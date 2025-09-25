@@ -28,17 +28,8 @@ public class IcedCpu : ICpu
 
 	public uint GetRegister(string name) => name.ToUpperInvariant() switch
 	{
-		"EAX" => _eax,
-		"EBX" => _ebx,
-		"ECX" => _ecx,
-		"EDX" => _edx,
-		"ESI" => _esi,
-		"EDI" => _edi,
-		"EBP" => _ebp,
-		"ESP" => _esp,
-		"EIP" => _eip,
-		"EFLAGS" => _eflags,
-		_ => 0
+		"EAX" => _eax, "EBX" => _ebx, "ECX" => _ecx, "EDX" => _edx, "ESI" => _esi, "EDI" => _edi, "EBP" => _ebp,
+		"ESP" => _esp, "EIP" => _eip, "EFLAGS" => _eflags, _ => 0
 	};
 
 	public void SetRegister(string name, uint value)
@@ -75,6 +66,8 @@ public class IcedCpu : ICpu
 			case Mnemonic.Movsx: ExecMovx(insn, true); break;
 			case Mnemonic.Push: ExecPush(insn); break;
 			case Mnemonic.Pop: ExecPop(insn); break;
+			case Mnemonic.Pushad: ExecPushad(); break;
+			case Mnemonic.Popad: ExecPopad(); break;
 			case Mnemonic.Add: ExecAdd(insn); break;
 			case Mnemonic.Adc: ExecAdc(insn); break;
 			case Mnemonic.Sub: ExecSub(insn); break;
@@ -128,24 +121,11 @@ public class IcedCpu : ICpu
 				ExecCmovcc(insn); break;
 			// String ops (byte/dword variants)
 			case Mnemonic.Movsb: ExecMovs(1, insn.HasRepPrefix); break;
-			case Mnemonic.Movsw: ExecMovs(2, insn.HasRepPrefix); break;
 			case Mnemonic.Movsd: ExecMovs(4, insn.HasRepPrefix); break;
 			case Mnemonic.Stosb: ExecStos(1, insn.HasRepPrefix); break;
-			case Mnemonic.Stosw: ExecStos(2, insn.HasRepPrefix); break;
 			case Mnemonic.Stosd: ExecStos(4, insn.HasRepPrefix); break;
 			case Mnemonic.Lodsb: ExecLods(1, insn.HasRepPrefix); break;
-			case Mnemonic.Lodsw: ExecLods(2, insn.HasRepPrefix); break;
 			case Mnemonic.Lodsd: ExecLods(4, insn.HasRepPrefix); break;
-			case Mnemonic.Cmpsb: ExecCmps(1, insn.HasRepePrefix, insn.HasRepnePrefix); break;
-			case Mnemonic.Cmpsw: ExecCmps(2, insn.HasRepePrefix, insn.HasRepnePrefix); break;
-			case Mnemonic.Cmpsd: ExecCmps(4, insn.HasRepePrefix, insn.HasRepnePrefix); break;
-			case Mnemonic.Scasb: ExecScas(1, insn.HasRepePrefix, insn.HasRepnePrefix); break;
-			case Mnemonic.Scasw: ExecScas(2, insn.HasRepePrefix, insn.HasRepnePrefix); break;
-			case Mnemonic.Scasd: ExecScas(4, insn.HasRepePrefix, insn.HasRepnePrefix); break;
-			case Mnemonic.Mul: ExecMul(insn); break;
-			case Mnemonic.Imul: ExecImul(insn); break;
-			case Mnemonic.Div: ExecDiv(insn); break;
-			case Mnemonic.Idiv: ExecIdiv(insn); break;
 			case Mnemonic.Jmp:
 				if (insn.GetOpKind(0) == OpKind.Register) _eip = GetReg32(insn.GetOpRegister(0));
 				else if (insn.GetOpKind(0) == OpKind.Memory) _eip = Read32(CalcMemAddress(insn));
@@ -270,16 +250,42 @@ public class IcedCpu : ICpu
 	private void ExecPush(Instruction insn)
 	{
 		var val = ReadOp(insn, 0);
-		_esp -= 4;
-		Write32(_esp, val);
+		Push32(val);
 	}
 
 	private void ExecPop(Instruction insn)
 	{
-		var v = Read32(_esp);
-		_esp += 4;
-		if (insn.GetOpKind(0) == OpKind.Register) SetReg32(insn.GetOpRegister(0), v);
-		else if (insn.GetOpKind(0) == OpKind.Memory) Write32(CalcMemAddress(insn), v);
+		if (insn.GetOpKind(0) == OpKind.Register)
+		{
+			var v = Pop32();
+			SetReg32(insn.GetOpRegister(0), v);
+		}
+		else Console.WriteLine("[IcedCpu] POP mem not implemented");
+	}
+
+	private void ExecPushad()
+	{
+		var oldEsp = _esp;
+		Push32(_eax);
+		Push32(_ecx);
+		Push32(_edx);
+		Push32(_ebx);
+		Push32(oldEsp);
+		Push32(_ebp);
+		Push32(_esi);
+		Push32(_edi);
+	}
+
+	private void ExecPopad()
+	{
+		_edi = Pop32();
+		_esi = Pop32();
+		_ebp = Pop32();
+		_ = Pop32();
+		_ebx = Pop32();
+		_edx = Pop32();
+		_ecx = Pop32();
+		_eax = Pop32();
 	}
 
 	private void ExecAdd(Instruction insn)
@@ -296,8 +302,7 @@ public class IcedCpu : ICpu
 		var sum = (ulong)a + b + cf;
 		var r = (uint)sum;
 		WriteOp(insn, 0, r);
-		SetFlagVal(CF, (sum >> 32) != 0); // carry
-		// overflow
+		SetFlagVal(CF, (sum >> 32) != 0);
 		SetFlagVal(OF, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
 		SetFlagVal(AF, (((a ^ b ^ r) & 0x10) != 0));
 		UpdateLogicResultFlags(r);
@@ -855,38 +860,16 @@ public class IcedCpu : ICpu
 		{
 			return insn.MemorySize switch
 			{
-				MemorySize.UInt8 => 8,
-				MemorySize.Int8 => 8,
-				MemorySize.UInt16 => 16,
-				MemorySize.Int16 => 16,
-				_ => 32
+				MemorySize.UInt8 or MemorySize.Int8 => 8, MemorySize.UInt16 or MemorySize.Int16 => 16, _ => 32
 			};
 		}
 
 		var r = insn.GetOpRegister(1);
-		switch (r)
-		{
-			case Register.AL:
-			case Register.CL:
-			case Register.DL:
-			case Register.BL:
-			case Register.AH:
-			case Register.CH:
-			case Register.DH:
-			case Register.BH:
-				return 8;
-			case Register.AX:
-			case Register.CX:
-			case Register.DX:
-			case Register.BX:
-			case Register.SI:
-			case Register.DI:
-			case Register.SP:
-			case Register.BP:
-				return 16;
-			default:
-				return 32;
-		}
+		if (r is Register.AL or Register.CL or Register.DL or Register.BL or Register.AH or Register.CH or Register.DH
+		    or Register.BH) return 8;
+		if (r is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP
+		    or Register.BP) return 16;
+		return 32;
 	}
 
 	private uint CalcMemAddress(Instruction insn)
@@ -925,21 +908,6 @@ public class IcedCpu : ICpu
 		Register.BH => (byte)((_ebx >> 8) & 0xFF), _ => 0
 	};
 
-	private void SetReg32(Register reg, uint v)
-	{
-		switch (reg)
-		{
-			case Register.EAX: _eax = v; break;
-			case Register.EBX: _ebx = v; break;
-			case Register.ECX: _ecx = v; break;
-			case Register.EDX: _edx = v; break;
-			case Register.ESI: _esi = v; break;
-			case Register.EDI: _edi = v; break;
-			case Register.EBP: _ebp = v; break;
-			case Register.ESP: _esp = v; break;
-		}
-	}
-
 	private void SetReg8(Register reg, byte v)
 	{
 		switch (reg)
@@ -955,14 +923,44 @@ public class IcedCpu : ICpu
 		}
 	}
 
+	private void SetReg32(Register reg, uint v)
+	{
+		switch (reg)
+		{
+			case Register.EAX: _eax = v; break;
+			case Register.EBX: _ebx = v; break;
+			case Register.ECX: _ecx = v; break;
+			case Register.EDX: _edx = v; break;
+			case Register.ESI: _esi = v; break;
+			case Register.EDI: _edi = v; break;
+			case Register.EBP: _ebp = v; break;
+			case Register.ESP: _esp = v; break;
+		}
+	}
+
 	private uint Read32(uint addr) => _mem.Read32(addr);
 	private void Write32(uint addr, uint v) => _mem.Write32(addr, v);
 
-	private class SimpleMemoryCodeReader(IcedCpu cpu) : CodeReader
+	private void Push32(uint v)
 	{
+		_esp -= 4;
+		Write32(_esp, v);
+	}
+
+	private uint Pop32()
+	{
+		var v = Read32(_esp);
+		_esp += 4;
+		return v;
+	}
+
+	private class SimpleMemoryCodeReader : CodeReader
+	{
+		private readonly IcedCpu _cpu;
 		private uint _ptr;
+		public SimpleMemoryCodeReader(IcedCpu cpu) => _cpu = cpu;
 		public void Reset(uint ip) => _ptr = ip;
-		public override int ReadByte() => cpu._mem.Read8(_ptr++);
+		public override int ReadByte() => _cpu._mem.Read8(_ptr++);
 	}
 
 	private enum LogicOp

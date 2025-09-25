@@ -46,14 +46,14 @@ namespace Win32Emu
 				var step = cpu.SingleStep(vm);
 				if (step.IsCall && image.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
 				{
-					string dll = imp.dll.ToUpperInvariant();
-					string name = imp.name;
+					var dll = imp.dll.ToUpperInvariant();
+					var name = imp.name;
 					Console.WriteLine($"[Import] {dll}!{name}");
 					if (dispatcher.TryInvoke(dll, name, cpu, vm, out var ret, out var argBytes))
 					{
 						Console.WriteLine($"[Import] Returned 0x{ret:X8}");
-						uint esp = cpu.GetRegister("ESP");
-						uint retEip = vm.Read32(esp);
+						var esp = cpu.GetRegister("ESP");
+						var retEip = vm.Read32(esp);
 						esp += 4 + (uint)argBytes;
 						cpu.SetRegister("ESP", esp);
 						cpu.SetEip(retEip);
