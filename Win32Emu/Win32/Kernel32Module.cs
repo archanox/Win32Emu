@@ -113,6 +113,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "SETENDOFFILE":
 				returnValue = SetEndOfFile((void*)a.UInt32(0));
 				return true;
+			case "SETHANDLECOUNT":
+				returnValue = SetHandleCount(a.UInt32(0));
+				return true;
 
 			default:
 				Console.WriteLine($"[Kernel32] Unimplemented export: {export}");
@@ -329,6 +332,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		return 0;
+	}
+
+	private unsafe uint SetHandleCount(uint uNumber)
+	{
+		// SetHandleCount is a legacy function from 16-bit Windows
+		// In Win32, it's essentially a no-op that returns the requested count
+		// Modern systems ignore this and have much higher handle limits
+		return uNumber; // Return the requested number as if it was successfully set
 	}
 
 	private string ReadCurrentModulePath() => "game.exe";
