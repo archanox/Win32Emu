@@ -46,7 +46,7 @@ jobs:
       run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage"
       
     - name: Publish test results
-      uses: dorny/test-reporter@v1
+      uses: dorny/test-reporter@v2
       if: steps.check-tests.outputs.has-tests == 'true' && (success() || failure())
       with:
         name: .NET Tests
