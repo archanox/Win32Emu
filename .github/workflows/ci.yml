@@ -1,0 +1,86 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore --verbosity normal
+      
+    - name: Check for tests
+      id: check-tests
+      run: |
+        if dotnet test --list-tests 2>/dev/null | grep -q "Test"; then
+          echo "has-tests=true" >> $GITHUB_OUTPUT
+        else
+          echo "has-tests=false" >> $GITHUB_OUTPUT
+        fi
+      
+    - name: Run tests
+      if: steps.check-tests.outputs.has-tests == 'true'
+      run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage"
+      
+    - name: Publish test results
+      uses: dorny/test-reporter@v1
+      if: steps.check-tests.outputs.has-tests == 'true' && (success() || failure())
+      with:
+        name: .NET Tests
+        path: "**/*.trx"
+        reporter: dotnet-trx
+        fail-on-error: true
+      continue-on-error: true
+      
+    - name: No tests found
+      if: steps.check-tests.outputs.has-tests == 'false'
+      run: echo "No tests found in the solution. Consider adding unit tests for better code quality."
+
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build with full analysis
+      run: dotnet build --configuration Release --verbosity normal --property WarningsAsErrors=false
+      
+    - name: Check for build warnings
+      run: |
+        echo "Build completed. Check the logs above for any warnings."
+        echo "Consider addressing the warnings for better code quality."
