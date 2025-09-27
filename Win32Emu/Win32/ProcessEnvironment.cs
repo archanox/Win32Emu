@@ -1,4 +1,5 @@
 using Win32Emu.Memory;
+using Win32Emu.Loader;
 
 namespace Win32Emu.Win32;
 
@@ -25,6 +26,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 
 	// Loaded modules tracking
 	private readonly Dictionary<string, uint> _loadedModules = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<string, LoadedImage> _loadedImages = new(StringComparer.OrdinalIgnoreCase);
 	private uint _nextModuleHandle = 0x10000000;
 	// Environment variables (emulated, not from system)
 	private readonly Dictionary<string, string> _environmentVariables = new();
@@ -170,6 +172,33 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 		_nextModuleHandle += 0x1000;
 		_loadedModules[normalizedName] = handle;
 		return handle;
+	}
+
+	public uint LoadPeImage(string imagePath, PeImageLoader peLoader)
+	{
+		var normalizedName = Path.GetFileName(imagePath).ToUpperInvariant();
+		if (_loadedModules.TryGetValue(normalizedName, out var existingHandle))
+		{
+			return existingHandle;
+		}
+
+		try
+		{
+			var loadedImage = peLoader.Load(imagePath);
+			var handle = loadedImage.BaseAddress;
+			
+			_loadedModules[normalizedName] = handle;
+			_loadedImages[normalizedName] = loadedImage;
+			
+			Console.WriteLine($"[ProcessEnv] Loaded PE image: {imagePath} at 0x{handle:X8}");
+			return handle;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"[ProcessEnv] Failed to load PE image {imagePath}: {ex.Message}");
+			// Fall back to tracking without loading
+			return LoadModule(normalizedName);
+		}
 	}
 
 	public bool IsModuleLoaded(string moduleName)

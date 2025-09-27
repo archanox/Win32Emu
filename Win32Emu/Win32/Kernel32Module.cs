@@ -1,9 +1,10 @@
 using Win32Emu.Cpu;
 using Win32Emu.Memory;
+using Win32Emu.Loader;
 
 namespace Win32Emu.Win32;
 
-public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32ModuleUnsafe
+public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
 {
 	public string Name => "KERNEL32.DLL";
 
@@ -225,9 +226,18 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 
 		if (isLocalDll)
 		{
-			// DLL is local to executable path - emulate it while thunking to emulator
+			// DLL is local to executable path - load it using PeImageLoader for proper emulation
 			Console.WriteLine($"[Kernel32] Loading local DLL for emulation: {libraryName}");
-			return env.LoadModule(libraryName);
+			
+			if (peLoader != null)
+			{
+				return env.LoadPeImage(localLibraryPath, peLoader);
+			}
+			else
+			{
+				Console.WriteLine($"[Kernel32] Warning: PeImageLoader not available, falling back to module tracking for {libraryName}");
+				return env.LoadModule(libraryName);
+			}
 		}
 		else
 		{
