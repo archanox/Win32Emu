@@ -41,6 +41,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				returnValue = GetOEMCP();
 				return true;
 			case "GETSTRINGTYPEA":
+				Console.WriteLine("[Kernel32] GetStringTypeA called");
 				returnValue = GetStringTypeA(a.UInt32(0), a.UInt32(1), a.Lpstr(2), a.Int32(3), a.UInt32(4));
 				return true;
 			case "GETMODULEHANDLEA":
@@ -197,8 +198,11 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		// This is a simplified implementation focused on basic ASCII character classification
 		
 		uint srcStrAddr = (uint)(nint)lpSrcStr;
+		Console.WriteLine($"[GetStringTypeA] Entry: locale={locale}, dwInfoType={dwInfoType}, lpSrcStr={srcStrAddr:X}, cchSrc={cchSrc}, lpCharType={lpCharType:X}");
+		
 		if (srcStrAddr == 0 || lpCharType == 0)
 		{
+			Console.WriteLine($"[GetStringTypeA] Null pointer check failed: srcStrAddr={srcStrAddr}, lpCharType={lpCharType}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -206,6 +210,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		// We only support CT_CTYPE1 for simplicity
 		if (dwInfoType != 1)
 		{
+			Console.WriteLine($"[GetStringTypeA] Unsupported dwInfoType: {dwInfoType}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -214,20 +219,26 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		int length = cchSrc;
 		if (cchSrc == -1)
 		{
+			Console.WriteLine("[GetStringTypeA] Calculating null-terminated string length");
 			length = 0;
 			uint addr = srcStrAddr;
 			// Safely calculate string length with bounds check
 			while (length < 1000) // Arbitrary limit to prevent infinite loops
 			{
 				byte ch = env.MemRead8(addr + (uint)length);
+				Console.WriteLine($"[GetStringTypeA] Char at {length}: {ch} ('{(char)ch}')");
 				if (ch == 0) break;
 				length++;
 			}
 		}
 
+		// Debug output
+		Console.WriteLine($"[GetStringTypeA] cchSrc={cchSrc}, calculated length={length}");
+
 		// Validate length
 		if (length <= 0 || length > 1000)
 		{
+			Console.WriteLine($"[GetStringTypeA] Length validation failed: {length}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -288,6 +299,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			env.MemWrite16(lpCharType + (uint)(i * 2), charType);
 		}
 
+		Console.WriteLine($"[GetStringTypeA] Successfully processed {length} characters");
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
