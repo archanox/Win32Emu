@@ -55,7 +55,22 @@ namespace Win32Emu
 				logger.LogInformation("Imports mapped: {ImportCount}", image.ImportAddressMap.Count);
 
 				var env = new ProcessEnvironment(vm);
-				env.InitializeStrings(path, args.Where(a => a != "--debug" && a != "--otel-endpoint" && a != otlpEndpoint).ToArray());
+				// Exclude "--debug", "--otel-endpoint", and its value by index
+				var excludeIndices = new HashSet<int>();
+				var debugIndex = Array.IndexOf(args, "--debug");
+				if (debugIndex >= 0)
+				{
+					excludeIndices.Add(debugIndex);
+				}
+				if (otlpIndex >= 0)
+				{
+					excludeIndices.Add(otlpIndex); // "--otel-endpoint"
+					if (otlpIndex + 1 < args.Length)
+					{
+						excludeIndices.Add(otlpIndex + 1); // endpoint value
+					}
+				}
+				env.InitializeStrings(path, args.Where((a, i) => !excludeIndices.Contains(i)).ToArray());
 
 				var cpu = new IcedCpu(vm);
 				cpu.SetEip(image.EntryPointAddress);
