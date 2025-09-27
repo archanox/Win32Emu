@@ -191,6 +191,74 @@ public class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
+    public void QueryPerformanceCounter_WithValidPointer_ShouldReturnTrueAndSetCounter()
+    {
+        // Arrange
+        var counterPtr = _testEnv.AllocateMemory(8); // LARGE_INTEGER is 8 bytes (64-bit)
+
+        // Act
+        var result = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", counterPtr);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
+        
+        // Verify that a 64-bit counter value was written
+        var lowPart = _testEnv.Memory.Read32(counterPtr);
+        var highPart = _testEnv.Memory.Read32(counterPtr + 4);
+        var fullCounter = ((ulong)highPart << 32) | lowPart;
+        
+        // The counter should be a positive value (time stamp)
+        Assert.True(fullCounter > 0, "Performance counter should be a positive value");
+    }
+
+    [Fact]
+    public void QueryPerformanceCounter_WithNullPointer_ShouldReturnFalse()
+    {
+        // Act
+        var result = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", 0);
+
+        // Assert
+        Assert.Equal(0u, result); // Should return FALSE (0)
+        
+        // Check that last error was set to ERROR_INVALID_PARAMETER
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+    }
+
+    [Fact]
+    public void QueryPerformanceCounter_ConsecutiveCalls_ShouldReturnIncreasingValues()
+    {
+        // Arrange
+        var counterPtr1 = _testEnv.AllocateMemory(8);
+        var counterPtr2 = _testEnv.AllocateMemory(8);
+
+        // Act
+        var result1 = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", counterPtr1);
+        
+        // Small delay to ensure different timestamps
+        System.Threading.Thread.Sleep(1);
+        
+        var result2 = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", counterPtr2);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result1);
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result2);
+        
+        // Read the counter values
+        var counter1Low = _testEnv.Memory.Read32(counterPtr1);
+        var counter1High = _testEnv.Memory.Read32(counterPtr1 + 4);
+        var counter1Full = ((ulong)counter1High << 32) | counter1Low;
+        
+        var counter2Low = _testEnv.Memory.Read32(counterPtr2);
+        var counter2High = _testEnv.Memory.Read32(counterPtr2 + 4);
+        var counter2Full = ((ulong)counter2High << 32) | counter2Low;
+        
+        // The second call should return a higher or equal value (monotonic)
+        Assert.True(counter2Full >= counter1Full, 
+            $"Performance counter should be monotonic: {counter2Full} should be >= {counter1Full}");
+    }
+
+    [Fact]
     public void ExitProcess_ShouldSetExitRequestedFlag()
     {
         // Arrange
