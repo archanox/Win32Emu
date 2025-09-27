@@ -150,21 +150,21 @@ namespace Win32Emu
 					try 
 					{
 						var instrBytes = vm.GetSpan(currentEip, 4);
-						Console.WriteLine($"[Debug] Instruction bytes at synthetic address: {Convert.ToHexString(instrBytes)}");
+						logger.LogDebug("Instruction bytes at synthetic address: {InstructionBytes}", Convert.ToHexString(instrBytes));
 						
 						if (instrBytes[0] == 0xCC)
 						{
-							Console.WriteLine("[Debug] Good! Found INT3 (0xCC) stub - continuing execution");
+							logger.LogDebug("Good! Found INT3 (0xCC) stub - continuing execution");
 							// Don't break, let the INT3 execute and be handled
 						}
 						else
 						{
-							Console.WriteLine("[Debug] ERROR: Expected INT3 (0xCC) but found different instruction");
+							logger.LogError("ERROR: Expected INT3 (0xCC) but found different instruction");
 						}
 					}
 					catch (Exception ex)
 					{
-						Console.WriteLine($"[Debug] Could not read instruction bytes: {ex.Message}");
+						logger.LogError(ex, "Could not read instruction bytes");
 					}
 					
 					// Continue execution instead of breaking - let's see if the INT3 handling works
@@ -173,16 +173,18 @@ namespace Win32Emu
 				// *** CHECK FOR PROBLEMATIC EIP (keep existing check for other cases) ***
 				if (debugger.IsProblematicEip(0x0F000512))
 				{
-					Console.WriteLine($"\n[Debug] *** FOUND PROBLEMATIC EIP AT INSTRUCTION {i} ***");
+					using var problematicScope = logger.BeginScope("ProblematicEIP");
+					logger.LogError("Found problematic EIP at instruction {InstructionIndex}", i);
 					debugger.HandleProblematicEip();
-					Console.WriteLine("[Debug] Stopping execution to prevent crash");
+					logger.LogWarning("Stopping execution to prevent crash");
 					break;
 				}
 				
 				// *** CHECK FOR SUSPICIOUS REGISTERS ***
 				if (cpu.HasSuspiciousRegisters() && i > 100) // Skip early initialization
 				{
-					Console.WriteLine($"[Debug] [Instruction {i}] Suspicious registers detected");
+					using var suspiciousScope = logger.BeginScope("SuspiciousRegisters");
+					logger.LogWarning("Suspicious registers detected at instruction {InstructionIndex}", i);
 					cpu.LogRegisters("[Debug] ");
 				}
 				
@@ -203,10 +205,11 @@ namespace Win32Emu
 					{
 						var dll = imp.dll.ToUpperInvariant();
 						var name = imp.name;
-						Console.WriteLine($"[Import] {dll}!{name}");
+						using var importScope = logger.BeginScope($"Import.{dll}.{name}");
+						logger.LogInformation("Calling debug import: {Dll}!{Function}", dll, name);
 						if (dispatcher.TryInvoke(dll, name, cpu, vm, out var ret, out var argBytes))
 						{
-							Console.WriteLine($"[Import] Returned 0x{ret:X8}");
+							logger.LogDebug("Debug import returned: 0x{ReturnValue:X8}", ret);
 							var esp = cpu.GetRegister("ESP");
 							var retEip = vm.Read32(esp);
 							esp += 4 + (uint)argBytes;
@@ -219,41 +222,41 @@ namespace Win32Emu
 														  ex.Message.Contains("0xFFFFFFFF"))
 				{
 					// *** ENHANCED ERROR HANDLING ***
-					Console.WriteLine($"\n[Debug] *** CAUGHT MEMORY ACCESS VIOLATION AT INSTRUCTION {i} ***");
-					Console.WriteLine($"[Debug] Exception: {ex.Message}");
+					using var errorScope = logger.BeginScope("MemoryAccessViolation");
+					logger.LogError(ex, "Caught memory access violation at instruction {InstructionIndex}", i);
 					
 					// Check if we're trying to execute a synthetic import address
 					if (currentEip >= 0x0F000000 && currentEip < 0x10000000)
 					{
-						Console.WriteLine($"[Debug] ERROR CAUSE: Trying to execute synthetic import address 0x{currentEip:X8}");
+						logger.LogError("ERROR CAUSE: Trying to execute synthetic import address 0x{CurrentEip:X8}", currentEip);
 						if (image.ImportAddressMap.TryGetValue(currentEip, out var importInfo))
 						{
-							Console.WriteLine($"[Debug] This is import: {importInfo.dll}!{importInfo.name}");
+							logger.LogDebug("This is import: {Dll}!{Function}", importInfo.dll, importInfo.name);
 						}
-						Console.WriteLine($"[Debug] SOLUTION: The program should CALL THROUGH the IAT, not execute the import address directly");
+						logger.LogError("SOLUTION: The program should CALL THROUGH the IAT, not execute the import address directly");
 					}
 					
 					// Get execution trace to see what led to this
 					var trace = debugger.GetExecutionTrace();
 					var suspiciousStates = debugger.FindSuspiciousStates();
 					
-					Console.WriteLine($"[Debug] Execution trace has {trace.Count} entries");
-					Console.WriteLine($"[Debug] Found {suspiciousStates.Count} suspicious register states");
+					logger.LogDebug("Execution trace has {TraceCount} entries", trace.Count);
+					logger.LogDebug("Found {SuspiciousCount} suspicious register states", suspiciousStates.Count);
 					
 					if (suspiciousStates.Count > 0)
 					{
-						Console.WriteLine("[Debug] First suspicious state occurred at:");
+						logger.LogDebug("First suspicious state occurred at:");
 						var first = suspiciousStates.First();
-						Console.WriteLine($"[Debug]   EIP=0x{first.EIP:X8} EBP=0x{first.EBP:X8} ESP=0x{first.ESP:X8}");
+						logger.LogDebug("  EIP=0x{EIP:X8} EBP=0x{EBP:X8} ESP=0x{ESP:X8}", first.EIP, first.EBP, first.ESP);
 					}
 					
 					// Show last few instructions
 					if (trace.Count > 5)
 					{
-						Console.WriteLine("[Debug] Last 5 instructions:");
+						logger.LogDebug("Last 5 instructions:");
 						foreach (var state in trace.TakeLast(5))
 						{
-							Console.WriteLine($"[Debug]   0x{state.EIP:X8}: {state.InstructionBytes} (EBP=0x{state.EBP:X8})");
+							logger.LogDebug("  0x{EIP:X8}: {InstructionBytes} (EBP=0x{EBP:X8})", state.EIP, state.InstructionBytes, state.EBP);
 						}
 					}
 					
@@ -262,18 +265,20 @@ namespace Win32Emu
 				catch (Exception ex)
 				{
 					// *** CATCH OTHER EXCEPTIONS ***
-					Console.WriteLine($"[Debug] Unexpected exception at instruction {i}: {ex}");
+					using var unexpectedScope = logger.BeginScope("UnexpectedException");
+					logger.LogError(ex, "Unexpected exception at instruction {InstructionIndex}", i);
 					cpu.LogRegisters("[Debug] Register state: ");
 					throw;
 				}
 			}
 			
 			// *** FINAL DEBUG SUMMARY ***
+			using var summaryScope = logger.BeginScope("DebugSummary");
 			var finalTrace = debugger.GetExecutionTrace();
 			var finalSuspicious = debugger.FindSuspiciousStates();
-			Console.WriteLine($"[Debug] Final execution summary:");
-			Console.WriteLine($"[Debug]   Total traced instructions: {finalTrace.Count}");
-			Console.WriteLine($"[Debug]   Suspicious register states: {finalSuspicious.Count}");
+			logger.LogInformation("Final execution summary:");
+			logger.LogInformation("  Total traced instructions: {TracedInstructions}", finalTrace.Count);
+			logger.LogInformation("  Suspicious register states: {SuspiciousStates}", finalSuspicious.Count);
 		}
 
 		/// <summary>
