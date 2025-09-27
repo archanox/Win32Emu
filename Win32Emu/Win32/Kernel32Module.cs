@@ -114,7 +114,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				returnValue = SetHandleCount(a.UInt32(0));
 				return true;
 			case "WIDECHARTOMULTIBYTE":
-				returnValue = (uint)WideCharToMultiByte(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+				returnValue = WideCharToMultiByte(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
 				return true;
 
 			default:
@@ -396,18 +396,10 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		return uNumber; // Return the requested number as if it was successfully set
 	}
 
-	private unsafe int WideCharToMultiByte(uint p0, uint p1, uint p2, uint p3, uint p4, uint p5, uint p6, uint p7)
+	private unsafe uint WideCharToMultiByte(uint codePage, uint dwFlags, uint lpWideCharStr, uint cchWideChar, uint lpMultiByteStr, uint cbMultiByte, uint lpDefaultChar, uint lpUsedDefaultChar)
 	{
-		// Win32 API: WideCharToMultiByte(CodePage, dwFlags, lpWideCharStr, cchWideChar, lpMultiByteStr, cbMultiByte, lpDefaultChar, lpUsedDefaultChar)
-		// Parameter remapping due to test framework calling convention:
-		uint codePage = p7;           // CodePage
-		uint dwFlags = p0;            // dwFlags  
-		uint lpWideCharStr = p5;      // lpWideCharStr (LPCWSTR)
-		int cchWideChar = (int)p4;    // cchWideChar 
-		uint lpMultiByteStr = p2;     // lpMultiByteStr (LPSTR)
-		int cbMultiByte = (int)p1;    // cbMultiByte
-		uint lpDefaultChar = p6;      // lpDefaultChar (LPCSTR)
-		uint lpUsedDefaultChar = p3;  // lpUsedDefaultChar (LPBOOL)
+		// Parameters now match Win32 API order:
+		// codePage, dwFlags, lpWideCharStr, cchWideChar, lpMultiByteStr, cbMultiByte, lpDefaultChar, lpUsedDefaultChar
 		
 		try
 		{
@@ -428,7 +420,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 
 			// Read the wide character string from memory
 			string wideString;
-			if (cchWideChar == -1) // -1 indicates null-terminated string
+			if (cchWideChar == 0xFFFFFFFF) // -1 indicates null-terminated string
 			{
 				// Read null-terminated wide string
 				var wideChars = new List<char>();
@@ -446,9 +438,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			{
 				// Read specified number of wide characters
 				var wideChars = new char[cchWideChar];
-				for (int i = 0; i < cchWideChar; i++)
+				for (uint i = 0; i < cchWideChar; i++)
 				{
-					wideChars[i] = (char)env.MemRead16(lpWideCharStr + (uint)(i * 2));
+					wideChars[i] = (char)env.MemRead16(lpWideCharStr + i * 2);
 				}
 				wideString = new string(wideChars);
 			}
@@ -457,15 +449,14 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			byte[] multiByteBytes;
 			switch (actualCodePage)
 			{
-				case 1252: // Windows-1252 - use Latin-1 (ISO-8859-1) as compatible fallback
+				case 1252: // Windows-1252
+				case 437:  // OEM US
+				case 850:  // OEM Latin-1
+				case 1250: // Windows Central Europe
+				case 1251: // Windows Cyrillic
 				case 28591: // ISO 8859-1
-					multiByteBytes = System.Text.Encoding.Latin1.GetBytes(wideString);
-					break;
-				case 437:  // OEM US - use ASCII as fallback  
-				case 850:  // OEM Latin-1 - use ASCII as fallback
-				case 1250: // Windows Central Europe - use ASCII as fallback
-				case 1251: // Windows Cyrillic - use ASCII as fallback
-					multiByteBytes = System.Text.Encoding.ASCII.GetBytes(wideString);
+					// Use the correct code page encoding for these single-byte code pages
+					multiByteBytes = System.Text.Encoding.GetEncoding((int)actualCodePage).GetBytes(wideString);
 					break;
 				case 65001: // UTF-8
 					multiByteBytes = System.Text.Encoding.UTF8.GetBytes(wideString);
@@ -480,11 +471,11 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			if (cbMultiByte == 0)
 			{
 				// If input is null-terminated, include space for null terminator in required size
-				if (cchWideChar == -1)
+				if (cchWideChar == unchecked((uint)-1))
 				{
-					return multiByteBytes.Length + 1;
+					return (uint)(multiByteBytes.Length + 1);
 				}
-				return multiByteBytes.Length;
+				return (uint)multiByteBytes.Length;
 			}
 
 			// Check if output buffer is large enough
@@ -506,7 +497,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				env.MemWrite32(lpUsedDefaultChar, 0); // FALSE - no default char used (simplified)
 			}
 
-			return multiByteBytes.Length;
+			return (uint)multiByteBytes.Length;
 		}
 		catch (Exception ex)
 		{
