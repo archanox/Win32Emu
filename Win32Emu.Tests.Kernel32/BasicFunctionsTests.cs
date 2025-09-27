@@ -100,6 +100,16 @@ public class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
+    public void GetOEMCP_ShouldReturnOemCodePage()
+    {
+        // Act
+        var codePage = _testEnv.CallKernel32Api("GETOEMCP");
+
+        // Assert
+        Assert.Equal(437u, codePage); // Should return IBM PC US (OEM code page)
+    }
+
+    [Fact]
     public void ExitProcess_ShouldSetExitRequestedFlag()
     {
         // Arrange

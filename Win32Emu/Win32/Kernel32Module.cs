@@ -34,6 +34,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "GETACP":
 				returnValue = GetACP();
 				return true;
+			case "GETOEMCP":
+				returnValue = GetOEMCP();
+				return true;
 			case "GETMODULEHANDLEA":
 				returnValue = GetModuleHandleA(a.Lpstr(0));
 				return true;
@@ -137,6 +140,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 	private unsafe uint GetCurrentProcess() => 0xFFFFFFFF; // pseudo-handle
 
 	private static unsafe uint GetACP() => 1252; // Windows-1252 (Western European)
+
+	private static unsafe uint GetOEMCP() => 437; // IBM PC US (OEM code page)
 
 	private unsafe uint GetModuleHandleA(sbyte* name)
 	{
