@@ -267,6 +267,15 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		try
 		{
 			var path = env.ReadAnsiString(lpFileName);
+			
+			// Handle invalid paths (empty, null, or invalid characters)
+			if (string.IsNullOrEmpty(path))
+			{
+				Console.WriteLine("[Kernel32] CreateFileA failed: Invalid path (empty or null)");
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
+			
 			var mode = FileMode.OpenOrCreate;
 			switch (dwCreationDisposition)
 			{
@@ -289,7 +298,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		{
 			Console.WriteLine($"[Kernel32] CreateFileA failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return NativeTypes.Win32Bool.FALSE;
+			return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
 	}
 

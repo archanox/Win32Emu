@@ -89,4 +89,10 @@ public static class NativeTypes
 		public const uint FALSE = 0;
 		public const uint TRUE = 1;
 	}
+
+	// Windows handle values
+	public static class Win32Handle
+	{
+		public const uint INVALID_HANDLE_VALUE = 0xFFFFFFFF;
+	}
 }
