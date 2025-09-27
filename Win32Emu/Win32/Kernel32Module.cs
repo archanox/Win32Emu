@@ -52,6 +52,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "GETCOMMANDLINEA":
 				returnValue = GetCommandLineA();
 				return true;
+			case "GETENVIRONMENTSTRINGSW":
+				returnValue = GetEnvironmentStringsW();
+				return true;
 
 			// Std handles
 			case "GETSTDHANDLE":
@@ -205,6 +208,13 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 	}
 
 	private unsafe uint GetCommandLineA() => env.CommandLinePtr;
+
+	private unsafe uint GetEnvironmentStringsW()
+	{
+		// Return pointer to Unicode environment strings block
+		// This will be obtained from emulated environment variables, not system ones
+		return env.GetEnvironmentStringsW();
+	}
 
 	private unsafe uint GetStartupInfoA(uint lpStartupInfo)
 	{
