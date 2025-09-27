@@ -36,6 +36,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				return true;
 			case "GETCPINFO":
 				returnValue = GetCPInfo(a.UInt32(1), a.UInt32(0));
+			case "GETOEMCP":
+				returnValue = GetOEMCP();
 				return true;
 			case "GETMODULEHANDLEA":
 				returnValue = GetModuleHandleA(a.Lpstr(0));
@@ -182,6 +184,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				return 0; // FALSE
 		}
 	}
+  
+	private static unsafe uint GetOEMCP() => 437; // IBM PC US (OEM code page)
 
 	private unsafe uint GetModuleHandleA(sbyte* name)
 	{
