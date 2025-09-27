@@ -14,7 +14,13 @@ public class VirtualMemory(ulong size = VirtualMemory.DefaultSize)
 	    private void EnsureRange(ulong addr, ulong length = 1)
     {
         if (length == 0) return;
-        if (addr + (length - 1) >= (ulong)_mem.LongLength)
+        
+        // Check for overflow in address calculation
+        if (addr > ulong.MaxValue - length + 1)
+            throw new IndexOutOfRangeException($"Memory access causes address overflow: addr=0x{addr:X}, len={length}");
+            
+        // Check if the entire range is within bounds
+        if (addr + length > (ulong)_mem.LongLength)
             throw new IndexOutOfRangeException($"Memory access out of range: addr=0x{addr:X}, len={length}, size=0x{(ulong)_mem.LongLength:X}");
     }
 

@@ -196,6 +196,51 @@ public class IcedCpu : ICpu
 				SetFlagVal(Cf, (sahf & 0x01) != 0);
 				break;
 			}
+			case Mnemonic.Int:
+				// Handle INT instruction with immediate
+				if (insn.Immediate8 == 3)
+				{
+					// This is an INT3 breakpoint - check if it's at a synthetic import address
+					if (oldEip >= 0x0F000000 && oldEip < 0x10000000)
+					{
+						// This is a synthetic import stub - signal this as a call
+						isCall = true;
+						callTarget = oldEip;
+						
+						// Don't actually execute the INT3, just treat it as a call
+						// The main loop will handle the import invocation
+						break;
+					}
+					else
+					{
+						// Regular INT3 - for now, just print a message and continue
+						Console.WriteLine($"[IcedCpu] INT3 breakpoint at 0x{oldEip:X8}");
+					}
+				}
+				else
+				{
+					Console.WriteLine($"[IcedCpu] Unhandled interrupt INT {insn.Immediate8:X2} at 0x{oldEip:X8}");
+				}
+				break;
+			case Mnemonic.Int3:
+				// Handle INT3 (0xCC) instruction used for import stubs
+				if (oldEip >= 0x0F000000 && oldEip < 0x10000000)
+				{
+					// This is a synthetic import stub - signal this as a call
+					isCall = true;
+					callTarget = oldEip;
+					Console.WriteLine($"[IcedCpu] Handling INT3 import stub at 0x{oldEip:X8}");
+					
+					// Don't actually execute the INT3, just treat it as a call
+					// The main loop will handle the import invocation
+					break;
+				}
+				else
+				{
+					// Regular INT3 - for now, just print a message and continue
+					Console.WriteLine($"[IcedCpu] INT3 breakpoint at 0x{oldEip:X8}");
+				}
+				break;
 			default:
 				if (insn.Mnemonic.ToString().StartsWith('J'))
 				{
@@ -882,10 +927,12 @@ public class IcedCpu : ICpu
 			addr += (uint)(GetReg32(insn.MemoryIndex) * scale);
 		}
 
-		if (addr < 0 || (ulong)addr >= _mem.Size)
-			throw new IndexOutOfRangeException($"Calculated memory address out of range: 0x{(ulong)addr:X} (EIP=0x{_eip:X8})");
+		// Check if address is within valid memory range
+		// Convert to ulong to avoid overflow issues when comparing with memory size
+		if ((ulong)addr >= _mem.Size)
+			throw new IndexOutOfRangeException($"Calculated memory address out of range: 0x{addr:X} (EIP=0x{_eip:X8})");
 
-		return (uint)addr;
+		return addr;
 	}
 
 	private uint CalcLeaAddress(Instruction insn) => CalcMemAddress(insn);

@@ -47,7 +47,23 @@ public class PeImageLoader(VirtualMemory vm)
 				if (rva is null or 0) continue;
 				var va = imageBase + rva.Value;
 				var synthetic = 0x0F000000u + (uint)(synth++ * 0x10u);
+				
+				// Write the synthetic address to the IAT entry
 				vm.Write32(va, synthetic);
+				
+				// Create an executable stub at the synthetic address
+				// This stub will be a simple INT3 (breakpoint) that we can intercept
+				// INT3 = 0xCC, followed by padding
+				var stub = new byte[] 
+				{ 
+					0xCC, // INT3 - breakpoint instruction
+					0x90, 0x90, 0x90, // NOP padding
+					0x90, 0x90, 0x90, 0x90,
+					0x90, 0x90, 0x90, 0x90,
+					0x90, 0x90, 0x90, 0x90
+				};
+				vm.WriteBytes(synthetic, stub);
+				
 				var name = sym.Name ?? ($"Ordinal_{sym.Hint}");
 				map[synthetic] = (dll.ToUpperInvariant(), name);
 			}

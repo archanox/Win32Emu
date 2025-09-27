@@ -42,4 +42,8 @@
     <ProjectReference Include="..\Win32Emu.Generators\Win32Emu.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Examples\" />
+  </ItemGroup>
+
 </Project>
