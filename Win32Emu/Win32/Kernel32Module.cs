@@ -35,7 +35,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				returnValue = GetACP();
 				return true;
 			case "GETCPINFO":
-				returnValue = GetCPInfo(a.UInt32(1), a.UInt32(0));
+				returnValue = GetCPInfo(a.UInt32(0), a.UInt32(1));
 			case "GETOEMCP":
 				returnValue = GetOEMCP();
 				return true;
