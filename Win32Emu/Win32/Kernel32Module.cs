@@ -34,6 +34,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "GETACP":
 				returnValue = GetACP();
 				return true;
+			case "GETCPINFO":
+				returnValue = GetCPInfo(a.UInt32(0), a.UInt32(1));
+				return true;
 			case "GETOEMCP":
 				returnValue = GetOEMCP();
 				return true;
@@ -141,6 +144,48 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 
 	private static unsafe uint GetACP() => 1252; // Windows-1252 (Western European)
 
+	private unsafe uint GetCPInfo(uint codePage, uint lpCPInfo)
+	{
+		if (lpCPInfo == 0) return NativeTypes.Win32Bool.FALSE; // Return FALSE if null pointer
+
+		// Handle special code page values
+		uint actualCodePage = codePage switch
+		{
+			0 => GetACP(),        // CP_ACP - system default Windows ANSI code page
+			1 => GetACP(),        // CP_OEMCP - system default OEM code page (we'll use same as ACP)
+			_ => codePage
+		};
+
+		// We'll support common Western code pages
+		switch (actualCodePage)
+		{
+			case 1252: // Windows-1252 (Western European)
+				// Fill CPINFO structure
+				env.MemWrite32(lpCPInfo + 0, 1);  // MaxCharSize = 1 (single-byte)
+				// Write DefaultChar as bytes - using MemWriteBytes for byte array
+				env.MemWriteBytes(lpCPInfo + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar[0] = '?' (0x3F), DefaultChar[1] = 0
+				// LeadByte array - all zeros for single-byte code page (12 bytes)
+				env.MemWriteBytes(lpCPInfo + 6, new byte[12]); // All zeros
+				return 1; // TRUE
+
+			case 437:  // OEM United States
+			case 850:  // OEM Multilingual Latin I
+			case 1250: // Windows Central Europe
+			case 1251: // Windows Cyrillic
+			case 28591: // ISO 8859-1 Latin I
+				// Similar single-byte code page setup
+				env.MemWrite32(lpCPInfo + 0, 1);  // MaxCharSize = 1
+				env.MemWriteBytes(lpCPInfo + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar = '?', 0
+				env.MemWriteBytes(lpCPInfo + 6, new byte[12]); // LeadByte array all zeros
+				return NativeTypes.Win32Bool.TRUE;
+
+			default:
+				// Unsupported code page
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return NativeTypes.Win32Bool.FALSE;
+		}
+	}
+  
 	private static unsafe uint GetOEMCP() => 437; // IBM PC US (OEM code page)
 
 	private unsafe uint GetModuleHandleA(sbyte* name)
@@ -233,8 +278,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		catch (Exception ex)
 		{
 			Console.WriteLine($"[Kernel32] CreateFileA failed: {ex.Message}");
-			_lastError = 2; // ERROR_FILE_NOT_FOUND or generic error
-			return 0;
+			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -253,8 +298,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		catch (Exception ex)
 		{
 			Console.WriteLine($"[Kernel32] ReadFile failed: {ex.Message}");
-			_lastError = 1; // generic
-			return 0;
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -272,8 +317,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		catch (Exception ex)
 		{
 			Console.WriteLine($"[Kernel32] WriteFile failed: {ex.Message}");
-			_lastError = 1;
-			return 0;
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 	}
 

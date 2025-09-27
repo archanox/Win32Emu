@@ -64,4 +64,29 @@ public static class NativeTypes
 		public static implicit operator uint(Dword d) => d.Value;
 		public static implicit operator Dword(uint v) => new(v);
 	}
+
+	// CPINFO structure for GetCPInfo function
+	// Total size: 20 bytes (4 + 2 + 12 + 2 padding)
+	public struct CPINFO
+	{
+		public uint MaxCharSize;           // Maximum length, in bytes, of a character in the code page
+		public unsafe fixed byte DefaultChar[2];  // Default character used when translating to the specific code page
+		public unsafe fixed byte LeadByte[12];    // Lead byte ranges for double-byte character sets (DBCS)
+	}
+
+	// Windows error codes
+	public static class Win32Error
+	{
+		public const uint ERROR_SUCCESS = 0;
+		public const uint ERROR_INVALID_FUNCTION = 1;
+		public const uint ERROR_FILE_NOT_FOUND = 2;
+		public const uint ERROR_INVALID_PARAMETER = 87;
+	}
+
+	// Windows BOOL values
+	public static class Win32Bool
+	{
+		public const uint FALSE = 0;
+		public const uint TRUE = 1;
+	}
 }
