@@ -36,6 +36,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				return true;
 			case "GETCPINFO":
 				returnValue = GetCPInfo(a.UInt32(0), a.UInt32(1));
+				return true;
 			case "GETOEMCP":
 				returnValue = GetOEMCP();
 				return true;
@@ -145,7 +146,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 
 	private unsafe uint GetCPInfo(uint codePage, uint lpCPInfo)
 	{
-		if (lpCPInfo == 0) return 0; // Return FALSE if null pointer
+		if (lpCPInfo == 0) return NativeTypes.Win32Bool.FALSE; // Return FALSE if null pointer
 
 		// Handle special code page values
 		uint actualCodePage = codePage switch
@@ -176,12 +177,12 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				env.MemWrite32(lpCPInfo + 0, 1);  // MaxCharSize = 1
 				env.MemWriteBytes(lpCPInfo + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar = '?', 0
 				env.MemWriteBytes(lpCPInfo + 6, new byte[12]); // LeadByte array all zeros
-				return 1; // TRUE
+				return NativeTypes.Win32Bool.TRUE;
 
 			default:
 				// Unsupported code page
-				_lastError = 87; // ERROR_INVALID_PARAMETER
-				return 0; // FALSE
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return NativeTypes.Win32Bool.FALSE;
 		}
 	}
   
@@ -277,8 +278,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		catch (Exception ex)
 		{
 			Console.WriteLine($"[Kernel32] CreateFileA failed: {ex.Message}");
-			_lastError = 2; // ERROR_FILE_NOT_FOUND or generic error
-			return 0;
+			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -297,8 +298,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		catch (Exception ex)
 		{
 			Console.WriteLine($"[Kernel32] ReadFile failed: {ex.Message}");
-			_lastError = 1; // generic
-			return 0;
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -316,8 +317,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		catch (Exception ex)
 		{
 			Console.WriteLine($"[Kernel32] WriteFile failed: {ex.Message}");
-			_lastError = 1;
-			return 0;
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 	}
 

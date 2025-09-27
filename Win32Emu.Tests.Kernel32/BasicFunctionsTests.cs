@@ -1,4 +1,5 @@
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
+using Win32Emu.Win32;
 
 namespace Win32Emu.Tests.Kernel32;
 
@@ -110,7 +111,7 @@ public class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETCPINFO", codePage1252, cpInfoPtr);
 
         // Assert
-        Assert.Equal(1u, result); // Should return TRUE (1)
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
         
         // Verify CPINFO structure contents
         var maxCharSize = _testEnv.Memory.Read32(cpInfoPtr + 0);
@@ -140,7 +141,7 @@ public class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETCPINFO", cpAcp, cpInfoPtr);
 
         // Assert
-        Assert.Equal(1u, result); // Should return TRUE (1)
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
         
         // Should behave same as getting 1252 (the default ACP)
         var maxCharSize = _testEnv.Memory.Read32(cpInfoPtr + 0);
@@ -162,7 +163,7 @@ public class BasicFunctionsTests : IDisposable
         
         // Check that last error was set
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        Assert.Equal(87u, lastError); // ERROR_INVALID_PARAMETER
+        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
     }
 
     [Fact]
@@ -176,7 +177,7 @@ public class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETCPINFO", codePage1252, nullPointer);
 
         // Assert
-        Assert.Equal(0u, result); // Should return FALSE (0)
+        Assert.Equal(NativeTypes.Win32Bool.FALSE, result); // Should return FALSE (0)
     }
 
     [Fact]
