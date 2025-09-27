@@ -6,11 +6,13 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 {
 	private uint _allocPtr = heapBase;
 	private bool _exitRequested;
+	private string _executablePath = string.Empty;
 
 	public uint CommandLinePtr { get; private set; }
 	public uint ModuleFileNamePtr { get; private set; }
 	public uint ModuleFileNameLength { get; private set; }
 	public bool ExitRequested => _exitRequested;
+	public string ExecutablePath => _executablePath;
 
 	// Default standard handles (pseudo values)
 	public uint StdInputHandle { get; set; } = 0x00000001;
@@ -21,8 +23,13 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	private readonly Dictionary<uint, object> _handles = new();
 	private uint _nextHandle = 0x00001000; // avoid low values used as sentinels
 
+	// Loaded modules tracking
+	private readonly Dictionary<string, uint> _loadedModules = new(StringComparer.OrdinalIgnoreCase);
+	private uint _nextModuleHandle = 0x10000000;
+
 	public void InitializeStrings(string exePath, string[] args)
 	{
+		_executablePath = exePath;
 		var cmdLine = string.Join(" ", new[] { exePath }.Concat(args.Skip(1)));
 		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
 		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
@@ -96,6 +103,27 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	}
 
 	public bool CloseHandle(uint handle) => _handles.Remove(handle);
+
+	// Module loading tracking
+	public uint LoadModule(string moduleName)
+	{
+		var normalizedName = Path.GetFileName(moduleName).ToUpperInvariant();
+		if (_loadedModules.TryGetValue(normalizedName, out var existingHandle))
+		{
+			return existingHandle;
+		}
+
+		var handle = _nextModuleHandle;
+		_nextModuleHandle += 0x1000;
+		_loadedModules[normalizedName] = handle;
+		return handle;
+	}
+
+	public bool IsModuleLoaded(string moduleName)
+	{
+		var normalizedName = Path.GetFileName(moduleName).ToUpperInvariant();
+		return _loadedModules.ContainsKey(normalizedName);
+	}
 
 	// Heaps
 	private readonly Dictionary<uint, HeapState> _heaps = new();

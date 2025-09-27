@@ -46,6 +46,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "GETMODULEFILENAMEA":
 				returnValue = GetModuleFileNameA(a.Ptr(0), a.Lpstr(1), a.UInt32(2));
 				return true;
+			case "LOADLIBRARYA":
+				returnValue = LoadLibraryA(a.Lpstr(0));
+				return true;
 			case "GETSTARTUPINFOA":
 				returnValue = GetStartupInfoA(a.UInt32(0));
 				return true;
@@ -191,6 +194,48 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 	private unsafe uint GetModuleHandleA(sbyte* name)
 	{
 		return imageBase;
+	}
+
+	private unsafe uint LoadLibraryA(sbyte* lpLibFileName)
+	{
+		if (lpLibFileName == null)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		// Read the library name from memory
+		var libraryName = env.ReadAnsiString((uint)lpLibFileName);
+		if (string.IsNullOrEmpty(libraryName))
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		// Get the directory of the current executable
+		var executablePath = env.ExecutablePath;
+		var executableDir = Path.GetDirectoryName(executablePath) ?? string.Empty;
+		
+		// Check if the library is local to the executable path
+		var localLibraryPath = Path.Combine(executableDir, libraryName);
+		bool isLocalDll = File.Exists(localLibraryPath);
+
+		if (isLocalDll)
+		{
+			// DLL is local to executable path - emulate it while thunking to emulator
+			Console.WriteLine($"[Kernel32] Loading local DLL for emulation: {libraryName}");
+			return env.LoadModule(libraryName);
+		}
+		else
+		{
+			// DLL is not local - thunk to emulator's win32 syscall implementation
+			// For system DLLs like kernel32.dll, user32.dll, etc., we return a fake handle
+			// but the actual implementation will be handled by the dispatcher
+			Console.WriteLine($"[Kernel32] Loading system DLL via thunking: {libraryName}");
+			
+			// For system libraries, we still need to track them but mark them as system modules
+			return env.LoadModule(libraryName);
+		}
 	}
 
 	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
