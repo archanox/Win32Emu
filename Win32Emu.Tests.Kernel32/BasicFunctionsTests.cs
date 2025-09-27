@@ -179,6 +179,7 @@ public class BasicFunctionsTests : IDisposable
         Assert.Equal(0u, result); // Should return FALSE (0)
     }
 
+    [Fact]
     public void GetOEMCP_ShouldReturnOemCodePage()
     {
         // Act
