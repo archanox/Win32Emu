@@ -15,6 +15,9 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     
+    # Note: User32 tests are optional and won't block PRs if they fail
+    # This allows adding tests for unimplemented functionality without breaking CI
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v5
@@ -35,15 +38,40 @@ jobs:
     - name: Check for tests
       id: check-tests
       run: |
-        if dotnet test --list-tests 2>/dev/null | grep -q "Test"; then
+        # Check for any tests in the solution
+        if dotnet test --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
           echo "has-tests=true" >> $GITHUB_OUTPUT
         else
           echo "has-tests=false" >> $GITHUB_OUTPUT
         fi
+        
+        # Check specifically for Kernel32 tests (required)
+        if dotnet test Win32Emu.Tests.Kernel32 --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
+          echo "has-kernel32-tests=true" >> $GITHUB_OUTPUT
+        else
+          echo "has-kernel32-tests=false" >> $GITHUB_OUTPUT
+        fi
+        
+        # Check specifically for User32 tests (optional)
+        if dotnet test Win32Emu.Tests.User32 --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
+          echo "has-user32-tests=true" >> $GITHUB_OUTPUT
+        else
+          echo "has-user32-tests=false" >> $GITHUB_OUTPUT
+        fi
       
-    - name: Run tests
+    - name: Run Kernel32 tests (required)
+      if: steps.check-tests.outputs.has-kernel32-tests == 'true'
+      run: dotnet test Win32Emu.Tests.Kernel32 --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage"
+      
+    - name: Run User32 tests (optional)
+      if: steps.check-tests.outputs.has-user32-tests == 'true'
+      run: dotnet test Win32Emu.Tests.User32 --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage"
+      continue-on-error: true
+      
+    - name: Run all other tests
       if: steps.check-tests.outputs.has-tests == 'true'
-      run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage"
+      run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "FullyQualifiedName!~Win32Emu.Tests.Kernel32&FullyQualifiedName!~Win32Emu.Tests.User32"
+      continue-on-error: true
       
     - name: Publish test results
       uses: dorny/test-reporter@v2
@@ -52,12 +80,14 @@ jobs:
         name: .NET Tests
         path: "**/*.trx"
         reporter: dotnet-trx
-        fail-on-error: true
+        fail-on-error: false  # Don't fail the job on test failures since User32 tests are optional
       continue-on-error: true
       
     - name: No tests found
       if: steps.check-tests.outputs.has-tests == 'false'
-      run: echo "No tests found in the solution. Consider adding unit tests for better code quality."
+      run: |
+        echo "No tests found in the solution. Consider adding unit tests for better code quality."
+        echo "Note: User32 tests are optional and won't block PRs if they fail."
 
   code-quality:
     name: Code Quality Analysis

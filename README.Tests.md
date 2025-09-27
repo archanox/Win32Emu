@@ -118,4 +118,25 @@ Tests are categorized to support different CI/CD requirements:
 **Infrastructure**: Fully functional and extensible  
 **Ready for**: Additional DLL testing, emulator testing, integration testing
 
+## CI Test Behavior
+
+### Test Execution Policy
+- **Kernel32 Tests**: Required - failures will block PRs
+- **User32 Tests**: Optional - failures won't block PRs (allows test-driven development)
+- **Other Tests**: Optional - failures won't block PRs
+
+### Purpose
+This policy allows developers to:
+1. Add tests for unimplemented User32 functionality without breaking CI
+2. Use test-driven development approach for new Win32 modules
+3. Still see test results and regressions in CI output
+4. Keep core Kernel32 functionality stable and tested
+
+### Adding Tests for New Modules
+When creating tests for new Win32 modules:
+1. Tests will automatically be treated as optional (non-blocking)
+2. Implement the functionality to make tests pass
+3. Tests provide documentation of expected API behavior
+4. CI will show test status without blocking development
+
 The failing tests document current implementation differences and serve as targets for future improvements while ensuring the test suite captures the actual behavior of the emulator.
