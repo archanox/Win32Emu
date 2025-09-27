@@ -69,6 +69,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	}
 
 	public byte[] MemReadBytes(uint addr, int count) => vm.GetSpan(addr, count);
+	public byte MemRead8(uint addr) => vm.Read8(addr);
 	public void MemWriteBytes(uint addr, ReadOnlySpan<byte> data) => vm.WriteBytes(addr, data);
 	public void MemWrite32(uint addr, uint value) => vm.Write32(addr, value);
 	public void MemWrite16(uint addr, ushort value) => vm.Write16(addr, value);
