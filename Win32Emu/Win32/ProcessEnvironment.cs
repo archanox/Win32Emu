@@ -21,12 +21,31 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	private readonly Dictionary<uint, object> _handles = new();
 	private uint _nextHandle = 0x00001000; // avoid low values used as sentinels
 
+	// Environment variables (emulated, not from system)
+	private readonly Dictionary<string, string> _environmentVariables = new();
+
 	public void InitializeStrings(string exePath, string[] args)
 	{
 		var cmdLine = string.Join(" ", new[] { exePath }.Concat(args.Skip(1)));
 		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
 		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
 		ModuleFileNameLength = (uint)exePath.Length;
+
+		// Initialize with some default environment variables
+		InitializeDefaultEnvironmentVariables();
+	}
+
+	private void InitializeDefaultEnvironmentVariables()
+	{
+		// Set some common Windows environment variables for emulation
+		_environmentVariables["PATH"] = @"C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem";
+		_environmentVariables["WINDIR"] = @"C:\WINDOWS";
+		_environmentVariables["SYSTEMROOT"] = @"C:\WINDOWS";
+		_environmentVariables["TEMP"] = @"C:\TEMP";
+		_environmentVariables["TMP"] = @"C:\TEMP";
+		_environmentVariables["COMPUTERNAME"] = "WIN32EMU";
+		_environmentVariables["USERNAME"] = "User";
+		_environmentVariables["USERDOMAIN"] = "WIN32EMU";
 	}
 
 	public uint SimpleAlloc(uint size)
@@ -43,6 +62,14 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	public uint WriteAnsiString(string s)
 	{
 		var bytes = System.Text.Encoding.ASCII.GetBytes(s);
+		var addr = SimpleAlloc((uint)bytes.Length);
+		vm.WriteBytes(addr, bytes);
+		return addr;
+	}
+
+	public uint WriteUnicodeString(string s)
+	{
+		var bytes = System.Text.Encoding.Unicode.GetBytes(s);
 		var addr = SimpleAlloc((uint)bytes.Length);
 		vm.WriteBytes(addr, bytes);
 		return addr;
@@ -66,6 +93,33 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 		}
 
 		return System.Text.Encoding.ASCII.GetString(buf.ToArray());
+	}
+
+	/// <summary>
+	/// Creates a Windows-format environment strings block in Unicode.
+	/// Returns a pointer to a double-null-terminated block of null-terminated strings.
+	/// Format: "VAR1=value1\0VAR2=value2\0...VARn=valuen\0\0"
+	/// </summary>
+	public uint GetEnvironmentStringsW()
+	{
+		var envBlock = new System.Text.StringBuilder();
+		
+		// Add each environment variable as "NAME=VALUE\0"
+		foreach (var kvp in _environmentVariables.OrderBy(x => x.Key))
+		{
+			envBlock.Append($"{kvp.Key}={kvp.Value}");
+			envBlock.Append('\0'); // null terminate each string
+		}
+		
+		// Add final null terminator for the block
+		envBlock.Append('\0');
+		
+		// Convert to bytes and allocate memory
+		var bytes = System.Text.Encoding.Unicode.GetBytes(envBlock.ToString());
+		var addr = SimpleAlloc((uint)bytes.Length);
+		vm.WriteBytes(addr, bytes);
+		
+		return addr;
 	}
 
 	public byte[] MemReadBytes(uint addr, int count) => vm.GetSpan(addr, count);
