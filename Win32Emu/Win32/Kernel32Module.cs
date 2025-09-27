@@ -274,8 +274,24 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			{
 				charType |= CT_CTYPE1_CNTRL;
 			}
-			else if ((ch >= '!' && ch <= '/') || (ch >= ':' && ch <= '@') || 
-			         (ch >= '[' && ch <= '`') || (ch >= '{' && ch <= '~'))
+			// ASCII punctuation ranges:
+			// '!'..'/'  (33-47): !"#$%&'()*+,-./
+			// ':'..'@'  (58-64): :;<=>?@
+			// '['..'`'  (91-96): [\]^_`
+			// '{'..'~'  (123-126): {|}~
+			const byte PUNCT_RANGE1_START = (byte)'!';
+			const byte PUNCT_RANGE1_END   = (byte)'/';
+			const byte PUNCT_RANGE2_START = (byte)':';
+			const byte PUNCT_RANGE2_END   = (byte)'@';
+			const byte PUNCT_RANGE3_START = (byte)'[';
+			const byte PUNCT_RANGE3_END   = (byte)'`';
+			const byte PUNCT_RANGE4_START = (byte)'{';
+			const byte PUNCT_RANGE4_END   = (byte)'~';
+
+			else if ((ch >= PUNCT_RANGE1_START && ch <= PUNCT_RANGE1_END) ||
+			         (ch >= PUNCT_RANGE2_START && ch <= PUNCT_RANGE2_END) ||
+			         (ch >= PUNCT_RANGE3_START && ch <= PUNCT_RANGE3_END) ||
+			         (ch >= PUNCT_RANGE4_START && ch <= PUNCT_RANGE4_END))
 			{
 				charType |= CT_CTYPE1_PUNCT;
 			}
