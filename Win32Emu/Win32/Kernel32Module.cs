@@ -110,6 +110,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "SETHANDLECOUNT":
 				returnValue = SetHandleCount(a.UInt32(0));
 				return true;
+			case "UNHANDLEDEXCEPTIONFILTER":
+				returnValue = UnhandledExceptionFilter(a.UInt32(0));
+				return true;
 
 			default:
 				Console.WriteLine($"[Kernel32] Unimplemented export: {export}");
@@ -381,6 +384,16 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		// In Win32, it's essentially a no-op that returns the requested count
 		// Modern systems ignore this and have much higher handle limits
 		return uNumber; // Return the requested number as if it was successfully set
+	}
+
+	private unsafe uint UnhandledExceptionFilter(uint exceptionInfo)
+	{
+		// UnhandledExceptionFilter processes unhandled exceptions
+		// exceptionInfo is a pointer to an EXCEPTION_POINTERS structure
+		// For the emulator, we'll return EXCEPTION_EXECUTE_HANDLER (1) to terminate the process
+		// This is the safest default behavior for unhandled exceptions in an emulated environment
+		Console.WriteLine($"[Kernel32] UnhandledExceptionFilter called with exceptionInfo=0x{exceptionInfo:X8}");
+		return 1; // EXCEPTION_EXECUTE_HANDLER
 	}
 
 	private unsafe string ReadCurrentModulePath() => "game.exe";

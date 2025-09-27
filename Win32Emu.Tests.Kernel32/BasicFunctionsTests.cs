@@ -203,6 +203,32 @@ public class BasicFunctionsTests : IDisposable
         Assert.True(_testEnv.ProcessEnv.ExitRequested);
     }
 
+    [Fact]
+    public void UnhandledExceptionFilter_ShouldReturnExceptionExecuteHandler()
+    {
+        // Arrange
+        const uint fakeExceptionInfo = 0x12345678; // Fake exception info pointer
+
+        // Act
+        var result = _testEnv.CallKernel32Api("UNHANDLEDEXCEPTIONFILTER", fakeExceptionInfo);
+
+        // Assert
+        Assert.Equal(1u, result); // Should return EXCEPTION_EXECUTE_HANDLER (1)
+    }
+
+    [Fact]
+    public void UnhandledExceptionFilter_WithNullPointer_ShouldReturnExceptionExecuteHandler()
+    {
+        // Arrange
+        const uint nullPointer = 0;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("UNHANDLEDEXCEPTIONFILTER", nullPointer);
+
+        // Assert
+        Assert.Equal(1u, result); // Should return EXCEPTION_EXECUTE_HANDLER (1) even with null pointer
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
