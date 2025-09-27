@@ -114,6 +114,11 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				returnValue = SetHandleCount(a.UInt32(0));
 				return true;
 
+			// Performance/timing functions
+			case "QUERYPERFORMANCECOUNTER":
+				returnValue = QueryPerformanceCounter(a.UInt32(0));
+				return true;
+
 			default:
 				Console.WriteLine($"[Kernel32] Unimplemented export: {export}");
 				return false;
@@ -391,6 +396,35 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		// In Win32, it's essentially a no-op that returns the requested count
 		// Modern systems ignore this and have much higher handle limits
 		return uNumber; // Return the requested number as if it was successfully set
+	}
+
+	private unsafe uint QueryPerformanceCounter(uint lpPerformanceCount)
+	{
+		// QueryPerformanceCounter retrieves the current value of the performance counter
+		// lpPerformanceCount is a pointer to a LARGE_INTEGER (64-bit value)
+		if (lpPerformanceCount == 0)
+		{
+			_lastError = 87; // ERROR_INVALID_PARAMETER
+			return 0; // FALSE
+		}
+
+		try
+		{
+			// Use .NET's Stopwatch.GetTimestamp() which provides high-resolution timestamp
+			var timestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+			
+			// Write the 64-bit timestamp to the provided memory location
+			// LARGE_INTEGER is a 64-bit value, so we write it as two 32-bit values
+			env.MemWrite32(lpPerformanceCount, (uint)(timestamp & 0xFFFFFFFF)); // Low part
+			env.MemWrite32(lpPerformanceCount + 4, (uint)(timestamp >> 32)); // High part
+			
+			return 1; // TRUE - success
+		}
+		catch
+		{
+			_lastError = 87; // ERROR_INVALID_PARAMETER
+			return 0; // FALSE
+		}
 	}
 
 	private unsafe string ReadCurrentModulePath() => "game.exe";
