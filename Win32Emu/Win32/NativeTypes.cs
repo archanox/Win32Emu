@@ -89,4 +89,12 @@ public static class NativeTypes
 		public const uint FALSE = 0;
 		public const uint TRUE = 1;
 	}
+
+	// Exception handling return values for UnhandledExceptionFilter
+	public static class ExceptionHandling
+	{
+		public const uint EXCEPTION_EXECUTE_HANDLER = 1;      // Terminate the process
+		public const uint EXCEPTION_CONTINUE_SEARCH = 0;      // Continue searching for a handler
+		public const uint EXCEPTION_CONTINUE_EXECUTION = unchecked((uint)-1); // Continue execution (-1 as uint)
+	}
 }

@@ -400,10 +400,50 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 	{
 		// UnhandledExceptionFilter processes unhandled exceptions
 		// exceptionInfo is a pointer to an EXCEPTION_POINTERS structure
-		// For the emulator, we'll return EXCEPTION_EXECUTE_HANDLER (1) to terminate the process
-		// This is the safest default behavior for unhandled exceptions in an emulated environment
 		Console.WriteLine($"[Kernel32] UnhandledExceptionFilter called with exceptionInfo=0x{exceptionInfo:X8}");
-		return 1; // EXCEPTION_EXECUTE_HANDLER
+		
+		if (exceptionInfo != 0)
+		{
+			try
+			{
+				// EXCEPTION_POINTERS structure:
+				// typedef struct _EXCEPTION_POINTERS {
+				//   PEXCEPTION_RECORD ExceptionRecord;    // offset 0, 4 bytes
+				//   PCONTEXT          ContextRecord;       // offset 4, 4 bytes  
+				// } EXCEPTION_POINTERS;
+				
+				var exceptionRecordPtr = env.MemRead32(exceptionInfo);
+				var contextRecordPtr = env.MemRead32(exceptionInfo + 4);
+				
+				Console.WriteLine($"[Kernel32]   ExceptionRecord: 0x{exceptionRecordPtr:X8}");
+				Console.WriteLine($"[Kernel32]   ContextRecord: 0x{contextRecordPtr:X8}");
+				
+				// If we have a valid exception record, read some basic info
+				if (exceptionRecordPtr != 0)
+				{
+					// EXCEPTION_RECORD structure (first few fields):
+					//   DWORD ExceptionCode;        // offset 0
+					//   DWORD ExceptionFlags;       // offset 4
+					//   PEXCEPTION_RECORD ExceptionRecord; // offset 8
+					//   PVOID ExceptionAddress;     // offset 12
+					var exceptionCode = env.MemRead32(exceptionRecordPtr);
+					var exceptionFlags = env.MemRead32(exceptionRecordPtr + 4);
+					var exceptionAddress = env.MemRead32(exceptionRecordPtr + 12);
+					
+					Console.WriteLine($"[Kernel32]     ExceptionCode: 0x{exceptionCode:X8}");
+					Console.WriteLine($"[Kernel32]     ExceptionFlags: 0x{exceptionFlags:X8}");
+					Console.WriteLine($"[Kernel32]     ExceptionAddress: 0x{exceptionAddress:X8}");
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[Kernel32] Error reading exception info: {ex.Message}");
+			}
+		}
+		
+		// For the emulator, we'll return EXCEPTION_EXECUTE_HANDLER to terminate the process
+		// This is the safest default behavior for unhandled exceptions in an emulated environment
+		return NativeTypes.ExceptionHandling.EXCEPTION_EXECUTE_HANDLER;
 	}
 
 	private unsafe string ReadCurrentModulePath() => "game.exe";
