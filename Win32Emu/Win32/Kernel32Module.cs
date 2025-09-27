@@ -110,6 +110,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "SETHANDLECOUNT":
 				returnValue = SetHandleCount(a.UInt32(0));
 				return true;
+			case "WIDECHARTOMULTIBYTE":
+				returnValue = WideCharToMultiByte(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+				return true;
 
 			default:
 				Console.WriteLine($"[Kernel32] Unimplemented export: {export}");
@@ -381,6 +384,113 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		// In Win32, it's essentially a no-op that returns the requested count
 		// Modern systems ignore this and have much higher handle limits
 		return uNumber; // Return the requested number as if it was successfully set
+	}
+
+	private unsafe uint WideCharToMultiByte(uint codePage, uint dwFlags, uint lpWideCharStr, uint cchWideChar, 
+		uint lpMultiByteStr, uint cbMultiByte, uint lpDefaultChar, uint lpUsedDefaultChar)
+	{
+		Console.WriteLine($"[Kernel32] WideCharToMultiByte called: codePage={codePage}, lpWideCharStr=0x{lpWideCharStr:X}, cchWideChar={cchWideChar}, cbMultiByte={cbMultiByte}");
+		
+		try
+		{
+			// Handle null input string
+			if (lpWideCharStr == 0)
+			{
+				Console.WriteLine("[Kernel32] WideCharToMultiByte: Null input string");
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			// Handle special code page values
+			uint actualCodePage = codePage switch
+			{
+				0 => GetACP(),        // CP_ACP - system default Windows ANSI code page
+				1 => GetOEMCP(),      // CP_OEMCP - system default OEM code page
+				_ => codePage
+			};
+
+			// Read the wide character string from memory
+			string wideString;
+			if (cchWideChar == 0xFFFFFFFF) // -1 indicates null-terminated string
+			{
+				// Read null-terminated wide string
+				var wideChars = new List<char>();
+				uint addr = lpWideCharStr;
+				while (true)
+				{
+					ushort wideChar = env.MemRead16(addr);
+					if (wideChar == 0) break;
+					wideChars.Add((char)wideChar);
+					addr += 2;
+				}
+				wideString = new string(wideChars.ToArray());
+			}
+			else
+			{
+				// Read specified number of wide characters
+				var wideChars = new char[cchWideChar];
+				for (uint i = 0; i < cchWideChar; i++)
+				{
+					wideChars[i] = (char)env.MemRead16(lpWideCharStr + i * 2);
+				}
+				wideString = new string(wideChars);
+			}
+
+			// Convert to multi-byte string based on code page
+			byte[] multiByteBytes;
+			switch (actualCodePage)
+			{
+				case 1252: // Windows-1252
+				case 437:  // OEM US
+				case 850:  // OEM Latin-1
+				case 1250: // Windows Central Europe
+				case 1251: // Windows Cyrillic
+				case 28591: // ISO 8859-1
+					// Use ASCII for these single-byte code pages (simplified)
+					multiByteBytes = System.Text.Encoding.ASCII.GetBytes(wideString);
+					break;
+				case 65001: // UTF-8
+					multiByteBytes = System.Text.Encoding.UTF8.GetBytes(wideString);
+					break;
+				default:
+					// Unsupported code page
+					_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+					return 0;
+			}
+
+			// If cbMultiByte is 0, return required buffer size
+			if (cbMultiByte == 0)
+			{
+				return (uint)multiByteBytes.Length;
+			}
+
+			// Check if output buffer is large enough
+			if (multiByteBytes.Length > cbMultiByte)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+				return 0;
+			}
+
+			// Copy converted bytes to output buffer
+			if (lpMultiByteStr != 0)
+			{
+				env.MemWriteBytes(lpMultiByteStr, multiByteBytes);
+			}
+
+			// Clear the "used default char" flag if provided
+			if (lpUsedDefaultChar != 0)
+			{
+				env.MemWrite32(lpUsedDefaultChar, 0); // FALSE - no default char used (simplified)
+			}
+
+			return (uint)multiByteBytes.Length;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"[Kernel32] WideCharToMultiByte failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
 	}
 
 	private unsafe string ReadCurrentModulePath() => "game.exe";
