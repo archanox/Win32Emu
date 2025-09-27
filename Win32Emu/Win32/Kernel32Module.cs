@@ -251,7 +251,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
 
 	// File I/O implementations
-	private uint CreateFileA(uint lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecAttr,
+	private unsafe uint CreateFileA(uint lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecAttr,
 		uint dwCreationDisposition, uint dwFlagsAndAttributes, uint hTemplateFile)
 	{
 		try
@@ -383,5 +383,5 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		return uNumber; // Return the requested number as if it was successfully set
 	}
 
-	private string ReadCurrentModulePath() => "game.exe";
+	private unsafe string ReadCurrentModulePath() => "game.exe";
 }
