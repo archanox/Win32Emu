@@ -396,21 +396,10 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		return uNumber; // Return the requested number as if it was successfully set
 	}
 
-	private unsafe uint WideCharToMultiByte(uint p0, uint p1, uint p2, uint p3, uint p4, uint p5, uint p6, uint p7)
+	private unsafe uint WideCharToMultiByte(uint codePage, uint dwFlags, uint lpWideCharStr, uint cchWideChar, uint lpMultiByteStr, uint cbMultiByte, uint lpDefaultChar, uint lpUsedDefaultChar)
 	{
-		// WORKAROUND: The parameters seem to be in wrong order from the test framework
-		// Based on debug output, remap them:
-		// Expected: codePage=1252, dwFlags=0, lpWideCharStr=0x1000020, cchWideChar=4, lpMultiByteStr=0, cbMultiByte=0, lpDefaultChar=0, lpUsedDefaultChar=0
-		// Actual:   p0=0, p1=0, p2=0x0, p3=0, p4=0x4, p5=16777248, p6=0, p7=1252
-		
-		uint codePage = p7;           
-		uint dwFlags = p0;            
-		uint lpWideCharStr = p5;      
-		uint cchWideChar = p4;        
-		uint lpMultiByteStr = p2;     
-		uint cbMultiByte = p1;        
-		uint lpDefaultChar = p6;      
-		uint lpUsedDefaultChar = p3;  
+		// Parameters now match Win32 API order:
+		// codePage, dwFlags, lpWideCharStr, cchWideChar, lpMultiByteStr, cbMultiByte, lpDefaultChar, lpUsedDefaultChar
 		
 		try
 		{
