@@ -470,6 +470,11 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			// If cbMultiByte is 0, return required buffer size
 			if (cbMultiByte == 0)
 			{
+				// If input is null-terminated, include space for null terminator in required size
+				if (cchWideChar == unchecked((uint)-1))
+				{
+					return (uint)(multiByteBytes.Length + 1);
+				}
 				return (uint)multiByteBytes.Length;
 			}
 
