@@ -100,6 +100,86 @@ public class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
+    public void GetCPInfo_WithValidCodePage_ShouldReturnSuccessAndFillStructure()
+    {
+        // Arrange
+        var cpInfoPtr = _testEnv.AllocateMemory(20); // CPINFO structure is 20 bytes
+        const uint codePage1252 = 1252; // Windows-1252
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETCPINFO", codePage1252, cpInfoPtr);
+
+        // Assert
+        Assert.Equal(1u, result); // Should return TRUE (1)
+        
+        // Verify CPINFO structure contents
+        var maxCharSize = _testEnv.Memory.Read32(cpInfoPtr + 0);
+        var defaultChar0 = _testEnv.Memory.Read8(cpInfoPtr + 4);
+        var defaultChar1 = _testEnv.Memory.Read8(cpInfoPtr + 5);
+        
+        Assert.Equal(1u, maxCharSize); // Single-byte code page
+        Assert.Equal(0x3F, defaultChar0); // '?' character
+        Assert.Equal(0x00, defaultChar1); // Null terminator
+        
+        // Check that LeadByte array is all zeros (single-byte code page)
+        for (uint i = 0; i < 12; i++)
+        {
+            var leadByte = _testEnv.Memory.Read8(cpInfoPtr + 6 + i);
+            Assert.Equal(0, leadByte);
+        }
+    }
+
+    [Fact]
+    public void GetCPInfo_WithCodePageACP_ShouldReturnSuccessAndUseDefaultCodePage()
+    {
+        // Arrange
+        var cpInfoPtr = _testEnv.AllocateMemory(20);
+        const uint cpAcp = 0; // CP_ACP - system default ANSI code page
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETCPINFO", cpAcp, cpInfoPtr);
+
+        // Assert
+        Assert.Equal(1u, result); // Should return TRUE (1)
+        
+        // Should behave same as getting 1252 (the default ACP)
+        var maxCharSize = _testEnv.Memory.Read32(cpInfoPtr + 0);
+        Assert.Equal(1u, maxCharSize);
+    }
+
+    [Fact]
+    public void GetCPInfo_WithUnsupportedCodePage_ShouldReturnFalse()
+    {
+        // Arrange
+        var cpInfoPtr = _testEnv.AllocateMemory(20);
+        const uint unsupportedCodePage = 65001; // UTF-8 (not supported in our implementation)
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETCPINFO", unsupportedCodePage, cpInfoPtr);
+
+        // Assert
+        Assert.Equal(0u, result); // Should return FALSE (0)
+        
+        // Check that last error was set
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal(87u, lastError); // ERROR_INVALID_PARAMETER
+    }
+
+    [Fact]
+    public void GetCPInfo_WithNullPointer_ShouldReturnFalse()
+    {
+        // Arrange
+        const uint codePage1252 = 1252;
+        const uint nullPointer = 0;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETCPINFO", codePage1252, nullPointer);
+
+        // Assert
+        Assert.Equal(0u, result); // Should return FALSE (0)
+    }
+
+    [Fact]
     public void ExitProcess_ShouldSetExitRequestedFlag()
     {
         // Arrange
