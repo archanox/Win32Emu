@@ -102,21 +102,20 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	/// </summary>
 	public uint GetEnvironmentStringsW()
 	{
-		var envBlock = new List<char>();
+		var envBlock = new System.Text.StringBuilder();
 		
 		// Add each environment variable as "NAME=VALUE\0"
 		foreach (var kvp in _environmentVariables.OrderBy(x => x.Key))
 		{
-			var envString = $"{kvp.Key}={kvp.Value}";
-			envBlock.AddRange(envString.ToCharArray());
-			envBlock.Add('\0'); // null terminate each string
+			envBlock.Append($"{kvp.Key}={kvp.Value}");
+			envBlock.Append('\0'); // null terminate each string
 		}
 		
 		// Add final null terminator for the block
-		envBlock.Add('\0');
+		envBlock.Append('\0');
 		
 		// Convert to bytes and allocate memory
-		var bytes = System.Text.Encoding.Unicode.GetBytes(envBlock.ToArray());
+		var bytes = System.Text.Encoding.Unicode.GetBytes(envBlock.ToString());
 		var addr = SimpleAlloc((uint)bytes.Length);
 		vm.WriteBytes(addr, bytes);
 		
