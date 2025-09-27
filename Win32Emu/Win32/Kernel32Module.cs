@@ -404,8 +404,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		// lpPerformanceCount is a pointer to a LARGE_INTEGER (64-bit value)
 		if (lpPerformanceCount == 0)
 		{
-			_lastError = 87; // ERROR_INVALID_PARAMETER
-			return 0; // FALSE
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 
 		try
@@ -414,16 +414,14 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			var timestamp = System.Diagnostics.Stopwatch.GetTimestamp();
 			
 			// Write the 64-bit timestamp to the provided memory location
-			// LARGE_INTEGER is a 64-bit value, so we write it as two 32-bit values
-			env.MemWrite32(lpPerformanceCount, (uint)(timestamp & 0xFFFFFFFF)); // Low part
-			env.MemWrite32(lpPerformanceCount + 4, (uint)(timestamp >> 32)); // High part
+			env.MemWrite64(lpPerformanceCount, (ulong)timestamp);
 			
-			return 1; // TRUE - success
+			return NativeTypes.Win32Bool.TRUE;
 		}
 		catch
 		{
-			_lastError = 87; // ERROR_INVALID_PARAMETER
-			return 0; // FALSE
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
