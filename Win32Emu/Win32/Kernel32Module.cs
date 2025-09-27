@@ -55,6 +55,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "GETENVIRONMENTSTRINGSW":
 				returnValue = GetEnvironmentStringsW();
 				return true;
+			case "FREEENVIRONMENTSTRINGSW":
+				returnValue = FreeEnvironmentStringsW(a.UInt32(0));
+				return true;
 
 			// Std handles
 			case "GETSTDHANDLE":
@@ -214,6 +217,24 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		// Return pointer to Unicode environment strings block
 		// This will be obtained from emulated environment variables, not system ones
 		return env.GetEnvironmentStringsW();
+	}
+
+	private unsafe uint FreeEnvironmentStringsW(uint lpszEnvironmentBlock)
+	{
+		// In the Windows API, FreeEnvironmentStringsW frees the memory allocated by GetEnvironmentStringsW
+		// However, our emulator uses a simple bump allocator that doesn't support freeing individual blocks
+		// For API compatibility, we accept the call and always return success (TRUE)
+		// The memory will be cleaned up when the process terminates
+		
+		// Validate that the pointer is not null (basic error checking)
+		if (lpszEnvironmentBlock == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		
+		// Return success - in a real implementation this would free the memory
+		return NativeTypes.Win32Bool.TRUE;
 	}
 
 	private unsafe uint GetStartupInfoA(uint lpStartupInfo)
