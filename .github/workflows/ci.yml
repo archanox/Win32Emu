@@ -51,9 +51,9 @@ jobs:
         for dll in Kernel32 User32 Gdi32 DDraw DInput WinMM DSound DPlayX; do
           if dotnet test "Win32Emu.Tests.$dll" --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null 2>&1; then
             dll_tests="$dll_tests Win32Emu.Tests.$dll"
-            echo "has-${dll,,}-tests=true" >> $GITHUB_OUTPUT
+            echo "has-$(echo $dll | tr '[:upper:]' '[:lower:]')-tests=true" >> $GITHUB_OUTPUT
           else
-            echo "has-${dll,,}-tests=false" >> $GITHUB_OUTPUT
+            echo "has-$(echo $dll | tr '[:upper:]' '[:lower:]')-tests=false" >> $GITHUB_OUTPUT
           fi
         done
         echo "dll-test-projects=$dll_tests" >> $GITHUB_OUTPUT
