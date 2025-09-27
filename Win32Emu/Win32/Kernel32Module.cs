@@ -1,9 +1,10 @@
 using Win32Emu.Cpu;
 using Win32Emu.Memory;
+using Win32Emu.Logging;
 
 namespace Win32Emu.Win32;
 
-public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32ModuleUnsafe
+public class Kernel32Module(ProcessEnvironment env, uint imageBase, IScopedLogger logger) : IWin32ModuleUnsafe
 {
 	public string Name => "KERNEL32.DLL";
 
@@ -112,7 +113,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				return true;
 
 			default:
-				Console.WriteLine($"[Kernel32] Unimplemented export: {export}");
+				logger.LogWarning("Unimplemented export: {Export}", export);
 				return false;
 		}
 	}
@@ -135,7 +136,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 
 	private unsafe uint ExitProcess(uint code)
 	{
-		Console.WriteLine($"[Kernel32] ExitProcess({code})");
+		using var scope = logger.BeginScope("ExitProcess");
+		logger.LogInformation("Process exit requested with code: {ExitCode}", code);
 		env.RequestExit();
 		return 0;
 	}
@@ -277,7 +279,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"[Kernel32] CreateFileA failed: {ex.Message}");
+			logger.LogError(ex, "CreateFileA failed");
 			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -297,7 +299,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"[Kernel32] ReadFile failed: {ex.Message}");
+			logger.LogError(ex, "ReadFile failed");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -316,7 +318,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"[Kernel32] WriteFile failed: {ex.Message}");
+			logger.LogError(ex, "WriteFile failed");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 			return NativeTypes.Win32Bool.FALSE;
 		}

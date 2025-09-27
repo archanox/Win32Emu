@@ -4,6 +4,7 @@ using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
 using Win32Emu.Debugging;
+using Win32Emu.Logging;
 using System.Linq;
 
 namespace Win32Emu
@@ -14,8 +15,9 @@ namespace Win32Emu
 		{
 			if (args.Length == 0)
 			{
-				Console.WriteLine("Usage: Win32Emu <path-to-pe> [--debug]");
+				Console.WriteLine("Usage: Win32Emu <path-to-pe> [--debug] [--otel-endpoint <endpoint>]");
 				Console.WriteLine("  --debug: Enable enhanced debugging to catch 0xFFFFFFFD memory access errors");
+				Console.WriteLine("  --otel-endpoint <endpoint>: Enable HTTP OpenTelemetry export to specified endpoint");
 				return;
 			}
 
@@ -23,45 +25,66 @@ namespace Win32Emu
 			var debugMode = args.Contains("--debug");
 			var path = args[0];
 			
-			if (!File.Exists(path))
+			// Parse OpenTelemetry endpoint
+			string? otlpEndpoint = null;
+			var otlpIndex = Array.IndexOf(args, "--otel-endpoint");
+			if (otlpIndex >= 0 && otlpIndex + 1 < args.Length)
 			{
-				Console.WriteLine($"File not found: {path}");
-				return;
+				otlpEndpoint = args[otlpIndex + 1];
 			}
-
-			Console.WriteLine($"[Loader] Loading PE: {path}");
-			var vm = new VirtualMemory();
-			var loader = new PeImageLoader(vm);
-			var image = loader.Load(path);
-			Console.WriteLine(
-				$"[Loader] Image base=0x{image.BaseAddress:X8} EntryPoint=0x{image.EntryPointAddress:X8} Size=0x{image.ImageSize:X}");
-			Console.WriteLine($"[Loader] Imports mapped: {image.ImportAddressMap.Count}");
-
-			var env = new ProcessEnvironment(vm);
-			env.InitializeStrings(path, args.Where(a => a != "--debug").ToArray());
-
-			var cpu = new IcedCpu(vm);
-			cpu.SetEip(image.EntryPointAddress);
-			cpu.SetRegister("ESP", 0x00200000); // crude stack top
-
-			var dispatcher = new Win32Dispatcher();
-			dispatcher.RegisterModule(new Kernel32Module(env, image.BaseAddress));
-
-			if (debugMode)
+			
+			// Initialize logging system
+			Logging.LoggerFactory.Initialize(enableHttpExport: !string.IsNullOrEmpty(otlpEndpoint), otlpEndpoint);
+			var logger = Logging.LoggerFactory.CreateScopedLogger("Win32Emu");
+			
+			try
 			{
-				RunWithEnhancedDebugging(cpu, vm, env, dispatcher, image);
-			}
-			else
-			{
-				RunNormal(cpu, vm, env, dispatcher, image);
-			}
+				if (!File.Exists(path))
+				{
+					logger.LogError("File not found: {FilePath}", path);
+					return;
+				}
 
-			Console.WriteLine(
-				env.ExitRequested ? "[Exit] Process requested exit." : "[Exit] Instruction limit reached.");
+				using var loaderScope = logger.BeginScope("PELoader");
+				logger.LogInformation("Loading PE: {FilePath}", path);
+				var vm = new VirtualMemory();
+				var loader = new PeImageLoader(vm);
+				var image = loader.Load(path);
+				logger.LogInformation("Image loaded - Base=0x{BaseAddress:X8} EntryPoint=0x{EntryPointAddress:X8} Size=0x{ImageSize:X}", 
+					image.BaseAddress, image.EntryPointAddress, image.ImageSize);
+				logger.LogInformation("Imports mapped: {ImportCount}", image.ImportAddressMap.Count);
+
+				var env = new ProcessEnvironment(vm);
+				env.InitializeStrings(path, args.Where(a => a != "--debug" && a != "--otel-endpoint" && a != otlpEndpoint).ToArray());
+
+				var cpu = new IcedCpu(vm);
+				cpu.SetEip(image.EntryPointAddress);
+				cpu.SetRegister("ESP", 0x00200000); // crude stack top
+
+				var dispatcher = new Win32Dispatcher();
+				var kernel32Logger = Logging.LoggerFactory.CreateScopedLogger("Kernel32Module");
+				dispatcher.RegisterModule(new Kernel32Module(env, image.BaseAddress, kernel32Logger));
+
+				if (debugMode)
+				{
+					RunWithEnhancedDebugging(cpu, vm, env, dispatcher, image, logger);
+				}
+				else
+				{
+					RunNormal(cpu, vm, env, dispatcher, image, logger);
+				}
+
+				logger.LogInformation(env.ExitRequested ? "Process requested exit." : "Instruction limit reached.");
+			}
+			finally
+			{
+				Logging.LoggerFactory.Dispose();
+			}
 		}
 
-		private static void RunNormal(IcedCpu cpu, VirtualMemory vm, ProcessEnvironment env, Win32Dispatcher dispatcher, LoadedImage image)
+		private static void RunNormal(IcedCpu cpu, VirtualMemory vm, ProcessEnvironment env, Win32Dispatcher dispatcher, LoadedImage image, IScopedLogger logger)
 		{
+			using var executionScope = logger.BeginScope("Execution");
 			const int maxInstr = 500000;
 			for (var i = 0; i < maxInstr && !env.ExitRequested; i++)
 			{
@@ -70,10 +93,11 @@ namespace Win32Emu
 				{
 					var dll = imp.dll.ToUpperInvariant();
 					var name = imp.name;
-					Console.WriteLine($"[Import] {dll}!{name}");
+					using var importScope = logger.BeginScope($"Import.{dll}.{name}");
+					logger.LogInformation("Calling import: {Dll}!{Function}", dll, name);
 					if (dispatcher.TryInvoke(dll, name, cpu, vm, out var ret, out var argBytes))
 					{
-						Console.WriteLine($"[Import] Returned 0x{ret:X8}");
+						logger.LogDebug("Import returned: 0x{ReturnValue:X8}", ret);
 						var esp = cpu.GetRegister("ESP");
 						var retEip = vm.Read32(esp);
 						esp += 4 + (uint)argBytes;
@@ -84,8 +108,9 @@ namespace Win32Emu
 			}
 		}
 
-		private static void RunWithEnhancedDebugging(IcedCpu cpu, VirtualMemory vm, ProcessEnvironment env, Win32Dispatcher dispatcher, LoadedImage image)
+		private static void RunWithEnhancedDebugging(IcedCpu cpu, VirtualMemory vm, ProcessEnvironment env, Win32Dispatcher dispatcher, LoadedImage image, IScopedLogger logger)
 		{
+			using var debugScope = logger.BeginScope("EnhancedDebugging");
 			// *** ENHANCED DEBUGGING SETUP ***
 			var debugger = cpu.CreateDebugger(vm);
 			debugger.EnableSuspiciousRegisterDetection = true;
@@ -93,9 +118,9 @@ namespace Win32Emu
 			debugger.LogAllInstructions = false; // Set to true for full instruction trace
 			debugger.SuspiciousThreshold = 0x1000; // Adjust if needed
 
-			Console.WriteLine("[Debug] Enhanced debugging enabled - will catch 0xFFFFFFFD errors");
-			Console.WriteLine("[Debug] Monitoring for suspicious register values");
-			Console.WriteLine("[Debug] Use --debug argument to enable this mode");
+			logger.LogInformation("Enhanced debugging enabled - will catch 0xFFFFFFFD errors");
+			logger.LogInformation("Monitoring for suspicious register values");
+			logger.LogDebug("Use --debug argument to enable this mode");
 			
 			const int maxInstr = 500000;
 			for (var i = 0; i < maxInstr && !env.ExitRequested; i++)
@@ -105,19 +130,20 @@ namespace Win32Emu
 				// *** CHECK FOR SYNTHETIC IMPORT ADDRESS EXECUTION ***
 				if (currentEip >= 0x0F000000 && currentEip < 0x10000000)
 				{
-					Console.WriteLine($"\n[Debug] *** CPU TRYING TO EXECUTE SYNTHETIC IMPORT ADDRESS! ***");
-					Console.WriteLine($"[Debug] EIP=0x{currentEip:X8} at instruction {i}");
+					using var synthScope = logger.BeginScope("SyntheticImportAddress");
+					logger.LogWarning("CPU trying to execute synthetic import address!");
+					logger.LogDebug("EIP=0x{CurrentEip:X8} at instruction {InstructionIndex}", currentEip, i);
 					
 					if (image.ImportAddressMap.TryGetValue(currentEip, out var importInfo))
 					{
-						Console.WriteLine($"[Debug] This is import: {importInfo.dll}!{importInfo.name}");
+						logger.LogDebug("This is import: {Dll}!{Function}", importInfo.dll, importInfo.name);
 					}
 					else
 					{
-						Console.WriteLine($"[Debug] Unknown synthetic address - not in import map");
+						logger.LogWarning("Unknown synthetic address - not in import map");
 					}
 					
-					Console.WriteLine("[Debug] This should now execute an INT3 stub that will be handled as an import call");
+					logger.LogDebug("This should now execute an INT3 stub that will be handled as an import call");
 					cpu.LogRegisters("[Debug] ");
 					
 					// Show the actual instruction bytes at this address

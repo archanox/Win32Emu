@@ -1,5 +1,6 @@
 using Win32Emu.Memory;
 using Win32Emu.Win32;
+using Win32Emu.Logging;
 
 namespace Win32Emu.Tests.Kernel32.TestInfrastructure;
 
@@ -18,7 +19,8 @@ public class TestEnvironment : IDisposable
         Memory = new VirtualMemory();
         Cpu = new MockCpu();
         ProcessEnv = new ProcessEnvironment(Memory);
-        Kernel32 = new Kernel32Module(ProcessEnv, 0x00400000);
+        var mockLogger = new MockLogger();
+        Kernel32 = new Kernel32Module(ProcessEnv, 0x00400000, mockLogger);
 
         // Initialize process environment with test data
         ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);
@@ -85,5 +87,32 @@ public class TestEnvironment : IDisposable
     public void Dispose()
     {
         // Nothing to dispose currently, but good practice for future cleanup
+    }
+}
+
+/// <summary>
+/// Simple mock logger for testing that doesn't output anything
+/// </summary>
+public class MockLogger : IScopedLogger
+{
+    public string ComponentName => "MockLogger";
+
+    public IDisposable BeginScope(string scopeName) => new MockScope();
+    
+    public IDisposable BeginScope<T>(T state) => new MockScope();
+
+    public void LogDebug(string message, params object[] args) { }
+    
+    public void LogError(Exception ex, string message, params object[] args) { }
+    
+    public void LogError(string message, params object[] args) { }
+    
+    public void LogInformation(string message, params object[] args) { }
+    
+    public void LogWarning(string message, params object[] args) { }
+
+    private class MockScope : IDisposable
+    {
+        public void Dispose() { }
     }
 }
