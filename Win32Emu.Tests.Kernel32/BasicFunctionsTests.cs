@@ -203,6 +203,40 @@ public class BasicFunctionsTests : IDisposable
         Assert.True(_testEnv.ProcessEnv.ExitRequested);
     }
 
+    [Fact]
+    public void RtlUnwind_ShouldReturnSuccessfully()
+    {
+        // Arrange
+        const uint targetFrame = 0x12345678;
+        const uint targetIp = 0x87654321;
+        const uint exceptionRecord = 0x0; // No exception record
+        const uint returnValue = 0xAABBCCDD;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("RTLUNWIND", targetFrame, targetIp, exceptionRecord, returnValue);
+
+        // Assert
+        // RtlUnwind typically doesn't return a value (it either succeeds or throws),
+        // but our implementation returns 0 to indicate success
+        Assert.Equal(0u, result);
+    }
+
+    [Fact]
+    public void RtlUnwind_WithNullTargetIp_ShouldReturnSuccessfully()
+    {
+        // Arrange
+        const uint targetFrame = 0x12345678;
+        const uint targetIp = 0x0; // No target IP
+        const uint exceptionRecord = 0x0;
+        const uint returnValue = 0x0;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("RTLUNWIND", targetFrame, targetIp, exceptionRecord, returnValue);
+
+        // Assert
+        Assert.Equal(0u, result);
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();

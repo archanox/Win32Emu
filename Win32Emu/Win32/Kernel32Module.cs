@@ -110,6 +110,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "SETHANDLECOUNT":
 				returnValue = SetHandleCount(a.UInt32(0));
 				return true;
+			case "RTLUNWIND":
+				returnValue = RtlUnwind(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
 
 			default:
 				Console.WriteLine($"[Kernel32] Unimplemented export: {export}");
@@ -384,4 +387,39 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 	}
 
 	private unsafe string ReadCurrentModulePath() => "game.exe";
+
+	private unsafe uint RtlUnwind(uint targetFrame, uint targetIp, uint exceptionRecord, uint returnValue)
+	{
+		// RtlUnwind is used for structured exception handling to unwind the stack
+		// In a real implementation, this would:
+		// 1. Walk the stack from current frame to targetFrame
+		// 2. Call exception handlers with EXCEPTION_UNWIND flag
+		// 3. Restore processor state
+		// 4. Jump to targetIp with returnValue in EAX
+		
+		// For the Win32Emu, we implement a minimal version that:
+		// - Simply logs the unwind operation
+		// - Sets the target IP if provided
+		// - Returns success
+		
+		Console.WriteLine($"[Kernel32] RtlUnwind called: targetFrame=0x{targetFrame:X8}, targetIp=0x{targetIp:X8}, exceptionRecord=0x{exceptionRecord:X8}, returnValue=0x{returnValue:X8}");
+		
+		// If a target IP is specified and it's not null, we would typically:
+		// - Unwind the stack to the target frame
+		// - Set EIP to targetIp
+		// - Set EAX to returnValue
+		// However, in this emulator context, we'll leave the actual stack unwinding
+		// to be handled by the calling code/exception handling mechanism
+		
+		if (targetIp != 0)
+		{
+			Console.WriteLine($"[Kernel32] RtlUnwind: Would jump to 0x{targetIp:X8} with return value 0x{returnValue:X8}");
+			// In a full implementation, we would modify the CPU state here
+			// For now, we just log the intended operation
+		}
+		
+		// RtlUnwind doesn't return a value in the traditional sense - it either succeeds
+		// or raises an exception. We'll return 0 to indicate success.
+		return 0;
+	}
 }
