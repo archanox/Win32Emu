@@ -455,8 +455,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				case 1250: // Windows Central Europe
 				case 1251: // Windows Cyrillic
 				case 28591: // ISO 8859-1
-					// Use ASCII for these single-byte code pages (simplified)
-					multiByteBytes = System.Text.Encoding.ASCII.GetBytes(wideString);
+					// Use the correct code page encoding for these single-byte code pages
+					multiByteBytes = System.Text.Encoding.GetEncoding((int)actualCodePage).GetBytes(wideString);
 					break;
 				case 65001: // UTF-8
 					multiByteBytes = System.Text.Encoding.UTF8.GetBytes(wideString);
