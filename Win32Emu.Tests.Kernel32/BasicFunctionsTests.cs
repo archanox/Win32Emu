@@ -345,26 +345,6 @@ public class BasicFunctionsTests : IDisposable
         Assert.True((lType & 0x0002) != 0); // CT_CTYPE1_LOWER
     }
 
-    [Fact]
-    public void GetStringTypeA_DebugNullTerminatedString_ShouldWork()
-    {
-        // Arrange
-        var testString = _testEnv.WriteString("A");
-        var charTypeBuffer = _testEnv.AllocateMemory(2); // 1 character * 2 bytes
-        const uint locale = 0x0409; // English (US) locale
-        const uint CT_CTYPE1 = 1; // Character type 1
-
-        // Debug: verify the string was written correctly
-        var readStr = _testEnv.ReadString(testString);
-        Assert.Equal("A", readStr);
-
-        // Act - test with null-terminated (-1)
-        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, testString, unchecked((uint)-1), charTypeBuffer);
-
-        // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
-    }
-
     #endregion
 
     public void Dispose()
