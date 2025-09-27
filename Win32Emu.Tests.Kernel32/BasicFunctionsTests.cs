@@ -203,9 +203,7 @@ public class BasicFunctionsTests : IDisposable
         Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
         
         // Verify that a 64-bit counter value was written
-        var lowPart = _testEnv.Memory.Read32(counterPtr);
-        var highPart = _testEnv.Memory.Read32(counterPtr + 4);
-        var fullCounter = ((ulong)highPart << 32) | lowPart;
+        var fullCounter = _testEnv.Memory.Read64(counterPtr);
         
         // The counter should be a positive value (time stamp)
         Assert.True(fullCounter > 0, "Performance counter should be a positive value");
@@ -245,13 +243,8 @@ public class BasicFunctionsTests : IDisposable
         Assert.Equal(NativeTypes.Win32Bool.TRUE, result2);
         
         // Read the counter values
-        var counter1Low = _testEnv.Memory.Read32(counterPtr1);
-        var counter1High = _testEnv.Memory.Read32(counterPtr1 + 4);
-        var counter1Full = ((ulong)counter1High << 32) | counter1Low;
-        
-        var counter2Low = _testEnv.Memory.Read32(counterPtr2);
-        var counter2High = _testEnv.Memory.Read32(counterPtr2 + 4);
-        var counter2Full = ((ulong)counter2High << 32) | counter2Low;
+        var counter1Full = _testEnv.Memory.Read64(counterPtr1);
+        var counter2Full = _testEnv.Memory.Read64(counterPtr2);
         
         // The second call should return a higher or equal value (monotonic)
         Assert.True(counter2Full >= counter1Full, 
