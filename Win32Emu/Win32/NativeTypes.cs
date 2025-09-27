@@ -11,25 +11,25 @@ public static class NativeTypes
 		public static implicit operator uint(HModule h) => h.Value;
 	}
 
-	public readonly unsafe struct PVOID(void* v)
+	public readonly unsafe struct Pvoid(void* v)
 	{
 		public readonly void* Value = v;
-		public static implicit operator void*(PVOID p) => p.Value;
-		public static implicit operator PVOID(void* v) => new(v);
+		public static implicit operator void*(Pvoid p) => p.Value;
+		public static implicit operator Pvoid(void* v) => new(v);
 	}
 
-	public readonly unsafe struct HANDLE(void* v) : IEquatable<HANDLE>
+	public readonly unsafe struct Handle(void* v) : IEquatable<Handle>
 	{
 		public readonly void* Value = v;
-		public static implicit operator void*(HANDLE h) => h.Value;
-		public static implicit operator HANDLE(void* v) => new(v);
+		public static implicit operator void*(Handle h) => h.Value;
+		public static implicit operator Handle(void* v) => new(v);
 
 		public override bool Equals([NotNullWhen(true)] object? obj)
 		{
-			return obj is HANDLE other && Equals(other);
+			return obj is Handle other && Equals(other);
 		}
 
-		public bool Equals(HANDLE other)
+		public bool Equals(Handle other)
 		{
 			return Value == other.Value;
 		}
@@ -39,29 +39,29 @@ public static class NativeTypes
 			return unchecked((int)(long)Value);
 		}
 
-		public static bool operator ==(HANDLE left, HANDLE right)
+		public static bool operator ==(Handle left, Handle right)
 		{
 			return left.Equals(right);
 		}
 
-		public static bool operator !=(HANDLE left, HANDLE right)
+		public static bool operator !=(Handle left, Handle right)
 		{
 			return !left.Equals(right);
 		}
 	}
 
-	public readonly unsafe struct HINSTANCE(void* v)
+	public readonly unsafe struct Hinstance(void* v)
 	{
 		public readonly void* Value = v;
-		public static implicit operator void*(HINSTANCE h) => h.Value;
-		public static implicit operator HINSTANCE(void* v) => new(v);
+		public static implicit operator void*(Hinstance h) => h.Value;
+		public static implicit operator Hinstance(void* v) => new(v);
 	}
 
 	// DWORD is a 32-bit unsigned integer
-	public struct DWORD(uint v)
+	public struct Dword(uint v)
 	{
 		public uint Value = v;
-		public static implicit operator uint(DWORD d) => d.Value;
-		public static implicit operator DWORD(uint v) => new(v);
+		public static implicit operator uint(Dword d) => d.Value;
+		public static implicit operator Dword(uint v) => new(v);
 	}
 }

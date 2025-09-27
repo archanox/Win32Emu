@@ -3,7 +3,7 @@ using Win32Emu.Memory;
 
 namespace Win32Emu.Win32;
 
-public readonly struct LPStr(uint address)
+public readonly struct LpStr(uint address)
 {
 	public readonly uint Address = address;
 

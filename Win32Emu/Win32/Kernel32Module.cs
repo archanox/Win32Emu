@@ -3,26 +3,11 @@ using Win32Emu.Memory;
 
 namespace Win32Emu.Win32;
 
-public class Kernel32Module : IWin32ModuleUnsafe
+public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32ModuleUnsafe
 {
 	public string Name => "KERNEL32.DLL";
 
-	private readonly ProcessEnvironment _env;
-	private readonly uint _imageBase;
-
-	public Kernel32Module(ProcessEnvironment env, uint imageBase)
-	{
-		_env = env;
-		_imageBase = imageBase;
-	}
-
 	[ThreadStatic] private static uint _lastError;
-
-	public bool TryInvoke(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
-	{
-		returnValue = 0;
-		return false;
-	}
 
 	public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
@@ -47,10 +32,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = GetCurrentProcess();
 				return true;
 			case "GETMODULEHANDLEA":
-				returnValue = GetModuleHandleA(a.LPSTR(0));
+				returnValue = GetModuleHandleA(a.Lpstr(0));
 				return true;
 			case "GETMODULEFILENAMEA":
-				returnValue = GetModuleFileNameA(a.Ptr(0), a.LPSTR(1), a.UInt32(2));
+				returnValue = GetModuleFileNameA(a.Ptr(0), a.Lpstr(1), a.UInt32(2));
 				return true;
 			case "GETSTARTUPINFOA":
 				returnValue = GetStartupInfoA(a.UInt32(0));
@@ -125,8 +110,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 	private static unsafe uint GetVersion()
 	{
-		ushort build = 950;
-		byte major = 4, minor = 0;
+		const ushort build = 950;
+		const byte major = 4;
+		const byte minor = 0;
 		return (uint)((major << 8 | minor) << 16 | build);
 	}
 
@@ -141,7 +127,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint ExitProcess(uint code)
 	{
 		Console.WriteLine($"[Kernel32] ExitProcess({code})");
-		_env.RequestExit();
+		env.RequestExit();
 		return 0;
 	}
 
@@ -149,7 +135,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 	private unsafe uint GetModuleHandleA(sbyte* name)
 	{
-		return _imageBase;
+		return imageBase;
 	}
 
 	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
@@ -163,16 +149,16 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return len;
 	}
 
-	private unsafe uint GetCommandLineA() => _env.CommandLinePtr;
+	private unsafe uint GetCommandLineA() => env.CommandLinePtr;
 
 	private unsafe uint GetStartupInfoA(uint lpStartupInfo)
 	{
 		if (lpStartupInfo == 0) return 0;
-		_env.MemZero(lpStartupInfo, 68);
-		_env.MemWrite32(lpStartupInfo + 0, 68);
-		_env.MemWrite32(lpStartupInfo + 56, _env.StdInputHandle);
-		_env.MemWrite32(lpStartupInfo + 60, _env.StdOutputHandle);
-		_env.MemWrite32(lpStartupInfo + 64, _env.StdErrorHandle);
+		env.MemZero(lpStartupInfo, 68);
+		env.MemWrite32(lpStartupInfo + 0, 68);
+		env.MemWrite32(lpStartupInfo + 56, env.StdInputHandle);
+		env.MemWrite32(lpStartupInfo + 60, env.StdOutputHandle);
+		env.MemWrite32(lpStartupInfo + 64, env.StdErrorHandle);
 		return 0;
 	}
 
@@ -180,8 +166,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		return nStdHandle switch
 		{
-			0xFFFFFFF6 => _env.StdInputHandle, 0xFFFFFFF5 => _env.StdOutputHandle,
-			0xFFFFFFF4 => _env.StdErrorHandle, _ => 0
+			0xFFFFFFF6 => env.StdInputHandle, 0xFFFFFFF5 => env.StdOutputHandle,
+			0xFFFFFFF4 => env.StdErrorHandle, _ => 0
 		};
 	}
 
@@ -189,25 +175,25 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		switch (nStdHandle)
 		{
-			case 0xFFFFFFF6: _env.StdInputHandle = hHandle; break;
-			case 0xFFFFFFF5: _env.StdOutputHandle = hHandle; break;
-			case 0xFFFFFFF4: _env.StdErrorHandle = hHandle; break;
+			case 0xFFFFFFF6: env.StdInputHandle = hHandle; break;
+			case 0xFFFFFFF5: env.StdOutputHandle = hHandle; break;
+			case 0xFFFFFFF4: env.StdErrorHandle = hHandle; break;
 		}
 
 		return 1;
 	}
 
-	private unsafe uint GlobalAlloc(uint flags, uint bytes) => _env.SimpleAlloc(bytes == 0 ? 1u : bytes);
+	private unsafe uint GlobalAlloc(uint flags, uint bytes) => env.SimpleAlloc(bytes == 0 ? 1u : bytes);
 	private static unsafe uint GlobalFree(void* h) => 0;
 
 	private unsafe uint HeapCreate(uint flOptions, uint dwInitialSize, uint dwMaximumSize) =>
-		_env.HeapCreate(flOptions, dwInitialSize, dwMaximumSize);
+		env.HeapCreate(flOptions, dwInitialSize, dwMaximumSize);
 
-	private unsafe uint HeapAlloc(void* hHeap, uint dwFlags, uint dwBytes) => _env.HeapAlloc((uint)hHeap, dwBytes);
+	private unsafe uint HeapAlloc(void* hHeap, uint dwFlags, uint dwBytes) => env.HeapAlloc((uint)hHeap, dwBytes);
 	private static unsafe uint HeapFree(void* hHeap, uint dwFlags, void* lpMem) => 1;
 
 	private unsafe uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect) =>
-		_env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
+		env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
 
 	// File I/O implementations
 	private uint CreateFileA(uint lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecAttr,
@@ -215,7 +201,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		try
 		{
-			var path = _env.ReadAnsiString(lpFileName);
+			var path = env.ReadAnsiString(lpFileName);
 			var mode = FileMode.OpenOrCreate;
 			switch (dwCreationDisposition)
 			{
@@ -232,7 +218,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			if ((dwDesiredAccess & 0x80000000) != 0 && (dwDesiredAccess & 0x40000000) == 0)
 				access = FileAccess.Write; // GENERIC_WRITE
 			var fs = new FileStream(path, mode, access, FileShare.ReadWrite);
-			return _env.RegisterHandle(fs);
+			return env.RegisterHandle(fs);
 		}
 		catch (Exception ex)
 		{
@@ -245,13 +231,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint ReadFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToRead, uint lpNumberOfBytesRead,
 		uint lpOverlapped)
 	{
-		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null) return 0;
+		if (!env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null) return 0;
 		try
 		{
 			var buf = new byte[nNumberOfBytesToRead];
 			var read = fs.Read(buf, 0, buf.Length);
-			if (lpBuffer != 0 && read > 0) _env.MemWriteBytes(lpBuffer, buf.AsSpan(0, read));
-			if (lpNumberOfBytesRead != 0) _env.MemWrite32(lpNumberOfBytesRead, (uint)read);
+			if (lpBuffer != 0 && read > 0) env.MemWriteBytes(lpBuffer, buf.AsSpan(0, read));
+			if (lpNumberOfBytesRead != 0) env.MemWrite32(lpNumberOfBytesRead, (uint)read);
 			return 1;
 		}
 		catch (Exception ex)
@@ -265,12 +251,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint WriteFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToWrite, uint lpNumberOfBytesWritten,
 		uint lpOverlapped)
 	{
-		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null) return 0;
+		if (!env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null) return 0;
 		try
 		{
-			var buf = _env.MemReadBytes(lpBuffer, (int)nNumberOfBytesToWrite);
+			var buf = env.MemReadBytes(lpBuffer, (int)nNumberOfBytesToWrite);
 			fs.Write(buf, 0, buf.Length);
-			if (lpNumberOfBytesWritten != 0) _env.MemWrite32(lpNumberOfBytesWritten, (uint)buf.Length);
+			if (lpNumberOfBytesWritten != 0) env.MemWrite32(lpNumberOfBytesWritten, (uint)buf.Length);
 			return 1;
 		}
 		catch (Exception ex)
@@ -284,25 +270,25 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint CloseHandle(void* hObject)
 	{
 		var h = (uint)hObject;
-		if (_env.TryGetHandle<FileStream>(h, out var fs) && fs is not null)
+		if (env.TryGetHandle<FileStream>(h, out var fs) && fs is not null)
 		{
 			fs.Dispose();
-			_env.CloseHandle(h);
+			env.CloseHandle(h);
 			return 1;
 		}
 
-		return _env.CloseHandle(h) ? 1u : 0u;
+		return env.CloseHandle(h) ? 1u : 0u;
 	}
 
 	private unsafe uint GetFileType(void* hFile)
 	{
-		if (_env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null) return 0x0001; // FILE_TYPE_DISK
+		if (env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null) return 0x0001; // FILE_TYPE_DISK
 		return 0; // FILE_TYPE_UNKNOWN
 	}
 
 	private unsafe uint SetFilePointer(void* hFile, uint lDistanceToMove, uint lpDistanceToMoveHigh, uint dwMoveMethod)
 	{
-		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null) return 0xFFFFFFFF;
+		if (!env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null) return 0xFFFFFFFF;
 		var origin = dwMoveMethod switch
 		{
 			0 => SeekOrigin.Begin, 1 => SeekOrigin.Current, 2 => SeekOrigin.End, _ => SeekOrigin.Begin
@@ -314,7 +300,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 	private unsafe uint FlushFileBuffers(void* hFile)
 	{
-		if (_env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
+		if (env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
 		{
 			fs.Flush(true);
 			return 1;
@@ -325,7 +311,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 	private unsafe uint SetEndOfFile(void* hFile)
 	{
-		if (_env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
+		if (env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
 		{
 			fs.SetLength(fs.Position);
 			return 1;

@@ -14,7 +14,7 @@ public class IcedCpu : ICpu
 	private readonly SimpleMemoryCodeReader _reader;
 
 	// EFLAGS bit positions
-	private const int CF = 0, PF = 2, AF = 4, ZF = 6, SF = 7, TF = 8, IF = 9, DF = 10, OF = 11;
+	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Tf = 8, If = 9, Df = 10, Of = 11;
 
 	public IcedCpu(VirtualMemory mem)
 	{
@@ -161,11 +161,11 @@ public class IcedCpu : ICpu
 				if (insn.Immediate16 != 0) _esp += insn.Immediate16;
 				break;
 			case Mnemonic.Nop: break;
-			case Mnemonic.Cld: ClearFlag(DF); break;
-			case Mnemonic.Std: SetFlag(DF); break;
-			case Mnemonic.Clc: ClearFlag(CF); break;
-			case Mnemonic.Stc: SetFlag(CF); break;
-			case Mnemonic.Cmc: SetFlagVal(CF, !GetFlag(CF)); break;
+			case Mnemonic.Cld: ClearFlag(Df); break;
+			case Mnemonic.Std: SetFlag(Df); break;
+			case Mnemonic.Clc: ClearFlag(Cf); break;
+			case Mnemonic.Stc: SetFlag(Cf); break;
+			case Mnemonic.Cmc: SetFlagVal(Cf, !GetFlag(Cf)); break;
 			case Mnemonic.Pushfd:
 				_esp -= 4;
 				Write32(_esp, _eflags);
@@ -177,23 +177,23 @@ public class IcedCpu : ICpu
 			case Mnemonic.Lahf:
 			{
 				byte ah = 0;
-				if (GetFlag(SF)) ah |= 0x80;
-				if (GetFlag(ZF)) ah |= 0x40;
-				if (GetFlag(AF)) ah |= 0x10;
-				if (GetFlag(PF)) ah |= 0x04;
+				if (GetFlag(Sf)) ah |= 0x80;
+				if (GetFlag(Zf)) ah |= 0x40;
+				if (GetFlag(Af)) ah |= 0x10;
+				if (GetFlag(Pf)) ah |= 0x04;
 				ah |= 0x02;
-				if (GetFlag(CF)) ah |= 0x01;
+				if (GetFlag(Cf)) ah |= 0x01;
 				_eax = (_eax & 0xFFFF00FF) | (uint)(ah << 8);
 				break;
 			}
 			case Mnemonic.Sahf:
 			{
 				var sahf = (byte)((_eax >> 8) & 0xFF);
-				SetFlagVal(SF, (sahf & 0x80) != 0);
-				SetFlagVal(ZF, (sahf & 0x40) != 0);
-				SetFlagVal(AF, (sahf & 0x10) != 0);
-				SetFlagVal(PF, (sahf & 0x04) != 0);
-				SetFlagVal(CF, (sahf & 0x01) != 0);
+				SetFlagVal(Sf, (sahf & 0x80) != 0);
+				SetFlagVal(Zf, (sahf & 0x40) != 0);
+				SetFlagVal(Af, (sahf & 0x10) != 0);
+				SetFlagVal(Pf, (sahf & 0x04) != 0);
+				SetFlagVal(Cf, (sahf & 0x01) != 0);
 				break;
 			}
 			default:
@@ -298,13 +298,13 @@ public class IcedCpu : ICpu
 	private void ExecAdc(Instruction insn)
 	{
 		uint a = ReadOp(insn, 0), b = ReadOp(insn, 1);
-		var cf = GetFlag(CF) ? 1u : 0u;
+		var cf = GetFlag(Cf) ? 1u : 0u;
 		var sum = (ulong)a + b + cf;
 		var r = (uint)sum;
 		WriteOp(insn, 0, r);
-		SetFlagVal(CF, (sum >> 32) != 0);
-		SetFlagVal(OF, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
-		SetFlagVal(AF, (((a ^ b ^ r) & 0x10) != 0));
+		SetFlagVal(Cf, (sum >> 32) != 0);
+		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Af, (((a ^ b ^ r) & 0x10) != 0));
 		UpdateLogicResultFlags(r);
 	}
 
@@ -318,13 +318,13 @@ public class IcedCpu : ICpu
 	private void ExecSbb(Instruction insn)
 	{
 		uint a = ReadOp(insn, 0), b = ReadOp(insn, 1);
-		var cf = GetFlag(CF) ? 1u : 0u;
+		var cf = GetFlag(Cf) ? 1u : 0u;
 		var diff = (ulong)a - (b + cf);
 		var r = (uint)diff;
 		WriteOp(insn, 0, r);
-		SetFlagVal(CF, a < b + cf);
-		SetFlagVal(OF, ((a ^ b) & (a ^ r) & 0x80000000) != 0);
-		SetFlagVal(AF, (((a ^ b ^ r) & 0x10) != 0));
+		SetFlagVal(Cf, a < b + cf);
+		SetFlagVal(Of, ((a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Af, (((a ^ b ^ r) & 0x10) != 0));
 		UpdateLogicResultFlags(r);
 	}
 
@@ -332,9 +332,9 @@ public class IcedCpu : ICpu
 	{
 		var r = ReadOp(insn, 0) ^ ReadOp(insn, 1);
 		WriteOp(insn, 0, r);
-		ClearFlag(CF);
-		ClearFlag(OF);
-		ClearFlag(AF);
+		ClearFlag(Cf);
+		ClearFlag(Of);
+		ClearFlag(Af);
 		UpdateLogicResultFlags(r);
 	}
 
@@ -342,18 +342,18 @@ public class IcedCpu : ICpu
 	{
 		uint a = ReadOp(insn, 0), b = ReadOp(insn, 1), r = op == LogicOp.And ? a & b : a | b;
 		WriteOp(insn, 0, r);
-		ClearFlag(CF);
-		ClearFlag(OF);
-		ClearFlag(AF);
+		ClearFlag(Cf);
+		ClearFlag(Of);
+		ClearFlag(Af);
 		UpdateLogicResultFlags(r);
 	}
 
 	private void ExecTest(Instruction insn)
 	{
 		var r = ReadOp(insn, 0) & ReadOp(insn, 1);
-		ClearFlag(CF);
-		ClearFlag(OF);
-		ClearFlag(AF);
+		ClearFlag(Cf);
+		ClearFlag(Of);
+		ClearFlag(Af);
 		UpdateLogicResultFlags(r);
 	}
 
@@ -386,15 +386,15 @@ public class IcedCpu : ICpu
 		if (c == 0) return;
 		var r = a << c;
 		var lastOut = (a >> (32 - c)) & 1u;
-		SetFlagVal(CF, lastOut != 0);
+		SetFlagVal(Cf, lastOut != 0);
 		if (c == 1)
 		{
 			bool before = (a & 0x80000000) != 0, after = (r & 0x80000000) != 0;
-			SetFlagVal(OF, before ^ after);
+			SetFlagVal(Of, before ^ after);
 		}
-		else ClearFlag(OF);
+		else ClearFlag(Of);
 
-		ClearFlag(AF);
+		ClearFlag(Af);
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r);
 	}
@@ -411,18 +411,18 @@ public class IcedCpu : ICpu
 		{
 			var s = (int)a;
 			r = (uint)(s >> c);
-			SetFlagVal(OF, false);
+			SetFlagVal(Of, false);
 		}
 		else
 		{
 			r = a >> c;
-			if (c == 1) SetFlagVal(OF, (a & 0x80000000) != 0);
-			else ClearFlag(OF);
+			if (c == 1) SetFlagVal(Of, (a & 0x80000000) != 0);
+			else ClearFlag(Of);
 		}
 
 		var lastOut = (a >> (c - 1)) & 1u;
-		SetFlagVal(CF, lastOut != 0);
-		ClearFlag(AF);
+		SetFlagVal(Cf, lastOut != 0);
+		ClearFlag(Af);
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r);
 	}
@@ -444,60 +444,60 @@ public class IcedCpu : ICpu
 		{
 			case RotateKind.Rol:
 				r = (a << c) | (a >> (32 - c));
-				SetFlagVal(CF, (r & 1) != 0);
+				SetFlagVal(Cf, (r & 1) != 0);
 				if (c == 1)
 				{
 					var msb = (r & 0x80000000) != 0;
-					var cf = GetFlag(CF);
-					SetFlagVal(OF, msb ^ cf);
+					var cf = GetFlag(Cf);
+					SetFlagVal(Of, msb ^ cf);
 				}
-				else ClearFlag(OF);
+				else ClearFlag(Of);
 
 				break;
 			case RotateKind.Ror:
 				r = (a >> c) | (a << (32 - c));
-				SetFlagVal(CF, ((r >> 31) & 1) != 0);
+				SetFlagVal(Cf, ((r >> 31) & 1) != 0);
 				if (c == 1)
 				{
 					var msb = (r & 0x80000000) != 0;
-					var cf = GetFlag(CF);
-					SetFlagVal(OF, msb ^ cf);
+					var cf = GetFlag(Cf);
+					SetFlagVal(Of, msb ^ cf);
 				}
-				else ClearFlag(OF);
+				else ClearFlag(Of);
 
 				break;
 			case RotateKind.Rcl:
 				for (var i = 0; i < c; i++)
 				{
-					var carry = GetFlag(CF) ? 1u : 0u;
+					var carry = GetFlag(Cf) ? 1u : 0u;
 					var newCarry = (a >> 31) & 1u;
 					r = (a << 1) | carry;
-					SetFlagVal(CF, newCarry != 0);
+					SetFlagVal(Cf, newCarry != 0);
 					a = r;
 				}
 
 				if (c == 1)
 				{
-					SetFlagVal(OF, ((a ^ r) & 0x80000000) != 0);
+					SetFlagVal(Of, ((a ^ r) & 0x80000000) != 0);
 				}
-				else ClearFlag(OF);
+				else ClearFlag(Of);
 
 				break;
 			case RotateKind.Rcr:
 				for (var i = 0; i < c; i++)
 				{
-					var carry = GetFlag(CF) ? 1u : 0u;
+					var carry = GetFlag(Cf) ? 1u : 0u;
 					var newCarry = a & 1u;
 					r = (a >> 1) | (carry << 31);
-					SetFlagVal(CF, newCarry != 0);
+					SetFlagVal(Cf, newCarry != 0);
 					a = r;
 				}
 
 				if (c == 1)
 				{
-					SetFlagVal(OF, ((a ^ r) & 0x80000000) != 0);
+					SetFlagVal(Of, ((a ^ r) & 0x80000000) != 0);
 				}
-				else ClearFlag(OF);
+				else ClearFlag(Of);
 
 				break;
 		}
@@ -559,7 +559,7 @@ public class IcedCpu : ICpu
 	private void ExecMovs(int size, bool rep)
 	{
 		var count = rep ? _ecx : 1u;
-		var delta = GetFlag(DF) ? -size : size;
+		var delta = GetFlag(Df) ? -size : size;
 		for (uint i = 0; i < count; i++)
 		{
 			var v = size switch
@@ -581,7 +581,7 @@ public class IcedCpu : ICpu
 	private void ExecStos(int size, bool rep)
 	{
 		var count = rep ? _ecx : 1u;
-		var delta = GetFlag(DF) ? -size : size;
+		var delta = GetFlag(Df) ? -size : size;
 		var src = size switch
 		{
 			1 => (byte)_eax,
@@ -602,7 +602,7 @@ public class IcedCpu : ICpu
 	private void ExecLods(int size, bool rep)
 	{
 		var count = rep ? _ecx : 1u;
-		var delta = GetFlag(DF) ? -size : size;
+		var delta = GetFlag(Df) ? -size : size;
 		for (uint i = 0; i < count; i++)
 		{
 			var v = size switch
@@ -623,7 +623,7 @@ public class IcedCpu : ICpu
 	private void ExecCmps(int size, bool repe, bool repne)
 	{
 		var count = (repe || repne) ? _ecx : 1u;
-		var delta = GetFlag(DF) ? -size : size;
+		var delta = GetFlag(Df) ? -size : size;
 		for (uint i = 0; i < count; i++)
 		{
 			var a = size switch
@@ -643,15 +643,15 @@ public class IcedCpu : ICpu
 			_esi = (uint)(_esi + delta);
 			_edi = (uint)(_edi + delta);
 			_ecx--;
-			if (repe && !GetFlag(ZF)) break; // stop when not equal
-			if (repne && GetFlag(ZF)) break; // stop when equal
+			if (repe && !GetFlag(Zf)) break; // stop when not equal
+			if (repne && GetFlag(Zf)) break; // stop when equal
 		}
 	}
 
 	private void ExecScas(int size, bool repe, bool repne)
 	{
 		var count = (repe || repne) ? _ecx : 1u;
-		var delta = GetFlag(DF) ? -size : size;
+		var delta = GetFlag(Df) ? -size : size;
 		var a = size switch
 		{
 			1 => (byte)_eax,
@@ -670,8 +670,8 @@ public class IcedCpu : ICpu
 			SetFlagsSub(a, b, r);
 			_edi = (uint)(_edi + delta);
 			_ecx--;
-			if (repe && !GetFlag(ZF)) break;
-			if (repne && GetFlag(ZF)) break;
+			if (repe && !GetFlag(Zf)) break;
+			if (repne && GetFlag(Zf)) break;
 		}
 	}
 
@@ -683,10 +683,10 @@ public class IcedCpu : ICpu
 		_eax = (uint)prod;
 		_edx = (uint)(prod >> 32);
 		var carry = _edx != 0;
-		SetFlagVal(CF, carry);
-		SetFlagVal(OF, carry);
+		SetFlagVal(Cf, carry);
+		SetFlagVal(Of, carry);
 		// Other flags undefined; leave as-is except clear AF.
-		ClearFlag(AF);
+		ClearFlag(Af);
 	}
 
 	private void ExecImul(Instruction insn)
@@ -697,9 +697,9 @@ public class IcedCpu : ICpu
 			_eax = (uint)prod;
 			_edx = (uint)(prod >> 32);
 			var overflow = (_edx != 0 && _edx != 0xFFFFFFFFu) || (((prod >> 31) & 1) != ((prod >> 32) & 1));
-			SetFlagVal(CF, overflow);
-			SetFlagVal(OF, overflow);
-			ClearFlag(AF);
+			SetFlagVal(Cf, overflow);
+			SetFlagVal(Of, overflow);
+			ClearFlag(Af);
 		}
 		else
 		{
@@ -708,9 +708,9 @@ public class IcedCpu : ICpu
 			var r = (uint)prod;
 			WriteOp(insn, 0, r);
 			var overflow = prod is > int.MaxValue or < int.MinValue;
-			SetFlagVal(CF, overflow);
-			SetFlagVal(OF, overflow);
-			ClearFlag(AF);
+			SetFlagVal(Cf, overflow);
+			SetFlagVal(Of, overflow);
+			ClearFlag(Af);
 		}
 	}
 
@@ -744,48 +744,48 @@ public class IcedCpu : ICpu
 
 	private void SetFlagsAdd(uint a, uint b, uint r)
 	{
-		SetFlagVal(CF, r < a);
-		SetFlagVal(OF, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
-		SetFlagVal(AF, ((a ^ b ^ r) & 0x10) != 0);
+		SetFlagVal(Cf, r < a);
+		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
 		UpdateLogicResultFlags(r);
 	}
 
 	private void SetFlagsSub(uint a, uint b, uint r)
 	{
-		SetFlagVal(CF, a < b);
-		SetFlagVal(OF, ((a ^ b) & (a ^ r) & 0x80000000) != 0);
-		SetFlagVal(AF, ((a ^ b ^ r) & 0x10) != 0);
+		SetFlagVal(Cf, a < b);
+		SetFlagVal(Of, ((a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
 		UpdateLogicResultFlags(r);
 	}
 
 	private void SetFlagsIncDecAdd(uint a, uint r)
 	{
-		SetFlagVal(OF, ((~(a ^ 1u) & (a ^ r) & 0x80000000) != 0));
-		SetFlagVal(AF, ((a ^ 1u ^ r) & 0x10) != 0);
+		SetFlagVal(Of, ((~(a ^ 1u) & (a ^ r) & 0x80000000) != 0));
+		SetFlagVal(Af, ((a ^ 1u ^ r) & 0x10) != 0);
 		UpdateLogicResultFlags(r);
 	}
 
 	private void SetFlagsIncDecSub(uint a, uint r)
 	{
-		SetFlagVal(OF, (((a ^ 0xFFFFFFFFu) & (a ^ r) & 0x80000000) != 0));
-		SetFlagVal(AF, ((a ^ 0xFFFFFFFFu ^ r) & 0x10) != 0);
+		SetFlagVal(Of, (((a ^ 0xFFFFFFFFu) & (a ^ r) & 0x80000000) != 0));
+		SetFlagVal(Af, ((a ^ 0xFFFFFFFFu ^ r) & 0x10) != 0);
 		UpdateLogicResultFlags(r);
 	}
 
 	private void UpdateLogicResultFlags(uint r)
 	{
-		SetFlagVal(ZF, r == 0);
-		SetFlagVal(SF, (r & 0x80000000) != 0);
+		SetFlagVal(Zf, r == 0);
+		SetFlagVal(Sf, (r & 0x80000000) != 0);
 		var lo = (byte)r;
 		var bits = lo ^ (lo >> 4);
 		bits &= 0xF;
 		var even = (((0x6996 >> bits) & 1) == 1);
-		SetFlagVal(PF, even);
+		SetFlagVal(Pf, even);
 	}
 
 	private bool IsBranchTaken(ConditionCode cc)
 	{
-		bool cf = GetFlag(CF), zf = GetFlag(ZF), sf = GetFlag(SF), of = GetFlag(OF), pf = GetFlag(PF);
+		bool cf = GetFlag(Cf), zf = GetFlag(Zf), sf = GetFlag(Sf), of = GetFlag(Of), pf = GetFlag(Pf);
 		return cc switch
 		{
 			ConditionCode.o => of, ConditionCode.no => !of, ConditionCode.b => cf, ConditionCode.ae => !cf,
@@ -798,22 +798,22 @@ public class IcedCpu : ICpu
 
 	private bool IsSetccTrue(Mnemonic m) => m switch
 	{
-		Mnemonic.Seto => GetFlag(OF), Mnemonic.Setno => !GetFlag(OF), Mnemonic.Setb => GetFlag(CF),
-		Mnemonic.Setae => !GetFlag(CF), Mnemonic.Sete => GetFlag(ZF), Mnemonic.Setne => !GetFlag(ZF),
-		Mnemonic.Setbe => GetFlag(CF) || GetFlag(ZF), Mnemonic.Seta => !GetFlag(CF) && !GetFlag(ZF),
-		Mnemonic.Sets => GetFlag(SF), Mnemonic.Setns => !GetFlag(SF), Mnemonic.Setp => GetFlag(PF),
-		Mnemonic.Setnp => !GetFlag(PF), Mnemonic.Setl => GetFlag(SF) != GetFlag(OF),
-		Mnemonic.Setge => GetFlag(SF) == GetFlag(OF), Mnemonic.Setle => GetFlag(ZF) || (GetFlag(SF) != GetFlag(OF)),
-		Mnemonic.Setg => !GetFlag(ZF) && (GetFlag(SF) == GetFlag(OF)), _ => false
+		Mnemonic.Seto => GetFlag(Of), Mnemonic.Setno => !GetFlag(Of), Mnemonic.Setb => GetFlag(Cf),
+		Mnemonic.Setae => !GetFlag(Cf), Mnemonic.Sete => GetFlag(Zf), Mnemonic.Setne => !GetFlag(Zf),
+		Mnemonic.Setbe => GetFlag(Cf) || GetFlag(Zf), Mnemonic.Seta => !GetFlag(Cf) && !GetFlag(Zf),
+		Mnemonic.Sets => GetFlag(Sf), Mnemonic.Setns => !GetFlag(Sf), Mnemonic.Setp => GetFlag(Pf),
+		Mnemonic.Setnp => !GetFlag(Pf), Mnemonic.Setl => GetFlag(Sf) != GetFlag(Of),
+		Mnemonic.Setge => GetFlag(Sf) == GetFlag(Of), Mnemonic.Setle => GetFlag(Zf) || (GetFlag(Sf) != GetFlag(Of)),
+		Mnemonic.Setg => !GetFlag(Zf) && (GetFlag(Sf) == GetFlag(Of)), _ => false
 	};
 
 	private bool IsCmovccTrue(Mnemonic m) => m switch
 	{
-		Mnemonic.Cmove => GetFlag(ZF), Mnemonic.Cmovne => !GetFlag(ZF), Mnemonic.Cmovb => GetFlag(CF),
-		Mnemonic.Cmovbe => GetFlag(CF) || GetFlag(ZF), Mnemonic.Cmova => !GetFlag(CF) && !GetFlag(ZF),
-		Mnemonic.Cmovge => GetFlag(SF) == GetFlag(OF),
-		Mnemonic.Cmovg => !GetFlag(ZF) && (GetFlag(SF) == GetFlag(OF)),
-		Mnemonic.Cmovl => GetFlag(SF) != GetFlag(OF), _ => false
+		Mnemonic.Cmove => GetFlag(Zf), Mnemonic.Cmovne => !GetFlag(Zf), Mnemonic.Cmovb => GetFlag(Cf),
+		Mnemonic.Cmovbe => GetFlag(Cf) || GetFlag(Zf), Mnemonic.Cmova => !GetFlag(Cf) && !GetFlag(Zf),
+		Mnemonic.Cmovge => GetFlag(Sf) == GetFlag(Of),
+		Mnemonic.Cmovg => !GetFlag(Zf) && (GetFlag(Sf) == GetFlag(Of)),
+		Mnemonic.Cmovl => GetFlag(Sf) != GetFlag(Of), _ => false
 	};
 
 	private bool GetFlag(int bit) => (_eflags & (1u << bit)) != 0;
@@ -879,10 +879,13 @@ public class IcedCpu : ICpu
 		if (insn.MemoryIndex != Register.None)
 		{
 			var scale = insn.MemoryIndexScale;
-			addr += GetReg32(insn.MemoryIndex) * (uint)scale;
+			addr += (uint)(GetReg32(insn.MemoryIndex) * scale);
 		}
 
-		return addr;
+		if (addr < 0 || (ulong)addr >= _mem.Size)
+			throw new IndexOutOfRangeException($"Calculated memory address out of range: 0x{(ulong)addr:X} (EIP=0x{_eip:X8})");
+
+		return (uint)addr;
 	}
 
 	private uint CalcLeaAddress(Instruction insn) => CalcMemAddress(insn);
@@ -954,13 +957,11 @@ public class IcedCpu : ICpu
 		return v;
 	}
 
-	private class SimpleMemoryCodeReader : CodeReader
+	private class SimpleMemoryCodeReader(IcedCpu cpu) : CodeReader
 	{
-		private readonly IcedCpu _cpu;
 		private uint _ptr;
-		public SimpleMemoryCodeReader(IcedCpu cpu) => _cpu = cpu;
 		public void Reset(uint ip) => _ptr = ip;
-		public override int ReadByte() => _cpu._mem.Read8(_ptr++);
+		public override int ReadByte() => cpu._mem.Read8(_ptr++);
 	}
 
 	private enum LogicOp
