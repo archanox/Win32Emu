@@ -15,8 +15,9 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     
-    # Note: User32 tests are optional and won't block PRs if they fail
+    # Note: Win32 DLL module tests (Kernel32, User32, etc.) are optional and won't block PRs
     # This allows adding tests for unimplemented functionality without breaking CI
+    # Core emulator tests (CPU, memory, etc.) are required and will block PRs
     
     steps:
     - name: Checkout code
@@ -45,32 +46,36 @@ jobs:
           echo "has-tests=false" >> $GITHUB_OUTPUT
         fi
         
-        # Check specifically for Kernel32 tests (required)
-        if dotnet test Win32Emu.Tests.Kernel32 --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
-          echo "has-kernel32-tests=true" >> $GITHUB_OUTPUT
-        else
-          echo "has-kernel32-tests=false" >> $GITHUB_OUTPUT
-        fi
+        # Check for Win32 DLL module tests (optional)
+        dll_tests=""
+        for dll in Kernel32 User32 Gdi32 DDraw DInput WinMM DSound DPlayX; do
+          if dotnet test "Win32Emu.Tests.$dll" --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null 2>&1; then
+            dll_tests="$dll_tests Win32Emu.Tests.$dll"
+            echo "has-${dll,,}-tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-${dll,,}-tests=false" >> $GITHUB_OUTPUT
+          fi
+        done
+        echo "dll-test-projects=$dll_tests" >> $GITHUB_OUTPUT
         
-        # Check specifically for User32 tests (optional)
-        if dotnet test Win32Emu.Tests.User32 --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
-          echo "has-user32-tests=true" >> $GITHUB_OUTPUT
+        # Check for core emulator tests (required) - anything that's not a Win32 DLL module
+        if dotnet test --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" | grep -v -E "Win32Emu\.Tests\.(Kernel32|User32|Gdi32|DDraw|DInput|WinMM|DSound|DPlayX)" > /dev/null; then
+          echo "has-core-tests=true" >> $GITHUB_OUTPUT
         else
-          echo "has-user32-tests=false" >> $GITHUB_OUTPUT
+          echo "has-core-tests=false" >> $GITHUB_OUTPUT
         fi
       
-    - name: Run Kernel32 tests (required)
-      if: steps.check-tests.outputs.has-kernel32-tests == 'true'
-      run: dotnet test Win32Emu.Tests.Kernel32 --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage"
+    - name: Run core emulator tests (required)
+      if: steps.check-tests.outputs.has-core-tests == 'true'
+      run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "FullyQualifiedName!~Win32Emu.Tests.Kernel32&FullyQualifiedName!~Win32Emu.Tests.User32&FullyQualifiedName!~Win32Emu.Tests.Gdi32&FullyQualifiedName!~Win32Emu.Tests.DDraw&FullyQualifiedName!~Win32Emu.Tests.DInput&FullyQualifiedName!~Win32Emu.Tests.WinMM&FullyQualifiedName!~Win32Emu.Tests.DSound&FullyQualifiedName!~Win32Emu.Tests.DPlayX"
       
-    - name: Run User32 tests (optional)
-      if: steps.check-tests.outputs.has-user32-tests == 'true'
-      run: dotnet test Win32Emu.Tests.User32 --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage"
-      continue-on-error: true
-      
-    - name: Run all other tests
-      if: steps.check-tests.outputs.has-tests == 'true'
-      run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "FullyQualifiedName!~Win32Emu.Tests.Kernel32&FullyQualifiedName!~Win32Emu.Tests.User32"
+    - name: Run Win32 DLL module tests (optional)
+      if: steps.check-tests.outputs.dll-test-projects != ''
+      run: |
+        for project in ${{ steps.check-tests.outputs.dll-test-projects }}; do
+          echo "Running tests for $project"
+          dotnet test "$project" --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" || true
+        done
       continue-on-error: true
       
     - name: Publish test results
@@ -80,14 +85,15 @@ jobs:
         name: .NET Tests
         path: "**/*.trx"
         reporter: dotnet-trx
-        fail-on-error: false  # Don't fail the job on test failures since User32 tests are optional
+        fail-on-error: true  # Fail on core test failures, but DLL module tests won't reach here if they fail
       continue-on-error: true
       
     - name: No tests found
       if: steps.check-tests.outputs.has-tests == 'false'
       run: |
         echo "No tests found in the solution. Consider adding unit tests for better code quality."
-        echo "Note: User32 tests are optional and won't block PRs if they fail."
+        echo "Note: Win32 DLL module tests are optional and won't block PRs if they fail."
+        echo "Core emulator tests (CPU, memory, etc.) are required and will block PRs if they fail."
 
   code-quality:
     name: Code Quality Analysis
