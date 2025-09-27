@@ -331,8 +331,6 @@ public class BasicFunctionsTests : IDisposable
         var totalChars = includeNullTerminator ? wideChars.Length + 1 : wideChars.Length;
         var addr = _testEnv.AllocateMemory((uint)(totalChars * 2)); // 2 bytes per wide char
         
-        Console.WriteLine($"[Test] WriteWideString: str='{str}', addr=0x{addr:X}, totalChars={totalChars}");
-        
         for (int i = 0; i < wideChars.Length; i++)
         {
             _testEnv.Memory.Write16((uint)(addr + i * 2), (ushort)wideChars[i]);
