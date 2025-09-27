@@ -31,6 +31,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "GETCURRENTPROCESS":
 				returnValue = GetCurrentProcess();
 				return true;
+			case "GETACP":
+				returnValue = GetACP();
+				return true;
 			case "GETMODULEHANDLEA":
 				returnValue = GetModuleHandleA(a.Lpstr(0));
 				return true;
@@ -132,6 +135,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 	}
 
 	private unsafe uint GetCurrentProcess() => 0xFFFFFFFF; // pseudo-handle
+
+	private static unsafe uint GetACP() => 1252; // Windows-1252 (Western European)
 
 	private unsafe uint GetModuleHandleA(sbyte* name)
 	{

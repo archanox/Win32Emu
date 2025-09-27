@@ -90,6 +90,16 @@ public class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
+    public void GetACP_ShouldReturnWindowsCodePage()
+    {
+        // Act
+        var codePage = _testEnv.CallKernel32Api("GETACP");
+
+        // Assert
+        Assert.Equal(1252u, codePage); // Should return Windows-1252 (Western European)
+    }
+
+    [Fact]
     public void ExitProcess_ShouldSetExitRequestedFlag()
     {
         // Arrange
