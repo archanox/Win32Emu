@@ -119,6 +119,46 @@ public class EnvironmentTests : IDisposable
     }
 
     [Fact]
+    public void FreeEnvironmentStringsW_WithValidPointer_ShouldReturnTrue()
+    {
+        // Arrange - Get environment strings
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSW");
+        Assert.NotEqual(0u, envStringsPtr);
+
+        // Act - Free the environment strings
+        var result = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSW", envStringsPtr);
+
+        // Assert - Should return TRUE (1)
+        Assert.Equal(1u, result);
+    }
+
+    [Fact]
+    public void FreeEnvironmentStringsW_WithNullPointer_ShouldReturnFalse()
+    {
+        // Act - Try to free a null pointer
+        var result = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSW", 0u);
+
+        // Assert - Should return FALSE (0) for null pointer
+        Assert.Equal(0u, result);
+    }
+
+    [Fact]
+    public void FreeEnvironmentStringsW_MultipleCallsWithSamePointer_ShouldSucceed()
+    {
+        // Arrange - Get environment strings
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSW");
+        Assert.NotEqual(0u, envStringsPtr);
+
+        // Act - Free the same pointer multiple times
+        var result1 = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSW", envStringsPtr);
+        var result2 = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSW", envStringsPtr);
+
+        // Assert - Both calls should succeed (in our simple implementation)
+        Assert.Equal(1u, result1);
+        Assert.Equal(1u, result2);
+    }
+    
+    [Fact]
     public void GetEnvironmentStringsA_ShouldReturnValidPointer()
     {
         // Act
