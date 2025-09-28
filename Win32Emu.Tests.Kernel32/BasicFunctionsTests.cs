@@ -191,6 +191,67 @@ public class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
+    public void QueryPerformanceCounter_WithValidPointer_ShouldReturnTrueAndSetCounter()
+    {
+        // Arrange
+        var counterPtr = _testEnv.AllocateMemory(8); // LARGE_INTEGER is 8 bytes (64-bit)
+
+        // Act
+        var result = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", counterPtr);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
+        
+        // Verify that a 64-bit counter value was written
+        var fullCounter = _testEnv.Memory.Read64(counterPtr);
+        
+        // The counter should be a positive value (time stamp)
+        Assert.True(fullCounter > 0, "Performance counter should be a positive value");
+    }
+
+    [Fact]
+    public void QueryPerformanceCounter_WithNullPointer_ShouldReturnFalse()
+    {
+        // Act
+        var result = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", 0);
+
+        // Assert
+        Assert.Equal(0u, result); // Should return FALSE (0)
+        
+        // Check that last error was set to ERROR_INVALID_PARAMETER
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+    }
+
+    [Fact]
+    public void QueryPerformanceCounter_ConsecutiveCalls_ShouldReturnIncreasingValues()
+    {
+        // Arrange
+        var counterPtr1 = _testEnv.AllocateMemory(8);
+        var counterPtr2 = _testEnv.AllocateMemory(8);
+
+        // Act
+        var result1 = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", counterPtr1);
+        
+        // Small delay to ensure different timestamps
+        System.Threading.Thread.Sleep(1);
+        
+        var result2 = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", counterPtr2);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result1);
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result2);
+        
+        // Read the counter values
+        var counter1Full = _testEnv.Memory.Read64(counterPtr1);
+        var counter2Full = _testEnv.Memory.Read64(counterPtr2);
+        
+        // The second call should return a higher or equal value (monotonic)
+        Assert.True(counter2Full >= counter1Full, 
+            $"Performance counter should be monotonic: {counter2Full} should be >= {counter1Full}");
+    }
+
+    [Fact]
     public void ExitProcess_ShouldSetExitRequestedFlag()
     {
         // Arrange
@@ -201,6 +262,291 @@ public class BasicFunctionsTests : IDisposable
 
         // Assert
         Assert.True(_testEnv.ProcessEnv.ExitRequested);
+    }
+    
+    #region GetStringTypeA Tests
+
+    [Fact]
+    public void GetStringTypeA_SimpleTest_ShouldReturnTrue()
+    {
+        // Arrange
+        var testString = _testEnv.WriteString("A");
+        var charTypeBuffer = _testEnv.AllocateMemory(2); // 1 character * 2 bytes
+        const uint locale = 0x0409; // English (US) locale
+        const uint CT_CTYPE1 = 1; // Character type 1
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, testString, 1u, charTypeBuffer);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+    }
+
+    [Fact]
+    public void GetStringTypeA_WithBasicASCIIString_ShouldReturnCorrectCharacterTypes()
+    {
+        // Arrange
+        var testString = _testEnv.WriteString("Hello123");
+        var charTypeBuffer = _testEnv.AllocateMemory(8 * 2); // 8 characters * 2 bytes per character type
+        const uint locale = 0x0409; // English (US) locale
+        const uint CT_CTYPE1 = 1; // Character type 1
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, testString, unchecked((uint)-1), charTypeBuffer);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+
+        // Check character types for "Hello123"
+        // H - uppercase letter
+        var hType = _testEnv.Memory.Read16(charTypeBuffer + 0);
+        Assert.True((hType & 0x0001) != 0); // CT_CTYPE1_UPPER
+        Assert.True((hType & 0x0100) != 0); // CT_CTYPE1_ALPHA
+
+        // e - lowercase letter  
+        var eType = _testEnv.Memory.Read16(charTypeBuffer + 2);
+        Assert.True((eType & 0x0002) != 0); // CT_CTYPE1_LOWER
+        Assert.True((eType & 0x0100) != 0); // CT_CTYPE1_ALPHA
+
+        // 1 - digit
+        var oneType = _testEnv.Memory.Read16(charTypeBuffer + 10); // "Hello1" -> index 5
+        Assert.True((oneType & 0x0004) != 0); // CT_CTYPE1_DIGIT
+        Assert.True((oneType & 0x0080) != 0); // CT_CTYPE1_XDIGIT
+    }
+
+    [Fact]
+    public void GetStringTypeA_WithSpacesAndPunctuation_ShouldReturnCorrectCharacterTypes()
+    {
+        // Arrange
+        var testString = _testEnv.WriteString("A !"); 
+        var charTypeBuffer = _testEnv.AllocateMemory(3 * 2); // 3 characters * 2 bytes per character type
+        const uint locale = 0x0409; // English (US) locale
+        const uint CT_CTYPE1 = 1; // Character type 1
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, testString, unchecked((uint)-1), charTypeBuffer);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+
+        // A - uppercase letter
+        var aType = _testEnv.Memory.Read16(charTypeBuffer + 0);
+        Assert.True((aType & 0x0001) != 0); // CT_CTYPE1_UPPER
+        Assert.True((aType & 0x0100) != 0); // CT_CTYPE1_ALPHA
+        Assert.True((aType & 0x0080) != 0); // CT_CTYPE1_XDIGIT (A is hex digit)
+
+        // Space - space character
+        var spaceType = _testEnv.Memory.Read16(charTypeBuffer + 2);
+        Assert.True((spaceType & 0x0008) != 0); // CT_CTYPE1_SPACE
+        Assert.True((spaceType & 0x0040) != 0); // CT_CTYPE1_BLANK
+
+        // ! - punctuation
+        var exclamationType = _testEnv.Memory.Read16(charTypeBuffer + 4);
+        Assert.True((exclamationType & 0x0010) != 0); // CT_CTYPE1_PUNCT
+    }
+
+    [Fact]
+    public void GetStringTypeA_WithNullString_ShouldReturnFalse()
+    {
+        // Arrange
+        const uint nullString = 0;
+        var charTypeBuffer = _testEnv.AllocateMemory(10);
+        const uint locale = 0x0409;
+        const uint CT_CTYPE1 = 1;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, nullString, 1, charTypeBuffer);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.FALSE, result);
+    }
+
+    [Fact]
+    public void GetStringTypeA_WithNullCharTypeBuffer_ShouldReturnFalse()
+    {
+        // Arrange
+        var testString = _testEnv.WriteString("Test");
+        const uint nullBuffer = 0;
+        const uint locale = 0x0409;
+        const uint CT_CTYPE1 = 1;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, testString, unchecked((uint)-1), nullBuffer);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.FALSE, result);
+    }
+
+    [Fact]
+    public void GetStringTypeA_WithSpecificLength_ShouldProcessOnlySpecifiedCharacters()
+    {
+        // Arrange
+        var testString = _testEnv.WriteString("Hello123");
+        var charTypeBuffer = _testEnv.AllocateMemory(3 * 2); // Only process first 3 characters
+        const uint locale = 0x0409;
+        const uint CT_CTYPE1 = 1;
+
+        // Act - only process first 3 characters ("Hel")
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, testString, 3, charTypeBuffer);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+
+        // Verify that only 3 character types were written
+        // H - uppercase
+        var hType = _testEnv.Memory.Read16(charTypeBuffer + 0);
+        Assert.True((hType & 0x0001) != 0); // CT_CTYPE1_UPPER
+
+        // e - lowercase
+        var eType = _testEnv.Memory.Read16(charTypeBuffer + 2);
+        Assert.True((eType & 0x0002) != 0); // CT_CTYPE1_LOWER
+
+        // l - lowercase
+        var lType = _testEnv.Memory.Read16(charTypeBuffer + 4);
+        Assert.True((lType & 0x0002) != 0); // CT_CTYPE1_LOWER
+    }
+
+    #endregion
+    
+    [Fact]
+    public void WideCharToMultiByte_WithNullTerminatedString_ShouldConvertCorrectly()
+    {
+        // Arrange
+        const string testString = "Hello";
+        var wideStringPtr = WriteWideString(testString);
+        var outputBuffer = _testEnv.AllocateMemory(20);
+        const uint codePage = 1252; // Windows-1252
+
+        // Act - Call with specific length (not null-terminated)
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePage, 0, wideStringPtr, (uint)testString.Length, outputBuffer, 20, 0, 0);
+
+        // Assert
+        Assert.Equal((uint)testString.Length, result);
+        
+        // Verify the converted string
+        var convertedString = _testEnv.ReadString(outputBuffer);
+        Assert.Equal(testString, convertedString);
+    }
+
+    [Fact]
+    public void WideCharToMultiByte_WithNullTerminatedString_ShouldConvertCorrectlyUsingMinusOne()
+    {
+        // Arrange
+        const string testString = "World";
+        var wideStringPtr = WriteWideString(testString, true); // Include null terminator
+        var outputBuffer = _testEnv.AllocateMemory(20);
+        const uint codePage = 1252; // Windows-1252
+
+        // Act - Call with -1 to indicate null-terminated string
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePage, 0, wideStringPtr, 0xFFFFFFFF, outputBuffer, 20, 0, 0);
+
+        // Assert
+        Assert.Equal((uint)testString.Length, result);
+        
+        // Verify the converted string
+        var convertedString = _testEnv.ReadString(outputBuffer);
+        Assert.Equal(testString, convertedString);
+    }
+
+    [Fact]
+    public void WideCharToMultiByte_WithBufferSizeQuery_ShouldReturnRequiredSize()
+    {
+        // Arrange
+        const string testString = "Test";
+        var wideStringPtr = WriteWideString(testString);
+        const uint codePage = 1252; // Windows-1252
+
+        // Act - Call with cbMultiByte = 0 to query buffer size
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePage, 0, wideStringPtr, (uint)testString.Length, 0, 0, 0, 0);
+
+        // Assert
+        Assert.Equal((uint)testString.Length, result);
+    }
+
+    [Fact]
+    public void WideCharToMultiByte_WithInvalidCodePage_ShouldReturnZero()
+    {
+        // Arrange
+        const string testString = "Test";
+        var wideStringPtr = WriteWideString(testString);
+        var outputBuffer = _testEnv.AllocateMemory(20);
+        const uint invalidCodePage = 99999; // Invalid code page
+
+        // Act
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            invalidCodePage, 0, wideStringPtr, (uint)testString.Length, outputBuffer, 20, 0, 0);
+
+        // Assert
+        Assert.Equal(0u, result);
+        
+        // Check that last error was set
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+    }
+
+    [Fact]
+    public void WideCharToMultiByte_WithNullPointer_ShouldReturnZero()
+    {
+        // Arrange
+        var outputBuffer = _testEnv.AllocateMemory(20);
+        const uint codePage = 1252;
+
+        // Act - Call with null string pointer
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePage, 0, 0, 5, outputBuffer, 20, 0, 0);
+
+        // Assert
+        Assert.Equal(0u, result);
+        
+        // Check that last error was set
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+    }
+
+    [Fact]
+    public void WideCharToMultiByte_WithCP_ACP_ShouldUseDefaultCodePage()
+    {
+        // Arrange
+        const string testString = "ACP";
+        var wideStringPtr = WriteWideString(testString);
+        var outputBuffer = _testEnv.AllocateMemory(20);
+        const uint cpAcp = 0; // CP_ACP
+
+        // Act
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            cpAcp, 0, wideStringPtr, (uint)testString.Length, outputBuffer, 20, 0, 0);
+
+        // Assert
+        Assert.Equal((uint)testString.Length, result);
+        
+        // Verify the converted string
+        var convertedString = _testEnv.ReadString(outputBuffer);
+        Assert.Equal(testString, convertedString);
+    }
+
+    /// <summary>
+    /// Helper method to write a wide string to memory
+    /// </summary>
+    private uint WriteWideString(string str, bool includeNullTerminator = false)
+    {
+        var wideChars = str.ToCharArray();
+        var totalChars = includeNullTerminator ? wideChars.Length + 1 : wideChars.Length;
+        var addr = _testEnv.AllocateMemory((uint)(totalChars * 2)); // 2 bytes per wide char
+        
+        for (int i = 0; i < wideChars.Length; i++)
+        {
+            _testEnv.Memory.Write16((uint)(addr + i * 2), (ushort)wideChars[i]);
+        }
+        
+        if (includeNullTerminator)
+        {
+            _testEnv.Memory.Write16((uint)(addr + wideChars.Length * 2), 0);
+        }
+        
+        return addr;
     }
 
     [Fact]

@@ -40,6 +40,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "GETOEMCP":
 				returnValue = GetOEMCP();
 				return true;
+			case "GETSTRINGTYPEA":
+				returnValue = GetStringTypeA(a.UInt32(0), a.UInt32(1), a.Lpstr(2), a.Int32(3), a.UInt32(4));
+				return true;
 			case "GETMODULEHANDLEA":
 				returnValue = GetModuleHandleA(a.Lpstr(0));
 				return true;
@@ -51,6 +54,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				return true;
 			case "GETCOMMANDLINEA":
 				returnValue = GetCommandLineA();
+				return true;
+			case "GETENVIRONMENTSTRINGSW":
+				returnValue = GetEnvironmentStringsW();
 				return true;
 
 			// Std handles
@@ -112,6 +118,14 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				return true;
 			case "RTLUNWIND":
 				returnValue = RtlUnwind(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+        return true;
+			case "WIDECHARTOMULTIBYTE":
+				returnValue = WideCharToMultiByte(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+				return true;
+
+			// Performance/timing functions
+			case "QUERYPERFORMANCECOUNTER":
+				returnValue = QueryPerformanceCounter(a.UInt32(0));
 				return true;
 
 			default:
@@ -191,6 +205,121 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
   
 	private static unsafe uint GetOEMCP() => 437; // IBM PC US (OEM code page)
 
+	private unsafe uint GetStringTypeA(uint locale, uint dwInfoType, sbyte* lpSrcStr, int cchSrc, uint lpCharType)
+	{
+		// Maximum string length limit to prevent excessive memory usage and infinite loops
+		const int MAX_STRING_LENGTH_LIMIT = 1000;
+		
+		uint srcStrAddr = (uint)(nint)lpSrcStr;
+		if (srcStrAddr == 0 || lpCharType == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		// We only support CT_CTYPE1 for simplicity
+		if (dwInfoType != 1)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Determine the length of the string if cchSrc is -1
+		int length = cchSrc;
+		if (cchSrc == -1)
+		{
+			length = 0;
+			// Safely calculate string length with bounds check
+			while (length < MAX_STRING_LENGTH_LIMIT)
+			{
+				byte ch = env.MemRead8(srcStrAddr + (uint)length);
+				if (ch == 0) break;
+				length++;
+			}
+		}
+
+		// Validate length
+		if (length <= 0 || length > MAX_STRING_LENGTH_LIMIT)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Character type constants from Windows API
+		const ushort CT_CTYPE1_UPPER = 0x0001;    // uppercase
+		const ushort CT_CTYPE1_LOWER = 0x0002;    // lowercase
+		const ushort CT_CTYPE1_DIGIT = 0x0004;    // decimal digit
+		const ushort CT_CTYPE1_SPACE = 0x0008;    // space characters
+		const ushort CT_CTYPE1_PUNCT = 0x0010;    // punctuation
+		const ushort CT_CTYPE1_CNTRL = 0x0020;    // control characters
+		const ushort CT_CTYPE1_BLANK = 0x0040;    // blank characters
+		const ushort CT_CTYPE1_XDIGIT = 0x0080;   // hexadecimal digits
+		const ushort CT_CTYPE1_ALPHA = 0x0100;    // any letter
+
+		// Process each character
+		for (int i = 0; i < length; i++)
+		{
+			byte ch = env.MemRead8(srcStrAddr + (uint)i);
+			ushort charType = 0;
+
+			// ASCII punctuation ranges:
+			// '!'..'/'  (33-47): !"#$%&'()*+,-./
+			// ':'..'@'  (58-64): :;<=>?@
+			// '['..'`'  (91-96): [\]^_`
+			// '{'..'~'  (123-126): {|}~
+			const byte PUNCT_RANGE1_START = (byte)'!';
+			const byte PUNCT_RANGE1_END   = (byte)'/';
+			const byte PUNCT_RANGE2_START = (byte)':';
+			const byte PUNCT_RANGE2_END   = (byte)'@';
+			const byte PUNCT_RANGE3_START = (byte)'[';
+			const byte PUNCT_RANGE3_END   = (byte)'`';
+			const byte PUNCT_RANGE4_START = (byte)'{';
+			const byte PUNCT_RANGE4_END   = (byte)'~';
+
+			// Basic ASCII character classification
+			if (ch >= 'A' && ch <= 'Z')
+			{
+				charType |= CT_CTYPE1_UPPER | CT_CTYPE1_ALPHA;
+				if ((ch >= 'A' && ch <= 'F'))
+					charType |= CT_CTYPE1_XDIGIT;
+			}
+			else if (ch >= 'a' && ch <= 'z')
+			{
+				charType |= CT_CTYPE1_LOWER | CT_CTYPE1_ALPHA;
+				if ((ch >= 'a' && ch <= 'f'))
+					charType |= CT_CTYPE1_XDIGIT;
+			}
+			else if (ch >= '0' && ch <= '9')
+			{
+				charType |= CT_CTYPE1_DIGIT | CT_CTYPE1_XDIGIT;
+			}
+			else if (ch == ' ' || ch == '\t')
+			{
+				charType |= CT_CTYPE1_SPACE | CT_CTYPE1_BLANK;
+			}
+			else if (ch == '\n' || ch == '\r' || ch == '\f' || ch == '\v')
+			{
+				charType |= CT_CTYPE1_SPACE;
+			}
+			else if (ch <= 0x1F || ch == 0x7F)
+			{
+				charType |= CT_CTYPE1_CNTRL;
+			}
+			else if ((ch >= PUNCT_RANGE1_START && ch <= PUNCT_RANGE1_END) ||
+			         (ch >= PUNCT_RANGE2_START && ch <= PUNCT_RANGE2_END) ||
+			         (ch >= PUNCT_RANGE3_START && ch <= PUNCT_RANGE3_END) ||
+			         (ch >= PUNCT_RANGE4_START && ch <= PUNCT_RANGE4_END))
+			{
+				charType |= CT_CTYPE1_PUNCT;
+			}
+
+			// Write the character type to the output array (each entry is 2 bytes)
+			env.MemWrite16(lpCharType + (uint)(i * 2), charType);
+		}
+
+		return NativeTypes.Win32Bool.TRUE;
+	}
+
 	private unsafe uint GetModuleHandleA(sbyte* name)
 	{
 		return imageBase;
@@ -208,6 +337,13 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 	}
 
 	private unsafe uint GetCommandLineA() => env.CommandLinePtr;
+
+	private unsafe uint GetEnvironmentStringsW()
+	{
+		// Return pointer to Unicode environment strings block
+		// This will be obtained from emulated environment variables, not system ones
+		return env.GetEnvironmentStringsW();
+	}
 
 	private unsafe uint GetStartupInfoA(uint lpStartupInfo)
 	{
@@ -384,6 +520,142 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		// In Win32, it's essentially a no-op that returns the requested count
 		// Modern systems ignore this and have much higher handle limits
 		return uNumber; // Return the requested number as if it was successfully set
+	}
+
+	private unsafe uint WideCharToMultiByte(uint codePage, uint dwFlags, uint lpWideCharStr, uint cchWideChar, uint lpMultiByteStr, uint cbMultiByte, uint lpDefaultChar, uint lpUsedDefaultChar)
+	{
+		try
+		{
+			// Handle null input string
+			if (lpWideCharStr == 0)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			// Handle special code page values
+			uint actualCodePage = codePage switch
+			{
+				0 => GetACP(),        // CP_ACP - system default Windows ANSI code page
+				1 => GetOEMCP(),      // CP_OEMCP - system default OEM code page
+				_ => codePage
+			};
+
+			// Read the wide character string from memory
+			string wideString;
+			if (cchWideChar == 0xFFFFFFFF) // -1 indicates null-terminated string
+			{
+				// Read null-terminated wide string
+				var wideChars = new List<char>();
+				uint addr = lpWideCharStr;
+				while (true)
+				{
+					ushort wideChar = env.MemRead16(addr);
+					if (wideChar == 0) break;
+					wideChars.Add((char)wideChar);
+					addr += 2;
+				}
+				wideString = new string(wideChars.ToArray());
+			}
+			else
+			{
+				// Read specified number of wide characters
+				var wideChars = new char[cchWideChar];
+				for (uint i = 0; i < cchWideChar; i++)
+				{
+					wideChars[i] = (char)env.MemRead16(lpWideCharStr + i * 2);
+				}
+				wideString = new string(wideChars);
+			}
+
+			// Convert to multi-byte string based on code page
+			byte[] multiByteBytes;
+			switch (actualCodePage)
+			{
+				case 1252: // Windows-1252
+				case 437:  // OEM US
+				case 850:  // OEM Latin-1
+				case 1250: // Windows Central Europe
+				case 1251: // Windows Cyrillic
+				case 28591: // ISO 8859-1
+					// Use the correct code page encoding for these single-byte code pages
+					multiByteBytes = System.Text.Encoding.GetEncoding((int)actualCodePage).GetBytes(wideString);
+					break;
+				case 65001: // UTF-8
+					multiByteBytes = System.Text.Encoding.UTF8.GetBytes(wideString);
+					break;
+				default:
+					// Unsupported code page
+					_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+					return 0;
+			}
+
+			// If cbMultiByte is 0, return required buffer size
+			if (cbMultiByte == 0)
+			{
+				// If input is null-terminated, include space for null terminator in required size
+				if (cchWideChar == unchecked((uint)-1))
+				{
+					return (uint)(multiByteBytes.Length + 1);
+				}
+        
+				return (uint)multiByteBytes.Length;
+			}
+
+			// Check if output buffer is large enough
+			if (multiByteBytes.Length > cbMultiByte)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+				return 0;
+			}
+
+			// Copy converted bytes to output buffer
+			if (lpMultiByteStr != 0)
+			{
+				env.MemWriteBytes(lpMultiByteStr, multiByteBytes);
+			}
+
+			// Clear the "used default char" flag if provided
+			if (lpUsedDefaultChar != 0)
+			{
+				env.MemWrite32(lpUsedDefaultChar, 0); // FALSE - no default char used (simplified)
+			}
+
+			return (uint)multiByteBytes.Length;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"[Kernel32] WideCharToMultiByte failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+	}
+  
+	private unsafe uint QueryPerformanceCounter(uint lpPerformanceCount)
+	{
+		// QueryPerformanceCounter retrieves the current value of the performance counter
+		// lpPerformanceCount is a pointer to a LARGE_INTEGER (64-bit value)
+		if (lpPerformanceCount == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		try
+		{
+			// Use .NET's Stopwatch.GetTimestamp() which provides high-resolution timestamp
+			var timestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+			
+			// Write the 64-bit timestamp to the provided memory location
+			env.MemWrite64(lpPerformanceCount, (ulong)timestamp);
+			
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
 	}
 
 	private unsafe string ReadCurrentModulePath() => "game.exe";
