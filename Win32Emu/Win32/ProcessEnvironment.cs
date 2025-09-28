@@ -122,6 +122,59 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 		return addr;
 	}
 
+	/// <summary>
+	/// Creates a Windows-format environment strings block in ANSI.
+	/// Returns a pointer to a double-null-terminated block of null-terminated strings.
+	/// Format: "VAR1=value1\0VAR2=value2\0...VARn=valuen\0\0"
+	/// </summary>
+	public uint GetEnvironmentStringsA()
+	{
+		var envBlock = new System.Text.StringBuilder();
+		
+		// Add each environment variable as "NAME=VALUE\0"
+		foreach (var kvp in _environmentVariables.OrderBy(x => x.Key))
+		{
+			envBlock.Append($"{kvp.Key}={kvp.Value}");
+			envBlock.Append('\0'); // null terminate each string
+		}
+		
+		// Add final null terminator for the block
+		envBlock.Append('\0');
+		
+		// Convert to bytes and allocate memory
+		var bytes = System.Text.Encoding.ASCII.GetBytes(envBlock.ToString());
+		var addr = SimpleAlloc((uint)bytes.Length);
+		vm.WriteBytes(addr, bytes);
+		
+		return addr;
+	}
+
+	/// <summary>
+	/// Frees environment strings memory allocated by GetEnvironmentStringsW.
+	/// In a real implementation, this would free the memory block, but since we use
+	/// a simple allocator that doesn't support freeing, this is a no-op.
+	/// Returns TRUE (1) to indicate success.
+	/// </summary>
+	public uint FreeEnvironmentStringsW(uint lpszEnvironmentBlock)
+	{
+		// In our simple memory model, we don't actually free memory
+		// Just return success (TRUE)
+		return 1;
+	}
+
+	/// <summary>
+	/// Frees environment strings memory allocated by GetEnvironmentStringsA.
+	/// In a real implementation, this would free the memory block, but since we use
+	/// a simple allocator that doesn't support freeing, this is a no-op.
+	/// Returns TRUE (1) to indicate success.
+	/// </summary>
+	public uint FreeEnvironmentStringsA(uint lpszEnvironmentBlock)
+	{
+		// In our simple memory model, we don't actually free memory
+		// Just return success (TRUE)
+		return 1;
+	}
+
 	public byte[] MemReadBytes(uint addr, int count) => vm.GetSpan(addr, count);
 	public byte MemRead8(uint addr) => vm.Read8(addr);
 	public void MemWriteBytes(uint addr, ReadOnlySpan<byte> data) => vm.WriteBytes(addr, data);

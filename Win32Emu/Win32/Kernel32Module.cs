@@ -58,6 +58,15 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "GETENVIRONMENTSTRINGSW":
 				returnValue = GetEnvironmentStringsW();
 				return true;
+			case "GETENVIRONMENTSTRINGSA":
+				returnValue = GetEnvironmentStringsA();
+				return true;
+			case "FREEENVIRONMENTSTRINGSW":
+				returnValue = FreeEnvironmentStringsW(a.UInt32(0));
+				return true;
+			case "FREEENVIRONMENTSTRINGSA":
+				returnValue = FreeEnvironmentStringsA(a.UInt32(0));
+				return true;
 
 			// Std handles
 			case "GETSTDHANDLE":
@@ -343,6 +352,25 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		// Return pointer to Unicode environment strings block
 		// This will be obtained from emulated environment variables, not system ones
 		return env.GetEnvironmentStringsW();
+	}
+
+	private unsafe uint GetEnvironmentStringsA()
+	{
+		// Return pointer to ANSI environment strings block
+		// This will be obtained from emulated environment variables, not system ones
+		return env.GetEnvironmentStringsA();
+	}
+
+	private unsafe uint FreeEnvironmentStringsW(uint lpszEnvironmentBlock)
+	{
+		// Free Unicode environment strings block
+		return env.FreeEnvironmentStringsW(lpszEnvironmentBlock);
+	}
+
+	private unsafe uint FreeEnvironmentStringsA(uint lpszEnvironmentBlock)
+	{
+		// Free ANSI environment strings block
+		return env.FreeEnvironmentStringsA(lpszEnvironmentBlock);
 	}
 
 	private unsafe uint GetStartupInfoA(uint lpStartupInfo)
