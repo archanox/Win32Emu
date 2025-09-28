@@ -204,6 +204,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 
 	private unsafe uint GetStringTypeA(uint locale, uint dwInfoType, sbyte* lpSrcStr, int cchSrc, uint lpCharType)
 	{
+		// Maximum string length limit to prevent excessive memory usage and infinite loops
+		const int MAX_STRING_LENGTH_LIMIT = 1000;
+		
 		uint srcStrAddr = (uint)(nint)lpSrcStr;
 		if (srcStrAddr == 0 || lpCharType == 0)
 		{
@@ -224,7 +227,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		{
 			length = 0;
 			// Safely calculate string length with bounds check
-			while (length < 1000) // Arbitrary limit to prevent infinite loops
+			while (length < MAX_STRING_LENGTH_LIMIT)
 			{
 				byte ch = env.MemRead8(srcStrAddr + (uint)length);
 				if (ch == 0) break;
@@ -233,7 +236,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		}
 
 		// Validate length
-		if (length <= 0 || length > 1000)
+		if (length <= 0 || length > MAX_STRING_LENGTH_LIMIT)
 		{
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
@@ -255,6 +258,20 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		{
 			byte ch = env.MemRead8(srcStrAddr + (uint)i);
 			ushort charType = 0;
+
+			// ASCII punctuation ranges:
+			// '!'..'/'  (33-47): !"#$%&'()*+,-./
+			// ':'..'@'  (58-64): :;<=>?@
+			// '['..'`'  (91-96): [\]^_`
+			// '{'..'~'  (123-126): {|}~
+			const byte PUNCT_RANGE1_START = (byte)'!';
+			const byte PUNCT_RANGE1_END   = (byte)'/';
+			const byte PUNCT_RANGE2_START = (byte)':';
+			const byte PUNCT_RANGE2_END   = (byte)'@';
+			const byte PUNCT_RANGE3_START = (byte)'[';
+			const byte PUNCT_RANGE3_END   = (byte)'`';
+			const byte PUNCT_RANGE4_START = (byte)'{';
+			const byte PUNCT_RANGE4_END   = (byte)'~';
 
 			// Basic ASCII character classification
 			if (ch >= 'A' && ch <= 'Z')
@@ -285,20 +302,6 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			{
 				charType |= CT_CTYPE1_CNTRL;
 			}
-			// ASCII punctuation ranges:
-			// '!'..'/'  (33-47): !"#$%&'()*+,-./
-			// ':'..'@'  (58-64): :;<=>?@
-			// '['..'`'  (91-96): [\]^_`
-			// '{'..'~'  (123-126): {|}~
-			const byte PUNCT_RANGE1_START = (byte)'!';
-			const byte PUNCT_RANGE1_END   = (byte)'/';
-			const byte PUNCT_RANGE2_START = (byte)':';
-			const byte PUNCT_RANGE2_END   = (byte)'@';
-			const byte PUNCT_RANGE3_START = (byte)'[';
-			const byte PUNCT_RANGE3_END   = (byte)'`';
-			const byte PUNCT_RANGE4_START = (byte)'{';
-			const byte PUNCT_RANGE4_END   = (byte)'~';
-
 			else if ((ch >= PUNCT_RANGE1_START && ch <= PUNCT_RANGE1_END) ||
 			         (ch >= PUNCT_RANGE2_START && ch <= PUNCT_RANGE2_END) ||
 			         (ch >= PUNCT_RANGE3_START && ch <= PUNCT_RANGE3_END) ||
