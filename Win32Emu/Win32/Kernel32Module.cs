@@ -623,14 +623,19 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			byte[] multiByteBytes;
 			switch (actualCodePage)
 			{
-				case 1252: // Windows-1252
+				case 1252: // Windows-1252 (Western European)
+				case 28591: // ISO 8859-1 (Latin-1)
+					// Both Windows-1252 and ISO 8859-1 are single-byte encodings
+					// For compatibility with InvariantGlobalization, use Latin1 fallback
+					multiByteBytes = System.Text.Encoding.Latin1.GetBytes(wideString);
+					break;
 				case 437:  // OEM US
-				case 850:  // OEM Latin-1
+				case 850:  // OEM Latin-1  
 				case 1250: // Windows Central Europe
 				case 1251: // Windows Cyrillic
-				case 28591: // ISO 8859-1
-					// Use the correct code page encoding for these single-byte code pages
-					multiByteBytes = System.Text.Encoding.GetEncoding((int)actualCodePage).GetBytes(wideString);
+					// For other single-byte code pages, fallback to UTF-8 since Latin1 may not cover all characters
+					// This provides better Unicode support even if not 100% code page accurate
+					multiByteBytes = System.Text.Encoding.UTF8.GetBytes(wideString);
 					break;
 				case 65001: // UTF-8
 					multiByteBytes = System.Text.Encoding.UTF8.GetBytes(wideString);

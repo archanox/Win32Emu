@@ -583,6 +583,32 @@ public class BasicFunctionsTests : IDisposable
         Assert.Equal(0u, result);
     }
 
+    [Fact]
+    public void WideCharToMultiByte_WithWindows1252CodePage_ShouldWorkWithInvariantGlobalization()
+    {
+        // This test specifically addresses the issue from the bug report
+        // where WideCharToMultiByte with code page 1252 failed with 
+        // "No data is available for encoding 1252"
+        
+        // Arrange
+        const string testString = "TestString"; 
+        var wideStringPtr = WriteWideString(testString);
+        var outputBuffer = _testEnv.AllocateMemory(50);
+        const uint codePage1252 = 1252; // Windows-1252 (Western European)
+
+        // Act - This was the failing call from the issue
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePage1252, 0, wideStringPtr, (uint)testString.Length, outputBuffer, 50, 0, 0);
+
+        // Assert - Should now work with fallback to Latin-1 encoding
+        Assert.True(result > 0, "WideCharToMultiByte should succeed with code page 1252");
+        Assert.Equal((uint)testString.Length, result);
+        
+        // Verify the converted string is correct
+        var convertedString = _testEnv.ReadString(outputBuffer);
+        Assert.Equal(testString, convertedString);
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
