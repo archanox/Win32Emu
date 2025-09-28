@@ -40,6 +40,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			case "GETOEMCP":
 				returnValue = GetOEMCP();
 				return true;
+			case "GETSTRINGTYPEA":
+				returnValue = GetStringTypeA(a.UInt32(0), a.UInt32(1), a.Lpstr(2), a.Int32(3), a.UInt32(4));
+				return true;
 			case "GETMODULEHANDLEA":
 				returnValue = GetModuleHandleA(a.Lpstr(0));
 				return true;
@@ -198,6 +201,121 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 	}
   
 	private static unsafe uint GetOEMCP() => 437; // IBM PC US (OEM code page)
+
+	private unsafe uint GetStringTypeA(uint locale, uint dwInfoType, sbyte* lpSrcStr, int cchSrc, uint lpCharType)
+	{
+		// Maximum string length limit to prevent excessive memory usage and infinite loops
+		const int MAX_STRING_LENGTH_LIMIT = 1000;
+		
+		uint srcStrAddr = (uint)(nint)lpSrcStr;
+		if (srcStrAddr == 0 || lpCharType == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		// We only support CT_CTYPE1 for simplicity
+		if (dwInfoType != 1)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Determine the length of the string if cchSrc is -1
+		int length = cchSrc;
+		if (cchSrc == -1)
+		{
+			length = 0;
+			// Safely calculate string length with bounds check
+			while (length < MAX_STRING_LENGTH_LIMIT)
+			{
+				byte ch = env.MemRead8(srcStrAddr + (uint)length);
+				if (ch == 0) break;
+				length++;
+			}
+		}
+
+		// Validate length
+		if (length <= 0 || length > MAX_STRING_LENGTH_LIMIT)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Character type constants from Windows API
+		const ushort CT_CTYPE1_UPPER = 0x0001;    // uppercase
+		const ushort CT_CTYPE1_LOWER = 0x0002;    // lowercase
+		const ushort CT_CTYPE1_DIGIT = 0x0004;    // decimal digit
+		const ushort CT_CTYPE1_SPACE = 0x0008;    // space characters
+		const ushort CT_CTYPE1_PUNCT = 0x0010;    // punctuation
+		const ushort CT_CTYPE1_CNTRL = 0x0020;    // control characters
+		const ushort CT_CTYPE1_BLANK = 0x0040;    // blank characters
+		const ushort CT_CTYPE1_XDIGIT = 0x0080;   // hexadecimal digits
+		const ushort CT_CTYPE1_ALPHA = 0x0100;    // any letter
+
+		// Process each character
+		for (int i = 0; i < length; i++)
+		{
+			byte ch = env.MemRead8(srcStrAddr + (uint)i);
+			ushort charType = 0;
+
+			// ASCII punctuation ranges:
+			// '!'..'/'  (33-47): !"#$%&'()*+,-./
+			// ':'..'@'  (58-64): :;<=>?@
+			// '['..'`'  (91-96): [\]^_`
+			// '{'..'~'  (123-126): {|}~
+			const byte PUNCT_RANGE1_START = (byte)'!';
+			const byte PUNCT_RANGE1_END   = (byte)'/';
+			const byte PUNCT_RANGE2_START = (byte)':';
+			const byte PUNCT_RANGE2_END   = (byte)'@';
+			const byte PUNCT_RANGE3_START = (byte)'[';
+			const byte PUNCT_RANGE3_END   = (byte)'`';
+			const byte PUNCT_RANGE4_START = (byte)'{';
+			const byte PUNCT_RANGE4_END   = (byte)'~';
+
+			// Basic ASCII character classification
+			if (ch >= 'A' && ch <= 'Z')
+			{
+				charType |= CT_CTYPE1_UPPER | CT_CTYPE1_ALPHA;
+				if ((ch >= 'A' && ch <= 'F'))
+					charType |= CT_CTYPE1_XDIGIT;
+			}
+			else if (ch >= 'a' && ch <= 'z')
+			{
+				charType |= CT_CTYPE1_LOWER | CT_CTYPE1_ALPHA;
+				if ((ch >= 'a' && ch <= 'f'))
+					charType |= CT_CTYPE1_XDIGIT;
+			}
+			else if (ch >= '0' && ch <= '9')
+			{
+				charType |= CT_CTYPE1_DIGIT | CT_CTYPE1_XDIGIT;
+			}
+			else if (ch == ' ' || ch == '\t')
+			{
+				charType |= CT_CTYPE1_SPACE | CT_CTYPE1_BLANK;
+			}
+			else if (ch == '\n' || ch == '\r' || ch == '\f' || ch == '\v')
+			{
+				charType |= CT_CTYPE1_SPACE;
+			}
+			else if (ch <= 0x1F || ch == 0x7F)
+			{
+				charType |= CT_CTYPE1_CNTRL;
+			}
+			else if ((ch >= PUNCT_RANGE1_START && ch <= PUNCT_RANGE1_END) ||
+			         (ch >= PUNCT_RANGE2_START && ch <= PUNCT_RANGE2_END) ||
+			         (ch >= PUNCT_RANGE3_START && ch <= PUNCT_RANGE3_END) ||
+			         (ch >= PUNCT_RANGE4_START && ch <= PUNCT_RANGE4_END))
+			{
+				charType |= CT_CTYPE1_PUNCT;
+			}
+
+			// Write the character type to the output array (each entry is 2 bytes)
+			env.MemWrite16(lpCharType + (uint)(i * 2), charType);
+		}
+
+		return NativeTypes.Win32Bool.TRUE;
+	}
 
 	private unsafe uint GetModuleHandleA(sbyte* name)
 	{
