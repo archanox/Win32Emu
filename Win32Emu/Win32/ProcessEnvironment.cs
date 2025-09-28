@@ -129,6 +129,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	public uint MemRead32(uint addr) => vm.Read32(addr);
 	public ushort MemRead16(uint addr) => vm.Read16(addr);
 	public byte MemRead8(uint addr) => vm.Read8(addr);
+	public void MemWrite64(uint addr, ulong value) => vm.Write64(addr, value);
 	public void MemZero(uint addr, uint size) => vm.WriteBytes(addr, new byte[size]);
 
 	// Handle table ops

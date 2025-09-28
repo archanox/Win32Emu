@@ -117,6 +117,11 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				returnValue = WideCharToMultiByte(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
 				return true;
 
+			// Performance/timing functions
+			case "QUERYPERFORMANCECOUNTER":
+				returnValue = QueryPerformanceCounter(a.UInt32(0));
+				return true;
+
 			default:
 				Console.WriteLine($"[Kernel32] Unimplemented export: {export}");
 				return false;
@@ -398,9 +403,6 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 
 	private unsafe uint WideCharToMultiByte(uint codePage, uint dwFlags, uint lpWideCharStr, uint cchWideChar, uint lpMultiByteStr, uint cbMultiByte, uint lpDefaultChar, uint lpUsedDefaultChar)
 	{
-		// Parameters now match Win32 API order:
-		// codePage, dwFlags, lpWideCharStr, cchWideChar, lpMultiByteStr, cbMultiByte, lpDefaultChar, lpUsedDefaultChar
-		
 		try
 		{
 			// Handle null input string
@@ -475,6 +477,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 				{
 					return (uint)(multiByteBytes.Length + 1);
 				}
+        
 				return (uint)multiByteBytes.Length;
 			}
 
@@ -504,6 +507,33 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			Console.WriteLine($"[Kernel32] WideCharToMultiByte failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
+    }
+  }
+  
+	private unsafe uint QueryPerformanceCounter(uint lpPerformanceCount)
+	{
+		// QueryPerformanceCounter retrieves the current value of the performance counter
+		// lpPerformanceCount is a pointer to a LARGE_INTEGER (64-bit value)
+		if (lpPerformanceCount == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		try
+		{
+			// Use .NET's Stopwatch.GetTimestamp() which provides high-resolution timestamp
+			var timestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+			
+			// Write the 64-bit timestamp to the provided memory location
+			env.MemWrite64(lpPerformanceCount, (ulong)timestamp);
+			
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
