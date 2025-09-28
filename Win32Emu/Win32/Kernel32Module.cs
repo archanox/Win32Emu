@@ -507,8 +507,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 			Console.WriteLine($"[Kernel32] WideCharToMultiByte failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
-    }
-  }
+		}
+	}
   
 	private unsafe uint QueryPerformanceCounter(uint lpPerformanceCount)
 	{
