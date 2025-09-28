@@ -379,11 +379,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase) : IWin32Modu
 		return env.GetEnvironmentStringsA();
 	}
 
-	private unsafe uint FreeEnvironmentStringsW(uint lpszEnvironmentBlock)
-	{
-		// Free Unicode environment strings block
-		return env.FreeEnvironmentStringsW(lpszEnvironmentBlock);
-	}
+
 
 	private unsafe uint FreeEnvironmentStringsA(uint lpszEnvironmentBlock)
 	{
