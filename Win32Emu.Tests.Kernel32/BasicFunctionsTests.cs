@@ -264,6 +264,147 @@ public class BasicFunctionsTests : IDisposable
         Assert.True(_testEnv.ProcessEnv.ExitRequested);
     }
 
+    [Fact]
+    public void WideCharToMultiByte_WithNullTerminatedString_ShouldConvertCorrectly()
+    {
+        // Arrange
+        const string testString = "Hello";
+        var wideStringPtr = WriteWideString(testString);
+        var outputBuffer = _testEnv.AllocateMemory(20);
+        const uint codePage = 1252; // Windows-1252
+
+        // Act - Call with specific length (not null-terminated)
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePage, 0, wideStringPtr, (uint)testString.Length, outputBuffer, 20, 0, 0);
+
+        // Assert
+        Assert.Equal((uint)testString.Length, result);
+        
+        // Verify the converted string
+        var convertedString = _testEnv.ReadString(outputBuffer);
+        Assert.Equal(testString, convertedString);
+    }
+
+    [Fact]
+    public void WideCharToMultiByte_WithNullTerminatedString_ShouldConvertCorrectlyUsingMinusOne()
+    {
+        // Arrange
+        const string testString = "World";
+        var wideStringPtr = WriteWideString(testString, true); // Include null terminator
+        var outputBuffer = _testEnv.AllocateMemory(20);
+        const uint codePage = 1252; // Windows-1252
+
+        // Act - Call with -1 to indicate null-terminated string
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePage, 0, wideStringPtr, 0xFFFFFFFF, outputBuffer, 20, 0, 0);
+
+        // Assert
+        Assert.Equal((uint)testString.Length, result);
+        
+        // Verify the converted string
+        var convertedString = _testEnv.ReadString(outputBuffer);
+        Assert.Equal(testString, convertedString);
+    }
+
+    [Fact]
+    public void WideCharToMultiByte_WithBufferSizeQuery_ShouldReturnRequiredSize()
+    {
+        // Arrange
+        const string testString = "Test";
+        var wideStringPtr = WriteWideString(testString);
+        const uint codePage = 1252; // Windows-1252
+
+        // Act - Call with cbMultiByte = 0 to query buffer size
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePage, 0, wideStringPtr, (uint)testString.Length, 0, 0, 0, 0);
+
+        // Assert
+        Assert.Equal((uint)testString.Length, result);
+    }
+
+    [Fact]
+    public void WideCharToMultiByte_WithInvalidCodePage_ShouldReturnZero()
+    {
+        // Arrange
+        const string testString = "Test";
+        var wideStringPtr = WriteWideString(testString);
+        var outputBuffer = _testEnv.AllocateMemory(20);
+        const uint invalidCodePage = 99999; // Invalid code page
+
+        // Act
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            invalidCodePage, 0, wideStringPtr, (uint)testString.Length, outputBuffer, 20, 0, 0);
+
+        // Assert
+        Assert.Equal(0u, result);
+        
+        // Check that last error was set
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+    }
+
+    [Fact]
+    public void WideCharToMultiByte_WithNullPointer_ShouldReturnZero()
+    {
+        // Arrange
+        var outputBuffer = _testEnv.AllocateMemory(20);
+        const uint codePage = 1252;
+
+        // Act - Call with null string pointer
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePage, 0, 0, 5, outputBuffer, 20, 0, 0);
+
+        // Assert
+        Assert.Equal(0u, result);
+        
+        // Check that last error was set
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+    }
+
+    [Fact]
+    public void WideCharToMultiByte_WithCP_ACP_ShouldUseDefaultCodePage()
+    {
+        // Arrange
+        const string testString = "ACP";
+        var wideStringPtr = WriteWideString(testString);
+        var outputBuffer = _testEnv.AllocateMemory(20);
+        const uint cpAcp = 0; // CP_ACP
+
+        // Act
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            cpAcp, 0, wideStringPtr, (uint)testString.Length, outputBuffer, 20, 0, 0);
+
+        // Assert
+        Assert.Equal((uint)testString.Length, result);
+        
+        // Verify the converted string
+        var convertedString = _testEnv.ReadString(outputBuffer);
+        Assert.Equal(testString, convertedString);
+    }
+
+    /// <summary>
+    /// Helper method to write a wide string to memory
+    /// </summary>
+    private uint WriteWideString(string str, bool includeNullTerminator = false)
+    {
+        var wideChars = str.ToCharArray();
+        var totalChars = includeNullTerminator ? wideChars.Length + 1 : wideChars.Length;
+        var addr = _testEnv.AllocateMemory((uint)(totalChars * 2)); // 2 bytes per wide char
+        
+        for (int i = 0; i < wideChars.Length; i++)
+        {
+            _testEnv.Memory.Write16((uint)(addr + i * 2), (ushort)wideChars[i]);
+        }
+        
+        if (includeNullTerminator)
+        {
+            _testEnv.Memory.Write16((uint)(addr + wideChars.Length * 2), 0);
+        }
+        
+        return addr;
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
