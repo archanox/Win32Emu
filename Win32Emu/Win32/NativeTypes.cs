@@ -81,6 +81,7 @@ public static class NativeTypes
 		public const uint ERROR_INVALID_FUNCTION = 1;
 		public const uint ERROR_FILE_NOT_FOUND = 2;
 		public const uint ERROR_INVALID_PARAMETER = 87;
+		public const uint ERROR_INSUFFICIENT_BUFFER = 122;
 	}
 
 	// Windows BOOL values
