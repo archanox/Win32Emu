@@ -7,8 +7,15 @@ namespace Win32Emu.Win32;
 public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
 {
 	public string Name => "KERNEL32.DLL";
+	
+	private Win32Dispatcher? _dispatcher;
 
 	[ThreadStatic] private static uint _lastError;
+	
+	public void SetDispatcher(Win32Dispatcher dispatcher)
+	{
+		_dispatcher = dispatcher;
+	}
 
 	public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
@@ -367,6 +374,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			// DLL is local to executable path - load it using PeImageLoader for proper emulation
 			Console.WriteLine($"[Kernel32] Loading local DLL for emulation: {libraryName}");
 			
+			// Register with dispatcher for function call tracking
+			_dispatcher?.RegisterDynamicallyLoadedDll(libraryName);
+			
 			if (peLoader != null)
 			{
 				return env.LoadPeImage(localLibraryPath, peLoader);
@@ -383,6 +393,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			// For system DLLs like kernel32.dll, user32.dll, etc., we return a fake handle
 			// but the actual implementation will be handled by the dispatcher
 			Console.WriteLine($"[Kernel32] Loading system DLL via thunking: {libraryName}");
+			
+			// Register with dispatcher for function call tracking
+			_dispatcher?.RegisterDynamicallyLoadedDll(libraryName);
 			
 			// For system libraries, we still need to track them but mark them as system modules
 			return env.LoadModule(libraryName);

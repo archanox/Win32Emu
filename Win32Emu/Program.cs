@@ -45,7 +45,9 @@ namespace Win32Emu
 			cpu.SetRegister("ESP", 0x00200000); // crude stack top
 
 			var dispatcher = new Win32Dispatcher();
-			dispatcher.RegisterModule(new Kernel32Module(env, image.BaseAddress, loader));
+			var kernel32Module = new Kernel32Module(env, image.BaseAddress, loader);
+			kernel32Module.SetDispatcher(dispatcher);
+			dispatcher.RegisterModule(kernel32Module);
 
 			if (debugMode)
 			{
@@ -58,6 +60,9 @@ namespace Win32Emu
 
 			Console.WriteLine(
 				env.ExitRequested ? "[Exit] Process requested exit." : "[Exit] Instruction limit reached.");
+			
+			// Print summary of unknown function calls
+			dispatcher.PrintUnknownFunctionsSummary();
 		}
 
 		private static void RunNormal(IcedCpu cpu, VirtualMemory vm, ProcessEnvironment env, Win32Dispatcher dispatcher, LoadedImage image)
