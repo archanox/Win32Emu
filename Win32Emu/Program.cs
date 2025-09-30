@@ -45,7 +45,9 @@ namespace Win32Emu
 			cpu.SetRegister("ESP", 0x00200000); // crude stack top
 
 			var dispatcher = new Win32Dispatcher();
-			dispatcher.RegisterModule(new Kernel32Module(env, image.BaseAddress));
+			var kernel32Module = new Kernel32Module(env, image.BaseAddress, loader);
+			kernel32Module.SetDispatcher(dispatcher);
+			dispatcher.RegisterModule(kernel32Module);
 
 			if (debugMode)
 			{
@@ -58,6 +60,9 @@ namespace Win32Emu
 
 			Console.WriteLine(
 				env.ExitRequested ? "[Exit] Process requested exit." : "[Exit] Instruction limit reached.");
+			
+			// Print summary of unknown function calls
+			dispatcher.PrintUnknownFunctionsSummary();
 		}
 
 		private static void RunNormal(IcedCpu cpu, VirtualMemory vm, ProcessEnvironment env, Win32Dispatcher dispatcher, LoadedImage image)
@@ -263,7 +268,19 @@ namespace Win32Emu
 				// Common CALL opcodes:
 				// 0xE8 = CALL rel32
 				// 0xFF = CALL r/m32 (with ModR/M byte)
-				return opcode == 0xE8 || (opcode == 0xFF && IsCallVariant(vm, eip));
+				// 0xCC = INT3 (used for synthetic import stubs)
+				if (opcode == 0xE8 || (opcode == 0xFF && IsCallVariant(vm, eip)))
+				{
+					return true;
+				}
+				
+				// Check for INT3 in synthetic import address range
+				if (opcode == 0xCC && eip >= 0x0F000000 && eip < 0x10000000)
+				{
+					return true;
+				}
+				
+				return false;
 			}
 			catch
 			{
@@ -308,6 +325,11 @@ namespace Win32Emu
 					// This is more complex as it depends on ModR/M and potentially SIB bytes
 					// For debugging purposes, we'll return 0 and let the normal execution handle it
 					return 0;
+				}
+				else if (opcode == 0xCC && eip >= 0x0F000000 && eip < 0x10000000) // INT3 in synthetic import range
+				{
+					// For synthetic import stubs, the target is the address itself
+					return eip;
 				}
 			}
 			catch

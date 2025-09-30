@@ -1,4 +1,5 @@
 using Win32Emu.Memory;
+using Win32Emu.Loader;
 
 namespace Win32Emu.Win32;
 
@@ -6,11 +7,13 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 {
 	private uint _allocPtr = heapBase;
 	private bool _exitRequested;
+	private string _executablePath = string.Empty;
 
 	public uint CommandLinePtr { get; private set; }
 	public uint ModuleFileNamePtr { get; private set; }
 	public uint ModuleFileNameLength { get; private set; }
 	public bool ExitRequested => _exitRequested;
+	public string ExecutablePath => _executablePath;
 
 	// Default standard handles (pseudo values)
 	public uint StdInputHandle { get; set; } = 0x00000001;
@@ -21,11 +24,16 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	private readonly Dictionary<uint, object> _handles = new();
 	private uint _nextHandle = 0x00001000; // avoid low values used as sentinels
 
+	// Loaded modules tracking
+	private readonly Dictionary<string, uint> _loadedModules = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<string, LoadedImage> _loadedImages = new(StringComparer.OrdinalIgnoreCase);
+	private uint _nextModuleHandle = 0x10000000;
 	// Environment variables (emulated, not from system)
 	private readonly Dictionary<string, string> _environmentVariables = new();
 
 	public void InitializeStrings(string exePath, string[] args)
 	{
+		_executablePath = exePath;
 		var cmdLine = string.Join(" ", new[] { exePath }.Concat(args.Skip(1)));
 		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
 		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
@@ -122,11 +130,68 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 		return addr;
 	}
 
+	/// <summary>
+	/// Creates a Windows-format environment strings block in ANSI.
+	/// Returns a pointer to a double-null-terminated block of null-terminated strings.
+	/// Format: "VAR1=value1\0VAR2=value2\0...VARn=valuen\0\0"
+	/// </summary>
+	public uint GetEnvironmentStringsA()
+	{
+		var envBlock = new System.Text.StringBuilder();
+		
+		// Add each environment variable as "NAME=VALUE\0"
+		foreach (var kvp in _environmentVariables.OrderBy(x => x.Key))
+		{
+			envBlock.Append($"{kvp.Key}={kvp.Value}");
+			envBlock.Append('\0'); // null terminate each string
+		}
+		
+		// Add final null terminator for the block
+		envBlock.Append('\0');
+		
+		// Convert to bytes and allocate memory
+		var bytes = System.Text.Encoding.ASCII.GetBytes(envBlock.ToString());
+		var addr = SimpleAlloc((uint)bytes.Length);
+		vm.WriteBytes(addr, bytes);
+		
+		return addr;
+	}
+
+	/// <summary>
+	/// Frees environment strings memory allocated by GetEnvironmentStringsW.
+	/// In a real implementation, this would free the memory block, but since we use
+	/// a simple allocator that doesn't support freeing, this is a no-op.
+	/// Returns TRUE (1) to indicate success.
+	/// </summary>
+	public uint FreeEnvironmentStringsW(uint lpszEnvironmentBlock)
+	{
+		// In our simple memory model, we don't actually free memory
+		// Just return success (TRUE)
+		return 1;
+	}
+
+	/// <summary>
+	/// Frees environment strings memory allocated by GetEnvironmentStringsA.
+	/// In a real implementation, this would free the memory block, but since we use
+	/// a simple allocator that doesn't support freeing, this is a no-op.
+	/// Returns TRUE (1) to indicate success.
+	/// </summary>
+	public uint FreeEnvironmentStringsA(uint lpszEnvironmentBlock)
+	{
+		// In our simple memory model, we don't actually free memory
+		// Just return success (TRUE)
+		return 1;
+	}
+
 	public byte[] MemReadBytes(uint addr, int count) => vm.GetSpan(addr, count);
+	public byte MemRead8(uint addr) => vm.Read8(addr);
 	public void MemWriteBytes(uint addr, ReadOnlySpan<byte> data) => vm.WriteBytes(addr, data);
 	public uint MemRead32(uint addr) => vm.Read32(addr);
 	public void MemWrite32(uint addr, uint value) => vm.Write32(addr, value);
 	public void MemWrite16(uint addr, ushort value) => vm.Write16(addr, value);
+	public uint MemRead32(uint addr) => vm.Read32(addr);
+	public ushort MemRead16(uint addr) => vm.Read16(addr);
+	public void MemWrite64(uint addr, ulong value) => vm.Write64(addr, value);
 	public void MemZero(uint addr, uint size) => vm.WriteBytes(addr, new byte[size]);
 
 	// Handle table ops
@@ -151,6 +216,54 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	}
 
 	public bool CloseHandle(uint handle) => _handles.Remove(handle);
+
+	// Module loading tracking
+	public uint LoadModule(string moduleName)
+	{
+		var normalizedName = Path.GetFileName(moduleName).ToUpperInvariant();
+		if (_loadedModules.TryGetValue(normalizedName, out var existingHandle))
+		{
+			return existingHandle;
+		}
+
+		var handle = _nextModuleHandle;
+		_nextModuleHandle += 0x1000;
+		_loadedModules[normalizedName] = handle;
+		return handle;
+	}
+
+	public uint LoadPeImage(string imagePath, PeImageLoader peLoader)
+	{
+		var normalizedName = Path.GetFileName(imagePath).ToUpperInvariant();
+		if (_loadedModules.TryGetValue(normalizedName, out var existingHandle))
+		{
+			return existingHandle;
+		}
+
+		try
+		{
+			var loadedImage = peLoader.Load(imagePath);
+			var handle = loadedImage.BaseAddress;
+			
+			_loadedModules[normalizedName] = handle;
+			_loadedImages[normalizedName] = loadedImage;
+			
+			Console.WriteLine($"[ProcessEnv] Loaded PE image: {imagePath} at 0x{handle:X8}");
+			return handle;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"[ProcessEnv] Failed to load PE image {imagePath}: {ex.Message}");
+			// Fall back to tracking without loading
+			return LoadModule(normalizedName);
+		}
+	}
+
+	public bool IsModuleLoaded(string moduleName)
+	{
+		var normalizedName = Path.GetFileName(moduleName).ToUpperInvariant();
+		return _loadedModules.ContainsKey(normalizedName);
+	}
 
 	// Heaps
 	private readonly Dictionary<uint, HeapState> _heaps = new();

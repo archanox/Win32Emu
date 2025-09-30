@@ -81,6 +81,7 @@ public static class NativeTypes
 		public const uint ERROR_INVALID_FUNCTION = 1;
 		public const uint ERROR_FILE_NOT_FOUND = 2;
 		public const uint ERROR_INVALID_PARAMETER = 87;
+		public const uint ERROR_INSUFFICIENT_BUFFER = 122;
 	}
 
 	// Windows BOOL values
@@ -96,5 +97,11 @@ public static class NativeTypes
 		public const uint EXCEPTION_EXECUTE_HANDLER = 1;      // Terminate the process
 		public const uint EXCEPTION_CONTINUE_SEARCH = 0;      // Continue searching for a handler
 		public const uint EXCEPTION_CONTINUE_EXECUTION = unchecked((uint)-1); // Continue execution (-1 as uint)
+  }
+  
+	// Windows handle values
+	public static class Win32Handle
+	{
+		public const uint INVALID_HANDLE_VALUE = 0xFFFFFFFF;
 	}
 }

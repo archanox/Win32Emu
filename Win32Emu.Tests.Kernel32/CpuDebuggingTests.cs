@@ -146,6 +146,28 @@ public class CpuDebuggingTests
         Assert.IsType<EnhancedCpuDebugger>(debugger);
     }
     
+    [Fact]
+    public void TestSyntheticImportAddressDetection()
+    {
+        var memory = new VirtualMemory(512 * 1024 * 1024);
+        var cpu = new IcedCpu(memory);
+        
+        // Set up a synthetic import address with INT3 stub (like PeImageLoader creates)
+        var syntheticAddress = 0x0F000512u; // This is the problematic address from the error log
+        var int3Stub = new byte[] { 0xCC, 0x90, 0x90, 0x90 }; // INT3 + NOPs
+        memory.WriteBytes(syntheticAddress, int3Stub);
+        
+        cpu.SetEip(syntheticAddress);
+        cpu.SetRegister("ESP", 0x00200000);
+        
+        // Test that SingleStep correctly identifies this as a call to synthetic import
+        var stepResult = cpu.SingleStep(memory);
+        
+        // The IcedCpu should recognize INT3 at synthetic address as a call
+        Assert.True(stepResult.IsCall);
+        Assert.Equal(syntheticAddress, stepResult.CallTarget);
+    }
+
     [Fact] 
     public void ShowUsageExample()
     {

@@ -118,6 +118,155 @@ public class EnvironmentTests : IDisposable
         }
     }
 
+    [Fact]
+    public void FreeEnvironmentStringsW_WithValidPointer_ShouldReturnTrue()
+    {
+        // Arrange - Get environment strings
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSW");
+        Assert.NotEqual(0u, envStringsPtr);
+
+        // Act - Free the environment strings
+        var result = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSW", envStringsPtr);
+
+        // Assert - Should return TRUE (1)
+        Assert.Equal(1u, result);
+    }
+
+    [Fact]
+    public void FreeEnvironmentStringsW_WithNullPointer_ShouldReturnFalse()
+    {
+        // Act - Try to free a null pointer
+        var result = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSW", 0u);
+
+        // Assert - Should return FALSE (0) for null pointer
+        Assert.Equal(0u, result);
+    }
+
+    [Fact]
+    public void FreeEnvironmentStringsW_MultipleCallsWithSamePointer_ShouldSucceed()
+    {
+        // Arrange - Get environment strings
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSW");
+        Assert.NotEqual(0u, envStringsPtr);
+
+        // Act - Free the same pointer multiple times
+        var result1 = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSW", envStringsPtr);
+        var result2 = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSW", envStringsPtr);
+
+        // Assert - Both calls should succeed (in our simple implementation)
+        Assert.Equal(1u, result1);
+        Assert.Equal(1u, result2);
+    }
+    
+    [Fact]
+    public void GetEnvironmentStringsA_ShouldReturnValidPointer()
+    {
+        // Act
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSA");
+
+        // Assert
+        Assert.NotEqual(0u, envStringsPtr); // Should return a valid pointer
+    }
+
+    [Fact]
+    public void GetEnvironmentStringsA_ShouldReturnProperlyFormattedEnvironmentBlock()
+    {
+        // Act
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSA");
+
+        // Assert
+        Assert.NotEqual(0u, envStringsPtr);
+
+        // Read and verify the environment strings format (ANSI)
+        var environmentStrings = ReadEnvironmentStringsFromMemoryAnsi(envStringsPtr);
+
+        // Should contain some default environment variables
+        Assert.True(environmentStrings.Any(s => s.StartsWith("PATH=")), "Should contain PATH environment variable");
+        Assert.True(environmentStrings.Any(s => s.StartsWith("WINDIR=")), "Should contain WINDIR environment variable");
+        Assert.True(environmentStrings.Any(s => s.StartsWith("SYSTEMROOT=")), "Should contain SYSTEMROOT environment variable");
+        Assert.True(environmentStrings.Any(s => s.StartsWith("TEMP=")), "Should contain TEMP environment variable");
+        Assert.True(environmentStrings.Any(s => s.StartsWith("USERNAME=")), "Should contain USERNAME environment variable");
+    }
+
+    [Fact]
+    public void GetEnvironmentStringsA_ShouldUseEmulatedVariablesNotSystemVariables()
+    {
+        // Act
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSA");
+
+        // Assert
+        Assert.NotEqual(0u, envStringsPtr);
+
+        var environmentStrings = ReadEnvironmentStringsFromMemoryAnsi(envStringsPtr);
+
+        // Should contain emulated values, not real system values
+        Assert.Contains("COMPUTERNAME=WIN32EMU", environmentStrings);
+        Assert.Contains("USERNAME=User", environmentStrings);
+        Assert.Contains("USERDOMAIN=WIN32EMU", environmentStrings);
+        Assert.Contains("WINDIR=C:\\WINDOWS", environmentStrings);
+    }
+
+    [Fact]
+    public void GetEnvironmentStringsA_ShouldReturnDoubleNullTerminated()
+    {
+        // Act
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSA");
+
+        // Assert
+        Assert.NotEqual(0u, envStringsPtr);
+
+        // Find the end of the environment block by looking for double null termination (ANSI)
+        var addr = envStringsPtr;
+        var foundDoubleNull = false;
+        var maxIterations = 1000; // Safety check to prevent infinite loop
+        var iterations = 0;
+
+        while (iterations < maxIterations)
+        {
+            var byte1 = _testEnv.Memory.Read8(addr);
+            var byte2 = _testEnv.Memory.Read8(addr + 1);
+            
+            if (byte1 == 0 && byte2 == 0)
+            {
+                foundDoubleNull = true;
+                break;
+            }
+            
+            addr += 1;
+            iterations++;
+        }
+
+        Assert.True(foundDoubleNull, "Environment strings block should be double-null terminated");
+    }
+
+    [Fact]
+    public void FreeEnvironmentStringsW_ShouldReturnTrue()
+    {
+        // Arrange
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSW");
+        Assert.NotEqual(0u, envStringsPtr);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSW", envStringsPtr);
+
+        // Assert
+        Assert.Equal(1u, result); // Should return TRUE (1)
+    }
+
+    [Fact]
+    public void FreeEnvironmentStringsA_ShouldReturnTrue()
+    {
+        // Arrange
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSA");
+        Assert.NotEqual(0u, envStringsPtr);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSA", envStringsPtr);
+
+        // Assert
+        Assert.Equal(1u, result); // Should return TRUE (1)
+    }
+
     /// <summary>
     /// Helper method to read environment strings from memory and parse them into a list
     /// </summary>
@@ -147,6 +296,34 @@ public class EnvironmentTests : IDisposable
     }
 
     /// <summary>
+    /// Helper method to read ANSI environment strings from memory and parse them into a list
+    /// </summary>
+    private List<string> ReadEnvironmentStringsFromMemoryAnsi(uint ptr)
+    {
+        var environmentStrings = new List<string>();
+        var addr = ptr;
+        
+        while (true)
+        {
+            // Read a null-terminated ANSI string
+            var envString = ReadAnsiString(addr);
+            
+            if (string.IsNullOrEmpty(envString))
+            {
+                // Empty string means we've reached the end
+                break;
+            }
+            
+            environmentStrings.Add(envString);
+            
+            // Move to next string (current string length + 1 byte for null terminator)
+            addr += (uint)(envString.Length + 1);
+        }
+        
+        return environmentStrings;
+    }
+
+    /// <summary>
     /// Helper method to read a null-terminated Unicode string from memory
     /// </summary>
     private string ReadUnicodeString(uint addr)
@@ -164,6 +341,26 @@ public class EnvironmentTests : IDisposable
         }
         
         return new string(chars.ToArray());
+    }
+
+    /// <summary>
+    /// Helper method to read a null-terminated ANSI string from memory
+    /// </summary>
+    private string ReadAnsiString(uint addr)
+    {
+        var bytes = new List<byte>();
+        var currentAddr = addr;
+        
+        while (true)
+        {
+            var b = _testEnv.Memory.Read8(currentAddr);
+            if (b == 0) break;
+            
+            bytes.Add(b);
+            currentAddr += 1;
+        }
+        
+        return System.Text.Encoding.ASCII.GetString(bytes.ToArray());
     }
 
     public void Dispose()

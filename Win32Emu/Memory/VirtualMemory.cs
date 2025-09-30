@@ -60,6 +60,18 @@ public class VirtualMemory(ulong size = VirtualMemory.DefaultSize)
         Write16(addr + 2, (ushort)(value >> 16));
     }
 
+    public ulong Read64(ulong addr)
+    {
+        EnsureRange(addr, 8);
+        return (ulong)(Read32(addr) | ((ulong)Read32(addr + 4) << 32));
+    }
+
+    public void Write64(ulong addr, ulong value)
+    {
+        Write32(addr, (uint)(value & 0xFFFFFFFF));
+        Write32(addr + 4, (uint)(value >> 32));
+    }
+
     public void WriteBytes(ulong addr, ReadOnlySpan<byte> data)
     {
         EnsureRange(addr, (ulong)data.Length);

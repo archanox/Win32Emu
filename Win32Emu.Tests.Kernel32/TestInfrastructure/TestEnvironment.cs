@@ -1,5 +1,6 @@
 using Win32Emu.Memory;
 using Win32Emu.Win32;
+using Win32Emu.Loader;
 
 namespace Win32Emu.Tests.Kernel32.TestInfrastructure;
 
@@ -12,13 +13,15 @@ public class TestEnvironment : IDisposable
     public MockCpu Cpu { get; }
     public ProcessEnvironment ProcessEnv { get; }
     public Kernel32Module Kernel32 { get; }
+    public PeImageLoader PeLoader { get; }
 
     public TestEnvironment()
     {
         Memory = new VirtualMemory();
         Cpu = new MockCpu();
         ProcessEnv = new ProcessEnvironment(Memory);
-        Kernel32 = new Kernel32Module(ProcessEnv, 0x00400000);
+        PeLoader = new PeImageLoader(Memory);
+        Kernel32 = new Kernel32Module(ProcessEnv, 0x00400000, PeLoader);
 
         // Initialize process environment with test data
         ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);

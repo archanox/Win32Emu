@@ -83,8 +83,8 @@ public class MockCpu : ICpu
     /// </summary>
     public void SetupStackArgs(VirtualMemory memory, params uint[] args)
     {
-        // Push arguments in normal order (first argument at lowest address after return address)
-        for (int i = 0; i < args.Length; i++)
+        // Push arguments in reverse order so the first argument ends up at ESP+4
+        for (int i = args.Length - 1; i >= 0; i--)
         {
             PushStack(memory, args[i]);
         }
