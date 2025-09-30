@@ -1,3 +1,5 @@
+using Win32Emu;
+
 namespace Win32Emu.Memory;
 
 /// <summary>
@@ -11,17 +13,23 @@ public class VirtualMemory(ulong size = VirtualMemory.DefaultSize)
 
     public ulong Size => (ulong)_mem.LongLength;
 
-	    private void EnsureRange(ulong addr, ulong length = 1)
+    private void EnsureRange(ulong addr, ulong length = 1)
     {
         if (length == 0) return;
         
         // Check for overflow in address calculation
         if (addr > ulong.MaxValue - length + 1)
+        {
+            Diagnostics.LogMemoryEnsureFailure(addr, length, Size);
             throw new IndexOutOfRangeException($"Memory access causes address overflow: addr=0x{addr:X}, len={length}");
+        }
             
         // Check if the entire range is within bounds
         if (addr + length > (ulong)_mem.LongLength)
+        {
+            Diagnostics.LogMemoryEnsureFailure(addr, length, Size);
             throw new IndexOutOfRangeException($"Memory access out of range: addr=0x{addr:X}, len={length}, size=0x{(ulong)_mem.LongLength:X}");
+        }
     }
 
     public byte Read8(ulong addr)

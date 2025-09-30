@@ -4,4 +4,6 @@ public record LoadedImage(
 	uint BaseAddress,
 	uint EntryPointAddress,
 	uint ImageSize,
-	Dictionary<uint, (string dll, string name)> ImportAddressMap);
+	Dictionary<uint, (string dll, string name)> ImportAddressMap,
+	string FilePath
+);

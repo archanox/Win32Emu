@@ -1,6 +1,7 @@
 using Iced.Intel;
 using Win32Emu.Memory;
 using Win32Emu.Cpu;
+using Win32Emu;
 
 namespace Win32Emu.Cpu.IcedImpl;
 
@@ -51,6 +52,11 @@ public class IcedCpu : ICpu
 
 	public CpuStepResult SingleStep(VirtualMemory mem)
 	{
+		// Set diagnostics context for memory errors
+		var instrBytes = new byte[8];
+		try { instrBytes = mem.GetSpan(_eip, 8); } catch { instrBytes = null; }
+		Diagnostics.SetCpuContext(new Diagnostics.CpuContext(_eip, _esp, _ebp, _eax, _ecx, _edx, instrBytes));
+
 		_reader.Reset(_eip);
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
@@ -58,155 +64,181 @@ public class IcedCpu : ICpu
 		_eip = (uint)_decoder.IP;
 		var isCall = false;
 		uint callTarget = 0;
-		switch (insn.Mnemonic)
+		try
 		{
-			case Mnemonic.Mov: ExecMov(insn); break;
-			case Mnemonic.Lea: ExecLea(insn); break;
-			case Mnemonic.Movzx: ExecMovx(insn, false); break;
-			case Mnemonic.Movsx: ExecMovx(insn, true); break;
-			case Mnemonic.Push: ExecPush(insn); break;
-			case Mnemonic.Pop: ExecPop(insn); break;
-			case Mnemonic.Pushad: ExecPushad(); break;
-			case Mnemonic.Popad: ExecPopad(); break;
-			case Mnemonic.Add: ExecAdd(insn); break;
-			case Mnemonic.Adc: ExecAdc(insn); break;
-			case Mnemonic.Sub: ExecSub(insn); break;
-			case Mnemonic.Sbb: ExecSbb(insn); break;
-			case Mnemonic.Xor: ExecXor(insn); break;
-			case Mnemonic.And: ExecLogic(insn, LogicOp.And); break;
-			case Mnemonic.Or: ExecLogic(insn, LogicOp.Or); break;
-			case Mnemonic.Test: ExecTest(insn); break;
-			case Mnemonic.Cmp: ExecCmp(insn); break;
-			case Mnemonic.Inc: ExecInc(insn); break;
-			case Mnemonic.Dec: ExecDec(insn); break;
-			case Mnemonic.Shl:
-			case Mnemonic.Sal: ExecShiftLeft(insn); break;
-			case Mnemonic.Shr: ExecShiftRight(insn, false); break;
-			case Mnemonic.Sar: ExecShiftRight(insn, true); break;
-			case Mnemonic.Rol: ExecRotate(insn, RotateKind.Rol); break;
-			case Mnemonic.Ror: ExecRotate(insn, RotateKind.Ror); break;
-			case Mnemonic.Rcl: ExecRotate(insn, RotateKind.Rcl); break;
-			case Mnemonic.Rcr: ExecRotate(insn, RotateKind.Rcr); break;
-			case Mnemonic.Not: ExecNot(insn); break;
-			case Mnemonic.Neg: ExecNeg(insn); break;
-			case Mnemonic.Bswap: ExecBswap(insn); break;
-			case Mnemonic.Xchg: ExecXchg(insn); break;
-			// SETcc family
-			case Mnemonic.Seto:
-			case Mnemonic.Setno:
-			case Mnemonic.Setb:
-			case Mnemonic.Setae:
-			case Mnemonic.Sete:
-			case Mnemonic.Setne:
-			case Mnemonic.Setbe:
-			case Mnemonic.Seta:
-			case Mnemonic.Sets:
-			case Mnemonic.Setns:
-			case Mnemonic.Setp:
-			case Mnemonic.Setnp:
-			case Mnemonic.Setl:
-			case Mnemonic.Setge:
-			case Mnemonic.Setle:
-			case Mnemonic.Setg:
-				ExecSetcc(insn); break;
-			// CMOVcc family
-			case Mnemonic.Cmove:
-			case Mnemonic.Cmovne:
-			case Mnemonic.Cmovb:
-			case Mnemonic.Cmovbe:
-			case Mnemonic.Cmova:
-			case Mnemonic.Cmovge:
-			case Mnemonic.Cmovg:
-			case Mnemonic.Cmovl:
-				ExecCmovcc(insn); break;
-			// String ops (byte/dword variants)
-			case Mnemonic.Movsb: ExecMovs(1, insn.HasRepPrefix); break;
-			case Mnemonic.Movsd: ExecMovs(4, insn.HasRepPrefix); break;
-			case Mnemonic.Stosb: ExecStos(1, insn.HasRepPrefix); break;
-			case Mnemonic.Stosd: ExecStos(4, insn.HasRepPrefix); break;
-			case Mnemonic.Lodsb: ExecLods(1, insn.HasRepPrefix); break;
-			case Mnemonic.Lodsd: ExecLods(4, insn.HasRepPrefix); break;
-			case Mnemonic.Jmp:
-				if (insn.GetOpKind(0) == OpKind.Register) _eip = GetReg32(insn.GetOpRegister(0));
-				else if (insn.GetOpKind(0) == OpKind.Memory) _eip = Read32(CalcMemAddress(insn));
-				else _eip = (uint)insn.NearBranchTarget;
-				break;
-			case Mnemonic.Call:
-				_esp -= 4;
-				Write32(_esp, _eip);
-				if (insn.GetOpKind(0) == OpKind.Register)
-				{
-					_eip = GetReg32(insn.GetOpRegister(0));
-					callTarget = _eip;
-					isCall = true;
-				}
-				else if (insn.GetOpKind(0) == OpKind.Memory)
-				{
-					_eip = Read32(CalcMemAddress(insn));
-					callTarget = _eip;
-					isCall = true;
-				}
-				else
-				{
-					_eip = (uint)insn.NearBranchTarget;
-					callTarget = _eip;
-					isCall = true;
-				}
+			switch (insn.Mnemonic)
+			{
+				case Mnemonic.Mov: ExecMov(insn); break;
+				case Mnemonic.Lea: ExecLea(insn); break;
+				case Mnemonic.Movzx: ExecMovx(insn, false); break;
+				case Mnemonic.Movsx: ExecMovx(insn, true); break;
+				case Mnemonic.Push: ExecPush(insn); break;
+				case Mnemonic.Pop: ExecPop(insn); break;
+				case Mnemonic.Pushad: ExecPushad(); break;
+				case Mnemonic.Popad: ExecPopad(); break;
+				case Mnemonic.Add: ExecAdd(insn); break;
+				case Mnemonic.Adc: ExecAdc(insn); break;
+				case Mnemonic.Sub: ExecSub(insn); break;
+				case Mnemonic.Sbb: ExecSbb(insn); break;
+				case Mnemonic.Xor: ExecXor(insn); break;
+				case Mnemonic.And: ExecLogic(insn, LogicOp.And); break;
+				case Mnemonic.Or: ExecLogic(insn, LogicOp.Or); break;
+				case Mnemonic.Test: ExecTest(insn); break;
+				case Mnemonic.Cmp: ExecCmp(insn); break;
+				case Mnemonic.Inc: ExecInc(insn); break;
+				case Mnemonic.Dec: ExecDec(insn); break;
+				case Mnemonic.Shl:
+				case Mnemonic.Sal: ExecShiftLeft(insn); break;
+				case Mnemonic.Shr: ExecShiftRight(insn, false); break;
+				case Mnemonic.Sar: ExecShiftRight(insn, true); break;
+				case Mnemonic.Rol: ExecRotate(insn, RotateKind.Rol); break;
+				case Mnemonic.Ror: ExecRotate(insn, RotateKind.Ror); break;
+				case Mnemonic.Rcl: ExecRotate(insn, RotateKind.Rcl); break;
+				case Mnemonic.Rcr: ExecRotate(insn, RotateKind.Rcr); break;
+				case Mnemonic.Not: ExecNot(insn); break;
+				case Mnemonic.Neg: ExecNeg(insn); break;
+				case Mnemonic.Bswap: ExecBswap(insn); break;
+				case Mnemonic.Xchg: ExecXchg(insn); break;
+				// SETcc family
+				case Mnemonic.Seto:
+				case Mnemonic.Setno:
+				case Mnemonic.Setb:
+				case Mnemonic.Setae:
+				case Mnemonic.Sete:
+				case Mnemonic.Setne:
+				case Mnemonic.Setbe:
+				case Mnemonic.Seta:
+				case Mnemonic.Sets:
+				case Mnemonic.Setns:
+				case Mnemonic.Setp:
+				case Mnemonic.Setnp:
+				case Mnemonic.Setl:
+				case Mnemonic.Setge:
+				case Mnemonic.Setle:
+				case Mnemonic.Setg:
+					ExecSetcc(insn); break;
+				// CMOVcc family
+				case Mnemonic.Cmove:
+				case Mnemonic.Cmovne:
+				case Mnemonic.Cmovb:
+				case Mnemonic.Cmovbe:
+				case Mnemonic.Cmova:
+				case Mnemonic.Cmovge:
+				case Mnemonic.Cmovg:
+				case Mnemonic.Cmovl:
+					ExecCmovcc(insn); break;
+				// String ops (byte/dword variants)
+				case Mnemonic.Movsb: ExecMovs(1, insn.HasRepPrefix); break;
+				case Mnemonic.Movsd: ExecMovs(4, insn.HasRepPrefix); break;
+				case Mnemonic.Stosb: ExecStos(1, insn.HasRepPrefix); break;
+				case Mnemonic.Stosd: ExecStos(4, insn.HasRepPrefix); break;
+				case Mnemonic.Lodsb: ExecLods(1, insn.HasRepPrefix); break;
+				case Mnemonic.Lodsd: ExecLods(4, insn.HasRepPrefix); break;
+				case Mnemonic.Jmp:
+					if (insn.GetOpKind(0) == OpKind.Register) _eip = GetReg32(insn.GetOpRegister(0));
+					else if (insn.GetOpKind(0) == OpKind.Memory) _eip = Read32(CalcMemAddress(insn));
+					else _eip = (uint)insn.NearBranchTarget;
+					break;
+				case Mnemonic.Call:
+					_esp -= 4;
+					Write32(_esp, _eip);
+					if (insn.GetOpKind(0) == OpKind.Register)
+					{
+						_eip = GetReg32(insn.GetOpRegister(0));
+						callTarget = _eip;
+						isCall = true;
+					}
+					else if (insn.GetOpKind(0) == OpKind.Memory)
+					{
+						_eip = Read32(CalcMemAddress(insn));
+						callTarget = _eip;
+						isCall = true;
+					}
+					else
+					{
+						_eip = (uint)insn.NearBranchTarget;
+						callTarget = _eip;
+						isCall = true;
+					}
 
-				break;
-			case Mnemonic.Ret:
-				var ret = Read32(_esp);
-				_esp += 4;
-				_eip = ret;
-				if (insn.Immediate16 != 0) _esp += insn.Immediate16;
-				break;
-			case Mnemonic.Nop: break;
-			case Mnemonic.Cld: ClearFlag(Df); break;
-			case Mnemonic.Std: SetFlag(Df); break;
-			case Mnemonic.Clc: ClearFlag(Cf); break;
-			case Mnemonic.Stc: SetFlag(Cf); break;
-			case Mnemonic.Cmc: SetFlagVal(Cf, !GetFlag(Cf)); break;
-			case Mnemonic.Pushfd:
-				_esp -= 4;
-				Write32(_esp, _eflags);
-				break;
-			case Mnemonic.Popfd:
-				_eflags = Read32(_esp);
-				_esp += 4;
-				break;
-			case Mnemonic.Lahf:
-			{
-				byte ah = 0;
-				if (GetFlag(Sf)) ah |= 0x80;
-				if (GetFlag(Zf)) ah |= 0x40;
-				if (GetFlag(Af)) ah |= 0x10;
-				if (GetFlag(Pf)) ah |= 0x04;
-				ah |= 0x02;
-				if (GetFlag(Cf)) ah |= 0x01;
-				_eax = (_eax & 0xFFFF00FF) | (uint)(ah << 8);
-				break;
-			}
-			case Mnemonic.Sahf:
-			{
-				var sahf = (byte)((_eax >> 8) & 0xFF);
-				SetFlagVal(Sf, (sahf & 0x80) != 0);
-				SetFlagVal(Zf, (sahf & 0x40) != 0);
-				SetFlagVal(Af, (sahf & 0x10) != 0);
-				SetFlagVal(Pf, (sahf & 0x04) != 0);
-				SetFlagVal(Cf, (sahf & 0x01) != 0);
-				break;
-			}
-			case Mnemonic.Int:
-				// Handle INT instruction with immediate
-				if (insn.Immediate8 == 3)
+					break;
+				case Mnemonic.Ret:
+					var ret = Read32(_esp);
+					_esp += 4;
+					_eip = ret;
+					if (insn.Immediate16 != 0) _esp += insn.Immediate16;
+					break;
+				case Mnemonic.Nop: break;
+				case Mnemonic.Cld: ClearFlag(Df); break;
+				case Mnemonic.Std: SetFlag(Df); break;
+				case Mnemonic.Clc: ClearFlag(Cf); break;
+				case Mnemonic.Stc: SetFlag(Cf); break;
+				case Mnemonic.Cmc: SetFlagVal(Cf, !GetFlag(Cf)); break;
+				case Mnemonic.Pushfd:
+					_esp -= 4;
+					Write32(_esp, _eflags);
+					break;
+				case Mnemonic.Popfd:
+					_eflags = Read32(_esp);
+					_esp += 4;
+					break;
+				case Mnemonic.Lahf:
 				{
-					// This is an INT3 breakpoint - check if it's at a synthetic import address
+					byte ah = 0;
+					if (GetFlag(Sf)) ah |= 0x80;
+					if (GetFlag(Zf)) ah |= 0x40;
+					if (GetFlag(Af)) ah |= 0x10;
+					if (GetFlag(Pf)) ah |= 0x04;
+					ah |= 0x02;
+					if (GetFlag(Cf)) ah |= 0x01;
+					_eax = (_eax & 0xFFFF00FF) | (uint)(ah << 8);
+					break;
+				}
+				case Mnemonic.Sahf:
+				{
+					var sahf = (byte)((_eax >> 8) & 0xFF);
+					SetFlagVal(Sf, (sahf & 0x80) != 0);
+					SetFlagVal(Zf, (sahf & 0x40) != 0);
+					SetFlagVal(Af, (sahf & 0x10) != 0);
+					SetFlagVal(Pf, (sahf & 0x04) != 0);
+					SetFlagVal(Cf, (sahf & 0x01) != 0);
+					break;
+				}
+				case Mnemonic.Int:
+					// Handle INT instruction with immediate
+					if (insn.Immediate8 == 3)
+					{
+						// This is an INT3 breakpoint - check if it's at a synthetic import address
+						if (oldEip >= 0x0F000000 && oldEip < 0x10000000)
+						{
+							// This is a synthetic import stub - signal this as a call
+						 isCall = true;
+							callTarget = oldEip;
+						
+							// Don't actually execute the INT3, just treat it as a call
+							// The main loop will handle the import invocation
+							break;
+						}
+						else
+						{
+							// Regular INT3 - for now, just print a message and continue
+							Console.WriteLine($"[IcedCpu] INT3 breakpoint at 0x{oldEip:X8}");
+						}
+					}
+					else
+					{
+						Console.WriteLine($"[IcedCpu] Unhandled interrupt INT {insn.Immediate8:X2} at 0x{oldEip:X8}");
+					}
+					break;
+				case Mnemonic.Int3:
+					// Handle INT3 (0xCC) instruction used for import stubs
 					if (oldEip >= 0x0F000000 && oldEip < 0x10000000)
 					{
 						// This is a synthetic import stub - signal this as a call
 						isCall = true;
 						callTarget = oldEip;
-						
+						Console.WriteLine($"[IcedCpu] Handling INT3 import stub at 0x{oldEip:X8}");
+					
 						// Don't actually execute the INT3, just treat it as a call
 						// The main loop will handle the import invocation
 						break;
@@ -216,39 +248,20 @@ public class IcedCpu : ICpu
 						// Regular INT3 - for now, just print a message and continue
 						Console.WriteLine($"[IcedCpu] INT3 breakpoint at 0x{oldEip:X8}");
 					}
-				}
-				else
-				{
-					Console.WriteLine($"[IcedCpu] Unhandled interrupt INT {insn.Immediate8:X2} at 0x{oldEip:X8}");
-				}
-				break;
-			case Mnemonic.Int3:
-				// Handle INT3 (0xCC) instruction used for import stubs
-				if (oldEip >= 0x0F000000 && oldEip < 0x10000000)
-				{
-					// This is a synthetic import stub - signal this as a call
-					isCall = true;
-					callTarget = oldEip;
-					Console.WriteLine($"[IcedCpu] Handling INT3 import stub at 0x{oldEip:X8}");
-					
-					// Don't actually execute the INT3, just treat it as a call
-					// The main loop will handle the import invocation
 					break;
-				}
-				else
-				{
-					// Regular INT3 - for now, just print a message and continue
-					Console.WriteLine($"[IcedCpu] INT3 breakpoint at 0x{oldEip:X8}");
-				}
-				break;
-			default:
-				if (insn.Mnemonic.ToString().StartsWith('J'))
-				{
-					if (IsBranchTaken(insn.ConditionCode)) _eip = (uint)insn.NearBranchTarget;
-				}
-				else Console.WriteLine($"[IcedCpu] Unhandled mnemonic {insn.Mnemonic} at 0x{oldEip:X8}");
+				default:
+					if (insn.Mnemonic.ToString().StartsWith('J'))
+					{
+						if (IsBranchTaken(insn.ConditionCode)) _eip = (uint)insn.NearBranchTarget;
+					}
+					else Console.WriteLine($"[IcedCpu] Unhandled mnemonic {insn.Mnemonic} at 0x{oldEip:X8}");
 
-				break;
+					break;
+			}
+		}
+		finally
+		{
+			Diagnostics.ClearCpuContext();
 		}
 
 		return new CpuStepResult(isCall, callTarget);
@@ -917,6 +930,7 @@ public class IcedCpu : ICpu
 		return 32;
 	}
 
+	// replace CalcMemAddress to report via Diagnostics on failure
 	private uint CalcMemAddress(Instruction insn)
 	{
 		var addr = (uint)insn.MemoryDisplacement32;
@@ -930,7 +944,12 @@ public class IcedCpu : ICpu
 		// Check if address is within valid memory range
 		// Convert to ulong to avoid overflow issues when comparing with memory size
 		if ((ulong)addr >= _mem.Size)
+		{
+			byte[]? instrBytes = null;
+			try { instrBytes = _mem.GetSpan(_eip, 8); } catch { }
+			Diagnostics.LogCalcMemAddressFailure(addr, _mem.Size, _eip, _esp, _ebp, _eax, _ecx, _edx, instrBytes);
 			throw new IndexOutOfRangeException($"Calculated memory address out of range: 0x{addr:X} (EIP=0x{_eip:X8})");
+		}
 
 		return addr;
 	}

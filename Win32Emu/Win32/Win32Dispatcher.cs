@@ -1,6 +1,7 @@
 using System.Reflection;
 using Win32Emu.Cpu;
 using Win32Emu.Memory;
+using Win32Emu;
 
 namespace Win32Emu.Win32;
 
@@ -15,13 +16,18 @@ public class Win32Dispatcher
     public void RegisterDynamicallyLoadedDll(string dllName)
     {
         _dynamicallyLoadedDlls.Add(dllName);
-        Console.WriteLine($"[Dispatcher] Registered dynamically loaded DLL: {dllName}");
+        Diagnostics.LogInfo($"[Dispatcher] Registered dynamically loaded DLL: {dllName}");
     }
 
     public bool TryInvoke(string dll, string export, ICpu cpu, VirtualMemory memory, out uint returnValue, out int stdcallArgBytes)
     {
         returnValue = 0;
         stdcallArgBytes = 0;
+
+        uint esp = cpu.GetRegister("ESP");
+        byte[] stackSnippet = null;
+        try { stackSnippet = memory.GetSpan(esp, 16); } catch { }
+        Diagnostics.LogInfo($"Dispatching {dll}!{export} at EIP=0x{cpu.GetEip():X8} ESP=0x{esp:X8} stack={ (stackSnippet==null?"<unreadable>":BitConverter.ToString(stackSnippet).Replace('-', ' ')) }");
         
         // Try to invoke with known modules first
         if (_modules.TryGetValue(dll, out var mod))
@@ -40,7 +46,7 @@ public class Win32Dispatcher
                 {
                     // Default to 0 for unknown functions in known modules
                     stdcallArgBytes = 0;
-                    Console.WriteLine($"[Dispatcher] Warning: No arg bytes metadata for {dll}!{export}, using 0");
+                    Diagnostics.LogWarn($"No arg bytes metadata for {dll}!{export}, using 0");
                 }
                 
                 return true;
@@ -48,7 +54,7 @@ public class Win32Dispatcher
             else
             {
                 // Known module but unknown export - log this
-                Console.WriteLine($"[Dispatcher] Unimplemented function in known module: {dll}!{export}");
+                Diagnostics.LogWarn($"Unimplemented function in known module: {dll}!{export}");
                 LogUnknownFunctionCall(dll, export);
                 
                 // Return success with default behavior
@@ -60,14 +66,14 @@ public class Win32Dispatcher
         }
         
         // Handle unknown DLLs - this is the main enhancement
-        Console.WriteLine($"[Dispatcher] Unknown DLL function call: {dll}!{export}");
+        Diagnostics.LogWarn($"Unknown DLL function call: {dll}!{export}");
         LogUnknownFunctionCall(dll, export);
         
         // Check if this DLL was dynamically loaded
         bool isDynamicallyLoaded = _dynamicallyLoadedDlls.Contains(dll);
         if (isDynamicallyLoaded)
         {
-            Console.WriteLine($"[Dispatcher] Note: {dll} was dynamically loaded via LoadLibrary");
+            Diagnostics.LogInfo($"Note: {dll} was dynamically loaded via LoadLibrary");
         }
         
         // Provide default behavior for unknown DLL calls
@@ -88,7 +94,7 @@ public class Win32Dispatcher
         
         if (functions.Add(export))
         {
-            Console.WriteLine($"[Dispatcher] New unimplemented function: {dll}!{export} (total for {dll}: {functions.Count})");
+            Diagnostics.LogInfo($"New unimplemented function: {dll}!{export} (total for {dll}: {functions.Count})");
         }
     }
     
@@ -96,17 +102,17 @@ public class Win32Dispatcher
     {
         if (_unknownFunctionCalls.Count == 0)
         {
-            Console.WriteLine("[Dispatcher] No unknown function calls recorded.");
+            Diagnostics.LogInfo("No unknown function calls recorded.");
             return;
         }
         
-        Console.WriteLine($"[Dispatcher] Summary of unknown function calls ({_unknownFunctionCalls.Count} DLLs):");
+        Diagnostics.LogInfo($"Summary of unknown function calls ({_unknownFunctionCalls.Count} DLLs):");
         foreach (var (dll, functions) in _unknownFunctionCalls.OrderBy(kvp => kvp.Key))
         {
-            Console.WriteLine($"[Dispatcher]   {dll}: {functions.Count} functions");
+            Diagnostics.LogInfo($"  {dll}: {functions.Count} functions");
             foreach (var func in functions.OrderBy(f => f))
             {
-                Console.WriteLine($"[Dispatcher]     - {func}");
+                Diagnostics.LogInfo($"    - {func}");
             }
         }
     }

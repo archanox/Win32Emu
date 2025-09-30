@@ -72,6 +72,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 		var bytes = System.Text.Encoding.ASCII.GetBytes(s);
 		var addr = SimpleAlloc((uint)bytes.Length);
 		vm.WriteBytes(addr, bytes);
+		Diagnostics.LogMemWrite(addr, bytes.Length, bytes);
 		return addr;
 	}
 
@@ -80,6 +81,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 		var bytes = System.Text.Encoding.Unicode.GetBytes(s);
 		var addr = SimpleAlloc((uint)bytes.Length);
 		vm.WriteBytes(addr, bytes);
+		Diagnostics.LogMemWrite(addr, bytes.Length, bytes);
 		return addr;
 	}
 
@@ -87,6 +89,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	{
 		var bytes = System.Text.Encoding.ASCII.GetBytes(nullTerminate ? s + "\0" : s);
 		vm.WriteBytes(addr, bytes);
+		Diagnostics.LogMemWrite(addr, bytes.Length, bytes);
 	}
 
 	public string ReadAnsiString(uint addr)
@@ -100,14 +103,11 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 			buf.Add(b);
 		}
 
-		return System.Text.Encoding.ASCII.GetString(buf.ToArray());
+		var result = System.Text.Encoding.ASCII.GetString(buf.ToArray());
+		Diagnostics.LogDebug($"ReadAnsiString addr=0x{addr:X8} result='{result}'");
+		return result;
 	}
 
-	/// <summary>
-	/// Creates a Windows-format environment strings block in Unicode.
-	/// Returns a pointer to a double-null-terminated block of null-terminated strings.
-	/// Format: "VAR1=value1\0VAR2=value2\0...VARn=valuen\0\0"
-	/// </summary>
 	public uint GetEnvironmentStringsW()
 	{
 		var envBlock = new System.Text.StringBuilder();
@@ -185,7 +185,11 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 
 	public byte[] MemReadBytes(uint addr, int count) => vm.GetSpan(addr, count);
 	public byte MemRead8(uint addr) => vm.Read8(addr);
-	public void MemWriteBytes(uint addr, ReadOnlySpan<byte> data) => vm.WriteBytes(addr, data);
+	public void MemWriteBytes(uint addr, ReadOnlySpan<byte> data)
+	{
+		vm.WriteBytes(addr, data);
+		try { Diagnostics.LogMemWrite(addr, data.Length, data.ToArray()); } catch { }
+	}
 	public uint MemRead32(uint addr) => vm.Read32(addr);
 	public void MemWrite32(uint addr, uint value) => vm.Write32(addr, value);
 	public void MemWrite16(uint addr, ushort value) => vm.Write16(addr, value);
@@ -262,6 +266,27 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	{
 		var normalizedName = Path.GetFileName(moduleName).ToUpperInvariant();
 		return _loadedModules.ContainsKey(normalizedName);
+	}
+
+	/// <summary>
+	/// Try to resolve a module handle to a module filename (normalized). Returns null if unknown.
+	/// </summary>
+	public string? GetModuleFileNameForHandle(uint moduleHandle)
+	{
+		// Search loaded images first to return full path
+		foreach (var kvp in _loadedImages)
+		{
+			if (kvp.Value.BaseAddress == moduleHandle) return kvp.Value.FilePath;
+		}
+
+		// Search loaded modules for a matching handle and return normalized name
+		foreach (var kvp in _loadedModules)
+		{
+			if (kvp.Value == moduleHandle) return kvp.Key; // normalized name
+		}
+
+		// If not found, return null
+		return null;
 	}
 
 	// Heaps

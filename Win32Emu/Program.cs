@@ -45,9 +45,17 @@ namespace Win32Emu
 			cpu.SetRegister("ESP", 0x00200000); // crude stack top
 
 			var dispatcher = new Win32Dispatcher();
+			
 			var kernel32Module = new Kernel32Module(env, image.BaseAddress, loader);
 			kernel32Module.SetDispatcher(dispatcher);
 			dispatcher.RegisterModule(kernel32Module);
+
+			dispatcher.RegisterModule(new User32Module(env, image.BaseAddress, loader));
+			dispatcher.RegisterModule(new Gdi32Module(env, image.BaseAddress, loader));
+			dispatcher.RegisterModule(new DDrawModule(env, image.BaseAddress, loader));
+			dispatcher.RegisterModule(new DSoundModule(env, image.BaseAddress, loader));
+			dispatcher.RegisterModule(new DInputModule(env, image.BaseAddress, loader));
+			dispatcher.RegisterModule(new WinMMModule(env, image.BaseAddress, loader));
 
 			if (debugMode)
 			{

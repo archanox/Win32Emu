@@ -36,6 +36,7 @@
   <ItemGroup>
     <PackageReference Include="AsmResolver.PE" Version="6.0.0-beta.4" />
     <PackageReference Include="Iced" Version="1.21.0" />
+    <PackageReference Include="Reko.Decompiler.Runtime" Version="0.12.1" />
   </ItemGroup>
 
   <ItemGroup>

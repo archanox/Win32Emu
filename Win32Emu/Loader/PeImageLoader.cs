@@ -29,7 +29,7 @@ public class PeImageLoader(VirtualMemory vm)
 		}
 
 		var importMap = BuildImportMap(image, imageBase);
-		return new LoadedImage(imageBase, entryPoint, imageSize, importMap);
+		return new LoadedImage(imageBase, entryPoint, imageSize, importMap, path);
 	}
 
 	private Dictionary<uint, (string dll, string name)> BuildImportMap(PEImage image, uint imageBase)

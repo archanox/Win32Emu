@@ -407,13 +407,73 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 
 	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
 	{
+		Diagnostics.LogDebug($"GetModuleFileNameA called: h=0x{(uint)(nint)h:X8} lp=0x{(uint)(nint)lp:X8} n={n}");
+		// Use guest memory helpers instead of dereferencing raw pointers to avoid AccessViolation
 		if (n == 0 || lp == null) return 0;
-		var p = ReadCurrentModulePath();
-		var b = System.Text.Encoding.ASCII.GetBytes(p);
-		var len = Math.Min((uint)b.Length, n - 1);
-		for (uint i = 0; i < len; i++) lp[i] = (sbyte)b[i];
-		lp[len] = 0;
-		return len;
+
+		// Convert lp to guest address
+		uint lpAddr = (uint)(nint)lp;
+		if (lpAddr == 0) return 0;
+
+		string? path = null;
+
+		if (h == null || (IntPtr)h == IntPtr.Zero)
+		{
+			path = ReadCurrentModulePath();
+		}
+		else
+		{
+			if ((ulong)(nint)h == 0xFFFFFFFFul)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			var numericHandle = (uint)(nint)h;
+			var moduleName = env.GetModuleFileNameForHandle(numericHandle);
+			if (moduleName != null)
+			{
+				path = moduleName;
+			}
+			else
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+		}
+
+		if (path == null)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		Diagnostics.LogDebug($"GetModuleFileNameA resolved path: {path}");
+
+		var bytes = System.Text.Encoding.ASCII.GetBytes(path);
+		var required = (uint)bytes.Length; // number of chars without null
+
+		// If buffer too small, copy up to n-1 and null terminate
+		if (n <= required)
+		{
+			var copyLen = n > 0 ? n - 1u : 0u;
+			if (copyLen > 0)
+			{
+				env.MemWriteBytes(lpAddr, bytes.AsSpan(0, (int)copyLen));
+				Diagnostics.LogMemWrite(lpAddr, (int)copyLen, bytes.AsSpan(0, (int)copyLen).ToArray());
+			}
+			// write null terminator
+			env.MemWriteBytes(lpAddr + copyLen, new byte[] { 0 });
+			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			Diagnostics.LogDebug($"GetModuleFileNameA truncated; copyLen={copyLen} returned");
+			return copyLen;
+		}
+
+		// Fits in buffer: write full path and null terminator
+		env.MemWriteBytes(lpAddr, bytes);
+		env.MemWriteBytes(lpAddr + (uint)bytes.Length, new byte[] { 0 });
+		Diagnostics.LogMemWrite(lpAddr, bytes.Length + 1, bytes.AsSpan(0, bytes.Length).ToArray());
+		return (uint)bytes.Length;
 	}
 
 	private unsafe uint GetCommandLineA() => env.CommandLinePtr;
@@ -458,6 +518,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return env.FreeEnvironmentStringsA(lpszEnvironmentBlock);
 	}
 
+	
+	
 	private unsafe uint GetStartupInfoA(uint lpStartupInfo)
 	{
 		if (lpStartupInfo == 0) return 0;
@@ -472,10 +534,10 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	private unsafe uint GetStdHandle(uint nStdHandle)
 	{
 		return nStdHandle switch
-		{
-			0xFFFFFFF6 => env.StdInputHandle, 0xFFFFFFF5 => env.StdOutputHandle,
-			0xFFFFFFF4 => env.StdErrorHandle, _ => 0
-		};
+			{
+				0xFFFFFFF6 => env.StdInputHandle, 0xFFFFFFF5 => env.StdOutputHandle,
+				0xFFFFFFF4 => env.StdErrorHandle, _ => 0
+			};
 	}
 
 	private unsafe uint SetStdHandle(uint nStdHandle, uint hHandle)
@@ -775,7 +837,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				{
 					return (uint)(multiByteBytes.Length + 1);
 				}
-        
+			
 				return (uint)multiByteBytes.Length;
 			}
 
@@ -835,7 +897,31 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 	}
 
-	private unsafe string ReadCurrentModulePath() => "game.exe";
+	private unsafe string ReadCurrentModulePath()
+	{
+		// Prefer the initialized executable path from the process environment
+		if (!string.IsNullOrEmpty(env.ExecutablePath))
+		{
+			return env.ExecutablePath;
+		}
+
+		// Fall back to the module filename pointer if available
+		try
+		{
+			if (env.ModuleFileNamePtr != 0)
+			{
+				var s = env.ReadAnsiString(env.ModuleFileNamePtr);
+				if (!string.IsNullOrEmpty(s)) return s;
+			}
+		}
+		catch
+		{
+			// ignore and fall through to default
+		}
+
+		// Final fallback for legacy behavior
+		return "game.exe";
+	}
 
 	private unsafe uint RtlUnwind(uint targetFrame, uint targetIp, uint exceptionRecord, uint returnValue)
 	{

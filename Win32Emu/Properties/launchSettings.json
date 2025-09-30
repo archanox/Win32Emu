@@ -1,28 +1,36 @@
 {
-  "profiles": {
-    "Win32Emu (Ignition)": {
-      "commandName": "Project",
-      "commandLineArgs": "C:\\Games\\IGNITION\\Ign_win.exe"
-    },
-    "Win32Emu (Ignition Debug)": {
-      "commandName": "Project",
-      "commandLineArgs": "C:\\Games\\IGNITION\\Ign_win.exe --debug"
-    },
-    "Win32Emu (SegaGT)": {
-      "commandName": "Project",
-      "commandLineArgs": "\"C:\\Program Files (x86)\\SEGA\\SegaGT\\SegaGT.exe\""
-    },
-    "Win32Emu (SegaGT Debug)": {
-      "commandName": "Project",
-      "commandLineArgs": "\"C:\\Program Files (x86)\\SEGA\\SegaGT\\SegaGT.exe\" --debug"
-    },
-    "Win32Emu (Ignition Teaser)": {
-      "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\pierc\\Downloads\\ign_teas\\IGN_TEAS.EXE\""
-    },
-    "Win32Emu (Ignition Teaser Debug)": {
-      "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\pierc\\Downloads\\ign_teas\\IGN_TEAS.EXE\" --debug"
+    "profiles": {
+        "Win32Emu (Ignition)": {
+            "commandName": "Project",
+            "commandLineArgs": "C:\\Games\\IGNITION\\Ign_win.exe"
+        },
+        "Win32Emu (Ignition Debug)": {
+            "commandName": "Project",
+            "commandLineArgs": "C:\\Games\\IGNITION\\Ign_win.exe --debug"
+        },
+        "Win32Emu (Ignition 3dfx)": {
+            "commandName": "Project",
+            "commandLineArgs": "C:\\Games\\IGNITION\\ign_3dfx.exe"
+        },
+        "Win32Emu (Ignition 3dfx Debug)": {
+            "commandName": "Project",
+            "commandLineArgs": "C:\\Games\\IGNITION\\ign_3dfx.exe --debug"
+        },
+        "Win32Emu (SegaGT)": {
+            "commandName": "Project",
+            "commandLineArgs": "\"C:\\Program Files (x86)\\SEGA\\SegaGT\\SegaGT.exe\""
+        },
+        "Win32Emu (SegaGT Debug)": {
+            "commandName": "Project",
+            "commandLineArgs": "\"C:\\Program Files (x86)\\SEGA\\SegaGT\\SegaGT.exe\" --debug"
+        },
+        "Win32Emu (Ignition Teaser)": {
+            "commandName": "Project",
+            "commandLineArgs": "\"C:\\Users\\pierc\\Downloads\\ign_teas\\IGN_TEAS.EXE\""
+        },
+        "Win32Emu (Ignition Teaser Debug)": {
+            "commandName": "Project",
+            "commandLineArgs": "\"C:\\Users\\pierc\\Downloads\\ign_teas\\IGN_TEAS.EXE\" --debug"
+        }
     }
-  }
 }
