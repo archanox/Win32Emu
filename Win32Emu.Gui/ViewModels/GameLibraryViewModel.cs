@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Win32Emu.Gui.Models;
+using Win32Emu.Gui.Services;
+using Avalonia.Platform.Storage;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -13,8 +15,13 @@ public partial class GameLibraryViewModel : ViewModelBase
     [ObservableProperty]
     private Game? _selectedGame;
 
-    public GameLibraryViewModel()
+    private IStorageProvider? _storageProvider;
+    private readonly EmulatorConfiguration _configuration;
+
+    public GameLibraryViewModel(EmulatorConfiguration configuration)
     {
+        _configuration = configuration;
+        
         // Add some sample games for demonstration
         Games.Add(new Game
         {
@@ -25,11 +32,43 @@ public partial class GameLibraryViewModel : ViewModelBase
         });
     }
 
+    public void SetStorageProvider(IStorageProvider storageProvider)
+    {
+        _storageProvider = storageProvider;
+    }
+
     [RelayCommand]
     private async Task AddGame()
     {
-        // This will be implemented with a file picker
-        await Task.CompletedTask;
+        if (_storageProvider == null) return;
+
+        var files = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Select Game Executable",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("Windows Executable")
+                {
+                    Patterns = new[] { "*.exe" }
+                }
+            }
+        });
+
+        if (files.Count > 0)
+        {
+            var file = files[0];
+            var fileName = file.Name;
+            var filePath = file.Path.LocalPath;
+
+            Games.Add(new Game
+            {
+                Title = Path.GetFileNameWithoutExtension(fileName),
+                ExecutablePath = filePath,
+                Description = "Added from file picker",
+                TimesPlayed = 0
+            });
+        }
     }
 
     [RelayCommand]
@@ -37,12 +76,20 @@ public partial class GameLibraryViewModel : ViewModelBase
     {
         if (game == null) return;
         
-        // Launch the emulator with the selected game
-        await Task.Run(() =>
+        try
         {
-            // This will launch the Win32Emu with the game executable
-            // For now, just a placeholder
-        });
+            var service = new EmulatorService(_configuration);
+            await service.LaunchGame(game);
+            
+            // Update play count
+            game.TimesPlayed++;
+            game.LastPlayed = DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            // In a real app, we would show an error dialog here
+            Console.WriteLine($"Error launching game: {ex.Message}");
+        }
     }
 
     [RelayCommand]

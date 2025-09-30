@@ -6,17 +6,19 @@ namespace Win32Emu.Gui.ViewModels;
 
 public partial class SettingsViewModel : ViewModelBase
 {
-    [ObservableProperty]
-    private string _renderingBackend = "Software";
+    private readonly EmulatorConfiguration _configuration;
 
     [ObservableProperty]
-    private int _resolutionScaleFactor = 1;
+    private string _renderingBackend;
 
     [ObservableProperty]
-    private int _reservedMemoryMB = 256;
+    private int _resolutionScaleFactor;
 
     [ObservableProperty]
-    private string _windowsVersion = "Windows 95";
+    private int _reservedMemoryMB;
+
+    [ObservableProperty]
+    private string _windowsVersion;
 
     [ObservableProperty]
     private bool _enableDebugMode;
@@ -42,4 +44,41 @@ public partial class SettingsViewModel : ViewModelBase
     {
         1, 2, 3, 4
     };
+
+    public SettingsViewModel(EmulatorConfiguration configuration)
+    {
+        _configuration = configuration;
+        
+        // Initialize properties from configuration
+        _renderingBackend = configuration.RenderingBackend;
+        _resolutionScaleFactor = configuration.ResolutionScaleFactor;
+        _reservedMemoryMB = configuration.ReservedMemoryMB;
+        _windowsVersion = configuration.WindowsVersion;
+        _enableDebugMode = configuration.EnableDebugMode;
+    }
+
+    partial void OnRenderingBackendChanged(string value)
+    {
+        _configuration.RenderingBackend = value;
+    }
+
+    partial void OnResolutionScaleFactorChanged(int value)
+    {
+        _configuration.ResolutionScaleFactor = value;
+    }
+
+    partial void OnReservedMemoryMBChanged(int value)
+    {
+        _configuration.ReservedMemoryMB = value;
+    }
+
+    partial void OnWindowsVersionChanged(string value)
+    {
+        _configuration.WindowsVersion = value;
+    }
+
+    partial void OnEnableDebugModeChanged(bool value)
+    {
+        _configuration.EnableDebugMode = value;
+    }
 }
