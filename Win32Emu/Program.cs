@@ -56,6 +56,7 @@ namespace Win32Emu
 			dispatcher.RegisterModule(new DSoundModule(env, image.BaseAddress, loader));
 			dispatcher.RegisterModule(new DInputModule(env, image.BaseAddress, loader));
 			dispatcher.RegisterModule(new WinMMModule(env, image.BaseAddress, loader));
+			dispatcher.RegisterModule(new Glide2xModule(env, image.BaseAddress, loader));
 
 			if (debugMode)
 			{

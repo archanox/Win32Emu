@@ -17,6 +17,10 @@ public class PeImageLoader(VirtualMemory vm)
 		var image = PEImage.FromFile(path);
 		var pe = image.PEFile ?? throw new InvalidOperationException("PEImage missing PEFile.");
 		var opt = pe.OptionalHeader ?? throw new InvalidOperationException("Missing optional header.");
+
+		if(opt.Magic != OptionalHeaderMagic.PE32)
+			throw new NotSupportedException("Only PE32 format is supported.");
+
 		var imageBase = (uint)opt.ImageBase;
 		var entryPoint = imageBase + opt.AddressOfEntryPoint;
 		var imageSize = opt.SizeOfImage;

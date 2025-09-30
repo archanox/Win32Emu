@@ -96,3 +96,17 @@ public class WinMMModule(ProcessEnvironment env, uint imageBase, PeImageLoader? 
 		return false;
 	}
 }
+
+public class Glide2xModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
+{
+	public string Name => "GLIDE2X.DLL";
+
+	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+	{
+		returnValue = 0;
+		//var a = new StackArgs(cpu, memory);
+
+		Console.WriteLine($"[Glide2x] Unimplemented export: {export}");
+		return false;
+	}
+}
