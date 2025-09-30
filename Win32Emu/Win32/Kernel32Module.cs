@@ -138,7 +138,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				return true;
 			case "UNHANDLEDEXCEPTIONFILTER":
 				returnValue = UnhandledExceptionFilter(a.UInt32(0));
-        return true
+        return true;
 			case "RTLUNWIND":
 				returnValue = RtlUnwind(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
         return true;
