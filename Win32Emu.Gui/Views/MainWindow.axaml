@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Win32Emu.Gui.ViewModels"
+        xmlns:views="using:Win32Emu.Gui.Views"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+        x:Class="Win32Emu.Gui.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Win32Emu - Windows 32-bit Emulator"
+        Width="1200"
+        Height="800"
+        MinWidth="800"
+        MinHeight="600">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid ColumnDefinitions="200,*">
+        <!-- Navigation Sidebar -->
+        <Border Grid.Column="0" 
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                BorderThickness="0,0,1,0">
+            <StackPanel Spacing="5" Margin="10">
+                <TextBlock Text="Win32Emu"
+                          FontSize="18"
+                          FontWeight="Bold"
+                          Margin="10,20,10,30"
+                          HorizontalAlignment="Center"/>
+                
+                <Button Content="📚 Library"
+                       Command="{Binding NavigateToLibraryCommand}"
+                       HorizontalAlignment="Stretch"
+                       HorizontalContentAlignment="Left"
+                       Padding="15,10"/>
+                
+                <Button Content="⚙️ Settings"
+                       Command="{Binding NavigateToSettingsCommand}"
+                       HorizontalAlignment="Stretch"
+                       HorizontalContentAlignment="Left"
+                       Padding="15,10"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Content Area -->
+        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}">
+            <ContentControl.DataTemplates>
+                <DataTemplate DataType="vm:GameLibraryViewModel">
+                    <views:GameLibraryView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:SettingsViewModel">
+                    <views:SettingsView />
+                </DataTemplate>
+            </ContentControl.DataTemplates>
+        </ContentControl>
+    </Grid>
+
+</Window>
+
