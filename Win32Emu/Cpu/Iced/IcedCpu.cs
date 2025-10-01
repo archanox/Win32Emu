@@ -744,6 +744,20 @@ public class IcedCpu : ICpu
 				}
 				break;
 			
+			case 0x80000000: // Get maximum extended function
+				_eax = 0x80000001; // Max supported extended function
+				_ebx = 0;
+				_ecx = 0;
+				_edx = 0;
+				break;
+			
+			case 0x80000001: // Extended processor info and feature bits
+				_eax = 0x00000600; // Extended processor signature (same as function 1)
+				_ebx = 0;
+				_ecx = CpuIntrinsics.GetCpuid80000001EcxFeatures(); // Extended feature flags (includes LZCNT)
+				_edx = 0; // Extended feature flags in EDX
+				break;
+			
 			default:
 				// Unsupported function - return zeros
 				_eax = 0;

@@ -144,12 +144,49 @@ public class CpuIntrinsicsTests : IDisposable
     }
 
     [Fact]
+    public void CPUID_Function80000000_ShouldReturnMaxExtendedFunction()
+    {
+        // Arrange: CPUID (0F A2) with EAX=0x80000000 - Get max extended function
+        _helper.SetReg("EAX", 0x80000000);
+        _helper.WriteCode(0x0F, 0xA2);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert - EAX should contain max extended function (at least 0x80000001)
+        var maxExtendedFunction = _helper.GetReg("EAX");
+        Assert.True(maxExtendedFunction >= 0x80000001, "CPUID should support at least extended function 0x80000001");
+    }
+
+    [Fact]
+    public void CPUID_Function80000001_ShouldReturnExtendedFeatures()
+    {
+        // Arrange: CPUID (0F A2) with EAX=0x80000001 - Get extended features
+        _helper.SetReg("EAX", 0x80000001);
+        _helper.WriteCode(0x0F, 0xA2);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert - ECX should contain extended features
+        var extendedFeaturesECX = _helper.GetReg("ECX");
+
+        // If running on x86 host with LZCNT support, LZCNT flag should be set
+        if (CpuIntrinsics.HasLzcnt)
+        {
+            Assert.True((extendedFeaturesECX & (1 << 5)) != 0, 
+                "LZCNT feature should be set on x86 hosts with LZCNT support");
+        }
+    }
+
+    [Fact]
     public void CpuIntrinsics_GetCpuidFeatures_ShouldNotThrow()
     {
         // Act & Assert - Should not throw when querying features
         var ecxFeatures = CpuIntrinsics.GetCpuidEcxFeatures();
         var edxFeatures = CpuIntrinsics.GetCpuidEdxFeatures();
         var extendedFeatures = CpuIntrinsics.GetCpuidExtendedEbxFeatures();
+        var extended80000001Features = CpuIntrinsics.GetCpuid80000001EcxFeatures();
 
         // Basic validation - EDX should always have some features set
         Assert.True(edxFeatures > 0, "EDX features should include at least basic CPU features");

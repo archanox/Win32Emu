@@ -99,6 +99,17 @@ The CPUID instruction now returns accurate feature flags based on the host CPU c
   - Bit 5: AVX2
   - Bit 8: BMI2
 
+### Function 0x80000000: Get Maximum Extended Function
+- **EAX**: Max supported extended function (0x80000001)
+- **EBX, ECX, EDX**: Reserved (0)
+
+### Function 0x80000001: Extended Processor Info and Features
+- **EAX**: Extended processor signature
+- **EBX**: Reserved (0)
+- **ECX**: Extended feature flags (based on host CPU)
+  - Bit 5: LZCNT
+- **EDX**: Extended feature flags in EDX (currently 0)
+
 ## SIMD Intrinsics Helper
 
 The `SimdIntrinsicsHelper` class provides hardware-accelerated implementations of common SIMD operations that can be used when implementing SSE/SSE2 instructions:
