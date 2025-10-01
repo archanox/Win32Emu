@@ -277,14 +277,12 @@ public static class SimdIntrinsicsHelper
 		else if (CpuIntrinsics.HasAdvSimd)
 		{
 			// ARM has population count in AdvSimd
-			// Software fallback for ARM since getting the scalar result is complex
-			uint count = 0;
-			while (value != 0)
-			{
-				value &= value - 1;
-				count++;
-			}
-			return count;
+			// Use NEON intrinsics to count set bits
+			var vec = Vector64.Create(value, 0u);
+			var popcount = AdvSimd.PopCount(vec.AsByte());
+			// Sum all bytes to get total count
+			var sum = AdvSimd.Arm64.AddAcross(popcount);
+			return sum.ToScalar();
 		}
 		else
 		{
