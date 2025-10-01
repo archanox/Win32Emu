@@ -318,6 +318,10 @@ public class Gdi32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? 
 	private readonly Dictionary<int, uint> _stockObjects = new();
 	private uint _nextStockObjectHandle = 0x80000000; // Start with high address to distinguish from regular handles
 
+	// Device contexts
+	private readonly Dictionary<uint, DeviceContext> _deviceContexts = new();
+	private uint _nextDCHandle = 0x81000000;
+
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
@@ -327,6 +331,31 @@ public class Gdi32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? 
 		{
 			case "GETSTOCKOBJECT":
 				returnValue = GetStockObject(a.Int32(0));
+				return true;
+
+			case "BEGINPAINT":
+				returnValue = BeginPaint(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "ENDPAINT":
+				returnValue = EndPaint(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "FILLRECT":
+				returnValue = FillRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+
+			case "TEXTOUT":
+			case "TEXTOUTA":
+				returnValue = TextOutA(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.Int32(4));
+				return true;
+
+			case "SETBKMODE":
+				returnValue = SetBkMode(a.UInt32(0), a.Int32(1));
+				return true;
+
+			case "SETTEXTCOLOR":
+				returnValue = SetTextColor(a.UInt32(0), a.UInt32(1));
 				return true;
 
 			default:
@@ -358,19 +387,191 @@ public class Gdi32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? 
 		Console.WriteLine($"[Gdi32] GetStockObject({stockObjectId}) -> 0x{handle:X8}");
 		return handle;
 	}
+
+	private uint BeginPaint(uint hwnd, uint lpPaint)
+	{
+		Console.WriteLine($"[Gdi32] BeginPaint(HWND=0x{hwnd:X8}, lpPaint=0x{lpPaint:X8})");
+
+		// Create a device context for this paint session
+		var hdc = _nextDCHandle++;
+		var dc = new DeviceContext
+		{
+			Handle = hdc,
+			WindowHandle = hwnd
+		};
+		_deviceContexts[hdc] = dc;
+
+		// Fill PAINTSTRUCT if provided
+		if (lpPaint != 0)
+		{
+			// PAINTSTRUCT layout:
+			// HDC hdc
+			// BOOL fErase
+			// RECT rcPaint
+			// BOOL fRestore
+			// BOOL fIncUpdate
+			// BYTE rgbReserved[32]
+			env.MemWrite32(lpPaint, hdc);      // hdc
+			env.MemWrite32(lpPaint + 4, 1);    // fErase = TRUE
+			env.MemWrite32(lpPaint + 8, 0);    // rcPaint.left
+			env.MemWrite32(lpPaint + 12, 0);   // rcPaint.top
+			env.MemWrite32(lpPaint + 16, 640); // rcPaint.right
+			env.MemWrite32(lpPaint + 20, 480); // rcPaint.bottom
+		}
+
+		return hdc;
+	}
+
+	private uint EndPaint(uint hwnd, uint lpPaint)
+	{
+		if (lpPaint != 0)
+		{
+			var hdc = env.MemRead32(lpPaint);
+			Console.WriteLine($"[Gdi32] EndPaint(HWND=0x{hwnd:X8}, HDC=0x{hdc:X8})");
+
+			// Remove the device context
+			_deviceContexts.Remove(hdc);
+		}
+
+		return 1; // TRUE
+	}
+
+	private uint FillRect(uint hdc, uint lpRect, uint hBrush)
+	{
+		if (lpRect != 0)
+		{
+			var left = env.MemRead32(lpRect);
+			var top = env.MemRead32(lpRect + 4);
+			var right = env.MemRead32(lpRect + 8);
+			var bottom = env.MemRead32(lpRect + 12);
+			Console.WriteLine($"[Gdi32] FillRect(HDC=0x{hdc:X8}, rect=({left},{top},{right},{bottom}), hBrush=0x{hBrush:X8})");
+		}
+
+		return 1; // Non-zero on success
+	}
+
+	private uint TextOutA(uint hdc, int x, int y, uint lpString, int cbString)
+	{
+		if (lpString != 0 && cbString > 0)
+		{
+			var text = env.ReadAnsiString(lpString, cbString);
+			Console.WriteLine($"[Gdi32] TextOutA(HDC=0x{hdc:X8}, x={x}, y={y}, text=\"{text}\")");
+		}
+
+		return 1; // TRUE
+	}
+
+	private uint SetBkMode(uint hdc, int mode)
+	{
+		Console.WriteLine($"[Gdi32] SetBkMode(HDC=0x{hdc:X8}, mode={mode})");
+		return 1; // Previous mode (OPAQUE)
+	}
+
+	private uint SetTextColor(uint hdc, uint color)
+	{
+		Console.WriteLine($"[Gdi32] SetTextColor(HDC=0x{hdc:X8}, color=0x{color:X8})");
+		return 0x00000000; // Previous color (black)
+	}
+
+	private class DeviceContext
+	{
+		public uint Handle { get; set; }
+		public uint WindowHandle { get; set; }
+		public int BkMode { get; set; } = 2; // OPAQUE
+		public uint TextColor { get; set; } = 0x00000000; // Black
+	}
 }
 
 public class DDrawModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
 {
 	public string Name => "DDRAW.DLL";
 
+	// DirectDraw object handles
+	private readonly Dictionary<uint, DirectDrawObject> _ddrawObjects = new();
+	private readonly Dictionary<uint, DirectDrawSurface> _surfaces = new();
+	private uint _nextDDrawHandle = 0x70000000;
+	private uint _nextSurfaceHandle = 0x71000000;
+
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		//var a = new StackArgs(cpu, memory);
+		var a = new StackArgs(cpu, memory);
 
-		Console.WriteLine($"[DDraw] Unimplemented export: {export}");
-		return false;
+		switch (export.ToUpperInvariant())
+		{
+			case "DIRECTDRAWCREATE":
+				returnValue = DirectDrawCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+
+			case "DIRECTDRAWCREATEEX":
+				returnValue = DirectDrawCreateEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+
+			default:
+				Console.WriteLine($"[DDraw] Unimplemented export: {export}");
+				return false;
+		}
+	}
+
+	private uint DirectDrawCreate(uint lpGuid, uint lplpDD, uint pUnkOuter)
+	{
+		Console.WriteLine($"[DDraw] DirectDrawCreate(lpGuid=0x{lpGuid:X8}, lplpDD=0x{lplpDD:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+
+		// Create DirectDraw object
+		var ddrawHandle = _nextDDrawHandle++;
+		var ddrawObj = new DirectDrawObject
+		{
+			Handle = ddrawHandle
+		};
+		_ddrawObjects[ddrawHandle] = ddrawObj;
+
+		// Write vtable pointer back to caller
+		if (lplpDD != 0)
+		{
+			env.MemWrite32(lplpDD, ddrawHandle);
+		}
+
+		Console.WriteLine($"[DDraw] Created DirectDraw object: 0x{ddrawHandle:X8}");
+		return 0; // DD_OK
+	}
+
+	private uint DirectDrawCreateEx(uint lpGuid, uint lplpDD, uint iid, uint pUnkOuter)
+	{
+		Console.WriteLine($"[DDraw] DirectDrawCreateEx(lpGuid=0x{lpGuid:X8}, lplpDD=0x{lplpDD:X8}, iid=0x{iid:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+
+		// Similar to DirectDrawCreate but with interface ID
+		var ddrawHandle = _nextDDrawHandle++;
+		var ddrawObj = new DirectDrawObject
+		{
+			Handle = ddrawHandle
+		};
+		_ddrawObjects[ddrawHandle] = ddrawObj;
+
+		if (lplpDD != 0)
+		{
+			env.MemWrite32(lplpDD, ddrawHandle);
+		}
+
+		Console.WriteLine($"[DDraw] Created DirectDraw object (Ex): 0x{ddrawHandle:X8}");
+		return 0; // DD_OK
+	}
+
+	private class DirectDrawObject
+	{
+		public uint Handle { get; set; }
+		public int Width { get; set; }
+		public int Height { get; set; }
+		public int BitsPerPixel { get; set; }
+	}
+
+	private class DirectDrawSurface
+	{
+		public uint Handle { get; set; }
+		public int Width { get; set; }
+		public int Height { get; set; }
+		public int Pitch { get; set; }
+		public byte[]? Bits { get; set; }
+		public bool IsPrimary { get; set; }
 	}
 }
 
