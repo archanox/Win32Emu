@@ -38,7 +38,7 @@ public class Emulator
         LogDebug($"[Loader] Image base=0x{_image.BaseAddress:X8} EntryPoint=0x{_image.EntryPointAddress:X8} Size=0x{_image.ImageSize:X}");
         LogDebug($"[Loader] Imports mapped: {_image.ImportAddressMap.Count}");
 
-        _env = new ProcessEnvironment(_vm);
+        _env = new ProcessEnvironment(_vm, 0x01000000, _host);
         _env.InitializeStrings(path, Array.Empty<string>());
 
         _cpu = new IcedCpu(_vm);
@@ -303,6 +303,7 @@ public interface IEmulatorHost
 {
     void OnDebugOutput(string message, DebugLevel level);
     void OnStdOutput(string output);
+    void OnWindowCreate(WindowCreateInfo info);
 }
 
 public enum DebugLevel
@@ -312,4 +313,18 @@ public enum DebugLevel
     Info,
     Warning,
     Error
+}
+
+public class WindowCreateInfo
+{
+    public required uint Handle { get; init; }
+    public required string Title { get; init; }
+    public int Width { get; init; }
+    public int Height { get; init; }
+    public int X { get; init; }
+    public int Y { get; init; }
+    public required string ClassName { get; init; }
+    public uint Style { get; init; }
+    public uint ExStyle { get; init; }
+    public uint Parent { get; init; }
 }

@@ -5,10 +5,7 @@ namespace Win32Emu.Gui.Services;
 /// </summary>
 public interface IGuiEmulatorHost : Win32Emu.IEmulatorHost
 {
-    /// <summary>
-    /// Called when the emulator needs to create a window
-    /// </summary>
-    void OnWindowCreate(WindowCreateInfo info);
+    // OnWindowCreate is now in the base IEmulatorHost interface
     
     /// <summary>
     /// Called when the emulator updates display output
@@ -27,15 +24,6 @@ public enum EmulatorState
     Running,
     Paused,
     Error
-}
-
-public class WindowCreateInfo
-{
-    public required string Title { get; init; }
-    public int Width { get; init; }
-    public int Height { get; init; }
-    public int X { get; init; }
-    public int Y { get; init; }
 }
 
 public class DisplayUpdateInfo

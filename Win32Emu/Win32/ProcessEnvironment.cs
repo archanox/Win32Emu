@@ -3,11 +3,12 @@ using Win32Emu.Loader;
 
 namespace Win32Emu.Win32;
 
-public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
+public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null)
 {
 	private uint _allocPtr = heapBase;
 	private bool _exitRequested;
 	private string _executablePath = string.Empty;
+	private readonly IEmulatorHost? _host = host;
 
 	public uint CommandLinePtr { get; private set; }
 	public uint ModuleFileNamePtr { get; private set; }
@@ -416,6 +417,22 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 
 		_windows[handle] = windowInfo;
 		Console.WriteLine($"[ProcessEnv] Created window: HWND=0x{handle:X8} Class='{className}' Title='{windowName}'");
+
+		// Notify host about window creation (Phase 2: Window Management)
+		// The GUI will create an actual Avalonia window when this is called
+		_host?.OnWindowCreate(new WindowCreateInfo
+		{
+			Handle = handle,
+			Title = windowName,
+			Width = width,
+			Height = height,
+			X = x,
+			Y = y,
+			ClassName = className,
+			Style = style,
+			ExStyle = exStyle,
+			Parent = parent
+		});
 
 		return handle;
 	}

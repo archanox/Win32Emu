@@ -1,6 +1,9 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Win32Emu.Gui.Services;
+using Avalonia.Controls;
+using Avalonia.Threading;
+using System.Collections.Generic;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -23,6 +26,9 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 
     [ObservableProperty]
     private bool _showStdOutputPanel = true;
+
+    // Track created windows - maps Win32 HWND to Avalonia Window
+    private readonly Dictionary<uint, Window> _createdWindows = new();
 
     public void OnDebugOutput(string message, Win32Emu.DebugLevel level)
     {
@@ -54,10 +60,51 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         }
     }
 
-    public void OnWindowCreate(WindowCreateInfo info)
+    public void OnWindowCreate(Win32Emu.WindowCreateInfo info)
     {
-        // TODO: Create Avalonia window for User32/GDI32 operations
-        OnDebugOutput($"Window created: {info.Title} ({info.Width}x{info.Height})", Win32Emu.DebugLevel.Info);
+        // Phase 2: Create actual Avalonia windows for User32/GDI32 operations
+        OnDebugOutput($"Creating Avalonia window for HWND=0x{info.Handle:X8}: {info.Title} ({info.Width}x{info.Height})", Win32Emu.DebugLevel.Info);
+        
+        // Create the window on the UI thread
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                var window = new Window
+                {
+                    Title = string.IsNullOrEmpty(info.Title) ? $"Window 0x{info.Handle:X8}" : info.Title,
+                    Width = info.Width > 0 ? info.Width : 640,
+                    Height = info.Height > 0 ? info.Height : 480,
+                    CanResize = true,
+                    ShowInTaskbar = true
+                };
+
+                // Set position if specified (not CW_USEDEFAULT)
+                if (info.X >= 0 && info.X < 10000 && info.Y >= 0 && info.Y < 10000)
+                {
+                    window.Position = new Avalonia.PixelPoint(info.X, info.Y);
+                }
+
+                // Store the window mapping
+                _createdWindows[info.Handle] = window;
+
+                // Handle window closing
+                window.Closing += (s, e) =>
+                {
+                    _createdWindows.Remove(info.Handle);
+                    OnDebugOutput($"Avalonia window closed for HWND=0x{info.Handle:X8}", Win32Emu.DebugLevel.Info);
+                };
+
+                // Show the window
+                window.Show();
+                
+                OnDebugOutput($"Avalonia window shown for HWND=0x{info.Handle:X8}", Win32Emu.DebugLevel.Info);
+            }
+            catch (Exception ex)
+            {
+                OnDebugOutput($"Failed to create Avalonia window: {ex.Message}", Win32Emu.DebugLevel.Error);
+            }
+        });
     }
 
     public void OnDisplayUpdate(DisplayUpdateInfo info)
