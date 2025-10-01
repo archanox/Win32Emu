@@ -35,6 +35,10 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 	private readonly Dictionary<string, WindowClassInfo> _windowClasses = new(StringComparer.OrdinalIgnoreCase);
 	private uint _nextWindowHandle = 0x00010000; // Window handles typically start low
 
+	// Message queue management
+	private bool _hasQuitMessage;
+	private int _quitExitCode;
+
 	// Environment variables (emulated, not from system)
 	private readonly Dictionary<string, string> _environmentVariables = new();
 
@@ -450,5 +454,23 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 			return true;
 		}
 		return false;
+	}
+
+	// Message queue management
+	public void PostQuitMessage(int exitCode)
+	{
+		_hasQuitMessage = true;
+		_quitExitCode = exitCode;
+		Console.WriteLine($"[ProcessEnv] PostQuitMessage: exitCode={exitCode}");
+	}
+
+	public bool HasQuitMessage()
+	{
+		return _hasQuitMessage;
+	}
+
+	public int GetQuitExitCode()
+	{
+		return _quitExitCode;
 	}
 }

@@ -44,6 +44,35 @@ public class User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader?
 				);
 				return true;
 
+			case "SHOWWINDOW":
+				returnValue = ShowWindow(a.UInt32(0), a.Int32(1));
+				return true;
+
+			case "GETMESSAGEA":
+				returnValue = GetMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+
+			case "TRANSLATEMESSAGE":
+				returnValue = TranslateMessage(a.UInt32(0));
+				return true;
+
+			case "DISPATCHMESSAGEA":
+				returnValue = DispatchMessageA(a.UInt32(0));
+				return true;
+
+			case "DEFWINDOWPROCA":
+				returnValue = DefWindowProcA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+
+			case "POSTQUITMESSAGE":
+				PostQuitMessage(a.Int32(0));
+				returnValue = 0;
+				return true;
+
+			case "SENDMESSAGEA":
+				returnValue = SendMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+
 			default:
 				Console.WriteLine($"[User32] Unimplemented export: {export}");
 				return false;
@@ -165,6 +194,119 @@ public class User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader?
 		}
 
 		return hwnd;
+	}
+
+	private uint ShowWindow(uint hwnd, int nCmdShow)
+	{
+		// SW_HIDE = 0, SW_NORMAL = 1, SW_SHOWMINIMIZED = 2, SW_SHOWMAXIMIZED = 3, etc.
+		Console.WriteLine($"[User32] ShowWindow: HWND=0x{hwnd:X8} nCmdShow={nCmdShow}");
+		
+		// For now, just log and return TRUE (non-zero)
+		// In a full implementation, this would interact with the Avalonia window
+		return 1;
+	}
+
+	private uint GetMessageA(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax)
+	{
+		// MSG structure layout (28 bytes):
+		// HWND   hwnd;      // 0
+		// UINT   message;   // 4
+		// WPARAM wParam;    // 8
+		// LPARAM lParam;    // 12
+		// DWORD  time;      // 16
+		// POINT  pt;        // 20 (x, y each 4 bytes)
+
+		if (lpMsg == 0)
+		{
+			Console.WriteLine("[User32] GetMessageA: NULL MSG pointer");
+			return 0;
+		}
+
+		// Check if there's a quit message
+		if (env.HasQuitMessage())
+		{
+			var exitCode = env.GetQuitExitCode();
+			Console.WriteLine($"[User32] GetMessageA: WM_QUIT (exitCode={exitCode})");
+			
+			// Fill MSG structure with WM_QUIT
+			env.MemWrite32(lpMsg + 0, 0);      // hwnd = NULL
+			env.MemWrite32(lpMsg + 4, 0x0012); // WM_QUIT = 0x0012
+			env.MemWrite32(lpMsg + 8, (uint)exitCode); // wParam = exit code
+			env.MemWrite32(lpMsg + 12, 0);     // lParam = 0
+			env.MemWrite32(lpMsg + 16, 0);     // time = 0
+			env.MemWrite32(lpMsg + 20, 0);     // pt.x = 0
+			env.MemWrite32(lpMsg + 24, 0);     // pt.y = 0
+			
+			return 0; // GetMessage returns 0 for WM_QUIT
+		}
+
+		// For now, simulate no messages (would block in real implementation)
+		// In a real implementation, this would wait for messages or return pending messages
+		Console.WriteLine("[User32] GetMessageA: No messages, simulating empty queue");
+		
+		// Return a dummy message (WM_NULL)
+		env.MemWrite32(lpMsg + 0, hWnd);   // hwnd
+		env.MemWrite32(lpMsg + 4, 0);      // WM_NULL = 0
+		env.MemWrite32(lpMsg + 8, 0);      // wParam = 0
+		env.MemWrite32(lpMsg + 12, 0);     // lParam = 0
+		env.MemWrite32(lpMsg + 16, 0);     // time = 0
+		env.MemWrite32(lpMsg + 20, 0);     // pt.x = 0
+		env.MemWrite32(lpMsg + 24, 0);     // pt.y = 0
+		
+		return 1; // GetMessage returns non-zero for all messages except WM_QUIT
+	}
+
+	private uint TranslateMessage(uint lpMsg)
+	{
+		// TranslateMessage translates virtual-key messages into character messages
+		// For now, just log and return FALSE (no translation occurred)
+		Console.WriteLine("[User32] TranslateMessage: Called");
+		return 0;
+	}
+
+	private uint DispatchMessageA(uint lpMsg)
+	{
+		if (lpMsg == 0)
+		{
+			Console.WriteLine("[User32] DispatchMessageA: NULL MSG pointer");
+			return 0;
+		}
+
+		// Read MSG structure
+		var hwnd = env.MemRead32(lpMsg + 0);
+		var message = env.MemRead32(lpMsg + 4);
+		var wParam = env.MemRead32(lpMsg + 8);
+		var lParam = env.MemRead32(lpMsg + 12);
+
+		Console.WriteLine($"[User32] DispatchMessageA: HWND=0x{hwnd:X8} MSG=0x{message:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+
+		// In a full implementation, this would call the window procedure
+		// For now, just return 0 (message processed)
+		return 0;
+	}
+
+	private uint DefWindowProcA(uint hwnd, uint msg, uint wParam, uint lParam)
+	{
+		Console.WriteLine($"[User32] DefWindowProcA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+		
+		// DefWindowProc provides default processing for window messages
+		// For now, just return 0 (message processed)
+		return 0;
+	}
+
+	private void PostQuitMessage(int nExitCode)
+	{
+		Console.WriteLine($"[User32] PostQuitMessage: exitCode={nExitCode}");
+		env.PostQuitMessage(nExitCode);
+	}
+
+	private uint SendMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
+	{
+		Console.WriteLine($"[User32] SendMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+		
+		// SendMessage sends a message to the window procedure
+		// For now, just log and return 0 (message processed)
+		return 0;
 	}
 }
 
