@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Win32Emu.Gui.ViewModels"
+             x:Class="Win32Emu.Gui.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+    
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                Padding="20">
+            <TextBlock Text="Emulator Settings"
+                      FontSize="24"
+                      FontWeight="Bold"/>
+        </Border>
+
+        <!-- Settings Content -->
+        <ScrollViewer Grid.Row="1" Padding="20">
+            <StackPanel Spacing="20" MaxWidth="600">
+                
+                <!-- Rendering Backend -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Rendering Backend"
+                             FontWeight="Bold"
+                             FontSize="14"/>
+                    <ComboBox ItemsSource="{Binding RenderingBackends}"
+                            SelectedItem="{Binding RenderingBackend}"
+                            HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="Select the graphics rendering backend for games"
+                             FontSize="12"
+                             Opacity="0.7"/>
+                </StackPanel>
+
+                <!-- Resolution Scale Factor -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Resolution Scale Factor"
+                             FontWeight="Bold"
+                             FontSize="14"/>
+                    <ComboBox ItemsSource="{Binding ScaleFactors}"
+                            SelectedItem="{Binding ResolutionScaleFactor}"
+                            HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="Upscale the game resolution by this factor (1x = native resolution)"
+                             FontSize="12"
+                             Opacity="0.7"/>
+                </StackPanel>
+
+                <!-- Reserved Memory -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Reserved Memory (MB)"
+                             FontWeight="Bold"
+                             FontSize="14"/>
+                    <NumericUpDown Value="{Binding ReservedMemoryMB}"
+                                 Minimum="64"
+                                 Maximum="2048"
+                                 Increment="64"
+                                 HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="Amount of memory to allocate for the emulated environment"
+                             FontSize="12"
+                             Opacity="0.7"/>
+                </StackPanel>
+
+                <!-- Windows Version -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Windows Version"
+                             FontWeight="Bold"
+                             FontSize="14"/>
+                    <ComboBox ItemsSource="{Binding WindowsVersions}"
+                            SelectedItem="{Binding WindowsVersion}"
+                            HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="The Windows version to emulate for compatibility"
+                             FontSize="12"
+                             Opacity="0.7"/>
+                </StackPanel>
+
+                <!-- Debug Mode -->
+                <StackPanel Spacing="8">
+                    <CheckBox IsChecked="{Binding EnableDebugMode}"
+                            Content="Enable Debug Mode"/>
+                    <TextBlock Text="Enable enhanced debugging to catch memory access errors"
+                             FontSize="12"
+                             Opacity="0.7"
+                             Margin="0,-8,0,0"/>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
