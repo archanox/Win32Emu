@@ -99,8 +99,18 @@ public static class CpuIntrinsics
 		if (HasBmi1) ebx |= 1 << 3;        // BMI1
 		if (HasAvx2) ebx |= 1 << 5;        // AVX2
 		if (HasBmi2) ebx |= 1 << 8;        // BMI2
-		if (HasLzcnt) ebx |= 1 << 5;       // LZCNT (overlaps with AVX2 bit in extended features)
+		// LZCNT is not reported in EBX (function 7); see GetCpuid80000001EcxFeatures()
 
 		return ebx;
+	}
+	/// <summary>
+	/// Gets extended CPUID feature flags for ECX register (function 0x80000001)
+	/// LZCNT is bit 5 (per Intel/AMD documentation).
+	/// </summary>
+	public static uint GetCpuid80000001EcxFeatures()
+	{
+		uint ecx = 0;
+		if (HasLzcnt) ecx |= 1 << 5; // LZCNT
+		return ecx;
 	}
 }
