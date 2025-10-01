@@ -99,6 +99,17 @@ public class IcedCpu : ICpu
 				case Mnemonic.Neg: ExecNeg(insn); break;
 				case Mnemonic.Bswap: ExecBswap(insn); break;
 				case Mnemonic.Xchg: ExecXchg(insn); break;
+				case Mnemonic.Cmpxchg: ExecCmpxchg(insn); break;
+				case Mnemonic.Xadd: ExecXadd(insn); break;
+				case Mnemonic.Cmpxchg8b: ExecCmpxchg8b(insn); break;
+				case Mnemonic.Rdtsc: ExecRdtsc(); break;
+				case Mnemonic.Cpuid: ExecCpuid(); break;
+				case Mnemonic.Rdmsr: ExecRdmsr(); break;
+				case Mnemonic.Wrmsr: ExecWrmsr(); break;
+				case Mnemonic.Invd: ExecInvd(); break;
+				case Mnemonic.Wbinvd: ExecWbinvd(); break;
+				case Mnemonic.Invlpg: ExecInvlpg(insn); break;
+				case Mnemonic.Rsm: ExecRsm(); break;
 				// SETcc family
 				case Mnemonic.Seto:
 				case Mnemonic.Setno:
@@ -596,6 +607,152 @@ public class IcedCpu : ICpu
 		var b = ReadOp(insn, 1);
 		WriteOp(insn, 0, b);
 		WriteOp(insn, 1, a);
+	}
+
+	private void ExecCmpxchg(Instruction insn)
+	{
+		// CMPXCHG dest, src
+		// Compare AL/AX/EAX with dest. If equal, ZF=1 and dest=src. If not equal, ZF=0 and AL/AX/EAX=dest.
+		var dest = ReadOp(insn, 0);
+		var src = ReadOp(insn, 1);
+		var accumulator = _eax;
+		
+		// Compare accumulator with destination
+		uint result = accumulator - dest;
+		SetFlagsSub(accumulator, dest, result);
+		
+		if (GetFlag(Zf))
+		{
+			// Equal: write src to dest
+			WriteOp(insn, 0, src);
+		}
+		else
+		{
+			// Not equal: write dest to accumulator
+			_eax = dest;
+		}
+	}
+
+	private void ExecXadd(Instruction insn)
+	{
+		// XADD dest, src
+		// temp = dest; dest = dest + src; src = temp
+		var dest = ReadOp(insn, 0);
+		var src = ReadOp(insn, 1);
+		
+		uint result = dest + src;
+		WriteOp(insn, 0, result);
+		WriteOp(insn, 1, dest);
+		
+		SetFlagsAdd(dest, src, result);
+	}
+
+	private void ExecCmpxchg8b(Instruction insn)
+	{
+		// CMPXCHG8B m64
+		// Compare EDX:EAX with m64. If equal, ZF=1 and m64=ECX:EBX. If not equal, ZF=0 and EDX:EAX=m64.
+		var addr = CalcMemAddress(insn);
+		
+		// Read 64-bit value from memory
+		var memLow = Read32(addr);
+		var memHigh = Read32(addr + 4);
+		
+		// Compare with EDX:EAX
+		if (_eax == memLow && _edx == memHigh)
+		{
+			// Equal: write ECX:EBX to memory
+			Write32(addr, _ebx);
+			Write32(addr + 4, _ecx);
+			SetFlag(Zf);
+		}
+		else
+		{
+			// Not equal: load memory into EDX:EAX
+			_eax = memLow;
+			_edx = memHigh;
+			ClearFlag(Zf);
+		}
+	}
+
+	private void ExecRdtsc()
+	{
+		// RDTSC - Read Time-Stamp Counter
+		// Returns timestamp in EDX:EAX
+		var ticks = (ulong)Environment.TickCount64;
+		_eax = (uint)(ticks & 0xFFFFFFFF);
+		_edx = (uint)(ticks >> 32);
+	}
+
+	private void ExecCpuid()
+	{
+		// CPUID - CPU Identification
+		// Input: EAX = function number
+		// Output: EAX, EBX, ECX, EDX contain CPU info
+		switch (_eax)
+		{
+			case 0: // Get vendor string and max function
+				_eax = 1; // Max supported standard function
+				_ebx = 0x756E6547; // "Genu"
+				_edx = 0x49656E69; // "ineI"
+				_ecx = 0x6C65746E; // "ntel"
+				break;
+			
+			case 1: // Get feature flags
+				_eax = 0x00000600; // Family 6, Model 0, Stepping 0
+				_ebx = 0x00000000; // Brand index, CLFLUSH line size, etc.
+				_ecx = 0x00000001; // Feature flags (SSE3)
+				_edx = 0x00000001; // Feature flags (FPU)
+				break;
+			
+			default:
+				// Unsupported function - return zeros
+				_eax = 0;
+				_ebx = 0;
+				_ecx = 0;
+				_edx = 0;
+				break;
+		}
+	}
+
+	private void ExecRdmsr()
+	{
+		// RDMSR - Read Model Specific Register (privileged)
+		// Input: ECX = MSR address
+		// Output: EDX:EAX = MSR value
+		// For user-mode emulation, return dummy values
+		_eax = 0;
+		_edx = 0;
+	}
+
+	private void ExecWrmsr()
+	{
+		// WRMSR - Write Model Specific Register (privileged)
+		// Input: ECX = MSR address, EDX:EAX = value
+		// For user-mode emulation, this is a no-op
+	}
+
+	private void ExecInvd()
+	{
+		// INVD - Invalidate Cache (privileged)
+		// For user-mode emulation, this is a no-op
+	}
+
+	private void ExecWbinvd()
+	{
+		// WBINVD - Write-Back and Invalidate Cache (privileged)
+		// For user-mode emulation, this is a no-op
+	}
+
+	private void ExecInvlpg(Instruction insn)
+	{
+		// INVLPG - Invalidate TLB Entry (privileged)
+		// For user-mode emulation, this is a no-op
+	}
+
+	private void ExecRsm()
+	{
+		// RSM - Resume from System Management Mode (privileged)
+		// For user-mode emulation, this is a no-op
 	}
 
 	private void ExecSetcc(Instruction insn)
