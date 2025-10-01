@@ -464,7 +464,13 @@ public class Gdi32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? 
 	private uint SetBkMode(uint hdc, int mode)
 	{
 		Console.WriteLine($"[Gdi32] SetBkMode(HDC=0x{hdc:X8}, mode={mode})");
-		return 1; // Previous mode (OPAQUE)
+		if (_deviceContexts.TryGetValue(hdc, out var dc))
+		{
+			int previous = dc.BkMode;
+			dc.BkMode = mode;
+			return (uint)previous;
+		}
+		return 0; // Default: TRANSPARENT
 	}
 
 	private uint SetTextColor(uint hdc, uint color)
