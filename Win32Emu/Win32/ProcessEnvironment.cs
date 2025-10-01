@@ -3,11 +3,12 @@ using Win32Emu.Loader;
 
 namespace Win32Emu.Win32;
 
-public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
+public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null)
 {
 	private uint _allocPtr = heapBase;
 	private bool _exitRequested;
 	private string _executablePath = string.Empty;
+	private readonly IEmulatorHost? _host = host;
 
 	public uint CommandLinePtr { get; private set; }
 	public uint ModuleFileNamePtr { get; private set; }
@@ -28,6 +29,16 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	private readonly Dictionary<string, uint> _loadedModules = new(StringComparer.OrdinalIgnoreCase);
 	private readonly Dictionary<string, LoadedImage> _loadedImages = new(StringComparer.OrdinalIgnoreCase);
 	private uint _nextModuleHandle = 0x10000000;
+
+	// Window management
+	private readonly Dictionary<uint, WindowInfo> _windows = new();
+	private readonly Dictionary<string, WindowClassInfo> _windowClasses = new(StringComparer.OrdinalIgnoreCase);
+	private uint _nextWindowHandle = 0x00010000; // Window handles typically start low
+
+	// Message queue management
+	private bool _hasQuitMessage;
+	private int _quitExitCode;
+
 	// Environment variables (emulated, not from system)
 	private readonly Dictionary<string, string> _environmentVariables = new();
 
@@ -337,4 +348,129 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000)
 	private static uint AlignUp(uint value, uint align) => (value + (align - 1)) & ~(align - 1);
 
 	private record struct HeapState(uint Base, uint Current, uint Limit);
+
+	// Window management structures and methods
+	public record struct WindowClassInfo(
+		string ClassName,
+		uint Style,
+		uint WndProc,
+		int ClsExtra,
+		int WndExtra,
+		uint HInstance,
+		uint HIcon,
+		uint HCursor,
+		uint HbrBackground,
+		string? MenuName
+	);
+
+	public record struct WindowInfo(
+		uint Handle,
+		string ClassName,
+		string WindowName,
+		uint Style,
+		uint ExStyle,
+		int X,
+		int Y,
+		int Width,
+		int Height,
+		uint Parent,
+		uint Menu,
+		uint Instance,
+		uint Param
+	);
+
+	public bool RegisterWindowClass(string className, WindowClassInfo classInfo)
+	{
+		if (_windowClasses.ContainsKey(className))
+		{
+			Console.WriteLine($"[ProcessEnv] Window class '{className}' already registered");
+			return false;
+		}
+
+		_windowClasses[className] = classInfo;
+		Console.WriteLine($"[ProcessEnv] Registered window class: {className}");
+		return true;
+	}
+
+	public bool IsWindowClassRegistered(string className)
+	{
+		return _windowClasses.ContainsKey(className);
+	}
+
+	public WindowClassInfo? GetWindowClass(string className)
+	{
+		return _windowClasses.TryGetValue(className, out var classInfo) ? classInfo : null;
+	}
+
+	public uint CreateWindow(string className, string windowName, uint style, uint exStyle,
+		int x, int y, int width, int height, uint parent, uint menu, uint instance, uint param)
+	{
+		if (!_windowClasses.ContainsKey(className))
+		{
+			Console.WriteLine($"[ProcessEnv] CreateWindow failed: Window class '{className}' not registered");
+			return 0;
+		}
+
+		var handle = _nextWindowHandle;
+		_nextWindowHandle += 4;
+
+		var windowInfo = new WindowInfo(
+			handle, className, windowName, style, exStyle,
+			x, y, width, height, parent, menu, instance, param
+		);
+
+		_windows[handle] = windowInfo;
+		Console.WriteLine($"[ProcessEnv] Created window: HWND=0x{handle:X8} Class='{className}' Title='{windowName}'");
+
+		// Notify host about window creation (Phase 2: Window Management)
+		// The GUI will create an actual Avalonia window when this is called
+		_host?.OnWindowCreate(new WindowCreateInfo
+		{
+			Handle = handle,
+			Title = windowName,
+			Width = width,
+			Height = height,
+			X = x,
+			Y = y,
+			ClassName = className,
+			Style = style,
+			ExStyle = exStyle,
+			Parent = parent
+		});
+
+		return handle;
+	}
+
+	public WindowInfo? GetWindow(uint hwnd)
+	{
+		return _windows.TryGetValue(hwnd, out var windowInfo) ? windowInfo : null;
+	}
+
+	public bool DestroyWindow(uint hwnd)
+	{
+		if (_windows.Remove(hwnd))
+		{
+			Console.WriteLine($"[ProcessEnv] Destroyed window: HWND=0x{hwnd:X8}");
+			return true;
+		}
+		return false;
+	}
+
+	// Message queue management
+	public void PostQuitMessage(int exitCode)
+	{
+		_hasQuitMessage = true;
+		_quitExitCode = exitCode;
+		Console.WriteLine($"[ProcessEnv] PostQuitMessage: exitCode={exitCode}");
+	}
+
+	public bool HasQuitMessage()
+	{
+		return _hasQuitMessage;
+	}
+
+	public int GetQuitExitCode()
+	{
+		return _quitExitCode;
+	}
 }
