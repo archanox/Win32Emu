@@ -166,11 +166,8 @@ public class MemoryManagementTests : IDisposable
     }
 
     [Fact]
-    public void VirtualAlloc_MultipleAllocations_DocumentsCurrentBehavior()
+    public void VirtualAlloc_MultipleAllocations_ShouldReturnDifferentAddresses()
     {
-        // Note: This test documents current behavior where VirtualAlloc might
-        // return unexpected values in some scenarios. This is a known issue.
-        
         // Arrange
         const uint dwSize = 4096;
         const uint flAllocationType = 0x00001000; // MEM_COMMIT
@@ -180,11 +177,10 @@ public class MemoryManagementTests : IDisposable
         var address1 = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, dwSize, flAllocationType, flProtect);
         var address2 = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, dwSize, flAllocationType, flProtect);
 
-        // Assert - Document current behavior
-        // The current implementation returns 4 (the flProtect parameter) instead of valid addresses
-        // This test ensures the behavior is consistent, even if incorrect
-        Assert.Equal(4u, address1); // Current behavior: returns flProtect value
-        Assert.Equal(4u, address2); // Current behavior: returns flProtect value
+        // Assert - VirtualAlloc should return valid addresses
+        Assert.NotEqual(0u, address1); // Should return a valid address
+        Assert.NotEqual(0u, address2); // Should return a valid address
+        Assert.NotEqual(address1, address2); // Different allocations should have different addresses
     }
 
     #endregion
