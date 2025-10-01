@@ -2,6 +2,7 @@ using Iced.Intel;
 using Win32Emu.Memory;
 using Win32Emu.Cpu;
 using Win32Emu;
+using System.Diagnostics;
 
 namespace Win32Emu.Cpu.IcedImpl;
 
@@ -16,6 +17,11 @@ public class IcedCpu : ICpu
 
 	// EFLAGS bit positions
 	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Tf = 8, If = 9, Df = 10, Of = 11;
+
+	// RDTSC support - use Stopwatch for high-resolution timing
+	private static readonly Stopwatch _rdtscStopwatch = Stopwatch.StartNew();
+	private static readonly bool _rdtscIsHighResolution = Stopwatch.IsHighResolution;
+	private static readonly long _rdtscFrequency = Stopwatch.Frequency;
 
 	public IcedCpu(VirtualMemory mem)
 	{
@@ -629,19 +635,8 @@ public class IcedCpu : ICpu
 		else
 		{
 			// Not equal: write dest to accumulator
-			switch (insn.Op0Kind == OpKind.Register ? insn.Op0Register.GetSize() : insn.Op0Size)
-			{
-				case 1: // 8-bit
-					_eax = (_eax & 0xFFFFFF00) | (dest & 0xFF);
-					break;
-				case 2: // 16-bit
-					_eax = (_eax & 0xFFFF0000) | (dest & 0xFFFF);
-					break;
-				case 4: // 32-bit
-				default:
-					_eax = dest;
-					break;
-			}
+			_eax = dest;
+		}
 	}
 
 	private void ExecXadd(Instruction insn)
@@ -689,7 +684,23 @@ public class IcedCpu : ICpu
 	{
 		// RDTSC - Read Time-Stamp Counter
 		// Returns timestamp in EDX:EAX
-		var ticks = (ulong)Environment.TickCount64;
+		// Use Stopwatch for high-resolution timing when available
+		ulong ticks;
+		if (_rdtscIsHighResolution)
+		{
+			// Use high-resolution Stopwatch
+			// Scale the ticks to approximate CPU cycle count (assuming ~1 GHz for compatibility)
+			var elapsed = _rdtscStopwatch.ElapsedTicks;
+			// Convert to approximate "CPU cycles" by scaling based on frequency
+			// Real CPUs run at GHz speeds, so we scale the Stopwatch frequency to approximate that
+			ticks = (ulong)((double)elapsed / _rdtscFrequency * 1_000_000_000.0);
+		}
+		else
+		{
+			// Fall back to TickCount64 if high-resolution timer is not available
+			ticks = (ulong)Environment.TickCount64;
+		}
+		
 		_eax = (uint)(ticks & 0xFFFFFFFF);
 		_edx = (uint)(ticks >> 32);
 	}
