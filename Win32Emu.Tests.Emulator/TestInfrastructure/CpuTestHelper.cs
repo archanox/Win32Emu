@@ -133,7 +133,14 @@ public class CpuTestHelper : IDisposable
 
     public void Dispose()
     {
-        // Cleanup if needed
+        if (Cpu is IDisposable cpuDisposable)
+        {
+            cpuDisposable.Dispose();
+        }
+        if (Memory is IDisposable memoryDisposable)
+        {
+            memoryDisposable.Dispose();
+        }
     }
 }
 
