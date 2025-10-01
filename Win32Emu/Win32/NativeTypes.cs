@@ -104,4 +104,97 @@ public static class NativeTypes
 	{
 		public const uint INVALID_HANDLE_VALUE = 0xFFFFFFFF;
 	}
+
+	// GDI32 stock objects
+	public static class StockObject
+	{
+		public const int WHITE_BRUSH = 0;
+		public const int LTGRAY_BRUSH = 1;
+		public const int GRAY_BRUSH = 2;
+		public const int DKGRAY_BRUSH = 3;
+		public const int BLACK_BRUSH = 4;
+		public const int NULL_BRUSH = 5;
+		public const int HOLLOW_BRUSH = NULL_BRUSH;
+		public const int WHITE_PEN = 6;
+		public const int BLACK_PEN = 7;
+		public const int NULL_PEN = 8;
+		public const int OEM_FIXED_FONT = 10;
+		public const int ANSI_FIXED_FONT = 11;
+		public const int ANSI_VAR_FONT = 12;
+		public const int SYSTEM_FONT = 13;
+		public const int DEVICE_DEFAULT_FONT = 14;
+		public const int DEFAULT_PALETTE = 15;
+		public const int SYSTEM_FIXED_FONT = 16;
+		public const int DEFAULT_GUI_FONT = 17;
+		public const int DC_BRUSH = 18;
+		public const int DC_PEN = 19;
+	}
+
+	// User32 window class constants
+	public static class WindowClass
+	{
+		public const uint CS_VREDRAW = 0x0001;
+		public const uint CS_HREDRAW = 0x0002;
+		public const uint CS_DBLCLKS = 0x0008;
+		public const uint CS_OWNDC = 0x0020;
+		public const uint CS_CLASSDC = 0x0040;
+		public const uint CS_PARENTDC = 0x0080;
+		public const uint CS_NOCLOSE = 0x0200;
+		public const uint CS_SAVEBITS = 0x0800;
+		public const uint CS_BYTEALIGNCLIENT = 0x1000;
+		public const uint CS_BYTEALIGNWINDOW = 0x2000;
+		public const uint CS_GLOBALCLASS = 0x4000;
+	}
+
+	// Window styles
+	public static class WindowStyle
+	{
+		public const uint WS_OVERLAPPED = 0x00000000;
+		public const uint WS_POPUP = 0x80000000;
+		public const uint WS_CHILD = 0x40000000;
+		public const uint WS_MINIMIZE = 0x20000000;
+		public const uint WS_VISIBLE = 0x10000000;
+		public const uint WS_DISABLED = 0x08000000;
+		public const uint WS_CLIPSIBLINGS = 0x04000000;
+		public const uint WS_CLIPCHILDREN = 0x02000000;
+		public const uint WS_MAXIMIZE = 0x01000000;
+		public const uint WS_CAPTION = 0x00C00000;
+		public const uint WS_BORDER = 0x00800000;
+		public const uint WS_DLGFRAME = 0x00400000;
+		public const uint WS_VSCROLL = 0x00200000;
+		public const uint WS_HSCROLL = 0x00100000;
+		public const uint WS_SYSMENU = 0x00080000;
+		public const uint WS_THICKFRAME = 0x00040000;
+		public const uint WS_GROUP = 0x00020000;
+		public const uint WS_TABSTOP = 0x00010000;
+		public const uint WS_MINIMIZEBOX = 0x00020000;
+		public const uint WS_MAXIMIZEBOX = 0x00010000;
+		public const uint WS_OVERLAPPEDWINDOW = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+	}
+
+	// Color constants
+	public static class ColorConstants
+	{
+		public const int COLOR_SCROLLBAR = 0;
+		public const int COLOR_BACKGROUND = 1;
+		public const int COLOR_ACTIVECAPTION = 2;
+		public const int COLOR_INACTIVECAPTION = 3;
+		public const int COLOR_MENU = 4;
+		public const int COLOR_WINDOW = 5;
+		public const int COLOR_WINDOWFRAME = 6;
+		public const int COLOR_MENUTEXT = 7;
+		public const int COLOR_WINDOWTEXT = 8;
+		public const int COLOR_CAPTIONTEXT = 9;
+		public const int COLOR_ACTIVEBORDER = 10;
+		public const int COLOR_INACTIVEBORDER = 11;
+		public const int COLOR_APPWORKSPACE = 12;
+		public const int COLOR_HIGHLIGHT = 13;
+		public const int COLOR_HIGHLIGHTTEXT = 14;
+		public const int COLOR_BTNFACE = 15;
+		public const int COLOR_BTNSHADOW = 16;
+		public const int COLOR_GRAYTEXT = 17;
+		public const int COLOR_BTNTEXT = 18;
+		public const int COLOR_INACTIVECAPTIONTEXT = 19;
+		public const int COLOR_BTNHIGHLIGHT = 20;
+	}
 }
