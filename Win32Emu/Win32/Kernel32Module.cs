@@ -9,8 +9,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	public string Name => "KERNEL32.DLL";
 	
 	private Win32Dispatcher? _dispatcher;
-
-	[ThreadStatic] private static uint _lastError;
+	private uint _lastError;
 	
 	public void SetDispatcher(Win32Dispatcher dispatcher)
 	{
@@ -165,9 +164,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return (uint)((major << 8 | minor) << 16 | build);
 	}
 
-	private static unsafe uint GetLastError() => _lastError;
+	private unsafe uint GetLastError() => _lastError;
 
-	private static unsafe uint SetLastError(uint e)
+	private unsafe uint SetLastError(uint e)
 	{
 		_lastError = e;
 		return 0;

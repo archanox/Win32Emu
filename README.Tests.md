@@ -6,12 +6,16 @@ This document outlines the comprehensive testing strategy for Win32Emu, organize
 
 ### 1. Win32Emu.Tests.Kernel32 ✅ COMPLETED
 **Purpose**: Tests the Kernel32.dll API emulation  
-**Status**: 25/30 tests passing (83% success rate)  
+**Status**: 101/101 tests passing (100% success rate)  
 **Coverage**: 
-- Basic functions (GetVersion, error handling, process functions)
+- Basic functions (GetVersion, error handling, process functions, performance counters, code pages)
 - Memory management (GlobalAlloc, HeapAlloc, VirtualAlloc)
 - File I/O operations (CreateFileA, handles, standard I/O)
-- Module/process functions (GetModuleHandleA)
+- Module/process functions (GetModuleHandleA, LoadLibraryA)
+- Environment and command-line functions
+- CPU and memory interaction
+- Debugging functionality
+- Win32 dispatcher integration
 
 ### 2. Win32Emu.Tests.User32 📋 TEMPLATE CREATED
 **Purpose**: Tests the User32.dll API emulation  
@@ -22,15 +26,17 @@ This document outlines the comprehensive testing strategy for Win32Emu, organize
 - Input handling (keyboard, mouse, GetAsyncKeyState)
 - Drawing/GDI integration
 
-### 3. Win32Emu.Tests.Emulator 🔄 PLANNED
+### 3. Win32Emu.Tests.Emulator ✅ COMPLETED
 **Purpose**: Tests the x86 CPU emulator conformance  
-**Status**: Ready for implementation  
-**Future Coverage**:
+**Status**: 34 tests passing (100% success rate)  
+**Coverage**:
+- **Basic Instructions** (8086/286/386): ADD, SUB, XOR, AND, OR, TEST, CMP, INC, DEC, SHL, SHR
+- **486 Instructions**: BSWAP, CMPXCHG, XADD, INVD, WBINVD, INVLPG
+- **Pentium Instructions**: RDTSC, CPUID, CMPXCHG8B, RDMSR, WRMSR, RSM
 - CPU instruction execution accuracy
 - Register state management
-- Memory addressing modes
-- Flag handling and arithmetic operations
-- Control flow (jumps, calls, returns)
+- Flag handling (CF, ZF, SF, OF, PF, AF)
+- Arithmetic and logic operations
 
 ### 4. Win32Emu.Tests.Integration 🔄 PLANNED
 **Purpose**: End-to-end testing with real Win32 executables  
@@ -113,10 +119,12 @@ Tests are categorized to support different CI/CD requirements:
 
 ## Current Status
 
-**Total Tests**: 30 (25 passing, 5 failing with known issues)  
-**Test Coverage**: Core Kernel32 functionality complete  
+**Total Tests**: 135 (all passing)  
+**Test Coverage**: 
+- Kernel32 functionality complete (101 tests)
+- CPU Emulator basic/486/Pentium instructions (34 tests)  
 **Infrastructure**: Fully functional and extensible  
-**Ready for**: Additional DLL testing, emulator testing, integration testing
+**Ready for**: User32 testing, integration testing, additional instruction coverage
 
 ## CI Test Behavior
 
