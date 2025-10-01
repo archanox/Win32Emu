@@ -267,6 +267,16 @@ public class EnvironmentTests : IDisposable
         Assert.Equal(1u, result); // Should return TRUE (1)
     }
 
+    [Fact]
+    public void FreeEnvironmentStringsA_WithNullPointer_ShouldReturnFalse()
+    {
+        // Act - Try to free a null pointer
+        var result = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSA", 0u);
+
+        // Assert - Should return FALSE (0) for null pointer
+        Assert.Equal(0u, result);
+    }
+
     /// <summary>
     /// Helper method to read environment strings from memory and parse them into a list
     /// </summary>
