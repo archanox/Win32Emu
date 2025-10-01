@@ -1,0 +1,143 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Win32Emu.Gui.ViewModels"
+        xmlns:services="using:Win32Emu.Gui.Services"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
+        x:Class="Win32Emu.Gui.Views.EmulatorWindow"
+        x:DataType="vm:EmulatorWindowViewModel"
+        Title="Win32Emu - Game Running"
+        Width="1024"
+        Height="768">
+
+    <Design.DataContext>
+        <vm:EmulatorWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="*,Auto">
+        <!-- Main Content Area -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            
+            <!-- Game Display Area (placeholder for SDL3/GDI32 rendering) -->
+            <Border Grid.Column="0"
+                    Background="Black"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                    BorderThickness="1">
+                <Grid>
+                    <TextBlock Text="🎮 Game Rendering Area"
+                             FontSize="24"
+                             Foreground="Gray"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"/>
+                    <TextBlock Text="(SDL3/DirectDraw output will appear here)"
+                             FontSize="14"
+                             Foreground="Gray"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             Margin="0,40,0,0"/>
+                </Grid>
+            </Border>
+
+            <!-- Debug Panel (collapsible) -->
+            <Border Grid.Column="1"
+                    Width="400"
+                    Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                    BorderThickness="1,0,0,0"
+                    IsVisible="{Binding ShowDebugPanel}">
+                <Grid RowDefinitions="Auto,*,Auto,*">
+                    
+                    <!-- Debug Output Header -->
+                    <Border Grid.Row="0"
+                            Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                            Padding="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0"
+                                     Text="Debug Output"
+                                     FontWeight="Bold"/>
+                            <ComboBox Grid.Column="1"
+                                    SelectedItem="{Binding MinimumDebugLevel}"
+                                    Width="100">
+                                <ComboBoxItem>Trace</ComboBoxItem>
+                                <ComboBoxItem>Debug</ComboBoxItem>
+                                <ComboBoxItem>Info</ComboBoxItem>
+                                <ComboBoxItem>Warning</ComboBoxItem>
+                                <ComboBoxItem>Error</ComboBoxItem>
+                            </ComboBox>
+                        </Grid>
+                    </Border>
+
+                    <!-- Debug Messages -->
+                    <ScrollViewer Grid.Row="1" Padding="5">
+                        <ItemsControl ItemsSource="{Binding DebugMessages}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2">
+                                        <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss}'}"
+                                                 FontSize="10"
+                                                 Foreground="Gray"
+                                                 Width="60"/>
+                                        <TextBlock Text="{Binding Level}"
+                                                 FontSize="10"
+                                                 Width="60"
+                                                 FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Message}"
+                                                 FontSize="10"
+                                                 TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- Stdout Header -->
+                    <Border Grid.Row="2"
+                            Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                            Padding="10"
+                            IsVisible="{Binding ShowStdOutputPanel}">
+                        <TextBlock Text="Standard Output (DOS-like)"
+                                 FontWeight="Bold"/>
+                    </Border>
+
+                    <!-- Stdout Console -->
+                    <Border Grid.Row="3"
+                            Background="Black"
+                            IsVisible="{Binding ShowStdOutputPanel}">
+                        <ScrollViewer Padding="5">
+                            <ItemsControl ItemsSource="{Binding StdOutput}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}"
+                                                 FontFamily="Consolas,monospace"
+                                                 FontSize="12"
+                                                 Foreground="LightGray"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                </Grid>
+            </Border>
+
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="10,5">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0"
+                         Text="{Binding CurrentState, StringFormat='State: {0}'}"
+                         Margin="0,0,20,0"/>
+                <TextBlock Grid.Column="2"
+                         Text="Press F12 to toggle debug panel"/>
+            </Grid>
+        </Border>
+
+    </Grid>
+
+</Window>

@@ -130,6 +130,8 @@ public partial class GameLibraryViewModel : ViewModelBase
         
         try
         {
+            // TODO: For now, use process-based launching
+            // In future updates, this will use in-process API with EmulatorWindow
             var service = new EmulatorService(_configuration);
             await service.LaunchGame(game);
             
