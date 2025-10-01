@@ -513,8 +513,20 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 
 	private unsafe uint FreeEnvironmentStringsA(uint lpszEnvironmentBlock)
 	{
-		// Free ANSI environment strings block
-		return env.FreeEnvironmentStringsA(lpszEnvironmentBlock);
+		// In the Windows API, FreeEnvironmentStringsA frees the memory allocated by GetEnvironmentStringsA
+		// However, our emulator uses a simple bump allocator that doesn't support freeing individual blocks
+		// For API compatibility, we accept the call and always return success (TRUE)
+		// The memory will be cleaned up when the process terminates
+		
+		// Validate that the pointer is not null (basic error checking)
+		if (lpszEnvironmentBlock == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		
+		// Return success - in a real implementation this would free the memory
+		return NativeTypes.Win32Bool.TRUE;
 	}
 
 	
