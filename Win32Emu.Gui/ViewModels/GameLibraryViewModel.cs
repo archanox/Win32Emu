@@ -39,7 +39,7 @@ public partial class GameLibraryViewModel : ViewModelBase
         var files = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Select Game Executable",
-            AllowMultiple = false,
+            AllowMultiple = true,
             FileTypeFilter = new[]
             {
                 new FilePickerFileType("Windows Executable")
@@ -49,9 +49,8 @@ public partial class GameLibraryViewModel : ViewModelBase
             }
         });
 
-        if (files.Count > 0)
+        foreach (var file in files)
         {
-            var file = files[0];
             var fileName = file.Name;
             var filePath = file.Path.LocalPath;
 

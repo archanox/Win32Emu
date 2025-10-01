@@ -4,7 +4,7 @@ using Win32Emu.Gui.Services;
 
 namespace Win32Emu.Gui.ViewModels;
 
-public partial class EmulatorWindowViewModel : ViewModelBase, IEmulatorHost
+public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 {
     [ObservableProperty]
     private ObservableCollection<DebugMessage> _debugMessages = [];
@@ -16,7 +16,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IEmulatorHost
     private EmulatorState _currentState = EmulatorState.Stopped;
 
     [ObservableProperty]
-    private DebugLevel _minimumDebugLevel = DebugLevel.Info;
+    private Win32Emu.DebugLevel _minimumDebugLevel = Win32Emu.DebugLevel.Info;
 
     [ObservableProperty]
     private bool _showDebugPanel = true;
@@ -24,7 +24,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IEmulatorHost
     [ObservableProperty]
     private bool _showStdOutputPanel = true;
 
-    public void OnDebugOutput(string message, DebugLevel level)
+    public void OnDebugOutput(string message, Win32Emu.DebugLevel level)
     {
         if (level >= MinimumDebugLevel)
         {
@@ -57,25 +57,25 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IEmulatorHost
     public void OnWindowCreate(WindowCreateInfo info)
     {
         // TODO: Create Avalonia window for User32/GDI32 operations
-        OnDebugOutput($"Window created: {info.Title} ({info.Width}x{info.Height})", DebugLevel.Info);
+        OnDebugOutput($"Window created: {info.Title} ({info.Width}x{info.Height})", Win32Emu.DebugLevel.Info);
     }
 
     public void OnDisplayUpdate(DisplayUpdateInfo info)
     {
         // TODO: Update SDL3 display rendering
-        OnDebugOutput($"Display updated: {info.Width}x{info.Height}", DebugLevel.Debug);
+        OnDebugOutput($"Display updated: {info.Width}x{info.Height}", Win32Emu.DebugLevel.Debug);
     }
 
     public void OnStateChanged(EmulatorState state)
     {
         CurrentState = state;
-        OnDebugOutput($"Emulator state changed: {state}", DebugLevel.Info);
+        OnDebugOutput($"Emulator state changed: {state}", Win32Emu.DebugLevel.Info);
     }
 }
 
 public class DebugMessage
 {
     public DateTime Timestamp { get; init; }
-    public DebugLevel Level { get; init; }
+    public Win32Emu.DebugLevel Level { get; init; }
     public required string Message { get; init; }
 }

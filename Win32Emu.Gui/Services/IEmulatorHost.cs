@@ -1,20 +1,10 @@
 namespace Win32Emu.Gui.Services;
 
 /// <summary>
-/// Interface for receiving emulator output and events
+/// Extended interface for receiving emulator output and events in the GUI
 /// </summary>
-public interface IEmulatorHost
+public interface IGuiEmulatorHost : Win32Emu.IEmulatorHost
 {
-    /// <summary>
-    /// Called when the emulator outputs debug information
-    /// </summary>
-    void OnDebugOutput(string message, DebugLevel level);
-    
-    /// <summary>
-    /// Called when the emulated program writes to stdout
-    /// </summary>
-    void OnStdOutput(string output);
-    
     /// <summary>
     /// Called when the emulator needs to create a window
     /// </summary>
@@ -29,15 +19,6 @@ public interface IEmulatorHost
     /// Called when the emulator state changes
     /// </summary>
     void OnStateChanged(EmulatorState state);
-}
-
-public enum DebugLevel
-{
-    Trace,
-    Debug,
-    Info,
-    Warning,
-    Error
 }
 
 public enum EmulatorState

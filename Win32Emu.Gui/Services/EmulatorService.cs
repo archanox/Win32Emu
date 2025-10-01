@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Win32Emu.Gui.Models;
 
 namespace Win32Emu.Gui.Services;
@@ -6,17 +5,16 @@ namespace Win32Emu.Gui.Services;
 public class EmulatorService
 {
     private readonly EmulatorConfiguration _configuration;
-    private readonly IEmulatorHost? _host;
+    private readonly Win32Emu.IEmulatorHost? _host;
 
-    public EmulatorService(EmulatorConfiguration configuration, IEmulatorHost? host = null)
+    public EmulatorService(EmulatorConfiguration configuration, Win32Emu.IEmulatorHost? host = null)
     {
         _configuration = configuration;
         _host = host;
     }
 
     /// <summary>
-    /// Launch game using the process-based approach (legacy)
-    /// This will be replaced with the in-process API in future updates
+    /// Launch game using the in-process emulator API
     /// </summary>
     public async Task LaunchGame(Game game)
     {
@@ -25,67 +23,24 @@ public class EmulatorService
             throw new FileNotFoundException($"Game executable not found: {game.ExecutablePath}");
         }
 
-        // Build command line arguments
-        var args = new List<string>
-        {
-            game.ExecutablePath
-        };
-
-        if (_configuration.EnableDebugMode)
-        {
-            args.Add("--debug");
-        }
-
-        // TODO: Replace this with in-process emulator API
-        // For now, launch as a separate process
-        await LaunchAsProcess(args);
-    }
-
-    private async Task LaunchAsProcess(List<string> args)
-    {
-        // Launch the Win32Emu process
-        var processStartInfo = new ProcessStartInfo
-        {
-            FileName = "Win32Emu",
-            Arguments = string.Join(" ", args.Select(arg => $"\"{arg}\"")),
-            UseShellExecute = false,
-            CreateNoWindow = false,
-            RedirectStandardOutput = _host != null,
-            RedirectStandardError = _host != null
-        };
-
         await Task.Run(() =>
         {
-            using var process = Process.Start(processStartInfo);
-            if (process != null && _host != null)
+            try
             {
-                // If we have a host, redirect output
-                process.OutputDataReceived += (sender, e) =>
-                {
-                    if (!string.IsNullOrEmpty(e.Data))
-                    {
-                        _host.OnStdOutput(e.Data);
-                    }
-                };
-
-                process.ErrorDataReceived += (sender, e) =>
-                {
-                    if (!string.IsNullOrEmpty(e.Data))
-                    {
-                        _host.OnDebugOutput(e.Data, DebugLevel.Error);
-                    }
-                };
-
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
+                // Create and configure the emulator
+                var emulator = new Win32Emu.Emulator(_host);
+                
+                // Load the executable
+                emulator.LoadExecutable(game.ExecutablePath, _configuration.EnableDebugMode);
+                
+                // Run the emulator
+                emulator.Run();
             }
-
-            process?.WaitForExit();
+            catch (Exception ex)
+            {
+                _host?.OnDebugOutput($"Emulator error: {ex.Message}", Win32Emu.DebugLevel.Error);
+                throw;
+            }
         });
     }
-
-    // Future API-based methods will be added here:
-    // public async Task LaunchGameInProcess(Game game) { ... }
-    // public void SetDisplayOutput(Action<DisplayUpdateInfo> callback) { ... }
-    // public void SetDebugOutput(Action<string, DebugLevel> callback) { ... }
 }
