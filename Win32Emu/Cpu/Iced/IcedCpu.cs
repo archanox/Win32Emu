@@ -629,8 +629,19 @@ public class IcedCpu : ICpu
 		else
 		{
 			// Not equal: write dest to accumulator
-			_eax = dest;
-		}
+			switch (insn.Op0Kind == OpKind.Register ? insn.Op0Register.GetSize() : insn.Op0Size)
+			{
+				case 1: // 8-bit
+					_eax = (_eax & 0xFFFFFF00) | (dest & 0xFF);
+					break;
+				case 2: // 16-bit
+					_eax = (_eax & 0xFFFF0000) | (dest & 0xFFFF);
+					break;
+				case 4: // 32-bit
+				default:
+					_eax = dest;
+					break;
+			}
 	}
 
 	private void ExecXadd(Instruction insn)
