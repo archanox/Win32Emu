@@ -713,7 +713,7 @@ public class IcedCpu : ICpu
 		switch (_eax)
 		{
 			case 0: // Get vendor string and max function
-				_eax = 1; // Max supported standard function
+				_eax = 7; // Max supported standard function (extended to support function 7)
 				_ebx = 0x756E6547; // "Genu"
 				_edx = 0x49656E69; // "ineI"
 				_ecx = 0x6C65746E; // "ntel"
@@ -722,8 +722,26 @@ public class IcedCpu : ICpu
 			case 1: // Get feature flags
 				_eax = 0x00000600; // Family 6, Model 0, Stepping 0
 				_ebx = 0x00000000; // Brand index, CLFLUSH line size, etc.
-				_ecx = 0x00000001; // Feature flags (SSE3)
-				_edx = 0x00000001; // Feature flags (FPU)
+				_ecx = CpuIntrinsics.GetCpuidEcxFeatures(); // Feature flags based on host CPU
+				_edx = CpuIntrinsics.GetCpuidEdxFeatures(); // Feature flags based on host CPU
+				break;
+			
+			case 7: // Extended features (sub-function in ECX)
+				if (_ecx == 0)
+				{
+					_eax = 0; // Max sub-function
+					_ebx = CpuIntrinsics.GetCpuidExtendedEbxFeatures(); // Extended feature flags
+					_ecx = 0;
+					_edx = 0;
+				}
+				else
+				{
+					// Unsupported sub-function
+					_eax = 0;
+					_ebx = 0;
+					_ecx = 0;
+					_edx = 0;
+				}
 				break;
 			
 			default:
