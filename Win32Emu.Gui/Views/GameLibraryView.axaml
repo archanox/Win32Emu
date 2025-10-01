@@ -10,81 +10,107 @@
         <Border Grid.Row="0" 
                 Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                 Padding="20">
-            <Grid ColumnDefinitions="*,Auto">
+            <Grid ColumnDefinitions="*,Auto,Auto">
                 <TextBlock Grid.Column="0"
                           Text="Game Library"
                           FontSize="24"
                           FontWeight="Bold"/>
                 <Button Grid.Column="1"
+                        Content="Add Folder"
+                        Command="{Binding AddFolderCommand}"
+                        Margin="0,0,10,0"/>
+                <Button Grid.Column="2"
                         Content="Add Game"
                         Command="{Binding AddGameCommand}"/>
             </Grid>
         </Border>
 
-        <!-- Game Grid -->
-        <ScrollViewer Grid.Row="1" Padding="20">
-            <ItemsControl ItemsSource="{Binding Games}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="models:Game">
-                        <Border Margin="10"
-                                Padding="15"
-                                Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
-                                CornerRadius="8"
-                                Width="200"
-                                Height="280">
-                            <Grid RowDefinitions="150,Auto,*,Auto">
-                                <!-- Thumbnail placeholder -->
-                                <Border Grid.Row="0"
-                                       Background="{DynamicResource SystemControlBackgroundBaseMediumBrush}"
-                                       CornerRadius="4">
-                                    <TextBlock Text="🎮"
-                                             FontSize="64"
-                                             HorizontalAlignment="Center"
-                                             VerticalAlignment="Center"/>
-                                </Border>
+        <!-- Game Grid or Empty State -->
+        <Grid Grid.Row="1">
+            <!-- Empty State Message -->
+            <Border IsVisible="{Binding !Games.Count}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel Spacing="20" HorizontalAlignment="Center">
+                    <TextBlock Text="📚"
+                             FontSize="72"
+                             HorizontalAlignment="Center"/>
+                    <TextBlock Text="Your library is empty"
+                             FontSize="20"
+                             FontWeight="Bold"
+                             HorizontalAlignment="Center"/>
+                    <TextBlock Text="Click 'Add Game' or 'Add Folder' above to get started"
+                             FontSize="14"
+                             Opacity="0.7"
+                             HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
 
-                                <!-- Game Title -->
-                                <TextBlock Grid.Row="1"
-                                          Text="{Binding Title}"
-                                          FontSize="16"
-                                          FontWeight="Bold"
-                                          Margin="0,10,0,5"
-                                          TextWrapping="Wrap"/>
+            <!-- Game Grid -->
+            <ScrollViewer Padding="20" IsVisible="{Binding Games.Count}">
+                <ItemsControl ItemsSource="{Binding Games}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="models:Game">
+                            <Border Margin="10"
+                                    Padding="15"
+                                    Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                                    CornerRadius="8"
+                                    Width="200"
+                                    Height="280">
+                                <Grid RowDefinitions="150,Auto,*,Auto">
+                                    <!-- Thumbnail placeholder -->
+                                    <Border Grid.Row="0"
+                                           Background="{DynamicResource SystemControlBackgroundBaseMediumBrush}"
+                                           CornerRadius="4">
+                                        <TextBlock Text="🎮"
+                                                 FontSize="64"
+                                                 HorizontalAlignment="Center"
+                                                 VerticalAlignment="Center"/>
+                                    </Border>
 
-                                <!-- Game Info -->
-                                <StackPanel Grid.Row="2" Spacing="4">
-                                    <TextBlock Text="{Binding Description}"
-                                             TextWrapping="Wrap"
-                                             FontSize="12"
-                                             Opacity="0.7"/>
-                                    <TextBlock Text="{Binding TimesPlayed, StringFormat='Played: {0} times'}"
-                                             FontSize="12"
-                                             Opacity="0.7"/>
-                                </StackPanel>
+                                    <!-- Game Title -->
+                                    <TextBlock Grid.Row="1"
+                                              Text="{Binding Title}"
+                                              FontSize="16"
+                                              FontWeight="Bold"
+                                              Margin="0,10,0,5"
+                                              TextWrapping="Wrap"/>
 
-                                <!-- Action Buttons -->
-                                <StackPanel Grid.Row="3" 
-                                           Orientation="Horizontal" 
-                                           Spacing="5"
-                                           Margin="0,10,0,0">
-                                    <Button Content="Launch"
-                                           Command="{Binding $parent[ItemsControl].((vm:GameLibraryViewModel)DataContext).LaunchGameCommand}"
-                                           CommandParameter="{Binding}"
-                                           HorizontalAlignment="Stretch"/>
-                                    <Button Content="Remove"
-                                           Command="{Binding $parent[ItemsControl].((vm:GameLibraryViewModel)DataContext).RemoveGameCommand}"
-                                           CommandParameter="{Binding}"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                                    <!-- Game Info -->
+                                    <StackPanel Grid.Row="2" Spacing="4">
+                                        <TextBlock Text="{Binding Description}"
+                                                 TextWrapping="Wrap"
+                                                 FontSize="12"
+                                                 Opacity="0.7"/>
+                                        <TextBlock Text="{Binding TimesPlayed, StringFormat='Played: {0} times'}"
+                                                 FontSize="12"
+                                                 Opacity="0.7"/>
+                                    </StackPanel>
+
+                                    <!-- Action Buttons -->
+                                    <StackPanel Grid.Row="3" 
+                                               Orientation="Horizontal" 
+                                               Spacing="5"
+                                               Margin="0,10,0,0">
+                                        <Button Content="Launch"
+                                               Command="{Binding $parent[ItemsControl].((vm:GameLibraryViewModel)DataContext).LaunchGameCommand}"
+                                               CommandParameter="{Binding}"
+                                               HorizontalAlignment="Stretch"/>
+                                        <Button Content="Remove"
+                                               Command="{Binding $parent[ItemsControl].((vm:GameLibraryViewModel)DataContext).RemoveGameCommand}"
+                                               CommandParameter="{Binding}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </UserControl>

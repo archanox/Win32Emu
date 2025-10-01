@@ -1,0 +1,106 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Win32Emu.Gui.ViewModels"
+             x:Class="Win32Emu.Gui.Views.ControllerMappingView"
+             x:DataType="vm:ControllerMappingViewModel">
+    
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                Padding="20">
+            <TextBlock Text="Controller Mapping"
+                      FontSize="24"
+                      FontWeight="Bold"/>
+        </Border>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" Padding="20">
+            <StackPanel Spacing="20" MaxWidth="600">
+                
+                <!-- Controller Preset -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Controller Preset"
+                             FontWeight="Bold"
+                             FontSize="14"/>
+                    <ComboBox ItemsSource="{Binding ControllerPresets}"
+                            SelectedItem="{Binding SelectedControllerPreset}"
+                            HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="Select a predefined controller or 'Custom' to define your own"
+                             FontSize="12"
+                             Opacity="0.7"/>
+                </StackPanel>
+
+                <!-- Custom Controller Settings (shown when Custom is selected) -->
+                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       BorderThickness="1"
+                       CornerRadius="4"
+                       Padding="15"
+                       IsVisible="{Binding IsCustomSelected}">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="Custom Controller Configuration"
+                                 FontWeight="Bold"
+                                 FontSize="14"/>
+
+                        <!-- Controller Type -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Controller Type"
+                                     FontWeight="SemiBold"/>
+                            <ComboBox ItemsSource="{Binding ControllerTypes}"
+                                    SelectedItem="{Binding ControllerType}"
+                                    HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+
+                        <!-- Number of Axes -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Number of Axes"
+                                     FontWeight="SemiBold"/>
+                            <ComboBox ItemsSource="{Binding AxisOptions}"
+                                    SelectedItem="{Binding NumberOfAxes}"
+                                    HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+
+                        <!-- Number of Buttons -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Number of Buttons"
+                                     FontWeight="SemiBold"/>
+                            <ComboBox ItemsSource="{Binding ButtonOptions}"
+                                    SelectedItem="{Binding NumberOfButtons}"
+                                    HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+
+                        <!-- Point of View Control -->
+                        <CheckBox IsChecked="{Binding HasPointOfView}"
+                                Content="Has a point of view control"/>
+
+                        <!-- Custom Name -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Controller Name"
+                                     FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding CustomControllerName}"
+                                   Watermark="Enter controller name"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- SDL3 Integration Notice -->
+                <Border Background="{DynamicResource SystemControlBackgroundBaseMediumBrush}"
+                       Padding="15"
+                       CornerRadius="4">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="ℹ️ SDL3 Integration"
+                                 FontWeight="Bold"/>
+                        <TextBlock TextWrapping="Wrap"
+                                 FontSize="12"
+                                 Opacity="0.8">
+                            Controller mapping will be connected to SDL3 in a future update. 
+                            Virtual controllers will be created based on these settings and mapped 
+                            to your physical controllers for use in emulated games.
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

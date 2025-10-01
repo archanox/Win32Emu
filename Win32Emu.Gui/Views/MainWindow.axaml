@@ -37,6 +37,12 @@
                        HorizontalContentAlignment="Left"
                        Padding="15,10"/>
                 
+                <Button Content="🎮 Controllers"
+                       Command="{Binding NavigateToControllersCommand}"
+                       HorizontalAlignment="Stretch"
+                       HorizontalContentAlignment="Left"
+                       Padding="15,10"/>
+                
                 <Button Content="⚙️ Settings"
                        Command="{Binding NavigateToSettingsCommand}"
                        HorizontalAlignment="Stretch"
@@ -50,6 +56,9 @@
             <ContentControl.DataTemplates>
                 <DataTemplate DataType="vm:GameLibraryViewModel">
                     <views:GameLibraryView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:ControllerMappingViewModel">
+                    <views:ControllerMappingView />
                 </DataTemplate>
                 <DataTemplate DataType="vm:SettingsViewModel">
                     <views:SettingsView />

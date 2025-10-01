@@ -15,21 +15,15 @@ public partial class GameLibraryViewModel : ViewModelBase
     [ObservableProperty]
     private Game? _selectedGame;
 
+    [ObservableProperty]
+    private ObservableCollection<string> _watchedFolders = [];
+
     private IStorageProvider? _storageProvider;
     private readonly EmulatorConfiguration _configuration;
 
     public GameLibraryViewModel(EmulatorConfiguration configuration)
     {
         _configuration = configuration;
-        
-        // Add some sample games for demonstration
-        Games.Add(new Game
-        {
-            Title = "Ignition",
-            ExecutablePath = "ignition.exe",
-            Description = "Classic racing game from 1997",
-            TimesPlayed = 5
-        });
     }
 
     public void SetStorageProvider(IStorageProvider storageProvider)
@@ -69,6 +63,64 @@ public partial class GameLibraryViewModel : ViewModelBase
                 TimesPlayed = 0
             });
         }
+    }
+
+    [RelayCommand]
+    private async Task AddFolder()
+    {
+        if (_storageProvider == null) return;
+
+        var folders = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select Folder to Scan for Games",
+            AllowMultiple = false
+        });
+
+        if (folders.Count > 0)
+        {
+            var folder = folders[0];
+            var folderPath = folder.Path.LocalPath;
+
+            // Add to watched folders if not already added
+            if (!WatchedFolders.Contains(folderPath))
+            {
+                WatchedFolders.Add(folderPath);
+            }
+
+            // Scan for exe files
+            await ScanFolderForGames(folderPath);
+        }
+    }
+
+    private async Task ScanFolderForGames(string folderPath)
+    {
+        await Task.Run(() =>
+        {
+            try
+            {
+                var exeFiles = Directory.GetFiles(folderPath, "*.exe", SearchOption.TopDirectoryOnly);
+                
+                foreach (var exeFile in exeFiles)
+                {
+                    // Check if game already exists
+                    if (!Games.Any(g => g.ExecutablePath.Equals(exeFile, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var fileName = Path.GetFileNameWithoutExtension(exeFile);
+                        Games.Add(new Game
+                        {
+                            Title = fileName,
+                            ExecutablePath = exeFile,
+                            Description = $"Found in {Path.GetFileName(folderPath)}",
+                            TimesPlayed = 0
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error scanning folder: {ex.Message}");
+            }
+        });
     }
 
     [RelayCommand]
