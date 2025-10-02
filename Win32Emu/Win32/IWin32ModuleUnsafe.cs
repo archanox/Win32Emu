@@ -1026,7 +1026,7 @@ public class DInputModule(ProcessEnvironment env, uint imageBase, PeImageLoader?
 		switch (export.ToUpperInvariant())
 		{
 			case "DIRECTINPUTCREATEA":
-      case "DIRECTINPUTCREATE":
+			case "DIRECTINPUTCREATE":
         returnValue = DirectInputCreateA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
         return true;
 			case "DIRECTINPUT8CREATE":
