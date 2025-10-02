@@ -585,13 +585,84 @@ public class DSoundModule(ProcessEnvironment env, uint imageBase, PeImageLoader?
 {
 	public string Name => "DSOUND.DLL";
 
+	// DirectSound object handles
+	private readonly Dictionary<uint, DirectSoundObject> _dsoundObjects = new();
+	private readonly Dictionary<uint, DirectSoundBuffer> _buffers = new();
+	private uint _nextDSoundHandle = 0x80000000;
+	private uint _nextBufferHandle = 0x81000000;
+
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		//var a = new StackArgs(cpu, memory);
+		var a = new StackArgs(cpu, memory);
 
-		Console.WriteLine($"[DSound] Unimplemented export: {export}");
-		return false;
+		switch (export)
+		{
+			case "DirectSoundCreate":
+				returnValue = DirectSoundCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+
+			case "DirectSoundEnumerateA":
+				returnValue = DirectSoundEnumerateA(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			default:
+				Console.WriteLine($"[DSound] Unimplemented export: {export}");
+				return false;
+		}
+	}
+
+	private uint DirectSoundCreate(uint lpGuid, uint lplpDS, uint pUnkOuter)
+	{
+		Console.WriteLine($"[DSound] DirectSoundCreate(lpGuid=0x{lpGuid:X8}, lplpDS=0x{lplpDS:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+
+		// Create DirectSound object
+		var dsHandle = _nextDSoundHandle++;
+		var dsObj = new DirectSoundObject
+		{
+			Handle = dsHandle
+		};
+		_dsoundObjects[dsHandle] = dsObj;
+
+		// Initialize audio backend if not already done
+		if (env.AudioBackend == null)
+		{
+			env.AudioBackend = new Win32Emu.Rendering.SDL3AudioBackend();
+			env.AudioBackend.Initialize();
+		}
+
+		if (lplpDS != 0)
+		{
+			env.MemWrite32(lplpDS, dsHandle);
+		}
+
+		return 0; // DS_OK
+	}
+
+	private uint DirectSoundEnumerateA(uint lpDSEnumCallback, uint lpContext)
+	{
+		Console.WriteLine($"[DSound] DirectSoundEnumerateA(lpDSEnumCallback=0x{lpDSEnumCallback:X8}, lpContext=0x{lpContext:X8})");
+		
+		// For now, just report no devices found (return DS_OK)
+		// In a full implementation, we would enumerate audio devices and call the callback
+		return 0; // DS_OK
+	}
+
+	private class DirectSoundObject
+	{
+		public uint Handle { get; set; }
+		public int Frequency { get; set; } = 44100;
+		public int BitsPerSample { get; set; } = 16;
+		public int Channels { get; set; } = 2;
+	}
+
+	private class DirectSoundBuffer
+	{
+		public uint Handle { get; set; }
+		public uint AudioStreamId { get; set; }
+		public int Size { get; set; }
+		public byte[]? Data { get; set; }
+		public bool IsPrimary { get; set; }
 	}
 }
 
@@ -600,13 +671,81 @@ public class DInputModule(ProcessEnvironment env, uint imageBase, PeImageLoader?
 {
 	public string Name => "DINPUT.DLL";
 
+	// DirectInput object handles
+	private readonly Dictionary<uint, DirectInputObject> _dinputObjects = new();
+	private readonly Dictionary<uint, DirectInputDevice> _devices = new();
+	private uint _nextDInputHandle = 0x90000000;
+	private uint _nextDeviceHandle = 0x91000000;
+
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		//var a = new StackArgs(cpu, memory);
+		var a = new StackArgs(cpu, memory);
 
-		Console.WriteLine($"[DInput] Unimplemented export: {export}");
-		return false;
+		switch (export)
+		{
+			case "DirectInputCreateA":
+			case "DirectInputCreate":
+				returnValue = DirectInputCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+
+			case "DirectInput8Create":
+				returnValue = DirectInput8Create(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+
+			default:
+				Console.WriteLine($"[DInput] Unimplemented export: {export}");
+				return false;
+		}
+	}
+
+	private uint DirectInputCreate(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
+	{
+		Console.WriteLine($"[DInput] DirectInputCreate(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, lplpDirectInput=0x{lplpDirectInput:X8})");
+
+		// Create DirectInput object
+		var diHandle = _nextDInputHandle++;
+		var diObj = new DirectInputObject
+		{
+			Handle = diHandle,
+			Version = dwVersion
+		};
+		_dinputObjects[diHandle] = diObj;
+
+		// Initialize input backend if not already done
+		if (env.InputBackend == null)
+		{
+			env.InputBackend = new Win32Emu.Rendering.SDL3InputBackend();
+			env.InputBackend.Initialize();
+		}
+
+		if (lplpDirectInput != 0)
+		{
+			env.MemWrite32(lplpDirectInput, diHandle);
+		}
+
+		return 0; // DI_OK
+	}
+
+	private uint DirectInput8Create(uint hinst, uint dwVersion, uint riidltf, uint lplpDirectInput, uint pUnkOuter)
+	{
+		Console.WriteLine($"[DInput] DirectInput8Create(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, riidltf=0x{riidltf:X8})");
+
+		// DirectInput8 is similar to DirectInputCreate but with additional parameters
+		return DirectInputCreate(hinst, dwVersion, lplpDirectInput, pUnkOuter);
+	}
+
+	private class DirectInputObject
+	{
+		public uint Handle { get; set; }
+		public uint Version { get; set; }
+	}
+
+	private class DirectInputDevice
+	{
+		public uint Handle { get; set; }
+		public uint BackendDeviceId { get; set; }
+		public string Name { get; set; } = string.Empty;
 	}
 }
 

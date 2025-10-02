@@ -10,6 +10,10 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 	private string _executablePath = string.Empty;
 	private readonly IEmulatorHost? _host = host;
 
+	// SDL3 backends for audio and input
+	public Win32Emu.Rendering.SDL3AudioBackend? AudioBackend { get; set; }
+	public Win32Emu.Rendering.SDL3InputBackend? InputBackend { get; set; }
+
 	public uint CommandLinePtr { get; private set; }
 	public uint ModuleFileNamePtr { get; private set; }
 	public uint ModuleFileNameLength { get; private set; }
