@@ -317,6 +317,25 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 		return null;
 	}
 
+	/// <summary>
+	/// Try to get a loaded PE image by its module handle.
+	/// </summary>
+	public bool TryGetLoadedImage(uint moduleHandle, out LoadedImage? image)
+	{
+		// Search loaded images by base address
+		foreach (var kvp in _loadedImages)
+		{
+			if (kvp.Value.BaseAddress == moduleHandle)
+			{
+				image = kvp.Value;
+				return true;
+			}
+		}
+
+		image = null;
+		return false;
+	}
+
 	// Heaps
 	private readonly Dictionary<uint, HeapState> _heaps = new();
 

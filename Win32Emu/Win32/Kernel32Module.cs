@@ -555,12 +555,14 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 		
 		string? procName = null;
-		ushort ordinal = 0;
+		uint ordinal = 0;
+		bool byOrdinal = false;
 		
 		// Check if lpProcName is an ordinal (high word is 0)
 		if ((lpProcName & 0xFFFF0000) == 0)
 		{
-			ordinal = (ushort)(lpProcName & 0xFFFF);
+			ordinal = lpProcName & 0xFFFF;
+			byOrdinal = true;
 			Console.WriteLine($"[Kernel32] GetProcAddress: Looking up by ordinal {ordinal}");
 		}
 		else
@@ -570,15 +572,44 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			Console.WriteLine($"[Kernel32] GetProcAddress: Looking up '{procName}'");
 		}
 		
-		// For now, we don't actually resolve exports from loaded modules
-		// Real implementation would need to:
-		// 1. Find the module by handle
-		// 2. Parse its PE export table
-		// 3. Return the RVA of the exported function
-		// For emulation purposes, we return a stub address or 0 for not found
-		
-		Console.WriteLine($"[Kernel32] GetProcAddress: Export resolution not fully implemented, returning 0");
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+		// Try to find the module in loaded images
+		if (!env.TryGetLoadedImage(hModule, out var loadedImage) || loadedImage == null)
+		{
+			Console.WriteLine($"[Kernel32] GetProcAddress: Module handle 0x{hModule:X8} not found in loaded images");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+			return 0;
+		}
+
+		uint exportAddress = 0;
+
+		// Look up by ordinal or name
+		if (byOrdinal)
+		{
+			if (loadedImage.ExportsByOrdinal.TryGetValue(ordinal, out exportAddress))
+			{
+				Console.WriteLine($"[Kernel32] GetProcAddress: Found export by ordinal {ordinal} at 0x{exportAddress:X8}");
+				return exportAddress;
+			}
+			else
+			{
+				Console.WriteLine($"[Kernel32] GetProcAddress: Ordinal {ordinal} not found in exports");
+			}
+		}
+		else if (procName != null)
+		{
+			if (loadedImage.ExportsByName.TryGetValue(procName, out exportAddress))
+			{
+				Console.WriteLine($"[Kernel32] GetProcAddress: Found export '{procName}' at 0x{exportAddress:X8}");
+				return exportAddress;
+			}
+			else
+			{
+				Console.WriteLine($"[Kernel32] GetProcAddress: Export '{procName}' not found");
+			}
+		}
+
+		// Not found
+		_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 		return 0;
 	}
 
