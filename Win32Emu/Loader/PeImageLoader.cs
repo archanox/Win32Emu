@@ -2,6 +2,7 @@ using AsmResolver;
 using AsmResolver.PE;
 using AsmResolver.PE.File;
 using AsmResolver.PE.Imports;
+using AsmResolver.PE.Exports;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Loader;
@@ -33,7 +34,8 @@ public class PeImageLoader(VirtualMemory vm)
 		}
 
 		var importMap = BuildImportMap(image, imageBase);
-		return new LoadedImage(imageBase, entryPoint, imageSize, importMap, path);
+		var (exportsByName, exportsByOrdinal) = BuildExportMaps(image, imageBase);
+		return new LoadedImage(imageBase, entryPoint, imageSize, importMap, path, exportsByName, exportsByOrdinal);
 	}
 
 	private Dictionary<uint, (string dll, string name)> BuildImportMap(PEImage image, uint imageBase)
@@ -74,5 +76,37 @@ public class PeImageLoader(VirtualMemory vm)
 		}
 
 		return map;
+	}
+
+	private (Dictionary<string, uint> byName, Dictionary<uint, uint> byOrdinal) BuildExportMaps(PEImage image, uint imageBase)
+	{
+		var byName = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
+		var byOrdinal = new Dictionary<uint, uint>();
+
+		if (image.Exports == null)
+		{
+			return (byName, byOrdinal);
+		}
+
+		foreach (var export in image.Exports.Entries)
+		{
+			// Skip forwarded exports (they have no RVA)
+			if (export.Address == null || export.Address.IsBounded == false)
+				continue;
+
+			var rva = export.Address.Rva;
+			var va = imageBase + rva;
+
+			// Add by ordinal
+			byOrdinal[export.Ordinal] = va;
+
+			// Add by name if it has one
+			if (!string.IsNullOrEmpty(export.Name))
+			{
+				byName[export.Name] = va;
+			}
+		}
+
+		return (byName, byOrdinal);
 	}
 }
