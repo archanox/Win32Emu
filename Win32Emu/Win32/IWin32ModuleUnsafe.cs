@@ -52,6 +52,10 @@ public class User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader?
 				returnValue = GetMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
 
+			case "PEEKMESSAGEA":
+				returnValue = PeekMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+
 			case "TRANSLATEMESSAGE":
 				returnValue = TranslateMessage(a.UInt32(0));
 				return true;
@@ -69,8 +73,92 @@ public class User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader?
 				returnValue = 0;
 				return true;
 
+			case "POSTMESSAGEA":
+				returnValue = PostMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+
 			case "SENDMESSAGEA":
 				returnValue = SendMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+
+			case "CLIENTTOSCREEN":
+				returnValue = ClientToScreen(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "SETRECT":
+				returnValue = SetRect(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4));
+				return true;
+
+			case "GETCLIENTRECT":
+				returnValue = GetClientRect(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "GETWINDOWRECT":
+				returnValue = GetWindowRect(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "ADJUSTWINDOWRECTEX":
+				returnValue = AdjustWindowRectEx(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+				return true;
+
+			case "GETDC":
+				returnValue = GetDC(a.UInt32(0));
+				return true;
+
+			case "RELEASEDC":
+				returnValue = ReleaseDC(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "UPDATEWINDOW":
+				returnValue = UpdateWindow(a.UInt32(0));
+				return true;
+
+			case "DESTROYWINDOW":
+				returnValue = DestroyWindow(a.UInt32(0));
+				return true;
+
+			case "SETWINDOWPOS":
+				returnValue = SetWindowPos(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.UInt32(6));
+				return true;
+
+			case "GETSYSTEMMETRICS":
+				returnValue = (uint)GetSystemMetrics(a.Int32(0));
+				return true;
+
+			case "LOADICONA":
+				returnValue = LoadIconA(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "LOADCURSORA":
+				returnValue = LoadCursorA(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "SETCURSOR":
+				returnValue = SetCursor(a.UInt32(0));
+				return true;
+
+			case "SETFOCUS":
+				returnValue = SetFocus(a.UInt32(0));
+				return true;
+
+			case "GETMENU":
+				returnValue = GetMenu(a.UInt32(0));
+				return true;
+
+			case "SETWINDOWLONGA":
+				returnValue = SetWindowLongA(a.UInt32(0), a.Int32(1), a.UInt32(2));
+				return true;
+
+			case "GETWINDOWLONGA":
+				returnValue = GetWindowLongA(a.UInt32(0), a.Int32(1));
+				return true;
+
+			case "MESSAGEBOXA":
+				returnValue = MessageBoxA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+
+			case "SYSTEMPARAMETERSINFOA":
+				returnValue = SystemParametersInfoA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
 
 			default:
@@ -308,6 +396,240 @@ public class User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader?
 		// For now, just log and return 0 (message processed)
 		return 0;
 	}
+
+	private uint ClientToScreen(uint hwnd, uint lpPoint)
+	{
+		if (lpPoint == 0)
+			return 0;
+
+		// POINT structure: LONG x, LONG y (8 bytes)
+		var x = (int)env.MemRead32(lpPoint);
+		var y = (int)env.MemRead32(lpPoint + 4);
+
+		Console.WriteLine($"[User32] ClientToScreen: HWND=0x{hwnd:X8} Point=({x},{y})");
+
+		// For now, treat client coordinates same as screen coordinates (no offset)
+		// In a real implementation, this would add window position to client coords
+		return 1; // TRUE
+	}
+
+	private uint SetRect(uint lpRect, int left, int top, int right, int bottom)
+	{
+		if (lpRect == 0)
+			return 0;
+
+		Console.WriteLine($"[User32] SetRect: lpRect=0x{lpRect:X8} ({left},{top},{right},{bottom})");
+
+		// RECT structure: LONG left, top, right, bottom (16 bytes)
+		env.MemWrite32(lpRect, (uint)left);
+		env.MemWrite32(lpRect + 4, (uint)top);
+		env.MemWrite32(lpRect + 8, (uint)right);
+		env.MemWrite32(lpRect + 12, (uint)bottom);
+
+		return 1; // TRUE
+	}
+
+	private uint GetClientRect(uint hwnd, uint lpRect)
+	{
+		if (lpRect == 0)
+			return 0;
+
+		Console.WriteLine($"[User32] GetClientRect: HWND=0x{hwnd:X8}");
+
+		// Return a default client rect (0, 0, 640, 480)
+		env.MemWrite32(lpRect, 0);       // left
+		env.MemWrite32(lpRect + 4, 0);   // top
+		env.MemWrite32(lpRect + 8, 640); // right
+		env.MemWrite32(lpRect + 12, 480); // bottom
+
+		return 1; // TRUE
+	}
+
+	private uint GetWindowRect(uint hwnd, uint lpRect)
+	{
+		if (lpRect == 0)
+			return 0;
+
+		Console.WriteLine($"[User32] GetWindowRect: HWND=0x{hwnd:X8}");
+
+		// Return a default window rect (100, 100, 740, 580)
+		env.MemWrite32(lpRect, 100);     // left
+		env.MemWrite32(lpRect + 4, 100); // top
+		env.MemWrite32(lpRect + 8, 740); // right
+		env.MemWrite32(lpRect + 12, 580); // bottom
+
+		return 1; // TRUE
+	}
+
+	private uint AdjustWindowRectEx(uint lpRect, uint dwStyle, int bMenu, uint dwExStyle)
+	{
+		if (lpRect == 0)
+			return 0;
+
+		var left = (int)env.MemRead32(lpRect);
+		var top = (int)env.MemRead32(lpRect + 4);
+		var right = (int)env.MemRead32(lpRect + 8);
+		var bottom = (int)env.MemRead32(lpRect + 12);
+
+		Console.WriteLine($"[User32] AdjustWindowRectEx: rect=({left},{top},{right},{bottom}) style=0x{dwStyle:X8}");
+
+		// Add window frame size (typical values)
+		const int frameWidth = 8;
+		const int frameHeight = 8;
+		const int titleBarHeight = 32;
+		const int menuHeight = 20;
+
+		left -= frameWidth;
+		top -= titleBarHeight;
+		right += frameWidth;
+		bottom += frameHeight;
+
+		if (bMenu != 0)
+			top -= menuHeight;
+
+		env.MemWrite32(lpRect, (uint)left);
+		env.MemWrite32(lpRect + 4, (uint)top);
+		env.MemWrite32(lpRect + 8, (uint)right);
+		env.MemWrite32(lpRect + 12, (uint)bottom);
+
+		return 1; // TRUE
+	}
+
+	private uint GetDC(uint hwnd)
+	{
+		// Create a device context handle
+		var hdc = env.RegisterHandle(new object()); // Dummy DC object
+		Console.WriteLine($"[User32] GetDC: HWND=0x{hwnd:X8} -> HDC=0x{hdc:X8}");
+		return hdc;
+	}
+
+	private uint ReleaseDC(uint hwnd, uint hdc)
+	{
+		Console.WriteLine($"[User32] ReleaseDC: HWND=0x{hwnd:X8} HDC=0x{hdc:X8}");
+		env.CloseHandle(hdc);
+		return 1; // Success
+	}
+
+	private uint UpdateWindow(uint hwnd)
+	{
+		Console.WriteLine($"[User32] UpdateWindow: HWND=0x{hwnd:X8}");
+		// Trigger immediate repaint - for now just log
+		return 1; // TRUE
+	}
+
+	private uint DestroyWindow(uint hwnd)
+	{
+		Console.WriteLine($"[User32] DestroyWindow: HWND=0x{hwnd:X8}");
+		
+		// Remove window from tracking
+		if (env.DestroyWindow(hwnd))
+		{
+			return 1; // TRUE
+		}
+		return 0; // FALSE
+	}
+
+	private uint SetWindowPos(uint hwnd, uint hwndInsertAfter, int x, int y, int cx, int cy, uint flags)
+	{
+		Console.WriteLine($"[User32] SetWindowPos: HWND=0x{hwnd:X8} pos=({x},{y}) size=({cx},{cy}) flags=0x{flags:X8}");
+		// For now just log
+		return 1; // TRUE
+	}
+
+	private int GetSystemMetrics(int nIndex)
+	{
+		Console.WriteLine($"[User32] GetSystemMetrics: nIndex={nIndex}");
+		
+		// Return common system metrics
+		return nIndex switch
+		{
+			0 => 1920,  // SM_CXSCREEN - Screen width
+			1 => 1080,  // SM_CYSCREEN - Screen height
+			4 => 640,   // SM_CXMIN - Minimum window width
+			5 => 480,   // SM_CYMIN - Minimum window height
+			_ => 0
+		};
+	}
+
+	private uint LoadIconA(uint hInstance, uint lpIconName)
+	{
+		Console.WriteLine($"[User32] LoadIconA: hInstance=0x{hInstance:X8} lpIconName=0x{lpIconName:X8}");
+		// Return a dummy icon handle
+		return env.RegisterHandle(new object()); // Dummy icon object
+	}
+
+	private uint LoadCursorA(uint hInstance, uint lpCursorName)
+	{
+		Console.WriteLine($"[User32] LoadCursorA: hInstance=0x{hInstance:X8} lpCursorName=0x{lpCursorName:X8}");
+		// Return a dummy cursor handle
+		return env.RegisterHandle(new object()); // Dummy cursor object
+	}
+
+	private uint SetCursor(uint hCursor)
+	{
+		Console.WriteLine($"[User32] SetCursor: hCursor=0x{hCursor:X8}");
+		// Return previous cursor handle (dummy)
+		return 0x00000001;
+	}
+
+	private uint SetFocus(uint hwnd)
+	{
+		Console.WriteLine($"[User32] SetFocus: HWND=0x{hwnd:X8}");
+		// Return previous focus window handle
+		return 0; // NULL means no previous focus
+	}
+
+	private uint GetMenu(uint hwnd)
+	{
+		Console.WriteLine($"[User32] GetMenu: HWND=0x{hwnd:X8}");
+		// Return menu handle (NULL if no menu)
+		return 0;
+	}
+
+	private uint SetWindowLongA(uint hwnd, int nIndex, uint dwNewLong)
+	{
+		Console.WriteLine($"[User32] SetWindowLongA: HWND=0x{hwnd:X8} nIndex={nIndex} dwNewLong=0x{dwNewLong:X8}");
+		// Return previous value (for now return 0)
+		return 0;
+	}
+
+	private uint GetWindowLongA(uint hwnd, int nIndex)
+	{
+		Console.WriteLine($"[User32] GetWindowLongA: HWND=0x{hwnd:X8} nIndex={nIndex}");
+		// Return window data (for now return 0)
+		return 0;
+	}
+
+	private uint MessageBoxA(uint hwnd, uint lpText, uint lpCaption, uint uType)
+	{
+		var text = lpText != 0 ? env.ReadAnsiString(lpText) : "";
+		var caption = lpCaption != 0 ? env.ReadAnsiString(lpCaption) : "";
+		Console.WriteLine($"[User32] MessageBoxA: \"{caption}\" - \"{text}\" type=0x{uType:X8}");
+		// Return IDOK (1)
+		return 1;
+	}
+
+	private uint SystemParametersInfoA(uint uiAction, uint uiParam, uint pvParam, uint fWinIni)
+	{
+		Console.WriteLine($"[User32] SystemParametersInfoA: action=0x{uiAction:X8} param={uiParam}");
+		// For now just return success
+		return 1; // TRUE
+	}
+
+	private uint PeekMessageA(uint lpMsg, uint hwnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg)
+	{
+		// PeekMessage returns immediately with message availability
+		// Return 0 for no message (non-blocking)
+		Console.WriteLine($"[User32] PeekMessageA: lpMsg=0x{lpMsg:X8} HWND=0x{hwnd:X8}");
+		return 0; // No message available
+	}
+
+	private uint PostMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
+	{
+		Console.WriteLine($"[User32] PostMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+		// Post message to queue - for now just log
+		return 1; // TRUE
+	}
 }
 
 public class Gdi32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
@@ -356,6 +678,10 @@ public class Gdi32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? 
 
 			case "SETTEXTCOLOR":
 				returnValue = SetTextColor(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "GETDEVICECAPS":
+				returnValue = (uint)GetDeviceCaps(a.UInt32(0), a.Int32(1));
 				return true;
 
 			default:
@@ -479,6 +805,23 @@ public class Gdi32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? 
 		return 0x00000000; // Previous color (black)
 	}
 
+	private int GetDeviceCaps(uint hdc, int nIndex)
+	{
+		Console.WriteLine($"[Gdi32] GetDeviceCaps(HDC=0x{hdc:X8}, nIndex={nIndex})");
+		
+		// Return common device capabilities
+		return nIndex switch
+		{
+			8 => 1920,    // HORZRES - Horizontal resolution in pixels
+			10 => 1080,   // VERTRES - Vertical resolution in pixels
+			12 => 32,     // BITSPIXEL - Color bits per pixel
+			88 => 96,     // LOGPIXELSX - Logical pixels/inch in X
+			90 => 96,     // LOGPIXELSY - Logical pixels/inch in Y
+			2 => 8,       // TECHNOLOGY - DT_RASDISPLAY (raster display)
+			_ => 0
+		};
+	}
+
 	private class DeviceContext
 	{
 		public uint Handle { get; set; }
@@ -585,13 +928,51 @@ public class DSoundModule(ProcessEnvironment env, uint imageBase, PeImageLoader?
 {
 	public string Name => "DSOUND.DLL";
 
+	private readonly Dictionary<uint, DirectSoundObject> _dsoundObjects = new();
+	private uint _nextDSoundHandle = 0x72000000;
+
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		//var a = new StackArgs(cpu, memory);
+		var a = new StackArgs(cpu, memory);
 
-		Console.WriteLine($"[DSound] Unimplemented export: {export}");
-		return false;
+		switch (export.ToUpperInvariant())
+		{
+			case "DIRECTSOUNDCREATE":
+				returnValue = DirectSoundCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+
+			default:
+				Console.WriteLine($"[DSound] Unimplemented export: {export}");
+				return false;
+		}
+	}
+
+	private uint DirectSoundCreate(uint lpGuid, uint lplpDS, uint pUnkOuter)
+	{
+		Console.WriteLine($"[DSound] DirectSoundCreate(lpGuid=0x{lpGuid:X8}, lplpDS=0x{lplpDS:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+
+		// Create DirectSound object
+		var dsoundHandle = _nextDSoundHandle++;
+		var dsoundObj = new DirectSoundObject
+		{
+			Handle = dsoundHandle
+		};
+		_dsoundObjects[dsoundHandle] = dsoundObj;
+
+		// Write handle back to caller
+		if (lplpDS != 0)
+		{
+			env.MemWrite32(lplpDS, dsoundHandle);
+		}
+
+		Console.WriteLine($"[DSound] Created DirectSound object: 0x{dsoundHandle:X8}");
+		return 0; // DS_OK
+	}
+
+	private class DirectSoundObject
+	{
+		public uint Handle { get; set; }
 	}
 }
 
@@ -600,13 +981,51 @@ public class DInputModule(ProcessEnvironment env, uint imageBase, PeImageLoader?
 {
 	public string Name => "DINPUT.DLL";
 
+	private readonly Dictionary<uint, DirectInputObject> _dinputObjects = new();
+	private uint _nextDInputHandle = 0x73000000;
+
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		//var a = new StackArgs(cpu, memory);
+		var a = new StackArgs(cpu, memory);
 
-		Console.WriteLine($"[DInput] Unimplemented export: {export}");
-		return false;
+		switch (export.ToUpperInvariant())
+		{
+			case "DIRECTINPUTCREATEA":
+				returnValue = DirectInputCreateA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+
+			default:
+				Console.WriteLine($"[DInput] Unimplemented export: {export}");
+				return false;
+		}
+	}
+
+	private uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint punkOuter)
+	{
+		Console.WriteLine($"[DInput] DirectInputCreateA(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, lplpDirectInput=0x{lplpDirectInput:X8})");
+
+		// Create DirectInput object
+		var dinputHandle = _nextDInputHandle++;
+		var dinputObj = new DirectInputObject
+		{
+			Handle = dinputHandle
+		};
+		_dinputObjects[dinputHandle] = dinputObj;
+
+		// Write handle back to caller
+		if (lplpDirectInput != 0)
+		{
+			env.MemWrite32(lplpDirectInput, dinputHandle);
+		}
+
+		Console.WriteLine($"[DInput] Created DirectInput object: 0x{dinputHandle:X8}");
+		return 0; // DI_OK
+	}
+
+	private class DirectInputObject
+	{
+		public uint Handle { get; set; }
 	}
 }
 
@@ -614,13 +1033,63 @@ public class WinMMModule(ProcessEnvironment env, uint imageBase, PeImageLoader? 
 {
 	public string Name => "WINMM.DLL";
 
+	private readonly System.Diagnostics.Stopwatch _stopwatch = System.Diagnostics.Stopwatch.StartNew();
+	private uint _timerPeriod = 0;
+
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		//var a = new StackArgs(cpu, memory);
+		var a = new StackArgs(cpu, memory);
 
-		Console.WriteLine($"[WinMM] Unimplemented export: {export}");
-		return false;
+		switch (export.ToUpperInvariant())
+		{
+			case "TIMEGETTIME":
+				returnValue = TimeGetTime();
+				return true;
+
+			case "TIMEBEGINPERIOD":
+				returnValue = TimeBeginPeriod(a.UInt32(0));
+				return true;
+
+			case "TIMEENDPERIOD":
+				returnValue = TimeEndPeriod(a.UInt32(0));
+				return true;
+
+			case "TIMEKILLEVENT":
+				returnValue = TimeKillEvent(a.UInt32(0));
+				return true;
+
+			default:
+				Console.WriteLine($"[WinMM] Unimplemented export: {export}");
+				return false;
+		}
+	}
+
+	private uint TimeGetTime()
+	{
+		// Return time in milliseconds since start
+		var time = (uint)_stopwatch.ElapsedMilliseconds;
+		return time;
+	}
+
+	private uint TimeBeginPeriod(uint uPeriod)
+	{
+		Console.WriteLine($"[WinMM] timeBeginPeriod({uPeriod})");
+		_timerPeriod = uPeriod;
+		return 0; // TIMERR_NOERROR
+	}
+
+	private uint TimeEndPeriod(uint uPeriod)
+	{
+		Console.WriteLine($"[WinMM] timeEndPeriod({uPeriod})");
+		_timerPeriod = 0;
+		return 0; // TIMERR_NOERROR
+	}
+
+	private uint TimeKillEvent(uint uTimerID)
+	{
+		Console.WriteLine($"[WinMM] timeKillEvent({uTimerID})");
+		return 0; // TIMERR_NOERROR
 	}
 }
 
