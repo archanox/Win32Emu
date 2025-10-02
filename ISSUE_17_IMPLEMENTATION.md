@@ -110,7 +110,7 @@ Many kernel32 functions were already implemented in earlier phases. The remainin
 | GetLastError | ✅ Implemented | Gets last error code |
 | HeapDestroy | ⏳ TODO | Destroys heap |
 | HeapCreate | ✅ Implemented | Creates heap |
-| GetProcAddress | ⏳ TODO | Gets procedure address |
+| GetProcAddress | ✅ Implemented | Gets procedure address from PE export table |
 | RtlUnwind | ⏳ TODO | Exception unwinding |
 | UnhandledExceptionFilter | ⏳ TODO | Exception filter |
 | GetFileType | ✅ Implemented | Gets file type |
@@ -171,7 +171,8 @@ Each new API has corresponding tests that verify:
 
 ### Remaining from Issue #17
 Focus on kernel32 functions that are commonly used:
-- `LoadLibraryA` / `GetProcAddress` - Critical for dynamic linking
+- ✅ `GetProcAddress` - Now implemented with full PE export table parsing
+- `LoadLibraryA` - Enhance to support loading additional DLLs with PeImageLoader
 - `VirtualFree` - Pair with VirtualAlloc
 - String conversion functions (WideCharToMultiByte, MultiByteToWideChar)
 - Code page functions (GetCPInfo, GetACP)
