@@ -14,6 +14,10 @@ public class TestEnvironment : IDisposable
     public ProcessEnvironment ProcessEnv { get; }
     public User32Module User32 { get; }
     public Gdi32Module Gdi32 { get; }
+    public DDrawModule DDraw { get; }
+    public DSoundModule DSound { get; }
+    public DInputModule DInput { get; }
+    public WinMMModule WinMM { get; }
     public PeImageLoader PeLoader { get; }
 
     public TestEnvironment()
@@ -24,6 +28,10 @@ public class TestEnvironment : IDisposable
         PeLoader = new PeImageLoader(Memory);
         User32 = new User32Module(ProcessEnv, 0x00400000, PeLoader);
         Gdi32 = new Gdi32Module(ProcessEnv, 0x00400000, PeLoader);
+        DDraw = new DDrawModule(ProcessEnv, 0x00400000, PeLoader);
+        DSound = new DSoundModule(ProcessEnv, 0x00400000, PeLoader);
+        DInput = new DInputModule(ProcessEnv, 0x00400000, PeLoader);
+        WinMM = new WinMMModule(ProcessEnv, 0x00400000, PeLoader);
 
         // Initialize process environment with test data
         ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);
@@ -62,6 +70,62 @@ public class TestEnvironment : IDisposable
             throw new InvalidOperationException($"Failed to invoke {functionName}");
         }
 
+        return returnValue;
+    }
+
+    /// <summary>
+    /// Call a DirectDraw API function with the given arguments
+    /// </summary>
+    public uint CallDDrawApi(string functionName, params uint[] args)
+    {
+        Cpu.SetupStackArgs(Memory, args);
+        var success = DDraw.TryInvokeUnsafe(functionName, Cpu, Memory, out uint returnValue);
+        if (!success)
+        {
+            throw new InvalidOperationException($"Failed to invoke {functionName}");
+        }
+        return returnValue;
+    }
+
+    /// <summary>
+    /// Call a DirectSound API function with the given arguments
+    /// </summary>
+    public uint CallDSoundApi(string functionName, params uint[] args)
+    {
+        Cpu.SetupStackArgs(Memory, args);
+        var success = DSound.TryInvokeUnsafe(functionName, Cpu, Memory, out uint returnValue);
+        if (!success)
+        {
+            throw new InvalidOperationException($"Failed to invoke {functionName}");
+        }
+        return returnValue;
+    }
+
+    /// <summary>
+    /// Call a DirectInput API function with the given arguments
+    /// </summary>
+    public uint CallDInputApi(string functionName, params uint[] args)
+    {
+        Cpu.SetupStackArgs(Memory, args);
+        var success = DInput.TryInvokeUnsafe(functionName, Cpu, Memory, out uint returnValue);
+        if (!success)
+        {
+            throw new InvalidOperationException($"Failed to invoke {functionName}");
+        }
+        return returnValue;
+    }
+
+    /// <summary>
+    /// Call a WinMM API function with the given arguments
+    /// </summary>
+    public uint CallWinMMApi(string functionName, params uint[] args)
+    {
+        Cpu.SetupStackArgs(Memory, args);
+        var success = WinMM.TryInvokeUnsafe(functionName, Cpu, Memory, out uint returnValue);
+        if (!success)
+        {
+            throw new InvalidOperationException($"Failed to invoke {functionName}");
+        }
         return returnValue;
     }
 
