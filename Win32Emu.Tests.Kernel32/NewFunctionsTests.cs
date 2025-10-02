@@ -90,16 +90,43 @@ public class NewFunctionsTests : IDisposable
     #region GetProcAddress Tests
 
     [Fact]
-    public void GetProcAddress_WithValidModule_ShouldReturnZeroForNow()
+    public void GetProcAddress_WithNonLoadedModule_ShouldReturnZero()
     {
         // Arrange - Get a module handle
+        // Note: GetModuleHandleA returns imageBase, which is not a loaded PE image with exports
         var moduleHandle = _testEnv.CallKernel32Api("GETMODULEHANDLEA", 0);
         var procNamePtr = _testEnv.WriteString("GetVersion");
 
         // Act
         var result = _testEnv.CallKernel32Api("GETPROCADDRESS", moduleHandle, procNamePtr);
 
-        // Assert - Currently returns 0 as export resolution is not fully implemented
+        // Assert - Returns 0 because the module handle doesn't correspond to a loaded PE image
+        Assert.Equal(0u, result);
+    }
+
+    [Fact]
+    public void GetProcAddress_WithNullModule_ShouldReturnZero()
+    {
+        // Arrange
+        var procNamePtr = _testEnv.WriteString("SomeFunction");
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETPROCADDRESS", 0, procNamePtr);
+
+        // Assert
+        Assert.Equal(0u, result);
+    }
+
+    [Fact]
+    public void GetProcAddress_ByOrdinal_WithNonLoadedModule_ShouldReturnZero()
+    {
+        // Arrange - Get a module handle  
+        var moduleHandle = _testEnv.CallKernel32Api("GETMODULEHANDLEA", 0);
+        
+        // Act - Look up by ordinal (ordinal 1)
+        var result = _testEnv.CallKernel32Api("GETPROCADDRESS", moduleHandle, 1);
+
+        // Assert - Returns 0 because the module handle doesn't correspond to a loaded PE image
         Assert.Equal(0u, result);
     }
 
