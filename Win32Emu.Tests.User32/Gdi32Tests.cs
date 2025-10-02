@@ -168,14 +168,19 @@ public class Gdi32Tests : IDisposable
     public void SetBkMode_ShouldReturnPreviousMode()
     {
         // Arrange
-        uint hdc = 0x81000000;
+        uint hwnd = 0x00010000;
+        uint lpPaint = _testEnv.AllocateMemory(64);
+        uint hdc = _testEnv.CallGdi32Api("BEGINPAINT", hwnd, lpPaint);
         int TRANSPARENT = 1;
 
         // Act
         var result = _testEnv.CallGdi32Api("SETBKMODE", hdc, (uint)TRANSPARENT);
 
         // Assert
-        Assert.NotEqual(0u, result); // Should return previous mode
+        Assert.NotEqual(0u, result); // Should return previous mode (OPAQUE = 2)
+        
+        // Cleanup
+        _testEnv.CallGdi32Api("ENDPAINT", hwnd, lpPaint);
     }
 
     [Fact]
