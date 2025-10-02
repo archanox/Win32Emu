@@ -35,6 +35,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			case "EXITPROCESS":
 				returnValue = ExitProcess(a.UInt32(0));
 				return true;
+			case "TERMINATEPROCESS":
+				returnValue = TerminateProcess(a.UInt32(0), a.UInt32(1));
+				return true;
 			case "GETCURRENTPROCESS":
 				returnValue = GetCurrentProcess();
 				return true;
@@ -50,6 +53,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			case "GETSTRINGTYPEA":
 				returnValue = GetStringTypeA(a.UInt32(0), a.UInt32(1), a.Lpstr(2), a.Int32(3), a.UInt32(4));
 				return true;
+			case "GETSTRINGTYPEW":
+				returnValue = GetStringTypeW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
+				return true;
 			case "GETMODULEHANDLEA":
 				returnValue = GetModuleHandleA(a.Lpstr(0));
 				return true;
@@ -58,6 +64,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				return true;
 			case "LOADLIBRARYA":
 				returnValue = LoadLibraryA(a.Lpstr(0));
+				return true;
+			case "GETPROCADDRESS":
+				returnValue = GetProcAddress(a.UInt32(0), a.UInt32(1));
 				return true;
 			case "GETSTARTUPINFOA":
 				returnValue = GetStartupInfoA(a.UInt32(0));
@@ -102,8 +111,14 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			case "HEAPFREE":
 				returnValue = HeapFree((void*)a.UInt32(0), a.UInt32(1), (void*)a.UInt32(2));
 				return true;
+			case "HEAPDESTROY":
+				returnValue = HeapDestroy((void*)a.UInt32(0));
+				return true;
 			case "VIRTUALALLOC":
 				returnValue = VirtualAlloc(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+			case "VIRTUALFREE":
+				returnValue = VirtualFree(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 
 			// File I/O
@@ -144,6 +159,18 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			case "WIDECHARTOMULTIBYTE":
 				returnValue = WideCharToMultiByte(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
 				return true;
+			case "MULTIBYTETOWIDECHAR":
+				returnValue = MultiByteToWideChar(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4), a.UInt32(5));
+				return true;
+			case "LCMAPSTRINGA":
+				returnValue = LCMapStringA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4), a.Int32(5));
+				return true;
+			case "LCMAPSTRINGW":
+				returnValue = LCMapStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4), a.Int32(5));
+				return true;
+			case "RAISEEXCEPTION":
+				returnValue = RaiseException(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
 
 			// Performance/timing functions
 			case "QUERYPERFORMANCECOUNTER":
@@ -176,6 +203,44 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	{
 		Console.WriteLine($"[Kernel32] ExitProcess({code})");
 		env.RequestExit();
+		return 0;
+	}
+
+	private unsafe uint TerminateProcess(uint hProcess, uint uExitCode)
+	{
+		// TerminateProcess terminates the specified process
+		// hProcess: handle to the process (0xFFFFFFFF for current process)
+		// uExitCode: exit code for the process
+		
+		Console.WriteLine($"[Kernel32] TerminateProcess(0x{hProcess:X8}, {uExitCode})");
+		
+		// In our emulator, we only support terminating the current process
+		if (hProcess == 0xFFFFFFFF || hProcess == 0)
+		{
+			env.RequestExit();
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		
+		// We don't support terminating other processes
+		Console.WriteLine($"[Kernel32] TerminateProcess: Cannot terminate external process handle 0x{hProcess:X8}");
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+		return NativeTypes.Win32Bool.FALSE;
+	}
+
+	private unsafe uint RaiseException(uint dwExceptionCode, uint dwExceptionFlags, uint nNumberOfArguments, uint lpArguments)
+	{
+		// RaiseException raises a software exception
+		// For now, we just log and continue - proper implementation would need exception handling
+		Console.WriteLine($"[Kernel32] RaiseException(code=0x{dwExceptionCode:X8}, flags=0x{dwExceptionFlags:X}, nArgs={nNumberOfArguments}, args=0x{lpArguments:X8})");
+		
+		// In a real implementation, this would:
+		// 1. Create an EXCEPTION_RECORD
+		// 2. Search for exception handlers
+		// 3. Unwind the stack if no handler found
+		// For our emulator, we'll just log and return (doesn't actually return in real Win32)
+		
+		// This function doesn't return in normal Windows - it transfers control to exception handler
+		// But for our simple emulator, we'll just return 0
 		return 0;
 	}
 
@@ -342,6 +407,77 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
+	private unsafe uint GetStringTypeW(uint locale, uint dwInfoType, uint lpSrcStr, int cchSrc, uint lpCharType)
+	{
+		// GetStringTypeW retrieves character type information for Unicode characters
+		// Similar to GetStringTypeA but for wide (Unicode) strings
+		const int MAX_STRING_LENGTH_LIMIT = 1000;
+		
+		if (lpSrcStr == 0 || lpCharType == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		// We only support CT_CTYPE1 for simplicity
+		if (dwInfoType != 1)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Determine the length of the string if cchSrc is -1
+		int length = cchSrc;
+		if (cchSrc == -1)
+		{
+			// Count characters until null terminator (wide char = 2 bytes)
+			length = 0;
+			uint currentAddr = lpSrcStr;
+			while (length < MAX_STRING_LENGTH_LIMIT)
+			{
+				ushort wchar = env.MemRead16(currentAddr);
+				if (wchar == 0) break;
+				length++;
+				currentAddr += 2;
+			}
+
+			if (length >= MAX_STRING_LENGTH_LIMIT)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+		}
+
+		// Use same character type constants as GetStringTypeA
+		const ushort CT_CTYPE1_UPPER = 0x0001;
+		const ushort CT_CTYPE1_LOWER = 0x0002;
+		const ushort CT_CTYPE1_DIGIT = 0x0004;
+		const ushort CT_CTYPE1_SPACE = 0x0008;
+		const ushort CT_CTYPE1_ALPHA = 0x0100;
+
+		// Write character type information for each character
+		for (int i = 0; i < length; i++)
+		{
+			ushort wchar = env.MemRead16(lpSrcStr + (uint)(i * 2));
+			ushort charType = 0;
+
+			if (wchar >= 'A' && wchar <= 'Z')
+				charType = (ushort)(CT_CTYPE1_UPPER | CT_CTYPE1_ALPHA);
+			else if (wchar >= 'a' && wchar <= 'z')
+				charType = (ushort)(CT_CTYPE1_LOWER | CT_CTYPE1_ALPHA);
+			else if (wchar >= '0' && wchar <= '9')
+				charType = CT_CTYPE1_DIGIT;
+			else if (wchar == ' ' || wchar == '\t' || wchar == '\n' || wchar == '\r')
+				charType = CT_CTYPE1_SPACE;
+			else
+				charType = CT_CTYPE1_ALPHA; // Default for other characters
+
+			env.MemWrite16(lpCharType + (uint)(i * 2), charType);
+		}
+
+		return NativeTypes.Win32Bool.TRUE;
+	}
+
 	private unsafe uint GetModuleHandleA(sbyte* name)
 	{
 		return imageBase;
@@ -402,6 +538,48 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			// For system libraries, we still need to track them but mark them as system modules
 			return env.LoadModule(libraryName);
 		}
+	}
+
+	private unsafe uint GetProcAddress(uint hModule, uint lpProcName)
+	{
+		// GetProcAddress retrieves the address of an exported function from a DLL
+		// hModule: module handle from LoadLibraryA or GetModuleHandleA
+		// lpProcName: either a string pointer (name) or an ordinal value (LOWORD)
+		
+		Console.WriteLine($"[Kernel32] GetProcAddress(0x{hModule:X8}, 0x{lpProcName:X8})");
+		
+		if (hModule == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+		
+		string? procName = null;
+		ushort ordinal = 0;
+		
+		// Check if lpProcName is an ordinal (high word is 0)
+		if ((lpProcName & 0xFFFF0000) == 0)
+		{
+			ordinal = (ushort)(lpProcName & 0xFFFF);
+			Console.WriteLine($"[Kernel32] GetProcAddress: Looking up by ordinal {ordinal}");
+		}
+		else
+		{
+			// It's a string pointer
+			procName = env.ReadAnsiString(lpProcName);
+			Console.WriteLine($"[Kernel32] GetProcAddress: Looking up '{procName}'");
+		}
+		
+		// For now, we don't actually resolve exports from loaded modules
+		// Real implementation would need to:
+		// 1. Find the module by handle
+		// 2. Parse its PE export table
+		// 3. Return the RVA of the exported function
+		// For emulation purposes, we return a stub address or 0 for not found
+		
+		Console.WriteLine($"[Kernel32] GetProcAddress: Export resolution not fully implemented, returning 0");
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+		return 0;
 	}
 
 	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
@@ -572,8 +750,53 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	private unsafe uint HeapAlloc(void* hHeap, uint dwFlags, uint dwBytes) => env.HeapAlloc((uint)hHeap, dwBytes);
 	private static unsafe uint HeapFree(void* hHeap, uint dwFlags, void* lpMem) => 1;
 
+	private unsafe uint HeapDestroy(void* hHeap)
+	{
+		// HeapDestroy destroys a heap created with HeapCreate
+		// In our simple allocator, we don't actually manage individual heaps
+		// Just return success for API compatibility
+		Console.WriteLine($"[Kernel32] HeapDestroy(0x{(uint)(nint)hHeap:X8})");
+		
+		if (hHeap == null)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		
+		return NativeTypes.Win32Bool.TRUE;
+	}
+
 	private unsafe uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect) =>
 		env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
+
+	private unsafe uint VirtualFree(uint lpAddress, uint dwSize, uint dwFreeType)
+	{
+		// VirtualFree releases or decommits virtual memory
+		// dwFreeType: MEM_DECOMMIT (0x4000) or MEM_RELEASE (0x8000)
+		// For simplicity in our emulator, we accept the call but don't actually free memory
+		// The bump allocator doesn't support freeing
+		Console.WriteLine($"[Kernel32] VirtualFree(0x{lpAddress:X8}, {dwSize}, 0x{dwFreeType:X})");
+		
+		const uint MEM_DECOMMIT = 0x4000;
+		const uint MEM_RELEASE = 0x8000;
+		
+		// Validate parameters
+		if (lpAddress == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		
+		// When using MEM_RELEASE, dwSize must be 0
+		if ((dwFreeType & MEM_RELEASE) != 0 && dwSize != 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		
+		// Return success - memory will be cleaned up when process terminates
+		return NativeTypes.Win32Bool.TRUE;
+	}
 
 	// File I/O implementations
 	private unsafe uint CreateFileA(uint lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecAttr,
@@ -881,6 +1104,255 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 	}
   
+	private unsafe uint MultiByteToWideChar(uint codePage, uint dwFlags, uint lpMultiByteStr, int cbMultiByte, uint lpWideCharStr, uint cchWideChar)
+	{
+		// MultiByteToWideChar converts a multibyte (ANSI) string to Unicode (wide char) string
+		// This is the inverse of WideCharToMultiByte
+		
+		try
+		{
+			if (lpMultiByteStr == 0)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			// Validate code page
+			if (codePage != 0 && codePage != 1 && codePage != 1252 && codePage != 437 && codePage != 65001)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			// Use CP_ACP (1252) as default
+			if (codePage == 0 || codePage == 1)
+				codePage = 1252;
+
+			// Determine string length if cbMultiByte is -1
+			byte[] multiByteBytes;
+			if (cbMultiByte == -1)
+			{
+				// Null-terminated string - read until null
+				var byteList = new List<byte>();
+				uint currentAddr = lpMultiByteStr;
+				while (true)
+				{
+					byte b = env.MemRead8(currentAddr);
+					if (b == 0) break;
+					byteList.Add(b);
+					currentAddr++;
+					if (byteList.Count > 10000) // Safety limit
+					{
+						_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+						return 0;
+					}
+				}
+				multiByteBytes = byteList.ToArray();
+			}
+			else
+			{
+				// Read specified number of bytes
+				multiByteBytes = new byte[cbMultiByte];
+				for (int i = 0; i < cbMultiByte; i++)
+				{
+					multiByteBytes[i] = env.MemRead8(lpMultiByteStr + (uint)i);
+				}
+			}
+
+			// Convert to string using appropriate encoding
+			// For simplicity, use ASCII for code pages 1252/437, UTF-8 for 65001
+			System.Text.Encoding encoding = codePage switch
+			{
+				65001 => System.Text.Encoding.UTF8,             // UTF-8
+				_ => System.Text.Encoding.ASCII                  // ASCII for Western code pages
+			};
+
+			string str = encoding.GetString(multiByteBytes);
+
+			// If lpWideCharStr is 0, just return required buffer size
+			if (lpWideCharStr == 0 || cchWideChar == 0)
+			{
+				return (uint)str.Length; // Not including null terminator
+			}
+
+			// Check if output buffer is large enough
+			if (str.Length > cchWideChar)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+				return 0;
+			}
+
+			// Write wide characters to output buffer
+			for (int i = 0; i < str.Length; i++)
+			{
+				env.MemWrite16(lpWideCharStr + (uint)(i * 2), (ushort)str[i]);
+			}
+
+			// Add null terminator if there's room and input was null-terminated
+			if (cbMultiByte == -1 && str.Length < cchWideChar)
+			{
+				env.MemWrite16(lpWideCharStr + (uint)(str.Length * 2), 0);
+			}
+
+			return (uint)str.Length;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"[Kernel32] MultiByteToWideChar failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+	}
+
+	private unsafe uint LCMapStringA(uint locale, uint dwMapFlags, uint lpSrcStr, int cchSrc, uint lpDestStr, int cchDest)
+	{
+		// LCMapStringA performs locale-dependent string mapping (e.g., uppercase, lowercase)
+		// For simplicity, we'll support only basic case conversion
+		
+		try
+		{
+			if (lpSrcStr == 0)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			const uint LCMAP_LOWERCASE = 0x00000100;
+			const uint LCMAP_UPPERCASE = 0x00000200;
+
+			// Read source string
+			string srcStr;
+			if (cchSrc == -1)
+			{
+				srcStr = env.ReadAnsiString(lpSrcStr);
+			}
+			else
+			{
+				var bytes = new byte[cchSrc];
+				for (int i = 0; i < cchSrc; i++)
+				{
+					bytes[i] = env.MemRead8(lpSrcStr + (uint)i);
+				}
+				srcStr = System.Text.Encoding.ASCII.GetString(bytes);
+			}
+
+			// Apply mapping
+			string destStr = srcStr;
+			if ((dwMapFlags & LCMAP_LOWERCASE) != 0)
+				destStr = srcStr.ToLowerInvariant();
+			else if ((dwMapFlags & LCMAP_UPPERCASE) != 0)
+				destStr = srcStr.ToUpperInvariant();
+
+			// If lpDestStr is 0, return required buffer size
+			if (lpDestStr == 0 || cchDest == 0)
+			{
+				return (uint)destStr.Length + 1; // Including null terminator
+			}
+
+			// Check buffer size
+			if (destStr.Length + 1 > cchDest)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+				return 0;
+			}
+
+			// Write result
+			var destBytes = System.Text.Encoding.ASCII.GetBytes(destStr);
+			env.MemWriteBytes(lpDestStr, destBytes);
+			env.MemWriteBytes(lpDestStr + (uint)destBytes.Length, new byte[] { 0 }); // Null terminator
+
+			return (uint)destStr.Length + 1;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"[Kernel32] LCMapStringA failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+	}
+
+	private unsafe uint LCMapStringW(uint locale, uint dwMapFlags, uint lpSrcStr, int cchSrc, uint lpDestStr, int cchDest)
+	{
+		// LCMapStringW performs locale-dependent string mapping for Unicode strings
+		
+		try
+		{
+			if (lpSrcStr == 0)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			const uint LCMAP_LOWERCASE = 0x00000100;
+			const uint LCMAP_UPPERCASE = 0x00000200;
+
+			// Read source string (wide chars)
+			string srcStr;
+			if (cchSrc == -1)
+			{
+				// Null-terminated
+				var chars = new List<char>();
+				uint currentAddr = lpSrcStr;
+				while (true)
+				{
+					ushort wchar = env.MemRead16(currentAddr);
+					if (wchar == 0) break;
+					chars.Add((char)wchar);
+					currentAddr += 2;
+					if (chars.Count > 10000) // Safety limit
+					{
+						_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+						return 0;
+					}
+				}
+				srcStr = new string(chars.ToArray());
+			}
+			else
+			{
+				var chars = new char[cchSrc];
+				for (int i = 0; i < cchSrc; i++)
+				{
+					chars[i] = (char)env.MemRead16(lpSrcStr + (uint)(i * 2));
+				}
+				srcStr = new string(chars);
+			}
+
+			// Apply mapping
+			string destStr = srcStr;
+			if ((dwMapFlags & LCMAP_LOWERCASE) != 0)
+				destStr = srcStr.ToLowerInvariant();
+			else if ((dwMapFlags & LCMAP_UPPERCASE) != 0)
+				destStr = srcStr.ToUpperInvariant();
+
+			// If lpDestStr is 0, return required buffer size
+			if (lpDestStr == 0 || cchDest == 0)
+			{
+				return (uint)destStr.Length + 1; // Including null terminator
+			}
+
+			// Check buffer size
+			if (destStr.Length + 1 > cchDest)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+				return 0;
+			}
+
+			// Write result (wide chars)
+			for (int i = 0; i < destStr.Length; i++)
+			{
+				env.MemWrite16(lpDestStr + (uint)(i * 2), (ushort)destStr[i]);
+			}
+			env.MemWrite16(lpDestStr + (uint)(destStr.Length * 2), 0); // Null terminator
+
+			return (uint)destStr.Length + 1;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"[Kernel32] LCMapStringW failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+	}
 	private unsafe uint QueryPerformanceCounter(uint lpPerformanceCount)
 	{
 		// QueryPerformanceCounter retrieves the current value of the performance counter

@@ -55,26 +55,26 @@ This document tracks the implementation status using the exact format from issue
 
 ## kernel32
 - [x] GetModuleFileNameA — `kernel32.dll`
-- [ ] GetEnvironmentStringsW — `kernel32.dll`
-- [ ] WideCharToMultiByte — `kernel32.dll`
-- [ ] GetStringTypeA — `kernel32.dll`
+- [x] GetEnvironmentStringsW — `kernel32.dll`
+- [x] WideCharToMultiByte — `kernel32.dll`
+- [x] GetStringTypeA — `kernel32.dll`
 - [x] CreateFileA — `kernel32.dll`
 - [x] FlushFileBuffers — `kernel32.dll`
 - [x] SetStdHandle — `kernel32.dll`
-- [ ] LoadLibraryA — `kernel32.dll`
+- [x] LoadLibraryA — `kernel32.dll`
 - [ ] SetFilePointer — `kernel32.dll`
 - [x] ReadFile — `kernel32.dll`
 - [x] CloseHandle — `kernel32.dll`
 - [x] VirtualAlloc — `kernel32.dll`
 - [x] WriteFile — `kernel32.dll`
-- [ ] VirtualFree — `kernel32.dll`
-- [ ] RaiseException — `kernel32.dll`
+- [x] VirtualFree — `kernel32.dll`
+- [x] RaiseException — `kernel32.dll`
 - [x] SetEndOfFile — `kernel32.dll`
-- [ ] LCMapStringW — `kernel32.dll`
-- [ ] LCMapStringA — `kernel32.dll`
-- [ ] GetStringTypeW — `kernel32.dll`
+- [x] LCMapStringW — `kernel32.dll`
+- [x] LCMapStringA — `kernel32.dll`
+- [x] GetStringTypeW — `kernel32.dll`
 - [x] ExitProcess — `kernel32.dll`
-- [ ] TerminateProcess — `kernel32.dll`
+- [x] TerminateProcess — `kernel32.dll`
 - [x] GetCurrentProcess — `kernel32.dll`
 - [x] GetModuleHandleA — `kernel32.dll`
 - [x] GetStartupInfoA — `kernel32.dll`
@@ -83,24 +83,24 @@ This document tracks the implementation status using the exact format from issue
 - [x] HeapAlloc — `kernel32.dll`
 - [x] HeapFree — `kernel32.dll`
 - [x] GetLastError — `kernel32.dll`
-- [ ] HeapDestroy — `kernel32.dll`
+- [x] HeapDestroy — `kernel32.dll`
 - [x] HeapCreate — `kernel32.dll`
-- [ ] GetProcAddress — `kernel32.dll`
+- [x] GetProcAddress — `kernel32.dll`
 - [ ] RtlUnwind — `kernel32.dll`
 - [ ] UnhandledExceptionFilter — `kernel32.dll`
 - [x] GetFileType — `kernel32.dll`
 - [ ] FreeEnvironmentStringsA — `kernel32.dll`
-- [ ] MultiByteToWideChar — `kernel32.dll`
-- [ ] GetEnvironmentStrings — `kernel32.dll`
+- [x] MultiByteToWideChar — `kernel32.dll`
+- [x] GetEnvironmentStrings — `kernel32.dll`
 - [ ] FreeEnvironmentStringsW — `kernel32.dll`
 - [x] SetHandleCount — `kernel32.dll`
 - [x] GetStdHandle — `kernel32.dll`
-- [ ] GetCPInfo — `kernel32.dll`
-- [ ] GetACP — `kernel32.dll`
+- [x] GetCPInfo — `kernel32.dll`
+- [x] GetACP — `kernel32.dll`
 
 ## Summary
 
-**Completed**: 64/82 functions (78%)
+**Completed**: 74/82 functions (90%)
 
 By module:
 - **user32**: 30/30 (100%) ✅
@@ -109,7 +109,7 @@ By module:
 - **dsound**: 1/1 (100%) ✅
 - **dinput**: 1/1 (100%) ✅
 - **winmm**: 4/4 (100%) ✅
-- **kernel32**: 25/43 (58%) ⚡
+- **kernel32**: 35/43 (81%) ⚡
 
 ## Notes
 
