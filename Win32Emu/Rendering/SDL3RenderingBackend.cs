@@ -29,10 +29,12 @@ public class SDL3RenderingBackend : IDisposable
             _width = width;
             _height = height;
 
-            // Initialize SDL3
+            // Initialize SDL3 video subsystem
+            // Note: Other subsystems (Audio, Gamepad, Joystick) are initialized separately
+            // by their respective backends
             if (!SDL.Init(SDL.InitFlags.Video))
             {
-                Console.WriteLine($"[SDL3] Failed to initialize: {SDL.GetError()}");
+                Console.WriteLine($"[SDL3] Failed to initialize video: {SDL.GetError()}");
                 return false;
             }
 
@@ -175,7 +177,8 @@ public class SDL3RenderingBackend : IDisposable
                 _window = IntPtr.Zero;
             }
 
-            SDL.Quit();
+            // Only quit video subsystem - other subsystems managed by their backends
+            SDL.QuitSubSystem(SDL.InitFlags.Video);
             _initialized = false;
         }
     }
