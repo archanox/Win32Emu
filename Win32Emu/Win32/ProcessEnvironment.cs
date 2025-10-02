@@ -119,6 +119,19 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 		return result;
 	}
 
+	public string ReadAnsiString(uint addr, int maxLength)
+	{
+		var buf = new byte[maxLength];
+		for (int i = 0; i < maxLength; i++)
+		{
+			buf[i] = vm.Read8(addr + (uint)i);
+		}
+
+		var result = System.Text.Encoding.ASCII.GetString(buf);
+		Diagnostics.LogDebug($"ReadAnsiString addr=0x{addr:X8} length={maxLength} result='{result}'");
+		return result;
+	}
+
 	public uint GetEnvironmentStringsW()
 	{
 		var envBlock = new System.Text.StringBuilder();

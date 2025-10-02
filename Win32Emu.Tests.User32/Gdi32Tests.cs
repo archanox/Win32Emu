@@ -97,6 +97,101 @@ public class Gdi32Tests : IDisposable
         Assert.Equal(0u, handle);
     }
 
+    [Fact]
+    public void BeginPaint_ShouldReturnValidHDC()
+    {
+        // Arrange
+        uint hwnd = 0x00010000;
+        uint lpPaint = _testEnv.AllocateMemory(64); // PAINTSTRUCT size
+
+        // Act
+        var hdc = _testEnv.CallGdi32Api("BEGINPAINT", hwnd, lpPaint);
+
+        // Assert
+        Assert.NotEqual(0u, hdc);
+        
+        // Verify PAINTSTRUCT was filled
+        var hdcFromStruct = _testEnv.Memory.Read32(lpPaint);
+        Assert.Equal(hdc, hdcFromStruct);
+    }
+
+    [Fact]
+    public void EndPaint_ShouldReturnTrue()
+    {
+        // Arrange
+        uint hwnd = 0x00010000;
+        uint lpPaint = _testEnv.AllocateMemory(64);
+        _testEnv.CallGdi32Api("BEGINPAINT", hwnd, lpPaint);
+
+        // Act
+        var result = _testEnv.CallGdi32Api("ENDPAINT", hwnd, lpPaint);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+    }
+
+    [Fact]
+    public void FillRect_ShouldReturnSuccess()
+    {
+        // Arrange
+        uint hdc = 0x81000000;
+        uint lpRect = _testEnv.AllocateMemory(16);
+        _testEnv.Memory.Write32(lpRect, 10);      // left
+        _testEnv.Memory.Write32(lpRect + 4, 10);  // top
+        _testEnv.Memory.Write32(lpRect + 8, 100); // right
+        _testEnv.Memory.Write32(lpRect + 12, 100); // bottom
+        uint hBrush = 0x80000000;
+
+        // Act
+        var result = _testEnv.CallGdi32Api("FILLRECT", hdc, lpRect, hBrush);
+
+        // Assert
+        Assert.NotEqual(0u, result); // Non-zero on success
+    }
+
+    [Fact]
+    public void TextOutA_ShouldReturnTrue()
+    {
+        // Arrange
+        uint hdc = 0x81000000;
+        string text = "Hello, World!";
+        uint lpString = _testEnv.WriteString(text);
+
+        // Act
+        var result = _testEnv.CallGdi32Api("TEXTOUTA", hdc, 10, 20, lpString, (uint)text.Length);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+    }
+
+    [Fact]
+    public void SetBkMode_ShouldReturnPreviousMode()
+    {
+        // Arrange
+        uint hdc = 0x81000000;
+        int TRANSPARENT = 1;
+
+        // Act
+        var result = _testEnv.CallGdi32Api("SETBKMODE", hdc, (uint)TRANSPARENT);
+
+        // Assert
+        Assert.NotEqual(0u, result); // Should return previous mode
+    }
+
+    [Fact]
+    public void SetTextColor_ShouldReturnPreviousColor()
+    {
+        // Arrange
+        uint hdc = 0x81000000;
+        uint RGB_RED = 0x000000FF;
+
+        // Act
+        var result = _testEnv.CallGdi32Api("SETTEXTCOLOR", hdc, RGB_RED);
+
+        // Assert - should return previous color (black = 0x00000000)
+        Assert.Equal(0u, result);
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
