@@ -9,7 +9,7 @@ public class DllModuleExportInfoTests
 	public void IsExportImplemented_ShouldReturnTrue_ForImplementedExport()
 	{
 		// Arrange & Act
-		var isImplemented = DllModuleExportInfo.IsExportImplemented("DPlayXModule", "DirectPlayCreate");
+		var isImplemented = DllModuleExportInfo.IsExportImplemented("DPLAYX.DLL", "DirectPlayCreate");
 
 		// Assert
 		Assert.True(isImplemented);
@@ -19,7 +19,7 @@ public class DllModuleExportInfoTests
 	public void IsExportImplemented_ShouldReturnFalse_ForNonExistentExport()
 	{
 		// Arrange & Act
-		var isImplemented = DllModuleExportInfo.IsExportImplemented("DPlayXModule", "NonExistentFunction");
+		var isImplemented = DllModuleExportInfo.IsExportImplemented("DPLAYX.DLL", "NonExistentFunction");
 
 		// Assert
 		Assert.False(isImplemented);
@@ -29,7 +29,7 @@ public class DllModuleExportInfoTests
 	public void GetAllExports_ShouldReturnExportsWithAttributes()
 	{
 		// Arrange & Act
-		var exports = DllModuleExportInfo.GetAllExports("DPlayXModule");
+		var exports = DllModuleExportInfo.GetAllExports("DPLAYX.DLL");
 
 		// Assert
 		Assert.NotEmpty(exports);
@@ -43,7 +43,7 @@ public class DllModuleExportInfoTests
 	public void IsExportImplemented_ShouldBeCaseInsensitive()
 	{
 		// Arrange & Act
-		var isImplemented = DllModuleExportInfo.IsExportImplemented("DPlayXModule", "DIRECTPLAYCREATE");
+		var isImplemented = DllModuleExportInfo.IsExportImplemented("dplayx.dll", "DIRECTPLAYCREATE");
 
 		// Assert
 		Assert.True(isImplemented);
