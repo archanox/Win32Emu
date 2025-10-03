@@ -1,12 +1,14 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Win32Emu.Gui.Models;
+using Win32Emu.Gui.Configuration;
 
 namespace Win32Emu.Gui.ViewModels;
 
 public partial class SettingsViewModel : ViewModelBase
 {
     private readonly EmulatorConfiguration _configuration;
+    private readonly ConfigurationService _configService;
 
     [ObservableProperty]
     private string _renderingBackend;
@@ -45,9 +47,10 @@ public partial class SettingsViewModel : ViewModelBase
         1, 2, 3, 4
     };
 
-    public SettingsViewModel(EmulatorConfiguration configuration)
+    public SettingsViewModel(EmulatorConfiguration configuration, ConfigurationService configService)
     {
         _configuration = configuration;
+        _configService = configService;
         
         // Initialize properties from configuration
         _renderingBackend = configuration.RenderingBackend;
@@ -60,25 +63,30 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnRenderingBackendChanged(string value)
     {
         _configuration.RenderingBackend = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
     }
 
     partial void OnResolutionScaleFactorChanged(int value)
     {
         _configuration.ResolutionScaleFactor = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
     }
 
     partial void OnReservedMemoryMBChanged(int value)
     {
         _configuration.ReservedMemoryMB = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
     }
 
     partial void OnWindowsVersionChanged(string value)
     {
         _configuration.WindowsVersion = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
     }
 
     partial void OnEnableDebugModeChanged(bool value)
     {
         _configuration.EnableDebugMode = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
     }
 }

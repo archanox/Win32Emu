@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Services;
+using Win32Emu.Gui.Configuration;
 using Avalonia.Platform.Storage;
 using Win32Emu.Gui.Views;
 
@@ -21,15 +22,43 @@ public partial class GameLibraryViewModel : ViewModelBase
 
     private IStorageProvider? _storageProvider;
     private readonly EmulatorConfiguration _configuration;
+    private readonly ConfigurationService _configService;
 
-    public GameLibraryViewModel(EmulatorConfiguration configuration)
+    public GameLibraryViewModel(EmulatorConfiguration configuration, ConfigurationService configService)
     {
         _configuration = configuration;
+        _configService = configService;
+        
+        // Load games and watched folders from persistent storage
+        LoadFromConfiguration();
     }
 
     public void SetStorageProvider(IStorageProvider storageProvider)
     {
         _storageProvider = storageProvider;
+    }
+
+    private void LoadFromConfiguration()
+    {
+        // Load games from configuration
+        var savedGames = _configService.GetGames();
+        foreach (var game in savedGames)
+        {
+            Games.Add(game);
+        }
+
+        // Load watched folders from configuration
+        var savedFolders = _configService.GetWatchedFolders();
+        foreach (var folder in savedFolders)
+        {
+            WatchedFolders.Add(folder);
+        }
+    }
+
+    private void SaveToConfiguration()
+    {
+        _configService.SaveGames(Games);
+        _configService.SaveWatchedFolders(WatchedFolders);
     }
 
     [RelayCommand]
@@ -63,6 +92,9 @@ public partial class GameLibraryViewModel : ViewModelBase
                 TimesPlayed = 0
             });
         }
+
+        // Save the updated games list
+        SaveToConfiguration();
     }
 
     [RelayCommand]
@@ -89,6 +121,9 @@ public partial class GameLibraryViewModel : ViewModelBase
 
             // Scan for exe files
             await ScanFolderForGames(folderPath);
+
+            // Save the updated watched folders and games
+            SaveToConfiguration();
         }
     }
 
@@ -130,6 +165,13 @@ public partial class GameLibraryViewModel : ViewModelBase
         
         try
         {
+            // Update play count and last played time before launching
+            game.TimesPlayed++;
+            game.LastPlayed = DateTime.Now;
+            
+            // Save the updated game stats
+            SaveToConfiguration();
+            
             // Create the EmulatorWindow with its ViewModel that implements IGuiEmulatorHost
             var emulatorWindow = new EmulatorWindow();
             var viewModel = new EmulatorWindowViewModel();
@@ -144,10 +186,6 @@ public partial class GameLibraryViewModel : ViewModelBase
             // Launch the game with the view model as the host
             var service = new EmulatorService(_configuration, viewModel);
             await service.LaunchGame(game);
-            
-            // Update play count
-            game.TimesPlayed++;
-            game.LastPlayed = DateTime.Now;
         }
         catch (Exception ex)
         {
@@ -162,6 +200,9 @@ public partial class GameLibraryViewModel : ViewModelBase
         if (game != null)
         {
             Games.Remove(game);
+            
+            // Save the updated games list
+            SaveToConfiguration();
         }
     }
 }
