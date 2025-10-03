@@ -24,11 +24,11 @@ public class ConfigurationService
             Directory.CreateDirectory(win32EmuDir);
         }
 
-        _configFilePath = Path.Combine(win32EmuDir, "config.ini");
+        _configFilePath = Path.Combine(win32EmuDir, "config.json");
 
-        // Build the configuration using Config.Net with INI file storage
+        // Build the configuration using Config.Net with JSON file storage
         _config = new ConfigurationBuilder<IAppConfiguration>()
-            .UseIniFile(_configFilePath)
+            .UseJsonFile(_configFilePath)
             .Build();
     }
 
