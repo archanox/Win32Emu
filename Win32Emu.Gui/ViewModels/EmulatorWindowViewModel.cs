@@ -29,6 +29,14 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 
     // Track created windows - maps Win32 HWND to Avalonia Window
     private readonly Dictionary<uint, Window> _createdWindows = new();
+    
+    // Reference to the owner window for showing child windows
+    private Window? _ownerWindow;
+
+    public void SetOwnerWindow(Window owner)
+    {
+        _ownerWindow = owner;
+    }
 
     public void OnDebugOutput(string message, Win32Emu.DebugLevel level)
     {
@@ -95,8 +103,15 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                     OnDebugOutput($"Avalonia window closed for HWND=0x{info.Handle:X8}", Win32Emu.DebugLevel.Info);
                 };
 
-                // Show the window
-                window.Show();
+                // Show the window with owner if available
+                if (_ownerWindow != null)
+                {
+                    window.Show(_ownerWindow);
+                }
+                else
+                {
+                    window.Show();
+                }
                 
                 OnDebugOutput($"Avalonia window shown for HWND=0x{info.Handle:X8}", Win32Emu.DebugLevel.Info);
             }

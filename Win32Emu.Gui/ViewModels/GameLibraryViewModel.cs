@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Services;
 using Avalonia.Platform.Storage;
+using Win32Emu.Gui.Views;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -129,9 +130,19 @@ public partial class GameLibraryViewModel : ViewModelBase
         
         try
         {
-            // TODO: For now, use process-based launching
-            // In future updates, this will use in-process API with EmulatorWindow
-            var service = new EmulatorService(_configuration);
+            // Create the EmulatorWindow with its ViewModel that implements IGuiEmulatorHost
+            var emulatorWindow = new EmulatorWindow();
+            var viewModel = new EmulatorWindowViewModel();
+            emulatorWindow.DataContext = viewModel;
+            
+            // Set the owner window reference so created windows can use it as parent
+            viewModel.SetOwnerWindow(emulatorWindow);
+            
+            // Show the emulator window
+            emulatorWindow.Show();
+            
+            // Launch the game with the view model as the host
+            var service = new EmulatorService(_configuration, viewModel);
             await service.LaunchGame(game);
             
             // Update play count
