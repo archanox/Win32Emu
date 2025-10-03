@@ -183,6 +183,28 @@ namespace Win32Emu.Win32
 
 ## Migration Guide
 
+### All Modules Now Require Attributes
+
+**Important**: The backward compatibility mode has been removed. All modules, including Kernel32Module, now require `[DllModuleExport]` attributes.
+
+### Kernel32Module Migration
+
+Kernel32Module has been fully migrated with all 48 exported methods now using `[DllModuleExport]` attributes. Each method's ordinal is defined directly on the method:
+
+```csharp
+[DllModuleExport(23)]
+private unsafe uint GetVersion()
+{
+    // Implementation
+}
+
+[DllModuleExport(3)]
+private unsafe uint ExitProcess(uint code)
+{
+    // Implementation
+}
+```
+
 ### Converting Existing Modules
 
 Before:

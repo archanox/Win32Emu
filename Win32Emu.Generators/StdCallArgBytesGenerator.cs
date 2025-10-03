@@ -9,7 +9,7 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 {
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
-		// Find methods with [DllModuleExport] attribute for new modules
+		// Find methods with [DllModuleExport] attribute
 		var attributedMethods = context.SyntaxProvider
 			.CreateSyntaxProvider(
 				static (node, _) => node is MethodDeclarationSyntax m && m.AttributeLists.Count > 0,
@@ -28,22 +28,8 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 			.Where(static s => s is not null)!
 			.Select(static (s, _) => s!);
 
-		// LEGACY: Find all unsafe methods in Kernel32Module for backward compatibility
-		var unsafeMethods = context.SyntaxProvider
-			.CreateSyntaxProvider(
-				static (node, _) => node is MethodDeclarationSyntax m && m.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.UnsafeKeyword),
-				static (ctx, _) =>
-					ctx.SemanticModel.GetDeclaredSymbol((MethodDeclarationSyntax)ctx.Node) as IMethodSymbol)
-			.Where(static s => s is not null && s.ContainingType.ToDisplayString() == "Win32Emu.Win32.Kernel32Module")!
-			.Select(static (s, _) => s!);
-
-		// Combine both sources
-		var allMethods = attributedMethods.Collect()
-			.Combine(unsafeMethods.Collect())
-			.Select(static (pair, _) => pair.Left.Concat(pair.Right).ToList());
-
 		// Filter to module classes and compute arg bytes.
-		var exportMeta = allMethods
+		var exportMeta = attributedMethods.Collect()
 			.Select(static (methods, _) =>
 			{
 				return methods
