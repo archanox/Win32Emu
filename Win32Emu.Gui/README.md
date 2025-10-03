@@ -5,14 +5,26 @@ A cross-platform desktop GUI for Win32Emu, built with Avalonia UI.
 ## Features
 
 - **Game Library**: Manage your collection of Windows games with an intuitive card-based layout
+- **Persistent Storage**: Your game library and settings automatically persist between application launches
 - **Add Games**: Easily add games using a file picker to select Windows executables (.exe files)
+- **Folder Scanning**: Add entire folders to automatically discover Windows executables
 - **Launch Games**: Run games directly from the library with a single click
+- **Play Tracking**: Automatically tracks how many times each game has been played
 - **Emulator Settings**: Configure emulator options including:
   - Rendering Backend (Software, DirectDraw, Glide)
   - Resolution Scale Factor (1x - 4x)
   - Reserved Memory (64MB - 2048MB)
   - Windows Version (95, 98, ME, NT 4.0, 2000, XP)
   - Debug Mode toggle
+
+## Configuration Storage
+
+All settings, games, and watched folders are automatically saved to a platform-specific location:
+- **Windows**: `%APPDATA%\Win32Emu\config.ini`
+- **Linux**: `~/.config/Win32Emu/config.ini`
+- **macOS**: `~/Library/Application Support/Win32Emu/config.ini`
+
+See [CONFIGURATION.md](CONFIGURATION.md) for more details about the configuration system.
 
 ## Getting Started
 
@@ -47,6 +59,13 @@ The application follows the MVVM (Model-View-ViewModel) pattern:
 - **ViewModels**: MainWindowViewModel, GameLibraryViewModel, SettingsViewModel
 - **Views**: MainWindow, GameLibraryView, SettingsView
 - **Services**: EmulatorService (handles launching the emulator)
+- **Configuration**: ConfigurationService (manages persistent storage using Config.Net)
+
+## Technology Stack
+
+- **Avalonia UI**: Cross-platform XAML-based UI framework
+- **CommunityToolkit.Mvvm**: MVVM helpers and source generators
+- **Config.Net**: Configuration management with INI file persistence
 
 ## Future Enhancements
 
