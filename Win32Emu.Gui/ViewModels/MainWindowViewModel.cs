@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using Avalonia.Platform.Storage;
 using Win32Emu.Gui.Models;
+using Win32Emu.Gui.Configuration;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -13,12 +14,15 @@ public partial class MainWindowViewModel : ViewModelBase
     public GameLibraryViewModel GameLibraryViewModel { get; }
     public SettingsViewModel SettingsViewModel { get; }
     public ControllerMappingViewModel ControllerMappingViewModel { get; }
-    public EmulatorConfiguration Configuration { get; } = new();
+    public EmulatorConfiguration Configuration { get; }
+    private readonly ConfigurationService _configService;
 
     public MainWindowViewModel()
     {
-        GameLibraryViewModel = new GameLibraryViewModel(Configuration);
-        SettingsViewModel = new SettingsViewModel(Configuration);
+        _configService = new ConfigurationService();
+        Configuration = _configService.GetEmulatorConfiguration();
+        GameLibraryViewModel = new GameLibraryViewModel(Configuration, _configService);
+        SettingsViewModel = new SettingsViewModel(Configuration, _configService);
         ControllerMappingViewModel = new ControllerMappingViewModel();
         _currentPage = GameLibraryViewModel;
     }
