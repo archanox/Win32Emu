@@ -58,7 +58,7 @@ public class Emulator
     /// </summary>
     public bool IsPaused => !_pauseEvent.WaitOne(0);
 
-    public void LoadExecutable(string path, bool debugMode = false)
+    public void LoadExecutable(string path, bool debugMode = false, int reservedMemoryMB = 256)
     {
         _debugMode = debugMode;
 
@@ -68,7 +68,9 @@ public class Emulator
         }
 
         LogDebug($"[Loader] Loading PE: {path}");
-        _vm = new VirtualMemory();
+        // Convert MB to bytes for VirtualMemory constructor
+        ulong memorySizeBytes = (ulong)reservedMemoryMB * 1024 * 1024;
+        _vm = new VirtualMemory(memorySizeBytes);
         var loader = new PeImageLoader(_vm);
         _image = loader.Load(path);
         LogDebug($"[Loader] Image base=0x{_image.BaseAddress:X8} EntryPoint=0x{_image.EntryPointAddress:X8} Size=0x{_image.ImageSize:X}");

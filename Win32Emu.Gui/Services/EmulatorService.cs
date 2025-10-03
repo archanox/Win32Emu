@@ -36,8 +36,11 @@ public class EmulatorService
                 // Create and configure the emulator
                 _currentEmulator = new Win32Emu.Emulator(_host);
                 
-                // Load the executable
-                _currentEmulator.LoadExecutable(game.ExecutablePath, _configuration.EnableDebugMode);
+                // Load the executable with configured memory size
+                _currentEmulator.LoadExecutable(
+                    game.ExecutablePath, 
+                    _configuration.EnableDebugMode,
+                    _configuration.ReservedMemoryMB);
                 
                 // Run the emulator
                 _currentEmulator.Run();

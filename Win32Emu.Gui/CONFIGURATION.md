@@ -61,8 +61,19 @@ The `TimesPlayed` counter is automatically incremented each time a game is launc
   "ReservedMemoryMB": 256,
   "WindowsVersion": "Windows 95",
   "EnableDebugMode": false,
-  "GamesJson": "[{\"Title\":\"Game1\",\"ExecutablePath\":\"C:\\\\Games\\\\game1.exe\",\"TimesPlayed\":5,\"LastPlayed\":\"2024-01-15T10:30:00\"}]",
-  "WatchedFolders": "C:\\Games;D:\\OldGames"
+  "Games": [
+    {
+      "Title": "Game1",
+      "ExecutablePath": "C:\\Games\\game1.exe",
+      "Description": "Classic game",
+      "TimesPlayed": 5,
+      "LastPlayed": "2024-01-15T10:30:00"
+    }
+  ],
+  "WatchedFolders": [
+    "C:\\Games",
+    "D:\\OldGames"
+  ]
 }
 ```
 

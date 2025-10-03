@@ -49,8 +49,18 @@ Configuration is stored in a platform-agnostic location:
   "ReservedMemoryMB": 256,
   "WindowsVersion": "Windows 95",
   "EnableDebugMode": false,
-  "GamesJson": "[{\"Title\":\"Game1\",\"ExecutablePath\":\"...\",\"TimesPlayed\":5,\"LastPlayed\":\"...\"}]",
-  "WatchedFolders": "C:\\Games;D:\\OldGames"
+  "Games": [
+    {
+      "Title": "Game1",
+      "ExecutablePath": "...",
+      "TimesPlayed": 5,
+      "LastPlayed": "..."
+    }
+  ],
+  "WatchedFolders": [
+    "C:\\Games",
+    "D:\\OldGames"
+  ]
 }
 ```
 
