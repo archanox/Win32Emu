@@ -167,7 +167,7 @@ public partial class GameLibraryViewModel : ViewModelBase
         {
             // Update play count and last played time before launching
             game.TimesPlayed++;
-            game.LastPlayed = DateTime.Now;
+            game.LastPlayed = DateTime.UtcNow;
             
             // Save the updated game stats
             SaveToConfiguration();
