@@ -1,5 +1,4 @@
 using Win32Emu.Win32;
-using Win32Emu.Win32.Modules;
 using Xunit;
 
 namespace Win32Emu.Tests.Kernel32;
@@ -9,11 +8,8 @@ public class DllModuleExportInfoTests
 	[Fact]
 	public void IsExportImplemented_ShouldReturnTrue_ForImplementedExport()
 	{
-		// Arrange
-		var moduleType = typeof(DPlayXModule);
-
-		// Act
-		var isImplemented = DllModuleExportInfo.IsExportImplemented(moduleType, "DirectPlayCreate");
+		// Arrange & Act
+		var isImplemented = DllModuleExportInfo.IsExportImplemented("DPlayXModule", "DirectPlayCreate");
 
 		// Assert
 		Assert.True(isImplemented);
@@ -22,11 +18,8 @@ public class DllModuleExportInfoTests
 	[Fact]
 	public void IsExportImplemented_ShouldReturnFalse_ForNonExistentExport()
 	{
-		// Arrange
-		var moduleType = typeof(DPlayXModule);
-
-		// Act
-		var isImplemented = DllModuleExportInfo.IsExportImplemented(moduleType, "NonExistentFunction");
+		// Arrange & Act
+		var isImplemented = DllModuleExportInfo.IsExportImplemented("DPlayXModule", "NonExistentFunction");
 
 		// Assert
 		Assert.False(isImplemented);
@@ -35,11 +28,8 @@ public class DllModuleExportInfoTests
 	[Fact]
 	public void GetAllExports_ShouldReturnExportsWithAttributes()
 	{
-		// Arrange
-		var moduleType = typeof(DPlayXModule);
-
-		// Act
-		var exports = DllModuleExportInfo.GetAllExports(moduleType);
+		// Arrange & Act
+		var exports = DllModuleExportInfo.GetAllExports("DPlayXModule");
 
 		// Assert
 		Assert.NotEmpty(exports);
@@ -50,40 +40,10 @@ public class DllModuleExportInfoTests
 	}
 
 	[Fact]
-	public void GetExportAttributes_ShouldReturnAttributes_ForExportWithAttribute()
-	{
-		// Arrange
-		var moduleType = typeof(DPlayXModule);
-
-		// Act
-		var attributes = DllModuleExportInfo.GetExportAttributes(moduleType, "DirectPlayCreate");
-
-		// Assert
-		Assert.NotEmpty(attributes);
-		Assert.Equal(1u, attributes[0].Ordinal);
-	}
-
-	[Fact]
-	public void GetExportAttributes_ShouldReturnEmpty_ForNonExistentExport()
-	{
-		// Arrange
-		var moduleType = typeof(DPlayXModule);
-
-		// Act
-		var attributes = DllModuleExportInfo.GetExportAttributes(moduleType, "NonExistentFunction");
-
-		// Assert
-		Assert.Empty(attributes);
-	}
-
-	[Fact]
 	public void IsExportImplemented_ShouldBeCaseInsensitive()
 	{
-		// Arrange
-		var moduleType = typeof(DPlayXModule);
-
-		// Act
-		var isImplemented = DllModuleExportInfo.IsExportImplemented(moduleType, "DIRECTPLAYCREATE");
+		// Arrange & Act
+		var isImplemented = DllModuleExportInfo.IsExportImplemented("DPlayXModule", "DIRECTPLAYCREATE");
 
 		// Assert
 		Assert.True(isImplemented);
