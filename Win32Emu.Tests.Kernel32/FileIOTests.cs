@@ -5,11 +5,11 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for Kernel32 file I/O functions like CreateFileA, ReadFile, WriteFile, CloseHandle, GetFileType
 /// </summary>
-public class FileIOTests : IDisposable
+public class FileIoTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;
 
-    public FileIOTests()
+    public FileIoTests()
     {
         _testEnv = new TestEnvironment();
     }
@@ -135,7 +135,10 @@ public class FileIOTests : IDisposable
             0, 4, 0x80, 0);
         
         // Skip test if file creation failed
-        if (handle == 0xFFFFFFFF) return;
+        if (handle == 0xFFFFFFFF)
+        {
+	        return;
+        }
 
         // Act
         var result = _testEnv.CallKernel32Api("CLOSEHANDLE", handle);
@@ -170,7 +173,10 @@ public class FileIOTests : IDisposable
             0, 4, 0x80, 0);
         
         // Skip test if file creation failed
-        if (handle == 0xFFFFFFFF) return;
+        if (handle == 0xFFFFFFFF)
+        {
+	        return;
+        }
 
         // Act
         var fileType = _testEnv.CallKernel32Api("GETFILETYPE", handle);

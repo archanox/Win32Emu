@@ -18,14 +18,14 @@ public class MultimediaTests : IDisposable
     public void DirectSoundCreate_ShouldReturnSuccess()
     {
         // Arrange
-        uint lplpDS = _testEnv.AllocateMemory(4);
+        var lplpDs = _testEnv.AllocateMemory(4);
 
         // Act
-        var result = _testEnv.CallDSoundApi("DIRECTSOUNDCREATE", 0u, lplpDS, 0u);
+        var result = _testEnv.CallDSoundApi("DIRECTSOUNDCREATE", 0u, lplpDs, 0u);
 
         // Assert
         Assert.Equal(0u, result); // DS_OK
-        var dsHandle = _testEnv.Memory.Read32(lplpDS);
+        var dsHandle = _testEnv.Memory.Read32(lplpDs);
         Assert.NotEqual(0u, dsHandle);
     }
 
@@ -33,7 +33,7 @@ public class MultimediaTests : IDisposable
     public void DirectInputCreateA_ShouldReturnSuccess()
     {
         // Arrange
-        uint lplpDirectInput = _testEnv.AllocateMemory(4);
+        var lplpDirectInput = _testEnv.AllocateMemory(4);
 
         // Act
         var result = _testEnv.CallDInputApi("DIRECTINPUTCREATEA", 0u, 0x0300u, lplpDirectInput, 0u);
@@ -48,9 +48,9 @@ public class MultimediaTests : IDisposable
     public void TimeGetTime_ShouldReturnIncreasingValues()
     {
         // Act
-        var time1 = _testEnv.CallWinMMApi("TIMEGETTIME");
-        System.Threading.Thread.Sleep(10); // Sleep 10ms
-        var time2 = _testEnv.CallWinMMApi("TIMEGETTIME");
+        var time1 = _testEnv.CallWinMmApi("TIMEGETTIME");
+        Thread.Sleep(10); // Sleep 10ms
+        var time2 = _testEnv.CallWinMmApi("TIMEGETTIME");
 
         // Assert
         Assert.True(time2 >= time1); // Time should not go backwards
@@ -60,7 +60,7 @@ public class MultimediaTests : IDisposable
     public void TimeBeginPeriod_ShouldReturnSuccess()
     {
         // Act
-        var result = _testEnv.CallWinMMApi("TIMEBEGINPERIOD", 1u);
+        var result = _testEnv.CallWinMmApi("TIMEBEGINPERIOD", 1u);
 
         // Assert
         Assert.Equal(0u, result); // TIMERR_NOERROR
@@ -70,7 +70,7 @@ public class MultimediaTests : IDisposable
     public void TimeEndPeriod_ShouldReturnSuccess()
     {
         // Act
-        var result = _testEnv.CallWinMMApi("TIMEENDPERIOD", 1u);
+        var result = _testEnv.CallWinMmApi("TIMEENDPERIOD", 1u);
 
         // Assert
         Assert.Equal(0u, result); // TIMERR_NOERROR
@@ -80,7 +80,7 @@ public class MultimediaTests : IDisposable
     public void TimeKillEvent_ShouldReturnSuccess()
     {
         // Act
-        var result = _testEnv.CallWinMMApi("TIMEKILLEVENT", 1u);
+        var result = _testEnv.CallWinMmApi("TIMEKILLEVENT", 1u);
 
         // Assert
         Assert.Equal(0u, result); // TIMERR_NOERROR
@@ -90,7 +90,7 @@ public class MultimediaTests : IDisposable
     public void GetDeviceCaps_ShouldReturnResolution()
     {
         // Arrange
-        uint hdc = 0x81000000;
+        var hdc = 0x81000000;
 
         // Act - HORZRES = 8
         var width = _testEnv.CallGdi32Api("GETDEVICECAPS", hdc, 8);

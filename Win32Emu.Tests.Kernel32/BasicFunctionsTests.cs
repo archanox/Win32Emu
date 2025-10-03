@@ -6,7 +6,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for basic Kernel32 functions like GetVersion, GetLastError, SetLastError
 /// </summary>
-public class BasicFunctionsTests : IDisposable
+public sealed class BasicFunctionsTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;
 
@@ -234,7 +234,7 @@ public class BasicFunctionsTests : IDisposable
         var result1 = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", counterPtr1);
         
         // Small delay to ensure different timestamps
-        System.Threading.Thread.Sleep(1);
+        Thread.Sleep(1);
         
         var result2 = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", counterPtr2);
 
@@ -273,10 +273,10 @@ public class BasicFunctionsTests : IDisposable
         var testString = _testEnv.WriteString("A");
         var charTypeBuffer = _testEnv.AllocateMemory(2); // 1 character * 2 bytes
         const uint locale = 0x0409; // English (US) locale
-        const uint CT_CTYPE1 = 1; // Character type 1
+        const uint ctCtype1 = 1; // Character type 1
 
         // Act
-        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, testString, 1u, charTypeBuffer);
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, testString, 1u, charTypeBuffer);
 
         // Assert
         Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
@@ -289,10 +289,10 @@ public class BasicFunctionsTests : IDisposable
         var testString = _testEnv.WriteString("Hello123");
         var charTypeBuffer = _testEnv.AllocateMemory(8 * 2); // 8 characters * 2 bytes per character type
         const uint locale = 0x0409; // English (US) locale
-        const uint CT_CTYPE1 = 1; // Character type 1
+        const uint ctCtype1 = 1; // Character type 1
 
         // Act
-        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, testString, unchecked((uint)-1), charTypeBuffer);
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, testString, unchecked((uint)-1), charTypeBuffer);
 
         // Assert
         Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
@@ -321,10 +321,10 @@ public class BasicFunctionsTests : IDisposable
         var testString = _testEnv.WriteString("A !"); 
         var charTypeBuffer = _testEnv.AllocateMemory(3 * 2); // 3 characters * 2 bytes per character type
         const uint locale = 0x0409; // English (US) locale
-        const uint CT_CTYPE1 = 1; // Character type 1
+        const uint ctCtype1 = 1; // Character type 1
 
         // Act
-        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, testString, unchecked((uint)-1), charTypeBuffer);
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, testString, unchecked((uint)-1), charTypeBuffer);
 
         // Assert
         Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
@@ -352,10 +352,10 @@ public class BasicFunctionsTests : IDisposable
         const uint nullString = 0;
         var charTypeBuffer = _testEnv.AllocateMemory(10);
         const uint locale = 0x0409;
-        const uint CT_CTYPE1 = 1;
+        const uint ctCtype1 = 1;
 
         // Act
-        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, nullString, 1, charTypeBuffer);
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, nullString, 1, charTypeBuffer);
 
         // Assert
         Assert.Equal(NativeTypes.Win32Bool.FALSE, result);
@@ -368,10 +368,10 @@ public class BasicFunctionsTests : IDisposable
         var testString = _testEnv.WriteString("Test");
         const uint nullBuffer = 0;
         const uint locale = 0x0409;
-        const uint CT_CTYPE1 = 1;
+        const uint ctCtype1 = 1;
 
         // Act
-        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, testString, unchecked((uint)-1), nullBuffer);
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, testString, unchecked((uint)-1), nullBuffer);
 
         // Assert
         Assert.Equal(NativeTypes.Win32Bool.FALSE, result);
@@ -384,10 +384,10 @@ public class BasicFunctionsTests : IDisposable
         var testString = _testEnv.WriteString("Hello123");
         var charTypeBuffer = _testEnv.AllocateMemory(3 * 2); // Only process first 3 characters
         const uint locale = 0x0409;
-        const uint CT_CTYPE1 = 1;
+        const uint ctCtype1 = 1;
 
         // Act - only process first 3 characters ("Hel")
-        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, CT_CTYPE1, testString, 3, charTypeBuffer);
+        var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, testString, 3, charTypeBuffer);
 
         // Assert
         Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
@@ -536,9 +536,9 @@ public class BasicFunctionsTests : IDisposable
         var totalChars = includeNullTerminator ? wideChars.Length + 1 : wideChars.Length;
         var addr = _testEnv.AllocateMemory((uint)(totalChars * 2)); // 2 bytes per wide char
         
-        for (int i = 0; i < wideChars.Length; i++)
+        for (var i = 0; i < wideChars.Length; i++)
         {
-            _testEnv.Memory.Write16((uint)(addr + i * 2), (ushort)wideChars[i]);
+            _testEnv.Memory.Write16((uint)(addr + i * 2), wideChars[i]);
         }
         
         if (includeNullTerminator)

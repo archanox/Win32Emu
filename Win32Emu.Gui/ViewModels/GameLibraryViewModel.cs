@@ -1,10 +1,10 @@
 using System.Collections.ObjectModel;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Services;
-using Win32Emu.Gui.Configuration;
-using Avalonia.Platform.Storage;
 using Win32Emu.Gui.Views;
 
 namespace Win32Emu.Gui.ViewModels;
@@ -64,7 +64,10 @@ public partial class GameLibraryViewModel : ViewModelBase
     [RelayCommand]
     private async Task AddGame()
     {
-        if (_storageProvider == null) return;
+        if (_storageProvider == null)
+        {
+	        return;
+        }
 
         var files = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -100,7 +103,10 @@ public partial class GameLibraryViewModel : ViewModelBase
     [RelayCommand]
     private async Task AddFolder()
     {
-        if (_storageProvider == null) return;
+        if (_storageProvider == null)
+        {
+	        return;
+        }
 
         var folders = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
@@ -161,8 +167,11 @@ public partial class GameLibraryViewModel : ViewModelBase
     [RelayCommand]
     private async Task LaunchGame(Game? game)
     {
-        if (game == null) return;
-        
+        if (game == null)
+        {
+	        return;
+        }
+
         try
         {
             // Update play count and last played time before launching

@@ -204,7 +204,7 @@ public class WindowTests : IDisposable
         var classNamePtr = _testEnv.WriteString("TestClass");
         var titlePtr = _testEnv.WriteString("Test Window");
 
-        const uint CW_USEDEFAULT = 0x80000000;
+        const uint cwUsedefault = 0x80000000;
 
         // Act - using CW_USEDEFAULT should still create a valid window
         var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
@@ -212,10 +212,10 @@ public class WindowTests : IDisposable
             classNamePtr,   // lpClassName
             titlePtr,       // lpWindowName
             NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
-            CW_USEDEFAULT,  // x
-            CW_USEDEFAULT,  // y
-            CW_USEDEFAULT,  // width
-            CW_USEDEFAULT,  // height
+            cwUsedefault,  // x
+            cwUsedefault,  // y
+            cwUsedefault,  // width
+            cwUsedefault,  // height
             0,              // hWndParent
             0,              // hMenu
             0,              // hInstance
@@ -231,7 +231,7 @@ public class WindowTests : IDisposable
     {
         // Arrange
         uint hwnd = 0x00010000;
-        uint lpPoint = _testEnv.AllocateMemory(8); // POINT structure
+        var lpPoint = _testEnv.AllocateMemory(8); // POINT structure
         _testEnv.Memory.Write32(lpPoint, 10);     // x
         _testEnv.Memory.Write32(lpPoint + 4, 20); // y
 
@@ -246,7 +246,7 @@ public class WindowTests : IDisposable
     public void SetRect_ShouldInitializeRectCorrectly()
     {
         // Arrange
-        uint lpRect = _testEnv.AllocateMemory(16); // RECT structure
+        var lpRect = _testEnv.AllocateMemory(16); // RECT structure
 
         // Act
         var result = _testEnv.CallUser32Api("SETRECT", lpRect, 10u, 20u, 100u, 200u);
@@ -264,7 +264,7 @@ public class WindowTests : IDisposable
     {
         // Arrange
         uint hwnd = 0x00010000;
-        uint lpRect = _testEnv.AllocateMemory(16);
+        var lpRect = _testEnv.AllocateMemory(16);
 
         // Act
         var result = _testEnv.CallUser32Api("GETCLIENTRECT", hwnd, lpRect);
@@ -282,7 +282,7 @@ public class WindowTests : IDisposable
     {
         // Arrange
         uint hwnd = 0x00010000;
-        uint lpRect = _testEnv.AllocateMemory(16);
+        var lpRect = _testEnv.AllocateMemory(16);
 
         // Act
         var result = _testEnv.CallUser32Api("GETWINDOWRECT", hwnd, lpRect);
@@ -366,7 +366,7 @@ public class WindowTests : IDisposable
     public void PeekMessageA_ShouldReturnZeroWhenNoMessage()
     {
         // Arrange
-        uint lpMsg = _testEnv.AllocateMemory(28); // MSG structure
+        var lpMsg = _testEnv.AllocateMemory(28); // MSG structure
 
         // Act
         var result = _testEnv.CallUser32Api("PEEKMESSAGEA", lpMsg, 0u, 0u, 0u, 0u);
@@ -392,8 +392,8 @@ public class WindowTests : IDisposable
     public void MessageBoxA_ShouldReturnOK()
     {
         // Arrange
-        uint lpText = _testEnv.WriteString("Test message");
-        uint lpCaption = _testEnv.WriteString("Test caption");
+        var lpText = _testEnv.WriteString("Test message");
+        var lpCaption = _testEnv.WriteString("Test caption");
 
         // Act
         var result = _testEnv.CallUser32Api("MESSAGEBOXA", 0u, lpText, lpCaption, 0u);

@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -17,7 +15,7 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 			.CreateSyntaxProvider(
 				static (node, _) => node is MethodDeclarationSyntax m && m.Modifiers.Any(SyntaxKind.UnsafeKeyword),
 				static (ctx, _) =>
-					ctx.SemanticModel.GetDeclaredSymbol((MethodDeclarationSyntax)ctx.Node) as IMethodSymbol)
+					ctx.SemanticModel.GetDeclaredSymbol((MethodDeclarationSyntax)ctx.Node))
 			.Where(static s => s is not null)!
 			.Select(static (s, _) => s!);
 
@@ -70,7 +68,10 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 	private static int GetParamSize(ITypeSymbol t)
 	{
 		if (t is IPointerTypeSymbol)
+		{
 			return 4;
+		}
+
 		var name = t.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 		return name switch
 		{
@@ -88,8 +89,8 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 
 		public void Deconstruct(out string name, out int argBytes)
 		{
-			name = this.Name;
-			argBytes = this.ArgBytes;
+			name = Name;
+			argBytes = ArgBytes;
 		}
 	}
 }

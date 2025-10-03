@@ -92,7 +92,7 @@ public class I486InstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0xAABBCCDDu, _helper.GetReg("EBX"));
-        Assert.True(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be set when values are equal");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set when values are equal");
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public class I486InstructionTests : IDisposable
         // Assert
         Assert.Equal(0x22222222u, _helper.GetReg("EAX"));
         Assert.Equal(0x22222222u, _helper.GetReg("EBX")); // Should not change
-        Assert.False(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be clear when values are not equal");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear when values are not equal");
     }
 
     [Fact]
@@ -145,8 +145,8 @@ public class I486InstructionTests : IDisposable
         // Assert
         Assert.Equal(0x00000000u, _helper.GetReg("EAX")); // Overflow to 0
         Assert.Equal(0xFFFFFFFFu, _helper.GetReg("EBX")); // original EAX
-        Assert.True(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be set for zero result");
-        Assert.True(_helper.IsFlagSet(CpuFlag.CF), "CF should be set for carry");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set for zero result");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set for carry");
     }
 
     [Fact]

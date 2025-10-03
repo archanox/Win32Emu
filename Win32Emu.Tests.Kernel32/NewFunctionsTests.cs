@@ -167,10 +167,10 @@ public class NewFunctionsTests : IDisposable
         Assert.Equal((uint)testString.Length, result);
         
         // Verify the converted string
-        for (int i = 0; i < testString.Length; i++)
+        for (var i = 0; i < testString.Length; i++)
         {
             var wideChar = _testEnv.Memory.Read16(wideCharBuffer + (uint)(i * 2));
-            Assert.Equal((ushort)testString[i], wideChar);
+            Assert.Equal(testString[i], wideChar);
         }
     }
 
@@ -185,11 +185,11 @@ public class NewFunctionsTests : IDisposable
         const string testString = "hello";
         var srcPtr = _testEnv.WriteString(testString);
         var destBuffer = _testEnv.AllocateMemory(20);
-        const uint LCMAP_UPPERCASE = 0x00000200;
+        const uint lcmapUppercase = 0x00000200;
 
         // Act
         var result = _testEnv.CallKernel32Api("LCMAPSTRINGA", 
-            0, LCMAP_UPPERCASE, srcPtr, unchecked((uint)-1), destBuffer, 20);
+            0, lcmapUppercase, srcPtr, unchecked((uint)-1), destBuffer, 20);
 
         // Assert
         Assert.True(result > 0);
@@ -204,11 +204,11 @@ public class NewFunctionsTests : IDisposable
         const string testString = "WORLD";
         var srcPtr = _testEnv.WriteString(testString);
         var destBuffer = _testEnv.AllocateMemory(20);
-        const uint LCMAP_LOWERCASE = 0x00000100;
+        const uint lcmapLowercase = 0x00000100;
 
         // Act
         var result = _testEnv.CallKernel32Api("LCMAPSTRINGA", 
-            0, LCMAP_LOWERCASE, srcPtr, unchecked((uint)-1), destBuffer, 20);
+            0, lcmapLowercase, srcPtr, unchecked((uint)-1), destBuffer, 20);
 
         // Assert
         Assert.True(result > 0);
@@ -227,11 +227,11 @@ public class NewFunctionsTests : IDisposable
         const string testString = "hello";
         var srcPtr = WriteWideString(testString);
         var destBuffer = _testEnv.AllocateMemory(40);
-        const uint LCMAP_UPPERCASE = 0x00000200;
+        const uint lcmapUppercase = 0x00000200;
 
         // Act
         var result = _testEnv.CallKernel32Api("LCMAPSTRINGW", 
-            0, LCMAP_UPPERCASE, srcPtr, unchecked((uint)-1), destBuffer, 20);
+            0, lcmapUppercase, srcPtr, unchecked((uint)-1), destBuffer, 20);
 
         // Assert
         Assert.True(result > 0);
@@ -284,9 +284,9 @@ public class NewFunctionsTests : IDisposable
     private uint WriteWideString(string str)
     {
         var ptr = _testEnv.AllocateMemory((uint)((str.Length + 1) * 2));
-        for (int i = 0; i < str.Length; i++)
+        for (var i = 0; i < str.Length; i++)
         {
-            _testEnv.Memory.Write16(ptr + (uint)(i * 2), (ushort)str[i]);
+            _testEnv.Memory.Write16(ptr + (uint)(i * 2), str[i]);
         }
         _testEnv.Memory.Write16(ptr + (uint)(str.Length * 2), 0); // Null terminator
         return ptr;
@@ -299,7 +299,11 @@ public class NewFunctionsTests : IDisposable
         while (true)
         {
             var wchar = _testEnv.Memory.Read16(ptr + offset);
-            if (wchar == 0) break;
+            if (wchar == 0)
+            {
+	            break;
+            }
+
             chars.Add((char)wchar);
             offset += 2;
         }

@@ -20,7 +20,11 @@ public readonly struct LpStr(uint address)
 		for (var i = 0; i < max; i++)
 		{
 			var b = mem.Read8(a++);
-			if (b == 0) break;
+			if (b == 0)
+			{
+				break;
+			}
+
 			buf.Add(b);
 		}
 		return Encoding.ASCII.GetString(buf.ToArray());

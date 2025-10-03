@@ -1,10 +1,6 @@
-using Win32Emu.Cpu.IcedImpl;
-using Win32Emu.Memory;
+using Win32Emu.Cpu.Iced;
 using Win32Emu.Debugging;
-using Xunit;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Kernel32;
 
@@ -16,7 +12,7 @@ public class CpuDebuggingTests
     [Fact]
     public void TestEnhancedCpuDebugger()
     {
-        var memory = new VirtualMemory(512 * 1024 * 1024);
+        var memory = new VirtualMemory();
         var cpu = new IcedCpu(memory);
         var debugger = new EnhancedCpuDebugger(cpu, memory);
         
@@ -47,14 +43,14 @@ public class CpuDebuggingTests
         
         // Verify that debugging info was captured
         var lastState = debugger.GetLastRegisterState();
-        Assert.Equal(0x00000001u, lastState.EBP);
-        Assert.Equal(0x00401000u, lastState.EIP);
+        Assert.Equal(0x00000001u, lastState.Ebp);
+        Assert.Equal(0x00401000u, lastState.Eip);
     }
     
     [Fact]
     public void TestInstructionTracing()
     {
-        var memory = new VirtualMemory(512 * 1024 * 1024);
+        var memory = new VirtualMemory();
         var cpu = new IcedCpu(memory);
         var debugger = new EnhancedCpuDebugger(cpu, memory);
         
@@ -91,14 +87,14 @@ public class CpuDebuggingTests
         Assert.True(trace.Count >= 2);
         
         // First instruction should be PUSH EBP at 0x00401000
-        Assert.Equal(0x00401000u, trace[0].EIP);
+        Assert.Equal(0x00401000u, trace[0].Eip);
         Assert.Contains("55", trace[0].InstructionBytes); // PUSH EBP opcode
     }
     
     [Fact]
     public void TestProblematicEipDetection()
     {
-        var memory = new VirtualMemory(512 * 1024 * 1024);
+        var memory = new VirtualMemory();
         var cpu = new IcedCpu(memory);
         var debugger = new EnhancedCpuDebugger(cpu, memory);
         
@@ -107,12 +103,12 @@ public class CpuDebuggingTests
         cpu.SetRegister("EBP", 0x00000000); // Problematic register state
         
         // Test problematic EIP detection
-        Assert.True(debugger.IsProblematicEip(0x0F000512));
+        Assert.True(debugger.IsProblematicEip());
         Assert.False(debugger.IsProblematicEip(0x0F000513));
         
         // Test that it doesn't crash when handling the problematic EIP
         debugger.LogToConsole = false; // Silent for test
-        debugger.HandleProblematicEip(0x0F000512);
+        debugger.HandleProblematicEip();
         
         // First capture state to ensure _lastState is set  
         debugger.CheckRegistersBeforeStep();
@@ -120,14 +116,14 @@ public class CpuDebuggingTests
         // Verify state was captured correctly
         var state = debugger.GetLastRegisterState();
         Assert.NotNull(state);
-        Assert.Equal(0x0F000512u, state.EIP);
-        Assert.Equal(0x00000000u, state.EBP);
+        Assert.Equal(0x0F000512u, state.Eip);
+        Assert.Equal(0x00000000u, state.Ebp);
     }
     
     [Fact]
     public void TestCpuDebuggingExtensions()
     {
-        var memory = new VirtualMemory(512 * 1024 * 1024);
+        var memory = new VirtualMemory();
         var cpu = new IcedCpu(memory);
         
         // Initialize registers to known state first
@@ -138,7 +134,7 @@ public class CpuDebuggingTests
         Assert.False(cpu.HasSuspiciousRegisters()); // Should be fine initially
         
         cpu.SetRegister("EBP", 0x00000500); // Set to suspicious value
-        Assert.True(cpu.HasSuspiciousRegisters(0x1000)); // Should detect it
+        Assert.True(cpu.HasSuspiciousRegisters()); // Should detect it
         
         // Test debugger creation
         var debugger = cpu.CreateDebugger(memory);
@@ -149,7 +145,7 @@ public class CpuDebuggingTests
     [Fact]
     public void TestSyntheticImportAddressDetection()
     {
-        var memory = new VirtualMemory(512 * 1024 * 1024);
+        var memory = new VirtualMemory();
         var cpu = new IcedCpu(memory);
         
         // Set up a synthetic import address with INT3 stub (like PeImageLoader creates)

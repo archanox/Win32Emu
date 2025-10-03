@@ -1,8 +1,6 @@
 using AsmResolver;
 using AsmResolver.PE;
 using AsmResolver.PE.File;
-using AsmResolver.PE.Imports;
-using AsmResolver.PE.Exports;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Loader;
@@ -20,7 +18,9 @@ public class PeImageLoader(VirtualMemory vm)
 		var opt = pe.OptionalHeader ?? throw new InvalidOperationException("Missing optional header.");
 
 		if(opt.Magic != OptionalHeaderMagic.PE32)
+		{
 			throw new NotSupportedException("Only PE32 format is supported.");
+		}
 
 		var imageBase = (uint)opt.ImageBase;
 		var entryPoint = imageBase + opt.AddressOfEntryPoint;
@@ -29,7 +29,11 @@ public class PeImageLoader(VirtualMemory vm)
 		// Map sections (raw contents only; uninitialized data left zeroed).
 		foreach (var section in pe.Sections)
 		{
-			if (section.Contents is null) continue;
+			if (section.Contents is null)
+			{
+				continue;
+			}
+
 			vm.WriteBytes(imageBase + section.Rva, section.Contents.WriteIntoArray());
 		}
 
@@ -50,7 +54,11 @@ public class PeImageLoader(VirtualMemory vm)
 			{
 				// Prefer IAT entry RVA when available.
 				var rva = sym.AddressTableEntry?.Rva; // fallback
-				if (rva is null or 0) continue;
+				if (rva is null or 0)
+				{
+					continue;
+				}
+
 				var va = imageBase + rva.Value;
 				var synthetic = 0x0F000000u + (uint)(synth++ * 0x10u);
 				
@@ -92,7 +100,9 @@ public class PeImageLoader(VirtualMemory vm)
 		{
 			// Skip forwarded exports (they have no RVA)
 			if (export.Address == null || !export.Address.IsBounded)
+			{
 				continue;
+			}
 
 			var rva = export.Address.Rva;
 			var va = imageBase + rva;

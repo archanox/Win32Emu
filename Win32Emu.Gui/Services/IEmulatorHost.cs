@@ -3,7 +3,7 @@ namespace Win32Emu.Gui.Services;
 /// <summary>
 /// Extended interface for receiving emulator output and events in the GUI
 /// </summary>
-public interface IGuiEmulatorHost : Win32Emu.IEmulatorHost
+public interface IGuiEmulatorHost : IEmulatorHost
 {
     // OnWindowCreate is now in the base IEmulatorHost interface
     

@@ -1,15 +1,14 @@
-using Xunit;
 using Win32Emu.Rendering;
 
 namespace Win32Emu.Tests.Emulator;
 
-public class SDL3BackendTests
+public class Sdl3BackendTests
 {
     [Fact]
     public void SDL3AudioBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw even if SDL3 is not available
-        using var audioBackend = new SDL3AudioBackend();
+        using var audioBackend = new Sdl3AudioBackend();
         
         try
         {
@@ -21,7 +20,7 @@ public class SDL3BackendTests
                 Assert.Equal(0, audioBackend.ActiveStreamCount);
             }
         }
-        catch (System.DllNotFoundException)
+        catch (DllNotFoundException)
         {
             // SDL3 not available in CI - this is OK
             Assert.False(audioBackend.IsInitialized);
@@ -32,13 +31,15 @@ public class SDL3BackendTests
     public void SDL3AudioBackend_CreateStream_WhenInitialized_ShouldReturnValidId()
     {
         // Arrange
-        using var audioBackend = new SDL3AudioBackend();
+        using var audioBackend = new Sdl3AudioBackend();
         
         try
         {
             audioBackend.Initialize();
             if (!audioBackend.IsInitialized)
-                return; // Skip test if SDL3 not available
+            {
+	            return; // Skip test if SDL3 not available
+            }
 
             // Act
             var streamId = audioBackend.CreateAudioStream(44100, 2, 4096);
@@ -47,7 +48,7 @@ public class SDL3BackendTests
             Assert.NotEqual(0u, streamId);
             Assert.Equal(1, audioBackend.ActiveStreamCount);
         }
-        catch (System.DllNotFoundException)
+        catch (DllNotFoundException)
         {
             // SDL3 not available in CI - skip test
         }
@@ -57,13 +58,15 @@ public class SDL3BackendTests
     public void SDL3AudioBackend_WriteAudioData_ShouldNotThrow()
     {
         // Arrange
-        using var audioBackend = new SDL3AudioBackend();
+        using var audioBackend = new Sdl3AudioBackend();
         
         try
         {
             audioBackend.Initialize();
             if (!audioBackend.IsInitialized)
-                return; // Skip test if SDL3 not available
+            {
+	            return; // Skip test if SDL3 not available
+            }
 
             var streamId = audioBackend.CreateAudioStream(44100, 2, 4096);
             var data = new byte[4096];
@@ -74,7 +77,7 @@ public class SDL3BackendTests
             // Assert
             Assert.True(result);
         }
-        catch (System.DllNotFoundException)
+        catch (DllNotFoundException)
         {
             // SDL3 not available in CI - skip test
         }
@@ -84,7 +87,7 @@ public class SDL3BackendTests
     public void SDL3InputBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw even if SDL3 is not available
-        using var inputBackend = new SDL3InputBackend();
+        using var inputBackend = new Sdl3InputBackend();
         
         try
         {
@@ -95,7 +98,7 @@ public class SDL3BackendTests
                 Assert.True(inputBackend.IsInitialized);
             }
         }
-        catch (System.DllNotFoundException)
+        catch (DllNotFoundException)
         {
             // SDL3 not available in CI - this is OK
             Assert.False(inputBackend.IsInitialized);
@@ -106,13 +109,15 @@ public class SDL3BackendTests
     public void SDL3InputBackend_GetDevices_WhenInitialized_ShouldReturnDevices()
     {
         // Arrange
-        using var inputBackend = new SDL3InputBackend();
+        using var inputBackend = new Sdl3InputBackend();
         
         try
         {
             inputBackend.Initialize();
             if (!inputBackend.IsInitialized)
-                return; // Skip test if SDL3 not available
+            {
+	            return; // Skip test if SDL3 not available
+            }
 
             // Act
             var devices = inputBackend.GetDevices();
@@ -121,10 +126,10 @@ public class SDL3BackendTests
             Assert.NotNull(devices);
             // Should at least have keyboard and mouse
             Assert.True(devices.Count >= 2);
-            Assert.Contains(devices, d => d.Type == SDL3InputBackend.DeviceType.Keyboard);
-            Assert.Contains(devices, d => d.Type == SDL3InputBackend.DeviceType.Mouse);
+            Assert.Contains(devices, d => d.Type == Sdl3InputBackend.DeviceType.Keyboard);
+            Assert.Contains(devices, d => d.Type == Sdl3InputBackend.DeviceType.Mouse);
         }
-        catch (System.DllNotFoundException)
+        catch (DllNotFoundException)
         {
             // SDL3 not available in CI - skip test
         }
@@ -134,7 +139,7 @@ public class SDL3BackendTests
     public void SDL3AudioBackend_Dispose_ShouldNotThrow()
     {
         // Arrange
-        var audioBackend = new SDL3AudioBackend();
+        var audioBackend = new Sdl3AudioBackend();
         
         try
         {
@@ -144,7 +149,7 @@ public class SDL3BackendTests
                 audioBackend.CreateAudioStream(44100, 2, 4096);
             }
         }
-        catch (System.DllNotFoundException)
+        catch (DllNotFoundException)
         {
             // SDL3 not available - still test dispose
         }
@@ -161,13 +166,13 @@ public class SDL3BackendTests
     public void SDL3InputBackend_Dispose_ShouldNotThrow()
     {
         // Arrange
-        var inputBackend = new SDL3InputBackend();
+        var inputBackend = new Sdl3InputBackend();
         
         try
         {
             inputBackend.Initialize();
         }
-        catch (System.DllNotFoundException)
+        catch (DllNotFoundException)
         {
             // SDL3 not available - still test dispose
         }

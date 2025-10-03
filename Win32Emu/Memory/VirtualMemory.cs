@@ -1,5 +1,3 @@
-using Win32Emu;
-
 namespace Win32Emu.Memory;
 
 /// <summary>
@@ -15,26 +13,29 @@ public class VirtualMemory(ulong size = VirtualMemory.DefaultSize)
 
     private void EnsureRange(ulong addr, ulong length = 1)
     {
-        if (length == 0) return;
-        
+        if (length == 0)
+        {
+	        return;
+        }
+
         // Check for overflow in address calculation
         if (addr > ulong.MaxValue - length + 1)
         {
-            Diagnostics.LogMemoryEnsureFailure(addr, length, Size);
+            Diagnostics.Diagnostics.LogMemoryEnsureFailure(addr, length, Size);
             throw new IndexOutOfRangeException($"Memory access causes address overflow: addr=0x{addr:X}, len={length}");
         }
             
         // Check if the entire range is within bounds
         if (addr + length > (ulong)_mem.LongLength)
         {
-            Diagnostics.LogMemoryEnsureFailure(addr, length, Size);
+            Diagnostics.Diagnostics.LogMemoryEnsureFailure(addr, length, Size);
             throw new IndexOutOfRangeException($"Memory access out of range: addr=0x{addr:X}, len={length}, size=0x{(ulong)_mem.LongLength:X}");
         }
     }
 
     public byte Read8(ulong addr)
     {
-        EnsureRange(addr, 1);
+        EnsureRange(addr);
         return _mem[(int)addr];
     }
 
@@ -52,7 +53,7 @@ public class VirtualMemory(ulong size = VirtualMemory.DefaultSize)
 
     public void Write8(ulong addr, byte value)
     {
-        EnsureRange(addr, 1);
+        EnsureRange(addr);
         _mem[(int)addr] = value;
     }
 
@@ -71,7 +72,7 @@ public class VirtualMemory(ulong size = VirtualMemory.DefaultSize)
     public ulong Read64(ulong addr)
     {
         EnsureRange(addr, 8);
-        return (ulong)(Read32(addr) | ((ulong)Read32(addr + 4) << 32));
+        return Read32(addr) | ((ulong)Read32(addr + 4) << 32);
     }
 
     public void Write64(ulong addr, ulong value)

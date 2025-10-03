@@ -1,7 +1,5 @@
-using System.Reflection;
 using Win32Emu.Cpu;
 using Win32Emu.Memory;
-using Win32Emu;
 
 namespace Win32Emu.Win32;
 
@@ -16,7 +14,7 @@ public class Win32Dispatcher
     public void RegisterDynamicallyLoadedDll(string dllName)
     {
         _dynamicallyLoadedDlls.Add(dllName);
-        Diagnostics.LogInfo($"[Dispatcher] Registered dynamically loaded DLL: {dllName}");
+        Diagnostics.Diagnostics.LogInfo($"[Dispatcher] Registered dynamically loaded DLL: {dllName}");
     }
 
     public bool TryGetModule(string dllName, out IWin32ModuleUnsafe? module)
@@ -29,15 +27,15 @@ public class Win32Dispatcher
         returnValue = 0;
         stdcallArgBytes = 0;
 
-        uint esp = cpu.GetRegister("ESP");
+        var esp = cpu.GetRegister("ESP");
         byte[] stackSnippet = null;
         try { stackSnippet = memory.GetSpan(esp, 16); } catch { }
-        Diagnostics.LogInfo($"Dispatching {dll}!{export} at EIP=0x{cpu.GetEip():X8} ESP=0x{esp:X8} stack={ (stackSnippet==null?"<unreadable>":BitConverter.ToString(stackSnippet).Replace('-', ' ')) }");
+        Diagnostics.Diagnostics.LogInfo($"Dispatching {dll}!{export} at EIP=0x{cpu.GetEip():X8} ESP=0x{esp:X8} stack={ (stackSnippet==null?"<unreadable>":BitConverter.ToString(stackSnippet).Replace('-', ' ')) }");
         
         // Try to invoke with known modules first
         if (_modules.TryGetValue(dll, out var mod))
         {
-            if (mod.TryInvokeUnsafe(export, cpu, memory, out var retUnsafe))
+	        if (mod.TryInvokeUnsafe(export, cpu, memory, out var retUnsafe))
             {
                 returnValue = retUnsafe;
                 cpu.SetRegister("EAX", retUnsafe);
@@ -51,34 +49,32 @@ public class Win32Dispatcher
                 {
                     // Default to 0 for unknown functions in known modules
                     stdcallArgBytes = 0;
-                    Diagnostics.LogWarn($"No arg bytes metadata for {dll}!{export}, using 0");
+                    Diagnostics.Diagnostics.LogWarn($"No arg bytes metadata for {dll}!{export}, using 0");
                 }
                 
                 return true;
             }
-            else
-            {
-                // Known module but unknown export - log this
-                Diagnostics.LogWarn($"Unimplemented function in known module: {dll}!{export}");
-                LogUnknownFunctionCall(dll, export);
+
+	        // Known module but unknown export - log this
+	        Diagnostics.Diagnostics.LogWarn($"Unimplemented function in known module: {dll}!{export}");
+	        LogUnknownFunctionCall(dll, export);
                 
-                // Return success with default behavior
-                returnValue = 0;
-                stdcallArgBytes = 0; // Default for unknown functions
-                cpu.SetRegister("EAX", returnValue);
-                return true;
-            }
+	        // Return success with default behavior
+	        returnValue = 0;
+	        stdcallArgBytes = 0; // Default for unknown functions
+	        cpu.SetRegister("EAX", returnValue);
+	        return true;
         }
         
         // Handle unknown DLLs - this is the main enhancement
-        Diagnostics.LogWarn($"Unknown DLL function call: {dll}!{export}");
+        Diagnostics.Diagnostics.LogWarn($"Unknown DLL function call: {dll}!{export}");
         LogUnknownFunctionCall(dll, export);
         
         // Check if this DLL was dynamically loaded
-        bool isDynamicallyLoaded = _dynamicallyLoadedDlls.Contains(dll);
+        var isDynamicallyLoaded = _dynamicallyLoadedDlls.Contains(dll);
         if (isDynamicallyLoaded)
         {
-            Diagnostics.LogInfo($"Note: {dll} was dynamically loaded via LoadLibrary");
+            Diagnostics.Diagnostics.LogInfo($"Note: {dll} was dynamically loaded via LoadLibrary");
         }
         
         // Provide default behavior for unknown DLL calls
@@ -99,7 +95,7 @@ public class Win32Dispatcher
         
         if (functions.Add(export))
         {
-            Diagnostics.LogInfo($"New unimplemented function: {dll}!{export} (total for {dll}: {functions.Count})");
+            Diagnostics.Diagnostics.LogInfo($"New unimplemented function: {dll}!{export} (total for {dll}: {functions.Count})");
         }
     }
     
@@ -107,17 +103,17 @@ public class Win32Dispatcher
     {
         if (_unknownFunctionCalls.Count == 0)
         {
-            Diagnostics.LogInfo("No unknown function calls recorded.");
+            Diagnostics.Diagnostics.LogInfo("No unknown function calls recorded.");
             return;
         }
         
-        Diagnostics.LogInfo($"Summary of unknown function calls ({_unknownFunctionCalls.Count} DLLs):");
+        Diagnostics.Diagnostics.LogInfo($"Summary of unknown function calls ({_unknownFunctionCalls.Count} DLLs):");
         foreach (var (dll, functions) in _unknownFunctionCalls.OrderBy(kvp => kvp.Key))
         {
-            Diagnostics.LogInfo($"  {dll}: {functions.Count} functions");
+            Diagnostics.Diagnostics.LogInfo($"  {dll}: {functions.Count} functions");
             foreach (var func in functions.OrderBy(f => f))
             {
-                Diagnostics.LogInfo($"    - {func}");
+                Diagnostics.Diagnostics.LogInfo($"    - {func}");
             }
         }
     }

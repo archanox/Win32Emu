@@ -5,10 +5,10 @@ namespace Win32Emu.Gui.Services;
 public class EmulatorService
 {
     private readonly EmulatorConfiguration _configuration;
-    private readonly Win32Emu.IEmulatorHost? _host;
-    private Win32Emu.Emulator? _currentEmulator;
+    private readonly IEmulatorHost? _host;
+    private Emulator? _currentEmulator;
 
-    public EmulatorService(EmulatorConfiguration configuration, Win32Emu.IEmulatorHost? host = null)
+    public EmulatorService(EmulatorConfiguration configuration, IEmulatorHost? host = null)
     {
         _configuration = configuration;
         _host = host;
@@ -17,7 +17,7 @@ public class EmulatorService
     /// <summary>
     /// Get the currently running emulator instance, or null if not running
     /// </summary>
-    public Win32Emu.Emulator? CurrentEmulator => _currentEmulator;
+    public Emulator? CurrentEmulator => _currentEmulator;
 
     /// <summary>
     /// Launch game using the in-process emulator API
@@ -34,20 +34,20 @@ public class EmulatorService
             try
             {
                 // Create and configure the emulator
-                _currentEmulator = new Win32Emu.Emulator(_host);
+                _currentEmulator = new Emulator(_host);
                 
                 // Load the executable with configured memory size
                 _currentEmulator.LoadExecutable(
                     game.ExecutablePath, 
                     _configuration.EnableDebugMode,
-                    _configuration.ReservedMemoryMB);
+                    _configuration.ReservedMemoryMb);
                 
                 // Run the emulator
                 _currentEmulator.Run();
             }
             catch (Exception ex)
             {
-                _host?.OnDebugOutput($"Emulator error: {ex.Message}", Win32Emu.DebugLevel.Error);
+                _host?.OnDebugOutput($"Emulator error: {ex.Message}", DebugLevel.Error);
                 throw;
             }
             finally

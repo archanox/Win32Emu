@@ -1,4 +1,4 @@
-using Win32Emu.Cpu.IcedImpl;
+using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Debugging;
@@ -35,26 +35,35 @@ public class EnhancedCpuDebugger
         
         if (EnableSuspiciousRegisterDetection)
         {
-            if (state.EBP <= SuspiciousThreshold && state.EBP != 0)
+            if (state.Ebp <= SuspiciousThreshold && state.Ebp != 0)
             {
-                var warning = $"WARNING: EBP suspiciously small: 0x{state.EBP:X8} at EIP=0x{state.EIP:X8}";
+                var warning = $"WARNING: EBP suspiciously small: 0x{state.Ebp:X8} at EIP=0x{state.Eip:X8}";
                 warnings.Add(warning);
-                if (LogToConsole) Console.WriteLine(warning);
+                if (LogToConsole)
+                {
+	                Console.WriteLine(warning);
+                }
             }
             
-            if (state.ESP <= SuspiciousThreshold && state.ESP != 0)
+            if (state.Esp <= SuspiciousThreshold && state.Esp != 0)
             {
-                var warning = $"WARNING: ESP suspiciously small: 0x{state.ESP:X8} at EIP=0x{state.EIP:X8}";
+                var warning = $"WARNING: ESP suspiciously small: 0x{state.Esp:X8} at EIP=0x{state.Eip:X8}";
                 warnings.Add(warning);
-                if (LogToConsole) Console.WriteLine(warning);
+                if (LogToConsole)
+                {
+	                Console.WriteLine(warning);
+                }
             }
             
             // Check for frame pointer corruption (EBP should generally be >= ESP)
-            if (state.EBP != 0 && state.ESP != 0 && state.EBP < state.ESP - 0x10000)
+            if (state.Ebp != 0 && state.Esp != 0 && state.Ebp < state.Esp - 0x10000)
             {
-                var warning = $"WARNING: EBP (0x{state.EBP:X8}) much smaller than ESP (0x{state.ESP:X8})";
+                var warning = $"WARNING: EBP (0x{state.Ebp:X8}) much smaller than ESP (0x{state.Esp:X8})";
                 warnings.Add(warning);
-                if (LogToConsole) Console.WriteLine(warning);
+                if (LogToConsole)
+                {
+	                Console.WriteLine(warning);
+                }
             }
         }
         
@@ -94,11 +103,11 @@ public class EnhancedCpuDebugger
             if (LogToConsole)
             {
                 Console.WriteLine("*** MEMORY ACCESS VIOLATION DETECTED ***");
-                Console.WriteLine($"EIP: 0x{stateBefore.EIP:X8}");
+                Console.WriteLine($"EIP: 0x{stateBefore.Eip:X8}");
                 Console.WriteLine($"Instruction: {stateBefore.InstructionBytes}");
                 Console.WriteLine("Register state:");
-                Console.WriteLine($"  EAX=0x{stateBefore.EAX:X8} EBX=0x{stateBefore.EBX:X8} ECX=0x{stateBefore.ECX:X8} EDX=0x{stateBefore.EDX:X8}");
-                Console.WriteLine($"  ESI=0x{stateBefore.ESI:X8} EDI=0x{stateBefore.EDI:X8} EBP=0x{stateBefore.EBP:X8} ESP=0x{stateBefore.ESP:X8}");
+                Console.WriteLine($"  EAX=0x{stateBefore.Eax:X8} EBX=0x{stateBefore.Ebx:X8} ECX=0x{stateBefore.Ecx:X8} EDX=0x{stateBefore.Edx:X8}");
+                Console.WriteLine($"  ESI=0x{stateBefore.Esi:X8} EDI=0x{stateBefore.Edi:X8} EBP=0x{stateBefore.Ebp:X8} ESP=0x{stateBefore.Esp:X8}");
                 Console.WriteLine($"Original exception: {ex.Message}");
                 
                 // Analyze the likely cause
@@ -116,18 +125,18 @@ public class EnhancedCpuDebugger
     {
         Console.WriteLine("\n*** LIKELY CAUSE ANALYSIS ***");
         
-        if (state.EBP <= 0x10)
+        if (state.Ebp <= 0x10)
         {
             Console.WriteLine("→ CAUSE: Uninitialized or corrupted frame pointer (EBP)");
             Console.WriteLine("  SOLUTION: Check that function prologues properly execute 'PUSH EBP; MOV EBP, ESP'");
         }
-        else if (state.EBP <= SuspiciousThreshold)
+        else if (state.Ebp <= SuspiciousThreshold)
         {
             Console.WriteLine("→ CAUSE: Frame pointer (EBP) corrupted to small value");
             Console.WriteLine("  SOLUTION: Check for buffer overflows or stack corruption in previous functions");
         }
         
-        if (state.ESP <= SuspiciousThreshold)
+        if (state.Esp <= SuspiciousThreshold)
         {
             Console.WriteLine("→ CAUSE: Stack pointer (ESP) corrupted or stack overflow");
             Console.WriteLine("  SOLUTION: Check for infinite recursion or excessive local variable allocation");
@@ -170,16 +179,16 @@ public class EnhancedCpuDebugger
         
         return new CpuState
         {
-            EIP = eip,
-            EAX = _cpu.GetRegister("EAX"),
-            EBX = _cpu.GetRegister("EBX"),
-            ECX = _cpu.GetRegister("ECX"),
-            EDX = _cpu.GetRegister("EDX"),
-            ESI = _cpu.GetRegister("ESI"),
-            EDI = _cpu.GetRegister("EDI"),
-            EBP = _cpu.GetRegister("EBP"),
-            ESP = _cpu.GetRegister("ESP"),
-            EFLAGS = _cpu.GetRegister("EFLAGS"),
+            Eip = eip,
+            Eax = _cpu.GetRegister("EAX"),
+            Ebx = _cpu.GetRegister("EBX"),
+            Ecx = _cpu.GetRegister("ECX"),
+            Edx = _cpu.GetRegister("EDX"),
+            Esi = _cpu.GetRegister("ESI"),
+            Edi = _cpu.GetRegister("EDI"),
+            Ebp = _cpu.GetRegister("EBP"),
+            Esp = _cpu.GetRegister("ESP"),
+            Eflags = _cpu.GetRegister("EFLAGS"),
             InstructionBytes = instructionBytes
         };
     }
@@ -189,10 +198,13 @@ public class EnhancedCpuDebugger
     /// </summary>
     private void LogInstruction(CpuState state)
     {
-        if (!LogToConsole) return;
-        
-        Console.WriteLine($"[0x{state.EIP:X8}] {state.InstructionBytes} | " +
-                         $"EAX=0x{state.EAX:X8} EBP=0x{state.EBP:X8} ESP=0x{state.ESP:X8}");
+        if (!LogToConsole)
+        {
+	        return;
+        }
+
+        Console.WriteLine($"[0x{state.Eip:X8}] {state.InstructionBytes} | " +
+                          $"EAX=0x{state.Eax:X8} EBP=0x{state.Ebp:X8} ESP=0x{state.Esp:X8}");
     }
     
     /// <summary>
@@ -216,8 +228,8 @@ public class EnhancedCpuDebugger
     public List<CpuState> FindSuspiciousStates()
     {
         return _executionTrace.Where(state => 
-            state.EBP <= SuspiciousThreshold || 
-            state.ESP <= SuspiciousThreshold).ToList();
+            state.Ebp <= SuspiciousThreshold || 
+            state.Esp <= SuspiciousThreshold).ToList();
     }
     
     /// <summary>
@@ -233,21 +245,24 @@ public class EnhancedCpuDebugger
     /// </summary>
     public void HandleProblematicEip(uint targetEip = 0x0F000512)
     {
-        if (!IsProblematicEip(targetEip)) return;
-        
+        if (!IsProblematicEip(targetEip))
+        {
+	        return;
+        }
+
         var state = CaptureCurrentState();
         
-        Console.WriteLine($"*** FOUND PROBLEMATIC EIP! ***");
-        Console.WriteLine($"EIP=0x{state.EIP:X8} EBP=0x{state.EBP:X8} ESP=0x{state.ESP:X8}");
-        Console.WriteLine($"EAX=0x{state.EAX:X8} EBX=0x{state.EBX:X8} ECX=0x{state.ECX:X8} EDX=0x{state.EDX:X8}");
-        Console.WriteLine($"ESI=0x{state.ESI:X8} EDI=0x{state.EDI:X8}");
+        Console.WriteLine("*** FOUND PROBLEMATIC EIP! ***");
+        Console.WriteLine($"EIP=0x{state.Eip:X8} EBP=0x{state.Ebp:X8} ESP=0x{state.Esp:X8}");
+        Console.WriteLine($"EAX=0x{state.Eax:X8} EBX=0x{state.Ebx:X8} ECX=0x{state.Ecx:X8} EDX=0x{state.Edx:X8}");
+        Console.WriteLine($"ESI=0x{state.Esi:X8} EDI=0x{state.Edi:X8}");
         Console.WriteLine($"Instruction bytes: {state.InstructionBytes}");
         Console.WriteLine("*** STOPPING BEFORE CRASH ***");
         
         // Analyze what would happen
-        if (state.EBP <= 0x10)
+        if (state.Ebp <= 0x10)
         {
-            Console.WriteLine($"ANALYSIS: EBP=0x{state.EBP:X8} is extremely small - any negative displacement will wrap around!");
+            Console.WriteLine($"ANALYSIS: EBP=0x{state.Ebp:X8} is extremely small - any negative displacement will wrap around!");
             Console.WriteLine("This will likely cause the 0xFFFFFFFD error.");
         }
     }
@@ -258,15 +273,15 @@ public class EnhancedCpuDebugger
 /// </summary>
 public record CpuState
 {
-    public uint EIP { get; init; }
-    public uint EAX { get; init; }
-    public uint EBX { get; init; }
-    public uint ECX { get; init; }
-    public uint EDX { get; init; }
-    public uint ESI { get; init; }
-    public uint EDI { get; init; }
-    public uint EBP { get; init; }
-    public uint ESP { get; init; }
-    public uint EFLAGS { get; init; }
+    public uint Eip { get; init; }
+    public uint Eax { get; init; }
+    public uint Ebx { get; init; }
+    public uint Ecx { get; init; }
+    public uint Edx { get; init; }
+    public uint Esi { get; init; }
+    public uint Edi { get; init; }
+    public uint Ebp { get; init; }
+    public uint Esp { get; init; }
+    public uint Eflags { get; init; }
     public string InstructionBytes { get; init; } = "";
 }

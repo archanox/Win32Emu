@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Configuration;
+using Win32Emu.Gui.Models;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -17,7 +17,7 @@ public partial class SettingsViewModel : ViewModelBase
     private int _resolutionScaleFactor;
 
     [ObservableProperty]
-    private int _reservedMemoryMB;
+    private int _reservedMemoryMb;
 
     [ObservableProperty]
     private string _windowsVersion;
@@ -55,7 +55,7 @@ public partial class SettingsViewModel : ViewModelBase
         // Initialize properties from configuration
         _renderingBackend = configuration.RenderingBackend;
         _resolutionScaleFactor = configuration.ResolutionScaleFactor;
-        _reservedMemoryMB = configuration.ReservedMemoryMB;
+        _reservedMemoryMb = configuration.ReservedMemoryMb;
         _windowsVersion = configuration.WindowsVersion;
         _enableDebugMode = configuration.EnableDebugMode;
     }
@@ -72,9 +72,9 @@ public partial class SettingsViewModel : ViewModelBase
         _configService.SaveEmulatorConfiguration(_configuration);
     }
 
-    partial void OnReservedMemoryMBChanged(int value)
+    partial void OnReservedMemoryMbChanged(int value)
     {
-        _configuration.ReservedMemoryMB = value;
+        _configuration.ReservedMemoryMb = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
 

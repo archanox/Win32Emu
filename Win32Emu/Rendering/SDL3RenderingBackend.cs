@@ -1,12 +1,11 @@
 using SDL3;
-using Win32Emu.Memory;
 
 namespace Win32Emu.Rendering;
 
 /// <summary>
 /// SDL3-based rendering backend for DirectDraw and GDI operations
 /// </summary>
-public class SDL3RenderingBackend : IDisposable
+public class Sdl3RenderingBackend : IDisposable
 {
     private IntPtr _window;
     private IntPtr _renderer;
@@ -24,7 +23,9 @@ public class SDL3RenderingBackend : IDisposable
         lock (_lock)
         {
             if (_initialized)
-                return true;
+            {
+	            return true;
+            }
 
             _width = width;
             _height = height;
@@ -86,7 +87,9 @@ public class SDL3RenderingBackend : IDisposable
         lock (_lock)
         {
             if (!_initialized)
-                return false;
+            {
+	            return false;
+            }
 
             // Update texture with new data
             unsafe
@@ -118,7 +121,9 @@ public class SDL3RenderingBackend : IDisposable
         lock (_lock)
         {
             if (!_initialized)
-                return;
+            {
+	            return;
+            }
 
             SDL.SetRenderDrawColor(_renderer, r, g, b, a);
             SDL.RenderClear(_renderer);
@@ -134,7 +139,9 @@ public class SDL3RenderingBackend : IDisposable
         lock (_lock)
         {
             if (!_initialized)
-                return;
+            {
+	            return;
+            }
 
             SDL.Event evt;
             while (SDL.PollEvent(out evt))
@@ -157,7 +164,9 @@ public class SDL3RenderingBackend : IDisposable
         lock (_lock)
         {
             if (!_initialized)
-                return;
+            {
+	            return;
+            }
 
             if (_texture != IntPtr.Zero)
             {

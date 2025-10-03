@@ -102,7 +102,7 @@ public class Gdi32Tests : IDisposable
     {
         // Arrange
         uint hwnd = 0x00010000;
-        uint lpPaint = _testEnv.AllocateMemory(64); // PAINTSTRUCT size
+        var lpPaint = _testEnv.AllocateMemory(64); // PAINTSTRUCT size
 
         // Act
         var hdc = _testEnv.CallGdi32Api("BEGINPAINT", hwnd, lpPaint);
@@ -120,7 +120,7 @@ public class Gdi32Tests : IDisposable
     {
         // Arrange
         uint hwnd = 0x00010000;
-        uint lpPaint = _testEnv.AllocateMemory(64);
+        var lpPaint = _testEnv.AllocateMemory(64);
         _testEnv.CallGdi32Api("BEGINPAINT", hwnd, lpPaint);
 
         // Act
@@ -134,13 +134,13 @@ public class Gdi32Tests : IDisposable
     public void FillRect_ShouldReturnSuccess()
     {
         // Arrange
-        uint hdc = 0x81000000;
-        uint lpRect = _testEnv.AllocateMemory(16);
+        var hdc = 0x81000000;
+        var lpRect = _testEnv.AllocateMemory(16);
         _testEnv.Memory.Write32(lpRect, 10);      // left
         _testEnv.Memory.Write32(lpRect + 4, 10);  // top
         _testEnv.Memory.Write32(lpRect + 8, 100); // right
         _testEnv.Memory.Write32(lpRect + 12, 100); // bottom
-        uint hBrush = 0x80000000;
+        var hBrush = 0x80000000;
 
         // Act
         var result = _testEnv.CallGdi32Api("FILLRECT", hdc, lpRect, hBrush);
@@ -153,9 +153,9 @@ public class Gdi32Tests : IDisposable
     public void TextOutA_ShouldReturnTrue()
     {
         // Arrange
-        uint hdc = 0x81000000;
-        string text = "Hello, World!";
-        uint lpString = _testEnv.WriteString(text);
+        var hdc = 0x81000000;
+        var text = "Hello, World!";
+        var lpString = _testEnv.WriteString(text);
 
         // Act
         var result = _testEnv.CallGdi32Api("TEXTOUTA", hdc, 10, 20, lpString, (uint)text.Length);
@@ -169,12 +169,12 @@ public class Gdi32Tests : IDisposable
     {
         // Arrange
         uint hwnd = 0x00010000;
-        uint lpPaint = _testEnv.AllocateMemory(64);
-        uint hdc = _testEnv.CallGdi32Api("BEGINPAINT", hwnd, lpPaint);
-        int TRANSPARENT = 1;
+        var lpPaint = _testEnv.AllocateMemory(64);
+        var hdc = _testEnv.CallGdi32Api("BEGINPAINT", hwnd, lpPaint);
+        var transparent = 1;
 
         // Act
-        var result = _testEnv.CallGdi32Api("SETBKMODE", hdc, (uint)TRANSPARENT);
+        var result = _testEnv.CallGdi32Api("SETBKMODE", hdc, (uint)transparent);
 
         // Assert
         Assert.NotEqual(0u, result); // Should return previous mode (OPAQUE = 2)
@@ -187,11 +187,11 @@ public class Gdi32Tests : IDisposable
     public void SetTextColor_ShouldReturnPreviousColor()
     {
         // Arrange
-        uint hdc = 0x81000000;
-        uint RGB_RED = 0x000000FF;
+        var hdc = 0x81000000;
+        uint rgbRed = 0x000000FF;
 
         // Act
-        var result = _testEnv.CallGdi32Api("SETTEXTCOLOR", hdc, RGB_RED);
+        var result = _testEnv.CallGdi32Api("SETTEXTCOLOR", hdc, rgbRed);
 
         // Assert - should return previous color (black = 0x00000000)
         Assert.Equal(0u, result);

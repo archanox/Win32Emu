@@ -1,15 +1,13 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
-using System.Linq;
 using Avalonia.Markup.Xaml;
 using Win32Emu.Gui.ViewModels;
 using Win32Emu.Gui.Views;
 
 namespace Win32Emu.Gui;
 
-public partial class App : Application
+public class App : Application
 {
     public override void Initialize()
     {

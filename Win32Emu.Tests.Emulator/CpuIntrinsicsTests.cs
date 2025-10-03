@@ -49,40 +49,40 @@ public class CpuIntrinsicsTests : IDisposable
         _helper.ExecuteInstruction();
 
         // Assert - EDX should contain basic features
-        var featuresEDX = _helper.GetReg("EDX");
-        var featuresECX = _helper.GetReg("ECX");
+        var featuresEdx = _helper.GetReg("EDX");
+        var featuresEcx = _helper.GetReg("ECX");
 
         // FPU (bit 0) should always be set
-        Assert.True((featuresEDX & (1 << 0)) != 0, "FPU feature should be set");
+        Assert.True((featuresEdx & 1U) != 0, "FPU feature should be set");
         
         // TSC (bit 4) should always be set
-        Assert.True((featuresEDX & (1 << 4)) != 0, "TSC feature should be set");
+        Assert.True((featuresEdx & (1 << 4)) != 0, "TSC feature should be set");
         
         // CMOV (bit 15) should always be set
-        Assert.True((featuresEDX & (1 << 15)) != 0, "CMOV feature should be set");
+        Assert.True((featuresEdx & (1 << 15)) != 0, "CMOV feature should be set");
         
         // CMPXCHG8B (bit 8) should always be set
-        Assert.True((featuresEDX & (1 << 8)) != 0, "CMPXCHG8B feature should be set");
+        Assert.True((featuresEdx & (1 << 8)) != 0, "CMPXCHG8B feature should be set");
 
         // If running on x86 host with SSE support, SSE flags should be set
         if (CpuIntrinsics.HasSse)
         {
-            Assert.True((featuresEDX & (1 << 25)) != 0, "SSE feature should be set on x86 hosts with SSE");
+            Assert.True((featuresEdx & (1 << 25)) != 0, "SSE feature should be set on x86 hosts with SSE");
         }
 
         if (CpuIntrinsics.HasSse2)
         {
-            Assert.True((featuresEDX & (1 << 26)) != 0, "SSE2 feature should be set on x86 hosts with SSE2");
+            Assert.True((featuresEdx & (1 << 26)) != 0, "SSE2 feature should be set on x86 hosts with SSE2");
         }
 
         if (CpuIntrinsics.HasSse3)
         {
-            Assert.True((featuresECX & (1 << 0)) != 0, "SSE3 feature should be set on x86 hosts with SSE3");
+            Assert.True((featuresEcx & 1U) != 0, "SSE3 feature should be set on x86 hosts with SSE3");
         }
 
         if (CpuIntrinsics.HasSsse3)
         {
-            Assert.True((featuresECX & (1 << 9)) != 0, "SSSE3 feature should be set on x86 hosts with SSSE3");
+            Assert.True((featuresEcx & (1 << 9)) != 0, "SSSE3 feature should be set on x86 hosts with SSSE3");
         }
     }
 
@@ -99,26 +99,26 @@ public class CpuIntrinsicsTests : IDisposable
 
         // Assert - EAX should contain max sub-function (0 for now)
         var maxSubFunction = _helper.GetReg("EAX");
-        var extendedFeaturesEBX = _helper.GetReg("EBX");
+        var extendedFeaturesEbx = _helper.GetReg("EBX");
 
         Assert.Equal(0u, maxSubFunction);
 
         // If running on x86 host with AVX2 support, AVX2 flag should be set
         if (CpuIntrinsics.HasAvx2)
         {
-            Assert.True((extendedFeaturesEBX & (1 << 5)) != 0, 
+            Assert.True((extendedFeaturesEbx & (1 << 5)) != 0, 
                 "AVX2 feature should be set on x86 hosts with AVX2");
         }
 
         if (CpuIntrinsics.HasBmi1)
         {
-            Assert.True((extendedFeaturesEBX & (1 << 3)) != 0, 
+            Assert.True((extendedFeaturesEbx & (1 << 3)) != 0, 
                 "BMI1 feature should be set on x86 hosts with BMI1");
         }
 
         if (CpuIntrinsics.HasBmi2)
         {
-            Assert.True((extendedFeaturesEBX & (1 << 8)) != 0, 
+            Assert.True((extendedFeaturesEbx & (1 << 8)) != 0, 
                 "BMI2 feature should be set on x86 hosts with BMI2");
         }
     }
@@ -169,12 +169,12 @@ public class CpuIntrinsicsTests : IDisposable
         _helper.ExecuteInstruction();
 
         // Assert - ECX should contain extended features
-        var extendedFeaturesECX = _helper.GetReg("ECX");
+        var extendedFeaturesEcx = _helper.GetReg("ECX");
 
         // If running on x86 host with LZCNT support, LZCNT flag should be set
         if (CpuIntrinsics.HasLzcnt)
         {
-            Assert.True((extendedFeaturesECX & (1 << 5)) != 0, 
+            Assert.True((extendedFeaturesEcx & (1 << 5)) != 0, 
                 "LZCNT feature should be set on x86 hosts with LZCNT support");
         }
     }

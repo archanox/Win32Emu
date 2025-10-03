@@ -1,4 +1,4 @@
-using Win32Emu.Cpu.IcedImpl;
+using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Debugging;

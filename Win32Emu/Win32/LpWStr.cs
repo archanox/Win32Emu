@@ -20,7 +20,11 @@ public readonly struct LpWStr(uint address)
 		for (var i = 0; i < maxChars; i++)
 		{
 			var wchar = mem.Read16(addr);
-			if (wchar == 0) break;
+			if (wchar == 0)
+			{
+				break;
+			}
+
 			buf.Add((char)wchar);
 			addr += 2;
 		}

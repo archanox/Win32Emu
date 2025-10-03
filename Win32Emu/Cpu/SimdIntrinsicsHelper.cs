@@ -1,6 +1,6 @@
 using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
 using System.Runtime.Intrinsics.Arm;
+using System.Runtime.Intrinsics.X86;
 
 namespace Win32Emu.Cpu;
 
@@ -44,7 +44,8 @@ public static class SimdIntrinsicsHelper
 			BitConverter.GetBytes(result.GetElement(3)).CopyTo(output, 12);
 			return output;
 		}
-		else if (CpuIntrinsics.HasAdvSimd)
+
+		if (CpuIntrinsics.HasAdvSimd)
 		{
 			// Use ARM NEON intrinsics for hardware acceleration
 			var vec1 = Vector128.Create(
@@ -73,7 +74,7 @@ public static class SimdIntrinsicsHelper
 		{
 			// Software fallback
 			var output = new byte[16];
-			for (int i = 0; i < 4; i++)
+			for (var i = 0; i < 4; i++)
 			{
 				var f1 = BitConverter.ToSingle(a, i * 4);
 				var f2 = BitConverter.ToSingle(b, i * 4);
@@ -116,7 +117,8 @@ public static class SimdIntrinsicsHelper
 			BitConverter.GetBytes(result.GetElement(3)).CopyTo(output, 12);
 			return output;
 		}
-		else if (CpuIntrinsics.HasAdvSimd)
+
+		if (CpuIntrinsics.HasAdvSimd)
 		{
 			var vec1 = Vector128.Create(
 				BitConverter.ToSingle(a, 0),
@@ -144,7 +146,7 @@ public static class SimdIntrinsicsHelper
 		{
 			// Software fallback
 			var output = new byte[16];
-			for (int i = 0; i < 4; i++)
+			for (var i = 0; i < 4; i++)
 			{
 				var f1 = BitConverter.ToSingle(a, i * 4);
 				var f2 = BitConverter.ToSingle(b, i * 4);
@@ -181,7 +183,8 @@ public static class SimdIntrinsicsHelper
 			BitConverter.GetBytes(result.GetElement(1)).CopyTo(output, 8);
 			return output;
 		}
-		else if (CpuIntrinsics.HasAdvSimd)
+
+		if (CpuIntrinsics.HasAdvSimd)
 		{
 			var vec1 = Vector128.Create(
 				BitConverter.ToDouble(a, 0),
@@ -203,7 +206,7 @@ public static class SimdIntrinsicsHelper
 		{
 			// Software fallback
 			var output = new byte[16];
-			for (int i = 0; i < 2; i++)
+			for (var i = 0; i < 2; i++)
 			{
 				var d1 = BitConverter.ToDouble(a, i * 8);
 				var d2 = BitConverter.ToDouble(b, i * 8);
@@ -230,13 +233,14 @@ public static class SimdIntrinsicsHelper
 			var result = Sse2.Add(vec1, vec2);
 			
 			var output = new byte[16];
-			for (int i = 0; i < 16; i++)
+			for (var i = 0; i < 16; i++)
 			{
 				output[i] = result.GetElement(i);
 			}
 			return output;
 		}
-		else if (CpuIntrinsics.HasAdvSimd)
+
+		if (CpuIntrinsics.HasAdvSimd)
 		{
 			var vec1 = Vector128.Create(a);
 			var vec2 = Vector128.Create(b);
@@ -244,7 +248,7 @@ public static class SimdIntrinsicsHelper
 			var result = AdvSimd.Add(vec1, vec2);
 			
 			var output = new byte[16];
-			for (int i = 0; i < 16; i++)
+			for (var i = 0; i < 16; i++)
 			{
 				output[i] = result.GetElement(i);
 			}
@@ -254,7 +258,7 @@ public static class SimdIntrinsicsHelper
 		{
 			// Software fallback
 			var output = new byte[16];
-			for (int i = 0; i < 16; i++)
+			for (var i = 0; i < 16; i++)
 			{
 				output[i] = (byte)(a[i] + b[i]);
 			}
@@ -274,7 +278,8 @@ public static class SimdIntrinsicsHelper
 		{
 			return Popcnt.PopCount(value);
 		}
-		else if (CpuIntrinsics.HasAdvSimd)
+
+		if (CpuIntrinsics.HasAdvSimd)
 		{
 			// ARM has population count in AdvSimd
 			// Use NEON intrinsics to count set bits
@@ -284,17 +289,15 @@ public static class SimdIntrinsicsHelper
 			var sum = AdvSimd.Arm64.AddAcross(popcount);
 			return sum.ToScalar();
 		}
-		else
+
+		// Software fallback using Brian Kernighan's algorithm
+		uint count = 0;
+		while (value != 0)
 		{
-			// Software fallback using Brian Kernighan's algorithm
-			uint count = 0;
-			while (value != 0)
-			{
-				value &= value - 1;
-				count++;
-			}
-			return count;
+			value &= value - 1;
+			count++;
 		}
+		return count;
 	}
 
 	/// <summary>
@@ -309,22 +312,25 @@ public static class SimdIntrinsicsHelper
 		{
 			return Lzcnt.LeadingZeroCount(value);
 		}
-		else if (CpuIntrinsics.HasArmBase)
+
+		if (CpuIntrinsics.HasArmBase)
 		{
 			return (uint)ArmBase.Arm64.LeadingZeroCount(value);
 		}
-		else
+
+		// Software fallback
+		if (value == 0)
 		{
-			// Software fallback
-			if (value == 0) return 32;
-			uint count = 0;
-			if ((value & 0xFFFF0000) == 0) { count += 16; value <<= 16; }
-			if ((value & 0xFF000000) == 0) { count += 8; value <<= 8; }
-			if ((value & 0xF0000000) == 0) { count += 4; value <<= 4; }
-			if ((value & 0xC0000000) == 0) { count += 2; value <<= 2; }
-			if ((value & 0x80000000) == 0) { count += 1; }
-			return count;
+			return 32;
 		}
+
+		uint count = 0;
+		if ((value & 0xFFFF0000) == 0) { count += 16; value <<= 16; }
+		if ((value & 0xFF000000) == 0) { count += 8; value <<= 8; }
+		if ((value & 0xF0000000) == 0) { count += 4; value <<= 4; }
+		if ((value & 0xC0000000) == 0) { count += 2; value <<= 2; }
+		if ((value & 0x80000000) == 0) { count += 1; }
+		return count;
 	}
 
 	/// <summary>
@@ -340,22 +346,25 @@ public static class SimdIntrinsicsHelper
 		{
 			return Sse42.Crc32(crc, data);
 		}
-		else if (CpuIntrinsics.HasCrc32_Arm || CpuIntrinsics.HasCrc32_Arm64)
+
+		if (CpuIntrinsics.HasCrc32Arm || CpuIntrinsics.HasCrc32Arm64)
 		{
 			return Crc32.ComputeCrc32(crc, data);
 		}
-		else
+
+		// Software fallback using standard CRC32 algorithm
+		crc ^= data;
+		for (var i = 0; i < 8; i++)
 		{
-			// Software fallback using standard CRC32 algorithm
-			crc ^= data;
-			for (int i = 0; i < 8; i++)
+			if ((crc & 1) != 0)
 			{
-				if ((crc & 1) != 0)
-					crc = (crc >> 1) ^ 0xEDB88320;
-				else
-					crc >>= 1;
+				crc = (crc >> 1) ^ 0xEDB88320;
 			}
-			return crc;
+			else
+			{
+				crc >>= 1;
+			}
 		}
+		return crc;
 	}
 }

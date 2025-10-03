@@ -1,7 +1,5 @@
-using Win32Emu.Cpu.IcedImpl;
+using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
-using Xunit;
-using System;
 
 namespace Win32Emu.Tests.Kernel32;
 
@@ -151,7 +149,7 @@ public class CpuMemoryAccessTests
     public void CPU_SimulateRealProgramExecution()
     {
         // This test simulates more realistic conditions that might occur in a real program
-        var memory = new VirtualMemory(512 * 1024 * 1024); // Default size like in real usage
+        var memory = new VirtualMemory(); // Default size like in real usage
         var cpu = new IcedCpu(memory);
         
         // Simulate typical program initialization from Program.cs
@@ -199,7 +197,7 @@ public class CpuMemoryAccessTests
     public void CPU_IdentifyExactFailureCondition()
     {
         // This test reproduces the exact error from the stack trace
-        var memory = new VirtualMemory(512 * 1024 * 1024);
+        var memory = new VirtualMemory();
         var cpu = new IcedCpu(memory);
         
         // Set up conditions matching the stack trace
@@ -226,7 +224,7 @@ public class CpuMemoryAccessTests
         try
         {
             cpu.SingleStep(memory);
-            Assert.True(false, "Expected IndexOutOfRangeException was not thrown");
+            Assert.Fail("Expected IndexOutOfRangeException was not thrown");
         }
         catch (IndexOutOfRangeException ex)
         {
@@ -246,7 +244,7 @@ public class CpuMemoryAccessTests
     public void DiagnoseRealWorldScenario()
     {
         // This test identifies the most likely real-world causes of the 0xFFFFFFFD error
-        var memory = new VirtualMemory(512 * 1024 * 1024);
+        var memory = new VirtualMemory();
         var cpu = new IcedCpu(memory);
         
         // === Scenario 1: Uninitialized frame pointer ===

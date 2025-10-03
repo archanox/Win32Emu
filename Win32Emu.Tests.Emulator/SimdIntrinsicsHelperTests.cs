@@ -95,7 +95,7 @@ public class SimdIntrinsicsHelperTests
         var a = new byte[16];
         var b = new byte[16];
         
-        for (int i = 0; i < 16; i++)
+        for (var i = 0; i < 16; i++)
         {
             a[i] = (byte)(i + 1);      // [1, 2, 3, ..., 16]
             b[i] = (byte)(16 - i);     // [16, 15, 14, ..., 1]
@@ -105,7 +105,7 @@ public class SimdIntrinsicsHelperTests
         var result = SimdIntrinsicsHelper.AddPackedBytes(a, b);
 
         // Assert - each result should be 17
-        for (int i = 0; i < 16; i++)
+        for (var i = 0; i < 16; i++)
         {
             Assert.Equal(17, result[i]);
         }

@@ -1,5 +1,7 @@
-using System.Runtime.Intrinsics.X86;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.Arm;
+using System.Runtime.Intrinsics.X86;
+using Aes = System.Runtime.Intrinsics.X86.Aes;
 
 namespace Win32Emu.Cpu;
 
@@ -12,16 +14,16 @@ public static class CpuIntrinsics
 	/// <summary>
 	/// Indicates if the host CPU is x86/x64 architecture
 	/// </summary>
-	public static readonly bool IsX86 = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture 
-		is System.Runtime.InteropServices.Architecture.X86 
-		or System.Runtime.InteropServices.Architecture.X64;
+	public static readonly bool IsX86 = RuntimeInformation.ProcessArchitecture 
+		is Architecture.X86 
+		or Architecture.X64;
 
 	/// <summary>
 	/// Indicates if the host CPU is ARM architecture
 	/// </summary>
-	public static readonly bool IsArm = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture 
-		is System.Runtime.InteropServices.Architecture.Arm 
-		or System.Runtime.InteropServices.Architecture.Arm64;
+	public static readonly bool IsArm = RuntimeInformation.ProcessArchitecture 
+		is Architecture.Arm 
+		or Architecture.Arm64;
 
 	// x86 feature flags
 	public static readonly bool HasSse = IsX86 && Sse.IsSupported;
@@ -32,7 +34,7 @@ public static class CpuIntrinsics
 	public static readonly bool HasSse42 = IsX86 && Sse42.IsSupported;
 	public static readonly bool HasAvx = IsX86 && Avx.IsSupported;
 	public static readonly bool HasAvx2 = IsX86 && Avx2.IsSupported;
-	public static readonly bool HasAes = IsX86 && System.Runtime.Intrinsics.X86.Aes.IsSupported;
+	public static readonly bool HasAes = IsX86 && Aes.IsSupported;
 	public static readonly bool HasPclmulqdq = IsX86 && Pclmulqdq.IsSupported;
 	public static readonly bool HasPopcnt = IsX86 && Popcnt.IsSupported;
 	public static readonly bool HasLzcnt = IsX86 && Lzcnt.IsSupported;
@@ -43,9 +45,9 @@ public static class CpuIntrinsics
 	// ARM feature flags
 	public static readonly bool HasArmBase = IsArm && ArmBase.IsSupported;
 	public static readonly bool HasAdvSimd = IsArm && AdvSimd.IsSupported;
-	public static readonly bool HasAes_Arm = IsArm && System.Runtime.Intrinsics.Arm.Aes.Arm64.IsSupported;
-	public static readonly bool HasCrc32_Arm = IsArm && Crc32.IsSupported;
-	public static readonly bool HasCrc32_Arm64 = IsArm && Crc32.Arm64.IsSupported;
+	public static readonly bool HasAesArm = IsArm && System.Runtime.Intrinsics.Arm.Aes.Arm64.IsSupported;
+	public static readonly bool HasCrc32Arm = IsArm && Crc32.IsSupported;
+	public static readonly bool HasCrc32Arm64 = IsArm && Crc32.Arm64.IsSupported;
 	public static readonly bool HasDp = IsArm && Dp.IsSupported;
 	public static readonly bool HasRdm = IsArm && Rdm.IsSupported;
 	public static readonly bool HasSha1 = IsArm && Sha1.IsSupported;
@@ -58,15 +60,50 @@ public static class CpuIntrinsics
 	{
 		uint ecx = 0;
 
-		if (HasSse3) ecx |= 1 << 0;        // SSE3
-		if (HasPclmulqdq) ecx |= 1 << 1;   // PCLMULQDQ
-		if (HasSsse3) ecx |= 1 << 9;       // SSSE3
-		if (HasFma) ecx |= 1 << 12;        // FMA
-		if (HasSse41) ecx |= 1 << 19;      // SSE4.1
-		if (HasSse42) ecx |= 1 << 20;      // SSE4.2
-		if (HasPopcnt) ecx |= 1 << 23;     // POPCNT
-		if (HasAes) ecx |= 1 << 25;        // AES
-		if (HasAvx) ecx |= 1 << 28;        // AVX
+		if (HasSse3)
+		{
+			ecx |= 1U;        // SSE3
+		}
+
+		if (HasPclmulqdq)
+		{
+			ecx |= 1 << 1;   // PCLMULQDQ
+		}
+
+		if (HasSsse3)
+		{
+			ecx |= 1 << 9;       // SSSE3
+		}
+
+		if (HasFma)
+		{
+			ecx |= 1 << 12;        // FMA
+		}
+
+		if (HasSse41)
+		{
+			ecx |= 1 << 19;      // SSE4.1
+		}
+
+		if (HasSse42)
+		{
+			ecx |= 1 << 20;      // SSE4.2
+		}
+
+		if (HasPopcnt)
+		{
+			ecx |= 1 << 23;     // POPCNT
+		}
+
+		if (HasAes)
+		{
+			ecx |= 1 << 25;        // AES
+		}
+
+		if (HasAvx)
+		{
+			ecx |= 1 << 28;        // AVX
+		}
 
 		return ecx;
 	}
@@ -83,8 +120,15 @@ public static class CpuIntrinsics
 		edx |= 1 << 5;                     // MSR (RDMSR/WRMSR)
 		edx |= 1 << 8;                     // CMPXCHG8B
 		edx |= 1 << 15;                    // CMOV
-		if (HasSse) edx |= 1 << 25;        // SSE
-		if (HasSse2) edx |= 1 << 26;       // SSE2
+		if (HasSse)
+		{
+			edx |= 1 << 25;        // SSE
+		}
+
+		if (HasSse2)
+		{
+			edx |= 1 << 26;       // SSE2
+		}
 
 		return edx;
 	}
@@ -96,9 +140,20 @@ public static class CpuIntrinsics
 	{
 		uint ebx = 0;
 
-		if (HasBmi1) ebx |= 1 << 3;        // BMI1
-		if (HasAvx2) ebx |= 1 << 5;        // AVX2
-		if (HasBmi2) ebx |= 1 << 8;        // BMI2
+		if (HasBmi1)
+		{
+			ebx |= 1 << 3;        // BMI1
+		}
+
+		if (HasAvx2)
+		{
+			ebx |= 1 << 5;        // AVX2
+		}
+
+		if (HasBmi2)
+		{
+			ebx |= 1 << 8;        // BMI2
+		}
 		// LZCNT is not reported in EBX (function 7); see GetCpuid80000001EcxFeatures()
 
 		return ebx;
@@ -110,7 +165,11 @@ public static class CpuIntrinsics
 	public static uint GetCpuid80000001EcxFeatures()
 	{
 		uint ecx = 0;
-		if (HasLzcnt) ecx |= 1 << 5; // LZCNT
+		if (HasLzcnt)
+		{
+			ecx |= 1 << 5; // LZCNT
+		}
+
 		return ecx;
 	}
 }

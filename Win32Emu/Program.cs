@@ -1,6 +1,4 @@
-﻿using Win32Emu;
-
-namespace Win32Emu.ConsoleApp
+﻿namespace Win32Emu
 {
 	internal class Program
 	{
@@ -8,8 +6,8 @@ namespace Win32Emu.ConsoleApp
 		{
 			if (args.Length == 0)
 			{
-				System.Console.WriteLine("Usage: Win32Emu <path-to-pe> [--debug]");
-				System.Console.WriteLine("  --debug: Enable enhanced debugging to catch 0xFFFFFFFD memory access errors");
+				Console.WriteLine("Usage: Win32Emu <path-to-pe> [--debug]");
+				Console.WriteLine("  --debug: Enable enhanced debugging to catch 0xFFFFFFFD memory access errors");
 				return;
 			}
 
@@ -19,20 +17,20 @@ namespace Win32Emu.ConsoleApp
 
 			try
 			{
-				var emulator = new Emulator();
+				using var emulator = new Emulator();
 				emulator.LoadExecutable(path, debugMode);
 				emulator.Run();
 			}
 			catch (FileNotFoundException ex)
 			{
-				System.Console.WriteLine($"Error: {ex.Message}");
+				Console.WriteLine($"Error: {ex.Message}");
 			}
 			catch (Exception ex)
 			{
-				System.Console.WriteLine($"Emulator error: {ex.Message}");
+				Console.WriteLine($"Emulator error: {ex.Message}");
 				if (debugMode)
 				{
-					System.Console.WriteLine($"Stack trace: {ex.StackTrace}");
+					Console.WriteLine($"Stack trace: {ex.StackTrace}");
 				}
 			}
 		}

@@ -1,13 +1,14 @@
 using Win32Emu.Cpu;
-using Win32Emu.Cpu.IcedImpl;
+using Win32Emu.Cpu.Iced;
 using Win32Emu.Debugging;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
+using Win32Emu.Win32.Modules;
 
 namespace Win32Emu;
 
-public class Emulator
+public sealed class Emulator : IDisposable
 {
     private readonly IEmulatorHost? _host;
     private VirtualMemory? _vm;
@@ -58,7 +59,7 @@ public class Emulator
     /// </summary>
     public bool IsPaused => !_pauseEvent.WaitOne(0);
 
-    public void LoadExecutable(string path, bool debugMode = false, int reservedMemoryMB = 256)
+    public void LoadExecutable(string path, bool debugMode = false, int reservedMemoryMb = 256)
     {
         _debugMode = debugMode;
 
@@ -69,7 +70,7 @@ public class Emulator
 
         LogDebug($"[Loader] Loading PE: {path}");
         // Convert MB to bytes for VirtualMemory constructor
-        ulong memorySizeBytes = (ulong)reservedMemoryMB * 1024 * 1024;
+        var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
         _vm = new VirtualMemory(memorySizeBytes);
         var loader = new PeImageLoader(_vm);
         _image = loader.Load(path);
@@ -94,8 +95,9 @@ public class Emulator
         _dispatcher.RegisterModule(new DDrawModule(_env, _image.BaseAddress, loader));
         _dispatcher.RegisterModule(new DSoundModule(_env, _image.BaseAddress, loader));
         _dispatcher.RegisterModule(new DInputModule(_env, _image.BaseAddress, loader));
-        _dispatcher.RegisterModule(new WinMMModule(_env, _image.BaseAddress, loader));
-        _dispatcher.RegisterModule(new Glide2xModule(_env, _image.BaseAddress, loader));
+        _dispatcher.RegisterModule(new WinMmModule(_env, _image.BaseAddress, loader));
+        _dispatcher.RegisterModule(new Glide2XModule(_env, _image.BaseAddress, loader));
+        _dispatcher.RegisterModule(new DPlayXModule(_env, _image.BaseAddress, loader));
     }
 
     public void Run()
@@ -117,9 +119,23 @@ public class Emulator
             RunNormal();
         }
 
-        var exitMessage = _stopRequested ? "[Exit] Stop requested by user." :
-                         _env.ExitRequested ? "[Exit] Process requested exit." :
-                         "[Exit] Execution completed.";
+        string exitMessage;
+        if (_stopRequested)
+        {
+	        exitMessage = "[Exit] Stop requested by user.";
+        }
+        else
+        {
+	        if (_env.ExitRequested)
+	        {
+		        exitMessage = "[Exit] Process requested exit.";
+	        }
+	        else
+	        {
+		        exitMessage = "[Exit] Execution completed.";
+	        }
+        }
+
         LogDebug(exitMessage);
 
         LogDebug("=== Unknown Function Summary ===");
@@ -135,7 +151,10 @@ public class Emulator
             // Using a timeout allows us to check _stopRequested periodically
             _pauseEvent.WaitOne(100);
 
-            if (_stopRequested) break;
+            if (_stopRequested)
+            {
+	            break;
+            }
 
             var step = _cpu!.SingleStep(_vm!);
             if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
@@ -175,13 +194,16 @@ public class Emulator
             // Using a timeout allows us to check _stopRequested periodically
             _pauseEvent.WaitOne(100);
 
-            if (_stopRequested) break;
+            if (_stopRequested)
+            {
+	            break;
+            }
 
             var currentEip = _cpu.GetEip();
 
-            if (currentEip >= 0x0F000000 && currentEip < 0x10000000)
+            if (currentEip is >= 0x0F000000 and < 0x10000000)
             {
-                LogDebug($"\n[Debug] *** CPU TRYING TO EXECUTE SYNTHETIC IMPORT ADDRESS! ***");
+                LogDebug("\n[Debug] *** CPU TRYING TO EXECUTE SYNTHETIC IMPORT ADDRESS! ***");
                 LogDebug($"[Debug] EIP=0x{currentEip:X8} at instruction {i}");
 
                 if (_image!.ImportAddressMap.TryGetValue(currentEip, out var importInfo))
@@ -190,13 +212,13 @@ public class Emulator
                 }
                 else
                 {
-                    LogDebug($"[Debug] Unknown synthetic address - not in import map");
+                    LogDebug("[Debug] Unknown synthetic address - not in import map");
                 }
 
                 LogDebug("[Debug] This should now execute an INT3 stub that will be handled as an import call");
             }
 
-            if (debugger.IsProblematicEip(0x0F000512))
+            if (debugger.IsProblematicEip())
             {
                 LogDebug($"\n[Debug] *** FOUND PROBLEMATIC EIP AT INSTRUCTION {i} ***");
                 debugger.HandleProblematicEip();
@@ -239,14 +261,14 @@ public class Emulator
                 LogDebug($"\n[Debug] *** CAUGHT MEMORY ACCESS VIOLATION AT INSTRUCTION {i} ***");
                 LogDebug($"[Debug] Exception: {ex.Message}");
 
-                if (currentEip >= 0x0F000000 && currentEip < 0x10000000)
+                if (currentEip is >= 0x0F000000 and < 0x10000000)
                 {
                     LogDebug($"[Debug] ERROR CAUSE: Trying to execute synthetic import address 0x{currentEip:X8}");
                     if (_image!.ImportAddressMap.TryGetValue(currentEip, out var importInfo))
                     {
                         LogDebug($"[Debug] This is import: {importInfo.dll}!{importInfo.name}");
                     }
-                    LogDebug($"[Debug] SOLUTION: The program should CALL THROUGH the IAT, not execute the import address directly");
+                    LogDebug("[Debug] SOLUTION: The program should CALL THROUGH the IAT, not execute the import address directly");
                 }
 
                 var trace = debugger.GetExecutionTrace();
@@ -257,9 +279,9 @@ public class Emulator
 
                 if (suspiciousStates.Count > 0)
                 {
-                    var first = suspiciousStates.First();
+                    var first = suspiciousStates[0];
                     LogDebug("[Debug] First suspicious state occurred at:");
-                    LogDebug($"[Debug]   EIP=0x{first.EIP:X8} EBP=0x{first.EBP:X8} ESP=0x{first.ESP:X8}");
+                    LogDebug($"[Debug]   EIP=0x{first.Eip:X8} EBP=0x{first.Ebp:X8} ESP=0x{first.Esp:X8}");
                 }
 
                 throw;
@@ -275,7 +297,7 @@ public class Emulator
 
         var finalTrace = debugger.GetExecutionTrace();
         var finalSuspicious = debugger.FindSuspiciousStates();
-        LogDebug($"[Debug] Final execution summary:");
+        LogDebug("[Debug] Final execution summary:");
         LogDebug($"[Debug]   Total traced instructions: {finalTrace.Count}");
         LogDebug($"[Debug]   Suspicious register states: {finalSuspicious.Count}");
     }
@@ -292,7 +314,7 @@ public class Emulator
                 return true;
             }
 
-            if (opcode == 0xCC && eip >= 0x0F000000 && eip < 0x10000000)
+            if (opcode == 0xCC && eip is >= 0x0F000000 and < 0x10000000)
             {
                 return true;
             }
@@ -331,9 +353,10 @@ public class Emulator
                 var displacement = vm.Read32(eip + 1);
                 return (uint)(eip + 5 + (int)displacement);
             }
-            else if (opcode == 0xCC && eip >= 0x0F000000 && eip < 0x10000000)
+
+            if (opcode == 0xCC && eip is >= 0x0F000000 and < 0x10000000)
             {
-                return eip;
+	            return eip;
             }
         }
         catch
@@ -348,12 +371,17 @@ public class Emulator
     {
         if (_host != null)
         {
-            _host.OnDebugOutput(message, Win32Emu.DebugLevel.Debug);
+            _host.OnDebugOutput(message, DebugLevel.Debug);
         }
         else
         {
             Console.WriteLine(message);
         }
+    }
+
+    public void Dispose()
+    {
+	    _pauseEvent.Dispose();
     }
 }
 

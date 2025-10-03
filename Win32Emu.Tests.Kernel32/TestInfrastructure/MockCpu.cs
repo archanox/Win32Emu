@@ -74,7 +74,11 @@ public class MockCpu : ICpu
         var value = memory.Read32(_esp);
         _esp += 4;
         SetRegister("ESP", _esp);
-        if (_stack.Count > 0) _stack.Pop();
+        if (_stack.Count > 0)
+        {
+	        _stack.Pop();
+        }
+
         return value;
     }
 
@@ -84,7 +88,7 @@ public class MockCpu : ICpu
     public void SetupStackArgs(VirtualMemory memory, params uint[] args)
     {
         // Push arguments in reverse order so the first argument ends up at ESP+4
-        for (int i = args.Length - 1; i >= 0; i--)
+        for (var i = args.Length - 1; i >= 0; i--)
         {
             PushStack(memory, args[i]);
         }

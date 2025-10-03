@@ -1,6 +1,8 @@
+using System.Text;
+using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
-using Win32Emu.Loader;
+using Win32Emu.Win32.Modules;
 
 namespace Win32Emu.Tests.Kernel32.TestInfrastructure;
 
@@ -36,7 +38,7 @@ public class TestEnvironment : IDisposable
         Cpu.SetupStackArgs(Memory, args);
 
         // Call the API
-        var success = Kernel32.TryInvokeUnsafe(functionName, Cpu, Memory, out uint returnValue);
+        var success = Kernel32.TryInvokeUnsafe(functionName, Cpu, Memory, out var returnValue);
         if (!success)
         {
             throw new InvalidOperationException($"Failed to invoke {functionName}");
@@ -50,7 +52,7 @@ public class TestEnvironment : IDisposable
     /// </summary>
     public uint WriteString(string str)
     {
-        var bytes = System.Text.Encoding.ASCII.GetBytes(str + "\0");
+        var bytes = Encoding.ASCII.GetBytes(str + "\0");
         var addr = ProcessEnv.SimpleAlloc((uint)bytes.Length);
         Memory.WriteBytes(addr, bytes);
         return addr;
@@ -61,20 +63,27 @@ public class TestEnvironment : IDisposable
     /// </summary>
     public string ReadString(uint addr)
     {
-        if (addr == 0) return string.Empty;
+        if (addr == 0)
+        {
+	        return string.Empty;
+        }
 
         var result = new List<byte>();
-        uint currentAddr = addr;
+        var currentAddr = addr;
         
         while (true)
         {
             var b = Memory.Read8(currentAddr);
-            if (b == 0) break;
+            if (b == 0)
+            {
+	            break;
+            }
+
             result.Add(b);
             currentAddr++;
         }
 
-        return System.Text.Encoding.ASCII.GetString(result.ToArray());
+        return Encoding.ASCII.GetString(result.ToArray());
     }
 
     /// <summary>

@@ -67,7 +67,7 @@ public static class NativeTypes
 
 	// CPINFO structure for GetCPInfo function
 	// Total size: 20 bytes (4 + 2 + 12 + 2 padding)
-	public struct CPINFO
+	public struct Cpinfo
 	{
 		public uint MaxCharSize;           // Maximum length, in bytes, of a character in the code page
 		public unsafe fixed byte DefaultChar[2];  // Default character used when translating to the specific code page

@@ -1,4 +1,4 @@
-using Win32Emu.Cpu.IcedImpl;
+using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Emulator.TestInfrastructure;
@@ -34,7 +34,7 @@ public class CpuTestHelper : IDisposable
     public void WriteCode(params byte[] code)
     {
         var eip = Cpu.GetEip();
-        for (int i = 0; i < code.Length; i++)
+        for (var i = 0; i < code.Length; i++)
         {
             Memory.Write8(eip + (uint)i, code[i]);
         }
@@ -53,7 +53,7 @@ public class CpuTestHelper : IDisposable
     /// </summary>
     public void ExecuteInstructions(int count)
     {
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
             Cpu.SingleStep(Memory);
         }
@@ -149,13 +149,13 @@ public class CpuTestHelper : IDisposable
 /// </summary>
 public enum CpuFlag
 {
-    CF = 0,  // Carry Flag
-    PF = 2,  // Parity Flag
-    AF = 4,  // Auxiliary Carry Flag
-    ZF = 6,  // Zero Flag
-    SF = 7,  // Sign Flag
-    TF = 8,  // Trap Flag
-    IF = 9,  // Interrupt Enable Flag
-    DF = 10, // Direction Flag
-    OF = 11  // Overflow Flag
+    Cf = 0,  // Carry Flag
+    Pf = 2,  // Parity Flag
+    Af = 4,  // Auxiliary Carry Flag
+    Zf = 6,  // Zero Flag
+    Sf = 7,  // Sign Flag
+    Tf = 8,  // Trap Flag
+    If = 9,  // Interrupt Enable Flag
+    Df = 10, // Direction Flag
+    Of = 11  // Overflow Flag
 }

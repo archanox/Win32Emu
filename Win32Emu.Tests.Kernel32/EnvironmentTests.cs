@@ -1,5 +1,5 @@
+using System.Text;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
-using Xunit;
 
 namespace Win32Emu.Tests.Kernel32;
 
@@ -344,8 +344,11 @@ public class EnvironmentTests : IDisposable
         while (true)
         {
             var wchar = _testEnv.Memory.Read16(currentAddr);
-            if (wchar == 0) break;
-            
+            if (wchar == 0)
+            {
+	            break;
+            }
+
             chars.Add((char)wchar);
             currentAddr += 2;
         }
@@ -364,13 +367,16 @@ public class EnvironmentTests : IDisposable
         while (true)
         {
             var b = _testEnv.Memory.Read8(currentAddr);
-            if (b == 0) break;
-            
+            if (b == 0)
+            {
+	            break;
+            }
+
             bytes.Add(b);
             currentAddr += 1;
         }
         
-        return System.Text.Encoding.ASCII.GetString(bytes.ToArray());
+        return Encoding.ASCII.GetString(bytes.ToArray());
     }
 
     public void Dispose()

@@ -1,9 +1,7 @@
-using Xunit;
-using Win32Emu.Win32;
 using Win32Emu.Memory;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
-using System.IO;
-using System;
+using Win32Emu.Win32;
+using Win32Emu.Win32.Modules;
 
 namespace Win32Emu.Tests.Kernel32;
 
@@ -22,7 +20,7 @@ public class DispatcherIntegrationTests
         var testCpu = new MockCpu();
         
         var dispatcher = new Win32Dispatcher();
-        var kernel32Module = new Kernel32Module(env, 0x00400000, null);
+        var kernel32Module = new Kernel32Module(env, 0x00400000);
         kernel32Module.SetDispatcher(dispatcher);
         dispatcher.RegisterModule(kernel32Module);
         
@@ -30,7 +28,7 @@ public class DispatcherIntegrationTests
         dispatcher.RegisterDynamicallyLoadedDll("USER32.DLL");
         
         // Now try to call a function from the loaded DLL
-        bool result = dispatcher.TryInvoke("USER32.DLL", "MessageBoxA", testCpu, vm, out uint returnValue, out int argBytes);
+        var result = dispatcher.TryInvoke("USER32.DLL", "MessageBoxA", testCpu, vm, out var returnValue, out var argBytes);
         
         // Assert
         Assert.True(result); // MessageBoxA call should be handled
@@ -47,7 +45,7 @@ public class DispatcherIntegrationTests
         var testCpu = new MockCpu();
         
         var dispatcher = new Win32Dispatcher();
-        var kernel32Module = new Kernel32Module(env, 0x00400000, null);
+        var kernel32Module = new Kernel32Module(env, 0x00400000);
         kernel32Module.SetDispatcher(dispatcher);
         dispatcher.RegisterModule(kernel32Module);
         

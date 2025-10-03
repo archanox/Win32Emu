@@ -49,7 +49,7 @@
                     <TextBlock Text="Reserved Memory (MB)"
                              FontWeight="Bold"
                              FontSize="14"/>
-                    <NumericUpDown Value="{Binding ReservedMemoryMB}"
+                    <NumericUpDown Value="{Binding ReservedMemoryMb}"
                                  Minimum="64"
                                  Maximum="2048"
                                  Increment="64"

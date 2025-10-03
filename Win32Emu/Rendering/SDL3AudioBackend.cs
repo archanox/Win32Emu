@@ -5,10 +5,10 @@ namespace Win32Emu.Rendering;
 /// <summary>
 /// SDL3-based audio backend for DirectSound operations
 /// </summary>
-public class SDL3AudioBackend : IDisposable
+public sealed class Sdl3AudioBackend : IDisposable
 {
     private bool _initialized;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly Dictionary<uint, AudioStream> _audioStreams = new();
     private uint _nextStreamId = 1;
 
@@ -29,7 +29,9 @@ public class SDL3AudioBackend : IDisposable
         lock (_lock)
         {
             if (_initialized)
-                return true;
+            {
+	            return true;
+            }
 
             // Initialize SDL3 audio subsystem
             if (!SDL.Init(SDL.InitFlags.Audio))
@@ -103,7 +105,9 @@ public class SDL3AudioBackend : IDisposable
         lock (_lock)
         {
             if (!_audioStreams.TryGetValue(streamId, out var stream))
-                return false;
+            {
+	            return false;
+            }
 
             // Close SDL audio stream if handle is valid
             if (stream.StreamHandle != IntPtr.Zero)
@@ -125,7 +129,9 @@ public class SDL3AudioBackend : IDisposable
         lock (_lock)
         {
             if (!_audioStreams.TryGetValue(streamId, out var stream))
-                return false;
+            {
+	            return false;
+            }
 
             Console.WriteLine($"[SDL3Audio] Stream {streamId}: Set volume to {volume}");
             return true;
@@ -140,7 +146,9 @@ public class SDL3AudioBackend : IDisposable
         lock (_lock)
         {
             if (!_audioStreams.TryGetValue(streamId, out var stream))
-                return false;
+            {
+	            return false;
+            }
 
             Console.WriteLine($"[SDL3Audio] Stream {streamId}: {(paused ? "Paused" : "Resumed")}");
             return true;
@@ -152,7 +160,9 @@ public class SDL3AudioBackend : IDisposable
         lock (_lock)
         {
             if (!_initialized)
-                return;
+            {
+	            return;
+            }
 
             // Destroy all audio streams
             foreach (var stream in _audioStreams.Values.ToList())

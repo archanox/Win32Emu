@@ -28,8 +28,8 @@ public class BasicInstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0x00000008u, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be clear for non-zero result");
-        Assert.False(_helper.IsFlagSet(CpuFlag.CF), "CF should be clear for no carry");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear for no carry");
     }
 
     [Fact]
@@ -45,8 +45,8 @@ public class BasicInstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0x00000000u, _helper.GetReg("EAX"));
-        Assert.True(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be set for zero result");
-        Assert.True(_helper.IsFlagSet(CpuFlag.CF), "CF should be set for carry");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set for zero result");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set for carry");
     }
 
     [Fact]
@@ -62,8 +62,8 @@ public class BasicInstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0x0000000Bu, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be clear for non-zero result");
-        Assert.False(_helper.IsFlagSet(CpuFlag.CF), "CF should be clear for no borrow");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear for no borrow");
     }
 
     [Fact]
@@ -79,8 +79,8 @@ public class BasicInstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0xFFFFFFF5u, _helper.GetReg("EAX")); // Underflow
-        Assert.True(_helper.IsFlagSet(CpuFlag.CF), "CF should be set for borrow");
-        Assert.True(_helper.IsFlagSet(CpuFlag.SF), "SF should be set for negative result");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set for borrow");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Sf), "SF should be set for negative result");
     }
 
     [Fact]
@@ -95,9 +95,9 @@ public class BasicInstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0x00000000u, _helper.GetReg("EAX"));
-        Assert.True(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be set for zero result");
-        Assert.False(_helper.IsFlagSet(CpuFlag.CF), "CF should be clear for XOR");
-        Assert.False(_helper.IsFlagSet(CpuFlag.OF), "OF should be clear for XOR");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set for zero result");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear for XOR");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Of), "OF should be clear for XOR");
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public class BasicInstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0xF000F000u, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be clear for non-zero result");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class BasicInstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0xFFFFFFFFu, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be clear for non-zero result");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class BasicInstructionTests : IDisposable
         // Assert - Registers should not change
         Assert.Equal(0x12345678u, _helper.GetReg("EAX"));
         Assert.Equal(0x12345678u, _helper.GetReg("EBX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be clear for non-zero result");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class BasicInstructionTests : IDisposable
         _helper.ExecuteInstruction();
 
         // Assert
-        Assert.True(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be set when AND result is zero");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set when AND result is zero");
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public class BasicInstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0x00000006u, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be clear for non-zero result");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class BasicInstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0x00000004u, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be clear for non-zero result");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public class BasicInstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0x0000000Au, _helper.GetReg("EAX")); // Binary: 1010
-        Assert.False(_helper.IsFlagSet(CpuFlag.CF), "CF should be clear when MSB was 0");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear when MSB was 0");
     }
 
     [Fact]
@@ -221,7 +221,7 @@ public class BasicInstructionTests : IDisposable
 
         // Assert
         Assert.Equal(0x00000005u, _helper.GetReg("EAX")); // Binary: 0101
-        Assert.False(_helper.IsFlagSet(CpuFlag.CF), "CF should be clear when LSB was 0");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear when LSB was 0");
     }
 
     [Fact]
@@ -237,7 +237,7 @@ public class BasicInstructionTests : IDisposable
 
         // Assert - Registers should not change
         Assert.Equal(0x12345678u, _helper.GetReg("EAX"));
-        Assert.True(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be set when values are equal");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set when values are equal");
     }
 
     [Fact]
@@ -252,8 +252,8 @@ public class BasicInstructionTests : IDisposable
         _helper.ExecuteInstruction();
 
         // Assert
-        Assert.True(_helper.IsFlagSet(CpuFlag.CF), "CF should be set when first operand is less");
-        Assert.False(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be clear when values are not equal");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set when first operand is less");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear when values are not equal");
     }
 
     public void Dispose()

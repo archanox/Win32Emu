@@ -56,7 +56,7 @@ public class ConfigurationService
         {
             RenderingBackend = config.RenderingBackend,
             ResolutionScaleFactor = config.ResolutionScaleFactor,
-            ReservedMemoryMB = config.ReservedMemoryMB,
+            ReservedMemoryMb = config.ReservedMemoryMb,
             WindowsVersion = config.WindowsVersion,
             EnableDebugMode = config.EnableDebugMode
         };
@@ -69,7 +69,7 @@ public class ConfigurationService
     {
         config.RenderingBackend = emulatorConfig.RenderingBackend;
         config.ResolutionScaleFactor = emulatorConfig.ResolutionScaleFactor;
-        config.ReservedMemoryMB = emulatorConfig.ReservedMemoryMB;
+        config.ReservedMemoryMb = emulatorConfig.ReservedMemoryMb;
         config.WindowsVersion = emulatorConfig.WindowsVersion;
         config.EnableDebugMode = emulatorConfig.EnableDebugMode;
     }
@@ -77,9 +77,9 @@ public class ConfigurationService
     /// <summary>
     /// Get the list of games from configuration
     /// </summary>
-    public List<Game> GetGames()
+    public Game[] GetGames()
     {
-        return _config.Games ?? new List<Game>();
+        return System.Text.Json.JsonSerializer.Deserialize<Game[]>(_config.Games) ?? [];
     }
 
     /// <summary>
@@ -87,15 +87,15 @@ public class ConfigurationService
     /// </summary>
     public void SaveGames(IEnumerable<Game> games)
     {
-        _config.Games = games.ToList();
+        _config.Games = System.Text.Json.JsonSerializer.Serialize(games);
     }
 
     /// <summary>
     /// Get the list of watched folders
     /// </summary>
-    public List<string> GetWatchedFolders()
+    public string[] GetWatchedFolders()
     {
-        return _config.WatchedFolders ?? new List<string>();
+        return _config.WatchedFolders ?? [];
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ public class ConfigurationService
     /// </summary>
     public void SaveWatchedFolders(IEnumerable<string> folders)
     {
-        _config.WatchedFolders = folders.ToList();
+        _config.WatchedFolders = folders.ToArray();
     }
 
     /// <summary>

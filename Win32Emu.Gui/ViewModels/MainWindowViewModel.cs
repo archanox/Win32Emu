@@ -1,8 +1,8 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using Avalonia.Platform.Storage;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Avalonia.Platform.Storage;
-using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Configuration;
+using Win32Emu.Gui.Models;
 
 namespace Win32Emu.Gui.ViewModels;
 

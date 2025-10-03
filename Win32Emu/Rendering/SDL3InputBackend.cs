@@ -5,7 +5,7 @@ namespace Win32Emu.Rendering;
 /// <summary>
 /// SDL3-based input backend for DirectInput operations
 /// </summary>
-public class SDL3InputBackend : IDisposable
+public class Sdl3InputBackend : IDisposable
 {
     private bool _initialized;
     private readonly object _lock = new();
@@ -48,7 +48,9 @@ public class SDL3InputBackend : IDisposable
         lock (_lock)
         {
             if (_initialized)
-                return true;
+            {
+	            return true;
+            }
 
             // Initialize SDL3 gamepad and joystick subsystems
             if (!SDL.Init(SDL.InitFlags.Gamepad | SDL.InitFlags.Joystick))
@@ -77,7 +79,7 @@ public class SDL3InputBackend : IDisposable
         var gamepadIds = SDL.GetGamepads(out gamepadCount);
         if (gamepadIds != null)
         {
-            for (int i = 0; i < gamepadCount; i++)
+            for (var i = 0; i < gamepadCount; i++)
             {
                 _gamepadIds.Add(gamepadIds[i]);
                 Console.WriteLine($"[SDL3Input] Found gamepad: {gamepadIds[i]}");
@@ -89,7 +91,7 @@ public class SDL3InputBackend : IDisposable
         var joystickIds = SDL.GetJoysticks(out joystickCount);
         if (joystickIds != null)
         {
-            for (int i = 0; i < joystickCount; i++)
+            for (var i = 0; i < joystickCount; i++)
             {
                 if (!_gamepadIds.Contains(joystickIds[i]))
                 {
@@ -114,7 +116,7 @@ public class SDL3InputBackend : IDisposable
             result.Add((0x2000, "Mouse", DeviceType.Mouse));
 
             // Add gamepads
-            for (int i = 0; i < _gamepadIds.Count; i++)
+            for (var i = 0; i < _gamepadIds.Count; i++)
             {
                 var gamepadId = _gamepadIds[i];
                 var gamepad = SDL.OpenGamepad(gamepadId);
@@ -127,7 +129,7 @@ public class SDL3InputBackend : IDisposable
             }
 
             // Add joysticks
-            for (int i = 0; i < _joystickIds.Count; i++)
+            for (var i = 0; i < _joystickIds.Count; i++)
             {
                 var joystickId = _joystickIds[i];
                 var joystick = SDL.OpenJoystick(joystickId);
@@ -167,7 +169,7 @@ public class SDL3InputBackend : IDisposable
             // Open the appropriate SDL device
             if (type == DeviceType.Gamepad)
             {
-                int index = (int)(deviceId - 0x3000);
+                var index = (int)(deviceId - 0x3000);
                 if (index >= 0 && index < _gamepadIds.Count)
                 {
                     device.SdlJoystickId = _gamepadIds[index];
@@ -180,7 +182,7 @@ public class SDL3InputBackend : IDisposable
             }
             else if (type == DeviceType.Joystick)
             {
-                int index = (int)(deviceId - 0x4000);
+                var index = (int)(deviceId - 0x4000);
                 if (index >= 0 && index < _joystickIds.Count)
                 {
                     device.SdlJoystickId = _joystickIds[index];
@@ -206,7 +208,9 @@ public class SDL3InputBackend : IDisposable
         lock (_lock)
         {
             if (!_devices.TryGetValue(deviceId, out var device))
-                return false;
+            {
+	            return false;
+            }
 
             if (device.GamepadHandle != IntPtr.Zero)
             {
@@ -234,7 +238,9 @@ public class SDL3InputBackend : IDisposable
             state = null;
 
             if (!_devices.TryGetValue(deviceId, out var device))
-                return false;
+            {
+	            return false;
+            }
 
             state = new InputState();
 
@@ -242,14 +248,14 @@ public class SDL3InputBackend : IDisposable
             if (device.GamepadHandle != IntPtr.Zero)
             {
                 // Poll buttons
-                for (int i = 0; i < 16; i++)
+                for (var i = 0; i < 16; i++)
                 {
                     var buttonState = SDL.GetGamepadButton(device.GamepadHandle, (SDL.GamepadButton)i);
                     state.Buttons[i] = buttonState;
                 }
 
                 // Poll axes
-                for (int i = 0; i < 6; i++)
+                for (var i = 0; i < 6; i++)
                 {
                     var axisValue = SDL.GetGamepadAxis(device.GamepadHandle, (SDL.GamepadAxis)i);
                     state.Axes[i] = axisValue;
@@ -258,21 +264,21 @@ public class SDL3InputBackend : IDisposable
             // Update joystick state
             else if (device.JoystickHandle != IntPtr.Zero)
             {
-                int numButtons = SDL.GetNumJoystickButtons(device.JoystickHandle);
-                for (int i = 0; i < numButtons; i++)
+                var numButtons = SDL.GetNumJoystickButtons(device.JoystickHandle);
+                for (var i = 0; i < numButtons; i++)
                 {
                     var buttonState = SDL.GetJoystickButton(device.JoystickHandle, i);
                     state.Buttons[i] = buttonState;
                 }
 
-                int numAxes = SDL.GetNumJoystickAxes(device.JoystickHandle);
-                for (int i = 0; i < numAxes; i++)
+                var numAxes = SDL.GetNumJoystickAxes(device.JoystickHandle);
+                for (var i = 0; i < numAxes; i++)
                 {
                     var axisValue = SDL.GetJoystickAxis(device.JoystickHandle, i);
                     state.Axes[i] = axisValue;
                 }
 
-                int numHats = SDL.GetNumJoystickHats(device.JoystickHandle);
+                var numHats = SDL.GetNumJoystickHats(device.JoystickHandle);
                 if (numHats > 0)
                 {
                     state.PovHat = (int)SDL.GetJoystickHat(device.JoystickHandle, 0);
@@ -292,7 +298,9 @@ public class SDL3InputBackend : IDisposable
         lock (_lock)
         {
             if (!_initialized)
-                return;
+            {
+	            return;
+            }
 
             SDL.Event evt;
             while (SDL.PollEvent(out evt))
@@ -300,19 +308,19 @@ public class SDL3InputBackend : IDisposable
                 switch ((SDL.EventType)evt.Type)
                 {
                     case SDL.EventType.GamepadAdded:
-                        Console.WriteLine($"[SDL3Input] Gamepad added");
+                        Console.WriteLine("[SDL3Input] Gamepad added");
                         EnumerateDevices();
                         break;
                     case SDL.EventType.GamepadRemoved:
-                        Console.WriteLine($"[SDL3Input] Gamepad removed");
+                        Console.WriteLine("[SDL3Input] Gamepad removed");
                         EnumerateDevices();
                         break;
                     case SDL.EventType.JoystickAdded:
-                        Console.WriteLine($"[SDL3Input] Joystick added");
+                        Console.WriteLine("[SDL3Input] Joystick added");
                         EnumerateDevices();
                         break;
                     case SDL.EventType.JoystickRemoved:
-                        Console.WriteLine($"[SDL3Input] Joystick removed");
+                        Console.WriteLine("[SDL3Input] Joystick removed");
                         EnumerateDevices();
                         break;
                 }
@@ -325,7 +333,9 @@ public class SDL3InputBackend : IDisposable
         lock (_lock)
         {
             if (!_initialized)
-                return;
+            {
+	            return;
+            }
 
             // Close all open devices
             foreach (var device in _devices.Values.ToList())

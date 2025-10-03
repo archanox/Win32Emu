@@ -20,6 +20,37 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Gui", "Win32Emu.Gu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Tests.Emulator", "Win32Emu.Tests.Emulator\Win32Emu.Tests.Emulator.csproj", "{FAFD63C5-34CC-402E-B033-41ED7DC49400}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DLLs", "DLLs", "{BD8301D0-EC1D-46DD-B3DC-11A282404259}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WinME", "WinME", "{D241F632-4AC7-42FA-917B-85F0EE1F9CED}"
+	ProjectSection(SolutionItems) = preProject
+		DLLs\WinME\WINMM.DLL = DLLs\WinME\WINMM.DLL
+		DLLs\WinME\USER32.DLL = DLLs\WinME\USER32.DLL
+		DLLs\WinME\KERNEL32.DLL = DLLs\WinME\KERNEL32.DLL
+		DLLs\WinME\GDI32.DLL = DLLs\WinME\GDI32.DLL
+		DLLs\WinME\DSOUND.DLL = DLLs\WinME\DSOUND.DLL
+		DLLs\WinME\DPLAYX.DLL = DLLs\WinME\DPLAYX.DLL
+		DLLs\WinME\DPLAY.DLL = DLLs\WinME\DPLAY.DLL
+		DLLs\WinME\dinput8.dll = DLLs\WinME\dinput8.dll
+		DLLs\WinME\DINPUT.DLL = DLLs\WinME\DINPUT.DLL
+		DLLs\WinME\DDRAW.DLL = DLLs\WinME\DDRAW.DLL
+		DLLs\WinME\GLIDE2X.DLL = DLLs\WinME\GLIDE2X.DLL
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WinXP", "WinXP", "{1CB43367-B21B-4548-8D02-8508762B05EE}"
+	ProjectSection(SolutionItems) = preProject
+		DLLs\WinXP\winmm.dll = DLLs\WinXP\winmm.dll
+		DLLs\WinXP\user32.dll = DLLs\WinXP\user32.dll
+		DLLs\WinXP\kernel32.dll = DLLs\WinXP\kernel32.dll
+		DLLs\WinXP\gdi32.dll = DLLs\WinXP\gdi32.dll
+		DLLs\WinXP\dsound.dll = DLLs\WinXP\dsound.dll
+		DLLs\WinXP\dplay.dll = DLLs\WinXP\dplay.dll
+		DLLs\WinXP\dplayx.dll = DLLs\WinXP\dplayx.dll
+		DLLs\WinXP\dinput8.dll = DLLs\WinXP\dinput8.dll
+		DLLs\WinXP\dinput.dll = DLLs\WinXP\dinput.dll
+		DLLs\WinXP\ddraw.dll = DLLs\WinXP\ddraw.dll
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -108,5 +139,10 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F51FE0B2-88D2-4467-86A9-54B70B52FBD9}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{BD8301D0-EC1D-46DD-B3DC-11A282404259} = {8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}
+		{D241F632-4AC7-42FA-917B-85F0EE1F9CED} = {BD8301D0-EC1D-46DD-B3DC-11A282404259}
+		{1CB43367-B21B-4548-8D02-8508762B05EE} = {BD8301D0-EC1D-46DD-B3DC-11A282404259}
 	EndGlobalSection
 EndGlobal

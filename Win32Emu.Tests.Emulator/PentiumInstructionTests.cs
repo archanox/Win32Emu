@@ -74,12 +74,12 @@ public class PentiumInstructionTests : IDisposable
         // Assert - EAX should contain processor signature
         // EDX and ECX should contain feature flags
         var signature = _helper.GetReg("EAX");
-        var featuresEDX = _helper.GetReg("EDX");
-        var featuresECX = _helper.GetReg("ECX");
+        var featuresEdx = _helper.GetReg("EDX");
+        var featuresEcx = _helper.GetReg("ECX");
         
         // At minimum, we should return some feature information
         // Feature flags should have at least one bit set for basic CPU features
-        Assert.True(featuresEDX > 0 || featuresECX > 0, "CPUID should return feature flags");
+        Assert.True(featuresEdx > 0 || featuresEcx > 0, "CPUID should return feature flags");
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class PentiumInstructionTests : IDisposable
         // Assert
         var result = _helper.ReadMemory64(memAddr);
         Assert.Equal(((ulong)newHigh << 32) | newLow, result);
-        Assert.True(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be set when values are equal");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set when values are equal");
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public class PentiumInstructionTests : IDisposable
         // Assert
         Assert.Equal(0x55667788u, _helper.GetReg("EAX"));
         Assert.Equal(0x11223344u, _helper.GetReg("EDX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.ZF), "ZF should be clear when values are not equal");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear when values are not equal");
         
         // Memory should not change
         var result = _helper.ReadMemory64(memAddr);

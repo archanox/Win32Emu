@@ -1,6 +1,8 @@
+using System.Text;
+using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
-using Win32Emu.Loader;
+using Win32Emu.Win32.Modules;
 
 namespace Win32Emu.Tests.User32.TestInfrastructure;
 
@@ -17,7 +19,7 @@ public class TestEnvironment : IDisposable
     public DDrawModule DDraw { get; }
     public DSoundModule DSound { get; }
     public DInputModule DInput { get; }
-    public WinMMModule WinMM { get; }
+    public WinMmModule WinMm { get; }
     public PeImageLoader PeLoader { get; }
 
     public TestEnvironment()
@@ -31,7 +33,7 @@ public class TestEnvironment : IDisposable
         DDraw = new DDrawModule(ProcessEnv, 0x00400000, PeLoader);
         DSound = new DSoundModule(ProcessEnv, 0x00400000, PeLoader);
         DInput = new DInputModule(ProcessEnv, 0x00400000, PeLoader);
-        WinMM = new WinMMModule(ProcessEnv, 0x00400000, PeLoader);
+        WinMm = new WinMmModule(ProcessEnv, 0x00400000, PeLoader);
 
         // Initialize process environment with test data
         ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);
@@ -48,7 +50,7 @@ public class TestEnvironment : IDisposable
         DDraw = new DDrawModule(ProcessEnv, 0x00400000, PeLoader);
         DSound = new DSoundModule(ProcessEnv, 0x00400000, PeLoader);
         DInput = new DInputModule(ProcessEnv, 0x00400000, PeLoader);
-        WinMM = new WinMMModule(ProcessEnv, 0x00400000, PeLoader);
+        WinMm = new WinMmModule(ProcessEnv, 0x00400000, PeLoader);
 
         // Initialize process environment with test data
         ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);
@@ -63,7 +65,7 @@ public class TestEnvironment : IDisposable
         Cpu.SetupStackArgs(Memory, args);
 
         // Call the API
-        var success = User32.TryInvokeUnsafe(functionName, Cpu, Memory, out uint returnValue);
+        var success = User32.TryInvokeUnsafe(functionName, Cpu, Memory, out var returnValue);
         if (!success)
         {
             throw new InvalidOperationException($"Failed to invoke {functionName}");
@@ -81,7 +83,7 @@ public class TestEnvironment : IDisposable
         Cpu.SetupStackArgs(Memory, args);
 
         // Call the API
-        var success = Gdi32.TryInvokeUnsafe(functionName, Cpu, Memory, out uint returnValue);
+        var success = Gdi32.TryInvokeUnsafe(functionName, Cpu, Memory, out var returnValue);
         if (!success)
         {
             throw new InvalidOperationException($"Failed to invoke {functionName}");
@@ -96,7 +98,7 @@ public class TestEnvironment : IDisposable
     public uint CallDDrawApi(string functionName, params uint[] args)
     {
         Cpu.SetupStackArgs(Memory, args);
-        var success = DDraw.TryInvokeUnsafe(functionName, Cpu, Memory, out uint returnValue);
+        var success = DDraw.TryInvokeUnsafe(functionName, Cpu, Memory, out var returnValue);
         if (!success)
         {
             throw new InvalidOperationException($"Failed to invoke {functionName}");
@@ -110,7 +112,7 @@ public class TestEnvironment : IDisposable
     public uint CallDSoundApi(string functionName, params uint[] args)
     {
         Cpu.SetupStackArgs(Memory, args);
-        var success = DSound.TryInvokeUnsafe(functionName, Cpu, Memory, out uint returnValue);
+        var success = DSound.TryInvokeUnsafe(functionName, Cpu, Memory, out var returnValue);
         if (!success)
         {
             throw new InvalidOperationException($"Failed to invoke {functionName}");
@@ -124,7 +126,7 @@ public class TestEnvironment : IDisposable
     public uint CallDInputApi(string functionName, params uint[] args)
     {
         Cpu.SetupStackArgs(Memory, args);
-        var success = DInput.TryInvokeUnsafe(functionName, Cpu, Memory, out uint returnValue);
+        var success = DInput.TryInvokeUnsafe(functionName, Cpu, Memory, out var returnValue);
         if (!success)
         {
             throw new InvalidOperationException($"Failed to invoke {functionName}");
@@ -135,10 +137,10 @@ public class TestEnvironment : IDisposable
     /// <summary>
     /// Call a WinMM API function with the given arguments
     /// </summary>
-    public uint CallWinMMApi(string functionName, params uint[] args)
+    public uint CallWinMmApi(string functionName, params uint[] args)
     {
         Cpu.SetupStackArgs(Memory, args);
-        var success = WinMM.TryInvokeUnsafe(functionName, Cpu, Memory, out uint returnValue);
+        var success = WinMm.TryInvokeUnsafe(functionName, Cpu, Memory, out var returnValue);
         if (!success)
         {
             throw new InvalidOperationException($"Failed to invoke {functionName}");
@@ -151,7 +153,7 @@ public class TestEnvironment : IDisposable
     /// </summary>
     public uint WriteString(string str)
     {
-        var bytes = System.Text.Encoding.ASCII.GetBytes(str + "\0");
+        var bytes = Encoding.ASCII.GetBytes(str + "\0");
         var addr = ProcessEnv.SimpleAlloc((uint)bytes.Length);
         Memory.WriteBytes(addr, bytes);
         return addr;
@@ -162,20 +164,27 @@ public class TestEnvironment : IDisposable
     /// </summary>
     public string ReadString(uint addr)
     {
-        if (addr == 0) return string.Empty;
+        if (addr == 0)
+        {
+	        return string.Empty;
+        }
 
         var result = new List<byte>();
-        uint currentAddr = addr;
+        var currentAddr = addr;
         
         while (true)
         {
             var b = Memory.Read8(currentAddr);
-            if (b == 0) break;
+            if (b == 0)
+            {
+	            break;
+            }
+
             result.Add(b);
             currentAddr++;
         }
 
-        return System.Text.Encoding.ASCII.GetString(result.ToArray());
+        return Encoding.ASCII.GetString(result.ToArray());
     }
 
     /// <summary>

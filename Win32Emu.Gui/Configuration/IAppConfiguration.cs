@@ -15,7 +15,7 @@ public interface IAppConfiguration
     int ResolutionScaleFactor { get; set; }
 
     [Option(Alias = "ReservedMemoryMB", DefaultValue = 256)]
-    int ReservedMemoryMB { get; set; }
+    int ReservedMemoryMb { get; set; }
 
     [Option(Alias = "WindowsVersion", DefaultValue = "Windows 95")]
     string WindowsVersion { get; set; }
@@ -23,9 +23,9 @@ public interface IAppConfiguration
     [Option(Alias = "EnableDebugMode", DefaultValue = false)]
     bool EnableDebugMode { get; set; }
 
-    [Option(Alias = "Games")]
-    List<Game>? Games { get; set; }
+    [Option(Alias = "Games", DefaultValue = "[]")]
+    string Games { get; set; }
 
     [Option(Alias = "WatchedFolders")]
-    List<string>? WatchedFolders { get; set; }
+    string[]? WatchedFolders { get; set; }
 }
