@@ -129,12 +129,39 @@
                 BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                 BorderThickness="0,1,0,0"
                 Padding="10,5">
-            <Grid ColumnDefinitions="Auto,*,Auto">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
                 <TextBlock Grid.Column="0"
                          Text="{Binding CurrentState, StringFormat='State: {0}'}"
+                         VerticalAlignment="Center"
                          Margin="0,0,20,0"/>
-                <TextBlock Grid.Column="2"
-                         Text="Press F12 to toggle debug panel"/>
+                
+                <!-- Stop Button -->
+                <Button Grid.Column="1"
+                        Command="{Binding StopEmulationCommand}"
+                        ToolTip.Tip="Stop Emulation"
+                        Margin="0,0,5,0"
+                        Padding="10,5">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⏹" FontSize="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Stop"/>
+                    </StackPanel>
+                </Button>
+                
+                <!-- Pause/Resume Button -->
+                <Button Grid.Column="2"
+                        Command="{Binding PauseResumeEmulationCommand}"
+                        ToolTip.Tip="Pause/Resume Emulation"
+                        Margin="0,0,5,0"
+                        Padding="10,5">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⏸" FontSize="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Pause/Resume"/>
+                    </StackPanel>
+                </Button>
+                
+                <TextBlock Grid.Column="4"
+                         Text="Press F12 to toggle debug panel"
+                         VerticalAlignment="Center"/>
             </Grid>
         </Border>
 

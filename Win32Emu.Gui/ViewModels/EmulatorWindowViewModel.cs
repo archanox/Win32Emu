@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Win32Emu.Gui.Services;
 using Avalonia.Controls;
 using Avalonia.Threading;
@@ -9,6 +10,8 @@ namespace Win32Emu.Gui.ViewModels;
 
 public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 {
+    private readonly EmulatorService? _emulatorService;
+
     [ObservableProperty]
     private ObservableCollection<DebugMessage> _debugMessages = [];
 
@@ -36,6 +39,16 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     public void SetOwnerWindow(Window owner)
     {
         _ownerWindow = owner;
+    }
+
+    public EmulatorWindowViewModel()
+    {
+        // Default constructor for design-time
+    }
+
+    public EmulatorWindowViewModel(EmulatorService emulatorService)
+    {
+        _emulatorService = emulatorService;
     }
 
     public void OnDebugOutput(string message, Win32Emu.DebugLevel level)
@@ -132,6 +145,34 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     {
         CurrentState = state;
         OnDebugOutput($"Emulator state changed: {state}", Win32Emu.DebugLevel.Info);
+    }
+
+    [RelayCommand]
+    private void StopEmulation()
+    {
+        if (_emulatorService?.CurrentEmulator != null)
+        {
+            _emulatorService.CurrentEmulator.Stop();
+            OnDebugOutput("Stop requested", Win32Emu.DebugLevel.Info);
+        }
+    }
+
+    [RelayCommand]
+    private void PauseResumeEmulation()
+    {
+        if (_emulatorService?.CurrentEmulator != null)
+        {
+            if (_emulatorService.CurrentEmulator.IsPaused)
+            {
+                _emulatorService.CurrentEmulator.Resume();
+                OnDebugOutput("Resume requested", Win32Emu.DebugLevel.Info);
+            }
+            else
+            {
+                _emulatorService.CurrentEmulator.Pause();
+                OnDebugOutput("Pause requested", Win32Emu.DebugLevel.Info);
+            }
+        }
     }
 }
 
