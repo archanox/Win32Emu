@@ -555,10 +555,10 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 		
 		string? procName = null;
-		uint ordinal = 0;
 		bool byOrdinal = false;
 		
 		// Check if lpProcName is an ordinal (high word is 0)
+		uint ordinal = 0;
 		if ((lpProcName & 0xFFFF0000) == 0)
 		{
 			ordinal = lpProcName & 0xFFFF;
