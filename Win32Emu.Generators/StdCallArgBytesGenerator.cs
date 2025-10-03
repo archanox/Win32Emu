@@ -41,8 +41,44 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 					})
 					.Select(sym =>
 					{
-						var containingType = sym.ContainingType.Name;
-						var dllName = GetDllNameFromModuleClassName(containingType);
+						var containingType = sym.ContainingType;
+						
+						// Get the DLL name from the Name property of the module class
+						var nameProperty = containingType.GetMembers("Name")
+							.OfType<IPropertySymbol>()
+							.FirstOrDefault();
+						
+						string? dllName = null;
+						if (nameProperty != null && nameProperty.GetMethod != null)
+						{
+							// Try to get the constant value from the property getter
+							var syntaxRef = nameProperty.GetMethod.DeclaringSyntaxReferences.FirstOrDefault();
+							if (syntaxRef != null)
+							{
+								var syntax = syntaxRef.GetSyntax();
+								// Look for arrow expression body: => "VALUE"
+								if (syntax.ToString().Contains("=>"))
+								{
+									var match = System.Text.RegularExpressions.Regex.Match(
+										syntax.ToString(), 
+										@"=>\s*""([^""]+)"""
+									);
+									if (match.Success)
+									{
+										dllName = match.Groups[1].Value;
+									}
+								}
+							}
+						}
+						
+						// Fallback if we couldn't extract the name
+						if (string.IsNullOrEmpty(dllName))
+						{
+							dllName = containingType.Name.ToUpperInvariant();
+							if (!dllName.EndsWith(".DLL"))
+								dllName += ".DLL";
+						}
+						
 						var argBytes = sym.Parameters.Sum(p => GetParamSize(p.Type));
 						return new ExportEntry(dllName, sym.Name, argBytes);
 					})
@@ -252,24 +288,6 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 
 			spc.AddSource("DllModuleExportInfo.g.cs", sb.ToString());
 		});
-	}
-
-	private static string GetDllNameFromModuleClassName(string moduleClassName)
-	{
-		// Convert class names like "Kernel32Module" to "KERNEL32.DLL"
-		return moduleClassName switch
-		{
-			"Kernel32Module" => "KERNEL32.DLL",
-			"User32Module" => "USER32.DLL",
-			"Gdi32Module" => "GDI32.DLL",
-			"DDrawModule" => "DDRAW.DLL",
-			"DInputModule" => "DINPUT.DLL",
-			"DSoundModule" => "DSOUND.DLL",
-			"DPlayXModule" => "DPLAYX.DLL",
-			"WinMMModule" => "WINMM.DLL",
-			"Glide2xModule" => "GLIDE2X.DLL",
-			_ => moduleClassName.ToUpperInvariant()
-		};
 	}
 
 	private static int GetParamSize(ITypeSymbol t)
