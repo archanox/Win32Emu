@@ -56,8 +56,8 @@ Use the `DllModuleExportInfo` helper class to check if exports are implemented. 
 ```csharp
 using Win32Emu.Win32;
 
-// Check if function exists (using module name as string)
-bool isImplemented = DllModuleExportInfo.IsExportImplemented("DPlayXModule", "DirectPlayCreate");
+// Check if function exists (using DLL filename)
+bool isImplemented = DllModuleExportInfo.IsExportImplemented("DPLAYX.DLL", "DirectPlayCreate");
 if (isImplemented)
 {
     Console.WriteLine("DirectPlayCreate is implemented");
@@ -65,7 +65,7 @@ if (isImplemented)
 
 // Check for specific version
 bool isImplementedXP = DllModuleExportInfo.IsExportImplemented(
-    "DPlayXModule", 
+    "DPLAYX.DLL", 
     "DirectPlayEnumerateA", 
     version: "5.3.2600.5512"
 );
@@ -74,7 +74,7 @@ bool isImplementedXP = DllModuleExportInfo.IsExportImplemented(
 ### Get All Exports from a Module
 
 ```csharp
-var exports = DllModuleExportInfo.GetAllExports("DPlayXModule");
+var exports = DllModuleExportInfo.GetAllExports("DPLAYX.DLL");
 foreach (var export in exports)
 {
     Console.WriteLine($"{export.Key} => Ordinal {export.Value}");
@@ -138,23 +138,23 @@ namespace Win32Emu.Win32
 {
     public static class DllModuleExportInfo
     {
-        public static bool IsExportImplemented(string moduleName, string exportName, string? version = null)
+        public static bool IsExportImplemented(string dllName, string exportName, string? version = null)
         {
-            switch ((moduleName, exportName.ToUpperInvariant()))
+            switch ((dllName.ToUpperInvariant(), exportName.ToUpperInvariant()))
             {
-                case ("DPlayXModule", "DIRECTPLAYCREATE"): return true;
-                case ("DPlayXModule", "DIRECTPLAYENUMERATEA"): return true;
+                case ("DPLAYX.DLL", "DIRECTPLAYCREATE"): return true;
+                case ("DPLAYX.DLL", "DIRECTPLAYENUMERATEA"): return true;
                 // ... more exports
                 default: return false;
             }
         }
 
-        public static Dictionary<string, uint> GetAllExports(string moduleName)
+        public static Dictionary<string, uint> GetAllExports(string dllName)
         {
             var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
-            switch (moduleName)
+            switch (dllName.ToUpperInvariant())
             {
-                case "DPlayXModule":
+                case "DPLAYX.DLL":
                     exports["DirectPlayCreate"] = 1;
                     exports["DirectPlayEnumerateA"] = 2;
                     break;
@@ -179,7 +179,7 @@ namespace Win32Emu.Win32
 2. **Use version strings for multiple versions**: When emulating different Windows versions, use version-specific attributes
 3. **Document entry points**: If known, include entry point addresses for debugging
 4. **Keep methods private**: Export methods should typically be private and called via `TryInvokeUnsafe()`
-5. **Use module name strings**: When calling `DllModuleExportInfo` methods, use the exact module class name (e.g., "DPlayXModule")
+5. **Use DLL filenames**: When calling `DllModuleExportInfo` methods, use the DLL filename (e.g., "KERNEL32.DLL", "DPLAYX.DLL")
 
 ## Migration Guide
 
@@ -234,7 +234,7 @@ private unsafe uint DirectPlayCreate(uint lpGUID, uint lplpDP, uint pUnkOuter)
 // GetExportOrdinals() can now use the generated helper
 public Dictionary<string, uint> GetExportOrdinals()
 {
-    return DllModuleExportInfo.GetAllExports("DPlayXModule");
+    return DllModuleExportInfo.GetAllExports("DPLAYX.DLL");
 }
 ```
 

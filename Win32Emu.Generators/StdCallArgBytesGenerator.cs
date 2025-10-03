@@ -146,8 +146,44 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 					})
 					.Select(sym =>
 					{
-						var containingType = sym.ContainingType.Name;
+						var containingType = sym.ContainingType;
 						var methodName = sym.Name;
+						
+						// Get the DLL name from the Name property of the module class
+						var nameProperty = containingType.GetMembers("Name")
+							.OfType<IPropertySymbol>()
+							.FirstOrDefault();
+						
+						string? dllName = null;
+						if (nameProperty != null && nameProperty.GetMethod != null)
+						{
+							// Try to get the constant value from the property getter
+							var syntaxRef = nameProperty.GetMethod.DeclaringSyntaxReferences.FirstOrDefault();
+							if (syntaxRef != null)
+							{
+								var syntax = syntaxRef.GetSyntax();
+								// Look for arrow expression body: => "VALUE"
+								if (syntax.ToString().Contains("=>"))
+								{
+									var match = System.Text.RegularExpressions.Regex.Match(
+										syntax.ToString(), 
+										@"=>\s*""([^""]+)"""
+									);
+									if (match.Success)
+									{
+										dllName = match.Groups[1].Value;
+									}
+								}
+							}
+						}
+						
+						// Fallback if we couldn't extract the name
+						if (string.IsNullOrEmpty(dllName))
+						{
+							dllName = containingType.Name.ToUpperInvariant();
+							if (!dllName.EndsWith(".DLL"))
+								dllName += ".DLL";
+						}
 						
 						// Get all DllModuleExport attributes
 						var exportAttrs = sym.GetAttributes()
@@ -183,7 +219,7 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 							})
 							.ToList();
 						
-						return new ExportMethodInfo(containingType, methodName, exportAttrs);
+						return new ExportMethodInfo(dllName, methodName, exportAttrs);
 					})
 					.ToList();
 			});
@@ -203,20 +239,20 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				    public static class DllModuleExportInfo
 				    {
 				        /// <summary>
-				        /// Checks if a given export function is implemented in a module.
+				        /// Checks if a given export function is implemented in a DLL module.
 				        /// </summary>
-				        /// <param name="moduleName">The name of the module class (e.g., "DPlayXModule")</param>
+				        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL", "DPLAYX.DLL")</param>
 				        /// <param name="exportName">The export function name to check</param>
 				        /// <param name="version">Optional version string to match. If null, checks if any version is implemented.</param>
 				        /// <returns>True if the export is implemented, false otherwise</returns>
-				        public static bool IsExportImplemented(string moduleName, string exportName, string? version = null)
+				        public static bool IsExportImplemented(string dllName, string exportName, string? version = null)
 				        {
-				            switch ((moduleName, exportName.ToUpperInvariant()))
+				            switch ((dllName.ToUpperInvariant(), exportName.ToUpperInvariant()))
 				            {
 				""");
 
 			// Generate switch cases for each export
-			foreach (var export in entries.OrderBy(e => e.ModuleName).ThenBy(e => e.MethodName))
+			foreach (var export in entries.OrderBy(e => e.DllName).ThenBy(e => e.MethodName))
 			{
 				// Check if this export has version-specific attributes
 				var hasVersions = export.Attributes.Any(a => a.Version != null);
@@ -224,7 +260,7 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				if (!hasVersions)
 				{
 					// No version-specific, simple case
-					sb.AppendLine($"                case (\"{export.ModuleName}\", \"{export.MethodName.ToUpperInvariant()}\"): return true;");
+					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\"): return true;");
 				}
 				else
 				{
@@ -233,11 +269,11 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 					{
 						if (attr.Version != null)
 						{
-							sb.AppendLine($"                case (\"{export.ModuleName}\", \"{export.MethodName.ToUpperInvariant()}\") when version == \"{attr.Version}\": return true;");
+							sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == \"{attr.Version}\": return true;");
 						}
 						else
 						{
-							sb.AppendLine($"                case (\"{export.ModuleName}\", \"{export.MethodName.ToUpperInvariant()}\") when version == null: return true;");
+							sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == null: return true;");
 						}
 					}
 				}
@@ -250,26 +286,26 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				        }
 
 				        /// <summary>
-				        /// Gets all exports implemented in a module.
+				        /// Gets all exports implemented in a DLL module.
 				        /// </summary>
-				        /// <param name="moduleName">The name of the module class</param>
+				        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL", "DPLAYX.DLL")</param>
 				        /// <returns>Dictionary mapping export names to their ordinals (first version found)</returns>
-				        public static System.Collections.Generic.Dictionary<string, uint> GetAllExports(string moduleName)
+				        public static System.Collections.Generic.Dictionary<string, uint> GetAllExports(string dllName)
 				        {
 				            var exports = new System.Collections.Generic.Dictionary<string, uint>(System.StringComparer.OrdinalIgnoreCase);
-				            switch (moduleName)
+				            switch (dllName.ToUpperInvariant())
 				            {
 				""");
 
-			// Group by module
-			var byModule = entries
-				.GroupBy(e => e.ModuleName)
+			// Group by DLL name
+			var byDll = entries
+				.GroupBy(e => e.DllName)
 				.OrderBy(g => g.Key);
 
-			foreach (var moduleGroup in byModule)
+			foreach (var dllGroup in byDll)
 			{
-				sb.AppendLine($"                case \"{moduleGroup.Key}\":");
-				foreach (var export in moduleGroup.OrderBy(e => e.MethodName))
+				sb.AppendLine($"                case \"{dllGroup.Key.ToUpperInvariant()}\":");
+				foreach (var export in dllGroup.OrderBy(e => e.MethodName))
 				{
 					var firstOrdinal = export.Attributes.Count > 0 ? export.Attributes[0].Ordinal : 0u;
 					sb.AppendLine($"                    exports[\"{export.MethodName}\"] = {firstOrdinal};");
@@ -321,9 +357,9 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 		public string? Version { get; } = version;
 	}
 
-	private readonly struct ExportMethodInfo(string moduleName, string methodName, List<ExportAttributeInfo> attributes)
+	private readonly struct ExportMethodInfo(string dllName, string methodName, List<ExportAttributeInfo> attributes)
 	{
-		public string ModuleName { get; } = moduleName;
+		public string DllName { get; } = dllName;
 		public string MethodName { get; } = methodName;
 		public List<ExportAttributeInfo> Attributes { get; } = attributes;
 	}
