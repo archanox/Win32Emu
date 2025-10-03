@@ -27,6 +27,7 @@ namespace Win32Emu.Win32.Modules
 			}
 		}
 
+		[DllModuleExport(2)]
 		private unsafe uint DirectPlayEnumerateA(uint pCallback, uint pContext)
 		{
 			// TODO: Implement DirectPlayEnumerateA
@@ -34,6 +35,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint DirectPlayCreate(uint lpGUID, uint lplpDP, uint pUnkOuter)
 		{
 			// TODO: Implement DirectPlayCreate
