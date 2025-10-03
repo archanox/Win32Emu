@@ -1,4 +1,5 @@
 using Config.Net;
+using Win32Emu.Gui.Models;
 
 namespace Win32Emu.Gui.Configuration;
 
@@ -22,9 +23,9 @@ public interface IAppConfiguration
     [Option(Alias = "EnableDebugMode", DefaultValue = false)]
     bool EnableDebugMode { get; set; }
 
-    [Option(Alias = "GamesJson", DefaultValue = "[]")]
-    string GamesJson { get; set; }
+    [Option(Alias = "Games")]
+    List<Game>? Games { get; set; }
 
-    [Option(Alias = "WatchedFolders", DefaultValue = "")]
-    string WatchedFolders { get; set; }
+    [Option(Alias = "WatchedFolders")]
+    List<string>? WatchedFolders { get; set; }
 }

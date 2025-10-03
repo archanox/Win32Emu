@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Config.Net;
 using Win32Emu.Gui.Models;
 
@@ -64,21 +63,7 @@ public class ConfigurationService
     /// </summary>
     public List<Game> GetGames()
     {
-        try
-        {
-            var gamesJson = _config.GamesJson;
-            if (string.IsNullOrWhiteSpace(gamesJson) || gamesJson == "[]")
-            {
-                return new List<Game>();
-            }
-
-            var games = JsonSerializer.Deserialize<List<Game>>(gamesJson);
-            return games ?? new List<Game>();
-        }
-        catch
-        {
-            return new List<Game>();
-        }
+        return _config.Games ?? new List<Game>();
     }
 
     /// <summary>
@@ -86,11 +71,7 @@ public class ConfigurationService
     /// </summary>
     public void SaveGames(IEnumerable<Game> games)
     {
-        var gamesJson = JsonSerializer.Serialize(games, new JsonSerializerOptions
-        {
-            WriteIndented = false
-        });
-        _config.GamesJson = gamesJson;
+        _config.Games = games.ToList();
     }
 
     /// <summary>
@@ -98,15 +79,7 @@ public class ConfigurationService
     /// </summary>
     public List<string> GetWatchedFolders()
     {
-        var foldersStr = _config.WatchedFolders;
-        if (string.IsNullOrWhiteSpace(foldersStr))
-        {
-            return new List<string>();
-        }
-
-        return foldersStr.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(f => f.Trim())
-                        .ToList();
+        return _config.WatchedFolders ?? new List<string>();
     }
 
     /// <summary>
@@ -114,7 +87,7 @@ public class ConfigurationService
     /// </summary>
     public void SaveWatchedFolders(IEnumerable<string> folders)
     {
-        _config.WatchedFolders = string.Join(";", folders);
+        _config.WatchedFolders = folders.ToList();
     }
 
     /// <summary>
