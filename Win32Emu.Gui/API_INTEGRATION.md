@@ -46,7 +46,7 @@ A dedicated window for running games with:
 - Timestamps and level indicators
 - Filterable by minimum debug level
 - Auto-scrolling with 1000 message limit
-- Toggle with F12 key
+- Toggle with debug panel button
 
 **Stdout Console (Bottom of Debug Panel)**
 - DOS-like black console with monospace font

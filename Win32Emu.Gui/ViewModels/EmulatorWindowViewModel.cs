@@ -174,6 +174,12 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             }
         }
     }
+
+    [RelayCommand]
+    private void ToggleDebugPanel()
+    {
+        ShowDebugPanel = !ShowDebugPanel;
+    }
 }
 
 public class DebugMessage
