@@ -129,7 +129,7 @@
                 BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                 BorderThickness="0,1,0,0"
                 Padding="10,5">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*">
                 <TextBlock Grid.Column="0"
                          Text="{Binding CurrentState, StringFormat='State: {0}'}"
                          VerticalAlignment="Center"
@@ -170,10 +170,6 @@
                         <TextBlock Text="Debug Panel"/>
                     </StackPanel>
                 </Button>
-                
-                <TextBlock Grid.Column="4"
-                         Text=""
-                         VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
