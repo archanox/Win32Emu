@@ -10,6 +10,10 @@ public interface IWin32ModuleUnsafe
 
 	// Optional extension: modules can implement pointer-based stubs for selected exports.
 	bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue);
+
+	// Get the export table for this module (export name -> ordinal)
+	// This allows GetProcAddress to work with emulated modules
+	Dictionary<string, uint> GetExportOrdinals();
 }
 
 public class User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
@@ -630,6 +634,46 @@ public class User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader?
 		// Post message to queue - for now just log
 		return 1; // TRUE
 	}
+
+	public Dictionary<string, uint> GetExportOrdinals()
+	{
+		// Export ordinals for User32 - alphabetically ordered
+		var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
+		{
+			{ "ADJUSTWINDOWRECTEX", 1 },
+			{ "CLIENTTOSCREEN", 2 },
+			{ "CREATEWINDOWEXA", 3 },
+			{ "DEFWINDOWPROCA", 4 },
+			{ "DESTROYWINDOW", 5 },
+			{ "DISPATCHMESSAGEA", 6 },
+			{ "GETCLIENTRECT", 7 },
+			{ "GETDC", 8 },
+			{ "GETMENU", 9 },
+			{ "GETMESSAGEA", 10 },
+			{ "GETSYSTEMMETRICS", 11 },
+			{ "GETWINDOWLONGA", 12 },
+			{ "GETWINDOWRECT", 13 },
+			{ "LOADCURSORA", 14 },
+			{ "LOADICONA", 15 },
+			{ "MESSAGEBOXA", 16 },
+			{ "PEEKMESSAGEA", 17 },
+			{ "POSTMESSAGEA", 18 },
+			{ "POSTQUITMESSAGE", 19 },
+			{ "REGISTERCLASSA", 20 },
+			{ "RELEASEDC", 21 },
+			{ "SENDMESSAGEA", 22 },
+			{ "SETCURSOR", 23 },
+			{ "SETFOCUS", 24 },
+			{ "SETRECT", 25 },
+			{ "SETWINDOWLONGA", 26 },
+			{ "SETWINDOWPOS", 27 },
+			{ "SHOWWINDOW", 28 },
+			{ "SYSTEMPARAMETERSINFOA", 29 },
+			{ "TRANSLATEMESSAGE", 30 },
+			{ "UPDATEWINDOW", 31 }
+		};
+		return exports;
+	}
 }
 
 public class Gdi32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
@@ -829,6 +873,24 @@ public class Gdi32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? 
 		public int BkMode { get; set; } = 2; // OPAQUE
 		public uint TextColor { get; set; } = 0x00000000; // Black
 	}
+
+	public Dictionary<string, uint> GetExportOrdinals()
+	{
+		// Export ordinals for Gdi32 - alphabetically ordered
+		var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
+		{
+			{ "BEGINPAINT", 1 },
+			{ "ENDPAINT", 2 },
+			{ "FILLRECT", 3 },
+			{ "GETDEVICECAPS", 4 },
+			{ "GETSTOCKOBJECT", 5 },
+			{ "SETBKMODE", 6 },
+			{ "SETTEXTCOLOR", 7 },
+			{ "TEXTOUT", 8 },
+			{ "TEXTOUTA", 9 }
+		};
+		return exports;
+	}
 }
 
 public class DDrawModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
@@ -922,6 +984,17 @@ public class DDrawModule(ProcessEnvironment env, uint imageBase, PeImageLoader? 
 		public byte[]? Bits { get; set; }
 		public bool IsPrimary { get; set; }
 	}
+
+	public Dictionary<string, uint> GetExportOrdinals()
+	{
+		// Export ordinals for DDraw - alphabetically ordered
+		var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
+		{
+			{ "DIRECTDRAWCREATE", 1 },
+			{ "DIRECTDRAWCREATEEX", 2 }
+		};
+		return exports;
+	}
 }
 
 public class DSoundModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
@@ -1004,6 +1077,17 @@ public class DSoundModule(ProcessEnvironment env, uint imageBase, PeImageLoader?
 		public int Size { get; set; }
 		public byte[]? Data { get; set; }
 		public bool IsPrimary { get; set; }
+	}
+
+	public Dictionary<string, uint> GetExportOrdinals()
+	{
+		// Export ordinals for DSound - alphabetically ordered
+		var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
+		{
+			{ "DIRECTSOUNDCREATE", 1 },
+			{ "DIRECTSOUNDENUMERATEA", 2 }
+		};
+		return exports;
 	}
 }
 
@@ -1110,6 +1194,18 @@ public class DInputModule(ProcessEnvironment env, uint imageBase, PeImageLoader?
 		public uint BackendDeviceId { get; set; }
 		public string Name { get; set; } = string.Empty;
 	}
+
+	public Dictionary<string, uint> GetExportOrdinals()
+	{
+		// Export ordinals for DInput - alphabetically ordered
+		var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
+		{
+			{ "DIRECTINPUT8CREATE", 1 },
+			{ "DIRECTINPUTCREATE", 2 },
+			{ "DIRECTINPUTCREATEA", 3 }
+		};
+		return exports;
+	}
 }
 
 public class WinMMModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
@@ -1174,6 +1270,19 @@ public class WinMMModule(ProcessEnvironment env, uint imageBase, PeImageLoader? 
 		Console.WriteLine($"[WinMM] timeKillEvent({uTimerID})");
 		return 0; // TIMERR_NOERROR
 	}
+
+	public Dictionary<string, uint> GetExportOrdinals()
+	{
+		// Export ordinals for WinMM - alphabetically ordered
+		var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
+		{
+			{ "TIMEBEGINPERIOD", 1 },
+			{ "TIMEENDPERIOD", 2 },
+			{ "TIMEGETTIME", 3 },
+			{ "TIMEKILLEVENT", 4 }
+		};
+		return exports;
+	}
 }
 
 public class Glide2xModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
@@ -1187,5 +1296,12 @@ public class Glide2xModule(ProcessEnvironment env, uint imageBase, PeImageLoader
 
 		Console.WriteLine($"[Glide2x] Unimplemented export: {export}");
 		return false;
+	}
+
+	public Dictionary<string, uint> GetExportOrdinals()
+	{
+		// Export ordinals for Glide2x - currently no implemented exports
+		var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
+		return exports;
 	}
 }

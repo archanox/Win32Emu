@@ -572,45 +572,86 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			Console.WriteLine($"[Kernel32] GetProcAddress: Looking up '{procName}'");
 		}
 		
-		// Try to find the module in loaded images
-		if (!env.TryGetLoadedImage(hModule, out var loadedImage) || loadedImage == null)
+		// Try to find the module in loaded PE images first
+		if (env.TryGetLoadedImage(hModule, out var loadedImage) && loadedImage != null)
 		{
-			Console.WriteLine($"[Kernel32] GetProcAddress: Module handle 0x{hModule:X8} not found in loaded images");
+			uint exportAddress = 0;
+
+			// Look up by ordinal or name in the real PE export table
+			if (byOrdinal)
+			{
+				if (loadedImage.ExportsByOrdinal.TryGetValue(ordinal, out exportAddress))
+				{
+					Console.WriteLine($"[Kernel32] GetProcAddress: Found export by ordinal {ordinal} at 0x{exportAddress:X8}");
+					return exportAddress;
+				}
+			}
+			else if (procName != null)
+			{
+				if (loadedImage.ExportsByName.TryGetValue(procName, out exportAddress))
+				{
+					Console.WriteLine($"[Kernel32] GetProcAddress: Found export '{procName}' at 0x{exportAddress:X8}");
+					return exportAddress;
+				}
+			}
+			
+			// Export not found in PE image
+			Console.WriteLine($"[Kernel32] GetProcAddress: Export not found in PE image");
+			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			return 0;
+		}
+		
+		// Not in loaded images - check if it's an emulated module
+		var moduleName = env.GetModuleFileNameForHandle(hModule);
+		if (moduleName == null)
+		{
+			Console.WriteLine($"[Kernel32] GetProcAddress: Module handle 0x{hModule:X8} not recognized");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 			return 0;
 		}
 
-		uint exportAddress = 0;
+		// Try to get the emulated module from the dispatcher
+		if (_dispatcher == null || !_dispatcher.TryGetModule(moduleName, out var emulatedModule) || emulatedModule == null)
+		{
+			Console.WriteLine($"[Kernel32] GetProcAddress: Emulated module '{moduleName}' not found in dispatcher");
+			_lastError = NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
+			return 0;
+		}
 
-		// Look up by ordinal or name
+		// Get the export ordinals for this emulated module
+		var exportOrdinals = emulatedModule.GetExportOrdinals();
+
+		// Look up the export by name or ordinal
+		string? exportName = null;
 		if (byOrdinal)
 		{
-			if (loadedImage.ExportsByOrdinal.TryGetValue(ordinal, out exportAddress))
+			// Find export by ordinal
+			var exportEntry = exportOrdinals.FirstOrDefault(kvp => kvp.Value == ordinal);
+			if (exportEntry.Key != null)
 			{
-				Console.WriteLine($"[Kernel32] GetProcAddress: Found export by ordinal {ordinal} at 0x{exportAddress:X8}");
-				return exportAddress;
-			}
-			else
-			{
-				Console.WriteLine($"[Kernel32] GetProcAddress: Ordinal {ordinal} not found in exports");
+				exportName = exportEntry.Key;
 			}
 		}
 		else if (procName != null)
 		{
-			if (loadedImage.ExportsByName.TryGetValue(procName, out exportAddress))
+			// Look up by name
+			if (exportOrdinals.ContainsKey(procName))
 			{
-				Console.WriteLine($"[Kernel32] GetProcAddress: Found export '{procName}' at 0x{exportAddress:X8}");
-				return exportAddress;
-			}
-			else
-			{
-				Console.WriteLine($"[Kernel32] GetProcAddress: Export '{procName}' not found");
+				exportName = procName;
 			}
 		}
 
-		// Not found
-		_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
-		return 0;
+		if (exportName == null)
+		{
+			Console.WriteLine($"[Kernel32] GetProcAddress: Export not found in emulated module '{moduleName}'");
+			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			return 0;
+		}
+
+		// Register and return a synthetic export address
+		var syntheticAddress = env.RegisterSyntheticExport(moduleName, exportName);
+		Console.WriteLine($"[Kernel32] GetProcAddress: Registered synthetic export '{moduleName}!{exportName}' at 0x{syntheticAddress:X8}");
+		return syntheticAddress;
 	}
 
 	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
@@ -1470,5 +1511,62 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		// RtlUnwind doesn't return a value in the traditional sense - it either succeeds
 		// or raises an exception. We'll return 0 to indicate success.
 		return 0;
+	}
+
+	public Dictionary<string, uint> GetExportOrdinals()
+	{
+		// Export ordinals for Kernel32 - alphabetically ordered
+		var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
+		{
+			{ "CLOSEHANDLE", 1 },
+			{ "CREATEFILEA", 2 },
+			{ "EXITPROCESS", 3 },
+			{ "FLUSHFILEBUFFERS", 4 },
+			{ "FREEENVIRONMENTSTRINGSA", 5 },
+			{ "FREEENVIRONMENTSTRINGSW", 6 },
+			{ "GETACP", 7 },
+			{ "GETCOMMANDLINEA", 8 },
+			{ "GETCPINFO", 9 },
+			{ "GETCURRENTPROCESS", 10 },
+			{ "GETENVIRONMENTSTRINGSA", 11 },
+			{ "GETENVIRONMENTSTRINGSW", 12 },
+			{ "GETFILETYPE", 13 },
+			{ "GETLASTERROR", 14 },
+			{ "GETMODULEFILENAMEA", 15 },
+			{ "GETMODULEHANDLEA", 16 },
+			{ "GETOEMCP", 17 },
+			{ "GETPROCADDRESS", 18 },
+			{ "GETSTARTUPINFOA", 19 },
+			{ "GETSTDHANDLE", 20 },
+			{ "GETSTRINGTYPEA", 21 },
+			{ "GETSTRINGTYPEW", 22 },
+			{ "GETVERSION", 23 },
+			{ "GLOBALALLOC", 24 },
+			{ "GLOBALFREE", 25 },
+			{ "HEAPALLOC", 26 },
+			{ "HEAPCREATE", 27 },
+			{ "HEAPDESTROY", 28 },
+			{ "HEAPFREE", 29 },
+			{ "LCMAPSTRINGA", 30 },
+			{ "LCMAPSTRINGW", 31 },
+			{ "LOADLIBRARYA", 32 },
+			{ "MULTIBYTETOWIDECHAR", 33 },
+			{ "QUERYPERFORMANCECOUNTER", 34 },
+			{ "RAISEEXCEPTION", 35 },
+			{ "READFILE", 36 },
+			{ "RTLUNWIND", 37 },
+			{ "SETENDOFFILE", 38 },
+			{ "SETFILEPOINTER", 39 },
+			{ "SETHANDLECOUNT", 40 },
+			{ "SETLASTERROR", 41 },
+			{ "SETSTDHANDLE", 42 },
+			{ "TERMINATEPROCESS", 43 },
+			{ "UNHANDLEDEXCEPTIONFILTER", 44 },
+			{ "VIRTUALALLOC", 45 },
+			{ "VIRTUALFREE", 46 },
+			{ "WIDECHARTOMULTIBYTE", 47 },
+			{ "WRITEFILE", 48 }
+		};
+		return exports;
 	}
 }
