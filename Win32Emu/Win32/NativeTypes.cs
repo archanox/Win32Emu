@@ -84,6 +84,7 @@ public static class NativeTypes
 		public const uint ERROR_INSUFFICIENT_BUFFER = 122;
 		public const uint ERROR_INVALID_HANDLE = 6;
 		public const uint ERROR_PROC_NOT_FOUND = 127;
+		public const uint ERROR_MOD_NOT_FOUND = 126;
 	}
 
 	// Windows BOOL values

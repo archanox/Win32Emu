@@ -19,6 +19,11 @@ public class Win32Dispatcher
         Diagnostics.LogInfo($"[Dispatcher] Registered dynamically loaded DLL: {dllName}");
     }
 
+    public bool TryGetModule(string dllName, out IWin32ModuleUnsafe? module)
+    {
+        return _modules.TryGetValue(dllName, out module);
+    }
+
     public bool TryInvoke(string dll, string export, ICpu cpu, VirtualMemory memory, out uint returnValue, out int stdcallArgBytes)
     {
         returnValue = 0;

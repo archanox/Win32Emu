@@ -34,6 +34,10 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 	private readonly Dictionary<string, LoadedImage> _loadedImages = new(StringComparer.OrdinalIgnoreCase);
 	private uint _nextModuleHandle = 0x10000000;
 
+	// Emulated module exports tracking (for GetProcAddress on system DLLs)
+	private readonly Dictionary<uint, (string module, string export)> _syntheticExports = new();
+	private uint _nextSyntheticExport = 0x0E000000; // Synthetic export base address
+
 	// Window management
 	private readonly Dictionary<uint, WindowInfo> _windows = new();
 	private readonly Dictionary<string, WindowClassInfo> _windowClasses = new(StringComparer.OrdinalIgnoreCase);
@@ -333,6 +337,40 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 		}
 
 		image = null;
+		return false;
+	}
+
+	/// <summary>
+	/// Register a synthetic export for an emulated module.
+	/// Returns a synthetic address that can be used to call this export.
+	/// </summary>
+	public uint RegisterSyntheticExport(string moduleName, string exportName)
+	{
+		var address = _nextSyntheticExport;
+		_nextSyntheticExport += 0x10;
+		_syntheticExports[address] = (moduleName.ToUpperInvariant(), exportName.ToUpperInvariant());
+		
+		// Create a stub at the synthetic address (INT3 for breakpoint interception)
+		var stub = new byte[] { 0xCC, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 };
+		vm.WriteBytes(address, stub);
+		
+		return address;
+	}
+
+	/// <summary>
+	/// Try to get the module and export name for a synthetic export address.
+	/// </summary>
+	public bool TryGetSyntheticExport(uint address, out string moduleName, out string exportName)
+	{
+		if (_syntheticExports.TryGetValue(address, out var export))
+		{
+			moduleName = export.module;
+			exportName = export.export;
+			return true;
+		}
+
+		moduleName = string.Empty;
+		exportName = string.Empty;
 		return false;
 	}
 
