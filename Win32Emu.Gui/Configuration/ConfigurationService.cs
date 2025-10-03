@@ -36,14 +36,7 @@ public class ConfigurationService
     /// </summary>
     public EmulatorConfiguration GetEmulatorConfiguration()
     {
-        return new EmulatorConfiguration
-        {
-            RenderingBackend = _config.RenderingBackend,
-            ResolutionScaleFactor = _config.ResolutionScaleFactor,
-            ReservedMemoryMB = _config.ReservedMemoryMB,
-            WindowsVersion = _config.WindowsVersion,
-            EnableDebugMode = _config.EnableDebugMode
-        };
+        return MapToEmulatorConfiguration(_config);
     }
 
     /// <summary>
@@ -51,11 +44,34 @@ public class ConfigurationService
     /// </summary>
     public void SaveEmulatorConfiguration(EmulatorConfiguration configuration)
     {
-        _config.RenderingBackend = configuration.RenderingBackend;
-        _config.ResolutionScaleFactor = configuration.ResolutionScaleFactor;
-        _config.ReservedMemoryMB = configuration.ReservedMemoryMB;
-        _config.WindowsVersion = configuration.WindowsVersion;
-        _config.EnableDebugMode = configuration.EnableDebugMode;
+        ApplyEmulatorConfiguration(_config, configuration);
+    }
+
+    /// <summary>
+    /// Maps IAppConfiguration to EmulatorConfiguration
+    /// </summary>
+    private EmulatorConfiguration MapToEmulatorConfiguration(IAppConfiguration config)
+    {
+        return new EmulatorConfiguration
+        {
+            RenderingBackend = config.RenderingBackend,
+            ResolutionScaleFactor = config.ResolutionScaleFactor,
+            ReservedMemoryMB = config.ReservedMemoryMB,
+            WindowsVersion = config.WindowsVersion,
+            EnableDebugMode = config.EnableDebugMode
+        };
+    }
+
+    /// <summary>
+    /// Applies EmulatorConfiguration to IAppConfiguration
+    /// </summary>
+    private void ApplyEmulatorConfiguration(IAppConfiguration config, EmulatorConfiguration emulatorConfig)
+    {
+        config.RenderingBackend = emulatorConfig.RenderingBackend;
+        config.ResolutionScaleFactor = emulatorConfig.ResolutionScaleFactor;
+        config.ReservedMemoryMB = emulatorConfig.ReservedMemoryMB;
+        config.WindowsVersion = emulatorConfig.WindowsVersion;
+        config.EnableDebugMode = emulatorConfig.EnableDebugMode;
     }
 
     /// <summary>
