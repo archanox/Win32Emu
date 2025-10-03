@@ -129,7 +129,7 @@
                 BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                 BorderThickness="0,1,0,0"
                 Padding="10,5">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
                 <TextBlock Grid.Column="0"
                          Text="{Binding CurrentState, StringFormat='State: {0}'}"
                          VerticalAlignment="Center"
@@ -159,8 +159,20 @@
                     </StackPanel>
                 </Button>
                 
+                <!-- Toggle Debug Panel Button -->
+                <Button Grid.Column="3"
+                        Command="{Binding ToggleDebugPanelCommand}"
+                        ToolTip.Tip="Toggle Debug Panel"
+                        Margin="0,0,5,0"
+                        Padding="10,5">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🐛" FontSize="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Debug Panel"/>
+                    </StackPanel>
+                </Button>
+                
                 <TextBlock Grid.Column="4"
-                         Text="Press F12 to toggle debug panel"
+                         Text=""
                          VerticalAlignment="Center"/>
             </Grid>
         </Border>
