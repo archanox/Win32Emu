@@ -85,7 +85,7 @@ public class Emulator
 
     private void RunNormal()
     {
-        const int maxInstr = 500000;
+        const int maxInstr = 5000000;
         for (var i = 0; i < maxInstr && !_env!.ExitRequested; i++)
         {
             var step = _cpu!.SingleStep(_vm!);
@@ -118,7 +118,7 @@ public class Emulator
         LogDebug("[Debug] Enhanced debugging enabled - will catch 0xFFFFFFFD errors");
         LogDebug("[Debug] Monitoring for suspicious register values");
 
-        const int maxInstr = 500000;
+        const int maxInstr = 5000000;
         for (var i = 0; i < maxInstr && !_env!.ExitRequested; i++)
         {
             var currentEip = _cpu.GetEip();
