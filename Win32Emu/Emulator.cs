@@ -17,13 +17,13 @@ public class Emulator
     private LoadedImage? _image;
     private bool _debugMode;
     private volatile bool _stopRequested;
-    private volatile bool _pauseRequested;
+    private readonly ManualResetEvent _pauseEvent;
 
     public Emulator(IEmulatorHost? host = null)
     {
         _host = host;
         _stopRequested = false;
-        _pauseRequested = false;
+        _pauseEvent = new ManualResetEvent(true); // Initially not paused (signaled)
     }
 
     /// <summary>
@@ -40,7 +40,7 @@ public class Emulator
     /// </summary>
     public void Pause()
     {
-        _pauseRequested = true;
+        _pauseEvent.Reset(); // Set event to non-signaled (paused)
         LogDebug("[Emulator] Pause requested");
     }
 
@@ -49,14 +49,14 @@ public class Emulator
     /// </summary>
     public void Resume()
     {
-        _pauseRequested = false;
+        _pauseEvent.Set(); // Set event to signaled (running)
         LogDebug("[Emulator] Resume requested");
     }
 
     /// <summary>
     /// Check if emulator is currently paused
     /// </summary>
-    public bool IsPaused => _pauseRequested;
+    public bool IsPaused => !_pauseEvent.WaitOne(0);
 
     public void LoadExecutable(string path, bool debugMode = false)
     {
@@ -104,7 +104,7 @@ public class Emulator
         }
 
         _stopRequested = false;
-        _pauseRequested = false;
+        _pauseEvent.Set(); // Ensure we start in running state
 
         if (_debugMode)
         {
@@ -129,11 +129,9 @@ public class Emulator
         // Run indefinitely until stop/exit requested
         while (!_stopRequested && !_env!.ExitRequested)
         {
-            // Handle pause
-            while (_pauseRequested && !_stopRequested)
-            {
-                Thread.Sleep(10);
-            }
+            // Wait for pause event to be signaled (running state)
+            // Using a timeout allows us to check _stopRequested periodically
+            _pauseEvent.WaitOne(100);
 
             if (_stopRequested) break;
 
@@ -171,11 +169,9 @@ public class Emulator
         var i = 0;
         while (!_stopRequested && !_env!.ExitRequested)
         {
-            // Handle pause
-            while (_pauseRequested && !_stopRequested)
-            {
-                Thread.Sleep(10);
-            }
+            // Wait for pause event to be signaled (running state)
+            // Using a timeout allows us to check _stopRequested periodically
+            _pauseEvent.WaitOne(100);
 
             if (_stopRequested) break;
 
