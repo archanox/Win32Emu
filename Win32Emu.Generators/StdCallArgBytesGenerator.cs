@@ -1,6 +1,5 @@
 using System.Text;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Win32Emu.Generators;
@@ -10,27 +9,66 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 {
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
-		// Find all unsafe methods.
-		var methodSymbols = context.SyntaxProvider
+		// Find methods with [DllModuleExport] attribute for new modules
+		var attributedMethods = context.SyntaxProvider
 			.CreateSyntaxProvider(
-				static (node, _) => node is MethodDeclarationSyntax m && m.Modifiers.Any(SyntaxKind.UnsafeKeyword),
+				static (node, _) => node is MethodDeclarationSyntax m && m.AttributeLists.Count > 0,
 				static (ctx, _) =>
-					ctx.SemanticModel.GetDeclaredSymbol((MethodDeclarationSyntax)ctx.Node))
+				{
+					var method = ctx.SemanticModel.GetDeclaredSymbol((MethodDeclarationSyntax)ctx.Node) as IMethodSymbol;
+					if (method is null)
+						return null;
+
+					// Check if method has DllModuleExport attribute
+					var hasDllExportAttr = method.GetAttributes()
+						.Any(attr => attr.AttributeClass?.Name == "DllModuleExportAttribute");
+
+					return hasDllExportAttr ? method : null;
+				})
 			.Where(static s => s is not null)!
 			.Select(static (s, _) => s!);
 
-		// Filter to Kernel32Module methods and compute arg bytes.
-		var exportMeta = methodSymbols
-			.Where(static sym => sym!.ContainingType.ToDisplayString() == "Win32Emu.Win32.Kernel32Module")
-			.Select(static (sym, _) => new ExportEntry(sym!.Name, sym.Parameters.Sum(p => GetParamSize(p.Type))))
-			.Collect();
+		// LEGACY: Find all unsafe methods in Kernel32Module for backward compatibility
+		var unsafeMethods = context.SyntaxProvider
+			.CreateSyntaxProvider(
+				static (node, _) => node is MethodDeclarationSyntax m && m.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.UnsafeKeyword),
+				static (ctx, _) =>
+					ctx.SemanticModel.GetDeclaredSymbol((MethodDeclarationSyntax)ctx.Node) as IMethodSymbol)
+			.Where(static s => s is not null && s.ContainingType.ToDisplayString() == "Win32Emu.Win32.Kernel32Module")!
+			.Select(static (s, _) => s!);
+
+		// Combine both sources
+		var allMethods = attributedMethods.Collect()
+			.Combine(unsafeMethods.Collect())
+			.Select(static (pair, _) => pair.Left.Concat(pair.Right).ToList());
+
+		// Filter to module classes and compute arg bytes.
+		var exportMeta = allMethods
+			.Select(static (methods, _) =>
+			{
+				return methods
+					.Where(sym =>
+					{
+						var containingType = sym.ContainingType.ToDisplayString();
+						return containingType.StartsWith("Win32Emu.Win32.Modules.") ||
+						       containingType == "Win32Emu.Win32.Kernel32Module";
+					})
+					.Select(sym =>
+					{
+						var containingType = sym.ContainingType.Name;
+						var dllName = GetDllNameFromModuleClassName(containingType);
+						var argBytes = sym.Parameters.Sum(p => GetParamSize(p.Type));
+						return new ExportEntry(dllName, sym.Name, argBytes);
+					})
+					.ToList();
+			});
 
 		context.RegisterSourceOutput(exportMeta, static (spc, entries) =>
 		{
-			// De-duplicate by method name in case of partials/overloads.
-			var distinct = entries
-				.GroupBy(e => e.Name)
-				.Select(g => new ExportEntry(g.Key, g.First().ArgBytes))
+			// Group by DLL and method name to handle duplicates
+			var byDll = entries
+				.GroupBy(e => e.DllName)
+				.OrderBy(g => g.Key)
 				.ToList();
 
 			var sb = new StringBuilder();
@@ -47,9 +85,17 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				            {
 				""");
 
-			foreach (var e in distinct)
+			foreach (var dllGroup in byDll)
 			{
-				sb.AppendLine($"                case (\"KERNEL32.DLL\", \"{e.Name}\"): return {e.ArgBytes};");
+				var distinct = dllGroup
+					.GroupBy(e => e.MethodName)
+					.Select(g => g.First())
+					.OrderBy(e => e.MethodName);
+
+				foreach (var e in distinct)
+				{
+					sb.AppendLine($"                case (\"{e.DllName}\", \"{e.MethodName}\"): return {e.ArgBytes};");
+				}
 			}
 
 			sb.AppendLine(
@@ -63,6 +109,24 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 
 			spc.AddSource("StdCallMeta.g.cs", sb.ToString());
 		});
+	}
+
+	private static string GetDllNameFromModuleClassName(string moduleClassName)
+	{
+		// Convert class names like "Kernel32Module" to "KERNEL32.DLL"
+		return moduleClassName switch
+		{
+			"Kernel32Module" => "KERNEL32.DLL",
+			"User32Module" => "USER32.DLL",
+			"Gdi32Module" => "GDI32.DLL",
+			"DDrawModule" => "DDRAW.DLL",
+			"DInputModule" => "DINPUT.DLL",
+			"DSoundModule" => "DSOUND.DLL",
+			"DPlayXModule" => "DPLAYX.DLL",
+			"WinMMModule" => "WINMM.DLL",
+			"Glide2xModule" => "GLIDE2X.DLL",
+			_ => moduleClassName.ToUpperInvariant()
+		};
 	}
 
 	private static int GetParamSize(ITypeSymbol t)
@@ -82,15 +146,10 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 		};
 	}
 
-	private readonly struct ExportEntry(string name, int argBytes)
+	private readonly struct ExportEntry(string dllName, string methodName, int argBytes)
 	{
-		public string Name { get; } = name;
+		public string DllName { get; } = dllName;
+		public string MethodName { get; } = methodName;
 		public int ArgBytes { get; } = argBytes;
-
-		public void Deconstruct(out string name, out int argBytes)
-		{
-			name = Name;
-			argBytes = ArgBytes;
-		}
 	}
 }
