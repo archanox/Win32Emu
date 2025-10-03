@@ -91,7 +91,7 @@ public class PeImageLoader(VirtualMemory vm)
 		foreach (var export in image.Exports.Entries)
 		{
 			// Skip forwarded exports (they have no RVA)
-			if (export.Address == null || export.Address.IsBounded == false)
+			if (export.Address == null || !export.Address.IsBounded)
 				continue;
 
 			var rva = export.Address.Rva;
