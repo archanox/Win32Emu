@@ -16,11 +16,47 @@ public class Emulator
     private Win32Dispatcher? _dispatcher;
     private LoadedImage? _image;
     private bool _debugMode;
+    private volatile bool _stopRequested;
+    private volatile bool _pauseRequested;
 
     public Emulator(IEmulatorHost? host = null)
     {
         _host = host;
+        _stopRequested = false;
+        _pauseRequested = false;
     }
+
+    /// <summary>
+    /// Request the emulator to stop execution
+    /// </summary>
+    public void Stop()
+    {
+        _stopRequested = true;
+        LogDebug("[Emulator] Stop requested");
+    }
+
+    /// <summary>
+    /// Request the emulator to pause execution
+    /// </summary>
+    public void Pause()
+    {
+        _pauseRequested = true;
+        LogDebug("[Emulator] Pause requested");
+    }
+
+    /// <summary>
+    /// Resume emulator execution from pause
+    /// </summary>
+    public void Resume()
+    {
+        _pauseRequested = false;
+        LogDebug("[Emulator] Resume requested");
+    }
+
+    /// <summary>
+    /// Check if emulator is currently paused
+    /// </summary>
+    public bool IsPaused => _pauseRequested;
 
     public void LoadExecutable(string path, bool debugMode = false)
     {
@@ -67,6 +103,9 @@ public class Emulator
             throw new InvalidOperationException("Executable not loaded. Call LoadExecutable first.");
         }
 
+        _stopRequested = false;
+        _pauseRequested = false;
+
         if (_debugMode)
         {
             RunWithEnhancedDebugging();
@@ -76,7 +115,9 @@ public class Emulator
             RunNormal();
         }
 
-        var exitMessage = _env.ExitRequested ? "[Exit] Process requested exit." : "[Exit] Instruction limit reached.";
+        var exitMessage = _stopRequested ? "[Exit] Stop requested by user." :
+                         _env.ExitRequested ? "[Exit] Process requested exit." :
+                         "[Exit] Execution completed.";
         LogDebug(exitMessage);
 
         LogDebug("=== Unknown Function Summary ===");
@@ -85,9 +126,17 @@ public class Emulator
 
     private void RunNormal()
     {
-        const int maxInstr = 5000000;
-        for (var i = 0; i < maxInstr && !_env!.ExitRequested; i++)
+        // Run indefinitely until stop/exit requested
+        while (!_stopRequested && !_env!.ExitRequested)
         {
+            // Handle pause
+            while (_pauseRequested && !_stopRequested)
+            {
+                Thread.Sleep(10);
+            }
+
+            if (_stopRequested) break;
+
             var step = _cpu!.SingleStep(_vm!);
             if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
             {
@@ -118,9 +167,18 @@ public class Emulator
         LogDebug("[Debug] Enhanced debugging enabled - will catch 0xFFFFFFFD errors");
         LogDebug("[Debug] Monitoring for suspicious register values");
 
-        const int maxInstr = 5000000;
-        for (var i = 0; i < maxInstr && !_env!.ExitRequested; i++)
+        // Run indefinitely until stop/exit requested
+        var i = 0;
+        while (!_stopRequested && !_env!.ExitRequested)
         {
+            // Handle pause
+            while (_pauseRequested && !_stopRequested)
+            {
+                Thread.Sleep(10);
+            }
+
+            if (_stopRequested) break;
+
             var currentEip = _cpu.GetEip();
 
             if (currentEip >= 0x0F000000 && currentEip < 0x10000000)
@@ -213,6 +271,8 @@ public class Emulator
                 LogDebug($"[Debug] Unexpected exception at instruction {i}: {ex}");
                 throw;
             }
+
+            i++;
         }
 
         var finalTrace = debugger.GetExecutionTrace();
