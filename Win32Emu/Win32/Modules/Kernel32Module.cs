@@ -185,6 +185,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 	}
 
+	[DllModuleExport(23)]
 	private unsafe uint GetVersion()
 	{
 		const ushort build = 950;
@@ -193,14 +194,17 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return (major << 8 | minor) << 16 | build;
 	}
 
+	[DllModuleExport(14)]
 	private unsafe uint GetLastError() => _lastError;
 
+	[DllModuleExport(41)]
 	private unsafe uint SetLastError(uint e)
 	{
 		_lastError = e;
 		return 0;
 	}
 
+	[DllModuleExport(3)]
 	private unsafe uint ExitProcess(uint code)
 	{
 		Console.WriteLine($"[Kernel32] ExitProcess({code})");
@@ -208,6 +212,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return 0;
 	}
 
+	[DllModuleExport(43)]
 	private unsafe uint TerminateProcess(uint hProcess, uint uExitCode)
 	{
 		// TerminateProcess terminates the specified process
@@ -229,6 +234,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return NativeTypes.Win32Bool.FALSE;
 	}
 
+	[DllModuleExport(35)]
 	private unsafe uint RaiseException(uint dwExceptionCode, uint dwExceptionFlags, uint nNumberOfArguments, uint lpArguments)
 	{
 		// RaiseException raises a software exception
@@ -246,10 +252,13 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return 0;
 	}
 
+	[DllModuleExport(10)]
 	private unsafe uint GetCurrentProcess() => 0xFFFFFFFF; // pseudo-handle
 
+	[DllModuleExport(7)]
 	private unsafe uint GetAcp() => 1252; // Windows-1252 (Western European)
 
+	[DllModuleExport(9)]
 	private unsafe uint GetCpInfo(uint codePage, uint lpCpInfo)
 	{
 		if (lpCpInfo == 0)
@@ -295,8 +304,10 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 	}
 
+	[DllModuleExport(17)]
 	private unsafe uint GetOemcp() => 437; // IBM PC US (OEM code page)
 
+	[DllModuleExport(21)]
 	private unsafe uint GetStringTypeA(uint locale, uint dwInfoType, sbyte* lpSrcStr, int cchSrc, uint lpCharType)
 	{
 		// Maximum string length limit to prevent excessive memory usage and infinite loops
@@ -420,6 +431,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
+	[DllModuleExport(22)]
 	private unsafe uint GetStringTypeW(uint locale, uint dwInfoType, uint lpSrcStr, int cchSrc, uint lpCharType)
 	{
 		// GetStringTypeW retrieves character type information for Unicode characters
@@ -524,12 +536,14 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	/// The GetModuleHandle function returns a handle to a mapped module without incrementing its reference count. However, if this handle is passed to the FreeLibrary function, the reference count of the mapped module will be decremented. Therefore, do not pass a handle returned by GetModuleHandle to the FreeLibrary function. Doing so can cause a DLL module to be unmapped prematurely.
 	/// This function must be used carefully in a multithreaded application. There is no guarantee that the module handle remains valid between the time this function returns the handle and the time it is used. For example, suppose that a thread retrieves a module handle, but before it uses the handle, a second thread frees the module. If the system loads another module, it could reuse the module handle that was recently freed. Therefore, the first thread would have a handle to a different module than the one intended.
 	/// </remarks>
+	[DllModuleExport(16)]
 	private unsafe uint GetModuleHandleA(char* lpModuleName)
 	{
 		Console.WriteLine($"Getting module handle for '{(lpModuleName != null ? new string(lpModuleName) : "NULL (current process)")}''");
 		return imageBase;
 	}
 
+	[DllModuleExport(32)]
 	private unsafe uint LoadLibraryA(sbyte* lpLibFileName)
 	{
 		if (lpLibFileName == null)
@@ -583,6 +597,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return env.LoadModule(libraryName);
 	}
 
+	[DllModuleExport(18)]
 	private unsafe uint GetProcAddress(uint hModule, uint lpProcName)
 	{
 		// GetProcAddress retrieves the address of an exported function from a DLL
@@ -697,6 +712,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return syntheticAddress;
 	}
 
+	[DllModuleExport(15)]
 	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
 	{
 		Diagnostics.Diagnostics.LogDebug($"GetModuleFileNameA called: h=0x{(uint)(nint)h:X8} lp=0x{(uint)(nint)lp:X8} n={n}");
@@ -775,8 +791,10 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return (uint)bytes.Length;
 	}
 
+	[DllModuleExport(8)]
 	private unsafe uint GetCommandLineA() => env.CommandLinePtr;
 
+	[DllModuleExport(12)]
 	private unsafe uint GetEnvironmentStringsW()
 	{
 		// Return pointer to Unicode environment strings block
@@ -784,6 +802,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return env.GetEnvironmentStringsW();
 	}
 
+	[DllModuleExport(6)]
 	private unsafe uint FreeEnvironmentStringsW(uint lpszEnvironmentBlock)
 	{
 		// In the Windows API, FreeEnvironmentStringsW frees the memory allocated by GetEnvironmentStringsW
@@ -802,6 +821,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
+	[DllModuleExport(11)]
 	private unsafe uint GetEnvironmentStringsA()
 	{
 		// Return pointer to ANSI environment strings block
@@ -809,6 +829,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return env.GetEnvironmentStringsA();
 	}
 
+	[DllModuleExport(5)]
 	private unsafe uint FreeEnvironmentStringsA(uint lpszEnvironmentBlock)
 	{
 		// In the Windows API, FreeEnvironmentStringsA frees the memory allocated by GetEnvironmentStringsA
@@ -827,6 +848,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
+	[DllModuleExport(19)]
 	private unsafe uint GetStartupInfoA(uint lpStartupInfo)
 	{
 		if (lpStartupInfo == 0)
@@ -842,6 +864,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return 0;
 	}
 
+	[DllModuleExport(20)]
 	private unsafe uint GetStdHandle(uint nStdHandle)
 	{
 		return nStdHandle switch
@@ -853,6 +876,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		};
 	}
 
+	[DllModuleExport(42)]
 	private unsafe uint SetStdHandle(uint nStdHandle, uint hHandle)
 	{
 		switch (nStdHandle)
@@ -865,15 +889,21 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return 1;
 	}
 
+	[DllModuleExport(24)]
 	private unsafe uint GlobalAlloc(uint flags, uint bytes) => env.SimpleAlloc(bytes == 0 ? 1u : bytes);
+	[DllModuleExport(25)]
 	private static unsafe uint GlobalFree(void* h) => 0;
 
+	[DllModuleExport(27)]
 	private unsafe uint HeapCreate(uint flOptions, uint dwInitialSize, uint dwMaximumSize) =>
 		env.HeapCreate(flOptions, dwInitialSize, dwMaximumSize);
 
+	[DllModuleExport(26)]
 	private unsafe uint HeapAlloc(void* hHeap, uint dwFlags, uint dwBytes) => env.HeapAlloc((uint)hHeap, dwBytes);
+	[DllModuleExport(29)]
 	private static unsafe uint HeapFree(void* hHeap, uint dwFlags, void* lpMem) => 1;
 
+	[DllModuleExport(28)]
 	private unsafe uint HeapDestroy(void* hHeap)
 	{
 		// HeapDestroy destroys a heap created with HeapCreate
@@ -890,9 +920,11 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
+	[DllModuleExport(45)]
 	private unsafe uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect) =>
 		env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
 
+	[DllModuleExport(46)]
 	private unsafe uint VirtualFree(uint lpAddress, uint dwSize, uint dwFreeType)
 	{
 		// VirtualFree releases or decommits virtual memory
@@ -923,6 +955,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	}
 
 	// File I/O implementations
+	[DllModuleExport(2)]
 	private unsafe uint CreateFileA(uint lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecAttr,
 		uint dwCreationDisposition, uint dwFlagsAndAttributes, uint hTemplateFile)
 	{
@@ -970,6 +1003,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 	}
 
+	[DllModuleExport(36)]
 	private unsafe uint ReadFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToRead, uint lpNumberOfBytesRead,
 		uint lpOverlapped)
 	{
@@ -1002,6 +1036,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 	}
 
+	[DllModuleExport(48)]
 	private unsafe uint WriteFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToWrite, uint lpNumberOfBytesWritten,
 		uint lpOverlapped)
 	{
@@ -1029,6 +1064,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 	}
 
+	[DllModuleExport(1)]
 	private unsafe uint CloseHandle(void* hObject)
 	{
 		var h = (uint)hObject;
@@ -1042,6 +1078,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return env.CloseHandle(h) ? 1u : 0u;
 	}
 
+	[DllModuleExport(13)]
 	private unsafe uint GetFileType(void* hFile)
 	{
 		if (env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
@@ -1052,6 +1089,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return 0; // FILE_TYPE_UNKNOWN
 	}
 
+	[DllModuleExport(39)]
 	private unsafe uint SetFilePointer(void* hFile, uint lDistanceToMove, uint lpDistanceToMoveHigh, uint dwMoveMethod)
 	{
 		if (!env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
@@ -1068,6 +1106,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return (uint)pos;
 	}
 
+	[DllModuleExport(4)]
 	private unsafe uint FlushFileBuffers(void* hFile)
 	{
 		if (env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
@@ -1079,6 +1118,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return 0;
 	}
 
+	[DllModuleExport(38)]
 	private unsafe uint SetEndOfFile(void* hFile)
 	{
 		if (env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
@@ -1090,6 +1130,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return 0;
 	}
 
+	[DllModuleExport(40)]
 	private unsafe uint SetHandleCount(uint uNumber)
 	{
 		// SetHandleCount is a legacy function from 16-bit Windows
@@ -1098,6 +1139,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return uNumber; // Return the requested number as if it was successfully set
 	}
 
+	[DllModuleExport(44)]
 	private unsafe uint UnhandledExceptionFilter(uint exceptionInfo)
 	{
 		// UnhandledExceptionFilter processes unhandled exceptions
@@ -1148,6 +1190,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return NativeTypes.ExceptionHandling.EXCEPTION_EXECUTE_HANDLER;
 	}
 
+	[DllModuleExport(47)]
 	private unsafe uint WideCharToMultiByte(
 		uint codePage,
 		uint dwFlags,
@@ -1276,6 +1319,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 	}
 
+	[DllModuleExport(33)]
 	private unsafe uint MultiByteToWideChar(uint codePage, uint dwFlags, uint lpMultiByteStr, int cbMultiByte, uint lpWideCharStr, uint cchWideChar)
 	{
 		// MultiByteToWideChar converts a multibyte (ANSI) string to Unicode (wide char) string
@@ -1383,6 +1427,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 	}
 
+	[DllModuleExport(30)]
 	private unsafe uint LcMapStringA(uint locale, uint dwMapFlags, uint lpSrcStr, int cchSrc, uint lpDestStr, int cchDest)
 	{
 		// LCMapStringA performs locale-dependent string mapping (e.g., uppercase, lowercase)
@@ -1455,6 +1500,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 	}
 
+	[DllModuleExport(31)]
 	private unsafe uint LcMapStringW(uint locale, uint dwMapFlags, uint lpSrcStr, int cchSrc, uint lpDestStr, int cchDest)
 	{
 		// LCMapStringW performs locale-dependent string mapping for Unicode strings
@@ -1549,6 +1595,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 	}
 
+	[DllModuleExport(34)]
 	private unsafe uint QueryPerformanceCounter(uint lpPerformanceCount)
 	{
 		// QueryPerformanceCounter retrieves the current value of the performance counter
@@ -1605,6 +1652,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return "game.exe";
 	}
 
+	[DllModuleExport(37)]
 	private unsafe uint RtlUnwind(uint targetFrame, uint targetIp, uint exceptionRecord, uint returnValue)
 	{
 		// RtlUnwind is used for structured exception handling to unwind the stack
