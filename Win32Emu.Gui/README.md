@@ -20,9 +20,9 @@ A cross-platform desktop GUI for Win32Emu, built with Avalonia UI.
 ## Configuration Storage
 
 All settings, games, and watched folders are automatically saved to a platform-specific location:
-- **Windows**: `%APPDATA%\Win32Emu\config.ini`
-- **Linux**: `~/.config/Win32Emu/config.ini`
-- **macOS**: `~/Library/Application Support/Win32Emu/config.ini`
+- **Windows**: `%APPDATA%\Win32Emu\config.json`
+- **Linux**: `~/.config/Win32Emu/config.json`
+- **macOS**: `~/Library/Application Support/Win32Emu/config.json`
 
 See [CONFIGURATION.md](CONFIGURATION.md) for more details about the configuration system.
 

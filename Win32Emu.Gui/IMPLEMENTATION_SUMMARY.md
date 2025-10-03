@@ -30,9 +30,9 @@ Integrated Config.Net library to provide cross-platform persistent storage for:
 
 ### Storage Location
 Configuration is stored in a platform-agnostic location:
-- **Windows**: `%APPDATA%\Win32Emu\config.ini`
-- **Linux**: `~/.config/Win32Emu/config.ini`
-- **macOS**: `~/Library/Application Support/Win32Emu/config.ini`
+- **Windows**: `%APPDATA%\Win32Emu\config.json`
+- **Linux**: `~/.config/Win32Emu/config.json`
+- **macOS**: `~/Library/Application Support/Win32Emu/config.json`
 
 ### Automatic Persistence
 - **On Startup**: All saved games, folders, and settings are loaded automatically
@@ -42,17 +42,16 @@ Configuration is stored in a platform-agnostic location:
 - **On Settings Change**: Settings auto-save when any value changes
 
 ### Data Stored
-```ini
-[Emulator]
-RenderingBackend=Software
-ResolutionScaleFactor=1
-ReservedMemoryMB=256
-WindowsVersion=Windows 95
-EnableDebugMode=False
-
-[Library]
-GamesJson=[{"Title":"Game1","ExecutablePath":"...","TimesPlayed":5,"LastPlayed":"..."}]
-WatchedFolders=C:\Games;D:\OldGames
+```json
+{
+  "RenderingBackend": "Software",
+  "ResolutionScaleFactor": 1,
+  "ReservedMemoryMB": 256,
+  "WindowsVersion": "Windows 95",
+  "EnableDebugMode": false,
+  "GamesJson": "[{\"Title\":\"Game1\",\"ExecutablePath\":\"...\",\"TimesPlayed\":5,\"LastPlayed\":\"...\"}]",
+  "WatchedFolders": "C:\\Games;D:\\OldGames"
+}
 ```
 
 ## Testing Performed
