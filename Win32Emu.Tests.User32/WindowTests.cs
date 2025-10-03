@@ -402,8 +402,77 @@ public class WindowTests : IDisposable
         Assert.Equal(1u, result); // IDOK
     }
 
+    [Fact]
+    public void CreateWindowExA_ShouldInvokeHostCallback()
+    {
+        // Arrange - Create a mock host to track callbacks
+        var mockHost = new MockEmulatorHost();
+        var testEnvWithHost = new TestEnvironment(mockHost);
+        
+        var wndClassAddr = testEnvWithHost.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        testEnvWithHost.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = testEnvWithHost.WriteString("TestClass");
+        var titlePtr = testEnvWithHost.WriteString("Test Window");
+
+        // Act
+        var hwnd = testEnvWithHost.CallUser32Api("CREATEWINDOWEXA",
+            0,              // dwExStyle
+            classNamePtr,   // lpClassName
+            titlePtr,       // lpWindowName
+            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
+            100,            // x
+            100,            // y
+            640,            // width
+            480,            // height
+            0,              // hWndParent
+            0,              // hMenu
+            0,              // hInstance
+            0               // lpParam
+        );
+
+        // Assert
+        Assert.NotEqual(0u, hwnd);
+        Assert.True(mockHost.OnWindowCreateCalled, "OnWindowCreate should have been called");
+        Assert.NotNull(mockHost.LastWindowInfo);
+        Assert.Equal("Test Window", mockHost.LastWindowInfo?.Title);
+        Assert.Equal(640, mockHost.LastWindowInfo?.Width);
+        Assert.Equal(480, mockHost.LastWindowInfo?.Height);
+        Assert.Equal("TestClass", mockHost.LastWindowInfo?.ClassName);
+        
+        testEnvWithHost.Dispose();
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
+    }
+}
+
+/// <summary>
+/// Mock implementation of IEmulatorHost for testing
+/// </summary>
+internal class MockEmulatorHost : IEmulatorHost
+{
+    public bool OnWindowCreateCalled { get; private set; }
+    public WindowCreateInfo? LastWindowInfo { get; private set; }
+    
+    public void OnDebugOutput(string message, DebugLevel level)
+    {
+        // No-op for testing
+    }
+    
+    public void OnStdOutput(string output)
+    {
+        // No-op for testing
+    }
+    
+    public void OnWindowCreate(WindowCreateInfo info)
+    {
+        OnWindowCreateCalled = true;
+        LastWindowInfo = info;
     }
 }

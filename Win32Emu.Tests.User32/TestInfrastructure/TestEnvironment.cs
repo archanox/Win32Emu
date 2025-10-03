@@ -37,6 +37,23 @@ public class TestEnvironment : IDisposable
         ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);
     }
 
+    public TestEnvironment(IEmulatorHost host)
+    {
+        Memory = new VirtualMemory();
+        Cpu = new MockCpu();
+        ProcessEnv = new ProcessEnvironment(Memory, host: host);
+        PeLoader = new PeImageLoader(Memory);
+        User32 = new User32Module(ProcessEnv, 0x00400000, PeLoader);
+        Gdi32 = new Gdi32Module(ProcessEnv, 0x00400000, PeLoader);
+        DDraw = new DDrawModule(ProcessEnv, 0x00400000, PeLoader);
+        DSound = new DSoundModule(ProcessEnv, 0x00400000, PeLoader);
+        DInput = new DInputModule(ProcessEnv, 0x00400000, PeLoader);
+        WinMM = new WinMMModule(ProcessEnv, 0x00400000, PeLoader);
+
+        // Initialize process environment with test data
+        ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);
+    }
+
     /// <summary>
     /// Call a User32 API function with the given arguments
     /// </summary>
