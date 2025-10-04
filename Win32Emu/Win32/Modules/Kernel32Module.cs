@@ -560,7 +560,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private unsafe uint GetModuleHandleA(char* lpModuleName)
 	{
-		Console.WriteLine($"Getting module handle for '{(lpModuleName != null ? new string(lpModuleName) : "NULL (current process)")}''");
+		_logger.LogInformation($"Getting module handle for '{(lpModuleName != null ? new string(lpModuleName) : "NULL (current process)")}''");
 		return _imageBase;
 	}
 
