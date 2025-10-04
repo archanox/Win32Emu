@@ -1168,29 +1168,40 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var handle = (uint)hFile;
 		
-		// Check if this is a standard output or error handle
-		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle)
+		// Handle standard handles specially
+		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle || handle == _env.StdInputHandle)
 		{
 			try
 			{
 				var buf = _env.MemReadBytes(lpBuffer, (int)nNumberOfBytesToWrite);
-				_env.WriteToStdOutput(buf);
+				var text = Encoding.ASCII.GetString(buf);
+				
+				if (handle == _env.StdOutputHandle)
+				{
+					_env.WriteToStdOutput(text);
+				}
+				else if (handle == _env.StdErrorHandle)
+				{
+					_env.WriteToStdError(text);
+				}
+				// StdInputHandle is not writable, but we'll just succeed silently
+				
 				if (lpNumberOfBytesWritten != 0)
 				{
 					_env.MemWrite32(lpNumberOfBytesWritten, (uint)buf.Length);
 				}
-
+				
 				return 1;
 			}
 			catch (Exception ex)
 			{
-				_logger.LogInformation($"[Kernel32] WriteFile to stdout/stderr failed: {ex.Message}");
+				_logger.LogInformation($"[Kernel32] WriteFile to standard handle failed: {ex.Message}");
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return NativeTypes.Win32Bool.FALSE;
 			}
 		}
 		
-		// Regular file handle
+		// Handle regular file handles
 		if (!_env.TryGetHandle<FileStream>(handle, out var fs) || fs is null)
 		{
 			return 0;
