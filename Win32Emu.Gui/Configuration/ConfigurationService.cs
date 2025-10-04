@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using Win32Emu.Gui.Models;
 
@@ -11,7 +10,6 @@ public class ConfigurationService
 {
     private readonly string _settingsFilePath;
     private readonly string _libraryFilePath;
-    private readonly string _legacyConfigFilePath;
     private EmulatorSettings _settings;
     private GameLibrary _library;
 
@@ -29,14 +27,10 @@ public class ConfigurationService
 
         _settingsFilePath = Path.Combine(win32EmuDir, "settings.json");
         _libraryFilePath = Path.Combine(win32EmuDir, "library.json");
-        _legacyConfigFilePath = Path.Combine(win32EmuDir, "config.json");
 
-        // Load configuration
+        // Load configuration using Microsoft.Extensions.Configuration
         _settings = LoadSettings();
         _library = LoadLibrary();
-
-        // Migrate from legacy config if new files don't exist
-        MigrateLegacyConfigIfNeeded();
     }
 
     private EmulatorSettings LoadSettings()
@@ -48,6 +42,7 @@ public class ConfigurationService
 
         try
         {
+            // Use System.Text.Json directly for better handling of complex types like Dictionary
             var json = File.ReadAllText(_settingsFilePath);
             return JsonSerializer.Deserialize<EmulatorSettings>(json) ?? new EmulatorSettings();
         }
@@ -66,6 +61,7 @@ public class ConfigurationService
 
         try
         {
+            // Use System.Text.Json directly for better handling of complex types
             var json = File.ReadAllText(_libraryFilePath);
             return JsonSerializer.Deserialize<GameLibrary>(json) ?? new GameLibrary();
         }
@@ -203,45 +199,6 @@ public class ConfigurationService
     }
 
     /// <summary>
-    /// Migrate from legacy config.json to split files if needed
-    /// </summary>
-    private void MigrateLegacyConfigIfNeeded()
-    {
-        // Check if legacy config exists and new files don't
-        if (File.Exists(_legacyConfigFilePath) && 
-            (!File.Exists(_settingsFilePath) || !File.Exists(_libraryFilePath)))
-        {
-            try
-            {
-                var json = File.ReadAllText(_legacyConfigFilePath);
-                var legacyConfig = JsonSerializer.Deserialize<AppConfiguration>(json);
-
-                if (legacyConfig != null)
-                {
-                    // Migrate emulator settings
-                    _settings.RenderingBackend = legacyConfig.RenderingBackend;
-                    _settings.ResolutionScaleFactor = legacyConfig.ResolutionScaleFactor;
-                    _settings.ReservedMemoryMB = legacyConfig.ReservedMemoryMB;
-                    _settings.WindowsVersion = legacyConfig.WindowsVersion;
-                    _settings.EnableDebugMode = legacyConfig.EnableDebugMode;
-
-                    // Migrate game library
-                    _library.Games = legacyConfig.Games;
-                    _library.WatchedFolders = legacyConfig.WatchedFolders;
-
-                    // Save the migrated configuration
-                    SaveSettings();
-                    SaveLibrary();
-                }
-            }
-            catch
-            {
-                // If migration fails, keep the default values
-            }
-        }
-    }
-
-    /// <summary>
     /// Get the settings file path for display purposes
     /// </summary>
     public string SettingsFilePath => _settingsFilePath;
@@ -250,10 +207,4 @@ public class ConfigurationService
     /// Get the library file path for display purposes
     /// </summary>
     public string LibraryFilePath => _libraryFilePath;
-
-    /// <summary>
-    /// Get the configuration file path for display purposes (legacy)
-    /// </summary>
-    [Obsolete("Use SettingsFilePath or LibraryFilePath instead")]
-    public string ConfigFilePath => _legacyConfigFilePath;
 }

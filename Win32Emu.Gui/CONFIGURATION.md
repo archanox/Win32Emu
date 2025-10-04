@@ -56,7 +56,6 @@ The `ConfigurationService` class manages all configuration persistence:
 - Loads configuration on application startup from split files
 - Automatically saves changes when settings are modified
 - Uses System.Text.Json for JSON serialization
-- Supports migration from legacy `config.json` to split files
 - Provides per-game settings override functionality
 
 ### Split Configuration Files
@@ -74,9 +73,6 @@ The configuration is split into two files:
 - Settings (settings.json) are automatically saved when:
   - Any setting is changed in the Settings view
   - Per-game settings are added or modified
-
-### Legacy Migration
-If a legacy `config.json` file exists and the new split files don't exist, the service will automatically migrate the configuration to the new format on startup.
 
 ### Play Counter
 The `TimesPlayed` counter is automatically incremented each time a game is launched, before the emulator starts.
@@ -133,10 +129,5 @@ To verify the implementation:
 5. Launch the game - the play counter should increment
 6. Change a setting - it should persist after restart
 7. Verify that two separate files are created: `settings.json` and `library.json`
-
-### Legacy Migration Testing
-1. If you have an existing `config.json` file, delete `settings.json` and `library.json`
-2. Start the application
-3. The legacy configuration should be automatically migrated to the new split files
 
 The configuration files can be manually inspected at the locations mentioned above.

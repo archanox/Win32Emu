@@ -14,24 +14,23 @@ Split the single `config.json` into two separate files:
 
 Added support for per-game emulator settings that override the global defaults.
 
-Uses Microsoft.Extensions.Configuration with System.Text.Json for clean, standard JSON serialization.
+Uses System.Text.Json for clean, standard JSON serialization with direct file I/O.
 
 ## Key Changes
 
-### 1. Replaced Config.Net with Microsoft.Extensions.Configuration
+### 1. Removed Config.Net and Legacy Migration
 - Removed dependency on Config.Net
-- Added Microsoft.Extensions.Configuration packages
-- Replaced interface-based configuration with POCO classes
+- Removed legacy migration code from config.json
+- Deleted AppConfiguration.cs (no longer needed)
 - Uses System.Text.Json for serialization
 
-### 2. New Files Created
+### 2. Files Created
 - `Configuration/EmulatorSettings.cs` - POCO class for emulator settings
 - `Configuration/GameLibrary.cs` - POCO class for game library
 - `Models/GameSettings.cs` - Model for per-game settings overrides
-- `Configuration/AppConfiguration.cs` - POCO class for legacy migration support
 
 ### 3. Modified Files
-- `Configuration/ConfigurationService.cs` - Completely rewritten to use Microsoft.Extensions.Configuration
+- `Configuration/ConfigurationService.cs` - Simplified to use System.Text.Json directly
 - `CONFIGURATION.md` - Updated documentation
 - `Win32Emu.Gui.csproj` - Updated package references
 
@@ -59,12 +58,6 @@ Games can have custom emulator settings that override the global defaults:
 - Settings are stored in `settings.json` under `PerGameSettings`
 - Only specified settings are overridden; others use global defaults
 - Use `GetEmulatorConfiguration(gameExecutablePath)` to get merged settings
-
-### Legacy Migration
-The service automatically migrates from the old `config.json` to the new split files:
-- If `config.json` exists and new files don't, migration occurs on startup
-- All settings, games, and folders are preserved
-- The old `config.json` remains for backward compatibility
 
 ## Example Configuration Files
 
@@ -105,7 +98,6 @@ The service automatically migrates from the old `config.json` to the new split f
 ✅ Configuration successfully splits into two files
 ✅ Per-game settings work correctly
 ✅ Settings and library are read/written independently
-✅ Legacy migration works correctly
 ✅ All existing functionality preserved
 
 ## Verification Steps
@@ -116,7 +108,6 @@ To verify the implementation works:
 4. Verify two separate files exist: `settings.json` and `library.json`
 5. Modify settings - only `settings.json` should change
 6. Add/remove games - only `library.json` should change
-7. Test legacy migration by deleting new files and creating `config.json`
 
 ## API Changes
 
@@ -129,10 +120,9 @@ To verify the implementation works:
 ### New Properties
 - `SettingsFilePath` - Path to settings.json
 - `LibraryFilePath` - Path to library.json
-- `ConfigFilePath` - (Obsolete) Legacy path to config.json
 
 ## Notes
-- **Backward compatible**: Automatically migrates from old `config.json`
+- **Simplified implementation**: Uses System.Text.Json directly for configuration management
 - **Zero breaking changes**: All existing code continues to work
 - **Portable settings**: Users can sync `settings.json` across machines
 - **Machine-specific data**: `library.json` stays local to each machine
