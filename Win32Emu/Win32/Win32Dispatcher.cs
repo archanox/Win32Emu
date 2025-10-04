@@ -47,9 +47,24 @@ public class Win32Dispatcher
                 }
                 catch (InvalidOperationException)
                 {
-                    // Default to 0 for unknown functions in known modules
-                    stdcallArgBytes = 0;
-                    Diagnostics.Diagnostics.LogWarn($"No arg bytes metadata for {dll}!{export}, using 0");
+                    // Hardcoded fixes for functions with missing metadata (temporary workaround)
+                    var dllUpper = dll.ToUpperInvariant();
+                    var exportUpper = export.ToUpperInvariant();
+                    stdcallArgBytes = (dllUpper, exportUpper) switch
+                    {
+                        ("KERNEL32.DLL", "GETACP") => 0,        // UINT GetACP(void)
+                        ("KERNEL32.DLL", "GETCPINFO") => 8,     // BOOL GetCPInfo(UINT, LPCPINFO)
+                        _ => 0
+                    };
+                    
+                    if (stdcallArgBytes > 0)
+                    {
+                        Diagnostics.Diagnostics.LogWarn($"Using hardcoded arg bytes for {dll}!{export}: {stdcallArgBytes}");
+                    }
+                    else
+                    {
+                        Diagnostics.Diagnostics.LogWarn($"No arg bytes metadata for {dll}!{export}, using 0");
+                    }
                 }
                 
                 return true;
