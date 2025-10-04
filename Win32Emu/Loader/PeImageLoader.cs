@@ -102,7 +102,7 @@ public class PeImageLoader(VirtualMemory vm)
 		foreach (var export in image.Exports.Entries)
 		{
 			// Check if this is a forwarded export
-			if (export.IsForwarder && !string.IsNullOrEmpty(export.ForwarderName))
+			if (export.IsForwarder)
 			{
 				// Store forwarded export information
 				forwardedByOrdinal[export.Ordinal] = export.ForwarderName;
