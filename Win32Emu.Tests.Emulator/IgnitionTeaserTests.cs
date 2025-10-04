@@ -7,6 +7,33 @@ namespace Win32Emu.Tests.Emulator;
 /// <summary>
 /// Integration tests for running real game executables with the emulator.
 /// These tests document the behavior and issues encountered when running actual Win32 executables.
+/// 
+/// Test Overview:
+/// - IgnitionTeaser_ShouldLoadAndRun: Runs the IGN_TEAS.EXE demo and captures basic execution details
+/// - IgnitionTeaser_ShouldLoadAndRun_WithDebugLogging: (Skipped) Runs with full debug output for detailed analysis
+/// 
+/// Findings from running IGN_TEAS.EXE:
+/// 1. The executable loads successfully and runs without crashing
+/// 2. Several Win32 API calls are made:
+///    - GetVersion: Returns version information
+///    - HeapCreate: Creates a heap for dynamic memory allocation
+///    - VirtualAlloc: Allocates virtual memory (called multiple times)
+///    - GetStartupInfoA: Retrieves startup configuration
+///    - GetStdHandle: Gets standard handles (stdin, stdout, stderr)
+///    - GetFileType: Checks file handle types
+///    - SetHandleCount: Sets number of file handles
+///    - GetACP: Gets the ANSI code page
+///    - GetCPInfo: Gets code page information
+/// 3. Warnings observed:
+///    - Missing argument byte metadata for some KERNEL32 functions (GetACP, GetCPInfo)
+/// 4. The game appears to initialize successfully but doesn't create any windows or produce output
+/// 5. The emulator processes instructions continuously without hitting an exit condition
+/// 
+/// Known Issues to Investigate:
+/// - The game doesn't exit naturally - it appears to be stuck in a loop or waiting for DirectX/graphics initialization
+/// - No windows are created, which suggests the game hasn't reached its main rendering loop
+/// - Consider implementing DirectX stubs to allow the game to progress further
+/// - The test uses a timeout to prevent infinite execution
 /// </summary>
 public class IgnitionTeaserTests
 {
