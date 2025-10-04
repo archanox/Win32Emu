@@ -1212,7 +1212,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(13)]
 	private unsafe uint GetFileType(void* hFile)
 	{
-		if (_env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
+		var handle = (uint)hFile;
+		
+		// Standard handles are character devices (console)
+		if (handle == _env.StdInputHandle || handle == _env.StdOutputHandle || handle == _env.StdErrorHandle)
+		{
+			return 0x0002; // FILE_TYPE_CHAR (character device like console)
+		}
+		
+		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
 		{
 			return 0x0001; // FILE_TYPE_DISK
 		}
@@ -1240,7 +1248,16 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(4)]
 	private unsafe uint FlushFileBuffers(void* hFile)
 	{
-		if (_env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
+		var handle = (uint)hFile;
+		
+		// Standard output/error handles don't need flushing in our implementation
+		// since WriteToStdOutput already calls the host callback immediately
+		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle)
+		{
+			return 1; // Success
+		}
+		
+		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
 		{
 			fs.Flush(true);
 			return 1;

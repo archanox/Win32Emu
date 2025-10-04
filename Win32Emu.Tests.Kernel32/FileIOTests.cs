@@ -247,6 +247,32 @@ public class FileIoTests : IDisposable
         Assert.Equal(0u, fileType); // FILE_TYPE_UNKNOWN
     }
 
+    [Fact]
+    public void GetFileType_WithStdOutputHandle_ShouldReturnChar()
+    {
+        // Arrange
+        const uint stdOutputHandle = 0x00000002u; // Default stdout handle
+
+        // Act
+        var fileType = _testEnv.CallKernel32Api("GETFILETYPE", stdOutputHandle);
+
+        // Assert
+        Assert.Equal(0x0002u, fileType); // FILE_TYPE_CHAR (character device)
+    }
+
+    [Fact]
+    public void FlushFileBuffers_WithStdOutputHandle_ShouldSucceed()
+    {
+        // Arrange
+        const uint stdOutputHandle = 0x00000002u; // Default stdout handle
+
+        // Act
+        var result = _testEnv.CallKernel32Api("FLUSHFILEBUFFERS", stdOutputHandle);
+
+        // Assert
+        Assert.Equal(1u, result); // Returns 1 on success
+    }
+
     #endregion
 
     #region SetHandleCount Tests
