@@ -55,14 +55,15 @@ Edit `IgnitionTeaserTests.cs` and remove the `Skip` parameter from the `[Fact]` 
 
 ### Known Issues ⚠️
 
-1. **Infinite Execution Loop**
-   - The game doesn't exit naturally
+1. **Infinite Loop After Initialization**
+   - The game enters an infinite loop after completing basic Win32 initialization
+   - No additional API calls are made after GetCPInfo
    - Test uses a 5-second timeout to prevent hanging
-   - Likely waiting for DirectX/graphics initialization
 
-2. **No Window Creation**
-   - The game doesn't create any windows during execution
-   - Suggests it hasn't reached its main rendering loop
+2. **No DirectX Calls Observed**
+   - Despite importing DDRAW.dll, DINPUT.dll, DSOUND.dll, the game never attempts to call functions from these DLLs
+   - The dispatcher logs "No unknown function calls recorded" - confirming no missing APIs are being called
+   - This indicates the game is stuck in its own initialization code BEFORE attempting graphics/input setup
 
 3. **Missing Metadata**
    - Warnings about missing argument byte metadata for:
@@ -70,17 +71,18 @@ Edit `IgnitionTeaserTests.cs` and remove the `Skip` parameter from the `[Fact]` 
      - `KERNEL32.DLL!GetCPInfo`
    - The emulator falls back to 0 bytes for these functions
 
-4. **DirectX Requirements**
-   - The README indicates this is a DirectX 3.0 game
-   - DirectX calls are likely missing/stubbed out
-   - This prevents the game from initializing its graphics subsystem
+4. **Root Cause Unknown**
+   - The game is executing instructions continuously without calling any APIs
+   - Possible causes: waiting for a specific return value, timer condition, or event that will never occur
+   - Requires deeper debugging (instruction-level tracing) to identify the exact loop location
 
 ## Next Steps for Investigation
 
-1. **Implement DirectX Stubs**: Add stub implementations for DirectX functions to allow the game to proceed past initialization
-2. **Track API Call Sequence**: Use the debug test to see exactly where execution gets stuck
-3. **Add Exit Detection**: Implement better detection of when a game is waiting vs. actually stuck
-4. **Window Messages**: Implement message pump for window creation and event handling
+1. **Instruction-Level Debugging**: Use the debug test variant to identify the exact code location where the infinite loop occurs
+2. **Check for Polling Loops**: The game may be polling for a specific condition (e.g., checking a flag or waiting for a timer)
+3. **Verify API Return Values**: Some API calls might be returning unexpected values that cause the game to wait
+4. **Implement Missing APIs**: Once the game progresses past this loop, it will likely call DirectX/User32/GDI32 functions
+5. **Add Execution Profiling**: Track which code regions are being executed repeatedly to identify hot loops
 
 ## Test Output Example
 

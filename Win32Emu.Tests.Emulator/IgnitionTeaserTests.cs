@@ -14,7 +14,7 @@ namespace Win32Emu.Tests.Emulator;
 /// 
 /// Findings from running IGN_TEAS.EXE:
 /// 1. The executable loads successfully and runs without crashing
-/// 2. Several Win32 API calls are made:
+/// 2. Several Win32 API calls are made during initialization:
 ///    - GetVersion: Returns version information
 ///    - HeapCreate: Creates a heap for dynamic memory allocation
 ///    - VirtualAlloc: Allocates virtual memory (called multiple times)
@@ -24,15 +24,18 @@ namespace Win32Emu.Tests.Emulator;
 ///    - SetHandleCount: Sets number of file handles
 ///    - GetACP: Gets the ANSI code page
 ///    - GetCPInfo: Gets code page information
-/// 3. Warnings observed:
+/// 3. After initialization, the game enters an infinite loop in its own code
+///    - No additional Win32 API calls are made
+///    - No unknown/missing DLL functions are called (confirmed by dispatcher logging)
+///    - The game is executing instructions but not making progress toward any visible state
+/// 4. Warnings observed:
 ///    - Missing argument byte metadata for some KERNEL32 functions (GetACP, GetCPInfo)
-/// 4. The game appears to initialize successfully but doesn't create any windows or produce output
-/// 5. The emulator processes instructions continuously without hitting an exit condition
 /// 
-/// Known Issues to Investigate:
-/// - The game doesn't exit naturally - it appears to be stuck in a loop or waiting for DirectX/graphics initialization
-/// - No windows are created, which suggests the game hasn't reached its main rendering loop
-/// - Consider implementing DirectX stubs to allow the game to progress further
+/// Root Cause Analysis:
+/// - The game's PE imports include DDRAW.dll, DINPUT.dll, DSOUND.dll, USER32.dll, GDI32.dll, and WINMM.dll
+/// - However, the game never attempts to call functions from these DLLs
+/// - This suggests the game's initialization code is stuck in a loop BEFORE it tries to initialize graphics/input
+/// - Possible causes: waiting for a condition that will never be met (timer, event, or specific return value)
 /// - The test uses a timeout to prevent infinite execution
 /// </summary>
 public class IgnitionTeaserTests
