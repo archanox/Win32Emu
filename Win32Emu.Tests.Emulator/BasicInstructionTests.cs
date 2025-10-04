@@ -256,6 +256,43 @@ public class BasicInstructionTests : IDisposable
         Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear when values are not equal");
     }
 
+    [Fact]
+    public void MUL_EBX_ShouldMultiplyEAXByEBX()
+    {
+        // Arrange: MUL EBX (F7 E3) - EDX:EAX = EAX * EBX
+        _helper.SetReg("EAX", 0x00000005);
+        _helper.SetReg("EBX", 0x00000003);
+        _helper.SetReg("EDX", 0xFFFFFFFF); // Clear this to verify it gets set
+        _helper.WriteCode(0xF7, 0xE3);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(0x0000000Fu, _helper.GetReg("EAX")); // 5 * 3 = 15
+        Assert.Equal(0x00000000u, _helper.GetReg("EDX")); // High 32 bits should be 0
+        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear when result fits in 32 bits");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Of), "OF should be clear when result fits in 32 bits");
+    }
+
+    [Fact]
+    public void MUL_WithOverflow_ShouldSetCarryAndOverflowFlags()
+    {
+        // Arrange: MUL EBX (F7 E3) - EDX:EAX = EAX * EBX
+        _helper.SetReg("EAX", 0x80000000); // 2^31
+        _helper.SetReg("EBX", 0x00000002); // 2
+        _helper.WriteCode(0xF7, 0xE3);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(0x00000000u, _helper.GetReg("EAX")); // Low 32 bits of result
+        Assert.Equal(0x00000001u, _helper.GetReg("EDX")); // High 32 bits of result (1)
+        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set when result doesn't fit in 32 bits");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Of), "OF should be set when result doesn't fit in 32 bits");
+    }
+
     public void Dispose()
     {
         _helper?.Dispose();
