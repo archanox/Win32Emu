@@ -23,12 +23,12 @@ namespace Win32Emu.Win32.Modules
 
 		public string Name => "USER32.DLL";
 
-		public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+		public unsafe bool TryInvokeUnsafe(string exp, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
 			var a = new StackArgs(cpu, memory);
 
-			switch (export.ToUpperInvariant())
+			switch (exp.ToUpperInvariant())
 			{
 				case "REGISTERCLASSA":
 					returnValue = RegisterClassA(a.UInt32(0));
@@ -169,12 +169,14 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					_logger.LogInformation($"[User32] Unimplemented export: {export}");
+					_logger.LogInformation($"[User32] Unimplemented export: {exp}");
 					return false;
 			}
 		}
 
-		private unsafe uint RegisterClassA(uint lpWndClass)
+		[DllModuleExport(475)]
+
+		private uint RegisterClassA(uint lpWndClass)
 		{
 			if (lpWndClass == 0)
 			{
@@ -238,6 +240,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
+		[DllModuleExport(23)]
 		private unsafe uint CreateWindowExA(
 			uint dwExStyle,
 			sbyte* lpClassName,
@@ -310,7 +313,8 @@ namespace Win32Emu.Win32.Modules
 			return hwnd;
 		}
 
-		private unsafe uint ShowWindow(uint hwnd, int nCmdShow)
+		[DllModuleExport(23)]
+		private uint ShowWindow(uint hwnd, int nCmdShow)
 		{
 			// SW_HIDE = 0, SW_NORMAL = 1, SW_SHOWMINIMIZED = 2, SW_SHOWMAXIMIZED = 3, etc.
 			_logger.LogInformation($"[User32] ShowWindow: HWND=0x{hwnd:X8} nCmdShow={nCmdShow}");
@@ -320,7 +324,8 @@ namespace Win32Emu.Win32.Modules
 			return 1;
 		}
 
-		private unsafe uint GetMessageA(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax)
+		[DllModuleExport(23)]
+		private uint GetMessageA(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax)
 		{
 			// MSG structure layout (28 bytes):
 			// HWND   hwnd;      // 0
@@ -370,7 +375,8 @@ namespace Win32Emu.Win32.Modules
 			return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 		}
 
-		private unsafe uint TranslateMessage(uint lpMsg)
+		[DllModuleExport(23)]
+		private uint TranslateMessage(uint lpMsg)
 		{
 			// TranslateMessage translates virtual-key messages into character messages
 			// For now, just log and return FALSE (no translation occurred)
@@ -378,7 +384,8 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		private unsafe uint DispatchMessageA(uint lpMsg)
+		[DllModuleExport(23)]
+		private uint DispatchMessageA(uint lpMsg)
 		{
 			if (lpMsg == 0)
 			{
@@ -399,7 +406,8 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		private unsafe uint DefWindowProcA(uint hwnd, uint msg, uint wParam, uint lParam)
+		[DllModuleExport(23)]
+		private uint DefWindowProcA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
 			_logger.LogInformation($"[User32] DefWindowProcA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
 
@@ -408,13 +416,15 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		private unsafe void PostQuitMessage(int nExitCode)
+		[DllModuleExport(23)]
+		private void PostQuitMessage(int nExitCode)
 		{
 			_logger.LogInformation($"[User32] PostQuitMessage: exitCode={nExitCode}");
 			_env.PostQuitMessage(nExitCode);
 		}
 
-		private unsafe uint SendMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
+		[DllModuleExport(23)]
+		private uint SendMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
 			_logger.LogInformation($"[User32] SendMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
 
@@ -423,7 +433,8 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		private unsafe uint ClientToScreen(uint hwnd, uint lpPoint)
+		[DllModuleExport(23)]
+		private uint ClientToScreen(uint hwnd, uint lpPoint)
 		{
 			if (lpPoint == 0)
 			{
@@ -441,7 +452,8 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
-		private unsafe uint SetRect(uint lpRect, int left, int top, int right, int bottom)
+		[DllModuleExport(23)]
+		private uint SetRect(uint lpRect, int left, int top, int right, int bottom)
 		{
 			if (lpRect == 0)
 			{
@@ -459,7 +471,8 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
-		private unsafe uint GetClientRect(uint hwnd, uint lpRect)
+		[DllModuleExport(23)]
+		private uint GetClientRect(uint hwnd, uint lpRect)
 		{
 			if (lpRect == 0)
 			{
@@ -477,7 +490,8 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
-		private unsafe uint GetWindowRect(uint hwnd, uint lpRect)
+		[DllModuleExport(23)]
+		private uint GetWindowRect(uint hwnd, uint lpRect)
 		{
 			if (lpRect == 0)
 			{
@@ -495,7 +509,8 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
-		private unsafe uint AdjustWindowRectEx(uint lpRect, uint dwStyle, int bMenu, uint dwExStyle)
+		[DllModuleExport(23)]
+		private uint AdjustWindowRectEx(uint lpRect, uint dwStyle, int bMenu, uint dwExStyle)
 		{
 			if (lpRect == 0)
 			{
@@ -533,7 +548,8 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
-		private unsafe uint GetDc(uint hwnd)
+		[DllModuleExport(23)]
+		private uint GetDc(uint hwnd)
 		{
 			// Create a device context handle
 			var hdc = _env.RegisterHandle(new object()); // Dummy DC object
@@ -541,21 +557,24 @@ namespace Win32Emu.Win32.Modules
 			return hdc;
 		}
 
-		private unsafe uint ReleaseDc(uint hwnd, uint hdc)
+		[DllModuleExport(23)]
+		private uint ReleaseDc(uint hwnd, uint hdc)
 		{
 			_logger.LogInformation($"[User32] ReleaseDC: HWND=0x{hwnd:X8} HDC=0x{hdc:X8}");
 			_env.CloseHandle(hdc);
 			return 1; // Success
 		}
 
-		private unsafe uint UpdateWindow(uint hwnd)
+		[DllModuleExport(23)]
+		private uint UpdateWindow(uint hwnd)
 		{
 			_logger.LogInformation($"[User32] UpdateWindow: HWND=0x{hwnd:X8}");
 			// Trigger immediate repaint - for now just log
 			return 1; // TRUE
 		}
 
-		private unsafe uint DestroyWindow(uint hwnd)
+		[DllModuleExport(23)]
+		private uint DestroyWindow(uint hwnd)
 		{
 			_logger.LogInformation($"[User32] DestroyWindow: HWND=0x{hwnd:X8}");
 
@@ -568,14 +587,16 @@ namespace Win32Emu.Win32.Modules
 			return 0; // FALSE
 		}
 
-		private unsafe uint SetWindowPos(uint hwnd, uint hwndInsertAfter, int x, int y, int cx, int cy, uint flags)
+		[DllModuleExport(23)]
+		private uint SetWindowPos(uint hwnd, uint hwndInsertAfter, int x, int y, int cx, int cy, uint flags)
 		{
 			_logger.LogInformation($"[User32] SetWindowPos: HWND=0x{hwnd:X8} pos=({x},{y}) size=({cx},{cy}) flags=0x{flags:X8}");
 			// For now just log
 			return 1; // TRUE
 		}
 
-		private unsafe int GetSystemMetrics(int nIndex)
+		[DllModuleExport(23)]
+		private int GetSystemMetrics(int nIndex)
 		{
 			_logger.LogInformation($"[User32] GetSystemMetrics: nIndex={nIndex}");
 
@@ -590,56 +611,64 @@ namespace Win32Emu.Win32.Modules
 			};
 		}
 
-		private unsafe uint LoadIconA(uint hInstance, uint lpIconName)
+		[DllModuleExport(23)]
+		private uint LoadIconA(uint hInstance, uint lpIconName)
 		{
 			_logger.LogInformation($"[User32] LoadIconA: hInstance=0x{hInstance:X8} lpIconName=0x{lpIconName:X8}");
 			// Return a dummy icon handle
 			return _env.RegisterHandle(new object()); // Dummy icon object
 		}
 
-		private unsafe uint LoadCursorA(uint hInstance, uint lpCursorName)
+		[DllModuleExport(23)]
+		private uint LoadCursorA(uint hInstance, uint lpCursorName)
 		{
 			_logger.LogInformation($"[User32] LoadCursorA: hInstance=0x{hInstance:X8} lpCursorName=0x{lpCursorName:X8}");
 			// Return a dummy cursor handle
 			return _env.RegisterHandle(new object()); // Dummy cursor object
 		}
 
-		private unsafe uint SetCursor(uint hCursor)
+		[DllModuleExport(23)]
+		private uint SetCursor(uint hCursor)
 		{
 			_logger.LogInformation($"[User32] SetCursor: hCursor=0x{hCursor:X8}");
 			// Return previous cursor handle (dummy)
 			return 0x00000001;
 		}
 
-		private unsafe uint SetFocus(uint hwnd)
+		[DllModuleExport(23)]
+		private uint SetFocus(uint hwnd)
 		{
 			_logger.LogInformation($"[User32] SetFocus: HWND=0x{hwnd:X8}");
 			// Return previous focus window handle
 			return 0; // NULL means no previous focus
 		}
 
-		private unsafe uint GetMenu(uint hwnd)
+		[DllModuleExport(23)]
+		private uint GetMenu(uint hwnd)
 		{
 			_logger.LogInformation($"[User32] GetMenu: HWND=0x{hwnd:X8}");
 			// Return menu handle (NULL if no menu)
 			return 0;
 		}
 
-		private unsafe uint SetWindowLongA(uint hwnd, int nIndex, uint dwNewLong)
+		[DllModuleExport(23)]
+		private uint SetWindowLongA(uint hwnd, int nIndex, uint dwNewLong)
 		{
 			_logger.LogInformation($"[User32] SetWindowLongA: HWND=0x{hwnd:X8} nIndex={nIndex} dwNewLong=0x{dwNewLong:X8}");
 			// Return previous value (for now return 0)
 			return 0;
 		}
 
-		private unsafe uint GetWindowLongA(uint hwnd, int nIndex)
+		[DllModuleExport(23)]
+		private uint GetWindowLongA(uint hwnd, int nIndex)
 		{
 			_logger.LogInformation($"[User32] GetWindowLongA: HWND=0x{hwnd:X8} nIndex={nIndex}");
 			// Return window data (for now return 0)
 			return 0;
 		}
 
-		private unsafe uint MessageBoxA(uint hwnd, uint lpText, uint lpCaption, uint uType)
+		[DllModuleExport(23)]
+		private uint MessageBoxA(uint hwnd, uint lpText, uint lpCaption, uint uType)
 		{
 			var text = lpText != 0 ? _env.ReadAnsiString(lpText) : "";
 			var caption = lpCaption != 0 ? _env.ReadAnsiString(lpCaption) : "";
@@ -648,14 +677,16 @@ namespace Win32Emu.Win32.Modules
 			return 1;
 		}
 
-		private unsafe uint SystemParametersInfoA(uint uiAction, uint uiParam, uint pvParam, uint fWinIni)
+		[DllModuleExport(23)]
+		private uint SystemParametersInfoA(uint uiAction, uint uiParam, uint pvParam, uint fWinIni)
 		{
 			_logger.LogInformation($"[User32] SystemParametersInfoA: action=0x{uiAction:X8} param={uiParam}");
 			// For now just return success
 			return 1; // TRUE
 		}
 
-		private unsafe uint PeekMessageA(uint lpMsg, uint hwnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg)
+		[DllModuleExport(23)]
+		private uint PeekMessageA(uint lpMsg, uint hwnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg)
 		{
 			// PeekMessage returns immediately with message availability
 			// Return 0 for no message (non-blocking)
@@ -663,51 +694,12 @@ namespace Win32Emu.Win32.Modules
 			return 0; // No message available
 		}
 
-		private unsafe uint PostMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
+		[DllModuleExport(23)]
+		private uint PostMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
 			_logger.LogInformation($"[User32] PostMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
 			// Post message to queue - for now just log
 			return 1; // TRUE
-		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Export ordinals for User32 - alphabetically ordered
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "ADJUSTWINDOWRECTEX", 1 },
-				{ "CLIENTTOSCREEN", 2 },
-				{ "CREATEWINDOWEXA", 3 },
-				{ "DEFWINDOWPROCA", 4 },
-				{ "DESTROYWINDOW", 5 },
-				{ "DISPATCHMESSAGEA", 6 },
-				{ "GETCLIENTRECT", 7 },
-				{ "GETDC", 8 },
-				{ "GETMENU", 9 },
-				{ "GETMESSAGEA", 10 },
-				{ "GETSYSTEMMETRICS", 11 },
-				{ "GETWINDOWLONGA", 12 },
-				{ "GETWINDOWRECT", 13 },
-				{ "LOADCURSORA", 14 },
-				{ "LOADICONA", 15 },
-				{ "MESSAGEBOXA", 16 },
-				{ "PEEKMESSAGEA", 17 },
-				{ "POSTMESSAGEA", 18 },
-				{ "POSTQUITMESSAGE", 19 },
-				{ "REGISTERCLASSA", 20 },
-				{ "RELEASEDC", 21 },
-				{ "SENDMESSAGEA", 22 },
-				{ "SETCURSOR", 23 },
-				{ "SETFOCUS", 24 },
-				{ "SETRECT", 25 },
-				{ "SETWINDOWLONGA", 26 },
-				{ "SETWINDOWPOS", 27 },
-				{ "SHOWWINDOW", 28 },
-				{ "SYSTEMPARAMETERSINFOA", 29 },
-				{ "TRANSLATEMESSAGE", 30 },
-				{ "UPDATEWINDOW", 31 }
-			};
-			return exports;
 		}
 	}
 }

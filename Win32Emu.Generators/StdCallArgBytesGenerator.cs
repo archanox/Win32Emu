@@ -2,414 +2,415 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Win32Emu.Generators;
-
-[Generator(LanguageNames.CSharp)]
-public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
+namespace Win32Emu.Generators
 {
-	public void Initialize(IncrementalGeneratorInitializationContext context)
+	[Generator(LanguageNames.CSharp)]
+	public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 	{
-		// Find methods with [DllModuleExport] attribute
-		var attributedMethods = context.SyntaxProvider
-			.CreateSyntaxProvider(
-				static (node, _) => node is MethodDeclarationSyntax m && m.AttributeLists.Count > 0,
-				static (ctx, _) =>
-				{
-					var method = ctx.SemanticModel.GetDeclaredSymbol((MethodDeclarationSyntax)ctx.Node) as IMethodSymbol;
-					if (method is null)
-						return null;
-
-					// Check if method has DllModuleExport attribute
-					var hasDllExportAttr = method.GetAttributes()
-						.Any(attr => attr.AttributeClass?.Name == "DllModuleExportAttribute");
-
-					return hasDllExportAttr ? method : null;
-				})
-			.Where(static s => s is not null)!
-			.Select(static (s, _) => s!);
-
-		// Filter to module classes and compute arg bytes.
-		var exportMeta = attributedMethods.Collect()
-			.Select(static (methods, _) =>
-			{
-				return methods
-					.Where(sym =>
+		public void Initialize(IncrementalGeneratorInitializationContext context)
+		{
+			// Find methods with [DllModuleExport] attribute
+			var attributedMethods = context.SyntaxProvider
+				.CreateSyntaxProvider(
+					static (node, _) => node is MethodDeclarationSyntax m && m.AttributeLists.Count > 0,
+					static (ctx, _) =>
 					{
-						var containingType = sym.ContainingType.ToDisplayString();
-						return containingType.StartsWith("Win32Emu.Win32.Modules.") ||
-						       containingType == "Win32Emu.Win32.Kernel32Module";
+						var method = ctx.SemanticModel.GetDeclaredSymbol((MethodDeclarationSyntax)ctx.Node) as IMethodSymbol;
+						if (method is null)
+							return null;
+
+						// Check if method has DllModuleExport attribute
+						var hasDllExportAttr = method.GetAttributes()
+							.Any(attr => attr.AttributeClass?.Name == "DllModuleExportAttribute");
+
+						return hasDllExportAttr ? method : null;
 					})
-					.Select(sym =>
-					{
-						var containingType = sym.ContainingType;
-						
-						// Get the DLL name from the Name property of the module class
-						var nameProperty = containingType.GetMembers("Name")
-							.OfType<IPropertySymbol>()
-							.FirstOrDefault();
-						
-						string? dllName = null;
-						if (nameProperty != null && nameProperty.GetMethod != null)
+				.Where(static s => s is not null)!
+				.Select(static (s, _) => s!);
+
+			// Filter to module classes and compute arg bytes.
+			var exportMeta = attributedMethods.Collect()
+				.Select(static (methods, _) =>
+				{
+					return methods
+						.Where(sym =>
 						{
-							// Try to get the constant value from the property getter
-							var syntaxRef = nameProperty.GetMethod.DeclaringSyntaxReferences.FirstOrDefault();
-							if (syntaxRef != null)
+							var containingType = sym.ContainingType.ToDisplayString();
+							return containingType.StartsWith("Win32Emu.Win32.Modules.") ||
+							       containingType == "Win32Emu.Win32.Kernel32Module";
+						})
+						.Select(sym =>
+						{
+							var containingType = sym.ContainingType;
+						
+							// Get the DLL name from the Name property of the module class
+							var nameProperty = containingType.GetMembers("Name")
+								.OfType<IPropertySymbol>()
+								.FirstOrDefault();
+						
+							string? dllName = null;
+							if (nameProperty != null && nameProperty.GetMethod != null)
 							{
-								var syntax = syntaxRef.GetSyntax();
-								// Look for arrow expression body: => "VALUE"
-								if (syntax.ToString().Contains("=>"))
+								// Try to get the constant value from the property getter
+								var syntaxRef = nameProperty.GetMethod.DeclaringSyntaxReferences.FirstOrDefault();
+								if (syntaxRef != null)
 								{
-									var syntaxText = syntax.ToString();
-									var arrowIndex = syntaxText.IndexOf("=>");
-									if (arrowIndex >= 0)
+									var syntax = syntaxRef.GetSyntax();
+									// Look for arrow expression body: => "VALUE"
+									if (syntax.ToString().Contains("=>"))
 									{
-										var firstQuote = syntaxText.IndexOf('"', arrowIndex);
-										if (firstQuote >= 0)
+										var syntaxText = syntax.ToString();
+										var arrowIndex = syntaxText.IndexOf("=>");
+										if (arrowIndex >= 0)
 										{
-											var secondQuote = syntaxText.IndexOf('"', firstQuote + 1);
-											if (secondQuote > firstQuote)
+											var firstQuote = syntaxText.IndexOf('"', arrowIndex);
+											if (firstQuote >= 0)
 											{
-												dllName = syntaxText.Substring(firstQuote + 1, secondQuote - firstQuote - 1);
+												var secondQuote = syntaxText.IndexOf('"', firstQuote + 1);
+												if (secondQuote > firstQuote)
+												{
+													dllName = syntaxText.Substring(firstQuote + 1, secondQuote - firstQuote - 1);
+												}
 											}
 										}
 									}
 								}
 							}
-						}
 						
-						// Fallback if we couldn't extract the name
-						if (string.IsNullOrEmpty(dllName))
-						{
-							dllName = containingType.Name.ToUpperInvariant();
-							if (!dllName.EndsWith(".DLL"))
-								dllName += ".DLL";
-						}
+							// Fallback if we couldn't extract the name
+							if (string.IsNullOrEmpty(dllName))
+							{
+								dllName = containingType.Name.ToUpperInvariant();
+								if (!dllName.EndsWith(".DLL"))
+									dllName += ".DLL";
+							}
 						
-						var argBytes = sym.Parameters.Sum(p => GetParamSize(p.Type));
-						return new ExportEntry(dllName, sym.Name, argBytes);
-					})
+							var argBytes = sym.Parameters.Sum(p => GetParamSize(p.Type));
+							return new ExportEntry(dllName, sym.Name, argBytes);
+						})
+						.ToList();
+				});
+
+			context.RegisterSourceOutput(exportMeta, static (spc, entries) =>
+			{
+				// Group by DLL and method name to handle duplicates
+				var byDll = entries
+					.GroupBy(e => e.DllName)
+					.OrderBy(g => g.Key)
 					.ToList();
+
+				var sb = new StringBuilder();
+				sb.AppendLine("// <auto-generated/>");
+				sb.AppendLine(
+					"""
+					namespace Win32Emu.Win32
+					{
+					    public static class StdCallMeta
+					    {
+					        public static int GetArgBytes(string dll, string export)
+					        {
+					            switch ((dll.ToUpperInvariant(), export))
+					            {
+					""");
+
+				foreach (var dllGroup in byDll)
+				{
+					var distinct = dllGroup
+						.GroupBy(e => e.MethodName)
+						.Select(g => g.First())
+						.OrderBy(e => e.MethodName);
+
+					foreach (var e in distinct)
+					{
+						sb.AppendLine($"                case (\"{e.DllName}\", \"{e.MethodName}\"): return {e.ArgBytes};");
+					}
+				}
+
+				sb.AppendLine(
+					"""
+					                default: throw new System.InvalidOperationException($"Missing arg bytes for {dll}!{export}");
+					            }
+					        }
+					    }
+					}
+					""");
+
+				spc.AddSource("StdCallMeta.g.cs", sb.ToString());
 			});
 
-		context.RegisterSourceOutput(exportMeta, static (spc, entries) =>
-		{
-			// Group by DLL and method name to handle duplicates
-			var byDll = entries
-				.GroupBy(e => e.DllName)
-				.OrderBy(g => g.Key)
-				.ToList();
-
-			var sb = new StringBuilder();
-			sb.AppendLine("// <auto-generated/>");
-			sb.AppendLine(
-				"""
-				namespace Win32Emu.Win32
+			// Generate DllModuleExportInfo helper class
+			var exportInfoMeta = attributedMethods
+				.Collect()
+				.Select(static (methods, _) =>
 				{
-				    public static class StdCallMeta
-				    {
-				        public static int GetArgBytes(string dll, string export)
-				        {
-				            switch ((dll.ToUpperInvariant(), export))
-				            {
-				""");
-
-			foreach (var dllGroup in byDll)
-			{
-				var distinct = dllGroup
-					.GroupBy(e => e.MethodName)
-					.Select(g => g.First())
-					.OrderBy(e => e.MethodName);
-
-				foreach (var e in distinct)
-				{
-					sb.AppendLine($"                case (\"{e.DllName}\", \"{e.MethodName}\"): return {e.ArgBytes};");
-				}
-			}
-
-			sb.AppendLine(
-				"""
-				                default: throw new System.InvalidOperationException($"Missing arg bytes for {dll}!{export}");
-				            }
-				        }
-				    }
-				}
-				""");
-
-			spc.AddSource("StdCallMeta.g.cs", sb.ToString());
-		});
-
-		// Generate DllModuleExportInfo helper class
-		var exportInfoMeta = attributedMethods
-			.Collect()
-			.Select(static (methods, _) =>
-			{
-				return methods
-					.Where(sym =>
-					{
-						var containingType = sym.ContainingType.ToDisplayString();
-						return containingType.StartsWith("Win32Emu.Win32.Modules.") ||
-						       containingType == "Win32Emu.Win32.Kernel32Module";
-					})
-					.Select(sym =>
-					{
-						var containingType = sym.ContainingType;
-						var methodName = sym.Name;
-						
-						// Get the DLL name from the Name property of the module class
-						var nameProperty = containingType.GetMembers("Name")
-							.OfType<IPropertySymbol>()
-							.FirstOrDefault();
-						
-						string? dllName = null;
-						if (nameProperty != null && nameProperty.GetMethod != null)
+					return methods
+						.Where(sym =>
 						{
-							// Try to get the constant value from the property getter
-							var syntaxRef = nameProperty.GetMethod.DeclaringSyntaxReferences.FirstOrDefault();
-							if (syntaxRef != null)
+							var containingType = sym.ContainingType.ToDisplayString();
+							return containingType.StartsWith("Win32Emu.Win32.Modules.") ||
+							       containingType == "Win32Emu.Win32.Kernel32Module";
+						})
+						.Select(sym =>
+						{
+							var containingType = sym.ContainingType;
+							var methodName = sym.Name;
+						
+							// Get the DLL name from the Name property of the module class
+							var nameProperty = containingType.GetMembers("Name")
+								.OfType<IPropertySymbol>()
+								.FirstOrDefault();
+						
+							string? dllName = null;
+							if (nameProperty != null && nameProperty.GetMethod != null)
 							{
-								var syntax = syntaxRef.GetSyntax();
-								// Look for arrow expression body: => "VALUE"
-								if (syntax.ToString().Contains("=>"))
+								// Try to get the constant value from the property getter
+								var syntaxRef = nameProperty.GetMethod.DeclaringSyntaxReferences.FirstOrDefault();
+								if (syntaxRef != null)
 								{
-									var match = System.Text.RegularExpressions.Regex.Match(
-										syntax.ToString(), 
-										@"=>\s*""([^""]+)"""
-									);
-									if (match.Success)
+									var syntax = syntaxRef.GetSyntax();
+									// Look for arrow expression body: => "VALUE"
+									if (syntax.ToString().Contains("=>"))
 									{
-										dllName = match.Groups[1].Value;
+										var match = System.Text.RegularExpressions.Regex.Match(
+											syntax.ToString(), 
+											@"=>\s*""([^""]+)"""
+										);
+										if (match.Success)
+										{
+											dllName = match.Groups[1].Value;
+										}
 									}
 								}
 							}
-						}
 						
-						// Fallback if we couldn't extract the name
-						if (string.IsNullOrEmpty(dllName))
-						{
-							dllName = containingType.Name.ToUpperInvariant();
-							if (!dllName.EndsWith(".DLL"))
-								dllName += ".DLL";
-						}
-						
-						// Get all DllModuleExport attributes
-						var exportAttrs = sym.GetAttributes()
-							.Where(attr => attr.AttributeClass?.Name == "DllModuleExportAttribute")
-							.Select(attr =>
+							// Fallback if we couldn't extract the name
+							if (string.IsNullOrEmpty(dllName))
 							{
-								uint ordinal = 0u;
-								if (attr.ConstructorArguments.Length > 0)
-								{
-									var ordinalValue = attr.ConstructorArguments[0].Value;
-									if (ordinalValue != null)
-									{
-										// Handle both int and uint
-										ordinal = ordinalValue is uint u ? u : Convert.ToUInt32(ordinalValue);
-									}
-								}
-								
-								uint? entryPoint = null;
-								string? version = null;
-								string? forwardedTo = null;
-								
-								foreach (var named in attr.NamedArguments)
-								{
-									if (named.Key == "EntryPoint" && named.Value.Value != null)
-									{
-										var epValue = named.Value.Value;
-										entryPoint = epValue is uint u ? u : Convert.ToUInt32(epValue);
-									}
-									else if (named.Key == "Version" && named.Value.Value != null)
-										version = (string)named.Value.Value;
-									else if (named.Key == "ForwardedTo" && named.Value.Value != null)
-										forwardedTo = (string)named.Value.Value;
-								}
-								
-								return new ExportAttributeInfo(ordinal, entryPoint, version, forwardedTo);
-							})
-							.ToList();
+								dllName = containingType.Name.ToUpperInvariant();
+								if (!dllName.EndsWith(".DLL"))
+									dllName += ".DLL";
+							}
 						
-						return new ExportMethodInfo(dllName, methodName, exportAttrs);
-					})
-					.ToList();
-			});
+							// Get all DllModuleExport attributes
+							var exportAttrs = sym.GetAttributes()
+								.Where(attr => attr.AttributeClass?.Name == "DllModuleExportAttribute")
+								.Select(attr =>
+								{
+									uint ordinal = 0u;
+									if (attr.ConstructorArguments.Length > 0)
+									{
+										var ordinalValue = attr.ConstructorArguments[0].Value;
+										if (ordinalValue != null)
+										{
+											// Handle both int and uint
+											ordinal = ordinalValue is uint u ? u : Convert.ToUInt32(ordinalValue);
+										}
+									}
+								
+									uint? entryPoint = null;
+									string? version = null;
+									string? forwardedTo = null;
+								
+									foreach (var named in attr.NamedArguments)
+									{
+										if (named.Key == "EntryPoint" && named.Value.Value != null)
+										{
+											var epValue = named.Value.Value;
+											entryPoint = epValue is uint u ? u : Convert.ToUInt32(epValue);
+										}
+										else if (named.Key == "Version" && named.Value.Value != null)
+											version = (string)named.Value.Value;
+										else if (named.Key == "ForwardedTo" && named.Value.Value != null)
+											forwardedTo = (string)named.Value.Value;
+									}
+								
+									return new ExportAttributeInfo(ordinal, entryPoint, version, forwardedTo);
+								})
+								.ToList();
+						
+							return new ExportMethodInfo(dllName, methodName, exportAttrs);
+						})
+						.ToList();
+				});
 
-		context.RegisterSourceOutput(exportInfoMeta, static (spc, entries) =>
-		{
-			var sb = new StringBuilder();
-			sb.AppendLine("// <auto-generated/>");
-			sb.AppendLine(
-				"""
-				namespace Win32Emu.Win32
-				{
-				    /// <summary>
-				    /// Helper class to query metadata about DLL module exports.
-				    /// Generated at compile-time from [DllModuleExport] attributes.
-				    /// </summary>
-				    public static class DllModuleExportInfo
-				    {
-				        /// <summary>
-				        /// Checks if a given export function is implemented in a DLL module.
-				        /// </summary>
-				        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL", "DPLAYX.DLL")</param>
-				        /// <param name="exportName">The export function name to check</param>
-				        /// <param name="version">Optional version string to match. If null, checks if any version is implemented.</param>
-				        /// <returns>True if the export is implemented, false otherwise</returns>
-				        public static bool IsExportImplemented(string dllName, string exportName, string? version = null)
-				        {
-				            switch ((dllName.ToUpperInvariant(), exportName.ToUpperInvariant()))
-				            {
-				""");
-
-			// Generate switch cases for each export
-			foreach (var export in entries.OrderBy(e => e.DllName).ThenBy(e => e.MethodName))
+			context.RegisterSourceOutput(exportInfoMeta, static (spc, entries) =>
 			{
-				// Check if this export has version-specific attributes
-				var hasVersions = export.Attributes.Any(a => a.Version != null);
+				var sb = new StringBuilder();
+				sb.AppendLine("// <auto-generated/>");
+				sb.AppendLine(
+					"""
+					namespace Win32Emu.Win32
+					{
+					    /// <summary>
+					    /// Helper class to query metadata about DLL module exports.
+					    /// Generated at compile-time from [DllModuleExport] attributes.
+					    /// </summary>
+					    public static class DllModuleExportInfo
+					    {
+					        /// <summary>
+					        /// Checks if a given export function is implemented in a DLL module.
+					        /// </summary>
+					        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL", "DPLAYX.DLL")</param>
+					        /// <param name="exportName">The export function name to check</param>
+					        /// <param name="version">Optional version string to match. If null, checks if any version is implemented.</param>
+					        /// <returns>True if the export is implemented, false otherwise</returns>
+					        public static bool IsExportImplemented(string dllName, string exportName, string? version = null)
+					        {
+					            switch ((dllName.ToUpperInvariant(), exportName.ToUpperInvariant()))
+					            {
+					""");
+
+				// Generate switch cases for each export
+				foreach (var export in entries.OrderBy(e => e.DllName).ThenBy(e => e.MethodName))
+				{
+					// Check if this export has version-specific attributes
+					var hasVersions = export.Attributes.Any(a => a.Version != null);
 				
-				if (!hasVersions)
-				{
-					// No version-specific, simple case
-					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\"): return true;");
-				}
-				else
-				{
-					// Has versions, generate version checks
-					foreach (var attr in export.Attributes)
+					if (!hasVersions)
 					{
-						if (attr.Version != null)
-						{
-							sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == \"{attr.Version}\": return true;");
-						}
-						else
-						{
-							sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == null: return true;");
-						}
-					}
-				}
-			}
-
-			sb.AppendLine(
-				"""
-				                default: return false;
-				            }
-				        }
-
-				        /// <summary>
-				        /// Gets all exports implemented in a DLL module.
-				        /// </summary>
-				        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL", "DPLAYX.DLL")</param>
-				        /// <returns>Dictionary mapping export names to their ordinals (first version found)</returns>
-				        public static System.Collections.Generic.Dictionary<string, uint> GetAllExports(string dllName)
-				        {
-				            var exports = new System.Collections.Generic.Dictionary<string, uint>(System.StringComparer.OrdinalIgnoreCase);
-				            switch (dllName.ToUpperInvariant())
-				            {
-				""");
-
-			// Group by DLL name
-			var byDll = entries
-				.GroupBy(e => e.DllName)
-				.OrderBy(g => g.Key);
-
-			foreach (var dllGroup in byDll)
-			{
-				sb.AppendLine($"                case \"{dllGroup.Key.ToUpperInvariant()}\":");
-				foreach (var export in dllGroup.OrderBy(e => e.MethodName))
-				{
-					var firstOrdinal = export.Attributes.Count > 0 ? export.Attributes[0].Ordinal : 0u;
-					sb.AppendLine($"                    exports[\"{export.MethodName}\"] = {firstOrdinal};");
-				}
-				sb.AppendLine("                    break;");
-			}
-
-			sb.AppendLine(
-				"""
-				            }
-				            return exports;
-				        }
-
-				        /// <summary>
-				        /// Gets the forwarding target for an export, if it's a forwarded export.
-				        /// </summary>
-				        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL")</param>
-				        /// <param name="exportName">The export function name to check</param>
-				        /// <param name="version">Optional version string to match. If null, checks first matching export.</param>
-				        /// <returns>The forwarding target string (e.g., "KERNELBASE.GetVersion") or null if not forwarded</returns>
-				        public static string? GetForwardedExport(string dllName, string exportName, string? version = null)
-				        {
-				            switch ((dllName.ToUpperInvariant(), exportName.ToUpperInvariant()))
-				            {
-				""");
-
-			// Generate switch cases for forwarded exports only
-			foreach (var export in entries.OrderBy(e => e.DllName).ThenBy(e => e.MethodName))
-			{
-				var forwardedAttrs = export.Attributes.Where(a => !string.IsNullOrEmpty(a.ForwardedTo)).ToList();
-				if (forwardedAttrs.Count == 0)
-					continue;
-
-				foreach (var attr in forwardedAttrs)
-				{
-					if (attr.Version != null)
-					{
-						sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == \"{attr.Version}\": return \"{attr.ForwardedTo}\";");
+						// No version-specific, simple case
+						sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\"): return true;");
 					}
 					else
 					{
-						sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == null: return \"{attr.ForwardedTo}\";");
+						// Has versions, generate version checks
+						foreach (var attr in export.Attributes)
+						{
+							if (attr.Version != null)
+							{
+								sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == \"{attr.Version}\": return true;");
+							}
+							else
+							{
+								sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == null: return true;");
+							}
+						}
 					}
 				}
-			}
 
-			sb.AppendLine(
-				"""
-				                default: return null;
-				            }
-				        }
-				    }
+				sb.AppendLine(
+					"""
+					                default: return false;
+					            }
+					        }
+
+					        /// <summary>
+					        /// Gets all exports implemented in a DLL module.
+					        /// </summary>
+					        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL", "DPLAYX.DLL")</param>
+					        /// <returns>Dictionary mapping export names to their ordinals (first version found)</returns>
+					        public static System.Collections.Generic.Dictionary<string, uint> GetAllExports(string dllName)
+					        {
+					            var exports = new System.Collections.Generic.Dictionary<string, uint>(System.StringComparer.OrdinalIgnoreCase);
+					            switch (dllName.ToUpperInvariant())
+					            {
+					""");
+
+				// Group by DLL name
+				var byDll = entries
+					.GroupBy(e => e.DllName)
+					.OrderBy(g => g.Key);
+
+				foreach (var dllGroup in byDll)
+				{
+					sb.AppendLine($"                case \"{dllGroup.Key.ToUpperInvariant()}\":");
+					foreach (var export in dllGroup.OrderBy(e => e.MethodName))
+					{
+						var firstOrdinal = export.Attributes.Count > 0 ? export.Attributes[0].Ordinal : 0u;
+						sb.AppendLine($"                    exports[\"{export.MethodName}\"] = {firstOrdinal};");
+					}
+					sb.AppendLine("                    break;");
 				}
-				""");
 
-			spc.AddSource("DllModuleExportInfo.g.cs", sb.ToString());
-		});
-	}
+				sb.AppendLine(
+					"""
+					            }
+					            return exports;
+					        }
 
-	private static int GetParamSize(ITypeSymbol t)
-	{
-		if (t is IPointerTypeSymbol)
-		{
-			return 4;
+					        /// <summary>
+					        /// Gets the forwarding target for an export, if it's a forwarded export.
+					        /// </summary>
+					        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL")</param>
+					        /// <param name="exportName">The export function name to check</param>
+					        /// <param name="version">Optional version string to match. If null, checks first matching export.</param>
+					        /// <returns>The forwarding target string (e.g., "KERNELBASE.GetVersion") or null if not forwarded</returns>
+					        public static string? GetForwardedExport(string dllName, string exportName, string? version = null)
+					        {
+					            switch ((dllName.ToUpperInvariant(), exportName.ToUpperInvariant()))
+					            {
+					""");
+
+				// Generate switch cases for forwarded exports only
+				foreach (var export in entries.OrderBy(e => e.DllName).ThenBy(e => e.MethodName))
+				{
+					var forwardedAttrs = export.Attributes.Where(a => !string.IsNullOrEmpty(a.ForwardedTo)).ToList();
+					if (forwardedAttrs.Count == 0)
+						continue;
+
+					foreach (var attr in forwardedAttrs)
+					{
+						if (attr.Version != null)
+						{
+							sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == \"{attr.Version}\": return \"{attr.ForwardedTo}\";");
+						}
+						else
+						{
+							sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == null: return \"{attr.ForwardedTo}\";");
+						}
+					}
+				}
+
+				sb.AppendLine(
+					"""
+					                default: return null;
+					            }
+					        }
+					    }
+					}
+					""");
+
+				spc.AddSource("DllModuleExportInfo.g.cs", sb.ToString());
+			});
 		}
 
-		var name = t.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-		return name switch
+		private static int GetParamSize(ITypeSymbol t)
 		{
-			"global::System.UInt32" or "global::System.Int32" or "global::System.UInt16" or "global::System.Int16"
-				or "global::System.Byte" or "global::System.SByte" or "global::System.Boolean" => 4,
-			"global::System.UInt64" or "global::System.Int64" or "global::System.Double" => 8,
-			_ => 4,
-		};
-	}
+			if (t is IPointerTypeSymbol)
+			{
+				return 4;
+			}
 
-	private readonly struct ExportEntry(string dllName, string methodName, int argBytes)
-	{
-		public string DllName { get; } = dllName;
-		public string MethodName { get; } = methodName;
-		public int ArgBytes { get; } = argBytes;
-	}
+			var name = t.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+			return name switch
+			{
+				"global::System.UInt32" or "global::System.Int32" or "global::System.UInt16" or "global::System.Int16"
+					or "global::System.Byte" or "global::System.SByte" or "global::System.Boolean" => 4,
+				"global::System.UInt64" or "global::System.Int64" or "global::System.Double" => 8,
+				_ => 4,
+			};
+		}
 
-	private readonly struct ExportAttributeInfo(uint ordinal, uint? entryPoint, string? version, string? forwardedTo)
-	{
-		public uint Ordinal { get; } = ordinal;
-		public uint? EntryPoint { get; } = entryPoint;
-		public string? Version { get; } = version;
-		public string? ForwardedTo { get; } = forwardedTo;
-	}
+		private readonly struct ExportEntry(string dllName, string methodName, int argBytes)
+		{
+			public string DllName { get; } = dllName;
+			public string MethodName { get; } = methodName;
+			public int ArgBytes { get; } = argBytes;
+		}
 
-	private readonly struct ExportMethodInfo(string dllName, string methodName, List<ExportAttributeInfo> attributes)
-	{
-		public string DllName { get; } = dllName;
-		public string MethodName { get; } = methodName;
-		public List<ExportAttributeInfo> Attributes { get; } = attributes;
+		private readonly struct ExportAttributeInfo(uint ordinal, uint? entryPoint, string? version, string? forwardedTo)
+		{
+			public uint Ordinal { get; } = ordinal;
+			public uint? EntryPoint { get; } = entryPoint;
+			public string? Version { get; } = version;
+			public string? ForwardedTo { get; } = forwardedTo;
+		}
+
+		private readonly struct ExportMethodInfo(string dllName, string methodName, List<ExportAttributeInfo> attributes)
+		{
+			public string DllName { get; } = dllName;
+			public string MethodName { get; } = methodName;
+			public List<ExportAttributeInfo> Attributes { get; } = attributes;
+		}
 	}
 }

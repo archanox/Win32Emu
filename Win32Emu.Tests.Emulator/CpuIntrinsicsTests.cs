@@ -1,199 +1,200 @@
 using Win32Emu.Cpu;
 using Win32Emu.Tests.Emulator.TestInfrastructure;
 
-namespace Win32Emu.Tests.Emulator;
-
-/// <summary>
-/// Tests for CPU intrinsics detection and CPUID feature reporting
-/// </summary>
-public class CpuIntrinsicsTests : IDisposable
+namespace Win32Emu.Tests.Emulator
 {
-    private readonly CpuTestHelper _helper;
+	/// <summary>
+	/// Tests for CPU intrinsics detection and CPUID feature reporting
+	/// </summary>
+	public class CpuIntrinsicsTests : IDisposable
+	{
+		private readonly CpuTestHelper _helper;
 
-    public CpuIntrinsicsTests()
-    {
-        _helper = new CpuTestHelper();
-    }
+		public CpuIntrinsicsTests()
+		{
+			_helper = new CpuTestHelper();
+		}
 
-    [Fact]
-    public void CpuIntrinsics_ShouldDetectArchitecture()
-    {
-        // Assert - At least one architecture should be detected
-        Assert.True(CpuIntrinsics.IsX86 || CpuIntrinsics.IsArm, 
-            "Should detect either x86 or ARM architecture");
-    }
+		[Fact]
+		public void CpuIntrinsics_ShouldDetectArchitecture()
+		{
+			// Assert - At least one architecture should be detected
+			Assert.True(CpuIntrinsics.IsX86 || CpuIntrinsics.IsArm, 
+				"Should detect either x86 or ARM architecture");
+		}
 
-    [Fact]
-    public void CPUID_Function0_ShouldReturnMaxFunction()
-    {
-        // Arrange: CPUID (0F A2) with EAX=0 - Get vendor string
-        _helper.SetReg("EAX", 0);
-        _helper.WriteCode(0x0F, 0xA2);
+		[Fact]
+		public void CPUID_Function0_ShouldReturnMaxFunction()
+		{
+			// Arrange: CPUID (0F A2) with EAX=0 - Get vendor string
+			_helper.SetReg("EAX", 0);
+			_helper.WriteCode(0x0F, 0xA2);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert - EAX should contain max supported function (at least 1, now extended to 7)
-        var maxFunction = _helper.GetReg("EAX");
-        Assert.True(maxFunction >= 1, "CPUID should support at least function 1");
-    }
+			// Assert - EAX should contain max supported function (at least 1, now extended to 7)
+			var maxFunction = _helper.GetReg("EAX");
+			Assert.True(maxFunction >= 1, "CPUID should support at least function 1");
+		}
 
-    [Fact]
-    public void CPUID_Function1_ShouldReturnHostBasedFeatures()
-    {
-        // Arrange: CPUID (0F A2) with EAX=1 - Get feature flags
-        _helper.SetReg("EAX", 1);
-        _helper.WriteCode(0x0F, 0xA2);
+		[Fact]
+		public void CPUID_Function1_ShouldReturnHostBasedFeatures()
+		{
+			// Arrange: CPUID (0F A2) with EAX=1 - Get feature flags
+			_helper.SetReg("EAX", 1);
+			_helper.WriteCode(0x0F, 0xA2);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert - EDX should contain basic features
-        var featuresEdx = _helper.GetReg("EDX");
-        var featuresEcx = _helper.GetReg("ECX");
+			// Assert - EDX should contain basic features
+			var featuresEdx = _helper.GetReg("EDX");
+			var featuresEcx = _helper.GetReg("ECX");
 
-        // FPU (bit 0) should always be set
-        Assert.True((featuresEdx & 1U) != 0, "FPU feature should be set");
+			// FPU (bit 0) should always be set
+			Assert.True((featuresEdx & 1U) != 0, "FPU feature should be set");
         
-        // TSC (bit 4) should always be set
-        Assert.True((featuresEdx & (1 << 4)) != 0, "TSC feature should be set");
+			// TSC (bit 4) should always be set
+			Assert.True((featuresEdx & (1 << 4)) != 0, "TSC feature should be set");
         
-        // CMOV (bit 15) should always be set
-        Assert.True((featuresEdx & (1 << 15)) != 0, "CMOV feature should be set");
+			// CMOV (bit 15) should always be set
+			Assert.True((featuresEdx & (1 << 15)) != 0, "CMOV feature should be set");
         
-        // CMPXCHG8B (bit 8) should always be set
-        Assert.True((featuresEdx & (1 << 8)) != 0, "CMPXCHG8B feature should be set");
+			// CMPXCHG8B (bit 8) should always be set
+			Assert.True((featuresEdx & (1 << 8)) != 0, "CMPXCHG8B feature should be set");
 
-        // If running on x86 host with SSE support, SSE flags should be set
-        if (CpuIntrinsics.HasSse)
-        {
-            Assert.True((featuresEdx & (1 << 25)) != 0, "SSE feature should be set on x86 hosts with SSE");
-        }
+			// If running on x86 host with SSE support, SSE flags should be set
+			if (CpuIntrinsics.HasSse)
+			{
+				Assert.True((featuresEdx & (1 << 25)) != 0, "SSE feature should be set on x86 hosts with SSE");
+			}
 
-        if (CpuIntrinsics.HasSse2)
-        {
-            Assert.True((featuresEdx & (1 << 26)) != 0, "SSE2 feature should be set on x86 hosts with SSE2");
-        }
+			if (CpuIntrinsics.HasSse2)
+			{
+				Assert.True((featuresEdx & (1 << 26)) != 0, "SSE2 feature should be set on x86 hosts with SSE2");
+			}
 
-        if (CpuIntrinsics.HasSse3)
-        {
-            Assert.True((featuresEcx & 1U) != 0, "SSE3 feature should be set on x86 hosts with SSE3");
-        }
+			if (CpuIntrinsics.HasSse3)
+			{
+				Assert.True((featuresEcx & 1U) != 0, "SSE3 feature should be set on x86 hosts with SSE3");
+			}
 
-        if (CpuIntrinsics.HasSsse3)
-        {
-            Assert.True((featuresEcx & (1 << 9)) != 0, "SSSE3 feature should be set on x86 hosts with SSSE3");
-        }
-    }
+			if (CpuIntrinsics.HasSsse3)
+			{
+				Assert.True((featuresEcx & (1 << 9)) != 0, "SSSE3 feature should be set on x86 hosts with SSSE3");
+			}
+		}
 
-    [Fact]
-    public void CPUID_Function7_SubFunction0_ShouldReturnExtendedFeatures()
-    {
-        // Arrange: CPUID (0F A2) with EAX=7, ECX=0 - Get extended features
-        _helper.SetReg("EAX", 7);
-        _helper.SetReg("ECX", 0);
-        _helper.WriteCode(0x0F, 0xA2);
+		[Fact]
+		public void CPUID_Function7_SubFunction0_ShouldReturnExtendedFeatures()
+		{
+			// Arrange: CPUID (0F A2) with EAX=7, ECX=0 - Get extended features
+			_helper.SetReg("EAX", 7);
+			_helper.SetReg("ECX", 0);
+			_helper.WriteCode(0x0F, 0xA2);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert - EAX should contain max sub-function (0 for now)
-        var maxSubFunction = _helper.GetReg("EAX");
-        var extendedFeaturesEbx = _helper.GetReg("EBX");
+			// Assert - EAX should contain max sub-function (0 for now)
+			var maxSubFunction = _helper.GetReg("EAX");
+			var extendedFeaturesEbx = _helper.GetReg("EBX");
 
-        Assert.Equal(0u, maxSubFunction);
+			Assert.Equal(0u, maxSubFunction);
 
-        // If running on x86 host with AVX2 support, AVX2 flag should be set
-        if (CpuIntrinsics.HasAvx2)
-        {
-            Assert.True((extendedFeaturesEbx & (1 << 5)) != 0, 
-                "AVX2 feature should be set on x86 hosts with AVX2");
-        }
+			// If running on x86 host with AVX2 support, AVX2 flag should be set
+			if (CpuIntrinsics.HasAvx2)
+			{
+				Assert.True((extendedFeaturesEbx & (1 << 5)) != 0, 
+					"AVX2 feature should be set on x86 hosts with AVX2");
+			}
 
-        if (CpuIntrinsics.HasBmi1)
-        {
-            Assert.True((extendedFeaturesEbx & (1 << 3)) != 0, 
-                "BMI1 feature should be set on x86 hosts with BMI1");
-        }
+			if (CpuIntrinsics.HasBmi1)
+			{
+				Assert.True((extendedFeaturesEbx & (1 << 3)) != 0, 
+					"BMI1 feature should be set on x86 hosts with BMI1");
+			}
 
-        if (CpuIntrinsics.HasBmi2)
-        {
-            Assert.True((extendedFeaturesEbx & (1 << 8)) != 0, 
-                "BMI2 feature should be set on x86 hosts with BMI2");
-        }
-    }
+			if (CpuIntrinsics.HasBmi2)
+			{
+				Assert.True((extendedFeaturesEbx & (1 << 8)) != 0, 
+					"BMI2 feature should be set on x86 hosts with BMI2");
+			}
+		}
 
-    [Fact]
-    public void CPUID_UnsupportedFunction_ShouldReturnZeros()
-    {
-        // Arrange: CPUID (0F A2) with unsupported function
-        _helper.SetReg("EAX", 0xFFFFFFFF);
-        _helper.SetReg("EBX", 0x12345678);
-        _helper.SetReg("ECX", 0xABCDEF01);
-        _helper.SetReg("EDX", 0x98765432);
-        _helper.WriteCode(0x0F, 0xA2);
+		[Fact]
+		public void CPUID_UnsupportedFunction_ShouldReturnZeros()
+		{
+			// Arrange: CPUID (0F A2) with unsupported function
+			_helper.SetReg("EAX", 0xFFFFFFFF);
+			_helper.SetReg("EBX", 0x12345678);
+			_helper.SetReg("ECX", 0xABCDEF01);
+			_helper.SetReg("EDX", 0x98765432);
+			_helper.WriteCode(0x0F, 0xA2);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert - All registers should be zero for unsupported functions
-        Assert.Equal(0u, _helper.GetReg("EAX"));
-        Assert.Equal(0u, _helper.GetReg("EBX"));
-        Assert.Equal(0u, _helper.GetReg("ECX"));
-        Assert.Equal(0u, _helper.GetReg("EDX"));
-    }
+			// Assert - All registers should be zero for unsupported functions
+			Assert.Equal(0u, _helper.GetReg("EAX"));
+			Assert.Equal(0u, _helper.GetReg("EBX"));
+			Assert.Equal(0u, _helper.GetReg("ECX"));
+			Assert.Equal(0u, _helper.GetReg("EDX"));
+		}
 
-    [Fact]
-    public void CPUID_Function80000000_ShouldReturnMaxExtendedFunction()
-    {
-        // Arrange: CPUID (0F A2) with EAX=0x80000000 - Get max extended function
-        _helper.SetReg("EAX", 0x80000000);
-        _helper.WriteCode(0x0F, 0xA2);
+		[Fact]
+		public void CPUID_Function80000000_ShouldReturnMaxExtendedFunction()
+		{
+			// Arrange: CPUID (0F A2) with EAX=0x80000000 - Get max extended function
+			_helper.SetReg("EAX", 0x80000000);
+			_helper.WriteCode(0x0F, 0xA2);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert - EAX should contain max extended function (at least 0x80000001)
-        var maxExtendedFunction = _helper.GetReg("EAX");
-        Assert.True(maxExtendedFunction >= 0x80000001, "CPUID should support at least extended function 0x80000001");
-    }
+			// Assert - EAX should contain max extended function (at least 0x80000001)
+			var maxExtendedFunction = _helper.GetReg("EAX");
+			Assert.True(maxExtendedFunction >= 0x80000001, "CPUID should support at least extended function 0x80000001");
+		}
 
-    [Fact]
-    public void CPUID_Function80000001_ShouldReturnExtendedFeatures()
-    {
-        // Arrange: CPUID (0F A2) with EAX=0x80000001 - Get extended features
-        _helper.SetReg("EAX", 0x80000001);
-        _helper.WriteCode(0x0F, 0xA2);
+		[Fact]
+		public void CPUID_Function80000001_ShouldReturnExtendedFeatures()
+		{
+			// Arrange: CPUID (0F A2) with EAX=0x80000001 - Get extended features
+			_helper.SetReg("EAX", 0x80000001);
+			_helper.WriteCode(0x0F, 0xA2);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert - ECX should contain extended features
-        var extendedFeaturesEcx = _helper.GetReg("ECX");
+			// Assert - ECX should contain extended features
+			var extendedFeaturesEcx = _helper.GetReg("ECX");
 
-        // If running on x86 host with LZCNT support, LZCNT flag should be set
-        if (CpuIntrinsics.HasLzcnt)
-        {
-            Assert.True((extendedFeaturesEcx & (1 << 5)) != 0, 
-                "LZCNT feature should be set on x86 hosts with LZCNT support");
-        }
-    }
+			// If running on x86 host with LZCNT support, LZCNT flag should be set
+			if (CpuIntrinsics.HasLzcnt)
+			{
+				Assert.True((extendedFeaturesEcx & (1 << 5)) != 0, 
+					"LZCNT feature should be set on x86 hosts with LZCNT support");
+			}
+		}
 
-    [Fact]
-    public void CpuIntrinsics_GetCpuidFeatures_ShouldNotThrow()
-    {
-        // Act & Assert - Should not throw when querying features
-        var ecxFeatures = CpuIntrinsics.GetCpuidEcxFeatures();
-        var edxFeatures = CpuIntrinsics.GetCpuidEdxFeatures();
-        var extendedFeatures = CpuIntrinsics.GetCpuidExtendedEbxFeatures();
-        var extended80000001Features = CpuIntrinsics.GetCpuid80000001EcxFeatures();
+		[Fact]
+		public void CpuIntrinsics_GetCpuidFeatures_ShouldNotThrow()
+		{
+			// Act & Assert - Should not throw when querying features
+			var ecxFeatures = CpuIntrinsics.GetCpuidEcxFeatures();
+			var edxFeatures = CpuIntrinsics.GetCpuidEdxFeatures();
+			var extendedFeatures = CpuIntrinsics.GetCpuidExtendedEbxFeatures();
+			var extended80000001Features = CpuIntrinsics.GetCpuid80000001EcxFeatures();
 
-        // Basic validation - EDX should always have some features set
-        Assert.True(edxFeatures > 0, "EDX features should include at least basic CPU features");
-    }
+			// Basic validation - EDX should always have some features set
+			Assert.True(edxFeatures > 0, "EDX features should include at least basic CPU features");
+		}
 
-    public void Dispose()
-    {
-        _helper?.Dispose();
-    }
+		public void Dispose()
+		{
+			_helper?.Dispose();
+		}
+	}
 }

@@ -30,12 +30,12 @@ namespace Win32Emu.Win32.Modules
 		private uint _nextDInputHandle = 0x90000000;
 		private uint _nextDeviceHandle = 0x91000000;
 
-		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+		public bool TryInvokeUnsafe(string exp, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
 			var a = new StackArgs(cpu, memory);
 
-			switch (export.ToUpperInvariant())
+			switch (exp.ToUpperInvariant())
 			{
 				case "DIRECTINPUTCREATEA":
 				case "DIRECTINPUTCREATE":
@@ -47,12 +47,12 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					_logger.LogInformation($"[DInput] Unimplemented export: {export}");
+					_logger.LogInformation($"[DInput] Unimplemented export: {exp}");
 					return false;
 			}
 		}
 
-		private unsafe uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
+		private uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
 			_logger.LogInformation($"[DInput] DirectInputCreateA(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, lplpDirectInput=0x{lplpDirectInput:X8}, pUnkOuter=0x{pUnkOuter:X8})");
 
@@ -75,7 +75,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DI_OK
 		}
 
-		private unsafe uint DirectInputCreate(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
+		private uint DirectInputCreate(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
 			_logger.LogInformation($"[DInput] DirectInputCreate(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, lplpDirectInput=0x{lplpDirectInput:X8}, pUnkOuter=0x{pUnkOuter:X8})");
 
@@ -103,7 +103,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DI_OK
 		}
 
-		private unsafe uint DirectInput8Create(uint hinst, uint dwVersion, uint riidltf, uint lplpDirectInput, uint pUnkOuter)
+		private uint DirectInput8Create(uint hinst, uint dwVersion, uint riidltf, uint lplpDirectInput, uint pUnkOuter)
 		{
 			_logger.LogInformation($"[DInput] DirectInput8Create(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, riidltf=0x{riidltf:X8})");
 
@@ -122,23 +122,6 @@ namespace Win32Emu.Win32.Modules
 			public uint Handle { get; set; }
 			public uint BackendDeviceId { get; set; }
 			public string Name { get; set; } = string.Empty;
-		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Export ordinals for DInput - alphabetically ordered
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				//{ "DIRECTINPUT8CREATE", 1 },
-				
-				// NOTE: DIRECTINPUTCREATE doesn't appear to be in the winxp dinpput.dll
-				//{ "DIRECTINPUTCREATE", 2 },
-				
-				{ "DIRECTINPUTCREATEA", 1 },
-				{ "DIRECTINPUTCREATEEX", 2 },
-				{ "DIRECTINPUTCREATEW", 3 },
-			};
-			return exports;
 		}
 	}
 }

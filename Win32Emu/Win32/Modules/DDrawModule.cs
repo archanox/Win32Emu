@@ -29,12 +29,12 @@ namespace Win32Emu.Win32.Modules
 		private uint _nextDDrawHandle = 0x70000000;
 		private uint _nextSurfaceHandle = 0x71000000;
 
-		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+		public bool TryInvokeUnsafe(string exp, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
 			var a = new StackArgs(cpu, memory);
 
-			switch (export.ToUpperInvariant())
+			switch (exp.ToUpperInvariant())
 			{
 				case "DIRECTDRAWCREATE":
 					returnValue = DirectDrawCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2));
@@ -45,7 +45,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					_logger.LogInformation($"[DDraw] Unimplemented export: {export}");
+					_logger.LogInformation($"[DDraw] Unimplemented export: {exp}");
 					return false;
 			}
 		}
@@ -68,7 +68,7 @@ namespace Win32Emu.Win32.Modules
 		///	DDERR_INVALIDPARAMS
 		/// DDERR_NODIRECTDRAWHW
 		///	DDERR_OUTOFMEMORY</returns>
-		private unsafe uint DirectDrawCreate(in uint lpGuid, uint lplpDd, in uint pUnkOuter)
+		private uint DirectDrawCreate(in uint lpGuid, uint lplpDd, in uint pUnkOuter)
 		{
 			_logger.LogInformation($"[DDraw] DirectDrawCreate(lpGuid=0x{lpGuid:X8}, lplpDD=0x{lplpDd:X8}, pUnkOuter=0x{pUnkOuter:X8})");
 
@@ -90,7 +90,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DD_OK
 		}
 
-		private unsafe uint DirectDrawCreateEx(uint lpGuid, uint lplpDd, uint iid, uint pUnkOuter)
+		private uint DirectDrawCreateEx(uint lpGuid, uint lplpDd, uint iid, uint pUnkOuter)
 		{
 			_logger.LogInformation($"[DDraw] DirectDrawCreateEx(lpGuid=0x{lpGuid:X8}, lplpDD=0x{lplpDd:X8}, iid=0x{iid:X8}, pUnkOuter=0x{pUnkOuter:X8})");
 
@@ -127,39 +127,6 @@ namespace Win32Emu.Win32.Modules
 			public int Pitch { get; set; }
 			public byte[]? Bits { get; set; }
 			public bool IsPrimary { get; set; }
-		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Export ordinals for DDraw
-			// version 5.3.2600.5512 (XP)
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "ACQUIREDDTHREADLOCK", 1 },
-				{ "CHECKFULLSCREEN", 2 },
-				{ "COMPLETECREATESYSMEMSURFACE", 3 },
-				{ "D3DPARSEUNKNOWNCOMMAND", 4 },
-				{ "DDGETATTACHEDSURFACELCL", 5 },
-				{ "DDINTERNALLOCK", 6 },
-				{ "DDINTERNALINTERNALUNLOCK", 7 },
-				{ "DSOUNDHELP", 8 },
-				{ "DIRECTDRAWCREATE", 9 },
-				{ "DIRECTDRAWCREATECLIPPER", 10 },
-				{ "DIRECTDRAWCREATEEX", 11 },
-				{ "DIRECTDRAWENUMERATEA", 12 },
-				{ "DIRECTDRAWENUMERATEEXA", 13 },
-				{ "DIRECTDRAWENUMERATEEXW", 14 },
-				{ "DIRECTDRAWENUMERATEW", 15 },
-				{ "DLLCANUNLOADNOW", 16 },
-				{ "DLLGETCLASSOBJECT", 17 },
-				{ "GETDDSURFACELOCAL", 18 },
-				{ "GETOLETHUNKDATA", 19 },
-				{ "GETSURFACEFROMDC", 20 },
-				{ "REGISTERSPECIALCASE", 21 },
-				{ "RELEASEDDTHREADLOCK", 22 },
-			};
-			
-			return exports;
 		}
 	}
 }

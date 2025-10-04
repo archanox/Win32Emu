@@ -1,263 +1,264 @@
 using Win32Emu.Tests.Emulator.TestInfrastructure;
 
-namespace Win32Emu.Tests.Emulator;
-
-/// <summary>
-/// Tests for basic x86 arithmetic and logic instructions (8086/286/386 era)
-/// These are foundational instructions that should be well-tested
-/// </summary>
-public class BasicInstructionTests : IDisposable
+namespace Win32Emu.Tests.Emulator
 {
-    private readonly CpuTestHelper _helper;
+	/// <summary>
+	/// Tests for basic x86 arithmetic and logic instructions (8086/286/386 era)
+	/// These are foundational instructions that should be well-tested
+	/// </summary>
+	public class BasicInstructionTests : IDisposable
+	{
+		private readonly CpuTestHelper _helper;
 
-    public BasicInstructionTests()
-    {
-        _helper = new CpuTestHelper();
-    }
+		public BasicInstructionTests()
+		{
+			_helper = new CpuTestHelper();
+		}
 
-    [Fact]
-    public void ADD_EAX_EBX_ShouldAddRegisters()
-    {
-        // Arrange: ADD EAX, EBX (01 D8)
-        _helper.SetReg("EAX", 0x00000005);
-        _helper.SetReg("EBX", 0x00000003);
-        _helper.WriteCode(0x01, 0xD8);
+		[Fact]
+		public void ADD_EAX_EBX_ShouldAddRegisters()
+		{
+			// Arrange: ADD EAX, EBX (01 D8)
+			_helper.SetReg("EAX", 0x00000005);
+			_helper.SetReg("EBX", 0x00000003);
+			_helper.WriteCode(0x01, 0xD8);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.Equal(0x00000008u, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
-        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear for no carry");
-    }
+			// Assert
+			Assert.Equal(0x00000008u, _helper.GetReg("EAX"));
+			Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
+			Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear for no carry");
+		}
 
-    [Fact]
-    public void ADD_WithCarry_ShouldSetCarryFlag()
-    {
-        // Arrange: ADD EAX, EBX (01 D8)
-        _helper.SetReg("EAX", 0xFFFFFFFF);
-        _helper.SetReg("EBX", 0x00000001);
-        _helper.WriteCode(0x01, 0xD8);
+		[Fact]
+		public void ADD_WithCarry_ShouldSetCarryFlag()
+		{
+			// Arrange: ADD EAX, EBX (01 D8)
+			_helper.SetReg("EAX", 0xFFFFFFFF);
+			_helper.SetReg("EBX", 0x00000001);
+			_helper.WriteCode(0x01, 0xD8);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.Equal(0x00000000u, _helper.GetReg("EAX"));
-        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set for zero result");
-        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set for carry");
-    }
+			// Assert
+			Assert.Equal(0x00000000u, _helper.GetReg("EAX"));
+			Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set for zero result");
+			Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set for carry");
+		}
 
-    [Fact]
-    public void SUB_EAX_EBX_ShouldSubtractRegisters()
-    {
-        // Arrange: SUB EAX, EBX (29 D8)
-        _helper.SetReg("EAX", 0x00000010);
-        _helper.SetReg("EBX", 0x00000005);
-        _helper.WriteCode(0x29, 0xD8);
+		[Fact]
+		public void SUB_EAX_EBX_ShouldSubtractRegisters()
+		{
+			// Arrange: SUB EAX, EBX (29 D8)
+			_helper.SetReg("EAX", 0x00000010);
+			_helper.SetReg("EBX", 0x00000005);
+			_helper.WriteCode(0x29, 0xD8);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.Equal(0x0000000Bu, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
-        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear for no borrow");
-    }
+			// Assert
+			Assert.Equal(0x0000000Bu, _helper.GetReg("EAX"));
+			Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
+			Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear for no borrow");
+		}
 
-    [Fact]
-    public void SUB_WithBorrow_ShouldSetCarryFlag()
-    {
-        // Arrange: SUB EAX, EBX (29 D8)
-        _helper.SetReg("EAX", 0x00000005);
-        _helper.SetReg("EBX", 0x00000010);
-        _helper.WriteCode(0x29, 0xD8);
+		[Fact]
+		public void SUB_WithBorrow_ShouldSetCarryFlag()
+		{
+			// Arrange: SUB EAX, EBX (29 D8)
+			_helper.SetReg("EAX", 0x00000005);
+			_helper.SetReg("EBX", 0x00000010);
+			_helper.WriteCode(0x29, 0xD8);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.Equal(0xFFFFFFF5u, _helper.GetReg("EAX")); // Underflow
-        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set for borrow");
-        Assert.True(_helper.IsFlagSet(CpuFlag.Sf), "SF should be set for negative result");
-    }
+			// Assert
+			Assert.Equal(0xFFFFFFF5u, _helper.GetReg("EAX")); // Underflow
+			Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set for borrow");
+			Assert.True(_helper.IsFlagSet(CpuFlag.Sf), "SF should be set for negative result");
+		}
 
-    [Fact]
-    public void XOR_EAX_EAX_ShouldClearRegister()
-    {
-        // Arrange: XOR EAX, EAX (31 C0)
-        _helper.SetReg("EAX", 0x12345678);
-        _helper.WriteCode(0x31, 0xC0);
+		[Fact]
+		public void XOR_EAX_EAX_ShouldClearRegister()
+		{
+			// Arrange: XOR EAX, EAX (31 C0)
+			_helper.SetReg("EAX", 0x12345678);
+			_helper.WriteCode(0x31, 0xC0);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.Equal(0x00000000u, _helper.GetReg("EAX"));
-        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set for zero result");
-        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear for XOR");
-        Assert.False(_helper.IsFlagSet(CpuFlag.Of), "OF should be clear for XOR");
-    }
+			// Assert
+			Assert.Equal(0x00000000u, _helper.GetReg("EAX"));
+			Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set for zero result");
+			Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear for XOR");
+			Assert.False(_helper.IsFlagSet(CpuFlag.Of), "OF should be clear for XOR");
+		}
 
-    [Fact]
-    public void AND_EAX_EBX_ShouldPerformBitwiseAnd()
-    {
-        // Arrange: AND EAX, EBX (21 D8)
-        _helper.SetReg("EAX", 0xFF00FF00);
-        _helper.SetReg("EBX", 0xF0F0F0F0);
-        _helper.WriteCode(0x21, 0xD8);
+		[Fact]
+		public void AND_EAX_EBX_ShouldPerformBitwiseAnd()
+		{
+			// Arrange: AND EAX, EBX (21 D8)
+			_helper.SetReg("EAX", 0xFF00FF00);
+			_helper.SetReg("EBX", 0xF0F0F0F0);
+			_helper.WriteCode(0x21, 0xD8);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.Equal(0xF000F000u, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
-    }
+			// Assert
+			Assert.Equal(0xF000F000u, _helper.GetReg("EAX"));
+			Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
+		}
 
-    [Fact]
-    public void OR_EAX_EBX_ShouldPerformBitwiseOr()
-    {
-        // Arrange: OR EAX, EBX (09 D8)
-        _helper.SetReg("EAX", 0x00FF00FF);
-        _helper.SetReg("EBX", 0xFF00FF00);
-        _helper.WriteCode(0x09, 0xD8);
+		[Fact]
+		public void OR_EAX_EBX_ShouldPerformBitwiseOr()
+		{
+			// Arrange: OR EAX, EBX (09 D8)
+			_helper.SetReg("EAX", 0x00FF00FF);
+			_helper.SetReg("EBX", 0xFF00FF00);
+			_helper.WriteCode(0x09, 0xD8);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.Equal(0xFFFFFFFFu, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
-    }
+			// Assert
+			Assert.Equal(0xFFFFFFFFu, _helper.GetReg("EAX"));
+			Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
+		}
 
-    [Fact]
-    public void TEST_EAX_EBX_ShouldNotModifyRegisters()
-    {
-        // Arrange: TEST EAX, EBX (85 D8)
-        _helper.SetReg("EAX", 0x12345678);
-        _helper.SetReg("EBX", 0x12345678);
-        _helper.WriteCode(0x85, 0xD8);
+		[Fact]
+		public void TEST_EAX_EBX_ShouldNotModifyRegisters()
+		{
+			// Arrange: TEST EAX, EBX (85 D8)
+			_helper.SetReg("EAX", 0x12345678);
+			_helper.SetReg("EBX", 0x12345678);
+			_helper.WriteCode(0x85, 0xD8);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert - Registers should not change
-        Assert.Equal(0x12345678u, _helper.GetReg("EAX"));
-        Assert.Equal(0x12345678u, _helper.GetReg("EBX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
-    }
+			// Assert - Registers should not change
+			Assert.Equal(0x12345678u, _helper.GetReg("EAX"));
+			Assert.Equal(0x12345678u, _helper.GetReg("EBX"));
+			Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
+		}
 
-    [Fact]
-    public void TEST_ZeroResult_ShouldSetZeroFlag()
-    {
-        // Arrange: TEST EAX, EBX (85 D8)
-        _helper.SetReg("EAX", 0x00FF00FF);
-        _helper.SetReg("EBX", 0xFF00FF00);
-        _helper.WriteCode(0x85, 0xD8);
+		[Fact]
+		public void TEST_ZeroResult_ShouldSetZeroFlag()
+		{
+			// Arrange: TEST EAX, EBX (85 D8)
+			_helper.SetReg("EAX", 0x00FF00FF);
+			_helper.SetReg("EBX", 0xFF00FF00);
+			_helper.WriteCode(0x85, 0xD8);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set when AND result is zero");
-    }
+			// Assert
+			Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set when AND result is zero");
+		}
 
-    [Fact]
-    public void INC_EAX_ShouldIncrementRegister()
-    {
-        // Arrange: INC EAX (40)
-        _helper.SetReg("EAX", 0x00000005);
-        _helper.WriteCode(0x40);
+		[Fact]
+		public void INC_EAX_ShouldIncrementRegister()
+		{
+			// Arrange: INC EAX (40)
+			_helper.SetReg("EAX", 0x00000005);
+			_helper.WriteCode(0x40);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.Equal(0x00000006u, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
-    }
+			// Assert
+			Assert.Equal(0x00000006u, _helper.GetReg("EAX"));
+			Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
+		}
 
-    [Fact]
-    public void DEC_EAX_ShouldDecrementRegister()
-    {
-        // Arrange: DEC EAX (48)
-        _helper.SetReg("EAX", 0x00000005);
-        _helper.WriteCode(0x48);
+		[Fact]
+		public void DEC_EAX_ShouldDecrementRegister()
+		{
+			// Arrange: DEC EAX (48)
+			_helper.SetReg("EAX", 0x00000005);
+			_helper.WriteCode(0x48);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.Equal(0x00000004u, _helper.GetReg("EAX"));
-        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
-    }
+			// Assert
+			Assert.Equal(0x00000004u, _helper.GetReg("EAX"));
+			Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear for non-zero result");
+		}
 
-    [Fact]
-    public void SHL_EAX_1_ShouldShiftLeft()
-    {
-        // Arrange: SHL EAX, 1 (D1 E0)
-        _helper.SetReg("EAX", 0x00000005); // Binary: 0101
-        _helper.WriteCode(0xD1, 0xE0);
+		[Fact]
+		public void SHL_EAX_1_ShouldShiftLeft()
+		{
+			// Arrange: SHL EAX, 1 (D1 E0)
+			_helper.SetReg("EAX", 0x00000005); // Binary: 0101
+			_helper.WriteCode(0xD1, 0xE0);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.Equal(0x0000000Au, _helper.GetReg("EAX")); // Binary: 1010
-        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear when MSB was 0");
-    }
+			// Assert
+			Assert.Equal(0x0000000Au, _helper.GetReg("EAX")); // Binary: 1010
+			Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear when MSB was 0");
+		}
 
-    [Fact]
-    public void SHR_EAX_1_ShouldShiftRight()
-    {
-        // Arrange: SHR EAX, 1 (D1 E8)
-        _helper.SetReg("EAX", 0x0000000A); // Binary: 1010
-        _helper.WriteCode(0xD1, 0xE8);
+		[Fact]
+		public void SHR_EAX_1_ShouldShiftRight()
+		{
+			// Arrange: SHR EAX, 1 (D1 E8)
+			_helper.SetReg("EAX", 0x0000000A); // Binary: 1010
+			_helper.WriteCode(0xD1, 0xE8);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.Equal(0x00000005u, _helper.GetReg("EAX")); // Binary: 0101
-        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear when LSB was 0");
-    }
+			// Assert
+			Assert.Equal(0x00000005u, _helper.GetReg("EAX")); // Binary: 0101
+			Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear when LSB was 0");
+		}
 
-    [Fact]
-    public void CMP_EAX_EBX_Equal_ShouldSetZeroFlag()
-    {
-        // Arrange: CMP EAX, EBX (39 D8)
-        _helper.SetReg("EAX", 0x12345678);
-        _helper.SetReg("EBX", 0x12345678);
-        _helper.WriteCode(0x39, 0xD8);
+		[Fact]
+		public void CMP_EAX_EBX_Equal_ShouldSetZeroFlag()
+		{
+			// Arrange: CMP EAX, EBX (39 D8)
+			_helper.SetReg("EAX", 0x12345678);
+			_helper.SetReg("EBX", 0x12345678);
+			_helper.WriteCode(0x39, 0xD8);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert - Registers should not change
-        Assert.Equal(0x12345678u, _helper.GetReg("EAX"));
-        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set when values are equal");
-    }
+			// Assert - Registers should not change
+			Assert.Equal(0x12345678u, _helper.GetReg("EAX"));
+			Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set when values are equal");
+		}
 
-    [Fact]
-    public void CMP_EAX_EBX_Less_ShouldSetCarryFlag()
-    {
-        // Arrange: CMP EAX, EBX (39 D8)
-        _helper.SetReg("EAX", 0x00000005);
-        _helper.SetReg("EBX", 0x00000010);
-        _helper.WriteCode(0x39, 0xD8);
+		[Fact]
+		public void CMP_EAX_EBX_Less_ShouldSetCarryFlag()
+		{
+			// Arrange: CMP EAX, EBX (39 D8)
+			_helper.SetReg("EAX", 0x00000005);
+			_helper.SetReg("EBX", 0x00000010);
+			_helper.WriteCode(0x39, 0xD8);
 
-        // Act
-        _helper.ExecuteInstruction();
+			// Act
+			_helper.ExecuteInstruction();
 
-        // Assert
-        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set when first operand is less");
-        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear when values are not equal");
-    }
+			// Assert
+			Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set when first operand is less");
+			Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear when values are not equal");
+		}
 
-    public void Dispose()
-    {
-        _helper?.Dispose();
-    }
+		public void Dispose()
+		{
+			_helper?.Dispose();
+		}
+	}
 }

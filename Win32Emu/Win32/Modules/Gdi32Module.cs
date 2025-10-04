@@ -31,12 +31,12 @@ namespace Win32Emu.Win32.Modules
 		private readonly Dictionary<uint, DeviceContext> _deviceContexts = new();
 		private uint _nextDcHandle = 0x81000000;
 
-		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+		public bool TryInvokeUnsafe(string exp, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
 			var a = new StackArgs(cpu, memory);
 
-			switch (export.ToUpperInvariant())
+			switch (exp.ToUpperInvariant())
 			{
 				case "GETSTOCKOBJECT":
 					returnValue = GetStockObject(a.Int32(0));
@@ -72,18 +72,17 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					_logger.LogInformation($"[Gdi32] Unimplemented export: {export}");
+					_logger.LogInformation($"[Gdi32] Unimplemented export: {exp}");
 					return false;
 			}
 		}
 
-		private unsafe uint GetStockObject(int stockObjectId)
+		private uint GetStockObject(int stockObjectId)
 		{
 			// Validate stock object ID
-			if (stockObjectId < NativeTypes.StockObject.WHITE_BRUSH ||
-			    stockObjectId > NativeTypes.StockObject.DC_PEN)
+			if (stockObjectId is < NativeTypes.StockObject.WHITE_BRUSH or > NativeTypes.StockObject.DC_PEN)
 			{
-				_logger.LogInformation($"[Gdi32] GetStockObject: Invalid stock object ID {stockObjectId}");
+				_logger.LogInformation("[Gdi32] GetStockObject: Invalid stock object ID {stockObjectId}", stockObjectId);
 				return 0;
 			}
 
@@ -101,7 +100,7 @@ namespace Win32Emu.Win32.Modules
 			return handle;
 		}
 
-		private unsafe uint BeginPaint(uint hwnd, uint lpPaint)
+		private uint BeginPaint(uint hwnd, uint lpPaint)
 		{
 			_logger.LogInformation($"[Gdi32] BeginPaint(HWND=0x{hwnd:X8}, lpPaint=0x{lpPaint:X8})");
 
@@ -135,7 +134,7 @@ namespace Win32Emu.Win32.Modules
 			return hdc;
 		}
 
-		private unsafe uint EndPaint(uint hwnd, uint lpPaint)
+		private uint EndPaint(uint hwnd, uint lpPaint)
 		{
 			if (lpPaint != 0)
 			{
@@ -149,7 +148,7 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
-		private unsafe uint FillRect(uint hdc, uint lpRect, uint hBrush)
+		private uint FillRect(uint hdc, uint lpRect, uint hBrush)
 		{
 			if (lpRect != 0)
 			{
@@ -163,7 +162,7 @@ namespace Win32Emu.Win32.Modules
 			return 1; // Non-zero on success
 		}
 
-		private unsafe uint TextOutA(uint hdc, int x, int y, uint lpString, int cbString)
+		private uint TextOutA(uint hdc, int x, int y, uint lpString, int cbString)
 		{
 			if (lpString != 0 && cbString > 0)
 			{
@@ -174,7 +173,7 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
-		private unsafe uint SetBkMode(uint hdc, int mode)
+		private uint SetBkMode(uint hdc, int mode)
 		{
 			_logger.LogInformation($"[Gdi32] SetBkMode(HDC=0x{hdc:X8}, mode={mode})");
 			if (_deviceContexts.TryGetValue(hdc, out var dc))
@@ -187,13 +186,13 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Default: TRANSPARENT
 		}
 
-		private unsafe uint SetTextColor(uint hdc, uint color)
+		private uint SetTextColor(uint hdc, uint color)
 		{
 			_logger.LogInformation($"[Gdi32] SetTextColor(HDC=0x{hdc:X8}, color=0x{color:X8})");
 			return 0x00000000; // Previous color (black)
 		}
 
-		private unsafe int GetDeviceCaps(uint hdc, int nIndex)
+		private int GetDeviceCaps(uint hdc, int nIndex)
 		{
 			_logger.LogInformation($"[Gdi32] GetDeviceCaps(HDC=0x{hdc:X8}, nIndex={nIndex})");
 
@@ -216,24 +215,6 @@ namespace Win32Emu.Win32.Modules
 			public uint WindowHandle { get; set; }
 			public int BkMode { get; set; } = 2; // OPAQUE
 			public uint TextColor { get; set; } = 0x00000000; // Black
-		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Export ordinals for Gdi32 - alphabetically ordered
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "BEGINPAINT", 1 },
-				{ "ENDPAINT", 2 },
-				{ "FILLRECT", 3 },
-				{ "GETDEVICECAPS", 4 },
-				{ "GETSTOCKOBJECT", 5 },
-				{ "SETBKMODE", 6 },
-				{ "SETTEXTCOLOR", 7 },
-				{ "TEXTOUT", 8 },
-				{ "TEXTOUTA", 9 }
-			};
-			return exports;
 		}
 	}
 }

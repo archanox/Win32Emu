@@ -28,12 +28,12 @@ namespace Win32Emu.Win32.Modules
 		private uint _nextDSoundHandle = 0x80000000;
 		private uint _nextBufferHandle = 0x81000000;
 
-		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+		public bool TryInvokeUnsafe(string exp, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
 			var a = new StackArgs(cpu, memory);
 
-			switch (export.ToUpperInvariant())
+			switch (exp.ToUpperInvariant())
 			{
 				case "DIRECTSOUNDCREATE":
 					returnValue = DirectSoundCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2));
@@ -42,12 +42,12 @@ namespace Win32Emu.Win32.Modules
 					returnValue = DirectSoundEnumerateA(a.UInt32(0), a.UInt32(1));
 					return true;
 				default:
-					_logger.LogInformation($"[DSound] Unimplemented export: {export}");
+					_logger.LogInformation($"[DSound] Unimplemented export: {exp}");
 					return false;
 			}
 		}
 
-		private unsafe uint DirectSoundCreate(uint lpGuid, uint lplpDs, uint pUnkOuter)
+		private uint DirectSoundCreate(uint lpGuid, uint lplpDs, uint pUnkOuter)
 		{
 			_logger.LogInformation($"[DSound] DirectSoundCreate(lpGuid=0x{lpGuid:X8}, lplpDS=0x{lplpDs:X8}, pUnkOuter=0x{pUnkOuter:X8})");
 
@@ -74,7 +74,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DS_OK
 		}
 
-		private unsafe uint DirectSoundEnumerateA(uint lpDsEnumCallback, uint lpContext)
+		private uint DirectSoundEnumerateA(uint lpDsEnumCallback, uint lpContext)
 		{
 			_logger.LogInformation($"[DSound] DirectSoundEnumerateA(lpDSEnumCallback=0x{lpDsEnumCallback:X8}, lpContext=0x{lpContext:X8})");
 
@@ -98,17 +98,6 @@ namespace Win32Emu.Win32.Modules
 			public int Size { get; set; }
 			public byte[]? Data { get; set; }
 			public bool IsPrimary { get; set; }
-		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Export ordinals for DSound - alphabetically ordered
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "DIRECTSOUNDCREATE", 1 },
-				{ "DIRECTSOUNDENUMERATEA", 2 }
-			};
-			return exports;
 		}
 	}
 }

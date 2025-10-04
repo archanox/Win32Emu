@@ -1,33 +1,34 @@
 using System.Text;
 using Win32Emu.Memory;
 
-namespace Win32Emu.Win32;
-
-public readonly struct LpWStr(uint address)
+namespace Win32Emu.Win32
 {
-	public readonly uint Address = address;
-
-	public void Write(VirtualMemory mem, string s, bool nullTerminate = true)
+	public readonly struct LpWStr(uint address)
 	{
-		var bytes = Encoding.Unicode.GetBytes(nullTerminate ? s + "\0" : s);
-		mem.WriteBytes(Address, bytes);
-	}
+		public readonly uint Address = address;
 
-	public string Read(VirtualMemory mem, int maxChars = int.MaxValue)
-	{
-		var buf = new List<char>();
-		var addr = Address;
-		for (var i = 0; i < maxChars; i++)
+		public void Write(VirtualMemory mem, string s, bool nullTerminate = true)
 		{
-			var wchar = mem.Read16(addr);
-			if (wchar == 0)
-			{
-				break;
-			}
-
-			buf.Add((char)wchar);
-			addr += 2;
+			var bytes = Encoding.Unicode.GetBytes(nullTerminate ? s + "\0" : s);
+			mem.WriteBytes(Address, bytes);
 		}
-		return new string(buf.ToArray());
+
+		public string Read(VirtualMemory mem, int maxChars = int.MaxValue)
+		{
+			var buf = new List<char>();
+			var addr = Address;
+			for (var i = 0; i < maxChars; i++)
+			{
+				var wchar = mem.Read16(addr);
+				if (wchar == 0)
+				{
+					break;
+				}
+
+				buf.Add((char)wchar);
+				addr += 2;
+			}
+			return new string(buf.ToArray());
+		}
 	}
 }

@@ -27,12 +27,12 @@ namespace Win32Emu.Win32.Modules
 		private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 		private uint _timerPeriod;
 
-		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+		public bool TryInvokeUnsafe(string exp, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
 			var a = new StackArgs(cpu, memory);
 
-			switch (export.ToUpperInvariant())
+			switch (exp.ToUpperInvariant())
 			{
 				case "TIMEGETTIME":
 					returnValue = TimeGetTime();
@@ -51,49 +51,36 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					_logger.LogInformation($"[WinMM] Unimplemented export: {export}");
+					_logger.LogInformation($"[WinMM] Unimplemented export: {exp}");
 					return false;
 			}
 		}
 
-		private unsafe uint TimeGetTime()
+		private uint TimeGetTime()
 		{
 			// Return time in milliseconds since start
 			var time = (uint)_stopwatch.ElapsedMilliseconds;
 			return time;
 		}
 
-		private unsafe uint TimeBeginPeriod(uint uPeriod)
+		private uint TimeBeginPeriod(uint uPeriod)
 		{
 			_logger.LogInformation($"[WinMM] timeBeginPeriod({uPeriod})");
 			_timerPeriod = uPeriod;
 			return 0; // TIMERR_NOERROR
 		}
 
-		private unsafe uint TimeEndPeriod(uint uPeriod)
+		private uint TimeEndPeriod(uint uPeriod)
 		{
 			_logger.LogInformation($"[WinMM] timeEndPeriod({uPeriod})");
 			_timerPeriod = 0;
 			return 0; // TIMERR_NOERROR
 		}
 
-		private unsafe uint TimeKillEvent(uint uTimerId)
+		private uint TimeKillEvent(uint uTimerId)
 		{
 			_logger.LogInformation($"[WinMM] timeKillEvent({uTimerId})");
 			return 0; // TIMERR_NOERROR
-		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Export ordinals for WinMM - alphabetically ordered
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "TIMEBEGINPERIOD", 1 },
-				{ "TIMEENDPERIOD", 2 },
-				{ "TIMEGETTIME", 3 },
-				{ "TIMEKILLEVENT", 4 }
-			};
-			return exports;
 		}
 	}
 }

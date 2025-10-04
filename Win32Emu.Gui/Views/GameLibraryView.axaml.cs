@@ -1,11 +1,12 @@
 using Avalonia.Controls;
 
-namespace Win32Emu.Gui.Views;
-
-public partial class GameLibraryView : UserControl
+namespace Win32Emu.Gui.Views
 {
-    public GameLibraryView()
-    {
-        InitializeComponent();
-    }
+	public partial class GameLibraryView : UserControl
+	{
+		public GameLibraryView()
+		{
+			InitializeComponent();
+		}
+	}
 }

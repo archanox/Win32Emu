@@ -21,12 +21,12 @@ namespace Win32Emu.Win32.Modules
 		}
 		public string Name => "DPLAYX.DLL";
 
-		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+		public bool TryInvokeUnsafe(string exp, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
 			var a = new StackArgs(cpu, memory);
 
-			switch (export.ToUpperInvariant())
+			switch (exp.ToUpperInvariant())
 			{
 				case "DIRECTPLAYCREATE":
 					returnValue = DirectPlayCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2));
@@ -35,13 +35,13 @@ namespace Win32Emu.Win32.Modules
 					returnValue = DirectPlayEnumerateA(a.UInt32(0), a.UInt32(1));
 					return true;
 				default:
-					_logger.LogInformation($"[DPlayX] Unimplemented export: {export}");
+					_logger.LogInformation($"[DPlayX] Unimplemented export: {exp}");
 					return false;
 			}
 		}
 
 		[DllModuleExport(2)]
-		private unsafe uint DirectPlayEnumerateA(uint pCallback, uint pContext)
+		private uint DirectPlayEnumerateA(uint pCallback, uint pContext)
 		{
 			// TODO: Implement DirectPlayEnumerateA
 			_logger.LogInformation($"[DPlayX] DirectPlayEnumerateA({nameof(pCallback)}=0x{pCallback:X8}, {nameof(pContext)}=0x{pContext:X8})");
@@ -49,17 +49,11 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint DirectPlayCreate(uint lpGUID, uint lplpDP, uint pUnkOuter)
+		private uint DirectPlayCreate(uint lpGUID, uint lplpDP, uint pUnkOuter)
 		{
 			// TODO: Implement DirectPlayCreate
 			_logger.LogInformation($"[DPlayX] DirectPlayCreate({nameof(lpGUID)}=0x{lpGUID:X8}, {nameof(lplpDP)}=0x{lplpDP:X8}, {nameof(pUnkOuter)}=0x{pUnkOuter:X8})");
 			return 0;
-		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Auto-generated from [DllModuleExport] attributes
-			return DllModuleExportInfo.GetAllExports("DPLAYX.DLL");
 		}
 	}
 }
