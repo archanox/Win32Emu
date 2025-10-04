@@ -47,6 +47,31 @@ private unsafe uint DirectPlayEnumerateA(uint pCallback, uint pContext)
 }
 ```
 
+### Forwarded Exports
+
+Forwarded exports redirect to another DLL's export. This is commonly used in Windows where many KERNEL32.DLL functions forward to KERNELBASE.DLL:
+
+```csharp
+// In KERNEL32.DLL module
+[DllModuleExport(48, ForwardedTo = "KERNELBASE.GetVersionEx")]
+private unsafe uint GetVersionEx()
+{
+    // This method will never be called
+    // GetProcAddress will automatically resolve to KERNELBASE.GetVersionEx
+    throw new NotImplementedException("This export is forwarded to KERNELBASE.GetVersionEx");
+}
+```
+
+**How it works:**
+1. When `GetProcAddress` is called for a forwarded export, it automatically resolves the forwarding chain
+2. The target DLL is loaded if not already loaded
+3. The target export is looked up recursively
+4. The final address is returned
+
+**Forwarding Format:**
+- Simple forwarding: `ForwardedTo = "TARGETDLL.ExportName"`
+- DLL extension is optional: `"KERNELBASE.GetVersionEx"` or `"KERNELBASE.DLL.GetVersionEx"`
+
 ## Runtime Checking
 
 Use the `DllModuleExportInfo` helper class to check if exports are implemented. This class is **generated at compile-time** from the `[DllModuleExport]` attributes.
@@ -79,6 +104,22 @@ foreach (var export in exports)
 {
     Console.WriteLine($"{export.Key} => Ordinal {export.Value}");
 }
+```
+
+### Check if an Export is Forwarded
+
+```csharp
+// Check if an export is forwarded
+string? forwardedTo = DllModuleExportInfo.GetForwardedExport("KERNEL32.DLL", "GetVersionEx");
+if (forwardedTo != null)
+{
+    Console.WriteLine($"GetVersionEx is forwarded to {forwardedTo}");
+    // Output: "GetVersionEx is forwarded to KERNELBASE.GetVersionEx"
+}
+
+// Returns null for non-forwarded exports
+string? notForwarded = DllModuleExportInfo.GetForwardedExport("KERNEL32.DLL", "GetVersion");
+// notForwarded is null because GetVersion is not forwarded
 ```
 
 **Note:** The `DllModuleExportInfo` class is automatically generated at compile-time by analyzing `[DllModuleExport]` attributes. No reflection is used at runtime, making it fast and AOT-friendly.
@@ -259,6 +300,39 @@ public Dictionary<string, uint> GetExportOrdinals()
 - Single source of truth for export metadata
 - Automatically stays in sync with attribute changes
 
+### Forwarded Exports Support
+
+The system now fully supports forwarded exports (e.g., KERNEL32 -> KERNELBASE forwarding):
+
+**Declaration:**
+```csharp
+// In KERNEL32.DLL module
+[DllModuleExport(48, ForwardedTo = "KERNELBASE.GetVersionEx")]
+private unsafe uint GetVersionEx()
+{
+    throw new NotImplementedException("This export is forwarded");
+}
+```
+
+**Runtime Resolution:**
+- `GetProcAddress` automatically detects forwarded exports
+- Recursively resolves the forwarding chain
+- Loads target DLL if not already loaded
+- Returns the final export address
+
+**API Support:**
+```csharp
+// Check if an export is forwarded
+string? target = DllModuleExportInfo.GetForwardedExport("KERNEL32.DLL", "GetVersionEx");
+// Returns: "KERNELBASE.GetVersionEx"
+```
+
+**Benefits:**
+- Matches real Windows DLL forwarding behavior
+- Supports multi-level forwarding chains
+- Works with both PE exports and emulated modules
+- No performance overhead for non-forwarded exports
+
 ### Enhanced GetProcAddress Integration
 
 The `GetProcAddress` implementation in `Kernel32Module` now uses `DllModuleExportInfo` for export validation:
@@ -281,4 +355,4 @@ if (DllModuleExportInfo.IsExportImplemented(moduleName, procName))
 Potential future improvements:
 - Automatic version detection based on emulated Windows version
 - Export by name vs. ordinal distinction
-- Support for forwarded exports (e.g., KERNEL32 -> KERNELBASE forwarding)
+- Enhanced forwarding chain diagnostics and debugging

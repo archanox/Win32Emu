@@ -194,6 +194,14 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		return (major << 8 | minor) << 16 | build;
 	}
 
+	[DllModuleExport(48, ForwardedTo = "KERNELBASE.GetVersionEx")]
+	private unsafe uint GetVersionEx()
+	{
+		// This is a forwarded export - the actual implementation is in KERNELBASE.DLL
+		// This method will never be called; GetProcAddress will resolve to KERNELBASE
+		throw new NotImplementedException("This export is forwarded to KERNELBASE.GetVersionEx");
+	}
+
 	[DllModuleExport(14)]
 	private unsafe uint GetLastError() => _lastError;
 
