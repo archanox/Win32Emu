@@ -227,6 +227,40 @@ public class WindowTests : IDisposable
     }
 
     [Fact]
+    public void CreateWindowExA_WithAtom_ShouldResolveClassName()
+    {
+        // Arrange - Register a window class and get its atom
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "AtomTestClass",
+            wndProc: 0x00401000
+        );
+        var atom = _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+        Assert.NotEqual(0u, atom);
+
+        var titlePtr = _testEnv.WriteString("Test Window");
+
+        // Act - Use the atom instead of a string pointer for the class name
+        // When HIWORD(lpClassName) == 0, it's treated as an atom
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0,              // dwExStyle
+            atom,           // lpClassName (using atom instead of string pointer)
+            titlePtr,       // lpWindowName
+            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
+            100,            // x
+            100,            // y
+            640,            // width
+            480,            // height
+            0,              // hWndParent
+            0,              // hMenu
+            0,              // hInstance
+            0               // lpParam
+        );
+
+        // Assert - Window should be created successfully using the atom
+        Assert.NotEqual(0u, hwnd);
+    }
+
+    [Fact]
     public void ClientToScreen_WithValidPoint_ShouldReturnTrue()
     {
         // Arrange
