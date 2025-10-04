@@ -48,4 +48,35 @@ public class DllModuleExportInfoTests
 		// Assert
 		Assert.True(isImplemented);
 	}
+
+	[Fact]
+	public void GetForwardedExport_ShouldReturnNull_ForNonForwardedExport()
+	{
+		// Arrange & Act
+		var forwardedTo = DllModuleExportInfo.GetForwardedExport("DPLAYX.DLL", "DirectPlayCreate");
+
+		// Assert
+		Assert.Null(forwardedTo);
+	}
+
+	[Fact]
+	public void GetForwardedExport_ShouldReturnNull_ForNonExistentExport()
+	{
+		// Arrange & Act
+		var forwardedTo = DllModuleExportInfo.GetForwardedExport("DPLAYX.DLL", "NonExistentFunction");
+
+		// Assert
+		Assert.Null(forwardedTo);
+	}
+
+	[Fact]
+	public void GetForwardedExport_ShouldReturnForwardingTarget_ForForwardedExport()
+	{
+		// Arrange & Act
+		var forwardedTo = DllModuleExportInfo.GetForwardedExport("KERNEL32.DLL", "GetVersionEx");
+
+		// Assert
+		Assert.NotNull(forwardedTo);
+		Assert.Equal("KERNELBASE.GetVersionEx", forwardedTo);
+	}
 }

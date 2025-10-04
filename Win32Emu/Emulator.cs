@@ -89,6 +89,8 @@ public sealed class Emulator : IDisposable
         var kernel32Module = new Kernel32Module(_env, _image.BaseAddress, loader);
         kernel32Module.SetDispatcher(_dispatcher);
         _dispatcher.RegisterModule(kernel32Module);
+        // Register KERNELBASE for forwarded exports from KERNEL32
+        _dispatcher.RegisterModule(new KernelBaseModule(_env, _image.BaseAddress, loader));
 
         _dispatcher.RegisterModule(new User32Module(_env, _image.BaseAddress, loader));
         _dispatcher.RegisterModule(new Gdi32Module(_env, _image.BaseAddress, loader));
