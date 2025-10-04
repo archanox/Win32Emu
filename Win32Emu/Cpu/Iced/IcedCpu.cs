@@ -103,6 +103,10 @@ public class IcedCpu : ICpu
 				case Mnemonic.Cmp: ExecCmp(insn); break;
 				case Mnemonic.Inc: ExecInc(insn); break;
 				case Mnemonic.Dec: ExecDec(insn); break;
+				case Mnemonic.Mul: ExecMul(insn); break;
+				case Mnemonic.Imul: ExecImul(insn); break;
+				case Mnemonic.Div: ExecDiv(insn); break;
+				case Mnemonic.Idiv: ExecIdiv(insn); break;
 				case Mnemonic.Shl:
 				case Mnemonic.Sal: ExecShiftLeft(insn); break;
 				case Mnemonic.Shr: ExecShiftRight(insn, false); break;
