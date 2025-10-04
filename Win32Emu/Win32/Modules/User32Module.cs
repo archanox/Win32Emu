@@ -582,7 +582,7 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
-	[DllModuleExport(11)]
+		[DllModuleExport(11)]
 		private unsafe int GetSystemMetrics(int nIndex)
 		{
 			_logger.LogInformation($"[User32] GetSystemMetrics: nIndex={nIndex}");
