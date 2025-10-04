@@ -209,6 +209,7 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 								
 								uint? entryPoint = null;
 								string? version = null;
+								string? forwardedTo = null;
 								
 								foreach (var named in attr.NamedArguments)
 								{
@@ -219,9 +220,11 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 									}
 									else if (named.Key == "Version" && named.Value.Value != null)
 										version = (string)named.Value.Value;
+									else if (named.Key == "ForwardedTo" && named.Value.Value != null)
+										forwardedTo = (string)named.Value.Value;
 								}
 								
-								return new ExportAttributeInfo(ordinal, entryPoint, version);
+								return new ExportAttributeInfo(ordinal, entryPoint, version, forwardedTo);
 							})
 							.ToList();
 						
@@ -324,6 +327,45 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				            }
 				            return exports;
 				        }
+
+				        /// <summary>
+				        /// Gets the forwarding target for an export, if it's a forwarded export.
+				        /// </summary>
+				        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL")</param>
+				        /// <param name="exportName">The export function name to check</param>
+				        /// <param name="version">Optional version string to match. If null, checks first matching export.</param>
+				        /// <returns>The forwarding target string (e.g., "KERNELBASE.GetVersion") or null if not forwarded</returns>
+				        public static string? GetForwardedExport(string dllName, string exportName, string? version = null)
+				        {
+				            switch ((dllName.ToUpperInvariant(), exportName.ToUpperInvariant()))
+				            {
+				""");
+
+			// Generate switch cases for forwarded exports only
+			foreach (var export in entries.OrderBy(e => e.DllName).ThenBy(e => e.MethodName))
+			{
+				var forwardedAttrs = export.Attributes.Where(a => !string.IsNullOrEmpty(a.ForwardedTo)).ToList();
+				if (forwardedAttrs.Count == 0)
+					continue;
+
+				foreach (var attr in forwardedAttrs)
+				{
+					if (attr.Version != null)
+					{
+						sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == \"{attr.Version}\": return \"{attr.ForwardedTo}\";");
+					}
+					else
+					{
+						sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == null: return \"{attr.ForwardedTo}\";");
+					}
+				}
+			}
+
+			sb.AppendLine(
+				"""
+				                default: return null;
+				            }
+				        }
 				    }
 				}
 				""");
@@ -356,11 +398,12 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 		public int ArgBytes { get; } = argBytes;
 	}
 
-	private readonly struct ExportAttributeInfo(uint ordinal, uint? entryPoint, string? version)
+	private readonly struct ExportAttributeInfo(uint ordinal, uint? entryPoint, string? version, string? forwardedTo)
 	{
 		public uint Ordinal { get; } = ordinal;
 		public uint? EntryPoint { get; } = entryPoint;
 		public string? Version { get; } = version;
+		public string? ForwardedTo { get; } = forwardedTo;
 	}
 
 	private readonly struct ExportMethodInfo(string dllName, string methodName, List<ExportAttributeInfo> attributes)

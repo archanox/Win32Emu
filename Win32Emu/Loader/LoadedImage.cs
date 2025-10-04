@@ -7,5 +7,7 @@ public record LoadedImage(
 	Dictionary<uint, (string dll, string name)> ImportAddressMap,
 	string FilePath,
 	Dictionary<string, uint> ExportsByName,
-	Dictionary<uint, uint> ExportsByOrdinal
+	Dictionary<uint, uint> ExportsByOrdinal,
+	Dictionary<string, string> ForwardedExportsByName,
+	Dictionary<uint, string> ForwardedExportsByOrdinal
 );
