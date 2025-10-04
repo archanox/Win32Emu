@@ -408,15 +408,8 @@ public class IcedCpu : ICpu
 
 	private void ExecPop(Instruction insn)
 	{
-		if (insn.GetOpKind(0) == OpKind.Register)
-		{
-			var v = Pop32();
-			SetReg32(insn.GetOpRegister(0), v);
-		}
-		else
-		{
-			_logger.LogWarning("[IcedCpu] POP mem not implemented");
-		}
+		var v = Pop32();
+		WriteOp(insn, 0, v);
 	}
 
 	private void ExecPushad()
