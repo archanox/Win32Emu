@@ -1,11 +1,26 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Win32.Modules
 {
-	public class User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
+	public class User32Module : IWin32ModuleUnsafe
 	{
+		private readonly ProcessEnvironment _env;
+		private readonly uint _imageBase;
+		private readonly PeImageLoader? _peLoader;
+		private readonly ILogger _logger;
+
+		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
+		{
+			_env = env;
+			_imageBase = imageBase;
+			_peLoader = peLoader;
+			_logger = logger ?? NullLogger.Instance;
+		}
+
 		public string Name => "USER32.DLL";
 
 		public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
@@ -154,7 +169,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					Console.WriteLine($"[User32] Unimplemented export: {export}");
+					_logger.LogInformation($"[User32] Unimplemented export: {export}");
 					return false;
 			}
 		}
@@ -163,7 +178,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			if (lpWndClass == 0)
 			{
-				Console.WriteLine("[User32] RegisterClassA: NULL WNDCLASS pointer");
+				_logger.LogInformation("[User32] RegisterClassA: NULL WNDCLASS pointer");
 				return 0;
 			}
 
@@ -179,32 +194,32 @@ namespace Win32Emu.Win32.Modules
 			// LPCSTR    lpszMenuName;  // 32
 			// LPCSTR    lpszClassName; // 36
 
-			var style = env.MemRead32(lpWndClass + 0);
-			var wndProc = env.MemRead32(lpWndClass + 4);
-			var clsExtra = (int)env.MemRead32(lpWndClass + 8);
-			var wndExtra = (int)env.MemRead32(lpWndClass + 12);
-			var hInstance = env.MemRead32(lpWndClass + 16);
-			var hIcon = env.MemRead32(lpWndClass + 20);
-			var hCursor = env.MemRead32(lpWndClass + 24);
-			var hbrBackground = env.MemRead32(lpWndClass + 28);
-			var menuNamePtr = env.MemRead32(lpWndClass + 32);
-			var classNamePtr = env.MemRead32(lpWndClass + 36);
+			var style = _env.MemRead32(lpWndClass + 0);
+			var wndProc = _env.MemRead32(lpWndClass + 4);
+			var clsExtra = (int)_env.MemRead32(lpWndClass + 8);
+			var wndExtra = (int)_env.MemRead32(lpWndClass + 12);
+			var hInstance = _env.MemRead32(lpWndClass + 16);
+			var hIcon = _env.MemRead32(lpWndClass + 20);
+			var hCursor = _env.MemRead32(lpWndClass + 24);
+			var hbrBackground = _env.MemRead32(lpWndClass + 28);
+			var menuNamePtr = _env.MemRead32(lpWndClass + 32);
+			var classNamePtr = _env.MemRead32(lpWndClass + 36);
 
 			if (classNamePtr == 0)
 			{
-				Console.WriteLine("[User32] RegisterClassA: NULL class name");
+				_logger.LogInformation("[User32] RegisterClassA: NULL class name");
 				return 0;
 			}
 
-			var className = env.ReadAnsiString(classNamePtr);
-			var menuName = menuNamePtr != 0 ? env.ReadAnsiString(menuNamePtr) : null;
+			var className = _env.ReadAnsiString(classNamePtr);
+			var menuName = menuNamePtr != 0 ? _env.ReadAnsiString(menuNamePtr) : null;
 
 			var classInfo = new ProcessEnvironment.WindowClassInfo(
 				className, style, wndProc, clsExtra, wndExtra,
 				hInstance, hIcon, hCursor, hbrBackground, menuName
 			);
 
-			if (env.RegisterWindowClass(className, classInfo))
+			if (_env.RegisterWindowClass(className, classInfo))
 			{
 				// Return an ATOM (non-zero value) on success
 				// Windows uses atoms (16-bit values) for class registration
@@ -215,11 +230,11 @@ namespace Win32Emu.Win32.Modules
 					atom = 1;
 				}
 
-				Console.WriteLine($"[User32] RegisterClassA: '{className}' -> atom 0x{atom:X4}");
+				_logger.LogInformation($"[User32] RegisterClassA: '{className}' -> atom 0x{atom:X4}");
 				return atom;
 			}
 
-			Console.WriteLine($"[User32] RegisterClassA: Failed to register '{className}'");
+			_logger.LogInformation($"[User32] RegisterClassA: Failed to register '{className}'");
 			return 0;
 		}
 
@@ -242,17 +257,17 @@ namespace Win32Emu.Win32.Modules
 
 			if (classNamePtr == 0)
 			{
-				Console.WriteLine("[User32] CreateWindowExA: NULL class name");
+				_logger.LogInformation("[User32] CreateWindowExA: NULL class name");
 				return 0;
 			}
 
-			var className = env.ReadAnsiString(classNamePtr);
-			var windowName = windowNamePtr != 0 ? env.ReadAnsiString(windowNamePtr) : "";
+			var className = _env.ReadAnsiString(classNamePtr);
+			var windowName = windowNamePtr != 0 ? _env.ReadAnsiString(windowNamePtr) : "";
 
 			// Check if window class is registered
-			if (!env.IsWindowClassRegistered(className))
+			if (!_env.IsWindowClassRegistered(className))
 			{
-				Console.WriteLine($"[User32] CreateWindowExA: Window class '{className}' not registered");
+				_logger.LogInformation($"[User32] CreateWindowExA: Window class '{className}' not registered");
 				return 0;
 			}
 
@@ -278,18 +293,18 @@ namespace Win32Emu.Win32.Modules
 				nHeight = 480;
 			}
 
-			var hwnd = env.CreateWindow(
+			var hwnd = _env.CreateWindow(
 				className, windowName, dwStyle, dwExStyle,
 				x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam
 			);
 
 			if (hwnd != 0)
 			{
-				Console.WriteLine($"[User32] CreateWindowExA: Created HWND=0x{hwnd:X8} Class='{className}' Title='{windowName}'");
+				_logger.LogInformation($"[User32] CreateWindowExA: Created HWND=0x{hwnd:X8} Class='{className}' Title='{windowName}'");
 			}
 			else
 			{
-				Console.WriteLine("[User32] CreateWindowExA: Failed to create window");
+				_logger.LogInformation("[User32] CreateWindowExA: Failed to create window");
 			}
 
 			return hwnd;
@@ -298,7 +313,7 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint ShowWindow(uint hwnd, int nCmdShow)
 		{
 			// SW_HIDE = 0, SW_NORMAL = 1, SW_SHOWMINIMIZED = 2, SW_SHOWMAXIMIZED = 3, etc.
-			Console.WriteLine($"[User32] ShowWindow: HWND=0x{hwnd:X8} nCmdShow={nCmdShow}");
+			_logger.LogInformation($"[User32] ShowWindow: HWND=0x{hwnd:X8} nCmdShow={nCmdShow}");
 
 			// For now, just log and return TRUE (non-zero)
 			// In a full implementation, this would interact with the Avalonia window
@@ -317,40 +332,40 @@ namespace Win32Emu.Win32.Modules
 
 			if (lpMsg == 0)
 			{
-				Console.WriteLine("[User32] GetMessageA: NULL MSG pointer");
+				_logger.LogInformation("[User32] GetMessageA: NULL MSG pointer");
 				return 0;
 			}
 
 			// Check if there's a quit message
-			if (env.HasQuitMessage())
+			if (_env.HasQuitMessage())
 			{
-				var exitCode = env.GetQuitExitCode();
-				Console.WriteLine($"[User32] GetMessageA: WM_QUIT (exitCode={exitCode})");
+				var exitCode = _env.GetQuitExitCode();
+				_logger.LogInformation($"[User32] GetMessageA: WM_QUIT (exitCode={exitCode})");
 
 				// Fill MSG structure with WM_QUIT
-				env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
-				env.MemWrite32(lpMsg + 4, 0x0012); // WM_QUIT = 0x0012
-				env.MemWrite32(lpMsg + 8, (uint)exitCode); // wParam = exit code
-				env.MemWrite32(lpMsg + 12, 0); // lParam = 0
-				env.MemWrite32(lpMsg + 16, 0); // time = 0
-				env.MemWrite32(lpMsg + 20, 0); // pt.x = 0
-				env.MemWrite32(lpMsg + 24, 0); // pt.y = 0
+				_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
+				_env.MemWrite32(lpMsg + 4, 0x0012); // WM_QUIT = 0x0012
+				_env.MemWrite32(lpMsg + 8, (uint)exitCode); // wParam = exit code
+				_env.MemWrite32(lpMsg + 12, 0); // lParam = 0
+				_env.MemWrite32(lpMsg + 16, 0); // time = 0
+				_env.MemWrite32(lpMsg + 20, 0); // pt.x = 0
+				_env.MemWrite32(lpMsg + 24, 0); // pt.y = 0
 
 				return 0; // GetMessage returns 0 for WM_QUIT
 			}
 
 			// For now, simulate no messages (would block in real implementation)
 			// In a real implementation, this would wait for messages or return pending messages
-			Console.WriteLine("[User32] GetMessageA: No messages, simulating empty queue");
+			_logger.LogInformation("[User32] GetMessageA: No messages, simulating empty queue");
 
 			// Return a dummy message (WM_NULL)
-			env.MemWrite32(lpMsg + 0, hWnd); // hwnd
-			env.MemWrite32(lpMsg + 4, 0); // WM_NULL = 0
-			env.MemWrite32(lpMsg + 8, 0); // wParam = 0
-			env.MemWrite32(lpMsg + 12, 0); // lParam = 0
-			env.MemWrite32(lpMsg + 16, 0); // time = 0
-			env.MemWrite32(lpMsg + 20, 0); // pt.x = 0
-			env.MemWrite32(lpMsg + 24, 0); // pt.y = 0
+			_env.MemWrite32(lpMsg + 0, hWnd); // hwnd
+			_env.MemWrite32(lpMsg + 4, 0); // WM_NULL = 0
+			_env.MemWrite32(lpMsg + 8, 0); // wParam = 0
+			_env.MemWrite32(lpMsg + 12, 0); // lParam = 0
+			_env.MemWrite32(lpMsg + 16, 0); // time = 0
+			_env.MemWrite32(lpMsg + 20, 0); // pt.x = 0
+			_env.MemWrite32(lpMsg + 24, 0); // pt.y = 0
 
 			return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 		}
@@ -359,7 +374,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			// TranslateMessage translates virtual-key messages into character messages
 			// For now, just log and return FALSE (no translation occurred)
-			Console.WriteLine("[User32] TranslateMessage: Called");
+			_logger.LogInformation("[User32] TranslateMessage: Called");
 			return 0;
 		}
 
@@ -367,17 +382,17 @@ namespace Win32Emu.Win32.Modules
 		{
 			if (lpMsg == 0)
 			{
-				Console.WriteLine("[User32] DispatchMessageA: NULL MSG pointer");
+				_logger.LogInformation("[User32] DispatchMessageA: NULL MSG pointer");
 				return 0;
 			}
 
 			// Read MSG structure
-			var hwnd = env.MemRead32(lpMsg + 0);
-			var message = env.MemRead32(lpMsg + 4);
-			var wParam = env.MemRead32(lpMsg + 8);
-			var lParam = env.MemRead32(lpMsg + 12);
+			var hwnd = _env.MemRead32(lpMsg + 0);
+			var message = _env.MemRead32(lpMsg + 4);
+			var wParam = _env.MemRead32(lpMsg + 8);
+			var lParam = _env.MemRead32(lpMsg + 12);
 
-			Console.WriteLine($"[User32] DispatchMessageA: HWND=0x{hwnd:X8} MSG=0x{message:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+			_logger.LogInformation($"[User32] DispatchMessageA: HWND=0x{hwnd:X8} MSG=0x{message:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
 
 			// In a full implementation, this would call the window procedure
 			// For now, just return 0 (message processed)
@@ -386,7 +401,7 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint DefWindowProcA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
-			Console.WriteLine($"[User32] DefWindowProcA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+			_logger.LogInformation($"[User32] DefWindowProcA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
 
 			// DefWindowProc provides default processing for window messages
 			// For now, just return 0 (message processed)
@@ -395,13 +410,13 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe void PostQuitMessage(int nExitCode)
 		{
-			Console.WriteLine($"[User32] PostQuitMessage: exitCode={nExitCode}");
-			env.PostQuitMessage(nExitCode);
+			_logger.LogInformation($"[User32] PostQuitMessage: exitCode={nExitCode}");
+			_env.PostQuitMessage(nExitCode);
 		}
 
 		private unsafe uint SendMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
-			Console.WriteLine($"[User32] SendMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+			_logger.LogInformation($"[User32] SendMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
 
 			// SendMessage sends a message to the window procedure
 			// For now, just log and return 0 (message processed)
@@ -416,10 +431,10 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// POINT structure: LONG x, LONG y (8 bytes)
-			var x = (int)env.MemRead32(lpPoint);
-			var y = (int)env.MemRead32(lpPoint + 4);
+			var x = (int)_env.MemRead32(lpPoint);
+			var y = (int)_env.MemRead32(lpPoint + 4);
 
-			Console.WriteLine($"[User32] ClientToScreen: HWND=0x{hwnd:X8} Point=({x},{y})");
+			_logger.LogInformation($"[User32] ClientToScreen: HWND=0x{hwnd:X8} Point=({x},{y})");
 
 			// For now, treat client coordinates same as screen coordinates (no offset)
 			// In a real implementation, this would add window position to client coords
@@ -433,13 +448,13 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			Console.WriteLine($"[User32] SetRect: lpRect=0x{lpRect:X8} ({left},{top},{right},{bottom})");
+			_logger.LogInformation($"[User32] SetRect: lpRect=0x{lpRect:X8} ({left},{top},{right},{bottom})");
 
 			// RECT structure: LONG left, top, right, bottom (16 bytes)
-			env.MemWrite32(lpRect, (uint)left);
-			env.MemWrite32(lpRect + 4, (uint)top);
-			env.MemWrite32(lpRect + 8, (uint)right);
-			env.MemWrite32(lpRect + 12, (uint)bottom);
+			_env.MemWrite32(lpRect, (uint)left);
+			_env.MemWrite32(lpRect + 4, (uint)top);
+			_env.MemWrite32(lpRect + 8, (uint)right);
+			_env.MemWrite32(lpRect + 12, (uint)bottom);
 
 			return 1; // TRUE
 		}
@@ -451,13 +466,13 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			Console.WriteLine($"[User32] GetClientRect: HWND=0x{hwnd:X8}");
+			_logger.LogInformation($"[User32] GetClientRect: HWND=0x{hwnd:X8}");
 
 			// Return a default client rect (0, 0, 640, 480)
-			env.MemWrite32(lpRect, 0); // left
-			env.MemWrite32(lpRect + 4, 0); // top
-			env.MemWrite32(lpRect + 8, 640); // right
-			env.MemWrite32(lpRect + 12, 480); // bottom
+			_env.MemWrite32(lpRect, 0); // left
+			_env.MemWrite32(lpRect + 4, 0); // top
+			_env.MemWrite32(lpRect + 8, 640); // right
+			_env.MemWrite32(lpRect + 12, 480); // bottom
 
 			return 1; // TRUE
 		}
@@ -469,13 +484,13 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			Console.WriteLine($"[User32] GetWindowRect: HWND=0x{hwnd:X8}");
+			_logger.LogInformation($"[User32] GetWindowRect: HWND=0x{hwnd:X8}");
 
 			// Return a default window rect (100, 100, 740, 580)
-			env.MemWrite32(lpRect, 100); // left
-			env.MemWrite32(lpRect + 4, 100); // top
-			env.MemWrite32(lpRect + 8, 740); // right
-			env.MemWrite32(lpRect + 12, 580); // bottom
+			_env.MemWrite32(lpRect, 100); // left
+			_env.MemWrite32(lpRect + 4, 100); // top
+			_env.MemWrite32(lpRect + 8, 740); // right
+			_env.MemWrite32(lpRect + 12, 580); // bottom
 
 			return 1; // TRUE
 		}
@@ -487,12 +502,12 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			var left = (int)env.MemRead32(lpRect);
-			var top = (int)env.MemRead32(lpRect + 4);
-			var right = (int)env.MemRead32(lpRect + 8);
-			var bottom = (int)env.MemRead32(lpRect + 12);
+			var left = (int)_env.MemRead32(lpRect);
+			var top = (int)_env.MemRead32(lpRect + 4);
+			var right = (int)_env.MemRead32(lpRect + 8);
+			var bottom = (int)_env.MemRead32(lpRect + 12);
 
-			Console.WriteLine($"[User32] AdjustWindowRectEx: rect=({left},{top},{right},{bottom}) style=0x{dwStyle:X8}");
+			_logger.LogInformation($"[User32] AdjustWindowRectEx: rect=({left},{top},{right},{bottom}) style=0x{dwStyle:X8}");
 
 			// Add window frame size (typical values)
 			const int frameWidth = 8;
@@ -510,10 +525,10 @@ namespace Win32Emu.Win32.Modules
 				top -= menuHeight;
 			}
 
-			env.MemWrite32(lpRect, (uint)left);
-			env.MemWrite32(lpRect + 4, (uint)top);
-			env.MemWrite32(lpRect + 8, (uint)right);
-			env.MemWrite32(lpRect + 12, (uint)bottom);
+			_env.MemWrite32(lpRect, (uint)left);
+			_env.MemWrite32(lpRect + 4, (uint)top);
+			_env.MemWrite32(lpRect + 8, (uint)right);
+			_env.MemWrite32(lpRect + 12, (uint)bottom);
 
 			return 1; // TRUE
 		}
@@ -521,31 +536,31 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint GetDc(uint hwnd)
 		{
 			// Create a device context handle
-			var hdc = env.RegisterHandle(new object()); // Dummy DC object
-			Console.WriteLine($"[User32] GetDC: HWND=0x{hwnd:X8} -> HDC=0x{hdc:X8}");
+			var hdc = _env.RegisterHandle(new object()); // Dummy DC object
+			_logger.LogInformation($"[User32] GetDC: HWND=0x{hwnd:X8} -> HDC=0x{hdc:X8}");
 			return hdc;
 		}
 
 		private unsafe uint ReleaseDc(uint hwnd, uint hdc)
 		{
-			Console.WriteLine($"[User32] ReleaseDC: HWND=0x{hwnd:X8} HDC=0x{hdc:X8}");
-			env.CloseHandle(hdc);
+			_logger.LogInformation($"[User32] ReleaseDC: HWND=0x{hwnd:X8} HDC=0x{hdc:X8}");
+			_env.CloseHandle(hdc);
 			return 1; // Success
 		}
 
 		private unsafe uint UpdateWindow(uint hwnd)
 		{
-			Console.WriteLine($"[User32] UpdateWindow: HWND=0x{hwnd:X8}");
+			_logger.LogInformation($"[User32] UpdateWindow: HWND=0x{hwnd:X8}");
 			// Trigger immediate repaint - for now just log
 			return 1; // TRUE
 		}
 
 		private unsafe uint DestroyWindow(uint hwnd)
 		{
-			Console.WriteLine($"[User32] DestroyWindow: HWND=0x{hwnd:X8}");
+			_logger.LogInformation($"[User32] DestroyWindow: HWND=0x{hwnd:X8}");
 
 			// Remove window from tracking
-			if (env.DestroyWindow(hwnd))
+			if (_env.DestroyWindow(hwnd))
 			{
 				return 1; // TRUE
 			}
@@ -555,14 +570,14 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint SetWindowPos(uint hwnd, uint hwndInsertAfter, int x, int y, int cx, int cy, uint flags)
 		{
-			Console.WriteLine($"[User32] SetWindowPos: HWND=0x{hwnd:X8} pos=({x},{y}) size=({cx},{cy}) flags=0x{flags:X8}");
+			_logger.LogInformation($"[User32] SetWindowPos: HWND=0x{hwnd:X8} pos=({x},{y}) size=({cx},{cy}) flags=0x{flags:X8}");
 			// For now just log
 			return 1; // TRUE
 		}
 
 		private unsafe int GetSystemMetrics(int nIndex)
 		{
-			Console.WriteLine($"[User32] GetSystemMetrics: nIndex={nIndex}");
+			_logger.LogInformation($"[User32] GetSystemMetrics: nIndex={nIndex}");
 
 			// Return common system metrics
 			return nIndex switch
@@ -577,65 +592,65 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint LoadIconA(uint hInstance, uint lpIconName)
 		{
-			Console.WriteLine($"[User32] LoadIconA: hInstance=0x{hInstance:X8} lpIconName=0x{lpIconName:X8}");
+			_logger.LogInformation($"[User32] LoadIconA: hInstance=0x{hInstance:X8} lpIconName=0x{lpIconName:X8}");
 			// Return a dummy icon handle
-			return env.RegisterHandle(new object()); // Dummy icon object
+			return _env.RegisterHandle(new object()); // Dummy icon object
 		}
 
 		private unsafe uint LoadCursorA(uint hInstance, uint lpCursorName)
 		{
-			Console.WriteLine($"[User32] LoadCursorA: hInstance=0x{hInstance:X8} lpCursorName=0x{lpCursorName:X8}");
+			_logger.LogInformation($"[User32] LoadCursorA: hInstance=0x{hInstance:X8} lpCursorName=0x{lpCursorName:X8}");
 			// Return a dummy cursor handle
-			return env.RegisterHandle(new object()); // Dummy cursor object
+			return _env.RegisterHandle(new object()); // Dummy cursor object
 		}
 
 		private unsafe uint SetCursor(uint hCursor)
 		{
-			Console.WriteLine($"[User32] SetCursor: hCursor=0x{hCursor:X8}");
+			_logger.LogInformation($"[User32] SetCursor: hCursor=0x{hCursor:X8}");
 			// Return previous cursor handle (dummy)
 			return 0x00000001;
 		}
 
 		private unsafe uint SetFocus(uint hwnd)
 		{
-			Console.WriteLine($"[User32] SetFocus: HWND=0x{hwnd:X8}");
+			_logger.LogInformation($"[User32] SetFocus: HWND=0x{hwnd:X8}");
 			// Return previous focus window handle
 			return 0; // NULL means no previous focus
 		}
 
 		private unsafe uint GetMenu(uint hwnd)
 		{
-			Console.WriteLine($"[User32] GetMenu: HWND=0x{hwnd:X8}");
+			_logger.LogInformation($"[User32] GetMenu: HWND=0x{hwnd:X8}");
 			// Return menu handle (NULL if no menu)
 			return 0;
 		}
 
 		private unsafe uint SetWindowLongA(uint hwnd, int nIndex, uint dwNewLong)
 		{
-			Console.WriteLine($"[User32] SetWindowLongA: HWND=0x{hwnd:X8} nIndex={nIndex} dwNewLong=0x{dwNewLong:X8}");
+			_logger.LogInformation($"[User32] SetWindowLongA: HWND=0x{hwnd:X8} nIndex={nIndex} dwNewLong=0x{dwNewLong:X8}");
 			// Return previous value (for now return 0)
 			return 0;
 		}
 
 		private unsafe uint GetWindowLongA(uint hwnd, int nIndex)
 		{
-			Console.WriteLine($"[User32] GetWindowLongA: HWND=0x{hwnd:X8} nIndex={nIndex}");
+			_logger.LogInformation($"[User32] GetWindowLongA: HWND=0x{hwnd:X8} nIndex={nIndex}");
 			// Return window data (for now return 0)
 			return 0;
 		}
 
 		private unsafe uint MessageBoxA(uint hwnd, uint lpText, uint lpCaption, uint uType)
 		{
-			var text = lpText != 0 ? env.ReadAnsiString(lpText) : "";
-			var caption = lpCaption != 0 ? env.ReadAnsiString(lpCaption) : "";
-			Console.WriteLine($"[User32] MessageBoxA: \"{caption}\" - \"{text}\" type=0x{uType:X8}");
+			var text = lpText != 0 ? _env.ReadAnsiString(lpText) : "";
+			var caption = lpCaption != 0 ? _env.ReadAnsiString(lpCaption) : "";
+			_logger.LogInformation($"[User32] MessageBoxA: \"{caption}\" - \"{text}\" type=0x{uType:X8}");
 			// Return IDOK (1)
 			return 1;
 		}
 
 		private unsafe uint SystemParametersInfoA(uint uiAction, uint uiParam, uint pvParam, uint fWinIni)
 		{
-			Console.WriteLine($"[User32] SystemParametersInfoA: action=0x{uiAction:X8} param={uiParam}");
+			_logger.LogInformation($"[User32] SystemParametersInfoA: action=0x{uiAction:X8} param={uiParam}");
 			// For now just return success
 			return 1; // TRUE
 		}
@@ -644,13 +659,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			// PeekMessage returns immediately with message availability
 			// Return 0 for no message (non-blocking)
-			Console.WriteLine($"[User32] PeekMessageA: lpMsg=0x{lpMsg:X8} HWND=0x{hwnd:X8}");
+			_logger.LogInformation($"[User32] PeekMessageA: lpMsg=0x{lpMsg:X8} HWND=0x{hwnd:X8}");
 			return 0; // No message available
 		}
 
 		private unsafe uint PostMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
-			Console.WriteLine($"[User32] PostMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+			_logger.LogInformation($"[User32] PostMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
 			// Post message to queue - for now just log
 			return 1; // TRUE
 		}

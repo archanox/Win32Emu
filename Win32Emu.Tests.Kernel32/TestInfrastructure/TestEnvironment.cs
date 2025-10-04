@@ -1,4 +1,6 @@
 using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
@@ -21,9 +23,9 @@ public class TestEnvironment : IDisposable
     {
         Memory = new VirtualMemory();
         Cpu = new MockCpu();
-        ProcessEnv = new ProcessEnvironment(Memory);
+        ProcessEnv = new ProcessEnvironment(Memory, logger: NullLogger.Instance);
         PeLoader = new PeImageLoader(Memory);
-        Kernel32 = new Kernel32Module(ProcessEnv, 0x00400000, PeLoader);
+        Kernel32 = new Kernel32Module(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
 
         // Initialize process environment with test data
         ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);

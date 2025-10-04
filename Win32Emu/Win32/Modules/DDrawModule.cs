@@ -1,11 +1,26 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Win32.Modules
 {
-	public class DDrawModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
+	public class DDrawModule : IWin32ModuleUnsafe
 	{
+		private readonly ProcessEnvironment _env;
+		private readonly uint _imageBase;
+		private readonly PeImageLoader? _peLoader;
+		private readonly ILogger _logger;
+
+		public DDrawModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
+		{
+			_env = env;
+			_imageBase = imageBase;
+			_peLoader = peLoader;
+			_logger = logger ?? NullLogger.Instance;
+		}
+
 		public string Name => "DDRAW.DLL";
 
 		// DirectDraw object handles
@@ -30,7 +45,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					Console.WriteLine($"[DDraw] Unimplemented export: {export}");
+					_logger.LogInformation($"[DDraw] Unimplemented export: {export}");
 					return false;
 			}
 		}
@@ -55,7 +70,7 @@ namespace Win32Emu.Win32.Modules
 		///	DDERR_OUTOFMEMORY</returns>
 		private unsafe uint DirectDrawCreate(in uint lpGuid, uint lplpDd, in uint pUnkOuter)
 		{
-			Console.WriteLine($"[DDraw] DirectDrawCreate(lpGuid=0x{lpGuid:X8}, lplpDD=0x{lplpDd:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+			_logger.LogInformation($"[DDraw] DirectDrawCreate(lpGuid=0x{lpGuid:X8}, lplpDD=0x{lplpDd:X8}, pUnkOuter=0x{pUnkOuter:X8})");
 
 			// Create DirectDraw object
 			var ddrawHandle = _nextDDrawHandle++;
@@ -68,16 +83,16 @@ namespace Win32Emu.Win32.Modules
 			// Write vtable pointer back to caller
 			if (lplpDd != 0)
 			{
-				env.MemWrite32(lplpDd, ddrawHandle);
+				_env.MemWrite32(lplpDd, ddrawHandle);
 			}
 
-			Console.WriteLine($"[DDraw] Created DirectDraw object: 0x{ddrawHandle:X8}");
+			_logger.LogInformation($"[DDraw] Created DirectDraw object: 0x{ddrawHandle:X8}");
 			return 0; // DD_OK
 		}
 
 		private unsafe uint DirectDrawCreateEx(uint lpGuid, uint lplpDd, uint iid, uint pUnkOuter)
 		{
-			Console.WriteLine($"[DDraw] DirectDrawCreateEx(lpGuid=0x{lpGuid:X8}, lplpDD=0x{lplpDd:X8}, iid=0x{iid:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+			_logger.LogInformation($"[DDraw] DirectDrawCreateEx(lpGuid=0x{lpGuid:X8}, lplpDD=0x{lplpDd:X8}, iid=0x{iid:X8}, pUnkOuter=0x{pUnkOuter:X8})");
 
 			// Similar to DirectDrawCreate but with interface ID
 			var ddrawHandle = _nextDDrawHandle++;
@@ -89,10 +104,10 @@ namespace Win32Emu.Win32.Modules
 
 			if (lplpDd != 0)
 			{
-				env.MemWrite32(lplpDd, ddrawHandle);
+				_env.MemWrite32(lplpDd, ddrawHandle);
 			}
 
-			Console.WriteLine($"[DDraw] Created DirectDraw object (Ex): 0x{ddrawHandle:X8}");
+			_logger.LogInformation($"[DDraw] Created DirectDraw object (Ex): 0x{ddrawHandle:X8}");
 			return 0; // DD_OK
 		}
 

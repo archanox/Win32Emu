@@ -3,11 +3,24 @@ using System.Text;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
-
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 namespace Win32Emu.Win32.Modules;
 
-public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
-{
+public class Kernel32Module : IWin32ModuleUnsafe
+	{
+		private readonly ProcessEnvironment _env;
+		private readonly uint _imageBase;
+		private readonly PeImageLoader? _peLoader;
+		private readonly ILogger _logger;
+
+		public Kernel32Module(ProcessEnvironment env, uint _imageBase, PeImageLoader? _peLoader = null, ILogger? logger = null)
+		{
+			_env = env;
+			_imageBase = _imageBase;
+			_peLoader = _peLoader;
+			_logger = logger ?? NullLogger.Instance;
+		}
 	public string Name => "KERNEL32.DLL";
 
 	private Win32Dispatcher? _dispatcher;
@@ -180,7 +193,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				return true;
 
 			default:
-				Console.WriteLine($"[Kernel32] Unimplemented export: {export}");
+				_logger.LogInformation($"[Kernel32] Unimplemented export: {export}");
 				return false;
 		}
 	}
@@ -215,8 +228,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	[DllModuleExport(3)]
 	private unsafe uint ExitProcess(uint code)
 	{
-		Console.WriteLine($"[Kernel32] ExitProcess({code})");
-		env.RequestExit();
+		_logger.LogInformation($"[Kernel32] ExitProcess({code})");
+		_env.RequestExit();
 		return 0;
 	}
 
@@ -227,17 +240,17 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		// hProcess: handle to the process (0xFFFFFFFF for current process)
 		// uExitCode: exit code for the process
 
-		Console.WriteLine($"[Kernel32] TerminateProcess(0x{hProcess:X8}, {uExitCode})");
+		_logger.LogInformation($"[Kernel32] TerminateProcess(0x{hProcess:X8}, {uExitCode})");
 
 		// In our emulator, we only support terminating the current process
 		if (hProcess is 0xFFFFFFFF or 0)
 		{
-			env.RequestExit();
+			_env.RequestExit();
 			return NativeTypes.Win32Bool.TRUE;
 		}
 
 		// We don't support terminating other processes
-		Console.WriteLine($"[Kernel32] TerminateProcess: Cannot terminate external process handle 0x{hProcess:X8}");
+		_logger.LogInformation($"[Kernel32] TerminateProcess: Cannot terminate external process handle 0x{hProcess:X8}");
 		_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 		return NativeTypes.Win32Bool.FALSE;
 	}
@@ -247,7 +260,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	{
 		// RaiseException raises a software exception
 		// For now, we just log and continue - proper implementation would need exception handling
-		Console.WriteLine($"[Kernel32] RaiseException(code=0x{dwExceptionCode:X8}, flags=0x{dwExceptionFlags:X}, nArgs={nNumberOfArguments}, args=0x{lpArguments:X8})");
+		_logger.LogInformation($"[Kernel32] RaiseException(code=0x{dwExceptionCode:X8}, flags=0x{dwExceptionFlags:X}, nArgs={nNumberOfArguments}, args=0x{lpArguments:X8})");
 
 		// In a real implementation, this would:
 		// 1. Create an EXCEPTION_RECORD
@@ -287,11 +300,11 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		{
 			case 1252: // Windows-1252 (Western European)
 				// Fill CPINFO structure
-				env.MemWrite32(lpCpInfo + 0, 1); // MaxCharSize = 1 (single-byte)
+				_env.MemWrite32(lpCpInfo + 0, 1); // MaxCharSize = 1 (single-byte)
 				// Write DefaultChar as bytes - using MemWriteBytes for byte array
-				env.MemWriteBytes(lpCpInfo + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar[0] = '?' (0x3F), DefaultChar[1] = 0
+				_env.MemWriteBytes(lpCpInfo + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar[0] = '?' (0x3F), DefaultChar[1] = 0
 				// LeadByte array - all zeros for single-byte code page (12 bytes)
-				env.MemWriteBytes(lpCpInfo + 6, new byte[12]); // All zeros
+				_env.MemWriteBytes(lpCpInfo + 6, new byte[12]); // All zeros
 				return 1; // TRUE
 
 			case 437: // OEM United States
@@ -300,9 +313,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			case 1251: // Windows Cyrillic
 			case 28591: // ISO 8859-1 Latin I
 				// Similar single-byte code page setup
-				env.MemWrite32(lpCpInfo + 0, 1); // MaxCharSize = 1
-				env.MemWriteBytes(lpCpInfo + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar = '?', 0
-				env.MemWriteBytes(lpCpInfo + 6, new byte[12]); // LeadByte array all zeros
+				_env.MemWrite32(lpCpInfo + 0, 1); // MaxCharSize = 1
+				_env.MemWriteBytes(lpCpInfo + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar = '?', 0
+				_env.MemWriteBytes(lpCpInfo + 6, new byte[12]); // LeadByte array all zeros
 				return NativeTypes.Win32Bool.TRUE;
 
 			default:
@@ -343,7 +356,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			// Safely calculate string length with bounds check
 			while (length < maxStringLengthLimit)
 			{
-				var ch = env.MemRead8(srcStrAddr + (uint)length);
+				var ch = _env.MemRead8(srcStrAddr + (uint)length);
 				if (ch == 0)
 				{
 					break;
@@ -374,7 +387,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		// Process each character
 		for (var i = 0; i < length; i++)
 		{
-			var ch = env.MemRead8(srcStrAddr + (uint)i);
+			var ch = _env.MemRead8(srcStrAddr + (uint)i);
 			ushort charType = 0;
 
 			// ASCII punctuation ranges:
@@ -433,7 +446,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			}
 
 			// Write the character type to the output array (each entry is 2 bytes)
-			env.MemWrite16(lpCharType + (uint)(i * 2), charType);
+			_env.MemWrite16(lpCharType + (uint)(i * 2), charType);
 		}
 
 		return NativeTypes.Win32Bool.TRUE;
@@ -468,7 +481,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			var currentAddr = lpSrcStr;
 			while (length < maxStringLengthLimit)
 			{
-				var wchar = env.MemRead16(currentAddr);
+				var wchar = _env.MemRead16(currentAddr);
 				if (wchar == 0)
 				{
 					break;
@@ -495,7 +508,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		// Write character type information for each character
 		for (var i = 0; i < length; i++)
 		{
-			var wchar = env.MemRead16(lpSrcStr + (uint)(i * 2));
+			var wchar = _env.MemRead16(lpSrcStr + (uint)(i * 2));
 			ushort charType = 0;
 
 			if (wchar is >= 'A' and <= 'Z')
@@ -519,7 +532,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				charType = ctCtype1Alpha; // Default for other characters
 			}
 
-			env.MemWrite16(lpCharType + (uint)(i * 2), charType);
+			_env.MemWrite16(lpCharType + (uint)(i * 2), charType);
 		}
 
 		return NativeTypes.Win32Bool.TRUE;
@@ -548,7 +561,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	private unsafe uint GetModuleHandleA(char* lpModuleName)
 	{
 		Console.WriteLine($"Getting module handle for '{(lpModuleName != null ? new string(lpModuleName) : "NULL (current process)")}''");
-		return imageBase;
+		return _imageBase;
 	}
 
 	[DllModuleExport(32)]
@@ -561,7 +574,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 
 		// Read the library name from memory
-		var libraryName = env.ReadAnsiString((uint)lpLibFileName);
+		var libraryName = _env.ReadAnsiString((uint)lpLibFileName);
 		if (string.IsNullOrEmpty(libraryName))
 		{
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
@@ -569,7 +582,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 
 		// Get the directory of the current executable
-		var executablePath = env.ExecutablePath;
+		var executablePath = _env.ExecutablePath;
 		var executableDir = Path.GetDirectoryName(executablePath) ?? string.Empty;
 
 		// Check if the library is local to the executable path
@@ -579,30 +592,30 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		if (isLocalDll)
 		{
 			// DLL is local to executable path - load it using PeImageLoader for proper emulation
-			Console.WriteLine($"[Kernel32] Loading local DLL for emulation: {libraryName}");
+			_logger.LogInformation($"[Kernel32] Loading local DLL for emulation: {libraryName}");
 
 			// Register with dispatcher for function call tracking
 			_dispatcher?.RegisterDynamicallyLoadedDll(libraryName);
 
-			if (peLoader != null)
+			if (_peLoader != null)
 			{
-				return env.LoadPeImage(localLibraryPath, peLoader);
+				return _env.LoadPeImage(localLibraryPath, _peLoader);
 			}
 
-			Console.WriteLine($"[Kernel32] Warning: PeImageLoader not available, falling back to module tracking for {libraryName}");
-			return env.LoadModule(libraryName);
+			_logger.LogInformation($"[Kernel32] Warning: PeImageLoader not available, falling back to module tracking for {libraryName}");
+			return _env.LoadModule(libraryName);
 		}
 
 		// DLL is not local - thunk to emulator's win32 syscall implementation
 		// For system DLLs like kernel32.dll, user32.dll, etc., we return a fake handle
 		// but the actual implementation will be handled by the dispatcher
-		Console.WriteLine($"[Kernel32] Loading system DLL via thunking: {libraryName}");
+		_logger.LogInformation($"[Kernel32] Loading system DLL via thunking: {libraryName}");
 
 		// Register with dispatcher for function call tracking
 		_dispatcher?.RegisterDynamicallyLoadedDll(libraryName);
 
 		// For system libraries, we still need to track them but mark them as system modules
-		return env.LoadModule(libraryName);
+		return _env.LoadModule(libraryName);
 	}
 
 	[DllModuleExport(18)]
@@ -612,7 +625,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		// hModule: module handle from LoadLibraryA or GetModuleHandleA
 		// lpProcName: either a string pointer (name) or an ordinal value (LOWORD)
 
-		Console.WriteLine($"[Kernel32] GetProcAddress(0x{hModule:X8}, 0x{lpProcName:X8})");
+		_logger.LogInformation($"[Kernel32] GetProcAddress(0x{hModule:X8}, 0x{lpProcName:X8})");
 
 		if (hModule == 0)
 		{
@@ -629,17 +642,17 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		{
 			ordinal = lpProcName & 0xFFFF;
 			byOrdinal = true;
-			Console.WriteLine($"[Kernel32] GetProcAddress: Looking up by ordinal {ordinal}");
+			_logger.LogInformation($"[Kernel32] GetProcAddress: Looking up by ordinal {ordinal}");
 		}
 		else
 		{
 			// It's a string pointer
-			procName = env.ReadAnsiString(lpProcName);
-			Console.WriteLine($"[Kernel32] GetProcAddress: Looking up '{procName}'");
+			procName = _env.ReadAnsiString(lpProcName);
+			_logger.LogInformation($"[Kernel32] GetProcAddress: Looking up '{procName}'");
 		}
 
 		// Try to find the module in loaded PE images first
-		if (env.TryGetLoadedImage(hModule, out var loadedImage) && loadedImage != null)
+		if (_env.TryGetLoadedImage(hModule, out var loadedImage) && loadedImage != null)
 		{
 			uint exportAddress = 0;
 			string? forwarderName = null;
@@ -649,14 +662,14 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			{
 				if (loadedImage.ExportsByOrdinal.TryGetValue(ordinal, out exportAddress))
 				{
-					Console.WriteLine($"[Kernel32] GetProcAddress: Found export by ordinal {ordinal} at 0x{exportAddress:X8}");
+					_logger.LogInformation($"[Kernel32] GetProcAddress: Found export by ordinal {ordinal} at 0x{exportAddress:X8}");
 					return exportAddress;
 				}
 				
 				// Check if it's a forwarded export
 				if (loadedImage.ForwardedExportsByOrdinal.TryGetValue(ordinal, out forwarderName))
 				{
-					Console.WriteLine($"[Kernel32] GetProcAddress: Found forwarded export by ordinal {ordinal} -> {forwarderName}");
+					_logger.LogInformation($"[Kernel32] GetProcAddress: Found forwarded export by ordinal {ordinal} -> {forwarderName}");
 					return ResolveForwardedExport(forwarderName);
 				}
 			}
@@ -664,29 +677,29 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			{
 				if (loadedImage.ExportsByName.TryGetValue(procName, out exportAddress))
 				{
-					Console.WriteLine($"[Kernel32] GetProcAddress: Found export '{procName}' at 0x{exportAddress:X8}");
+					_logger.LogInformation($"[Kernel32] GetProcAddress: Found export '{procName}' at 0x{exportAddress:X8}");
 					return exportAddress;
 				}
 				
 				// Check if it's a forwarded export
 				if (loadedImage.ForwardedExportsByName.TryGetValue(procName, out forwarderName))
 				{
-					Console.WriteLine($"[Kernel32] GetProcAddress: Found forwarded export '{procName}' -> {forwarderName}");
+					_logger.LogInformation($"[Kernel32] GetProcAddress: Found forwarded export '{procName}' -> {forwarderName}");
 					return ResolveForwardedExport(forwarderName);
 				}
 			}
 
 			// Export not found in PE image
-			Console.WriteLine("[Kernel32] GetProcAddress: Export not found in PE image");
+			_logger.LogInformation("[Kernel32] GetProcAddress: Export not found in PE image");
 			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
 
 		// Not in loaded images - check if it's an emulated module
-		var moduleName = env.GetModuleFileNameForHandle(hModule);
+		var moduleName = _env.GetModuleFileNameForHandle(hModule);
 		if (moduleName == null)
 		{
-			Console.WriteLine($"[Kernel32] GetProcAddress: Module handle 0x{hModule:X8} not recognized");
+			_logger.LogInformation($"[Kernel32] GetProcAddress: Module handle 0x{hModule:X8} not recognized");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 			return 0;
 		}
@@ -694,7 +707,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		// Try to get the emulated module from the dispatcher
 		if (_dispatcher == null || !_dispatcher.TryGetModule(moduleName, out var emulatedModule) || emulatedModule == null)
 		{
-			Console.WriteLine($"[Kernel32] GetProcAddress: Emulated module '{moduleName}' not found in dispatcher");
+			_logger.LogInformation($"[Kernel32] GetProcAddress: Emulated module '{moduleName}' not found in dispatcher");
 			_lastError = NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
 			return 0;
 		}
@@ -725,7 +738,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 
 		if (exportName == null)
 		{
-			Console.WriteLine($"[Kernel32] GetProcAddress: Export not found in emulated module '{moduleName}'");
+			_logger.LogInformation($"[Kernel32] GetProcAddress: Export not found in emulated module '{moduleName}'");
 			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
@@ -734,13 +747,13 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		var forwardedTo = DllModuleExportInfo.GetForwardedExport(moduleName, exportName);
 		if (forwardedTo != null)
 		{
-			Console.WriteLine($"[Kernel32] GetProcAddress: Found forwarded export '{moduleName}!{exportName}' -> {forwardedTo}");
+			_logger.LogInformation($"[Kernel32] GetProcAddress: Found forwarded export '{moduleName}!{exportName}' -> {forwardedTo}");
 			return ResolveForwardedExport(forwardedTo);
 		}
 
 		// Register and return a synthetic export address
-		var syntheticAddress = env.RegisterSyntheticExport(moduleName, exportName);
-		Console.WriteLine($"[Kernel32] GetProcAddress: Registered synthetic export '{moduleName}!{exportName}' at 0x{syntheticAddress:X8}");
+		var syntheticAddress = _env.RegisterSyntheticExport(moduleName, exportName);
+		_logger.LogInformation($"[Kernel32] GetProcAddress: Registered synthetic export '{moduleName}!{exportName}' at 0x{syntheticAddress:X8}");
 		return syntheticAddress;
 	}
 
@@ -754,7 +767,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		var parts = forwarderName.Split('.');
 		if (parts.Length < 2)
 		{
-			Console.WriteLine($"[Kernel32] ResolveForwardedExport: Invalid forwarder format '{forwarderName}'");
+			_logger.LogInformation($"[Kernel32] ResolveForwardedExport: Invalid forwarder format '{forwarderName}'");
 			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
@@ -785,19 +798,19 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			}
 		}
 
-		Console.WriteLine($"[Kernel32] ResolveForwardedExport: Resolving '{forwarderName}' -> {targetDll}!{targetExport}");
+		_logger.LogInformation($"[Kernel32] ResolveForwardedExport: Resolving '{forwarderName}' -> {targetDll}!{targetExport}");
 
 		// Try to get the target module handle
-		var targetModuleHandle = env.LoadModule(targetDll);
+		var targetModuleHandle = _env.LoadModule(targetDll);
 		if (targetModuleHandle == 0)
 		{
-			Console.WriteLine($"[Kernel32] ResolveForwardedExport: Failed to load target module '{targetDll}'");
+			_logger.LogInformation($"[Kernel32] ResolveForwardedExport: Failed to load target module '{targetDll}'");
 			_lastError = NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
 			return 0;
 		}
 
 		// Write the export name to a temporary location in memory
-		var exportNamePtr = env.WriteAnsiString(targetExport);
+		var exportNamePtr = _env.WriteAnsiString(targetExport);
 
 		// Recursively call GetProcAddress to resolve the forwarded export
 		var result = GetProcAddress(targetModuleHandle, exportNamePtr);
@@ -837,7 +850,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			}
 
 			var numericHandle = (uint)(nint)h;
-			var moduleName = env.GetModuleFileNameForHandle(numericHandle);
+			var moduleName = _env.GetModuleFileNameForHandle(numericHandle);
 			if (moduleName != null)
 			{
 				path = moduleName;
@@ -866,33 +879,33 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			var copyLen = n > 0 ? n - 1u : 0u;
 			if (copyLen > 0)
 			{
-				env.MemWriteBytes(lpAddr, bytes.AsSpan(0, (int)copyLen));
+				_env.MemWriteBytes(lpAddr, bytes.AsSpan(0, (int)copyLen));
 				Diagnostics.Diagnostics.LogMemWrite(lpAddr, (int)copyLen, bytes.AsSpan(0, (int)copyLen).ToArray());
 			}
 
 			// write null terminator
-			env.MemWriteBytes(lpAddr + copyLen, [0]);
+			_env.MemWriteBytes(lpAddr + copyLen, [0]);
 			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			Diagnostics.Diagnostics.LogDebug($"GetModuleFileNameA truncated; copyLen={copyLen} returned");
 			return copyLen;
 		}
 
 		// Fits in buffer: write full path and null terminator
-		env.MemWriteBytes(lpAddr, bytes);
-		env.MemWriteBytes(lpAddr + (uint)bytes.Length, [0]);
+		_env.MemWriteBytes(lpAddr, bytes);
+		_env.MemWriteBytes(lpAddr + (uint)bytes.Length, [0]);
 		Diagnostics.Diagnostics.LogMemWrite(lpAddr, bytes.Length + 1, bytes.AsSpan(0, bytes.Length).ToArray());
 		return (uint)bytes.Length;
 	}
 
 	[DllModuleExport(8)]
-	private unsafe uint GetCommandLineA() => env.CommandLinePtr;
+	private unsafe uint GetCommandLineA() => _env.CommandLinePtr;
 
 	[DllModuleExport(12)]
 	private unsafe uint GetEnvironmentStringsW()
 	{
 		// Return pointer to Unicode environment strings block
 		// This will be obtained from emulated environment variables, not system ones
-		return env.GetEnvironmentStringsW();
+		return _env.GetEnvironmentStringsW();
 	}
 
 	[DllModuleExport(6)]
@@ -919,7 +932,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	{
 		// Return pointer to ANSI environment strings block
 		// This will be obtained from emulated environment variables, not system ones
-		return env.GetEnvironmentStringsA();
+		return _env.GetEnvironmentStringsA();
 	}
 
 	[DllModuleExport(5)]
@@ -949,11 +962,11 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			return 0;
 		}
 
-		env.MemZero(lpStartupInfo, 68);
-		env.MemWrite32(lpStartupInfo + 0, 68);
-		env.MemWrite32(lpStartupInfo + 56, env.StdInputHandle);
-		env.MemWrite32(lpStartupInfo + 60, env.StdOutputHandle);
-		env.MemWrite32(lpStartupInfo + 64, env.StdErrorHandle);
+		_env.MemZero(lpStartupInfo, 68);
+		_env.MemWrite32(lpStartupInfo + 0, 68);
+		_env.MemWrite32(lpStartupInfo + 56, _env.StdInputHandle);
+		_env.MemWrite32(lpStartupInfo + 60, _env.StdOutputHandle);
+		_env.MemWrite32(lpStartupInfo + 64, _env.StdErrorHandle);
 		return 0;
 	}
 
@@ -962,9 +975,9 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	{
 		return nStdHandle switch
 		{
-			0xFFFFFFF6 => env.StdInputHandle,
-			0xFFFFFFF5 => env.StdOutputHandle,
-			0xFFFFFFF4 => env.StdErrorHandle,
+			0xFFFFFFF6 => _env.StdInputHandle,
+			0xFFFFFFF5 => _env.StdOutputHandle,
+			0xFFFFFFF4 => _env.StdErrorHandle,
 			_ => 0
 		};
 	}
@@ -974,25 +987,25 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	{
 		switch (nStdHandle)
 		{
-			case 0xFFFFFFF6: env.StdInputHandle = hHandle; break;
-			case 0xFFFFFFF5: env.StdOutputHandle = hHandle; break;
-			case 0xFFFFFFF4: env.StdErrorHandle = hHandle; break;
+			case 0xFFFFFFF6: _env.StdInputHandle = hHandle; break;
+			case 0xFFFFFFF5: _env.StdOutputHandle = hHandle; break;
+			case 0xFFFFFFF4: _env.StdErrorHandle = hHandle; break;
 		}
 
 		return 1;
 	}
 
 	[DllModuleExport(24)]
-	private unsafe uint GlobalAlloc(uint flags, uint bytes) => env.SimpleAlloc(bytes == 0 ? 1u : bytes);
+	private unsafe uint GlobalAlloc(uint flags, uint bytes) => _env.SimpleAlloc(bytes == 0 ? 1u : bytes);
 	[DllModuleExport(25)]
 	private static unsafe uint GlobalFree(void* h) => 0;
 
 	[DllModuleExport(27)]
 	private unsafe uint HeapCreate(uint flOptions, uint dwInitialSize, uint dwMaximumSize) =>
-		env.HeapCreate(flOptions, dwInitialSize, dwMaximumSize);
+		_env.HeapCreate(flOptions, dwInitialSize, dwMaximumSize);
 
 	[DllModuleExport(26)]
-	private unsafe uint HeapAlloc(void* hHeap, uint dwFlags, uint dwBytes) => env.HeapAlloc((uint)hHeap, dwBytes);
+	private unsafe uint HeapAlloc(void* hHeap, uint dwFlags, uint dwBytes) => _env.HeapAlloc((uint)hHeap, dwBytes);
 	[DllModuleExport(29)]
 	private static unsafe uint HeapFree(void* hHeap, uint dwFlags, void* lpMem) => 1;
 
@@ -1002,7 +1015,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		// HeapDestroy destroys a heap created with HeapCreate
 		// In our simple allocator, we don't actually manage individual heaps
 		// Just return success for API compatibility
-		Console.WriteLine($"[Kernel32] HeapDestroy(0x{(uint)(nint)hHeap:X8})");
+		_logger.LogInformation($"[Kernel32] HeapDestroy(0x{(uint)(nint)hHeap:X8})");
 
 		if (hHeap == null)
 		{
@@ -1015,7 +1028,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 
 	[DllModuleExport(45)]
 	private unsafe uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect) =>
-		env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
+		_env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
 
 	[DllModuleExport(46)]
 	private unsafe uint VirtualFree(uint lpAddress, uint dwSize, uint dwFreeType)
@@ -1024,7 +1037,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		// dwFreeType: MEM_DECOMMIT (0x4000) or MEM_RELEASE (0x8000)
 		// For simplicity in our emulator, we accept the call but don't actually free memory
 		// The bump allocator doesn't support freeing
-		Console.WriteLine($"[Kernel32] VirtualFree(0x{lpAddress:X8}, {dwSize}, 0x{dwFreeType:X})");
+		_logger.LogInformation($"[Kernel32] VirtualFree(0x{lpAddress:X8}, {dwSize}, 0x{dwFreeType:X})");
 
 		const uint memDecommit = 0x4000;
 		const uint memRelease = 0x8000;
@@ -1054,12 +1067,12 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	{
 		try
 		{
-			var path = env.ReadAnsiString(lpFileName);
+			var path = _env.ReadAnsiString(lpFileName);
 
 			// Handle invalid paths (empty, null, or invalid characters)
 			if (string.IsNullOrEmpty(path))
 			{
-				Console.WriteLine("[Kernel32] CreateFileA failed: Invalid path (empty or null)");
+				_logger.LogInformation("[Kernel32] CreateFileA failed: Invalid path (empty or null)");
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
@@ -1086,11 +1099,11 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			}
 
 			var fs = new FileStream(path, mode, access, FileShare.ReadWrite);
-			return env.RegisterHandle(fs);
+			return _env.RegisterHandle(fs);
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"[Kernel32] CreateFileA failed: {ex.Message}");
+			_logger.LogInformation($"[Kernel32] CreateFileA failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
@@ -1100,7 +1113,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	private unsafe uint ReadFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToRead, uint lpNumberOfBytesRead,
 		uint lpOverlapped)
 	{
-		if (!env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
+		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
 		{
 			return 0;
 		}
@@ -1111,19 +1124,19 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			var read = fs.Read(buf, 0, buf.Length);
 			if (lpBuffer != 0 && read > 0)
 			{
-				env.MemWriteBytes(lpBuffer, buf.AsSpan(0, read));
+				_env.MemWriteBytes(lpBuffer, buf.AsSpan(0, read));
 			}
 
 			if (lpNumberOfBytesRead != 0)
 			{
-				env.MemWrite32(lpNumberOfBytesRead, (uint)read);
+				_env.MemWrite32(lpNumberOfBytesRead, (uint)read);
 			}
 
 			return 1;
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"[Kernel32] ReadFile failed: {ex.Message}");
+			_logger.LogInformation($"[Kernel32] ReadFile failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -1133,25 +1146,25 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	private unsafe uint WriteFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToWrite, uint lpNumberOfBytesWritten,
 		uint lpOverlapped)
 	{
-		if (!env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
+		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
 		{
 			return 0;
 		}
 
 		try
 		{
-			var buf = env.MemReadBytes(lpBuffer, (int)nNumberOfBytesToWrite);
+			var buf = _env.MemReadBytes(lpBuffer, (int)nNumberOfBytesToWrite);
 			fs.Write(buf, 0, buf.Length);
 			if (lpNumberOfBytesWritten != 0)
 			{
-				env.MemWrite32(lpNumberOfBytesWritten, (uint)buf.Length);
+				_env.MemWrite32(lpNumberOfBytesWritten, (uint)buf.Length);
 			}
 
 			return 1;
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"[Kernel32] WriteFile failed: {ex.Message}");
+			_logger.LogInformation($"[Kernel32] WriteFile failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -1161,20 +1174,20 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	private unsafe uint CloseHandle(void* hObject)
 	{
 		var h = (uint)hObject;
-		if (env.TryGetHandle<FileStream>(h, out var fs) && fs is not null)
+		if (_env.TryGetHandle<FileStream>(h, out var fs) && fs is not null)
 		{
 			fs.Dispose();
-			env.CloseHandle(h);
+			_env.CloseHandle(h);
 			return 1;
 		}
 
-		return env.CloseHandle(h) ? 1u : 0u;
+		return _env.CloseHandle(h) ? 1u : 0u;
 	}
 
 	[DllModuleExport(13)]
 	private unsafe uint GetFileType(void* hFile)
 	{
-		if (env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
+		if (_env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
 		{
 			return 0x0001; // FILE_TYPE_DISK
 		}
@@ -1185,7 +1198,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	[DllModuleExport(39)]
 	private unsafe uint SetFilePointer(void* hFile, uint lDistanceToMove, uint lpDistanceToMoveHigh, uint dwMoveMethod)
 	{
-		if (!env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
+		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
 		{
 			return 0xFFFFFFFF;
 		}
@@ -1202,7 +1215,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	[DllModuleExport(4)]
 	private unsafe uint FlushFileBuffers(void* hFile)
 	{
-		if (env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
+		if (_env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
 		{
 			fs.Flush(true);
 			return 1;
@@ -1214,7 +1227,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	[DllModuleExport(38)]
 	private unsafe uint SetEndOfFile(void* hFile)
 	{
-		if (env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
+		if (_env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
 		{
 			fs.SetLength(fs.Position);
 			return 1;
@@ -1237,7 +1250,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	{
 		// UnhandledExceptionFilter processes unhandled exceptions
 		// exceptionInfo is a pointer to an EXCEPTION_POINTERS structure
-		Console.WriteLine($"[Kernel32] UnhandledExceptionFilter called with exceptionInfo=0x{exceptionInfo:X8}");
+		_logger.LogInformation($"[Kernel32] UnhandledExceptionFilter called with exceptionInfo=0x{exceptionInfo:X8}");
 
 		if (exceptionInfo != 0)
 		{
@@ -1249,11 +1262,11 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				//   PCONTEXT          ContextRecord;       // offset 4, 4 bytes  
 				// } EXCEPTION_POINTERS;
 
-				var exceptionRecordPtr = env.MemRead32(exceptionInfo);
-				var contextRecordPtr = env.MemRead32(exceptionInfo + 4);
+				var exceptionRecordPtr = _env.MemRead32(exceptionInfo);
+				var contextRecordPtr = _env.MemRead32(exceptionInfo + 4);
 
-				Console.WriteLine($"[Kernel32]   ExceptionRecord: 0x{exceptionRecordPtr:X8}");
-				Console.WriteLine($"[Kernel32]   ContextRecord: 0x{contextRecordPtr:X8}");
+				_logger.LogInformation($"[Kernel32]   ExceptionRecord: 0x{exceptionRecordPtr:X8}");
+				_logger.LogInformation($"[Kernel32]   ContextRecord: 0x{contextRecordPtr:X8}");
 
 				// If we have a valid exception record, read some basic info
 				if (exceptionRecordPtr != 0)
@@ -1263,18 +1276,18 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 					//   DWORD ExceptionFlags;       // offset 4
 					//   PEXCEPTION_RECORD ExceptionRecord; // offset 8
 					//   PVOID ExceptionAddress;     // offset 12
-					var exceptionCode = env.MemRead32(exceptionRecordPtr);
-					var exceptionFlags = env.MemRead32(exceptionRecordPtr + 4);
-					var exceptionAddress = env.MemRead32(exceptionRecordPtr + 12);
+					var exceptionCode = _env.MemRead32(exceptionRecordPtr);
+					var exceptionFlags = _env.MemRead32(exceptionRecordPtr + 4);
+					var exceptionAddress = _env.MemRead32(exceptionRecordPtr + 12);
 
-					Console.WriteLine($"[Kernel32]     ExceptionCode: 0x{exceptionCode:X8}");
-					Console.WriteLine($"[Kernel32]     ExceptionFlags: 0x{exceptionFlags:X8}");
-					Console.WriteLine($"[Kernel32]     ExceptionAddress: 0x{exceptionAddress:X8}");
+					_logger.LogInformation($"[Kernel32]     ExceptionCode: 0x{exceptionCode:X8}");
+					_logger.LogInformation($"[Kernel32]     ExceptionFlags: 0x{exceptionFlags:X8}");
+					_logger.LogInformation($"[Kernel32]     ExceptionAddress: 0x{exceptionAddress:X8}");
 				}
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"[Kernel32] Error reading exception info: {ex.Message}");
+				_logger.LogInformation($"[Kernel32] Error reading exception info: {ex.Message}");
 			}
 		}
 
@@ -1320,7 +1333,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				var addr = lpWideCharStr;
 				while (true)
 				{
-					var wideChar = env.MemRead16(addr);
+					var wideChar = _env.MemRead16(addr);
 					if (wideChar == 0)
 					{
 						break;
@@ -1338,7 +1351,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				var wideChars = new char[cchWideChar];
 				for (uint i = 0; i < cchWideChar; i++)
 				{
-					wideChars[i] = (char)env.MemRead16(lpWideCharStr + i * 2);
+					wideChars[i] = (char)_env.MemRead16(lpWideCharStr + i * 2);
 				}
 
 				wideString = new string(wideChars);
@@ -1393,20 +1406,20 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			// Copy converted bytes to output buffer
 			if (lpMultiByteStr != 0)
 			{
-				env.MemWriteBytes(lpMultiByteStr, multiByteBytes);
+				_env.MemWriteBytes(lpMultiByteStr, multiByteBytes);
 			}
 
 			// Clear the "used default char" flag if provided
 			if (lpUsedDefaultChar != 0)
 			{
-				env.MemWrite32(lpUsedDefaultChar, 0); // FALSE - no default char used (simplified)
+				_env.MemWrite32(lpUsedDefaultChar, 0); // FALSE - no default char used (simplified)
 			}
 
 			return (uint)multiByteBytes.Length;
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"[Kernel32] WideCharToMultiByte failed: {ex.Message}");
+			_logger.LogInformation($"[Kernel32] WideCharToMultiByte failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -1448,7 +1461,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				var currentAddr = lpMultiByteStr;
 				while (true)
 				{
-					var b = env.MemRead8(currentAddr);
+					var b = _env.MemRead8(currentAddr);
 					if (b == 0)
 					{
 						break;
@@ -1471,7 +1484,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				multiByteBytes = new byte[cbMultiByte];
 				for (var i = 0; i < cbMultiByte; i++)
 				{
-					multiByteBytes[i] = env.MemRead8(lpMultiByteStr + (uint)i);
+					multiByteBytes[i] = _env.MemRead8(lpMultiByteStr + (uint)i);
 				}
 			}
 
@@ -1501,20 +1514,20 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			// Write wide characters to output buffer
 			for (var i = 0; i < str.Length; i++)
 			{
-				env.MemWrite16(lpWideCharStr + (uint)(i * 2), str[i]);
+				_env.MemWrite16(lpWideCharStr + (uint)(i * 2), str[i]);
 			}
 
 			// Add null terminator if there's room and input was null-terminated
 			if (cbMultiByte == -1 && str.Length < cchWideChar)
 			{
-				env.MemWrite16(lpWideCharStr + (uint)(str.Length * 2), 0);
+				_env.MemWrite16(lpWideCharStr + (uint)(str.Length * 2), 0);
 			}
 
 			return (uint)str.Length;
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"[Kernel32] MultiByteToWideChar failed: {ex.Message}");
+			_logger.LogInformation($"[Kernel32] MultiByteToWideChar failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -1541,14 +1554,14 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			string srcStr;
 			if (cchSrc == -1)
 			{
-				srcStr = env.ReadAnsiString(lpSrcStr);
+				srcStr = _env.ReadAnsiString(lpSrcStr);
 			}
 			else
 			{
 				var bytes = new byte[cchSrc];
 				for (var i = 0; i < cchSrc; i++)
 				{
-					bytes[i] = env.MemRead8(lpSrcStr + (uint)i);
+					bytes[i] = _env.MemRead8(lpSrcStr + (uint)i);
 				}
 
 				srcStr = Encoding.ASCII.GetString(bytes);
@@ -1580,14 +1593,14 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 
 			// Write result
 			var destBytes = Encoding.ASCII.GetBytes(destStr);
-			env.MemWriteBytes(lpDestStr, destBytes);
-			env.MemWriteBytes(lpDestStr + (uint)destBytes.Length, new byte[] { 0 }); // Null terminator
+			_env.MemWriteBytes(lpDestStr, destBytes);
+			_env.MemWriteBytes(lpDestStr + (uint)destBytes.Length, new byte[] { 0 }); // Null terminator
 
 			return (uint)destStr.Length + 1;
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"[Kernel32] LCMapStringA failed: {ex.Message}");
+			_logger.LogInformation($"[Kernel32] LCMapStringA failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -1618,7 +1631,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				var currentAddr = lpSrcStr;
 				while (true)
 				{
-					var wchar = env.MemRead16(currentAddr);
+					var wchar = _env.MemRead16(currentAddr);
 					if (wchar == 0)
 					{
 						break;
@@ -1640,7 +1653,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				var chars = new char[cchSrc];
 				for (var i = 0; i < cchSrc; i++)
 				{
-					chars[i] = (char)env.MemRead16(lpSrcStr + (uint)(i * 2));
+					chars[i] = (char)_env.MemRead16(lpSrcStr + (uint)(i * 2));
 				}
 
 				srcStr = new string(chars);
@@ -1673,16 +1686,16 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			// Write result (wide chars)
 			for (var i = 0; i < destStr.Length; i++)
 			{
-				env.MemWrite16(lpDestStr + (uint)(i * 2), destStr[i]);
+				_env.MemWrite16(lpDestStr + (uint)(i * 2), destStr[i]);
 			}
 
-			env.MemWrite16(lpDestStr + (uint)(destStr.Length * 2), 0); // Null terminator
+			_env.MemWrite16(lpDestStr + (uint)(destStr.Length * 2), 0); // Null terminator
 
 			return (uint)destStr.Length + 1;
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"[Kernel32] LCMapStringW failed: {ex.Message}");
+			_logger.LogInformation($"[Kernel32] LCMapStringW failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -1705,7 +1718,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			var timestamp = Stopwatch.GetTimestamp();
 
 			// Write the 64-bit timestamp to the provided memory location
-			env.MemWrite64(lpPerformanceCount, (ulong)timestamp);
+			_env.MemWrite64(lpPerformanceCount, (ulong)timestamp);
 
 			return NativeTypes.Win32Bool.TRUE;
 		}
@@ -1719,17 +1732,17 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 	private unsafe string ReadCurrentModulePath()
 	{
 		// Prefer the initialized executable path from the process environment
-		if (!string.IsNullOrEmpty(env.ExecutablePath))
+		if (!string.IsNullOrEmpty(_env.ExecutablePath))
 		{
-			return env.ExecutablePath;
+			return _env.ExecutablePath;
 		}
 
 		// Fall back to the module filename pointer if available
 		try
 		{
-			if (env.ModuleFileNamePtr != 0)
+			if (_env.ModuleFileNamePtr != 0)
 			{
-				var s = env.ReadAnsiString(env.ModuleFileNamePtr);
+				var s = _env.ReadAnsiString(_env.ModuleFileNamePtr);
 				if (!string.IsNullOrEmpty(s))
 				{
 					return s;
@@ -1760,7 +1773,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		// - Sets the target IP if provided
 		// - Returns success
 
-		Console.WriteLine($"[Kernel32] RtlUnwind called: targetFrame=0x{targetFrame:X8}, targetIp=0x{targetIp:X8}, exceptionRecord=0x{exceptionRecord:X8}, returnValue=0x{returnValue:X8}");
+		_logger.LogInformation($"[Kernel32] RtlUnwind called: targetFrame=0x{targetFrame:X8}, targetIp=0x{targetIp:X8}, exceptionRecord=0x{exceptionRecord:X8}, returnValue=0x{returnValue:X8}");
 
 		// If a target IP is specified and it's not null, we would typically:
 		// - Unwind the stack to the target frame
@@ -1771,7 +1784,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 
 		if (targetIp != 0)
 		{
-			Console.WriteLine($"[Kernel32] RtlUnwind: Would jump to 0x{targetIp:X8} with return value 0x{returnValue:X8}");
+			_logger.LogInformation($"[Kernel32] RtlUnwind: Would jump to 0x{targetIp:X8} with return value 0x{returnValue:X8}");
 			// In a full implementation, we would modify the CPU state here
 			// For now, we just log the intended operation
 		}

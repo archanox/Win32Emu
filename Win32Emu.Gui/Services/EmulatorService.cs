@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Gui.Models;
 
 namespace Win32Emu.Gui.Services;
@@ -6,12 +8,14 @@ public class EmulatorService
 {
     private readonly EmulatorConfiguration _configuration;
     private readonly IEmulatorHost? _host;
+    private readonly ILogger _logger;
     private Emulator? _currentEmulator;
 
-    public EmulatorService(EmulatorConfiguration configuration, IEmulatorHost? host = null)
+    public EmulatorService(EmulatorConfiguration configuration, IEmulatorHost? host = null, ILogger? logger = null)
     {
         _configuration = configuration;
         _host = host;
+        _logger = logger ?? NullLogger.Instance;
     }
 
     /// <summary>
@@ -34,7 +38,7 @@ public class EmulatorService
             try
             {
                 // Create and configure the emulator
-                _currentEmulator = new Emulator(_host);
+                _currentEmulator = new Emulator(_host, _logger);
                 
                 // Load the executable with configured memory size
                 _currentEmulator.LoadExecutable(
@@ -47,6 +51,7 @@ public class EmulatorService
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Emulator error: {Message}", ex.Message);
                 _host?.OnDebugOutput($"Emulator error: {ex.Message}", DebugLevel.Error);
                 throw;
             }

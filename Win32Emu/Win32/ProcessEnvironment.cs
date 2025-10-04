@@ -1,16 +1,28 @@
 using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
 
 namespace Win32Emu.Win32;
 
-public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null)
+public class ProcessEnvironment
 {
-	private uint _allocPtr = heapBase;
+	private readonly VirtualMemory _vm;
+	private readonly IEmulatorHost? _host;
+	private readonly ILogger _logger;
+	private uint _allocPtr;
 	private bool _exitRequested;
 	private string _executablePath = string.Empty;
-	private readonly IEmulatorHost? _host = host;
+
+	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
+	{
+		_vm = vm;
+		_host = host;
+		_logger = logger ?? NullLogger.Instance;
+		_allocPtr = heapBase;
+	}
 
 	// SDL3 backends for audio and input
 	public Sdl3AudioBackend? AudioBackend { get; set; }
@@ -96,7 +108,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 	{
 		var bytes = Encoding.ASCII.GetBytes(s);
 		var addr = SimpleAlloc((uint)bytes.Length);
-		vm.WriteBytes(addr, bytes);
+		_vm.WriteBytes(addr, bytes);
 		Diagnostics.Diagnostics.LogMemWrite(addr, bytes.Length, bytes);
 		return addr;
 	}
@@ -105,7 +117,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 	{
 		var bytes = Encoding.Unicode.GetBytes(s);
 		var addr = SimpleAlloc((uint)bytes.Length);
-		vm.WriteBytes(addr, bytes);
+		_vm.WriteBytes(addr, bytes);
 		Diagnostics.Diagnostics.LogMemWrite(addr, bytes.Length, bytes);
 		return addr;
 	}
@@ -113,7 +125,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 	public void WriteAnsiStringAt(uint addr, string s, bool nullTerminate = true)
 	{
 		var bytes = Encoding.ASCII.GetBytes(nullTerminate ? s + "\0" : s);
-		vm.WriteBytes(addr, bytes);
+		_vm.WriteBytes(addr, bytes);
 		Diagnostics.Diagnostics.LogMemWrite(addr, bytes.Length, bytes);
 	}
 
@@ -123,7 +135,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 		var p = addr;
 		for (;;)
 		{
-			var b = vm.Read8(p++);
+			var b = _vm.Read8(p++);
 			if (b == 0)
 			{
 				break;
@@ -142,7 +154,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 		var buf = new byte[maxLength];
 		for (var i = 0; i < maxLength; i++)
 		{
-			buf[i] = vm.Read8(addr + (uint)i);
+			buf[i] = _vm.Read8(addr + (uint)i);
 		}
 
 		var result = Encoding.ASCII.GetString(buf);
@@ -167,7 +179,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 		// Convert to bytes and allocate memory
 		var bytes = Encoding.Unicode.GetBytes(envBlock.ToString());
 		var addr = SimpleAlloc((uint)bytes.Length);
-		vm.WriteBytes(addr, bytes);
+		_vm.WriteBytes(addr, bytes);
 		
 		return addr;
 	}
@@ -194,7 +206,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 		// Convert to bytes and allocate memory
 		var bytes = Encoding.ASCII.GetBytes(envBlock.ToString());
 		var addr = SimpleAlloc((uint)bytes.Length);
-		vm.WriteBytes(addr, bytes);
+		_vm.WriteBytes(addr, bytes);
 		
 		return addr;
 	}
@@ -225,19 +237,19 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 		return 1;
 	}
 
-	public byte[] MemReadBytes(uint addr, int count) => vm.GetSpan(addr, count);
-	public byte MemRead8(uint addr) => vm.Read8(addr);
+	public byte[] MemReadBytes(uint addr, int count) => _vm.GetSpan(addr, count);
+	public byte MemRead8(uint addr) => _vm.Read8(addr);
 	public void MemWriteBytes(uint addr, ReadOnlySpan<byte> data)
 	{
-		vm.WriteBytes(addr, data);
+		_vm.WriteBytes(addr, data);
 		try { Diagnostics.Diagnostics.LogMemWrite(addr, data.Length, data.ToArray()); } catch { }
 	}
-	public uint MemRead32(uint addr) => vm.Read32(addr);
-	public void MemWrite32(uint addr, uint value) => vm.Write32(addr, value);
-	public void MemWrite16(uint addr, ushort value) => vm.Write16(addr, value);
-	public ushort MemRead16(uint addr) => vm.Read16(addr);
-	public void MemWrite64(uint addr, ulong value) => vm.Write64(addr, value);
-	public void MemZero(uint addr, uint size) => vm.WriteBytes(addr, new byte[size]);
+	public uint MemRead32(uint addr) => _vm.Read32(addr);
+	public void MemWrite32(uint addr, uint value) => _vm.Write32(addr, value);
+	public void MemWrite16(uint addr, ushort value) => _vm.Write16(addr, value);
+	public ushort MemRead16(uint addr) => _vm.Read16(addr);
+	public void MemWrite64(uint addr, ulong value) => _vm.Write64(addr, value);
+	public void MemZero(uint addr, uint size) => _vm.WriteBytes(addr, new byte[size]);
 
 	// Handle table ops
 	public uint RegisterHandle(object obj)
@@ -368,7 +380,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 		
 		// Create a stub at the synthetic address (INT3 for breakpoint interception)
 		var stub = new byte[] { 0xCC, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 };
-		vm.WriteBytes(address, stub);
+		_vm.WriteBytes(address, stub);
 		
 		return address;
 	}
@@ -429,9 +441,9 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 		var size = AlignUp(dwSize == 0 ? 1u : dwSize, 0x1000);
 		if (lpAddress != 0)
 		{
-			if (lpAddress + size <= vm.Size)
+			if (lpAddress + size <= _vm.Size)
 			{
-				vm.WriteBytes(lpAddress, new byte[size]);
+				_vm.WriteBytes(lpAddress, new byte[size]);
 			}
 
 			return lpAddress;
@@ -439,7 +451,7 @@ public class ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IE
 
 		var addr = AlignUp(_allocPtr, 0x1000);
 		_allocPtr = addr + size;
-		vm.WriteBytes(addr, new byte[size]);
+		_vm.WriteBytes(addr, new byte[size]);
 		return addr;
 	}
 

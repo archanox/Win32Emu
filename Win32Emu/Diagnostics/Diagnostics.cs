@@ -1,4 +1,6 @@
 using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Win32Emu.Diagnostics;
 
@@ -8,12 +10,29 @@ public static class Diagnostics
 
 	private static readonly object Sync = new();
 	private static CpuContext? _currentContext;
+	private static ILogger _logger = NullLogger.Instance;
+
+	/// <summary>
+	/// Set the logger instance to use for diagnostics output
+	/// </summary>
+	public static void SetLogger(ILogger logger)
+	{
+		_logger = logger ?? NullLogger.Instance;
+	}
 
 	public static void Log(Level level, string message)
 	{
 		lock (Sync)
 		{
-			Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {message}");
+			var logLevel = level switch
+			{
+				Level.Error => LogLevel.Error,
+				Level.Warn => LogLevel.Warning,
+				Level.Info => LogLevel.Information,
+				Level.Debug => LogLevel.Debug,
+				_ => LogLevel.Debug
+			};
+			_logger.Log(logLevel, message);
 		}
 	}
 

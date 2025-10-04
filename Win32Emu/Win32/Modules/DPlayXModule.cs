@@ -1,11 +1,24 @@
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
-
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 namespace Win32Emu.Win32.Modules
 {
-	public class DPlayXModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
+	public class DPlayXModule : IWin32ModuleUnsafe
 	{
+		private readonly ProcessEnvironment _env;
+		private readonly uint _imageBase;
+		private readonly PeImageLoader? _peLoader;
+		private readonly ILogger _logger;
+
+		public DPlayXModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
+		{
+			_env = env;
+			_imageBase = imageBase;
+			_peLoader = peLoader;
+			_logger = logger ?? NullLogger.Instance;
+		}
 		public string Name => "DPLAYX.DLL";
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
@@ -22,7 +35,7 @@ namespace Win32Emu.Win32.Modules
 					returnValue = DirectPlayEnumerateA(a.UInt32(0), a.UInt32(1));
 					return true;
 				default:
-					Console.WriteLine($"[DPlayX] Unimplemented export: {export}");
+					_logger.LogInformation($"[DPlayX] Unimplemented export: {export}");
 					return false;
 			}
 		}
@@ -31,7 +44,7 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint DirectPlayEnumerateA(uint pCallback, uint pContext)
 		{
 			// TODO: Implement DirectPlayEnumerateA
-			Console.WriteLine($"[DPlayX] DirectPlayEnumerateA({nameof(pCallback)}=0x{pCallback:X8}, {nameof(pContext)}=0x{pContext:X8})");
+			_logger.LogInformation($"[DPlayX] DirectPlayEnumerateA({nameof(pCallback)}=0x{pCallback:X8}, {nameof(pContext)}=0x{pContext:X8})");
 			return 0;
 		}
 
@@ -39,7 +52,7 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint DirectPlayCreate(uint lpGUID, uint lplpDP, uint pUnkOuter)
 		{
 			// TODO: Implement DirectPlayCreate
-			Console.WriteLine($"[DPlayX] DirectPlayCreate({nameof(lpGUID)}=0x{lpGUID:X8}, {nameof(lplpDP)}=0x{lplpDP:X8}, {nameof(pUnkOuter)}=0x{pUnkOuter:X8})");
+			_logger.LogInformation($"[DPlayX] DirectPlayCreate({nameof(lpGUID)}=0x{lpGUID:X8}, {nameof(lplpDP)}=0x{lplpDP:X8}, {nameof(pUnkOuter)}=0x{pUnkOuter:X8})");
 			return 0;
 		}
 
