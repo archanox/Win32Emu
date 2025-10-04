@@ -23,13 +23,21 @@ namespace Win32Emu.Tests.Emulator;
 ///    - GetFileType: Checks file handle types
 ///    - SetHandleCount: Sets number of file handles
 ///    - GetACP: Gets the ANSI code page
-///    - GetCPInfo: Gets code page information
+///    - GetCPInfo: Gets code page information (FIXED: was causing stack corruption)
+///    - GetCommandLineA: Gets command line
+///    - GetEnvironmentStringsW: Gets environment variables
+///    - WideCharToMultiByte: Character conversion
+///    - FreeEnvironmentStringsW: Frees environment strings
+///    - GetModuleFileNameA: Gets module path
 /// 3. After initialization, the game enters an infinite loop in its own code
-///    - No additional Win32 API calls are made
+///    - No additional Win32 API calls are made after initialization completes
 ///    - No unknown/missing DLL functions are called (confirmed by dispatcher logging)
 ///    - The game is executing instructions but not making progress toward any visible state
-/// 4. Warnings observed:
-///    - Missing argument byte metadata for some KERNEL32 functions (GetACP, GetCPInfo)
+/// 4. Fixed Issues:
+///    - Stack corruption bug: GetCPInfo was not cleaning up 8 bytes from the stack
+///    - This caused the stack to become corrupted after multiple API calls
+///    - Fixed by adding hardcoded argument metadata (temporary workaround)
+///    - Game now progresses further through initialization
 /// 
 /// Root Cause Analysis:
 /// - The game's PE imports include DDRAW.dll, DINPUT.dll, DSOUND.dll, USER32.dll, GDI32.dll, and WINMM.dll

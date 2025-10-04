@@ -50,14 +50,18 @@ Edit `IgnitionTeaserTests.cs` and remove the `Skip` parameter from the `[Fact]` 
    - `GetFileType` - Checks handle types
    - `SetHandleCount` - Sets file handle count
    - `GetACP` - Gets ANSI code page
-   - `GetCPInfo` - Gets code page information
+   - `GetCPInfo` - Gets code page information (fixed stack corruption)
+   - `GetCommandLineA` - Gets command line
+   - `GetEnvironmentStringsW`, `FreeEnvironmentStringsW` - Environment variables
+   - `WideCharToMultiByte` - Character conversion
+   - `GetModuleFileNameA` - Module path retrieval
 4. **No Crashes**: The executable runs without throwing exceptions
 
 ### Known Issues ⚠️
 
 1. **Infinite Loop After Initialization**
-   - The game enters an infinite loop after completing basic Win32 initialization
-   - No additional API calls are made after GetCPInfo
+   - The game enters an infinite loop after completing Win32 initialization
+   - No additional API calls are made after initialization completes
    - Test uses a 5-second timeout to prevent hanging
 
 2. **No DirectX Calls Observed**
@@ -65,11 +69,11 @@ Edit `IgnitionTeaserTests.cs` and remove the `Skip` parameter from the `[Fact]` 
    - The dispatcher logs "No unknown function calls recorded" - confirming no missing APIs are being called
    - This indicates the game is stuck in its own initialization code BEFORE attempting graphics/input setup
 
-3. **Missing Metadata**
-   - Warnings about missing argument byte metadata for:
-     - `KERNEL32.DLL!GetACP`
-     - `KERNEL32.DLL!GetCPInfo`
-   - The emulator falls back to 0 bytes for these functions
+3. **Stack Corruption Bug (FIXED)**
+   - ~~GetCPInfo was not cleaning up stack properly (missing arg bytes metadata)~~
+   - ~~This caused stack corruption and made the game hang after a few API calls~~
+   - **Fixed**: Added hardcoded argument bytes for GetCPInfo (8 bytes) and GetACP (0 bytes)
+   - Game now progresses further through initialization
 
 4. **Root Cause Unknown**
    - The game is executing instructions continuously without calling any APIs
