@@ -1146,7 +1146,32 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint WriteFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToWrite, uint lpNumberOfBytesWritten,
 		uint lpOverlapped)
 	{
-		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
+		var handle = (uint)hFile;
+		
+		// Check if this is a standard output or error handle
+		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle)
+		{
+			try
+			{
+				var buf = _env.MemReadBytes(lpBuffer, (int)nNumberOfBytesToWrite);
+				_env.WriteToStdOutput(buf);
+				if (lpNumberOfBytesWritten != 0)
+				{
+					_env.MemWrite32(lpNumberOfBytesWritten, (uint)buf.Length);
+				}
+
+				return 1;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogInformation($"[Kernel32] WriteFile to stdout/stderr failed: {ex.Message}");
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+		}
+		
+		// Regular file handle
+		if (!_env.TryGetHandle<FileStream>(handle, out var fs) || fs is null)
 		{
 			return 0;
 		}

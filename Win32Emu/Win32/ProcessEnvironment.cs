@@ -103,6 +103,21 @@ public class ProcessEnvironment
 
 	public void RequestExit() => _exitRequested = true;
 
+	/// <summary>
+	/// Writes output to the standard output stream, notifying the host if available.
+	/// </summary>
+	public void WriteToStdOutput(byte[] data)
+	{
+		// Convert bytes to string (assuming ANSI/ASCII encoding)
+		var text = Encoding.Default.GetString(data);
+		
+		// Log to console for debugging
+		Console.Write(text);
+		
+		// Notify host if available (for GUI display)
+		_host?.OnStdOutput(text);
+	}
+
 	// Guest memory helpers
 	public uint WriteAnsiString(string s)
 	{
