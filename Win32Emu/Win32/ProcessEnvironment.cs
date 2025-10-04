@@ -109,7 +109,7 @@ public class ProcessEnvironment
 	public void WriteToStdOutput(byte[] data)
 	{
 		// Convert bytes to string (assuming ANSI/ASCII encoding)
-		var text = Encoding.Default.GetString(data);
+		var text = Encoding.ASCII.GetString(data);
 		
 		// Log to console for debugging
 		Console.Write(text);
