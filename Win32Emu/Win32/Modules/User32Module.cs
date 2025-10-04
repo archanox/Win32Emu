@@ -231,6 +231,9 @@ namespace Win32Emu.Win32.Modules
 					atom = 1;
 				}
 
+				// Register the atom-to-classname mapping
+				_env.RegisterAtom(atom, className);
+
 				_logger.LogInformation($"[User32] RegisterClassA: '{className}' -> atom 0x{atom:X4}");
 				return atom;
 			}
@@ -257,13 +260,31 @@ namespace Win32Emu.Win32.Modules
 			var classNamePtr = (uint)(nint)lpClassName;
 			var windowNamePtr = (uint)(nint)lpWindowName;
 
-			if (classNamePtr == 0)
+			string className;
+
+			// Check if lpClassName is an atom (HIWORD is 0) or a string pointer
+			if (classNamePtr != 0 && (classNamePtr & 0xFFFF0000) == 0)
+			{
+				// It's an atom - look up the class name
+				var atomClassName = _env.GetClassNameFromAtom(classNamePtr);
+				if (atomClassName == null)
+				{
+					_logger.LogInformation($"[User32] CreateWindowExA: Unknown atom 0x{classNamePtr:X4}");
+					return 0;
+				}
+				className = atomClassName;
+			}
+			else if (classNamePtr == 0)
 			{
 				_logger.LogInformation("[User32] CreateWindowExA: NULL class name");
 				return 0;
 			}
+			else
+			{
+				// It's a string pointer
+				className = _env.ReadAnsiString(classNamePtr);
+			}
 
-			var className = _env.ReadAnsiString(classNamePtr);
 			var windowName = windowNamePtr != 0 ? _env.ReadAnsiString(windowNamePtr) : "";
 
 			// Check if window class is registered
