@@ -634,6 +634,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		if (env.TryGetLoadedImage(hModule, out var loadedImage) && loadedImage != null)
 		{
 			uint exportAddress = 0;
+			string? forwarderName = null;
 
 			// Look up by ordinal or name in the real PE export table
 			if (byOrdinal)
@@ -643,6 +644,13 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 					Console.WriteLine($"[Kernel32] GetProcAddress: Found export by ordinal {ordinal} at 0x{exportAddress:X8}");
 					return exportAddress;
 				}
+				
+				// Check if it's a forwarded export
+				if (loadedImage.ForwardedExportsByOrdinal.TryGetValue(ordinal, out forwarderName))
+				{
+					Console.WriteLine($"[Kernel32] GetProcAddress: Found forwarded export by ordinal {ordinal} -> {forwarderName}");
+					return ResolveForwardedExport(forwarderName);
+				}
 			}
 			else if (procName != null)
 			{
@@ -650,6 +658,13 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 				{
 					Console.WriteLine($"[Kernel32] GetProcAddress: Found export '{procName}' at 0x{exportAddress:X8}");
 					return exportAddress;
+				}
+				
+				// Check if it's a forwarded export
+				if (loadedImage.ForwardedExportsByName.TryGetValue(procName, out forwarderName))
+				{
+					Console.WriteLine($"[Kernel32] GetProcAddress: Found forwarded export '{procName}' -> {forwarderName}");
+					return ResolveForwardedExport(forwarderName);
 				}
 			}
 
@@ -707,10 +722,79 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			return 0;
 		}
 
+		// Check if this export is forwarded to another DLL
+		var forwardedTo = DllModuleExportInfo.GetForwardedExport(moduleName, exportName);
+		if (forwardedTo != null)
+		{
+			Console.WriteLine($"[Kernel32] GetProcAddress: Found forwarded export '{moduleName}!{exportName}' -> {forwardedTo}");
+			return ResolveForwardedExport(forwardedTo);
+		}
+
 		// Register and return a synthetic export address
 		var syntheticAddress = env.RegisterSyntheticExport(moduleName, exportName);
 		Console.WriteLine($"[Kernel32] GetProcAddress: Registered synthetic export '{moduleName}!{exportName}' at 0x{syntheticAddress:X8}");
 		return syntheticAddress;
+	}
+
+	/// <summary>
+	/// Resolves a forwarded export to its actual address.
+	/// Forwarded exports have the format "DLL.ExportName" or "DLL.DLL.ExportName".
+	/// </summary>
+	private unsafe uint ResolveForwardedExport(string forwarderName)
+	{
+		// Parse the forwarder string (format: "DLL.ExportName" or "DLL.DLL.ExportName")
+		var parts = forwarderName.Split('.');
+		if (parts.Length < 2)
+		{
+			Console.WriteLine($"[Kernel32] ResolveForwardedExport: Invalid forwarder format '{forwarderName}'");
+			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			return 0;
+		}
+
+		// Extract DLL name and export name
+		string targetDll;
+		string targetExport;
+		
+		if (parts.Length == 2)
+		{
+			// Format: "DLL.ExportName"
+			targetDll = parts[0] + ".DLL";
+			targetExport = parts[1];
+		}
+		else
+		{
+			// Format: "DLL.DLL.ExportName" or assume first part is DLL, rest is export
+			// Check if second part is "DLL"
+			if (parts[1].Equals("DLL", StringComparison.OrdinalIgnoreCase))
+			{
+				targetDll = parts[0] + "." + parts[1];
+				targetExport = string.Join(".", parts.Skip(2));
+			}
+			else
+			{
+				targetDll = parts[0] + ".DLL";
+				targetExport = string.Join(".", parts.Skip(1));
+			}
+		}
+
+		Console.WriteLine($"[Kernel32] ResolveForwardedExport: Resolving '{forwarderName}' -> {targetDll}!{targetExport}");
+
+		// Try to get the target module handle
+		var targetModuleHandle = env.LoadModule(targetDll);
+		if (targetModuleHandle == 0)
+		{
+			Console.WriteLine($"[Kernel32] ResolveForwardedExport: Failed to load target module '{targetDll}'");
+			_lastError = NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
+			return 0;
+		}
+
+		// Write the export name to a temporary location in memory
+		var exportNamePtr = env.WriteAnsiString(targetExport);
+
+		// Recursively call GetProcAddress to resolve the forwarded export
+		var result = GetProcAddress(targetModuleHandle, exportNamePtr);
+
+		return result;
 	}
 
 	[DllModuleExport(15)]

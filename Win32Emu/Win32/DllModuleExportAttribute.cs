@@ -24,6 +24,14 @@ public sealed class DllModuleExportAttribute : Attribute
 	/// </summary>
 	public string? Version { get; init; }
 
+	/// <summary>
+	/// The forwarding target for this export (optional).
+	/// If specified, this export forwards to another DLL's export.
+	/// Example: "KERNELBASE.GetVersion" to forward to GetVersion in KERNELBASE.DLL
+	/// Format: "DLL.ExportName" where DLL can optionally include .DLL extension
+	/// </summary>
+	public string? ForwardedTo { get; init; }
+
 	public DllModuleExportAttribute(uint ordinal)
 	{
 		Ordinal = ordinal;

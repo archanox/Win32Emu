@@ -1,5 +1,6 @@
 using AsmResolver;
 using AsmResolver.PE;
+using AsmResolver.PE.Exports;
 using AsmResolver.PE.File;
 using Win32Emu.Memory;
 
@@ -38,8 +39,8 @@ public class PeImageLoader(VirtualMemory vm)
 		}
 
 		var importMap = BuildImportMap(image, imageBase);
-		var (exportsByName, exportsByOrdinal) = BuildExportMaps(image, imageBase);
-		return new LoadedImage(imageBase, entryPoint, imageSize, importMap, path, exportsByName, exportsByOrdinal);
+		var (exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal) = BuildExportMaps(image, imageBase);
+		return new LoadedImage(imageBase, entryPoint, imageSize, importMap, path, exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal);
 	}
 
 	private Dictionary<uint, (string dll, string name)> BuildImportMap(PEImage image, uint imageBase)
@@ -86,19 +87,34 @@ public class PeImageLoader(VirtualMemory vm)
 		return map;
 	}
 
-	private (Dictionary<string, uint> byName, Dictionary<uint, uint> byOrdinal) BuildExportMaps(PEImage image, uint imageBase)
+	private (Dictionary<string, uint> byName, Dictionary<uint, uint> byOrdinal, Dictionary<string, string> forwardedByName, Dictionary<uint, string> forwardedByOrdinal) BuildExportMaps(PEImage image, uint imageBase)
 	{
 		var byName = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
 		var byOrdinal = new Dictionary<uint, uint>();
+		var forwardedByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		var forwardedByOrdinal = new Dictionary<uint, string>();
 
 		if (image.Exports == null)
 		{
-			return (byName, byOrdinal);
+			return (byName, byOrdinal, forwardedByName, forwardedByOrdinal);
 		}
 
 		foreach (var export in image.Exports.Entries)
 		{
-			// Skip forwarded exports (they have no RVA)
+			// Check if this is a forwarded export
+			if (export.IsForwarder && !string.IsNullOrEmpty(export.ForwarderName))
+			{
+				// Store forwarded export information
+				forwardedByOrdinal[export.Ordinal] = export.ForwarderName;
+				
+				if (!string.IsNullOrEmpty(export.Name))
+				{
+					forwardedByName[export.Name] = export.ForwarderName;
+				}
+				continue;
+			}
+
+			// Skip exports with no RVA (shouldn't happen for non-forwarded exports)
 			if (export.Address == null || !export.Address.IsBounded)
 			{
 				continue;
@@ -117,6 +133,6 @@ public class PeImageLoader(VirtualMemory vm)
 			}
 		}
 
-		return (byName, byOrdinal);
+		return (byName, byOrdinal, forwardedByName, forwardedByOrdinal);
 	}
 }
