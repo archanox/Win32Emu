@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Win32Emu.Gui.Models;
 
@@ -38,12 +37,18 @@ public class ConfigurationService
     }
 
     /// <summary>
-    /// Compute SHA256 hash of the executable path
+    /// Compute SHA256 hash of the executable file content
     /// </summary>
-    private static string ComputePathHash(string executablePath)
+    private static string ComputeFileHash(string executablePath)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(executablePath));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
+        if (!File.Exists(executablePath))
+        {
+            throw new FileNotFoundException($"Executable not found: {executablePath}");
+        }
+
+        using var stream = File.OpenRead(executablePath);
+        var hashBytes = SHA256.HashData(stream);
+        return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
 
     private EmulatorSettings LoadSettings()
@@ -129,7 +134,7 @@ public class ConfigurationService
     public EmulatorConfiguration GetEmulatorConfiguration(string gameExecutablePath)
     {
         var config = GetEmulatorConfiguration();
-        var hash = ComputePathHash(gameExecutablePath);
+        var hash = ComputeFileHash(gameExecutablePath);
 
         if (_settings.PerGameSettings.TryGetValue(hash, out var gameSettings))
         {
@@ -167,9 +172,8 @@ public class ConfigurationService
     /// </summary>
     public void SaveGameSettings(string gameExecutablePath, GameSettings gameSettings)
     {
-        var hash = ComputePathHash(gameExecutablePath);
+        var hash = ComputeFileHash(gameExecutablePath);
         _settings.PerGameSettings[hash] = gameSettings;
-        _settings.GamePathMapping[hash] = gameExecutablePath;
         SaveSettings();
     }
 
@@ -178,7 +182,7 @@ public class ConfigurationService
     /// </summary>
     public GameSettings? GetGameSettings(string gameExecutablePath)
     {
-        var hash = ComputePathHash(gameExecutablePath);
+        var hash = ComputeFileHash(gameExecutablePath);
         return _settings.PerGameSettings.TryGetValue(hash, out var settings) ? settings : null;
     }
 
@@ -187,10 +191,9 @@ public class ConfigurationService
     /// </summary>
     public void RemoveGameSettings(string gameExecutablePath)
     {
-        var hash = ComputePathHash(gameExecutablePath);
+        var hash = ComputeFileHash(gameExecutablePath);
         if (_settings.PerGameSettings.Remove(hash))
         {
-            _settings.GamePathMapping.Remove(hash);
             SaveSettings();
         }
     }

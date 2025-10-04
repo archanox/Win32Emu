@@ -55,14 +55,16 @@ Example use cases:
 The `ConfigurationService` class manages all configuration persistence:
 - Loads configuration on application startup from split files using Microsoft.Extensions.Configuration
 - Uses configuration binding with `Get<T>()` for all properties (leveraging source generation where available)
-- Uses SHA256 hashing of executable paths as keys for per-game settings to avoid path delimiter conflicts
+- Uses SHA256 hashing of executable file content as keys for per-game settings
+- Settings are executable-dependent, not location-based (same file in different locations shares settings)
 - Automatically saves changes when settings are modified using System.Text.Json
 - Provides per-game settings override functionality with transparent hash-based key management
 
 ### SHA256 Hashing for Per-Game Settings
-To avoid conflicts with Microsoft.Extensions.Configuration's `:` path delimiter in Windows file paths:
-- Executable paths are hashed using SHA256 before being used as keys
-- The `GamePathMapping` dictionary maintains a reference from hash to original path
+Per-game settings use content-based hashing for true portability:
+- The SHA256 hash of the **executable file content** is used as the key
+- Settings follow the executable, not its location
+- Same executable in different locations automatically shares the same settings
 - This allows pure Microsoft.Extensions.Configuration binding without hybrid approaches
 
 ### Split Configuration Files
@@ -103,15 +105,11 @@ The `TimesPlayed` counter is automatically incremented each time a game is launc
     "8f3e9a2b7c1d4e5f6a9b8c7d6e5f4a3b2c1d9e8f7a6b5c4d3e2f1a9b8c7d6e5f": {
       "EnableDebugMode": true
     }
-  },
-  "GamePathMapping": {
-    "1a67ffbc5ebaf4417fb6b2c135a8c64e77904a4fc5d24291f434c34e3f6b91c2": "C:\\Games\\game1.exe",
-    "8f3e9a2b7c1d4e5f6a9b8c7d6e5f4a3b2c1d9e8f7a6b5c4d3e2f1a9b8c7d6e5f": "C:\\Games\\game2.exe"
   }
 }
 ```
 
-Note: The keys in `PerGameSettings` are SHA256 hashes of the executable paths. The `GamePathMapping` provides a reference to see which hash corresponds to which game.
+Note: The keys in `PerGameSettings` are SHA256 hashes of the executable file content. Settings are tied to the executable itself, not its location, so moving the file to a different folder maintains the same settings.
 
 ### library.json
 ```json

@@ -18,21 +18,21 @@ Uses Microsoft.Extensions.Configuration for loading configuration with pure conf
 
 ## Key Changes
 
-### 1. Using Microsoft.Extensions.Configuration with SHA256 Hashing
+### 1. Using Microsoft.Extensions.Configuration with File Content Hashing
 - Uses Microsoft.Extensions.Configuration for loading configuration files
 - Leverages configuration binding with `Get<T>()` for all properties (source generation support)
-- SHA256 hashing of executable paths to avoid `:` path delimiter conflicts
-- `GamePathMapping` dictionary maintains hash-to-path reference
+- SHA256 hashing of **executable file content** (not path) for truly portable, location-independent settings
+- Settings follow the executable itself - same file in different locations shares settings
 - Pure configuration binding approach - no hybrid System.Text.Json usage for loading
 - System.Text.Json for saving configuration (two-way serialization)
 
 ### 2. Files Created
-- `Configuration/EmulatorSettings.cs` - POCO class for emulator settings with SHA256-based per-game settings
+- `Configuration/EmulatorSettings.cs` - POCO class for emulator settings with content-based per-game settings
 - `Configuration/GameLibrary.cs` - POCO class for game library
 - `Models/GameSettings.cs` - Model for per-game settings overrides
 
 ### 3. Modified Files
-- `Configuration/ConfigurationService.cs` - Updated to use SHA256 hashing and pure configuration binding
+- `Configuration/ConfigurationService.cs` - Updated to use file content SHA256 hashing and pure configuration binding
 - `CONFIGURATION.md` - Updated documentation
 - `Win32Emu.Gui.csproj` - Updated package references
 
@@ -76,14 +76,11 @@ Games can have custom emulator settings that override the global defaults:
       "RenderingBackend": "DirectDraw",
       "ResolutionScaleFactor": 2
     }
-  },
-  "GamePathMapping": {
-    "1a67ffbc5ebaf4417fb6b2c135a8c64e77904a4fc5d24291f434c34e3f6b91c2": "C:\\Games\\game1.exe"
   }
 }
 ```
 
-Note: Keys are SHA256 hashes of executable paths to avoid conflicts with configuration path delimiters.
+Note: Keys are SHA256 hashes of the executable file content. Settings are tied to the executable itself, not its location.
 
 ### library.json
 ```json

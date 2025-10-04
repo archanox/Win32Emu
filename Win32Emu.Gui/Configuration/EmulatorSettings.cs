@@ -14,12 +14,7 @@ public class EmulatorSettings
     public bool EnableDebugMode { get; set; } = false;
     
     /// <summary>
-    /// Per-game settings keyed by SHA256 hash of the executable path
+    /// Per-game settings keyed by SHA256 hash of the executable file
     /// </summary>
     public Dictionary<string, GameSettings> PerGameSettings { get; set; } = new();
-    
-    /// <summary>
-    /// Mapping of SHA256 hash to executable path for reference
-    /// </summary>
-    public Dictionary<string, string> GamePathMapping { get; set; } = new();
 }
