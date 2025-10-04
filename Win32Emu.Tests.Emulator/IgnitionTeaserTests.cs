@@ -105,23 +105,25 @@ public class IgnitionTeaserTests
             _output.WriteLine("");
             
             // Set a timeout for the test run
-            var cancellationTokenSource = new CancellationTokenSource();
-            cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
+            var timeout = TimeSpan.FromSeconds(5);
             
-            var runTask = Task.Run(() => emulator.Run(), cancellationTokenSource.Token);
+            var runTask = Task.Run(() => emulator.Run());
+            var completedTask = Task.WhenAny(runTask, Task.Delay(timeout)).Result;
             
-            try
-            {
-                runTask.Wait(cancellationTokenSource.Token);
-            }
-            catch (OperationCanceledException)
+            if (completedTask != runTask)
             {
                 _output.WriteLine("Test timed out after 5 seconds - stopping emulator");
                 emulator.Stop();
-                runTask.Wait(TimeSpan.FromSeconds(2));
+                // Give the emulator up to 2 seconds to shut down gracefully
+                if (!runTask.Wait(TimeSpan.FromSeconds(2)))
+                {
+                    _output.WriteLine("Emulator did not stop within 2 seconds after timeout.");
+                }
             }
-            
-            _output.WriteLine("Emulation completed");
+            else
+            {
+                _output.WriteLine("Emulation completed");
+            }
         }
         catch (Exception ex)
         {
