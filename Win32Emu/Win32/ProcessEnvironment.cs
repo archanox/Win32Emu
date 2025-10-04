@@ -64,6 +64,15 @@ public class ProcessEnvironment
 	// Environment variables (emulated, not from system)
 	private readonly Dictionary<string, string> _environmentVariables = new();
 
+	// Thread management
+	private uint _nextThreadId = 1;
+	private uint _currentThreadId = 1; // Main thread ID is always 1
+
+	// TLS (Thread Local Storage) support
+	private readonly Dictionary<uint, Dictionary<uint, uint>> _threadLocalStorage = new(); // threadId -> (tlsIndex -> value)
+	private readonly HashSet<uint> _allocatedTlsIndices = new();
+	private uint _nextTlsIndex = 0;
+
 	public void InitializeStrings(string exePath, string[] args)
 	{
 		_executablePath = exePath;
@@ -582,5 +591,93 @@ public class ProcessEnvironment
 	public int GetQuitExitCode()
 	{
 		return _quitExitCode;
+	}
+
+	// Thread management methods
+	public uint GetCurrentThreadId()
+	{
+		return _currentThreadId;
+	}
+
+	public uint CreateThread()
+	{
+		// Simple thread emulation - just return a new thread ID
+		// In this emulation, we don't actually create real threads
+		var threadId = _nextThreadId++;
+		
+		// Initialize TLS storage for this thread
+		_threadLocalStorage[threadId] = new Dictionary<uint, uint>();
+		
+		_logger.LogInformation($"[ProcessEnv] CreateThread: new thread ID={threadId}");
+		return threadId;
+	}
+
+	// TLS (Thread Local Storage) methods
+	public uint TlsAlloc()
+	{
+		// Find next available TLS index
+		var index = _nextTlsIndex++;
+		_allocatedTlsIndices.Add(index);
+		
+		_logger.LogInformation($"[ProcessEnv] TlsAlloc: allocated index={index}");
+		return index;
+	}
+
+	public bool TlsSetValue(uint tlsIndex, uint value)
+	{
+		if (!_allocatedTlsIndices.Contains(tlsIndex))
+		{
+			_logger.LogWarning($"[ProcessEnv] TlsSetValue: invalid TLS index={tlsIndex}");
+			return false;
+		}
+
+		// Get or create TLS storage for current thread
+		if (!_threadLocalStorage.TryGetValue(_currentThreadId, out var threadTls))
+		{
+			threadTls = new Dictionary<uint, uint>();
+			_threadLocalStorage[_currentThreadId] = threadTls;
+		}
+
+		threadTls[tlsIndex] = value;
+		_logger.LogInformation($"[ProcessEnv] TlsSetValue: threadId={_currentThreadId} index={tlsIndex} value=0x{value:X8}");
+		return true;
+	}
+
+	public uint TlsGetValue(uint tlsIndex)
+	{
+		if (!_allocatedTlsIndices.Contains(tlsIndex))
+		{
+			_logger.LogWarning($"[ProcessEnv] TlsGetValue: invalid TLS index={tlsIndex}");
+			return 0;
+		}
+
+		// Get TLS storage for current thread
+		if (_threadLocalStorage.TryGetValue(_currentThreadId, out var threadTls) &&
+		    threadTls.TryGetValue(tlsIndex, out var value))
+		{
+			_logger.LogInformation($"[ProcessEnv] TlsGetValue: threadId={_currentThreadId} index={tlsIndex} value=0x{value:X8}");
+			return value;
+		}
+
+		_logger.LogInformation($"[ProcessEnv] TlsGetValue: threadId={_currentThreadId} index={tlsIndex} not set, returning 0");
+		return 0;
+	}
+
+	public bool TlsFree(uint tlsIndex)
+	{
+		if (!_allocatedTlsIndices.Remove(tlsIndex))
+		{
+			_logger.LogWarning($"[ProcessEnv] TlsFree: invalid TLS index={tlsIndex}");
+			return false;
+		}
+
+		// Remove from all threads
+		foreach (var threadTls in _threadLocalStorage.Values)
+		{
+			threadTls.Remove(tlsIndex);
+		}
+
+		_logger.LogInformation($"[ProcessEnv] TlsFree: freed index={tlsIndex}");
+		return true;
 	}
 }
