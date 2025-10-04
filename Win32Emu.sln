@@ -51,6 +51,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WinXP", "WinXP", "{1CB43367
 		DLLs\WinXP\ddraw.dll = DLLs\WinXP\ddraw.dll
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Tests.Gui", "Win32Emu.Tests.Gui\Win32Emu.Tests.Gui.csproj", "{6E7CBBC8-81E2-4446-A434-4A0942FB477E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -133,16 +135,28 @@ Global
 		{FAFD63C5-34CC-402E-B033-41ED7DC49400}.Release|x64.Build.0 = Release|Any CPU
 		{FAFD63C5-34CC-402E-B033-41ED7DC49400}.Release|x86.ActiveCfg = Release|Any CPU
 		{FAFD63C5-34CC-402E-B033-41ED7DC49400}.Release|x86.Build.0 = Release|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Debug|x64.Build.0 = Debug|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Debug|x86.Build.0 = Debug|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Release|x64.ActiveCfg = Release|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Release|x64.Build.0 = Release|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Release|x86.ActiveCfg = Release|Any CPU
+		{6E7CBBC8-81E2-4446-A434-4A0942FB477E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {F51FE0B2-88D2-4467-86A9-54B70B52FBD9}
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{BD8301D0-EC1D-46DD-B3DC-11A282404259} = {8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}
 		{D241F632-4AC7-42FA-917B-85F0EE1F9CED} = {BD8301D0-EC1D-46DD-B3DC-11A282404259}
 		{1CB43367-B21B-4548-8D02-8508762B05EE} = {BD8301D0-EC1D-46DD-B3DC-11A282404259}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F51FE0B2-88D2-4467-86A9-54B70B52FBD9}
 	EndGlobalSection
 EndGlobal

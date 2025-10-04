@@ -8,4 +8,9 @@ public class Game
     public string? Description { get; set; }
     public DateTime? LastPlayed { get; set; }
     public int TimesPlayed { get; set; }
+    
+    /// <summary>
+    /// Optional reference to game database entry ID
+    /// </summary>
+    public string? GameDbId { get; set; }
 }

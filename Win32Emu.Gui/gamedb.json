@@ -1,0 +1,67 @@
+{
+  "Version": "1.0",
+  "Games": [
+    {
+      "Id": "Q2411602",
+      "WikidataKey": "Q2411602",
+      "Title": "Ignition",
+      "Genres": [
+        "Racing"
+      ],
+      "Developers": [
+        "Unique Development Studios"
+      ],
+      "Publishers": [
+        "Virgin Interactive",
+        "UDS"
+      ],
+      "ReleaseDate": "1997-03-31T00:00:00",
+      "Description": "Ignition is a racing game developed by Unique Development Studios and published by Virgin Interactive for PC, Sega Saturn and PlayStation in 1997. The game features overhead-view racing with power-ups and weapons.",
+      "Languages": [
+        "en"
+      ],
+      "LogoUrl": "https://images.launchbox-app.com//90a26b92-bc4d-4862-9b07-dc36b88536e0.png",
+      "Ratings": {
+        "Esrb": "E",
+        "Pegi": null,
+        "Usk": null,
+        "Acb": null
+      },
+      "Executables": [
+        {
+          "Name": "ign_win.exe",
+          "Md5": null,
+          "Sha1": null,
+          "Sha256": null
+        },
+        {
+          "Name": "ign_dos.exe",
+          "Md5": null,
+          "Sha1": null,
+          "Sha256": null
+        },
+        {
+          "Name": "ign_3dfx.exe",
+          "Md5": null,
+          "Sha1": null,
+          "Sha256": null
+        },
+        {
+          "Name": "ign_teas.exe",
+          "Md5": "42aeaf49af6191400fa18ba3e3c47e48",
+          "Sha1": "eda557a84013bcf42100c3dd43e40263cb8d3353",
+          "Sha256": "52b0c3a95cc70eb909b46d5f872a6779eb228b1925274c9da072463934ff2099"
+        }
+      ],
+      "ExternalUrls": {
+        "IGDB": "https://www.igdb.com/games/ignition",
+        "Wikidata": "https://www.wikidata.org/wiki/Q2411602",
+        "MobyGames": "https://www.mobygames.com/game/807/ignition/",
+        "TheGamesDB": "https://thegamesdb.net/game.php?id=16400",
+        "LaunchBox": "https://gamesdb.launchbox-app.com/games/details/168516-ignition",
+        "GameFAQs": "https://gamefaqs.gamespot.com/pc/197611-ignition"
+      },
+      "DataSource": "user_submitted"
+    }
+  ]
+}
