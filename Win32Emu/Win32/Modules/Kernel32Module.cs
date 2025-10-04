@@ -192,6 +192,26 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = QueryPerformanceCounter(a.UInt32(0));
 				return true;
 
+			// Thread management and TLS functions
+			case "CREATETHREAD":
+				returnValue = CreateThread(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+				return true;
+			case "GETCURRENTTHREADID":
+				returnValue = GetCurrentThreadId();
+				return true;
+			case "TLSALLOC":
+				returnValue = TlsAlloc();
+				return true;
+			case "TLSGETVALUE":
+				returnValue = TlsGetValue(a.UInt32(0));
+				return true;
+			case "TLSSETVALUE":
+				returnValue = TlsSetValue(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "TLSFREE":
+				returnValue = TlsFree(a.UInt32(0));
+				return true;
+
 			default:
 				_logger.LogInformation($"[Kernel32] Unimplemented export: {export}");
 				return false;
@@ -1146,7 +1166,43 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint WriteFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToWrite, uint lpNumberOfBytesWritten,
 		uint lpOverlapped)
 	{
-		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
+		var handle = (uint)hFile;
+		
+		// Handle standard handles specially
+		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle || handle == _env.StdInputHandle)
+		{
+			try
+			{
+				var buf = _env.MemReadBytes(lpBuffer, (int)nNumberOfBytesToWrite);
+				var text = Encoding.ASCII.GetString(buf);
+				
+				if (handle == _env.StdOutputHandle)
+				{
+					_env.WriteToStdOutput(text);
+				}
+				else if (handle == _env.StdErrorHandle)
+				{
+					_env.WriteToStdError(text);
+				}
+				// StdInputHandle is not writable, but we'll just succeed silently
+				
+				if (lpNumberOfBytesWritten != 0)
+				{
+					_env.MemWrite32(lpNumberOfBytesWritten, (uint)buf.Length);
+				}
+				
+				return 1;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogInformation($"[Kernel32] WriteFile to standard handle failed: {ex.Message}");
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+		}
+		
+		// Handle regular file handles
+		if (!_env.TryGetHandle<FileStream>(handle, out var fs) || fs is null)
 		{
 			return 0;
 		}
@@ -1187,7 +1243,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(13)]
 	private unsafe uint GetFileType(void* hFile)
 	{
-		if (_env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
+		var handle = (uint)hFile;
+		
+		// Standard handles are character devices (console)
+		if (handle == _env.StdInputHandle || handle == _env.StdOutputHandle || handle == _env.StdErrorHandle)
+		{
+			return 0x0002; // FILE_TYPE_CHAR (character device like console)
+		}
+		
+		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
 		{
 			return 0x0001; // FILE_TYPE_DISK
 		}
@@ -1215,7 +1279,16 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(4)]
 	private unsafe uint FlushFileBuffers(void* hFile)
 	{
-		if (_env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
+		var handle = (uint)hFile;
+		
+		// Standard output/error handles don't need flushing in our implementation
+		// since WriteToStdOutput already calls the host callback immediately
+		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle)
+		{
+			return 1; // Success
+		}
+		
+		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
 		{
 			fs.Flush(true);
 			return 1;
@@ -1792,6 +1865,62 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// RtlUnwind doesn't return a value in the traditional sense - it either succeeds
 		// or raises an exception. We'll return 0 to indicate success.
 		return 0;
+	}
+
+	// Thread management and TLS functions
+	private unsafe uint CreateThread(uint lpThreadAttributes, uint dwStackSize, uint lpStartAddress, 
+		uint lpParameter, uint dwCreationFlags, uint lpThreadId)
+	{
+		_logger.LogInformation($"[Kernel32] CreateThread(attr=0x{lpThreadAttributes:X8}, stack=0x{dwStackSize:X8}, " +
+			$"start=0x{lpStartAddress:X8}, param=0x{lpParameter:X8}, flags=0x{dwCreationFlags:X8}, outId=0x{lpThreadId:X8})");
+
+		// For now, we do simple thread emulation - we don't actually create threads
+		// Just allocate a thread ID and return a handle
+		var threadId = _env.CreateThread();
+		
+		// If lpThreadId is not null, write the thread ID to it
+		if (lpThreadId != 0)
+		{
+			_env.MemWrite32(lpThreadId, threadId);
+		}
+		
+		// Return a pseudo thread handle (just use the thread ID as the handle)
+		return threadId;
+	}
+
+	private unsafe uint GetCurrentThreadId()
+	{
+		var threadId = _env.GetCurrentThreadId();
+		_logger.LogInformation($"[Kernel32] GetCurrentThreadId() = {threadId}");
+		return threadId;
+	}
+
+	private unsafe uint TlsAlloc()
+	{
+		var index = _env.TlsAlloc();
+		_logger.LogInformation($"[Kernel32] TlsAlloc() = {index}");
+		return index;
+	}
+
+	private unsafe uint TlsGetValue(uint dwTlsIndex)
+	{
+		var value = _env.TlsGetValue(dwTlsIndex);
+		_logger.LogInformation($"[Kernel32] TlsGetValue({dwTlsIndex}) = 0x{value:X8}");
+		return value;
+	}
+
+	private unsafe uint TlsSetValue(uint dwTlsIndex, uint lpTlsValue)
+	{
+		var success = _env.TlsSetValue(dwTlsIndex, lpTlsValue);
+		_logger.LogInformation($"[Kernel32] TlsSetValue({dwTlsIndex}, 0x{lpTlsValue:X8}) = {success}");
+		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+	}
+
+	private unsafe uint TlsFree(uint dwTlsIndex)
+	{
+		var success = _env.TlsFree(dwTlsIndex);
+		_logger.LogInformation($"[Kernel32] TlsFree({dwTlsIndex}) = {success}");
+		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
 	}
 
 	public Dictionary<string, uint> GetExportOrdinals()

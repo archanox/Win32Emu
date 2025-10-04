@@ -124,6 +124,94 @@ public class FileIoTests : IDisposable
 
     #endregion
 
+    #region WriteFile Tests
+
+    [Fact]
+    public void WriteFile_ToStdOutput_ShouldSucceed()
+    {
+	    // Arrange
+	    const uint stdOutputHandle = 0x00000002u; // Default stdout handle
+	    const string testMessage = "Hello, World!\n";
+	    var messagePtr = _testEnv.WriteString(testMessage);
+	    var bytesWrittenPtr = _testEnv.AllocateMemory(4); // Allocate space for bytes written
+
+	    // Act
+	    var result = _testEnv.CallKernel32Api("WRITEFILE", stdOutputHandle, messagePtr, 
+		    (uint)testMessage.Length, bytesWrittenPtr, 0);
+
+	    // Assert
+	    Assert.Equal(1u, result); // WriteFile returns 1 on success
+        
+	    // Verify bytes written
+	    var bytesWritten = _testEnv.Memory.Read32(bytesWrittenPtr);
+	    Assert.Equal((uint)testMessage.Length, bytesWritten);
+    }
+    
+    [Fact]
+    public void WriteFile_ToStdError_ShouldSucceed()
+    {
+	    // Arrange
+	    const uint stdErrorHandle = 0x00000003u; // Default stderr handle
+	    const string testMessage = "Error message\n";
+	    var messagePtr = _testEnv.WriteString(testMessage);
+	    var bytesWrittenPtr = _testEnv.AllocateMemory(4); // Allocate space for bytes written
+
+	    // Act
+	    var result = _testEnv.CallKernel32Api("WRITEFILE", stdErrorHandle, messagePtr, 
+		    (uint)testMessage.Length, bytesWrittenPtr, 0);
+
+	    // Assert
+	    Assert.Equal(1u, result); // WriteFile returns 1 on success
+        
+	    // Verify bytes written
+	    var bytesWritten = _testEnv.Memory.Read32(bytesWrittenPtr);
+	    Assert.Equal((uint)testMessage.Length, bytesWritten);
+    }
+    
+    [Fact]
+    public void WriteFile_WithStdOutputHandle_ShouldReturnOne()
+    {
+	    // Arrange
+	    const uint stdOutputHandle = 0xFFFFFFF5; // STD_OUTPUT_HANDLE
+	    var handle = _testEnv.CallKernel32Api("GETSTDHANDLE", stdOutputHandle);
+	    var buffer = _testEnv.WriteString("hello\n");
+	    const uint bytesToWrite = 6; // Length of "hello\n"
+	    var bytesWrittenPtr = _testEnv.AllocateMemory(4);
+
+	    // Act
+	    var result = _testEnv.CallKernel32Api("WRITEFILE", handle, buffer, bytesToWrite, bytesWrittenPtr, 0);
+
+	    // Assert
+	    Assert.Equal(1u, result); // WriteFile returns 1 on success
+        
+	    // Verify bytes written was set correctly
+	    var bytesWritten = _testEnv.Memory.Read32(bytesWrittenPtr);
+	    Assert.Equal(bytesToWrite, bytesWritten);
+    }
+
+    [Fact]
+    public void WriteFile_WithStdErrorHandle_ShouldReturnOne()
+    {
+	    // Arrange
+	    const uint stdErrorHandle = 0xFFFFFFF4; // STD_ERROR_HANDLE
+	    var handle = _testEnv.CallKernel32Api("GETSTDHANDLE", stdErrorHandle);
+	    var buffer = _testEnv.WriteString("error\n");
+	    const uint bytesToWrite = 6; // Length of "error\n"
+	    var bytesWrittenPtr = _testEnv.AllocateMemory(4);
+
+	    // Act
+	    var result = _testEnv.CallKernel32Api("WRITEFILE", handle, buffer, bytesToWrite, bytesWrittenPtr, 0);
+
+	    // Assert
+	    Assert.Equal(1u, result); // WriteFile returns 1 on success
+        
+	    // Verify bytes written was set correctly
+	    var bytesWritten = _testEnv.Memory.Read32(bytesWrittenPtr);
+	    Assert.Equal(bytesToWrite, bytesWritten);
+    }
+
+    #endregion
+    
     #region CloseHandle Tests
 
     [Fact] 
