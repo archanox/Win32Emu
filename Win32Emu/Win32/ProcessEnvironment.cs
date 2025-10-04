@@ -55,6 +55,7 @@ public class ProcessEnvironment
 	// Window management
 	private readonly Dictionary<uint, WindowInfo> _windows = new();
 	private readonly Dictionary<string, WindowClassInfo> _windowClasses = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<uint, string> _atomToClassName = new(); // Maps atoms to class names
 	private uint _nextWindowHandle = 0x00010000; // Window handles typically start low
 
 	// Message queue management
@@ -510,6 +511,16 @@ public class ProcessEnvironment
 	public WindowClassInfo? GetWindowClass(string className)
 	{
 		return _windowClasses.TryGetValue(className, out var classInfo) ? classInfo : null;
+	}
+
+	public void RegisterAtom(uint atom, string className)
+	{
+		_atomToClassName[atom] = className;
+	}
+
+	public string? GetClassNameFromAtom(uint atom)
+	{
+		return _atomToClassName.TryGetValue(atom, out var className) ? className : null;
 	}
 
 	public uint CreateWindow(string className, string windowName, uint style, uint exStyle,

@@ -113,6 +113,10 @@ public class IcedCpu : ICpu
 				case Mnemonic.Rcr: ExecRotate(insn, RotateKind.Rcr); break;
 				case Mnemonic.Not: ExecNot(insn); break;
 				case Mnemonic.Neg: ExecNeg(insn); break;
+				case Mnemonic.Mul: ExecMul(insn); break;
+				case Mnemonic.Imul: ExecImul(insn); break;
+				case Mnemonic.Div: ExecDiv(insn); break;
+				case Mnemonic.Idiv: ExecIdiv(insn); break;
 				case Mnemonic.Bswap: ExecBswap(insn); break;
 				case Mnemonic.Xchg: ExecXchg(insn); break;
 				case Mnemonic.Cmpxchg: ExecCmpxchg(insn); break;
@@ -214,6 +218,8 @@ public class IcedCpu : ICpu
 				case Mnemonic.Std: SetFlag(Df); break;
 				case Mnemonic.Clc: ClearFlag(Cf); break;
 				case Mnemonic.Stc: SetFlag(Cf); break;
+				case Mnemonic.Cli: ClearFlag(If); break;
+				case Mnemonic.Sti: SetFlag(If); break;
 				case Mnemonic.Cmc: SetFlagVal(Cf, !GetFlag(Cf)); break;
 				case Mnemonic.Pushfd:
 					_esp -= 4;
