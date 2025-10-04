@@ -2,10 +2,12 @@ using System.Collections.ObjectModel;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Services;
 using Win32Emu.Gui.Views;
+using Win32Emu.Loader;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -87,6 +89,13 @@ public partial class GameLibraryViewModel : ViewModelBase
             var fileName = file.Name;
             var filePath = file.Path.LocalPath;
 
+            // Validate that the file is a valid PE32 executable
+            if (!PeImageLoader.IsPE32(filePath))
+            {
+                Console.WriteLine($"Skipping non-PE32 executable: {filePath}");
+                continue;
+            }
+
             Games.Add(new Game
             {
                 Title = Path.GetFileNameWithoutExtension(fileName),
@@ -143,6 +152,13 @@ public partial class GameLibraryViewModel : ViewModelBase
                 
                 foreach (var exeFile in exeFiles)
                 {
+                    // Validate that the file is a valid PE32 executable
+                    if (!PeImageLoader.IsPE32(exeFile))
+                    {
+                        Console.WriteLine($"Skipping non-PE32 executable: {exeFile}");
+                        continue;
+                    }
+
                     // Check if game already exists
                     if (!Games.Any(g => g.ExecutablePath.Equals(exeFile, StringComparison.OrdinalIgnoreCase)))
                     {
@@ -192,8 +208,19 @@ public partial class GameLibraryViewModel : ViewModelBase
             // Show the emulator window
             emulatorWindow.Show();
             
+            // Create logger factory with console and Avalonia providers
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                    .AddConsole()
+                    .AddProvider(new AvaloniaLoggerProvider(viewModel))
+                    .SetMinimumLevel(_configuration.EnableDebugMode ? LogLevel.Debug : LogLevel.Information);
+            });
+            
+            var logger = loggerFactory.CreateLogger<Emulator>();
+            
             // Launch the game with the view model as the host
-            var service = new EmulatorService(_configuration, viewModel);
+            var service = new EmulatorService(_configuration, viewModel, logger);
             await service.LaunchGame(game);
         }
         catch (Exception ex)

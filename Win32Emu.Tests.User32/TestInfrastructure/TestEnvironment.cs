@@ -1,4 +1,6 @@
 using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
@@ -26,14 +28,14 @@ public class TestEnvironment : IDisposable
     {
         Memory = new VirtualMemory();
         Cpu = new MockCpu();
-        ProcessEnv = new ProcessEnvironment(Memory);
+        ProcessEnv = new ProcessEnvironment(Memory, logger: NullLogger.Instance);
         PeLoader = new PeImageLoader(Memory);
-        User32 = new User32Module(ProcessEnv, 0x00400000, PeLoader);
-        Gdi32 = new Gdi32Module(ProcessEnv, 0x00400000, PeLoader);
-        DDraw = new DDrawModule(ProcessEnv, 0x00400000, PeLoader);
-        DSound = new DSoundModule(ProcessEnv, 0x00400000, PeLoader);
-        DInput = new DInputModule(ProcessEnv, 0x00400000, PeLoader);
-        WinMm = new WinMmModule(ProcessEnv, 0x00400000, PeLoader);
+        User32 = new User32Module(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+        Gdi32 = new Gdi32Module(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+        DDraw = new DDrawModule(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+        DSound = new DSoundModule(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+        DInput = new DInputModule(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+        WinMm = new WinMmModule(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
 
         // Initialize process environment with test data
         ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);
@@ -43,14 +45,14 @@ public class TestEnvironment : IDisposable
     {
         Memory = new VirtualMemory();
         Cpu = new MockCpu();
-        ProcessEnv = new ProcessEnvironment(Memory, host: host);
+        ProcessEnv = new ProcessEnvironment(Memory, host: host, logger: NullLogger.Instance);
         PeLoader = new PeImageLoader(Memory);
-        User32 = new User32Module(ProcessEnv, 0x00400000, PeLoader);
-        Gdi32 = new Gdi32Module(ProcessEnv, 0x00400000, PeLoader);
-        DDraw = new DDrawModule(ProcessEnv, 0x00400000, PeLoader);
-        DSound = new DSoundModule(ProcessEnv, 0x00400000, PeLoader);
-        DInput = new DInputModule(ProcessEnv, 0x00400000, PeLoader);
-        WinMm = new WinMmModule(ProcessEnv, 0x00400000, PeLoader);
+        User32 = new User32Module(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+        Gdi32 = new Gdi32Module(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+        DDraw = new DDrawModule(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+        DSound = new DSoundModule(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+        DInput = new DInputModule(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+        WinMm = new WinMmModule(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
 
         // Initialize process environment with test data
         ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);

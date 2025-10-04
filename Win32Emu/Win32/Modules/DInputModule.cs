@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
@@ -5,8 +7,21 @@ using Win32Emu.Rendering;
 
 namespace Win32Emu.Win32.Modules
 {
-	public class DInputModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
+	public class DInputModule : IWin32ModuleUnsafe
 	{
+		private readonly ProcessEnvironment _env;
+		private readonly uint _imageBase;
+		private readonly PeImageLoader? _peLoader;
+		private readonly ILogger _logger;
+
+		public DInputModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
+		{
+			_env = env;
+			_imageBase = imageBase;
+			_peLoader = peLoader;
+			_logger = logger ?? NullLogger.Instance;
+		}
+
 		public string Name => "DINPUT.DLL";
 
 		// DirectInput object handles
@@ -32,14 +47,14 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					Console.WriteLine($"[DInput] Unimplemented export: {export}");
+					_logger.LogInformation($"[DInput] Unimplemented export: {export}");
 					return false;
 			}
 		}
 
 		private unsafe uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
-			Console.WriteLine($"[DInput] DirectInputCreateA(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, lplpDirectInput=0x{lplpDirectInput:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+			_logger.LogInformation($"[DInput] DirectInputCreateA(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, lplpDirectInput=0x{lplpDirectInput:X8}, pUnkOuter=0x{pUnkOuter:X8})");
 
 			// Create DirectInput object
 			var dinputHandle = _nextDInputHandle++;
@@ -53,16 +68,16 @@ namespace Win32Emu.Win32.Modules
 			// Write handle back to caller
 			if (lplpDirectInput != 0)
 			{
-				env.MemWrite32(lplpDirectInput, dinputHandle);
+				_env.MemWrite32(lplpDirectInput, dinputHandle);
 			}
 
-			Console.WriteLine($"[DInput] Created DirectInput object: 0x{dinputHandle:X8}");
+			_logger.LogInformation($"[DInput] Created DirectInput object: 0x{dinputHandle:X8}");
 			return 0; // DI_OK
 		}
 
 		private unsafe uint DirectInputCreate(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
-			Console.WriteLine($"[DInput] DirectInputCreate(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, lplpDirectInput=0x{lplpDirectInput:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+			_logger.LogInformation($"[DInput] DirectInputCreate(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, lplpDirectInput=0x{lplpDirectInput:X8}, pUnkOuter=0x{pUnkOuter:X8})");
 
 			// Create DirectInput object
 			var diHandle = _nextDInputHandle++;
@@ -74,15 +89,15 @@ namespace Win32Emu.Win32.Modules
 			_dinputObjects[diHandle] = diObj;
 
 			// Initialize input backend if not already done
-			if (env.InputBackend == null)
+			if (_env.InputBackend == null)
 			{
-				env.InputBackend = new Sdl3InputBackend();
-				env.InputBackend.Initialize();
+				_env.InputBackend = new Sdl3InputBackend();
+				_env.InputBackend.Initialize();
 			}
 
 			if (lplpDirectInput != 0)
 			{
-				env.MemWrite32(lplpDirectInput, diHandle);
+				_env.MemWrite32(lplpDirectInput, diHandle);
 			}
 
 			return 0; // DI_OK
@@ -90,7 +105,7 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint DirectInput8Create(uint hinst, uint dwVersion, uint riidltf, uint lplpDirectInput, uint pUnkOuter)
 		{
-			Console.WriteLine($"[DInput] DirectInput8Create(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, riidltf=0x{riidltf:X8})");
+			_logger.LogInformation($"[DInput] DirectInput8Create(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, riidltf=0x{riidltf:X8})");
 
 			// DirectInput8 is similar to DirectInputCreate but with additional parameters
 			return DirectInputCreate(hinst, dwVersion, lplpDirectInput, pUnkOuter);

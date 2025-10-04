@@ -1,4 +1,6 @@
-﻿namespace Win32Emu
+﻿using Microsoft.Extensions.Logging;
+
+namespace Win32Emu
 {
 	internal class Program
 	{
@@ -15,22 +17,32 @@
 			var debugMode = args.Contains("--debug");
 			var path = args[0];
 
+			// Set up logging
+			using var loggerFactory = LoggerFactory.Create(builder =>
+			{
+				builder
+					.AddConsole()
+					.SetMinimumLevel(debugMode ? LogLevel.Debug : LogLevel.Information);
+			});
+
+			var logger = loggerFactory.CreateLogger<Emulator>();
+
 			try
 			{
-				using var emulator = new Emulator();
+				using var emulator = new Emulator(null, logger);
 				emulator.LoadExecutable(path, debugMode);
 				emulator.Run();
 			}
 			catch (FileNotFoundException ex)
 			{
-				Console.WriteLine($"Error: {ex.Message}");
+				logger.LogError("Error: {Message}", ex.Message);
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Emulator error: {ex.Message}");
+				logger.LogError(ex, "Emulator error: {Message}", ex.Message);
 				if (debugMode)
 				{
-					Console.WriteLine($"Stack trace: {ex.StackTrace}");
+					logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
 				}
 			}
 		}

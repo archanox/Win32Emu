@@ -2,11 +2,24 @@ using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
-
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 namespace Win32Emu.Win32.Modules
 {
-	public class DSoundModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
+	public class DSoundModule : IWin32ModuleUnsafe
 	{
+		private readonly ProcessEnvironment _env;
+		private readonly uint _imageBase;
+		private readonly PeImageLoader? _peLoader;
+		private readonly ILogger _logger;
+
+		public DSoundModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
+		{
+			_env = env;
+			_imageBase = imageBase;
+			_peLoader = peLoader;
+			_logger = logger ?? NullLogger.Instance;
+		}
 		public string Name => "DSOUND.DLL";
 
 		// DirectSound object handles
@@ -29,14 +42,14 @@ namespace Win32Emu.Win32.Modules
 					returnValue = DirectSoundEnumerateA(a.UInt32(0), a.UInt32(1));
 					return true;
 				default:
-					Console.WriteLine($"[DSound] Unimplemented export: {export}");
+					_logger.LogInformation($"[DSound] Unimplemented export: {export}");
 					return false;
 			}
 		}
 
 		private unsafe uint DirectSoundCreate(uint lpGuid, uint lplpDs, uint pUnkOuter)
 		{
-			Console.WriteLine($"[DSound] DirectSoundCreate(lpGuid=0x{lpGuid:X8}, lplpDS=0x{lplpDs:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+			_logger.LogInformation($"[DSound] DirectSoundCreate(lpGuid=0x{lpGuid:X8}, lplpDS=0x{lplpDs:X8}, pUnkOuter=0x{pUnkOuter:X8})");
 
 			// Create DirectSound object
 			var dsHandle = _nextDSoundHandle++;
@@ -47,15 +60,15 @@ namespace Win32Emu.Win32.Modules
 			_dsoundObjects[dsHandle] = dsObj;
 
 			// Initialize audio backend if not already done
-			if (env.AudioBackend == null)
+			if (_env.AudioBackend == null)
 			{
-				env.AudioBackend = new Sdl3AudioBackend();
-				env.AudioBackend.Initialize();
+				_env.AudioBackend = new Sdl3AudioBackend();
+				_env.AudioBackend.Initialize();
 			}
 
 			if (lplpDs != 0)
 			{
-				env.MemWrite32(lplpDs, dsHandle);
+				_env.MemWrite32(lplpDs, dsHandle);
 			}
 
 			return 0; // DS_OK
@@ -63,7 +76,7 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint DirectSoundEnumerateA(uint lpDsEnumCallback, uint lpContext)
 		{
-			Console.WriteLine($"[DSound] DirectSoundEnumerateA(lpDSEnumCallback=0x{lpDsEnumCallback:X8}, lpContext=0x{lpContext:X8})");
+			_logger.LogInformation($"[DSound] DirectSoundEnumerateA(lpDSEnumCallback=0x{lpDsEnumCallback:X8}, lpContext=0x{lpContext:X8})");
 
 			// For now, just report no devices found (return DS_OK)
 			// In a full implementation, we would enumerate audio devices and call the callback

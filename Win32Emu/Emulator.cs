@@ -1,6 +1,9 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Debugging;
+using Win32Emu.Diagnostics;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
@@ -11,6 +14,7 @@ namespace Win32Emu;
 public sealed class Emulator : IDisposable
 {
     private readonly IEmulatorHost? _host;
+    private readonly ILogger _logger;
     private VirtualMemory? _vm;
     private IcedCpu? _cpu;
     private ProcessEnvironment? _env;
@@ -20,11 +24,15 @@ public sealed class Emulator : IDisposable
     private volatile bool _stopRequested;
     private readonly ManualResetEvent _pauseEvent;
 
-    public Emulator(IEmulatorHost? host = null)
+    public Emulator(IEmulatorHost? host = null, ILogger? logger = null)
     {
         _host = host;
+        _logger = logger ?? NullLogger.Instance;
         _stopRequested = false;
         _pauseEvent = new ManualResetEvent(true); // Initially not paused (signaled)
+        
+        // Set the logger for Diagnostics class
+        Diagnostics.Diagnostics.SetLogger(_logger);
     }
 
     /// <summary>
@@ -77,29 +85,29 @@ public sealed class Emulator : IDisposable
         LogDebug($"[Loader] Image base=0x{_image.BaseAddress:X8} EntryPoint=0x{_image.EntryPointAddress:X8} Size=0x{_image.ImageSize:X}");
         LogDebug($"[Loader] Imports mapped: {_image.ImportAddressMap.Count}");
 
-        _env = new ProcessEnvironment(_vm, 0x01000000, _host);
+        _env = new ProcessEnvironment(_vm, 0x01000000, _host, _logger);
         _env.InitializeStrings(path, Array.Empty<string>());
 
-        _cpu = new IcedCpu(_vm);
+        _cpu = new IcedCpu(_vm, _logger);
         _cpu.SetEip(_image.EntryPointAddress);
         _cpu.SetRegister("ESP", 0x00200000);
 
         _dispatcher = new Win32Dispatcher();
 
-        var kernel32Module = new Kernel32Module(_env, _image.BaseAddress, loader);
+        var kernel32Module = new Kernel32Module(_env, _image.BaseAddress, loader, _logger);
         kernel32Module.SetDispatcher(_dispatcher);
         _dispatcher.RegisterModule(kernel32Module);
         // Register KERNELBASE for forwarded exports from KERNEL32
-        _dispatcher.RegisterModule(new KernelBaseModule(_env, _image.BaseAddress, loader));
+        _dispatcher.RegisterModule(new KernelBaseModule(_env, _image.BaseAddress, loader, _logger));
 
-        _dispatcher.RegisterModule(new User32Module(_env, _image.BaseAddress, loader));
-        _dispatcher.RegisterModule(new Gdi32Module(_env, _image.BaseAddress, loader));
-        _dispatcher.RegisterModule(new DDrawModule(_env, _image.BaseAddress, loader));
-        _dispatcher.RegisterModule(new DSoundModule(_env, _image.BaseAddress, loader));
-        _dispatcher.RegisterModule(new DInputModule(_env, _image.BaseAddress, loader));
-        _dispatcher.RegisterModule(new WinMmModule(_env, _image.BaseAddress, loader));
-        _dispatcher.RegisterModule(new Glide2XModule(_env, _image.BaseAddress, loader));
-        _dispatcher.RegisterModule(new DPlayXModule(_env, _image.BaseAddress, loader));
+        _dispatcher.RegisterModule(new User32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Gdi32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new DDrawModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new DSoundModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new DInputModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new WinMmModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Glide2XModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new DPlayXModule(_env, _image.BaseAddress, loader, _logger));
     }
 
     public void Run()
@@ -371,13 +379,10 @@ public sealed class Emulator : IDisposable
 
     private void LogDebug(string message)
     {
+        _logger.LogDebug(message);
         if (_host != null)
         {
             _host.OnDebugOutput(message, DebugLevel.Debug);
-        }
-        else
-        {
-            Console.WriteLine(message);
         }
     }
 

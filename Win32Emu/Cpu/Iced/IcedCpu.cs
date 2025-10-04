@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using Iced.Intel;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Cpu.Iced;
@@ -7,6 +9,7 @@ namespace Win32Emu.Cpu.Iced;
 public class IcedCpu : ICpu
 {
 	private readonly VirtualMemory _mem;
+	private readonly ILogger _logger;
 
 	private uint _eax, _ebx, _ecx, _edx, _esi, _edi, _ebp, _esp, _eip, _eflags;
 
@@ -21,9 +24,10 @@ public class IcedCpu : ICpu
 	private static readonly bool RdtscIsHighResolution = Stopwatch.IsHighResolution;
 	private static readonly long RdtscFrequency = Stopwatch.Frequency;
 
-	public IcedCpu(VirtualMemory mem)
+	public IcedCpu(VirtualMemory mem, ILogger? logger = null)
 	{
 		_mem = mem;
+		_logger = logger ?? NullLogger.Instance;
 		_reader = new SimpleMemoryCodeReader(this);
 		_decoder = Decoder.Create(32, _reader);
 	}
@@ -278,12 +282,12 @@ public class IcedCpu : ICpu
 						else
 						{
 							// Regular INT3 - for now, just print a message and continue
-							Console.WriteLine($"[IcedCpu] INT3 breakpoint at 0x{oldEip:X8}");
+							_logger.LogWarning($"[IcedCpu] INT3 breakpoint at 0x{oldEip:X8}");
 						}
 					}
 					else
 					{
-						Console.WriteLine($"[IcedCpu] Unhandled interrupt INT {insn.Immediate8:X2} at 0x{oldEip:X8}");
+						_logger.LogWarning($"[IcedCpu] Unhandled interrupt INT {insn.Immediate8:X2} at 0x{oldEip:X8}");
 					}
 
 					break;
@@ -294,7 +298,7 @@ public class IcedCpu : ICpu
 						// This is a synthetic import stub - signal this as a call
 						isCall = true;
 						callTarget = oldEip;
-						Console.WriteLine($"[IcedCpu] Handling INT3 import stub at 0x{oldEip:X8}");
+						_logger.LogWarning($"[IcedCpu] Handling INT3 import stub at 0x{oldEip:X8}");
 
 						// Don't actually execute the INT3, just treat it as a call
 						// The main loop will handle the import invocation
@@ -302,7 +306,7 @@ public class IcedCpu : ICpu
 					else
 					{
 						// Regular INT3 - for now, just print a message and continue
-						Console.WriteLine($"[IcedCpu] INT3 breakpoint at 0x{oldEip:X8}");
+						_logger.LogWarning($"[IcedCpu] INT3 breakpoint at 0x{oldEip:X8}");
 					}
 
 					break;
@@ -319,7 +323,7 @@ public class IcedCpu : ICpu
 					}
 					else
 					{
-						Console.WriteLine($"[IcedCpu] Unhandled mnemonic {insn.Mnemonic} at 0x{oldEip:X8}");
+						_logger.LogWarning($"[IcedCpu] Unhandled mnemonic {insn.Mnemonic} at 0x{oldEip:X8}");
 					}
 
 					break;
@@ -407,7 +411,7 @@ public class IcedCpu : ICpu
 		}
 		else
 		{
-			Console.WriteLine("[IcedCpu] POP mem not implemented");
+			_logger.LogWarning("[IcedCpu] POP mem not implemented");
 		}
 	}
 
@@ -1313,7 +1317,7 @@ public class IcedCpu : ICpu
 		{
 			case OpKind.Register: SetReg32(insn.GetOpRegister(index), value); break;
 			case OpKind.Memory: Write32(CalcMemAddress(insn), value); break;
-			default: Console.WriteLine($"[IcedCpu] WriteOp unsupported {insn.GetOpKind(index)}"); break;
+			default: _logger.LogWarning($"[IcedCpu] WriteOp unsupported {insn.GetOpKind(index)}"); break;
 		}
 	}
 

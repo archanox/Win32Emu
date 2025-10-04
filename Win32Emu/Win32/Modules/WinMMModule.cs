@@ -1,12 +1,27 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Win32.Modules
 {
-	public class WinMmModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null) : IWin32ModuleUnsafe
+	public class WinMmModule : IWin32ModuleUnsafe
 	{
+		private readonly ProcessEnvironment _env;
+		private readonly uint _imageBase;
+		private readonly PeImageLoader? _peLoader;
+		private readonly ILogger _logger;
+
+		public WinMmModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
+		{
+			_env = env;
+			_imageBase = imageBase;
+			_peLoader = peLoader;
+			_logger = logger ?? NullLogger.Instance;
+		}
+
 		public string Name => "WINMM.DLL";
 
 		private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
@@ -36,7 +51,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					Console.WriteLine($"[WinMM] Unimplemented export: {export}");
+					_logger.LogInformation($"[WinMM] Unimplemented export: {export}");
 					return false;
 			}
 		}
@@ -50,21 +65,21 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint TimeBeginPeriod(uint uPeriod)
 		{
-			Console.WriteLine($"[WinMM] timeBeginPeriod({uPeriod})");
+			_logger.LogInformation($"[WinMM] timeBeginPeriod({uPeriod})");
 			_timerPeriod = uPeriod;
 			return 0; // TIMERR_NOERROR
 		}
 
 		private unsafe uint TimeEndPeriod(uint uPeriod)
 		{
-			Console.WriteLine($"[WinMM] timeEndPeriod({uPeriod})");
+			_logger.LogInformation($"[WinMM] timeEndPeriod({uPeriod})");
 			_timerPeriod = 0;
 			return 0; // TIMERR_NOERROR
 		}
 
 		private unsafe uint TimeKillEvent(uint uTimerId)
 		{
-			Console.WriteLine($"[WinMM] timeKillEvent({uTimerId})");
+			_logger.LogInformation($"[WinMM] timeKillEvent({uTimerId})");
 			return 0; // TIMERR_NOERROR
 		}
 
