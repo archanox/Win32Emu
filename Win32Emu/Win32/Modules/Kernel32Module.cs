@@ -1146,7 +1146,43 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint WriteFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToWrite, uint lpNumberOfBytesWritten,
 		uint lpOverlapped)
 	{
-		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
+		var handle = (uint)hFile;
+		
+		// Handle standard handles specially
+		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle || handle == _env.StdInputHandle)
+		{
+			try
+			{
+				var buf = _env.MemReadBytes(lpBuffer, (int)nNumberOfBytesToWrite);
+				var text = Encoding.ASCII.GetString(buf);
+				
+				if (handle == _env.StdOutputHandle)
+				{
+					_env.WriteToStdOutput(text);
+				}
+				else if (handle == _env.StdErrorHandle)
+				{
+					_env.WriteToStdError(text);
+				}
+				// StdInputHandle is not writable, but we'll just succeed silently
+				
+				if (lpNumberOfBytesWritten != 0)
+				{
+					_env.MemWrite32(lpNumberOfBytesWritten, (uint)buf.Length);
+				}
+				
+				return 1;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogInformation($"[Kernel32] WriteFile to standard handle failed: {ex.Message}");
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+		}
+		
+		// Handle regular file handles
+		if (!_env.TryGetHandle<FileStream>(handle, out var fs) || fs is null)
 		{
 			return 0;
 		}

@@ -237,6 +237,23 @@ public class ProcessEnvironment
 		return 1;
 	}
 
+	/// <summary>
+	/// Write text to standard output via the host callback
+	/// </summary>
+	public void WriteToStdOutput(string text)
+	{
+		_host?.OnStdOutput(text);
+	}
+
+	/// <summary>
+	/// Write text to standard error via the host callback (currently same as stdout)
+	/// </summary>
+	public void WriteToStdError(string text)
+	{
+		// For now, treat stderr the same as stdout
+		_host?.OnStdOutput(text);
+	}
+
 	public byte[] MemReadBytes(uint addr, int count) => _vm.GetSpan(addr, count);
 	public byte MemRead8(uint addr) => _vm.Read8(addr);
 	public void MemWriteBytes(uint addr, ReadOnlySpan<byte> data)
