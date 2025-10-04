@@ -13,7 +13,7 @@ namespace Win32Emu.Loader;
 public class PeImageLoader(VirtualMemory vm)
 {
 	/// <summary>
-	/// Validates if a file is a valid PE32 executable without fully loading it.
+	/// Validates if a file is a valid PE32 executable by parsing the PE structure (and may map sections into memory).
 	/// </summary>
 	/// <param name="path">Path to the executable file</param>
 	/// <returns>True if the file is a valid PE32 executable, false otherwise</returns>
