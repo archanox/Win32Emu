@@ -238,11 +238,47 @@ public Dictionary<string, uint> GetExportOrdinals()
 }
 ```
 
+## Implemented Features
+
+The following features have been fully implemented:
+
+### Auto-Generated GetExportOrdinals()
+
+All modules now auto-generate their `GetExportOrdinals()` implementation from `[DllModuleExport]` attributes:
+
+```csharp
+public Dictionary<string, uint> GetExportOrdinals()
+{
+    // Auto-generated from [DllModuleExport] attributes
+    return DllModuleExportInfo.GetAllExports("KERNEL32.DLL");
+}
+```
+
+**Benefits:**
+- No manual synchronization between attributes and ordinals dictionary
+- Single source of truth for export metadata
+- Automatically stays in sync with attribute changes
+
+### Enhanced GetProcAddress Integration
+
+The `GetProcAddress` implementation in `Kernel32Module` now uses `DllModuleExportInfo` for export validation:
+
+```csharp
+// Check if export is implemented using DllModuleExportInfo
+if (DllModuleExportInfo.IsExportImplemented(moduleName, procName))
+{
+    exportName = procName;
+}
+```
+
+**Benefits:**
+- Fast compile-time generated lookups (no reflection)
+- Consistent with other export metadata queries
+- Better error reporting for missing exports
+
 ## Future Enhancements
 
 Potential future improvements:
-- Auto-generate `GetExportOrdinals()` from attributes
-- Support for forwarded exports
 - Automatic version detection based on emulated Windows version
 - Export by name vs. ordinal distinction
-- Better integration with `GetProcAddress` implementation
+- Support for forwarded exports (e.g., KERNEL32 -> KERNELBASE forwarding)

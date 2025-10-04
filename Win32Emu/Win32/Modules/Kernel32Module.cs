@@ -676,13 +676,14 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 			return 0;
 		}
 
-		// Get the export ordinals for this emulated module
-		var exportOrdinals = emulatedModule.GetExportOrdinals();
-
-		// Look up the export by name or ordinal
+		// Use DllModuleExportInfo to check if the export exists before looking up
 		string? exportName = null;
+		
 		if (byOrdinal)
 		{
+			// Get export ordinals for this emulated module
+			var exportOrdinals = emulatedModule.GetExportOrdinals();
+			
 			// Find export by ordinal
 			var exportEntry = exportOrdinals.FirstOrDefault(kvp => kvp.Value == ordinal);
 			if (exportEntry.Key != null)
@@ -692,8 +693,8 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 		}
 		else if (procName != null)
 		{
-			// Look up by name
-			if (exportOrdinals.ContainsKey(procName))
+			// Check if export is implemented using DllModuleExportInfo
+			if (DllModuleExportInfo.IsExportImplemented(moduleName, procName))
 			{
 				exportName = procName;
 			}
@@ -1690,58 +1691,7 @@ public class Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoade
 
 	public Dictionary<string, uint> GetExportOrdinals()
 	{
-		// Export ordinals for Kernel32 - alphabetically ordered
-		var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-		{
-			{ "CLOSEHANDLE", 1 },
-			{ "CREATEFILEA", 2 },
-			{ "EXITPROCESS", 3 },
-			{ "FLUSHFILEBUFFERS", 4 },
-			{ "FREEENVIRONMENTSTRINGSA", 5 },
-			{ "FREEENVIRONMENTSTRINGSW", 6 },
-			{ "GETACP", 7 },
-			{ "GETCOMMANDLINEA", 8 },
-			{ "GETCPINFO", 9 },
-			{ "GETCURRENTPROCESS", 10 },
-			{ "GETENVIRONMENTSTRINGSA", 11 },
-			{ "GETENVIRONMENTSTRINGSW", 12 },
-			{ "GETFILETYPE", 13 },
-			{ "GETLASTERROR", 14 },
-			{ "GETMODULEFILENAMEA", 15 },
-			{ "GETMODULEHANDLEA", 16 },
-			{ "GETOEMCP", 17 },
-			{ "GETPROCADDRESS", 18 },
-			{ "GETSTARTUPINFOA", 19 },
-			{ "GETSTDHANDLE", 20 },
-			{ "GETSTRINGTYPEA", 21 },
-			{ "GETSTRINGTYPEW", 22 },
-			{ "GETVERSION", 23 },
-			{ "GLOBALALLOC", 24 },
-			{ "GLOBALFREE", 25 },
-			{ "HEAPALLOC", 26 },
-			{ "HEAPCREATE", 27 },
-			{ "HEAPDESTROY", 28 },
-			{ "HEAPFREE", 29 },
-			{ "LCMAPSTRINGA", 30 },
-			{ "LCMAPSTRINGW", 31 },
-			{ "LOADLIBRARYA", 32 },
-			{ "MULTIBYTETOWIDECHAR", 33 },
-			{ "QUERYPERFORMANCECOUNTER", 34 },
-			{ "RAISEEXCEPTION", 35 },
-			{ "READFILE", 36 },
-			{ "RTLUNWIND", 37 },
-			{ "SETENDOFFILE", 38 },
-			{ "SETFILEPOINTER", 39 },
-			{ "SETHANDLECOUNT", 40 },
-			{ "SETLASTERROR", 41 },
-			{ "SETSTDHANDLE", 42 },
-			{ "TERMINATEPROCESS", 43 },
-			{ "UNHANDLEDEXCEPTIONFILTER", 44 },
-			{ "VIRTUALALLOC", 45 },
-			{ "VIRTUALFREE", 46 },
-			{ "WIDECHARTOMULTIBYTE", 47 },
-			{ "WRITEFILE", 48 }
-		};
-		return exports;
+		// Auto-generated from [DllModuleExport] attributes
+		return DllModuleExportInfo.GetAllExports("KERNEL32.DLL");
 	}
 }

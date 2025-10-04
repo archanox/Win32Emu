@@ -45,23 +45,8 @@ namespace Win32Emu.Win32.Modules
 
 		public Dictionary<string, uint> GetExportOrdinals()
 		{
-			// Export ordinals for DPlayX
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "DirectPlayCreate", 1 },
-				{ "DirectPlayEnumerateA", 2 },
-				{ "DirectPlayEnumerateW", 3 },
-				{ "DirectPlayLobbyCreateA", 4 },
-				{ "DirectPlayLobbyCreateW", 5 },
-				{ "DllCanUnloadNow", 6 },
-				{ "DllGetClassObject", 7 },
-				{ "DllRegisterServer", 8 },
-				{ "DirectPlayEnumerate", 9 },
-				{ "DllUnregisterServer", 10 },
-				{ "gdwDPlaySPRefCount", 11 }
-			};
-			
-			return exports;
+			// Auto-generated from [DllModuleExport] attributes
+			return DllModuleExportInfo.GetAllExports("DPLAYX.DLL");
 		}
 	}
 }
