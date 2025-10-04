@@ -14,23 +14,25 @@ Split the single `config.json` into two separate files:
 
 Added support for per-game emulator settings that override the global defaults.
 
-Uses Microsoft.Extensions.Configuration for loading configuration with configuration binding, and System.Text.Json for saving and complex nested structures.
+Uses Microsoft.Extensions.Configuration for loading configuration with pure configuration binding (no hybrid approach).
 
 ## Key Changes
 
-### 1. Using Microsoft.Extensions.Configuration
+### 1. Using Microsoft.Extensions.Configuration with SHA256 Hashing
 - Uses Microsoft.Extensions.Configuration for loading configuration files
-- Leverages configuration binding with source generation support
-- Hybrid approach: Configuration binding for simple properties, System.Text.Json for complex dictionaries
+- Leverages configuration binding with `Get<T>()` for all properties (source generation support)
+- SHA256 hashing of executable paths to avoid `:` path delimiter conflicts
+- `GamePathMapping` dictionary maintains hash-to-path reference
+- Pure configuration binding approach - no hybrid System.Text.Json usage for loading
 - System.Text.Json for saving configuration (two-way serialization)
 
 ### 2. Files Created
-- `Configuration/EmulatorSettings.cs` - POCO class for emulator settings
+- `Configuration/EmulatorSettings.cs` - POCO class for emulator settings with SHA256-based per-game settings
 - `Configuration/GameLibrary.cs` - POCO class for game library
 - `Models/GameSettings.cs` - Model for per-game settings overrides
 
 ### 3. Modified Files
-- `Configuration/ConfigurationService.cs` - Simplified to use System.Text.Json directly
+- `Configuration/ConfigurationService.cs` - Updated to use SHA256 hashing and pure configuration binding
 - `CONFIGURATION.md` - Updated documentation
 - `Win32Emu.Gui.csproj` - Updated package references
 
@@ -70,13 +72,18 @@ Games can have custom emulator settings that override the global defaults:
   "WindowsVersion": "Windows 95",
   "EnableDebugMode": false,
   "PerGameSettings": {
-    "C:\\Games\\game1.exe": {
+    "1a67ffbc5ebaf4417fb6b2c135a8c64e77904a4fc5d24291f434c34e3f6b91c2": {
       "RenderingBackend": "DirectDraw",
       "ResolutionScaleFactor": 2
     }
+  },
+  "GamePathMapping": {
+    "1a67ffbc5ebaf4417fb6b2c135a8c64e77904a4fc5d24291f434c34e3f6b91c2": "C:\\Games\\game1.exe"
   }
 }
 ```
+
+Note: Keys are SHA256 hashes of executable paths to avoid conflicts with configuration path delimiters.
 
 ### library.json
 ```json

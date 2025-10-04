@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Win32Emu.Gui.Models;
 
@@ -35,6 +37,15 @@ public class ConfigurationService
         _library = LoadLibrary();
     }
 
+    /// <summary>
+    /// Compute SHA256 hash of the executable path
+    /// </summary>
+    private static string ComputePathHash(string executablePath)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(executablePath));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
     private EmulatorSettings LoadSettings()
     {
         if (!File.Exists(_settingsFilePath))
@@ -50,22 +61,9 @@ public class ConfigurationService
                 .AddJsonFile("settings.json", optional: true, reloadOnChange: false)
                 .Build();
 
-            // Create new settings and bind simple properties using Configuration
-            var settings = new EmulatorSettings();
-            configuration.Bind(settings);
-            
-            // For PerGameSettings dictionary, we need to use System.Text.Json
-            // because Configuration uses ':' as delimiter which conflicts with paths like "C:\Games\test.exe"
-            var json = File.ReadAllText(_settingsFilePath);
-            var doc = JsonDocument.Parse(json);
-            
-            if (doc.RootElement.TryGetProperty("PerGameSettings", out var perGameElement))
-            {
-                settings.PerGameSettings = JsonSerializer.Deserialize<Dictionary<string, GameSettings>>(perGameElement.GetRawText()) 
-                    ?? new Dictionary<string, GameSettings>();
-            }
-
-            return settings;
+            // Use Get<T>() to leverage source generation
+            var settings = configuration.Get<EmulatorSettings>();
+            return settings ?? new EmulatorSettings();
         }
         catch
         {
@@ -131,8 +129,9 @@ public class ConfigurationService
     public EmulatorConfiguration GetEmulatorConfiguration(string gameExecutablePath)
     {
         var config = GetEmulatorConfiguration();
+        var hash = ComputePathHash(gameExecutablePath);
 
-        if (_settings.PerGameSettings.TryGetValue(gameExecutablePath, out var gameSettings))
+        if (_settings.PerGameSettings.TryGetValue(hash, out var gameSettings))
         {
             // Apply per-game overrides
             if (gameSettings.RenderingBackend != null)
@@ -168,7 +167,9 @@ public class ConfigurationService
     /// </summary>
     public void SaveGameSettings(string gameExecutablePath, GameSettings gameSettings)
     {
-        _settings.PerGameSettings[gameExecutablePath] = gameSettings;
+        var hash = ComputePathHash(gameExecutablePath);
+        _settings.PerGameSettings[hash] = gameSettings;
+        _settings.GamePathMapping[hash] = gameExecutablePath;
         SaveSettings();
     }
 
@@ -177,7 +178,8 @@ public class ConfigurationService
     /// </summary>
     public GameSettings? GetGameSettings(string gameExecutablePath)
     {
-        return _settings.PerGameSettings.TryGetValue(gameExecutablePath, out var settings) ? settings : null;
+        var hash = ComputePathHash(gameExecutablePath);
+        return _settings.PerGameSettings.TryGetValue(hash, out var settings) ? settings : null;
     }
 
     /// <summary>
@@ -185,8 +187,10 @@ public class ConfigurationService
     /// </summary>
     public void RemoveGameSettings(string gameExecutablePath)
     {
-        if (_settings.PerGameSettings.Remove(gameExecutablePath))
+        var hash = ComputePathHash(gameExecutablePath);
+        if (_settings.PerGameSettings.Remove(hash))
         {
+            _settings.GamePathMapping.Remove(hash);
             SaveSettings();
         }
     }
