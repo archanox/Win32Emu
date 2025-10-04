@@ -59,13 +59,19 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 								// Look for arrow expression body: => "VALUE"
 								if (syntax.ToString().Contains("=>"))
 								{
-									var match = System.Text.RegularExpressions.Regex.Match(
-										syntax.ToString(), 
-										@"=>\s*""([^""]+)"""
-									);
-									if (match.Success)
+									var syntaxText = syntax.ToString();
+									var arrowIndex = syntaxText.IndexOf("=>");
+									if (arrowIndex >= 0)
 									{
-										dllName = match.Groups[1].Value;
+										var firstQuote = syntaxText.IndexOf('"', arrowIndex);
+										if (firstQuote >= 0)
+										{
+											var secondQuote = syntaxText.IndexOf('"', firstQuote + 1);
+											if (secondQuote > firstQuote)
+											{
+												dllName = syntaxText.Substring(firstQuote + 1, secondQuote - firstQuote - 1);
+											}
+										}
 									}
 								}
 							}
