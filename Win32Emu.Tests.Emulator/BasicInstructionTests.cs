@@ -255,6 +255,64 @@ public class BasicInstructionTests : IDisposable
         Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set when first operand is less");
         Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear when values are not equal");
     }
+    
+    
+    [Fact]
+    public void IMUL_EBX_ShouldMultiplySigned()
+    {
+        // Arrange: IMUL EBX (F7 EB)
+        // EDX:EAX = EAX * EBX (signed)
+        _helper.SetReg("EAX", 0x00000005);
+        _helper.SetReg("EBX", 0x00000003);
+        _helper.SetReg("EDX", 0xFFFFFFFF); // Should be updated
+        _helper.WriteCode(0xF7, 0xEB);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(0x0000000Fu, _helper.GetReg("EAX")); // 5 * 3 = 15
+        Assert.Equal(0x00000000u, _helper.GetReg("EDX")); // High 32 bits should be 0
+        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear when result fits");
+    }
+
+    [Fact]
+    public void DIV_EBX_ShouldDivideUnsigned()
+    {
+        // Arrange: DIV EBX (F7 F3)
+        // EAX = EDX:EAX / EBX (unsigned)
+        // EDX = EDX:EAX % EBX (remainder)
+        _helper.SetReg("EAX", 0x0000000F); // 15
+        _helper.SetReg("EDX", 0x00000000);
+        _helper.SetReg("EBX", 0x00000003); // divisor = 3
+        _helper.WriteCode(0xF7, 0xF3);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(0x00000005u, _helper.GetReg("EAX")); // 15 / 3 = 5
+        Assert.Equal(0x00000000u, _helper.GetReg("EDX")); // 15 % 3 = 0
+    }
+
+    [Fact]
+    public void DIV_WithRemainder_ShouldSetRemainder()
+    {
+        // Arrange: DIV EBX (F7 F3)
+        _helper.SetReg("EAX", 0x00000010); // 16
+        _helper.SetReg("EDX", 0x00000000);
+        _helper.SetReg("EBX", 0x00000003); // divisor = 3
+        _helper.WriteCode(0xF7, 0xF3);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(0x00000005u, _helper.GetReg("EAX")); // 16 / 3 = 5
+        Assert.Equal(0x00000001u, _helper.GetReg("EDX")); // 16 % 3 = 1
+    }
+
+//TODO: redo IDIV_EBX_ShouldDivideSigned, MUL_WithOverflow_ShouldSetCarryAndOverflowFlags, MUL_WithOverflow_ShouldSetCarryFlag, MUL_EBX_ShouldMultiplyEAXByEBX & MUL_EBX_ShouldMultiplyUnsigned tests
 
     public void Dispose()
     {

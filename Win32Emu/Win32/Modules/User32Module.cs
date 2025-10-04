@@ -174,7 +174,8 @@ namespace Win32Emu.Win32.Modules
 			}
 		}
 
-		private unsafe uint RegisterClassA(uint lpWndClass)
+		[DllModuleExport(20)]
+	private unsafe uint RegisterClassA(uint lpWndClass)
 		{
 			if (lpWndClass == 0)
 			{
@@ -238,6 +239,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
+	[DllModuleExport(3)]
 		private unsafe uint CreateWindowExA(
 			uint dwExStyle,
 			sbyte* lpClassName,
@@ -310,7 +312,8 @@ namespace Win32Emu.Win32.Modules
 			return hwnd;
 		}
 
-		private unsafe uint ShowWindow(uint hwnd, int nCmdShow)
+		[DllModuleExport(28)]
+	private unsafe uint ShowWindow(uint hwnd, int nCmdShow)
 		{
 			// SW_HIDE = 0, SW_NORMAL = 1, SW_SHOWMINIMIZED = 2, SW_SHOWMAXIMIZED = 3, etc.
 			_logger.LogInformation($"[User32] ShowWindow: HWND=0x{hwnd:X8} nCmdShow={nCmdShow}");
@@ -320,7 +323,8 @@ namespace Win32Emu.Win32.Modules
 			return 1;
 		}
 
-		private unsafe uint GetMessageA(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax)
+		[DllModuleExport(10)]
+	private unsafe uint GetMessageA(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax)
 		{
 			// MSG structure layout (28 bytes):
 			// HWND   hwnd;      // 0
@@ -370,7 +374,8 @@ namespace Win32Emu.Win32.Modules
 			return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 		}
 
-		private unsafe uint TranslateMessage(uint lpMsg)
+		[DllModuleExport(30)]
+	private unsafe uint TranslateMessage(uint lpMsg)
 		{
 			// TranslateMessage translates virtual-key messages into character messages
 			// For now, just log and return FALSE (no translation occurred)
@@ -378,7 +383,8 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		private unsafe uint DispatchMessageA(uint lpMsg)
+		[DllModuleExport(6)]
+	private unsafe uint DispatchMessageA(uint lpMsg)
 		{
 			if (lpMsg == 0)
 			{
@@ -408,6 +414,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
+	[DllModuleExport(19)]
 		private unsafe void PostQuitMessage(int nExitCode)
 		{
 			_logger.LogInformation($"[User32] PostQuitMessage: exitCode={nExitCode}");
@@ -575,6 +582,7 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
+		[DllModuleExport(11)]
 		private unsafe int GetSystemMetrics(int nIndex)
 		{
 			_logger.LogInformation($"[User32] GetSystemMetrics: nIndex={nIndex}");
