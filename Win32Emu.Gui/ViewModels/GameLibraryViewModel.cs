@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Services;
@@ -207,8 +208,19 @@ public partial class GameLibraryViewModel : ViewModelBase
             // Show the emulator window
             emulatorWindow.Show();
             
+            // Create logger factory with console and Avalonia providers
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                    .AddConsole()
+                    .AddProvider(new AvaloniaLoggerProvider(viewModel))
+                    .SetMinimumLevel(_configuration.EnableDebugMode ? LogLevel.Debug : LogLevel.Information);
+            });
+            
+            var logger = loggerFactory.CreateLogger<Emulator>();
+            
             // Launch the game with the view model as the host
-            var service = new EmulatorService(_configuration, viewModel);
+            var service = new EmulatorService(_configuration, viewModel, logger);
             await service.LaunchGame(game);
         }
         catch (Exception ex)
