@@ -6,6 +6,7 @@ using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Services;
 using Win32Emu.Gui.Views;
+using Win32Emu.Loader;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -87,6 +88,13 @@ public partial class GameLibraryViewModel : ViewModelBase
             var fileName = file.Name;
             var filePath = file.Path.LocalPath;
 
+            // Validate that the file is a valid PE32 executable
+            if (!PeImageLoader.IsPE32(filePath))
+            {
+                Console.WriteLine($"Skipping non-PE32 executable: {filePath}");
+                continue;
+            }
+
             Games.Add(new Game
             {
                 Title = Path.GetFileNameWithoutExtension(fileName),
@@ -143,6 +151,13 @@ public partial class GameLibraryViewModel : ViewModelBase
                 
                 foreach (var exeFile in exeFiles)
                 {
+                    // Validate that the file is a valid PE32 executable
+                    if (!PeImageLoader.IsPE32(exeFile))
+                    {
+                        Console.WriteLine($"Skipping non-PE32 executable: {exeFile}");
+                        continue;
+                    }
+
                     // Check if game already exists
                     if (!Games.Any(g => g.ExecutablePath.Equals(exeFile, StringComparison.OrdinalIgnoreCase)))
                     {
