@@ -24,6 +24,18 @@ public class EmulatorService
     public Emulator? CurrentEmulator => _currentEmulator;
 
     /// <summary>
+    /// Stop the currently running emulator
+    /// </summary>
+    public void StopEmulator()
+    {
+        if (_currentEmulator != null)
+        {
+            _currentEmulator.Stop();
+            _logger.LogInformation("Emulator stop requested");
+        }
+    }
+
+    /// <summary>
     /// Launch game using the in-process emulator API
     /// </summary>
     public async Task LaunchGame(Game game)

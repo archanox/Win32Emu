@@ -41,6 +41,7 @@ public sealed class Emulator : IDisposable
     public void Stop()
     {
         _stopRequested = true;
+        _pauseEvent.Set(); // Signal the pause event to wake up any waiting threads
         LogDebug("[Emulator] Stop requested");
     }
 
