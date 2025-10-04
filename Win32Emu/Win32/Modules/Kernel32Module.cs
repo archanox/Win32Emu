@@ -14,11 +14,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
 
-		public Kernel32Module(ProcessEnvironment env, uint _imageBase, PeImageLoader? _peLoader = null, ILogger? logger = null)
+		public Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
 			_env = env;
-			_imageBase = _imageBase;
-			_peLoader = _peLoader;
+			_imageBase = imageBase;
+			_peLoader = peLoader;
 			_logger = logger ?? NullLogger.Instance;
 		}
 	public string Name => "KERNEL32.DLL";
