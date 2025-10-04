@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Win32Emu GUI uses Config.Net for persistent storage of application settings and game library. Configuration is split into two separate files:
+The Win32Emu GUI uses Microsoft.Extensions.Configuration with System.Text.Json for persistent storage of application settings and game library. Configuration is split into two separate files:
 
 - **Settings file (`settings.json`)**: Portable emulator settings that can be carried across machines/platforms
 - **Library file (`library.json`)**: Machine-specific game library and watched folders
@@ -55,7 +55,7 @@ Example use cases:
 The `ConfigurationService` class manages all configuration persistence:
 - Loads configuration on application startup from split files
 - Automatically saves changes when settings are modified
-- Uses Config.Net with JSON file storage
+- Uses System.Text.Json for JSON serialization
 - Supports migration from legacy `config.json` to split files
 - Provides per-game settings override functionality
 

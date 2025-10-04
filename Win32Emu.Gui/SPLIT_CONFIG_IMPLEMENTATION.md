@@ -14,19 +14,26 @@ Split the single `config.json` into two separate files:
 
 Added support for per-game emulator settings that override the global defaults.
 
+Uses Microsoft.Extensions.Configuration with System.Text.Json for clean, standard JSON serialization.
+
 ## Key Changes
 
-### 1. New Files Created
-- `Configuration/IEmulatorSettings.cs` - Interface for emulator settings
-- `Configuration/IGameLibrary.cs` - Interface for game library
+### 1. Replaced Config.Net with Microsoft.Extensions.Configuration
+- Removed dependency on Config.Net
+- Added Microsoft.Extensions.Configuration packages
+- Replaced interface-based configuration with POCO classes
+- Uses System.Text.Json for serialization
+
+### 2. New Files Created
+- `Configuration/EmulatorSettings.cs` - POCO class for emulator settings
+- `Configuration/GameLibrary.cs` - POCO class for game library
 - `Models/GameSettings.cs` - Model for per-game settings overrides
+- `Configuration/AppConfiguration.cs` - POCO class for legacy migration support
 
-### 2. Modified Files
-- `Configuration/ConfigurationService.cs` - Updated to use split configuration files
+### 3. Modified Files
+- `Configuration/ConfigurationService.cs` - Completely rewritten to use Microsoft.Extensions.Configuration
 - `CONFIGURATION.md` - Updated documentation
-
-### 3. Preserved Files
-- `Configuration/IAppConfiguration.cs` - Kept for legacy migration support
+- `Win32Emu.Gui.csproj` - Updated package references
 
 ## How It Works
 

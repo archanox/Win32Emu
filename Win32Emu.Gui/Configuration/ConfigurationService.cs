@@ -1,4 +1,5 @@
-using Config.Net;
+using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 using Win32Emu.Gui.Models;
 
 namespace Win32Emu.Gui.Configuration;
@@ -8,12 +9,11 @@ namespace Win32Emu.Gui.Configuration;
 /// </summary>
 public class ConfigurationService
 {
-    private readonly IEmulatorSettings _settings;
-    private readonly IGameLibrary _library;
-    private readonly IAppConfiguration _legacyConfig;
     private readonly string _settingsFilePath;
     private readonly string _libraryFilePath;
     private readonly string _legacyConfigFilePath;
+    private EmulatorSettings _settings;
+    private GameLibrary _library;
 
     public ConfigurationService()
     {
@@ -31,22 +31,60 @@ public class ConfigurationService
         _libraryFilePath = Path.Combine(win32EmuDir, "library.json");
         _legacyConfigFilePath = Path.Combine(win32EmuDir, "config.json");
 
-        // Build the new split configuration files
-        _settings = new ConfigurationBuilder<IEmulatorSettings>()
-            .UseJsonFile(_settingsFilePath)
-            .Build();
-
-        _library = new ConfigurationBuilder<IGameLibrary>()
-            .UseJsonFile(_libraryFilePath)
-            .Build();
-
-        // Keep legacy config for migration
-        _legacyConfig = new ConfigurationBuilder<IAppConfiguration>()
-            .UseJsonFile(_legacyConfigFilePath)
-            .Build();
+        // Load configuration
+        _settings = LoadSettings();
+        _library = LoadLibrary();
 
         // Migrate from legacy config if new files don't exist
         MigrateLegacyConfigIfNeeded();
+    }
+
+    private EmulatorSettings LoadSettings()
+    {
+        if (!File.Exists(_settingsFilePath))
+        {
+            return new EmulatorSettings();
+        }
+
+        try
+        {
+            var json = File.ReadAllText(_settingsFilePath);
+            return JsonSerializer.Deserialize<EmulatorSettings>(json) ?? new EmulatorSettings();
+        }
+        catch
+        {
+            return new EmulatorSettings();
+        }
+    }
+
+    private GameLibrary LoadLibrary()
+    {
+        if (!File.Exists(_libraryFilePath))
+        {
+            return new GameLibrary();
+        }
+
+        try
+        {
+            var json = File.ReadAllText(_libraryFilePath);
+            return JsonSerializer.Deserialize<GameLibrary>(json) ?? new GameLibrary();
+        }
+        catch
+        {
+            return new GameLibrary();
+        }
+    }
+
+    private void SaveSettings()
+    {
+        var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(_settingsFilePath, json);
+    }
+
+    private void SaveLibrary()
+    {
+        var json = JsonSerializer.Serialize(_library, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(_libraryFilePath, json);
     }
 
     /// <summary>
@@ -54,7 +92,14 @@ public class ConfigurationService
     /// </summary>
     public EmulatorConfiguration GetEmulatorConfiguration()
     {
-        return MapToEmulatorConfiguration(_settings);
+        return new EmulatorConfiguration
+        {
+            RenderingBackend = _settings.RenderingBackend,
+            ResolutionScaleFactor = _settings.ResolutionScaleFactor,
+            ReservedMemoryMb = _settings.ReservedMemoryMB,
+            WindowsVersion = _settings.WindowsVersion,
+            EnableDebugMode = _settings.EnableDebugMode
+        };
     }
 
     /// <summary>
@@ -63,9 +108,8 @@ public class ConfigurationService
     public EmulatorConfiguration GetEmulatorConfiguration(string gameExecutablePath)
     {
         var config = GetEmulatorConfiguration();
-        var perGameSettings = GetPerGameSettings();
 
-        if (perGameSettings.TryGetValue(gameExecutablePath, out var gameSettings))
+        if (_settings.PerGameSettings.TryGetValue(gameExecutablePath, out var gameSettings))
         {
             // Apply per-game overrides
             if (gameSettings.RenderingBackend != null)
@@ -88,7 +132,12 @@ public class ConfigurationService
     /// </summary>
     public void SaveEmulatorConfiguration(EmulatorConfiguration configuration)
     {
-        ApplyEmulatorConfiguration(_settings, configuration);
+        _settings.RenderingBackend = configuration.RenderingBackend;
+        _settings.ResolutionScaleFactor = configuration.ResolutionScaleFactor;
+        _settings.ReservedMemoryMB = configuration.ReservedMemoryMb;
+        _settings.WindowsVersion = configuration.WindowsVersion;
+        _settings.EnableDebugMode = configuration.EnableDebugMode;
+        SaveSettings();
     }
 
     /// <summary>
@@ -96,9 +145,8 @@ public class ConfigurationService
     /// </summary>
     public void SaveGameSettings(string gameExecutablePath, GameSettings gameSettings)
     {
-        var perGameSettings = GetPerGameSettings();
-        perGameSettings[gameExecutablePath] = gameSettings;
-        _settings.PerGameSettings = System.Text.Json.JsonSerializer.Serialize(perGameSettings);
+        _settings.PerGameSettings[gameExecutablePath] = gameSettings;
+        SaveSettings();
     }
 
     /// <summary>
@@ -106,8 +154,7 @@ public class ConfigurationService
     /// </summary>
     public GameSettings? GetGameSettings(string gameExecutablePath)
     {
-        var perGameSettings = GetPerGameSettings();
-        return perGameSettings.TryGetValue(gameExecutablePath, out var settings) ? settings : null;
+        return _settings.PerGameSettings.TryGetValue(gameExecutablePath, out var settings) ? settings : null;
     }
 
     /// <summary>
@@ -115,47 +162,10 @@ public class ConfigurationService
     /// </summary>
     public void RemoveGameSettings(string gameExecutablePath)
     {
-        var perGameSettings = GetPerGameSettings();
-        if (perGameSettings.Remove(gameExecutablePath))
+        if (_settings.PerGameSettings.Remove(gameExecutablePath))
         {
-            _settings.PerGameSettings = System.Text.Json.JsonSerializer.Serialize(perGameSettings);
+            SaveSettings();
         }
-    }
-
-    /// <summary>
-    /// Maps IEmulatorSettings to EmulatorConfiguration
-    /// </summary>
-    private EmulatorConfiguration MapToEmulatorConfiguration(IEmulatorSettings settings)
-    {
-        return new EmulatorConfiguration
-        {
-            RenderingBackend = settings.RenderingBackend,
-            ResolutionScaleFactor = settings.ResolutionScaleFactor,
-            ReservedMemoryMb = settings.ReservedMemoryMb,
-            WindowsVersion = settings.WindowsVersion,
-            EnableDebugMode = settings.EnableDebugMode
-        };
-    }
-
-    /// <summary>
-    /// Applies EmulatorConfiguration to IEmulatorSettings
-    /// </summary>
-    private void ApplyEmulatorConfiguration(IEmulatorSettings settings, EmulatorConfiguration emulatorConfig)
-    {
-        settings.RenderingBackend = emulatorConfig.RenderingBackend;
-        settings.ResolutionScaleFactor = emulatorConfig.ResolutionScaleFactor;
-        settings.ReservedMemoryMb = emulatorConfig.ReservedMemoryMb;
-        settings.WindowsVersion = emulatorConfig.WindowsVersion;
-        settings.EnableDebugMode = emulatorConfig.EnableDebugMode;
-    }
-
-    /// <summary>
-    /// Get all per-game settings
-    /// </summary>
-    private Dictionary<string, GameSettings> GetPerGameSettings()
-    {
-        return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, GameSettings>>(_settings.PerGameSettings) 
-            ?? new Dictionary<string, GameSettings>();
     }
 
     /// <summary>
@@ -163,7 +173,7 @@ public class ConfigurationService
     /// </summary>
     public Game[] GetGames()
     {
-        return System.Text.Json.JsonSerializer.Deserialize<Game[]>(_library.Games) ?? [];
+        return _library.Games.ToArray();
     }
 
     /// <summary>
@@ -171,7 +181,8 @@ public class ConfigurationService
     /// </summary>
     public void SaveGames(IEnumerable<Game> games)
     {
-        _library.Games = System.Text.Json.JsonSerializer.Serialize(games);
+        _library.Games = games.ToList();
+        SaveLibrary();
     }
 
     /// <summary>
@@ -179,7 +190,7 @@ public class ConfigurationService
     /// </summary>
     public string[] GetWatchedFolders()
     {
-        return _library.WatchedFolders ?? [];
+        return _library.WatchedFolders.ToArray();
     }
 
     /// <summary>
@@ -187,7 +198,8 @@ public class ConfigurationService
     /// </summary>
     public void SaveWatchedFolders(IEnumerable<string> folders)
     {
-        _library.WatchedFolders = folders.ToArray();
+        _library.WatchedFolders = folders.ToList();
+        SaveLibrary();
     }
 
     /// <summary>
@@ -199,16 +211,33 @@ public class ConfigurationService
         if (File.Exists(_legacyConfigFilePath) && 
             (!File.Exists(_settingsFilePath) || !File.Exists(_libraryFilePath)))
         {
-            // Migrate emulator settings
-            _settings.RenderingBackend = _legacyConfig.RenderingBackend;
-            _settings.ResolutionScaleFactor = _legacyConfig.ResolutionScaleFactor;
-            _settings.ReservedMemoryMb = _legacyConfig.ReservedMemoryMb;
-            _settings.WindowsVersion = _legacyConfig.WindowsVersion;
-            _settings.EnableDebugMode = _legacyConfig.EnableDebugMode;
+            try
+            {
+                var json = File.ReadAllText(_legacyConfigFilePath);
+                var legacyConfig = JsonSerializer.Deserialize<AppConfiguration>(json);
 
-            // Migrate game library
-            _library.Games = _legacyConfig.Games;
-            _library.WatchedFolders = _legacyConfig.WatchedFolders;
+                if (legacyConfig != null)
+                {
+                    // Migrate emulator settings
+                    _settings.RenderingBackend = legacyConfig.RenderingBackend;
+                    _settings.ResolutionScaleFactor = legacyConfig.ResolutionScaleFactor;
+                    _settings.ReservedMemoryMB = legacyConfig.ReservedMemoryMB;
+                    _settings.WindowsVersion = legacyConfig.WindowsVersion;
+                    _settings.EnableDebugMode = legacyConfig.EnableDebugMode;
+
+                    // Migrate game library
+                    _library.Games = legacyConfig.Games;
+                    _library.WatchedFolders = legacyConfig.WatchedFolders;
+
+                    // Save the migrated configuration
+                    SaveSettings();
+                    SaveLibrary();
+                }
+            }
+            catch
+            {
+                // If migration fails, keep the default values
+            }
         }
     }
 
