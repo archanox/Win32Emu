@@ -53,9 +53,10 @@ Example use cases:
 
 ### ConfigurationService
 The `ConfigurationService` class manages all configuration persistence:
-- Loads configuration on application startup from split files
-- Automatically saves changes when settings are modified
-- Uses System.Text.Json for JSON serialization
+- Loads configuration on application startup from split files using Microsoft.Extensions.Configuration
+- Uses configuration binding for simple properties (leveraging source generation where available)
+- Uses System.Text.Json for complex nested dictionaries (like PerGameSettings) due to configuration path delimiter limitations
+- Automatically saves changes when settings are modified using System.Text.Json
 - Provides per-game settings override functionality
 
 ### Split Configuration Files

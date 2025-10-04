@@ -14,15 +14,15 @@ Split the single `config.json` into two separate files:
 
 Added support for per-game emulator settings that override the global defaults.
 
-Uses System.Text.Json for clean, standard JSON serialization with direct file I/O.
+Uses Microsoft.Extensions.Configuration for loading configuration with configuration binding, and System.Text.Json for saving and complex nested structures.
 
 ## Key Changes
 
-### 1. Removed Config.Net and Legacy Migration
-- Removed dependency on Config.Net
-- Removed legacy migration code from config.json
-- Deleted AppConfiguration.cs (no longer needed)
-- Uses System.Text.Json for serialization
+### 1. Using Microsoft.Extensions.Configuration
+- Uses Microsoft.Extensions.Configuration for loading configuration files
+- Leverages configuration binding with source generation support
+- Hybrid approach: Configuration binding for simple properties, System.Text.Json for complex dictionaries
+- System.Text.Json for saving configuration (two-way serialization)
 
 ### 2. Files Created
 - `Configuration/EmulatorSettings.cs` - POCO class for emulator settings

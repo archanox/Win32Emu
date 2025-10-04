@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using Win32Emu.Gui.Models;
 
@@ -10,6 +11,7 @@ public class ConfigurationService
 {
     private readonly string _settingsFilePath;
     private readonly string _libraryFilePath;
+    private readonly string _configDirectory;
     private EmulatorSettings _settings;
     private GameLibrary _library;
 
@@ -17,16 +19,16 @@ public class ConfigurationService
     {
         // Get the application data directory for cross-platform storage
         var appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var win32EmuDir = Path.Combine(appDataDir, "Win32Emu");
+        _configDirectory = Path.Combine(appDataDir, "Win32Emu");
 
         // Ensure the directory exists
-        if (!Directory.Exists(win32EmuDir))
+        if (!Directory.Exists(_configDirectory))
         {
-            Directory.CreateDirectory(win32EmuDir);
+            Directory.CreateDirectory(_configDirectory);
         }
 
-        _settingsFilePath = Path.Combine(win32EmuDir, "settings.json");
-        _libraryFilePath = Path.Combine(win32EmuDir, "library.json");
+        _settingsFilePath = Path.Combine(_configDirectory, "settings.json");
+        _libraryFilePath = Path.Combine(_configDirectory, "library.json");
 
         // Load configuration using Microsoft.Extensions.Configuration
         _settings = LoadSettings();
@@ -42,9 +44,28 @@ public class ConfigurationService
 
         try
         {
-            // Use System.Text.Json directly for better handling of complex types like Dictionary
+            // Build configuration using Microsoft.Extensions.Configuration
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(_configDirectory)
+                .AddJsonFile("settings.json", optional: true, reloadOnChange: false)
+                .Build();
+
+            // Create new settings and bind simple properties using Configuration
+            var settings = new EmulatorSettings();
+            configuration.Bind(settings);
+            
+            // For PerGameSettings dictionary, we need to use System.Text.Json
+            // because Configuration uses ':' as delimiter which conflicts with paths like "C:\Games\test.exe"
             var json = File.ReadAllText(_settingsFilePath);
-            return JsonSerializer.Deserialize<EmulatorSettings>(json) ?? new EmulatorSettings();
+            var doc = JsonDocument.Parse(json);
+            
+            if (doc.RootElement.TryGetProperty("PerGameSettings", out var perGameElement))
+            {
+                settings.PerGameSettings = JsonSerializer.Deserialize<Dictionary<string, GameSettings>>(perGameElement.GetRawText()) 
+                    ?? new Dictionary<string, GameSettings>();
+            }
+
+            return settings;
         }
         catch
         {
@@ -61,9 +82,15 @@ public class ConfigurationService
 
         try
         {
-            // Use System.Text.Json directly for better handling of complex types
-            var json = File.ReadAllText(_libraryFilePath);
-            return JsonSerializer.Deserialize<GameLibrary>(json) ?? new GameLibrary();
+            // Build configuration using Microsoft.Extensions.Configuration
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(_configDirectory)
+                .AddJsonFile("library.json", optional: true, reloadOnChange: false)
+                .Build();
+
+            // Use Get<T>() to leverage source generation
+            var library = configuration.Get<GameLibrary>();
+            return library ?? new GameLibrary();
         }
         catch
         {
