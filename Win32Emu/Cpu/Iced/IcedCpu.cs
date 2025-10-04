@@ -117,10 +117,6 @@ public class IcedCpu : ICpu
 				case Mnemonic.Rcr: ExecRotate(insn, RotateKind.Rcr); break;
 				case Mnemonic.Not: ExecNot(insn); break;
 				case Mnemonic.Neg: ExecNeg(insn); break;
-				case Mnemonic.Mul: ExecMul(insn); break;
-				case Mnemonic.Imul: ExecImul(insn); break;
-				case Mnemonic.Div: ExecDiv(insn); break;
-				case Mnemonic.Idiv: ExecIdiv(insn); break;
 				case Mnemonic.Bswap: ExecBswap(insn); break;
 				case Mnemonic.Xchg: ExecXchg(insn); break;
 				case Mnemonic.Cmpxchg: ExecCmpxchg(insn); break;
