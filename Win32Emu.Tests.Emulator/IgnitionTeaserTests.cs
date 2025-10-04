@@ -5,7 +5,8 @@ using Xunit.Abstractions;
 namespace Win32Emu.Tests.Emulator;
 
 /// <summary>
-/// Integration tests for running real game executables with the emulator
+/// Integration tests for running real game executables with the emulator.
+/// These tests document the behavior and issues encountered when running actual Win32 executables.
 /// </summary>
 public class IgnitionTeaserTests
 {
@@ -37,10 +38,12 @@ public class IgnitionTeaserTests
         
         var exePath = Path.Combine(repoRoot!, "EXEs", "ign_teas", "IGN_TEAS.EXE");
         
+        _output.WriteLine("=== Ignition Teaser Demo Test ===");
         _output.WriteLine($"Current directory: {currentDir}");
         _output.WriteLine($"Repository root: {repoRoot}");
         _output.WriteLine($"Testing executable: {exePath}");
         _output.WriteLine($"File exists: {File.Exists(exePath)}");
+        _output.WriteLine("");
         
         if (!File.Exists(exePath))
         {
@@ -48,22 +51,24 @@ public class IgnitionTeaserTests
         }
 
         var testHost = new TestEmulatorHost(_output);
-        var logger = new XunitLogger(_output);
+        var logger = new XunitLogger(_output, LogLevel.Information); // Only log Info and above
         
         // Act
         Exception? caughtException = null;
+        var startTime = DateTime.UtcNow;
         try
         {
             using var emulator = new Win32Emu.Emulator(testHost, logger);
             
             _output.WriteLine("Loading executable...");
-            emulator.LoadExecutable(exePath, debugMode: true, reservedMemoryMb: 256);
+            emulator.LoadExecutable(exePath, debugMode: false, reservedMemoryMb: 256);
             
             _output.WriteLine("Starting emulation...");
+            _output.WriteLine("");
             
             // Set a timeout for the test run
             var cancellationTokenSource = new CancellationTokenSource();
-            cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(10));
+            cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
             
             var runTask = Task.Run(() => emulator.Run(), cancellationTokenSource.Token);
             
@@ -73,7 +78,7 @@ public class IgnitionTeaserTests
             }
             catch (OperationCanceledException)
             {
-                _output.WriteLine("Test timed out after 10 seconds - stopping emulator");
+                _output.WriteLine("Test timed out after 5 seconds - stopping emulator");
                 emulator.Stop();
                 runTask.Wait(TimeSpan.FromSeconds(2));
             }
@@ -83,13 +88,20 @@ public class IgnitionTeaserTests
         catch (Exception ex)
         {
             caughtException = ex;
-            _output.WriteLine($"Exception caught: {ex.GetType().Name}");
+            _output.WriteLine($"\nException caught: {ex.GetType().Name}");
             _output.WriteLine($"Message: {ex.Message}");
-            _output.WriteLine($"Stack trace: {ex.StackTrace}");
+            if (ex.StackTrace != null)
+            {
+                _output.WriteLine($"Stack trace:\n{ex.StackTrace}");
+            }
         }
+        
+        var endTime = DateTime.UtcNow;
+        var duration = endTime - startTime;
         
         // Assert
         _output.WriteLine("\n=== Test Summary ===");
+        _output.WriteLine($"Execution time: {duration.TotalSeconds:F2} seconds");
         _output.WriteLine($"Debug messages captured: {testHost.DebugMessages.Count}");
         _output.WriteLine($"Error messages captured: {testHost.ErrorMessages.Count}");
         _output.WriteLine($"Warning messages captured: {testHost.WarningMessages.Count}");
@@ -99,27 +111,39 @@ public class IgnitionTeaserTests
         if (testHost.ErrorMessages.Count > 0)
         {
             _output.WriteLine("\n=== Error Messages ===");
-            foreach (var error in testHost.ErrorMessages)
+            foreach (var error in testHost.ErrorMessages.Take(20))
             {
                 _output.WriteLine($"  - {error}");
+            }
+            if (testHost.ErrorMessages.Count > 20)
+            {
+                _output.WriteLine($"  ... and {testHost.ErrorMessages.Count - 20} more errors");
             }
         }
         
         if (testHost.WarningMessages.Count > 0)
         {
             _output.WriteLine("\n=== Warning Messages ===");
-            foreach (var warning in testHost.WarningMessages)
+            foreach (var warning in testHost.WarningMessages.Take(20))
             {
                 _output.WriteLine($"  - {warning}");
+            }
+            if (testHost.WarningMessages.Count > 20)
+            {
+                _output.WriteLine($"  ... and {testHost.WarningMessages.Count - 20} more warnings");
             }
         }
         
         if (testHost.StdOutputMessages.Count > 0)
         {
             _output.WriteLine("\n=== Stdout Messages ===");
-            foreach (var stdout in testHost.StdOutputMessages)
+            foreach (var stdout in testHost.StdOutputMessages.Take(20))
             {
                 _output.WriteLine($"  - {stdout}");
+            }
+            if (testHost.StdOutputMessages.Count > 20)
+            {
+                _output.WriteLine($"  ... and {testHost.StdOutputMessages.Count - 20} more stdout messages");
             }
         }
         
@@ -145,8 +169,80 @@ public class IgnitionTeaserTests
             }
         }
         
+        _output.WriteLine("\n=== Test Result ===");
+        if (caughtException == null)
+        {
+            _output.WriteLine("✓ The executable loaded and ran successfully (with timeout)");
+            _output.WriteLine("  No exceptions were thrown during execution");
+        }
+        else
+        {
+            _output.WriteLine("✗ The executable encountered an exception during execution");
+            _output.WriteLine($"  Exception type: {caughtException.GetType().Name}");
+        }
+        
         // The test always succeeds - we're just documenting what happens
-        _output.WriteLine("\nTest completed - check output above for issues encountered");
+        _output.WriteLine("\nNote: This test documents the behavior and issues when running the game.");
+        _output.WriteLine("Check the output above for details on what was encountered.");
+    }
+
+    [Fact(Skip = "Very verbose - enable manually to see detailed debugging output")]
+    public void IgnitionTeaser_ShouldLoadAndRun_WithDebugLogging()
+    {
+        // This test is identical to the main test but runs with debug logging enabled
+        // to capture all the detailed execution information
+        
+        var currentDir = Directory.GetCurrentDirectory();
+        var repoRoot = currentDir;
+        
+        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "Win32Emu.sln")))
+        {
+            var parent = Directory.GetParent(repoRoot);
+            if (parent == null)
+            {
+                break;
+            }
+            repoRoot = parent.FullName;
+        }
+        
+        var exePath = Path.Combine(repoRoot!, "EXEs", "ign_teas", "IGN_TEAS.EXE");
+        
+        _output.WriteLine("=== Ignition Teaser Demo Test (Debug Mode) ===");
+        _output.WriteLine($"Testing executable: {exePath}");
+        
+        if (!File.Exists(exePath))
+        {
+            throw new FileNotFoundException($"Test executable not found: {exePath}");
+        }
+
+        var testHost = new TestEmulatorHost(_output);
+        var logger = new XunitLogger(_output, LogLevel.Debug); // Log everything
+        
+        try
+        {
+            using var emulator = new Win32Emu.Emulator(testHost, logger);
+            
+            emulator.LoadExecutable(exePath, debugMode: true, reservedMemoryMb: 256);
+            
+            var cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(10));
+            
+            var runTask = Task.Run(() => emulator.Run(), cancellationTokenSource.Token);
+            
+            try
+            {
+                runTask.Wait(cancellationTokenSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                emulator.Stop();
+                runTask.Wait(TimeSpan.FromSeconds(2));
+            }
+        }
+        catch (Exception ex)
+        {
+            _output.WriteLine($"\nException: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -212,10 +308,12 @@ public class IgnitionTeaserTests
     private class XunitLogger : ILogger
     {
         private readonly ITestOutputHelper _output;
+        private readonly LogLevel _minLevel;
 
-        public XunitLogger(ITestOutputHelper output)
+        public XunitLogger(ITestOutputHelper output, LogLevel minLevel = LogLevel.Information)
         {
             _output = output;
+            _minLevel = minLevel;
         }
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull
@@ -225,11 +323,16 @@ public class IgnitionTeaserTests
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            return true;
+            return logLevel >= _minLevel;
         }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
+            if (!IsEnabled(logLevel))
+            {
+                return;
+            }
+            
             var message = formatter(state, exception);
             var prefix = logLevel switch
             {
