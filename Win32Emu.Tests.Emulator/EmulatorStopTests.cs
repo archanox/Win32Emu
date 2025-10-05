@@ -44,17 +44,28 @@ public class EmulatorStopTests : IDisposable
         _emulator.Pause();
         Assert.True(_emulator.IsPaused, "Emulator should be paused");
         
+        // Start a thread that waits for the emulator to be resumed (simulate a thread waiting on pause)
+        var releasedEvent = new System.Threading.ManualResetEventSlim(false);
+        var waitThread = new System.Threading.Thread(() =>
+        {
+            // This should block until the emulator is resumed or stopped
+            _emulator.WaitWhilePaused();
+            releasedEvent.Set();
+        });
+        waitThread.Start();
+
+        // Give the thread a moment to start and block
+        System.Threading.Thread.Sleep(100);
+        Assert.False(releasedEvent.IsSet, "Thread should be blocked while emulator is paused");
+
         // Act - Stop should signal the pause event to wake up any waiting threads
         _emulator.Stop();
-        
-        // Assert - The pause event should be signaled after stop
-        // Use reflection to check the pause event state
-        var pauseEventField = typeof(Win32Emu.Emulator).GetField("_pauseEvent", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var pauseEvent = (ManualResetEvent)pauseEventField!.GetValue(_emulator)!;
-        
-        // WaitOne(0) returns true immediately if the event is signaled
-        Assert.True(pauseEvent.WaitOne(0), "Pause event should be signaled after Stop()");
+
+        // Assert - The waiting thread should be released after stop
+        bool released = releasedEvent.Wait(1000); // Wait up to 1 second
+        Assert.True(released, "Waiting thread should be released after Stop()");
+
+        waitThread.Join();
     }
 
     public void Dispose()
