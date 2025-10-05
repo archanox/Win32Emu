@@ -150,11 +150,8 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     [RelayCommand]
     private void StopEmulation()
     {
-        if (_emulatorService?.CurrentEmulator != null)
-        {
-            _emulatorService.CurrentEmulator.Stop();
-            OnDebugOutput("Stop requested", DebugLevel.Info);
-        }
+        _emulatorService?.StopEmulator();
+        OnDebugOutput("Stop requested", DebugLevel.Info);
     }
 
     [RelayCommand]
