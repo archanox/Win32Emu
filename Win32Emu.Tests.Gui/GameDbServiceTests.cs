@@ -79,6 +79,7 @@ public class GameDbServiceTests : IDisposable
     public void FindGameByExecutable_ShouldMatchBySha256()
     {
         // Arrange
+        var gameId = Guid.NewGuid();
         var sha256 = HashUtility.ComputeSha256(_testExecutablePath);
         CreateGameDatabase(new GameDatabase
         {
@@ -86,7 +87,7 @@ public class GameDbServiceTests : IDisposable
             {
                 new GameDbEntry
                 {
-                    Id = "test-game",
+                    Id = gameId,
                     Title = "Test Game",
                     Executables = new List<GameExecutable>
                     {
@@ -107,7 +108,7 @@ public class GameDbServiceTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("test-game", result.Id);
+        Assert.Equal(gameId, result.Id);
         Assert.Equal("Test Game", result.Title);
     }
 
@@ -115,6 +116,7 @@ public class GameDbServiceTests : IDisposable
     public void FindGameByExecutable_ShouldMatchByMd5()
     {
         // Arrange
+        var gameId = Guid.NewGuid();
         var md5 = HashUtility.ComputeMd5(_testExecutablePath);
         CreateGameDatabase(new GameDatabase
         {
@@ -122,7 +124,7 @@ public class GameDbServiceTests : IDisposable
             {
                 new GameDbEntry
                 {
-                    Id = "test-game",
+                    Id = gameId,
                     Title = "Test Game",
                     Executables = new List<GameExecutable>
                     {
@@ -143,13 +145,14 @@ public class GameDbServiceTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("test-game", result.Id);
+        Assert.Equal(gameId, result.Id);
     }
 
     [Fact]
     public void FindGameByExecutable_ShouldMatchBySha1()
     {
         // Arrange
+        var gameId = Guid.NewGuid();
         var sha1 = HashUtility.ComputeSha1(_testExecutablePath);
         CreateGameDatabase(new GameDatabase
         {
@@ -157,7 +160,7 @@ public class GameDbServiceTests : IDisposable
             {
                 new GameDbEntry
                 {
-                    Id = "test-game",
+                    Id = gameId,
                     Title = "Test Game",
                     Executables = new List<GameExecutable>
                     {
@@ -178,13 +181,14 @@ public class GameDbServiceTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("test-game", result.Id);
+        Assert.Equal(gameId, result.Id);
     }
 
     [Fact]
     public void FindGameByExecutable_ShouldPrioritizeUserOverrides()
     {
         // Arrange
+        var gameId = Guid.NewGuid();
         var sha256 = HashUtility.ComputeSha256(_testExecutablePath);
         
         // Create readonly database
@@ -194,7 +198,7 @@ public class GameDbServiceTests : IDisposable
             {
                 new GameDbEntry
                 {
-                    Id = "test-game",
+                    Id = gameId,
                     Title = "Original Title",
                     Executables = new List<GameExecutable>
                     {
@@ -211,7 +215,7 @@ public class GameDbServiceTests : IDisposable
             {
                 new GameDbEntry
                 {
-                    Id = "test-game",
+                    Id = gameId,
                     Title = "Overridden Title",
                     Executables = new List<GameExecutable>
                     {
@@ -248,12 +252,14 @@ public class GameDbServiceTests : IDisposable
     public void GetAllGames_ShouldReturnAllGames()
     {
         // Arrange
+        var game1Id = Guid.NewGuid();
+        var game2Id = Guid.NewGuid();
         CreateGameDatabase(new GameDatabase
         {
             Games = new List<GameDbEntry>
             {
-                new GameDbEntry { Id = "game1", Title = "Game 1" },
-                new GameDbEntry { Id = "game2", Title = "Game 2" }
+                new GameDbEntry { Id = game1Id, Title = "Game 1" },
+                new GameDbEntry { Id = game2Id, Title = "Game 2" }
             }
         });
 
@@ -264,20 +270,23 @@ public class GameDbServiceTests : IDisposable
 
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.Contains(result, g => g.Id == "game1");
-        Assert.Contains(result, g => g.Id == "game2");
+        Assert.Contains(result, g => g.Id == game1Id);
+        Assert.Contains(result, g => g.Id == game2Id);
     }
 
     [Fact]
     public void GetAllGames_ShouldMergeReadonlyAndOverrides()
     {
         // Arrange
+        var game1Id = Guid.NewGuid();
+        var game2Id = Guid.NewGuid();
+        var game3Id = Guid.NewGuid();
         CreateGameDatabase(new GameDatabase
         {
             Games = new List<GameDbEntry>
             {
-                new GameDbEntry { Id = "game1", Title = "Game 1" },
-                new GameDbEntry { Id = "game2", Title = "Original Game 2" }
+                new GameDbEntry { Id = game1Id, Title = "Game 1" },
+                new GameDbEntry { Id = game2Id, Title = "Original Game 2" }
             }
         });
 
@@ -285,8 +294,8 @@ public class GameDbServiceTests : IDisposable
         {
             Games = new List<GameDbEntry>
             {
-                new GameDbEntry { Id = "game2", Title = "Overridden Game 2" },
-                new GameDbEntry { Id = "game3", Title = "Game 3" }
+                new GameDbEntry { Id = game2Id, Title = "Overridden Game 2" },
+                new GameDbEntry { Id = game3Id, Title = "Game 3" }
             }
         });
 
@@ -297,27 +306,28 @@ public class GameDbServiceTests : IDisposable
 
         // Assert
         Assert.Equal(3, result.Count);
-        Assert.Contains(result, g => g.Id == "game1" && g.Title == "Game 1");
-        Assert.Contains(result, g => g.Id == "game2" && g.Title == "Overridden Game 2");
-        Assert.Contains(result, g => g.Id == "game3" && g.Title == "Game 3");
+        Assert.Contains(result, g => g.Id == game1Id && g.Title == "Game 1");
+        Assert.Contains(result, g => g.Id == game2Id && g.Title == "Overridden Game 2");
+        Assert.Contains(result, g => g.Id == game3Id && g.Title == "Game 3");
     }
 
     [Fact]
     public void GetGameById_ShouldReturnGame_WhenExists()
     {
         // Arrange
+        var gameId = Guid.NewGuid();
         CreateGameDatabase(new GameDatabase
         {
             Games = new List<GameDbEntry>
             {
-                new GameDbEntry { Id = "test-game", Title = "Test Game" }
+                new GameDbEntry { Id = gameId, Title = "Test Game" }
             }
         });
 
         var service = CreateServiceWithCustomPaths();
 
         // Act
-        var result = service.GetGameById("test-game");
+        var result = service.GetGameById(gameId);
 
         // Assert
         Assert.NotNull(result);
@@ -328,18 +338,19 @@ public class GameDbServiceTests : IDisposable
     public void GetGameById_ShouldReturnNull_WhenNotFound()
     {
         // Arrange
+        var gameId = Guid.NewGuid();
         CreateGameDatabase(new GameDatabase
         {
             Games = new List<GameDbEntry>
             {
-                new GameDbEntry { Id = "test-game", Title = "Test Game" }
+                new GameDbEntry { Id = gameId, Title = "Test Game" }
             }
         });
 
         var service = CreateServiceWithCustomPaths();
 
         // Act
-        var result = service.GetGameById("nonexistent");
+        var result = service.GetGameById(Guid.NewGuid());
 
         // Assert
         Assert.Null(result);

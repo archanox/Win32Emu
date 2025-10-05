@@ -113,9 +113,9 @@ public class GameDbService : IGameDbService
         {
             foreach (var executable in game.Executables)
             {
-                // Match on any available hash
-                if (!string.IsNullOrEmpty(executable.Md5) && 
-                    executable.Md5.Equals(md5, StringComparison.OrdinalIgnoreCase))
+                // Match on any available hash - prioritize SHA256, then SHA1, then MD5
+                if (!string.IsNullOrEmpty(executable.Sha256) && 
+                    executable.Sha256.Equals(sha256, StringComparison.OrdinalIgnoreCase))
                 {
                     return game;
                 }
@@ -126,8 +126,8 @@ public class GameDbService : IGameDbService
                     return game;
                 }
 
-                if (!string.IsNullOrEmpty(executable.Sha256) && 
-                    executable.Sha256.Equals(sha256, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(executable.Md5) && 
+                    executable.Md5.Equals(md5, StringComparison.OrdinalIgnoreCase))
                 {
                     return game;
                 }
@@ -143,7 +143,7 @@ public class GameDbService : IGameDbService
     public IEnumerable<GameDbEntry> GetAllGames()
     {
         // Use a dictionary to deduplicate by ID, with user overrides taking precedence
-        var gamesById = new Dictionary<string, GameDbEntry>();
+        var gamesById = new Dictionary<Guid, GameDbEntry>();
 
         // Add games from readonly database
         foreach (var game in _gameDatabase.Games)
@@ -163,7 +163,7 @@ public class GameDbService : IGameDbService
     /// <summary>
     /// Get a game by its ID
     /// </summary>
-    public GameDbEntry? GetGameById(string id)
+    public GameDbEntry? GetGameById(Guid id)
     {
         // Check user overrides first
         var entry = _userOverrides.Games.FirstOrDefault(g => g.Id == id);

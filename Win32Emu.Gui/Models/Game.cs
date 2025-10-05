@@ -12,5 +12,5 @@ public class Game
     /// <summary>
     /// Optional reference to game database entry ID
     /// </summary>
-    public string? GameDbId { get; set; }
+    public Guid? GameDbId { get; set; }
 }

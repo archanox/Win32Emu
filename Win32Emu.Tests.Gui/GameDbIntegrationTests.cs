@@ -64,6 +64,7 @@ public class GameDbIntegrationTests : IDisposable
     public void GameLibraryViewModel_ShouldEnrichGameFromDatabase_WhenGameDbServiceProvided()
     {
         // Arrange
+        var gameId = Guid.NewGuid();
         var sha256 = HashUtility.ComputeSha256(_testExecutablePath);
         
         // Create a test database
@@ -73,7 +74,7 @@ public class GameDbIntegrationTests : IDisposable
             {
                 new GameDbEntry
                 {
-                    Id = "test-game",
+                    Id = gameId,
                     Title = "Test Game Title",
                     Description = "Test game description",
                     Developers = new List<string> { "Test Developer" },
@@ -119,7 +120,7 @@ public class GameDbIntegrationTests : IDisposable
         // Assert
         Assert.Equal("Test Game Title", game.Title);
         Assert.Equal("Test game description", game.Description);
-        Assert.Equal("test-game", game.GameDbId);
+        Assert.Equal(gameId, game.GameDbId);
     }
 
     [Fact]

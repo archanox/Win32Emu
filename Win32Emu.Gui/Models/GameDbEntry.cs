@@ -6,9 +6,9 @@ namespace Win32Emu.Gui.Models;
 public class GameDbEntry
 {
     /// <summary>
-    /// Unique identifier for the game (e.g., Wikidata ID)
+    /// Unique identifier for the game (auto-generated GUID)
     /// </summary>
-    public string Id { get; set; } = string.Empty;
+    public Guid Id { get; set; } = Guid.Empty;
 
     /// <summary>
     /// Wikidata key for scraping metadata (e.g., "Q2411602")

@@ -25,7 +25,7 @@ public interface IGameDbService
     /// </summary>
     /// <param name="id">Game ID</param>
     /// <returns>Game entry, or null if not found</returns>
-    GameDbEntry? GetGameById(string id);
+    GameDbEntry? GetGameById(Guid id);
 
     /// <summary>
     /// Reload the game database from disk
