@@ -94,8 +94,9 @@ public partial class GameLibraryViewModel : ViewModelBase
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
+            _logger?.LogError(ex, "Failed to enrich game from DB for executable path: {ExecutablePath}", game.ExecutablePath);
             // If enrichment fails, just continue with the basic game info
         }
     }
