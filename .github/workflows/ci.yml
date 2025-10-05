@@ -120,3 +120,136 @@ jobs:
       run: |
         echo "Build completed. Check the logs above for any warnings."
         echo "Consider addressing the warnings for better code quality."
+
+  process-stubs:
+    name: Process Game Database Stubs
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        submodules: recursive
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Check for stub files
+      id: check-stubs
+      run: |
+        if [ -d "stubs" ] && [ "$(find stubs -name '*.json' -type f | wc -l)" -gt 0 ]; then
+          echo "has-stubs=true" >> $GITHUB_OUTPUT
+          echo "Found stub files to process"
+        else
+          echo "has-stubs=false" >> $GITHUB_OUTPUT
+          echo "No stub files found"
+        fi
+        
+    - name: Process and merge stubs
+      if: steps.check-stubs.outputs.has-stubs == 'true'
+      run: |
+        echo "Processing game database stubs..."
+        
+        # Path to gamedb.json
+        GAMEDB_FILE="Win32Emu.Gui/gamedb.json"
+        
+        # Create a temporary directory for processing
+        mkdir -p /tmp/gamedb-processing
+        
+        # Copy current gamedb.json if it exists
+        if [ -f "$GAMEDB_FILE" ]; then
+          cp "$GAMEDB_FILE" /tmp/gamedb-processing/gamedb.json
+        else
+          echo '{"Version":"1.0","Games":[]}' > /tmp/gamedb-processing/gamedb.json
+        fi
+        
+        # Process each stub file
+        for stub in stubs/*.json; do
+          if [ -f "$stub" ]; then
+            echo "Processing stub: $stub"
+            
+            # Validate JSON
+            if ! jq empty "$stub" 2>/dev/null; then
+              echo "ERROR: Invalid JSON in $stub"
+              continue
+            fi
+            
+            # Check for required fields
+            TITLE=$(jq -r '.Title // empty' "$stub")
+            if [ -z "$TITLE" ]; then
+              echo "ERROR: Missing required field 'Title' in $stub"
+              continue
+            fi
+            
+            # Check for at least one executable with a hash
+            HAS_EXECUTABLE=$(jq -r '
+              .Executables // [] | 
+              map(select(.Name and (.Md5 or .Sha1 or .Sha256))) | 
+              length > 0
+            ' "$stub")
+            
+            if [ "$HAS_EXECUTABLE" != "true" ]; then
+              echo "ERROR: Missing required executable with hash in $stub"
+              continue
+            fi
+            
+            # Set DataSource to user_submitted if not specified
+            jq 'if .DataSource == null or .DataSource == "" then .DataSource = "user_submitted" else . end' "$stub" > /tmp/gamedb-processing/stub_temp.json
+            
+            # Generate a new GUID if Id is not a valid GUID format
+            ID=$(jq -r '.Id // empty' /tmp/gamedb-processing/stub_temp.json)
+            if [ -z "$ID" ] || ! echo "$ID" | grep -qE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+              NEW_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+              jq --arg id "$NEW_ID" '.Id = $id' /tmp/gamedb-processing/stub_temp.json > /tmp/gamedb-processing/stub_with_id.json
+            else
+              cp /tmp/gamedb-processing/stub_temp.json /tmp/gamedb-processing/stub_with_id.json
+            fi
+            
+            # Check if this game already exists in the database (by ID)
+            EXISTING=$(jq --arg id "$(jq -r '.Id' /tmp/gamedb-processing/stub_with_id.json)" '
+              .Games | map(select(.Id == $id)) | length > 0
+            ' /tmp/gamedb-processing/gamedb.json)
+            
+            if [ "$EXISTING" = "true" ]; then
+              echo "Game with ID $(jq -r '.Id' /tmp/gamedb-processing/stub_with_id.json) already exists, skipping"
+            else
+              # Add the stub to the games array
+              jq --slurpfile stub /tmp/gamedb-processing/stub_with_id.json '
+                .Games += $stub
+              ' /tmp/gamedb-processing/gamedb.json > /tmp/gamedb-processing/gamedb_new.json
+              
+              mv /tmp/gamedb-processing/gamedb_new.json /tmp/gamedb-processing/gamedb.json
+              echo "Added game: $TITLE"
+            fi
+            
+            # Remove the processed stub file
+            rm "$stub"
+            echo "Processed and removed: $stub"
+          fi
+        done
+        
+        # Copy the updated gamedb.json back
+        cp /tmp/gamedb-processing/gamedb.json "$GAMEDB_FILE"
+        
+        echo "Game database processing complete"
+        
+    - name: Commit changes
+      if: steps.check-stubs.outputs.has-stubs == 'true'
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        
+        git add Win32Emu.Gui/gamedb.json
+        git add stubs/
+        
+        if git diff --cached --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "chore: process game database stubs and update gamedb.json"
+          git push
+        fi
