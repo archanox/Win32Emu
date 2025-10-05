@@ -183,10 +183,11 @@ jobs:
               continue
             fi
             
-            # Check for required fields
+            # Check for required fields: Title OR WikidataKey
             TITLE=$(jq -r '.Title // empty' "$stub")
-            if [ -z "$TITLE" ]; then
-              echo "ERROR: Missing required field 'Title' in $stub"
+            WIKIDATAKEY=$(jq -r '.WikidataKey // empty' "$stub")
+            if [ -z "$TITLE" ] && [ -z "$WIKIDATAKEY" ]; then
+              echo "ERROR: Missing required field: must have either 'Title' or 'WikidataKey' in $stub"
               continue
             fi
             
