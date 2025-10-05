@@ -21,7 +21,7 @@ This directory contains game database stub files submitted by users.
 
 The CI/CD pipeline will:
 - Validate JSON syntax
-- Check for required fields (Title, at least one Executable with hash)
+- Check for required fields (at least one Executable with hash, and Title unless WikidataKey is provided)
 - **Enrich from Wikidata** if WikidataKey is provided (automatically fetches Title, Description, ReleaseDate, Languages)
 - Merge stub data into the main `gamedb.json`
 - Set DataSource to "user_submitted" if not specified
