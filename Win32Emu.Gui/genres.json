@@ -1,0 +1,19 @@
+{
+  "Genres": [
+    {
+      "Id": "a1b2c3d4-e5f6-4789-a0b1-c2d3e4f5a6b7",
+      "Name": "Racing",
+      "Description": "Racing games focus on competitive racing in vehicles"
+    },
+    {
+      "Id": "b2c3d4e5-f6a7-4890-b1c2-d3e4f5a6b7c8",
+      "Name": "Action",
+      "Description": "Action games emphasize physical challenges and hand-eye coordination"
+    },
+    {
+      "Id": "c3d4e5f6-a7b8-4901-c2d3-e4f5a6b7c8d9",
+      "Name": "RPG",
+      "Description": "Role-playing games where players assume the roles of characters"
+    }
+  ]
+}

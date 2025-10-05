@@ -77,7 +77,7 @@ public class GameDbIntegrationTests : IDisposable
                     Id = gameId,
                     Title = "Test Game Title",
                     Description = "Test game description",
-                    Developers = new List<string> { "Test Developer" },
+                    DeveloperIds = new List<Guid> { Guid.NewGuid() },
                     Executables = new List<GameExecutable>
                     {
                         new GameExecutable

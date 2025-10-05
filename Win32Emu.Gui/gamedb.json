@@ -5,15 +5,15 @@
       "Id": "e7c3f2a1-8b4d-4e6f-9a2c-1d5b8e4a7c9f",
       "WikidataKey": "Q2411602",
       "Title": "Ignition",
-      "Genres": [
-        "Racing"
+      "GenreIds": [
+        "a1b2c3d4-e5f6-4789-a0b1-c2d3e4f5a6b7"
       ],
-      "Developers": [
-        "Unique Development Studios"
+      "DeveloperIds": [
+        "d4e5f6a7-b8c9-4012-d3e4-f5a6b7c8d9e0"
       ],
-      "Publishers": [
-        "Virgin Interactive",
-        "UDS"
+      "PublisherIds": [
+        "e5f6a7b8-c9d0-4123-e4f5-a6b7c8d9e0f1",
+        "f6a7b8c9-d0e1-4234-f5a6-b7c8d9e0f1a2"
       ],
       "ReleaseDate": "1997-03-31T00:00:00",
       "Description": "Ignition is a racing game developed by Unique Development Studios and published by Virgin Interactive for PC, Sega Saturn and PlayStation in 1997. The game features overhead-view racing with power-ups and weapons.",

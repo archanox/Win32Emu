@@ -21,19 +21,19 @@ public class GameDbEntry
     public string Title { get; set; } = string.Empty;
 
     /// <summary>
-    /// Game genre(s)
+    /// Game genre IDs (references to Genre table)
     /// </summary>
-    public List<string> Genres { get; set; } = new();
+    public List<Guid> GenreIds { get; set; } = new();
 
     /// <summary>
-    /// Game developer(s)
+    /// Game developer IDs (references to Developer table)
     /// </summary>
-    public List<string> Developers { get; set; } = new();
+    public List<Guid> DeveloperIds { get; set; } = new();
 
     /// <summary>
-    /// Game publisher(s)
+    /// Game publisher IDs (references to Publisher table)
     /// </summary>
-    public List<string> Publishers { get; set; } = new();
+    public List<Guid> PublisherIds { get; set; } = new();
 
     /// <summary>
     /// Release date
