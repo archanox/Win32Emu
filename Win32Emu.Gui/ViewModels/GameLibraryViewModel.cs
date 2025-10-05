@@ -25,11 +25,13 @@ public partial class GameLibraryViewModel : ViewModelBase
     private IStorageProvider? _storageProvider;
     private readonly EmulatorConfiguration _configuration;
     private readonly ConfigurationService _configService;
+    private readonly IGameDbService? _gameDbService;
 
-    public GameLibraryViewModel(EmulatorConfiguration configuration, ConfigurationService configService)
+    public GameLibraryViewModel(EmulatorConfiguration configuration, ConfigurationService configService, IGameDbService? gameDbService = null)
     {
         _configuration = configuration;
         _configService = configService;
+        _gameDbService = gameDbService;
         
         // Load games and watched folders from persistent storage
         LoadFromConfiguration();
@@ -61,6 +63,42 @@ public partial class GameLibraryViewModel : ViewModelBase
     {
         _configService.SaveGames(Games);
         _configService.SaveWatchedFolders(WatchedFolders);
+    }
+
+    /// <summary>
+    /// Enrich a game with metadata from the GameDB if available
+    /// </summary>
+    private void EnrichGameFromDb(Game game)
+    {
+        if (_gameDbService == null || string.IsNullOrEmpty(game.ExecutablePath))
+        {
+            return;
+        }
+
+        try
+        {
+            var dbEntry = _gameDbService.FindGameByExecutable(game.ExecutablePath);
+            if (dbEntry != null)
+            {
+                // Update game with metadata from database
+                game.GameDbId = dbEntry.Id;
+                game.Title = dbEntry.Title;
+                game.Description = dbEntry.Description ?? game.Description;
+                
+                // If there's a logo URL, we could download it and set ThumbnailPath
+                // For now, just use the URL as a reference
+                if (!string.IsNullOrEmpty(dbEntry.LogoUrl))
+                {
+                    // Future: Download logo and set ThumbnailPath
+                    // For now, we'll leave ThumbnailPath as is
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to enrich game from DB for executable path: {ExecutablePath}", game.ExecutablePath);
+            // If enrichment fails, just continue with the basic game info
+        }
     }
 
     [RelayCommand]
@@ -96,13 +134,18 @@ public partial class GameLibraryViewModel : ViewModelBase
                 continue;
             }
 
-            Games.Add(new Game
+            var game = new Game
             {
                 Title = Path.GetFileNameWithoutExtension(fileName),
                 ExecutablePath = filePath,
                 Description = "Added from file picker",
                 TimesPlayed = 0
-            });
+            };
+            
+            // Enrich with GameDB metadata if available
+            EnrichGameFromDb(game);
+            
+            Games.Add(game);
         }
 
         // Save the updated games list
@@ -163,13 +206,18 @@ public partial class GameLibraryViewModel : ViewModelBase
                     if (!Games.Any(g => g.ExecutablePath.Equals(exeFile, StringComparison.OrdinalIgnoreCase)))
                     {
                         var fileName = Path.GetFileNameWithoutExtension(exeFile);
-                        Games.Add(new Game
+                        var game = new Game
                         {
                             Title = fileName,
                             ExecutablePath = exeFile,
                             Description = $"Found in {Path.GetFileName(folderPath)}",
                             TimesPlayed = 0
-                        });
+                        };
+                        
+                        // Enrich with GameDB metadata if available
+                        EnrichGameFromDb(game);
+                        
+                        Games.Add(game);
                     }
                 }
             }

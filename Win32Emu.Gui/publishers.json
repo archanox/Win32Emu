@@ -1,0 +1,16 @@
+{
+  "Publishers": [
+    {
+      "Id": "e5f6a7b8-c9d0-4123-e4f5-a6b7c8d9e0f1",
+      "Name": "Virgin Interactive",
+      "Description": "British video game publisher",
+      "WebsiteUrl": null
+    },
+    {
+      "Id": "f6a7b8c9-d0e1-4234-f5a6-b7c8d9e0f1a2",
+      "Name": "UDS",
+      "Description": "Unique Development Studios publishing division",
+      "WebsiteUrl": null
+    }
+  ]
+}

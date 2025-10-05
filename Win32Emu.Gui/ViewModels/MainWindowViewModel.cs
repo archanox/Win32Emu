@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
+using Win32Emu.Gui.Services;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -16,12 +17,14 @@ public partial class MainWindowViewModel : ViewModelBase
     public ControllerMappingViewModel ControllerMappingViewModel { get; }
     public EmulatorConfiguration Configuration { get; }
     private readonly ConfigurationService _configService;
+    private readonly IGameDbService _gameDbService;
 
     public MainWindowViewModel()
     {
         _configService = new ConfigurationService();
+        _gameDbService = new GameDbService();
         Configuration = _configService.GetEmulatorConfiguration();
-        GameLibraryViewModel = new GameLibraryViewModel(Configuration, _configService);
+        GameLibraryViewModel = new GameLibraryViewModel(Configuration, _configService, _gameDbService);
         SettingsViewModel = new SettingsViewModel(Configuration, _configService);
         ControllerMappingViewModel = new ControllerMappingViewModel();
         _currentPage = GameLibraryViewModel;
