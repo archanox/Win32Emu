@@ -8,7 +8,7 @@ public class GameDbEntry
     /// <summary>
     /// Unique identifier for the game (auto-generated GUID)
     /// </summary>
-    public Guid Id { get; set; } = Guid.Empty;
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     /// <summary>
     /// Wikidata key for scraping metadata (e.g., "Q2411602")
