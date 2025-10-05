@@ -117,6 +117,44 @@ The current implementation is minimal and functional. Future enhancements could 
    - Add unit tests for stub validation logic
    - Add integration tests for the merge process
 
+## Wikidata Integration
+
+The stub processing now includes automatic enrichment from Wikidata:
+
+### What Gets Enriched
+
+When a stub includes a `WikidataKey` field (e.g., "Q2411602"), the system automatically fetches and populates:
+
+- **Title** - Game title (if not already provided)
+- **Description** - Short game description (if not already provided)
+- **ReleaseDate** - Publication date in ISO 8601 format (if not already provided)
+- **Languages** - ISO 639-1 language codes (if not already provided or empty)
+- **ExternalUrls.Wikidata** - Link to the Wikidata page
+
+### What Gets Logged
+
+The following information is fetched and logged but not automatically mapped (requires manual review or future enhancement):
+
+- **Genres** - Game genres (Wikidata property P136)
+- **Developers** - Game developers (Wikidata property P178)
+- **Publishers** - Game publishers (Wikidata property P123)
+
+These are logged because they would need to be mapped to UUIDs in the database, which requires a proper genre/developer/publisher management system.
+
+### How It Works
+
+The enrichment is performed by the Python script `.github/scripts/enrich_from_wikidata.py` which:
+
+1. Checks if the stub has a `WikidataKey` field
+2. Calls the Wikidata MediaWiki API to fetch entity data
+3. Extracts relevant properties (P136, P178, P123, P577, P407)
+4. Enriches only the fields that are missing in the original stub
+5. Preserves any user-provided values
+
+### Supported Languages
+
+The script includes mappings for common languages including: English, French, German, Spanish, Italian, Portuguese, Dutch, Swedish, Czech, Polish, Chinese, Japanese, Korean, and Russian.
+
 ## Testing
 
 The implementation has been tested locally:

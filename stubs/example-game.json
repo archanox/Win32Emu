@@ -1,22 +1,8 @@
 {
-  "Id": "00000000-0000-0000-0000-000000000001",
   "WikidataKey": "Q2411602",
-  "Title": "Example Game",
   "GenreIds": [],
   "DeveloperIds": [],
   "PublisherIds": [],
-  "ReleaseDate": "1997-03-31T00:00:00",
-  "Description": "This is an example game stub. Replace this with actual game data.",
-  "Languages": [
-    "en"
-  ],
-  "LogoUrl": "https://example.com/logo.png",
-  "Ratings": {
-    "Esrb": "E",
-    "Pegi": "3",
-    "Usk": "0",
-    "Acb": "G"
-  },
   "Executables": [
     {
       "Name": "example.exe",
@@ -24,10 +10,5 @@
       "Sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
       "Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
-  ],
-  "ExternalUrls": {
-    "IGDB": "https://www.igdb.com/games/example",
-    "Wikidata": "https://www.wikidata.org/wiki/Q2411602"
-  },
-  "DataSource": "user_submitted"
+  ]
 }

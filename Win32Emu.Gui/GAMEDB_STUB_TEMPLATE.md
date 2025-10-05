@@ -8,7 +8,7 @@ This file contains a minimal template for submitting a game to the Win32Emu game
 2. Fill in the required fields (marked with `*`)
 3. Fill in as many optional fields as possible
 4. Submit a pull request with your stub file to the `stubs/` directory
-5. CI/CD will automatically enrich the entry with scraped data
+5. CI/CD will automatically enrich the entry with scraped data from Wikidata
 
 ## Stub Template
 
@@ -141,6 +141,7 @@ sha256sum game.exe
 ## Notes
 
 - **UUID Format**: The Id field should be a valid UUID. If not provided or invalid, the CI/CD pipeline will auto-generate one
+- **WikidataKey**: If provided, the CI/CD pipeline will automatically fetch and populate missing fields (Title, Description, ReleaseDate, Languages) from Wikidata
 - **Multiple Executables**: Games can have multiple executables (e.g., different versions, patches)
 - **Hash Accuracy**: At least one hash is required, but providing all three (MD5, SHA1, SHA256) is recommended
 - **Ratings**: Ratings are optional but helpful for content filtering
@@ -155,13 +156,20 @@ Once your stub is merged to the main or develop branch:
 1. CI/CD detects the new stub file in the `stubs/` directory
 2. Validates the JSON syntax
 3. Checks for required fields (Title and at least one Executable with a hash)
-4. Generates a UUID for the Id field if not provided or invalid
-5. Sets DataSource to "user_submitted" if not specified
-6. Merges the stub into the main `gamedb.json`
-7. Removes the stub file from the `stubs/` directory
-8. Commits the updated `gamedb.json` back to the repository
+4. **Enriches from Wikidata** (if WikidataKey is provided):
+   - Fetches Title (if not provided)
+   - Fetches Description (if not provided)
+   - Fetches ReleaseDate (if not provided)
+   - Fetches Languages (if not provided or empty)
+   - Adds Wikidata URL to ExternalUrls
+   - Logs genre, developer, and publisher information (not auto-mapped to IDs yet)
+5. Generates a UUID for the Id field if not provided or invalid
+6. Sets DataSource to "user_submitted" if not specified
+7. Merges the stub into the main `gamedb.json`
+8. Removes the stub file from the `stubs/` directory
+9. Commits the updated `gamedb.json` back to the repository
 
-**Note**: In the future, the CI/CD pipeline may be enhanced to automatically scrape additional metadata from sources like Wikidata, IGDB, MobyGames, etc.
+**Note**: The Wikidata integration currently enriches Title, Description, ReleaseDate, and Languages. Genre/Developer/Publisher information is logged but not automatically mapped to UUIDs (this is a future enhancement).
 
 ## Questions?
 

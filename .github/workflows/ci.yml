@@ -139,6 +139,15 @@ jobs:
       with:
         dotnet-version: '9.0.x'
         
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+        
+    - name: Install Python dependencies
+      run: |
+        pip install requests
+        
     - name: Check for stub files
       id: check-stubs
       run: |
@@ -200,6 +209,14 @@ jobs:
             
             # Set DataSource to user_submitted if not specified
             jq 'if .DataSource == null or .DataSource == "" then .DataSource = "user_submitted" else . end' "$stub" > /tmp/gamedb-processing/stub_temp.json
+            
+            # Enrich with Wikidata if WikidataKey is present
+            WIKIDATA_KEY=$(jq -r '.WikidataKey // empty' /tmp/gamedb-processing/stub_temp.json)
+            if [ -n "$WIKIDATA_KEY" ]; then
+              echo "Enriching from Wikidata: $WIKIDATA_KEY"
+              python3 .github/scripts/enrich_from_wikidata.py /tmp/gamedb-processing/stub_temp.json /tmp/gamedb-processing/stub_enriched.json
+              mv /tmp/gamedb-processing/stub_enriched.json /tmp/gamedb-processing/stub_temp.json
+            fi
             
             # Generate a new GUID if Id is not a valid GUID format
             ID=$(jq -r '.Id // empty' /tmp/gamedb-processing/stub_temp.json)
