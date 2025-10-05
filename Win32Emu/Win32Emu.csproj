@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <PackageReference Include="AsmResolver.PE" Version="6.0.0-beta.4" />
+    <PackageReference Include="AsmResolver.PE.Win32Resources" Version="6.0.0-beta.4" />
     <PackageReference Include="Iced" Version="1.21.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.9" />
     <PackageReference Include="SDL3-CS" Version="3.2.24" />
