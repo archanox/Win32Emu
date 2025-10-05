@@ -1,0 +1,3 @@
+# This directory contains game database stub files
+# Users can submit stub JSON files here via pull requests
+# The CI/CD pipeline will process these stubs and merge them into gamedb.json
