@@ -119,7 +119,7 @@ The current implementation is minimal and functional. Future enhancements could 
 
 ## Wikidata Integration
 
-The stub processing now includes automatic enrichment from Wikidata:
+The stub processing now includes automatic enrichment from Wikidata using a C# tool:
 
 ### What Gets Enriched
 
@@ -143,7 +143,7 @@ These are logged because they would need to be mapped to UUIDs in the database, 
 
 ### How It Works
 
-The enrichment is performed by the Python script `.github/scripts/enrich_from_wikidata.py` which:
+The enrichment is performed by the C# console application `Win32Emu.Tools.WikidataEnricher` which:
 
 1. Checks if the stub has a `WikidataKey` field
 2. Calls the Wikidata MediaWiki API to fetch entity data
@@ -151,9 +151,14 @@ The enrichment is performed by the Python script `.github/scripts/enrich_from_wi
 4. Enriches only the fields that are missing in the original stub
 5. Preserves any user-provided values
 
+The tool is built as part of the CI workflow and invoked with:
+```bash
+dotnet Win32Emu.Tools.WikidataEnricher/bin/Release/net9.0/enrich-from-wikidata.dll input.json output.json
+```
+
 ### Supported Languages
 
-The script includes mappings for common languages including: English, French, German, Spanish, Italian, Portuguese, Dutch, Swedish, Czech, Polish, Chinese, Japanese, Korean, and Russian.
+The tool includes mappings for common languages including: English, French, German, Spanish, Italian, Portuguese, Dutch, Swedish, Czech, Polish, Chinese, Japanese, Korean, and Russian.
 
 ## Testing
 

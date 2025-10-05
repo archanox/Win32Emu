@@ -139,14 +139,9 @@ jobs:
       with:
         dotnet-version: '9.0.x'
         
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
-        
-    - name: Install Python dependencies
+    - name: Build Wikidata enricher tool
       run: |
-        pip install requests
+        dotnet build Win32Emu.Tools.WikidataEnricher/Win32Emu.Tools.WikidataEnricher.csproj --configuration Release
         
     - name: Check for stub files
       id: check-stubs
@@ -214,7 +209,7 @@ jobs:
             WIKIDATA_KEY=$(jq -r '.WikidataKey // empty' /tmp/gamedb-processing/stub_temp.json)
             if [ -n "$WIKIDATA_KEY" ]; then
               echo "Enriching from Wikidata: $WIKIDATA_KEY"
-              python3 .github/scripts/enrich_from_wikidata.py /tmp/gamedb-processing/stub_temp.json /tmp/gamedb-processing/stub_enriched.json
+              dotnet Win32Emu.Tools.WikidataEnricher/bin/Release/net9.0/enrich-from-wikidata.dll /tmp/gamedb-processing/stub_temp.json /tmp/gamedb-processing/stub_enriched.json
               mv /tmp/gamedb-processing/stub_enriched.json /tmp/gamedb-processing/stub_temp.json
             fi
             
