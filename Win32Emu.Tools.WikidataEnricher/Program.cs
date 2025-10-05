@@ -29,7 +29,7 @@ catch (Exception e)
 }
 
 // Enrich with Wikidata
-var enricher = new WikidataEnricher();
+using var enricher = new WikidataEnricher();
 var enrichedStub = await enricher.EnrichStubAsync(stub);
 
 // Write output
@@ -52,7 +52,7 @@ catch (Exception e)
 
 return 0;
 
-class WikidataEnricher
+sealed class WikidataEnricher : IDisposable
 {
     private const string BaseUrl = "https://www.wikidata.org/w/api.php";
     private const string UserAgent = "Win32Emu-GameDB-Bot/1.0 (https://github.com/archanox/Win32Emu)";
@@ -78,6 +78,7 @@ class WikidataEnricher
 
     private readonly HttpClient _httpClient;
     private readonly Dictionary<string, JsonNode?> _entityCache = new();
+    private bool _disposed;
 
     public WikidataEnricher()
     {
@@ -335,5 +336,16 @@ class WikidataEnricher
             Console.Error.WriteLine($"Warning: Failed to parse date {dateValue}: {e.Message}");
             return null;
         }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _httpClient.Dispose();
+        _disposed = true;
     }
 }
