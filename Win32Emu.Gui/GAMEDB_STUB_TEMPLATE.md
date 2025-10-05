@@ -14,17 +14,17 @@ This file contains a minimal template for submitting a game to the Win32Emu game
 
 ```json
 {
-  "Id": "*REQUIRED - Wikidata ID (e.g., Q2411602) or unique identifier",
-  "WikidataKey": "Wikidata key for automatic data scraping (e.g., Q2411602)",
+  "Id": "*REQUIRED - UUID in the format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (will be auto-generated if not provided or invalid)",
+  "WikidataKey": "Optional - Wikidata key for reference (e.g., Q2411602)",
   "Title": "*REQUIRED - Official game title",
-  "Genres": [
-    "Optional - List of genres"
+  "GenreIds": [
+    "Optional - List of genre UUIDs (leave empty if unknown, can be populated later)"
   ],
-  "Developers": [
-    "Optional - List of developers"
+  "DeveloperIds": [
+    "Optional - List of developer UUIDs (leave empty if unknown, can be populated later)"
   ],
-  "Publishers": [
-    "Optional - List of publishers"
+  "PublisherIds": [
+    "Optional - List of publisher UUIDs (leave empty if unknown, can be populated later)"
   ],
   "ReleaseDate": "Optional - ISO 8601 date format (e.g., 1997-03-31T00:00:00)",
   "Description": "Optional - Game description or synopsis",
@@ -54,7 +54,7 @@ This file contains a minimal template for submitting a game to the Win32Emu game
     "LaunchBox": "Optional - https://gamesdb.launchbox-app.com/games/details/...",
     "GameFAQs": "Optional - https://gamefaqs.gamespot.com/..."
   },
-  "DataSource": "user_submitted"
+  "DataSource": "Optional - Source of data (defaults to 'user_submitted' if not provided)"
 }
 ```
 
@@ -64,12 +64,19 @@ Here's a complete example for the game "Ignition":
 
 ```json
 {
-  "Id": "Q2411602",
+  "Id": "e7c3f2a1-8b4d-4e6f-9a2c-1d5b8e4a7c9f",
   "WikidataKey": "Q2411602",
   "Title": "Ignition",
-  "Genres": ["Racing"],
-  "Developers": ["Unique Development Studios"],
-  "Publishers": ["Virgin Interactive", "UDS"],
+  "GenreIds": [
+    "a1b2c3d4-e5f6-4789-a0b1-c2d3e4f5a6b7"
+  ],
+  "DeveloperIds": [
+    "d4e5f6a7-b8c9-4012-d3e4-f5a6b7c8d9e0"
+  ],
+  "PublisherIds": [
+    "e5f6a7b8-c9d0-4123-e4f5-a6b7c8d9e0f1",
+    "f6a7b8c9-d0e1-4234-f5a6-b7c8d9e0f1a2"
+  ],
   "ReleaseDate": "1997-03-31T00:00:00",
   "Description": "Ignition is a racing game developed by Unique Development Studios and published by Virgin Interactive for PC, Sega Saturn and PlayStation in 1997. The game features overhead-view racing with power-ups and weapons.",
   "Languages": ["en"],
@@ -131,56 +138,30 @@ sha256sum game.exe
 ### Online Tools
 - Use reputable online hash calculators (be cautious about uploading executables to third-party sites)
 
-## Data Sources
-
-The CI/CD pipeline will attempt to scrape additional metadata from:
-
-1. **Wikidata** (https://www.wikidata.org/) - Primary source for structured data
-   - Properties used:
-     - P136: genre
-     - P178: developer
-     - P123: publisher
-     - P577: publication date
-     - P407: language of work
-     - And many more...
-
-2. **IGDB** (https://www.igdb.com/) - Internet Game Database
-   - Requires API key
-   - Provides comprehensive game data
-
-3. **MobyGames** (https://www.mobygames.com/) - Community-driven game database
-   - Historical game information
-   - Screenshots and covers
-
-4. **TheGamesDB** (https://thegamesdb.net/) - Community game database
-   - Game metadata and artwork
-
-5. **LaunchBox** (https://gamesdb.launchbox-app.com/) - Frontend database
-   - High-quality logos and artwork
-
-6. **GameFAQs** (https://gamefaqs.gamespot.com/) - Game guides and info
-   - Platform information and reviews
-
 ## Notes
 
-- **Wikidata Key**: If you provide a Wikidata key, many fields can be auto-populated
+- **UUID Format**: The Id field should be a valid UUID. If not provided or invalid, the CI/CD pipeline will auto-generate one
 - **Multiple Executables**: Games can have multiple executables (e.g., different versions, patches)
 - **Hash Accuracy**: At least one hash is required, but providing all three (MD5, SHA1, SHA256) is recommended
 - **Ratings**: Ratings are optional but helpful for content filtering
 - **Logo URL**: Prefer transparent PNG images for logos
 - **External URLs**: These help with cross-referencing and verification
+- **Genre/Developer/Publisher IDs**: Leave these arrays empty if you don't know the IDs. They can be populated later
 
 ## CI/CD Process
 
-Once your stub is merged:
+Once your stub is merged to the main or develop branch:
 
-1. CI/CD detects the new stub file
-2. Scrapes data from Wikidata (if key provided)
-3. Attempts to scrape from other sources
-4. Merges scraped data with your stub
-5. Validates the complete entry
-6. Adds to the main `gamedb.json`
-7. Deploys updated database with next release
+1. CI/CD detects the new stub file in the `stubs/` directory
+2. Validates the JSON syntax
+3. Checks for required fields (Title and at least one Executable with a hash)
+4. Generates a UUID for the Id field if not provided or invalid
+5. Sets DataSource to "user_submitted" if not specified
+6. Merges the stub into the main `gamedb.json`
+7. Removes the stub file from the `stubs/` directory
+8. Commits the updated `gamedb.json` back to the repository
+
+**Note**: In the future, the CI/CD pipeline may be enhanced to automatically scrape additional metadata from sources like Wikidata, IGDB, MobyGames, etc.
 
 ## Questions?
 

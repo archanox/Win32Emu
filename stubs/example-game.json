@@ -1,17 +1,10 @@
 {
-  "Id": "example-game-id-12345",
+  "Id": "00000000-0000-0000-0000-000000000001",
   "WikidataKey": "Q2411602",
   "Title": "Example Game",
-  "Genres": [
-    "Racing",
-    "Action"
-  ],
-  "Developers": [
-    "Example Studios"
-  ],
-  "Publishers": [
-    "Example Publisher"
-  ],
+  "GenreIds": [],
+  "DeveloperIds": [],
+  "PublisherIds": [],
   "ReleaseDate": "1997-03-31T00:00:00",
   "Description": "This is an example game stub. Replace this with actual game data.",
   "Languages": [
