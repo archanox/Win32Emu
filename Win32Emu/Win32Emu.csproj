@@ -39,7 +39,7 @@
     <PackageReference Include="Iced" Version="1.21.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.9" />
     <PackageReference Include="SDL3-CS" Version="3.2.24" />
-    <PackageReference Include="System.Threading.Channels" Version="9.0.0" />
+    <PackageReference Include="System.Threading.Channels" Version="9.0.9" />
   </ItemGroup>
 
   <ItemGroup>
