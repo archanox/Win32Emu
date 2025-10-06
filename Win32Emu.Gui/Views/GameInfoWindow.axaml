@@ -1,0 +1,149 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Win32Emu.Gui.ViewModels"
+        x:Class="Win32Emu.Gui.Views.GameInfoWindow"
+        x:DataType="vm:GameInfoViewModel"
+        Title="Game Information"
+        Width="800"
+        Height="700"
+        WindowStartupLocation="CenterOwner">
+    
+    <Grid Margin="20">
+        <ScrollViewer>
+            <StackPanel Spacing="20">
+                <!-- Title Section -->
+                <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                        Padding="15"
+                        CornerRadius="8">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Game Title"
+                                 FontSize="14"
+                                 FontWeight="Bold"/>
+                        <TextBox Text="{Binding EditableTitle}"
+                               Watermark="Enter game title"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- File Information Section -->
+                <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                        Padding="15"
+                        CornerRadius="8">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="File Information"
+                                 FontSize="16"
+                                 FontWeight="Bold"/>
+                        
+                        <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="File Name:" FontWeight="SemiBold" Margin="0,5"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding FileName}" Margin="0,5"/>
+                            
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="File Size:" FontWeight="SemiBold" Margin="0,5"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FileSize}" Margin="0,5"/>
+                            
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Compiled:" FontWeight="SemiBold" Margin="0,5"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DateTimeCompiled}" Margin="0,5"/>
+                            
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Machine Type:" FontWeight="SemiBold" Margin="0,5"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding MachineType}" Margin="0,5" TextWrapping="Wrap"/>
+                            
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Minimum OS:" FontWeight="SemiBold" Margin="0,5"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding MinimumOs}" Margin="0,5"/>
+                            
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="OS Version:" FontWeight="SemiBold" Margin="0,5"/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding MinimumOsVersion}" Margin="0,5"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- DLL Imports Section -->
+                <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                        Padding="15"
+                        CornerRadius="8">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="DLL Imports"
+                                 FontSize="16"
+                                 FontWeight="Bold"/>
+                        
+                        <Border Background="{DynamicResource SystemControlBackgroundBaseMediumBrush}"
+                                BorderThickness="1"
+                                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                                CornerRadius="4"
+                                Height="200">
+                            <ScrollViewer>
+                                <ItemsControl ItemsSource="{Binding Imports}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="200,*,100" Margin="5">
+                                                <TextBlock Grid.Column="0" 
+                                                         Text="{Binding DllName}"
+                                                         FontFamily="Consolas"
+                                                         FontSize="12"/>
+                                                <TextBlock Grid.Column="1" 
+                                                         Text="{Binding FunctionName}"
+                                                         FontFamily="Consolas"
+                                                         FontSize="12"/>
+                                                <TextBlock Grid.Column="2" 
+                                                         Text="{Binding IsImplemented, Converter={StaticResource BoolToImplementedConverter}}"
+                                                         FontSize="12"
+                                                         Foreground="{Binding IsImplemented, Converter={StaticResource BoolToColorConverter}}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Background="#28A745" Padding="5,2" CornerRadius="3">
+                                <TextBlock Text="● Implemented" FontSize="12" Foreground="White"/>
+                            </Border>
+                            <Border Background="#DC3545" Padding="5,2" CornerRadius="3">
+                                <TextBlock Text="● Not Implemented" FontSize="12" Foreground="White"/>
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Environment Variables Section -->
+                <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                        Padding="15"
+                        CornerRadius="8">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Environment Variables"
+                                 FontSize="14"
+                                 FontWeight="Bold"/>
+                        <TextBox Text="{Binding EnvironmentVariables}"
+                               Watermark="KEY=value (one per line)"
+                               AcceptsReturn="True"
+                               Height="80"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Program Arguments Section -->
+                <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                        Padding="15"
+                        CornerRadius="8">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Program Arguments"
+                                 FontSize="14"
+                                 FontWeight="Bold"/>
+                        <TextBox Text="{Binding ProgramArguments}"
+                               Watermark="Command line arguments"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Action Buttons -->
+                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                    <Button Content="Copy GameDB Stub"
+                            Click="CopyGameDbStub_Click"/>
+                    <Button Content="Open in VirusTotal"
+                            Command="{Binding OpenVirusTotalCommand}"/>
+                    <Button Content="Save Changes"
+                            Command="{Binding SaveChangesCommand}"/>
+                    <Button Content="Close"
+                            Click="CloseButton_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
