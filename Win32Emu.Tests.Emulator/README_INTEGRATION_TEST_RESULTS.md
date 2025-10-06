@@ -68,8 +68,10 @@ The following Win32 APIs are being called and appear to work correctly:
 - This suggests either:
   - A jump to invalid memory location (possible bug in emulator's instruction emulation)
   - Corrupted function pointer
-  - Missing CPU instruction implementation
+  - Missing CPU instruction implementation causing execution to jump to wrong address
   - Incorrect memory mapping
+
+**Note**: The "INVALID" mnemonic from IcedCpu indicates the CPU emulator encountered an instruction it cannot decode, not that a specific x86 instruction is missing from the implementation. The issue is likely that execution jumped to data/unmapped memory rather than code. This requires instruction-level debugging to trace how execution reaches these invalid addresses.
 
 **Recommendation**: 
 - Add instruction-level debugging to trace how execution reaches these invalid addresses
@@ -95,14 +97,14 @@ This indicates executables are waiting for a condition that never occurs. Possib
 - **Return Value Issues**: Some API might be returning unexpected values causing wait loops
 
 **Recommendation**:
-1. Implement missing timing APIs:
-   - `GetTickCount` / `GetTickCount64`
-   - `QueryPerformanceCounter`
-   - `QueryPerformanceFrequency`
-   - `timeGetTime` (WINMM.DLL)
+1. ~~Implement missing timing APIs~~: **IMPLEMENTED** ✅
+   - ~~`GetTickCount` / `GetTickCount64`~~ - **GetTickCount implemented**
+   - ~~`QueryPerformanceCounter`~~ - **Already implemented**
+   - ~~`QueryPerformanceFrequency`~~ - **Now implemented**
+   - `timeGetTime` (WINMM.DLL) - Not yet implemented
 
 2. Verify message pump functionality:
-   - Check if `PeekMessage`/`GetMessage` are implemented
+   - Check if `PeekMessage`/`GetMessage` are implemented - **Already implemented** ✅
    - Ensure message queue works properly
    - Test if messages are being dispatched
 
@@ -144,26 +146,28 @@ The games never reach the point where they would initialize graphics/audio. This
 - Not scalable for all APIs
 
 **Recommendation**:
-- Implement automatic stack cleanup based on calling convention
-- Parse PE export tables to determine function signatures
-- Create metadata database for common Win32 APIs
+- Implement automatic stack cleanup based on calling convention (stdcall vs cdecl)
+- Parse PE export tables to determine function signatures where available
+- Create metadata database for common Win32 APIs with argument byte counts
+- Reference: Windows uses stdcall convention for Win32 APIs (callee cleans stack)
+- The current hardcoded values work but need systematic approach for scalability
 
 ## Missing APIs (Not Yet Called But May Be Needed)
 
 Based on common game requirements, the following APIs may be needed once executables progress further:
 
 ### Timing APIs (KERNEL32.DLL / WINMM.DLL)
-- `GetTickCount` / `GetTickCount64`
-- `QueryPerformanceCounter` 
-- `QueryPerformanceFrequency`
-- `timeGetTime`
-- `Sleep` / `SleepEx`
+- ~~`GetTickCount` / `GetTickCount64`~~ - **GetTickCount now implemented** ✅
+- ~~`QueryPerformanceCounter`~~ - **Already implemented** ✅
+- ~~`QueryPerformanceFrequency`~~ - **Now implemented** ✅
+- `timeGetTime` (WINMM.DLL) - Not yet implemented
+- ~~`Sleep` / `SleepEx`~~ - **Sleep now implemented** ✅
 
 ### Window/Message APIs (USER32.DLL)
-- `PeekMessageA` / `PeekMessageW`
-- `GetMessageA` / `GetMessageW`
-- `DispatchMessageA` / `DispatchMessageW`
-- `DefWindowProcA` / `DefWindowProcW`
+- ~~`PeekMessageA` / `PeekMessageW`~~ - **Already implemented** ✅
+- ~~`GetMessageA` / `GetMessageW`~~ - **Already implemented** ✅
+- ~~`DispatchMessageA` / `DispatchMessageW`~~ - **DispatchMessageA implemented** ✅
+- `DefWindowProcA` / `DefWindowProcW` - Need to verify implementation
 
 ### DirectX APIs
 Will likely be needed once initialization completes:
@@ -195,18 +199,19 @@ Created a comprehensive test suite with the following features:
 ### Immediate Priorities (Critical)
 
 1. **Fix Invalid Instruction Issue (ign_3dfx.exe)**
-   - Add instruction-level tracing
-   - Identify missing CPU instructions
+   - Add instruction-level tracing to identify exact instruction that fails
+   - Identify missing CPU instructions from test output
    - Fix memory access violations
 
-2. **Implement Timing APIs**
-   - Add `GetTickCount`, `QueryPerformanceCounter`, `QueryPerformanceFrequency`
-   - These are likely needed to break the infinite loops
+2. ~~**Implement Timing APIs**~~ - **COMPLETED** ✅
+   - ~~Add `GetTickCount`, `QueryPerformanceCounter`, `QueryPerformanceFrequency`~~ 
+   - ~~These are likely needed to break the infinite loops~~ 
+   - **Testing needed to confirm if infinite loops are now resolved**
 
 3. **Debug Infinite Loop**
    - Enable debug logging on one executable
-   - Add execution profiling to identify hot loops
-   - Check what conditions games are polling for
+   - Add execution profiling to identify hot loops (logging what conditions games are polling for)
+   - Run tests with new timing APIs to see if behavior changes
 
 ### Medium Priority
 
