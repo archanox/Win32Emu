@@ -55,6 +55,20 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Tests.Gui", "Win32
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Tools.WikidataEnricher", "Win32Emu.Tools.WikidataEnricher\Win32Emu.Tools.WikidataEnricher.csproj", "{70BE4532-71DD-429D-8ECE-B6E07D16B08A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Decomp", "Decomp", "{8B49F0DF-39B6-48A4-A760-9D3388683F88}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ign_teas", "ign_teas", "{C9170703-CD97-4BCC-BAE6-C6886DB6AAF3}"
+	ProjectSection(SolutionItems) = preProject
+		Decomp\ign_teas\binaryninja.cpp = Decomp\ign_teas\binaryninja.cpp
+		Decomp\ign_teas\boomerang.cpp = Decomp\ign_teas\boomerang.cpp
+		Decomp\ign_teas\ghidra.cpp = Decomp\ign_teas\ghidra.cpp
+		Decomp\ign_teas\hexrays.cpp = Decomp\ign_teas\hexrays.cpp
+		Decomp\ign_teas\recstudio.cpp = Decomp\ign_teas\recstudio.cpp
+		Decomp\ign_teas\reko.cpp = Decomp\ign_teas\reko.cpp
+		Decomp\ign_teas\retdec.cpp = Decomp\ign_teas\retdec.cpp
+		Decomp\ign_teas\snowman.cpp = Decomp\ign_teas\snowman.cpp
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -169,6 +183,8 @@ Global
 		{BD8301D0-EC1D-46DD-B3DC-11A282404259} = {8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}
 		{D241F632-4AC7-42FA-917B-85F0EE1F9CED} = {BD8301D0-EC1D-46DD-B3DC-11A282404259}
 		{1CB43367-B21B-4548-8D02-8508762B05EE} = {BD8301D0-EC1D-46DD-B3DC-11A282404259}
+		{8B49F0DF-39B6-48A4-A760-9D3388683F88} = {8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}
+		{C9170703-CD97-4BCC-BAE6-C6886DB6AAF3} = {8B49F0DF-39B6-48A4-A760-9D3388683F88}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F51FE0B2-88D2-4467-86A9-54B70B52FBD9}
