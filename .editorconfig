@@ -71,3 +71,9 @@ tab_width = 4
 indent_size = 4
 end_of_line = crlf
 csharp_indent_labels = one_less_than_current
+
+[*.cs]
+# IMPORTANT: Do not use Console.WriteLine for logging
+# Use ILogger instance instead for proper logging with structured data
+# Example: _logger.LogInformation("Message with {Parameter}", value);
+
