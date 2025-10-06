@@ -49,6 +49,35 @@ The following Win32 APIs are being called and appear to work correctly:
 - ✓ `GetStringTypeW` - Gets character type information for Unicode
 - ✓ `GetStringTypeA` - Gets character type information for ANSI
 
+### API Implementation Status Summary
+
+#### Fully Implemented APIs ✅
+
+**KERNEL32.DLL Timing APIs** (all newly implemented with full functionality):
+- `GetTickCount` - Returns actual tick count from Environment.TickCount
+- `QueryPerformanceCounter` - Returns high-resolution timestamp from Stopwatch
+- `QueryPerformanceFrequency` - Returns timer frequency from Stopwatch
+- `Sleep` - Performs actual thread sleep with smart handling for special cases
+
+**Other KERNEL32.DLL APIs** (verified working):
+- Memory: `HeapCreate`, `VirtualAlloc`
+- I/O: `GetStdHandle`, `GetFileType`, `SetHandleCount`
+- Locale: `GetACP`, `GetCPInfo`, `GetStringTypeA/W`, `WideCharToMultiByte`
+- Environment: `GetCommandLineA`, `GetEnvironmentStringsW`, `FreeEnvironmentStringsW`
+- System: `GetVersion`, `GetStartupInfoA`, `GetModuleFileNameA`
+
+#### Stubbed APIs (Minimal Implementation) ⚠️
+
+**USER32.DLL Message Queue APIs** - These exist but are stubs:
+- `GetMessageA` - Only handles WM_QUIT, returns WM_NULL for all other cases (doesn't block)
+- `PeekMessageA` - Always returns 0 (no message available)
+- `DispatchMessageA` - Logs the message but doesn't call window procedures
+- `DefWindowProcA` - Logs and returns 0, doesn't provide default message handling
+- `TranslateMessage` - Logs and returns FALSE, doesn't translate virtual keys
+- `PostMessageA` - Logs but doesn't actually post to queue
+
+**Impact**: Games relying on message loops will not work properly. Messages aren't queued, dispatched, or processed. Window procedures aren't called. A full message queue implementation with System.Threading.Channels and window procedure callbacks is required.
+
 ### Issues Identified
 
 #### 1. Invalid Instructions (ign_3dfx.exe) ⚠️
@@ -97,16 +126,18 @@ This indicates executables are waiting for a condition that never occurs. Possib
 - **Return Value Issues**: Some API might be returning unexpected values causing wait loops
 
 **Recommendation**:
-1. ~~Implement missing timing APIs~~: **IMPLEMENTED** ✅
-   - ~~`GetTickCount` / `GetTickCount64`~~ - **GetTickCount implemented**
-   - ~~`QueryPerformanceCounter`~~ - **Already implemented**
-   - ~~`QueryPerformanceFrequency`~~ - **Now implemented**
+1. ~~Implement missing timing APIs~~: **COMPLETED** ✅
+   - ~~`GetTickCount` / `GetTickCount64`~~ - **GetTickCount FULLY implemented**
+   - ~~`QueryPerformanceCounter`~~ - **FULLY implemented**
+   - ~~`QueryPerformanceFrequency`~~ - **FULLY implemented**
    - `timeGetTime` (WINMM.DLL) - Not yet implemented
 
-2. Verify message pump functionality:
-   - Check if `PeekMessage`/`GetMessage` are implemented - **Already implemented** ✅
-   - Ensure message queue works properly
-   - Test if messages are being dispatched
+2. Implement full message pump functionality:
+   - `PeekMessage`/`GetMessage` - **Currently stubbed, need proper implementation** ⚠️
+   - Ensure message queue works properly - **Need Channel-based queue**
+   - Test if messages are being dispatched - **DispatchMessage is stub**
+   - Implement window procedure callbacks - **DefWindowProc is stub**
+   - Implement TranslateMessage - **Currently stub**
 
 3. Add execution profiling:
    - Track which code sections execute repeatedly
@@ -157,20 +188,20 @@ The games never reach the point where they would initialize graphics/audio. This
 Based on common game requirements, the following APIs may be needed once executables progress further:
 
 ### Timing APIs (KERNEL32.DLL / WINMM.DLL)
-- ~~`GetTickCount` / `GetTickCount64`~~ - **GetTickCount now implemented** ✅
-- ~~`QueryPerformanceCounter`~~ - **Already implemented** ✅
-- ~~`QueryPerformanceFrequency`~~ - **Now implemented** ✅
+- ~~`GetTickCount` / `GetTickCount64`~~ - **GetTickCount FULLY implemented** ✅
+- ~~`QueryPerformanceCounter`~~ - **FULLY implemented** ✅
+- ~~`QueryPerformanceFrequency`~~ - **FULLY implemented** ✅
 - `timeGetTime` (WINMM.DLL) - Not yet implemented
-- ~~`Sleep` / `SleepEx`~~ - **Sleep now implemented** ✅
+- ~~`Sleep` / `SleepEx`~~ - **Sleep FULLY implemented** ✅
 
 ### Window/Message APIs (USER32.DLL)
-- ~~`PeekMessageA` / `PeekMessageW`~~ - **Already implemented** ✅
-- ~~`GetMessageA` / `GetMessageW`~~ - **Already implemented** ✅
-- ~~`DispatchMessageA` / `DispatchMessageW`~~ - **DispatchMessageA implemented** ✅
-- ~~`DefWindowProcA` / `DefWindowProcW`~~ - **DefWindowProcA implemented** ✅
-- ~~`TranslateMessage`~~ - **Already implemented** ✅
+- `PeekMessageA` / `PeekMessageW` - **Stubbed** (always returns 0 - no message) ⚠️
+- `GetMessageA` / `GetMessageW` - **Partially implemented** (only WM_QUIT, else WM_NULL) ⚠️
+- `DispatchMessageA` / `DispatchMessageW` - **Stubbed** (logs only, doesn't dispatch) ⚠️
+- `DefWindowProcA` / `DefWindowProcW` - **Stubbed** (logs only, returns 0) ⚠️
+- `TranslateMessage` - **Stubbed** (logs only, returns FALSE) ⚠️
 
-**Note**: These APIs are implemented but use a minimal message queue (only WM_QUIT). A full message queue implementation with proper message posting/dispatching would improve game compatibility.
+**Note**: Message queue APIs exist but are minimal stubs. GetMessageA only handles WM_QUIT (returns WM_NULL otherwise). DispatchMessageA, DefWindowProcA, TranslateMessage, and PeekMessageA are stubs that log but don't perform actual functionality. A full message queue implementation with proper message posting/dispatching/window procedure callbacks would be required for games that rely on message loops.
 
 ### DirectX APIs
 Will likely be needed once initialization completes:
