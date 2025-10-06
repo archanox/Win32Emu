@@ -3,6 +3,7 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Services;
@@ -26,12 +27,14 @@ public partial class GameLibraryViewModel : ViewModelBase
     private readonly EmulatorConfiguration _configuration;
     private readonly ConfigurationService _configService;
     private readonly IGameDbService? _gameDbService;
+    private readonly ILogger _logger;
 
-    public GameLibraryViewModel(EmulatorConfiguration configuration, ConfigurationService configService, IGameDbService? gameDbService = null)
+    public GameLibraryViewModel(EmulatorConfiguration configuration, ConfigurationService configService, IGameDbService? gameDbService = null, ILogger? logger = null)
     {
         _configuration = configuration;
         _configService = configService;
         _gameDbService = gameDbService;
+        _logger = logger ?? NullLogger.Instance;
         
         // Load games and watched folders from persistent storage
         LoadFromConfiguration();
@@ -108,7 +111,7 @@ public partial class GameLibraryViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to enrich game from DB for executable path: {game.ExecutablePath}. Error: {ex.Message}");
+            _logger.LogError(ex, "Failed to enrich game from DB for executable path: {ExecutablePath}", game.ExecutablePath);
             // If enrichment fails, just continue with the basic game info
         }
     }
@@ -150,7 +153,7 @@ public partial class GameLibraryViewModel : ViewModelBase
             if (PeIconExtractor.TryExtractIcon(game.ExecutablePath, iconPath))
             {
                 game.ThumbnailPath = iconPath;
-                Console.WriteLine($"Extracted icon for {game.Title} to {iconPath}");
+                _logger.LogInformation("Extracted icon for {GameTitle} to {IconPath}", game.Title, iconPath);
             }
             else
             {
@@ -165,13 +168,13 @@ public partial class GameLibraryViewModel : ViewModelBase
                         File.Copy(defaultIconPath, fallbackIconPath);
                     }
                     game.ThumbnailPath = fallbackIconPath;
-                    Console.WriteLine($"Using default icon for {game.Title}");
+                    _logger.LogInformation("Using default icon for {GameTitle}", game.Title);
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to extract icon for {game.Title}: {ex.Message}");
+            _logger.LogError(ex, "Failed to extract icon for {GameTitle}", game.Title);
         }
     }
 
