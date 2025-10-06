@@ -379,9 +379,26 @@ namespace Win32Emu.Win32.Modules
 				return 0; // GetMessage returns 0 for WM_QUIT
 			}
 
-			// For now, simulate no messages (would block in real implementation)
-			// In a real implementation, this would wait for messages or return pending messages
-			_logger.LogInformation("[User32] GetMessageA: No messages, simulating empty queue");
+			// Try to get a message from the queue (non-blocking for now)
+			// In a real Windows implementation, this would block until a message arrives
+			if (_env.TryPeekMessage(out var queuedMsg, hWnd, wMsgFilterMin, wMsgFilterMax, remove: true))
+			{
+				_logger.LogInformation($"[User32] GetMessageA: retrieved MSG=0x{queuedMsg.Message:X4} HWND=0x{queuedMsg.Hwnd:X8}");
+
+				// Fill MSG structure
+				_env.MemWrite32(lpMsg + 0, queuedMsg.Hwnd);
+				_env.MemWrite32(lpMsg + 4, queuedMsg.Message);
+				_env.MemWrite32(lpMsg + 8, queuedMsg.WParam);
+				_env.MemWrite32(lpMsg + 12, queuedMsg.LParam);
+				_env.MemWrite32(lpMsg + 16, queuedMsg.Time);
+				_env.MemWrite32(lpMsg + 20, queuedMsg.PtX);
+				_env.MemWrite32(lpMsg + 24, queuedMsg.PtY);
+
+				return 1; // GetMessage returns non-zero for all messages except WM_QUIT
+			}
+
+			// No messages available - return WM_NULL (this would normally block)
+			_logger.LogInformation("[User32] GetMessageA: No messages in queue, returning WM_NULL");
 
 			// Return a dummy message (WM_NULL)
 			_env.MemWrite32(lpMsg + 0, hWnd); // hwnd
@@ -421,7 +438,25 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation($"[User32] DispatchMessageA: HWND=0x{hwnd:X8} MSG=0x{message:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
 
-			// In a full implementation, this would call the window procedure
+			// Try to get the window procedure for this window
+			var wndProc = _env.GetWindowProc(hwnd);
+			if (wndProc.HasValue && wndProc.Value != 0)
+			{
+				_logger.LogInformation($"[User32] DispatchMessageA: Found WndProc=0x{wndProc.Value:X8} for HWND=0x{hwnd:X8}");
+				
+				// TODO: In a full implementation, this would:
+				// 1. Set up CPU state (push parameters onto stack)
+				// 2. Call the window procedure at wndProc address
+				// 3. Get the return value from EAX
+				// For now, just log and return 0
+				
+				_logger.LogInformation($"[User32] DispatchMessageA: Would call WndProc at 0x{wndProc.Value:X8}");
+			}
+			else
+			{
+				_logger.LogInformation($"[User32] DispatchMessageA: No WndProc found for HWND=0x{hwnd:X8}");
+			}
+
 			// For now, just return 0 (message processed)
 			return 0;
 		}
@@ -431,8 +466,35 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation($"[User32] DefWindowProcA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
 
 			// DefWindowProc provides default processing for window messages
-			// For now, just return 0 (message processed)
-			return 0;
+			// Implement some common default behaviors
+			switch (msg)
+			{
+				case 0x0001: // WM_CREATE
+					_logger.LogInformation($"[User32] DefWindowProcA: WM_CREATE");
+					return 0; // Continue creation
+
+				case 0x0002: // WM_DESTROY
+					_logger.LogInformation($"[User32] DefWindowProcA: WM_DESTROY");
+					return 0;
+
+				case 0x0010: // WM_CLOSE
+					_logger.LogInformation($"[User32] DefWindowProcA: WM_CLOSE - destroying window");
+					// Default action is to destroy the window
+					_env.DestroyWindow(hwnd);
+					return 0;
+
+				case 0x000F: // WM_PAINT
+					_logger.LogInformation($"[User32] DefWindowProcA: WM_PAINT");
+					return 0;
+
+				case 0x0014: // WM_ERASEBKGND
+					_logger.LogInformation($"[User32] DefWindowProcA: WM_ERASEBKGND");
+					return 1; // Background erased
+
+				default:
+					// For all other messages, just return 0
+					return 0;
+			}
 		}
 
 	[DllModuleExport(19)]
@@ -446,8 +508,27 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation($"[User32] SendMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
 
-			// SendMessage sends a message to the window procedure
-			// For now, just log and return 0 (message processed)
+			// SendMessage sends a message directly to the window procedure (synchronous)
+			// Try to get the window procedure for this window
+			var wndProc = _env.GetWindowProc(hwnd);
+			if (wndProc.HasValue && wndProc.Value != 0)
+			{
+				_logger.LogInformation($"[User32] SendMessageA: Found WndProc=0x{wndProc.Value:X8} for HWND=0x{hwnd:X8}");
+				
+				// TODO: In a full implementation, this would:
+				// 1. Set up CPU state (push parameters onto stack)
+				// 2. Call the window procedure at wndProc address
+				// 3. Get the return value from EAX and return it
+				// For now, just log and return 0
+				
+				_logger.LogInformation($"[User32] SendMessageA: Would call WndProc at 0x{wndProc.Value:X8}");
+			}
+			else
+			{
+				_logger.LogInformation($"[User32] SendMessageA: No WndProc found for HWND=0x{hwnd:X8}");
+			}
+
+			// For now, return 0 (message processed)
 			return 0;
 		}
 
@@ -687,16 +768,42 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint PeekMessageA(uint lpMsg, uint hwnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg)
 		{
 			// PeekMessage returns immediately with message availability
-			// Return 0 for no message (non-blocking)
 			_logger.LogInformation($"[User32] PeekMessageA: lpMsg=0x{lpMsg:X8} HWND=0x{hwnd:X8}");
+			
+			if (lpMsg == 0)
+			{
+				return 0; // No message available
+			}
+
+			// PM_REMOVE = 0x0001, PM_NOREMOVE = 0x0000
+			var remove = (wRemoveMsg & 0x0001) != 0;
+
+			// Try to peek at a message from the queue
+			if (_env.TryPeekMessage(out var queuedMsg, hwnd, wMsgFilterMin, wMsgFilterMax, remove))
+			{
+				// Fill MSG structure
+				_env.MemWrite32(lpMsg + 0, queuedMsg.Hwnd);
+				_env.MemWrite32(lpMsg + 4, queuedMsg.Message);
+				_env.MemWrite32(lpMsg + 8, queuedMsg.WParam);
+				_env.MemWrite32(lpMsg + 12, queuedMsg.LParam);
+				_env.MemWrite32(lpMsg + 16, queuedMsg.Time);
+				_env.MemWrite32(lpMsg + 20, queuedMsg.PtX);
+				_env.MemWrite32(lpMsg + 24, queuedMsg.PtY);
+				
+				_logger.LogInformation($"[User32] PeekMessageA: found MSG=0x{queuedMsg.Message:X4}");
+				return 1; // Message available
+			}
+
 			return 0; // No message available
 		}
 
 		private unsafe uint PostMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
 			_logger.LogInformation($"[User32] PostMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
-			// Post message to queue - for now just log
-			return 1; // TRUE
+			
+			// Post message to the queue
+			var success = _env.PostMessage(hwnd, msg, wParam, lParam);
+			return success ? 1u : 0u; // TRUE : FALSE
 		}
 
 		public Dictionary<string, uint> GetExportOrdinals()

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Loader;
@@ -69,6 +70,20 @@ public class ProcessEnvironment
 	// Message queue management
 	private bool _hasQuitMessage;
 	private int _quitExitCode;
+
+	// Message queue with Channels
+	private readonly Channel<QueuedMessage> _messageQueue = Channel.CreateUnbounded<QueuedMessage>();
+	
+	// Message structure for queueing
+	public record struct QueuedMessage(
+		uint Hwnd,
+		uint Message,
+		uint WParam,
+		uint LParam,
+		uint Time,
+		uint PtX,
+		uint PtY
+	);
 
 	// Environment variables (emulated, not from system)
 	private readonly Dictionary<string, string> _environmentVariables = new();
@@ -643,6 +658,119 @@ public class ProcessEnvironment
 	public int GetQuitExitCode()
 	{
 		return _quitExitCode;
+	}
+
+	/// <summary>
+	/// Post a message to the message queue asynchronously
+	/// </summary>
+	public bool PostMessage(uint hwnd, uint message, uint wParam, uint lParam)
+	{
+		var timestamp = (uint)Environment.TickCount;
+		var queuedMsg = new QueuedMessage(hwnd, message, wParam, lParam, timestamp, 0, 0);
+		
+		// Try to write to the channel
+		if (_messageQueue.Writer.TryWrite(queuedMsg))
+		{
+			_logger.LogInformation($"[ProcessEnv] PostMessage: queued MSG=0x{message:X4} HWND=0x{hwnd:X8}");
+			return true;
+		}
+
+		_logger.LogWarning($"[ProcessEnv] PostMessage: failed to queue MSG=0x{message:X4}");
+		return false;
+	}
+
+	/// <summary>
+	/// Try to get a message from the queue (blocking)
+	/// </summary>
+	public async Task<QueuedMessage?> GetMessageAsync(uint hwnd, uint msgFilterMin, uint msgFilterMax)
+	{
+		try
+		{
+			// Read from the channel (will block until message available)
+			var message = await _messageQueue.Reader.ReadAsync();
+			
+			// Apply filters if specified
+			if (hwnd != 0 && message.Hwnd != hwnd)
+			{
+				// Re-queue messages that don't match the window filter
+				_messageQueue.Writer.TryWrite(message);
+				return null;
+			}
+
+			if (msgFilterMin != 0 || msgFilterMax != 0)
+			{
+				if (message.Message < msgFilterMin || message.Message > msgFilterMax)
+				{
+					// Re-queue messages outside the filter range
+					_messageQueue.Writer.TryWrite(message);
+					return null;
+				}
+			}
+
+			return message;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError($"[ProcessEnv] GetMessageAsync error: {ex.Message}");
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// Try to peek at a message from the queue (non-blocking)
+	/// </summary>
+	public bool TryPeekMessage(out QueuedMessage message, uint hwnd, uint msgFilterMin, uint msgFilterMax, bool remove)
+	{
+		message = default;
+
+		if (_messageQueue.Reader.TryRead(out var queuedMsg))
+		{
+			// Apply filters if specified
+			if (hwnd != 0 && queuedMsg.Hwnd != hwnd)
+			{
+				// Re-queue and return false
+				_messageQueue.Writer.TryWrite(queuedMsg);
+				return false;
+			}
+
+			if (msgFilterMin != 0 || msgFilterMax != 0)
+			{
+				if (queuedMsg.Message < msgFilterMin || queuedMsg.Message > msgFilterMax)
+				{
+					// Re-queue and return false
+					_messageQueue.Writer.TryWrite(queuedMsg);
+					return false;
+				}
+			}
+
+			message = queuedMsg;
+			
+			// If remove is false (PM_NOREMOVE), put the message back
+			if (!remove)
+			{
+				_messageQueue.Writer.TryWrite(queuedMsg);
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Get the window procedure address for a given window handle
+	/// </summary>
+	public uint? GetWindowProc(uint hwnd)
+	{
+		if (_windows.TryGetValue(hwnd, out var windowInfo))
+		{
+			var className = windowInfo.ClassName;
+			if (_windowClasses.TryGetValue(className, out var classInfo))
+			{
+				return classInfo.WndProc;
+			}
+		}
+		return null;
 	}
 
 	// Thread management methods
