@@ -117,22 +117,24 @@ Successfully implemented a comprehensive game information window that displays P
 
 #### Current Limitations
 1. **Import Implementation Detection**
-   - Uses heuristic (common DLL names)
-   - Should query actual emulator module registry
+   - ✅ **FIXED**: Now uses `DllModuleExportInfo.IsExportImplemented` to query actual emulator module registry
+   - Accurately reflects which Win32 functions are implemented
 
 2. **Environment Variables**
-   - UI ready but not persisted
-   - Need GameSettings integration
+   - ✅ **FIXED**: Now persisted per-game to configuration
+   - Saved to GameSettings and loaded on window open
 
 3. **Program Arguments**
-   - UI ready but not passed to emulator
-   - Need EmulatorService integration
+   - ✅ **FIXED**: Now persisted per-game to configuration
+   - Saved to GameSettings (ready for EmulatorService integration)
 
 #### Future Enhancements
-1. Query Win32Dispatcher for actual implemented functions
-2. Persist environment variables per-game
-3. Pass program arguments to emulator on launch
+1. ~~Query Win32Dispatcher for actual implemented functions~~ ✅ **DONE**
+2. ~~Persist environment variables per-game~~ ✅ **DONE**
+3. Pass program arguments to emulator on launch (EmulatorService integration needed)
 4. Add VirusTotal API integration for uploads
+5. Show more GameDB metadata when available
+6. Add tooltips for technical terms
 5. Show more GameDB metadata when available
 6. Add tooltips for technical terms
 

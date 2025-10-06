@@ -395,7 +395,7 @@ public partial class GameLibraryViewModel : ViewModelBase
             return;
         }
 
-        var viewModel = new GameInfoViewModel(game, _gameDbService);
+        var viewModel = new GameInfoViewModel(game, _gameDbService, _configService);
         
         // Set up callback to save changes when the game is updated
         viewModel.SetGameUpdatedCallback(_ =>

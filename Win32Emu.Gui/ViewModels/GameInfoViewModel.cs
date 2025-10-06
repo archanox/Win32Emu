@@ -4,8 +4,10 @@ using System.Text.Json;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Services;
+using Win32Emu.Win32;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -57,12 +59,14 @@ public partial class GameInfoViewModel : ViewModelBase
     private string _gameDbStubJson = string.Empty;
 
     private readonly IGameDbService? _gameDbService;
+    private readonly ConfigurationService? _configService;
     private Action<Game>? _onGameUpdated;
 
-    public GameInfoViewModel(Game game, IGameDbService? gameDbService = null)
+    public GameInfoViewModel(Game game, IGameDbService? gameDbService = null, ConfigurationService? configService = null)
     {
         _game = game;
         _gameDbService = gameDbService;
+        _configService = configService;
         _editableTitle = game.Title;
 
         LoadGameInfo();
@@ -105,6 +109,24 @@ public partial class GameInfoViewModel : ViewModelBase
             // Generate VirusTotal URL
             var hashes = HashUtility.ComputeAllHashes(Game.ExecutablePath);
             VirusTotalUrl = $"https://www.virustotal.com/gui/file/{hashes.Sha256}";
+            
+            // Load game settings (environment variables and program arguments)
+            if (_configService != null)
+            {
+                var gameSettings = _configService.GetGameSettings(Game.ExecutablePath);
+                if (gameSettings != null)
+                {
+                    // Load environment variables
+                    if (gameSettings.EnvironmentVariables != null && gameSettings.EnvironmentVariables.Count > 0)
+                    {
+                        EnvironmentVariables = string.Join(Environment.NewLine, 
+                            gameSettings.EnvironmentVariables.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+                    }
+                    
+                    // Load program arguments
+                    ProgramArguments = gameSettings.ProgramArguments ?? string.Empty;
+                }
+            }
         }
     }
 
@@ -135,19 +157,8 @@ public partial class GameInfoViewModel : ViewModelBase
 
     private static bool CheckIfImplemented(string dllName, string functionName)
     {
-        // Common DLLs and their typical implementation status
-        // This is a heuristic - for a real implementation, you'd query the emulator's module registry
-        var commonImplementedDlls = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "KERNEL32.DLL",
-            "USER32.DLL",
-            "GDI32.DLL",
-            "ADVAPI32.DLL"
-        };
-
-        // For now, mark common DLL imports as potentially implemented
-        // In a real implementation, you'd check against the actual emulator exports
-        return commonImplementedDlls.Contains(dllName);
+        // Use DllModuleExportInfo to check if the export is actually implemented
+        return DllModuleExportInfo.IsExportImplemented(dllName, functionName);
     }
 
     private static string FormatFileSize(long bytes)
@@ -170,6 +181,32 @@ public partial class GameInfoViewModel : ViewModelBase
     {
         // Update the game with edited values
         Game.Title = EditableTitle;
+        
+        // Save environment variables and program arguments to GameSettings
+        if (_configService != null && !string.IsNullOrEmpty(Game.ExecutablePath))
+        {
+            var gameSettings = _configService.GetGameSettings(Game.ExecutablePath) ?? new GameSettings();
+            
+            // Parse environment variables from the text box
+            var envVars = new Dictionary<string, string>();
+            if (!string.IsNullOrWhiteSpace(EnvironmentVariables))
+            {
+                var lines = EnvironmentVariables.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var line in lines)
+                {
+                    var parts = line.Split('=', 2);
+                    if (parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[0]))
+                    {
+                        envVars[parts[0].Trim()] = parts[1].Trim();
+                    }
+                }
+            }
+            
+            gameSettings.EnvironmentVariables = envVars.Count > 0 ? envVars : null;
+            gameSettings.ProgramArguments = string.IsNullOrWhiteSpace(ProgramArguments) ? null : ProgramArguments;
+            
+            _configService.SaveGameSettings(Game.ExecutablePath, gameSettings);
+        }
         
         // Notify that the game was updated
         _onGameUpdated?.Invoke(Game);
