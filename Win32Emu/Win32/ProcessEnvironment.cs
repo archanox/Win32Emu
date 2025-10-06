@@ -751,7 +751,7 @@ public class ProcessEnvironment
 			using var cts = new CancellationTokenSource(timeoutMs);
 			var readTask = _messageQueue.Reader.ReadAsync(cts.Token).AsTask();
 			
-			if (readTask.Wait(timeoutMs))
+			if (readTask.Wait())
 			{
 				message = readTask.Result;
 				
