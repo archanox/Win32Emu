@@ -1555,6 +1555,8 @@ public class IcedCpu : ICpu
 			case Register.DI: _edi = (_edi & 0xFFFF0000) | v; break;
 			case Register.BP: _ebp = (_ebp & 0xFFFF0000) | v; break;
 			case Register.SP: _esp = (_esp & 0xFFFF0000) | v; break;
+			default:
+				throw new ArgumentOutOfRangeException(nameof(reg), reg, "Invalid 16-bit register specified in SetReg16.");
 		}
 	}
 
