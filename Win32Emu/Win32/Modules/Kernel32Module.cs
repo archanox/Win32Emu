@@ -1112,8 +1112,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint HeapReAlloc(void* hHeap, uint dwFlags, void* lpMem, uint dwBytes)
 	{
 		// HeapReAlloc reallocates a memory block from a heap
-		// Simplified implementation: allocate new block
-		// Note: This doesn't copy old data - a limitation of the simplified implementation
+		// This implementation properly copies old data and frees the old block
 		
 		try
 		{
@@ -1125,7 +1124,17 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return alloc;
 			}
 
-			// Allocate new block (simplified - doesn't preserve old data)
+			// Get the size of the original allocation
+			uint originalSize = _env.HeapSize((uint)hHeap, (uint)lpMem);
+			if (originalSize == 0)
+			{
+				// If we don't have size info, this might be an invalid pointer
+				_logger.LogWarning($"[Kernel32] HeapReAlloc: Could not determine size of block at 0x{(uint)lpMem:X8}");
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			// Allocate new block
 			var newMem = _env.HeapAlloc((uint)hHeap, dwBytes);
 			if (newMem == 0)
 			{
@@ -1133,13 +1142,28 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return 0;
 			}
 
-			// Note: In a real implementation, we would copy the old data to the new block
-			// and free the old block, but without size tracking this is not possible
-			_logger.LogInformation($"[Kernel32] HeapReAlloc: Allocated new block at 0x{newMem:X8}, size={dwBytes} (old data not preserved)");
+			// Copy the data from the old block to the new block
+			uint bytesToCopy = Math.Min(originalSize, dwBytes);
+			if (bytesToCopy > 0)
+			{
+				// Copy using memory operations
+				var buffer = new byte[bytesToCopy];
+				for (uint i = 0; i < bytesToCopy; i++)
+				{
+					buffer[i] = _env.MemRead8((uint)lpMem + i);
+				}
+				_env.MemWriteBytes(newMem, buffer);
+			}
+
+			// Free the old block
+			_env.HeapFree((uint)hHeap, (uint)lpMem);
+
+			_logger.LogInformation($"[Kernel32] HeapReAlloc: Reallocated from 0x{(uint)lpMem:X8} (size={originalSize}) to 0x{newMem:X8} (size={dwBytes}), copied {bytesToCopy} bytes");
 			return newMem;
 		}
-		catch
+		catch (Exception ex)
 		{
+			_logger.LogError($"[Kernel32] HeapReAlloc failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
