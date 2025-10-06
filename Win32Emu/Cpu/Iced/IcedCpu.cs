@@ -118,6 +118,7 @@ public class IcedCpu : ICpu
 				case Mnemonic.Not: ExecNot(insn); break;
 				case Mnemonic.Neg: ExecNeg(insn); break;
 				case Mnemonic.Bswap: ExecBswap(insn); break;
+				case Mnemonic.Cdq: ExecCdq(); break;
 				case Mnemonic.Xchg: ExecXchg(insn); break;
 				case Mnemonic.Cmpxchg: ExecCmpxchg(insn); break;
 				case Mnemonic.Xadd: ExecXadd(insn); break;
@@ -820,6 +821,14 @@ public class IcedCpu : ICpu
 			v = (v >> 24) | ((v >> 8) & 0x0000FF00) | ((v << 8) & 0x00FF0000) | (v << 24);
 			SetReg32(r, v);
 		}
+	}
+
+	private void ExecCdq()
+	{
+		// CDQ: Sign-extend EAX into EDX:EAX
+		// If bit 31 of EAX is 0 (positive), EDX = 0x00000000
+		// If bit 31 of EAX is 1 (negative), EDX = 0xFFFFFFFF
+		_edx = (_eax & 0x80000000) != 0 ? 0xFFFFFFFF : 0x00000000;
 	}
 
 	private void ExecXchg(Instruction insn)

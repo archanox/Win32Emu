@@ -312,6 +312,39 @@ public class BasicInstructionTests : IDisposable
         Assert.Equal(0x00000001u, _helper.GetReg("EDX")); // 16 % 3 = 1
     }
 
+    [Fact]
+    public void CDQ_WithPositiveEAX_ShouldSetEDXToZero()
+    {
+        // Arrange: CDQ (99) - sign-extends EAX into EDX:EAX
+        _helper.SetReg("EAX", 0x00000042); // Positive number (bit 31 = 0)
+        _helper.SetReg("EDX", 0xFFFFFFFF); // Set to non-zero to verify it changes
+        _helper.WriteCode(0x99);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(0x00000042u, _helper.GetReg("EAX")); // EAX unchanged
+        Assert.Equal(0x00000000u, _helper.GetReg("EDX")); // EDX = 0 for positive EAX
+    }
+
+    [Theory]
+    [InlineData(0x80000000u, 0x00000000u)] // Negative number (bit 31 = 1)
+    [InlineData(0xFFFFFFF5u, 0x12345678u)] // -11 in two's complement (bit 31 = 1)
+    public void CDQ_WithNegativeEAX_ShouldSetEDXToFFFFFFFF(uint eaxValue, uint edxInitial)
+    {
+        // Arrange: CDQ (99) - sign-extends EAX into EDX:EAX
+        _helper.SetReg("EAX", eaxValue);
+        _helper.SetReg("EDX", edxInitial); // Set to known value to verify it changes
+        _helper.WriteCode(0x99);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(eaxValue, _helper.GetReg("EAX")); // EAX unchanged
+        Assert.Equal(0xFFFFFFFFu, _helper.GetReg("EDX")); // EDX = 0xFFFFFFFF for negative EAX
+    }
 //TODO: redo IDIV_EBX_ShouldDivideSigned, MUL_WithOverflow_ShouldSetCarryAndOverflowFlags, MUL_WithOverflow_ShouldSetCarryFlag, MUL_EBX_ShouldMultiplyEAXByEBX & MUL_EBX_ShouldMultiplyUnsigned tests
 
     public void Dispose()
