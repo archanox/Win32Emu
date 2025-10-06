@@ -3,6 +3,7 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Services;
@@ -26,12 +27,14 @@ public partial class GameLibraryViewModel : ViewModelBase
     private readonly EmulatorConfiguration _configuration;
     private readonly ConfigurationService _configService;
     private readonly IGameDbService? _gameDbService;
+    private readonly ILogger _logger;
 
-    public GameLibraryViewModel(EmulatorConfiguration configuration, ConfigurationService configService, IGameDbService? gameDbService = null)
+    public GameLibraryViewModel(EmulatorConfiguration configuration, ConfigurationService configService, IGameDbService? gameDbService = null, ILogger? logger = null)
     {
         _configuration = configuration;
         _configService = configService;
         _gameDbService = gameDbService;
+        _logger = logger ?? NullLogger.Instance;
         
         // Load games and watched folders from persistent storage
         LoadFromConfiguration();
@@ -66,38 +69,132 @@ public partial class GameLibraryViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Enrich a game with metadata from the GameDB if available
+    /// Enrich a game with metadata from the GameDB if available, and extract icon if needed
     /// </summary>
     private void EnrichGameFromDb(Game game)
     {
-        if (_gameDbService == null || string.IsNullOrEmpty(game.ExecutablePath))
+        if (string.IsNullOrEmpty(game.ExecutablePath))
         {
             return;
         }
 
         try
         {
-            var dbEntry = _gameDbService.FindGameByExecutable(game.ExecutablePath);
-            if (dbEntry != null)
+            // Try to enrich from GameDB first
+            var hasLogo = false;
+            if (_gameDbService != null)
             {
-                // Update game with metadata from database
-                game.GameDbId = dbEntry.Id;
-                game.Title = dbEntry.Title;
-                game.Description = dbEntry.Description ?? game.Description;
-                
-                // If there's a logo URL, we could download it and set ThumbnailPath
-                // For now, just use the URL as a reference
-                if (!string.IsNullOrEmpty(dbEntry.LogoUrl))
+                var dbEntry = _gameDbService.FindGameByExecutable(game.ExecutablePath);
+                if (dbEntry != null)
                 {
-                    // Future: Download logo and set ThumbnailPath
-                    // For now, we'll leave ThumbnailPath as is
+                    // Update game with metadata from database
+                    game.GameDbId = dbEntry.Id;
+                    game.Title = dbEntry.Title;
+                    game.Description = dbEntry.Description ?? game.Description;
+                    
+                    // If there's a logo URL, we could download it and set ThumbnailPath
+                    // For now, just use the URL as a reference
+                    if (!string.IsNullOrEmpty(dbEntry.LogoUrl))
+                    {
+                        // Future: Download logo and set ThumbnailPath
+                        // For now, we'll leave ThumbnailPath as is
+                        hasLogo = true;
+                    }
+                }
+            }
+
+            // If no logo from GameDB, try to extract icon from PE
+            if (!hasLogo && string.IsNullOrEmpty(game.ThumbnailPath))
+            {
+                ExtractGameIcon(game);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to enrich game from DB for executable path: {ExecutablePath}", game.ExecutablePath);
+            // If enrichment fails, just continue with the basic game info
+        }
+    }
+
+    /// <summary>
+    /// Extract icon from PE executable and save it for the game
+    /// </summary>
+    private void ExtractGameIcon(Game game)
+    {
+        if (string.IsNullOrEmpty(game.ExecutablePath) || !File.Exists(game.ExecutablePath))
+        {
+            return;
+        }
+
+        try
+        {
+            // Create icons directory in AppData
+            var appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var iconsDirectory = Path.Combine(appDataDir, "Win32Emu", "GameIcons");
+            
+            if (!Directory.Exists(iconsDirectory))
+            {
+                Directory.CreateDirectory(iconsDirectory);
+            }
+
+            // Generate icon filename based on executable hash
+            var exeFileName = Path.GetFileNameWithoutExtension(game.ExecutablePath);
+            var iconFileName = $"{exeFileName}_{GetFileHash(game.ExecutablePath)}.ico";
+            var iconPath = Path.Combine(iconsDirectory, iconFileName);
+
+            // Check if icon already exists
+            if (File.Exists(iconPath))
+            {
+                game.ThumbnailPath = iconPath;
+                return;
+            }
+
+            // Try to extract icon from PE
+            if (PeIconExtractor.TryExtractIcon(game.ExecutablePath, iconPath))
+            {
+                game.ThumbnailPath = iconPath;
+                _logger.LogInformation("Extracted icon for {GameTitle} to {IconPath}", game.Title, iconPath);
+            }
+            else
+            {
+                // Fall back to default icon
+                var defaultIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "default-game-icon.ico");
+                if (File.Exists(defaultIconPath))
+                {
+                    // Copy default icon to the icons directory
+                    var fallbackIconPath = Path.Combine(iconsDirectory, $"{exeFileName}_default.ico");
+                    if (!File.Exists(fallbackIconPath))
+                    {
+                        File.Copy(defaultIconPath, fallbackIconPath);
+                    }
+                    game.ThumbnailPath = fallbackIconPath;
+                    _logger.LogInformation("Using default icon for {GameTitle}", game.Title);
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Failed to enrich game from DB for executable path: {ExecutablePath}", game.ExecutablePath);
-            // If enrichment fails, just continue with the basic game info
+            _logger.LogError(ex, "Failed to extract icon for {GameTitle}", game.Title);
+        }
+    }
+
+    /// <summary>
+    /// Get a simple hash of the file for unique identification
+    /// </summary>
+    private static string GetFileHash(string filePath)
+    {
+        try
+        {
+            using var stream = File.OpenRead(filePath);
+            using var md5 = System.Security.Cryptography.MD5.Create();
+            var hash = md5.ComputeHash(stream);
+            return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant().Substring(0, 16);
+        }
+        catch
+        {
+            // If hashing fails, use file size and name as fallback
+            var info = new FileInfo(filePath);
+            return $"{info.Length}_{info.Name.GetHashCode():X8}";
         }
     }
 
