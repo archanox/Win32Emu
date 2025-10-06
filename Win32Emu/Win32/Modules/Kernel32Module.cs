@@ -1547,9 +1547,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				_env.MemWriteBytes(lpFindFileData + i, new byte[] { 0 });
 			}
 			
-			// Write filename at offset 44 (cFileName field)
-			_env.MemWriteBytes(lpFindFileData + 44, fileNameBytes);
-			
+			// Write filename at offset 44 (cFileName field), ensure null-terminated and max 260 bytes
+			var cFileNameBytes = new byte[260];
+			int copyLen = Math.Min(fileNameBytes.Length, 259); // leave room for null terminator
+			Array.Copy(fileNameBytes, 0, cFileNameBytes, 0, copyLen);
+			cFileNameBytes[copyLen] = 0; // explicit null terminator
+			_env.MemWriteBytes(lpFindFileData + 44, cFileNameBytes);
 			_logger.LogInformation($"[Kernel32] FindFirstFileA: Found '{fileName}' for pattern '{searchPattern}'");
 			_findFileHandles[handle].CurrentIndex = 1;
 			
