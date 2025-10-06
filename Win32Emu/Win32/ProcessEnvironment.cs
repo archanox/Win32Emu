@@ -717,6 +717,73 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
+	/// Try to get a message from the queue (blocking, synchronous with timeout)
+	/// </summary>
+	public QueuedMessage? GetMessageBlocking(uint hwnd, uint msgFilterMin, uint msgFilterMax, int timeoutMs = 100)
+	{
+		try
+		{
+			// Try to read from the channel with a timeout
+			if (_messageQueue.Reader.TryRead(out var message))
+			{
+				// Apply filters if specified
+				if (hwnd != 0 && message.Hwnd != hwnd)
+				{
+					// Re-queue messages that don't match the window filter
+					_messageQueue.Writer.TryWrite(message);
+					return null;
+				}
+
+				if (msgFilterMin != 0 || msgFilterMax != 0)
+				{
+					if (message.Message < msgFilterMin || message.Message > msgFilterMax)
+					{
+						// Re-queue messages outside the filter range
+						_messageQueue.Writer.TryWrite(message);
+						return null;
+					}
+				}
+
+				return message;
+			}
+
+			// Wait for a message with timeout
+			using var cts = new CancellationTokenSource(timeoutMs);
+			var readTask = _messageQueue.Reader.ReadAsync(cts.Token).AsTask();
+			
+			if (readTask.Wait(timeoutMs))
+			{
+				message = readTask.Result;
+				
+				// Apply filters if specified
+				if (hwnd != 0 && message.Hwnd != hwnd)
+				{
+					_messageQueue.Writer.TryWrite(message);
+					return null;
+				}
+
+				if (msgFilterMin != 0 || msgFilterMax != 0)
+				{
+					if (message.Message < msgFilterMin || message.Message > msgFilterMax)
+					{
+						_messageQueue.Writer.TryWrite(message);
+						return null;
+					}
+				}
+
+				return message;
+			}
+
+			return null;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning($"[ProcessEnv] GetMessageBlocking: {ex.Message}");
+			return null;
+		}
+	}
+
+	/// <summary>
 	/// Try to peek at a message from the queue (non-blocking)
 	/// </summary>
 	public bool TryPeekMessage(out QueuedMessage message, uint hwnd, uint msgFilterMin, uint msgFilterMax, bool remove)

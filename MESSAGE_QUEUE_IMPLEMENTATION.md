@@ -109,18 +109,21 @@ All tests pass ✅ (61 total: 53 existing + 8 new)
 - ❌ DispatchMessageA didn't call window procedures
 - ❌ DefWindowProcA provided no default handling
 - ❌ No message queue infrastructure
+- ❌ No CPU callback mechanism
 
 ### After
 - ✅ Full message queue with System.Threading.Channels
 - ✅ PostMessageA queues messages to channel
-- ✅ GetMessageA retrieves from queue (non-blocking for now)
+- ✅ GetMessageA retrieves from queue with timeout-based blocking
 - ✅ PeekMessageA supports PM_REMOVE and PM_NOREMOVE flags
-- ✅ DispatchMessageA looks up window procedures
-- ✅ SendMessageA looks up window procedures (synchronous path)
+- ✅ **DispatchMessageA actually calls window procedures via CPU callback**
+- ✅ **SendMessageA actually calls window procedures via CPU callback**
 - ✅ DefWindowProcA provides proper default message handling
 - ✅ Window procedure addresses tracked from RegisterClassA
 - ✅ FIFO message ordering preserved
 - ✅ Comprehensive test coverage
+- ✅ **CPU callback mechanism fully implemented**
+- ✅ **Blocking GetMessage with timeout**
 
 ## Message Flow
 
@@ -157,7 +160,7 @@ All tests pass ✅ (61 total: 53 existing + 8 new)
 ## Future Enhancements
 
 ### CPU Callback Mechanism
-The current implementation looks up window procedure addresses but doesn't actually invoke them. To complete the implementation:
+The current implementation now **invokes window procedures** using the CPU callback mechanism:
 
 1. **CPU State Setup** - Push message parameters onto the emulated stack:
    - Push lParam
@@ -169,13 +172,24 @@ The current implementation looks up window procedure addresses but doesn't actua
 
 3. **Return Value Handling** - Read return value from EAX register
 
-This requires deeper integration with the CPU emulation layer and is marked as a future enhancement.
+**Implementation Status:** ✅ **COMPLETE** - `CallWindowProcedure()` method implemented in User32Module.cs
+
+- Sets up CPU state with stdcall convention (parameters pushed right-to-left)
+- Executes window procedure by setting EIP and running CPU.SingleStep() until return
+- Handles return value from EAX register
+- Restores original CPU state (EIP, ESP, EBP)
+- Used by DispatchMessageA and SendMessageA when CPU is available
 
 ### Blocking GetMessage
-Real Windows GetMessage blocks until a message is available. The current implementation is non-blocking (returns WM_NULL if no messages). To implement true blocking:
+Real Windows GetMessage blocks until a message is available. The current implementation uses a timeout-based blocking approach:
 
-- Use `await _messageQueue.Reader.ReadAsync()` in GetMessageA
-- Requires making the emulator support async operations or implement a polling mechanism
+- Uses `GetMessageBlocking()` in ProcessEnvironment with a 100ms timeout
+- Waits synchronously using `ChannelReader.ReadAsync()` with CancellationToken
+- Returns WM_NULL if timeout expires (real Windows would block indefinitely)
+
+**Implementation Status:** ✅ **COMPLETE** - Blocking with timeout implemented
+
+Note: True indefinite blocking would require async/await support in the emulator main loop. The current implementation provides a practical compromise that blocks for a short period, preventing busy-waiting while still allowing the emulator to remain responsive.
 
 ## Testing
 

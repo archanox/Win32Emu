@@ -379,26 +379,28 @@ namespace Win32Emu.Win32.Modules
 				return 0; // GetMessage returns 0 for WM_QUIT
 			}
 
-			// Try to get a message from the queue (non-blocking for now)
-			// In a real Windows implementation, this would block until a message arrives
-			if (_env.TryPeekMessage(out var queuedMsg, hWnd, wMsgFilterMin, wMsgFilterMax, remove: true))
+			// Try to get a message from the queue (with short timeout to simulate blocking)
+			// Real Windows GetMessage blocks indefinitely, but we use a timeout to avoid hanging the emulator
+			var queuedMsg = _env.GetMessageBlocking(hWnd, wMsgFilterMin, wMsgFilterMax, timeoutMs: 100);
+			if (queuedMsg.HasValue)
 			{
-				_logger.LogInformation($"[User32] GetMessageA: retrieved MSG=0x{queuedMsg.Message:X4} HWND=0x{queuedMsg.Hwnd:X8}");
+				_logger.LogInformation($"[User32] GetMessageA: retrieved MSG=0x{queuedMsg.Value.Message:X4} HWND=0x{queuedMsg.Value.Hwnd:X8}");
 
 				// Fill MSG structure
-				_env.MemWrite32(lpMsg + 0, queuedMsg.Hwnd);
-				_env.MemWrite32(lpMsg + 4, queuedMsg.Message);
-				_env.MemWrite32(lpMsg + 8, queuedMsg.WParam);
-				_env.MemWrite32(lpMsg + 12, queuedMsg.LParam);
-				_env.MemWrite32(lpMsg + 16, queuedMsg.Time);
-				_env.MemWrite32(lpMsg + 20, queuedMsg.PtX);
-				_env.MemWrite32(lpMsg + 24, queuedMsg.PtY);
+				_env.MemWrite32(lpMsg + 0, queuedMsg.Value.Hwnd);
+				_env.MemWrite32(lpMsg + 4, queuedMsg.Value.Message);
+				_env.MemWrite32(lpMsg + 8, queuedMsg.Value.WParam);
+				_env.MemWrite32(lpMsg + 12, queuedMsg.Value.LParam);
+				_env.MemWrite32(lpMsg + 16, queuedMsg.Value.Time);
+				_env.MemWrite32(lpMsg + 20, queuedMsg.Value.PtX);
+				_env.MemWrite32(lpMsg + 24, queuedMsg.Value.PtY);
 
 				return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 			}
 
-			// No messages available - return WM_NULL (this would normally block)
-			_logger.LogInformation("[User32] GetMessageA: No messages in queue, returning WM_NULL");
+			// No messages available after timeout - return WM_NULL
+			// Note: Real Windows GetMessage would block indefinitely, but we timeout to avoid hanging
+			_logger.LogInformation("[User32] GetMessageA: No messages after timeout, returning WM_NULL");
 
 			// Return a dummy message (WM_NULL)
 			_env.MemWrite32(lpMsg + 0, hWnd); // hwnd
