@@ -275,7 +275,7 @@ public class IcedCpu : ICpu
 					// Handle INT instruction with immediate
 					if (insn.Immediate8 == 3)
 					{
-						// This is an INT3 breakpoint - check if it's at a synthetic import address
+						// This is an INT3 breakpoint - check if it's at a synthetic import or COM vtable address
 						if (oldEip is >= 0x0F000000 and < 0x10000000)
 						{
 							// This is a synthetic import stub - signal this as a call
@@ -284,6 +284,16 @@ public class IcedCpu : ICpu
 
 							// Don't actually execute the INT3, just treat it as a call
 							// The main loop will handle the import invocation
+						}
+						else if (oldEip is >= 0x0D000000 and < 0x0E000000)
+						{
+							// This is a COM vtable method stub - signal this as a call
+							isCall = true;
+							callTarget = oldEip;
+							_logger.LogWarning($"[IcedCpu] Handling INT3 COM vtable stub at 0x{oldEip:X8}");
+
+							// Don't actually execute the INT3, just treat it as a call
+							// The main loop will handle the COM method invocation
 						}
 						else
 						{
@@ -298,7 +308,7 @@ public class IcedCpu : ICpu
 
 					break;
 				case Mnemonic.Int3:
-					// Handle INT3 (0xCC) instruction used for import stubs
+					// Handle INT3 (0xCC) instruction used for import stubs and COM vtable methods
 					if (oldEip is >= 0x0F000000 and < 0x10000000)
 					{
 						// This is a synthetic import stub - signal this as a call
@@ -308,6 +318,16 @@ public class IcedCpu : ICpu
 
 						// Don't actually execute the INT3, just treat it as a call
 						// The main loop will handle the import invocation
+					}
+					else if (oldEip is >= 0x0D000000 and < 0x0E000000)
+					{
+						// This is a COM vtable method stub - signal this as a call
+						isCall = true;
+						callTarget = oldEip;
+						_logger.LogWarning($"[IcedCpu] Handling INT3 COM vtable stub at 0x{oldEip:X8}");
+
+						// Don't actually execute the INT3, just treat it as a call
+						// The main loop will handle the COM method invocation
 					}
 					else
 					{
