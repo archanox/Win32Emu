@@ -1112,18 +1112,45 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint HeapReAlloc(void* hHeap, uint dwFlags, void* lpMem, uint dwBytes)
 	{
 		// HeapReAlloc reallocates a memory block from a heap
-		// For simplicity, we'll allocate a new block and copy the data
-		// This is not optimal but works for compatibility
+		// Allocate a new block, copy the old data, and free the old block
 		
 		try
 		{
+			if (lpMem == null)
+			{
+				// If lpMem is null, HeapReAlloc acts like HeapAlloc
+				var alloc = _env.HeapAlloc((uint)hHeap, dwBytes);
+				_logger.LogInformation($"[Kernel32] HeapReAlloc: lpMem is null, allocated new block at 0x{alloc:X8}, size={dwBytes}");
+				return alloc;
+			}
+
+			// Get the size of the original allocation
+			uint originalSize = _env.HeapSize((uint)hHeap, (uint)lpMem);
+			if (originalSize == uint.MaxValue)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
 			// Allocate new block
 			var newMem = _env.HeapAlloc((uint)hHeap, dwBytes);
-			
-			// In a real implementation, we'd copy the old data to the new block
-			// For now, just return the new allocation
-			_logger.LogInformation($"[Kernel32] HeapReAlloc: Allocated new block at 0x{newMem:X8}, size={dwBytes}");
-			
+			if (newMem == 0)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_NOT_ENOUGH_MEMORY;
+				return 0;
+			}
+
+			// Copy the data from the old block to the new block
+			uint bytesToCopy = Math.Min(originalSize, dwBytes);
+			if (bytesToCopy > 0)
+			{
+				Buffer.MemoryCopy((void*)lpMem, (void*)newMem, dwBytes, bytesToCopy);
+			}
+
+			// Free the old block
+			_env.HeapFree((uint)hHeap, (uint)lpMem);
+
+			_logger.LogInformation($"[Kernel32] HeapReAlloc: Copied {bytesToCopy} bytes from 0x{(ulong)lpMem:X8} to 0x{newMem:X8}, freed old block, new size={dwBytes}");
 			return newMem;
 		}
 		catch
