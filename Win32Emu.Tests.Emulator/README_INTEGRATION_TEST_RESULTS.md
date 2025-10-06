@@ -55,9 +55,13 @@ The following Win32 APIs are being called and appear to work correctly:
 
 **KERNEL32.DLL Timing APIs** (all newly implemented with full functionality):
 - `GetTickCount` - Returns actual tick count from Environment.TickCount
+- `GetTickCount64` - Returns 64-bit tick count from Environment.TickCount64 (newly added)
 - `QueryPerformanceCounter` - Returns high-resolution timestamp from Stopwatch
 - `QueryPerformanceFrequency` - Returns timer frequency from Stopwatch
 - `Sleep` - Performs actual thread sleep with smart handling for special cases
+
+**WINMM.DLL Timing APIs** (already implemented):
+- `timeGetTime` - Returns elapsed time in milliseconds using Stopwatch
 
 **Other KERNEL32.DLL APIs** (verified working):
 - Memory: `HeapCreate`, `VirtualAlloc`
@@ -188,10 +192,10 @@ The games never reach the point where they would initialize graphics/audio. This
 Based on common game requirements, the following APIs may be needed once executables progress further:
 
 ### Timing APIs (KERNEL32.DLL / WINMM.DLL)
-- ~~`GetTickCount` / `GetTickCount64`~~ - **GetTickCount FULLY implemented** ✅
+- ~~`GetTickCount` / `GetTickCount64`~~ - **Both FULLY implemented** ✅
 - ~~`QueryPerformanceCounter`~~ - **FULLY implemented** ✅
 - ~~`QueryPerformanceFrequency`~~ - **FULLY implemented** ✅
-- `timeGetTime` (WINMM.DLL) - Not yet implemented
+- ~~`timeGetTime`~~ (WINMM.DLL) - **Already implemented in WinMMModule** ✅
 - ~~`Sleep` / `SleepEx`~~ - **Sleep FULLY implemented** ✅
 
 ### Window/Message APIs (USER32.DLL)

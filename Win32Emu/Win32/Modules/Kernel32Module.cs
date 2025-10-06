@@ -197,6 +197,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETTICKCOUNT":
 				returnValue = GetTickCount();
 				return true;
+			case "GETTICKCOUNT64":
+				returnValue = GetTickCount64(a.UInt32(0));
+				return true;
 			case "SLEEP":
 				returnValue = Sleep(a.UInt32(0));
 				return true;
@@ -1851,6 +1854,37 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		
 		_logger.LogInformation($"[Kernel32] GetTickCount: {tickCount} ms");
 		return tickCount;
+	}
+
+	private unsafe uint GetTickCount64(uint lpTickCount)
+	{
+		// GetTickCount64 returns a 64-bit tick count that won't wrap
+		// lpTickCount is a pointer to a ULONGLONG (64-bit value)
+		// Returns non-zero on success, zero on failure
+		
+		if (lpTickCount == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		try
+		{
+			// Use Environment.TickCount64 which provides 64-bit tick count
+			// This is available in .NET and won't wrap around
+			var tickCount64 = (ulong)Environment.TickCount64;
+			
+			// Write the 64-bit tick count to the provided memory location
+			_env.MemWrite64(lpTickCount, tickCount64);
+			
+			_logger.LogInformation($"[Kernel32] GetTickCount64: {tickCount64} ms");
+			return 1; // Success (non-zero return)
+		}
+		catch
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
 	}
 
 	private uint Sleep(uint dwMilliseconds)
