@@ -4,12 +4,12 @@ This document tracks the x86 instruction coverage in the Win32Emu CPU emulator t
 
 ## Test Summary
 
-**Total Tests**: 34  
+**Total Tests**: 37  
 **Status**: All passing ✅
 
 ## Instruction Categories
 
-### 8086/286/386 Basic Instructions (15 tests)
+### 8086/286/386 Basic Instructions (18 tests)
 These foundational instructions are tested for correctness:
 
 | Instruction | Tests | Description |
@@ -25,6 +25,7 @@ These foundational instructions are tested for correctness:
 | DEC | 1 | Decrement |
 | SHL | 1 | Shift left |
 | SHR | 1 | Shift right |
+| CDQ | 3 | Convert Doubleword to Quadword (sign-extend EAX into EDX:EAX) |
 
 ### Intel 486 Instructions (11 tests)
 New instructions introduced with the 486 processor:
@@ -69,6 +70,13 @@ CPUID returns basic CPU information:
 
 ### Time-Stamp Counter
 RDTSC returns a timestamp based on `Environment.TickCount64`, providing a monotonically increasing value suitable for basic timing operations.
+
+### Sign Extension (CDQ)
+CDQ (Convert Doubleword to Quadword) is a critical instruction for signed division operations. It sign-extends EAX into EDX:EAX:
+- If EAX is positive (bit 31 = 0), EDX becomes 0x00000000
+- If EAX is negative (bit 31 = 1), EDX becomes 0xFFFFFFFF
+
+This is commonly used before IDIV to prepare the dividend for signed division.
 
 ## Already Implemented (Not New)
 
