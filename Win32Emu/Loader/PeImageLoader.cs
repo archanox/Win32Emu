@@ -65,11 +65,7 @@ public class PeImageLoader(VirtualMemory vm)
 				continue;
 			}
 
-			var bytes = section.Contents.WriteIntoArray();
-			var address = imageBase + section.Rva;
-			vm.WriteBytes(address, bytes);
-			
-			Console.WriteLine($"[PELoader] Loaded section '{section.Name}' at 0x{address:X8}, size={bytes.Length} bytes, first 16 bytes: {BitConverter.ToString(bytes.Length >= 16 ? bytes.Take(16).ToArray() : bytes)}");
+			vm.WriteBytes(imageBase + section.Rva, section.Contents.WriteIntoArray());
 		}
 
 		var importMap = BuildImportMap(image, imageBase);
