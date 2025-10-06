@@ -95,6 +95,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETENVIRONMENTSTRINGSA":
 				returnValue = GetEnvironmentStringsA();
 				return true;
+			case "SETENVIRONMENTVARIABLEA":
+				returnValue = SetEnvironmentVariableA(a.UInt32(0), a.UInt32(1));
+				return true;
 			case "FREEENVIRONMENTSTRINGSW":
 				returnValue = FreeEnvironmentStringsW(a.UInt32(0));
 				return true;
@@ -117,6 +120,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GLOBALFREE":
 				returnValue = GlobalFree((void*)a.UInt32(0));
 				return true;
+			case "GLOBALLOCK":
+				returnValue = GlobalLock((void*)a.UInt32(0));
+				return true;
+			case "GLOBALUNLOCK":
+				returnValue = GlobalUnlock((void*)a.UInt32(0));
+				return true;
+			case "GLOBALHANDLE":
+				returnValue = GlobalHandle((void*)a.UInt32(0));
+				return true;
 			case "HEAPCREATE":
 				returnValue = HeapCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
@@ -125,6 +137,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "HEAPFREE":
 				returnValue = HeapFree((void*)a.UInt32(0), a.UInt32(1), (void*)a.UInt32(2));
+				return true;
+			case "HEAPREALLOC":
+				returnValue = HeapReAlloc((void*)a.UInt32(0), a.UInt32(1), (void*)a.UInt32(2), a.UInt32(3));
 				return true;
 			case "HEAPDESTROY":
 				returnValue = HeapDestroy((void*)a.UInt32(0));
@@ -162,6 +177,30 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "SETENDOFFILE":
 				returnValue = SetEndOfFile((void*)a.UInt32(0));
 				return true;
+			case "DELETEFILEA":
+				returnValue = DeleteFileA(a.UInt32(0));
+				return true;
+			case "MOVEFILEA":
+				returnValue = MoveFileA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "FINDFIRSTFILEA":
+				returnValue = FindFirstFileA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "FINDNEXTFILEA":
+				returnValue = FindNextFileA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "FINDCLOSE":
+				returnValue = FindClose((void*)a.UInt32(0));
+				return true;
+			case "FILETIMETOSYSTEMTIME":
+				returnValue = FileTimeToSystemTime(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "FILETIMETOLOCALFILETIME":
+				returnValue = FileTimeToLocalFileTime(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "GETTIMEZONEINFORMATION":
+				returnValue = GetTimeZoneInformation(a.UInt32(0));
+				return true;
 			case "SETHANDLECOUNT":
 				returnValue = SetHandleCount(a.UInt32(0));
 				return true;
@@ -182,6 +221,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "LCMAPSTRINGW":
 				returnValue = LcMapStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4), a.Int32(5));
+				return true;
+			case "COMPARESTRINGA":
+				returnValue = CompareStringA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4), a.Int32(5));
+				return true;
+			case "COMPARESTRINGW":
+				returnValue = CompareStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4), a.Int32(5));
 				return true;
 			case "RAISEEXCEPTION":
 				returnValue = RaiseException(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
@@ -1032,6 +1077,29 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(25)]
 	private static unsafe uint GlobalFree(void* h) => 0;
 
+	private static unsafe uint GlobalLock(void* hMem)
+	{
+		// GlobalLock locks a global memory object and returns a pointer to it
+		// In our simplified implementation, we just return the handle as a pointer
+		// since memory is already accessible
+		return (uint)hMem;
+	}
+
+	private static unsafe uint GlobalUnlock(void* hMem)
+	{
+		// GlobalUnlock decrements the lock count
+		// Returns TRUE (1) if still locked, FALSE (0) if unlocked
+		// In our simplified implementation, always return TRUE
+		return NativeTypes.Win32Bool.TRUE;
+	}
+
+	private static unsafe uint GlobalHandle(void* pMem)
+	{
+		// GlobalHandle retrieves the handle associated with a locked memory pointer
+		// In our simplified implementation, the handle is the same as the pointer
+		return (uint)pMem;
+	}
+
 	[DllModuleExport(27)]
 	private unsafe uint HeapCreate(uint flOptions, uint dwInitialSize, uint dwMaximumSize) =>
 		_env.HeapCreate(flOptions, dwInitialSize, dwMaximumSize);
@@ -1040,6 +1108,66 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint HeapAlloc(void* hHeap, uint dwFlags, uint dwBytes) => _env.HeapAlloc((uint)hHeap, dwBytes);
 	[DllModuleExport(29)]
 	private static unsafe uint HeapFree(void* hHeap, uint dwFlags, void* lpMem) => 1;
+
+	private unsafe uint HeapReAlloc(void* hHeap, uint dwFlags, void* lpMem, uint dwBytes)
+	{
+		// HeapReAlloc reallocates a memory block from a heap
+		// This implementation properly copies old data and frees the old block
+		
+		try
+		{
+			if (lpMem == null)
+			{
+				// If lpMem is null, HeapReAlloc acts like HeapAlloc
+				var alloc = _env.HeapAlloc((uint)hHeap, dwBytes);
+				_logger.LogInformation($"[Kernel32] HeapReAlloc: lpMem is null, allocated new block at 0x{alloc:X8}, size={dwBytes}");
+				return alloc;
+			}
+
+			// Get the size of the original allocation
+			uint originalSize = _env.HeapSize((uint)hHeap, (uint)lpMem);
+			if (originalSize == 0)
+			{
+				// If we don't have size info, this might be an invalid pointer
+				_logger.LogWarning($"[Kernel32] HeapReAlloc: Could not determine size of block at 0x{(uint)lpMem:X8}");
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			// Allocate new block
+			var newMem = _env.HeapAlloc((uint)hHeap, dwBytes);
+			if (newMem == 0)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			// Copy the data from the old block to the new block
+			uint bytesToCopy = Math.Min(originalSize, dwBytes);
+			if (bytesToCopy > 0)
+			{
+				// Copy using memory operations
+				var buffer = new byte[bytesToCopy];
+				for (uint i = 0; i < bytesToCopy; i++)
+				{
+					buffer[i] = _env.MemRead8((uint)lpMem + i);
+				}
+				_env.MemWriteBytes(newMem, buffer);
+			}
+
+			// Free the old block
+			_env.HeapFree((uint)hHeap, (uint)lpMem);
+
+			_logger.LogInformation($"[Kernel32] HeapReAlloc: Reallocated from 0x{(uint)lpMem:X8} (size={originalSize}) to 0x{newMem:X8} (size={dwBytes}), copied {bytesToCopy} bytes");
+			return newMem;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError($"[Kernel32] HeapReAlloc failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+	}
 
 	[DllModuleExport(28)]
 	private unsafe uint HeapDestroy(void* hHeap)
@@ -1319,6 +1447,306 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		return 0;
+	}
+
+	private unsafe uint DeleteFileA(uint lpFileName)
+	{
+		try
+		{
+			var path = _env.ReadAnsiString(lpFileName);
+			if (string.IsNullOrEmpty(path))
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+
+			File.Delete(path);
+			_logger.LogInformation($"[Kernel32] DeleteFileA: Deleted '{path}'");
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation($"[Kernel32] DeleteFileA failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	private unsafe uint MoveFileA(uint lpExistingFileName, uint lpNewFileName)
+	{
+		try
+		{
+			var existingPath = _env.ReadAnsiString(lpExistingFileName);
+			var newPath = _env.ReadAnsiString(lpNewFileName);
+			
+			if (string.IsNullOrEmpty(existingPath) || string.IsNullOrEmpty(newPath))
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+
+			File.Move(existingPath, newPath);
+			_logger.LogInformation($"[Kernel32] MoveFileA: Moved '{existingPath}' to '{newPath}'");
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation($"[Kernel32] MoveFileA failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	// Simple structure to hold find file data
+	private class FindFileHandle
+	{
+		public string SearchPattern { get; set; } = "";
+		public string[] Files { get; set; } = Array.Empty<string>();
+		public int CurrentIndex { get; set; } = 0;
+	}
+
+	private readonly Dictionary<uint, FindFileHandle> _findFileHandles = new();
+	private uint _nextFindFileHandle = 0x1000;
+
+	// Helper method to write WIN32_FIND_DATAA structure
+	private unsafe void WriteFindData(uint lpFindFileData, string fileName)
+	{
+		var fileNameBytes = Encoding.ASCII.GetBytes(fileName);
+		
+		// Clear the structure
+		var zeroBuffer = new byte[320];
+		_env.MemWriteBytes(lpFindFileData, zeroBuffer);
+		
+		// Write filename at offset 44 (cFileName field), ensure null-terminated and max 260 bytes
+		var cFileNameBytes = new byte[260];
+		int copyLen = Math.Min(fileNameBytes.Length, 259); // leave room for null terminator
+		Array.Copy(fileNameBytes, 0, cFileNameBytes, 0, copyLen);
+		cFileNameBytes[copyLen] = 0; // explicit null terminator
+		_env.MemWriteBytes(lpFindFileData + 44, cFileNameBytes);
+	}
+
+	private unsafe uint FindFirstFileA(uint lpFileName, uint lpFindFileData)
+	{
+		try
+		{
+			var searchPattern = _env.ReadAnsiString(lpFileName);
+			if (string.IsNullOrEmpty(searchPattern))
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
+
+			// Get directory and pattern
+			var dir = Path.GetDirectoryName(searchPattern) ?? ".";
+			var pattern = Path.GetFileName(searchPattern);
+			
+			if (string.IsNullOrEmpty(pattern))
+			{
+				pattern = "*";
+			}
+
+			var files = Directory.GetFiles(dir, pattern);
+			
+			if (files.Length == 0)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
+
+			// Create handle for this search
+			var handle = _nextFindFileHandle++;
+			_findFileHandles[handle] = new FindFileHandle
+			{
+				SearchPattern = searchPattern,
+				Files = files,
+				CurrentIndex = 0
+			};
+
+			// Write first file data (WIN32_FIND_DATAA structure - 320 bytes)
+			// We'll write a simplified version with just the filename
+			var fileName = Path.GetFileName(files[0]);
+			WriteFindData(lpFindFileData, fileName);
+			
+			_logger.LogInformation($"[Kernel32] FindFirstFileA: Found '{fileName}' for pattern '{searchPattern}'");
+			_findFileHandles[handle].CurrentIndex = 1;
+			
+			return handle;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation($"[Kernel32] FindFirstFileA failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+		}
+	}
+
+	private unsafe uint FindNextFileA(uint hFindFile, uint lpFindFileData)
+	{
+		try
+		{
+			if (!_findFileHandles.TryGetValue(hFindFile, out var handle))
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+
+			if (handle.CurrentIndex >= handle.Files.Length)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+
+			// Write next file data
+			var fileName = Path.GetFileName(handle.Files[handle.CurrentIndex]);
+			WriteFindData(lpFindFileData, fileName);
+			
+			_logger.LogInformation($"[Kernel32] FindNextFileA: Found '{fileName}'");
+			handle.CurrentIndex++;
+			
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation($"[Kernel32] FindNextFileA failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	private unsafe uint FindClose(void* hFindFile)
+	{
+		var handle = (uint)hFindFile;
+		if (_findFileHandles.Remove(handle))
+		{
+			_logger.LogInformation($"[Kernel32] FindClose: Closed handle 0x{handle:X8}");
+			return NativeTypes.Win32Bool.TRUE;
+		}
+
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return NativeTypes.Win32Bool.FALSE;
+	}
+
+	private unsafe uint FileTimeToSystemTime(uint lpFileTime, uint lpSystemTime)
+	{
+		try
+		{
+			// FileTime is a 64-bit value representing the number of 100-nanosecond intervals since Jan 1, 1601
+			// SystemTime is a SYSTEMTIME structure (16 bytes)
+			
+			// Read 64-bit file time as two 32-bit values
+			var low = _env.MemRead32(lpFileTime);
+			var high = _env.MemRead32(lpFileTime + 4);
+			var fileTime = ((ulong)high << 32) | low;
+			var dateTime = DateTime.FromFileTimeUtc((long)fileTime);
+			
+			// Write SYSTEMTIME structure
+			_env.MemWrite16(lpSystemTime, (ushort)dateTime.Year);
+			_env.MemWrite16(lpSystemTime + 2, (ushort)dateTime.Month);
+			_env.MemWrite16(lpSystemTime + 4, (ushort)dateTime.DayOfWeek);
+			_env.MemWrite16(lpSystemTime + 6, (ushort)dateTime.Day);
+			_env.MemWrite16(lpSystemTime + 8, (ushort)dateTime.Hour);
+			_env.MemWrite16(lpSystemTime + 10, (ushort)dateTime.Minute);
+			_env.MemWrite16(lpSystemTime + 12, (ushort)dateTime.Second);
+			_env.MemWrite16(lpSystemTime + 14, (ushort)dateTime.Millisecond);
+			
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation($"[Kernel32] FileTimeToSystemTime failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	private unsafe uint FileTimeToLocalFileTime(uint lpFileTime, uint lpLocalFileTime)
+	{
+		try
+		{
+			// Convert UTC file time to local file time
+			var low = _env.MemRead32(lpFileTime);
+			var high = _env.MemRead32(lpFileTime + 4);
+			var fileTime = ((ulong)high << 32) | low;
+			var dateTime = DateTime.FromFileTimeUtc((long)fileTime);
+			var localTime = dateTime.ToLocalTime();
+			// Use ToFileTime() (not ToFileTimeUtc()) to get the local file time
+			var localFileTime = (ulong)localTime.ToFileTime();
+			
+			_env.MemWrite32(lpLocalFileTime, (uint)(localFileTime & 0xFFFFFFFF));
+			_env.MemWrite32(lpLocalFileTime + 4, (uint)(localFileTime >> 32));
+			
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation($"[Kernel32] FileTimeToLocalFileTime failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	private unsafe uint GetTimeZoneInformation(uint lpTimeZoneInformation)
+	{
+		try
+		{
+			// TIME_ZONE_INFORMATION structure is 172 bytes
+			// For simplicity, we'll just fill in the bias
+			var bias = -(int)TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalMinutes;
+			
+			_env.MemWrite32(lpTimeZoneInformation, (uint)bias);
+			
+			// Fill rest with zeros
+			for (uint i = 4; i < 172; i++)
+			{
+				_env.MemWriteBytes(lpTimeZoneInformation + i, new byte[] { 0 });
+			}
+			
+			_logger.LogInformation($"[Kernel32] GetTimeZoneInformation: Bias={bias} minutes");
+			
+			// Return TIME_ZONE_ID_UNKNOWN (0)
+			return 0;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation($"[Kernel32] GetTimeZoneInformation failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0xFFFFFFFF; // TIME_ZONE_ID_INVALID
+		}
+	}
+
+	private unsafe uint SetEnvironmentVariableA(uint lpName, uint lpValue)
+	{
+		try
+		{
+			var name = _env.ReadAnsiString(lpName);
+			
+			if (string.IsNullOrEmpty(name))
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+
+			// If lpValue is NULL, delete the variable
+			if (lpValue == 0)
+			{
+				Environment.SetEnvironmentVariable(name, null);
+				_logger.LogInformation($"[Kernel32] SetEnvironmentVariableA: Deleted '{name}'");
+			}
+			else
+			{
+				var value = _env.ReadAnsiString(lpValue);
+				Environment.SetEnvironmentVariable(name, value);
+				_logger.LogInformation($"[Kernel32] SetEnvironmentVariableA: Set '{name}'='{value}'");
+			}
+
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation($"[Kernel32] SetEnvironmentVariableA failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
 	}
 
 	[DllModuleExport(40)]
@@ -1781,6 +2209,156 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogInformation($"[Kernel32] LCMapStringW failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+	}
+
+	private unsafe uint CompareStringA(uint locale, uint dwCmpFlags, uint lpString1, int cchCount1, uint lpString2, int cchCount2)
+	{
+		// CompareStringA compares two ANSI strings
+		// Returns: CSTR_LESS_THAN (1), CSTR_EQUAL (2), or CSTR_GREATER_THAN (3)
+		const uint cstrLessThan = 1;
+		const uint cstrEqual = 2;
+		const uint cstrGreaterThan = 3;
+
+		try
+		{
+			if (lpString1 == 0 || lpString2 == 0)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			// Read strings
+			string str1;
+			if (cchCount1 == -1)
+			{
+				str1 = _env.ReadAnsiString(lpString1);
+			}
+			else
+			{
+				var bytes = new byte[cchCount1];
+				for (var i = 0; i < cchCount1; i++)
+				{
+					bytes[i] = _env.MemRead8(lpString1 + (uint)i);
+				}
+				str1 = Encoding.ASCII.GetString(bytes);
+			}
+
+			string str2;
+			if (cchCount2 == -1)
+			{
+				str2 = _env.ReadAnsiString(lpString2);
+			}
+			else
+			{
+				var bytes = new byte[cchCount2];
+				for (var i = 0; i < cchCount2; i++)
+				{
+					bytes[i] = _env.MemRead8(lpString2 + (uint)i);
+				}
+				str2 = Encoding.ASCII.GetString(bytes);
+			}
+
+			// Perform comparison (ignoring locale and flags for simplicity)
+			var result = string.Compare(str1, str2, StringComparison.Ordinal);
+			
+			_logger.LogInformation($"[Kernel32] CompareStringA: '{str1}' vs '{str2}' = {result}");
+			
+			if (result < 0) return cstrLessThan;
+			if (result > 0) return cstrGreaterThan;
+			return cstrEqual;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation($"[Kernel32] CompareStringA failed: {ex.Message}");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+	}
+
+	private unsafe uint CompareStringW(uint locale, uint dwCmpFlags, uint lpString1, int cchCount1, uint lpString2, int cchCount2)
+	{
+		// CompareStringW compares two Unicode strings
+		// Returns: CSTR_LESS_THAN (1), CSTR_EQUAL (2), or CSTR_GREATER_THAN (3)
+		const uint cstrLessThan = 1;
+		const uint cstrEqual = 2;
+		const uint cstrGreaterThan = 3;
+
+		try
+		{
+			if (lpString1 == 0 || lpString2 == 0)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			// Read wide strings
+			string str1;
+			if (cchCount1 == -1)
+			{
+				// Read null-terminated Unicode string
+				var sb = new StringBuilder();
+				uint offset = 0;
+				while (true)
+				{
+					var ch = (char)_env.MemRead16(lpString1 + offset);
+					if (ch == 0) break;
+					sb.Append(ch);
+					offset += 2;
+				}
+				str1 = sb.ToString();
+			}
+			else
+			{
+				var sb = new StringBuilder();
+				for (var i = 0; i < cchCount1; i++)
+				{
+					var ch = (char)_env.MemRead16(lpString1 + (uint)(i * 2));
+					sb.Append(ch);
+				}
+				str1 = sb.ToString();
+			}
+
+			string str2;
+			if (cchCount2 == -1)
+			{
+				// Read null-terminated Unicode string
+				var sb = new StringBuilder();
+				uint offset = 0;
+				while (true)
+				{
+					var ch = (char)_env.MemRead16(lpString2 + offset);
+					if (ch == 0) break;
+					sb.Append(ch);
+					offset += 2;
+				}
+				str2 = sb.ToString();
+			}
+			else
+			{
+				var sb = new StringBuilder();
+				for (var i = 0; i < cchCount2; i++)
+				{
+					var ch = (char)_env.MemRead16(lpString2 + (uint)(i * 2));
+					sb.Append(ch);
+				}
+				str2 = sb.ToString();
+			}
+
+			// Perform comparison (ignoring locale and flags for simplicity)
+			var result = string.Compare(str1, str2, StringComparison.Ordinal);
+			
+			_logger.LogInformation($"[Kernel32] CompareStringW: '{str1}' vs '{str2}' = {result}");
+			
+			if (result < 0) return cstrLessThan;
+			if (result > 0) return cstrGreaterThan;
+			return cstrEqual;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation($"[Kernel32] CompareStringW failed: {ex.Message}");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}

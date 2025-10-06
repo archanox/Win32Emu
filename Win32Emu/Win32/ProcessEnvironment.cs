@@ -470,6 +470,7 @@ public class ProcessEnvironment
 
 	// Heaps
 	private readonly Dictionary<uint, HeapState> _heaps = new();
+	private readonly Dictionary<uint, uint> _heapAllocationSizes = new(); // Track allocation sizes (address -> size)
 
 	public uint HeapCreate(uint flOptions, uint dwInitialSize, uint dwMaximumSize)
 	{
@@ -484,7 +485,9 @@ public class ProcessEnvironment
 	{
 		if (!_heaps.TryGetValue(hHeap, out var hs))
 		{
-			return SimpleAlloc(dwBytes);
+			var addr = SimpleAlloc(dwBytes);
+			_heapAllocationSizes[addr] = dwBytes;
+			return addr;
 		}
 
 		var size = AlignUp(dwBytes == 0 ? 1u : dwBytes, 16);
@@ -493,13 +496,27 @@ public class ProcessEnvironment
 			var ptr = hs.Current;
 			hs = hs with { Current = hs.Current + size };
 			_heaps[hHeap] = hs;
+			_heapAllocationSizes[ptr] = dwBytes; // Track the requested size, not aligned
 			return ptr;
 		}
 
-		return SimpleAlloc(dwBytes);
+		var fallbackAddr = SimpleAlloc(dwBytes);
+		_heapAllocationSizes[fallbackAddr] = dwBytes;
+		return fallbackAddr;
 	}
 
-	public uint HeapFree(uint hHeap, uint lpMem) => 1;
+	public uint HeapFree(uint hHeap, uint lpMem)
+	{
+		// Remove allocation size tracking
+		_heapAllocationSizes.Remove(lpMem);
+		return 1;
+	}
+
+	public uint HeapSize(uint hHeap, uint lpMem)
+	{
+		// Return the size of the allocated block, or 0 if not found
+		return _heapAllocationSizes.TryGetValue(lpMem, out var size) ? size : 0;
+	}
 
 	// VirtualAlloc
 	public uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect)

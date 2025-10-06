@@ -50,6 +50,22 @@ namespace Win32Emu.Win32.Modules
 					returnValue = TimeKillEvent(a.UInt32(0));
 					return true;
 
+				case "TIMESETEVENT":
+					returnValue = TimeSetEvent(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+
+				case "JOYGETPOSEX":
+					returnValue = JoyGetPosEx(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "JOYGETDEVCAPSA":
+					returnValue = JoyGetDevCapsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MCISENDSTRINGA":
+					returnValue = MciSendStringA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
 				default:
 					_logger.LogInformation($"[WinMM] Unimplemented export: {export}");
 					return false;
@@ -81,6 +97,54 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation($"[WinMM] timeKillEvent({uTimerId})");
 			return 0; // TIMERR_NOERROR
+		}
+
+		private unsafe uint TimeSetEvent(uint uDelay, uint uResolution, uint lpTimeProc, uint dwUser, uint fuEvent)
+		{
+			// TimeSetEvent sets a timer event
+			// Returns a timer identifier or 0 if it failed
+			_logger.LogInformation($"[WinMM] timeSetEvent(delay={uDelay}, resolution={uResolution}, callback=0x{lpTimeProc:X8})");
+			
+			// Return a synthetic timer ID
+			return 0x1000 + uDelay; // Simple unique ID based on delay
+		}
+
+		private unsafe uint JoyGetPosEx(uint uJoyID, uint pji)
+		{
+			// JoyGetPosEx queries the position and button status of a joystick
+			_logger.LogInformation($"[WinMM] joyGetPosEx(uJoyID={uJoyID}, pji=0x{pji:X8})");
+			
+			if (pji == 0)
+			{
+				return 165; // JOYERR_PARMS
+			}
+
+			// Return JOYERR_UNPLUGGED to indicate no joystick is connected
+			return 167; // JOYERR_UNPLUGGED
+		}
+
+		private unsafe uint JoyGetDevCapsA(uint uJoyID, uint pjc, uint cbjc)
+		{
+			// JoyGetDevCapsA queries the capabilities of a joystick
+			_logger.LogInformation($"[WinMM] joyGetDevCapsA(uJoyID={uJoyID}, pjc=0x{pjc:X8}, cbjc={cbjc})");
+			
+			if (pjc == 0)
+			{
+				return 165; // JOYERR_PARMS
+			}
+
+			// Return JOYERR_UNPLUGGED to indicate no joystick is connected
+			return 167; // JOYERR_UNPLUGGED
+		}
+
+		private unsafe uint MciSendStringA(uint lpszCommand, uint lpszReturnString, uint cchReturn, uint hwndCallback)
+		{
+			// MciSendStringA sends a command string to an MCI device
+			var command = lpszCommand != 0 ? _env.ReadAnsiString(lpszCommand) : "";
+			_logger.LogInformation($"[WinMM] mciSendStringA: \"{command}\"");
+			
+			// For now, just return success
+			return 0; // MMSYSERR_NOERROR
 		}
 
 		public Dictionary<string, uint> GetExportOrdinals()

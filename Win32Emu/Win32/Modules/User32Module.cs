@@ -12,6 +12,7 @@ namespace Win32Emu.Win32.Modules
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
+		private readonly Dictionary<uint, bool> _windowEnabledState = new();
 
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -166,6 +167,30 @@ namespace Win32Emu.Win32.Modules
 
 				case "SYSTEMPARAMETERSINFOA":
 					returnValue = SystemParametersInfoA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "DIALOGBOXPARAMA":
+					returnValue = DialogBoxParamA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+
+				case "ENDDIALOG":
+					returnValue = EndDialog(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "GETDLGITEM":
+					returnValue = GetDlgItem(a.UInt32(0), a.Int32(1));
+					return true;
+
+				case "GETDLGITEMTEXTA":
+					returnValue = GetDlgItemTextA(a.UInt32(0), a.Int32(1), a.UInt32(2), a.Int32(3));
+					return true;
+
+				case "SENDDLGITEMMESSAGEA":
+					returnValue = SendDlgItemMessageA(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+
+				case "ENABLEWINDOW":
+					returnValue = EnableWindow(a.UInt32(0), a.UInt32(1));
 					return true;
 
 				default:
@@ -948,6 +973,72 @@ namespace Win32Emu.Win32.Modules
 				{ "UPDATEWINDOW", 31 }
 			};
 			return exports;
+		}
+
+		private unsafe uint DialogBoxParamA(uint hInstance, uint lpTemplateName, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
+		{
+			// DialogBoxParamA creates a modal dialog box
+			// For now, we'll just log and return a default value
+			_logger.LogInformation($"[User32] DialogBoxParamA: hInstance=0x{hInstance:X8} lpTemplateName=0x{lpTemplateName:X8} lpDialogFunc=0x{lpDialogFunc:X8}");
+			
+			// Return IDOK (1) to indicate the dialog was closed with OK
+			return 1;
+		}
+
+		private unsafe uint EndDialog(uint hDlg, uint nResult)
+		{
+			// EndDialog closes a modal dialog box
+			_logger.LogInformation($"[User32] EndDialog: hDlg=0x{hDlg:X8} nResult={nResult}");
+			return 1; // TRUE
+		}
+
+		private unsafe uint GetDlgItem(uint hDlg, int nIDDlgItem)
+		{
+			// GetDlgItem retrieves a handle to a control in a dialog box
+			_logger.LogInformation($"[User32] GetDlgItem: hDlg=0x{hDlg:X8} nIDDlgItem={nIDDlgItem}");
+			
+			// Return a synthetic handle (dialog handle + control ID)
+			return hDlg + (uint)nIDDlgItem;
+		}
+
+		private unsafe uint GetDlgItemTextA(uint hDlg, int nIDDlgItem, uint lpString, int cchMax)
+		{
+			// GetDlgItemTextA retrieves the text of a control in a dialog box
+			_logger.LogInformation($"[User32] GetDlgItemTextA: hDlg=0x{hDlg:X8} nIDDlgItem={nIDDlgItem} cchMax={cchMax}");
+			
+			if (lpString == 0 || cchMax <= 0)
+			{
+				return 0;
+			}
+
+			// Return empty string for now
+			_env.MemWriteBytes(lpString, new byte[] { 0 });
+			return 0;
+		}
+
+		private unsafe uint SendDlgItemMessageA(uint hDlg, int nIDDlgItem, uint msg, uint wParam, uint lParam)
+		{
+			// SendDlgItemMessageA sends a message to a control in a dialog box
+			_logger.LogInformation($"[User32] SendDlgItemMessageA: hDlg=0x{hDlg:X8} nIDDlgItem={nIDDlgItem} msg=0x{msg:X4}");
+			
+			// Return 0 (default message handling result)
+			return 0;
+		}
+
+		private unsafe uint EnableWindow(uint hwnd, uint bEnable)
+		{
+			// EnableWindow enables or disables mouse and keyboard input to a window
+			// Returns the previous enable state: nonzero if previously disabled, zero if previously enabled
+			_logger.LogInformation($"[User32] EnableWindow: HWND=0x{hwnd:X8} bEnable={bEnable}");
+			
+			// Get the previous state (default to enabled if not tracked)
+			bool wasEnabled = _windowEnabledState.GetValueOrDefault(hwnd, true);
+			
+			// Update the state
+			_windowEnabledState[hwnd] = bEnable != 0;
+			
+			// Return previous state: return 0 if was enabled, non-zero if was disabled
+			return wasEnabled ? 0u : 1u;
 		}
 	}
 }
