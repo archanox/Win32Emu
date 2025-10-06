@@ -396,6 +396,13 @@ public partial class GameLibraryViewModel : ViewModelBase
         }
 
         var viewModel = new GameInfoViewModel(game, _gameDbService);
+        
+        // Set up callback to save changes when the game is updated
+        viewModel.SetGameUpdatedCallback(_ =>
+        {
+            SaveToConfiguration();
+        });
+        
         var window = new GameInfoWindow
         {
             DataContext = viewModel

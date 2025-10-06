@@ -37,6 +37,15 @@ public partial class GameInfoWindow : Window
             if (clipboard != null)
             {
                 await clipboard.SetTextAsync(viewModel.GameDbStubJson);
+                
+                // Show a temporary message that the text was copied
+                if (sender is Button button)
+                {
+                    var originalContent = button.Content;
+                    button.Content = "✓ Copied!";
+                    await Task.Delay(2000);
+                    button.Content = originalContent;
+                }
             }
         }
     }

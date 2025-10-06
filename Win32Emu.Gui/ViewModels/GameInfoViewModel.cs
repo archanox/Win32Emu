@@ -57,7 +57,7 @@ public partial class GameInfoViewModel : ViewModelBase
     private string _gameDbStubJson = string.Empty;
 
     private readonly IGameDbService? _gameDbService;
-    private IStorageProvider? _storageProvider;
+    private Action<Game>? _onGameUpdated;
 
     public GameInfoViewModel(Game game, IGameDbService? gameDbService = null)
     {
@@ -68,9 +68,12 @@ public partial class GameInfoViewModel : ViewModelBase
         LoadGameInfo();
     }
 
-    public void SetStorageProvider(IStorageProvider storageProvider)
+    /// <summary>
+    /// Set a callback to be invoked when the game is updated
+    /// </summary>
+    public void SetGameUpdatedCallback(Action<Game> callback)
     {
-        _storageProvider = storageProvider;
+        _onGameUpdated = callback;
     }
 
     private void LoadGameInfo()
@@ -168,8 +171,8 @@ public partial class GameInfoViewModel : ViewModelBase
         // Update the game with edited values
         Game.Title = EditableTitle;
         
-        // In a real implementation, you'd save environment variables and program arguments
-        // to a configuration file or database
+        // Notify that the game was updated
+        _onGameUpdated?.Invoke(Game);
     }
 
     [RelayCommand]
