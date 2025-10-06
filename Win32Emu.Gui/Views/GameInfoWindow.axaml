@@ -135,7 +135,7 @@
                 <!-- Action Buttons -->
                 <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
                     <Button Content="Copy GameDB Stub"
-                            Command="{Binding CopyGameDbStubCommand}"/>
+                            Click="CopyGameDbStub_Click"/>
                     <Button Content="Open in VirusTotal"
                             Command="{Binding OpenVirusTotalCommand}"/>
                     <Button Content="Save Changes"

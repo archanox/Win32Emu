@@ -53,6 +53,9 @@ public partial class GameInfoViewModel : ViewModelBase
     [ObservableProperty]
     private string _programArguments = string.Empty;
 
+    [ObservableProperty]
+    private string _gameDbStubJson = string.Empty;
+
     private readonly IGameDbService? _gameDbService;
     private IStorageProvider? _storageProvider;
 
@@ -206,10 +209,7 @@ public partial class GameInfoViewModel : ViewModelBase
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
-            var json = JsonSerializer.Serialize(stub, options);
-
-            // Copy to clipboard
-            CopyToClipboard(json);
+            GameDbStubJson = JsonSerializer.Serialize(stub, options);
         }
         catch (Exception ex)
         {
@@ -236,15 +236,6 @@ public partial class GameInfoViewModel : ViewModelBase
                 Console.WriteLine($"Error opening VirusTotal URL: {ex.Message}");
             }
         }
-    }
-
-    private static void CopyToClipboard(string text)
-    {
-        // Use Avalonia's clipboard API
-        // This will be called from the view's code-behind
-        // For now, we'll just write to console as a fallback
-        Console.WriteLine("GameDB Stub (copy this to clipboard manually if needed):");
-        Console.WriteLine(text);
     }
 }
 
