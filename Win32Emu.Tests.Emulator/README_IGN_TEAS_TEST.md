@@ -75,18 +75,26 @@ Edit `IgnitionTeaserTests.cs` and remove the `Skip` parameter from the `[Fact]` 
    - **Fixed**: Added hardcoded argument bytes for GetCPInfo (8 bytes) and GetACP (0 bytes)
    - Game now progresses further through initialization
 
-4. **Root Cause Unknown**
-   - The game is executing instructions continuously without calling any APIs
-   - Possible causes: waiting for a specific return value, timer condition, or event that will never occur
-   - Requires deeper debugging (instruction-level tracing) to identify the exact loop location
+4. **Root Cause Identified** ✅
+   - **Analysis of decompilation files reveals the exact issue**
+   - The game calls `DirectDrawCreate`, `DirectInputCreateA`, and `DirectSoundCreate` successfully
+   - However, it then tries to invoke COM interface methods via vtable pointers
+   - The emulator returns success but **does not provide functional COM vtables**
+   - When the game tries to call methods like `SetCooperativeLevel` via the vtable, it fails
+   - This causes initialization function `sub_403510()` to return 0 (failure)
+   - See `/Decomp/ign_teas/ANALYSIS.md` for detailed decompilation analysis
 
 ## Next Steps for Investigation
 
-1. **Instruction-Level Debugging**: Use the debug test variant to identify the exact code location where the infinite loop occurs
-2. **Check for Polling Loops**: The game may be polling for a specific condition (e.g., checking a flag or waiting for a timer)
-3. **Verify API Return Values**: Some API calls might be returning unexpected values that cause the game to wait
-4. **Implement Missing APIs**: Once the game progresses past this loop, it will likely call DirectX/User32/GDI32 functions
-5. **Add Execution Profiling**: Track which code regions are being executed repeatedly to identify hot loops
+1. ✅ **Root Cause Identified**: Decompilation analysis completed - see `/Decomp/ign_teas/ANALYSIS.md`
+2. **Implement COM Vtable Emulation**: The primary blocker is the lack of COM interface support for DirectX objects
+3. **Required Changes**:
+   - Modify `DDrawModule.cs` to create proper COM objects with vtables
+   - Implement `IDirectDraw::SetCooperativeLevel`, `SetDisplayMode`, etc.
+   - Modify `DInputModule.cs` to support `IDirectInput::CreateDevice` and device methods
+   - Add vtable method dispatching to the CPU emulator
+4. **After COM Support**: The game should progress to window creation and enter the main message loop
+5. **Future Work**: Implement actual rendering, input, and audio backends for full gameplay
 
 ## Test Output Example
 
