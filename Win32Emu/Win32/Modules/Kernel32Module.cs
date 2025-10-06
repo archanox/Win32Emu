@@ -191,6 +191,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "QUERYPERFORMANCECOUNTER":
 				returnValue = QueryPerformanceCounter(a.UInt32(0));
 				return true;
+			case "QUERYPERFORMANCEFREQUENCY":
+				returnValue = QueryPerformanceFrequency(a.UInt32(0));
+				return true;
+			case "GETTICKCOUNT":
+				returnValue = GetTickCount();
+				return true;
+			case "SLEEP":
+				returnValue = Sleep(a.UInt32(0));
+				return true;
 
 			// Thread management and TLS functions
 			case "CREATETHREAD":
@@ -1800,6 +1809,92 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
+	}
+
+	private unsafe uint QueryPerformanceFrequency(uint lpFrequency)
+	{
+		// QueryPerformanceFrequency retrieves the frequency of the performance counter
+		// lpFrequency is a pointer to a LARGE_INTEGER (64-bit value)
+		// The frequency is in counts per second
+		if (lpFrequency == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		try
+		{
+			// Stopwatch.Frequency provides the frequency of the high-resolution timer
+			var frequency = Stopwatch.Frequency;
+
+			// Write the 64-bit frequency to the provided memory location
+			_env.MemWrite64(lpFrequency, (ulong)frequency);
+
+			_logger.LogInformation($"[Kernel32] QueryPerformanceFrequency: {frequency} Hz");
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	private uint GetTickCount()
+	{
+		// GetTickCount returns the number of milliseconds since system start
+		// In an emulator context, we use the time since the emulator started
+		// Returns a 32-bit value that wraps around to zero after ~49.7 days
+		
+		// Use Environment.TickCount which is designed for this exact purpose
+		var tickCount = (uint)Environment.TickCount;
+		
+		_logger.LogInformation($"[Kernel32] GetTickCount: {tickCount} ms");
+		return tickCount;
+	}
+
+	private uint Sleep(uint dwMilliseconds)
+	{
+		// Sleep suspends execution for a specified interval
+		// In an emulator, we can either:
+		// 1. Actually sleep (blocking) - not ideal for emulation
+		// 2. Just acknowledge the call without sleeping
+		// 3. Use a minimal sleep for 0 (yield) cases
+		
+		if (dwMilliseconds == 0)
+		{
+			// Sleep(0) means "yield to other threads"
+			// In our single-threaded emulator, this is effectively a no-op
+			_logger.LogInformation("[Kernel32] Sleep(0): yielding");
+			Thread.Yield();
+		}
+		else if (dwMilliseconds == 0xFFFFFFFF) // INFINITE
+		{
+			_logger.LogWarning("[Kernel32] Sleep(INFINITE): treating as 1ms sleep");
+			// Don't actually sleep forever - that would hang the emulator
+			// Just sleep for a short time
+			Thread.Sleep(1);
+		}
+		else
+		{
+			_logger.LogInformation($"[Kernel32] Sleep: {dwMilliseconds} ms");
+			// For actual sleep durations, we need to decide:
+			// - Sleeping blocks emulation which may not be desired
+			// - Not sleeping means game timing could be wrong
+			// For now, use a minimal sleep to avoid busy-waiting
+			if (dwMilliseconds > 100)
+			{
+				// Long sleeps - use a fraction of the requested time
+				Thread.Sleep((int)(dwMilliseconds / 10));
+			}
+			else if (dwMilliseconds > 0)
+			{
+				// Short sleeps - minimal delay
+				Thread.Sleep(1);
+			}
+		}
+		
+		return 0; // Sleep doesn't return a value (void function)
 	}
 
 	private unsafe string ReadCurrentModulePath()
