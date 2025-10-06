@@ -12,6 +12,7 @@ namespace Win32Emu.Win32.Modules
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
+		private readonly Dictionary<uint, bool> _windowEnabledState = new();
 
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -1027,10 +1028,17 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint EnableWindow(uint hwnd, uint bEnable)
 		{
 			// EnableWindow enables or disables mouse and keyboard input to a window
+			// Returns the previous enable state: nonzero if previously disabled, zero if previously enabled
 			_logger.LogInformation($"[User32] EnableWindow: HWND=0x{hwnd:X8} bEnable={bEnable}");
 			
-			// Return the previous enable state (assume window was enabled)
-			return 1; // TRUE
+			// Get the previous state (default to enabled if not tracked)
+			bool wasEnabled = _windowEnabledState.GetValueOrDefault(hwnd, true);
+			
+			// Update the state
+			_windowEnabledState[hwnd] = bEnable != 0;
+			
+			// Return previous state: return 0 if was enabled, non-zero if was disabled
+			return wasEnabled ? 0u : 1u;
 		}
 	}
 }
