@@ -62,9 +62,43 @@ class Program
         coverageCommand.AddOption(assemblyOption);
         coverageCommand.SetHandler(GenerateCoverageReport, winmeOption, winxpOption, reportOutputOption, assemblyOption);
         
+        // Command: generate-stubs
+        var generateStubsCommand = new Command("generate-stubs", "Generate C# stub methods for missing APIs");
+        var dllNameOption = new Option<string>(
+            "--dll",
+            description: "DLL name to generate stubs for (e.g., ADVAPI32.DLL)"
+        ) { IsRequired = true };
+        var stubOutputOption = new Option<string>(
+            "--output",
+            description: "Output file for generated stubs",
+            getDefaultValue: () => "GeneratedStubs.cs"
+        );
+        var moduleClassOption = new Option<bool>(
+            "--module-class",
+            description: "Generate a complete module class instead of just methods",
+            getDefaultValue: () => false
+        );
+        var winmeForStubsOption = new Option<string>(
+            "--winme",
+            description: "Path to WinME DLLs directory",
+            getDefaultValue: () => "DLLs/WinME"
+        );
+        var assemblyForStubsOption = new Option<string?>(
+            "--assembly",
+            description: "Path to Win32Emu.dll to determine which APIs are already implemented"
+        );
+        
+        generateStubsCommand.AddOption(dllNameOption);
+        generateStubsCommand.AddOption(stubOutputOption);
+        generateStubsCommand.AddOption(moduleClassOption);
+        generateStubsCommand.AddOption(winmeForStubsOption);
+        generateStubsCommand.AddOption(assemblyForStubsOption);
+        generateStubsCommand.SetHandler(GenerateStubs, dllNameOption, stubOutputOption, moduleClassOption, winmeForStubsOption, assemblyForStubsOption);
+        
         rootCommand.AddCommand(analyzeDllsCommand);
         rootCommand.AddCommand(parseXmlCommand);
         rootCommand.AddCommand(coverageCommand);
+        rootCommand.AddCommand(generateStubsCommand);
         
         return await rootCommand.InvokeAsync(args);
     }
@@ -237,5 +271,63 @@ class Program
         }
         
         File.WriteAllText(outputPath, sb.ToString());
+    }
+    
+    static void GenerateStubs(string dllName, string output, bool moduleClass, string winmePath, string? assemblyPath)
+    {
+        Console.WriteLine($"Generating stubs for {dllName}");
+        Console.WriteLine("===============================");
+        Console.WriteLine();
+        
+        // Parse the DLL to get all exports
+        var dllPath = Path.Combine(winmePath, dllName);
+        if (!File.Exists(dllPath))
+        {
+            Console.WriteLine($"Error: DLL not found: {dllPath}");
+            return;
+        }
+        
+        var allExports = PeExportParser.ParseExports(dllPath);
+        Console.WriteLine($"Found {allExports.Count} exports in {dllName}");
+        
+        // Get implemented APIs if assembly path provided
+        var implementedApis = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrEmpty(assemblyPath))
+        {
+            var implemented = ImplementedApiExtractor.ExtractFromAssembly(assemblyPath);
+            if (implemented.TryGetValue(dllName, out var apis))
+            {
+                foreach (var api in apis.Keys)
+                {
+                    implementedApis.Add(api);
+                }
+                Console.WriteLine($"Found {implementedApis.Count} already implemented APIs");
+            }
+        }
+        
+        // Determine missing APIs
+        var missingApis = allExports
+            .Where(e => !implementedApis.Contains(e.Name))
+            .Select(e => e.Name)
+            .ToList();
+        
+        Console.WriteLine($"Generating stubs for {missingApis.Count} missing APIs");
+        Console.WriteLine();
+        
+        // Generate stubs
+        string code;
+        if (moduleClass)
+        {
+            var moduleName = Path.GetFileNameWithoutExtension(dllName) + "Module";
+            code = StubGenerator.GenerateModuleClass(moduleName, dllName, missingApis);
+        }
+        else
+        {
+            code = StubGenerator.GenerateStubs(dllName, missingApis);
+        }
+        
+        File.WriteAllText(output, code);
+        Console.WriteLine($"Stubs written to: {output}");
+        Console.WriteLine($"Total lines: {code.Split('\n').Length}");
     }
 }
