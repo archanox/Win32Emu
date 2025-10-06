@@ -167,7 +167,10 @@ Based on common game requirements, the following APIs may be needed once executa
 - ~~`PeekMessageA` / `PeekMessageW`~~ - **Already implemented** ✅
 - ~~`GetMessageA` / `GetMessageW`~~ - **Already implemented** ✅
 - ~~`DispatchMessageA` / `DispatchMessageW`~~ - **DispatchMessageA implemented** ✅
-- `DefWindowProcA` / `DefWindowProcW` - Need to verify implementation
+- ~~`DefWindowProcA` / `DefWindowProcW`~~ - **DefWindowProcA implemented** ✅
+- ~~`TranslateMessage`~~ - **Already implemented** ✅
+
+**Note**: These APIs are implemented but use a minimal message queue (only WM_QUIT). A full message queue implementation with proper message posting/dispatching would improve game compatibility.
 
 ### DirectX APIs
 Will likely be needed once initialization completes:
