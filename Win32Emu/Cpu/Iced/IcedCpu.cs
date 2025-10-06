@@ -352,8 +352,79 @@ public class IcedCpu : ICpu
 			return;
 		}
 
-		var src = ReadOp(insn, 1);
-		WriteOp(insn, 0, src);
+		// Determine the operand size
+		var opSize = GetOpSizeBits(insn, 0);
+
+		switch (opSize)
+		{
+			case 8:
+			{
+				// 8-bit MOV
+				byte value;
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					value = GetReg8(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					value = _mem.Read8(CalcMemAddress(insn));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Immediate8)
+				{
+					value = insn.Immediate8;
+				}
+				else
+				{
+					value = (byte)ReadOp(insn, 1);
+				}
+
+				// Write the 8-bit value
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					SetReg8(insn.GetOpRegister(0), value);
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					_mem.Write8(CalcMemAddress(insn), value);
+				}
+				break;
+			}
+			case 16:
+			{
+				// 16-bit MOV
+				ushort value;
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					value = GetReg16(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					value = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					value = (ushort)ReadOp(insn, 1);
+				}
+
+				// Write the 16-bit value
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					SetReg16(insn.GetOpRegister(0), value);
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					_mem.Write16(CalcMemAddress(insn), value);
+				}
+				break;
+			}
+			default:
+			{
+				// 32-bit MOV (default behavior)
+				var src = ReadOp(insn, 1);
+				WriteOp(insn, 0, src);
+				break;
+			}
+		}
 	}
 
 	private void ExecLea(Instruction insn)
@@ -1367,6 +1438,38 @@ public class IcedCpu : ICpu
 		return 32;
 	}
 
+	private int GetOpSizeBits(Instruction insn, int opIndex)
+	{
+		if (insn.GetOpKind(opIndex) == OpKind.Memory)
+		{
+			return insn.MemorySize switch
+			{
+				MemorySize.UInt8 or MemorySize.Int8 => 8,
+				MemorySize.UInt16 or MemorySize.Int16 => 16,
+				_ => 32
+			};
+		}
+
+		if (insn.GetOpKind(opIndex) == OpKind.Register)
+		{
+			var r = insn.GetOpRegister(opIndex);
+			if (r is Register.AL or Register.CL or Register.DL or Register.BL or Register.AH or Register.CH or Register.DH or Register.BH)
+			{
+				return 8;
+			}
+
+			if (r is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP or Register.BP)
+			{
+				return 16;
+			}
+
+			return 32;
+		}
+
+		// For immediates, default to 32
+		return 32;
+	}
+
 	// replace CalcMemAddress to report via Diagnostics on failure
 	private uint CalcMemAddress(Instruction insn)
 	{
@@ -1437,6 +1540,21 @@ public class IcedCpu : ICpu
 			case Register.CH: _ecx = (_ecx & 0xFFFF00FF) | ((uint)v << 8); break;
 			case Register.DH: _edx = (_edx & 0xFFFF00FF) | ((uint)v << 8); break;
 			case Register.BH: _ebx = (_ebx & 0xFFFF00FF) | ((uint)v << 8); break;
+		}
+	}
+
+	private void SetReg16(Register reg, ushort v)
+	{
+		switch (reg)
+		{
+			case Register.AX: _eax = (_eax & 0xFFFF0000) | v; break;
+			case Register.BX: _ebx = (_ebx & 0xFFFF0000) | v; break;
+			case Register.CX: _ecx = (_ecx & 0xFFFF0000) | v; break;
+			case Register.DX: _edx = (_edx & 0xFFFF0000) | v; break;
+			case Register.SI: _esi = (_esi & 0xFFFF0000) | v; break;
+			case Register.DI: _edi = (_edi & 0xFFFF0000) | v; break;
+			case Register.BP: _ebp = (_ebp & 0xFFFF0000) | v; break;
+			case Register.SP: _esp = (_esp & 0xFFFF0000) | v; break;
 		}
 	}
 
