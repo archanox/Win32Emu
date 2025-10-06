@@ -4,6 +4,8 @@ using System.Text.Json;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Services;
@@ -60,13 +62,15 @@ public partial class GameInfoViewModel : ViewModelBase
 
     private readonly IGameDbService? _gameDbService;
     private readonly ConfigurationService? _configService;
+    private readonly ILogger _logger;
     private Action<Game>? _onGameUpdated;
 
-    public GameInfoViewModel(Game game, IGameDbService? gameDbService = null, ConfigurationService? configService = null)
+    public GameInfoViewModel(Game game, IGameDbService? gameDbService = null, ConfigurationService? configService = null, ILogger? logger = null)
     {
         _game = game;
         _gameDbService = gameDbService;
         _configService = configService;
+        _logger = logger ?? NullLogger.Instance;
         _editableTitle = game.Title;
 
         LoadGameInfo();
@@ -253,7 +257,7 @@ public partial class GameInfoViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error creating GameDB stub: {ex.Message}");
+            _logger.LogError(ex, "Error creating GameDB stub for game: {GameTitle}", Game.Title);
         }
     }
 
@@ -273,7 +277,7 @@ public partial class GameInfoViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error opening VirusTotal URL: {ex.Message}");
+                _logger.LogError(ex, "Error opening VirusTotal URL: {Url}", VirusTotalUrl);
             }
         }
     }

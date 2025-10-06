@@ -51,12 +51,15 @@ resharper_redundant_base_qualifier_highlighting = warning
 resharper_suggest_var_or_type_built_in_types_highlighting = hint
 resharper_suggest_var_or_type_elsewhere_highlighting = hint
 resharper_suggest_var_or_type_simple_types_highlighting = hint
-csharp_using_directive_placement = outside_namespace:silent
-csharp_prefer_simple_using_statement = true:suggestion
-csharp_prefer_braces = true:silent
-csharp_style_namespace_declarations = block_scoped:silent
-csharp_style_prefer_method_group_conversion = true:silent
-csharp_style_prefer_top_level_statements = true:silent
+
+# ReSharper properties
+resharper_autodetect_indent_settings = true
+resharper_formatter_off_tag = @formatter:off
+resharper_formatter_on_tag = @formatter:on
+resharper_formatter_tags_enabled = true
+resharper_use_indent_from_vs = false
+
+[*.cs]
 csharp_style_prefer_primary_constructors = true:suggestion
 csharp_prefer_system_threading_lock = true:suggestion
 csharp_style_expression_bodied_methods = false:silent
@@ -72,8 +75,6 @@ indent_size = 4
 end_of_line = crlf
 csharp_indent_labels = one_less_than_current
 
-[*.cs]
-# IMPORTANT: Do not use Console.WriteLine for logging
-# Use ILogger instance instead for proper logging with structured data
-# Example: _logger.LogInformation("Message with {Parameter}", value);
-
+# Ban Console.WriteLine - Use ILogger instead
+# This is enforced through code review as there's no built-in analyzer for this
+# Developers should use ILogger for all logging

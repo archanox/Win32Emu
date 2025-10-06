@@ -227,7 +227,7 @@ public partial class GameLibraryViewModel : ViewModelBase
             // Validate that the file is a valid PE32 executable
             if (!PeImageLoader.IsPE32(filePath))
             {
-                Console.WriteLine($"Skipping non-PE32 executable: {filePath}");
+                _logger.LogInformation("Skipping non-PE32 executable: {FilePath}", filePath);
                 continue;
             }
 
@@ -295,7 +295,7 @@ public partial class GameLibraryViewModel : ViewModelBase
                     // Validate that the file is a valid PE32 executable
                     if (!PeImageLoader.IsPE32(exeFile))
                     {
-                        Console.WriteLine($"Skipping non-PE32 executable: {exeFile}");
+                        _logger.LogInformation("Skipping non-PE32 executable: {FilePath}", exeFile);
                         continue;
                     }
 
@@ -320,7 +320,7 @@ public partial class GameLibraryViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error scanning folder: {ex.Message}");
+                _logger.LogError(ex, "Error scanning folder: {FolderPath}", folderPath);
             }
         });
     }
@@ -370,8 +370,7 @@ public partial class GameLibraryViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            // In a real app, we would show an error dialog here
-            Console.WriteLine($"Error launching game: {ex.Message}");
+            _logger.LogError(ex, "Error launching game: {GameTitle}", game.Title);
         }
     }
 
@@ -395,7 +394,7 @@ public partial class GameLibraryViewModel : ViewModelBase
             return;
         }
 
-        var viewModel = new GameInfoViewModel(game, _gameDbService, _configService);
+        var viewModel = new GameInfoViewModel(game, _gameDbService, _configService, _logger);
         
         // Set up callback to save changes when the game is updated
         viewModel.SetGameUpdatedCallback(_ =>
