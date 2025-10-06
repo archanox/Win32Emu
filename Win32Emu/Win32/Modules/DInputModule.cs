@@ -52,28 +52,45 @@ namespace Win32Emu.Win32.Modules
 			}
 		}
 
-		private unsafe uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
-		{
-			_logger.LogInformation($"[DInput] DirectInputCreateA(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, lplpDirectInput=0x{lplpDirectInput:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+private unsafe uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
+{
+_logger.LogInformation($"[DInput] DirectInputCreateA(hinst=0x{hinst:X8}, dwVersion=0x{dwVersion:X8}, lplpDirectInput=0x{lplpDirectInput:X8}, pUnkOuter=0x{pUnkOuter:X8})");
 
-			// Create DirectInput object
-			var dinputHandle = _nextDInputHandle++;
-			var dinputObj = new DirectInputObject
-			{
-				Handle = dinputHandle
-			};
+// Create DirectInput object with COM vtable
+var dinputHandle = _nextDInputHandle++;
+var dinputObj = new DirectInputObject
+{
+Handle = dinputHandle,
+Version = dwVersion
+};
+_dinputObjects[dinputHandle] = dinputObj;
 
-			_dinputObjects[dinputHandle] = dinputObj;
+// Create COM vtable for IDirectInput interface
+var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+{
+{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
+{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
+{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
+{ "CreateDevice", (cpu, mem) => DInput_CreateDevice(cpu, mem, dinputHandle) },
+{ "EnumDevices", (cpu, mem) => DInput_EnumDevices(cpu, mem) },
+{ "GetDeviceStatus", (cpu, mem) => DInput_GetDeviceStatus(cpu, mem) },
+{ "RunControlPanel", (cpu, mem) => DInput_RunControlPanel(cpu, mem) },
+{ "Initialize", (cpu, mem) => DInput_Initialize(cpu, mem) }
+};
 
-			// Write handle back to caller
-			if (lplpDirectInput != 0)
-			{
-				_env.MemWrite32(lplpDirectInput, dinputHandle);
-			}
+// Create the COM object with vtable
+var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectInput", vtableMethods);
 
-			_logger.LogInformation($"[DInput] Created DirectInput object: 0x{dinputHandle:X8}");
-			return 0; // DI_OK
-		}
+// Write COM object pointer to output parameter
+if (lplpDirectInput != 0)
+{
+_env.MemWrite32(lplpDirectInput, comObjectAddr);
+}
+
+_logger.LogInformation($"[DInput] Created IDirectInput COM object at 0x{comObjectAddr:X8}");
+return 0; // DI_OK
+}
+
 
 		private unsafe uint DirectInputCreate(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
@@ -139,6 +156,227 @@ namespace Win32Emu.Win32.Modules
 				{ "DIRECTINPUTCREATEW", 3 },
 			};
 			return exports;
+		}
+
+		// COM interface methods for IDirectInput
+		private uint ComQueryInterface(ICpu cpu, VirtualMemory memory)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var riid = args.UInt32(1);
+			var ppvObject = args.UInt32(2);
+			
+			_logger.LogInformation($"[DInput COM] IUnknown::QueryInterface(this=0x{thisPtr:X8}, riid=0x{riid:X8}, ppvObject=0x{ppvObject:X8})");
+			
+			// E_NOINTERFACE = 0x80004002
+			return 0x80004002;
+		}
+
+		private uint ComAddRef(ICpu cpu, VirtualMemory memory)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			
+			_logger.LogInformation($"[DInput COM] IUnknown::AddRef(this=0x{thisPtr:X8})");
+			return 1; // Reference count
+		}
+
+		private uint ComRelease(ICpu cpu, VirtualMemory memory)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			
+			_logger.LogInformation($"[DInput COM] IUnknown::Release(this=0x{thisPtr:X8})");
+			return 0; // Reference count after release
+		}
+
+		private uint DInput_CreateDevice(ICpu cpu, VirtualMemory memory, uint dinputHandle)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var rguid = args.UInt32(1);
+			var lplpDirectInputDevice = args.UInt32(2);
+			var pUnkOuter = args.UInt32(3);
+			
+			_logger.LogInformation($"[DInput COM] IDirectInput::CreateDevice(this=0x{thisPtr:X8}, rguid=0x{rguid:X8}, lplpDevice=0x{lplpDirectInputDevice:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+			
+			// Create a device COM object with its own vtable
+			var deviceHandle = _nextDeviceHandle++;
+			var deviceObj = new DirectInputDevice
+			{
+				Handle = deviceHandle,
+				Name = "Emulated Device"
+			};
+			_devices[deviceHandle] = deviceObj;
+
+			// Create COM vtable for IDirectInputDevice interface
+			var deviceMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			{
+				{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
+				{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
+				{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
+				{ "GetCapabilities", (cpu, mem) => DInputDevice_GetCapabilities(cpu, mem) },
+				{ "EnumObjects", (cpu, mem) => DInputDevice_EnumObjects(cpu, mem) },
+				{ "GetProperty", (cpu, mem) => DInputDevice_GetProperty(cpu, mem) },
+				{ "SetProperty", (cpu, mem) => DInputDevice_SetProperty(cpu, mem) },
+				{ "Acquire", (cpu, mem) => DInputDevice_Acquire(cpu, mem) },
+				{ "Unacquire", (cpu, mem) => DInputDevice_Unacquire(cpu, mem) },
+				{ "GetDeviceState", (cpu, mem) => DInputDevice_GetDeviceState(cpu, mem) },
+				{ "GetDeviceData", (cpu, mem) => DInputDevice_GetDeviceData(cpu, mem) },
+				{ "SetDataFormat", (cpu, mem) => DInputDevice_SetDataFormat(cpu, mem) },
+				{ "SetEventNotification", (cpu, mem) => DInputDevice_SetEventNotification(cpu, mem) },
+				{ "SetCooperativeLevel", (cpu, mem) => DInputDevice_SetCooperativeLevel(cpu, mem) },
+				{ "GetObjectInfo", (cpu, mem) => DInputDevice_GetObjectInfo(cpu, mem) },
+				{ "GetDeviceInfo", (cpu, mem) => DInputDevice_GetDeviceInfo(cpu, mem) },
+				{ "RunControlPanel", (cpu, mem) => DInputDevice_RunControlPanel(cpu, mem) },
+				{ "Initialize", (cpu, mem) => DInputDevice_Initialize(cpu, mem) }
+			};
+
+			var deviceComAddr = _env.ComDispatcher.CreateComObject("IDirectInputDevice", deviceMethods);
+
+			if (lplpDirectInputDevice != 0)
+			{
+				_env.MemWrite32(lplpDirectInputDevice, deviceComAddr);
+			}
+
+			_logger.LogInformation($"[DInput COM] Created IDirectInputDevice COM object at 0x{deviceComAddr:X8}");
+			return 0; // DI_OK
+		}
+
+		private uint DInput_EnumDevices(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInput::EnumDevices() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInput_GetDeviceStatus(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInput::GetDeviceStatus() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInput_RunControlPanel(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInput::RunControlPanel() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInput_Initialize(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInput::Initialize() - stub");
+			return 0; // DI_OK
+		}
+
+		// IDirectInputDevice COM methods
+		private uint DInputDevice_GetCapabilities(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetCapabilities() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_EnumObjects(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::EnumObjects() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_GetProperty(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetProperty() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_SetProperty(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::SetProperty() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_Acquire(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::Acquire() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_Unacquire(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::Unacquire() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_GetDeviceState(ICpu cpu, VirtualMemory memory)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var cbData = args.UInt32(1);
+			var lpvData = args.UInt32(2);
+			
+			_logger.LogInformation($"[DInput COM] IDirectInputDevice::GetDeviceState(this=0x{thisPtr:X8}, cbData={cbData}, lpvData=0x{lpvData:X8}) - stub");
+			
+			// Zero out the device state buffer
+			if (lpvData != 0 && cbData > 0)
+			{
+				_env.MemZero(lpvData, cbData);
+			}
+			
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_GetDeviceData(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetDeviceData() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_SetDataFormat(ICpu cpu, VirtualMemory memory)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lpdf = args.UInt32(1);
+			
+			_logger.LogInformation($"[DInput COM] IDirectInputDevice::SetDataFormat(this=0x{thisPtr:X8}, lpdf=0x{lpdf:X8}) - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_SetEventNotification(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::SetEventNotification() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_SetCooperativeLevel(ICpu cpu, VirtualMemory memory)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var hwnd = args.UInt32(1);
+			var dwFlags = args.UInt32(2);
+			
+			_logger.LogInformation($"[DInput COM] IDirectInputDevice::SetCooperativeLevel(this=0x{thisPtr:X8}, hwnd=0x{hwnd:X8}, flags=0x{dwFlags:X8}) - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_GetObjectInfo(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetObjectInfo() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_GetDeviceInfo(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetDeviceInfo() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_RunControlPanel(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::RunControlPanel() - stub");
+			return 0; // DI_OK
+		}
+
+		private uint DInputDevice_Initialize(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::Initialize() - stub");
+			return 0; // DI_OK
 		}
 	}
 }

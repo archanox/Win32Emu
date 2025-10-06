@@ -169,7 +169,25 @@ public sealed class Emulator : IDisposable
             }
 
             var step = _cpu!.SingleStep(_vm!);
-            if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+            
+            // Check for COM vtable method calls
+            if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
+            {
+                LogDebug($"[COM] Vtable method call at 0x{step.CallTarget:X8}");
+                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
+                {
+                    LogDebug($"[COM] Method returned 0x{ret:X8}");
+                    var esp = _cpu.GetRegister("ESP");
+                    var retEip = _vm.Read32(esp);
+                    // COM methods use stdcall convention - they clean up their own stack
+                    // For now, we'll let the method handler manage the stack
+                    esp += 4; // Pop return address
+                    _cpu.SetRegister("ESP", esp);
+                    _cpu.SetRegister("EAX", ret); // Return value in EAX
+                    _cpu.SetEip(retEip);
+                }
+            }
+            else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
             {
                 var dll = imp.dll.ToUpperInvariant();
                 var name = imp.name;
@@ -252,7 +270,22 @@ public sealed class Emulator : IDisposable
 
                 var step = new CpuStepResult(wasCall, callTarget);
 
-                if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                // Check for COM vtable method calls
+                if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
+                {
+                    LogDebug($"[COM] Vtable method call at 0x{step.CallTarget:X8}");
+                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
+                    {
+                        LogDebug($"[COM] Method returned 0x{ret:X8}");
+                        var esp = _cpu.GetRegister("ESP");
+                        var retEip = _vm.Read32(esp);
+                        esp += 4; // Pop return address
+                        _cpu.SetRegister("ESP", esp);
+                        _cpu.SetRegister("EAX", ret); // Return value in EAX
+                        _cpu.SetEip(retEip);
+                    }
+                }
+                else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
                 {
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;

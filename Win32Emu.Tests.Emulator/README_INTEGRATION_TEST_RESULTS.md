@@ -280,22 +280,33 @@ Created a comprehensive test suite with the following features:
 The IGN_TEAS.EXE test (from IgnitionTeaserTests.cs) shows similar behavior:
 - ✓ Loads and initializes successfully
 - ✓ Calls same set of KERNEL32 APIs
-- ⚠️ Enters infinite loop after initialization
-- ⚠️ Never calls DirectX functions
+- ✓ Calls DirectX creation functions (`DirectDrawCreate`, `DirectInputCreateA`)
+- ❌ **ROOT CAUSE IDENTIFIED**: Tries to invoke COM methods via DirectX object vtables
+- ❌ Emulator provides handles but not functional COM objects with vtables
+- ❌ DirectX initialization fails, causing game to exit
 - ⚠️ Times out after 5 seconds
+
+**Detailed analysis available in `/Decomp/ign_teas/ANALYSIS.md`**
 
 This confirms the issues are systemic across multiple Ignition executables, not specific to individual builds.
 
 ## Conclusion
 
-The Win32Emu emulator successfully handles basic Win32 initialization for all tested Ignition game executables. However, all executables get stuck in infinite loops during their initialization phase, preventing them from creating windows or initializing DirectX.
+The Win32Emu emulator successfully handles basic Win32 initialization for all tested Ignition game executables. However, all executables fail during DirectX initialization due to **missing COM interface emulation**.
 
-**The primary blockers are:**
-1. Invalid instruction execution (ign_3dfx.exe specific)
-2. Missing timing APIs causing infinite wait loops
-3. Possible message queue issues
+**The primary blocker has been identified:**
+1. ✅ DirectX creation functions are called and return success
+2. ❌ **No COM vtable support** - The emulator returns simple handles instead of proper COM objects
+3. ❌ Games try to call COM methods (e.g., `IDirectDraw::SetCooperativeLevel`) via vtables
+4. ❌ These calls fail because no vtable exists, causing initialization to abort
 
-Once these are addressed, the executables should progress to DirectX initialization, where additional APIs will need to be implemented.
+**Decompilation analysis** of IGN_TEAS.EXE (see `/Decomp/ign_teas/ANALYSIS.md`) confirms:
+- The game calls `DirectDrawCreate` successfully
+- It then immediately tries to call `lpDD->lpVtbl->SetCooperativeLevel(lpDD, hWnd, flags)`
+- The emulator has no vtable, so this fails
+- The initialization function returns 0 (failure) and the game exits
+
+Once COM vtable emulation is implemented, the executables should progress to window creation and DirectX rendering, where additional functionality will need to be added.
 
 ## Files Modified/Created
 

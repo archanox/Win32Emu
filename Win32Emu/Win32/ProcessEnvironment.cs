@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
+using Win32Emu.Win32.COM;
 
 namespace Win32Emu.Win32;
 
@@ -16,13 +17,20 @@ public class ProcessEnvironment
 	private bool _exitRequested;
 	private string _executablePath = string.Empty;
 
+	// COM vtable dispatcher
+	private ComVtableDispatcher? _comDispatcher;
+	
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
 	{
 		_vm = vm;
 		_host = host;
 		_logger = logger ?? NullLogger.Instance;
 		_allocPtr = heapBase;
+		_comDispatcher = new ComVtableDispatcher(this, _logger);
 	}
+	
+	// COM vtable dispatcher access
+	public ComVtableDispatcher ComDispatcher => _comDispatcher ?? throw new InvalidOperationException("COM dispatcher not initialized");
 
 	// SDL3 backends for audio and input
 	public Sdl3AudioBackend? AudioBackend { get; set; }
@@ -288,6 +296,7 @@ public class ProcessEnvironment
 	}
 	public uint MemRead32(uint addr) => _vm.Read32(addr);
 	public void MemWrite32(uint addr, uint value) => _vm.Write32(addr, value);
+	public void MemWriteBytes(uint addr, byte[] bytes) => _vm.WriteBytes(addr, bytes);
 	public void MemWrite16(uint addr, ushort value) => _vm.Write16(addr, value);
 	public ushort MemRead16(uint addr) => _vm.Read16(addr);
 	public void MemWrite64(uint addr, ulong value) => _vm.Write64(addr, value);
