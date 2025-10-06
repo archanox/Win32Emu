@@ -386,4 +386,21 @@ public partial class GameLibraryViewModel : ViewModelBase
             SaveToConfiguration();
         }
     }
+
+    [RelayCommand]
+    private void ShowGameInfo(Game? game)
+    {
+        if (game == null)
+        {
+            return;
+        }
+
+        var viewModel = new GameInfoViewModel(game, _gameDbService);
+        var window = new GameInfoWindow
+        {
+            DataContext = viewModel
+        };
+        
+        window.Show();
+    }
 }

@@ -2,8 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Win32Emu.Gui.App"
              xmlns:local="using:Win32Emu.Gui"
+             xmlns:converters="using:Win32Emu.Gui.Converters"
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.Resources>
+        <converters:BoolToImplementedConverter x:Key="BoolToImplementedConverter"/>
+        <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+    </Application.Resources>
 
     <Application.DataTemplates>
         <local:ViewLocator/>
