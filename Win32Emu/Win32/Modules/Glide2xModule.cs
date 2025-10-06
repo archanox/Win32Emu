@@ -221,10 +221,45 @@ namespace Win32Emu.Win32.Modules
 
 		public Dictionary<string, uint> GetExportOrdinals()
 		{
-			// Export ordinals for Glide2x - currently no implemented exports
+			// Export ordinals for Glide2x functions
 			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
 			{
-				{"_ConvertAndDownloadRle@64", 1}
+				{"_ConvertAndDownloadRle@64", 1},
+				{"_grGlideInit@0", 2},
+				{"_grGlideShutdown@0", 3},
+				{"_grSstSelect@4", 4},
+				{"_grSstQueryHardware@4", 5},
+				{"_grSstWinOpen@28", 6},
+				{"_grSstWinClose@0", 7},
+				{"_grSstIdle@0", 8},
+				{"_grSstVRetraceOn@0", 9},
+				{"_grBufferSwap@4", 10},
+				{"_grBufferClear@12", 11},
+				{"_grRenderBuffer@4", 12},
+				{"_grLfbLock@24", 13},
+				{"_grLfbUnlock@8", 14},
+				{"_guTexMemReset@0", 15},
+				{"_guTexAllocateMemory@60", 16},
+				{"_guTexDownloadMipMap@12", 17},
+				{"_grTexDownloadTable@12", 18},
+				{"_grGlideGetState@4", 19},
+				{"_grGlideSetState@4", 20},
+				{"_grAlphaBlendFunction@16", 21},
+				{"_grDepthBufferFunction@4", 22},
+				{"_grDepthMask@4", 23},
+				{"_grDepthBufferMode@4", 24},
+				{"_grChromakeyValue@4", 25},
+				{"_grChromakeyMode@4", 26},
+				{"_grCullMode@4", 27},
+				{"_grClipWindow@16", 28},
+				{"_grConstantColorValue@4", 29},
+				{"_guAlphaSource@4", 30},
+				{"_guColorCombineFunction@4", 31},
+				{"_guTexCombineFunction@8", 32},
+				{"_guTexSource@4", 33},
+				{"_grAADrawLine@8", 34},
+				{"_grAADrawPoint@4", 35},
+				{"_guDrawTriangleWithClip@12", 36}
 			};
 			return exports;
 		}
