@@ -145,6 +145,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = SetCursor(a.UInt32(0));
 					return true;
 
+				case "SHOWCURSOR":
+					returnValue = (uint)ShowCursor(a.Int32(0));
+					return true;
+
 				case "SETFOCUS":
 					returnValue = SetFocus(a.UInt32(0));
 					return true;
@@ -848,6 +852,15 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation($"[User32] SetCursor: hCursor=0x{hCursor:X8}");
 			// Return previous cursor handle (dummy)
 			return 0x00000001;
+		}
+
+		private int ShowCursor(int bShow)
+		{
+			_logger.LogInformation($"[User32] ShowCursor: bShow={bShow}");
+			// ShowCursor increments/decrements an internal display count
+			// Returns the new display count after the operation
+			// For now, return a simple value indicating cursor is visible
+			return bShow != 0 ? 1 : 0;
 		}
 
 		private unsafe uint SetFocus(uint hwnd)
