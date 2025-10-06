@@ -26,7 +26,7 @@ public class ProcessEnvironment
 		_host = host;
 		_logger = logger ?? NullLogger.Instance;
 		_allocPtr = heapBase;
-		_comDispatcher = new ComVtableDispatcher(this, logger);
+		_comDispatcher = new ComVtableDispatcher(this, _logger);
 	}
 	
 	// COM vtable dispatcher access
