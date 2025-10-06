@@ -1585,9 +1585,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			var fileNameBytes = Encoding.ASCII.GetBytes(fileName);
 			
 			// Clear the structure
-			for (uint i = 0; i < 320; i++)
+			unsafe
 			{
-				_env.MemWriteBytes(lpFindFileData + i, new byte[] { 0 });
+				Span<byte> zeroBuffer = stackalloc byte[320];
+				zeroBuffer.Clear();
+				_env.MemWriteBytes(lpFindFileData, zeroBuffer);
 			}
 			
 			// Write filename at offset 44
