@@ -448,4 +448,163 @@ public class CpuMemoryAccessTests
         var result = cpu.GetRegister("EAX");
         Assert.Equal(0x90808080u, result);
     }
+    
+    [Fact]
+    public void CalcMemAddress_NegativeBaseRegister_ShouldBeInterpretedAsSigned()
+    {
+        // This test reproduces the exact issue from metrics.exe:
+        // mov eax, 0xffffffeb        ; eax = -21
+        // mov cl, BYTE PTR [eax+0x4020da]  ; Should read from 0x004020c5, not 0x004042c5
+        
+        // Arrange
+        var memory = new VirtualMemory(16 * 1024 * 1024); // 16MB to accommodate both addresses
+        var cpu = new IcedCpu(memory);
+        
+        // Set up the scenario from metrics.exe
+        cpu.SetRegister("EAX", 0xffffffeb); // -21 as unsigned 32-bit
+        cpu.SetEip(0x00401000);
+        
+        // Write test data at the CORRECT address (where string should be read from)
+        // Expected address: -21 + 0x4020da = 0x004020c5
+        memory.Write8(0x004020c5, 0x42); // 'B' character
+        
+        // Write DIFFERENT data at the WRONG address (where current buggy code reads from)
+        // Wrong address: 0xffffffeb + 0x4020da (unsigned) = 0x004042c5 (after wraparound)
+        memory.Write8(0x004042c5, 0x00); // null byte
+        
+        // Create test code: MOV CL, BYTE PTR [EAX+0x4020da]
+        var testCode = new byte[]
+        {
+            0x8A, 0x88, 0xDA, 0x20, 0x40, 0x00  // MOV CL, [EAX+0x4020da]
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - CL should contain 0x42 (from correct address), not 0x00 (from wrong address)
+        var cl = cpu.GetRegister("ECX") & 0xFF; // Get low byte (CL)
+        Assert.Equal(0x42u, cl);
+    }
+    
+    [Fact]
+    public void Char_Addition_ShouldProduceCorrectAscii()
+    {
+        // This test verifies that ADD instructions work correctly for character arithmetic
+        // The fmt::dec() method in util.h does: ch('0' + value % 10)
+        // If this doesn't work, we get raw digits instead of ASCII characters
+        
+        // Arrange
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        cpu.SetRegister("EAX", 0); // value % 10 = 0
+        cpu.SetRegister("EDX", 0x30); // '0' character
+        cpu.SetEip(0x00401000);
+        
+        // ADD AL, DL  ; AL = 0 + 0x30 = 0x30 = '0'
+        var testCode = new byte[]
+        {
+            0x00, 0xD0  // ADD AL, DL
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - AL should be 0x30 ('0')
+        var al = cpu.GetRegister("EAX") & 0xFF;
+        Assert.Equal(0x30u, al);
+    }
+    
+    [Fact]
+    public void ImmediateAdd_ShouldWorkWith8BitOperands()
+    {
+        // This test verifies ADD with immediate values works for 8-bit operands
+        // In the real code, the compiler might generate: ADD AL, 0x30
+        
+        // Arrange
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        cpu.SetRegister("EAX", 5); // digit value
+        cpu.SetEip(0x00401000);
+        
+        // ADD AL, 0x30  ; AL = 5 + 0x30 = 0x35 = '5'
+        var testCode = new byte[]
+        {
+            0x04, 0x30  // ADD AL, 0x30
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - AL should be 0x35 ('5')
+        var al = cpu.GetRegister("EAX") & 0xFF;
+        Assert.Equal(0x35u, al);
+    }
+    
+    [Fact]
+    public void Memory_Write8Bit_ShouldWorkCorrectly()
+    {
+        // This test verifies that 8-bit MOV to memory works correctly
+        // The fmt::ch() method does: buf[ofs++] = c;
+        // which compiles to MOV [address], AL
+        
+        // Arrange
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        cpu.SetRegister("EAX", 0x35); // '5' character
+        cpu.SetRegister("EDI", 0x001000); // buffer address
+        cpu.SetEip(0x00401000);
+        
+        // MOV [EDI], AL  ; Write 0x35 to memory
+        var testCode = new byte[]
+        {
+            0x88, 0x07  // MOV [EDI], AL
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - Memory at EDI should contain 0x35
+        var value = memory.Read8(0x001000);
+        Assert.Equal(0x35, value);
+    }
+    
+    [Fact]
+    public void Lea_ShouldCalculateAddressWithConstantOffset()
+    {
+        // Test if LEA might be used for '0' + digit calculation
+        // LEA EAX, [EBX+0x30] could be used to add 0x30 to EBX
+        
+        // Arrange
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        cpu.SetRegister("EBX", 5); // digit value
+        cpu.SetEip(0x00401000);
+        
+        // LEA EAX, [EBX+0x30]  ; EAX = EBX + 0x30
+        var testCode = new byte[]
+        {
+            0x8D, 0x43, 0x30  // LEA EAX, [EBX+0x30]
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - EAX should be 0x35 ('5')
+        var eax = cpu.GetRegister("EAX");
+        Assert.Equal(0x35u, eax);
+    }
 }

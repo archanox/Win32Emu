@@ -539,9 +539,115 @@ public class IcedCpu : ICpu
 
 	private void ExecAdd(Instruction insn)
 	{
-		uint a = ReadOp(insn, 0), b = ReadOp(insn, 1), r = a + b;
-		WriteOp(insn, 0, r);
-		SetFlagsAdd(a, b, r);
+		var opSize = GetOpSizeBits(insn, 0);
+		
+		switch (opSize)
+		{
+			case 8:
+			{
+				// 8-bit ADD
+				byte a, b;
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg8(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read8(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (byte)ReadOp(insn, 0);
+				}
+				
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg8(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read8(CalcMemAddress(insn));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Immediate8)
+				{
+					b = insn.Immediate8;
+				}
+				else if (insn.GetOpKind(1) == OpKind.Immediate16)
+				{
+					b = (byte)insn.Immediate16;
+				}
+				else
+				{
+					b = (byte)ReadOp(insn, 1);
+				}
+				
+				byte r = (byte)(a + b);
+				
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					SetReg8(insn.GetOpRegister(0), r);
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					_mem.Write8(CalcMemAddress(insn), r);
+				}
+				
+				SetFlagsAdd(a, b, r);
+				break;
+			}
+			case 16:
+			{
+				// 16-bit ADD
+				ushort a, b;
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg16(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (ushort)ReadOp(insn, 0);
+				}
+				
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg16(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					b = (ushort)ReadOp(insn, 1);
+				}
+				
+				ushort r = (ushort)(a + b);
+				
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					SetReg16(insn.GetOpRegister(0), r);
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					_mem.Write16(CalcMemAddress(insn), r);
+				}
+				
+				SetFlagsAdd(a, b, r);
+				break;
+			}
+			default:
+			{
+				// 32-bit ADD (default behavior)
+				uint a = ReadOp(insn, 0), b = ReadOp(insn, 1), r = a + b;
+				WriteOp(insn, 0, r);
+				SetFlagsAdd(a, b, r);
+				break;
+			}
+		}
 	}
 
 	private void ExecAdc(Instruction insn)
