@@ -19,6 +19,11 @@ public class IcedCpu : ICpu
 	// EFLAGS bit positions
 	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Tf = 8, If = 9, Df = 10, Of = 11;
 
+	// x87 FPU state (8 registers in a stack, ST(0) to ST(7))
+	private readonly double[] _fpu = new double[8];
+	private int _fpuTop = 0; // Index of ST(0) in the circular stack
+	private ushort _fpuControlWord = 0x037F; // Default FPU control word
+
 	// RDTSC support - use Stopwatch for high-resolution timing
 	private static readonly Stopwatch RdtscStopwatch = Stopwatch.StartNew();
 	private static readonly bool RdtscIsHighResolution = Stopwatch.IsHighResolution;
@@ -159,6 +164,37 @@ public class IcedCpu : ICpu
 				case Mnemonic.Cmovg:
 				case Mnemonic.Cmovl:
 					ExecCmovcc(insn); break;
+				// FPU operations
+				case Mnemonic.Fld: ExecFld(insn); break;
+				case Mnemonic.Fst: ExecFst(insn, false); break;
+				case Mnemonic.Fstp: ExecFst(insn, true); break;
+				case Mnemonic.Fild: ExecFild(insn); break;
+				case Mnemonic.Fistp: ExecFistp(insn); break;
+				case Mnemonic.Fadd: ExecFadd(insn); break;
+				case Mnemonic.Faddp: ExecFaddp(insn); break;
+				case Mnemonic.Fsub: ExecFsub(insn); break;
+				case Mnemonic.Fmul: ExecFmul(insn); break;
+				case Mnemonic.Fiadd: ExecFiadd(insn); break;
+				case Mnemonic.Fxch: ExecFxch(insn); break;
+				case Mnemonic.Fchs: ExecFchs(); break;
+				case Mnemonic.Fabs: ExecFabs(); break;
+				case Mnemonic.Fldz: ExecFldz(); break;
+				case Mnemonic.Fld1: ExecFld1(); break;
+				case Mnemonic.Fldpi: ExecFldpi(); break;
+				case Mnemonic.Fldl2e: ExecFldl2e(); break;
+				case Mnemonic.Fsin: ExecFsin(); break;
+				case Mnemonic.Fcos: ExecFcos(); break;
+				case Mnemonic.Fsincos: ExecFsincos(); break;
+				case Mnemonic.Fpatan: ExecFpatan(); break;
+				case Mnemonic.F2xm1: ExecF2xm1(); break;
+				case Mnemonic.Fscale: ExecFscale(); break;
+				case Mnemonic.Fucomi: ExecFucomi(insn); break;
+				case Mnemonic.Fucomip: ExecFucomip(insn); break;
+				case Mnemonic.Fcmovnbe: ExecFcmovnbe(insn); break;
+				case Mnemonic.Fnstcw: ExecFnstcw(insn); break;
+				case Mnemonic.Fldcw: ExecFldcw(insn); break;
+				// Bit operations
+				case Mnemonic.Bt: ExecBt(insn); break;
 				// String ops (byte/dword variants)
 				case Mnemonic.Movsb: ExecMovs(1, insn.HasRepPrefix); break;
 				case Mnemonic.Movsd: ExecMovs(4, insn.HasRepPrefix); break;
@@ -1484,6 +1520,485 @@ public class IcedCpu : ICpu
 		_edx = (uint)r;
 	}
 
+	private void ExecFld(Instruction insn)
+	{
+		// FLD - Load floating point value
+		if (insn.GetOpKind(0) == OpKind.Memory)
+		{
+			var addr = CalcMemAddress(insn);
+			double val;
+			if (insn.MemorySize == MemorySize.Float32)
+			{
+				val = BitConverter.Int32BitsToSingle(unchecked((int)_mem.Read32(addr)));
+			}
+			else if (insn.MemorySize == MemorySize.Float64)
+			{
+				var bits = _mem.Read64(addr);
+				val = BitConverter.Int64BitsToDouble((long)bits);
+			}
+			else
+			{
+				// Assume 64-bit double
+				var bits = _mem.Read64(addr);
+				val = BitConverter.Int64BitsToDouble((long)bits);
+			}
+			FpuPush(val);
+		}
+		else if (insn.GetOpKind(0) == OpKind.Register)
+		{
+			// FLD ST(i)
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuPush(FpuGetSt(i));
+		}
+	}
+
+	private void ExecFst(Instruction insn, bool pop)
+	{
+		// FST/FSTP - Store floating point value
+		var val = FpuGetSt(0);
+		
+		if (insn.GetOpKind(0) == OpKind.Memory)
+		{
+			var addr = CalcMemAddress(insn);
+			if (insn.MemorySize == MemorySize.Float32)
+			{
+				var bits = unchecked((uint)BitConverter.SingleToInt32Bits((float)val));
+				_mem.Write32(addr, bits);
+			}
+			else
+			{
+				// Assume 64-bit double
+				var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(val));
+				_mem.Write64(addr, bits);
+			}
+		}
+		else if (insn.GetOpKind(0) == OpKind.Register)
+		{
+			// FST/FSTP ST(i)
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, val);
+		}
+
+		if (pop)
+		{
+			FpuPop();
+		}
+	}
+
+	private void ExecFild(Instruction insn)
+	{
+		// FILD - Load integer to FPU stack
+		var addr = CalcMemAddress(insn);
+		double val;
+		
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			val = (short)_mem.Read16(addr);
+		}
+		else if (insn.MemorySize == MemorySize.Int32)
+		{
+			val = (int)_mem.Read32(addr);
+		}
+		else if (insn.MemorySize == MemorySize.Int64)
+		{
+			val = (long)_mem.Read64(addr);
+		}
+		else
+		{
+			// Default to 32-bit
+			val = (int)_mem.Read32(addr);
+		}
+		
+		FpuPush(val);
+	}
+
+	private void ExecFistp(Instruction insn)
+	{
+		// FISTP - Store integer and pop
+		var val = FpuGetSt(0);
+		var addr = CalcMemAddress(insn);
+		
+		// Get rounding mode from control word (bits 10-11)
+		// For simplicity, we'll use standard rounding
+		var rounded = Math.Round(val);
+		
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			// Store the signed 16-bit integer bit pattern as unsigned for memory representation
+			_mem.Write16(addr, unchecked((ushort)(short)rounded));
+		}
+		else if (insn.MemorySize == MemorySize.Int32)
+		{
+			_mem.Write32(addr, unchecked((uint)(int)rounded));
+		}
+		else if (insn.MemorySize == MemorySize.Int64)
+		{
+			// Cast double -> long (truncate/round), then to ulong (bit pattern preserved, unchecked)
+			_mem.Write64(addr, unchecked((ulong)(long)rounded));
+		}
+		else
+		{
+			// Default to 32-bit
+			_mem.Write32(addr, unchecked((uint)(int)rounded));
+		}
+		
+		FpuPop();
+	}
+
+	private void ExecFadd(Instruction insn)
+	{
+		// FADD - Add
+		if (insn.OpCount == 0)
+		{
+			// FADD - Add ST(1) to ST(0)
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuSetSt(0, st0 + st1);
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.GetOpKind(0) == OpKind.Memory)
+			{
+				// FADD m32/m64 - Add memory to ST(0)
+				var addr = CalcMemAddress(insn);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)_mem.Read32(addr));
+				}
+				else
+				{
+					var bits = _mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, FpuGetSt(0) + val);
+			}
+			else
+			{
+				// FADD ST(i) - Add ST(i) to ST(0)
+				var reg = insn.GetOpRegister(0);
+				var i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(0) + FpuGetSt(i));
+			}
+		}
+		else
+		{
+			// FADD ST(i), ST(0) - Add ST(0) to ST(i)
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) + FpuGetSt(0));
+		}
+	}
+
+	private void ExecFaddp(Instruction insn)
+	{
+		// FADDP - Add and pop
+		if (insn.OpCount == 0)
+		{
+			// FADDP - Add ST(0) to ST(1) and pop
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st0 + st1);
+		}
+		else
+		{
+			// FADDP ST(i), ST(0) - Add ST(0) to ST(i) and pop
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) + FpuGetSt(0));
+			FpuPop();
+		}
+	}
+
+	private void ExecFsub(Instruction insn)
+	{
+		// FSUB - Subtract
+		if (insn.OpCount == 0)
+		{
+			// FSUB - Subtract ST(0) from ST(1)
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuSetSt(0, st1 - st0);
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.GetOpKind(0) == OpKind.Memory)
+			{
+				// FSUB m32/m64 - Subtract memory from ST(0)
+				var addr = CalcMemAddress(insn);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)_mem.Read32(addr));
+				}
+				else
+				{
+					var bits = _mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, FpuGetSt(0) - val);
+			}
+			else
+			{
+				// FSUB ST(i) - Subtract ST(i) from ST(0)
+				var reg = insn.GetOpRegister(0);
+				var i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(0) - FpuGetSt(i));
+			}
+		}
+		else
+		{
+			// FSUB ST(i), ST(0) - Subtract ST(0) from ST(i)
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) - FpuGetSt(0));
+		}
+	}
+
+	private void ExecFmul(Instruction insn)
+	{
+		// FMUL - Multiply
+		if (insn.OpCount == 0)
+		{
+			// FMUL - Multiply ST(0) by ST(1)
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuSetSt(0, st0 * st1);
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.GetOpKind(0) == OpKind.Memory)
+			{
+				// FMUL m32/m64 - Multiply ST(0) by memory
+				var addr = CalcMemAddress(insn);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)_mem.Read32(addr));
+				}
+				else
+				{
+					var bits = _mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, FpuGetSt(0) * val);
+			}
+			else
+			{
+				// FMUL ST(i) - Multiply ST(0) by ST(i)
+				var reg = insn.GetOpRegister(0);
+				var i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(0) * FpuGetSt(i));
+			}
+		}
+		else
+		{
+			// FMUL ST(i), ST(0) - Multiply ST(i) by ST(0)
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) * FpuGetSt(0));
+		}
+	}
+
+	private void ExecFiadd(Instruction insn)
+	{
+		// FIADD - Add integer to ST(0)
+		var addr = CalcMemAddress(insn);
+		double val;
+		
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			val = (short)_mem.Read16(addr);
+		}
+		else
+		{
+			val = (int)_mem.Read32(addr);
+		}
+		
+		FpuSetSt(0, FpuGetSt(0) + val);
+	}
+
+	private void ExecFxch(Instruction insn)
+	{
+		// FXCH - Exchange ST(0) with ST(i)
+		int i = 1; // Default to ST(1)
+		if (insn.OpCount > 0)
+		{
+			var reg = insn.GetOpRegister(0);
+			i = reg - Register.ST0;
+		}
+		
+		var st0 = FpuGetSt(0);
+		var sti = FpuGetSt(i);
+		FpuSetSt(0, sti);
+		FpuSetSt(i, st0);
+	}
+
+	private void ExecFchs()
+	{
+		// FCHS - Change sign of ST(0)
+		FpuSetSt(0, -FpuGetSt(0));
+	}
+
+	private void ExecFabs()
+	{
+		// FABS - Absolute value of ST(0)
+		FpuSetSt(0, Math.Abs(FpuGetSt(0)));
+	}
+
+	private void ExecFldz()
+	{
+		// FLDZ - Load +0.0
+		FpuPush(0.0);
+	}
+
+	private void ExecFld1()
+	{
+		// FLD1 - Load +1.0
+		FpuPush(1.0);
+	}
+
+	private void ExecFldpi()
+	{
+		// FLDPI - Load π
+		FpuPush(Math.PI);
+	}
+
+	private void ExecFldl2e()
+	{
+		// FLDL2E - Load log2(e)
+		FpuPush(Math.Log2(Math.E));
+	}
+
+	private void ExecFsin()
+	{
+		// FSIN - Sine of ST(0)
+		FpuSetSt(0, Math.Sin(FpuGetSt(0)));
+	}
+
+	private void ExecFcos()
+	{
+		// FCOS - Cosine of ST(0)
+		FpuSetSt(0, Math.Cos(FpuGetSt(0)));
+	}
+
+	private void ExecFsincos()
+	{
+		// FSINCOS - Sine and cosine of ST(0)
+		var st0 = FpuGetSt(0);
+		FpuSetSt(0, Math.Sin(st0));
+		FpuPush(Math.Cos(st0));
+	}
+
+	private void ExecFpatan()
+	{
+		// FPATAN - Partial arctangent: ST(1) = atan2(ST(1), ST(0)), then pop
+		var st0 = FpuGetSt(0);
+		var st1 = FpuGetSt(1);
+		FpuPop();
+		FpuSetSt(0, Math.Atan2(st1, st0));
+	}
+
+	private void ExecF2xm1()
+	{
+		// F2XM1 - Compute 2^x - 1 where x is ST(0)
+		var st0 = FpuGetSt(0);
+		FpuSetSt(0, Math.Pow(2, st0) - 1);
+	}
+
+	private void ExecFscale()
+	{
+		// FSCALE - Scale ST(0) by powers of 2: ST(0) = ST(0) * 2^floor(ST(1))
+		var st0 = FpuGetSt(0);
+		var st1 = FpuGetSt(1);
+		FpuSetSt(0, st0 * Math.Pow(2, Math.Floor(st1)));
+	}
+
+	private void ExecFucomi(Instruction insn)
+	{
+		// FUCOMI - Compare ST(0) with ST(i) and set EFLAGS
+		int i = 1; // Default to ST(1)
+		if (insn.OpCount > 0)
+		{
+			var reg = insn.GetOpRegister(0);
+			i = reg - Register.ST0;
+		}
+		
+		var st0 = FpuGetSt(0);
+		var sti = FpuGetSt(i);
+		
+		// Set EFLAGS based on comparison
+		if (double.IsNaN(st0) || double.IsNaN(sti))
+		{
+			SetFlag(Zf);
+			SetFlag(Pf);
+			SetFlag(Cf);
+		}
+		else if (st0 > sti)
+		{
+			ClearFlag(Zf);
+			ClearFlag(Pf);
+			ClearFlag(Cf);
+		}
+		else if (st0 < sti)
+		{
+			ClearFlag(Zf);
+			ClearFlag(Pf);
+			SetFlag(Cf);
+		}
+		else // st0 == sti
+		{
+			SetFlag(Zf);
+			ClearFlag(Pf);
+			ClearFlag(Cf);
+		}
+	}
+
+	private void ExecFucomip(Instruction insn)
+	{
+		// FUCOMIP - Compare ST(0) with ST(i), set EFLAGS, and pop
+		ExecFucomi(insn);
+		FpuPop();
+	}
+
+	private void ExecFcmovnbe(Instruction insn)
+	{
+		// FCMOVNBE - Conditional move if not below or equal (CF=0 and ZF=0)
+		if (!GetFlag(Cf) && !GetFlag(Zf))
+		{
+			var reg = insn.GetOpRegister(1);
+			var i = reg - Register.ST0;
+			FpuSetSt(0, FpuGetSt(i));
+		}
+	}
+
+	private void ExecFnstcw(Instruction insn)
+	{
+		// FNSTCW - Store FPU control word
+		var addr = CalcMemAddress(insn);
+		_mem.Write16(addr, _fpuControlWord);
+	}
+
+	private void ExecFldcw(Instruction insn)
+	{
+		// FLDCW - Load FPU control word
+		var addr = CalcMemAddress(insn);
+		_fpuControlWord = _mem.Read16(addr);
+	}
+
+	private void ExecBt(Instruction insn)
+	{
+		// BT - Bit test
+		var bitBase = ReadOp(insn, 0);
+		var bitOffset = ReadOp(insn, 1);
+		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		var bitValue = (bitBase >> bitPos) & 1;
+		SetFlagVal(Cf, bitValue != 0);
+	}
+
 	#endregion
 
 	#region Flags
@@ -1813,6 +2328,39 @@ public class IcedCpu : ICpu
 		_esp += 4;
 		return v;
 	}
+
+	#region FPU Helpers
+
+	// Get ST(i) - ST(0) is the top of stack
+	private double FpuGetSt(int i)
+	{
+		var idx = (_fpuTop + i) & 7;
+		return _fpu[idx];
+	}
+
+	// Set ST(i)
+	private void FpuSetSt(int i, double val)
+	{
+		var idx = (_fpuTop + i) & 7;
+		_fpu[idx] = val;
+	}
+
+	// Push a value onto the FPU stack
+	private void FpuPush(double val)
+	{
+		_fpuTop = (_fpuTop - 1) & 7;
+		_fpu[_fpuTop] = val;
+	}
+
+	// Pop a value from the FPU stack
+	private double FpuPop()
+	{
+		var val = _fpu[_fpuTop];
+		_fpuTop = (_fpuTop + 1) & 7;
+		return val;
+	}
+
+	#endregion
 
 	private sealed class SimpleMemoryCodeReader(IcedCpu cpu) : CodeReader
 	{
