@@ -62,7 +62,7 @@ public static class Diagnostics
 				0xFFFFFFF4 => "STD_ERROR_HANDLE",
 				_ => "UNKNOWN_PSEUDO_HANDLE"
 			};
-			sb.Append($"\nNOTE: Address 0x{addr:X} is {handleName} (pseudo-handle value -1{(int)addr:D}).");
+			sb.Append($"\nNOTE: Address 0x{addr:X} is {handleName} (pseudo-handle value {(int)addr:D}).");
 			sb.Append("\nThis error typically occurs when code tries to dereference a pseudo-handle as a memory address.");
 			sb.Append("\nPseudo-handles must be translated to real handles via GetStdHandle() before use.");
 		}
