@@ -1563,7 +1563,7 @@ public class IcedCpu : ICpu
 			var addr = CalcMemAddress(insn);
 			if (insn.MemorySize == MemorySize.Float32)
 			{
-				var bits = (uint)BitConverter.SingleToInt32Bits((float)val);
+				var bits = unchecked((uint)BitConverter.SingleToInt32Bits((float)val));
 				_mem.Write32(addr, bits);
 			}
 			else
