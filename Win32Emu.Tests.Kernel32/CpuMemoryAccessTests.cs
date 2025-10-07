@@ -448,4 +448,74 @@ public class CpuMemoryAccessTests
         var result = cpu.GetRegister("EAX");
         Assert.Equal(0x90808080u, result);
     }
+    
+    [Fact]
+    public void CalcMemAddress_NegativeBaseRegister_ShouldBeInterpretedAsSigned()
+    {
+        // This test reproduces the exact issue from metrics.exe:
+        // mov eax, 0xffffffeb        ; eax = -21
+        // mov cl, BYTE PTR [eax+0x4020da]  ; Should read from 0x004020c5, not 0x004042c5
+        
+        // Arrange
+        var memory = new VirtualMemory(16 * 1024 * 1024); // 16MB to accommodate both addresses
+        var cpu = new IcedCpu(memory);
+        
+        // Set up the scenario from metrics.exe
+        cpu.SetRegister("EAX", 0xffffffeb); // -21 as unsigned 32-bit
+        cpu.SetEip(0x00401000);
+        
+        // Write test data at the CORRECT address (where string should be read from)
+        // Expected address: -21 + 0x4020da = 0x004020c5
+        memory.Write8(0x004020c5, 0x42); // 'B' character
+        
+        // Write DIFFERENT data at the WRONG address (where current buggy code reads from)
+        // Wrong address: 0xffffffeb + 0x4020da (unsigned) = 0x004042c5 (after wraparound)
+        memory.Write8(0x004042c5, 0x00); // null byte
+        
+        // Create test code: MOV CL, BYTE PTR [EAX+0x4020da]
+        var testCode = new byte[]
+        {
+            0x8A, 0x88, 0xDA, 0x20, 0x40, 0x00  // MOV CL, [EAX+0x4020da]
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - CL should contain 0x42 (from correct address), not 0x00 (from wrong address)
+        var cl = cpu.GetRegister("ECX") & 0xFF; // Get low byte (CL)
+        Assert.Equal(0x42u, cl);
+    }
+    
+    [Fact]
+    public void Char_Addition_ShouldProduceCorrectAscii()
+    {
+        // This test verifies that ADD instructions work correctly for character arithmetic
+        // The fmt::dec() method in util.h does: ch('0' + value % 10)
+        // If this doesn't work, we get raw digits instead of ASCII characters
+        
+        // Arrange
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        cpu.SetRegister("EAX", 0); // value % 10 = 0
+        cpu.SetRegister("EDX", 0x30); // '0' character
+        cpu.SetEip(0x00401000);
+        
+        // ADD AL, DL  ; AL = 0 + 0x30 = 0x30 = '0'
+        var testCode = new byte[]
+        {
+            0x00, 0xD0  // ADD AL, DL
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - AL should be 0x30 ('0')
+        var al = cpu.GetRegister("EAX") & 0xFF;
+        Assert.Equal(0x30u, al);
+    }
 }
