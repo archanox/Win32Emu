@@ -76,12 +76,12 @@ public static class Diagnostics
 
 	public static void LogMemWrite(uint addr, int length, byte[] data)
 	{
-		_logger.LogError($"MemWrite addr=0x{addr:X8} len={length} data={Preview(data)}");
+		_logger.LogDebug($"MemWrite addr=0x{addr:X8} len={length} data={Preview(data)}");
 	}
 
 	public static void LogMemRead(uint addr, int length)
 	{
-		_logger.LogError($"MemRead addr=0x{addr:X8} len={length}");
+		_logger.LogDebug($"MemRead addr=0x{addr:X8} len={length}");
 	}
 
 	private static string Preview(byte[] data, int max = 32)
