@@ -98,8 +98,8 @@ public class StubGeneratorTests
         var mIndex = code.IndexOf("public uint MFunction()");
         var zIndex = code.IndexOf("public uint ZFunction()");
         
-        Assert.True(aIndex < mIndex);
-        Assert.True(mIndex < zIndex);
+        Assert.True(zIndex < aIndex, $"ZFunction (ordinal 1) should come before AFunction (ordinal 2). zIndex={zIndex}, aIndex={aIndex}");
+        Assert.True(aIndex < mIndex, $"AFunction (ordinal 2) should come before MFunction (ordinal 3). aIndex={aIndex}, mIndex={mIndex}");
     }
     
     [Fact]
