@@ -290,6 +290,10 @@ public class ProcessEnvironment
 	/// </summary>
 	public void WriteToStdOutput(string text)
 	{
+		// Log to console for debugging
+		Console.Write(text);
+		
+		// Notify host if available (for GUI display)
 		_host?.OnStdOutput(text);
 	}
 
