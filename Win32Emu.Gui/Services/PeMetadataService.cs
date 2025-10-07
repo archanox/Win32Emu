@@ -64,7 +64,7 @@ public static class PeMetadataService
         {
             // TimeDateStamp is seconds since Unix epoch (Jan 1, 1970)
             var timestamp = fileHeader.TimeDateStamp;
-            var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var epoch = DateTime.UnixEpoch;
             return epoch.AddSeconds(timestamp);
         }
         catch

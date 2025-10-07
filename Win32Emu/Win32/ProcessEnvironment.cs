@@ -291,7 +291,7 @@ public class ProcessEnvironment
 	public void WriteToStdOutput(string text)
 	{
 		// Log to console for debugging
-		Console.Write(text);
+		_logger.LogInformation("StdOutput: {Text}", text);
 		
 		// Notify host if available (for GUI display)
 		_host?.OnStdOutput(text);
@@ -303,7 +303,7 @@ public class ProcessEnvironment
 	public void WriteToStdError(string text)
 	{
 		// Log to console for debugging
-		Console.Write(text);
+		_logger.LogError("StdOutput: {Text}", text);
 		
 		// For now, treat stderr the same as stdout
 		_host?.OnStdOutput(text);
@@ -581,13 +581,12 @@ public class ProcessEnvironment
 
 	public bool RegisterWindowClass(string className, WindowClassInfo classInfo)
 	{
-		if (_windowClasses.ContainsKey(className))
+		if (!_windowClasses.TryAdd(className, classInfo))
 		{
 			Console.WriteLine($"[ProcessEnv] Window class '{className}' already registered");
 			return false;
 		}
 
-		_windowClasses[className] = classInfo;
 		Console.WriteLine($"[ProcessEnv] Registered window class: {className}");
 		return true;
 	}
@@ -609,7 +608,7 @@ public class ProcessEnvironment
 
 	public string? GetClassNameFromAtom(uint atom)
 	{
-		return _atomToClassName.TryGetValue(atom, out var className) ? className : null;
+		return _atomToClassName.GetValueOrDefault(atom);
 	}
 
 	public uint CreateWindow(string className, string windowName, uint style, uint exStyle,
@@ -695,11 +694,11 @@ public class ProcessEnvironment
 		// Try to write to the channel
 		if (_messageQueue.Writer.TryWrite(queuedMsg))
 		{
-			_logger.LogInformation($"[ProcessEnv] PostMessage: queued MSG=0x{message:X4} HWND=0x{hwnd:X8}");
+			_logger.LogInformation("[ProcessEnv] PostMessage: queued MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", message, hwnd);
 			return true;
 		}
 
-		_logger.LogWarning($"[ProcessEnv] PostMessage: failed to queue MSG=0x{message:X4}");
+		_logger.LogWarning("[ProcessEnv] PostMessage: failed to queue MSG=0x{Message:X4}", message);
 		return false;
 	}
 
@@ -735,7 +734,7 @@ public class ProcessEnvironment
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError($"[ProcessEnv] GetMessageAsync error: {ex.Message}");
+			_logger.LogError(ex, $"[ProcessEnv] GetMessageAsync error");
 			return null;
 		}
 	}
@@ -802,7 +801,7 @@ public class ProcessEnvironment
 		}
 		catch (Exception ex)
 		{
-			_logger.LogWarning($"[ProcessEnv] GetMessageBlocking: {ex.Message}");
+			_logger.LogWarning(ex, "[ProcessEnv] GetMessageBlocking");
 			return null;
 		}
 	}

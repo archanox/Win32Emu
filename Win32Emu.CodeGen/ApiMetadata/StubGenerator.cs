@@ -14,7 +14,9 @@ public class StubGenerator
     /// <param name="missingApis">List of missing API names</param>
     /// <param name="xmlDefinitions">Optional API definitions from XML (for better signatures)</param>
     /// <returns>Generated C# code</returns>
-    public static string GenerateStubs(string dllName, List<string> missingApis, Dictionary<string, ApiDefinition>? xmlDefinitions = null)
+    public static string GenerateStubs(string dllName,
+	    List<ExportedFunction> missingApis,
+	    Dictionary<string, ApiDefinition>? xmlDefinitions = null)
     {
         var sb = new StringBuilder();
         
@@ -23,9 +25,9 @@ public class StubGenerator
         sb.AppendLine($"// Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
         sb.AppendLine();
         
-        foreach (var apiName in missingApis.OrderBy(a => a))
+        foreach (var api in missingApis.OrderBy(a => a.Ordinal))
         {
-            var stub = GenerateStubMethod(apiName, xmlDefinitions?.GetValueOrDefault(apiName));
+            var stub = GenerateStubMethod(api, xmlDefinitions?.GetValueOrDefault(api.Name));
             sb.AppendLine(stub);
             sb.AppendLine();
         }
@@ -36,15 +38,23 @@ public class StubGenerator
     /// <summary>
     /// Generate a stub method for a single API
     /// </summary>
-    private static string GenerateStubMethod(string apiName, ApiDefinition? definition)
+    private static string GenerateStubMethod(ExportedFunction api, ApiDefinition? definition)
     {
         var sb = new StringBuilder();
         
+        //[DllModuleExport(48, ForwardedTo = "KERNELBASE.GetVersionEx")]
         // Generate method signature
-        sb.Append("[DllModuleExport]");
+        if (api.ForwardedTo == null)
+        {
+	        sb.Append($"[DllModuleExport({api.Ordinal}, IsStub = true)]");
+        }
+        else
+        {
+	        sb.Append($"[DllModuleExport({api.Ordinal}, ForwardedTo = \"{api.ForwardedTo}\", IsStub = true)]");
+        }
         sb.AppendLine();
         sb.Append("public uint ");
-        sb.Append(apiName);
+        sb.Append(api.Name);
         sb.Append("(");
         
         // Add parameters if we have definition
@@ -67,15 +77,15 @@ public class StubGenerator
         if (definition != null && definition.Parameters.Count > 0)
         {
             var paramNames = string.Join(", ", definition.Parameters.Select(p => $"{p.Name}={{" + p.Name + "}}"));
-            sb.AppendLine($"    Diagnostics.Diagnostics.LogWarn($\"Stub called: {apiName}({paramNames})\");");
+            sb.AppendLine($"    Diagnostics.Diagnostics.LogWarn($\"Stub called: {api.Name}({paramNames})\");");
         }
         else
         {
-            sb.AppendLine($"    Diagnostics.Diagnostics.LogWarn(\"Stub called: {apiName}()\");");
+            sb.AppendLine($"    Diagnostics.Diagnostics.LogWarn(\"Stub called: {api.Name}()\");");
         }
         
         // Add TODO comment
-        sb.AppendLine($"    // TODO: Implement {apiName}");
+        sb.AppendLine($"    // TODO: Implement {api.Name}");
         
         // Return default value
         var returnType = definition?.ReturnType ?? "DWORD";
@@ -94,7 +104,7 @@ public class StubGenerator
     {
         // Remove const and pointer markers for analysis
         var cleanType = win32Type.Replace("const", "").Trim();
-        var isPointer = cleanType.Contains("*");
+        var isPointer = cleanType.Contains('*');
         cleanType = cleanType.Replace("*", "").Trim();
         
         // If it's a pointer type, return uint* (generic pointer in our emulator)
@@ -170,7 +180,7 @@ public class StubGenerator
     /// <param name="missingApis">List of missing API names</param>
     /// <param name="xmlDefinitions">Optional API definitions from XML</param>
     /// <returns>Complete C# class file</returns>
-    public static string GenerateModuleClass(string moduleName, string dllName, List<string> missingApis, Dictionary<string, ApiDefinition>? xmlDefinitions = null)
+    public static string GenerateModuleClass(string moduleName, string dllName, List<ExportedFunction> missingApis, Dictionary<string, ApiDefinition>? xmlDefinitions = null)
     {
         var sb = new StringBuilder();
         
@@ -186,13 +196,13 @@ public class StubGenerator
         sb.AppendLine("/// </summary>");
         sb.AppendLine($"public class {moduleName} : BaseModule");
         sb.AppendLine("{");
-        sb.AppendLine($"    public override string Name => \"{dllName}\";");
+        sb.AppendLine($"    public override string Name => \"{dllName.ToUpperInvariant()}\";");
         sb.AppendLine();
         
         // Generate all stub methods
-        foreach (var apiName in missingApis.OrderBy(a => a))
+        foreach (var api in missingApis.OrderBy(a => a.Ordinal))
         {
-            var stub = GenerateStubMethod(apiName, xmlDefinitions?.GetValueOrDefault(apiName));
+            var stub = GenerateStubMethod(api, xmlDefinitions?.GetValueOrDefault(api.Name));
             
             // Indent the method
             var lines = stub.Split('\n');

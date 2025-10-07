@@ -308,7 +308,6 @@ class Program
         // Determine missing APIs
         var missingApis = allExports
             .Where(e => !implementedApis.Contains(e.Name))
-            .Select(e => e.Name)
             .ToList();
         
         Console.WriteLine($"Generating stubs for {missingApis.Count} missing APIs");

@@ -183,7 +183,7 @@ public class ConfigurationService
     public GameSettings? GetGameSettings(string gameExecutablePath)
     {
         var hash = ComputeFileHash(gameExecutablePath);
-        return _settings.PerGameSettings.TryGetValue(hash, out var settings) ? settings : null;
+        return _settings.PerGameSettings.GetValueOrDefault(hash);
     }
 
     /// <summary>
