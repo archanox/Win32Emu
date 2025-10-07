@@ -116,6 +116,39 @@ public class CpuTestHelper : IDisposable
     }
 
     /// <summary>
+    /// Read a 16-bit value from memory
+    /// </summary>
+    public ushort ReadMemory16(uint address)
+    {
+        return Memory.Read16(address);
+    }
+
+    /// <summary>
+    /// Read an 8-bit value from memory
+    /// </summary>
+    public byte ReadMemory8(uint address)
+    {
+        return Memory.Read8(address);
+    }
+
+    /// <summary>
+    /// Set a specific CPU flag
+    /// </summary>
+    public void SetFlag(CpuFlag flag, bool value)
+    {
+        var flags = GetFlags();
+        if (value)
+        {
+            flags |= (1u << (int)flag);
+        }
+        else
+        {
+            flags &= ~(1u << (int)flag);
+        }
+        SetFlags(flags);
+    }
+
+    /// <summary>
     /// Write a 64-bit value to memory
     /// </summary>
     public void WriteMemory64(uint address, ulong value)
