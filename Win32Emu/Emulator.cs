@@ -68,6 +68,20 @@ public sealed class Emulator : IDisposable
     /// </summary>
     public bool IsPaused => !_pauseEvent.WaitOne(0);
 
+    /// <summary>
+    /// Post a message to the Win32 message queue (for GUI-to-emulator communication)
+    /// </summary>
+    public bool PostMessage(uint hwnd, uint message, uint wParam, uint lParam)
+    {
+        if (_env == null)
+        {
+            LogDebug("[Emulator] PostMessage called but environment not initialized");
+            return false;
+        }
+        
+        return _env.PostMessage(hwnd, message, wParam, lParam);
+    }
+
     public void LoadExecutable(string path, bool debugMode = false, int reservedMemoryMb = 256)
     {
         _debugMode = debugMode;
@@ -455,4 +469,5 @@ public class WindowCreateInfo
     public uint Style { get; init; }
     public uint ExStyle { get; init; }
     public uint Parent { get; init; }
+    public uint Menu { get; init; }
 }

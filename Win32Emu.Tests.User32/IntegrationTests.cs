@@ -79,11 +79,9 @@ public class IntegrationTests : IDisposable
             0                                               // lpParam (NULL)
         );
         
-        // Note: In the actual implementation, the BUTTON class would need to be 
-        // pre-registered by the system, but for this test we just verify that 
-        // the window creation logic works with an unregistered class
-        // The real Windows system pre-registers common control classes like BUTTON
-        Assert.Equal(0u, buttonHwnd); // Expected to fail since BUTTON class not registered
+        // Now that we've pre-registered standard control classes like BUTTON,
+        // the button window should be created successfully
+        Assert.NotEqual(0u, buttonHwnd); // Button should be created successfully
         
         // Verify main window was created successfully
         var windowInfo = _testEnv.ProcessEnv.GetWindow(hwnd);
@@ -92,6 +90,13 @@ public class IntegrationTests : IDisposable
         Assert.Equal("title", windowInfo.Value.WindowName);
         Assert.Equal(400, windowInfo.Value.Width);
         Assert.Equal(300, windowInfo.Value.Height);
+        
+        // Verify button window was created successfully
+        var buttonInfo = _testEnv.ProcessEnv.GetWindow(buttonHwnd);
+        Assert.NotNull(buttonInfo);
+        Assert.Equal("BUTTON", buttonInfo.Value.ClassName);
+        Assert.Equal("quit", buttonInfo.Value.WindowName);
+        Assert.Equal(hwnd, buttonInfo.Value.Parent); // Button is child of main window
     }
 
     [Fact]
