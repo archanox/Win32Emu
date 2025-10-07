@@ -1635,7 +1635,8 @@ public class IcedCpu : ICpu
 		}
 		else if (insn.MemorySize == MemorySize.Int64)
 		{
-			_mem.Write64(addr, (ulong)(long)rounded);
+			// Cast double -> long (truncate/round), then to ulong (bit pattern preserved, unchecked)
+			_mem.Write64(addr, unchecked((ulong)(long)rounded));
 		}
 		else
 		{
