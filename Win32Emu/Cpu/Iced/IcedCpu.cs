@@ -1569,7 +1569,7 @@ public class IcedCpu : ICpu
 			else
 			{
 				// Assume 64-bit double
-				var bits = (ulong)BitConverter.DoubleToInt64Bits(val);
+				var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(val));
 				_mem.Write64(addr, bits);
 			}
 		}
