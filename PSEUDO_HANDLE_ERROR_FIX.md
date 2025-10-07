@@ -35,7 +35,7 @@ fail: Calculated memory address out of range: 0xFFFFFFF5 (EIP=0x00001003)
       size=0x100000; ESP=0x00200000 EBP=0x00200000 
       EAX=0x00000002 EBX=0x00000000 ECX=0x00000000 
       EDX=0x00000000 ESI=0x12345678 EDI=0x87654321
-      NOTE: Address 0xFFFFFFF5 is STD_OUTPUT_HANDLE (pseudo-handle value -1-11).
+      NOTE: Address 0xFFFFFFF5 is STD_OUTPUT_HANDLE (pseudo-handle value -11).
       This error typically occurs when code tries to dereference a pseudo-handle as a memory address.
       Pseudo-handles must be translated to real handles via GetStdHandle() before use.
 ```
