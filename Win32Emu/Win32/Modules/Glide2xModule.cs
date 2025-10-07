@@ -208,7 +208,7 @@ namespace Win32Emu.Win32.Modules
 					returnValue = 0;
 					return true;
 
-				case "_GUDRAWTRIANGLEWITHCL" + "IP@12": // _guDrawTriangleWithClip@12
+				case "_GUDRAWTRIANGLEWITHCLIP@12": // _guDrawTriangleWithClip@12
 					_logger.LogInformation($"[Glide2x] guDrawTriangleWithClip(0x{a.UInt32(0):X8}, 0x{a.UInt32(1):X8}, 0x{a.UInt32(2):X8})");
 					returnValue = 0;
 					return true;
