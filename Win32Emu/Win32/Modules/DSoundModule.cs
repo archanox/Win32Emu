@@ -4,6 +4,7 @@ using Win32Emu.Memory;
 using Win32Emu.Rendering;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Win32Emu.Win32.Modules
 {
 	public class DSoundModule : IWin32ModuleUnsafe
@@ -20,6 +21,7 @@ namespace Win32Emu.Win32.Modules
 			_peLoader = peLoader;
 			_logger = logger ?? NullLogger.Instance;
 		}
+
 		public string Name => "DSOUND.DLL";
 
 		// DirectSound object handles
@@ -47,56 +49,56 @@ namespace Win32Emu.Win32.Modules
 			}
 		}
 
-private unsafe uint DirectSoundCreate(uint lpGuid, uint lplpDs, uint pUnkOuter)
-{
-_logger.LogInformation("[DSound] DirectSoundCreate(lpGuid=0x{LpGuid:X8}, lplpDS=0x{LplpDs:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDs, pUnkOuter);
+		private unsafe uint DirectSoundCreate(uint lpGuid, uint lplpDs, uint pUnkOuter)
+		{
+			_logger.LogInformation("[DSound] DirectSoundCreate(lpGuid=0x{LpGuid:X8}, lplpDS=0x{LplpDs:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDs, pUnkOuter);
 
 // Create DirectSound object with COM vtable
-var dsHandle = _nextDSoundHandle++;
-var dsObj = new DirectSoundObject
-{
-Handle = dsHandle,
-Frequency = 44100,
-BitsPerSample = 16,
-Channels = 2
-};
-_dsoundObjects[dsHandle] = dsObj;
+			var dsHandle = _nextDSoundHandle++;
+			var dsObj = new DirectSoundObject
+			{
+				Handle = dsHandle,
+				Frequency = 44100,
+				BitsPerSample = 16,
+				Channels = 2
+			};
+			_dsoundObjects[dsHandle] = dsObj;
 
 // Initialize audio backend if not already done
-if (_env.AudioBackend == null)
-{
-_env.AudioBackend = new Sdl3AudioBackend();
-_env.AudioBackend.Initialize();
-}
+			if (_env.AudioBackend == null)
+			{
+				_env.AudioBackend = new Sdl3AudioBackend(_logger);
+				_env.AudioBackend.Initialize();
+			}
 
 // Create COM vtable for IDirectSound interface
-var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
-{
-{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
-{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
-{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
-{ "CreateSoundBuffer", (cpu, mem) => DSound_CreateSoundBuffer(cpu, mem, dsHandle) },
-{ "GetCaps", (cpu, mem) => DSound_GetCaps(cpu, mem) },
-{ "DuplicateSoundBuffer", (cpu, mem) => DSound_DuplicateSoundBuffer(cpu, mem) },
-{ "SetCooperativeLevel", (cpu, mem) => DSound_SetCooperativeLevel(cpu, mem) },
-{ "Compact", (cpu, mem) => DSound_Compact(cpu, mem) },
-{ "GetSpeakerConfig", (cpu, mem) => DSound_GetSpeakerConfig(cpu, mem) },
-{ "SetSpeakerConfig", (cpu, mem) => DSound_SetSpeakerConfig(cpu, mem) },
-{ "Initialize", (cpu, mem) => DSound_Initialize(cpu, mem) }
-};
+			var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			{
+				{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
+				{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
+				{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
+				{ "CreateSoundBuffer", (cpu, mem) => DSound_CreateSoundBuffer(cpu, mem, dsHandle) },
+				{ "GetCaps", (cpu, mem) => DSound_GetCaps(cpu, mem) },
+				{ "DuplicateSoundBuffer", (cpu, mem) => DSound_DuplicateSoundBuffer(cpu, mem) },
+				{ "SetCooperativeLevel", (cpu, mem) => DSound_SetCooperativeLevel(cpu, mem) },
+				{ "Compact", (cpu, mem) => DSound_Compact(cpu, mem) },
+				{ "GetSpeakerConfig", (cpu, mem) => DSound_GetSpeakerConfig(cpu, mem) },
+				{ "SetSpeakerConfig", (cpu, mem) => DSound_SetSpeakerConfig(cpu, mem) },
+				{ "Initialize", (cpu, mem) => DSound_Initialize(cpu, mem) }
+			};
 
 // Create the COM object with vtable
-var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectSound", vtableMethods);
+			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectSound", vtableMethods);
 
 // Write COM object pointer to output parameter
-if (lplpDs != 0)
-{
-_env.MemWrite32(lplpDs, comObjectAddr);
-}
+			if (lplpDs != 0)
+			{
+				_env.MemWrite32(lplpDs, comObjectAddr);
+			}
 
-_logger.LogInformation("[DSound] Created IDirectSound COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
-return 0; // DS_OK
-}
+			_logger.LogInformation("[DSound] Created IDirectSound COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
+			return 0; // DS_OK
+		}
 
 
 		private unsafe uint DirectSoundEnumerateA(uint lpDsEnumCallback, uint lpContext)
@@ -143,9 +145,9 @@ return 0; // DS_OK
 			var thisPtr = args.UInt32(0);
 			var riid = args.UInt32(1);
 			var ppvObject = args.UInt32(2);
-			
+
 			_logger.LogInformation("[DSound COM] IUnknown::QueryInterface(this=0x{ThisPtr:X8}, riid=0x{Riid:X8}, ppvObject=0x{PpvObject:X8})", thisPtr, riid, ppvObject);
-			
+
 			// E_NOINTERFACE = 0x80004002
 			return 0x80004002;
 		}
@@ -154,7 +156,7 @@ return 0; // DS_OK
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
-			
+
 			_logger.LogInformation("[DSound COM] IUnknown::AddRef(this=0x{ThisPtr:X8})", thisPtr);
 			return 1; // Reference count
 		}
@@ -163,7 +165,7 @@ return 0; // DS_OK
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
-			
+
 			_logger.LogInformation("[DSound COM] IUnknown::Release(this=0x{ThisPtr:X8})", thisPtr);
 			return 0; // Reference count after release
 		}
@@ -175,9 +177,9 @@ return 0; // DS_OK
 			var pcDSBufferDesc = args.UInt32(1);
 			var lplpDirectSoundBuffer = args.UInt32(2);
 			var pUnkOuter = args.UInt32(3);
-			
+
 			_logger.LogInformation("[DSound COM] IDirectSound::CreateSoundBuffer(this=0x{ThisPtr:X8}, pcDSBufferDesc=0x{PcDsBufferDesc:X8}, lplpDSBuffer=0x{LplpDirectSoundBuffer:X8}, pUnkOuter=0x{PUnkOuter:X8})", thisPtr, pcDSBufferDesc, lplpDirectSoundBuffer, pUnkOuter);
-			
+
 			// Create a sound buffer COM object with its own vtable
 			var bufferHandle = _nextBufferHandle++;
 			var bufferObj = new DirectSoundBuffer
@@ -243,7 +245,7 @@ return 0; // DS_OK
 			var thisPtr = args.UInt32(0);
 			var hwnd = args.UInt32(1);
 			var dwLevel = args.UInt32(2);
-			
+
 			_logger.LogInformation("[DSound COM] IDirectSound::SetCooperativeLevel(this=0x{ThisPtr:X8}, hwnd=0x{Hwnd:X8}, level=0x{DwLevel:X8}) - stub", thisPtr, hwnd, dwLevel);
 			return 0; // DS_OK
 		}

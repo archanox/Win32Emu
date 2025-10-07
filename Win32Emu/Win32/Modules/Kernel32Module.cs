@@ -297,7 +297,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(479, entryPoint: 0x00010830, IsStub = true, Version = "5.1.2600.6532")]
 	public uint GetVersionExA()
 	{
-		Diagnostics.Diagnostics.LogWarn("Stub called: GetVersionExA()");
+		_logger.LogWarning("[Kernel32] Stub called: GetVersionExA()");
 		// TODO: Implement GetVersionExA
 		return 0; // DWORD default
 	}
@@ -306,7 +306,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(480, entryPoint: 0x0000AF05, IsStub = true, Version = "5.1.2600.6532")]
 	public uint GetVersionExW()
 	{
-		Diagnostics.Diagnostics.LogWarn("Stub called: GetVersionExW()");
+		_logger.LogWarning("[Kernel32] Stub called: GetVersionExW()");
 		// TODO: Implement GetVersionExW
 		return 0; // DWORD default
 	}
@@ -917,7 +917,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(15)]
 	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
 	{
-		Diagnostics.Diagnostics.LogDebug($"GetModuleFileNameA called: h=0x{(uint)(nint)h:X8} lp=0x{(uint)(nint)lp:X8} n={n}");
+		_logger.LogDebug($"[Kernel32] GetModuleFileNameA called: h=0x{(uint)(nint)h:X8} lp=0x{(uint)(nint)lp:X8} n={n}");
 		// Use guest memory helpers instead of dereferencing raw pointers to avoid AccessViolation
 		if (n == 0 || lp == null)
 		{
@@ -964,7 +964,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 
-		Diagnostics.Diagnostics.LogDebug($"GetModuleFileNameA resolved path: {path}");
+		_logger.LogDebug($"[Kernel32] GetModuleFileNameA resolved path: {path}");
 
 		var bytes = Encoding.ASCII.GetBytes(path);
 		var required = (uint)bytes.Length; // number of chars without null
@@ -982,7 +982,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// write null terminator
 			_env.MemWriteBytes(lpAddr + copyLen, [0]);
 			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
-			Diagnostics.Diagnostics.LogDebug($"GetModuleFileNameA truncated; copyLen={copyLen} returned");
+			_logger.LogDebug($"[Kernel32] GetModuleFileNameA truncated; copyLen={copyLen} returned");
 			return copyLen;
 		}
 
@@ -1071,9 +1071,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		return nStdHandle switch
 		{
-			0xFFFFFFF6 => _env.StdInputHandle,
-			0xFFFFFFF5 => _env.StdOutputHandle,
-			0xFFFFFFF4 => _env.StdErrorHandle,
+			0xFFFFFFF6 => _env.StdInputHandle, //STD_INPUT_HANDLE ((DWORD)-10)
+			0xFFFFFFF5 => _env.StdOutputHandle, //STD_OUTPUT_HANDLE ((DWORD)-11)
+			0xFFFFFFF4 => _env.StdErrorHandle, //STD_ERROR_HANDLE ((DWORD)-12)
 			_ => 0
 		};
 	}

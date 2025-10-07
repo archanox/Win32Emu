@@ -56,12 +56,26 @@ public class IgnitionGameTests
         var exePath = FindExecutable("ign_3dfx.exe");
         RunExecutableTest(exePath, "ign_3dfx.exe");
     }
-
-    [Fact(Skip = "Enable manually to test DOS executables")]
-    public void IgnitionDos_ShouldLoadAndRun()
+    
+    [Fact]
+    public void IgnitionAutorun_ShouldLoadAndRun()
     {
-        var exePath = FindExecutable("MAINDOS.EXE");
-        RunExecutableTest(exePath, "MAINDOS.EXE");
+	    var exePath = FindExecutable("AUTORUN.EXE");
+	    RunExecutableTest(exePath, "AUTORUN.EXE");
+    }
+    
+    [Fact]
+    public void IgnitionSetup_ShouldLoadAndRun()
+    {
+	    var exePath = FindExecutable("SETUP.EXE");
+	    RunExecutableTest(exePath, "SETUP.EXE");
+    }
+    
+    [Fact]
+    public void CHKCPU32_ShouldLoadAndRun()
+    {
+	    var exePath = FindExecutable("CHKCPU32.exe");
+	    RunExecutableTest(exePath, "CHKCPU32.exe");
     }
 
     private void RunExecutableTest(string exePath, string exeName)
@@ -77,7 +91,7 @@ public class IgnitionGameTests
         }
 
         var testHost = new TestEmulatorHost(_output);
-        var logger = new XunitLogger(_output, LogLevel.Information);
+        var logger = new XunitLogger(_output, LogLevel.Trace);
 
         Exception? caughtException = null;
         var startTime = DateTime.UtcNow;
@@ -92,19 +106,19 @@ public class IgnitionGameTests
             _output.WriteLine("");
 
             // Set a timeout for the test run
-            var timeout = TimeSpan.FromSeconds(5);
+            var timeout = TimeSpan.FromSeconds(10);
 
             var runTask = Task.Run(() => emulator.Run());
             var completedTask = Task.WhenAny(runTask, Task.Delay(timeout)).Result;
 
             if (completedTask != runTask)
             {
-                _output.WriteLine("Test timed out after 5 seconds - stopping emulator");
+                _output.WriteLine("Test timed out after 10 seconds - stopping emulator");
                 emulator.Stop();
                 // Give the emulator up to 2 seconds to shut down gracefully
-                if (!runTask.Wait(TimeSpan.FromSeconds(2)))
+                if (!runTask.Wait(TimeSpan.FromSeconds(5)))
                 {
-                    _output.WriteLine("Emulator did not stop within 2 seconds after timeout.");
+                    _output.WriteLine("Emulator did not stop within 5 seconds after timeout.");
                 }
             }
             else
@@ -233,8 +247,9 @@ public class IgnitionGameTests
         {
             Path.Combine(repoRoot!, "EXEs", "ign_demo", exeName),
             Path.Combine(repoRoot!, "EXEs", "ign_win", exeName),
-            Path.Combine(repoRoot!, "EXEs", "ign_dos", exeName),
-            Path.Combine(repoRoot!, "EXEs", "ign_teas", exeName)
+            Path.Combine(repoRoot!, "EXEs", "ign_teas", exeName),
+            Path.Combine(repoRoot!, "EXEs", "ign_install", exeName),
+            Path.Combine(repoRoot!, "EXEs", exeName),
         };
 
         foreach (var path in possiblePaths)
@@ -273,6 +288,8 @@ public class IgnitionGameTests
                 DebugLevel.Error => "[ERROR] ",
                 DebugLevel.Warning => "[WARN]  ",
                 DebugLevel.Info => "[INFO]  ",
+                DebugLevel.Trace => "[TRACE] ",
+                DebugLevel.Debug => "[DEBUG] ",
                 _ => "[DEBUG] "
             };
 

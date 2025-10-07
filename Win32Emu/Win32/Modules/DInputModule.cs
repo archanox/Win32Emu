@@ -52,44 +52,44 @@ namespace Win32Emu.Win32.Modules
 			}
 		}
 
-private unsafe uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
-{
-_logger.LogInformation("[DInput] DirectInputCreateA(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
+		private unsafe uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
+		{
+			_logger.LogInformation("[DInput] DirectInputCreateA(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
 
 // Create DirectInput object with COM vtable
-var dinputHandle = _nextDInputHandle++;
-var dinputObj = new DirectInputObject
-{
-Handle = dinputHandle,
-Version = dwVersion
-};
-_dinputObjects[dinputHandle] = dinputObj;
+			var dinputHandle = _nextDInputHandle++;
+			var dinputObj = new DirectInputObject
+			{
+				Handle = dinputHandle,
+				Version = dwVersion
+			};
+			_dinputObjects[dinputHandle] = dinputObj;
 
 // Create COM vtable for IDirectInput interface
-var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
-{
-{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
-{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
-{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
-{ "CreateDevice", (cpu, mem) => DInput_CreateDevice(cpu, mem, dinputHandle) },
-{ "EnumDevices", (cpu, mem) => DInput_EnumDevices(cpu, mem) },
-{ "GetDeviceStatus", (cpu, mem) => DInput_GetDeviceStatus(cpu, mem) },
-{ "RunControlPanel", (cpu, mem) => DInput_RunControlPanel(cpu, mem) },
-{ "Initialize", (cpu, mem) => DInput_Initialize(cpu, mem) }
-};
+			var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			{
+				{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
+				{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
+				{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
+				{ "CreateDevice", (cpu, mem) => DInput_CreateDevice(cpu, mem, dinputHandle) },
+				{ "EnumDevices", (cpu, mem) => DInput_EnumDevices(cpu, mem) },
+				{ "GetDeviceStatus", (cpu, mem) => DInput_GetDeviceStatus(cpu, mem) },
+				{ "RunControlPanel", (cpu, mem) => DInput_RunControlPanel(cpu, mem) },
+				{ "Initialize", (cpu, mem) => DInput_Initialize(cpu, mem) }
+			};
 
 // Create the COM object with vtable
-var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectInput", vtableMethods);
+			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectInput", vtableMethods);
 
 // Write COM object pointer to output parameter
-if (lplpDirectInput != 0)
-{
-_env.MemWrite32(lplpDirectInput, comObjectAddr);
-}
+			if (lplpDirectInput != 0)
+			{
+				_env.MemWrite32(lplpDirectInput, comObjectAddr);
+			}
 
-_logger.LogInformation("[DInput] Created IDirectInput COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
-return 0; // DI_OK
-}
+			_logger.LogInformation("[DInput] Created IDirectInput COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
+			return 0; // DI_OK
+		}
 
 
 		private unsafe uint DirectInputCreate(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
@@ -108,7 +108,7 @@ return 0; // DI_OK
 			// Initialize input backend if not already done
 			if (_env.InputBackend == null)
 			{
-				_env.InputBackend = new Sdl3InputBackend();
+				_env.InputBackend = new Sdl3InputBackend(_logger);
 				_env.InputBackend.Initialize();
 			}
 
@@ -147,10 +147,10 @@ return 0; // DI_OK
 			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
 			{
 				//{ "DIRECTINPUT8CREATE", 1 },
-				
+
 				// NOTE: DIRECTINPUTCREATE doesn't appear to be in the winxp dinpput.dll
 				//{ "DIRECTINPUTCREATE", 2 },
-				
+
 				{ "DIRECTINPUTCREATEA", 1 },
 				{ "DIRECTINPUTCREATEEX", 2 },
 				{ "DIRECTINPUTCREATEW", 3 },
@@ -165,9 +165,9 @@ return 0; // DI_OK
 			var thisPtr = args.UInt32(0);
 			var riid = args.UInt32(1);
 			var ppvObject = args.UInt32(2);
-			
+
 			_logger.LogInformation("[DInput COM] IUnknown::QueryInterface(this=0x{ThisPtr:X8}, riid=0x{Riid:X8}, ppvObject=0x{PpvObject:X8})", thisPtr, riid, ppvObject);
-			
+
 			// E_NOINTERFACE = 0x80004002
 			return 0x80004002;
 		}
@@ -176,7 +176,7 @@ return 0; // DI_OK
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
-			
+
 			_logger.LogInformation("[DInput COM] IUnknown::AddRef(this=0x{ThisPtr:X8})", thisPtr);
 			return 1; // Reference count
 		}
@@ -185,7 +185,7 @@ return 0; // DI_OK
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
-			
+
 			_logger.LogInformation("[DInput COM] IUnknown::Release(this=0x{ThisPtr:X8})", thisPtr);
 			return 0; // Reference count after release
 		}
@@ -197,9 +197,9 @@ return 0; // DI_OK
 			var rguid = args.UInt32(1);
 			var lplpDirectInputDevice = args.UInt32(2);
 			var pUnkOuter = args.UInt32(3);
-			
+
 			_logger.LogInformation("[DInput COM] IDirectInput::CreateDevice(this=0x{ThisPtr:X8}, rguid=0x{Rguid:X8}, lplpDevice=0x{LplpDirectInputDevice:X8}, pUnkOuter=0x{PUnkOuter:X8})", thisPtr, rguid, lplpDirectInputDevice, pUnkOuter);
-			
+
 			// Create a device COM object with its own vtable
 			var deviceHandle = _nextDeviceHandle++;
 			var deviceObj = new DirectInputDevice
@@ -310,15 +310,15 @@ return 0; // DI_OK
 			var thisPtr = args.UInt32(0);
 			var cbData = args.UInt32(1);
 			var lpvData = args.UInt32(2);
-			
+
 			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetDeviceState(this=0x{ThisPtr:X8}, cbData={CbData}, lpvData=0x{LpvData:X8}) - stub", thisPtr, cbData, lpvData);
-			
+
 			// Zero out the device state buffer
 			if (lpvData != 0 && cbData > 0)
 			{
 				_env.MemZero(lpvData, cbData);
 			}
-			
+
 			return 0; // DI_OK
 		}
 
@@ -333,7 +333,7 @@ return 0; // DI_OK
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
 			var lpdf = args.UInt32(1);
-			
+
 			_logger.LogInformation("[DInput COM] IDirectInputDevice::SetDataFormat(this=0x{ThisPtr:X8}, lpdf=0x{Lpdf:X8}) - stub", thisPtr, lpdf);
 			return 0; // DI_OK
 		}
@@ -350,7 +350,7 @@ return 0; // DI_OK
 			var thisPtr = args.UInt32(0);
 			var hwnd = args.UInt32(1);
 			var dwFlags = args.UInt32(2);
-			
+
 			_logger.LogInformation("[DInput COM] IDirectInputDevice::SetCooperativeLevel(this=0x{ThisPtr:X8}, hwnd=0x{Hwnd:X8}, flags=0x{DwFlags:X8}) - stub", thisPtr, hwnd, dwFlags);
 			return 0; // DI_OK
 		}

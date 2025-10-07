@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SDL3;
 
 namespace Win32Emu.Rendering;
@@ -5,7 +6,7 @@ namespace Win32Emu.Rendering;
 /// <summary>
 /// SDL3-based input backend for DirectInput operations
 /// </summary>
-public class Sdl3InputBackend : IDisposable
+public class Sdl3InputBackend(ILogger logger) : IDisposable
 {
     private bool _initialized;
     private readonly object _lock = new();
@@ -55,12 +56,12 @@ public class Sdl3InputBackend : IDisposable
             // Initialize SDL3 gamepad and joystick subsystems
             if (!SDL.Init(SDL.InitFlags.Gamepad | SDL.InitFlags.Joystick))
             {
-                Console.WriteLine($"[SDL3Input] Failed to initialize: {SDL.GetError()}");
+                logger.LogError($"[SDL3Input] Failed to initialize: {SDL.GetError()}");
                 return false;
             }
 
             _initialized = true;
-            Console.WriteLine("[SDL3Input] Input subsystem initialized");
+            logger.LogInformation("[SDL3Input] Input subsystem initialized");
             
             // Enumerate connected devices
             EnumerateDevices();
@@ -82,13 +83,12 @@ public class Sdl3InputBackend : IDisposable
             for (var i = 0; i < gamepadCount; i++)
             {
                 _gamepadIds.Add(gamepadIds[i]);
-                Console.WriteLine($"[SDL3Input] Found gamepad: {gamepadIds[i]}");
+                logger.LogInformation($"[SDL3Input] Found gamepad: {gamepadIds[i]}");
             }
         }
 
         // Get joystick count  
-        int joystickCount;
-        var joystickIds = SDL.GetJoysticks(out joystickCount);
+        var joystickIds = SDL.GetJoysticks(out var joystickCount);
         if (joystickIds != null)
         {
             for (var i = 0; i < joystickCount; i++)
@@ -96,7 +96,7 @@ public class Sdl3InputBackend : IDisposable
                 if (!_gamepadIds.Contains(joystickIds[i]))
                 {
                     _joystickIds.Add(joystickIds[i]);
-                    Console.WriteLine($"[SDL3Input] Found joystick: {joystickIds[i]}");
+                    logger.LogInformation($"[SDL3Input] Found joystick: {joystickIds[i]}");
                 }
             }
         }
@@ -154,7 +154,7 @@ public class Sdl3InputBackend : IDisposable
         {
             if (!_initialized)
             {
-                Console.WriteLine("[SDL3Input] Not initialized");
+                logger.LogError("[SDL3Input] Not initialized");
                 return 0;
             }
 
@@ -195,7 +195,7 @@ public class Sdl3InputBackend : IDisposable
             }
 
             _devices[internalId] = device;
-            Console.WriteLine($"[SDL3Input] Opened device {internalId}: {device.Name} ({type})");
+            logger.LogInformation($"[SDL3Input] Opened device {internalId}: {device.Name} ({type})");
             return internalId;
         }
     }
@@ -223,7 +223,7 @@ public class Sdl3InputBackend : IDisposable
             }
 
             _devices.Remove(deviceId);
-            Console.WriteLine($"[SDL3Input] Closed device {deviceId}");
+            logger.LogInformation($"[SDL3Input] Closed device {deviceId}");
             return true;
         }
     }
@@ -308,19 +308,19 @@ public class Sdl3InputBackend : IDisposable
                 switch ((SDL.EventType)evt.Type)
                 {
                     case SDL.EventType.GamepadAdded:
-                        Console.WriteLine("[SDL3Input] Gamepad added");
+                        logger.LogInformation("[SDL3Input] Gamepad added");
                         EnumerateDevices();
                         break;
                     case SDL.EventType.GamepadRemoved:
-                        Console.WriteLine("[SDL3Input] Gamepad removed");
+	                    logger.LogInformation("[SDL3Input] Gamepad removed");
                         EnumerateDevices();
                         break;
                     case SDL.EventType.JoystickAdded:
-                        Console.WriteLine("[SDL3Input] Joystick added");
+	                    logger.LogInformation("[SDL3Input] Joystick added");
                         EnumerateDevices();
                         break;
                     case SDL.EventType.JoystickRemoved:
-                        Console.WriteLine("[SDL3Input] Joystick removed");
+	                    logger.LogInformation("[SDL3Input] Joystick removed");
                         EnumerateDevices();
                         break;
                 }
@@ -350,7 +350,7 @@ public class Sdl3InputBackend : IDisposable
             // Quit SDL input subsystems
             SDL.QuitSubSystem(SDL.InitFlags.Gamepad | SDL.InitFlags.Joystick);
             _initialized = false;
-            Console.WriteLine("[SDL3Input] Input subsystem disposed");
+            logger.LogInformation("[SDL3Input] Input subsystem disposed");
         }
     }
 

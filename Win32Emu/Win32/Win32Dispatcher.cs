@@ -1,9 +1,10 @@
+using Microsoft.Extensions.Logging;
 using Win32Emu.Cpu;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Win32;
 
-public class Win32Dispatcher
+public class Win32Dispatcher(ILogger logger)
 {
     private readonly Dictionary<string, IWin32ModuleUnsafe> _modules = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _dynamicallyLoadedDlls = new(StringComparer.OrdinalIgnoreCase);
@@ -14,7 +15,7 @@ public class Win32Dispatcher
     public void RegisterDynamicallyLoadedDll(string dllName)
     {
         _dynamicallyLoadedDlls.Add(dllName);
-        Diagnostics.Diagnostics.LogInfo($"[Dispatcher] Registered dynamically loaded DLL: {dllName}");
+        logger.LogInformation($"[Dispatcher] Registered dynamically loaded DLL: {dllName}");
     }
 
     public bool TryGetModule(string dllName, out IWin32ModuleUnsafe? module)
@@ -30,7 +31,7 @@ public class Win32Dispatcher
         var esp = cpu.GetRegister("ESP");
         byte[] stackSnippet = null;
         try { stackSnippet = memory.GetSpan(esp, 16); } catch { }
-        Diagnostics.Diagnostics.LogInfo($"Dispatching {dll}!{export} at EIP=0x{cpu.GetEip():X8} ESP=0x{esp:X8} stack={ (stackSnippet==null?"<unreadable>":BitConverter.ToString(stackSnippet).Replace('-', ' ')) }");
+        logger.LogInformation($"Dispatching {dll}!{export} at EIP=0x{cpu.GetEip():X8} ESP=0x{esp:X8} stack={ (stackSnippet==null?"<unreadable>":BitConverter.ToString(stackSnippet).Replace('-', ' ')) }");
         
         // Try to invoke with known modules first
         if (_modules.TryGetValue(dll, out var mod))
@@ -59,11 +60,11 @@ public class Win32Dispatcher
                     
                     if (stdcallArgBytes > 0)
                     {
-                        Diagnostics.Diagnostics.LogWarn($"Using hardcoded arg bytes for {dll}!{export}: {stdcallArgBytes}");
+	                    logger.LogWarning($"Using hardcoded arg bytes for {dll}!{export}: {stdcallArgBytes}");
                     }
                     else
                     {
-                        Diagnostics.Diagnostics.LogWarn($"No arg bytes metadata for {dll}!{export}, using 0");
+	                    logger.LogWarning($"No arg bytes metadata for {dll}!{export}, using 0");
                     }
                 }
                 
@@ -71,7 +72,7 @@ public class Win32Dispatcher
             }
 
 	        // Known module but unknown export - log this
-	        Diagnostics.Diagnostics.LogWarn($"Unimplemented function in known module: {dll}!{export}");
+	        logger.LogWarning($"Unimplemented function in known module: {dll}!{export}");
 	        LogUnknownFunctionCall(dll, export);
                 
 	        // Return success with default behavior
@@ -82,14 +83,14 @@ public class Win32Dispatcher
         }
         
         // Handle unknown DLLs - this is the main enhancement
-        Diagnostics.Diagnostics.LogWarn($"Unknown DLL function call: {dll}!{export}");
+        logger.LogWarning($"Unknown DLL function call: {dll}!{export}");
         LogUnknownFunctionCall(dll, export);
         
         // Check if this DLL was dynamically loaded
         var isDynamicallyLoaded = _dynamicallyLoadedDlls.Contains(dll);
         if (isDynamicallyLoaded)
         {
-            Diagnostics.Diagnostics.LogInfo($"Note: {dll} was dynamically loaded via LoadLibrary");
+	        logger.LogInformation($"Note: {dll} was dynamically loaded via LoadLibrary");
         }
         
         // Provide default behavior for unknown DLL calls
@@ -110,7 +111,7 @@ public class Win32Dispatcher
         
         if (functions.Add(export))
         {
-            Diagnostics.Diagnostics.LogInfo($"New unimplemented function: {dll}!{export} (total for {dll}: {functions.Count})");
+	        logger.LogInformation($"New unimplemented function: {dll}!{export} (total for {dll}: {functions.Count})");
         }
     }
     
@@ -118,17 +119,17 @@ public class Win32Dispatcher
     {
         if (_unknownFunctionCalls.Count == 0)
         {
-            Diagnostics.Diagnostics.LogInfo("No unknown function calls recorded.");
+	        logger.LogInformation("No unknown function calls recorded.");
             return;
         }
         
-        Diagnostics.Diagnostics.LogInfo($"Summary of unknown function calls ({_unknownFunctionCalls.Count} DLLs):");
+        logger.LogInformation($"Summary of unknown function calls ({_unknownFunctionCalls.Count} DLLs):");
         foreach (var (dll, functions) in _unknownFunctionCalls.OrderBy(kvp => kvp.Key))
         {
-            Diagnostics.Diagnostics.LogInfo($"  {dll}: {functions.Count} functions");
+	        logger.LogInformation($"  {dll}: {functions.Count} functions");
             foreach (var func in functions.OrderBy(f => f))
             {
-                Diagnostics.Diagnostics.LogInfo($"    - {func}");
+	            logger.LogInformation($"    - {func}");
             }
         }
     }
