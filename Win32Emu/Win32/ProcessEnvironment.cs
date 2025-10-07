@@ -28,6 +28,9 @@ public class ProcessEnvironment
 		_logger = logger ?? NullLogger.Instance;
 		_allocPtr = heapBase;
 		_comDispatcher = new ComVtableDispatcher(this, _logger);
+		
+		// Pre-register standard Windows control classes
+		RegisterStandardControlClasses();
 	}
 	
 	// COM vtable dispatcher access
@@ -578,6 +581,43 @@ public class ProcessEnvironment
 		uint Instance,
 		uint Param
 	);
+
+	/// <summary>
+	/// Pre-registers standard Windows control classes that are built into the OS.
+	/// These classes are available without explicit registration in real Windows.
+	/// </summary>
+	private void RegisterStandardControlClasses()
+	{
+		// Common window class names from Windows
+		var standardClasses = new[]
+		{
+			"BUTTON",
+			"EDIT",
+			"STATIC",
+			"LISTBOX",
+			"COMBOBOX",
+			"SCROLLBAR"
+		};
+
+		foreach (var className in standardClasses)
+		{
+			var classInfo = new WindowClassInfo(
+				ClassName: className,
+				Style: 0,
+				WndProc: 0, // Standard controls have their own internal window procedures
+				ClsExtra: 0,
+				WndExtra: 0,
+				HInstance: 0,
+				HIcon: 0,
+				HCursor: 0,
+				HbrBackground: 0,
+				MenuName: null
+			);
+
+			_windowClasses.TryAdd(className, classInfo);
+			_logger.LogInformation($"[ProcessEnv] Pre-registered standard control class: {className}");
+		}
+	}
 
 	public bool RegisterWindowClass(string className, WindowClassInfo classInfo)
 	{

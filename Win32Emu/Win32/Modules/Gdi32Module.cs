@@ -77,6 +77,7 @@ namespace Win32Emu.Win32.Modules
 			}
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint GetStockObject(int stockObjectId)
 		{
 			// Validate stock object ID

@@ -501,6 +501,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint DefWindowProcA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
 			_logger.LogInformation("[User32] DefWindowProcA: HWND=0x{Hwnd:X8} MSG=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, msg, wParam, lParam);
