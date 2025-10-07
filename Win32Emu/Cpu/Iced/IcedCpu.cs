@@ -169,6 +169,9 @@ public class IcedCpu : ICpu
 				case Mnemonic.Insb: ExecIns(1, insn.HasRepPrefix); break;
 				case Mnemonic.Insw: ExecIns(2, insn.HasRepPrefix); break;
 				case Mnemonic.Insd: ExecIns(4, insn.HasRepPrefix); break;
+				case Mnemonic.Outsb: ExecOuts(1, insn.HasRepPrefix); break;
+				case Mnemonic.Outsw: ExecOuts(2, insn.HasRepPrefix); break;
+				case Mnemonic.Outsd: ExecOuts(4, insn.HasRepPrefix); break;
 				case Mnemonic.Jmp:
 					if (insn.GetOpKind(0) == OpKind.Register)
 					{
@@ -1187,6 +1190,38 @@ public class IcedCpu : ICpu
 			}
 
 			_edi = (uint)(_edi + delta);
+		}
+
+		if (rep)
+		{
+			_ecx = 0;
+		}
+	}
+
+	private void ExecOuts(int size, bool rep)
+	{
+		// OUTS reads from [ESI] and writes to I/O port DX
+		// Since I/O ports are not fully emulated, we just read and discard (similar to OUT instruction handling)
+		var count = rep ? _ecx : 1u;
+		var delta = GetFlag(Df) ? -size : size;
+		for (uint i = 0; i < count; i++)
+		{
+			// Read from memory (required for proper ESI advancement)
+			if (size == 1)
+			{
+				_ = _mem.Read8(_esi);
+			}
+			else if (size == 2)
+			{
+				_ = _mem.Read16(_esi);
+			}
+			else
+			{
+				_ = _mem.Read32(_esi);
+			}
+			// I/O port write would go here, but we stub it as a no-op
+
+			_esi = (uint)(_esi + delta);
 		}
 
 		if (rep)
