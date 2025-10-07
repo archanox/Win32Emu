@@ -1295,7 +1295,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
 		{
-			return 0;
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 
 		try
@@ -1411,7 +1412,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Handle regular file handles
 		if (!_env.TryGetHandle<FileStream>(handle, out var fs) || fs is null)
 		{
-			return 0;
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 
 		try
@@ -1471,6 +1473,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
 		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 			return 0xFFFFFFFF;
 		}
 
@@ -1501,7 +1504,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 1;
 		}
 
-		return 0;
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(38)]
@@ -1513,7 +1517,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 1;
 		}
 
-		return 0;
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return NativeTypes.Win32Bool.FALSE;
 	}
 
 	private unsafe uint DeleteFileA(uint lpFileName)
