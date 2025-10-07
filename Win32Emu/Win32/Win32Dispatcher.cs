@@ -119,17 +119,17 @@ public class Win32Dispatcher(ILogger logger)
     {
         if (_unknownFunctionCalls.Count == 0)
         {
-	        logger.LogInformation("No unknown function calls recorded.");
+	        Console.WriteLine("No unknown function calls recorded.");
             return;
         }
         
-        logger.LogInformation($"Summary of unknown function calls ({_unknownFunctionCalls.Count} DLLs):");
+        Console.WriteLine($"Summary of unknown function calls ({_unknownFunctionCalls.Count} DLLs):");
         foreach (var (dll, functions) in _unknownFunctionCalls.OrderBy(kvp => kvp.Key))
         {
-	        logger.LogInformation($"  {dll}: {functions.Count} functions");
+	        Console.WriteLine($"  {dll}: {functions.Count} functions");
             foreach (var func in functions.OrderBy(f => f))
             {
-	            logger.LogInformation($"    - {func}");
+	            Console.WriteLine($"    - {func}");
             }
         }
     }
