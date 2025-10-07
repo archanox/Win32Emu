@@ -1631,7 +1631,7 @@ public class IcedCpu : ICpu
 		}
 		else if (insn.MemorySize == MemorySize.Int32)
 		{
-			_mem.Write32(addr, (uint)(int)rounded);
+			_mem.Write32(addr, unchecked((uint)(int)rounded));
 		}
 		else if (insn.MemorySize == MemorySize.Int64)
 		{
