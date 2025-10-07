@@ -518,4 +518,33 @@ public class CpuMemoryAccessTests
         var al = cpu.GetRegister("EAX") & 0xFF;
         Assert.Equal(0x30u, al);
     }
+    
+    [Fact]
+    public void ImmediateAdd_ShouldWorkWith8BitOperands()
+    {
+        // This test verifies ADD with immediate values works for 8-bit operands
+        // In the real code, the compiler might generate: ADD AL, 0x30
+        
+        // Arrange
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        cpu.SetRegister("EAX", 5); // digit value
+        cpu.SetEip(0x00401000);
+        
+        // ADD AL, 0x30  ; AL = 5 + 0x30 = 0x35 = '5'
+        var testCode = new byte[]
+        {
+            0x04, 0x30  // ADD AL, 0x30
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - AL should be 0x35 ('5')
+        var al = cpu.GetRegister("EAX") & 0xFF;
+        Assert.Equal(0x35u, al);
+    }
 }
