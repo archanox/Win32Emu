@@ -1534,7 +1534,24 @@ public class IcedCpu : ICpu
 		return addr;
 	}
 
-	private uint CalcLeaAddress(Instruction insn) => CalcMemAddress(insn);
+	// CalcLeaAddress calculates an effective address without validating memory bounds
+	// LEA (Load Effective Address) doesn't actually access memory, so out-of-bounds addresses are valid
+	private uint CalcLeaAddress(Instruction insn)
+	{
+		var addr = insn.MemoryDisplacement32;
+		if (insn.MemoryBase != Register.None)
+		{
+			addr += GetReg32(insn.MemoryBase);
+		}
+
+		if (insn.MemoryIndex != Register.None)
+		{
+			var scale = insn.MemoryIndexScale;
+			addr += (uint)(GetReg32(insn.MemoryIndex) * scale);
+		}
+
+		return addr;
+	}
 
 	private uint GetReg32(Register reg) => reg switch
 	{
