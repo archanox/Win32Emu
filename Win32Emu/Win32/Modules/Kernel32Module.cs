@@ -1411,7 +1411,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Handle regular file handles
 		if (!_env.TryGetHandle<FileStream>(handle, out var fs) || fs is null)
 		{
-			return 0;
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+			return NativeTypes.Win32Bool.FALSE;
 		}
 
 		try

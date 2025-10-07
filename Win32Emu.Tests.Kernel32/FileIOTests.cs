@@ -210,6 +210,26 @@ public class FileIoTests : IDisposable
 	    Assert.Equal(bytesToWrite, bytesWritten);
     }
 
+    [Fact]
+    public void WriteFile_WithInvalidHandle_ShouldReturnZeroAndSetLastError()
+    {
+	    // Arrange
+	    const uint invalidHandle = 0x00000000; // NULL handle
+	    var buffer = _testEnv.WriteString("test\n");
+	    const uint bytesToWrite = 5; // Length of "test\n"
+	    var bytesWrittenPtr = _testEnv.AllocateMemory(4);
+
+	    // Act
+	    var result = _testEnv.CallKernel32Api("WRITEFILE", invalidHandle, buffer, bytesToWrite, bytesWrittenPtr, 0);
+
+	    // Assert
+	    Assert.Equal(0u, result); // WriteFile returns 0 on failure
+        
+	    // Verify GetLastError returns ERROR_INVALID_HANDLE (6)
+	    var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+	    Assert.Equal(6u, lastError); // ERROR_INVALID_HANDLE
+    }
+
     #endregion
     
     #region CloseHandle Tests
