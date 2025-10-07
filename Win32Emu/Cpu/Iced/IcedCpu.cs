@@ -166,6 +166,9 @@ public class IcedCpu : ICpu
 				case Mnemonic.Stosd: ExecStos(4, insn.HasRepPrefix); break;
 				case Mnemonic.Lodsb: ExecLods(1, insn.HasRepPrefix); break;
 				case Mnemonic.Lodsd: ExecLods(4, insn.HasRepPrefix); break;
+				case Mnemonic.Insb: ExecIns(1, insn.HasRepPrefix); break;
+				case Mnemonic.Insw: ExecIns(2, insn.HasRepPrefix); break;
+				case Mnemonic.Insd: ExecIns(4, insn.HasRepPrefix); break;
 				case Mnemonic.Jmp:
 					if (insn.GetOpKind(0) == OpKind.Register)
 					{
@@ -1151,6 +1154,39 @@ public class IcedCpu : ICpu
 			}
 
 			_esi = (uint)(_esi + delta);
+		}
+
+		if (rep)
+		{
+			_ecx = 0;
+		}
+	}
+
+	private void ExecIns(int size, bool rep)
+	{
+		// INS reads from I/O port DX and writes to [EDI]
+		// Since I/O ports are not fully emulated, we write 0 (similar to IN instruction handling)
+		var count = rep ? _ecx : 1u;
+		var delta = GetFlag(Df) ? -size : size;
+		for (uint i = 0; i < count; i++)
+		{
+			// I/O port read would go here, but we stub it to return 0
+			uint value = 0;
+			
+			if (size == 1)
+			{
+				_mem.Write8(_edi, (byte)value);
+			}
+			else if (size == 2)
+			{
+				_mem.Write16(_edi, (ushort)value);
+			}
+			else
+			{
+				_mem.Write32(_edi, value);
+			}
+
+			_edi = (uint)(_edi + delta);
 		}
 
 		if (rep)
