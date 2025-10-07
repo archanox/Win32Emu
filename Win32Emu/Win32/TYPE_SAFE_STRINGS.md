@@ -26,7 +26,7 @@ Represents `LPCSTR` (Long Pointer to Const String) - a read-only ANSI string poi
 // Win32Emu implementation:
 private uint GetModuleHandleA(in LpcStr lpModuleName)
 {
-    var moduleName = lpModuleName.ReadFrom(_env);
+    var moduleName = lpModuleName.ToString();
     _logger.LogInformation($"Getting module handle for '{moduleName ?? "NULL (current process)"}'");
     // ...
 }
@@ -34,11 +34,11 @@ private uint GetModuleHandleA(in LpcStr lpModuleName)
 
 **Features:**
 - `IsNull` property to check if pointer is null
-- `Read(VirtualMemory mem, int max = int.MaxValue)` method to read the string from memory
-- `ReadFrom(ProcessEnvironment env)` method - convenience method that handles null checking
-- `ToString()` override - returns "NULL" for null pointers or the hex address for debugging
+- `Read(VirtualMemory mem = null)` method to read the string from memory
+- `ToString()` override - returns the actual string value from memory (or null if pointer is null)
 - `Address` property to access the raw address
 - Implicit conversions to/from `uint`
+- VirtualMemory passed in constructor for automatic string reading
 
 ### LpStr
 
@@ -159,11 +159,10 @@ When updating existing Win32 API implementations:
 
 3. Update the implementation:
    - Use `.IsNull` instead of `== null` checks
-   - Use `.ReadFrom(env)` for convenient string reading (preferred)
-   - Use `.Read(mem)` or `env.ReadAnsiString(param.Address)` for lower-level access
+   - Use `.ToString()` to get the string value (preferred - works automatically with memory)
+   - Use `.Read(mem)` for lower-level access when needed
    - Use `.Write()` to write strings (for writable types)
    - Use `.Address` when you need the raw pointer value
-   - Use `.ToString()` for debugging output
 
 4. Update the `TryInvokeUnsafe` dispatch:
    - Change `a.Lpcstr(0)` → `a.LpcStr(0)` (const string)

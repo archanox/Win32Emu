@@ -11,10 +11,12 @@ namespace Win32Emu.Win32;
 public readonly struct LpcStr
 {
 	public readonly uint Address;
+	private readonly VirtualMemory? _memory;
 
-	public LpcStr(uint address)
+	public LpcStr(uint address, VirtualMemory? memory = null)
 	{
 		Address = address;
+		_memory = memory;
 	}
 
 	/// <summary>
@@ -26,21 +28,21 @@ public readonly struct LpcStr
 	/// Reads the ANSI string from virtual memory at this address.
 	/// Returns null if the address is 0 (null pointer).
 	/// </summary>
-	/// <param name="mem">Virtual memory to read from</param>
-	/// <param name="max">Maximum number of characters to read (default: int.MaxValue)</param>
+	/// <param name="mem">Virtual memory to read from (optional if memory was provided in constructor)</param>
 	/// <returns>The string read from memory, or null if address is 0</returns>
-	public string? Read(VirtualMemory mem, int max = int.MaxValue)
+	public string? Read(VirtualMemory? mem = null)
 	{
-		if (IsNull)
+		var memory = mem ?? _memory;
+		if (IsNull || memory == null)
 		{
 			return null;
 		}
 
 		var buf = new List<byte>();
 		var a = Address;
-		for (var i = 0; i < max; i++)
+		while (true)
 		{
-			var b = mem.Read8(a++);
+			var b = memory.Read8(a++);
 			if (b == 0)
 			{
 				break;
@@ -52,23 +54,11 @@ public readonly struct LpcStr
 	}
 
 	/// <summary>
-	/// Reads the ANSI string from the ProcessEnvironment.
-	/// Returns null if the address is 0 (null pointer).
-	/// This is a convenience method for use in Win32 module implementations.
+	/// Returns the string value from memory, or null if the pointer is null.
 	/// </summary>
-	/// <param name="env">Process environment to read from</param>
-	/// <returns>The string read from memory, or null if address is 0</returns>
-	public string? ReadFrom(ProcessEnvironment env)
+	public override string? ToString()
 	{
-		return IsNull ? null : env.ReadAnsiString(Address);
-	}
-
-	/// <summary>
-	/// Returns the address as a hex string for debugging purposes.
-	/// </summary>
-	public override string ToString()
-	{
-		return IsNull ? "NULL" : $"0x{Address:X8}";
+		return Read();
 	}
 
 	/// <summary>

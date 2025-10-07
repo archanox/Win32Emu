@@ -20,7 +20,7 @@ public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem)
 	
 	public LpStr LpStr(int index) => new LpStr(UInt32(index));
 	
-	public LpcStr LpcStr(int index) => new LpcStr(UInt32(index));
+	public LpcStr LpcStr(int index) => new LpcStr(UInt32(index), mem);
 	
 	public LpWStr LpWStr(int index) => new LpWStr(UInt32(index));
 }

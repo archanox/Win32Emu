@@ -637,7 +637,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private uint GetModuleHandleA(in LpcStr lpModuleName)
 	{
-		var moduleName = lpModuleName.ReadFrom(_env);
+		var moduleName = lpModuleName.ToString();
 		_logger.LogInformation($"Getting module handle for '{moduleName ?? "NULL (current process)"}'");
 		return _imageBase;
 	}
@@ -652,7 +652,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Read the library name from memory
-		var libraryName = lpLibFileName.ReadFrom(_env);
+		var libraryName = lpLibFileName.ToString();
 		if (string.IsNullOrEmpty(libraryName))
 		{
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;

@@ -19,7 +19,7 @@ public sealed class LpcStrTests : IDisposable
 	public void LpcStr_WithNullAddress_IsNull()
 	{
 		// Arrange
-		var lpcStr = new LpcStr(0);
+		var lpcStr = new LpcStr(0, _memory);
 
 		// Assert
 		Assert.True(lpcStr.IsNull);
@@ -30,7 +30,7 @@ public sealed class LpcStrTests : IDisposable
 	public void LpcStr_WithNonZeroAddress_IsNotNull()
 	{
 		// Arrange
-		var lpcStr = new LpcStr(0x1000);
+		var lpcStr = new LpcStr(0x1000, _memory);
 
 		// Assert
 		Assert.False(lpcStr.IsNull);
@@ -41,10 +41,10 @@ public sealed class LpcStrTests : IDisposable
 	public void LpcStr_Read_WithNullPointer_ReturnsNull()
 	{
 		// Arrange
-		var lpcStr = new LpcStr(0);
+		var lpcStr = new LpcStr(0, _memory);
 
 		// Act
-		var result = lpcStr.Read(_memory);
+		var result = lpcStr.Read();
 
 		// Assert
 		Assert.Null(result);
@@ -59,10 +59,10 @@ public sealed class LpcStrTests : IDisposable
 		var bytes = System.Text.Encoding.ASCII.GetBytes(expectedString + "\0");
 		_memory.WriteBytes(address, bytes);
 
-		var lpcStr = new LpcStr(address);
+		var lpcStr = new LpcStr(address, _memory);
 
 		// Act
-		var result = lpcStr.Read(_memory);
+		var result = lpcStr.Read();
 
 		// Assert
 		Assert.NotNull(result);
@@ -77,10 +77,10 @@ public sealed class LpcStrTests : IDisposable
 		var bytes = new byte[] { 0 }; // Just null terminator
 		_memory.WriteBytes(address, bytes);
 
-		var lpcStr = new LpcStr(address);
+		var lpcStr = new LpcStr(address, _memory);
 
 		// Act
-		var result = lpcStr.Read(_memory);
+		var result = lpcStr.Read();
 
 		// Assert
 		Assert.NotNull(result);
@@ -88,23 +88,22 @@ public sealed class LpcStrTests : IDisposable
 	}
 
 	[Fact]
-	public void LpcStr_Read_WithMaxLength_RespectsLimit()
+	public void LpcStr_ToString_ReturnsStringValue()
 	{
 		// Arrange
 		const uint address = 0x1000;
-		const string longString = "This is a very long string that should be truncated";
-		var bytes = System.Text.Encoding.ASCII.GetBytes(longString + "\0");
+		const string expectedString = "Test String";
+		var bytes = System.Text.Encoding.ASCII.GetBytes(expectedString + "\0");
 		_memory.WriteBytes(address, bytes);
 
-		var lpcStr = new LpcStr(address);
+		var lpcStr = new LpcStr(address, _memory);
 
 		// Act
-		var result = lpcStr.Read(_memory, max: 10);
+		var result = lpcStr.ToString();
 
 		// Assert
 		Assert.NotNull(result);
-		Assert.Equal("This is a ", result);
-		Assert.Equal(10, result.Length);
+		Assert.Equal(expectedString, result);
 	}
 
 	[Fact]
@@ -142,10 +141,10 @@ public sealed class LpcStrTests : IDisposable
 		var bytes = System.Text.Encoding.ASCII.GetBytes(specialString + "\0");
 		_memory.WriteBytes(address, bytes);
 
-		var lpcStr = new LpcStr(address);
+		var lpcStr = new LpcStr(address, _memory);
 
 		// Act
-		var result = lpcStr.Read(_memory);
+		var result = lpcStr.Read();
 
 		// Assert
 		Assert.NotNull(result);
@@ -160,10 +159,10 @@ public sealed class LpcStrTests : IDisposable
 		var bytes = System.Text.Encoding.ASCII.GetBytes("Hello\0World\0");
 		_memory.WriteBytes(address, bytes);
 
-		var lpcStr = new LpcStr(address);
+		var lpcStr = new LpcStr(address, _memory);
 
 		// Act
-		var result = lpcStr.Read(_memory);
+		var result = lpcStr.Read();
 
 		// Assert
 		Assert.NotNull(result);
@@ -171,29 +170,30 @@ public sealed class LpcStrTests : IDisposable
 	}
 
 	[Fact]
-	public void LpcStr_ToString_WithNullAddress_ReturnsNULL()
+	public void LpcStr_ToString_WithNullPointer_ReturnsNull()
 	{
 		// Arrange
-		var lpcStr = new LpcStr(0);
+		var lpcStr = new LpcStr(0, _memory);
 
 		// Act
 		var result = lpcStr.ToString();
 
 		// Assert
-		Assert.Equal("NULL", result);
+		Assert.Null(result);
 	}
 
 	[Fact]
-	public void LpcStr_ToString_WithValidAddress_ReturnsHexAddress()
+	public void LpcStr_WithoutMemory_ToString_ReturnsNull()
 	{
 		// Arrange
-		var lpcStr = new LpcStr(0x12345678);
+		const uint address = 0x1000;
+		var lpcStr = new LpcStr(address); // No memory provided
 
 		// Act
 		var result = lpcStr.ToString();
 
 		// Assert
-		Assert.Equal("0x12345678", result);
+		Assert.Null(result);
 	}
 
 	public void Dispose()

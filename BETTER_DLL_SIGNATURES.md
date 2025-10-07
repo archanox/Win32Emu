@@ -38,9 +38,8 @@ public readonly struct LpcStr
 {
     public readonly uint Address;
     public bool IsNull => Address == 0;
-    public string? Read(VirtualMemory mem, int max = int.MaxValue);
-    public string? ReadFrom(ProcessEnvironment env);
-    public override string ToString();
+    public string? Read(VirtualMemory? mem = null);
+    public override string? ToString();
 }
 ```
 
@@ -55,7 +54,7 @@ HMODULE GetModuleHandleA(
 ```csharp
 private uint GetModuleHandleA(in LpcStr lpModuleName)
 {
-    var moduleName = lpModuleName.ReadFrom(_env);
+    var moduleName = lpModuleName.ToString();
     _logger.LogInformation($"Getting module handle for '{moduleName ?? "NULL (current process)"}'");
     return _imageBase;
 }
@@ -185,7 +184,7 @@ private unsafe uint LoadLibraryA(sbyte* lpLibFileName)
 private uint LoadLibraryA(in LpcStr lpLibFileName)
 {
     if (lpLibFileName.IsNull) return 0;
-    var libraryName = lpLibFileName.ReadFrom(_env);
+    var libraryName = lpLibFileName.ToString();
     // ...
 }
 ```
@@ -238,11 +237,11 @@ if (lpParam.IsNull)
 // Before
 var str = _env.ReadAnsiString((uint)lpParam);
 
-// After (preferred - cleaner)
-var str = lpParam.ReadFrom(_env);
+// After (preferred - cleaner, works automatically)
+var str = lpParam.ToString();
 
 // After (alternative - lower level)
-var str = _env.ReadAnsiString(lpParam.Address);
+var str = lpParam.Read(_memory);
 ```
 
 ### Step 5: Update dispatch call
