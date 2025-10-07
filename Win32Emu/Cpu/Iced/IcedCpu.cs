@@ -1626,7 +1626,8 @@ public class IcedCpu : ICpu
 		
 		if (insn.MemorySize == MemorySize.Int16)
 		{
-			_mem.Write16(addr, (ushort)(short)rounded);
+			// Store the signed 16-bit integer bit pattern as unsigned for memory representation
+			_mem.Write16(addr, unchecked((ushort)(short)rounded));
 		}
 		else if (insn.MemorySize == MemorySize.Int32)
 		{
