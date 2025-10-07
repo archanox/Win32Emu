@@ -302,6 +302,9 @@ public class ProcessEnvironment
 	/// </summary>
 	public void WriteToStdError(string text)
 	{
+		// Log to console for debugging
+		Console.Write(text);
+		
 		// For now, treat stderr the same as stdout
 		_host?.OnStdOutput(text);
 	}
