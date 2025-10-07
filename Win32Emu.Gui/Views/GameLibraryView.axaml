@@ -65,13 +65,13 @@
                                 <Border.ContextFlyout>
                                     <MenuFlyout>
                                         <MenuItem Header="View Info" 
-                                                Command="{Binding $parent[ItemsControl].((vm:GameLibraryViewModel)DataContext).ShowGameInfoCommand}"
+                                                Command="{Binding $parent[UserControl].((vm:GameLibraryViewModel)DataContext).ShowGameInfoCommand}"
                                                 CommandParameter="{Binding}"/>
                                         <MenuItem Header="Launch" 
-                                                Command="{Binding $parent[ItemsControl].((vm:GameLibraryViewModel)DataContext).LaunchGameCommand}"
+                                                Command="{Binding $parent[UserControl].((vm:GameLibraryViewModel)DataContext).LaunchGameCommand}"
                                                 CommandParameter="{Binding}"/>
                                         <MenuItem Header="Remove" 
-                                                Command="{Binding $parent[ItemsControl].((vm:GameLibraryViewModel)DataContext).RemoveGameCommand}"
+                                                Command="{Binding $parent[UserControl].((vm:GameLibraryViewModel)DataContext).RemoveGameCommand}"
                                                 CommandParameter="{Binding}"/>
                                     </MenuFlyout>
                                 </Border.ContextFlyout>
