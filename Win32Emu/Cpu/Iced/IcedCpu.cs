@@ -1641,7 +1641,7 @@ public class IcedCpu : ICpu
 		else
 		{
 			// Default to 32-bit
-			_mem.Write32(addr, (uint)(int)rounded);
+			_mem.Write32(addr, unchecked((uint)(int)rounded));
 		}
 		
 		FpuPop();
