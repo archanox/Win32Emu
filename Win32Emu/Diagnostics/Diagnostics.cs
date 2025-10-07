@@ -46,11 +46,27 @@ public static class Diagnostics
 		}
 	}
 
-	public static void LogCalcMemAddressFailure(uint addr, ulong vmSize, uint eip, uint esp, uint ebp, uint eax, uint ecx, uint edx, byte[]? instrBytes = null)
+	public static void LogCalcMemAddressFailure(uint addr, ulong vmSize, uint eip, uint esp, uint ebp, uint eax, uint ebx, uint ecx, uint edx, uint esi, uint edi, byte[]? instrBytes = null)
 	{
 		var sb = new StringBuilder();
 		sb.Append($"Calculated memory address out of range: 0x{addr:X} (EIP=0x{eip:X8}) size=0x{vmSize:X}");
-		sb.Append($"; ESP=0x{esp:X8} EBP=0x{ebp:X8} EAX=0x{eax:X8} ECX=0x{ecx:X8} EDX=0x{edx:X8}");
+		sb.Append($"; ESP=0x{esp:X8} EBP=0x{ebp:X8} EAX=0x{eax:X8} EBX=0x{ebx:X8} ECX=0x{ecx:X8} EDX=0x{edx:X8} ESI=0x{esi:X8} EDI=0x{edi:X8}");
+		
+		// Check if this is a Windows pseudo-handle value
+		if (addr == 0xFFFFFFF6 || addr == 0xFFFFFFF5 || addr == 0xFFFFFFF4)
+		{
+			string handleName = addr switch
+			{
+				0xFFFFFFF6 => "STD_INPUT_HANDLE",
+				0xFFFFFFF5 => "STD_OUTPUT_HANDLE",
+				0xFFFFFFF4 => "STD_ERROR_HANDLE",
+				_ => "UNKNOWN_PSEUDO_HANDLE"
+			};
+			sb.Append($"\nNOTE: Address 0x{addr:X} is {handleName} (pseudo-handle value {(int)addr:D}).");
+			sb.Append("\nThis error typically occurs when code tries to dereference a pseudo-handle as a memory address.");
+			sb.Append("\nPseudo-handles must be translated to real handles via GetStdHandle() before use.");
+		}
+		
 		_logger.LogError(sb.ToString());
 		if (instrBytes != null)
 		{
