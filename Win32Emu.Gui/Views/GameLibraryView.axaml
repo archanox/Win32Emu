@@ -80,10 +80,16 @@
                                     <Border Grid.Row="0"
                                            Background="{DynamicResource SystemControlBackgroundBaseMediumBrush}"
                                            CornerRadius="4">
-                                        <TextBlock Text="🎮"
-                                                 FontSize="64"
-                                                 HorizontalAlignment="Center"
-                                                 VerticalAlignment="Center"/>
+                                        <Panel>
+                                            <!-- Fallback emoji (always present) -->
+                                            <TextBlock Text="🎮"
+                                                     FontSize="64"
+                                                     HorizontalAlignment="Center"
+                                                     VerticalAlignment="Center"/>
+                                            <!-- Show image on top if ThumbnailPath is available -->
+                                            <Image Source="{Binding ThumbnailPath, Converter={StaticResource ThumbnailPathConverter}}"
+                                                   Stretch="Uniform"/>
+                                        </Panel>
                                     </Border>
 
                                     <!-- Game Title -->

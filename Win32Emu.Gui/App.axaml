@@ -9,6 +9,7 @@
     <Application.Resources>
         <converters:BoolToImplementedConverter x:Key="BoolToImplementedConverter"/>
         <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+        <converters:ThumbnailPathConverter x:Key="ThumbnailPathConverter"/>
     </Application.Resources>
 
     <Application.DataTemplates>
