@@ -684,7 +684,8 @@ public class ProcessEnvironment
 			ClassName = className,
 			Style = style,
 			ExStyle = exStyle,
-			Parent = parent
+			Parent = parent,
+			Menu = menu
 		});
 
 		return handle;

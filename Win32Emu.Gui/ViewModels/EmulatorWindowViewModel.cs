@@ -36,6 +36,12 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     // Track created controls - maps Win32 HWND to Avalonia Control
     private readonly Dictionary<uint, Control> _createdControls = new();
     
+    // Track control parent relationships - maps child HWND to parent HWND
+    private readonly Dictionary<uint, uint> _controlParents = new();
+    
+    // Track control IDs - maps child HWND to control ID (from hMenu parameter)
+    private readonly Dictionary<uint, uint> _controlIds = new();
+    
     // Reference to the owner window for showing child windows
     private Window? _ownerWindow;
 
@@ -201,11 +207,17 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 
         // Store the control mapping
         _createdControls[info.Handle] = control;
+        
+        // Store the parent relationship
+        _controlParents[info.Handle] = info.Parent;
+        
+        // Store the control ID (from hMenu parameter for child windows)
+        _controlIds[info.Handle] = info.Menu;
 
         // Set up event handlers for the control
         SetupControlEventHandlers(info.Handle, control, info.ClassName);
 
-        OnDebugOutput($"Created {info.ClassName} control at ({info.X}, {info.Y})", DebugLevel.Info);
+        OnDebugOutput($"Created {info.ClassName} control at ({info.X}, {info.Y}) with ID={info.Menu}", DebugLevel.Info);
     }
 
     private void SetupControlEventHandlers(uint hwnd, Control control, string className)
@@ -218,7 +230,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                     button.Click += (s, e) =>
                     {
                         OnDebugOutput($"Button 0x{hwnd:X8} clicked", DebugLevel.Debug);
-                        // TODO: Send WM_COMMAND message to parent with BN_CLICKED notification
+                        SendWmCommand(hwnd, 0); // BN_CLICKED = 0
                     };
                 }
                 break;
@@ -229,12 +241,47 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                     textBox.TextChanged += (s, e) =>
                     {
                         OnDebugOutput($"Edit 0x{hwnd:X8} text changed", DebugLevel.Debug);
-                        // TODO: Send WM_COMMAND message to parent with EN_CHANGE notification
+                        SendWmCommand(hwnd, 0x0300); // EN_CHANGE = 0x0300
                     };
                 }
                 break;
 
             // Add more control types as needed
+        }
+    }
+    
+    /// <summary>
+    /// Send WM_COMMAND message to the parent window
+    /// </summary>
+    private void SendWmCommand(uint controlHwnd, uint notificationCode)
+    {
+        // Get parent HWND
+        if (!_controlParents.TryGetValue(controlHwnd, out var parentHwnd))
+        {
+            OnDebugOutput($"Cannot send WM_COMMAND: parent not found for control 0x{controlHwnd:X8}", DebugLevel.Warning);
+            return;
+        }
+        
+        // Get control ID
+        if (!_controlIds.TryGetValue(controlHwnd, out var controlId))
+        {
+            OnDebugOutput($"Cannot send WM_COMMAND: control ID not found for control 0x{controlHwnd:X8}", DebugLevel.Warning);
+            return;
+        }
+        
+        // Build WM_COMMAND wParam: HIWORD = notification code, LOWORD = control ID
+        uint wParam = (notificationCode << 16) | (controlId & 0xFFFF);
+        uint lParam = controlHwnd;
+        
+        // Post WM_COMMAND (0x0111) to parent
+        if (_emulatorService?.CurrentEmulator != null)
+        {
+            bool success = _emulatorService.CurrentEmulator.PostMessage(parentHwnd, 0x0111, wParam, lParam);
+            OnDebugOutput($"Sent WM_COMMAND to parent 0x{parentHwnd:X8}: controlId={controlId}, notification=0x{notificationCode:X4}, success={success}", DebugLevel.Debug);
+        }
+        else
+        {
+            OnDebugOutput($"Cannot send WM_COMMAND: emulator not running", DebugLevel.Warning);
         }
     }
 
