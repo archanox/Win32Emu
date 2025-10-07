@@ -547,4 +547,35 @@ public class CpuMemoryAccessTests
         var al = cpu.GetRegister("EAX") & 0xFF;
         Assert.Equal(0x35u, al);
     }
+    
+    [Fact]
+    public void Memory_Write8Bit_ShouldWorkCorrectly()
+    {
+        // This test verifies that 8-bit MOV to memory works correctly
+        // The fmt::ch() method does: buf[ofs++] = c;
+        // which compiles to MOV [address], AL
+        
+        // Arrange
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        cpu.SetRegister("EAX", 0x35); // '5' character
+        cpu.SetRegister("EDI", 0x001000); // buffer address
+        cpu.SetEip(0x00401000);
+        
+        // MOV [EDI], AL  ; Write 0x35 to memory
+        var testCode = new byte[]
+        {
+            0x88, 0x07  // MOV [EDI], AL
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - Memory at EDI should contain 0x35
+        var value = memory.Read8(0x001000);
+        Assert.Equal(0x35, value);
+    }
 }
