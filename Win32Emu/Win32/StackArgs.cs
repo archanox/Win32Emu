@@ -18,5 +18,7 @@ public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem)
 	
 	public unsafe char* Lpcstr(int index) => (char*)UInt32(index);
 	
+	public LpcStr LpcStr(int index) => new LpcStr(UInt32(index));
+	
 	public LpWStr LpWStr(int index) => new LpWStr(UInt32(index));
 }
