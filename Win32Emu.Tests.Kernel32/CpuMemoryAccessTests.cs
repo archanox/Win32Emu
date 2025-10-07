@@ -578,4 +578,33 @@ public class CpuMemoryAccessTests
         var value = memory.Read8(0x001000);
         Assert.Equal(0x35, value);
     }
+    
+    [Fact]
+    public void Lea_ShouldCalculateAddressWithConstantOffset()
+    {
+        // Test if LEA might be used for '0' + digit calculation
+        // LEA EAX, [EBX+0x30] could be used to add 0x30 to EBX
+        
+        // Arrange
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        cpu.SetRegister("EBX", 5); // digit value
+        cpu.SetEip(0x00401000);
+        
+        // LEA EAX, [EBX+0x30]  ; EAX = EBX + 0x30
+        var testCode = new byte[]
+        {
+            0x8D, 0x43, 0x30  // LEA EAX, [EBX+0x30]
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - EAX should be 0x35 ('5')
+        var eax = cpu.GetRegister("EAX");
+        Assert.Equal(0x35u, eax);
+    }
 }
