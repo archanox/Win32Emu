@@ -72,13 +72,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = GetStringTypeW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
 				return true;
 			case "GETMODULEHANDLEA":
-				returnValue = GetModuleHandleA(a.Lpcstr(0));
+				returnValue = GetModuleHandleA(a.LpcStr(0));
 				return true;
 			case "GETMODULEFILENAMEA":
 				returnValue = GetModuleFileNameA(a.Ptr(0), a.Lpstr(1), a.UInt32(2));
 				return true;
 			case "LOADLIBRARYA":
-				returnValue = LoadLibraryA(a.Lpstr(0));
+				returnValue = LoadLibraryA(a.LpcStr(0));
 				return true;
 			case "GETPROCADDRESS":
 				returnValue = GetProcAddress(a.UInt32(0), a.UInt32(1));
@@ -654,23 +654,24 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// This function must be used carefully in a multithreaded application. There is no guarantee that the module handle remains valid between the time this function returns the handle and the time it is used. For example, suppose that a thread retrieves a module handle, but before it uses the handle, a second thread frees the module. If the system loads another module, it could reuse the module handle that was recently freed. Therefore, the first thread would have a handle to a different module than the one intended.
 	/// </remarks>
 	[DllModuleExport(16, IsStub = true)]
-	private unsafe uint GetModuleHandleA(char* lpModuleName)
+	private uint GetModuleHandleA(in LpcStr lpModuleName)
 	{
-		_logger.LogInformation("Getting module handle for '{NullCurrentProcess}''", lpModuleName != null ? new string(lpModuleName) : "NULL (current process)");
+		var moduleName = lpModuleName.ToString();
+		_logger.LogInformation("Getting module handle for '{NullCurrentProcess}''", moduleName != null ? moduleName : "NULL (current process)");
 		return _imageBase;
 	}
 
 	[DllModuleExport(32)]
-	private unsafe uint LoadLibraryA(sbyte* lpLibFileName)
+	private uint LoadLibraryA(in LpcStr lpLibFileName)
 	{
-		if (lpLibFileName == null)
+		if (lpLibFileName.IsNull)
 		{
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 
 		// Read the library name from memory
-		var libraryName = _env.ReadAnsiString((uint)lpLibFileName);
+		var libraryName = lpLibFileName.ToString();
 		if (string.IsNullOrEmpty(libraryName))
 		{
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
