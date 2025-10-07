@@ -216,6 +216,21 @@ public class MessageQueueTests : IDisposable
 		Assert.NotEqual(0u, hwnd);
 	}
 
+	[Fact]
+	public void GetMessageA_WithNoMessages_ShouldTimeoutGracefully()
+	{
+		// Arrange
+		var msgAddr = _testEnv.AllocateMemory(28); // MSG structure size
+
+		// Act - Should timeout and return WM_NULL without throwing exception
+		var result = _testEnv.CallUser32Api("GETMESSAGEA", msgAddr, 0, 0, 0);
+
+		// Assert
+		Assert.Equal(1u, result); // Non-zero for non-WM_QUIT messages
+		var message = _testEnv.Memory.Read32(msgAddr + 4);
+		Assert.Equal(0u, message); // WM_NULL
+	}
+
 	public void Dispose()
 	{
 		_testEnv?.Dispose();
