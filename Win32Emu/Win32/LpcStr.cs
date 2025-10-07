@@ -52,6 +52,26 @@ public readonly struct LpcStr
 	}
 
 	/// <summary>
+	/// Reads the ANSI string from the ProcessEnvironment.
+	/// Returns null if the address is 0 (null pointer).
+	/// This is a convenience method for use in Win32 module implementations.
+	/// </summary>
+	/// <param name="env">Process environment to read from</param>
+	/// <returns>The string read from memory, or null if address is 0</returns>
+	public string? ReadFrom(ProcessEnvironment env)
+	{
+		return IsNull ? null : env.ReadAnsiString(Address);
+	}
+
+	/// <summary>
+	/// Returns the address as a hex string for debugging purposes.
+	/// </summary>
+	public override string ToString()
+	{
+		return IsNull ? "NULL" : $"0x{Address:X8}";
+	}
+
+	/// <summary>
 	/// Implicit conversion from uint address to LpcStr.
 	/// </summary>
 	public static implicit operator LpcStr(uint address) => new(address);

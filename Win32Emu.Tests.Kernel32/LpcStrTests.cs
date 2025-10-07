@@ -170,6 +170,32 @@ public sealed class LpcStrTests : IDisposable
 		Assert.Equal("Hello", result);
 	}
 
+	[Fact]
+	public void LpcStr_ToString_WithNullAddress_ReturnsNULL()
+	{
+		// Arrange
+		var lpcStr = new LpcStr(0);
+
+		// Act
+		var result = lpcStr.ToString();
+
+		// Assert
+		Assert.Equal("NULL", result);
+	}
+
+	[Fact]
+	public void LpcStr_ToString_WithValidAddress_ReturnsHexAddress()
+	{
+		// Arrange
+		var lpcStr = new LpcStr(0x12345678);
+
+		// Act
+		var result = lpcStr.ToString();
+
+		// Assert
+		Assert.Equal("0x12345678", result);
+	}
+
 	public void Dispose()
 	{
 		// Cleanup if needed

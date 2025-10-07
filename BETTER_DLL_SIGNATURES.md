@@ -39,6 +39,8 @@ public readonly struct LpcStr
     public readonly uint Address;
     public bool IsNull => Address == 0;
     public string? Read(VirtualMemory mem, int max = int.MaxValue);
+    public string? ReadFrom(ProcessEnvironment env);
+    public override string ToString();
 }
 ```
 
@@ -53,7 +55,7 @@ HMODULE GetModuleHandleA(
 ```csharp
 private uint GetModuleHandleA(in LpcStr lpModuleName)
 {
-    var moduleName = lpModuleName.IsNull ? null : _env.ReadAnsiString(lpModuleName.Address);
+    var moduleName = lpModuleName.ReadFrom(_env);
     _logger.LogInformation($"Getting module handle for '{moduleName ?? "NULL (current process)"}'");
     return _imageBase;
 }
@@ -183,7 +185,7 @@ private unsafe uint LoadLibraryA(sbyte* lpLibFileName)
 private uint LoadLibraryA(in LpcStr lpLibFileName)
 {
     if (lpLibFileName.IsNull) return 0;
-    var libraryName = _env.ReadAnsiString(lpLibFileName.Address);
+    var libraryName = lpLibFileName.ReadFrom(_env);
     // ...
 }
 ```
@@ -236,7 +238,10 @@ if (lpParam.IsNull)
 // Before
 var str = _env.ReadAnsiString((uint)lpParam);
 
-// After
+// After (preferred - cleaner)
+var str = lpParam.ReadFrom(_env);
+
+// After (alternative - lower level)
 var str = _env.ReadAnsiString(lpParam.Address);
 ```
 
