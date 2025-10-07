@@ -480,6 +480,27 @@ public class WindowTests : IDisposable
         testEnvWithHost.Dispose();
     }
 
+    [Fact]
+    public void ShowCursor_WithTrueParameter_ShouldReturnPositiveValue()
+    {
+        // Act
+        var result = _testEnv.CallUser32Api("SHOWCURSOR", 1);
+
+        // Assert
+        // ShowCursor returns the new display count, which should be >= 0
+        Assert.True((int)result >= 0);
+    }
+
+    [Fact]
+    public void ShowCursor_WithFalseParameter_ShouldReturnZero()
+    {
+        // Act
+        var result = _testEnv.CallUser32Api("SHOWCURSOR", 0);
+
+        // Assert
+        Assert.Equal(0, (int)result);
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
