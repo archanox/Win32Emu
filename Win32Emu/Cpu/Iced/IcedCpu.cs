@@ -1529,7 +1529,7 @@ public class IcedCpu : ICpu
 			double val;
 			if (insn.MemorySize == MemorySize.Float32)
 			{
-				val = BitConverter.Int32BitsToSingle((int)_mem.Read32(addr));
+				val = BitConverter.Int32BitsToSingle(unchecked((int)_mem.Read32(addr)));
 			}
 			else if (insn.MemorySize == MemorySize.Float64)
 			{
