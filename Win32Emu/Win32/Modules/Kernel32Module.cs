@@ -351,7 +351,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return NativeTypes.Win32Bool.FALSE;
 	}
 
-	[DllModuleExport(35)]
+	[DllModuleExport(35, IsStub = true)]
 	private unsafe uint RaiseException(uint dwExceptionCode, uint dwExceptionFlags, uint nNumberOfArguments, uint lpArguments)
 	{
 		// RaiseException raises a software exception
@@ -369,10 +369,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
-	[DllModuleExport(10)]
+	[DllModuleExport(10, IsStub = true)]
 	private unsafe uint GetCurrentProcess() => 0xFFFFFFFF; // pseudo-handle
 
-	[DllModuleExport(7)]
+	[DllModuleExport(7, IsStub = true)]
 	private unsafe uint GetAcp() => 1252; // Windows-1252 (Western European)
 
 	[DllModuleExport(9)]
@@ -421,7 +421,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 	}
 
-	[DllModuleExport(17)]
+	[DllModuleExport(17, IsStub = true)]
 	private unsafe uint GetOemcp() => 437; // IBM PC US (OEM code page)
 
 	[DllModuleExport(21)]
@@ -653,7 +653,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// The GetModuleHandle function returns a handle to a mapped module without incrementing its reference count. However, if this handle is passed to the FreeLibrary function, the reference count of the mapped module will be decremented. Therefore, do not pass a handle returned by GetModuleHandle to the FreeLibrary function. Doing so can cause a DLL module to be unmapped prematurely.
 	/// This function must be used carefully in a multithreaded application. There is no guarantee that the module handle remains valid between the time this function returns the handle and the time it is used. For example, suppose that a thread retrieves a module handle, but before it uses the handle, a second thread frees the module. If the system loads another module, it could reuse the module handle that was recently freed. Therefore, the first thread would have a handle to a different module than the one intended.
 	/// </remarks>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, IsStub = true)]
 	private unsafe uint GetModuleHandleA(char* lpModuleName)
 	{
 		_logger.LogInformation("Getting module handle for '{NullCurrentProcess}''", lpModuleName != null ? new string(lpModuleName) : "NULL (current process)");
@@ -1369,6 +1369,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint WriteFile(uint handle, uint lpBuffer, uint nNumberOfBytesToWrite, uint lpNumberOfBytesWritten,
 		uint lpOverlapped)
 	{
+		_logger.LogInformation("[Kernel32] WriteFile(handle=0x{Handle:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToWrite={NNumberOfBytesToWrite}, lpNumberOfBytesWritten=0x{LpNumberOfBytesWritten:X8}, lpOverlapped=0x{LpOverlapped:X8})", handle, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
 		// Handle standard handles specially
 		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle || handle == _env.StdInputHandle)
 		{
@@ -1400,6 +1401,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return NativeTypes.Win32Bool.FALSE;
 			}
+		}
+		else
+		{
+			_logger.LogWarning("[Kernel32] WriteFile not StdOutput, StdError or StdInput, called on non-standard handle 0x{Handle:X8}", handle);
 		}
 		
 		// Handle regular file handles
