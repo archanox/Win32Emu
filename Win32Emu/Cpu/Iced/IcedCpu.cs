@@ -572,6 +572,10 @@ public class IcedCpu : ICpu
 				{
 					b = insn.Immediate8;
 				}
+				else if (insn.GetOpKind(1) == OpKind.Immediate16)
+				{
+					b = (byte)insn.Immediate16;
+				}
 				else
 				{
 					b = (byte)ReadOp(insn, 1);
