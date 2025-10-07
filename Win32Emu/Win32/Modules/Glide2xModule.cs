@@ -131,7 +131,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				// Rendering modes
-				case "_GRALPHABLENDFUNCTI" + "ON@16": // _grAlphaBlendFunction@16
+				case "_GRALPHABLENDFUNCTION@16": // _grAlphaBlendFunction@16
 					_logger.LogInformation($"[Glide2x] grAlphaBlendFunction({a.UInt32(0)}, {a.UInt32(1)}, {a.UInt32(2)}, {a.UInt32(3)})");
 					returnValue = 0;
 					return true;
