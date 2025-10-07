@@ -188,11 +188,38 @@ The Game Info Window feature has been fully implemented with:
 
 The implementation is ready for review and meets all requirements specified in the original issue.
 
+### Post-Implementation Fixes
+
+#### Context Menu Fix (Issue Reopened)
+**Problem**: Context menu items appeared but were disabled (grayed out) and unclickable.
+
+**Root Cause**: The menu item command bindings used `$parent[ItemsControl]` to access the parent ViewModel. However, in Avalonia, MenuFlyout creates a separate visual tree and doesn't have direct access to the ItemsControl's DataContext through this binding path.
+
+**Solution**: Changed the binding path from:
+```xaml
+Command="{Binding $parent[ItemsControl].((vm:GameLibraryViewModel)DataContext).ShowGameInfoCommand}"
+```
+to:
+```xaml
+Command="{Binding $parent[UserControl].((vm:GameLibraryViewModel)DataContext).ShowGameInfoCommand}"
+```
+
+This change was applied to all three context menu items (View Info, Launch, Remove) in `GameLibraryView.axaml`.
+
+**Testing**: Added comprehensive unit tests in `GameLibraryViewModelTests.cs` to verify:
+- Commands exist and are not null
+- Commands can be invoked with valid game parameters
+- Commands handle null parameters gracefully
+- RemoveGameCommand properly removes games from the collection
+
+All tests pass (34 tests total in Win32Emu.Tests.Gui).
+
 ### Commits
 1. `b8cf4f3` - Initial plan
 2. `0eed372` - Add game info window with PE metadata extraction
 3. `c074d65` - Add clipboard functionality and PE metadata tests
 4. `729732d` - Add save changes functionality and clipboard feedback
 5. `c71ff94` - Add comprehensive documentation for game info window feature
+6. `59db9cd` - Fix disabled context menu by updating parent binding path
 
-Total: 5 commits, clean history, ready for merge.
+Total: 6 commits, clean history, ready for merge.
