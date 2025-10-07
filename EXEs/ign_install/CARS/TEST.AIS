@@ -1,0 +1,90 @@
+car 1
+
+acc             .95
+carebed         .80
+caresight       .75
+careother       .50
+maintain        .75
+aggr            .30
+sight           6
+curveinflu      .55
+slopeinflu      .75
+
+
+car 2
+
+acc             .90
+carebed         .90
+caresight       .80
+careother       .40
+maintain        .70
+aggr            .20
+sight           6
+curveinflu      .60
+slopeinflu      .60
+
+
+car 3
+
+acc             .95
+carebed         .90
+caresight       .85
+careother       .40
+maintain        .80
+aggr            .40
+sight           7
+curveinflu      .65
+slopeinflu      .65
+
+
+car 4
+
+acc             .65
+carebed         .90
+caresight       .85
+careother       .50
+maintain        .55
+aggr            .50
+sight           7
+curveinflu      .80
+slopeinflu      .50
+
+
+car 5
+
+acc             .55
+carebed         .90
+caresight       .85
+careother       .50
+maintain        .60
+aggr            .50
+sight           7
+curveinflu      .80
+slopeinflu      .50
+
+
+car 6
+
+acc             .55
+carebed         .90
+caresight       .85
+careother       .50
+maintain        .50
+aggr            .30
+sight           7
+curveinflu      .80
+slopeinflu      .50
+
+
+car 7
+
+acc             .45
+carebed         .90
+caresight       .85
+careother       .60
+maintain        .50
+aggr            .40
+sight           7
+curveinflu      .80
+slopeinflu      .50
+

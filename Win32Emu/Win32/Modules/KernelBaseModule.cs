@@ -36,7 +36,7 @@ public class KernelBaseModule : IWin32ModuleUnsafe
 				return true;
 
 			default:
-				_logger.LogInformation($"[KernelBase] Unimplemented export: {export}");
+				_logger.LogInformation("[KernelBase] Unimplemented export: {Export}", export);
 				return false;
 		}
 	}

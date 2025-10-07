@@ -109,7 +109,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding}"
-                                                 FontFamily="Consolas,monospace"
+                                                 FontFamily="Monospace"
                                                  FontSize="12"
                                                  Foreground="LightGray"/>
                                     </DataTemplate>

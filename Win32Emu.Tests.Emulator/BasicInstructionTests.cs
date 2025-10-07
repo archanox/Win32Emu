@@ -345,7 +345,12 @@ public class BasicInstructionTests : IDisposable
         Assert.Equal(eaxValue, _helper.GetReg("EAX")); // EAX unchanged
         Assert.Equal(0xFFFFFFFFu, _helper.GetReg("EDX")); // EDX = 0xFFFFFFFF for negative EAX
     }
-//TODO: redo IDIV_EBX_ShouldDivideSigned, MUL_WithOverflow_ShouldSetCarryAndOverflowFlags, MUL_WithOverflow_ShouldSetCarryFlag, MUL_EBX_ShouldMultiplyEAXByEBX & MUL_EBX_ShouldMultiplyUnsigned tests
+    
+	//TODO: IDIV_EBX_ShouldDivideSigned
+	//TODO: MUL_WithOverflow_ShouldSetCarryAndOverflowFlags
+	//TODO: MUL_WithOverflow_ShouldSetCarryFlag
+	//TODO: MUL_EBX_ShouldMultiplyEAXByEBX
+	//TODO: MUL_EBX_ShouldMultiplyUnsigned tests
 
     public void Dispose()
     {

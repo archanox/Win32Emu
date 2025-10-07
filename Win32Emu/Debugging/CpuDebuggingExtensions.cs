@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 
@@ -52,7 +53,7 @@ public static class CpuDebuggingExtensions
     /// <summary>
     /// Log current register state to console
     /// </summary>
-    public static void LogRegisters(this IcedCpu cpu, string prefix = "")
+    public static void LogRegisters(this IcedCpu cpu, ILogger logger, string prefix = "")
     {
         var eip = cpu.GetEip();
         var eax = cpu.GetRegister("EAX");
@@ -64,7 +65,6 @@ public static class CpuDebuggingExtensions
         var ebp = cpu.GetRegister("EBP");
         var esp = cpu.GetRegister("ESP");
         
-        Diagnostics.Diagnostics.LogDebug($"{prefix}EIP=0x{eip:X8} | EAX=0x{eax:X8} EBX=0x{ebx:X8} ECX=0x{ecx:X8} EDX=0x{edx:X8}");
-        Diagnostics.Diagnostics.LogDebug($"{prefix}ESP=0x{esp:X8} EBP=0x{ebp:X8} | ESI=0x{esi:X8} EDI=0x{edi:X8}");
+        logger.LogDebug($"{prefix}EIP=0x{eip:X8} | EAX=0x{eax:X8} EBX=0x{ebx:X8} ECX=0x{ecx:X8} EDX=0x{edx:X8} ESP=0x{esp:X8} EBP=0x{ebp:X8} | ESI=0x{esi:X8} EDI=0x{edi:X8}");
     }
 }

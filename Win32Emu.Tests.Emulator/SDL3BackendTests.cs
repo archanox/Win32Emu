@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Rendering;
 
 namespace Win32Emu.Tests.Emulator;
@@ -8,7 +9,7 @@ public class Sdl3BackendTests
     public void SDL3AudioBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw even if SDL3 is not available
-        using var audioBackend = new Sdl3AudioBackend();
+        using var audioBackend = new Sdl3AudioBackend(NullLogger.Instance);
         
         try
         {
@@ -31,7 +32,7 @@ public class Sdl3BackendTests
     public void SDL3AudioBackend_CreateStream_WhenInitialized_ShouldReturnValidId()
     {
         // Arrange
-        using var audioBackend = new Sdl3AudioBackend();
+        using var audioBackend = new Sdl3AudioBackend(NullLogger.Instance);
         
         try
         {
@@ -58,7 +59,7 @@ public class Sdl3BackendTests
     public void SDL3AudioBackend_WriteAudioData_ShouldNotThrow()
     {
         // Arrange
-        using var audioBackend = new Sdl3AudioBackend();
+        using var audioBackend = new Sdl3AudioBackend(NullLogger.Instance);
         
         try
         {
@@ -87,7 +88,7 @@ public class Sdl3BackendTests
     public void SDL3InputBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw even if SDL3 is not available
-        using var inputBackend = new Sdl3InputBackend();
+        using var inputBackend = new Sdl3InputBackend(NullLogger.Instance);
         
         try
         {
@@ -109,7 +110,7 @@ public class Sdl3BackendTests
     public void SDL3InputBackend_GetDevices_WhenInitialized_ShouldReturnDevices()
     {
         // Arrange
-        using var inputBackend = new Sdl3InputBackend();
+        using var inputBackend = new Sdl3InputBackend(NullLogger.Instance);
         
         try
         {
@@ -139,7 +140,7 @@ public class Sdl3BackendTests
     public void SDL3AudioBackend_Dispose_ShouldNotThrow()
     {
         // Arrange
-        var audioBackend = new Sdl3AudioBackend();
+        var audioBackend = new Sdl3AudioBackend(NullLogger.Instance);
         
         try
         {
@@ -166,7 +167,7 @@ public class Sdl3BackendTests
     public void SDL3InputBackend_Dispose_ShouldNotThrow()
     {
         // Arrange
-        var inputBackend = new Sdl3InputBackend();
+        var inputBackend = new Sdl3InputBackend(NullLogger.Instance);
         
         try
         {

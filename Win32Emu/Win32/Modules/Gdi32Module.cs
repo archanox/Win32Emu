@@ -72,7 +72,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					_logger.LogInformation($"[Gdi32] Unimplemented export: {export}");
+					_logger.LogInformation("[Gdi32] Unimplemented export: {Export}", export);
 					return false;
 			}
 		}
@@ -83,7 +83,7 @@ namespace Win32Emu.Win32.Modules
 			if (stockObjectId < NativeTypes.StockObject.WHITE_BRUSH ||
 			    stockObjectId > NativeTypes.StockObject.DC_PEN)
 			{
-				_logger.LogInformation($"[Gdi32] GetStockObject: Invalid stock object ID {stockObjectId}");
+				_logger.LogInformation("[Gdi32] GetStockObject: Invalid stock object ID {StockObjectId}", stockObjectId);
 				return 0;
 			}
 
@@ -97,13 +97,13 @@ namespace Win32Emu.Win32.Modules
 			handle = _nextStockObjectHandle++;
 			_stockObjects[stockObjectId] = handle;
 
-			_logger.LogInformation($"[Gdi32] GetStockObject({stockObjectId}) -> 0x{handle:X8}");
+			_logger.LogInformation("[Gdi32] GetStockObject({StockObjectId}) -> 0x{Handle:X8}", stockObjectId, handle);
 			return handle;
 		}
 
 		private unsafe uint BeginPaint(uint hwnd, uint lpPaint)
 		{
-			_logger.LogInformation($"[Gdi32] BeginPaint(HWND=0x{hwnd:X8}, lpPaint=0x{lpPaint:X8})");
+			_logger.LogInformation("[Gdi32] BeginPaint(HWND=0x{Hwnd:X8}, lpPaint=0x{LpPaint:X8})", hwnd, lpPaint);
 
 			// Create a device context for this paint session
 			var hdc = _nextDcHandle++;
@@ -140,7 +140,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpPaint != 0)
 			{
 				var hdc = _env.MemRead32(lpPaint);
-				_logger.LogInformation($"[Gdi32] EndPaint(HWND=0x{hwnd:X8}, HDC=0x{hdc:X8})");
+				_logger.LogInformation("[Gdi32] EndPaint(HWND=0x{Hwnd:X8}, HDC=0x{Hdc:X8})", hwnd, hdc);
 
 				// Remove the device context
 				_deviceContexts.Remove(hdc);
@@ -157,7 +157,7 @@ namespace Win32Emu.Win32.Modules
 				var top = _env.MemRead32(lpRect + 4);
 				var right = _env.MemRead32(lpRect + 8);
 				var bottom = _env.MemRead32(lpRect + 12);
-				_logger.LogInformation($"[Gdi32] FillRect(HDC=0x{hdc:X8}, rect=({left},{top},{right},{bottom}), hBrush=0x{hBrush:X8})");
+				_logger.LogInformation("[Gdi32] FillRect(HDC=0x{Hdc:X8}, rect=({Left},{Top},{Right},{Bottom}), hBrush=0x{HBrush:X8})", hdc, left, top, right, bottom, hBrush);
 			}
 
 			return 1; // Non-zero on success
@@ -168,7 +168,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpString != 0 && cbString > 0)
 			{
 				var text = _env.ReadAnsiString(lpString, cbString);
-				_logger.LogInformation($"[Gdi32] TextOutA(HDC=0x{hdc:X8}, x={x}, y={y}, text=\"{text}\")");
+				_logger.LogInformation("[Gdi32] TextOutA(HDC=0x{Hdc:X8}, x={I}, y={I1}, text=\"{Text}\")", hdc, x, y, text);
 			}
 
 			return 1; // TRUE
@@ -176,7 +176,7 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint SetBkMode(uint hdc, int mode)
 		{
-			_logger.LogInformation($"[Gdi32] SetBkMode(HDC=0x{hdc:X8}, mode={mode})");
+			_logger.LogInformation("[Gdi32] SetBkMode(HDC=0x{Hdc:X8}, mode={Mode})", hdc, mode);
 			if (_deviceContexts.TryGetValue(hdc, out var dc))
 			{
 				var previous = dc.BkMode;
@@ -189,13 +189,13 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint SetTextColor(uint hdc, uint color)
 		{
-			_logger.LogInformation($"[Gdi32] SetTextColor(HDC=0x{hdc:X8}, color=0x{color:X8})");
+			_logger.LogInformation("[Gdi32] SetTextColor(HDC=0x{Hdc:X8}, color=0x{Color:X8})", hdc, color);
 			return 0x00000000; // Previous color (black)
 		}
 
 		private unsafe int GetDeviceCaps(uint hdc, int nIndex)
 		{
-			_logger.LogInformation($"[Gdi32] GetDeviceCaps(HDC=0x{hdc:X8}, nIndex={nIndex})");
+			_logger.LogInformation("[Gdi32] GetDeviceCaps(HDC=0x{Hdc:X8}, nIndex={NIndex})", hdc, nIndex);
 
 			// Return common device capabilities
 			return nIndex switch

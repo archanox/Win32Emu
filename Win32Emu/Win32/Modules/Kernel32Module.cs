@@ -160,7 +160,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = ReadFile((void*)a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
 			case "WRITEFILE":
-				returnValue = WriteFile((void*)a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				returnValue = WriteFile(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
 			case "CLOSEHANDLE":
 				returnValue = CloseHandle((void*)a.UInt32(0));
@@ -270,12 +270,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 
 			default:
-				_logger.LogInformation($"[Kernel32] Unimplemented export: {export}");
+				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
 				return false;
 		}
 	}
 
-	[DllModuleExport(23)]
+	[DllModuleExport(489, entryPoint: 0x000233FD, Version = "4.90.0.3000")]
+	[DllModuleExport(478, entryPoint: 0x00011752, Version = "5.1.2600.6532")]
 	private unsafe uint GetVersion()
 	{
 		const ushort build = 950;
@@ -291,8 +292,26 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// This method will never be called; GetProcAddress will resolve to KERNELBASE
 		throw new NotImplementedException("This export is forwarded to KERNELBASE.GetVersionEx");
 	}
+	
+	[DllModuleExport(490, IsStub = true, Version = "4.90.0.3000")]
+	[DllModuleExport(479, entryPoint: 0x00010830, IsStub = true, Version = "5.1.2600.6532")]
+	public uint GetVersionExA()
+	{
+		_logger.LogWarning("[Kernel32] Stub called: GetVersionExA()");
+		// TODO: Implement GetVersionExA
+		return 0; // DWORD default
+	}
 
-	[DllModuleExport(14)]
+	[DllModuleExport(491, IsStub = true, Version = "4.90.0.3000")]
+	[DllModuleExport(480, entryPoint: 0x0000AF05, IsStub = true, Version = "5.1.2600.6532")]
+	public uint GetVersionExW()
+	{
+		_logger.LogWarning("[Kernel32] Stub called: GetVersionExW()");
+		// TODO: Implement GetVersionExW
+		return 0; // DWORD default
+	}
+
+	[DllModuleExport(361, entryPoint: 0x000090DB, Version = "5.1.2600.6532")]
 	private unsafe uint GetLastError() => _lastError;
 
 	[DllModuleExport(41)]
@@ -305,7 +324,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(3)]
 	private unsafe uint ExitProcess(uint code)
 	{
-		_logger.LogInformation($"[Kernel32] ExitProcess({code})");
+		_logger.LogInformation("[Kernel32] ExitProcess({Code})", code);
 		_env.RequestExit();
 		return 0;
 	}
@@ -317,7 +336,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// hProcess: handle to the process (0xFFFFFFFF for current process)
 		// uExitCode: exit code for the process
 
-		_logger.LogInformation($"[Kernel32] TerminateProcess(0x{hProcess:X8}, {uExitCode})");
+		_logger.LogInformation("[Kernel32] TerminateProcess(0x{HProcess:X8}, {UExitCode})", hProcess, uExitCode);
 
 		// In our emulator, we only support terminating the current process
 		if (hProcess is 0xFFFFFFFF or 0)
@@ -327,17 +346,17 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// We don't support terminating other processes
-		_logger.LogInformation($"[Kernel32] TerminateProcess: Cannot terminate external process handle 0x{hProcess:X8}");
+		_logger.LogInformation("[Kernel32] TerminateProcess: Cannot terminate external process handle 0x{HProcess:X8}", hProcess);
 		_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 		return NativeTypes.Win32Bool.FALSE;
 	}
 
-	[DllModuleExport(35)]
+	[DllModuleExport(35, IsStub = true)]
 	private unsafe uint RaiseException(uint dwExceptionCode, uint dwExceptionFlags, uint nNumberOfArguments, uint lpArguments)
 	{
 		// RaiseException raises a software exception
 		// For now, we just log and continue - proper implementation would need exception handling
-		_logger.LogInformation($"[Kernel32] RaiseException(code=0x{dwExceptionCode:X8}, flags=0x{dwExceptionFlags:X}, nArgs={nNumberOfArguments}, args=0x{lpArguments:X8})");
+		_logger.LogInformation("[Kernel32] RaiseException(code=0x{DwExceptionCode:X8}, flags=0x{DwExceptionFlags:X}, nArgs={NNumberOfArguments}, args=0x{LpArguments:X8})", dwExceptionCode, dwExceptionFlags, nNumberOfArguments, lpArguments);
 
 		// In a real implementation, this would:
 		// 1. Create an EXCEPTION_RECORD
@@ -350,10 +369,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
-	[DllModuleExport(10)]
+	[DllModuleExport(10, IsStub = true)]
 	private unsafe uint GetCurrentProcess() => 0xFFFFFFFF; // pseudo-handle
 
-	[DllModuleExport(7)]
+	[DllModuleExport(7, IsStub = true)]
 	private unsafe uint GetAcp() => 1252; // Windows-1252 (Western European)
 
 	[DllModuleExport(9)]
@@ -402,7 +421,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 	}
 
-	[DllModuleExport(17)]
+	[DllModuleExport(17, IsStub = true)]
 	private unsafe uint GetOemcp() => 437; // IBM PC US (OEM code page)
 
 	[DllModuleExport(21)]
@@ -634,11 +653,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// The GetModuleHandle function returns a handle to a mapped module without incrementing its reference count. However, if this handle is passed to the FreeLibrary function, the reference count of the mapped module will be decremented. Therefore, do not pass a handle returned by GetModuleHandle to the FreeLibrary function. Doing so can cause a DLL module to be unmapped prematurely.
 	/// This function must be used carefully in a multithreaded application. There is no guarantee that the module handle remains valid between the time this function returns the handle and the time it is used. For example, suppose that a thread retrieves a module handle, but before it uses the handle, a second thread frees the module. If the system loads another module, it could reuse the module handle that was recently freed. Therefore, the first thread would have a handle to a different module than the one intended.
 	/// </remarks>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, IsStub = true)]
 	private uint GetModuleHandleA(in LpcStr lpModuleName)
 	{
 		var moduleName = lpModuleName.ToString();
-		_logger.LogInformation($"Getting module handle for '{moduleName ?? "NULL (current process)"}'");
+		_logger.LogInformation("Getting module handle for '{NullCurrentProcess}''", moduleName != null ? moduleName : "NULL (current process)");
 		return _imageBase;
 	}
 
@@ -670,7 +689,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		if (isLocalDll)
 		{
 			// DLL is local to executable path - load it using PeImageLoader for proper emulation
-			_logger.LogInformation($"[Kernel32] Loading local DLL for emulation: {libraryName}");
+			_logger.LogInformation("[Kernel32] Loading local DLL for emulation: {LibraryName}", libraryName);
 
 			// Register with dispatcher for function call tracking
 			_dispatcher?.RegisterDynamicallyLoadedDll(libraryName);
@@ -680,14 +699,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return _env.LoadPeImage(localLibraryPath, _peLoader);
 			}
 
-			_logger.LogInformation($"[Kernel32] Warning: PeImageLoader not available, falling back to module tracking for {libraryName}");
+			_logger.LogInformation("[Kernel32] Warning: PeImageLoader not available, falling back to module tracking for {LibraryName}", libraryName);
 			return _env.LoadModule(libraryName);
 		}
 
 		// DLL is not local - thunk to emulator's win32 syscall implementation
 		// For system DLLs like kernel32.dll, user32.dll, etc., we return a fake handle
 		// but the actual implementation will be handled by the dispatcher
-		_logger.LogInformation($"[Kernel32] Loading system DLL via thunking: {libraryName}");
+		_logger.LogInformation("[Kernel32] Loading system DLL via thunking: {LibraryName}", libraryName);
 
 		// Register with dispatcher for function call tracking
 		_dispatcher?.RegisterDynamicallyLoadedDll(libraryName);
@@ -703,7 +722,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// hModule: module handle from LoadLibraryA or GetModuleHandleA
 		// lpProcName: either a string pointer (name) or an ordinal value (LOWORD)
 
-		_logger.LogInformation($"[Kernel32] GetProcAddress(0x{hModule:X8}, 0x{lpProcName:X8})");
+		_logger.LogInformation("[Kernel32] GetProcAddress(0x{HModule:X8}, 0x{LpProcName:X8})", hModule, lpProcName);
 
 		if (hModule == 0)
 		{
@@ -720,13 +739,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		{
 			ordinal = lpProcName & 0xFFFF;
 			byOrdinal = true;
-			_logger.LogInformation($"[Kernel32] GetProcAddress: Looking up by ordinal {ordinal}");
+			_logger.LogInformation("[Kernel32] GetProcAddress: Looking up by ordinal {Ordinal}", ordinal);
 		}
 		else
 		{
 			// It's a string pointer
 			procName = _env.ReadAnsiString(lpProcName);
-			_logger.LogInformation($"[Kernel32] GetProcAddress: Looking up '{procName}'");
+			_logger.LogInformation("[Kernel32] GetProcAddress: Looking up '{ProcName}'", procName);
 		}
 
 		// Try to find the module in loaded PE images first
@@ -740,14 +759,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				if (loadedImage.ExportsByOrdinal.TryGetValue(ordinal, out exportAddress))
 				{
-					_logger.LogInformation($"[Kernel32] GetProcAddress: Found export by ordinal {ordinal} at 0x{exportAddress:X8}");
+					_logger.LogInformation("[Kernel32] GetProcAddress: Found export by ordinal {Ordinal} at 0x{ExportAddress:X8}", ordinal, exportAddress);
 					return exportAddress;
 				}
 				
 				// Check if it's a forwarded export
 				if (loadedImage.ForwardedExportsByOrdinal.TryGetValue(ordinal, out forwarderName))
 				{
-					_logger.LogInformation($"[Kernel32] GetProcAddress: Found forwarded export by ordinal {ordinal} -> {forwarderName}");
+					_logger.LogInformation("[Kernel32] GetProcAddress: Found forwarded export by ordinal {Ordinal} -> {ForwarderName}", ordinal, forwarderName);
 					return ResolveForwardedExport(forwarderName);
 				}
 			}
@@ -755,14 +774,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				if (loadedImage.ExportsByName.TryGetValue(procName, out exportAddress))
 				{
-					_logger.LogInformation($"[Kernel32] GetProcAddress: Found export '{procName}' at 0x{exportAddress:X8}");
+					_logger.LogInformation("[Kernel32] GetProcAddress: Found export '{ProcName}' at 0x{ExportAddress:X8}", procName, exportAddress);
 					return exportAddress;
 				}
 				
 				// Check if it's a forwarded export
 				if (loadedImage.ForwardedExportsByName.TryGetValue(procName, out forwarderName))
 				{
-					_logger.LogInformation($"[Kernel32] GetProcAddress: Found forwarded export '{procName}' -> {forwarderName}");
+					_logger.LogInformation("[Kernel32] GetProcAddress: Found forwarded export '{ProcName}' -> {ForwarderName}", procName, forwarderName);
 					return ResolveForwardedExport(forwarderName);
 				}
 			}
@@ -777,7 +796,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var moduleName = _env.GetModuleFileNameForHandle(hModule);
 		if (moduleName == null)
 		{
-			_logger.LogInformation($"[Kernel32] GetProcAddress: Module handle 0x{hModule:X8} not recognized");
+			_logger.LogInformation("[Kernel32] GetProcAddress: Module handle 0x{HModule:X8} not recognized", hModule);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 			return 0;
 		}
@@ -785,7 +804,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Try to get the emulated module from the dispatcher
 		if (_dispatcher == null || !_dispatcher.TryGetModule(moduleName, out var emulatedModule) || emulatedModule == null)
 		{
-			_logger.LogInformation($"[Kernel32] GetProcAddress: Emulated module '{moduleName}' not found in dispatcher");
+			_logger.LogInformation("[Kernel32] GetProcAddress: Emulated module '{ModuleName}' not found in dispatcher", moduleName);
 			_lastError = NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
 			return 0;
 		}
@@ -816,7 +835,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		if (exportName == null)
 		{
-			_logger.LogInformation($"[Kernel32] GetProcAddress: Export not found in emulated module '{moduleName}'");
+			_logger.LogInformation("[Kernel32] GetProcAddress: Export not found in emulated module '{ModuleName}'", moduleName);
 			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
@@ -825,13 +844,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var forwardedTo = DllModuleExportInfo.GetForwardedExport(moduleName, exportName);
 		if (forwardedTo != null)
 		{
-			_logger.LogInformation($"[Kernel32] GetProcAddress: Found forwarded export '{moduleName}!{exportName}' -> {forwardedTo}");
+			_logger.LogInformation("[Kernel32] GetProcAddress: Found forwarded export '{ModuleName}!{ExportName}' -> {ForwardedTo}", moduleName, exportName, forwardedTo);
 			return ResolveForwardedExport(forwardedTo);
 		}
 
 		// Register and return a synthetic export address
 		var syntheticAddress = _env.RegisterSyntheticExport(moduleName, exportName);
-		_logger.LogInformation($"[Kernel32] GetProcAddress: Registered synthetic export '{moduleName}!{exportName}' at 0x{syntheticAddress:X8}");
+		_logger.LogInformation("[Kernel32] GetProcAddress: Registered synthetic export '{ModuleName}!{ExportName}' at 0x{SyntheticAddress:X8}", moduleName, exportName, syntheticAddress);
 		return syntheticAddress;
 	}
 
@@ -845,7 +864,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var parts = forwarderName.Split('.');
 		if (parts.Length < 2)
 		{
-			_logger.LogInformation($"[Kernel32] ResolveForwardedExport: Invalid forwarder format '{forwarderName}'");
+			_logger.LogInformation("[Kernel32] ResolveForwardedExport: Invalid forwarder format '{ForwarderName}'", forwarderName);
 			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
@@ -876,13 +895,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 		}
 
-		_logger.LogInformation($"[Kernel32] ResolveForwardedExport: Resolving '{forwarderName}' -> {targetDll}!{targetExport}");
+		_logger.LogInformation("[Kernel32] ResolveForwardedExport: Resolving '{ForwarderName}' -> {TargetDll}!{TargetExport}", forwarderName, targetDll, targetExport);
 
 		// Try to get the target module handle
 		var targetModuleHandle = _env.LoadModule(targetDll);
 		if (targetModuleHandle == 0)
 		{
-			_logger.LogInformation($"[Kernel32] ResolveForwardedExport: Failed to load target module '{targetDll}'");
+			_logger.LogInformation("[Kernel32] ResolveForwardedExport: Failed to load target module '{TargetDll}'", targetDll);
 			_lastError = NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
 			return 0;
 		}
@@ -899,7 +918,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(15)]
 	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
 	{
-		Diagnostics.Diagnostics.LogDebug($"GetModuleFileNameA called: h=0x{(uint)(nint)h:X8} lp=0x{(uint)(nint)lp:X8} n={n}");
+		_logger.LogDebug($"[Kernel32] GetModuleFileNameA called: h=0x{(uint)(nint)h:X8} lp=0x{(uint)(nint)lp:X8} n={n}");
 		// Use guest memory helpers instead of dereferencing raw pointers to avoid AccessViolation
 		if (n == 0 || lp == null)
 		{
@@ -946,7 +965,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 
-		Diagnostics.Diagnostics.LogDebug($"GetModuleFileNameA resolved path: {path}");
+		_logger.LogDebug($"[Kernel32] GetModuleFileNameA resolved path: {path}");
 
 		var bytes = Encoding.ASCII.GetBytes(path);
 		var required = (uint)bytes.Length; // number of chars without null
@@ -964,7 +983,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// write null terminator
 			_env.MemWriteBytes(lpAddr + copyLen, [0]);
 			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
-			Diagnostics.Diagnostics.LogDebug($"GetModuleFileNameA truncated; copyLen={copyLen} returned");
+			_logger.LogDebug($"[Kernel32] GetModuleFileNameA truncated; copyLen={copyLen} returned");
 			return copyLen;
 		}
 
@@ -1053,9 +1072,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		return nStdHandle switch
 		{
-			0xFFFFFFF6 => _env.StdInputHandle,
-			0xFFFFFFF5 => _env.StdOutputHandle,
-			0xFFFFFFF4 => _env.StdErrorHandle,
+			0xFFFFFFF6 => _env.StdInputHandle, //STD_INPUT_HANDLE ((DWORD)-10)
+			0xFFFFFFF5 => _env.StdOutputHandle, //STD_OUTPUT_HANDLE ((DWORD)-11)
+			0xFFFFFFF4 => _env.StdErrorHandle, //STD_ERROR_HANDLE ((DWORD)-12)
 			_ => 0
 		};
 	}
@@ -1121,7 +1140,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				// If lpMem is null, HeapReAlloc acts like HeapAlloc
 				var alloc = _env.HeapAlloc((uint)hHeap, dwBytes);
-				_logger.LogInformation($"[Kernel32] HeapReAlloc: lpMem is null, allocated new block at 0x{alloc:X8}, size={dwBytes}");
+				_logger.LogInformation("[Kernel32] HeapReAlloc: lpMem is null, allocated new block at 0x{Alloc:X8}, size={DwBytes}", alloc, dwBytes);
 				return alloc;
 			}
 
@@ -1130,7 +1149,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			if (originalSize == 0)
 			{
 				// If we don't have size info, this might be an invalid pointer
-				_logger.LogWarning($"[Kernel32] HeapReAlloc: Could not determine size of block at 0x{(uint)lpMem:X8}");
+				_logger.LogWarning("[Kernel32] HeapReAlloc: Could not determine size of block at 0x{LpMem:X8}", (uint)lpMem);
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
@@ -1159,12 +1178,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// Free the old block
 			_env.HeapFree((uint)hHeap, (uint)lpMem);
 
-			_logger.LogInformation($"[Kernel32] HeapReAlloc: Reallocated from 0x{(uint)lpMem:X8} (size={originalSize}) to 0x{newMem:X8} (size={dwBytes}), copied {bytesToCopy} bytes");
+			_logger.LogInformation("[Kernel32] HeapReAlloc: Reallocated from 0x{LpMem:X8} (size={OriginalSize}) to 0x{NewMem:X8} (size={DwBytes}), copied {BytesToCopy} bytes", (uint)lpMem, originalSize, newMem, dwBytes, bytesToCopy);
 			return newMem;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError($"[Kernel32] HeapReAlloc failed: {ex.Message}");
+			_logger.LogError("[Kernel32] HeapReAlloc failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -1176,7 +1195,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// HeapDestroy destroys a heap created with HeapCreate
 		// In our simple allocator, we don't actually manage individual heaps
 		// Just return success for API compatibility
-		_logger.LogInformation($"[Kernel32] HeapDestroy(0x{(uint)(nint)hHeap:X8})");
+		_logger.LogInformation("[Kernel32] HeapDestroy(0x{HHeap:X8})", (uint)(nint)hHeap);
 
 		if (hHeap == null)
 		{
@@ -1198,7 +1217,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// dwFreeType: MEM_DECOMMIT (0x4000) or MEM_RELEASE (0x8000)
 		// For simplicity in our emulator, we accept the call but don't actually free memory
 		// The bump allocator doesn't support freeing
-		_logger.LogInformation($"[Kernel32] VirtualFree(0x{lpAddress:X8}, {dwSize}, 0x{dwFreeType:X})");
+		_logger.LogInformation("[Kernel32] VirtualFree(0x{LpAddress:X8}, {DwSize}, 0x{DwFreeType:X})", lpAddress, dwSize, dwFreeType);
 
 		const uint memDecommit = 0x4000;
 		const uint memRelease = 0x8000;
@@ -1264,7 +1283,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] CreateFileA failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] CreateFileA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
@@ -1297,18 +1316,61 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] ReadFile failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] ReadFile failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 			return NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
+	/// <summary>
+	/// Writes data to the specified file or input/output (I/O) device.
+	/// This function is designed for both synchronous and asynchronous operation. For a similar function designed solely for asynchronous operation, see WriteFileEx.
+	/// </summary>
+	/// <param name="handle">
+	/// A handle to the file or I/O device (for example, a file, file stream, physical disk, volume, console buffer, tape drive, socket, communications resource, mailslot, or pipe).
+	/// The hFile parameter must have been created with the write access. For more information, see Generic Access Rights and File Security and Access Rights.
+	/// For asynchronous write operations, hFile can be any handle opened with the CreateFile function using the FILE_FLAG_OVERLAPPED flag or a socket handle returned by the socket or accept function.
+	/// </param>
+	/// <param name="lpBuffer">
+	/// A pointer to the buffer containing the data to be written to the file or device.
+	/// This buffer must remain valid for the duration of the write operation. The caller must not use this buffer until the write operation is completed.
+	/// </param>
+	/// <param name="nNumberOfBytesToWrite">
+	/// The number of bytes to be written to the file or device.
+	/// A value of zero specifies a null write operation. The behavior of a null write operation depends on the underlying file system or communications technology.
+	/// Windows Server 2003 and Windows XP: Pipe write operations across a network are limited in size per write. The amount varies per platform. For x86 platforms it's 63.97 MB. For x64 platforms it's 31.97 MB. For Itanium it's 63.95 MB. For more information regarding pipes, see the Remarks section.
+	/// </param>
+	/// <param name="lpNumberOfBytesWritten">
+	/// A pointer to the variable that receives the number of bytes written when using a synchronous hFile parameter. WriteFile sets this value to zero before doing any work or error checking. Use NULL for this parameter if this is an asynchronous operation to avoid potentially erroneous results.
+	/// This parameter can be NULL only when the lpOverlapped parameter is not NULL.
+	/// Windows 7: This parameter can not be NULL.
+	/// For more information, see the Remarks section.
+	/// </param>
+	/// <param name="lpOverlapped">
+	/// A pointer to an OVERLAPPED structure is required if the hFile parameter was opened with FILE_FLAG_OVERLAPPED, otherwise this parameter can be NULL.
+	/// For an hFile that supports byte offsets, if you use this parameter you must specify a byte offset at which to start writing to the file or device. This offset is specified by setting the Offset and OffsetHigh members of the OVERLAPPED structure. For an hFile that does not support byte offsets, Offset and OffsetHigh are ignored.
+	/// To write to the end of file, specify both the Offset and OffsetHigh members of the OVERLAPPED structure as 0xFFFFFFFF. This is functionally equivalent to previously calling the CreateFile function to open hFile using FILE_APPEND_DATA access.
+	/// For more information about different combinations of lpOverlapped and FILE_FLAG_OVERLAPPED, see the Remarks section and the Synchronization and File Position section.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is nonzero (TRUE).
+	/// If the function fails, or is completing asynchronously, the return value is zero (FALSE). To get extended error information, call the GetLastError function.
+	/// </returns>
+	/// <remarks>
+	/// The WriteFile function returns when one of the following conditions occur:
+	/// <ul>
+	/// <li>The number of bytes requested is written.</li>
+	/// <li>A read operation releases buffer space on the read end of the pipe (if the write was blocked). For more information, see the Pipes section.</li>
+	/// <li>An asynchronous handle is being used and the write is occurring asynchronously.</li>
+	/// <li>An error occurs.</li>
+	/// </ul>
+	/// The WriteFile function may fail with ERROR_INVALID_USER_BUFFER or ERROR_NOT_ENOUGH_MEMORY whenever there are too many outstanding asynchronous I/O requests.
+	/// </remarks>
 	[DllModuleExport(48)]
-	private unsafe uint WriteFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToWrite, uint lpNumberOfBytesWritten,
+	private unsafe uint WriteFile(uint handle, uint lpBuffer, uint nNumberOfBytesToWrite, uint lpNumberOfBytesWritten,
 		uint lpOverlapped)
 	{
-		var handle = (uint)hFile;
-		
+		_logger.LogInformation("[Kernel32] WriteFile(handle=0x{Handle:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToWrite={NNumberOfBytesToWrite}, lpNumberOfBytesWritten=0x{LpNumberOfBytesWritten:X8}, lpOverlapped=0x{LpOverlapped:X8})", handle, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
 		// Handle standard handles specially
 		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle || handle == _env.StdInputHandle)
 		{
@@ -1336,10 +1398,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 			catch (Exception ex)
 			{
-				_logger.LogInformation($"[Kernel32] WriteFile to standard handle failed: {ex.Message}");
+				_logger.LogInformation("[Kernel32] WriteFile to standard handle failed: {ExMessage}", ex.Message);
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return NativeTypes.Win32Bool.FALSE;
 			}
+		}
+		else
+		{
+			_logger.LogWarning("[Kernel32] WriteFile not StdOutput, StdError or StdInput, called on non-standard handle 0x{Handle:X8}", handle);
 		}
 		
 		// Handle regular file handles
@@ -1361,7 +1427,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] WriteFile failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] WriteFile failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -1462,12 +1528,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 
 			File.Delete(path);
-			_logger.LogInformation($"[Kernel32] DeleteFileA: Deleted '{path}'");
+			_logger.LogInformation("[Kernel32] DeleteFileA: Deleted '{Path}'", path);
 			return NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] DeleteFileA failed: {ex.Message}");
+			_logger.LogInformation(ex, "[Kernel32] DeleteFileA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -1487,12 +1553,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 
 			File.Move(existingPath, newPath);
-			_logger.LogInformation($"[Kernel32] MoveFileA: Moved '{existingPath}' to '{newPath}'");
+			_logger.LogInformation("[Kernel32] MoveFileA: Moved '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
 			return NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] MoveFileA failed: {ex.Message}");
+			_logger.LogInformation(ex, "[Kernel32] MoveFileA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -1568,14 +1634,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			var fileName = Path.GetFileName(files[0]);
 			WriteFindData(lpFindFileData, fileName);
 			
-			_logger.LogInformation($"[Kernel32] FindFirstFileA: Found '{fileName}' for pattern '{searchPattern}'");
+			_logger.LogInformation("[Kernel32] FindFirstFileA: Found '{FileName}' for pattern '{SearchPattern}'", fileName, searchPattern);
 			_findFileHandles[handle].CurrentIndex = 1;
 			
 			return handle;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] FindFirstFileA failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] FindFirstFileA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
@@ -1601,14 +1667,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			var fileName = Path.GetFileName(handle.Files[handle.CurrentIndex]);
 			WriteFindData(lpFindFileData, fileName);
 			
-			_logger.LogInformation($"[Kernel32] FindNextFileA: Found '{fileName}'");
+			_logger.LogInformation("[Kernel32] FindNextFileA: Found '{FileName}'", fileName);
 			handle.CurrentIndex++;
 			
 			return NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] FindNextFileA failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] FindNextFileA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -1619,7 +1685,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var handle = (uint)hFindFile;
 		if (_findFileHandles.Remove(handle))
 		{
-			_logger.LogInformation($"[Kernel32] FindClose: Closed handle 0x{handle:X8}");
+			_logger.LogInformation("[Kernel32] FindClose: Closed handle 0x{Handle:X8}", handle);
 			return NativeTypes.Win32Bool.TRUE;
 		}
 
@@ -1654,7 +1720,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] FileTimeToSystemTime failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] FileTimeToSystemTime failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -1680,7 +1746,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] FileTimeToLocalFileTime failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] FileTimeToLocalFileTime failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -1702,14 +1768,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				_env.MemWriteBytes(lpTimeZoneInformation + i, new byte[] { 0 });
 			}
 			
-			_logger.LogInformation($"[Kernel32] GetTimeZoneInformation: Bias={bias} minutes");
+			_logger.LogInformation("[Kernel32] GetTimeZoneInformation: Bias={Bias} minutes", bias);
 			
 			// Return TIME_ZONE_ID_UNKNOWN (0)
 			return 0;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] GetTimeZoneInformation failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] GetTimeZoneInformation failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0xFFFFFFFF; // TIME_ZONE_ID_INVALID
 		}
@@ -1731,20 +1797,20 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			if (lpValue == 0)
 			{
 				Environment.SetEnvironmentVariable(name, null);
-				_logger.LogInformation($"[Kernel32] SetEnvironmentVariableA: Deleted '{name}'");
+				_logger.LogInformation("[Kernel32] SetEnvironmentVariableA: Deleted '{Name}'", name);
 			}
 			else
 			{
 				var value = _env.ReadAnsiString(lpValue);
 				Environment.SetEnvironmentVariable(name, value);
-				_logger.LogInformation($"[Kernel32] SetEnvironmentVariableA: Set '{name}'='{value}'");
+				_logger.LogInformation("[Kernel32] SetEnvironmentVariableA: Set '{Name}'='{Value}'", name, value);
 			}
 
 			return NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] SetEnvironmentVariableA failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] SetEnvironmentVariableA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -1764,7 +1830,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		// UnhandledExceptionFilter processes unhandled exceptions
 		// exceptionInfo is a pointer to an EXCEPTION_POINTERS structure
-		_logger.LogInformation($"[Kernel32] UnhandledExceptionFilter called with exceptionInfo=0x{exceptionInfo:X8}");
+		_logger.LogInformation("[Kernel32] UnhandledExceptionFilter called with exceptionInfo=0x{ExceptionInfo:X8}", exceptionInfo);
 
 		if (exceptionInfo != 0)
 		{
@@ -1779,8 +1845,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				var exceptionRecordPtr = _env.MemRead32(exceptionInfo);
 				var contextRecordPtr = _env.MemRead32(exceptionInfo + 4);
 
-				_logger.LogInformation($"[Kernel32]   ExceptionRecord: 0x{exceptionRecordPtr:X8}");
-				_logger.LogInformation($"[Kernel32]   ContextRecord: 0x{contextRecordPtr:X8}");
+				_logger.LogInformation("[Kernel32]   ExceptionRecord: 0x{ExceptionRecordPtr:X8}", exceptionRecordPtr);
+				_logger.LogInformation("[Kernel32]   ContextRecord: 0x{ContextRecordPtr:X8}", contextRecordPtr);
 
 				// If we have a valid exception record, read some basic info
 				if (exceptionRecordPtr != 0)
@@ -1794,14 +1860,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 					var exceptionFlags = _env.MemRead32(exceptionRecordPtr + 4);
 					var exceptionAddress = _env.MemRead32(exceptionRecordPtr + 12);
 
-					_logger.LogInformation($"[Kernel32]     ExceptionCode: 0x{exceptionCode:X8}");
-					_logger.LogInformation($"[Kernel32]     ExceptionFlags: 0x{exceptionFlags:X8}");
-					_logger.LogInformation($"[Kernel32]     ExceptionAddress: 0x{exceptionAddress:X8}");
+					_logger.LogInformation("[Kernel32]     ExceptionCode: 0x{ExceptionCode:X8}", exceptionCode);
+					_logger.LogInformation("[Kernel32]     ExceptionFlags: 0x{ExceptionFlags:X8}", exceptionFlags);
+					_logger.LogInformation("[Kernel32]     ExceptionAddress: 0x{ExceptionAddress:X8}", exceptionAddress);
 				}
 			}
 			catch (Exception ex)
 			{
-				_logger.LogInformation($"[Kernel32] Error reading exception info: {ex.Message}");
+				_logger.LogInformation("[Kernel32] Error reading exception info: {ExMessage}", ex.Message);
 			}
 		}
 
@@ -1933,7 +1999,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] WideCharToMultiByte failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] WideCharToMultiByte failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -2041,7 +2107,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] MultiByteToWideChar failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] MultiByteToWideChar failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -2114,7 +2180,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] LCMapStringA failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] LCMapStringA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -2209,7 +2275,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] LCMapStringW failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] LCMapStringW failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -2265,7 +2331,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// Perform comparison (ignoring locale and flags for simplicity)
 			var result = string.Compare(str1, str2, StringComparison.Ordinal);
 			
-			_logger.LogInformation($"[Kernel32] CompareStringA: '{str1}' vs '{str2}' = {result}");
+			_logger.LogInformation("[Kernel32] CompareStringA: '{Str1}' vs '{Str2}' = {Result}", str1, str2, result);
 			
 			if (result < 0) return cstrLessThan;
 			if (result > 0) return cstrGreaterThan;
@@ -2273,7 +2339,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] CompareStringA failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] CompareStringA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -2351,7 +2417,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// Perform comparison (ignoring locale and flags for simplicity)
 			var result = string.Compare(str1, str2, StringComparison.Ordinal);
 			
-			_logger.LogInformation($"[Kernel32] CompareStringW: '{str1}' vs '{str2}' = {result}");
+			_logger.LogInformation("[Kernel32] CompareStringW: '{Str1}' vs '{Str2}' = {Result}", str1, str2, result);
 			
 			if (result < 0) return cstrLessThan;
 			if (result > 0) return cstrGreaterThan;
@@ -2359,7 +2425,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation($"[Kernel32] CompareStringW failed: {ex.Message}");
+			_logger.LogInformation("[Kernel32] CompareStringW failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -2412,7 +2478,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// Write the 64-bit frequency to the provided memory location
 			_env.MemWrite64(lpFrequency, (ulong)frequency);
 
-			_logger.LogInformation($"[Kernel32] QueryPerformanceFrequency: {frequency} Hz");
+			_logger.LogInformation("[Kernel32] QueryPerformanceFrequency: {Frequency} Hz", frequency);
 			return NativeTypes.Win32Bool.TRUE;
 		}
 		catch
@@ -2431,7 +2497,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Use Environment.TickCount which is designed for this exact purpose
 		var tickCount = (uint)Environment.TickCount;
 		
-		_logger.LogInformation($"[Kernel32] GetTickCount: {tickCount} ms");
+		_logger.LogInformation("[Kernel32] GetTickCount: {TickCount} ms", tickCount);
 		return tickCount;
 	}
 
@@ -2456,7 +2522,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// Write the 64-bit tick count to the provided memory location
 			_env.MemWrite64(lpTickCount, tickCount64);
 			
-			_logger.LogInformation($"[Kernel32] GetTickCount64: {tickCount64} ms");
+			_logger.LogInformation("[Kernel32] GetTickCount64: {TickCount64} ms", tickCount64);
 			return 1; // Success (non-zero return)
 		}
 		catch
@@ -2490,7 +2556,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		else
 		{
-			_logger.LogInformation($"[Kernel32] Sleep: {dwMilliseconds} ms");
+			_logger.LogInformation("[Kernel32] Sleep: {DwMilliseconds} ms", dwMilliseconds);
 			// For actual sleep durations, we need to decide:
 			// - Sleeping blocks emulation which may not be desired
 			// - Not sleeping means game timing could be wrong
@@ -2539,7 +2605,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return "game.exe";
 	}
 
-	[DllModuleExport(37)]
+	[DllModuleExport(37, IsStub = true)]
 	private unsafe uint RtlUnwind(uint targetFrame, uint targetIp, uint exceptionRecord, uint returnValue)
 	{
 		// RtlUnwind is used for structured exception handling to unwind the stack
@@ -2554,7 +2620,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// - Sets the target IP if provided
 		// - Returns success
 
-		_logger.LogInformation($"[Kernel32] RtlUnwind called: targetFrame=0x{targetFrame:X8}, targetIp=0x{targetIp:X8}, exceptionRecord=0x{exceptionRecord:X8}, returnValue=0x{returnValue:X8}");
+		_logger.LogInformation("[Kernel32] RtlUnwind called: targetFrame=0x{TargetFrame:X8}, targetIp=0x{TargetIp:X8}, exceptionRecord=0x{ExceptionRecord:X8}, returnValue=0x{ReturnValue:X8}", targetFrame, targetIp, exceptionRecord, returnValue);
 
 		// If a target IP is specified and it's not null, we would typically:
 		// - Unwind the stack to the target frame
@@ -2565,7 +2631,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		if (targetIp != 0)
 		{
-			_logger.LogInformation($"[Kernel32] RtlUnwind: Would jump to 0x{targetIp:X8} with return value 0x{returnValue:X8}");
+			_logger.LogInformation("[Kernel32] RtlUnwind: Would jump to 0x{TargetIp:X8} with return value 0x{ReturnValue:X8}", targetIp, returnValue);
 			// In a full implementation, we would modify the CPU state here
 			// For now, we just log the intended operation
 		}
@@ -2596,38 +2662,43 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return threadId;
 	}
 
+	[DllModuleExport(37)]
 	private unsafe uint GetCurrentThreadId()
 	{
 		var threadId = _env.GetCurrentThreadId();
-		_logger.LogInformation($"[Kernel32] GetCurrentThreadId() = {threadId}");
+		_logger.LogInformation("[Kernel32] GetCurrentThreadId() = {ThreadId}", threadId);
 		return threadId;
 	}
 
+	[DllModuleExport(37)]
 	private unsafe uint TlsAlloc()
 	{
 		var index = _env.TlsAlloc();
-		_logger.LogInformation($"[Kernel32] TlsAlloc() = {index}");
+		_logger.LogInformation("[Kernel32] TlsAlloc() = {Index}", index);
 		return index;
 	}
 
+	[DllModuleExport(37)]
 	private unsafe uint TlsGetValue(uint dwTlsIndex)
 	{
 		var value = _env.TlsGetValue(dwTlsIndex);
-		_logger.LogInformation($"[Kernel32] TlsGetValue({dwTlsIndex}) = 0x{value:X8}");
+		_logger.LogInformation("[Kernel32] TlsGetValue({DwTlsIndex}) = 0x{Value:X8}", dwTlsIndex, value);
 		return value;
 	}
 
+	[DllModuleExport(37)]
 	private unsafe uint TlsSetValue(uint dwTlsIndex, uint lpTlsValue)
 	{
 		var success = _env.TlsSetValue(dwTlsIndex, lpTlsValue);
-		_logger.LogInformation($"[Kernel32] TlsSetValue({dwTlsIndex}, 0x{lpTlsValue:X8}) = {success}");
+		_logger.LogInformation("[Kernel32] TlsSetValue({DwTlsIndex}, 0x{LpTlsValue:X8}) = {Success}", dwTlsIndex, lpTlsValue, success);
 		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
 	}
 
+	[DllModuleExport(37)]
 	private unsafe uint TlsFree(uint dwTlsIndex)
 	{
 		var success = _env.TlsFree(dwTlsIndex);
-		_logger.LogInformation($"[Kernel32] TlsFree({dwTlsIndex}) = {success}");
+		_logger.LogInformation("[Kernel32] TlsFree({DwTlsIndex}) = {Success}", dwTlsIndex, success);
 		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
 	}
 

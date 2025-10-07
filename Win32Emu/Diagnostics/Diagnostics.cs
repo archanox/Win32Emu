@@ -6,8 +6,6 @@ namespace Win32Emu.Diagnostics;
 
 public static class Diagnostics
 {
-	public enum Level { Error, Warn, Info, Debug }
-
 	private static readonly object Sync = new();
 	private static CpuContext? _currentContext;
 	private static ILogger _logger = NullLogger.Instance;
@@ -19,28 +17,7 @@ public static class Diagnostics
 	{
 		_logger = logger ?? NullLogger.Instance;
 	}
-
-	public static void Log(Level level, string message)
-	{
-		lock (Sync)
-		{
-			var logLevel = level switch
-			{
-				Level.Error => LogLevel.Error,
-				Level.Warn => LogLevel.Warning,
-				Level.Info => LogLevel.Information,
-				Level.Debug => LogLevel.Debug,
-				_ => LogLevel.Debug
-			};
-			_logger.Log(logLevel, message);
-		}
-	}
-
-	public static void LogDebug(string message) => Log(Level.Debug, message);
-	public static void LogInfo(string message) => Log(Level.Info, message);
-	public static void LogWarn(string message) => Log(Level.Warn, message);
-	public static void LogError(string message) => Log(Level.Error, message);
-
+	
 	public static void SetCpuContext(CpuContext ctx)
 	{
 		_currentContext = ctx;
@@ -58,12 +35,12 @@ public static class Diagnostics
 			var c = ctx.Value;
 			sb.Append($"; EIP=0x{c.Eip:X8} ESP=0x{c.Esp:X8} EBP=0x{c.Ebp:X8} EAX=0x{c.Eax:X8}");
 		}
-		LogError(sb.ToString());
+		_logger.LogError(sb.ToString());
 		if (ctx is { InstructionBytes: not null })
 		{
 			try
 			{
-				LogError($"Instruction bytes at EIP: {BitConverter.ToString(ctx.Value.InstructionBytes).Replace('-', ' ')}");
+				_logger.LogError($"Instruction bytes at EIP: {BitConverter.ToString(ctx.Value.InstructionBytes).Replace('-', ' ')}");
 			}
 			catch { }
 		}
@@ -74,24 +51,24 @@ public static class Diagnostics
 		var sb = new StringBuilder();
 		sb.Append($"Calculated memory address out of range: 0x{addr:X} (EIP=0x{eip:X8}) size=0x{vmSize:X}");
 		sb.Append($"; ESP=0x{esp:X8} EBP=0x{ebp:X8} EAX=0x{eax:X8} ECX=0x{ecx:X8} EDX=0x{edx:X8}");
-		LogError(sb.ToString());
+		_logger.LogError(sb.ToString());
 		if (instrBytes != null)
 		{
-			LogError($"Instruction bytes at EIP: {BitConverter.ToString(instrBytes).Replace('-', ' ')}");
+			_logger.LogError($"Instruction bytes at EIP: {BitConverter.ToString(instrBytes).Replace('-', ' ')}");
 		}
 	}
 
 	public static void LogMemWrite(uint addr, int length, byte[] data)
 	{
-		LogDebug($"MemWrite addr=0x{addr:X8} len={length} data={Preview(data)}");
+		_logger.LogError($"MemWrite addr=0x{addr:X8} len={length} data={Preview(data)}");
 	}
 
 	public static void LogMemRead(uint addr, int length)
 	{
-		LogDebug($"MemRead addr=0x{addr:X8} len={length}");
+		_logger.LogError($"MemRead addr=0x{addr:X8} len={length}");
 	}
 
-	private static string Preview(byte[] data, int max = 16)
+	private static string Preview(byte[] data, int max = 32)
 	{
 		if (data == null || data.Length == 0)
 		{

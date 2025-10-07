@@ -67,7 +67,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					_logger.LogInformation($"[WinMM] Unimplemented export: {export}");
+					_logger.LogInformation("[WinMM] Unimplemented export: {Export}", export);
 					return false;
 			}
 		}
@@ -81,21 +81,21 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint TimeBeginPeriod(uint uPeriod)
 		{
-			_logger.LogInformation($"[WinMM] timeBeginPeriod({uPeriod})");
+			_logger.LogInformation("[WinMM] timeBeginPeriod({UPeriod})", uPeriod);
 			_timerPeriod = uPeriod;
 			return 0; // TIMERR_NOERROR
 		}
 
 		private unsafe uint TimeEndPeriod(uint uPeriod)
 		{
-			_logger.LogInformation($"[WinMM] timeEndPeriod({uPeriod})");
+			_logger.LogInformation("[WinMM] timeEndPeriod({UPeriod})", uPeriod);
 			_timerPeriod = 0;
 			return 0; // TIMERR_NOERROR
 		}
 
 		private unsafe uint TimeKillEvent(uint uTimerId)
 		{
-			_logger.LogInformation($"[WinMM] timeKillEvent({uTimerId})");
+			_logger.LogInformation("[WinMM] timeKillEvent({UTimerId})", uTimerId);
 			return 0; // TIMERR_NOERROR
 		}
 
@@ -103,7 +103,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			// TimeSetEvent sets a timer event
 			// Returns a timer identifier or 0 if it failed
-			_logger.LogInformation($"[WinMM] timeSetEvent(delay={uDelay}, resolution={uResolution}, callback=0x{lpTimeProc:X8})");
+			_logger.LogInformation("[WinMM] timeSetEvent(delay={UDelay}, resolution={UResolution}, callback=0x{LpTimeProc:X8})", uDelay, uResolution, lpTimeProc);
 			
 			// Return a synthetic timer ID
 			return 0x1000 + uDelay; // Simple unique ID based on delay
@@ -112,7 +112,7 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint JoyGetPosEx(uint uJoyID, uint pji)
 		{
 			// JoyGetPosEx queries the position and button status of a joystick
-			_logger.LogInformation($"[WinMM] joyGetPosEx(uJoyID={uJoyID}, pji=0x{pji:X8})");
+			_logger.LogInformation("[WinMM] joyGetPosEx(uJoyID={UJoyId}, pji=0x{Pji:X8})", uJoyID, pji);
 			
 			if (pji == 0)
 			{
@@ -126,7 +126,7 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint JoyGetDevCapsA(uint uJoyID, uint pjc, uint cbjc)
 		{
 			// JoyGetDevCapsA queries the capabilities of a joystick
-			_logger.LogInformation($"[WinMM] joyGetDevCapsA(uJoyID={uJoyID}, pjc=0x{pjc:X8}, cbjc={cbjc})");
+			_logger.LogInformation("[WinMM] joyGetDevCapsA(uJoyID={UJoyId}, pjc=0x{Pjc:X8}, cbjc={Cbjc})", uJoyID, pjc, cbjc);
 			
 			if (pjc == 0)
 			{
@@ -141,7 +141,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			// MciSendStringA sends a command string to an MCI device
 			var command = lpszCommand != 0 ? _env.ReadAnsiString(lpszCommand) : "";
-			_logger.LogInformation($"[WinMM] mciSendStringA: \"{command}\"");
+			_logger.LogInformation("[WinMM] mciSendStringA: \"{Command}\"", command);
 			
 			// For now, just return success
 			return 0; // MMSYSERR_NOERROR

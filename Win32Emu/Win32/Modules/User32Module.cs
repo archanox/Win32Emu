@@ -198,7 +198,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					_logger.LogInformation($"[User32] Unimplemented export: {export}");
+					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
 			}
 		}
@@ -263,11 +263,11 @@ namespace Win32Emu.Win32.Modules
 				// Register the atom-to-classname mapping
 				_env.RegisterAtom(atom, className);
 
-				_logger.LogInformation($"[User32] RegisterClassA: '{className}' -> atom 0x{atom:X4}");
+				_logger.LogInformation("[User32] RegisterClassA: '{ClassName}' -> atom 0x{Atom:X4}", className, atom);
 				return atom;
 			}
 
-			_logger.LogInformation($"[User32] RegisterClassA: Failed to register '{className}'");
+			_logger.LogInformation("[User32] RegisterClassA: Failed to register '{ClassName}'", className);
 			return 0;
 		}
 
@@ -298,7 +298,7 @@ namespace Win32Emu.Win32.Modules
 				var atomClassName = _env.GetClassNameFromAtom(classNamePtr);
 				if (atomClassName == null)
 				{
-					_logger.LogInformation($"[User32] CreateWindowExA: Unknown atom 0x{classNamePtr:X4}");
+					_logger.LogInformation("[User32] CreateWindowExA: Unknown atom 0x{ClassNamePtr:X4}", classNamePtr);
 					return 0;
 				}
 				className = atomClassName;
@@ -319,7 +319,7 @@ namespace Win32Emu.Win32.Modules
 			// Check if window class is registered
 			if (!_env.IsWindowClassRegistered(className))
 			{
-				_logger.LogInformation($"[User32] CreateWindowExA: Window class '{className}' not registered");
+				_logger.LogInformation("[User32] CreateWindowExA: Window class '{ClassName}' not registered", className);
 				return 0;
 			}
 
@@ -352,7 +352,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (hwnd != 0)
 			{
-				_logger.LogInformation($"[User32] CreateWindowExA: Created HWND=0x{hwnd:X8} Class='{className}' Title='{windowName}'");
+				_logger.LogInformation("[User32] CreateWindowExA: Created HWND=0x{Hwnd:X8} Class='{ClassName}' Title='{WindowName}'", hwnd, className, windowName);
 			}
 			else
 			{
@@ -366,7 +366,7 @@ namespace Win32Emu.Win32.Modules
 	private unsafe uint ShowWindow(uint hwnd, int nCmdShow)
 		{
 			// SW_HIDE = 0, SW_NORMAL = 1, SW_SHOWMINIMIZED = 2, SW_SHOWMAXIMIZED = 3, etc.
-			_logger.LogInformation($"[User32] ShowWindow: HWND=0x{hwnd:X8} nCmdShow={nCmdShow}");
+			_logger.LogInformation("[User32] ShowWindow: HWND=0x{Hwnd:X8} nCmdShow={NCmdShow}", hwnd, nCmdShow);
 
 			// For now, just log and return TRUE (non-zero)
 			// In a full implementation, this would interact with the Avalonia window
@@ -394,7 +394,7 @@ namespace Win32Emu.Win32.Modules
 			if (_env.HasQuitMessage())
 			{
 				var exitCode = _env.GetQuitExitCode();
-				_logger.LogInformation($"[User32] GetMessageA: WM_QUIT (exitCode={exitCode})");
+				_logger.LogInformation("[User32] GetMessageA: WM_QUIT (exitCode={ExitCode})", exitCode);
 
 				// Fill MSG structure with WM_QUIT
 				_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
@@ -413,7 +413,7 @@ namespace Win32Emu.Win32.Modules
 			var queuedMsg = _env.GetMessageBlocking(hWnd, wMsgFilterMin, wMsgFilterMax, timeoutMs: 100);
 			if (queuedMsg.HasValue)
 			{
-				_logger.LogInformation($"[User32] GetMessageA: retrieved MSG=0x{queuedMsg.Value.Message:X4} HWND=0x{queuedMsg.Value.Hwnd:X8}");
+				_logger.LogInformation("[User32] GetMessageA: retrieved MSG=0x{ValueMessage:X4} HWND=0x{ValueHwnd:X8}", queuedMsg.Value.Message, queuedMsg.Value.Hwnd);
 
 				// Fill MSG structure
 				_env.MemWrite32(lpMsg + 0, queuedMsg.Value.Hwnd);
@@ -472,19 +472,19 @@ namespace Win32Emu.Win32.Modules
 			var wParam = _env.MemRead32(lpMsg + 8);
 			var lParam = _env.MemRead32(lpMsg + 12);
 
-			_logger.LogInformation($"[User32] DispatchMessageA: HWND=0x{hwnd:X8} MSG=0x{message:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, message, wParam, lParam);
 
 			// Try to get the window procedure for this window
 			var wndProc = _env.GetWindowProc(hwnd);
 			if (wndProc.HasValue && wndProc.Value != 0)
 			{
-				_logger.LogInformation($"[User32] DispatchMessageA: Found WndProc=0x{wndProc.Value:X8} for HWND=0x{hwnd:X8}");
+				_logger.LogInformation("[User32] DispatchMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
 				
 				// If CPU is available, call the window procedure
 				if (cpu != null && memory != null)
 				{
 					var result = CallWindowProcedure(cpu, memory, wndProc.Value, hwnd, message, wParam, lParam);
-					_logger.LogInformation($"[User32] DispatchMessageA: WndProc returned 0x{result:X8}");
+					_logger.LogInformation("[User32] DispatchMessageA: WndProc returned 0x{Result:X8}", result);
 					return result;
 				}
 				else
@@ -494,7 +494,7 @@ namespace Win32Emu.Win32.Modules
 			}
 			else
 			{
-				_logger.LogInformation($"[User32] DispatchMessageA: No WndProc found for HWND=0x{hwnd:X8}");
+				_logger.LogInformation("[User32] DispatchMessageA: No WndProc found for HWND=0x{Hwnd:X8}", hwnd);
 			}
 
 			// For now, just return 0 (message processed)
@@ -503,7 +503,7 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint DefWindowProcA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
-			_logger.LogInformation($"[User32] DefWindowProcA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+			_logger.LogInformation("[User32] DefWindowProcA: HWND=0x{Hwnd:X8} MSG=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, msg, wParam, lParam);
 
 			// DefWindowProc provides default processing for window messages
 			// Implement some common default behaviors
@@ -540,7 +540,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(19)]
 		private unsafe void PostQuitMessage(int nExitCode)
 		{
-			_logger.LogInformation($"[User32] PostQuitMessage: exitCode={nExitCode}");
+			_logger.LogInformation("[User32] PostQuitMessage: exitCode={NExitCode}", nExitCode);
 			_env.PostQuitMessage(nExitCode);
 		}
 
@@ -551,7 +551,7 @@ namespace Win32Emu.Win32.Modules
 		/// </summary>
 		private uint CallWindowProcedure(ICpu cpu, VirtualMemory memory, uint wndProcAddress, uint hwnd, uint message, uint wParam, uint lParam)
 		{
-			_logger.LogInformation($"[User32] CallWindowProcedure: Calling 0x{wndProcAddress:X8} with HWND=0x{hwnd:X8} MSG=0x{message:X4}");
+			_logger.LogInformation("[User32] CallWindowProcedure: Calling 0x{WndProcAddress:X8} with HWND=0x{Hwnd:X8} MSG=0x{Message:X4}", wndProcAddress, hwnd, message);
 
 			// Save current CPU state
 			var savedEip = cpu.GetEip();
@@ -607,12 +607,12 @@ namespace Win32Emu.Win32.Modules
 			}
 			catch (Exception ex)
 			{
-				_logger.LogWarning($"[User32] CallWindowProcedure: Exception during execution: {ex.Message}");
+				_logger.LogWarning("[User32] CallWindowProcedure: Exception during execution: {ExMessage}", ex.Message);
 			}
 			
 			if (steps >= MAX_STEPS)
 			{
-				_logger.LogWarning($"[User32] CallWindowProcedure: Exceeded max steps ({MAX_STEPS}), aborting");
+				_logger.LogWarning("[User32] CallWindowProcedure: Exceeded max steps ({MaxSteps}), aborting", MAX_STEPS);
 			}
 			
 			// Get return value from EAX
@@ -623,7 +623,7 @@ namespace Win32Emu.Win32.Modules
 			cpu.SetRegister("ESP", savedEsp);
 			cpu.SetRegister("EBP", savedEbp);
 			
-			_logger.LogInformation($"[User32] CallWindowProcedure: Completed with return value 0x{returnValue:X8}");
+			_logger.LogInformation("[User32] CallWindowProcedure: Completed with return value 0x{ReturnValue:X8}", returnValue);
 			
 			return returnValue;
 		}
@@ -635,20 +635,20 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint SendMessageAInternal(uint hwnd, uint msg, uint wParam, uint lParam, ICpu? cpu, VirtualMemory? memory)
 		{
-			_logger.LogInformation($"[User32] SendMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+			_logger.LogInformation("[User32] SendMessageA: HWND=0x{Hwnd:X8} MSG=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, msg, wParam, lParam);
 
 			// SendMessage sends a message directly to the window procedure (synchronous)
 			// Try to get the window procedure for this window
 			var wndProc = _env.GetWindowProc(hwnd);
 			if (wndProc.HasValue && wndProc.Value != 0)
 			{
-				_logger.LogInformation($"[User32] SendMessageA: Found WndProc=0x{wndProc.Value:X8} for HWND=0x{hwnd:X8}");
+				_logger.LogInformation("[User32] SendMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
 				
 				// If CPU is available, call the window procedure
 				if (cpu != null && memory != null)
 				{
 					var result = CallWindowProcedure(cpu, memory, wndProc.Value, hwnd, msg, wParam, lParam);
-					_logger.LogInformation($"[User32] SendMessageA: WndProc returned 0x{result:X8}");
+					_logger.LogInformation("[User32] SendMessageA: WndProc returned 0x{Result:X8}", result);
 					return result;
 				}
 				else
@@ -658,7 +658,7 @@ namespace Win32Emu.Win32.Modules
 			}
 			else
 			{
-				_logger.LogInformation($"[User32] SendMessageA: No WndProc found for HWND=0x{hwnd:X8}");
+				_logger.LogInformation("[User32] SendMessageA: No WndProc found for HWND=0x{Hwnd:X8}", hwnd);
 			}
 
 			// For now, return 0 (message processed)
@@ -676,7 +676,7 @@ namespace Win32Emu.Win32.Modules
 			var x = (int)_env.MemRead32(lpPoint);
 			var y = (int)_env.MemRead32(lpPoint + 4);
 
-			_logger.LogInformation($"[User32] ClientToScreen: HWND=0x{hwnd:X8} Point=({x},{y})");
+			_logger.LogInformation("[User32] ClientToScreen: HWND=0x{Hwnd:X8} Point=({I},{I1})", hwnd, x, y);
 
 			// For now, treat client coordinates same as screen coordinates (no offset)
 			// In a real implementation, this would add window position to client coords
@@ -690,7 +690,7 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			_logger.LogInformation($"[User32] SetRect: lpRect=0x{lpRect:X8} ({left},{top},{right},{bottom})");
+			_logger.LogInformation("[User32] SetRect: lpRect=0x{LpRect:X8} ({Left},{Top},{Right},{Bottom})", lpRect, left, top, right, bottom);
 
 			// RECT structure: LONG left, top, right, bottom (16 bytes)
 			_env.MemWrite32(lpRect, (uint)left);
@@ -708,7 +708,7 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			_logger.LogInformation($"[User32] GetClientRect: HWND=0x{hwnd:X8}");
+			_logger.LogInformation("[User32] GetClientRect: HWND=0x{Hwnd:X8}", hwnd);
 
 			// Return a default client rect (0, 0, 640, 480)
 			_env.MemWrite32(lpRect, 0); // left
@@ -726,7 +726,7 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			_logger.LogInformation($"[User32] GetWindowRect: HWND=0x{hwnd:X8}");
+			_logger.LogInformation("[User32] GetWindowRect: HWND=0x{Hwnd:X8}", hwnd);
 
 			// Return a default window rect (100, 100, 740, 580)
 			_env.MemWrite32(lpRect, 100); // left
@@ -749,7 +749,7 @@ namespace Win32Emu.Win32.Modules
 			var right = (int)_env.MemRead32(lpRect + 8);
 			var bottom = (int)_env.MemRead32(lpRect + 12);
 
-			_logger.LogInformation($"[User32] AdjustWindowRectEx: rect=({left},{top},{right},{bottom}) style=0x{dwStyle:X8}");
+			_logger.LogInformation("[User32] AdjustWindowRectEx: rect=({Left},{Top},{Right},{Bottom}) style=0x{DwStyle:X8}", left, top, right, bottom, dwStyle);
 
 			// Add window frame size (typical values)
 			const int frameWidth = 8;
@@ -779,27 +779,27 @@ namespace Win32Emu.Win32.Modules
 		{
 			// Create a device context handle
 			var hdc = _env.RegisterHandle(new object()); // Dummy DC object
-			_logger.LogInformation($"[User32] GetDC: HWND=0x{hwnd:X8} -> HDC=0x{hdc:X8}");
+			_logger.LogInformation("[User32] GetDC: HWND=0x{Hwnd:X8} -> HDC=0x{Hdc:X8}", hwnd, hdc);
 			return hdc;
 		}
 
 		private unsafe uint ReleaseDc(uint hwnd, uint hdc)
 		{
-			_logger.LogInformation($"[User32] ReleaseDC: HWND=0x{hwnd:X8} HDC=0x{hdc:X8}");
+			_logger.LogInformation("[User32] ReleaseDC: HWND=0x{Hwnd:X8} HDC=0x{Hdc:X8}", hwnd, hdc);
 			_env.CloseHandle(hdc);
 			return 1; // Success
 		}
 
 		private unsafe uint UpdateWindow(uint hwnd)
 		{
-			_logger.LogInformation($"[User32] UpdateWindow: HWND=0x{hwnd:X8}");
+			_logger.LogInformation("[User32] UpdateWindow: HWND=0x{Hwnd:X8}", hwnd);
 			// Trigger immediate repaint - for now just log
 			return 1; // TRUE
 		}
 
 		private unsafe uint DestroyWindow(uint hwnd)
 		{
-			_logger.LogInformation($"[User32] DestroyWindow: HWND=0x{hwnd:X8}");
+			_logger.LogInformation("[User32] DestroyWindow: HWND=0x{Hwnd:X8}", hwnd);
 
 			// Remove window from tracking
 			if (_env.DestroyWindow(hwnd))
@@ -812,7 +812,7 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint SetWindowPos(uint hwnd, uint hwndInsertAfter, int x, int y, int cx, int cy, uint flags)
 		{
-			_logger.LogInformation($"[User32] SetWindowPos: HWND=0x{hwnd:X8} pos=({x},{y}) size=({cx},{cy}) flags=0x{flags:X8}");
+			_logger.LogInformation("[User32] SetWindowPos: HWND=0x{Hwnd:X8} pos=({I},{I1}) size=({Cx},{Cy}) flags=0x{Flags:X8}", hwnd, x, y, cx, cy, flags);
 			// For now just log
 			return 1; // TRUE
 		}
@@ -820,7 +820,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(11)]
 		private unsafe int GetSystemMetrics(int nIndex)
 		{
-			_logger.LogInformation($"[User32] GetSystemMetrics: nIndex={nIndex}");
+			_logger.LogInformation("[User32] GetSystemMetrics: nIndex={NIndex}", nIndex);
 
 			// Return common system metrics
 			return nIndex switch
@@ -835,28 +835,28 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint LoadIconA(uint hInstance, uint lpIconName)
 		{
-			_logger.LogInformation($"[User32] LoadIconA: hInstance=0x{hInstance:X8} lpIconName=0x{lpIconName:X8}");
+			_logger.LogInformation("[User32] LoadIconA: hInstance=0x{HInstance:X8} lpIconName=0x{LpIconName:X8}", hInstance, lpIconName);
 			// Return a dummy icon handle
 			return _env.RegisterHandle(new object()); // Dummy icon object
 		}
 
 		private unsafe uint LoadCursorA(uint hInstance, uint lpCursorName)
 		{
-			_logger.LogInformation($"[User32] LoadCursorA: hInstance=0x{hInstance:X8} lpCursorName=0x{lpCursorName:X8}");
+			_logger.LogInformation("[User32] LoadCursorA: hInstance=0x{HInstance:X8} lpCursorName=0x{LpCursorName:X8}", hInstance, lpCursorName);
 			// Return a dummy cursor handle
 			return _env.RegisterHandle(new object()); // Dummy cursor object
 		}
 
 		private unsafe uint SetCursor(uint hCursor)
 		{
-			_logger.LogInformation($"[User32] SetCursor: hCursor=0x{hCursor:X8}");
+			_logger.LogInformation("[User32] SetCursor: hCursor=0x{HCursor:X8}", hCursor);
 			// Return previous cursor handle (dummy)
 			return 0x00000001;
 		}
 
 		private int ShowCursor(int bShow)
 		{
-			_logger.LogInformation($"[User32] ShowCursor: bShow={bShow}");
+			_logger.LogInformation("[User32] ShowCursor: bShow={BShow}", bShow);
 			// ShowCursor increments/decrements an internal display count
 			// Returns the new display count after the operation
 			// For now, return a simple value indicating cursor is visible
@@ -865,28 +865,28 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint SetFocus(uint hwnd)
 		{
-			_logger.LogInformation($"[User32] SetFocus: HWND=0x{hwnd:X8}");
+			_logger.LogInformation("[User32] SetFocus: HWND=0x{Hwnd:X8}", hwnd);
 			// Return previous focus window handle
 			return 0; // NULL means no previous focus
 		}
 
 		private unsafe uint GetMenu(uint hwnd)
 		{
-			_logger.LogInformation($"[User32] GetMenu: HWND=0x{hwnd:X8}");
+			_logger.LogInformation("[User32] GetMenu: HWND=0x{Hwnd:X8}", hwnd);
 			// Return menu handle (NULL if no menu)
 			return 0;
 		}
 
 		private unsafe uint SetWindowLongA(uint hwnd, int nIndex, uint dwNewLong)
 		{
-			_logger.LogInformation($"[User32] SetWindowLongA: HWND=0x{hwnd:X8} nIndex={nIndex} dwNewLong=0x{dwNewLong:X8}");
+			_logger.LogInformation("[User32] SetWindowLongA: HWND=0x{Hwnd:X8} nIndex={NIndex} dwNewLong=0x{DwNewLong:X8}", hwnd, nIndex, dwNewLong);
 			// Return previous value (for now return 0)
 			return 0;
 		}
 
 		private unsafe uint GetWindowLongA(uint hwnd, int nIndex)
 		{
-			_logger.LogInformation($"[User32] GetWindowLongA: HWND=0x{hwnd:X8} nIndex={nIndex}");
+			_logger.LogInformation("[User32] GetWindowLongA: HWND=0x{Hwnd:X8} nIndex={NIndex}", hwnd, nIndex);
 			// Return window data (for now return 0)
 			return 0;
 		}
@@ -895,14 +895,14 @@ namespace Win32Emu.Win32.Modules
 		{
 			var text = lpText != 0 ? _env.ReadAnsiString(lpText) : "";
 			var caption = lpCaption != 0 ? _env.ReadAnsiString(lpCaption) : "";
-			_logger.LogInformation($"[User32] MessageBoxA: \"{caption}\" - \"{text}\" type=0x{uType:X8}");
+			_logger.LogInformation("[User32] MessageBoxA: \"{Caption}\" - \"{Text}\" type=0x{UType:X8}", caption, text, uType);
 			// Return IDOK (1)
 			return 1;
 		}
 
 		private unsafe uint SystemParametersInfoA(uint uiAction, uint uiParam, uint pvParam, uint fWinIni)
 		{
-			_logger.LogInformation($"[User32] SystemParametersInfoA: action=0x{uiAction:X8} param={uiParam}");
+			_logger.LogInformation("[User32] SystemParametersInfoA: action=0x{UiAction:X8} param={UiParam}", uiAction, uiParam);
 			// For now just return success
 			return 1; // TRUE
 		}
@@ -910,7 +910,7 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint PeekMessageA(uint lpMsg, uint hwnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg)
 		{
 			// PeekMessage returns immediately with message availability
-			_logger.LogInformation($"[User32] PeekMessageA: lpMsg=0x{lpMsg:X8} HWND=0x{hwnd:X8}");
+			_logger.LogInformation("[User32] PeekMessageA: lpMsg=0x{LpMsg:X8} HWND=0x{Hwnd:X8}", lpMsg, hwnd);
 			
 			if (lpMsg == 0)
 			{
@@ -932,7 +932,7 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lpMsg + 20, queuedMsg.PtX);
 				_env.MemWrite32(lpMsg + 24, queuedMsg.PtY);
 				
-				_logger.LogInformation($"[User32] PeekMessageA: found MSG=0x{queuedMsg.Message:X4}");
+				_logger.LogInformation("[User32] PeekMessageA: found MSG=0x{QueuedMsgMessage:X4}", queuedMsg.Message);
 				return 1; // Message available
 			}
 
@@ -941,7 +941,7 @@ namespace Win32Emu.Win32.Modules
 
 		private unsafe uint PostMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
-			_logger.LogInformation($"[User32] PostMessageA: HWND=0x{hwnd:X8} MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}");
+			_logger.LogInformation("[User32] PostMessageA: HWND=0x{Hwnd:X8} MSG=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, msg, wParam, lParam);
 			
 			// Post message to the queue
 			var success = _env.PostMessage(hwnd, msg, wParam, lParam);
@@ -992,7 +992,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			// DialogBoxParamA creates a modal dialog box
 			// For now, we'll just log and return a default value
-			_logger.LogInformation($"[User32] DialogBoxParamA: hInstance=0x{hInstance:X8} lpTemplateName=0x{lpTemplateName:X8} lpDialogFunc=0x{lpDialogFunc:X8}");
+			_logger.LogInformation("[User32] DialogBoxParamA: hInstance=0x{HInstance:X8} lpTemplateName=0x{LpTemplateName:X8} lpDialogFunc=0x{LpDialogFunc:X8}", hInstance, lpTemplateName, lpDialogFunc);
 			
 			// Return IDOK (1) to indicate the dialog was closed with OK
 			return 1;
@@ -1001,14 +1001,14 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint EndDialog(uint hDlg, uint nResult)
 		{
 			// EndDialog closes a modal dialog box
-			_logger.LogInformation($"[User32] EndDialog: hDlg=0x{hDlg:X8} nResult={nResult}");
+			_logger.LogInformation("[User32] EndDialog: hDlg=0x{HDlg:X8} nResult={NResult}", hDlg, nResult);
 			return 1; // TRUE
 		}
 
 		private unsafe uint GetDlgItem(uint hDlg, int nIDDlgItem)
 		{
 			// GetDlgItem retrieves a handle to a control in a dialog box
-			_logger.LogInformation($"[User32] GetDlgItem: hDlg=0x{hDlg:X8} nIDDlgItem={nIDDlgItem}");
+			_logger.LogInformation("[User32] GetDlgItem: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem}", hDlg, nIDDlgItem);
 			
 			// Return a synthetic handle (dialog handle + control ID)
 			return hDlg + (uint)nIDDlgItem;
@@ -1017,7 +1017,7 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint GetDlgItemTextA(uint hDlg, int nIDDlgItem, uint lpString, int cchMax)
 		{
 			// GetDlgItemTextA retrieves the text of a control in a dialog box
-			_logger.LogInformation($"[User32] GetDlgItemTextA: hDlg=0x{hDlg:X8} nIDDlgItem={nIDDlgItem} cchMax={cchMax}");
+			_logger.LogInformation("[User32] GetDlgItemTextA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem} cchMax={CchMax}", hDlg, nIDDlgItem, cchMax);
 			
 			if (lpString == 0 || cchMax <= 0)
 			{
@@ -1032,7 +1032,7 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint SendDlgItemMessageA(uint hDlg, int nIDDlgItem, uint msg, uint wParam, uint lParam)
 		{
 			// SendDlgItemMessageA sends a message to a control in a dialog box
-			_logger.LogInformation($"[User32] SendDlgItemMessageA: hDlg=0x{hDlg:X8} nIDDlgItem={nIDDlgItem} msg=0x{msg:X4}");
+			_logger.LogInformation("[User32] SendDlgItemMessageA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem} msg=0x{Msg:X4}", hDlg, nIDDlgItem, msg);
 			
 			// Return 0 (default message handling result)
 			return 0;
@@ -1042,7 +1042,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			// EnableWindow enables or disables mouse and keyboard input to a window
 			// Returns the previous enable state: nonzero if previously disabled, zero if previously enabled
-			_logger.LogInformation($"[User32] EnableWindow: HWND=0x{hwnd:X8} bEnable={bEnable}");
+			_logger.LogInformation("[User32] EnableWindow: HWND=0x{Hwnd:X8} bEnable={BEnable}", hwnd, bEnable);
 			
 			// Get the previous state (default to enabled if not tracked)
 			bool wasEnabled = _windowEnabledState.GetValueOrDefault(hwnd, true);
