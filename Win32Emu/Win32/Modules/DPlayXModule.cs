@@ -37,7 +37,7 @@ namespace Win32Emu.Win32.Modules
 					returnValue = DirectPlayEnumerateA(a.UInt32(0), a.UInt32(1));
 					return true;
 				default:
-					_logger.LogInformation($"[DPlayX] Unimplemented export: {export}");
+					_logger.LogInformation("[DPlayX] Unimplemented export: {Export}", export);
 					return false;
 			}
 		}
@@ -46,7 +46,7 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint DirectPlayEnumerateA(uint pCallback, uint pContext)
 		{
 			// TODO: Implement DirectPlayEnumerateA
-			_logger.LogInformation($"[DPlayX] DirectPlayEnumerateA({nameof(pCallback)}=0x{pCallback:X8}, {nameof(pContext)}=0x{pContext:X8})");
+			_logger.LogInformation("[DPlayX] DirectPlayEnumerateA({PCallbackName}=0x{PCallback:X8}, {PContextName}=0x{PContext:X8})", nameof(pCallback), pCallback, nameof(pContext), pContext);
 			return 0;
 		}
 
@@ -54,7 +54,7 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint DirectPlayCreate(uint lpGUID, uint lplpDP, uint pUnkOuter)
 		{
 			// TODO: Implement DirectPlayCreate
-			_logger.LogInformation($"[DPlayX] DirectPlayCreate({nameof(lpGUID)}=0x{lpGUID:X8}, {nameof(lplpDP)}=0x{lplpDP:X8}, {nameof(pUnkOuter)}=0x{pUnkOuter:X8})");
+			_logger.LogInformation("[DPlayX] DirectPlayCreate({LpGuidName}=0x{LpGuid:X8}, {LplpDpName}=0x{LplpDp:X8}, {PUnkOuterName}=0x{PUnkOuter:X8})", nameof(lpGUID), lpGUID, nameof(lplpDP), lplpDP, nameof(pUnkOuter), pUnkOuter);
 			return 0;
 		}
 

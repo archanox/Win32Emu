@@ -9,13 +9,18 @@ public class StubGeneratorTests
     public void GenerateStubs_ShouldCreateMethodStubs()
     {
         // Arrange
-        var missingApis = new List<string> { "GetVersion", "GetProcAddress", "LoadLibraryA" };
+        var missingApis = new List<ExportedFunction>
+        {
+	        new ExportedFunction("GetVersion", 1, null),
+	        new ExportedFunction("GetProcAddress", 2, null),
+	        new ExportedFunction("LoadLibraryA", 3, null)
+        };
         
         // Act
         var code = StubGenerator.GenerateStubs("KERNEL32.DLL", missingApis);
         
         // Assert
-        Assert.Contains("[DllModuleExport]", code);
+        Assert.Contains("[DllModuleExport", code);
         Assert.Contains("public uint GetVersion()", code);
         Assert.Contains("public uint GetProcAddress()", code);
         Assert.Contains("public uint LoadLibraryA()", code);
@@ -27,7 +32,7 @@ public class StubGeneratorTests
     public void GenerateStubs_WithApiDefinitions_ShouldIncludeParameters()
     {
         // Arrange
-        var missingApis = new List<string> { "CreateFileA" };
+        var missingApis = new List<ExportedFunction> { new ExportedFunction("CreateFileA", 1, null) };
         var definitions = new Dictionary<string, ApiDefinition>
         {
             ["CreateFileA"] = new ApiDefinition(
@@ -55,7 +60,11 @@ public class StubGeneratorTests
     public void GenerateModuleClass_ShouldCreateCompleteClass()
     {
         // Arrange
-        var missingApis = new List<string> { "DirectInput8Create", "DllCanUnloadNow" };
+        var missingApis = new List<ExportedFunction>
+        {
+	        new ExportedFunction("DirectInput8Create", 1, null),
+	        new ExportedFunction("DllCanUnloadNow", 2, null)
+        };
         
         // Act
         var code = StubGenerator.GenerateModuleClass("DInput8Module", "DINPUT8.DLL", missingApis);
@@ -71,10 +80,15 @@ public class StubGeneratorTests
     }
     
     [Fact]
-    public void GenerateStubs_ShouldSortApisByName()
+    public void GenerateStubs_ShouldSortApisByOrdinal()
     {
         // Arrange
-        var missingApis = new List<string> { "ZFunction", "AFunction", "MFunction" };
+        var missingApis = new List<ExportedFunction>
+        {
+	        new ExportedFunction("ZFunction", 1, null),
+	        new ExportedFunction("AFunction", 2, null),
+	        new ExportedFunction("MFunction", 3, null)
+        };
         
         // Act
         var code = StubGenerator.GenerateStubs("TEST.DLL", missingApis);
@@ -84,15 +98,15 @@ public class StubGeneratorTests
         var mIndex = code.IndexOf("public uint MFunction()");
         var zIndex = code.IndexOf("public uint ZFunction()");
         
-        Assert.True(aIndex < mIndex);
-        Assert.True(mIndex < zIndex);
+        Assert.True(zIndex < aIndex, $"ZFunction (ordinal 1) should come before AFunction (ordinal 2). zIndex={zIndex}, aIndex={aIndex}");
+        Assert.True(aIndex < mIndex, $"AFunction (ordinal 2) should come before MFunction (ordinal 3). aIndex={aIndex}, mIndex={mIndex}");
     }
     
     [Fact]
     public void GenerateStubs_EmptyList_ShouldReturnOnlyHeader()
     {
         // Arrange
-        var missingApis = new List<string>();
+        var missingApis = new List<ExportedFunction>();
         
         // Act
         var code = StubGenerator.GenerateStubs("EMPTY.DLL", missingApis);

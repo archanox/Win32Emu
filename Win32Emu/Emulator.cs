@@ -94,7 +94,7 @@ public sealed class Emulator : IDisposable
         _cpu.SetRegister("ESP", 0x00200000);
         _cpu.SetRegister("EBP", 0x00200000); // Initialize frame pointer to match stack pointer
 
-        _dispatcher = new Win32Dispatcher();
+        _dispatcher = new Win32Dispatcher(_logger);
 
         var kernel32Module = new Kernel32Module(_env, _image.BaseAddress, loader, _logger);
         kernel32Module.SetDispatcher(_dispatcher);

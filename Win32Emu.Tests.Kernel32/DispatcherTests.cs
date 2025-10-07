@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Memory;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Win32Emu.Win32;
@@ -15,7 +16,7 @@ public class DispatcherTests
         var env = new ProcessEnvironment(vm);
         var testCpu = new MockCpu();
         
-        var dispatcher = new Win32Dispatcher();
+        var dispatcher = new Win32Dispatcher(NullLogger.Instance);
         var kernel32Module = new Kernel32Module(env, 0x00400000);
         kernel32Module.SetDispatcher(dispatcher);
         dispatcher.RegisterModule(kernel32Module);
@@ -36,7 +37,7 @@ public class DispatcherTests
         var env = new ProcessEnvironment(vm);
         var testCpu = new MockCpu();
         
-        var dispatcher = new Win32Dispatcher();
+        var dispatcher = new Win32Dispatcher(NullLogger.Instance);
         var kernel32Module = new Kernel32Module(env, 0x00400000);
         kernel32Module.SetDispatcher(dispatcher);
         dispatcher.RegisterModule(kernel32Module);
@@ -58,7 +59,7 @@ public class DispatcherTests
         var env = new ProcessEnvironment(vm);
         var testCpu = new MockCpu();
         
-        var dispatcher = new Win32Dispatcher();
+        var dispatcher = new Win32Dispatcher(NullLogger.Instance);
         var kernel32Module = new Kernel32Module(env, 0x00400000);
         kernel32Module.SetDispatcher(dispatcher);
         dispatcher.RegisterModule(kernel32Module);
@@ -80,7 +81,7 @@ public class DispatcherTests
         var env = new ProcessEnvironment(vm);
         var testCpu = new MockCpu();
         
-        var dispatcher = new Win32Dispatcher();
+        var dispatcher = new Win32Dispatcher(NullLogger.Instance);
         var kernel32Module = new Kernel32Module(env, 0x00400000);
         kernel32Module.SetDispatcher(dispatcher);
         dispatcher.RegisterModule(kernel32Module);
@@ -103,7 +104,7 @@ public class DispatcherTests
         var env = new ProcessEnvironment(vm);
         var testCpu = new MockCpu();
         
-        var dispatcher = new Win32Dispatcher();
+        var dispatcher = new Win32Dispatcher(NullLogger.Instance);
         var kernel32Module = new Kernel32Module(env, 0x00400000);
         kernel32Module.SetDispatcher(dispatcher);
         dispatcher.RegisterModule(kernel32Module);

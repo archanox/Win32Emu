@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SDL3;
 
 namespace Win32Emu.Rendering;
@@ -5,7 +6,7 @@ namespace Win32Emu.Rendering;
 /// <summary>
 /// SDL3-based audio backend for DirectSound operations
 /// </summary>
-public sealed class Sdl3AudioBackend : IDisposable
+public sealed class Sdl3AudioBackend(ILogger logger) : IDisposable
 {
     private bool _initialized;
     private readonly Lock _lock = new();
@@ -36,12 +37,12 @@ public sealed class Sdl3AudioBackend : IDisposable
             // Initialize SDL3 audio subsystem
             if (!SDL.Init(SDL.InitFlags.Audio))
             {
-                Console.WriteLine($"[SDL3Audio] Failed to initialize: {SDL.GetError()}");
+	            logger.LogError("[SDL3Audio] Failed to initialize: {GetError}", SDL.GetError());
                 return false;
             }
 
             _initialized = true;
-            Console.WriteLine("[SDL3Audio] Audio subsystem initialized");
+            logger.LogInformation("[SDL3Audio] AudioBackend initialized");
             return true;
         }
     }
@@ -55,7 +56,7 @@ public sealed class Sdl3AudioBackend : IDisposable
         {
             if (!_initialized)
             {
-                Console.WriteLine("[SDL3Audio] Not initialized");
+                logger.LogError("[SDL3Audio] Not initialized");
                 return 0;
             }
 
@@ -72,7 +73,7 @@ public sealed class Sdl3AudioBackend : IDisposable
             };
 
             _audioStreams[streamId] = stream;
-            Console.WriteLine($"[SDL3Audio] Created audio stream {streamId}: {frequency}Hz, {channels}ch, {bufferSize} bytes");
+            logger.LogInformation($"[SDL3Audio] Created audio stream {streamId}: {frequency}Hz, {channels}ch, {bufferSize} bytes");
             return streamId;
         }
     }
@@ -86,13 +87,13 @@ public sealed class Sdl3AudioBackend : IDisposable
         {
             if (!_initialized || !_audioStreams.TryGetValue(streamId, out var stream))
             {
-                Console.WriteLine($"[SDL3Audio] Invalid stream {streamId}");
+                logger.LogError($"[SDL3Audio] Invalid stream {streamId}");
                 return false;
             }
 
             // TODO: Queue audio data to SDL in a full implementation
             // For now, just log that we received the data
-            Console.WriteLine($"[SDL3Audio] Stream {streamId}: Received {length} bytes of audio data");
+            logger.LogInformation($"[SDL3Audio] Stream {streamId}: Received {length} bytes of audio data");
             return true;
         }
     }
@@ -116,7 +117,7 @@ public sealed class Sdl3AudioBackend : IDisposable
             }
 
             _audioStreams.Remove(streamId);
-            Console.WriteLine($"[SDL3Audio] Destroyed audio stream {streamId}");
+            logger.LogInformation($"[SDL3Audio] Destroyed audio stream {streamId}");
             return true;
         }
     }
@@ -133,7 +134,7 @@ public sealed class Sdl3AudioBackend : IDisposable
 	            return false;
             }
 
-            Console.WriteLine($"[SDL3Audio] Stream {streamId}: Set volume to {volume}");
+            logger.LogInformation($"[SDL3Audio] Stream {streamId}: Set volume to {volume}");
             return true;
         }
     }
@@ -150,7 +151,7 @@ public sealed class Sdl3AudioBackend : IDisposable
 	            return false;
             }
 
-            Console.WriteLine($"[SDL3Audio] Stream {streamId}: {(paused ? "Paused" : "Resumed")}");
+            logger.LogInformation($"[SDL3Audio] Stream {streamId}: {(paused ? "Paused" : "Resumed")}");
             return true;
         }
     }
@@ -175,7 +176,7 @@ public sealed class Sdl3AudioBackend : IDisposable
             // Quit SDL audio subsystem
             SDL.QuitSubSystem(SDL.InitFlags.Audio);
             _initialized = false;
-            Console.WriteLine("[SDL3Audio] Audio subsystem disposed");
+            logger.LogInformation("[SDL3Audio] Audio subsystem disposed");
         }
     }
 

@@ -55,30 +55,36 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     {
         if (level >= MinimumDebugLevel)
         {
-            DebugMessages.Add(new DebugMessage
+            Dispatcher.UIThread.Post(() =>
             {
-                Timestamp = DateTime.Now,
-                Level = level,
-                Message = message
-            });
+                DebugMessages.Add(new DebugMessage
+                {
+                    Timestamp = DateTime.Now,
+                    Level = level,
+                    Message = message
+                });
 
-            // Keep only last 1000 messages
-            while (DebugMessages.Count > 1000)
-            {
-                DebugMessages.RemoveAt(0);
-            }
+                // Keep only last 1000 messages
+                while (DebugMessages.Count > 1000)
+                {
+                    DebugMessages.RemoveAt(0);
+                }
+            });
         }
     }
 
     public void OnStdOutput(string output)
     {
-        StdOutput.Add(output);
-
-        // Keep only last 1000 lines
-        while (StdOutput.Count > 1000)
+        Dispatcher.UIThread.Post(() =>
         {
-            StdOutput.RemoveAt(0);
-        }
+            StdOutput.Add(output);
+
+            // Keep only last 1000 lines
+            while (StdOutput.Count > 1000)
+            {
+                StdOutput.RemoveAt(0);
+            }
+        });
     }
 
     public void OnWindowCreate(WindowCreateInfo info)

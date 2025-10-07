@@ -45,7 +45,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				default:
-					_logger.LogInformation($"[DDraw] Unimplemented export: {export}");
+					_logger.LogInformation("[DDraw] Unimplemented export: {Export}", export);
 					return false;
 			}
 		}
@@ -70,7 +70,7 @@ namespace Win32Emu.Win32.Modules
 		///	DDERR_OUTOFMEMORY</returns>
 private unsafe uint DirectDrawCreate(in uint lpGuid, uint lplpDd, in uint pUnkOuter)
 {
-_logger.LogInformation($"[DDraw] DirectDrawCreate(lpGuid=0x{lpGuid:X8}, lplpDD=0x{lplpDd:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+_logger.LogInformation("[DDraw] DirectDrawCreate(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, pUnkOuter);
 
 // Create DirectDraw object with COM vtable
 var ddrawHandle = _nextDDrawHandle++;
@@ -120,14 +120,14 @@ if (lplpDd != 0)
 _env.MemWrite32(lplpDd, comObjectAddr);
 }
 
-_logger.LogInformation($"[DDraw] Created IDirectDraw COM object at 0x{comObjectAddr:X8}");
+_logger.LogInformation("[DDraw] Created IDirectDraw COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
 return 0; // DD_OK
 }
 
 
 		private unsafe uint DirectDrawCreateEx(uint lpGuid, uint lplpDd, uint iid, uint pUnkOuter)
 		{
-			_logger.LogInformation($"[DDraw] DirectDrawCreateEx(lpGuid=0x{lpGuid:X8}, lplpDD=0x{lplpDd:X8}, iid=0x{iid:X8}, pUnkOuter=0x{pUnkOuter:X8})");
+			_logger.LogInformation("[DDraw] DirectDrawCreateEx(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, iid=0x{Iid:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, iid, pUnkOuter);
 
 			// Similar to DirectDrawCreate but with interface ID
 			var ddrawHandle = _nextDDrawHandle++;
@@ -142,7 +142,7 @@ return 0; // DD_OK
 				_env.MemWrite32(lplpDd, ddrawHandle);
 			}
 
-			_logger.LogInformation($"[DDraw] Created DirectDraw object (Ex): 0x{ddrawHandle:X8}");
+			_logger.LogInformation("[DDraw] Created DirectDraw object (Ex): 0x{DdrawHandle:X8}", ddrawHandle);
 			return 0; // DD_OK
 		}
 
@@ -205,7 +205,7 @@ return 0; // DD_OK
 			var riid = args.UInt32(1);
 			var ppvObject = args.UInt32(2);
 			
-			_logger.LogInformation($"[DDraw COM] IUnknown::QueryInterface(this=0x{thisPtr:X8}, riid=0x{riid:X8}, ppvObject=0x{ppvObject:X8})");
+			_logger.LogInformation("[DDraw COM] IUnknown::QueryInterface(this=0x{ThisPtr:X8}, riid=0x{Riid:X8}, ppvObject=0x{PpvObject:X8})", thisPtr, riid, ppvObject);
 			
 			// E_NOINTERFACE = 0x80004002
 			return 0x80004002;
@@ -216,7 +216,7 @@ return 0; // DD_OK
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
 			
-			_logger.LogInformation($"[DDraw COM] IUnknown::AddRef(this=0x{thisPtr:X8})");
+			_logger.LogInformation("[DDraw COM] IUnknown::AddRef(this=0x{ThisPtr:X8})", thisPtr);
 			return 1; // Reference count
 		}
 
@@ -225,7 +225,7 @@ return 0; // DD_OK
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
 			
-			_logger.LogInformation($"[DDraw COM] IUnknown::Release(this=0x{thisPtr:X8})");
+			_logger.LogInformation("[DDraw COM] IUnknown::Release(this=0x{ThisPtr:X8})", thisPtr);
 			return 0; // Reference count after release
 		}
 
@@ -338,7 +338,7 @@ return 0; // DD_OK
 			var hWnd = args.UInt32(1);
 			var dwFlags = args.UInt32(2);
 			
-			_logger.LogInformation($"[DDraw COM] IDirectDraw::SetCooperativeLevel(this=0x{thisPtr:X8}, hWnd=0x{hWnd:X8}, flags=0x{dwFlags:X8})");
+			_logger.LogInformation("[DDraw COM] IDirectDraw::SetCooperativeLevel(this=0x{ThisPtr:X8}, hWnd=0x{HWnd:X8}, flags=0x{DwFlags:X8})", thisPtr, hWnd, dwFlags);
 			
 			// Store cooperation level settings
 			if (_ddrawObjects.TryGetValue(ddrawHandle, out var obj))
@@ -357,7 +357,7 @@ return 0; // DD_OK
 			var dwHeight = args.UInt32(2);
 			var dwBPP = args.UInt32(3);
 			
-			_logger.LogInformation($"[DDraw COM] IDirectDraw::SetDisplayMode(this=0x{thisPtr:X8}, width={dwWidth}, height={dwHeight}, bpp={dwBPP})");
+			_logger.LogInformation("[DDraw COM] IDirectDraw::SetDisplayMode(this=0x{ThisPtr:X8}, width={DwWidth}, height={DwHeight}, bpp={DwBpp})", thisPtr, dwWidth, dwHeight, dwBPP);
 			
 			// Store display mode settings
 			if (_ddrawObjects.TryGetValue(ddrawHandle, out var obj))

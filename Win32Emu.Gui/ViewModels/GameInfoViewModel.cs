@@ -195,7 +195,7 @@ public partial class GameInfoViewModel : ViewModelBase
             var envVars = new Dictionary<string, string>();
             if (!string.IsNullOrWhiteSpace(EnvironmentVariables))
             {
-                var lines = EnvironmentVariables.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                var lines = EnvironmentVariables.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 foreach (var line in lines)
                 {
                     var parts = line.Split('=', 2);

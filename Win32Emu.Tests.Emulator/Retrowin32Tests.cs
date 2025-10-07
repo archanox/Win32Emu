@@ -111,7 +111,7 @@ public class Retrowin32Tests
         RunExecutableTest(exePath, "trace.exe", "Execution tracing");
     }
 
-    [Fact(Skip = "Zig hello world - enable manually if needed")]
+    [Fact]
     public void ZigHelloTest_ShouldLoadAndRun()
     {
         var exePath = FindRetrowin32Executable("zig_hello/hello.exe");

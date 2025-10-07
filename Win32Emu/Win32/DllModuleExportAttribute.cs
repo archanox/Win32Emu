@@ -8,6 +8,11 @@ namespace Win32Emu.Win32;
 public sealed class DllModuleExportAttribute : Attribute
 {
 	/// <summary>
+	/// Used to indicate that this export is a stub implementation.
+	/// </summary>
+	public bool IsStub { get; init; } = false;
+	
+	/// <summary>
 	/// The export ordinal number for this function.
 	/// </summary>
 	public uint Ordinal { get; }
@@ -15,7 +20,7 @@ public sealed class DllModuleExportAttribute : Attribute
 	/// <summary>
 	/// The entry point address for this function (optional).
 	/// </summary>
-	public uint? EntryPoint { get; init; }
+	public uint? EntryPoint { get; }
 
 	/// <summary>
 	/// The DLL version this export applies to (optional).
@@ -35,5 +40,12 @@ public sealed class DllModuleExportAttribute : Attribute
 	public DllModuleExportAttribute(uint ordinal)
 	{
 		Ordinal = ordinal;
+	}
+	
+	public DllModuleExportAttribute(uint ordinal,
+		uint entryPoint)
+	{
+		Ordinal = ordinal;
+		EntryPoint = entryPoint;
 	}
 }

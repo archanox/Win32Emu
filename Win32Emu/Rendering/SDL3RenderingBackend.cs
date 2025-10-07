@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SDL3;
 
 namespace Win32Emu.Rendering;
@@ -5,7 +6,7 @@ namespace Win32Emu.Rendering;
 /// <summary>
 /// SDL3-based rendering backend for DirectDraw and GDI operations
 /// </summary>
-public class Sdl3RenderingBackend : IDisposable
+public class Sdl3RenderingBackend(ILogger logger) : IDisposable
 {
     private IntPtr _window;
     private IntPtr _renderer;
@@ -35,7 +36,7 @@ public class Sdl3RenderingBackend : IDisposable
             // by their respective backends
             if (!SDL.Init(SDL.InitFlags.Video))
             {
-                Console.WriteLine($"[SDL3] Failed to initialize video: {SDL.GetError()}");
+                logger.LogError($"[SDL3] Failed to initialize video: {SDL.GetError()}");
                 return false;
             }
 
@@ -43,7 +44,7 @@ public class Sdl3RenderingBackend : IDisposable
             _window = SDL.CreateWindow(title, width, height, SDL.WindowFlags.Resizable);
             if (_window == IntPtr.Zero)
             {
-                Console.WriteLine($"[SDL3] Failed to create window: {SDL.GetError()}");
+                logger.LogError($"[SDL3] Failed to create window: {SDL.GetError()}");
                 SDL.Quit();
                 return false;
             }
@@ -52,7 +53,7 @@ public class Sdl3RenderingBackend : IDisposable
             _renderer = SDL.CreateRenderer(_window, null);
             if (_renderer == IntPtr.Zero)
             {
-                Console.WriteLine($"[SDL3] Failed to create renderer: {SDL.GetError()}");
+	            logger.LogError($"[SDL3] Failed to create renderer: {SDL.GetError()}");
                 SDL.DestroyWindow(_window);
                 SDL.Quit();
                 return false;
@@ -66,7 +67,7 @@ public class Sdl3RenderingBackend : IDisposable
                 
             if (_texture == IntPtr.Zero)
             {
-                Console.WriteLine($"[SDL3] Failed to create texture: {SDL.GetError()}");
+	            logger.LogError($"[SDL3] Failed to create texture: {SDL.GetError()}");
                 SDL.DestroyRenderer(_renderer);
                 SDL.DestroyWindow(_window);
                 SDL.Quit();
@@ -74,7 +75,7 @@ public class Sdl3RenderingBackend : IDisposable
             }
 
             _initialized = true;
-            Console.WriteLine($"[SDL3] Initialized {width}x{height} display");
+            logger.LogInformation($"[SDL3] Initialized {width}x{height} display");
             return true;
         }
     }
@@ -98,7 +99,7 @@ public class Sdl3RenderingBackend : IDisposable
                 {
                     if (!SDL.UpdateTexture(_texture, IntPtr.Zero, (IntPtr)ptr, pitch))
                     {
-                        Console.WriteLine($"[SDL3] Failed to update texture: {SDL.GetError()}");
+                        logger.LogError($"[SDL3] Failed to update texture: {SDL.GetError()}");
                         return false;
                     }
                 }
