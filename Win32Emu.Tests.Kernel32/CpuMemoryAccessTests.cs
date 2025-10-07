@@ -342,8 +342,7 @@ public class CpuMemoryAccessTests
         
         // Assert - The exception message should mention the specific address and handle name
         Assert.Contains($"0x{pseudoHandleValue:X}", exception.Message);
-        // The handleName parameter is used to make the test data more readable in test output
-        _ = handleName;
+        Assert.Contains(handleName, exception.Message);
     }
     
     [Fact]
