@@ -52,6 +52,12 @@ public partial class GameLibraryViewModel : ViewModelBase
         foreach (var game in savedGames)
         {
             Games.Add(game);
+            
+            // Extract icon if not already present
+            if (string.IsNullOrEmpty(game.ThumbnailPath) || !File.Exists(game.ThumbnailPath))
+            {
+                ExtractGameIcon(game);
+            }
         }
 
         // Load watched folders from configuration
