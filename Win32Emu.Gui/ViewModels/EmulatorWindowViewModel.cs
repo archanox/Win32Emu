@@ -33,6 +33,9 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     // Track created windows - maps Win32 HWND to Avalonia Window
     private readonly Dictionary<uint, Window> _createdWindows = new();
     
+    // Track created controls - maps Win32 HWND to Avalonia Control
+    private readonly Dictionary<uint, Control> _createdControls = new();
+    
     // Reference to the owner window for showing child windows
     private Window? _ownerWindow;
 
@@ -90,55 +93,149 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     public void OnWindowCreate(WindowCreateInfo info)
     {
         // Phase 2: Create actual Avalonia windows for User32/GDI32 operations
-        OnDebugOutput($"Creating Avalonia window for HWND=0x{info.Handle:X8}: {info.Title} ({info.Width}x{info.Height})", DebugLevel.Info);
+        OnDebugOutput($"Creating Avalonia window for HWND=0x{info.Handle:X8}: {info.Title} ({info.Width}x{info.Height}), Class='{info.ClassName}', Parent=0x{info.Parent:X8}", DebugLevel.Info);
         
         // Create the window on the UI thread
         Dispatcher.UIThread.Post(() =>
         {
             try
             {
-                var window = new Window
+                // Check if this is a standard control (child window)
+                if (info.Parent != 0 && Win32ControlFactory.IsStandardControl(info.ClassName))
                 {
-                    Title = string.IsNullOrEmpty(info.Title) ? $"Window 0x{info.Handle:X8}" : info.Title,
-                    Width = info.Width > 0 ? info.Width : 640,
-                    Height = info.Height > 0 ? info.Height : 480,
-                    CanResize = true,
-                    ShowInTaskbar = true
-                };
-
-                // Set position if specified (not CW_USEDEFAULT)
-                if (info.X is >= 0 and < 10000 && info.Y is >= 0 and < 10000)
-                {
-                    window.Position = new PixelPoint(info.X, info.Y);
-                }
-
-                // Store the window mapping
-                _createdWindows[info.Handle] = window;
-
-                // Handle window closing
-                window.Closing += (s, e) =>
-                {
-                    _createdWindows.Remove(info.Handle);
-                    OnDebugOutput($"Avalonia window closed for HWND=0x{info.Handle:X8}", DebugLevel.Info);
-                };
-
-                // Show the window with owner if available
-                if (_ownerWindow != null)
-                {
-                    window.Show(_ownerWindow);
+                    CreateChildControl(info);
                 }
                 else
                 {
-                    window.Show();
+                    CreateTopLevelWindow(info);
                 }
-                
-                OnDebugOutput($"Avalonia window shown for HWND=0x{info.Handle:X8}", DebugLevel.Info);
             }
             catch (Exception ex)
             {
                 OnDebugOutput($"Failed to create Avalonia window: {ex.Message}", DebugLevel.Error);
             }
         });
+    }
+
+    private void CreateTopLevelWindow(WindowCreateInfo info)
+    {
+        var window = new Window
+        {
+            Title = string.IsNullOrEmpty(info.Title) ? $"Window 0x{info.Handle:X8}" : info.Title,
+            Width = info.Width > 0 ? info.Width : 640,
+            Height = info.Height > 0 ? info.Height : 480,
+            CanResize = true,
+            ShowInTaskbar = true
+        };
+
+        // Set position if specified (not CW_USEDEFAULT)
+        if (info.X is >= 0 and < 10000 && info.Y is >= 0 and < 10000)
+        {
+            window.Position = new PixelPoint(info.X, info.Y);
+        }
+
+        // Create a canvas to host child controls
+        var canvas = new Canvas();
+        window.Content = canvas;
+
+        // Store the window mapping
+        _createdWindows[info.Handle] = window;
+
+        // Handle window closing
+        window.Closing += (s, e) =>
+        {
+            _createdWindows.Remove(info.Handle);
+            OnDebugOutput($"Avalonia window closed for HWND=0x{info.Handle:X8}", DebugLevel.Info);
+        };
+
+        // Show the window with owner if available
+        if (_ownerWindow != null)
+        {
+            window.Show(_ownerWindow);
+        }
+        else
+        {
+            window.Show();
+        }
+        
+        OnDebugOutput($"Avalonia window shown for HWND=0x{info.Handle:X8}", DebugLevel.Info);
+    }
+
+    private void CreateChildControl(WindowCreateInfo info)
+    {
+        // Find parent window
+        if (!_createdWindows.TryGetValue(info.Parent, out var parentWindow))
+        {
+            OnDebugOutput($"Parent window 0x{info.Parent:X8} not found for control 0x{info.Handle:X8}", DebugLevel.Warning);
+            return;
+        }
+
+        // Create the appropriate Avalonia control
+        var control = Win32ControlFactory.CreateControl(
+            info.ClassName,
+            info.Title,
+            info.Style,
+            info.Width,
+            info.Height);
+
+        if (control == null)
+        {
+            OnDebugOutput($"Failed to create control for class '{info.ClassName}'", DebugLevel.Warning);
+            return;
+        }
+
+        // Set position on the canvas
+        Canvas.SetLeft(control, info.X);
+        Canvas.SetTop(control, info.Y);
+
+        // Add to parent window's canvas
+        if (parentWindow.Content is Canvas canvas)
+        {
+            canvas.Children.Add(control);
+        }
+        else
+        {
+            OnDebugOutput($"Parent window content is not a Canvas, cannot add control", DebugLevel.Warning);
+            return;
+        }
+
+        // Store the control mapping
+        _createdControls[info.Handle] = control;
+
+        // Set up event handlers for the control
+        SetupControlEventHandlers(info.Handle, control, info.ClassName);
+
+        OnDebugOutput($"Created {info.ClassName} control at ({info.X}, {info.Y})", DebugLevel.Info);
+    }
+
+    private void SetupControlEventHandlers(uint hwnd, Control control, string className)
+    {
+        switch (className.ToUpperInvariant())
+        {
+            case "BUTTON":
+                if (control is Button button)
+                {
+                    button.Click += (s, e) =>
+                    {
+                        OnDebugOutput($"Button 0x{hwnd:X8} clicked", DebugLevel.Debug);
+                        // TODO: Send WM_COMMAND message to parent with BN_CLICKED notification
+                    };
+                }
+                break;
+
+            case "EDIT":
+                if (control is TextBox textBox)
+                {
+                    textBox.TextChanged += (s, e) =>
+                    {
+                        OnDebugOutput($"Edit 0x{hwnd:X8} text changed", DebugLevel.Debug);
+                        // TODO: Send WM_COMMAND message to parent with EN_CHANGE notification
+                    };
+                }
+                break;
+
+            // Add more control types as needed
+        }
     }
 
     public void OnDisplayUpdate(DisplayUpdateInfo info)
