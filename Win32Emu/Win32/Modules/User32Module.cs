@@ -13,6 +13,7 @@ namespace Win32Emu.Win32.Modules
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
 		private readonly Dictionary<uint, bool> _windowEnabledState = new();
+		private readonly StandardControlHandler _standardControlHandler;
 
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -20,6 +21,7 @@ namespace Win32Emu.Win32.Modules
 			_imageBase = imageBase;
 			_peLoader = peLoader;
 			_logger = logger ?? NullLogger.Instance;
+			_standardControlHandler = new StandardControlHandler(env, null, _logger);
 		}
 
 		public string Name => "USER32.DLL";
@@ -474,6 +476,14 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, message, wParam, lParam);
 
+			// Check if this is a standard control first
+			var windowInfo = _env.GetWindow(hwnd);
+			if (windowInfo.HasValue && StandardControlHandler.IsStandardControl(windowInfo.Value.ClassName))
+			{
+				_logger.LogInformation("[User32] DispatchMessageA: Routing to standard control handler for class '{ClassName}'", windowInfo.Value.ClassName);
+				return _standardControlHandler.HandleMessage(hwnd, message, wParam, lParam, windowInfo.Value.ClassName);
+			}
+
 			// Try to get the window procedure for this window
 			var wndProc = _env.GetWindowProc(hwnd);
 			if (wndProc.HasValue && wndProc.Value != 0)
@@ -637,6 +647,14 @@ namespace Win32Emu.Win32.Modules
 		private unsafe uint SendMessageAInternal(uint hwnd, uint msg, uint wParam, uint lParam, ICpu? cpu, VirtualMemory? memory)
 		{
 			_logger.LogInformation("[User32] SendMessageA: HWND=0x{Hwnd:X8} MSG=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, msg, wParam, lParam);
+
+			// Check if this is a standard control first
+			var windowInfo = _env.GetWindow(hwnd);
+			if (windowInfo.HasValue && StandardControlHandler.IsStandardControl(windowInfo.Value.ClassName))
+			{
+				_logger.LogInformation("[User32] SendMessageA: Routing to standard control handler for class '{ClassName}'", windowInfo.Value.ClassName);
+				return _standardControlHandler.HandleMessage(hwnd, msg, wParam, lParam, windowInfo.Value.ClassName);
+			}
 
 			// SendMessage sends a message directly to the window procedure (synchronous)
 			// Try to get the window procedure for this window
