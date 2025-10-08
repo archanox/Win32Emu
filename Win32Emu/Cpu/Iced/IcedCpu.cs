@@ -272,6 +272,17 @@ public class IcedCpu : ICpu
 					_eflags = Read32(_esp);
 					_esp += 4;
 					break;
+				case Mnemonic.Iret:
+				case Mnemonic.Iretd:
+					// IRET/IRETD - Interrupt Return
+					// Pops EIP, CS (ignored in flat memory model), and EFLAGS from stack
+					_eip = Read32(_esp);
+					_esp += 4;
+					// Skip CS (we don't use segmentation)
+					_esp += 4;
+					_eflags = Read32(_esp);
+					_esp += 4;
+					break;
 				case Mnemonic.Lahf:
 				{
 					byte ah = 0;
@@ -731,12 +742,125 @@ public class IcedCpu : ICpu
 
 	private void ExecLogic(Instruction insn, LogicOp op)
 	{
-		uint a = ReadOp(insn, 0), b = ReadOp(insn, 1), r = op == LogicOp.And ? a & b : a | b;
-		WriteOp(insn, 0, r);
-		ClearFlag(Cf);
-		ClearFlag(Of);
-		ClearFlag(Af);
-		UpdateLogicResultFlags(r);
+		// Determine the operand size
+		var opSize = GetOpSizeBits(insn, 0);
+
+		switch (opSize)
+		{
+			case 8:
+			{
+				// 8-bit logic operation
+				byte a, b;
+				
+				// Read first operand
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg8(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read8(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (byte)ReadOp(insn, 0);
+				}
+				
+				// Read second operand
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg8(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read8(CalcMemAddress(insn));
+				}
+				else
+				{
+					b = (byte)ReadOp(insn, 1);
+				}
+				
+				byte r = op == LogicOp.And ? (byte)(a & b) : (byte)(a | b);
+
+				// Write the 8-bit result
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					SetReg8(insn.GetOpRegister(0), r);
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					_mem.Write8(CalcMemAddress(insn), r);
+				}
+
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				UpdateLogicResultFlags(r);
+				break;
+			}
+			case 16:
+			{
+				// 16-bit logic operation
+				ushort a, b;
+				
+				// Read first operand
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg16(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (ushort)ReadOp(insn, 0);
+				}
+				
+				// Read second operand
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg16(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					b = (ushort)ReadOp(insn, 1);
+				}
+				
+				ushort r = op == LogicOp.And ? (ushort)(a & b) : (ushort)(a | b);
+
+				// Write the 16-bit result
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					SetReg16(insn.GetOpRegister(0), r);
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					_mem.Write16(CalcMemAddress(insn), r);
+				}
+
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				UpdateLogicResultFlags(r);
+				break;
+			}
+			default:
+			{
+				// 32-bit logic operation (default)
+				uint a = ReadOp(insn, 0), b = ReadOp(insn, 1), r = op == LogicOp.And ? a & b : a | b;
+				WriteOp(insn, 0, r);
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				UpdateLogicResultFlags(r);
+				break;
+			}
+		}
 	}
 
 	private void ExecTest(Instruction insn)

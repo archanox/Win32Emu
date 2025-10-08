@@ -607,4 +607,62 @@ public class CpuMemoryAccessTests
         var eax = cpu.GetRegister("EAX");
         Assert.Equal(0x35u, eax);
     }
+    
+    [Fact]
+    public void Or_8BitImmediate_ShouldProduceCorrectResult()
+    {
+        // This test reproduces the exact scenario from metrics.exe dec() function
+        // The code does: OR AL, 0x30 to convert digit to ASCII
+        
+        // Arrange
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        cpu.SetRegister("EAX", 0); // AL = 0 (digit value 0)
+        cpu.SetEip(0x00401000);
+        
+        // OR AL, 0x30  ; AL = 0 | 0x30 = 0x30 ('0')
+        var testCode = new byte[]
+        {
+            0x0C, 0x30  // OR AL, 0x30
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - AL should be 0x30 ('0')
+        var al = cpu.GetRegister("EAX") & 0xFF;
+        Assert.Equal(0x30u, al);
+    }
+    
+    [Fact]
+    public void Or_8BitImmediate_WithNonZeroValue_ShouldWork()
+    {
+        // Test OR AL, 0x30 with AL=5 (digit value 5)
+        // Result should be 0x35 ('5')
+        
+        // Arrange
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        cpu.SetRegister("EAX", 5); // AL = 5
+        cpu.SetEip(0x00401000);
+        
+        // OR AL, 0x30
+        var testCode = new byte[]
+        {
+            0x0C, 0x30  // OR AL, 0x30
+        };
+        
+        memory.WriteBytes(0x00401000, testCode);
+        
+        // Act
+        cpu.SingleStep(memory);
+        
+        // Assert - AL should be 0x35 ('5')
+        var al = cpu.GetRegister("EAX") & 0xFF;
+        Assert.Equal(0x35u, al);
+    }
 }
