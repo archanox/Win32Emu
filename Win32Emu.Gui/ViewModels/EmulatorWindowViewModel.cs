@@ -16,7 +16,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     private ObservableCollection<DebugMessage> _debugMessages = [];
 
     [ObservableProperty]
-    private ObservableCollection<string> _stdOutput = [];
+    private string _stdOutput = "";
 
     [ObservableProperty]
     private EmulatorState _currentState = EmulatorState.Stopped;
@@ -86,13 +86,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     {
         Dispatcher.UIThread.Post(() =>
         {
-            StdOutput.Add(output);
-
-            // Keep only last 1000 lines
-            while (StdOutput.Count > 1000)
-            {
-                StdOutput.RemoveAt(0);
-            }
+            StdOutput += output;
         });
     }
 

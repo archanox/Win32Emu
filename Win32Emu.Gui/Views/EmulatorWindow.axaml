@@ -103,18 +103,14 @@
                     <!-- Stdout Console -->
                     <Border Grid.Row="3"
                             Background="Black"
+                            IsHitTestVisible="True"
                             IsVisible="{Binding ShowStdOutputPanel}">
-                        <ScrollViewer Padding="5">
-                            <ItemsControl ItemsSource="{Binding StdOutput}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}"
+                        <ScrollViewer Padding="5" >
+                                        <TextBlock Text="{Binding StdOutput}"
                                                  FontFamily="Monospace"
                                                  FontSize="12"
-                                                 Foreground="LightGray"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                                 Foreground="LightGray"
+                                                 />
                         </ScrollViewer>
                     </Border>
 

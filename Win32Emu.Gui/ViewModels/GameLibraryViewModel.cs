@@ -341,7 +341,7 @@ public partial class GameLibraryViewModel : ViewModelBase
 
         try
         {
-            // Update play count and last played time before launching
+	        // Update play count and last played time before launching
             game.TimesPlayed++;
             game.LastPlayed = DateTime.UtcNow;
             
@@ -369,6 +369,7 @@ public partial class GameLibraryViewModel : ViewModelBase
             });
             
             var logger = loggerFactory.CreateLogger<Emulator>();
+            logger.LogInformation("Launching game: {GameTitle} {Path}", game.Title, game.ExecutablePath);
             
             // Launch the game with the view model as the host
             var service = new EmulatorService(_configuration, viewModel, logger);
