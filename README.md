@@ -16,8 +16,26 @@ Command-line emulator that loads and executes Windows PE executables.
 
 **Usage:**
 ```bash
-Win32Emu <path-to-pe> [--debug]
+Win32Emu <path-to-pe> [options]
 ```
+
+**Options:**
+- `--debug`: Enable enhanced debugging mode with automatic error detection
+- `--interactive-debug`: Enable interactive step-through debugger (GDB-like)
+
+**Examples:**
+```bash
+# Run normally
+Win32Emu game.exe
+
+# Run with enhanced debugging
+Win32Emu game.exe --debug
+
+# Run with interactive debugger for step-through debugging
+Win32Emu game.exe --interactive-debug
+```
+
+See [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) and [INTERACTIVE_DEBUGGER_GUIDE.md](INTERACTIVE_DEBUGGER_GUIDE.md) for more details.
 
 ### Win32Emu.Gui
 Cross-platform desktop GUI for managing your game library and emulator settings. Built with Avalonia UI.

@@ -45,6 +45,7 @@ public class Win32Dispatcher(ILogger logger)
                 try
                 {
                     stdcallArgBytes = StdCallMeta.GetArgBytes(dll, export);
+                    logger.LogInformation($"[Dispatcher] {dll}!{export} returned 0x{returnValue:X8}, argBytes={stdcallArgBytes}");
                 }
                 catch (InvalidOperationException)
                 {
@@ -55,6 +56,7 @@ public class Win32Dispatcher(ILogger logger)
                     {
                         ("KERNEL32.DLL", "GETACP") => 0,        // UINT GetACP(void)
                         ("KERNEL32.DLL", "GETCPINFO") => 8,     // BOOL GetCPInfo(UINT, LPCPINFO)
+                        ("KERNEL32.DLL", "GETMODULEFILENAMEA") => 12,  // DWORD GetModuleFileNameA(HMODULE, LPSTR, DWORD)
                         _ => 0
                     };
                     
@@ -66,6 +68,8 @@ public class Win32Dispatcher(ILogger logger)
                     {
 	                    logger.LogWarning($"No arg bytes metadata for {dll}!{export}, using 0");
                     }
+                    
+                    logger.LogInformation($"[Dispatcher] {dll}!{export} returned 0x{returnValue:X8}, argBytes={stdcallArgBytes} (hardcoded)");
                 }
                 
                 return true;

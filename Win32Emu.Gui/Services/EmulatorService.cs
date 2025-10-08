@@ -56,6 +56,7 @@ public class EmulatorService
                 _currentEmulator.LoadExecutable(
                     game.ExecutablePath, 
                     _configuration.EnableDebugMode,
+                    false, // Interactive debug mode not supported in GUI
                     _configuration.ReservedMemoryMb);
                 
                 // Run the emulator

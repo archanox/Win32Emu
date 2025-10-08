@@ -21,6 +21,7 @@ public sealed class Emulator : IDisposable
     private Win32Dispatcher? _dispatcher;
     private LoadedImage? _image;
     private bool _debugMode;
+    private bool _interactiveDebugMode;
     private volatile bool _stopRequested;
     private readonly ManualResetEvent _pauseEvent;
 
@@ -82,9 +83,10 @@ public sealed class Emulator : IDisposable
         return _env.PostMessage(hwnd, message, wParam, lParam);
     }
 
-    public void LoadExecutable(string path, bool debugMode = false, int reservedMemoryMb = 256)
+    public void LoadExecutable(string path, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256)
     {
         _debugMode = debugMode;
+        _interactiveDebugMode = interactiveDebugMode;
 
         if (!File.Exists(path))
         {
@@ -136,7 +138,11 @@ public sealed class Emulator : IDisposable
         _stopRequested = false;
         _pauseEvent.Set(); // Ensure we start in running state
 
-        if (_debugMode)
+        if (_interactiveDebugMode)
+        {
+            RunWithInteractiveDebugger();
+        }
+        else if (_debugMode)
         {
             RunWithEnhancedDebugging();
         }
@@ -210,10 +216,25 @@ public sealed class Emulator : IDisposable
                 {
                     LogDebug($"[Import] Returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
+                    var ebp = _cpu.GetRegister("EBP");
                     var retEip = _vm.Read32(esp);
+                    
+                    // Log stack state BEFORE adjustment
+                    if (name.ToUpperInvariant() == "GETMODULEFILENAMEA")
+                    {
+                        _logger.LogInformation($"[Emulator] Before stack adjustment: ESP=0x{esp:X8} EBP=0x{ebp:X8} RetAddr=0x{retEip:X8} ArgBytes={argBytes}");
+                    }
+                    
                     esp += 4 + (uint)argBytes;
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
+                    
+                    // Log stack state AFTER adjustment
+                    if (name.ToUpperInvariant() == "GETMODULEFILENAMEA")
+                    {
+                        _logger.LogInformation($"[Emulator] After stack adjustment: ESP=0x{esp:X8} EBP=0x{ebp:X8} NewEIP=0x{retEip:X8}");
+                        _logger.LogInformation($"[Emulator] GetModuleFileNameA complete - execution continuing at 0x{retEip:X8}");
+                    }
                 }
             }
         }
@@ -273,6 +294,15 @@ public sealed class Emulator : IDisposable
             if (_cpu.HasSuspiciousRegisters() && i > 100)
             {
                 LogDebug($"[Debug] [Instruction {i}] Suspicious registers detected");
+            }
+
+            // Add detailed logging for the problematic address range
+            if (currentEip >= 0x004123B8 && currentEip <= 0x00412500 && i < 1000)
+            {
+                var esp = _cpu.GetRegister("ESP");
+                var ebp = _cpu.GetRegister("EBP");
+                var eax = _cpu.GetRegister("EAX");
+                LogDebug($"[CRT] Instruction {i} at EIP=0x{currentEip:X8} ESP=0x{esp:X8} EBP=0x{ebp:X8} EAX=0x{eax:X8}");
             }
 
             try
@@ -359,6 +389,73 @@ public sealed class Emulator : IDisposable
         LogDebug("[Debug] Final execution summary:");
         LogDebug($"[Debug]   Total traced instructions: {finalTrace.Count}");
         LogDebug($"[Debug]   Suspicious register states: {finalSuspicious.Count}");
+    }
+
+    private void RunWithInteractiveDebugger()
+    {
+        var debugger = new InteractiveDebugger(_cpu!, _vm!);
+        
+        Console.WriteLine("=== Interactive Debugger Mode ===");
+        Console.WriteLine("Type 'help' for available commands");
+        Console.WriteLine("The debugger will break at the entry point");
+        Console.WriteLine();
+
+        // Break at entry point
+        var currentEip = _cpu!.GetEip();
+        if (!debugger.HandleBreak(currentEip, "Stopped at entry point"))
+        {
+            return; // User quit
+        }
+
+        // Run indefinitely until stop/exit requested
+        while (!_stopRequested && !_env!.ExitRequested && !debugger.ShouldStop)
+        {
+            // Check if debugger wants to break
+            currentEip = _cpu.GetEip();
+            if (debugger.ShouldBreak(currentEip))
+            {
+                if (!debugger.HandleBreak(currentEip))
+                {
+                    break; // User quit
+                }
+            }
+
+            // Execute one instruction
+            var step = _cpu.SingleStep(_vm!);
+            
+            // Check for COM vtable method calls
+            if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
+            {
+                LogDebug($"[COM] Vtable method call at 0x{step.CallTarget:X8}");
+                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
+                {
+                    LogDebug($"[COM] Method returned 0x{ret:X8}");
+                    var esp = _cpu.GetRegister("ESP");
+                    var retEip = _vm.Read32(esp);
+                    esp += 4; // Pop return address
+                    _cpu.SetRegister("ESP", esp);
+                    _cpu.SetRegister("EAX", ret); // Return value in EAX
+                    _cpu.SetEip(retEip);
+                }
+            }
+            else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+            {
+                var dll = imp.dll.ToUpperInvariant();
+                var name = imp.name;
+                LogDebug($"[Import] {dll}!{name}");
+                if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
+                {
+                    LogDebug($"[Import] Returned 0x{ret:X8}");
+                    var esp = _cpu.GetRegister("ESP");
+                    var retEip = _vm.Read32(esp);
+                    esp += 4 + (uint)argBytes;
+                    _cpu.SetRegister("ESP", esp);
+                    _cpu.SetEip(retEip);
+                }
+            }
+        }
+
+        Console.WriteLine("\nInteractive debugger session ended");
     }
 
     private static bool WillBeCall(IcedCpu cpu, VirtualMemory vm)
