@@ -325,6 +325,14 @@ public class IcedCpu : ICpu
 					SetFlagVal(Cf, (sahf & 0x01) != 0);
 					break;
 				}
+				// Legacy BCD (Binary Coded Decimal) instructions
+				case Mnemonic.Aad: ExecAad(insn); break;
+				case Mnemonic.Aam: ExecAam(insn); break;
+				case Mnemonic.Das: ExecDas(); break;
+				case Mnemonic.Daa: ExecDaa(); break;
+				// Protected mode / privileged instructions - no-op in flat memory model
+				case Mnemonic.Sldt: ExecSldt(insn); break;
+				case Mnemonic.Arpl: ExecArpl(insn); break;
 				case Mnemonic.Int:
 					// Handle INT instruction with immediate
 					if (insn.Immediate8 == 3)
@@ -2121,6 +2129,164 @@ public class IcedCpu : ICpu
 		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
+	}
+
+	private void ExecAad(Instruction insn)
+	{
+		// AAD - ASCII Adjust AX Before Division
+		// Converts unpacked BCD in AX to binary
+		// Formula: AL = AH * base + AL, AH = 0
+		// The base is typically 10 (0x0A) but can be specified in the instruction
+		byte base_;
+		// If the instruction has no immediate operand, use default base 10.
+		// If immediate is present (even if 0), use it as the base.
+		if (insn.OpCount == 0)
+		{
+			base_ = 10;
+		}
+		else
+		{
+			base_ = insn.Immediate8;
+		}
+
+		var al = (byte)(_eax & 0xFF);
+		var ah = (byte)((_eax >> 8) & 0xFF);
+		
+		al = (byte)(ah * base_ + al);
+		ah = 0;
+		
+		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+		
+		// Update flags: SF, ZF, PF (OF, AF, CF are undefined)
+		UpdateLogicResultFlags(al);
+	}
+
+	private void ExecAam(Instruction insn)
+	{
+		// AAM - ASCII Adjust AX After Multiply
+		// Converts binary in AL to unpacked BCD in AX
+		// Formula: AH = AL / base, AL = AL % base
+		// The base is typically 10 (0x0A) but can be specified in the instruction
+		var base_ = insn.Immediate8;
+		if (base_ == 0)
+		{
+			base_ = 10; // Default base is 10
+		}
+
+		var al = (byte)(_eax & 0xFF);
+		
+		var ah = (byte)(al / base_);
+		al = (byte)(al % base_);
+		
+		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+		
+		// Update flags: SF, ZF, PF (OF, AF, CF are undefined)
+		UpdateLogicResultFlags(al);
+	}
+
+	private void ExecDas()
+	{
+		// DAS - Decimal Adjust AL After Subtraction
+		// Adjusts AL after packed BCD subtraction
+		var al = (byte)(_eax & 0xFF);
+		var oldAl = al;
+		var oldCf = GetFlag(Cf);
+		
+		ClearFlag(Cf);
+		
+		// Step 1: Check low nibble
+		if (((al & 0x0F) > 9) || GetFlag(Af))
+		{
+			al -= 6;
+			SetFlagVal(Cf, oldCf || (al < oldAl)); // Set CF if borrow occurred
+			SetFlag(Af);
+		}
+		else
+		{
+			ClearFlag(Af);
+		}
+		
+		// Step 2: Check high nibble
+		if ((oldAl > 0x99) || oldCf)
+		{
+			al -= 0x60;
+			SetFlag(Cf);
+		}
+		
+		_eax = (_eax & 0xFFFFFF00) | al;
+		
+		// Update flags: SF, ZF, PF
+		UpdateLogicResultFlags(al);
+	}
+
+	private void ExecDaa()
+	{
+		// DAA - Decimal Adjust AL After Addition
+		// Adjusts AL after packed BCD addition
+		var al = (byte)(_eax & 0xFF);
+		var oldAl = al;
+		var oldCf = GetFlag(Cf);
+		
+		ClearFlag(Cf);
+		
+		// Step 1: Check low nibble
+		if (((al & 0x0F) > 9) || GetFlag(Af))
+		{
+			al += 6;
+			SetFlagVal(Cf, oldCf || (al < oldAl)); // Set CF if carry occurred
+			SetFlag(Af);
+		}
+		else
+		{
+			ClearFlag(Af);
+		}
+		
+		// Step 2: Check high nibble
+		if ((oldAl > 0x99) || oldCf)
+		{
+			al += 0x60;
+			SetFlag(Cf);
+		}
+		
+		_eax = (_eax & 0xFFFFFF00) | al;
+		
+		// Update flags: SF, ZF, PF
+		UpdateLogicResultFlags(al);
+	}
+
+	private void ExecSldt(Instruction insn)
+	{
+		// SLDT - Store Local Descriptor Table Register
+		// This is a privileged instruction for protected mode
+		// In a flat memory model emulation, we don't use segmentation
+		// Store a dummy value of 0 to indicate no LDT
+		if (insn.GetOpKind(0) == OpKind.Memory)
+		{
+			var addr = CalcMemAddress(insn);
+			_mem.Write16(addr, 0);
+		}
+		else if (insn.GetOpKind(0) == OpKind.Register)
+		{
+			var reg = insn.GetOpRegister(0);
+			if (reg >= Register.EAX && reg <= Register.EDI)
+			{
+				SetReg32(reg, 0);
+			}
+			else if (reg >= Register.AX && reg <= Register.DI)
+			{
+				SetReg16(reg, 0);
+			}
+		}
+	}
+
+	private void ExecArpl(Instruction insn)
+	{
+		// ARPL - Adjust RPL Field of Segment Selector
+		// This is a protected mode instruction for adjusting privilege levels
+		// In a flat memory model emulation, we don't use segmentation or privilege levels
+		// The instruction should just set ZF based on whether an adjustment was made
+		// Since we don't track segment selectors, we always report no adjustment (ZF=0)
+		ClearFlag(Zf);
 	}
 
 	#endregion
