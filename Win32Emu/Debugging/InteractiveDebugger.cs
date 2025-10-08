@@ -22,8 +22,11 @@ public class InteractiveDebugger
     private bool _stepMode = false;
     private bool _shouldStop = false;
     private uint _lastStoppedEip = 0;
+    
+    private Queue<string>? _scriptCommands = null;
+    private bool _scriptMode = false;
 
-    public InteractiveDebugger(IcedCpu cpu, VirtualMemory memory)
+    public InteractiveDebugger(IcedCpu cpu, VirtualMemory memory, IEnumerable<string>? scriptCommands = null)
     {
         _cpu = cpu;
         _memory = memory;
@@ -34,6 +37,12 @@ public class InteractiveDebugger
             LogToConsole = false,
             LogAllInstructions = false
         };
+        
+        if (scriptCommands != null)
+        {
+            _scriptCommands = new Queue<string>(scriptCommands);
+            _scriptMode = true;
+        }
     }
 
     /// <summary>
@@ -86,8 +95,26 @@ public class InteractiveDebugger
 
         while (_isPaused)
         {
-            Console.Write("(dbg) ");
-            var input = Console.ReadLine()?.Trim();
+            string? input;
+            
+            if (_scriptMode && _scriptCommands != null && _scriptCommands.Count > 0)
+            {
+                // Script mode: get next command from queue
+                input = _scriptCommands.Dequeue();
+                Console.WriteLine($"(dbg) {input}");
+            }
+            else if (_scriptMode)
+            {
+                // Script exhausted, quit
+                input = "quit";
+                Console.WriteLine($"(dbg) {input}");
+            }
+            else
+            {
+                // Interactive mode: read from user
+                Console.Write("(dbg) ");
+                input = Console.ReadLine()?.Trim();
+            }
             
             if (string.IsNullOrEmpty(input))
             {
