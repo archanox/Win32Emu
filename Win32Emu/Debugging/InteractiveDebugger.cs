@@ -435,7 +435,7 @@ public class InteractiveDebugger
                 var bytes = _memory.GetSpan(address, 15);
                 var hexStr = Convert.ToHexString(bytes);
                 var displayLen = Math.Min(24, hexStr.Length);
-                Console.WriteLine($"0x{address:X8}: {hexStr.Substring(0, displayLen)}");
+                Console.WriteLine($"0x{address:X8}: {hexStr.AsSpan(0, displayLen)}");
                 
                 // Simple heuristic: most instructions are 1-7 bytes
                 // For better disassembly, we'd need to properly decode
