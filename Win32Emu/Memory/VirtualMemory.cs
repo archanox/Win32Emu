@@ -22,7 +22,7 @@ public class VirtualMemory(ulong size = VirtualMemory.DefaultSize)
         if (addr > ulong.MaxValue - length + 1)
         {
             Diagnostics.Diagnostics.LogMemoryEnsureFailure(addr, length, Size);
-            throw new IndexOutOfRangeException($"Memory access causes address overflow: addr=0x{addr:X}, len={length}");
+            throw new IndexOutOfRangeException($"Memory access causes address overflow: addr=0x{addr:X}, len={length}, size=0x{(ulong)_mem.LongLength:X}");
         }
             
         // Check if the entire range is within bounds

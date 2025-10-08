@@ -68,65 +68,65 @@ namespace Win32Emu.Win32.Modules
 		///	DDERR_INVALIDPARAMS
 		/// DDERR_NODIRECTDRAWHW
 		///	DDERR_OUTOFMEMORY</returns>
-[DllModuleExport(9)]
-private unsafe uint DirectDrawCreate(in uint lpGuid, uint lplpDd, in uint pUnkOuter)
-{
-_logger.LogInformation("[DDraw] DirectDrawCreate(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, pUnkOuter);
+		[DllModuleExport(9)]
+		private unsafe uint DirectDrawCreate(in uint lpGuid, uint lplpDd, in uint pUnkOuter)
+		{
+			_logger.LogInformation("[DDraw] DirectDrawCreate(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, pUnkOuter);
 
 // Create DirectDraw object with COM vtable
-var ddrawHandle = _nextDDrawHandle++;
-var ddrawObj = new DirectDrawObject
-{
-Handle = ddrawHandle,
-Width = 640,
-Height = 480,
-BitsPerPixel = 16
-};
-_ddrawObjects[ddrawHandle] = ddrawObj;
+			var ddrawHandle = _nextDDrawHandle++;
+			var ddrawObj = new DirectDrawObject
+			{
+				Handle = ddrawHandle,
+				Width = 640,
+				Height = 480,
+				BitsPerPixel = 16
+			};
+			_ddrawObjects[ddrawHandle] = ddrawObj;
 
 // Create COM vtable for IDirectDraw interface
-var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
-{
-{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
-{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
-{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
-{ "Compact", (cpu, mem) => DDraw_Compact(cpu, mem) },
-{ "CreateClipper", (cpu, mem) => DDraw_CreateClipper(cpu, mem) },
-{ "CreatePalette", (cpu, mem) => DDraw_CreatePalette(cpu, mem) },
-{ "CreateSurface", (cpu, mem) => DDraw_CreateSurface(cpu, mem) },
-{ "DuplicateSurface", (cpu, mem) => DDraw_DuplicateSurface(cpu, mem) },
-{ "EnumDisplayModes", (cpu, mem) => DDraw_EnumDisplayModes(cpu, mem) },
-{ "EnumSurfaces", (cpu, mem) => DDraw_EnumSurfaces(cpu, mem) },
-{ "FlipToGDISurface", (cpu, mem) => DDraw_FlipToGDISurface(cpu, mem) },
-{ "GetCaps", (cpu, mem) => DDraw_GetCaps(cpu, mem) },
-{ "GetDisplayMode", (cpu, mem) => DDraw_GetDisplayMode(cpu, mem) },
-{ "GetFourCCCodes", (cpu, mem) => DDraw_GetFourCCCodes(cpu, mem) },
-{ "GetGDISurface", (cpu, mem) => DDraw_GetGDISurface(cpu, mem) },
-{ "GetMonitorFrequency", (cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem) },
-{ "GetScanLine", (cpu, mem) => DDraw_GetScanLine(cpu, mem) },
-{ "GetVerticalBlankStatus", (cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem) },
-{ "Initialize", (cpu, mem) => DDraw_Initialize(cpu, mem) },
-{ "RestoreDisplayMode", (cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem) },
-{ "SetCooperativeLevel", (cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle) },
-{ "SetDisplayMode", (cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle) },
-{ "WaitForVerticalBlank", (cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem) }
-};
+			var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			{
+				{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
+				{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
+				{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
+				{ "Compact", (cpu, mem) => DDraw_Compact(cpu, mem) },
+				{ "CreateClipper", (cpu, mem) => DDraw_CreateClipper(cpu, mem) },
+				{ "CreatePalette", (cpu, mem) => DDraw_CreatePalette(cpu, mem) },
+				{ "CreateSurface", (cpu, mem) => DDraw_CreateSurface(cpu, mem) },
+				{ "DuplicateSurface", (cpu, mem) => DDraw_DuplicateSurface(cpu, mem) },
+				{ "EnumDisplayModes", (cpu, mem) => DDraw_EnumDisplayModes(cpu, mem) },
+				{ "EnumSurfaces", (cpu, mem) => DDraw_EnumSurfaces(cpu, mem) },
+				{ "FlipToGDISurface", (cpu, mem) => DDraw_FlipToGDISurface(cpu, mem) },
+				{ "GetCaps", (cpu, mem) => DDraw_GetCaps(cpu, mem) },
+				{ "GetDisplayMode", (cpu, mem) => DDraw_GetDisplayMode(cpu, mem) },
+				{ "GetFourCCCodes", (cpu, mem) => DDraw_GetFourCCCodes(cpu, mem) },
+				{ "GetGDISurface", (cpu, mem) => DDraw_GetGDISurface(cpu, mem) },
+				{ "GetMonitorFrequency", (cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem) },
+				{ "GetScanLine", (cpu, mem) => DDraw_GetScanLine(cpu, mem) },
+				{ "GetVerticalBlankStatus", (cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem) },
+				{ "Initialize", (cpu, mem) => DDraw_Initialize(cpu, mem) },
+				{ "RestoreDisplayMode", (cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem) },
+				{ "SetCooperativeLevel", (cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle) },
+				{ "SetDisplayMode", (cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle) },
+				{ "WaitForVerticalBlank", (cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem) }
+			};
 
 // Create the COM object with vtable
-var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDraw", vtableMethods);
+			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDraw", vtableMethods);
 
 // Write COM object pointer to output parameter
-if (lplpDd != 0)
-{
-_env.MemWrite32(lplpDd, comObjectAddr);
-}
+			if (lplpDd != 0)
+			{
+				_env.MemWrite32(lplpDd, comObjectAddr);
+			}
 
-_logger.LogInformation("[DDraw] Created IDirectDraw COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
-return 0; // DD_OK
-}
+			_logger.LogInformation("[DDraw] Created IDirectDraw COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
+			return 0; // DD_OK
+		}
 
 
-[DllModuleExport(11)]
+		[DllModuleExport(11)]
 		private unsafe uint DirectDrawCreateEx(uint lpGuid, uint lplpDd, uint iid, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DDraw] DirectDrawCreateEx(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, iid=0x{Iid:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, iid, pUnkOuter);
@@ -166,39 +166,6 @@ return 0; // DD_OK
 			public bool IsPrimary { get; set; }
 		}
 
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Export ordinals for DDraw
-			// version 5.3.2600.5512 (XP)
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "ACQUIREDDTHREADLOCK", 1 },
-				{ "CHECKFULLSCREEN", 2 },
-				{ "COMPLETECREATESYSMEMSURFACE", 3 },
-				{ "D3DPARSEUNKNOWNCOMMAND", 4 },
-				{ "DDGETATTACHEDSURFACELCL", 5 },
-				{ "DDINTERNALLOCK", 6 },
-				{ "DDINTERNALINTERNALUNLOCK", 7 },
-				{ "DSOUNDHELP", 8 },
-				{ "DIRECTDRAWCREATE", 9 },
-				{ "DIRECTDRAWCREATECLIPPER", 10 },
-				{ "DIRECTDRAWCREATEEX", 11 },
-				{ "DIRECTDRAWENUMERATEA", 12 },
-				{ "DIRECTDRAWENUMERATEEXA", 13 },
-				{ "DIRECTDRAWENUMERATEEXW", 14 },
-				{ "DIRECTDRAWENUMERATEW", 15 },
-				{ "DLLCANUNLOADNOW", 16 },
-				{ "DLLGETCLASSOBJECT", 17 },
-				{ "GETDDSURFACELOCAL", 18 },
-				{ "GETOLETHUNKDATA", 19 },
-				{ "GETSURFACEFROMDC", 20 },
-				{ "REGISTERSPECIALCASE", 21 },
-				{ "RELEASEDDTHREADLOCK", 22 },
-			};
-			
-			return exports;
-		}
-
 		// COM interface methods (stubs for IDirectDraw)
 		private uint ComQueryInterface(ICpu cpu, VirtualMemory memory)
 		{
@@ -206,9 +173,9 @@ return 0; // DD_OK
 			var thisPtr = args.UInt32(0);
 			var riid = args.UInt32(1);
 			var ppvObject = args.UInt32(2);
-			
+
 			_logger.LogInformation("[DDraw COM] IUnknown::QueryInterface(this=0x{ThisPtr:X8}, riid=0x{Riid:X8}, ppvObject=0x{PpvObject:X8})", thisPtr, riid, ppvObject);
-			
+
 			// E_NOINTERFACE = 0x80004002
 			return 0x80004002;
 		}
@@ -217,7 +184,7 @@ return 0; // DD_OK
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
-			
+
 			_logger.LogInformation("[DDraw COM] IUnknown::AddRef(this=0x{ThisPtr:X8})", thisPtr);
 			return 1; // Reference count
 		}
@@ -226,7 +193,7 @@ return 0; // DD_OK
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
-			
+
 			_logger.LogInformation("[DDraw COM] IUnknown::Release(this=0x{ThisPtr:X8})", thisPtr);
 			return 0; // Reference count after release
 		}
@@ -339,15 +306,15 @@ return 0; // DD_OK
 			var thisPtr = args.UInt32(0);
 			var hWnd = args.UInt32(1);
 			var dwFlags = args.UInt32(2);
-			
+
 			_logger.LogInformation("[DDraw COM] IDirectDraw::SetCooperativeLevel(this=0x{ThisPtr:X8}, hWnd=0x{HWnd:X8}, flags=0x{DwFlags:X8})", thisPtr, hWnd, dwFlags);
-			
+
 			// Store cooperation level settings
 			if (_ddrawObjects.TryGetValue(ddrawHandle, out var obj))
 			{
 				// Store flags for future reference
 			}
-			
+
 			return 0; // DD_OK
 		}
 
@@ -358,9 +325,9 @@ return 0; // DD_OK
 			var dwWidth = args.UInt32(1);
 			var dwHeight = args.UInt32(2);
 			var dwBPP = args.UInt32(3);
-			
+
 			_logger.LogInformation("[DDraw COM] IDirectDraw::SetDisplayMode(this=0x{ThisPtr:X8}, width={DwWidth}, height={DwHeight}, bpp={DwBpp})", thisPtr, dwWidth, dwHeight, dwBPP);
-			
+
 			// Store display mode settings
 			if (_ddrawObjects.TryGetValue(ddrawHandle, out var obj))
 			{
@@ -368,7 +335,7 @@ return 0; // DD_OK
 				obj.Height = (int)dwHeight;
 				obj.BitsPerPixel = (int)dwBPP;
 			}
-			
+
 			return 0; // DD_OK
 		}
 

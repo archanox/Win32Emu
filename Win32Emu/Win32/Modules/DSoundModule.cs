@@ -48,7 +48,8 @@ namespace Win32Emu.Win32.Modules
 					return false;
 			}
 		}
-
+		
+		[DllModuleExport(1)]
 		private unsafe uint DirectSoundCreate(uint lpGuid, uint lplpDs, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DSound] DirectSoundCreate(lpGuid=0x{LpGuid:X8}, lplpDS=0x{LplpDs:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDs, pUnkOuter);
@@ -99,8 +100,8 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DSound] Created IDirectSound COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
 			return 0; // DS_OK
 		}
-
-
+		
+		[DllModuleExport(1)]
 		private unsafe uint DirectSoundEnumerateA(uint lpDsEnumCallback, uint lpContext)
 		{
 			_logger.LogInformation("[DSound] DirectSoundEnumerateA(lpDSEnumCallback=0x{LpDsEnumCallback:X8}, lpContext=0x{LpContext:X8})", lpDsEnumCallback, lpContext);
@@ -125,17 +126,6 @@ namespace Win32Emu.Win32.Modules
 			public int Size { get; set; }
 			public byte[]? Data { get; set; }
 			public bool IsPrimary { get; set; }
-		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Export ordinals for DSound - alphabetically ordered
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "DIRECTSOUNDCREATE", 1 },
-				{ "DIRECTSOUNDENUMERATEA", 2 }
-			};
-			return exports;
 		}
 
 		// COM interface methods for IDirectSound

@@ -102,6 +102,7 @@ namespace Win32Emu.Win32.Modules
 			return handle;
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint BeginPaint(uint hwnd, uint lpPaint)
 		{
 			_logger.LogInformation("[Gdi32] BeginPaint(HWND=0x{Hwnd:X8}, lpPaint=0x{LpPaint:X8})", hwnd, lpPaint);
@@ -136,6 +137,7 @@ namespace Win32Emu.Win32.Modules
 			return hdc;
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint EndPaint(uint hwnd, uint lpPaint)
 		{
 			if (lpPaint != 0)
@@ -150,6 +152,7 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint FillRect(uint hdc, uint lpRect, uint hBrush)
 		{
 			if (lpRect != 0)
@@ -164,6 +167,7 @@ namespace Win32Emu.Win32.Modules
 			return 1; // Non-zero on success
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint TextOutA(uint hdc, int x, int y, uint lpString, int cbString)
 		{
 			if (lpString != 0 && cbString > 0)
@@ -175,6 +179,7 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint SetBkMode(uint hdc, int mode)
 		{
 			_logger.LogInformation("[Gdi32] SetBkMode(HDC=0x{Hdc:X8}, mode={Mode})", hdc, mode);
@@ -188,12 +193,14 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Default: TRANSPARENT
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint SetTextColor(uint hdc, uint color)
 		{
 			_logger.LogInformation("[Gdi32] SetTextColor(HDC=0x{Hdc:X8}, color=0x{Color:X8})", hdc, color);
 			return 0x00000000; // Previous color (black)
 		}
 
+		[DllModuleExport(1)]
 		private unsafe int GetDeviceCaps(uint hdc, int nIndex)
 		{
 			_logger.LogInformation("[Gdi32] GetDeviceCaps(HDC=0x{Hdc:X8}, nIndex={NIndex})", hdc, nIndex);
@@ -217,24 +224,6 @@ namespace Win32Emu.Win32.Modules
 			public uint WindowHandle { get; set; }
 			public int BkMode { get; set; } = 2; // OPAQUE
 			public uint TextColor { get; set; } = 0x00000000; // Black
-		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Export ordinals for Gdi32 - alphabetically ordered
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "BEGINPAINT", 1 },
-				{ "ENDPAINT", 2 },
-				{ "FILLRECT", 3 },
-				{ "GETDEVICECAPS", 4 },
-				{ "GETSTOCKOBJECT", 5 },
-				{ "SETBKMODE", 6 },
-				{ "SETTEXTCOLOR", 7 },
-				{ "TEXTOUT", 8 },
-				{ "TEXTOUTA", 9 }
-			};
-			return exports;
 		}
 	}
 }
