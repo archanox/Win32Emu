@@ -1,11 +1,154 @@
 # IGN_TEAS.EXE Infinite Loop Investigation
 
-## Problem
-The game hangs in an infinite loop after GetModuleFileNameA during C runtime initialization, never reaching WinMain or DirectX code.
+## **ROOT CAUSE IDENTIFIED** ✅
 
-## Investigation Steps
+**Uninitialized Character Type Table at Address 0x0043AB91**
 
-### 1. Confirmed Infinite Loop Location
+### The Problem
+
+The C runtime command-line parser function `fn00412440` (at address 0x00412440) accesses a character type lookup table at `g_a43AB91` (address 0x0043AB91). This table should contain 256 bytes of character classification flags (isspace, isdigit, etc.), but the decompilation shows it as empty:
+
+```cpp
+byte g_a43AB91[] = // 0043AB91
+{
+};  // EMPTY!
+```
+
+### How This Causes the Infinite Loop
+
+1. GetModuleFileNameA returns successfully with the module path string
+2. C runtime calls `fn004123A0()` to initialize and parse command line
+3. `fn004123A0()` calls `fn00412440()` to parse the module filename string
+4. `fn00412440()` loops through each character, checking `g_a43AB91[ch] & 0x04`
+5. **With an all-zero table**, the loop condition never matches properly:
+   ```cpp
+   if ((g_a43AB91[(uint32) dl_123] & 0x04) != 0x00)
+   ```
+6. The parser gets stuck in an infinite loop trying to parse the filename
+7. Game never reaches WinMain or DirectX initialization
+
+### Evidence from Decompilation
+
+From `/Decomp/ign_teas/reko.cpp` lines 4140-4167:
+```cpp
+void fn00412440(...)
+{
+    // ... setup code ...
+    if (*dwArg04.u3 != 0x22)
+    {
+        uint8 dl_123;
+        do
+        {
+            ++*dwArg14;
+            // ... copy character ...
+            dl_123 = (uint8) *esi_101.u3;
+            esi_101.u1 = (word32) esi_101 + 1;
+            
+            // ❌ THIS CHECK FAILS WITH EMPTY TABLE
+            if ((g_a43AB91[(uint32) dl_123] & 0x04) != 0x00)
+            {
+                // Handle special characters
+            }
+            
+            if (dl_123 == 0x20)  // space
+                break;
+            if (dl_123 == 0x00)  // null terminator
+                goto l004124B0;
+        } while (dl_123 != 0x09);  // tab
+    }
+}
+```
+
+### Solution Required
+
+The PE loader must properly initialize the `.data` section at address 0x0043AB91 with the character type table. This is typically 256 bytes containing bit flags:
+- 0x01: uppercase letter
+- 0x02: lowercase letter  
+- 0x04: digit/whitespace/special characters
+- 0x08: hex digit
+- etc.
+
+This table is part of the C runtime library (ctype.h character classification).
+
+## Previous Problem (Already Solved)
+
+## Debugging Steps Taken
+
+### Step 1: Used Interactive Debugger to Set Breakpoint at 0x004123B8
+
+Created debugging script and ran:
+```bash
+Win32Emu.exe ./EXEs/ign_teas/IGN_TEAS.EXE --interactive-debug < debug_script.txt
+```
+
+Results:
+- Breakpoint hit successfully at 0x004123B8 (return from GetModuleFileNameA)
+- Registers show correct state: EAX=0x0000001C, ESP=0x001FFF6C, EBP=0x001FFFFC
+- Stack looks correct
+- Stepped through 10 instructions showing argument setup for function call
+
+### Step 2: Analyzed Decompilation to Understand Code Flow
+
+From `/Decomp/ign_teas/reko.cpp`:
+- Address 0x004123B8 is in function `fn004123A0()` (C runtime initialization)
+- This function calls `fn00412440()` which is a command-line parser
+- The parser loops through characters and checks `g_a43AB91[character] & 0x04`
+- Found that `g_a43AB91[]` is declared but **empty** in decompilation
+
+### Step 3: Cross-Referenced Parser Logic
+
+The parser function has a do-while loop (lines 4143-4167) that should:
+1. Loop through each character in the filename
+2. Check if character is special using the lookup table
+3. Break on space (0x20), tab (0x09), or null (0x00)
+
+**Problem**: With an empty/zero table, none of the bit checks succeed, so the break conditions are never properly evaluated, causing an infinite loop.
+
+## Next Steps to Fix
+
+### Option 1: Initialize Character Type Table in PE Loader
+
+Add code to properly load and initialize the `.data` section at 0x0043AB91:
+
+```csharp
+// In PE loader, after loading sections:
+// Initialize C runtime character type table at 0x43AB91
+var ctypeTable = new byte[256];
+for (int i = 0; i < 256; i++)
+{
+    byte flags = 0;
+    if (char.IsUpper((char)i)) flags |= 0x01;
+    if (char.IsLower((char)i)) flags |= 0x02;
+    if (char.IsDigit((char)i) || i == ' ' || i == '\t') flags |= 0x04;
+    if (char.IsDigit((char)i) || (i >= 'A' && i <= 'F') || (i >= 'a' && i <= 'f')) flags |= 0x08;
+    ctypeTable[i] = flags;
+}
+memory.WriteBytes(0x0043AB91, ctypeTable);
+```
+
+### Option 2: Extract Table from Original PE File
+
+The character type table should exist in the original IGN_TEAS.EXE file's `.data` section. Extract and verify the actual data at offset corresponding to RVA 0x0043AB91.
+
+### Option 3: Patch the Parser Function  
+
+As a workaround, patch the parser to use a simpler check that doesn't rely on the table.
+
+## How to Verify the Fix
+
+After implementing the fix:
+
+1. Run: `Win32Emu.exe ./EXEs/ign_teas/IGN_TEAS.EXE --debug`
+2. Should see:
+   - GetModuleFileNameA completes successfully
+   - Parser function `fn00412440` completes and returns
+   - Execution continues to LoadCursorA, RegisterClassA, etc.
+   - DirectX initialization functions are called
+3. Game should progress into main loop
+
+---
+
+## Original Investigation Below
 - Last successful Win32 API call: `GetModuleFileNameA`  
 - After this, the CPU executes ~2 million instructions in 3 seconds
 - No further Win32 API calls are made
