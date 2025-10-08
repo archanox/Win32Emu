@@ -231,6 +231,25 @@ public class MessageQueueTests : IDisposable
 		Assert.Equal(0u, message); // WM_NULL
 	}
 
+	[Fact]
+	public void GetMessageA_MultipleTimeoutsInSuccession_ShouldNotThrowExceptions()
+	{
+		// Arrange
+		var msgAddr = _testEnv.AllocateMemory(28); // MSG structure size
+
+		// Act - Call GetMessageA multiple times in succession to ensure no TaskCanceledException
+		// This tests the fix for the issue where readTask.Wait() was called on an already-canceled task
+		for (int i = 0; i < 10; i++)
+		{
+			var result = _testEnv.CallUser32Api("GETMESSAGEA", msgAddr, 0, 0, 0);
+			
+			// Assert - Each call should succeed without exceptions
+			Assert.Equal(1u, result); // Non-zero for non-WM_QUIT messages
+			var message = _testEnv.Memory.Read32(msgAddr + 4);
+			Assert.Equal(0u, message); // WM_NULL
+		}
+	}
+
 	public void Dispose()
 	{
 		_testEnv?.Dispose();

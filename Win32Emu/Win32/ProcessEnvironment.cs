@@ -815,7 +815,17 @@ public class ProcessEnvironment
 			using var cts = new CancellationTokenSource(timeoutMs);
 			var readTask = _messageQueue.Reader.ReadAsync(cts.Token).AsTask();
 			
-			if (readTask.Wait(timeoutMs) && readTask.IsCompletedSuccessfully)
+			// Wait for the task to complete (successfully or canceled)
+			try
+			{
+				readTask.Wait(timeoutMs);
+			}
+			catch (AggregateException)
+			{
+				// Task was canceled or faulted, which is expected on timeout
+			}
+			
+			if (readTask.IsCompletedSuccessfully)
 			{
 				message = readTask.Result;
 				
