@@ -308,12 +308,19 @@ public sealed class Emulator : IDisposable
             }
 
             // Add detailed logging for the problematic address range
-            if (currentEip >= 0x004123B8 && currentEip <= 0x00412500 && i < 1000)
+            if (currentEip >= 0x004123B8 && currentEip <= 0x004125A0 && i < 2000)
             {
                 var esp = _cpu.GetRegister("ESP");
                 var ebp = _cpu.GetRegister("EBP");
                 var eax = _cpu.GetRegister("EAX");
                 LogDebug($"[CRT] Instruction {i} at EIP=0x{currentEip:X8} ESP=0x{esp:X8} EBP=0x{ebp:X8} EAX=0x{eax:X8}");
+            }
+            
+            // Log when we see the same EIP range repeatedly (likely a loop)
+            if (i % 10000 == 0 && i > 0)
+            {
+                var eip = _cpu.GetEip();
+                LogDebug($"[Loop Check] Instruction {i}: EIP=0x{eip:X8}");
             }
 
             try
