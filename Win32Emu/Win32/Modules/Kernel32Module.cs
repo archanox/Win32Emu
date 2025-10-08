@@ -601,6 +601,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		const ushort ctCtype1Lower = 0x0002;
 		const ushort ctCtype1Digit = 0x0004;
 		const ushort ctCtype1Space = 0x0008;
+		const ushort ctCtype1Punct = 0x0010;
+		const ushort ctCtype1Cntrl = 0x0020;
+		const ushort ctCtype1Blank = 0x0040;
+		const ushort ctCtype1Xdigit = 0x0080;
 		const ushort ctCtype1Alpha = 0x0100;
 
 		// Write character type information for each character
@@ -625,9 +629,39 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				charType = ctCtype1Space;
 			}
-			else
+			else if (wchar == ' ' || wchar == '\t')
 			{
-				charType = ctCtype1Alpha; // Default for other characters
+				charType |= ctCtype1Blank;
+			}
+			
+			// Control characters (0x00-0x1F, 0x7F)
+			if (wchar is >= 0x00 and <= 0x1F or 0x7F)
+			{
+				charType |= ctCtype1Cntrl;
+			}
+			
+			// Hex digits
+			if (wchar is >= '0' and <= '9' or >= 'A' and <= 'F' or >= 'a' and <= 'f')
+			{
+				charType |= ctCtype1Xdigit;
+			}
+			
+			// Punctuation characters - same ranges as GetStringTypeA
+			const ushort punctRange1Start = 0x21; // !
+			const ushort punctRange1End = 0x2F;   // /
+			const ushort punctRange2Start = 0x3A; // :
+			const ushort punctRange2End = 0x40;   // @
+			const ushort punctRange3Start = 0x5B; // [
+			const ushort punctRange3End = 0x60;   // `
+			const ushort punctRange4Start = 0x7B; // {
+			const ushort punctRange4End = 0x7E;   // ~
+			
+			if (wchar is >= punctRange1Start and <= punctRange1End ||
+			    wchar is >= punctRange2Start and <= punctRange2End ||
+			    wchar is >= punctRange3Start and <= punctRange3End ||
+			    wchar is >= punctRange4Start and <= punctRange4End)
+			{
+				charType |= ctCtype1Punct;
 			}
 
 			_env.MemWrite16(lpCharType + (uint)(i * 2), charType);

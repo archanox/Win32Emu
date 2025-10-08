@@ -41,12 +41,18 @@ The .data section at RVA 0x3AB91 is indeed all zeros in the PE file. **However**
 
 ## Next Steps for Diagnosis
 
-Focus on emulator issues, not the PE file:
+**Investigation Progress:**
+- ✅ GetStringTypeA/GetStringTypeW tested - Added comprehensive test coverage
+- ✅ argBytes audit completed - Documented in ARGBYTES_INVESTIGATION.md
+- ✅ GetStringTypeW fixed - Now includes punct, cntrl, blank, xdigit flags
+- ⏳ CPU FLAGS testing - Needs public GetFlag/SetFlag methods or integration tests
+- ⏳ Interactive debugger session - Need to set breakpoint at 0x004123B8 and step through
 
-1. **Test GetStringTypeA/GetStringTypeW** - Add logging to see if they're being called and returning correct values
-2. **Check for other missing argBytes** - Audit all Kernel32 functions for correct parameter counts
-3. **Add CPU flag logging** - Log ZF/CF/SF/OF before/after CMP/TEST instructions
-4. **Step through with register inspection** - Use interactive debugger to see which instruction causes the loop
+**Next Actions:**
+1. Make GetFlag/SetFlag public in IcedCpu to enable FLAGS testing
+2. Use interactive debugger at breakpoint 0x004123B8 with instruction-level stepping
+3. Add FLAGS state logging after each instruction
+4. Test with minimal C program to isolate emulation issue
 
 ### Solution Required
 
