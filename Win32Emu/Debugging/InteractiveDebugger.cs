@@ -512,7 +512,7 @@ public class InteractiveDebugger
         {
             var bytes = _memory.GetSpan(eip, 15);
             var len = Math.Min(8, bytes.Length);
-            var hexStr = Convert.ToHexString(bytes.Slice(0, len));
+            var hexStr = Convert.ToHexString(bytes.AsSpan(0, len));
             Console.WriteLine($"Next instruction at 0x{eip:X8}: {hexStr}");
         }
         catch (Exception ex)
