@@ -293,7 +293,18 @@ public sealed class Emulator : IDisposable
 
             if (_cpu.HasSuspiciousRegisters() && i > 100)
             {
-                LogDebug($"[Debug] [Instruction {i}] Suspicious registers detected");
+                // Log the first few occurrences and then periodically
+                if (i < 500 || i % 10000 == 101)
+                {
+                    var esp = _cpu.GetRegister("ESP");
+                    var ebp = _cpu.GetRegister("EBP");
+                    var eip = _cpu.GetEip();
+                    LogDebug($"[Debug] [Instruction {i}] Suspicious registers: EIP=0x{eip:X8} ESP=0x{esp:X8} EBP=0x{ebp:X8}");
+                }
+                else if (i > 100 && i <= 500)
+                {
+                    LogDebug($"[Debug] [Instruction {i}] Suspicious registers detected");
+                }
             }
 
             // Add detailed logging for the problematic address range
