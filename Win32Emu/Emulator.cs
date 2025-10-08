@@ -296,6 +296,15 @@ public sealed class Emulator : IDisposable
                 LogDebug($"[Debug] [Instruction {i}] Suspicious registers detected");
             }
 
+            // Add detailed logging for the problematic address range
+            if (currentEip >= 0x004123B8 && currentEip <= 0x00412500 && i < 1000)
+            {
+                var esp = _cpu.GetRegister("ESP");
+                var ebp = _cpu.GetRegister("EBP");
+                var eax = _cpu.GetRegister("EAX");
+                LogDebug($"[CRT] Instruction {i} at EIP=0x{currentEip:X8} ESP=0x{esp:X8} EBP=0x{ebp:X8} EAX=0x{eax:X8}");
+            }
+
             try
             {
                 var wasCall = WillBeCall(_cpu, _vm!);
