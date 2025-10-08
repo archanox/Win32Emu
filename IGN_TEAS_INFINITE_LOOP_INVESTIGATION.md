@@ -1,63 +1,52 @@
 # IGN_TEAS.EXE Infinite Loop Investigation
 
-## **ROOT CAUSE IDENTIFIED** ✅
+## **INVESTIGATION STATUS** - Emulation Issue Identified ⚠️
 
-**Uninitialized Character Type Table at Address 0x0043AB91**
+**IMPORTANT UPDATE:** Initial hypothesis about uninitialized PE data was **incorrect**.
 
-### The Problem
+### The Real Problem: Emulator Bug, Not PE File Issue
 
-The C runtime command-line parser function `fn00412440` (at address 0x00412440) accesses a character type lookup table at `g_a43AB91` (address 0x0043AB91). This table should contain 256 bytes of character classification flags (isspace, isdigit, etc.), but the decompilation shows it as empty:
+**Verified Facts:**
+- ✅ PE file at 0x43AB91 does contain zeros (verified with xxd)
+- ✅ **BUT the game works perfectly on real Windows hardware**
+- ✅ Therefore: the issue is in the **emulator**, not the PE file
+- ✅ Windows handles character classification dynamically at runtime
 
-```cpp
-byte g_a43AB91[] = // 0043AB91
-{
-};  // EMPTY!
+The decompiler showing `g_a43AB91[]` as empty is a **red herring** - it's just showing uninitialized .data, which Windows populates at runtime through APIs like `GetStringTypeA/GetStringTypeW` or other CRT initialization.
+
+### Likely Root Causes (Emulation Issues)
+
+1. **GetStringTypeA/GetStringTypeW bug** - These functions are implemented in Kernel32Module.cs but may have incorrect behavior
+2. **Stack corruption from missing argBytes** - Other functions besides GetModuleFileNameA may have incorrect cleanup
+3. **CPU flag handling** - CMP, TEST, and conditional jumps may not set FLAGS correctly
+4. **Function return handling** - stdcall/cdecl cleanup might be wrong in some cases
+
+### Evidence from Interactive Debugger
+
+Using the debugger at breakpoint 0x004123B8:
+- Stack state is correct after GetModuleFileNameA
+- ESP/EBP values are valid
+- Return address (0x004123B8) is in valid code range
+- The infinite loop happens AFTER this point in C runtime code
+
+### Evidence from PE File Analysis
+
+```bash
+$ xxd -s $((0x38F91)) -l 32 EXEs/ign_teas/IGN_TEAS.EXE
+0x38F91: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+         00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 ```
 
-### How This Causes the Infinite Loop
+The .data section at RVA 0x3AB91 is indeed all zeros in the PE file. **However**, since the game runs on Windows, this is normal - Windows CRT initializes this data at runtime.
 
-1. GetModuleFileNameA returns successfully with the module path string
-2. C runtime calls `fn004123A0()` to initialize and parse command line
-3. `fn004123A0()` calls `fn00412440()` to parse the module filename string
-4. `fn00412440()` loops through each character, checking `g_a43AB91[ch] & 0x04`
-5. **With an all-zero table**, the loop condition never matches properly:
-   ```cpp
-   if ((g_a43AB91[(uint32) dl_123] & 0x04) != 0x00)
-   ```
-6. The parser gets stuck in an infinite loop trying to parse the filename
-7. Game never reaches WinMain or DirectX initialization
+## Next Steps for Diagnosis
 
-### Evidence from Decompilation
+Focus on emulator issues, not the PE file:
 
-From `/Decomp/ign_teas/reko.cpp` lines 4140-4167:
-```cpp
-void fn00412440(...)
-{
-    // ... setup code ...
-    if (*dwArg04.u3 != 0x22)
-    {
-        uint8 dl_123;
-        do
-        {
-            ++*dwArg14;
-            // ... copy character ...
-            dl_123 = (uint8) *esi_101.u3;
-            esi_101.u1 = (word32) esi_101 + 1;
-            
-            // ❌ THIS CHECK FAILS WITH EMPTY TABLE
-            if ((g_a43AB91[(uint32) dl_123] & 0x04) != 0x00)
-            {
-                // Handle special characters
-            }
-            
-            if (dl_123 == 0x20)  // space
-                break;
-            if (dl_123 == 0x00)  // null terminator
-                goto l004124B0;
-        } while (dl_123 != 0x09);  // tab
-    }
-}
-```
+1. **Test GetStringTypeA/GetStringTypeW** - Add logging to see if they're being called and returning correct values
+2. **Check for other missing argBytes** - Audit all Kernel32 functions for correct parameter counts
+3. **Add CPU flag logging** - Log ZF/CF/SF/OF before/after CMP/TEST instructions
+4. **Step through with register inspection** - Use interactive debugger to see which instruction causes the loop
 
 ### Solution Required
 
@@ -67,10 +56,6 @@ The PE loader must properly initialize the `.data` section at address 0x0043AB91
 - 0x04: digit/whitespace/special characters
 - 0x08: hex digit
 - etc.
-
-This table is part of the C runtime library (ctype.h character classification).
-
-## Previous Problem (Already Solved)
 
 ## Debugging Steps Taken
 
@@ -92,63 +77,41 @@ Results:
 From `/Decomp/ign_teas/reko.cpp`:
 - Address 0x004123B8 is in function `fn004123A0()` (C runtime initialization)
 - This function calls `fn00412440()` which is a command-line parser
-- The parser loops through characters and checks `g_a43AB91[character] & 0x04`
-- Found that `g_a43AB91[]` is declared but **empty** in decompilation
+- The parser has character type checks that may rely on Windows APIs
+- The emulator likely has a bug in how it handles these checks
 
-### Step 3: Cross-Referenced Parser Logic
+### Step 3: Verified PE File Is Correct
 
-The parser function has a do-while loop (lines 4143-4167) that should:
-1. Loop through each character in the filename
-2. Check if character is special using the lookup table
-3. Break on space (0x20), tab (0x09), or null (0x00)
+Used `xxd` to dump the PE file at address 0x43AB91:
+- The .data section does contain zeros at this location
+- **However**: The game works on real Windows, so this is expected
+- Windows CRT populates runtime data structures dynamically
 
-**Problem**: With an empty/zero table, none of the bit checks succeed, so the break conditions are never properly evaluated, causing an infinite loop.
+## Recommended Next Steps
 
-## Next Steps to Fix
+### 1. Add Comprehensive Logging to Character Classification
 
-### Option 1: Initialize Character Type Table in PE Loader
+Add logging to `GetStringTypeA` and `GetStringTypeW` in Kernel32Module.cs to see if they're called and what they return.
 
-Add code to properly load and initialize the `.data` section at 0x0043AB91:
+### 2. Step Through with Full CPU State Logging
 
-```csharp
-// In PE loader, after loading sections:
-// Initialize C runtime character type table at 0x43AB91
-var ctypeTable = new byte[256];
-for (int i = 0; i < 256; i++)
-{
-    byte flags = 0;
-    if (char.IsUpper((char)i)) flags |= 0x01;
-    if (char.IsLower((char)i)) flags |= 0x02;
-    if (char.IsDigit((char)i) || i == ' ' || i == '\t') flags |= 0x04;
-    if (char.IsDigit((char)i) || (i >= 'A' && i <= 'F') || (i >= 'a' && i <= 'f')) flags |= 0x08;
-    ctypeTable[i] = flags;
-}
-memory.WriteBytes(0x0043AB91, ctypeTable);
-```
+Use the interactive debugger to step through instructions after 0x004123B8 while logging:
+- Each instruction executed
+- Register values before/after
+- FLAGS register state (ZF, CF, SF, OF)
+- Memory reads/writes
 
-### Option 2: Extract Table from Original PE File
+### 3. Audit argBytes for All Functions
 
-The character type table should exist in the original IGN_TEAS.EXE file's `.data` section. Extract and verify the actual data at offset corresponding to RVA 0x0043AB91.
+Check Win32Dispatcher.cs for any other functions with missing or incorrect argBytes.
 
-### Option 3: Patch the Parser Function  
+### 4. Test Simple Case
 
-As a workaround, patch the parser to use a simpler check that doesn't rely on the table.
-
-## How to Verify the Fix
-
-After implementing the fix:
-
-1. Run: `Win32Emu.exe ./EXEs/ign_teas/IGN_TEAS.EXE --debug`
-2. Should see:
-   - GetModuleFileNameA completes successfully
-   - Parser function `fn00412440` completes and returns
-   - Execution continues to LoadCursorA, RegisterClassA, etc.
-   - DirectX initialization functions are called
-3. Game should progress into main loop
+Create a minimal test program that just calls GetModuleFileNameA and returns, to isolate the stack corruption issue.
 
 ---
 
-## Original Investigation Below
+## Original Investigation Below (Context)
 - Last successful Win32 API call: `GetModuleFileNameA`  
 - After this, the CPU executes ~2 million instructions in 3 seconds
 - No further Win32 API calls are made
