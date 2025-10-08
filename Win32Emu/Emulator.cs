@@ -103,7 +103,9 @@ public sealed class Emulator : IDisposable
         LogDebug($"[Loader] Imports mapped: {_image.ImportAddressMap.Count}");
 
         _env = new ProcessEnvironment(_vm, 0x01000000, _host, _logger);
-        _env.InitializeStrings(path, Array.Empty<string>());
+        // Convert path to Windows-style backslashes for proper parsing by C runtime
+        var windowsPath = path.Replace('/', '\\');
+        _env.InitializeStrings(windowsPath, Array.Empty<string>());
 
         _cpu = new IcedCpu(_vm, _logger);
         _cpu.SetEip(_image.EntryPointAddress);
@@ -293,16 +295,34 @@ public sealed class Emulator : IDisposable
 
             if (_cpu.HasSuspiciousRegisters() && i > 100)
             {
-                LogDebug($"[Debug] [Instruction {i}] Suspicious registers detected");
+                // Log the first few occurrences and then periodically
+                if (i < 500 || i % 10000 == 101)
+                {
+                    var esp = _cpu.GetRegister("ESP");
+                    var ebp = _cpu.GetRegister("EBP");
+                    var eip = _cpu.GetEip();
+                    LogDebug($"[Debug] [Instruction {i}] Suspicious registers: EIP=0x{eip:X8} ESP=0x{esp:X8} EBP=0x{ebp:X8}");
+                }
+                else if (i > 100 && i <= 500)
+                {
+                    LogDebug($"[Debug] [Instruction {i}] Suspicious registers detected");
+                }
             }
 
             // Add detailed logging for the problematic address range
-            if (currentEip >= 0x004123B8 && currentEip <= 0x00412500 && i < 1000)
+            if (currentEip >= 0x004123B8 && currentEip <= 0x004125A0 && i < 2000)
             {
                 var esp = _cpu.GetRegister("ESP");
                 var ebp = _cpu.GetRegister("EBP");
                 var eax = _cpu.GetRegister("EAX");
                 LogDebug($"[CRT] Instruction {i} at EIP=0x{currentEip:X8} ESP=0x{esp:X8} EBP=0x{ebp:X8} EAX=0x{eax:X8}");
+            }
+            
+            // Log when we see the same EIP range repeatedly (likely a loop)
+            if (i % 10000 == 0 && i > 0)
+            {
+                var eip = _cpu.GetEip();
+                LogDebug($"[Loop Check] Instruction {i}: EIP=0x{eip:X8}");
             }
 
             try

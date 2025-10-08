@@ -99,9 +99,9 @@ public class IgnitionTeaserTests
             using var emulator = new Win32Emu.Emulator(testHost, logger);
             
             _output.WriteLine("Loading executable...");
-            emulator.LoadExecutable(exePath, debugMode: false, reservedMemoryMb: 256);
+            emulator.LoadExecutable(exePath, debugMode: true, reservedMemoryMb: 256);
             
-            _output.WriteLine("Starting emulation...");
+            _output.WriteLine("Starting emulation with debug mode...");
             _output.WriteLine("");
             
             // Set a timeout for the test run
