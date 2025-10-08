@@ -103,7 +103,9 @@ public sealed class Emulator : IDisposable
         LogDebug($"[Loader] Imports mapped: {_image.ImportAddressMap.Count}");
 
         _env = new ProcessEnvironment(_vm, 0x01000000, _host, _logger);
-        _env.InitializeStrings(path, Array.Empty<string>());
+        // Convert path to Windows-style backslashes for proper parsing by C runtime
+        var windowsPath = path.Replace('/', '\\');
+        _env.InitializeStrings(windowsPath, Array.Empty<string>());
 
         _cpu = new IcedCpu(_vm, _logger);
         _cpu.SetEip(_image.EntryPointAddress);
