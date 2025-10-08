@@ -2198,7 +2198,7 @@ public class IcedCpu : ICpu
 		if (((al & 0x0F) > 9) || GetFlag(Af))
 		{
 			al -= 6;
-			SetFlagVal(Cf, oldCf || (al > oldAl)); // Set CF if borrow occurred
+			SetFlagVal(Cf, oldCf || (al < oldAl)); // Set CF if borrow occurred
 			SetFlag(Af);
 		}
 		else
