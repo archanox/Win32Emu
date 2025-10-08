@@ -840,7 +840,7 @@ public class IcedCpu : ICpu
 				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
 				{
-					_mem.Write16(CalcMemAddress(insn), r);
+					_mem.Write16(CalcMemAddress(insn, 0), r);
 				}
 
 				ClearFlag(Cf);
