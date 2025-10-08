@@ -917,10 +917,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(15)]
 	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
 	{
-		_logger.LogDebug($"[Kernel32] GetModuleFileNameA called: h=0x{(uint)(nint)h:X8} lp=0x{(uint)(nint)lp:X8} n={n}");
+		_logger.LogInformation($"[Kernel32] GetModuleFileNameA called: h=0x{(uint)(nint)h:X8} lp=0x{(uint)(nint)lp:X8} n={n}");
+		
 		// Use guest memory helpers instead of dereferencing raw pointers to avoid AccessViolation
 		if (n == 0 || lp == null)
 		{
+			_logger.LogWarning("[Kernel32] GetModuleFileNameA returning 0 (invalid params)");
 			return 0;
 		}
 
@@ -990,7 +992,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_env.MemWriteBytes(lpAddr, bytes);
 		_env.MemWriteBytes(lpAddr + (uint)bytes.Length, [0]);
 		Diagnostics.Diagnostics.LogMemWrite(lpAddr, bytes.Length + 1, bytes.AsSpan(0, bytes.Length).ToArray());
-		return (uint)bytes.Length;
+		
+		var returnLength = (uint)bytes.Length;
+		_logger.LogInformation($"[Kernel32] GetModuleFileNameA returning {returnLength}");
+		
+		return returnLength;
 	}
 
 	[DllModuleExport(8)]

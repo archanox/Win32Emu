@@ -7,16 +7,15 @@ The game hangs in an infinite loop after GetModuleFileNameA during C runtime ini
 
 ### 1. Confirmed Infinite Loop Location
 - Last successful Win32 API call: `GetModuleFileNameA`  
-- After this, the CPU executes ~1.6 million instructions in 2 seconds
+- After this, the CPU executes ~2 million instructions in 3 seconds
 - No further Win32 API calls are made
 - The game never reaches LoadCursorA, RegisterClassA, timeBeginPeriod, or DirectX initialization
 
 ### 2. Suspicious Register Detection
 Running with `--debug` flag shows continuous warnings:
 ```
-[Debug] [Instruction 1611922] Suspicious registers detected
-[Debug] [Instruction 1611923] Suspicious registers detected
-[Debug] [Instruction 1611924] Suspicious registers detected
+[Debug] [Instruction 2011615] Suspicious registers detected
+[Debug] [Instruction 2011616] Suspicious registers detected
 ...
 ```
 
@@ -25,7 +24,34 @@ This indicates **EBP or ESP registers are below 0x1000**, suggesting:
 - Invalid stack setup
 - Incorrect return from GetModuleFileNameA
 
-### 3. Decompilation Analysis
+### 3. Fix Attempted: argBytes for GetModuleFileNameA
+
+**Problem Found:** GetModuleFileNameA had missing `argBytes` metadata, causing incorrect stack cleanup.
+
+**Fix Applied:**
+- Added `GetModuleFileNameA` to hardcoded argBytes in `Win32Dispatcher.cs` (12 bytes for 3 parameters)
+- Added detailed logging in `Kernel32Module.cs` to track the function call
+- Added detailed logging in `Emulator.cs` to track stack state before/after adjustment
+
+**Results:**
+```
+[Kernel32] GetModuleFileNameA called: h=0x00000000 lp=0x00452760 n=260
+[Kernel32] GetModuleFileNameA returning 28
+[Dispatcher] KERNEL32.DLL!GetModuleFileNameA returned 0x0000001C, argBytes=12
+[Emulator] Before stack adjustment: ESP=0x001FFF5C EBP=0x001FFFFC RetAddr=0x004123B8 ArgBytes=12
+[Emulator] After stack adjustment: ESP=0x001FFF6C EBP=0x001FFFFC NewEIP=0x004123B8
+[Emulator] GetModuleFileNameA complete - execution continuing at 0x004123B8
+```
+
+**Analysis:**
+- Stack adjustment is correct: ESP increased by 16 bytes (4 for return address + 12 for args)
+- Return address (0x004123B8) looks valid
+- EBP (0x001FFFFC) looks reasonable
+- Function returns successfully
+
+**Conclusion:** The argBytes fix is correct, but **did NOT solve the infinite loop**. The game still executes ~2M instructions after GetModuleFileNameA with "Suspicious registers detected", then stops without calling any more Win32 APIs.
+
+### 4. Decompilation Analysis
 According to ghidra.cpp (lines 7575-7620), after GetModuleFileNameA, the C runtime should:
 
 1. Call `parse_cmdline()` to parse command line arguments

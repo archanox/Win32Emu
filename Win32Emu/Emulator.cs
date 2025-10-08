@@ -216,10 +216,25 @@ public sealed class Emulator : IDisposable
                 {
                     LogDebug($"[Import] Returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
+                    var ebp = _cpu.GetRegister("EBP");
                     var retEip = _vm.Read32(esp);
+                    
+                    // Log stack state BEFORE adjustment
+                    if (name.ToUpperInvariant() == "GETMODULEFILENAMEA")
+                    {
+                        _logger.LogInformation($"[Emulator] Before stack adjustment: ESP=0x{esp:X8} EBP=0x{ebp:X8} RetAddr=0x{retEip:X8} ArgBytes={argBytes}");
+                    }
+                    
                     esp += 4 + (uint)argBytes;
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
+                    
+                    // Log stack state AFTER adjustment
+                    if (name.ToUpperInvariant() == "GETMODULEFILENAMEA")
+                    {
+                        _logger.LogInformation($"[Emulator] After stack adjustment: ESP=0x{esp:X8} EBP=0x{ebp:X8} NewEIP=0x{retEip:X8}");
+                        _logger.LogInformation($"[Emulator] GetModuleFileNameA complete - execution continuing at 0x{retEip:X8}");
+                    }
                 }
             }
         }
