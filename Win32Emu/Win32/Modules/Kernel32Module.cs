@@ -1061,9 +1061,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		_env.MemZero(lpStartupInfo, 68);
 		_env.MemWrite32(lpStartupInfo + 0, 68);
-		_env.MemWrite32(lpStartupInfo + 56, _env.StdInputHandle);
-		_env.MemWrite32(lpStartupInfo + 60, _env.StdOutputHandle);
-		_env.MemWrite32(lpStartupInfo + 64, _env.StdErrorHandle);
+		// Write pseudo-handle constants, not real handle values
+		// Programs should call GetStdHandle() to get actual handles
+		_env.MemWrite32(lpStartupInfo + 56, 0xFFFFFFF6); // STD_INPUT_HANDLE
+		_env.MemWrite32(lpStartupInfo + 60, 0xFFFFFFF5); // STD_OUTPUT_HANDLE
+		_env.MemWrite32(lpStartupInfo + 64, 0xFFFFFFF4); // STD_ERROR_HANDLE
 		return 0;
 	}
 
