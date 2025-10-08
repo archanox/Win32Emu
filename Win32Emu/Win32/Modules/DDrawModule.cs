@@ -131,20 +131,55 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[DDraw] DirectDrawCreateEx(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, iid=0x{Iid:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, iid, pUnkOuter);
 
-			// Similar to DirectDrawCreate but with interface ID
+			// Create DirectDraw object with COM vtable (similar to DirectDrawCreate)
 			var ddrawHandle = _nextDDrawHandle++;
 			var ddrawObj = new DirectDrawObject
 			{
-				Handle = ddrawHandle
+				Handle = ddrawHandle,
+				Width = 640,
+				Height = 480,
+				BitsPerPixel = 16
 			};
 			_ddrawObjects[ddrawHandle] = ddrawObj;
 
+			// Create COM vtable for IDirectDraw interface
+			var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			{
+				{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
+				{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
+				{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
+				{ "Compact", (cpu, mem) => DDraw_Compact(cpu, mem) },
+				{ "CreateClipper", (cpu, mem) => DDraw_CreateClipper(cpu, mem) },
+				{ "CreatePalette", (cpu, mem) => DDraw_CreatePalette(cpu, mem) },
+				{ "CreateSurface", (cpu, mem) => DDraw_CreateSurface(cpu, mem) },
+				{ "DuplicateSurface", (cpu, mem) => DDraw_DuplicateSurface(cpu, mem) },
+				{ "EnumDisplayModes", (cpu, mem) => DDraw_EnumDisplayModes(cpu, mem) },
+				{ "EnumSurfaces", (cpu, mem) => DDraw_EnumSurfaces(cpu, mem) },
+				{ "FlipToGDISurface", (cpu, mem) => DDraw_FlipToGDISurface(cpu, mem) },
+				{ "GetCaps", (cpu, mem) => DDraw_GetCaps(cpu, mem) },
+				{ "GetDisplayMode", (cpu, mem) => DDraw_GetDisplayMode(cpu, mem) },
+				{ "GetFourCCCodes", (cpu, mem) => DDraw_GetFourCCCodes(cpu, mem) },
+				{ "GetGDISurface", (cpu, mem) => DDraw_GetGDISurface(cpu, mem) },
+				{ "GetMonitorFrequency", (cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem) },
+				{ "GetScanLine", (cpu, mem) => DDraw_GetScanLine(cpu, mem) },
+				{ "GetVerticalBlankStatus", (cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem) },
+				{ "Initialize", (cpu, mem) => DDraw_Initialize(cpu, mem) },
+				{ "RestoreDisplayMode", (cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem) },
+				{ "SetCooperativeLevel", (cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle) },
+				{ "SetDisplayMode", (cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle) },
+				{ "WaitForVerticalBlank", (cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem) }
+			};
+
+			// Create the COM object with vtable
+			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDraw", vtableMethods);
+
+			// Write COM object pointer to output parameter
 			if (lplpDd != 0)
 			{
-				_env.MemWrite32(lplpDd, ddrawHandle);
+				_env.MemWrite32(lplpDd, comObjectAddr);
 			}
 
-			_logger.LogInformation("[DDraw] Created DirectDraw object (Ex): 0x{DdrawHandle:X8}", ddrawHandle);
+			_logger.LogInformation("[DDraw] Created IDirectDraw COM object (Ex) at 0x{ComObjectAddr:X8}", comObjectAddr);
 			return 0; // DD_OK
 		}
 

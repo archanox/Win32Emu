@@ -96,14 +96,14 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[DInput] DirectInputCreate(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
 
-			// Create DirectInput object
-			var diHandle = _nextDInputHandle++;
-			var diObj = new DirectInputObject
+			// Create DirectInput object with COM vtable (same as DirectInputCreateA)
+			var dinputHandle = _nextDInputHandle++;
+			var dinputObj = new DirectInputObject
 			{
-				Handle = diHandle,
+				Handle = dinputHandle,
 				Version = dwVersion
 			};
-			_dinputObjects[diHandle] = diObj;
+			_dinputObjects[dinputHandle] = dinputObj;
 
 			// Initialize input backend if not already done
 			if (_env.InputBackend == null)
@@ -112,11 +112,29 @@ namespace Win32Emu.Win32.Modules
 				_env.InputBackend.Initialize();
 			}
 
+			// Create COM vtable for IDirectInput interface
+			var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			{
+				{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
+				{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
+				{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
+				{ "CreateDevice", (cpu, mem) => DInput_CreateDevice(cpu, mem, dinputHandle) },
+				{ "EnumDevices", (cpu, mem) => DInput_EnumDevices(cpu, mem) },
+				{ "GetDeviceStatus", (cpu, mem) => DInput_GetDeviceStatus(cpu, mem) },
+				{ "RunControlPanel", (cpu, mem) => DInput_RunControlPanel(cpu, mem) },
+				{ "Initialize", (cpu, mem) => DInput_Initialize(cpu, mem) }
+			};
+
+			// Create the COM object with vtable
+			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectInput", vtableMethods);
+
+			// Write COM object pointer to output parameter
 			if (lplpDirectInput != 0)
 			{
-				_env.MemWrite32(lplpDirectInput, diHandle);
+				_env.MemWrite32(lplpDirectInput, comObjectAddr);
 			}
 
+			_logger.LogInformation("[DInput] Created IDirectInput COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
 			return 0; // DI_OK
 		}
 
