@@ -742,12 +742,69 @@ public class IcedCpu : ICpu
 
 	private void ExecLogic(Instruction insn, LogicOp op)
 	{
-		uint a = ReadOp(insn, 0), b = ReadOp(insn, 1), r = op == LogicOp.And ? a & b : a | b;
-		WriteOp(insn, 0, r);
-		ClearFlag(Cf);
-		ClearFlag(Of);
-		ClearFlag(Af);
-		UpdateLogicResultFlags(r);
+		// Determine the operand size
+		var opSize = GetOpSizeBits(insn, 0);
+
+		switch (opSize)
+		{
+			case 8:
+			{
+				// 8-bit logic operation
+				byte a = (byte)ReadOp(insn, 0);
+				byte b = (byte)ReadOp(insn, 1);
+				byte r = op == LogicOp.And ? (byte)(a & b) : (byte)(a | b);
+
+				// Write the 8-bit result
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					SetReg8(insn.GetOpRegister(0), r);
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					_mem.Write8(CalcMemAddress(insn), r);
+				}
+
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				UpdateLogicResultFlags(r);
+				break;
+			}
+			case 16:
+			{
+				// 16-bit logic operation
+				ushort a = (ushort)ReadOp(insn, 0);
+				ushort b = (ushort)ReadOp(insn, 1);
+				ushort r = op == LogicOp.And ? (ushort)(a & b) : (ushort)(a | b);
+
+				// Write the 16-bit result
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					SetReg16(insn.GetOpRegister(0), r);
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					_mem.Write16(CalcMemAddress(insn), r);
+				}
+
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				UpdateLogicResultFlags(r);
+				break;
+			}
+			default:
+			{
+				// 32-bit logic operation (default)
+				uint a = ReadOp(insn, 0), b = ReadOp(insn, 1), r = op == LogicOp.And ? a & b : a | b;
+				WriteOp(insn, 0, r);
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				UpdateLogicResultFlags(r);
+				break;
+			}
+		}
 	}
 
 	private void ExecTest(Instruction insn)
