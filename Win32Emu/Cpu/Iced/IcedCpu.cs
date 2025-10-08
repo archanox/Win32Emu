@@ -272,6 +272,17 @@ public class IcedCpu : ICpu
 					_eflags = Read32(_esp);
 					_esp += 4;
 					break;
+				case Mnemonic.Iret:
+				case Mnemonic.Iretd:
+					// IRET/IRETD - Interrupt Return
+					// Pops EIP, CS (ignored in flat memory model), and EFLAGS from stack
+					_eip = Read32(_esp);
+					_esp += 4;
+					// Skip CS (we don't use segmentation)
+					_esp += 4;
+					_eflags = Read32(_esp);
+					_esp += 4;
+					break;
 				case Mnemonic.Lahf:
 				{
 					byte ah = 0;
