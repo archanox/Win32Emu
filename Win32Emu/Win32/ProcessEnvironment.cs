@@ -103,7 +103,11 @@ public class ProcessEnvironment
 	public void InitializeStrings(string exePath, string[] args)
 	{
 		_executablePath = exePath;
-		var cmdLine = string.Join(" ", new[] { exePath }.Concat(args.Skip(1)));
+		// Add a dummy argument if none provided to avoid parse_cmdline infinite loop bug
+		// The C runtime's parse_cmdline function has issues when the command line ends
+		// without a space after the last argument
+		var argsWithDummy = args.Length <= 1 ? new[] { exePath, "x" } : new[] { exePath }.Concat(args.Skip(1));
+		var cmdLine = string.Join(" ", argsWithDummy);
 		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
 		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
 		ModuleFileNameLength = (uint)exePath.Length;
