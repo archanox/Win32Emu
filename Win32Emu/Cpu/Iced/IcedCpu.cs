@@ -2137,10 +2137,16 @@ public class IcedCpu : ICpu
 		// Converts unpacked BCD in AX to binary
 		// Formula: AL = AH * base + AL, AH = 0
 		// The base is typically 10 (0x0A) but can be specified in the instruction
-		var base_ = insn.Immediate8;
-		if (base_ == 0)
+		byte base_;
+		// If the instruction has no immediate operand, use default base 10.
+		// If immediate is present (even if 0), use it as the base.
+		if (insn.OpCount == 0)
 		{
-			base_ = 10; // Default base is 10
+			base_ = 10;
+		}
+		else
+		{
+			base_ = insn.Immediate8;
 		}
 
 		var al = (byte)(_eax & 0xFF);
