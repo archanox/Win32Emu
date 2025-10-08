@@ -750,8 +750,36 @@ public class IcedCpu : ICpu
 			case 8:
 			{
 				// 8-bit logic operation
-				byte a = (byte)ReadOp(insn, 0);
-				byte b = (byte)ReadOp(insn, 1);
+				byte a, b;
+				
+				// Read first operand
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg8(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read8(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (byte)ReadOp(insn, 0);
+				}
+				
+				// Read second operand
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg8(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read8(CalcMemAddress(insn));
+				}
+				else
+				{
+					b = (byte)ReadOp(insn, 1);
+				}
+				
 				byte r = op == LogicOp.And ? (byte)(a & b) : (byte)(a | b);
 
 				// Write the 8-bit result
@@ -773,8 +801,36 @@ public class IcedCpu : ICpu
 			case 16:
 			{
 				// 16-bit logic operation
-				ushort a = (ushort)ReadOp(insn, 0);
-				ushort b = (ushort)ReadOp(insn, 1);
+				ushort a, b;
+				
+				// Read first operand
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg16(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (ushort)ReadOp(insn, 0);
+				}
+				
+				// Read second operand
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg16(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					b = (ushort)ReadOp(insn, 1);
+				}
+				
 				ushort r = op == LogicOp.And ? (ushort)(a & b) : (ushort)(a | b);
 
 				// Write the 16-bit result
