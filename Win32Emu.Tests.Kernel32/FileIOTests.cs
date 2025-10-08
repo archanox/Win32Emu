@@ -122,6 +122,34 @@ public class FileIoTests : IDisposable
         Assert.Equal(newHandle, retrievedHandle);
     }
 
+    [Fact]
+    public void GetStartupInfoA_ShouldReturnPseudoHandlesInStartupInfo()
+    {
+        // Arrange
+        // Allocate memory for STARTUPINFO structure (68 bytes)
+        var startupInfoPtr = _testEnv.AllocateMemory(68);
+
+        // Act
+        _testEnv.CallKernel32Api("GETSTARTUPINFOA", startupInfoPtr);
+
+        // Assert
+        // STARTUPINFO structure offsets:
+        // +0: cb (size) - should be 68
+        // +56: hStdInput - should be STD_INPUT_HANDLE pseudo-handle (0xFFFFFFF6)
+        // +60: hStdOutput - should be STD_OUTPUT_HANDLE pseudo-handle (0xFFFFFFF5)
+        // +64: hStdError - should be STD_ERROR_HANDLE pseudo-handle (0xFFFFFFF4)
+        
+        var cb = _testEnv.Memory.Read32(startupInfoPtr);
+        var hStdInput = _testEnv.Memory.Read32(startupInfoPtr + 56);
+        var hStdOutput = _testEnv.Memory.Read32(startupInfoPtr + 60);
+        var hStdError = _testEnv.Memory.Read32(startupInfoPtr + 64);
+
+        Assert.Equal(68u, cb);
+        Assert.Equal(0xFFFFFFF6u, hStdInput); // STD_INPUT_HANDLE
+        Assert.Equal(0xFFFFFFF5u, hStdOutput); // STD_OUTPUT_HANDLE
+        Assert.Equal(0xFFFFFFF4u, hStdError); // STD_ERROR_HANDLE
+    }
+
     #endregion
 
     #region WriteFile Tests
