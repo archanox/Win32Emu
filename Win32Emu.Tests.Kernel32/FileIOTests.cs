@@ -150,6 +150,44 @@ public class FileIoTests : IDisposable
         Assert.Equal(0xFFFFFFF4u, hStdError); // STD_ERROR_HANDLE
     }
 
+    [Fact]
+    public void GetStartupInfoA_ThenGetStdHandle_ShouldWorkCorrectly()
+    {
+        // This test simulates the correct program behavior:
+        // 1. Call GetStartupInfoA to get startup info
+        // 2. Read the hStdOutput field (which contains a pseudo-handle)
+        // 3. Call GetStdHandle with the pseudo-handle to get the real handle
+        // 4. Use the real handle with WriteFile
+        
+        // Arrange
+        var startupInfoPtr = _testEnv.AllocateMemory(68);
+        
+        // Act
+        // Step 1: Get startup info
+        _testEnv.CallKernel32Api("GETSTARTUPINFOA", startupInfoPtr);
+        
+        // Step 2: Read the hStdOutput field (offset 60)
+        var pseudoHandle = _testEnv.Memory.Read32(startupInfoPtr + 60);
+        
+        // Verify it's the pseudo-handle constant
+        Assert.Equal(0xFFFFFFF5u, pseudoHandle);
+        
+        // Step 3: Call GetStdHandle to get the real handle
+        var realHandle = _testEnv.CallKernel32Api("GETSTDHANDLE", pseudoHandle);
+        
+        // Verify we got the real stdout handle
+        Assert.Equal(0x00000002u, realHandle);
+        
+        // Step 4: Verify the real handle can be used with WriteFile
+        var buffer = _testEnv.WriteString("test");
+        var bytesWrittenPtr = _testEnv.AllocateMemory(4);
+        
+        var result = _testEnv.CallKernel32Api("WRITEFILE", realHandle, buffer, 4u, bytesWrittenPtr, 0u);
+        
+        // WriteFile should succeed
+        Assert.Equal(1u, result);
+    }
+
     #endregion
 
     #region WriteFile Tests
