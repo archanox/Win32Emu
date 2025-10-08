@@ -72,6 +72,7 @@ namespace Win32Emu.Win32.Modules
 			}
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint TimeGetTime()
 		{
 			// Return time in milliseconds since start
@@ -79,6 +80,7 @@ namespace Win32Emu.Win32.Modules
 			return time;
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint TimeBeginPeriod(uint uPeriod)
 		{
 			_logger.LogInformation("[WinMM] timeBeginPeriod({UPeriod})", uPeriod);
@@ -86,6 +88,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // TIMERR_NOERROR
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint TimeEndPeriod(uint uPeriod)
 		{
 			_logger.LogInformation("[WinMM] timeEndPeriod({UPeriod})", uPeriod);
@@ -93,12 +96,14 @@ namespace Win32Emu.Win32.Modules
 			return 0; // TIMERR_NOERROR
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint TimeKillEvent(uint uTimerId)
 		{
 			_logger.LogInformation("[WinMM] timeKillEvent({UTimerId})", uTimerId);
 			return 0; // TIMERR_NOERROR
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint TimeSetEvent(uint uDelay, uint uResolution, uint lpTimeProc, uint dwUser, uint fuEvent)
 		{
 			// TimeSetEvent sets a timer event
@@ -109,6 +114,7 @@ namespace Win32Emu.Win32.Modules
 			return 0x1000 + uDelay; // Simple unique ID based on delay
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint JoyGetPosEx(uint uJoyID, uint pji)
 		{
 			// JoyGetPosEx queries the position and button status of a joystick
@@ -123,6 +129,7 @@ namespace Win32Emu.Win32.Modules
 			return 167; // JOYERR_UNPLUGGED
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint JoyGetDevCapsA(uint uJoyID, uint pjc, uint cbjc)
 		{
 			// JoyGetDevCapsA queries the capabilities of a joystick
@@ -137,6 +144,7 @@ namespace Win32Emu.Win32.Modules
 			return 167; // JOYERR_UNPLUGGED
 		}
 
+		[DllModuleExport(1)]
 		private unsafe uint MciSendStringA(uint lpszCommand, uint lpszReturnString, uint cchReturn, uint hwndCallback)
 		{
 			// MciSendStringA sends a command string to an MCI device
@@ -145,19 +153,6 @@ namespace Win32Emu.Win32.Modules
 			
 			// For now, just return success
 			return 0; // MMSYSERR_NOERROR
-		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Export ordinals for WinMM - alphabetically ordered
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "TIMEBEGINPERIOD", 1 },
-				{ "TIMEENDPERIOD", 2 },
-				{ "TIMEGETTIME", 3 },
-				{ "TIMEKILLEVENT", 4 }
-			};
-			return exports;
 		}
 	}
 }

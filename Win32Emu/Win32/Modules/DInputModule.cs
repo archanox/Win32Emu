@@ -91,7 +91,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DI_OK
 		}
 
-
+[DllModuleExport(1)]
 		private unsafe uint DirectInputCreate(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DInput] DirectInputCreate(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
@@ -120,6 +120,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DI_OK
 		}
 
+		[DllModuleExport(2)]
 		private unsafe uint DirectInput8Create(uint hinst, uint dwVersion, uint riidltf, uint lplpDirectInput, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DInput] DirectInput8Create(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, riidltf=0x{Riidltf:X8})", hinst, dwVersion, riidltf);
@@ -139,23 +140,6 @@ namespace Win32Emu.Win32.Modules
 			public uint Handle { get; set; }
 			public uint BackendDeviceId { get; set; }
 			public string Name { get; set; } = string.Empty;
-		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Export ordinals for DInput - alphabetically ordered
-			var exports = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-			{
-				//{ "DIRECTINPUT8CREATE", 1 },
-
-				// NOTE: DIRECTINPUTCREATE doesn't appear to be in the winxp dinpput.dll
-				//{ "DIRECTINPUTCREATE", 2 },
-
-				{ "DIRECTINPUTCREATEA", 1 },
-				{ "DIRECTINPUTCREATEEX", 2 },
-				{ "DIRECTINPUTCREATEW", 3 },
-			};
-			return exports;
 		}
 
 		// COM interface methods for IDirectInput

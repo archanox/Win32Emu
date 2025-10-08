@@ -48,10 +48,4 @@ public class KernelBaseModule : IWin32ModuleUnsafe
 		_logger.LogInformation("[KernelBase] GetVersionEx called (forwarded from KERNEL32)");
 		return 1; // TRUE
 	}
-
-	public Dictionary<string, uint> GetExportOrdinals()
-	{
-		// Auto-generated from [DllModuleExport] attributes
-		return DllModuleExportInfo.GetAllExports("KERNELBASE.DLL");
-	}
 }

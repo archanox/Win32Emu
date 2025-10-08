@@ -57,11 +57,5 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DPlayX] DirectPlayCreate({LpGuidName}=0x{LpGuid:X8}, {LplpDpName}=0x{LplpDp:X8}, {PUnkOuterName}=0x{PUnkOuter:X8})", nameof(lpGUID), lpGUID, nameof(lplpDP), lplpDP, nameof(pUnkOuter), pUnkOuter);
 			return 0;
 		}
-
-		public Dictionary<string, uint> GetExportOrdinals()
-		{
-			// Auto-generated from [DllModuleExport] attributes
-			return DllModuleExportInfo.GetAllExports("DPLAYX.DLL");
-		}
 	}
 }
