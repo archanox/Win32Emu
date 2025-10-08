@@ -245,12 +245,46 @@ The infinite loop appears to be related to **stack pointer corruption** indicate
 - Incorrect calling convention or argument cleanup
 - Issue with how the emulator handles function returns
 
-## Recommended Action
+## Recommended Actions & Status
 
-1. Add enhanced logging to `GetModuleFileNameA` in `Kernel32Module.cs`
-2. Check the stack state before and after the call
-3. Verify ESP is correctly adjusted for the stdcall/cdecl convention
-4. Use interactive debugger to step through the instructions after the return
-5. Compare against what a real Windows system would do
+### 1. GetStringTypeA/GetStringTypeW Investigation ✅ IN PROGRESS
 
-The interactive debugger I created should be perfect for this investigation, but requires manual stepping since the loop happens very quickly.
+**Status:** Functions ARE implemented with test coverage
+- GetStringTypeA: 6 existing tests in BasicFunctionsTests.cs
+- GetStringTypeW: 1 existing test in NewFunctionsTests.cs
+- **Action Taken:** Added 13 comprehensive tests in GetStringTypeTests.cs
+
+**Potential Issue:** GetStringTypeW is incomplete - missing punct, blank, cntrl, xdigit flags
+If C runtime uses these functions for character classification, incomplete implementation could cause parsing failures.
+
+### 2. argBytes Metadata Audit ✅ COMPLETED
+
+**Findings:** Documented in ARGBYTES_INVESTIGATION.md
+- StdCallArgBytesGenerator IS working correctly
+- Manual overrides exist due to exception handling in Win32Dispatcher.cs
+- All three problematic functions (GetAcp, GetCpInfo, GetModuleFileNameA) HAVE [DllModuleExport] attributes
+- **Root Cause:** Likely case sensitivity or DLL name mismatch between generator and dispatcher lookup
+
+### 3. Interactive Debugger Investigation 🔄 NEXT STEP
+
+**Recommended:** Set breakpoint at 0x004123B8 with full register/FLAGS inspection to identify exact failure point in C runtime code.
+
+### 4. CPU FLAGS Testing ⚠️ NEEDS COVERAGE
+
+**Testing Gaps Identified:**
+- CMP/TEST instruction flag setting (ZF, CF, SF, OF, PF)
+- Conditional jump behavior (JE, JNE, JG, JL, etc.)
+- LOOP instruction handling
+- Flag propagation through instruction sequences
+
+Character comparison loops heavily depend on correct CPU flag handling.
+
+### 5. GetStringTypeW Completeness 🔄 NEXT STEP
+
+**Action Required:** Add missing character type flags to match GetStringTypeA:
+- CT_CTYPE1_PUNCT (0x0010)
+- CT_CTYPE1_CNTRL (0x0020)
+- CT_CTYPE1_BLANK (0x0040)
+- CT_CTYPE1_XDIGIT (0x0080)
+
+See ARGBYTES_INVESTIGATION.md for complete analysis and detailed recommendations.
