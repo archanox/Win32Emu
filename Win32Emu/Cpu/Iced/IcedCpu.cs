@@ -824,7 +824,7 @@ public class IcedCpu : ICpu
 				}
 				else if (insn.GetOpKind(1) == OpKind.Memory)
 				{
-					b = _mem.Read16(CalcMemAddress(insn));
+					b = _mem.Read16(CalcMemAddress(insn, 1));
 				}
 				else
 				{
