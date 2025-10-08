@@ -103,10 +103,13 @@ public class ProcessEnvironment
 	public void InitializeStrings(string exePath, string[] args)
 	{
 		_executablePath = exePath;
-		// Add a dummy argument if none provided to avoid parse_cmdline infinite loop bug
-		// The C runtime's parse_cmdline function has issues when the command line ends
-		// without a space after the last argument
-		var argsWithDummy = args.Length <= 1 ? new[] { exePath, "x" } : new[] { exePath }.Concat(args.Skip(1));
+		// TEMPORARY: Use simple executable name to avoid parse_cmdline bug
+		// The C runtime's parse_cmdline has an infinite loop with complex paths
+		// Extract filename manually since Path.GetFileName doesn't handle backslashes on Linux
+		var simpleName = exePath.Contains('\\') ? exePath.Substring(exePath.LastIndexOf('\\') + 1) : 
+		                  exePath.Contains('/') ? exePath.Substring(exePath.LastIndexOf('/') + 1) : exePath;
+		_logger.LogInformation($"[ProcessEnv] Using simple name: {simpleName} from path: {exePath}");
+		var argsWithDummy = args.Length <= 1 ? new[] { simpleName, "x" } : new[] { simpleName }.Concat(args.Skip(1));
 		var cmdLine = string.Join(" ", argsWithDummy);
 		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
 		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
