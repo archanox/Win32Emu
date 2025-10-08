@@ -773,7 +773,7 @@ public class IcedCpu : ICpu
 				}
 				else if (insn.GetOpKind(1) == OpKind.Memory)
 				{
-					b = _mem.Read8(CalcMemAddress(insn, 1));
+					b = _mem.Read8(CalcMemAddress(insn));
 				}
 				else
 				{
@@ -789,7 +789,7 @@ public class IcedCpu : ICpu
 				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
 				{
-					_mem.Write8(CalcMemAddress(insn, 0), r);
+					_mem.Write8(CalcMemAddress(insn), r);
 				}
 
 				ClearFlag(Cf);
@@ -824,7 +824,7 @@ public class IcedCpu : ICpu
 				}
 				else if (insn.GetOpKind(1) == OpKind.Memory)
 				{
-					b = _mem.Read16(CalcMemAddress(insn, 1));
+					b = _mem.Read16(CalcMemAddress(insn));
 				}
 				else
 				{
@@ -840,7 +840,7 @@ public class IcedCpu : ICpu
 				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
 				{
-					_mem.Write16(CalcMemAddress(insn, 0), r);
+					_mem.Write16(CalcMemAddress(insn), r);
 				}
 
 				ClearFlag(Cf);
