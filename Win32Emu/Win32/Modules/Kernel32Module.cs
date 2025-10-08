@@ -380,8 +380,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(9)]
 	private unsafe uint GetCpInfo(uint codePage, uint lpCpInfo)
 	{
+		_logger.LogInformation("[Kernel32] GetCPInfo called: codePage={CodePage} lpCpInfo=0x{LpCpInfo:X8}", codePage, lpCpInfo);
+		
 		if (lpCpInfo == 0)
 		{
+			_logger.LogWarning("[Kernel32] GetCPInfo: null pointer");
 			return NativeTypes.Win32Bool.FALSE; // Return FALSE if null pointer
 		}
 
@@ -393,6 +396,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_ => codePage
 		};
 
+		_logger.LogInformation("[Kernel32] GetCPInfo: actualCodePage={ActualCodePage}", actualCodePage);
+
 		// We'll support common Western code pages
 		switch (actualCodePage)
 		{
@@ -403,6 +408,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				_env.MemWriteBytes(lpCpInfo + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar[0] = '?' (0x3F), DefaultChar[1] = 0
 				// LeadByte array - all zeros for single-byte code page (12 bytes)
 				_env.MemWriteBytes(lpCpInfo + 6, new byte[12]); // All zeros
+				_logger.LogInformation("[Kernel32] GetCPInfo: returning TRUE for CP1252");
 				return 1; // TRUE
 
 			case 437: // OEM United States
@@ -414,10 +420,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				_env.MemWrite32(lpCpInfo + 0, 1); // MaxCharSize = 1
 				_env.MemWriteBytes(lpCpInfo + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar = '?', 0
 				_env.MemWriteBytes(lpCpInfo + 6, new byte[12]); // LeadByte array all zeros
+				_logger.LogInformation("[Kernel32] GetCPInfo: returning TRUE for CP{ActualCodePage}", actualCodePage);
 				return NativeTypes.Win32Bool.TRUE;
 
 			default:
 				// Unsupported code page
+				_logger.LogWarning("[Kernel32] GetCPInfo: unsupported code page {ActualCodePage}", actualCodePage);
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return NativeTypes.Win32Bool.FALSE;
 		}
@@ -1034,7 +1042,17 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(8)]
-	private unsafe uint GetCommandLineA() => _env.CommandLinePtr;
+	private unsafe uint GetCommandLineA()
+	{
+		var ptr = _env.CommandLinePtr;
+		if (ptr != 0)
+		{
+			// Read the command line string for logging
+			var cmdLine = _env.ReadAnsiString(ptr);
+			_logger.LogInformation("[Kernel32] GetCommandLineA returning 0x{Ptr:X8}: \"{CmdLine}\"", ptr, cmdLine);
+		}
+		return ptr;
+	}
 
 	[DllModuleExport(12)]
 	private unsafe uint GetEnvironmentStringsW()
