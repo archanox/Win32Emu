@@ -229,21 +229,32 @@ Step through the program to understand the execution path.
 ### 5. Memory Inspection
 Examine memory regions to understand data structures and COM vtables.
 
+## GDB Server (New!)
+
+A GDB Remote Serial Protocol server has been implemented, enabling debugging with external tools:
+
+- **Ghidra Integration**: Connect Ghidra's debugger to step through decompiled code
+- **IDA Pro Support**: Use IDA's debugging features with the emulator
+- **GDB/LLDB Compatible**: Standard GDB protocol for flexibility
+- **Remote Debugging**: Connect from any tool that supports GDB protocol
+
+See [GDB_SERVER_GUIDE.md](GDB_SERVER_GUIDE.md) for detailed usage instructions.
+
 ## Future Enhancements
 
-Potential additions (not in this PR):
+Potential additions (not in current implementation):
 
 - Conditional breakpoints (break if register == value)
 - Watchpoints (break on memory access)
 - Call stack unwinding
-- Register/memory modification
+- Register/memory modification (GDB server has stubs, needs full implementation)
 - Symbol support (if debug info available)
 - Scripting support (automate common debugging tasks)
-- GDB remote protocol (for integration with external tools)
 
 ## Testing
 
 - **13 unit tests** for BreakpointManager and basic debugger functionality
+- **4 unit tests** for GDB server functionality
 - All existing tests still pass
 - Builds successfully on .NET 9
 
