@@ -52,12 +52,14 @@ public class EmulatorService
                 // Create and configure the emulator
                 _currentEmulator = new Emulator(_host, _logger);
                 
-                // Load the executable with configured memory size
+                // Load the executable with configured memory size and GDB server settings
                 _currentEmulator.LoadExecutable(
                     game.ExecutablePath, 
                     _configuration.EnableDebugMode,
                     false, // Interactive debug mode not supported in GUI
-                    _configuration.ReservedMemoryMb);
+                    _configuration.ReservedMemoryMb,
+                    _configuration.EnableGdbServer,
+                    _configuration.GdbServerPort);
                 
                 // Run the emulator
                 _currentEmulator.Run();

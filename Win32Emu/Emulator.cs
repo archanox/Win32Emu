@@ -22,6 +22,8 @@ public sealed class Emulator : IDisposable
     private LoadedImage? _image;
     private bool _debugMode;
     private bool _interactiveDebugMode;
+    private bool _gdbServerMode;
+    private int _gdbServerPort;
     private volatile bool _stopRequested;
     private readonly ManualResetEvent _pauseEvent;
 
@@ -83,10 +85,12 @@ public sealed class Emulator : IDisposable
         return _env.PostMessage(hwnd, message, wParam, lParam);
     }
 
-    public void LoadExecutable(string path, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256)
+    public void LoadExecutable(string path, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
+        _gdbServerMode = gdbServerMode;
+        _gdbServerPort = gdbServerPort;
 
         if (!File.Exists(path))
         {
@@ -138,7 +142,11 @@ public sealed class Emulator : IDisposable
         _stopRequested = false;
         _pauseEvent.Set(); // Ensure we start in running state
 
-        if (_interactiveDebugMode)
+        if (_gdbServerMode)
+        {
+            RunWithGdbServer(_gdbServerPort);
+        }
+        else if (_interactiveDebugMode)
         {
             RunWithInteractiveDebugger();
         }
@@ -456,6 +464,76 @@ public sealed class Emulator : IDisposable
         }
 
         Console.WriteLine("\nInteractive debugger session ended");
+    }
+
+    private async void RunWithGdbServer(int port)
+    {
+        var breakpoints = new BreakpointManager();
+        var gdbServer = new GdbServer(_cpu!, _vm!, breakpoints, _logger, port);
+        
+        try
+        {
+            await gdbServer.StartAsync();
+            
+            // Break at entry point
+            var currentEip = _cpu!.GetEip();
+            if (!await gdbServer.HandleBreakAsync(currentEip, "Stopped at entry point"))
+            {
+                return; // Client disconnected or quit
+            }
+
+            // Run indefinitely until stop/exit requested
+            while (!_stopRequested && !_env!.ExitRequested)
+            {
+                // Check if GDB wants to break
+                currentEip = _cpu.GetEip();
+                if (gdbServer.ShouldBreak(currentEip))
+                {
+                    if (!await gdbServer.HandleBreakAsync(currentEip))
+                    {
+                        break; // Client disconnected or quit
+                    }
+                }
+
+                // Execute one instruction
+                var step = _cpu.SingleStep(_vm!);
+                
+                // Check for COM vtable method calls
+                if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
+                {
+                    LogDebug($"[COM] Vtable method call at 0x{step.CallTarget:X8}");
+                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
+                    {
+                        LogDebug($"[COM] Method returned 0x{ret:X8}");
+                        var esp = _cpu.GetRegister("ESP");
+                        var retEip = _vm.Read32(esp);
+                        esp += 4; // Pop return address
+                        _cpu.SetRegister("ESP", esp);
+                        _cpu.SetRegister("EAX", ret); // Return value in EAX
+                        _cpu.SetEip(retEip);
+                    }
+                }
+                else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                {
+                    var dll = imp.dll.ToUpperInvariant();
+                    var name = imp.name;
+                    LogDebug($"[Import] {dll}!{name}");
+                    if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
+                    {
+                        LogDebug($"[Import] Returned 0x{ret:X8}");
+                        var esp = _cpu.GetRegister("ESP");
+                        var retEip = _vm.Read32(esp);
+                        esp += 4 + (uint)argBytes;
+                        _cpu.SetRegister("ESP", esp);
+                        _cpu.SetEip(retEip);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            gdbServer.Dispose();
+        }
     }
 
     private static bool WillBeCall(IcedCpu cpu, VirtualMemory vm)

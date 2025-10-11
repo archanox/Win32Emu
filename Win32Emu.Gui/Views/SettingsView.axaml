@@ -82,6 +82,87 @@
                              Margin="0,-8,0,0"/>
                 </StackPanel>
 
+                <!-- GDB Server Section -->
+                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="0,20,0,0"
+                        Margin="0,20,0,0">
+                    <StackPanel Spacing="20">
+                        <TextBlock Text="GDB Server (Ghidra/IDA Integration)"
+                                 FontWeight="Bold"
+                                 FontSize="16"/>
+
+                        <!-- Enable GDB Server -->
+                        <StackPanel Spacing="8">
+                            <CheckBox IsChecked="{Binding EnableGdbServer}"
+                                    Content="Enable GDB Server"/>
+                            <TextBlock Text="Start GDB server for remote debugging with Ghidra, IDA Pro, or GDB"
+                                     FontSize="12"
+                                     Opacity="0.7"
+                                     Margin="0,-8,0,0"/>
+                        </StackPanel>
+
+                        <!-- GDB Server Port -->
+                        <StackPanel Spacing="8" IsEnabled="{Binding EnableGdbServer}">
+                            <TextBlock Text="GDB Server Port"
+                                     FontWeight="Bold"
+                                     FontSize="14"/>
+                            <NumericUpDown Value="{Binding GdbServerPort}"
+                                         Minimum="1024"
+                                         Maximum="65535"
+                                         Increment="1"
+                                         HorizontalAlignment="Stretch"/>
+                            <TextBlock Text="Port for GDB server to listen on (default: 1234)"
+                                     FontSize="12"
+                                     Opacity="0.7"/>
+                        </StackPanel>
+
+                        <!-- Pause on Start -->
+                        <StackPanel Spacing="8" IsEnabled="{Binding EnableGdbServer}">
+                            <CheckBox IsChecked="{Binding GdbPauseOnStart}"
+                                    Content="Pause on Start"/>
+                            <TextBlock Text="Pause emulation at entry point and wait for debugger to connect"
+                                     FontSize="12"
+                                     Opacity="0.7"
+                                     Margin="0,-8,0,0"/>
+                        </StackPanel>
+
+                        <!-- Information Panel -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                                Padding="12"
+                                CornerRadius="4"
+                                IsVisible="{Binding EnableGdbServer}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="ℹ️ How to Connect"
+                                         FontWeight="Bold"
+                                         FontSize="13"/>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9">
+                                    <Run Text="Once the game starts, the GDB server will be listening on port "/>
+                                    <Run Text="{Binding GdbServerPort}" FontWeight="Bold"/>
+                                    <Run Text="."/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9"
+                                         Margin="0,4,0,0">
+                                    <Run Text="Connect from Ghidra: "/>
+                                    <Run FontFamily="Consolas" Text="Debugger → Connect → gdb → localhost:"/>
+                                    <Run FontFamily="Consolas" Text="{Binding GdbServerPort}"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9">
+                                    <Run Text="Connect from GDB: "/>
+                                    <Run FontFamily="Consolas" Text="target remote localhost:"/>
+                                    <Run FontFamily="Consolas" Text="{Binding GdbServerPort}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>

@@ -124,7 +124,10 @@ public class ConfigurationService
             ResolutionScaleFactor = _settings.ResolutionScaleFactor,
             ReservedMemoryMb = _settings.ReservedMemoryMB,
             WindowsVersion = _settings.WindowsVersion,
-            EnableDebugMode = _settings.EnableDebugMode
+            EnableDebugMode = _settings.EnableDebugMode,
+            EnableGdbServer = _settings.EnableGdbServer,
+            GdbServerPort = _settings.GdbServerPort,
+            GdbPauseOnStart = _settings.GdbPauseOnStart
         };
     }
 
@@ -164,6 +167,9 @@ public class ConfigurationService
         _settings.ReservedMemoryMB = configuration.ReservedMemoryMb;
         _settings.WindowsVersion = configuration.WindowsVersion;
         _settings.EnableDebugMode = configuration.EnableDebugMode;
+        _settings.EnableGdbServer = configuration.EnableGdbServer;
+        _settings.GdbServerPort = configuration.GdbServerPort;
+        _settings.GdbPauseOnStart = configuration.GdbPauseOnStart;
         SaveSettings();
     }
 

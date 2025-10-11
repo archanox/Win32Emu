@@ -1,0 +1,97 @@
+Settings Panel - GDB Server Section
+═══════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Emulator Settings                                          ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃                                                            ┃
+┃  Rendering Backend                                         ┃
+┃  ┌────────────────────────────────────────────┐            ┃
+┃  │ Software                               ▼  │            ┃
+┃  └────────────────────────────────────────────┘            ┃
+┃  Select the graphics rendering backend for games           ┃
+┃                                                            ┃
+┃  Resolution Scale Factor                                   ┃
+┃  ┌────────────────────────────────────────────┐            ┃
+┃  │ 1                                      ▼  │            ┃
+┃  └────────────────────────────────────────────┘            ┃
+┃  Upscale the game resolution by this factor                ┃
+┃                                                            ┃
+┃  Reserved Memory (MB)                                      ┃
+┃  ┌────────────────────────────────────────────┐            ┃
+┃  │ 256                                    ▲▼ │            ┃
+┃  └────────────────────────────────────────────┘            ┃
+┃  Amount of memory to allocate for emulated environment     ┃
+┃                                                            ┃
+┃  Windows Version                                           ┃
+┃  ┌────────────────────────────────────────────┐            ┃
+┃  │ Windows 95                             ▼  │            ┃
+┃  └────────────────────────────────────────────┘            ┃
+┃  The Windows version to emulate for compatibility          ┃
+┃                                                            ┃
+┃  ☑ Enable Debug Mode                                      ┃
+┃  Enable enhanced debugging to catch memory access errors   ┃
+┃                                                            ┃
+┃  ────────────────────────────────────────────────────────  ┃
+┃                                                            ┃
+┃  GDB Server (Ghidra/IDA Integration)                       ┃
+┃                                                            ┃
+┃  ☑ Enable GDB Server                                      ┃
+┃  Start GDB server for remote debugging with Ghidra, IDA    ┃
+┃  Pro, or GDB                                               ┃
+┃                                                            ┃
+┃  GDB Server Port                                           ┃
+┃  ┌────────────────────────────────────────────┐            ┃
+┃  │ 1234                                   ▲▼ │            ┃
+┃  └────────────────────────────────────────────┘            ┃
+┃  Port for GDB server to listen on (default: 1234)          ┃
+┃                                                            ┃
+┃  ☑ Pause on Start                                         ┃
+┃  Pause emulation at entry point and wait for debugger to   ┃
+┃  connect                                                   ┃
+┃                                                            ┃
+┃  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓  ┃
+┃  ┃ ℹ️ How to Connect                                   ┃  ┃
+┃  ┃                                                     ┃  ┃
+┃  ┃ Once the game starts, the GDB server will be       ┃  ┃
+┃  ┃ listening on port 1234.                            ┃  ┃
+┃  ┃                                                     ┃  ┃
+┃  ┃ Connect from Ghidra:                               ┃  ┃
+┃  ┃ Debugger → Connect → gdb → localhost:1234          ┃  ┃
+┃  ┃                                                     ┃  ┃
+┃  ┃ Connect from GDB:                                  ┃  ┃
+┃  ┃ target remote localhost:1234                       ┃  ┃
+┃  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛  ┃
+┃                                                            ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+
+Features:
+─────────
+✓ Enable/disable GDB server with checkbox
+✓ Configurable port (1024-65535)
+✓ Pause on start option for waiting for debugger
+✓ Dynamic info panel showing connection instructions
+✓ Port value updates in real-time in info panel
+✓ Controls disabled when GDB server is not enabled
+✓ All settings persisted to configuration file
+
+
+When GDB Server is Disabled:
+────────────────────────────
+- Port input is grayed out
+- Pause on Start checkbox is grayed out  
+- Information panel is hidden
+
+
+Usage Flow:
+───────────
+1. Open Win32Emu GUI
+2. Click Settings in navigation
+3. Scroll to "GDB Server" section
+4. Check "Enable GDB Server"
+5. Adjust port if needed
+6. Choose whether to pause on start
+7. Launch any game from library
+8. GDB server starts automatically
+9. Connect from Ghidra/IDA/GDB using displayed instructions
