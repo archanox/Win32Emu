@@ -7,4 +7,7 @@ public class EmulatorConfiguration
 	public int ReservedMemoryMb { get; set; } = 256;
 	public string WindowsVersion { get; set; } = "Windows 95";
 	public bool EnableDebugMode { get; set; }
+	public bool EnableGdbServer { get; set; }
+	public int GdbServerPort { get; set; } = 1234;
+	public bool GdbPauseOnStart { get; set; } = true;
 }
