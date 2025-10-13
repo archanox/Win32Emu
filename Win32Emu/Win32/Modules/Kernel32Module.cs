@@ -434,7 +434,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Write the CPINFO structure to emulated memory
-		_env.MemWriteStruct((uint)lpCpInfo.Value, ref cpInfo);
+		// Validate pointer before casting and writing
+		ulong ptrValue = (ulong)lpCpInfo.Value;
+		// Assume emulated memory is 32-bit addressable (0..0xFFFFFFFF)
+		if (ptrValue > uint.MaxValue || ptrValue == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		_env.MemWriteStruct((uint)ptrValue, ref cpInfo);
 
 		return NativeTypes.Win32Bool.TRUE;
 	}
