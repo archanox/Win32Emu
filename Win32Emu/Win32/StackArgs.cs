@@ -23,4 +23,6 @@ public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem)
 	public LpcStr LpcStr(int index) => new LpcStr(UInt32(index), mem);
 	
 	public LpWStr LpWStr(int index) => new LpWStr(UInt32(index));
+	
+	public unsafe NativeTypes.Lpcpinfo Lpcpinfo(int index) => (NativeTypes.Cpinfo*)UInt32(index);
 }

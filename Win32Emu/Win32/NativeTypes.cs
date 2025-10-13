@@ -74,6 +74,14 @@ public static class NativeTypes
 		public unsafe fixed byte LeadByte[12];    // Lead byte ranges for double-byte character sets (DBCS)
 	}
 
+	// Pointer to CPINFO structure
+	public readonly unsafe struct Lpcpinfo(Cpinfo* v)
+	{
+		public readonly Cpinfo* Value = v;
+		public static implicit operator Cpinfo*(Lpcpinfo p) => p.Value;
+		public static implicit operator Lpcpinfo(Cpinfo* v) => new(v);
+	}
+
 	// Windows error codes
 	public static class Win32Error
 	{

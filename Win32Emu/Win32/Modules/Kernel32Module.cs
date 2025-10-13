@@ -43,6 +43,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETVERSION":
 				returnValue = GetVersion();
 				return true;
+			case "ISPROCESSORFEATUREPRESENT":
+				returnValue = IsProcessorFeaturePresent(a.UInt32(0));
+				return true;
 			case "GETLASTERROR":
 				returnValue = GetLastError();
 				return true;
@@ -62,7 +65,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = GetAcp();
 				return true;
 			case "GETCPINFO":
-				returnValue = GetCpInfo(a.UInt32(0), a.UInt32(1));
+				returnValue = GetCpInfo(a.UInt32(0), a.Lpcpinfo(1));
 				return true;
 			case "GETOEMCP":
 				returnValue = GetOemcp();
@@ -83,7 +86,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = LoadLibraryA(a.LpcStr(0));
 				return true;
 			case "GETPROCADDRESS":
-				returnValue = GetProcAddress(a.UInt32(0), a.UInt32(1));
+				returnValue = GetProcAddress(a.UInt32(0), a.LpcStr(1));
 				return true;
 			case "GETSTARTUPINFOA":
 				returnValue = GetStartupInfoA(a.UInt32(0));
@@ -113,6 +116,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "SETSTDHANDLE":
 				returnValue = SetStdHandle(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "ALLOCCONSOLE":
+				returnValue = AllocConsole();
+				return true;
+			case "FREECONSOLE":
+				returnValue = FreeConsole();
+				return true;
+			case "ATTACHCONSOLE":
+				returnValue = AttachConsole(a.UInt32(0));
 				return true;
 
 			// Memory/heap
@@ -287,6 +299,41 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return (major << 8 | minor) << 16 | build;
 	}
 
+	[DllModuleExport(85)]
+	private unsafe uint IsProcessorFeaturePresent(uint processorFeature)
+	{
+		// Return features that would be present on an Intel Pentium 1 processor
+		// Pentium 1 (P5) was introduced in 1993 and had the following features:
+		// - FPU (Floating Point Unit) - built-in, not emulated
+		// - TSC (Time Stamp Counter)
+		// - MSR (Model Specific Registers)
+		// - CX8 (CMPXCHG8B instruction)
+		// - MMX was added in Pentium MMX (P55C) in 1997, not in original P5
+		
+		const uint PF_FLOATING_POINT_PRECISION_ERRATA = 0;
+		const uint PF_FLOATING_POINT_EMULATED = 1;
+		const uint PF_COMPARE_EXCHANGE_DOUBLE = 2;
+		const uint PF_MMX_INSTRUCTIONS_AVAILABLE = 3;
+		const uint PF_RDTSC_INSTRUCTION_AVAILABLE = 8;
+		const uint PF_3DNOW_INSTRUCTIONS_AVAILABLE = 7;
+		
+		bool isPresent = processorFeature switch
+		{
+			PF_FLOATING_POINT_PRECISION_ERRATA => false, // No known FPU precision bug
+			PF_FLOATING_POINT_EMULATED => false,         // FPU is built-in, not emulated
+			PF_COMPARE_EXCHANGE_DOUBLE => true,          // Pentium has CMPXCHG8B
+			PF_MMX_INSTRUCTIONS_AVAILABLE => false,      // Original Pentium doesn't have MMX (added in P55C)
+			PF_RDTSC_INSTRUCTION_AVAILABLE => true,      // Pentium has RDTSC
+			PF_3DNOW_INSTRUCTIONS_AVAILABLE => false,    // 3DNow! is AMD K6-2 feature
+			_ => false                                   // Other features not present
+		};
+		
+		_logger.LogDebug("[Kernel32] IsProcessorFeaturePresent({ProcessorFeature}) -> {Result}", 
+			processorFeature, isPresent);
+		
+		return isPresent ? 1u : 0u; // TRUE or FALSE
+	}
+
 	[DllModuleExport(48, ForwardedTo = "KERNELBASE.GetVersionEx")]
 	private unsafe uint GetVersionEx()
 	{
@@ -378,11 +425,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint GetAcp() => 1252; // Windows-1252 (Western European)
 
 	[DllModuleExport(9)]
-	private unsafe uint GetCpInfo(uint codePage, uint lpCpInfo)
+	private unsafe uint GetCpInfo(uint codePage, NativeTypes.Lpcpinfo lpCpInfo)
 	{
 		_logger.LogInformation("[Kernel32] GetCPInfo called: codePage={CodePage} lpCpInfo=0x{LpCpInfo:X8}", codePage, lpCpInfo);
 		
-		if (lpCpInfo == 0)
+		if (lpCpInfo == 0 || lpCpInfo.Value == null)
 		{
 			_logger.LogWarning("[Kernel32] GetCPInfo: null pointer");
 			return NativeTypes.Win32Bool.FALSE; // Return FALSE if null pointer
@@ -397,31 +444,39 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		};
 
 		_logger.LogInformation("[Kernel32] GetCPInfo: actualCodePage={ActualCodePage}", actualCodePage);
+		NativeTypes.Cpinfo cpInfo;
 
 		// We'll support common Western code pages
 		switch (actualCodePage)
 		{
 			case 1252: // Windows-1252 (Western European)
-				// Fill CPINFO structure
-				_env.MemWrite32(lpCpInfo + 0, 1); // MaxCharSize = 1 (single-byte)
-				// Write DefaultChar as bytes - using MemWriteBytes for byte array
-				_env.MemWriteBytes(lpCpInfo + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar[0] = '?' (0x3F), DefaultChar[1] = 0
-				// LeadByte array - all zeros for single-byte code page (12 bytes)
-				_env.MemWriteBytes(lpCpInfo + 6, new byte[12]); // All zeros
-				_logger.LogInformation("[Kernel32] GetCPInfo: returning TRUE for CP1252");
-				return 1; // TRUE
-
 			case 437: // OEM United States
 			case 850: // OEM Multilingual Latin I
 			case 1250: // Windows Central Europe
 			case 1251: // Windows Cyrillic
 			case 28591: // ISO 8859-1 Latin I
-				// Similar single-byte code page setup
-				_env.MemWrite32(lpCpInfo + 0, 1); // MaxCharSize = 1
-				_env.MemWriteBytes(lpCpInfo + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar = '?', 0
-				_env.MemWriteBytes(lpCpInfo + 6, new byte[12]); // LeadByte array all zeros
-				_logger.LogInformation("[Kernel32] GetCPInfo: returning TRUE for CP{ActualCodePage}", actualCodePage);
-				return NativeTypes.Win32Bool.TRUE;
+				// Single-byte code page setup
+				cpInfo.MaxCharSize = 1;
+				cpInfo.DefaultChar[0] = 0x3F; // '?' character
+				cpInfo.DefaultChar[1] = 0x00; // Null terminator
+				// LeadByte array - all zeros for single-byte code page
+				for (int i = 0; i < 12; i++)
+				{
+					cpInfo.LeadByte[i] = 0;
+				}
+				break;
+
+			case 65001: // UTF-8
+				// UTF-8 is a multi-byte encoding with variable length (1-4 bytes per character)
+				cpInfo.MaxCharSize = 4;
+				cpInfo.DefaultChar[0] = 0x3F; // '?' character
+				cpInfo.DefaultChar[1] = 0x00; // Null terminator
+				// LeadByte array - all zeros for UTF-8 (no traditional lead bytes like DBCS)
+				for (int i = 0; i < 12; i++)
+				{
+					cpInfo.LeadByte[i] = 0;
+				}
+				break;
 
 			default:
 				// Unsupported code page
@@ -429,6 +484,19 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return NativeTypes.Win32Bool.FALSE;
 		}
+
+		// Write the CPINFO structure to emulated memory
+		// Validate pointer before casting and writing
+		ulong ptrValue = (ulong)lpCpInfo.Value;
+		// Assume emulated memory is 32-bit addressable (0..0xFFFFFFFF)
+		if (ptrValue > uint.MaxValue || ptrValue == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		_env.MemWriteStruct((uint)ptrValue, ref cpInfo);
+
+		return NativeTypes.Win32Bool.TRUE;
 	}
 
 	[DllModuleExport(17, IsStub = true)]
@@ -760,13 +828,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(18)]
-	private unsafe uint GetProcAddress(uint hModule, uint lpProcName)
+	private unsafe uint GetProcAddress(uint hModule, LpcStr lpProcName)
 	{
 		// GetProcAddress retrieves the address of an exported function from a DLL
 		// hModule: module handle from LoadLibraryA or GetModuleHandleA
 		// lpProcName: either a string pointer (name) or an ordinal value (LOWORD)
 
-		_logger.LogInformation("[Kernel32] GetProcAddress(0x{HModule:X8}, 0x{LpProcName:X8})", hModule, lpProcName);
+		_logger.LogInformation("[Kernel32] GetProcAddress(0x{HModule:X8}, 0x{LpProcName:X8})", hModule, lpProcName.Address);
 
 		if (hModule == 0)
 		{
@@ -779,16 +847,16 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// Check if lpProcName is an ordinal (high word is 0)
 		uint ordinal = 0;
-		if ((lpProcName & 0xFFFF0000) == 0)
+		if ((lpProcName.Address & 0xFFFF0000) == 0)
 		{
-			ordinal = lpProcName & 0xFFFF;
+			ordinal = lpProcName.Address & 0xFFFF;
 			byOrdinal = true;
 			_logger.LogInformation("[Kernel32] GetProcAddress: Looking up by ordinal {Ordinal}", ordinal);
 		}
 		else
 		{
 			// It's a string pointer
-			procName = _env.ReadAnsiString(lpProcName);
+			procName = lpProcName.ToString();
 			_logger.LogInformation("[Kernel32] GetProcAddress: Looking up '{ProcName}'", procName);
 		}
 
@@ -1151,6 +1219,63 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return 1;
 	}
 
+	[DllModuleExport(1)]
+	private unsafe uint AllocConsole()
+	{
+		_logger.LogInformation("[Kernel32] AllocConsole()");
+		
+		bool success = _env.AllocateConsole();
+		if (!success)
+		{
+			// Console already exists
+			_lastError = 5; // ERROR_ACCESS_DENIED
+			return 0; // FALSE
+		}
+		
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(1)]
+	private unsafe uint FreeConsole()
+	{
+		_logger.LogInformation("[Kernel32] FreeConsole()");
+		
+		bool success = _env.FreeConsole();
+		if (!success)
+		{
+			// No console to free
+			_lastError = 6; // ERROR_INVALID_HANDLE
+			return 0; // FALSE
+		}
+		
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(1)]
+	private unsafe uint AttachConsole(uint dwProcessId)
+	{
+		_logger.LogInformation("[Kernel32] AttachConsole(dwProcessId={DwProcessId})", dwProcessId);
+		
+		// dwProcessId == 0xFFFFFFFF means attach to parent process console
+		// For emulation, we just allocate a console if one doesn't exist
+		
+		if (_env.HasConsole)
+		{
+			// Already has a console
+			_lastError = 5; // ERROR_ACCESS_DENIED
+			return 0; // FALSE
+		}
+		
+		bool success = _env.AllocateConsole();
+		if (!success)
+		{
+			_lastError = 5; // ERROR_ACCESS_DENIED
+			return 0; // FALSE
+		}
+		
+		return 1; // TRUE
+	}
+
 	[DllModuleExport(24)]
 	private unsafe uint GlobalAlloc(uint flags, uint bytes) => _env.SimpleAlloc(bytes == 0 ? 1u : bytes);
 
@@ -1438,7 +1563,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		uint lpOverlapped)
 	{
 		_logger.LogInformation("[Kernel32] WriteFile(handle=0x{Handle:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToWrite={NNumberOfBytesToWrite}, lpNumberOfBytesWritten=0x{LpNumberOfBytesWritten:X8}, lpOverlapped=0x{LpOverlapped:X8})", handle, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
-		// Handle standard handles specially
+		
+		// NULL handle is invalid
+		if (handle == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		
+		// Handle standard handles specially (only if they're not NULL)
 		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle || handle == _env.StdInputHandle)
 		{
 			try
@@ -1519,6 +1652,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint GetFileType(void* hFile)
 	{
 		var handle = (uint)hFile;
+
+		// NULL handle returns FILE_TYPE_UNKNOWN
+		if (handle == 0)
+		{
+			return 0x0000; // FILE_TYPE_UNKNOWN
+		}
 
 		// Standard handles are character devices (console)
 		if (handle == _env.StdInputHandle || handle == _env.StdOutputHandle || handle == _env.StdErrorHandle)

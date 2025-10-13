@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
@@ -46,10 +48,15 @@ public class ProcessEnvironment
 	public bool ExitRequested => _exitRequested;
 	public string ExecutablePath => _executablePath;
 
-	// Default standard handles (pseudo values)
-	public uint StdInputHandle { get; set; } = 0x00000001;
-	public uint StdOutputHandle { get; set; } = 0x00000002;
-	public uint StdErrorHandle { get; set; } = 0x00000003;
+	// Console state
+	private bool _hasConsole = false;
+	public bool HasConsole => _hasConsole;
+
+	// Default standard handles (NULL for GUI apps without console)
+	// Console apps would set these to actual handles via AllocConsole/AttachConsole
+	public uint StdInputHandle { get; set; } = 0x00000000; // NULL - no console by default
+	public uint StdOutputHandle { get; set; } = 0x00000000; // NULL - no console by default
+	public uint StdErrorHandle { get; set; } = 0x00000000; // NULL - no console by default
 
 	// Simple handle table for host resources (files etc.)
 	private readonly Dictionary<uint, object> _handles = new();
@@ -102,16 +109,11 @@ public class ProcessEnvironment
 
 	public void InitializeStrings(string exePath, string[] args)
 	{
+		Debug.Assert(exePath != null, nameof(exePath) + " != null");
+		
 		_executablePath = exePath;
-		// TEMPORARY: Use simple executable name to avoid parse_cmdline bug
-		// The C runtime's parse_cmdline has an infinite loop with complex paths
-		// Extract filename manually since Path.GetFileName doesn't handle backslashes on Linux
-		var simpleName = exePath.Contains('\\') ? exePath.Substring(exePath.LastIndexOf('\\') + 1) : 
-		                  exePath.Contains('/') ? exePath.Substring(exePath.LastIndexOf('/') + 1) : exePath;
-		_logger.LogInformation($"[ProcessEnv] Using simple name: {simpleName} from path: {exePath}");
-		var argsWithDummy = args.Length <= 1 ? new[] { simpleName, "x" } : new[] { simpleName }.Concat(args.Skip(1));
-		var cmdLine = string.Join(" ", argsWithDummy);
-		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
+		var cmdLine = string.Join(" ", new[] { exePath }.Concat(args.Skip(1)));
+		CommandLinePtr = WriteAnsiString($"\"{cmdLine}\"\0");
 		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
 		ModuleFileNameLength = (uint)exePath.Length;
 
@@ -334,6 +336,19 @@ public class ProcessEnvironment
 	public void MemWrite64(uint addr, ulong value) => _vm.Write64(addr, value);
 	public void MemZero(uint addr, uint size) => _vm.WriteBytes(addr, new byte[size]);
 
+	// Write an unmanaged struct to emulated memory
+	public unsafe void MemWriteStruct<T>(uint addr, ref T value) where T : unmanaged
+	{
+		var size = sizeof(T);
+		var bytes = new byte[size];
+		fixed (T* ptr = &value)
+		{
+			Marshal.Copy((nint)ptr, bytes, 0, size);
+		}
+		_vm.WriteBytes(addr, bytes);
+		try { Diagnostics.Diagnostics.LogMemWrite(addr, bytes.Length, bytes); } catch { }
+	}
+
 	// Handle table ops
 	public uint RegisterHandle(object obj)
 	{
@@ -533,6 +548,86 @@ public class ProcessEnvironment
 	{
 		// Return the size of the allocated block, or 0 if not found
 		return _heapAllocationSizes.TryGetValue(lpMem, out var size) ? size : 0;
+	}
+
+	// Console management
+	/// <summary>
+	/// Allocate a console for the process and initialize standard handles.
+	/// </summary>
+	/// <returns>True if console was allocated successfully</returns>
+	public bool AllocateConsole()
+	{
+		if (_hasConsole)
+		{
+			_logger.LogWarning("[ProcessEnvironment] AllocConsole called but console already exists");
+			return false; // Console already exists
+		}
+
+		_hasConsole = true;
+		
+		// Initialize standard handles to valid values
+		// Use simple sequential handle values for console handles
+		StdInputHandle = 0x00000001;
+		StdOutputHandle = 0x00000002;
+		StdErrorHandle = 0x00000003;
+		
+		_logger.LogInformation("[ProcessEnvironment] Console allocated - stdin=0x{StdIn:X8}, stdout=0x{StdOut:X8}, stderr=0x{StdErr:X8}", 
+			StdInputHandle, StdOutputHandle, StdErrorHandle);
+		
+		return true;
+	}
+
+	/// <summary>
+	/// Free the console and reset standard handles to NULL.
+	/// </summary>
+	/// <returns>True if console was freed successfully</returns>
+	public bool FreeConsole()
+	{
+		if (!_hasConsole)
+		{
+			_logger.LogWarning("[ProcessEnvironment] FreeConsole called but no console exists");
+			return false;
+		}
+
+		_hasConsole = false;
+		
+		// Reset standard handles to NULL
+		StdInputHandle = 0x00000000;
+		StdOutputHandle = 0x00000000;
+		StdErrorHandle = 0x00000000;
+		
+		_logger.LogInformation("[ProcessEnvironment] Console freed");
+		
+		return true;
+	}
+
+	/// <summary>
+	/// Initialize standard handles based on PE subsystem type.
+	/// </summary>
+	/// <param name="subsystem">PE subsystem value (2=GUI, 3=CUI)</param>
+	public void InitializeConsoleForSubsystem(ushort subsystem)
+	{
+		// IMAGE_SUBSYSTEM_WINDOWS_CUI = 3 (Console app)
+		// IMAGE_SUBSYSTEM_WINDOWS_GUI = 2 (GUI app)
+		const ushort IMAGE_SUBSYSTEM_WINDOWS_GUI = 2;
+		const ushort IMAGE_SUBSYSTEM_WINDOWS_CUI = 3;
+		
+		if (subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI)
+		{
+			// Console application - allocate console automatically
+			_logger.LogInformation("[ProcessEnvironment] Detected console subsystem, allocating console");
+			AllocateConsole();
+		}
+		else if (subsystem == IMAGE_SUBSYSTEM_WINDOWS_GUI)
+		{
+			// GUI application - no console by default (handles remain NULL)
+			_logger.LogInformation("[ProcessEnvironment] Detected GUI subsystem, no console allocated");
+		}
+		else
+		{
+			// Unknown subsystem - default to GUI behavior (no console)
+			_logger.LogWarning("[ProcessEnvironment] Unknown subsystem type {Subsystem}, defaulting to GUI behavior", subsystem);
+		}
 	}
 
 	// VirtualAlloc

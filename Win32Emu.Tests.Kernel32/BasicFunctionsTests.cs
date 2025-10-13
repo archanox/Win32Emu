@@ -41,6 +41,34 @@ public sealed class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
+    public void IsProcessorFeaturePresent_ShouldReturnPentium1Features()
+    {
+        // Arrange - Pentium 1 (P5) processor features
+        const uint PF_FLOATING_POINT_PRECISION_ERRATA = 0;
+        const uint PF_FLOATING_POINT_EMULATED = 1;
+        const uint PF_COMPARE_EXCHANGE_DOUBLE = 2; // CMPXCHG8B
+        const uint PF_MMX_INSTRUCTIONS_AVAILABLE = 3;
+        const uint PF_RDTSC_INSTRUCTION_AVAILABLE = 8;
+        const uint PF_3DNOW_INSTRUCTIONS_AVAILABLE = 7;
+
+        // Act - test features that should be present on Pentium 1
+        var fpuErrata = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_FLOATING_POINT_PRECISION_ERRATA);
+        var fpuEmulated = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_FLOATING_POINT_EMULATED);
+        var cmpxchg8b = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_COMPARE_EXCHANGE_DOUBLE);
+        var mmx = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_MMX_INSTRUCTIONS_AVAILABLE);
+        var rdtsc = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_RDTSC_INSTRUCTION_AVAILABLE);
+        var amd3dnow = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_3DNOW_INSTRUCTIONS_AVAILABLE);
+
+        // Assert - Pentium 1 features
+        Assert.Equal(0u, fpuErrata);      // FALSE - No FPU precision bug
+        Assert.Equal(0u, fpuEmulated);    // FALSE - Built-in FPU, not emulated
+        Assert.Equal(1u, cmpxchg8b);      // TRUE - Pentium has CMPXCHG8B
+        Assert.Equal(0u, mmx);            // FALSE - MMX added in Pentium MMX (P55C), not original P5
+        Assert.Equal(1u, rdtsc);          // TRUE - Pentium has RDTSC
+        Assert.Equal(0u, amd3dnow);       // FALSE - 3DNow! is AMD K6-2 feature
+    }
+
+    [Fact]
     public void GetLastError_InitialValue_ShouldBeZero()
     {
         // Act
@@ -149,11 +177,41 @@ public sealed class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
+    public void GetCPInfo_WithUTF8_ShouldReturnSuccessAndFillStructure()
+    {
+        // Arrange
+        var cpInfoPtr = _testEnv.AllocateMemory(20);
+        const uint utf8CodePage = 65001; // UTF-8
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETCPINFO", utf8CodePage, cpInfoPtr);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
+        
+        // Verify CPINFO structure contents
+        var maxCharSize = _testEnv.Memory.Read32(cpInfoPtr + 0);
+        var defaultChar0 = _testEnv.Memory.Read8(cpInfoPtr + 4);
+        var defaultChar1 = _testEnv.Memory.Read8(cpInfoPtr + 5);
+        
+        Assert.Equal(4u, maxCharSize); // UTF-8 uses up to 4 bytes per character
+        Assert.Equal(0x3F, defaultChar0); // '?' character
+        Assert.Equal(0x00, defaultChar1); // Null terminator
+        
+        // Check that LeadByte array is all zeros (UTF-8 doesn't use traditional lead bytes)
+        for (uint i = 0; i < 12; i++)
+        {
+            var leadByte = _testEnv.Memory.Read8(cpInfoPtr + 6 + i);
+            Assert.Equal(0, leadByte);
+        }
+    }
+
+    [Fact]
     public void GetCPInfo_WithUnsupportedCodePage_ShouldReturnFalse()
     {
         // Arrange
         var cpInfoPtr = _testEnv.AllocateMemory(20);
-        const uint unsupportedCodePage = 65001; // UTF-8 (not supported in our implementation)
+        const uint unsupportedCodePage = 12345; // Some unsupported code page
 
         // Act
         var result = _testEnv.CallKernel32Api("GETCPINFO", unsupportedCodePage, cpInfoPtr);
