@@ -151,7 +151,7 @@ public class GdbServer : IDisposable
                 else if (ch == '#' && inPacket)
                 {
                     // Read checksum (2 hex digits)
-                    if (i + 2 < bytesRead)
+                    if (i + 2 <= bytesRead)
                     {
                         var checksumStr = Encoding.ASCII.GetString(buffer, i + 1, 2);
                         var packet = packetData.ToString();
