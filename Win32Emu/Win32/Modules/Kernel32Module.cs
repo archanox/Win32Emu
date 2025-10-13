@@ -427,8 +427,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(9)]
 	private unsafe uint GetCpInfo(uint codePage, NativeTypes.Lpcpinfo lpCpInfo)
 	{
-		if (lpCpInfo.Value == null)
+		_logger.LogInformation("[Kernel32] GetCPInfo called: codePage={CodePage} lpCpInfo=0x{LpCpInfo:X8}", codePage, lpCpInfo);
+		
+		if (lpCpInfo == 0 || lpCpInfo.Value == null)
 		{
+			_logger.LogWarning("[Kernel32] GetCPInfo: null pointer");
 			return NativeTypes.Win32Bool.FALSE; // Return FALSE if null pointer
 		}
 
@@ -440,6 +443,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_ => codePage
 		};
 
+		_logger.LogInformation("[Kernel32] GetCPInfo: actualCodePage={ActualCodePage}", actualCodePage);
 		NativeTypes.Cpinfo cpInfo;
 
 		// We'll support common Western code pages
@@ -476,6 +480,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 			default:
 				// Unsupported code page
+				_logger.LogWarning("[Kernel32] GetCPInfo: unsupported code page {ActualCodePage}", actualCodePage);
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return NativeTypes.Win32Bool.FALSE;
 		}
@@ -1105,7 +1110,17 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(8)]
-	private unsafe uint GetCommandLineA() => _env.CommandLinePtr;
+	private unsafe uint GetCommandLineA()
+	{
+		var ptr = _env.CommandLinePtr;
+		if (ptr != 0)
+		{
+			// Read the command line string for logging
+			var cmdLine = _env.ReadAnsiString(ptr);
+			_logger.LogInformation("[Kernel32] GetCommandLineA returning 0x{Ptr:X8}: \"{CmdLine}\"", ptr, cmdLine);
+		}
+		return ptr;
+	}
 
 	[DllModuleExport(12)]
 	private unsafe uint GetEnvironmentStringsW()
