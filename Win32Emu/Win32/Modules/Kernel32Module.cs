@@ -393,42 +393,65 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_ => codePage
 		};
 
-		// Get the address of the CPINFO structure
-		var cpInfoAddr = (uint)lpCpInfo.Value;
+		NativeTypes.Cpinfo cpInfo;
 
 		// We'll support common Western code pages
 		switch (actualCodePage)
 		{
 			case 1252: // Windows-1252 (Western European)
-				// Fill CPINFO structure
-				_env.MemWrite32(cpInfoAddr + 0, 1); // MaxCharSize = 1 (single-byte)
-				_env.MemWriteBytes(cpInfoAddr + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar = '?', 0
-				_env.MemWriteBytes(cpInfoAddr + 6, new byte[12]); // LeadByte array all zeros
-				return NativeTypes.Win32Bool.TRUE;
-
 			case 437: // OEM United States
 			case 850: // OEM Multilingual Latin I
 			case 1250: // Windows Central Europe
 			case 1251: // Windows Cyrillic
 			case 28591: // ISO 8859-1 Latin I
-				// Similar single-byte code page setup
-				_env.MemWrite32(cpInfoAddr + 0, 1); // MaxCharSize = 1
-				_env.MemWriteBytes(cpInfoAddr + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar = '?', 0
-				_env.MemWriteBytes(cpInfoAddr + 6, new byte[12]); // LeadByte array all zeros
-				return NativeTypes.Win32Bool.TRUE;
+				// Single-byte code page setup
+				cpInfo.MaxCharSize = 1;
+				cpInfo.DefaultChar[0] = 0x3F; // '?' character
+				cpInfo.DefaultChar[1] = 0x00; // Null terminator
+				// LeadByte array - all zeros for single-byte code page
+				for (int i = 0; i < 12; i++)
+				{
+					cpInfo.LeadByte[i] = 0;
+				}
+				break;
 
 			case 65001: // UTF-8
 				// UTF-8 is a multi-byte encoding with variable length (1-4 bytes per character)
-				_env.MemWrite32(cpInfoAddr + 0, 4); // MaxCharSize = 4 (UTF-8 can use up to 4 bytes)
-				_env.MemWriteBytes(cpInfoAddr + 4, new byte[] { 0x3F, 0x00 }); // DefaultChar = '?', 0
-				_env.MemWriteBytes(cpInfoAddr + 6, new byte[12]); // LeadByte array all zeros
-				return NativeTypes.Win32Bool.TRUE;
+				cpInfo.MaxCharSize = 4;
+				cpInfo.DefaultChar[0] = 0x3F; // '?' character
+				cpInfo.DefaultChar[1] = 0x00; // Null terminator
+				// LeadByte array - all zeros for UTF-8 (no traditional lead bytes like DBCS)
+				for (int i = 0; i < 12; i++)
+				{
+					cpInfo.LeadByte[i] = 0;
+				}
+				break;
 
 			default:
 				// Unsupported code page
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return NativeTypes.Win32Bool.FALSE;
 		}
+
+		// Write the CPINFO structure to emulated memory
+		var cpInfoAddr = (uint)lpCpInfo.Value;
+		_env.MemWrite32(cpInfoAddr, cpInfo.MaxCharSize);
+		
+		// Write DefaultChar array
+		var defaultCharBytes = new byte[2];
+		defaultCharBytes[0] = cpInfo.DefaultChar[0];
+		defaultCharBytes[1] = cpInfo.DefaultChar[1];
+		_env.MemWriteBytes(cpInfoAddr + 4, defaultCharBytes);
+		
+		// Write LeadByte array
+		var leadBytes = new byte[12];
+		for (int i = 0; i < 12; i++)
+		{
+			leadBytes[i] = cpInfo.LeadByte[i];
+		}
+		_env.MemWriteBytes(cpInfoAddr + 6, leadBytes);
+
+		return NativeTypes.Win32Bool.TRUE;
 	}
 
 	[DllModuleExport(17, IsStub = true)]
