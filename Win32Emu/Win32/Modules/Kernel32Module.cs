@@ -83,7 +83,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = LoadLibraryA(a.LpcStr(0));
 				return true;
 			case "GETPROCADDRESS":
-				returnValue = GetProcAddress(a.UInt32(0), a.UInt32(1));
+				returnValue = GetProcAddress(a.UInt32(0), a.LpcStr(1));
 				return true;
 			case "GETSTARTUPINFOA":
 				returnValue = GetStartupInfoA(a.UInt32(0));
@@ -752,13 +752,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(18)]
-	private unsafe uint GetProcAddress(uint hModule, uint lpProcName)
+	private unsafe uint GetProcAddress(uint hModule, LpcStr lpProcName)
 	{
 		// GetProcAddress retrieves the address of an exported function from a DLL
 		// hModule: module handle from LoadLibraryA or GetModuleHandleA
 		// lpProcName: either a string pointer (name) or an ordinal value (LOWORD)
 
-		_logger.LogInformation("[Kernel32] GetProcAddress(0x{HModule:X8}, 0x{LpProcName:X8})", hModule, lpProcName);
+		_logger.LogInformation("[Kernel32] GetProcAddress(0x{HModule:X8}, 0x{LpProcName:X8})", hModule, lpProcName.Address);
 
 		if (hModule == 0)
 		{
@@ -771,16 +771,16 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// Check if lpProcName is an ordinal (high word is 0)
 		uint ordinal = 0;
-		if ((lpProcName & 0xFFFF0000) == 0)
+		if ((lpProcName.Address & 0xFFFF0000) == 0)
 		{
-			ordinal = lpProcName & 0xFFFF;
+			ordinal = lpProcName.Address & 0xFFFF;
 			byOrdinal = true;
 			_logger.LogInformation("[Kernel32] GetProcAddress: Looking up by ordinal {Ordinal}", ordinal);
 		}
 		else
 		{
 			// It's a string pointer
-			procName = _env.ReadAnsiString(lpProcName);
+			procName = lpProcName.ToString();
 			_logger.LogInformation("[Kernel32] GetProcAddress: Looking up '{ProcName}'", procName);
 		}
 

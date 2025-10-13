@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
@@ -102,9 +103,11 @@ public class ProcessEnvironment
 
 	public void InitializeStrings(string exePath, string[] args)
 	{
+		Debug.Assert(exePath != null, nameof(exePath) + " != null");
+		
 		_executablePath = exePath;
 		var cmdLine = string.Join(" ", new[] { exePath }.Concat(args.Skip(1)));
-		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
+		CommandLinePtr = WriteAnsiString($"\"{cmdLine}\"\0");
 		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
 		ModuleFileNameLength = (uint)exePath.Length;
 
