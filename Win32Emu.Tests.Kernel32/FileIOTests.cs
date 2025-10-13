@@ -401,6 +401,109 @@ public class FileIoTests : IDisposable
 
     #endregion
 
+    #region Console Tests
+
+    [Fact]
+    public void AllocConsole_ShouldAllocateConsoleAndSetHandles()
+    {
+        // Act
+        var result = _testEnv.CallKernel32Api("ALLOCCONSOLE");
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+
+        // Verify standard handles are now set
+        var stdinHandle = _testEnv.CallKernel32Api("GETSTDHANDLE", 0xFFFFFFF6u);
+        var stdoutHandle = _testEnv.CallKernel32Api("GETSTDHANDLE", 0xFFFFFFF5u);
+        var stderrHandle = _testEnv.CallKernel32Api("GETSTDHANDLE", 0xFFFFFFF4u);
+
+        Assert.NotEqual(0u, stdinHandle);  // Should not be NULL
+        Assert.NotEqual(0u, stdoutHandle); // Should not be NULL
+        Assert.NotEqual(0u, stderrHandle); // Should not be NULL
+    }
+
+    [Fact]
+    public void AllocConsole_WhenConsoleExists_ShouldReturnFalse()
+    {
+        // Arrange - allocate console first
+        _testEnv.CallKernel32Api("ALLOCCONSOLE");
+
+        // Act - try to allocate again
+        var result = _testEnv.CallKernel32Api("ALLOCCONSOLE");
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+        
+        // Verify last error is set to ERROR_ACCESS_DENIED (5)
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal(5u, lastError);
+    }
+
+    [Fact]
+    public void FreeConsole_ShouldFreeConsoleAndResetHandles()
+    {
+        // Arrange - allocate console first
+        _testEnv.CallKernel32Api("ALLOCCONSOLE");
+
+        // Act
+        var result = _testEnv.CallKernel32Api("FREECONSOLE");
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+
+        // Verify standard handles are now NULL
+        var stdinHandle = _testEnv.CallKernel32Api("GETSTDHANDLE", 0xFFFFFFF6u);
+        var stdoutHandle = _testEnv.CallKernel32Api("GETSTDHANDLE", 0xFFFFFFF5u);
+        var stderrHandle = _testEnv.CallKernel32Api("GETSTDHANDLE", 0xFFFFFFF4u);
+
+        Assert.Equal(0u, stdinHandle);  // Should be NULL
+        Assert.Equal(0u, stdoutHandle); // Should be NULL
+        Assert.Equal(0u, stderrHandle); // Should be NULL
+    }
+
+    [Fact]
+    public void FreeConsole_WhenNoConsole_ShouldReturnFalse()
+    {
+        // Act - try to free console when none exists
+        var result = _testEnv.CallKernel32Api("FREECONSOLE");
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+        
+        // Verify last error is set to ERROR_INVALID_HANDLE (6)
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal(6u, lastError);
+    }
+
+    [Fact]
+    public void AttachConsole_ShouldAllocateConsole()
+    {
+        // Act - attach to parent process (0xFFFFFFFF)
+        var result = _testEnv.CallKernel32Api("ATTACHCONSOLE", 0xFFFFFFFFu);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+
+        // Verify standard handles are now set
+        var stdoutHandle = _testEnv.CallKernel32Api("GETSTDHANDLE", 0xFFFFFFF5u);
+        Assert.NotEqual(0u, stdoutHandle); // Should not be NULL
+    }
+
+    [Fact]
+    public void AttachConsole_WhenConsoleExists_ShouldReturnFalse()
+    {
+        // Arrange - allocate console first
+        _testEnv.CallKernel32Api("ALLOCCONSOLE");
+
+        // Act - try to attach
+        var result = _testEnv.CallKernel32Api("ATTACHCONSOLE", 0xFFFFFFFFu);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+    }
+
+    #endregion
+
     public void Dispose()
     {
         _testEnv?.Dispose();

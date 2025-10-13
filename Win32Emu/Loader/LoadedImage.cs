@@ -9,5 +9,6 @@ public record LoadedImage(
 	Dictionary<string, uint> ExportsByName,
 	Dictionary<uint, uint> ExportsByOrdinal,
 	Dictionary<string, string> ForwardedExportsByName,
-	Dictionary<uint, string> ForwardedExportsByOrdinal
+	Dictionary<uint, string> ForwardedExportsByOrdinal,
+	ushort Subsystem // PE subsystem type (IMAGE_SUBSYSTEM_WINDOWS_CUI = 3, IMAGE_SUBSYSTEM_WINDOWS_GUI = 2)
 );

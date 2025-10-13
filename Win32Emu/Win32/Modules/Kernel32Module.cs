@@ -117,6 +117,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "SETSTDHANDLE":
 				returnValue = SetStdHandle(a.UInt32(0), a.UInt32(1));
 				return true;
+			case "ALLOCCONSOLE":
+				returnValue = AllocConsole();
+				return true;
+			case "FREECONSOLE":
+				returnValue = FreeConsole();
+				return true;
+			case "ATTACHCONSOLE":
+				returnValue = AttachConsole(a.UInt32(0));
+				return true;
 
 			// Memory/heap
 			case "GLOBALALLOC":
@@ -293,14 +302,36 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(85)]
 	private unsafe uint IsProcessorFeaturePresent(uint processorFeature)
 	{
-		// Always return FALSE for all processor features in emulation
-		// This is the safest approach - apps should not rely on specific CPU features
-		// ProcessorFeature values:
-		// 0 = PF_FLOATING_POINT_PRECISION_ERRATA
-		// 1 = PF_FLOATING_POINT_EMULATED
-		// etc.
-		_logger.LogDebug("[Kernel32] IsProcessorFeaturePresent({ProcessorFeature}) -> FALSE", processorFeature);
-		return 0; // FALSE
+		// Return features that would be present on an Intel Pentium 1 processor
+		// Pentium 1 (P5) was introduced in 1993 and had the following features:
+		// - FPU (Floating Point Unit) - built-in, not emulated
+		// - TSC (Time Stamp Counter)
+		// - MSR (Model Specific Registers)
+		// - CX8 (CMPXCHG8B instruction)
+		// - MMX was added in Pentium MMX (P55C) in 1997, not in original P5
+		
+		const uint PF_FLOATING_POINT_PRECISION_ERRATA = 0;
+		const uint PF_FLOATING_POINT_EMULATED = 1;
+		const uint PF_COMPARE_EXCHANGE_DOUBLE = 2;
+		const uint PF_MMX_INSTRUCTIONS_AVAILABLE = 3;
+		const uint PF_RDTSC_INSTRUCTION_AVAILABLE = 8;
+		const uint PF_3DNOW_INSTRUCTIONS_AVAILABLE = 7;
+		
+		bool isPresent = processorFeature switch
+		{
+			PF_FLOATING_POINT_PRECISION_ERRATA => false, // No known FPU precision bug
+			PF_FLOATING_POINT_EMULATED => false,         // FPU is built-in, not emulated
+			PF_COMPARE_EXCHANGE_DOUBLE => true,          // Pentium has CMPXCHG8B
+			PF_MMX_INSTRUCTIONS_AVAILABLE => false,      // Original Pentium doesn't have MMX (added in P55C)
+			PF_RDTSC_INSTRUCTION_AVAILABLE => true,      // Pentium has RDTSC
+			PF_3DNOW_INSTRUCTIONS_AVAILABLE => false,    // 3DNow! is AMD K6-2 feature
+			_ => false                                   // Other features not present
+		};
+		
+		_logger.LogDebug("[Kernel32] IsProcessorFeaturePresent({ProcessorFeature}) -> {Result}", 
+			processorFeature, isPresent);
+		
+		return isPresent ? 1u : 0u; // TRUE or FALSE
 	}
 
 	[DllModuleExport(48, ForwardedTo = "KERNELBASE.GetVersionEx")]
@@ -1147,6 +1178,63 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		return 1;
+	}
+
+	[DllModuleExport(1)]
+	private unsafe uint AllocConsole()
+	{
+		_logger.LogInformation("[Kernel32] AllocConsole()");
+		
+		bool success = _env.AllocateConsole();
+		if (!success)
+		{
+			// Console already exists
+			_lastError = 5; // ERROR_ACCESS_DENIED
+			return 0; // FALSE
+		}
+		
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(1)]
+	private unsafe uint FreeConsole()
+	{
+		_logger.LogInformation("[Kernel32] FreeConsole()");
+		
+		bool success = _env.FreeConsole();
+		if (!success)
+		{
+			// No console to free
+			_lastError = 6; // ERROR_INVALID_HANDLE
+			return 0; // FALSE
+		}
+		
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(1)]
+	private unsafe uint AttachConsole(uint dwProcessId)
+	{
+		_logger.LogInformation("[Kernel32] AttachConsole(dwProcessId={DwProcessId})", dwProcessId);
+		
+		// dwProcessId == 0xFFFFFFFF means attach to parent process console
+		// For emulation, we just allocate a console if one doesn't exist
+		
+		if (_env.HasConsole)
+		{
+			// Already has a console
+			_lastError = 5; // ERROR_ACCESS_DENIED
+			return 0; // FALSE
+		}
+		
+		bool success = _env.AllocateConsole();
+		if (!success)
+		{
+			_lastError = 5; // ERROR_ACCESS_DENIED
+			return 0; // FALSE
+		}
+		
+		return 1; // TRUE
 	}
 
 	[DllModuleExport(24)]

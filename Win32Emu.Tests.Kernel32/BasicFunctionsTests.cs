@@ -41,22 +41,31 @@ public sealed class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
-    public void IsProcessorFeaturePresent_ShouldReturnFalse()
+    public void IsProcessorFeaturePresent_ShouldReturnPentium1Features()
     {
-        // Arrange
+        // Arrange - Pentium 1 (P5) processor features
         const uint PF_FLOATING_POINT_PRECISION_ERRATA = 0;
         const uint PF_FLOATING_POINT_EMULATED = 1;
+        const uint PF_COMPARE_EXCHANGE_DOUBLE = 2; // CMPXCHG8B
         const uint PF_MMX_INSTRUCTIONS_AVAILABLE = 3;
+        const uint PF_RDTSC_INSTRUCTION_AVAILABLE = 8;
+        const uint PF_3DNOW_INSTRUCTIONS_AVAILABLE = 7;
 
-        // Act - test multiple processor features
-        var result1 = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_FLOATING_POINT_PRECISION_ERRATA);
-        var result2 = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_FLOATING_POINT_EMULATED);
-        var result3 = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_MMX_INSTRUCTIONS_AVAILABLE);
+        // Act - test features that should be present on Pentium 1
+        var fpuErrata = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_FLOATING_POINT_PRECISION_ERRATA);
+        var fpuEmulated = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_FLOATING_POINT_EMULATED);
+        var cmpxchg8b = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_COMPARE_EXCHANGE_DOUBLE);
+        var mmx = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_MMX_INSTRUCTIONS_AVAILABLE);
+        var rdtsc = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_RDTSC_INSTRUCTION_AVAILABLE);
+        var amd3dnow = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_3DNOW_INSTRUCTIONS_AVAILABLE);
 
-        // Assert - should all return FALSE (0) in emulation for safety
-        Assert.Equal(0u, result1);
-        Assert.Equal(0u, result2);
-        Assert.Equal(0u, result3);
+        // Assert - Pentium 1 features
+        Assert.Equal(0u, fpuErrata);      // FALSE - No FPU precision bug
+        Assert.Equal(0u, fpuEmulated);    // FALSE - Built-in FPU, not emulated
+        Assert.Equal(1u, cmpxchg8b);      // TRUE - Pentium has CMPXCHG8B
+        Assert.Equal(0u, mmx);            // FALSE - MMX added in Pentium MMX (P55C), not original P5
+        Assert.Equal(1u, rdtsc);          // TRUE - Pentium has RDTSC
+        Assert.Equal(0u, amd3dnow);       // FALSE - 3DNow! is AMD K6-2 feature
     }
 
     [Fact]

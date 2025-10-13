@@ -56,6 +56,7 @@ public class PeImageLoader(VirtualMemory vm)
 		var imageBase = (uint)opt.ImageBase;
 		var entryPoint = imageBase + opt.AddressOfEntryPoint;
 		var imageSize = opt.SizeOfImage;
+		var subsystem = (ushort)opt.SubSystem;
 
 		// Map sections (raw contents only; uninitialized data left zeroed).
 		foreach (var section in pe.Sections)
@@ -70,7 +71,7 @@ public class PeImageLoader(VirtualMemory vm)
 
 		var importMap = BuildImportMap(image, imageBase);
 		var (exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal) = BuildExportMaps(image, imageBase);
-		return new LoadedImage(imageBase, entryPoint, imageSize, importMap, path, exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal);
+		return new LoadedImage(imageBase, entryPoint, imageSize, importMap, path, exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal, (ushort)subsystem);
 	}
 
 	private Dictionary<uint, (string dll, string name)> BuildImportMap(PEImage image, uint imageBase)
