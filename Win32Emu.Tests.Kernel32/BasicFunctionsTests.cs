@@ -177,11 +177,41 @@ public sealed class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
+    public void GetCPInfo_WithUTF8_ShouldReturnSuccessAndFillStructure()
+    {
+        // Arrange
+        var cpInfoPtr = _testEnv.AllocateMemory(20);
+        const uint utf8CodePage = 65001; // UTF-8
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETCPINFO", utf8CodePage, cpInfoPtr);
+
+        // Assert
+        Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
+        
+        // Verify CPINFO structure contents
+        var maxCharSize = _testEnv.Memory.Read32(cpInfoPtr + 0);
+        var defaultChar0 = _testEnv.Memory.Read8(cpInfoPtr + 4);
+        var defaultChar1 = _testEnv.Memory.Read8(cpInfoPtr + 5);
+        
+        Assert.Equal(4u, maxCharSize); // UTF-8 uses up to 4 bytes per character
+        Assert.Equal(0x3F, defaultChar0); // '?' character
+        Assert.Equal(0x00, defaultChar1); // Null terminator
+        
+        // Check that LeadByte array is all zeros (UTF-8 doesn't use traditional lead bytes)
+        for (uint i = 0; i < 12; i++)
+        {
+            var leadByte = _testEnv.Memory.Read8(cpInfoPtr + 6 + i);
+            Assert.Equal(0, leadByte);
+        }
+    }
+
+    [Fact]
     public void GetCPInfo_WithUnsupportedCodePage_ShouldReturnFalse()
     {
         // Arrange
         var cpInfoPtr = _testEnv.AllocateMemory(20);
-        const uint unsupportedCodePage = 65001; // UTF-8 (not supported in our implementation)
+        const uint unsupportedCodePage = 12345; // Some unsupported code page
 
         // Act
         var result = _testEnv.CallKernel32Api("GETCPINFO", unsupportedCodePage, cpInfoPtr);

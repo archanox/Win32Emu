@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
@@ -334,6 +335,19 @@ public class ProcessEnvironment
 	public ushort MemRead16(uint addr) => _vm.Read16(addr);
 	public void MemWrite64(uint addr, ulong value) => _vm.Write64(addr, value);
 	public void MemZero(uint addr, uint size) => _vm.WriteBytes(addr, new byte[size]);
+
+	// Write an unmanaged struct to emulated memory
+	public unsafe void MemWriteStruct<T>(uint addr, ref T value) where T : unmanaged
+	{
+		var size = sizeof(T);
+		var bytes = new byte[size];
+		fixed (T* ptr = &value)
+		{
+			Marshal.Copy((nint)ptr, bytes, 0, size);
+		}
+		_vm.WriteBytes(addr, bytes);
+		try { Diagnostics.Diagnostics.LogMemWrite(addr, bytes.Length, bytes); } catch { }
+	}
 
 	// Handle table ops
 	public uint RegisterHandle(object obj)
