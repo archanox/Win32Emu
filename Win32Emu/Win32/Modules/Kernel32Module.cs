@@ -434,22 +434,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Write the CPINFO structure to emulated memory
-		var cpInfoAddr = (uint)lpCpInfo.Value;
-		_env.MemWrite32(cpInfoAddr, cpInfo.MaxCharSize);
-		
-		// Write DefaultChar array
-		var defaultCharBytes = new byte[2];
-		defaultCharBytes[0] = cpInfo.DefaultChar[0];
-		defaultCharBytes[1] = cpInfo.DefaultChar[1];
-		_env.MemWriteBytes(cpInfoAddr + 4, defaultCharBytes);
-		
-		// Write LeadByte array
-		var leadBytes = new byte[12];
-		for (int i = 0; i < 12; i++)
-		{
-			leadBytes[i] = cpInfo.LeadByte[i];
-		}
-		_env.MemWriteBytes(cpInfoAddr + 6, leadBytes);
+		_env.MemWriteStruct((uint)lpCpInfo.Value, ref cpInfo);
 
 		return NativeTypes.Win32Bool.TRUE;
 	}
