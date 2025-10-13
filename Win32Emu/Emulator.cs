@@ -105,9 +105,13 @@ public sealed class Emulator : IDisposable
         _image = loader.Load(path);
         LogDebug($"[Loader] Image base=0x{_image.BaseAddress:X8} EntryPoint=0x{_image.EntryPointAddress:X8} Size=0x{_image.ImageSize:X}");
         LogDebug($"[Loader] Imports mapped: {_image.ImportAddressMap.Count}");
+        LogDebug($"[Loader] Subsystem: {_image.Subsystem} (2=GUI, 3=CUI)");
 
         _env = new ProcessEnvironment(_vm, 0x01000000, _host, _logger);
         _env.InitializeStrings(path, Array.Empty<string>());
+        
+        // Initialize console based on PE subsystem type
+        _env.InitializeConsoleForSubsystem(_image.Subsystem);
 
         _cpu = new IcedCpu(_vm, _logger);
         _cpu.SetEip(_image.EntryPointAddress);
