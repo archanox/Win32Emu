@@ -25,6 +25,15 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _enableDebugMode;
 
+    [ObservableProperty]
+    private bool _enableGdbServer;
+
+    [ObservableProperty]
+    private int _gdbServerPort;
+
+    [ObservableProperty]
+    private bool _gdbPauseOnStart;
+
     public ObservableCollection<string> RenderingBackends { get; } = new()
     {
         "Software",
@@ -58,6 +67,9 @@ public partial class SettingsViewModel : ViewModelBase
         _reservedMemoryMb = configuration.ReservedMemoryMb;
         _windowsVersion = configuration.WindowsVersion;
         _enableDebugMode = configuration.EnableDebugMode;
+        _enableGdbServer = configuration.EnableGdbServer;
+        _gdbServerPort = configuration.GdbServerPort;
+        _gdbPauseOnStart = configuration.GdbPauseOnStart;
     }
 
     partial void OnRenderingBackendChanged(string value)
@@ -87,6 +99,24 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnEnableDebugModeChanged(bool value)
     {
         _configuration.EnableDebugMode = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+
+    partial void OnEnableGdbServerChanged(bool value)
+    {
+        _configuration.EnableGdbServer = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+
+    partial void OnGdbServerPortChanged(int value)
+    {
+        _configuration.GdbServerPort = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+
+    partial void OnGdbPauseOnStartChanged(bool value)
+    {
+        _configuration.GdbPauseOnStart = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
 }
