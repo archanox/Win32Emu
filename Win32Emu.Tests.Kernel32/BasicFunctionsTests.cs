@@ -41,6 +41,25 @@ public sealed class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
+    public void IsProcessorFeaturePresent_ShouldReturnFalse()
+    {
+        // Arrange
+        const uint PF_FLOATING_POINT_PRECISION_ERRATA = 0;
+        const uint PF_FLOATING_POINT_EMULATED = 1;
+        const uint PF_MMX_INSTRUCTIONS_AVAILABLE = 3;
+
+        // Act - test multiple processor features
+        var result1 = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_FLOATING_POINT_PRECISION_ERRATA);
+        var result2 = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_FLOATING_POINT_EMULATED);
+        var result3 = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_MMX_INSTRUCTIONS_AVAILABLE);
+
+        // Assert - should all return FALSE (0) in emulation for safety
+        Assert.Equal(0u, result1);
+        Assert.Equal(0u, result2);
+        Assert.Equal(0u, result3);
+    }
+
+    [Fact]
     public void GetLastError_InitialValue_ShouldBeZero()
     {
         // Act

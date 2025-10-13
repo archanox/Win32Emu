@@ -43,6 +43,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETVERSION":
 				returnValue = GetVersion();
 				return true;
+			case "ISPROCESSORFEATUREPRESENT":
+				returnValue = IsProcessorFeaturePresent(a.UInt32(0));
+				return true;
 			case "GETLASTERROR":
 				returnValue = GetLastError();
 				return true;
@@ -285,6 +288,19 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		const byte major = 4;
 		const byte minor = 0;
 		return (major << 8 | minor) << 16 | build;
+	}
+
+	[DllModuleExport(85)]
+	private unsafe uint IsProcessorFeaturePresent(uint processorFeature)
+	{
+		// Always return FALSE for all processor features in emulation
+		// This is the safest approach - apps should not rely on specific CPU features
+		// ProcessorFeature values:
+		// 0 = PF_FLOATING_POINT_PRECISION_ERRATA
+		// 1 = PF_FLOATING_POINT_EMULATED
+		// etc.
+		_logger.LogDebug("[Kernel32] IsProcessorFeaturePresent({ProcessorFeature}) -> FALSE", processorFeature);
+		return 0; // FALSE
 	}
 
 	[DllModuleExport(48, ForwardedTo = "KERNELBASE.GetVersionEx")]
@@ -1420,7 +1436,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		uint lpOverlapped)
 	{
 		_logger.LogInformation("[Kernel32] WriteFile(handle=0x{Handle:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToWrite={NNumberOfBytesToWrite}, lpNumberOfBytesWritten=0x{LpNumberOfBytesWritten:X8}, lpOverlapped=0x{LpOverlapped:X8})", handle, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
-		// Handle standard handles specially
+		
+		// NULL handle is invalid
+		if (handle == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		
+		// Handle standard handles specially (only if they're not NULL)
 		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle || handle == _env.StdInputHandle)
 		{
 			try
@@ -1501,6 +1525,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint GetFileType(void* hFile)
 	{
 		var handle = (uint)hFile;
+
+		// NULL handle returns FILE_TYPE_UNKNOWN
+		if (handle == 0)
+		{
+			return 0x0000; // FILE_TYPE_UNKNOWN
+		}
 
 		// Standard handles are character devices (console)
 		if (handle == _env.StdInputHandle || handle == _env.StdOutputHandle || handle == _env.StdErrorHandle)

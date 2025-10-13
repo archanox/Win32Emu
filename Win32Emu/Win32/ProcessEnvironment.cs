@@ -47,10 +47,11 @@ public class ProcessEnvironment
 	public bool ExitRequested => _exitRequested;
 	public string ExecutablePath => _executablePath;
 
-	// Default standard handles (pseudo values)
-	public uint StdInputHandle { get; set; } = 0x00000001;
-	public uint StdOutputHandle { get; set; } = 0x00000002;
-	public uint StdErrorHandle { get; set; } = 0x00000003;
+	// Default standard handles (NULL for GUI apps without console)
+	// Console apps would set these to actual handles via AllocConsole/AttachConsole
+	public uint StdInputHandle { get; set; } = 0x00000000; // NULL - no console by default
+	public uint StdOutputHandle { get; set; } = 0x00000000; // NULL - no console by default
+	public uint StdErrorHandle { get; set; } = 0x00000000; // NULL - no console by default
 
 	// Simple handle table for host resources (files etc.)
 	private readonly Dictionary<uint, object> _handles = new();
