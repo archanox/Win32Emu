@@ -12,6 +12,9 @@ public class EmulatorSettings
     public int ReservedMemoryMB { get; set; } = 256;
     public string WindowsVersion { get; set; } = "Windows 95";
     public bool EnableDebugMode { get; set; } = false;
+    public bool EnableGdbServer { get; set; } = false;
+    public int GdbServerPort { get; set; } = 1234;
+    public bool GdbPauseOnStart { get; set; } = true;
     
     /// <summary>
     /// Per-game settings keyed by SHA256 hash of the executable file
