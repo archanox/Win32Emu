@@ -427,9 +427,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(9)]
 	private unsafe uint GetCpInfo(uint codePage, NativeTypes.Lpcpinfo lpCpInfo)
 	{
-		_logger.LogInformation("[Kernel32] GetCPInfo called: codePage={CodePage} lpCpInfo=0x{LpCpInfo:X8}", codePage, lpCpInfo);
+		_logger.LogInformation("[Kernel32] GetCPInfo called: codePage={CodePage} lpCpInfo=0x{LpCpInfo:X8}", codePage, (nint)lpCpInfo.Value);
 		
-		if (lpCpInfo == 0 || lpCpInfo.Value == null)
+		if (lpCpInfo.Value == null)
 		{
 			_logger.LogWarning("[Kernel32] GetCPInfo: null pointer");
 			return NativeTypes.Win32Bool.FALSE; // Return FALSE if null pointer
