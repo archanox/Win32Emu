@@ -607,7 +607,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Execute until we hit the return address
 			const int MAX_STEPS = 100000; // Safety limit
-			int steps = 0;
+			var steps = 0;
 
 			try
 			{
@@ -1059,7 +1059,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] EnableWindow: HWND=0x{Hwnd:X8} bEnable={BEnable}", hwnd, bEnable);
 
 			// Get the previous state (default to enabled if not tracked)
-			bool wasEnabled = _windowEnabledState.GetValueOrDefault(hwnd, true);
+			var wasEnabled = _windowEnabledState.GetValueOrDefault(hwnd, true);
 
 			// Update the state
 			_windowEnabledState[hwnd] = bEnable != 0;

@@ -125,7 +125,7 @@ public static class PeIconExtractor
 			var iconEntries = new List<(GrpIconDirEntry entry, byte[] data)>();
 			var offset = 6; // After ICONDIR header
 
-			for (int i = 0; i < count && offset + 14 <= grpData.Length; i++)
+			for (var i = 0; i < count && offset + 14 <= grpData.Length; i++)
 			{
 				var grpEntry = new GrpIconDirEntry
 				{
@@ -169,7 +169,7 @@ public static class PeIconExtractor
 			writer.Write((ushort)iconEntries.Count);  // Count
 
 			// Calculate and write icon directory entries
-			uint currentOffset = (uint)(6 + iconEntries.Count * 16); // Header + all entries
+			var currentOffset = (uint)(6 + iconEntries.Count * 16); // Header + all entries
 			foreach (var (entry, data) in iconEntries)
 			{
 				writer.Write(entry.Width);

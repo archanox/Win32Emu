@@ -81,8 +81,7 @@ namespace Win32Emu.Win32.Modules
 		private uint GetStockObject(int stockObjectId)
 		{
 			// Validate stock object ID
-			if (stockObjectId < NativeTypes.StockObject.WHITE_BRUSH ||
-			    stockObjectId > NativeTypes.StockObject.DC_PEN)
+			if (stockObjectId is < NativeTypes.StockObject.WHITE_BRUSH or > NativeTypes.StockObject.DC_PEN)
 			{
 				_logger.LogInformation("[Gdi32] GetStockObject: Invalid stock object ID {StockObjectId}", stockObjectId);
 				return 0;

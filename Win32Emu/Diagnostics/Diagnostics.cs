@@ -53,9 +53,9 @@ public static class Diagnostics
 		sb.Append($"; ESP=0x{esp:X8} EBP=0x{ebp:X8} EAX=0x{eax:X8} EBX=0x{ebx:X8} ECX=0x{ecx:X8} EDX=0x{edx:X8} ESI=0x{esi:X8} EDI=0x{edi:X8}");
 		
 		// Check if this is a Windows pseudo-handle value
-		if (addr == 0xFFFFFFF6 || addr == 0xFFFFFFF5 || addr == 0xFFFFFFF4)
+		if (addr is 0xFFFFFFF6 or 0xFFFFFFF5 or 0xFFFFFFF4)
 		{
-			string handleName = addr switch
+			var handleName = addr switch
 			{
 				0xFFFFFFF6 => "STD_INPUT_HANDLE",
 				0xFFFFFFF5 => "STD_OUTPUT_HANDLE",
