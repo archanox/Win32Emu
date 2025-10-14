@@ -224,7 +224,9 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                     button.Click += (s, e) =>
                     {
                         OnDebugOutput($"Button 0x{hwnd:X8} clicked", DebugLevel.Debug);
-                        SendWmCommand(hwnd, 0); // BN_CLICKED = 0
+                        // Send WM_LBUTTONDOWN and WM_LBUTTONUP to simulate a button click
+                        // This will allow the StandardControlHandler to handle the click and send WM_COMMAND
+                        SendMouseClickToButton(hwnd);
                     };
                 }
                 break;
@@ -241,6 +243,27 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 break;
 
             // Add more control types as needed
+        }
+    }
+    
+    /// <summary>
+    /// Send mouse click messages to a button control
+    /// </summary>
+    private void SendMouseClickToButton(uint buttonHwnd)
+    {
+        if (_emulatorService?.CurrentEmulator != null)
+        {
+            // Send WM_LBUTTONDOWN (0x0201)
+            _emulatorService.CurrentEmulator.PostMessage(buttonHwnd, 0x0201, 0x0001, 0);
+            
+            // Send WM_LBUTTONUP (0x0202) 
+            _emulatorService.CurrentEmulator.PostMessage(buttonHwnd, 0x0202, 0, 0);
+            
+            OnDebugOutput($"Sent mouse click messages to button 0x{buttonHwnd:X8}", DebugLevel.Debug);
+        }
+        else
+        {
+            OnDebugOutput($"Cannot send mouse click: emulator not running", DebugLevel.Warning);
         }
     }
     
