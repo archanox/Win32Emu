@@ -21,6 +21,9 @@ public class ComVtableDispatcher
 	// Map of vtable stub addresses to handler functions
 	private readonly Dictionary<uint, Func<ICpu, VirtualMemory, uint>> _vtableHandlers = new();
 	
+	// Map of vtable stub addresses to method names for debugging
+	private readonly Dictionary<uint, string> _vtableMethodNames = new();
+	
 	// Track allocated COM objects
 	private readonly Dictionary<uint, ComObjectInfo> _comObjects = new();
 	private uint _nextObjectId = 1;
@@ -51,13 +54,17 @@ public class ComVtableDispatcher
 			return false;
 		}
 		
+		// Try to get the method name for better logging
+		var methodName = _vtableMethodNames.TryGetValue(address, out var name) ? name : "Unknown";
+		
 		if (_vtableHandlers.TryGetValue(address, out var handler))
 		{
+			_logger.LogInformation("[COM] Invoking vtable method: {MethodName} at address 0x{Address:X8}", methodName, address);
 			returnValue = handler(cpu, memory);
 			return true;
 		}
 		
-		_logger.LogWarning("[COM] Unhandled COM vtable call at 0x{Address:X8}", address);
+		_logger.LogWarning("[COM] Unhandled COM vtable call at 0x{Address:X8} (method: {MethodName})", address, methodName);
 		return false;
 	}
 	
@@ -107,6 +114,9 @@ public class ComVtableDispatcher
 			
 			// Register the handler
 			_vtableHandlers[methodStubAddr] = handler;
+			
+			// Register the method name for debugging
+			_vtableMethodNames[methodStubAddr] = $"{interfaceName}::{methodName}";
 			
 			_logger.LogDebug("[COM] {InterfaceName}::{MethodName} -> 0x{MethodStubAddr:X8}", interfaceName, methodName, methodStubAddr);
 			
