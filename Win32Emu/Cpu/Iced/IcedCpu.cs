@@ -636,7 +636,7 @@ public class IcedCpu : ICpu
 					b = (byte)ReadOp(insn, 1);
 				}
 				
-				byte r = (byte)(a + b);
+				var r = (byte)(a + b);
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
 				{
@@ -680,7 +680,7 @@ public class IcedCpu : ICpu
 					b = (ushort)ReadOp(insn, 1);
 				}
 				
-				ushort r = (ushort)(a + b);
+				var r = (ushort)(a + b);
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
 				{
@@ -788,7 +788,7 @@ public class IcedCpu : ICpu
 					b = (byte)ReadOp(insn, 1);
 				}
 				
-				byte r = op == LogicOp.And ? (byte)(a & b) : (byte)(a | b);
+				var r = op == LogicOp.And ? (byte)(a & b) : (byte)(a | b);
 
 				// Write the 8-bit result
 				if (insn.GetOpKind(0) == OpKind.Register)
@@ -839,7 +839,7 @@ public class IcedCpu : ICpu
 					b = (ushort)ReadOp(insn, 1);
 				}
 				
-				ushort r = op == LogicOp.And ? (ushort)(a & b) : (ushort)(a | b);
+				var r = op == LogicOp.And ? (ushort)(a & b) : (ushort)(a | b);
 
 				// Write the 16-bit result
 				if (insn.GetOpKind(0) == OpKind.Register)
@@ -1956,7 +1956,7 @@ public class IcedCpu : ICpu
 	private void ExecFxch(Instruction insn)
 	{
 		// FXCH - Exchange ST(0) with ST(i)
-		int i = 1; // Default to ST(1)
+		var i = 1; // Default to ST(1)
 		if (insn.OpCount > 0)
 		{
 			var reg = insn.GetOpRegister(0);
@@ -2052,7 +2052,7 @@ public class IcedCpu : ICpu
 	private void ExecFucomi(Instruction insn)
 	{
 		// FUCOMI - Compare ST(0) with ST(i) and set EFLAGS
-		int i = 1; // Default to ST(1)
+		var i = 1; // Default to ST(1)
 		if (insn.OpCount > 0)
 		{
 			var reg = insn.GetOpRegister(0);

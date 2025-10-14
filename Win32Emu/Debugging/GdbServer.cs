@@ -170,7 +170,7 @@ public class GdbServer : IDisposable
                 {
                     packetData.Append(ch);
                 }
-                else if (ch == '+' || ch == '-')
+                else if (ch is '+' or '-')
                 {
                     // ACK/NACK from client - ignore
                 }

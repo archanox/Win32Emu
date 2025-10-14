@@ -68,13 +68,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = GetCurrentProcess();
 				return true;
 			case "GETACP":
-				returnValue = GetAcp();
+				returnValue = (uint)GetAcp();
 				return true;
 			case "GETCPINFO":
-				returnValue = GetCpInfo(a.UInt32(0), a.Lpcpinfo(1));
+				returnValue = GetCpInfo((CodePage)a.UInt32(0), a.Lpcpinfo(1));
 				return true;
 			case "GETOEMCP":
-				returnValue = GetOemcp();
+				returnValue = (uint)GetOemCp();
 				return true;
 			case "GETSTRINGTYPEA":
 				returnValue = GetStringTypeA(a.UInt32(0), a.UInt32(1), a.Lpstr(2), a.Int32(3), a.UInt32(4));
@@ -231,7 +231,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = RtlUnwind(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
 			case "WIDECHARTOMULTIBYTE":
-				returnValue = WideCharToMultiByte(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+				returnValue = WideCharToMultiByte((CodePage)a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
 				return true;
 			case "MULTIBYTETOWIDECHAR":
 				returnValue = MultiByteToWideChar(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4), a.UInt32(5));
@@ -323,7 +323,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		const uint PF_RDTSC_INSTRUCTION_AVAILABLE = 8;
 		const uint PF_3DNOW_INSTRUCTIONS_AVAILABLE = 7;
 		
-		bool isPresent = processorFeature switch
+		var isPresent = processorFeature switch
 		{
 			PF_FLOATING_POINT_PRECISION_ERRATA => false, // No known FPU precision bug
 			PF_FLOATING_POINT_EMULATED => false,         // FPU is built-in, not emulated
@@ -475,10 +475,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint GetCurrentProcess() => 0xFFFFFFFF; // pseudo-handle
 
 	[DllModuleExport(7, IsStub = true)]
-	private uint GetAcp() => 65001;
+	public CodePage GetAcp() => CodePage.Utf8;
 
 	[DllModuleExport(9)]
-	private unsafe uint GetCpInfo(uint codePage, NativeTypes.Lpcpinfo lpCpInfo)
+	public unsafe uint GetCpInfo(CodePage codePage, NativeTypes.Lpcpinfo lpCpInfo)
 	{
 		_logger.LogInformation("[Kernel32] GetCPInfo called: codePage={CodePage} lpCpInfo=0x{LpCpInfo:X8}", codePage, (nint)lpCpInfo.Value);
 		
@@ -491,8 +491,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Handle special code page values
 		var actualCodePage = codePage switch
 		{
-			0 => GetAcp(), // CP_ACP - system default Windows ANSI code page
-			1 => GetAcp(), // CP_OEMCP - system default OEM code page (we'll use same as ACP)
+			CodePage.Acp => GetAcp(), // CP_ACP - system default Windows ANSI code page
+			CodePage.OemCp => GetOemCp(), // CP_OEMCP - system default OEM code page (we'll use same as ACP)
 			_ => codePage
 		};
 
@@ -502,30 +502,30 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// We'll support common Western code pages
 		switch (actualCodePage)
 		{
-			case 1252: // Windows-1252 (Western European)
-			case 437: // OEM United States
-			case 850: // OEM Multilingual Latin I
-			case 1250: // Windows Central Europe
-			case 1251: // Windows Cyrillic
-			case 28591: // ISO 8859-1 Latin I
+			case CodePage.WestEurope: // Windows-1252 (Western European)
+			case CodePage.Oem437: // OEM United States
+			case CodePage.OemMultilingualLatinI: // OEM Multilingual Latin I
+			case CodePage.EastEurope: // Windows Central Europe
+			case CodePage.Russian: // Windows Cyrillic
+			case CodePage.Iso88591LatinI: // ISO 8859-1 Latin I
 				// Single-byte code page setup
 				cpInfo.MaxCharSize = 1;
 				cpInfo.DefaultChar[0] = 0x3F; // '?' character
 				cpInfo.DefaultChar[1] = 0x00; // Null terminator
 				// LeadByte array - all zeros for single-byte code page
-				for (int i = 0; i < 12; i++)
+				for (var i = 0; i < 12; i++)
 				{
 					cpInfo.LeadByte[i] = 0;
 				}
 				break;
 
-			case 65001: // UTF-8
+			case CodePage.Utf8: // UTF-8
 				// UTF-8 is a multi-byte encoding with variable length (1-4 bytes per character)
 				cpInfo.MaxCharSize = 4;
 				cpInfo.DefaultChar[0] = 0x3F; // '?' character
 				cpInfo.DefaultChar[1] = 0x00; // Null terminator
 				// LeadByte array - all zeros for UTF-8 (no traditional lead bytes like DBCS)
-				for (int i = 0; i < 12; i++)
+				for (var i = 0; i < 12; i++)
 				{
 					cpInfo.LeadByte[i] = 0;
 				}
@@ -540,9 +540,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// Write the CPINFO structure to emulated memory
 		// Validate pointer before casting and writing
-		ulong ptrValue = (ulong)lpCpInfo.Value;
+		var ptrValue = (ulong)lpCpInfo.Value;
 		// Assume emulated memory is 32-bit addressable (0..0xFFFFFFFF)
-		if (ptrValue > uint.MaxValue || ptrValue == 0)
+		if (ptrValue is > uint.MaxValue or 0)
 		{
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
@@ -553,7 +553,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(17, IsStub = true)]
-	private uint GetOemcp() => 437; // IBM PC US (OEM code page)
+	private CodePage GetOemCp() => CodePage.Oem437; // IBM PC US (OEM code page)
 
 	[DllModuleExport(21)]
 	private unsafe uint GetStringTypeA(uint locale, uint dwInfoType, sbyte* lpSrcStr, int cchSrc, uint lpCharType)
@@ -594,7 +594,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Validate length
-		if (length <= 0 || length > maxStringLengthLimit)
+		if (length is <= 0 or > maxStringLengthLimit)
 		{
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
@@ -660,14 +660,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				charType |= ctCtype1Space;
 			}
-			else if (ch <= 0x1F || ch == 0x7F)
+			else if (ch is <= 0x1F or 0x7F)
 			{
 				charType |= ctCtype1Cntrl;
 			}
-			else if (ch is >= punctRange1Start and <= punctRange1End ||
-			         ch is >= punctRange2Start and <= punctRange2End ||
-			         ch is >= punctRange3Start and <= punctRange3End ||
-			         ch is >= punctRange4Start and <= punctRange4End)
+			else if (ch is >= punctRange1Start and <= punctRange1End or >= punctRange2Start and <= punctRange2End or >= punctRange3Start and <= punctRange3End or >= punctRange4Start and <= punctRange4End)
 			{
 				charType |= ctCtype1Punct;
 			}
@@ -754,11 +751,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				charType = ctCtype1Digit;
 			}
-			else if (wchar == ' ' || wchar == '\t' || wchar == '\n' || wchar == '\r')
+			else if (wchar is ' ' or '\t' or '\n' or '\r')
 			{
 				charType = ctCtype1Space;
 			}
-			else if (wchar == ' ' || wchar == '\t')
+			else if (wchar is ' ' or '\t')
 			{
 				charType |= ctCtype1Blank;
 			}
@@ -785,10 +782,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			const ushort punctRange4Start = 0x7B; // {
 			const ushort punctRange4End = 0x7E;   // ~
 			
-			if (wchar is >= punctRange1Start and <= punctRange1End ||
-			    wchar is >= punctRange2Start and <= punctRange2End ||
-			    wchar is >= punctRange3Start and <= punctRange3End ||
-			    wchar is >= punctRange4Start and <= punctRange4End)
+			if (wchar is >= punctRange1Start and <= punctRange1End or >= punctRange2Start and <= punctRange2End or >= punctRange3Start and <= punctRange3End or >= punctRange4Start and <= punctRange4End)
 			{
 				charType |= ctCtype1Punct;
 			}
@@ -1195,7 +1189,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(8)]
-	private uint GetCommandLineA()
+	public uint GetCommandLineA()
 	{
 		var ptr = _env.CommandLinePtr;
 		if (ptr != 0)
@@ -1208,7 +1202,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(12)]
-	private uint GetEnvironmentStringsW()
+	public uint GetEnvironmentStringsW()
 	{
 		// Return pointer to Unicode environment strings block
 		// This will be obtained from emulated environment variables, not system ones
@@ -1309,7 +1303,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] AllocConsole()");
 		
-		bool success = _env.AllocateConsole();
+		var success = _env.AllocateConsole();
 		if (!success)
 		{
 			// Console already exists
@@ -1325,7 +1319,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] FreeConsole()");
 		
-		bool success = _env.FreeConsole();
+		var success = _env.FreeConsole();
 		if (!success)
 		{
 			// No console to free
@@ -1351,7 +1345,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 0; // FALSE
 		}
 		
-		bool success = _env.AllocateConsole();
+		var success = _env.AllocateConsole();
 		if (!success)
 		{
 			_lastError = 5; // ERROR_ACCESS_DENIED
@@ -1420,7 +1414,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 
 			// Get the size of the original allocation
-			uint originalSize = _env.HeapSize((uint)hHeap, (uint)lpMem);
+			var originalSize = _env.HeapSize((uint)hHeap, (uint)lpMem);
 			if (originalSize == 0)
 			{
 				// If we don't have size info, this might be an invalid pointer
@@ -1438,7 +1432,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 
 			// Copy the data from the old block to the new block
-			uint bytesToCopy = Math.Min(originalSize, dwBytes);
+			var bytesToCopy = Math.Min(originalSize, dwBytes);
 			if (bytesToCopy > 0)
 			{
 				// Copy using memory operations
@@ -1883,7 +1877,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// Write filename at offset 44 (cFileName field), ensure null-terminated and max 260 bytes
 		var cFileNameBytes = new byte[260];
-		int copyLen = Math.Min(fileNameBytes.Length, 259); // leave room for null terminator
+		var copyLen = Math.Min(fileNameBytes.Length, 259); // leave room for null terminator
 		Array.Copy(fileNameBytes, 0, cFileNameBytes, 0, copyLen);
 		cFileNameBytes[copyLen] = 0; // explicit null terminator
 		_env.MemWriteBytes(lpFindFileData + 44, cFileNameBytes);
@@ -2121,7 +2115,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(40)]
-	private uint SetHandleCount(uint uNumber)
+	public uint SetHandleCount(uint uNumber)
 	{
 		// SetHandleCount is a legacy function from 16-bit Windows
 		// In Win32, it's essentially a no-op that returns the requested count
@@ -2182,7 +2176,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 	[DllModuleExport(47)]
 	private uint WideCharToMultiByte(
-		uint codePage,
+		CodePage codePage,
 		uint dwFlags,
 		uint lpWideCharStr,
 		uint cchWideChar,
@@ -2203,8 +2197,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// Handle special code page values
 			var actualCodePage = codePage switch
 			{
-				0 => GetAcp(), // CP_ACP - system default Windows ANSI code page
-				1 => GetOemcp(), // CP_OEMCP - system default OEM code page
+				CodePage.Acp => GetAcp(), // CP_ACP - system default Windows ANSI code page
+				CodePage.OemCp => GetOemCp(), // CP_OEMCP - system default OEM code page
 				_ => codePage
 			};
 
@@ -2245,21 +2239,21 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			byte[] multiByteBytes;
 			switch (actualCodePage)
 			{
-				case 1252: // Windows-1252 (Western European)
-				case 28591: // ISO 8859-1 (Latin-1)
+				case CodePage.WestEurope: // Windows-1252 (Western European)
+				case CodePage.Iso88591LatinI: // ISO 8859-1 (Latin-1)
 					// Both Windows-1252 and ISO 8859-1 are single-byte encodings
 					// For compatibility with InvariantGlobalization, use Latin1 fallback
 					multiByteBytes = Encoding.Latin1.GetBytes(wideString);
 					break;
-				case 437: // OEM US
-				case 850: // OEM Latin-1  
-				case 1250: // Windows Central Europe
-				case 1251: // Windows Cyrillic
+				case CodePage.Oem437: // OEM US
+				case CodePage.OemMultilingualLatinI: // OEM Latin-1  
+				case CodePage.EastEurope: // Windows Central Europe
+				case CodePage.Russian: // Windows Cyrillic
 					// For other single-byte code pages, fallback to UTF-8 since Latin1 may not cover all characters
 					// This provides better Unicode support even if not 100% code page accurate
 					multiByteBytes = Encoding.UTF8.GetBytes(wideString);
 					break;
-				case 65001: // UTF-8
+				case CodePage.Utf8: // UTF-8
 					multiByteBytes = Encoding.UTF8.GetBytes(wideString);
 					break;
 				default:
@@ -2303,7 +2297,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation("[Kernel32] WideCharToMultiByte failed: {ExMessage}", ex.Message);
+			_logger.LogError(ex, "[Kernel32] WideCharToMultiByte failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -2331,7 +2325,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 
 			// Use CP_ACP (1252) as default
-			if (codePage == 0 || codePage == 1)
+			if (codePage is 0 or 1)
 			{
 				codePage = 1252;
 			}
