@@ -78,7 +78,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint GetStockObject(int stockObjectId)
+		private uint GetStockObject(int stockObjectId)
 		{
 			// Validate stock object ID
 			if (stockObjectId < NativeTypes.StockObject.WHITE_BRUSH ||
@@ -103,7 +103,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint BeginPaint(uint hwnd, uint lpPaint)
+		private uint BeginPaint(uint hwnd, uint lpPaint)
 		{
 			_logger.LogInformation("[Gdi32] BeginPaint(HWND=0x{Hwnd:X8}, lpPaint=0x{LpPaint:X8})", hwnd, lpPaint);
 
@@ -138,7 +138,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint EndPaint(uint hwnd, uint lpPaint)
+		private uint EndPaint(uint hwnd, uint lpPaint)
 		{
 			if (lpPaint != 0)
 			{
@@ -153,7 +153,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint FillRect(uint hdc, uint lpRect, uint hBrush)
+		private uint FillRect(uint hdc, uint lpRect, uint hBrush)
 		{
 			if (lpRect != 0)
 			{
@@ -168,7 +168,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint TextOutA(uint hdc, int x, int y, uint lpString, int cbString)
+		private uint TextOutA(uint hdc, int x, int y, uint lpString, int cbString)
 		{
 			if (lpString != 0 && cbString > 0)
 			{
@@ -180,7 +180,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint SetBkMode(uint hdc, int mode)
+		private uint SetBkMode(uint hdc, int mode)
 		{
 			_logger.LogInformation("[Gdi32] SetBkMode(HDC=0x{Hdc:X8}, mode={Mode})", hdc, mode);
 			if (_deviceContexts.TryGetValue(hdc, out var dc))
@@ -194,14 +194,14 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint SetTextColor(uint hdc, uint color)
+		private uint SetTextColor(uint hdc, uint color)
 		{
 			_logger.LogInformation("[Gdi32] SetTextColor(HDC=0x{Hdc:X8}, color=0x{Color:X8})", hdc, color);
 			return 0x00000000; // Previous color (black)
 		}
 
 		[DllModuleExport(1)]
-		private unsafe int GetDeviceCaps(uint hdc, int nIndex)
+		private int GetDeviceCaps(uint hdc, int nIndex)
 		{
 			_logger.LogInformation("[Gdi32] GetDeviceCaps(HDC=0x{Hdc:X8}, nIndex={NIndex})", hdc, nIndex);
 

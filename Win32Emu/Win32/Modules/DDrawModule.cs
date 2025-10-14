@@ -69,7 +69,7 @@ namespace Win32Emu.Win32.Modules
 		/// DDERR_NODIRECTDRAWHW
 		///	DDERR_OUTOFMEMORY</returns>
 		[DllModuleExport(9)]
-		private unsafe uint DirectDrawCreate(in uint lpGuid, uint lplpDd, in uint pUnkOuter)
+		private uint DirectDrawCreate(in uint lpGuid, uint lplpDd, in uint pUnkOuter)
 		{
 			_logger.LogInformation("[DDraw] DirectDrawCreate(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, pUnkOuter);
 
@@ -127,7 +127,7 @@ namespace Win32Emu.Win32.Modules
 
 
 		[DllModuleExport(11)]
-		private unsafe uint DirectDrawCreateEx(uint lpGuid, uint lplpDd, uint iid, uint pUnkOuter)
+		private uint DirectDrawCreateEx(uint lpGuid, uint lplpDd, uint iid, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DDraw] DirectDrawCreateEx(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, iid=0x{Iid:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, iid, pUnkOuter);
 

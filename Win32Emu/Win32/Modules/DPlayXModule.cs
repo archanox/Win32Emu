@@ -43,7 +43,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(2)]
-		private unsafe uint DirectPlayEnumerateA(uint pCallback, uint pContext)
+		private uint DirectPlayEnumerateA(uint pCallback, uint pContext)
 		{
 			// TODO: Implement DirectPlayEnumerateA
 			_logger.LogInformation("[DPlayX] DirectPlayEnumerateA({PCallbackName}=0x{PCallback:X8}, {PContextName}=0x{PContext:X8})", nameof(pCallback), pCallback, nameof(pContext), pContext);
@@ -51,7 +51,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint DirectPlayCreate(uint lpGUID, uint lplpDP, uint pUnkOuter)
+		private uint DirectPlayCreate(uint lpGUID, uint lplpDP, uint pUnkOuter)
 		{
 			// TODO: Implement DirectPlayCreate
 			_logger.LogInformation("[DPlayX] DirectPlayCreate({LpGuidName}=0x{LpGuid:X8}, {LplpDpName}=0x{LplpDp:X8}, {PUnkOuterName}=0x{PUnkOuter:X8})", nameof(lpGUID), lpGUID, nameof(lplpDP), lplpDP, nameof(pUnkOuter), pUnkOuter);
