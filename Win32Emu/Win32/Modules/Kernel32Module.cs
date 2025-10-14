@@ -769,8 +769,52 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint GetModuleHandleA(in LpcStr lpModuleName)
 	{
 		var moduleName = lpModuleName.ToString();
-		_logger.LogInformation("Getting module handle for '{NullCurrentProcess}''", moduleName != null ? moduleName : "NULL (current process)");
-		return _imageBase;
+		_logger.LogInformation("[Kernel32] GetModuleHandleA called: module='{ModuleName}'", moduleName ?? "NULL (current process)");
+		
+		// NULL means get handle to current process executable
+		if (string.IsNullOrEmpty(moduleName))
+		{
+			_logger.LogDebug("[Kernel32] GetModuleHandleA returning current process handle: 0x{ImageBase:X8}", _imageBase);
+			return _imageBase;
+		}
+		
+		// Normalize the module name (remove path, make uppercase, ensure .DLL extension)
+		var normalizedName = Path.GetFileName(moduleName).ToUpperInvariant();
+		if (!normalizedName.EndsWith(".DLL", StringComparison.OrdinalIgnoreCase))
+		{
+			normalizedName += ".DLL";
+		}
+		
+		// Check if this is a system DLL that we emulate
+		// These are the DLLs registered in the Win32Dispatcher
+		var isSystemDll = normalizedName switch
+		{
+			"KERNEL32.DLL" => true,
+			"KERNELBASE.DLL" => true,
+			"USER32.DLL" => true,
+			"GDI32.DLL" => true,
+			"DDRAW.DLL" => true,
+			"DINPUT.DLL" => true,
+			"DSOUND.DLL" => true,
+			"WINMM.DLL" => true,
+			"GLIDE2X.DLL" => true,
+			"DPLAYX.DLL" => true,
+			_ => false
+		};
+		
+		if (isSystemDll || _env.IsModuleLoaded(normalizedName))
+		{
+			// Load/register the module and get its handle
+			// LoadModule returns existing handle if already loaded
+			var handle = _env.LoadModule(normalizedName);
+			_logger.LogDebug("[Kernel32] GetModuleHandleA returning handle for {NormalizedName}: 0x{Handle:X8}", normalizedName, handle);
+			return handle;
+		}
+		
+		// Module not found
+		_logger.LogWarning("[Kernel32] GetModuleHandleA: module '{ModuleName}' not found", moduleName);
+		_lastError = NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
+		return 0;
 	}
 
 	[DllModuleExport(32)]
