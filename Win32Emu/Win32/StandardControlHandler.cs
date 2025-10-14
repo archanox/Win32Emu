@@ -108,7 +108,7 @@ public class StandardControlHandler
 		var controlId = windowInfo.Value.Menu;
 
 		// Build WM_COMMAND wParam: HIWORD = notification code, LOWORD = control ID
-		uint wParam = (notificationCode << 16) | (controlId & 0xFFFF);
+		uint wParam = ((notificationCode & 0xFFFF) << 16) | (controlId & 0xFFFF);
 		uint lParam = buttonHwnd; // lParam = handle of control
 
 		// Post WM_COMMAND to parent window
