@@ -1,8 +1,10 @@
-# HeapAlloc Investigation: Why We Don't See HeapAlloc Calls
+# HeapAlloc Investigation: Why We Don't See HeapAlloc Calls After WideCharToMultiByte
 
 ## Question
 
 "ApiMon says we should be expecting calls to HeapAlloc after WideCharToMultiByte in a couple places. Why aren't we seeing it in our Win32Emu logs?"
+
+**TL;DR:** The C runtime's `malloc()` uses a Small Block Heap for small allocations, which doesn't call the Win32 `HeapAlloc` API. Win32Emu has a smaller environment than real Windows, leading to smaller allocations that use the Small Block Heap instead of calling HeapAlloc.
 
 ## Answer
 
