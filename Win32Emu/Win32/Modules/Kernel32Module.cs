@@ -785,22 +785,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			normalizedName += ".DLL";
 		}
 		
-		// Check if this is a system DLL that we emulate
-		// These are the DLLs registered in the Win32Dispatcher
-		var isSystemDll = normalizedName switch
-		{
-			"KERNEL32.DLL" => true,
-			"KERNELBASE.DLL" => true,
-			"USER32.DLL" => true,
-			"GDI32.DLL" => true,
-			"DDRAW.DLL" => true,
-			"DINPUT.DLL" => true,
-			"DSOUND.DLL" => true,
-			"WINMM.DLL" => true,
-			"GLIDE2X.DLL" => true,
-			"DPLAYX.DLL" => true,
-			_ => false
-		};
+		// Check if this is a system DLL that we emulate by checking if it has any exports
+		// registered in the source-generated DllModuleExportInfo
+		var exports = DllModuleExportInfo.GetAllExports(normalizedName);
+		var isSystemDll = exports.Count > 0;
 		
 		if (isSystemDll || _env.IsModuleLoaded(normalizedName))
 		{
