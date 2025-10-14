@@ -206,7 +206,7 @@ public sealed class Emulator : IDisposable
             // Check for COM vtable method calls
             if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
             {
-                LogDebug($"[COM] Vtable method call at 0x{step.CallTarget:X8}");
+                _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                 if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
                 {
                     LogDebug($"[COM] Method returned 0x{ret:X8}");
@@ -224,7 +224,7 @@ public sealed class Emulator : IDisposable
             {
                 var dll = imp.dll.ToUpperInvariant();
                 var name = imp.name;
-                LogDebug($"[Import] {dll}!{name}");
+                _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
                 if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
                 {
                     LogDebug($"[Import] Returned 0x{ret:X8}");
@@ -348,7 +348,7 @@ public sealed class Emulator : IDisposable
                 // Check for COM vtable method calls
                 if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
                 {
-                    LogDebug($"[COM] Vtable method call at 0x{step.CallTarget:X8}");
+                    _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                     if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
                     {
                         LogDebug($"[COM] Method returned 0x{ret:X8}");
@@ -364,7 +364,7 @@ public sealed class Emulator : IDisposable
                 {
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;
-                    LogDebug($"[Import] {dll}!{name}");
+                    _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
                     {
                         LogDebug($"[Import] Returned 0x{ret:X8}");
@@ -457,7 +457,7 @@ public sealed class Emulator : IDisposable
             // Check for COM vtable method calls
             if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
             {
-                LogDebug($"[COM] Vtable method call at 0x{step.CallTarget:X8}");
+                _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                 if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
                 {
                     LogDebug($"[COM] Method returned 0x{ret:X8}");
@@ -473,7 +473,7 @@ public sealed class Emulator : IDisposable
             {
                 var dll = imp.dll.ToUpperInvariant();
                 var name = imp.name;
-                LogDebug($"[Import] {dll}!{name}");
+                _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
                 if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
                 {
                     LogDebug($"[Import] Returned 0x{ret:X8}");
@@ -524,7 +524,7 @@ public sealed class Emulator : IDisposable
                 // Check for COM vtable method calls
                 if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
                 {
-                    LogDebug($"[COM] Vtable method call at 0x{step.CallTarget:X8}");
+                    _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                     if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
                     {
                         LogDebug($"[COM] Method returned 0x{ret:X8}");
@@ -540,7 +540,7 @@ public sealed class Emulator : IDisposable
                 {
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;
-                    LogDebug($"[Import] {dll}!{name}");
+                    _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
                     {
                         LogDebug($"[Import] Returned 0x{ret:X8}");

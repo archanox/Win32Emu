@@ -343,6 +343,7 @@ public class IcedCpu : ICpu
 							// This is a synthetic import stub - signal this as a call
 							isCall = true;
 							callTarget = oldEip;
+							_logger.LogInformation("[IcedCpu] INT 3 hooking import stub at address 0x{OldEip:X8}", oldEip);
 
 							// Don't actually execute the INT3, just treat it as a call
 							// The main loop will handle the import invocation
@@ -352,7 +353,7 @@ public class IcedCpu : ICpu
 							// This is a COM vtable method stub - signal this as a call
 							isCall = true;
 							callTarget = oldEip;
-							_logger.LogWarning("[IcedCpu] Handling INT3 COM vtable stub at 0x{OldEip:X8}", oldEip);
+							_logger.LogInformation("[IcedCpu] INT 3 hooking COM vtable stub at address 0x{OldEip:X8}", oldEip);
 
 							// Don't actually execute the INT3, just treat it as a call
 							// The main loop will handle the COM method invocation
@@ -376,7 +377,7 @@ public class IcedCpu : ICpu
 						// This is a synthetic import stub - signal this as a call
 						isCall = true;
 						callTarget = oldEip;
-						_logger.LogWarning("[IcedCpu] Handling INT3 import stub at 0x{OldEip:X8}", oldEip);
+						_logger.LogInformation("[IcedCpu] INT3 (0xCC) hooking import stub at address 0x{OldEip:X8}", oldEip);
 
 						// Don't actually execute the INT3, just treat it as a call
 						// The main loop will handle the import invocation
@@ -386,7 +387,7 @@ public class IcedCpu : ICpu
 						// This is a COM vtable method stub - signal this as a call
 						isCall = true;
 						callTarget = oldEip;
-						_logger.LogWarning("[IcedCpu] Handling INT3 COM vtable stub at 0x{OldEip:X8}", oldEip);
+						_logger.LogInformation("[IcedCpu] INT3 (0xCC) hooking COM vtable stub at address 0x{OldEip:X8}", oldEip);
 
 						// Don't actually execute the INT3, just treat it as a call
 						// The main loop will handle the COM method invocation
