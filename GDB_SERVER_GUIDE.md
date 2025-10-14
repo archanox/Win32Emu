@@ -12,6 +12,8 @@ This allows you to step through decompiled code line by line, set breakpoints, a
 
 ## Quick Start
 
+> **Note**: If you see "(No debugging symbols found in ...)" when connecting, that's normal! See [GHIDRA_DEBUGGING_FAQ.md](GHIDRA_DEBUGGING_FAQ.md) for details. Ghidra's decompiler works perfectly without debug symbols.
+
 ### 1. Start Win32Emu with GDB Server
 
 ```bash
@@ -240,6 +242,66 @@ In Ghidra:
 - Check the Win32Emu terminal for error messages
 - Restart Win32Emu and reconnect
 
+### "No debugging symbols found in .EXE"
+
+**Problem**: GDB or Ghidra shows a warning like:
+```
+(No debugging symbols found in /path/to/IGN_TEAS.EXE)
+```
+
+**Why This Happens**:
+This message is **expected and harmless**. It occurs because:
+- PE (Portable Executable) files don't contain embedded debug symbols
+- Debug information for Windows executables is stored in separate PDB (Program Database) files
+- Older games and applications typically don't ship with PDB files
+- Win32Emu emulates the executable but doesn't have access to the original PDB files
+
+**This Does NOT Prevent Debugging**:
+You can still debug effectively without symbols because:
+- ✅ **Ghidra's disassembler works perfectly** - It analyzes the binary and creates its own function names
+- ✅ **You can set breakpoints by address** - Use addresses from Ghidra's analysis
+- ✅ **Import functions are visible** - Win32Emu logs all API calls with their names (like `KERNEL32!CreateFileA`)
+- ✅ **Memory and registers are accessible** - Full inspection capabilities
+- ✅ **Ghidra's decompiler works** - Shows C-like pseudocode even without debug symbols
+
+**What You Can Do**:
+
+1. **Use Ghidra's Analysis** (Recommended):
+   - Open the .EXE in Ghidra and run Auto-Analysis
+   - Ghidra will identify functions, strings, and data structures
+   - These appear in the debugger as you step through code
+   - You can rename functions in Ghidra to make debugging easier
+
+2. **Check Win32Emu's Logs**:
+   - Win32Emu logs all Win32 API calls with their names
+   - Example: `[Import] KERNEL32!GetVersion`
+   - This helps you understand what the program is doing
+
+3. **Use Enhanced Debug Mode**:
+   ```bash
+   Win32Emu game.exe --debug
+   ```
+   - Provides detailed execution logs
+   - Shows register states and function calls
+   - Helps identify where the program is in its execution flow
+
+4. **Ignore the Warning**:
+   - Simply continue debugging
+   - The warning doesn't affect functionality
+   - It's just informing you that symbolic debugging won't be available
+
+**Understanding the Limitation**:
+- **With symbols**: You could see variable names like `playerHealth` or `screenBuffer`
+- **Without symbols**: You see addresses like `0x00405060` and `0x00406000`
+- **Ghidra helps**: Its analysis creates names like `FUN_00405060` and identifies data structures
+- **Win32Emu helps**: Import names show which Windows APIs are being called
+
+**For the Curious**:
+If you really want symbol information, you would need:
+- The original PDB file from the developer (rarely available for old games)
+- Source code to compile with debug symbols (usually not available)
+- Or use Ghidra's analysis to create your own symbol annotations
+
 ## Performance Considerations
 
 - **GDB server mode is slow**: Each instruction requires network communication
@@ -289,7 +351,7 @@ print(f"Registers: {response}")
 2. **No watchpoints**: Memory watchpoints are not implemented
 3. **No conditional breakpoints**: Breakpoints always trigger when hit
 4. **Single-threaded**: Only one thread is emulated
-5. **No symbol support**: Debugging is by address only
+5. **No PDB/DWARF symbols**: PE files don't have embedded debug symbols (this is normal - use Ghidra's analysis instead)
 
 ## Future Enhancements
 
@@ -299,11 +361,11 @@ Potential improvements for the GDB server:
 - [ ] Hardware watchpoints (break on memory access)
 - [ ] Conditional breakpoints
 - [ ] Multi-threading support
-- [ ] Symbol file support
 - [ ] Reverse debugging (step backwards)
 
 ## See Also
 
+- [GHIDRA_DEBUGGING_FAQ.md](GHIDRA_DEBUGGING_FAQ.md) - **START HERE** - Answers common questions about "No debugging symbols" and effective debugging without PDB files
 - [INTERACTIVE_DEBUGGER_GUIDE.md](INTERACTIVE_DEBUGGER_GUIDE.md) - Built-in command-line debugger
 - [DEBUGGER_IMPLEMENTATION_SUMMARY.md](DEBUGGER_IMPLEMENTATION_SUMMARY.md) - Technical implementation details
 - [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) - Enhanced debug mode
