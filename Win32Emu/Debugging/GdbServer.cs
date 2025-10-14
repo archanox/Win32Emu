@@ -250,7 +250,7 @@ public class GdbServer : IDisposable
                 
             case 'G':
                 // Write general registers
-                await SendPacketAsync("OK");
+                await HandleWriteRegistersAsync(args);
                 break;
                 
             case 'p':
@@ -260,7 +260,7 @@ public class GdbServer : IDisposable
                 
             case 'P':
                 // Write single register
-                await SendPacketAsync("OK");
+                await HandleWriteRegisterAsync(args);
                 break;
                 
             case 'm':
@@ -270,7 +270,7 @@ public class GdbServer : IDisposable
                 
             case 'M':
                 // Write memory
-                await SendPacketAsync("OK");
+                await HandleWriteMemoryAsync(args);
                 break;
                 
             case 'c':
@@ -440,26 +440,203 @@ public class GdbServer : IDisposable
     }
     
     /// <summary>
-    /// Insert breakpoint: Z type,addr,kind
+    /// Write all general purpose registers: G XX...
+    /// Format: EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI, EIP, EFLAGS, CS, SS, DS, ES, FS, GS
     /// </summary>
-    private async Task HandleInsertBreakpointAsync(string args)
+    private async Task HandleWriteRegistersAsync(string args)
     {
-        var parts = args.Split(',');
-        if (parts.Length < 2)
+        // Each register is 4 bytes (8 hex digits) in little-endian format
+        // We expect 16 registers: 10 GPRs + 6 segment registers
+        if (args.Length < 80) // 10 registers * 8 hex chars = 80 minimum
         {
             await SendPacketAsync("E01");
             return;
         }
         
-        // Type 0 = software breakpoint
-        if (uint.TryParse(parts[1], NumberStyles.HexNumber, null, out var addr))
+        try
         {
-            _breakpoints.AddBreakpoint(addr, $"GDB breakpoint at 0x{addr:X8}");
+            var offset = 0;
+            _cpu.SetRegister("EAX", ParseHex32(args, ref offset));
+            _cpu.SetRegister("ECX", ParseHex32(args, ref offset));
+            _cpu.SetRegister("EDX", ParseHex32(args, ref offset));
+            _cpu.SetRegister("EBX", ParseHex32(args, ref offset));
+            _cpu.SetRegister("ESP", ParseHex32(args, ref offset));
+            _cpu.SetRegister("EBP", ParseHex32(args, ref offset));
+            _cpu.SetRegister("ESI", ParseHex32(args, ref offset));
+            _cpu.SetRegister("EDI", ParseHex32(args, ref offset));
+            _cpu.SetEip(ParseHex32(args, ref offset));
+            _cpu.SetRegister("EFLAGS", ParseHex32(args, ref offset));
+            
+            // Segment registers are ignored (we don't emulate them)
+            
+            _logger.LogDebug("GDB: Registers updated via G command");
             await SendPacketAsync("OK");
         }
-        else
+        catch
         {
             await SendPacketAsync("E01");
+        }
+    }
+    
+    /// <summary>
+    /// Write a single register: P n=XX...
+    /// </summary>
+    private async Task HandleWriteRegisterAsync(string args)
+    {
+        var parts = args.Split('=');
+        if (parts.Length != 2)
+        {
+            await SendPacketAsync("E01");
+            return;
+        }
+        
+        if (!int.TryParse(parts[0], NumberStyles.HexNumber, null, out var regNum))
+        {
+            await SendPacketAsync("E01");
+            return;
+        }
+        
+        try
+        {
+            var offset = 0;
+            var value = ParseHex32(parts[1], ref offset);
+            
+            switch (regNum)
+            {
+                case 0: _cpu.SetRegister("EAX", value); break;
+                case 1: _cpu.SetRegister("ECX", value); break;
+                case 2: _cpu.SetRegister("EDX", value); break;
+                case 3: _cpu.SetRegister("EBX", value); break;
+                case 4: _cpu.SetRegister("ESP", value); break;
+                case 5: _cpu.SetRegister("EBP", value); break;
+                case 6: _cpu.SetRegister("ESI", value); break;
+                case 7: _cpu.SetRegister("EDI", value); break;
+                case 8: _cpu.SetEip(value); break;
+                case 9: _cpu.SetRegister("EFLAGS", value); break;
+                default:
+                    // Unsupported register (segment registers, etc.)
+                    await SendPacketAsync("E01");
+                    return;
+            }
+            
+            _logger.LogDebug("GDB: Register {RegNum} updated to 0x{Value:X8}", regNum, value);
+            await SendPacketAsync("OK");
+        }
+        catch
+        {
+            await SendPacketAsync("E01");
+        }
+    }
+    
+    /// <summary>
+    /// Write memory: M addr,length:XX...
+    /// </summary>
+    private async Task HandleWriteMemoryAsync(string args)
+    {
+        var parts = args.Split(':');
+        if (parts.Length != 2)
+        {
+            await SendPacketAsync("E01");
+            return;
+        }
+        
+        var addrLen = parts[0].Split(',');
+        if (addrLen.Length != 2)
+        {
+            await SendPacketAsync("E01");
+            return;
+        }
+        
+        if (!uint.TryParse(addrLen[0], NumberStyles.HexNumber, null, out var addr) ||
+            !uint.TryParse(addrLen[1], NumberStyles.HexNumber, null, out var length))
+        {
+            await SendPacketAsync("E01");
+            return;
+        }
+        
+        var data = parts[1];
+        if (data.Length != length * 2)
+        {
+            await SendPacketAsync("E01");
+            return;
+        }
+        
+        try
+        {
+            for (uint i = 0; i < length; i++)
+            {
+                var byteStr = data.Substring((int)(i * 2), 2);
+                var byteVal = byte.Parse(byteStr, NumberStyles.HexNumber);
+                _memory.Write8(addr + i, byteVal);
+            }
+            
+            _logger.LogDebug("GDB: Memory written at 0x{Address:X8}, {Length} bytes", addr, length);
+            await SendPacketAsync("OK");
+        }
+        catch (IndexOutOfRangeException ex)
+        {
+            _logger.LogWarning("GDB memory write failed: {Message} (addr=0x{Address:X8}, length={Length})", 
+                ex.Message, addr, length);
+            await SendPacketAsync("E01");
+        }
+        catch
+        {
+            await SendPacketAsync("E01");
+        }
+    }
+    
+    /// <summary>
+    /// Insert breakpoint: Z type,addr,kind
+    /// Types: 0=software, 1=hardware, 2=write watchpoint, 3=read watchpoint, 4=access watchpoint
+    /// </summary>
+    private async Task HandleInsertBreakpointAsync(string args)
+    {
+        var parts = args.Split(',');
+        if (parts.Length < 3)
+        {
+            await SendPacketAsync("E01");
+            return;
+        }
+        
+        if (!int.TryParse(parts[0], out var type) ||
+            !uint.TryParse(parts[1], NumberStyles.HexNumber, null, out var addr) ||
+            !uint.TryParse(parts[2], NumberStyles.HexNumber, null, out var kind))
+        {
+            await SendPacketAsync("E01");
+            return;
+        }
+        
+        switch (type)
+        {
+            case 0: // Software breakpoint
+            case 1: // Hardware breakpoint (treat same as software)
+                _breakpoints.AddBreakpoint(addr, $"GDB breakpoint at 0x{addr:X8}");
+                _logger.LogDebug("GDB: Breakpoint added at 0x{Address:X8}", addr);
+                await SendPacketAsync("OK");
+                break;
+                
+            case 2: // Write watchpoint
+                _breakpoints.AddWatchpoint(addr, WatchpointType.Write, kind, $"GDB write watchpoint at 0x{addr:X8}");
+                _logger.LogDebug("GDB: Write watchpoint added at 0x{Address:X8}, size={Size}", addr, kind);
+                await SendPacketAsync("OK");
+                break;
+                
+            case 3: // Read watchpoint
+                _breakpoints.AddWatchpoint(addr, WatchpointType.Read, kind, $"GDB read watchpoint at 0x{addr:X8}");
+                _logger.LogDebug("GDB: Read watchpoint added at 0x{Address:X8}, size={Size}", addr, kind);
+                await SendPacketAsync("OK");
+                break;
+                
+            case 4: // Access watchpoint (read or write)
+                _breakpoints.AddWatchpoint(addr, WatchpointType.Access, kind, $"GDB access watchpoint at 0x{addr:X8}");
+                _logger.LogDebug("GDB: Access watchpoint added at 0x{Address:X8}, size={Size}", addr, kind);
+                await SendPacketAsync("OK");
+                break;
+                
+            default:
+                // Unsupported breakpoint type
+                await SendPacketAsync("");
+                break;
         }
     }
     
@@ -475,15 +652,43 @@ public class GdbServer : IDisposable
             return;
         }
         
-        if (uint.TryParse(parts[1], NumberStyles.HexNumber, null, out var addr))
-        {
-            var removed = _breakpoints.RemoveBreakpointAtAddress(addr);
-            await SendPacketAsync(removed ? "OK" : "E01");
-        }
-        else
+        if (!int.TryParse(parts[0], out var type) ||
+            !uint.TryParse(parts[1], NumberStyles.HexNumber, null, out var addr))
         {
             await SendPacketAsync("E01");
+            return;
         }
+        
+        bool removed;
+        switch (type)
+        {
+            case 0: // Software breakpoint
+            case 1: // Hardware breakpoint
+                removed = _breakpoints.RemoveBreakpointAtAddress(addr);
+                _logger.LogDebug("GDB: Breakpoint removed at 0x{Address:X8}", addr);
+                break;
+                
+            case 2: // Write watchpoint
+                removed = _breakpoints.RemoveWatchpointAtAddress(addr, WatchpointType.Write);
+                _logger.LogDebug("GDB: Write watchpoint removed at 0x{Address:X8}", addr);
+                break;
+                
+            case 3: // Read watchpoint
+                removed = _breakpoints.RemoveWatchpointAtAddress(addr, WatchpointType.Read);
+                _logger.LogDebug("GDB: Read watchpoint removed at 0x{Address:X8}", addr);
+                break;
+                
+            case 4: // Access watchpoint
+                removed = _breakpoints.RemoveWatchpointAtAddress(addr, WatchpointType.Access);
+                _logger.LogDebug("GDB: Access watchpoint removed at 0x{Address:X8}", addr);
+                break;
+                
+            default:
+                await SendPacketAsync("");
+                return;
+        }
+        
+        await SendPacketAsync(removed ? "OK" : "E01");
     }
     
     /// <summary>
@@ -613,6 +818,26 @@ public class GdbServer : IDisposable
     {
         var bytes = BitConverter.GetBytes(value);
         return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+    
+    /// <summary>
+    /// Parse a 32-bit value from little-endian hex string
+    /// </summary>
+    private static uint ParseHex32(string hex, ref int offset)
+    {
+        if (offset + 8 > hex.Length)
+        {
+            throw new ArgumentException("Insufficient data for 32-bit value");
+        }
+        
+        var bytes = new byte[4];
+        for (var i = 0; i < 4; i++)
+        {
+            bytes[i] = byte.Parse(hex.Substring(offset + i * 2, 2), NumberStyles.HexNumber);
+        }
+        offset += 8;
+        
+        return BitConverter.ToUInt32(bytes, 0);
     }
     
     public void Dispose()

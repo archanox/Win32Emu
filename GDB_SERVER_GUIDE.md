@@ -89,13 +89,13 @@ The Win32Emu GDB server implements the following GDB Remote Serial Protocol comm
 
 ### Register Operations
 - `g` - Read all general-purpose registers (EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI, EIP, EFLAGS)
+- `G` - Write all general-purpose registers
 - `p` - Read single register by index
-- `G` - Write all registers (stub - returns OK)
-- `P` - Write single register (stub - returns OK)
+- `P` - Write single register by index
 
 ### Memory Operations
 - `m addr,length` - Read memory bytes
-- `M addr,length:XX...` - Write memory (stub - returns OK)
+- `M addr,length:XX...` - Write memory bytes
 
 ### Execution Control
 - `c` - Continue execution
@@ -105,6 +105,14 @@ The Win32Emu GDB server implements the following GDB Remote Serial Protocol comm
 ### Breakpoints
 - `Z0,addr,kind` - Insert software breakpoint
 - `z0,addr,kind` - Remove software breakpoint
+- `Z1,addr,kind` - Insert hardware breakpoint (treated as software)
+- `z1,addr,kind` - Remove hardware breakpoint
+- `Z2,addr,kind` - Insert write watchpoint
+- `z2,addr,kind` - Remove write watchpoint
+- `Z3,addr,kind` - Insert read watchpoint
+- `z3,addr,kind` - Remove read watchpoint
+- `Z4,addr,kind` - Insert access watchpoint (read/write)
+- `z4,addr,kind` - Remove access watchpoint
 
 ### Queries
 - `qSupported` - Feature negotiation
@@ -369,21 +377,40 @@ print(f"Registers: {response}")
 
 ## Known Limitations
 
-1. **Read-only debugging**: Register and memory writes are stubbed (return OK but don't modify state)
-2. **No watchpoints**: Memory watchpoints are not implemented
+1. ~~**Read-only debugging**: Register and memory writes are stubbed (return OK but don't modify state)~~ ✅ **IMPLEMENTED**
+2. ~~**No watchpoints**: Memory watchpoints are not implemented~~ ✅ **IMPLEMENTED**
 3. **No conditional breakpoints**: Breakpoints always trigger when hit
 4. **Single-threaded**: Only one thread is emulated
 5. **No PDB/DWARF symbols**: PE files don't have embedded debug symbols (this is normal - use Ghidra's analysis instead)
+6. **Watchpoint checking**: Watchpoints are not automatically triggered during execution - they're registered but need manual checking in emulator loop
+
+## Recent Enhancements
+
+### ✅ Register and Memory Modification (Implemented)
+You can now modify register and memory values during debugging:
+- Set register values with `P` (single) or `G` (all registers)
+- Write memory with `M addr,length:data`
+- Full read/write debugging capability
+
+### ✅ Hardware Watchpoints (Implemented)
+Break on memory access at specific addresses:
+- Write watchpoints: Break when memory is written
+- Read watchpoints: Break when memory is read
+- Access watchpoints: Break on any read or write
+- Set with `Z2`, `Z3`, `Z4` commands in GDB/Ghidra
+
+**Note**: Watchpoints are registered but require integration into the emulator's execution loop for automatic triggering.
 
 ## Future Enhancements
 
 Potential improvements for the GDB server:
 
-- [ ] Register/memory modification support
-- [ ] Hardware watchpoints (break on memory access)
 - [ ] Conditional breakpoints
 - [ ] Multi-threading support
 - [ ] Reverse debugging (step backwards)
+- [ ] Automatic watchpoint triggering in emulator loop
+- [ ] Tracepoints for non-intrusive data collection
+- [ ] Better symbol integration via qSymbol responses
 
 ## See Also
 

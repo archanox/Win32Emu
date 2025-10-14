@@ -250,7 +250,12 @@ You can safely ignore these errors - they don't affect debugging functionality. 
 
 ### "Can I modify registers or memory?"
 
-Currently no - the GDB server supports read-only debugging. This is listed as a known limitation.
+Yes! As of the latest version, the GDB server supports full register and memory modification:
+- Modify individual registers with the `set` command in GDB
+- Write to memory addresses during debugging
+- This allows you to test different code paths and fix bugs on the fly
+
+In Ghidra's debugger, you can edit register values and memory directly in the UI.
 
 ### "Why is debugging so slow?"
 
