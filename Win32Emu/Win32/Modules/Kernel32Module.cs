@@ -2193,6 +2193,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		try
 		{
+			// Log the call parameters for debugging
+			_logger.LogInformation("[Kernel32] WideCharToMultiByte: CP={CodePage} cchWide={CchWide} lpWide=0x{LpWide:X8} cbMulti={CbMulti} lpMulti=0x{LpMulti:X8}", 
+				codePage, cchWideChar, lpWideCharStr, cbMultiByte, lpMultiByteStr);
+			
 			// Handle null input string
 			if (lpWideCharStr == 0)
 			{
@@ -2228,6 +2232,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				}
 
 				wideString = new string(wideChars.ToArray());
+				_logger.LogInformation("[Kernel32] WideCharToMultiByte: Read {Count} chars (null-terminated)", wideChars.Count);
 			}
 			else
 			{
@@ -2239,6 +2244,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				}
 
 				wideString = new string(wideChars);
+				_logger.LogInformation("[Kernel32] WideCharToMultiByte: Read {Count} chars (specified count)", cchWideChar);
 			}
 
 			// Convert to multi-byte string based on code page
@@ -2274,9 +2280,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				// If input is null-terminated, include space for null terminator in required size
 				if (cchWideChar == unchecked((uint)-1))
 				{
-					return (uint)(multiByteBytes.Length + 1);
+					var result = (uint)(multiByteBytes.Length + 1);
+					_logger.LogInformation("[Kernel32] WideCharToMultiByte: Returning size {Size} (including null terminator)", result);
+					return result;
 				}
 
+				_logger.LogInformation("[Kernel32] WideCharToMultiByte: Returning size {Size}", (uint)multiByteBytes.Length);
 				return (uint)multiByteBytes.Length;
 			}
 
