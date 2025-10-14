@@ -50,7 +50,7 @@ namespace Win32Emu.Win32.Modules
 		}
 		
 		[DllModuleExport(1)]
-		private unsafe uint DirectSoundCreate(uint lpGuid, uint lplpDs, uint pUnkOuter)
+		private uint DirectSoundCreate(uint lpGuid, uint lplpDs, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DSound] DirectSoundCreate(lpGuid=0x{LpGuid:X8}, lplpDS=0x{LplpDs:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDs, pUnkOuter);
 
@@ -102,7 +102,7 @@ namespace Win32Emu.Win32.Modules
 		}
 		
 		[DllModuleExport(1)]
-		private unsafe uint DirectSoundEnumerateA(uint lpDsEnumCallback, uint lpContext)
+		private uint DirectSoundEnumerateA(uint lpDsEnumCallback, uint lpContext)
 		{
 			_logger.LogInformation("[DSound] DirectSoundEnumerateA(lpDSEnumCallback=0x{LpDsEnumCallback:X8}, lpContext=0x{LpContext:X8})", lpDsEnumCallback, lpContext);
 

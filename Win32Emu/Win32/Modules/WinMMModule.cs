@@ -73,7 +73,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint TimeGetTime()
+		private uint TimeGetTime()
 		{
 			// Return time in milliseconds since start
 			var time = (uint)_stopwatch.ElapsedMilliseconds;
@@ -81,7 +81,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint TimeBeginPeriod(uint uPeriod)
+		private uint TimeBeginPeriod(uint uPeriod)
 		{
 			_logger.LogInformation("[WinMM] timeBeginPeriod({UPeriod})", uPeriod);
 			_timerPeriod = uPeriod;
@@ -89,7 +89,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint TimeEndPeriod(uint uPeriod)
+		private uint TimeEndPeriod(uint uPeriod)
 		{
 			_logger.LogInformation("[WinMM] timeEndPeriod({UPeriod})", uPeriod);
 			_timerPeriod = 0;
@@ -97,14 +97,14 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint TimeKillEvent(uint uTimerId)
+		private uint TimeKillEvent(uint uTimerId)
 		{
 			_logger.LogInformation("[WinMM] timeKillEvent({UTimerId})", uTimerId);
 			return 0; // TIMERR_NOERROR
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint TimeSetEvent(uint uDelay, uint uResolution, uint lpTimeProc, uint dwUser, uint fuEvent)
+		private uint TimeSetEvent(uint uDelay, uint uResolution, uint lpTimeProc, uint dwUser, uint fuEvent)
 		{
 			// TimeSetEvent sets a timer event
 			// Returns a timer identifier or 0 if it failed
@@ -115,7 +115,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint JoyGetPosEx(uint uJoyID, uint pji)
+		private uint JoyGetPosEx(uint uJoyID, uint pji)
 		{
 			// JoyGetPosEx queries the position and button status of a joystick
 			_logger.LogInformation("[WinMM] joyGetPosEx(uJoyID={UJoyId}, pji=0x{Pji:X8})", uJoyID, pji);
@@ -130,7 +130,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint JoyGetDevCapsA(uint uJoyID, uint pjc, uint cbjc)
+		private uint JoyGetDevCapsA(uint uJoyID, uint pjc, uint cbjc)
 		{
 			// JoyGetDevCapsA queries the capabilities of a joystick
 			_logger.LogInformation("[WinMM] joyGetDevCapsA(uJoyID={UJoyId}, pjc=0x{Pjc:X8}, cbjc={Cbjc})", uJoyID, pjc, cbjc);
@@ -145,7 +145,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint MciSendStringA(uint lpszCommand, uint lpszReturnString, uint cchReturn, uint hwndCallback)
+		private uint MciSendStringA(uint lpszCommand, uint lpszReturnString, uint cchReturn, uint hwndCallback)
 		{
 			// MciSendStringA sends a command string to an MCI device
 			var command = lpszCommand != 0 ? _env.ReadAnsiString(lpszCommand) : "";

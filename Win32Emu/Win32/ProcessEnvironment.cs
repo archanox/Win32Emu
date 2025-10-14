@@ -332,6 +332,7 @@ public class ProcessEnvironment
 	public void MemWrite32(uint addr, uint value) => _vm.Write32(addr, value);
 	public void MemWriteBytes(uint addr, byte[] bytes) => _vm.WriteBytes(addr, bytes);
 	public void MemWrite16(uint addr, ushort value) => _vm.Write16(addr, value);
+	public void MemWrite8(uint addr, byte value) => _vm.Write8(addr, value);
 	public ushort MemRead16(uint addr) => _vm.Read16(addr);
 	public void MemWrite64(uint addr, ulong value) => _vm.Write64(addr, value);
 	public void MemZero(uint addr, uint size) => _vm.WriteBytes(addr, new byte[size]);
