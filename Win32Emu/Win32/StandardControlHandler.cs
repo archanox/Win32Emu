@@ -112,7 +112,7 @@ public class StandardControlHandler
 		uint lParam = buttonHwnd; // lParam = handle of control
 
 		// Post WM_COMMAND to parent window
-		_logger.LogInformation("[Button] Sending WM_COMMAND to parent 0x{ParentHwnd:X8}: controlId={ControlId}, notification=BN_CLICKED", parentHwnd, controlId);
+		_logger.LogInformation("[Button] Sending WM_COMMAND to parent 0x{ParentHwnd:X8}: controlId={ControlId}, notification=0x{NotificationCode:X4}", parentHwnd, controlId, notificationCode);
 		_env.PostMessage(parentHwnd, 0x0111, wParam, lParam); // WM_COMMAND = 0x0111
 	}
 
