@@ -18,6 +18,7 @@ public class TestEnvironment : IDisposable
     public ProcessEnvironment ProcessEnv { get; }
     public Kernel32Module Kernel32 { get; }
     public PeImageLoader PeLoader { get; }
+    public Win32Dispatcher Dispatcher { get; }
 
     public TestEnvironment()
     {
@@ -25,7 +26,14 @@ public class TestEnvironment : IDisposable
         Cpu = new MockCpu();
         ProcessEnv = new ProcessEnvironment(Memory, logger: NullLogger.Instance);
         PeLoader = new PeImageLoader(Memory);
+        
+        // Create dispatcher and register modules
+        Dispatcher = new Win32Dispatcher(NullLogger.Instance);
+        
+        // Create and register Kernel32 module
         Kernel32 = new Kernel32Module(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+        Kernel32.SetDispatcher(Dispatcher);
+        Dispatcher.RegisterModule(Kernel32);
 
         // Initialize process environment with test data
         ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);

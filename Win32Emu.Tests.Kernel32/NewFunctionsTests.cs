@@ -130,6 +130,24 @@ public class NewFunctionsTests : IDisposable
         Assert.Equal(0u, result);
     }
 
+    [Fact]
+    public void GetProcAddress_WithSystemDll_ShouldReturnFunctionAddress()
+    {
+        // Arrange - Get handle to KERNEL32 system DLL
+        var kernel32Name = _testEnv.WriteString("KERNEL32");
+        var moduleHandle = _testEnv.CallKernel32Api("GETMODULEHANDLEA", kernel32Name);
+        Assert.NotEqual(0u, moduleHandle);
+        
+        // Look up IsProcessorFeaturePresent function
+        var procNamePtr = _testEnv.WriteString("IsProcessorFeaturePresent");
+        
+        // Act
+        var result = _testEnv.CallKernel32Api("GETPROCADDRESS", moduleHandle, procNamePtr);
+        
+        // Assert - Should return a non-zero function address
+        Assert.NotEqual(0u, result);
+    }
+
     #endregion
 
     #region MultiByteToWideChar Tests
