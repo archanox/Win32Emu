@@ -36,7 +36,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
             // by their respective backends
             if (!SDL.Init(SDL.InitFlags.Video))
             {
-                logger.LogError($"[SDL3] Failed to initialize video: {SDL.GetError()}");
+                logger.LogError("[SDL3] Failed to initialize video: {GetError}", SDL.GetError());
                 return false;
             }
 
@@ -44,7 +44,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
             _window = SDL.CreateWindow(title, width, height, SDL.WindowFlags.Resizable);
             if (_window == IntPtr.Zero)
             {
-                logger.LogError($"[SDL3] Failed to create window: {SDL.GetError()}");
+                logger.LogError("[SDL3] Failed to create window: {GetError}", SDL.GetError());
                 SDL.Quit();
                 return false;
             }
@@ -53,7 +53,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
             _renderer = SDL.CreateRenderer(_window, null);
             if (_renderer == IntPtr.Zero)
             {
-	            logger.LogError($"[SDL3] Failed to create renderer: {SDL.GetError()}");
+	            logger.LogError("[SDL3] Failed to create renderer: {GetError}", SDL.GetError());
                 SDL.DestroyWindow(_window);
                 SDL.Quit();
                 return false;
@@ -67,7 +67,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
                 
             if (_texture == IntPtr.Zero)
             {
-	            logger.LogError($"[SDL3] Failed to create texture: {SDL.GetError()}");
+	            logger.LogError("[SDL3] Failed to create texture: {GetError}", SDL.GetError());
                 SDL.DestroyRenderer(_renderer);
                 SDL.DestroyWindow(_window);
                 SDL.Quit();
@@ -75,7 +75,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
             }
 
             _initialized = true;
-            logger.LogInformation($"[SDL3] Initialized {width}x{height} display");
+            logger.LogInformation("[SDL3] Initialized {Width}x{Height} display", width, height);
             return true;
         }
     }
@@ -99,7 +99,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
                 {
                     if (!SDL.UpdateTexture(_texture, IntPtr.Zero, (IntPtr)ptr, pitch))
                     {
-                        logger.LogError($"[SDL3] Failed to update texture: {SDL.GetError()}");
+                        logger.LogError("[SDL3] Failed to update texture: {GetError}", SDL.GetError());
                         return false;
                     }
                 }

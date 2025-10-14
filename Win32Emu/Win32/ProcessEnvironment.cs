@@ -205,7 +205,7 @@ public class ProcessEnvironment
 		}
 
 		var result = Encoding.ASCII.GetString(buf.ToArray());
-		_logger.LogDebug($"[ProcessEnv] ReadAnsiString addr=0x{addr:X8} result='{result}'");
+		_logger.LogDebug("[ProcessEnv] ReadAnsiString addr=0x{Addr:X8} result='{Result}'", addr, result);
 		return result;
 	}
 
@@ -218,7 +218,7 @@ public class ProcessEnvironment
 		}
 
 		var result = Encoding.ASCII.GetString(buf);
-		_logger.LogDebug($"[ProcessEnv] ReadAnsiString addr=0x{addr:X8} length={maxLength} result='{result}'");
+		_logger.LogDebug("[ProcessEnv] ReadAnsiString addr=0x{Addr:X8} length={MaxLength} result='{Result}'", addr, maxLength, result);
 		return result;
 	}
 
@@ -717,7 +717,7 @@ public class ProcessEnvironment
 			);
 
 			_windowClasses.TryAdd(className, classInfo);
-			_logger.LogInformation($"[ProcessEnv] Pre-registered standard control class: {className}");
+			_logger.LogInformation("[ProcessEnv] Pre-registered standard control class: {ClassName}", className);
 		}
 	}
 
@@ -725,11 +725,11 @@ public class ProcessEnvironment
 	{
 		if (!_windowClasses.TryAdd(className, classInfo))
 		{
-			_logger.LogError($"[ProcessEnv] Window class '{className}' already registered");
+			_logger.LogError("[ProcessEnv] Window class '{ClassName}' already registered", className);
 			return false;
 		}
 
-		_logger.LogInformation($"[ProcessEnv] Registered window class: {className}");
+		_logger.LogInformation("[ProcessEnv] Registered window class: {ClassName}", className);
 		return true;
 	}
 
@@ -1031,7 +1031,7 @@ public class ProcessEnvironment
 		// Initialize TLS storage for this thread
 		_threadLocalStorage[threadId] = new Dictionary<uint, uint>();
 		
-		_logger.LogInformation($"[ProcessEnv] CreateThread: new thread ID={threadId}");
+		_logger.LogInformation("[ProcessEnv] CreateThread: new thread ID={ThreadId}", threadId);
 		return threadId;
 	}
 
@@ -1042,7 +1042,7 @@ public class ProcessEnvironment
 		var index = _nextTlsIndex++;
 		_allocatedTlsIndices.Add(index);
 		
-		_logger.LogInformation($"[ProcessEnv] TlsAlloc: allocated index={index}");
+		_logger.LogInformation("[ProcessEnv] TlsAlloc: allocated index={Index}", index);
 		return index;
 	}
 
@@ -1050,7 +1050,7 @@ public class ProcessEnvironment
 	{
 		if (!_allocatedTlsIndices.Contains(tlsIndex))
 		{
-			_logger.LogWarning($"[ProcessEnv] TlsSetValue: invalid TLS index={tlsIndex}");
+			_logger.LogWarning("[ProcessEnv] TlsSetValue: invalid TLS index={TlsIndex}", tlsIndex);
 			return false;
 		}
 
@@ -1062,7 +1062,7 @@ public class ProcessEnvironment
 		}
 
 		threadTls[tlsIndex] = value;
-		_logger.LogInformation($"[ProcessEnv] TlsSetValue: threadId={_currentThreadId} index={tlsIndex} value=0x{value:X8}");
+		_logger.LogInformation("[ProcessEnv] TlsSetValue: threadId={CurrentThreadId} index={TlsIndex} value=0x{Value:X8}", _currentThreadId, tlsIndex, value);
 		return true;
 	}
 
@@ -1070,7 +1070,7 @@ public class ProcessEnvironment
 	{
 		if (!_allocatedTlsIndices.Contains(tlsIndex))
 		{
-			_logger.LogWarning($"[ProcessEnv] TlsGetValue: invalid TLS index={tlsIndex}");
+			_logger.LogWarning("[ProcessEnv] TlsGetValue: invalid TLS index={TlsIndex}", tlsIndex);
 			return 0;
 		}
 
@@ -1078,11 +1078,11 @@ public class ProcessEnvironment
 		if (_threadLocalStorage.TryGetValue(_currentThreadId, out var threadTls) &&
 		    threadTls.TryGetValue(tlsIndex, out var value))
 		{
-			_logger.LogInformation($"[ProcessEnv] TlsGetValue: threadId={_currentThreadId} index={tlsIndex} value=0x{value:X8}");
+			_logger.LogInformation("[ProcessEnv] TlsGetValue: threadId={CurrentThreadId} index={TlsIndex} value=0x{Value:X8}", _currentThreadId, tlsIndex, value);
 			return value;
 		}
 
-		_logger.LogInformation($"[ProcessEnv] TlsGetValue: threadId={_currentThreadId} index={tlsIndex} not set, returning 0");
+		_logger.LogInformation("[ProcessEnv] TlsGetValue: threadId={CurrentThreadId} index={TlsIndex} not set, returning 0", _currentThreadId, tlsIndex);
 		return 0;
 	}
 
@@ -1090,7 +1090,7 @@ public class ProcessEnvironment
 	{
 		if (!_allocatedTlsIndices.Remove(tlsIndex))
 		{
-			_logger.LogWarning($"[ProcessEnv] TlsFree: invalid TLS index={tlsIndex}");
+			_logger.LogWarning("[ProcessEnv] TlsFree: invalid TLS index={TlsIndex}", tlsIndex);
 			return false;
 		}
 
@@ -1100,7 +1100,7 @@ public class ProcessEnvironment
 			threadTls.Remove(tlsIndex);
 		}
 
-		_logger.LogInformation($"[ProcessEnv] TlsFree: freed index={tlsIndex}");
+		_logger.LogInformation("[ProcessEnv] TlsFree: freed index={TlsIndex}", tlsIndex);
 		return true;
 	}
 }

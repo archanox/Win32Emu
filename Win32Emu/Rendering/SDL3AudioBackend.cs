@@ -73,7 +73,7 @@ public sealed class Sdl3AudioBackend(ILogger logger) : IDisposable
             };
 
             _audioStreams[streamId] = stream;
-            logger.LogInformation($"[SDL3Audio] Created audio stream {streamId}: {frequency}Hz, {channels}ch, {bufferSize} bytes");
+            logger.LogInformation("[SDL3Audio] Created audio stream {StreamId}: {Frequency}Hz, {Channels}ch, {BufferSize} bytes", streamId, frequency, channels, bufferSize);
             return streamId;
         }
     }
@@ -87,13 +87,13 @@ public sealed class Sdl3AudioBackend(ILogger logger) : IDisposable
         {
             if (!_initialized || !_audioStreams.TryGetValue(streamId, out var stream))
             {
-                logger.LogError($"[SDL3Audio] Invalid stream {streamId}");
+                logger.LogError("[SDL3Audio] Invalid stream {StreamId}", streamId);
                 return false;
             }
 
             // TODO: Queue audio data to SDL in a full implementation
             // For now, just log that we received the data
-            logger.LogInformation($"[SDL3Audio] Stream {streamId}: Received {length} bytes of audio data");
+            logger.LogInformation("[SDL3Audio] Stream {StreamId}: Received {Length} bytes of audio data", streamId, length);
             return true;
         }
     }
@@ -117,7 +117,7 @@ public sealed class Sdl3AudioBackend(ILogger logger) : IDisposable
             }
 
             _audioStreams.Remove(streamId);
-            logger.LogInformation($"[SDL3Audio] Destroyed audio stream {streamId}");
+            logger.LogInformation("[SDL3Audio] Destroyed audio stream {StreamId}", streamId);
             return true;
         }
     }
@@ -134,7 +134,7 @@ public sealed class Sdl3AudioBackend(ILogger logger) : IDisposable
 	            return false;
             }
 
-            logger.LogInformation($"[SDL3Audio] Stream {streamId}: Set volume to {volume}");
+            logger.LogInformation("[SDL3Audio] Stream {StreamId}: Set volume to {Volume}", streamId, volume);
             return true;
         }
     }
@@ -151,7 +151,7 @@ public sealed class Sdl3AudioBackend(ILogger logger) : IDisposable
 	            return false;
             }
 
-            logger.LogInformation($"[SDL3Audio] Stream {streamId}: {(paused ? "Paused" : "Resumed")}");
+            logger.LogInformation("[SDL3Audio] Stream {StreamId}: {Resumed}", streamId, paused ? "Paused" : "Resumed");
             return true;
         }
     }

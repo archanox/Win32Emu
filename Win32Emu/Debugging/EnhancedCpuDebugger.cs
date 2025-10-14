@@ -10,7 +10,7 @@ public class EnhancedCpuDebugger
 {
     private readonly IcedCpu _cpu;
     private readonly VirtualMemory _memory;
-    private readonly List<CpuState> _executionTrace = new();
+    private readonly List<CpuState> _executionTrace = [];
     private CpuState _lastState;
     
     public bool EnableSuspiciousRegisterDetection { get; set; } = true;
@@ -215,7 +215,7 @@ public class EnhancedCpuDebugger
     /// <summary>
     /// Get the execution trace (last 1000 instructions)
     /// </summary>
-    public List<CpuState> GetExecutionTrace() => new(_executionTrace);
+    public List<CpuState> GetExecutionTrace() => [.._executionTrace];
     
     /// <summary>
     /// Clear the execution trace

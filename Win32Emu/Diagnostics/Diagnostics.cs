@@ -40,7 +40,7 @@ public static class Diagnostics
 		{
 			try
 			{
-				_logger.LogError($"Instruction bytes at EIP: {BitConverter.ToString(ctx.Value.InstructionBytes).Replace('-', ' ')}");
+				_logger.LogError("Instruction bytes at EIP: {Replace}", BitConverter.ToString(ctx.Value.InstructionBytes).Replace('-', ' '));
 			}
 			catch { }
 		}
@@ -70,18 +70,18 @@ public static class Diagnostics
 		_logger.LogError(sb.ToString());
 		if (instrBytes != null)
 		{
-			_logger.LogError($"Instruction bytes at EIP: {BitConverter.ToString(instrBytes).Replace('-', ' ')}");
+			_logger.LogError("Instruction bytes at EIP: {Replace}", BitConverter.ToString(instrBytes).Replace('-', ' '));
 		}
 	}
 
 	public static void LogMemWrite(uint addr, int length, byte[] data)
 	{
-		_logger.LogDebug($"MemWrite addr=0x{addr:X8} len={length} data={Preview(data)}");
+		_logger.LogDebug("MemWrite addr=0x{Addr:X8} len={Length} data={Preview}", addr, length, Preview(data));
 	}
 
 	public static void LogMemRead(uint addr, int length)
 	{
-		_logger.LogDebug($"MemRead addr=0x{addr:X8} len={length}");
+		_logger.LogDebug("MemRead addr=0x{Addr:X8} len={Length}", addr, length);
 	}
 
 	private static string Preview(byte[] data, int max = 32)

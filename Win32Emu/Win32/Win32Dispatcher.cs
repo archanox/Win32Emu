@@ -15,7 +15,7 @@ public class Win32Dispatcher(ILogger logger)
     public void RegisterDynamicallyLoadedDll(string dllName)
     {
         _dynamicallyLoadedDlls.Add(dllName);
-        logger.LogInformation($"[Dispatcher] Registered dynamically loaded DLL: {dllName}");
+        logger.LogInformation("[Dispatcher] Registered dynamically loaded DLL: {DllName}", dllName);
     }
 
     public bool TryGetModule(string dllName, out IWin32ModuleUnsafe? module)
@@ -31,7 +31,7 @@ public class Win32Dispatcher(ILogger logger)
         var esp = cpu.GetRegister("ESP");
         byte[] stackSnippet = null;
         try { stackSnippet = memory.GetSpan(esp, 16); } catch { }
-        logger.LogInformation($"Dispatching {dll}!{export} at EIP=0x{cpu.GetEip():X8} ESP=0x{esp:X8} stack={ (stackSnippet==null?"<unreadable>":BitConverter.ToString(stackSnippet).Replace('-', ' ')) }");
+        logger.LogInformation("Dispatching {Dll}!{Export} at EIP=0x{GetEip:X8} ESP=0x{Esp:X8} stack={Unreadable}", dll, export, cpu.GetEip(), esp, stackSnippet==null?"<unreadable>":BitConverter.ToString(stackSnippet).Replace('-', ' '));
         
         // Try to invoke with known modules first
         if (_modules.TryGetValue(dll, out var mod))
@@ -45,7 +45,7 @@ public class Win32Dispatcher(ILogger logger)
                 try
                 {
                     stdcallArgBytes = StdCallMeta.GetArgBytes(dll, export);
-                    logger.LogInformation($"[Dispatcher] {dll}!{export} returned 0x{returnValue:X8}, argBytes={stdcallArgBytes}");
+                    logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes}", dll, export, returnValue, stdcallArgBytes);
                 }
                 catch (InvalidOperationException)
                 {
@@ -62,21 +62,21 @@ public class Win32Dispatcher(ILogger logger)
                     
                     if (stdcallArgBytes > 0)
                     {
-	                    logger.LogWarning($"Using hardcoded arg bytes for {dll}!{export}: {stdcallArgBytes}");
+	                    logger.LogWarning("Using hardcoded arg bytes for {Dll}!{Export}: {StdcallArgBytes}", dll, export, stdcallArgBytes);
                     }
                     else
                     {
-	                    logger.LogWarning($"No arg bytes metadata for {dll}!{export}, using 0");
+	                    logger.LogWarning("No arg bytes metadata for {Dll}!{Export}, using 0", dll, export);
                     }
                     
-                    logger.LogInformation($"[Dispatcher] {dll}!{export} returned 0x{returnValue:X8}, argBytes={stdcallArgBytes} (hardcoded)");
+                    logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes} (hardcoded)", dll, export, returnValue, stdcallArgBytes);
                 }
                 
                 return true;
             }
 
 	        // Known module but unknown export - log this
-	        logger.LogWarning($"Unimplemented function in known module: {dll}!{export}");
+	        logger.LogWarning("Unimplemented function in known module: {Dll}!{Export}", dll, export);
 	        LogUnknownFunctionCall(dll, export);
                 
 	        // Return success with default behavior
@@ -87,14 +87,14 @@ public class Win32Dispatcher(ILogger logger)
         }
         
         // Handle unknown DLLs - this is the main enhancement
-        logger.LogWarning($"Unknown DLL function call: {dll}!{export}");
+        logger.LogWarning("Unknown DLL function call: {Dll}!{Export}", dll, export);
         LogUnknownFunctionCall(dll, export);
         
         // Check if this DLL was dynamically loaded
         var isDynamicallyLoaded = _dynamicallyLoadedDlls.Contains(dll);
         if (isDynamicallyLoaded)
         {
-	        logger.LogInformation($"Note: {dll} was dynamically loaded via LoadLibrary");
+	        logger.LogInformation("Note: {Dll} was dynamically loaded via LoadLibrary", dll);
         }
         
         // Provide default behavior for unknown DLL calls
@@ -115,7 +115,7 @@ public class Win32Dispatcher(ILogger logger)
         
         if (functions.Add(export))
         {
-	        logger.LogInformation($"New unimplemented function: {dll}!{export} (total for {dll}: {functions.Count})");
+	        logger.LogInformation("New unimplemented function: {Dll}!{Export} (total for {S}: {FunctionsCount})", dll, export, dll, functions.Count);
         }
     }
     

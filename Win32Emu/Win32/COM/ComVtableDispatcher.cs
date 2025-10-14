@@ -57,7 +57,7 @@ public class ComVtableDispatcher
 			return true;
 		}
 		
-		_logger.LogWarning($"[COM] Unhandled COM vtable call at 0x{address:X8}");
+		_logger.LogWarning("[COM] Unhandled COM vtable call at 0x{Address:X8}", address);
 		return false;
 	}
 	
@@ -108,7 +108,7 @@ public class ComVtableDispatcher
 			// Register the handler
 			_vtableHandlers[methodStubAddr] = handler;
 			
-			_logger.LogDebug($"[COM] {interfaceName}::{methodName} -> 0x{methodStubAddr:X8}");
+			_logger.LogDebug("[COM] {InterfaceName}::{MethodName} -> 0x{MethodStubAddr:X8}", interfaceName, methodName, methodStubAddr);
 			
 			methodIndex++;
 		}
@@ -123,7 +123,7 @@ public class ComVtableDispatcher
 		
 		_comObjects[objectAddr] = objInfo;
 		
-		_logger.LogInformation($"[COM] Created {interfaceName} object at 0x{objectAddr:X8} (vtable at 0x{vtableAddr:X8})");
+		_logger.LogInformation("[COM] Created {InterfaceName} object at 0x{ObjectAddr:X8} (vtable at 0x{VtableAddr:X8})", interfaceName, objectAddr, vtableAddr);
 		
 		return objectAddr;
 	}

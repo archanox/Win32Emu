@@ -109,8 +109,7 @@ public sealed class Emulator : IDisposable
 
         _env = new ProcessEnvironment(_vm, 0x01000000, _host, _logger);
         // Convert path to Windows-style backslashes for proper parsing by C runtime
-        var windowsPath = path.Replace('/', '\\');
-        _env.InitializeStrings(windowsPath, Array.Empty<string>());
+        _env.InitializeStrings(path, []);
         
         // Initialize console based on PE subsystem type
         _env.InitializeConsoleForSubsystem(_image.Subsystem);
@@ -236,7 +235,7 @@ public sealed class Emulator : IDisposable
                     // Log stack state BEFORE adjustment
                     if (name.ToUpperInvariant() == "GETMODULEFILENAMEA")
                     {
-                        _logger.LogInformation($"[Emulator] Before stack adjustment: ESP=0x{esp:X8} EBP=0x{ebp:X8} RetAddr=0x{retEip:X8} ArgBytes={argBytes}");
+                        _logger.LogInformation("[Emulator] Before stack adjustment: ESP=0x{Esp:X8} EBP=0x{Ebp:X8} RetAddr=0x{RetEip:X8} ArgBytes={StdcallArgBytes}", esp, ebp, retEip, argBytes);
                     }
                     
                     esp += 4 + (uint)argBytes;
@@ -246,8 +245,8 @@ public sealed class Emulator : IDisposable
                     // Log stack state AFTER adjustment
                     if (name.ToUpperInvariant() == "GETMODULEFILENAMEA")
                     {
-                        _logger.LogInformation($"[Emulator] After stack adjustment: ESP=0x{esp:X8} EBP=0x{ebp:X8} NewEIP=0x{retEip:X8}");
-                        _logger.LogInformation($"[Emulator] GetModuleFileNameA complete - execution continuing at 0x{retEip:X8}");
+                        _logger.LogInformation("[Emulator] After stack adjustment: ESP=0x{Esp:X8} EBP=0x{Ebp:X8} NewEIP=0x{RetEip:X8}", esp, ebp, retEip);
+                        _logger.LogInformation("[Emulator] GetModuleFileNameA complete - execution continuing at 0x{RetEip:X8}", retEip);
                     }
                 }
             }

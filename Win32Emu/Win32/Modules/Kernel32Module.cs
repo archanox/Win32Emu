@@ -422,7 +422,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint GetCurrentProcess() => 0xFFFFFFFF; // pseudo-handle
 
 	[DllModuleExport(7, IsStub = true)]
-	private unsafe uint GetAcp() => 1252; // Windows-1252 (Western European)
+	private unsafe uint GetAcp() => 65001;
 
 	[DllModuleExport(9)]
 	private unsafe uint GetCpInfo(uint codePage, NativeTypes.Lpcpinfo lpCpInfo)
@@ -1027,7 +1027,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(15)]
 	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
 	{
-		_logger.LogInformation($"[Kernel32] GetModuleFileNameA called: h=0x{(uint)(nint)h:X8} lp=0x{(uint)(nint)lp:X8} n={n}");
+		_logger.LogInformation("[Kernel32] GetModuleFileNameA called: h=0x{U:X8} lp=0x{Lp:X8} n={U1}", (uint)(nint)h, (uint)(nint)lp, n);
 		
 		// Use guest memory helpers instead of dereferencing raw pointers to avoid AccessViolation
 		if (n == 0 || lp == null)
@@ -1076,7 +1076,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 
-		_logger.LogDebug($"[Kernel32] GetModuleFileNameA resolved path: {path}");
+		_logger.LogDebug("[Kernel32] GetModuleFileNameA resolved path: {Path}", path);
 
 		var bytes = Encoding.ASCII.GetBytes(path);
 		var required = (uint)bytes.Length; // number of chars without null
@@ -1094,7 +1094,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// write null terminator
 			_env.MemWriteBytes(lpAddr + copyLen, [0]);
 			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
-			_logger.LogDebug($"[Kernel32] GetModuleFileNameA truncated; copyLen={copyLen} returned");
+			_logger.LogDebug("[Kernel32] GetModuleFileNameA truncated; copyLen={CopyLen} returned", copyLen);
 			return copyLen;
 		}
 
@@ -1104,7 +1104,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		Diagnostics.Diagnostics.LogMemWrite(lpAddr, bytes.Length + 1, bytes.AsSpan(0, bytes.Length).ToArray());
 		
 		var returnLength = (uint)bytes.Length;
-		_logger.LogInformation($"[Kernel32] GetModuleFileNameA returning {returnLength}");
+		_logger.LogInformation("[Kernel32] GetModuleFileNameA returning {ReturnLength}", returnLength);
 		
 		return returnLength;
 	}
@@ -1780,7 +1780,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private class FindFileHandle
 	{
 		public string SearchPattern { get; set; } = "";
-		public string[] Files { get; set; } = Array.Empty<string>();
+		public string[] Files { get; set; } = [];
 		public int CurrentIndex { get; set; } = 0;
 	}
 

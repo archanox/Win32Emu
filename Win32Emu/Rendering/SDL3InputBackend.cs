@@ -56,7 +56,7 @@ public class Sdl3InputBackend(ILogger logger) : IDisposable
             // Initialize SDL3 gamepad and joystick subsystems
             if (!SDL.Init(SDL.InitFlags.Gamepad | SDL.InitFlags.Joystick))
             {
-                logger.LogError($"[SDL3Input] Failed to initialize: {SDL.GetError()}");
+                logger.LogError("[SDL3Input] Failed to initialize: {GetError}", SDL.GetError());
                 return false;
             }
 
@@ -83,7 +83,7 @@ public class Sdl3InputBackend(ILogger logger) : IDisposable
             for (var i = 0; i < gamepadCount; i++)
             {
                 _gamepadIds.Add(gamepadIds[i]);
-                logger.LogInformation($"[SDL3Input] Found gamepad: {gamepadIds[i]}");
+                logger.LogInformation("[SDL3Input] Found gamepad: {GamepadId}", gamepadIds[i]);
             }
         }
 
@@ -96,7 +96,7 @@ public class Sdl3InputBackend(ILogger logger) : IDisposable
                 if (!_gamepadIds.Contains(joystickIds[i]))
                 {
                     _joystickIds.Add(joystickIds[i]);
-                    logger.LogInformation($"[SDL3Input] Found joystick: {joystickIds[i]}");
+                    logger.LogInformation("[SDL3Input] Found joystick: {JoystickId}", joystickIds[i]);
                 }
             }
         }
@@ -195,7 +195,7 @@ public class Sdl3InputBackend(ILogger logger) : IDisposable
             }
 
             _devices[internalId] = device;
-            logger.LogInformation($"[SDL3Input] Opened device {internalId}: {device.Name} ({type})");
+            logger.LogInformation("[SDL3Input] Opened device {InternalId}: {DeviceName} ({DeviceType})", internalId, device.Name, type);
             return internalId;
         }
     }
@@ -223,7 +223,7 @@ public class Sdl3InputBackend(ILogger logger) : IDisposable
             }
 
             _devices.Remove(deviceId);
-            logger.LogInformation($"[SDL3Input] Closed device {deviceId}");
+            logger.LogInformation("[SDL3Input] Closed device {DeviceId}", deviceId);
             return true;
         }
     }

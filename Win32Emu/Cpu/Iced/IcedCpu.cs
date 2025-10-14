@@ -352,7 +352,7 @@ public class IcedCpu : ICpu
 							// This is a COM vtable method stub - signal this as a call
 							isCall = true;
 							callTarget = oldEip;
-							_logger.LogWarning($"[IcedCpu] Handling INT3 COM vtable stub at 0x{oldEip:X8}");
+							_logger.LogWarning("[IcedCpu] Handling INT3 COM vtable stub at 0x{OldEip:X8}", oldEip);
 
 							// Don't actually execute the INT3, just treat it as a call
 							// The main loop will handle the COM method invocation
@@ -360,12 +360,12 @@ public class IcedCpu : ICpu
 						else
 						{
 							// Regular INT3 - for now, just print a message and continue
-							_logger.LogWarning($"[IcedCpu] INT3 breakpoint at 0x{oldEip:X8}");
+							_logger.LogWarning("[IcedCpu] INT3 breakpoint at 0x{OldEip:X8}", oldEip);
 						}
 					}
 					else
 					{
-						_logger.LogWarning($"[IcedCpu] Unhandled interrupt INT {insn.Immediate8:X2} at 0x{oldEip:X8}");
+						_logger.LogWarning("[IcedCpu] Unhandled interrupt INT {InsnImmediate8:X2} at 0x{OldEip:X8}", insn.Immediate8, oldEip);
 					}
 
 					break;
@@ -376,7 +376,7 @@ public class IcedCpu : ICpu
 						// This is a synthetic import stub - signal this as a call
 						isCall = true;
 						callTarget = oldEip;
-						_logger.LogWarning($"[IcedCpu] Handling INT3 import stub at 0x{oldEip:X8}");
+						_logger.LogWarning("[IcedCpu] Handling INT3 import stub at 0x{OldEip:X8}", oldEip);
 
 						// Don't actually execute the INT3, just treat it as a call
 						// The main loop will handle the import invocation
@@ -386,7 +386,7 @@ public class IcedCpu : ICpu
 						// This is a COM vtable method stub - signal this as a call
 						isCall = true;
 						callTarget = oldEip;
-						_logger.LogWarning($"[IcedCpu] Handling INT3 COM vtable stub at 0x{oldEip:X8}");
+						_logger.LogWarning("[IcedCpu] Handling INT3 COM vtable stub at 0x{OldEip:X8}", oldEip);
 
 						// Don't actually execute the INT3, just treat it as a call
 						// The main loop will handle the COM method invocation
@@ -394,7 +394,7 @@ public class IcedCpu : ICpu
 					else
 					{
 						// Regular INT3 - for now, just print a message and continue
-						_logger.LogWarning($"[IcedCpu] INT3 breakpoint at 0x{oldEip:X8}");
+						_logger.LogWarning("[IcedCpu] INT3 breakpoint at 0x{OldEip:X8}", oldEip);
 					}
 
 					break;
@@ -411,7 +411,7 @@ public class IcedCpu : ICpu
 					}
 					else
 					{
-						_logger.LogWarning($"[IcedCpu] Unhandled mnemonic {insn.Mnemonic} at 0x{oldEip:X8}");
+						_logger.LogWarning("[IcedCpu] Unhandled mnemonic {InsnMnemonic} at 0x{OldEip:X8}", insn.Mnemonic, oldEip);
 					}
 
 					break;
@@ -2398,7 +2398,7 @@ public class IcedCpu : ICpu
 		{
 			case OpKind.Register: SetReg32(insn.GetOpRegister(index), value); break;
 			case OpKind.Memory: Write32(CalcMemAddress(insn), value); break;
-			default: _logger.LogWarning($"[IcedCpu] WriteOp unsupported {insn.GetOpKind(index)}"); break;
+			default: _logger.LogWarning("[IcedCpu] WriteOp unsupported {GetOpKind}", insn.GetOpKind(index)); break;
 		}
 	}
 

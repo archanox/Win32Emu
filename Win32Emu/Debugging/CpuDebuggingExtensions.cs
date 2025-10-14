@@ -65,6 +65,6 @@ public static class CpuDebuggingExtensions
         var ebp = cpu.GetRegister("EBP");
         var esp = cpu.GetRegister("ESP");
         
-        logger.LogDebug($"{prefix}EIP=0x{eip:X8} | EAX=0x{eax:X8} EBX=0x{ebx:X8} ECX=0x{ecx:X8} EDX=0x{edx:X8} ESP=0x{esp:X8} EBP=0x{ebp:X8} | ESI=0x{esi:X8} EDI=0x{edi:X8}");
+        logger.LogDebug("{Prefix}EIP=0x{Eip:X8} | EAX=0x{Eax:X8} EBX=0x{Ebx:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} ESP=0x{Esp:X8} EBP=0x{Ebp:X8} | ESI=0x{Esi:X8} EDI=0x{Edi:X8}", prefix, eip, eax, ebx, ecx, edx, esp, ebp, esi, edi);
     }
 }
