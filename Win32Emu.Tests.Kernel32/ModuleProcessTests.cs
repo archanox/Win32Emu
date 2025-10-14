@@ -45,8 +45,9 @@ public class ModuleProcessTests : IDisposable
 
         // Assert
         Assert.NotEqual(0u, handle);
-        // Should return the Kernel32 module handle (image base in our case)
-        Assert.Equal(0x00400000u, handle);
+        // Should return a valid handle for KERNEL32 (not the image base)
+        // The handle should be different from the image base since KERNEL32 is a system DLL
+        Assert.NotEqual(0x00400000u, handle);
     }
 
     [Fact]
@@ -59,9 +60,12 @@ public class ModuleProcessTests : IDisposable
         var handle = _testEnv.CallKernel32Api("GETMODULEHANDLEA", invalidModuleName);
 
         // Assert
-        // Note: The current implementation returns the image base for any module name
-        // rather than properly checking if the module is loaded
-        Assert.Equal(0x00400000u, handle); // Current behavior: returns image base
+        // Should return 0 for unknown/unloaded modules
+        Assert.Equal(0u, handle);
+        
+        // Verify error code is set
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal(NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND, lastError);
     }
 
     #endregion
