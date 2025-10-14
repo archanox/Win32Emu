@@ -61,10 +61,59 @@ public class StandardControlHandler
 			case 0x0085: // WM_NCPAINT
 				return 0;
 
+			case 0x0201: // WM_LBUTTONDOWN
+				_logger.LogDebug("[Button] WM_LBUTTONDOWN");
+				// Capture mouse and set state
+				return 0;
+
+			case 0x0202: // WM_LBUTTONUP
+				_logger.LogDebug("[Button] WM_LBUTTONUP");
+				// Release capture and send BN_CLICKED notification to parent
+				SendButtonNotification(hwnd, 0); // BN_CLICKED = 0
+				return 0;
+
+			case 0x00F1: // BM_CLICK - programmatic click
+				_logger.LogDebug("[Button] BM_CLICK");
+				// Simulate a button click
+				SendButtonNotification(hwnd, 0); // BN_CLICKED = 0
+				return 0;
+
 			default:
 				_logger.LogDebug("[Button] Unhandled message 0x{Msg:X4}", msg);
 				return 0;
 		}
+	}
+
+	/// <summary>
+	/// Send a button notification (WM_COMMAND) to the parent window
+	/// </summary>
+	private void SendButtonNotification(uint buttonHwnd, uint notificationCode)
+	{
+		// Get the button's window info to find parent
+		var windowInfo = _env.GetWindow(buttonHwnd);
+		if (!windowInfo.HasValue)
+		{
+			_logger.LogWarning("[Button] Cannot send notification: window info not found for HWND=0x{ButtonHwnd:X8}", buttonHwnd);
+			return;
+		}
+
+		var parentHwnd = windowInfo.Value.Parent;
+		if (parentHwnd == 0)
+		{
+			_logger.LogWarning("[Button] Cannot send notification: no parent for button HWND=0x{ButtonHwnd:X8}", buttonHwnd);
+			return;
+		}
+
+		// Get control ID from the button's menu field (for child windows, this is the control ID)
+		var controlId = windowInfo.Value.Menu;
+
+		// Build WM_COMMAND wParam: HIWORD = notification code, LOWORD = control ID
+		uint wParam = (notificationCode << 16) | (controlId & 0xFFFF);
+		uint lParam = buttonHwnd; // lParam = handle of control
+
+		// Post WM_COMMAND to parent window
+		_logger.LogInformation("[Button] Sending WM_COMMAND to parent 0x{ParentHwnd:X8}: controlId={ControlId}, notification=BN_CLICKED", parentHwnd, controlId);
+		_env.PostMessage(parentHwnd, 0x0111, wParam, lParam); // WM_COMMAND = 0x0111
 	}
 
 	private uint HandleEditMessage(uint hwnd, uint msg, uint wParam, uint lParam)
