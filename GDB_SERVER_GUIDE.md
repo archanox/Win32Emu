@@ -302,6 +302,28 @@ If you really want symbol information, you would need:
 - Source code to compile with debug symbols (usually not available)
 - Or use Ghidra's analysis to create your own symbol annotations
 
+### Protocol Errors or Memory Access Errors
+
+**Problem**: You see errors like:
+```
+Protocol error: QStartNoAckMode (noack) conflicting enabled responses.
+```
+or
+```
+Python Exception <class 'gdb.MemoryError'>: Cannot access memory at address 0x...
+```
+
+**Solution**:
+These issues have been fixed in the latest version:
+- **QStartNoAckMode conflict**: The GDB server now properly handles the `QStartNoAckMode` command
+- **Memory access errors**: Invalid memory reads are handled gracefully with better error messages
+
+If you're still experiencing these errors:
+- Make sure you're using the latest version of Win32Emu
+- Check the Win32Emu console for warning messages about invalid memory access
+- The memory errors are normal if the debugger tries to read beyond allocated memory
+- Use Ghidra's memory map to understand which addresses are valid
+
 ## Performance Considerations
 
 - **GDB server mode is slow**: Each instruction requires network communication

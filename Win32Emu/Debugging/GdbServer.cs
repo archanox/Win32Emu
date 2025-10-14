@@ -300,6 +300,11 @@ public class GdbServer : IDisposable
                 await HandleQueryAsync(args);
                 break;
                 
+            case 'Q':
+                // Set
+                await HandleSetAsync(args);
+                break;
+                
             case 'v':
                 // v packets
                 await HandleVPacketAsync(args);
@@ -421,6 +426,13 @@ public class GdbServer : IDisposable
             }
             await SendPacketAsync(data.ToString());
         }
+        catch (IndexOutOfRangeException ex)
+        {
+            // Memory access out of bounds
+            _logger.LogWarning("GDB memory read failed: {Message} (addr=0x{Address:X8}, length={Length})", 
+                ex.Message, addr, length);
+            await SendPacketAsync("E01");
+        }
         catch
         {
             await SendPacketAsync("E01");
@@ -511,6 +523,24 @@ public class GdbServer : IDisposable
         }
         else
         {
+            await SendPacketAsync("");
+        }
+    }
+    
+    /// <summary>
+    /// Handle set packets (Q commands)
+    /// </summary>
+    private async Task HandleSetAsync(string args)
+    {
+        if (args.StartsWith("StartNoAckMode", StringComparison.Ordinal))
+        {
+            // Enable no-ack mode
+            _noAckMode = true;
+            await SendPacketAsync("OK");
+        }
+        else
+        {
+            // Unsupported set command
             await SendPacketAsync("");
         }
     }

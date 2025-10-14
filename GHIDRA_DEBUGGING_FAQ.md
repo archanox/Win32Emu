@@ -235,6 +235,19 @@ For reverse engineering or debugging closed-source binaries (like old games), **
 
 This means Win32Emu stopped or crashed. Check the Win32Emu terminal for error messages.
 
+### "I'm getting 'Protocol error: QStartNoAckMode conflicting enabled responses'"
+
+This has been fixed in the latest version. The GDB server now properly handles the `QStartNoAckMode` command that Ghidra sends during connection. Make sure you're using the latest version of Win32Emu.
+
+### "I see 'Python Exception <class 'gdb.MemoryError'>: Cannot access memory at address 0x...'"
+
+This is normal and indicates that the debugger tried to read memory outside the allocated range. The GDB server will log a warning message about the invalid memory access. This typically happens when:
+- The debugger tries to inspect memory that hasn't been allocated yet
+- Stack unwinding attempts to read beyond the stack boundaries
+- The debugger explores memory regions automatically
+
+You can safely ignore these errors - they don't affect debugging functionality. Check the Win32Emu console for more details about which addresses are being accessed.
+
 ### "Can I modify registers or memory?"
 
 Currently no - the GDB server supports read-only debugging. This is listed as a known limitation.
