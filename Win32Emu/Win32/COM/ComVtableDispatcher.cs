@@ -55,7 +55,7 @@ public class ComVtableDispatcher
 		}
 		
 		// Try to get the method name for better logging
-		var methodName = _vtableMethodNames.TryGetValue(address, out var name) ? name : "Unknown";
+		var methodName = _vtableMethodNames.GetValueOrDefault(address, "Unknown");
 		
 		if (_vtableHandlers.TryGetValue(address, out var handler))
 		{
