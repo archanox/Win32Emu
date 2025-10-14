@@ -63,12 +63,12 @@ public class StandardControlHandler
 
 			case 0x0201: // WM_LBUTTONDOWN
 				_logger.LogDebug("[Button] WM_LBUTTONDOWN");
-				// Capture mouse and set state
+				// No mouse capture or state change implemented
 				return 0;
 
 			case 0x0202: // WM_LBUTTONUP
 				_logger.LogDebug("[Button] WM_LBUTTONUP");
-				// Release capture and send BN_CLICKED notification to parent
+				// Send BN_CLICKED notification to parent (no mouse capture or state change implemented)
 				SendButtonNotification(hwnd, 0); // BN_CLICKED = 0
 				return 0;
 
