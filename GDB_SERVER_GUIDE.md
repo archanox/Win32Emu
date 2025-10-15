@@ -114,6 +114,15 @@ The Win32Emu GDB server implements the following GDB Remote Serial Protocol comm
 - `Z4,addr,kind` - Insert access watchpoint (read/write)
 - `z4,addr,kind` - Remove access watchpoint
 
+### Remote File I/O (when VFS is initialized)
+- `vFile:open:filename,flags,mode` - Open a file in the virtual filesystem
+- `vFile:close:fd` - Close a file descriptor
+- `vFile:pread:fd,count,offset` - Read from file at offset
+- `vFile:pwrite:fd,offset,data` - Write to file at offset
+- `vFile:fstat:fd` - Get file status information
+- `vFile:unlink:filename` - Delete a file
+- `vFile:setfs:pid` - Set filesystem (no-op, always returns success)
+
 ### Queries
 - `qSupported` - Feature negotiation
 - `qAttached` - Attached to existing process
@@ -125,6 +134,71 @@ The Win32Emu GDB server implements the following GDB Remote Serial Protocol comm
 - `H` - Set thread for subsequent operations
 - `k` - Kill process
 - `D` - Detach from process
+
+## Remote File I/O
+
+When the Virtual File System (VFS) is initialized, the GDB server supports remote file I/O operations. This allows Ghidra and other GDB clients to access files in the emulated environment's virtual filesystem.
+
+### Enabling Remote File I/O
+
+Remote file I/O is automatically enabled when you initialize the VFS before starting the GDB server:
+
+```csharp
+// In your emulator setup code
+var processEnv = new ProcessEnvironment(virtualMemory);
+
+// Initialize VFS with game directory
+processEnv.InitializeVirtualFileSystem(
+    baseDirectory: @"C:\Games\MyGame",
+    overlayDirectory: @"C:\Users\YourName\AppData\Local\Win32Emu\MyGame"
+);
+
+// Now when you start the GDB server, it will have access to VFS
+emulator.LoadExecutable("game.exe", gdbServerMode: true);
+```
+
+### Supported File Operations
+
+The GDB server supports the following file I/O operations on the virtual filesystem:
+
+- **Open files**: Ghidra can open files from the game directory
+- **Read files**: Read file contents at any offset
+- **Write files**: Write to files (writes go to overlay, preserving originals)
+- **Get file info**: Query file size and attributes
+- **Delete files**: Delete files from the overlay
+- **Close files**: Clean up file descriptors
+
+### Use Cases
+
+Remote file I/O is useful for:
+
+1. **Analyzing game data files**: Open and examine configuration files, saved games, etc.
+2. **Debugging file operations**: Watch what files the game accesses
+3. **Extracting assets**: Copy out resources without manual file copying
+4. **Scripting analysis**: Use Ghidra scripts to process game files
+
+### Example: Reading a Config File
+
+```python
+# Ghidra Python script to read game config
+import gdb
+
+# Open a config file from the virtual filesystem
+fd = gdb.execute("call (int)open(\"config.ini\", 0)", to_string=True)
+
+# Read the contents
+buffer = gdb.execute("call (void*)malloc(1024)", to_string=True)
+bytes_read = gdb.execute(f"call (int)read({fd}, {buffer}, 1024)", to_string=True)
+
+# Process the file data...
+```
+
+### Security Considerations
+
+- Only files within the VFS base directory are accessible
+- Write operations are copy-on-write (original files are never modified)
+- File deletions only affect the overlay directory
+- Standard POSIX permission checks apply
 
 ## Architecture Information
 

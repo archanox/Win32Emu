@@ -23,6 +23,7 @@ Win32Emu <path-to-pe> [options]
 - `--debug`: Enable enhanced debugging mode with automatic error detection
 - `--interactive-debug`: Enable interactive step-through debugger (GDB-like)
 - `--gdb-server [port]`: Start GDB server for remote debugging with Ghidra/IDA (default port: 1234)
+  - Supports remote file I/O when VFS is initialized (access game files from debugger)
 
 **Examples:**
 ```bash
@@ -47,6 +48,7 @@ Win32Emu game.exe --gdb-server 5678
 - [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) - Enhanced debugging mode
 - [INTERACTIVE_DEBUGGER_GUIDE.md](INTERACTIVE_DEBUGGER_GUIDE.md) - Interactive debugger
 - [GDB_SERVER_GUIDE.md](GDB_SERVER_GUIDE.md) - GDB server for Ghidra/IDA integration
+- [VFS_DOCUMENTATION.md](VFS_DOCUMENTATION.md) - Virtual File System for game file isolation
 
 See [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md), [INTERACTIVE_DEBUGGER_GUIDE.md](INTERACTIVE_DEBUGGER_GUIDE.md), and [GDB_SERVER_GUIDE.md](GDB_SERVER_GUIDE.md) for more details.
 

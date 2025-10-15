@@ -1,9 +1,11 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Debugging;
 using Win32Emu.Memory;
+using Win32Emu.VirtualFileSystem;
 using Xunit;
 
 namespace Win32Emu.Tests.Kernel32;
@@ -23,6 +25,36 @@ public class GdbServerTests
         
         // Assert
         Assert.NotNull(gdbServer);
+    }
+    
+    [Fact]
+    public void GdbServer_CanBeCreatedWithVfs()
+    {
+        // Arrange
+        var memory = new VirtualMemory(1024 * 1024);
+        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var breakpoints = new BreakpointManager();
+        
+        var tempDir = Path.Combine(Path.GetTempPath(), $"GdbServerTest_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        
+        try
+        {
+            var vfs = new LayeredVirtualFileSystem(tempDir, null, NullLogger.Instance);
+            
+            // Act
+            using var gdbServer = new GdbServer(cpu, memory, breakpoints, NullLogger.Instance, 9999, vfs);
+            
+            // Assert
+            Assert.NotNull(gdbServer);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
     }
     
     [Fact]
