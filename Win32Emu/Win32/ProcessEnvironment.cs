@@ -8,6 +8,7 @@ using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
 using Win32Emu.Win32.COM;
+using Win32Emu.VirtualFileSystem;
 
 namespace Win32Emu.Win32;
 
@@ -22,6 +23,9 @@ public class ProcessEnvironment
 
 	// COM vtable dispatcher
 	private ComVtableDispatcher? _comDispatcher;
+
+	// Virtual File System
+	private IVirtualFileSystem? _vfs;
 	
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
 	{
@@ -37,6 +41,20 @@ public class ProcessEnvironment
 	
 	// COM vtable dispatcher access
 	public ComVtableDispatcher ComDispatcher => _comDispatcher ?? throw new InvalidOperationException("COM dispatcher not initialized");
+
+	// Virtual File System access
+	public IVirtualFileSystem? VirtualFileSystem => _vfs;
+
+	/// <summary>
+	/// Initializes the virtual file system with the specified base directory.
+	/// </summary>
+	/// <param name="baseDirectory">Base directory containing game files (read-only)</param>
+	/// <param name="overlayDirectory">Optional overlay directory for writable files. If null, a temporary directory is used.</param>
+	public void InitializeVirtualFileSystem(string baseDirectory, string? overlayDirectory = null)
+	{
+		_vfs = new LayeredVirtualFileSystem(baseDirectory, overlayDirectory, _logger);
+		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with base: {BaseDirectory}", baseDirectory);
+	}
 
 	// SDL3 backends for audio and input
 	public Sdl3AudioBackend? AudioBackend { get; set; }
