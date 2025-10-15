@@ -56,7 +56,7 @@ namespace Win32Emu
 			try
 			{
 				using var emulator = new Emulator(null, logger);
-				emulator.LoadExecutable(path, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort);
+				emulator.LoadExecutable(path, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort);
 				emulator.Run();
 			}
 			catch (FileNotFoundException ex)

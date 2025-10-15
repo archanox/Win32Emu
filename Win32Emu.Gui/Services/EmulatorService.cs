@@ -38,7 +38,7 @@ public class EmulatorService
     /// <summary>
     /// Launch game using the in-process emulator API
     /// </summary>
-    public async Task LaunchGame(Game game)
+    public async Task LaunchGame(Game game, string[] programArgs = null)
     {
         if (!File.Exists(game.ExecutablePath))
         {
@@ -54,7 +54,8 @@ public class EmulatorService
                 
                 // Load the executable with configured memory size and GDB server settings
                 _currentEmulator.LoadExecutable(
-                    game.ExecutablePath, 
+                    game.ExecutablePath,
+                    programArgs,
                     _configuration.EnableDebugMode,
                     false, // Interactive debug mode not supported in GUI
                     _configuration.ReservedMemoryMb,
