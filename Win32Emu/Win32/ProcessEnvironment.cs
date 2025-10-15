@@ -43,6 +43,12 @@ public class ProcessEnvironment
 	public ComVtableDispatcher ComDispatcher => _comDispatcher ?? throw new InvalidOperationException("COM dispatcher not initialized");
 
 	// Virtual File System access
+	/// <summary>
+	/// Gets the current virtual file system instance for this process environment.
+	/// </summary>
+	/// <remarks>
+	/// Returns <c>null</c> if the virtual file system has not been initialized.
+	/// </remarks>
 	public IVirtualFileSystem? VirtualFileSystem => _vfs;
 
 	/// <summary>
