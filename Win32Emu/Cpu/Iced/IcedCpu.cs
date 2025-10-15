@@ -81,6 +81,7 @@ public class IcedCpu : ICpu
 		_reader.Reset(_eip);
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
+		//_logger.LogInformation("Instruction: {Insn}", insn.ToString());
 		var oldEip = _eip;
 		_eip = (uint)_decoder.IP;
 		var isCall = false;
@@ -193,6 +194,7 @@ public class IcedCpu : ICpu
 				case Mnemonic.Fcmovnbe: ExecFcmovnbe(insn); break;
 				case Mnemonic.Fnstcw: ExecFnstcw(insn); break;
 				case Mnemonic.Fldcw: ExecFldcw(insn); break;
+				case Mnemonic.Wait: break; // FWAIT - no-op for now
 				// Bit operations
 				case Mnemonic.Bt: ExecBt(insn); break;
 				// String ops (byte/dword variants)
@@ -208,6 +210,12 @@ public class IcedCpu : ICpu
 				case Mnemonic.Outsb: ExecOuts(1, insn.HasRepPrefix); break;
 				case Mnemonic.Outsw: ExecOuts(2, insn.HasRepPrefix); break;
 				case Mnemonic.Outsd: ExecOuts(4, insn.HasRepPrefix); break;
+				case Mnemonic.Cmpsb: ExecCmps(1, insn.HasRepePrefix, insn.HasRepnePrefix); break;
+				case Mnemonic.Cmpsw: ExecCmps(2, insn.HasRepePrefix, insn.HasRepnePrefix); break;
+				case Mnemonic.Cmpsd: ExecCmps(4, insn.HasRepePrefix, insn.HasRepnePrefix); break;
+				case Mnemonic.Scasb: ExecScas(1, insn.HasRepePrefix, insn.HasRepnePrefix); break;
+				case Mnemonic.Scasw: ExecScas(2, insn.HasRepePrefix, insn.HasRepnePrefix); break;
+				case Mnemonic.Scasd: ExecScas(4, insn.HasRepePrefix, insn.HasRepnePrefix); break;
 				case Mnemonic.Jmp:
 					if (insn.GetOpKind(0) == OpKind.Register)
 					{
@@ -256,6 +264,7 @@ public class IcedCpu : ICpu
 					}
 
 					break;
+				case Mnemonic.Leave: ExecLeave(); break;
 				case Mnemonic.Nop: break;
 				case Mnemonic.Cld: ClearFlag(Df); break;
 				case Mnemonic.Std: SetFlag(Df); break;
@@ -333,6 +342,7 @@ public class IcedCpu : ICpu
 				// Protected mode / privileged instructions - no-op in flat memory model
 				case Mnemonic.Sldt: ExecSldt(insn); break;
 				case Mnemonic.Arpl: ExecArpl(insn); break;
+				case Mnemonic.In: ExecIn(insn); break;
 				case Mnemonic.Int:
 					// Handle INT instruction with immediate
 					if (insn.Immediate8 == 3)
@@ -422,9 +432,6 @@ public class IcedCpu : ICpu
 					{
 						_eip = (uint)insn.NearBranchTarget;
 					}
-					break;
-				case Mnemonic.In:
-					//TODO: this is getting spammed all the time? regression?
 					break;
 				default:
 					if (insn.Mnemonic.ToString().StartsWith('J'))
@@ -898,17 +905,233 @@ public class IcedCpu : ICpu
 
 	private void ExecTest(Instruction insn)
 	{
-		var r = ReadOp(insn, 0) & ReadOp(insn, 1);
-		ClearFlag(Cf);
-		ClearFlag(Of);
-		ClearFlag(Af);
-		UpdateLogicResultFlags(r);
+		var opSize = GetOpSizeBits(insn, 0);
+		
+		switch (opSize)
+		{
+			case 8:
+			{
+				// 8-bit TEST
+				byte a, b;
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg8(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read8(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (byte)ReadOp(insn, 0);
+				}
+				
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg8(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read8(CalcMemAddress(insn));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Immediate8)
+				{
+					b = insn.Immediate8;
+				}
+				else
+				{
+					b = (byte)ReadOp(insn, 1);
+				}
+				
+				var r = (byte)(a & b);
+				
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				
+				// Update flags based on 8-bit result
+				SetFlagVal(Sf, (r & 0x80) != 0);
+				SetFlagVal(Zf, r == 0);
+				
+				// Calculate parity using the same method as UpdateLogicResultFlags
+				var bits = r ^ (r >> 4);
+				bits &= 0xF;
+				var even = (((0x6996 >> bits) & 1) == 1);
+				SetFlagVal(Pf, even);
+				break;
+			}
+			case 16:
+			{
+				// 16-bit TEST
+				ushort a, b;
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg16(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (ushort)ReadOp(insn, 0);
+				}
+				
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg16(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					b = (ushort)ReadOp(insn, 1);
+				}
+				
+				var r = (ushort)(a & b);
+				
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				
+				// Update flags based on 16-bit result
+				SetFlagVal(Sf, (r & 0x8000) != 0);
+				SetFlagVal(Zf, r == 0);
+				
+				// Calculate parity using the same method as UpdateLogicResultFlags
+				var lo = (byte)r;
+				var bits = lo ^ (lo >> 4);
+				bits &= 0xF;
+				var even = (((0x6996 >> bits) & 1) == 1);
+				SetFlagVal(Pf, even);
+				break;
+			}
+			default:
+			{
+				// 32-bit TEST (default behavior)
+				var r = ReadOp(insn, 0) & ReadOp(insn, 1);
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				UpdateLogicResultFlags(r);
+				break;
+			}
+		}
 	}
 
 	private void ExecCmp(Instruction insn)
 	{
-		uint a = ReadOp(insn, 0), b = ReadOp(insn, 1), r = a - b;
-		SetFlagsSub(a, b, r);
+		var opSize = GetOpSizeBits(insn, 0);
+		
+		switch (opSize)
+		{
+			case 8:
+			{
+				// 8-bit CMP
+				byte a, b;
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg8(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read8(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (byte)ReadOp(insn, 0);
+				}
+				
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg8(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read8(CalcMemAddress(insn));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Immediate8)
+				{
+					b = insn.Immediate8;
+				}
+				else
+				{
+					b = (byte)ReadOp(insn, 1);
+				}
+				
+				byte r = (byte)(a - b);
+				
+				// Set flags for 8-bit comparison
+				SetFlagVal(Cf, a < b);
+				SetFlagVal(Of, ((a ^ b) & (a ^ r) & 0x80) != 0);
+				SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
+				SetFlagVal(Sf, (r & 0x80) != 0);
+				SetFlagVal(Zf, r == 0);
+				
+				// Calculate parity using the same method as UpdateLogicResultFlags
+				var bits = r ^ (r >> 4);
+				bits &= 0xF;
+				var even = (((0x6996 >> bits) & 1) == 1);
+				SetFlagVal(Pf, even);
+				break;
+			}
+			case 16:
+			{
+				// 16-bit CMP
+				ushort a, b;
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg16(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (ushort)ReadOp(insn, 0);
+				}
+				
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg16(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					b = (ushort)ReadOp(insn, 1);
+				}
+				
+				ushort r = (ushort)(a - b);
+				
+				// Set flags for 16-bit comparison
+				SetFlagVal(Cf, a < b);
+				SetFlagVal(Of, ((a ^ b) & (a ^ r) & 0x8000) != 0);
+				SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
+				SetFlagVal(Sf, (r & 0x8000) != 0);
+				SetFlagVal(Zf, r == 0);
+				
+				// Calculate parity using the same method as UpdateLogicResultFlags
+				var lo = (byte)r;
+				var bits = lo ^ (lo >> 4);
+				bits &= 0xF;
+				var even = (((0x6996 >> bits) & 1) == 1);
+				SetFlagVal(Pf, even);
+				break;
+			}
+			default:
+			{
+				// 32-bit CMP (default behavior)
+				uint a = ReadOp(insn, 0), b = ReadOp(insn, 1), r = a - b;
+				SetFlagsSub(a, b, r);
+				break;
+			}
+		}
 	}
 
 	private void ExecInc(Instruction insn)
@@ -1675,6 +1898,32 @@ public class IcedCpu : ICpu
 		var r = (int)(dividend % divisor);
 		_eax = (uint)(int)q;
 		_edx = (uint)r;
+	}
+
+	private void ExecLeave()
+	{
+		_esp = _ebp;
+		_ebp = Pop32();
+	}
+
+	private void ExecIn(Instruction insn)
+	{
+		// IN accumulator, port
+		// We don't emulate I/O ports, so we'll just return 0.
+		// This prevents crashes but may not be functionally correct for all programs.
+		var opSize = GetOpSizeBits(insn, 0);
+		switch (opSize)
+		{
+			case 8:
+				SetReg8(Register.AL, 0);
+				break;
+			case 16:
+				SetReg16(Register.AX, 0);
+				break;
+			default:
+				_eax = 0;
+				break;
+		}
 	}
 
 	private void ExecFld(Instruction insn)

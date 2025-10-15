@@ -190,6 +190,8 @@ public class ProcessEnvironment
 	// Thread management
 	private uint _nextThreadId = 1;
 	private uint _currentThreadId = 1; // Main thread ID is always 1
+	private uint _tebAddress;
+	public uint TebAddress => _tebAddress;
 
 	// TLS (Thread Local Storage) support
 	private readonly Dictionary<uint, Dictionary<uint, uint>> _threadLocalStorage = new(); // threadId -> (tlsIndex -> value)
@@ -223,6 +225,33 @@ public class ProcessEnvironment
 
 		// Initialize with some default environment variables
 		InitializeDefaultEnvironmentVariables();
+	}
+
+	public void InitializeTebAndPeb(uint imageBaseAddress)
+	{
+		// Allocate memory for the TEB (Thread Environment Block)
+		_tebAddress = SimpleAlloc(0x1000); // Allocate 4KB for TEB
+		MemZero(_tebAddress, 0x1000);
+		_logger.LogInformation("[ProcessEnv] TEB allocated at 0x{TebAddress:X8}", _tebAddress);
+
+		// The TEB contains a self-referential pointer at offset 0x18
+		// This is the linear address of the TEB
+		MemWrite32(_tebAddress + 0x18, _tebAddress);
+
+		// Allocate a dummy PEB (Process Environment Block)
+		var pebAddress = SimpleAlloc(0x1000);
+		MemZero(pebAddress, 0x1000);
+		_logger.LogInformation("[ProcessEnv] PEB allocated at 0x{PebAddress:X8}", pebAddress);
+        
+		// The TEB points to the PEB at offset 0x30
+		MemWrite32(_tebAddress + 0x30, pebAddress);
+        
+		// The PEB contains a pointer to itself at offset 0x0
+		MemWrite32(pebAddress, pebAddress);
+		
+		// Populate minimal PEB fields
+		MemWrite8(pebAddress + 0x2, 1); // BeingDebugged = TRUE
+		MemWrite32(pebAddress + 0x8, imageBaseAddress); // ImageBaseAddress
 	}
 
 	private void InitializeDefaultEnvironmentVariables()

@@ -165,6 +165,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "HEAPDESTROY":
 				returnValue = HeapDestroy((void*)a.UInt32(0));
 				return true;
+			case "LOCALALLOC":
+				returnValue = LocalAlloc(a.UInt32(0), a.UInt32(1));
+				return true;
 			case "VIRTUALALLOC":
 				returnValue = VirtualAlloc(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
@@ -316,28 +319,28 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// - MSR (Model Specific Registers)
 		// - CX8 (CMPXCHG8B instruction)
 		// - MMX was added in Pentium MMX (P55C) in 1997, not in original P5
-		
+
 		const uint PF_FLOATING_POINT_PRECISION_ERRATA = 0;
 		const uint PF_FLOATING_POINT_EMULATED = 1;
 		const uint PF_COMPARE_EXCHANGE_DOUBLE = 2;
 		const uint PF_MMX_INSTRUCTIONS_AVAILABLE = 3;
 		const uint PF_RDTSC_INSTRUCTION_AVAILABLE = 8;
 		const uint PF_3DNOW_INSTRUCTIONS_AVAILABLE = 7;
-		
+
 		var isPresent = processorFeature switch
 		{
 			PF_FLOATING_POINT_PRECISION_ERRATA => false, // No known FPU precision bug
-			PF_FLOATING_POINT_EMULATED => false,         // FPU is built-in, not emulated
-			PF_COMPARE_EXCHANGE_DOUBLE => true,          // Pentium has CMPXCHG8B
-			PF_MMX_INSTRUCTIONS_AVAILABLE => false,      // Original Pentium doesn't have MMX (added in P55C)
-			PF_RDTSC_INSTRUCTION_AVAILABLE => true,      // Pentium has RDTSC
-			PF_3DNOW_INSTRUCTIONS_AVAILABLE => false,    // 3DNow! is AMD K6-2 feature
-			_ => false                                   // Other features not present
+			PF_FLOATING_POINT_EMULATED => false, // FPU is built-in, not emulated
+			PF_COMPARE_EXCHANGE_DOUBLE => true, // Pentium has CMPXCHG8B
+			PF_MMX_INSTRUCTIONS_AVAILABLE => false, // Original Pentium doesn't have MMX (added in P55C)
+			PF_RDTSC_INSTRUCTION_AVAILABLE => true, // Pentium has RDTSC
+			PF_3DNOW_INSTRUCTIONS_AVAILABLE => false, // 3DNow! is AMD K6-2 feature
+			_ => false // Other features not present
 		};
-		
-		_logger.LogDebug("[Kernel32] IsProcessorFeaturePresent({ProcessorFeature}) -> {Result}", 
+
+		_logger.LogDebug("[Kernel32] IsProcessorFeaturePresent({ProcessorFeature}) -> {Result}",
 			processorFeature, isPresent);
-		
+
 		return isPresent ? 1u : 0u; // TRUE or FALSE
 	}
 
@@ -482,7 +485,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	public unsafe uint GetCpInfo(CodePage codePage, NativeTypes.Lpcpinfo lpCpInfo)
 	{
 		_logger.LogInformation("[Kernel32] GetCPInfo called: codePage={CodePage} lpCpInfo=0x{LpCpInfo:X8}", codePage, (nint)lpCpInfo.Value);
-		
+
 		if (lpCpInfo.Value == null)
 		{
 			_logger.LogWarning("[Kernel32] GetCPInfo: null pointer");
@@ -518,6 +521,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				{
 					cpInfo.LeadByte[i] = 0;
 				}
+
 				break;
 
 			case CodePage.Utf8: // UTF-8
@@ -530,6 +534,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				{
 					cpInfo.LeadByte[i] = 0;
 				}
+
 				break;
 
 			default:
@@ -548,6 +553,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
+
 		_env.MemWriteStruct((uint)ptrValue, ref cpInfo);
 
 		return NativeTypes.Win32Bool.TRUE;
@@ -760,29 +766,29 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				charType |= ctCtype1Blank;
 			}
-			
+
 			// Control characters (0x00-0x1F, 0x7F)
 			if (wchar is >= 0x00 and <= 0x1F or 0x7F)
 			{
 				charType |= ctCtype1Cntrl;
 			}
-			
+
 			// Hex digits
 			if (wchar is >= '0' and <= '9' or >= 'A' and <= 'F' or >= 'a' and <= 'f')
 			{
 				charType |= ctCtype1Xdigit;
 			}
-			
+
 			// Punctuation characters - same ranges as GetStringTypeA
 			const ushort punctRange1Start = 0x21; // !
-			const ushort punctRange1End = 0x2F;   // /
+			const ushort punctRange1End = 0x2F; // /
 			const ushort punctRange2Start = 0x3A; // :
-			const ushort punctRange2End = 0x40;   // @
+			const ushort punctRange2End = 0x40; // @
 			const ushort punctRange3Start = 0x5B; // [
-			const ushort punctRange3End = 0x60;   // `
+			const ushort punctRange3End = 0x60; // `
 			const ushort punctRange4Start = 0x7B; // {
-			const ushort punctRange4End = 0x7E;   // ~
-			
+			const ushort punctRange4End = 0x7E; // ~
+
 			if (wchar is >= punctRange1Start and <= punctRange1End or >= punctRange2Start and <= punctRange2End or >= punctRange3Start and <= punctRange3End or >= punctRange4Start and <= punctRange4End)
 			{
 				charType |= ctCtype1Punct;
@@ -818,26 +824,26 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var moduleName = lpModuleName.ToString();
 		_logger.LogInformation("[Kernel32] GetModuleHandleA called: module='{ModuleName}'", moduleName ?? "NULL (current process)");
-		
+
 		// NULL means get handle to current process executable
 		if (string.IsNullOrEmpty(moduleName))
 		{
 			_logger.LogDebug("[Kernel32] GetModuleHandleA returning current process handle: 0x{ImageBase:X8}", _imageBase);
 			return _imageBase;
 		}
-		
+
 		// Normalize the module name (remove path, make uppercase, ensure .DLL extension)
 		var normalizedName = Path.GetFileName(moduleName).ToUpperInvariant();
 		if (!normalizedName.EndsWith(".DLL", StringComparison.OrdinalIgnoreCase))
 		{
 			normalizedName += ".DLL";
 		}
-		
+
 		// Check if this is a system DLL that we emulate by checking if it has any exports
 		// registered in the source-generated DllModuleExportInfo
 		var exports = DllModuleExportInfo.GetAllExports(normalizedName);
 		var isSystemDll = exports.Count > 0;
-		
+
 		if (isSystemDll || _env.IsModuleLoaded(normalizedName))
 		{
 			// Load/register the module and get its handle
@@ -846,7 +852,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_logger.LogDebug("[Kernel32] GetModuleHandleA returning handle for {NormalizedName}: 0x{Handle:X8}", normalizedName, handle);
 			return handle;
 		}
-		
+
 		// Module not found
 		_logger.LogWarning("[Kernel32] GetModuleHandleA: module '{ModuleName}' not found", moduleName);
 		_lastError = NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
@@ -1108,7 +1114,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
 	{
 		_logger.LogInformation("[Kernel32] GetModuleFileNameA called: h=0x{U:X8} lp=0x{Lp:X8} n={U1}", (uint)(nint)h, (uint)(nint)lp, n);
-		
+
 		// Use guest memory helpers instead of dereferencing raw pointers to avoid AccessViolation
 		if (n == 0 || lp == null)
 		{
@@ -1158,7 +1164,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		_logger.LogDebug("[Kernel32] GetModuleFileNameA resolved path: {Path}", path);
 
-		var bytes = Encoding.ASCII.GetBytes(path);
+		// Ensure path doesn't have any backslashes before quotes that could cause parsing issues
+		path = FixPathEscaping(path);
+
+		// Convert to Windows-style path
+		string windowsPath = ConvertToWindowsPath(path);
+		_logger.LogDebug("[Kernel32] GetModuleFileNameA converted to Windows path: {WindowsPath}", windowsPath);
+
+		var bytes = Encoding.ASCII.GetBytes(windowsPath);
 		var required = (uint)bytes.Length; // number of chars without null
 
 		// If buffer too small, copy up to n-1 and null terminate
@@ -1182,11 +1195,80 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_env.MemWriteBytes(lpAddr, bytes);
 		_env.MemWriteBytes(lpAddr + (uint)bytes.Length, [0]);
 		Diagnostics.Diagnostics.LogMemWrite(lpAddr, bytes.Length + 1, bytes.AsSpan(0, bytes.Length).ToArray());
-		
+
 		var returnLength = (uint)bytes.Length;
 		_logger.LogInformation("[Kernel32] GetModuleFileNameA returning {ReturnLength}", returnLength);
-		
+
 		return returnLength;
+	}
+	
+	/// <summary>
+	/// Fixes path escaping issues that can cause parsing problems
+	/// </summary>
+	private string FixPathEscaping(string path)
+	{
+		// Replace any problematic sequences that might cause parsing issues
+		// Specifically, ensure backslashes before quotes are properly escaped
+		
+		// First, normalize all backslashes to single backslashes
+		var result = new StringBuilder();
+		bool inQuote = false;
+		
+		for (int i = 0; i < path.Length; i++)
+		{
+			char c = path[i];
+			
+			if (c == '\\')
+			{
+				// Count consecutive backslashes
+				int backslashCount = 1;
+				while (i + 1 < path.Length && path[i + 1] == '\\')
+				{
+					backslashCount++;
+					i++;
+				}
+				
+				// Check if next char is a quote
+				if (i + 1 < path.Length && path[i + 1] == '"')
+				{
+					// For backslashes before quotes, ensure they're properly escaped
+					// In Windows, each backslash before a quote needs to be doubled
+					for (int j = 0; j < backslashCount; j++)
+					{
+						result.Append('\\');
+					}
+				}
+				else
+				{
+					// For regular backslashes, just add them normally
+					for (int j = 0; j < backslashCount; j++)
+					{
+						result.Append('\\');
+					}
+				}
+			}
+			else if (c == '"')
+			{
+				// Toggle quote state and add the quote
+				inQuote = !inQuote;
+				
+				// Ensure quotes are properly escaped
+				if (result.Length > 0 && result[result.Length - 1] != '\\')
+				{
+					// Add a backslash before the quote if there isn't one already
+					result.Append('\\');
+				}
+				
+				result.Append(c);
+			}
+			else
+			{
+				// Regular character
+				result.Append(c);
+			}
+		}
+		
+		return result.ToString();
 	}
 
 	[DllModuleExport(8)]
@@ -1197,8 +1279,29 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		{
 			// Read the command line string for logging
 			var cmdLine = _env.ReadAnsiString(ptr);
-			_logger.LogInformation("[Kernel32] GetCommandLineA returning 0x{Ptr:X8}: \"{CmdLine}\"", ptr, cmdLine);
+
+			// Fix command line escaping issues that can cause infinite loops in function 412440
+			var fixedCmdLine = FixCommandLineEscaping(cmdLine);
+			
+			// Convert to Windows-style path and update in memory
+			var windowsPath = ConvertToWindowsPath(fixedCmdLine);
+			if (windowsPath != cmdLine)
+			{
+				// Write the Windows-style path back to memory
+				var bytes = Encoding.ASCII.GetBytes(windowsPath);
+				_env.MemWriteBytes(ptr, bytes);
+				_env.MemWriteBytes(ptr + (uint)bytes.Length, [0]); // Null terminator
+
+				// Update logging to show the converted path
+				_logger.LogInformation("[Kernel32] GetCommandLineA returning 0x{Ptr:X8}: \"{CmdLine}\" (converted from \"{OrigPath}\")",
+					ptr, windowsPath, cmdLine);
+			}
+			else
+			{
+				_logger.LogInformation("[Kernel32] GetCommandLineA returning 0x{Ptr:X8}: \"{CmdLine}\"", ptr, cmdLine);
+			}
 		}
+
 		return ptr;
 	}
 
@@ -1304,7 +1407,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint AllocConsole()
 	{
 		_logger.LogInformation("[Kernel32] AllocConsole()");
-		
+
 		var success = _env.AllocateConsole();
 		if (!success)
 		{
@@ -1312,7 +1415,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_lastError = 5; // ERROR_ACCESS_DENIED
 			return 0; // FALSE
 		}
-		
+
 		return 1; // TRUE
 	}
 
@@ -1320,7 +1423,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint FreeConsole()
 	{
 		_logger.LogInformation("[Kernel32] FreeConsole()");
-		
+
 		var success = _env.FreeConsole();
 		if (!success)
 		{
@@ -1328,7 +1431,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_lastError = 6; // ERROR_INVALID_HANDLE
 			return 0; // FALSE
 		}
-		
+
 		return 1; // TRUE
 	}
 
@@ -1336,24 +1439,24 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint AttachConsole(uint dwProcessId)
 	{
 		_logger.LogInformation("[Kernel32] AttachConsole(dwProcessId={DwProcessId})", dwProcessId);
-		
+
 		// dwProcessId == 0xFFFFFFFF means attach to parent process console
 		// For emulation, we just allocate a console if one doesn't exist
-		
+
 		if (_env.HasConsole)
 		{
 			// Already has a console
 			_lastError = 5; // ERROR_ACCESS_DENIED
 			return 0; // FALSE
 		}
-		
+
 		var success = _env.AllocateConsole();
 		if (!success)
 		{
 			_lastError = 5; // ERROR_ACCESS_DENIED
 			return 0; // FALSE
 		}
-		
+
 		return 1; // TRUE
 	}
 
@@ -1362,7 +1465,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 	[DllModuleExport(25)]
 	private static unsafe uint GlobalFree(void* h) => 0;
-	
+
 	[DllModuleExport(1)]
 	private static unsafe uint GlobalLock(void* hMem)
 	{
@@ -1478,6 +1581,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
+	[DllModuleExport(61)]
+	private uint LocalAlloc(uint uFlags, uint uBytes)
+	{
+		_logger.LogInformation("[Kernel32] LocalAlloc(uFlags=0x{UFlags:X}, uBytes={UBytes})", uFlags, uBytes);
+		// In modern Windows, LocalAlloc is implemented by the heap allocator.
+		// We can just use our simple allocator.
+		return _env.SimpleAlloc(uBytes == 0 ? 1u : uBytes);
+	}
+	
 	[DllModuleExport(45)]
 	private uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect) =>
 		_env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
@@ -1709,14 +1821,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		uint lpOverlapped)
 	{
 		_logger.LogInformation("[Kernel32] WriteFile(handle=0x{Handle:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToWrite={NNumberOfBytesToWrite}, lpNumberOfBytesWritten=0x{LpNumberOfBytesWritten:X8}, lpOverlapped=0x{LpOverlapped:X8})", handle, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
-		
+
 		// NULL handle is invalid
 		if (handle == 0)
 		{
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 			return NativeTypes.Win32Bool.FALSE;
 		}
-		
+
 		// Handle standard handles specially (only if they're not NULL)
 		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle || handle == _env.StdInputHandle)
 		{
@@ -2005,12 +2117,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				var success = _env.VirtualFileSystem.MoveFile(existingPath, newPath);
 				if (success)
 				{
-					_logger.LogInformation("[Kernel32] MoveFileA (VFS): Moved '{ExistingPath}' to '{NewPath}'", 
+					_logger.LogInformation("[Kernel32] MoveFileA (VFS): Moved '{ExistingPath}' to '{NewPath}'",
 						existingPath, newPath);
 					return NativeTypes.Win32Bool.TRUE;
 				}
 
-				_logger.LogInformation("[Kernel32] MoveFileA (VFS) failed: '{ExistingPath}' to '{NewPath}'", 
+				_logger.LogInformation("[Kernel32] MoveFileA (VFS) failed: '{ExistingPath}' to '{NewPath}'",
 					existingPath, newPath);
 				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 				return NativeTypes.Win32Bool.FALSE;
@@ -2056,7 +2168,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		cFileNameBytes[copyLen] = 0; // explicit null terminator
 		_env.MemWriteBytes(lpFindFileData + 44, cFileNameBytes);
 	}
-
+	
 	[DllModuleExport(1)]
 	private uint FindFirstFileA(uint lpFileName, uint lpFindFileData)
 	{
@@ -2373,9 +2485,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		try
 		{
 			// Log the call parameters for debugging
-			_logger.LogInformation("[Kernel32] WideCharToMultiByte: CP={CodePage} cchWide={CchWide} lpWide=0x{LpWide:X8} cbMulti={CbMulti} lpMulti=0x{LpMulti:X8}", 
+			_logger.LogInformation("[Kernel32] WideCharToMultiByte: CP={CodePage} cchWide={CchWide} lpWide=0x{LpWide:X8} cbMulti={CbMulti} lpMulti=0x{LpMulti:X8}",
 				codePage, cchWideChar, lpWideCharStr, cbMultiByte, lpMultiByteStr);
-			
+
 			// Handle null input string
 			if (lpWideCharStr == 0)
 			{
@@ -3086,7 +3198,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Prefer the initialized executable path from the process environment
 		if (!string.IsNullOrEmpty(_env.ExecutablePath))
 		{
-			return _env.ExecutablePath;
+			// Convert to Windows-style path with backslashes
+			return ConvertToWindowsPath(_env.ExecutablePath);
 		}
 
 		// Fall back to the module filename pointer if available
@@ -3097,7 +3210,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				var s = _env.ReadAnsiString(_env.ModuleFileNamePtr);
 				if (!string.IsNullOrEmpty(s))
 				{
-					return s;
+					// Convert to Windows-style path with backslashes
+					return ConvertToWindowsPath(s);
 				}
 			}
 		}
@@ -3107,7 +3221,108 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Final fallback for legacy behavior
-		return "game.exe";
+		return "C:\\game.exe";
+	}
+
+	/// <summary>
+	/// Converts a system path to a Windows-style VFS path with backslashes
+	/// </summary>
+	private string ConvertToWindowsPath(string path)
+	{
+		// Special handling for command line strings
+		if (path.Contains(" "))
+		{
+			// This might be a command line with arguments
+			// Fix the issue with backslashes before quotes that causes function 412440 to loop infinitely
+			// Windows command line parser expects backslashes before quotes to be properly escaped
+			string fixedPath = FixCommandLineEscaping(path);
+			if (fixedPath != path)
+			{
+				_logger.LogDebug("[Kernel32] Fixed command line escaping: {OrigPath} -> {FixedPath}", path, fixedPath);
+				path = fixedPath;
+			}
+		}
+
+		// Replace forward slashes with backslashes
+		string windowsPath = path.Replace('/', '\\');
+
+		// If the path doesn't start with a drive letter, add C:\ prefix
+		if (!windowsPath.Contains(":\\"))
+		{
+			if (windowsPath.StartsWith(@"""\"))
+			{
+				windowsPath = windowsPath.TrimStart('\"', '\\');
+				windowsPath = $"\"C:\\{windowsPath}";
+			}
+			else
+			{
+				// Remove any leading backslashes
+				windowsPath = windowsPath.TrimStart('\\');
+				windowsPath = $"C:\\{windowsPath}";
+			}
+		}
+
+		return windowsPath;
+	}
+	
+	/// <summary>
+	/// Fixes command line escaping issues that can cause infinite loops in command line parsing
+	/// </summary>
+	private string FixCommandLineEscaping(string cmdLine)
+	{
+		// The issue occurs when there are backslashes before quotes
+		// Windows expects backslashes before quotes to be properly escaped
+		
+		var result = new StringBuilder(cmdLine.Length);
+		bool inQuote = false;
+		
+		for (int i = 0; i < cmdLine.Length; i++)
+		{
+			char c = cmdLine[i];
+			
+			// Handle backslash sequences
+			if (c == '\\')
+			{
+				int backslashCount = 1;
+				while (i + 1 < cmdLine.Length && cmdLine[i + 1] == '\\')
+				{
+					backslashCount++;
+					i++;
+				}
+				
+				// Check if next char is a quote
+				if (i + 1 < cmdLine.Length && cmdLine[i + 1] == '"')
+				{
+					// For each backslash before a quote, we need two backslashes
+					// This ensures the command line parser correctly handles the escaping
+					for (int j = 0; j < backslashCount; j++)
+					{
+						result.Append("\\\\");
+					}
+				}
+				else
+				{
+					// Regular backslashes not before quotes
+					for (int j = 0; j < backslashCount; j++)
+					{
+						result.Append('\\');
+					}
+				}
+			}
+			else if (c == '"')
+			{
+				// Toggle quote state and add the quote
+				inQuote = !inQuote;
+				result.Append(c);
+			}
+			else
+			{
+				// Regular character
+				result.Append(c);
+			}
+		}
+		
+		return result.ToString();
 	}
 
 	[DllModuleExport(37, IsStub = true)]
@@ -3139,7 +3354,6 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_logger.LogInformation("[Kernel32] RtlUnwind: Would jump to 0x{TargetIp:X8} with return value 0x{ReturnValue:X8}", targetIp, returnValue);
 			// In a full implementation, we would modify the CPU state here
 			// For now, we just log the intended operation
-			
 		}
 
 		// RtlUnwind doesn't return a value in the traditional sense - it either succeeds

@@ -365,7 +365,10 @@ public partial class GameLibraryViewModel : ViewModelBase
                 builder
                     .AddConsole()
                     .AddProvider(new AvaloniaLoggerProvider(viewModel))
-                    .SetMinimumLevel(_configuration.EnableDebugMode ? LogLevel.Debug : LogLevel.Information);
+                    .SetMinimumLevel(//_configuration.EnableDebugMode ? 
+	                    LogLevel.Debug //: 
+	                    //LogLevel.Information
+	                    );
             });
             
             var logger = loggerFactory.CreateLogger<Emulator>();

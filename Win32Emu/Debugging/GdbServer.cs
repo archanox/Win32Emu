@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 using Win32Emu.VirtualFileSystem;
+using Win32Emu.Win32;
 
 namespace Win32Emu.Debugging;
 
@@ -25,6 +26,7 @@ public class GdbServer : IDisposable
     private readonly ILogger _logger;
     private readonly int _port;
     private readonly IVirtualFileSystem? _vfs;
+    private readonly ProcessEnvironment? _env;
     
     private TcpListener? _listener;
     private TcpClient? _client;
@@ -42,7 +44,7 @@ public class GdbServer : IDisposable
     private readonly Dictionary<int, IVirtualFileHandle> _openFiles = new();
     private int _nextFileDescriptor = 3; // Start after stdin(0), stdout(1), stderr(2)
     
-    public GdbServer(IcedCpu cpu, VirtualMemory memory, BreakpointManager breakpoints, ILogger logger, int port = 1234, IVirtualFileSystem? vfs = null)
+    public GdbServer(IcedCpu cpu, VirtualMemory memory, BreakpointManager breakpoints, ILogger logger, int port = 1234, IVirtualFileSystem? vfs = null, ProcessEnvironment? env = null)
     {
         _cpu = cpu;
         _memory = memory;
@@ -50,6 +52,7 @@ public class GdbServer : IDisposable
         _logger = logger;
         _port = port;
         _vfs = vfs;
+        _env = env;
     }
     
     /// <summary>
@@ -707,7 +710,7 @@ public class GdbServer : IDisposable
         if (args.StartsWith("Supported", StringComparison.Ordinal))
         {
             // Advertise our capabilities, including file I/O if VFS is available
-            var capabilities = "PacketSize=4096;qXfer:features:read+;QStartNoAckMode+";
+            var capabilities = "PacketSize=4096;qXfer:features:read+;QStartNoAckMode+;qGetTIBAddr+";
             if (_vfs != null)
             {
                 capabilities += ";vFile:open+;vFile:close+;vFile:pread+;vFile:pwrite+;vFile:fstat+;vFile:unlink+;vFile:readlink+;vFile:setfs+";
@@ -738,6 +741,17 @@ public class GdbServer : IDisposable
         {
             // Send target description XML
             await HandleTargetDescriptionAsync(args);
+        }
+        else if (args.StartsWith("GetTIBAddr", StringComparison.Ordinal))
+        {
+            if (_env != null)
+            {
+                await SendPacketAsync(ToHex32(_env.TebAddress));
+            }
+            else
+            {
+                await SendPacketAsync("E01");
+            }
         }
         else
         {

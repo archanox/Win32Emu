@@ -85,7 +85,7 @@ public sealed class Emulator : IDisposable
         return _env.PostMessage(hwnd, message, wParam, lParam);
     }
 
-    public void LoadExecutable(string path, string[] programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234)
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -110,6 +110,7 @@ public sealed class Emulator : IDisposable
         _env = new ProcessEnvironment(_vm, 0x01000000, _host, _logger);
         // Convert path to Windows-style backslashes for proper parsing by C runtime
         _env.InitializeStrings(path, programArgs ?? []);
+        _env.InitializeTebAndPeb(_image.BaseAddress);
         
         // Initialize console based on PE subsystem type
         _env.InitializeConsoleForSubsystem(_image.Subsystem);
@@ -229,27 +230,19 @@ public sealed class Emulator : IDisposable
                 {
                     LogDebug($"[Import] Returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
-                    var ebp = _cpu.GetRegister("EBP");
                     var retEip = _vm.Read32(esp);
                     
-                    // Log stack state BEFORE adjustment
-                    if (name.ToUpperInvariant() == "GETMODULEFILENAMEA")
-                    {
-                        _logger.LogInformation("[Emulator] Before stack adjustment: ESP=0x{Esp:X8} EBP=0x{Ebp:X8} RetAddr=0x{RetEip:X8} ArgBytes={StdcallArgBytes}", esp, ebp, retEip, argBytes);
-                    }
-                    
                     esp += 4 + (uint)argBytes;
+                    
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
-                    
-                    // Log stack state AFTER adjustment
-                    if (name.ToUpperInvariant() == "GETMODULEFILENAMEA")
-                    {
-                        _logger.LogInformation("[Emulator] After stack adjustment: ESP=0x{Esp:X8} EBP=0x{Ebp:X8} NewEIP=0x{RetEip:X8}", esp, ebp, retEip);
-                        _logger.LogInformation("[Emulator] GetModuleFileNameA complete - execution continuing at 0x{RetEip:X8}", retEip);
-                    }
                 }
             }
+            else if (step.IsCall)
+            {
+	            // _logger.LogInformation("[Call] Call method at 0x{CallTarget:X8}", step.CallTarget);
+            }
+            
         }
     }
 
@@ -492,7 +485,7 @@ public sealed class Emulator : IDisposable
     private async void RunWithGdbServer(int port)
     {
         var breakpoints = new BreakpointManager();
-        var gdbServer = new GdbServer(_cpu!, _vm!, breakpoints, _logger, port, _env!.VirtualFileSystem);
+        var gdbServer = new GdbServer(_cpu!, _vm!, breakpoints, _logger, port, _env!.VirtualFileSystem, _env);
         
         try
         {
@@ -510,12 +503,9 @@ public sealed class Emulator : IDisposable
             {
                 // Check if GDB wants to break
                 currentEip = _cpu.GetEip();
-                if (gdbServer.ShouldBreak(currentEip))
+                if (gdbServer.ShouldBreak(currentEip) && !await gdbServer.HandleBreakAsync(currentEip))
                 {
-                    if (!await gdbServer.HandleBreakAsync(currentEip))
-                    {
-                        break; // Client disconnected or quit
-                    }
+	                break; // Client disconnected or quit
                 }
 
                 // Execute one instruction

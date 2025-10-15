@@ -29,7 +29,7 @@ public class Win32Dispatcher(ILogger logger)
         stdcallArgBytes = 0;
 
         var esp = cpu.GetRegister("ESP");
-        byte[] stackSnippet = null;
+        byte[]? stackSnippet = null;
         try { stackSnippet = memory.GetSpan(esp, 16); } catch { }
         logger.LogInformation("Dispatching {Dll}!{Export} at EIP=0x{GetEip:X8} ESP=0x{Esp:X8} stack={Unreadable}", dll, export, cpu.GetEip(), esp, stackSnippet==null?"<unreadable>":BitConverter.ToString(stackSnippet).Replace('-', ' '));
         

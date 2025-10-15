@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
@@ -14,6 +15,8 @@ namespace Win32Emu.Win32.Modules
 		private readonly ILogger _logger;
 		private readonly Dictionary<uint, bool> _windowEnabledState = new();
 		private readonly StandardControlHandler _standardControlHandler;
+		private ICpu _cpu;
+		private VirtualMemory _memory;
 
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -28,9 +31,13 @@ namespace Win32Emu.Win32.Modules
 
 		public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
+			_cpu = cpu;
+			_memory = memory;
+			
 			returnValue = 0;
 			var a = new StackArgs(cpu, memory);
 
+			Debug.Assert(export != null, nameof(export) + " != null");
 			switch (export.ToUpperInvariant())
 			{
 				case "REGISTERCLASSA":
@@ -71,7 +78,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "DISPATCHMESSAGEA":
-					returnValue = DispatchMessageAInternal(a.UInt32(0), cpu, memory);
+					returnValue = DispatchMessageA(a.UInt32(0));
 					return true;
 
 				case "DEFWINDOWPROCA":
@@ -88,7 +95,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "SENDMESSAGEA":
-					returnValue = SendMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), cpu, memory);
+					returnValue = SendMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 
 				case "CLIENTTOSCREEN":
@@ -197,6 +204,18 @@ namespace Win32Emu.Win32.Modules
 
 				case "ENABLEWINDOW":
 					returnValue = EnableWindow(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "BEGINPAINT":
+					returnValue = BeginPaint(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "ENDPAINT":
+					returnValue = EndPaint(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "FILLRECT":
+					returnValue = FillRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
 				default:
@@ -467,12 +486,6 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(6)]
 		private uint DispatchMessageA(uint lpMsg)
 		{
-			return DispatchMessageAInternal(lpMsg, null, null);
-		}
-
-		[DllModuleExport(1)]
-		private uint DispatchMessageAInternal(uint lpMsg, ICpu? cpu, VirtualMemory? memory)
-		{
 			if (lpMsg == 0)
 			{
 				_logger.LogInformation("[User32] DispatchMessageA: NULL MSG pointer");
@@ -500,23 +513,13 @@ namespace Win32Emu.Win32.Modules
 			if (wndProc.HasValue && wndProc.Value != 0)
 			{
 				_logger.LogInformation("[User32] DispatchMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
+				
+				var result = CallWindowProcedure(_cpu, _memory, wndProc.Value, hwnd, message, wParam, lParam);
+				_logger.LogInformation("[User32] DispatchMessageA: WndProc returned 0x{Result:X8}", result);
+				return result;
+			}
 
-				// If CPU is available, call the window procedure
-				if (cpu != null && memory != null)
-				{
-					var result = CallWindowProcedure(cpu, memory, wndProc.Value, hwnd, message, wParam, lParam);
-					_logger.LogInformation("[User32] DispatchMessageA: WndProc returned 0x{Result:X8}", result);
-					return result;
-				}
-				else
-				{
-					_logger.LogInformation($"[User32] DispatchMessageA: CPU not available, cannot call WndProc");
-				}
-			}
-			else
-			{
-				_logger.LogInformation("[User32] DispatchMessageA: No WndProc found for HWND=0x{Hwnd:X8}", hwnd);
-			}
+			_logger.LogInformation("[User32] DispatchMessageA: No WndProc found for HWND=0x{Hwnd:X8}", hwnd);
 
 			// For now, just return 0 (message processed)
 			return 0;
@@ -651,7 +654,7 @@ namespace Win32Emu.Win32.Modules
 		}
 		
 		[DllModuleExport(1)]
-		private uint SendMessageA(uint hwnd, uint msg, uint wParam, uint lParam, ICpu? cpu, VirtualMemory? memory)
+		private uint SendMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
 			_logger.LogInformation("[User32] SendMessageA: HWND=0x{Hwnd:X8} MSG=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, msg, wParam, lParam);
 
@@ -669,23 +672,12 @@ namespace Win32Emu.Win32.Modules
 			if (wndProc.HasValue && wndProc.Value != 0)
 			{
 				_logger.LogInformation("[User32] SendMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
+				var result = CallWindowProcedure(_cpu, _memory, wndProc.Value, hwnd, msg, wParam, lParam);
+				_logger.LogInformation("[User32] SendMessageA: WndProc returned 0x{Result:X8}", result);
+				return result;
+			}
 
-				// If CPU is available, call the window procedure
-				if (cpu != null && memory != null)
-				{
-					var result = CallWindowProcedure(cpu, memory, wndProc.Value, hwnd, msg, wParam, lParam);
-					_logger.LogInformation("[User32] SendMessageA: WndProc returned 0x{Result:X8}", result);
-					return result;
-				}
-				else
-				{
-					_logger.LogInformation($"[User32] SendMessageA: CPU not available, cannot call WndProc");
-				}
-			}
-			else
-			{
-				_logger.LogInformation("[User32] SendMessageA: No WndProc found for HWND=0x{Hwnd:X8}", hwnd);
-			}
+			_logger.LogInformation("[User32] SendMessageA: No WndProc found for HWND=0x{Hwnd:X8}", hwnd);
 
 			// For now, return 0 (message processed)
 			return 0;
@@ -1066,6 +1058,75 @@ namespace Win32Emu.Win32.Modules
 
 			// Return previous state: return 0 if was enabled, non-zero if was disabled
 			return wasEnabled ? 0u : 1u;
+		}
+
+		[DllModuleExport(1)]
+		private uint BeginPaint(uint hwnd, uint lpPaint)
+		{
+			_logger.LogInformation("[User32] BeginPaint: HWND=0x{Hwnd:X8} lpPaint=0x{LpPaint:X8}", hwnd, lpPaint);
+
+			if (lpPaint == 0)
+			{
+				return 0;
+			}
+
+			// Get a device context
+			var hdc = GetDc(hwnd);
+
+			// Fill the PAINTSTRUCT structure (64 bytes)
+			// HDC  hdc;         // 0
+			// BOOL fErase;      // 4
+			// RECT rcPaint;     // 8
+			// BOOL fRestore;    // 24
+			// BOOL fIncUpdate;  // 28
+			// BYTE rgbReserved[32]; // 32
+
+			_env.MemWrite32(lpPaint + 0, hdc);
+			_env.MemWrite32(lpPaint + 4, 1); // fErase = TRUE
+
+			// Get the client rectangle for rcPaint
+			GetClientRect(hwnd, lpPaint + 8);
+
+			// Zero out fRestore, fIncUpdate, and rgbReserved
+			for (uint i = 24; i < 64; i++)
+			{
+				_env.MemWrite8(lpPaint + i, 0);
+			}
+
+			return hdc;
+		}
+
+		[DllModuleExport(1)]
+		private uint EndPaint(uint hwnd, uint lpPaint)
+		{
+			_logger.LogInformation("[User32] EndPaint: HWND=0x{Hwnd:X8} lpPaint=0x{LpPaint:X8}", hwnd, lpPaint);
+
+			if (lpPaint != 0)
+			{
+				var hdc = _env.MemRead32(lpPaint + 0);
+				ReleaseDc(hwnd, hdc);
+			}
+
+			return 1; // Always returns non-zero
+		}
+
+		[DllModuleExport(1)]
+		private uint FillRect(uint hdc, uint lprc, uint hbr)
+		{
+			_logger.LogInformation("[User32] FillRect: hdc=0x{Hdc:X8} lprc=0x{Lprc:X8} hbr=0x{Hbr:X8}", hdc, lprc, hbr);
+
+			if (lprc != 0)
+			{
+				var left = (int)_env.MemRead32(lprc);
+				var top = (int)_env.MemRead32(lprc + 4);
+				var right = (int)_env.MemRead32(lprc + 8);
+				var bottom = (int)_env.MemRead32(lprc + 12);
+				_logger.LogInformation("[User32] FillRect: rect=({Left},{Top},{Right},{Bottom})", left, top, right, bottom);
+			}
+
+			// For now, we don't do any actual drawing.
+			// Just return success.
+			return 1;
 		}
 	}
 }

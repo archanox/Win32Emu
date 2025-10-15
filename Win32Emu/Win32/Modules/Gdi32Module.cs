@@ -167,6 +167,12 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
+		private uint TextOut(uint hdc, int x, int y, uint lpString, int cbString)
+		{
+			return 0;
+		}
+
+		[DllModuleExport(1)]
 		private uint TextOutA(uint hdc, int x, int y, uint lpString, int cbString)
 		{
 			if (lpString != 0 && cbString > 0)
