@@ -12,6 +12,8 @@ This allows you to step through decompiled code line by line, set breakpoints, a
 
 ## Quick Start
 
+> **Note**: If you see "(No debugging symbols found in ...)" when connecting, that's normal! See [GHIDRA_DEBUGGING_FAQ.md](GHIDRA_DEBUGGING_FAQ.md) for details. Ghidra's decompiler works perfectly without debug symbols.
+
 ### 1. Start Win32Emu with GDB Server
 
 ```bash
@@ -87,13 +89,13 @@ The Win32Emu GDB server implements the following GDB Remote Serial Protocol comm
 
 ### Register Operations
 - `g` - Read all general-purpose registers (EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI, EIP, EFLAGS)
+- `G` - Write all general-purpose registers
 - `p` - Read single register by index
-- `G` - Write all registers (stub - returns OK)
-- `P` - Write single register (stub - returns OK)
+- `P` - Write single register by index
 
 ### Memory Operations
 - `m addr,length` - Read memory bytes
-- `M addr,length:XX...` - Write memory (stub - returns OK)
+- `M addr,length:XX...` - Write memory bytes
 
 ### Execution Control
 - `c` - Continue execution
@@ -103,6 +105,14 @@ The Win32Emu GDB server implements the following GDB Remote Serial Protocol comm
 ### Breakpoints
 - `Z0,addr,kind` - Insert software breakpoint
 - `z0,addr,kind` - Remove software breakpoint
+- `Z1,addr,kind` - Insert hardware breakpoint (treated as software)
+- `z1,addr,kind` - Remove hardware breakpoint
+- `Z2,addr,kind` - Insert write watchpoint
+- `z2,addr,kind` - Remove write watchpoint
+- `Z3,addr,kind` - Insert read watchpoint
+- `z3,addr,kind` - Remove read watchpoint
+- `Z4,addr,kind` - Insert access watchpoint (read/write)
+- `z4,addr,kind` - Remove access watchpoint
 
 ### Queries
 - `qSupported` - Feature negotiation
@@ -240,6 +250,88 @@ In Ghidra:
 - Check the Win32Emu terminal for error messages
 - Restart Win32Emu and reconnect
 
+### "No debugging symbols found in .EXE"
+
+**Problem**: GDB or Ghidra shows a warning like:
+```
+(No debugging symbols found in /path/to/IGN_TEAS.EXE)
+```
+
+**Why This Happens**:
+This message is **expected and harmless**. It occurs because:
+- PE (Portable Executable) files don't contain embedded debug symbols
+- Debug information for Windows executables is stored in separate PDB (Program Database) files
+- Older games and applications typically don't ship with PDB files
+- Win32Emu emulates the executable but doesn't have access to the original PDB files
+
+**This Does NOT Prevent Debugging**:
+You can still debug effectively without symbols because:
+- ✅ **Ghidra's disassembler works perfectly** - It analyzes the binary and creates its own function names
+- ✅ **You can set breakpoints by address** - Use addresses from Ghidra's analysis
+- ✅ **Import functions are visible** - Win32Emu logs all API calls with their names (like `KERNEL32!CreateFileA`)
+- ✅ **Memory and registers are accessible** - Full inspection capabilities
+- ✅ **Ghidra's decompiler works** - Shows C-like pseudocode even without debug symbols
+
+**What You Can Do**:
+
+1. **Use Ghidra's Analysis** (Recommended):
+   - Open the .EXE in Ghidra and run Auto-Analysis
+   - Ghidra will identify functions, strings, and data structures
+   - These appear in the debugger as you step through code
+   - You can rename functions in Ghidra to make debugging easier
+
+2. **Check Win32Emu's Logs**:
+   - Win32Emu logs all Win32 API calls with their names
+   - Example: `[Import] KERNEL32!GetVersion`
+   - This helps you understand what the program is doing
+
+3. **Use Enhanced Debug Mode**:
+   ```bash
+   Win32Emu game.exe --debug
+   ```
+   - Provides detailed execution logs
+   - Shows register states and function calls
+   - Helps identify where the program is in its execution flow
+
+4. **Ignore the Warning**:
+   - Simply continue debugging
+   - The warning doesn't affect functionality
+   - It's just informing you that symbolic debugging won't be available
+
+**Understanding the Limitation**:
+- **With symbols**: You could see variable names like `playerHealth` or `screenBuffer`
+- **Without symbols**: You see addresses like `0x00405060` and `0x00406000`
+- **Ghidra helps**: Its analysis creates names like `FUN_00405060` and identifies data structures
+- **Win32Emu helps**: Import names show which Windows APIs are being called
+
+**For the Curious**:
+If you really want symbol information, you would need:
+- The original PDB file from the developer (rarely available for old games)
+- Source code to compile with debug symbols (usually not available)
+- Or use Ghidra's analysis to create your own symbol annotations
+
+### Protocol Errors or Memory Access Errors
+
+**Problem**: You see errors like:
+```
+Protocol error: QStartNoAckMode (noack) conflicting enabled responses.
+```
+or
+```
+Python Exception <class 'gdb.MemoryError'>: Cannot access memory at address 0x...
+```
+
+**Solution**:
+These issues have been fixed in the latest version:
+- **QStartNoAckMode conflict**: The GDB server now properly handles the `QStartNoAckMode` command
+- **Memory access errors**: Invalid memory reads are handled gracefully with better error messages
+
+If you're still experiencing these errors:
+- Make sure you're using the latest version of Win32Emu
+- Check the Win32Emu console for warning messages about invalid memory access
+- The memory errors are normal if the debugger tries to read beyond allocated memory
+- Use Ghidra's memory map to understand which addresses are valid
+
 ## Performance Considerations
 
 - **GDB server mode is slow**: Each instruction requires network communication
@@ -285,25 +377,44 @@ print(f"Registers: {response}")
 
 ## Known Limitations
 
-1. **Read-only debugging**: Register and memory writes are stubbed (return OK but don't modify state)
-2. **No watchpoints**: Memory watchpoints are not implemented
+1. ~~**Read-only debugging**: Register and memory writes are stubbed (return OK but don't modify state)~~ ✅ **IMPLEMENTED**
+2. ~~**No watchpoints**: Memory watchpoints are not implemented~~ ✅ **IMPLEMENTED**
 3. **No conditional breakpoints**: Breakpoints always trigger when hit
 4. **Single-threaded**: Only one thread is emulated
-5. **No symbol support**: Debugging is by address only
+5. **No PDB/DWARF symbols**: PE files don't have embedded debug symbols (this is normal - use Ghidra's analysis instead)
+6. **Watchpoint checking**: Watchpoints are not automatically triggered during execution - they're registered but need manual checking in emulator loop
+
+## Recent Enhancements
+
+### ✅ Register and Memory Modification (Implemented)
+You can now modify register and memory values during debugging:
+- Set register values with `P` (single) or `G` (all registers)
+- Write memory with `M addr,length:data`
+- Full read/write debugging capability
+
+### ✅ Hardware Watchpoints (Implemented)
+Break on memory access at specific addresses:
+- Write watchpoints: Break when memory is written
+- Read watchpoints: Break when memory is read
+- Access watchpoints: Break on any read or write
+- Set with `Z2`, `Z3`, `Z4` commands in GDB/Ghidra
+
+**Note**: Watchpoints are registered but require integration into the emulator's execution loop for automatic triggering.
 
 ## Future Enhancements
 
 Potential improvements for the GDB server:
 
-- [ ] Register/memory modification support
-- [ ] Hardware watchpoints (break on memory access)
 - [ ] Conditional breakpoints
 - [ ] Multi-threading support
-- [ ] Symbol file support
 - [ ] Reverse debugging (step backwards)
+- [ ] Automatic watchpoint triggering in emulator loop
+- [ ] Tracepoints for non-intrusive data collection
+- [ ] Better symbol integration via qSymbol responses
 
 ## See Also
 
+- [GHIDRA_DEBUGGING_FAQ.md](GHIDRA_DEBUGGING_FAQ.md) - **START HERE** - Answers common questions about "No debugging symbols" and effective debugging without PDB files
 - [INTERACTIVE_DEBUGGER_GUIDE.md](INTERACTIVE_DEBUGGER_GUIDE.md) - Built-in command-line debugger
 - [DEBUGGER_IMPLEMENTATION_SUMMARY.md](DEBUGGER_IMPLEMENTATION_SUMMARY.md) - Technical implementation details
 - [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) - Enhanced debug mode

@@ -112,6 +112,76 @@ public class BreakpointManager
     public void ClearAll()
     {
         _breakpoints.Clear();
+        _watchpoints.Clear();
+    }
+    
+    // Watchpoints
+    private readonly Dictionary<uint, Watchpoint> _watchpoints = new();
+    private uint _nextWatchpointId = 1;
+    
+    /// <summary>
+    /// Add a watchpoint at the specified address
+    /// </summary>
+    public Watchpoint AddWatchpoint(uint address, WatchpointType type, uint length, string? description = null)
+    {
+        var watchpoint = new Watchpoint
+        {
+            Id = _nextWatchpointId++,
+            Address = address,
+            Type = type,
+            Length = length,
+            Description = description ?? $"Watchpoint at 0x{address:X8}",
+            Enabled = true,
+            HitCount = 0
+        };
+        
+        _watchpoints[watchpoint.Id] = watchpoint;
+        return watchpoint;
+    }
+    
+    /// <summary>
+    /// Remove a watchpoint by address and type
+    /// </summary>
+    public bool RemoveWatchpointAtAddress(uint address, WatchpointType type)
+    {
+        var watchpoint = _watchpoints.Values.FirstOrDefault(w => w.Address == address && w.Type == type);
+        if (watchpoint != null)
+        {
+            return _watchpoints.Remove(watchpoint.Id);
+        }
+        return false;
+    }
+    
+    /// <summary>
+    /// Check if a memory access should trigger a watchpoint
+    /// </summary>
+    public Watchpoint? CheckWatchpoint(uint address, WatchpointType accessType)
+    {
+        foreach (var wp in _watchpoints.Values)
+        {
+            if (!wp.Enabled)
+                continue;
+                
+            // Check if address is within watchpoint range (avoid overflow)
+            if (address >= wp.Address && wp.Length > 0 && address - wp.Address < wp.Length)
+            {
+                // Check if access type matches
+                if (wp.Type == WatchpointType.Access || wp.Type == accessType)
+                {
+                    wp.HitCount++;
+                    return wp;
+                }
+            }
+        }
+        return null;
+    }
+    
+    /// <summary>
+    /// Get all watchpoints
+    /// </summary>
+    public IEnumerable<Watchpoint> GetAllWatchpoints()
+    {
+        return _watchpoints.Values;
     }
 }
 
@@ -125,4 +195,28 @@ public class Breakpoint
     public string Description { get; init; } = "";
     public bool Enabled { get; set; }
     public int HitCount { get; set; }
+}
+
+/// <summary>
+/// Represents a watchpoint in the debugger
+/// </summary>
+public class Watchpoint
+{
+    public uint Id { get; init; }
+    public uint Address { get; init; }
+    public WatchpointType Type { get; init; }
+    public uint Length { get; init; }
+    public string Description { get; init; } = "";
+    public bool Enabled { get; set; }
+    public int HitCount { get; set; }
+}
+
+/// <summary>
+/// Type of watchpoint
+/// </summary>
+public enum WatchpointType
+{
+    Write,    // Break on write
+    Read,     // Break on read
+    Access    // Break on read or write
 }
