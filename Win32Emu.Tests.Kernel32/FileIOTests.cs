@@ -126,7 +126,7 @@ public class FileIoTests : IDisposable
     }
 
     [Fact]
-    public void GetStartupInfoA_ShouldReturnPseudoHandlesInStartupInfo()
+    public void GetStartupInfoA_ShouldReturnActualHandlesInStartupInfo()
     {
         // Arrange
         // Allocate memory for STARTUPINFO structure (68 bytes)
@@ -138,9 +138,9 @@ public class FileIoTests : IDisposable
         // Assert
         // STARTUPINFO structure offsets:
         // +0: cb (size) - should be 68
-        // +56: hStdInput - should be STD_INPUT_HANDLE pseudo-handle (0xFFFFFFF6)
-        // +60: hStdOutput - should be STD_OUTPUT_HANDLE pseudo-handle (0xFFFFFFF5)
-        // +64: hStdError - should be STD_ERROR_HANDLE pseudo-handle (0xFFFFFFF4)
+        // +56: hStdInput - should be actual handle value (NULL for GUI apps without console)
+        // +60: hStdOutput - should be actual handle value (NULL for GUI apps without console)
+        // +64: hStdError - should be actual handle value (NULL for GUI apps without console)
         
         var cb = _testEnv.Memory.Read32(startupInfoPtr);
         var hStdInput = _testEnv.Memory.Read32(startupInfoPtr + 56);
@@ -148,38 +148,54 @@ public class FileIoTests : IDisposable
         var hStdError = _testEnv.Memory.Read32(startupInfoPtr + 64);
 
         Assert.Equal(68u, cb);
-        Assert.Equal(0xFFFFFFF6u, hStdInput); // STD_INPUT_HANDLE
-        Assert.Equal(0xFFFFFFF5u, hStdOutput); // STD_OUTPUT_HANDLE
-        Assert.Equal(0xFFFFFFF4u, hStdError); // STD_ERROR_HANDLE
+        // GUI apps without a console have NULL standard handles
+        Assert.Equal(0x00000000u, hStdInput);
+        Assert.Equal(0x00000000u, hStdOutput);
+        Assert.Equal(0x00000000u, hStdError);
     }
 
     [Fact]
     public void GetStartupInfoA_ThenGetStdHandle_ShouldWorkCorrectly()
     {
-        // This test simulates the correct program behavior for GUI apps:
-        // 1. Call GetStartupInfoA to get startup info
-        // 2. Read the hStdOutput field (which contains a pseudo-handle)
-        // 3. Call GetStdHandle with the pseudo-handle to get the real handle
-        // 4. For GUI apps without a console, the real handle will be NULL
+        // This test simulates the correct program behavior:
+        // Programs can use GetStdHandle with pseudo-handle constants to get standard handles
+        // This is independent of what GetStartupInfoA returns
         
-        // Arrange
-        var startupInfoPtr = _testEnv.AllocateMemory(68);
-        
-        // Act
-        // Step 1: Get startup info
-        _testEnv.CallKernel32Api("GETSTARTUPINFOA", startupInfoPtr);
-        
-        // Step 2: Read the hStdOutput field (offset 60)
-        var pseudoHandle = _testEnv.Memory.Read32(startupInfoPtr + 60);
-        
-        // Verify it's the pseudo-handle constant
-        Assert.Equal(0xFFFFFFF5u, pseudoHandle);
-        
-        // Step 3: Call GetStdHandle to get the real handle
-        var realHandle = _testEnv.CallKernel32Api("GETSTDHANDLE", pseudoHandle);
+        // Arrange & Act
+        // Call GetStdHandle with STD_OUTPUT_HANDLE pseudo-handle constant
+        var realHandle = _testEnv.CallKernel32Api("GETSTDHANDLE", 0xFFFFFFF5u);
         
         // For GUI apps without a console, standard handles are NULL
         Assert.Equal(0x00000000u, realHandle); // NULL - no console
+    }
+
+    [Fact]
+    public void GetStartupInfoA_WithConsole_ShouldReturnRealHandles()
+    {
+        // This test verifies that when a console is allocated,
+        // GetStartupInfoA returns the actual handle values, not pseudo-handles
+        
+        // Arrange
+        // Allocate a console
+        _testEnv.CallKernel32Api("ALLOCCONSOLE");
+        
+        // Allocate memory for STARTUPINFO structure (68 bytes)
+        var startupInfoPtr = _testEnv.AllocateMemory(68);
+        
+        // Act
+        _testEnv.CallKernel32Api("GETSTARTUPINFOA", startupInfoPtr);
+        
+        // Assert
+        var cb = _testEnv.Memory.Read32(startupInfoPtr);
+        var hStdInput = _testEnv.Memory.Read32(startupInfoPtr + 56);
+        var hStdOutput = _testEnv.Memory.Read32(startupInfoPtr + 60);
+        var hStdError = _testEnv.Memory.Read32(startupInfoPtr + 64);
+        
+        Assert.Equal(68u, cb);
+        // Console apps should have real handle values (not NULL, not pseudo-handles)
+        Assert.Equal(0x00000001u, hStdInput);  // Real stdin handle
+        Assert.Equal(0x00000002u, hStdOutput); // Real stdout handle
+        Assert.Equal(0x00000003u, hStdError);  // Real stderr handle
     }
 
     #endregion
