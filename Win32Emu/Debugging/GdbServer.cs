@@ -563,15 +563,15 @@ public class GdbServer : IDisposable
         
         try
         {
+            var dataSpan = data.AsSpan();
             for (uint i = 0; i < length; i++)
             {
-                var byteStr = data.Substring((int)(i * 2), 2);
-                var byteVal = byte.Parse(byteStr, NumberStyles.HexNumber);
+                var byteSpan = dataSpan.Slice((int)(i * 2), 2);
+                var byteVal = byte.Parse(byteSpan, NumberStyles.HexNumber);
                 _memory.Write8(addr + i, byteVal);
             }
             
             _logger.LogDebug("GDB: Memory written at 0x{Address:X8}, {Length} bytes", addr, length);
-            await SendPacketAsync("OK");
         }
         catch (IndexOutOfRangeException ex)
         {
