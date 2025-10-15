@@ -26,8 +26,10 @@ namespace Win32Emu.Win32.Modules
 		// DirectDraw object handles
 		private readonly Dictionary<uint, DirectDrawObject> _ddrawObjects = new();
 		private readonly Dictionary<uint, DirectDrawSurface> _surfaces = new();
+		private readonly Dictionary<uint, DirectDrawPalette> _palettes = new();
 		private uint _nextDDrawHandle = 0x70000000;
 		private uint _nextSurfaceHandle = 0x71000000;
+		private uint _nextPaletteHandle = 0x72000000;
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
@@ -195,18 +197,26 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		private sealed class DirectDrawSurface
-	{
-		public uint Handle { get; set; }
-		public int Width { get; set; }
-		public int Height { get; set; }
-		public int Pitch { get; set; }
-		public byte[]? Bits { get; set; }
-		public bool IsPrimary { get; set; }
-		public bool IsLocked { get; set; }
-		public uint DirectDrawHandle { get; set; }
-		public IntPtr TexturePtr { get; set; }
-		public uint LockedMemoryPtr { get; set; }
-	}
+		{
+			public uint Handle { get; set; }
+			public int Width { get; set; }
+			public int Height { get; set; }
+			public int Pitch { get; set; }
+			public byte[]? Bits { get; set; }
+			public bool IsPrimary { get; set; }
+			public bool IsLocked { get; set; }
+			public uint DirectDrawHandle { get; set; }
+			public IntPtr TexturePtr { get; set; }
+			public uint LockedMemoryPtr { get; set; }
+			public uint PaletteHandle { get; set; }
+		}
+
+		private sealed class DirectDrawPalette
+		{
+			public uint Handle { get; set; }
+			public uint ComObjectAddress { get; set; }
+			public uint[] Entries { get; set; } = Array.Empty<uint>();
+		}
 
 		// COM interface methods (stubs for IDirectDraw)
 		private uint ComQueryInterface(ICpu cpu, VirtualMemory memory)
@@ -240,6 +250,30 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Reference count after release
 		}
 
+		private uint Palette_GetCaps(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::GetCaps() - stub");
+			return 0;
+		}
+
+		private uint Palette_GetEntries(ICpu cpu, VirtualMemory memory, uint paletteHandle)
+		{
+			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::GetEntries() - stub");
+			return 0;
+		}
+
+		private uint Palette_Initialize(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::Initialize() - stub");
+			return 0;
+		}
+
+		private uint Palette_SetEntries(ICpu cpu, VirtualMemory memory, uint paletteHandle)
+		{
+			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::SetEntries() - stub");
+			return 0;
+		}
+
 		private uint DDraw_Compact(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::Compact() - stub");
@@ -254,7 +288,65 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DDraw_CreatePalette(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::CreatePalette() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+			var lpColorTable = args.UInt32(2);
+			var lplpDDPalette = args.UInt32(3);
+			var pUnkOuter = args.UInt32(4);
+
+			_logger.LogInformation(
+				"[DDraw COM] IDirectDraw::CreatePalette(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lpColorTable=0x{LpColorTable:X8}, lplpDDPalette=0x{LplpDDPalette:X8}, pUnkOuter=0x{PUnkOuter:X8})",
+				thisPtr, dwFlags, lpColorTable, lplpDDPalette, pUnkOuter);
+
+			// Determine number of entries from dwFlags
+			int numEntries;
+			if ((dwFlags & 0x1) != 0) numEntries = 2; // DDPCAPS_1BIT
+			else if ((dwFlags & 0x2) != 0)
+				numEntries = 4; // DDPCAPS_2BIT
+			else if ((dwFlags & 0x4) != 0)
+				numEntries = 16; // DDPCAPS_4BIT
+			else if ((dwFlags & 0x8) != 0)
+				numEntries = 256; // DDPCAPS_8BIT
+			else
+				numEntries = 256; // Default
+
+			var paletteEntries = new uint[numEntries];
+			if (lpColorTable != 0)
+			{
+				for (var i = 0; i < numEntries; i++)
+				{
+					// PALETTEENTRY is 4 bytes (r,g,b,flags)
+					paletteEntries[i] = _env.MemRead32(lpColorTable + (uint)(i * 4));
+				}
+			}
+
+			var paletteHandle = _nextPaletteHandle++;
+			var palette = new DirectDrawPalette { Handle = paletteHandle, Entries = paletteEntries };
+			_palettes[paletteHandle] = palette;
+
+			var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			{
+				{ "QueryInterface", (c, m) => ComQueryInterface(c, m) },
+				{ "AddRef", (c, m) => ComAddRef(c, m) },
+				{ "Release", (c, m) => ComRelease(c, m) },
+				{ "GetCaps", (c, m) => Palette_GetCaps(c, m) },
+				{ "GetEntries", (c, m) => Palette_GetEntries(c, m, paletteHandle) },
+				{ "Initialize", (c, m) => Palette_Initialize(c, m) },
+				{ "SetEntries", (c, m) => Palette_SetEntries(c, m, paletteHandle) }
+			};
+
+			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDrawPalette", vtableMethods);
+			palette.ComObjectAddress = comObjectAddr;
+
+			if (lplpDDPalette != 0)
+			{
+				_env.MemWrite32(lplpDDPalette, comObjectAddr);
+			}
+
+			_logger.LogInformation("[DDraw] Created IDirectDrawPalette COM object at 0x{ComObjectAddr:X8} for palette 0x{PaletteHandle:X8}",
+				comObjectAddr, paletteHandle);
+
 			return 0; // DD_OK
 		}
 
@@ -341,7 +433,7 @@ namespace Win32Emu.Win32.Modules
 				{ "SetClipper", (cpu, mem) => Surface_SetClipper(cpu, mem) },
 				{ "SetColorKey", (cpu, mem) => Surface_SetColorKey(cpu, mem) },
 				{ "SetOverlayPosition", (cpu, mem) => Surface_SetOverlayPosition(cpu, mem) },
-				{ "SetPalette", (cpu, mem) => Surface_SetPalette(cpu, mem) },
+				{ "SetPalette", (cpu, mem) => Surface_SetPalette(cpu, mem, surfaceHandle) },
 				{ "Unlock", (cpu, mem) => Surface_Unlock(cpu, mem, surfaceHandle) },
 				{ "UpdateOverlay", (cpu, mem) => Surface_UpdateOverlay(cpu, mem) },
 				{ "UpdateOverlayDisplay", (cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem) },
@@ -379,9 +471,47 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DD_OK
 		}
 
-		private uint Surface_SetPalette(ICpu cpu, VirtualMemory mem)
+		private uint Surface_SetPalette(ICpu cpu, VirtualMemory mem, uint surfaceHandle)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::SetPalette() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lpDDPalette = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::SetPalette(this=0x{ThisPtr:X8}, lpDDPalette=0x{LpDDPalette:X8})", thisPtr,
+				lpDDPalette);
+
+			if (!_surfaces.TryGetValue(surfaceHandle, out var surface))
+			{
+				_logger.LogError("[DDraw] SetPalette: could not find surface with handle 0x{SurfaceHandle:X8}", surfaceHandle);
+				return 1; // DDERR_GENERIC
+			}
+
+			if (lpDDPalette == 0)
+			{
+				surface.PaletteHandle = 0;
+				_logger.LogInformation("[DDraw] Detached palette from surface 0x{SurfaceHandle:X8}", surfaceHandle);
+				return 0; // DD_OK
+			}
+
+			uint paletteHandle = 0;
+			foreach (var p in _palettes.Values)
+			{
+				if (p.ComObjectAddress == lpDDPalette)
+				{
+					paletteHandle = p.Handle;
+					break;
+				}
+			}
+
+			if (paletteHandle == 0)
+			{
+				_logger.LogWarning("[DDraw] SetPalette: could not find palette object with address 0x{LpDDPalette:X8}", lpDDPalette);
+				return 0x887601E6; // DDERR_INVALIDOBJECT
+			}
+
+			surface.PaletteHandle = paletteHandle;
+			_logger.LogInformation("[DDraw] Surface 0x{SurfaceHandle:X8} palette set to 0x{PaletteHandle:X8}", surfaceHandle, paletteHandle);
+
 			return 0; // DD_OK
 		}
 
@@ -417,7 +547,10 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_IsLost(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::IsLost() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::IsLost(this=0x{ThisPtr:X8})", thisPtr);
+			// Our surfaces are never lost in the emulator
 			return 0; // DD_OK
 		}
 
@@ -489,8 +622,22 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_GetAttachedSurface(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetAttachedSurface() - stub");
-			return 0; // DD_OK
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lpDDSCaps = args.UInt32(1);
+			var lplpDDAttachedSurface = args.UInt32(2);
+
+			_logger.LogInformation(
+				"[DDraw COM] IDirectDrawSurface::GetAttachedSurface(this=0x{ThisPtr:X8}, lpDDSCaps=0x{LpDDSCaps:X8}, lplp=0x{Lplp:X8})", thisPtr,
+				lpDDSCaps, lplpDDAttachedSurface);
+
+			// For now, we don't support attached surfaces.
+			if (lplpDDAttachedSurface != 0)
+			{
+				_env.MemWrite32(lplpDDAttachedSurface, 0);
+			}
+
+			return 0x887601C2; // DDERR_NOTFOUND
 		}
 
 		private uint Surface_Flip(ICpu cpu, VirtualMemory mem)
