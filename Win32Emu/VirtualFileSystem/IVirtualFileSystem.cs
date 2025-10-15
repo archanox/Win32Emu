@@ -31,6 +31,13 @@ public interface IVirtualFileSystem
 	/// Gets files matching a search pattern.
 	/// </summary>
 	string[] GetFiles(string directory, string pattern);
+
+	/// <summary>
+	/// Converts a real filesystem path to a Windows-style virtual path.
+	/// If the path is under the base directory, it returns a relative path formatted as C:\path\to\file.
+	/// Otherwise, returns the original path.
+	/// </summary>
+	string ToWindowsPath(string realPath);
 }
 
 /// <summary>

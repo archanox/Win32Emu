@@ -308,6 +308,38 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 			_ => FileAccess.ReadWrite
 		};
 	}
+
+	public string ToWindowsPath(string realPath)
+	{
+		try
+		{
+			// Get the full path to normalize it
+			var fullPath = Path.GetFullPath(realPath);
+			var baseFullPath = Path.GetFullPath(_baseDirectory);
+
+			// Check if the path is under the base directory
+			if (fullPath.StartsWith(baseFullPath, StringComparison.OrdinalIgnoreCase))
+			{
+				// Get the relative path from base
+				var relativePath = Path.GetRelativePath(baseFullPath, fullPath);
+				
+				// Convert to Windows-style path with backslashes and add C: drive
+				var windowsPath = @"C:\" + relativePath.Replace('/', '\\');
+				
+				_logger.LogDebug("[VFS] Virtualized path: {RealPath} -> {WindowsPath}", realPath, windowsPath);
+				return windowsPath;
+			}
+
+			// If not under base directory, return the original path
+			_logger.LogDebug("[VFS] Path not under base directory, returning as-is: {RealPath}", realPath);
+			return realPath;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogDebug(ex, "[VFS] Failed to virtualize path: {RealPath}", realPath);
+			return realPath;
+		}
+	}
 }
 
 /// <summary>

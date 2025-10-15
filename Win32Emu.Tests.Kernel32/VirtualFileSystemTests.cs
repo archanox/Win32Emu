@@ -243,4 +243,46 @@ public class VirtualFileSystemTests : IDisposable
 		var overlayPath = Path.Combine(_testOverlayDir, "test", "file.txt");
 		Assert.True(File.Exists(overlayPath));
 	}
+
+	[Fact]
+	public void ToWindowsPath_WithPathUnderBase_ShouldReturnVirtualizedPath()
+	{
+		// Arrange
+		var realPath = Path.Combine(_testBaseDir, "readonly.txt");
+
+		// Act
+		var windowsPath = _vfs.ToWindowsPath(realPath);
+
+		// Assert
+		Assert.Equal(@"C:\readonly.txt", windowsPath);
+	}
+
+	[Fact]
+	public void ToWindowsPath_WithSubdirectoryPath_ShouldReturnVirtualizedPath()
+	{
+		// Arrange - Create a subdirectory structure
+		var subDir = Path.Combine(_testBaseDir, "subdir");
+		Directory.CreateDirectory(subDir);
+		var filePath = Path.Combine(subDir, "test.dat");
+		File.WriteAllText(filePath, "test");
+
+		// Act
+		var windowsPath = _vfs.ToWindowsPath(filePath);
+
+		// Assert
+		Assert.Equal(@"C:\subdir\test.dat", windowsPath);
+	}
+
+	[Fact]
+	public void ToWindowsPath_WithPathOutsideBase_ShouldReturnOriginal()
+	{
+		// Arrange
+		var outsidePath = Path.Combine(Path.GetTempPath(), "outside.txt");
+
+		// Act
+		var result = _vfs.ToWindowsPath(outsidePath);
+
+		// Assert
+		Assert.Equal(outsidePath, result);
+	}
 }

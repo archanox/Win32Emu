@@ -54,6 +54,71 @@ public class ProcessEnvironment
 	{
 		_vfs = new LayeredVirtualFileSystem(baseDirectory, overlayDirectory, _logger);
 		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with base: {BaseDirectory}", baseDirectory);
+		
+		// If executable path is already set, virtualize it to Windows-style path
+		if (!string.IsNullOrEmpty(_executablePath))
+		{
+			var virtualizedPath = _vfs.ToWindowsPath(_executablePath);
+			if (virtualizedPath != _executablePath)
+			{
+				_logger.LogInformation("[ProcessEnv] Virtualizing executable path: {Original} -> {Virtualized}", 
+					_executablePath, virtualizedPath);
+				
+				// Update the executable path and module file name
+				_executablePath = virtualizedPath;
+				ModuleFileNamePtr = WriteAnsiString(virtualizedPath + '\0');
+				ModuleFileNameLength = (uint)virtualizedPath.Length;
+				
+				// Also update command line if it was already set
+				if (CommandLinePtr != 0)
+				{
+					// Re-read the old command line to extract args
+					var oldCmdLine = ReadAnsiString(CommandLinePtr);
+					// Parse to extract args (skip the first quoted part which is the exe path)
+					var args = new List<string>();
+					var inQuote = false;
+					var current = new System.Text.StringBuilder();
+					var skipFirst = true;
+					
+					foreach (var ch in oldCmdLine)
+					{
+						if (ch == '"')
+						{
+							inQuote = !inQuote;
+							if (!inQuote && skipFirst)
+							{
+								skipFirst = false;
+								current.Clear();
+								continue;
+							}
+						}
+						else if (ch == ' ' && !inQuote)
+						{
+							if (current.Length > 0 && !skipFirst)
+							{
+								args.Add(current.ToString());
+								current.Clear();
+							}
+						}
+						else if (!skipFirst)
+						{
+							current.Append(ch);
+						}
+					}
+					
+					if (current.Length > 0 && !skipFirst)
+					{
+						args.Add(current.ToString());
+					}
+					
+					// Rebuild command line with virtualized path
+					var newCmdLine = args.Count > 0 
+						? $"\"{virtualizedPath}\" {string.Join(" ", args)}"
+						: $"\"{virtualizedPath}\"";
+					CommandLinePtr = WriteAnsiString(newCmdLine + '\0');
+				}
+			}
+		}
 	}
 
 	// SDL3 backends for audio and input
@@ -129,14 +194,26 @@ public class ProcessEnvironment
 	{
 		Debug.Assert(exePath != null, nameof(exePath) + " != null");
 		
-		_executablePath = exePath;
+		// If VFS is initialized, virtualize the executable path to Windows-style
+		var effectivePath = exePath;
+		if (_vfs != null)
+		{
+			effectivePath = _vfs.ToWindowsPath(exePath);
+			if (effectivePath != exePath)
+			{
+				_logger.LogInformation("[ProcessEnv] Virtualizing executable path: {Original} -> {Virtualized}", 
+					exePath, effectivePath);
+			}
+		}
+		
+		_executablePath = effectivePath;
 		// Build command line: quoted exe path + space + args (if any)
 		var cmdLine = args.Length > 0 
-			? $"\"{exePath}\" {string.Join(" ", args)}"
-			: $"\"{exePath}\"";
+			? $"\"{effectivePath}\" {string.Join(" ", args)}"
+			: $"\"{effectivePath}\"";
 		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
-		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
-		ModuleFileNameLength = (uint)exePath.Length;
+		ModuleFileNamePtr = WriteAnsiString(effectivePath + '\0');
+		ModuleFileNameLength = (uint)effectivePath.Length;
 
 		// Initialize with some default environment variables
 		InitializeDefaultEnvironmentVariables();

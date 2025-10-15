@@ -278,4 +278,53 @@ public class VfsIntegrationTests : IDisposable
 		Directory.Delete(game1OverlayDir, true);
 		Directory.Delete(game2OverlayDir, true);
 	}
+
+	[Fact]
+	public void VFS_VirtualizesExecutablePath_ToWindowsStyle()
+	{
+		// Arrange - Create a test executable in base directory
+		var exePath = Path.Combine(_testBaseDir, "game.exe");
+		File.WriteAllText(exePath, "fake exe");
+
+		// Create a new test environment without VFS first
+		var testEnv = new TestEnvironment();
+		
+		// Initialize strings with the real path first
+		testEnv.ProcessEnv.InitializeStrings(exePath, []);
+		
+		// Verify it's the real path initially
+		Assert.Equal(exePath, testEnv.ProcessEnv.ExecutablePath);
+		
+		// Now initialize VFS - this should virtualize the executable path
+		testEnv.ProcessEnv.InitializeVirtualFileSystem(_testBaseDir, _testOverlayDir);
+		
+		// Assert - The executable path should now be virtualized
+		var expectedWindowsPath = @"C:\game.exe";
+		Assert.Equal(expectedWindowsPath, testEnv.ProcessEnv.ExecutablePath);
+		
+		// Clean up
+		testEnv.Dispose();
+	}
+
+	[Fact]
+	public void VFS_InitializeStrings_AfterVFS_AutomaticallyVirtualizesPaths()
+	{
+		// Arrange - Create test environment with VFS initialized first
+		var testEnv = new TestEnvironment();
+		var exePath = Path.Combine(_testBaseDir, "game.exe");
+		File.WriteAllText(exePath, "fake exe");
+		
+		// Initialize VFS first
+		testEnv.ProcessEnv.InitializeVirtualFileSystem(_testBaseDir, _testOverlayDir);
+		
+		// Act - Initialize strings with real path
+		testEnv.ProcessEnv.InitializeStrings(exePath, ["arg1", "arg2"]);
+		
+		// Assert - Path should be automatically virtualized
+		var expectedWindowsPath = @"C:\game.exe";
+		Assert.Equal(expectedWindowsPath, testEnv.ProcessEnv.ExecutablePath);
+		
+		// Clean up
+		testEnv.Dispose();
+	}
 }

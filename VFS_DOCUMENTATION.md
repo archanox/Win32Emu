@@ -4,6 +4,8 @@
 
 Win32Emu includes a Virtual File System (VFS) that provides isolation and copy-on-write semantics for file I/O operations. This allows games to run without modifying original installation files, while maintaining per-game save data and configurations independently.
 
+The VFS also automatically virtualizes filesystem paths to make them appear Windows-like, converting Unix-style paths like `/users/Pierce/games/ignition/ign_teas.exe` to Windows-style paths like `C:\ignition\ign_teas.exe`.
+
 ## Architecture
 
 The VFS uses a layered approach with two layers:
@@ -17,6 +19,23 @@ When a file is accessed:
 - **Delete operations**: Remove from overlay (base files remain intact)
 - **Move operations**: Move within overlay (copies from base if needed)
 
+## Path Virtualization
+
+When VFS is initialized with a base directory, all paths under that directory are automatically virtualized to Windows-style paths:
+
+```csharp
+// Base directory: /users/Pierce/games/ignition
+processEnv.InitializeVirtualFileSystem("/users/Pierce/games/ignition", overlayDir);
+
+// When loading: /users/Pierce/games/ignition/ign_teas.exe
+// Game sees: C:\ign_teas.exe
+
+// When loading: /users/Pierce/games/ignition/data/config.ini
+// Game sees: C:\data\config.ini
+```
+
+This makes paths appear more Windows-like to the emulated programs, improving compatibility.
+
 ## Usage
 
 ### Initializing VFS
@@ -27,12 +46,37 @@ var processEnv = new ProcessEnvironment(virtualMemory);
 
 // Initialize VFS with game directory as base and optional overlay directory
 processEnv.InitializeVirtualFileSystem(
-    baseDirectory: @"C:\Games\MyGame",
+    baseDirectory: @"C:\Games\MyGame",  // or "/home/user/games/mygame" on Linux
     overlayDirectory: @"C:\Users\YourName\AppData\Local\Win32Emu\MyGame"
 );
 ```
 
 If `overlayDirectory` is `null`, a temporary directory will be used.
+
+**Path Virtualization**: When you initialize the VFS and then load an executable, the executable path is automatically virtualized:
+
+```csharp
+// On Linux with base directory: /home/user/games/ignition
+var processEnv = new ProcessEnvironment(vm);
+processEnv.InitializeVirtualFileSystem("/home/user/games/ignition", overlayDir);
+
+// Load executable: /home/user/games/ignition/ign_teas.exe
+processEnv.InitializeStrings("/home/user/games/ignition/ign_teas.exe", []);
+
+// The game sees: C:\ign_teas.exe
+// This makes it appear more Windows-like to the emulated program
+```
+
+You can also initialize the strings first, then the VFS - it will automatically virtualize the previously set path:
+
+```csharp
+var processEnv = new ProcessEnvironment(vm);
+processEnv.InitializeStrings("/home/user/games/ignition/ign_teas.exe", []);
+// At this point, ExecutablePath is the real Unix path
+
+processEnv.InitializeVirtualFileSystem("/home/user/games/ignition", overlayDir);
+// Now ExecutablePath is virtualized to C:\ign_teas.exe
+```
 
 ### Per-Game Isolation
 
@@ -156,6 +200,7 @@ public interface IVirtualFileSystem
     bool MoveFile(string existingPath, string newPath);
     bool FileExists(string path);
     string[] GetFiles(string directory, string pattern);
+    string ToWindowsPath(string realPath);  // Virtualizes a real path to Windows-style
 }
 
 public interface IVirtualFileHandle : IDisposable
