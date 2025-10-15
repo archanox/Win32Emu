@@ -38,6 +38,8 @@ public class EmulatorService
     /// <summary>
     /// Launch game using the in-process emulator API
     /// </summary>
+    /// <param name="game">The game to launch, including its executable path.</param>
+    /// <param name="programArgs">An array of command-line arguments to pass to the emulator when launching the game. These arguments are parsed and provided to the emulated program as if they were passed on the command line.</param>
     public async Task LaunchGame(Game game, string[] programArgs = null)
     {
         if (!File.Exists(game.ExecutablePath))
