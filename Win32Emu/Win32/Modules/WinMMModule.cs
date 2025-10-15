@@ -39,7 +39,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "TIMEBEGINPERIOD":
-					returnValue = TimeBeginPeriod(a.UInt32(0));
+					returnValue = timeBeginPeriod(a.UInt32(0));
 					return true;
 
 				case "TIMEENDPERIOD":
@@ -81,7 +81,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private uint TimeBeginPeriod(uint uPeriod)
+		private uint timeBeginPeriod(uint uPeriod)
 		{
 			_logger.LogInformation("[WinMM] timeBeginPeriod({UPeriod})", uPeriod);
 			_timerPeriod = uPeriod;

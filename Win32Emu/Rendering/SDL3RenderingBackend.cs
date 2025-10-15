@@ -14,7 +14,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
     private bool _initialized;
     private int _width;
     private int _height;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     /// <summary>
     /// Initialize SDL3 with specified dimensions
@@ -25,49 +25,41 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
         {
             if (_initialized)
             {
-	            return true;
+                return true;
             }
 
             _width = width;
             _height = height;
 
+            // Set app metadata, similar to the C++ example
+            SDL.SetAppMetadata(title, "1.0", "com.win32emu.display");
+
             // Initialize SDL3 video subsystem
-            // Note: Other subsystems (Audio, Gamepad, Joystick) are initialized separately
-            // by their respective backends
             if (!SDL.Init(SDL.InitFlags.Video))
             {
                 logger.LogError("[SDL3] Failed to initialize video: {GetError}", SDL.GetError());
                 return false;
             }
 
-            // Create window
-            _window = SDL.CreateWindow(title, width, height, SDL.WindowFlags.Resizable);
-            if (_window == IntPtr.Zero)
+            // Create window and renderer
+            if (!SDL.CreateWindowAndRenderer(title, width, height, SDL.WindowFlags.Resizable, out _window, out _renderer))
             {
-                logger.LogError("[SDL3] Failed to create window: {GetError}", SDL.GetError());
+                logger.LogError("[SDL3] Failed to create window and renderer: {GetError}", SDL.GetError());
                 SDL.Quit();
                 return false;
             }
 
-            // Create renderer
-            _renderer = SDL.CreateRenderer(_window, null);
-            if (_renderer == IntPtr.Zero)
-            {
-	            logger.LogError("[SDL3] Failed to create renderer: {GetError}", SDL.GetError());
-                SDL.DestroyWindow(_window);
-                SDL.Quit();
-                return false;
-            }
+            SDL.SetRenderLogicalPresentation(_renderer, width, height, SDL.RendererLogicalPresentation.Letterbox);
 
             // Create texture for rendering
-            _texture = SDL.CreateTexture(_renderer, 
+            _texture = SDL.CreateTexture(_renderer,
                 SDL.PixelFormat.ARGB8888,
-                SDL.TextureAccess.Streaming, 
+                SDL.TextureAccess.Streaming,
                 width, height);
-                
+
             if (_texture == IntPtr.Zero)
             {
-	            logger.LogError("[SDL3] Failed to create texture: {GetError}", SDL.GetError());
+                logger.LogError("[SDL3] Failed to create texture: {GetError}", SDL.GetError());
                 SDL.DestroyRenderer(_renderer);
                 SDL.DestroyWindow(_window);
                 SDL.Quit();
@@ -89,7 +81,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
         {
             if (!_initialized)
             {
-	            return false;
+                return false;
             }
 
             // Update texture with new data
@@ -109,7 +101,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
             SDL.RenderClear(_renderer);
             SDL.RenderTexture(_renderer, _texture, IntPtr.Zero, IntPtr.Zero);
             SDL.RenderPresent(_renderer);
-            
+
             return true;
         }
     }
@@ -123,7 +115,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
         {
             if (!_initialized)
             {
-	            return;
+                return;
             }
 
             SDL.SetRenderDrawColor(_renderer, r, g, b, a);
@@ -141,7 +133,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
         {
             if (!_initialized)
             {
-	            return;
+                return;
             }
 
             SDL.Event evt;
@@ -166,7 +158,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
         {
             if (!_initialized)
             {
-	            return;
+                return;
             }
 
             if (_texture != IntPtr.Zero)
@@ -187,8 +179,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
                 _window = IntPtr.Zero;
             }
 
-            // Only quit video subsystem - other subsystems managed by their backends
-            SDL.QuitSubSystem(SDL.InitFlags.Video);
+            SDL.Quit();
             _initialized = false;
         }
     }
