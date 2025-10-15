@@ -446,9 +446,9 @@ public class GdbServer : IDisposable
     private async Task HandleWriteRegistersAsync(string args)
     {
         // Each register is 4 bytes (8 hex digits) in little-endian format
-        // We expect 16 registers: 10 GPRs + 6 segment registers
-        if (args.Length < 80) // 10 registers * 8 hex chars = 80 minimum
-        {
+        // Protocol expects 16 registers: 10 GPRs + 6 segment registers.
+        // This check only validates the 10 GPRs (10 registers * 8 hex chars = 80 minimum); segment registers are ignored.
+        if (args.Length < 80)
             await SendPacketAsync("E01");
             return;
         }
