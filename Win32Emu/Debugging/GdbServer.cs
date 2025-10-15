@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
+using Win32Emu.VirtualFileSystem;
 
 namespace Win32Emu.Debugging;
 
@@ -23,6 +24,7 @@ public class GdbServer : IDisposable
     private readonly BreakpointManager _breakpoints;
     private readonly ILogger _logger;
     private readonly int _port;
+    private readonly IVirtualFileSystem? _vfs;
     
     private TcpListener? _listener;
     private TcpClient? _client;
@@ -36,13 +38,18 @@ public class GdbServer : IDisposable
     private bool _singleStep;
     private uint _lastStoppedEip;
     
-    public GdbServer(IcedCpu cpu, VirtualMemory memory, BreakpointManager breakpoints, ILogger logger, int port = 1234)
+    // Remote file I/O state
+    private readonly Dictionary<int, IVirtualFileHandle> _openFiles = new();
+    private int _nextFileDescriptor = 3; // Start after stdin(0), stdout(1), stderr(2)
+    
+    public GdbServer(IcedCpu cpu, VirtualMemory memory, BreakpointManager breakpoints, ILogger logger, int port = 1234, IVirtualFileSystem? vfs = null)
     {
         _cpu = cpu;
         _memory = memory;
         _breakpoints = breakpoints;
         _logger = logger;
         _port = port;
+        _vfs = vfs;
     }
     
     /// <summary>
@@ -699,8 +706,13 @@ public class GdbServer : IDisposable
     {
         if (args.StartsWith("Supported", StringComparison.Ordinal))
         {
-            // Advertise our capabilities
-            await SendPacketAsync("PacketSize=4096;qXfer:features:read+;QStartNoAckMode+");
+            // Advertise our capabilities, including file I/O if VFS is available
+            var capabilities = "PacketSize=4096;qXfer:features:read+;QStartNoAckMode+";
+            if (_vfs != null)
+            {
+                capabilities += ";vFile:open+;vFile:close+;vFile:pread+;vFile:pwrite+;vFile:fstat+;vFile:unlink+;vFile:readlink+;vFile:setfs+";
+            }
+            await SendPacketAsync(capabilities);
         }
         else if (args.StartsWith("Attached", StringComparison.Ordinal))
         {
@@ -776,6 +788,11 @@ public class GdbServer : IDisposable
                 _singleStep = true;
             }
         }
+        else if (args.StartsWith("File:", StringComparison.Ordinal))
+        {
+            // Handle remote file I/O operations
+            await HandleVFileAsync(args[5..]);
+        }
         else
         {
             await SendPacketAsync("");
@@ -841,8 +858,367 @@ public class GdbServer : IDisposable
         return BitConverter.ToUInt32(bytes, 0);
     }
     
+    /// <summary>
+    /// Handle remote file I/O operations (vFile packets)
+    /// </summary>
+    private async Task HandleVFileAsync(string args)
+    {
+        if (_vfs == null)
+        {
+            // File I/O not supported without VFS
+            await SendPacketAsync("");
+            return;
+        }
+
+        if (args.StartsWith("open:", StringComparison.Ordinal))
+        {
+            await HandleVFileOpenAsync(args[5..]);
+        }
+        else if (args.StartsWith("close:", StringComparison.Ordinal))
+        {
+            await HandleVFileCloseAsync(args[6..]);
+        }
+        else if (args.StartsWith("pread:", StringComparison.Ordinal))
+        {
+            await HandleVFilePReadAsync(args[6..]);
+        }
+        else if (args.StartsWith("pwrite:", StringComparison.Ordinal))
+        {
+            await HandleVFilePWriteAsync(args[7..]);
+        }
+        else if (args.StartsWith("fstat:", StringComparison.Ordinal))
+        {
+            await HandleVFileFStatAsync(args[6..]);
+        }
+        else if (args.StartsWith("unlink:", StringComparison.Ordinal))
+        {
+            await HandleVFileUnlinkAsync(args[7..]);
+        }
+        else if (args.StartsWith("readlink:", StringComparison.Ordinal))
+        {
+            // Readlink not implemented (symbolic links not supported in VFS)
+            await SendFileIoErrorAsync(1); // EPERM
+        }
+        else if (args.StartsWith("setfs:", StringComparison.Ordinal))
+        {
+            // setfs not needed (we only have one filesystem)
+            await SendPacketAsync("F0");
+        }
+        else
+        {
+            await SendPacketAsync("");
+        }
+    }
+
+    /// <summary>
+    /// Handle vFile:open - Opens a file in the virtual filesystem
+    /// Format: vFile:open:filename,flags,mode
+    /// </summary>
+    private async Task HandleVFileOpenAsync(string args)
+    {
+        try
+        {
+            var parts = args.Split(',');
+            if (parts.Length < 3)
+            {
+                await SendFileIoErrorAsync(22); // EINVAL
+                return;
+            }
+
+            var filename = DecodeHexString(parts[0]);
+            if (!int.TryParse(parts[1], NumberStyles.HexNumber, null, out var flags) ||
+                !int.TryParse(parts[2], NumberStyles.HexNumber, null, out _))
+            {
+                await SendFileIoErrorAsync(22); // EINVAL
+                return;
+            }
+
+            // Parse flags (using standard POSIX O_* flags)
+            const int O_RDONLY = 0x0000;
+            const int O_WRONLY = 0x0001;
+            const int O_RDWR = 0x0002;
+            const int O_CREAT = 0x0100;
+            const int O_TRUNC = 0x0200;
+            const int O_EXCL = 0x0400;
+
+            var accessMode = flags & 0x03;
+            VfsFileAccess access = accessMode switch
+            {
+                O_RDONLY => VfsFileAccess.Read,
+                O_WRONLY => VfsFileAccess.Write,
+                O_RDWR => VfsFileAccess.ReadWrite,
+                _ => VfsFileAccess.Read
+            };
+
+            VfsFileMode mode;
+            if ((flags & O_CREAT) != 0)
+            {
+                if ((flags & O_EXCL) != 0)
+                {
+                    mode = VfsFileMode.CreateNew;
+                }
+                else if ((flags & O_TRUNC) != 0)
+                {
+                    mode = VfsFileMode.Create;
+                }
+                else
+                {
+                    mode = VfsFileMode.OpenOrCreate;
+                }
+            }
+            else if ((flags & O_TRUNC) != 0)
+            {
+                mode = VfsFileMode.Truncate;
+            }
+            else
+            {
+                mode = VfsFileMode.Open;
+            }
+
+            var handle = _vfs!.OpenFile(filename, mode, access);
+            if (handle == null)
+            {
+                await SendFileIoErrorAsync(2); // ENOENT
+                return;
+            }
+
+            var fd = _nextFileDescriptor++;
+            _openFiles[fd] = handle;
+
+            _logger.LogDebug("[GDB File I/O] Opened file '{Filename}' as fd {Fd}", filename, fd);
+            await SendPacketAsync($"F{fd:x}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[GDB File I/O] Failed to open file");
+            await SendFileIoErrorAsync(5); // EIO
+        }
+    }
+
+    /// <summary>
+    /// Handle vFile:close - Closes a file descriptor
+    /// Format: vFile:close:fd
+    /// </summary>
+    private async Task HandleVFileCloseAsync(string args)
+    {
+        try
+        {
+            if (!int.TryParse(args, NumberStyles.HexNumber, null, out var fd))
+            {
+                await SendFileIoErrorAsync(9); // EBADF
+                return;
+            }
+
+            if (!_openFiles.TryGetValue(fd, out var handle))
+            {
+                await SendFileIoErrorAsync(9); // EBADF
+                return;
+            }
+
+            handle.Dispose();
+            _openFiles.Remove(fd);
+
+            _logger.LogDebug("[GDB File I/O] Closed fd {Fd}", fd);
+            await SendPacketAsync("F0");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[GDB File I/O] Failed to close file");
+            await SendFileIoErrorAsync(5); // EIO
+        }
+    }
+
+    /// <summary>
+    /// Handle vFile:pread - Read from file at specified offset
+    /// Format: vFile:pread:fd,count,offset
+    /// </summary>
+    private async Task HandleVFilePReadAsync(string args)
+    {
+        try
+        {
+            var parts = args.Split(',');
+            if (parts.Length < 3)
+            {
+                await SendFileIoErrorAsync(22); // EINVAL
+                return;
+            }
+
+            if (!int.TryParse(parts[0], NumberStyles.HexNumber, null, out var fd) ||
+                !int.TryParse(parts[1], NumberStyles.HexNumber, null, out var count) ||
+                !long.TryParse(parts[2], NumberStyles.HexNumber, null, out var offset))
+            {
+                await SendFileIoErrorAsync(22); // EINVAL
+                return;
+            }
+
+            if (!_openFiles.TryGetValue(fd, out var handle))
+            {
+                await SendFileIoErrorAsync(9); // EBADF
+                return;
+            }
+
+            handle.Seek(offset, SeekOrigin.Begin);
+            var buffer = new byte[count];
+            var bytesRead = handle.Read(buffer, 0, count);
+
+            var hexData = Convert.ToHexString(buffer, 0, bytesRead).ToLowerInvariant();
+            await SendPacketAsync($"F{bytesRead:x};{hexData}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[GDB File I/O] Failed to read from file");
+            await SendFileIoErrorAsync(5); // EIO
+        }
+    }
+
+    /// <summary>
+    /// Handle vFile:pwrite - Write to file at specified offset
+    /// Format: vFile:pwrite:fd,offset,data
+    /// </summary>
+    private async Task HandleVFilePWriteAsync(string args)
+    {
+        try
+        {
+            var parts = args.Split(',', 3);
+            if (parts.Length < 3)
+            {
+                await SendFileIoErrorAsync(22); // EINVAL
+                return;
+            }
+
+            if (!int.TryParse(parts[0], NumberStyles.HexNumber, null, out var fd) ||
+                !long.TryParse(parts[1], NumberStyles.HexNumber, null, out var offset))
+            {
+                await SendFileIoErrorAsync(22); // EINVAL
+                return;
+            }
+
+            if (!_openFiles.TryGetValue(fd, out var handle))
+            {
+                await SendFileIoErrorAsync(9); // EBADF
+                return;
+            }
+
+            var data = Convert.FromHexString(parts[2]);
+            handle.Seek(offset, SeekOrigin.Begin);
+            handle.Write(data, 0, data.Length);
+            handle.Flush();
+
+            await SendPacketAsync($"F{data.Length:x}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[GDB File I/O] Failed to write to file");
+            await SendFileIoErrorAsync(5); // EIO
+        }
+    }
+
+    /// <summary>
+    /// Handle vFile:fstat - Get file status
+    /// Format: vFile:fstat:fd
+    /// </summary>
+    private async Task HandleVFileFStatAsync(string args)
+    {
+        try
+        {
+            if (!int.TryParse(args, NumberStyles.HexNumber, null, out var fd))
+            {
+                await SendFileIoErrorAsync(9); // EBADF
+                return;
+            }
+
+            if (!_openFiles.TryGetValue(fd, out var handle))
+            {
+                await SendFileIoErrorAsync(9); // EBADF
+                return;
+            }
+
+            // Build a minimal stat structure
+            // struct stat format (simplified for GDB):
+            // st_dev (4 bytes), st_ino (4 bytes), st_mode (4 bytes), st_nlink (4 bytes),
+            // st_uid (4 bytes), st_gid (4 bytes), st_rdev (4 bytes), st_size (8 bytes),
+            // st_blksize (8 bytes), st_blocks (8 bytes), st_atime (8 bytes), st_mtime (8 bytes), st_ctime (8 bytes)
+            
+            var currentPos = handle.Position;
+            handle.Seek(0, SeekOrigin.End);
+            var size = handle.Position;
+            handle.Seek(currentPos, SeekOrigin.Begin);
+
+            var stat = new byte[88]; // Total size of stat structure
+            
+            // st_mode: S_IFREG (regular file) | 0644 (permissions)
+            var mode = 0x8000 | 0x1A4; // 0x8000 = S_IFREG, 0x1A4 = 0644
+            BitConverter.GetBytes(mode).CopyTo(stat, 8);
+            
+            // st_nlink: 1
+            BitConverter.GetBytes(1).CopyTo(stat, 12);
+            
+            // st_size
+            BitConverter.GetBytes(size).CopyTo(stat, 28);
+
+            var hexStat = Convert.ToHexString(stat).ToLowerInvariant();
+            await SendPacketAsync($"F{stat.Length:x};{hexStat}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[GDB File I/O] Failed to stat file");
+            await SendFileIoErrorAsync(5); // EIO
+        }
+    }
+
+    /// <summary>
+    /// Handle vFile:unlink - Delete a file
+    /// Format: vFile:unlink:filename
+    /// </summary>
+    private async Task HandleVFileUnlinkAsync(string args)
+    {
+        try
+        {
+            var filename = DecodeHexString(args);
+            
+            if (_vfs!.DeleteFile(filename))
+            {
+                _logger.LogDebug("[GDB File I/O] Deleted file '{Filename}'", filename);
+                await SendPacketAsync("F0");
+            }
+            else
+            {
+                await SendFileIoErrorAsync(2); // ENOENT
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[GDB File I/O] Failed to unlink file");
+            await SendFileIoErrorAsync(5); // EIO
+        }
+    }
+
+    /// <summary>
+    /// Send a file I/O error response
+    /// </summary>
+    private async Task SendFileIoErrorAsync(int errno)
+    {
+        await SendPacketAsync($"F-1,{errno:x}");
+    }
+
+    /// <summary>
+    /// Decode a hex-encoded string
+    /// </summary>
+    private static string DecodeHexString(string hex)
+    {
+        var bytes = Convert.FromHexString(hex);
+        return Encoding.UTF8.GetString(bytes);
+    }
+    
     public void Dispose()
     {
+        // Close all open file handles
+        foreach (var handle in _openFiles.Values)
+        {
+            handle.Dispose();
+        }
+        _openFiles.Clear();
+        
         _stream?.Dispose();
         _client?.Dispose();
         _listener?.Stop();

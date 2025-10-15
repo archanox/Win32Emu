@@ -492,7 +492,7 @@ public sealed class Emulator : IDisposable
     private async void RunWithGdbServer(int port)
     {
         var breakpoints = new BreakpointManager();
-        var gdbServer = new GdbServer(_cpu!, _vm!, breakpoints, _logger, port);
+        var gdbServer = new GdbServer(_cpu!, _vm!, breakpoints, _logger, port, _env!.VirtualFileSystem);
         
         try
         {
