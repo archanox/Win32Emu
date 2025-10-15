@@ -8,6 +8,7 @@ using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
 using Win32Emu.Win32.COM;
+using Win32Emu.VirtualFileSystem;
 
 namespace Win32Emu.Win32;
 
@@ -22,6 +23,9 @@ public class ProcessEnvironment
 
 	// COM vtable dispatcher
 	private ComVtableDispatcher? _comDispatcher;
+
+	// Virtual File System
+	private IVirtualFileSystem? _vfs;
 	
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
 	{
@@ -37,6 +41,91 @@ public class ProcessEnvironment
 	
 	// COM vtable dispatcher access
 	public ComVtableDispatcher ComDispatcher => _comDispatcher ?? throw new InvalidOperationException("COM dispatcher not initialized");
+
+	// Virtual File System access
+	/// <summary>
+	/// Gets the current virtual file system instance for this process environment.
+	/// </summary>
+	/// <remarks>
+	/// Returns <c>null</c> if the virtual file system has not been initialized.
+	/// </remarks>
+	public IVirtualFileSystem? VirtualFileSystem => _vfs;
+
+	/// <summary>
+	/// Initializes the virtual file system with the specified base directory.
+	/// </summary>
+	/// <param name="baseDirectory">Base directory containing game files (read-only)</param>
+	/// <param name="overlayDirectory">Optional overlay directory for writable files. If null, a temporary directory is used.</param>
+	public void InitializeVirtualFileSystem(string baseDirectory, string? overlayDirectory = null)
+	{
+		_vfs = new LayeredVirtualFileSystem(baseDirectory, overlayDirectory, _logger);
+		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with base: {BaseDirectory}", baseDirectory);
+		
+		// If executable path is already set, virtualize it to Windows-style path
+		if (!string.IsNullOrEmpty(_executablePath))
+		{
+			var virtualizedPath = _vfs.ToWindowsPath(_executablePath);
+			if (virtualizedPath != _executablePath)
+			{
+				_logger.LogInformation("[ProcessEnv] Virtualizing executable path: {Original} -> {Virtualized}", 
+					_executablePath, virtualizedPath);
+				
+				// Update the executable path and module file name
+				_executablePath = virtualizedPath;
+				ModuleFileNamePtr = WriteAnsiString(virtualizedPath + '\0');
+				ModuleFileNameLength = (uint)virtualizedPath.Length;
+				
+				// Also update command line if it was already set
+				if (CommandLinePtr != 0)
+				{
+					// Re-read the old command line to extract args
+					var oldCmdLine = ReadAnsiString(CommandLinePtr);
+					// Parse to extract args (skip the first quoted part which is the exe path)
+					var args = new List<string>();
+					var inQuote = false;
+					var current = new System.Text.StringBuilder();
+					var skipFirst = true;
+					
+					foreach (var ch in oldCmdLine)
+					{
+						if (ch == '"')
+						{
+							inQuote = !inQuote;
+							if (!inQuote && skipFirst)
+							{
+								skipFirst = false;
+								current.Clear();
+								continue;
+							}
+						}
+						else if (ch == ' ' && !inQuote)
+						{
+							if (current.Length > 0 && !skipFirst)
+							{
+								args.Add(current.ToString());
+								current.Clear();
+							}
+						}
+						else if (!skipFirst)
+						{
+							current.Append(ch);
+						}
+					}
+					
+					if (current.Length > 0 && !skipFirst)
+					{
+						args.Add(current.ToString());
+					}
+					
+					// Rebuild command line with virtualized path
+					var newCmdLine = args.Count > 0 
+						? $"\"{virtualizedPath}\" {string.Join(" ", args)}"
+						: $"\"{virtualizedPath}\"";
+					CommandLinePtr = WriteAnsiString(newCmdLine + '\0');
+				}
+			}
+		}
+	}
 
 	// SDL3 backends for audio and input
 	public Sdl3AudioBackend? AudioBackend { get; set; }
@@ -111,14 +200,26 @@ public class ProcessEnvironment
 	{
 		Debug.Assert(exePath != null, nameof(exePath) + " != null");
 		
-		_executablePath = exePath;
+		// If VFS is initialized, virtualize the executable path to Windows-style
+		var effectivePath = exePath;
+		if (_vfs != null)
+		{
+			effectivePath = _vfs.ToWindowsPath(exePath);
+			if (effectivePath != exePath)
+			{
+				_logger.LogInformation("[ProcessEnv] Virtualizing executable path: {Original} -> {Virtualized}", 
+					exePath, effectivePath);
+			}
+		}
+		
+		_executablePath = effectivePath;
 		// Build command line: quoted exe path + space + args (if any)
 		var cmdLine = args.Length > 0 
-			? $"\"{exePath}\" {string.Join(" ", args)}"
-			: $"\"{exePath}\"";
+			? $"\"{effectivePath}\" {string.Join(" ", args)}"
+			: $"\"{effectivePath}\"";
 		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
-		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
-		ModuleFileNameLength = (uint)exePath.Length;
+		ModuleFileNamePtr = WriteAnsiString(effectivePath + '\0');
+		ModuleFileNameLength = (uint)effectivePath.Length;
 
 		// Initialize with some default environment variables
 		InitializeDefaultEnvironmentVariables();

@@ -3,6 +3,7 @@ using System.Text;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using Win32Emu.VirtualFileSystem;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -1527,28 +1528,63 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
-			var mode = FileMode.OpenOrCreate;
-			switch (dwCreationDisposition)
+			// If VFS is available, use it for file operations
+			if (_env.VirtualFileSystem != null)
 			{
-				case 1: mode = FileMode.CreateNew; break; // CREATE_NEW
-				case 2: mode = FileMode.Create; break; // CREATE_ALWAYS
-				case 3: mode = FileMode.Open; break; // OPEN_EXISTING
-				case 4: mode = FileMode.OpenOrCreate; break; // OPEN_ALWAYS
-				case 5: mode = FileMode.Truncate; break; // TRUNCATE_EXISTING
+				var mode = dwCreationDisposition switch
+				{
+					1 => VfsFileMode.CreateNew,
+					2 => VfsFileMode.Create,
+					3 => VfsFileMode.Open,
+					4 => VfsFileMode.OpenOrCreate,
+					5 => VfsFileMode.Truncate,
+					_ => VfsFileMode.OpenOrCreate
+				};
+
+				var access = VfsFileAccess.ReadWrite;
+				if ((dwDesiredAccess & 0x80000000) != 0 && (dwDesiredAccess & 0x40000000) == 0)
+				{
+					access = VfsFileAccess.Read; // GENERIC_READ
+				}
+				else if ((dwDesiredAccess & 0x40000000) != 0 && (dwDesiredAccess & 0x80000000) == 0)
+				{
+					access = VfsFileAccess.Write; // GENERIC_WRITE
+				}
+
+				var handle = _env.VirtualFileSystem.OpenFile(path, mode, access);
+				if (handle != null)
+				{
+					return _env.RegisterHandle(handle);
+				}
+
+				_logger.LogInformation("[Kernel32] CreateFileA (VFS) failed: {Path}", path);
+				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
-			var access = FileAccess.ReadWrite;
-			if ((dwDesiredAccess & 0x40000000) != 0 && (dwDesiredAccess & 0x80000000) == 0)
+			// Fallback to direct filesystem access if VFS not available
+			var fileMode = dwCreationDisposition switch
 			{
-				access = FileAccess.Read; // GENERIC_READ
-			}
+				1 => FileMode.CreateNew,
+				2 => FileMode.Create,
+				3 => FileMode.Open,
+				4 => FileMode.OpenOrCreate,
+				5 => FileMode.Truncate,
+				_ => FileMode.OpenOrCreate
+			};
 
+			var fileAccess = FileAccess.ReadWrite;
 			if ((dwDesiredAccess & 0x80000000) != 0 && (dwDesiredAccess & 0x40000000) == 0)
 			{
-				access = FileAccess.Write; // GENERIC_WRITE
+				fileAccess = FileAccess.Read; // GENERIC_READ
 			}
 
-			var fs = new FileStream(path, mode, access, FileShare.ReadWrite);
+			if ((dwDesiredAccess & 0x40000000) != 0 && (dwDesiredAccess & 0x80000000) == 0)
+			{
+				fileAccess = FileAccess.Write; // GENERIC_WRITE
+			}
+
+			var fs = new FileStream(path, fileMode, fileAccess, FileShare.ReadWrite);
 			return _env.RegisterHandle(fs);
 		}
 		catch (Exception ex)
@@ -1563,34 +1599,64 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint ReadFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToRead, uint lpNumberOfBytesRead,
 		uint lpOverlapped)
 	{
-		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
-		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-			return NativeTypes.Win32Bool.FALSE;
-		}
+		var handle = (uint)hFile;
 
-		try
+		// Try VFS handle first
+		if (_env.TryGetHandle<IVirtualFileHandle>(handle, out var vfsHandle) && vfsHandle is not null)
 		{
-			var buf = new byte[nNumberOfBytesToRead];
-			var read = fs.Read(buf, 0, buf.Length);
-			if (lpBuffer != 0 && read > 0)
+			try
 			{
-				_env.MemWriteBytes(lpBuffer, buf.AsSpan(0, read));
-			}
+				var buf = new byte[nNumberOfBytesToRead];
+				var read = vfsHandle.Read(buf, 0, buf.Length);
+				if (lpBuffer != 0 && read > 0)
+				{
+					_env.MemWriteBytes(lpBuffer, buf.AsSpan(0, read));
+				}
 
-			if (lpNumberOfBytesRead != 0)
+				if (lpNumberOfBytesRead != 0)
+				{
+					_env.MemWrite32(lpNumberOfBytesRead, (uint)read);
+				}
+
+				return 1;
+			}
+			catch (Exception ex)
 			{
-				_env.MemWrite32(lpNumberOfBytesRead, (uint)read);
+				_logger.LogInformation("[Kernel32] ReadFile (VFS) failed: {ExMessage}", ex.Message);
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return NativeTypes.Win32Bool.FALSE;
 			}
+		}
 
-			return 1;
-		}
-		catch (Exception ex)
+		// Fallback to FileStream for backwards compatibility
+		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
 		{
-			_logger.LogInformation("[Kernel32] ReadFile failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
-			return NativeTypes.Win32Bool.FALSE;
+			try
+			{
+				var buf = new byte[nNumberOfBytesToRead];
+				var read = fs.Read(buf, 0, buf.Length);
+				if (lpBuffer != 0 && read > 0)
+				{
+					_env.MemWriteBytes(lpBuffer, buf.AsSpan(0, read));
+				}
+
+				if (lpNumberOfBytesRead != 0)
+				{
+					_env.MemWrite32(lpNumberOfBytesRead, (uint)read);
+				}
+
+				return 1;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogInformation("[Kernel32] ReadFile failed: {ExMessage}", ex.Message);
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return NativeTypes.Win32Bool.FALSE;
+			}
 		}
+
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return NativeTypes.Win32Bool.FALSE;
 	}
 
 	/// <summary>
@@ -1688,35 +1754,68 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Handle regular file handles
-		if (!_env.TryGetHandle<FileStream>(handle, out var fs) || fs is null)
+		// Try VFS handle first
+		if (_env.TryGetHandle<IVirtualFileHandle>(handle, out var vfsHandle) && vfsHandle is not null)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-			return NativeTypes.Win32Bool.FALSE;
-		}
-
-		try
-		{
-			var buf = _env.MemReadBytes(lpBuffer, (int)nNumberOfBytesToWrite);
-			fs.Write(buf, 0, buf.Length);
-			if (lpNumberOfBytesWritten != 0)
+			try
 			{
-				_env.MemWrite32(lpNumberOfBytesWritten, (uint)buf.Length);
-			}
+				var buf = _env.MemReadBytes(lpBuffer, (int)nNumberOfBytesToWrite);
+				vfsHandle.Write(buf, 0, buf.Length);
+				if (lpNumberOfBytesWritten != 0)
+				{
+					_env.MemWrite32(lpNumberOfBytesWritten, (uint)buf.Length);
+				}
 
-			return 1;
+				return 1;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogInformation("[Kernel32] WriteFile (VFS) failed: {ExMessage}", ex.Message);
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return NativeTypes.Win32Bool.FALSE;
+			}
 		}
-		catch (Exception ex)
+
+		// Fallback to FileStream for backwards compatibility
+		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
 		{
-			_logger.LogInformation("[Kernel32] WriteFile failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
-			return NativeTypes.Win32Bool.FALSE;
+			try
+			{
+				var buf = _env.MemReadBytes(lpBuffer, (int)nNumberOfBytesToWrite);
+				fs.Write(buf, 0, buf.Length);
+				if (lpNumberOfBytesWritten != 0)
+				{
+					_env.MemWrite32(lpNumberOfBytesWritten, (uint)buf.Length);
+				}
+
+				return 1;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogInformation("[Kernel32] WriteFile failed: {ExMessage}", ex.Message);
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return NativeTypes.Win32Bool.FALSE;
+			}
 		}
+
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(1)]
 	private unsafe uint CloseHandle(void* hObject)
 	{
 		var h = (uint)hObject;
+
+		// Try VFS handle first
+		if (_env.TryGetHandle<IVirtualFileHandle>(h, out var vfsHandle) && vfsHandle is not null)
+		{
+			vfsHandle.Dispose();
+			_env.CloseHandle(h);
+			return 1;
+		}
+
+		// Fallback to FileStream for backwards compatibility
 		if (_env.TryGetHandle<FileStream>(h, out var fs) && fs is not null)
 		{
 			fs.Dispose();
@@ -1744,6 +1843,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 0x0002; // FILE_TYPE_CHAR (character device like console)
 		}
 
+		// Check VFS handle
+		if (_env.TryGetHandle<IVirtualFileHandle>(handle, out var vfsHandle) && vfsHandle is not null)
+		{
+			return 0x0001; // FILE_TYPE_DISK
+		}
+
+		// Check FileStream (backwards compatibility)
 		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
 		{
 			return 0x0001; // FILE_TYPE_DISK
@@ -1755,19 +1861,34 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(39)]
 	private unsafe uint SetFilePointer(void* hFile, uint lDistanceToMove, uint lpDistanceToMoveHigh, uint dwMoveMethod)
 	{
-		if (!_env.TryGetHandle<FileStream>((uint)hFile, out var fs) || fs is null)
+		var handle = (uint)hFile;
+
+		// Try VFS handle first
+		if (_env.TryGetHandle<IVirtualFileHandle>(handle, out var vfsHandle) && vfsHandle is not null)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-			return 0xFFFFFFFF;
+			var origin = dwMoveMethod switch
+			{
+				0 => SeekOrigin.Begin, 1 => SeekOrigin.Current, 2 => SeekOrigin.End, _ => SeekOrigin.Begin
+			};
+			long dist = (int)lDistanceToMove; // ignore high for now
+			var pos = vfsHandle.Seek(dist, origin);
+			return (uint)pos;
 		}
 
-		var origin = dwMoveMethod switch
+		// Fallback to FileStream
+		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
 		{
-			0 => SeekOrigin.Begin, 1 => SeekOrigin.Current, 2 => SeekOrigin.End, _ => SeekOrigin.Begin
-		};
-		long dist = (int)lDistanceToMove; // ignore high for now
-		var pos = fs.Seek(dist, origin);
-		return (uint)pos;
+			var origin = dwMoveMethod switch
+			{
+				0 => SeekOrigin.Begin, 1 => SeekOrigin.Current, 2 => SeekOrigin.End, _ => SeekOrigin.Begin
+			};
+			long dist = (int)lDistanceToMove; // ignore high for now
+			var pos = fs.Seek(dist, origin);
+			return (uint)pos;
+		}
+
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return 0xFFFFFFFF;
 	}
 
 	[DllModuleExport(4)]
@@ -1782,6 +1903,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 1; // Success
 		}
 
+		// Try VFS handle first
+		if (_env.TryGetHandle<IVirtualFileHandle>(handle, out var vfsHandle) && vfsHandle is not null)
+		{
+			vfsHandle.Flush();
+			return 1;
+		}
+
+		// Fallback to FileStream
 		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
 		{
 			fs.Flush(true);
@@ -1795,7 +1924,17 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(38)]
 	private unsafe uint SetEndOfFile(void* hFile)
 	{
-		if (_env.TryGetHandle<FileStream>((uint)hFile, out var fs) && fs is not null)
+		var handle = (uint)hFile;
+
+		// Try VFS handle first
+		if (_env.TryGetHandle<IVirtualFileHandle>(handle, out var vfsHandle) && vfsHandle is not null)
+		{
+			vfsHandle.SetLength(vfsHandle.Position);
+			return 1;
+		}
+
+		// Fallback to FileStream
+		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
 		{
 			fs.SetLength(fs.Position);
 			return 1;
@@ -1817,6 +1956,22 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return NativeTypes.Win32Bool.FALSE;
 			}
 
+			// If VFS is available, use it
+			if (_env.VirtualFileSystem != null)
+			{
+				var success = _env.VirtualFileSystem.DeleteFile(path);
+				if (success)
+				{
+					_logger.LogInformation("[Kernel32] DeleteFileA (VFS): Deleted '{Path}'", path);
+					return NativeTypes.Win32Bool.TRUE;
+				}
+
+				_logger.LogInformation("[Kernel32] DeleteFileA (VFS) failed: '{Path}'", path);
+				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+
+			// Fallback to direct filesystem
 			File.Delete(path);
 			_logger.LogInformation("[Kernel32] DeleteFileA: Deleted '{Path}'", path);
 			return NativeTypes.Win32Bool.TRUE;
@@ -1843,6 +1998,24 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return NativeTypes.Win32Bool.FALSE;
 			}
 
+			// If VFS is available, use it
+			if (_env.VirtualFileSystem != null)
+			{
+				var success = _env.VirtualFileSystem.MoveFile(existingPath, newPath);
+				if (success)
+				{
+					_logger.LogInformation("[Kernel32] MoveFileA (VFS): Moved '{ExistingPath}' to '{NewPath}'", 
+						existingPath, newPath);
+					return NativeTypes.Win32Bool.TRUE;
+				}
+
+				_logger.LogInformation("[Kernel32] MoveFileA (VFS) failed: '{ExistingPath}' to '{NewPath}'", 
+					existingPath, newPath);
+				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+
+			// Fallback to direct filesystem
 			File.Move(existingPath, newPath);
 			_logger.LogInformation("[Kernel32] MoveFileA: Moved '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
 			return NativeTypes.Win32Bool.TRUE;
@@ -1904,7 +2077,18 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				pattern = "*";
 			}
 
-			var files = Directory.GetFiles(dir, pattern);
+			string[] files;
+
+			// If VFS is available, use it
+			if (_env.VirtualFileSystem != null)
+			{
+				files = _env.VirtualFileSystem.GetFiles(dir, pattern);
+			}
+			else
+			{
+				// Fallback to direct filesystem
+				files = Directory.GetFiles(dir, pattern);
+			}
 
 			if (files.Length == 0)
 			{
