@@ -85,7 +85,7 @@ public sealed class Emulator : IDisposable
         return _env.PostMessage(hwnd, message, wParam, lParam);
     }
 
-    public void LoadExecutable(string path, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234)
+    public void LoadExecutable(string path, string[] programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -109,7 +109,7 @@ public sealed class Emulator : IDisposable
 
         _env = new ProcessEnvironment(_vm, 0x01000000, _host, _logger);
         // Convert path to Windows-style backslashes for proper parsing by C runtime
-        _env.InitializeStrings(path, []);
+        _env.InitializeStrings(path, programArgs ?? []);
         
         // Initialize console based on PE subsystem type
         _env.InitializeConsoleForSubsystem(_image.Subsystem);

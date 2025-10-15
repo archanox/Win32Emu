@@ -371,9 +371,26 @@ public partial class GameLibraryViewModel : ViewModelBase
             var logger = loggerFactory.CreateLogger<Emulator>();
             logger.LogInformation("Launching game: {GameTitle} {Path}", game.Title, game.ExecutablePath);
             
+            // Retrieve game settings to get program arguments
+            var gameSettings = _configService.GetGameSettings(game.ExecutablePath);
+            string[] programArgs = null;
+            if (gameSettings?.ProgramArguments != null && !string.IsNullOrWhiteSpace(gameSettings.ProgramArguments))
+            {
+                // Split the program arguments string into an array
+                // Use simple space splitting for now - could be enhanced for quoted args
+                programArgs = gameSettings.ProgramArguments.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                
+                // Log each argument separately
+                logger.LogInformation("Program arguments count: {Count}", programArgs.Length);
+                for (int i = 0; i < programArgs.Length; i++)
+                {
+                    logger.LogInformation("Program argument [{Index}]: {Argument}", i, programArgs[i]);
+                }
+            }
+            
             // Launch the game with the view model as the host
             var service = new EmulatorService(_configuration, viewModel, logger);
-            await service.LaunchGame(game);
+            await service.LaunchGame(game, programArgs);
         }
         catch (Exception ex)
         {

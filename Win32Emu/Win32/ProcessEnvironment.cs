@@ -112,8 +112,11 @@ public class ProcessEnvironment
 		Debug.Assert(exePath != null, nameof(exePath) + " != null");
 		
 		_executablePath = exePath;
-		var cmdLine = string.Join(" ", new[] { exePath }.Concat(args.Skip(1)));
-		CommandLinePtr = WriteAnsiString($"\"{cmdLine}\"\0");
+		// Build command line: quoted exe path + space + args (if any)
+		var cmdLine = args.Length > 0 
+			? $"\"{exePath}\" {string.Join(" ", args)}"
+			: $"\"{exePath}\"";
+		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
 		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
 		ModuleFileNameLength = (uint)exePath.Length;
 
