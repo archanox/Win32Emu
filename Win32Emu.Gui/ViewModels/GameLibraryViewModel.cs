@@ -379,6 +379,13 @@ public partial class GameLibraryViewModel : ViewModelBase
                 // Split the program arguments string into an array
                 // Use simple space splitting for now - could be enhanced for quoted args
                 programArgs = gameSettings.ProgramArguments.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                
+                // Log each argument separately
+                logger.LogInformation("Program arguments count: {Count}", programArgs.Length);
+                for (int i = 0; i < programArgs.Length; i++)
+                {
+                    logger.LogInformation("Program argument [{Index}]: {Argument}", i, programArgs[i]);
+                }
             }
             
             // Launch the game with the view model as the host
