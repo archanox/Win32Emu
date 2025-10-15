@@ -36,7 +36,7 @@ public class TestEnvironment : IDisposable
         Dispatcher.RegisterModule(Kernel32);
 
         // Initialize process environment with test data
-        ProcessEnv.InitializeStrings("test.exe", ["test.exe"]);
+        ProcessEnv.InitializeStrings("test.exe", []);
     }
 
     /// <summary>
