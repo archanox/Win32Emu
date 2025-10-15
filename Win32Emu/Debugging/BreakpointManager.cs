@@ -162,8 +162,8 @@ public class BreakpointManager
             if (!wp.Enabled)
                 continue;
                 
-            // Check if address is within watchpoint range
-            if (address >= wp.Address && address < wp.Address + wp.Length)
+            // Check if address is within watchpoint range (avoid overflow)
+            if (address >= wp.Address && wp.Length > 0 && address - wp.Address < wp.Length)
             {
                 // Check if access type matches
                 if (wp.Type == WatchpointType.Access || wp.Type == accessType)
