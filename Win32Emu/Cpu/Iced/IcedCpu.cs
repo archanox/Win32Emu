@@ -399,6 +399,30 @@ public class IcedCpu : ICpu
 					}
 
 					break;
+				case Mnemonic.Loop:
+					// LOOP - Decrement ECX and jump if ECX != 0
+					_ecx--;
+					if (_ecx != 0)
+					{
+						_eip = (uint)insn.NearBranchTarget;
+					}
+					break;
+				case Mnemonic.Loope:
+					// LOOPE/LOOPZ - Decrement ECX and jump if ECX != 0 and ZF = 1
+					_ecx--;
+					if (_ecx != 0 && GetFlag(Zf))
+					{
+						_eip = (uint)insn.NearBranchTarget;
+					}
+					break;
+				case Mnemonic.Loopne:
+					// LOOPNE/LOOPNZ - Decrement ECX and jump if ECX != 0 and ZF = 0
+					_ecx--;
+					if (_ecx != 0 && !GetFlag(Zf))
+					{
+						_eip = (uint)insn.NearBranchTarget;
+					}
+					break;
 				case Mnemonic.In:
 					//TODO: this is getting spammed all the time? regression?
 					break;
