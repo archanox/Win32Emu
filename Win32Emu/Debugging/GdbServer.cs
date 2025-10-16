@@ -826,16 +826,26 @@ public class GdbServer : IDisposable
             if (!string.IsNullOrEmpty(hexName))
             {
                 // GDB is asking for a specific symbol - decode and look it up
-                var symbolName = DecodeHexString(hexName);
+                string symbolName;
+                try
+                {
+                    symbolName = DecodeHexString(hexName);
+                }
+                catch (Exception ex) when (ex is FormatException || ex is ArgumentException)
+                {
+                    _logger.LogError(ex, "GDB: Malformed symbol lookup request: invalid hex string '{HexName}'", hexName);
+                    // Optionally, you could send an error response or just skip to the next step
+                    symbolName = null;
+                }
                 
-                if (_symbols.TryGetValue(symbolName, out var address))
+                if (!string.IsNullOrEmpty(symbolName) && _symbols.TryGetValue(symbolName, out var address))
                 {
                     _logger.LogDebug("GDB: Symbol lookup for '{SymbolName}' -> 0x{Address:X8}", symbolName, address);
                     var hexAddr = $"{address:x}";
                     await SendPacketAsync($"qSymbol:{hexAddr}:{hexName}");
                     return;
                 }
-                else
+                else if (!string.IsNullOrEmpty(symbolName))
                 {
                     _logger.LogDebug("GDB: Symbol lookup for '{SymbolName}' not found", symbolName);
                 }
