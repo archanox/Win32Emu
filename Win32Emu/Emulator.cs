@@ -487,6 +487,13 @@ public sealed class Emulator : IDisposable
         var breakpoints = new BreakpointManager();
         var gdbServer = new GdbServer(_cpu!, _vm!, breakpoints, _logger, port, _env!.VirtualFileSystem, _env);
         
+        // Add symbols from the loaded image for better debugging experience
+        if (_image != null)
+        {
+            var moduleName = Path.GetFileNameWithoutExtension(_image.FilePath).ToUpperInvariant();
+            gdbServer.AddSymbolsFromLoadedImage(_image, moduleName);
+        }
+        
         try
         {
             await gdbServer.StartAsync();
