@@ -158,9 +158,12 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
                     ushort pixel = (ushort)(rgb565Data[srcOffset] | (rgb565Data[srcOffset + 1] << 8));
                     
                     // RGB565 format: RRRRRGGGGGGBBBBB
-                    byte r = (byte)(((pixel >> 11) & 0x1F) << 3);
-                    byte g = (byte)(((pixel >> 5) & 0x3F) << 2);
-                    byte b = (byte)((pixel & 0x1F) << 3);
+                    byte r5 = (byte)((pixel >> 11) & 0x1F);
+                    byte g6 = (byte)((pixel >> 5) & 0x3F);
+                    byte b5 = (byte)(pixel & 0x1F);
+                    byte r = (byte)((r5 << 3) | (r5 >> 2));
+                    byte g = (byte)((g6 << 2) | (g6 >> 4));
+                    byte b = (byte)((b5 << 3) | (b5 >> 2));
                     
                     rgbaData[dstOffset + 0] = r;
                     rgbaData[dstOffset + 1] = g;
