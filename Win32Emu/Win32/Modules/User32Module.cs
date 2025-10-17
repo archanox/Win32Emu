@@ -1011,16 +1011,26 @@ namespace Win32Emu.Win32.Modules
 			// wParam = hWndParent (or 0 if no focus control)
 			// lParam = dwInitParam
 			const uint WM_INITDIALOG = 0x0110;
+			var dialogProcTimedOut = false;
 			
 			if (lpDialogFunc != 0)
 			{
 				_logger.LogInformation("[User32] DialogBoxParamA: Calling dialog procedure with WM_INITDIALOG");
-				var initResult = CallDialogProcedure(_cpu, _memory, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam);
+				var (initResult, timedOut) = CallDialogProcedureWithTimeout(_cpu, _memory, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam);
 				_logger.LogInformation("[User32] DialogBoxParamA: WM_INITDIALOG returned {InitResult}", initResult);
+				dialogProcTimedOut = timedOut;
 			}
 			else
 			{
 				_logger.LogWarning("[User32] DialogBoxParamA: No dialog procedure specified");
+			}
+
+			// If the dialog procedure timed out during initialization, end the dialog immediately
+			// This prevents the modal loop from hanging indefinitely
+			if (dialogProcTimedOut)
+			{
+				_logger.LogWarning("[User32] DialogBoxParamA: Dialog procedure timed out, ending dialog with result 0");
+				_env.SetDialogResult(hDlg, 0);
 			}
 
 			// Run modal message loop until EndDialog is called
@@ -1028,6 +1038,8 @@ namespace Win32Emu.Win32.Modules
 			
 			const int MAX_ITERATIONS = 10000; // Safety limit to prevent infinite loops
 			var iterations = 0;
+			var consecutiveEmptyIterations = 0;
+			const int MAX_EMPTY_ITERATIONS = 100; // Exit if no messages for 100 iterations
 			
 			while (!_env.IsDialogEnded(hDlg) && iterations < MAX_ITERATIONS)
 			{
@@ -1045,6 +1057,7 @@ namespace Win32Emu.Win32.Modules
 				
 				if (queuedMsg.HasValue)
 				{
+					consecutiveEmptyIterations = 0;
 					var msg = queuedMsg.Value;
 					_logger.LogDebug("[User32] DialogBoxParamA: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", msg.Message, msg.Hwnd);
 					
@@ -1053,14 +1066,32 @@ namespace Win32Emu.Win32.Modules
 					{
 						if (lpDialogFunc != 0)
 						{
-							var result = CallDialogProcedure(_cpu, _memory, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam);
+							var (result, timedOut) = CallDialogProcedureWithTimeout(_cpu, _memory, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam);
 							_logger.LogDebug("[User32] DialogBoxParamA: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
+							
+							// If dialog procedure times out again, force end the dialog
+							if (timedOut)
+							{
+								_logger.LogWarning("[User32] DialogBoxParamA: Dialog procedure timed out during message processing, forcing dialog end");
+								_env.SetDialogResult(hDlg, 0);
+							}
 						}
 					}
 					else
 					{
 						// Message for a different window - requeue it
 						_env.PostMessage(msg.Hwnd, msg.Message, msg.WParam, msg.LParam);
+					}
+				}
+				else
+				{
+					consecutiveEmptyIterations++;
+					
+					// If we've had too many empty iterations and the dialog proc timed out, force end
+					if (dialogProcTimedOut && consecutiveEmptyIterations >= MAX_EMPTY_ITERATIONS)
+					{
+						_logger.LogWarning("[User32] DialogBoxParamA: No messages and dialog procedure timed out, forcing dialog end");
+						_env.SetDialogResult(hDlg, 0);
 					}
 				}
 			}
@@ -1085,8 +1116,9 @@ namespace Win32Emu.Win32.Modules
 		/// Call a dialog procedure by setting up CPU state and executing the callback.
 		/// DialogProc signature: INT_PTR CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		/// Uses stdcall calling convention (callee cleans stack, parameters pushed right-to-left)
+		/// Returns a tuple of (returnValue, timedOut) where timedOut indicates if the procedure exceeded max steps.
 		/// </summary>
-		private uint CallDialogProcedure(ICpu cpu, VirtualMemory memory, uint dialogProcAddress, uint hwndDlg, uint message, uint wParam, uint lParam)
+		private (uint returnValue, bool timedOut) CallDialogProcedureWithTimeout(ICpu cpu, VirtualMemory memory, uint dialogProcAddress, uint hwndDlg, uint message, uint wParam, uint lParam)
 		{
 			_logger.LogInformation("[User32] CallDialogProcedure: Calling 0x{DialogProcAddress:X8} with HWND=0x{HwndDlg:X8} MSG=0x{Message:X4}", dialogProcAddress, hwndDlg, message);
 
@@ -1123,6 +1155,7 @@ namespace Win32Emu.Win32.Modules
 			// Execute until we hit the return address
 			const int MAX_STEPS = 100000; // Safety limit
 			var steps = 0;
+			var timedOut = false;
 
 			try
 			{
@@ -1150,6 +1183,7 @@ namespace Win32Emu.Win32.Modules
 			if (steps >= MAX_STEPS)
 			{
 				_logger.LogWarning("[User32] CallDialogProcedure: Exceeded max steps ({MaxSteps}), aborting", MAX_STEPS);
+				timedOut = true;
 			}
 
 			// Get return value from EAX
@@ -1162,7 +1196,7 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[User32] CallDialogProcedure: Completed with return value 0x{ReturnValue:X8}", returnValue);
 
-			return returnValue;
+			return (returnValue, timedOut);
 		}
 
 		[DllModuleExport(1)]
