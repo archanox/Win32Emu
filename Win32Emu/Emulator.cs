@@ -108,6 +108,8 @@ public sealed class Emulator : IDisposable
         LogDebug($"[Loader] Subsystem: {_image.Subsystem} (2=GUI, 3=CUI)");
 
         _env = new ProcessEnvironment(_vm, 0x01000000, _host, _logger);
+        // Register the main executable so GetModuleFileNameA can find it
+        _env.RegisterMainExecutable(_image, path);
         // Convert path to Windows-style backslashes for proper parsing by C runtime
         _env.InitializeStrings(path, programArgs ?? []);
         _env.InitializeTebAndPeb(_image.BaseAddress);
@@ -136,6 +138,7 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new WinMmModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Glide2XModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DPlayXModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Ole32Module(_env, _image.BaseAddress, loader, _logger));
     }
 
     public void Run()

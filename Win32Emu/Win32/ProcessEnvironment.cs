@@ -548,6 +548,18 @@ public class ProcessEnvironment
 		}
 	}
 
+	/// <summary>
+	/// Registers the main executable's LoadedImage so it can be found by GetModuleFileNameA.
+	/// This should be called after loading the main executable.
+	/// </summary>
+	public void RegisterMainExecutable(LoadedImage image, string imagePath)
+	{
+		var normalizedName = Path.GetFileName(imagePath).ToUpperInvariant();
+		_loadedModules[normalizedName] = image.BaseAddress;
+		_loadedImages[normalizedName] = image;
+		_logger.LogInformation("[ProcessEnv] Registered main executable: {ImagePath} at 0x{BaseAddress:X8}", imagePath, image.BaseAddress);
+	}
+
 	public bool IsModuleLoaded(string moduleName)
 	{
 		var normalizedName = Path.GetFileName(moduleName).ToUpperInvariant();
