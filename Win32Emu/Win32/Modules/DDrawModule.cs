@@ -939,13 +939,9 @@ namespace Win32Emu.Win32.Modules
 			DirectDrawSurface? srcSurface = null;
 			if (lpDDSrcSurface != 0)
 			{
-				foreach (var s in _surfaces.Values)
+				if (_surfaces.TryGetValue(lpDDSrcSurface, out var s))
 				{
-					if (!s.IsPrimary)
-					{
-						srcSurface = s;
-						break;
-					}
+					srcSurface = s;
 				}
 			}
 
