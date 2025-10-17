@@ -1609,9 +1609,19 @@ namespace Win32Emu.Win32.Modules
 							surface.Height, 
 							surface.Pitch);
 					}
-					else if (ddrawObj.BitsPerPixel == 24 || ddrawObj.BitsPerPixel == 32)
+					else if (ddrawObj.BitsPerPixel == 24)
 					{
-						// 24-bit or 32-bit RGB/RGBA - assume RGBA format
+						// Convert 24-bit RGB/BGR to RGBA
+						_logger.LogInformation("[DDraw] Converting 24-bit surface to RGBA");
+						displayData = ddrawObj.RenderingBackend.Convert24BitToRGBA(
+							surface.Bits,
+							surface.Width,
+							surface.Height,
+							surface.Pitch);
+					}
+					else if (ddrawObj.BitsPerPixel == 32)
+					{
+						// 32-bit RGBA - pass through
 						displayData = surface.Bits;
 					}
 					else
