@@ -356,8 +356,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_ => false // Other features not present
 		};
 
-		_logger.LogDebug("[Kernel32] IsProcessorFeaturePresent({ProcessorFeature}) -> {Result}",
-			processorFeature, isPresent);
+		_logger.LogDebug("[Kernel32] IsProcessorFeaturePresent({ProcessorFeature}) -> {Result}", processorFeature, isPresent);
 
 		return isPresent ? 1u : 0u; // TRUE or FALSE
 	}
@@ -1219,7 +1218,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		return returnLength;
 	}
-	
+
 	/// <summary>
 	/// Fixes path escaping issues that can cause parsing problems
 	/// </summary>
@@ -1227,15 +1226,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		// Replace any problematic sequences that might cause parsing issues
 		// Specifically, ensure backslashes before quotes are properly escaped
-		
+
 		// First, normalize all backslashes to single backslashes
 		var result = new StringBuilder();
 		bool inQuote = false;
-		
+
 		for (int i = 0; i < path.Length; i++)
 		{
 			char c = path[i];
-			
+
 			if (c == '\\')
 			{
 				// Count consecutive backslashes
@@ -1245,7 +1244,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 					backslashCount++;
 					i++;
 				}
-				
+
 				// Check if next char is a quote
 				if (i + 1 < path.Length && path[i + 1] == '"')
 				{
@@ -1269,14 +1268,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				// Toggle quote state and add the quote
 				inQuote = !inQuote;
-				
+
 				// Ensure quotes are properly escaped
 				if (result.Length > 0 && result[result.Length - 1] != '\\')
 				{
 					// Add a backslash before the quote if there isn't one already
 					result.Append('\\');
 				}
-				
+
 				result.Append(c);
 			}
 			else
@@ -1285,7 +1284,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				result.Append(c);
 			}
 		}
-		
+
 		return result.ToString();
 	}
 
@@ -1300,7 +1299,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 			// Fix command line escaping issues that can cause infinite loops in function 412440
 			var fixedCmdLine = FixCommandLineEscaping(cmdLine);
-			
+
 			// Convert to Windows-style path and update in memory
 			var windowsPath = ConvertToWindowsPath(fixedCmdLine);
 			if (windowsPath != cmdLine)
@@ -1576,7 +1575,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError("[Kernel32] HeapReAlloc failed: {ExMessage}", ex.Message);
+			_logger.LogError(ex, "[Kernel32] HeapReAlloc failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -1607,7 +1606,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// We can just use our simple allocator.
 		return _env.SimpleAlloc(uBytes == 0 ? 1u : uBytes);
 	}
-	
+
 	[DllModuleExport(45)]
 	private uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect) =>
 		_env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
@@ -1720,7 +1719,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation("[Kernel32] CreateFileA failed: {ExMessage}", ex.Message);
+			_logger.LogError(ex, "[Kernel32] CreateFileA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
@@ -1753,7 +1752,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 			catch (Exception ex)
 			{
-				_logger.LogInformation("[Kernel32] ReadFile (VFS) failed: {ExMessage}", ex.Message);
+				_logger.LogError(ex, "[Kernel32] ReadFile (VFS) failed: {ExMessage}", ex.Message);
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return NativeTypes.Win32Bool.FALSE;
 			}
@@ -1780,7 +1779,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 			catch (Exception ex)
 			{
-				_logger.LogInformation("[Kernel32] ReadFile failed: {ExMessage}", ex.Message);
+				_logger.LogError(ex, "[Kernel32] ReadFile failed: {ExMessage}", ex.Message);
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return NativeTypes.Win32Bool.FALSE;
 			}
@@ -1874,7 +1873,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 			catch (Exception ex)
 			{
-				_logger.LogInformation("[Kernel32] WriteFile to standard handle failed: {ExMessage}", ex.Message);
+				_logger.LogError(ex, "[Kernel32] WriteFile to standard handle failed: {ExMessage}", ex.Message);
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return NativeTypes.Win32Bool.FALSE;
 			}
@@ -1901,7 +1900,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 			catch (Exception ex)
 			{
-				_logger.LogInformation("[Kernel32] WriteFile (VFS) failed: {ExMessage}", ex.Message);
+				_logger.LogError(ex, "[Kernel32] WriteFile (VFS) failed: {ExMessage}", ex.Message);
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return NativeTypes.Win32Bool.FALSE;
 			}
@@ -1923,7 +1922,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 			catch (Exception ex)
 			{
-				_logger.LogInformation("[Kernel32] WriteFile failed: {ExMessage}", ex.Message);
+				_logger.LogError(ex, "[Kernel32] WriteFile failed: {ExMessage}", ex.Message);
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return NativeTypes.Win32Bool.FALSE;
 			}
@@ -2186,7 +2185,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		cFileNameBytes[copyLen] = 0; // explicit null terminator
 		_env.MemWriteBytes(lpFindFileData + 44, cFileNameBytes);
 	}
-	
+
 	[DllModuleExport(1)]
 	private uint FindFirstFileA(uint lpFileName, uint lpFindFileData)
 	{
@@ -2578,9 +2577,22 @@ public class Kernel32Module : IWin32ModuleUnsafe
 					multiByteBytes = Encoding.UTF8.GetBytes(wideString);
 					break;
 				default:
-					// Unsupported code page
-					_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-					return 0;
+				{
+					try
+					{
+						var encoding = Encoding.GetEncoding((int)actualCodePage);
+						multiByteBytes = encoding.GetBytes(wideString);
+						_logger.LogDebug("[Kernel32] Found bonus codepage {EncodingName} {WebName} ({CodePageInt})", encoding.EncodingName, encoding.WebName, (int)actualCodePage);
+						break;
+					}
+					catch (Exception ex)
+					{
+						// Unsupported code page
+						_logger.LogError(ex, "[Kernel32] Unsupported code page {CodePage} ({CodePageInt})", actualCodePage, (int)actualCodePage);
+						_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+						return 0;
+					}
+				}
 			}
 
 			// If cbMultiByte is 0, return required buffer size
@@ -2729,7 +2741,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation("[Kernel32] MultiByteToWideChar failed: {ExMessage}", ex.Message);
+			_logger.LogError(ex, "[Kernel32] MultiByteToWideChar failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -2802,7 +2814,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation("[Kernel32] LCMapStringA failed: {ExMessage}", ex.Message);
+			_logger.LogError(ex, "[Kernel32] LCMapStringA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -2897,7 +2909,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation("[Kernel32] LCMapStringW failed: {ExMessage}", ex.Message);
+			_logger.LogError(ex, "[Kernel32] LCMapStringW failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -2964,7 +2976,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation("[Kernel32] CompareStringA failed: {ExMessage}", ex.Message);
+			_logger.LogError(ex, "[Kernel32] CompareStringA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -3055,7 +3067,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation("[Kernel32] CompareStringW failed: {ExMessage}", ex.Message);
+			_logger.LogError(ex, "[Kernel32] CompareStringW failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -3082,8 +3094,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 			return NativeTypes.Win32Bool.TRUE;
 		}
-		catch
+		catch (Exception ex)
 		{
+			_logger.LogError(ex, "[Kernel32] QueryPerformanceCounter failed");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -3112,8 +3125,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_logger.LogInformation("[Kernel32] QueryPerformanceFrequency: {Frequency} Hz", frequency);
 			return NativeTypes.Win32Bool.TRUE;
 		}
-		catch
+		catch (Exception ex)
 		{
+			_logger.LogError(ex, "[Kernel32] QueryPerformanceFrequency failed");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -3158,8 +3172,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_logger.LogInformation("[Kernel32] GetTickCount64: {TickCount64} ms", tickCount64);
 			return 1; // Success (non-zero return)
 		}
-		catch
+		catch (Exception ex)
 		{
+			_logger.LogError(ex, "[Kernel32] GetTickCount64 failed");
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
@@ -3248,7 +3263,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private string ConvertToWindowsPath(string path)
 	{
 		// Special handling for command line strings
-		if (path.Contains(" "))
+		if (path.Contains(' '))
 		{
 			// This might be a command line with arguments
 			// Fix the issue with backslashes before quotes that causes function 412440 to loop infinitely
@@ -3282,7 +3297,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		return windowsPath;
 	}
-	
+
 	/// <summary>
 	/// Fixes command line escaping issues that can cause infinite loops in command line parsing
 	/// </summary>
@@ -3290,14 +3305,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		// The issue occurs when there are backslashes before quotes
 		// Windows expects backslashes before quotes to be properly escaped
-		
+
 		var result = new StringBuilder(cmdLine.Length);
 		bool inQuote = false;
-		
+
 		for (int i = 0; i < cmdLine.Length; i++)
 		{
 			char c = cmdLine[i];
-			
+
 			// Handle backslash sequences
 			if (c == '\\')
 			{
@@ -3307,7 +3322,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 					backslashCount++;
 					i++;
 				}
-				
+
 				// Check if next char is a quote
 				if (i + 1 < cmdLine.Length && cmdLine[i + 1] == '"')
 				{
@@ -3339,7 +3354,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				result.Append(c);
 			}
 		}
-		
+
 		return result.ToString();
 	}
 
@@ -3473,8 +3488,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var currentDir = _env.CurrentDirectory;
 		var requiredLength = (uint)currentDir.Length + 1; // +1 for null terminator
 
-		_logger.LogInformation("[Kernel32] GetCurrentDirectoryA({NBufferLength}, 0x{LpBuffer:X8}) -> \"{CurrentDir}\"",
-			nBufferLength, lpBuffer.Address, currentDir);
+		_logger.LogInformation("[Kernel32] GetCurrentDirectoryA({NBufferLength}, 0x{LpBuffer:X8}) -> \"{CurrentDir}\"", nBufferLength, lpBuffer.Address, currentDir);
 
 		if (nBufferLength == 0)
 		{
