@@ -53,6 +53,9 @@ public class Sdl3InputBackend(ILogger logger) : IDisposable
 	            return true;
             }
 
+            // Ensure app metadata is set BEFORE any SDL initialization (required for macOS)
+            Sdl3Initializer.EnsureAppMetadataSet();
+
             // Initialize SDL3 gamepad and joystick subsystems
             if (!SDL.Init(SDL.InitFlags.Gamepad | SDL.InitFlags.Joystick))
             {

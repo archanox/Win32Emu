@@ -34,6 +34,9 @@ public sealed class Sdl3AudioBackend(ILogger logger) : IDisposable
 	            return true;
             }
 
+            // Ensure app metadata is set BEFORE any SDL initialization (required for macOS)
+            Sdl3Initializer.EnsureAppMetadataSet();
+
             // Initialize SDL3 audio subsystem
             if (!SDL.Init(SDL.InitFlags.Audio))
             {

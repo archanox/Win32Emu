@@ -34,15 +34,15 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
             _width = width;
             _height = height;
 
+            // Ensure app metadata is set BEFORE any SDL initialization (required for macOS)
+            Sdl3Initializer.EnsureAppMetadataSet();
+
             // Initialize SDL3 video subsystem
             if (!SDL.Init(SDL.InitFlags.Video))
             {
                 logger.LogError("[SDL3] Failed to initialize video subsystem: {GetError}", SDL.GetError());
                 return false;
             }
-
-            // Set app metadata before creating GPU device
-            SDL.SetAppMetadata(title, "1.0", "com.win32emu.display");
 
             // Create GPU device with auto-selected driver (Metal/Vulkan/DirectX)
             // The second parameter 'true' enables debug mode for better error reporting
