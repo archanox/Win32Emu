@@ -1589,7 +1589,7 @@ namespace Win32Emu.Win32.Modules
 							var grayscalePalette = new uint[256];
 							for (int i = 0; i < 256; i++)
 							{
-								grayscalePalette[i] = (uint)((i << 16) | (i << 8) | i); // RGB all same value
+								grayscalePalette[i] = (0xFFu << 24) | ((uint)i << 16) | ((uint)i << 8) | (uint)i; // RGBA: opaque grayscale
 							}
 							displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
 								surface.Bits, 
