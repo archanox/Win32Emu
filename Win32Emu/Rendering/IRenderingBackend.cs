@@ -21,6 +21,11 @@ public interface IRenderingBackend : IDisposable
     byte[] Convert16BitToRGBA(byte[] rgb565Data, int width, int height, int pitch);
 
     /// <summary>
+    /// Convert 24-bit RGB/BGR surface to RGBA format
+    /// </summary>
+    byte[] Convert24BitToRGBA(byte[] rgb24Data, int width, int height, int pitch);
+
+    /// <summary>
     /// Update the display with new frame buffer data
     /// </summary>
     bool UpdateFrameBuffer(byte[] data, int pitch);
