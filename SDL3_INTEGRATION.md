@@ -5,8 +5,11 @@ This document describes the SDL3 integration approach for rendering DirectDraw a
 ## Overview
 
 SDL3 is used as the rendering backend for both DirectDraw and GDI operations. This provides:
-- Cross-platform rendering support (Metal/OpenGL/DirectX/Vulkan via SDL_gpu)
-- Hardware acceleration
+- **Cross-platform rendering support using SDL3 GPU API**:
+  - **macOS**: Metal backend (hardware accelerated)
+  - **Linux**: Vulkan backend (hardware accelerated)
+  - **Windows**: DirectX 12 backend (hardware accelerated)
+- Hardware acceleration through native graphics APIs
 - Unified rendering pipeline for different Win32 graphics APIs
 
 ## Architecture
@@ -15,10 +18,29 @@ SDL3 is used as the rendering backend for both DirectDraw and GDI operations. Th
 
 Located in `Win32Emu/Rendering/SDL3RenderingBackend.cs`, this class provides:
 
-- **SDL3 Initialization**: Creates SDL3 window, renderer, and textures
-- **Frame Buffer Management**: Updates textures with new frame data
+- **SDL3 GPU Initialization**: Creates GPU device with auto-selected driver (Metal/Vulkan/DirectX)
+- **Window Management**: Creates and manages window for GPU rendering
+- **Frame Buffer Management**: Uses GPU transfer buffers to upload frame data
+- **GPU Command Submission**: Uses command buffers for efficient rendering
 - **Event Processing**: Handles SDL events (resize, quit, etc.)
 - **Resource Management**: Proper cleanup via IDisposable
+
+#### GPU API Usage
+
+The rendering backend uses SDL3's modern GPU API instead of the traditional renderer API:
+
+1. **Device Creation**: `SDL.CreateGPUDevice()` with shader format flags for Metal/SPIRV/DXIL
+2. **Window Association**: `SDL.ClaimWindowForGPUDevice()` to claim window for GPU rendering
+3. **Frame Upload**:
+   - Create transfer buffer with `SDL.CreateGPUTransferBuffer()`
+   - Map buffer, copy frame data, unmap
+   - Use `SDL.UploadToGPUTexture()` to upload to GPU
+4. **Presentation**:
+   - Acquire swapchain texture with `SDL.AcquireGPUSwapchainTexture()`
+   - Blit from frame texture to swapchain with `SDL.BlitGPUTexture()`
+   - Submit command buffer with `SDL.SubmitGPUCommandBuffer()`
+
+This approach ensures Metal is properly initialized on macOS, fixing initialization issues that occurred with the traditional video subsystem.
 
 ### DirectDraw Integration (`DDrawModule`)
 

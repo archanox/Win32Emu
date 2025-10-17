@@ -6,6 +6,52 @@ namespace Win32Emu.Tests.Emulator;
 public class Sdl3BackendTests
 {
     [Fact]
+    public void SDL3RenderingBackend_Initialize_ShouldNotThrow()
+    {
+        // Arrange & Act & Assert - should not throw even if SDL3 is not available
+        using var renderingBackend = new Sdl3RenderingBackend(NullLogger.Instance);
+        
+        try
+        {
+            var result = renderingBackend.Initialize(640, 480, "Test Window");
+            // If initialization succeeds, verify state
+            if (result)
+            {
+                Assert.True(renderingBackend.IsInitialized);
+                Assert.Equal(640, renderingBackend.Width);
+                Assert.Equal(480, renderingBackend.Height);
+            }
+        }
+        catch (DllNotFoundException)
+        {
+            // SDL3 not available in CI - this is OK
+            Assert.False(renderingBackend.IsInitialized);
+        }
+    }
+
+    [Fact]
+    public void SDL3RenderingBackend_Dispose_ShouldNotThrow()
+    {
+        // Arrange
+        var renderingBackend = new Sdl3RenderingBackend(NullLogger.Instance);
+        
+        try
+        {
+            renderingBackend.Initialize(640, 480, "Test Window");
+        }
+        catch (DllNotFoundException)
+        {
+            // SDL3 not available - still test dispose
+        }
+
+        // Act
+        renderingBackend.Dispose();
+
+        // Assert - should not throw
+        Assert.False(renderingBackend.IsInitialized);
+    }
+
+    [Fact]
     public void SDL3AudioBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw even if SDL3 is not available
