@@ -1053,15 +1053,36 @@ namespace Win32Emu.Win32.Modules
 				uint fillColor = _env.MemRead32(lpDDBltFx + 16); // dwFillColor offset
 
 				// Perform color fill
+				// Determine bytes per pixel based on bit depth
+				int bytesPerPixel = destSurface.BitDepth / 8;
 				for (int y = destY; y < destY + destHeight && y < destSurface.Height; y++)
 				{
 					for (int x = destX; x < destX + destWidth && x < destSurface.Width; x++)
 					{
-						int offset = y * destSurface.Pitch + x * 2; // Assuming 16-bit
-						if (offset + 1 < destSurface.Bits.Length)
+						int offset = y * destSurface.Pitch + x * bytesPerPixel;
+						if (offset + bytesPerPixel - 1 < destSurface.Bits.Length)
 						{
-							destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
-							destSurface.Bits[offset + 1] = (byte)((fillColor >> 8) & 0xFF);
+							switch (bytesPerPixel)
+							{
+								case 1: // 8-bit
+									destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
+									break;
+								case 2: // 16-bit
+									destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
+									destSurface.Bits[offset + 1] = (byte)((fillColor >> 8) & 0xFF);
+									break;
+								case 3: // 24-bit
+									destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
+									destSurface.Bits[offset + 1] = (byte)((fillColor >> 8) & 0xFF);
+									destSurface.Bits[offset + 2] = (byte)((fillColor >> 16) & 0xFF);
+									break;
+								case 4: // 32-bit
+									destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
+									destSurface.Bits[offset + 1] = (byte)((fillColor >> 8) & 0xFF);
+									destSurface.Bits[offset + 2] = (byte)((fillColor >> 16) & 0xFF);
+									destSurface.Bits[offset + 3] = (byte)((fillColor >> 24) & 0xFF);
+									break;
+							}
 						}
 					}
 				}
