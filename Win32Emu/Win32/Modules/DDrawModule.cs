@@ -607,13 +607,132 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_GetSurfaceDesc(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetSurfaceDesc() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lpDDSurfaceDesc = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetSurfaceDesc(this=0x{ThisPtr:X8}, lpDDSurfaceDesc=0x{SurfaceDesc:X8})", 
+				thisPtr, lpDDSurfaceDesc);
+
+			// Find the surface
+			DirectDrawSurface? surface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				// For now, use the first surface
+				surface = s;
+				break;
+			}
+
+			if (surface == null)
+			{
+				_logger.LogError("[DDraw] GetSurfaceDesc: could not find surface");
+				return 1; // DDERR_GENERIC
+			}
+
+			if (lpDDSurfaceDesc != 0)
+			{
+				// Find the DirectDraw object to get BPP
+				DirectDrawObject? ddrawObj = null;
+				if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out ddrawObj))
+				{
+					uint dwSize = _env.MemRead32(lpDDSurfaceDesc);
+
+					// Fill DDSURFACEDESC structure
+					_env.MemWrite32(lpDDSurfaceDesc + 4, 0x0000100F); // dwFlags: DDSD_WIDTH | DDSD_HEIGHT | DDSD_PITCH | DDSD_PIXELFORMAT
+					_env.MemWrite32(lpDDSurfaceDesc + 8, (uint)surface.Width); // dwWidth
+					_env.MemWrite32(lpDDSurfaceDesc + 12, (uint)surface.Height); // dwHeight
+					_env.MemWrite32(lpDDSurfaceDesc + 16, (uint)surface.Pitch); // lPitch
+
+					// Write pixel format (offset 76)
+					if (dwSize >= 108)
+					{
+						_env.MemWrite32(lpDDSurfaceDesc + 76, 32); // dwSize of DDPIXELFORMAT
+						_env.MemWrite32(lpDDSurfaceDesc + 80, 0x00000040); // dwFlags: DDPF_RGB
+						_env.MemWrite32(lpDDSurfaceDesc + 84, 0); // dwFourCC
+						_env.MemWrite32(lpDDSurfaceDesc + 88, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
+
+						// Set RGB masks based on bit depth
+						if (ddrawObj.BitsPerPixel == 16)
+						{
+							_env.MemWrite32(lpDDSurfaceDesc + 92, 0xF800); // Red mask (5 bits)
+							_env.MemWrite32(lpDDSurfaceDesc + 96, 0x07E0); // Green mask (6 bits)
+							_env.MemWrite32(lpDDSurfaceDesc + 100, 0x001F); // Blue mask (5 bits)
+						}
+						else if (ddrawObj.BitsPerPixel == 24 || ddrawObj.BitsPerPixel == 32)
+						{
+							_env.MemWrite32(lpDDSurfaceDesc + 92, 0x00FF0000); // Red mask
+							_env.MemWrite32(lpDDSurfaceDesc + 96, 0x0000FF00); // Green mask
+							_env.MemWrite32(lpDDSurfaceDesc + 100, 0x000000FF); // Blue mask
+						}
+
+						_env.MemWrite32(lpDDSurfaceDesc + 104, 0); // dwRGBAlphaBitMask
+					}
+				}
+			}
+
 			return 0; // DD_OK
 		}
 
 		private uint Surface_GetPixelFormat(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetPixelFormat() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lpDDPixelFormat = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetPixelFormat(this=0x{ThisPtr:X8}, lpDDPixelFormat=0x{PixelFormat:X8})", 
+				thisPtr, lpDDPixelFormat);
+
+			// Find the surface
+			DirectDrawSurface? surface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				surface = s;
+				break;
+			}
+
+			if (surface == null)
+			{
+				_logger.LogError("[DDraw] GetPixelFormat: could not find surface");
+				return 1; // DDERR_GENERIC
+			}
+
+			if (lpDDPixelFormat != 0)
+			{
+				// Find the DirectDraw object to get BPP
+				if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
+				{
+					// Fill DDPIXELFORMAT structure
+					_env.MemWrite32(lpDDPixelFormat, 32); // dwSize
+					_env.MemWrite32(lpDDPixelFormat + 4, 0x00000040); // dwFlags: DDPF_RGB
+					_env.MemWrite32(lpDDPixelFormat + 8, 0); // dwFourCC
+					_env.MemWrite32(lpDDPixelFormat + 12, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
+
+					// Set RGB masks based on bit depth
+					if (ddrawObj.BitsPerPixel == 8)
+					{
+						// Palettized mode
+						_env.MemWrite32(lpDDPixelFormat + 4, 0x00000020); // DDPF_PALETTEINDEXED8
+						_env.MemWrite32(lpDDPixelFormat + 16, 0);
+						_env.MemWrite32(lpDDPixelFormat + 20, 0);
+						_env.MemWrite32(lpDDPixelFormat + 24, 0);
+					}
+					else if (ddrawObj.BitsPerPixel == 16)
+					{
+						_env.MemWrite32(lpDDPixelFormat + 16, 0xF800); // Red mask (5 bits)
+						_env.MemWrite32(lpDDPixelFormat + 20, 0x07E0); // Green mask (6 bits)
+						_env.MemWrite32(lpDDPixelFormat + 24, 0x001F); // Blue mask (5 bits)
+					}
+					else if (ddrawObj.BitsPerPixel == 24 || ddrawObj.BitsPerPixel == 32)
+					{
+						_env.MemWrite32(lpDDPixelFormat + 16, 0x00FF0000); // Red mask
+						_env.MemWrite32(lpDDPixelFormat + 20, 0x0000FF00); // Green mask
+						_env.MemWrite32(lpDDPixelFormat + 24, 0x000000FF); // Blue mask
+					}
+
+					_env.MemWrite32(lpDDPixelFormat + 28, 0); // dwRGBAlphaBitMask
+				}
+			}
+
 			return 0; // DD_OK
 		}
 
@@ -655,7 +774,40 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_GetCaps(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetCaps() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lpDDSCaps = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetCaps(this=0x{ThisPtr:X8}, lpDDSCaps=0x{Caps:X8})", 
+				thisPtr, lpDDSCaps);
+
+			// Find the surface
+			DirectDrawSurface? surface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				surface = s;
+				break;
+			}
+
+			if (surface == null)
+			{
+				_logger.LogError("[DDraw] GetCaps: could not find surface");
+				return 1; // DDERR_GENERIC
+			}
+
+			if (lpDDSCaps != 0)
+			{
+				// Fill DDSCAPS structure
+				uint caps = 0;
+				if (surface.IsPrimary)
+				{
+					caps |= 0x00000200; // DDSCAPS_PRIMARYSURFACE
+				}
+				caps |= 0x00000800; // DDSCAPS_VIDEOMEMORY
+
+				_env.MemWrite32(lpDDSCaps, caps);
+			}
+
 			return 0; // DD_OK
 		}
 
@@ -1123,7 +1275,19 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DDraw_GetMonitorFrequency(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetMonitorFrequency() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lpdwFrequency = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetMonitorFrequency(this=0x{ThisPtr:X8}, lpdwFrequency=0x{Frequency:X8})", 
+				thisPtr, lpdwFrequency);
+
+			if (lpdwFrequency != 0)
+			{
+				// Return typical 60Hz refresh rate
+				_env.MemWrite32(lpdwFrequency, 60);
+			}
+
 			return 0; // DD_OK
 		}
 
@@ -1135,7 +1299,20 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DDraw_GetVerticalBlankStatus(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetVerticalBlankStatus() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lpbIsInVB = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetVerticalBlankStatus(this=0x{ThisPtr:X8}, lpbIsInVB=0x{IsInVB:X8})", 
+				thisPtr, lpbIsInVB);
+
+			if (lpbIsInVB != 0)
+			{
+				// Simulate being in vertical blank 1/60th of the time
+				bool isInVBlank = (DateTime.UtcNow.Ticks / 10000) % 17 == 0; // Approximately 1/60th
+				_env.MemWrite32(lpbIsInVB, isInVBlank ? 1u : 0u);
+			}
+
 			return 0; // DD_OK
 		}
 
