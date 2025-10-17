@@ -47,6 +47,7 @@ public static class BackendFactory
         {
             BackendType.SDL => new SilkSdlRenderingBackend(logger),
             BackendType.GLFW => new SilkGlfwRenderingBackend(logger),
+            BackendType.Vulkan => new SilkVulkanRenderingBackend(logger),
             _ => new SilkSdlRenderingBackend(logger)
         };
     }

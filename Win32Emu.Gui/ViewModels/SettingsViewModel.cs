@@ -37,7 +37,8 @@ public partial class SettingsViewModel : ViewModelBase
     public ObservableCollection<string> RenderingBackends { get; } = new()
     {
         "SDL",
-        "GLFW"
+        "GLFW",
+        "Vulkan"
     };
 
     public ObservableCollection<string> WindowsVersions { get; } = new()
