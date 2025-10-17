@@ -177,8 +177,8 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             _gl.Clear(ClearBufferMask.ColorBufferBit);
             
             // Note: A full implementation would use shaders and VAOs for proper rendering
+            // TODO: Implement full OpenGL rendering pipeline (use shaders and VAOs) for proper rendering.
             // For now, just update the texture - actual rendering requires more OpenGL setup
-            
             _glfw.SwapBuffers(_window);
 
             return true;
