@@ -51,6 +51,13 @@ public class EmulatorService
         {
             try
             {
+                // Set the multimedia backend from configuration
+                if (Enum.TryParse<Rendering.BackendType>(_configuration.MultimediaBackend, ignoreCase: true, out var backendType))
+                {
+                    Rendering.BackendFactory.CurrentBackendType = backendType;
+                    _logger.LogInformation("Set multimedia backend to: {Backend}", backendType);
+                }
+                
                 // Create and configure the emulator
                 _currentEmulator = new Emulator(_host, _logger);
                 

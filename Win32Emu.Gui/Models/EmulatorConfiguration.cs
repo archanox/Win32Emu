@@ -3,6 +3,7 @@ namespace Win32Emu.Gui.Models;
 public class EmulatorConfiguration
 {
 	public string RenderingBackend { get; set; } = "Software";
+	public string MultimediaBackend { get; set; } = "SDL";
 	public int ResolutionScaleFactor { get; set; } = 1;
 	public int ReservedMemoryMb { get; set; } = 256;
 	public string WindowsVersion { get; set; } = "Windows 95";

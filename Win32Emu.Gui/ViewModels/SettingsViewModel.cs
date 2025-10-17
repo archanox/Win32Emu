@@ -14,6 +14,9 @@ public partial class SettingsViewModel : ViewModelBase
     private string _renderingBackend;
 
     [ObservableProperty]
+    private string _multimediaBackend;
+
+    [ObservableProperty]
     private int _resolutionScaleFactor;
 
     [ObservableProperty]
@@ -41,6 +44,12 @@ public partial class SettingsViewModel : ViewModelBase
         "Glide"
     };
 
+    public ObservableCollection<string> MultimediaBackends { get; } = new()
+    {
+        "SDL",
+        "GLFW"
+    };
+
     public ObservableCollection<string> WindowsVersions { get; } = new()
     {
         "Windows 95",
@@ -63,6 +72,7 @@ public partial class SettingsViewModel : ViewModelBase
         
         // Initialize properties from configuration
         _renderingBackend = configuration.RenderingBackend;
+        _multimediaBackend = configuration.MultimediaBackend;
         _resolutionScaleFactor = configuration.ResolutionScaleFactor;
         _reservedMemoryMb = configuration.ReservedMemoryMb;
         _windowsVersion = configuration.WindowsVersion;
@@ -75,6 +85,12 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnRenderingBackendChanged(string value)
     {
         _configuration.RenderingBackend = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+
+    partial void OnMultimediaBackendChanged(string value)
+    {
+        _configuration.MultimediaBackend = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
 

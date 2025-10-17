@@ -121,6 +121,7 @@ public class ConfigurationService
         return new EmulatorConfiguration
         {
             RenderingBackend = _settings.RenderingBackend,
+            MultimediaBackend = _settings.MultimediaBackend,
             ResolutionScaleFactor = _settings.ResolutionScaleFactor,
             ReservedMemoryMb = _settings.ReservedMemoryMB,
             WindowsVersion = _settings.WindowsVersion,
@@ -163,6 +164,7 @@ public class ConfigurationService
     public void SaveEmulatorConfiguration(EmulatorConfiguration configuration)
     {
         _settings.RenderingBackend = configuration.RenderingBackend;
+        _settings.MultimediaBackend = configuration.MultimediaBackend;
         _settings.ResolutionScaleFactor = configuration.ResolutionScaleFactor;
         _settings.ReservedMemoryMB = configuration.ReservedMemoryMb;
         _settings.WindowsVersion = configuration.WindowsVersion;
