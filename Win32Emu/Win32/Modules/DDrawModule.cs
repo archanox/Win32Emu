@@ -191,7 +191,7 @@ namespace Win32Emu.Win32.Modules
 			public int Width { get; set; }
 			public int Height { get; set; }
 			public int BitsPerPixel { get; set; }
-			public Rendering.Sdl3RenderingBackend? RenderingBackend { get; set; }
+			public Rendering.IRenderingBackend? RenderingBackend { get; set; }
 			public uint CooperativeLevel { get; set; }
 			public IntPtr WindowHandle { get; set; }
 		}
@@ -1375,10 +1375,10 @@ namespace Win32Emu.Win32.Modules
 				obj.CooperativeLevel = dwFlags;
 				obj.WindowHandle = (IntPtr)hWnd;
 				
-				// Initialize SDL3 backend if not already done
+				// Initialize rendering backend if not already done
 				if (obj.RenderingBackend == null)
 				{
-					obj.RenderingBackend = new Rendering.Sdl3RenderingBackend(_logger);
+					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
 				}
 			}
 
@@ -1402,13 +1402,13 @@ namespace Win32Emu.Win32.Modules
 				obj.Height = (int)dwHeight;
 				obj.BitsPerPixel = (int)dwBPP;
 				
-				// Initialize SDL3 backend with the specified dimensions
+				// Initialize rendering backend with the specified dimensions
 				if (obj.RenderingBackend == null)
 				{
-					obj.RenderingBackend = new Rendering.Sdl3RenderingBackend(_logger);
+					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
 				}
 				
-				// Initialize the SDL3 window with the specified dimensions
+				// Initialize the window with the specified dimensions
 				string title = "Win32Emu DirectDraw";
 				if (obj.RenderingBackend.IsInitialized)
 				{
@@ -1421,7 +1421,7 @@ namespace Win32Emu.Win32.Modules
 					bool success = obj.RenderingBackend.Initialize((int)dwWidth, (int)dwHeight, title);
 					if (!success)
 					{
-						_logger.LogError("[DDraw] Failed to initialize SDL3 backend");
+						_logger.LogError("[DDraw] Failed to initialize rendering backend");
 						return 1; // DDERR_GENERIC
 					}
 				}

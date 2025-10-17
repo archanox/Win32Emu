@@ -38,8 +38,15 @@
     <PackageReference Include="AsmResolver.PE.Win32Resources" Version="6.0.0-beta.4" />
     <PackageReference Include="Iced" Version="1.21.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.10" />
-    <PackageReference Include="SDL3-CS" Version="3.2.24" />
-    <PackageReference Include="SDL3-CS.Native" Version="3.2.24" />
+    <PackageReference Include="Silk.NET.SDL" Version="2.22.0" />
+    <PackageReference Include="Silk.NET.GLFW" Version="2.22.0" />
+    <PackageReference Include="Silk.NET.OpenGL" Version="2.22.0" />
+    <PackageReference Include="Silk.NET.OpenAL" Version="2.22.0" />
+    <PackageReference Include="Silk.NET.Input" Version="2.22.0" />
+    <PackageReference Include="Silk.NET.Vulkan" Version="2.22.0" />
+    <PackageReference Include="Silk.NET.Vulkan.Extensions.KHR" Version="2.22.0" />
+    <PackageReference Include="Silk.NET.Windowing" Version="2.22.0" />
+    <PackageReference Include="Silk.NET.Maths" Version="2.22.0" />
     <PackageReference Include="System.Threading.Channels" Version="9.0.10" />
   </ItemGroup>
 
