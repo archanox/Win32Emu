@@ -119,7 +119,7 @@ public class SilkInputBackend : IInputBackend
             }
 
             // Return current state
-            // In a full implementation, this would poll the actual input devices
+            // TODO: In a full implementation, this would poll the actual input devices
             state = device.State;
             return true;
         }
