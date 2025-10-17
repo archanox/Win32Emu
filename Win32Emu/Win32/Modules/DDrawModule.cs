@@ -1356,8 +1356,39 @@ namespace Win32Emu.Win32.Modules
 			{
 				try
 				{
-					// Update the SDL3 texture with the surface data
-					ddrawObj.RenderingBackend.UpdateFrameBuffer(surface.Bits, surface.Pitch);
+					byte[] displayData;
+
+					// Check if we need to convert the surface data
+					if (surface.PaletteHandle != 0 && _palettes.TryGetValue(surface.PaletteHandle, out var palette))
+					{
+						// Convert palettized (8-bit indexed) to RGBA
+						_logger.LogInformation("[DDraw] Converting palettized surface to RGBA");
+						displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
+							surface.Bits, 
+							palette.Entries, 
+							surface.Width, 
+							surface.Height, 
+							surface.Pitch);
+					}
+					else if (ddrawObj.BitsPerPixel == 16)
+					{
+						// Convert 16-bit RGB565 to RGBA
+						_logger.LogInformation("[DDraw] Converting 16-bit RGB565 surface to RGBA");
+						displayData = ddrawObj.RenderingBackend.Convert16BitToRGBA(
+							surface.Bits, 
+							surface.Width, 
+							surface.Height, 
+							surface.Pitch);
+					}
+					else
+					{
+						// Use surface data as-is (already RGBA)
+						displayData = surface.Bits;
+					}
+
+					// Update the SDL3 texture with the converted surface data
+					int displayPitch = surface.Width * 4; // RGBA format
+					ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch);
 				}
 				catch (Exception ex)
 				{
