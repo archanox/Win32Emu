@@ -150,14 +150,13 @@ public sealed class DirectoryAndStringFunctionsTests : IDisposable
         var handlePtr = _testEnv.ProcessEnv.SimpleAlloc(4);
 
         // Act
-        var result = _advapi32.TryInvokeUnsafe("REGOPENKEYEXA", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
         _testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 
             HKEY_LOCAL_MACHINE, 
             subKeyAddr, 
             0u, // ulOptions
             0u, // samDesired
             handlePtr);
-        result = _advapi32.TryInvokeUnsafe("REGOPENKEYEXA", _testEnv.Cpu, _testEnv.Memory, out returnValue);
+        var result = _advapi32.TryInvokeUnsafe("REGOPENKEYEXA", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
 
         // Assert
         Assert.True(result);
