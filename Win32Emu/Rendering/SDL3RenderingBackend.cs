@@ -34,6 +34,13 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
             _width = width;
             _height = height;
 
+            // Initialize SDL3 video subsystem
+            if (!SDL.Init(SDL.InitFlags.Video))
+            {
+                logger.LogError("[SDL3] Failed to initialize video subsystem: {GetError}", SDL.GetError());
+                return false;
+            }
+
             // Set app metadata before creating GPU device
             SDL.SetAppMetadata(title, "1.0", "com.win32emu.display");
 
@@ -47,6 +54,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
             if (_gpuDevice == IntPtr.Zero)
             {
                 logger.LogError("[SDL3] Failed to create GPU device: {GetError}", SDL.GetError());
+                SDL.QuitSubSystem(SDL.InitFlags.Video);
                 return false;
             }
 
@@ -59,6 +67,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
             {
                 logger.LogError("[SDL3] Failed to create window: {GetError}", SDL.GetError());
                 SDL.DestroyGPUDevice(_gpuDevice);
+                SDL.QuitSubSystem(SDL.InitFlags.Video);
                 return false;
             }
 
@@ -68,6 +77,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
                 logger.LogError("[SDL3] Failed to claim window for GPU device: {GetError}", SDL.GetError());
                 SDL.DestroyWindow(_window);
                 SDL.DestroyGPUDevice(_gpuDevice);
+                SDL.QuitSubSystem(SDL.InitFlags.Video);
                 return false;
             }
 
@@ -91,6 +101,7 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
                 SDL.ReleaseWindowFromGPUDevice(_gpuDevice, _window);
                 SDL.DestroyWindow(_window);
                 SDL.DestroyGPUDevice(_gpuDevice);
+                SDL.QuitSubSystem(SDL.InitFlags.Video);
                 return false;
             }
 
@@ -445,6 +456,9 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
                 SDL.DestroyGPUDevice(_gpuDevice);
                 _gpuDevice = IntPtr.Zero;
             }
+
+            // Quit SDL video subsystem
+            SDL.QuitSubSystem(SDL.InitFlags.Video);
 
             _frameBuffer = null;
             _initialized = false;
