@@ -4,20 +4,23 @@ using SDL3;
 namespace Win32Emu.Rendering;
 
 /// <summary>
-/// SDL3-based rendering backend for DirectDraw and GDI operations
+/// SDL3-based rendering backend for DirectDraw and GDI operations.
+/// Uses SDL3 GPU API for hardware-accelerated rendering with Metal (macOS), Vulkan (Linux), and DirectX (Windows).
 /// </summary>
 public class Sdl3RenderingBackend(ILogger logger) : IDisposable
 {
     private IntPtr _window;
-    private IntPtr _renderer;
-    private IntPtr _texture;
+    private IntPtr _gpuDevice;
+    private IntPtr _gpuTexture;
     private bool _initialized;
     private int _width;
     private int _height;
     private readonly Lock _lock = new();
+    private byte[]? _frameBuffer;
 
     /// <summary>
-    /// Initialize SDL3 with specified dimensions
+    /// Initialize SDL3 with specified dimensions using GPU API for hardware acceleration.
+    /// On macOS uses Metal, on Linux uses Vulkan, on Windows uses DirectX 12.
     /// </summary>
     public bool Initialize(int width, int height, string title = "Win32Emu Display")
     {
@@ -31,96 +34,273 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
             _width = width;
             _height = height;
 
-            // Set app metadata, similar to the C++ example
+            // Set app metadata before creating GPU device
             SDL.SetAppMetadata(title, "1.0", "com.win32emu.display");
 
-            // Initialize SDL3 video subsystem
-            if (!SDL.Init(SDL.InitFlags.Video))
+            // Create GPU device with auto-selected driver (Metal/Vulkan/DirectX)
+            // The second parameter 'true' enables debug mode for better error reporting
+            _gpuDevice = SDL.CreateGPUDevice(
+                SDL.GPUShaderFormat.SPIRV | SDL.GPUShaderFormat.MSL | SDL.GPUShaderFormat.DXIL,
+                true,
+                null);
+
+            if (_gpuDevice == IntPtr.Zero)
             {
-                logger.LogError("[SDL3] Failed to initialize video: {GetError}", SDL.GetError());
+                logger.LogError("[SDL3] Failed to create GPU device: {GetError}", SDL.GetError());
                 return false;
             }
 
-            // Create window and renderer
-            if (!SDL.CreateWindowAndRenderer(title, width, height, SDL.WindowFlags.Resizable, out _window, out _renderer))
+            var driverName = SDL.GetGPUDeviceDriver(_gpuDevice);
+            logger.LogInformation("[SDL3] Created GPU device with driver: {Driver}", driverName);
+
+            // Create window
+            _window = SDL.CreateWindow(title, width, height, SDL.WindowFlags.Resizable);
+            if (_window == IntPtr.Zero)
             {
-                logger.LogError("[SDL3] Failed to create window and renderer: {GetError}", SDL.GetError());
-                SDL.Quit();
+                logger.LogError("[SDL3] Failed to create window: {GetError}", SDL.GetError());
+                SDL.DestroyGPUDevice(_gpuDevice);
                 return false;
             }
 
-            SDL.SetRenderLogicalPresentation(_renderer, width, height, SDL.RendererLogicalPresentation.Letterbox);
-
-            // Create texture for rendering
-            _texture = SDL.CreateTexture(_renderer,
-                SDL.PixelFormat.ARGB8888,
-                SDL.TextureAccess.Streaming,
-                width, height);
-
-            if (_texture == IntPtr.Zero)
+            // Claim window for GPU device
+            if (!SDL.ClaimWindowForGPUDevice(_gpuDevice, _window))
             {
-                logger.LogError("[SDL3] Failed to create texture: {GetError}", SDL.GetError());
-                SDL.DestroyRenderer(_renderer);
+                logger.LogError("[SDL3] Failed to claim window for GPU device: {GetError}", SDL.GetError());
                 SDL.DestroyWindow(_window);
-                SDL.Quit();
+                SDL.DestroyGPUDevice(_gpuDevice);
                 return false;
             }
+
+            // Create GPU texture for frame buffer
+            var textureCreateInfo = new SDL.GPUTextureCreateInfo
+            {
+                Type = SDL.GPUTextureType.Texturetype2D,
+                Format = SDL.GPUTextureFormat.R8G8B8A8Unorm,
+                Usage = SDL.GPUTextureUsageFlags.Sampler | SDL.GPUTextureUsageFlags.ColorTarget,
+                Width = (uint)width,
+                Height = (uint)height,
+                LayerCountOrDepth = 1,
+                NumLevels = 1,
+                SampleCount = SDL.GPUSampleCount.SampleCount1
+            };
+
+            _gpuTexture = SDL.CreateGPUTexture(_gpuDevice, textureCreateInfo);
+            if (_gpuTexture == IntPtr.Zero)
+            {
+                logger.LogError("[SDL3] Failed to create GPU texture: {GetError}", SDL.GetError());
+                SDL.ReleaseWindowFromGPUDevice(_gpuDevice, _window);
+                SDL.DestroyWindow(_window);
+                SDL.DestroyGPUDevice(_gpuDevice);
+                return false;
+            }
+
+            // Allocate CPU-side frame buffer
+            _frameBuffer = new byte[width * height * 4]; // RGBA format
 
             _initialized = true;
-            logger.LogInformation("[SDL3] Initialized {Width}x{Height} display", width, height);
+            logger.LogInformation("[SDL3] Initialized {Width}x{Height} display with GPU backend ({Driver})", 
+                width, height, driverName);
             return true;
         }
     }
 
     /// <summary>
-    /// Update the display with new frame buffer data
+    /// Update the display with new frame buffer data using GPU API
     /// </summary>
     public bool UpdateFrameBuffer(byte[] data, int pitch)
     {
         lock (_lock)
         {
-            if (!_initialized)
+            if (!_initialized || _gpuDevice == IntPtr.Zero || _gpuTexture == IntPtr.Zero)
             {
                 return false;
             }
 
-            // Update texture with new data
-            unsafe
+            // Copy data to our frame buffer
+            if (_frameBuffer != null && data.Length <= _frameBuffer.Length)
             {
-                fixed (byte* ptr = data)
-                {
-                    if (!SDL.UpdateTexture(_texture, IntPtr.Zero, (IntPtr)ptr, pitch))
-                    {
-                        logger.LogError("[SDL3] Failed to update texture: {GetError}", SDL.GetError());
-                        return false;
-                    }
-                }
+                Array.Copy(data, _frameBuffer, data.Length);
+            }
+            else
+            {
+                logger.LogError("[SDL3] Frame buffer size mismatch");
+                return false;
             }
 
-            // Clear and render
-            SDL.RenderClear(_renderer);
-            SDL.RenderTexture(_renderer, _texture, IntPtr.Zero, IntPtr.Zero);
-            SDL.RenderPresent(_renderer);
+            // Acquire command buffer for GPU operations
+            var commandBuffer = SDL.AcquireGPUCommandBuffer(_gpuDevice);
+            if (commandBuffer == IntPtr.Zero)
+            {
+                logger.LogError("[SDL3] Failed to acquire GPU command buffer: {GetError}", SDL.GetError());
+                return false;
+            }
+
+            // Acquire swapchain texture to render to
+            IntPtr swapchainTexture;
+            uint swapchainWidth, swapchainHeight;
+            if (!SDL.AcquireGPUSwapchainTexture(commandBuffer, _window, out swapchainTexture, 
+                out swapchainWidth, out swapchainHeight))
+            {
+                logger.LogError("[SDL3] Failed to acquire swapchain texture: {GetError}", SDL.GetError());
+                return false;
+            }
+
+            if (swapchainTexture == IntPtr.Zero)
+            {
+                // Window is minimized or occluded, skip rendering
+                return true;
+            }
+
+            // For now, we'll use a simple copy pass to blit the texture
+            // In a full implementation, we'd upload the frame buffer data to the GPU texture
+            // and use a render pass to draw it to the swapchain
+
+            // Begin copy pass to upload frame buffer data
+            var copyPass = SDL.BeginGPUCopyPass(commandBuffer);
+
+            // Create transfer buffer for uploading data
+            var transferBufferCreateInfo = new SDL.GPUTransferBufferCreateInfo
+            {
+                Usage = SDL.GPUTransferBufferUsage.Upload,
+                Size = (uint)(_width * _height * 4)
+            };
+
+            var transferBuffer = SDL.CreateGPUTransferBuffer(_gpuDevice, transferBufferCreateInfo);
+            if (transferBuffer != IntPtr.Zero)
+            {
+                // Map transfer buffer and copy data
+                var mappedData = SDL.MapGPUTransferBuffer(_gpuDevice, transferBuffer, false);
+                if (mappedData != IntPtr.Zero && _frameBuffer != null)
+                {
+                    unsafe
+                    {
+                        fixed (byte* srcPtr = _frameBuffer)
+                        {
+                            Buffer.MemoryCopy(srcPtr, mappedData.ToPointer(), 
+                                _frameBuffer.Length, _frameBuffer.Length);
+                        }
+                    }
+                    SDL.UnmapGPUTransferBuffer(_gpuDevice, transferBuffer);
+
+                    // Upload to GPU texture
+                    var textureTransferInfo = new SDL.GPUTextureTransferInfo
+                    {
+                        TransferBuffer = transferBuffer,
+                        Offset = 0,
+                        PixelsPerRow = (uint)_width,
+                        RowsPerLayer = (uint)_height
+                    };
+
+                    var textureRegion = new SDL.GPUTextureRegion
+                    {
+                        Texture = _gpuTexture,
+                        MipLevel = 0,
+                        Layer = 0,
+                        X = 0,
+                        Y = 0,
+                        Z = 0,
+                        W = (uint)_width,
+                        H = (uint)_height,
+                        D = 1
+                    };
+
+                    SDL.UploadToGPUTexture(copyPass, textureTransferInfo, textureRegion, false);
+                }
+
+                SDL.ReleaseGPUTransferBuffer(_gpuDevice, transferBuffer);
+            }
+
+            SDL.EndGPUCopyPass(copyPass);
+
+            // Now blit our texture to the swapchain
+            var blitInfo = new SDL.GPUBlitInfo
+            {
+                Source = new SDL.GPUBlitRegion
+                {
+                    Texture = _gpuTexture,
+                    MipLevel = 0,
+                    LayerOrDepthPlane = 0,
+                    X = 0,
+                    Y = 0,
+                    W = (uint)_width,
+                    H = (uint)_height
+                },
+                Destination = new SDL.GPUBlitRegion
+                {
+                    Texture = swapchainTexture,
+                    MipLevel = 0,
+                    LayerOrDepthPlane = 0,
+                    X = 0,
+                    Y = 0,
+                    W = swapchainWidth,
+                    H = swapchainHeight
+                },
+                LoadOp = SDL.GPULoadOp.Clear,
+                ClearColor = new SDL.FColor { R = 0, G = 0, B = 0, A = 1 },
+                Filter = SDL.GPUFilter.Linear,
+                FlipMode = 0
+            };
+
+            SDL.BlitGPUTexture(commandBuffer, blitInfo);
+
+            // Submit command buffer
+            SDL.SubmitGPUCommandBuffer(commandBuffer);
 
             return true;
         }
     }
 
     /// <summary>
-    /// Clear the display with specified color
+    /// Clear the display with specified color using GPU API
     /// </summary>
     public void Clear(byte r, byte g, byte b, byte a = 255)
     {
         lock (_lock)
         {
-            if (!_initialized)
+            if (!_initialized || _gpuDevice == IntPtr.Zero)
             {
                 return;
             }
 
-            SDL.SetRenderDrawColor(_renderer, r, g, b, a);
-            SDL.RenderClear(_renderer);
-            SDL.RenderPresent(_renderer);
+            // Acquire command buffer
+            var commandBuffer = SDL.AcquireGPUCommandBuffer(_gpuDevice);
+            if (commandBuffer == IntPtr.Zero)
+            {
+                return;
+            }
+
+            // Acquire swapchain texture
+            IntPtr swapchainTexture;
+            uint swapchainWidth, swapchainHeight;
+            if (!SDL.AcquireGPUSwapchainTexture(commandBuffer, _window, out swapchainTexture,
+                out swapchainWidth, out swapchainHeight) || swapchainTexture == IntPtr.Zero)
+            {
+                return;
+            }
+
+            // Begin render pass with clear operation
+            var colorTargetInfo = new SDL.GPUColorTargetInfo
+            {
+                Texture = swapchainTexture,
+                MipLevel = 0,
+                LayerOrDepthPlane = 0,
+                ClearColor = new SDL.FColor { R = r / 255.0f, G = g / 255.0f, B = b / 255.0f, A = a / 255.0f },
+                LoadOp = SDL.GPULoadOp.Clear,
+                StoreOp = SDL.GPUStoreOp.Store,
+                ResolveTexture = IntPtr.Zero,
+                ResolveMipLevel = 0,
+                ResolveLayer = 0,
+                CycleResolveTexture = 0
+            };
+
+            var colorTargets = new[] { colorTargetInfo };
+            var renderPass = SDL.BeginGPURenderPass(commandBuffer, colorTargets, 1, IntPtr.Zero);
+            
+            // End render pass (clear happens automatically)
+            SDL.EndGPURenderPass(renderPass);
+
+            // Submit command buffer
+            SDL.SubmitGPUCommandBuffer(commandBuffer);
         }
     }
 
@@ -161,25 +341,40 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
                 return;
             }
 
-            if (_texture != IntPtr.Zero)
+            // Wait for GPU to finish
+            if (_gpuDevice != IntPtr.Zero)
             {
-                SDL.DestroyTexture(_texture);
-                _texture = IntPtr.Zero;
+                SDL.WaitForGPUIdle(_gpuDevice);
             }
 
-            if (_renderer != IntPtr.Zero)
+            // Release GPU texture
+            if (_gpuTexture != IntPtr.Zero && _gpuDevice != IntPtr.Zero)
             {
-                SDL.DestroyRenderer(_renderer);
-                _renderer = IntPtr.Zero;
+                SDL.ReleaseGPUTexture(_gpuDevice, _gpuTexture);
+                _gpuTexture = IntPtr.Zero;
             }
 
+            // Release window from GPU device
+            if (_window != IntPtr.Zero && _gpuDevice != IntPtr.Zero)
+            {
+                SDL.ReleaseWindowFromGPUDevice(_gpuDevice, _window);
+            }
+
+            // Destroy window
             if (_window != IntPtr.Zero)
             {
                 SDL.DestroyWindow(_window);
                 _window = IntPtr.Zero;
             }
 
-            SDL.Quit();
+            // Destroy GPU device
+            if (_gpuDevice != IntPtr.Zero)
+            {
+                SDL.DestroyGPUDevice(_gpuDevice);
+                _gpuDevice = IntPtr.Zero;
+            }
+
+            _frameBuffer = null;
             _initialized = false;
         }
     }
