@@ -25,6 +25,7 @@ namespace Win32Emu.Win32.Modules
 
 		// DirectDraw object handles
 		private readonly Dictionary<uint, DirectDrawObject> _ddrawObjects = new();
+		private readonly Dictionary<uint, uint> _comObjectToHandle = new(); // Maps COM object address to ddraw handle
 		private readonly Dictionary<uint, DirectDrawSurface> _surfaces = new();
 		private readonly Dictionary<uint, DirectDrawPalette> _palettes = new();
 		private uint _nextDDrawHandle = 0x70000000;
@@ -116,6 +117,10 @@ namespace Win32Emu.Win32.Modules
 
 // Create the COM object with vtable
 			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDraw", vtableMethods);
+			
+			// Store the COM object address in the DirectDraw object for reverse lookup
+			ddrawObj.ComObjectAddress = comObjectAddr;
+			_comObjectToHandle[comObjectAddr] = ddrawHandle;
 
 // Write COM object pointer to output parameter
 			if (lplpDd != 0)
@@ -174,6 +179,10 @@ namespace Win32Emu.Win32.Modules
 
 			// Create the COM object with vtable
 			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDraw", vtableMethods);
+			
+			// Store the COM object address in the DirectDraw object for reverse lookup
+			ddrawObj.ComObjectAddress = comObjectAddr;
+			_comObjectToHandle[comObjectAddr] = ddrawHandle;
 
 			// Write COM object pointer to output parameter
 			if (lplpDd != 0)
@@ -188,6 +197,7 @@ namespace Win32Emu.Win32.Modules
 		private sealed class DirectDrawObject
 		{
 			public uint Handle { get; set; }
+			public uint ComObjectAddress { get; set; }
 			public int Width { get; set; }
 			public int Height { get; set; }
 			public int BitsPerPixel { get; set; }
@@ -1369,8 +1379,15 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[DDraw COM] IDirectDraw::SetCooperativeLevel(this=0x{ThisPtr:X8}, hWnd=0x{HWnd:X8}, flags=0x{DwFlags:X8})", thisPtr, hWnd, dwFlags);
 
+			// Look up the actual handle from the COM object address
+			if (!_comObjectToHandle.TryGetValue(thisPtr, out var actualHandle))
+			{
+				_logger.LogWarning("[DDraw] SetCooperativeLevel: Could not find DirectDraw handle for COM object 0x{ThisPtr:X8}, using captured handle 0x{Handle:X8}", thisPtr, ddrawHandle);
+				actualHandle = ddrawHandle;
+			}
+
 			// Store cooperation level settings
-			if (_ddrawObjects.TryGetValue(ddrawHandle, out var obj))
+			if (_ddrawObjects.TryGetValue(actualHandle, out var obj))
 			{
 				obj.CooperativeLevel = dwFlags;
 				obj.WindowHandle = (IntPtr)hWnd;
@@ -1380,6 +1397,10 @@ namespace Win32Emu.Win32.Modules
 				{
 					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
 				}
+			}
+			else
+			{
+				_logger.LogError("[DDraw] SetCooperativeLevel: Could not find DirectDraw object with handle 0x{Handle:X8}", actualHandle);
 			}
 
 			return 0; // DD_OK
@@ -1395,8 +1416,15 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[DDraw COM] IDirectDraw::SetDisplayMode(this=0x{ThisPtr:X8}, width={DwWidth}, height={DwHeight}, bpp={DwBpp})", thisPtr, dwWidth, dwHeight, dwBPP);
 
+			// Look up the actual handle from the COM object address
+			if (!_comObjectToHandle.TryGetValue(thisPtr, out var actualHandle))
+			{
+				_logger.LogWarning("[DDraw] SetDisplayMode: Could not find DirectDraw handle for COM object 0x{ThisPtr:X8}, using captured handle 0x{Handle:X8}", thisPtr, ddrawHandle);
+				actualHandle = ddrawHandle;
+			}
+
 			// Store display mode settings
-			if (_ddrawObjects.TryGetValue(ddrawHandle, out var obj))
+			if (_ddrawObjects.TryGetValue(actualHandle, out var obj))
 			{
 				obj.Width = (int)dwWidth;
 				obj.Height = (int)dwHeight;
@@ -1425,6 +1453,11 @@ namespace Win32Emu.Win32.Modules
 						return 1; // DDERR_GENERIC
 					}
 				}
+			}
+			else
+			{
+				_logger.LogError("[DDraw] SetDisplayMode: Could not find DirectDraw object with handle 0x{Handle:X8}", actualHandle);
+				return 1; // DDERR_GENERIC
 			}
 
 			return 0; // DD_OK
