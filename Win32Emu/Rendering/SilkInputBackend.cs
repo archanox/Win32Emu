@@ -135,7 +135,7 @@ public class SilkInputBackend : IInputBackend
             }
 
             // Process input events
-            // This would be called by the windowing system in a full implementation
+            // TODO: Implement event processing. This would be called by the windowing system in a full implementation.
         }
     }
 
