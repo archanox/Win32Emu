@@ -961,6 +961,14 @@ namespace Win32Emu.Win32.Modules
 				srcHeight = (int)_env.MemRead32(lpSrcRect + 12) - srcY;
 			}
 
+			// Get bits per pixel from DirectDraw object
+			if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
+			{
+				_logger.LogError("[DDraw] BltFast: could not find DirectDraw object");
+				return 1; // DDERR_GENERIC
+			}
+			int bytesPerPixel = ddrawObj.BitsPerPixel / 8;
+
 			// Perform fast blit
 			int destX = (int)dwX;
 			int destY = (int)dwY;
@@ -969,8 +977,8 @@ namespace Win32Emu.Win32.Modules
 			{
 				for (int x = 0; x < srcWidth && (destX + x) < destSurface.Width && (srcX + x) < srcSurface.Width; x++)
 				{
-					int destOffset = (destY + y) * destSurface.Pitch + (destX + x) * (destSurface.BitsPerPixel / 8);
-					int srcOffset = (srcY + y) * srcSurface.Pitch + (srcX + x) * (srcSurface.BitsPerPixel / 8);
+					int destOffset = (destY + y) * destSurface.Pitch + (destX + x) * bytesPerPixel;
+					int srcOffset = (srcY + y) * srcSurface.Pitch + (srcX + x) * bytesPerPixel;
 
 					if (destOffset + 1 < destSurface.Bits.Length && srcOffset + 1 < srcSurface.Bits.Length)
 					{
@@ -1052,9 +1060,16 @@ namespace Win32Emu.Win32.Modules
 				// Read fill color from DDBLTFX structure
 				uint fillColor = _env.MemRead32(lpDDBltFx + 16); // dwFillColor offset
 
+				// Get bits per pixel from DirectDraw object
+				if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
+				{
+					_logger.LogError("[DDraw] Blt: could not find DirectDraw object for color fill");
+					return 1; // DDERR_GENERIC
+				}
+
 				// Perform color fill
 				// Determine bytes per pixel based on bit depth
-				int bytesPerPixel = destSurface.BitDepth / 8;
+				int bytesPerPixel = ddrawObj.BitsPerPixel / 8;
 				for (int y = destY; y < destY + destHeight && y < destSurface.Height; y++)
 				{
 					for (int x = destX; x < destX + destWidth && x < destSurface.Width; x++)
