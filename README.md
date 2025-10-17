@@ -27,6 +27,8 @@ Win32Emu <path-to-pe> [options]
 - `--gdb-server [port]`: Start GDB server for remote debugging with Ghidra/IDA (default port: 1234)
   - Supports remote file I/O when VFS is initialized (access game files from debugger)
 - `--backend <SDL|GLFW>`: Select rendering backend (default: SDL)
+- `--telemetry-console`: Enable OpenTelemetry with console exporter for logging and metrics
+- `--telemetry-otlp [endpoint]`: Enable OpenTelemetry with OTLP exporter (default: http://localhost:4317)
 
 **Environment Variables:**
 - `WIN32EMU_BACKEND`: Set rendering backend (SDL or GLFW)
@@ -50,6 +52,12 @@ Win32Emu game.exe --gdb-server
 
 # Run with GDB server on custom port
 Win32Emu game.exe --gdb-server 5678
+
+# Run with OpenTelemetry console exporter for observability
+Win32Emu game.exe --telemetry-console
+
+# Run with OpenTelemetry OTLP exporter (for Jaeger, Prometheus, etc.)
+Win32Emu game.exe --telemetry-otlp http://localhost:4317
 ```
 
 **See Also:**
@@ -59,6 +67,8 @@ Win32Emu game.exe --gdb-server 5678
 - [INTERACTIVE_DEBUGGER_GUIDE.md](INTERACTIVE_DEBUGGER_GUIDE.md) - Interactive debugger
 - [GDB_SERVER_GUIDE.md](GDB_SERVER_GUIDE.md) - GDB server for Ghidra/IDA integration
 - [VFS_DOCUMENTATION.md](VFS_DOCUMENTATION.md) - Virtual File System for game file isolation
+- [OPENTELEMETRY_USAGE.md](OPENTELEMETRY_USAGE.md) - OpenTelemetry for logging, metrics, and profiling
+- [TELEMETRY_EXAMPLE.md](TELEMETRY_EXAMPLE.md) - Practical examples of using OpenTelemetry
 
 ### Win32Emu.Gui
 Cross-platform desktop GUI for managing your game library and emulator settings. Built with Avalonia UI.

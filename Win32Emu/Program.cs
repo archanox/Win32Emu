@@ -15,6 +15,8 @@ namespace Win32Emu
 				Console.WriteLine("  --interactive-debug  Enable interactive step-through debugger (GDB-like)");
 				Console.WriteLine("  --gdb-server [port]  Start GDB server for remote debugging (default port: 1234)");
 				Console.WriteLine("  --backend <SDL|GLFW> Select rendering backend (default: SDL)");
+				Console.WriteLine("  --telemetry-console  Enable OpenTelemetry with console exporter");
+				Console.WriteLine("  --telemetry-otlp [endpoint] Enable OpenTelemetry with OTLP exporter (default: http://localhost:4317)");
 				Console.WriteLine();
 				Console.WriteLine("Environment Variables:");
 				Console.WriteLine("  WIN32EMU_BACKEND     Set backend type (SDL or GLFW)");
@@ -45,6 +47,21 @@ namespace Win32Emu
 					gdbServerPort = customPort;
 				}
 			}
+			
+			// Parse OpenTelemetry options
+			var telemetryConsoleMode = args.Contains("--telemetry-console");
+			var telemetryOtlpMode = args.Contains("--telemetry-otlp");
+			var telemetryOtlpEndpoint = "http://localhost:4317"; // Default endpoint
+			
+			if (telemetryOtlpMode)
+			{
+				var otlpIndex = Array.IndexOf(args, "--telemetry-otlp");
+				if (otlpIndex >= 0 && otlpIndex + 1 < args.Length && 
+				    !args[otlpIndex + 1].StartsWith("--"))
+				{
+					telemetryOtlpEndpoint = args[otlpIndex + 1];
+				}
+			}
 
 			// Check for backend selection
 			var backendIndex = Array.IndexOf(args, "--backend");
@@ -68,9 +85,27 @@ namespace Win32Emu
 
 			var logger = loggerFactory.CreateLogger<Emulator>();
 
+			// Initialize OpenTelemetry if enabled
+			Telemetry.TelemetryService? telemetryService = null;
+			if (telemetryConsoleMode || telemetryOtlpMode)
+			{
+				var telemetryConfig = new Telemetry.TelemetryConfig
+				{
+					EnableTracing = true,
+					EnableMetrics = true,
+					UseConsoleExporter = telemetryConsoleMode,
+					UseOtlpExporter = telemetryOtlpMode,
+					OtlpEndpoint = telemetryOtlpEndpoint
+				};
+				
+				telemetryService = new Telemetry.TelemetryService(telemetryConfig);
+				logger.LogInformation("OpenTelemetry initialized - Console: {Console}, OTLP: {Otlp} ({Endpoint})", 
+					telemetryConsoleMode, telemetryOtlpMode, telemetryOtlpEndpoint);
+			}
+
 			try
 			{
-				using var emulator = new Emulator(null, logger);
+				using var emulator = new Emulator(null, logger, telemetryService);
 				emulator.LoadExecutable(path, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort);
 				emulator.Run();
 			}
@@ -85,6 +120,10 @@ namespace Win32Emu
 				{
 					logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
 				}
+			}
+			finally
+			{
+				telemetryService?.Dispose();
 			}
 		}
 	}
