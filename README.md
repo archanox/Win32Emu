@@ -1,5 +1,7 @@
 # Win32Emu
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/archanox/Win32Emu)
+
 A Windows 32-bit PE executable emulator for running classic Windows games and applications on modern systems.
 
 ## Features
