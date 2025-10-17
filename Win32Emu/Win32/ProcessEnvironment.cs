@@ -179,6 +179,9 @@ public class ProcessEnvironment
 	private bool _hasQuitMessage;
 	private int _quitExitCode;
 
+	// Dialog state management
+	private readonly Dictionary<uint, DialogState> _dialogStates = new();
+
 	// Message queue with Channels
 	private readonly Channel<QueuedMessage> _messageQueue = Channel.CreateUnbounded<QueuedMessage>();
 	
@@ -1310,5 +1313,75 @@ public class ProcessEnvironment
 
 		_logger.LogWarning("[ProcessEnv] RegCloseKey: invalid handle=0x{Handle:X8}", handle);
 		return false;
+	}
+
+	// Dialog state management methods
+
+	/// <summary>
+	/// Initializes dialog state for a dialog box.
+	/// </summary>
+	public void InitializeDialogState(uint hDlg)
+	{
+		_dialogStates[hDlg] = new DialogState();
+		_logger.LogDebug("[ProcessEnv] InitializeDialogState: hDlg=0x{HDlg:X8}", hDlg);
+	}
+
+	/// <summary>
+	/// Sets the result for a dialog and marks it as ended.
+	/// Called by EndDialog.
+	/// </summary>
+	public bool SetDialogResult(uint hDlg, uint result)
+	{
+		if (_dialogStates.TryGetValue(hDlg, out var state))
+		{
+			state.Result = result;
+			state.IsEnded = true;
+			_logger.LogInformation("[ProcessEnv] SetDialogResult: hDlg=0x{HDlg:X8} result={Result}", hDlg, result);
+			return true;
+		}
+
+		_logger.LogWarning("[ProcessEnv] SetDialogResult: unknown dialog hDlg=0x{HDlg:X8}", hDlg);
+		return false;
+	}
+
+	/// <summary>
+	/// Checks if a dialog has been ended via EndDialog.
+	/// </summary>
+	public bool IsDialogEnded(uint hDlg)
+	{
+		return _dialogStates.TryGetValue(hDlg, out var state) && state.IsEnded;
+	}
+
+	/// <summary>
+	/// Gets the result set by EndDialog.
+	/// </summary>
+	public uint GetDialogResult(uint hDlg)
+	{
+		if (_dialogStates.TryGetValue(hDlg, out var state))
+		{
+			return state.Result;
+		}
+
+		return 0;
+	}
+
+	/// <summary>
+	/// Cleans up dialog state after the dialog is destroyed.
+	/// </summary>
+	public void CleanupDialogState(uint hDlg)
+	{
+		if (_dialogStates.Remove(hDlg))
+		{
+			_logger.LogDebug("[ProcessEnv] CleanupDialogState: hDlg=0x{HDlg:X8}", hDlg);
+		}
+	}
+
+	/// <summary>
+	/// Internal class to track dialog state.
+	/// </summary>
+	private class DialogState
+	{
+		public bool IsEnded { get; set; }
+		public uint Result { get; set; }
 	}
 }

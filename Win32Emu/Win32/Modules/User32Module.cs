@@ -996,19 +996,186 @@ namespace Win32Emu.Win32.Modules
 		private uint DialogBoxParamA(uint hInstance, uint lpTemplateName, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
 		{
 			// DialogBoxParamA creates a modal dialog box
-			// For now, we'll just log and return a default value
 			_logger.LogInformation("[User32] DialogBoxParamA: hInstance=0x{HInstance:X8} lpTemplateName=0x{LpTemplateName:X8} lpDialogFunc=0x{LpDialogFunc:X8}", hInstance, lpTemplateName, lpDialogFunc);
 
-			// Return IDOK (1) to indicate the dialog was closed with OK
-			return 1;
+			// Create a dialog window handle
+			// For now, we create a synthetic dialog handle without parsing the template
+			var hDlg = _env.RegisterHandle(new object()); // Dialog handle
+			_logger.LogInformation("[User32] DialogBoxParamA: Created dialog handle=0x{HDlg:X8}", hDlg);
+
+			// Initialize dialog state
+			_env.InitializeDialogState(hDlg);
+
+			// Call the dialog procedure with WM_INITDIALOG (0x0110)
+			// WM_INITDIALOG signature: BOOL CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			// wParam = hWndParent (or 0 if no focus control)
+			// lParam = dwInitParam
+			const uint WM_INITDIALOG = 0x0110;
+			
+			if (lpDialogFunc != 0)
+			{
+				_logger.LogInformation("[User32] DialogBoxParamA: Calling dialog procedure with WM_INITDIALOG");
+				var initResult = CallDialogProcedure(_cpu, _memory, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam);
+				_logger.LogInformation("[User32] DialogBoxParamA: WM_INITDIALOG returned {InitResult}", initResult);
+			}
+			else
+			{
+				_logger.LogWarning("[User32] DialogBoxParamA: No dialog procedure specified");
+			}
+
+			// Run modal message loop until EndDialog is called
+			_logger.LogInformation("[User32] DialogBoxParamA: Entering modal message loop");
+			
+			const int MAX_ITERATIONS = 10000; // Safety limit to prevent infinite loops
+			var iterations = 0;
+			
+			while (!_env.IsDialogEnded(hDlg) && iterations < MAX_ITERATIONS)
+			{
+				iterations++;
+				
+				// Check for quit message
+				if (_env.HasQuitMessage())
+				{
+					_logger.LogInformation("[User32] DialogBoxParamA: Quit message received, breaking modal loop");
+					break;
+				}
+
+				// Try to get a message (with short timeout to avoid blocking indefinitely)
+				var queuedMsg = _env.GetMessageBlocking(0, 0, 0, timeoutMs: 10);
+				
+				if (queuedMsg.HasValue)
+				{
+					var msg = queuedMsg.Value;
+					_logger.LogDebug("[User32] DialogBoxParamA: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", msg.Message, msg.Hwnd);
+					
+					// Dispatch the message to the dialog procedure if it's for our dialog
+					if (msg.Hwnd == hDlg || msg.Hwnd == 0)
+					{
+						if (lpDialogFunc != 0)
+						{
+							var result = CallDialogProcedure(_cpu, _memory, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam);
+							_logger.LogDebug("[User32] DialogBoxParamA: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
+						}
+					}
+					else
+					{
+						// Message for a different window - requeue it
+						_env.PostMessage(msg.Hwnd, msg.Message, msg.WParam, msg.LParam);
+					}
+				}
+			}
+
+			if (iterations >= MAX_ITERATIONS)
+			{
+				_logger.LogWarning("[User32] DialogBoxParamA: Exceeded max iterations, forcing dialog end");
+			}
+
+			// Get the result from EndDialog
+			var dialogResult = _env.GetDialogResult(hDlg);
+			
+			// Clean up dialog state
+			_env.CleanupDialogState(hDlg);
+			_env.CloseHandle(hDlg);
+			
+			_logger.LogInformation("[User32] DialogBoxParamA: Returning result={DialogResult}", dialogResult);
+			return dialogResult;
+		}
+
+		/// <summary>
+		/// Call a dialog procedure by setting up CPU state and executing the callback.
+		/// DialogProc signature: INT_PTR CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+		/// Uses stdcall calling convention (callee cleans stack, parameters pushed right-to-left)
+		/// </summary>
+		private uint CallDialogProcedure(ICpu cpu, VirtualMemory memory, uint dialogProcAddress, uint hwndDlg, uint message, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] CallDialogProcedure: Calling 0x{DialogProcAddress:X8} with HWND=0x{HwndDlg:X8} MSG=0x{Message:X4}", dialogProcAddress, hwndDlg, message);
+
+			// Save current CPU state
+			var savedEip = cpu.GetEip();
+			var savedEsp = cpu.GetRegister("ESP");
+			var savedEbp = cpu.GetRegister("EBP");
+
+			// Set up stack for stdcall convention (parameters pushed right-to-left)
+			var esp = savedEsp;
+
+			// Push return address (we'll use a special marker address)
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+			esp -= 4;
+			memory.Write32(esp, RETURN_ADDRESS);
+
+			// Push parameters (right-to-left for stdcall)
+			esp -= 4;
+			memory.Write32(esp, lParam);
+
+			esp -= 4;
+			memory.Write32(esp, wParam);
+
+			esp -= 4;
+			memory.Write32(esp, message);
+
+			esp -= 4;
+			memory.Write32(esp, hwndDlg);
+
+			// Update CPU registers
+			cpu.SetRegister("ESP", esp);
+			cpu.SetEip(dialogProcAddress);
+
+			// Execute until we hit the return address
+			const int MAX_STEPS = 100000; // Safety limit
+			var steps = 0;
+
+			try
+			{
+				while (steps < MAX_STEPS)
+				{
+					var eip = cpu.GetEip();
+
+					// Check if we've returned to our marker address
+					if (eip == RETURN_ADDRESS)
+					{
+						break;
+					}
+
+					// Execute one instruction
+					cpu.SingleStep(memory);
+
+					steps++;
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning("[User32] CallDialogProcedure: Exception during execution: {ExMessage}", ex.Message);
+			}
+
+			if (steps >= MAX_STEPS)
+			{
+				_logger.LogWarning("[User32] CallDialogProcedure: Exceeded max steps ({MaxSteps}), aborting", MAX_STEPS);
+			}
+
+			// Get return value from EAX
+			var returnValue = cpu.GetRegister("EAX");
+
+			// Restore CPU state
+			cpu.SetEip(savedEip);
+			cpu.SetRegister("ESP", savedEsp);
+			cpu.SetRegister("EBP", savedEbp);
+
+			_logger.LogInformation("[User32] CallDialogProcedure: Completed with return value 0x{ReturnValue:X8}", returnValue);
+
+			return returnValue;
 		}
 
 		[DllModuleExport(1)]
 		private uint EndDialog(uint hDlg, uint nResult)
 		{
-			// EndDialog closes a modal dialog box
+			// EndDialog closes a modal dialog box and sets its result
 			_logger.LogInformation("[User32] EndDialog: hDlg=0x{HDlg:X8} nResult={NResult}", hDlg, nResult);
-			return 1; // TRUE
+			
+			// Set the dialog result in the process environment
+			// This will signal DialogBoxParamA to exit its message loop
+			var success = _env.SetDialogResult(hDlg, nResult);
+			
+			return success ? 1u : 0u; // TRUE if successful, FALSE otherwise
 		}
 
 		[DllModuleExport(1)]
