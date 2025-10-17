@@ -14,10 +14,15 @@ namespace Win32Emu
 				Console.WriteLine("  --debug              Enable enhanced debugging to catch memory access errors");
 				Console.WriteLine("  --interactive-debug  Enable interactive step-through debugger (GDB-like)");
 				Console.WriteLine("  --gdb-server [port]  Start GDB server for remote debugging (default port: 1234)");
+				Console.WriteLine("  --backend <SDL|GLFW> Select rendering backend (default: SDL)");
+				Console.WriteLine();
+				Console.WriteLine("Environment Variables:");
+				Console.WriteLine("  WIN32EMU_BACKEND     Set backend type (SDL or GLFW)");
 				Console.WriteLine();
 				Console.WriteLine("Examples:");
 				Console.WriteLine("  Win32Emu game.exe");
 				Console.WriteLine("  Win32Emu game.exe --debug");
+				Console.WriteLine("  Win32Emu game.exe --backend GLFW");
 				Console.WriteLine("  Win32Emu game.exe --interactive-debug");
 				Console.WriteLine("  Win32Emu game.exe --gdb-server");
 				Console.WriteLine("  Win32Emu game.exe --gdb-server 5678");
@@ -38,6 +43,16 @@ namespace Win32Emu
 				    int.TryParse(args[gdbServerIndex + 1], out var customPort))
 				{
 					gdbServerPort = customPort;
+				}
+			}
+
+			// Check for backend selection
+			var backendIndex = Array.IndexOf(args, "--backend");
+			if (backendIndex >= 0 && backendIndex + 1 < args.Length)
+			{
+				if (Enum.TryParse<Rendering.BackendType>(args[backendIndex + 1], ignoreCase: true, out var backendType))
+				{
+					Rendering.BackendFactory.CurrentBackendType = backendType;
 				}
 			}
 			

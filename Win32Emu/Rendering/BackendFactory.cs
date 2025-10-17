@@ -7,10 +7,36 @@ namespace Win32Emu.Rendering;
 /// </summary>
 public static class BackendFactory
 {
+    private static BackendType? _currentBackendType;
+
     /// <summary>
-    /// Current backend type setting (defaults to SDL)
+    /// Current backend type setting
+    /// Priority: 1. Explicitly set value, 2. WIN32EMU_BACKEND environment variable, 3. Default to SDL
     /// </summary>
-    public static BackendType CurrentBackendType { get; set; } = BackendType.SDL;
+    public static BackendType CurrentBackendType
+    {
+        get
+        {
+            if (_currentBackendType.HasValue)
+            {
+                return _currentBackendType.Value;
+            }
+
+            // Check environment variable
+            var envBackend = Environment.GetEnvironmentVariable("WIN32EMU_BACKEND");
+            if (!string.IsNullOrEmpty(envBackend))
+            {
+                if (Enum.TryParse<BackendType>(envBackend, ignoreCase: true, out var backendType))
+                {
+                    return backendType;
+                }
+            }
+
+            // Default to SDL
+            return BackendType.SDL;
+        }
+        set => _currentBackendType = value;
+    }
 
     /// <summary>
     /// Create a rendering backend instance
