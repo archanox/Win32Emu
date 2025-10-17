@@ -218,6 +218,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = FillRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				case "CHARNEXTA":
+					returnValue = CharNextA(a.UInt32(0));
+					return true;
+
 				default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
@@ -1127,6 +1131,35 @@ namespace Win32Emu.Win32.Modules
 			// For now, we don't do any actual drawing.
 			// Just return success.
 			return 1;
+		}
+
+		[DllModuleExport(4)]
+		private uint CharNextA(uint lpsz)
+		{
+			if (lpsz == 0)
+			{
+				_logger.LogInformation("[User32] CharNextA: NULL pointer");
+				return 0;
+			}
+
+			// Read the byte at the current position
+			var currentByte = _env.MemRead8(lpsz);
+
+			// If we're at the null terminator, return the same pointer
+			if (currentByte == 0)
+			{
+				_logger.LogInformation("[User32] CharNextA: At null terminator, returning same pointer 0x{Lpsz:X8}", lpsz);
+				return lpsz;
+			}
+
+			// For single-byte character sets (ASCII), just advance by 1 byte
+			// A full implementation would need to check for multi-byte character sequences
+			// and use IsDBCSLeadByte to determine if this is a lead byte in a DBCS encoding
+			var nextPtr = lpsz + 1;
+
+			_logger.LogInformation("[User32] CharNextA: lpsz=0x{Lpsz:X8} currentByte=0x{CurrentByte:X2} -> next=0x{NextPtr:X8}", lpsz, currentByte, nextPtr);
+
+			return nextPtr;
 		}
 	}
 }
