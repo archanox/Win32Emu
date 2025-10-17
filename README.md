@@ -26,11 +26,18 @@ Win32Emu <path-to-pe> [options]
 - `--interactive-debug`: Enable interactive step-through debugger (GDB-like)
 - `--gdb-server [port]`: Start GDB server for remote debugging with Ghidra/IDA (default port: 1234)
   - Supports remote file I/O when VFS is initialized (access game files from debugger)
+- `--backend <SDL|GLFW>`: Select rendering backend (default: SDL)
+
+**Environment Variables:**
+- `WIN32EMU_BACKEND`: Set rendering backend (SDL or GLFW)
 
 **Examples:**
 ```bash
-# Run normally
+# Run normally (uses SDL backend)
 Win32Emu game.exe
+
+# Run with GLFW backend (alternative if SDL has issues on macOS)
+Win32Emu game.exe --backend GLFW
 
 # Run with enhanced debugging
 Win32Emu game.exe --debug
@@ -46,13 +53,12 @@ Win32Emu game.exe --gdb-server 5678
 ```
 
 **See Also:**
+- [SILK_NET_MIGRATION.md](SILK_NET_MIGRATION.md) - Backend system and configuration
 - [GHIDRA_DEBUGGING_FAQ.md](GHIDRA_DEBUGGING_FAQ.md) - Troubleshooting "no debugging symbols" and debugging tips
 - [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) - Enhanced debugging mode
 - [INTERACTIVE_DEBUGGER_GUIDE.md](INTERACTIVE_DEBUGGER_GUIDE.md) - Interactive debugger
 - [GDB_SERVER_GUIDE.md](GDB_SERVER_GUIDE.md) - GDB server for Ghidra/IDA integration
 - [VFS_DOCUMENTATION.md](VFS_DOCUMENTATION.md) - Virtual File System for game file isolation
-
-See [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md), [INTERACTIVE_DEBUGGER_GUIDE.md](INTERACTIVE_DEBUGGER_GUIDE.md), and [GDB_SERVER_GUIDE.md](GDB_SERVER_GUIDE.md) for more details.
 
 ### Win32Emu.Gui
 Cross-platform desktop GUI for managing your game library and emulator settings. Built with Avalonia UI.
@@ -64,6 +70,27 @@ Cross-platform desktop GUI for managing your game library and emulator settings.
 - One-click game launching
 
 See [Win32Emu.Gui/README.md](Win32Emu.Gui/README.md) for more details.
+
+## Backend System
+
+Win32Emu uses Silk.NET for cross-platform multimedia support with pluggable backends:
+
+### Rendering Backends
+- **SDL** (default): Silk.NET.SDL - Best compatibility, hardware-accelerated
+- **GLFW**: Silk.NET.GLFW + OpenGL - Alternative for systems where SDL has issues
+
+### Audio Backend
+- **OpenAL**: Silk.NET.OpenAL - Cross-platform audio support
+
+### Input Backend
+- **Silk.NET.Input**: Unified keyboard, mouse, and gamepad support
+
+**Configuration:**
+- Command-line: `--backend SDL` or `--backend GLFW`
+- Environment variable: `WIN32EMU_BACKEND=GLFW`
+- Programmatic: `BackendFactory.CurrentBackendType = BackendType.GLFW;`
+
+See [SILK_NET_MIGRATION.md](SILK_NET_MIGRATION.md) for detailed documentation.
 
 ## CPU Intrinsics Support
 
