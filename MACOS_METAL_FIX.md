@@ -1,29 +1,34 @@
 # SDL3 macOS Metal Support - Implementation Summary
 
 ## Issue
-SDL3 initialization was failing on macOS when calling `SDL.Init(SDL.InitFlags.Video)`. The issue requested Metal support for macOS as indicated in the SDL3-CS GPU documentation.
+SDL3 initialization was failing on macOS with error "No available video device" when calling `SDL.Init(SDL.InitFlags.Video)`. The issue requested Metal support for macOS as indicated in the SDL3-CS GPU documentation.
 
 ## Root Cause
-The traditional SDL video subsystem initialization approach does not properly initialize Metal on macOS. SDL3's modern approach requires using the GPU API for hardware-accelerated rendering.
+1. The traditional SDL video subsystem initialization approach does not properly initialize Metal on macOS. SDL3's modern approach requires using the GPU API for hardware-accelerated rendering.
+2. **Critical**: On macOS, `SDL.SetAppMetadata()` must be called BEFORE `SDL.Init()` to properly initialize the video subsystem. This is a macOS-specific requirement due to how the platform handles application metadata.
 
 ## Solution
 Migrated SDL3RenderingBackend from traditional renderer API to modern GPU API:
 
 ### Key Changes
 
-1. **Device Initialization**
+1. **App Metadata Initialization (NEW)**
+   - **Critical Fix**: `SDL.SetAppMetadata()` must be called BEFORE `SDL.Init()` on macOS
+   - This ensures the video subsystem initializes correctly with Metal support
+   
+2. **Device Initialization**
    - **Before**: `SDL.Init(SDL.InitFlags.Video)` + `SDL.CreateWindowAndRenderer()`
-   - **After**: `SDL.CreateGPUDevice()` with auto-selected driver
+   - **After**: `SDL.SetAppMetadata()` → `SDL.Init()` → `SDL.CreateGPUDevice()` with auto-selected driver
 
-2. **Window Management**
+3. **Window Management**
    - **Before**: Window and renderer created together
    - **After**: Separate window creation + `SDL.ClaimWindowForGPUDevice()`
 
-3. **Rendering**
+4. **Rendering**
    - **Before**: Direct texture updates with `SDL.UpdateTexture()`
    - **After**: GPU command buffers + transfer buffers + blit operations
 
-4. **Resource Cleanup**
+5. **Resource Cleanup**
    - **Before**: `SDL.Quit()` for video subsystem
    - **After**: Proper GPU resource release sequence with idle wait
 
