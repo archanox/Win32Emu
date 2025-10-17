@@ -293,6 +293,24 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = TlsFree(a.UInt32(0));
 				return true;
 
+			// Directory functions
+			case "SETCURRENTDIRECTORYA":
+				returnValue = SetCurrentDirectoryA(a.LpcStr(0));
+				return true;
+			case "GETCURRENTDIRECTORYA":
+				returnValue = GetCurrentDirectoryA(a.UInt32(0), a.LpStr(1));
+				return true;
+
+			// String functions
+			case "LSTRCATA":
+				returnValue = LstrcatA(a.LpStr(0), a.LpcStr(1));
+				return true;
+
+			// Process execution
+			case "WINEXEC":
+				returnValue = WinExec(a.LpcStr(0), a.UInt32(1));
+				return true;
+
 			default:
 				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
 				return false;
@@ -3426,5 +3444,102 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var success = _env.TlsFree(dwTlsIndex);
 		_logger.LogInformation("[Kernel32] TlsFree({DwTlsIndex}) = {Success}", dwTlsIndex, success);
 		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+	}
+
+	// Directory functions
+	private uint SetCurrentDirectoryA(in LpcStr lpPathName)
+	{
+		var path = lpPathName.ToString();
+		if (string.IsNullOrEmpty(path))
+		{
+			_logger.LogInformation("[Kernel32] SetCurrentDirectoryA failed: Invalid path (empty or null)");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Convert to Windows path format if using VFS
+		if (_env.VirtualFileSystem != null)
+		{
+			path = _env.VirtualFileSystem.ToWindowsPath(path);
+		}
+
+		_logger.LogInformation("[Kernel32] SetCurrentDirectoryA(\"{Path}\")", path);
+		_env.CurrentDirectory = path;
+		return NativeTypes.Win32Bool.TRUE;
+	}
+
+	private uint GetCurrentDirectoryA(uint nBufferLength, in LpStr lpBuffer)
+	{
+		var currentDir = _env.CurrentDirectory;
+		var requiredLength = (uint)currentDir.Length + 1; // +1 for null terminator
+
+		_logger.LogInformation("[Kernel32] GetCurrentDirectoryA({NBufferLength}, 0x{LpBuffer:X8}) -> \"{CurrentDir}\"",
+			nBufferLength, lpBuffer.Address, currentDir);
+
+		if (nBufferLength == 0)
+		{
+			// Return required buffer size
+			return requiredLength;
+		}
+
+		if (nBufferLength < requiredLength)
+		{
+			// Buffer too small, return required size
+			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return requiredLength;
+		}
+
+		// Write the current directory to the buffer
+		lpBuffer.Write(_env.Memory, currentDir, true);
+		return (uint)currentDir.Length; // Return length without null terminator
+	}
+
+	// String functions
+	private uint LstrcatA(in LpStr lpString1, in LpcStr lpString2)
+	{
+		var str1 = lpString1.Read(_env.Memory);
+		var str2 = lpString2.ToString();
+
+		_logger.LogInformation("[Kernel32] LstrcatA(\"{Str1}\", \"{Str2}\")", str1, str2);
+
+		// Concatenate and write back
+		var result = str1 + str2;
+		lpString1.Write(_env.Memory, result, true);
+
+		// Return pointer to destination string
+		return lpString1.Address;
+	}
+
+	// Process execution
+	private uint WinExec(in LpcStr lpCmdLine, uint uCmdShow)
+	{
+		var cmdLine = lpCmdLine.ToString();
+		_logger.LogInformation("[Kernel32] WinExec(\"{CmdLine}\", {UCmdShow})", cmdLine, uCmdShow);
+
+		// Parse command line to extract executable path
+		var executable = cmdLine.Trim();
+		if (executable.StartsWith("\""))
+		{
+			var endQuote = executable.IndexOf("\"", 1);
+			if (endQuote > 0)
+			{
+				executable = executable.Substring(1, endQuote - 1);
+			}
+		}
+		else
+		{
+			var spaceIndex = executable.IndexOf(" ");
+			if (spaceIndex > 0)
+			{
+				executable = executable.Substring(0, spaceIndex);
+			}
+		}
+
+		_logger.LogInformation("[Kernel32] WinExec: Parsed executable path: \"{Executable}\"", executable);
+
+		// For now, we just log that an attempt was made to execute a program
+		// A full implementation would need to support launching child processes
+		// Return success (33 or higher indicates success in WinExec)
+		return 33; // SE_ERR_SUCCESS (actually any value > 31 indicates success)
 	}
 }

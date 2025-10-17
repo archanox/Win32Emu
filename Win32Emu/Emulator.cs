@@ -130,6 +130,7 @@ public sealed class Emulator : IDisposable
         // Register KERNELBASE for forwarded exports from KERNEL32
         _dispatcher.RegisterModule(new KernelBaseModule(_env, _image.BaseAddress, loader, _logger));
 
+        _dispatcher.RegisterModule(new Advapi32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new User32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Gdi32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DDrawModule(_env, _image.BaseAddress, loader, _logger));

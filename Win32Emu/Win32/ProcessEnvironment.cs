@@ -20,12 +20,16 @@ public class ProcessEnvironment
 	private uint _allocPtr;
 	private bool _exitRequested;
 	private string _executablePath = string.Empty;
+	private string _currentDirectory = @"C:\"; // Default to C:\ root
 
 	// COM vtable dispatcher
 	private ComVtableDispatcher? _comDispatcher;
 
 	// Virtual File System
 	private IVirtualFileSystem? _vfs;
+	
+	// Expose VirtualMemory for use by Win32 API implementations
+	public VirtualMemory Memory => _vm;
 	
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
 	{
@@ -136,6 +140,11 @@ public class ProcessEnvironment
 	public uint ModuleFileNameLength { get; private set; }
 	public bool ExitRequested => _exitRequested;
 	public string ExecutablePath => _executablePath;
+	public string CurrentDirectory
+	{
+		get => _currentDirectory;
+		set => _currentDirectory = value ?? @"C:\";
+	}
 
 	// Console state
 	private bool _hasConsole = false;
@@ -197,6 +206,16 @@ public class ProcessEnvironment
 	private readonly Dictionary<uint, Dictionary<uint, uint>> _threadLocalStorage = new(); // threadId -> (tlsIndex -> value)
 	private readonly HashSet<uint> _allocatedTlsIndices = new();
 	private uint _nextTlsIndex = 0;
+
+	// Virtual Registry support
+	private readonly Dictionary<uint, VirtualRegistryKey> _registryKeys = new(); // handle -> key
+	private uint _nextRegistryHandle = 0x80000000; // Registry handles typically use high values
+	
+	public class VirtualRegistryKey
+	{
+		public string Path { get; set; } = string.Empty;
+		public Dictionary<string, object> Values { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+	}
 
 	public void InitializeStrings(string exePath, string[] args)
 	{
@@ -1248,5 +1267,48 @@ public class ProcessEnvironment
 
 		_logger.LogInformation("[ProcessEnv] TlsFree: freed index={TlsIndex}", tlsIndex);
 		return true;
+	}
+
+	// Registry support methods
+	public uint RegOpenKey(string path)
+	{
+		var handle = _nextRegistryHandle++;
+		var key = new VirtualRegistryKey { Path = path };
+		_registryKeys[handle] = key;
+		_logger.LogInformation("[ProcessEnv] RegOpenKey: path=\"{Path}\" handle=0x{Handle:X8}", path, handle);
+		return handle;
+	}
+
+	public bool RegQueryValue(uint handle, string valueName, out object? value)
+	{
+		value = null;
+		if (!_registryKeys.TryGetValue(handle, out var key))
+		{
+			_logger.LogWarning("[ProcessEnv] RegQueryValue: invalid handle=0x{Handle:X8}", handle);
+			return false;
+		}
+
+		if (key.Values.TryGetValue(valueName, out value))
+		{
+			_logger.LogInformation("[ProcessEnv] RegQueryValue: handle=0x{Handle:X8} name=\"{ValueName}\" value={Value}",
+				handle, valueName, value);
+			return true;
+		}
+
+		_logger.LogInformation("[ProcessEnv] RegQueryValue: handle=0x{Handle:X8} name=\"{ValueName}\" not found",
+			handle, valueName);
+		return false;
+	}
+
+	public bool RegCloseKey(uint handle)
+	{
+		if (_registryKeys.Remove(handle))
+		{
+			_logger.LogInformation("[ProcessEnv] RegCloseKey: handle=0x{Handle:X8}", handle);
+			return true;
+		}
+
+		_logger.LogWarning("[ProcessEnv] RegCloseKey: invalid handle=0x{Handle:X8}", handle);
+		return false;
 	}
 }
