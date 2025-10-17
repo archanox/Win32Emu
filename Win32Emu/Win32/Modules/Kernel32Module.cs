@@ -3520,7 +3520,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var executable = cmdLine.Trim();
 		if (executable.StartsWith("\""))
 		{
-			var endQuote = executable.IndexOf("\"", 1);
+			var endQuote = executable.IndexOf('"', 1);
 			if (endQuote > 0)
 			{
 				executable = executable.Substring(1, endQuote - 1);
