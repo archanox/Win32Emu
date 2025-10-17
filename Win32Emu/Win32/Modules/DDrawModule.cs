@@ -969,8 +969,8 @@ namespace Win32Emu.Win32.Modules
 			{
 				for (int x = 0; x < srcWidth && (destX + x) < destSurface.Width && (srcX + x) < srcSurface.Width; x++)
 				{
-					int destOffset = (destY + y) * destSurface.Pitch + (destX + x) * 2;
-					int srcOffset = (srcY + y) * srcSurface.Pitch + (srcX + x) * 2;
+					int destOffset = (destY + y) * destSurface.Pitch + (destX + x) * (destSurface.BitsPerPixel / 8);
+					int srcOffset = (srcY + y) * srcSurface.Pitch + (srcX + x) * (srcSurface.BitsPerPixel / 8);
 
 					if (destOffset + 1 < destSurface.Bits.Length && srcOffset + 1 < srcSurface.Bits.Length)
 					{
