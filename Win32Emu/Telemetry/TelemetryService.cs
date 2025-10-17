@@ -89,8 +89,8 @@ public sealed class TelemetryService : IDisposable
 	{
 		_tracerProvider?.Dispose();
 		_meterProvider?.Dispose();
-		ActivitySource?.Dispose();
-		Meter?.Dispose();
+		ActivitySource.Dispose();
+		Meter.Dispose();
 	}
 }
 
