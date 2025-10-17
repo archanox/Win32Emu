@@ -1574,7 +1574,7 @@ namespace Win32Emu.Win32.Modules
 						if (surface.PaletteHandle != 0 && _palettes.TryGetValue(surface.PaletteHandle, out var palette))
 						{
 							// Convert palettized (8-bit indexed) to RGBA using attached palette
-							_logger.LogInformation("[DDraw] Converting 8-bit palettized surface to RGBA");
+							_logger.LogDebug("[DDraw] Converting 8-bit palettized surface to RGBA");
 							displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
 								surface.Bits, 
 								palette.Entries, 
