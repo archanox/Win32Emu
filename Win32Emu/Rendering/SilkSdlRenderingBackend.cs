@@ -75,6 +75,12 @@ public class SilkSdlRenderingBackend : IRenderingBackend
             }
 
             _initialized = true;
+            
+            // Clear the window with black to show it's properly initialized
+            _sdl.SetRenderDrawColor(_renderer, 0, 0, 0, 255);
+            _sdl.RenderClear(_renderer);
+            _sdl.RenderPresent(_renderer);
+            
             _logger.LogInformation("[SilkSDL] Initialized {Width}x{Height} display", width, height);
             return true;
         }
