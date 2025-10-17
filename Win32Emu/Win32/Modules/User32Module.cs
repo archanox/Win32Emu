@@ -1157,7 +1157,7 @@ namespace Win32Emu.Win32.Modules
 			// and use IsDBCSLeadByte to determine if this is a lead byte in a DBCS encoding
 			var nextPtr = lpsz + 1;
 
-			_logger.LogInformation("[User32] CharNextA: lpsz=0x{Lpsz:X8} currentByte=0x{CurrentByte:X2} -> next=0x{NextPtr:X8}", lpsz, currentByte, nextPtr);
+			_logger.LogDebug("[User32] CharNextA: lpsz=0x{Lpsz:X8} currentByte=0x{CurrentByte:X2} -> next=0x{NextPtr:X8}", lpsz, currentByte, nextPtr);
 
 			return nextPtr;
 		}
