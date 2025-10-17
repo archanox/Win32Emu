@@ -209,6 +209,9 @@ namespace Win32Emu.Win32.Modules
 			public IntPtr TexturePtr { get; set; }
 			public uint LockedMemoryPtr { get; set; }
 			public uint PaletteHandle { get; set; }
+			public uint ColorKeyLow { get; set; }
+			public uint ColorKeyHigh { get; set; }
+			public bool HasColorKey { get; set; }
 		}
 
 		private sealed class DirectDrawPalette
@@ -523,7 +526,49 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_SetColorKey(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::SetColorKey() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+			var lpDDColorKey = args.UInt32(2);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::SetColorKey(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lpDDColorKey=0x{ColorKey:X8})", 
+				thisPtr, dwFlags, lpDDColorKey);
+
+			// Find the surface
+			DirectDrawSurface? surface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				// For now, find any surface
+				// In a complete implementation, we'd match by COM object address
+				surface = s;
+				break;
+			}
+
+			if (surface == null)
+			{
+				_logger.LogError("[DDraw] SetColorKey: could not find surface");
+				return 1; // DDERR_GENERIC
+			}
+
+			if (lpDDColorKey != 0)
+			{
+				// Read DDCOLORKEY structure
+				uint colorKeyLow = _env.MemRead32(lpDDColorKey);
+				uint colorKeyHigh = _env.MemRead32(lpDDColorKey + 4);
+
+				surface.ColorKeyLow = colorKeyLow;
+				surface.ColorKeyHigh = colorKeyHigh;
+				surface.HasColorKey = true;
+
+				_logger.LogInformation("[DDraw] Set color key: low=0x{Low:X8}, high=0x{High:X8}", colorKeyLow, colorKeyHigh);
+			}
+			else
+			{
+				// Clear color key
+				surface.HasColorKey = false;
+				_logger.LogInformation("[DDraw] Cleared color key");
+			}
+
 			return 0; // DD_OK
 		}
 
@@ -642,7 +687,51 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_Flip(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::Flip() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lpDDSurfaceTargetOverride = args.UInt32(1);
+			var dwFlags = args.UInt32(2);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::Flip(this=0x{ThisPtr:X8}, lpDDSurfaceTargetOverride=0x{Target:X8}, dwFlags=0x{DwFlags:X8})", 
+				thisPtr, lpDDSurfaceTargetOverride, dwFlags);
+
+			// Find the surface from the COM object
+			DirectDrawSurface? surface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				// We need to match surfaces by their COM object address
+				// For now, just use the first primary surface
+				if (s.IsPrimary)
+				{
+					surface = s;
+					break;
+				}
+			}
+
+			if (surface == null)
+			{
+				_logger.LogError("[DDraw] Flip: could not find primary surface");
+				return 1; // DDERR_GENERIC
+			}
+
+			// If this is a primary surface, present the frame to SDL3
+			if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null)
+			{
+				try
+				{
+					// Process SDL events to keep the window responsive
+					ddrawObj.RenderingBackend.ProcessEvents();
+
+					// The frame was already updated in Surface_Unlock, so Flip just ensures presentation
+					_logger.LogInformation("[DDraw] Flipped primary surface");
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[DDraw] Failed to flip surface");
+					return 1; // DDERR_GENERIC
+				}
+			}
+
 			return 0; // DD_OK
 		}
 
@@ -666,7 +755,99 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_BltFast(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::BltFast() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var dwX = args.UInt32(1);
+			var dwY = args.UInt32(2);
+			var lpDDSrcSurface = args.UInt32(3);
+			var lpSrcRect = args.UInt32(4);
+			var dwTrans = args.UInt32(5);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::BltFast(this=0x{ThisPtr:X8}, x={X}, y={Y}, lpDDSrcSurface=0x{SrcSurface:X8}, lpSrcRect=0x{SrcRect:X8}, dwTrans=0x{Trans:X8})", 
+				thisPtr, dwX, dwY, lpDDSrcSurface, lpSrcRect, dwTrans);
+
+			// Find destination surface
+			DirectDrawSurface? destSurface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				if (s.IsPrimary)
+				{
+					destSurface = s;
+					break;
+				}
+			}
+
+			if (destSurface == null || destSurface.Bits == null)
+			{
+				_logger.LogError("[DDraw] BltFast: could not find destination surface");
+				return 1; // DDERR_GENERIC
+			}
+
+			// Find source surface
+			DirectDrawSurface? srcSurface = null;
+			if (lpDDSrcSurface != 0)
+			{
+				foreach (var s in _surfaces.Values)
+				{
+					if (!s.IsPrimary)
+					{
+						srcSurface = s;
+						break;
+					}
+				}
+			}
+
+			if (srcSurface == null || srcSurface.Bits == null)
+			{
+				_logger.LogError("[DDraw] BltFast: could not find source surface");
+				return 1; // DDERR_GENERIC
+			}
+
+			// Read source rectangle if provided
+			int srcX = 0, srcY = 0, srcWidth = srcSurface.Width, srcHeight = srcSurface.Height;
+			if (lpSrcRect != 0)
+			{
+				srcX = (int)_env.MemRead32(lpSrcRect);
+				srcY = (int)_env.MemRead32(lpSrcRect + 4);
+				srcWidth = (int)_env.MemRead32(lpSrcRect + 8) - srcX;
+				srcHeight = (int)_env.MemRead32(lpSrcRect + 12) - srcY;
+			}
+
+			// Perform fast blit
+			int destX = (int)dwX;
+			int destY = (int)dwY;
+
+			for (int y = 0; y < srcHeight && (destY + y) < destSurface.Height && (srcY + y) < srcSurface.Height; y++)
+			{
+				for (int x = 0; x < srcWidth && (destX + x) < destSurface.Width && (srcX + x) < srcSurface.Width; x++)
+				{
+					int destOffset = (destY + y) * destSurface.Pitch + (destX + x) * 2;
+					int srcOffset = (srcY + y) * srcSurface.Pitch + (srcX + x) * 2;
+
+					if (destOffset + 1 < destSurface.Bits.Length && srcOffset + 1 < srcSurface.Bits.Length)
+					{
+						// DDBLTFAST_SRCCOLORKEY = 0x00000001
+						if ((dwTrans & 0x00000001) != 0 && srcSurface.HasColorKey)
+						{
+							// Check for color key transparency
+							ushort srcPixel = (ushort)(srcSurface.Bits[srcOffset] | (srcSurface.Bits[srcOffset + 1] << 8));
+							// Check if pixel is within color key range (transparent if it matches)
+							if (srcPixel < srcSurface.ColorKeyLow || srcPixel > srcSurface.ColorKeyHigh)
+							{
+								destSurface.Bits[destOffset] = srcSurface.Bits[srcOffset];
+								destSurface.Bits[destOffset + 1] = srcSurface.Bits[srcOffset + 1];
+							}
+						}
+						else
+						{
+							// No transparency
+							destSurface.Bits[destOffset] = srcSurface.Bits[srcOffset];
+							destSurface.Bits[destOffset + 1] = srcSurface.Bits[srcOffset + 1];
+						}
+					}
+				}
+			}
+
 			return 0; // DD_OK
 		}
 
@@ -678,7 +859,117 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_Blt(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::Blt() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lpDestRect = args.UInt32(1);
+			var lpDDSrcSurface = args.UInt32(2);
+			var lpSrcRect = args.UInt32(3);
+			var dwFlags = args.UInt32(4);
+			var lpDDBltFx = args.UInt32(5);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::Blt(this=0x{ThisPtr:X8}, lpDestRect=0x{DestRect:X8}, lpDDSrcSurface=0x{SrcSurface:X8}, lpSrcRect=0x{SrcRect:X8}, dwFlags=0x{DwFlags:X8}, lpDDBltFx=0x{BltFx:X8})", 
+				thisPtr, lpDestRect, lpDDSrcSurface, lpSrcRect, dwFlags, lpDDBltFx);
+
+			// Find destination surface
+			DirectDrawSurface? destSurface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				// For now, use the first primary surface as destination
+				if (s.IsPrimary)
+				{
+					destSurface = s;
+					break;
+				}
+			}
+
+			if (destSurface == null || destSurface.Bits == null)
+			{
+				_logger.LogError("[DDraw] Blt: could not find destination surface");
+				return 1; // DDERR_GENERIC
+			}
+
+			// Read destination rectangle if provided
+			int destX = 0, destY = 0, destWidth = destSurface.Width, destHeight = destSurface.Height;
+			if (lpDestRect != 0)
+			{
+				destX = (int)_env.MemRead32(lpDestRect);
+				destY = (int)_env.MemRead32(lpDestRect + 4);
+				destWidth = (int)_env.MemRead32(lpDestRect + 8) - destX;
+				destHeight = (int)_env.MemRead32(lpDestRect + 12) - destY;
+			}
+
+			// Check for color fill operation (DDBLT_COLORFILL = 0x00000400)
+			if ((dwFlags & 0x00000400) != 0 && lpDDBltFx != 0)
+			{
+				// Read fill color from DDBLTFX structure
+				uint fillColor = _env.MemRead32(lpDDBltFx + 16); // dwFillColor offset
+
+				// Perform color fill
+				for (int y = destY; y < destY + destHeight && y < destSurface.Height; y++)
+				{
+					for (int x = destX; x < destX + destWidth && x < destSurface.Width; x++)
+					{
+						int offset = y * destSurface.Pitch + x * 2; // Assuming 16-bit
+						if (offset + 1 < destSurface.Bits.Length)
+						{
+							destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
+							destSurface.Bits[offset + 1] = (byte)((fillColor >> 8) & 0xFF);
+						}
+					}
+				}
+
+				_logger.LogInformation("[DDraw] Performed color fill with color 0x{FillColor:X8}", fillColor);
+				return 0; // DD_OK
+			}
+
+			// Handle source surface blit
+			if (lpDDSrcSurface != 0)
+			{
+				// Find source surface by COM object address
+				DirectDrawSurface? srcSurface = null;
+				foreach (var s in _surfaces.Values)
+				{
+					// Would need to match COM object address
+					// For now, this is a simplified implementation
+					if (!s.IsPrimary)
+					{
+						srcSurface = s;
+						break;
+					}
+				}
+
+				if (srcSurface != null && srcSurface.Bits != null)
+				{
+					// Read source rectangle if provided
+					int srcX = 0, srcY = 0, srcWidth = srcSurface.Width, srcHeight = srcSurface.Height;
+					if (lpSrcRect != 0)
+					{
+						srcX = (int)_env.MemRead32(lpSrcRect);
+						srcY = (int)_env.MemRead32(lpSrcRect + 4);
+						srcWidth = (int)_env.MemRead32(lpSrcRect + 8) - srcX;
+						srcHeight = (int)_env.MemRead32(lpSrcRect + 12) - srcY;
+					}
+
+					// Perform simple blit (copy pixels)
+					for (int y = 0; y < srcHeight && (destY + y) < destSurface.Height && (srcY + y) < srcSurface.Height; y++)
+					{
+						for (int x = 0; x < srcWidth && (destX + x) < destSurface.Width && (srcX + x) < srcSurface.Width; x++)
+						{
+							int destOffset = (destY + y) * destSurface.Pitch + (destX + x) * 2;
+							int srcOffset = (srcY + y) * srcSurface.Pitch + (srcX + x) * 2;
+
+							if (destOffset + 1 < destSurface.Bits.Length && srcOffset + 1 < srcSurface.Bits.Length)
+							{
+								destSurface.Bits[destOffset] = srcSurface.Bits[srcOffset];
+								destSurface.Bits[destOffset + 1] = srcSurface.Bits[srcOffset + 1];
+							}
+						}
+					}
+
+					_logger.LogInformation("[DDraw] Performed blit from source surface");
+				}
+			}
+
 			return 0; // DD_OK
 		}
 
@@ -720,13 +1011,101 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DDraw_GetCaps(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetCaps() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lpDDDriverCaps = args.UInt32(1);
+			var lpDDHELCaps = args.UInt32(2);
+
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetCaps(this=0x{ThisPtr:X8}, lpDDDriverCaps=0x{DriverCaps:X8}, lpDDHELCaps=0x{HELCaps:X8})", 
+				thisPtr, lpDDDriverCaps, lpDDHELCaps);
+
+			// Fill in basic capabilities
+			if (lpDDDriverCaps != 0)
+			{
+				uint dwSize = _env.MemRead32(lpDDDriverCaps);
+				
+				// DDCAPS structure - simplified
+				_env.MemWrite32(lpDDDriverCaps + 4, 0x00000001); // dwCaps: DDCAPS_BLT
+				_env.MemWrite32(lpDDDriverCaps + 8, 0x00000040); // dwCaps2: DDCAPS2_CANRENDERWINDOWED
+				_env.MemWrite32(lpDDDriverCaps + 12, 0); // dwCKeyCaps
+				_env.MemWrite32(lpDDDriverCaps + 16, 0); // dwFXCaps
+				_env.MemWrite32(lpDDDriverCaps + 20, 0); // dwFXAlphaCaps
+				_env.MemWrite32(lpDDDriverCaps + 24, 0); // dwPalCaps
+				_env.MemWrite32(lpDDDriverCaps + 28, 0x00000001); // dwSVCaps: DDSVCAPS_RESERVED1
+				_env.MemWrite32(lpDDDriverCaps + 32, 0); // dwAlphaBltConstBitDepths
+				_env.MemWrite32(lpDDDriverCaps + 36, 0); // dwAlphaBltPixelBitDepths
+				_env.MemWrite32(lpDDDriverCaps + 40, 0); // dwAlphaBltSurfaceBitDepths
+			}
+
+			if (lpDDHELCaps != 0)
+			{
+				// HEL (Hardware Emulation Layer) caps - can be left empty for now
+				uint dwSize = _env.MemRead32(lpDDHELCaps);
+				_env.MemWrite32(lpDDHELCaps + 4, 0);
+			}
+
 			return 0; // DD_OK
 		}
 
 		private uint DDraw_GetDisplayMode(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetDisplayMode() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lpDDSurfaceDesc = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetDisplayMode(this=0x{ThisPtr:X8}, lpDDSurfaceDesc=0x{SurfaceDesc:X8})", 
+				thisPtr, lpDDSurfaceDesc);
+
+			// Find the DirectDraw object
+			DirectDrawObject? ddrawObj = null;
+			foreach (var obj in _ddrawObjects.Values)
+			{
+				ddrawObj = obj;
+				break;
+			}
+
+			if (ddrawObj == null)
+			{
+				_logger.LogError("[DDraw] GetDisplayMode: could not find DirectDraw object");
+				return 1; // DDERR_GENERIC
+			}
+
+			if (lpDDSurfaceDesc != 0)
+			{
+				// Fill DDSURFACEDESC structure
+				uint dwSize = _env.MemRead32(lpDDSurfaceDesc);
+
+				_env.MemWrite32(lpDDSurfaceDesc + 4, 0x0000100F); // dwFlags: DDSD_WIDTH | DDSD_HEIGHT | DDSD_PITCH | DDSD_PIXELFORMAT
+				_env.MemWrite32(lpDDSurfaceDesc + 8, (uint)ddrawObj.Width); // dwWidth
+				_env.MemWrite32(lpDDSurfaceDesc + 12, (uint)ddrawObj.Height); // dwHeight
+				_env.MemWrite32(lpDDSurfaceDesc + 16, (uint)(ddrawObj.Width * (ddrawObj.BitsPerPixel / 8))); // lPitch
+
+				// Write pixel format (offset 76)
+				if (dwSize >= 108)
+				{
+					_env.MemWrite32(lpDDSurfaceDesc + 76, 32); // dwSize of DDPIXELFORMAT
+					_env.MemWrite32(lpDDSurfaceDesc + 80, 0x00000040); // dwFlags: DDPF_RGB
+					_env.MemWrite32(lpDDSurfaceDesc + 84, 0); // dwFourCC
+					_env.MemWrite32(lpDDSurfaceDesc + 88, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
+
+					// Set RGB masks based on bit depth
+					if (ddrawObj.BitsPerPixel == 16)
+					{
+						_env.MemWrite32(lpDDSurfaceDesc + 92, 0xF800); // Red mask (5 bits)
+						_env.MemWrite32(lpDDSurfaceDesc + 96, 0x07E0); // Green mask (6 bits)
+						_env.MemWrite32(lpDDSurfaceDesc + 100, 0x001F); // Blue mask (5 bits)
+					}
+					else if (ddrawObj.BitsPerPixel == 24 || ddrawObj.BitsPerPixel == 32)
+					{
+						_env.MemWrite32(lpDDSurfaceDesc + 92, 0x00FF0000); // Red mask
+						_env.MemWrite32(lpDDSurfaceDesc + 96, 0x0000FF00); // Green mask
+						_env.MemWrite32(lpDDSurfaceDesc + 100, 0x000000FF); // Blue mask
+					}
+
+					_env.MemWrite32(lpDDSurfaceDesc + 104, 0); // dwRGBAlphaBitMask
+				}
+			}
+
 			return 0; // DD_OK
 		}
 
