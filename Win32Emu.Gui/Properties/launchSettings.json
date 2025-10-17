@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Win32Emu.Gui": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
