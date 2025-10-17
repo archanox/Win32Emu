@@ -1612,7 +1612,7 @@ namespace Win32Emu.Win32.Modules
 					else if (ddrawObj.BitsPerPixel == 24)
 					{
 						// Convert 24-bit RGB/BGR to RGBA
-						_logger.LogInformation("[DDraw] Converting 24-bit surface to RGBA");
+						_logger.LogDebug("[DDraw] Converting 24-bit surface to RGBA");
 						displayData = ddrawObj.RenderingBackend.Convert24BitToRGBA(
 							surface.Bits,
 							surface.Width,
