@@ -127,6 +127,7 @@ The Win32Emu GDB server implements the following GDB Remote Serial Protocol comm
 - `qSupported` - Feature negotiation
 - `qAttached` - Attached to existing process
 - `qOffsets` - Text/data/BSS offsets
+- `qSymbol` - Symbol lookup and announcement (import/export tables)
 - `qXfer:features:read` - Send target description (i386 architecture)
 
 ### Other
@@ -138,6 +139,53 @@ The Win32Emu GDB server implements the following GDB Remote Serial Protocol comm
 ## Remote File I/O
 
 When the Virtual File System (VFS) is initialized, the GDB server supports remote file I/O operations. This allows Ghidra and other GDB clients to access files in the emulated environment's virtual filesystem.
+
+## Symbol Integration
+
+The GDB server automatically extracts and provides symbol information from PE import/export tables to debuggers. This enhances the debugging experience by allowing Ghidra, IDA, and GDB to display function names instead of raw addresses.
+
+### How It Works
+
+When Win32Emu starts with `--gdb-server`, it:
+
+1. **Parses Import Tables**: Extracts all imported functions (e.g., `KERNEL32!GetVersion`, `USER32!MessageBoxA`)
+2. **Parses Export Tables**: Extracts all exported functions from the loaded PE executable
+3. **Announces Symbols**: Proactively sends symbol information to the connected debugger via `qSymbol` packets
+4. **Responds to Lookups**: Answers symbol lookup requests from the debugger
+
+### Symbol Format
+
+Symbols are announced in the format: `MODULE!FunctionName`
+
+Examples:
+- `KERNEL32!GetVersion` - Imported function from KERNEL32.DLL
+- `USER32!MessageBoxA` - Imported function from USER32.DLL
+- `MYAPP!MyFunction` - Exported function from the main executable
+
+### Benefits
+
+- **Function Names in Disassembly**: See meaningful names like `KERNEL32!GetVersion` instead of addresses
+- **Better Call Graphs**: Debuggers can display import/export relationships
+- **Easier Navigation**: Jump to functions by name in Ghidra/IDA
+- **Import Analysis**: Understand which Windows APIs the program uses
+
+### Viewing Symbols in Ghidra
+
+Once connected to the GDB server:
+1. Symbols appear in Ghidra's **Symbol Tree** window
+2. Function calls show the symbol name in the decompiler
+3. Use **Window** → **Debugger** → **Symbols** to browse all loaded symbols
+
+### Technical Details
+
+The symbol integration uses the GDB Remote Serial Protocol's `qSymbol` packet:
+- **Request**: `qSymbol::<hexname>` - GDB asks for a symbol address
+- **Response**: `qSymbol:<hexaddr>:<hexname>` - Server provides the address
+- **Announcement**: Server proactively sends symbols to the debugger
+
+For imported functions, the symbol points to the synthetic stub address (0x0F000000 range) that Win32Emu uses for API interception.
+
+For exported functions, the symbol points to the actual function address in the loaded PE image.
 
 ### Enabling Remote File I/O
 
@@ -460,6 +508,14 @@ print(f"Registers: {response}")
 
 ## Recent Enhancements
 
+### ✅ Symbol Integration via qSymbol (Implemented)
+Import and export symbols are automatically extracted from PE files and announced to debuggers:
+- Function names appear in disassembly (e.g., `KERNEL32!GetVersion`)
+- Imported Windows API functions are identified
+- Exported functions from the main executable are visible
+- Supports symbol lookup requests from debuggers
+- Improves navigation and code understanding in Ghidra/IDA
+
 ### ✅ Register and Memory Modification (Implemented)
 You can now modify register and memory values during debugging:
 - Set register values with `P` (single) or `G` (all registers)
@@ -484,7 +540,7 @@ Potential improvements for the GDB server:
 - [ ] Reverse debugging (step backwards)
 - [ ] Automatic watchpoint triggering in emulator loop
 - [ ] Tracepoints for non-intrusive data collection
-- [ ] Better symbol integration via qSymbol responses
+- [x] ~~Better symbol integration via qSymbol responses~~ ✅ **IMPLEMENTED**
 
 ## See Also
 

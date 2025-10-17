@@ -35,6 +35,11 @@ public class GdbServer : IDisposable
     private bool _shouldStop;
     private bool _noAckMode;
     
+    // Symbol tables for import/export information
+    private readonly Dictionary<string, uint> _symbols = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> _symbolsToAnnounce = new();
+    private int _symbolAnnounceIndex;
+    
     // Execution state
     private bool _continueExecution;
     private bool _singleStep;
@@ -53,6 +58,47 @@ public class GdbServer : IDisposable
         _port = port;
         _vfs = vfs;
         _env = env;
+        _symbolAnnounceIndex = 0;
+    }
+    
+    /// <summary>
+    /// Add symbols from import/export tables for debugging
+    /// </summary>
+    /// <param name="symbols">Dictionary of symbol names to addresses</param>
+    public void AddSymbols(Dictionary<string, uint> symbols)
+    {
+        foreach (var (name, address) in symbols)
+        {
+            _symbols[name] = address;
+            _symbolsToAnnounce.Add(name);
+        }
+        
+        _logger.LogDebug("GDB: Added {Count} symbols for debugging", symbols.Count);
+    }
+    
+    /// <summary>
+    /// Add symbols from a loaded image (imports and exports)
+    /// </summary>
+    public void AddSymbolsFromLoadedImage(Loader.LoadedImage image, string moduleName)
+    {
+        var symbols = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
+        
+        // Add exports by name (these are functions exported by this module)
+        foreach (var (name, address) in image.ExportsByName)
+        {
+            var symbolName = $"{moduleName}!{name}";
+            symbols[symbolName] = address;
+        }
+        
+        // Add imports (these are functions this module calls)
+        foreach (var (address, (dll, name)) in image.ImportAddressMap)
+        {
+            var symbolName = $"{dll}!{name}";
+            // For imports, we store the synthetic stub address
+            symbols[symbolName] = address;
+        }
+        
+        AddSymbols(symbols);
     }
     
     /// <summary>
@@ -731,7 +777,7 @@ public class GdbServer : IDisposable
         }
         else if (args.StartsWith("Symbol", StringComparison.Ordinal))
         {
-            await SendPacketAsync("OK"); // No symbols
+            await HandleSymbolQueryAsync(args);
         }
         else if (args.StartsWith("TStatus", StringComparison.Ordinal))
         {
@@ -756,6 +802,78 @@ public class GdbServer : IDisposable
         else
         {
             await SendPacketAsync("");
+        }
+    }
+    
+    /// <summary>
+    /// Handle symbol query packets (qSymbol)
+    /// The GDB Remote Serial Protocol uses qSymbol for symbol lookup.
+    /// Format: qSymbol::<hexname> - lookup symbol by name
+    /// Format: qSymbol:: - announce symbols proactively
+    /// Response: qSymbol:<hexaddr>:<hexname> - provide symbol address
+    /// Response: qSymbol:OK - no more symbols
+    /// </summary>
+    private async Task HandleSymbolQueryAsync(string args)
+    {
+        // Remove "Symbol" prefix to get the arguments
+        var symbolArgs = args["Symbol".Length..];
+        
+        if (symbolArgs.StartsWith("::", StringComparison.Ordinal))
+        {
+            // This is either a symbol lookup request or acknowledgment of our announcement
+            var hexName = symbolArgs[2..];
+            
+            if (!string.IsNullOrEmpty(hexName))
+            {
+                // GDB is asking for a specific symbol - decode and look it up
+                string symbolName;
+                try
+                {
+                    symbolName = DecodeHexString(hexName);
+                }
+                catch (Exception ex) when (ex is FormatException || ex is ArgumentException)
+                {
+                    _logger.LogError(ex, "GDB: Malformed symbol lookup request: invalid hex string '{HexName}'", hexName);
+                    // Optionally, you could send an error response or just skip to the next step
+                    symbolName = null;
+                }
+                
+                if (!string.IsNullOrEmpty(symbolName) && _symbols.TryGetValue(symbolName, out var address))
+                {
+                    _logger.LogDebug("GDB: Symbol lookup for '{SymbolName}' -> 0x{Address:X8}", symbolName, address);
+                    var hexAddr = $"{address:x}";
+                    await SendPacketAsync($"qSymbol:{hexAddr}:{hexName}");
+                    return;
+                }
+                else if (!string.IsNullOrEmpty(symbolName))
+                {
+                    _logger.LogDebug("GDB: Symbol lookup for '{SymbolName}' not found", symbolName);
+                }
+            }
+            
+            // Proactively announce our symbols to GDB
+            if (_symbolAnnounceIndex < _symbolsToAnnounce.Count)
+            {
+                var symbolName = _symbolsToAnnounce[_symbolAnnounceIndex];
+                var address = _symbols[symbolName];
+                _symbolAnnounceIndex++;
+                
+                var hexEncodedName = EncodeHexString(symbolName);
+                var hexAddr = $"{address:x}";
+                
+                _logger.LogDebug("GDB: Announcing symbol '{SymbolName}' at 0x{Address:X8}", symbolName, address);
+                await SendPacketAsync($"qSymbol:{hexAddr}:{hexEncodedName}");
+                return;
+            }
+            
+            // No more symbols to announce
+            _symbolAnnounceIndex = 0; // Reset for next time
+            await SendPacketAsync("qSymbol:OK");
+        }
+        else
+        {
+            // Unknown qSymbol format
+            await SendPacketAsync("qSymbol:OK");
         }
     }
     
@@ -1222,6 +1340,15 @@ public class GdbServer : IDisposable
     {
         var bytes = Convert.FromHexString(hex);
         return Encoding.UTF8.GetString(bytes);
+    }
+    
+    /// <summary>
+    /// Encode a string to hex format
+    /// </summary>
+    private static string EncodeHexString(string text)
+    {
+        var bytes = Encoding.UTF8.GetBytes(text);
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
     
     public void Dispose()
