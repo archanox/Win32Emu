@@ -54,7 +54,7 @@ public class SilkInputBackend : IInputBackend
 
             // Note: Silk.NET.Input requires a window context to enumerate actual devices
             // For now, we'll provide basic keyboard/mouse support
-            // Gamepad/joystick support can be added later when integrated with windowing
+            // TODO: Add gamepad/joystick support when integrated with windowing. Track in issue tracker. 
 
             return result;
         }
