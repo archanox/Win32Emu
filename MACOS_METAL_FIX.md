@@ -5,20 +5,22 @@ SDL3 initialization was failing on macOS with error "No available video device" 
 
 ## Root Cause
 1. The traditional SDL video subsystem initialization approach does not properly initialize Metal on macOS. SDL3's modern approach requires using the GPU API for hardware-accelerated rendering.
-2. **Critical**: On macOS, `SDL.SetAppMetadata()` must be called BEFORE `SDL.Init()` to properly initialize the video subsystem. This is a macOS-specific requirement due to how the platform handles application metadata.
+2. **Critical**: On macOS, `SDL.SetAppMetadata()` must be called BEFORE **ANY** `SDL.Init()` call (not just before Video init). This is a macOS-specific requirement due to how the platform handles application metadata and window server registration. If Audio or Input subsystems initialize SDL first, calling SetAppMetadata later will be too late.
 
 ## Solution
 Migrated SDL3RenderingBackend from traditional renderer API to modern GPU API:
 
 ### Key Changes
 
-1. **App Metadata Initialization (NEW)**
-   - **Critical Fix**: `SDL.SetAppMetadata()` must be called BEFORE `SDL.Init()` on macOS
-   - This ensures the video subsystem initializes correctly with Metal support
+1. **App Metadata Initialization (UPDATED FIX)**
+   - **Critical Fix**: Created `SDL3Initializer` helper class to ensure `SDL.SetAppMetadata()` is called BEFORE **ANY** `SDL.Init()` call
+   - The helper uses a static flag to ensure metadata is set exactly once, before any subsystem initialization
+   - All three backends (Video, Audio, Input) now call `Sdl3Initializer.EnsureAppMetadataSet()` before their `SDL.Init()` calls
+   - This ensures proper initialization regardless of which subsystem initializes first
    
 2. **Device Initialization**
    - **Before**: `SDL.Init(SDL.InitFlags.Video)` + `SDL.CreateWindowAndRenderer()`
-   - **After**: `SDL.SetAppMetadata()` → `SDL.Init()` → `SDL.CreateGPUDevice()` with auto-selected driver
+   - **After**: `Sdl3Initializer.EnsureAppMetadataSet()` → `SDL.Init()` → `SDL.CreateGPUDevice()` with auto-selected driver
 
 3. **Window Management**
    - **Before**: Window and renderer created together
@@ -49,15 +51,19 @@ Migrated SDL3RenderingBackend from traditional renderer API to modern GPU API:
 ## Files Modified
 
 ### Implementation
-- `Win32Emu/Rendering/SDL3RenderingBackend.cs` - Complete GPU API migration
+- `Win32Emu/Rendering/SDL3Initializer.cs` - **NEW**: Static helper to ensure metadata is set before any SDL init
+- `Win32Emu/Rendering/SDL3RenderingBackend.cs` - Complete GPU API migration + use SDL3Initializer
+- `Win32Emu/Rendering/SDL3AudioBackend.cs` - **UPDATED**: Use SDL3Initializer before Init
+- `Win32Emu/Rendering/SDL3InputBackend.cs` - **UPDATED**: Use SDL3Initializer before Init
 
 ### Tests
-- `Win32Emu.Tests.Emulator/SDL3BackendTests.cs` - Added GPU backend tests
+- `Win32Emu.Tests.Emulator/SDL3BackendTests.cs` - Added GPU backend tests (all 9 passing)
 
 ### Documentation
 - `SDL3_INTEGRATION.md` - Updated architecture documentation
 - `SDL3_GPU_BACKEND.md` - New comprehensive guide
-- `MACOS_METAL_FIX.md` - This summary document
+- `MACOS_METAL_FIX.md` - This summary document (updated)
+- `MACOS_VIDEO_INIT_FIX.md` - Detailed fix documentation (updated)
 
 ## Testing
 

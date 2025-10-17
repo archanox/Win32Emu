@@ -34,8 +34,8 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
             _width = width;
             _height = height;
 
-            // Set app metadata BEFORE initializing SDL3 (required for macOS)
-            SDL.SetAppMetadata(title, "1.0", "com.win32emu.display");
+            // Ensure app metadata is set BEFORE any SDL initialization (required for macOS)
+            Sdl3Initializer.EnsureAppMetadataSet();
 
             // Initialize SDL3 video subsystem
             if (!SDL.Init(SDL.InitFlags.Video))
