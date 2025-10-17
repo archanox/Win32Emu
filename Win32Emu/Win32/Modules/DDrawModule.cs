@@ -1567,17 +1567,37 @@ namespace Win32Emu.Win32.Modules
 				{
 					byte[] displayData;
 
-					// Check if we need to convert the surface data
-					if (surface.PaletteHandle != 0 && _palettes.TryGetValue(surface.PaletteHandle, out var palette))
+					// Check if we need to convert the surface data based on bit depth
+					if (ddrawObj.BitsPerPixel == 8)
 					{
-						// Convert palettized (8-bit indexed) to RGBA
-						_logger.LogInformation("[DDraw] Converting palettized surface to RGBA");
-						displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
-							surface.Bits, 
-							palette.Entries, 
-							surface.Width, 
-							surface.Height, 
-							surface.Pitch);
+						// 8-bit palettized mode
+						if (surface.PaletteHandle != 0 && _palettes.TryGetValue(surface.PaletteHandle, out var palette))
+						{
+							// Convert palettized (8-bit indexed) to RGBA using attached palette
+							_logger.LogInformation("[DDraw] Converting 8-bit palettized surface to RGBA");
+							displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
+								surface.Bits, 
+								palette.Entries, 
+								surface.Width, 
+								surface.Height, 
+								surface.Pitch);
+						}
+						else
+						{
+							// No palette set yet - use a default grayscale palette
+							_logger.LogWarning("[DDraw] No palette set for 8-bit surface, using grayscale");
+							var grayscalePalette = new uint[256];
+							for (int i = 0; i < 256; i++)
+							{
+								grayscalePalette[i] = (uint)((i << 16) | (i << 8) | i); // RGB all same value
+							}
+							displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
+								surface.Bits, 
+								grayscalePalette, 
+								surface.Width, 
+								surface.Height, 
+								surface.Pitch);
+						}
 					}
 					else if (ddrawObj.BitsPerPixel == 16)
 					{
@@ -1589,9 +1609,15 @@ namespace Win32Emu.Win32.Modules
 							surface.Height, 
 							surface.Pitch);
 					}
+					else if (ddrawObj.BitsPerPixel == 24 || ddrawObj.BitsPerPixel == 32)
+					{
+						// 24-bit or 32-bit RGB/RGBA - assume RGBA format
+						displayData = surface.Bits;
+					}
 					else
 					{
-						// Use surface data as-is (already RGBA)
+						// Unknown format - treat as RGBA
+						_logger.LogWarning("[DDraw] Unknown bit depth {Bpp}, treating as RGBA", ddrawObj.BitsPerPixel);
 						displayData = surface.Bits;
 					}
 
