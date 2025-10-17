@@ -105,10 +105,12 @@ public class SilkSdlRenderingBackend : IRenderingBackend
                     {
                         uint color = palette[paletteIndex];
                         
-                        rgbaData[dstOffset + 0] = (byte)(color & 0xFF);         // R
-                        rgbaData[dstOffset + 1] = (byte)((color >> 8) & 0xFF);  // G
-                        rgbaData[dstOffset + 2] = (byte)((color >> 16) & 0xFF); // B
-                        rgbaData[dstOffset + 3] = 0xFF;                          // A
+                        // SDL texture format is ABGR8888, so we need to write in ABGR byte order
+                        // PALETTEENTRY is stored as: R, G, B, Flags in little-endian uint32
+                        rgbaData[dstOffset + 0] = 0xFF;                          // A
+                        rgbaData[dstOffset + 1] = (byte)((color >> 16) & 0xFF); // B
+                        rgbaData[dstOffset + 2] = (byte)((color >> 8) & 0xFF);  // G
+                        rgbaData[dstOffset + 3] = (byte)(color & 0xFF);         // R
                     }
                 }
             }
@@ -139,10 +141,11 @@ public class SilkSdlRenderingBackend : IRenderingBackend
                     byte g = (byte)((g6 << 2) | (g6 >> 4));
                     byte b = (byte)((b5 << 3) | (b5 >> 2));
                     
-                    rgbaData[dstOffset + 0] = r;
-                    rgbaData[dstOffset + 1] = g;
-                    rgbaData[dstOffset + 2] = b;
-                    rgbaData[dstOffset + 3] = 0xFF;
+                    // SDL texture format is ABGR8888, so we need to write in ABGR byte order
+                    rgbaData[dstOffset + 0] = 0xFF;  // A
+                    rgbaData[dstOffset + 1] = b;     // B
+                    rgbaData[dstOffset + 2] = g;     // G
+                    rgbaData[dstOffset + 3] = r;     // R
                 }
             }
         }
@@ -164,10 +167,11 @@ public class SilkSdlRenderingBackend : IRenderingBackend
                 if (srcOffset + 2 < rgb24Data.Length)
                 {
                     // 24-bit is typically BGR format in Windows
-                    rgbaData[dstOffset + 0] = rgb24Data[srcOffset + 2]; // R
-                    rgbaData[dstOffset + 1] = rgb24Data[srcOffset + 1]; // G
-                    rgbaData[dstOffset + 2] = rgb24Data[srcOffset + 0]; // B
-                    rgbaData[dstOffset + 3] = 0xFF;                      // A
+                    // SDL texture format is ABGR8888, so we need to write in ABGR byte order
+                    rgbaData[dstOffset + 0] = 0xFF;                      // A
+                    rgbaData[dstOffset + 1] = rgb24Data[srcOffset + 0]; // B (already in correct position)
+                    rgbaData[dstOffset + 2] = rgb24Data[srcOffset + 1]; // G (already in correct position)
+                    rgbaData[dstOffset + 3] = rgb24Data[srcOffset + 2]; // R (already in correct position)
                 }
             }
         }
