@@ -15,6 +15,8 @@ public sealed class Emulator : IDisposable
 {
     private readonly IEmulatorHost? _host;
     private readonly ILogger _logger;
+    private readonly Telemetry.TelemetryService? _telemetryService;
+    private readonly Telemetry.EmulatorMetrics? _metrics;
     private VirtualMemory? _vm;
     private IcedCpu? _cpu;
     private ProcessEnvironment? _env;
@@ -27,15 +29,22 @@ public sealed class Emulator : IDisposable
     private volatile bool _stopRequested;
     private readonly ManualResetEvent _pauseEvent;
 
-    public Emulator(IEmulatorHost? host = null, ILogger? logger = null)
+    public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
         _host = host;
         _logger = logger ?? NullLogger.Instance;
+        _telemetryService = telemetryService;
         _stopRequested = false;
         _pauseEvent = new ManualResetEvent(true); // Initially not paused (signaled)
         
         // Set the logger for Diagnostics class
         Diagnostics.Diagnostics.SetLogger(_logger);
+        
+        // Initialize metrics if telemetry is enabled
+        if (_telemetryService != null)
+        {
+            _metrics = new Telemetry.EmulatorMetrics(_telemetryService.Meter);
+        }
     }
 
     /// <summary>
@@ -70,6 +79,11 @@ public sealed class Emulator : IDisposable
     /// Check if emulator is currently paused
     /// </summary>
     public bool IsPaused => !_pauseEvent.WaitOne(0);
+
+    /// <summary>
+    /// Get the emulator metrics (may be null if telemetry is not enabled)
+    /// </summary>
+    public Telemetry.EmulatorMetrics? Metrics => _metrics;
 
     /// <summary>
     /// Post a message to the Win32 message queue (for GUI-to-emulator communication)
@@ -149,6 +163,11 @@ public sealed class Emulator : IDisposable
             throw new InvalidOperationException("Executable not loaded. Call LoadExecutable first.");
         }
 
+        // Start tracing activity
+        using var activity = _telemetryService?.StartActivity("Emulator.Run");
+        activity?.SetTag("executable", _image.FilePath);
+        activity?.SetTag("debug_mode", _debugMode);
+
         _stopRequested = false;
         _pauseEvent.Set(); // Ensure we start in running state
 
@@ -207,6 +226,9 @@ public sealed class Emulator : IDisposable
             }
 
             var step = _cpu!.SingleStep(_vm!);
+            
+            // Record instruction execution
+            _metrics?.RecordInstructionsExecuted();
             
             // Check for COM vtable method calls
             if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
