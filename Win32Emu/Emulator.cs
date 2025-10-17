@@ -212,6 +212,13 @@ public sealed class Emulator : IDisposable
             if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
             {
                 _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
+                
+                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                var savedEbx = _cpu.GetRegister("EBX");
+                var savedEsi = _cpu.GetRegister("ESI");
+                var savedEdi = _cpu.GetRegister("EDI");
+                var savedEbp = _cpu.GetRegister("EBP");
+                
                 if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
                 {
                     LogDebug($"[COM] Method returned 0x{ret:X8}");
@@ -223,6 +230,12 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetRegister("EAX", ret); // Return value in EAX
                     _cpu.SetEip(retEip);
+                    
+                    // Restore callee-saved registers
+                    _cpu.SetRegister("EBX", savedEbx);
+                    _cpu.SetRegister("ESI", savedEsi);
+                    _cpu.SetRegister("EDI", savedEdi);
+                    _cpu.SetRegister("EBP", savedEbp);
                 }
             }
             else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
@@ -230,6 +243,13 @@ public sealed class Emulator : IDisposable
                 var dll = imp.dll.ToUpperInvariant();
                 var name = imp.name;
                 _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                
+                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                var savedEbx = _cpu.GetRegister("EBX");
+                var savedEsi = _cpu.GetRegister("ESI");
+                var savedEdi = _cpu.GetRegister("EDI");
+                var savedEbp = _cpu.GetRegister("EBP");
+                
                 if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
                 {
                     LogDebug($"[Import] Returned 0x{ret:X8}");
@@ -240,6 +260,12 @@ public sealed class Emulator : IDisposable
                     
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
+                    
+                    // Restore callee-saved registers
+                    _cpu.SetRegister("EBX", savedEbx);
+                    _cpu.SetRegister("ESI", savedEsi);
+                    _cpu.SetRegister("EDI", savedEdi);
+                    _cpu.SetRegister("EBP", savedEbp);
                 }
             }
             else if (step.IsCall)
@@ -346,6 +372,13 @@ public sealed class Emulator : IDisposable
                 if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
                 {
                     _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
+                    
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                    var savedEbx = _cpu.GetRegister("EBX");
+                    var savedEsi = _cpu.GetRegister("ESI");
+                    var savedEdi = _cpu.GetRegister("EDI");
+                    var savedEbp = _cpu.GetRegister("EBP");
+                    
                     if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
                     {
                         LogDebug($"[COM] Method returned 0x{ret:X8}");
@@ -355,6 +388,12 @@ public sealed class Emulator : IDisposable
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetRegister("EAX", ret); // Return value in EAX
                         _cpu.SetEip(retEip);
+                        
+                        // Restore callee-saved registers
+                        _cpu.SetRegister("EBX", savedEbx);
+                        _cpu.SetRegister("ESI", savedEsi);
+                        _cpu.SetRegister("EDI", savedEdi);
+                        _cpu.SetRegister("EBP", savedEbp);
                     }
                 }
                 else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
@@ -362,6 +401,13 @@ public sealed class Emulator : IDisposable
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;
                     _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                    
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                    var savedEbx = _cpu.GetRegister("EBX");
+                    var savedEsi = _cpu.GetRegister("ESI");
+                    var savedEdi = _cpu.GetRegister("EDI");
+                    var savedEbp = _cpu.GetRegister("EBP");
+                    
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
                     {
                         LogDebug($"[Import] Returned 0x{ret:X8}");
@@ -370,6 +416,12 @@ public sealed class Emulator : IDisposable
                         esp += 4 + (uint)argBytes;
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetEip(retEip);
+                        
+                        // Restore callee-saved registers
+                        _cpu.SetRegister("EBX", savedEbx);
+                        _cpu.SetRegister("ESI", savedEsi);
+                        _cpu.SetRegister("EDI", savedEdi);
+                        _cpu.SetRegister("EBP", savedEbp);
                     }
                 }
             }
@@ -455,6 +507,13 @@ public sealed class Emulator : IDisposable
             if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
             {
                 _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
+                
+                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                var savedEbx = _cpu.GetRegister("EBX");
+                var savedEsi = _cpu.GetRegister("ESI");
+                var savedEdi = _cpu.GetRegister("EDI");
+                var savedEbp = _cpu.GetRegister("EBP");
+                
                 if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
                 {
                     LogDebug($"[COM] Method returned 0x{ret:X8}");
@@ -464,6 +523,12 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetRegister("EAX", ret); // Return value in EAX
                     _cpu.SetEip(retEip);
+                    
+                    // Restore callee-saved registers
+                    _cpu.SetRegister("EBX", savedEbx);
+                    _cpu.SetRegister("ESI", savedEsi);
+                    _cpu.SetRegister("EDI", savedEdi);
+                    _cpu.SetRegister("EBP", savedEbp);
                 }
             }
             else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
@@ -471,6 +536,13 @@ public sealed class Emulator : IDisposable
                 var dll = imp.dll.ToUpperInvariant();
                 var name = imp.name;
                 _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                
+                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                var savedEbx = _cpu.GetRegister("EBX");
+                var savedEsi = _cpu.GetRegister("ESI");
+                var savedEdi = _cpu.GetRegister("EDI");
+                var savedEbp = _cpu.GetRegister("EBP");
+                
                 if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
                 {
                     LogDebug($"[Import] Returned 0x{ret:X8}");
@@ -479,6 +551,12 @@ public sealed class Emulator : IDisposable
                     esp += 4 + (uint)argBytes;
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
+                    
+                    // Restore callee-saved registers
+                    _cpu.SetRegister("EBX", savedEbx);
+                    _cpu.SetRegister("ESI", savedEsi);
+                    _cpu.SetRegister("EDI", savedEdi);
+                    _cpu.SetRegister("EBP", savedEbp);
                 }
             }
         }
@@ -526,6 +604,13 @@ public sealed class Emulator : IDisposable
                 if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
                 {
                     _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
+                    
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                    var savedEbx = _cpu.GetRegister("EBX");
+                    var savedEsi = _cpu.GetRegister("ESI");
+                    var savedEdi = _cpu.GetRegister("EDI");
+                    var savedEbp = _cpu.GetRegister("EBP");
+                    
                     if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
                     {
                         LogDebug($"[COM] Method returned 0x{ret:X8}");
@@ -535,6 +620,12 @@ public sealed class Emulator : IDisposable
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetRegister("EAX", ret); // Return value in EAX
                         _cpu.SetEip(retEip);
+                        
+                        // Restore callee-saved registers
+                        _cpu.SetRegister("EBX", savedEbx);
+                        _cpu.SetRegister("ESI", savedEsi);
+                        _cpu.SetRegister("EDI", savedEdi);
+                        _cpu.SetRegister("EBP", savedEbp);
                     }
                 }
                 else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
@@ -542,6 +633,13 @@ public sealed class Emulator : IDisposable
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;
                     _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                    
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                    var savedEbx = _cpu.GetRegister("EBX");
+                    var savedEsi = _cpu.GetRegister("ESI");
+                    var savedEdi = _cpu.GetRegister("EDI");
+                    var savedEbp = _cpu.GetRegister("EBP");
+                    
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
                     {
                         LogDebug($"[Import] Returned 0x{ret:X8}");
@@ -550,6 +648,12 @@ public sealed class Emulator : IDisposable
                         esp += 4 + (uint)argBytes;
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetEip(retEip);
+                        
+                        // Restore callee-saved registers
+                        _cpu.SetRegister("EBX", savedEbx);
+                        _cpu.SetRegister("ESI", savedEsi);
+                        _cpu.SetRegister("EDI", savedEdi);
+                        _cpu.SetRegister("EBP", savedEbp);
                     }
                 }
             }
