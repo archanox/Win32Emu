@@ -75,6 +75,12 @@ public class SilkSdlRenderingBackend : IRenderingBackend
             }
 
             _initialized = true;
+            
+            // Clear the window with black to show it's properly initialized
+            _sdl.SetRenderDrawColor(_renderer, 0, 0, 0, 255);
+            _sdl.RenderClear(_renderer);
+            _sdl.RenderPresent(_renderer);
+            
             _logger.LogInformation("[SilkSDL] Initialized {Width}x{Height} display", width, height);
             return true;
         }
@@ -137,6 +143,31 @@ public class SilkSdlRenderingBackend : IRenderingBackend
                     rgbaData[dstOffset + 1] = g;
                     rgbaData[dstOffset + 2] = b;
                     rgbaData[dstOffset + 3] = 0xFF;
+                }
+            }
+        }
+        
+        return rgbaData;
+    }
+
+    public byte[] Convert24BitToRGBA(byte[] rgb24Data, int width, int height, int pitch)
+    {
+        var rgbaData = new byte[width * height * 4];
+        
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                int srcOffset = y * pitch + x * 3;
+                int dstOffset = (y * width + x) * 4;
+                
+                if (srcOffset + 2 < rgb24Data.Length)
+                {
+                    // 24-bit is typically BGR format in Windows
+                    rgbaData[dstOffset + 0] = rgb24Data[srcOffset + 2]; // R
+                    rgbaData[dstOffset + 1] = rgb24Data[srcOffset + 1]; // G
+                    rgbaData[dstOffset + 2] = rgb24Data[srcOffset + 0]; // B
+                    rgbaData[dstOffset + 3] = 0xFF;                      // A
                 }
             }
         }
