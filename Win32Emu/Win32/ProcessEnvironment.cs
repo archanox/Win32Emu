@@ -132,8 +132,8 @@ public class ProcessEnvironment
 	}
 
 	// SDL3 backends for audio and input
-	public Sdl3AudioBackend? AudioBackend { get; set; }
-	public Sdl3InputBackend? InputBackend { get; set; }
+	public IAudioBackend? AudioBackend { get; set; }
+	public IInputBackend? InputBackend { get; set; }
 
 	public uint CommandLinePtr { get; private set; }
 	public uint ModuleFileNamePtr { get; private set; }

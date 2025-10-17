@@ -109,7 +109,7 @@ namespace Win32Emu.Win32.Modules
 			// Initialize input backend if not already done
 			if (_env.InputBackend == null)
 			{
-				_env.InputBackend = new Sdl3InputBackend(_logger);
+				_env.InputBackend = Rendering.BackendFactory.CreateInputBackend(_logger);
 				_env.InputBackend.Initialize();
 			}
 
