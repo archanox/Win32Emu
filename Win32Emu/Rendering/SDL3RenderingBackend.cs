@@ -105,6 +105,78 @@ public class Sdl3RenderingBackend(ILogger logger) : IDisposable
     }
 
     /// <summary>
+    /// Convert palettized (8-bit indexed) surface to RGBA format
+    /// </summary>
+    public byte[] ConvertPalettizedToRGBA(byte[] indexedData, uint[] palette, int width, int height, int pitch)
+    {
+        var rgbaData = new byte[width * height * 4];
+        
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                int srcOffset = y * pitch + x;
+                int dstOffset = (y * width + x) * 4;
+                
+                if (srcOffset < indexedData.Length)
+                {
+                    byte paletteIndex = indexedData[srcOffset];
+                    
+                    if (paletteIndex < palette.Length)
+                    {
+                        uint color = palette[paletteIndex];
+                        
+                        // PALETTEENTRY format: RGBQUAD (r, g, b, flags)
+                        rgbaData[dstOffset + 0] = (byte)(color & 0xFF);         // R
+                        rgbaData[dstOffset + 1] = (byte)((color >> 8) & 0xFF);  // G
+                        rgbaData[dstOffset + 2] = (byte)((color >> 16) & 0xFF); // B
+                        rgbaData[dstOffset + 3] = 0xFF;                          // A (opaque)
+                    }
+                }
+            }
+        }
+        
+        return rgbaData;
+    }
+
+    /// <summary>
+    /// Convert 16-bit RGB565 surface to RGBA format
+    /// </summary>
+    public byte[] Convert16BitToRGBA(byte[] rgb565Data, int width, int height, int pitch)
+    {
+        var rgbaData = new byte[width * height * 4];
+        
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                int srcOffset = y * pitch + x * 2;
+                int dstOffset = (y * width + x) * 4;
+                
+                if (srcOffset + 1 < rgb565Data.Length)
+                {
+                    ushort pixel = (ushort)(rgb565Data[srcOffset] | (rgb565Data[srcOffset + 1] << 8));
+                    
+                    // RGB565 format: RRRRRGGGGGGBBBBB
+                    byte r5 = (byte)((pixel >> 11) & 0x1F);
+                    byte g6 = (byte)((pixel >> 5) & 0x3F);
+                    byte b5 = (byte)(pixel & 0x1F);
+                    byte r = (byte)((r5 << 3) | (r5 >> 2));
+                    byte g = (byte)((g6 << 2) | (g6 >> 4));
+                    byte b = (byte)((b5 << 3) | (b5 >> 2));
+                    
+                    rgbaData[dstOffset + 0] = r;
+                    rgbaData[dstOffset + 1] = g;
+                    rgbaData[dstOffset + 2] = b;
+                    rgbaData[dstOffset + 3] = 0xFF; // Alpha (opaque)
+                }
+            }
+        }
+        
+        return rgbaData;
+    }
+
+    /// <summary>
     /// Update the display with new frame buffer data using GPU API
     /// </summary>
     public bool UpdateFrameBuffer(byte[] data, int pitch)
