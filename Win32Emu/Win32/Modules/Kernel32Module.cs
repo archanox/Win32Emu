@@ -3528,7 +3528,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		else
 		{
-			var spaceIndex = executable.IndexOf(" ");
+			var spaceIndex = executable.IndexOf(' ');
 			if (spaceIndex > 0)
 			{
 				executable = executable.Substring(0, spaceIndex);
