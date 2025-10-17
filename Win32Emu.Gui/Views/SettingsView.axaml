@@ -26,19 +26,6 @@
                     <ComboBox ItemsSource="{Binding RenderingBackends}"
                             SelectedItem="{Binding RenderingBackend}"
                             HorizontalAlignment="Stretch"/>
-                    <TextBlock Text="Select the graphics rendering backend for games"
-                             FontSize="12"
-                             Opacity="0.7"/>
-                </StackPanel>
-
-                <!-- Multimedia Backend -->
-                <StackPanel Spacing="8">
-                    <TextBlock Text="Multimedia Backend"
-                             FontWeight="Bold"
-                             FontSize="14"/>
-                    <ComboBox ItemsSource="{Binding MultimediaBackends}"
-                            SelectedItem="{Binding MultimediaBackend}"
-                            HorizontalAlignment="Stretch"/>
                     <TextBlock Text="Select the multimedia backend (SDL or GLFW). Use GLFW if experiencing issues with SDL on macOS."
                              FontSize="12"
                              Opacity="0.7"
