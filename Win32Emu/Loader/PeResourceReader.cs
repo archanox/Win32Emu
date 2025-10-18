@@ -115,10 +115,9 @@ public class PeResourceReader
 			return 0;
 		}
 
-		// For now, we'll return a synthetic address that points to the resource data
-		// The actual memory management should be done by the caller (ProcessEnvironment)
-		// Store the resource data in a cache for later retrieval
-		var resourceAddress = 0xE0000000u + (uint)(_resourceCache.Count * 0x10000);
+		// Allocate resource in a safe memory range
+		// Use 0x0D000000 - 0x0E000000 range for resources (208-224 MB range, before imports at 0x0F000000)
+		var resourceAddress = 0x0D000000u + (uint)(_resourceCache.Count * 0x10000);
 		_resourceCache[resourceAddress] = resourceData;
 
 		return resourceAddress;
