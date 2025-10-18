@@ -244,6 +244,22 @@ namespace Win32Emu.Win32.Modules
 			}
 		}
 
+		/// <summary>
+		/// Registers a window class for subsequent use in calls to the CreateWindow or CreateWindowEx function.
+		/// </summary>
+		/// <param name="lpWndClass">
+		/// A pointer to a WNDCLASS structure. You must fill the structure with the appropriate class attributes before passing it to the function.
+		/// </param>
+		/// <returns>
+		/// If the function succeeds, the return value is a class atom that uniquely identifies the class being registered.
+		/// This atom can only be used by CreateWindow, CreateWindowEx, GetClassInfo, GetClassInfoEx, FindWindow, FindWindowEx, and UnregisterClass functions.
+		/// If the function fails, the return value is zero. To get extended error information, call GetLastError.
+		/// </returns>
+		/// <remarks>
+		/// If you register the window class by using RegisterClassA, the application tells the system that the windows of the created class expect messages with text or character parameters to use the ANSI character set.
+		/// All window classes that an application registers are unregistered when it terminates.
+		/// No window classes registered by a DLL are unregistered when the DLL is unloaded. A DLL must explicitly unregister its classes when it is unloaded.
+		/// </remarks>
 		[DllModuleExport(20)]
 		private uint RegisterClassA(uint lpWndClass)
 		{
@@ -404,6 +420,26 @@ namespace Win32Emu.Win32.Modules
 			return hwnd;
 		}
 
+		/// <summary>
+		/// Sets the specified window's show state.
+		/// </summary>
+		/// <param name="hwnd">
+		/// A handle to the window.
+		/// </param>
+		/// <param name="nCmdShow">
+		/// Controls how the window is to be shown. This parameter can be one of the following values:
+		/// SW_HIDE (0), SW_SHOWNORMAL (1), SW_SHOWMINIMIZED (2), SW_SHOWMAXIMIZED (3), SW_SHOWNOACTIVATE (4), SW_SHOW (5),
+		/// SW_MINIMIZE (6), SW_SHOWMINNOACTIVE (7), SW_SHOWNA (8), SW_RESTORE (9), SW_SHOWDEFAULT (10), SW_FORCEMINIMIZE (11).
+		/// </param>
+		/// <returns>
+		/// If the window was previously visible, the return value is nonzero.
+		/// If the window was previously hidden, the return value is zero.
+		/// </returns>
+		/// <remarks>
+		/// To perform certain special effects when showing or hiding a window, use AnimateWindow.
+		/// The first time an application calls ShowWindow, it should use the WinMain function's nCmdShow parameter as its nCmdShow parameter.
+		/// Subsequent calls to ShowWindow must use one of the values in the given list, instead of the one specified by the WinMain function's nCmdShow parameter.
+		/// </remarks>
 		[DllModuleExport(28)]
 		private uint ShowWindow(uint hwnd, int nCmdShow)
 		{
@@ -673,6 +709,31 @@ namespace Win32Emu.Win32.Modules
 			return returnValue;
 		}
 		
+		/// <summary>
+		/// Sends the specified message to a window or windows. The SendMessage function calls the window procedure for the specified window and does not return until the window procedure has processed the message.
+		/// </summary>
+		/// <param name="hwnd">
+		/// A handle to the window whose window procedure will receive the message.
+		/// If this parameter is HWND_BROADCAST ((HWND)0xffff), the message is sent to all top-level windows in the system.
+		/// </param>
+		/// <param name="msg">
+		/// The message to be sent. For lists of the system-provided messages, see System-Defined Messages.
+		/// </param>
+		/// <param name="wParam">
+		/// Additional message-specific information.
+		/// </param>
+		/// <param name="lParam">
+		/// Additional message-specific information.
+		/// </param>
+		/// <returns>
+		/// The return value specifies the result of the message processing; it depends on the message sent.
+		/// </returns>
+		/// <remarks>
+		/// The system only does marshalling for system messages (those in the range 0 to (WM_USER-1)). To send other messages (those >= WM_USER) to another process, you must do custom marshalling.
+		/// If the specified window was created by the calling thread, the window procedure is called immediately as a subroutine.
+		/// If the specified window was created by a different thread, the system switches to that thread and calls the appropriate window procedure.
+		/// Messages sent between threads are processed only when the receiving thread executes message retrieval code.
+		/// </remarks>
 		[DllModuleExport(1)]
 		private uint SendMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
