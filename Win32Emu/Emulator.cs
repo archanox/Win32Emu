@@ -156,6 +156,12 @@ public sealed class Emulator : IDisposable
 
         var kernel32Module = new Kernel32Module(_env, _image.BaseAddress, loader, _logger);
         kernel32Module.SetDispatcher(_dispatcher);
+        
+        // Create resource reader for PE resources (dialogs, icons, etc.)
+        var peImage = AsmResolver.PE.PEImage.FromFile(path);
+        var resourceReader = new PeResourceReader(peImage, _image.BaseAddress, _vm);
+        kernel32Module.SetResourceReader(resourceReader);
+        
         _dispatcher.RegisterModule(kernel32Module);
         // Register KERNELBASE for forwarded exports from KERNEL32
         _dispatcher.RegisterModule(new KernelBaseModule(_env, _image.BaseAddress, loader, _logger));
@@ -165,6 +171,7 @@ public sealed class Emulator : IDisposable
         var user32Module = new User32Module(_env, _image.BaseAddress, loader, _logger);
         user32Module.SetDispatcher(_dispatcher);
         user32Module.SetLoadedImage(_image);
+        user32Module.SetResourceReader(resourceReader); // Set resource reader for dialog loading
         _dispatcher.RegisterModule(user32Module);
         
         _dispatcher.RegisterModule(new Gdi32Module(_env, _image.BaseAddress, loader, _logger));

@@ -19,6 +19,7 @@ namespace Win32Emu.Win32.Modules
 		private VirtualMemory? _memory;
 		private Win32Dispatcher? _dispatcher;
 		private LoadedImage? _image;
+		private PeResourceReader? _resourceReader;
 		
 		// Constants for procedure execution monitoring
 		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
@@ -42,6 +43,11 @@ namespace Win32Emu.Win32.Modules
 		public void SetLoadedImage(LoadedImage image)
 		{
 			_image = image;
+		}
+
+		public void SetResourceReader(PeResourceReader resourceReader)
+		{
+			_resourceReader = resourceReader;
 		}
 
 		public string Name => "USER32.DLL";
@@ -1169,8 +1175,79 @@ namespace Win32Emu.Win32.Modules
 			// DialogBoxParamA creates a modal dialog box
 			_logger.LogInformation("[User32] DialogBoxParamAsync: hInstance=0x{HInstance:X8} lpTemplateName=0x{LpTemplateName:X8} lpDialogFunc=0x{LpDialogFunc:X8}", hInstance, lpTemplateName, lpDialogFunc);
 
+			// Load the dialog template from resources
+			DialogTemplate? template = null;
+			if (_resourceReader != null && _memory != null)
+			{
+				try
+				{
+					// Find the dialog resource (RT_DIALOG = 5)
+					const uint RT_DIALOG = 5;
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Loading dialog resource from 0x{LpTemplateName:X8}", lpTemplateName);
+					
+					var hResInfo = _resourceReader.FindResource(RT_DIALOG, lpTemplateName, 0);
+					if (hResInfo != 0)
+					{
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Found dialog resource, hResInfo=0x{HResInfo:X8}", hResInfo);
+						
+						var hResData = _resourceReader.LoadResource(hInstance, hResInfo);
+						if (hResData != 0)
+						{
+							_logger.LogInformation("[User32] DialogBoxParamAsync: Loaded dialog resource data at 0x{HResData:X8}", hResData);
+							
+							var lpData = _resourceReader.LockResource(hResData);
+							if (lpData != 0)
+							{
+								_logger.LogInformation("[User32] DialogBoxParamAsync: Locked dialog resource at 0x{LpData:X8}", lpData);
+								
+								// Parse the dialog template
+								var parser = new DialogTemplateParser(_memory);
+								template = parser.Parse(lpData);
+								
+								_logger.LogInformation("[User32] DialogBoxParamAsync: Parsed dialog template - Title='{Title}', Items={ItemCount}, Size=({Width}x{Height})", 
+									template.Title, template.ItemCount, template.Width, template.Height);
+								
+								// Log control information
+								foreach (var item in template.Items)
+								{
+									_logger.LogInformation("[User32] DialogBoxParamAsync: Control - ID={Id}, Class={Class}, Title='{Title}', Pos=({X},{Y}), Size=({Width}x{Height})", 
+										item.Id, item.WindowClass, item.Title, item.X, item.Y, item.Width, item.Height);
+								}
+							}
+							else
+							{
+								_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to lock dialog resource");
+							}
+						}
+						else
+						{
+							_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to load dialog resource");
+						}
+					}
+					else
+					{
+						_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog resource not found for template 0x{LpTemplateName:X8}", lpTemplateName);
+					}
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[User32] DialogBoxParamAsync: Exception loading dialog template");
+				}
+			}
+			else
+			{
+				_logger.LogWarning("[User32] DialogBoxParamAsync: Resource reader or memory not available");
+			}
+
+			// TODO: Show the dialog using Avalonia UI
+			// For now, we'll fall back to the existing behavior but at least we've loaded and parsed the template
+			if (template != null)
+			{
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog template loaded successfully but Avalonia UI integration not yet implemented");
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Would create dialog window with title '{Title}' and {ItemCount} controls", template.Title, template.ItemCount);
+			}
+
 			// Create a dialog window handle
-			// For now, we create a synthetic dialog handle without parsing the template
 			var hDlg = _env.RegisterHandle(new object()); // Dialog handle
 			_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog handle=0x{HDlg:X8}", hDlg);
 
