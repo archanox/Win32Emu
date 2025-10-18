@@ -1942,12 +1942,12 @@ namespace Win32Emu.Win32.Modules
 				}
 				else
 				{
-					_logger.LogWarning("[User32] Skipped restoring EBP from stack: 0x{EBP:X8} (invalid frame pointer)", ebpFromStack);
+					_logger.LogDebug("[User32] Skipped restoring EBP from stack: 0x{EBP:X8} (not a valid frame pointer)", ebpFromStack);
 				}
 			}
 			catch (Exception ex)
 			{
-				_logger.LogWarning(ex, "[User32] Failed to restore EBP from stack");
+				_logger.LogDebug(ex, "[User32] Failed to restore EBP from stack");
 			}
 		}
 	}
