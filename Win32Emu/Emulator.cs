@@ -916,12 +916,12 @@ public sealed class Emulator : IDisposable
             }
             else
             {
-                _logger.LogWarning("[Emulator] Skipped restoring EBP from stack: 0x{EBP:X8} (invalid frame pointer)", ebpFromStack);
+                _logger.LogDebug("[Emulator] Skipped restoring EBP from stack: 0x{EBP:X8} (not a valid frame pointer)", ebpFromStack);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[Emulator] Failed to restore EBP from stack");
+            _logger.LogDebug(ex, "[Emulator] Failed to restore EBP from stack");
         }
     }
 
