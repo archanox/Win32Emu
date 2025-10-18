@@ -167,6 +167,122 @@ public sealed class ThreadingTests : IDisposable
         Assert.Equal(value2, getValue2);
     }
 
+    [Fact]
+    public void InitializeCriticalSection_ShouldInitializeStructure()
+    {
+        // Arrange - Allocate memory for CRITICAL_SECTION (24 bytes)
+        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+
+        // Act - Initialize the critical section
+        _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
+
+        // Assert - Verify structure is properly initialized
+        var lockCount = _testEnv.Memory.Read32(criticalSectionAddr + 4);
+        var recursionCount = _testEnv.Memory.Read32(criticalSectionAddr + 8);
+        var owningThread = _testEnv.Memory.Read32(criticalSectionAddr + 12);
+
+        Assert.Equal(unchecked((uint)-1), lockCount); // -1 means unlocked
+        Assert.Equal(0u, recursionCount); // Initially 0
+        Assert.Equal(0u, owningThread); // Initially NULL
+    }
+
+    [Fact]
+    public void EnterCriticalSection_ShouldAcquireLock()
+    {
+        // Arrange
+        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+        _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
+
+        // Act - Enter critical section
+        _testEnv.CallKernel32Api("ENTERCRITICALSECTION", criticalSectionAddr);
+
+        // Assert - Verify the lock is acquired
+        var lockCount = _testEnv.Memory.Read32(criticalSectionAddr + 4);
+        var recursionCount = _testEnv.Memory.Read32(criticalSectionAddr + 8);
+        var owningThread = _testEnv.Memory.Read32(criticalSectionAddr + 12);
+
+        Assert.Equal(0u, lockCount); // 0 means locked once
+        Assert.Equal(1u, recursionCount); // First entry
+        Assert.NotEqual(0u, owningThread); // Should be owned by a thread
+    }
+
+    [Fact]
+    public void EnterCriticalSection_MultipleTimes_ShouldIncrementRecursion()
+    {
+        // Arrange
+        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+        _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
+
+        // Act - Enter critical section multiple times
+        _testEnv.CallKernel32Api("ENTERCRITICALSECTION", criticalSectionAddr);
+        _testEnv.CallKernel32Api("ENTERCRITICALSECTION", criticalSectionAddr);
+        _testEnv.CallKernel32Api("ENTERCRITICALSECTION", criticalSectionAddr);
+
+        // Assert - Verify recursion count
+        var recursionCount = _testEnv.Memory.Read32(criticalSectionAddr + 8);
+        Assert.Equal(3u, recursionCount); // Entered 3 times
+    }
+
+    [Fact]
+    public void LeaveCriticalSection_ShouldReleaseLock()
+    {
+        // Arrange
+        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+        _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
+        _testEnv.CallKernel32Api("ENTERCRITICALSECTION", criticalSectionAddr);
+
+        // Act - Leave critical section
+        _testEnv.CallKernel32Api("LEAVECRITICALSECTION", criticalSectionAddr);
+
+        // Assert - Verify the lock is released
+        var lockCount = _testEnv.Memory.Read32(criticalSectionAddr + 4);
+        var recursionCount = _testEnv.Memory.Read32(criticalSectionAddr + 8);
+        var owningThread = _testEnv.Memory.Read32(criticalSectionAddr + 12);
+
+        Assert.Equal(unchecked((uint)-1), lockCount); // -1 means unlocked
+        Assert.Equal(0u, recursionCount); // Back to 0
+        Assert.Equal(0u, owningThread); // No longer owned
+    }
+
+    [Fact]
+    public void LeaveCriticalSection_WithRecursion_ShouldDecrementCount()
+    {
+        // Arrange
+        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+        _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
+        _testEnv.CallKernel32Api("ENTERCRITICALSECTION", criticalSectionAddr);
+        _testEnv.CallKernel32Api("ENTERCRITICALSECTION", criticalSectionAddr);
+        _testEnv.CallKernel32Api("ENTERCRITICALSECTION", criticalSectionAddr);
+
+        // Act - Leave once
+        _testEnv.CallKernel32Api("LEAVECRITICALSECTION", criticalSectionAddr);
+
+        // Assert - Still locked but recursion decremented
+        var recursionCount = _testEnv.Memory.Read32(criticalSectionAddr + 8);
+        var owningThread = _testEnv.Memory.Read32(criticalSectionAddr + 12);
+
+        Assert.Equal(2u, recursionCount); // Decremented from 3 to 2
+        Assert.NotEqual(0u, owningThread); // Still owned
+    }
+
+    [Fact]
+    public void DeleteCriticalSection_ShouldClearStructure()
+    {
+        // Arrange
+        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+        _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
+
+        // Act - Delete critical section
+        _testEnv.CallKernel32Api("DELETECRITICALSECTION", criticalSectionAddr);
+
+        // Assert - Verify structure is cleared
+        for (uint i = 0; i < 24; i++)
+        {
+            var value = _testEnv.Memory.Read8(criticalSectionAddr + i);
+            Assert.Equal(0, value);
+        }
+    }
+
     public void Dispose()
     {
         _testEnv.Dispose();
