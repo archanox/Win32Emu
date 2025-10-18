@@ -1211,13 +1211,50 @@ namespace Win32Emu.Win32.Modules
 				}
 			}
 
+			// Parse the dialog template to create controls
+			// DLGTEMPLATE structure:
+			// DWORD style; DWORD dwExtendedStyle; WORD cdit; short x, y, cx, cy;
+			// followed by variable-length data
+			uint dialogStyle = 0;
+			ushort controlCount = 0;
+			
+			try
+			{
+				if ((lpTemplateName & 0xFFFF0000) != 0)
+				{
+					// It's a pointer - try to parse as DLGTEMPLATE
+					dialogStyle = _env.MemRead32(lpTemplateName);
+					var extendedStyle = _env.MemRead32(lpTemplateName + 4);
+					controlCount = _env.MemRead16(lpTemplateName + 8);
+					var x = (short)_env.MemRead16(lpTemplateName + 10);
+					var y = (short)_env.MemRead16(lpTemplateName + 12);
+					var cx = (short)_env.MemRead16(lpTemplateName + 14);
+					var cy = (short)_env.MemRead16(lpTemplateName + 16);
+					
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog template - style=0x{DialogStyle:X8} extStyle=0x{ExtendedStyle:X8} controls={ControlCount} pos=({X},{Y}) size=({Cx},{Cy})",
+						dialogStyle, extendedStyle, controlCount, x, y, cx, cy);
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to parse dialog template: {Message}", ex.Message);
+			}
+
 			// Create a dialog window handle
-			// For now, we create a synthetic dialog handle without parsing the template
+			// For now, we create a synthetic dialog handle without fully parsing the template
 			var hDlg = _env.RegisterHandle(new object()); // Dialog handle
 			_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog handle=0x{HDlg:X8}", hDlg);
 
 			// Initialize dialog state
 			_env.InitializeDialogState(hDlg);
+			
+			// Create placeholder controls for common dialog item IDs
+			// Many dialogs expect IDOK (1) and IDCANCEL (2) buttons
+			const int IDOK = 1;
+			const int IDCANCEL = 2;
+			_env.SetDialogControlText(hDlg, IDOK, "OK");
+			_env.SetDialogControlText(hDlg, IDCANCEL, "Cancel");
+			_logger.LogInformation("[User32] DialogBoxParamAsync: Created placeholder controls IDOK and IDCANCEL");
 
 			// Call the dialog procedure with WM_INITDIALOG (0x0110)
 			// WM_INITDIALOG signature: BOOL CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
