@@ -696,6 +696,13 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
+				// Check for invalid EIP (NULL pointer execution)
+				if (eip == 0x00000000)
+				{
+					_logger.LogWarning("[User32] CallWindowProcedure: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+					break;
+				}
+
 					// Detect potential infinite loops by checking if we're making progress
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
@@ -1366,6 +1373,14 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
+				// Check for invalid EIP (NULL pointer execution)
+				if (eip == 0x00000000)
+				{
+					_logger.LogWarning("[User32] CallDialogProcedure: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+					timedOut = true;
+					break;
+				}
+
 					// Detect potential infinite loops by checking if we're making progress
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
@@ -1499,6 +1514,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] CallDialogProcedureAsync: Calling 0x{DialogProcAddress:X8} with HWND=0x{HwndDlg:X8} MSG=0x{Message:X4}", dialogProcAddress, hwndDlg, message);
 
+			// Validate dialog procedure address - reject NULL or obviously invalid addresses
+			if (dialogProcAddress == 0)
+			{
+				_logger.LogWarning("[User32] CallDialogProcedureAsync: Dialog procedure address is NULL (0x00000000), aborting");
+				return (0, true, false);
+			}
+
 			// Save current CPU state
 			var savedEip = cpu.GetEip();
 			var savedEsp = cpu.GetRegister("ESP");
@@ -1561,6 +1583,14 @@ namespace Win32Emu.Win32.Modules
 					// Check if we've returned to our marker address
 					if (eip == RETURN_ADDRESS)
 					{
+						break;
+					}
+
+					// Check for invalid EIP (NULL pointer execution)
+					if (eip == 0x00000000)
+					{
+						_logger.LogWarning("[User32] CallDialogProcedureAsync: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+						timedOut = true;
 						break;
 					}
 
