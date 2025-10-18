@@ -261,26 +261,21 @@ public sealed class Emulator : IDisposable
                 // pointer for indirect calls (e.g., MOV EBP, [IAT_Entry]; CALL EBP). If we preserve
                 // the EBP value at the time of the call, we'll restore the function pointer value
                 // instead of the original frame pointer, causing crashes.
-                var savedEbx = _cpu.GetRegister("EBX");
-                var savedEsi = _cpu.GetRegister("ESI");
-                var savedEdi = _cpu.GetRegister("EDI");
+                var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                 
-                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
+                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret, out var comArgBytes))
                 {
                     LogDebug($"[COM] Method returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
                     var retEip = _vm.Read32(esp);
-                    // COM methods use stdcall convention - they clean up their own stack
-                    // For now, we'll let the method handler manage the stack
-                    esp += 4; // Pop return address
+                    // COM methods use stdcall convention - callee cleans up the stack
+                    esp += 4 + (uint)comArgBytes; // Pop return address + arguments
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetRegister("EAX", ret); // Return value in EAX
                     _cpu.SetEip(retEip);
                     
                     // Restore callee-saved registers (except EBP - see above)
-                    _cpu.SetRegister("EBX", savedEbx);
-                    _cpu.SetRegister("ESI", savedEsi);
-                    _cpu.SetRegister("EDI", savedEdi);
+                    CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     
                     // Restore EBP from stack to handle indirect call cases
                     RestoreEbpFromStack(esp);
@@ -297,9 +292,7 @@ public sealed class Emulator : IDisposable
                 // pointer for indirect calls (e.g., MOV EBP, [IAT_Entry]; CALL EBP). If we preserve
                 // the EBP value at the time of the call, we'll restore the function pointer value
                 // instead of the original frame pointer, causing crashes.
-                var savedEbx = _cpu.GetRegister("EBX");
-                var savedEsi = _cpu.GetRegister("ESI");
-                var savedEdi = _cpu.GetRegister("EDI");
+                var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                 
                 if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
                 {
@@ -313,9 +306,7 @@ public sealed class Emulator : IDisposable
                     _cpu.SetEip(retEip);
                     
                     // Restore callee-saved registers (except EBP - see above)
-                    _cpu.SetRegister("EBX", savedEbx);
-                    _cpu.SetRegister("ESI", savedEsi);
-                    _cpu.SetRegister("EDI", savedEdi);
+                    CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     
                     // Restore EBP from stack to handle indirect call cases
                     RestoreEbpFromStack(esp);

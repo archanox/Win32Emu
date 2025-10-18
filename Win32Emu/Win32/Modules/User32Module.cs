@@ -1222,23 +1222,19 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogDebug("[User32] CallDialogProcedure: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
 						
 						// Save callee-saved registers (EBX, ESI, EDI)
-						var savedEbx = cpu.GetRegister("EBX");
-						var savedEsi = cpu.GetRegister("ESI");
-						var savedEdi = cpu.GetRegister("EDI");
+						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
 						
-						if (_env.ComDispatcher.TryInvoke(step.CallTarget, cpu, memory, out var comRet))
+						if (_env.ComDispatcher.TryInvoke(step.CallTarget, cpu, memory, out var comRet, out var comArgBytes))
 						{
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
-							currentEsp += 4; // Pop return address
+							currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
 							cpu.SetRegister("ESP", currentEsp);
 							cpu.SetRegister("EAX", comRet);
 							cpu.SetEip(retEip);
 							
 							// Restore callee-saved registers
-							cpu.SetRegister("EBX", savedEbx);
-							cpu.SetRegister("ESI", savedEsi);
-							cpu.SetRegister("EDI", savedEdi);
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
 							
 							RestoreEbpFromStack(cpu, memory, currentEsp);
 						}
@@ -1251,9 +1247,7 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogDebug("[User32] CallDialogProcedure: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
 						
 						// Save callee-saved registers (EBX, ESI, EDI)
-						var savedEbx = cpu.GetRegister("EBX");
-						var savedEsi = cpu.GetRegister("ESI");
-						var savedEdi = cpu.GetRegister("EDI");
+						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
 						
 						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
 						{
@@ -1268,9 +1262,7 @@ namespace Win32Emu.Win32.Modules
 							cpu.SetEip(retEip);
 							
 							// Restore callee-saved registers
-							cpu.SetRegister("EBX", savedEbx);
-							cpu.SetRegister("ESI", savedEsi);
-							cpu.SetRegister("EDI", savedEdi);
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
 							
 							RestoreEbpFromStack(cpu, memory, currentEsp);
 						}
