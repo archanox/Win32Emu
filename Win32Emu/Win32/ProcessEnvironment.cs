@@ -1275,7 +1275,7 @@ public class ProcessEnvironment
 	public uint CreateThread()
 	{
 		// Legacy overload for compatibility - creates a thread with default parameters
-		return CreateThread(0, 0, 0x8000, true); // 32KB default stack, suspended
+		return CreateThread(0, 0, 0x8000, false); // 32KB default stack, running (matches Win32 default)
 	}
 
 	// TLS (Thread Local Storage) methods
