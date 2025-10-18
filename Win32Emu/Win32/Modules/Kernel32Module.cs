@@ -311,6 +311,20 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = WinExec(a.LpcStr(0), a.UInt32(1));
 				return true;
 
+			// Critical section synchronization
+			case "INITIALIZECRITICALSECTION":
+				returnValue = InitializeCriticalSection(a.UInt32(0));
+				return true;
+			case "DELETECRITICALSECTION":
+				returnValue = DeleteCriticalSection(a.UInt32(0));
+				return true;
+			case "ENTERCRITICALSECTION":
+				returnValue = EnterCriticalSection(a.UInt32(0));
+				return true;
+			case "LEAVECRITICALSECTION":
+				returnValue = LeaveCriticalSection(a.UInt32(0));
+				return true;
+
 			default:
 				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
 				return false;
@@ -3555,5 +3569,146 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// A full implementation would need to support launching child processes
 		// Return success (33 or higher indicates success in WinExec)
 		return 33; // SE_ERR_SUCCESS (actually any value > 31 indicates success)
+	}
+
+	// Critical section synchronization functions
+	// In a single-threaded emulator, these are essentially no-ops but we need to initialize the structure properly
+	[DllModuleExport(1)]
+	private uint InitializeCriticalSection(uint lpCriticalSection)
+	{
+		_logger.LogInformation("[Kernel32] InitializeCriticalSection(0x{LpCriticalSection:X8})", lpCriticalSection);
+
+		if (lpCriticalSection == 0)
+		{
+			_logger.LogWarning("[Kernel32] InitializeCriticalSection: null pointer");
+			return 0;
+		}
+
+		// CRITICAL_SECTION structure on Windows XP is 24 bytes:
+		// typedef struct _RTL_CRITICAL_SECTION {
+		//   PRTL_CRITICAL_SECTION_DEBUG DebugInfo;    // offset 0, 4 bytes
+		//   LONG LockCount;                           // offset 4, 4 bytes (starts at -1)
+		//   LONG RecursionCount;                      // offset 8, 4 bytes (starts at 0)
+		//   HANDLE OwningThread;                      // offset 12, 4 bytes (starts at NULL)
+		//   HANDLE LockSemaphore;                     // offset 16, 4 bytes (starts at NULL)
+		//   ULONG_PTR SpinCount;                      // offset 20, 4 bytes (starts at 0)
+		// } RTL_CRITICAL_SECTION, *PRTL_CRITICAL_SECTION;
+
+		// Initialize the structure to default values
+		_env.MemWrite32(lpCriticalSection + 0, 0);  // DebugInfo = NULL (simplified)
+		_env.MemWrite32(lpCriticalSection + 4, unchecked((uint)-1));  // LockCount = -1 (unlocked)
+		_env.MemWrite32(lpCriticalSection + 8, 0);  // RecursionCount = 0
+		_env.MemWrite32(lpCriticalSection + 12, 0); // OwningThread = NULL
+		_env.MemWrite32(lpCriticalSection + 16, 0); // LockSemaphore = NULL
+		_env.MemWrite32(lpCriticalSection + 20, 0); // SpinCount = 0
+
+		return 0; // This function returns void, but we return 0 for consistency
+	}
+
+	[DllModuleExport(1)]
+	private uint DeleteCriticalSection(uint lpCriticalSection)
+	{
+		_logger.LogInformation("[Kernel32] DeleteCriticalSection(0x{LpCriticalSection:X8})", lpCriticalSection);
+
+		if (lpCriticalSection == 0)
+		{
+			_logger.LogWarning("[Kernel32] DeleteCriticalSection: null pointer");
+			return 0;
+		}
+
+		// In our single-threaded emulator, we just need to clear the structure
+		// A real implementation would release any associated semaphore and free debug info
+		for (uint i = 0; i < 24; i++)
+		{
+			_env.MemWrite8(lpCriticalSection + i, 0);
+		}
+
+		return 0; // This function returns void, but we return 0 for consistency
+	}
+
+	[DllModuleExport(1)]
+	private uint EnterCriticalSection(uint lpCriticalSection)
+	{
+		_logger.LogInformation("[Kernel32] EnterCriticalSection(0x{LpCriticalSection:X8})", lpCriticalSection);
+
+		if (lpCriticalSection == 0)
+		{
+			_logger.LogWarning("[Kernel32] EnterCriticalSection: null pointer");
+			return 0;
+		}
+
+		// In a single-threaded emulator, this is a no-op since there's no contention
+		// However, we update the structure to maintain correct state for any code that reads it
+		
+		// Read current state
+		var lockCount = (int)_env.MemRead32(lpCriticalSection + 4);
+		var recursionCount = (int)_env.MemRead32(lpCriticalSection + 8);
+		var owningThread = _env.MemRead32(lpCriticalSection + 12);
+		var currentThreadId = _env.GetCurrentThreadId();
+
+		if (owningThread == 0)
+		{
+			// Critical section is not owned, acquire it
+			_env.MemWrite32(lpCriticalSection + 4, 0);  // LockCount = 0 (locked)
+			_env.MemWrite32(lpCriticalSection + 8, 1);  // RecursionCount = 1
+			_env.MemWrite32(lpCriticalSection + 12, currentThreadId); // OwningThread = current thread
+		}
+		else if (owningThread == currentThreadId)
+		{
+			// Re-entering from the same thread
+			_env.MemWrite32(lpCriticalSection + 4, (uint)(lockCount + 1));  // Increment LockCount
+			_env.MemWrite32(lpCriticalSection + 8, (uint)(recursionCount + 1));  // Increment RecursionCount
+		}
+		else
+		{
+			// In a real multi-threaded scenario, this would block
+			// For single-threaded emulator, this shouldn't happen
+			_logger.LogWarning("[Kernel32] EnterCriticalSection: unexpected thread ownership (owner=0x{OwningThread:X8}, current=0x{CurrentThreadId:X8})", owningThread, currentThreadId);
+		}
+
+		return 0; // This function returns void, but we return 0 for consistency
+	}
+
+	[DllModuleExport(1)]
+	private uint LeaveCriticalSection(uint lpCriticalSection)
+	{
+		_logger.LogInformation("[Kernel32] LeaveCriticalSection(0x{LpCriticalSection:X8})", lpCriticalSection);
+
+		if (lpCriticalSection == 0)
+		{
+			_logger.LogWarning("[Kernel32] LeaveCriticalSection: null pointer");
+			return 0;
+		}
+
+		// Read current state
+		var lockCount = (int)_env.MemRead32(lpCriticalSection + 4);
+		var recursionCount = (int)_env.MemRead32(lpCriticalSection + 8);
+		var owningThread = _env.MemRead32(lpCriticalSection + 12);
+		var currentThreadId = _env.GetCurrentThreadId();
+
+		if (owningThread != currentThreadId)
+		{
+			_logger.LogWarning("[Kernel32] LeaveCriticalSection: thread 0x{CurrentThreadId:X8} does not own critical section (owner=0x{OwningThread:X8})", currentThreadId, owningThread);
+			return 0;
+		}
+
+		// Decrement recursion count
+		recursionCount--;
+		
+		if (recursionCount == 0)
+		{
+			// Fully releasing the critical section
+			_env.MemWrite32(lpCriticalSection + 4, unchecked((uint)-1));  // LockCount = -1 (unlocked)
+			_env.MemWrite32(lpCriticalSection + 8, 0);  // RecursionCount = 0
+			_env.MemWrite32(lpCriticalSection + 12, 0); // OwningThread = NULL
+		}
+		else
+		{
+			// Still owned by this thread (recursive lock)
+			_env.MemWrite32(lpCriticalSection + 4, (uint)(lockCount - 1));  // Decrement LockCount
+			_env.MemWrite32(lpCriticalSection + 8, (uint)recursionCount);  // Update RecursionCount
+		}
+
+		return 0; // This function returns void, but we return 0 for consistency
 	}
 }
