@@ -1030,6 +1030,7 @@ namespace Win32Emu.Win32.Modules
 			if (dialogProcTimedOut)
 			{
 				_logger.LogWarning("[User32] DialogBoxParamA: Dialog procedure timed out, ending dialog with result 0");
+				// Use result 0 to simulate user cancellation; this is a safe fallback value for timed-out dialogs.
 				_env.SetDialogResult(hDlg, 0);
 			}
 
