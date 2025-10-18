@@ -806,7 +806,7 @@ public sealed class Emulator : IDisposable
             if (ebpFromStack >= 0x00100000 && ebpFromStack < _vm.Size)
             {
                 _cpu!.SetRegister("EBP", ebpFromStack);
-                LogDebug($"[Emulator] Restored EBP from stack: 0x{ebpFromStack:X8}");
+                _logger.LogDebug("[Emulator] Restored EBP from stack: 0x{EBP:X8}", ebpFromStack);
             }
         }
         catch (Exception ex)
