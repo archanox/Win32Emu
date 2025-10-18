@@ -175,6 +175,10 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new Glide2XModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DPlayXModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Ole32Module(_env, _image.BaseAddress, loader, _logger));
+
+        // Initialize the main thread in the thread scheduler
+        _env.InitializeMainThread(_cpu);
+        LogDebug("[Loader] Main thread initialized");
     }
 
     public void Run()
@@ -234,7 +238,9 @@ public sealed class Emulator : IDisposable
 
     private void RunNormal()
     {
-        // Run indefinitely until stop/exit requested
+        var scheduler = _env!.ThreadScheduler;
+
+        // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
         {
             // Wait for pause event to be signaled (running state)
@@ -246,10 +252,52 @@ public sealed class Emulator : IDisposable
 	            break;
             }
 
+            // Check if we have any runnable threads
+            if (scheduler != null && !scheduler.HasRunningThreads())
+            {
+                LogDebug("[Emulator] No more runnable threads, stopping execution");
+                break;
+            }
+
+            // Process wait timeouts
+            scheduler?.ProcessWaitTimeouts();
+
+            // Check if we should context switch
+            if (scheduler != null && scheduler.ShouldContextSwitch())
+            {
+                var nextThread = scheduler.ContextSwitch(_cpu!);
+                if (nextThread != null)
+                {
+                    LogDebug($"[Emulator] Context switched to thread {nextThread.ThreadId}");
+                }
+                else
+                {
+                    // No runnable threads
+                    continue;
+                }
+            }
+
             var step = _cpu!.SingleStep(_vm!);
             
             // Record instruction execution
             _metrics?.RecordInstructionsExecuted();
+            
+            // Check for thread exit (return address is 0xFFFFFFFF)
+            var eip = _cpu.GetEip();
+            if (eip == 0xFFFFFFFF && scheduler != null)
+            {
+                var currentThread = scheduler.CurrentThread;
+                if (currentThread != null && currentThread.ThreadId != 1) // Not the main thread
+                {
+                    var exitCode = _cpu.GetRegister("EAX"); // Return value in EAX
+                    scheduler.TerminateThread(currentThread.ThreadId, exitCode);
+                    LogDebug($"[Emulator] Thread {currentThread.ThreadId} terminated with exit code {exitCode}");
+                    
+                    // Switch to another thread
+                    scheduler.ContextSwitch(_cpu);
+                    continue;
+                }
+            }
             
             // Check for COM vtable method calls
             if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
