@@ -696,6 +696,13 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
+				// Check for invalid EIP (NULL pointer execution)
+				if (eip == 0x00000000)
+				{
+					_logger.LogWarning("[User32] CallWindowProcedure: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+					break;
+				}
+
 					// Detect potential infinite loops by checking if we're making progress
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
@@ -1169,13 +1176,115 @@ namespace Win32Emu.Win32.Modules
 			// DialogBoxParamA creates a modal dialog box
 			_logger.LogInformation("[User32] DialogBoxParamAsync: hInstance=0x{HInstance:X8} lpTemplateName=0x{LpTemplateName:X8} lpDialogFunc=0x{LpDialogFunc:X8}", hInstance, lpTemplateName, lpDialogFunc);
 
+			// Check if lpTemplateName is a resource ID or a pointer
+			if ((lpTemplateName & 0xFFFF0000) == 0)
+			{
+				_logger.LogInformation("[User32] DialogBoxParamAsync: lpTemplateName is a resource ID: {ResourceId}", lpTemplateName & 0xFFFF);
+			}
+			else
+			{
+				// It's a pointer - check if it's a string name or a DLGTEMPLATE
+				// Try to read as a string first
+				try
+				{
+					var templateStr = _env.ReadAnsiString(lpTemplateName);
+					_logger.LogInformation("[User32] DialogBoxParamAsync: lpTemplateName is a string pointer: '{TemplateStr}'", templateStr);
+				}
+				catch
+				{
+					// Not a valid string, probably a DLGTEMPLATE structure
+					_logger.LogInformation("[User32] DialogBoxParamAsync: lpTemplateName appears to be a DLGTEMPLATE pointer");
+					// Log the first few bytes
+					try
+					{
+						var bytes = new byte[16];
+						for (int i = 0; i < 16; i++)
+						{
+							bytes[i] = _env.MemRead8(lpTemplateName + (uint)i);
+						}
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Template data: {Bytes}", BitConverter.ToString(bytes));
+					}
+					catch (Exception ex)
+					{
+						_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to read template data: {Message}", ex.Message);
+					}
+				}
+			}
+
+			// Parse the dialog template to create controls
+			// DLGTEMPLATE structure:
+			// DWORD style; DWORD dwExtendedStyle; WORD cdit; short x, y, cx, cy;
+			// followed by variable-length data
+			uint dialogStyle = 0;
+			ushort controlCount = 0;
+			bool isResourceName = false;
+			
+			// Check if lpTemplateName is a resource ID or name
+			if ((lpTemplateName & 0xFFFF0000) == 0)
+			{
+				// It's a resource ID - need to load from PE resources
+				isResourceName = true;
+				_logger.LogWarning("[User32] DialogBoxParamAsync: Resource ID {ResourceId} needs to be loaded from PE resources (not yet implemented)",
+					lpTemplateName & 0xFFFF);
+			}
+			else if (lpTemplateName > 0)
+			{
+				// Check if it's a string resource name by checking the earlier detection
+				// If the first attempt to read it as a string succeeded, it's a resource name
+				try
+				{
+					var testStr = _env.ReadAnsiString(lpTemplateName);
+					if (!string.IsNullOrEmpty(testStr) && testStr.All(c => char.IsLetterOrDigit(c) || c == '_'))
+					{
+						// It's a valid resource name string
+						isResourceName = true;
+						_logger.LogWarning("[User32] DialogBoxParamAsync: Resource name '{ResourceName}' needs to be loaded from PE resources (not yet implemented)", testStr);
+					}
+				}
+				catch
+				{
+					// Not a string, might be a direct DLGTEMPLATE pointer
+				}
+			}
+			
+			// Only try to parse as DLGTEMPLATE if it's not a resource ID/name
+			if (!isResourceName && lpTemplateName > 0)
+			{
+				try
+				{
+					// It's a pointer to a DLGTEMPLATE structure - parse it
+					dialogStyle = _env.MemRead32(lpTemplateName);
+					var extendedStyle = _env.MemRead32(lpTemplateName + 4);
+					controlCount = _env.MemRead16(lpTemplateName + 8);
+					var x = (short)_env.MemRead16(lpTemplateName + 10);
+					var y = (short)_env.MemRead16(lpTemplateName + 12);
+					var cx = (short)_env.MemRead16(lpTemplateName + 14);
+					var cy = (short)_env.MemRead16(lpTemplateName + 16);
+					
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog template - style=0x{DialogStyle:X8} extStyle=0x{ExtendedStyle:X8} controls={ControlCount} pos=({X},{Y}) size=({Cx},{Cy})",
+						dialogStyle, extendedStyle, controlCount, x, y, cx, cy);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to parse dialog template: {Message}", ex.Message);
+				}
+			}
+
 			// Create a dialog window handle
-			// For now, we create a synthetic dialog handle without parsing the template
+			// Basic template parsing is implemented above; full control creation from template is TODO
 			var hDlg = _env.RegisterHandle(new object()); // Dialog handle
-			_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog handle=0x{HDlg:X8}", hDlg);
+			_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog handle=0x{HDlg:X8} with {ControlCount} controls", hDlg, controlCount);
 
 			// Initialize dialog state
 			_env.InitializeDialogState(hDlg);
+			
+			// Create placeholder controls for common dialog item IDs
+			// Many dialogs expect IDOK (1) and IDCANCEL (2) buttons
+			const int IDOK = 1;
+			const int IDCANCEL = 2;
+			_env.SetDialogControlText(hDlg, IDOK, "OK");
+			_env.SetDialogControlText(hDlg, IDCANCEL, "Cancel");
+			_logger.LogInformation("[User32] DialogBoxParamAsync: Created placeholder controls IDOK and IDCANCEL");
 
 			// Call the dialog procedure with WM_INITDIALOG (0x0110)
 			// WM_INITDIALOG signature: BOOL CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -1366,6 +1475,14 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
+				// Check for invalid EIP (NULL pointer execution)
+				if (eip == 0x00000000)
+				{
+					_logger.LogWarning("[User32] CallDialogProcedure: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+					timedOut = true;
+					break;
+				}
+
 					// Detect potential infinite loops by checking if we're making progress
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
@@ -1499,6 +1616,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] CallDialogProcedureAsync: Calling 0x{DialogProcAddress:X8} with HWND=0x{HwndDlg:X8} MSG=0x{Message:X4}", dialogProcAddress, hwndDlg, message);
 
+			// Validate dialog procedure address - reject NULL or obviously invalid addresses
+			if (dialogProcAddress == 0)
+			{
+				_logger.LogWarning("[User32] CallDialogProcedureAsync: Dialog procedure address is NULL (0x00000000), aborting");
+				return (0, true, false);
+			}
+
 			// Save current CPU state
 			var savedEip = cpu.GetEip();
 			var savedEsp = cpu.GetRegister("ESP");
@@ -1558,9 +1682,34 @@ namespace Win32Emu.Win32.Modules
 
 					var eip = cpu.GetEip();
 
+					// Log first 20 instructions to help debug if we jump to NULL
+					if (steps < 20)
+					{
+						_logger.LogInformation("[User32] CallDialogProcedureAsync: Step {Steps}: EIP=0x{Eip:X8}", steps, eip);
+					}
+
 					// Check if we've returned to our marker address
 					if (eip == RETURN_ADDRESS)
 					{
+						break;
+					}
+
+					// Check for invalid EIP (NULL pointer execution)
+					if (eip == 0x00000000)
+					{
+						_logger.LogError("[User32] CallDialogProcedureAsync: Execution jumped to NULL address (0x00000000) at step {Steps}", steps);
+						_logger.LogError("[User32] CallDialogProcedureAsync: This typically means the code called a NULL function pointer");
+						_logger.LogError("[User32] CallDialogProcedureAsync: ESP=0x{Esp:X8} EBP=0x{Ebp:X8}", 
+							cpu.GetRegister("ESP"), cpu.GetRegister("EBP"));
+						// Log stack contents
+						try
+						{
+							var stackPtr = cpu.GetRegister("ESP");
+							_logger.LogError("[User32] CallDialogProcedureAsync: Stack: {Stack}",
+								string.Join(" ", Enumerable.Range(0, 8).Select(i => $"0x{memory.Read32(stackPtr + (uint)(i * 4)):X8}")));
+						}
+						catch { }
+						timedOut = true;
 						break;
 					}
 
@@ -1592,7 +1741,7 @@ namespace Win32Emu.Win32.Modules
 					// Check for COM vtable method calls
 					if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
 					{
-						_logger.LogDebug("[User32] CallDialogProcedureAsync: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
+						_logger.LogInformation("[User32] CallDialogProcedureAsync: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
 						
 						// Save callee-saved registers (EBX, ESI, EDI)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
@@ -1617,14 +1766,14 @@ namespace Win32Emu.Win32.Modules
 					{
 						var dll = imp.dll.ToUpperInvariant();
 						var name = imp.name;
-						_logger.LogDebug("[User32] CallDialogProcedureAsync: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
+						_logger.LogInformation("[User32] CallDialogProcedureAsync: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
 						
 						// Save callee-saved registers (EBX, ESI, EDI)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
 						
 						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
 						{
-							_logger.LogDebug("[User32] CallDialogProcedureAsync: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
+							_logger.LogInformation("[User32] CallDialogProcedureAsync: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
 							
@@ -1655,7 +1804,7 @@ namespace Win32Emu.Win32.Modules
 							// Check if there are other threads that need CPU time
 							if (scheduler.ShouldContextSwitch())
 							{
-								_logger.LogDebug("[User32] CallDialogProcedureAsync: Cooperative yield at {Steps} steps", steps);
+								_logger.LogInformation("[User32] CallDialogProcedureAsync: Cooperative yield at {Steps} steps", steps);
 							}
 						}
 					}
