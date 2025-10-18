@@ -16,6 +16,10 @@ public class EmulatorSettings
     public int GdbServerPort { get; set; } = 1234;
     public bool GdbPauseOnStart { get; set; } = true;
     
+    // Instruction Analyzer Settings
+    public bool EnableInstructionAnalyzer { get; set; } = false;
+    public bool EnableLegacyInstructionDecoding { get; set; } = false;
+    
     /// <summary>
     /// Per-game settings keyed by SHA256 hash of the executable file
     /// </summary>

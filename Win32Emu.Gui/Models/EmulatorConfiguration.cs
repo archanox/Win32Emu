@@ -10,4 +10,8 @@ public class EmulatorConfiguration
 	public bool EnableGdbServer { get; set; }
 	public int GdbServerPort { get; set; } = 1234;
 	public bool GdbPauseOnStart { get; set; } = true;
+	
+	// Instruction Analyzer Settings
+	public bool EnableInstructionAnalyzer { get; set; }
+	public bool EnableLegacyInstructionDecoding { get; set; }
 }

@@ -69,7 +69,9 @@ public class EmulatorService
                     false, // Interactive debug mode not supported in GUI
                     _configuration.ReservedMemoryMb,
                     _configuration.EnableGdbServer,
-                    _configuration.GdbServerPort);
+                    _configuration.GdbServerPort,
+                    _configuration.EnableInstructionAnalyzer,
+                    _configuration.EnableLegacyInstructionDecoding);
                 
                 // Run the emulator
                 _currentEmulator.Run();

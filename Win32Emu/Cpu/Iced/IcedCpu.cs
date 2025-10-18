@@ -15,6 +15,7 @@ public class IcedCpu : ICpu
 
 	private readonly Decoder _decoder;
 	private readonly SimpleMemoryCodeReader _reader;
+	private readonly InstructionAnalyzer? _analyzer;
 
 	// EFLAGS bit positions
 	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Tf = 8, If = 9, Df = 10, Of = 11;
@@ -29,12 +30,17 @@ public class IcedCpu : ICpu
 	private static readonly bool RdtscIsHighResolution = Stopwatch.IsHighResolution;
 	private static readonly long RdtscFrequency = Stopwatch.Frequency;
 
-	public IcedCpu(VirtualMemory mem, ILogger? logger = null)
+	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
 		_reader = new SimpleMemoryCodeReader(this);
-		_decoder = Decoder.Create(32, _reader);
+		_decoder = Decoder.Create(32, _reader, decoderOptions);
+		
+		if (enableInstructionAnalyzer)
+		{
+			_analyzer = new InstructionAnalyzer(logger);
+		}
 	}
 
 	public void SetEip(uint eip) => _eip = eip;
@@ -45,6 +51,49 @@ public class IcedCpu : ICpu
 		"EAX" => _eax, "EBX" => _ebx, "ECX" => _ecx, "EDX" => _edx, "ESI" => _esi, "EDI" => _edi, "EBP" => _ebp,
 		"ESP" => _esp, "EIP" => _eip, "EFLAGS" => _eflags, _ => 0
 	};
+
+	/// <summary>
+	/// Gets the instruction analyzer if it was enabled during construction.
+	/// </summary>
+	public InstructionAnalyzer? GetInstructionAnalyzer() => _analyzer;
+
+	/// <summary>
+	/// Decodes and formats the instruction at the current EIP for debugging purposes.
+	/// </summary>
+	public string FormatCurrentInstruction()
+	{
+		if (_analyzer == null)
+		{
+			return "Instruction analyzer not enabled";
+		}
+
+		var insn = DecodeCurrentInstruction();
+		return _analyzer.FormatInstructionWithAddress(insn);
+	}
+
+	/// <summary>
+	/// Decodes and analyzes the instruction at the current EIP.
+	/// </summary>
+	public InstructionAnalysis? AnalyzeCurrentInstruction()
+	{
+		if (_analyzer == null)
+		{
+			return null;
+		}
+
+		var insn = DecodeCurrentInstruction();
+		return _analyzer.AnalyzeInstruction(insn);
+	}
+
+	/// <summary>
+	/// Decodes the instruction at the current EIP.
+	/// </summary>
+	private Instruction DecodeCurrentInstruction()
+	{
+		_reader.Reset(_eip);
+		_decoder.IP = _eip;
+		return _decoder.Decode();
+	}
 
 	public void SetRegister(string name, uint value)
 	{

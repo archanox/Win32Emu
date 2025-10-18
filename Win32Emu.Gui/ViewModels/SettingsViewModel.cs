@@ -34,6 +34,12 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _gdbPauseOnStart;
 
+    [ObservableProperty]
+    private bool _enableInstructionAnalyzer;
+
+    [ObservableProperty]
+    private bool _enableLegacyInstructionDecoding;
+
     public ObservableCollection<string> RenderingBackends { get; } = new()
     {
         "SDL",
@@ -70,6 +76,8 @@ public partial class SettingsViewModel : ViewModelBase
         _enableGdbServer = configuration.EnableGdbServer;
         _gdbServerPort = configuration.GdbServerPort;
         _gdbPauseOnStart = configuration.GdbPauseOnStart;
+        _enableInstructionAnalyzer = configuration.EnableInstructionAnalyzer;
+        _enableLegacyInstructionDecoding = configuration.EnableLegacyInstructionDecoding;
     }
 
     partial void OnRenderingBackendChanged(string value)
@@ -117,6 +125,18 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnGdbPauseOnStartChanged(bool value)
     {
         _configuration.GdbPauseOnStart = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+
+    partial void OnEnableInstructionAnalyzerChanged(bool value)
+    {
+        _configuration.EnableInstructionAnalyzer = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+
+    partial void OnEnableLegacyInstructionDecodingChanged(bool value)
+    {
+        _configuration.EnableLegacyInstructionDecoding = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
 }

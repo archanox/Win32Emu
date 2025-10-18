@@ -99,7 +99,7 @@ public sealed class Emulator : IDisposable
         return _env.PostMessage(hwnd, message, wParam, lParam);
     }
 
-    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234)
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -131,7 +131,23 @@ public sealed class Emulator : IDisposable
         // Initialize console based on PE subsystem type
         _env.InitializeConsoleForSubsystem(_image.Subsystem);
 
-        _cpu = new IcedCpu(_vm, _logger);
+        // Determine decoder options for legacy instruction support
+        var decoderOptions = Iced.Intel.DecoderOptions.None;
+        if (enableLegacyInstructionDecoding)
+        {
+            decoderOptions = Iced.Intel.DecoderOptions.MPX | 
+                           Iced.Intel.DecoderOptions.MovTr | 
+                           Iced.Intel.DecoderOptions.Cyrix | 
+                           Iced.Intel.DecoderOptions.Cyrix_DMI | 
+                           Iced.Intel.DecoderOptions.ALTINST;
+            LogDebug("[Loader] Legacy instruction decoding enabled (MPX, Cyrix, ALTINST, etc.)");
+        }
+
+        _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
+        if (enableInstructionAnalyzer)
+        {
+            LogDebug("[Loader] Instruction analyzer enabled");
+        }
         _cpu.SetEip(_image.EntryPointAddress);
         _cpu.SetRegister("ESP", 0x00200000);
         _cpu.SetRegister("EBP", 0x00200000); // Initialize frame pointer to match stack pointer
