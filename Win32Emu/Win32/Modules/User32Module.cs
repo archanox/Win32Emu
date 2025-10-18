@@ -1299,13 +1299,16 @@ namespace Win32Emu.Win32.Modules
 			// SetDlgItemTextA sets the text of a control in a dialog box
 			_logger.LogInformation("[User32] SetDlgItemTextA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem}", hDlg, nIDDlgItem);
 
+			string text;
 			if (lpString == null)
 			{
-				return 0;
+				text = string.Empty;
 			}
-
-			var lpStringPtr = (uint)(nint)lpString;
-			var text = _env.ReadAnsiString(lpStringPtr);
+			else
+			{
+				var lpStringPtr = (uint)(nint)lpString;
+				text = _env.ReadAnsiString(lpStringPtr);
+			}
 			
 			// Store the text in the dialog control
 			_env.SetDialogControlText(hDlg, nIDDlgItem, text);
