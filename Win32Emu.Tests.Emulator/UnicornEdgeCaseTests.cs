@@ -97,7 +97,7 @@ public class UnicornEdgeCaseTests : IDisposable
 
         // Assert
         _helper.AssertRegistersMatch("EBX"); // Should be 0
-        _helper.AssertFlagsMatch(CpuFlag.Zf, CpuFlag.Cf, CpuFlag.Of); // ZF set, CF/OF clear
+        _helper.AssertFlagsMatch(CpuFlag.Zf, CpuFlag.Cf, CpuFlag.Of); // Verify flags match between emulators
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class UnicornEdgeCaseTests : IDisposable
 
         // Assert
         _helper.AssertRegistersMatch("EAX"); // Should be 0
-        _helper.AssertFlagsMatch(CpuFlag.Zf, CpuFlag.Cf); // ZF set, CF clear (no borrow)
+        _helper.AssertFlagsMatch(CpuFlag.Zf, CpuFlag.Cf); // Verify flags match between emulators
     }
 
     [Fact]
