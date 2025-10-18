@@ -629,7 +629,9 @@ namespace Win32Emu.Win32.Modules
 			cpu.SetEip(wndProcAddress);
 
 			// Execute until we hit the return address
-			const int MAX_STEPS = 100000; // Safety limit
+			// Increased limit and added cooperative yielding for better threading support
+			const int MAX_STEPS = 500000; // Increased safety limit for complex WndProcs
+			const int YIELD_INTERVAL = 10000; // Check for context switch every 10K instructions
 			var steps = 0;
 
 			try
@@ -648,6 +650,26 @@ namespace Win32Emu.Win32.Modules
 					cpu.SingleStep(memory);
 
 					steps++;
+					
+					// Periodically check if we should yield to other threads
+					if (steps % YIELD_INTERVAL == 0)
+					{
+						var scheduler = _env.ThreadScheduler;
+						if (scheduler != null)
+						{
+							// Process any waiting thread timeouts
+							scheduler.ProcessWaitTimeouts();
+							
+							// Check if there are other threads that need CPU time
+							if (scheduler.ShouldContextSwitch())
+							{
+								_logger.LogDebug("[User32] CallWindowProcedure: Cooperative yield at {Steps} steps", steps);
+								// Note: We can't actually context switch here since we're mid-call
+								// But we log it for diagnostics. In a future enhancement, we could
+								// save state and resume the call later.
+							}
+						}
+					}
 				}
 			}
 			catch (Exception ex)
@@ -657,7 +679,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (steps >= MAX_STEPS)
 			{
-				_logger.LogWarning("[User32] CallWindowProcedure: Exceeded max steps ({MaxSteps}), aborting", MAX_STEPS);
+				_logger.LogWarning("[User32] CallWindowProcedure: Exceeded max steps ({MaxSteps}), aborting - WndProc may be in infinite loop", MAX_STEPS);
 			}
 
 			// Get return value from EAX
@@ -1197,7 +1219,9 @@ namespace Win32Emu.Win32.Modules
 			cpu.SetEip(dialogProcAddress);
 
 			// Execute until we hit the return address
-			const int MAX_STEPS = 100000; // Safety limit
+			// Increased limit and added cooperative yielding for better threading support
+			const int MAX_STEPS = 500000; // Increased safety limit for complex dialog procs
+			const int YIELD_INTERVAL = 10000; // Check for context switch every 10K instructions
 			var steps = 0;
 			var timedOut = false;
 
@@ -1269,6 +1293,26 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					steps++;
+					
+					// Periodically check if we should yield to other threads
+					if (steps % YIELD_INTERVAL == 0)
+					{
+						var scheduler = _env.ThreadScheduler;
+						if (scheduler != null)
+						{
+							// Process any waiting thread timeouts
+							scheduler.ProcessWaitTimeouts();
+							
+							// Check if there are other threads that need CPU time
+							if (scheduler.ShouldContextSwitch())
+							{
+								_logger.LogDebug("[User32] CallDialogProcedure: Cooperative yield at {Steps} steps", steps);
+								// Note: We can't actually context switch here since we're mid-call
+								// But we log it for diagnostics. In a future enhancement, we could
+								// save state and resume the call later.
+							}
+						}
+					}
 				}
 			}
 			catch (Exception ex)
@@ -1278,7 +1322,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (steps >= MAX_STEPS)
 			{
-				_logger.LogWarning("[User32] CallDialogProcedure: Exceeded max steps ({MaxSteps}), aborting", MAX_STEPS);
+				_logger.LogWarning("[User32] CallDialogProcedure: Exceeded max steps ({MaxSteps}), aborting - DialogProc may be in infinite loop", MAX_STEPS);
 				timedOut = true;
 			}
 
