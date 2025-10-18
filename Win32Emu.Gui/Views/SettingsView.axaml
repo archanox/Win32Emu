@@ -26,7 +26,7 @@
                     <ComboBox ItemsSource="{Binding RenderingBackends}"
                             SelectedItem="{Binding RenderingBackend}"
                             HorizontalAlignment="Stretch"/>
-                    <TextBlock Text="Select the multimedia backend (SDL or GLFW). Use GLFW if experiencing issues with SDL on macOS."
+                    <TextBlock Text="Select the multimedia backend (SDL, GLFW, or Vulkan). SDL is the default. Use GLFW or Vulkan if experiencing issues with SDL."
                              FontSize="12"
                              Opacity="0.7"
                              TextWrapping="Wrap"/>

@@ -25,7 +25,7 @@ Configuration files are stored in a platform-agnostic location:
 ## What Gets Persisted
 
 ### Emulator Settings (settings.json)
-- Rendering Backend (Software, DirectDraw, Glide)
+- Rendering Backend (SDL, GLFW, Vulkan)
 - Resolution Scale Factor (1-4)
 - Reserved Memory (MB)
 - Windows Version
@@ -45,7 +45,8 @@ Configuration files are stored in a platform-agnostic location:
 The emulator settings can be overridden on a per-game basis. These overrides are stored in the settings file and allow you to customize emulator behavior for specific games.
 
 Example use cases:
-- Use DirectDraw for one game but Software rendering for others
+- Use GLFW for one game but SDL for others
+- Use Vulkan backend for modern GPUs
 - Allocate more memory for specific games
 - Enable debug mode only for troublesome games
 
@@ -91,14 +92,14 @@ The `TimesPlayed` counter is automatically incremented each time a game is launc
 ### settings.json
 ```json
 {
-  "RenderingBackend": "Software",
+  "RenderingBackend": "SDL",
   "ResolutionScaleFactor": 1,
   "ReservedMemoryMB": 256,
   "WindowsVersion": "Windows 95",
   "EnableDebugMode": false,
   "PerGameSettings": {
     "1a67ffbc5ebaf4417fb6b2c135a8c64e77904a4fc5d24291f434c34e3f6b91c2": {
-      "RenderingBackend": "DirectDraw",
+      "RenderingBackend": "Vulkan",
       "ResolutionScaleFactor": 2,
       "ReservedMemoryMb": 512
     },

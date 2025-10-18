@@ -33,6 +33,11 @@ Three main interfaces define the backend contracts:
   - Good for systems where SDL has issues
   - Alternative for macOS
 
+- **SilkVulkanRenderingBackend** - Uses Silk.NET.Vulkan
+  - Modern GPU API with cross-platform support
+  - Uses MoltenVK on macOS for native Metal integration
+  - High-performance rendering option
+
 #### Audio Backend
 
 - **SilkOpenAlAudioBackend** - Uses Silk.NET.OpenAL
@@ -51,9 +56,9 @@ Three main interfaces define the backend contracts:
 
 Backends are selected in this order:
 
-1. **Explicit setting** in code: `BackendFactory.CurrentBackendType = BackendType.GLFW;`
-2. **Command-line argument**: `--backend GLFW`
-3. **Environment variable**: `WIN32EMU_BACKEND=GLFW`
+1. **Explicit setting** in code: `BackendFactory.CurrentBackendType = BackendType.Vulkan;`
+2. **Command-line argument**: `--backend Vulkan`
+3. **Environment variable**: `WIN32EMU_BACKEND=Vulkan`
 4. **Default**: SDL
 
 ### Command-Line Usage
@@ -67,6 +72,9 @@ Win32Emu game.exe --backend GLFW
 
 # Use SDL backend explicitly
 Win32Emu game.exe --backend SDL
+
+# Use Vulkan backend
+Win32Emu game.exe --backend Vulkan
 ```
 
 ### Environment Variable
@@ -74,6 +82,10 @@ Win32Emu game.exe --backend SDL
 ```bash
 # Set backend for all runs
 export WIN32EMU_BACKEND=GLFW
+Win32Emu game.exe
+
+# Or use Vulkan
+export WIN32EMU_BACKEND=Vulkan
 Win32Emu game.exe
 
 # Or on Windows
@@ -87,7 +99,7 @@ Win32Emu game.exe
 using Win32Emu.Rendering;
 
 // Set backend before creating any backends
-BackendFactory.CurrentBackendType = BackendType.GLFW;
+BackendFactory.CurrentBackendType = BackendType.Vulkan;
 
 // Backends are created automatically by modules
 // DDrawModule, DSoundModule, and DInputModule use the factory
@@ -98,7 +110,7 @@ BackendFactory.CurrentBackendType = BackendType.GLFW;
 ### Changes for Users
 
 - **No breaking changes** for most users - the default SDL backend works the same way
-- **New option**: Try `--backend GLFW` if SDL has issues on your system
+- **New options**: Try `--backend GLFW` or `--backend Vulkan` if SDL has issues on your system
 - **Environment variable**: Set `WIN32EMU_BACKEND` for persistent configuration
 
 ### Changes for Developers
@@ -134,10 +146,11 @@ backend.Initialize(640, 480);
 - `IRenderingBackend` - Interface for rendering backends
 - `IAudioBackend` - Interface for audio backends
 - `IInputBackend` - Interface for input backends
-- `BackendType` - Enumeration of backend types
+- `BackendType` - Enumeration of backend types (SDL, GLFW, Vulkan)
 - `BackendFactory` - Factory for creating backends
 - `SilkSdlRenderingBackend` - SDL implementation
 - `SilkGlfwRenderingBackend` - GLFW implementation
+- `SilkVulkanRenderingBackend` - Vulkan implementation
 - `SilkOpenAlAudioBackend` - OpenAL implementation
 - `SilkInputBackend` - Input implementation
 
@@ -181,8 +194,9 @@ Test coverage includes:
 If you experience issues with the SDL backend on macOS:
 
 1. Try the GLFW backend: `--backend GLFW`
-2. Ensure you have the latest Silk.NET.SDL native binaries
-3. Check console output for initialization errors
+2. Try the Vulkan backend: `--backend Vulkan` (uses MoltenVK)
+3. Ensure you have the latest Silk.NET.SDL native binaries
+4. Check console output for initialization errors
 
 ### Missing Native Libraries
 
@@ -192,15 +206,16 @@ If you see `DllNotFoundException` or `FileNotFoundException`:
    - **SDL**: Install SDL3 for your platform
    - **OpenAL**: Install OpenAL for your platform
    - **GLFW**: Install GLFW3 for your platform
+   - **Vulkan**: Vulkan SDK (MoltenVK on macOS)
 
 2. On Linux:
    ```bash
-   sudo apt-get install libsdl3-dev libopenal-dev libglfw3-dev
+   sudo apt-get install libsdl3-dev libopenal-dev libglfw3-dev vulkan-tools
    ```
 
 3. On macOS:
    ```bash
-   brew install sdl3 openal-soft glfw
+   brew install sdl3 openal-soft glfw molten-vk
    ```
 
 ### Backend Selection Not Working
@@ -212,11 +227,22 @@ Verify backend selection order:
 3. Check environment variable
 4. Default (SDL) will be used if none specified
 
+## Vulkan Backend
+
+The Vulkan backend provides modern GPU API support with cross-platform compatibility:
+
+- **Windows**: Direct Vulkan API support
+- **Linux**: Direct Vulkan API support  
+- **macOS**: Uses MoltenVK to translate Vulkan calls to Metal
+- **Performance**: Generally offers better performance on modern GPUs
+- **Compatibility**: Requires Vulkan-capable GPU and drivers
+
+To use the Vulkan backend, ensure the Vulkan SDK (including MoltenVK on macOS) is installed on your system.
+
 ## Future Enhancements
 
 Potential future improvements:
 
-- Additional rendering backends (e.g., Vulkan, Metal)
 - Enhanced gamepad/joystick support in input backend
 - Configuration file support for backend selection
 - Runtime backend switching
