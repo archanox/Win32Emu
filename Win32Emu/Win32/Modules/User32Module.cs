@@ -931,7 +931,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		[DllModuleExport(1)]
+		[DllModuleExport(16)]
 		private uint MessageBoxA(uint hwnd, uint lpText, uint lpCaption, uint uType)
 		{
 			var text = lpText != 0 ? _env.ReadAnsiString(lpText) : "";
