@@ -120,6 +120,8 @@ public class IgnitionTeaserDiagnosticTests
         {
             _output.WriteLine($"[WINDOW] {windowInfo.Title}");
         }
+
+        public Task<int> OnDialogCreate(DialogCreateInfo info) => Task.FromResult(2);
         
         public void TrackInstruction(uint eip)
         {

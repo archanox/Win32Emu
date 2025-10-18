@@ -78,5 +78,6 @@ public class EmulatorStopTests : IDisposable
         public void OnDebugOutput(string message, DebugLevel level) { }
         public void OnStdOutput(string output) { }
         public void OnWindowCreate(WindowCreateInfo info) { }
+        public Task<int> OnDialogCreate(DialogCreateInfo info) => Task.FromResult(2);
     }
 }

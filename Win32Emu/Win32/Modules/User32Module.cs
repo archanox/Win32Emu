@@ -19,6 +19,8 @@ namespace Win32Emu.Win32.Modules
 		private VirtualMemory? _memory;
 		private Win32Dispatcher? _dispatcher;
 		private LoadedImage? _image;
+		private PeResourceReader? _resourceReader;
+		private IEmulatorHost? _host;
 		
 		// Constants for procedure execution monitoring
 		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
@@ -42,6 +44,16 @@ namespace Win32Emu.Win32.Modules
 		public void SetLoadedImage(LoadedImage image)
 		{
 			_image = image;
+		}
+
+		public void SetResourceReader(PeResourceReader resourceReader)
+		{
+			_resourceReader = resourceReader;
+		}
+
+		public void SetHost(IEmulatorHost? host)
+		{
+			_host = host;
 		}
 
 		public string Name => "USER32.DLL";
@@ -1176,115 +1188,131 @@ namespace Win32Emu.Win32.Modules
 			// DialogBoxParamA creates a modal dialog box
 			_logger.LogInformation("[User32] DialogBoxParamAsync: hInstance=0x{HInstance:X8} lpTemplateName=0x{LpTemplateName:X8} lpDialogFunc=0x{LpDialogFunc:X8}", hInstance, lpTemplateName, lpDialogFunc);
 
-			// Check if lpTemplateName is a resource ID or a pointer
-			if ((lpTemplateName & 0xFFFF0000) == 0)
-			{
-				_logger.LogInformation("[User32] DialogBoxParamAsync: lpTemplateName is a resource ID: {ResourceId}", lpTemplateName & 0xFFFF);
-			}
-			else
-			{
-				// It's a pointer - check if it's a string name or a DLGTEMPLATE
-				// Try to read as a string first
-				try
-				{
-					var templateStr = _env.ReadAnsiString(lpTemplateName);
-					_logger.LogInformation("[User32] DialogBoxParamAsync: lpTemplateName is a string pointer: '{TemplateStr}'", templateStr);
-				}
-				catch
-				{
-					// Not a valid string, probably a DLGTEMPLATE structure
-					_logger.LogInformation("[User32] DialogBoxParamAsync: lpTemplateName appears to be a DLGTEMPLATE pointer");
-					// Log the first few bytes
-					try
-					{
-						var bytes = new byte[16];
-						for (int i = 0; i < 16; i++)
-						{
-							bytes[i] = _env.MemRead8(lpTemplateName + (uint)i);
-						}
-						_logger.LogInformation("[User32] DialogBoxParamAsync: Template data: {Bytes}", BitConverter.ToString(bytes));
-					}
-					catch (Exception ex)
-					{
-						_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to read template data: {Message}", ex.Message);
-					}
-				}
-			}
-
-			// Parse the dialog template to create controls
-			// DLGTEMPLATE structure:
-			// DWORD style; DWORD dwExtendedStyle; WORD cdit; short x, y, cx, cy;
-			// followed by variable-length data
-			uint dialogStyle = 0;
-			ushort controlCount = 0;
-			bool isResourceName = false;
-			
-			// Check if lpTemplateName is a resource ID or name
-			if ((lpTemplateName & 0xFFFF0000) == 0)
-			{
-				// It's a resource ID - need to load from PE resources
-				isResourceName = true;
-				_logger.LogWarning("[User32] DialogBoxParamAsync: Resource ID {ResourceId} needs to be loaded from PE resources (not yet implemented)",
-					lpTemplateName & 0xFFFF);
-			}
-			else if (lpTemplateName > 0)
-			{
-				// Check if it's a string resource name by checking the earlier detection
-				// If the first attempt to read it as a string succeeded, it's a resource name
-				try
-				{
-					var testStr = _env.ReadAnsiString(lpTemplateName);
-					if (!string.IsNullOrEmpty(testStr) && testStr.All(c => char.IsLetterOrDigit(c) || c == '_'))
-					{
-						// It's a valid resource name string
-						isResourceName = true;
-						_logger.LogWarning("[User32] DialogBoxParamAsync: Resource name '{ResourceName}' needs to be loaded from PE resources (not yet implemented)", testStr);
-					}
-				}
-				catch
-				{
-					// Not a string, might be a direct DLGTEMPLATE pointer
-				}
-			}
-			
-			// Only try to parse as DLGTEMPLATE if it's not a resource ID/name
-			if (!isResourceName && lpTemplateName > 0)
+			// Load the dialog template from resources
+			DialogTemplate? template = null;
+			if (_resourceReader != null && _memory != null)
 			{
 				try
 				{
-					// It's a pointer to a DLGTEMPLATE structure - parse it
-					dialogStyle = _env.MemRead32(lpTemplateName);
-					var extendedStyle = _env.MemRead32(lpTemplateName + 4);
-					controlCount = _env.MemRead16(lpTemplateName + 8);
-					var x = (short)_env.MemRead16(lpTemplateName + 10);
-					var y = (short)_env.MemRead16(lpTemplateName + 12);
-					var cx = (short)_env.MemRead16(lpTemplateName + 14);
-					var cy = (short)_env.MemRead16(lpTemplateName + 16);
+					// Find the dialog resource (RT_DIALOG = 5)
+					const uint RT_DIALOG = 5;
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Loading dialog resource from 0x{LpTemplateName:X8}", lpTemplateName);
 					
-					_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog template - style=0x{DialogStyle:X8} extStyle=0x{ExtendedStyle:X8} controls={ControlCount} pos=({X},{Y}) size=({Cx},{Cy})",
-						dialogStyle, extendedStyle, controlCount, x, y, cx, cy);
+					var hResInfo = _resourceReader.FindResource(RT_DIALOG, lpTemplateName, 0);
+					if (hResInfo != 0)
+					{
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Found dialog resource, hResInfo=0x{HResInfo:X8}", hResInfo);
+						
+						var hResData = _resourceReader.LoadResource(hInstance, hResInfo);
+						if (hResData != 0)
+						{
+							_logger.LogInformation("[User32] DialogBoxParamAsync: Loaded dialog resource data at 0x{HResData:X8}", hResData);
+							
+							var lpData = _resourceReader.LockResource(hResData);
+							if (lpData != 0)
+							{
+								_logger.LogInformation("[User32] DialogBoxParamAsync: Locked dialog resource at 0x{LpData:X8}", lpData);
+								
+								// Parse the dialog template
+								var parser = new DialogTemplateParser(_memory);
+								template = parser.Parse(lpData);
+								
+								_logger.LogInformation("[User32] DialogBoxParamAsync: Parsed dialog template - Title='{Title}', Items={ItemCount}, Size=({Width}x{Height})", 
+									template.Title, template.ItemCount, template.Width, template.Height);
+								
+								// Log control information
+								foreach (var item in template.Items)
+								{
+									_logger.LogInformation("[User32] DialogBoxParamAsync: Control - ID={Id}, Class={Class}, Title='{Title}', Pos=({X},{Y}), Size=({Width}x{Height})", 
+										item.Id, item.WindowClass, item.Title, item.X, item.Y, item.Width, item.Height);
+								}
+							}
+							else
+							{
+								_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to lock dialog resource");
+							}
+						}
+						else
+						{
+							_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to load dialog resource");
+						}
+					}
+					else
+					{
+						_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog resource not found for template 0x{LpTemplateName:X8}", lpTemplateName);
+					}
 				}
 				catch (Exception ex)
 				{
-					_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to parse dialog template: {Message}", ex.Message);
+					_logger.LogError(ex, "[User32] DialogBoxParamAsync: Exception loading dialog template");
 				}
 			}
+			else
+			{
+				_logger.LogWarning("[User32] DialogBoxParamAsync: Resource reader or memory not available");
+			}
 
-			// Create a dialog window handle
-			// Basic template parsing is implemented above; full control creation from template is TODO
-			var hDlg = _env.RegisterHandle(new object()); // Dialog handle
-			_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog handle=0x{HDlg:X8} with {ControlCount} controls", hDlg, controlCount);
+			// TODO: Show the dialog using Avalonia UI
+			// For now, we'll fall back to the existing behavior but at least we've loaded and parsed the template
+			if (template != null)
+			{
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog template loaded successfully but Avalonia UI integration not yet implemented");
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Would create dialog window with title '{Title}' and {ItemCount} controls", template.Title, template.ItemCount);
+				
+				// Create a dialog window handle
+				var hDlg = _env.RegisterHandle(new object()); // Dialog handle
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog handle=0x{HDlg:X8}", hDlg);
+
+				// If we have a host, show the dialog through Avalonia
+				if (_host != null)
+				{
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Showing dialog through Avalonia UI");
+					
+					try
+					{
+						var dialogInfo = new DialogCreateInfo
+						{
+							Handle = hDlg,
+							Template = template,
+							ParentHandle = hWndParent,
+							DialogProcAddress = lpDialogFunc,
+							InitParam = dwInitParam
+						};
+						
+						// Show the dialog and wait for result
+						var avaloniaResult = await _host.OnDialogCreate(dialogInfo);
+						
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog closed with result={DialogResult}", avaloniaResult);
+						
+						// Clean up and return the result
+						_env.CloseHandle(hDlg);
+						return (uint)avaloniaResult;
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "[User32] DialogBoxParamAsync: Exception showing dialog through host");
+						_env.CloseHandle(hDlg);
+						return 0;
+					}
+				}
+				else
+				{
+					_logger.LogWarning("[User32] DialogBoxParamAsync: No host available to show Avalonia dialog");
+				}
+				
+				// If we reach here, fall through to legacy behavior with this handle
+			}
+			else
+			{
+				_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to load dialog template, falling back to legacy behavior");
+			}
+
+			// Create a dialog window handle (fallback for when template couldn't be loaded or no host)
+			var hDlgFallback = _env.RegisterHandle(new object()); // Dialog handle
+			_logger.LogInformation("[User32] DialogBoxParamAsync: Created fallback dialog handle=0x{HDlg:X8}", hDlgFallback);
 
 			// Initialize dialog state
-			_env.InitializeDialogState(hDlg);
-			
-			// Create placeholder controls for common dialog item IDs
-			// Many dialogs expect IDOK (1) and IDCANCEL (2) buttons
-			const int IDOK = 1;
-			const int IDCANCEL = 2;
-			_env.SetDialogControlText(hDlg, IDOK, "OK");
-			_env.SetDialogControlText(hDlg, IDCANCEL, "Cancel");
-			_logger.LogInformation("[User32] DialogBoxParamAsync: Created placeholder controls IDOK and IDCANCEL");
+			_env.InitializeDialogState(hDlgFallback);
 
 			// Call the dialog procedure with WM_INITDIALOG (0x0110)
 			// WM_INITDIALOG signature: BOOL CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -1297,7 +1325,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpDialogFunc != 0)
 			{
 				_logger.LogInformation("[User32] DialogBoxParamAsync: Calling dialog procedure with WM_INITDIALOG");
-				var (initResult, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam, cancellationToken);
+				var (initResult, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlgFallback, WM_INITDIALOG, 0, dwInitParam, cancellationToken);
 				_logger.LogInformation("[User32] DialogBoxParamAsync: WM_INITDIALOG returned {InitResult}", initResult);
 				dialogProcTimedOut = timedOut;
 				dialogProcCancelled = cancelled;
@@ -1312,7 +1340,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status}, ending dialog with result 0", 
 					dialogProcCancelled ? "cancelled" : "timed out");
-				_env.SetDialogResult(hDlg, 0);
+				_env.SetDialogResult(hDlgFallback, 0);
 			}
 
 			// Run modal message loop until EndDialog is called
@@ -1323,7 +1351,7 @@ namespace Win32Emu.Win32.Modules
 			var consecutiveEmptyIterations = 0;
 			const int MAX_EMPTY_ITERATIONS = 100; // Exit if no messages for 100 iterations
 			
-			while (!_env.IsDialogEnded(hDlg) && iterations < MAX_ITERATIONS && !cancellationToken.IsCancellationRequested)
+			while (!_env.IsDialogEnded(hDlgFallback) && iterations < MAX_ITERATIONS && !cancellationToken.IsCancellationRequested)
 			{
 				iterations++;
 				
@@ -1345,11 +1373,11 @@ namespace Win32Emu.Win32.Modules
 					_logger.LogDebug("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", msg.Message, msg.Hwnd);
 					
 					// Dispatch the message to the dialog procedure if it's for our dialog
-					if (msg.Hwnd == hDlg || msg.Hwnd == 0)
+					if (msg.Hwnd == hDlgFallback || msg.Hwnd == 0)
 					{
 						if (lpDialogFunc != 0)
 						{
-							var (result, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam, cancellationToken);
+							var (result, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlgFallback, msg.Message, msg.WParam, msg.LParam, cancellationToken);
 							_logger.LogDebug("[User32] DialogBoxParamAsync: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
 							
 							// If dialog procedure times out or is cancelled, force end the dialog
@@ -1357,7 +1385,7 @@ namespace Win32Emu.Win32.Modules
 							{
 								_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status} during message processing, forcing dialog end",
 									cancelled ? "cancelled" : "timed out");
-								_env.SetDialogResult(hDlg, 0);
+								_env.SetDialogResult(hDlgFallback, 0);
 							}
 						}
 					}
@@ -1375,7 +1403,7 @@ namespace Win32Emu.Win32.Modules
 					if (dialogProcTimedOut && consecutiveEmptyIterations >= MAX_EMPTY_ITERATIONS)
 					{
 						_logger.LogWarning("[User32] DialogBoxParamAsync: No messages and dialog procedure timed out, forcing dialog end");
-						_env.SetDialogResult(hDlg, 0);
+						_env.SetDialogResult(hDlgFallback, 0);
 					}
 					
 					// Yield to avoid tight loop without introducing artificial delay
@@ -1394,14 +1422,14 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Get the result from EndDialog
-			var dialogResult = _env.GetDialogResult(hDlg);
+			var fallbackDialogResult = _env.GetDialogResult(hDlgFallback);
 			
 			// Clean up dialog state
-			_env.CleanupDialogState(hDlg);
-			_env.CloseHandle(hDlg);
+			_env.CleanupDialogState(hDlgFallback);
+			_env.CloseHandle(hDlgFallback);
 			
-			_logger.LogInformation("[User32] DialogBoxParamAsync: Returning result={DialogResult}", dialogResult);
-			return dialogResult;
+			_logger.LogInformation("[User32] DialogBoxParamAsync: Returning result={DialogResult}", fallbackDialogResult);
+			return fallbackDialogResult;
 		}
 
 		/// <summary>

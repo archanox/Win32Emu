@@ -666,4 +666,6 @@ internal class MockEmulatorHost : IEmulatorHost
         OnWindowCreateCalled = true;
         LastWindowInfo = info;
     }
+
+    public Task<int> OnDialogCreate(DialogCreateInfo info) => Task.FromResult(2);
 }

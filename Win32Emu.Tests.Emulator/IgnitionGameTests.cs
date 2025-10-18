@@ -321,6 +321,8 @@ public class IgnitionGameTests
             _output.WriteLine($"[WINDOW] {info}");
             WindowsCreated.Add(info);
         }
+
+        public Task<int> OnDialogCreate(DialogCreateInfo info) => Task.FromResult(2);
     }
 
     /// <summary>
