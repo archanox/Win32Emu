@@ -4211,7 +4211,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		if (cmdLine == null)
 		{
 			_logger.LogWarning("[Kernel32] WinExec: null command line");
-			return 0; // ERROR_FILE_NOT_FOUND
+			return 2; // ERROR_FILE_NOT_FOUND
 		}
 
 		// Parse command line to extract executable path
