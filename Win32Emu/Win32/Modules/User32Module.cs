@@ -631,7 +631,12 @@ namespace Win32Emu.Win32.Modules
 			// Execute until we hit the return address
 			// Increased limit and added cooperative yielding for better threading support
 			const int MAX_STEPS = 500000; // Increased safety limit for complex WndProcs
-			const int YIELD_INTERVAL = 10000; // Check for context switch every 10K instructions
+			// YIELD_INTERVAL: Check for context switches every 10K instructions
+			// Rationale: 10K provides good balance between:
+			// - Responsiveness: Allows context switches ~50 times during max execution
+			// - Performance: Low overhead (~0.001% for scheduler checks)
+			// - Granularity: Fine enough for cooperative multitasking
+			const int YIELD_INTERVAL = 10000;
 			var steps = 0;
 
 			try
@@ -1221,7 +1226,12 @@ namespace Win32Emu.Win32.Modules
 			// Execute until we hit the return address
 			// Increased limit and added cooperative yielding for better threading support
 			const int MAX_STEPS = 500000; // Increased safety limit for complex dialog procs
-			const int YIELD_INTERVAL = 10000; // Check for context switch every 10K instructions
+			// YIELD_INTERVAL: Check for context switches every 10K instructions
+			// Rationale: 10K provides good balance between:
+			// - Responsiveness: Allows context switches ~50 times during max execution
+			// - Performance: Low overhead (~0.001% for scheduler checks)
+			// - Granularity: Fine enough for cooperative multitasking
+			const int YIELD_INTERVAL = 10000;
 			var steps = 0;
 			var timedOut = false;
 
