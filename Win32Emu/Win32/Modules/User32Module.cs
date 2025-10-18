@@ -1220,7 +1220,14 @@ namespace Win32Emu.Win32.Modules
 			
 			try
 			{
-				if ((lpTemplateName & 0xFFFF0000) != 0)
+				if ((lpTemplateName & 0xFFFF0000) == 0)
+				{
+					// It's a resource ID - need to load from PE resources
+					// TODO: Implement FindResource/LoadResource to load dialog template from resources
+					_logger.LogWarning("[User32] DialogBoxParamAsync: Resource ID {ResourceId} needs to be loaded from PE resources (not yet implemented)",
+						lpTemplateName & 0xFFFF);
+				}
+				else if ((lpTemplateName & 0xFFFF0000) != 0)
 				{
 					// It's a pointer - try to parse as DLGTEMPLATE
 					dialogStyle = _env.MemRead32(lpTemplateName);
@@ -1241,9 +1248,9 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Create a dialog window handle
-			// For now, we create a synthetic dialog handle without fully parsing the template
+			// Basic template parsing is implemented above; full control creation from template is TODO
 			var hDlg = _env.RegisterHandle(new object()); // Dialog handle
-			_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog handle=0x{HDlg:X8}", hDlg);
+			_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog handle=0x{HDlg:X8} with {ControlCount} controls", hDlg, controlCount);
 
 			// Initialize dialog state
 			_env.InitializeDialogState(hDlg);
