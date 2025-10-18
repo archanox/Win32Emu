@@ -1082,9 +1082,9 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
-	/// Try to get a message from the queue (blocking, synchronous with timeout)
+	/// Try to get a message from the queue (async with timeout) - preferred method for new code
 	/// </summary>
-	public QueuedMessage? GetMessageBlocking(uint hwnd, uint msgFilterMin, uint msgFilterMax, int timeoutMs = 100)
+	public async Task<QueuedMessage?> GetMessageAsync(uint hwnd, uint msgFilterMin, uint msgFilterMax, int timeoutMs = 100)
 	{
 		try
 		{
@@ -1095,7 +1095,7 @@ public class ProcessEnvironment
 				if (hwnd != 0 && message.Hwnd != hwnd)
 				{
 					// Re-queue messages that don't match the window filter
-					_messageQueue.Writer.TryWrite(message);
+					await _messageQueue.Writer.WriteAsync(message);
 					return null;
 				}
 
@@ -1104,7 +1104,7 @@ public class ProcessEnvironment
 					if (message.Message < msgFilterMin || message.Message > msgFilterMax)
 					{
 						// Re-queue messages outside the filter range
-						_messageQueue.Writer.TryWrite(message);
+						await _messageQueue.Writer.WriteAsync(message);
 						return null;
 					}
 				}
@@ -1114,26 +1114,16 @@ public class ProcessEnvironment
 
 			// Wait for a message with timeout
 			using var cts = new CancellationTokenSource(timeoutMs);
-			var readTask = _messageQueue.Reader.ReadAsync(cts.Token).AsTask();
 			
-			// Wait for the task to complete (successfully or canceled)
 			try
 			{
-				readTask.Wait(timeoutMs);
-			}
-			catch (AggregateException)
-			{
-				// Task was canceled or faulted, which is expected on timeout
-			}
-			
-			if (readTask.IsCompletedSuccessfully)
-			{
-				message = readTask.Result;
+				// Use async waiting which properly yields to other tasks
+				message = await _messageQueue.Reader.ReadAsync(cts.Token);
 				
 				// Apply filters if specified
 				if (hwnd != 0 && message.Hwnd != hwnd)
 				{
-					_messageQueue.Writer.TryWrite(message);
+					await _messageQueue.Writer.WriteAsync(message);
 					return null;
 				}
 
@@ -1141,15 +1131,38 @@ public class ProcessEnvironment
 				{
 					if (message.Message < msgFilterMin || message.Message > msgFilterMax)
 					{
-						_messageQueue.Writer.TryWrite(message);
+						await _messageQueue.Writer.WriteAsync(message);
 						return null;
 					}
 				}
 
 				return message;
 			}
-
+			catch (OperationCanceledException)
+			{
+				// Timeout occurred, which is expected
+				return null;
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning(ex, "[ProcessEnv] GetMessageAsync");
 			return null;
+		}
+	}
+
+	/// <summary>
+	/// Try to get a message from the queue (blocking, synchronous with timeout)
+	/// Note: This is a synchronous wrapper around GetMessageAsync. For better performance and
+	/// cooperative multitasking, consider using GetMessageAsync directly where possible.
+	/// </summary>
+	public QueuedMessage? GetMessageBlocking(uint hwnd, uint msgFilterMin, uint msgFilterMax, int timeoutMs = 100)
+	{
+		try
+		{
+			// Use the async version with GetAwaiter().GetResult() for synchronous contexts
+			// This is more efficient than Task.Wait() and doesn't wrap exceptions in AggregateException
+			return GetMessageAsync(hwnd, msgFilterMin, msgFilterMax, timeoutMs).GetAwaiter().GetResult();
 		}
 		catch (Exception ex)
 		{

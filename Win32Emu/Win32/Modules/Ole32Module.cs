@@ -52,6 +52,9 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Initializes the COM library on the current thread.
 	/// HRESULT CoInitialize([in, optional] LPVOID pvReserved);
+	/// Note: This implementation is synchronous but designed to be non-blocking.
+	/// COM initialization in Win32 can involve thread-specific setup, which we handle
+	/// cooperatively with the emulator's threading system.
 	/// </summary>
 	[DllModuleExport(4)]
 	private uint CoInitialize(uint pvReserved)
@@ -65,6 +68,9 @@ public class Ole32Module : IWin32ModuleUnsafe
 			return 0x00000001;
 		}
 
+		// Mark COM as initialized for this process/thread context
+		// In a real Windows system, this would set up the COM runtime for the calling thread.
+		// In our emulator, we simply track the initialization state.
 		_comInitialized = true;
 		_logger.LogInformation("[Ole32] CoInitialize: COM initialized successfully, returning S_OK");
 		
