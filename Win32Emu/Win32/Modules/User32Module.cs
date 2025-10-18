@@ -1269,8 +1269,8 @@ namespace Win32Emu.Win32.Modules
 						_env.SetDialogResult(hDlg, 0);
 					}
 					
-					// Small delay to avoid tight loop
-					await Task.Delay(1, cancellationToken);
+					// Yield to avoid tight loop without introducing artificial delay
+					await Task.Yield();
 				}
 			}
 
