@@ -4207,6 +4207,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var cmdLine = lpCmdLine.ToString();
 		_logger.LogInformation("[Kernel32] WinExec(\"{CmdLine}\", {UCmdShow})", cmdLine, uCmdShow);
+		
+		if (cmdLine == null)
+		{
+			_logger.LogWarning("[Kernel32] WinExec: null command line");
+			return 0; // ERROR_FILE_NOT_FOUND
+		}
 
 		// Parse command line to extract executable path
 		var executable = cmdLine.Trim();

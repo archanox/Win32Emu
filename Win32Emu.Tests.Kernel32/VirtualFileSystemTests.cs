@@ -144,7 +144,7 @@ public class VirtualFileSystemTests : IDisposable
 		using (var handle = _vfs.OpenFile("overlayfile.txt", VfsFileMode.Create, VfsFileAccess.Write))
 		{
 			var content = System.Text.Encoding.UTF8.GetBytes("Overlay content");
-			handle.Write(content, 0, content.Length);
+			handle!.Write(content, 0, content.Length);
 		}
 
 		// Act
@@ -162,7 +162,7 @@ public class VirtualFileSystemTests : IDisposable
 		using (var handle = _vfs.OpenFile("source.txt", VfsFileMode.Create, VfsFileAccess.Write))
 		{
 			var content = System.Text.Encoding.UTF8.GetBytes("Source content");
-			handle.Write(content, 0, content.Length);
+			handle!.Write(content, 0, content.Length);
 		}
 
 		// Act
@@ -181,7 +181,7 @@ public class VirtualFileSystemTests : IDisposable
 		using (var handle = _vfs.OpenFile("overlayonly.txt", VfsFileMode.Create, VfsFileAccess.Write))
 		{
 			var content = System.Text.Encoding.UTF8.GetBytes("Overlay only");
-			handle.Write(content, 0, content.Length);
+			handle!.Write(content, 0, content.Length);
 		}
 
 		// Act

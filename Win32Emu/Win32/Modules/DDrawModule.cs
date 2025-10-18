@@ -1598,6 +1598,13 @@ namespace Win32Emu.Win32.Modules
 			{
 				try
 				{
+					// Check if surface bits are available
+					if (surface.Bits == null)
+					{
+						_logger.LogWarning("[DDraw] Surface bits are null, skipping flip");
+						return 0; // DD_OK
+					}
+					
 					byte[] displayData;
 
 					// Check if we need to convert the surface data based on bit depth

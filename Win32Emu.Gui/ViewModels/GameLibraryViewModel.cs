@@ -376,7 +376,7 @@ public partial class GameLibraryViewModel : ViewModelBase
             
             // Retrieve game settings to get program arguments
             var gameSettings = _configService.GetGameSettings(game.ExecutablePath);
-            string[] programArgs = null;
+            string[]? programArgs = null;
             if (gameSettings?.ProgramArguments != null && !string.IsNullOrWhiteSpace(gameSettings.ProgramArguments))
             {
                 // Split the program arguments string into an array

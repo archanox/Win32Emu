@@ -328,7 +328,7 @@ public sealed class Emulator : IDisposable
                 {
                     LogDebug($"[COM] Method returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
-                    var retEip = _vm.Read32(esp);
+                    var retEip = _vm!.Read32(esp);
                     // COM methods use stdcall convention - callee cleans up the stack
                     esp += 4 + (uint)comArgBytes; // Pop return address + arguments
                     _cpu.SetRegister("ESP", esp);
@@ -518,7 +518,7 @@ public sealed class Emulator : IDisposable
                     {
                         LogDebug($"[COM] Method returned 0x{ret:X8}");
                         var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm.Read32(esp);
+                        var retEip = _vm!.Read32(esp);
                         esp += 4; // Pop return address
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetRegister("EAX", ret); // Return value in EAX
@@ -547,7 +547,7 @@ public sealed class Emulator : IDisposable
                     {
                         LogDebug($"[Import] Returned 0x{ret:X8}");
                         var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm.Read32(esp);
+                        var retEip = _vm!.Read32(esp);
                         esp += 4 + (uint)argBytes;
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetEip(retEip);
@@ -653,7 +653,7 @@ public sealed class Emulator : IDisposable
                 {
                     LogDebug($"[COM] Method returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
-                    var retEip = _vm.Read32(esp);
+                    var retEip = _vm!.Read32(esp);
                     esp += 4; // Pop return address
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetRegister("EAX", ret); // Return value in EAX
@@ -682,7 +682,7 @@ public sealed class Emulator : IDisposable
                 {
                     LogDebug($"[Import] Returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
-                    var retEip = _vm.Read32(esp);
+                    var retEip = _vm!.Read32(esp);
                     esp += 4 + (uint)argBytes;
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
@@ -750,7 +750,7 @@ public sealed class Emulator : IDisposable
                     {
                         LogDebug($"[COM] Method returned 0x{ret:X8}");
                         var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm.Read32(esp);
+                        var retEip = _vm!.Read32(esp);
                         esp += 4; // Pop return address
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetRegister("EAX", ret); // Return value in EAX
@@ -779,7 +779,7 @@ public sealed class Emulator : IDisposable
                     {
                         LogDebug($"[Import] Returned 0x{ret:X8}");
                         var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm.Read32(esp);
+                        var retEip = _vm!.Read32(esp);
                         esp += 4 + (uint)argBytes;
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetEip(retEip);
@@ -899,7 +899,7 @@ public sealed class Emulator : IDisposable
             {
                 try
                 {
-                    var savedEbp = _vm.Read32(ebpFromStack);
+                    var savedEbp = _vm!.Read32(ebpFromStack);
                     // Check that savedEbp is also within stack region (optional, but plausible)
                     savedEbpValid = (savedEbp >= stackBottom) && (savedEbp <= stackTop);
                 }
