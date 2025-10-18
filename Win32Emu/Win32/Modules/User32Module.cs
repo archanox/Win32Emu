@@ -17,6 +17,8 @@ namespace Win32Emu.Win32.Modules
 		private readonly StandardControlHandler _standardControlHandler;
 		private ICpu _cpu;
 		private VirtualMemory _memory;
+		private Win32Dispatcher? _dispatcher;
+		private LoadedImage? _image;
 
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -25,6 +27,16 @@ namespace Win32Emu.Win32.Modules
 			_peLoader = peLoader;
 			_logger = logger ?? NullLogger.Instance;
 			_standardControlHandler = new StandardControlHandler(env, null, _logger);
+		}
+
+		public void SetDispatcher(Win32Dispatcher dispatcher)
+		{
+			_dispatcher = dispatcher;
+		}
+
+		public void SetLoadedImage(LoadedImage image)
+		{
+			_image = image;
 		}
 
 		public string Name => "USER32.DLL";
@@ -1201,8 +1213,60 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
-					// Execute one instruction
-					cpu.SingleStep(memory);
+					// Execute one instruction and check for import calls
+					var step = cpu.SingleStep(memory);
+					
+					// Check for COM vtable method calls
+					if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
+					{
+						_logger.LogDebug("[User32] CallDialogProcedure: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
+						
+						// Save callee-saved registers (EBX, ESI, EDI)
+						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+						
+						if (_env.ComDispatcher.TryInvoke(step.CallTarget, cpu, memory, out var comRet, out var comArgBytes))
+						{
+							var currentEsp = cpu.GetRegister("ESP");
+							var retEip = memory.Read32(currentEsp);
+							currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
+							cpu.SetRegister("ESP", currentEsp);
+							cpu.SetRegister("EAX", comRet);
+							cpu.SetEip(retEip);
+							
+							// Restore callee-saved registers
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+							
+							RestoreEbpFromStack(cpu, memory, currentEsp);
+						}
+					}
+					// Check for import calls
+					else if (step.IsCall && _image != null && _image.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+					{
+						var dll = imp.dll.ToUpperInvariant();
+						var name = imp.name;
+						_logger.LogDebug("[User32] CallDialogProcedure: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
+						
+						// Save callee-saved registers (EBX, ESI, EDI)
+						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+						
+						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
+						{
+							_logger.LogDebug("[User32] CallDialogProcedure: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
+							var currentEsp = cpu.GetRegister("ESP");
+							var retEip = memory.Read32(currentEsp);
+							
+							currentEsp += 4 + (uint)argBytes;
+							
+							cpu.SetRegister("ESP", currentEsp);
+							cpu.SetRegister("EAX", ret);
+							cpu.SetEip(retEip);
+							
+							// Restore callee-saved registers
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+							
+							RestoreEbpFromStack(cpu, memory, currentEsp);
+						}
+					}
 
 					steps++;
 				}
@@ -1441,6 +1505,58 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogDebug("[User32] CharNextA: lpsz=0x{Lpsz:X8} currentChar={CurrentChar} currentByte=0x{CurrentByte:X2} -> next=0x{NextPtr:X8}", lpsz, (char)currentByte, currentByte, nextPtr);
 
 			return nextPtr;
+		}
+
+		/// <summary>
+		/// Attempts to restore EBP from the stack after an emulated API call.
+		/// This handles cases where the calling code used EBP to hold the function pointer for an indirect call.
+		/// </summary>
+		private void RestoreEbpFromStack(ICpu cpu, VirtualMemory memory, uint esp)
+		{
+			try
+			{
+				var ebpFromStack = memory.Read32(esp);
+
+				// Define plausible stack region (for example, 1MB stack)
+				// Assume stack grows down, so stack base is the highest address, stack limit is lowest
+				// Here, we use current ESP as the top of the stack, and allow up to 1MB below
+				const uint STACK_SIZE = 0x100000; // 1MB
+				uint stackTop = esp;
+				uint stackBottom = (esp > STACK_SIZE) ? (esp - STACK_SIZE) : 0x00100000; // Don't go below 1MB
+
+				bool inStackRegion = (ebpFromStack >= stackBottom) && (ebpFromStack <= stackTop);
+				bool isAligned = (ebpFromStack & 0x3) == 0;
+
+				// Optionally, check that the memory at ebpFromStack is readable and contains a plausible saved EBP
+				bool savedEbpValid = false;
+				if (inStackRegion && isAligned)
+				{
+					try
+					{
+						var savedEbp = memory.Read32(ebpFromStack);
+						// Check that savedEbp is also within stack region (optional, but plausible)
+						savedEbpValid = (savedEbp >= stackBottom) && (savedEbp <= stackTop);
+					}
+					catch
+					{
+						savedEbpValid = false;
+					}
+				}
+
+				if (inStackRegion && isAligned && savedEbpValid)
+				{
+					cpu.SetRegister("EBP", ebpFromStack);
+					_logger.LogDebug("[User32] Restored EBP from stack: 0x{EBP:X8}", ebpFromStack);
+				}
+				else
+				{
+					_logger.LogWarning("[User32] Skipped restoring EBP from stack: 0x{EBP:X8} (invalid frame pointer)", ebpFromStack);
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "[User32] Failed to restore EBP from stack");
+			}
 		}
 	}
 }
