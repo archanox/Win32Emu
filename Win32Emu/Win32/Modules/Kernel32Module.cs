@@ -299,6 +299,38 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = TlsFree(a.UInt32(0));
 				return true;
 
+			// Synchronization primitives
+			case "CREATEMUTEXW":
+			case "CREATEMUTEXA":
+				returnValue = CreateMutex(a.UInt32(0), a.UInt32(1), a.LpcStr(2));
+				return true;
+			case "RELEASEMUTEX":
+				returnValue = ReleaseMutex(a.UInt32(0));
+				return true;
+			case "CREATEEVENTW":
+			case "CREATEEVENTA":
+				returnValue = CreateEvent(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3));
+				return true;
+			case "SETEVENT":
+				returnValue = SetEvent(a.UInt32(0));
+				return true;
+			case "RESETEVENT":
+				returnValue = ResetEvent(a.UInt32(0));
+				return true;
+			case "PULSEEVENT":
+				returnValue = PulseEvent(a.UInt32(0));
+				return true;
+			case "CREATESEMAPHOREW":
+			case "CREATESEMAPHOREA":
+				returnValue = CreateSemaphore(a.UInt32(0), a.Int32(1), a.Int32(2), a.LpcStr(3));
+				return true;
+			case "RELEASESEMAPHORE":
+				returnValue = ReleaseSemaphore(a.UInt32(0), a.Int32(1), a.UInt32(2));
+				return true;
+			case "WAITFORSINGLEOBJECT":
+				returnValue = WaitForSingleObject(a.UInt32(0), a.UInt32(1));
+				return true;
+
 			// Directory functions
 			case "SETCURRENTDIRECTORYA":
 				returnValue = SetCurrentDirectoryA(a.LpcStr(0));
@@ -3549,6 +3581,268 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var success = _env.TlsFree(dwTlsIndex);
 		_logger.LogInformation("[Kernel32] TlsFree({DwTlsIndex}) = {Success}", dwTlsIndex, success);
 		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+	}
+
+	// Synchronization primitives
+	[DllModuleExport(37)]
+	private uint CreateMutex(uint lpMutexAttributes, uint bInitialOwner, in LpcStr lpName)
+	{
+		var name = lpName.ToString();
+		var initialOwner = bInitialOwner != 0;
+		var currentThreadId = _env.GetCurrentThreadId();
+
+		_logger.LogInformation("[Kernel32] CreateMutex(attr=0x{Attr:X8}, initialOwner={InitialOwner}, name=\"{Name}\")",
+			lpMutexAttributes, initialOwner, name ?? "<unnamed>");
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] CreateMutex: SynchronizationManager not available");
+			return 0; // NULL handle
+		}
+
+		var handle = _env.SynchronizationManager.CreateMutex(initialOwner, name, currentThreadId, out var alreadyExists);
+
+		if (alreadyExists)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
+		}
+
+		return handle;
+	}
+
+	[DllModuleExport(37)]
+	private uint ReleaseMutex(uint hMutex)
+	{
+		var currentThreadId = _env.GetCurrentThreadId();
+		_logger.LogInformation("[Kernel32] ReleaseMutex(handle=0x{Handle:X8})", hMutex);
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] ReleaseMutex: SynchronizationManager not available");
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		var success = _env.SynchronizationManager.ReleaseMutex(hMutex, currentThreadId);
+		
+		if (!success)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_NOT_OWNER;
+		}
+
+		// Check if there are waiting threads
+		var nextWaiter = _env.SynchronizationManager.GetNextMutexWaiter(hMutex);
+		if (nextWaiter.HasValue && _env.ThreadScheduler != null)
+		{
+			_env.ThreadScheduler.WakeThread(nextWaiter.Value);
+		}
+
+		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+	}
+
+	[DllModuleExport(37)]
+	private uint CreateEvent(uint lpEventAttributes, uint bManualReset, uint bInitialState, in LpcStr lpName)
+	{
+		var name = lpName.ToString();
+		var manualReset = bManualReset != 0;
+		var initialState = bInitialState != 0;
+
+		_logger.LogInformation("[Kernel32] CreateEvent(attr=0x{Attr:X8}, manual={Manual}, initial={Initial}, name=\"{Name}\")",
+			lpEventAttributes, manualReset, initialState, name ?? "<unnamed>");
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] CreateEvent: SynchronizationManager not available");
+			return 0; // NULL handle
+		}
+
+		var handle = _env.SynchronizationManager.CreateEvent(manualReset, initialState, name, out var alreadyExists);
+
+		if (alreadyExists)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
+		}
+
+		return handle;
+	}
+
+	[DllModuleExport(37)]
+	private uint SetEvent(uint hEvent)
+	{
+		_logger.LogInformation("[Kernel32] SetEvent(handle=0x{Handle:X8})", hEvent);
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] SetEvent: SynchronizationManager not available");
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		var success = _env.SynchronizationManager.SetEvent(hEvent);
+
+		// Wake all threads waiting on this event
+		if (success && _env.ThreadScheduler != null)
+		{
+			var waiters = _env.SynchronizationManager.GetEventWaiters(hEvent);
+			foreach (var waiterId in waiters)
+			{
+				_env.ThreadScheduler.WakeThread(waiterId);
+			}
+		}
+
+		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+	}
+
+	[DllModuleExport(37)]
+	private uint ResetEvent(uint hEvent)
+	{
+		_logger.LogInformation("[Kernel32] ResetEvent(handle=0x{Handle:X8})", hEvent);
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] ResetEvent: SynchronizationManager not available");
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		var success = _env.SynchronizationManager.ResetEvent(hEvent);
+		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+	}
+
+	[DllModuleExport(37)]
+	private uint PulseEvent(uint hEvent)
+	{
+		_logger.LogInformation("[Kernel32] PulseEvent(handle=0x{Handle:X8})", hEvent);
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] PulseEvent: SynchronizationManager not available");
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		// PulseEvent sets and immediately resets the event
+		// Wake threads waiting on this event
+		if (_env.ThreadScheduler != null)
+		{
+			var waiters = _env.SynchronizationManager.GetEventWaiters(hEvent);
+			foreach (var waiterId in waiters)
+			{
+				_env.ThreadScheduler.WakeThread(waiterId);
+			}
+		}
+
+		// The event remains in non-signaled state
+		return NativeTypes.Win32Bool.TRUE;
+	}
+
+	[DllModuleExport(37)]
+	private uint CreateSemaphore(uint lpSemaphoreAttributes, int lInitialCount, int lMaximumCount, in LpcStr lpName)
+	{
+		var name = lpName.ToString();
+
+		_logger.LogInformation("[Kernel32] CreateSemaphore(attr=0x{Attr:X8}, initial={Initial}, max={Max}, name=\"{Name}\")",
+			lpSemaphoreAttributes, lInitialCount, lMaximumCount, name ?? "<unnamed>");
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] CreateSemaphore: SynchronizationManager not available");
+			return 0; // NULL handle
+		}
+
+		var handle = _env.SynchronizationManager.CreateSemaphore(lInitialCount, lMaximumCount, name, out var alreadyExists);
+
+		if (alreadyExists)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
+		}
+
+		return handle;
+	}
+
+	[DllModuleExport(37)]
+	private uint ReleaseSemaphore(uint hSemaphore, int lReleaseCount, uint lpPreviousCount)
+	{
+		_logger.LogInformation("[Kernel32] ReleaseSemaphore(handle=0x{Handle:X8}, count={Count})", hSemaphore, lReleaseCount);
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] ReleaseSemaphore: SynchronizationManager not available");
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		var success = _env.SynchronizationManager.ReleaseSemaphore(hSemaphore, lReleaseCount, out var previousCount);
+
+		if (lpPreviousCount != 0)
+		{
+			_env.MemWrite32(lpPreviousCount, (uint)previousCount);
+		}
+
+		// Wake waiting threads
+		if (success && _env.ThreadScheduler != null)
+		{
+			for (int i = 0; i < lReleaseCount; i++)
+			{
+				var nextWaiter = _env.SynchronizationManager.GetNextSemaphoreWaiter(hSemaphore);
+				if (nextWaiter.HasValue)
+				{
+					_env.ThreadScheduler.WakeThread(nextWaiter.Value);
+				}
+			}
+		}
+
+		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+	}
+
+	[DllModuleExport(37)]
+	private uint WaitForSingleObject(uint hHandle, uint dwMilliseconds)
+	{
+		var currentThreadId = _env.GetCurrentThreadId();
+		_logger.LogInformation("[Kernel32] WaitForSingleObject(handle=0x{Handle:X8}, timeout={Timeout}ms)", hHandle, dwMilliseconds);
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] WaitForSingleObject: SynchronizationManager not available");
+			return 0xFFFFFFFF; // WAIT_FAILED
+		}
+
+		const uint WAIT_OBJECT_0 = 0;
+		const uint WAIT_TIMEOUT = 0x102;
+		const uint WAIT_FAILED = 0xFFFFFFFF;
+
+		// Check what type of object this is
+		var objectType = _env.SynchronizationManager.GetObjectType(hHandle);
+		
+		if (objectType == null)
+		{
+			_logger.LogWarning("[Kernel32] WaitForSingleObject: invalid handle 0x{Handle:X8}", hHandle);
+			return WAIT_FAILED;
+		}
+
+		bool signaled = false;
+
+		switch (objectType)
+		{
+			case "Mutex":
+				signaled = _env.SynchronizationManager.AcquireMutex(hHandle, currentThreadId);
+				break;
+			case "Event":
+				signaled = _env.SynchronizationManager.WaitOnEvent(hHandle, currentThreadId);
+				break;
+			case "Semaphore":
+				signaled = _env.SynchronizationManager.WaitOnSemaphore(hHandle, currentThreadId);
+				break;
+		}
+
+		if (signaled)
+		{
+			return WAIT_OBJECT_0;
+		}
+
+		// Need to wait - mark thread as waiting
+		if (_env.ThreadScheduler != null)
+		{
+			_env.ThreadScheduler.SetThreadWaiting(currentThreadId, hHandle, dwMilliseconds);
+		}
+
+		// For now, return timeout (cooperative scheduling will handle actual waiting)
+		return WAIT_TIMEOUT;
 	}
 
 	// Directory functions
