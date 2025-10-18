@@ -8,6 +8,10 @@ namespace Win32Emu.Tests.Kernel32;
 public sealed class ThreadingTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;
+    
+    // Constants for CRITICAL_SECTION structure
+    private const uint CRITICAL_SECTION_SIZE = 24;
+    private const uint CRITICAL_SECTION_UNLOCKED = unchecked((uint)-1);
 
     public ThreadingTests()
     {
@@ -171,7 +175,7 @@ public sealed class ThreadingTests : IDisposable
     public void InitializeCriticalSection_ShouldInitializeStructure()
     {
         // Arrange - Allocate memory for CRITICAL_SECTION (24 bytes)
-        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+        var criticalSectionAddr = _testEnv.AllocateMemory(CRITICAL_SECTION_SIZE);
 
         // Act - Initialize the critical section
         _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
@@ -181,7 +185,7 @@ public sealed class ThreadingTests : IDisposable
         var recursionCount = _testEnv.Memory.Read32(criticalSectionAddr + 8);
         var owningThread = _testEnv.Memory.Read32(criticalSectionAddr + 12);
 
-        Assert.Equal(unchecked((uint)-1), lockCount); // -1 means unlocked
+        Assert.Equal(CRITICAL_SECTION_UNLOCKED, lockCount); // -1 means unlocked
         Assert.Equal(0u, recursionCount); // Initially 0
         Assert.Equal(0u, owningThread); // Initially NULL
     }
@@ -190,7 +194,7 @@ public sealed class ThreadingTests : IDisposable
     public void EnterCriticalSection_ShouldAcquireLock()
     {
         // Arrange
-        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+        var criticalSectionAddr = _testEnv.AllocateMemory(CRITICAL_SECTION_SIZE);
         _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
 
         // Act - Enter critical section
@@ -210,7 +214,7 @@ public sealed class ThreadingTests : IDisposable
     public void EnterCriticalSection_MultipleTimes_ShouldIncrementRecursion()
     {
         // Arrange
-        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+        var criticalSectionAddr = _testEnv.AllocateMemory(CRITICAL_SECTION_SIZE);
         _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
 
         // Act - Enter critical section multiple times
@@ -227,7 +231,7 @@ public sealed class ThreadingTests : IDisposable
     public void LeaveCriticalSection_ShouldReleaseLock()
     {
         // Arrange
-        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+        var criticalSectionAddr = _testEnv.AllocateMemory(CRITICAL_SECTION_SIZE);
         _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
         _testEnv.CallKernel32Api("ENTERCRITICALSECTION", criticalSectionAddr);
 
@@ -239,7 +243,7 @@ public sealed class ThreadingTests : IDisposable
         var recursionCount = _testEnv.Memory.Read32(criticalSectionAddr + 8);
         var owningThread = _testEnv.Memory.Read32(criticalSectionAddr + 12);
 
-        Assert.Equal(unchecked((uint)-1), lockCount); // -1 means unlocked
+        Assert.Equal(CRITICAL_SECTION_UNLOCKED, lockCount); // -1 means unlocked
         Assert.Equal(0u, recursionCount); // Back to 0
         Assert.Equal(0u, owningThread); // No longer owned
     }
@@ -248,7 +252,7 @@ public sealed class ThreadingTests : IDisposable
     public void LeaveCriticalSection_WithRecursion_ShouldDecrementCount()
     {
         // Arrange
-        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+        var criticalSectionAddr = _testEnv.AllocateMemory(CRITICAL_SECTION_SIZE);
         _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
         _testEnv.CallKernel32Api("ENTERCRITICALSECTION", criticalSectionAddr);
         _testEnv.CallKernel32Api("ENTERCRITICALSECTION", criticalSectionAddr);
@@ -269,14 +273,14 @@ public sealed class ThreadingTests : IDisposable
     public void DeleteCriticalSection_ShouldClearStructure()
     {
         // Arrange
-        var criticalSectionAddr = _testEnv.AllocateMemory(24);
+        var criticalSectionAddr = _testEnv.AllocateMemory(CRITICAL_SECTION_SIZE);
         _testEnv.CallKernel32Api("INITIALIZECRITICALSECTION", criticalSectionAddr);
 
         // Act - Delete critical section
         _testEnv.CallKernel32Api("DELETECRITICALSECTION", criticalSectionAddr);
 
         // Assert - Verify structure is cleared
-        for (uint i = 0; i < 24; i++)
+        for (uint i = 0; i < CRITICAL_SECTION_SIZE; i++)
         {
             var value = _testEnv.Memory.Read8(criticalSectionAddr + i);
             Assert.Equal(0, value);
