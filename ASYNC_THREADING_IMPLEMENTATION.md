@@ -64,12 +64,13 @@ private uint WaitForSingleObject(uint hHandle, uint dwMilliseconds)
 ```
 
 **Enhancements**:
+- **Polling loop**: Implements proper blocking behavior by polling until object is signaled or timeout expires
+- **Timeout handling**: Correctly handles zero timeout (immediate return) and INFINITE timeout
+- **Cooperative yielding**: Uses `Thread.Sleep(1)` and ProcessWaitTimeouts() to prevent busy-waiting
 - **Detailed logging**: Tracks synchronization object states (mutex, event, semaphore)
-- **Cooperative waiting**: Uses ThreadScheduler to mark threads as waiting
-- **Non-blocking**: Returns immediately with status, scheduler handles actual waiting
-- **Better diagnostics**: Logs thread IDs and wait states for debugging
+- **Win32 conformance**: Now properly blocks and waits, conforming to Win32 API specifications
 
-**Impact**: Synchronization operations properly cooperate with the threading system, allowing deadlock detection and proper thread scheduling.
+**Impact**: Synchronization operations now correctly block until signaled or timeout, matching Win32 behavior. Applications using WaitForSingleObject will work correctly without needing retry loops.
 
 ### 4. Ole32Module: COM Initialization
 

@@ -3847,62 +3847,65 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return WAIT_FAILED;
 		}
 
-		bool signaled = false;
+		// Start time for timeout tracking
+		var startTime = DateTime.UtcNow;
+		var timeoutSpan = dwMilliseconds == 0xFFFFFFFF 
+			? TimeSpan.MaxValue 
+			: TimeSpan.FromMilliseconds(dwMilliseconds);
 
-		// Try to acquire/wait on the synchronization object
-		// This is non-blocking - it returns immediately with the current state
-		switch (objectType)
+		// Polling loop to wait for object - implements blocking behavior
+		while (true)
 		{
-			case "Mutex":
-				signaled = _env.SynchronizationManager.AcquireMutex(hHandle, currentThreadId);
-				_logger.LogDebug("[Kernel32] WaitForSingleObject: Mutex {Handle:X8} {State}", 
-					hHandle, signaled ? "acquired" : "not available");
-				break;
-			case "Event":
-				signaled = _env.SynchronizationManager.WaitOnEvent(hHandle, currentThreadId);
-				_logger.LogDebug("[Kernel32] WaitForSingleObject: Event {Handle:X8} {State}", 
-					hHandle, signaled ? "signaled" : "not signaled");
-				break;
-			case "Semaphore":
-				signaled = _env.SynchronizationManager.WaitOnSemaphore(hHandle, currentThreadId);
-				_logger.LogDebug("[Kernel32] WaitForSingleObject: Semaphore {Handle:X8} {State}", 
-					hHandle, signaled ? "acquired" : "not available");
-				break;
-		}
+			bool signaled = false;
 
-		if (signaled)
-		{
-			// Object is immediately available
-			_logger.LogDebug("[Kernel32] WaitForSingleObject: Thread {ThreadId} successfully acquired/waited", currentThreadId);
-			return WAIT_OBJECT_0;
-		}
+			// Try to acquire/wait on the synchronization object
+			switch (objectType)
+			{
+				case "Mutex":
+					signaled = _env.SynchronizationManager.AcquireMutex(hHandle, currentThreadId);
+					break;
+				case "Event":
+					signaled = _env.SynchronizationManager.WaitOnEvent(hHandle, currentThreadId);
+					break;
+				case "Semaphore":
+					signaled = _env.SynchronizationManager.WaitOnSemaphore(hHandle, currentThreadId);
+					break;
+			}
 
-		// Object not immediately available - need to wait
-		// Use cooperative threading to properly yield control
-		if (_env.ThreadScheduler != null)
-		{
-			_logger.LogDebug("[Kernel32] WaitForSingleObject: Thread {ThreadId} will wait for handle 0x{Handle:X8} with timeout {Timeout}ms", 
-				currentThreadId, hHandle, dwMilliseconds);
+			if (signaled)
+			{
+				// Object is now available
+				_logger.LogDebug("[Kernel32] WaitForSingleObject: Thread {ThreadId} successfully acquired {Type} 0x{Handle:X8}", 
+					currentThreadId, objectType, hHandle);
+				return WAIT_OBJECT_0;
+			}
+
+			// Check timeout
+			if (dwMilliseconds == 0)
+			{
+				// Zero timeout - return immediately without waiting
+				_logger.LogDebug("[Kernel32] WaitForSingleObject: Zero timeout, returning WAIT_TIMEOUT");
+				return WAIT_TIMEOUT;
+			}
+
+			var elapsed = DateTime.UtcNow - startTime;
+			if (elapsed >= timeoutSpan)
+			{
+				// Timeout expired
+				_logger.LogDebug("[Kernel32] WaitForSingleObject: Timeout expired after {Elapsed}ms", elapsed.TotalMilliseconds);
+				return WAIT_TIMEOUT;
+			}
+
+			// Object not available yet - yield and retry
+			// Use a small sleep to prevent busy-waiting and allow other threads to run
+			Thread.Sleep(1);
 			
-			// Mark thread as waiting - this integrates with the emulator's cooperative scheduling
-			// The thread scheduler will:
-			// 1. Context switch to other runnable threads
-			// 2. Check periodically if the object becomes signaled
-			// 3. Wake this thread when the object is signaled or timeout expires
-			_env.ThreadScheduler.SetThreadWaiting(currentThreadId, hHandle, dwMilliseconds);
-			
-			// Return WAIT_TIMEOUT for now - in a real implementation, we would either:
-			// - Suspend execution and resume when signaled (cooperative multitasking)
-			// - Poll the object state (current approach)
-			// The calling code should handle WAIT_TIMEOUT and retry if needed
-			_logger.LogDebug("[Kernel32] WaitForSingleObject: Returning WAIT_TIMEOUT (cooperative wait scheduled)");
+			// Yield to thread scheduler if available
+			if (_env.ThreadScheduler != null)
+			{
+				_env.ThreadScheduler.ProcessWaitTimeouts();
+			}
 		}
-		else
-		{
-			_logger.LogWarning("[Kernel32] WaitForSingleObject: No ThreadScheduler available, cannot wait cooperatively");
-		}
-
-		return WAIT_TIMEOUT;
 	}
 
 	// Directory functions
