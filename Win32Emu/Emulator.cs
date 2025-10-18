@@ -198,7 +198,7 @@ public sealed class Emulator : IDisposable
 
         if (_gdbServerMode)
         {
-            await RunWithGdbServerAsync(_gdbServerPort);
+            await RunWithGdbServer(_gdbServerPort);
         }
         else if (_interactiveDebugMode)
         {
@@ -251,8 +251,13 @@ public sealed class Emulator : IDisposable
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
         {
-            // Use async wait instead of blocking wait
-            await Task.Run(() => _pauseEvent.WaitOne(100));
+            // Check pause state periodically without blocking
+            if (!_pauseEvent.WaitOne(0))
+            {
+                // Paused - yield and check again
+                await Task.Delay(100);
+                continue;
+            }
 
             if (_stopRequested)
             {
@@ -384,24 +389,20 @@ public sealed class Emulator : IDisposable
         RunNormalAsync().GetAwaiter().GetResult();
     }
 
-    private async Task RunWithEnhancedDebuggingAsync()
+    private Task RunWithEnhancedDebuggingAsync()
     {
-        // For now, just call the synchronous version
-        // Full async implementation would require deeper changes to the debugger
-        await Task.Run(() => RunWithEnhancedDebugging());
+        // Enhanced debugging is inherently synchronous due to the debugger's design
+        RunWithEnhancedDebugging();
+        return Task.CompletedTask;
     }
 
-    private async Task RunWithInteractiveDebuggerAsync()
+    private Task RunWithInteractiveDebuggerAsync()
     {
-        // For now, just call the synchronous version
-        await Task.Run(() => RunWithInteractiveDebugger());
+        // Interactive debugger is inherently synchronous due to console I/O
+        RunWithInteractiveDebugger();
+        return Task.CompletedTask;
     }
 
-    private async Task RunWithGdbServerAsync(int port)
-    {
-        // GdbServer already has async support
-        await RunWithGdbServer(port);
-    }
 
     private void RunWithEnhancedDebugging()
     {
