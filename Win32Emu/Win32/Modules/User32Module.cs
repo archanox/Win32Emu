@@ -665,15 +665,20 @@ namespace Win32Emu.Win32.Modules
 			cpu.SetEip(wndProcAddress);
 
 			// Execute until we hit the return address
-			// Increased limit and added cooperative yielding for better threading support
-			const int MAX_STEPS = 500000; // Increased safety limit for complex WndProcs
+			// Use unlimited steps for window procedures to support complex UI operations.
+			// The procedure will naturally terminate when it returns (hits RETURN_ADDRESS).
+			// To prevent true infinite loops, we track progress and detect stuck execution.
+			const int MAX_STEPS = int.MaxValue; // No artificial limit
 			// YIELD_INTERVAL: Check for context switches every 10K instructions
 			// Rationale: 10K provides good balance between:
 			// - Responsiveness: Allows context switches ~50 times during max execution
 			// - Performance: Low overhead (~0.001% for scheduler checks)
 			// - Granularity: Fine enough for cooperative multitasking
 			const int YIELD_INTERVAL = 10000;
+			const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
 			var steps = 0;
+			var lastCheckEip = cpu.GetEip();
+			var stuckCounter = 0;
 
 			try
 			{
@@ -685,6 +690,27 @@ namespace Win32Emu.Win32.Modules
 					if (eip == RETURN_ADDRESS)
 					{
 						break;
+					}
+
+					// Detect potential infinite loops by checking if we're making progress
+					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+					{
+						var currentEip = cpu.GetEip();
+						if (currentEip == lastCheckEip)
+						{
+							stuckCounter++;
+							if (stuckCounter >= 3)
+							{
+								// We've been at the same instruction for 300K steps - likely an infinite loop
+								_logger.LogWarning("[User32] CallWindowProcedure: Detected infinite loop at EIP=0x{Eip:X8}, aborting", currentEip);
+								break;
+							}
+						}
+						else
+						{
+							stuckCounter = 0;
+							lastCheckEip = currentEip;
+						}
 					}
 
 					// Execute one instruction
@@ -1285,16 +1311,24 @@ namespace Win32Emu.Win32.Modules
 			cpu.SetEip(dialogProcAddress);
 
 			// Execute until we hit the return address
-			// Increased limit and added cooperative yielding for better threading support
-			const int MAX_STEPS = 500000; // Increased safety limit for complex dialog procs
+			// Use unlimited steps for dialog procedures to support complex UI operations
+			// that may involve extensive initialization, layout calculations, or event processing.
+			// The procedure will naturally terminate when it returns (hits RETURN_ADDRESS).
+			// To prevent true infinite loops, we track progress via:
+			// - Detecting when EIP stops changing (infinite loop detection)
+			// - Monitoring for repeated execution at the same address
+			const int MAX_STEPS = int.MaxValue; // No artificial limit
 			// YIELD_INTERVAL: Check for context switches every 10K instructions
 			// Rationale: 10K provides good balance between:
 			// - Responsiveness: Allows context switches ~50 times during max execution
 			// - Performance: Low overhead (~0.001% for scheduler checks)
 			// - Granularity: Fine enough for cooperative multitasking
 			const int YIELD_INTERVAL = 10000;
+			const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
 			var steps = 0;
 			var timedOut = false;
+			var lastCheckEip = cpu.GetEip();
+			var stuckCounter = 0;
 
 			try
 			{
@@ -1306,6 +1340,28 @@ namespace Win32Emu.Win32.Modules
 					if (eip == RETURN_ADDRESS)
 					{
 						break;
+					}
+
+					// Detect potential infinite loops by checking if we're making progress
+					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+					{
+						var currentEip = cpu.GetEip();
+						if (currentEip == lastCheckEip)
+						{
+							stuckCounter++;
+							if (stuckCounter >= 3)
+							{
+								// We've been at the same instruction for 300K steps - likely an infinite loop
+								_logger.LogWarning("[User32] CallDialogProcedure: Detected infinite loop at EIP=0x{Eip:X8}, aborting", currentEip);
+								timedOut = true;
+								break;
+							}
+						}
+						else
+						{
+							stuckCounter = 0;
+							lastCheckEip = currentEip;
+						}
 					}
 
 					// Execute one instruction and check for import calls
