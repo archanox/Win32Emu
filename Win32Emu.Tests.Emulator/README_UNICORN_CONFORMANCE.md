@@ -19,7 +19,7 @@ The test suite covers the following instruction categories:
 ### Arithmetic Instructions
 - ADD, SUB (with overflow/underflow)
 - INC, DEC
-- IMUL, DIV (signed/unsigned multiply and divide)
+- IMUL (signed multiply), MUL (unsigned multiply), IDIV (signed divide), DIV (unsigned divide)
 - ADC, SBB (add/subtract with carry/borrow)
 - NEG (two's complement negation)
 
