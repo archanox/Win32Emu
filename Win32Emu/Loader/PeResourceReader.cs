@@ -54,7 +54,7 @@ public class PeResourceReader
 	/// </summary>
 	/// <param name="lpType">Resource type (can be integer ID or string name)</param>
 	/// <param name="lpName">Resource name (can be integer ID or string name)</param>
-	/// <param name="wLanguage">Language ID (0 for default)</param>
+	/// <param name="wLanguage">Language ID (0 for default, 0x0409 for English US)</param>
 	/// <returns>Handle to the resource information block, or 0 if not found</returns>
 	public uint FindResource(uint lpType, uint lpName, ushort wLanguage = 0)
 	{
@@ -73,16 +73,28 @@ public class PeResourceReader
 		var nameId = IsIntResource(lpName) ? (uint?)GetIntResource(lpName) : null;
 		var nameNameStr = nameId == null ? ReadResourceString(lpName) : null;
 
+		// If no language specified, default to English (US)
+		if (wLanguage == 0)
+		{
+			wLanguage = 0x0409; // LANG_ENGLISH, SUBLANG_ENGLISH_US
+		}
+		
 		// Navigate the resource directory tree: Type -> Name -> Language
 		// For now, we'll create a synthetic handle that encodes the type, name, and language
 		// The handle will be used by LoadResource to retrieve the actual data
 		
 		// Create a resource handle (synthetic identifier)
-		// Format: 0x80000000 | (type << 16) | name
+		// Format: 0x80000000 | (type << 16) | name | (language << 0)
+		// Note: We don't encode language in the handle as we'll use the stored _preferredLanguage
 		var resourceHandle = 0x80000000u | ((typeId ?? 0) << 16) | (nameId ?? 0);
+		
+		// Store the preferred language for this lookup
+		_preferredLanguage = wLanguage;
 		
 		return resourceHandle;
 	}
+	
+	private ushort _preferredLanguage = 0x0409; // Default to English (US)
 
 	/// <summary>
 	/// Loads a resource into memory.
@@ -205,20 +217,37 @@ public class PeResourceReader
 					continue;
 				}
 
-				// Name matched, now get the language entry (use first available)
+				// Name matched, now get the language entry
 				if (nameEntry is not ResourceDirectory nameDir)
 				{
 					continue;
 				}
 
-				// Get the first language entry
+				// Try to find the preferred language first
+				ResourceData? preferredData = null;
+				ResourceData? fallbackData = null;
+				
 				foreach (var langEntry in nameDir.Entries)
 				{
 					if (langEntry is ResourceData data && data.Contents != null)
 					{
-						// Use WriteIntoArray() like PeIconExtractor does
-						return data.Contents.WriteIntoArray();
+						// Check if this is the preferred language
+						if (langEntry.Id == _preferredLanguage)
+						{
+							preferredData = data;
+							break; // Found exact match
+						}
+						
+						// Keep the first entry as fallback
+						fallbackData ??= data;
 					}
+				}
+				
+				// Use preferred language if found, otherwise use fallback
+				var selectedData = preferredData ?? fallbackData;
+				if (selectedData?.Contents != null)
+				{
+					return selectedData.Contents.WriteIntoArray();
 				}
 			}
 		}
