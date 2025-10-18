@@ -251,11 +251,14 @@ public sealed class Emulator : IDisposable
             {
                 _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                 
-                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
+                // Note: We do NOT save EBP here because some calling code uses EBP to hold the function
+                // pointer for indirect calls (e.g., MOV EBP, [IAT_Entry]; CALL EBP). If we preserve
+                // the EBP value at the time of the call, we'll restore the function pointer value
+                // instead of the original frame pointer, causing crashes.
                 var savedEbx = _cpu.GetRegister("EBX");
                 var savedEsi = _cpu.GetRegister("ESI");
                 var savedEdi = _cpu.GetRegister("EDI");
-                var savedEbp = _cpu.GetRegister("EBP");
                 
                 if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
                 {
@@ -269,11 +272,13 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("EAX", ret); // Return value in EAX
                     _cpu.SetEip(retEip);
                     
-                    // Restore callee-saved registers
+                    // Restore callee-saved registers (except EBP - see above)
                     _cpu.SetRegister("EBX", savedEbx);
                     _cpu.SetRegister("ESI", savedEsi);
                     _cpu.SetRegister("EDI", savedEdi);
-                    _cpu.SetRegister("EBP", savedEbp);
+                    
+                    // Restore EBP from stack to handle indirect call cases
+                    RestoreEbpFromStack(esp);
                 }
             }
             else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
@@ -307,14 +312,8 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("ESI", savedEsi);
                     _cpu.SetRegister("EDI", savedEdi);
                     
-                    // Set EBP to a plausible frame pointer value by reading from the stack
-                    // This attempts to recover from cases where EBP was used as a function pointer
-                    var ebpFromStack = _vm.Read32(esp);
-                    if (ebpFromStack >= 0x00100000 && ebpFromStack < _vm.Size)
-                    {
-                        _cpu.SetRegister("EBP", ebpFromStack);
-                        _logger.LogDebug("[Import] Restored EBP from stack: 0x{EBP:X8}", ebpFromStack);
-                    }
+                    // Restore EBP from stack to handle indirect call cases
+                    RestoreEbpFromStack(esp);
                 }
             }
             else if (step.IsCall)
@@ -791,6 +790,28 @@ public sealed class Emulator : IDisposable
         if (_host != null)
         {
             _host.OnDebugOutput(message, DebugLevel.Debug);
+        }
+    }
+
+    /// <summary>
+    /// Attempts to restore EBP from the stack after an emulated API call.
+    /// This handles cases where the calling code used EBP to hold the function pointer for an indirect call.
+    /// </summary>
+    private void RestoreEbpFromStack(uint esp)
+    {
+        try
+        {
+            var ebpFromStack = _vm!.Read32(esp);
+            // Validate that the value looks like a plausible frame pointer (within allocated memory)
+            if (ebpFromStack >= 0x00100000 && ebpFromStack < _vm.Size)
+            {
+                _cpu!.SetRegister("EBP", ebpFromStack);
+                LogDebug($"[Emulator] Restored EBP from stack: 0x{ebpFromStack:X8}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[Emulator] Failed to restore EBP from stack");
         }
     }
 
