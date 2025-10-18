@@ -15,6 +15,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private readonly uint _imageBase;
 	private readonly PeImageLoader? _peLoader;
 	private readonly ILogger _logger;
+	private PeResourceReader? _resourceReader;
 
 	public Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 	{
@@ -28,6 +29,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 	private Win32Dispatcher? _dispatcher;
 	private uint _lastError;
+
+	public void SetResourceReader(PeResourceReader resourceReader)
+	{
+		_resourceReader = resourceReader;
+	}
 
 	public void SetDispatcher(Win32Dispatcher dispatcher)
 	{
@@ -361,6 +367,20 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "LEAVECRITICALSECTION":
 				returnValue = LeaveCriticalSection(a.UInt32(0));
+				return true;
+
+			// Resource functions
+			case "FINDRESOURCEA":
+				returnValue = FindResourceA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "LOADRESOURCE":
+				returnValue = LoadResource(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "SIZEOFRESOURCE":
+				returnValue = SizeofResource(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "LOCKRESOURCE":
+				returnValue = LockResource(a.UInt32(0));
 				return true;
 
 			default:
@@ -4379,5 +4399,134 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_env.MemWriteStruct(lpCriticalSection, ref criticalSection);
 
 		return 0; // This function returns void, but we return 0 for consistency
+	}
+
+	/// <summary>
+	/// Finds a resource in the specified module.
+	/// </summary>
+	/// <param name="hModule">Handle to the module whose executable file contains the resource</param>
+	/// <param name="lpName">Resource name (can be integer ID or string pointer)</param>
+	/// <param name="lpType">Resource type (can be integer ID or string pointer)</param>
+	/// <returns>Handle to the resource information block, or NULL if not found</returns>
+	[DllModuleExport(302, entryPoint: 0x00008D8E, Version = "5.1.2600.6532")]
+	private uint FindResourceA(uint hModule, uint lpName, uint lpType)
+	{
+		_logger.LogInformation("[Kernel32] FindResourceA: hModule=0x{HModule:X8} lpName=0x{LpName:X8} lpType=0x{LpType:X8}",
+			hModule, lpName, lpType);
+
+		if (_resourceReader == null)
+		{
+			_logger.LogWarning("[Kernel32] FindResourceA: Resource reader not initialized");
+			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			return 0;
+		}
+
+		try
+		{
+			var result = _resourceReader.FindResource(lpType, lpName, 0);
+			if (result == 0)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			}
+			return result;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] FindResourceA: Exception occurred");
+			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			return 0;
+		}
+	}
+
+	/// <summary>
+	/// Loads a resource into memory.
+	/// </summary>
+	/// <param name="hModule">Handle to the module containing the resource</param>
+	/// <param name="hResInfo">Handle to the resource (from FindResource)</param>
+	/// <returns>Handle to the loaded resource data, or NULL if failed</returns>
+	[DllModuleExport(459, entryPoint: 0x0000A6E7, Version = "5.1.2600.6532")]
+	private uint LoadResource(uint hModule, uint hResInfo)
+	{
+		_logger.LogInformation("[Kernel32] LoadResource: hModule=0x{HModule:X8} hResInfo=0x{HResInfo:X8}",
+			hModule, hResInfo);
+
+		if (_resourceReader == null)
+		{
+			_logger.LogWarning("[Kernel32] LoadResource: Resource reader not initialized");
+			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			return 0;
+		}
+
+		try
+		{
+			var result = _resourceReader.LoadResource(hModule, hResInfo);
+			if (result == 0)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			}
+			return result;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] LoadResource: Exception occurred");
+			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			return 0;
+		}
+	}
+
+	/// <summary>
+	/// Gets the size of a resource.
+	/// </summary>
+	/// <param name="hModule">Handle to the module containing the resource</param>
+	/// <param name="hResInfo">Handle to the resource</param>
+	/// <returns>Size of the resource in bytes, or 0 if failed</returns>
+	[DllModuleExport(680, entryPoint: 0x0000F25A, Version = "5.1.2600.6532")]
+	private uint SizeofResource(uint hModule, uint hResInfo)
+	{
+		_logger.LogInformation("[Kernel32] SizeofResource: hModule=0x{HModule:X8} hResInfo=0x{HResInfo:X8}",
+			hModule, hResInfo);
+
+		if (_resourceReader == null)
+		{
+			_logger.LogWarning("[Kernel32] SizeofResource: Resource reader not initialized");
+			return 0;
+		}
+
+		try
+		{
+			return _resourceReader.SizeofResource(hModule, hResInfo);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] SizeofResource: Exception occurred");
+			return 0;
+		}
+	}
+
+	/// <summary>
+	/// Locks a resource into memory.
+	/// </summary>
+	/// <param name="hResData">Handle to the resource data</param>
+	/// <returns>Pointer to the resource data</returns>
+	[DllModuleExport(460, entryPoint: 0x0000A6F9, Version = "5.1.2600.6532")]
+	private uint LockResource(uint hResData)
+	{
+		_logger.LogInformation("[Kernel32] LockResource: hResData=0x{HResData:X8}", hResData);
+
+		if (_resourceReader == null)
+		{
+			_logger.LogWarning("[Kernel32] LockResource: Resource reader not initialized");
+			return 0;
+		}
+
+		try
+		{
+			return _resourceReader.LockResource(hResData);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] LockResource: Exception occurred");
+			return 0;
+		}
 	}
 }
