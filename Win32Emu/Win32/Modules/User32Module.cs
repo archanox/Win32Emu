@@ -1217,19 +1217,42 @@ namespace Win32Emu.Win32.Modules
 			// followed by variable-length data
 			uint dialogStyle = 0;
 			ushort controlCount = 0;
+			bool isResourceName = false;
 			
-			try
+			// Check if lpTemplateName is a resource ID or name
+			if ((lpTemplateName & 0xFFFF0000) == 0)
 			{
-				if ((lpTemplateName & 0xFFFF0000) == 0)
+				// It's a resource ID - need to load from PE resources
+				isResourceName = true;
+				_logger.LogWarning("[User32] DialogBoxParamAsync: Resource ID {ResourceId} needs to be loaded from PE resources (not yet implemented)",
+					lpTemplateName & 0xFFFF);
+			}
+			else if (lpTemplateName > 0)
+			{
+				// Check if it's a string resource name by checking the earlier detection
+				// If the first attempt to read it as a string succeeded, it's a resource name
+				try
 				{
-					// It's a resource ID - need to load from PE resources
-					// TODO: Implement FindResource/LoadResource to load dialog template from resources
-					_logger.LogWarning("[User32] DialogBoxParamAsync: Resource ID {ResourceId} needs to be loaded from PE resources (not yet implemented)",
-						lpTemplateName & 0xFFFF);
+					var testStr = _env.ReadAnsiString(lpTemplateName);
+					if (!string.IsNullOrEmpty(testStr) && testStr.All(c => char.IsLetterOrDigit(c) || c == '_'))
+					{
+						// It's a valid resource name string
+						isResourceName = true;
+						_logger.LogWarning("[User32] DialogBoxParamAsync: Resource name '{ResourceName}' needs to be loaded from PE resources (not yet implemented)", testStr);
+					}
 				}
-				else
+				catch
 				{
-					// It's a pointer - try to parse as DLGTEMPLATE
+					// Not a string, might be a direct DLGTEMPLATE pointer
+				}
+			}
+			
+			// Only try to parse as DLGTEMPLATE if it's not a resource ID/name
+			if (!isResourceName && lpTemplateName > 0)
+			{
+				try
+				{
+					// It's a pointer to a DLGTEMPLATE structure - parse it
 					dialogStyle = _env.MemRead32(lpTemplateName);
 					var extendedStyle = _env.MemRead32(lpTemplateName + 4);
 					controlCount = _env.MemRead16(lpTemplateName + 8);
@@ -1241,10 +1264,10 @@ namespace Win32Emu.Win32.Modules
 					_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog template - style=0x{DialogStyle:X8} extStyle=0x{ExtendedStyle:X8} controls={ControlCount} pos=({X},{Y}) size=({Cx},{Cy})",
 						dialogStyle, extendedStyle, controlCount, x, y, cx, cy);
 				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to parse dialog template: {Message}", ex.Message);
+				catch (Exception ex)
+				{
+					_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to parse dialog template: {Message}", ex.Message);
+				}
 			}
 
 			// Create a dialog window handle
