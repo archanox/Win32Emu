@@ -354,6 +354,8 @@ public class Retrowin32Tests
             _output.WriteLine($"[WINDOW] {info}");
             WindowsCreated.Add(info);
         }
+
+        public Task<int> OnDialogCreate(DialogCreateInfo info) => Task.FromResult(2);
     }
 
     /// <summary>

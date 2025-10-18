@@ -708,6 +708,13 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
+				// Check for invalid EIP (NULL pointer execution)
+				if (eip == 0x00000000)
+				{
+					_logger.LogWarning("[User32] CallWindowProcedure: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+					break;
+				}
+
 					// Detect potential infinite loops by checking if we're making progress
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
@@ -1496,6 +1503,14 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
+				// Check for invalid EIP (NULL pointer execution)
+				if (eip == 0x00000000)
+				{
+					_logger.LogWarning("[User32] CallDialogProcedure: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+					timedOut = true;
+					break;
+				}
+
 					// Detect potential infinite loops by checking if we're making progress
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
@@ -1629,6 +1644,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] CallDialogProcedureAsync: Calling 0x{DialogProcAddress:X8} with HWND=0x{HwndDlg:X8} MSG=0x{Message:X4}", dialogProcAddress, hwndDlg, message);
 
+			// Validate dialog procedure address - reject NULL or obviously invalid addresses
+			if (dialogProcAddress == 0)
+			{
+				_logger.LogWarning("[User32] CallDialogProcedureAsync: Dialog procedure address is NULL (0x00000000), aborting");
+				return (0, true, false);
+			}
+
 			// Save current CPU state
 			var savedEip = cpu.GetEip();
 			var savedEsp = cpu.GetRegister("ESP");
@@ -1688,9 +1710,34 @@ namespace Win32Emu.Win32.Modules
 
 					var eip = cpu.GetEip();
 
+					// Log first 20 instructions to help debug if we jump to NULL
+					if (steps < 20)
+					{
+						_logger.LogInformation("[User32] CallDialogProcedureAsync: Step {Steps}: EIP=0x{Eip:X8}", steps, eip);
+					}
+
 					// Check if we've returned to our marker address
 					if (eip == RETURN_ADDRESS)
 					{
+						break;
+					}
+
+					// Check for invalid EIP (NULL pointer execution)
+					if (eip == 0x00000000)
+					{
+						_logger.LogError("[User32] CallDialogProcedureAsync: Execution jumped to NULL address (0x00000000) at step {Steps}", steps);
+						_logger.LogError("[User32] CallDialogProcedureAsync: This typically means the code called a NULL function pointer");
+						_logger.LogError("[User32] CallDialogProcedureAsync: ESP=0x{Esp:X8} EBP=0x{Ebp:X8}", 
+							cpu.GetRegister("ESP"), cpu.GetRegister("EBP"));
+						// Log stack contents
+						try
+						{
+							var stackPtr = cpu.GetRegister("ESP");
+							_logger.LogError("[User32] CallDialogProcedureAsync: Stack: {Stack}",
+								string.Join(" ", Enumerable.Range(0, 8).Select(i => $"0x{memory.Read32(stackPtr + (uint)(i * 4)):X8}")));
+						}
+						catch { }
+						timedOut = true;
 						break;
 					}
 
@@ -1722,7 +1769,7 @@ namespace Win32Emu.Win32.Modules
 					// Check for COM vtable method calls
 					if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
 					{
-						_logger.LogDebug("[User32] CallDialogProcedureAsync: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
+						_logger.LogInformation("[User32] CallDialogProcedureAsync: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
 						
 						// Save callee-saved registers (EBX, ESI, EDI)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
@@ -1747,14 +1794,14 @@ namespace Win32Emu.Win32.Modules
 					{
 						var dll = imp.dll.ToUpperInvariant();
 						var name = imp.name;
-						_logger.LogDebug("[User32] CallDialogProcedureAsync: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
+						_logger.LogInformation("[User32] CallDialogProcedureAsync: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
 						
 						// Save callee-saved registers (EBX, ESI, EDI)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
 						
 						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
 						{
-							_logger.LogDebug("[User32] CallDialogProcedureAsync: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
+							_logger.LogInformation("[User32] CallDialogProcedureAsync: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
 							
@@ -1785,7 +1832,7 @@ namespace Win32Emu.Win32.Modules
 							// Check if there are other threads that need CPU time
 							if (scheduler.ShouldContextSwitch())
 							{
-								_logger.LogDebug("[User32] CallDialogProcedureAsync: Cooperative yield at {Steps} steps", steps);
+								_logger.LogInformation("[User32] CallDialogProcedureAsync: Cooperative yield at {Steps} steps", steps);
 							}
 						}
 					}
