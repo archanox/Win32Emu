@@ -16,6 +16,14 @@ public record ComMethodInfo(
 /// <summary>
 /// Dispatcher for COM vtable method calls
 /// Handles calls to COM interface methods at addresses 0x0E000000-0x0EFFFFFF
+/// 
+/// Threading Model:
+/// COM method invocations are synchronous but designed to be non-blocking.
+/// All handlers should complete quickly without long-running operations.
+/// For operations that need to wait or perform I/O, handlers should:
+/// 1. Return immediately with appropriate status codes
+/// 2. Use cooperative threading patterns (e.g., ThreadScheduler.SetThreadWaiting)
+/// 3. Avoid blocking the emulation loop
 /// </summary>
 public class ComVtableDispatcher
 {
