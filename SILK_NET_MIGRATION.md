@@ -165,6 +165,10 @@ The following Silk.NET packages are now used:
 - `Silk.NET.OpenGL` (2.22.0) - OpenGL bindings for rendering
 - `Silk.NET.OpenAL` (2.22.0) - OpenAL bindings for audio
 - `Silk.NET.Input` (2.22.0) - Input abstraction
+- `Silk.NET.Vulkan` (2.22.0) - Vulkan API bindings
+- `Silk.NET.Vulkan.Extensions.KHR` (2.22.0) - Vulkan KHR extensions
+- `Silk.NET.Windowing` (2.22.0) - Windowing abstraction
+- `Silk.NET.Maths` (2.22.0) - Math utilities
 
 ### Removed Packages
 

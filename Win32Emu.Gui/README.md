@@ -19,10 +19,21 @@ A cross-platform desktop GUI for Win32Emu, built with Avalonia UI.
 
 ## Configuration Storage
 
-All settings, games, and watched folders are automatically saved to a platform-specific location:
-- **Windows**: `%APPDATA%\Win32Emu\config.json`
-- **Linux**: `~/.config/Win32Emu/config.json`
-- **macOS**: `~/Library/Application Support/Win32Emu/config.json`
+All settings, games, and watched folders are automatically saved to platform-specific locations:
+
+- **Windows**: 
+  - Settings: `%APPDATA%\Win32Emu\settings.json`
+  - Library: `%APPDATA%\Win32Emu\library.json`
+- **Linux**: 
+  - Settings: `~/.config/Win32Emu/settings.json`
+  - Library: `~/.config/Win32Emu/library.json`
+- **macOS**: 
+  - Settings: `~/Library/Application Support/Win32Emu/settings.json`
+  - Library: `~/Library/Application Support/Win32Emu/library.json`
+
+The configuration is split into two files:
+- **settings.json**: Emulator settings (portable, can be synced across devices)
+- **library.json**: Game library and watched folders (machine-specific)
 
 See [CONFIGURATION.md](CONFIGURATION.md) for more details about the configuration system.
 
