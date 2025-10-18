@@ -23,6 +23,7 @@ namespace Win32Emu.Win32.Modules
 		// Constants for procedure execution monitoring
 		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
 		private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
+		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
 
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -1155,13 +1156,23 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1)]
 		private uint DialogBoxParamA(uint hInstance, uint lpTemplateName, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
 		{
+			// Synchronous wrapper around async implementation
+			return DialogBoxParamAsync(hInstance, lpTemplateName, hWndParent, lpDialogFunc, dwInitParam, CancellationToken.None).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async version of DialogBoxParamA with cancellation token support.
+		/// Creates a modal dialog box with proper async message loop and cooperative cancellation.
+		/// </summary>
+		private async Task<uint> DialogBoxParamAsync(uint hInstance, uint lpTemplateName, uint hWndParent, uint lpDialogFunc, uint dwInitParam, CancellationToken cancellationToken = default)
+		{
 			// DialogBoxParamA creates a modal dialog box
-			_logger.LogInformation("[User32] DialogBoxParamA: hInstance=0x{HInstance:X8} lpTemplateName=0x{LpTemplateName:X8} lpDialogFunc=0x{LpDialogFunc:X8}", hInstance, lpTemplateName, lpDialogFunc);
+			_logger.LogInformation("[User32] DialogBoxParamAsync: hInstance=0x{HInstance:X8} lpTemplateName=0x{LpTemplateName:X8} lpDialogFunc=0x{LpDialogFunc:X8}", hInstance, lpTemplateName, lpDialogFunc);
 
 			// Create a dialog window handle
 			// For now, we create a synthetic dialog handle without parsing the template
 			var hDlg = _env.RegisterHandle(new object()); // Dialog handle
-			_logger.LogInformation("[User32] DialogBoxParamA: Created dialog handle=0x{HDlg:X8}", hDlg);
+			_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog handle=0x{HDlg:X8}", hDlg);
 
 			// Initialize dialog state
 			_env.InitializeDialogState(hDlg);
@@ -1172,68 +1183,71 @@ namespace Win32Emu.Win32.Modules
 			// lParam = dwInitParam
 			const uint WM_INITDIALOG = 0x0110;
 			var dialogProcTimedOut = false;
+			var dialogProcCancelled = false;
 			
 			if (lpDialogFunc != 0)
 			{
-				_logger.LogInformation("[User32] DialogBoxParamA: Calling dialog procedure with WM_INITDIALOG");
-				var (initResult, timedOut) = CallDialogProcedureWithTimeout(_cpu, _memory, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam);
-				_logger.LogInformation("[User32] DialogBoxParamA: WM_INITDIALOG returned {InitResult}", initResult);
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Calling dialog procedure with WM_INITDIALOG");
+				var (initResult, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu, _memory, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam, cancellationToken);
+				_logger.LogInformation("[User32] DialogBoxParamAsync: WM_INITDIALOG returned {InitResult}", initResult);
 				dialogProcTimedOut = timedOut;
+				dialogProcCancelled = cancelled;
 			}
 			else
 			{
-				_logger.LogWarning("[User32] DialogBoxParamA: No dialog procedure specified");
+				_logger.LogWarning("[User32] DialogBoxParamAsync: No dialog procedure specified");
 			}
 
-			// If the dialog procedure timed out during initialization, end the dialog immediately
-			// This prevents the modal loop from hanging indefinitely
-			if (dialogProcTimedOut)
+			// If the dialog procedure timed out or was cancelled during initialization, end the dialog immediately
+			if (dialogProcTimedOut || dialogProcCancelled)
 			{
-				_logger.LogWarning("[User32] DialogBoxParamA: Dialog procedure timed out, ending dialog with result 0");
-				// Use result 0 to simulate user cancellation; this is a safe fallback value for timed-out dialogs.
+				_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status}, ending dialog with result 0", 
+					dialogProcCancelled ? "cancelled" : "timed out");
 				_env.SetDialogResult(hDlg, 0);
 			}
 
 			// Run modal message loop until EndDialog is called
-			_logger.LogInformation("[User32] DialogBoxParamA: Entering modal message loop");
+			_logger.LogInformation("[User32] DialogBoxParamAsync: Entering modal message loop");
 			
 			const int MAX_ITERATIONS = 10000; // Safety limit to prevent infinite loops
 			var iterations = 0;
 			var consecutiveEmptyIterations = 0;
 			const int MAX_EMPTY_ITERATIONS = 100; // Exit if no messages for 100 iterations
 			
-			while (!_env.IsDialogEnded(hDlg) && iterations < MAX_ITERATIONS)
+			while (!_env.IsDialogEnded(hDlg) && iterations < MAX_ITERATIONS && !cancellationToken.IsCancellationRequested)
 			{
 				iterations++;
 				
 				// Check for quit message
 				if (_env.HasQuitMessage())
 				{
-					_logger.LogInformation("[User32] DialogBoxParamA: Quit message received, breaking modal loop");
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Quit message received, breaking modal loop");
 					break;
 				}
 
 				// Try to get a message (with short timeout to avoid blocking indefinitely)
-				var queuedMsg = _env.GetMessageBlocking(0, 0, 0, timeoutMs: 10);
+				// Use async version for better cooperative multitasking
+				var queuedMsg = await _env.GetMessageAsync(0, 0, 0, timeoutMs: 10);
 				
 				if (queuedMsg.HasValue)
 				{
 					consecutiveEmptyIterations = 0;
 					var msg = queuedMsg.Value;
-					_logger.LogDebug("[User32] DialogBoxParamA: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", msg.Message, msg.Hwnd);
+					_logger.LogDebug("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", msg.Message, msg.Hwnd);
 					
 					// Dispatch the message to the dialog procedure if it's for our dialog
 					if (msg.Hwnd == hDlg || msg.Hwnd == 0)
 					{
 						if (lpDialogFunc != 0)
 						{
-							var (result, timedOut) = CallDialogProcedureWithTimeout(_cpu, _memory, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam);
-							_logger.LogDebug("[User32] DialogBoxParamA: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
+							var (result, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu, _memory, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam, cancellationToken);
+							_logger.LogDebug("[User32] DialogBoxParamAsync: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
 							
-							// If dialog procedure times out again, force end the dialog
-							if (timedOut)
+							// If dialog procedure times out or is cancelled, force end the dialog
+							if (timedOut || cancelled)
 							{
-								_logger.LogWarning("[User32] DialogBoxParamA: Dialog procedure timed out during message processing, forcing dialog end");
+								_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status} during message processing, forcing dialog end",
+									cancelled ? "cancelled" : "timed out");
 								_env.SetDialogResult(hDlg, 0);
 							}
 						}
@@ -1251,15 +1265,23 @@ namespace Win32Emu.Win32.Modules
 					// If we've had too many empty iterations and the dialog proc timed out, force end
 					if (dialogProcTimedOut && consecutiveEmptyIterations >= MAX_EMPTY_ITERATIONS)
 					{
-						_logger.LogWarning("[User32] DialogBoxParamA: No messages and dialog procedure timed out, forcing dialog end");
+						_logger.LogWarning("[User32] DialogBoxParamAsync: No messages and dialog procedure timed out, forcing dialog end");
 						_env.SetDialogResult(hDlg, 0);
 					}
+					
+					// Small delay to avoid tight loop
+					await Task.Delay(1, cancellationToken);
 				}
 			}
 
 			if (iterations >= MAX_ITERATIONS)
 			{
-				_logger.LogWarning("[User32] DialogBoxParamA: Exceeded max iterations, forcing dialog end");
+				_logger.LogWarning("[User32] DialogBoxParamAsync: Exceeded max iterations, forcing dialog end");
+			}
+
+			if (cancellationToken.IsCancellationRequested)
+			{
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Cancellation requested, ending dialog");
 			}
 
 			// Get the result from EndDialog
@@ -1269,7 +1291,7 @@ namespace Win32Emu.Win32.Modules
 			_env.CleanupDialogState(hDlg);
 			_env.CloseHandle(hDlg);
 			
-			_logger.LogInformation("[User32] DialogBoxParamA: Returning result={DialogResult}", dialogResult);
+			_logger.LogInformation("[User32] DialogBoxParamAsync: Returning result={DialogResult}", dialogResult);
 			return dialogResult;
 		}
 
@@ -1467,6 +1489,203 @@ namespace Win32Emu.Win32.Modules
 
 			return (returnValue, timedOut);
 		}
+
+		/// <summary>
+		/// Async version of CallDialogProcedureWithTimeout with cancellation token support.
+		/// Allows cooperative cancellation during long-running dialog procedure execution.
+		/// </summary>
+		private async Task<(uint returnValue, bool timedOut, bool cancelled)> CallDialogProcedureAsync(
+			ICpu cpu, VirtualMemory memory, uint dialogProcAddress, uint hwndDlg, uint message, uint wParam, uint lParam, CancellationToken cancellationToken = default)
+		{
+			_logger.LogInformation("[User32] CallDialogProcedureAsync: Calling 0x{DialogProcAddress:X8} with HWND=0x{HwndDlg:X8} MSG=0x{Message:X4}", dialogProcAddress, hwndDlg, message);
+
+			// Save current CPU state
+			var savedEip = cpu.GetEip();
+			var savedEsp = cpu.GetRegister("ESP");
+			var savedEbp = cpu.GetRegister("EBP");
+
+			// Set up stack for stdcall convention (parameters pushed right-to-left)
+			var esp = savedEsp;
+
+			// Push return address (we'll use a special marker address)
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+			esp -= 4;
+			memory.Write32(esp, RETURN_ADDRESS);
+
+			// Push parameters (right-to-left for stdcall)
+			esp -= 4;
+			memory.Write32(esp, lParam);
+
+			esp -= 4;
+			memory.Write32(esp, wParam);
+
+			esp -= 4;
+			memory.Write32(esp, message);
+
+			esp -= 4;
+			memory.Write32(esp, hwndDlg);
+
+			// Update CPU registers
+			cpu.SetRegister("ESP", esp);
+			cpu.SetEip(dialogProcAddress);
+
+			// Execute until we hit the return address with cancellation support
+			const int MAX_STEPS = int.MaxValue; // No artificial limit
+			const int YIELD_INTERVAL = 10000;
+			var steps = 0;
+			var timedOut = false;
+			var cancelled = false;
+			var lastCheckEip = cpu.GetEip();
+			var stuckCounter = 0;
+
+			try
+			{
+				while (steps < MAX_STEPS)
+				{
+					// Check for cancellation at regular intervals
+					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+					{
+						if (cancellationToken.IsCancellationRequested)
+						{
+							_logger.LogInformation("[User32] CallDialogProcedureAsync: Cancellation requested at step {Steps}", steps);
+							cancelled = true;
+							break;
+						}
+						
+						// Yield to allow other async operations to proceed
+						await Task.Yield();
+					}
+
+					var eip = cpu.GetEip();
+
+					// Check if we've returned to our marker address
+					if (eip == RETURN_ADDRESS)
+					{
+						break;
+					}
+
+					// Detect potential infinite loops by checking if we're making progress
+					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+					{
+						var currentEip = cpu.GetEip();
+						if (currentEip == lastCheckEip)
+						{
+							stuckCounter++;
+							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+							{
+								// We've been at the same instruction for multiple check intervals - likely an infinite loop
+								_logger.LogWarning("[User32] CallDialogProcedureAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", currentEip, stuckCounter);
+								timedOut = true;
+								break;
+							}
+						}
+						else
+						{
+							stuckCounter = 0;
+							lastCheckEip = currentEip;
+						}
+					}
+
+					// Execute one instruction and check for import calls
+					var step = cpu.SingleStep(memory);
+					
+					// Check for COM vtable method calls
+					if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
+					{
+						_logger.LogDebug("[User32] CallDialogProcedureAsync: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
+						
+						// Save callee-saved registers (EBX, ESI, EDI)
+						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+						
+						if (_env.ComDispatcher.TryInvoke(step.CallTarget, cpu, memory, out var comRet, out var comArgBytes))
+						{
+							var currentEsp = cpu.GetRegister("ESP");
+							var retEip = memory.Read32(currentEsp);
+							currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
+							cpu.SetRegister("ESP", currentEsp);
+							cpu.SetRegister("EAX", comRet);
+							cpu.SetEip(retEip);
+							
+							// Restore callee-saved registers
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+							
+							RestoreEbpFromStack(cpu, memory, currentEsp);
+						}
+					}
+					// Check for import calls
+					else if (step.IsCall && _image != null && _image.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+					{
+						var dll = imp.dll.ToUpperInvariant();
+						var name = imp.name;
+						_logger.LogDebug("[User32] CallDialogProcedureAsync: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
+						
+						// Save callee-saved registers (EBX, ESI, EDI)
+						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+						
+						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
+						{
+							_logger.LogDebug("[User32] CallDialogProcedureAsync: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
+							var currentEsp = cpu.GetRegister("ESP");
+							var retEip = memory.Read32(currentEsp);
+							
+							currentEsp += 4 + (uint)argBytes;
+							
+							cpu.SetRegister("ESP", currentEsp);
+							cpu.SetRegister("EAX", ret);
+							cpu.SetEip(retEip);
+							
+							// Restore callee-saved registers
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+							
+							RestoreEbpFromStack(cpu, memory, currentEsp);
+						}
+					}
+
+					steps++;
+					
+					// Periodically check if we should yield to other threads
+					if (steps % YIELD_INTERVAL == 0)
+					{
+						var scheduler = _env.ThreadScheduler;
+						if (scheduler != null)
+						{
+							// Process any waiting thread timeouts
+							scheduler.ProcessWaitTimeouts();
+							
+							// Check if there are other threads that need CPU time
+							if (scheduler.ShouldContextSwitch())
+							{
+								_logger.LogDebug("[User32] CallDialogProcedureAsync: Cooperative yield at {Steps} steps", steps);
+							}
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning("[User32] CallDialogProcedureAsync: Exception during execution: {ExMessage}", ex.Message);
+			}
+
+			if (steps >= MAX_STEPS)
+			{
+				_logger.LogWarning("[User32] CallDialogProcedureAsync: Exceeded max steps ({MaxSteps}), aborting - DialogProc may be in infinite loop", MAX_STEPS);
+				timedOut = true;
+			}
+
+			// Get return value from EAX
+			var returnValue = cpu.GetRegister("EAX");
+
+			// Restore CPU state
+			cpu.SetEip(savedEip);
+			cpu.SetRegister("ESP", savedEsp);
+			cpu.SetRegister("EBP", savedEbp);
+
+			_logger.LogInformation("[User32] CallDialogProcedureAsync: Completed with return value 0x{ReturnValue:X8}, timedOut={TimedOut}, cancelled={Cancelled}", 
+				returnValue, timedOut, cancelled);
+
+			return (returnValue, timedOut, cancelled);
+		}
+
 
 		[DllModuleExport(1)]
 		private uint EndDialog(uint hDlg, uint nResult)
