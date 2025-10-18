@@ -67,9 +67,7 @@ public class IcedCpu : ICpu
 			return "Instruction analyzer not enabled";
 		}
 
-		_reader.Reset(_eip);
-		_decoder.IP = _eip;
-		var insn = _decoder.Decode();
+		var insn = DecodeCurrentInstruction();
 		return _analyzer.FormatInstructionWithAddress(insn);
 	}
 
@@ -83,10 +81,18 @@ public class IcedCpu : ICpu
 			return null;
 		}
 
+		var insn = DecodeCurrentInstruction();
+		return _analyzer.AnalyzeInstruction(insn);
+	}
+
+	/// <summary>
+	/// Decodes the instruction at the current EIP.
+	/// </summary>
+	private Instruction DecodeCurrentInstruction()
+	{
 		_reader.Reset(_eip);
 		_decoder.IP = _eip;
-		var insn = _decoder.Decode();
-		return _analyzer.AnalyzeInstruction(insn);
+		return _decoder.Decode();
 	}
 
 	public void SetRegister(string name, uint value)

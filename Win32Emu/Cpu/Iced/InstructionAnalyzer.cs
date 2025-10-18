@@ -68,19 +68,16 @@ public class InstructionAnalyzer
 			OpCodeString = instruction.OpCode.ToString()
 		};
 
-		// Collect read registers
+		// Collect read and written registers in a single pass
 		foreach (var regInfo in info.GetUsedRegisters())
 		{
-			if (regInfo.Access is OpAccess.Read or OpAccess.ReadWrite or OpAccess.ReadCondWrite)
+			var access = regInfo.Access;
+			if (access is OpAccess.Read or OpAccess.ReadWrite or OpAccess.ReadCondWrite)
 			{
 				analysis.ReadRegisters.Add(regInfo.Register.ToString());
 			}
-		}
-
-		// Collect written registers
-		foreach (var regInfo in info.GetUsedRegisters())
-		{
-			if (regInfo.Access is OpAccess.Write or OpAccess.ReadWrite or OpAccess.CondWrite or OpAccess.ReadCondWrite)
+			
+			if (access is OpAccess.Write or OpAccess.ReadWrite or OpAccess.CondWrite or OpAccess.ReadCondWrite)
 			{
 				analysis.WrittenRegisters.Add(regInfo.Register.ToString());
 			}
