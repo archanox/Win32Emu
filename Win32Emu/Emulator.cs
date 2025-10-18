@@ -802,11 +802,41 @@ public sealed class Emulator : IDisposable
         try
         {
             var ebpFromStack = _vm!.Read32(esp);
-            // Validate that the value looks like a plausible frame pointer (within allocated memory)
-            if (ebpFromStack >= 0x00100000 && ebpFromStack < _vm.Size)
+
+            // Define plausible stack region (for example, 1MB stack)
+            // Assume stack grows down, so stack base is the highest address, stack limit is lowest
+            // Here, we use current ESP as the top of the stack, and allow up to 1MB below
+            const uint STACK_SIZE = 0x100000; // 1MB
+            uint stackTop = esp;
+            uint stackBottom = (esp > STACK_SIZE) ? (esp - STACK_SIZE) : 0x00100000; // Don't go below 1MB
+
+            bool inStackRegion = (ebpFromStack >= stackBottom) && (ebpFromStack <= stackTop);
+            bool isAligned = (ebpFromStack & 0x3) == 0;
+
+            // Optionally, check that the memory at ebpFromStack is readable and contains a plausible saved EBP
+            bool savedEbpValid = false;
+            if (inStackRegion && isAligned)
+            {
+                try
+                {
+                    var savedEbp = _vm.Read32(ebpFromStack);
+                    // Check that savedEbp is also within stack region (optional, but plausible)
+                    savedEbpValid = (savedEbp >= stackBottom) && (savedEbp <= stackTop);
+                }
+                catch
+                {
+                    savedEbpValid = false;
+                }
+            }
+
+            if (inStackRegion && isAligned && savedEbpValid)
             {
                 _cpu!.SetRegister("EBP", ebpFromStack);
                 _logger.LogDebug("[Emulator] Restored EBP from stack: 0x{EBP:X8}", ebpFromStack);
+            }
+            else
+            {
+                _logger.LogWarning("[Emulator] Skipped restoring EBP from stack: 0x{EBP:X8} (invalid frame pointer)", ebpFromStack);
             }
         }
         catch (Exception ex)
