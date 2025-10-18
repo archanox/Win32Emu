@@ -114,28 +114,34 @@ public partial class DialogWindow : Window
 		// Determine control type from window class
 		var className = item.WindowClass.ToUpperInvariant();
 		
-		// Standard Win32 control classes
-		if (className == "BUTTON" || className == "#80")
+		// Standard Win32 control classes (ordinals are in decimal)
+		// #128 = 0x80 = BUTTON
+		// #129 = 0x81 = EDIT
+		// #130 = 0x82 = STATIC
+		// #131 = 0x83 = LISTBOX
+		// #132 = 0x84 = SCROLLBAR
+		// #133 = 0x85 = COMBOBOX
+		if (className == "BUTTON" || className == "#128")
 		{
 			return CreateButton(item);
 		}
-		else if (className == "STATIC" || className == "#82")
+		else if (className == "STATIC" || className == "#130")
 		{
 			return CreateStatic(item);
 		}
-		else if (className == "EDIT" || className == "#81")
+		else if (className == "EDIT" || className == "#129")
 		{
 			return CreateEdit(item);
 		}
-		else if (className == "LISTBOX" || className == "#83")
+		else if (className == "LISTBOX" || className == "#131")
 		{
 			return CreateListBox(item);
 		}
-		else if (className == "COMBOBOX" || className == "#85")
+		else if (className == "COMBOBOX" || className == "#133")
 		{
 			return CreateComboBox(item);
 		}
-		else if (className == "SCROLLBAR" || className == "#84")
+		else if (className == "SCROLLBAR" || className == "#132")
 		{
 			return CreateScrollBar(item);
 		}
