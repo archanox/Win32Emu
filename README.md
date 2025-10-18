@@ -26,20 +26,23 @@ Win32Emu <path-to-pe> [options]
 - `--interactive-debug`: Enable interactive step-through debugger (GDB-like)
 - `--gdb-server [port]`: Start GDB server for remote debugging with Ghidra/IDA (default port: 1234)
   - Supports remote file I/O when VFS is initialized (access game files from debugger)
-- `--backend <SDL|GLFW>`: Select rendering backend (default: SDL)
+- `--backend <SDL|GLFW|Vulkan>`: Select rendering backend (default: SDL)
 - `--telemetry-console`: Enable OpenTelemetry with console exporter for logging and metrics
 - `--telemetry-otlp [endpoint]`: Enable OpenTelemetry with OTLP exporter (default: http://localhost:4317)
 
 **Environment Variables:**
-- `WIN32EMU_BACKEND`: Set rendering backend (SDL or GLFW)
+- `WIN32EMU_BACKEND`: Set rendering backend (SDL, GLFW, or Vulkan)
 
 **Examples:**
 ```bash
 # Run normally (uses SDL backend)
 Win32Emu game.exe
 
-# Run with GLFW backend (alternative if SDL has issues on macOS)
+# Run with GLFW backend (alternative if SDL has issues)
 Win32Emu game.exe --backend GLFW
+
+# Run with Vulkan backend (uses MoltenVK on macOS)
+Win32Emu game.exe --backend Vulkan
 
 # Run with enhanced debugging
 Win32Emu game.exe --debug
@@ -88,6 +91,7 @@ Win32Emu uses Silk.NET for cross-platform multimedia support with pluggable back
 ### Rendering Backends
 - **SDL** (default): Silk.NET.SDL - Best compatibility, hardware-accelerated
 - **GLFW**: Silk.NET.GLFW + OpenGL - Alternative for systems where SDL has issues
+- **Vulkan**: Silk.NET.Vulkan - Modern GPU API with cross-platform support (uses MoltenVK on macOS)
 
 ### Audio Backend
 - **OpenAL**: Silk.NET.OpenAL - Cross-platform audio support
@@ -96,9 +100,9 @@ Win32Emu uses Silk.NET for cross-platform multimedia support with pluggable back
 - **Silk.NET.Input**: Unified keyboard, mouse, and gamepad support
 
 **Configuration:**
-- Command-line: `--backend SDL` or `--backend GLFW`
-- Environment variable: `WIN32EMU_BACKEND=GLFW`
-- Programmatic: `BackendFactory.CurrentBackendType = BackendType.GLFW;`
+- Command-line: `--backend SDL`, `--backend GLFW`, or `--backend Vulkan`
+- Environment variable: `WIN32EMU_BACKEND=GLFW` or `WIN32EMU_BACKEND=Vulkan`
+- Programmatic: `BackendFactory.CurrentBackendType = BackendType.Vulkan;`
 
 See [SILK_NET_MIGRATION.md](SILK_NET_MIGRATION.md) for detailed documentation.
 

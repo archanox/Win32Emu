@@ -11,7 +11,7 @@ A cross-platform desktop GUI for Win32Emu, built with Avalonia UI.
 - **Launch Games**: Run games directly from the library with a single click
 - **Play Tracking**: Automatically tracks how many times each game has been played
 - **Emulator Settings**: Configure emulator options including:
-  - Rendering Backend (Software, DirectDraw, Glide)
+  - Rendering Backend (SDL, GLFW, Vulkan)
   - Resolution Scale Factor (1x - 4x)
   - Reserved Memory (64MB - 2048MB)
   - Windows Version (95, 98, ME, NT 4.0, 2000, XP)
@@ -19,10 +19,21 @@ A cross-platform desktop GUI for Win32Emu, built with Avalonia UI.
 
 ## Configuration Storage
 
-All settings, games, and watched folders are automatically saved to a platform-specific location:
-- **Windows**: `%APPDATA%\Win32Emu\config.json`
-- **Linux**: `~/.config/Win32Emu/config.json`
-- **macOS**: `~/Library/Application Support/Win32Emu/config.json`
+All settings, games, and watched folders are automatically saved to platform-specific locations:
+
+- **Windows**: 
+  - Settings: `%APPDATA%\Win32Emu\settings.json`
+  - Library: `%APPDATA%\Win32Emu\library.json`
+- **Linux**: 
+  - Settings: `~/.config/Win32Emu/settings.json`
+  - Library: `~/.config/Win32Emu/library.json`
+- **macOS**: 
+  - Settings: `~/Library/Application Support/Win32Emu/settings.json`
+  - Library: `~/Library/Application Support/Win32Emu/library.json`
+
+The configuration is split into two files:
+- **settings.json**: Emulator settings (portable, can be synced across devices)
+- **library.json**: Game library and watched folders (machine-specific)
 
 See [CONFIGURATION.md](CONFIGURATION.md) for more details about the configuration system.
 
