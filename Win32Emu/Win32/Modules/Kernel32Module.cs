@@ -369,6 +369,20 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 	}
 
+	/// <summary>
+	/// Retrieves the version number of the operating system.
+	/// With the release of Windows 8.1, the behavior of this API has changed. The value returned now depends on how the application is manifested.
+	/// </summary>
+	/// <returns>
+	/// If the function succeeds, the return value includes the major and minor version numbers of the operating system in the low-order word,
+	/// and information about the operating system platform in the high-order word.
+	/// The low-order byte specifies the major version number in hexadecimal notation. 
+	/// The high-order byte specifies the minor version number in hexadecimal notation.
+	/// </returns>
+	/// <remarks>
+	/// This function has been deprecated. Applications not manifested for Windows 8.1 or Windows 10 will return the Windows 8 OS version value (6.2).
+	/// It is recommended to use the Version Helper functions instead for version detection.
+	/// </remarks>
 	[DllModuleExport(489, entryPoint: 0x000233FD, Version = "4.90.0.3000")]
 	[DllModuleExport(478, entryPoint: 0x00011752, Version = "5.1.2600.6532")]
 	private uint GetVersion()
@@ -421,6 +435,23 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		throw new NotImplementedException("This export is forwarded to KERNELBASE.GetVersionEx");
 	}
 
+	/// <summary>
+	/// Retrieves information about the current operating system (ANSI version).
+	/// With the release of Windows 8.1, the behavior of this API has changed. The value returned now depends on how the application is manifested.
+	/// </summary>
+	/// <param name="lpVersionInformation">
+	/// An OSVERSIONINFOA or OSVERSIONINFOEXA structure that receives the operating system information.
+	/// Before calling the GetVersionEx function, set the dwOSVersionInfoSize member of the structure as appropriate to indicate which data structure is being passed.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is a nonzero value.
+	/// If the function fails, the return value is zero. The function fails if an invalid value is specified for the dwOSVersionInfoSize member.
+	/// </returns>
+	/// <remarks>
+	/// This function has been deprecated. Applications not manifested for Windows 8.1 or Windows 10 will return the Windows 8 OS version value (6.2).
+	/// Identifying the current operating system is usually not the best way to determine whether a particular operating system feature is present.
+	/// Instead, test for the presence of the feature itself.
+	/// </remarks>
 	[DllModuleExport(490, Version = "4.90.0.3000")]
 	[DllModuleExport(479, entryPoint: 0x00010830, Version = "5.1.2600.6532")]
 	public uint GetVersionExA(uint lpVersionInformation)
@@ -451,6 +482,23 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
+	/// <summary>
+	/// Retrieves information about the current operating system (Unicode version).
+	/// With the release of Windows 8.1, the behavior of this API has changed. The value returned now depends on how the application is manifested.
+	/// </summary>
+	/// <param name="lpVersionInformation">
+	/// An OSVERSIONINFOW or OSVERSIONINFOEXW structure that receives the operating system information.
+	/// Before calling the GetVersionEx function, set the dwOSVersionInfoSize member of the structure as appropriate to indicate which data structure is being passed.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is a nonzero value.
+	/// If the function fails, the return value is zero. The function fails if an invalid value is specified for the dwOSVersionInfoSize member.
+	/// </returns>
+	/// <remarks>
+	/// This function has been deprecated. Applications not manifested for Windows 8.1 or Windows 10 will return the Windows 8 OS version value (6.2).
+	/// Identifying the current operating system is usually not the best way to determine whether a particular operating system feature is present.
+	/// Instead, test for the presence of the feature itself.
+	/// </remarks>
 	[DllModuleExport(491, Version = "4.90.0.3000")]
 	[DllModuleExport(480, entryPoint: 0x0000AF05, Version = "5.1.2600.6532")]
 	public uint GetVersionExW(uint lpVersionInformation)
@@ -486,9 +534,33 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
+	/// <summary>
+	/// Retrieves the calling thread's last-error code value. The last-error code is maintained on a per-thread basis.
+	/// Multiple threads do not overwrite each other's last-error code.
+	/// </summary>
+	/// <returns>
+	/// The return value is the calling thread's last-error code.
+	/// </returns>
+	/// <remarks>
+	/// Functions set this value by calling the SetLastError function if they fail.
+	/// You should call the GetLastError function immediately when a function's return value indicates that such a call will return useful data.
+	/// </remarks>
 	[DllModuleExport(361, entryPoint: 0x000090DB, Version = "5.1.2600.6532")]
 	private uint GetLastError() => _lastError;
 
+	/// <summary>
+	/// Sets the last-error code for the calling thread.
+	/// </summary>
+	/// <param name="e">
+	/// The last-error code for the thread.
+	/// </param>
+	/// <returns>
+	/// This function does not return a value.
+	/// </returns>
+	/// <remarks>
+	/// The last-error code is maintained on a per-thread basis. Multiple threads do not overwrite each other's last-error code.
+	/// Error codes are 32-bit values (bit 31 is the most significant bit). Bit 29 is reserved for application-defined error codes; no system error code has this bit set.
+	/// </remarks>
 	[DllModuleExport(41)]
 	private uint SetLastError(uint e)
 	{
@@ -496,6 +568,24 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
+	/// <summary>
+	/// Ends the calling process and all its threads.
+	/// </summary>
+	/// <param name="code">
+	/// The exit code for the process and all threads.
+	/// </param>
+	/// <returns>
+	/// This function does not return a value.
+	/// </returns>
+	/// <remarks>
+	/// Use the ExitProcess function to end a process. This function provides a clean process shutdown.
+	/// ExitProcess is the preferred method of ending a process.
+	/// Exiting a process causes the following:
+	/// All of the object handles opened by the process are closed.
+	/// All of the threads in the process terminate their execution.
+	/// The state of the process object becomes signaled, satisfying any threads that had been waiting for the process to terminate.
+	/// The process's termination status changes from STILL_ACTIVE to the exit code of the process.
+	/// </remarks>
 	[DllModuleExport(3)]
 	private uint ExitProcess(uint code)
 	{
@@ -928,6 +1018,26 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
+	/// <summary>
+	/// Loads the specified module into the address space of the calling process. The specified module may cause other modules to be loaded.
+	/// For additional load options, use the LoadLibraryEx function.
+	/// </summary>
+	/// <param name="lpLibFileName">
+	/// The name of the module. This can be either a library module (a .dll file) or an executable module (an .exe file).
+	/// If the string specifies a full path, the function searches only that path for the module.
+	/// If the string specifies a relative path or a module name without a path, the function uses a standard search strategy to find the module.
+	/// If the string specifies a module name without a path and the file name extension is omitted, the function appends the default library extension ".DLL" to the module name.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is a handle to the module.
+	/// If the function fails, the return value is NULL. To get extended error information, call GetLastError.
+	/// </returns>
+	/// <remarks>
+	/// LoadLibrary can be used to load a library module into the address space of the process and return a handle that can be used in GetProcAddress to get the address of a DLL function.
+	/// If the specified module is a DLL that is not already loaded for the calling process, the system calls the DLL's DllMain function with the DLL_PROCESS_ATTACH value.
+	/// The system maintains a per-process reference count on all loaded modules. Calling LoadLibrary increments the reference count.
+	/// Module handles are not global or inheritable. A call to LoadLibrary by one process does not produce a handle that another process can use.
+	/// </remarks>
 	[DllModuleExport(32)]
 	private uint LoadLibraryA(in LpcStr lpLibFileName)
 	{
@@ -982,6 +1092,27 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return _env.LoadModule(libraryName);
 	}
 
+	/// <summary>
+	/// Retrieves the address of an exported function (also known as a procedure) or variable from the specified dynamic-link library (DLL).
+	/// </summary>
+	/// <param name="hModule">
+	/// A handle to the DLL module that contains the function or variable. 
+	/// The LoadLibrary, LoadLibraryEx, LoadPackagedLibrary, or GetModuleHandle function returns this handle.
+	/// The GetProcAddress function does not retrieve addresses from modules that were loaded using the LOAD_LIBRARY_AS_DATAFILE flag.
+	/// </param>
+	/// <param name="lpProcName">
+	/// The function or variable name, or the function's ordinal value. If this parameter is an ordinal value, it must be in the low-order word; the high-order word must be zero.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is the address of the exported function or variable.
+	/// If the function fails, the return value is NULL. To get extended error information, call GetLastError.
+	/// </returns>
+	/// <remarks>
+	/// The spelling and case of a function name pointed to by lpProcName must be identical to that in the EXPORTS statement of the source DLL's module-definition (.def) file.
+	/// The lpProcName parameter can identify the DLL function by specifying an ordinal value associated with the function in the EXPORTS statement.
+	/// GetProcAddress verifies that the specified ordinal is in the range 1 through the highest ordinal value exported in the .def file.
+	/// If the function might not exist in the DLL module, specify the function by name rather than by ordinal value.
+	/// </remarks>
 	[DllModuleExport(18)]
 	private uint GetProcAddress(uint hModule, LpcStr lpProcName)
 	{
@@ -1340,6 +1471,18 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return result.ToString();
 	}
 
+	/// <summary>
+	/// Retrieves the command-line string for the current process (ANSI version).
+	/// </summary>
+	/// <returns>
+	/// The return value is a pointer to the command-line string for the current process.
+	/// The lifetime of the returned value is managed by the system, applications should not free or modify this value.
+	/// </returns>
+	/// <remarks>
+	/// Console processes can use the argc and argv arguments of the main or wmain functions by implementing those as the program entry point.
+	/// GUI processes can use the lpCmdLine argument of the WinMain or wWinMain functions by implementing those as the program entry point.
+	/// The name of the executable in the command line that the operating system provides to a process is not necessarily identical to that in the command line that the calling process gives to the CreateProcess function.
+	/// </remarks>
 	[DllModuleExport(8)]
 	public uint GetCommandLineA()
 	{
@@ -1561,6 +1704,29 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return (uint)pMem;
 	}
 
+	/// <summary>
+	/// Creates a private heap object that can be used by the calling process. The function reserves space in the virtual address space of the process and allocates physical storage for a specified initial portion of this block.
+	/// </summary>
+	/// <param name="flOptions">
+	/// The heap allocation options. This parameter can be 0 or one or more of the following values:
+	/// HEAP_CREATE_ENABLE_EXECUTE (0x00040000), HEAP_GENERATE_EXCEPTIONS (0x00000004), HEAP_NO_SERIALIZE (0x00000001).
+	/// </param>
+	/// <param name="dwInitialSize">
+	/// The initial size of the heap, in bytes. This value determines the initial amount of memory that is committed for the heap.
+	/// The value is rounded up to a multiple of the system page size. If this parameter is 0, the function commits one page.
+	/// </param>
+	/// <param name="dwMaximumSize">
+	/// The maximum size of the heap, in bytes. If dwMaximumSize is not zero, the heap size is fixed and cannot grow beyond the maximum size.
+	/// If dwMaximumSize is 0, the heap can grow in size. The heap's size is limited only by the available memory.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is a handle to the newly created heap.
+	/// If the function fails, the return value is NULL. To get extended error information, call GetLastError.
+	/// </returns>
+	/// <remarks>
+	/// The HeapCreate function creates a private heap object from which the calling process can allocate memory blocks by using the HeapAlloc function.
+	/// The memory of a private heap object is accessible only to the process that created it.
+	/// </remarks>
 	[DllModuleExport(27)]
 	private uint HeapCreate(uint flOptions, uint dwInitialSize, uint dwMaximumSize) =>
 		_env.HeapCreate(flOptions, dwInitialSize, dwMaximumSize);
@@ -1659,6 +1825,34 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return _env.SimpleAlloc(uBytes == 0 ? 1u : uBytes);
 	}
 
+	/// <summary>
+	/// Reserves, commits, or changes the state of a region of pages in the virtual address space of the calling process.
+	/// Memory allocated by this function is automatically initialized to zero.
+	/// </summary>
+	/// <param name="lpAddress">
+	/// The starting address of the region to allocate. If the memory is being reserved, the specified address is rounded down to the nearest multiple of the allocation granularity.
+	/// If this parameter is NULL, the system determines where to allocate the region.
+	/// </param>
+	/// <param name="dwSize">
+	/// The size of the region, in bytes. If the lpAddress parameter is NULL, this value is rounded up to the next page boundary.
+	/// </param>
+	/// <param name="flAllocationType">
+	/// The type of memory allocation. This parameter must contain one of the following values:
+	/// MEM_COMMIT (0x00001000), MEM_RESERVE (0x00002000), MEM_RESET (0x00080000), MEM_RESET_UNDO (0x1000000).
+	/// It can also specify: MEM_LARGE_PAGES (0x20000000), MEM_PHYSICAL (0x00400000), MEM_TOP_DOWN (0x00100000), MEM_WRITE_WATCH (0x00200000).
+	/// </param>
+	/// <param name="flProtect">
+	/// The memory protection for the region of pages to be allocated. If the pages are being committed, you can specify any one of the memory protection constants.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is the base address of the allocated region of pages.
+	/// If the function fails, the return value is NULL. To get extended error information, call GetLastError.
+	/// </returns>
+	/// <remarks>
+	/// Each page has an associated page state. The VirtualAlloc function can perform the following operations:
+	/// Commit a region of reserved pages, Reserve a region of free pages, or Simultaneously reserve and commit a region of free pages.
+	/// VirtualAlloc cannot reserve a reserved page. It can commit a page that is already committed.
+	/// </remarks>
 	[DllModuleExport(45)]
 	private uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect) =>
 		_env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
@@ -1693,6 +1887,43 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
+	/// <summary>
+	/// Creates or opens a file or I/O device. The most commonly used I/O devices are: file, file stream, directory, physical disk, volume, console buffer, tape drive, communications resource, mailslot, and pipe.
+	/// </summary>
+	/// <param name="lpFileName">
+	/// The name of the file or device to be created or opened.
+	/// </param>
+	/// <param name="dwDesiredAccess">
+	/// The requested access to the file or device, which can be summarized as read, write, both or 0 to indicate neither.
+	/// The most commonly used values are GENERIC_READ, GENERIC_WRITE, or both (GENERIC_READ | GENERIC_WRITE).
+	/// </param>
+	/// <param name="dwShareMode">
+	/// The requested sharing mode of the file or device, which can be read, write, both, delete, all of these, or none.
+	/// If this parameter is zero and CreateFile succeeds, the file or device cannot be shared and cannot be opened again until the handle is closed.
+	/// </param>
+	/// <param name="lpSecAttr">
+	/// A pointer to a SECURITY_ATTRIBUTES structure that contains an optional security descriptor and a Boolean value that determines whether the returned handle can be inherited.
+	/// This parameter can be NULL.
+	/// </param>
+	/// <param name="dwCreationDisposition">
+	/// An action to take on a file or device that exists or does not exist.
+	/// This parameter must be one of the following values: CREATE_NEW (1), CREATE_ALWAYS (2), OPEN_EXISTING (3), OPEN_ALWAYS (4), or TRUNCATE_EXISTING (5).
+	/// </param>
+	/// <param name="dwFlagsAndAttributes">
+	/// The file or device attributes and flags. FILE_ATTRIBUTE_NORMAL being the most common default value for files.
+	/// </param>
+	/// <param name="hTemplateFile">
+	/// A valid handle to a template file with the GENERIC_READ access right. The template file supplies file attributes and extended attributes for the file that is being created.
+	/// This parameter can be NULL.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is an open handle to the specified file, device, named pipe, or mail slot.
+	/// If the function fails, the return value is INVALID_HANDLE_VALUE. To get extended error information, call GetLastError.
+	/// </returns>
+	/// <remarks>
+	/// CreateFile was originally developed specifically for file interaction but has since been expanded to include most other types of I/O devices and mechanisms available to Windows developers.
+	/// When an application is finished using the object handle returned by CreateFile, use the CloseHandle function to close the handle.
+	/// </remarks>
 	// File I/O implementations
 	[DllModuleExport(2)]
 	private uint CreateFileA(uint lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecAttr,
