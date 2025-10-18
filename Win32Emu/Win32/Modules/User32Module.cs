@@ -19,6 +19,10 @@ namespace Win32Emu.Win32.Modules
 		private VirtualMemory _memory;
 		private Win32Dispatcher? _dispatcher;
 		private LoadedImage? _image;
+		
+		// Constants for procedure execution monitoring
+		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
+		private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
 
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -675,7 +679,6 @@ namespace Win32Emu.Win32.Modules
 			// - Performance: Low overhead (~0.001% for scheduler checks)
 			// - Granularity: Fine enough for cooperative multitasking
 			const int YIELD_INTERVAL = 10000;
-			const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
 			var steps = 0;
 			var lastCheckEip = cpu.GetEip();
 			var stuckCounter = 0;
@@ -699,10 +702,10 @@ namespace Win32Emu.Win32.Modules
 						if (currentEip == lastCheckEip)
 						{
 							stuckCounter++;
-							if (stuckCounter >= 3)
+							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
 							{
-								// We've been at the same instruction for 300K steps - likely an infinite loop
-								_logger.LogWarning("[User32] CallWindowProcedure: Detected infinite loop at EIP=0x{Eip:X8}, aborting", currentEip);
+								// We've been at the same instruction for multiple check intervals - likely an infinite loop
+								_logger.LogWarning("[User32] CallWindowProcedure: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", currentEip, stuckCounter);
 								break;
 							}
 						}
@@ -1324,7 +1327,6 @@ namespace Win32Emu.Win32.Modules
 			// - Performance: Low overhead (~0.001% for scheduler checks)
 			// - Granularity: Fine enough for cooperative multitasking
 			const int YIELD_INTERVAL = 10000;
-			const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
 			var steps = 0;
 			var timedOut = false;
 			var lastCheckEip = cpu.GetEip();
@@ -1349,10 +1351,10 @@ namespace Win32Emu.Win32.Modules
 						if (currentEip == lastCheckEip)
 						{
 							stuckCounter++;
-							if (stuckCounter >= 3)
+							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
 							{
-								// We've been at the same instruction for 300K steps - likely an infinite loop
-								_logger.LogWarning("[User32] CallDialogProcedure: Detected infinite loop at EIP=0x{Eip:X8}, aborting", currentEip);
+								// We've been at the same instruction for multiple check intervals - likely an infinite loop
+								_logger.LogWarning("[User32] CallDialogProcedure: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", currentEip, stuckCounter);
 								timedOut = true;
 								break;
 							}
