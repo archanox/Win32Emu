@@ -3584,23 +3584,18 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 
-		// CRITICAL_SECTION structure on Windows XP is 24 bytes:
-		// typedef struct _RTL_CRITICAL_SECTION {
-		//   PRTL_CRITICAL_SECTION_DEBUG DebugInfo;    // offset 0, 4 bytes
-		//   LONG LockCount;                           // offset 4, 4 bytes (starts at -1)
-		//   LONG RecursionCount;                      // offset 8, 4 bytes (starts at 0)
-		//   HANDLE OwningThread;                      // offset 12, 4 bytes (starts at NULL)
-		//   HANDLE LockSemaphore;                     // offset 16, 4 bytes (starts at NULL)
-		//   ULONG_PTR SpinCount;                      // offset 20, 4 bytes (starts at 0)
-		// } RTL_CRITICAL_SECTION, *PRTL_CRITICAL_SECTION;
+		// Initialize the CRITICAL_SECTION structure with default values
+		var criticalSection = new NativeTypes.CriticalSection
+		{
+			DebugInfo = 0,       // NULL (simplified)
+			LockCount = -1,      // -1 means unlocked
+			RecursionCount = 0,  // Initially 0
+			OwningThread = 0,    // NULL initially
+			LockSemaphore = 0,   // NULL
+			SpinCount = 0        // 0 for single-threaded
+		};
 
-		// Initialize the structure to default values
-		_env.MemWrite32(lpCriticalSection + 0, 0);  // DebugInfo = NULL (simplified)
-		_env.MemWrite32(lpCriticalSection + 4, unchecked((uint)-1));  // LockCount = -1 (unlocked)
-		_env.MemWrite32(lpCriticalSection + 8, 0);  // RecursionCount = 0
-		_env.MemWrite32(lpCriticalSection + 12, 0); // OwningThread = NULL
-		_env.MemWrite32(lpCriticalSection + 16, 0); // LockSemaphore = NULL
-		_env.MemWrite32(lpCriticalSection + 20, 0); // SpinCount = 0
+		_env.MemWriteStruct(lpCriticalSection, ref criticalSection);
 
 		return 0; // This function returns void, but we return 0 for consistency
 	}
