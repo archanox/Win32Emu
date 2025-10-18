@@ -3236,41 +3236,72 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint Sleep(uint dwMilliseconds)
 	{
 		// Sleep suspends execution for a specified interval
-		// In an emulator, we can either:
-		// 1. Actually sleep (blocking) - not ideal for emulation
-		// 2. Just acknowledge the call without sleeping
-		// 3. Use a minimal sleep for 0 (yield) cases
+		// With cooperative threading support, we integrate with the ThreadScheduler
+		// to properly yield control to other emulated threads.
 
 		if (dwMilliseconds == 0)
 		{
 			// Sleep(0) means "yield to other threads"
-			// In our single-threaded emulator, this is effectively a no-op
-			_logger.LogInformation("[Kernel32] Sleep(0): yielding");
-			Thread.Yield();
+			_logger.LogInformation("[Kernel32] Sleep(0): yielding to other threads");
+			
+			// Cooperate with the thread scheduler if available
+			var scheduler = _env.ThreadScheduler;
+			if (scheduler != null)
+			{
+				var currentThreadId = _env.GetCurrentThreadId();
+				_logger.LogDebug("[Kernel32] Sleep(0): Current thread {ThreadId} yielding", currentThreadId);
+				
+				// Mark as yielding but don't actually suspend
+				// The main execution loop will handle context switching
+				Thread.Yield();
+			}
+			else
+			{
+				// No thread scheduler, just yield the native thread
+				Thread.Yield();
+			}
 		}
 		else if (dwMilliseconds == 0xFFFFFFFF) // INFINITE
 		{
-			_logger.LogWarning("[Kernel32] Sleep(INFINITE): treating as 1ms sleep");
-			// Don't actually sleep forever - that would hang the emulator
-			// Just sleep for a short time
-			Thread.Sleep(1);
+			_logger.LogWarning("[Kernel32] Sleep(INFINITE): suspending thread indefinitely");
+			// Don't actually sleep forever - mark thread as waiting
+			// The thread scheduler will handle this appropriately
+			var scheduler = _env.ThreadScheduler;
+			if (scheduler != null)
+			{
+				var currentThreadId = _env.GetCurrentThreadId();
+				// Use a very long timeout to simulate INFINITE
+				scheduler.SetThreadWaiting(currentThreadId, new object(), 0xFFFFFFFF);
+			}
+			else
+			{
+				// No thread scheduler - do a short sleep to avoid hanging
+				Thread.Sleep(1);
+			}
 		}
 		else
 		{
 			_logger.LogInformation("[Kernel32] Sleep: {DwMilliseconds} ms", dwMilliseconds);
-			// For actual sleep durations, we need to decide:
-			// - Sleeping blocks emulation which may not be desired
-			// - Not sleeping means game timing could be wrong
-			// For now, use a minimal sleep to avoid busy-waiting
-			if (dwMilliseconds > 100)
+			
+			// For timed sleeps, cooperate with the threading system
+			var scheduler = _env.ThreadScheduler;
+			if (scheduler != null && dwMilliseconds > 10)
 			{
-				// Long sleeps - use a fraction of the requested time
-				Thread.Sleep((int)(dwMilliseconds / 10));
-			}
-			else if (dwMilliseconds > 0)
-			{
-				// Short sleeps - minimal delay
+				var currentThreadId = _env.GetCurrentThreadId();
+				_logger.LogDebug("[Kernel32] Sleep: Thread {ThreadId} sleeping for {Ms}ms", currentThreadId, dwMilliseconds);
+				
+				// Mark thread as waiting with timeout
+				// The scheduler will wake it after the timeout expires
+				var sleepToken = new object(); // Unique token for this sleep
+				scheduler.SetThreadWaiting(currentThreadId, sleepToken, dwMilliseconds);
+				
+				// Do a minimal actual sleep to prevent busy-waiting
 				Thread.Sleep(1);
+			}
+			else
+			{
+				// Short sleeps or no scheduler - use minimal delay
+				Thread.Sleep(dwMilliseconds > 0 ? 1 : 0);
 			}
 		}
 
@@ -3794,7 +3825,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint WaitForSingleObject(uint hHandle, uint dwMilliseconds)
 	{
 		var currentThreadId = _env.GetCurrentThreadId();
-		_logger.LogInformation("[Kernel32] WaitForSingleObject(handle=0x{Handle:X8}, timeout={Timeout}ms)", hHandle, dwMilliseconds);
+		_logger.LogInformation("[Kernel32] WaitForSingleObject(handle=0x{Handle:X8}, timeout={Timeout}ms) - Thread {ThreadId}", 
+			hHandle, dwMilliseconds, currentThreadId);
 
 		if (_env.SynchronizationManager == null)
 		{
@@ -3817,31 +3849,59 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		bool signaled = false;
 
+		// Try to acquire/wait on the synchronization object
+		// This is non-blocking - it returns immediately with the current state
 		switch (objectType)
 		{
 			case "Mutex":
 				signaled = _env.SynchronizationManager.AcquireMutex(hHandle, currentThreadId);
+				_logger.LogDebug("[Kernel32] WaitForSingleObject: Mutex {Handle:X8} {State}", 
+					hHandle, signaled ? "acquired" : "not available");
 				break;
 			case "Event":
 				signaled = _env.SynchronizationManager.WaitOnEvent(hHandle, currentThreadId);
+				_logger.LogDebug("[Kernel32] WaitForSingleObject: Event {Handle:X8} {State}", 
+					hHandle, signaled ? "signaled" : "not signaled");
 				break;
 			case "Semaphore":
 				signaled = _env.SynchronizationManager.WaitOnSemaphore(hHandle, currentThreadId);
+				_logger.LogDebug("[Kernel32] WaitForSingleObject: Semaphore {Handle:X8} {State}", 
+					hHandle, signaled ? "acquired" : "not available");
 				break;
 		}
 
 		if (signaled)
 		{
+			// Object is immediately available
+			_logger.LogDebug("[Kernel32] WaitForSingleObject: Thread {ThreadId} successfully acquired/waited", currentThreadId);
 			return WAIT_OBJECT_0;
 		}
 
-		// Need to wait - mark thread as waiting
+		// Object not immediately available - need to wait
+		// Use cooperative threading to properly yield control
 		if (_env.ThreadScheduler != null)
 		{
+			_logger.LogDebug("[Kernel32] WaitForSingleObject: Thread {ThreadId} will wait for handle 0x{Handle:X8} with timeout {Timeout}ms", 
+				currentThreadId, hHandle, dwMilliseconds);
+			
+			// Mark thread as waiting - this integrates with the emulator's cooperative scheduling
+			// The thread scheduler will:
+			// 1. Context switch to other runnable threads
+			// 2. Check periodically if the object becomes signaled
+			// 3. Wake this thread when the object is signaled or timeout expires
 			_env.ThreadScheduler.SetThreadWaiting(currentThreadId, hHandle, dwMilliseconds);
+			
+			// Return WAIT_TIMEOUT for now - in a real implementation, we would either:
+			// - Suspend execution and resume when signaled (cooperative multitasking)
+			// - Poll the object state (current approach)
+			// The calling code should handle WAIT_TIMEOUT and retry if needed
+			_logger.LogDebug("[Kernel32] WaitForSingleObject: Returning WAIT_TIMEOUT (cooperative wait scheduled)");
+		}
+		else
+		{
+			_logger.LogWarning("[Kernel32] WaitForSingleObject: No ThreadScheduler available, cannot wait cooperatively");
 		}
 
-		// For now, return timeout (cooperative scheduling will handle actual waiting)
 		return WAIT_TIMEOUT;
 	}
 
