@@ -3613,10 +3613,16 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// In our single-threaded emulator, we just need to clear the structure
 		// A real implementation would release any associated semaphore and free debug info
-		for (uint i = 0; i < 24; i++)
+		var criticalSection = new NativeTypes.CriticalSection
 		{
-			_env.MemWrite8(lpCriticalSection + i, 0);
-		}
+			DebugInfo = 0,
+			LockCount = 0,
+			RecursionCount = 0,
+			OwningThread = 0,
+			LockSemaphore = 0,
+			SpinCount = 0
+		};
+		_env.MemWriteStruct(lpCriticalSection, ref criticalSection);
 
 		return 0; // This function returns void, but we return 0 for consistency
 	}
@@ -3636,30 +3642,30 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// However, we update the structure to maintain correct state for any code that reads it
 		
 		// Read current state
-		var lockCount = (int)_env.MemRead32(lpCriticalSection + 4);
-		var recursionCount = (int)_env.MemRead32(lpCriticalSection + 8);
-		var owningThread = _env.MemRead32(lpCriticalSection + 12);
+		var criticalSection = _env.MemReadStruct<NativeTypes.CriticalSection>(lpCriticalSection);
 		var currentThreadId = _env.GetCurrentThreadId();
 
-		if (owningThread == 0)
+		if (criticalSection.OwningThread == 0)
 		{
 			// Critical section is not owned, acquire it
-			_env.MemWrite32(lpCriticalSection + 4, 0);  // LockCount = 0 (locked)
-			_env.MemWrite32(lpCriticalSection + 8, 1);  // RecursionCount = 1
-			_env.MemWrite32(lpCriticalSection + 12, currentThreadId); // OwningThread = current thread
+			criticalSection.LockCount = 0;  // 0 means locked once
+			criticalSection.RecursionCount = 1;
+			criticalSection.OwningThread = currentThreadId;
 		}
-		else if (owningThread == currentThreadId)
+		else if (criticalSection.OwningThread == currentThreadId)
 		{
 			// Re-entering from the same thread
-			_env.MemWrite32(lpCriticalSection + 4, (uint)(lockCount + 1));  // Increment LockCount
-			_env.MemWrite32(lpCriticalSection + 8, (uint)(recursionCount + 1));  // Increment RecursionCount
+			criticalSection.LockCount++;
+			criticalSection.RecursionCount++;
 		}
 		else
 		{
 			// In a real multi-threaded scenario, this would block
 			// For single-threaded emulator, this shouldn't happen
-			_logger.LogWarning("[Kernel32] EnterCriticalSection: unexpected thread ownership (owner=0x{OwningThread:X8}, current=0x{CurrentThreadId:X8})", owningThread, currentThreadId);
+			_logger.LogWarning("[Kernel32] EnterCriticalSection: unexpected thread ownership (owner=0x{OwningThread:X8}, current=0x{CurrentThreadId:X8})", criticalSection.OwningThread, currentThreadId);
 		}
+
+		_env.MemWriteStruct(lpCriticalSection, ref criticalSection);
 
 		return 0; // This function returns void, but we return 0 for consistency
 	}
@@ -3676,33 +3682,31 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Read current state
-		var lockCount = (int)_env.MemRead32(lpCriticalSection + 4);
-		var recursionCount = (int)_env.MemRead32(lpCriticalSection + 8);
-		var owningThread = _env.MemRead32(lpCriticalSection + 12);
+		var criticalSection = _env.MemReadStruct<NativeTypes.CriticalSection>(lpCriticalSection);
 		var currentThreadId = _env.GetCurrentThreadId();
 
-		if (owningThread != currentThreadId)
+		if (criticalSection.OwningThread != currentThreadId)
 		{
-			_logger.LogWarning("[Kernel32] LeaveCriticalSection: thread 0x{CurrentThreadId:X8} does not own critical section (owner=0x{OwningThread:X8})", currentThreadId, owningThread);
+			_logger.LogWarning("[Kernel32] LeaveCriticalSection: thread 0x{CurrentThreadId:X8} does not own critical section (owner=0x{OwningThread:X8})", currentThreadId, criticalSection.OwningThread);
 			return 0;
 		}
 
 		// Decrement recursion count
-		recursionCount--;
+		criticalSection.RecursionCount--;
 		
-		if (recursionCount == 0)
+		if (criticalSection.RecursionCount == 0)
 		{
 			// Fully releasing the critical section
-			_env.MemWrite32(lpCriticalSection + 4, unchecked((uint)-1));  // LockCount = -1 (unlocked)
-			_env.MemWrite32(lpCriticalSection + 8, 0);  // RecursionCount = 0
-			_env.MemWrite32(lpCriticalSection + 12, 0); // OwningThread = NULL
+			criticalSection.LockCount = -1;  // -1 means unlocked
+			criticalSection.OwningThread = 0;  // NULL
 		}
 		else
 		{
 			// Still owned by this thread (recursive lock)
-			_env.MemWrite32(lpCriticalSection + 4, (uint)(lockCount - 1));  // Decrement LockCount
-			_env.MemWrite32(lpCriticalSection + 8, (uint)recursionCount);  // Update RecursionCount
+			criticalSection.LockCount--;
 		}
+
+		_env.MemWriteStruct(lpCriticalSection, ref criticalSection);
 
 		return 0; // This function returns void, but we return 0 for consistency
 	}
