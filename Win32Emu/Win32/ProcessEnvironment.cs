@@ -4,9 +4,11 @@ using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
+using Win32Emu.Threading;
 using Win32Emu.Win32.COM;
 using Win32Emu.VirtualFileSystem;
 
@@ -27,9 +29,19 @@ public class ProcessEnvironment
 
 	// Virtual File System
 	private IVirtualFileSystem? _vfs;
+
+	// Threading infrastructure
+	private ThreadScheduler? _threadScheduler;
+	private SynchronizationManager? _synchronizationManager;
 	
 	// Expose VirtualMemory for use by Win32 API implementations
 	public VirtualMemory Memory => _vm;
+
+	// Expose ThreadScheduler for use by Emulator
+	public ThreadScheduler? ThreadScheduler => _threadScheduler;
+
+	// Expose SynchronizationManager for use by Win32 APIs
+	public SynchronizationManager? SynchronizationManager => _synchronizationManager;
 	
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
 	{
@@ -38,6 +50,8 @@ public class ProcessEnvironment
 		_logger = logger ?? NullLogger.Instance;
 		_allocPtr = heapBase;
 		_comDispatcher = new ComVtableDispatcher(this, _logger);
+		_threadScheduler = new ThreadScheduler(_logger);
+		_synchronizationManager = new SynchronizationManager(_logger);
 		
 		// Pre-register standard Windows control classes
 		RegisterStandardControlClasses();
@@ -1204,20 +1218,64 @@ public class ProcessEnvironment
 	// Thread management methods
 	public uint GetCurrentThreadId()
 	{
+		// Use ThreadScheduler if available, otherwise fall back to simple ID
+		if (_threadScheduler != null)
+		{
+			var currentThread = _threadScheduler.CurrentThread;
+			return currentThread?.ThreadId ?? _currentThreadId;
+		}
 		return _currentThreadId;
+	}
+
+	/// <summary>
+	/// Initialize the main thread in the thread scheduler
+	/// </summary>
+	public void InitializeMainThread(ICpu cpu)
+	{
+		if (_threadScheduler != null)
+		{
+			var mainThread = _threadScheduler.InitializeMainThread(cpu, _vm);
+			_currentThreadId = mainThread.ThreadId;
+			
+			// Initialize TLS storage for main thread
+			_threadLocalStorage[_currentThreadId] = new Dictionary<uint, uint>();
+			
+			_logger.LogInformation("[ProcessEnv] Main thread initialized with ID={ThreadId}", _currentThreadId);
+		}
+	}
+
+	public uint CreateThread(uint entryPoint, uint parameter, uint stackSize, bool suspended = false)
+	{
+		if (_threadScheduler != null)
+		{
+			// Use ThreadScheduler to create a proper thread with its own stack and context
+			var thread = _threadScheduler.CreateThread(entryPoint, parameter, stackSize, _vm, suspended);
+			
+			// Initialize TLS storage for this thread
+			_threadLocalStorage[thread.ThreadId] = new Dictionary<uint, uint>();
+			
+			_logger.LogInformation("[ProcessEnv] CreateThread: new thread ID={ThreadId} handle=0x{Handle:X8} entry=0x{EntryPoint:X8}",
+				thread.ThreadId, thread.Handle, entryPoint);
+			
+			return thread.Handle; // Return the handle, not the ID
+		}
+		else
+		{
+			// Fall back to simple thread emulation (legacy path)
+			var threadId = _nextThreadId++;
+			
+			// Initialize TLS storage for this thread
+			_threadLocalStorage[threadId] = new Dictionary<uint, uint>();
+			
+			_logger.LogInformation("[ProcessEnv] CreateThread: new thread ID={ThreadId} (legacy mode)", threadId);
+			return threadId;
+		}
 	}
 
 	public uint CreateThread()
 	{
-		// Simple thread emulation - just return a new thread ID
-		// In this emulation, we don't actually create real threads
-		var threadId = _nextThreadId++;
-		
-		// Initialize TLS storage for this thread
-		_threadLocalStorage[threadId] = new Dictionary<uint, uint>();
-		
-		_logger.LogInformation("[ProcessEnv] CreateThread: new thread ID={ThreadId}", threadId);
-		return threadId;
+		// Legacy overload for compatibility - creates a thread with default parameters
+		return CreateThread(0, 0, 0x8000, true); // 32KB default stack, suspended
 	}
 
 	// TLS (Thread Local Storage) methods

@@ -277,6 +277,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "CREATETHREAD":
 				returnValue = CreateThread(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
 				return true;
+			case "RESUMETHREAD":
+				returnValue = ResumeThread(a.UInt32(0));
+				return true;
+			case "SUSPENDTHREAD":
+				returnValue = SuspendThread(a.UInt32(0));
+				return true;
 			case "GETCURRENTTHREADID":
 				returnValue = GetCurrentThreadId();
 				return true;
@@ -3421,9 +3427,29 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			dwCreationFlags,
 			lpThreadId);
 
-		// For now, we do simple thread emulation - we don't actually create threads
-		// Just allocate a thread ID and return a handle
-		var threadId = _env.CreateThread();
+		// Use default stack size if not specified
+		if (dwStackSize == 0)
+		{
+			dwStackSize = 0x8000; // 32KB default
+		}
+
+		// CREATE_SUSPENDED flag (0x4)
+		const uint CREATE_SUSPENDED = 0x4;
+		bool suspended = (dwCreationFlags & CREATE_SUSPENDED) != 0;
+
+		// Create the thread using the new threading infrastructure
+		var handle = _env.CreateThread(lpStartAddress, lpParameter, dwStackSize, suspended);
+
+		// Get the thread ID from the handle (if ThreadScheduler is available)
+		uint threadId = handle;
+		if (_env.ThreadScheduler != null)
+		{
+			var thread = _env.ThreadScheduler.GetThreadByHandle(handle);
+			if (thread != null)
+			{
+				threadId = thread.ThreadId;
+			}
+		}
 
 		// If lpThreadId is not null, write the thread ID to it
 		if (lpThreadId != 0)
@@ -3431,8 +3457,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite32(lpThreadId, threadId);
 		}
 
-		// Return a pseudo thread handle (just use the thread ID as the handle)
-		return threadId;
+		// Return the thread handle
+		return handle;
 	}
 
 	[DllModuleExport(37)]
@@ -3441,6 +3467,56 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var threadId = _env.GetCurrentThreadId();
 		_logger.LogInformation("[Kernel32] GetCurrentThreadId() = {ThreadId}", threadId);
 		return threadId;
+	}
+
+	[DllModuleExport(37)]
+	private uint ResumeThread(uint hThread)
+	{
+		_logger.LogInformation("[Kernel32] ResumeThread(handle=0x{Handle:X8})", hThread);
+
+		if (_env.ThreadScheduler != null)
+		{
+			var thread = _env.ThreadScheduler.GetThreadByHandle(hThread);
+			if (thread != null)
+			{
+				// Get previous suspend count (0 if running, >0 if suspended)
+				uint previousSuspendCount = thread.State == Threading.ThreadState.Suspended ? 1u : 0u;
+				
+				_env.ThreadScheduler.ResumeThread(thread.ThreadId);
+				_logger.LogInformation("[Kernel32] ResumeThread: thread {ThreadId} resumed", thread.ThreadId);
+				
+				return previousSuspendCount;
+			}
+		}
+
+		// Thread not found or scheduler not available
+		_logger.LogWarning("[Kernel32] ResumeThread: invalid thread handle 0x{Handle:X8}", hThread);
+		return 0xFFFFFFFF; // -1 = error
+	}
+
+	[DllModuleExport(37)]
+	private uint SuspendThread(uint hThread)
+	{
+		_logger.LogInformation("[Kernel32] SuspendThread(handle=0x{Handle:X8})", hThread);
+
+		if (_env.ThreadScheduler != null)
+		{
+			var thread = _env.ThreadScheduler.GetThreadByHandle(hThread);
+			if (thread != null)
+			{
+				// Get previous suspend count (0 if running, >0 if suspended)
+				uint previousSuspendCount = thread.State == Threading.ThreadState.Suspended ? 1u : 0u;
+				
+				_env.ThreadScheduler.SuspendThread(thread.ThreadId);
+				_logger.LogInformation("[Kernel32] SuspendThread: thread {ThreadId} suspended", thread.ThreadId);
+				
+				return previousSuspendCount;
+			}
+		}
+
+		// Thread not found or scheduler not available
+		_logger.LogWarning("[Kernel32] SuspendThread: invalid thread handle 0x{Handle:X8}", hThread);
+		return 0xFFFFFFFF; // -1 = error
 	}
 
 	[DllModuleExport(37)]
