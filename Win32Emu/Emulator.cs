@@ -282,11 +282,14 @@ public sealed class Emulator : IDisposable
                 var name = imp.name;
                 _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
                 
-                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
+                // Note: We do NOT save EBP here because some calling code uses EBP to hold the function
+                // pointer for indirect calls (e.g., MOV EBP, [IAT_Entry]; CALL EBP). If we preserve
+                // the EBP value at the time of the call, we'll restore the function pointer value
+                // instead of the original frame pointer, causing crashes.
                 var savedEbx = _cpu.GetRegister("EBX");
                 var savedEsi = _cpu.GetRegister("ESI");
                 var savedEdi = _cpu.GetRegister("EDI");
-                var savedEbp = _cpu.GetRegister("EBP");
                 
                 if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
                 {
@@ -299,11 +302,19 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
                     
-                    // Restore callee-saved registers
+                    // Restore callee-saved registers (except EBP - see above)
                     _cpu.SetRegister("EBX", savedEbx);
                     _cpu.SetRegister("ESI", savedEsi);
                     _cpu.SetRegister("EDI", savedEdi);
-                    _cpu.SetRegister("EBP", savedEbp);
+                    
+                    // Set EBP to a plausible frame pointer value by reading from the stack
+                    // This attempts to recover from cases where EBP was used as a function pointer
+                    var ebpFromStack = _vm.Read32(esp);
+                    if (ebpFromStack >= 0x00100000 && ebpFromStack < _vm.Size)
+                    {
+                        _cpu.SetRegister("EBP", ebpFromStack);
+                        _logger.LogDebug("[Import] Restored EBP from stack: 0x{EBP:X8}", ebpFromStack);
+                    }
                 }
             }
             else if (step.IsCall)
