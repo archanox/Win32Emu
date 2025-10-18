@@ -265,6 +265,6 @@ public sealed class DialogTemplateTests : IDisposable
 
 	public void Dispose()
 	{
-		// Cleanup if needed
+		// VirtualMemory doesn't implement IDisposable, no cleanup needed
 	}
 }
