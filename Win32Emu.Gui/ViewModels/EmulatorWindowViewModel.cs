@@ -117,6 +117,45 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         });
     }
 
+    public async Task<int> OnDialogCreate(DialogCreateInfo info)
+    {
+        OnDebugOutput($"Creating Avalonia dialog for HWND=0x{info.Handle:X8}: {info.Template.Title} ({info.Template.Width}x{info.Template.Height})", DebugLevel.Info);
+        
+        // Show the dialog on the UI thread and wait for result
+        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            try
+            {
+                // Create DialogWindow from the template
+                var dialogWindow = new Views.DialogWindow(info.Template);
+                
+                // Find parent window if specified
+                Window? parentWindow = null;
+                if (info.ParentHandle != 0 && _createdWindows.TryGetValue(info.ParentHandle, out var parent))
+                {
+                    parentWindow = parent;
+                }
+                else
+                {
+                    // Use owner window as fallback
+                    parentWindow = _ownerWindow;
+                }
+                
+                // Show the dialog modally
+                var result = await dialogWindow.ShowDialog(parentWindow);
+                
+                OnDebugOutput($"Dialog closed for HWND=0x{info.Handle:X8} with result={result}", DebugLevel.Info);
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                OnDebugOutput($"Failed to create/show Avalonia dialog: {ex.Message}", DebugLevel.Error);
+                return 0;
+            }
+        });
+    }
+
     private void CreateTopLevelWindow(WindowCreateInfo info)
     {
         var window = new Window

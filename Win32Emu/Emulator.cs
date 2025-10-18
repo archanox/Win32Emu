@@ -172,6 +172,7 @@ public sealed class Emulator : IDisposable
         user32Module.SetDispatcher(_dispatcher);
         user32Module.SetLoadedImage(_image);
         user32Module.SetResourceReader(resourceReader); // Set resource reader for dialog loading
+        user32Module.SetHost(_host); // Set host for dialog UI callbacks
         _dispatcher.RegisterModule(user32Module);
         
         _dispatcher.RegisterModule(new Gdi32Module(_env, _image.BaseAddress, loader, _logger));
@@ -943,6 +944,7 @@ public interface IEmulatorHost
     void OnDebugOutput(string message, DebugLevel level);
     void OnStdOutput(string output);
     void OnWindowCreate(WindowCreateInfo info);
+    Task<int> OnDialogCreate(DialogCreateInfo info);
 }
 
 public enum DebugLevel
@@ -967,4 +969,13 @@ public class WindowCreateInfo
     public uint ExStyle { get; init; }
     public uint Parent { get; init; }
     public uint Menu { get; init; }
+}
+
+public class DialogCreateInfo
+{
+    public required uint Handle { get; init; }
+    public required Win32.DialogTemplate Template { get; init; }
+    public uint ParentHandle { get; init; }
+    public uint DialogProcAddress { get; init; }
+    public uint InitParam { get; init; }
 }
