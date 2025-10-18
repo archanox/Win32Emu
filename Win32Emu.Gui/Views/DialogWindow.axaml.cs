@@ -1,0 +1,389 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Threading;
+using Win32Emu.Win32;
+
+namespace Win32Emu.Gui.Views;
+
+/// <summary>
+/// Avalonia window that displays Win32 dialog boxes by converting dialog templates
+/// into Avalonia controls.
+/// </summary>
+public partial class DialogWindow : Window
+{
+	private readonly DialogTemplate _template;
+	private readonly Dictionary<ushort, Control> _controlsById = new();
+	private readonly TaskCompletionSource<int> _resultTcs = new();
+	private readonly Action<uint, uint, uint, uint>? _messageCallback;
+
+	public int DialogResult { get; private set; }
+
+	public DialogWindow(DialogTemplate template, Action<uint, uint, uint, uint>? messageCallback = null)
+	{
+		_template = template ?? throw new ArgumentNullException(nameof(template));
+		_messageCallback = messageCallback;
+		InitializeComponent();
+		BuildDialogContent();
+	}
+
+	/// <summary>
+	/// Shows the dialog modally and returns the dialog result.
+	/// </summary>
+	public new async Task<int> ShowDialog(Window? owner)
+	{
+		if (owner != null)
+		{
+			await Dispatcher.UIThread.InvokeAsync(async () =>
+			{
+				await ShowDialog<int>(owner);
+			});
+		}
+		else
+		{
+			await Dispatcher.UIThread.InvokeAsync(Show);
+		}
+
+		return await _resultTcs.Task;
+	}
+
+	/// <summary>
+	/// Ends the dialog with the specified result.
+	/// </summary>
+	public void EndDialog(int result)
+	{
+		DialogResult = result;
+		_resultTcs.TrySetResult(result);
+		
+		Dispatcher.UIThread.Post(() =>
+		{
+			Close();
+		});
+	}
+
+	private void BuildDialogContent()
+	{
+		// Set window title
+		Title = _template.Title;
+
+		// Convert dialog units to pixels (approximate: 1 DLU ≈ 2 pixels for width, 1.5 for height)
+		Width = Math.Max(200, _template.Width * 2);
+		Height = Math.Max(150, _template.Height * 1.5);
+
+		// Get the content panel
+		var contentPanel = this.FindControl<Panel>("DialogContentPanel");
+		if (contentPanel == null)
+		{
+			return;
+		}
+
+		// Create a canvas for absolute positioning of controls
+		var canvas = new Canvas
+		{
+			Width = _template.Width * 2,
+			Height = _template.Height * 1.5
+		};
+
+		// Create controls from template items
+		foreach (var item in _template.Items)
+		{
+			var control = CreateControlFromItem(item);
+			if (control != null)
+			{
+				// Position the control
+				Canvas.SetLeft(control, item.X * 2);
+				Canvas.SetTop(control, item.Y * 1.5);
+				control.Width = item.Width * 2;
+				control.Height = item.Height * 1.5;
+
+				canvas.Children.Add(control);
+				_controlsById[item.Id] = control;
+			}
+		}
+
+		contentPanel.Children.Add(canvas);
+	}
+
+	private Control? CreateControlFromItem(DialogItem item)
+	{
+		// Determine control type from window class
+		var className = item.WindowClass.ToUpperInvariant();
+		
+		// Standard Win32 control classes
+		if (className == "BUTTON" || className == "#80")
+		{
+			return CreateButton(item);
+		}
+		else if (className == "STATIC" || className == "#82")
+		{
+			return CreateStatic(item);
+		}
+		else if (className == "EDIT" || className == "#81")
+		{
+			return CreateEdit(item);
+		}
+		else if (className == "LISTBOX" || className == "#83")
+		{
+			return CreateListBox(item);
+		}
+		else if (className == "COMBOBOX" || className == "#85")
+		{
+			return CreateComboBox(item);
+		}
+		else if (className == "SCROLLBAR" || className == "#84")
+		{
+			return CreateScrollBar(item);
+		}
+		else
+		{
+			// Unknown control type - create a placeholder
+			return CreatePlaceholder(item);
+		}
+	}
+
+	private Control CreateButton(DialogItem item)
+	{
+		const uint BS_PUSHBUTTON = 0x00000000;
+		const uint BS_DEFPUSHBUTTON = 0x00000001;
+		const uint BS_CHECKBOX = 0x00000002;
+		const uint BS_AUTOCHECKBOX = 0x00000003;
+		const uint BS_RADIOBUTTON = 0x00000004;
+		const uint BS_AUTORADIOBUTTON = 0x00000009;
+		const uint BS_GROUPBOX = 0x00000007;
+
+		var buttonStyle = item.Style & 0x0F;
+
+		if (buttonStyle == BS_CHECKBOX || buttonStyle == BS_AUTOCHECKBOX)
+		{
+			var checkbox = new CheckBox
+			{
+				Content = item.Title,
+				Tag = item.Id
+			};
+			checkbox.Click += OnControlClick;
+			return checkbox;
+		}
+		else if (buttonStyle == BS_RADIOBUTTON || buttonStyle == BS_AUTORADIOBUTTON)
+		{
+			var radio = new RadioButton
+			{
+				Content = item.Title,
+				Tag = item.Id
+			};
+			radio.Click += OnControlClick;
+			return radio;
+		}
+		else if (buttonStyle == BS_GROUPBOX)
+		{
+			var groupBox = new Border
+			{
+				BorderBrush = Brushes.Gray,
+				BorderThickness = new Thickness(1),
+				Child = new TextBlock
+				{
+					Text = item.Title,
+					Margin = new Thickness(5)
+				}
+			};
+			return groupBox;
+		}
+		else
+		{
+			// Push button or default push button
+			var button = new Button
+			{
+				Content = item.Title,
+				Tag = item.Id
+			};
+
+			if (buttonStyle == BS_DEFPUSHBUTTON)
+			{
+				button.IsDefault = true;
+			}
+
+			button.Click += OnControlClick;
+			return button;
+		}
+	}
+
+	private Control CreateStatic(DialogItem item)
+	{
+		const uint SS_LEFT = 0x00000000;
+		const uint SS_CENTER = 0x00000001;
+		const uint SS_RIGHT = 0x00000002;
+		const uint SS_ICON = 0x00000003;
+		const uint SS_BLACKRECT = 0x00000004;
+		const uint SS_GRAYRECT = 0x00000005;
+		const uint SS_WHITERECT = 0x00000006;
+
+		var staticStyle = item.Style & 0x1F;
+
+		if (staticStyle == SS_ICON)
+		{
+			// Icon placeholder
+			return new Border
+			{
+				Background = Brushes.LightGray,
+				Child = new TextBlock
+				{
+					Text = "🖼",
+					HorizontalAlignment = HorizontalAlignment.Center,
+					VerticalAlignment = VerticalAlignment.Center
+				}
+			};
+		}
+		else if (staticStyle >= SS_BLACKRECT && staticStyle <= SS_WHITERECT)
+		{
+			// Rectangle
+			var brush = staticStyle == SS_BLACKRECT ? Brushes.Black :
+			            staticStyle == SS_GRAYRECT ? Brushes.Gray : Brushes.White;
+			return new Border { Background = brush };
+		}
+		else
+		{
+			// Text label
+			var alignment = staticStyle == SS_CENTER ? TextAlignment.Center :
+			               staticStyle == SS_RIGHT ? TextAlignment.Right : TextAlignment.Left;
+
+			return new TextBlock
+			{
+				Text = item.Title,
+				TextAlignment = alignment,
+				VerticalAlignment = VerticalAlignment.Center
+			};
+		}
+	}
+
+	private Control CreateEdit(DialogItem item)
+	{
+		const uint ES_MULTILINE = 0x0004;
+		const uint ES_PASSWORD = 0x0020;
+		const uint ES_READONLY = 0x0800;
+
+		var textBox = new TextBox
+		{
+			Text = item.Title,
+			Tag = item.Id
+		};
+
+		if ((item.Style & ES_MULTILINE) != 0)
+		{
+			textBox.AcceptsReturn = true;
+			textBox.TextWrapping = TextWrapping.Wrap;
+		}
+
+		if ((item.Style & ES_PASSWORD) != 0)
+		{
+			textBox.PasswordChar = '*';
+		}
+
+		if ((item.Style & ES_READONLY) != 0)
+		{
+			textBox.IsReadOnly = true;
+		}
+
+		return textBox;
+	}
+
+	private Control CreateListBox(DialogItem item)
+	{
+		var listBox = new ListBox
+		{
+			Tag = item.Id
+		};
+		listBox.SelectionChanged += OnControlSelectionChanged;
+		return listBox;
+	}
+
+	private Control CreateComboBox(DialogItem item)
+	{
+		var comboBox = new ComboBox
+		{
+			Tag = item.Id
+		};
+		comboBox.SelectionChanged += OnControlSelectionChanged;
+		return comboBox;
+	}
+
+	private Control CreateScrollBar(DialogItem item)
+	{
+		// Create a scrollbar placeholder
+		return new Border
+		{
+			Background = Brushes.LightGray,
+			BorderBrush = Brushes.Gray,
+			BorderThickness = new Thickness(1)
+		};
+	}
+
+	private Control CreatePlaceholder(DialogItem item)
+	{
+		return new Border
+		{
+			Background = Brushes.LightGray,
+			BorderBrush = Brushes.Red,
+			BorderThickness = new Thickness(1),
+			Child = new TextBlock
+			{
+				Text = $"[{item.WindowClass}]",
+				HorizontalAlignment = HorizontalAlignment.Center,
+				VerticalAlignment = VerticalAlignment.Center,
+				FontSize = 10
+			}
+		};
+	}
+
+	private void OnControlClick(object? sender, RoutedEventArgs e)
+	{
+		if (sender is Control control && control.Tag is ushort id)
+		{
+			// Handle standard button IDs
+			const ushort IDOK = 1;
+			const ushort IDCANCEL = 2;
+
+			if (id == IDOK)
+			{
+				EndDialog(1);
+			}
+			else if (id == IDCANCEL)
+			{
+				EndDialog(0);
+			}
+			else
+			{
+				// Send WM_COMMAND message to the dialog procedure
+				const uint WM_COMMAND = 0x0111;
+				const uint BN_CLICKED = 0;
+				var wParam = (uint)(BN_CLICKED << 16) | id;
+				_messageCallback?.Invoke(0, WM_COMMAND, wParam, 0);
+			}
+		}
+	}
+
+	private void OnControlSelectionChanged(object? sender, SelectionChangedEventArgs e)
+	{
+		if (sender is Control control && control.Tag is ushort id)
+		{
+			// Send WM_COMMAND message for selection change
+			const uint WM_COMMAND = 0x0111;
+			const uint LBN_SELCHANGE = 1;
+			const uint CBN_SELCHANGE = 1;
+			var wParam = (uint)(LBN_SELCHANGE << 16) | id;
+			_messageCallback?.Invoke(0, WM_COMMAND, wParam, 0);
+		}
+	}
+
+	/// <summary>
+	/// Gets a control by its dialog item ID.
+	/// </summary>
+	public Control? GetControlById(ushort id)
+	{
+		_controlsById.TryGetValue(id, out var control);
+		return control;
+	}
+}
