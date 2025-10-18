@@ -43,7 +43,7 @@ October 18, 2025
 #### Arithmetic Instructions
 - ADD, SUB (with overflow/underflow)
 - INC, DEC
-- IMUL, DIV (signed/unsigned)
+- IMUL (signed multiply), MUL (unsigned multiply), IDIV (signed divide), DIV (unsigned divide)
 - ADC, SBB (with carry/borrow)
 - NEG (two's complement)
 
