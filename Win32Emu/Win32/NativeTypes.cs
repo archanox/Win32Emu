@@ -74,6 +74,18 @@ public static class NativeTypes
 		public unsafe fixed byte LeadByte[12];    // Lead byte ranges for double-byte character sets (DBCS)
 	}
 
+	// RTL_CRITICAL_SECTION structure (Windows XP/2000)
+	// Total size: 24 bytes
+	public struct CriticalSection
+	{
+		public uint DebugInfo;      // PRTL_CRITICAL_SECTION_DEBUG - offset 0, 4 bytes
+		public int LockCount;       // LONG - offset 4, 4 bytes (starts at -1)
+		public int RecursionCount;  // LONG - offset 8, 4 bytes (starts at 0)
+		public uint OwningThread;   // HANDLE - offset 12, 4 bytes (starts at NULL)
+		public uint LockSemaphore;  // HANDLE - offset 16, 4 bytes (starts at NULL)
+		public uint SpinCount;      // ULONG_PTR - offset 20, 4 bytes (starts at 0)
+	}
+
 	// Pointer to CPINFO structure
 	public readonly unsafe struct Lpcpinfo(Cpinfo* v)
 	{
