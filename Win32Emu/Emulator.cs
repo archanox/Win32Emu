@@ -181,7 +181,7 @@ public sealed class Emulator : IDisposable
         LogDebug("[Loader] Main thread initialized");
     }
 
-    public void Run()
+    public async Task RunAsync()
     {
         if (_cpu == null || _vm == null || _env == null || _dispatcher == null || _image == null)
         {
@@ -198,19 +198,19 @@ public sealed class Emulator : IDisposable
 
         if (_gdbServerMode)
         {
-            RunWithGdbServer(_gdbServerPort);
+            await RunWithGdbServerAsync(_gdbServerPort);
         }
         else if (_interactiveDebugMode)
         {
-            RunWithInteractiveDebugger();
+            await RunWithInteractiveDebuggerAsync();
         }
         else if (_debugMode)
         {
-            RunWithEnhancedDebugging();
+            await RunWithEnhancedDebuggingAsync();
         }
         else
         {
-            RunNormal();
+            await RunNormalAsync();
         }
 
         string exitMessage;
@@ -236,16 +236,23 @@ public sealed class Emulator : IDisposable
         _dispatcher.PrintUnknownFunctionsSummary();
     }
 
-    private void RunNormal()
+    /// <summary>
+    /// Synchronous wrapper for RunAsync for backward compatibility
+    /// </summary>
+    public void Run()
+    {
+        RunAsync().GetAwaiter().GetResult();
+    }
+
+    private async Task RunNormalAsync()
     {
         var scheduler = _env!.ThreadScheduler;
 
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
         {
-            // Wait for pause event to be signaled (running state)
-            // Using a timeout allows us to check _stopRequested periodically
-            _pauseEvent.WaitOne(100);
+            // Use async wait instead of blocking wait
+            await Task.Run(() => _pauseEvent.WaitOne(100));
 
             if (_stopRequested)
             {
@@ -272,7 +279,8 @@ public sealed class Emulator : IDisposable
                 }
                 else
                 {
-                    // No runnable threads
+                    // No runnable threads - yield to prevent busy-waiting
+                    await Task.Delay(1);
                     continue;
                 }
             }
@@ -366,6 +374,33 @@ public sealed class Emulator : IDisposable
             }
             
         }
+    }
+
+    /// <summary>
+    /// Synchronous wrapper for backward compatibility
+    /// </summary>
+    private void RunNormal()
+    {
+        RunNormalAsync().GetAwaiter().GetResult();
+    }
+
+    private async Task RunWithEnhancedDebuggingAsync()
+    {
+        // For now, just call the synchronous version
+        // Full async implementation would require deeper changes to the debugger
+        await Task.Run(() => RunWithEnhancedDebugging());
+    }
+
+    private async Task RunWithInteractiveDebuggerAsync()
+    {
+        // For now, just call the synchronous version
+        await Task.Run(() => RunWithInteractiveDebugger());
+    }
+
+    private async Task RunWithGdbServerAsync(int port)
+    {
+        // GdbServer already has async support
+        await RunWithGdbServer(port);
     }
 
     private void RunWithEnhancedDebugging()
@@ -663,7 +698,7 @@ public sealed class Emulator : IDisposable
         Console.WriteLine("\nInteractive debugger session ended");
     }
 
-    private async void RunWithGdbServer(int port)
+    private async Task RunWithGdbServer(int port)
     {
         var breakpoints = new BreakpointManager();
         var gdbServer = new GdbServer(_cpu!, _vm!, breakpoints, _logger, port, _env!.VirtualFileSystem, _env);
