@@ -83,6 +83,87 @@
                              Margin="0,-8,0,0"/>
                 </StackPanel>
 
+                <!-- Instruction Analyzer Section -->
+                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="0,20,0,0"
+                        Margin="0,20,0,0">
+                    <StackPanel Spacing="20">
+                        <TextBlock Text="Instruction Analyzer (Advanced)"
+                                 FontWeight="Bold"
+                                 FontSize="16"/>
+
+                        <!-- Enable Instruction Analyzer -->
+                        <StackPanel Spacing="8">
+                            <CheckBox IsChecked="{Binding EnableInstructionAnalyzer}"
+                                    Content="Enable Instruction Analyzer"/>
+                            <TextBlock Text="Enable detailed instruction analysis for debugging (provides human-readable assembly output and register/memory usage information)"
+                                     FontSize="12"
+                                     Opacity="0.7"
+                                     Margin="0,-8,0,0"
+                                     TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- Enable Legacy Instruction Decoding -->
+                        <StackPanel Spacing="8">
+                            <CheckBox IsChecked="{Binding EnableLegacyInstructionDecoding}"
+                                    Content="Enable Legacy Instruction Decoding"/>
+                            <TextBlock Text="Enable decoding of old/deprecated CPU instructions (Cyrix, MPX, ALTINST, etc.) for vintage software compatibility"
+                                     FontSize="12"
+                                     Opacity="0.7"
+                                     Margin="0,-8,0,0"
+                                     TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- Information Panel -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                                Padding="12"
+                                CornerRadius="4"
+                                IsVisible="{Binding EnableInstructionAnalyzer}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="ℹ️ Instruction Analyzer Features"
+                                         FontWeight="Bold"
+                                         FontSize="13"/>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9">
+                                    <Run Text="The Instruction Analyzer provides:"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9"
+                                         Margin="12,4,0,0">
+                                    <Run Text="• Human-readable assembly formatting"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9"
+                                         Margin="12,0,0,0">
+                                    <Run Text="• Read/written register analysis"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9"
+                                         Margin="12,0,0,0">
+                                    <Run Text="• Memory access pattern detection"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9"
+                                         Margin="12,0,0,4">
+                                    <Run Text="• Virtual address calculation"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="11"
+                                         Opacity="0.7"
+                                         FontStyle="Italic">
+                                    <Run Text="Note: This feature has minimal performance impact but is most useful when combined with debug logging."/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
                 <!-- GDB Server Section -->
                 <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                         BorderThickness="0,1,0,0"
