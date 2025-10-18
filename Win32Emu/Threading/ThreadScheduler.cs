@@ -347,7 +347,7 @@ public class ThreadScheduler
 			var now = DateTime.UtcNow;
 			foreach (var thread in _threads.Values.Where(t => t.State == ThreadState.Waiting && t.WaitTimeout.HasValue))
 			{
-				if (now >= thread.WaitTimeout.Value)
+				if (now >= thread.WaitTimeout!.Value)
 				{
 					_logger.LogDebug("[ThreadScheduler] Thread {ThreadId} wait timeout expired", thread.ThreadId);
 					WakeThread(thread.ThreadId);

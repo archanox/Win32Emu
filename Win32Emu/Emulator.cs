@@ -296,7 +296,7 @@ public sealed class Emulator : IDisposable
             _metrics?.RecordInstructionsExecuted();
             
             // Check for thread exit (return address is 0xFFFFFFFF)
-            var eip = _cpu.GetEip();
+            var eip = _cpu!.GetEip();
             if (eip == 0xFFFFFFFF && scheduler != null)
             {
                 var currentThread = scheduler.CurrentThread;
@@ -324,11 +324,11 @@ public sealed class Emulator : IDisposable
                 // instead of the original frame pointer, causing crashes.
                 var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                 
-                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret, out var comArgBytes))
+                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
                 {
                     LogDebug($"[COM] Method returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
-                    var retEip = _vm.Read32(esp);
+                    var retEip = _vm!.Read32(esp);
                     // COM methods use stdcall convention - callee cleans up the stack
                     esp += 4 + (uint)comArgBytes; // Pop return address + arguments
                     _cpu.SetRegister("ESP", esp);
@@ -355,11 +355,11 @@ public sealed class Emulator : IDisposable
                 // instead of the original frame pointer, causing crashes.
                 var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                 
-                if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
+                if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                 {
                     LogDebug($"[Import] Returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
-                    var retEip = _vm.Read32(esp);
+                    var retEip = _vm!.Read32(esp);
                     
                     esp += 4 + (uint)argBytes;
                     
@@ -428,7 +428,7 @@ public sealed class Emulator : IDisposable
 	            break;
             }
 
-            var currentEip = _cpu.GetEip();
+            var currentEip = _cpu!.GetEip();
 
             if (currentEip is >= 0x0F000000 and < 0x10000000)
             {
@@ -462,7 +462,7 @@ public sealed class Emulator : IDisposable
                 {
                     var esp = _cpu.GetRegister("ESP");
                     var ebp = _cpu.GetRegister("EBP");
-                    var eip = _cpu.GetEip();
+                    var eip = _cpu!.GetEip();
                     LogDebug($"[Debug] [Instruction {i}] Suspicious registers: EIP=0x{eip:X8} ESP=0x{esp:X8} EBP=0x{ebp:X8}");
                 }
                 else if (i > 100 && i <= 500)
@@ -483,7 +483,7 @@ public sealed class Emulator : IDisposable
             // Log when we see the same EIP range repeatedly (likely a loop)
             if (i % 10000 == 0 && i > 0)
             {
-                var eip = _cpu.GetEip();
+                var eip = _cpu!.GetEip();
                 LogDebug($"[Loop Check] Instruction {i}: EIP=0x{eip:X8}");
                 
                 // Warn the user if execution seems stuck after many instructions
@@ -514,11 +514,11 @@ public sealed class Emulator : IDisposable
                     var savedEdi = _cpu.GetRegister("EDI");
                     var savedEbp = _cpu.GetRegister("EBP");
                     
-                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
+                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret))
                     {
                         LogDebug($"[COM] Method returned 0x{ret:X8}");
                         var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm.Read32(esp);
+                        var retEip = _vm!.Read32(esp);
                         esp += 4; // Pop return address
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetRegister("EAX", ret); // Return value in EAX
@@ -543,11 +543,11 @@ public sealed class Emulator : IDisposable
                     var savedEdi = _cpu.GetRegister("EDI");
                     var savedEbp = _cpu.GetRegister("EBP");
                     
-                    if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
+                    if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                     {
                         LogDebug($"[Import] Returned 0x{ret:X8}");
                         var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm.Read32(esp);
+                        var retEip = _vm!.Read32(esp);
                         esp += 4 + (uint)argBytes;
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetEip(retEip);
@@ -626,7 +626,7 @@ public sealed class Emulator : IDisposable
         while (!_stopRequested && !_env!.ExitRequested && !debugger.ShouldStop)
         {
             // Check if debugger wants to break
-            currentEip = _cpu.GetEip();
+            currentEip = _cpu!.GetEip();
             if (debugger.ShouldBreak(currentEip))
             {
                 if (!debugger.HandleBreak(currentEip))
@@ -649,11 +649,11 @@ public sealed class Emulator : IDisposable
                 var savedEdi = _cpu.GetRegister("EDI");
                 var savedEbp = _cpu.GetRegister("EBP");
                 
-                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
+                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret))
                 {
                     LogDebug($"[COM] Method returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
-                    var retEip = _vm.Read32(esp);
+                    var retEip = _vm!.Read32(esp);
                     esp += 4; // Pop return address
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetRegister("EAX", ret); // Return value in EAX
@@ -678,11 +678,11 @@ public sealed class Emulator : IDisposable
                 var savedEdi = _cpu.GetRegister("EDI");
                 var savedEbp = _cpu.GetRegister("EBP");
                 
-                if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
+                if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                 {
                     LogDebug($"[Import] Returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
-                    var retEip = _vm.Read32(esp);
+                    var retEip = _vm!.Read32(esp);
                     esp += 4 + (uint)argBytes;
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
@@ -726,7 +726,7 @@ public sealed class Emulator : IDisposable
             while (!_stopRequested && !_env!.ExitRequested)
             {
                 // Check if GDB wants to break
-                currentEip = _cpu.GetEip();
+                currentEip = _cpu!.GetEip();
                 if (gdbServer.ShouldBreak(currentEip) && !await gdbServer.HandleBreakAsync(currentEip))
                 {
 	                break; // Client disconnected or quit
@@ -746,11 +746,11 @@ public sealed class Emulator : IDisposable
                     var savedEdi = _cpu.GetRegister("EDI");
                     var savedEbp = _cpu.GetRegister("EBP");
                     
-                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm, out var ret))
+                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret))
                     {
                         LogDebug($"[COM] Method returned 0x{ret:X8}");
                         var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm.Read32(esp);
+                        var retEip = _vm!.Read32(esp);
                         esp += 4; // Pop return address
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetRegister("EAX", ret); // Return value in EAX
@@ -775,11 +775,11 @@ public sealed class Emulator : IDisposable
                     var savedEdi = _cpu.GetRegister("EDI");
                     var savedEbp = _cpu.GetRegister("EBP");
                     
-                    if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm, out var ret, out var argBytes))
+                    if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                     {
                         LogDebug($"[Import] Returned 0x{ret:X8}");
                         var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm.Read32(esp);
+                        var retEip = _vm!.Read32(esp);
                         esp += 4 + (uint)argBytes;
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetEip(retEip);
@@ -899,7 +899,7 @@ public sealed class Emulator : IDisposable
             {
                 try
                 {
-                    var savedEbp = _vm.Read32(ebpFromStack);
+                    var savedEbp = _vm!.Read32(ebpFromStack);
                     // Check that savedEbp is also within stack region (optional, but plausible)
                     savedEbpValid = (savedEbp >= stackBottom) && (savedEbp <= stackTop);
                 }

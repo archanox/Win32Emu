@@ -220,7 +220,7 @@ public class CpuMemoryAccessTests
         memory.WriteBytes(0x0F000512, testCode);
         
         // Act & Assert
-        IndexOutOfRangeException exception = null;
+        IndexOutOfRangeException? exception = null;
         try
         {
             cpu.SingleStep(memory);

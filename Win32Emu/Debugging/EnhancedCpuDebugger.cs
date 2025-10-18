@@ -22,6 +22,7 @@ public class EnhancedCpuDebugger
     {
         _cpu = cpu;
         _memory = memory;
+        _lastState = CaptureCurrentState();
     }
     
     /// <summary>
