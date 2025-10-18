@@ -1227,7 +1227,7 @@ namespace Win32Emu.Win32.Modules
 					_logger.LogWarning("[User32] DialogBoxParamAsync: Resource ID {ResourceId} needs to be loaded from PE resources (not yet implemented)",
 						lpTemplateName & 0xFFFF);
 				}
-				else if ((lpTemplateName & 0xFFFF0000) != 0)
+				else
 				{
 					// It's a pointer - try to parse as DLGTEMPLATE
 					dialogStyle = _env.MemRead32(lpTemplateName);
