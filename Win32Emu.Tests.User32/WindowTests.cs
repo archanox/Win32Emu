@@ -384,16 +384,152 @@ public class WindowTests : IDisposable
     }
 
     [Fact]
-    public void UpdateWindow_ShouldReturnTrue()
+    public void UpdateWindow_WithValidWindow_ShouldReturnTrue()
     {
-        // Arrange
-        uint hwnd = 0x00010000;
+        // Arrange - Create a valid window first
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+        
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            100, 100, 640, 480, 0, 0, 0, 0
+        );
 
         // Act
         var result = _testEnv.CallUser32Api("UPDATEWINDOW", hwnd);
 
         // Assert
         Assert.Equal(1u, result); // TRUE
+    }
+
+    [Fact]
+    public void UpdateWindow_WithInvalidWindow_ShouldReturnFalse()
+    {
+        // Arrange - Use an invalid window handle
+        uint invalidHwnd = 0x99999999;
+
+        // Act
+        var result = _testEnv.CallUser32Api("UPDATEWINDOW", invalidHwnd);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE for invalid window
+    }
+
+    [Fact]
+    public void SetWindowLongA_ShouldStoreValue()
+    {
+        // Arrange - Create a window
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+        
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            100, 100, 640, 480, 0, 0, 0, 0
+        );
+
+        // Act - Set user data (GWL_USERDATA = -21)
+        var previousValue = _testEnv.CallUser32Api("SETWINDOWLONGA", hwnd, unchecked((uint)-21), 0x12345678u);
+
+        // Assert
+        Assert.Equal(0u, previousValue); // Should return 0 (no previous value)
+    }
+
+    [Fact]
+    public void GetWindowLongA_ShouldRetrieveValue()
+    {
+        // Arrange - Create a window and set a value
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+        
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            100, 100, 640, 480, 0, 0, 0, 0
+        );
+
+        _testEnv.CallUser32Api("SETWINDOWLONGA", hwnd, unchecked((uint)-21), 0x12345678u);
+
+        // Act - Get user data (GWL_USERDATA = -21)
+        var value = _testEnv.CallUser32Api("GETWINDOWLONGA", hwnd, unchecked((uint)-21));
+
+        // Assert
+        Assert.Equal(0x12345678u, value);
+    }
+
+    [Fact]
+    public void SetWindowLongA_ShouldReturnPreviousValue()
+    {
+        // Arrange
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+        
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            100, 100, 640, 480, 0, 0, 0, 0
+        );
+
+        // Set initial value
+        _testEnv.CallUser32Api("SETWINDOWLONGA", hwnd, unchecked((uint)-21), 0x11111111u);
+
+        // Act - Set a new value
+        var previousValue = _testEnv.CallUser32Api("SETWINDOWLONGA", hwnd, unchecked((uint)-21), 0x22222222u);
+
+        // Assert
+        Assert.Equal(0x11111111u, previousValue);
+        
+        // Verify new value is set
+        var currentValue = _testEnv.CallUser32Api("GETWINDOWLONGA", hwnd, unchecked((uint)-21));
+        Assert.Equal(0x22222222u, currentValue);
+    }
+
+    [Fact]
+    public void GetWindowLongA_Style_ShouldReturnWindowStyle()
+    {
+        // Arrange - Create a window with specific style
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+        
+        var testStyle = NativeTypes.WindowStyle.WS_OVERLAPPED | NativeTypes.WindowStyle.WS_CAPTION;
+        
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0, classNamePtr, titlePtr, testStyle,
+            100, 100, 640, 480, 0, 0, 0, 0
+        );
+
+        // Act - Get style (GWL_STYLE = -16)
+        var style = _testEnv.CallUser32Api("GETWINDOWLONGA", hwnd, unchecked((uint)-16));
+
+        // Assert
+        Assert.Equal(testStyle, style);
     }
 
     [Fact]

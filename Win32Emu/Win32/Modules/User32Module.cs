@@ -198,6 +198,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = GetDlgItemTextA(a.UInt32(0), a.Int32(1), a.UInt32(2), a.Int32(3));
 					return true;
 
+				case "SETDLGITEMTEXTA":
+					returnValue = SetDlgItemTextA(a.UInt32(0), a.Int32(1), a.Lpstr(2));
+					return true;
+
 				case "SENDDLGITEMMESSAGEA":
 					returnValue = SendDlgItemMessageA(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 					return true;
@@ -823,7 +827,24 @@ namespace Win32Emu.Win32.Modules
 		private uint UpdateWindow(uint hwnd)
 		{
 			_logger.LogInformation("[User32] UpdateWindow: HWND=0x{Hwnd:X8}", hwnd);
-			// Trigger immediate repaint - for now just log
+			
+			// UpdateWindow sends WM_PAINT directly if the window has an update region
+			// This is synchronous - it calls the window procedure directly
+			const uint WM_PAINT = 0x000F;
+			
+			// Check if window exists
+			var windowInfo = _env.GetWindow(hwnd);
+			if (!windowInfo.HasValue)
+			{
+				_logger.LogWarning("[User32] UpdateWindow: Window 0x{Hwnd:X8} not found", hwnd);
+				return 0; // FALSE
+			}
+			
+			// Send WM_PAINT message to the window
+			// In a real implementation, this would only send if the window has an update region
+			_logger.LogInformation("[User32] UpdateWindow: Sending WM_PAINT to HWND=0x{Hwnd:X8}", hwnd);
+			SendMessageA(hwnd, WM_PAINT, 0, 0);
+			
 			return 1; // TRUE
 		}
 
@@ -919,16 +940,26 @@ namespace Win32Emu.Win32.Modules
 		private uint SetWindowLongA(uint hwnd, int nIndex, uint dwNewLong)
 		{
 			_logger.LogInformation("[User32] SetWindowLongA: HWND=0x{Hwnd:X8} nIndex={NIndex} dwNewLong=0x{DwNewLong:X8}", hwnd, nIndex, dwNewLong);
-			// Return previous value (for now return 0)
-			return 0;
+			
+			// Get the previous value before setting
+			var previousValue = _env.GetWindowProperty(hwnd, nIndex);
+			
+			// Set the new value
+			_env.SetWindowProperty(hwnd, nIndex, dwNewLong);
+			
+			// Return the previous value
+			return previousValue;
 		}
 
 		[DllModuleExport(1)]
 		private uint GetWindowLongA(uint hwnd, int nIndex)
 		{
 			_logger.LogInformation("[User32] GetWindowLongA: HWND=0x{Hwnd:X8} nIndex={NIndex}", hwnd, nIndex);
-			// Return window data (for now return 0)
-			return 0;
+			
+			// Get the window property value
+			var value = _env.GetWindowProperty(hwnd, nIndex);
+			
+			return value;
 		}
 
 		[DllModuleExport(16)]
@@ -1234,9 +1265,51 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			// Return empty string for now
-			_env.MemWriteBytes(lpString, new byte[] { 0 });
-			return 0;
+			// Get the text from the dialog control
+			var text = _env.GetDialogControlText(hDlg, nIDDlgItem);
+			
+			if (string.IsNullOrEmpty(text))
+			{
+				// Return empty string
+				_env.MemWriteBytes(lpString, new byte[] { 0 });
+				return 0;
+			}
+
+			// Truncate text if it exceeds buffer size (including null terminator)
+			var maxLength = cchMax - 1; // Leave room for null terminator
+			if (text.Length > maxLength)
+			{
+				text = text.Substring(0, maxLength);
+			}
+
+			// Write the text to memory
+			var bytes = System.Text.Encoding.ASCII.GetBytes(text + '\0');
+			_env.MemWriteBytes(lpString, bytes);
+			
+			// Return the number of characters copied (excluding null terminator)
+			return (uint)text.Length;
+		}
+
+		[DllModuleExport(1)]
+		private unsafe uint SetDlgItemTextA(uint hDlg, int nIDDlgItem, sbyte* lpString)
+		{
+			// SetDlgItemTextA sets the text of a control in a dialog box
+			_logger.LogInformation("[User32] SetDlgItemTextA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem}", hDlg, nIDDlgItem);
+
+			if (lpString == null)
+			{
+				return 0;
+			}
+
+			var lpStringPtr = (uint)(nint)lpString;
+			var text = _env.ReadAnsiString(lpStringPtr);
+			
+			// Store the text in the dialog control
+			_env.SetDialogControlText(hDlg, nIDDlgItem, text);
+			
+			_logger.LogInformation("[User32] SetDlgItemTextA: Set text '{Text}' for control {NIdDlgItem}", text, nIDDlgItem);
+			
+			return 1; // TRUE on success
 		}
 
 		[DllModuleExport(1)]

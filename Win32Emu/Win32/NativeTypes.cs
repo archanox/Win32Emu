@@ -208,4 +208,16 @@ public static class NativeTypes
 		public const int COLOR_INACTIVECAPTIONTEXT = 19;
 		public const int COLOR_BTNHIGHLIGHT = 20;
 	}
+
+	// Window Long (GetWindowLongA/SetWindowLongA) indices
+	public static class WindowLong
+	{
+		public const int GWL_WNDPROC = -4;      // Window procedure address
+		public const int GWL_HINSTANCE = -6;    // Application instance handle
+		public const int GWL_HWNDPARENT = -8;   // Parent window handle
+		public const int GWL_ID = -12;          // Control ID (for child windows)
+		public const int GWL_STYLE = -16;       // Window style
+		public const int GWL_EXSTYLE = -20;     // Extended window style
+		public const int GWL_USERDATA = -21;    // User data (32-bit value)
+	}
 }
