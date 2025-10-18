@@ -80,10 +80,13 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 						// Fallback if we couldn't extract the name
 						if (string.IsNullOrEmpty(dllName))
 						{
-							dllName = containingType.Name.ToUpperInvariant();
+							dllName = (containingType.Name ?? "UNKNOWN").ToUpperInvariant();
 							if (!dllName.EndsWith(".DLL"))
 								dllName += ".DLL";
 						}
+						
+						// Ensure dllName is not null (should never happen due to fallback above)
+						dllName ??= "UNKNOWN.DLL";
 						
 						var argBytes = sym.Parameters.Sum(p => GetParamSize(p.Type));
 						return new ExportEntry(dllName, sym.Name, argBytes);
@@ -186,10 +189,13 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 						// Fallback if we couldn't extract the name
 						if (string.IsNullOrEmpty(dllName))
 						{
-							dllName = containingType.Name.ToUpperInvariant();
+							dllName = (containingType.Name ?? "UNKNOWN").ToUpperInvariant();
 							if (!dllName.EndsWith(".DLL"))
 								dllName += ".DLL";
 						}
+						
+						// Ensure dllName is not null (should never happen due to fallback above)
+						dllName ??= "UNKNOWN.DLL";
 						
 						// Get all DllModuleExport attributes
 						var exportAttrs = sym.GetAttributes()

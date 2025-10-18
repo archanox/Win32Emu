@@ -15,8 +15,8 @@ namespace Win32Emu.Win32.Modules
 		private readonly ILogger _logger;
 		private readonly Dictionary<uint, bool> _windowEnabledState = new();
 		private readonly StandardControlHandler _standardControlHandler;
-		private ICpu _cpu;
-		private VirtualMemory _memory;
+		private ICpu? _cpu;
+		private VirtualMemory? _memory;
 		private Win32Dispatcher? _dispatcher;
 		private LoadedImage? _image;
 
@@ -570,7 +570,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogInformation("[User32] DispatchMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
 				
-				var result = CallWindowProcedure(_cpu, _memory, wndProc.Value, hwnd, message, wParam, lParam);
+				var result = CallWindowProcedure(_cpu!, _memory!, wndProc.Value, hwnd, message, wParam, lParam);
 				_logger.LogInformation("[User32] DispatchMessageA: WndProc returned 0x{Result:X8}", result);
 				return result;
 			}
@@ -780,7 +780,7 @@ namespace Win32Emu.Win32.Modules
 			if (wndProc.HasValue && wndProc.Value != 0)
 			{
 				_logger.LogInformation("[User32] SendMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
-				var result = CallWindowProcedure(_cpu, _memory, wndProc.Value, hwnd, msg, wParam, lParam);
+				var result = CallWindowProcedure(_cpu!, _memory!, wndProc.Value, hwnd, msg, wParam, lParam);
 				_logger.LogInformation("[User32] SendMessageA: WndProc returned 0x{Result:X8}", result);
 				return result;
 			}
@@ -1147,7 +1147,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpDialogFunc != 0)
 			{
 				_logger.LogInformation("[User32] DialogBoxParamA: Calling dialog procedure with WM_INITDIALOG");
-				var (initResult, timedOut) = CallDialogProcedureWithTimeout(_cpu, _memory, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam);
+				var (initResult, timedOut) = CallDialogProcedureWithTimeout(_cpu!, _memory!, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam);
 				_logger.LogInformation("[User32] DialogBoxParamA: WM_INITDIALOG returned {InitResult}", initResult);
 				dialogProcTimedOut = timedOut;
 			}
@@ -1198,7 +1198,7 @@ namespace Win32Emu.Win32.Modules
 					{
 						if (lpDialogFunc != 0)
 						{
-							var (result, timedOut) = CallDialogProcedureWithTimeout(_cpu, _memory, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam);
+							var (result, timedOut) = CallDialogProcedureWithTimeout(_cpu!, _memory!, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam);
 							_logger.LogDebug("[User32] DialogBoxParamA: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
 							
 							// If dialog procedure times out again, force end the dialog
