@@ -49,15 +49,19 @@ public class UnicornTestHelper : IDisposable
     /// </summary>
     public void WriteCode(params byte[] code)
     {
-        var eip = CodeBaseAddress;
+        // Get current EIP for Unicorn
+        var unicornEip = (uint)_unicorn.RegRead(X86.UC_X86_REG_EIP);
         
         // Write to Unicorn
-        _unicorn.MemWrite(eip, code);
+        _unicorn.MemWrite(unicornEip, code);
+        
+        // Get current EIP for Win32Emu
+        var win32EmuEip = _win32EmuCpu.GetEip();
         
         // Write to Win32Emu
         for (var i = 0; i < code.Length; i++)
         {
-            _win32EmuMemory.Write8((uint)eip + (uint)i, code[i]);
+            _win32EmuMemory.Write8(win32EmuEip + (uint)i, code[i]);
         }
     }
 
