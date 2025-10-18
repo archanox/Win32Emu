@@ -509,6 +509,19 @@ public class ProcessEnvironment
 		try { Diagnostics.Diagnostics.LogMemWrite(addr, bytes.Length, bytes); } catch { }
 	}
 
+	// Read an unmanaged struct from emulated memory
+	public unsafe T MemReadStruct<T>(uint addr) where T : unmanaged
+	{
+		var size = sizeof(T);
+		var bytes = _vm.GetSpan(addr, size);
+		T value;
+		fixed (byte* ptr = bytes)
+		{
+			value = *(T*)ptr;
+		}
+		return value;
+	}
+
 	// Handle table ops
 	public uint RegisterHandle(object obj)
 	{
