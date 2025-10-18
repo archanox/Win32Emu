@@ -1401,24 +1401,17 @@ public class ProcessEnvironment
 		}
 
 		// Return appropriate default values based on index
-		// Common GWL_* constants:
-		// GWL_USERDATA (-21): User data
-		// GWL_ID (-12): Control ID
-		// GWL_STYLE (-16): Window style
-		// GWL_EXSTYLE (-20): Extended window style
-		// GWL_WNDPROC (-4): Window procedure
-		// GWL_HINSTANCE (-6): Application instance handle
-		// GWL_HWNDPARENT (-8): Parent window handle
+		// Common GWL_* constants are defined in NativeTypes.WindowLong
 
 		if (_windows.TryGetValue(hwnd, out var windowInfo))
 		{
 			return index switch
 			{
-				-16 => windowInfo.Style,     // GWL_STYLE
-				-20 => windowInfo.ExStyle,   // GWL_EXSTYLE
-				-8 => windowInfo.Parent,     // GWL_HWNDPARENT
-				-6 => windowInfo.Instance,   // GWL_HINSTANCE
-				-12 => windowInfo.Menu,      // GWL_ID (for child windows, this is the control ID)
+				NativeTypes.WindowLong.GWL_STYLE => windowInfo.Style,
+				NativeTypes.WindowLong.GWL_EXSTYLE => windowInfo.ExStyle,
+				NativeTypes.WindowLong.GWL_HWNDPARENT => windowInfo.Parent,
+				NativeTypes.WindowLong.GWL_HINSTANCE => windowInfo.Instance,
+				NativeTypes.WindowLong.GWL_ID => windowInfo.Menu, // For child windows, this is the control ID
 				_ => 0
 			};
 		}

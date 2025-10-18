@@ -1276,13 +1276,16 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Truncate text if it exceeds buffer size (including null terminator)
+			// Note: This uses simple string truncation which is appropriate for Win32 ANSI APIs
+			// that work with single-byte character sets. For DBCS (double-byte character sets),
+			// Win32 would use functions like IsDBCSLeadByte to handle multibyte sequences.
 			var maxLength = cchMax - 1; // Leave room for null terminator
 			if (text.Length > maxLength)
 			{
 				text = text.Substring(0, maxLength);
 			}
 
-			// Write the text to memory
+			// Write the text to memory using ASCII encoding (Win32 ANSI API)
 			var bytes = System.Text.Encoding.ASCII.GetBytes(text + '\0');
 			_env.MemWriteBytes(lpString, bytes);
 			
