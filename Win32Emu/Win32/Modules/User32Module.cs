@@ -427,9 +427,9 @@ namespace Win32Emu.Win32.Modules
 		/// A handle to the window.
 		/// </param>
 		/// <param name="nCmdShow">
-		/// Controls how the window is to be shown. This parameter can be one of the following values:
-		/// SW_HIDE (0), SW_SHOWNORMAL (1), SW_SHOWMINIMIZED (2), SW_SHOWMAXIMIZED (3), SW_SHOWNOACTIVATE (4), SW_SHOW (5),
-		/// SW_MINIMIZE (6), SW_SHOWMINNOACTIVE (7), SW_SHOWNA (8), SW_RESTORE (9), SW_SHOWDEFAULT (10), SW_FORCEMINIMIZE (11).
+		/// Controls how the window is to be shown. This parameter can be one of the SW_ constants such as:
+		/// SW_HIDE, SW_SHOWNORMAL, SW_SHOWMINIMIZED, SW_SHOWMAXIMIZED, SW_SHOWNOACTIVATE, SW_SHOW,
+		/// SW_MINIMIZE, SW_SHOWMINNOACTIVE, SW_SHOWNA, SW_RESTORE, SW_SHOWDEFAULT, or SW_FORCEMINIMIZE.
 		/// </param>
 		/// <returns>
 		/// If the window was previously visible, the return value is nonzero.
@@ -714,7 +714,7 @@ namespace Win32Emu.Win32.Modules
 		/// </summary>
 		/// <param name="hwnd">
 		/// A handle to the window whose window procedure will receive the message.
-		/// If this parameter is HWND_BROADCAST ((HWND)0xffff), the message is sent to all top-level windows in the system.
+		/// If this parameter is HWND_BROADCAST (0xFFFF), the message is sent to all top-level windows in the system.
 		/// </param>
 		/// <param name="msg">
 		/// The message to be sent. For lists of the system-provided messages, see System-Defined Messages.
@@ -729,7 +729,7 @@ namespace Win32Emu.Win32.Modules
 		/// The return value specifies the result of the message processing; it depends on the message sent.
 		/// </returns>
 		/// <remarks>
-		/// The system only does marshalling for system messages (those in the range 0 to (WM_USER-1)). To send other messages (those >= WM_USER) to another process, you must do custom marshalling.
+		/// The system only does marshalling for system messages (those in the range 0 to WM_USER-1). To send other messages to another process, you must do custom marshalling.
 		/// If the specified window was created by the calling thread, the window procedure is called immediately as a subroutine.
 		/// If the specified window was created by a different thread, the system switches to that thread and calls the appropriate window procedure.
 		/// Messages sent between threads are processed only when the receiving thread executes message retrieval code.
