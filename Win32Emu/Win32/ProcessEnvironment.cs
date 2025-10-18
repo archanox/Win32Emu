@@ -174,6 +174,10 @@ public class ProcessEnvironment
 	private readonly Dictionary<string, WindowClassInfo> _windowClasses = new(StringComparer.OrdinalIgnoreCase);
 	private readonly Dictionary<uint, string> _atomToClassName = new(); // Maps atoms to class names
 	private uint _nextWindowHandle = 0x00010000; // Window handles typically start low
+	
+	// Window property storage for SetWindowLongA/GetWindowLongA
+	// Key: (hwnd, index), Value: property value
+	private readonly Dictionary<(uint, int), uint> _windowProperties = new();
 
 	// Message queue management
 	private bool _hasQuitMessage;
@@ -1377,11 +1381,83 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
+	/// Sets a window property value for SetWindowLongA.
+	/// </summary>
+	public void SetWindowProperty(uint hwnd, int index, uint value)
+	{
+		_windowProperties[(hwnd, index)] = value;
+		_logger.LogDebug("[ProcessEnv] SetWindowProperty: HWND=0x{Hwnd:X8} index={Index} value=0x{Value:X8}", hwnd, index, value);
+	}
+
+	/// <summary>
+	/// Gets a window property value for GetWindowLongA.
+	/// </summary>
+	public uint GetWindowProperty(uint hwnd, int index)
+	{
+		if (_windowProperties.TryGetValue((hwnd, index), out var value))
+		{
+			_logger.LogDebug("[ProcessEnv] GetWindowProperty: HWND=0x{Hwnd:X8} index={Index} -> 0x{Value:X8}", hwnd, index, value);
+			return value;
+		}
+
+		// Return appropriate default values based on index
+		// Common GWL_* constants are defined in NativeTypes.WindowLong
+
+		if (_windows.TryGetValue(hwnd, out var windowInfo))
+		{
+			return index switch
+			{
+				NativeTypes.WindowLong.GWL_STYLE => windowInfo.Style,
+				NativeTypes.WindowLong.GWL_EXSTYLE => windowInfo.ExStyle,
+				NativeTypes.WindowLong.GWL_HWNDPARENT => windowInfo.Parent,
+				NativeTypes.WindowLong.GWL_HINSTANCE => windowInfo.Instance,
+				NativeTypes.WindowLong.GWL_ID => windowInfo.Menu, // For child windows, this is the control ID
+				_ => 0
+			};
+		}
+
+		_logger.LogDebug("[ProcessEnv] GetWindowProperty: HWND=0x{Hwnd:X8} index={Index} -> 0 (default)", hwnd, index);
+		return 0;
+	}
+
+	/// <summary>
+	/// Sets text for a dialog control.
+	/// </summary>
+	public void SetDialogControlText(uint hDlg, int controlId, string text)
+	{
+		if (_dialogStates.TryGetValue(hDlg, out var state))
+		{
+			state.ControlText[controlId] = text;
+			_logger.LogDebug("[ProcessEnv] SetDialogControlText: hDlg=0x{HDlg:X8} controlId={ControlId} text='{Text}'", hDlg, controlId, text);
+		}
+	}
+
+	/// <summary>
+	/// Gets text for a dialog control.
+	/// </summary>
+	public string? GetDialogControlText(uint hDlg, int controlId)
+	{
+		if (_dialogStates.TryGetValue(hDlg, out var state))
+		{
+			if (state.ControlText.TryGetValue(controlId, out var text))
+			{
+				_logger.LogDebug("[ProcessEnv] GetDialogControlText: hDlg=0x{HDlg:X8} controlId={ControlId} -> '{Text}'", hDlg, controlId, text);
+				return text;
+			}
+		}
+
+		_logger.LogDebug("[ProcessEnv] GetDialogControlText: hDlg=0x{HDlg:X8} controlId={ControlId} -> null", hDlg, controlId);
+		return null;
+	}
+
+	/// <summary>
 	/// Internal class to track dialog state.
 	/// </summary>
 	private class DialogState
 	{
 		public bool IsEnded { get; set; }
 		public uint Result { get; set; }
+		// Storage for dialog control text: Key = control ID, Value = text
+		public Dictionary<int, string> ControlText { get; } = new();
 	}
 }
