@@ -379,6 +379,13 @@ public sealed class Emulator : IDisposable
             {
                 var eip = _cpu.GetEip();
                 LogDebug($"[Loop Check] Instruction {i}: EIP=0x{eip:X8}");
+                
+                // Warn the user if execution seems stuck after many instructions
+                if (i % 100000 == 0)
+                {
+                    _logger.LogWarning("[Loop Detection] Emulator has executed {InstructionCount} instructions and may be stuck in a loop. EIP=0x{Eip:X8}", i, eip);
+                    _logger.LogWarning("[Loop Detection] If the program is not responding, you may need to stop it. Check the documentation for known issues with this executable.");
+                }
             }
 
             try
