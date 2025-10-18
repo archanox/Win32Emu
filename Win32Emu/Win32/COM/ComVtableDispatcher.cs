@@ -6,6 +6,14 @@ using Win32Emu.Memory;
 namespace Win32Emu.Win32.COM;
 
 /// <summary>
+/// Metadata for a COM method including handler and argument information
+/// </summary>
+public record ComMethodInfo(
+	Func<ICpu, VirtualMemory, uint> Handler,
+	int ArgBytes = 0  // Argument byte count for stdcall stack cleanup (0 if unknown)
+);
+
+/// <summary>
 /// Dispatcher for COM vtable method calls
 /// Handles calls to COM interface methods at addresses 0x0E000000-0x0EFFFFFF
 /// </summary>
@@ -23,6 +31,9 @@ public class ComVtableDispatcher
 	
 	// Map of vtable stub addresses to method names for debugging
 	private readonly Dictionary<uint, string> _vtableMethodNames = new();
+	
+	// Map of vtable stub addresses to argument byte counts (for stdcall stack cleanup)
+	private readonly Dictionary<uint, int> _vtableArgBytes = new();
 	
 	// Track allocated COM objects
 	private readonly Dictionary<uint, ComObjectInfo> _comObjects = new();
@@ -47,7 +58,16 @@ public class ComVtableDispatcher
 	/// </summary>
 	public bool TryInvoke(uint address, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
+		return TryInvoke(address, cpu, memory, out returnValue, out _);
+	}
+	
+	/// <summary>
+	/// Try to invoke a COM vtable method and return argument byte count for stack cleanup
+	/// </summary>
+	public bool TryInvoke(uint address, ICpu cpu, VirtualMemory memory, out uint returnValue, out int argBytes)
+	{
 		returnValue = 0;
+		argBytes = 0;
 		
 		if (!IsComVtableAddress(address))
 		{
@@ -61,6 +81,10 @@ public class ComVtableDispatcher
 		{
 			_logger.LogInformation("[COM] Invoking vtable method: {MethodName} at address 0x{Address:X8}", methodName, address);
 			returnValue = handler(cpu, memory);
+			
+			// Get argument byte count for stack cleanup (0 if not registered)
+			argBytes = _vtableArgBytes.GetValueOrDefault(address, 0);
+			
 			return true;
 		}
 		
@@ -72,6 +96,19 @@ public class ComVtableDispatcher
 	/// Create a COM object with a vtable
 	/// </summary>
 	public uint CreateComObject(string interfaceName, Dictionary<string, Func<ICpu, VirtualMemory, uint>> methods)
+	{
+		// Convert to ComMethodInfo with default argBytes of 0 (unknown)
+		var methodsWithInfo = methods.ToDictionary(
+			kvp => kvp.Key,
+			kvp => new ComMethodInfo(kvp.Value, ArgBytes: 0)
+		);
+		return CreateComObject(interfaceName, methodsWithInfo);
+	}
+	
+	/// <summary>
+	/// Create a COM object with a vtable, with argument byte metadata for proper stack cleanup
+	/// </summary>
+	public uint CreateComObject(string interfaceName, Dictionary<string, ComMethodInfo> methods)
 	{
 		var objectId = _nextObjectId++;
 		
@@ -93,7 +130,7 @@ public class ComVtableDispatcher
 		foreach (var kvp in methods)
 		{
 			var methodName = kvp.Key;
-			var handler = kvp.Value;
+			var methodInfo = kvp.Value;
 			
 			// Calculate stub address for this method
 			var methodStubAddr = stubAddr + (methodIndex * 0x10); // 16 bytes per stub
@@ -113,12 +150,19 @@ public class ComVtableDispatcher
 			_env.MemWriteBytes(methodStubAddr, stub);
 			
 			// Register the handler
-			_vtableHandlers[methodStubAddr] = handler;
+			_vtableHandlers[methodStubAddr] = methodInfo.Handler;
 			
 			// Register the method name for debugging
 			_vtableMethodNames[methodStubAddr] = $"{interfaceName}::{methodName}";
 			
-			_logger.LogDebug("[COM] {InterfaceName}::{MethodName} -> 0x{MethodStubAddr:X8}", interfaceName, methodName, methodStubAddr);
+			// Register argument byte count for stack cleanup
+			if (methodInfo.ArgBytes > 0)
+			{
+				_vtableArgBytes[methodStubAddr] = methodInfo.ArgBytes;
+			}
+			
+			_logger.LogDebug("[COM] {InterfaceName}::{MethodName} -> 0x{MethodStubAddr:X8} (argBytes={ArgBytes})", 
+				interfaceName, methodName, methodStubAddr, methodInfo.ArgBytes);
 			
 			methodIndex++;
 		}
