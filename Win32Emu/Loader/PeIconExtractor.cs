@@ -98,6 +98,10 @@ public static class PeIconExtractor
 			}
 
 			// Read the icon group data
+			if (iconGroupDataEntry.Contents == null)
+			{
+				return false;
+			}
 			var grpData = iconGroupDataEntry.Contents.WriteIntoArray();
 			if (grpData.Length < 6)
 			{
@@ -144,7 +148,7 @@ public static class PeIconExtractor
 				if (iconDataEntry is ResourceDirectory iconDataDir)
 				{
 					var iconData = iconDataDir.Entries.FirstOrDefault();
-					if (iconData is ResourceData iconDataResource)
+					if (iconData is ResourceData iconDataResource && iconDataResource.Contents != null)
 					{
 						var imageData = iconDataResource.Contents.WriteIntoArray();
 						iconEntries.Add((grpEntry, imageData));

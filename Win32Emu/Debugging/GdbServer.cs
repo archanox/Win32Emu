@@ -826,7 +826,7 @@ public class GdbServer : IDisposable
             if (!string.IsNullOrEmpty(hexName))
             {
                 // GDB is asking for a specific symbol - decode and look it up
-                string symbolName;
+                string? symbolName;
                 try
                 {
                     symbolName = DecodeHexString(hexName);
