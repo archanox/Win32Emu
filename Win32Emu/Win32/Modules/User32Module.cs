@@ -1615,6 +1615,12 @@ namespace Win32Emu.Win32.Modules
 
 					var eip = cpu.GetEip();
 
+					// Log first 20 instructions to help debug if we jump to NULL
+					if (steps < 20)
+					{
+						_logger.LogInformation("[User32] CallDialogProcedureAsync: Step {Steps}: EIP=0x{Eip:X8}", steps, eip);
+					}
+
 					// Check if we've returned to our marker address
 					if (eip == RETURN_ADDRESS)
 					{
@@ -1624,7 +1630,18 @@ namespace Win32Emu.Win32.Modules
 					// Check for invalid EIP (NULL pointer execution)
 					if (eip == 0x00000000)
 					{
-						_logger.LogWarning("[User32] CallDialogProcedureAsync: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+						_logger.LogError("[User32] CallDialogProcedureAsync: Execution jumped to NULL address (0x00000000) at step {Steps}", steps);
+						_logger.LogError("[User32] CallDialogProcedureAsync: This typically means the code called a NULL function pointer");
+						_logger.LogError("[User32] CallDialogProcedureAsync: ESP=0x{Esp:X8} EBP=0x{Ebp:X8}", 
+							cpu.GetRegister("ESP"), cpu.GetRegister("EBP"));
+						// Log stack contents
+						try
+						{
+							var stackPtr = cpu.GetRegister("ESP");
+							_logger.LogError("[User32] CallDialogProcedureAsync: Stack: {Stack}",
+								string.Join(" ", Enumerable.Range(0, 8).Select(i => $"0x{memory.Read32(stackPtr + (uint)(i * 4)):X8}")));
+						}
+						catch { }
 						timedOut = true;
 						break;
 					}
