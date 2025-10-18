@@ -315,7 +315,7 @@ public class ThreadScheduler
 					thread.WaitTimeout = null;
 				}
 
-				_logger.LogDebug("[ThreadScheduler] Thread {ThreadId} waiting on {SyncObject}", threadId, syncObject.GetType().Name);
+				_logger.LogDebug("[ThreadScheduler] Thread {ThreadId} waiting on {SyncObject}", threadId, syncObject);
 			}
 		}
 	}
