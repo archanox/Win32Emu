@@ -1176,6 +1176,41 @@ namespace Win32Emu.Win32.Modules
 			// DialogBoxParamA creates a modal dialog box
 			_logger.LogInformation("[User32] DialogBoxParamAsync: hInstance=0x{HInstance:X8} lpTemplateName=0x{LpTemplateName:X8} lpDialogFunc=0x{LpDialogFunc:X8}", hInstance, lpTemplateName, lpDialogFunc);
 
+			// Check if lpTemplateName is a resource ID or a pointer
+			if ((lpTemplateName & 0xFFFF0000) == 0)
+			{
+				_logger.LogInformation("[User32] DialogBoxParamAsync: lpTemplateName is a resource ID: {ResourceId}", lpTemplateName & 0xFFFF);
+			}
+			else
+			{
+				// It's a pointer - check if it's a string name or a DLGTEMPLATE
+				// Try to read as a string first
+				try
+				{
+					var templateStr = _env.ReadAnsiString(lpTemplateName);
+					_logger.LogInformation("[User32] DialogBoxParamAsync: lpTemplateName is a string pointer: '{TemplateStr}'", templateStr);
+				}
+				catch
+				{
+					// Not a valid string, probably a DLGTEMPLATE structure
+					_logger.LogInformation("[User32] DialogBoxParamAsync: lpTemplateName appears to be a DLGTEMPLATE pointer");
+					// Log the first few bytes
+					try
+					{
+						var bytes = new byte[16];
+						for (int i = 0; i < 16; i++)
+						{
+							bytes[i] = _env.MemRead8(lpTemplateName + (uint)i);
+						}
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Template data: {Bytes}", BitConverter.ToString(bytes));
+					}
+					catch (Exception ex)
+					{
+						_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to read template data: {Message}", ex.Message);
+					}
+				}
+			}
+
 			// Create a dialog window handle
 			// For now, we create a synthetic dialog handle without parsing the template
 			var hDlg = _env.RegisterHandle(new object()); // Dialog handle
@@ -1622,7 +1657,7 @@ namespace Win32Emu.Win32.Modules
 					// Check for COM vtable method calls
 					if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
 					{
-						_logger.LogDebug("[User32] CallDialogProcedureAsync: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
+						_logger.LogInformation("[User32] CallDialogProcedureAsync: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
 						
 						// Save callee-saved registers (EBX, ESI, EDI)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
@@ -1647,14 +1682,14 @@ namespace Win32Emu.Win32.Modules
 					{
 						var dll = imp.dll.ToUpperInvariant();
 						var name = imp.name;
-						_logger.LogDebug("[User32] CallDialogProcedureAsync: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
+						_logger.LogInformation("[User32] CallDialogProcedureAsync: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
 						
 						// Save callee-saved registers (EBX, ESI, EDI)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
 						
 						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
 						{
-							_logger.LogDebug("[User32] CallDialogProcedureAsync: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
+							_logger.LogInformation("[User32] CallDialogProcedureAsync: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
 							
@@ -1685,7 +1720,7 @@ namespace Win32Emu.Win32.Modules
 							// Check if there are other threads that need CPU time
 							if (scheduler.ShouldContextSwitch())
 							{
-								_logger.LogDebug("[User32] CallDialogProcedureAsync: Cooperative yield at {Steps} steps", steps);
+								_logger.LogInformation("[User32] CallDialogProcedureAsync: Cooperative yield at {Steps} steps", steps);
 							}
 						}
 					}
