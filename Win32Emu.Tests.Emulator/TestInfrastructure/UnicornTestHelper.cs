@@ -85,10 +85,11 @@ public class UnicornTestHelper : IDisposable
             _ => 0
         };
         
-        if (regId != 0)
+        if (regId == 0)
         {
-            _unicorn.RegWrite(regId, (int)value);
+            throw new ArgumentException($"Unsupported register name: {name}", nameof(name));
         }
+        _unicorn.RegWrite(regId, (int)value);
     }
 
     /// <summary>
