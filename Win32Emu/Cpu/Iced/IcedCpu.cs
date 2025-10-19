@@ -1318,9 +1318,9 @@ public class IcedCpu : ICpu
 				SetFlagVal(Cf, ((r >> 31) & 1) != 0);
 				if (c == 1)
 				{
-					var msb = (r & 0x80000000) != 0;
-					var cf = GetFlag(Cf);
-					SetFlagVal(Of, msb ^ cf);
+					var bit31 = (r & 0x80000000) != 0;
+					var bit30 = (r & 0x40000000) != 0;
+					SetFlagVal(Of, bit31 ^ bit30);
 				}
 				else
 				{
@@ -2642,7 +2642,7 @@ public class IcedCpu : ICpu
 	private void SetFlagsIncDecSub(uint a, uint r)
 	{
 		SetFlagVal(Of, (((a ^ 0xFFFFFFFFu) & (a ^ r) & 0x80000000) != 0));
-		SetFlagVal(Af, ((a ^ 0xFFFFFFFFu ^ r) & 0x10) != 0);
+		SetFlagVal(Af, (a & 0x0F) == 0); // Borrow from bit 3 occurs when lower 4 bits are all zero
 		UpdateLogicResultFlags(r);
 	}
 
@@ -2653,7 +2653,7 @@ public class IcedCpu : ICpu
 		var lo = (byte)r;
 		var bits = lo ^ (lo >> 4);
 		bits &= 0xF;
-		var even = (((0x6996 >> bits) & 1) == 1);
+		var even = (((0x6996 >> bits) & 1) == 0); // Inverted: 0x6996 returns 1 for odd parity
 		SetFlagVal(Pf, even);
 	}
 
