@@ -1005,7 +1005,7 @@ public class IcedCpu : ICpu
 				// Calculate parity using the same method as UpdateLogicResultFlags
 				var bits = r ^ (r >> 4);
 				bits &= 0xF;
-				var even = (((0x6996 >> bits) & 1) == 0); // Inverted: 0x6996 returns 1 for odd parity
+				var even = (((0x6996 >> bits) & 1) == 1);
 				SetFlagVal(Pf, even);
 				break;
 			}
@@ -1053,7 +1053,7 @@ public class IcedCpu : ICpu
 				var lo = (byte)r;
 				var bits = lo ^ (lo >> 4);
 				bits &= 0xF;
-				var even = (((0x6996 >> bits) & 1) == 0); // Inverted: 0x6996 returns 1 for odd parity
+				var even = (((0x6996 >> bits) & 1) == 1);
 				SetFlagVal(Pf, even);
 				break;
 			}
@@ -1122,7 +1122,7 @@ public class IcedCpu : ICpu
 				// Calculate parity using the same method as UpdateLogicResultFlags
 				var bits = r ^ (r >> 4);
 				bits &= 0xF;
-				var even = (((0x6996 >> bits) & 1) == 0); // Inverted: 0x6996 returns 1 for odd parity
+				var even = (((0x6996 >> bits) & 1) == 1);
 				SetFlagVal(Pf, even);
 				break;
 			}
@@ -1169,7 +1169,7 @@ public class IcedCpu : ICpu
 				var lo = (byte)r;
 				var bits = lo ^ (lo >> 4);
 				bits &= 0xF;
-				var even = (((0x6996 >> bits) & 1) == 0); // Inverted: 0x6996 returns 1 for odd parity
+				var even = (((0x6996 >> bits) & 1) == 1);
 				SetFlagVal(Pf, even);
 				break;
 			}

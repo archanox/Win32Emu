@@ -125,7 +125,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var codePage = _testEnv.CallKernel32Api("GETACP");
 
         // Assert
-        Assert.Equal(1252u, codePage); // Should return Windows-1252 (Western European)
+        Assert.Equal(65001u, codePage); // Should return UTF-8
     }
 
     [Fact]
@@ -171,9 +171,9 @@ public sealed class BasicFunctionsTests : IDisposable
         // Assert
         Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
         
-        // Should behave same as getting 1252 (the default ACP)
+        // Should behave same as getting UTF-8 (the default ACP)
         var maxCharSize = _testEnv.Memory.Read32(cpInfoPtr + 0);
-        Assert.Equal(1u, maxCharSize);
+        Assert.Equal(4u, maxCharSize); // UTF-8 is multi-byte (up to 4 bytes)
     }
 
     [Fact]

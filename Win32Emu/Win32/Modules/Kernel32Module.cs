@@ -658,7 +658,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint GetCurrentProcess() => 0xFFFFFFFF; // pseudo-handle
 
 	[DllModuleExport(7, IsStub = true)]
-	public CodePage GetAcp() => CodePage.WestEurope;
+	public CodePage GetAcp() => CodePage.Utf8;
 
 	[DllModuleExport(9)]
 	public unsafe uint GetCpInfo(CodePage codePage, NativeTypes.Lpcpinfo lpCpInfo)
