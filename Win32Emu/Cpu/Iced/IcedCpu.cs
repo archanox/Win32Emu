@@ -2642,7 +2642,7 @@ public class IcedCpu : ICpu
 	private void SetFlagsIncDecSub(uint a, uint r)
 	{
 		SetFlagVal(Of, (((a ^ 0xFFFFFFFFu) & (a ^ r) & 0x80000000) != 0));
-		SetFlagVal(Af, (a & 0x0F) == 0); // Borrow from bit 3 occurs when lower 4 bits are all zero
+		SetFlagVal(Af, ((a ^ 1u ^ r) & 0x10) != 0); // Set if borrow from bit 4 (auxiliary carry) occurred
 		UpdateLogicResultFlags(r);
 	}
 
