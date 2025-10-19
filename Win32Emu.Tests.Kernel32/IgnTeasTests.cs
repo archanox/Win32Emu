@@ -55,16 +55,13 @@ namespace Win32Emu.Tests.Kernel32
 				var lpCpInfo = new NativeTypes.Lpcpinfo((NativeTypes.Cpinfo*)cpInfoAddr);
 				var cpInfoResult = _testEnv.Kernel32.GetCpInfo(CodePage.Utf8, lpCpInfo);
 				Assert.Equal(NativeTypes.Win32Bool.TRUE, cpInfoResult);
+				
+				// Read back into struct and assert
+				var cpInfo = _testEnv.ProcessEnv.MemReadStruct<NativeTypes.Cpinfo>(cpInfoAddr);
+				Assert.Equal(4u, cpInfo.MaxCharSize);
+				Assert.Equal(63, cpInfo.DefaultChar[0]);
+				Assert.Equal(0, cpInfo.DefaultChar[1]);
 			}
-			
-			// Read back from virtual memory
-			var maxCharSize = _testEnv.Memory.Read32(cpInfoAddr + 0);
-			Assert.Equal(4u, maxCharSize);
-			
-			var defaultChar0 = _testEnv.Memory.Read8(cpInfoAddr + 4);
-			var defaultChar1 = _testEnv.Memory.Read8(cpInfoAddr + 5);
-			Assert.Equal(63, defaultChar0);
-			Assert.Equal(0, defaultChar1);
 			
 			//#	Time of Day	Thread	TID	Module	Category	API	Return Type	Return Value	Error	Duration
 			// 5753	3:21:04.695 PM	1	20904	KERNEL32.DLL	Process	GetCommandLineA (  )	LPTSTR	0x028766d0		0.0000012
