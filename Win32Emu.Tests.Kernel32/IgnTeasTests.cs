@@ -46,16 +46,19 @@ namespace Win32Emu.Tests.Kernel32
 			Assert.Equal(32u, handleCount);
 
 			var acp = _testEnv.Kernel32.GetAcp();
-			Assert.Equal(CodePage.Utf8, acp);
+			Assert.Equal(CodePage.WestEurope, acp);
 
-			var lpCpInfo = new NativeTypes.Lpcpinfo(); //todo allocate in vmem
-			var cpInfoResult = _testEnv.Kernel32.GetCpInfo(CodePage.Utf8, lpCpInfo);
+			var cpInfoPtr = _testEnv.AllocateMemory(20); // CPINFO structure is 20 bytes
+			var cpInfoResult = _testEnv.CallKernel32Api("GETCPINFO", (uint)CodePage.WestEurope, cpInfoPtr);
 			Assert.Equal(NativeTypes.Win32Bool.TRUE, cpInfoResult);
 			
-			Assert.Equal(4u, lpCpInfo.Value->MaxCharSize);
+			var maxCharSize = _testEnv.Memory.Read32(cpInfoPtr + 0);
+			Assert.Equal(1u, maxCharSize);
 			
-			Assert.Equal(63, lpCpInfo.Value->DefaultChar[0]);
-			Assert.Equal(0, lpCpInfo.Value->DefaultChar[1]);
+			var defaultChar0 = _testEnv.Memory.Read8(cpInfoPtr + 4);
+			var defaultChar1 = _testEnv.Memory.Read8(cpInfoPtr + 5);
+			Assert.Equal(63, defaultChar0);
+			Assert.Equal(0, defaultChar1);
 			
 			//#	Time of Day	Thread	TID	Module	Category	API	Return Type	Return Value	Error	Duration
 			// 5753	3:21:04.695 PM	1	20904	KERNEL32.DLL	Process	GetCommandLineA (  )	LPTSTR	0x028766d0		0.0000012
