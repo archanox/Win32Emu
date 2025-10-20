@@ -161,15 +161,18 @@ public partial class DialogWindow : Window
 		const uint BS_RADIOBUTTON = 0x00000004;
 		const uint BS_AUTORADIOBUTTON = 0x00000009;
 		const uint BS_GROUPBOX = 0x00000007;
+		const uint WS_DISABLED = 0x08000000;
 
 		var buttonStyle = item.Style & 0x0F;
+		var isDisabled = (item.Style & WS_DISABLED) != 0;
 
 		if (buttonStyle == BS_CHECKBOX || buttonStyle == BS_AUTOCHECKBOX)
 		{
 			var checkbox = new CheckBox
 			{
-				Content = item.Title,
-				Tag = item.Id
+				Content = ProcessAccessKeys(item.Title),
+				Tag = item.Id,
+				IsEnabled = !isDisabled
 			};
 			checkbox.Click += OnControlClick;
 			return checkbox;
@@ -178,8 +181,9 @@ public partial class DialogWindow : Window
 		{
 			var radio = new RadioButton
 			{
-				Content = item.Title,
-				Tag = item.Id
+				Content = ProcessAccessKeys(item.Title),
+				Tag = item.Id,
+				IsEnabled = !isDisabled
 			};
 			radio.Click += OnControlClick;
 			return radio;
@@ -192,7 +196,7 @@ public partial class DialogWindow : Window
 				BorderThickness = new Thickness(1),
 				Child = new TextBlock
 				{
-					Text = item.Title,
+					Text = ProcessAccessKeys(item.Title),
 					Margin = new Thickness(5)
 				}
 			};
@@ -203,8 +207,9 @@ public partial class DialogWindow : Window
 			// Push button or default push button
 			var button = new Button
 			{
-				Content = item.Title,
-				Tag = item.Id
+				Content = ProcessAccessKeys(item.Title),
+				Tag = item.Id,
+				IsEnabled = !isDisabled
 			};
 
 			if (buttonStyle == BS_DEFPUSHBUTTON)
@@ -226,22 +231,43 @@ public partial class DialogWindow : Window
 		const uint SS_BLACKRECT = 0x00000004;
 		const uint SS_GRAYRECT = 0x00000005;
 		const uint SS_WHITERECT = 0x00000006;
+		const uint SS_BITMAP = 0x0000000E;
 
 		var staticStyle = item.Style & 0x1F;
 
-		if (staticStyle == SS_ICON)
+		if (staticStyle == SS_ICON || staticStyle == SS_BITMAP)
 		{
-			// Icon placeholder
-			return new Border
+			// Try to load the icon/bitmap resource
+			// For now, display the resource name if available, otherwise show placeholder
+			if (!string.IsNullOrEmpty(item.Title))
 			{
-				Background = Brushes.LightGray,
-				Child = new TextBlock
+				return new Border
 				{
-					Text = "🖼",
-					HorizontalAlignment = HorizontalAlignment.Center,
-					VerticalAlignment = VerticalAlignment.Center
-				}
-			};
+					Background = Brushes.LightGray,
+					Child = new TextBlock
+					{
+						Text = item.Title,
+						HorizontalAlignment = HorizontalAlignment.Center,
+						VerticalAlignment = VerticalAlignment.Center,
+						FontSize = 10,
+						Foreground = Brushes.DarkGray
+					}
+				};
+			}
+			else
+			{
+				// Icon placeholder
+				return new Border
+				{
+					Background = Brushes.LightGray,
+					Child = new TextBlock
+					{
+						Text = "🖼",
+						HorizontalAlignment = HorizontalAlignment.Center,
+						VerticalAlignment = VerticalAlignment.Center
+					}
+				};
+			}
 		}
 		else if (staticStyle >= SS_BLACKRECT && staticStyle <= SS_WHITERECT)
 		{
@@ -258,7 +284,7 @@ public partial class DialogWindow : Window
 
 			return new TextBlock
 			{
-				Text = item.Title,
+				Text = ProcessAccessKeys(item.Title),
 				TextAlignment = alignment,
 				VerticalAlignment = VerticalAlignment.Center
 			};
@@ -270,11 +296,13 @@ public partial class DialogWindow : Window
 		const uint ES_MULTILINE = 0x0004;
 		const uint ES_PASSWORD = 0x0020;
 		const uint ES_READONLY = 0x0800;
+		const uint WS_DISABLED = 0x08000000;
 
 		var textBox = new TextBox
 		{
 			Text = item.Title,
-			Tag = item.Id
+			Tag = item.Id,
+			IsEnabled = (item.Style & WS_DISABLED) == 0
 		};
 
 		if ((item.Style & ES_MULTILINE) != 0)
@@ -348,26 +376,15 @@ public partial class DialogWindow : Window
 	{
 		if (sender is Control control && control.Tag is ushort id)
 		{
-			// Handle standard button IDs
-			const ushort IDOK = 1;
-			const ushort IDCANCEL = 2;
+			// Send WM_COMMAND message to the dialog procedure for all button clicks
+			// The dialog procedure will decide whether to close the dialog via EndDialog
+			const uint WM_COMMAND = 0x0111;
+			const uint BN_CLICKED = 0;
+			var wParam = (uint)(BN_CLICKED << 16) | id;
+			_messageCallback?.Invoke(0, WM_COMMAND, wParam, 0);
 
-			if (id == IDOK)
-			{
-				EndDialog(1);
-			}
-			else if (id == IDCANCEL)
-			{
-				EndDialog(0);
-			}
-			else
-			{
-				// Send WM_COMMAND message to the dialog procedure
-				const uint WM_COMMAND = 0x0111;
-				const uint BN_CLICKED = 0;
-				var wParam = (uint)(BN_CLICKED << 16) | id;
-				_messageCallback?.Invoke(0, WM_COMMAND, wParam, 0);
-			}
+			// Note: We no longer automatically close the dialog for IDOK/IDCANCEL
+			// The dialog procedure should call EndDialog when appropriate
 		}
 	}
 
@@ -382,6 +399,34 @@ public partial class DialogWindow : Window
 			var wParam = (uint)(LBN_SELCHANGE << 16) | id;
 			_messageCallback?.Invoke(0, WM_COMMAND, wParam, 0);
 		}
+	}
+
+	/// <summary>
+	/// Processes Win32 access key markers (&) for Avalonia.
+	/// In Win32, & before a character marks it as an access key.
+	/// In Avalonia, _ before a character marks it as an access key.
+	/// This also handles HTML entity encoding like &amp; -> &
+	/// </summary>
+	private string ProcessAccessKeys(string text)
+	{
+		if (string.IsNullOrEmpty(text))
+		{
+			return text;
+		}
+
+		// First, decode HTML entities (e.g., &amp; -> &)
+		text = System.Net.WebUtility.HtmlDecode(text);
+
+		// Convert Win32 access key format (&) to Avalonia format (_)
+		// In Win32: &Cancel means C is the access key
+		// In Avalonia: _Cancel means C is the access key
+		// && in Win32 means literal &, which becomes & in Avalonia
+		
+		var result = text.Replace("&&", "\x00"); // Temporarily replace && with null char
+		result = result.Replace("&", "_");        // Replace & with _
+		result = result.Replace("\x00", "&");     // Replace null char back to &
+		
+		return result;
 	}
 
 	/// <summary>
