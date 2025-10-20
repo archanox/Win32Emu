@@ -1397,6 +1397,14 @@ namespace Win32Emu.Win32.Modules
 				{
 					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
 				}
+				
+				// Subscribe to UI events from the rendering backend
+				// ProcessEnvironment now tracks subscriptions and prevents duplicates automatically
+				if (obj.RenderingBackend != null)
+				{
+					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
+					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
+				}
 			}
 			else
 			{
@@ -1452,6 +1460,14 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogError("[DDraw] Failed to initialize rendering backend");
 						return 1; // DDERR_GENERIC
 					}
+				}
+				
+				// Subscribe to UI events from the rendering backend
+				// ProcessEnvironment now tracks subscriptions and prevents duplicates automatically
+				if (obj.RenderingBackend != null)
+				{
+					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
+					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
 				}
 			}
 			else

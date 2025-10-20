@@ -23,6 +23,10 @@ public class ProcessEnvironment
 
 	// COM vtable dispatcher
 	private readonly ComVtableDispatcher? _comDispatcher;
+	
+	// Track subscribed backends to prevent duplicate event subscriptions
+	private readonly HashSet<IRenderingBackend> _subscribedRenderingBackends = new();
+	private readonly HashSet<IInputBackend> _subscribedInputBackends = new();
 
 	// Virtual File System
 
@@ -1587,20 +1591,23 @@ public class ProcessEnvironment
 	/// <summary>
 	/// Subscribe to UI events from rendering and input backends.
 	/// This method should be called after backends are initialized to enable event-driven UI.
+	/// Automatically prevents duplicate subscriptions by tracking subscribed backends.
 	/// </summary>
 	/// <param name="renderingBackend">The rendering backend to subscribe to</param>
 	/// <param name="inputBackend">The input backend to subscribe to</param>
 	public void SubscribeToUIEvents(IRenderingBackend? renderingBackend, IInputBackend? inputBackend)
 	{
-		if (renderingBackend != null)
+		if (renderingBackend != null && !_subscribedRenderingBackends.Contains(renderingBackend))
 		{
 			renderingBackend.UIEvent += OnUIEvent;
+			_subscribedRenderingBackends.Add(renderingBackend);
 			_logger.LogInformation("[ProcessEnv] Subscribed to rendering backend UI events");
 		}
 
-		if (inputBackend != null)
+		if (inputBackend != null && !_subscribedInputBackends.Contains(inputBackend))
 		{
 			inputBackend.UIEvent += OnUIEvent;
+			_subscribedInputBackends.Add(inputBackend);
 			_logger.LogInformation("[ProcessEnv] Subscribed to input backend UI events");
 		}
 	}
@@ -1612,14 +1619,16 @@ public class ProcessEnvironment
 	/// <param name="inputBackend">The input backend to unsubscribe from</param>
 	public void UnsubscribeFromUIEvents(IRenderingBackend? renderingBackend, IInputBackend? inputBackend)
 	{
-		if (renderingBackend != null)
+		if (renderingBackend != null && _subscribedRenderingBackends.Contains(renderingBackend))
 		{
 			renderingBackend.UIEvent -= OnUIEvent;
+			_subscribedRenderingBackends.Remove(renderingBackend);
 		}
 
-		if (inputBackend != null)
+		if (inputBackend != null && _subscribedInputBackends.Contains(inputBackend))
 		{
 			inputBackend.UIEvent -= OnUIEvent;
+			_subscribedInputBackends.Remove(inputBackend);
 		}
 	}
 
