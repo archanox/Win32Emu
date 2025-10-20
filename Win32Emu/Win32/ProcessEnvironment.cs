@@ -1043,6 +1043,11 @@ public class ProcessEnvironment
 			Menu = menu
 		});
 
+		// Send WM_CREATE message to the window
+		// WM_CREATE = 0x0001
+		SendMessageToWindow(handle, 0x0001, 0, param);
+		_logger.LogDebug("[ProcessEnv] Sent WM_CREATE to window 0x{Handle:X8}", handle);
+
 		return handle;
 	}
 
@@ -1096,6 +1101,17 @@ public class ProcessEnvironment
 
 		_logger.LogWarning("[ProcessEnv] PostMessage: failed to queue MSG=0x{Message:X4}", message);
 		return false;
+	}
+
+	/// <summary>
+	/// Send a message directly to a window (synchronous) by posting it to the queue.
+	/// For system messages during window creation/lifecycle, we post them so they can be processed
+	/// in the normal message loop.
+	/// </summary>
+	public void SendMessageToWindow(uint hwnd, uint message, uint wParam, uint lParam)
+	{
+		_logger.LogDebug("[ProcessEnv] SendMessageToWindow: posting MSG=0x{Message:X4} to HWND=0x{Hwnd:X8}", message, hwnd);
+		PostMessage(hwnd, message, wParam, lParam);
 	}
 
 	/// <summary>
@@ -1732,14 +1748,28 @@ public class ProcessEnvironment
 				break;
 
 			case UIEventType.WindowActivate:
+				// Send WM_ACTIVATE first
 				message = 0x0006; // WM_ACTIVATE
 				wParam = 0x0001; // WA_ACTIVE
+				lParam = 0;
+				PostMessage(targetHwnd, message, wParam, lParam);
+				
+				// Then send WM_ACTIVATEAPP for application-level activation
+				message = 0x001C; // WM_ACTIVATEAPP
+				wParam = 1; // TRUE - activating
 				lParam = 0;
 				break;
 
 			case UIEventType.WindowDeactivate:
+				// Send WM_ACTIVATE first
 				message = 0x0006; // WM_ACTIVATE
 				wParam = 0x0000; // WA_INACTIVE
+				lParam = 0;
+				PostMessage(targetHwnd, message, wParam, lParam);
+				
+				// Then send WM_ACTIVATEAPP for application-level deactivation
+				message = 0x001C; // WM_ACTIVATEAPP
+				wParam = 0; // FALSE - deactivating
 				lParam = 0;
 				break;
 

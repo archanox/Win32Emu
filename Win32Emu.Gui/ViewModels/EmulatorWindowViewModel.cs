@@ -187,6 +187,28 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             OnDebugOutput($"Avalonia window closed for HWND=0x{info.Handle:X8}", DebugLevel.Info);
         };
 
+        // Hook window lifecycle events to send Win32 messages
+        window.Opened += (s, e) =>
+        {
+            OnDebugOutput($"Avalonia window opened for HWND=0x{info.Handle:X8}, sending WM_SHOWWINDOW", DebugLevel.Debug);
+            // WM_SHOWWINDOW = 0x0018, wParam = TRUE (showing)
+            _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x0018, 1, 0);
+        };
+
+        window.Activated += (s, e) =>
+        {
+            OnDebugOutput($"Avalonia window activated for HWND=0x{info.Handle:X8}, sending WM_ACTIVATEAPP", DebugLevel.Debug);
+            // WM_ACTIVATEAPP = 0x001C, wParam = TRUE (activating)
+            _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x001C, 1, 0);
+        };
+
+        window.Deactivated += (s, e) =>
+        {
+            OnDebugOutput($"Avalonia window deactivated for HWND=0x{info.Handle:X8}, sending WM_ACTIVATEAPP", DebugLevel.Debug);
+            // WM_ACTIVATEAPP = 0x001C, wParam = FALSE (deactivating)
+            _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x001C, 0, 0);
+        };
+
         // Show the window with owner if available
         if (_ownerWindow != null)
         {
