@@ -48,14 +48,20 @@ namespace Win32Emu.Tests.Kernel32
 			var acp = _testEnv.Kernel32.GetAcp();
 			Assert.Equal(CodePage.Utf8, acp);
 
-			var lpCpInfo = new NativeTypes.Lpcpinfo(); //todo allocate in vmem
-			var cpInfoResult = _testEnv.Kernel32.GetCpInfo(CodePage.Utf8, lpCpInfo);
-			Assert.Equal(NativeTypes.Win32Bool.TRUE, cpInfoResult);
-			
-			Assert.Equal(4u, lpCpInfo.Value->MaxCharSize);
-			
-			Assert.Equal(63, lpCpInfo.Value->DefaultChar[0]);
-			Assert.Equal(0, lpCpInfo.Value->DefaultChar[1]);
+			// Allocate CPINFO structure in virtual memory
+			var cpInfoAddr = _testEnv.AllocateMemory(20);
+			unsafe
+			{
+				var lpCpInfo = new NativeTypes.Lpcpinfo((NativeTypes.Cpinfo*)cpInfoAddr);
+				var cpInfoResult = _testEnv.Kernel32.GetCpInfo(CodePage.Utf8, lpCpInfo);
+				Assert.Equal(NativeTypes.Win32Bool.TRUE, cpInfoResult);
+				
+				// Read back into struct and assert
+				var cpInfo = _testEnv.ProcessEnv.MemReadStruct<NativeTypes.Cpinfo>(cpInfoAddr);
+				Assert.Equal(4u, cpInfo.MaxCharSize);
+				Assert.Equal(63, cpInfo.DefaultChar[0]);
+				Assert.Equal(0, cpInfo.DefaultChar[1]);
+			}
 			
 			//#	Time of Day	Thread	TID	Module	Category	API	Return Type	Return Value	Error	Duration
 			// 5753	3:21:04.695 PM	1	20904	KERNEL32.DLL	Process	GetCommandLineA (  )	LPTSTR	0x028766d0		0.0000012

@@ -2642,7 +2642,7 @@ public class IcedCpu : ICpu
 	private void SetFlagsIncDecSub(uint a, uint r)
 	{
 		SetFlagVal(Of, (((a ^ 0xFFFFFFFFu) & (a ^ r) & 0x80000000) != 0));
-		SetFlagVal(Af, ((a ^ 1 ^ r) & 0x10) != 0);
+		SetFlagVal(Af, ((a ^ 1u ^ r) & 0x10) != 0); // Set if borrow from bit 4 (auxiliary carry) occurred
 		UpdateLogicResultFlags(r);
 	}
 
@@ -2653,7 +2653,7 @@ public class IcedCpu : ICpu
 		var lo = (byte)r;
 		var bits = lo ^ (lo >> 4);
 		bits &= 0xF;
-		var even = (((0x6996 >> bits) & 1) == 0);
+		var even = (((0x6996 >> bits) & 1) == 0); // Inverted: 0x6996 returns 1 for odd parity
 		SetFlagVal(Pf, even);
 	}
 
