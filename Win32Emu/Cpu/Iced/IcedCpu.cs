@@ -2675,7 +2675,7 @@ public class IcedCpu : ICpu
 			var st0 = FpuGetSt(0);
 			var st1 = FpuGetSt(1);
 			FpuPop();
-			FpuSetSt(0, st0 - st1);
+			FpuSetSt(0, st1 - st0);
 		}
 		else
 		{
