@@ -19,7 +19,8 @@ namespace Win32Emu
 				Console.WriteLine("  --telemetry-otlp [endpoint] Enable OpenTelemetry with OTLP exporter (default: http://localhost:4317)");
 				Console.WriteLine();
 				Console.WriteLine("Environment Variables:");
-				Console.WriteLine("  WIN32EMU_BACKEND     Set backend type (GLFW or Vulkan)");
+				Console.WriteLine("  WIN32EMU_BACKEND             Set backend type (GLFW or Vulkan)");
+				Console.WriteLine("  OTEL_EXPORTER_OTLP_ENDPOINT  OpenTelemetry OTLP endpoint (e.g., http://localhost:4317)");
 				Console.WriteLine();
 				Console.WriteLine("Examples:");
 				Console.WriteLine("  Win32Emu game.exe");
@@ -88,20 +89,25 @@ namespace Win32Emu
 
 			// Initialize OpenTelemetry if enabled
 			Telemetry.TelemetryService? telemetryService = null;
-			if (telemetryConsoleMode || telemetryOtlpMode)
+			
+			// First check for environment variables
+			var envConfig = Telemetry.TelemetryConfig.FromEnvironment();
+			
+			// Command-line arguments override environment variables
+			if (telemetryConsoleMode || telemetryOtlpMode || envConfig.UseOtlpExporter)
 			{
 				var telemetryConfig = new Telemetry.TelemetryConfig
 				{
 					EnableTracing = true,
 					EnableMetrics = true,
 					UseConsoleExporter = telemetryConsoleMode,
-					UseOtlpExporter = telemetryOtlpMode,
-					OtlpEndpoint = telemetryOtlpEndpoint
+					UseOtlpExporter = telemetryOtlpMode || envConfig.UseOtlpExporter,
+					OtlpEndpoint = telemetryOtlpMode ? telemetryOtlpEndpoint : envConfig.OtlpEndpoint
 				};
 				
 				telemetryService = new Telemetry.TelemetryService(telemetryConfig);
 				logger.LogInformation("OpenTelemetry initialized - Console: {Console}, OTLP: {Otlp} ({Endpoint})", 
-					telemetryConsoleMode, telemetryOtlpMode, telemetryOtlpEndpoint);
+					telemetryConfig.UseConsoleExporter, telemetryConfig.UseOtlpExporter, telemetryConfig.OtlpEndpoint);
 			}
 
 			try

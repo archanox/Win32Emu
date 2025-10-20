@@ -178,4 +178,67 @@ public class TelemetryServiceTests
 		Assert.False(config.UseOtlpExporter);
 		Assert.Equal("http://localhost:4317", config.OtlpEndpoint);
 	}
+
+	[Fact]
+	public void TelemetryConfig_FromEnvironment_ShouldUseEnvironmentVariable()
+	{
+		// Arrange
+		var testEndpoint = "http://test-endpoint:4317";
+		Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT", testEndpoint);
+
+		try
+		{
+			// Act
+			var config = TelemetryConfig.FromEnvironment();
+
+			// Assert
+			Assert.True(config.UseOtlpExporter);
+			Assert.Equal(testEndpoint, config.OtlpEndpoint);
+		}
+		finally
+		{
+			// Cleanup
+			Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT", null);
+		}
+	}
+
+	[Fact]
+	public void TelemetryConfig_FromEnvironment_ShouldReturnDefaultWhenEnvVarNotSet()
+	{
+		// Arrange - ensure the environment variable is not set
+		Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT", null);
+
+		// Act
+		var config = TelemetryConfig.FromEnvironment();
+
+		// Assert
+		Assert.False(config.UseOtlpExporter);
+		Assert.Equal("http://localhost:4317", config.OtlpEndpoint);
+	}
+
+	[Fact]
+	public void TelemetryService_ShouldInitializeWithEnvironmentConfig()
+	{
+		// Arrange
+		var testEndpoint = "http://rider-endpoint:4317";
+		Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT", testEndpoint);
+
+		try
+		{
+			var config = TelemetryConfig.FromEnvironment();
+
+			// Act
+			using var telemetryService = new TelemetryService(config);
+
+			// Assert
+			Assert.NotNull(telemetryService);
+			Assert.NotNull(telemetryService.ActivitySource);
+			Assert.NotNull(telemetryService.Meter);
+		}
+		finally
+		{
+			// Cleanup
+			Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT", null);
+		}
+	}
 }
