@@ -69,9 +69,10 @@ public class App : Application
                 TelemetryService = _telemetryService;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently fail if telemetry initialization fails
+            // Log the exception to help diagnose telemetry initialization failures
+            System.Diagnostics.Debug.WriteLine($"Telemetry initialization failed: {ex}");
             _telemetryService = null;
             TelemetryService = null;
         }
