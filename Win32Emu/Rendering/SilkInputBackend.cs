@@ -14,6 +14,11 @@ public class SilkInputBackend : IInputBackend
     private readonly Dictionary<uint, InputDevice> _devices = new();
     private uint _nextDeviceId = 1;
 
+    /// <summary>
+    /// Event fired when a UI event occurs (mouse, keyboard, window)
+    /// </summary>
+    public event EventHandler<UIEventArgs>? UIEvent;
+
     private class InputDevice
     {
         public uint Id { get; set; }
@@ -135,8 +140,19 @@ public class SilkInputBackend : IInputBackend
             }
 
             // Process input events
-            // TODO: Implement event processing. This would be called by the windowing system in a full implementation.
+            // In a full implementation, this would poll the windowing system for events
+            // and raise UIEvent for each one. For now, this is a no-op stub.
+            // Actual input backend implementations (SDL, GLFW) should raise UIEvent
+            // when they detect mouse/keyboard input.
         }
+    }
+
+    /// <summary>
+    /// Helper method for subclasses to raise UI events
+    /// </summary>
+    protected virtual void OnUIEvent(UIEventArgs e)
+    {
+        UIEvent?.Invoke(this, e);
     }
 
     public void Dispose()

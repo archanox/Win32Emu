@@ -19,6 +19,11 @@ public class SilkSdlRenderingBackend : IRenderingBackend
     private int _height;
     private readonly object _lock = new();
 
+    /// <summary>
+    /// Event fired when a UI event occurs (mouse, keyboard, window)
+    /// </summary>
+    public event EventHandler<UIEventArgs>? UIEvent;
+
     public SilkSdlRenderingBackend(ILogger logger)
     {
         _logger = logger;
@@ -239,9 +244,127 @@ public class SilkSdlRenderingBackend : IRenderingBackend
             Event evt;
             while (_sdl.PollEvent(&evt) != 0)
             {
-                // Handle events if needed
+                // Translate SDL events to UI events that will be converted to Win32 messages
+                UIEventArgs? uiEvent = null;
+
+                switch ((EventType)evt.Type)
+                {
+                    case EventType.Mousemotion:
+                        uiEvent = new UIEventArgs
+                        {
+                            EventType = UIEventType.MouseMove,
+                            WindowHandle = 0, // Will be set by ProcessEnvironment
+                            MouseX = evt.Motion.X,
+                            MouseY = evt.Motion.Y
+                        };
+                        break;
+
+                    case EventType.Mousebuttondown:
+                        uiEvent = new UIEventArgs
+                        {
+                            EventType = UIEventType.MouseButtonDown,
+                            WindowHandle = 0,
+                            MouseX = evt.Button.X,
+                            MouseY = evt.Button.Y,
+                            WParam = evt.Button.Button // Button ID
+                        };
+                        break;
+
+                    case EventType.Mousebuttonup:
+                        uiEvent = new UIEventArgs
+                        {
+                            EventType = UIEventType.MouseButtonUp,
+                            WindowHandle = 0,
+                            MouseX = evt.Button.X,
+                            MouseY = evt.Button.Y,
+                            WParam = evt.Button.Button
+                        };
+                        break;
+
+                    case EventType.Keydown:
+                        uiEvent = new UIEventArgs
+                        {
+                            EventType = UIEventType.KeyDown,
+                            WindowHandle = 0,
+                            KeyCode = (int)evt.Key.Keysym.Sym,
+                            IsPressed = true
+                        };
+                        break;
+
+                    case EventType.Keyup:
+                        uiEvent = new UIEventArgs
+                        {
+                            EventType = UIEventType.KeyUp,
+                            WindowHandle = 0,
+                            KeyCode = (int)evt.Key.Keysym.Sym,
+                            IsPressed = false
+                        };
+                        break;
+
+                    case EventType.Quit:
+                        uiEvent = new UIEventArgs
+                        {
+                            EventType = UIEventType.WindowClose,
+                            WindowHandle = 0
+                        };
+                        break;
+
+                    case EventType.Windowevent:
+                        switch ((WindowEventID)evt.Window.Event)
+                        {
+                            case WindowEventID.Resized:
+                            case WindowEventID.SizeChanged:
+                                uiEvent = new UIEventArgs
+                                {
+                                    EventType = UIEventType.WindowResize,
+                                    WindowHandle = 0,
+                                    WParam = (uint)evt.Window.Data1, // width
+                                    LParam = (uint)evt.Window.Data2  // height
+                                };
+                                break;
+
+                            case WindowEventID.FocusGained:
+                                uiEvent = new UIEventArgs
+                                {
+                                    EventType = UIEventType.WindowActivate,
+                                    WindowHandle = 0
+                                };
+                                break;
+
+                            case WindowEventID.FocusLost:
+                                uiEvent = new UIEventArgs
+                                {
+                                    EventType = UIEventType.WindowDeactivate,
+                                    WindowHandle = 0
+                                };
+                                break;
+
+                            case WindowEventID.Close:
+                                uiEvent = new UIEventArgs
+                                {
+                                    EventType = UIEventType.WindowClose,
+                                    WindowHandle = 0
+                                };
+                                break;
+                        }
+                        break;
+                }
+
+                // Raise the UI event if we created one
+                if (uiEvent != null)
+                {
+                    OnUIEvent(uiEvent);
+                }
             }
         }
+    }
+
+    /// <summary>
+    /// Helper method to raise UI events
+    /// </summary>
+    protected virtual void OnUIEvent(UIEventArgs e)
+    {
+        UIEvent?.Invoke(this, e);
     }
 
     public unsafe void Dispose()

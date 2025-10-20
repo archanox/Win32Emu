@@ -28,6 +28,8 @@ public sealed class Emulator : IDisposable
     private int _gdbServerPort;
     private volatile bool _stopRequested;
     private readonly ManualResetEvent _pauseEvent;
+    private Task? _eventProcessingTask;
+    private CancellationTokenSource? _eventProcessingCts;
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -97,6 +99,29 @@ public sealed class Emulator : IDisposable
         }
         
         return _env.PostMessage(hwnd, message, wParam, lParam);
+    }
+
+    /// <summary>
+    /// Subscribe the process environment to UI events from rendering and input backends.
+    /// This enables event-driven UI message handling. Should be called after LoadExecutable
+    /// when backends are initialized.
+    /// </summary>
+    /// <param name="renderingBackend">The rendering backend to subscribe to (optional)</param>
+    /// <param name="inputBackend">The input backend to subscribe to (optional)</param>
+    public void SubscribeToUIEvents(Rendering.IRenderingBackend? renderingBackend = null, Rendering.IInputBackend? inputBackend = null)
+    {
+        if (_env == null)
+        {
+            LogDebug("[Emulator] SubscribeToUIEvents called but environment not initialized");
+            return;
+        }
+
+        // Use backends from parameters if provided, otherwise use from environment
+        var renderBackend = renderingBackend;
+        var inputBackendToUse = inputBackend ?? _env.InputBackend;
+
+        _env.SubscribeToUIEvents(renderBackend, inputBackendToUse);
+        LogDebug("[Emulator] Subscribed to UI events from backends");
     }
 
     public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false)
@@ -204,21 +229,40 @@ public sealed class Emulator : IDisposable
         _stopRequested = false;
         _pauseEvent.Set(); // Ensure we start in running state
 
-        if (_gdbServerMode)
+        // Subscribe to UI events from backends (if available)
+        if (_env.InputBackend != null || _env.AudioBackend != null)
         {
-            await RunWithGdbServer(_gdbServerPort);
+            // Note: We need access to rendering backend too, but it's not stored in _env
+            // For now, we'll need to ensure this is called from the host/GUI when backends are set up
+            LogDebug("[Emulator] UI backends detected - event processing will be available");
         }
-        else if (_interactiveDebugMode)
+
+        // Start background UI event processing thread
+        StartEventProcessing();
+
+        try
         {
-            await RunWithInteractiveDebuggerAsync();
+            if (_gdbServerMode)
+            {
+                await RunWithGdbServer(_gdbServerPort);
+            }
+            else if (_interactiveDebugMode)
+            {
+                await RunWithInteractiveDebuggerAsync();
+            }
+            else if (_debugMode)
+            {
+                await RunWithEnhancedDebuggingAsync();
+            }
+            else
+            {
+                await RunNormalAsync();
+            }
         }
-        else if (_debugMode)
+        finally
         {
-            await RunWithEnhancedDebuggingAsync();
-        }
-        else
-        {
-            await RunNormalAsync();
+            // Stop event processing thread
+            StopEventProcessing();
         }
 
         string exitMessage;
@@ -935,9 +979,97 @@ public sealed class Emulator : IDisposable
         }
     }
 
+    /// <summary>
+    /// Start background UI event processing loop.
+    /// This runs on a separate thread to continuously poll for events from rendering and input backends.
+    /// </summary>
+    private void StartEventProcessing()
+    {
+        if (_env == null)
+        {
+            return;
+        }
+
+        // Create cancellation token source for event processing
+        _eventProcessingCts = new CancellationTokenSource();
+
+        // Start the event processing task
+        _eventProcessingTask = Task.Run(async () =>
+        {
+            LogDebug("[EventProcessing] Starting UI event processing loop");
+
+            try
+            {
+                while (!_eventProcessingCts.Token.IsCancellationRequested && !_stopRequested)
+                {
+                    // Process events from input backend
+                    try
+                    {
+                        _env.InputBackend?.ProcessEvents();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[EventProcessing] Error processing input backend events");
+                    }
+
+                    // Small delay to avoid busy-waiting (60 FPS event processing)
+                    await Task.Delay(16, _eventProcessingCts.Token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation is requested
+                LogDebug("[EventProcessing] UI event processing cancelled");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[EventProcessing] Unexpected error in UI event processing loop");
+            }
+
+            LogDebug("[EventProcessing] UI event processing loop stopped");
+        }, _eventProcessingCts.Token);
+    }
+
+    /// <summary>
+    /// Stop the background UI event processing loop.
+    /// </summary>
+    private void StopEventProcessing()
+    {
+        if (_eventProcessingCts != null)
+        {
+            _eventProcessingCts.Cancel();
+            _eventProcessingCts.Dispose();
+            _eventProcessingCts = null;
+        }
+
+        if (_eventProcessingTask != null)
+        {
+            try
+            {
+                // Wait for the task to complete (with timeout)
+                _eventProcessingTask.Wait(TimeSpan.FromSeconds(1));
+            }
+            catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
+            {
+                // Expected
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[EventProcessing] Error waiting for event processing task to complete");
+            }
+            finally
+            {
+                _eventProcessingTask?.Dispose();
+                _eventProcessingTask = null;
+            }
+        }
+    }
+
     public void Dispose()
     {
-	    _pauseEvent.Dispose();
+        // Stop event processing if running
+        StopEventProcessing();
+        _pauseEvent.Dispose();
     }
 }
 

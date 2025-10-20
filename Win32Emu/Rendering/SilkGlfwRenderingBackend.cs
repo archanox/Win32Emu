@@ -20,6 +20,11 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
     private int _height;
     private readonly object _lock = new();
 
+    /// <summary>
+    /// Event fired when a UI event occurs (mouse, keyboard, window)
+    /// </summary>
+    public event EventHandler<UIEventArgs>? UIEvent;
+
     public SilkGlfwRenderingBackend(ILogger logger)
     {
         _logger = logger;
@@ -236,7 +241,19 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             }
 
             _glfw.PollEvents();
+            // Note: GLFW event handling would typically be set up via callbacks
+            // in Initialize() using SetMouseButtonCallback, SetKeyCallback, etc.
+            // For now, we poll but don't translate events to UI events.
+            // This would need callback registration to work properly.
         }
+    }
+
+    /// <summary>
+    /// Helper method to raise UI events
+    /// </summary>
+    protected virtual void OnUIEvent(UIEventArgs e)
+    {
+        UIEvent?.Invoke(this, e);
     }
 
     public void Dispose()
