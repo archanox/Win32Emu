@@ -2098,14 +2098,23 @@ namespace Win32Emu.Win32.Modules
 						}
 						else
 						{
-							// Import function not implemented - simulate a return with default value
-							_logger.LogWarning("[User32] CallDialogProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0", dll, name);
+							// Import function not implemented - try to get arg bytes from metadata and simulate return
+							var simulatedArgBytes = 0;
+							try
+							{
+								simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
+								_logger.LogWarning("[User32] CallDialogProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", dll, name, simulatedArgBytes);
+							}
+							catch
+							{
+								_logger.LogWarning("[User32] CallDialogProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes unknown (assuming 0)", dll, name);
+							}
 							
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
 							
-							// Pop return address (assume stdcall with no parameters for safety)
-							currentEsp += 4;
+							// Pop return address + parameters (stdcall convention - callee cleans)
+							currentEsp += 4 + (uint)simulatedArgBytes;
 							
 							cpu.SetRegister("ESP", currentEsp);
 							cpu.SetRegister("EAX", 0); // Return 0 as default
@@ -2353,14 +2362,23 @@ namespace Win32Emu.Win32.Modules
 						}
 						else
 						{
-							// Import function not implemented - simulate a return with default value
-							_logger.LogWarning("[User32] CallDialogProcedureAsync: Unimplemented import {Dll}!{Name}, simulating return with 0", dll, name);
+							// Import function not implemented - try to get arg bytes from metadata and simulate return
+							var simulatedArgBytes = 0;
+							try
+							{
+								simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
+								_logger.LogWarning("[User32] CallDialogProcedureAsync: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", dll, name, simulatedArgBytes);
+							}
+							catch
+							{
+								_logger.LogWarning("[User32] CallDialogProcedureAsync: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes unknown (assuming 0)", dll, name);
+							}
 							
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
 							
-							// Pop return address (assume stdcall with no parameters for safety)
-							currentEsp += 4;
+							// Pop return address + parameters (stdcall convention - callee cleans)
+							currentEsp += 4 + (uint)simulatedArgBytes;
 							
 							cpu.SetRegister("ESP", currentEsp);
 							cpu.SetRegister("EAX", 0); // Return 0 as default
