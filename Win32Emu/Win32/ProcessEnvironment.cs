@@ -1535,6 +1535,159 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
+	/// Subscribe to UI events from rendering and input backends.
+	/// This method should be called after backends are initialized to enable event-driven UI.
+	/// </summary>
+	/// <param name="renderingBackend">The rendering backend to subscribe to</param>
+	/// <param name="inputBackend">The input backend to subscribe to</param>
+	public void SubscribeToUIEvents(IRenderingBackend? renderingBackend, IInputBackend? inputBackend)
+	{
+		if (renderingBackend != null)
+		{
+			renderingBackend.UIEvent += OnUIEvent;
+			_logger.LogInformation("[ProcessEnv] Subscribed to rendering backend UI events");
+		}
+
+		if (inputBackend != null)
+		{
+			inputBackend.UIEvent += OnUIEvent;
+			_logger.LogInformation("[ProcessEnv] Subscribed to input backend UI events");
+		}
+	}
+
+	/// <summary>
+	/// Unsubscribe from UI events from rendering and input backends.
+	/// </summary>
+	/// <param name="renderingBackend">The rendering backend to unsubscribe from</param>
+	/// <param name="inputBackend">The input backend to unsubscribe from</param>
+	public void UnsubscribeFromUIEvents(IRenderingBackend? renderingBackend, IInputBackend? inputBackend)
+	{
+		if (renderingBackend != null)
+		{
+			renderingBackend.UIEvent -= OnUIEvent;
+		}
+
+		if (inputBackend != null)
+		{
+			inputBackend.UIEvent -= OnUIEvent;
+		}
+	}
+
+	/// <summary>
+	/// Handle UI events from rendering/input backends and translate them to Win32 messages.
+	/// This is the event handler that gets called when backends raise UI events.
+	/// </summary>
+	private void OnUIEvent(object? sender, UIEventArgs e)
+	{
+		// Get the target window handle (use first window if not specified)
+		var targetHwnd = e.WindowHandle;
+		if (targetHwnd == 0 && _windows.Count > 0)
+		{
+			// Default to the first created window
+			targetHwnd = _windows.Keys.First();
+		}
+
+		if (targetHwnd == 0)
+		{
+			// No window to send message to
+			_logger.LogDebug("[ProcessEnv] OnUIEvent: No target window for event {EventType}", e.EventType);
+			return;
+		}
+
+		// Translate UI event to Win32 message
+		uint message;
+		uint wParam;
+		uint lParam;
+
+		switch (e.EventType)
+		{
+			case UIEventType.MouseMove:
+				message = 0x0200; // WM_MOUSEMOVE
+				wParam = 0; // No button flags for now
+				lParam = (uint)((e.MouseY << 16) | (e.MouseX & 0xFFFF));
+				break;
+
+			case UIEventType.MouseButtonDown:
+				// Translate button ID to Win32 message
+				message = e.WParam switch
+				{
+					1 => 0x0201, // WM_LBUTTONDOWN
+					2 => 0x0204, // WM_RBUTTONDOWN
+					3 => 0x0207, // WM_MBUTTONDOWN
+					_ => 0x0201  // Default to left button
+				};
+				wParam = 0x0001; // MK_LBUTTON flag
+				lParam = (uint)((e.MouseY << 16) | (e.MouseX & 0xFFFF));
+				break;
+
+			case UIEventType.MouseButtonUp:
+				message = e.WParam switch
+				{
+					1 => 0x0202, // WM_LBUTTONUP
+					2 => 0x0205, // WM_RBUTTONUP
+					3 => 0x0208, // WM_MBUTTONUP
+					_ => 0x0202
+				};
+				wParam = 0;
+				lParam = (uint)((e.MouseY << 16) | (e.MouseX & 0xFFFF));
+				break;
+
+			case UIEventType.KeyDown:
+				message = 0x0100; // WM_KEYDOWN
+				wParam = (uint)e.KeyCode;
+				lParam = 0x00000001; // Repeat count = 1
+				break;
+
+			case UIEventType.KeyUp:
+				message = 0x0101; // WM_KEYUP
+				wParam = (uint)e.KeyCode;
+				lParam = 0xC0000001; // Transition and previous state
+				break;
+
+			case UIEventType.WindowResize:
+				message = 0x0005; // WM_SIZE
+				wParam = 0; // SIZE_RESTORED
+				lParam = (e.LParam << 16) | e.WParam; // HIWORD=height, LOWORD=width
+				break;
+
+			case UIEventType.WindowClose:
+				message = 0x0010; // WM_CLOSE
+				wParam = 0;
+				lParam = 0;
+				break;
+
+			case UIEventType.WindowActivate:
+				message = 0x0006; // WM_ACTIVATE
+				wParam = 0x0001; // WA_ACTIVE
+				lParam = 0;
+				break;
+
+			case UIEventType.WindowDeactivate:
+				message = 0x0006; // WM_ACTIVATE
+				wParam = 0x0000; // WA_INACTIVE
+				lParam = 0;
+				break;
+
+			default:
+				_logger.LogWarning("[ProcessEnv] OnUIEvent: Unknown event type {EventType}", e.EventType);
+				return;
+		}
+
+		// Post the translated message to the queue
+		var success = PostMessage(targetHwnd, message, wParam, lParam);
+		if (success)
+		{
+			_logger.LogDebug("[ProcessEnv] OnUIEvent: Translated {EventType} to WM_{Message:X4} for HWND=0x{TargetHwnd:X8}",
+				e.EventType, message, targetHwnd);
+		}
+		else
+		{
+			_logger.LogWarning("[ProcessEnv] OnUIEvent: Failed to post message WM_{Message:X4} for event {EventType}",
+				message, e.EventType);
+		}
+	}
+
+	/// <summary>
 	/// Internal class to track dialog state.
 	/// </summary>
 	private class DialogState

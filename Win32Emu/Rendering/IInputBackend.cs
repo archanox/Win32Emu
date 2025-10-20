@@ -57,6 +57,11 @@ public interface IInputBackend : IDisposable
     void ProcessEvents();
 
     /// <summary>
+    /// Event fired when a UI event occurs (mouse, keyboard, window)
+    /// </summary>
+    event EventHandler<UIEventArgs>? UIEvent;
+
+    /// <summary>
     /// Gets whether the backend is initialized
     /// </summary>
     bool IsInitialized { get; }

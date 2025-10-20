@@ -41,6 +41,11 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
     private KhrSwapchain? _khrSwapchain;
     private uint _graphicsQueueFamilyIndex;
 
+    /// <summary>
+    /// Event fired when a UI event occurs (mouse, keyboard, window)
+    /// </summary>
+    public event EventHandler<UIEventArgs>? UIEvent;
+
     public SilkVulkanRenderingBackend(ILogger logger)
     {
         _logger = logger;
@@ -786,7 +791,17 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
             }
 
             _window.DoEvents();
+            // Note: Silk.NET.Windowing handles events internally via DoEvents()
+            // Event translation would require hooking into window events.
         }
+    }
+
+    /// <summary>
+    /// Helper method to raise UI events
+    /// </summary>
+    protected virtual void OnUIEvent(UIEventArgs e)
+    {
+        UIEvent?.Invoke(this, e);
     }
 
     public void Dispose()
