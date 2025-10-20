@@ -668,6 +668,34 @@ public sealed class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
+    public void WideCharToMultiByte_WithInsufficientBuffer_ShouldReturnZero()
+    {
+        // This test addresses a potential issue from CPU-Z where a 257-character
+        // wide string is converted to UTF-8 but only 256 bytes of buffer are provided
+        
+        // Arrange
+        // Create a 257-character ASCII string. Since each ASCII character is encoded as
+        // a single byte in UTF-8, this will require exactly 257 bytes - one more than
+        // the 256-byte buffer size. This recreates the specific buffer overflow scenario
+        // observed in the CPU-Z execution logs.
+        var testString = new string('A', 257);
+        var wideStringPtr = WriteWideString(testString);
+        var outputBuffer = _testEnv.AllocateMemory(256); // Only 256 bytes available
+        const uint codePageUtf8 = 65001; // UTF-8
+
+        // Act - Try to convert 257 chars to 256-byte buffer
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePageUtf8, 0, wideStringPtr, (uint)testString.Length, outputBuffer, 256, 0, 0);
+
+        // Assert - Should return 0 because buffer is too small
+        Assert.Equal(0u, result);
+        
+        // Verify GetLastError returns ERROR_INSUFFICIENT_BUFFER
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal(NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER, lastError);
+    }
+
+    [Fact]
     public void UnhandledExceptionFilter_ShouldReturnExceptionExecuteHandler()
     {
         // Arrange
