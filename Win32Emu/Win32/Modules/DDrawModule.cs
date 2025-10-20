@@ -265,14 +265,87 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Palette_GetCaps(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::GetCaps() - stub");
-			return 0;
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lpdwCaps = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::GetCaps(this=0x{ThisPtr:X8}, lpdwCaps=0x{LpdwCaps:X8})", thisPtr, lpdwCaps);
+
+			// Find the palette based on COM object address
+			DirectDrawPalette? palette = null;
+			foreach (var p in _palettes.Values)
+			{
+				if (p.ComObjectAddress == thisPtr)
+				{
+					palette = p;
+					break;
+				}
+			}
+
+			if (palette == null)
+			{
+				_logger.LogError("[DDraw] GetCaps: could not find palette with COM address 0x{ThisPtr:X8}", thisPtr);
+				return 1; // DDERR_GENERIC
+			}
+
+			if (lpdwCaps != 0)
+			{
+				// Determine caps based on number of entries
+				uint caps = 0;
+				if (palette.Entries.Length == 2) caps = 0x1; // DDPCAPS_1BIT
+				else if (palette.Entries.Length == 4) caps = 0x2; // DDPCAPS_2BIT
+				else if (palette.Entries.Length == 16) caps = 0x4; // DDPCAPS_4BIT
+				else if (palette.Entries.Length == 256) caps = 0x8; // DDPCAPS_8BIT
+				else caps = 0x8; // Default to 8-bit
+
+				_env.MemWrite32(lpdwCaps, caps);
+				_logger.LogInformation("[DDraw] Palette caps: 0x{Caps:X8} ({Count} entries)", caps, palette.Entries.Length);
+			}
+
+			return 0; // DD_OK
 		}
 
 		private uint Palette_GetEntries(ICpu cpu, VirtualMemory memory, uint paletteHandle)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::GetEntries() - stub");
-			return 0;
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+			var dwBase = args.UInt32(2);
+			var dwNumEntries = args.UInt32(3);
+			var lpEntries = args.UInt32(4);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::GetEntries(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, dwBase={DwBase}, dwNumEntries={DwNumEntries}, lpEntries=0x{LpEntries:X8})", 
+				thisPtr, dwFlags, dwBase, dwNumEntries, lpEntries);
+
+			if (!_palettes.TryGetValue(paletteHandle, out var palette))
+			{
+				_logger.LogError("[DDraw] GetEntries: could not find palette with handle 0x{PaletteHandle:X8}", paletteHandle);
+				return 1; // DDERR_GENERIC
+			}
+
+			if (lpEntries == 0)
+			{
+				_logger.LogError("[DDraw] GetEntries: lpEntries is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Check bounds
+			if (dwBase >= palette.Entries.Length || dwBase + dwNumEntries > palette.Entries.Length)
+			{
+				_logger.LogError("[DDraw] GetEntries: invalid range (base={Base}, count={Count}, max={Max})", 
+					dwBase, dwNumEntries, palette.Entries.Length);
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Write palette entries (PALETTEENTRY is 4 bytes: r,g,b,flags)
+			for (var i = 0u; i < dwNumEntries; i++)
+			{
+				var entry = palette.Entries[dwBase + i];
+				_env.MemWrite32(lpEntries + (i * 4), entry);
+			}
+
+			_logger.LogInformation("[DDraw] Retrieved {Count} palette entries starting at index {Base}", dwNumEntries, dwBase);
+			return 0; // DD_OK
 		}
 
 		private uint Palette_Initialize(ICpu cpu, VirtualMemory memory)
@@ -283,8 +356,45 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Palette_SetEntries(ICpu cpu, VirtualMemory memory, uint paletteHandle)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::SetEntries() - stub");
-			return 0;
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+			var dwStartingEntry = args.UInt32(2);
+			var dwCount = args.UInt32(3);
+			var lpEntries = args.UInt32(4);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::SetEntries(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, dwStartingEntry={DwStartingEntry}, dwCount={DwCount}, lpEntries=0x{LpEntries:X8})", 
+				thisPtr, dwFlags, dwStartingEntry, dwCount, lpEntries);
+
+			if (!_palettes.TryGetValue(paletteHandle, out var palette))
+			{
+				_logger.LogError("[DDraw] SetEntries: could not find palette with handle 0x{PaletteHandle:X8}", paletteHandle);
+				return 1; // DDERR_GENERIC
+			}
+
+			if (lpEntries == 0)
+			{
+				_logger.LogError("[DDraw] SetEntries: lpEntries is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Check bounds
+			if (dwStartingEntry >= palette.Entries.Length || dwStartingEntry + dwCount > palette.Entries.Length)
+			{
+				_logger.LogError("[DDraw] SetEntries: invalid range (start={Start}, count={Count}, max={Max})", 
+					dwStartingEntry, dwCount, palette.Entries.Length);
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Read and update palette entries (PALETTEENTRY is 4 bytes: r,g,b,flags)
+			for (var i = 0u; i < dwCount; i++)
+			{
+				var entry = _env.MemRead32(lpEntries + (i * 4));
+				palette.Entries[dwStartingEntry + i] = entry;
+			}
+
+			_logger.LogInformation("[DDraw] Updated {Count} palette entries starting at index {Start}", dwCount, dwStartingEntry);
+			return 0; // DD_OK
 		}
 
 		private uint DDraw_Compact(ICpu cpu, VirtualMemory memory)
@@ -748,8 +858,52 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_GetPalette(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetPalette() - stub");
-			return 0; // DD_OK
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lplpDDPalette = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetPalette(this=0x{ThisPtr:X8}, lplpDDPalette=0x{LplpDDPalette:X8})", 
+				thisPtr, lplpDDPalette);
+
+			// Find the surface
+			DirectDrawSurface? surface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				// For now, find any surface - in a complete implementation we'd match by COM object address
+				surface = s;
+				break;
+			}
+
+			if (surface == null)
+			{
+				_logger.LogError("[DDraw] GetPalette: could not find surface");
+				return 1; // DDERR_GENERIC
+			}
+
+			if (lplpDDPalette == 0)
+			{
+				_logger.LogError("[DDraw] GetPalette: lplpDDPalette is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Check if surface has a palette attached
+			if (surface.PaletteHandle == 0)
+			{
+				_env.MemWrite32(lplpDDPalette, 0);
+				_logger.LogInformation("[DDraw] Surface has no palette attached");
+				return 0x88760165; // DDERR_NOPALETTEATTACHED
+			}
+
+			// Find the palette and return its COM object address
+			if (_palettes.TryGetValue(surface.PaletteHandle, out var palette))
+			{
+				_env.MemWrite32(lplpDDPalette, palette.ComObjectAddress);
+				_logger.LogInformation("[DDraw] Returning palette COM object at 0x{ComObjectAddr:X8}", palette.ComObjectAddress);
+				return 0; // DD_OK
+			}
+
+			_logger.LogError("[DDraw] GetPalette: palette handle 0x{PaletteHandle:X8} not found", surface.PaletteHandle);
+			return 1; // DDERR_GENERIC
 		}
 
 		private uint Surface_GetOverlayPosition(ICpu cpu, VirtualMemory mem)
@@ -772,7 +926,49 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_GetColorKey(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetColorKey() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+			var lpDDColorKey = args.UInt32(2);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetColorKey(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lpDDColorKey=0x{ColorKey:X8})", 
+				thisPtr, dwFlags, lpDDColorKey);
+
+			// Find the surface
+			DirectDrawSurface? surface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				// For now, find any surface - in a complete implementation we'd match by COM object address
+				surface = s;
+				break;
+			}
+
+			if (surface == null)
+			{
+				_logger.LogError("[DDraw] GetColorKey: could not find surface");
+				return 1; // DDERR_GENERIC
+			}
+
+			if (lpDDColorKey == 0)
+			{
+				_logger.LogError("[DDraw] GetColorKey: lpDDColorKey is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Check if surface has a color key
+			if (!surface.HasColorKey)
+			{
+				_logger.LogInformation("[DDraw] Surface has no color key set");
+				return 0x88760168; // DDERR_NOCOLORKEY
+			}
+
+			// Write DDCOLORKEY structure (2 DWORDs: dwColorSpaceLowValue and dwColorSpaceHighValue)
+			_env.MemWrite32(lpDDColorKey, surface.ColorKeyLow);
+			_env.MemWrite32(lpDDColorKey + 4, surface.ColorKeyHigh);
+
+			_logger.LogInformation("[DDraw] Returning color key: low=0x{Low:X8}, high=0x{High:X8}", 
+				surface.ColorKeyLow, surface.ColorKeyHigh);
+
 			return 0; // DD_OK
 		}
 
@@ -1305,7 +1501,25 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DDraw_GetFourCCCodes(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetFourCCCodes() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lpNumCodes = args.UInt32(1);
+			var lpCodes = args.UInt32(2);
+
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetFourCCCodes(this=0x{ThisPtr:X8}, lpNumCodes=0x{LpNumCodes:X8}, lpCodes=0x{LpCodes:X8})", 
+				thisPtr, lpNumCodes, lpCodes);
+
+			if (lpNumCodes == 0)
+			{
+				_logger.LogError("[DDraw] GetFourCCCodes: lpNumCodes is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// For now, we don't support any hardware FourCC codes
+			// Return 0 to indicate no additional formats are supported
+			_env.MemWrite32(lpNumCodes, 0);
+
+			_logger.LogInformation("[DDraw] Returning 0 FourCC codes (no additional formats supported)");
 			return 0; // DD_OK
 		}
 
@@ -1335,7 +1549,42 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DDraw_GetScanLine(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetScanLine() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lpdwScanLine = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetScanLine(this=0x{ThisPtr:X8}, lpdwScanLine=0x{LpdwScanLine:X8})", 
+				thisPtr, lpdwScanLine);
+
+			if (lpdwScanLine == 0)
+			{
+				_logger.LogError("[DDraw] GetScanLine: lpdwScanLine is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Find the DirectDraw object to get display height
+			DirectDrawObject? ddrawObj = null;
+			foreach (var obj in _ddrawObjects.Values)
+			{
+				ddrawObj = obj;
+				break;
+			}
+
+			if (ddrawObj == null)
+			{
+				_logger.LogError("[DDraw] GetScanLine: could not find DirectDraw object");
+				return 1; // DDERR_GENERIC
+			}
+
+			// Simulate scan line position based on current time
+			// In a real implementation, this would query the actual hardware
+			// We'll cycle through all scan lines at approximately 60Hz refresh rate
+			var totalScanLines = (uint)(ddrawObj.Height + 40); // Add vertical blanking lines
+			var scanLine = (uint)((DateTime.UtcNow.Ticks / 10000) % totalScanLines);
+
+			_env.MemWrite32(lpdwScanLine, scanLine);
+			_logger.LogInformation("[DDraw] Returning scan line: {ScanLine} (of {Total})", scanLine, totalScanLines);
+
 			return 0; // DD_OK
 		}
 
