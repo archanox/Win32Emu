@@ -546,11 +546,24 @@ namespace Win32Emu.Win32.Modules
 			{
 				currentStyle |= NativeTypes.WindowStyle.WS_VISIBLE;
 				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now visible", hwnd);
+
+				// Send WM_SHOWWINDOW (0x0018) when window becomes visible
+				_env.SendMessageToWindow(hwnd, 0x0018, 1, 0);
+				_logger.LogDebug("[User32] ShowWindow: Sent WM_SHOWWINDOW to window 0x{Hwnd:X8}", hwnd);
+
+				// Send WM_ACTIVATEAPP (0x001C) to activate the application
+				// wParam: TRUE (1) if activating, FALSE (0) if deactivating
+				_env.SendMessageToWindow(hwnd, 0x001C, 1, 0);
+				_logger.LogDebug("[User32] ShowWindow: Sent WM_ACTIVATEAPP to window 0x{Hwnd:X8}", hwnd);
 			}
 			else
 			{
 				currentStyle &= ~NativeTypes.WindowStyle.WS_VISIBLE;
 				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now hidden", hwnd);
+
+				// Send WM_SHOWWINDOW when window is hidden
+				_env.SendMessageToWindow(hwnd, 0x0018, 0, 0);
+				_logger.LogDebug("[User32] ShowWindow: Sent WM_SHOWWINDOW (hide) to window 0x{Hwnd:X8}", hwnd);
 			}
 
 			// Store the updated style in window properties
