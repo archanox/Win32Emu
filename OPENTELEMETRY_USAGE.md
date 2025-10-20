@@ -102,10 +102,38 @@ Open http://localhost:16686 in your browser to view traces in the Jaeger UI.
 
 ## Environment Variables
 
-OpenTelemetry also respects standard environment variables:
+OpenTelemetry respects standard OpenTelemetry environment variables:
 
-- `OTEL_EXPORTER_OTLP_ENDPOINT` - Default OTLP endpoint
-- `OTEL_SERVICE_NAME` - Service name (defaults to "Win32Emu")
+- `OTEL_EXPORTER_OTLP_ENDPOINT` - OTLP endpoint URL (e.g., `http://localhost:4317`)
+  - When set, automatically enables OTLP export
+  - Command-line arguments override this value
+  - Useful for IDE integrations like JetBrains Rider
+
+Example:
+
+```bash
+# Set environment variable (works automatically without CLI flags)
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+Win32Emu game.exe
+
+# Override with command-line argument
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+Win32Emu game.exe --telemetry-otlp http://custom:4317  # Uses http://custom:4317
+```
+
+### JetBrains Rider Integration
+
+JetBrains Rider 2025.2+ has built-in OpenTelemetry support. To use it with Win32Emu:
+
+1. In Rider, go to Settings → Tools → OpenTelemetry
+2. Note the OTLP endpoint shown (typically `http://localhost:4317`)
+3. Set the environment variable in your Run Configuration:
+   ```
+   OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+   ```
+4. Run Win32Emu - telemetry will automatically be sent to Rider
+
+No command-line flags are needed when using the environment variable.
 
 ## Example Usage
 

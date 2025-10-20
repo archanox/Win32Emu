@@ -32,6 +32,9 @@ Win32Emu <path-to-pe> [options]
 
 **Environment Variables:**
 - `WIN32EMU_BACKEND`: Set rendering backend (SDL, GLFW, or Vulkan)
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: OpenTelemetry OTLP endpoint (e.g., `http://localhost:4317`)
+  - Automatically enables OpenTelemetry when set
+  - Useful for IDE integrations like JetBrains Rider
 
 **Examples:**
 ```bash
