@@ -2924,7 +2924,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// Check if output buffer is large enough
 			if (multiByteBytes.Length > cbMultiByte)
 			{
-				_logger.LogWarning("[Kernel32] WideCharToMultiByte: Buffer too small - need {NeedSize} bytes but only have {CbMultiByte}", multiByteBytes.Length, cbMultiByte);
+				_logger.LogInformation("[Kernel32] WideCharToMultiByte: Buffer too small - need {NeedSize} bytes but only have {CbMultiByte}", multiByteBytes.Length, cbMultiByte);
 				_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 				return 0;
 			}
