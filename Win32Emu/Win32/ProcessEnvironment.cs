@@ -207,6 +207,10 @@ public class ProcessEnvironment
 	// Key: (hwnd, index), Value: property value
 	private readonly Dictionary<(uint, int), uint> _windowProperties = new();
 
+	// Registered window messages (RegisterWindowMessageA)
+	private readonly Dictionary<string, uint> _registeredMessages = new(StringComparer.OrdinalIgnoreCase);
+	private uint _nextRegisteredMessage = 0xC000; // WM_USER range starts at 0x0400, registered messages at 0xC000
+
 	// Message queue management
 	private bool _hasQuitMessage;
 	private int _quitExitCode;
@@ -950,6 +954,51 @@ public class ProcessEnvironment
 	public string? GetClassNameFromAtom(uint atom)
 	{
 		return _atomToClassName.GetValueOrDefault(atom);
+	}
+
+	/// <summary>
+	/// Registers a new window message that is guaranteed to be unique throughout the system.
+	/// This implements the behavior of RegisterWindowMessageA.
+	/// </summary>
+	/// <param name="messageName">The message string to register</param>
+	/// <returns>The registered message identifier in the range 0xC000 through 0xFFFF</returns>
+	public uint RegisterWindowMessage(string messageName)
+	{
+		// If the message is already registered, return the existing ID
+		if (_registeredMessages.TryGetValue(messageName, out var existingId))
+		{
+			_logger.LogDebug("[ProcessEnv] RegisterWindowMessage: '{MessageName}' already registered as 0x{ExistingId:X4}", messageName, existingId);
+			return existingId;
+		}
+
+		// Allocate a new message ID in the registered message range (0xC000-0xFFFF)
+		var messageId = _nextRegisteredMessage;
+		_nextRegisteredMessage++;
+
+		// Ensure we don't overflow the registered message range
+		if (_nextRegisteredMessage > 0xFFFF)
+		{
+			_logger.LogWarning("[ProcessEnv] RegisterWindowMessage: Registered message range exhausted!");
+			_nextRegisteredMessage = 0xC000; // Wrap around (not ideal, but better than overflow)
+		}
+
+		_registeredMessages[messageName] = messageId;
+		_logger.LogInformation("[ProcessEnv] RegisterWindowMessage: '{MessageName}' registered as 0x{MessageId:X4}", messageName, messageId);
+		return messageId;
+	}
+
+	/// <summary>
+	/// Gets the message ID for a registered window message.
+	/// </summary>
+	/// <param name="messageName">The message string to look up</param>
+	/// <returns>The message ID if found, or 0 if not registered</returns>
+	public uint GetRegisteredMessage(string messageName)
+	{
+		if (_registeredMessages.TryGetValue(messageName, out var messageId))
+		{
+			return messageId;
+		}
+		return 0;
 	}
 
 	public uint CreateWindow(string className, string windowName, uint style, uint exStyle,

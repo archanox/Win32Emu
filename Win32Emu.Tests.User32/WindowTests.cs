@@ -637,6 +637,96 @@ public class WindowTests : IDisposable
         Assert.Equal(0, (int)result);
     }
 
+    [Fact]
+    public void RegisterWindowMessageA_WithValidString_ShouldReturnMessageId()
+    {
+        // Arrange
+        var messageNamePtr = _testEnv.WriteString("MyCustomMessage");
+
+        // Act
+        var messageId = _testEnv.CallUser32Api("REGISTERWINDOWMESSAGEA", messageNamePtr);
+
+        // Assert
+        Assert.NotEqual(0u, messageId);
+        Assert.True(messageId >= 0xC000 && messageId <= 0xFFFF, 
+            $"Message ID should be in range 0xC000-0xFFFF, but was 0x{messageId:X4}");
+    }
+
+    [Fact]
+    public void RegisterWindowMessageA_SameMessageTwice_ShouldReturnSameId()
+    {
+        // Arrange
+        var messageNamePtr1 = _testEnv.WriteString("MyCustomMessage");
+        var messageNamePtr2 = _testEnv.WriteString("MyCustomMessage");
+
+        // Act
+        var messageId1 = _testEnv.CallUser32Api("REGISTERWINDOWMESSAGEA", messageNamePtr1);
+        var messageId2 = _testEnv.CallUser32Api("REGISTERWINDOWMESSAGEA", messageNamePtr2);
+
+        // Assert
+        Assert.NotEqual(0u, messageId1);
+        Assert.Equal(messageId1, messageId2); // Same message name should return same ID
+    }
+
+    [Fact]
+    public void RegisterWindowMessageA_DifferentMessages_ShouldReturnDifferentIds()
+    {
+        // Arrange
+        var messageNamePtr1 = _testEnv.WriteString("FirstMessage");
+        var messageNamePtr2 = _testEnv.WriteString("SecondMessage");
+
+        // Act
+        var messageId1 = _testEnv.CallUser32Api("REGISTERWINDOWMESSAGEA", messageNamePtr1);
+        var messageId2 = _testEnv.CallUser32Api("REGISTERWINDOWMESSAGEA", messageNamePtr2);
+
+        // Assert
+        Assert.NotEqual(0u, messageId1);
+        Assert.NotEqual(0u, messageId2);
+        Assert.NotEqual(messageId1, messageId2); // Different messages should have different IDs
+    }
+
+    [Fact]
+    public void RegisterWindowMessageA_WithNullPointer_ShouldReturnZero()
+    {
+        // Act
+        var messageId = _testEnv.CallUser32Api("REGISTERWINDOWMESSAGEA", 0);
+
+        // Assert
+        Assert.Equal(0u, messageId);
+    }
+
+    [Fact]
+    public void RegisterWindowMessageA_WithEmptyString_ShouldReturnZero()
+    {
+        // Arrange
+        var messageNamePtr = _testEnv.WriteString("");
+
+        // Act
+        var messageId = _testEnv.CallUser32Api("REGISTERWINDOWMESSAGEA", messageNamePtr);
+
+        // Assert
+        Assert.Equal(0u, messageId);
+    }
+
+    [Fact]
+    public void RegisterWindowMessageA_CaseInsensitive_ShouldReturnSameId()
+    {
+        // Arrange
+        var messageNamePtr1 = _testEnv.WriteString("MyMessage");
+        var messageNamePtr2 = _testEnv.WriteString("MYMESSAGE");
+        var messageNamePtr3 = _testEnv.WriteString("mymessage");
+
+        // Act
+        var messageId1 = _testEnv.CallUser32Api("REGISTERWINDOWMESSAGEA", messageNamePtr1);
+        var messageId2 = _testEnv.CallUser32Api("REGISTERWINDOWMESSAGEA", messageNamePtr2);
+        var messageId3 = _testEnv.CallUser32Api("REGISTERWINDOWMESSAGEA", messageNamePtr3);
+
+        // Assert
+        Assert.NotEqual(0u, messageId1);
+        Assert.Equal(messageId1, messageId2); // Same message name (different case) should return same ID
+        Assert.Equal(messageId1, messageId3); // Same message name (different case) should return same ID
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
