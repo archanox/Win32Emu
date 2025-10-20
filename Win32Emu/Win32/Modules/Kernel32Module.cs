@@ -2865,6 +2865,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 			// Convert to multi-byte string based on code page
 			byte[] multiByteBytes;
+			_logger.LogDebug("[Kernel32] WideCharToMultiByte: Converting with code page {ActualCodePage}", actualCodePage);
 			switch (actualCodePage)
 			{
 				case CodePage.WestEurope: // Windows-1252 (Western European)
@@ -2903,6 +2904,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				}
 			}
 
+			_logger.LogDebug("[Kernel32] WideCharToMultiByte: Conversion complete, got {BytesLength} bytes", multiByteBytes.Length);
+
 			// If cbMultiByte is 0, return required buffer size
 			if (cbMultiByte == 0)
 			{
@@ -2921,6 +2924,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// Check if output buffer is large enough
 			if (multiByteBytes.Length > cbMultiByte)
 			{
+				_logger.LogWarning("[Kernel32] WideCharToMultiByte: Buffer too small - need {NeedSize} bytes but only have {CbMultiByte}", multiByteBytes.Length, cbMultiByte);
 				_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 				return 0;
 			}
@@ -2928,6 +2932,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// Copy converted bytes to output buffer
 			if (lpMultiByteStr != 0)
 			{
+				_logger.LogDebug("[Kernel32] WideCharToMultiByte: Writing {BytesLength} bytes to 0x{LpMultiByteStr:X8}", multiByteBytes.Length, lpMultiByteStr);
 				_env.MemWriteBytes(lpMultiByteStr, multiByteBytes);
 			}
 
@@ -2937,6 +2942,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				_env.MemWrite32(lpUsedDefaultChar, 0); // FALSE - no default char used (simplified)
 			}
 
+			_logger.LogInformation("[Kernel32] WideCharToMultiByte: Success, returning {BytesLength} bytes", (uint)multiByteBytes.Length);
 			return (uint)multiByteBytes.Length;
 		}
 		catch (Exception ex)
