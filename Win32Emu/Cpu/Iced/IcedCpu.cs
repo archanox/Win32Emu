@@ -24,6 +24,7 @@ public class IcedCpu : ICpu
 	private readonly double[] _fpu = new double[8];
 	private int _fpuTop = 0; // Index of ST(0) in the circular stack
 	private ushort _fpuControlWord = 0x037F; // Default FPU control word
+	private ushort _fpuStatusWord = 0x0000; // FPU status word
 
 	// RDTSC support - use Stopwatch for high-resolution timing
 	private static readonly Stopwatch RdtscStopwatch = Stopwatch.StartNew();
@@ -175,6 +176,7 @@ public class IcedCpu : ICpu
 				case Mnemonic.Bswap: ExecBswap(insn); break;
 				case Mnemonic.Cdq: ExecCdq(); break;
 				case Mnemonic.Xchg: ExecXchg(insn); break;
+				case Mnemonic.Xlatb: ExecXlatb(); break;
 				case Mnemonic.Cmpxchg: ExecCmpxchg(insn); break;
 				case Mnemonic.Xadd: ExecXadd(insn); break;
 				case Mnemonic.Cmpxchg8b: ExecCmpxchg8B(insn); break;
@@ -235,6 +237,10 @@ public class IcedCpu : ICpu
 				case Mnemonic.Fsqrt: ExecFsqrt(); break;
 				case Mnemonic.Fist: ExecFist(insn); break;
 				case Mnemonic.Fiadd: ExecFiadd(insn); break;
+				case Mnemonic.Fimul: ExecFimul(insn); break;
+				case Mnemonic.Fisub: ExecFisub(insn); break;
+				case Mnemonic.Fidiv: ExecFidiv(insn); break;
+				case Mnemonic.Fidivr: ExecFidivr(insn); break;
 				case Mnemonic.Fxch: ExecFxch(insn); break;
 				case Mnemonic.Fchs: ExecFchs(); break;
 				case Mnemonic.Fabs: ExecFabs(); break;
@@ -255,14 +261,20 @@ public class IcedCpu : ICpu
 				case Mnemonic.Fucomip: ExecFucomip(insn); break;
 				case Mnemonic.Fcmovnbe: ExecFcmovnbe(insn); break;
 				case Mnemonic.Fnstcw: ExecFnstcw(insn); break;
+				case Mnemonic.Fnstsw: ExecFnstsw(insn); break;
 				case Mnemonic.Fldcw: ExecFldcw(insn); break;
+				case Mnemonic.Fninit: ExecFninit(); break;
+				case Mnemonic.Fnclex: ExecFnclex(); break;
+				case Mnemonic.Fxam: ExecFxam(); break;
 				case Mnemonic.Wait: break; // FWAIT - no-op for now
 				// Bit operations
 				case Mnemonic.Bt: ExecBt(insn); break;
-				// String ops (byte/dword variants)
+				// String ops (byte/word/dword variants)
 				case Mnemonic.Movsb: ExecMovs(1, insn.HasRepPrefix); break;
+				case Mnemonic.Movsw: ExecMovs(2, insn.HasRepPrefix); break;
 				case Mnemonic.Movsd: ExecMovs(4, insn.HasRepPrefix); break;
 				case Mnemonic.Stosb: ExecStos(1, insn.HasRepPrefix); break;
+				case Mnemonic.Stosw: ExecStos(2, insn.HasRepPrefix); break;
 				case Mnemonic.Stosd: ExecStos(4, insn.HasRepPrefix); break;
 				case Mnemonic.Lodsb: ExecLods(1, insn.HasRepPrefix); break;
 				case Mnemonic.Lodsd: ExecLods(4, insn.HasRepPrefix); break;
@@ -1429,6 +1441,16 @@ public class IcedCpu : ICpu
 		WriteOp(insn, 1, a);
 	}
 
+	private void ExecXlatb()
+	{
+		// XLATB - Table lookup translation
+		// AL = [EBX + AL]
+		var al = (byte)(_eax & 0xFF);
+		var addr = _ebx + al;
+		var value = _mem.Read8(addr);
+		_eax = (_eax & 0xFFFFFF00) | value;
+	}
+
 	private void ExecCmpxchg(Instruction insn)
 	{
 		// CMPXCHG dest, src
@@ -2289,6 +2311,78 @@ public class IcedCpu : ICpu
 		FpuSetSt(0, FpuGetSt(0) + val);
 	}
 
+	private void ExecFimul(Instruction insn)
+	{
+		// FIMUL - Multiply ST(0) by integer
+		var addr = CalcMemAddress(insn);
+		double val;
+		
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			val = (short)_mem.Read16(addr);
+		}
+		else
+		{
+			val = (int)_mem.Read32(addr);
+		}
+		
+		FpuSetSt(0, FpuGetSt(0) * val);
+	}
+
+	private void ExecFisub(Instruction insn)
+	{
+		// FISUB - Subtract integer from ST(0)
+		var addr = CalcMemAddress(insn);
+		double val;
+		
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			val = (short)_mem.Read16(addr);
+		}
+		else
+		{
+			val = (int)_mem.Read32(addr);
+		}
+		
+		FpuSetSt(0, FpuGetSt(0) - val);
+	}
+
+	private void ExecFidiv(Instruction insn)
+	{
+		// FIDIV - Divide ST(0) by integer
+		var addr = CalcMemAddress(insn);
+		double val;
+		
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			val = (short)_mem.Read16(addr);
+		}
+		else
+		{
+			val = (int)_mem.Read32(addr);
+		}
+		
+		FpuSetSt(0, FpuGetSt(0) / val);
+	}
+
+	private void ExecFidivr(Instruction insn)
+	{
+		// FIDIVR - Divide integer by ST(0) (reversed)
+		var addr = CalcMemAddress(insn);
+		double val;
+		
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			val = (short)_mem.Read16(addr);
+		}
+		else
+		{
+			val = (int)_mem.Read32(addr);
+		}
+		
+		FpuSetSt(0, val / FpuGetSt(0));
+	}
+
 	private void ExecFxch(Instruction insn)
 	{
 		// FXCH - Exchange ST(0) with ST(i)
@@ -2900,6 +2994,77 @@ public class IcedCpu : ICpu
 		_fpuControlWord = _mem.Read16(addr);
 	}
 
+	private void ExecFnstsw(Instruction insn)
+	{
+		// FNSTSW - Store FPU status word (no wait)
+		// Can store to memory or to AX register
+		if (insn.OpCount == 0 || insn.GetOpKind(0) == OpKind.Register)
+		{
+			// FNSTSW AX - Store to AX register
+			_eax = (_eax & 0xFFFF0000) | _fpuStatusWord;
+		}
+		else
+		{
+			// FNSTSW mem16 - Store to memory
+			var addr = CalcMemAddress(insn);
+			_mem.Write16(addr, _fpuStatusWord);
+		}
+	}
+
+	private void ExecFninit()
+	{
+		// FNINIT - Initialize FPU (no wait)
+		// Reset FPU to default state
+		_fpuControlWord = 0x037F;
+		_fpuStatusWord = 0x0000;
+		_fpuTop = 0;
+		Array.Clear(_fpu, 0, _fpu.Length);
+	}
+
+	private void ExecFnclex()
+	{
+		// FNCLEX/FCLEX - Clear FPU exceptions (no wait)
+		// Clear all exception flags in status word
+		_fpuStatusWord &= 0xFF00; // Clear the lower 8 bits which contain exception flags
+	}
+
+	private void ExecFxam()
+	{
+		// FXAM - Examine ST(0) and set condition codes in status word
+		var st0 = FpuGetSt(0);
+		
+		// Clear C0, C2, C3 bits (bits 8, 10, 14)
+		_fpuStatusWord &= 0xB8FF;
+		
+		// Set condition codes based on ST(0) value
+		if (double.IsNaN(st0))
+		{
+			// NaN: C0=0, C2=0, C3=0
+			// Already cleared above
+		}
+		else if (double.IsInfinity(st0))
+		{
+			// Infinity: C0=1, C2=1, C3=0
+			_fpuStatusWord |= 0x0500; // Set C0 and C2
+		}
+		else if (st0 == 0.0)
+		{
+			// Zero: C0=0, C2=0, C3=1
+			_fpuStatusWord |= 0x4000; // Set C3
+		}
+		else
+		{
+			// Normal: C0=1, C2=0, C3=0
+			_fpuStatusWord |= 0x0100; // Set C0
+		}
+		
+		// Set sign bit (C1, bit 9) based on sign of ST(0)
+		if (st0 < 0 || (st0 == 0.0 && 1.0 / st0 < 0)) // Handle negative zero
+		{
+			_fpuStatusWord |= 0x0200; // Set C1 (sign bit)
+		}
+	}
+
 	private void ExecBt(Instruction insn)
 	{
 		// BT - Bit test
@@ -3384,6 +3549,8 @@ public class IcedCpu : ICpu
 
 	private uint Read32(uint addr) => _mem.Read32(addr);
 	private void Write32(uint addr, uint v) => _mem.Write32(addr, v);
+	private ushort Read16(uint addr) => _mem.Read16(addr);
+	private void Write16(uint addr, ushort v) => _mem.Write16(addr, v);
 
 	private void Push32(uint v)
 	{
