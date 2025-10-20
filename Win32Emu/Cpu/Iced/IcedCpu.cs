@@ -2682,7 +2682,7 @@ public class IcedCpu : ICpu
 			// FSUBRP ST(i), ST(0) - Subtract ST(0) from ST(i) and pop
 			var reg = insn.GetOpRegister(0);
 			var i = reg - Register.ST0;
-			FpuSetSt(i, FpuGetSt(0) - FpuGetSt(i));
+			FpuSetSt(i, FpuGetSt(i) - FpuGetSt(0));
 			FpuPop();
 		}
 	}
