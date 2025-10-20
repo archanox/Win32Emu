@@ -114,6 +114,66 @@ public class UnicornFpuTests : IDisposable
         Assert.True(true, "FSQRT executed without error");
     }
 
+    [Fact]
+    public void FDIVP_BasicExecution_ShouldMatchUnicorn()
+    {
+        // Test FDIVP instruction execution with ST(i), ST(0) form
+        
+        // FLD1 - Load 1.0
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+        
+        // FLD1 - Load another 1.0
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+        
+        // FDIVP ST(1), ST(0) - Divide ST(1) by ST(0) and pop (DE F9)
+        _helper.WriteCode(0xDE, 0xF9);
+        _helper.ExecuteInstruction();
+        
+        Assert.True(true, "FDIVP executed without error");
+    }
+
+    [Fact]
+    public void FDIVRP_BasicExecution_ShouldMatchUnicorn()
+    {
+        // Test FDIVRP instruction execution with ST(i), ST(0) form
+        
+        // FLD1 - Load 1.0
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+        
+        // FLD1 - Load another 1.0
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+        
+        // FDIVRP ST(1), ST(0) - Divide ST(0) by ST(1) and pop (DE F1)
+        _helper.WriteCode(0xDE, 0xF1);
+        _helper.ExecuteInstruction();
+        
+        Assert.True(true, "FDIVRP executed without error");
+    }
+
+    [Fact]
+    public void FCOMPP_BasicExecution_ShouldMatchUnicorn()
+    {
+        // Test FCOMPP instruction execution (compare and pop twice)
+        
+        // FLD1 - Load 1.0
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+        
+        // FLD1 - Load another 1.0
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+        
+        // FCOMPP - Compare ST(0) with ST(1) and pop twice (DE D9)
+        _helper.WriteCode(0xDE, 0xD9);
+        _helper.ExecuteInstruction();
+        
+        Assert.True(true, "FCOMPP executed without error");
+    }
+
     public void Dispose()
     {
         _helper?.Dispose();

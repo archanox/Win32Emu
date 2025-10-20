@@ -2769,8 +2769,10 @@ public class IcedCpu : ICpu
 			// FDIVP ST(i), ST(0) - Divide ST(i) by ST(0) and pop
 			var reg = insn.GetOpRegister(0);
 			var i = reg - Register.ST0;
-			FpuSetSt(i, FpuGetSt(i) / FpuGetSt(0));
+			var st0 = FpuGetSt(0);
+			var sti = FpuGetSt(i);
 			FpuPop();
+			FpuSetSt(i - 1, sti / st0);
 		}
 	}
 
@@ -2835,8 +2837,10 @@ public class IcedCpu : ICpu
 			// FDIVRP ST(i), ST(0) - Divide ST(0) by ST(i) and pop
 			var reg = insn.GetOpRegister(0);
 			var i = reg - Register.ST0;
-			FpuSetSt(i, FpuGetSt(0) / FpuGetSt(i));
+			var st0 = FpuGetSt(0);
+			var sti = FpuGetSt(i);
 			FpuPop();
+			FpuSetSt(i - 1, st0 / sti);
 		}
 	}
 
