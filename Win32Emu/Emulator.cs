@@ -522,12 +522,13 @@ public sealed class Emulator : IDisposable
                     var savedEdi = _cpu.GetRegister("EDI");
                     var savedEbp = _cpu.GetRegister("EBP");
                     
-                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret))
+                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
                     {
                         LogDebug($"[COM] Method returned 0x{ret:X8}");
                         var esp = _cpu.GetRegister("ESP");
                         var retEip = _vm!.Read32(esp);
-                        esp += 4; // Pop return address
+                        // COM methods use stdcall convention - callee cleans up the stack
+                        esp += 4 + (uint)comArgBytes; // Pop return address + arguments
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetRegister("EAX", ret); // Return value in EAX
                         _cpu.SetEip(retEip);
@@ -657,12 +658,13 @@ public sealed class Emulator : IDisposable
                 var savedEdi = _cpu.GetRegister("EDI");
                 var savedEbp = _cpu.GetRegister("EBP");
                 
-                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret))
+                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
                 {
                     LogDebug($"[COM] Method returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
                     var retEip = _vm!.Read32(esp);
-                    esp += 4; // Pop return address
+                    // COM methods use stdcall convention - callee cleans up the stack
+                    esp += 4 + (uint)comArgBytes; // Pop return address + arguments
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetRegister("EAX", ret); // Return value in EAX
                     _cpu.SetEip(retEip);
@@ -754,12 +756,13 @@ public sealed class Emulator : IDisposable
                     var savedEdi = _cpu.GetRegister("EDI");
                     var savedEbp = _cpu.GetRegister("EBP");
                     
-                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret))
+                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
                     {
                         LogDebug($"[COM] Method returned 0x{ret:X8}");
                         var esp = _cpu.GetRegister("ESP");
                         var retEip = _vm!.Read32(esp);
-                        esp += 4; // Pop return address
+                        // COM methods use stdcall convention - callee cleans up the stack
+                        esp += 4 + (uint)comArgBytes; // Pop return address + arguments
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetRegister("EAX", ret); // Return value in EAX
                         _cpu.SetEip(retEip);
