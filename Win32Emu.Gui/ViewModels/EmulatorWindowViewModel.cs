@@ -135,8 +135,8 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 {
                     messageCallback = (hwnd, msg, wParam, lParam) =>
                     {
-                        OnDebugOutput($"Dialog HWND=0x{info.Handle:X8} posting message MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}", DebugLevel.Debug);
-                        _emulatorService.CurrentEmulator.PostMessage(info.Handle, msg, wParam, lParam);
+                        OnDebugOutput($"Dialog HWND=0x{hwnd:X8} posting message MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}", DebugLevel.Debug);
+                        _emulatorService.CurrentEmulator.PostMessage(hwnd, msg, wParam, lParam);
                     };
                 }
                 
