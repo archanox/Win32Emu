@@ -972,16 +972,15 @@ public class ProcessEnvironment
 			return existingId;
 		}
 
-		// Allocate a new message ID in the registered message range (0xC000-0xFFFF)
-		var messageId = _nextRegisteredMessage;
-		
 		// Ensure we don't overflow the registered message range
 		if (_nextRegisteredMessage > 0xFFFF)
 		{
 			_logger.LogError("[ProcessEnv] RegisterWindowMessage: Registered message range exhausted! Cannot register '{MessageName}'", messageName);
 			return 0; // Return 0 to indicate failure
 		}
-		
+
+		// Allocate a new message ID in the registered message range (0xC000-0xFFFF)
+		var messageId = _nextRegisteredMessage;
 		_nextRegisteredMessage++;
 
 		_registeredMessages[messageName] = messageId;
