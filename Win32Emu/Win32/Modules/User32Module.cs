@@ -2096,6 +2096,26 @@ namespace Win32Emu.Win32.Modules
 
 							RestoreEbpFromStack(cpu, memory, currentEsp);
 						}
+						else
+						{
+							// Import function not implemented - simulate a return with default value
+							_logger.LogWarning("[User32] CallDialogProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0", dll, name);
+							
+							var currentEsp = cpu.GetRegister("ESP");
+							var retEip = memory.Read32(currentEsp);
+							
+							// Pop return address (assume stdcall with no parameters for safety)
+							currentEsp += 4;
+							
+							cpu.SetRegister("ESP", currentEsp);
+							cpu.SetRegister("EAX", 0); // Return 0 as default
+							cpu.SetEip(retEip);
+							
+							// Restore callee-saved registers
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+							
+							RestoreEbpFromStack(cpu, memory, currentEsp);
+						}
 					}
 
 					steps++;
@@ -2329,6 +2349,26 @@ namespace Win32Emu.Win32.Modules
 							// Restore callee-saved registers
 							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
 
+							RestoreEbpFromStack(cpu, memory, currentEsp);
+						}
+						else
+						{
+							// Import function not implemented - simulate a return with default value
+							_logger.LogWarning("[User32] CallDialogProcedureAsync: Unimplemented import {Dll}!{Name}, simulating return with 0", dll, name);
+							
+							var currentEsp = cpu.GetRegister("ESP");
+							var retEip = memory.Read32(currentEsp);
+							
+							// Pop return address (assume stdcall with no parameters for safety)
+							currentEsp += 4;
+							
+							cpu.SetRegister("ESP", currentEsp);
+							cpu.SetRegister("EAX", 0); // Return 0 as default
+							cpu.SetEip(retEip);
+							
+							// Restore callee-saved registers
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+							
 							RestoreEbpFromStack(cpu, memory, currentEsp);
 						}
 					}
