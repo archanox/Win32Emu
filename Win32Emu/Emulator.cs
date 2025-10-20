@@ -590,11 +590,12 @@ public sealed class Emulator : IDisposable
                     var name = imp.name;
                     _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
                     
-                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
-                    var savedEbx = _cpu.GetRegister("EBX");
-                    var savedEsi = _cpu.GetRegister("ESI");
-                    var savedEdi = _cpu.GetRegister("EDI");
-                    var savedEbp = _cpu.GetRegister("EBP");
+                    // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
+                    // Note: We do NOT save EBP here because some calling code uses EBP to hold the function
+                    // pointer for indirect calls (e.g., MOV EBP, [IAT_Entry]; CALL EBP). If we preserve
+                    // the EBP value at the time of the call, we'll restore the function pointer value
+                    // instead of the original frame pointer, causing crashes.
+                    var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                     
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                     {
@@ -621,11 +622,14 @@ public sealed class Emulator : IDisposable
                         _cpu.SetEip(retEip);
                         LogDebug($"[Import] Set EIP to 0x{retEip:X8}");
                         
-                        // Restore callee-saved registers
-                        _cpu.SetRegister("EBX", savedEbx);
-                        _cpu.SetRegister("ESI", savedEsi);
-                        _cpu.SetRegister("EDI", savedEdi);
-                        _cpu.SetRegister("EBP", savedEbp);
+                        // Restore callee-saved registers (except EBP - see above)
+                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                        
+                        // Restore EBP from stack to handle indirect call cases
+                        RestoreEbpFromStack(esp);
+                        
+                        // Log final state after import return
+                        LogDebug($"[Import] After return: EIP=0x{_cpu.GetEip():X8} ESP=0x{_cpu.GetRegister("ESP"):X8} EBP=0x{_cpu.GetRegister("EBP"):X8}");
                     }
                 }
             }
