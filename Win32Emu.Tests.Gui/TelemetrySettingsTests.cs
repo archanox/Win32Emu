@@ -6,15 +6,12 @@ namespace Win32Emu.Tests.Gui;
 
 public class TelemetrySettingsTests : IDisposable
 {
-    private readonly string _tempDir;
+
 
     public TelemetrySettingsTests()
     {
-        // Create temporary directory for test files
-        _tempDir = Path.Combine(Path.GetTempPath(), "Win32EmuTests_" + Guid.NewGuid().ToString());
-        Directory.CreateDirectory(_tempDir);
+        // No temp directory needed
     }
-
     [Fact]
     public void EmulatorSettings_DefaultTelemetryValues_AreCorrect()
     {
