@@ -245,6 +245,111 @@
                     </StackPanel>
                 </Border>
 
+                <!-- OpenTelemetry Section -->
+                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="0,20,0,0"
+                        Margin="0,20,0,0">
+                    <StackPanel Spacing="20">
+                        <TextBlock Text="OpenTelemetry (Observability)"
+                                 FontWeight="Bold"
+                                 FontSize="16"/>
+
+                        <!-- Enable OpenTelemetry -->
+                        <StackPanel Spacing="8">
+                            <CheckBox IsChecked="{Binding EnableOpenTelemetry}"
+                                    Content="Enable OpenTelemetry"/>
+                            <TextBlock Text="Enable OpenTelemetry for distributed tracing, metrics collection, and monitoring across all emulator sessions"
+                                     FontSize="12"
+                                     Opacity="0.7"
+                                     Margin="0,-8,0,0"
+                                     TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- Console Exporter -->
+                        <StackPanel Spacing="8" IsEnabled="{Binding EnableOpenTelemetry}">
+                            <CheckBox IsChecked="{Binding UseConsoleExporter}"
+                                    Content="Console Exporter"/>
+                            <TextBlock Text="Export telemetry data to the console for debugging and development"
+                                     FontSize="12"
+                                     Opacity="0.7"
+                                     Margin="0,-8,0,0"
+                                     TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- OTLP Exporter -->
+                        <StackPanel Spacing="8" IsEnabled="{Binding EnableOpenTelemetry}">
+                            <CheckBox IsChecked="{Binding UseOtlpExporter}"
+                                    Content="OTLP Exporter"/>
+                            <TextBlock Text="Export telemetry data to an OpenTelemetry Protocol (OTLP) endpoint (e.g., Jaeger, Grafana, Prometheus)"
+                                     FontSize="12"
+                                     Opacity="0.7"
+                                     Margin="0,-8,0,0"
+                                     TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- OTLP Endpoint -->
+                        <StackPanel Spacing="8" IsEnabled="{Binding UseOtlpExporter}">
+                            <TextBlock Text="OTLP Endpoint"
+                                     FontWeight="Bold"
+                                     FontSize="14"/>
+                            <TextBox Text="{Binding OtlpEndpoint}"
+                                   Watermark="http://localhost:4317"
+                                   HorizontalAlignment="Stretch"/>
+                            <TextBlock Text="The endpoint URL for the OTLP collector (default: http://localhost:4317)"
+                                     FontSize="12"
+                                     Opacity="0.7"/>
+                        </StackPanel>
+
+                        <!-- Information Panel -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                                Padding="12"
+                                CornerRadius="4"
+                                IsVisible="{Binding EnableOpenTelemetry}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="ℹ️ OpenTelemetry Features"
+                                         FontWeight="Bold"
+                                         FontSize="13"/>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9">
+                                    <Run Text="OpenTelemetry enables comprehensive observability:"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9"
+                                         Margin="12,4,0,0">
+                                    <Run Text="• Distributed tracing for execution flow"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9"
+                                         Margin="12,0,0,0">
+                                    <Run Text="• Metrics for instructions executed, API calls, memory usage"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9"
+                                         Margin="12,0,0,0">
+                                    <Run Text="• .NET runtime metrics (GC, JIT, thread pool)"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9"
+                                         Margin="12,0,0,4">
+                                    <Run Text="• Performance profiling and monitoring"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="11"
+                                         Opacity="0.7"
+                                         FontStyle="Italic">
+                                    <Run Text="Note: Telemetry is initialized at application startup and runs for the entire Avalonia session, capturing logs from all emulator instances."/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>
