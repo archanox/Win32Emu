@@ -33,6 +33,9 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     // Track created windows - maps Win32 HWND to Avalonia Window
     private readonly Dictionary<uint, Window> _createdWindows = new();
     
+    // Track created dialogs - maps Win32 HWND to DialogWindow
+    private readonly Dictionary<uint, Views.DialogWindow> _createdDialogs = new();
+    
     // Track created controls - maps Win32 HWND to Avalonia Control
     private readonly Dictionary<uint, Control> _createdControls = new();
     
@@ -121,8 +124,8 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     {
         OnDebugOutput($"Creating Avalonia dialog for HWND=0x{info.Handle:X8}: {info.Template.Title} ({info.Template.Width}x{info.Template.Height})", DebugLevel.Info);
         
-        // Show the dialog on the UI thread and wait for result
-        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        // Show the dialog on the UI thread (non-blocking)
+        await Dispatcher.UIThread.InvokeAsync(() =>
         {
             try
             {
@@ -140,6 +143,9 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 // Create DialogWindow from the template with message callback
                 var dialogWindow = new Views.DialogWindow(info.Template, messageCallback);
                 
+                // Track the dialog so we can close it later via EndDialog
+                _createdDialogs[info.Handle] = dialogWindow;
+                
                 // Find parent window if specified
                 Window? parentWindow = null;
                 if (info.ParentHandle != 0 && _createdWindows.TryGetValue(info.ParentHandle, out var parent))
@@ -152,17 +158,51 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                     parentWindow = _ownerWindow;
                 }
                 
-                // Show the dialog modally
-                var result = await dialogWindow.ShowDialog(parentWindow);
+                // Show the dialog non-modally
+                // Note: We can't use ShowDialog() because that would block
+                // Instead, show it as a regular window
+                dialogWindow.Show();
                 
-                OnDebugOutput($"Dialog closed for HWND=0x{info.Handle:X8} with result={result}", DebugLevel.Info);
-                
-                return result;
+                OnDebugOutput($"Dialog window shown for HWND=0x{info.Handle:X8}, message loop will handle interactions", DebugLevel.Info);
             }
             catch (Exception ex)
             {
                 OnDebugOutput($"Failed to create/show Avalonia dialog: {ex.Message}", DebugLevel.Error);
-                return 0;
+            }
+        });
+        
+        // Return immediately - the message loop will handle the dialog lifecycle
+        // The actual result will come from EndDialog
+        return 0;
+    }
+
+    public void OnDialogEnd(uint dialogHandle, int result)
+    {
+        OnDebugOutput($"Closing Avalonia dialog for HWND=0x{dialogHandle:X8} with result={result}", DebugLevel.Info);
+        
+        // Close the dialog window on the UI thread
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_createdDialogs.TryGetValue(dialogHandle, out var dialogWindow))
+            {
+                try
+                {
+                    // End the dialog with the specified result
+                    dialogWindow.EndDialog(result);
+                    
+                    // Remove from tracking
+                    _createdDialogs.Remove(dialogHandle);
+                    
+                    OnDebugOutput($"Dialog closed for HWND=0x{dialogHandle:X8}", DebugLevel.Info);
+                }
+                catch (Exception ex)
+                {
+                    OnDebugOutput($"Error closing dialog for HWND=0x{dialogHandle:X8}: {ex.Message}", DebugLevel.Error);
+                }
+            }
+            else
+            {
+                OnDebugOutput($"Dialog HWND=0x{dialogHandle:X8} not found in tracking dictionary", DebugLevel.Warning);
             }
         });
     }

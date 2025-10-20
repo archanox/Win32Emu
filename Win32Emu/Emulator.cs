@@ -1090,6 +1090,7 @@ public interface IEmulatorHost
     void OnStdOutput(string output);
     void OnWindowCreate(WindowCreateInfo info);
     Task<int> OnDialogCreate(DialogCreateInfo info);
+    void OnDialogEnd(uint dialogHandle, int result);
 }
 
 public enum DebugLevel

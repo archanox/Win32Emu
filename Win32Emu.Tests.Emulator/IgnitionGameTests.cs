@@ -323,6 +323,11 @@ public class IgnitionGameTests
         }
 
         public Task<int> OnDialogCreate(DialogCreateInfo info) => Task.FromResult(2);
+        
+        public void OnDialogEnd(uint dialogHandle, int result)
+        {
+            // Mock implementation - no-op
+        }
     }
 
     /// <summary>

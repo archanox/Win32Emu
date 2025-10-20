@@ -123,6 +123,11 @@ public class IgnitionTeaserDiagnosticTests
 
         public Task<int> OnDialogCreate(DialogCreateInfo info) => Task.FromResult(2);
         
+        public void OnDialogEnd(uint dialogHandle, int result)
+        {
+            // Mock implementation - no-op
+        }
+        
         public void TrackInstruction(uint eip)
         {
             InstructionsSinceLastApi++;
