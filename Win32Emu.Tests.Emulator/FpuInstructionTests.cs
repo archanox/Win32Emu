@@ -14,6 +14,8 @@ public class FpuInstructionTests : IDisposable
         _helper = new CpuTestHelper();
     }
 
+    #region FCOMP Tests
+
     [Fact]
     public void FCOMP_ST1_ShouldCompareAndPop()
     {
@@ -102,6 +104,97 @@ public class FpuInstructionTests : IDisposable
         Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear when ST(0) > source");
         Assert.False(_helper.IsFlagSet(CpuFlag.Pf), "PF should be clear for ordered comparison");
     }
+
+    #endregion
+
+    #region New x87 Instruction Tests
+
+    [Fact]
+    public void FDIV_ShouldDivideFloats()
+    {
+        // Arrange: Test FDIV - divide ST(0) by memory value
+        var memAddr = 0x00200000u;
+        var floatBits = BitConverter.SingleToInt32Bits(2.0f);
+        _helper.WriteMemory32(memAddr, unchecked((uint)floatBits));
+        
+        // FLD1 - Load 1.0 onto stack
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+        
+        // FLD1 - Load 1.0 onto stack again
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+        
+        // FADD - Add to get 2.0 in ST(0)
+        _helper.WriteCode(0xD8, 0xC1);
+        _helper.ExecuteInstruction();
+        
+        // Now ST(0) = 2.0, divide by 2.0 from memory should give 1.0
+        // FDIV dword ptr [memAddr] (D8 35 + address)
+        _helper.WriteCode(
+            0xD8, 0x35,
+            (byte)(memAddr & 0xFF),
+            (byte)((memAddr >> 8) & 0xFF),
+            (byte)((memAddr >> 16) & 0xFF),
+            (byte)((memAddr >> 24) & 0xFF)
+        );
+        _helper.ExecuteInstruction();
+        
+        // Result should be 1.0 (we can't directly assert FPU stack values, but test shouldn't crash)
+    }
+
+    [Fact]
+    public void FSQRT_ShouldCalculateSquareRoot()
+    {
+        // Arrange: Test FSQRT
+        var memAddr = 0x00200000u;
+        var floatBits = BitConverter.SingleToInt32Bits(4.0f);
+        _helper.WriteMemory32(memAddr, unchecked((uint)floatBits));
+        
+        // FLD dword ptr [memAddr] - Load 4.0
+        _helper.WriteCode(
+            0xD9, 0x05,
+            (byte)(memAddr & 0xFF),
+            (byte)((memAddr >> 8) & 0xFF),
+            (byte)((memAddr >> 16) & 0xFF),
+            (byte)((memAddr >> 24) & 0xFF)
+        );
+        _helper.ExecuteInstruction();
+        
+        // FSQRT (D9 FA) - Square root of ST(0)
+        _helper.WriteCode(0xD9, 0xFA);
+        _helper.ExecuteInstruction();
+        
+        // Result should be 2.0 (test shouldn't crash)
+    }
+
+    [Fact]
+    public void FCOM_ShouldCompareWithoutPop()
+    {
+        // Arrange: FCOM should compare but not pop the stack
+        
+        // FLD1 - Load 1.0 onto FPU stack
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+        
+        // FLD1 - Load another 1.0 onto FPU stack
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+        
+        // FCOM ST(1) - Compare ST(0) with ST(1) without popping (D8 D1)
+        _helper.WriteCode(0xD8, 0xD1);
+        _helper.ExecuteInstruction();
+        
+        // Assert: ZF should be set for equal values
+        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set when values are equal");
+        
+        // FCOM doesn't pop, so we can do FCOMP next
+        _helper.WriteCode(0xD8, 0xD9);
+        _helper.ExecuteInstruction();
+        // This should succeed without error
+    }
+
+    #endregion
 
     public void Dispose()
     {

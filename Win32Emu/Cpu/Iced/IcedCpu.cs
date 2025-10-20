@@ -223,7 +223,17 @@ public class IcedCpu : ICpu
 				case Mnemonic.Fadd: ExecFadd(insn); break;
 				case Mnemonic.Faddp: ExecFaddp(insn); break;
 				case Mnemonic.Fsub: ExecFsub(insn); break;
+				case Mnemonic.Fsubp: ExecFsubp(insn); break;
+				case Mnemonic.Fsubr: ExecFsubr(insn); break;
+				case Mnemonic.Fsubrp: ExecFsubrp(insn); break;
 				case Mnemonic.Fmul: ExecFmul(insn); break;
+				case Mnemonic.Fmulp: ExecFmulp(insn); break;
+				case Mnemonic.Fdiv: ExecFdiv(insn); break;
+				case Mnemonic.Fdivp: ExecFdivp(insn); break;
+				case Mnemonic.Fdivr: ExecFdivr(insn); break;
+				case Mnemonic.Fdivrp: ExecFdivrp(insn); break;
+				case Mnemonic.Fsqrt: ExecFsqrt(); break;
+				case Mnemonic.Fist: ExecFist(insn); break;
 				case Mnemonic.Fiadd: ExecFiadd(insn); break;
 				case Mnemonic.Fxch: ExecFxch(insn); break;
 				case Mnemonic.Fchs: ExecFchs(); break;
@@ -238,7 +248,9 @@ public class IcedCpu : ICpu
 				case Mnemonic.Fpatan: ExecFpatan(); break;
 				case Mnemonic.F2xm1: ExecF2xm1(); break;
 				case Mnemonic.Fscale: ExecFscale(); break;
+				case Mnemonic.Fcom: ExecFcom(insn); break;
 				case Mnemonic.Fcomp: ExecFcomp(insn); break;
+				case Mnemonic.Fcompp: ExecFcompp(); break;
 				case Mnemonic.Fucomi: ExecFucomi(insn); break;
 				case Mnemonic.Fucomip: ExecFucomip(insn); break;
 				case Mnemonic.Fcmovnbe: ExecFcmovnbe(insn); break;
@@ -2486,6 +2498,377 @@ public class IcedCpu : ICpu
 		
 		// Pop the stack
 		FpuPop();
+	}
+
+	private void ExecFcom(Instruction insn)
+	{
+		// FCOM - Compare ST(0) with source (no pop)
+		// Similar to FCOMP but doesn't pop the stack
+		double st0 = FpuGetSt(0);
+		double source;
+		
+		if (insn.OpCount == 0)
+		{
+			// FCOM with no operand defaults to ST(1)
+			source = FpuGetSt(1);
+		}
+		else if (insn.GetOpKind(0) == OpKind.Memory)
+		{
+			// FCOM m32/m64 - Compare with memory
+			var addr = CalcMemAddress(insn);
+			if (insn.MemorySize == MemorySize.Float32)
+			{
+				source = BitConverter.Int32BitsToSingle((int)_mem.Read32(addr));
+			}
+			else
+			{
+				// Handle Float64 and unspecified memory sizes (default to 64-bit double)
+				var bits = _mem.Read64(addr);
+				source = BitConverter.Int64BitsToDouble((long)bits);
+			}
+		}
+		else
+		{
+			// FCOM ST(i) - Compare with ST(i)
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			source = FpuGetSt(i);
+		}
+		
+		// Set EFLAGS based on comparison
+		if (double.IsNaN(st0) || double.IsNaN(source))
+		{
+			SetFlag(Zf);
+			SetFlag(Pf);
+			SetFlag(Cf);
+		}
+		else if (st0 > source)
+		{
+			ClearFlag(Zf);
+			ClearFlag(Pf);
+			ClearFlag(Cf);
+		}
+		else if (st0 < source)
+		{
+			ClearFlag(Zf);
+			ClearFlag(Pf);
+			SetFlag(Cf);
+		}
+		else // st0 == source
+		{
+			SetFlag(Zf);
+			ClearFlag(Pf);
+			ClearFlag(Cf);
+		}
+		// No pop for FCOM
+	}
+
+	private void ExecFcompp()
+	{
+		// FCOMPP - Compare ST(0) with ST(1) and pop twice
+		double st0 = FpuGetSt(0);
+		double st1 = FpuGetSt(1);
+		
+		// Set EFLAGS based on comparison
+		if (double.IsNaN(st0) || double.IsNaN(st1))
+		{
+			SetFlag(Zf);
+			SetFlag(Pf);
+			SetFlag(Cf);
+		}
+		else if (st0 > st1)
+		{
+			ClearFlag(Zf);
+			ClearFlag(Pf);
+			ClearFlag(Cf);
+		}
+		else if (st0 < st1)
+		{
+			ClearFlag(Zf);
+			ClearFlag(Pf);
+			SetFlag(Cf);
+		}
+		else // st0 == st1
+		{
+			SetFlag(Zf);
+			ClearFlag(Pf);
+			ClearFlag(Cf);
+		}
+		
+		// Pop twice
+		FpuPop();
+		FpuPop();
+	}
+
+	private void ExecFsubp(Instruction insn)
+	{
+		// FSUBP - Subtract and pop
+		if (insn.OpCount == 0)
+		{
+			// FSUBP - Subtract ST(0) from ST(1) and pop
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st1 - st0);
+		}
+		else
+		{
+			// FSUBP ST(i), ST(0) - Subtract ST(0) from ST(i) and pop
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) - FpuGetSt(0));
+			FpuPop();
+		}
+	}
+
+	private void ExecFsubr(Instruction insn)
+	{
+		// FSUBR - Reverse subtract (subtract ST(0) from source)
+		if (insn.OpCount == 0)
+		{
+			// FSUBR - Subtract ST(0) from ST(1), store in ST(0)
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuSetSt(0, st0 - st1);
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.GetOpKind(0) == OpKind.Memory)
+			{
+				// FSUBR m32/m64 - Subtract ST(0) from memory
+				var addr = CalcMemAddress(insn);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)_mem.Read32(addr));
+				}
+				else
+				{
+					var bits = _mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, val - FpuGetSt(0));
+			}
+			else
+			{
+				// FSUBR ST(i) - Subtract ST(0) from ST(i), store in ST(0)
+				var reg = insn.GetOpRegister(0);
+				var i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(i) - FpuGetSt(0));
+			}
+		}
+		else
+		{
+			// FSUBR ST(i), ST(0) - Subtract ST(0) from ST(i)
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(0) - FpuGetSt(i));
+		}
+	}
+
+	private void ExecFsubrp(Instruction insn)
+	{
+		// FSUBRP - Reverse subtract and pop
+		if (insn.OpCount == 0)
+		{
+			// FSUBRP - Subtract ST(0) from ST(1) and pop
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st0 - st1);
+		}
+		else
+		{
+			// FSUBRP ST(i), ST(0) - Subtract ST(0) from ST(i) and pop
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(0) - FpuGetSt(i));
+			FpuPop();
+		}
+	}
+
+	private void ExecFmulp(Instruction insn)
+	{
+		// FMULP - Multiply and pop
+		if (insn.OpCount == 0)
+		{
+			// FMULP - Multiply ST(0) by ST(1) and pop
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st0 * st1);
+		}
+		else
+		{
+			// FMULP ST(i), ST(0) - Multiply ST(i) by ST(0) and pop
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) * FpuGetSt(0));
+			FpuPop();
+		}
+	}
+
+	private void ExecFdiv(Instruction insn)
+	{
+		// FDIV - Divide
+		if (insn.OpCount == 0)
+		{
+			// FDIV - Divide ST(0) by ST(1)
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuSetSt(0, st1 / st0);
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.GetOpKind(0) == OpKind.Memory)
+			{
+				// FDIV m32/m64 - Divide ST(0) by memory
+				var addr = CalcMemAddress(insn);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)_mem.Read32(addr));
+				}
+				else
+				{
+					var bits = _mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, FpuGetSt(0) / val);
+			}
+			else
+			{
+				// FDIV ST(i) - Divide ST(0) by ST(i)
+				var reg = insn.GetOpRegister(0);
+				var i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(0) / FpuGetSt(i));
+			}
+		}
+		else
+		{
+			// FDIV ST(i), ST(0) - Divide ST(i) by ST(0)
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) / FpuGetSt(0));
+		}
+	}
+
+	private void ExecFdivp(Instruction insn)
+	{
+		// FDIVP - Divide and pop
+		if (insn.OpCount == 0)
+		{
+			// FDIVP - Divide ST(1) by ST(0) and pop
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st1 / st0);
+		}
+		else
+		{
+			// FDIVP ST(i), ST(0) - Divide ST(i) by ST(0) and pop
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) / FpuGetSt(0));
+			FpuPop();
+		}
+	}
+
+	private void ExecFdivr(Instruction insn)
+	{
+		// FDIVR - Reverse divide (divide source by ST(0))
+		if (insn.OpCount == 0)
+		{
+			// FDIVR - Divide ST(0) by ST(1), store in ST(0)
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuSetSt(0, st0 / st1);
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.GetOpKind(0) == OpKind.Memory)
+			{
+				// FDIVR m32/m64 - Divide memory by ST(0)
+				var addr = CalcMemAddress(insn);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)_mem.Read32(addr));
+				}
+				else
+				{
+					var bits = _mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, val / FpuGetSt(0));
+			}
+			else
+			{
+				// FDIVR ST(i) - Divide ST(i) by ST(0), store in ST(0)
+				var reg = insn.GetOpRegister(0);
+				var i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(i) / FpuGetSt(0));
+			}
+		}
+		else
+		{
+			// FDIVR ST(i), ST(0) - Divide ST(0) by ST(i)
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(0) / FpuGetSt(i));
+		}
+	}
+
+	private void ExecFdivrp(Instruction insn)
+	{
+		// FDIVRP - Reverse divide and pop
+		if (insn.OpCount == 0)
+		{
+			// FDIVRP - Divide ST(0) by ST(1) and pop
+			var st0 = FpuGetSt(0);
+			var st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st0 / st1);
+		}
+		else
+		{
+			// FDIVRP ST(i), ST(0) - Divide ST(0) by ST(i) and pop
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(0) / FpuGetSt(i));
+			FpuPop();
+		}
+	}
+
+	private void ExecFsqrt()
+	{
+		// FSQRT - Square root of ST(0)
+		FpuSetSt(0, Math.Sqrt(FpuGetSt(0)));
+	}
+
+	private void ExecFist(Instruction insn)
+	{
+		// FIST - Store integer (no pop)
+		var val = FpuGetSt(0);
+		var addr = CalcMemAddress(insn);
+		
+		// Get rounding mode from control word (for simplicity, use standard rounding)
+		var rounded = Math.Round(val);
+		
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			_mem.Write16(addr, unchecked((ushort)(short)rounded));
+		}
+		else if (insn.MemorySize == MemorySize.Int32)
+		{
+			_mem.Write32(addr, unchecked((uint)(int)rounded));
+		}
+		else
+		{
+			// Default to 32-bit
+			_mem.Write32(addr, unchecked((uint)(int)rounded));
+		}
+		// No pop for FIST
 	}
 
 	private void ExecFcmovnbe(Instruction insn)
