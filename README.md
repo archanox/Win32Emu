@@ -75,6 +75,7 @@ Win32Emu game.exe --telemetry-otlp http://localhost:4317
 - [VFS_DOCUMENTATION.md](VFS_DOCUMENTATION.md) - Virtual File System for game file isolation
 - [OPENTELEMETRY_USAGE.md](OPENTELEMETRY_USAGE.md) - OpenTelemetry for logging, metrics, and profiling
 - [TELEMETRY_EXAMPLE.md](TELEMETRY_EXAMPLE.md) - Practical examples of using OpenTelemetry
+- [RIDER_OPENTELEMETRY_SETUP.md](RIDER_OPENTELEMETRY_SETUP.md) - JetBrains Rider integration guide
 
 ### Win32Emu.Gui
 Cross-platform desktop GUI for managing your game library and emulator settings. Built with Avalonia UI.
