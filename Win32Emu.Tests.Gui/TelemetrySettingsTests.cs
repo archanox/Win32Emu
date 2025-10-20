@@ -137,16 +137,6 @@ public class TelemetrySettingsTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try
-            {
-                Directory.Delete(_tempDir, true);
-            }
-            catch
-            {
-                // Ignore cleanup errors
-            }
-        }
+        // No cleanup needed
     }
 }
