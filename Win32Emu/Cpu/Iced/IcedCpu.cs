@@ -2779,10 +2779,10 @@ public class IcedCpu : ICpu
 		// FDIVR - Reverse divide (divide source by ST(0))
 		if (insn.OpCount == 0)
 		{
-			// FDIVR - Divide ST(0) by ST(1), store in ST(0)
+			// FDIVR - Divide ST(1) by ST(0), store in ST(0)
 			var st0 = FpuGetSt(0);
 			var st1 = FpuGetSt(1);
-			FpuSetSt(0, st0 / st1);
+			FpuSetSt(0, st1 / st0);
 		}
 		else if (insn.OpCount == 1)
 		{
