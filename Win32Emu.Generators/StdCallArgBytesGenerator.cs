@@ -112,7 +112,7 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				    {
 				        public static int GetArgBytes(string dll, string export)
 				        {
-				            switch ((dll.ToUpperInvariant(), export))
+				            switch ((dll.ToUpperInvariant(), export.ToUpperInvariant()))
 				            {
 				""");
 
@@ -125,7 +125,7 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 
 				foreach (var e in distinct)
 				{
-					sb.AppendLine($"                case (\"{e.DllName}\", \"{e.MethodName}\"): return {e.ArgBytes};");
+					sb.AppendLine($"                case (\"{e.DllName}\", \"{e.MethodName.ToUpperInvariant()}\"): return {e.ArgBytes};");
 				}
 			}
 
