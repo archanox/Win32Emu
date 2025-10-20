@@ -598,12 +598,28 @@ public sealed class Emulator : IDisposable
                     
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                     {
-                        LogDebug($"[Import] Returned 0x{ret:X8}");
+                        LogDebug($"[Import] Returned 0x{ret:X8}, argBytes={argBytes}");
                         var esp = _cpu.GetRegister("ESP");
+                        LogDebug($"[Import] ESP before return: 0x{esp:X8}");
+                        
+                        // Read first 4 stack values for debugging
+                        try
+                        {
+                            var stack0 = _vm!.Read32(esp);
+                            var stack4 = _vm!.Read32(esp + 4);
+                            var stack8 = _vm!.Read32(esp + 8);
+                            var stack12 = _vm!.Read32(esp + 12);
+                            LogDebug($"[Import] Stack: [ESP+0]=0x{stack0:X8} [ESP+4]=0x{stack4:X8} [ESP+8]=0x{stack8:X8} [ESP+12]=0x{stack12:X8}");
+                        }
+                        catch { }
+                        
                         var retEip = _vm!.Read32(esp);
+                        LogDebug($"[Import] Return address from stack: 0x{retEip:X8}");
                         esp += 4 + (uint)argBytes;
+                        LogDebug($"[Import] ESP after cleanup: 0x{esp:X8} (added {4 + argBytes} bytes)");
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetEip(retEip);
+                        LogDebug($"[Import] Set EIP to 0x{retEip:X8}");
                         
                         // Restore callee-saved registers
                         _cpu.SetRegister("EBX", savedEbx);
