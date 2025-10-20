@@ -204,12 +204,6 @@ namespace Win32Emu.Win32.Modules
 			public Rendering.IRenderingBackend? RenderingBackend { get; set; }
 			public uint CooperativeLevel { get; set; }
 			public IntPtr WindowHandle { get; set; }
-			
-			/// <summary>
-			/// Tracks whether UI events from the rendering backend have been subscribed to the ProcessEnvironment.
-			/// This prevents duplicate event handler registration.
-			/// </summary>
-			public bool UIEventsSubscribed { get; set; }
 		}
 
 		private sealed class DirectDrawSurface
@@ -1404,12 +1398,11 @@ namespace Win32Emu.Win32.Modules
 					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
 				}
 				
-				// Subscribe to UI events from the rendering backend (only once)
-				// This ensures SDL events are translated into Win32 messages
-				if (obj.RenderingBackend != null && !obj.UIEventsSubscribed)
+				// Subscribe to UI events from the rendering backend
+				// ProcessEnvironment now tracks subscriptions and prevents duplicates automatically
+				if (obj.RenderingBackend != null)
 				{
 					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
-					obj.UIEventsSubscribed = true;
 					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
 				}
 			}
@@ -1469,12 +1462,11 @@ namespace Win32Emu.Win32.Modules
 					}
 				}
 				
-				// Subscribe to UI events from the rendering backend (only once)
-				// This ensures SDL events are translated into Win32 messages
-				if (obj.RenderingBackend != null && !obj.UIEventsSubscribed)
+				// Subscribe to UI events from the rendering backend
+				// ProcessEnvironment now tracks subscriptions and prevents duplicates automatically
+				if (obj.RenderingBackend != null)
 				{
 					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
-					obj.UIEventsSubscribed = true;
 					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
 				}
 			}
