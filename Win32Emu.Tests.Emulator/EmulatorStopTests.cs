@@ -79,5 +79,10 @@ public class EmulatorStopTests : IDisposable
         public void OnStdOutput(string output) { }
         public void OnWindowCreate(WindowCreateInfo info) { }
         public Task<int> OnDialogCreate(DialogCreateInfo info) => Task.FromResult(2);
+        
+        public void OnDialogEnd(uint dialogHandle, int result)
+        {
+            // Mock implementation - no-op
+        }
     }
 }

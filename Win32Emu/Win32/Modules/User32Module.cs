@@ -1777,10 +1777,13 @@ namespace Win32Emu.Win32.Modules
 				var hDlg = _env.RegisterHandle(new object()); // Dialog handle
 				_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog handle=0x{HDlg:X8}", hDlg);
 
-				// If we have a host, show the dialog through Avalonia
+				// Initialize dialog state for proper message loop handling
+				_env.InitializeDialogState(hDlg);
+
+				// If we have a host, show the dialog through Avalonia (non-blocking)
 				if (_host != null)
 				{
-					_logger.LogInformation("[User32] DialogBoxParamAsync: Showing dialog through Avalonia UI");
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Showing dialog through Avalonia UI with message loop");
 
 					try
 					{
@@ -1793,18 +1796,17 @@ namespace Win32Emu.Win32.Modules
 							InitParam = dwInitParam
 						};
 
-						// Show the dialog and wait for result
-						var avaloniaResult = await _host.OnDialogCreate(dialogInfo);
-
-						_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog closed with result={DialogResult}", avaloniaResult);
-
-						// Clean up and return the result
-						_env.CloseHandle(hDlg);
-						return (uint)avaloniaResult;
+						// Show the dialog non-blocking
+						// OnDialogCreate will create and show the window, then return immediately
+						// The window will stay open while we process messages below
+						_ = _host.OnDialogCreate(dialogInfo);
+						
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog window shown, proceeding to message loop");
 					}
 					catch (Exception ex)
 					{
 						_logger.LogError(ex, "[User32] DialogBoxParamAsync: Exception showing dialog through host");
+						_env.CleanupDialogState(hDlg);
 						_env.CloseHandle(hDlg);
 						return 0;
 					}
@@ -1814,60 +1816,48 @@ namespace Win32Emu.Win32.Modules
 					_logger.LogWarning("[User32] DialogBoxParamAsync: No host available to show Avalonia dialog");
 				}
 
-				// If we reach here, fall through to legacy behavior with this handle
-			}
-			else
-			{
-				_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to load dialog template, falling back to legacy behavior");
-			}
+				// Call the dialog procedure with WM_INITDIALOG (continues for both Avalonia and non-Avalonia paths)
+				
+				// Call the dialog procedure with WM_INITDIALOG (0x0110)
+				// WM_INITDIALOG signature: BOOL CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+				// wParam = hWndParent (or 0 if no focus control)
+				// lParam = dwInitParam
+				const uint WM_INITDIALOG = 0x0110;
+				var dialogProcTimedOut = false;
+				var dialogProcCancelled = false;
 
-			// Create a dialog window handle (fallback for when template couldn't be loaded or no host)
-			var hDlgFallback = _env.RegisterHandle(new object()); // Dialog handle
-			_logger.LogInformation("[User32] DialogBoxParamAsync: Created fallback dialog handle=0x{HDlg:X8}", hDlgFallback);
+				if (lpDialogFunc != 0)
+				{
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Calling dialog procedure with WM_INITDIALOG");
+					var (initResult, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam, cancellationToken);
+					_logger.LogInformation("[User32] DialogBoxParamAsync: WM_INITDIALOG returned {InitResult}", initResult);
+					dialogProcTimedOut = timedOut;
+					dialogProcCancelled = cancelled;
+				}
+				else
+				{
+					_logger.LogWarning("[User32] DialogBoxParamAsync: No dialog procedure specified");
+				}
 
-			// Initialize dialog state
-			_env.InitializeDialogState(hDlgFallback);
+				// If the dialog procedure timed out or was cancelled during initialization, end the dialog immediately
+				if (dialogProcTimedOut || dialogProcCancelled)
+				{
+					_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status}, ending dialog with result 0",
+						dialogProcCancelled ? "cancelled" : "timed out");
+					_env.SetDialogResult(hDlg, 0);
+				}
 
-			// Call the dialog procedure with WM_INITDIALOG (0x0110)
-			// WM_INITDIALOG signature: BOOL CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
-			// wParam = hWndParent (or 0 if no focus control)
-			// lParam = dwInitParam
-			const uint WM_INITDIALOG = 0x0110;
-			var dialogProcTimedOut = false;
-			var dialogProcCancelled = false;
+				// Run modal message loop until EndDialog is called
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Entering modal message loop");
 
-			if (lpDialogFunc != 0)
-			{
-				_logger.LogInformation("[User32] DialogBoxParamAsync: Calling dialog procedure with WM_INITDIALOG");
-				var (initResult, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlgFallback, WM_INITDIALOG, 0, dwInitParam, cancellationToken);
-				_logger.LogInformation("[User32] DialogBoxParamAsync: WM_INITDIALOG returned {InitResult}", initResult);
-				dialogProcTimedOut = timedOut;
-				dialogProcCancelled = cancelled;
-			}
-			else
-			{
-				_logger.LogWarning("[User32] DialogBoxParamAsync: No dialog procedure specified");
-			}
+				const int MAX_ITERATIONS = 10000; // Safety limit to prevent infinite loops
+				var iterations = 0;
+				var consecutiveEmptyIterations = 0;
+				const int MAX_EMPTY_ITERATIONS = 100; // Exit if no messages for 100 iterations
 
-			// If the dialog procedure timed out or was cancelled during initialization, end the dialog immediately
-			if (dialogProcTimedOut || dialogProcCancelled)
-			{
-				_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status}, ending dialog with result 0",
-					dialogProcCancelled ? "cancelled" : "timed out");
-				_env.SetDialogResult(hDlgFallback, 0);
-			}
-
-			// Run modal message loop until EndDialog is called
-			_logger.LogInformation("[User32] DialogBoxParamAsync: Entering modal message loop");
-
-			const int MAX_ITERATIONS = 10000; // Safety limit to prevent infinite loops
-			var iterations = 0;
-			var consecutiveEmptyIterations = 0;
-			const int MAX_EMPTY_ITERATIONS = 100; // Exit if no messages for 100 iterations
-
-			while (!_env.IsDialogEnded(hDlgFallback) && iterations < MAX_ITERATIONS && !cancellationToken.IsCancellationRequested)
-			{
-				iterations++;
+				while (!_env.IsDialogEnded(hDlg) && iterations < MAX_ITERATIONS && !cancellationToken.IsCancellationRequested)
+				{
+					iterations++;
 
 				// Check for quit message
 				if (_env.HasQuitMessage())
@@ -1887,11 +1877,11 @@ namespace Win32Emu.Win32.Modules
 					_logger.LogDebug("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", msg.Message, msg.Hwnd);
 
 					// Dispatch the message to the dialog procedure if it's for our dialog
-					if (msg.Hwnd == hDlgFallback || msg.Hwnd == 0)
+					if (msg.Hwnd == hDlg || msg.Hwnd == 0)
 					{
 						if (lpDialogFunc != 0)
 						{
-							var (result, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlgFallback, msg.Message, msg.WParam, msg.LParam, cancellationToken);
+							var (result, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam, cancellationToken);
 							_logger.LogDebug("[User32] DialogBoxParamAsync: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
 
 							// If dialog procedure times out or is cancelled, force end the dialog
@@ -1899,7 +1889,7 @@ namespace Win32Emu.Win32.Modules
 							{
 								_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status} during message processing, forcing dialog end",
 									cancelled ? "cancelled" : "timed out");
-								_env.SetDialogResult(hDlgFallback, 0);
+								_env.SetDialogResult(hDlg, 0);
 							}
 						}
 					}
@@ -1917,7 +1907,7 @@ namespace Win32Emu.Win32.Modules
 					if (dialogProcTimedOut && consecutiveEmptyIterations >= MAX_EMPTY_ITERATIONS)
 					{
 						_logger.LogWarning("[User32] DialogBoxParamAsync: No messages and dialog procedure timed out, forcing dialog end");
-						_env.SetDialogResult(hDlgFallback, 0);
+						_env.SetDialogResult(hDlg, 0);
 					}
 
 					// Yield to avoid tight loop without introducing artificial delay
@@ -1936,14 +1926,20 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Get the result from EndDialog
-			var fallbackDialogResult = _env.GetDialogResult(hDlgFallback);
+			var dialogResult = _env.GetDialogResult(hDlg);
 
 			// Clean up dialog state
-			_env.CleanupDialogState(hDlgFallback);
-			_env.CloseHandle(hDlgFallback);
+			_env.CleanupDialogState(hDlg);
+			_env.CloseHandle(hDlg);
 
-			_logger.LogInformation("[User32] DialogBoxParamAsync: Returning result={DialogResult}", fallbackDialogResult);
-			return fallbackDialogResult;
+			_logger.LogInformation("[User32] DialogBoxParamAsync: Returning result={DialogResult}", dialogResult);
+			return dialogResult;
+		}
+		else
+		{
+			_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to load dialog template");
+			return 0;
+		}
 		}
 
 		/// <summary>
@@ -2394,6 +2390,20 @@ namespace Win32Emu.Win32.Modules
 			// Set the dialog result in the process environment
 			// This will signal DialogBoxParamA to exit its message loop
 			var success = _env.SetDialogResult(hDlg, nResult);
+
+			// If we have a host, close the Avalonia dialog window
+			if (_host != null && success)
+			{
+				try
+				{
+					// Notify host to close the dialog window
+					_host.OnDialogEnd(hDlg, (int)nResult);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[User32] EndDialog: Exception closing Avalonia dialog");
+				}
+			}
 
 			return success ? 1u : 0u; // TRUE if successful, FALSE otherwise
 		}
