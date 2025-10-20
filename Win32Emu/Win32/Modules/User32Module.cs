@@ -73,6 +73,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = RegisterClassA(a.UInt32(0));
 					return true;
 
+				case "REGISTERWINDOWMESSAGEA":
+					returnValue = RegisterWindowMessageA(a.Lpstr(0));
+					return true;
+
 				case "CREATEWINDOWEXA":
 					returnValue = CreateWindowExA(
 						a.UInt32(0), // dwExStyle
@@ -343,6 +347,55 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[User32] RegisterClassA: Failed to register '{ClassName}'", className);
 			return 0;
+		}
+
+		/// <summary>
+		/// Defines a new window message that is guaranteed to be unique throughout the system.
+		/// The message value can be used in calls to SendMessage or PostMessage.
+		/// </summary>
+		/// <param name="lpString">
+		/// A pointer to a null-terminated string that specifies the message to be registered.
+		/// </param>
+		/// <returns>
+		/// If the message is successfully registered, the return value is a message identifier in the range 0xC000 through 0xFFFF.
+		/// If the function fails, the return value is zero. To get extended error information, call GetLastError.
+		/// </returns>
+		/// <remarks>
+		/// The RegisterWindowMessage function is typically used to register messages for communicating between two cooperating applications.
+		/// If two different applications register the same message string, the applications return the same message value.
+		/// The message remains registered until the session ends.
+		/// Only use RegisterWindowMessage when more than one application must process the same message.
+		/// For sending private messages within a window class, an application can use any integer in the range WM_USER through 0x7FFF.
+		/// (Messages in this range are private to a window class, not to an application. For example, predefined control classes
+		/// such as BUTTON, EDIT, LISTBOX, and COMBOBOX may already be using values in this range.)
+		/// </remarks>
+		[DllModuleExport(18)]
+		private unsafe uint RegisterWindowMessageA(sbyte* lpString)
+		{
+			// Validate the input pointer
+			if (lpString == null)
+			{
+				_logger.LogWarning("[User32] RegisterWindowMessageA: NULL string pointer");
+				return 0;
+			}
+
+			var lpStringPtr = (uint)(nint)lpString;
+			
+			// Read the message string from memory
+			var messageString = _env.ReadAnsiString(lpStringPtr);
+
+			if (string.IsNullOrEmpty(messageString))
+			{
+				_logger.LogWarning("[User32] RegisterWindowMessageA: Empty message string");
+				return 0;
+			}
+
+			// Register the message in the process environment
+			var messageId = _env.RegisterWindowMessage(messageString);
+
+			_logger.LogInformation("[User32] RegisterWindowMessageA: '{MessageString}' -> 0x{MessageId:X4}", messageString, messageId);
+			
+			return messageId;
 		}
 
 		[DllModuleExport(3)]
