@@ -19,6 +19,7 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
     private int _width;
     private int _height;
     private readonly object _lock = new();
+    private GlfwCallbacks.ErrorCallback? _errorCallback;
 
     /// <summary>
     /// Event fired when a UI event occurs (mouse, keyboard, window)
@@ -43,20 +44,31 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             _width = width;
             _height = height;
 
+            // Set up GLFW error callback to route errors through ILogger
+            _errorCallback = (Silk.NET.GLFW.ErrorCode error, string description) =>
+            {
+                _logger.LogError("[SilkGLFW] GLFW Error {ErrorCode}: {Description}", error, description);
+            };
+            _glfw.SetErrorCallback(_errorCallback);
+
             // Initialize GLFW
+            _logger.LogInformation("[SilkGLFW] Initializing GLFW...");
             if (!_glfw.Init())
             {
                 _logger.LogError("[SilkGLFW] Failed to initialize GLFW");
                 return false;
             }
+            _logger.LogInformation("[SilkGLFW] GLFW initialized successfully");
 
             // Set window hints
+            _logger.LogInformation("[SilkGLFW] Setting window hints for OpenGL 3.3 Core...");
             _glfw.WindowHint(WindowHintInt.ContextVersionMajor, 3);
             _glfw.WindowHint(WindowHintInt.ContextVersionMinor, 3);
             _glfw.WindowHint(WindowHintOpenGlProfile.OpenGlProfile, OpenGlProfile.Core);
             _glfw.WindowHint(WindowHintBool.Resizable, true);
 
             // Create window
+            _logger.LogInformation("[SilkGLFW] Creating window: {Width}x{Height} - '{Title}'", width, height, title);
             _window = _glfw.CreateWindow(width, height, title, null, null);
             if (_window == null)
             {
@@ -64,8 +76,10 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
                 _glfw.Terminate();
                 return false;
             }
+            _logger.LogInformation("[SilkGLFW] Window created successfully");
 
             // Make context current and load OpenGL
+            _logger.LogInformation("[SilkGLFW] Making context current and loading OpenGL...");
             _glfw.MakeContextCurrent(_window);
             _gl = GL.GetApi(_glfw.GetProcAddress);
 
@@ -76,8 +90,20 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
                 _glfw.Terminate();
                 return false;
             }
+            _logger.LogInformation("[SilkGLFW] OpenGL loaded successfully");
+
+            // Log OpenGL version information
+            var glVersionPtr = _gl.GetString(StringName.Version);
+            var glVendorPtr = _gl.GetString(StringName.Vendor);
+            var glRendererPtr = _gl.GetString(StringName.Renderer);
+            var glVersion = Marshal.PtrToStringAnsi((IntPtr)glVersionPtr) ?? "Unknown";
+            var glVendor = Marshal.PtrToStringAnsi((IntPtr)glVendorPtr) ?? "Unknown";
+            var glRenderer = Marshal.PtrToStringAnsi((IntPtr)glRendererPtr) ?? "Unknown";
+            _logger.LogInformation("[SilkGLFW] OpenGL Version: {Version}, Vendor: {Vendor}, Renderer: {Renderer}", 
+                glVersion, glVendor, glRenderer);
 
             // Create texture for frame buffer
+            _logger.LogInformation("[SilkGLFW] Creating frame buffer texture...");
             _textureId = _gl.GenTexture();
             _gl.BindTexture(TextureTarget.Texture2D, _textureId);
             _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Linear);
@@ -88,6 +114,7 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             // Allocate texture storage
             _gl.TexImage2D(TextureTarget.Texture2D, 0, (int)InternalFormat.Rgba8, (uint)width, (uint)height, 
                           0, PixelFormat.Rgba, PixelType.UnsignedByte, null);
+            _logger.LogInformation("[SilkGLFW] Frame buffer texture created: ID={TextureId}", _textureId);
 
             // Set up window callbacks for lifecycle events
             _glfw.SetWindowFocusCallback(_window, (window, focused) =>
@@ -213,6 +240,7 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
         {
             if (!_initialized || _gl == null || _window == null)
             {
+                _logger.LogWarning("[SilkGLFW] UpdateFrameBuffer called but backend not initialized");
                 return false;
             }
 
@@ -233,6 +261,8 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             // TODO: Implement full OpenGL rendering pipeline (use shaders and VAOs) for proper rendering.
             // For now, just update the texture - actual rendering requires more OpenGL setup
             _glfw.SwapBuffers(_window);
+            
+            _logger.LogDebug("[SilkGLFW] Frame buffer updated and swapped");
 
             return true;
         }
@@ -260,10 +290,12 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
         {
             if (!_initialized)
             {
+                _logger.LogDebug("[SilkGLFW] ProcessEvents called but backend not initialized");
                 return;
             }
 
             _glfw.PollEvents();
+            _logger.LogDebug("[SilkGLFW] Events polled");
             // Note: GLFW event handling would typically be set up via callbacks
             // in Initialize() using SetMouseButtonCallback, SetKeyCallback, etc.
             // For now, we poll but don't translate events to UI events.
