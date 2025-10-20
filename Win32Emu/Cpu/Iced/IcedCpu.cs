@@ -3059,7 +3059,7 @@ public class IcedCpu : ICpu
 		}
 		
 		// Set sign bit (C1, bit 9) based on sign of ST(0)
-		if (st0 < 0 || (st0 == 0.0 && 1.0 / st0 < 0)) // Handle negative zero
+		if ((BitConverter.DoubleToInt64Bits(st0) & (1L << 63)) != 0) // Handle negative zero and negative numbers
 		{
 			_fpuStatusWord |= 0x0200; // Set C1 (sign bit)
 		}
