@@ -208,8 +208,9 @@ public class ProcessEnvironment
 	private readonly Dictionary<(uint, int), uint> _windowProperties = new();
 
 	// Registered window messages (RegisterWindowMessageA)
+	// Registered messages are allocated in the range 0xC000-0xFFFF
 	private readonly Dictionary<string, uint> _registeredMessages = new(StringComparer.OrdinalIgnoreCase);
-	private uint _nextRegisteredMessage = 0xC000; // WM_USER range starts at 0x0400, registered messages at 0xC000
+	private uint _nextRegisteredMessage = 0xC000;
 
 	// Message queue management
 	private bool _hasQuitMessage;
@@ -973,14 +974,15 @@ public class ProcessEnvironment
 
 		// Allocate a new message ID in the registered message range (0xC000-0xFFFF)
 		var messageId = _nextRegisteredMessage;
-		_nextRegisteredMessage++;
-
+		
 		// Ensure we don't overflow the registered message range
-		if (_nextRegisteredMessage > 0xFFFF)
+		if (_nextRegisteredMessage >= 0xFFFF)
 		{
-			_logger.LogWarning("[ProcessEnv] RegisterWindowMessage: Registered message range exhausted!");
-			_nextRegisteredMessage = 0xC000; // Wrap around (not ideal, but better than overflow)
+			_logger.LogError("[ProcessEnv] RegisterWindowMessage: Registered message range exhausted! Cannot register '{MessageName}'", messageName);
+			return 0; // Return 0 to indicate failure
 		}
+		
+		_nextRegisteredMessage++;
 
 		_registeredMessages[messageName] = messageId;
 		_logger.LogInformation("[ProcessEnv] RegisterWindowMessage: '{MessageName}' registered as 0x{MessageId:X4}", messageName, messageId);
