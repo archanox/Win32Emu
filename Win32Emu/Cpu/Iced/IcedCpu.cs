@@ -1110,7 +1110,7 @@ public class IcedCpu : ICpu
 					b = (byte)ReadOp(insn, 1);
 				}
 				
-				byte r = (byte)(a - b);
+				var r = (byte)(a - b);
 				
 				// Set flags for 8-bit comparison
 				SetFlagVal(Cf, a < b);
@@ -1156,7 +1156,7 @@ public class IcedCpu : ICpu
 					b = (ushort)ReadOp(insn, 1);
 				}
 				
-				ushort r = (ushort)(a - b);
+				var r = (ushort)(a - b);
 				
 				// Set flags for 16-bit comparison
 				SetFlagVal(Cf, a < b);

@@ -16,42 +16,36 @@ namespace Win32Emu.Win32;
 
 public class ProcessEnvironment
 {
-	private readonly VirtualMemory _vm;
 	private readonly IEmulatorHost? _host;
 	private readonly ILogger _logger;
 	private uint _allocPtr;
-	private bool _exitRequested;
-	private string _executablePath = string.Empty;
 	private string _currentDirectory = @"C:\"; // Default to C:\ root
 
 	// COM vtable dispatcher
-	private ComVtableDispatcher? _comDispatcher;
+	private readonly ComVtableDispatcher? _comDispatcher;
 
 	// Virtual File System
-	private IVirtualFileSystem? _vfs;
 
 	// Threading infrastructure
-	private ThreadScheduler? _threadScheduler;
-	private SynchronizationManager? _synchronizationManager;
-	
+
 	// Expose VirtualMemory for use by Win32 API implementations
-	public VirtualMemory Memory => _vm;
+	public VirtualMemory Memory { get; }
 
 	// Expose ThreadScheduler for use by Emulator
-	public ThreadScheduler? ThreadScheduler => _threadScheduler;
+	public ThreadScheduler? ThreadScheduler { get; }
 
 	// Expose SynchronizationManager for use by Win32 APIs
-	public SynchronizationManager? SynchronizationManager => _synchronizationManager;
-	
+	public SynchronizationManager? SynchronizationManager { get; }
+
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
 	{
-		_vm = vm;
+		Memory = vm;
 		_host = host;
 		_logger = logger ?? NullLogger.Instance;
 		_allocPtr = heapBase;
 		_comDispatcher = new ComVtableDispatcher(this, _logger);
-		_threadScheduler = new ThreadScheduler(_logger);
-		_synchronizationManager = new SynchronizationManager(_logger);
+		ThreadScheduler = new ThreadScheduler(_logger);
+		SynchronizationManager = new SynchronizationManager(_logger);
 		
 		// Pre-register standard Windows control classes
 		RegisterStandardControlClasses();
@@ -67,7 +61,7 @@ public class ProcessEnvironment
 	/// <remarks>
 	/// Returns <c>null</c> if the virtual file system has not been initialized.
 	/// </remarks>
-	public IVirtualFileSystem? VirtualFileSystem => _vfs;
+	public IVirtualFileSystem? VirtualFileSystem { get; private set; }
 
 	/// <summary>
 	/// Initializes the virtual file system with the specified base directory.
@@ -76,73 +70,92 @@ public class ProcessEnvironment
 	/// <param name="overlayDirectory">Optional overlay directory for writable files. If null, a temporary directory is used.</param>
 	public void InitializeVirtualFileSystem(string baseDirectory, string? overlayDirectory = null)
 	{
-		_vfs = new LayeredVirtualFileSystem(baseDirectory, overlayDirectory, _logger);
+		VirtualFileSystem = new LayeredVirtualFileSystem(baseDirectory, overlayDirectory, _logger);
 		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with base: {BaseDirectory}", baseDirectory);
 		
 		// If executable path is already set, virtualize it to Windows-style path
-		if (!string.IsNullOrEmpty(_executablePath))
+		if (string.IsNullOrEmpty(ExecutablePath))
 		{
-			var virtualizedPath = _vfs.ToWindowsPath(_executablePath);
-			if (virtualizedPath != _executablePath)
+			return;
+		}
+
+		var virtualizedPath = VirtualFileSystem.ToWindowsPath(ExecutablePath);
+		if (virtualizedPath == ExecutablePath)
+		{
+			return;
+		}
+
+		_logger.LogInformation("[ProcessEnv] Virtualizing executable path: {Original} -> {Virtualized}", 
+			ExecutablePath, virtualizedPath);
+				
+		// Update the executable path and module file name
+		ExecutablePath = virtualizedPath;
+		ModuleFileNamePtr = WriteAnsiString(virtualizedPath + '\0');
+		ModuleFileNameLength = (uint)virtualizedPath.Length;
+				
+		// Also update command line if it was already set
+		if (CommandLinePtr == 0)
+		{
+			return;
+		}
+
+		// Re-read the old command line to extract args
+		var oldCmdLine = ReadAnsiString(CommandLinePtr);
+		// Parse to extract args (skip the first quoted part which is the exe path)
+		var args = new List<string>();
+		var inQuote = false;
+		var current = new System.Text.StringBuilder();
+		var skipFirst = true;
+					
+		foreach (var ch in oldCmdLine)
+		{
+			switch (ch)
 			{
-				_logger.LogInformation("[ProcessEnv] Virtualizing executable path: {Original} -> {Virtualized}", 
-					_executablePath, virtualizedPath);
-				
-				// Update the executable path and module file name
-				_executablePath = virtualizedPath;
-				ModuleFileNamePtr = WriteAnsiString(virtualizedPath + '\0');
-				ModuleFileNameLength = (uint)virtualizedPath.Length;
-				
-				// Also update command line if it was already set
-				if (CommandLinePtr != 0)
+				case '"':
 				{
-					// Re-read the old command line to extract args
-					var oldCmdLine = ReadAnsiString(CommandLinePtr);
-					// Parse to extract args (skip the first quoted part which is the exe path)
-					var args = new List<string>();
-					var inQuote = false;
-					var current = new System.Text.StringBuilder();
-					var skipFirst = true;
-					
-					foreach (var ch in oldCmdLine)
+					inQuote = !inQuote;
+					if (inQuote || !skipFirst)
 					{
-						if (ch == '"')
-						{
-							inQuote = !inQuote;
-							if (!inQuote && skipFirst)
-							{
-								skipFirst = false;
-								current.Clear();
-								continue;
-							}
-						}
-						else if (ch == ' ' && !inQuote)
-						{
-							if (current.Length > 0 && !skipFirst)
-							{
-								args.Add(current.ToString());
-								current.Clear();
-							}
-						}
-						else if (!skipFirst)
-						{
-							current.Append(ch);
-						}
+						continue;
 					}
-					
-					if (current.Length > 0 && !skipFirst)
+
+					skipFirst = false;
+					current.Clear();
+					break;
+				}
+				case ' ' when !inQuote:
+				{
+					if (current.Length <= 0 || skipFirst)
 					{
-						args.Add(current.ToString());
+						continue;
 					}
-					
-					// Rebuild command line with virtualized path
-					var newCmdLine = args.Count > 0 
-						? $"\"{virtualizedPath}\" {string.Join(" ", args)}"
-						: $"\"{virtualizedPath}\"";
-					CommandLinePtr = WriteAnsiString(newCmdLine + '\0');
+
+					args.Add(current.ToString());
+					current.Clear();
+					break;
+				}
+				default:
+				{
+					if (!skipFirst)
+					{
+						current.Append(ch);
+					}
+
+					break;
 				}
 			}
 		}
+					
+		if (current.Length > 0 && !skipFirst)
+		{
+			args.Add(current.ToString());
+		}
+					
+		// Rebuild command line with virtualized path
+		var newCmdLine = args.Count > 0 
+			? $"\"{virtualizedPath}\" {string.Join(" ", args)}"
+			: $"\"{virtualizedPath}\"";
+		CommandLinePtr = WriteAnsiString(newCmdLine + '\0');
 	}
 
 	// SDL3 backends for audio and input
@@ -152,8 +165,10 @@ public class ProcessEnvironment
 	public uint CommandLinePtr { get; private set; }
 	public uint ModuleFileNamePtr { get; private set; }
 	public uint ModuleFileNameLength { get; private set; }
-	public bool ExitRequested => _exitRequested;
-	public string ExecutablePath => _executablePath;
+	public bool ExitRequested { get; private set; }
+
+	public string ExecutablePath { get; private set; } = string.Empty;
+
 	public string CurrentDirectory
 	{
 		get => _currentDirectory;
@@ -161,14 +176,13 @@ public class ProcessEnvironment
 	}
 
 	// Console state
-	private bool _hasConsole = false;
-	public bool HasConsole => _hasConsole;
+	public bool HasConsole { get; private set; }
 
 	// Default standard handles (NULL for GUI apps without console)
 	// Console apps would set these to actual handles via AllocConsole/AttachConsole
-	public uint StdInputHandle { get; set; } = 0x00000000; // NULL - no console by default
-	public uint StdOutputHandle { get; set; } = 0x00000000; // NULL - no console by default
-	public uint StdErrorHandle { get; set; } = 0x00000000; // NULL - no console by default
+	public uint StdInputHandle { get; set; } // NULL - no console by default
+	public uint StdOutputHandle { get; set; } // NULL - no console by default
+	public uint StdErrorHandle { get; set; } // NULL - no console by default
 
 	// Simple handle table for host resources (files etc.)
 	private readonly Dictionary<uint, object> _handles = new();
@@ -220,13 +234,12 @@ public class ProcessEnvironment
 	// Thread management
 	private uint _nextThreadId = 1;
 	private uint _currentThreadId = 1; // Main thread ID is always 1
-	private uint _tebAddress;
-	public uint TebAddress => _tebAddress;
+	public uint TebAddress { get; private set; }
 
 	// TLS (Thread Local Storage) support
 	private readonly Dictionary<uint, Dictionary<uint, uint>> _threadLocalStorage = new(); // threadId -> (tlsIndex -> value)
-	private readonly HashSet<uint> _allocatedTlsIndices = new();
-	private uint _nextTlsIndex = 0;
+	private readonly HashSet<uint> _allocatedTlsIndices = [];
+	private uint _nextTlsIndex;
 
 	// Virtual Registry support
 	private readonly Dictionary<uint, VirtualRegistryKey> _registryKeys = new(); // handle -> key
@@ -244,9 +257,9 @@ public class ProcessEnvironment
 		
 		// If VFS is initialized, virtualize the executable path to Windows-style
 		var effectivePath = exePath;
-		if (_vfs != null)
+		if (VirtualFileSystem != null)
 		{
-			effectivePath = _vfs.ToWindowsPath(exePath);
+			effectivePath = VirtualFileSystem.ToWindowsPath(exePath);
 			if (effectivePath != exePath)
 			{
 				_logger.LogInformation("[ProcessEnv] Virtualizing executable path: {Original} -> {Virtualized}", 
@@ -254,7 +267,7 @@ public class ProcessEnvironment
 			}
 		}
 		
-		_executablePath = effectivePath;
+		ExecutablePath = effectivePath;
 		// Build command line: quoted exe path + space + args (if any)
 		var cmdLine = args.Length > 0 
 			? $"\"{effectivePath}\" {string.Join(" ", args)}"
@@ -270,13 +283,13 @@ public class ProcessEnvironment
 	public void InitializeTebAndPeb(uint imageBaseAddress)
 	{
 		// Allocate memory for the TEB (Thread Environment Block)
-		_tebAddress = SimpleAlloc(0x1000); // Allocate 4KB for TEB
-		MemZero(_tebAddress, 0x1000);
-		_logger.LogInformation("[ProcessEnv] TEB allocated at 0x{TebAddress:X8}", _tebAddress);
+		TebAddress = SimpleAlloc(0x1000); // Allocate 4KB for TEB
+		MemZero(TebAddress, 0x1000);
+		_logger.LogInformation("[ProcessEnv] TEB allocated at 0x{TebAddress:X8}", TebAddress);
 
 		// The TEB contains a self-referential pointer at offset 0x18
 		// This is the linear address of the TEB
-		MemWrite32(_tebAddress + 0x18, _tebAddress);
+		MemWrite32(TebAddress + 0x18, TebAddress);
 
 		// Allocate a dummy PEB (Process Environment Block)
 		var pebAddress = SimpleAlloc(0x1000);
@@ -284,7 +297,7 @@ public class ProcessEnvironment
 		_logger.LogInformation("[ProcessEnv] PEB allocated at 0x{PebAddress:X8}", pebAddress);
         
 		// The TEB points to the PEB at offset 0x30
-		MemWrite32(_tebAddress + 0x30, pebAddress);
+		MemWrite32(TebAddress + 0x30, pebAddress);
         
 		// The PEB contains a pointer to itself at offset 0x0
 		MemWrite32(pebAddress, pebAddress);
@@ -319,7 +332,7 @@ public class ProcessEnvironment
 		return addr;
 	}
 
-	public void RequestExit() => _exitRequested = true;
+	public void RequestExit() => ExitRequested = true;
 
 	/// <summary>
 	/// Writes output to the standard output stream, notifying the host if available.
@@ -341,7 +354,7 @@ public class ProcessEnvironment
 	{
 		var bytes = Encoding.ASCII.GetBytes(s);
 		var addr = SimpleAlloc((uint)bytes.Length);
-		_vm.WriteBytes(addr, bytes);
+		Memory.WriteBytes(addr, bytes);
 		Diagnostics.Diagnostics.LogMemWrite(addr, bytes.Length, bytes);
 		return addr;
 	}
@@ -350,7 +363,7 @@ public class ProcessEnvironment
 	{
 		var bytes = Encoding.Unicode.GetBytes(s);
 		var addr = SimpleAlloc((uint)bytes.Length);
-		_vm.WriteBytes(addr, bytes);
+		Memory.WriteBytes(addr, bytes);
 		Diagnostics.Diagnostics.LogMemWrite(addr, bytes.Length, bytes);
 		return addr;
 	}
@@ -358,7 +371,7 @@ public class ProcessEnvironment
 	public void WriteAnsiStringAt(uint addr, string s, bool nullTerminate = true)
 	{
 		var bytes = Encoding.ASCII.GetBytes(nullTerminate ? s + "\0" : s);
-		_vm.WriteBytes(addr, bytes);
+		Memory.WriteBytes(addr, bytes);
 		Diagnostics.Diagnostics.LogMemWrite(addr, bytes.Length, bytes);
 	}
 
@@ -366,9 +379,9 @@ public class ProcessEnvironment
 	{
 		var buf = new List<byte>();
 		var p = addr;
-		for (;;)
+		while (true)
 		{
-			var b = _vm.Read8(p++);
+			var b = Memory.Read8(p++);
 			if (b == 0)
 			{
 				break;
@@ -387,7 +400,7 @@ public class ProcessEnvironment
 		var buf = new byte[maxLength];
 		for (var i = 0; i < maxLength; i++)
 		{
-			buf[i] = _vm.Read8(addr + (uint)i);
+			buf[i] = Memory.Read8(addr + (uint)i);
 		}
 
 		var result = Encoding.ASCII.GetString(buf);
@@ -412,7 +425,7 @@ public class ProcessEnvironment
 		// Convert to bytes and allocate memory
 		var bytes = Encoding.Unicode.GetBytes(envBlock.ToString());
 		var addr = SimpleAlloc((uint)bytes.Length);
-		_vm.WriteBytes(addr, bytes);
+		Memory.WriteBytes(addr, bytes);
 		
 		return addr;
 	}
@@ -439,7 +452,7 @@ public class ProcessEnvironment
 		// Convert to bytes and allocate memory
 		var bytes = Encoding.ASCII.GetBytes(envBlock.ToString());
 		var addr = SimpleAlloc((uint)bytes.Length);
-		_vm.WriteBytes(addr, bytes);
+		Memory.WriteBytes(addr, bytes);
 		
 		return addr;
 	}
@@ -494,21 +507,21 @@ public class ProcessEnvironment
 		_host?.OnStdOutput(text);
 	}
 
-	public byte[] MemReadBytes(uint addr, int count) => _vm.GetSpan(addr, count);
-	public byte MemRead8(uint addr) => _vm.Read8(addr);
+	public byte[] MemReadBytes(uint addr, int count) => Memory.GetSpan(addr, count);
+	public byte MemRead8(uint addr) => Memory.Read8(addr);
 	public void MemWriteBytes(uint addr, ReadOnlySpan<byte> data)
 	{
-		_vm.WriteBytes(addr, data);
+		Memory.WriteBytes(addr, data);
 		try { Diagnostics.Diagnostics.LogMemWrite(addr, data.Length, data.ToArray()); } catch { }
 	}
-	public uint MemRead32(uint addr) => _vm.Read32(addr);
-	public void MemWrite32(uint addr, uint value) => _vm.Write32(addr, value);
-	public void MemWriteBytes(uint addr, byte[] bytes) => _vm.WriteBytes(addr, bytes);
-	public void MemWrite16(uint addr, ushort value) => _vm.Write16(addr, value);
-	public void MemWrite8(uint addr, byte value) => _vm.Write8(addr, value);
-	public ushort MemRead16(uint addr) => _vm.Read16(addr);
-	public void MemWrite64(uint addr, ulong value) => _vm.Write64(addr, value);
-	public void MemZero(uint addr, uint size) => _vm.WriteBytes(addr, new byte[size]);
+	public uint MemRead32(uint addr) => Memory.Read32(addr);
+	public void MemWrite32(uint addr, uint value) => Memory.Write32(addr, value);
+	public void MemWriteBytes(uint addr, byte[] bytes) => Memory.WriteBytes(addr, bytes);
+	public void MemWrite16(uint addr, ushort value) => Memory.Write16(addr, value);
+	public void MemWrite8(uint addr, byte value) => Memory.Write8(addr, value);
+	public ushort MemRead16(uint addr) => Memory.Read16(addr);
+	public void MemWrite64(uint addr, ulong value) => Memory.Write64(addr, value);
+	public void MemZero(uint addr, uint size) => Memory.WriteBytes(addr, new byte[size]);
 
 	// Write an unmanaged struct to emulated memory
 	public unsafe void MemWriteStruct<T>(uint addr, ref T value) where T : unmanaged
@@ -519,7 +532,7 @@ public class ProcessEnvironment
 		{
 			Marshal.Copy((nint)ptr, bytes, 0, size);
 		}
-		_vm.WriteBytes(addr, bytes);
+		Memory.WriteBytes(addr, bytes);
 		try { Diagnostics.Diagnostics.LogMemWrite(addr, bytes.Length, bytes); } catch { }
 	}
 
@@ -527,7 +540,7 @@ public class ProcessEnvironment
 	public unsafe T MemReadStruct<T>(uint addr) where T : unmanaged
 	{
 		var size = sizeof(T);
-		var bytes = _vm.GetSpan(addr, size);
+		var bytes = Memory.GetSpan(addr, size);
 		T value;
 		fixed (byte* ptr = bytes)
 		{
@@ -625,25 +638,15 @@ public class ProcessEnvironment
 	public string? GetModuleFileNameForHandle(uint moduleHandle)
 	{
 		// Search loaded images first to return full path
-		foreach (var kvp in _loadedImages)
+		foreach (var kvp in _loadedImages.Where(kvp => kvp.Value.BaseAddress == moduleHandle))
 		{
-			if (kvp.Value.BaseAddress == moduleHandle)
-			{
-				return kvp.Value.FilePath;
-			}
+			return kvp.Value.FilePath;
 		}
 
 		// Search loaded modules for a matching handle and return normalized name
-		foreach (var kvp in _loadedModules)
-		{
-			if (kvp.Value == moduleHandle)
-			{
-				return kvp.Key; // normalized name
-			}
-		}
+		return (from kvp in _loadedModules where kvp.Value == moduleHandle select kvp.Key).FirstOrDefault();
 
 		// If not found, return null
-		return null;
 	}
 
 	/// <summary>
@@ -652,13 +655,10 @@ public class ProcessEnvironment
 	public bool TryGetLoadedImage(uint moduleHandle, out LoadedImage? image)
 	{
 		// Search loaded images by base address
-		foreach (var kvp in _loadedImages)
+		foreach (var kvp in _loadedImages.Where(kvp => kvp.Value.BaseAddress == moduleHandle))
 		{
-			if (kvp.Value.BaseAddress == moduleHandle)
-			{
-				image = kvp.Value;
-				return true;
-			}
+			image = kvp.Value;
+			return true;
 		}
 
 		image = null;
@@ -677,7 +677,7 @@ public class ProcessEnvironment
 		
 		// Create a stub at the synthetic address (INT3 for breakpoint interception)
 		var stub = new byte[] { 0xCC, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 };
-		_vm.WriteBytes(address, stub);
+		Memory.WriteBytes(address, stub);
 		
 		return address;
 	}
@@ -756,13 +756,13 @@ public class ProcessEnvironment
 	/// <returns>True if console was allocated successfully</returns>
 	public bool AllocateConsole()
 	{
-		if (_hasConsole)
+		if (HasConsole)
 		{
 			_logger.LogWarning("[ProcessEnvironment] AllocConsole called but console already exists");
 			return false; // Console already exists
 		}
 
-		_hasConsole = true;
+		HasConsole = true;
 		
 		// Initialize standard handles to valid values
 		// Use simple sequential handle values for console handles
@@ -782,13 +782,13 @@ public class ProcessEnvironment
 	/// <returns>True if console was freed successfully</returns>
 	public bool FreeConsole()
 	{
-		if (!_hasConsole)
+		if (!HasConsole)
 		{
 			_logger.LogWarning("[ProcessEnvironment] FreeConsole called but no console exists");
 			return false;
 		}
 
-		_hasConsole = false;
+		HasConsole = false;
 		
 		// Reset standard handles to NULL
 		StdInputHandle = 0x00000000;
@@ -835,9 +835,9 @@ public class ProcessEnvironment
 		var size = AlignUp(dwSize == 0 ? 1u : dwSize, 0x1000);
 		if (lpAddress != 0)
 		{
-			if (lpAddress + size <= _vm.Size)
+			if (lpAddress + size <= Memory.Size)
 			{
-				_vm.WriteBytes(lpAddress, new byte[size]);
+				Memory.WriteBytes(lpAddress, new byte[size]);
 			}
 
 			return lpAddress;
@@ -845,7 +845,7 @@ public class ProcessEnvironment
 
 		var addr = AlignUp(_allocPtr, 0x1000);
 		_allocPtr = addr + size;
-		_vm.WriteBytes(addr, new byte[size]);
+		Memory.WriteBytes(addr, new byte[size]);
 		return addr;
 	}
 
@@ -1232,9 +1232,9 @@ public class ProcessEnvironment
 	public uint GetCurrentThreadId()
 	{
 		// Use ThreadScheduler if available, otherwise fall back to simple ID
-		if (_threadScheduler != null)
+		if (ThreadScheduler != null)
 		{
-			var currentThread = _threadScheduler.CurrentThread;
+			var currentThread = ThreadScheduler.CurrentThread;
 			return currentThread?.ThreadId ?? _currentThreadId;
 		}
 		return _currentThreadId;
@@ -1245,9 +1245,9 @@ public class ProcessEnvironment
 	/// </summary>
 	public void InitializeMainThread(ICpu cpu)
 	{
-		if (_threadScheduler != null)
+		if (ThreadScheduler != null)
 		{
-			var mainThread = _threadScheduler.InitializeMainThread(cpu, _vm);
+			var mainThread = ThreadScheduler.InitializeMainThread(cpu, Memory);
 			_currentThreadId = mainThread.ThreadId;
 			
 			// Initialize TLS storage for main thread
@@ -1259,10 +1259,10 @@ public class ProcessEnvironment
 
 	public uint CreateThread(uint entryPoint, uint parameter, uint stackSize, bool suspended = false)
 	{
-		if (_threadScheduler != null)
+		if (ThreadScheduler != null)
 		{
 			// Use ThreadScheduler to create a proper thread with its own stack and context
-			var thread = _threadScheduler.CreateThread(entryPoint, parameter, stackSize, _vm, suspended);
+			var thread = ThreadScheduler.CreateThread(entryPoint, parameter, stackSize, Memory, suspended);
 			
 			// Initialize TLS storage for this thread
 			_threadLocalStorage[thread.ThreadId] = new Dictionary<uint, uint>();

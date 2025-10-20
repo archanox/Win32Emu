@@ -89,7 +89,7 @@ public unsafe class SilkOpenAlAudioBackend : IAudioBackend
             var streamId = _nextStreamId++;
             
             // Generate OpenAL source
-            uint source = _al.GenSource();
+            var source = _al.GenSource();
             
             var stream = new AudioStream
             {
@@ -101,9 +101,9 @@ public unsafe class SilkOpenAlAudioBackend : IAudioBackend
             };
 
             // Generate some buffers for streaming
-            for (int i = 0; i < 4; i++)
+            for (var i = 0; i < 4; i++)
             {
-                uint buffer = _al.GenBuffer();
+                var buffer = _al.GenBuffer();
                 stream.Buffers.Add(buffer);
             }
 
@@ -125,7 +125,7 @@ public unsafe class SilkOpenAlAudioBackend : IAudioBackend
             }
 
             // Get a free buffer
-            _al.GetSourceProperty(stream.Source, GetSourceInteger.BuffersProcessed, out int processed);
+            _al.GetSourceProperty(stream.Source, GetSourceInteger.BuffersProcessed, out var processed);
             
             uint bufferId;
             if (processed > 0)
@@ -157,11 +157,11 @@ public unsafe class SilkOpenAlAudioBackend : IAudioBackend
             }
 
             // Queue buffer
-            uint* bufferPtr = &bufferId;
+            var bufferPtr = &bufferId;
             _al.SourceQueueBuffers(stream.Source, 1, bufferPtr);
 
             // Start playing if not already
-            _al.GetSourceProperty(stream.Source, GetSourceInteger.SourceState, out int state);
+            _al.GetSourceProperty(stream.Source, GetSourceInteger.SourceState, out var state);
             if (state != (int)SourceState.Playing)
             {
                 _al.SourcePlay(stream.Source);

@@ -94,20 +94,20 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
     {
         var rgbaData = new byte[width * height * 4];
         
-        for (int y = 0; y < height; y++)
+        for (var y = 0; y < height; y++)
         {
-            for (int x = 0; x < width; x++)
+            for (var x = 0; x < width; x++)
             {
-                int srcOffset = y * pitch + x;
-                int dstOffset = (y * width + x) * 4;
+                var srcOffset = y * pitch + x;
+                var dstOffset = (y * width + x) * 4;
                 
                 if (srcOffset < indexedData.Length)
                 {
-                    byte paletteIndex = indexedData[srcOffset];
+                    var paletteIndex = indexedData[srcOffset];
                     
                     if (paletteIndex < palette.Length)
                     {
-                        uint color = palette[paletteIndex];
+                        var color = palette[paletteIndex];
                         
                         rgbaData[dstOffset + 0] = (byte)(color & 0xFF);         // R
                         rgbaData[dstOffset + 1] = (byte)((color >> 8) & 0xFF);  // G
@@ -125,23 +125,23 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
     {
         var rgbaData = new byte[width * height * 4];
         
-        for (int y = 0; y < height; y++)
+        for (var y = 0; y < height; y++)
         {
-            for (int x = 0; x < width; x++)
+            for (var x = 0; x < width; x++)
             {
-                int srcOffset = y * pitch + x * 2;
-                int dstOffset = (y * width + x) * 4;
+                var srcOffset = y * pitch + x * 2;
+                var dstOffset = (y * width + x) * 4;
                 
                 if (srcOffset + 1 < rgb565Data.Length)
                 {
-                    ushort pixel = (ushort)(rgb565Data[srcOffset] | (rgb565Data[srcOffset + 1] << 8));
+                    var pixel = (ushort)(rgb565Data[srcOffset] | (rgb565Data[srcOffset + 1] << 8));
                     
-                    byte r5 = (byte)((pixel >> 11) & 0x1F);
-                    byte g6 = (byte)((pixel >> 5) & 0x3F);
-                    byte b5 = (byte)(pixel & 0x1F);
-                    byte r = (byte)((r5 << 3) | (r5 >> 2));
-                    byte g = (byte)((g6 << 2) | (g6 >> 4));
-                    byte b = (byte)((b5 << 3) | (b5 >> 2));
+                    var r5 = (byte)((pixel >> 11) & 0x1F);
+                    var g6 = (byte)((pixel >> 5) & 0x3F);
+                    var b5 = (byte)(pixel & 0x1F);
+                    var r = (byte)((r5 << 3) | (r5 >> 2));
+                    var g = (byte)((g6 << 2) | (g6 >> 4));
+                    var b = (byte)((b5 << 3) | (b5 >> 2));
                     
                     rgbaData[dstOffset + 0] = r;
                     rgbaData[dstOffset + 1] = g;
@@ -158,12 +158,12 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
     {
         var rgbaData = new byte[width * height * 4];
         
-        for (int y = 0; y < height; y++)
+        for (var y = 0; y < height; y++)
         {
-            for (int x = 0; x < width; x++)
+            for (var x = 0; x < width; x++)
             {
-                int srcOffset = y * pitch + x * 3;
-                int dstOffset = (y * width + x) * 4;
+                var srcOffset = y * pitch + x * 3;
+                var dstOffset = (y * width + x) * 4;
                 
                 if (srcOffset + 2 < rgb24Data.Length)
                 {

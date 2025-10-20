@@ -6,135 +6,142 @@ namespace Win32Emu.Win32;
 
 public class Win32Dispatcher(ILogger logger)
 {
-    private readonly Dictionary<string, IWin32ModuleUnsafe> _modules = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _dynamicallyLoadedDlls = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, HashSet<string>> _unknownFunctionCalls = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<string, IWin32ModuleUnsafe> _modules = new(StringComparer.OrdinalIgnoreCase);
+	private readonly HashSet<string> _dynamicallyLoadedDlls = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<string, HashSet<string>> _unknownFunctionCalls = new(StringComparer.OrdinalIgnoreCase);
 
-    public void RegisterModule(IWin32ModuleUnsafe module) => _modules[module.Name] = module;
-    
-    public void RegisterDynamicallyLoadedDll(string dllName)
-    {
-        _dynamicallyLoadedDlls.Add(dllName);
-        logger.LogInformation("[Dispatcher] Registered dynamically loaded DLL: {DllName}", dllName);
-    }
+	public void RegisterModule(IWin32ModuleUnsafe module) => _modules[module.Name] = module;
 
-    public bool TryGetModule(string dllName, out IWin32ModuleUnsafe? module)
-    {
-        return _modules.TryGetValue(dllName, out module);
-    }
+	public void RegisterDynamicallyLoadedDll(string dllName)
+	{
+		_dynamicallyLoadedDlls.Add(dllName);
+		logger.LogInformation("[Dispatcher] Registered dynamically loaded DLL: {DllName}", dllName);
+	}
 
-    public bool TryInvoke(string dll, string export, ICpu cpu, VirtualMemory memory, out uint returnValue, out int stdcallArgBytes)
-    {
-        returnValue = 0;
-        stdcallArgBytes = 0;
+	public bool TryGetModule(string dllName, out IWin32ModuleUnsafe? module)
+	{
+		return _modules.TryGetValue(dllName, out module);
+	}
 
-        var esp = cpu.GetRegister("ESP");
-        byte[]? stackSnippet = null;
-        try { stackSnippet = memory.GetSpan(esp, 16); } catch { }
-        logger.LogInformation("Dispatching {Dll}!{Export} at EIP=0x{GetEip:X8} ESP=0x{Esp:X8} stack={Unreadable}", dll, export, cpu.GetEip(), esp, stackSnippet==null?"<unreadable>":BitConverter.ToString(stackSnippet).Replace('-', ' '));
-        
-        // Try to invoke with known modules first
-        if (_modules.TryGetValue(dll, out var mod))
-        {
-	        if (mod.TryInvokeUnsafe(export, cpu, memory, out var retUnsafe))
-            {
-                returnValue = retUnsafe;
-                cpu.SetRegister("EAX", retUnsafe);
-                
-                // Try to get arg bytes, but don't fail if not available
-                try
-                {
-                    stdcallArgBytes = StdCallMeta.GetArgBytes(dll, export);
-                    logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes}", dll, export, returnValue, stdcallArgBytes);
-                }
-                catch (InvalidOperationException)
-                {
-                    // Hardcoded fixes for functions with missing metadata (temporary workaround)
-                    var dllUpper = dll.ToUpperInvariant();
-                    var exportUpper = export.ToUpperInvariant();
-                    stdcallArgBytes = (dllUpper, exportUpper) switch
-                    {
-                        ("KERNEL32.DLL", "GETACP") => 0,        // UINT GetACP(void)
-                        ("KERNEL32.DLL", "GETCPINFO") => 8,     // BOOL GetCPInfo(UINT, LPCPINFO)
-                        ("KERNEL32.DLL", "GETMODULEFILENAMEA") => 12,  // DWORD GetModuleFileNameA(HMODULE, LPSTR, DWORD)
-                        _ => 0
-                    };
-                    
-                    if (stdcallArgBytes > 0)
-                    {
-	                    logger.LogWarning("Using hardcoded arg bytes for {Dll}!{Export}: {StdcallArgBytes}", dll, export, stdcallArgBytes);
-                    }
-                    else
-                    {
-	                    logger.LogWarning("No arg bytes metadata for {Dll}!{Export}, using 0", dll, export);
-                    }
-                    
-                    logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes} (hardcoded)", dll, export, returnValue, stdcallArgBytes);
-                }
-                
-                return true;
-            }
+	public bool TryInvoke(string dll, string export, ICpu cpu, VirtualMemory memory, out uint returnValue, out int stdcallArgBytes)
+	{
+		returnValue = 0;
+		stdcallArgBytes = 0;
 
-	        // Known module but unknown export - log this
-	        logger.LogWarning("Unimplemented function in known module: {Dll}!{Export}", dll, export);
-	        LogUnknownFunctionCall(dll, export);
-                
-	        // Return success with default behavior
-	        returnValue = 0;
-	        stdcallArgBytes = 0; // Default for unknown functions
-	        cpu.SetRegister("EAX", returnValue);
-	        return true;
-        }
-        
-        // Handle unknown DLLs - this is the main enhancement
-        logger.LogWarning("Unknown DLL function call: {Dll}!{Export}", dll, export);
-        LogUnknownFunctionCall(dll, export);
-        
-        // Check if this DLL was dynamically loaded
-        var isDynamicallyLoaded = _dynamicallyLoadedDlls.Contains(dll);
-        if (isDynamicallyLoaded)
-        {
-	        logger.LogInformation("Note: {Dll} was dynamically loaded via LoadLibrary", dll);
-        }
-        
-        // Provide default behavior for unknown DLL calls
-        returnValue = 0; // Default return value
-        stdcallArgBytes = 0; // Default arg bytes (let caller handle stack cleanup)
-        cpu.SetRegister("EAX", returnValue);
-        
-        return true; // Always return true now - we handle all calls
-    }
-    
-    private void LogUnknownFunctionCall(string dll, string export)
-    {
-        if (!_unknownFunctionCalls.TryGetValue(dll, out var functions))
-        {
-            functions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            _unknownFunctionCalls[dll] = functions;
-        }
-        
-        if (functions.Add(export))
-        {
-	        logger.LogInformation("New unimplemented function: {Dll}!{Export} (total for {S}: {FunctionsCount})", dll, export, dll, functions.Count);
-        }
-    }
-    
-    public void PrintUnknownFunctionsSummary()
-    {
-        if (_unknownFunctionCalls.Count == 0)
-        {
-	        Console.WriteLine("No unknown function calls recorded.");
-            return;
-        }
-        
-        Console.WriteLine($"Summary of unknown function calls ({_unknownFunctionCalls.Count} DLLs):");
-        foreach (var (dll, functions) in _unknownFunctionCalls.OrderBy(kvp => kvp.Key))
-        {
-	        Console.WriteLine($"  {dll}: {functions.Count} functions");
-            foreach (var func in functions.OrderBy(f => f))
-            {
-	            Console.WriteLine($"    - {func}");
-            }
-        }
-    }
+		var esp = cpu.GetRegister("ESP");
+		byte[]? stackSnippet = null;
+		try
+		{
+			stackSnippet = memory.GetSpan(esp, 16);
+		}
+		catch
+		{
+		}
+
+		logger.LogInformation("Dispatching {Dll}!{Export} at EIP=0x{GetEip:X8} ESP=0x{Esp:X8} stack={Unreadable}", dll, export, cpu.GetEip(), esp, stackSnippet == null ? "<unreadable>" : BitConverter.ToString(stackSnippet).Replace('-', ' '));
+
+		// Try to invoke with known modules first
+		if (_modules.TryGetValue(dll, out var mod))
+		{
+			if (mod.TryInvokeUnsafe(export, cpu, memory, out var retUnsafe))
+			{
+				returnValue = retUnsafe;
+				cpu.SetRegister("EAX", retUnsafe);
+
+				// Try to get arg bytes, but don't fail if not available
+				try
+				{
+					stdcallArgBytes = StdCallMeta.GetArgBytes(dll, export);
+					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes}", dll, export, returnValue, stdcallArgBytes);
+				}
+				catch (InvalidOperationException)
+				{
+					// Hardcoded fixes for functions with missing metadata (temporary workaround)
+					var dllUpper = dll.ToUpperInvariant();
+					var exportUpper = export.ToUpperInvariant();
+					stdcallArgBytes = (dllUpper, exportUpper) switch
+					{
+						("KERNEL32.DLL", "GETACP") => 0, // UINT GetACP(void)
+						("KERNEL32.DLL", "GETCPINFO") => 8, // BOOL GetCPInfo(UINT, LPCPINFO)
+						("KERNEL32.DLL", "GETMODULEFILENAMEA") => 12, // DWORD GetModuleFileNameA(HMODULE, LPSTR, DWORD)
+						_ => 0
+					};
+
+					if (stdcallArgBytes > 0)
+					{
+						logger.LogWarning("Using hardcoded arg bytes for {Dll}!{Export}: {StdcallArgBytes}", dll, export, stdcallArgBytes);
+					}
+					else
+					{
+						logger.LogWarning("No arg bytes metadata for {Dll}!{Export}, using 0", dll, export);
+					}
+
+					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes} (hardcoded)", dll, export, returnValue, stdcallArgBytes);
+				}
+
+				return true;
+			}
+
+			// Known module but unknown export - log this
+			logger.LogWarning("Unimplemented function in known module: {Dll}!{Export}", dll, export);
+			LogUnknownFunctionCall(dll, export);
+
+			// Return success with default behavior
+			returnValue = 0;
+			stdcallArgBytes = 0; // Default for unknown functions
+			cpu.SetRegister("EAX", returnValue);
+			return true;
+		}
+
+		// Handle unknown DLLs - this is the main enhancement
+		logger.LogWarning("Unknown DLL function call: {Dll}!{Export}", dll, export);
+		LogUnknownFunctionCall(dll, export);
+
+		// Check if this DLL was dynamically loaded
+		var isDynamicallyLoaded = _dynamicallyLoadedDlls.Contains(dll);
+		if (isDynamicallyLoaded)
+		{
+			logger.LogInformation("Note: {Dll} was dynamically loaded via LoadLibrary", dll);
+		}
+
+		// Provide default behavior for unknown DLL calls
+		returnValue = 0; // Default return value
+		stdcallArgBytes = 0; // Default arg bytes (let caller handle stack cleanup)
+		cpu.SetRegister("EAX", returnValue);
+
+		return true; // Always return true now - we handle all calls
+	}
+
+	private void LogUnknownFunctionCall(string dll, string export)
+	{
+		if (!_unknownFunctionCalls.TryGetValue(dll, out var functions))
+		{
+			functions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			_unknownFunctionCalls[dll] = functions;
+		}
+
+		if (functions.Add(export))
+		{
+			logger.LogInformation("New unimplemented function: {Dll}!{Export} (total for {S}: {FunctionsCount})", dll, export, dll, functions.Count);
+		}
+	}
+
+	public void PrintUnknownFunctionsSummary()
+	{
+		if (_unknownFunctionCalls.Count == 0)
+		{
+			logger.LogInformation("No unimplemented functions found!");
+			return;
+		}
+
+		Console.WriteLine($"Summary of unknown function calls ({_unknownFunctionCalls.Count} DLLs):");
+		foreach (var (dll, functions) in _unknownFunctionCalls.OrderBy(kvp => kvp.Key))
+		{
+			Console.WriteLine($"  {dll}: {functions.Count} functions");
+			foreach (var func in functions.OrderBy(f => f))
+			{
+				Console.WriteLine($"    - {func}");
+			}
+		}
+	}
 }

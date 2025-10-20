@@ -374,10 +374,10 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw COM] IDirectDraw::CreateSurface(this=0x{ThisPtr:X8}, lpDDSurfaceDesc=0x{LpDDSurfaceDesc:X8}, lplpDDSurface=0x{LplpDDSurface:X8}, pUnkOuter=0x{PUnkOuter:X8})", thisPtr, lpDDSurfaceDesc, lplpDDSurface, pUnkOuter);
 			
 			// Read surface description
-			uint dwSize = _env.MemRead32(lpDDSurfaceDesc);
-			uint dwFlags = _env.MemRead32(lpDDSurfaceDesc + 4);
-			uint dwWidth = _env.MemRead32(lpDDSurfaceDesc + 8);
-			uint dwHeight = _env.MemRead32(lpDDSurfaceDesc + 12);
+			var dwSize = _env.MemRead32(lpDDSurfaceDesc);
+			var dwFlags = _env.MemRead32(lpDDSurfaceDesc + 4);
+			var dwWidth = _env.MemRead32(lpDDSurfaceDesc + 8);
+			var dwHeight = _env.MemRead32(lpDDSurfaceDesc + 12);
 			
 			// Find the DirectDraw object from the COM object pointer
 			uint ddrawHandle = 0;
@@ -563,8 +563,8 @@ namespace Win32Emu.Win32.Modules
 			if (lpDDColorKey != 0)
 			{
 				// Read DDCOLORKEY structure
-				uint colorKeyLow = _env.MemRead32(lpDDColorKey);
-				uint colorKeyHigh = _env.MemRead32(lpDDColorKey + 4);
+				var colorKeyLow = _env.MemRead32(lpDDColorKey);
+				var colorKeyHigh = _env.MemRead32(lpDDColorKey + 4);
 
 				surface.ColorKeyLow = colorKeyLow;
 				surface.ColorKeyHigh = colorKeyHigh;
@@ -645,7 +645,7 @@ namespace Win32Emu.Win32.Modules
 				DirectDrawObject? ddrawObj = null;
 				if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out ddrawObj))
 				{
-					uint dwSize = _env.MemRead32(lpDDSurfaceDesc);
+					var dwSize = _env.MemRead32(lpDDSurfaceDesc);
 
 					// Fill DDSURFACEDESC structure
 					_env.MemWrite32(lpDDSurfaceDesc + 4, 0x0000100F); // dwFlags: DDSD_WIDTH | DDSD_HEIGHT | DDSD_PITCH | DDSD_PIXELFORMAT
@@ -977,18 +977,18 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogError("[DDraw] BltFast: could not find DirectDraw object");
 				return 1; // DDERR_GENERIC
 			}
-			int bytesPerPixel = ddrawObj.BitsPerPixel / 8;
+			var bytesPerPixel = ddrawObj.BitsPerPixel / 8;
 
 			// Perform fast blit
-			int destX = (int)dwX;
-			int destY = (int)dwY;
+			var destX = (int)dwX;
+			var destY = (int)dwY;
 
-			for (int y = 0; y < srcHeight && (destY + y) < destSurface.Height && (srcY + y) < srcSurface.Height; y++)
+			for (var y = 0; y < srcHeight && (destY + y) < destSurface.Height && (srcY + y) < srcSurface.Height; y++)
 			{
-				for (int x = 0; x < srcWidth && (destX + x) < destSurface.Width && (srcX + x) < srcSurface.Width; x++)
+				for (var x = 0; x < srcWidth && (destX + x) < destSurface.Width && (srcX + x) < srcSurface.Width; x++)
 				{
-					int destOffset = (destY + y) * destSurface.Pitch + (destX + x) * bytesPerPixel;
-					int srcOffset = (srcY + y) * srcSurface.Pitch + (srcX + x) * bytesPerPixel;
+					var destOffset = (destY + y) * destSurface.Pitch + (destX + x) * bytesPerPixel;
+					var srcOffset = (srcY + y) * srcSurface.Pitch + (srcX + x) * bytesPerPixel;
 
 					if (destOffset + 1 < destSurface.Bits.Length && srcOffset + 1 < srcSurface.Bits.Length)
 					{
@@ -996,7 +996,7 @@ namespace Win32Emu.Win32.Modules
 						if ((dwTrans & 0x00000001) != 0 && srcSurface.HasColorKey)
 						{
 							// Check for color key transparency
-							ushort srcPixel = (ushort)(srcSurface.Bits[srcOffset] | (srcSurface.Bits[srcOffset + 1] << 8));
+							var srcPixel = (ushort)(srcSurface.Bits[srcOffset] | (srcSurface.Bits[srcOffset + 1] << 8));
 							// Check if pixel is within color key range (transparent if it matches)
 							if (srcPixel < srcSurface.ColorKeyLow || srcPixel > srcSurface.ColorKeyHigh)
 							{
@@ -1068,7 +1068,7 @@ namespace Win32Emu.Win32.Modules
 			if ((dwFlags & 0x00000400) != 0 && lpDDBltFx != 0)
 			{
 				// Read fill color from DDBLTFX structure
-				uint fillColor = _env.MemRead32(lpDDBltFx + 16); // dwFillColor offset
+				var fillColor = _env.MemRead32(lpDDBltFx + 16); // dwFillColor offset
 
 				// Get bits per pixel from DirectDraw object
 				if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
@@ -1079,12 +1079,12 @@ namespace Win32Emu.Win32.Modules
 
 				// Perform color fill
 				// Determine bytes per pixel based on bit depth
-				int bytesPerPixel = ddrawObj.BitsPerPixel / 8;
-				for (int y = destY; y < destY + destHeight && y < destSurface.Height; y++)
+				var bytesPerPixel = ddrawObj.BitsPerPixel / 8;
+				for (var y = destY; y < destY + destHeight && y < destSurface.Height; y++)
 				{
-					for (int x = destX; x < destX + destWidth && x < destSurface.Width; x++)
+					for (var x = destX; x < destX + destWidth && x < destSurface.Width; x++)
 					{
-						int offset = y * destSurface.Pitch + x * bytesPerPixel;
+						var offset = y * destSurface.Pitch + x * bytesPerPixel;
 						if (offset + bytesPerPixel - 1 < destSurface.Bits.Length)
 						{
 							switch (bytesPerPixel)
@@ -1145,12 +1145,12 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Perform simple blit (copy pixels)
-					for (int y = 0; y < srcHeight && (destY + y) < destSurface.Height && (srcY + y) < srcSurface.Height; y++)
+					for (var y = 0; y < srcHeight && (destY + y) < destSurface.Height && (srcY + y) < srcSurface.Height; y++)
 					{
-						for (int x = 0; x < srcWidth && (destX + x) < destSurface.Width && (srcX + x) < srcSurface.Width; x++)
+						for (var x = 0; x < srcWidth && (destX + x) < destSurface.Width && (srcX + x) < srcSurface.Width; x++)
 						{
-							int destOffset = (destY + y) * destSurface.Pitch + (destX + x) * 2;
-							int srcOffset = (srcY + y) * srcSurface.Pitch + (srcX + x) * 2;
+							var destOffset = (destY + y) * destSurface.Pitch + (destX + x) * 2;
+							var srcOffset = (srcY + y) * srcSurface.Pitch + (srcX + x) * 2;
 
 							if (destOffset + 1 < destSurface.Bits.Length && srcOffset + 1 < srcSurface.Bits.Length)
 							{
@@ -1216,7 +1216,7 @@ namespace Win32Emu.Win32.Modules
 			// Fill in basic capabilities
 			if (lpDDDriverCaps != 0)
 			{
-				uint dwSize = _env.MemRead32(lpDDDriverCaps);
+				var dwSize = _env.MemRead32(lpDDDriverCaps);
 				
 				// DDCAPS structure - simplified
 				_env.MemWrite32(lpDDDriverCaps + 4, 0x00000001); // dwCaps: DDCAPS_BLT
@@ -1234,7 +1234,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpDDHELCaps != 0)
 			{
 				// HEL (Hardware Emulation Layer) caps - can be left empty for now
-				uint dwSize = _env.MemRead32(lpDDHELCaps);
+				var dwSize = _env.MemRead32(lpDDHELCaps);
 				_env.MemWrite32(lpDDHELCaps + 4, 0);
 			}
 
@@ -1267,7 +1267,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpDDSurfaceDesc != 0)
 			{
 				// Fill DDSURFACEDESC structure
-				uint dwSize = _env.MemRead32(lpDDSurfaceDesc);
+				var dwSize = _env.MemRead32(lpDDSurfaceDesc);
 
 				_env.MemWrite32(lpDDSurfaceDesc + 4, 0x0000100F); // dwFlags: DDSD_WIDTH | DDSD_HEIGHT | DDSD_PITCH | DDSD_PIXELFORMAT
 				_env.MemWrite32(lpDDSurfaceDesc + 8, (uint)ddrawObj.Width); // dwWidth
@@ -1351,7 +1351,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpbIsInVB != 0)
 			{
 				// Simulate being in vertical blank 1/60th of the time
-				bool isInVBlank = (DateTime.UtcNow.Ticks / 10000) % 17 == 0; // Approximately 1/60th
+				var isInVBlank = (DateTime.UtcNow.Ticks / 10000) % 17 == 0; // Approximately 1/60th
 				_env.MemWrite32(lpbIsInVB, isInVBlank ? 1u : 0u);
 			}
 
@@ -1437,7 +1437,7 @@ namespace Win32Emu.Win32.Modules
 				}
 				
 				// Initialize the window with the specified dimensions
-				string title = "Win32Emu DirectDraw";
+				var title = "Win32Emu DirectDraw";
 				if (obj.RenderingBackend.IsInitialized)
 				{
 					// If already initialized, we would need to recreate with new dimensions
@@ -1446,7 +1446,7 @@ namespace Win32Emu.Win32.Modules
 				}
 				else
 				{
-					bool success = obj.RenderingBackend.Initialize((int)dwWidth, (int)dwHeight, title);
+					var success = obj.RenderingBackend.Initialize((int)dwWidth, (int)dwHeight, title);
 					if (!success)
 					{
 						_logger.LogError("[DDraw] Failed to initialize rendering backend");
@@ -1502,13 +1502,13 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			// Get a pointer to the surface memory
-			uint surfaceMemPtr = _env.VirtualAlloc(0, (uint)(surface.Pitch * surface.Height), 0x1000, 0x04); // MEM_COMMIT, PAGE_READWRITE
+			var surfaceMemPtr = _env.VirtualAlloc(0, (uint)(surface.Pitch * surface.Height), 0x1000, 0x04); // MEM_COMMIT, PAGE_READWRITE
 			surface.LockedMemoryPtr = surfaceMemPtr;
 			
 			// Fill the surface description structure
 			if (lpDDSurfaceDesc != 0)
 			{
-				uint dwSize = _env.MemRead32(lpDDSurfaceDesc);
+				var dwSize = _env.MemRead32(lpDDSurfaceDesc);
 				
 				// Write the surface description
 				_env.MemWrite32(lpDDSurfaceDesc + 4, 0x00001007); // DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PITCH | DDSD_PIXELFORMAT
@@ -1582,7 +1582,7 @@ namespace Win32Emu.Win32.Modules
 			// Copy memory from the locked pointer to our surface bits
 			if (surface.LockedMemoryPtr != 0 && surface.Bits != null)
 			{
-				byte[] data = _env.MemReadBytes(surface.LockedMemoryPtr, surface.Pitch * surface.Height);
+				var data = _env.MemReadBytes(surface.LockedMemoryPtr, surface.Pitch * surface.Height);
 				Array.Copy(data, surface.Bits, data.Length);
 				
 				// We don't actually free memory in this implementation
@@ -1627,7 +1627,7 @@ namespace Win32Emu.Win32.Modules
 							// No palette set yet - use a default grayscale palette
 							_logger.LogWarning("[DDraw] No palette set for 8-bit surface, using grayscale");
 							var grayscalePalette = new uint[256];
-							for (int i = 0; i < 256; i++)
+							for (var i = 0; i < 256; i++)
 							{
 								grayscalePalette[i] = (0xFFu << 24) | ((uint)i << 16) | ((uint)i << 8) | (uint)i; // RGBA: opaque grayscale
 							}
@@ -1674,7 +1674,7 @@ namespace Win32Emu.Win32.Modules
 					// Update the SDL3 texture with the converted surface data
 					if (displayData != null)
 					{
-						int displayPitch = surface.Width * 4; // RGBA format
+						var displayPitch = surface.Width * 4; // RGBA format
 						ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch);
 					}
 				}

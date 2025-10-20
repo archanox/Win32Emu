@@ -187,7 +187,7 @@ public class PeResourceReader
 		foreach (var typeEntry in directory.Entries)
 		{
 			// Check if this is the type we're looking for
-			bool typeMatch = false;
+			var typeMatch = false;
 			if (typeEntry.Id == typeId)
 			{
 				typeMatch = true;
@@ -206,7 +206,7 @@ public class PeResourceReader
 
 			foreach (var nameEntry in typeDir.Entries)
 			{
-				bool nameMatch = false;
+				var nameMatch = false;
 				if (nameEntry.Id == nameId)
 				{
 					nameMatch = true;

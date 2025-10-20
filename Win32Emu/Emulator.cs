@@ -383,7 +383,7 @@ public sealed class Emulator : IDisposable
             }
             else if (step.IsCall)
             {
-	            // _logger.LogInformation("[Call] Call method at 0x{CallTarget:X8}", step.CallTarget);
+	            _logger.LogInformation("[Call] Call method at 0x{CallTarget:X8}", step.CallTarget);
             }
             
         }
@@ -473,7 +473,7 @@ public sealed class Emulator : IDisposable
                     var eip = _cpu!.GetEip();
                     LogDebug($"[Debug] [Instruction {i}] Suspicious registers: EIP=0x{eip:X8} ESP=0x{esp:X8} EBP=0x{ebp:X8}");
                 }
-                else if (i > 100 && i <= 500)
+                else if (i is > 100 and <= 500)
                 {
                     LogDebug($"[Debug] [Instruction {i}] Suspicious registers detected");
                 }
@@ -601,7 +601,7 @@ public sealed class Emulator : IDisposable
             }
             catch (Exception ex)
             {
-                LogDebug($"[Debug] Unexpected exception at instruction {i}: {ex}");
+	            _logger.LogDebug(ex, "[Debug] Unexpected exception at instruction {i}: {ex}", i, ex.Message);
                 throw;
             }
 
@@ -898,21 +898,20 @@ public sealed class Emulator : IDisposable
             // Assume stack grows down, so stack base is the highest address, stack limit is lowest
             // Here, we use current ESP as the top of the stack, and allow up to 1MB below
             const uint STACK_SIZE = 0x100000; // 1MB
-            uint stackTop = esp;
-            uint stackBottom = (esp > STACK_SIZE) ? (esp - STACK_SIZE) : 0x00100000; // Don't go below 1MB
+            var stackBottom = (esp > STACK_SIZE) ? (esp - STACK_SIZE) : 0x00100000; // Don't go below 1MB
 
-            bool inStackRegion = (ebpFromStack >= stackBottom) && (ebpFromStack <= stackTop);
-            bool isAligned = (ebpFromStack & 0x3) == 0;
+            var inStackRegion = (ebpFromStack >= stackBottom) && (ebpFromStack <= esp);
+            var isAligned = (ebpFromStack & 0x3) == 0;
 
             // Optionally, check that the memory at ebpFromStack is readable and contains a plausible saved EBP
-            bool savedEbpValid = false;
+            var savedEbpValid = false;
             if (inStackRegion && isAligned)
             {
                 try
                 {
                     var savedEbp = _vm!.Read32(ebpFromStack);
                     // Check that savedEbp is also within stack region (optional, but plausible)
-                    savedEbpValid = (savedEbp >= stackBottom) && (savedEbp <= stackTop);
+                    savedEbpValid = (savedEbp >= stackBottom) && (savedEbp <= esp);
                 }
                 catch
                 {

@@ -108,12 +108,11 @@ public class StandardControlHandler
 		var controlId = windowInfo.Value.Menu;
 
 		// Build WM_COMMAND wParam: HIWORD = notification code, LOWORD = control ID
-		uint wParam = ((notificationCode & 0xFFFF) << 16) | (controlId & 0xFFFF);
-		uint lParam = buttonHwnd; // lParam = handle of control
+		var wParam = ((notificationCode & 0xFFFF) << 16) | (controlId & 0xFFFF);
 
 		// Post WM_COMMAND to parent window
 		_logger.LogInformation("[Button] Sending WM_COMMAND to parent 0x{ParentHwnd:X8}: controlId={ControlId}, notification=0x{NotificationCode:X4}", parentHwnd, controlId, notificationCode);
-		_env.PostMessage(parentHwnd, 0x0111, wParam, lParam); // WM_COMMAND = 0x0111
+		_env.PostMessage(parentHwnd, 0x0111, wParam, buttonHwnd); // WM_COMMAND = 0x0111
 	}
 
 	private uint HandleEditMessage(uint hwnd, uint msg, uint wParam, uint lParam)

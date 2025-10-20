@@ -244,7 +244,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = WideCharToMultiByte((CodePage)a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
 				return true;
 			case "MULTIBYTETOWIDECHAR":
-				returnValue = MultiByteToWideChar(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4), a.UInt32(5));
+				returnValue = MultiByteToWideChar((CodePage)a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4), a.UInt32(5));
 				return true;
 			case "LCMAPSTRINGA":
 				returnValue = LcMapStringA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4), a.Int32(5));
@@ -540,7 +540,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var sp = "Service Pack 3\0".ToCharArray();
 		var bytes = new byte[sp.Length * 2];
 		Buffer.BlockCopy(sp, 0, bytes, 0, bytes.Length);
-		_env.MemWriteBytes(lpVersionInformation + 20, bytes.AsSpan().Slice(0, 256));
+		_env.MemWriteBytes(lpVersionInformation + 20, bytes.AsSpan()[..256]);
 
 		if (size == 284)
 		{
@@ -1388,7 +1388,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		path = FixPathEscaping(path);
 
 		// Convert to Windows-style path
-		string windowsPath = ConvertToWindowsPath(path);
+		var windowsPath = ConvertToWindowsPath(path);
 		_logger.LogDebug("[Kernel32] GetModuleFileNameA converted to Windows path: {WindowsPath}", windowsPath);
 
 		var bytes = Encoding.ASCII.GetBytes(windowsPath);
@@ -1432,59 +1432,64 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// First, normalize all backslashes to single backslashes
 		var result = new StringBuilder();
-		bool inQuote = false;
+		var inQuote = false;
 
-		for (int i = 0; i < path.Length; i++)
+		for (var i = 0; i < path.Length; i++)
 		{
-			char c = path[i];
+			var c = path[i];
 
-			if (c == '\\')
+			switch (c)
 			{
-				// Count consecutive backslashes
-				int backslashCount = 1;
-				while (i + 1 < path.Length && path[i + 1] == '\\')
+				case '\\':
 				{
-					backslashCount++;
-					i++;
-				}
-
-				// Check if next char is a quote
-				if (i + 1 < path.Length && path[i + 1] == '"')
-				{
-					// For backslashes before quotes, ensure they're properly escaped
-					// In Windows, each backslash before a quote needs to be doubled
-					for (int j = 0; j < backslashCount; j++)
+					// Count consecutive backslashes
+					var backslashCount = 1;
+					while (i + 1 < path.Length && path[i + 1] == '\\')
 					{
+						backslashCount++;
+						i++;
+					}
+
+					// Check if next char is a quote
+					if (i + 1 < path.Length && path[i + 1] == '"')
+					{
+						// For backslashes before quotes, ensure they're properly escaped
+						// In Windows, each backslash before a quote needs to be doubled
+						for (var j = 0; j < backslashCount; j++)
+						{
+							result.Append('\\');
+						}
+					}
+					else
+					{
+						// For regular backslashes, just add them normally
+						for (var j = 0; j < backslashCount; j++)
+						{
+							result.Append('\\');
+						}
+					}
+
+					break;
+				}
+				case '"':
+				{
+					// Toggle quote state and add the quote
+					inQuote = !inQuote;
+
+					// Ensure quotes are properly escaped
+					if (result.Length > 0 && result[result.Length - 1] != '\\')
+					{
+						// Add a backslash before the quote if there isn't one already
 						result.Append('\\');
 					}
-				}
-				else
-				{
-					// For regular backslashes, just add them normally
-					for (int j = 0; j < backslashCount; j++)
-					{
-						result.Append('\\');
-					}
-				}
-			}
-			else if (c == '"')
-			{
-				// Toggle quote state and add the quote
-				inQuote = !inQuote;
 
-				// Ensure quotes are properly escaped
-				if (result.Length > 0 && result[result.Length - 1] != '\\')
-				{
-					// Add a backslash before the quote if there isn't one already
-					result.Append('\\');
+					result.Append(c);
+					break;
 				}
-
-				result.Append(c);
-			}
-			else
-			{
-				// Regular character
-				result.Append(c);
+				default:
+					// Regular character
+					result.Append(c);
+					break;
 			}
 		}
 
@@ -2659,7 +2664,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation("[Kernel32] FileTimeToLocalFileTime failed: {ExMessage}", ex.Message);
+			_logger.LogError(ex, "[Kernel32] FileTimeToLocalFileTime failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -2725,7 +2730,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 		catch (Exception ex)
 		{
-			_logger.LogInformation("[Kernel32] SetEnvironmentVariableA failed: {ExMessage}", ex.Message);
+			_logger.LogError(ex, "[Kernel32] SetEnvironmentVariableA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
@@ -2782,7 +2787,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 			catch (Exception ex)
 			{
-				_logger.LogInformation("[Kernel32] Error reading exception info: {ExMessage}", ex.Message);
+				_logger.LogError(ex, "[Kernel32] Error reading exception info: {ExMessage}", ex.Message);
 			}
 		}
 
@@ -2943,7 +2948,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(33)]
-	private uint MultiByteToWideChar(uint codePage, uint dwFlags, uint lpMultiByteStr, int cbMultiByte, uint lpWideCharStr, uint cchWideChar)
+	private uint MultiByteToWideChar(CodePage codePage, uint dwFlags, uint lpMultiByteStr, int cbMultiByte, uint lpWideCharStr, uint cchWideChar)
 	{
 		// MultiByteToWideChar converts a multibyte (ANSI) string to Unicode (wide char) string
 		// This is the inverse of WideCharToMultiByte
@@ -2957,16 +2962,16 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 
 			// Validate code page
-			if (codePage != 0 && codePage != 1 && codePage != 1252 && codePage != 437 && codePage != 65001)
+			if (codePage != 0 && codePage != (CodePage)1 && codePage != (CodePage)1252 && codePage != (CodePage)437 && codePage != (CodePage)65001)
 			{
 				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
 			// Use CP_ACP (1252) as default
-			if (codePage is 0 or 1)
+			if (codePage is 0 or (CodePage)1)
 			{
-				codePage = 1252;
+				codePage = (CodePage)1252;
 			}
 
 			// Determine string length if cbMultiByte is -1
@@ -3009,7 +3014,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// For simplicity, use ASCII for code pages 1252/437, UTF-8 for 65001
 			var encoding = codePage switch
 			{
-				65001 => Encoding.UTF8, // UTF-8
+				(CodePage)65001 => Encoding.UTF8, // UTF-8
 				_ => Encoding.ASCII // ASCII for Western code pages
 			};
 
@@ -3602,7 +3607,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// This might be a command line with arguments
 			// Fix the issue with backslashes before quotes that causes function 412440 to loop infinitely
 			// Windows command line parser expects backslashes before quotes to be properly escaped
-			string fixedPath = FixCommandLineEscaping(path);
+			var fixedPath = FixCommandLineEscaping(path);
 			if (fixedPath != path)
 			{
 				_logger.LogDebug("[Kernel32] Fixed command line escaping: {OrigPath} -> {FixedPath}", path, fixedPath);
@@ -3611,7 +3616,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Replace forward slashes with backslashes
-		string windowsPath = path.Replace('/', '\\');
+		var windowsPath = path.Replace('/', '\\');
 
 		// If the path doesn't start with a drive letter, add C:\ prefix
 		if (!windowsPath.Contains(":\\"))
@@ -3641,16 +3646,16 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Windows expects backslashes before quotes to be properly escaped
 
 		var result = new StringBuilder(cmdLine.Length);
-		bool inQuote = false;
+		var inQuote = false;
 
-		for (int i = 0; i < cmdLine.Length; i++)
+		for (var i = 0; i < cmdLine.Length; i++)
 		{
-			char c = cmdLine[i];
+			var c = cmdLine[i];
 
 			// Handle backslash sequences
 			if (c == '\\')
 			{
-				int backslashCount = 1;
+				var backslashCount = 1;
 				while (i + 1 < cmdLine.Length && cmdLine[i + 1] == '\\')
 				{
 					backslashCount++;
@@ -3662,15 +3667,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				{
 					// For each backslash before a quote, we need two backslashes
 					// This ensures the command line parser correctly handles the escaping
-					for (int j = 0; j < backslashCount; j++)
+					for (var j = 0; j < backslashCount; j++)
 					{
-						result.Append("\\\\");
+						result.Append(@"\\");
 					}
 				}
 				else
 				{
 					// Regular backslashes not before quotes
-					for (int j = 0; j < backslashCount; j++)
+					for (var j = 0; j < backslashCount; j++)
 					{
 						result.Append('\\');
 					}
@@ -3749,13 +3754,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// CREATE_SUSPENDED flag (0x4)
 		const uint CREATE_SUSPENDED = 0x4;
-		bool suspended = (dwCreationFlags & CREATE_SUSPENDED) != 0;
+		var suspended = (dwCreationFlags & CREATE_SUSPENDED) != 0;
 
 		// Create the thread using the new threading infrastructure
 		var handle = _env.CreateThread(lpStartAddress, lpParameter, dwStackSize, suspended);
 
 		// Get the thread ID from the handle (if ThreadScheduler is available)
-		uint threadId = handle;
+		var threadId = handle;
 		if (_env.ThreadScheduler != null)
 		{
 			var thread = _env.ThreadScheduler.GetThreadByHandle(handle);
@@ -3794,7 +3799,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			if (thread != null)
 			{
 				// Get previous suspend count (0 if running, >0 if suspended)
-				uint previousSuspendCount = thread.State == Threading.ThreadState.Suspended ? 1u : 0u;
+				var previousSuspendCount = thread.State == Threading.ThreadState.Suspended ? 1u : 0u;
 				
 				_env.ThreadScheduler.ResumeThread(thread.ThreadId);
 				_logger.LogInformation("[Kernel32] ResumeThread: thread {ThreadId} resumed", thread.ThreadId);
@@ -3813,19 +3818,16 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] SuspendThread(handle=0x{Handle:X8})", hThread);
 
-		if (_env.ThreadScheduler != null)
+		var thread = _env.ThreadScheduler?.GetThreadByHandle(hThread);
+		if (thread != null)
 		{
-			var thread = _env.ThreadScheduler.GetThreadByHandle(hThread);
-			if (thread != null)
-			{
-				// Get previous suspend count (0 if running, >0 if suspended)
-				uint previousSuspendCount = thread.State == Threading.ThreadState.Suspended ? 1u : 0u;
+			// Get previous suspend count (0 if running, >0 if suspended)
+			var previousSuspendCount = thread.State == Threading.ThreadState.Suspended ? 1u : 0u;
 				
-				_env.ThreadScheduler.SuspendThread(thread.ThreadId);
-				_logger.LogInformation("[Kernel32] SuspendThread: thread {ThreadId} suspended", thread.ThreadId);
+			_env.ThreadScheduler.SuspendThread(thread.ThreadId);
+			_logger.LogInformation("[Kernel32] SuspendThread: thread {ThreadId} suspended", thread.ThreadId);
 				
-				return previousSuspendCount;
-			}
+			return previousSuspendCount;
 		}
 
 		// Thread not found or scheduler not available
@@ -3961,13 +3963,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var success = _env.SynchronizationManager.SetEvent(hEvent);
 
 		// Wake all threads waiting on this event
-		if (success && _env.ThreadScheduler != null)
+		if (!success || _env.ThreadScheduler == null)
 		{
-			var waiters = _env.SynchronizationManager.GetEventWaiters(hEvent);
-			foreach (var waiterId in waiters)
-			{
-				_env.ThreadScheduler.WakeThread(waiterId);
-			}
+			return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+		}
+
+		var waiters = _env.SynchronizationManager.GetEventWaiters(hEvent);
+		foreach (var waiterId in waiters)
+		{
+			_env.ThreadScheduler.WakeThread(waiterId);
 		}
 
 		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
@@ -4001,13 +4005,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// PulseEvent sets and immediately resets the event
 		// Wake threads waiting on this event
-		if (_env.ThreadScheduler != null)
+		if (_env.ThreadScheduler == null)
 		{
-			var waiters = _env.SynchronizationManager.GetEventWaiters(hEvent);
-			foreach (var waiterId in waiters)
-			{
-				_env.ThreadScheduler.WakeThread(waiterId);
-			}
+			return NativeTypes.Win32Bool.TRUE;
+		}
+
+		var waiters = _env.SynchronizationManager.GetEventWaiters(hEvent);
+		foreach (var waiterId in waiters)
+		{
+			_env.ThreadScheduler.WakeThread(waiterId);
 		}
 
 		// The event remains in non-signaled state
@@ -4057,15 +4063,17 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Wake waiting threads
-		if (success && _env.ThreadScheduler != null)
+		if (!success || _env.ThreadScheduler == null)
 		{
-			for (int i = 0; i < lReleaseCount; i++)
+			return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+		}
+
+		for (var i = 0; i < lReleaseCount; i++)
+		{
+			var nextWaiter = _env.SynchronizationManager.GetNextSemaphoreWaiter(hSemaphore);
+			if (nextWaiter.HasValue)
 			{
-				var nextWaiter = _env.SynchronizationManager.GetNextSemaphoreWaiter(hSemaphore);
-				if (nextWaiter.HasValue)
-				{
-					_env.ThreadScheduler.WakeThread(nextWaiter.Value);
-				}
+				_env.ThreadScheduler.WakeThread(nextWaiter.Value);
 			}
 		}
 
@@ -4107,21 +4115,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Polling loop to wait for object - implements blocking behavior
 		while (true)
 		{
-			bool signaled = false;
-
 			// Try to acquire/wait on the synchronization object
-			switch (objectType)
+			var signaled = objectType switch
 			{
-				case "Mutex":
-					signaled = _env.SynchronizationManager.AcquireMutex(hHandle, currentThreadId);
-					break;
-				case "Event":
-					signaled = _env.SynchronizationManager.WaitOnEvent(hHandle, currentThreadId);
-					break;
-				case "Semaphore":
-					signaled = _env.SynchronizationManager.WaitOnSemaphore(hHandle, currentThreadId);
-					break;
-			}
+				"Mutex" => _env.SynchronizationManager.AcquireMutex(hHandle, currentThreadId),
+				"Event" => _env.SynchronizationManager.WaitOnEvent(hHandle, currentThreadId),
+				"Semaphore" => _env.SynchronizationManager.WaitOnSemaphore(hHandle, currentThreadId),
+				_ => false
+			};
 
 			if (signaled)
 			{
@@ -4152,10 +4153,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			Thread.Sleep(1);
 			
 			// Yield to thread scheduler if available
-			if (_env.ThreadScheduler != null)
-			{
-				_env.ThreadScheduler.ProcessWaitTimeouts();
-			}
+			_env.ThreadScheduler?.ProcessWaitTimeouts();
 		}
 	}
 
@@ -4236,7 +4234,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// Parse command line to extract executable path
 		var executable = cmdLine.Trim();
-		if (executable.StartsWith("\""))
+		if (executable.StartsWith('"'))
 		{
 			var endQuote = executable.IndexOf('"', 1);
 			if (endQuote > 0)

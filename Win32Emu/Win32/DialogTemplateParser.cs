@@ -28,38 +28,39 @@ public class DialogTemplateParser
 		var offset = 0u;
 
 		// Read first two WORDs to determine if this is extended or standard
-		var word1 = _memory.Read16(templateAddress + offset);
+		var word1 = _memory.Read16(templateAddress);
 		offset += 2;
 		var word2 = _memory.Read16(templateAddress + offset);
 		offset += 2;
 
-		bool isExtended = (word1 == 0xFFFF && word2 == 0x0001);
+		var isExtended = (word1 == 0xFFFF && word2 == 0x0001);
 
 		if (isExtended)
 		{
 			return ParseExtendedTemplate(templateAddress, ref offset);
 		}
-		else
-		{
-			// Reset offset since these were style fields, not signature
-			offset = 0;
-			return ParseStandardTemplate(templateAddress, ref offset);
-		}
+
+		// Reset offset since these were style fields, not signature
+		offset = 0;
+		return ParseStandardTemplate(templateAddress, ref offset);
 	}
 
 	private DialogTemplate ParseStandardTemplate(uint templateAddress, ref uint offset)
 	{
-		var template = new DialogTemplate { IsExtended = false };
+		var template = new DialogTemplate
+		{
+			IsExtended = false,
+			// DLGTEMPLATE structure:
+			// DWORD style;
+			// DWORD dwExtendedStyle;
+			// WORD cdit;
+			// short x;
+			// short y;
+			// short cx;
+			// short cy;
+			Style = _memory.Read32(templateAddress + offset)
+		};
 
-		// DLGTEMPLATE structure:
-		// DWORD style;
-		// DWORD dwExtendedStyle;
-		// WORD cdit;
-		// short x;
-		// short y;
-		// short cx;
-		// short cy;
-		template.Style = _memory.Read32(templateAddress + offset);
 		offset += 4;
 		template.ExtendedStyle = _memory.Read32(templateAddress + offset);
 		offset += 4;
@@ -93,7 +94,7 @@ public class DialogTemplateParser
 
 		// Parse dialog items
 		template.Items = new List<DialogItem>();
-		for (int i = 0; i < template.ItemCount; i++)
+		for (var i = 0; i < template.ItemCount; i++)
 		{
 			var item = ParseStandardItem(templateAddress, ref offset);
 			template.Items.Add(item);
@@ -106,21 +107,23 @@ public class DialogTemplateParser
 
 	private DialogTemplate ParseExtendedTemplate(uint templateAddress, ref uint offset)
 	{
-		var template = new DialogTemplate { IsExtended = true };
+		var template = new DialogTemplate
+		{
+			IsExtended = true,
+			// DLGTEMPLATEEX structure (after signature):
+			// WORD dlgVer; (already read as word2 = 0x0001)
+			// WORD signature; (already read as word1 = 0xFFFF)
+			// DWORD helpID;
+			// DWORD exStyle;
+			// DWORD style;
+			// WORD cDlgItems;
+			// short x;
+			// short y;
+			// short cx;
+			// short cy;
+			HelpId = _memory.Read32(templateAddress + offset)
+		};
 
-		// DLGTEMPLATEEX structure (after signature):
-		// WORD dlgVer; (already read as word2 = 0x0001)
-		// WORD signature; (already read as word1 = 0xFFFF)
-		// DWORD helpID;
-		// DWORD exStyle;
-		// DWORD style;
-		// WORD cDlgItems;
-		// short x;
-		// short y;
-		// short cx;
-		// short cy;
-
-		template.HelpId = _memory.Read32(templateAddress + offset);
 		offset += 4;
 		template.ExtendedStyle = _memory.Read32(templateAddress + offset);
 		offset += 4;
@@ -162,7 +165,7 @@ public class DialogTemplateParser
 
 		// Parse dialog items
 		template.Items = new List<DialogItem>();
-		for (int i = 0; i < template.ItemCount; i++)
+		for (var i = 0; i < template.ItemCount; i++)
 		{
 			var item = ParseExtendedItem(templateAddress, ref offset);
 			template.Items.Add(item);
@@ -175,18 +178,20 @@ public class DialogTemplateParser
 
 	private DialogItem ParseStandardItem(uint templateAddress, ref uint offset)
 	{
-		var item = new DialogItem { IsExtended = false };
+		var item = new DialogItem
+		{
+			IsExtended = false,
+			// DLGITEMTEMPLATE structure:
+			// DWORD style;
+			// DWORD dwExtendedStyle;
+			// short x;
+			// short y;
+			// short cx;
+			// short cy;
+			// WORD id;
+			Style = _memory.Read32(templateAddress + offset)
+		};
 
-		// DLGITEMTEMPLATE structure:
-		// DWORD style;
-		// DWORD dwExtendedStyle;
-		// short x;
-		// short y;
-		// short cx;
-		// short cy;
-		// WORD id;
-
-		item.Style = _memory.Read32(templateAddress + offset);
 		offset += 4;
 		item.ExtendedStyle = _memory.Read32(templateAddress + offset);
 		offset += 4;
@@ -211,7 +216,7 @@ public class DialogTemplateParser
 		if (dataSize > 0)
 		{
 			item.CreationData = new byte[dataSize];
-			for (int i = 0; i < dataSize; i++)
+			for (var i = 0; i < dataSize; i++)
 			{
 				item.CreationData[i] = _memory.Read8(templateAddress + offset);
 				offset++;
@@ -223,19 +228,21 @@ public class DialogTemplateParser
 
 	private DialogItem ParseExtendedItem(uint templateAddress, ref uint offset)
 	{
-		var item = new DialogItem { IsExtended = true };
+		var item = new DialogItem
+		{
+			IsExtended = true,
+			// DLGITEMTEMPLATEEX structure:
+			// DWORD helpID;
+			// DWORD exStyle;
+			// DWORD style;
+			// short x;
+			// short y;
+			// short cx;
+			// short cy;
+			// DWORD id;
+			HelpId = _memory.Read32(templateAddress + offset)
+		};
 
-		// DLGITEMTEMPLATEEX structure:
-		// DWORD helpID;
-		// DWORD exStyle;
-		// DWORD style;
-		// short x;
-		// short y;
-		// short cx;
-		// short cy;
-		// DWORD id;
-
-		item.HelpId = _memory.Read32(templateAddress + offset);
 		offset += 4;
 		item.ExtendedStyle = _memory.Read32(templateAddress + offset);
 		offset += 4;
@@ -262,7 +269,7 @@ public class DialogTemplateParser
 		if (dataSize > 0)
 		{
 			item.CreationData = new byte[dataSize];
-			for (int i = 0; i < dataSize; i++)
+			for (var i = 0; i < dataSize; i++)
 			{
 				item.CreationData[i] = _memory.Read8(templateAddress + offset);
 				offset++;
@@ -276,24 +283,23 @@ public class DialogTemplateParser
 	{
 		var firstWord = _memory.Read16(templateAddress + offset);
 
-		if (firstWord == 0x0000)
+		switch (firstWord)
 		{
-			// Empty string
-			offset += 2;
-			return string.Empty;
-		}
-		else if (firstWord == 0xFFFF)
-		{
-			// Ordinal value follows
-			offset += 2;
-			var ordinal = _memory.Read16(templateAddress + offset);
-			offset += 2;
-			return $"#{ordinal}";
-		}
-		else
-		{
-			// Unicode string (null-terminated)
-			return ReadString(templateAddress, ref offset);
+			case 0x0000:
+				// Empty string
+				offset += 2;
+				return string.Empty;
+			case 0xFFFF:
+			{
+				// Ordinal value follows
+				offset += 2;
+				var ordinal = _memory.Read16(templateAddress + offset);
+				offset += 2;
+				return $"#{ordinal}";
+			}
+			default:
+				// Unicode string (null-terminated)
+				return ReadString(templateAddress, ref offset);
 		}
 	}
 
@@ -341,7 +347,7 @@ public class DialogTemplate
 	public byte FontItalic { get; set; }
 	public byte FontCharset { get; set; }
 	public string FontName { get; set; } = string.Empty;
-	public List<DialogItem> Items { get; set; } = new();
+	public List<DialogItem> Items { get; set; } = [];
 }
 
 /// <summary>

@@ -126,8 +126,7 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 	{
 		try
 		{
-			var virtualPath = path;
-			var overlayPath = GetOverlayPath(virtualPath);
+			var overlayPath = GetOverlayPath(path);
 
 			// For write operations, ensure we're working with the overlay
 			if (access == VfsFileAccess.Write || access == VfsFileAccess.ReadWrite)
@@ -135,7 +134,7 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 				// For modes that require existing file, copy to overlay first
 				if (mode == VfsFileMode.Open || mode == VfsFileMode.Truncate || mode == VfsFileMode.OpenOrCreate)
 				{
-					EnsureInOverlay(virtualPath);
+					EnsureInOverlay(path);
 				}
 
 				// Ensure overlay directory exists
@@ -148,21 +147,21 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 				var fileMode = ConvertFileMode(mode);
 				var fileAccess = ConvertFileAccess(access);
 				var fs = new FileStream(overlayPath, fileMode, fileAccess, FileShare.ReadWrite);
-				_logger.LogDebug("[VFS] Opened {VirtualPath} for {Access} in overlay", virtualPath, access);
+				_logger.LogDebug("[VFS] Opened {VirtualPath} for {Access} in overlay", path, access);
 				return new VirtualFileHandle(fs);
 			}
 
 			// For read-only operations, try overlay first, then base
-			var resolvedPath = ResolvePath(virtualPath, out var isInOverlay);
+			var resolvedPath = ResolvePath(path, out var isInOverlay);
 			if (resolvedPath != null)
 			{
 				var fs = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 				_logger.LogDebug("[VFS] Opened {VirtualPath} for read from {Layer}", 
-					virtualPath, isInOverlay ? "overlay" : "base");
+					path, isInOverlay ? "overlay" : "base");
 				return new VirtualFileHandle(fs);
 			}
 
-			_logger.LogDebug("[VFS] File not found: {VirtualPath}", virtualPath);
+			_logger.LogDebug("[VFS] File not found: {VirtualPath}", path);
 			return null;
 		}
 		catch (Exception ex)
@@ -249,9 +248,8 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 	{
 		try
 		{
-			var virtualDir = directory;
-			var overlayDir = GetOverlayPath(virtualDir);
-			var baseDir = GetBasePath(virtualDir);
+			var overlayDir = GetOverlayPath(directory);
+			var baseDir = GetBasePath(directory);
 
 			var files = new HashSet<string>();
 

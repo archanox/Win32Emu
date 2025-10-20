@@ -1074,7 +1074,7 @@ public class GdbServer : IDisposable
             const int O_EXCL = 0x0400;
 
             var accessMode = flags & 0x03;
-            VfsFileAccess access = accessMode switch
+            var access = accessMode switch
             {
                 O_RDONLY => VfsFileAccess.Read,
                 O_WRONLY => VfsFileAccess.Write,
