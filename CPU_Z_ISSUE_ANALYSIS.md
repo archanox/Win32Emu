@@ -2,7 +2,7 @@
 
 ## Issue Summary
 
-The original issue (#???) showed CPU-Z execution logs that were truncated during a `WideCharToMultiByte` call. The log stopped abruptly after logging "Read 257 chars (specified count)" with the next line showing only "[Di..." (truncated Dispatcher log).
+The original issue (#265) showed CPU-Z execution logs that were truncated during a `WideCharToMultiByte` call. The log stopped abruptly after logging "Read 257 chars (specified count)" with the next line showing only "[Di..." (truncated Dispatcher log).
 
 ## Investigation
 
