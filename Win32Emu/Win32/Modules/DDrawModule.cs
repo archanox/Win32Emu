@@ -706,7 +706,15 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_ReleaseDC(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::ReleaseDC() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var hDC = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::ReleaseDC(this=0x{ThisPtr:X8}, hDC=0x{HDC:X8})", 
+				thisPtr, hDC);
+
+			// In a real implementation, this would release the GDI DC
+			// For now, just acknowledge the release
 			return 0; // DD_OK
 		}
 
@@ -908,19 +916,55 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_GetOverlayPosition(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetOverlayPosition() - stub");
-			return 0; // DD_OK
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lplX = args.UInt32(1);
+			var lplY = args.UInt32(2);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetOverlayPosition(this=0x{ThisPtr:X8}, lplX=0x{LplX:X8}, lplY=0x{LplY:X8})", 
+				thisPtr, lplX, lplY);
+
+			// Overlays are not supported in this implementation
+			// Return error indicating this is not an overlay surface
+			return 0x88760177; // DDERR_NOTAOVERLAYSURFACE
 		}
 
 		private uint Surface_GetFlipStatus(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetFlipStatus() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetFlipStatus(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8})", 
+				thisPtr, dwFlags);
+
+			// In an emulator, flips complete instantly
+			// Always return DD_OK to indicate no flips are pending
 			return 0; // DD_OK
 		}
 
 		private uint Surface_GetDC(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetDC() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lphDC = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetDC(this=0x{ThisPtr:X8}, lphDC=0x{LphDC:X8})", 
+				thisPtr, lphDC);
+
+			if (lphDC == 0)
+			{
+				_logger.LogError("[DDraw] GetDC: lphDC is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Create a fake device context handle
+			// In a real implementation, this would create an actual GDI DC
+			// For now, we return a non-zero handle to indicate success
+			var fakeDC = 0x12340000u;
+			_env.MemWrite32(lphDC, fakeDC);
+
+			_logger.LogInformation("[DDraw] Returning fake DC handle: 0x{FakeDC:X8}", fakeDC);
 			return 0; // DD_OK
 		}
 
@@ -974,8 +1018,25 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_GetClipper(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetClipper() - stub");
-			return 0; // DD_OK
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lplpDDClipper = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetClipper(this=0x{ThisPtr:X8}, lplpDDClipper=0x{LplpDDClipper:X8})", 
+				thisPtr, lplpDDClipper);
+
+			if (lplpDDClipper == 0)
+			{
+				_logger.LogError("[DDraw] GetClipper: lplpDDClipper is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// We don't support clippers in this implementation
+			// Return null to indicate no clipper is attached
+			_env.MemWrite32(lplpDDClipper, 0);
+			_logger.LogInformation("[DDraw] No clipper attached to surface");
+
+			return 0x88760169; // DDERR_NOCLIPPERATTACHED
 		}
 
 		private uint Surface_GetCaps(ICpu cpu, VirtualMemory mem)
@@ -1019,7 +1080,15 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_GetBltStatus(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetBltStatus() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetBltStatus(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8})", 
+				thisPtr, dwFlags);
+
+			// In an emulator, blits complete instantly
+			// Always return DD_OK to indicate no blits are pending
 			return 0; // DD_OK
 		}
 
@@ -1525,8 +1594,44 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DDraw_GetGDISurface(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetGDISurface() - stub");
-			return 0; // DD_OK
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lplpGDIDDSSurface = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetGDISurface(this=0x{ThisPtr:X8}, lplpGDIDDSSurface=0x{LplpGDIDDSSurface:X8})", 
+				thisPtr, lplpGDIDDSSurface);
+
+			if (lplpGDIDDSSurface == 0)
+			{
+				_logger.LogError("[DDraw] GetGDISurface: lplpGDIDDSSurface is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Find the primary surface (which would be the GDI surface)
+			DirectDrawSurface? primarySurface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				if (s.IsPrimary)
+				{
+					primarySurface = s;
+					break;
+				}
+			}
+
+			if (primarySurface == null)
+			{
+				_env.MemWrite32(lplpGDIDDSSurface, 0);
+				_logger.LogInformation("[DDraw] No GDI surface found");
+				return 0x887601C2; // DDERR_NOTFOUND
+			}
+
+			// Return the COM object address of the primary surface
+			// Note: In a real implementation, we'd need to track the COM object addresses for surfaces
+			// For now, we'll return 0 to indicate no GDI surface
+			_env.MemWrite32(lplpGDIDDSSurface, 0);
+			_logger.LogInformation("[DDraw] GDI surface tracking not fully implemented");
+
+			return 0x887601C2; // DDERR_NOTFOUND
 		}
 
 		private uint DDraw_GetMonitorFrequency(ICpu cpu, VirtualMemory memory)
@@ -1730,7 +1835,25 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DDraw_WaitForVerticalBlank(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::WaitForVerticalBlank() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDraw::WaitForVerticalBlank(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8})", 
+				thisPtr, dwFlags);
+
+			// DDWAITVB_BLOCKBEGIN = 0x00000001 - Wait for vertical blank to begin
+			// DDWAITVB_BLOCKBEGINEVENT = 0x00000002 - Triggers when vertical blank begins
+			// DDWAITVB_BLOCKEND = 0x00000004 - Wait for vertical blank to end
+
+			if ((dwFlags & 0x00000001) != 0 || (dwFlags & 0x00000004) != 0)
+			{
+				// Simulate a small wait for vertical blank
+				// In reality, at 60Hz, vertical blank lasts about 1-2ms
+				// We don't actually wait in the emulator to avoid slowing down
+				_logger.LogInformation("[DDraw] Simulated wait for vertical blank");
+			}
+
 			return 0; // DD_OK
 		}
 
