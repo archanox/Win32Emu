@@ -407,6 +407,10 @@ void main()
             // Use our shader program
             _gl.UseProgram(_shaderProgram);
             
+            // Set the 'texture1' uniform to use texture unit 0
+            int textureUniformLocation = _gl.GetUniformLocation(_shaderProgram, "texture1");
+            _gl.Uniform1(textureUniformLocation, 0);
+            
             // Bind texture
             _gl.ActiveTexture(TextureUnit.Texture0);
             _gl.BindTexture(TextureTarget.Texture2D, _textureId);
