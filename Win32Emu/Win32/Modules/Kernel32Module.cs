@@ -2942,7 +2942,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				_env.MemWrite32(lpUsedDefaultChar, 0); // FALSE - no default char used (simplified)
 			}
 
-			_logger.LogInformation("[Kernel32] WideCharToMultiByte: Success, returning {BytesLength} bytes", (uint)multiByteBytes.Length);
+			_logger.LogDebug("[Kernel32] WideCharToMultiByte: Success, returning {BytesLength} bytes", (uint)multiByteBytes.Length);
 			return (uint)multiByteBytes.Length;
 		}
 		catch (Exception ex)
