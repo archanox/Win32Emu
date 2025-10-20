@@ -11,7 +11,7 @@ public static class BackendFactory
 
     /// <summary>
     /// Current backend type setting
-    /// Priority: 1. Explicitly set value, 2. WIN32EMU_BACKEND environment variable, 3. Default to SDL
+    /// Priority: 1. Explicitly set value, 2. WIN32EMU_BACKEND environment variable, 3. Default to GLFW
     /// </summary>
     public static BackendType CurrentBackendType
     {
@@ -32,8 +32,8 @@ public static class BackendFactory
                 }
             }
 
-            // Default to SDL
-            return BackendType.SDL;
+            // Default to GLFW
+            return BackendType.GLFW;
         }
         set => _currentBackendType = value;
     }
@@ -45,10 +45,9 @@ public static class BackendFactory
     {
         return CurrentBackendType switch
         {
-            BackendType.SDL => new SilkSdlRenderingBackend(logger),
             BackendType.GLFW => new SilkGlfwRenderingBackend(logger),
             BackendType.Vulkan => new SilkVulkanRenderingBackend(logger),
-            _ => new SilkSdlRenderingBackend(logger)
+            _ => new SilkGlfwRenderingBackend(logger)
         };
     }
 

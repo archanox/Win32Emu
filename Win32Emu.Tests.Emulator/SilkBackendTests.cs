@@ -6,62 +6,6 @@ namespace Win32Emu.Tests.Emulator;
 public class SilkBackendTests
 {
     [Fact]
-    public void SilkSDLRenderingBackend_Initialize_ShouldNotThrow()
-    {
-        // Arrange & Act & Assert - should not throw even if SDL is not available
-        try
-        {
-            using var renderingBackend = new SilkSdlRenderingBackend(NullLogger.Instance);
-            
-            var result = renderingBackend.Initialize(640, 480, "Test Window");
-            // If initialization succeeds, verify state
-            if (result)
-            {
-                Assert.True(renderingBackend.IsInitialized);
-                Assert.Equal(640, renderingBackend.Width);
-                Assert.Equal(480, renderingBackend.Height);
-            }
-        }
-        catch (DllNotFoundException)
-        {
-            // SDL not available in CI - this is OK, test passes
-        }
-        catch (FileNotFoundException)
-        {
-            // SDL library not found - this is OK in CI
-        }
-    }
-
-    [Fact]
-    public void SilkSDLRenderingBackend_Dispose_ShouldNotThrow()
-    {
-        // Arrange
-        try
-        {
-            var renderingBackend = new SilkSdlRenderingBackend(NullLogger.Instance);
-            
-            try
-            {
-                renderingBackend.Initialize(640, 480, "Test Window");
-            }
-            catch (DllNotFoundException)
-            {
-                // SDL not available - still test dispose
-            }
-
-            // Act
-            renderingBackend.Dispose();
-
-            // Assert - should not throw
-            Assert.False(renderingBackend.IsInitialized);
-        }
-        catch (FileNotFoundException)
-        {
-            // SDL library not found - test passes
-        }
-    }
-
-    [Fact]
     public void SilkOpenALAudioBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw even if OpenAL is not available

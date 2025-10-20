@@ -43,7 +43,6 @@
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.13.1" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.13.1" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
-    <PackageReference Include="Silk.NET.SDL" Version="2.22.0" />
     <PackageReference Include="Silk.NET.GLFW" Version="2.22.0" />
     <PackageReference Include="Silk.NET.OpenGL" Version="2.22.0" />
     <PackageReference Include="Silk.NET.OpenAL" Version="2.22.0" />

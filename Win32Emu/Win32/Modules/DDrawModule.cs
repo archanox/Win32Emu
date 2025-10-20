@@ -876,12 +876,12 @@ namespace Win32Emu.Win32.Modules
 				return 1; // DDERR_GENERIC
 			}
 
-			// If this is a primary surface, present the frame to SDL3
+			// If this is a primary surface, present the frame to the rendering backend
 			if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null)
 			{
 				try
 				{
-					// Process SDL events to keep the window responsive
+					// Process events to keep the window responsive
 					ddrawObj.RenderingBackend.ProcessEvents();
 
 					// The frame was already updated in Surface_Unlock, so Flip just ensures presentation
@@ -1609,7 +1609,7 @@ namespace Win32Emu.Win32.Modules
 			// Mark the surface as unlocked
 			surface.IsLocked = false;
 			
-			// If this is a primary surface, update the SDL3 texture
+			// If this is a primary surface, update the rendering backend texture
 			if (surface.IsPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null)
 			{
 				try
@@ -1687,7 +1687,7 @@ namespace Win32Emu.Win32.Modules
 						displayData = surface.Bits;
 					}
 
-					// Update the SDL3 texture with the converted surface data
+					// Update the rendering backend texture with the converted surface data
 					if (displayData != null)
 					{
 						var displayPitch = surface.Width * 4; // RGBA format
@@ -1696,7 +1696,7 @@ namespace Win32Emu.Win32.Modules
 				}
 				catch (Exception ex)
 				{
-					_logger.LogError(ex, "[DDraw] Failed to update SDL3 texture for primary surface");
+					_logger.LogError(ex, "[DDraw] Failed to update rendering backend texture for primary surface");
 				}
 			}
 			

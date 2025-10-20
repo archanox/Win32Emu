@@ -6,11 +6,6 @@ namespace Win32Emu.Rendering;
 public enum BackendType
 {
     /// <summary>
-    /// SDL backend using Silk.NET.SDL
-    /// </summary>
-    SDL,
-
-    /// <summary>
     /// GLFW backend using Silk.NET.GLFW
     /// </summary>
     GLFW,

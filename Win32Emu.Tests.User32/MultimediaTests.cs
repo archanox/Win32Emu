@@ -32,8 +32,8 @@ public class MultimediaTests : IDisposable
         }
         catch (DllNotFoundException)
         {
-            // SDL3 not available in CI - skip test
-            // This is expected behavior when SDL3 native library is not installed
+            // Native rendering library not available in CI - skip test
+            // This is expected behavior when native library is not installed
         }
     }
 
