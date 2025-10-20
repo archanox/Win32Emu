@@ -2424,6 +2424,9 @@ public class IcedCpu : ICpu
 	{
 		// FCOMP - Compare ST(0) with source and pop
 		// The source can be a memory operand (float32/float64) or ST(i)
+		// Note: FCOMP is an ordered comparison (unlike FUCOMP which is unordered)
+		// In a full x87 implementation, this would set C0, C2, C3 in the FPU status word
+		// For simplicity in this emulator, we set EFLAGS like FUCOMIP does
 		double st0 = FpuGetSt(0);
 		double source;
 		
@@ -2440,9 +2443,14 @@ public class IcedCpu : ICpu
 			{
 				source = BitConverter.Int32BitsToSingle((int)_mem.Read32(addr));
 			}
+			else if (insn.MemorySize == MemorySize.Float64)
+			{
+				var bits = _mem.Read64(addr);
+				source = BitConverter.Int64BitsToDouble((long)bits);
+			}
 			else
 			{
-				// Assume 64-bit double
+				// Default to 64-bit double if memory size is not explicitly specified
 				var bits = _mem.Read64(addr);
 				source = BitConverter.Int64BitsToDouble((long)bits);
 			}
@@ -2456,8 +2464,6 @@ public class IcedCpu : ICpu
 		}
 		
 		// Set EFLAGS based on comparison (similar to FUCOMIP)
-		// In a full x87 implementation, this would set C0, C2, C3 in the status word
-		// For simplicity, we set EFLAGS like FUCOMIP does
 		if (double.IsNaN(st0) || double.IsNaN(source))
 		{
 			SetFlag(Zf);
