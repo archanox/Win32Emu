@@ -1396,6 +1396,11 @@ namespace Win32Emu.Win32.Modules
 				if (obj.RenderingBackend == null)
 				{
 					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
+					
+					// Subscribe to UI events from the rendering backend
+					// This ensures SDL events are translated into Win32 messages
+					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
+					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
 				}
 			}
 			else
@@ -1452,6 +1457,11 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogError("[DDraw] Failed to initialize rendering backend");
 						return 1; // DDERR_GENERIC
 					}
+					
+					// Subscribe to UI events from the rendering backend
+					// This ensures SDL events are translated into Win32 messages
+					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
+					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
 				}
 			}
 			else
