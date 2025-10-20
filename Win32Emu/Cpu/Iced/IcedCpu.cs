@@ -2824,11 +2824,11 @@ public class IcedCpu : ICpu
 		// FDIVRP - Reverse divide and pop
 		if (insn.OpCount == 0)
 		{
-			// FDIVRP - Divide ST(0) by ST(1) and pop
+			// FDIVRP - Divide ST(1) by ST(0) and pop
 			var st0 = FpuGetSt(0);
 			var st1 = FpuGetSt(1);
 			FpuPop();
-			FpuSetSt(0, st0 / st1);
+			FpuSetSt(0, st1 / st0);
 		}
 		else
 		{
