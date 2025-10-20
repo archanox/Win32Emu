@@ -674,7 +674,10 @@ public sealed class BasicFunctionsTests : IDisposable
         // wide string is converted to UTF-8 but only 256 bytes of buffer are provided
         
         // Arrange
-        // Create a 257-character ASCII string (will be 257 bytes in UTF-8)
+        // Create a 257-character ASCII string. Since each ASCII character is encoded as
+        // a single byte in UTF-8, this will require exactly 257 bytes - one more than
+        // the 256-byte buffer size. This recreates the specific buffer overflow scenario
+        // observed in the CPU-Z execution logs.
         var testString = new string('A', 257);
         var wideStringPtr = WriteWideString(testString);
         var outputBuffer = _testEnv.AllocateMemory(256); // Only 256 bytes available
@@ -687,9 +690,9 @@ public sealed class BasicFunctionsTests : IDisposable
         // Assert - Should return 0 because buffer is too small
         Assert.Equal(0u, result);
         
-        // Verify GetLastError returns ERROR_INSUFFICIENT_BUFFER (122)
+        // Verify GetLastError returns ERROR_INSUFFICIENT_BUFFER
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        Assert.Equal(122u, lastError); // ERROR_INSUFFICIENT_BUFFER
+        Assert.Equal(NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER, lastError);
     }
 
     [Fact]
