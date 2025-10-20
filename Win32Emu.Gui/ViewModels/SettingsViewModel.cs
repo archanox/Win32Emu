@@ -42,7 +42,6 @@ public partial class SettingsViewModel : ViewModelBase
 
     public ObservableCollection<string> RenderingBackends { get; } = new()
     {
-        "SDL",
         "GLFW",
         "Vulkan"
     };

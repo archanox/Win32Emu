@@ -343,7 +343,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 
     public void OnDisplayUpdate(DisplayUpdateInfo info)
     {
-        // TODO: Update SDL3 display rendering
+        // TODO: Update rendering backend display rendering
         OnDebugOutput($"Display updated: {info.Width}x{info.Height}", DebugLevel.Debug);
     }
 

@@ -7,7 +7,7 @@ namespace Win32Emu.Gui.Configuration;
 /// </summary>
 public class EmulatorSettings
 {
-    public string RenderingBackend { get; set; } = "SDL";
+    public string RenderingBackend { get; set; } = "GLFW";
     public int ResolutionScaleFactor { get; set; } = 1;
     public int ReservedMemoryMB { get; set; } = 256;
     public string WindowsVersion { get; set; } = "Windows 95";

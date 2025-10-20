@@ -162,7 +162,7 @@ public class ProcessEnvironment
 		CommandLinePtr = WriteAnsiString(newCmdLine + '\0');
 	}
 
-	// SDL3 backends for audio and input
+	// Backends for audio and input
 	public IAudioBackend? AudioBackend { get; set; }
 	public IInputBackend? InputBackend { get; set; }
 

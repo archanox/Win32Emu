@@ -14,12 +14,12 @@ namespace Win32Emu
 				Console.WriteLine("  --debug              Enable enhanced debugging to catch memory access errors");
 				Console.WriteLine("  --interactive-debug  Enable interactive step-through debugger (GDB-like)");
 				Console.WriteLine("  --gdb-server [port]  Start GDB server for remote debugging (default port: 1234)");
-				Console.WriteLine("  --backend <SDL|GLFW|Vulkan> Select rendering backend (default: SDL)");
+				Console.WriteLine("  --backend <GLFW|Vulkan> Select rendering backend (default: GLFW)");
 				Console.WriteLine("  --telemetry-console  Enable OpenTelemetry with console exporter");
 				Console.WriteLine("  --telemetry-otlp [endpoint] Enable OpenTelemetry with OTLP exporter (default: http://localhost:4317)");
 				Console.WriteLine();
 				Console.WriteLine("Environment Variables:");
-				Console.WriteLine("  WIN32EMU_BACKEND     Set backend type (SDL, GLFW, or Vulkan)");
+				Console.WriteLine("  WIN32EMU_BACKEND     Set backend type (GLFW or Vulkan)");
 				Console.WriteLine();
 				Console.WriteLine("Examples:");
 				Console.WriteLine("  Win32Emu game.exe");
