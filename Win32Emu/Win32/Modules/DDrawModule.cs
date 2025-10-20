@@ -204,6 +204,11 @@ namespace Win32Emu.Win32.Modules
 			public Rendering.IRenderingBackend? RenderingBackend { get; set; }
 			public uint CooperativeLevel { get; set; }
 			public IntPtr WindowHandle { get; set; }
+			
+			/// <summary>
+			/// Tracks whether UI events from the rendering backend have been subscribed to the ProcessEnvironment.
+			/// This prevents duplicate event handler registration.
+			/// </summary>
 			public bool UIEventsSubscribed { get; set; }
 		}
 
