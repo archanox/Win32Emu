@@ -58,15 +58,14 @@ public class NewInstructionTests : IDisposable
         _helper.Memory.Write32(memAddr, 2); // Store integer 2
         
         // Load 10.0 onto FPU stack (FLD1 x10)
-        for (int i = 0; i < 10; i++)
+        _helper.WriteCode(0xD9, 0xE8); // FLD1
+        _helper.ExecuteInstruction();
+        for (int i = 1; i < 10; i++)
         {
             _helper.WriteCode(0xD9, 0xE8); // FLD1
             _helper.ExecuteInstruction();
-            if (i > 0)
-            {
-                _helper.WriteCode(0xD8, 0xC1); // FADD ST(0), ST(1)
-                _helper.ExecuteInstruction();
-            }
+            _helper.WriteCode(0xD8, 0xC1); // FADD ST(0), ST(1)
+            _helper.ExecuteInstruction();
         }
         
         // FIDIV dword ptr [memAddr] (DA 35 + address)
