@@ -126,8 +126,19 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         {
             try
             {
-                // Create DialogWindow from the template
-                var dialogWindow = new Views.DialogWindow(info.Template);
+                // Create message callback that posts messages to the emulator
+                Action<uint, uint, uint, uint>? messageCallback = null;
+                if (_emulatorService?.CurrentEmulator != null)
+                {
+                    messageCallback = (hwnd, msg, wParam, lParam) =>
+                    {
+                        OnDebugOutput($"Dialog HWND=0x{info.Handle:X8} posting message MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}", DebugLevel.Debug);
+                        _emulatorService.CurrentEmulator.PostMessage(info.Handle, msg, wParam, lParam);
+                    };
+                }
+                
+                // Create DialogWindow from the template with message callback
+                var dialogWindow = new Views.DialogWindow(info.Template, messageCallback);
                 
                 // Find parent window if specified
                 Window? parentWindow = null;
