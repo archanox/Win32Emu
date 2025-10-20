@@ -29,9 +29,13 @@ namespace Win32Emu.Win32.Modules
 		private readonly Dictionary<uint, DirectSoundBuffer> _buffers = new();
 		private uint _nextDSoundHandle = 0x80000000;
 		private uint _nextBufferHandle = 0x81000000;
+		private ICpu? _cpu;
+		private VirtualMemory? _memory;
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
+			_cpu = cpu;
+			_memory = memory;
 			returnValue = 0;
 			var a = new StackArgs(cpu, memory);
 
@@ -106,9 +110,121 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[DSound] DirectSoundEnumerateA(lpDSEnumCallback=0x{LpDsEnumCallback:X8}, lpContext=0x{LpContext:X8})", lpDsEnumCallback, lpContext);
 
-			// For now, just report no devices found (return DS_OK)
-			// In a full implementation, we would enumerate audio devices and call the callback
+			// If no callback is provided, just return success
+			if (lpDsEnumCallback == 0)
+			{
+				_logger.LogInformation("[DSound] DirectSoundEnumerateA: No callback provided");
+				return 0; // DS_OK
+			}
+
+			// Enumerate audio devices and call the callback for each one
+			// For now, we'll enumerate at least one default device
+			// The callback signature is: BOOL Callback(LPGUID lpGuid, LPCSTR lpcstrDescription, LPCSTR lpcstrModule, LPVOID lpContext)
+			
+			// Allocate strings for the default device
+			var descriptionStr = "Primary Sound Driver";
+			var moduleStr = "Primary Sound Driver";
+			
+			uint descriptionPtr = _env.WriteAnsiString(descriptionStr + '\0');
+			uint modulePtr = _env.WriteAnsiString(moduleStr + '\0');
+			
+			// Call the callback with NULL GUID for the default device
+			bool continueEnum = CallEnumerationCallback(lpDsEnumCallback, 0, descriptionPtr, modulePtr, lpContext);
+			
+			if (!continueEnum)
+			{
+				_logger.LogInformation("[DSound] DirectSoundEnumerateA: Callback returned FALSE, stopping enumeration");
+			}
+
 			return 0; // DS_OK
+		}
+
+		/// <summary>
+		/// Calls the DirectSound enumeration callback function.
+		/// </summary>
+		/// <returns>True if enumeration should continue, false otherwise</returns>
+		private bool CallEnumerationCallback(uint callbackAddress, uint lpGuid, uint lpcstrDescription, uint lpcstrModule, uint lpContext)
+		{
+			if (_cpu == null || _memory == null)
+			{
+				_logger.LogWarning("[DSound] CallEnumerationCallback: CPU or Memory not available");
+				return false;
+			}
+
+			_logger.LogInformation("[DSound] CallEnumerationCallback: Calling 0x{CallbackAddress:X8}", callbackAddress);
+
+			// Save current CPU state
+			var savedEip = _cpu.GetEip();
+			var savedEsp = _cpu.GetRegister("ESP");
+			var savedEbp = _cpu.GetRegister("EBP");
+
+			// Set up stack for stdcall convention (parameters pushed right-to-left)
+			var esp = savedEsp;
+
+			// Push return address (we'll use a special marker address)
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+			esp -= 4;
+			_memory.Write32(esp, RETURN_ADDRESS);
+
+			// Push parameters (right-to-left for stdcall)
+			esp -= 4;
+			_memory.Write32(esp, lpContext);
+
+			esp -= 4;
+			_memory.Write32(esp, lpcstrModule);
+
+			esp -= 4;
+			_memory.Write32(esp, lpcstrDescription);
+
+			esp -= 4;
+			_memory.Write32(esp, lpGuid);
+
+			// Update CPU registers
+			_cpu.SetRegister("ESP", esp);
+			_cpu.SetEip(callbackAddress);
+
+			// Execute until we hit the return address
+			const int MAX_STEPS = 100000;
+			var steps = 0;
+			var returnValue = 0u;
+
+			try
+			{
+				while (steps < MAX_STEPS)
+				{
+					var currentEip = _cpu.GetEip();
+					if (currentEip == RETURN_ADDRESS)
+					{
+						// Callback returned, get return value from EAX
+						returnValue = _cpu.GetRegister("EAX");
+						break;
+					}
+
+					_cpu.SingleStep(_memory);
+					steps++;
+				}
+
+				if (steps >= MAX_STEPS)
+				{
+					_logger.LogWarning("[DSound] CallEnumerationCallback: Exceeded max steps ({MaxSteps}), aborting", MAX_STEPS);
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "[DSound] CallEnumerationCallback: Exception during execution: {ExMessage}", ex.Message);
+			}
+			finally
+			{
+				// Restore CPU state
+				_cpu.SetEip(savedEip);
+				_cpu.SetRegister("ESP", savedEsp);
+				_cpu.SetRegister("EBP", savedEbp);
+			}
+
+			_logger.LogInformation("[DSound] CallEnumerationCallback: Completed with return value {ReturnValue}", returnValue);
+			
+			// Return TRUE means continue enumeration, FALSE means stop
+			return returnValue != 0;
 		}
 
 		private sealed class DirectSoundObject

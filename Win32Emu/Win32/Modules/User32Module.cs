@@ -516,9 +516,48 @@ namespace Win32Emu.Win32.Modules
 			// SW_HIDE = 0, SW_NORMAL = 1, SW_SHOWMINIMIZED = 2, SW_SHOWMAXIMIZED = 3, etc.
 			_logger.LogInformation("[User32] ShowWindow: HWND=0x{Hwnd:X8} nCmdShow={NCmdShow}", hwnd, nCmdShow);
 
-			// For now, just log and return TRUE (non-zero)
-			// In a full implementation, this would interact with the Avalonia window
-			return 1;
+			// Get the current window to check if it exists and get previous visibility
+			var window = _env.GetWindow(hwnd);
+			if (window == null)
+			{
+				_logger.LogWarning("[User32] ShowWindow: Invalid HWND=0x{Hwnd:X8}", hwnd);
+				return 0; // Window was not previously visible
+			}
+
+			// Check if window was previously visible (has WS_VISIBLE style)
+			var wasPreviouslyVisible = (window.Value.Style & NativeTypes.WindowStyle.WS_VISIBLE) != 0;
+
+			// Update visibility based on nCmdShow
+			// SW_HIDE = 0, SW_SHOWNORMAL = 1, SW_SHOWMINIMIZED = 2, SW_SHOWMAXIMIZED = 3,
+			// SW_MAXIMIZE = 3, SW_SHOWNOACTIVATE = 4, SW_SHOW = 5, SW_MINIMIZE = 6,
+			// SW_SHOWMINNOACTIVE = 7, SW_SHOWNA = 8, SW_RESTORE = 9
+			bool shouldBeVisible = nCmdShow != 0; // SW_HIDE = 0, all others show the window
+
+			// Get current style from window properties (which may have been modified)
+			var currentStyle = _env.GetWindowProperty(hwnd, NativeTypes.WindowLong.GWL_STYLE);
+			if (currentStyle == 0)
+			{
+				// No custom style set, use the window's original style
+				currentStyle = window.Value.Style;
+			}
+
+			// Update the WS_VISIBLE flag
+			if (shouldBeVisible)
+			{
+				currentStyle |= NativeTypes.WindowStyle.WS_VISIBLE;
+				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now visible", hwnd);
+			}
+			else
+			{
+				currentStyle &= ~NativeTypes.WindowStyle.WS_VISIBLE;
+				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now hidden", hwnd);
+			}
+
+			// Store the updated style in window properties
+			_env.SetWindowProperty(hwnd, NativeTypes.WindowLong.GWL_STYLE, currentStyle);
+
+			// Return non-zero if window was previously visible, zero if it was previously hidden
+			return wasPreviouslyVisible ? 1u : 0u;
 		}
 
 		[DllModuleExport(10)]

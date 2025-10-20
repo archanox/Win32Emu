@@ -123,8 +123,12 @@ public class SilkInputBackend : IInputBackend
                 return false;
             }
 
-            // Return current state
-            // TODO: In a full implementation, this would poll the actual input devices
+            // Return current state of the device.
+            // This is a stub implementation that returns empty state.
+            // A full implementation would:
+            // - Query Silk.NET.Input's IInputContext for actual keyboard/mouse/gamepad state
+            // - Requires integration with a windowing system (SDL, GLFW) to get input context
+            // - Update device.State with current button presses, axis positions, etc.
             state = device.State;
             return true;
         }
@@ -139,11 +143,15 @@ public class SilkInputBackend : IInputBackend
                 return;
             }
 
-            // Process input events
-            // In a full implementation, this would poll the windowing system for events
-            // and raise UIEvent for each one. For now, this is a no-op stub.
-            // Actual input backend implementations (SDL, GLFW) should raise UIEvent
-            // when they detect mouse/keyboard input.
+            // Process input events and raise UIEvent for each input change.
+            // This is a stub implementation that does nothing.
+            // A full implementation would:
+            // - Poll the windowing system (SDL, GLFW) for pending events
+            // - Convert each event (key press, mouse move, etc.) to UIEventArgs
+            // - Call OnUIEvent(args) to notify subscribers
+            // 
+            // Note: Actual input handling is typically done by the rendering backend
+            // (SilkSdlRenderingBackend, SilkGlfwRenderingBackend) which has window context.
         }
     }
 
