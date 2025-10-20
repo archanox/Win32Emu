@@ -20,6 +20,11 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
     private int _height;
     private readonly object _lock = new();
     private GlfwCallbacks.ErrorCallback? _errorCallback;
+    
+    // OpenGL rendering pipeline components
+    private uint _shaderProgram;
+    private uint _vao;
+    private uint _vbo;
 
     /// <summary>
     /// Event fired when a UI event occurs (mouse, keyboard, window)
@@ -116,6 +121,16 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
                           0, PixelFormat.Rgba, PixelType.UnsignedByte, null);
             _logger.LogInformation("[SilkGLFW] Frame buffer texture created: ID={TextureId}", _textureId);
 
+            // Set up rendering pipeline
+            if (!SetupRenderingPipeline())
+            {
+                _logger.LogError("[SilkGLFW] Failed to set up rendering pipeline");
+                _gl.DeleteTexture(_textureId);
+                _glfw.DestroyWindow(_window);
+                _glfw.Terminate();
+                return false;
+            }
+
             // Set up window callbacks for lifecycle events
             _glfw.SetWindowFocusCallback(_window, (window, focused) =>
             {
@@ -143,6 +158,137 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             _logger.LogInformation("[SilkGLFW] Initialized {Width}x{Height} display", width, height);
             return true;
         }
+    }
+
+    private bool SetupRenderingPipeline()
+    {
+        if (_gl == null)
+        {
+            return false;
+        }
+
+        // Vertex shader source - simple passthrough with texture coordinates
+        const string vertexShaderSource = @"
+#version 330 core
+layout (location = 0) in vec2 aPos;
+layout (location = 1) in vec2 aTexCoord;
+
+out vec2 TexCoord;
+
+void main()
+{
+    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);
+    TexCoord = aTexCoord;
+}
+";
+
+        // Fragment shader source - sample texture
+        const string fragmentShaderSource = @"
+#version 330 core
+out vec4 FragColor;
+
+in vec2 TexCoord;
+
+uniform sampler2D texture1;
+
+void main()
+{
+    FragColor = texture(texture1, TexCoord);
+}
+";
+
+        // Compile vertex shader
+        var vertexShader = _gl.CreateShader(ShaderType.VertexShader);
+        _gl.ShaderSource(vertexShader, vertexShaderSource);
+        _gl.CompileShader(vertexShader);
+
+        // Check for vertex shader compile errors
+        _gl.GetShader(vertexShader, ShaderParameterName.CompileStatus, out var success);
+        if (success == 0)
+        {
+            var infoLog = _gl.GetShaderInfoLog(vertexShader);
+            _logger.LogError("[SilkGLFW] Vertex shader compilation failed: {InfoLog}", infoLog);
+            return false;
+        }
+
+        // Compile fragment shader
+        var fragmentShader = _gl.CreateShader(ShaderType.FragmentShader);
+        _gl.ShaderSource(fragmentShader, fragmentShaderSource);
+        _gl.CompileShader(fragmentShader);
+
+        // Check for fragment shader compile errors
+        _gl.GetShader(fragmentShader, ShaderParameterName.CompileStatus, out success);
+        if (success == 0)
+        {
+            var infoLog = _gl.GetShaderInfoLog(fragmentShader);
+            _logger.LogError("[SilkGLFW] Fragment shader compilation failed: {InfoLog}", infoLog);
+            _gl.DeleteShader(vertexShader);
+            return false;
+        }
+
+        // Link shaders into a program
+        _shaderProgram = _gl.CreateProgram();
+        _gl.AttachShader(_shaderProgram, vertexShader);
+        _gl.AttachShader(_shaderProgram, fragmentShader);
+        _gl.LinkProgram(_shaderProgram);
+
+        // Check for linking errors
+        _gl.GetProgram(_shaderProgram, ProgramPropertyARB.LinkStatus, out success);
+        if (success == 0)
+        {
+            var infoLog = _gl.GetProgramInfoLog(_shaderProgram);
+            _logger.LogError("[SilkGLFW] Shader program linking failed: {InfoLog}", infoLog);
+            _gl.DeleteShader(vertexShader);
+            _gl.DeleteShader(fragmentShader);
+            return false;
+        }
+
+        // Clean up shaders (they're now linked into the program)
+        _gl.DeleteShader(vertexShader);
+        _gl.DeleteShader(fragmentShader);
+
+        // Set up vertex data for a fullscreen quad
+        // Two triangles forming a quad covering the entire screen
+        // Format: x, y, texX, texY
+        float[] vertices = new float[]
+        {
+            // Position      // TexCoords
+            -1.0f,  1.0f,    0.0f, 1.0f,  // Top-left
+            -1.0f, -1.0f,    0.0f, 0.0f,  // Bottom-left
+             1.0f, -1.0f,    1.0f, 0.0f,  // Bottom-right
+
+            -1.0f,  1.0f,    0.0f, 1.0f,  // Top-left
+             1.0f, -1.0f,    1.0f, 0.0f,  // Bottom-right
+             1.0f,  1.0f,    1.0f, 1.0f   // Top-right
+        };
+
+        // Create and configure VAO and VBO
+        _vao = _gl.GenVertexArray();
+        _vbo = _gl.GenBuffer();
+
+        _gl.BindVertexArray(_vao);
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
+
+        // Upload vertex data
+        fixed (float* v = vertices)
+        {
+            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.StaticDraw);
+        }
+
+        // Position attribute
+        _gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), (void*)0);
+        _gl.EnableVertexAttribArray(0);
+
+        // Texture coordinate attribute
+        _gl.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+        _gl.EnableVertexAttribArray(1);
+
+        // Unbind
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
+        _gl.BindVertexArray(0);
+
+        _logger.LogInformation("[SilkGLFW] Rendering pipeline set up successfully");
+        return true;
     }
 
     public byte[] ConvertPalettizedToRGBA(byte[] indexedData, uint[] palette, int width, int height, int pitch)
@@ -254,15 +400,26 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
                                  PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
             }
 
-            // Clear and render
+            // Clear the screen
+            _gl.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             _gl.Clear(ClearBufferMask.ColorBufferBit);
             
-            // Note: A full implementation would use shaders and VAOs for proper rendering
-            // TODO: Implement full OpenGL rendering pipeline (use shaders and VAOs) for proper rendering.
-            // For now, just update the texture - actual rendering requires more OpenGL setup
+            // Use our shader program
+            _gl.UseProgram(_shaderProgram);
+            
+            // Bind texture
+            _gl.ActiveTexture(TextureUnit.Texture0);
+            _gl.BindTexture(TextureTarget.Texture2D, _textureId);
+            
+            // Render the quad
+            _gl.BindVertexArray(_vao);
+            _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
+            _gl.BindVertexArray(0);
+            
+            // Swap buffers
             _glfw.SwapBuffers(_window);
             
-            _logger.LogDebug("[SilkGLFW] Frame buffer updated and swapped");
+            _logger.LogDebug("[SilkGLFW] Frame buffer updated and rendered to screen");
 
             return true;
         }
@@ -281,6 +438,8 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             _gl.ClearColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
             _gl.Clear(ClearBufferMask.ColorBufferBit);
             _glfw.SwapBuffers(_window);
+            
+            _logger.LogDebug("[SilkGLFW] Screen cleared to color ({R}, {G}, {B}, {A})", r, g, b, a);
         }
     }
 
@@ -320,10 +479,31 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
                 return;
             }
 
-            if (_gl != null && _textureId != 0)
+            if (_gl != null)
             {
-                _gl.DeleteTexture(_textureId);
-                _textureId = 0;
+                if (_textureId != 0)
+                {
+                    _gl.DeleteTexture(_textureId);
+                    _textureId = 0;
+                }
+                
+                if (_vao != 0)
+                {
+                    _gl.DeleteVertexArray(_vao);
+                    _vao = 0;
+                }
+                
+                if (_vbo != 0)
+                {
+                    _gl.DeleteBuffer(_vbo);
+                    _vbo = 0;
+                }
+                
+                if (_shaderProgram != 0)
+                {
+                    _gl.DeleteProgram(_shaderProgram);
+                    _shaderProgram = 0;
+                }
             }
 
             if (_window != null)
