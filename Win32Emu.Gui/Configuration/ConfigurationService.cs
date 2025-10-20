@@ -127,7 +127,11 @@ public class ConfigurationService
             EnableDebugMode = _settings.EnableDebugMode,
             EnableGdbServer = _settings.EnableGdbServer,
             GdbServerPort = _settings.GdbServerPort,
-            GdbPauseOnStart = _settings.GdbPauseOnStart
+            GdbPauseOnStart = _settings.GdbPauseOnStart,
+            EnableOpenTelemetry = _settings.EnableOpenTelemetry,
+            UseConsoleExporter = _settings.UseConsoleExporter,
+            UseOtlpExporter = _settings.UseOtlpExporter,
+            OtlpEndpoint = _settings.OtlpEndpoint
         };
     }
 
@@ -170,6 +174,10 @@ public class ConfigurationService
         _settings.EnableGdbServer = configuration.EnableGdbServer;
         _settings.GdbServerPort = configuration.GdbServerPort;
         _settings.GdbPauseOnStart = configuration.GdbPauseOnStart;
+        _settings.EnableOpenTelemetry = configuration.EnableOpenTelemetry;
+        _settings.UseConsoleExporter = configuration.UseConsoleExporter;
+        _settings.UseOtlpExporter = configuration.UseOtlpExporter;
+        _settings.OtlpEndpoint = configuration.OtlpEndpoint;
         SaveSettings();
     }
 

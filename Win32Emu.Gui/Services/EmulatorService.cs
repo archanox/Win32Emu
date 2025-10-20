@@ -58,8 +58,11 @@ public class EmulatorService
                     _logger.LogInformation("Set rendering backend to: {Backend}", backendType);
                 }
                 
+                // Get the global telemetry service if enabled
+                var telemetryService = App.TelemetryService;
+                
                 // Create and configure the emulator
-                _currentEmulator = new Emulator(_host, _logger);
+                _currentEmulator = new Emulator(_host, _logger, telemetryService);
                 
                 // Load the executable with configured memory size and GDB server settings
                 _currentEmulator.LoadExecutable(

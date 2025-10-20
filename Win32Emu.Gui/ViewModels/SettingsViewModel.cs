@@ -39,6 +39,18 @@ public partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _enableLegacyInstructionDecoding;
+    
+    [ObservableProperty]
+    private bool _enableOpenTelemetry;
+    
+    [ObservableProperty]
+    private bool _useConsoleExporter;
+    
+    [ObservableProperty]
+    private bool _useOtlpExporter;
+    
+    [ObservableProperty]
+    private string _otlpEndpoint;
 
     public ObservableCollection<string> RenderingBackends { get; } = new()
     {
@@ -77,6 +89,10 @@ public partial class SettingsViewModel : ViewModelBase
         _gdbPauseOnStart = configuration.GdbPauseOnStart;
         _enableInstructionAnalyzer = configuration.EnableInstructionAnalyzer;
         _enableLegacyInstructionDecoding = configuration.EnableLegacyInstructionDecoding;
+        _enableOpenTelemetry = configuration.EnableOpenTelemetry;
+        _useConsoleExporter = configuration.UseConsoleExporter;
+        _useOtlpExporter = configuration.UseOtlpExporter;
+        _otlpEndpoint = configuration.OtlpEndpoint;
     }
 
     partial void OnRenderingBackendChanged(string value)
@@ -136,6 +152,30 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnEnableLegacyInstructionDecodingChanged(bool value)
     {
         _configuration.EnableLegacyInstructionDecoding = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnEnableOpenTelemetryChanged(bool value)
+    {
+        _configuration.EnableOpenTelemetry = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnUseConsoleExporterChanged(bool value)
+    {
+        _configuration.UseConsoleExporter = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnUseOtlpExporterChanged(bool value)
+    {
+        _configuration.UseOtlpExporter = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnOtlpEndpointChanged(string value)
+    {
+        _configuration.OtlpEndpoint = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
 }
