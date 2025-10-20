@@ -89,6 +89,29 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             _gl.TexImage2D(TextureTarget.Texture2D, 0, (int)InternalFormat.Rgba8, (uint)width, (uint)height, 
                           0, PixelFormat.Rgba, PixelType.UnsignedByte, null);
 
+            // Set up window callbacks for lifecycle events
+            _glfw.SetWindowFocusCallback(_window, (window, focused) =>
+            {
+                if (focused)
+                {
+                    _logger.LogDebug("[SilkGLFW] Window gained focus, firing WindowActivate event");
+                    OnUIEvent(new UIEventArgs
+                    {
+                        EventType = UIEventType.WindowActivate,
+                        WindowHandle = 0 // Will be resolved by ProcessEnvironment
+                    });
+                }
+                else
+                {
+                    _logger.LogDebug("[SilkGLFW] Window lost focus, firing WindowDeactivate event");
+                    OnUIEvent(new UIEventArgs
+                    {
+                        EventType = UIEventType.WindowDeactivate,
+                        WindowHandle = 0
+                    });
+                }
+            });
+
             _initialized = true;
             _logger.LogInformation("[SilkGLFW] Initialized {Width}x{Height} display", width, height);
             return true;

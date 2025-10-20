@@ -76,6 +76,29 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                 _window = Window.Create(options);
                 _window.Initialize();
 
+                // Hook window focus events
+                _window.FocusChanged += (focused) =>
+                {
+                    if (focused)
+                    {
+                        _logger.LogDebug("[Vulkan] Window gained focus, firing WindowActivate event");
+                        OnUIEvent(new UIEventArgs
+                        {
+                            EventType = UIEventType.WindowActivate,
+                            WindowHandle = 0 // Will be resolved by ProcessEnvironment
+                        });
+                    }
+                    else
+                    {
+                        _logger.LogDebug("[Vulkan] Window lost focus, firing WindowDeactivate event");
+                        OnUIEvent(new UIEventArgs
+                        {
+                            EventType = UIEventType.WindowDeactivate,
+                            WindowHandle = 0
+                        });
+                    }
+                };
+
                 // Initialize Vulkan
                 _vk = Vk.GetApi();
 

@@ -1748,14 +1748,28 @@ public class ProcessEnvironment
 				break;
 
 			case UIEventType.WindowActivate:
+				// Send WM_ACTIVATE first
 				message = 0x0006; // WM_ACTIVATE
 				wParam = 0x0001; // WA_ACTIVE
+				lParam = 0;
+				PostMessage(targetHwnd, message, wParam, lParam);
+				
+				// Then send WM_ACTIVATEAPP for application-level activation
+				message = 0x001C; // WM_ACTIVATEAPP
+				wParam = 1; // TRUE - activating
 				lParam = 0;
 				break;
 
 			case UIEventType.WindowDeactivate:
+				// Send WM_ACTIVATE first
 				message = 0x0006; // WM_ACTIVATE
 				wParam = 0x0000; // WA_INACTIVE
+				lParam = 0;
+				PostMessage(targetHwnd, message, wParam, lParam);
+				
+				// Then send WM_ACTIVATEAPP for application-level deactivation
+				message = 0x001C; // WM_ACTIVATEAPP
+				wParam = 0; // FALSE - deactivating
 				lParam = 0;
 				break;
 
