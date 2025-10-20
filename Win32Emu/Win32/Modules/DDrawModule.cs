@@ -204,6 +204,7 @@ namespace Win32Emu.Win32.Modules
 			public Rendering.IRenderingBackend? RenderingBackend { get; set; }
 			public uint CooperativeLevel { get; set; }
 			public IntPtr WindowHandle { get; set; }
+			public bool UIEventsSubscribed { get; set; }
 		}
 
 		private sealed class DirectDrawSurface
@@ -1396,10 +1397,14 @@ namespace Win32Emu.Win32.Modules
 				if (obj.RenderingBackend == null)
 				{
 					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
-					
-					// Subscribe to UI events from the rendering backend
-					// This ensures SDL events are translated into Win32 messages
+				}
+				
+				// Subscribe to UI events from the rendering backend (only once)
+				// This ensures SDL events are translated into Win32 messages
+				if (obj.RenderingBackend != null && !obj.UIEventsSubscribed)
+				{
 					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
+					obj.UIEventsSubscribed = true;
 					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
 				}
 			}
@@ -1457,10 +1462,14 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogError("[DDraw] Failed to initialize rendering backend");
 						return 1; // DDERR_GENERIC
 					}
-					
-					// Subscribe to UI events from the rendering backend
-					// This ensures SDL events are translated into Win32 messages
+				}
+				
+				// Subscribe to UI events from the rendering backend (only once)
+				// This ensures SDL events are translated into Win32 messages
+				if (obj.RenderingBackend != null && !obj.UIEventsSubscribed)
+				{
 					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
+					obj.UIEventsSubscribed = true;
 					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
 				}
 			}
