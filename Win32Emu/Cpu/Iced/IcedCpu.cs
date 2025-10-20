@@ -2443,14 +2443,9 @@ public class IcedCpu : ICpu
 			{
 				source = BitConverter.Int32BitsToSingle((int)_mem.Read32(addr));
 			}
-			else if (insn.MemorySize == MemorySize.Float64)
-			{
-				var bits = _mem.Read64(addr);
-				source = BitConverter.Int64BitsToDouble((long)bits);
-			}
 			else
 			{
-				// Default to 64-bit double if memory size is not explicitly specified
+				// Handle Float64 and unspecified memory sizes (default to 64-bit double)
 				var bits = _mem.Read64(addr);
 				source = BitConverter.Int64BitsToDouble((long)bits);
 			}
