@@ -162,7 +162,8 @@ namespace Win32Emu.Win32.Modules
 			var esp = savedEsp;
 
 			// Push return address (we'll use a special marker address)
-			const uint RETURN_ADDRESS = 0xDEADBEEF;
+			// Use a unique marker address that must never be mapped in the emulated address space.
+			const uint RETURN_ADDRESS = 0xFFFFFFFF;
 			esp -= 4;
 			_memory.Write32(esp, RETURN_ADDRESS);
 
