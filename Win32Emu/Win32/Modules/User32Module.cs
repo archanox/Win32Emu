@@ -695,6 +695,7 @@ namespace Win32Emu.Win32.Modules
 			var steps = 0;
 			var lastCheckEip = cpu.GetEip();
 			var stuckCounter = 0;
+			var executionSuccessful = true;
 
 			try
 			{
@@ -712,6 +713,7 @@ namespace Win32Emu.Win32.Modules
 					if (eip == 0x00000000)
 					{
 						_logger.LogWarning("[User32] CallWindowProcedure: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+						executionSuccessful = false;
 						break;
 					}
 
@@ -726,6 +728,7 @@ namespace Win32Emu.Win32.Modules
 							{
 								// We've been at the same instruction for multiple check intervals - likely an infinite loop
 								_logger.LogWarning("[User32] CallWindowProcedure: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", currentEip, stuckCounter);
+								executionSuccessful = false;
 								break;
 							}
 						}
@@ -765,15 +768,18 @@ namespace Win32Emu.Win32.Modules
 			catch (Exception ex)
 			{
 				_logger.LogWarning(ex, "[User32] CallWindowProcedure: Exception during execution: {ExMessage}", ex.Message);
+				executionSuccessful = false;
 			}
 
 			if (steps >= MAX_STEPS)
 			{
 				_logger.LogWarning("[User32] CallWindowProcedure: Exceeded max steps ({MaxSteps}), aborting - WndProc may be in infinite loop", MAX_STEPS);
+				executionSuccessful = false;
 			}
 
-			// Get return value from EAX
-			var returnValue = cpu.GetRegister("EAX");
+			// Get return value from EAX, but only if execution was successful
+			// Otherwise return 0 as a safe default value
+			var returnValue = executionSuccessful ? cpu.GetRegister("EAX") : 0u;
 
 			// Restore CPU state
 			cpu.SetEip(savedEip);
@@ -2027,6 +2033,7 @@ namespace Win32Emu.Win32.Modules
 			catch (Exception ex)
 			{
 				_logger.LogWarning(ex, "[User32] CallDialogProcedure: Exception during execution: {ExMessage}", ex.Message);
+				timedOut = true;
 			}
 
 			if (steps >= MAX_STEPS)
@@ -2035,8 +2042,9 @@ namespace Win32Emu.Win32.Modules
 				timedOut = true;
 			}
 
-			// Get return value from EAX
-			var returnValue = cpu.GetRegister("EAX");
+			// Get return value from EAX, but only if execution was successful
+			// Otherwise return 0 as a safe default value
+			var returnValue = timedOut ? 0u : cpu.GetRegister("EAX");
 
 			// Restore CPU state
 			cpu.SetEip(savedEip);
@@ -2257,6 +2265,7 @@ namespace Win32Emu.Win32.Modules
 			catch (Exception ex)
 			{
 				_logger.LogWarning(ex, "[User32] CallDialogProcedureAsync: Exception during execution: {ExMessage}", ex.Message);
+				timedOut = true;
 			}
 
 			if (steps >= MAX_STEPS)
@@ -2265,8 +2274,9 @@ namespace Win32Emu.Win32.Modules
 				timedOut = true;
 			}
 
-			// Get return value from EAX
-			var returnValue = cpu.GetRegister("EAX");
+			// Get return value from EAX, but only if execution was successful
+			// Otherwise return 0 as a safe default value
+			var returnValue = (timedOut || cancelled) ? 0u : cpu.GetRegister("EAX");
 
 			// Restore CPU state
 			cpu.SetEip(savedEip);
