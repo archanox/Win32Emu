@@ -1,4 +1,4 @@
-# CPU-Z Issue Analysis and Fix
+# CPU-Z Issue Analysis and Diagnostics
 
 ## Issue Summary
 
