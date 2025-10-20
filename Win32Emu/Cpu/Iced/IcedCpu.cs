@@ -2716,7 +2716,7 @@ public class IcedCpu : ICpu
 			// FDIV - Divide ST(0) by ST(1)
 			var st0 = FpuGetSt(0);
 			var st1 = FpuGetSt(1);
-			FpuSetSt(0, st1 / st0);
+			FpuSetSt(0, st0 / st1);
 		}
 		else if (insn.OpCount == 1)
 		{
