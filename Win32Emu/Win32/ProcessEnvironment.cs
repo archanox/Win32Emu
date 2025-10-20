@@ -1571,14 +1571,14 @@ public class ProcessEnvironment
 	{
 		if (renderingBackend != null && _subscribedRenderingBackends.Contains(renderingBackend))
 		{
-			_subscribedRenderingBackends.Remove(renderingBackend);
 			renderingBackend.UIEvent -= OnUIEvent;
+			_subscribedRenderingBackends.Remove(renderingBackend);
 		}
 
 		if (inputBackend != null && _subscribedInputBackends.Contains(inputBackend))
 		{
-			_subscribedInputBackends.Remove(inputBackend);
 			inputBackend.UIEvent -= OnUIEvent;
+			_subscribedInputBackends.Remove(inputBackend);
 		}
 	}
 
