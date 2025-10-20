@@ -976,7 +976,7 @@ public class ProcessEnvironment
 		var messageId = _nextRegisteredMessage;
 		
 		// Ensure we don't overflow the registered message range
-		if (_nextRegisteredMessage >= 0xFFFF)
+		if (_nextRegisteredMessage > 0xFFFF)
 		{
 			_logger.LogError("[ProcessEnv] RegisterWindowMessage: Registered message range exhausted! Cannot register '{MessageName}'", messageName);
 			return 0; // Return 0 to indicate failure
