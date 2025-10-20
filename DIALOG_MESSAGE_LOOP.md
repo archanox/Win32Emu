@@ -5,4 +5,4 @@ Refactored dialog handling to process Win32 messages and execute dialog procedur
 
 ## Problem
 Previously, Avalonia dialogs blocked waiting for user to close window, never calling dialog procedure or processing messages. This meant:
-- Next/Back/Help/Browse
+- Next/Back/Help/Browse buttons did not work, as their events were never processed.
