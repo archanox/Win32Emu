@@ -14,4 +14,10 @@ public class EmulatorConfiguration
 	// Instruction Analyzer Settings
 	public bool EnableInstructionAnalyzer { get; set; }
 	public bool EnableLegacyInstructionDecoding { get; set; }
+	
+	// OpenTelemetry Settings
+	public bool EnableOpenTelemetry { get; set; }
+	public bool UseConsoleExporter { get; set; }
+	public bool UseOtlpExporter { get; set; }
+	public string OtlpEndpoint { get; set; } = "http://localhost:4317";
 }

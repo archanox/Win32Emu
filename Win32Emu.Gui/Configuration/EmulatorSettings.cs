@@ -20,6 +20,12 @@ public class EmulatorSettings
     public bool EnableInstructionAnalyzer { get; set; } = false;
     public bool EnableLegacyInstructionDecoding { get; set; } = false;
     
+    // OpenTelemetry Settings
+    public bool EnableOpenTelemetry { get; set; } = false;
+    public bool UseConsoleExporter { get; set; } = false;
+    public bool UseOtlpExporter { get; set; } = false;
+    public string OtlpEndpoint { get; set; } = "http://localhost:4317";
+    
     /// <summary>
     /// Per-game settings keyed by SHA256 hash of the executable file
     /// </summary>
