@@ -125,8 +125,8 @@ namespace Win32Emu.Win32.Modules
 			var descriptionStr = "Primary Sound Driver";
 			var moduleStr = "Primary Sound Driver";
 			
-			uint descriptionPtr = _env.WriteAnsiString(descriptionStr + '\0');
-			uint modulePtr = _env.WriteAnsiString(moduleStr + '\0');
+			uint descriptionPtr = _env.WriteAnsiString(descriptionStr);
+			uint modulePtr = _env.WriteAnsiString(moduleStr);
 			
 			// Call the callback with NULL GUID for the default device
 			bool continueEnum = CallEnumerationCallback(lpDsEnumCallback, 0, descriptionPtr, modulePtr, lpContext);
