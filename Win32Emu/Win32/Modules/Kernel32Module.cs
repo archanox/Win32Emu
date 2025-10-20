@@ -29,6 +29,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 	private Win32Dispatcher? _dispatcher;
 	private uint _lastError;
+	private ICpu? _cpu;
 
 	public void SetResourceReader(PeResourceReader resourceReader)
 	{
@@ -42,6 +43,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 	public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
+		_cpu = cpu;
 		returnValue = 0;
 		var a = new StackArgs(cpu, memory);
 		switch (export.ToUpperInvariant())
@@ -3714,24 +3716,37 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// 4. Jump to targetIp with returnValue in EAX
 
 		// For the Win32Emu, we implement a minimal version that:
-		// - Simply logs the unwind operation
+		// - Logs the unwind operation
 		// - Sets the target IP if provided
-		// - Returns success
+		// - Sets EAX to returnValue
+		// - Adjusts ESP to targetFrame if provided
 
 		_logger.LogInformation("[Kernel32] RtlUnwind called: targetFrame=0x{TargetFrame:X8}, targetIp=0x{TargetIp:X8}, exceptionRecord=0x{ExceptionRecord:X8}, returnValue=0x{ReturnValue:X8}", targetFrame, targetIp, exceptionRecord, returnValue);
 
-		// If a target IP is specified and it's not null, we would typically:
-		// - Unwind the stack to the target frame
-		// - Set EIP to targetIp
-		// - Set EAX to returnValue
-		// However, in this emulator context, we'll leave the actual stack unwinding
-		// to be handled by the calling code/exception handling mechanism
-
-		if (targetIp != 0)
+		// Modify CPU state as specified
+		if (_cpu != null)
 		{
-			_logger.LogInformation("[Kernel32] RtlUnwind: Would jump to 0x{TargetIp:X8} with return value 0x{ReturnValue:X8}", targetIp, returnValue);
-			// In a full implementation, we would modify the CPU state here
-			// For now, we just log the intended operation
+			// Set the return value in EAX
+			_cpu.SetRegister("EAX", returnValue);
+			_logger.LogInformation("[Kernel32] RtlUnwind: Set EAX to 0x{ReturnValue:X8}", returnValue);
+
+			// If a target frame is specified, set ESP to it
+			if (targetFrame != 0)
+			{
+				_cpu.SetRegister("ESP", targetFrame);
+				_logger.LogInformation("[Kernel32] RtlUnwind: Set ESP to target frame 0x{TargetFrame:X8}", targetFrame);
+			}
+
+			// If a target IP is specified, set EIP to it
+			if (targetIp != 0)
+			{
+				_cpu.SetEip(targetIp);
+				_logger.LogInformation("[Kernel32] RtlUnwind: Set EIP to 0x{TargetIp:X8}", targetIp);
+			}
+		}
+		else
+		{
+			_logger.LogWarning("[Kernel32] RtlUnwind: CPU not available, cannot modify state");
 		}
 
 		// RtlUnwind doesn't return a value in the traditional sense - it either succeeds
