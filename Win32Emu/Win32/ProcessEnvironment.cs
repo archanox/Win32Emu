@@ -1604,7 +1604,9 @@ public class ProcessEnvironment
 			case UIEventType.MouseMove:
 				message = 0x0200; // WM_MOUSEMOVE
 				wParam = 0; // No button flags for now
-				lParam = (uint)((e.MouseY << 16) | (e.MouseX & 0xFFFF));
+				// Pack coordinates into lParam: LOWORD = x, HIWORD = y
+				// Handle signed coordinates properly by masking to 16 bits
+				lParam = (uint)(((e.MouseY & 0xFFFF) << 16) | (e.MouseX & 0xFFFF));
 				break;
 
 			case UIEventType.MouseButtonDown:
@@ -1617,7 +1619,8 @@ public class ProcessEnvironment
 					_ => 0x0201  // Default to left button
 				};
 				wParam = 0x0001; // MK_LBUTTON flag
-				lParam = (uint)((e.MouseY << 16) | (e.MouseX & 0xFFFF));
+				// Pack coordinates: LOWORD = x, HIWORD = y
+				lParam = (uint)(((e.MouseY & 0xFFFF) << 16) | (e.MouseX & 0xFFFF));
 				break;
 
 			case UIEventType.MouseButtonUp:
@@ -1629,19 +1632,32 @@ public class ProcessEnvironment
 					_ => 0x0202
 				};
 				wParam = 0;
-				lParam = (uint)((e.MouseY << 16) | (e.MouseX & 0xFFFF));
+				// Pack coordinates: LOWORD = x, HIWORD = y
+				lParam = (uint)(((e.MouseY & 0xFFFF) << 16) | (e.MouseX & 0xFFFF));
 				break;
 
 			case UIEventType.KeyDown:
 				message = 0x0100; // WM_KEYDOWN
 				wParam = (uint)e.KeyCode;
-				lParam = 0x00000001; // Repeat count = 1
+				// lParam encoding for WM_KEYDOWN (simplified):
+				// Bits 0-15: Repeat count (1)
+				// Bits 16-23: Scan code (0 for now, would need virtual key to scan code translation)
+				// Bit 24: Extended key flag (0)
+				// Bits 25-28: Reserved (0)
+				// Bit 29: Context code (0 = not ALT key)
+				// Bit 30: Previous key state (0 = was up)
+				// Bit 31: Transition state (0 = being pressed)
+				lParam = 0x00000001; // Simplified: repeat count = 1, rest = 0
 				break;
 
 			case UIEventType.KeyUp:
 				message = 0x0101; // WM_KEYUP
 				wParam = (uint)e.KeyCode;
-				lParam = 0xC0000001; // Transition and previous state
+				// lParam encoding for WM_KEYUP:
+				// Bits 0-15: Repeat count (1)
+				// Bit 30: Previous key state (1 = was down)
+				// Bit 31: Transition state (1 = being released)
+				lParam = 0xC0000001; // Repeat=1, Previous=1, Transition=1
 				break;
 
 			case UIEventType.WindowResize:

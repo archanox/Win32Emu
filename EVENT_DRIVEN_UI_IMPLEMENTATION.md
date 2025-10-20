@@ -125,7 +125,9 @@ private void OnUIEvent(object? sender, UIEventArgs e)
     {
         case UIEventType.MouseMove:
             message = 0x0200; // WM_MOUSEMOVE
-            lParam = (uint)((e.MouseY << 16) | (e.MouseX & 0xFFFF));
+            // Pack coordinates: LOWORD = x, HIWORD = y
+            // Handle signed coordinates properly by masking to 16 bits
+            lParam = (uint)(((e.MouseY & 0xFFFF) << 16) | (e.MouseX & 0xFFFF));
             break;
             
         case UIEventType.MouseButtonDown:
@@ -136,12 +138,18 @@ private void OnUIEvent(object? sender, UIEventArgs e)
                 3 => 0x0207, // WM_MBUTTONDOWN
                 _ => 0x0201
             };
-            lParam = (uint)((e.MouseY << 16) | (e.MouseX & 0xFFFF));
+            // Pack coordinates: LOWORD = x, HIWORD = y
+            lParam = (uint)(((e.MouseY & 0xFFFF) << 16) | (e.MouseX & 0xFFFF));
             break;
             
         case UIEventType.KeyDown:
             message = 0x0100; // WM_KEYDOWN
             wParam = (uint)e.KeyCode;
+            // lParam encoding (simplified):
+            // Bits 0-15: Repeat count (1)
+            // Bits 16-23: Scan code (0 - would need VK to scan code translation)
+            // Bit 30: Previous key state (0 = was up)
+            // Bit 31: Transition state (0 = being pressed)
             lParam = 0x00000001;
             break;
             
