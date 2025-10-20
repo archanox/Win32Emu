@@ -981,7 +981,21 @@ public sealed class Emulator : IDisposable
             }
             else
             {
-                _logger.LogDebug("[Emulator] Skipped restoring EBP from stack: 0x{EBP:X8} (not a valid frame pointer)", ebpFromStack);
+                // If we can't restore EBP from stack, check if current EBP looks like an import hook address
+                // Import hooks are in range 0x0F000000-0x10000000
+                var currentEbp = _cpu!.GetRegister("EBP");
+                if (currentEbp >= 0x0F000000 && currentEbp < 0x10000000)
+                {
+                    // EBP contains an import hook address, which happens when the caller used EBP
+                    // to hold the function pointer (e.g., MOV EBP, [IAT]; CALL EBP)
+                    // Set it to ESP as a safe fallback to avoid crashes
+                    _cpu.SetRegister("EBP", esp);
+                    _logger.LogDebug("[Emulator] Reset EBP from import hook address 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", currentEbp, esp);
+                }
+                else
+                {
+                    _logger.LogDebug("[Emulator] Skipped restoring EBP from stack: 0x{EBP:X8} (not a valid frame pointer)", ebpFromStack);
+                }
             }
         }
         catch (Exception ex)
