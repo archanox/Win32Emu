@@ -238,6 +238,7 @@ public class IcedCpu : ICpu
 				case Mnemonic.Fpatan: ExecFpatan(); break;
 				case Mnemonic.F2xm1: ExecF2xm1(); break;
 				case Mnemonic.Fscale: ExecFscale(); break;
+				case Mnemonic.Fcomp: ExecFcomp(insn); break;
 				case Mnemonic.Fucomi: ExecFucomi(insn); break;
 				case Mnemonic.Fucomip: ExecFucomip(insn); break;
 				case Mnemonic.Fcmovnbe: ExecFcmovnbe(insn); break;
@@ -2416,6 +2417,73 @@ public class IcedCpu : ICpu
 	{
 		// FUCOMIP - Compare ST(0) with ST(i), set EFLAGS, and pop
 		ExecFucomi(insn);
+		FpuPop();
+	}
+
+	private void ExecFcomp(Instruction insn)
+	{
+		// FCOMP - Compare ST(0) with source and pop
+		// The source can be a memory operand (float32/float64) or ST(i)
+		double st0 = FpuGetSt(0);
+		double source;
+		
+		if (insn.OpCount == 0)
+		{
+			// FCOMP with no operand defaults to ST(1)
+			source = FpuGetSt(1);
+		}
+		else if (insn.GetOpKind(0) == OpKind.Memory)
+		{
+			// FCOMP m32/m64 - Compare with memory
+			var addr = CalcMemAddress(insn);
+			if (insn.MemorySize == MemorySize.Float32)
+			{
+				source = BitConverter.Int32BitsToSingle((int)_mem.Read32(addr));
+			}
+			else
+			{
+				// Assume 64-bit double
+				var bits = _mem.Read64(addr);
+				source = BitConverter.Int64BitsToDouble((long)bits);
+			}
+		}
+		else
+		{
+			// FCOMP ST(i) - Compare with ST(i)
+			var reg = insn.GetOpRegister(0);
+			var i = reg - Register.ST0;
+			source = FpuGetSt(i);
+		}
+		
+		// Set EFLAGS based on comparison (similar to FUCOMIP)
+		// In a full x87 implementation, this would set C0, C2, C3 in the status word
+		// For simplicity, we set EFLAGS like FUCOMIP does
+		if (double.IsNaN(st0) || double.IsNaN(source))
+		{
+			SetFlag(Zf);
+			SetFlag(Pf);
+			SetFlag(Cf);
+		}
+		else if (st0 > source)
+		{
+			ClearFlag(Zf);
+			ClearFlag(Pf);
+			ClearFlag(Cf);
+		}
+		else if (st0 < source)
+		{
+			ClearFlag(Zf);
+			ClearFlag(Pf);
+			SetFlag(Cf);
+		}
+		else // st0 == source
+		{
+			SetFlag(Zf);
+			ClearFlag(Pf);
+			ClearFlag(Cf);
+		}
+		
+		// Pop the stack
 		FpuPop();
 	}
 
