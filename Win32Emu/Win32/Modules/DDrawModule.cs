@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using Win32Emu.Win32.COM;
 
 namespace Win32Emu.Win32.Modules
 {
@@ -90,31 +91,31 @@ namespace Win32Emu.Win32.Modules
 			_ddrawObjects[ddrawHandle] = ddrawObj;
 
 // Create COM vtable for IDirectDraw interface
-			var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			var vtableMethods = new Dictionary<string, ComMethodInfo>
 			{
-				{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
-				{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
-				{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
-				{ "Compact", (cpu, mem) => DDraw_Compact(cpu, mem) },
-				{ "CreateClipper", (cpu, mem) => DDraw_CreateClipper(cpu, mem) },
-				{ "CreatePalette", (cpu, mem) => DDraw_CreatePalette(cpu, mem) },
-				{ "CreateSurface", (cpu, mem) => DDraw_CreateSurface(cpu, mem) },
-				{ "DuplicateSurface", (cpu, mem) => DDraw_DuplicateSurface(cpu, mem) },
-				{ "EnumDisplayModes", (cpu, mem) => DDraw_EnumDisplayModes(cpu, mem) },
-				{ "EnumSurfaces", (cpu, mem) => DDraw_EnumSurfaces(cpu, mem) },
-				{ "FlipToGDISurface", (cpu, mem) => DDraw_FlipToGDISurface(cpu, mem) },
-				{ "GetCaps", (cpu, mem) => DDraw_GetCaps(cpu, mem) },
-				{ "GetDisplayMode", (cpu, mem) => DDraw_GetDisplayMode(cpu, mem) },
-				{ "GetFourCCCodes", (cpu, mem) => DDraw_GetFourCCCodes(cpu, mem) },
-				{ "GetGDISurface", (cpu, mem) => DDraw_GetGDISurface(cpu, mem) },
-				{ "GetMonitorFrequency", (cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem) },
-				{ "GetScanLine", (cpu, mem) => DDraw_GetScanLine(cpu, mem) },
-				{ "GetVerticalBlankStatus", (cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem) },
-				{ "Initialize", (cpu, mem) => DDraw_Initialize(cpu, mem) },
-				{ "RestoreDisplayMode", (cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem) },
-				{ "SetCooperativeLevel", (cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle) },
-				{ "SetDisplayMode", (cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle) },
-				{ "WaitForVerticalBlank", (cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem) }
+				{ "QueryInterface", new ComMethodInfo((cpu, mem) => ComQueryInterface(cpu, mem), ArgBytes: 12) },
+				{ "AddRef", new ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) },
+				{ "Release", new ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) },
+				{ "Compact", new ComMethodInfo((cpu, mem) => DDraw_Compact(cpu, mem), ArgBytes: 4) },
+				{ "CreateClipper", new ComMethodInfo((cpu, mem) => DDraw_CreateClipper(cpu, mem), ArgBytes: 16) },
+				{ "CreatePalette", new ComMethodInfo((cpu, mem) => DDraw_CreatePalette(cpu, mem), ArgBytes: 20) },
+				{ "CreateSurface", new ComMethodInfo((cpu, mem) => DDraw_CreateSurface(cpu, mem), ArgBytes: 16) },
+				{ "DuplicateSurface", new ComMethodInfo((cpu, mem) => DDraw_DuplicateSurface(cpu, mem), ArgBytes: 12) },
+				{ "EnumDisplayModes", new ComMethodInfo((cpu, mem) => DDraw_EnumDisplayModes(cpu, mem), ArgBytes: 20) },
+				{ "EnumSurfaces", new ComMethodInfo((cpu, mem) => DDraw_EnumSurfaces(cpu, mem), ArgBytes: 20) },
+				{ "FlipToGDISurface", new ComMethodInfo((cpu, mem) => DDraw_FlipToGDISurface(cpu, mem), ArgBytes: 4) },
+				{ "GetCaps", new ComMethodInfo((cpu, mem) => DDraw_GetCaps(cpu, mem), ArgBytes: 12) },
+				{ "GetDisplayMode", new ComMethodInfo((cpu, mem) => DDraw_GetDisplayMode(cpu, mem), ArgBytes: 8) },
+				{ "GetFourCCCodes", new ComMethodInfo((cpu, mem) => DDraw_GetFourCCCodes(cpu, mem), ArgBytes: 12) },
+				{ "GetGDISurface", new ComMethodInfo((cpu, mem) => DDraw_GetGDISurface(cpu, mem), ArgBytes: 8) },
+				{ "GetMonitorFrequency", new ComMethodInfo((cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem), ArgBytes: 8) },
+				{ "GetScanLine", new ComMethodInfo((cpu, mem) => DDraw_GetScanLine(cpu, mem), ArgBytes: 8) },
+				{ "GetVerticalBlankStatus", new ComMethodInfo((cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem), ArgBytes: 8) },
+				{ "Initialize", new ComMethodInfo((cpu, mem) => DDraw_Initialize(cpu, mem), ArgBytes: 8) },
+				{ "RestoreDisplayMode", new ComMethodInfo((cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem), ArgBytes: 4) },
+				{ "SetCooperativeLevel", new ComMethodInfo((cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle), ArgBytes: 12) },
+				{ "SetDisplayMode", new ComMethodInfo((cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle), ArgBytes: 16) },
+				{ "WaitForVerticalBlank", new ComMethodInfo((cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem), ArgBytes: 8) }
 			};
 
 // Create the COM object with vtable
@@ -152,31 +153,31 @@ namespace Win32Emu.Win32.Modules
 			_ddrawObjects[ddrawHandle] = ddrawObj;
 
 			// Create COM vtable for IDirectDraw interface
-			var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			var vtableMethods = new Dictionary<string, ComMethodInfo>
 			{
-				{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
-				{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
-				{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
-				{ "Compact", (cpu, mem) => DDraw_Compact(cpu, mem) },
-				{ "CreateClipper", (cpu, mem) => DDraw_CreateClipper(cpu, mem) },
-				{ "CreatePalette", (cpu, mem) => DDraw_CreatePalette(cpu, mem) },
-				{ "CreateSurface", (cpu, mem) => DDraw_CreateSurface(cpu, mem) },
-				{ "DuplicateSurface", (cpu, mem) => DDraw_DuplicateSurface(cpu, mem) },
-				{ "EnumDisplayModes", (cpu, mem) => DDraw_EnumDisplayModes(cpu, mem) },
-				{ "EnumSurfaces", (cpu, mem) => DDraw_EnumSurfaces(cpu, mem) },
-				{ "FlipToGDISurface", (cpu, mem) => DDraw_FlipToGDISurface(cpu, mem) },
-				{ "GetCaps", (cpu, mem) => DDraw_GetCaps(cpu, mem) },
-				{ "GetDisplayMode", (cpu, mem) => DDraw_GetDisplayMode(cpu, mem) },
-				{ "GetFourCCCodes", (cpu, mem) => DDraw_GetFourCCCodes(cpu, mem) },
-				{ "GetGDISurface", (cpu, mem) => DDraw_GetGDISurface(cpu, mem) },
-				{ "GetMonitorFrequency", (cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem) },
-				{ "GetScanLine", (cpu, mem) => DDraw_GetScanLine(cpu, mem) },
-				{ "GetVerticalBlankStatus", (cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem) },
-				{ "Initialize", (cpu, mem) => DDraw_Initialize(cpu, mem) },
-				{ "RestoreDisplayMode", (cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem) },
-				{ "SetCooperativeLevel", (cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle) },
-				{ "SetDisplayMode", (cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle) },
-				{ "WaitForVerticalBlank", (cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem) }
+				{ "QueryInterface", new ComMethodInfo((cpu, mem) => ComQueryInterface(cpu, mem), ArgBytes: 12) },
+				{ "AddRef", new ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) },
+				{ "Release", new ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) },
+				{ "Compact", new ComMethodInfo((cpu, mem) => DDraw_Compact(cpu, mem), ArgBytes: 4) },
+				{ "CreateClipper", new ComMethodInfo((cpu, mem) => DDraw_CreateClipper(cpu, mem), ArgBytes: 16) },
+				{ "CreatePalette", new ComMethodInfo((cpu, mem) => DDraw_CreatePalette(cpu, mem), ArgBytes: 20) },
+				{ "CreateSurface", new ComMethodInfo((cpu, mem) => DDraw_CreateSurface(cpu, mem), ArgBytes: 16) },
+				{ "DuplicateSurface", new ComMethodInfo((cpu, mem) => DDraw_DuplicateSurface(cpu, mem), ArgBytes: 12) },
+				{ "EnumDisplayModes", new ComMethodInfo((cpu, mem) => DDraw_EnumDisplayModes(cpu, mem), ArgBytes: 20) },
+				{ "EnumSurfaces", new ComMethodInfo((cpu, mem) => DDraw_EnumSurfaces(cpu, mem), ArgBytes: 20) },
+				{ "FlipToGDISurface", new ComMethodInfo((cpu, mem) => DDraw_FlipToGDISurface(cpu, mem), ArgBytes: 4) },
+				{ "GetCaps", new ComMethodInfo((cpu, mem) => DDraw_GetCaps(cpu, mem), ArgBytes: 12) },
+				{ "GetDisplayMode", new ComMethodInfo((cpu, mem) => DDraw_GetDisplayMode(cpu, mem), ArgBytes: 8) },
+				{ "GetFourCCCodes", new ComMethodInfo((cpu, mem) => DDraw_GetFourCCCodes(cpu, mem), ArgBytes: 12) },
+				{ "GetGDISurface", new ComMethodInfo((cpu, mem) => DDraw_GetGDISurface(cpu, mem), ArgBytes: 8) },
+				{ "GetMonitorFrequency", new ComMethodInfo((cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem), ArgBytes: 8) },
+				{ "GetScanLine", new ComMethodInfo((cpu, mem) => DDraw_GetScanLine(cpu, mem), ArgBytes: 8) },
+				{ "GetVerticalBlankStatus", new ComMethodInfo((cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem), ArgBytes: 8) },
+				{ "Initialize", new ComMethodInfo((cpu, mem) => DDraw_Initialize(cpu, mem), ArgBytes: 8) },
+				{ "RestoreDisplayMode", new ComMethodInfo((cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem), ArgBytes: 4) },
+				{ "SetCooperativeLevel", new ComMethodInfo((cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle), ArgBytes: 12) },
+				{ "SetDisplayMode", new ComMethodInfo((cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle), ArgBytes: 16) },
+				{ "WaitForVerticalBlank", new ComMethodInfo((cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem), ArgBytes: 8) }
 			};
 
 			// Create the COM object with vtable
@@ -445,17 +446,17 @@ namespace Win32Emu.Win32.Modules
 			_clippers[clipperHandle] = clipper;
 
 			// Create COM vtable for IDirectDrawClipper interface
-			var clipperVtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			var clipperVtableMethods = new Dictionary<string, ComMethodInfo>
 			{
-				{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
-				{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
-				{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
-				{ "GetClipList", (cpu, mem) => Clipper_GetClipList(cpu, mem) },
-				{ "GetHWnd", (cpu, mem) => Clipper_GetHWnd(cpu, mem, clipperHandle) },
-				{ "Initialize", (cpu, mem) => Clipper_Initialize(cpu, mem) },
-				{ "IsClipListChanged", (cpu, mem) => Clipper_IsClipListChanged(cpu, mem) },
-				{ "SetClipList", (cpu, mem) => Clipper_SetClipList(cpu, mem) },
-				{ "SetHWnd", (cpu, mem) => Clipper_SetHWnd(cpu, mem, clipperHandle) }
+				{ "QueryInterface", new ComMethodInfo((cpu, mem) => ComQueryInterface(cpu, mem), ArgBytes: 12) },
+				{ "AddRef", new ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) },
+				{ "Release", new ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) },
+				{ "GetClipList", new ComMethodInfo((cpu, mem) => Clipper_GetClipList(cpu, mem), ArgBytes: 16) },
+				{ "GetHWnd", new ComMethodInfo((cpu, mem) => Clipper_GetHWnd(cpu, mem, clipperHandle), ArgBytes: 8) },
+				{ "Initialize", new ComMethodInfo((cpu, mem) => Clipper_Initialize(cpu, mem), ArgBytes: 12) },
+				{ "IsClipListChanged", new ComMethodInfo((cpu, mem) => Clipper_IsClipListChanged(cpu, mem), ArgBytes: 8) },
+				{ "SetClipList", new ComMethodInfo((cpu, mem) => Clipper_SetClipList(cpu, mem), ArgBytes: 12) },
+				{ "SetHWnd", new ComMethodInfo((cpu, mem) => Clipper_SetHWnd(cpu, mem, clipperHandle), ArgBytes: 12) }
 			};
 
 			var clipperComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawClipper", clipperVtableMethods);
@@ -509,15 +510,15 @@ namespace Win32Emu.Win32.Modules
 			var palette = new DirectDrawPalette { Handle = paletteHandle, Entries = paletteEntries };
 			_palettes[paletteHandle] = palette;
 
-			var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			var vtableMethods = new Dictionary<string, ComMethodInfo>
 			{
-				{ "QueryInterface", (c, m) => ComQueryInterface(c, m) },
-				{ "AddRef", (c, m) => ComAddRef(c, m) },
-				{ "Release", (c, m) => ComRelease(c, m) },
-				{ "GetCaps", (c, m) => Palette_GetCaps(c, m) },
-				{ "GetEntries", (c, m) => Palette_GetEntries(c, m, paletteHandle) },
-				{ "Initialize", (c, m) => Palette_Initialize(c, m) },
-				{ "SetEntries", (c, m) => Palette_SetEntries(c, m, paletteHandle) }
+				{ "QueryInterface", new ComMethodInfo((c, m) => ComQueryInterface(c, m), ArgBytes: 12) },
+				{ "AddRef", new ComMethodInfo((c, m) => ComAddRef(c, m), ArgBytes: 4) },
+				{ "Release", new ComMethodInfo((c, m) => ComRelease(c, m), ArgBytes: 4) },
+				{ "GetCaps", new ComMethodInfo((c, m) => Palette_GetCaps(c, m), ArgBytes: 8) },
+				{ "GetEntries", new ComMethodInfo((c, m) => Palette_GetEntries(c, m, paletteHandle), ArgBytes: 20) },
+				{ "Initialize", new ComMethodInfo((c, m) => Palette_Initialize(c, m), ArgBytes: 16) },
+				{ "SetEntries", new ComMethodInfo((c, m) => Palette_SetEntries(c, m, paletteHandle), ArgBytes: 20) }
 			};
 
 			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDrawPalette", vtableMethods);
@@ -601,44 +602,44 @@ namespace Win32Emu.Win32.Modules
 			_surfaces[surfaceHandle] = surface;
 			
 			// Create COM vtable for IDirectDrawSurface interface
-			var vtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			var vtableMethods = new Dictionary<string, ComMethodInfo>
 			{
-				{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
-				{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
-				{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
-				{ "AddAttachedSurface", (cpu, mem) => Surface_AddAttachedSurface(cpu, mem) },
-				{ "AddOverlayDirtyRect", (cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem) },
-				{ "Blt", (cpu, mem) => Surface_Blt(cpu, mem) },
-				{ "BltBatch", (cpu, mem) => Surface_BltBatch(cpu, mem) },
-				{ "BltFast", (cpu, mem) => Surface_BltFast(cpu, mem) },
-				{ "DeleteAttachedSurface", (cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem) },
-				{ "EnumAttachedSurfaces", (cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem) },
-				{ "EnumOverlayZOrders", (cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem) },
-				{ "Flip", (cpu, mem) => Surface_Flip(cpu, mem) },
-				{ "GetAttachedSurface", (cpu, mem) => Surface_GetAttachedSurface(cpu, mem) },
-				{ "GetBltStatus", (cpu, mem) => Surface_GetBltStatus(cpu, mem) },
-				{ "GetCaps", (cpu, mem) => Surface_GetCaps(cpu, mem) },
-				{ "GetClipper", (cpu, mem) => Surface_GetClipper(cpu, mem) },
-				{ "GetColorKey", (cpu, mem) => Surface_GetColorKey(cpu, mem) },
-				{ "GetDC", (cpu, mem) => Surface_GetDC(cpu, mem) },
-				{ "GetFlipStatus", (cpu, mem) => Surface_GetFlipStatus(cpu, mem) },
-				{ "GetOverlayPosition", (cpu, mem) => Surface_GetOverlayPosition(cpu, mem) },
-				{ "GetPalette", (cpu, mem) => Surface_GetPalette(cpu, mem) },
-				{ "GetPixelFormat", (cpu, mem) => Surface_GetPixelFormat(cpu, mem) },
-				{ "GetSurfaceDesc", (cpu, mem) => Surface_GetSurfaceDesc(cpu, mem) },
-				{ "Initialize", (cpu, mem) => Surface_Initialize(cpu, mem) },
-				{ "IsLost", (cpu, mem) => Surface_IsLost(cpu, mem) },
-				{ "Lock", (cpu, mem) => Surface_Lock(cpu, mem, surfaceHandle) },
-				{ "ReleaseDC", (cpu, mem) => Surface_ReleaseDC(cpu, mem) },
-				{ "Restore", (cpu, mem) => Surface_Restore(cpu, mem) },
-				{ "SetClipper", (cpu, mem) => Surface_SetClipper(cpu, mem) },
-				{ "SetColorKey", (cpu, mem) => Surface_SetColorKey(cpu, mem) },
-				{ "SetOverlayPosition", (cpu, mem) => Surface_SetOverlayPosition(cpu, mem) },
-				{ "SetPalette", (cpu, mem) => Surface_SetPalette(cpu, mem, surfaceHandle) },
-				{ "Unlock", (cpu, mem) => Surface_Unlock(cpu, mem, surfaceHandle) },
-				{ "UpdateOverlay", (cpu, mem) => Surface_UpdateOverlay(cpu, mem) },
-				{ "UpdateOverlayDisplay", (cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem) },
-				{ "UpdateOverlayZOrder", (cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem) }
+				{ "QueryInterface", new ComMethodInfo((cpu, mem) => ComQueryInterface(cpu, mem), ArgBytes: 12) },
+				{ "AddRef", new ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) },
+				{ "Release", new ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) },
+				{ "AddAttachedSurface", new ComMethodInfo((cpu, mem) => Surface_AddAttachedSurface(cpu, mem), ArgBytes: 8) },
+				{ "AddOverlayDirtyRect", new ComMethodInfo((cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem), ArgBytes: 8) },
+				{ "Blt", new ComMethodInfo((cpu, mem) => Surface_Blt(cpu, mem), ArgBytes: 24) },
+				{ "BltBatch", new ComMethodInfo((cpu, mem) => Surface_BltBatch(cpu, mem), ArgBytes: 12) },
+				{ "BltFast", new ComMethodInfo((cpu, mem) => Surface_BltFast(cpu, mem), ArgBytes: 24) },
+				{ "DeleteAttachedSurface", new ComMethodInfo((cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem), ArgBytes: 12) },
+				{ "EnumAttachedSurfaces", new ComMethodInfo((cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem), ArgBytes: 12) },
+				{ "EnumOverlayZOrders", new ComMethodInfo((cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem), ArgBytes: 16) },
+				{ "Flip", new ComMethodInfo((cpu, mem) => Surface_Flip(cpu, mem), ArgBytes: 12) },
+				{ "GetAttachedSurface", new ComMethodInfo((cpu, mem) => Surface_GetAttachedSurface(cpu, mem), ArgBytes: 12) },
+				{ "GetBltStatus", new ComMethodInfo((cpu, mem) => Surface_GetBltStatus(cpu, mem), ArgBytes: 8) },
+				{ "GetCaps", new ComMethodInfo((cpu, mem) => Surface_GetCaps(cpu, mem), ArgBytes: 8) },
+				{ "GetClipper", new ComMethodInfo((cpu, mem) => Surface_GetClipper(cpu, mem), ArgBytes: 8) },
+				{ "GetColorKey", new ComMethodInfo((cpu, mem) => Surface_GetColorKey(cpu, mem), ArgBytes: 12) },
+				{ "GetDC", new ComMethodInfo((cpu, mem) => Surface_GetDC(cpu, mem), ArgBytes: 8) },
+				{ "GetFlipStatus", new ComMethodInfo((cpu, mem) => Surface_GetFlipStatus(cpu, mem), ArgBytes: 8) },
+				{ "GetOverlayPosition", new ComMethodInfo((cpu, mem) => Surface_GetOverlayPosition(cpu, mem), ArgBytes: 12) },
+				{ "GetPalette", new ComMethodInfo((cpu, mem) => Surface_GetPalette(cpu, mem), ArgBytes: 8) },
+				{ "GetPixelFormat", new ComMethodInfo((cpu, mem) => Surface_GetPixelFormat(cpu, mem), ArgBytes: 8) },
+				{ "GetSurfaceDesc", new ComMethodInfo((cpu, mem) => Surface_GetSurfaceDesc(cpu, mem), ArgBytes: 8) },
+				{ "Initialize", new ComMethodInfo((cpu, mem) => Surface_Initialize(cpu, mem), ArgBytes: 8) },
+				{ "IsLost", new ComMethodInfo((cpu, mem) => Surface_IsLost(cpu, mem), ArgBytes: 4) },
+				{ "Lock", new ComMethodInfo((cpu, mem) => Surface_Lock(cpu, mem, surfaceHandle), ArgBytes: 20) },
+				{ "ReleaseDC", new ComMethodInfo((cpu, mem) => Surface_ReleaseDC(cpu, mem), ArgBytes: 8) },
+				{ "Restore", new ComMethodInfo((cpu, mem) => Surface_Restore(cpu, mem), ArgBytes: 4) },
+				{ "SetClipper", new ComMethodInfo((cpu, mem) => Surface_SetClipper(cpu, mem), ArgBytes: 8) },
+				{ "SetColorKey", new ComMethodInfo((cpu, mem) => Surface_SetColorKey(cpu, mem), ArgBytes: 12) },
+				{ "SetOverlayPosition", new ComMethodInfo((cpu, mem) => Surface_SetOverlayPosition(cpu, mem), ArgBytes: 12) },
+				{ "SetPalette", new ComMethodInfo((cpu, mem) => Surface_SetPalette(cpu, mem, surfaceHandle), ArgBytes: 8) },
+				{ "Unlock", new ComMethodInfo((cpu, mem) => Surface_Unlock(cpu, mem, surfaceHandle), ArgBytes: 8) },
+				{ "UpdateOverlay", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlay(cpu, mem), ArgBytes: 24) },
+				{ "UpdateOverlayDisplay", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem), ArgBytes: 8) },
+				{ "UpdateOverlayZOrder", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem), ArgBytes: 12) }
 			};
 			
 			// Create the COM object with vtable
@@ -682,44 +683,44 @@ namespace Win32Emu.Win32.Modules
 					_surfaces[backBufferHandle] = backBuffer;
 					
 					// Create COM vtable for backbuffer
-					var backBufferVtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+					var backBufferVtableMethods = new Dictionary<string, ComMethodInfo>
 					{
-						{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
-						{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
-						{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
-						{ "AddAttachedSurface", (cpu, mem) => Surface_AddAttachedSurface(cpu, mem) },
-						{ "AddOverlayDirtyRect", (cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem) },
-						{ "Blt", (cpu, mem) => Surface_Blt(cpu, mem) },
-						{ "BltBatch", (cpu, mem) => Surface_BltBatch(cpu, mem) },
-						{ "BltFast", (cpu, mem) => Surface_BltFast(cpu, mem) },
-						{ "DeleteAttachedSurface", (cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem) },
-						{ "EnumAttachedSurfaces", (cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem) },
-						{ "EnumOverlayZOrders", (cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem) },
-						{ "Flip", (cpu, mem) => Surface_Flip(cpu, mem) },
-						{ "GetAttachedSurface", (cpu, mem) => Surface_GetAttachedSurface(cpu, mem) },
-						{ "GetBltStatus", (cpu, mem) => Surface_GetBltStatus(cpu, mem) },
-						{ "GetCaps", (cpu, mem) => Surface_GetCaps(cpu, mem) },
-						{ "GetClipper", (cpu, mem) => Surface_GetClipper(cpu, mem) },
-						{ "GetColorKey", (cpu, mem) => Surface_GetColorKey(cpu, mem) },
-						{ "GetDC", (cpu, mem) => Surface_GetDC(cpu, mem) },
-						{ "GetFlipStatus", (cpu, mem) => Surface_GetFlipStatus(cpu, mem) },
-						{ "GetOverlayPosition", (cpu, mem) => Surface_GetOverlayPosition(cpu, mem) },
-						{ "GetPalette", (cpu, mem) => Surface_GetPalette(cpu, mem) },
-						{ "GetPixelFormat", (cpu, mem) => Surface_GetPixelFormat(cpu, mem) },
-						{ "GetSurfaceDesc", (cpu, mem) => Surface_GetSurfaceDesc(cpu, mem) },
-						{ "Initialize", (cpu, mem) => Surface_Initialize(cpu, mem) },
-						{ "IsLost", (cpu, mem) => Surface_IsLost(cpu, mem) },
-						{ "Lock", (cpu, mem) => Surface_Lock(cpu, mem, backBufferHandle) },
-						{ "ReleaseDC", (cpu, mem) => Surface_ReleaseDC(cpu, mem) },
-						{ "Restore", (cpu, mem) => Surface_Restore(cpu, mem) },
-						{ "SetClipper", (cpu, mem) => Surface_SetClipper(cpu, mem) },
-						{ "SetColorKey", (cpu, mem) => Surface_SetColorKey(cpu, mem) },
-						{ "SetOverlayPosition", (cpu, mem) => Surface_SetOverlayPosition(cpu, mem) },
-						{ "SetPalette", (cpu, mem) => Surface_SetPalette(cpu, mem, backBufferHandle) },
-						{ "Unlock", (cpu, mem) => Surface_Unlock(cpu, mem, backBufferHandle) },
-						{ "UpdateOverlay", (cpu, mem) => Surface_UpdateOverlay(cpu, mem) },
-						{ "UpdateOverlayDisplay", (cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem) },
-						{ "UpdateOverlayZOrder", (cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem) }
+						{ "QueryInterface", new ComMethodInfo((cpu, mem) => ComQueryInterface(cpu, mem), ArgBytes: 12) },
+						{ "AddRef", new ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) },
+						{ "Release", new ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) },
+						{ "AddAttachedSurface", new ComMethodInfo((cpu, mem) => Surface_AddAttachedSurface(cpu, mem), ArgBytes: 8) },
+						{ "AddOverlayDirtyRect", new ComMethodInfo((cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem), ArgBytes: 8) },
+						{ "Blt", new ComMethodInfo((cpu, mem) => Surface_Blt(cpu, mem), ArgBytes: 24) },
+						{ "BltBatch", new ComMethodInfo((cpu, mem) => Surface_BltBatch(cpu, mem), ArgBytes: 12) },
+						{ "BltFast", new ComMethodInfo((cpu, mem) => Surface_BltFast(cpu, mem), ArgBytes: 24) },
+						{ "DeleteAttachedSurface", new ComMethodInfo((cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem), ArgBytes: 12) },
+						{ "EnumAttachedSurfaces", new ComMethodInfo((cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem), ArgBytes: 12) },
+						{ "EnumOverlayZOrders", new ComMethodInfo((cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem), ArgBytes: 16) },
+						{ "Flip", new ComMethodInfo((cpu, mem) => Surface_Flip(cpu, mem), ArgBytes: 12) },
+						{ "GetAttachedSurface", new ComMethodInfo((cpu, mem) => Surface_GetAttachedSurface(cpu, mem), ArgBytes: 12) },
+						{ "GetBltStatus", new ComMethodInfo((cpu, mem) => Surface_GetBltStatus(cpu, mem), ArgBytes: 8) },
+						{ "GetCaps", new ComMethodInfo((cpu, mem) => Surface_GetCaps(cpu, mem), ArgBytes: 8) },
+						{ "GetClipper", new ComMethodInfo((cpu, mem) => Surface_GetClipper(cpu, mem), ArgBytes: 8) },
+						{ "GetColorKey", new ComMethodInfo((cpu, mem) => Surface_GetColorKey(cpu, mem), ArgBytes: 12) },
+						{ "GetDC", new ComMethodInfo((cpu, mem) => Surface_GetDC(cpu, mem), ArgBytes: 8) },
+						{ "GetFlipStatus", new ComMethodInfo((cpu, mem) => Surface_GetFlipStatus(cpu, mem), ArgBytes: 8) },
+						{ "GetOverlayPosition", new ComMethodInfo((cpu, mem) => Surface_GetOverlayPosition(cpu, mem), ArgBytes: 12) },
+						{ "GetPalette", new ComMethodInfo((cpu, mem) => Surface_GetPalette(cpu, mem), ArgBytes: 8) },
+						{ "GetPixelFormat", new ComMethodInfo((cpu, mem) => Surface_GetPixelFormat(cpu, mem), ArgBytes: 8) },
+						{ "GetSurfaceDesc", new ComMethodInfo((cpu, mem) => Surface_GetSurfaceDesc(cpu, mem), ArgBytes: 8) },
+						{ "Initialize", new ComMethodInfo((cpu, mem) => Surface_Initialize(cpu, mem), ArgBytes: 8) },
+						{ "IsLost", new ComMethodInfo((cpu, mem) => Surface_IsLost(cpu, mem), ArgBytes: 4) },
+						{ "Lock", new ComMethodInfo((cpu, mem) => Surface_Lock(cpu, mem, backBufferHandle), ArgBytes: 20) },
+						{ "ReleaseDC", new ComMethodInfo((cpu, mem) => Surface_ReleaseDC(cpu, mem), ArgBytes: 8) },
+						{ "Restore", new ComMethodInfo((cpu, mem) => Surface_Restore(cpu, mem), ArgBytes: 4) },
+						{ "SetClipper", new ComMethodInfo((cpu, mem) => Surface_SetClipper(cpu, mem), ArgBytes: 8) },
+						{ "SetColorKey", new ComMethodInfo((cpu, mem) => Surface_SetColorKey(cpu, mem), ArgBytes: 12) },
+						{ "SetOverlayPosition", new ComMethodInfo((cpu, mem) => Surface_SetOverlayPosition(cpu, mem), ArgBytes: 12) },
+						{ "SetPalette", new ComMethodInfo((cpu, mem) => Surface_SetPalette(cpu, mem, backBufferHandle), ArgBytes: 8) },
+						{ "Unlock", new ComMethodInfo((cpu, mem) => Surface_Unlock(cpu, mem, backBufferHandle), ArgBytes: 8) },
+						{ "UpdateOverlay", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlay(cpu, mem), ArgBytes: 24) },
+						{ "UpdateOverlayDisplay", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem), ArgBytes: 8) },
+						{ "UpdateOverlayZOrder", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem), ArgBytes: 12) }
 					};
 					
 					var backBufferComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawSurface", backBufferVtableMethods);
@@ -1410,44 +1411,44 @@ namespace Win32Emu.Win32.Modules
 						_surfaces[backBufferHandle] = backBuffer;
 						
 						// Create COM vtable for backbuffer
-						var backBufferVtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+						var backBufferVtableMethods = new Dictionary<string, ComMethodInfo>
 						{
-							{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
-							{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
-							{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
-							{ "AddAttachedSurface", (cpu, mem) => Surface_AddAttachedSurface(cpu, mem) },
-							{ "AddOverlayDirtyRect", (cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem) },
-							{ "Blt", (cpu, mem) => Surface_Blt(cpu, mem) },
-							{ "BltBatch", (cpu, mem) => Surface_BltBatch(cpu, mem) },
-							{ "BltFast", (cpu, mem) => Surface_BltFast(cpu, mem) },
-							{ "DeleteAttachedSurface", (cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem) },
-							{ "EnumAttachedSurfaces", (cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem) },
-							{ "EnumOverlayZOrders", (cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem) },
-							{ "Flip", (cpu, mem) => Surface_Flip(cpu, mem) },
-							{ "GetAttachedSurface", (cpu, mem) => Surface_GetAttachedSurface(cpu, mem) },
-							{ "GetBltStatus", (cpu, mem) => Surface_GetBltStatus(cpu, mem) },
-							{ "GetCaps", (cpu, mem) => Surface_GetCaps(cpu, mem) },
-							{ "GetClipper", (cpu, mem) => Surface_GetClipper(cpu, mem) },
-							{ "GetColorKey", (cpu, mem) => Surface_GetColorKey(cpu, mem) },
-							{ "GetDC", (cpu, mem) => Surface_GetDC(cpu, mem) },
-							{ "GetFlipStatus", (cpu, mem) => Surface_GetFlipStatus(cpu, mem) },
-							{ "GetOverlayPosition", (cpu, mem) => Surface_GetOverlayPosition(cpu, mem) },
-							{ "GetPalette", (cpu, mem) => Surface_GetPalette(cpu, mem) },
-							{ "GetPixelFormat", (cpu, mem) => Surface_GetPixelFormat(cpu, mem) },
-							{ "GetSurfaceDesc", (cpu, mem) => Surface_GetSurfaceDesc(cpu, mem) },
-							{ "Initialize", (cpu, mem) => Surface_Initialize(cpu, mem) },
-							{ "IsLost", (cpu, mem) => Surface_IsLost(cpu, mem) },
-							{ "Lock", (cpu, mem) => Surface_Lock(cpu, mem, backBufferHandle) },
-							{ "ReleaseDC", (cpu, mem) => Surface_ReleaseDC(cpu, mem) },
-							{ "Restore", (cpu, mem) => Surface_Restore(cpu, mem) },
-							{ "SetClipper", (cpu, mem) => Surface_SetClipper(cpu, mem) },
-							{ "SetColorKey", (cpu, mem) => Surface_SetColorKey(cpu, mem) },
-							{ "SetOverlayPosition", (cpu, mem) => Surface_SetOverlayPosition(cpu, mem) },
-							{ "SetPalette", (cpu, mem) => Surface_SetPalette(cpu, mem, backBufferHandle) },
-							{ "Unlock", (cpu, mem) => Surface_Unlock(cpu, mem, backBufferHandle) },
-							{ "UpdateOverlay", (cpu, mem) => Surface_UpdateOverlay(cpu, mem) },
-							{ "UpdateOverlayDisplay", (cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem) },
-							{ "UpdateOverlayZOrder", (cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem) }
+							{ "QueryInterface", new ComMethodInfo((cpu, mem) => ComQueryInterface(cpu, mem), ArgBytes: 12) },
+							{ "AddRef", new ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) },
+							{ "Release", new ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) },
+							{ "AddAttachedSurface", new ComMethodInfo((cpu, mem) => Surface_AddAttachedSurface(cpu, mem), ArgBytes: 8) },
+							{ "AddOverlayDirtyRect", new ComMethodInfo((cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem), ArgBytes: 8) },
+							{ "Blt", new ComMethodInfo((cpu, mem) => Surface_Blt(cpu, mem), ArgBytes: 24) },
+							{ "BltBatch", new ComMethodInfo((cpu, mem) => Surface_BltBatch(cpu, mem), ArgBytes: 12) },
+							{ "BltFast", new ComMethodInfo((cpu, mem) => Surface_BltFast(cpu, mem), ArgBytes: 24) },
+							{ "DeleteAttachedSurface", new ComMethodInfo((cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem), ArgBytes: 12) },
+							{ "EnumAttachedSurfaces", new ComMethodInfo((cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem), ArgBytes: 12) },
+							{ "EnumOverlayZOrders", new ComMethodInfo((cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem), ArgBytes: 16) },
+							{ "Flip", new ComMethodInfo((cpu, mem) => Surface_Flip(cpu, mem), ArgBytes: 12) },
+							{ "GetAttachedSurface", new ComMethodInfo((cpu, mem) => Surface_GetAttachedSurface(cpu, mem), ArgBytes: 12) },
+							{ "GetBltStatus", new ComMethodInfo((cpu, mem) => Surface_GetBltStatus(cpu, mem), ArgBytes: 8) },
+							{ "GetCaps", new ComMethodInfo((cpu, mem) => Surface_GetCaps(cpu, mem), ArgBytes: 8) },
+							{ "GetClipper", new ComMethodInfo((cpu, mem) => Surface_GetClipper(cpu, mem), ArgBytes: 8) },
+							{ "GetColorKey", new ComMethodInfo((cpu, mem) => Surface_GetColorKey(cpu, mem), ArgBytes: 12) },
+							{ "GetDC", new ComMethodInfo((cpu, mem) => Surface_GetDC(cpu, mem), ArgBytes: 8) },
+							{ "GetFlipStatus", new ComMethodInfo((cpu, mem) => Surface_GetFlipStatus(cpu, mem), ArgBytes: 8) },
+							{ "GetOverlayPosition", new ComMethodInfo((cpu, mem) => Surface_GetOverlayPosition(cpu, mem), ArgBytes: 12) },
+							{ "GetPalette", new ComMethodInfo((cpu, mem) => Surface_GetPalette(cpu, mem), ArgBytes: 8) },
+							{ "GetPixelFormat", new ComMethodInfo((cpu, mem) => Surface_GetPixelFormat(cpu, mem), ArgBytes: 8) },
+							{ "GetSurfaceDesc", new ComMethodInfo((cpu, mem) => Surface_GetSurfaceDesc(cpu, mem), ArgBytes: 8) },
+							{ "Initialize", new ComMethodInfo((cpu, mem) => Surface_Initialize(cpu, mem), ArgBytes: 8) },
+							{ "IsLost", new ComMethodInfo((cpu, mem) => Surface_IsLost(cpu, mem), ArgBytes: 4) },
+							{ "Lock", new ComMethodInfo((cpu, mem) => Surface_Lock(cpu, mem, backBufferHandle), ArgBytes: 20) },
+							{ "ReleaseDC", new ComMethodInfo((cpu, mem) => Surface_ReleaseDC(cpu, mem), ArgBytes: 8) },
+							{ "Restore", new ComMethodInfo((cpu, mem) => Surface_Restore(cpu, mem), ArgBytes: 4) },
+							{ "SetClipper", new ComMethodInfo((cpu, mem) => Surface_SetClipper(cpu, mem), ArgBytes: 8) },
+							{ "SetColorKey", new ComMethodInfo((cpu, mem) => Surface_SetColorKey(cpu, mem), ArgBytes: 12) },
+							{ "SetOverlayPosition", new ComMethodInfo((cpu, mem) => Surface_SetOverlayPosition(cpu, mem), ArgBytes: 12) },
+							{ "SetPalette", new ComMethodInfo((cpu, mem) => Surface_SetPalette(cpu, mem, backBufferHandle), ArgBytes: 8) },
+							{ "Unlock", new ComMethodInfo((cpu, mem) => Surface_Unlock(cpu, mem, backBufferHandle), ArgBytes: 8) },
+							{ "UpdateOverlay", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlay(cpu, mem), ArgBytes: 24) },
+							{ "UpdateOverlayDisplay", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem), ArgBytes: 8) },
+							{ "UpdateOverlayZOrder", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem), ArgBytes: 12) }
 						};
 						
 						var backBufferComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawSurface", backBufferVtableMethods);
