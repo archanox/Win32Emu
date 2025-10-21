@@ -28,9 +28,11 @@ namespace Win32Emu.Win32.Modules
 		private readonly Dictionary<uint, uint> _comObjectToHandle = new(); // Maps COM object address to ddraw handle
 		private readonly Dictionary<uint, DirectDrawSurface> _surfaces = new();
 		private readonly Dictionary<uint, DirectDrawPalette> _palettes = new();
+		private readonly Dictionary<uint, DirectDrawClipper> _clippers = new();
 		private uint _nextDDrawHandle = 0x70000000;
 		private uint _nextSurfaceHandle = 0x71000000;
 		private uint _nextPaletteHandle = 0x72000000;
+		private uint _nextClipperHandle = 0x73000000;
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
@@ -223,6 +225,7 @@ namespace Win32Emu.Win32.Modules
 			public uint ColorKeyLow { get; set; }
 			public uint ColorKeyHigh { get; set; }
 			public bool HasColorKey { get; set; }
+			public uint ClipperHandle { get; set; }
 			public List<uint> AttachedSurfaces { get; set; } = new List<uint>();
 		}
 
@@ -231,6 +234,14 @@ namespace Win32Emu.Win32.Modules
 			public uint Handle { get; set; }
 			public uint ComObjectAddress { get; set; }
 			public uint[] Entries { get; set; } = Array.Empty<uint>();
+		}
+
+		private sealed class DirectDrawClipper
+		{
+			public uint Handle { get; set; }
+			public uint ComObjectAddress { get; set; }
+			public uint WindowHandle { get; set; }
+			public bool IsWindowedMode { get; set; }
 		}
 
 		// COM interface methods (stubs for IDirectDraw)
@@ -407,7 +418,55 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DDraw_CreateClipper(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::CreateClipper() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+			var lplpDDClipper = args.UInt32(2);
+			var pUnkOuter = args.UInt32(3);
+
+			_logger.LogInformation(
+				"[DDraw COM] IDirectDraw::CreateClipper(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lplpDDClipper=0x{LplpDDClipper:X8}, pUnkOuter=0x{PUnkOuter:X8})",
+				thisPtr, dwFlags, lplpDDClipper, pUnkOuter);
+
+			if (lplpDDClipper == 0)
+			{
+				_logger.LogError("[DDraw] CreateClipper: lplpDDClipper is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Create a new clipper handle
+			var clipperHandle = _nextClipperHandle++;
+			var clipper = new DirectDrawClipper
+			{
+				Handle = clipperHandle,
+				IsWindowedMode = true // Typically used for windowed mode
+			};
+
+			_clippers[clipperHandle] = clipper;
+
+			// Create COM vtable for IDirectDrawClipper interface
+			var clipperVtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+			{
+				{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
+				{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
+				{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
+				{ "GetClipList", (cpu, mem) => Clipper_GetClipList(cpu, mem) },
+				{ "GetHWnd", (cpu, mem) => Clipper_GetHWnd(cpu, mem, clipperHandle) },
+				{ "Initialize", (cpu, mem) => Clipper_Initialize(cpu, mem) },
+				{ "IsClipListChanged", (cpu, mem) => Clipper_IsClipListChanged(cpu, mem) },
+				{ "SetClipList", (cpu, mem) => Clipper_SetClipList(cpu, mem) },
+				{ "SetHWnd", (cpu, mem) => Clipper_SetHWnd(cpu, mem, clipperHandle) }
+			};
+
+			var clipperComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawClipper", clipperVtableMethods);
+			clipper.ComObjectAddress = clipperComAddr;
+
+			// Write the clipper COM object address to the output pointer
+			_env.MemWrite32(lplpDDClipper, clipperComAddr);
+
+			_logger.LogInformation("[DDraw] Created clipper with handle 0x{Handle:X8}, COM object at 0x{ComAddr:X8}",
+				clipperHandle, clipperComAddr);
+
 			return 0; // DD_OK
 		}
 
@@ -802,7 +861,55 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_SetClipper(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::SetClipper() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lpDDClipper = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::SetClipper(this=0x{ThisPtr:X8}, lpDDClipper=0x{LpDDClipper:X8})", 
+				thisPtr, lpDDClipper);
+
+			// Find the surface by COM object address
+			DirectDrawSurface? surface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				if (s.ComObjectAddress == thisPtr)
+				{
+					surface = s;
+					break;
+				}
+			}
+
+			if (surface == null)
+			{
+				_logger.LogError("[DDraw] SetClipper: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				return 0x88760066; // DDERR_INVALIDOBJECT
+			}
+
+			// Find the clipper by COM object address
+			uint clipperHandle = 0;
+			if (lpDDClipper != 0)
+			{
+				foreach (var clipper in _clippers.Values)
+				{
+					if (clipper.ComObjectAddress == lpDDClipper)
+					{
+						clipperHandle = clipper.Handle;
+						break;
+					}
+				}
+
+				if (clipperHandle == 0)
+				{
+					_logger.LogError("[DDraw] SetClipper: could not find clipper with COM address 0x{LpDDClipper:X8}", lpDDClipper);
+					return 0x88760066; // DDERR_INVALIDOBJECT
+				}
+			}
+
+			// Set the clipper on the surface
+			surface.ClipperHandle = clipperHandle;
+			_logger.LogInformation("[DDraw] Surface 0x{SurfaceHandle:X8} clipper set to 0x{ClipperHandle:X8}", 
+				surface.Handle, clipperHandle);
+
 			return 0; // DD_OK
 		}
 
@@ -1139,12 +1246,45 @@ namespace Win32Emu.Win32.Modules
 				return 0x80070057; // DDERR_INVALIDPARAMS
 			}
 
-			// We don't support clippers in this implementation
-			// Return null to indicate no clipper is attached
-			_env.MemWrite32(lplpDDClipper, 0);
-			_logger.LogInformation("[DDraw] No clipper attached to surface");
+			// Find the surface by COM object address
+			DirectDrawSurface? surface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				if (s.ComObjectAddress == thisPtr)
+				{
+					surface = s;
+					break;
+				}
+			}
 
-			return 0x88760169; // DDERR_NOCLIPPERATTACHED
+			if (surface == null)
+			{
+				_logger.LogError("[DDraw] GetClipper: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				return 0x88760066; // DDERR_INVALIDOBJECT
+			}
+
+			// Check if a clipper is attached to the surface
+			if (surface.ClipperHandle == 0)
+			{
+				// Return null to indicate no clipper is attached
+				_env.MemWrite32(lplpDDClipper, 0);
+				_logger.LogInformation("[DDraw] No clipper attached to surface 0x{SurfaceHandle:X8}", surface.Handle);
+				return 0x88760169; // DDERR_NOCLIPPERATTACHED
+			}
+
+			// Get the clipper and return its COM object address
+			if (_clippers.TryGetValue(surface.ClipperHandle, out var clipper))
+			{
+				_env.MemWrite32(lplpDDClipper, clipper.ComObjectAddress);
+				_logger.LogInformation("[DDraw] Returning clipper COM object 0x{ComAddr:X8} for surface 0x{SurfaceHandle:X8}",
+					clipper.ComObjectAddress, surface.Handle);
+				return 0; // DD_OK
+			}
+
+			// Clipper handle is set but clipper not found
+			_logger.LogError("[DDraw] GetClipper: clipper handle 0x{ClipperHandle:X8} not found", surface.ClipperHandle);
+			_env.MemWrite32(lplpDDClipper, 0);
+			return 0x88760066; // DDERR_INVALIDOBJECT
 		}
 
 		private uint Surface_GetCaps(ICpu cpu, VirtualMemory mem)
@@ -2322,6 +2462,116 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			_logger.LogInformation("[DDraw] Unlocked surface 0x{SurfaceHandle:X8}", surfaceHandle);
+			return 0; // DD_OK
+		}
+
+		// IDirectDrawClipper interface methods
+		private uint Clipper_GetClipList(ICpu cpu, VirtualMemory memory)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lpRect = args.UInt32(1);
+			var lpClipList = args.UInt32(2);
+			var lpdwSize = args.UInt32(3);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawClipper::GetClipList(this=0x{ThisPtr:X8}, lpRect=0x{LpRect:X8}, lpClipList=0x{LpClipList:X8}, lpdwSize=0x{LpdwSize:X8})",
+				thisPtr, lpRect, lpClipList, lpdwSize);
+
+			// For windowed mode, we typically don't need a complex clip list
+			// Return that no clip list is available
+			if (lpdwSize != 0)
+			{
+				_env.MemWrite32(lpdwSize, 0);
+			}
+
+			return 0x88760169; // DDERR_NOCLIPLIST
+		}
+
+		private uint Clipper_GetHWnd(ICpu cpu, VirtualMemory memory, uint clipperHandle)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lphWnd = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawClipper::GetHWnd(this=0x{ThisPtr:X8}, lphWnd=0x{LphWnd:X8})",
+				thisPtr, lphWnd);
+
+			if (lphWnd == 0)
+			{
+				_logger.LogError("[DDraw] GetHWnd: lphWnd is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			if (!_clippers.TryGetValue(clipperHandle, out var clipper))
+			{
+				_logger.LogError("[DDraw] GetHWnd: clipper not found");
+				_env.MemWrite32(lphWnd, 0);
+				return 0x88760066; // DDERR_INVALIDOBJECT
+			}
+
+			_env.MemWrite32(lphWnd, clipper.WindowHandle);
+			_logger.LogInformation("[DDraw] Returning window handle 0x{WindowHandle:X8}", clipper.WindowHandle);
+
+			return 0; // DD_OK
+		}
+
+		private uint Clipper_Initialize(ICpu cpu, VirtualMemory memory)
+		{
+			_logger.LogInformation("[DDraw COM] IDirectDrawClipper::Initialize() - stub");
+			// Already initialized by CreateClipper
+			return 0; // DD_OK
+		}
+
+		private uint Clipper_IsClipListChanged(ICpu cpu, VirtualMemory memory)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lpbChanged = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawClipper::IsClipListChanged(this=0x{ThisPtr:X8}, lpbChanged=0x{LpbChanged:X8})",
+				thisPtr, lpbChanged);
+
+			if (lpbChanged != 0)
+			{
+				_env.MemWrite32(lpbChanged, 0); // FALSE - not changed
+			}
+
+			return 0; // DD_OK
+		}
+
+		private uint Clipper_SetClipList(ICpu cpu, VirtualMemory memory)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lpClipList = args.UInt32(1);
+			var dwFlags = args.UInt32(2);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawClipper::SetClipList(this=0x{ThisPtr:X8}, lpClipList=0x{LpClipList:X8}, dwFlags=0x{DwFlags:X8})",
+				thisPtr, lpClipList, dwFlags);
+
+			// For now, we accept but don't process clip lists
+			return 0; // DD_OK
+		}
+
+		private uint Clipper_SetHWnd(ICpu cpu, VirtualMemory memory, uint clipperHandle)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+			var hWnd = args.UInt32(2);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawClipper::SetHWnd(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, hWnd=0x{HWnd:X8})",
+				thisPtr, dwFlags, hWnd);
+
+			if (!_clippers.TryGetValue(clipperHandle, out var clipper))
+			{
+				_logger.LogError("[DDraw] SetHWnd: clipper not found");
+				return 0x88760066; // DDERR_INVALIDOBJECT
+			}
+
+			clipper.WindowHandle = hWnd;
+			_logger.LogInformation("[DDraw] Set clipper window handle to 0x{WindowHandle:X8}", hWnd);
+
 			return 0; // DD_OK
 		}
 	}
