@@ -505,6 +505,9 @@ namespace Win32Emu.Win32.Modules
 				dwSurfaceCaps = _env.MemRead32(lpDDSurfaceDesc + 108);
 			}
 			
+			_logger.LogInformation("[DDraw] Surface creation: flags=0x{Flags:X8}, caps=0x{Caps:X8}, width={Width}, height={Height}, backbufferCount={Count}",
+				dwFlags, dwSurfaceCaps, dwWidth, dwHeight, dwBackBufferCount);
+			
 			// Find the DirectDraw object from the COM object pointer
 			uint ddrawHandle = 0;
 			foreach (var kvp in _ddrawObjects)
@@ -582,6 +585,18 @@ namespace Win32Emu.Win32.Modules
 			// Create the COM object with vtable
 			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDrawSurface", vtableMethods);
 			surface.ComObjectAddress = comObjectAddr;
+			
+			// Check if this is a flipping complex surface that needs backbuffers
+			// DDSCAPS_FLIP = 0x00000010, DDSCAPS_COMPLEX = 0x00000008
+			var isFlippingChain = (dwSurfaceCaps & 0x00000010) != 0 && (dwSurfaceCaps & 0x00000008) != 0;
+			
+			// If this is a primary surface with flipping capabilities but no explicit backbuffer count,
+			// default to creating 1 backbuffer (common DirectDraw pattern)
+			if (surface.IsPrimary && isFlippingChain && dwBackBufferCount == 0)
+			{
+				dwBackBufferCount = 1;
+				_logger.LogInformation("[DDraw] Primary surface has FLIP+COMPLEX caps but no explicit backbuffer count, defaulting to 1 backbuffer");
+			}
 			
 			// Create backbuffers if requested
 			if (dwBackBufferCount > 0 && surface.IsPrimary)
