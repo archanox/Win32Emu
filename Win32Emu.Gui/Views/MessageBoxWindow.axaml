@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Win32Emu.Gui.Views.MessageBoxWindow"
+        Width="400"
+        MinWidth="300"
+        MaxWidth="600"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Background="#F0F0F0">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Message content area -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+            <!-- Icon (if any) -->
+            <TextBlock Name="IconText" 
+                       FontSize="32" 
+                       Margin="0,0,15,0"
+                       VerticalAlignment="Top"
+                       IsVisible="False"/>
+            
+            <!-- Message text -->
+            <TextBlock Name="MessageText" 
+                       TextWrapping="Wrap" 
+                       VerticalAlignment="Center"
+                       MaxWidth="500"/>
+        </StackPanel>
+        
+        <!-- Buttons area -->
+        <StackPanel Grid.Row="1" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Spacing="10">
+            <!-- Buttons will be dynamically created -->
+        </StackPanel>
+    </Grid>
+</Window>

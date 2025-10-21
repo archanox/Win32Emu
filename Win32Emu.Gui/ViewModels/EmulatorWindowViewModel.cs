@@ -211,10 +211,25 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     {
         OnDebugOutput($"MessageBox: \"{info.Caption}\" - \"{info.Text}\" (type=0x{info.Type:X8})", DebugLevel.Error);
         
-        // For now, just log the message box to output and return IDOK
-        // A full implementation would show an actual Avalonia dialog window
-        // Since the message is already logged with Error level, it will be visible to the user
-        return 1; // IDOK
+        // Show message box on UI thread and wait for result
+        var result = Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            try
+            {
+                var messageBox = new Views.MessageBoxWindow(info.Caption, info.Text, info.Type);
+                var buttonResult = await messageBox.ShowMessageBoxAsync(_ownerWindow);
+                
+                OnDebugOutput($"MessageBox returned: {buttonResult}", DebugLevel.Info);
+                return buttonResult;
+            }
+            catch (Exception ex)
+            {
+                OnDebugOutput($"Error showing message box: {ex.Message}", DebugLevel.Error);
+                return 1; // IDOK as fallback
+            }
+        }).Result;
+        
+        return result;
     }
 
     private void CreateTopLevelWindow(WindowCreateInfo info)
