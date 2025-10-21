@@ -1240,6 +1240,99 @@ namespace Win32Emu.Win32.Modules
 			if (surface.AttachedSurfaces.Count == 0)
 			{
 				_logger.LogInformation("[DDraw] No attached surfaces found for surface 0x{Handle:X8}", surface.Handle);
+				
+				// If this is a primary surface and a backbuffer is requested, create one on-demand
+				// DDSCAPS_BACKBUFFER = 0x00000004
+				const uint DDSCAPS_BACKBUFFER = 0x00000004;
+				if (surface.IsPrimary && (dwCaps & DDSCAPS_BACKBUFFER) != 0)
+				{
+					_logger.LogInformation("[DDraw] Primary surface needs backbuffer, creating on-demand");
+					
+					// Get the DirectDraw object to determine bits per pixel
+					if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
+					{
+						// Create a backbuffer surface
+						var backBufferHandle = _nextSurfaceHandle++;
+						var backBuffer = new DirectDrawSurface
+						{
+							Handle = backBufferHandle,
+							Width = surface.Width,
+							Height = surface.Height,
+							DirectDrawHandle = surface.DirectDrawHandle,
+							IsPrimary = false,
+							Pitch = surface.Width * (ddrawObj.BitsPerPixel / 8)
+						};
+						
+						// Allocate memory for the backbuffer
+						backBuffer.Bits = new byte[backBuffer.Pitch * backBuffer.Height];
+						
+						// Store the backbuffer
+						_surfaces[backBufferHandle] = backBuffer;
+						
+						// Create COM vtable for backbuffer
+						var backBufferVtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+						{
+							{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
+							{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
+							{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
+							{ "AddAttachedSurface", (cpu, mem) => Surface_AddAttachedSurface(cpu, mem) },
+							{ "AddOverlayDirtyRect", (cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem) },
+							{ "Blt", (cpu, mem) => Surface_Blt(cpu, mem) },
+							{ "BltBatch", (cpu, mem) => Surface_BltBatch(cpu, mem) },
+							{ "BltFast", (cpu, mem) => Surface_BltFast(cpu, mem) },
+							{ "DeleteAttachedSurface", (cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem) },
+							{ "EnumAttachedSurfaces", (cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem) },
+							{ "EnumOverlayZOrders", (cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem) },
+							{ "Flip", (cpu, mem) => Surface_Flip(cpu, mem) },
+							{ "GetAttachedSurface", (cpu, mem) => Surface_GetAttachedSurface(cpu, mem) },
+							{ "GetBltStatus", (cpu, mem) => Surface_GetBltStatus(cpu, mem) },
+							{ "GetCaps", (cpu, mem) => Surface_GetCaps(cpu, mem) },
+							{ "GetClipper", (cpu, mem) => Surface_GetClipper(cpu, mem) },
+							{ "GetColorKey", (cpu, mem) => Surface_GetColorKey(cpu, mem) },
+							{ "GetDC", (cpu, mem) => Surface_GetDC(cpu, mem) },
+							{ "GetFlipStatus", (cpu, mem) => Surface_GetFlipStatus(cpu, mem) },
+							{ "GetOverlayPosition", (cpu, mem) => Surface_GetOverlayPosition(cpu, mem) },
+							{ "GetPalette", (cpu, mem) => Surface_GetPalette(cpu, mem) },
+							{ "GetPixelFormat", (cpu, mem) => Surface_GetPixelFormat(cpu, mem) },
+							{ "GetSurfaceDesc", (cpu, mem) => Surface_GetSurfaceDesc(cpu, mem) },
+							{ "Initialize", (cpu, mem) => Surface_Initialize(cpu, mem) },
+							{ "IsLost", (cpu, mem) => Surface_IsLost(cpu, mem) },
+							{ "Lock", (cpu, mem) => Surface_Lock(cpu, mem, backBufferHandle) },
+							{ "ReleaseDC", (cpu, mem) => Surface_ReleaseDC(cpu, mem) },
+							{ "Restore", (cpu, mem) => Surface_Restore(cpu, mem) },
+							{ "SetClipper", (cpu, mem) => Surface_SetClipper(cpu, mem) },
+							{ "SetColorKey", (cpu, mem) => Surface_SetColorKey(cpu, mem) },
+							{ "SetOverlayPosition", (cpu, mem) => Surface_SetOverlayPosition(cpu, mem) },
+							{ "SetPalette", (cpu, mem) => Surface_SetPalette(cpu, mem, backBufferHandle) },
+							{ "Unlock", (cpu, mem) => Surface_Unlock(cpu, mem, backBufferHandle) },
+							{ "UpdateOverlay", (cpu, mem) => Surface_UpdateOverlay(cpu, mem) },
+							{ "UpdateOverlayDisplay", (cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem) },
+							{ "UpdateOverlayZOrder", (cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem) }
+						};
+						
+						var backBufferComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawSurface", backBufferVtableMethods);
+						backBuffer.ComObjectAddress = backBufferComAddr;
+						
+						// Attach the backbuffer to the primary surface
+						surface.AttachedSurfaces.Add(backBufferHandle);
+						
+						_logger.LogInformation("[DDraw] Created on-demand backbuffer at surface handle 0x{Handle:X8}, COM object at 0x{ComAddr:X8}",
+							backBufferHandle, backBufferComAddr);
+						
+						// Return the newly created backbuffer
+						if (lplpDDAttachedSurface != 0)
+						{
+							_env.MemWrite32(lplpDDAttachedSurface, backBuffer.ComObjectAddress);
+						}
+						_logger.LogInformation("[DDraw] Returning on-demand backbuffer COM object at 0x{ComAddr:X8}", backBuffer.ComObjectAddress);
+						return 0; // DD_OK
+					}
+					else
+					{
+						_logger.LogError("[DDraw] Could not find DirectDraw object for on-demand backbuffer creation");
+					}
+				}
+				
 				if (lplpDDAttachedSurface != 0)
 				{
 					_env.MemWrite32(lplpDDAttachedSurface, 0);
