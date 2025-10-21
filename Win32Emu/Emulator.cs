@@ -427,7 +427,8 @@ public sealed class Emulator : IDisposable
             }
             else if (step.IsCall)
             {
-	            _logger.LogInformation("[Call] Call method at 0x{CallTarget:X8}", step.CallTarget);
+	            // TODO: wire up to native program function overrides in c#
+	            // _logger.LogInformation("[Call] Call method at 0x{CallTarget:X8}", step.CallTarget);
             }
             
         }
