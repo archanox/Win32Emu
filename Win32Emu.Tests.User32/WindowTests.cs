@@ -727,6 +727,175 @@ public class WindowTests : IDisposable
         Assert.Equal(messageId1, messageId3); // Same message name (different case) should return same ID
     }
 
+    [Fact]
+    public void CreateWindowExA_ShouldSendWmCreateWmSizeAndWmMove()
+    {
+        // Arrange
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+
+        const int x = 100;
+        const int y = 150;
+        const int width = 640;
+        const int height = 480;
+
+        // Act
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0,              // dwExStyle
+            classNamePtr,   // lpClassName
+            titlePtr,       // lpWindowName
+            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
+            x,              // x
+            y,              // y
+            width,          // width
+            height,         // height
+            0,              // hWndParent
+            0,              // hMenu
+            0,              // hInstance
+            0               // lpParam
+        );
+
+        // Assert - window was created
+        Assert.NotEqual(0u, hwnd);
+
+        // Assert - WM_CREATE message should be queued
+        var msgAddr1 = _testEnv.AllocateMemory(28); // MSG structure size
+        var result1 = _testEnv.CallUser32Api("PEEKMESSAGEA", msgAddr1, 0, 0, 0, 0x0001); // PM_REMOVE
+        Assert.Equal(1u, result1);
+        var msg1 = _testEnv.Memory.Read32(msgAddr1 + 4);
+        Assert.Equal(0x0001u, msg1); // WM_CREATE
+
+        // Assert - WM_SIZE message should be queued
+        var msgAddr2 = _testEnv.AllocateMemory(28); // MSG structure size
+        var result2 = _testEnv.CallUser32Api("PEEKMESSAGEA", msgAddr2, 0, 0, 0, 0x0001); // PM_REMOVE
+        Assert.Equal(1u, result2);
+        var msg2 = _testEnv.Memory.Read32(msgAddr2 + 4);
+        var wParam2 = _testEnv.Memory.Read32(msgAddr2 + 8);
+        var lParam2 = _testEnv.Memory.Read32(msgAddr2 + 12);
+        Assert.Equal(0x0005u, msg2); // WM_SIZE
+        Assert.Equal(0u, wParam2); // SIZE_RESTORED
+        Assert.Equal((uint)((height << 16) | (width & 0xFFFF)), lParam2); // MAKELONG(width, height)
+
+        // Assert - WM_MOVE message should be queued
+        var msgAddr3 = _testEnv.AllocateMemory(28); // MSG structure size
+        var result3 = _testEnv.CallUser32Api("PEEKMESSAGEA", msgAddr3, 0, 0, 0, 0x0001); // PM_REMOVE
+        Assert.Equal(1u, result3);
+        var msg3 = _testEnv.Memory.Read32(msgAddr3 + 4);
+        var wParam3 = _testEnv.Memory.Read32(msgAddr3 + 8);
+        var lParam3 = _testEnv.Memory.Read32(msgAddr3 + 12);
+        Assert.Equal(0x0003u, msg3); // WM_MOVE
+        Assert.Equal(0u, wParam3);
+        Assert.Equal((uint)((y << 16) | (x & 0xFFFF)), lParam3); // MAKELONG(x, y)
+    }
+
+    [Fact]
+    public void ShowWindow_ShouldSendWmActivateAppWhenWindowBecomesVisible()
+    {
+        // Arrange - create a window
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0,              // dwExStyle
+            classNamePtr,   // lpClassName
+            titlePtr,       // lpWindowName
+            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle (not visible initially)
+            100,            // x
+            100,            // y
+            640,            // width
+            480,            // height
+            0,              // hWndParent
+            0,              // hMenu
+            0,              // hInstance
+            0               // lpParam
+        );
+
+        // Clear the message queue (WM_CREATE, WM_SIZE, WM_MOVE)
+        var dummyMsg = _testEnv.AllocateMemory(28);
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+
+        // Act - show the window
+        _testEnv.CallUser32Api("SHOWWINDOW", hwnd, 1); // SW_SHOWNORMAL
+
+        // Assert - WM_ACTIVATEAPP message should be queued
+        var msgAddr = _testEnv.AllocateMemory(28); // MSG structure size
+        var result = _testEnv.CallUser32Api("PEEKMESSAGEA", msgAddr, 0, 0, 0, 0x0001); // PM_REMOVE
+        Assert.Equal(1u, result);
+        var retrievedHwnd = _testEnv.Memory.Read32(msgAddr + 0);
+        var retrievedMsg = _testEnv.Memory.Read32(msgAddr + 4);
+        var retrievedWParam = _testEnv.Memory.Read32(msgAddr + 8);
+        var retrievedLParam = _testEnv.Memory.Read32(msgAddr + 12);
+        Assert.Equal(hwnd, retrievedHwnd);
+        Assert.Equal(0x001Cu, retrievedMsg); // WM_ACTIVATEAPP
+        Assert.Equal(1u, retrievedWParam); // TRUE - window is being activated
+        Assert.Equal(0u, retrievedLParam); // Thread ID (0 for simplicity)
+    }
+
+    [Fact]
+    public void ShowWindow_ShouldSendWmActivateAppWhenWindowBecomesHidden()
+    {
+        // Arrange - create a visible window
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0,              // dwExStyle
+            classNamePtr,   // lpClassName
+            titlePtr,       // lpWindowName
+            NativeTypes.WindowStyle.WS_OVERLAPPED | NativeTypes.WindowStyle.WS_VISIBLE, // dwStyle - visible
+            100,            // x
+            100,            // y
+            640,            // width
+            480,            // height
+            0,              // hWndParent
+            0,              // hMenu
+            0,              // hInstance
+            0               // lpParam
+        );
+
+        // Clear the message queue (WM_CREATE, WM_SIZE, WM_MOVE)
+        var dummyMsg = _testEnv.AllocateMemory(28);
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+
+        // Act - hide the window
+        _testEnv.CallUser32Api("SHOWWINDOW", hwnd, 0); // SW_HIDE
+
+        // Assert - WM_ACTIVATEAPP message should be queued
+        var msgAddr = _testEnv.AllocateMemory(28); // MSG structure size
+        var result = _testEnv.CallUser32Api("PEEKMESSAGEA", msgAddr, 0, 0, 0, 0x0001); // PM_REMOVE
+        Assert.Equal(1u, result);
+        var retrievedHwnd = _testEnv.Memory.Read32(msgAddr + 0);
+        var retrievedMsg = _testEnv.Memory.Read32(msgAddr + 4);
+        var retrievedWParam = _testEnv.Memory.Read32(msgAddr + 8);
+        var retrievedLParam = _testEnv.Memory.Read32(msgAddr + 12);
+        Assert.Equal(hwnd, retrievedHwnd);
+        Assert.Equal(0x001Cu, retrievedMsg); // WM_ACTIVATEAPP
+        Assert.Equal(0u, retrievedWParam); // FALSE - window is being deactivated
+        Assert.Equal(0u, retrievedLParam); // Thread ID (0 for simplicity)
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
