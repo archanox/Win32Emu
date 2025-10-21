@@ -285,6 +285,30 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x001C, 0, 0);
         };
 
+        window.PositionChanged += (s, e) =>
+        {
+            if (s is Window w)
+            {
+                var pos = w.Position;
+                OnDebugOutput($"Avalonia window moved for HWND=0x{info.Handle:X8} to ({pos.X}, {pos.Y}), sending WM_MOVE", DebugLevel.Debug);
+                // WM_MOVE = 0x0003, wParam = 0, lParam = MAKELONG(x, y)
+                uint lParam = ((uint)pos.Y << 16) | ((uint)pos.X & 0xFFFF);
+                _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x0003, 0, lParam);
+            }
+        };
+
+        window.Resized += (s, e) =>
+        {
+            if (s is Window w)
+            {
+                var size = w.ClientSize;
+                OnDebugOutput($"Avalonia window resized for HWND=0x{info.Handle:X8} to {size.Width}x{size.Height}, sending WM_SIZE", DebugLevel.Debug);
+                // WM_SIZE = 0x0005, wParam = SIZE_RESTORED (0), lParam = MAKELONG(width, height)
+                uint lParam = ((uint)size.Height << 16) | ((uint)size.Width & 0xFFFF);
+                _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x0005, 0, lParam);
+            }
+        };
+
         // Show the window with owner if available
         if (_ownerWindow != null)
         {
