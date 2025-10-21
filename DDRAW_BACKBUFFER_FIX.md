@@ -17,7 +17,7 @@ The backbuffer creation logic in `DDraw_CreateSurface` was only creating backbuf
 2. Set `DDSCAPS_FLIP` (0x00000010) to indicate the surface is part of a flipping chain
 3. Set `DDSCAPS_COMPLEX` (0x00000008) to indicate the surface has attached surfaces
 
-Without explicitly setting `DDSD_BACKBUFFERCOUNT` in the flags or providing a backbuffer count value, expecting the implementation to default to creating at least 1 backbuffer (which is the minimum needed for a flipping chain).
+These applications do not explicitly set `DDSD_BACKBUFFERCOUNT` in the flags or provide a backbuffer count value, expecting the implementation to default to creating at least 1 backbuffer (which is the minimum needed for a flipping chain).
 
 ## Solution
 
