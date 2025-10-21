@@ -18,7 +18,7 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [SilkGLFW] GLFW initialized successfully
 info: Win32Emu.Emulator[0]
-      [SilkGLFW] Setting window hints for OpenGL 3.3 Core...
+      [SilkGLFW] Setting window hints for OpenGL 3.2 Core...
 info: Win32Emu.Emulator[0]
       [SilkGLFW] Creating window: 640x480 - 'Win32Emu DirectDraw'
 info: Win32Emu.Emulator[0]
@@ -31,7 +31,7 @@ info: Win32Emu.Emulator[0]
 
 ## Root Cause
 
-On macOS, when using OpenGL 3.3 Core Profile with GLFW, the `GLFW_OPENGL_FORWARD_COMPAT` window hint **must** be set to `true`. This is a macOS-specific requirement documented in the GLFW documentation.
+On macOS, when using OpenGL 3.2 Core Profile with GLFW, the `GLFW_OPENGL_FORWARD_COMPAT` window hint **must** be set to `true`. This is a macOS-specific requirement documented in the GLFW documentation.
 
 From the [GLFW documentation](https://www.glfw.org/docs/3.3/window_guide.html#window_hints_ctx):
 > **GLFW_OPENGL_FORWARD_COMPAT** specifies whether the OpenGL context should be forward-compatible, i.e. one where all functionality deprecated in the requested version of OpenGL is removed. This must be set to GL_TRUE if requesting an OpenGL version 3.0 or later. If OpenGL ES is requested, this hint is ignored.
@@ -48,13 +48,13 @@ Added the `GLFW_OPENGL_FORWARD_COMPAT` window hint to `SilkGlfwRenderingBackend.
 
 ```csharp
 // Set window hints
-_logger.LogInformation("[SilkGLFW] Setting window hints for OpenGL 3.3 Core...");
+_logger.LogInformation("[SilkGLFW] Setting window hints for OpenGL 3.2 Core...");
 _glfw.WindowHint(WindowHintInt.ContextVersionMajor, 3);
-_glfw.WindowHint(WindowHintInt.ContextVersionMinor, 3);
+_glfw.WindowHint(WindowHintInt.ContextVersionMinor, 2);
 _glfw.WindowHint(WindowHintOpenGlProfile.OpenGlProfile, OpenGlProfile.Core);
 _glfw.WindowHint(WindowHintBool.Resizable, true);
 
-// On macOS, forward compatibility must be enabled for OpenGL 3.3 Core Profile
+// On macOS, forward compatibility must be enabled for OpenGL 3.2 Core Profile
 _glfw.WindowHint(WindowHintBool.OpenGLForwardCompat, true);
 ```
 
@@ -72,7 +72,7 @@ macOS has specific requirements for modern OpenGL:
 ### Cross-Platform Compatibility
 
 The `GLFW_OPENGL_FORWARD_COMPAT` hint:
-- ✅ **macOS**: Required for OpenGL 3.3 Core Profile to work
+- ✅ **macOS**: Required for OpenGL 3.2 Core Profile to work
 - ✅ **Windows**: Optional but harmless, works correctly with or without it
 - ✅ **Linux**: Optional but harmless, works correctly with or without it
 
@@ -121,7 +121,7 @@ To verify this fix on macOS:
    ```
    [SilkGLFW] Initializing GLFW...
    [SilkGLFW] GLFW initialized successfully
-   [SilkGLFW] Setting window hints for OpenGL 3.3 Core...
+   [SilkGLFW] Setting window hints for OpenGL 3.2 Core...
    [SilkGLFW] Creating window: 640x480 - 'Win32Emu DirectDraw'
    [SilkGLFW] Window created successfully
    [SilkGLFW] Making context current and loading OpenGL...
@@ -145,7 +145,7 @@ This fix:
 
 ## References
 
-- [GLFW Window Guide - Context Hints](https://www.glfw.org/docs/3.3/window_guide.html#window_hints_ctx)
+- [GLFW Window Guide - Context Hints](https://www.glfw.org/docs/3.2/window_guide.html#window_hints_ctx)
 - [OpenGL on macOS](https://developer.apple.com/opengl/)
 - [Silk.NET GLFW Documentation](https://github.com/dotnet/Silk.NET)
 
@@ -153,7 +153,7 @@ This fix:
 
 - SilkGLFW renderer non-functional on macOS
 - GLFW initialization hanging on macOS
-- OpenGL 3.3 Core Profile requirements on macOS
+- OpenGL 3.2 Core Profile requirements on macOS
 
 ## Notes
 
