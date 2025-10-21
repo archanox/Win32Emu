@@ -1171,6 +1171,7 @@ public interface IEmulatorHost
     void OnWindowCreate(WindowCreateInfo info);
     Task<int> OnDialogCreate(DialogCreateInfo info);
     void OnDialogEnd(uint dialogHandle, int result);
+    int OnMessageBox(MessageBoxInfo info);
 }
 
 public enum DebugLevel
@@ -1204,4 +1205,12 @@ public class DialogCreateInfo
     public uint ParentHandle { get; init; }
     public uint DialogProcAddress { get; init; }
     public uint InitParam { get; init; }
+}
+
+public class MessageBoxInfo
+{
+    public uint ParentHandle { get; init; }
+    public required string Text { get; init; }
+    public required string Caption { get; init; }
+    public uint Type { get; init; }
 }

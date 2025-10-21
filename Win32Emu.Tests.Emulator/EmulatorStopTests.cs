@@ -84,5 +84,11 @@ public class EmulatorStopTests : IDisposable
         {
             // Mock implementation - no-op
         }
+
+        public int OnMessageBox(MessageBoxInfo info)
+        {
+            // Mock implementation - return IDOK
+            return 1;
+        }
     }
 }
