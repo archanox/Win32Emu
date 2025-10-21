@@ -1625,13 +1625,37 @@ namespace Win32Emu.Win32.Modules
 			return value;
 		}
 
-		[DllModuleExport(16, IsStub = true)]
+		[DllModuleExport(16)]
 		private uint MessageBoxA(uint hwnd, uint lpText, uint lpCaption, uint uType)
 		{
 			var text = lpText != 0 ? _env.ReadAnsiString(lpText) : "";
 			var caption = lpCaption != 0 ? _env.ReadAnsiString(lpCaption) : "";
 			_logger.LogInformation("[User32] MessageBoxA: \"{Caption}\" - \"{Text}\" type=0x{UType:X8}", caption, text, uType);
-			// Return IDOK (1)
+			
+			// If a host is available, show the message box through it
+			if (_host != null)
+			{
+				try
+				{
+					var msgBoxInfo = new MessageBoxInfo
+					{
+						ParentHandle = hwnd,
+						Text = text,
+						Caption = caption,
+						Type = uType
+					};
+					
+					var result = _host.OnMessageBox(msgBoxInfo);
+					_logger.LogInformation("[User32] MessageBoxA: Host returned result {Result}", result);
+					return (uint)result;
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[User32] MessageBoxA: Exception calling host");
+				}
+			}
+			
+			// Fallback: return IDOK (1) if no host available
 			return 1;
 		}
 
