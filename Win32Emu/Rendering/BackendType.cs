@@ -18,5 +18,10 @@ public enum BackendType
     /// <summary>
     /// Vulkan backend using Silk.NET.Vulkan (MoltenVK on macOS)
     /// </summary>
-    Vulkan
+    Vulkan,
+
+    /// <summary>
+    /// Metal backend using SharpMetal (macOS only)
+    /// </summary>
+    Metal
 }
