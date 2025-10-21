@@ -1025,20 +1025,40 @@ public sealed class Emulator : IDisposable
             }
             else
             {
-                // If we can't restore EBP from stack, check if current EBP looks like an import hook address
-                // Import hooks are in range 0x0F000000-0x10000000
+                // If we can't restore EBP from stack, check if current EBP is valid
                 var currentEbp = _cpu!.GetRegister("EBP");
-                if (currentEbp >= 0x0F000000 && currentEbp < 0x10000000)
+                var currentEbpInStackRegion = (currentEbp >= stackBottom) && (currentEbp <= esp + 0x1000); // Allow some slack above ESP
+                
+                // Check if current EBP looks like an import hook address
+                // Import hooks are in range 0x0F000000-0x10000000
+                var isImportHook = (currentEbp >= 0x0F000000 && currentEbp < 0x10000000);
+                
+                // Check if current EBP looks like a COM vtable or object pointer
+                // COM objects are typically allocated in heap regions (0x01000000-0x70000000)
+                var isLikelyComPointer = (currentEbp >= 0x01000000 && currentEbp < 0x70000000) && !currentEbpInStackRegion;
+                
+                if (isImportHook || isLikelyComPointer || !currentEbpInStackRegion)
                 {
-                    // EBP contains an import hook address, which happens when the caller used EBP
-                    // to hold the function pointer (e.g., MOV EBP, [IAT]; CALL EBP)
+                    // EBP contains an invalid value (import hook, COM pointer, or not in stack region)
                     // Set it to ESP as a safe fallback to avoid crashes
                     _cpu.SetRegister("EBP", esp);
-                    _logger.LogDebug("[Emulator] Reset EBP from import hook address 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", currentEbp, esp);
+                    
+                    if (isImportHook)
+                    {
+                        _logger.LogDebug("[Emulator] Reset EBP from import hook address 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", currentEbp, esp);
+                    }
+                    else if (isLikelyComPointer)
+                    {
+                        _logger.LogDebug("[Emulator] Reset EBP from likely COM/heap pointer 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", currentEbp, esp);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("[Emulator] Reset EBP from out-of-stack-region 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", currentEbp, esp);
+                    }
                 }
                 else
                 {
-                    _logger.LogDebug("[Emulator] Skipped restoring EBP from stack: 0x{EBP:X8} (not a valid frame pointer)", ebpFromStack);
+                    _logger.LogDebug("[Emulator] Skipped restoring EBP from stack: 0x{EBP:X8} (not a valid frame pointer), current EBP 0x{CurrentEBP:X8} looks valid", ebpFromStack, currentEbp);
                 }
             }
         }
