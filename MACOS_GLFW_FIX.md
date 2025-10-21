@@ -31,7 +31,7 @@ info: Win32Emu.Emulator[0]
 
 ## Root Cause
 
-On macOS, when using OpenGL 3.2 Core Profile with GLFW, the `GLFW_OPENGL_FORWARD_COMPAT` window hint **must** be set to `true`. This is a macOS-specific requirement documented in the GLFW documentation.
+The `GLFW_OPENGL_FORWARD_COMPAT` window hint **must** be set to `true` when using OpenGL 3.2 Core Profile with GLFW on macOS. While this requirement originates from macOS (as documented in the GLFW documentation), the code sets this hint on all platforms for consistency and simplicity.
 
 From the [GLFW documentation](https://www.glfw.org/docs/3.3/window_guide.html#window_hints_ctx):
 > **GLFW_OPENGL_FORWARD_COMPAT** specifies whether the OpenGL context should be forward-compatible, i.e. one where all functionality deprecated in the requested version of OpenGL is removed. This must be set to GL_TRUE if requesting an OpenGL version 3.0 or later. If OpenGL ES is requested, this hint is ignored.
