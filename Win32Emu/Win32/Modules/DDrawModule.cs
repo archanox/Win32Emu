@@ -209,6 +209,7 @@ namespace Win32Emu.Win32.Modules
 		private sealed class DirectDrawSurface
 		{
 			public uint Handle { get; set; }
+			public uint ComObjectAddress { get; set; }
 			public int Width { get; set; }
 			public int Height { get; set; }
 			public int Pitch { get; set; }
@@ -222,6 +223,7 @@ namespace Win32Emu.Win32.Modules
 			public uint ColorKeyLow { get; set; }
 			public uint ColorKeyHigh { get; set; }
 			public bool HasColorKey { get; set; }
+			public List<uint> AttachedSurfaces { get; set; } = new List<uint>();
 		}
 
 		private sealed class DirectDrawPalette
@@ -489,6 +491,20 @@ namespace Win32Emu.Win32.Modules
 			var dwWidth = _env.MemRead32(lpDDSurfaceDesc + 8);
 			var dwHeight = _env.MemRead32(lpDDSurfaceDesc + 12);
 			
+			// Read backbuffer count if DDSD_BACKBUFFERCOUNT flag is set
+			var dwBackBufferCount = 0u;
+			if ((dwFlags & 0x00000020) != 0) // DDSD_BACKBUFFERCOUNT
+			{
+				dwBackBufferCount = _env.MemRead32(lpDDSurfaceDesc + 20);
+			}
+			
+			// Read surface capabilities from offset 108
+			var dwSurfaceCaps = 0u;
+			if (dwSize >= 112)
+			{
+				dwSurfaceCaps = _env.MemRead32(lpDDSurfaceDesc + 108);
+			}
+			
 			// Find the DirectDraw object from the COM object pointer
 			uint ddrawHandle = 0;
 			foreach (var kvp in _ddrawObjects)
@@ -512,7 +528,7 @@ namespace Win32Emu.Win32.Modules
 				Width = (int)dwWidth,
 				Height = (int)dwHeight,
 				DirectDrawHandle = ddrawHandle,
-				IsPrimary = (dwFlags & 0x00000001) != 0, // DDSCAPS_PRIMARYSURFACE
+				IsPrimary = (dwSurfaceCaps & 0x00000200) != 0, // DDSCAPS_PRIMARYSURFACE
 				Pitch = (int)dwWidth * (ddrawObj.BitsPerPixel / 8)
 			};
 			
@@ -565,6 +581,83 @@ namespace Win32Emu.Win32.Modules
 			
 			// Create the COM object with vtable
 			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDrawSurface", vtableMethods);
+			surface.ComObjectAddress = comObjectAddr;
+			
+			// Create backbuffers if requested
+			if (dwBackBufferCount > 0 && surface.IsPrimary)
+			{
+				_logger.LogInformation("[DDraw] Creating {Count} backbuffer(s) for primary surface", dwBackBufferCount);
+				
+				for (var i = 0u; i < dwBackBufferCount; i++)
+				{
+					var backBufferHandle = _nextSurfaceHandle++;
+					var backBuffer = new DirectDrawSurface
+					{
+						Handle = backBufferHandle,
+						Width = (int)dwWidth,
+						Height = (int)dwHeight,
+						DirectDrawHandle = ddrawHandle,
+						IsPrimary = false,
+						Pitch = (int)dwWidth * (ddrawObj.BitsPerPixel / 8)
+					};
+					
+					// Allocate memory for the backbuffer
+					backBuffer.Bits = new byte[backBuffer.Pitch * backBuffer.Height];
+					
+					// Store the backbuffer
+					_surfaces[backBufferHandle] = backBuffer;
+					
+					// Create COM vtable for backbuffer
+					var backBufferVtableMethods = new Dictionary<string, Func<ICpu, VirtualMemory, uint>>
+					{
+						{ "QueryInterface", (cpu, mem) => ComQueryInterface(cpu, mem) },
+						{ "AddRef", (cpu, mem) => ComAddRef(cpu, mem) },
+						{ "Release", (cpu, mem) => ComRelease(cpu, mem) },
+						{ "AddAttachedSurface", (cpu, mem) => Surface_AddAttachedSurface(cpu, mem) },
+						{ "AddOverlayDirtyRect", (cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem) },
+						{ "Blt", (cpu, mem) => Surface_Blt(cpu, mem) },
+						{ "BltBatch", (cpu, mem) => Surface_BltBatch(cpu, mem) },
+						{ "BltFast", (cpu, mem) => Surface_BltFast(cpu, mem) },
+						{ "DeleteAttachedSurface", (cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem) },
+						{ "EnumAttachedSurfaces", (cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem) },
+						{ "EnumOverlayZOrders", (cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem) },
+						{ "Flip", (cpu, mem) => Surface_Flip(cpu, mem) },
+						{ "GetAttachedSurface", (cpu, mem) => Surface_GetAttachedSurface(cpu, mem) },
+						{ "GetBltStatus", (cpu, mem) => Surface_GetBltStatus(cpu, mem) },
+						{ "GetCaps", (cpu, mem) => Surface_GetCaps(cpu, mem) },
+						{ "GetClipper", (cpu, mem) => Surface_GetClipper(cpu, mem) },
+						{ "GetColorKey", (cpu, mem) => Surface_GetColorKey(cpu, mem) },
+						{ "GetDC", (cpu, mem) => Surface_GetDC(cpu, mem) },
+						{ "GetFlipStatus", (cpu, mem) => Surface_GetFlipStatus(cpu, mem) },
+						{ "GetOverlayPosition", (cpu, mem) => Surface_GetOverlayPosition(cpu, mem) },
+						{ "GetPalette", (cpu, mem) => Surface_GetPalette(cpu, mem) },
+						{ "GetPixelFormat", (cpu, mem) => Surface_GetPixelFormat(cpu, mem) },
+						{ "GetSurfaceDesc", (cpu, mem) => Surface_GetSurfaceDesc(cpu, mem) },
+						{ "Initialize", (cpu, mem) => Surface_Initialize(cpu, mem) },
+						{ "IsLost", (cpu, mem) => Surface_IsLost(cpu, mem) },
+						{ "Lock", (cpu, mem) => Surface_Lock(cpu, mem, backBufferHandle) },
+						{ "ReleaseDC", (cpu, mem) => Surface_ReleaseDC(cpu, mem) },
+						{ "Restore", (cpu, mem) => Surface_Restore(cpu, mem) },
+						{ "SetClipper", (cpu, mem) => Surface_SetClipper(cpu, mem) },
+						{ "SetColorKey", (cpu, mem) => Surface_SetColorKey(cpu, mem) },
+						{ "SetOverlayPosition", (cpu, mem) => Surface_SetOverlayPosition(cpu, mem) },
+						{ "SetPalette", (cpu, mem) => Surface_SetPalette(cpu, mem, backBufferHandle) },
+						{ "Unlock", (cpu, mem) => Surface_Unlock(cpu, mem, backBufferHandle) },
+						{ "UpdateOverlay", (cpu, mem) => Surface_UpdateOverlay(cpu, mem) },
+						{ "UpdateOverlayDisplay", (cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem) },
+						{ "UpdateOverlayZOrder", (cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem) }
+					};
+					
+					var backBufferComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawSurface", backBufferVtableMethods);
+					backBuffer.ComObjectAddress = backBufferComAddr;
+					
+					// Attach the backbuffer to the primary surface
+					surface.AttachedSurfaces.Add(backBufferHandle);
+					
+					_logger.LogInformation("[DDraw] Created backbuffer {Index} at surface handle 0x{Handle:X8}, COM object at 0x{ComAddr:X8}",
+						i + 1, backBufferHandle, backBufferComAddr);
+				}
+			}
 			
 			// Write COM object pointer to output parameter
 			if (lplpDDSurface != 0)
@@ -1103,12 +1196,60 @@ namespace Win32Emu.Win32.Modules
 				"[DDraw COM] IDirectDrawSurface::GetAttachedSurface(this=0x{ThisPtr:X8}, lpDDSCaps=0x{LpDDSCaps:X8}, lplp=0x{Lplp:X8})", thisPtr,
 				lpDDSCaps, lplpDDAttachedSurface);
 
-			// For now, we don't support attached surfaces.
+			// Find the surface by COM object address
+			DirectDrawSurface? surface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				if (s.ComObjectAddress == thisPtr)
+				{
+					surface = s;
+					break;
+				}
+			}
+
+			if (surface == null)
+			{
+				_logger.LogError("[DDraw] GetAttachedSurface: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				if (lplpDDAttachedSurface != 0)
+				{
+					_env.MemWrite32(lplpDDAttachedSurface, 0);
+				}
+				return 0x887601C2; // DDERR_NOTFOUND
+			}
+
+			// Read the requested capabilities
+			var dwCaps = lpDDSCaps != 0 ? _env.MemRead32(lpDDSCaps) : 0;
+			_logger.LogInformation("[DDraw] Requested surface caps: 0x{Caps:X8}", dwCaps);
+
+			// Check if there are any attached surfaces
+			if (surface.AttachedSurfaces.Count == 0)
+			{
+				_logger.LogInformation("[DDraw] No attached surfaces found for surface 0x{Handle:X8}", surface.Handle);
+				if (lplpDDAttachedSurface != 0)
+				{
+					_env.MemWrite32(lplpDDAttachedSurface, 0);
+				}
+				return 0x887601C2; // DDERR_NOTFOUND
+			}
+
+			// For now, return the first attached surface (typically the backbuffer)
+			// In a complete implementation, we would filter by the requested capabilities
+			var attachedSurfaceHandle = surface.AttachedSurfaces[0];
+			if (_surfaces.TryGetValue(attachedSurfaceHandle, out var attachedSurface))
+			{
+				if (lplpDDAttachedSurface != 0)
+				{
+					_env.MemWrite32(lplpDDAttachedSurface, attachedSurface.ComObjectAddress);
+				}
+				_logger.LogInformation("[DDraw] Returning attached surface COM object at 0x{ComAddr:X8}", attachedSurface.ComObjectAddress);
+				return 0; // DD_OK
+			}
+
+			_logger.LogError("[DDraw] GetAttachedSurface: attached surface handle 0x{Handle:X8} not found", attachedSurfaceHandle);
 			if (lplpDDAttachedSurface != 0)
 			{
 				_env.MemWrite32(lplpDDAttachedSurface, 0);
 			}
-
 			return 0x887601C2; // DDERR_NOTFOUND
 		}
 
