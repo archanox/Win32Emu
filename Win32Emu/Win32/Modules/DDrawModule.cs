@@ -595,6 +595,8 @@ namespace Win32Emu.Win32.Modules
 			if (surface.IsPrimary && isFlippingChain && dwBackBufferCount == 0)
 			{
 				dwBackBufferCount = 1;
+				// Write the updated backbuffer count back to the surface descriptor in memory
+				mem.WriteUInt32(surfaceDescAddr + backBufferCountOffset, dwBackBufferCount);
 				_logger.LogInformation("[DDraw] Primary surface has FLIP+COMPLEX caps but no explicit backbuffer count, defaulting to 1 backbuffer");
 			}
 			
