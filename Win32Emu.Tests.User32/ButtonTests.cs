@@ -67,6 +67,10 @@ public class ButtonTests : IDisposable
 
 		Assert.NotEqual(0u, buttonHwnd);
 
+		// Clear the message queue (WM_CREATE, WM_SIZE, WM_MOVE for both windows)
+		var dummyMsg = _testEnv.AllocateMemory(28);
+		while (_testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001) != 0) { } // PM_REMOVE
+
 		// Act - Send WM_LBUTTONDOWN and WM_LBUTTONUP to the button
 		_testEnv.CallUser32Api("POSTMESSAGEA", buttonHwnd, 0x0201, 0x0001, 0); // WM_LBUTTONDOWN
 		_testEnv.CallUser32Api("POSTMESSAGEA", buttonHwnd, 0x0202, 0, 0);      // WM_LBUTTONUP
@@ -158,6 +162,10 @@ public class ButtonTests : IDisposable
 		);
 
 		Assert.NotEqual(0u, buttonHwnd);
+
+		// Clear the message queue (WM_CREATE, WM_SIZE, WM_MOVE for both windows)
+		var dummyMsg = _testEnv.AllocateMemory(28);
+		while (_testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001) != 0) { } // PM_REMOVE
 
 		// Act - Send BM_CLICK message to the button
 		_testEnv.CallUser32Api("POSTMESSAGEA", buttonHwnd, 0x00F1, 0, 0); // BM_CLICK = 0x00F1
