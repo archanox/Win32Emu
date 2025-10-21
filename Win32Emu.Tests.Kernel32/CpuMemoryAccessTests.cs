@@ -691,7 +691,7 @@ public class CpuMemoryAccessTests
         };
         
         memory.WriteBytes(0x00401000, testCode);
-        memory.Write32(0x001FFE31 + 8, 0x12345678); // Write test value
+        memory.Write32(0x001FFE38, 0x12345678); // Write test value at aligned address
         
         // Act - This should work without throwing (EBP+8 = 0x001FFE39, which is in bounds)
         cpu.SingleStep(memory);
