@@ -66,6 +66,7 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
             try
             {
                 // Create window
+                _logger.LogInformation("[Vulkan] Initializing Vulkan rendering backend...");
                 var options = WindowOptions.DefaultVulkan with
                 {
                     Size = new Silk.NET.Maths.Vector2D<int>(width, height),
@@ -73,8 +74,10 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                     API = new GraphicsAPI(ContextAPI.Vulkan, ContextProfile.Core, ContextFlags.Default, new APIVersion(1, 0))
                 };
 
+                _logger.LogInformation("[Vulkan] Creating window: {Width}x{Height} - '{Title}'", width, height, title);
                 _window = Window.Create(options);
                 _window.Initialize();
+                _logger.LogInformation("[Vulkan] Window created successfully");
 
                 // Hook window focus events
                 _window.FocusChanged += (focused) =>
@@ -100,19 +103,26 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                 };
 
                 // Initialize Vulkan
+                _logger.LogInformation("[Vulkan] Loading Vulkan API...");
                 _vk = Vk.GetApi();
+                _logger.LogInformation("[Vulkan] Vulkan API loaded successfully");
 
                 // Create Vulkan instance
+                _logger.LogInformation("[Vulkan] Creating Vulkan instance...");
                 if (!CreateInstance())
                 {
                     _logger.LogError("[Vulkan] Failed to create instance");
                     return false;
                 }
+                _logger.LogInformation("[Vulkan] Vulkan instance created successfully");
 
                 // Create surface
+                _logger.LogInformation("[Vulkan] Creating window surface...");
                 _surface = _window.VkSurface!.Create<AllocationCallbacks>(_instance.ToHandle(), null).ToSurface();
+                _logger.LogInformation("[Vulkan] Window surface created successfully");
 
                 // Select physical device
+                _logger.LogInformation("[Vulkan] Selecting physical device...");
                 if (!SelectPhysicalDevice())
                 {
                     _logger.LogError("[Vulkan] Failed to select physical device");
@@ -120,39 +130,49 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                 }
 
                 // Create logical device
+                _logger.LogInformation("[Vulkan] Creating logical device...");
                 if (!CreateLogicalDevice())
                 {
                     _logger.LogError("[Vulkan] Failed to create logical device");
                     return false;
                 }
+                _logger.LogInformation("[Vulkan] Logical device created successfully");
 
                 // Create swapchain
+                _logger.LogInformation("[Vulkan] Creating swapchain...");
                 if (!CreateSwapchain())
                 {
                     _logger.LogError("[Vulkan] Failed to create swapchain");
                     return false;
                 }
+                _logger.LogInformation("[Vulkan] Swapchain created successfully");
 
                 // Create staging image for frame buffer updates
+                _logger.LogInformation("[Vulkan] Creating staging image for frame buffer updates...");
                 if (!CreateStagingImage())
                 {
                     _logger.LogError("[Vulkan] Failed to create staging image");
                     return false;
                 }
+                _logger.LogInformation("[Vulkan] Staging image created successfully");
 
                 // Create command pool and buffers
+                _logger.LogInformation("[Vulkan] Creating command pool and buffers...");
                 if (!CreateCommandResources())
                 {
                     _logger.LogError("[Vulkan] Failed to create command resources");
                     return false;
                 }
+                _logger.LogInformation("[Vulkan] Command resources created successfully");
 
                 // Create synchronization objects
+                _logger.LogInformation("[Vulkan] Creating synchronization objects...");
                 if (!CreateSyncObjects())
                 {
                     _logger.LogError("[Vulkan] Failed to create sync objects");
                     return false;
                 }
+                _logger.LogInformation("[Vulkan] Synchronization objects created successfully");
 
                 _initialized = true;
                 _logger.LogInformation("[Vulkan] Initialized {Width}x{Height} display", width, height);
@@ -177,6 +197,14 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
             EngineVersion = new Version32(1, 0, 0),
             ApiVersion = Vk.Version10
         };
+
+        // Log Vulkan API version
+        // Vulkan version encoding: major (bits 22-29), minor (bits 12-21), patch (bits 0-11)
+        var apiVersion = appInfo.ApiVersion;
+        var vkMajor = (apiVersion >> 22) & 0x7F;
+        var vkMinor = (apiVersion >> 12) & 0x3FF;
+        var vkPatch = apiVersion & 0xFFF;
+        _logger.LogInformation("[Vulkan] Using Vulkan API Version: {Major}.{Minor}.{Patch}", vkMajor, vkMinor, vkPatch);
 
         // Get required extensions from window
         var extensions = _window!.VkSurface!.GetRequiredExtensions(out var extCount);
@@ -246,7 +274,29 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                     PhysicalDeviceProperties properties;
                     _vk.GetPhysicalDeviceProperties(_physicalDevice, &properties);
                     var deviceName = Marshal.PtrToStringAnsi((IntPtr)properties.DeviceName);
+                    
+                    // Log comprehensive device information (similar to OpenGL version logging in GLFW)
+                    var deviceType = properties.DeviceType switch
+                    {
+                        PhysicalDeviceType.IntegratedGpu => "Integrated GPU",
+                        PhysicalDeviceType.DiscreteGpu => "Discrete GPU",
+                        PhysicalDeviceType.VirtualGpu => "Virtual GPU",
+                        PhysicalDeviceType.Cpu => "CPU",
+                        _ => "Other"
+                    };
+                    
+                    var apiVersion = properties.ApiVersion;
+                    var apiMajor = (apiVersion >> 22) & 0x7F;
+                    var apiMinor = (apiVersion >> 12) & 0x3FF;
+                    var apiPatch = apiVersion & 0xFFF;
+                    
+                    var driverVersion = properties.DriverVersion;
+                    
                     _logger.LogInformation("[Vulkan] Selected device: {DeviceName}", deviceName);
+                    _logger.LogInformation("[Vulkan] Device Type: {DeviceType}, API Version: {ApiMajor}.{ApiMinor}.{ApiPatch}, Driver Version: {DriverVersion}", 
+                        deviceType, apiMajor, apiMinor, apiPatch, driverVersion);
+                    _logger.LogInformation("[Vulkan] Vendor ID: 0x{VendorId:X}, Device ID: 0x{DeviceId:X}", 
+                        properties.VendorID, properties.DeviceID);
                     
                     return true;
                 }
@@ -699,6 +749,8 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                     return false;
                 }
 
+                _logger.LogDebug("[Vulkan] Frame buffer updated and rendered to screen");
+
                 return true;
             }
             catch (Exception ex)
@@ -791,17 +843,27 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
 
     public void Clear(byte r, byte g, byte b, byte a = 255)
     {
-        // Create clear color data
-        var clearData = new byte[_width * _height * 4];
-        for (var i = 0; i < _width * _height; i++)
+        lock (_lock)
         {
-            clearData[i * 4 + 0] = r;
-            clearData[i * 4 + 1] = g;
-            clearData[i * 4 + 2] = b;
-            clearData[i * 4 + 3] = a;
-        }
+            if (!_initialized)
+            {
+                return;
+            }
 
-        UpdateFrameBuffer(clearData, _width * 4);
+            // Create clear color data
+            var clearData = new byte[_width * _height * 4];
+            for (var i = 0; i < _width * _height; i++)
+            {
+                clearData[i * 4 + 0] = r;
+                clearData[i * 4 + 1] = g;
+                clearData[i * 4 + 2] = b;
+                clearData[i * 4 + 3] = a;
+            }
+
+            UpdateFrameBuffer(clearData, _width * 4);
+            
+            _logger.LogDebug("[Vulkan] Screen cleared to color ({R}, {G}, {B}, {A})", r, g, b, a);
+        }
     }
 
     public void ProcessEvents()
@@ -810,10 +872,12 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
         {
             if (!_initialized || _window == null)
             {
+                _logger.LogDebug("[Vulkan] ProcessEvents called but backend not initialized");
                 return;
             }
 
             _window.DoEvents();
+            _logger.LogDebug("[Vulkan] Events processed");
             // Note: Silk.NET.Windowing handles events internally via DoEvents()
             // Event translation would require hooking into window events.
         }
