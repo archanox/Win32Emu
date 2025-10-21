@@ -51,15 +51,15 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                 Sdl3Initializer.EnsureAppMetadataSet();
 
                 // Initialize SDL video subsystem
-                if (!SDL.Init(SDL_InitFlags.Video))
+                if (!SDL.Init(SDL.InitFlags.Video))
                 {
                     _logger.LogError("[SDL3] Failed to initialize SDL video: {Error}", SDL.GetError());
                     return false;
                 }
 
                 // Create GPU device with shader format support for all platforms
-                var shaderFormats = SDL_GPUShaderFormat.SPIRV | SDL_GPUShaderFormat.MSL | SDL_GPUShaderFormat.DXIL;
-                _gpuDevice = SDL.CreateGPUDevice(shaderFormats, debug: false, name: null);
+                var shaderFormats = SDL.GPUShaderFormat.SPIRV | SDL.GPUShaderFormat.MSL | SDL.GPUShaderFormat.DXIL;
+                _gpuDevice = SDL.CreateGPUDevice(shaderFormats, debugMode: false, name: null);
                 
                 if (_gpuDevice == IntPtr.Zero)
                 {
@@ -73,7 +73,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                 _logger.LogInformation("[SDL3] Created GPU device with driver: {Driver}", driverName);
 
                 // Create window
-                _window = SDL.CreateWindow(title, width, height, SDL_WindowFlags.Hidden);
+                _window = SDL.CreateWindow(title, width, height, SDL.WindowFlags.Hidden);
                 if (_window == IntPtr.Zero)
                 {
                     _logger.LogError("[SDL3] Failed to create window: {Error}", SDL.GetError());
@@ -93,17 +93,17 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                 }
 
                 // Create frame texture
-                var textureCreateInfo = new SDL_GPUTextureCreateInfo
+                var textureCreateInfo = new SDL.GPUTextureCreateInfo
                 {
-                    type = SDL_GPUTextureType.TwoDimensional,
-                    format = SDL_GPUTextureFormat.R8G8B8A8Unorm,
-                    usage = SDL_GPUTextureUsageFlags.Sampler | SDL_GPUTextureUsageFlags.ColorTarget,
-                    width = (uint)width,
-                    height = (uint)height,
-                    layer_count_or_depth = 1,
-                    num_levels = 1,
-                    sample_count = SDL_GPUSampleCount.One,
-                    @props = 0
+                    Type = SDL.GPUTextureType.Texturetype2D,
+                    Format = SDL.GPUTextureFormat.R8G8B8A8Unorm,
+                    Usage = SDL.GPUTextureUsageFlags.Sampler | SDL.GPUTextureUsageFlags.ColorTarget,
+                    Width = (uint)width,
+                    Height = (uint)height,
+                    LayerCountOrDepth = 1,
+                    NumLevels = 1,
+                    SampleCount = SDL.GPUSampleCount.SampleCount1,
+                    Props = 0
                 };
 
                 _frameTexture = SDL.CreateGPUTexture(_gpuDevice, textureCreateInfo);
@@ -118,11 +118,11 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                 }
 
                 // Create transfer buffer for uploading frame data
-                var transferBufferCreateInfo = new SDL_GPUTransferBufferCreateInfo
+                var transferBufferCreateInfo = new SDL.GPUTransferBufferCreateInfo
                 {
-                    usage = SDL_GPUTransferBufferUsage.Upload,
-                    size = (uint)(width * height * 4), // RGBA format
-                    @props = 0
+                    Usage = SDL.GPUTransferBufferUsage.Upload,
+                    Size = (uint)(width * height * 4), // RGBA format
+                    Props = 0
                 };
 
                 _transferBuffer = SDL.CreateGPUTransferBuffer(_gpuDevice, transferBufferCreateInfo);
@@ -285,25 +285,25 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                 }
 
                 // Upload from transfer buffer to texture
-                var source = new SDL_GPUTextureTransferInfo
+                var source = new SDL.GPUTextureTransferInfo
                 {
-                    transfer_buffer = _transferBuffer,
-                    offset = 0,
-                    pixels_per_row = (uint)_width,
-                    rows_per_layer = (uint)_height
+                    TransferBuffer = _transferBuffer,
+                    Offset = 0,
+                    PixelsPerRow = (uint)_width,
+                    RowsPerLayer = (uint)_height
                 };
 
-                var destination = new SDL_GPUTextureRegion
+                var destination = new SDL.GPUTextureRegion
                 {
-                    texture = _frameTexture,
-                    mip_level = 0,
-                    layer = 0,
-                    x = 0,
-                    y = 0,
-                    z = 0,
-                    w = (uint)_width,
-                    h = (uint)_height,
-                    d = 1
+                    Texture = _frameTexture,
+                    MipLevel = 0,
+                    Layer = 0,
+                    X = 0,
+                    Y = 0,
+                    Z = 0,
+                    W = (uint)_width,
+                    H = (uint)_height,
+                    D = 1
                 };
 
                 SDL.UploadToGPUTexture(copyPass, source, destination, cycle: false);
@@ -322,33 +322,33 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                 if (swapchainTexture != IntPtr.Zero)
                 {
                     // Blit frame texture to swapchain
-                    var blitInfo = new SDL_GPUBlitInfo
+                    var blitInfo = new SDL.GPUBlitInfo
                     {
-                        source = new SDL_GPUBlitRegion
+                        Source = new SDL.GPUBlitRegion
                         {
-                            texture = _frameTexture,
-                            mip_level = 0,
-                            layer_or_depth_plane = 0,
-                            x = 0,
-                            y = 0,
-                            w = (uint)_width,
-                            h = (uint)_height
+                            Texture = _frameTexture,
+                            MipLevel = 0,
+                            LayerOrDepthPlane = 0,
+                            X = 0,
+                            Y = 0,
+                            W = (uint)_width,
+                            H = (uint)_height
                         },
-                        destination = new SDL_GPUBlitRegion
+                        Destination = new SDL.GPUBlitRegion
                         {
-                            texture = swapchainTexture,
-                            mip_level = 0,
-                            layer_or_depth_plane = 0,
-                            x = 0,
-                            y = 0,
-                            w = swapchainWidth,
-                            h = swapchainHeight
+                            Texture = swapchainTexture,
+                            MipLevel = 0,
+                            LayerOrDepthPlane = 0,
+                            X = 0,
+                            Y = 0,
+                            W = swapchainWidth,
+                            H = swapchainHeight
                         },
-                        load_op = SDL_GPULoadOp.DontCare,
-                        clear_color = default,
-                        flip_mode = SDL_FlipMode.None,
-                        filter = SDL_GPUFilter.Linear,
-                        cycle = false
+                        LoadOp = SDL.GPULoadOp.DontCare,
+                        ClearColor = default,
+                        FlipMode = SDL.FlipMode.None,
+                        Filter = SDL.GPUFilter.Linear,
+                        Cycle = 0
                     };
 
                     SDL.BlitGPUTexture(commandBuffer, blitInfo);
@@ -404,28 +404,21 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
             return;
         }
 
-        SDL_Event evt;
+        SDL.Event evt;
         while (SDL.PollEvent(out evt))
         {
-            switch (evt.type)
+            switch ((SDL.EventType)evt.Type)
             {
-                case SDL_EventType.Quit:
+                case SDL.EventType.Quit:
+                case SDL.EventType.WindowCloseRequested:
                     OnUIEvent(new UIEventArgs
                     {
-                        EventType = UIEventType.Quit,
+                        EventType = UIEventType.WindowClose,
                         WindowHandle = 0
                     });
                     break;
 
-                case SDL_EventType.WindowCloseRequested:
-                    OnUIEvent(new UIEventArgs
-                    {
-                        EventType = UIEventType.Quit,
-                        WindowHandle = 0
-                    });
-                    break;
-
-                case SDL_EventType.WindowFocusGained:
+                case SDL.EventType.WindowFocusGained:
                     OnUIEvent(new UIEventArgs
                     {
                         EventType = UIEventType.WindowActivate,
@@ -433,7 +426,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                     });
                     break;
 
-                case SDL_EventType.WindowFocusLost:
+                case SDL.EventType.WindowFocusLost:
                     OnUIEvent(new UIEventArgs
                     {
                         EventType = UIEventType.WindowDeactivate,
