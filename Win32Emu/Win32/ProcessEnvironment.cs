@@ -1048,6 +1048,18 @@ public class ProcessEnvironment
 		SendMessageToWindow(handle, 0x0001, 0, param);
 		_logger.LogDebug("[ProcessEnv] Sent WM_CREATE to window 0x{Handle:X8}", handle);
 
+		// Send WM_SIZE message to the window
+		// WM_SIZE = 0x0005, wParam = SIZE_RESTORED (0), lParam = MAKELONG(width, height)
+		uint sizeParam = ((uint)height << 16) | ((uint)width & 0xFFFF);
+		SendMessageToWindow(handle, 0x0005, 0, sizeParam);
+		_logger.LogDebug("[ProcessEnv] Sent WM_SIZE to window 0x{Handle:X8} (width={Width}, height={Height})", handle, width, height);
+
+		// Send WM_MOVE message to the window
+		// WM_MOVE = 0x0003, wParam = 0, lParam = MAKELONG(x, y)
+		uint moveParam = ((uint)y << 16) | ((uint)x & 0xFFFF);
+		SendMessageToWindow(handle, 0x0003, 0, moveParam);
+		_logger.LogDebug("[ProcessEnv] Sent WM_MOVE to window 0x{Handle:X8} (x={X}, y={Y})", handle, x, y);
+
 		return handle;
 	}
 
