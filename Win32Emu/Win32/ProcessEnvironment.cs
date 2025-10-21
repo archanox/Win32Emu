@@ -1757,7 +1757,7 @@ public class ProcessEnvironment
 				// Then send WM_ACTIVATEAPP for application-level activation
 				message = 0x001C; // WM_ACTIVATEAPP
 				wParam = 1; // TRUE - activating
-				lParam = 0;
+				lParam = GetCurrentThreadId(); // Thread ID of the thread being activated
 				break;
 
 			case UIEventType.WindowDeactivate:
@@ -1770,7 +1770,7 @@ public class ProcessEnvironment
 				// Then send WM_ACTIVATEAPP for application-level deactivation
 				message = 0x001C; // WM_ACTIVATEAPP
 				wParam = 0; // FALSE - deactivating
-				lParam = 0;
+				lParam = GetCurrentThreadId(); // Thread ID of the thread being deactivated
 				break;
 
 			default:
