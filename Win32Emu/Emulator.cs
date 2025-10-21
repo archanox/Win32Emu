@@ -628,6 +628,25 @@ public sealed class Emulator : IDisposable
                         // Log final state after import return
                         LogDebug($"[Import] After return: EIP=0x{_cpu.GetEip():X8} ESP=0x{_cpu.GetRegister("ESP"):X8} EBP=0x{_cpu.GetRegister("EBP"):X8}");
                     }
+                    else
+                    {
+                        // TryInvoke returned false - the dispatcher doesn't know how to handle this import
+                        _logger.LogError("[Import] Dispatcher failed to invoke {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                        _logger.LogError("[Import] This import is not implemented in the emulator");
+                        
+                        // Simulate a return from the call to prevent executing into uninitialized memory
+                        var esp = _cpu.GetRegister("ESP");
+                        var retEip = _vm!.Read32(esp);
+                        esp += 4; // Pop return address (we don't know argBytes, so just pop the return address)
+                        _cpu.SetRegister("ESP", esp);
+                        _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
+                        _cpu.SetEip(retEip);
+                        
+                        // Restore callee-saved registers
+                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                        
+                        _logger.LogWarning("[Import] Simulated return to 0x{RetEip:X8} with EAX=0 (this may cause incorrect behavior)", retEip);
+                    }
                 }
                 else if (step.IsCall && step.CallTarget >= 0x0F000000 && step.CallTarget < 0x10000000)
                 {
