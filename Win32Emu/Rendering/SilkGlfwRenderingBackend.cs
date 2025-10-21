@@ -66,9 +66,9 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             _logger.LogInformation("[SilkGLFW] GLFW initialized successfully");
 
             // Set window hints
-            _logger.LogInformation("[SilkGLFW] Setting window hints for OpenGL 3.3 Core...");
+            _logger.LogInformation("[SilkGLFW] Setting window hints for OpenGL 3.2 Core...");
             _glfw.WindowHint(WindowHintInt.ContextVersionMajor, 3);
-            _glfw.WindowHint(WindowHintInt.ContextVersionMinor, 3);
+            _glfw.WindowHint(WindowHintInt.ContextVersionMinor, 2);
             _glfw.WindowHint(WindowHintOpenGlProfile.OpenGlProfile, OpenGlProfile.Core);
             _glfw.WindowHint(WindowHintBool.Resizable, true);
             
