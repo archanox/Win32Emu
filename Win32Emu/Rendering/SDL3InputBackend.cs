@@ -45,7 +45,7 @@ public class Sdl3InputBackend : IInputBackend
                 Sdl3Initializer.EnsureAppMetadataSet();
 
                 // Initialize SDL joystick subsystem
-                if (!SDL.Init(SDL_InitFlags.Joystick | SDL_InitFlags.Gamepad))
+                if (!SDL.Init(SDL.InitFlags.Joystick | SDL.InitFlags.Gamepad))
                 {
                     _logger.LogError("[SDL3Input] Failed to initialize SDL input: {Error}", SDL.GetError());
                     return false;
@@ -68,10 +68,11 @@ public class Sdl3InputBackend : IInputBackend
                 };
 
                 // Enumerate joysticks
-                var joystickIds = SDL.GetJoysticks();
+                int count;
+                var joystickIds = SDL.GetJoysticks(out count);
                 if (joystickIds != null)
                 {
-                    for (var i = 0; i < joystickIds.Length; i++)
+                    for (var i = 0; i < joystickIds.Length && i < count; i++)
                     {
                         var joystickId = joystickIds[i];
                         var joystick = SDL.OpenJoystick(joystickId);
@@ -168,7 +169,7 @@ public class Sdl3InputBackend : IInputBackend
             // Get POV hat state (if available)
             if (SDL.GetNumJoystickHats(device.JoystickHandle) > 0)
             {
-                state.PovHat = SDL.GetJoystickHat(device.JoystickHandle, 0);
+                state.PovHat = (int)SDL.GetJoystickHat(device.JoystickHandle, 0);
             }
 
             return true;

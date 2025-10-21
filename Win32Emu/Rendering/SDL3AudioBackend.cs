@@ -45,7 +45,7 @@ public class Sdl3AudioBackend : IAudioBackend
                 Sdl3Initializer.EnsureAppMetadataSet();
 
                 // Initialize SDL audio subsystem
-                if (!SDL.Init(SDL_InitFlags.Audio))
+                if (!SDL.Init(SDL.InitFlags.Audio))
                 {
                     _logger.LogError("[SDL3Audio] Failed to initialize SDL audio: {Error}", SDL.GetError());
                     return false;
@@ -76,15 +76,15 @@ public class Sdl3AudioBackend : IAudioBackend
             try
             {
                 // Create SDL audio stream spec
-                var spec = new SDL_AudioSpec
+                var spec = new SDL.AudioSpec
                 {
-                    freq = sampleRate,
-                    format = SDL_AudioFormat.S16,
-                    channels = channels
+                    Freq = sampleRate,
+                    Format = SDL.AudioFormat.AudioS16LE,
+                    Channels = channels
                 };
 
-                // Open audio stream
-                var stream = SDL.OpenAudioDeviceStream(0, spec, callback: IntPtr.Zero, userdata: IntPtr.Zero);
+                // Open audio stream (0 = default playback device)
+                var stream = SDL.OpenAudioDeviceStream(0, in spec, callback: null, userdata: IntPtr.Zero);
                 if (stream == IntPtr.Zero)
                 {
                     _logger.LogError("[SDL3Audio] Failed to open audio stream: {Error}", SDL.GetError());
