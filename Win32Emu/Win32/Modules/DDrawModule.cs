@@ -2479,10 +2479,7 @@ namespace Win32Emu.Win32.Modules
 
 			// For windowed mode, we typically don't need a complex clip list
 			// Return that no clip list is available
-			if (lpdwSize != 0)
-			{
-				_env.MemWrite32(lpdwSize, 0);
-			}
+			// Do not write to lpdwSize when returning DDERR_NOCLIPLIST, per DirectDraw documentation.
 
 			return 0x88760169; // DDERR_NOCLIPLIST
 		}
