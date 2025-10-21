@@ -11,7 +11,7 @@ public static class BackendFactory
 
     /// <summary>
     /// Current backend type setting
-    /// Priority: 1. Explicitly set value, 2. WIN32EMU_BACKEND environment variable, 3. Default to GLFW
+    /// Priority: 1. Explicitly set value, 2. WIN32EMU_BACKEND environment variable, 3. Default to SDL
     /// </summary>
     public static BackendType CurrentBackendType
     {
@@ -32,8 +32,8 @@ public static class BackendFactory
                 }
             }
 
-            // Default to GLFW
-            return BackendType.GLFW;
+            // Default to SDL (Metal on macOS, Vulkan on Linux, DirectX 12 on Windows)
+            return BackendType.SDL;
         }
         set => _currentBackendType = value;
     }
@@ -45,9 +45,10 @@ public static class BackendFactory
     {
         return CurrentBackendType switch
         {
+            BackendType.SDL => new Sdl3RenderingBackend(logger),
             BackendType.GLFW => new SilkGlfwRenderingBackend(logger),
             BackendType.Vulkan => new SilkVulkanRenderingBackend(logger),
-            _ => new SilkGlfwRenderingBackend(logger)
+            _ => new Sdl3RenderingBackend(logger)
         };
     }
 
@@ -56,8 +57,12 @@ public static class BackendFactory
     /// </summary>
     public static IAudioBackend CreateAudioBackend(ILogger logger)
     {
-        // Always use OpenAL for audio
-        return new SilkOpenAlAudioBackend(logger);
+        // Use SDL3 audio when SDL backend is selected, otherwise use OpenAL
+        return CurrentBackendType switch
+        {
+            BackendType.SDL => new Sdl3AudioBackend(logger),
+            _ => new SilkOpenAlAudioBackend(logger)
+        };
     }
 
     /// <summary>
@@ -65,7 +70,11 @@ public static class BackendFactory
     /// </summary>
     public static IInputBackend CreateInputBackend(ILogger logger)
     {
-        // Use Silk.NET input abstraction
-        return new SilkInputBackend(logger);
+        // Use SDL3 input when SDL backend is selected, otherwise use Silk.NET
+        return CurrentBackendType switch
+        {
+            BackendType.SDL => new Sdl3InputBackend(logger),
+            _ => new SilkInputBackend(logger)
+        };
     }
 }

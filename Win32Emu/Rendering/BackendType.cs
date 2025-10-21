@@ -6,6 +6,11 @@ namespace Win32Emu.Rendering;
 public enum BackendType
 {
     /// <summary>
+    /// SDL3 backend using SDL3-CS (Metal on macOS, Vulkan on Linux, DirectX 12 on Windows)
+    /// </summary>
+    SDL,
+
+    /// <summary>
     /// GLFW backend using Silk.NET.GLFW
     /// </summary>
     GLFW,
