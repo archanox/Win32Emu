@@ -304,7 +304,9 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 var size = w.ClientSize;
                 OnDebugOutput($"Avalonia window resized for HWND=0x{info.Handle:X8} to {size.Width}x{size.Height}, sending WM_SIZE", DebugLevel.Debug);
                 // WM_SIZE = 0x0005, wParam = SIZE_RESTORED (0), lParam = MAKELONG(width, height)
-                uint lParam = ((uint)size.Height << 16) | ((uint)size.Width & 0xFFFF);
+                ushort width = (ushort)Math.Clamp(size.Width, 0, ushort.MaxValue);
+                ushort height = (ushort)Math.Clamp(size.Height, 0, ushort.MaxValue);
+                uint lParam = ((uint)height << 16) | ((uint)width & 0xFFFF);
                 _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x0005, 0, lParam);
             }
         };
