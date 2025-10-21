@@ -71,6 +71,9 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             _glfw.WindowHint(WindowHintInt.ContextVersionMinor, 3);
             _glfw.WindowHint(WindowHintOpenGlProfile.OpenGlProfile, OpenGlProfile.Core);
             _glfw.WindowHint(WindowHintBool.Resizable, true);
+            
+            // On macOS, forward compatibility must be enabled for OpenGL 3.3 Core Profile
+            _glfw.WindowHint(WindowHintBool.OpenGLForwardCompat, true);
 
             // Create window
             _logger.LogInformation("[SilkGLFW] Creating window: {Width}x{Height} - '{Title}'", width, height, title);
