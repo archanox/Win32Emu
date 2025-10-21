@@ -1027,7 +1027,9 @@ public sealed class Emulator : IDisposable
             {
                 // If we can't restore EBP from stack, check if current EBP is valid
                 var currentEbp = _cpu!.GetRegister("EBP");
-                var currentEbpInStackRegion = (currentEbp >= stackBottom) && (currentEbp <= esp + 0x1000); // Allow some slack above ESP
+                // Allow 4KB of slack above ESP to account for minor stack pointer adjustments (e.g., function prologues/epilogues, local allocations)
+                const uint StackSlackBytes = 0x1000; // 4KB slack above ESP for plausible stack frame pointers
+                var currentEbpInStackRegion = (currentEbp >= stackBottom) && (currentEbp <= esp + StackSlackBytes);
                 
                 // Check if current EBP looks like an import hook address
                 // Import hooks are in range 0x0F000000-0x10000000
