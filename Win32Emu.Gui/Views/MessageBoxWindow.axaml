@@ -4,11 +4,11 @@
         Width="400"
         MinWidth="300"
         MaxWidth="600"
+        MinHeight="150"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
-        ShowInTaskbar="False"
-        Background="#F0F0F0">
+        ShowInTaskbar="False">
     
     <Grid Margin="20">
         <Grid.RowDefinitions>
