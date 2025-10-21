@@ -637,7 +637,12 @@ public sealed class Emulator : IDisposable
                         // Simulate a return from the call to prevent executing into uninitialized memory
                         var esp = _cpu.GetRegister("ESP");
                         var retEip = _vm!.Read32(esp);
-                        esp += 4; // Pop return address (we don't know argBytes, so just pop the return address)
+                        esp += 4; // Pop return address only.
+                        // WARNING: In stdcall (common in Win32), the callee is responsible for cleaning up the arguments.
+                        // By only popping the return address here (since we don't know argBytes), the stack may become misaligned
+                        // if the failed import expected to clean up arguments. This can cause stack corruption or crashes later.
+                        // This is an error recovery scenario: we do this to prevent executing into uninitialized memory,
+                        // but correct stack alignment cannot be guaranteed. See log warning below.
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
                         _cpu.SetEip(retEip);
