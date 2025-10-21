@@ -90,23 +90,25 @@ See [Win32Emu.Gui/README.md](Win32Emu.Gui/README.md) for more details.
 
 ## Backend System
 
-Win32Emu uses Silk.NET for cross-platform multimedia support with pluggable backends:
+Win32Emu uses pluggable backends for cross-platform multimedia support:
 
 ### Rendering Backends
-- **SDL** (default): Silk.NET.SDL - Best compatibility, hardware-accelerated
+- **SDL** (default): SDL3-CS - Native Metal on macOS, Vulkan on Linux, DirectX 12 on Windows. Best compatibility, hardware-accelerated
 - **GLFW**: Silk.NET.GLFW + OpenGL - Alternative for systems where SDL has issues
 - **Vulkan**: Silk.NET.Vulkan - Modern GPU API with cross-platform support (uses MoltenVK on macOS)
 
 ### Audio Backend
-- **OpenAL**: Silk.NET.OpenAL - Cross-platform audio support
+- **SDL Audio**: SDL3-CS audio when using SDL backend - Native audio support
+- **OpenAL**: Silk.NET.OpenAL - Cross-platform audio support for GLFW/Vulkan backends
 
 ### Input Backend
-- **Silk.NET.Input**: Unified keyboard, mouse, and gamepad support
+- **SDL Input**: SDL3-CS input when using SDL backend - Keyboard, mouse, and joystick support
+- **Silk.NET.Input**: Unified keyboard, mouse, and gamepad support for GLFW/Vulkan backends
 
 **Configuration:**
 - Command-line: `--backend SDL`, `--backend GLFW`, or `--backend Vulkan`
-- Environment variable: `WIN32EMU_BACKEND=GLFW` or `WIN32EMU_BACKEND=Vulkan`
-- Programmatic: `BackendFactory.CurrentBackendType = BackendType.Vulkan;`
+- Environment variable: `WIN32EMU_BACKEND=SDL`, `WIN32EMU_BACKEND=GLFW` or `WIN32EMU_BACKEND=Vulkan`
+- Programmatic: `BackendFactory.CurrentBackendType = BackendType.SDL;`
 
 See [SILK_NET_MIGRATION.md](SILK_NET_MIGRATION.md) for detailed documentation.
 
