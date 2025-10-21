@@ -1039,9 +1039,13 @@ public sealed class Emulator : IDisposable
                 // COM objects are typically allocated in heap regions (0x01000000-0x70000000)
                 var isLikelyComPointer = (currentEbp >= 0x01000000 && currentEbp < 0x70000000) && !currentEbpInStackRegion;
                 
-                if (isImportHook || isLikelyComPointer || !currentEbpInStackRegion)
+                // Check if current EBP is properly aligned (should be 4-byte aligned on x86)
+                // Unaligned EBP can cause address calculation overflow issues
+                var isUnaligned = (currentEbp & 0x3) != 0;
+                
+                if (isImportHook || isLikelyComPointer || !currentEbpInStackRegion || isUnaligned)
                 {
-                    // EBP contains an invalid value (import hook, COM pointer, or not in stack region)
+                    // EBP contains an invalid value (import hook, COM pointer, not in stack region, or unaligned)
                     // Set it to ESP as a safe fallback to avoid crashes
                     _cpu.SetRegister("EBP", esp);
                     
@@ -1052,6 +1056,10 @@ public sealed class Emulator : IDisposable
                     else if (isLikelyComPointer)
                     {
                         _logger.LogDebug("[Emulator] Reset EBP from likely COM/heap pointer 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", currentEbp, esp);
+                    }
+                    else if (isUnaligned)
+                    {
+                        _logger.LogDebug("[Emulator] Reset EBP from unaligned value 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", currentEbp, esp);
                     }
                     else
                     {
