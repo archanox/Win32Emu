@@ -511,6 +511,42 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
+	/// Sets a virtualized environment variable.
+	/// </summary>
+	/// <param name="name">The name of the environment variable</param>
+	/// <param name="value">The value to set, or null to delete the variable</param>
+	public void SetEnvironmentVariable(string name, string? value)
+	{
+		if (value == null)
+		{
+			_environmentVariables.Remove(name);
+			_logger.LogDebug("[ProcessEnv] SetEnvironmentVariable: Deleted '{Name}'", name);
+		}
+		else
+		{
+			_environmentVariables[name] = value;
+			_logger.LogDebug("[ProcessEnv] SetEnvironmentVariable: Set '{Name}'='{Value}'", name, value);
+		}
+	}
+
+	/// <summary>
+	/// Gets a virtualized environment variable value.
+	/// </summary>
+	/// <param name="name">The name of the environment variable</param>
+	/// <returns>The value of the environment variable, or null if not found</returns>
+	public string? GetEnvironmentVariable(string name)
+	{
+		if (_environmentVariables.TryGetValue(name, out var value))
+		{
+			_logger.LogDebug("[ProcessEnv] GetEnvironmentVariable: '{Name}'='{Value}'", name, value);
+			return value;
+		}
+
+		_logger.LogDebug("[ProcessEnv] GetEnvironmentVariable: '{Name}' not found", name);
+		return null;
+	}
+
+	/// <summary>
 	/// Write text to standard output via the host callback
 	/// </summary>
 	public void WriteToStdOutput(string text)
@@ -1675,6 +1711,52 @@ public class ProcessEnvironment
 		{
 			inputBackend.UIEvent -= OnUIEvent;
 			_subscribedInputBackends.Remove(inputBackend);
+		}
+	}
+
+	/// <summary>
+	/// Process events from all subscribed rendering and input backends.
+	/// This should be called regularly to keep windows responsive and process input.
+	/// </summary>
+	public void ProcessAllBackendEvents()
+	{
+		// Process events from all subscribed rendering backends (e.g., GLFW windows)
+		foreach (var renderingBackend in _subscribedRenderingBackends)
+		{
+			try
+			{
+				renderingBackend.ProcessEvents();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[ProcessEnv] Error processing rendering backend events");
+			}
+		}
+
+		// Process events from all subscribed input backends
+		foreach (var inputBackend in _subscribedInputBackends)
+		{
+			try
+			{
+				inputBackend.ProcessEvents();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[ProcessEnv] Error processing input backend events");
+			}
+		}
+
+		// Also process the legacy InputBackend property if set and not already in subscribed list
+		if (InputBackend != null && !_subscribedInputBackends.Contains(InputBackend))
+		{
+			try
+			{
+				InputBackend.ProcessEvents();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[ProcessEnv] Error processing input backend events");
+			}
 		}
 	}
 
