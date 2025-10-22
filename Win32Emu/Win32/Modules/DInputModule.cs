@@ -37,16 +37,14 @@ namespace Win32Emu.Win32.Modules
 
 			switch (export.ToUpperInvariant())
 			{
-				case "DIRECTINPUTCREATEA":
 				case "DIRECTINPUTCREATE":
+					returnValue = DirectInputCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "DIRECTINPUTCREATEA":
 					returnValue = DirectInputCreateA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 				case "DIRECTINPUTCREATEEX":
 					returnValue = DirectInputCreateEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-					return true;
-				// TODO: DIRECTINPUT8CREATE needs to move over to DINPUT8.DLL
-				case "DIRECTINPUT8CREATE":
-					returnValue = DirectInput8Create(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 					return true;
 
 				default:
@@ -148,15 +146,6 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[DInput] Created IDirectInput COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
 			return 0; // DI_OK
-		}
-
-		[DllModuleExport(2)]
-		private uint DirectInput8Create(uint hinst, uint dwVersion, uint riidltf, uint lplpDirectInput, uint pUnkOuter)
-		{
-			_logger.LogInformation("[DInput] DirectInput8Create(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, riidltf=0x{Riidltf:X8})", hinst, dwVersion, riidltf);
-
-			// DirectInput8 is similar to DirectInputCreate but with additional parameters
-			return DirectInputCreate(hinst, dwVersion, lplpDirectInput, pUnkOuter);
 		}
 
 		[DllModuleExport(2, entryPoint: 0x0000B060, Version = "4.90.0.3000")]
