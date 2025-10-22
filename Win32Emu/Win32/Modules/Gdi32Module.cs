@@ -74,6 +74,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = (uint)GetDeviceCaps(a.UInt32(0), a.Int32(1));
 					return true;
 
+				case "DELETEOBJECT":
+					returnValue = DeleteObject(a.UInt32(0));
+					return true;
+
 				default:
 					_logger.LogInformation("[Gdi32] Unimplemented export: {Export}", export);
 					return false;
@@ -224,6 +228,30 @@ namespace Win32Emu.Win32.Modules
 				2 => 8, // TECHNOLOGY - DT_RASDISPLAY (raster display)
 				_ => 0
 			};
+		}
+
+		[DllModuleExport(1)]
+		private uint DeleteObject(uint hObject)
+		{
+			_logger.LogInformation("[Gdi32] DeleteObject(hObject=0x{HObject:X8})", hObject);
+
+			// Stock objects should not be deleted
+			if (hObject >= 0x80000000 && hObject < 0x81000000)
+			{
+				_logger.LogInformation("[Gdi32] DeleteObject: Cannot delete stock object");
+				return 0; // FALSE
+			}
+
+			// Remove device context if it exists
+			if (_deviceContexts.Remove(hObject))
+			{
+				_logger.LogInformation("[Gdi32] DeleteObject: Deleted device context");
+				return 1; // TRUE
+			}
+
+			// For other objects, just acknowledge the deletion
+			_logger.LogInformation("[Gdi32] DeleteObject: Object deleted (stub)");
+			return 1; // TRUE
 		}
 
 		private class DeviceContext
