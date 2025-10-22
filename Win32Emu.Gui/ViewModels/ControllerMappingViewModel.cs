@@ -1,12 +1,18 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
 
 namespace Win32Emu.Gui.ViewModels;
 
 public partial class ControllerMappingViewModel : ViewModelBase
 {
+    private readonly ConfigurationService? _configService;
+    private readonly EmulatorSettings? _settings;
+    private AxisMapping? _currentAxisMapping;
+    private ButtonMapping? _currentButtonMapping;
+
     [ObservableProperty]
     private string _selectedControllerPreset = "Custom";
 
@@ -40,6 +46,22 @@ public partial class ControllerMappingViewModel : ViewModelBase
     public ObservableCollection<string> PhysicalControllers { get; } = new();
     public ObservableCollection<AxisMapping> AxisMappings { get; } = new();
     public ObservableCollection<ButtonMapping> ButtonMappings { get; } = new();
+
+    public ControllerMappingViewModel() : this(null, null)
+    {
+    }
+
+    public ControllerMappingViewModel(ConfigurationService? configService, EmulatorSettings? settings)
+    {
+        _configService = configService;
+        _settings = settings;
+        
+        // Initialize with default mappings
+        UpdateMappings();
+        
+        // Load physical controllers (placeholder for now - would need input backend access)
+        LoadPhysicalControllers();
+    }
 
     public ObservableCollection<string> ControllerPresets { get; } = new()
     {
@@ -157,20 +179,46 @@ public partial class ControllerMappingViewModel : ViewModelBase
         };
     }
 
+    private void LoadPhysicalControllers()
+    {
+        // Placeholder: In a full implementation, this would enumerate controllers from the input backend
+        // For now, add example controllers
+        PhysicalControllers.Clear();
+        PhysicalControllers.Add("Xbox Controller (Example)");
+        PhysicalControllers.Add("PlayStation Controller (Example)");
+        PhysicalControllers.Add("Generic Gamepad (Example)");
+    }
+
     [RelayCommand]
     private void StartMapping(object? parameter)
     {
         if (parameter is AxisMapping axisMapping)
         {
+            _currentAxisMapping = axisMapping;
+            _currentButtonMapping = null;
             IsMappingMode = true;
             MappingInstructions = $"Move the axis you want to map to '{axisMapping.VirtualAxisName}'";
-            // TODO: Start listening for axis input
+            
+            // In a full implementation, this would:
+            // 1. Start polling the input backend for axis changes
+            // 2. Detect which physical axis moved the most
+            // 3. Assign that axis to the virtual axis
+            // 4. Update the mapping display
+            // 5. Exit mapping mode
         }
         else if (parameter is ButtonMapping buttonMapping)
         {
+            _currentAxisMapping = null;
+            _currentButtonMapping = buttonMapping;
             IsMappingMode = true;
             MappingInstructions = $"Press the button you want to map to '{buttonMapping.VirtualButtonName}'";
-            // TODO: Start listening for button input
+            
+            // In a full implementation, this would:
+            // 1. Start polling the input backend for button presses
+            // 2. Detect which physical button was pressed
+            // 3. Assign that button to the virtual button
+            // 4. Update the mapping display
+            // 5. Exit mapping mode
         }
     }
 
@@ -178,25 +226,124 @@ public partial class ControllerMappingViewModel : ViewModelBase
     private void CancelMapping()
     {
         IsMappingMode = false;
+        _currentAxisMapping = null;
+        _currentButtonMapping = null;
         MappingInstructions = "Select a virtual control and press the corresponding physical input";
     }
 
     [RelayCommand]
     private void TestController()
     {
-        // TODO: Open controller test window
+        // Open a controller test window to verify mappings
+        // In a full implementation, this would:
+        // 1. Create a new window showing a visual representation of the virtual controller
+        // 2. Poll the physical controller via the input backend
+        // 3. Apply the current mappings
+        // 4. Display the virtual controller state in real-time
+        // 5. Show which buttons are pressed and axis positions
+        
+        // For now, this is a placeholder that could show a message
+        // TODO: Implement controller test window when window management is available
     }
 
     [RelayCommand]
     private void LoadConfiguration()
     {
-        // TODO: Load configuration from settings
+        if (_configService == null || _settings == null || string.IsNullOrEmpty(SelectedPhysicalController))
+        {
+            return;
+        }
+
+        // Load the configuration for the selected physical controller
+        if (_settings.ControllerConfigurations.TryGetValue(SelectedPhysicalController, out var config))
+        {
+            // Load preset or custom configuration
+            SelectedControllerPreset = config.SelectedPreset;
+            
+            if (config.SelectedPreset == "Custom" && config.CustomConfiguration != null)
+            {
+                // Load custom controller settings
+                ControllerType = config.CustomConfiguration.Type;
+                NumberOfAxes = config.CustomConfiguration.NumberOfAxes;
+                NumberOfButtons = config.CustomConfiguration.NumberOfButtons;
+                HasPointOfView = config.CustomConfiguration.HasPointOfView;
+                CustomControllerName = config.CustomConfiguration.Name;
+            }
+            
+            // Load axis mappings
+            foreach (var mapping in AxisMappings)
+            {
+                if (config.AxisMappings.TryGetValue(mapping.VirtualAxisIndex, out var physicalAxis))
+                {
+                    mapping.PhysicalAxisIndex = physicalAxis;
+                }
+            }
+            
+            // Load button mappings
+            foreach (var mapping in ButtonMappings)
+            {
+                if (config.ButtonMappings.TryGetValue(mapping.VirtualButtonIndex, out var physicalButton))
+                {
+                    mapping.PhysicalButtonIndex = physicalButton;
+                }
+            }
+        }
     }
 
     [RelayCommand]
     private void SaveConfiguration()
     {
-        // TODO: Save configuration to settings
+        if (_configService == null || _settings == null || string.IsNullOrEmpty(SelectedPhysicalController))
+        {
+            return;
+        }
+
+        // Create or update the configuration for the selected physical controller
+        var config = new ControllerConfiguration
+        {
+            PhysicalControllerName = SelectedPhysicalController,
+            SelectedPreset = SelectedControllerPreset
+        };
+
+        // Save custom configuration if "Custom" is selected
+        if (SelectedControllerPreset == "Custom")
+        {
+            config.CustomConfiguration = new ControllerPreset
+            {
+                Name = CustomControllerName,
+                Type = ControllerType,
+                NumberOfAxes = NumberOfAxes,
+                NumberOfButtons = NumberOfButtons,
+                HasPointOfView = HasPointOfView
+            };
+        }
+
+        // Save axis mappings
+        config.AxisMappings.Clear();
+        foreach (var mapping in AxisMappings)
+        {
+            if (mapping.PhysicalAxisIndex >= 0)
+            {
+                config.AxisMappings[mapping.VirtualAxisIndex] = mapping.PhysicalAxisIndex;
+            }
+        }
+
+        // Save button mappings
+        config.ButtonMappings.Clear();
+        foreach (var mapping in ButtonMappings)
+        {
+            if (mapping.PhysicalButtonIndex >= 0)
+            {
+                config.ButtonMappings[mapping.VirtualButtonIndex] = mapping.PhysicalButtonIndex;
+            }
+        }
+
+        // Update the settings
+        _settings.ControllerConfigurations[SelectedPhysicalController] = config;
+        
+        // Persist to disk
+        var emulatorConfig = _configService.GetEmulatorConfiguration();
+        _configService.SaveEmulatorConfiguration(emulatorConfig);
     }
 }
 

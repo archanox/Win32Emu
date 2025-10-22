@@ -255,4 +255,12 @@ public class ConfigurationService
     /// Get the library file path for display purposes
     /// </summary>
     public string LibraryFilePath => _libraryFilePath;
+
+    /// <summary>
+    /// Get the emulator settings for direct access to controller configurations
+    /// </summary>
+    public EmulatorSettings GetEmulatorSettings()
+    {
+        return _settings;
+    }
 }
