@@ -167,14 +167,11 @@ namespace Win32Emu.Win32.Modules
 			public uint BackendDeviceId { get; set; }
 			public string Name { get; set; } = string.Empty;
 			public IInputBackend.DeviceType DeviceType { get; set; }
-			public bool IsAcquired { get; set; }
-			public byte[]? DataFormat { get; set; }
-			public int DataFormatSize { get; set; }
+			public bool IsAcquired { get; set; } // Whether device is acquired
 			public uint DataFormat { get; set; } // Pointer to DIDATAFORMAT structure
 			public uint DataFormatSize { get; set; } // Size of data format in bytes
 			public uint CooperativeHwnd { get; set; } // Window handle for cooperative level
 			public uint CooperativeFlags { get; set; } // Cooperative level flags
-			public bool IsAcquired { get; set; } // Whether device is acquired
 			public Dictionary<uint, uint> Properties { get; set; } = new(); // Device properties (GUID -> value)
 		}
 
@@ -245,7 +242,7 @@ namespace Win32Emu.Win32.Modules
 					{
 						var devices = _env.InputBackend.GetDevices();
 						var kbDevice = devices.FirstOrDefault(d => d.Type == IInputBackend.DeviceType.Keyboard);
-						backendDeviceId = kbDevice != null ? kbDevice.DeviceId : 0;
+						backendDeviceId = kbDevice.DeviceId;
 					}
 				}
 				else if (guidData1 == 0x6F1D2B60)

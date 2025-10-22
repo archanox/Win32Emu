@@ -211,6 +211,9 @@ public class DInputModuleTests
         Assert.True(state.Buttons[0]);
         Assert.False(state.Buttons[1]);
         Assert.Equal(0, state.PovHat);
+    }
+
+    [Fact]
     public void SetDataFormat_ShouldParseAndStoreDataFormat()
     {
         // Arrange

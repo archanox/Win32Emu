@@ -263,4 +263,12 @@ public class ConfigurationService
     {
         return _settings;
     }
+
+    /// <summary>
+    /// Save the current emulator settings (for controller configurations and other direct modifications)
+    /// </summary>
+    public void SaveEmulatorSettings()
+    {
+        SaveSettings();
+    }
 }
