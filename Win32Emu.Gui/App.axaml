@@ -9,6 +9,8 @@
     <Application.Resources>
         <converters:BoolToImplementedConverter x:Key="BoolToImplementedConverter"/>
         <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+        <converters:ImplementationStatusToTextConverter x:Key="ImplementationStatusToTextConverter"/>
+        <converters:ImplementationStatusToColorConverter x:Key="ImplementationStatusToColorConverter"/>
         <converters:ThumbnailPathConverter x:Key="ThumbnailPathConverter"/>
     </Application.Resources>
 

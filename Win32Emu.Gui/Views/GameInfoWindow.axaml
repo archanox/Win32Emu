@@ -60,9 +60,24 @@
                         Padding="15"
                         CornerRadius="8">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="DLL Imports"
-                                 FontSize="16"
-                                 FontWeight="Bold"/>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0"
+                                     Text="DLL Imports"
+                                     FontSize="16"
+                                     FontWeight="Bold"
+                                     VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5">
+                                <TextBlock Text="Compatibility:"
+                                         FontSize="14"
+                                         FontWeight="SemiBold"
+                                         VerticalAlignment="Center"
+                                         Margin="0,0,5,0"/>
+                                <TextBlock Text="{Binding CompatibilityRating}"
+                                         FontSize="14"
+                                         FontWeight="Bold"
+                                         VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
                         
                         <Border Background="{DynamicResource SystemControlBackgroundBaseMediumBrush}"
                                 BorderThickness="1"
@@ -73,7 +88,7 @@
                                 <ItemsControl ItemsSource="{Binding Imports}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid ColumnDefinitions="200,*,100" Margin="5">
+                                            <Grid ColumnDefinitions="200,*,150" Margin="5">
                                                 <TextBlock Grid.Column="0" 
                                                          Text="{Binding DllName}"
                                                          FontFamily="Consolas"
@@ -83,9 +98,9 @@
                                                          FontFamily="Consolas"
                                                          FontSize="12"/>
                                                 <TextBlock Grid.Column="2" 
-                                                         Text="{Binding IsImplemented, Converter={StaticResource BoolToImplementedConverter}}"
+                                                         Text="{Binding Status, Converter={StaticResource ImplementationStatusToTextConverter}}"
                                                          FontSize="12"
-                                                         Foreground="{Binding IsImplemented, Converter={StaticResource BoolToColorConverter}}"/>
+                                                         Foreground="{Binding Status, Converter={StaticResource ImplementationStatusToColorConverter}}"/>
                                             </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -97,9 +112,21 @@
                             <Border Background="#28A745" Padding="5,2" CornerRadius="3">
                                 <TextBlock Text="● Implemented" FontSize="12" Foreground="White"/>
                             </Border>
+                            <Border Background="#FFC107" Padding="5,2" CornerRadius="3">
+                                <TextBlock Text="● Partial" FontSize="12" Foreground="White"/>
+                            </Border>
                             <Border Background="#DC3545" Padding="5,2" CornerRadius="3">
                                 <TextBlock Text="● Not Implemented" FontSize="12" Foreground="White"/>
                             </Border>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                            <Button Content="Copy Unimplemented"
+                                    Click="CopyUnimplemented_Click"
+                                    ToolTip.Tip="Copy list of unimplemented functions to clipboard"/>
+                            <Button Content="Copy Partially Implemented"
+                                    Click="CopyPartiallyImplemented_Click"
+                                    ToolTip.Tip="Copy list of partially implemented functions to clipboard"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
