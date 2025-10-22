@@ -73,15 +73,32 @@ public class PeExportParser
     }
 
     /// <summary>
-    /// Extract file version from PE resources
-    /// TODO: Implement proper version extraction using AsmResolver API
-    /// For now, returns null - version info will not be populated
+    /// Extract file version from PE resources using FileVersionInfo
     /// </summary>
     private static string? ExtractFileVersion(string dllPath)
     {
-        // Version extraction would require deeper integration with AsmResolver
-        // For now, we'll leave this as a TODO and return null
-        // The Version field will still be part of the attribute but won't be populated yet
+        try
+        {
+            var versionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(dllPath);
+            
+            // Check if we have valid version information
+            if (versionInfo.FileMajorPart != 0 || versionInfo.FileMinorPart != 0 || 
+                versionInfo.FileBuildPart != 0 || versionInfo.FilePrivatePart != 0)
+            {
+                return $"{versionInfo.FileMajorPart}.{versionInfo.FileMinorPart}.{versionInfo.FileBuildPart}.{versionInfo.FilePrivatePart}";
+            }
+            
+            // If FileVersion string is available, use it
+            if (!string.IsNullOrWhiteSpace(versionInfo.FileVersion))
+            {
+                return versionInfo.FileVersion;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Could not extract version from {Path.GetFileName(dllPath)}: {ex.Message}");
+        }
+        
         return null;
     }
     
