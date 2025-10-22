@@ -2792,13 +2792,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// If lpValue is NULL, delete the variable
 			if (lpValue == 0)
 			{
-				Environment.SetEnvironmentVariable(name, null);
+				_env.SetEnvironmentVariable(name, null);
 				_logger.LogInformation("[Kernel32] SetEnvironmentVariableA: Deleted '{Name}'", name);
 			}
 			else
 			{
 				var value = _env.ReadAnsiString(lpValue);
-				Environment.SetEnvironmentVariable(name, value);
+				_env.SetEnvironmentVariable(name, value);
 				_logger.LogInformation("[Kernel32] SetEnvironmentVariableA: Set '{Name}'='{Value}'", name, value);
 			}
 
