@@ -614,6 +614,11 @@ public sealed class Emulator : IDisposable
                         
                         var retEip = _vm!.Read32(esp);
                         LogDebug($"[Import] Return address from stack: 0x{retEip:X8}");
+                        
+                        // Restore EBP from stack BEFORE cleanup to get the frame pointer from the caller's stack
+                        var espBeforeCleanup = esp;
+                        RestoreEbpFromStack(espBeforeCleanup);
+                        
                         esp += 4 + (uint)argBytes;
                         LogDebug($"[Import] ESP after cleanup: 0x{esp:X8} (added {4 + argBytes} bytes)");
                         _cpu.SetRegister("ESP", esp);
@@ -622,9 +627,6 @@ public sealed class Emulator : IDisposable
                         
                         // Restore callee-saved registers (except EBP - see above)
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-                        
-                        // Restore EBP from stack to handle indirect call cases
-                        RestoreEbpFromStack(esp);
                         
                         // Log final state after import return
                         LogDebug($"[Import] After return: EIP=0x{_cpu.GetEip():X8} ESP=0x{_cpu.GetRegister("ESP"):X8} EBP=0x{_cpu.GetRegister("EBP"):X8}");
@@ -1043,28 +1045,31 @@ public sealed class Emulator : IDisposable
                 // Unaligned EBP can cause address calculation overflow issues
                 var isUnaligned = (currentEbp & 0x3) != 0;
                 
-                if (isImportHook || isLikelyComPointer || !currentEbpInStackRegion || isUnaligned)
+                if (isImportHook || isLikelyComPointer || isUnaligned)
                 {
-                    // EBP contains an invalid value (import hook, COM pointer, not in stack region, or unaligned)
-                    // Set it to ESP as a safe fallback to avoid crashes
-                    _cpu.SetRegister("EBP", esp);
+                    // EBP contains a non-frame-pointer or special-purpose value (import hook address, COM pointer, or unaligned); leave unchanged to respect calling conventions
+                    // Don't modify EBP - the calling code will manage it
+                    // Setting EBP=ESP here would break the caller's frame pointer assumptions
                     
                     if (isImportHook)
                     {
-                        _logger.LogDebug("[Emulator] Reset EBP from import hook address 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", currentEbp, esp);
+                        _logger.LogDebug("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is an import hook address, leaving unchanged", currentEbp);
                     }
                     else if (isLikelyComPointer)
                     {
-                        _logger.LogDebug("[Emulator] Reset EBP from likely COM/heap pointer 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", currentEbp, esp);
+                        _logger.LogDebug("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is likely a COM/heap pointer, leaving unchanged", currentEbp);
                     }
                     else if (isUnaligned)
                     {
-                        _logger.LogDebug("[Emulator] Reset EBP from unaligned value 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", currentEbp, esp);
+                        _logger.LogDebug("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is unaligned, leaving unchanged", currentEbp);
                     }
-                    else
-                    {
-                        _logger.LogDebug("[Emulator] Reset EBP from out-of-stack-region 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", currentEbp, esp);
-                    }
+                }
+                else if (!currentEbpInStackRegion)
+                {
+                    // EBP is out of stack region but not obviously wrong (aligned, not a hook/pointer)
+                    // This might be a valid heap pointer or global variable address used intentionally
+                    // Don't modify it
+                    _logger.LogDebug("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is out of stack region but looks intentional, leaving unchanged", currentEbp);
                 }
                 else
                 {

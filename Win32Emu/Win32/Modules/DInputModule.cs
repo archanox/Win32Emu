@@ -170,6 +170,12 @@ namespace Win32Emu.Win32.Modules
 			public bool IsAcquired { get; set; }
 			public byte[]? DataFormat { get; set; }
 			public int DataFormatSize { get; set; }
+			public uint DataFormat { get; set; } // Pointer to DIDATAFORMAT structure
+			public uint DataFormatSize { get; set; } // Size of data format in bytes
+			public uint CooperativeHwnd { get; set; } // Window handle for cooperative level
+			public uint CooperativeFlags { get; set; } // Cooperative level flags
+			public bool IsAcquired { get; set; } // Whether device is acquired
+			public Dictionary<uint, uint> Properties { get; set; } = new(); // Device properties (GUID -> value)
 		}
 
 		// COM interface methods for IDirectInput
@@ -362,7 +368,65 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DInputDevice_SetProperty(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DInput COM] IDirectInputDevice::SetProperty() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var rguidProp = args.UInt32(1);
+			var pdiph = args.UInt32(2);
+
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::SetProperty(this=0x{ThisPtr:X8}, rguidProp=0x{RguidProp:X8}, pdiph=0x{Pdiph:X8})", thisPtr, rguidProp, pdiph);
+
+			// Common DirectInput property GUIDs (predefined values):
+			// DIPROP_BUFFERSIZE      = 1  // Set buffer size
+			// DIPROP_AXISMODE        = 2  // Set axis mode (absolute/relative)
+			// DIPROP_GRANULARITY     = 3  // Get granularity
+			// DIPROP_RANGE           = 4  // Set/get range
+			// DIPROP_DEADZONE        = 5  // Set/get deadzone
+			// DIPROP_SATURATION      = 6  // Set/get saturation
+			// DIPROP_FFGAIN          = 7  // Set/get force feedback gain
+			// DIPROP_FFLOAD          = 8  // Get force feedback load
+			// DIPROP_AUTOCENTER      = 9  // Set/get auto-center
+			// DIPROP_CALIBRATIONMODE = 10 // Set/get calibration mode
+
+			// Parse DIPROPHEADER structure if pdiph is valid
+			if (pdiph != 0)
+			{
+				// typedef struct DIPROPHEADER {
+				//   DWORD dwSize;      // +0: Size of enclosing structure
+				//   DWORD dwHeaderSize;// +4: Size of DIPROPHEADER (16 or 20 bytes)
+				//   DWORD dwObj;       // +8: Object ID or 0 for device
+				//   DWORD dwHow;       // +12: DIPH_DEVICE, DIPH_BYOFFSET, DIPH_BYID, etc.
+				// } DIPROPHEADER;
+
+				var dwSize = _env.MemRead32(pdiph);
+				var dwHeaderSize = _env.MemRead32(pdiph + 4);
+				var dwObj = _env.MemRead32(pdiph + 8);
+				var dwHow = _env.MemRead32(pdiph + 12);
+
+				_logger.LogInformation("[DInput COM]   DIPROPHEADER: size={DwSize}, headerSize={DwHeaderSize}, obj={DwObj}, how={DwHow}",
+					dwSize, dwHeaderSize, dwObj, dwHow);
+
+				// For properties like DIPROP_BUFFERSIZE, there's additional data after the header
+				// DIPROPDWORD contains: DIPROPHEADER diph; DWORD dwData;
+				if (dwSize >= dwHeaderSize + 4)
+				{
+					var dwData = _env.MemRead32(pdiph + dwHeaderSize);
+					_logger.LogInformation("[DInput COM]   Property value: {DwData}", dwData);
+
+					// Store the property
+					DirectInputDevice? device = null;
+					foreach (var dev in _devices.Values)
+					{
+						device = dev;
+						break; // For now, use the first device
+					}
+
+					if (device != null)
+					{
+						device.Properties[rguidProp] = dwData;
+					}
+				}
+			}
+
 			return 0; // DI_OK
 		}
 
@@ -375,9 +439,11 @@ namespace Win32Emu.Win32.Modules
 
 			// Find the device associated with this COM object
 			var device = _devices.Values.FirstOrDefault(d => true); // TODO: Map thisPtr to device
+
 			if (device != null)
 			{
 				device.IsAcquired = true;
+				_logger.LogInformation("[DInput COM]   Device acquired successfully");
 			}
 
 			return 0; // DI_OK
@@ -385,7 +451,25 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DInputDevice_Unacquire(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DInput COM] IDirectInputDevice::Unacquire() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::Unacquire(this=0x{ThisPtr:X8})", thisPtr);
+
+			// Find the device and mark it as not acquired
+			DirectInputDevice? device = null;
+			foreach (var dev in _devices.Values)
+			{
+				device = dev;
+				break; // For now, use the first device
+			}
+
+			if (device != null)
+			{
+				device.IsAcquired = false;
+				_logger.LogInformation("[DInput COM]   Device unacquired successfully");
+			}
+
 			return 0; // DI_OK
 		}
 
@@ -497,7 +581,44 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lpdf = args.UInt32(1);
 
-			_logger.LogInformation("[DInput COM] IDirectInputDevice::SetDataFormat(this=0x{ThisPtr:X8}, lpdf=0x{Lpdf:X8}) - stub", thisPtr, lpdf);
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::SetDataFormat(this=0x{ThisPtr:X8}, lpdf=0x{Lpdf:X8})", thisPtr, lpdf);
+
+			// Find the device object based on this pointer
+			// In COM, we need to look up the device by the COM object address
+			DirectInputDevice? device = null;
+			foreach (var dev in _devices.Values)
+			{
+				device = dev;
+				break; // For now, use the first device - in production would need proper COM object lookup
+			}
+
+			if (device != null && lpdf != 0)
+			{
+				// Parse DIDATAFORMAT structure
+				// typedef struct DIDATAFORMAT {
+				//   DWORD dwSize;        // +0: Size of this structure
+				//   DWORD dwObjSize;     // +4: Size of DIOBJECTDATAFORMAT
+				//   DWORD dwFlags;       // +8: DIDF_ABSAXIS or DIDF_RELAXIS
+				//   DWORD dwDataSize;    // +12: Size of device data
+				//   DWORD dwNumObjs;     // +16: Number of objects
+				//   LPDIOBJECTDATAFORMAT rgodf; // +20: Array of object formats
+				// } DIDATAFORMAT;
+
+				var dwSize = _env.MemRead32(lpdf);
+				var dwObjSize = _env.MemRead32(lpdf + 4);
+				var dwFlags = _env.MemRead32(lpdf + 8);
+				var dwDataSize = _env.MemRead32(lpdf + 12);
+				var dwNumObjs = _env.MemRead32(lpdf + 16);
+				var rgodf = _env.MemRead32(lpdf + 20);
+
+				_logger.LogInformation("[DInput COM]   DIDATAFORMAT: size={DwSize}, objSize={DwObjSize}, flags=0x{DwFlags:X}, dataSize={DwDataSize}, numObjs={DwNumObjs}, rgodf=0x{Rgodf:X8}",
+					dwSize, dwObjSize, dwFlags, dwDataSize, dwNumObjs, rgodf);
+
+				// Store the data format information
+				device.DataFormat = lpdf;
+				device.DataFormatSize = dwDataSize;
+			}
+
 			return 0; // DI_OK
 		}
 
@@ -514,7 +635,41 @@ namespace Win32Emu.Win32.Modules
 			var hwnd = args.UInt32(1);
 			var dwFlags = args.UInt32(2);
 
-			_logger.LogInformation("[DInput COM] IDirectInputDevice::SetCooperativeLevel(this=0x{ThisPtr:X8}, hwnd=0x{Hwnd:X8}, flags=0x{DwFlags:X8}) - stub", thisPtr, hwnd, dwFlags);
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::SetCooperativeLevel(this=0x{ThisPtr:X8}, hwnd=0x{Hwnd:X8}, flags=0x{DwFlags:X8})", thisPtr, hwnd, dwFlags);
+
+			// DirectInput Cooperative Level Flags:
+			// DISCL_EXCLUSIVE    = 0x00000001  // Exclusive access
+			// DISCL_NONEXCLUSIVE = 0x00000002  // Non-exclusive access
+			// DISCL_FOREGROUND   = 0x00000004  // Foreground access
+			// DISCL_BACKGROUND   = 0x00000008  // Background access
+			// DISCL_NOWINKEY     = 0x00000010  // Disable Windows key
+
+			var flagNames = new List<string>();
+			if ((dwFlags & 0x01) != 0) flagNames.Add("DISCL_EXCLUSIVE");
+			if ((dwFlags & 0x02) != 0) flagNames.Add("DISCL_NONEXCLUSIVE");
+			if ((dwFlags & 0x04) != 0) flagNames.Add("DISCL_FOREGROUND");
+			if ((dwFlags & 0x08) != 0) flagNames.Add("DISCL_BACKGROUND");
+			if ((dwFlags & 0x10) != 0) flagNames.Add("DISCL_NOWINKEY");
+
+			if (flagNames.Count > 0)
+			{
+				_logger.LogInformation("[DInput COM]   Flags: {FlagNames}", string.Join(" | ", flagNames));
+			}
+
+			// Find the device and store the cooperative level settings
+			DirectInputDevice? device = null;
+			foreach (var dev in _devices.Values)
+			{
+				device = dev;
+				break; // For now, use the first device
+			}
+
+			if (device != null)
+			{
+				device.CooperativeHwnd = hwnd;
+				device.CooperativeFlags = dwFlags;
+			}
+
 			return 0; // DI_OK
 		}
 
