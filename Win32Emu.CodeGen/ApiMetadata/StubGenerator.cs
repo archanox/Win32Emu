@@ -173,7 +173,12 @@ public class StubGenerator
         name = Regex.Replace(name, @"[^a-zA-Z0-9_]", "_");
         
         // Ensure it doesn't start with a digit
-        if (char.IsDigit(name[0]))
+        if (name.Length == 0)
+        {
+            // Fallback to a default method name if name is empty after processing
+            name = "_Method";
+        }
+        else if (char.IsDigit(name[0]))
         {
             name = "_" + name;
         }
