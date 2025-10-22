@@ -216,6 +216,7 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 								uint? entryPoint = null;
 								string? version = null;
 								string? forwardedTo = null;
+								bool isStub = false;
 								
 								foreach (var named in attr.NamedArguments)
 								{
@@ -228,9 +229,11 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 										version = (string)named.Value.Value;
 									else if (named.Key == "ForwardedTo" && named.Value.Value != null)
 										forwardedTo = (string)named.Value.Value;
+									else if (named.Key == "IsStub" && named.Value.Value != null)
+										isStub = (bool)named.Value.Value;
 								}
 								
-								return new ExportAttributeInfo(ordinal, entryPoint, version, forwardedTo);
+								return new ExportAttributeInfo(ordinal, entryPoint, version, forwardedTo, isStub);
 							})
 							.ToList();
 						
@@ -373,6 +376,45 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				                default: return null;
 				            }
 				        }
+
+				        /// <summary>
+				        /// Checks if a given export function is marked as a stub (partial implementation).
+				        /// </summary>
+				        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL", "USER32.DLL")</param>
+				        /// <param name="exportName">The export function name to check</param>
+				        /// <param name="version">Optional version string to match. If null, checks first matching export.</param>
+				        /// <returns>True if the export is marked as a stub, false otherwise</returns>
+				        public static bool IsExportStub(string dllName, string exportName, string? version = null)
+				        {
+				            switch ((dllName.ToUpperInvariant(), exportName.ToUpperInvariant()))
+				            {
+				""");
+
+			// Generate switch cases for stub exports only
+			foreach (var export in entries.OrderBy(e => e.DllName).ThenBy(e => e.MethodName))
+			{
+				var stubAttrs = export.Attributes.Where(a => a.IsStub).ToList();
+				if (stubAttrs.Count == 0)
+					continue;
+
+				foreach (var attr in stubAttrs)
+				{
+					if (attr.Version != null)
+					{
+						sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == \"{attr.Version}\": return true;");
+					}
+					else
+					{
+						sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == null: return true;");
+					}
+				}
+			}
+
+			sb.AppendLine(
+				"""
+				                default: return false;
+				            }
+				        }
 				    }
 				}
 				""");
@@ -405,12 +447,13 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 		public int ArgBytes { get; } = argBytes;
 	}
 
-	private readonly struct ExportAttributeInfo(uint ordinal, uint? entryPoint, string? version, string? forwardedTo)
+	private readonly struct ExportAttributeInfo(uint ordinal, uint? entryPoint, string? version, string? forwardedTo, bool isStub)
 	{
 		public uint Ordinal { get; } = ordinal;
 		public uint? EntryPoint { get; } = entryPoint;
 		public string? Version { get; } = version;
 		public string? ForwardedTo { get; } = forwardedTo;
+		public bool IsStub { get; } = isStub;
 	}
 
 	private readonly struct ExportMethodInfo(string dllName, string methodName, List<ExportAttributeInfo> attributes)
