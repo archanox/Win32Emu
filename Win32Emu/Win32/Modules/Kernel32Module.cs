@@ -113,6 +113,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = GetEnvironmentStringsW();
 				return true;
 			case "GETENVIRONMENTSTRINGS":
+				returnValue = GetEnvironmentStrings();
+				return true;
 			case "GETENVIRONMENTSTRINGSA":
 				returnValue = GetEnvironmentStringsA();
 				return true;
@@ -310,15 +312,19 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 			// Synchronization primitives
 			case "CREATEMUTEXW":
+				returnValue = CreateMutexW(a.UInt32(0), a.UInt32(1), a.LpcStr(2));
+				return true;
 			case "CREATEMUTEXA":
-				returnValue = CreateMutex(a.UInt32(0), a.UInt32(1), a.LpcStr(2));
+				returnValue = CreateMutexA(a.UInt32(0), a.UInt32(1), a.LpcStr(2));
 				return true;
 			case "RELEASEMUTEX":
 				returnValue = ReleaseMutex(a.UInt32(0));
 				return true;
 			case "CREATEEVENTW":
+				returnValue = CreateEventW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3));
+				return true;
 			case "CREATEEVENTA":
-				returnValue = CreateEvent(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3));
+				returnValue = CreateEventA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3));
 				return true;
 			case "SETEVENT":
 				returnValue = SetEvent(a.UInt32(0));
@@ -330,11 +336,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = PulseEvent(a.UInt32(0));
 				return true;
 			case "CREATESEMAPHOREW":
+				returnValue = CreateSemaphoreW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3));
+				return true;
 			case "CREATESEMAPHOREA":
-				returnValue = CreateSemaphore(a.UInt32(0), a.Int32(1), a.Int32(2), a.LpcStr(3));
+				returnValue = CreateSemaphoreA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3));
 				return true;
 			case "RELEASESEMAPHORE":
-				returnValue = ReleaseSemaphore(a.UInt32(0), a.Int32(1), a.UInt32(2));
+				returnValue = ReleaseSemaphore(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 			case "WAITFORSINGLEOBJECT":
 				returnValue = WaitForSingleObject(a.UInt32(0), a.UInt32(1));
@@ -391,6 +399,58 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return false;
 		}
 	}
+	
+	[DllModuleExport(203, entryPoint: 0x00039B1E, Version = "4.90.0.3000")]
+	[DllModuleExport(106, entryPoint: 0x00010156, Version = "5.1.2600.6532")]
+	public uint CreateSemaphoreW(uint lpSemaphoreAttributes, uint lInitialCount, uint lMaximumCount, LpcStr lpName)
+	{
+		_logger.LogInformation("[kernel32] CreateSemaphoreW: lpSemaphoreAttributes={lpSemaphoreAttributes}, lInitialCount={lInitialCount}, lMaximumCount={lMaximumCount}, lpName={lpName}", lpSemaphoreAttributes, lInitialCount, lMaximumCount, lpName);
+		return CreateSemaphore(lpSemaphoreAttributes, lInitialCount, lMaximumCount, lpName);
+	}
+	
+	[DllModuleExport(202, entryPoint: 0x000075C5, Version = "4.90.0.3000")]
+	[DllModuleExport(105, entryPoint: 0x00010B6D, Version = "5.1.2600.6532")]
+	public uint CreateSemaphoreA(uint lpSemaphoreAttributes, uint lInitialCount, uint lMaximumCount, LpcStr lpName)
+	{
+		_logger.LogInformation("[kernel32] CreateSemaphoreA: lpSemaphoreAttributes={lpSemaphoreAttributes}, lInitialCount={lInitialCount}, lMaximumCount={lMaximumCount}, lpName={lpName}", lpSemaphoreAttributes, lInitialCount, lMaximumCount, lpName);
+		return CreateSemaphore(lpSemaphoreAttributes, lInitialCount, lMaximumCount, lpName);
+	}
+	
+	[DllModuleExport(184, entryPoint: 0x00039B1E, Version = "4.90.0.3000")]
+	[DllModuleExport(77, entryPoint: 0x0000A749, Version = "5.1.2600.6532")]
+	public uint CreateEventW(uint lpEventAttributes, uint bManualReset, uint bInitialState, LpcStr lpName)
+	{
+		_logger.LogWarning("[kernel32] CreateEventW: lpEventAttributes={lpEventAttributes}, bManualReset={bManualReset}, bInitialState={bInitialState}, lpName={lpName}", lpEventAttributes, bManualReset, bInitialState, lpName);
+		return CreateEvent(lpEventAttributes, bManualReset, bInitialState, lpName);
+	}
+	
+	[DllModuleExport(183, entryPoint: 0x00007568, Version = "4.90.0.3000", IsStub = true)]
+	[DllModuleExport(76, entryPoint: 0x00030922, Version = "5.1.2600.6532", IsStub = true)]
+	public uint CreateEventA(uint lpEventAttributes, uint bManualReset, uint bInitialState, LpcStr lpName)
+	{
+		_logger.LogWarning("[kernel32] CreateEventA: lpEventAttributes={lpEventAttributes}, bManualReset={bManualReset}, bInitialState={bInitialState}, lpName={lpName}", lpEventAttributes, bManualReset, bInitialState, lpName);
+		return CreateEvent(lpEventAttributes, bManualReset, bInitialState, lpName);
+	}
+	
+	[DllModuleExport(194, entryPoint: 0x00007532, Version = "4.90.0.3000", IsStub = true)]
+	[DllModuleExport(93, entryPoint: 0x0000E9DF, Version = "5.1.2600.6532", IsStub = true)]
+	private uint CreateMutexA(uint lpMutexAttributes, uint bInitialOwner, LpcStr lpName)
+	{
+		_logger.LogInformation("[kernel32] CreateMutexA: lpMutexAttributes={lpMutexAttributes}, bInitialOwner={bInitialOwner}, lpName={lpName}", lpMutexAttributes, bInitialOwner, lpName);
+		return CreateMutex(lpMutexAttributes, bInitialOwner, lpName);
+	}
+
+	[DllModuleExport(195, entryPoint: 0x00039B03, Version = "4.90.0.3000", IsStub = true)]
+	[DllModuleExport(94, entryPoint: 0x0000E957, Version = "5.1.2600.6532", IsStub = true)]
+	public uint CreateMutexW(uint lpMutexAttributes, uint bInitialOwner, LpcStr lpName)
+	{
+		_logger.LogInformation("[kernel32] CreateMutexW: lpMutexAttributes={lpMutexAttributes}, bInitialOwner={bInitialOwner}, lpName={lpName}", lpMutexAttributes, bInitialOwner, lpName);
+		return CreateMutex(lpMutexAttributes, bInitialOwner, lpName);
+	}
+
+	[DllModuleExport(370, entryPoint: 0x0001B03D, Version = "4.90.0.3000", IsStub = true)]
+	[DllModuleExport(334, entryPoint: 0x0001C123, Version = "5.1.2600.6532", IsStub = true)]
+	private uint GetEnvironmentStrings() => GetEnvironmentStringsA();
 
 	/// <summary>
 	/// Retrieves the version number of the operating system.
@@ -4043,7 +4103,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(37)]
-	private uint CreateSemaphore(uint lpSemaphoreAttributes, int lInitialCount, int lMaximumCount, in LpcStr lpName)
+	private uint CreateSemaphore(uint lpSemaphoreAttributes, uint lInitialCount, uint lMaximumCount, in LpcStr lpName)
 	{
 		var name = lpName.ToString();
 
@@ -4067,7 +4127,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(37)]
-	private uint ReleaseSemaphore(uint hSemaphore, int lReleaseCount, uint lpPreviousCount)
+	private uint ReleaseSemaphore(uint hSemaphore, uint lReleaseCount, uint lpPreviousCount)
 	{
 		_logger.LogInformation("[Kernel32] ReleaseSemaphore(handle=0x{Handle:X8}, count={Count})", hSemaphore, lReleaseCount);
 
@@ -4081,7 +4141,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		if (lpPreviousCount != 0)
 		{
-			_env.MemWrite32(lpPreviousCount, (uint)previousCount);
+			_env.MemWrite32(lpPreviousCount, previousCount);
 		}
 
 		// Wake waiting threads

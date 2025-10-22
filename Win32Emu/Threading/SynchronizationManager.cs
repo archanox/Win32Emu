@@ -52,11 +52,11 @@ public class EmulatedSemaphore
 {
 	public uint Handle { get; }
 	public string? Name { get; }
-	public int CurrentCount { get; set; }
-	public int MaximumCount { get; }
+	public uint CurrentCount { get; set; }
+	public uint MaximumCount { get; }
 	public Queue<uint> WaitingThreads { get; } = new();
 
-	public EmulatedSemaphore(uint handle, string? name, int initialCount, int maximumCount)
+	public EmulatedSemaphore(uint handle, string? name, uint initialCount, uint maximumCount)
 	{
 		Handle = handle;
 		Name = name;
@@ -70,20 +70,15 @@ public class EmulatedSemaphore
 /// <summary>
 /// Manages Win32 synchronization objects
 /// </summary>
-public class SynchronizationManager
+public class SynchronizationManager(ILogger? logger = null)
 {
-	private readonly ILogger _logger;
+	private readonly ILogger _logger = logger ?? NullLogger.Instance;
 	private readonly Dictionary<uint, EmulatedMutex> _mutexes = new();
 	private readonly Dictionary<uint, EmulatedEvent> _events = new();
 	private readonly Dictionary<uint, EmulatedSemaphore> _semaphores = new();
 	private readonly Dictionary<string, uint> _namedObjects = new(); // name -> handle
 	private uint _nextHandle = 0x2000;
-	private readonly object _lock = new();
-
-	public SynchronizationManager(ILogger? logger = null)
-	{
-		_logger = logger ?? NullLogger.Instance;
-	}
+	private readonly Lock _lock = new();
 
 	#region Mutex Operations
 
@@ -358,7 +353,7 @@ public class SynchronizationManager
 	/// <summary>
 	/// Create a semaphore
 	/// </summary>
-	public uint CreateSemaphore(int initialCount, int maximumCount, string? name, out bool alreadyExists)
+	public uint CreateSemaphore(uint initialCount, uint maximumCount, string? name, out bool alreadyExists)
 	{
 		lock (_lock)
 		{
@@ -420,7 +415,7 @@ public class SynchronizationManager
 	/// <summary>
 	/// Release a semaphore
 	/// </summary>
-	public bool ReleaseSemaphore(uint handle, int releaseCount, out int previousCount)
+	public bool ReleaseSemaphore(uint handle, uint releaseCount, out uint previousCount)
 	{
 		lock (_lock)
 		{
