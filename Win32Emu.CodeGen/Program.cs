@@ -302,9 +302,14 @@ class Program
         // Group exports by DLL name across different versions
         var allExports = new List<ExportedFunction>();
         
-        // Check all DLL directories
-        var dllDirectories = new[] { "DLLs/WinME", "DLLs/WinXP" };
-        foreach (var dllDir in dllDirectories)
+        // Check all DLL directories with version mapping
+        var dllDirectoriesWithVersions = new[] 
+        { 
+            ("DLLs/WinME", "4.90.0.3000"),  // Windows ME
+            ("DLLs/WinXP", "5.1.2600.6532") // Windows XP SP3
+        };
+        
+        foreach (var (dllDir, version) in dllDirectoriesWithVersions)
         {
             if (!Directory.Exists(dllDir))
                 continue;
@@ -317,9 +322,9 @@ class Program
             if (dllPath != null && File.Exists(dllPath))
             {
                 Console.WriteLine($"Parsing {dllPath}...");
-                var exports = PeExportParser.ParseExports(dllPath);
+                var exports = PeExportParser.ParseExports(dllPath, version);
                 allExports.AddRange(exports);
-                Console.WriteLine($"  Found {exports.Count} exports");
+                Console.WriteLine($"  Found {exports.Count} exports (version {version})");
             }
         }
         
