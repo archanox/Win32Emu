@@ -333,6 +333,34 @@ public class EnvironmentTests : IDisposable
         return environmentStrings;
     }
 
+    [Fact]
+    public void GetEnvironmentStrings_WithoutSuffix_ShouldReturnValidPointer()
+    {
+        // Act - Call GetEnvironmentStrings without A or W suffix
+        // Per Windows API convention, this should map to the ANSI version
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGS");
+
+        // Assert
+        Assert.NotEqual(0u, envStringsPtr); // Should return a valid pointer
+    }
+
+    [Fact]
+    public void GetEnvironmentStrings_ShouldBehaveLikeAnsiVersion()
+    {
+        // Act - Call both GetEnvironmentStrings and GetEnvironmentStringsA
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGS");
+        var envStringsAPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSA");
+
+        // Assert - Both should return valid pointers
+        Assert.NotEqual(0u, envStringsPtr);
+        Assert.NotEqual(0u, envStringsAPtr);
+        
+        // The content should be ANSI strings (single-byte characters)
+        // Read a few characters to verify they're ANSI
+        var firstChar = _testEnv.Memory.Read8(envStringsPtr);
+        Assert.True(firstChar > 0 && firstChar < 128, "First character should be ASCII");
+    }
+
     /// <summary>
     /// Helper method to read a null-terminated Unicode string from memory
     /// </summary>

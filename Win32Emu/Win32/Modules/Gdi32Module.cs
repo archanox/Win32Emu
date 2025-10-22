@@ -55,6 +55,9 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "TEXTOUT":
+					returnValue = TextOut(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.Int32(4));
+					return true;
+				
 				case "TEXTOUTA":
 					returnValue = TextOutA(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.Int32(4));
 					return true;
@@ -166,7 +169,7 @@ namespace Win32Emu.Win32.Modules
 			return 1; // Non-zero on success
 		}
 
-		[DllModuleExport(1)]
+		[DllModuleExport(1, IsStub = true)]
 		private uint TextOut(uint hdc, int x, int y, uint lpString, int cbString)
 		{
 			return 0;

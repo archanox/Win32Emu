@@ -33,184 +33,184 @@ namespace Win32Emu.Win32.Modules
 				// Glide initialization/shutdown
 				case "_GRGLIDEINIT@0":
 					_logger.LogInformation("[Glide2x] grGlideInit()");
-					returnValue = 0; // Success
+					returnValue = grGlideInit(); // Success
 					return true;
 
 				case "_GRGLIDESHUTDOWN@0":
 					_logger.LogInformation("[Glide2x] grGlideShutdown()");
-					returnValue = 0;
+					returnValue = grGlideShutdown();
 					return true;
 
 				case "_GRSSTSELECT@4":
 					_logger.LogInformation("[Glide2x] grSstSelect({UInt32})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grSstSelect();
 					return true;
 
 				case "_GRSSTQUERYHARDWARE@4":
 					_logger.LogInformation("[Glide2x] grSstQueryHardware(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = 1; // Return TRUE to indicate hardware is present
+					returnValue = grSstQueryHardware(); // Return TRUE to indicate hardware is present
 					return true;
 
 				case "_GRSSTWINOPEN@28":
 					_logger.LogInformation("[Glide2x] grSstWinOpen(hwnd=0x{UInt32:X8}, res={U}, refresh={UInt33}, ...)", a.UInt32(0), a.UInt32(1), a.UInt32(2));
-					returnValue = 1; // Return TRUE for success
+					returnValue = grSstWinOpen(); // Return TRUE for success
 					return true;
 
 				case "_GRSSTWINCLOSE@0":
 					_logger.LogInformation("[Glide2x] grSstWinClose()");
-					returnValue = 0;
+					returnValue = grSstWinClose();
 					return true;
 
 				case "_GRSSTIDLE@0":
 					_logger.LogInformation("[Glide2x] grSstIdle()");
-					returnValue = 0;
+					returnValue = grSstIdle();
 					return true;
 
 				case "_GRSSTVRETRACEON@0":
 					_logger.LogInformation("[Glide2x] grSstVRetraceOn()");
-					returnValue = 1; // Return TRUE
+					returnValue = grSstVRetraceOn(); // Return TRUE
 					return true;
 
 				// Buffer management
 				case "_GRBUFFERSWAP@4":
 					_logger.LogInformation("[Glide2x] grBufferSwap({UInt32})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grBufferSwap();
 					return true;
 
 				case "_GRBUFFERCLEAR@12":
 					_logger.LogInformation("[Glide2x] grBufferClear(color=0x{UInt32:X8}, alpha={U}, depth={UInt33})", a.UInt32(0), a.UInt32(1), a.UInt32(2));
-					returnValue = 0;
+					returnValue = grBufferClear();
 					return true;
 
 				case "_GRRENDERBUFFER@4":
 					_logger.LogInformation("[Glide2x] grRenderBuffer({UInt32})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grRenderBuffer();
 					return true;
 
 				// Linear frame buffer
 				case "_GRLFBLOCK@24":
 					_logger.LogInformation("[Glide2x] grLfbLock({UInt32}, {U}, ...)", a.UInt32(0), a.UInt32(1));
-					returnValue = 1; // Return TRUE for success
+					returnValue = grLfbLock(); // Return TRUE for success
 					return true;
 
 				case "_GRLFBUNLOCK@8":
 					_logger.LogInformation("[Glide2x] grLfbUnlock({UInt32}, {U})", a.UInt32(0), a.UInt32(1));
-					returnValue = 1;
+					returnValue = grLfbUnlock();
 					return true;
 
 				// Texture management
 				case "_GUTEXMEMRESET@0":
 					_logger.LogInformation("[Glide2x] guTexMemReset()");
-					returnValue = 0;
+					returnValue = guTexMemReset();
 					return true;
 
 				case "_GUTEXALLOCATEMEMORY@60":
 					_logger.LogInformation("[Glide2x] guTexAllocateMemory(...)");
-					returnValue = 0x100000; // Return a dummy texture memory address
+					returnValue = guTexAllocateMemory(); // Return a dummy texture memory address
 					return true;
 
 				case "_GUTEXDOWNLOADMIPMAP@12":
 					_logger.LogInformation("[Glide2x] guTexDownloadMipMap(0x{UInt32:X8}, 0x{U:X8}, 0x{UInt33:X8})", a.UInt32(0), a.UInt32(1), a.UInt32(2));
-					returnValue = 0;
+					returnValue = guTexDownloadMipMap();
 					return true;
 
 				case "_GRTEXDOWNLOADTABLE@12":
 					_logger.LogInformation("[Glide2x] grTexDownloadTable({UInt32}, 0x{U:X8}, 0x{UInt33:X8})", a.UInt32(0), a.UInt32(1), a.UInt32(2));
-					returnValue = 0;
+					returnValue = grTexDownloadTable();
 					return true;
 
 				// State management
 				case "_GRGLIDEGETSTATE@4":
 					_logger.LogInformation("[Glide2x] grGlideGetState(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grGlideGetState();
 					return true;
 
 				case "_GRGLIDESETSTATE@4":
 					_logger.LogInformation("[Glide2x] grGlideSetState(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grGlideSetState();
 					return true;
 
 				// Rendering modes
 				case "_GRALPHABLENDFUNCTION@16": // _grAlphaBlendFunction@16
 					_logger.LogInformation("[Glide2x] grAlphaBlendFunction({UInt32}, {U}, {UInt33}, {U1})", a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-					returnValue = 0;
+					returnValue = grAlphaBlendFunction();
 					return true;
 
 				case "_GRDEPTHBUFFERFUNCTION@4":
 					_logger.LogInformation("[Glide2x] grDepthBufferFunction({UInt32})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grDepthBufferFunction();
 					return true;
 
 				case "_GRDEPTHMASK@4":
 					_logger.LogInformation("[Glide2x] grDepthMask({UInt32})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grDepthMask();
 					return true;
 
 				case "_GRDEPTHBUFFERMODE@4":
 					_logger.LogInformation("[Glide2x] grDepthBufferMode({UInt32})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grDepthBufferMode();
 					return true;
 
 				case "_GRCHROMAKEYVALUE@4":
 					_logger.LogInformation("[Glide2x] grChromakeyValue(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grChromakeyValue();
 					return true;
 
 				case "_GRCHROMAKEYMODE@4":
 					_logger.LogInformation("[Glide2x] grChromakeyMode({UInt32})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grChromakeyMode();
 					return true;
 
 				case "_GRCULLMODE@4":
 					_logger.LogInformation("[Glide2x] grCullMode({UInt32})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grCullMode();
 					return true;
 
 				case "_GRCLIPWINDOW@16":
 					_logger.LogInformation("[Glide2x] grClipWindow({UInt32}, {U}, {UInt33}, {U1})", a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-					returnValue = 0;
+					returnValue = grClipWindow();
 					return true;
 
 				case "_GRCONSTANTCOLORVALUE@4":
 					_logger.LogInformation("[Glide2x] grConstantColorValue(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grConstantColorValue();
 					return true;
 
 				// GU helper functions
 				case "_GUALPHASOURCE@4":
 					_logger.LogInformation("[Glide2x] guAlphaSource({UInt32})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = guAlphaSource();
 					return true;
 
 				case "_GUCOLORCOMBINEFUNCTION@4":
 					_logger.LogInformation("[Glide2x] guColorCombineFunction({UInt32})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = guColorCombineFunction();
 					return true;
 
 				case "_GUTEXCOMBINEFUNCTION@8":
 					_logger.LogInformation("[Glide2x] guTexCombineFunction({UInt32}, {U})", a.UInt32(0), a.UInt32(1));
-					returnValue = 0;
+					returnValue = guTexCombineFunction();
 					return true;
 
 				case "_GUTEXSOURCE@4":
 					_logger.LogInformation("[Glide2x] guTexSource(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = guTexSource();
 					return true;
 
 				// Drawing primitives
 				case "_GRAADRAWLINE@8":
 					_logger.LogInformation("[Glide2x] grAADrawLine(0x{UInt32:X8}, 0x{U:X8})", a.UInt32(0), a.UInt32(1));
-					returnValue = 0;
+					returnValue = grAADrawLine();
 					return true;
 
 				case "_GRAADRAWPOINT@4":
 					_logger.LogInformation("[Glide2x] grAADrawPoint(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = 0;
+					returnValue = grAADrawPoint();
 					return true;
 
 				case "_GUDRAWTRIANGLEWITHCLIP@12": // _guDrawTriangleWithClip@12
 					_logger.LogInformation("[Glide2x] guDrawTriangleWithClip(0x{UInt32:X8}, 0x{U:X8}, 0x{UInt33:X8})", a.UInt32(0), a.UInt32(1), a.UInt32(2));
-					returnValue = 0;
+					returnValue = guDrawTriangleWithClip();
 					return true;
 
 				default:
