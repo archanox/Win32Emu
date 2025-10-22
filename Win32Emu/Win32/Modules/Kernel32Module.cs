@@ -4018,7 +4018,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogDebug("[Kernel32] GetSystemInfo: Arch={Arch}, Processors={Procs}, PageSize={PageSize}", 
 			sysInfo.ProcessorArchitecture, sysInfo.NumberOfProcessors, sysInfo.PageSize);
 
-		return 0; // This function returns void, but we return 0 for consistency
+		// Note: The Windows API GetSystemInfo function returns void, but for consistency with the emulator's calling convention (which expects all API stubs to return a uint), we return 0 here.
+		return 0;
 	}
 
 	/// <summary>
