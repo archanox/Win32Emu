@@ -2029,6 +2029,18 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
+			// Resolve relative paths relative to the current directory
+			// This ensures paths like "data\IGN1.TEX" are resolved relative to the executable's directory
+			// Only do this when VFS is available, as that's when CurrentDirectory is properly set
+			var resolvedPath = path;
+			if (_env.VirtualFileSystem != null && !Path.IsPathRooted(path))
+			{
+				// Path is relative, resolve it relative to current directory
+				resolvedPath = Path.Combine(_env.CurrentDirectory, path);
+				_logger.LogDebug("[Kernel32] CreateFileA: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')", 
+					path, resolvedPath, _env.CurrentDirectory);
+			}
+
 			// If VFS is available, use it for file operations
 			if (_env.VirtualFileSystem != null)
 			{
@@ -2052,18 +2064,19 @@ public class Kernel32Module : IWin32ModuleUnsafe
 					access = VfsFileAccess.Write; // GENERIC_WRITE
 				}
 
-				var handle = _env.VirtualFileSystem.OpenFile(path, mode, access);
+				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
 				if (handle != null)
 				{
 					return _env.RegisterHandle(handle);
 				}
 
-				_logger.LogInformation("[Kernel32] CreateFileA (VFS) failed: {Path}", path);
+				_logger.LogInformation("[Kernel32] CreateFileA (VFS) failed: {Path}", resolvedPath);
 				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
 			// Fallback to direct filesystem access if VFS not available
+			// Use the original path (not resolved) since we're working with the real filesystem
 			var fileMode = dwCreationDisposition switch
 			{
 				1 => FileMode.CreateNew,
