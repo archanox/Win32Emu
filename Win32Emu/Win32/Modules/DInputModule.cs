@@ -225,7 +225,7 @@ namespace Win32Emu.Win32.Modules
 				{ "Acquire", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_Acquire(cpu, mem), ArgBytes: 4) }, // this only
 				{ "Unacquire", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_Unacquire(cpu, mem), ArgBytes: 4) }, // this only
 				{ "GetDeviceState", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_GetDeviceState(cpu, mem), ArgBytes: 12) }, // this + cbData + lpvData
-				{ "GetDeviceData", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_GetDeviceData(cpu, mem), ArgBytes: 16) }, // this + cbObjectData + rgdod + pdwInOut + dwFlags
+				{ "GetDeviceData", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_GetDeviceData(cpu, mem), ArgBytes: 20) }, // this + cbObjectData + rgdod + pdwInOut + dwFlags
 				{ "SetDataFormat", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_SetDataFormat(cpu, mem), ArgBytes: 8) }, // this + lpdf
 				{ "SetEventNotification", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_SetEventNotification(cpu, mem), ArgBytes: 8) }, // this + hEvent
 				{ "SetCooperativeLevel", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_SetCooperativeLevel(cpu, mem), ArgBytes: 12) }, // this + hwnd + dwFlags
