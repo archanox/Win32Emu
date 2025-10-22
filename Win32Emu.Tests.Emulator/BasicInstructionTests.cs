@@ -352,6 +352,87 @@ public class BasicInstructionTests : IDisposable
 	//TODO: MUL_EBX_ShouldMultiplyEAXByEBX
 	//TODO: MUL_EBX_ShouldMultiplyUnsigned tests
 
+    [Fact]
+    public void PUSHF_ShouldPush16BitFlags()
+    {
+        // Arrange: PUSHF (66 9C) - 16-bit version with operand-size prefix
+        // Set some flags in EFLAGS (CF=1, ZF=1, SF=0, OF=0)
+        var flags = (1u << (int)CpuFlag.Cf) | (1u << (int)CpuFlag.Zf);
+        _helper.SetFlags(flags);
+        var esp = _helper.GetReg("ESP");
+        _helper.WriteCode(0x66, 0x9C); // Operand-size prefix + PUSHF
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(esp - 2u, _helper.GetReg("ESP")); // Stack pointer should decrease by 2
+        var pushedValue = _helper.Memory.Read16(_helper.GetReg("ESP"));
+        Assert.Equal((ushort)flags, pushedValue); // Only lower 16 bits should be pushed
+    }
+
+    [Fact]
+    public void POPF_ShouldPop16BitFlags()
+    {
+        // Arrange: POPF (66 9D) - 16-bit version with operand-size prefix
+        // Push a 16-bit flags value onto the stack
+        var flagsValue = (ushort)((1 << (int)CpuFlag.Cf) | (1 << (int)CpuFlag.Sf));
+        var esp = _helper.GetReg("ESP");
+        _helper.Memory.Write16(esp - 2, flagsValue);
+        _helper.SetReg("ESP", esp - 2);
+        _helper.SetFlags(0); // Clear all flags
+        _helper.WriteCode(0x66, 0x9D); // Operand-size prefix + POPF
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(esp, _helper.GetReg("ESP")); // Stack pointer should increase by 2
+        var newFlags = _helper.GetFlags();
+        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set from popped value");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Sf), "SF should be set from popped value");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear from popped value");
+    }
+
+    [Fact]
+    public void PUSHFD_ShouldPush32BitFlags()
+    {
+        // Arrange: PUSHFD (9C) - In 32-bit mode, this is the default PUSHFD
+        var flags = (1u << (int)CpuFlag.Cf) | (1u << (int)CpuFlag.Zf) | (1u << 20); // Set bit 20 for testing
+        _helper.SetFlags(flags);
+        var esp = _helper.GetReg("ESP");
+        _helper.WriteCode(0x9C);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(esp - 4u, _helper.GetReg("ESP")); // Stack pointer should decrease by 4 for 32-bit
+        var pushedValue = _helper.Memory.Read32(_helper.GetReg("ESP"));
+        Assert.Equal(flags, pushedValue); // All 32 bits should be pushed
+    }
+
+    [Fact]
+    public void POPFD_ShouldPop32BitFlags()
+    {
+        // Arrange: POPFD (9D) - In 32-bit mode, this is the default POPFD
+        // Push a 32-bit flags value onto the stack
+        var flagsValue = (1u << (int)CpuFlag.Cf) | (1u << (int)CpuFlag.Sf) | (1u << 21);
+        var esp = _helper.GetReg("ESP");
+        _helper.Memory.Write32(esp - 4, flagsValue);
+        _helper.SetReg("ESP", esp - 4);
+        _helper.SetFlags(0); // Clear all flags
+        _helper.WriteCode(0x9D);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(esp, _helper.GetReg("ESP")); // Stack pointer should increase by 4
+        var newFlags = _helper.GetFlags();
+        Assert.Equal(flagsValue, newFlags); // All 32 bits should be restored
+    }
+
     public void Dispose()
     {
         _helper?.Dispose();
