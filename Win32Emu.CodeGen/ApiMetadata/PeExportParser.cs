@@ -27,16 +27,24 @@ public class PeExportParser
                 Console.WriteLine($"Warning: No export directory found in {Path.GetFileName(dllPath)}");
                 return exports;
             }
+
+            // Extract version from PE resources
+            string? version = ExtractFileVersion(dllPath);
             
             foreach (var export in exportDirectory.Entries)
             {
+                // Get entry point RVA if not forwarded
+                uint? entryPoint = export.IsForwarder ? null : export.Address?.Rva;
+                
                 // Skip forwarded exports for now (they don't have actual implementations in this DLL)
                 if (export.IsByName && export.Name != null)
                 {
                     exports.Add(new ExportedFunction(
                         export.Name,
                         export.Ordinal,
-                        export.IsForwarder ? export.ForwarderName : null
+                        export.IsForwarder ? export.ForwarderName : null,
+                        entryPoint,
+                        version
                     ));
                 }
                 else if (!export.IsByName)
@@ -45,7 +53,9 @@ public class PeExportParser
                     exports.Add(new ExportedFunction(
                         $"Ordinal_{export.Ordinal}",
                         export.Ordinal,
-                        export.IsForwarder ? export.ForwarderName : null
+                        export.IsForwarder ? export.ForwarderName : null,
+                        entryPoint,
+                        version
                     ));
                 }
             }
@@ -56,6 +66,19 @@ public class PeExportParser
         }
         
         return exports;
+    }
+
+    /// <summary>
+    /// Extract file version from PE resources
+    /// TODO: Implement proper version extraction using AsmResolver API
+    /// For now, returns null - version info will not be populated
+    /// </summary>
+    private static string? ExtractFileVersion(string dllPath)
+    {
+        // Version extraction would require deeper integration with AsmResolver
+        // For now, we'll leave this as a TODO and return null
+        // The Version field will still be part of the attribute but won't be populated yet
+        return null;
     }
     
     /// <summary>
@@ -96,4 +119,6 @@ public class PeExportParser
 /// <param name="Name">Function name</param>
 /// <param name="Ordinal">Export ordinal number</param>
 /// <param name="ForwardedTo">If this is a forwarded export, the target (e.g., "KERNELBASE.GetVersion")</param>
-public record ExportedFunction(string Name, uint Ordinal, string? ForwardedTo);
+/// <param name="EntryPoint">RVA of the function entry point (null if forwarded)</param>
+/// <param name="Version">DLL version string (e.g., "4.90.0.3000")</param>
+public record ExportedFunction(string Name, uint Ordinal, string? ForwardedTo, uint? EntryPoint = null, string? Version = null);

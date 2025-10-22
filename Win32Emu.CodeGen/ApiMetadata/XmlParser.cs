@@ -51,7 +51,19 @@ public class XmlParser
                 
                 var returnType = apiElement.Attribute("Return")?.Value ?? "DWORD";
                 
-                apis.Add(new ApiDefinition(name, returnType, parameters, argBytes));
+                // Check if BothCharset attribute is present (generates both A and W versions)
+                var bothCharset = apiElement.Attribute("BothCharset")?.Value == "True";
+                
+                if (bothCharset)
+                {
+                    // Add both A and W versions
+                    apis.Add(new ApiDefinition(name + "A", returnType, parameters, argBytes));
+                    apis.Add(new ApiDefinition(name + "W", returnType, parameters, argBytes));
+                }
+                else
+                {
+                    apis.Add(new ApiDefinition(name, returnType, parameters, argBytes));
+                }
             }
         }
         catch (Exception ex)
