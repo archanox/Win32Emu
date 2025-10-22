@@ -24,6 +24,16 @@ public partial class GameInfoWindow : Window
         // Set up clipboard access for the view model
         if (DataContext is GameInfoViewModel viewModel)
         {
+            // Set up clipboard setter function
+            viewModel.SetClipboardSetter(async (text) =>
+            {
+                var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+                if (clipboard != null)
+                {
+                    await clipboard.SetTextAsync(text);
+                }
+            });
+            
             // Generate the GameDB stub when window opens
             viewModel.CopyGameDbStubCommand.Execute(null);
         }
@@ -50,45 +60,16 @@ public partial class GameInfoWindow : Window
         }
     }
 
-    private async void CopyUnimplemented_Click(object? sender, RoutedEventArgs e)
+    private async void CopyButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is GameInfoViewModel viewModel && !string.IsNullOrEmpty(viewModel.UnimplementedList))
+        // Show a temporary message that the text was copied
+        // The actual copy is handled by the Command binding
+        if (sender is Button button)
         {
-            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-            if (clipboard != null)
-            {
-                await clipboard.SetTextAsync(viewModel.UnimplementedList);
-                
-                // Show a temporary message that the text was copied
-                if (sender is Button button)
-                {
-                    var originalContent = button.Content;
-                    button.Content = "✓ Copied!";
-                    await Task.Delay(2000);
-                    button.Content = originalContent;
-                }
-            }
-        }
-    }
-
-    private async void CopyPartiallyImplemented_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is GameInfoViewModel viewModel && !string.IsNullOrEmpty(viewModel.PartiallyImplementedList))
-        {
-            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-            if (clipboard != null)
-            {
-                await clipboard.SetTextAsync(viewModel.PartiallyImplementedList);
-                
-                // Show a temporary message that the text was copied
-                if (sender is Button button)
-                {
-                    var originalContent = button.Content;
-                    button.Content = "✓ Copied!";
-                    await Task.Delay(2000);
-                    button.Content = originalContent;
-                }
-            }
+            var originalContent = button.Content;
+            button.Content = "✓ Copied!";
+            await Task.Delay(2000);
+            button.Content = originalContent;
         }
     }
 }

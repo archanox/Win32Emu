@@ -73,6 +73,7 @@ public partial class GameInfoViewModel : ViewModelBase
     private readonly ConfigurationService? _configService;
     private readonly ILogger _logger;
     private Action<Game>? _onGameUpdated;
+    private Func<string, Task>? _clipboardSetter;
 
     public GameInfoViewModel(Game game, IGameDbService? gameDbService = null, ConfigurationService? configService = null, ILogger? logger = null)
     {
@@ -91,6 +92,14 @@ public partial class GameInfoViewModel : ViewModelBase
     public void SetGameUpdatedCallback(Action<Game> callback)
     {
         _onGameUpdated = callback;
+    }
+
+    /// <summary>
+    /// Set a clipboard setter function for copying text to clipboard
+    /// </summary>
+    public void SetClipboardSetter(Func<string, Task> clipboardSetter)
+    {
+        _clipboardSetter = clipboardSetter;
     }
 
     private void LoadGameInfo()
@@ -382,17 +391,41 @@ public partial class GameInfoViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void CopyUnimplementedToClipboard()
+    private async Task CopyUnimplementedToClipboard()
     {
-        // This will be handled by the view, which has access to the clipboard
-        // The command is just here to track when the button is clicked
+        if (_clipboardSetter == null || string.IsNullOrEmpty(UnimplementedList))
+        {
+            return;
+        }
+
+        try
+        {
+            await _clipboardSetter(UnimplementedList);
+            _logger.LogInformation("Copied unimplemented functions list to clipboard");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error copying unimplemented list to clipboard");
+        }
     }
 
     [RelayCommand]
-    private void CopyPartiallyImplementedToClipboard()
+    private async Task CopyPartiallyImplementedToClipboard()
     {
-        // This will be handled by the view, which has access to the clipboard
-        // The command is just here to track when the button is clicked
+        if (_clipboardSetter == null || string.IsNullOrEmpty(PartiallyImplementedList))
+        {
+            return;
+        }
+
+        try
+        {
+            await _clipboardSetter(PartiallyImplementedList);
+            _logger.LogInformation("Copied partially implemented functions list to clipboard");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error copying partially implemented list to clipboard");
+        }
     }
 }
 

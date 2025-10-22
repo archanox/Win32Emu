@@ -121,11 +121,15 @@
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
-                            <Button Content="Copy Unimplemented"
-                                    Click="CopyUnimplemented_Click"
+                            <Button Name="CopyUnimplementedButton"
+                                    Content="Copy Unimplemented"
+                                    Command="{Binding CopyUnimplementedToClipboardCommand}"
+                                    Click="CopyButton_Click"
                                     ToolTip.Tip="Copy list of unimplemented functions to clipboard"/>
-                            <Button Content="Copy Partially Implemented"
-                                    Click="CopyPartiallyImplemented_Click"
+                            <Button Name="CopyPartiallyImplementedButton"
+                                    Content="Copy Partially Implemented"
+                                    Command="{Binding CopyPartiallyImplementedToClipboardCommand}"
+                                    Click="CopyButton_Click"
                                     ToolTip.Tip="Copy list of partially implemented functions to clipboard"/>
                         </StackPanel>
                     </StackPanel>
