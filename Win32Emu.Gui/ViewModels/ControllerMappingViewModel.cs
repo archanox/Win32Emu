@@ -343,6 +343,7 @@ public partial class ControllerMappingViewModel : ViewModelBase
         
         // Persist to disk
         var emulatorConfig = _configService.GetEmulatorConfiguration();
+        emulatorConfig.ControllerConfigurations = new Dictionary<string, ControllerConfiguration>(_settings.ControllerConfigurations);
         _configService.SaveEmulatorConfiguration(emulatorConfig);
     }
 }
