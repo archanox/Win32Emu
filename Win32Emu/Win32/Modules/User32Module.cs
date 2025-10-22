@@ -771,11 +771,6 @@ namespace Win32Emu.Win32.Modules
 			// Set up stack for stdcall convention (parameters pushed right-to-left)
 			var esp = savedEsp;
 
-			// Push return address (we'll use a special marker address)
-			const uint RETURN_ADDRESS = 0xDEADBEEF;
-			esp -= 4;
-			memory.Write32(esp, RETURN_ADDRESS);
-
 			// Push parameters (right-to-left for stdcall)
 			esp -= 4;
 			memory.Write32(esp, lParam);
@@ -788,6 +783,12 @@ namespace Win32Emu.Win32.Modules
 
 			esp -= 4;
 			memory.Write32(esp, hwnd);
+
+			// Push return address (we'll use a special marker address)
+			// This must be pushed AFTER parameters so it's on top of the stack
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+			esp -= 4;
+			memory.Write32(esp, RETURN_ADDRESS);
 
 			// Update CPU registers
 			cpu.SetRegister("ESP", esp);
