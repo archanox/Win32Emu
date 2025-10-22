@@ -3887,6 +3887,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return handle;
 	}
 
+	[DllModuleExport(37)]
 	private uint GetCurrentThreadId()
 	{
 		var threadId = _env.GetCurrentThreadId();
