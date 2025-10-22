@@ -269,14 +269,14 @@ class Program
         Console.WriteLine();
         
         // Parse API Monitor XML to get function signatures
-        var xmlApiMonPath = Path.Combine("ApiMon XMLs", "Windows");
+        var xmlApiMonBasePath = "ApiMon XMLs";
         var xmlModuleName = Path.GetFileNameWithoutExtension(dllName);
         
-        // Try case-insensitive search for the XML file
+        // Try case-insensitive search for the XML file recursively in all subdirectories
         string? xmlPath = null;
-        if (Directory.Exists(xmlApiMonPath))
+        if (Directory.Exists(xmlApiMonBasePath))
         {
-            var xmlFiles = Directory.GetFiles(xmlApiMonPath, "*.xml");
+            var xmlFiles = Directory.GetFiles(xmlApiMonBasePath, "*.xml", SearchOption.AllDirectories);
             xmlPath = xmlFiles.FirstOrDefault(f => 
                 string.Equals(Path.GetFileNameWithoutExtension(f), xmlModuleName, StringComparison.OrdinalIgnoreCase));
         }
