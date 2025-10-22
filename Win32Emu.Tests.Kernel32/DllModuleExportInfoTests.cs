@@ -79,4 +79,44 @@ public class DllModuleExportInfoTests
 		Assert.NotNull(forwardedTo);
 		Assert.Equal("KERNELBASE.GetVersionEx", forwardedTo);
 	}
+
+	[Fact]
+	public void IsExportStub_ShouldReturnTrue_ForStubExport()
+	{
+		// Arrange & Act
+		var isStub = DllModuleExportInfo.IsExportStub("KERNEL32.DLL", "GetAcp");
+
+		// Assert
+		Assert.True(isStub);
+	}
+
+	[Fact]
+	public void IsExportStub_ShouldReturnFalse_ForFullyImplementedExport()
+	{
+		// Arrange & Act
+		var isStub = DllModuleExportInfo.IsExportStub("KERNEL32.DLL", "GetProcAddress");
+
+		// Assert
+		Assert.False(isStub);
+	}
+
+	[Fact]
+	public void IsExportStub_ShouldReturnFalse_ForNonExistentExport()
+	{
+		// Arrange & Act
+		var isStub = DllModuleExportInfo.IsExportStub("KERNEL32.DLL", "NonExistentFunction");
+
+		// Assert
+		Assert.False(isStub);
+	}
+
+	[Fact]
+	public void IsExportStub_ShouldBeCaseInsensitive()
+	{
+		// Arrange & Act
+		var isStub = DllModuleExportInfo.IsExportStub("kernel32.dll", "GETACP");
+
+		// Assert
+		Assert.True(isStub);
+	}
 }
