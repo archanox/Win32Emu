@@ -124,13 +124,29 @@ public class SilkInputBackend : IInputBackend
             }
 
             // Return current state of the device.
-            // This is a stub implementation that returns empty state.
+            // Note: This is a basic implementation that returns the cached state.
             // A full implementation would:
             // - Query Silk.NET.Input's IInputContext for actual keyboard/mouse/gamepad state
             // - Requires integration with a windowing system (SDL, GLFW) to get input context
             // - Update device.State with current button presses, axis positions, etc.
+            // For now, backends that use GLFW (SilkGlfwRenderingBackend) should update
+            // the input state directly when processing window events.
             state = device.State;
             return true;
+        }
+    }
+
+    /// <summary>
+    /// Update device state (called by rendering backends that have window context)
+    /// </summary>
+    public void UpdateDeviceState(uint deviceId, IInputBackend.InputState newState)
+    {
+        lock (_lock)
+        {
+            if (_devices.TryGetValue(deviceId, out var device))
+            {
+                device.State = newState;
+            }
         }
     }
 

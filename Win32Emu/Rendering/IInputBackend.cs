@@ -21,9 +21,19 @@ public interface IInputBackend : IDisposable
     /// </summary>
     public class InputState
     {
+        // Joystick/Gamepad state
         public Dictionary<int, bool> Buttons { get; set; } = new();
         public Dictionary<int, short> Axes { get; set; } = new();
         public int PovHat { get; set; }
+
+        // Keyboard state (256 keys for DirectInput compatibility)
+        public Dictionary<int, bool> KeyStates { get; set; } = new();
+
+        // Mouse state
+        public int MouseX { get; set; }
+        public int MouseY { get; set; }
+        public int MouseZ { get; set; } // Scroll wheel
+        public Dictionary<int, bool> MouseButtons { get; set; } = new();
     }
 
     /// <summary>

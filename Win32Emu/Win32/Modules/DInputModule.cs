@@ -159,6 +159,10 @@ namespace Win32Emu.Win32.Modules
 			public uint Handle { get; set; }
 			public uint BackendDeviceId { get; set; }
 			public string Name { get; set; } = string.Empty;
+			public IInputBackend.DeviceType DeviceType { get; set; }
+			public bool IsAcquired { get; set; }
+			public byte[]? DataFormat { get; set; }
+			public int DataFormatSize { get; set; }
 		}
 
 		// COM interface methods for IDirectInput
@@ -203,12 +207,72 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[DInput COM] IDirectInput::CreateDevice(this=0x{ThisPtr:X8}, rguid=0x{Rguid:X8}, lplpDevice=0x{LplpDirectInputDevice:X8}, pUnkOuter=0x{PUnkOuter:X8})", thisPtr, rguid, lplpDirectInputDevice, pUnkOuter);
 
+			// Determine device type from GUID
+			// Read GUID structure (16 bytes) from memory
+			var deviceType = IInputBackend.DeviceType.Joystick; // Default to joystick
+			var deviceName = "Emulated Device";
+			uint backendDeviceId = 0;
+
+			if (rguid != 0)
+			{
+				// Read GUID (Data1, Data2, Data3, Data4[8])
+				var guidData1 = _env.MemRead32(rguid);
+				
+				// Common DirectInput device GUIDs
+				// GUID_SysKeyboard = {6F1D2B61-D5A0-11CF-BFC7-444553540000}
+				// GUID_SysMouse = {6F1D2B60-D5A0-11CF-BFC7-444553540000}
+				// GUID_Joystick = {6F1D2B70-D5A0-11CF-BFC7-444553540000}
+				
+				if (guidData1 == 0x6F1D2B61)
+				{
+					deviceType = IInputBackend.DeviceType.Keyboard;
+					deviceName = "Keyboard";
+					// Find keyboard device in backend
+					if (_env.InputBackend != null)
+					{
+						var devices = _env.InputBackend.GetDevices();
+						var kbDevice = devices.FirstOrDefault(d => d.Type == IInputBackend.DeviceType.Keyboard);
+						backendDeviceId = kbDevice.DeviceId;
+					}
+				}
+				else if (guidData1 == 0x6F1D2B60)
+				{
+					deviceType = IInputBackend.DeviceType.Mouse;
+					deviceName = "Mouse";
+					// Find mouse device in backend
+					if (_env.InputBackend != null)
+					{
+						var devices = _env.InputBackend.GetDevices();
+						var mouseDevice = devices.FirstOrDefault(d => d.Type == IInputBackend.DeviceType.Mouse);
+						backendDeviceId = mouseDevice.DeviceId;
+					}
+				}
+				else
+				{
+					// Try to find a joystick device
+					deviceType = IInputBackend.DeviceType.Joystick;
+					if (_env.InputBackend != null)
+					{
+						var devices = _env.InputBackend.GetDevices();
+						var joystickDevice = devices.FirstOrDefault(d => d.Type == IInputBackend.DeviceType.Joystick);
+						backendDeviceId = joystickDevice.DeviceId;
+						if (backendDeviceId != 0)
+						{
+							deviceName = joystickDevice.Name;
+						}
+					}
+				}
+			}
+
 			// Create a device COM object with its own vtable
 			var deviceHandle = _nextDeviceHandle++;
 			var deviceObj = new DirectInputDevice
 			{
 				Handle = deviceHandle,
-				Name = "Emulated Device"
+				Name = deviceName,
+				DeviceType = deviceType,
+				BackendDeviceId = backendDeviceId,
+				IsAcquired = false
 			};
 			_devices[deviceHandle] = deviceObj;
 
@@ -297,7 +361,18 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DInputDevice_Acquire(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DInput COM] IDirectInputDevice::Acquire() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::Acquire(this=0x{ThisPtr:X8})", thisPtr);
+
+			// Find the device associated with this COM object
+			var device = _devices.Values.FirstOrDefault(d => true); // TODO: Map thisPtr to device
+			if (device != null)
+			{
+				device.IsAcquired = true;
+			}
+
 			return 0; // DI_OK
 		}
 
@@ -314,12 +389,90 @@ namespace Win32Emu.Win32.Modules
 			var cbData = args.UInt32(1);
 			var lpvData = args.UInt32(2);
 
-			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetDeviceState(this=0x{ThisPtr:X8}, cbData={CbData}, lpvData=0x{LpvData:X8}) - stub", thisPtr, cbData, lpvData);
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetDeviceState(this=0x{ThisPtr:X8}, cbData={CbData}, lpvData=0x{LpvData:X8})", thisPtr, cbData, lpvData);
 
-			// Zero out the device state buffer
+			// Find the device associated with this COM object
+			var device = _devices.Values.FirstOrDefault(d => true); // TODO: Map thisPtr to device
+			if (device == null || !device.IsAcquired)
+			{
+				_logger.LogWarning("[DInput COM] Device not acquired or not found");
+				return 0x8007001E; // DIERR_NOTACQUIRED
+			}
+
+			// Zero out the buffer first
 			if (lpvData != 0 && cbData > 0)
 			{
 				_env.MemZero(lpvData, cbData);
+			}
+
+			// Poll input from backend if available
+			if (_env.InputBackend != null && device.BackendDeviceId != 0)
+			{
+				if (_env.InputBackend.PollDevice(device.BackendDeviceId, out var state) && state != null)
+				{
+					// Convert backend state to DirectInput format
+					switch (device.DeviceType)
+					{
+						case IInputBackend.DeviceType.Keyboard:
+							// DirectInput keyboard format: 256 bytes, one per key
+							if (cbData >= 256 && lpvData != 0)
+							{
+								for (var i = 0; i < 256; i++)
+								{
+									var isPressed = state.KeyStates.TryGetValue(i, out var pressed) && pressed;
+									_env.Memory.Write8(lpvData + (uint)i, (byte)(isPressed ? 0x80 : 0x00));
+								}
+							}
+							break;
+
+						case IInputBackend.DeviceType.Mouse:
+							// DirectInput mouse format: DIMOUSESTATE structure
+							// struct { LONG lX; LONG lY; LONG lZ; BYTE rgbButtons[4]; }
+							if (cbData >= 16 && lpvData != 0)
+							{
+								_env.Memory.Write32(lpvData + 0, (uint)state.MouseX); // lX
+								_env.Memory.Write32(lpvData + 4, (uint)state.MouseY); // lY
+								_env.Memory.Write32(lpvData + 8, (uint)state.MouseZ); // lZ (wheel)
+								for (var i = 0; i < 4; i++)
+								{
+									var isPressed = state.MouseButtons.TryGetValue(i, out var pressed) && pressed;
+									_env.Memory.Write8(lpvData + 12 + (uint)i, (byte)(isPressed ? 0x80 : 0x00));
+								}
+							}
+							break;
+
+						case IInputBackend.DeviceType.Joystick:
+							// DirectInput joystick format: DIJOYSTATE structure
+							// Simplified: axes (4 LONGs) + POV (DWORD) + buttons (32 BYTEs)
+							if (lpvData != 0)
+							{
+								var offset = 0u;
+								// Axes (X, Y, Z, Rx)
+								for (var i = 0; i < 4 && offset < cbData; i++)
+								{
+									var axisValue = state.Axes.TryGetValue(i, out var val) ? val : (short)0;
+									// Convert -32768..32767 to 0..65535 for DirectInput
+									var dinputValue = (uint)(axisValue + 32768);
+									_env.Memory.Write32(lpvData + offset, dinputValue);
+									offset += 4;
+								}
+								// POV hat
+								if (offset + 4 <= cbData)
+								{
+									_env.Memory.Write32(lpvData + offset, (uint)state.PovHat);
+									offset += 4;
+								}
+								// Buttons
+								for (var i = 0; i < 32 && offset < cbData; i++)
+								{
+									var isPressed = state.Buttons.TryGetValue(i, out var pressed) && pressed;
+									_env.Memory.Write8(lpvData + offset, (byte)(isPressed ? 0x80 : 0x00));
+									offset++;
+								}
+							}
+							break;
+					}
+				}
 			}
 
 			return 0; // DI_OK

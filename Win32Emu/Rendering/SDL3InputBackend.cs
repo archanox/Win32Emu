@@ -148,31 +148,52 @@ public class Sdl3InputBackend : IInputBackend
 
         state = new IInputBackend.InputState();
 
-        if (device.Type == IInputBackend.DeviceType.Joystick && device.JoystickHandle != IntPtr.Zero)
+        switch (device.Type)
         {
-            var numAxes = SDL.GetNumJoystickAxes(device.JoystickHandle);
-            var numButtons = SDL.GetNumJoystickButtons(device.JoystickHandle);
-
-            // Get axis values
-            for (var i = 0; i < numAxes; i++)
+            case IInputBackend.DeviceType.Keyboard:
             {
-                var value = SDL.GetJoystickAxis(device.JoystickHandle, i);
-                state.Axes[i] = value;
+                // Note: SDL3 keyboard state is best obtained through events
+                // For now, return empty state. Rendering backend should update
+                // state through ProcessEvents.
+                // TODO: Integrate with SDL3RenderingBackend event processing
+                return true;
             }
 
-            // Get button states
-            for (var i = 0; i < numButtons; i++)
+            case IInputBackend.DeviceType.Mouse:
             {
-                state.Buttons[i] = SDL.GetJoystickButton(device.JoystickHandle, i);
+                // Note: SDL3 mouse state is best obtained through events
+                // For now, return empty state. Rendering backend should update
+                // state through ProcessEvents.
+                // TODO: Integrate with SDL3RenderingBackend event processing
+                return true;
             }
 
-            // Get POV hat state (if available)
-            if (SDL.GetNumJoystickHats(device.JoystickHandle) > 0)
+            case IInputBackend.DeviceType.Joystick when device.JoystickHandle != IntPtr.Zero:
             {
-                state.PovHat = (int)SDL.GetJoystickHat(device.JoystickHandle, 0);
-            }
+                var numAxes = SDL.GetNumJoystickAxes(device.JoystickHandle);
+                var numButtons = SDL.GetNumJoystickButtons(device.JoystickHandle);
 
-            return true;
+                // Get axis values
+                for (var i = 0; i < numAxes; i++)
+                {
+                    var value = SDL.GetJoystickAxis(device.JoystickHandle, i);
+                    state.Axes[i] = value;
+                }
+
+                // Get button states
+                for (var i = 0; i < numButtons; i++)
+                {
+                    state.Buttons[i] = SDL.GetJoystickButton(device.JoystickHandle, i);
+                }
+
+                // Get POV hat state (if available)
+                if (SDL.GetNumJoystickHats(device.JoystickHandle) > 0)
+                {
+                    state.PovHat = (int)SDL.GetJoystickHat(device.JoystickHandle, 0);
+                }
+
+                return true;
+            }
         }
 
         return false;
