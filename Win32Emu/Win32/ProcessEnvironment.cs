@@ -1679,6 +1679,52 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
+	/// Process events from all subscribed rendering and input backends.
+	/// This should be called regularly to keep windows responsive and process input.
+	/// </summary>
+	public void ProcessAllBackendEvents()
+	{
+		// Process events from all subscribed rendering backends (e.g., GLFW windows)
+		foreach (var renderingBackend in _subscribedRenderingBackends)
+		{
+			try
+			{
+				renderingBackend.ProcessEvents();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[ProcessEnv] Error processing rendering backend events");
+			}
+		}
+
+		// Process events from all subscribed input backends
+		foreach (var inputBackend in _subscribedInputBackends)
+		{
+			try
+			{
+				inputBackend.ProcessEvents();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[ProcessEnv] Error processing input backend events");
+			}
+		}
+
+		// Also process the legacy InputBackend property if set and not already in subscribed list
+		if (InputBackend != null && !_subscribedInputBackends.Contains(InputBackend))
+		{
+			try
+			{
+				InputBackend.ProcessEvents();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[ProcessEnv] Error processing input backend events");
+			}
+		}
+	}
+
+	/// <summary>
 	/// Handle UI events from rendering/input backends and translate them to Win32 messages.
 	/// This is the event handler that gets called when backends raise UI events.
 	/// </summary>

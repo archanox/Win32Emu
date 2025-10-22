@@ -1106,14 +1106,15 @@ public sealed class Emulator : IDisposable
             {
                 while (!_eventProcessingCts.Token.IsCancellationRequested && !_stopRequested)
                 {
-                    // Process events from input backend
+                    // Process events from all subscribed rendering and input backends
+                    // This includes GLFW window events which are critical for window responsiveness
                     try
                     {
-                        _env.InputBackend?.ProcessEvents();
+                        _env.ProcessAllBackendEvents();
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "[EventProcessing] Error processing input backend events");
+                        _logger.LogError(ex, "[EventProcessing] Error processing backend events");
                     }
 
                     // Small delay to avoid busy-waiting (60 FPS event processing)
