@@ -638,7 +638,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return NativeTypes.Win32Bool.FALSE;
 	}
 
-	[DllModuleExport(35, IsStub = true)]
+	[DllModuleExport(35)]
 	private uint RaiseException(uint dwExceptionCode, uint dwExceptionFlags, uint nNumberOfArguments, uint lpArguments)
 	{
 		// RaiseException raises a software exception
@@ -656,10 +656,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
-	[DllModuleExport(10, IsStub = true)]
+	[DllModuleExport(10)]
 	private uint GetCurrentProcess() => 0xFFFFFFFF; // pseudo-handle
 
-	[DllModuleExport(7, IsStub = true)]
+	[DllModuleExport(7)]
 	public CodePage GetAcp() => CodePage.Utf8;
 
 	[DllModuleExport(9)]
@@ -740,7 +740,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
-	[DllModuleExport(17, IsStub = true)]
+	[DllModuleExport(17)]
 	private CodePage GetOemCp() => CodePage.Oem437; // IBM PC US (OEM code page)
 
 	[DllModuleExport(21)]
@@ -1000,7 +1000,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// The GetModuleHandle function returns a handle to a mapped module without incrementing its reference count. However, if this handle is passed to the FreeLibrary function, the reference count of the mapped module will be decremented. Therefore, do not pass a handle returned by GetModuleHandle to the FreeLibrary function. Doing so can cause a DLL module to be unmapped prematurely.
 	/// This function must be used carefully in a multithreaded application. There is no guarantee that the module handle remains valid between the time this function returns the handle and the time it is used. For example, suppose that a thread retrieves a module handle, but before it uses the handle, a second thread frees the module. If the system loads another module, it could reuse the module handle that was recently freed. Therefore, the first thread would have a handle to a different module than the one intended.
 	/// </remarks>
-	[DllModuleExport(16, IsStub = true)]
+	[DllModuleExport(16)]
 	private uint GetModuleHandleA(in LpcStr lpModuleName)
 	{
 		var moduleName = lpModuleName.ToString();
@@ -3705,7 +3705,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return result.ToString();
 	}
 
-	[DllModuleExport(37, IsStub = true)]
+	[DllModuleExport(37)]
 	private uint RtlUnwind(uint targetFrame, uint targetIp, uint exceptionRecord, uint returnValue)
 	{
 		// RtlUnwind is used for structured exception handling to unwind the stack
