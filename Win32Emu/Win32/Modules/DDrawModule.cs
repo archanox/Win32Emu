@@ -1382,12 +1382,20 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogInformation("[DDraw] No attached surfaces found for surface 0x{Handle:X8}", surface.Handle);
 				
-				// If this is a primary surface and a backbuffer is requested, create one on-demand
+				// If a backbuffer is requested, create one on-demand
 				// DDSCAPS_BACKBUFFER = 0x00000004
 				const uint DDSCAPS_BACKBUFFER = 0x00000004;
-				if (surface.IsPrimary && (dwCaps & DDSCAPS_BACKBUFFER) != 0)
+				
+				// Log diagnostic information
+				_logger.LogInformation("[DDraw] Surface diagnostic: IsPrimary={IsPrimary}, dwCaps=0x{Caps:X8}, backbuffer requested={BackbufferRequested}", 
+					surface.IsPrimary, dwCaps, (dwCaps & DDSCAPS_BACKBUFFER) != 0);
+				
+				// Create backbuffer on-demand if requested, regardless of whether the surface was
+				// originally marked as primary. Some applications may not set the primary flag correctly,
+				// or may request a backbuffer for any surface that needs flipping capabilities.
+				if ((dwCaps & DDSCAPS_BACKBUFFER) != 0)
 				{
-					_logger.LogInformation("[DDraw] Primary surface needs backbuffer, creating on-demand");
+					_logger.LogInformation("[DDraw] Backbuffer requested, creating on-demand for surface 0x{Handle:X8}", surface.Handle);
 					
 					// Get the DirectDraw object to determine bits per pixel
 					if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
