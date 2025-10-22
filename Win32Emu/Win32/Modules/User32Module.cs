@@ -825,6 +825,20 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
+					// Check if EIP is in the import hook address range (0x0F000000-0x10000000)
+					// These addresses don't contain executable code, only INT3 stubs that should be handled by the emulator
+					// If we're trying to execute at such an address, something has gone wrong
+					if (eip is >= 0x0F000000 and < 0x10000000)
+					{
+						_logger.LogWarning("[User32] CallWindowProcedure: Execution jumped to import hook address range 0x{Eip:X8}, aborting - this address contains no executable code", eip);
+						if (_image != null && _image.ImportAddressMap.TryGetValue(eip, out var importInfo))
+						{
+							_logger.LogWarning("[User32] CallWindowProcedure: Address is import stub for {Dll}!{Name}", importInfo.dll, importInfo.name);
+						}
+						executionSuccessful = false;
+						break;
+					}
+
 					// Detect potential infinite loops by checking if we're making progress
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
@@ -2061,6 +2075,20 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
+					// Check if EIP is in the import hook address range (0x0F000000-0x10000000)
+					// These addresses don't contain executable code, only INT3 stubs that should be handled by the emulator
+					// If we're trying to execute at such an address, something has gone wrong
+					if (eip is >= 0x0F000000 and < 0x10000000)
+					{
+						_logger.LogWarning("[User32] CallDialogProcedure: Execution jumped to import hook address range 0x{Eip:X8}, aborting - this address contains no executable code", eip);
+						if (_image != null && _image.ImportAddressMap.TryGetValue(eip, out var importInfo))
+						{
+							_logger.LogWarning("[User32] CallDialogProcedure: Address is import stub for {Dll}!{Name}", importInfo.dll, importInfo.name);
+						}
+						timedOut = true;
+						break;
+					}
+
 					// Detect potential infinite loops by checking if we're making progress
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
@@ -2321,6 +2349,20 @@ namespace Win32Emu.Win32.Modules
 						{
 						}
 
+						timedOut = true;
+						break;
+					}
+
+					// Check if EIP is in the import hook address range (0x0F000000-0x10000000)
+					// These addresses don't contain executable code, only INT3 stubs that should be handled by the emulator
+					// If we're trying to execute at such an address, something has gone wrong
+					if (eip is >= 0x0F000000 and < 0x10000000)
+					{
+						_logger.LogError("[User32] CallDialogProcedureAsync: Execution jumped to import hook address range 0x{Eip:X8}, aborting - this address contains no executable code", eip);
+						if (_image != null && _image.ImportAddressMap.TryGetValue(eip, out var importInfo))
+						{
+							_logger.LogError("[User32] CallDialogProcedureAsync: Address is import stub for {Dll}!{Name}", importInfo.dll, importInfo.name);
+						}
 						timedOut = true;
 						break;
 					}
