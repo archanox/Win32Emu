@@ -347,6 +347,14 @@ public class IcedCpu : ICpu
 				case Mnemonic.Cli: ClearFlag(If); break;
 				case Mnemonic.Sti: SetFlag(If); break;
 				case Mnemonic.Cmc: SetFlagVal(Cf, !GetFlag(Cf)); break;
+				case Mnemonic.Pushf:
+					_esp -= 2;
+					Write16(_esp, (ushort)_eflags);
+					break;
+				case Mnemonic.Popf:
+					_eflags = (_eflags & 0xFFFF0000) | Read16(_esp);
+					_esp += 2;
+					break;
 				case Mnemonic.Pushfd:
 					_esp -= 4;
 					Write32(_esp, _eflags);
