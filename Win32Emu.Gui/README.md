@@ -11,7 +11,7 @@ A cross-platform desktop GUI for Win32Emu, built with Avalonia UI.
 - **Launch Games**: Run games directly from the library with a single click
 - **Play Tracking**: Automatically tracks how many times each game has been played
 - **Emulator Settings**: Configure emulator options including:
-  - Rendering Backend (SDL, GLFW, Vulkan)
+  - Rendering Backend (SDL, GLFW, Vulkan, Metal)
   - Resolution Scale Factor (1x - 4x)
   - Reserved Memory (64MB - 2048MB)
   - Windows Version (95, 98, ME, NT 4.0, 2000, XP)

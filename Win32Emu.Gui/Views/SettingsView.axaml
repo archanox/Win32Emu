@@ -26,7 +26,7 @@
                     <ComboBox ItemsSource="{Binding RenderingBackends}"
                             SelectedItem="{Binding RenderingBackend}"
                             HorizontalAlignment="Stretch"/>
-                    <TextBlock Text="Select the multimedia backend (SDL, GLFW, or Vulkan). SDL is the default. Use GLFW or Vulkan if experiencing issues with SDL."
+                    <TextBlock Text="Select the multimedia backend (SDL, GLFW, Vulkan, or Metal). SDL is the default and uses native APIs (Metal on macOS, Vulkan on Linux, DirectX 12 on Windows). GLFW uses OpenGL. Vulkan provides cross-platform GPU acceleration. Metal is macOS-only."
                              FontSize="12"
                              Opacity="0.7"
                              TextWrapping="Wrap"/>
