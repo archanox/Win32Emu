@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Win32Emu\Win32Emu.csproj" />
+    <ProjectReference Include="..\Win32Emu.Tests.Kernel32\Win32Emu.Tests.Kernel32.csproj" />
   </ItemGroup>
 
 </Project>
