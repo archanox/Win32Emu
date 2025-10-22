@@ -7,14 +7,19 @@ This tool provides automated analysis and code generation capabilities for Win32
 ### 1. PE DLL Export Parser
 - Parses export tables from PE DLL files using AsmResolver
 - Supports both WinME and WinXP DLL analysis
-- Extracts function names, ordinals, and forwarded exports
+- Extracts function names, ordinals, entry points, and forwarded exports
 - Handles exports by name and by ordinal
+- **NEW:** Groups exports by DLL name across multiple versions
+- **NEW:** Extracts entry point addresses (RVAs) for each export
+- **NEW:** Case-insensitive DLL file search
 
 ### 2. API Monitor XML Parser
-- Ready to parse API Monitor XML definition files
+- Parses API Monitor XML definition files from the `ApiMon XMLs` directory
 - Extracts function signatures, parameters, and types
 - Calculates expected argument bytes for stdcall convention
 - Compatible with definitions from https://github.com/jozefizso/apimonitor
+- **NEW:** Handles `BothCharset` attribute to generate both A and W function variants
+- **NEW:** Integrated directly into stub generation workflow
 
 ### 3. Metadata Database
 - Stores and queries API metadata from multiple sources
@@ -27,10 +32,16 @@ This tool provides automated analysis and code generation capabilities for Win32
 - Provides argument byte information
 
 ### 5. Auto-Stub Generator
-- Generates C# method stubs for missing APIs
+- Generates C# method stubs for APIs across multiple DLL versions
 - Creates properly attributed methods with `[DllModuleExport]`
-- Adds logging and TODO comments
-- Can generate complete module classes
+- **NEW:** Generates multiple `[DllModuleExport]` attributes for functions across versions
+- **NEW:** Populates `entryPoint` parameter with actual RVA addresses
+- **NEW:** Adds `ExportName` field for non-C#-compatible function names
+- **NEW:** Uses `_logger.LogWarning` instead of `Diagnostics.Diagnostics.LogWarn`
+- **NEW:** Generates parameter-aware logging with proper formatting
+- **NEW:** Generates ALL exports (not just missing ones)
+- Adds TODO comments for future implementation
+- Can generate complete module classes with ILogger support
 
 ## Usage
 
@@ -64,32 +75,48 @@ KERNEL32.DLL
   Sample Missing APIs: _DebugOut, _DebugPrintf, _hread, ...
 ```
 
-### Generate Stubs for Missing APIs
+### Generate Stubs for APIs
+
+**NEW:** The tool now automatically:
+- Searches for the DLL in both WinME and WinXP directories (case-insensitive)
+- Loads API definitions from `ApiMon XMLs/Windows/` directory
+- Groups exports by function name across versions
+- Generates complete parameter lists from XML definitions
 
 Generate method stubs only:
 ```bash
 dotnet run --project Win32Emu.CodeGen -- generate-stubs \
-  --dll DPLAYX.DLL \
-  --output DPlayXStubs.cs \
-  --assembly Win32Emu/bin/Debug/net9.0/Win32Emu.dll
+  --dll KERNEL32.DLL \
+  --output KernelStubs.cs
 ```
 
 Generate complete module class:
 ```bash
 dotnet run --project Win32Emu.CodeGen -- generate-stubs \
-  --dll dinput8.dll \
-  --output DInput8Module.cs \
-  --module-class \
-  --assembly Win32Emu/bin/Debug/net9.0/Win32Emu.dll
+  --dll USER32.DLL \
+  --output User32Module.cs \
+  --module-class
 ```
 
-Example generated stub:
+Example generated stub with parameters and multi-version support:
 ```csharp
-[DllModuleExport]
-public uint DirectInput8Create()
+[DllModuleExport(1, entryPoint: 0x00001371, IsStub = true)]
+[DllModuleExport(1, entryPoint: 0x00018673, IsStub = true)]
+public uint SetWindowPos(uint hWnd, uint hWndInsertAfter, uint X, uint Y, uint cx, uint cy, uint uFlags)
 {
-    Diagnostics.Diagnostics.LogWarn("Stub called: DirectInput8Create()");
-    // TODO: Implement DirectInput8Create
+    _logger.LogWarning("[USER32] SetWindowPos: hWnd=0x{hWnd:X8}, hWndInsertAfter=0x{hWndInsertAfter:X8}, X={X}, Y={Y}, cx={cx}, cy={cy}, uFlags=0x{uFlags:X8}", hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags);
+    // TODO: Implement SetWindowPos
+    return 0; // DWORD default
+}
+```
+
+Example with decorated export name:
+```csharp
+[DllModuleExport(12, entryPoint: 0x00001230, ExportName = "_grBufferClear@12", IsStub = true)]
+public uint grBufferClear()
+{
+    _logger.LogWarning("[GLIDE2X] grBufferClear called (stub)");
+    // TODO: Implement _grBufferClear@12
     return 0; // DWORD default
 }
 ```
@@ -97,7 +124,7 @@ public uint DirectInput8Create()
 ### Parse API Monitor XML Files
 
 ```bash
-dotnet run --project Win32Emu.CodeGen -- parse-xml --xml-dir path/to/apimonitor/xml
+dotnet run --project Win32Emu.CodeGen -- parse-xml --xml-dir "ApiMon XMLs/Windows"
 ```
 
 ## Command Reference
@@ -119,14 +146,18 @@ Generate API coverage report comparing implemented vs available APIs.
 - `--output` - Output file (optional, defaults to console)
 
 ### `generate-stubs`
-Generate C# stub methods for missing APIs.
+Generate C# stub methods for APIs across multiple DLL versions.
 
 **Options:**
-- `--dll` - DLL name to generate stubs for (required, e.g., `ADVAPI32.DLL`)
+- `--dll` - DLL name to generate stubs for (required, e.g., `KERNEL32.DLL`)
 - `--output` - Output file (default: `GeneratedStubs.cs`)
 - `--module-class` - Generate complete module class instead of just methods
-- `--winme` - Path to WinME DLLs directory (default: `DLLs/WinME`)
-- `--assembly` - Path to Win32Emu.dll to determine which APIs are already implemented
+
+**Behavior Changes:**
+- **Removed:** `--winme` and `--assembly` options (tool now searches all DLL directories automatically)
+- **NEW:** Automatically searches `DLLs/WinME` and `DLLs/WinXP` directories
+- **NEW:** Automatically loads API definitions from `ApiMon XMLs/Windows/`
+- **NEW:** Generates stubs for ALL exports (not just missing ones)
 
 ### `parse-xml`
 Parse API Monitor XML definition files.
@@ -141,32 +172,47 @@ Parse API Monitor XML definition files.
 ```
 Win32Emu.CodeGen/
 ├── ApiMetadata/
-│   ├── PeExportParser.cs         # Parse PE DLL exports
-│   ├── XmlParser.cs               # Parse API Monitor XML
+│   ├── PeExportParser.cs         # Parse PE DLL exports (enhanced)
+│   ├── XmlParser.cs               # Parse API Monitor XML (enhanced)
 │   ├── MetadataDatabase.cs        # Store/query metadata
 │   ├── ImplementedApiExtractor.cs # Extract from compiled assembly
-│   └── StubGenerator.cs           # Generate C# stubs
-└── Program.cs                     # CLI commands
+│   └── StubGenerator.cs           # Generate C# stubs (enhanced)
+└── Program.cs                     # CLI commands (updated)
+```
+
+### Key Enhancements
+
+#### ExportedFunction Record
+```csharp
+public record ExportedFunction(
+    string Name,
+    uint Ordinal,
+    string? ForwardedTo,
+    uint? EntryPoint = null,    // NEW: RVA entry point
+    string? Version = null      // NEW: DLL version (TODO)
+);
+```
+
+#### DllModuleExportAttribute
+```csharp
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+public sealed class DllModuleExportAttribute : Attribute
+{
+    public uint Ordinal { get; }
+    public uint? EntryPoint { get; }
+    public string? Version { get; init; }
+    public string? ForwardedTo { get; init; }
+    public string? ExportName { get; init; }  // NEW: Original export name
+    public bool IsStub { get; init; }
+}
 ```
 
 ### Data Flow
 
-1. **PE DLL Parsing** → Extracts all available exports
-2. **Assembly Analysis** → Identifies implemented APIs
-3. **Metadata Database** → Combines data from multiple sources
-4. **Coverage Analysis** → Calculates implementation percentages
-5. **Stub Generation** → Creates C# code for missing APIs
-
-## Current Coverage Statistics
-
-As of the latest analysis:
-
-- **Total Exports:** 3,003 across all DLLs
-- **Implemented:** 59 (2.0%)
-- **Top Coverage:**
-  - DPLAYX.DLL: 2/11 (18.2%)
-  - KERNEL32.DLL: 49/1,181 (4.1%)
-  - USER32.DLL: 8/756 (1.1%)
+1. **PE DLL Parsing** → Extracts all exports with entry points from multiple versions
+2. **XML Parsing** → Loads API definitions from ApiMon XMLs
+3. **Export Grouping** → Groups exports by function name across versions
+4. **Stub Generation** → Creates C# code with complete signatures and multi-version attributes
 
 ## Testing
 
@@ -179,18 +225,23 @@ dotnet test Win32Emu.Tests.CodeGen
 **Test Coverage:**
 - PeExportParser (4 tests)
 - MetadataDatabase (4 tests)
-- StubGenerator (5 tests)
-- **Total: 13 tests, 100% passing**
+- StubGenerator (7 tests) - **Enhanced with multi-version and decorated name tests**
+- **Total: 15 tests, 100% passing**
+
+## Dependencies
+
+- **AsmResolver.PE** (6.0.0-beta.4) - PE file parsing
+- **System.CommandLine** (2.0.0-beta4) - CLI framework
+- **.NET 9.0** - Target framework
 
 ## Future Enhancements
 
-1. **API Monitor XML Integration**
-   - Download XML files from apimonitor repository
-   - Parse parameter types and generate better stub signatures
-   - Validate argument bytes against XML definitions
+1. **Version Resource Extraction**
+   - Extract actual version strings from PE file resources
+   - Populate the `Version` field in `[DllModuleExport]` attributes
 
 2. **Intelligent Stub Generation**
-   - Infer parameter types from function names
+   - Infer more accurate parameter types
    - Generate more realistic default return values
    - Add parameter validation
 
@@ -203,12 +254,6 @@ dotnet test Win32Emu.Tests.CodeGen
    - Compare StdCallMeta against PE DLL exports
    - Identify argument byte mismatches
    - Detect missing or extra exports
-
-## Dependencies
-
-- **AsmResolver.PE** (6.0.0-beta.4) - PE file parsing
-- **System.CommandLine** (2.0.0-beta4) - CLI framework
-- **.NET 9.0** - Target framework
 
 ## License
 
