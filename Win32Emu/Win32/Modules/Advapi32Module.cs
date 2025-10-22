@@ -37,6 +37,14 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				returnValue = RegOpenKeyExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
 
+			case "REGCREATEKEYEXA":
+				returnValue = RegCreateKeyExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.LpcStr(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8));
+				return true;
+
+			case "REGSETVALUEEXA":
+				returnValue = RegSetValueExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+				return true;
+
 			case "REGQUERYVALUEEXA":
 				returnValue = RegQueryValueExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
 				return true;
@@ -164,4 +172,100 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		// ERROR_SUCCESS
 		return 0;
 	}
+	/// <summary>
+	/// Creates the specified registry key. If the key already exists, the function opens it.
+	/// LSTATUS RegCreateKeyExA(
+	///   [in]            HKEY                        hKey,
+	///   [in]            LPCSTR                      lpSubKey,
+	///   [in]            DWORD                       Reserved,
+	///   [in, optional]  LPSTR                       lpClass,
+	///   [in]            DWORD                       dwOptions,
+	///   [in]            REGSAM                      samDesired,
+	///   [in, optional]  const LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+	///   [out]           PHKEY                       phkResult,
+	///   [out, optional] LPDWORD                     lpdwDisposition
+	/// );
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint RegCreateKeyExA(uint hKey, in LpcStr lpSubKey, uint reserved, in LpcStr lpClass, uint dwOptions, uint samDesired, uint lpSecurityAttributes, uint phkResult, uint lpdwDisposition)
+	{
+		var subKey = lpSubKey.ToString() ?? string.Empty;
+		var className = lpClass.ToString() ?? string.Empty;
+		
+		// Predefined registry key values
+		const uint HKEY_CLASSES_ROOT = 0x80000000;
+		const uint HKEY_CURRENT_USER = 0x80000001;
+		const uint HKEY_LOCAL_MACHINE = 0x80000002;
+		const uint HKEY_USERS = 0x80000003;
+
+		// Map predefined keys to readable names
+		var hKeyName = hKey switch
+		{
+			HKEY_CLASSES_ROOT => "HKEY_CLASSES_ROOT",
+			HKEY_CURRENT_USER => "HKEY_CURRENT_USER",
+			HKEY_LOCAL_MACHINE => "HKEY_LOCAL_MACHINE",
+			HKEY_USERS => "HKEY_USERS",
+			_ => $"0x{hKey:X8}"
+		};
+
+		var fullPath = string.IsNullOrEmpty(subKey) ? hKeyName : $"{hKeyName}\\{subKey}";
+		
+		_logger.LogInformation("[Advapi32] RegCreateKeyExA(hKey={HKeyName}, lpSubKey=\"{SubKey}\", class=\"{ClassName}\", options=0x{DwOptions:X}, access=0x{SamDesired:X}, phkResult=0x{PhkResult:X8})",
+			hKeyName, subKey, className, dwOptions, samDesired, phkResult);
+
+		// Create or open the virtual registry key
+		var handle = _env.RegOpenKey(fullPath);
+		var wasCreated = true; // For simplicity, always report as created
+
+		// Write the handle to the output parameter
+		if (phkResult != 0)
+		{
+			_env.MemWrite32(phkResult, handle);
+		}
+
+		// Write disposition (created or opened)
+		if (lpdwDisposition != 0)
+		{
+			const uint REG_CREATED_NEW_KEY = 0x00000001;
+			const uint REG_OPENED_EXISTING_KEY = 0x00000002;
+			_env.MemWrite32(lpdwDisposition, wasCreated ? REG_CREATED_NEW_KEY : REG_OPENED_EXISTING_KEY);
+		}
+
+		// ERROR_SUCCESS
+		return 0;
+	}
+
+	/// <summary>
+	/// Sets the data and type of a specified value under a registry key.
+	/// LSTATUS RegSetValueExA(
+	///   [in]           HKEY       hKey,
+	///   [in, optional] LPCSTR     lpValueName,
+	///   [in]           DWORD      Reserved,
+	///   [in]           DWORD      dwType,
+	///   [in]           const BYTE *lpData,
+	///   [in]           DWORD      cbData
+	/// );
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint RegSetValueExA(uint hKey, in LpcStr lpValueName, uint reserved, uint dwType, uint lpData, uint cbData)
+	{
+		var valueName = lpValueName.ToString() ?? string.Empty;
+		
+		_logger.LogInformation("[Advapi32] RegSetValueExA(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\", type=0x{DwType:X}, lpData=0x{LpData:X8}, cbData={CbData})",
+			hKey, valueName, dwType, lpData, cbData);
+
+		// For simplicity, just log the operation without actually storing the data
+		// A full implementation would read the data from lpData and store it in the virtual registry
+		
+		if (lpData != 0 && cbData > 0)
+		{
+			// Could read the data here if needed for emulation
+			// For now, just acknowledge the set operation
+			_logger.LogInformation("[Advapi32] RegSetValueExA: Setting value (data not stored in emulation)");
+		}
+
+		// ERROR_SUCCESS
+		return 0;
+	}
+
 }
