@@ -1655,7 +1655,7 @@ namespace Win32Emu.Win32.Modules
 			return previousFocus;
 		}
 
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(1)]
 		private uint GetMenu(uint hwnd)
 		{
 			_logger.LogInformation("[User32] GetMenu: HWND=0x{Hwnd:X8}", hwnd);
@@ -1723,7 +1723,7 @@ namespace Win32Emu.Win32.Modules
 			return 1;
 		}
 
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(1)]
 		private uint SystemParametersInfoA(uint uiAction, uint uiParam, uint pvParam, uint fWinIni)
 		{
 			_logger.LogInformation("[User32] SystemParametersInfoA: action=0x{UiAction:X8} param={UiParam}", uiAction, uiParam);
