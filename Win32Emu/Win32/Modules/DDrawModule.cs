@@ -55,7 +55,7 @@ namespace Win32Emu.Win32.Modules
 					return false;
 			}
 		}
-
+		
 		/// <summary>
 		/// 
 		/// </summary>
@@ -74,8 +74,9 @@ namespace Win32Emu.Win32.Modules
 		///	DDERR_INVALIDPARAMS
 		/// DDERR_NODIRECTDRAWHW
 		///	DDERR_OUTOFMEMORY</returns>
-		[DllModuleExport(9)]
-		private uint DirectDrawCreate(in uint lpGuid, uint lplpDd, in uint pUnkOuter)
+		[DllModuleExport(31, entryPoint: 0x0001DDA5, Version = "4.90.0.3000")]
+		[DllModuleExport(9, entryPoint: 0x0002CCA3, Version = "5.1.2600.6532")]
+		private uint DirectDrawCreate(uint lpGuid, uint lplpDd, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DDraw] DirectDrawCreate(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, pUnkOuter);
 
@@ -120,7 +121,7 @@ namespace Win32Emu.Win32.Modules
 
 // Create the COM object with vtable
 			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDraw", vtableMethods);
-			
+
 			// Store the COM object address in the DirectDraw object for reverse lookup
 			ddrawObj.ComObjectAddress = comObjectAddr;
 			_comObjectToHandle[comObjectAddr] = ddrawHandle;
@@ -136,7 +137,8 @@ namespace Win32Emu.Win32.Modules
 		}
 
 
-		[DllModuleExport(11)]
+		[DllModuleExport(33, entryPoint: 0x0001DDF9, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(11, entryPoint: 0x0000CCF6, Version = "5.1.2600.6532", IsStub = true)]
 		private uint DirectDrawCreateEx(uint lpGuid, uint lplpDd, uint iid, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DDraw] DirectDrawCreateEx(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, iid=0x{Iid:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, iid, pUnkOuter);
@@ -182,7 +184,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Create the COM object with vtable
 			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDraw", vtableMethods);
-			
+
 			// Store the COM object address in the DirectDraw object for reverse lookup
 			ddrawObj.ComObjectAddress = comObjectAddr;
 			_comObjectToHandle[comObjectAddr] = ddrawHandle;
@@ -328,7 +330,7 @@ namespace Win32Emu.Win32.Modules
 			var dwNumEntries = args.UInt32(3);
 			var lpEntries = args.UInt32(4);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::GetEntries(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, dwBase={DwBase}, dwNumEntries={DwNumEntries}, lpEntries=0x{LpEntries:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::GetEntries(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, dwBase={DwBase}, dwNumEntries={DwNumEntries}, lpEntries=0x{LpEntries:X8})",
 				thisPtr, dwFlags, dwBase, dwNumEntries, lpEntries);
 
 			if (!_palettes.TryGetValue(paletteHandle, out var palette))
@@ -346,7 +348,7 @@ namespace Win32Emu.Win32.Modules
 			// Check bounds
 			if (dwBase >= palette.Entries.Length || dwBase + dwNumEntries > palette.Entries.Length)
 			{
-				_logger.LogError("[DDraw] GetEntries: invalid range (base={Base}, count={Count}, max={Max})", 
+				_logger.LogError("[DDraw] GetEntries: invalid range (base={Base}, count={Count}, max={Max})",
 					dwBase, dwNumEntries, palette.Entries.Length);
 				return 0x80070057; // DDERR_INVALIDPARAMS
 			}
@@ -377,7 +379,7 @@ namespace Win32Emu.Win32.Modules
 			var dwCount = args.UInt32(3);
 			var lpEntries = args.UInt32(4);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::SetEntries(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, dwStartingEntry={DwStartingEntry}, dwCount={DwCount}, lpEntries=0x{LpEntries:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawPalette::SetEntries(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, dwStartingEntry={DwStartingEntry}, dwCount={DwCount}, lpEntries=0x{LpEntries:X8})",
 				thisPtr, dwFlags, dwStartingEntry, dwCount, lpEntries);
 
 			if (!_palettes.TryGetValue(paletteHandle, out var palette))
@@ -395,7 +397,7 @@ namespace Win32Emu.Win32.Modules
 			// Check bounds
 			if (dwStartingEntry >= palette.Entries.Length || dwStartingEntry + dwCount > palette.Entries.Length)
 			{
-				_logger.LogError("[DDraw] SetEntries: invalid range (start={Start}, count={Count}, max={Max})", 
+				_logger.LogError("[DDraw] SetEntries: invalid range (start={Start}, count={Count}, max={Max})",
 					dwStartingEntry, dwCount, palette.Entries.Length);
 				return 0x80070057; // DDERR_INVALIDPARAMS
 			}
@@ -542,32 +544,32 @@ namespace Win32Emu.Win32.Modules
 			var lpDDSurfaceDesc = args.UInt32(1);
 			var lplpDDSurface = args.UInt32(2);
 			var pUnkOuter = args.UInt32(3);
-			
+
 			_logger.LogInformation("[DDraw COM] IDirectDraw::CreateSurface(this=0x{ThisPtr:X8}, lpDDSurfaceDesc=0x{LpDDSurfaceDesc:X8}, lplpDDSurface=0x{LplpDDSurface:X8}, pUnkOuter=0x{PUnkOuter:X8})", thisPtr, lpDDSurfaceDesc, lplpDDSurface, pUnkOuter);
-			
+
 			// Read surface description
 			var dwSize = _env.MemRead32(lpDDSurfaceDesc);
 			var dwFlags = _env.MemRead32(lpDDSurfaceDesc + 4);
 			var dwWidth = _env.MemRead32(lpDDSurfaceDesc + 8);
 			var dwHeight = _env.MemRead32(lpDDSurfaceDesc + 12);
-			
+
 			// Read backbuffer count if DDSD_BACKBUFFERCOUNT flag is set
 			var dwBackBufferCount = 0u;
 			if ((dwFlags & 0x00000020) != 0) // DDSD_BACKBUFFERCOUNT
 			{
 				dwBackBufferCount = _env.MemRead32(lpDDSurfaceDesc + 20);
 			}
-			
+
 			// Read surface capabilities from offset 108
 			var dwSurfaceCaps = 0u;
 			if (dwSize >= 112)
 			{
 				dwSurfaceCaps = _env.MemRead32(lpDDSurfaceDesc + 108);
 			}
-			
+
 			_logger.LogInformation("[DDraw] Surface creation: flags=0x{Flags:X8}, caps=0x{Caps:X8}, width={Width}, height={Height}, backbufferCount={Count}",
 				dwFlags, dwSurfaceCaps, dwWidth, dwHeight, dwBackBufferCount);
-			
+
 			// Find the DirectDraw object from the COM object pointer
 			uint ddrawHandle = 0;
 			foreach (var kvp in _ddrawObjects)
@@ -576,13 +578,13 @@ namespace Win32Emu.Win32.Modules
 				ddrawHandle = kvp.Key;
 				break;
 			}
-			
+
 			if (ddrawHandle == 0 || !_ddrawObjects.TryGetValue(ddrawHandle, out var ddrawObj))
 			{
 				_logger.LogError("[DDraw] Failed to find DirectDraw object for CreateSurface");
 				return 1; // DDERR_GENERIC
 			}
-			
+
 			// Create a new surface
 			var surfaceHandle = _nextSurfaceHandle++;
 			var surface = new DirectDrawSurface
@@ -594,13 +596,13 @@ namespace Win32Emu.Win32.Modules
 				IsPrimary = (dwSurfaceCaps & 0x00000200) != 0, // DDSCAPS_PRIMARYSURFACE
 				Pitch = (int)dwWidth * (ddrawObj.BitsPerPixel / 8)
 			};
-			
+
 			// Allocate memory for the surface
 			surface.Bits = new byte[surface.Pitch * surface.Height];
-			
+
 			// Store the surface
 			_surfaces[surfaceHandle] = surface;
-			
+
 			// Create COM vtable for IDirectDrawSurface interface
 			var vtableMethods = new Dictionary<string, ComMethodInfo>
 			{
@@ -641,15 +643,15 @@ namespace Win32Emu.Win32.Modules
 				{ "UpdateOverlayDisplay", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem), ArgBytes: 8) },
 				{ "UpdateOverlayZOrder", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem), ArgBytes: 12) }
 			};
-			
+
 			// Create the COM object with vtable
 			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDrawSurface", vtableMethods);
 			surface.ComObjectAddress = comObjectAddr;
-			
+
 			// Check if this is a flipping complex surface that needs backbuffers
 			// DDSCAPS_FLIP = 0x00000010, DDSCAPS_COMPLEX = 0x00000008
 			var isFlippingChain = (dwSurfaceCaps & 0x00000010) != 0 && (dwSurfaceCaps & 0x00000008) != 0;
-			
+
 			// If this is a primary surface with flipping capabilities but no explicit backbuffer count,
 			// default to creating 1 backbuffer (common DirectDraw pattern)
 			if (surface.IsPrimary && isFlippingChain && dwBackBufferCount == 0)
@@ -657,12 +659,12 @@ namespace Win32Emu.Win32.Modules
 				dwBackBufferCount = 1;
 				_logger.LogInformation("[DDraw] Primary surface has FLIP+COMPLEX caps but no explicit backbuffer count, defaulting to 1 backbuffer");
 			}
-			
+
 			// Create backbuffers if requested
 			if (dwBackBufferCount > 0 && surface.IsPrimary)
 			{
 				_logger.LogInformation("[DDraw] Creating {Count} backbuffer(s) for primary surface", dwBackBufferCount);
-				
+
 				for (var i = 0u; i < dwBackBufferCount; i++)
 				{
 					var backBufferHandle = _nextSurfaceHandle++;
@@ -675,13 +677,13 @@ namespace Win32Emu.Win32.Modules
 						IsPrimary = false,
 						Pitch = (int)dwWidth * (ddrawObj.BitsPerPixel / 8)
 					};
-					
+
 					// Allocate memory for the backbuffer
 					backBuffer.Bits = new byte[backBuffer.Pitch * backBuffer.Height];
-					
+
 					// Store the backbuffer
 					_surfaces[backBufferHandle] = backBuffer;
-					
+
 					// Create COM vtable for backbuffer
 					var backBufferVtableMethods = new Dictionary<string, ComMethodInfo>
 					{
@@ -722,24 +724,24 @@ namespace Win32Emu.Win32.Modules
 						{ "UpdateOverlayDisplay", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem), ArgBytes: 8) },
 						{ "UpdateOverlayZOrder", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem), ArgBytes: 12) }
 					};
-					
+
 					var backBufferComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawSurface", backBufferVtableMethods);
 					backBuffer.ComObjectAddress = backBufferComAddr;
-					
+
 					// Attach the backbuffer to the primary surface
 					surface.AttachedSurfaces.Add(backBufferHandle);
-					
+
 					_logger.LogInformation("[DDraw] Created backbuffer {Index} at surface handle 0x{Handle:X8}, COM object at 0x{ComAddr:X8}",
 						i + 1, backBufferHandle, backBufferComAddr);
 				}
 			}
-			
+
 			// Write COM object pointer to output parameter
 			if (lplpDDSurface != 0)
 			{
 				_env.MemWrite32(lplpDDSurface, comObjectAddr);
 			}
-			
+
 			_logger.LogInformation("[DDraw] Created IDirectDrawSurface COM object at 0x{ComObjectAddr:X8} for surface 0x{SurfaceHandle:X8}", comObjectAddr, surfaceHandle);
 			return 0; // DD_OK
 		}
@@ -819,7 +821,7 @@ namespace Win32Emu.Win32.Modules
 			var dwFlags = args.UInt32(1);
 			var lpDDColorKey = args.UInt32(2);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::SetColorKey(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lpDDColorKey=0x{ColorKey:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::SetColorKey(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lpDDColorKey=0x{ColorKey:X8})",
 				thisPtr, dwFlags, lpDDColorKey);
 
 			// Find the surface
@@ -866,7 +868,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lpDDClipper = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::SetClipper(this=0x{ThisPtr:X8}, lpDDClipper=0x{LpDDClipper:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::SetClipper(this=0x{ThisPtr:X8}, lpDDClipper=0x{LpDDClipper:X8})",
 				thisPtr, lpDDClipper);
 
 			// Find the surface by COM object address
@@ -908,7 +910,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Set the clipper on the surface
 			surface.ClipperHandle = clipperHandle;
-			_logger.LogInformation("[DDraw] Surface 0x{SurfaceHandle:X8} clipper set to 0x{ClipperHandle:X8}", 
+			_logger.LogInformation("[DDraw] Surface 0x{SurfaceHandle:X8} clipper set to 0x{ClipperHandle:X8}",
 				surface.Handle, clipperHandle);
 
 			return 0; // DD_OK
@@ -926,7 +928,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var hDC = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::ReleaseDC(this=0x{ThisPtr:X8}, hDC=0x{HDC:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::ReleaseDC(this=0x{ThisPtr:X8}, hDC=0x{HDC:X8})",
 				thisPtr, hDC);
 
 			// In a real implementation, this would release the GDI DC
@@ -955,7 +957,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lpDDSurfaceDesc = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetSurfaceDesc(this=0x{ThisPtr:X8}, lpDDSurfaceDesc=0x{SurfaceDesc:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetSurfaceDesc(this=0x{ThisPtr:X8}, lpDDSurfaceDesc=0x{SurfaceDesc:X8})",
 				thisPtr, lpDDSurfaceDesc);
 
 			// Find the surface
@@ -1023,7 +1025,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lpDDPixelFormat = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetPixelFormat(this=0x{ThisPtr:X8}, lpDDPixelFormat=0x{PixelFormat:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetPixelFormat(this=0x{ThisPtr:X8}, lpDDPixelFormat=0x{PixelFormat:X8})",
 				thisPtr, lpDDPixelFormat);
 
 			// Find the surface
@@ -1086,7 +1088,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lplpDDPalette = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetPalette(this=0x{ThisPtr:X8}, lplpDDPalette=0x{LplpDDPalette:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetPalette(this=0x{ThisPtr:X8}, lplpDDPalette=0x{LplpDDPalette:X8})",
 				thisPtr, lplpDDPalette);
 
 			// Find the surface
@@ -1137,7 +1139,7 @@ namespace Win32Emu.Win32.Modules
 			var lplX = args.UInt32(1);
 			var lplY = args.UInt32(2);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetOverlayPosition(this=0x{ThisPtr:X8}, lplX=0x{LplX:X8}, lplY=0x{LplY:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetOverlayPosition(this=0x{ThisPtr:X8}, lplX=0x{LplX:X8}, lplY=0x{LplY:X8})",
 				thisPtr, lplX, lplY);
 
 			// Overlays are not supported in this implementation
@@ -1151,7 +1153,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var dwFlags = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetFlipStatus(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetFlipStatus(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8})",
 				thisPtr, dwFlags);
 
 			// In an emulator, flips complete instantly
@@ -1165,7 +1167,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lphDC = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetDC(this=0x{ThisPtr:X8}, lphDC=0x{LphDC:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetDC(this=0x{ThisPtr:X8}, lphDC=0x{LphDC:X8})",
 				thisPtr, lphDC);
 
 			if (lphDC == 0)
@@ -1191,7 +1193,7 @@ namespace Win32Emu.Win32.Modules
 			var dwFlags = args.UInt32(1);
 			var lpDDColorKey = args.UInt32(2);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetColorKey(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lpDDColorKey=0x{ColorKey:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetColorKey(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lpDDColorKey=0x{ColorKey:X8})",
 				thisPtr, dwFlags, lpDDColorKey);
 
 			// Find the surface
@@ -1226,7 +1228,7 @@ namespace Win32Emu.Win32.Modules
 			_env.MemWrite32(lpDDColorKey, surface.ColorKeyLow);
 			_env.MemWrite32(lpDDColorKey + 4, surface.ColorKeyHigh);
 
-			_logger.LogInformation("[DDraw] Returning color key: low=0x{Low:X8}, high=0x{High:X8}", 
+			_logger.LogInformation("[DDraw] Returning color key: low=0x{Low:X8}, high=0x{High:X8}",
 				surface.ColorKeyLow, surface.ColorKeyHigh);
 
 			return 0; // DD_OK
@@ -1238,7 +1240,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lplpDDClipper = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetClipper(this=0x{ThisPtr:X8}, lplpDDClipper=0x{LplpDDClipper:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetClipper(this=0x{ThisPtr:X8}, lplpDDClipper=0x{LplpDDClipper:X8})",
 				thisPtr, lplpDDClipper);
 
 			if (lplpDDClipper == 0)
@@ -1294,7 +1296,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lpDDSCaps = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetCaps(this=0x{ThisPtr:X8}, lpDDSCaps=0x{Caps:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetCaps(this=0x{ThisPtr:X8}, lpDDSCaps=0x{Caps:X8})",
 				thisPtr, lpDDSCaps);
 
 			// Find the surface
@@ -1319,6 +1321,7 @@ namespace Win32Emu.Win32.Modules
 				{
 					caps |= 0x00000200; // DDSCAPS_PRIMARYSURFACE
 				}
+
 				caps |= 0x00000800; // DDSCAPS_VIDEOMEMORY
 
 				_env.MemWrite32(lpDDSCaps, caps);
@@ -1333,7 +1336,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var dwFlags = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetBltStatus(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetBltStatus(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8})",
 				thisPtr, dwFlags);
 
 			// In an emulator, blits complete instantly
@@ -1370,6 +1373,7 @@ namespace Win32Emu.Win32.Modules
 				{
 					_env.MemWrite32(lplpDDAttachedSurface, 0);
 				}
+
 				return 0x887601C2; // DDERR_NOTFOUND
 			}
 
@@ -1381,22 +1385,22 @@ namespace Win32Emu.Win32.Modules
 			if (surface.AttachedSurfaces.Count == 0)
 			{
 				_logger.LogInformation("[DDraw] No attached surfaces found for surface 0x{Handle:X8}", surface.Handle);
-				
+
 				// If a backbuffer is requested, create one on-demand
 				// DDSCAPS_BACKBUFFER = 0x00000004
 				const uint DDSCAPS_BACKBUFFER = 0x00000004;
-				
+
 				// Log diagnostic information
-				_logger.LogInformation("[DDraw] Surface diagnostic: IsPrimary={IsPrimary}, dwCaps=0x{Caps:X8}, backbuffer requested={BackbufferRequested}", 
+				_logger.LogInformation("[DDraw] Surface diagnostic: IsPrimary={IsPrimary}, dwCaps=0x{Caps:X8}, backbuffer requested={BackbufferRequested}",
 					surface.IsPrimary, dwCaps, (dwCaps & DDSCAPS_BACKBUFFER) != 0);
-				
+
 				// Create backbuffer on-demand if requested, regardless of whether the surface was
 				// originally marked as primary. Some applications may not set the primary flag correctly,
 				// or may request a backbuffer for any surface that needs flipping capabilities.
 				if ((dwCaps & DDSCAPS_BACKBUFFER) != 0)
 				{
 					_logger.LogInformation("[DDraw] Backbuffer requested, creating on-demand for surface 0x{Handle:X8}", surface.Handle);
-					
+
 					// Get the DirectDraw object to determine bits per pixel
 					if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
 					{
@@ -1411,13 +1415,13 @@ namespace Win32Emu.Win32.Modules
 							IsPrimary = false,
 							Pitch = surface.Width * (ddrawObj.BitsPerPixel / 8)
 						};
-						
+
 						// Allocate memory for the backbuffer
 						backBuffer.Bits = new byte[backBuffer.Pitch * backBuffer.Height];
-						
+
 						// Store the backbuffer
 						_surfaces[backBufferHandle] = backBuffer;
-						
+
 						// Create COM vtable for backbuffer
 						var backBufferVtableMethods = new Dictionary<string, ComMethodInfo>
 						{
@@ -1458,21 +1462,22 @@ namespace Win32Emu.Win32.Modules
 							{ "UpdateOverlayDisplay", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem), ArgBytes: 8) },
 							{ "UpdateOverlayZOrder", new ComMethodInfo((cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem), ArgBytes: 12) }
 						};
-						
+
 						var backBufferComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawSurface", backBufferVtableMethods);
 						backBuffer.ComObjectAddress = backBufferComAddr;
-						
+
 						// Attach the backbuffer to the primary surface
 						surface.AttachedSurfaces.Add(backBufferHandle);
-						
+
 						_logger.LogInformation("[DDraw] Created on-demand backbuffer at surface handle 0x{Handle:X8}, COM object at 0x{ComAddr:X8}",
 							backBufferHandle, backBufferComAddr);
-						
+
 						// Return the newly created backbuffer
 						if (lplpDDAttachedSurface != 0)
 						{
 							_env.MemWrite32(lplpDDAttachedSurface, backBuffer.ComObjectAddress);
 						}
+
 						_logger.LogInformation("[DDraw] Returning on-demand backbuffer COM object at 0x{ComAddr:X8}", backBuffer.ComObjectAddress);
 						return 0; // DD_OK
 					}
@@ -1481,11 +1486,12 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogError("[DDraw] Could not find DirectDraw object for on-demand backbuffer creation");
 					}
 				}
-				
+
 				if (lplpDDAttachedSurface != 0)
 				{
 					_env.MemWrite32(lplpDDAttachedSurface, 0);
 				}
+
 				return 0x887601C2; // DDERR_NOTFOUND
 			}
 
@@ -1498,6 +1504,7 @@ namespace Win32Emu.Win32.Modules
 				{
 					_env.MemWrite32(lplpDDAttachedSurface, attachedSurface.ComObjectAddress);
 				}
+
 				_logger.LogInformation("[DDraw] Returning attached surface COM object at 0x{ComAddr:X8}", attachedSurface.ComObjectAddress);
 				return 0; // DD_OK
 			}
@@ -1507,6 +1514,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_env.MemWrite32(lplpDDAttachedSurface, 0);
 			}
+
 			return 0x887601C2; // DDERR_NOTFOUND
 		}
 
@@ -1517,7 +1525,7 @@ namespace Win32Emu.Win32.Modules
 			var lpDDSurfaceTargetOverride = args.UInt32(1);
 			var dwFlags = args.UInt32(2);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::Flip(this=0x{ThisPtr:X8}, lpDDSurfaceTargetOverride=0x{Target:X8}, dwFlags=0x{DwFlags:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::Flip(this=0x{ThisPtr:X8}, lpDDSurfaceTargetOverride=0x{Target:X8}, dwFlags=0x{DwFlags:X8})",
 				thisPtr, lpDDSurfaceTargetOverride, dwFlags);
 
 			// Find the surface from the COM object
@@ -1588,7 +1596,7 @@ namespace Win32Emu.Win32.Modules
 			var lpSrcRect = args.UInt32(4);
 			var dwTrans = args.UInt32(5);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::BltFast(this=0x{ThisPtr:X8}, x={X}, y={Y}, lpDDSrcSurface=0x{SrcSurface:X8}, lpSrcRect=0x{SrcRect:X8}, dwTrans=0x{Trans:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::BltFast(this=0x{ThisPtr:X8}, x={X}, y={Y}, lpDDSrcSurface=0x{SrcSurface:X8}, lpSrcRect=0x{SrcRect:X8}, dwTrans=0x{Trans:X8})",
 				thisPtr, dwX, dwY, lpDDSrcSurface, lpSrcRect, dwTrans);
 
 			// Find destination surface
@@ -1640,6 +1648,7 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogError("[DDraw] BltFast: could not find DirectDraw object");
 				return 1; // DDERR_GENERIC
 			}
+
 			var bytesPerPixel = ddrawObj.BitsPerPixel / 8;
 
 			// Perform fast blit
@@ -1696,7 +1705,7 @@ namespace Win32Emu.Win32.Modules
 			var dwFlags = args.UInt32(4);
 			var lpDDBltFx = args.UInt32(5);
 
-			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::Blt(this=0x{ThisPtr:X8}, lpDestRect=0x{DestRect:X8}, lpDDSrcSurface=0x{SrcSurface:X8}, lpSrcRect=0x{SrcRect:X8}, dwFlags=0x{DwFlags:X8}, lpDDBltFx=0x{BltFx:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::Blt(this=0x{ThisPtr:X8}, lpDestRect=0x{DestRect:X8}, lpDDSrcSurface=0x{SrcSurface:X8}, lpSrcRect=0x{SrcRect:X8}, dwFlags=0x{DwFlags:X8}, lpDDBltFx=0x{BltFx:X8})",
 				thisPtr, lpDestRect, lpDDSrcSurface, lpSrcRect, dwFlags, lpDDBltFx);
 
 			// Find destination surface
@@ -1873,14 +1882,14 @@ namespace Win32Emu.Win32.Modules
 			var lpDDDriverCaps = args.UInt32(1);
 			var lpDDHELCaps = args.UInt32(2);
 
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetCaps(this=0x{ThisPtr:X8}, lpDDDriverCaps=0x{DriverCaps:X8}, lpDDHELCaps=0x{HELCaps:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetCaps(this=0x{ThisPtr:X8}, lpDDDriverCaps=0x{DriverCaps:X8}, lpDDHELCaps=0x{HELCaps:X8})",
 				thisPtr, lpDDDriverCaps, lpDDHELCaps);
 
 			// Fill in basic capabilities
 			if (lpDDDriverCaps != 0)
 			{
 				var dwSize = _env.MemRead32(lpDDDriverCaps);
-				
+
 				// DDCAPS structure - simplified
 				_env.MemWrite32(lpDDDriverCaps + 4, 0x00000001); // dwCaps: DDCAPS_BLT
 				_env.MemWrite32(lpDDDriverCaps + 8, 0x00000040); // dwCaps2: DDCAPS2_CANRENDERWINDOWED
@@ -1910,7 +1919,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lpDDSurfaceDesc = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetDisplayMode(this=0x{ThisPtr:X8}, lpDDSurfaceDesc=0x{SurfaceDesc:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetDisplayMode(this=0x{ThisPtr:X8}, lpDDSurfaceDesc=0x{SurfaceDesc:X8})",
 				thisPtr, lpDDSurfaceDesc);
 
 			// Find the DirectDraw object
@@ -1973,7 +1982,7 @@ namespace Win32Emu.Win32.Modules
 			var lpNumCodes = args.UInt32(1);
 			var lpCodes = args.UInt32(2);
 
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetFourCCCodes(this=0x{ThisPtr:X8}, lpNumCodes=0x{LpNumCodes:X8}, lpCodes=0x{LpCodes:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetFourCCCodes(this=0x{ThisPtr:X8}, lpNumCodes=0x{LpNumCodes:X8}, lpCodes=0x{LpCodes:X8})",
 				thisPtr, lpNumCodes, lpCodes);
 
 			if (lpNumCodes == 0)
@@ -1996,7 +2005,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lplpGDIDDSSurface = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetGDISurface(this=0x{ThisPtr:X8}, lplpGDIDDSSurface=0x{LplpGDIDDSSurface:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetGDISurface(this=0x{ThisPtr:X8}, lplpGDIDDSSurface=0x{LplpGDIDDSSurface:X8})",
 				thisPtr, lplpGDIDDSSurface);
 
 			if (lplpGDIDDSSurface == 0)
@@ -2038,7 +2047,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lpdwFrequency = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetMonitorFrequency(this=0x{ThisPtr:X8}, lpdwFrequency=0x{Frequency:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetMonitorFrequency(this=0x{ThisPtr:X8}, lpdwFrequency=0x{Frequency:X8})",
 				thisPtr, lpdwFrequency);
 
 			if (lpdwFrequency != 0)
@@ -2056,7 +2065,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lpdwScanLine = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetScanLine(this=0x{ThisPtr:X8}, lpdwScanLine=0x{LpdwScanLine:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetScanLine(this=0x{ThisPtr:X8}, lpdwScanLine=0x{LpdwScanLine:X8})",
 				thisPtr, lpdwScanLine);
 
 			if (lpdwScanLine == 0)
@@ -2097,7 +2106,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var lpbIsInVB = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDraw::GetVerticalBlankStatus(this=0x{ThisPtr:X8}, lpbIsInVB=0x{IsInVB:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDraw::GetVerticalBlankStatus(this=0x{ThisPtr:X8}, lpbIsInVB=0x{IsInVB:X8})",
 				thisPtr, lpbIsInVB);
 
 			if (lpbIsInVB != 0)
@@ -2143,13 +2152,13 @@ namespace Win32Emu.Win32.Modules
 			{
 				obj.CooperativeLevel = dwFlags;
 				obj.WindowHandle = (IntPtr)hWnd;
-				
+
 				// Initialize rendering backend if not already done
 				if (obj.RenderingBackend == null)
 				{
 					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
 				}
-				
+
 				// Subscribe to UI events from the rendering backend
 				// ProcessEnvironment now tracks subscriptions and prevents duplicates automatically
 				if (obj.RenderingBackend != null)
@@ -2189,13 +2198,13 @@ namespace Win32Emu.Win32.Modules
 				obj.Width = (int)dwWidth;
 				obj.Height = (int)dwHeight;
 				obj.BitsPerPixel = (int)dwBPP;
-				
+
 				// Initialize rendering backend with the specified dimensions
 				if (obj.RenderingBackend == null)
 				{
 					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
 				}
-				
+
 				// Initialize the window with the specified dimensions
 				var title = "Win32Emu DirectDraw";
 				if (obj.RenderingBackend.IsInitialized)
@@ -2213,7 +2222,7 @@ namespace Win32Emu.Win32.Modules
 						return 1; // DDERR_GENERIC
 					}
 				}
-				
+
 				// Subscribe to UI events from the rendering backend
 				// ProcessEnvironment now tracks subscriptions and prevents duplicates automatically
 				if (obj.RenderingBackend != null)
@@ -2237,7 +2246,7 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			var dwFlags = args.UInt32(1);
 
-			_logger.LogInformation("[DDraw COM] IDirectDraw::WaitForVerticalBlank(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8})", 
+			_logger.LogInformation("[DDraw COM] IDirectDraw::WaitForVerticalBlank(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8})",
 				thisPtr, dwFlags);
 
 			// DDWAITVB_BLOCKBEGIN = 0x00000001 - Wait for vertical blank to begin
@@ -2263,51 +2272,51 @@ namespace Win32Emu.Win32.Modules
 			var lpDDSurfaceDesc = args.UInt32(2);
 			var dwFlags = args.UInt32(3);
 			var hEvent = args.UInt32(4);
-			
+
 			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::Lock(this=0x{ThisPtr:X8}, lpDestRect=0x{LpDestRect:X8}, lpDDSurfaceDesc=0x{LpDDSurfaceDesc:X8}, dwFlags=0x{DwFlags:X8}, hEvent=0x{HEvent:X8})", thisPtr, lpDestRect, lpDDSurfaceDesc, dwFlags, hEvent);
-			
+
 			if (!_surfaces.TryGetValue(surfaceHandle, out var surface))
 			{
 				_logger.LogError("[DDraw] Failed to find surface 0x{SurfaceHandle:X8} for Lock", surfaceHandle);
 				return 1; // DDERR_GENERIC
 			}
-			
+
 			if (surface.IsLocked)
 			{
 				_logger.LogWarning("[DDraw] Surface 0x{SurfaceHandle:X8} is already locked", surfaceHandle);
 				return 0x8877000A; // DDERR_SURFACEBUSY
 			}
-			
+
 			// Mark the surface as locked
 			surface.IsLocked = true;
-			
+
 			// Allocate memory for the surface if not already done
 			if (surface.Bits == null)
 			{
 				surface.Bits = new byte[surface.Pitch * surface.Height];
 			}
-			
+
 			// Get a pointer to the surface memory
 			var surfaceMemPtr = _env.VirtualAlloc(0, (uint)(surface.Pitch * surface.Height), 0x1000, 0x04); // MEM_COMMIT, PAGE_READWRITE
 			surface.LockedMemoryPtr = surfaceMemPtr;
-			
+
 			// Fill the surface description structure
 			if (lpDDSurfaceDesc != 0)
 			{
 				var dwSize = _env.MemRead32(lpDDSurfaceDesc);
-				
+
 				// Write the surface description
 				_env.MemWrite32(lpDDSurfaceDesc + 4, 0x00001007); // DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PITCH | DDSD_PIXELFORMAT
-				_env.MemWrite32(lpDDSurfaceDesc + 8, (uint)surface.Width);  // dwWidth
+				_env.MemWrite32(lpDDSurfaceDesc + 8, (uint)surface.Width); // dwWidth
 				_env.MemWrite32(lpDDSurfaceDesc + 12, (uint)surface.Height); // dwHeight
-				_env.MemWrite32(lpDDSurfaceDesc + 16, (uint)surface.Pitch);  // lPitch
+				_env.MemWrite32(lpDDSurfaceDesc + 16, (uint)surface.Pitch); // lPitch
 				_env.MemWrite32(lpDDSurfaceDesc + 20, 0); // dwBackBufferCount
 				_env.MemWrite32(lpDDSurfaceDesc + 24, 0); // dwMipMapCount
 				_env.MemWrite32(lpDDSurfaceDesc + 28, 0); // dwRefreshRate
 				_env.MemWrite32(lpDDSurfaceDesc + 32, 0); // dwAlphaBitDepth
 				_env.MemWrite32(lpDDSurfaceDesc + 36, 0); // dwReserved
 				_env.MemWrite32(lpDDSurfaceDesc + 40, surfaceMemPtr); // lpSurface
-				
+
 				// Write pixel format if needed (offset 76)
 				if (dwSize >= 108)
 				{
@@ -2316,13 +2325,13 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogError("[DDraw] Failed to find DirectDraw object for surface 0x{SurfaceHandle:X8}", surfaceHandle);
 						return 1; // DDERR_GENERIC
 					}
-					
+
 					// Write pixel format structure
 					_env.MemWrite32(lpDDSurfaceDesc + 76, 32); // dwSize of DDPIXELFORMAT
 					_env.MemWrite32(lpDDSurfaceDesc + 80, 0x00000040); // DDPF_RGB
 					_env.MemWrite32(lpDDSurfaceDesc + 84, 0); // dwRGBBitCount
 					_env.MemWrite32(lpDDSurfaceDesc + 88, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
-					
+
 					// Set RGB masks based on bit depth
 					if (ddrawObj.BitsPerPixel == 16)
 					{
@@ -2336,11 +2345,11 @@ namespace Win32Emu.Win32.Modules
 						_env.MemWrite32(lpDDSurfaceDesc + 96, 0x0000FF00); // Green mask
 						_env.MemWrite32(lpDDSurfaceDesc + 100, 0x000000FF); // Blue mask
 					}
-					
+
 					_env.MemWrite32(lpDDSurfaceDesc + 104, 0); // dwRGBAlphaBitMask
 				}
 			}
-			
+
 			_logger.LogInformation("[DDraw] Locked surface 0x{SurfaceHandle:X8}, memory at 0x{SurfaceMemPtr:X8}", surfaceHandle, surfaceMemPtr);
 			return 0; // DD_OK
 		}
@@ -2350,35 +2359,35 @@ namespace Win32Emu.Win32.Modules
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
 			var lpRect = args.UInt32(1);
-			
+
 			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::Unlock(this=0x{ThisPtr:X8}, lpRect=0x{LpRect:X8})", thisPtr, lpRect);
-			
+
 			if (!_surfaces.TryGetValue(surfaceHandle, out var surface))
 			{
 				_logger.LogError("[DDraw] Failed to find surface 0x{SurfaceHandle:X8} for Unlock", surfaceHandle);
 				return 1; // DDERR_GENERIC
 			}
-			
+
 			if (!surface.IsLocked)
 			{
 				_logger.LogWarning("[DDraw] Surface 0x{SurfaceHandle:X8} is not locked", surfaceHandle);
 				return 0x88770010; // DDERR_NOTLOCKED
 			}
-			
+
 			// Copy memory from the locked pointer to our surface bits
 			if (surface.LockedMemoryPtr != 0 && surface.Bits != null)
 			{
 				var data = _env.MemReadBytes(surface.LockedMemoryPtr, surface.Pitch * surface.Height);
 				Array.Copy(data, surface.Bits, data.Length);
-				
+
 				// We don't actually free memory in this implementation
 				// Just mark it as no longer locked
 				surface.LockedMemoryPtr = 0;
 			}
-			
+
 			// Mark the surface as unlocked
 			surface.IsLocked = false;
-			
+
 			// If this is a primary surface, update the rendering backend texture
 			if (surface.IsPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null)
 			{
@@ -2390,7 +2399,7 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogWarning("[DDraw] Surface bits are null, skipping flip");
 						return 0; // DD_OK
 					}
-					
+
 					byte[] displayData;
 
 					// Check if we need to convert the surface data based on bit depth
@@ -2402,10 +2411,10 @@ namespace Win32Emu.Win32.Modules
 							// Convert palettized (8-bit indexed) to RGBA using attached palette
 							_logger.LogDebug("[DDraw] Converting 8-bit palettized surface to RGBA");
 							displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
-								surface.Bits, 
-								palette.Entries, 
-								surface.Width, 
-								surface.Height, 
+								surface.Bits,
+								palette.Entries,
+								surface.Width,
+								surface.Height,
 								surface.Pitch);
 						}
 						else
@@ -2417,11 +2426,12 @@ namespace Win32Emu.Win32.Modules
 							{
 								grayscalePalette[i] = (0xFFu << 24) | ((uint)i << 16) | ((uint)i << 8) | (uint)i; // RGBA: opaque grayscale
 							}
+
 							displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
-								surface.Bits, 
-								grayscalePalette, 
-								surface.Width, 
-								surface.Height, 
+								surface.Bits,
+								grayscalePalette,
+								surface.Width,
+								surface.Height,
 								surface.Pitch);
 						}
 					}
@@ -2430,9 +2440,9 @@ namespace Win32Emu.Win32.Modules
 						// Convert 16-bit RGB565 to RGBA
 						_logger.LogInformation("[DDraw] Converting 16-bit RGB565 surface to RGBA");
 						displayData = ddrawObj.RenderingBackend.Convert16BitToRGBA(
-							surface.Bits, 
-							surface.Width, 
-							surface.Height, 
+							surface.Bits,
+							surface.Width,
+							surface.Height,
 							surface.Pitch);
 					}
 					else if (ddrawObj.BitsPerPixel == 24)
@@ -2469,7 +2479,7 @@ namespace Win32Emu.Win32.Modules
 					_logger.LogError(ex, "[DDraw] Failed to update rendering backend texture for primary surface");
 				}
 			}
-			
+
 			_logger.LogInformation("[DDraw] Unlocked surface 0x{SurfaceHandle:X8}", surfaceHandle);
 			return 0; // DD_OK
 		}
@@ -2579,6 +2589,505 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw] Set clipper window handle to 0x{WindowHandle:X8}", hWnd);
 
 			return 0; // DD_OK
+		}
+
+
+		[DllModuleExport(1, entryPoint: 0x000178E9, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(1, entryPoint: 0x0000475A, Version = "5.1.2600.6532", IsStub = true)]
+		public uint AcquireDDThreadLock()
+		{
+			_logger.LogWarning("[ddraw] AcquireDDThreadLock called (stub)");
+			// TODO: Implement AcquireDDThreadLock
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(2, entryPoint: 0x0002A9D9, Version = "5.1.2600.6532", IsStub = true)]
+		public uint CheckFullscreen()
+		{
+			_logger.LogWarning("[ddraw] CheckFullscreen called (stub)");
+			// TODO: Implement CheckFullscreen
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(2, entryPoint: 0x0001B178, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(4, entryPoint: 0x0002C8DA, Version = "5.1.2600.6532", IsStub = true)]
+		public uint D3DParseUnknownCommand()
+		{
+			_logger.LogWarning("[ddraw] D3DParseUnknownCommand called (stub)");
+			// TODO: Implement D3DParseUnknownCommand
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(3, entryPoint: 0x0002B960, Version = "5.1.2600.6532", IsStub = true)]
+		public uint CompleteCreateSysmemSurface()
+		{
+			_logger.LogWarning("[ddraw] CompleteCreateSysmemSurface called (stub)");
+			// TODO: Implement CompleteCreateSysmemSurface
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(3, entryPoint: 0x0001E270, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(5, entryPoint: 0x0002CF19, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DDGetAttachedSurfaceLcl()
+		{
+			_logger.LogWarning("[ddraw] DDGetAttachedSurfaceLcl called (stub)");
+			// TODO: Implement DDGetAttachedSurfaceLcl
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(4, entryPoint: 0x0001ED2D, Version = "4.90.0.3000", IsStub = true)]
+		public uint DDHAL32_VidMemAlloc()
+		{
+			_logger.LogWarning("[ddraw] DDHAL32_VidMemAlloc called (stub)");
+			// TODO: Implement DDHAL32_VidMemAlloc
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(5, entryPoint: 0x0001EDC1, Version = "4.90.0.3000", IsStub = true)]
+		public uint DDHAL32_VidMemFree()
+		{
+			_logger.LogWarning("[ddraw] DDHAL32_VidMemFree called (stub)");
+			// TODO: Implement DDHAL32_VidMemFree
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(6, entryPoint: 0x00018A38, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(6, entryPoint: 0x0002A63F, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DDInternalLock()
+		{
+			_logger.LogWarning("[ddraw] DDInternalLock called (stub)");
+			// TODO: Implement DDInternalLock
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(7, entryPoint: 0x00017F6E, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(7, entryPoint: 0x0002A5F4, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DDInternalUnlock()
+		{
+			_logger.LogWarning("[ddraw] DDInternalUnlock called (stub)");
+			// TODO: Implement DDInternalUnlock
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(8, entryPoint: 0x000201D4, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(8, entryPoint: 0x0002E4B6, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DSoundHelp()
+		{
+			_logger.LogWarning("[ddraw] DSoundHelp called (stub)");
+			// TODO: Implement DSoundHelp
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(9, entryPoint: 0x00022368, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry10()
+		{
+			_logger.LogWarning("[ddraw] DdEntry10 called (stub)");
+			// TODO: Implement DdEntry10
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(32, entryPoint: 0x0002A461, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(10, entryPoint: 0x0002E921, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectDrawCreateClipper(uint dwFlags, uint lplpDDClipper, uint pUnkOuter)
+		{
+			_logger.LogWarning("[ddraw] DirectDrawCreateClipper: dwFlags=0x{dwFlags:X8}, lplpDDClipper=0x{lplpDDClipper:X8}, pUnkOuter=0x{pUnkOuter:X8}", dwFlags, lplpDDClipper, pUnkOuter);
+			// TODO: Implement DirectDrawCreateClipper
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(10, entryPoint: 0x00025999, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry11()
+		{
+			_logger.LogWarning("[ddraw] DdEntry11 called (stub)");
+			// TODO: Implement DdEntry11
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(11, entryPoint: 0x00022414, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry12()
+		{
+			_logger.LogWarning("[ddraw] DdEntry12 called (stub)");
+			// TODO: Implement DdEntry12
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(34, entryPoint: 0x0001DC21, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(12, entryPoint: 0x0002CB1B, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectDrawEnumerateA(uint lpCallback, uint lpContext)
+		{
+			_logger.LogWarning("[ddraw] DirectDrawEnumerateA: lpCallback={lpCallback}, lpContext={lpContext}", lpCallback, lpContext);
+			// TODO: Implement DirectDrawEnumerateA
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(12, entryPoint: 0x00022626, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry13()
+		{
+			_logger.LogWarning("[ddraw] DdEntry13 called (stub)");
+			// TODO: Implement DdEntry13
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(35, entryPoint: 0x0001A8F5, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(13, entryPoint: 0x00001A57, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectDrawEnumerateExA(uint lpCallback, uint lpContext, uint dwFlags)
+		{
+			_logger.LogWarning("[ddraw] DirectDrawEnumerateExA: lpCallback={lpCallback}, lpContext={lpContext}, dwFlags=0x{dwFlags:X8}", lpCallback, lpContext, dwFlags);
+			// TODO: Implement DirectDrawEnumerateExA
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(13, entryPoint: 0x00022467, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry16()
+		{
+			_logger.LogWarning("[ddraw] DdEntry16 called (stub)");
+			// TODO: Implement DdEntry16
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(36, entryPoint: 0x0001AD3A, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(14, entryPoint: 0x0002C629, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectDrawEnumerateExW(uint lpCallback, uint lpContext, uint dwFlags)
+		{
+			_logger.LogWarning("[ddraw] DirectDrawEnumerateExW: lpCallback={lpCallback}, lpContext={lpContext}, dwFlags=0x{dwFlags:X8}", lpCallback, lpContext, dwFlags);
+			// TODO: Implement DirectDrawEnumerateExW
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(14, entryPoint: 0x0002273B, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry17()
+		{
+			_logger.LogWarning("[ddraw] DdEntry17 called (stub)");
+			// TODO: Implement DdEntry17
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(37, entryPoint: 0x0001DC5F, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(15, entryPoint: 0x0002CAF6, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectDrawEnumerateW(uint lpCallback, uint lpContext)
+		{
+			_logger.LogWarning("[ddraw] DirectDrawEnumerateW: lpCallback={lpCallback}, lpContext={lpContext}", lpCallback, lpContext);
+			// TODO: Implement DirectDrawEnumerateW
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(15, entryPoint: 0x00022768, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry18()
+		{
+			_logger.LogWarning("[ddraw] DdEntry18 called (stub)");
+			// TODO: Implement DdEntry18
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(38, entryPoint: 0x0002AC54, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(16, entryPoint: 0x0002F32D, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DllCanUnloadNow()
+		{
+			_logger.LogWarning("[ddraw] DllCanUnloadNow called (stub)");
+			// TODO: Implement DllCanUnloadNow
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(16, entryPoint: 0x00025EA7, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry19()
+		{
+			_logger.LogWarning("[ddraw] DdEntry19 called (stub)");
+			// TODO: Implement DdEntry19
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(39, entryPoint: 0x0002AB29, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(17, entryPoint: 0x0002F1BF, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DllGetClassObject()
+		{
+			_logger.LogWarning("[ddraw] DllGetClassObject called (stub)");
+			// TODO: Implement DllGetClassObject
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(17, entryPoint: 0x00021EB8, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry1()
+		{
+			_logger.LogWarning("[ddraw] DdEntry1 called (stub)");
+			// TODO: Implement DdEntry1
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(41, entryPoint: 0x0002B513, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(18, entryPoint: 0x0002B7E9, Version = "5.1.2600.6532", IsStub = true)]
+		public uint GetDDSurfaceLocal()
+		{
+			_logger.LogWarning("[ddraw] GetDDSurfaceLocal called (stub)");
+			// TODO: Implement GetDDSurfaceLocal
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(18, entryPoint: 0x00022786, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry20()
+		{
+			_logger.LogWarning("[ddraw] DdEntry20 called (stub)");
+			// TODO: Implement DdEntry20
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(43, entryPoint: 0x0003308E, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(19, entryPoint: 0x0002B619, Version = "5.1.2600.6532", IsStub = true)]
+		public uint GetOLEThunkData()
+		{
+			_logger.LogWarning("[ddraw] GetOLEThunkData called (stub)");
+			// TODO: Implement GetOLEThunkData
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(19, entryPoint: 0x000227ED, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry21()
+		{
+			_logger.LogWarning("[ddraw] DdEntry21 called (stub)");
+			// TODO: Implement DdEntry21
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(44, entryPoint: 0x000302AB, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(20, entryPoint: 0x0003089F, Version = "5.1.2600.6532", IsStub = true)]
+		public uint GetSurfaceFromDC()
+		{
+			_logger.LogWarning("[ddraw] GetSurfaceFromDC called (stub)");
+			// TODO: Implement GetSurfaceFromDC
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(20, entryPoint: 0x00028B59, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry22()
+		{
+			_logger.LogWarning("[ddraw] DdEntry22 called (stub)");
+			// TODO: Implement DdEntry22
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(50, entryPoint: 0x000087E7, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(21, entryPoint: 0x0002009C, Version = "5.1.2600.6532", IsStub = true)]
+		public uint RegisterSpecialCase()
+		{
+			_logger.LogWarning("[ddraw] RegisterSpecialCase called (stub)");
+			// TODO: Implement RegisterSpecialCase
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(21, entryPoint: 0x00028383, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry23()
+		{
+			_logger.LogWarning("[ddraw] DdEntry23 called (stub)");
+			// TODO: Implement DdEntry23
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(51, entryPoint: 0x000178FB, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(22, entryPoint: 0x00004789, Version = "5.1.2600.6532", IsStub = true)]
+		public uint ReleaseDDThreadLock()
+		{
+			_logger.LogWarning("[ddraw] ReleaseDDThreadLock called (stub)");
+			// TODO: Implement ReleaseDDThreadLock
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(22, entryPoint: 0x0002851F, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry24()
+		{
+			_logger.LogWarning("[ddraw] DdEntry24 called (stub)");
+			// TODO: Implement DdEntry24
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(23, entryPoint: 0x00026758, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry2()
+		{
+			_logger.LogWarning("[ddraw] DdEntry2 called (stub)");
+			// TODO: Implement DdEntry2
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(24, entryPoint: 0x000257F3, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry3()
+		{
+			_logger.LogWarning("[ddraw] DdEntry3 called (stub)");
+			// TODO: Implement DdEntry3
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(25, entryPoint: 0x0002585D, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry4()
+		{
+			_logger.LogWarning("[ddraw] DdEntry4 called (stub)");
+			// TODO: Implement DdEntry4
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(26, entryPoint: 0x00022115, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry5()
+		{
+			_logger.LogWarning("[ddraw] DdEntry5 called (stub)");
+			// TODO: Implement DdEntry5
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(27, entryPoint: 0x00022050, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry6()
+		{
+			_logger.LogWarning("[ddraw] DdEntry6 called (stub)");
+			// TODO: Implement DdEntry6
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(28, entryPoint: 0x0002590A, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry7()
+		{
+			_logger.LogWarning("[ddraw] DdEntry7 called (stub)");
+			// TODO: Implement DdEntry7
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(29, entryPoint: 0x00022171, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry8()
+		{
+			_logger.LogWarning("[ddraw] DdEntry8 called (stub)");
+			// TODO: Implement DdEntry8
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(30, entryPoint: 0x00022354, Version = "4.90.0.3000", IsStub = true)]
+		public uint DdEntry9()
+		{
+			_logger.LogWarning("[ddraw] DdEntry9 called (stub)");
+			// TODO: Implement DdEntry9
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(40, entryPoint: 0x0002AEF8, Version = "4.90.0.3000", IsStub = true)]
+		public uint GetAliasedVidMem()
+		{
+			_logger.LogWarning("[ddraw] GetAliasedVidMem called (stub)");
+			// TODO: Implement GetAliasedVidMem
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(42, entryPoint: 0x00030A18, Version = "4.90.0.3000", IsStub = true)]
+		public uint GetNextMipMap()
+		{
+			_logger.LogWarning("[ddraw] GetNextMipMap called (stub)");
+			// TODO: Implement GetNextMipMap
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(45, entryPoint: 0x00033908, Version = "4.90.0.3000", IsStub = true)]
+		public uint HeapVidMemAllocAligned()
+		{
+			_logger.LogWarning("[ddraw] HeapVidMemAllocAligned called (stub)");
+			// TODO: Implement HeapVidMemAllocAligned
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(46, entryPoint: 0x00017FB9, Version = "4.90.0.3000", IsStub = true)]
+		public uint InternalLock()
+		{
+			_logger.LogWarning("[ddraw] InternalLock called (stub)");
+			// TODO: Implement InternalLock
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(47, entryPoint: 0x0001798B, Version = "4.90.0.3000", IsStub = true)]
+		public uint InternalUnlock()
+		{
+			_logger.LogWarning("[ddraw] InternalUnlock called (stub)");
+			// TODO: Implement InternalUnlock
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(48, entryPoint: 0x00030A54, Version = "4.90.0.3000", IsStub = true)]
+		public uint LateAllocateSurfaceMem()
+		{
+			_logger.LogWarning("[ddraw] LateAllocateSurfaceMem called (stub)");
+			// TODO: Implement LateAllocateSurfaceMem
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(49, entryPoint: 0x0002312E, Version = "4.90.0.3000", IsStub = true)]
+		public uint LockCB()
+		{
+			_logger.LogWarning("[ddraw] LockCB called (stub)");
+			// TODO: Implement LockCB
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(52, entryPoint: 0x00021469, Version = "4.90.0.3000", IsStub = true)]
+		public uint UnlockCB()
+		{
+			_logger.LogWarning("[ddraw] UnlockCB called (stub)");
+			// TODO: Implement UnlockCB
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(53, entryPoint: 0x00033413, Version = "4.90.0.3000", IsStub = true)]
+		public uint VidMemAlloc()
+		{
+			_logger.LogWarning("[ddraw] VidMemAlloc called (stub)");
+			// TODO: Implement VidMemAlloc
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(54, entryPoint: 0x00033483, Version = "4.90.0.3000", IsStub = true)]
+		public uint VidMemAmountFree()
+		{
+			_logger.LogWarning("[ddraw] VidMemAmountFree called (stub)");
+			// TODO: Implement VidMemAmountFree
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(55, entryPoint: 0x00033398, Version = "4.90.0.3000", IsStub = true)]
+		public uint VidMemFini()
+		{
+			_logger.LogWarning("[ddraw] VidMemFini called (stub)");
+			// TODO: Implement VidMemFini
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(56, entryPoint: 0x00033437, Version = "4.90.0.3000", IsStub = true)]
+		public uint VidMemFree()
+		{
+			_logger.LogWarning("[ddraw] VidMemFree called (stub)");
+			// TODO: Implement VidMemFree
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(57, entryPoint: 0x0003332E, Version = "4.90.0.3000", IsStub = true)]
+		public uint VidMemInit()
+		{
+			_logger.LogWarning("[ddraw] VidMemInit called (stub)");
+			// TODO: Implement VidMemInit
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(58, entryPoint: 0x000334A7, Version = "4.90.0.3000", IsStub = true)]
+		public uint VidMemLargestFree()
+		{
+			_logger.LogWarning("[ddraw] VidMemLargestFree called (stub)");
+			// TODO: Implement VidMemLargestFree
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(59, entryPoint: 0x00057648, Version = "4.90.0.3000", IsStub = true)]
+		public uint thk1632_ThunkData32()
+		{
+			_logger.LogWarning("[ddraw] thk1632_ThunkData32 called (stub)");
+			// TODO: Implement thk1632_ThunkData32
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(60, entryPoint: 0x0005766C, Version = "4.90.0.3000", IsStub = true)]
+		public uint thk3216_ThunkData32()
+		{
+			_logger.LogWarning("[ddraw] thk3216_ThunkData32 called (stub)");
+			// TODO: Implement thk3216_ThunkData32
+			return 0; // DWORD default
 		}
 	}
 }

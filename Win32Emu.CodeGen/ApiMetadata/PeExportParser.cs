@@ -12,8 +12,9 @@ public class PeExportParser
     /// Parse exports from a PE DLL file
     /// </summary>
     /// <param name="dllPath">Path to the DLL file</param>
+    /// <param name="version">Optional version string to associate with exports</param>
     /// <returns>List of exported functions with their ordinals</returns>
-    public static List<ExportedFunction> ParseExports(string dllPath)
+    public static List<ExportedFunction> ParseExports(string dllPath, string? version = null)
     {
         var exports = new List<ExportedFunction>();
         
@@ -28,8 +29,11 @@ public class PeExportParser
                 return exports;
             }
 
-            // Extract version from PE resources
-            string? version = ExtractFileVersion(dllPath);
+            // Use provided version, or try to extract from PE resources
+            if (version == null)
+            {
+                version = ExtractFileVersion(dllPath);
+            }
             
             foreach (var export in exportDirectory.Entries)
             {
@@ -69,15 +73,32 @@ public class PeExportParser
     }
 
     /// <summary>
-    /// Extract file version from PE resources
-    /// TODO: Implement proper version extraction using AsmResolver API
-    /// For now, returns null - version info will not be populated
+    /// Extract file version from PE resources using FileVersionInfo
     /// </summary>
     private static string? ExtractFileVersion(string dllPath)
     {
-        // Version extraction would require deeper integration with AsmResolver
-        // For now, we'll leave this as a TODO and return null
-        // The Version field will still be part of the attribute but won't be populated yet
+        try
+        {
+            var versionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(dllPath);
+            
+            // Check if we have valid version information
+            if (versionInfo.FileMajorPart != 0 || versionInfo.FileMinorPart != 0 || 
+                versionInfo.FileBuildPart != 0 || versionInfo.FilePrivatePart != 0)
+            {
+                return $"{versionInfo.FileMajorPart}.{versionInfo.FileMinorPart}.{versionInfo.FileBuildPart}.{versionInfo.FilePrivatePart}";
+            }
+            
+            // If FileVersion string is available, use it
+            if (!string.IsNullOrWhiteSpace(versionInfo.FileVersion))
+            {
+                return versionInfo.FileVersion;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Could not extract version from {Path.GetFileName(dllPath)}: {ex.Message}");
+        }
+        
         return null;
     }
     

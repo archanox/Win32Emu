@@ -269,14 +269,14 @@ class Program
         Console.WriteLine();
         
         // Parse API Monitor XML to get function signatures
-        var xmlApiMonPath = Path.Combine("ApiMon XMLs", "Windows");
+        var xmlApiMonBasePath = "ApiMon XMLs";
         var xmlModuleName = Path.GetFileNameWithoutExtension(dllName);
         
-        // Try case-insensitive search for the XML file
+        // Try case-insensitive search for the XML file recursively in all subdirectories
         string? xmlPath = null;
-        if (Directory.Exists(xmlApiMonPath))
+        if (Directory.Exists(xmlApiMonBasePath))
         {
-            var xmlFiles = Directory.GetFiles(xmlApiMonPath, "*.xml");
+            var xmlFiles = Directory.GetFiles(xmlApiMonBasePath, "*.xml", SearchOption.AllDirectories);
             xmlPath = xmlFiles.FirstOrDefault(f => 
                 string.Equals(Path.GetFileNameWithoutExtension(f), xmlModuleName, StringComparison.OrdinalIgnoreCase));
         }
@@ -302,13 +302,24 @@ class Program
         // Group exports by DLL name across different versions
         var allExports = new List<ExportedFunction>();
         
-        // Check all DLL directories
-        var dllDirectories = new[] { "DLLs/WinME", "DLLs/WinXP" };
-        foreach (var dllDir in dllDirectories)
+        // Dynamically discover all DLL subdirectories under DLLs/
+        var dllsBaseDir = "DLLs";
+        if (!Directory.Exists(dllsBaseDir))
         {
-            if (!Directory.Exists(dllDir))
-                continue;
-            
+            Console.WriteLine($"Error: DLLs directory not found at {dllsBaseDir}");
+            return;
+        }
+        
+        var dllSubDirectories = Directory.GetDirectories(dllsBaseDir, "*", SearchOption.TopDirectoryOnly);
+        
+        if (dllSubDirectories.Length == 0)
+        {
+            Console.WriteLine($"Error: No subdirectories found in {dllsBaseDir}");
+            return;
+        }
+        
+        foreach (var dllDir in dllSubDirectories)
+        {
             // Case-insensitive search for the DLL file
             var dllFiles = Directory.GetFiles(dllDir, "*", SearchOption.TopDirectoryOnly);
             var dllPath = dllFiles.FirstOrDefault(f => 
@@ -317,9 +328,38 @@ class Program
             if (dllPath != null && File.Exists(dllPath))
             {
                 Console.WriteLine($"Parsing {dllPath}...");
-                var exports = PeExportParser.ParseExports(dllPath);
+                
+                // Try to extract version from the DLL file itself
+                // If that fails, infer from directory name
+                string? version = null;
+                var versionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(dllPath);
+                
+                // Try to get version from FileVersionInfo
+                if (versionInfo.FileMajorPart != 0 || versionInfo.FileMinorPart != 0 || 
+                    versionInfo.FileBuildPart != 0 || versionInfo.FilePrivatePart != 0)
+                {
+                    version = $"{versionInfo.FileMajorPart}.{versionInfo.FileMinorPart}.{versionInfo.FileBuildPart}.{versionInfo.FilePrivatePart}";
+                }
+                else if (!string.IsNullOrWhiteSpace(versionInfo.FileVersion))
+                {
+                    version = versionInfo.FileVersion;
+                }
+                
+                // Fallback: Infer version from directory name
+                if (string.IsNullOrWhiteSpace(version))
+                {
+                    var dirName = Path.GetFileName(dllDir);
+                    version = InferVersionFromDirectoryName(dirName);
+                    if (!string.IsNullOrWhiteSpace(version))
+                    {
+                        Console.WriteLine($"  Using inferred version from directory name: {version}");
+                    }
+                }
+                
+                var exports = PeExportParser.ParseExports(dllPath, version);
                 allExports.AddRange(exports);
-                Console.WriteLine($"  Found {exports.Count} exports");
+                Console.WriteLine($"  Found {exports.Count} exports" + 
+                    (!string.IsNullOrWhiteSpace(version) ? $" (version {version})" : ""));
             }
         }
         
@@ -347,5 +387,38 @@ class Program
         File.WriteAllText(output, code);
         Console.WriteLine($"Stubs written to: {output}");
         Console.WriteLine($"Total lines: {code.Split('\n').Length}");
+    }
+    
+    /// <summary>
+    /// Infer Windows version from directory name
+    /// </summary>
+    /// <param name="directoryName">Directory name (e.g., "WinME", "WinXP", "Win98")</param>
+    /// <returns>Version string or null if unable to infer</returns>
+    static string? InferVersionFromDirectoryName(string directoryName)
+    {
+        // Common Windows version mappings
+        var versionMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "WinME", "4.90.0.3000" },      // Windows ME
+            { "Win9x", "4.10.0.2222" },      // Windows 98 SE
+            { "Win98", "4.10.0.1998" },      // Windows 98
+            { "Win95", "4.0.0.950" },        // Windows 95
+            { "WinXP", "5.1.2600.6532" },    // Windows XP SP3
+            { "Win2000", "5.0.2195" },       // Windows 2000
+            { "Win2K", "5.0.2195" },         // Windows 2000 (alternate)
+            { "WinVista", "6.0.6002" },      // Windows Vista SP2
+            { "Win7", "6.1.7601" },          // Windows 7 SP1
+            { "Win8", "6.2.9200" },          // Windows 8
+            { "Win8.1", "6.3.9600" },        // Windows 8.1
+            { "Win10", "10.0.19041" },       // Windows 10
+            { "Win11", "10.0.22000" },       // Windows 11
+        };
+        
+        if (versionMap.TryGetValue(directoryName, out var version))
+        {
+            return version;
+        }
+        
+        return null;
     }
 }
