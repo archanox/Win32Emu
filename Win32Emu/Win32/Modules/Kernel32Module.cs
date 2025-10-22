@@ -2075,7 +2075,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
-			// Fallback to direct filesystem access if VFS not available
+			// Fallback to direct filesystem access if VFS not available. Use resolvedPath to ensure relative paths are resolved against emulated CurrentDirectory.
 			var fileMode = dwCreationDisposition switch
 			{
 				1 => FileMode.CreateNew,
