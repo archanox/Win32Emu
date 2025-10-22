@@ -57,7 +57,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[DInput] DirectInputCreateA(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
 
-// Create DirectInput object with COM vtable
+			// Create DirectInput object with COM vtable
 			var dinputHandle = _nextDInputHandle++;
 			var dinputObj = new DirectInputObject
 			{
@@ -65,6 +65,13 @@ namespace Win32Emu.Win32.Modules
 				Version = dwVersion
 			};
 			_dinputObjects[dinputHandle] = dinputObj;
+
+			// Initialize input backend if not already done
+			if (_env.InputBackend == null)
+			{
+				_env.InputBackend = Rendering.BackendFactory.CreateInputBackend(_logger);
+				_env.InputBackend.Initialize();
+			}
 
 // Create COM vtable for IDirectInput interface
 			var vtableMethods = new Dictionary<string, Win32.COM.ComMethodInfo>
