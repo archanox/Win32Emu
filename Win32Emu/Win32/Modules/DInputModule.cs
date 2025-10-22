@@ -245,7 +245,7 @@ namespace Win32Emu.Win32.Modules
 					{
 						var devices = _env.InputBackend.GetDevices();
 						var kbDevice = devices.FirstOrDefault(d => d.Type == IInputBackend.DeviceType.Keyboard);
-						backendDeviceId = kbDevice.DeviceId;
+						backendDeviceId = kbDevice != null ? kbDevice.DeviceId : 0;
 					}
 				}
 				else if (guidData1 == 0x6F1D2B60)
