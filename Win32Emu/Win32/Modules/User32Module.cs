@@ -829,20 +829,6 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
-					// Check if EIP is in the import hook address range (0x0F000000-0x10000000)
-					// These addresses don't contain executable code, only INT3 stubs that should be handled by the emulator
-					// If we're trying to execute at such an address, something has gone wrong
-					if (eip is >= 0x0F000000 and < 0x10000000)
-					{
-						_logger.LogWarning("[User32] CallWindowProcedure: Execution jumped to import hook address range 0x{Eip:X8}, aborting - this address contains no executable code", eip);
-						if (_image != null && _image.ImportAddressMap.TryGetValue(eip, out var importInfo))
-						{
-							_logger.LogWarning("[User32] CallWindowProcedure: Address is import stub for {Dll}!{Name}", importInfo.dll, importInfo.name);
-						}
-						executionSuccessful = false;
-						break;
-					}
-
 					// Detect potential infinite loops by checking if we're making progress
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
@@ -866,7 +852,87 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Execute one instruction
-					cpu.SingleStep(memory);
+					var step = cpu.SingleStep(memory);
+
+					// Check for COM vtable method calls
+					if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
+					{
+						_logger.LogDebug("[User32] CallWindowProcedure: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
+
+						// Save callee-saved registers (EBX, ESI, EDI)
+						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+
+						if (_env.ComDispatcher.TryInvoke(step.CallTarget, cpu, memory, out var comRet, out var comArgBytes))
+						{
+							var currentEsp = cpu.GetRegister("ESP");
+							var retEip = memory.Read32(currentEsp);
+							currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
+							cpu.SetRegister("ESP", currentEsp);
+							cpu.SetRegister("EAX", comRet);
+							cpu.SetEip(retEip);
+
+							// Restore callee-saved registers
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+
+							RestoreEbpFromStack(cpu, memory, currentEsp);
+						}
+					}
+					// Check for import calls - these need to be dispatched to emulated Win32 functions
+					else if (step.IsCall && _image != null && _image.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+					{
+						var dll = imp.dll.ToUpperInvariant();
+						var name = imp.name;
+						_logger.LogDebug("[User32] CallWindowProcedure: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
+
+						// Save callee-saved registers (EBX, ESI, EDI)
+						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+
+						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
+						{
+							_logger.LogDebug("[User32] CallWindowProcedure: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
+							var currentEsp = cpu.GetRegister("ESP");
+							var retEip = memory.Read32(currentEsp);
+
+							currentEsp += 4 + (uint)argBytes;
+
+							cpu.SetRegister("ESP", currentEsp);
+							cpu.SetRegister("EAX", ret);
+							cpu.SetEip(retEip);
+
+							// Restore callee-saved registers
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+
+							RestoreEbpFromStack(cpu, memory, currentEsp);
+						}
+						else
+						{
+							// Import function not implemented - try to get arg bytes from metadata and simulate return
+							var simulatedArgBytes = 0;
+							try
+							{
+								simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
+								_logger.LogWarning("[User32] CallWindowProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", dll, name, simulatedArgBytes);
+							}
+							catch
+							{
+								_logger.LogWarning("[User32] CallWindowProcedure: Unimplemented import {Dll}!{Name}, no metadata available, simulating return with 0, argBytes=0", dll, name);
+							}
+
+							var currentEsp = cpu.GetRegister("ESP");
+							var retEip = memory.Read32(currentEsp);
+
+							currentEsp += 4 + (uint)simulatedArgBytes;
+
+							cpu.SetRegister("ESP", currentEsp);
+							cpu.SetRegister("EAX", 0);
+							cpu.SetEip(retEip);
+
+							// Restore callee-saved registers
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+
+							RestoreEbpFromStack(cpu, memory, currentEsp);
+						}
+					}
 
 					steps++;
 
@@ -2109,20 +2175,6 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
-					// Check if EIP is in the import hook address range (0x0F000000-0x10000000)
-					// These addresses don't contain executable code, only INT3 stubs that should be handled by the emulator
-					// If we're trying to execute at such an address, something has gone wrong
-					if (eip is >= 0x0F000000 and < 0x10000000)
-					{
-						_logger.LogWarning("[User32] CallDialogProcedure: Execution jumped to import hook address range 0x{Eip:X8}, aborting - this address contains no executable code", eip);
-						if (_image != null && _image.ImportAddressMap.TryGetValue(eip, out var importInfo))
-						{
-							_logger.LogWarning("[User32] CallDialogProcedure: Address is import stub for {Dll}!{Name}", importInfo.dll, importInfo.name);
-						}
-						timedOut = true;
-						break;
-					}
-
 					// Detect potential infinite loops by checking if we're making progress
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
@@ -2383,20 +2435,6 @@ namespace Win32Emu.Win32.Modules
 						{
 						}
 
-						timedOut = true;
-						break;
-					}
-
-					// Check if EIP is in the import hook address range (0x0F000000-0x10000000)
-					// These addresses don't contain executable code, only INT3 stubs that should be handled by the emulator
-					// If we're trying to execute at such an address, something has gone wrong
-					if (eip is >= 0x0F000000 and < 0x10000000)
-					{
-						_logger.LogWarning("[User32] CallDialogProcedureAsync: Execution jumped to import hook address range 0x{Eip:X8}, aborting - this address contains no executable code", eip);
-						if (_image != null && _image.ImportAddressMap.TryGetValue(eip, out var importInfo))
-						{
-							_logger.LogWarning("[User32] CallDialogProcedureAsync: Address is import stub for {Dll}!{Name}", importInfo.dll, importInfo.name);
-						}
 						timedOut = true;
 						break;
 					}
