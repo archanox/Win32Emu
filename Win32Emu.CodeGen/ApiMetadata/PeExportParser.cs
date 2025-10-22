@@ -12,8 +12,9 @@ public class PeExportParser
     /// Parse exports from a PE DLL file
     /// </summary>
     /// <param name="dllPath">Path to the DLL file</param>
+    /// <param name="version">Optional version string to associate with exports</param>
     /// <returns>List of exported functions with their ordinals</returns>
-    public static List<ExportedFunction> ParseExports(string dllPath)
+    public static List<ExportedFunction> ParseExports(string dllPath, string? version = null)
     {
         var exports = new List<ExportedFunction>();
         
@@ -28,8 +29,11 @@ public class PeExportParser
                 return exports;
             }
 
-            // Extract version from PE resources
-            string? version = ExtractFileVersion(dllPath);
+            // Use provided version, or try to extract from PE resources
+            if (version == null)
+            {
+                version = ExtractFileVersion(dllPath);
+            }
             
             foreach (var export in exportDirectory.Entries)
             {
