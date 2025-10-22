@@ -60,10 +60,20 @@ public partial class GameInfoViewModel : ViewModelBase
     [ObservableProperty]
     private string _gameDbStubJson = string.Empty;
 
+    [ObservableProperty]
+    private string _compatibilityRating = "Unknown";
+
+    [ObservableProperty]
+    private string _unimplementedList = string.Empty;
+
+    [ObservableProperty]
+    private string _partiallyImplementedList = string.Empty;
+
     private readonly IGameDbService? _gameDbService;
     private readonly ConfigurationService? _configService;
     private readonly ILogger _logger;
     private Action<Game>? _onGameUpdated;
+    private Func<string, Task>? _clipboardSetter;
 
     public GameInfoViewModel(Game game, IGameDbService? gameDbService = null, ConfigurationService? configService = null, ILogger? logger = null)
     {
@@ -82,6 +92,14 @@ public partial class GameInfoViewModel : ViewModelBase
     public void SetGameUpdatedCallback(Action<Game> callback)
     {
         _onGameUpdated = callback;
+    }
+
+    /// <summary>
+    /// Set a clipboard setter function for copying text to clipboard
+    /// </summary>
+    public void SetClipboardSetter(Func<string, Task> clipboardSetter)
+    {
+        _clipboardSetter = clipboardSetter;
     }
 
     private void LoadGameInfo()
@@ -145,24 +163,114 @@ public partial class GameInfoViewModel : ViewModelBase
         {
             foreach (var import in dllGroup)
             {
-                // Check if the import is implemented
-                // This is a simplified check - you may want to enhance this
-                var isImplemented = CheckIfImplemented(import.DllName, import.FunctionName);
+                // Check implementation status
+                var status = GetImplementationStatus(import.DllName, import.FunctionName);
                 
                 Imports.Add(new ImportInfo
                 {
                     DllName = import.DllName,
                     FunctionName = import.FunctionName,
-                    IsImplemented = isImplemented
+                    Status = status
                 });
             }
         }
+        
+        // Calculate compatibility rating after loading imports
+        CalculateCompatibilityRating();
+        
+        // Generate lists for clipboard
+        GenerateClipboardLists();
     }
 
-    private static bool CheckIfImplemented(string dllName, string functionName)
+    private static ImplementationStatus GetImplementationStatus(string dllName, string functionName)
     {
-        // Use DllModuleExportInfo to check if the export is actually implemented
-        return DllModuleExportInfo.IsExportImplemented(dllName, functionName);
+        // Check if the import is implemented
+        bool isImplemented = DllModuleExportInfo.IsExportImplemented(dllName, functionName);
+        
+        if (!isImplemented)
+        {
+            return ImplementationStatus.NotImplemented;
+        }
+        
+        // Check if it's a stub (partial implementation)
+        bool isStub = DllModuleExportInfo.IsExportStub(dllName, functionName);
+        
+        return isStub ? ImplementationStatus.Partial : ImplementationStatus.Implemented;
+    }
+
+    private void CalculateCompatibilityRating()
+    {
+        if (Imports.Count == 0)
+        {
+            CompatibilityRating = "Unknown";
+            return;
+        }
+
+        var totalImports = Imports.Count;
+        var implementedCount = Imports.Count(i => i.Status == ImplementationStatus.Implemented);
+        var partialCount = Imports.Count(i => i.Status == ImplementationStatus.Partial);
+        
+        // Calculate a weighted score: Implemented = 1.0, Partial = 0.5, Not Implemented = 0.0
+        var score = (implementedCount + (partialCount * 0.5)) / totalImports;
+        var percentage = (int)(score * 100);
+        
+        // Determine rating based on percentage
+        string rating;
+        if (percentage >= 90)
+            rating = "Excellent";
+        else if (percentage >= 75)
+            rating = "Good";
+        else if (percentage >= 50)
+            rating = "Fair";
+        else if (percentage >= 25)
+            rating = "Poor";
+        else
+            rating = "Very Poor";
+        
+        CompatibilityRating = $"{rating} ({percentage}%)";
+    }
+
+    private void GenerateClipboardLists()
+    {
+        var unimplemented = Imports
+            .Where(i => i.Status == ImplementationStatus.NotImplemented)
+            .GroupBy(i => i.DllName)
+            .OrderBy(g => g.Key);
+        
+        var partial = Imports
+            .Where(i => i.Status == ImplementationStatus.Partial)
+            .GroupBy(i => i.DllName)
+            .OrderBy(g => g.Key);
+        
+        // Generate unimplemented list
+        var unimplementedSb = new StringBuilder();
+        unimplementedSb.AppendLine("## Unimplemented Functions");
+        unimplementedSb.AppendLine();
+        foreach (var dllGroup in unimplemented)
+        {
+            unimplementedSb.AppendLine($"### {dllGroup.Key}");
+            foreach (var import in dllGroup.OrderBy(i => i.FunctionName))
+            {
+                unimplementedSb.AppendLine($"- [ ] {import.FunctionName}");
+            }
+            unimplementedSb.AppendLine();
+        }
+        UnimplementedList = unimplementedSb.ToString();
+        
+        // Generate partially implemented list
+        var partialSb = new StringBuilder();
+        partialSb.AppendLine("## Partially Implemented Functions (Stubs)");
+        partialSb.AppendLine();
+        foreach (var dllGroup in partial)
+        {
+            partialSb.AppendLine($"### {dllGroup.Key}");
+            foreach (var import in dllGroup.OrderBy(i => i.FunctionName))
+            {
+                partialSb.AppendLine($"- [ ] {import.FunctionName}");
+            }
+            partialSb.AppendLine();
+        }
+        PartiallyImplementedList = partialSb.ToString();
     }
 
     private static string FormatFileSize(long bytes)
@@ -281,6 +389,58 @@ public partial class GameInfoViewModel : ViewModelBase
             }
         }
     }
+
+    [RelayCommand]
+    private async Task CopyUnimplementedToClipboard()
+    {
+        if (_clipboardSetter == null || string.IsNullOrEmpty(UnimplementedList))
+        {
+            return;
+        }
+
+        try
+        {
+            await _clipboardSetter(UnimplementedList);
+            _logger.LogInformation("Copied unimplemented functions list to clipboard");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error copying unimplemented list to clipboard");
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyPartiallyImplementedToClipboard()
+    {
+        if (_clipboardSetter == null || string.IsNullOrEmpty(PartiallyImplementedList))
+        {
+            if (_clipboardSetter == null)
+                _logger.LogWarning("Clipboard setter is unavailable. Cannot copy partially implemented list to clipboard.");
+            else
+                _logger.LogWarning("PartiallyImplementedList is empty. Nothing to copy to clipboard.");
+            return;
+        }
+
+        try
+        {
+            await _clipboardSetter(PartiallyImplementedList);
+            _logger.LogInformation("Copied partially implemented functions list to clipboard");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error copying partially implemented list to clipboard");
+        }
+    }
+}
+
+/// <summary>
+/// Implementation status of an imported function
+/// </summary>
+public enum ImplementationStatus
+{
+    NotImplemented,
+    Partial,
+    Implemented
 }
 
 /// <summary>
@@ -290,5 +450,5 @@ public class ImportInfo
 {
     public string DllName { get; set; } = string.Empty;
     public string FunctionName { get; set; } = string.Empty;
-    public bool IsImplemented { get; set; }
+    public ImplementationStatus Status { get; set; }
 }

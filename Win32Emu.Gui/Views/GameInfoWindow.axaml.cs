@@ -24,6 +24,16 @@ public partial class GameInfoWindow : Window
         // Set up clipboard access for the view model
         if (DataContext is GameInfoViewModel viewModel)
         {
+            // Set up clipboard setter function
+            viewModel.SetClipboardSetter(async (text) =>
+            {
+                var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+                if (clipboard != null)
+                {
+                    await clipboard.SetTextAsync(text);
+                }
+            });
+            
             // Generate the GameDB stub when window opens
             viewModel.CopyGameDbStubCommand.Execute(null);
         }
@@ -47,6 +57,19 @@ public partial class GameInfoWindow : Window
                     button.Content = originalContent;
                 }
             }
+        }
+    }
+
+    private async void CopyButton_Click(object? sender, RoutedEventArgs e)
+    {
+        // Show a temporary message that the text was copied
+        // The actual copy is handled by the Command binding
+        if (sender is Button button)
+        {
+            var originalContent = button.Content;
+            button.Content = "✓ Copied!";
+            await Task.Delay(2000);
+            button.Content = originalContent;
         }
     }
 }
