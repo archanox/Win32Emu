@@ -1573,6 +1573,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(11)]
+	[DllModuleExport(13, ExportName = "GetEnvironmentStrings")]
 	private uint GetEnvironmentStringsA()
 	{
 		// Return pointer to ANSI environment strings block

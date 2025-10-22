@@ -217,6 +217,7 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 								string? version = null;
 								string? forwardedTo = null;
 								bool isStub = false;
+								string? exportName = null;
 								
 								foreach (var named in attr.NamedArguments)
 								{
@@ -231,9 +232,11 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 										forwardedTo = (string)named.Value.Value;
 									else if (named.Key == "IsStub" && named.Value.Value != null)
 										isStub = (bool)named.Value.Value;
+									else if (named.Key == "ExportName" && named.Value.Value != null)
+										exportName = (string)named.Value.Value;
 								}
 								
-								return new ExportAttributeInfo(ordinal, entryPoint, version, forwardedTo, isStub);
+								return new ExportAttributeInfo(ordinal, entryPoint, version, forwardedTo, isStub, exportName);
 							})
 							.ToList();
 						
@@ -271,30 +274,26 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				""");
 
 			// Generate switch cases for each export
-			foreach (var export in entries.OrderBy(e => e.DllName).ThenBy(e => e.MethodName))
-			{
-				// Check if this export has version-specific attributes
-				var hasVersions = export.Attributes.Any(a => a.Version != null);
-				
-				if (!hasVersions)
+			// Each attribute can specify its own ExportName, so we need to flatten the structure
+			var flatExports = entries.SelectMany(export =>
+				export.Attributes.Select(attr => new
 				{
-					// No version-specific, simple case
-					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\"): return true;");
+					export.DllName,
+					MethodName = export.MethodName,
+					ExportName = attr.ExportName ?? export.MethodName, // Use ExportName if specified, otherwise method name
+					attr.Version
+				})
+			).OrderBy(e => e.DllName).ThenBy(e => e.ExportName);
+
+			foreach (var export in flatExports)
+			{
+				if (export.Version != null)
+				{
+					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\") when version == \"{export.Version}\": return true;");
 				}
 				else
 				{
-					// Has versions, generate version checks
-					foreach (var attr in export.Attributes)
-					{
-						if (attr.Version != null)
-						{
-							sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == \"{attr.Version}\": return true;");
-						}
-						else
-						{
-							sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == null: return true;");
-						}
-					}
+					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\"): return true;");
 				}
 			}
 
@@ -352,22 +351,27 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				""");
 
 			// Generate switch cases for forwarded exports only
-			foreach (var export in entries.OrderBy(e => e.DllName).ThenBy(e => e.MethodName))
-			{
-				var forwardedAttrs = export.Attributes.Where(a => !string.IsNullOrEmpty(a.ForwardedTo)).ToList();
-				if (forwardedAttrs.Count == 0)
-					continue;
-
-				foreach (var attr in forwardedAttrs)
+			// Each attribute can specify its own ExportName, so we need to flatten the structure
+			var flatForwardedExports = entries.SelectMany(export =>
+				export.Attributes.Where(a => !string.IsNullOrEmpty(a.ForwardedTo)).Select(attr => new
 				{
-					if (attr.Version != null)
-					{
-						sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == \"{attr.Version}\": return \"{attr.ForwardedTo}\";");
-					}
-					else
-					{
-						sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == null: return \"{attr.ForwardedTo}\";");
-					}
+					export.DllName,
+					MethodName = export.MethodName,
+					ExportName = attr.ExportName ?? export.MethodName, // Use ExportName if specified, otherwise method name
+					attr.Version,
+					attr.ForwardedTo
+				})
+			).OrderBy(e => e.DllName).ThenBy(e => e.ExportName);
+
+			foreach (var export in flatForwardedExports)
+			{
+				if (export.Version != null)
+				{
+					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\") when version == \"{export.Version}\": return \"{export.ForwardedTo}\";");
+				}
+				else
+				{
+					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\"): return \"{export.ForwardedTo}\";");
 				}
 			}
 
@@ -391,22 +395,26 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				""");
 
 			// Generate switch cases for stub exports only
-			foreach (var export in entries.OrderBy(e => e.DllName).ThenBy(e => e.MethodName))
-			{
-				var stubAttrs = export.Attributes.Where(a => a.IsStub).ToList();
-				if (stubAttrs.Count == 0)
-					continue;
-
-				foreach (var attr in stubAttrs)
+			// Each attribute can specify its own ExportName, so we need to flatten the structure
+			var flatStubExports = entries.SelectMany(export =>
+				export.Attributes.Where(a => a.IsStub).Select(attr => new
 				{
-					if (attr.Version != null)
-					{
-						sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == \"{attr.Version}\": return true;");
-					}
-					else
-					{
-						sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.MethodName.ToUpperInvariant()}\") when version == null: return true;");
-					}
+					export.DllName,
+					MethodName = export.MethodName,
+					ExportName = attr.ExportName ?? export.MethodName, // Use ExportName if specified, otherwise method name
+					attr.Version
+				})
+			).OrderBy(e => e.DllName).ThenBy(e => e.ExportName);
+
+			foreach (var export in flatStubExports)
+			{
+				if (export.Version != null)
+				{
+					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\") when version == \"{export.Version}\": return true;");
+				}
+				else
+				{
+					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\"): return true;");
 				}
 			}
 
@@ -447,13 +455,14 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 		public int ArgBytes { get; } = argBytes;
 	}
 
-	private readonly struct ExportAttributeInfo(uint ordinal, uint? entryPoint, string? version, string? forwardedTo, bool isStub)
+	private readonly struct ExportAttributeInfo(uint ordinal, uint? entryPoint, string? version, string? forwardedTo, bool isStub, string? exportName)
 	{
 		public uint Ordinal { get; } = ordinal;
 		public uint? EntryPoint { get; } = entryPoint;
 		public string? Version { get; } = version;
 		public string? ForwardedTo { get; } = forwardedTo;
 		public bool IsStub { get; } = isStub;
+		public string? ExportName { get; } = exportName;
 	}
 
 	private readonly struct ExportMethodInfo(string dllName, string methodName, List<ExportAttributeInfo> attributes)
