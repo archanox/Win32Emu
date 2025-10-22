@@ -30,6 +30,142 @@ public sealed class ThreadingTests : IDisposable
     }
 
     [Fact]
+    public void GetCurrentThread_ShouldReturnPseudoHandle()
+    {
+        // Act
+        var threadHandle = _testEnv.CallKernel32Api("GETCURRENTTHREAD");
+
+        // Assert - Should return pseudo-handle (0xFFFFFFFE = -2 as unsigned)
+        Assert.Equal(0xFFFFFFFEu, threadHandle);
+    }
+
+    [Fact]
+    public void GetProcessAffinityMask_ShouldReturnSingleProcessorMask()
+    {
+        // Arrange
+        var processAffinityMaskAddr = _testEnv.AllocateMemory(4);
+        var systemAffinityMaskAddr = _testEnv.AllocateMemory(4);
+        var processHandle = 0xFFFFFFFFu; // Current process pseudo-handle
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETPROCESSAFFINITYMASK", 
+            processHandle, 
+            processAffinityMaskAddr, 
+            systemAffinityMaskAddr);
+
+        // Assert - Function should succeed
+        Assert.Equal(1u, result); // TRUE = 1
+
+        // Assert - Both masks should be 0x1 (single processor)
+        var processAffinityMask = _testEnv.Memory.Read32(processAffinityMaskAddr);
+        var systemAffinityMask = _testEnv.Memory.Read32(systemAffinityMaskAddr);
+        
+        Assert.Equal(0x00000001u, processAffinityMask);
+        Assert.Equal(0x00000001u, systemAffinityMask);
+    }
+
+    [Fact]
+    public void GetProcessAffinityMask_WithNullPointers_ShouldReturnFalse()
+    {
+        // Arrange
+        var processHandle = 0xFFFFFFFFu;
+
+        // Act - Both pointers null
+        var result = _testEnv.CallKernel32Api("GETPROCESSAFFINITYMASK", 
+            processHandle, 
+            0u, 
+            0u);
+
+        // Assert - Function should fail
+        Assert.Equal(0u, result); // FALSE = 0
+    }
+
+    [Fact]
+    public void GetSystemInfo_ShouldFillStructure()
+    {
+        // Arrange
+        const uint SYSTEM_INFO_SIZE = 36; // Size of SYSTEM_INFO structure
+        var systemInfoAddr = _testEnv.AllocateMemory(SYSTEM_INFO_SIZE);
+
+        // Act
+        _testEnv.CallKernel32Api("GETSYSTEMINFO", systemInfoAddr);
+
+        // Assert - Read and verify structure fields
+        var processorArchitecture = _testEnv.Memory.Read16(systemInfoAddr + 0);
+        var reserved = _testEnv.Memory.Read16(systemInfoAddr + 2);
+        var pageSize = _testEnv.Memory.Read32(systemInfoAddr + 4);
+        var minAddress = _testEnv.Memory.Read32(systemInfoAddr + 8);
+        var maxAddress = _testEnv.Memory.Read32(systemInfoAddr + 12);
+        var activeProcessorMask = _testEnv.Memory.Read32(systemInfoAddr + 16);
+        var numberOfProcessors = _testEnv.Memory.Read32(systemInfoAddr + 20);
+        var processorType = _testEnv.Memory.Read32(systemInfoAddr + 24);
+        var allocationGranularity = _testEnv.Memory.Read32(systemInfoAddr + 28);
+        var processorLevel = _testEnv.Memory.Read16(systemInfoAddr + 32);
+        var processorRevision = _testEnv.Memory.Read16(systemInfoAddr + 34);
+
+        // Verify values match our emulated Pentium system
+        Assert.Equal(0, processorArchitecture); // PROCESSOR_ARCHITECTURE_INTEL
+        Assert.Equal(0, reserved);
+        Assert.Equal(4096u, pageSize); // 4KB pages
+        Assert.Equal(0x00010000u, minAddress); // 64KB
+        Assert.Equal(0x7FFEFFFFu, maxAddress); // 2GB - 64KB
+        Assert.Equal(0x00000001u, activeProcessorMask); // Single CPU
+        Assert.Equal(1u, numberOfProcessors); // One processor
+        Assert.Equal(586u, processorType); // Pentium (586)
+        Assert.Equal(65536u, allocationGranularity); // 64KB
+        Assert.Equal(5, processorLevel); // Family 5 (Pentium)
+        Assert.Equal(0x0101, processorRevision); // Model 1, Stepping 1
+    }
+
+    [Fact]
+    public void SetThreadAffinityMask_ShouldReturnPreviousMask()
+    {
+        // Arrange
+        var threadHandle = 0xFFFFFFFEu; // Current thread pseudo-handle
+        var newAffinityMask = 0x00000001u; // Processor 0
+
+        // Act
+        var previousMask = _testEnv.CallKernel32Api("SETTHREADAFFINITYMASK", 
+            threadHandle, 
+            newAffinityMask);
+
+        // Assert - Should return previous affinity mask (also processor 0)
+        Assert.Equal(0x00000001u, previousMask);
+    }
+
+    [Fact]
+    public void SetThreadAffinityMask_WithZeroMask_ShouldReturnZero()
+    {
+        // Arrange
+        var threadHandle = 0xFFFFFFFEu;
+        var zeroMask = 0u;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("SETTHREADAFFINITYMASK", 
+            threadHandle, 
+            zeroMask);
+
+        // Assert - Should fail (return 0)
+        Assert.Equal(0u, result);
+    }
+
+    [Fact]
+    public void SetThreadAffinityMask_WithInvalidMask_ShouldReturnZero()
+    {
+        // Arrange
+        var threadHandle = 0xFFFFFFFEu;
+        var invalidMask = 0x00000002u; // Processor 1 doesn't exist in single-processor system
+
+        // Act
+        var result = _testEnv.CallKernel32Api("SETTHREADAFFINITYMASK", 
+            threadHandle, 
+            invalidMask);
+
+        // Assert - Should fail (return 0)
+        Assert.Equal(0u, result);
+    }
+
+    [Fact]
     public void TlsAlloc_ShouldReturnValidIndex()
     {
         // Act

@@ -297,6 +297,18 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETCURRENTTHREADID":
 				returnValue = GetCurrentThreadId();
 				return true;
+			case "GETCURRENTTHREAD":
+				returnValue = GetCurrentThread();
+				return true;
+			case "GETPROCESSAFFINITYMASK":
+				returnValue = GetProcessAffinityMask(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "GETSYSTEMINFO":
+				returnValue = GetSystemInfo(a.UInt32(0));
+				return true;
+			case "SETTHREADAFFINITYMASK":
+				returnValue = SetThreadAffinityMask(a.UInt32(0), a.UInt32(1));
+				return true;
 			case "TLSALLOC":
 				returnValue = TlsAlloc();
 				return true;
@@ -3875,12 +3887,194 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return handle;
 	}
 
-	[DllModuleExport(37)]
 	private uint GetCurrentThreadId()
 	{
 		var threadId = _env.GetCurrentThreadId();
 		_logger.LogInformation("[Kernel32] GetCurrentThreadId() = {ThreadId}", threadId);
 		return threadId;
+	}
+
+	/// <summary>
+	/// Retrieves a pseudo handle for the current thread.
+	/// </summary>
+	/// <returns>
+	/// The return value is a pseudo handle for the current thread.
+	/// A pseudo handle is a special constant that is interpreted as the current thread handle.
+	/// The calling thread can use this handle to specify itself whenever a thread handle is required.
+	/// Pseudo handles are not inherited by child processes.
+	/// This handle has the THREAD_ALL_ACCESS access right to the thread object.
+	/// </returns>
+	/// <remarks>
+	/// A pseudo handle is a special constant, currently (HANDLE)-2, that is interpreted as the current thread handle.
+	/// For compatibility with future operating systems, it is best to call GetCurrentThread instead of hard-coding this value.
+	/// The function cannot be used by one thread to create a handle that can be used by other threads to refer to the first thread.
+	/// The handle is always interpreted as referring to the thread that is using it.
+	/// A thread can create a "real" handle to itself that can be used by other threads, or inherited by other processes, by specifying the pseudo handle as the source handle in a call to the DuplicateHandle function.
+	/// The pseudo handle need not be closed when it is no longer needed. Calling the CloseHandle function with a pseudo handle has no effect.
+	/// If the pseudo handle is duplicated by DuplicateHandle, the duplicate handle must be closed.
+	/// </remarks>
+	private uint GetCurrentThread()
+	{
+		// Return pseudo-handle for current thread
+		// This is a special constant that Windows interprets as "current thread"
+		const uint CURRENT_THREAD_PSEUDO_HANDLE = 0xFFFFFFFE; // -2 as unsigned
+		
+		_logger.LogInformation("[Kernel32] GetCurrentThread() = 0xFFFFFFFE (pseudo-handle)");
+		return CURRENT_THREAD_PSEUDO_HANDLE;
+	}
+
+	/// <summary>
+	/// Retrieves the process affinity mask for the specified process and the system affinity mask for the system.
+	/// </summary>
+	/// <param name="hProcess">
+	/// A handle to the process whose affinity mask is desired.
+	/// This handle must have the PROCESS_QUERY_INFORMATION or PROCESS_QUERY_LIMITED_INFORMATION access right.
+	/// </param>
+	/// <param name="lpProcessAffinityMask">
+	/// A pointer to a variable that receives the affinity mask for the specified process.
+	/// </param>
+	/// <param name="lpSystemAffinityMask">
+	/// A pointer to a variable that receives the affinity mask for the system.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is nonzero.
+	/// If the function fails, the return value is zero. To get extended error information, call GetLastError.
+	/// </returns>
+	/// <remarks>
+	/// The process affinity mask is a bit mask in which each bit represents the processors that a process is allowed to run on.
+	/// The system affinity mask is a bit mask in which each bit represents the processors that are configured in the system.
+	/// The process affinity mask is a subset of the system affinity mask.
+	/// A process is only allowed to run on the processors configured in the system.
+	/// Therefore, the process affinity mask cannot specify a 1 bit for a processor when the system affinity mask specifies a 0 bit for that processor.
+	/// </remarks>
+	private uint GetProcessAffinityMask(uint hProcess, uint lpProcessAffinityMask, uint lpSystemAffinityMask)
+	{
+		_logger.LogInformation("[Kernel32] GetProcessAffinityMask(hProcess=0x{HProcess:X8}, lpProcessAffinityMask=0x{LpProcessAffinityMask:X8}, lpSystemAffinityMask=0x{LpSystemAffinityMask:X8})", 
+			hProcess, lpProcessAffinityMask, lpSystemAffinityMask);
+
+		if (lpProcessAffinityMask == 0 || lpSystemAffinityMask == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		// For our emulator, we'll report a single processor system
+		// Bit 0 set means processor 0 is available
+		const uint SINGLE_PROCESSOR_MASK = 0x00000001;
+
+		// Write the affinity masks to memory
+		_env.MemWrite32(lpProcessAffinityMask, SINGLE_PROCESSOR_MASK);
+		_env.MemWrite32(lpSystemAffinityMask, SINGLE_PROCESSOR_MASK);
+
+		_logger.LogDebug("[Kernel32] GetProcessAffinityMask: ProcessMask=0x{ProcessMask:X8}, SystemMask=0x{SystemMask:X8}", 
+			SINGLE_PROCESSOR_MASK, SINGLE_PROCESSOR_MASK);
+
+		return NativeTypes.Win32Bool.TRUE;
+	}
+
+	/// <summary>
+	/// Retrieves information about the current system.
+	/// </summary>
+	/// <param name="lpSystemInfo">
+	/// A pointer to a SYSTEM_INFO structure that receives the information.
+	/// </param>
+	/// <returns>
+	/// This function does not return a value.
+	/// </returns>
+	/// <remarks>
+	/// To retrieve accurate information for an application running on WOW64, call the GetNativeSystemInfo function.
+	/// </remarks>
+	private uint GetSystemInfo(uint lpSystemInfo)
+	{
+		_logger.LogInformation("[Kernel32] GetSystemInfo(lpSystemInfo=0x{LpSystemInfo:X8})", lpSystemInfo);
+
+		if (lpSystemInfo == 0)
+		{
+			_logger.LogWarning("[Kernel32] GetSystemInfo: null pointer");
+			return 0;
+		}
+
+		// Fill in SYSTEM_INFO structure with emulated system information
+		// We're emulating a single-processor Intel Pentium system running Windows XP
+		var sysInfo = new NativeTypes.SystemInfo
+		{
+			ProcessorArchitecture = 0,      // PROCESSOR_ARCHITECTURE_INTEL (x86)
+			Reserved = 0,
+			PageSize = 4096,                // 4KB pages (standard for x86)
+			MinimumApplicationAddress = 0x00010000, // 64KB - standard Windows minimum
+			MaximumApplicationAddress = 0x7FFEFFFF, // 2GB - 64KB (standard user-mode limit)
+			ActiveProcessorMask = 0x00000001,       // Processor 0 active (single CPU)
+			NumberOfProcessors = 1,                 // Single processor
+			ProcessorType = 586,                    // PROCESSOR_INTEL_PENTIUM (586)
+			AllocationGranularity = 65536,          // 64KB allocation granularity
+			ProcessorLevel = 5,                     // Pentium (family 5)
+			ProcessorRevision = 0x0101              // Model 1, Stepping 1
+		};
+
+		// Write the structure to memory
+		_env.MemWriteStruct(lpSystemInfo, ref sysInfo);
+
+		_logger.LogDebug("[Kernel32] GetSystemInfo: Arch={Arch}, Processors={Procs}, PageSize={PageSize}", 
+			sysInfo.ProcessorArchitecture, sysInfo.NumberOfProcessors, sysInfo.PageSize);
+
+		return 0; // This function returns void, but we return 0 for consistency
+	}
+
+	/// <summary>
+	/// Sets a processor affinity mask for the specified thread.
+	/// </summary>
+	/// <param name="hThread">
+	/// A handle to the thread whose affinity mask is to be set.
+	/// This handle must have the THREAD_SET_INFORMATION or THREAD_SET_LIMITED_INFORMATION access right
+	/// and the THREAD_QUERY_INFORMATION or THREAD_QUERY_LIMITED_INFORMATION access right.
+	/// </param>
+	/// <param name="dwThreadAffinityMask">
+	/// The affinity mask for the thread.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is the thread's previous affinity mask.
+	/// If the function fails, the return value is zero. To get extended error information, call GetLastError.
+	/// </returns>
+	/// <remarks>
+	/// A thread affinity mask is a bit vector in which each bit represents a logical processor on which the thread is allowed to run.
+	/// A thread affinity mask must be a subset of the process affinity mask for the containing process of a thread.
+	/// A thread can only run on the processors its process can run on. Therefore, the thread affinity mask cannot specify a 1 bit for a processor when the process affinity mask specifies a 0 bit for that processor.
+	/// Setting an affinity mask for a process or thread can result in threads receiving less processor time, as the system is restricted from running the threads on certain processors.
+	/// In most cases, it is better to let the system select an available processor.
+	/// </remarks>
+	private uint SetThreadAffinityMask(uint hThread, uint dwThreadAffinityMask)
+	{
+		_logger.LogInformation("[Kernel32] SetThreadAffinityMask(hThread=0x{HThread:X8}, dwThreadAffinityMask=0x{DwThreadAffinityMask:X8})", 
+			hThread, dwThreadAffinityMask);
+
+		// In our single-threaded emulator, we don't actually enforce affinity
+		// But we validate the mask and return the previous affinity (which is always 0x1 for processor 0)
+		
+		// Validate the affinity mask - must be non-zero
+		if (dwThreadAffinityMask == 0)
+		{
+			_logger.LogWarning("[Kernel32] SetThreadAffinityMask: Invalid affinity mask (zero)");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		// Validate the affinity mask - must be a subset of system affinity mask
+		const uint SYSTEM_AFFINITY_MASK = 0x00000001; // Single processor
+		if ((dwThreadAffinityMask & ~SYSTEM_AFFINITY_MASK) != 0)
+		{
+			_logger.LogWarning("[Kernel32] SetThreadAffinityMask: Invalid affinity mask 0x{Mask:X8} (not subset of system mask 0x{SystemMask:X8})", 
+				dwThreadAffinityMask, SYSTEM_AFFINITY_MASK);
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		// Return the previous affinity mask (always processor 0 in our emulator)
+		const uint PREVIOUS_AFFINITY_MASK = 0x00000001;
+		
+		_logger.LogDebug("[Kernel32] SetThreadAffinityMask: Success, returning previous mask 0x{PrevMask:X8}", 
+			PREVIOUS_AFFINITY_MASK);
+
+		return PREVIOUS_AFFINITY_MASK;
 	}
 
 	[DllModuleExport(37)]

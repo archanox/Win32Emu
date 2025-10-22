@@ -86,6 +86,23 @@ public static class NativeTypes
 		public uint SpinCount;      // ULONG_PTR - offset 20, 4 bytes (starts at 0)
 	}
 
+	// SYSTEM_INFO structure
+	// Total size: 36 bytes (0x24)
+	public struct SystemInfo
+	{
+		public ushort ProcessorArchitecture;  // WORD - offset 0, 2 bytes
+		public ushort Reserved;               // WORD - offset 2, 2 bytes
+		public uint PageSize;                 // DWORD - offset 4, 4 bytes
+		public uint MinimumApplicationAddress; // LPVOID - offset 8, 4 bytes
+		public uint MaximumApplicationAddress; // LPVOID - offset 12, 4 bytes
+		public uint ActiveProcessorMask;      // DWORD_PTR - offset 16, 4 bytes
+		public uint NumberOfProcessors;       // DWORD - offset 20, 4 bytes
+		public uint ProcessorType;            // DWORD - offset 24, 4 bytes
+		public uint AllocationGranularity;    // DWORD - offset 28, 4 bytes
+		public ushort ProcessorLevel;         // WORD - offset 32, 2 bytes
+		public ushort ProcessorRevision;      // WORD - offset 34, 2 bytes
+	}
+
 	// Pointer to CPINFO structure
 	public readonly unsafe struct Lpcpinfo(Cpinfo* v)
 	{
