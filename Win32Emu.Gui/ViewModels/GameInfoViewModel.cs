@@ -414,6 +414,10 @@ public partial class GameInfoViewModel : ViewModelBase
     {
         if (_clipboardSetter == null || string.IsNullOrEmpty(PartiallyImplementedList))
         {
+            if (_clipboardSetter == null)
+                _logger.LogWarning("Clipboard setter is unavailable. Cannot copy partially implemented list to clipboard.");
+            else
+                _logger.LogWarning("PartiallyImplementedList is empty. Nothing to copy to clipboard.");
             return;
         }
 
