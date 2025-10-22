@@ -63,7 +63,7 @@ class Program
         coverageCommand.SetHandler(GenerateCoverageReport, winmeOption, winxpOption, reportOutputOption, assemblyOption);
         
         // Command: generate-stubs
-        var generateStubsCommand = new Command("generate-stubs", "Generate C# stub methods for missing APIs");
+        var generateStubsCommand = new Command("generate-stubs", "Generate C# stub methods for APIs");
         var dllNameOption = new Option<string>(
             "--dll",
             description: "DLL name to generate stubs for (e.g., ADVAPI32.DLL)"
@@ -78,22 +78,11 @@ class Program
             description: "Generate a complete module class instead of just methods",
             getDefaultValue: () => false
         );
-        var winmeForStubsOption = new Option<string>(
-            "--winme",
-            description: "Path to WinME DLLs directory",
-            getDefaultValue: () => "DLLs/WinME"
-        );
-        var assemblyForStubsOption = new Option<string?>(
-            "--assembly",
-            description: "Path to Win32Emu.dll to determine which APIs are already implemented"
-        );
         
         generateStubsCommand.AddOption(dllNameOption);
         generateStubsCommand.AddOption(stubOutputOption);
         generateStubsCommand.AddOption(moduleClassOption);
-        generateStubsCommand.AddOption(winmeForStubsOption);
-        generateStubsCommand.AddOption(assemblyForStubsOption);
-        generateStubsCommand.SetHandler(GenerateStubs, dllNameOption, stubOutputOption, moduleClassOption, winmeForStubsOption, assemblyForStubsOption);
+        generateStubsCommand.SetHandler(GenerateStubs, dllNameOption, stubOutputOption, moduleClassOption);
         
         rootCommand.AddCommand(analyzeDllsCommand);
         rootCommand.AddCommand(parseXmlCommand);
@@ -273,56 +262,86 @@ class Program
         File.WriteAllText(outputPath, sb.ToString());
     }
     
-    static void GenerateStubs(string dllName, string output, bool moduleClass, string winmePath, string? assemblyPath)
+    static void GenerateStubs(string dllName, string output, bool moduleClass)
     {
         Console.WriteLine($"Generating stubs for {dllName}");
         Console.WriteLine("===============================");
         Console.WriteLine();
         
-        // Parse the DLL to get all exports
-        var dllPath = Path.Combine(winmePath, dllName);
-        if (!File.Exists(dllPath))
+        // Parse API Monitor XML to get function signatures
+        var xmlApiMonPath = Path.Combine("ApiMon XMLs", "Windows");
+        var xmlModuleName = Path.GetFileNameWithoutExtension(dllName);
+        
+        // Try case-insensitive search for the XML file
+        string? xmlPath = null;
+        if (Directory.Exists(xmlApiMonPath))
         {
-            Console.WriteLine($"Error: DLL not found: {dllPath}");
-            return;
+            var xmlFiles = Directory.GetFiles(xmlApiMonPath, "*.xml");
+            xmlPath = xmlFiles.FirstOrDefault(f => 
+                string.Equals(Path.GetFileNameWithoutExtension(f), xmlModuleName, StringComparison.OrdinalIgnoreCase));
         }
         
-        var allExports = PeExportParser.ParseExports(dllPath);
-        Console.WriteLine($"Found {allExports.Count} exports in {dllName}");
-        
-        // Get implemented APIs if assembly path provided
-        var implementedApis = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (!string.IsNullOrEmpty(assemblyPath))
+        Dictionary<string, ApiDefinition>? xmlDefinitions = null;
+        if (xmlPath != null && File.Exists(xmlPath))
         {
-            var implemented = ImplementedApiExtractor.ExtractFromAssembly(assemblyPath);
-            if (implemented.TryGetValue(dllName, out var apis))
+            Console.WriteLine($"Loading API definitions from {xmlPath}");
+            var apis = XmlParser.ParseApiMonitorXml(xmlPath);
+            
+            // Group by name and take the first definition (API Monitor XMLs can have duplicates for W/A versions)
+            xmlDefinitions = apis
+                .GroupBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            Console.WriteLine($"Loaded {xmlDefinitions.Count} API definitions");
+        }
+        else
+        {
+            Console.WriteLine($"Warning: API Monitor XML not found for {xmlModuleName}");
+        }
+        Console.WriteLine();
+        
+        // Group exports by DLL name across different versions
+        var allExports = new List<ExportedFunction>();
+        
+        // Check all DLL directories
+        var dllDirectories = new[] { "DLLs/WinME", "DLLs/WinXP" };
+        foreach (var dllDir in dllDirectories)
+        {
+            if (!Directory.Exists(dllDir))
+                continue;
+            
+            // Case-insensitive search for the DLL file
+            var dllFiles = Directory.GetFiles(dllDir, "*", SearchOption.TopDirectoryOnly);
+            var dllPath = dllFiles.FirstOrDefault(f => 
+                string.Equals(Path.GetFileName(f), dllName, StringComparison.OrdinalIgnoreCase));
+                
+            if (dllPath != null && File.Exists(dllPath))
             {
-                foreach (var api in apis.Keys)
-                {
-                    implementedApis.Add(api);
-                }
-                Console.WriteLine($"Found {implementedApis.Count} already implemented APIs");
+                Console.WriteLine($"Parsing {dllPath}...");
+                var exports = PeExportParser.ParseExports(dllPath);
+                allExports.AddRange(exports);
+                Console.WriteLine($"  Found {exports.Count} exports");
             }
         }
         
-        // Determine missing APIs
-        var missingApis = allExports
-            .Where(e => !implementedApis.Contains(e.Name))
-            .ToList();
+        if (allExports.Count == 0)
+        {
+            Console.WriteLine($"Error: No exports found for {dllName}");
+            return;
+        }
         
-        Console.WriteLine($"Generating stubs for {missingApis.Count} missing APIs");
+        Console.WriteLine($"Total exports across all versions: {allExports.Count}");
         Console.WriteLine();
         
-        // Generate stubs
+        // Generate stubs for ALL exports (not just missing ones)
         string code;
         if (moduleClass)
         {
             var moduleName = Path.GetFileNameWithoutExtension(dllName) + "Module";
-            code = StubGenerator.GenerateModuleClass(moduleName, dllName, missingApis);
+            code = StubGenerator.GenerateModuleClass(moduleName, dllName, allExports, xmlDefinitions);
         }
         else
         {
-            code = StubGenerator.GenerateStubs(dllName, missingApis);
+            code = StubGenerator.GenerateStubs(dllName, allExports, xmlDefinitions);
         }
         
         File.WriteAllText(output, code);

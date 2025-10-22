@@ -84,7 +84,7 @@ public class DllModuleExportInfoTests
 	public void IsExportStub_ShouldReturnTrue_ForStubExport()
 	{
 		// Arrange & Act
-		var isStub = DllModuleExportInfo.IsExportStub("KERNEL32.DLL", "GetAcp");
+		var isStub = DllModuleExportInfo.IsExportStub("USER32.DLL", "ShowCursor");
 
 		// Assert
 		Assert.True(isStub);
@@ -114,7 +114,7 @@ public class DllModuleExportInfoTests
 	public void IsExportStub_ShouldBeCaseInsensitive()
 	{
 		// Arrange & Act
-		var isStub = DllModuleExportInfo.IsExportStub("kernel32.dll", "GETACP");
+		var isStub = DllModuleExportInfo.IsExportStub("user32.dll", "SHOWCURSOR");
 
 		// Assert
 		Assert.True(isStub);

@@ -37,6 +37,14 @@ public sealed class DllModuleExportAttribute : Attribute
 	/// </summary>
 	public string? ForwardedTo { get; init; }
 
+	/// <summary>
+	/// The original export name from the DLL (optional).
+	/// Used when the export name is not a valid C# method name.
+	/// Example: "_grDepthBufferMode@4" from glide2x.dll
+	/// This will be displayed in the Game Info -> DLL Imports screen.
+	/// </summary>
+	public string? ExportName { get; init; }
+
 	public DllModuleExportAttribute(uint ordinal)
 	{
 		Ordinal = ordinal;

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Win32Emu.CodeGen.ApiMetadata;
 
@@ -8,26 +9,31 @@ namespace Win32Emu.CodeGen.ApiMetadata;
 public class StubGenerator
 {
     /// <summary>
-    /// Generate stub methods for missing APIs in a DLL
+    /// Generate stub methods for APIs in a DLL, grouping by function name across versions
     /// </summary>
     /// <param name="dllName">Name of the DLL (e.g., "KERNEL32.DLL")</param>
-    /// <param name="missingApis">List of missing API names</param>
+    /// <param name="allExports">List of all exports (can include multiple versions)</param>
     /// <param name="xmlDefinitions">Optional API definitions from XML (for better signatures)</param>
     /// <returns>Generated C# code</returns>
     public static string GenerateStubs(string dllName,
-	    List<ExportedFunction> missingApis,
+	    List<ExportedFunction> allExports,
 	    Dictionary<string, ApiDefinition>? xmlDefinitions = null)
     {
         var sb = new StringBuilder();
         
-        sb.AppendLine("// Auto-generated stubs for missing APIs");
+        sb.AppendLine("// Auto-generated stubs for APIs");
         sb.AppendLine($"// DLL: {dllName}");
         sb.AppendLine($"// Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
         sb.AppendLine();
         
-        foreach (var api in missingApis.OrderBy(a => a.Ordinal))
+        // Group exports by function name to handle multiple versions
+        var groupedExports = allExports
+            .GroupBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Min(e => e.Ordinal));
+        
+        foreach (var group in groupedExports)
         {
-            var stub = GenerateStubMethod(api, xmlDefinitions?.GetValueOrDefault(api.Name));
+            var stub = GenerateStubMethod(dllName, group.ToList(), xmlDefinitions?.GetValueOrDefault(group.Key));
             sb.AppendLine(stub);
             sb.AppendLine();
         }
@@ -36,56 +42,111 @@ public class StubGenerator
     }
     
     /// <summary>
-    /// Generate a stub method for a single API
+    /// Generate a stub method for a single API (potentially with multiple versions)
     /// </summary>
-    private static string GenerateStubMethod(ExportedFunction api, ApiDefinition? definition)
+    private static string GenerateStubMethod(string dllName, List<ExportedFunction> exports, ApiDefinition? definition)
     {
         var sb = new StringBuilder();
         
-        //[DllModuleExport(48, ForwardedTo = "KERNELBASE.GetVersionEx")]
+        // Use the first export as the primary one
+        var primaryExport = exports.First();
+        
+        // Generate multiple [DllModuleExport] attributes for different versions
+        foreach (var export in exports.OrderBy(e => e.Version))
+        {
+            sb.Append($"[DllModuleExport({export.Ordinal}");
+            
+            if (export.EntryPoint.HasValue)
+            {
+                sb.Append($", entryPoint: 0x{export.EntryPoint.Value:X8}");
+            }
+            
+            if (!string.IsNullOrEmpty(export.Version))
+            {
+                sb.Append($", Version = \"{export.Version}\"");
+            }
+            
+            if (export.ForwardedTo != null)
+            {
+                sb.Append($", ForwardedTo = \"{export.ForwardedTo}\"");
+            }
+            
+            // Check if the export name is not a valid C# identifier
+            string csharpMethodName = MakeCSharpMethodName(export.Name);
+            if (csharpMethodName != export.Name)
+            {
+                sb.Append($", ExportName = \"{export.Name}\"");
+            }
+            
+            sb.Append(", IsStub = true)]");
+            sb.AppendLine();
+        }
+        
         // Generate method signature
-        if (api.ForwardedTo == null)
-        {
-	        sb.Append($"[DllModuleExport({api.Ordinal}, IsStub = true)]");
-        }
-        else
-        {
-	        sb.Append($"[DllModuleExport({api.Ordinal}, ForwardedTo = \"{api.ForwardedTo}\", IsStub = true)]");
-        }
-        sb.AppendLine();
+        string methodName = MakeCSharpMethodName(primaryExport.Name);
         sb.Append("public uint ");
-        sb.Append(api.Name);
+        sb.Append(methodName);
         sb.Append("(");
         
         // Add parameters if we have definition
+        var paramStrings = new List<string>();
         if (definition != null && definition.Parameters.Count > 0)
         {
-            var paramStrings = new List<string>();
             for (int i = 0; i < definition.Parameters.Count; i++)
             {
                 var param = definition.Parameters[i];
                 var csharpType = MapWin32TypeToCSharp(param.Type);
                 paramStrings.Add($"{csharpType} {param.Name}");
             }
-            sb.Append(string.Join(", ", paramStrings));
         }
+        sb.Append(string.Join(", ", paramStrings));
         
         sb.AppendLine(")");
         sb.AppendLine("{");
         
-        // Add logging
+        // Add logging with parameters
+        string moduleName = Path.GetFileNameWithoutExtension(dllName);
         if (definition != null && definition.Parameters.Count > 0)
         {
-            var paramNames = string.Join(", ", definition.Parameters.Select(p => $"{p.Name}={{" + p.Name + "}}"));
-            sb.AppendLine($"    Diagnostics.Diagnostics.LogWarn($\"Stub called: {api.Name}({paramNames})\");");
+            // Build format string and arguments for logging
+            var logParams = new List<string>();
+            var logArgs = new List<string>();
+            
+            for (int i = 0; i < definition.Parameters.Count; i++)
+            {
+                var param = definition.Parameters[i];
+                var paramType = param.Type.ToUpperInvariant();
+                
+                // Determine the logging format based on parameter type
+                if (paramType.Contains("HANDLE") || paramType.Contains("HWND") || 
+                    paramType.Contains("HDC") || paramType.Contains("HMODULE") ||
+                    paramType.Contains("PTR") || paramType.EndsWith("*"))
+                {
+                    logParams.Add($"{param.Name}=0x{{{param.Name}:X8}}");
+                }
+                else if (paramType.Contains("FLAGS") || paramType.StartsWith("DW"))
+                {
+                    logParams.Add($"{param.Name}=0x{{{param.Name}:X8}}");
+                }
+                else
+                {
+                    logParams.Add($"{param.Name}={{{param.Name}}}");
+                }
+                
+                logArgs.Add(param.Name);
+            }
+            
+            string logMessage = $"[{moduleName}] {methodName}: {string.Join(", ", logParams)}";
+            string argsString = string.Join(", ", logArgs);
+            sb.AppendLine($"    _logger.LogWarning(\"{logMessage}\", {argsString});");
         }
         else
         {
-            sb.AppendLine($"    Diagnostics.Diagnostics.LogWarn(\"Stub called: {api.Name}()\");");
+            sb.AppendLine($"    _logger.LogWarning(\"[{moduleName}] {methodName} called (stub)\");");
         }
         
         // Add TODO comment
-        sb.AppendLine($"    // TODO: Implement {api.Name}");
+        sb.AppendLine($"    // TODO: Implement {primaryExport.Name}");
         
         // Return default value
         var returnType = definition?.ReturnType ?? "DWORD";
@@ -95,6 +156,34 @@ public class StubGenerator
         sb.Append("}");
         
         return sb.ToString();
+    }
+    
+    /// <summary>
+    /// Convert a DLL export name to a valid C# method name
+    /// </summary>
+    private static string MakeCSharpMethodName(string exportName)
+    {
+        // Remove decorations like @4, @8, etc. (stdcall decorations)
+        string name = Regex.Replace(exportName, @"@\d+$", "");
+        
+        // Remove leading underscores
+        name = name.TrimStart('_');
+        
+        // Replace any remaining invalid characters with underscores
+        name = Regex.Replace(name, @"[^a-zA-Z0-9_]", "_");
+        
+        // Ensure it doesn't start with a digit
+        if (name.Length == 0)
+        {
+            // Fallback to a default method name if name is empty after processing
+            name = "_Method";
+        }
+        else if (char.IsDigit(name[0]))
+        {
+            name = "_" + name;
+        }
+        
+        return name;
     }
     
     /// <summary>
@@ -173,19 +262,21 @@ public class StubGenerator
     }
     
     /// <summary>
-    /// Generate a complete module class with stubs for all missing APIs
+    /// Generate a complete module class with stubs for all APIs
     /// </summary>
     /// <param name="moduleName">Module name (e.g., "Advapi32Module")</param>
     /// <param name="dllName">DLL name (e.g., "ADVAPI32.DLL")</param>
-    /// <param name="missingApis">List of missing API names</param>
+    /// <param name="allExports">List of all exports (can include multiple versions)</param>
     /// <param name="xmlDefinitions">Optional API definitions from XML</param>
     /// <returns>Complete C# class file</returns>
-    public static string GenerateModuleClass(string moduleName, string dllName, List<ExportedFunction> missingApis, Dictionary<string, ApiDefinition>? xmlDefinitions = null)
+    public static string GenerateModuleClass(string moduleName, string dllName, List<ExportedFunction> allExports, Dictionary<string, ApiDefinition>? xmlDefinitions = null)
     {
         var sb = new StringBuilder();
         
         sb.AppendLine("using Win32Emu.Cpu;");
         sb.AppendLine("using Win32Emu.Memory;");
+        sb.AppendLine("using Microsoft.Extensions.Logging;");
+        sb.AppendLine("using Microsoft.Extensions.Logging.Abstractions;");
         sb.AppendLine();
         sb.AppendLine("namespace Win32Emu.Win32.Modules;");
         sb.AppendLine();
@@ -196,13 +287,26 @@ public class StubGenerator
         sb.AppendLine("/// </summary>");
         sb.AppendLine($"public class {moduleName} : BaseModule");
         sb.AppendLine("{");
+        sb.AppendLine("    private readonly ILogger _logger;");
+        sb.AppendLine();
+        sb.AppendLine($"    public {moduleName}(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)");
+        sb.AppendLine("        : base(env, imageBase, peLoader)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        _logger = logger ?? NullLogger.Instance;");
+        sb.AppendLine("    }");
+        sb.AppendLine();
         sb.AppendLine($"    public override string Name => \"{dllName.ToUpperInvariant()}\";");
         sb.AppendLine();
         
+        // Group exports by function name to handle multiple versions
+        var groupedExports = allExports
+            .GroupBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Min(e => e.Ordinal));
+        
         // Generate all stub methods
-        foreach (var api in missingApis.OrderBy(a => a.Ordinal))
+        foreach (var group in groupedExports)
         {
-            var stub = GenerateStubMethod(api, xmlDefinitions?.GetValueOrDefault(api.Name));
+            var stub = GenerateStubMethod(dllName, group.ToList(), xmlDefinitions?.GetValueOrDefault(group.Key));
             
             // Indent the method
             var lines = stub.Split('\n');
