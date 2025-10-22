@@ -42,7 +42,7 @@
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.13.1" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.13.1" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.13.1" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.13.0" />
     <PackageReference Include="SDL3-CS" Version="3.2.24.1" />
     <PackageReference Include="SharpMetal" Version="1.0.0" />
     <PackageReference Include="Silk.NET.GLFW" Version="2.22.0" />
