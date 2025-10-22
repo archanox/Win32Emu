@@ -2358,10 +2358,10 @@ namespace Win32Emu.Win32.Modules
 					// If we're trying to execute at such an address, something has gone wrong
 					if (eip is >= 0x0F000000 and < 0x10000000)
 					{
-						_logger.LogError("[User32] CallDialogProcedureAsync: Execution jumped to import hook address range 0x{Eip:X8}, aborting - this address contains no executable code", eip);
+						_logger.LogWarning("[User32] CallDialogProcedureAsync: Execution jumped to import hook address range 0x{Eip:X8}, aborting - this address contains no executable code", eip);
 						if (_image != null && _image.ImportAddressMap.TryGetValue(eip, out var importInfo))
 						{
-							_logger.LogError("[User32] CallDialogProcedureAsync: Address is import stub for {Dll}!{Name}", importInfo.dll, importInfo.name);
+							_logger.LogWarning("[User32] CallDialogProcedureAsync: Address is import stub for {Dll}!{Name}", importInfo.dll, importInfo.name);
 						}
 						timedOut = true;
 						break;
