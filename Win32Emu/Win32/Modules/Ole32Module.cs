@@ -43,6 +43,10 @@ public class Ole32Module : IWin32ModuleUnsafe
 				returnValue = CoUninitialize();
 				return true;
 
+			case "COCREATEINSTANCE":
+				returnValue = CoCreateInstance(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+
 			default:
 				_logger.LogInformation("[Ole32] Unimplemented export: {Export}", export);
 				return false;
@@ -101,4 +105,33 @@ public class Ole32Module : IWin32ModuleUnsafe
 		// CoUninitialize returns void (no return value in COM)
 		return 0;
 	}
+	/// <summary>
+	/// Creates a single uninitialized object of the class associated with a specified CLSID.
+	/// HRESULT CoCreateInstance(
+	///   [in]  REFCLSID  rclsid,
+	///   [in]  LPUNKNOWN pUnkOuter,
+	///   [in]  DWORD     dwClsContext,
+	///   [in]  REFIID    riid,
+	///   [out] LPVOID    *ppv
+	/// );
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint CoCreateInstance(uint rclsid, uint pUnkOuter, uint dwClsContext, uint riid, uint ppv)
+	{
+		_logger.LogInformation("[Ole32] CoCreateInstance(rclsid=0x{Rclsid:X8}, pUnkOuter=0x{PUnkOuter:X8}, dwClsContext=0x{DwClsContext:X}, riid=0x{Riid:X8}, ppv=0x{Ppv:X8})",
+			rclsid, pUnkOuter, dwClsContext, riid, ppv);
+
+		// Stub implementation - COM object creation not fully supported
+		// Return E_NOTIMPL (0x80004001) - Not implemented
+		_logger.LogInformation("[Ole32] CoCreateInstance: COM object creation not implemented (stub)");
+		
+		// Write NULL to output pointer
+		if (ppv != 0)
+		{
+			_env.MemWrite32(ppv, 0);
+		}
+
+		return 0x80004001; // E_NOTIMPL
+	}
+
 }

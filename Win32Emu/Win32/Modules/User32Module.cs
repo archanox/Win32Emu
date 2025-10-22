@@ -263,6 +263,34 @@ namespace Win32Emu.Win32.Modules
 					returnValue = CharNextA(a.UInt32(0));
 					return true;
 
+				case "EXITWINDOWSEX":
+					returnValue = ExitWindowsEx(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "GETWINDOWTEXTA":
+					returnValue = GetWindowTextA(a.UInt32(0), a.LpStr(1), a.Int32(2));
+					return true;
+
+				case "SETWINDOWTEXTA":
+					returnValue = SetWindowTextA(a.UInt32(0), a.LpcStr(1));
+					return true;
+
+				case "LOADIMAGEA":
+					returnValue = LoadImageA(a.UInt32(0), a.LpStr(1), a.UInt32(2), a.Int32(3), a.Int32(4), a.UInt32(5));
+					return true;
+
+				case "LOADSTRINGA":
+					returnValue = LoadStringA(a.UInt32(0), a.UInt32(1), a.LpStr(2), a.Int32(3));
+					return true;
+
+				case "WSPRINTFA":
+					returnValue = WsprintfA(a.LpStr(0), a.LpcStr(1), a);
+					return true;
+
+				case "WVSPRINTFA":
+					returnValue = WvsprintfA(a.LpStr(0), a.LpcStr(1), a.UInt32(2));
+					return true;
+
 				default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
@@ -2876,5 +2904,96 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogDebug(ex, "[User32] Failed to restore EBP from stack");
 			}
 		}
+
+	[DllModuleExport(8)]
+	private uint ExitWindowsEx(uint uFlags, uint dwReason)
+	{
+		_logger.LogInformation("[User32] ExitWindowsEx(uFlags=0x{UFlags:X}, dwReason=0x{DwReason:X})", uFlags, dwReason);
+		// Stub - just log the call, don't actually shut down
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(12)]
+	private uint GetWindowTextA(uint hWnd, in LpStr lpString, int nMaxCount)
+	{
+		_logger.LogInformation("[User32] GetWindowTextA(hWnd=0x{HWnd:X8}, lpString=0x{LpString:X8}, nMaxCount={NMaxCount})", hWnd, lpString.Address, nMaxCount);
+
+		// Stub - return empty string
+		var title = string.Empty;
+		
+		// Write to buffer
+		if (nMaxCount > 0)
+		{
+			lpString.Write(_env.Memory, title, true);
+		}
+
+		return (uint)title.Length;
+	}
+
+	[DllModuleExport(12)]
+	private uint SetWindowTextA(uint hWnd, in LpcStr lpString)
+	{
+		var text = lpString.ToString() ?? string.Empty;
+		_logger.LogInformation("[User32] SetWindowTextA(hWnd=0x{HWnd:X8}, lpString=\"{Text}\")", hWnd, text);
+
+		// Stub - just log the operation
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(20)]
+	private uint LoadImageA(uint hInst, in LpStr name, uint type, int cx, int cy, uint fuLoad)
+	{
+		var imageName = name.Read(_env.Memory);
+		_logger.LogInformation("[User32] LoadImageA(hInst=0x{HInst:X8}, name=\"{ImageName}\", type={Type}, cx={Cx}, cy={Cy}, fuLoad=0x{FuLoad:X})", 
+			hInst, imageName, type, cx, cy, fuLoad);
+
+		// Stub - return a dummy handle
+		// Type: 0=IMAGE_BITMAP, 1=IMAGE_ICON, 2=IMAGE_CURSOR
+		var handle = 0x90000000 + (uint)imageName.GetHashCode();
+		_logger.LogInformation("[User32] LoadImageA: Returning stub handle 0x{Handle:X8}", handle);
+		return handle;
+	}
+
+	[DllModuleExport(16)]
+	private uint LoadStringA(uint hInstance, uint uID, in LpStr lpBuffer, int cchBufferMax)
+	{
+		_logger.LogInformation("[User32] LoadStringA(hInstance=0x{HInstance:X8}, uID={UID}, lpBuffer=0x{LpBuffer:X8}, cchBufferMax={CchBufferMax})", 
+			hInstance, uID, lpBuffer.Address, cchBufferMax);
+
+		// Stub - string resources not yet implemented, return empty
+		if (cchBufferMax > 0)
+		{
+			lpBuffer.Write(_env.Memory, string.Empty, true);
+		}
+		return 0;
+	}
+
+	[DllModuleExport(20)]
+	private uint WsprintfA(in LpStr output, in LpcStr format, StackArgs args)
+	{
+		var formatStr = format.ToString() ?? string.Empty;
+		_logger.LogInformation("[User32] WsprintfA(output=0x{Output:X8}, format=\"{FormatStr}\")", output.Address, formatStr);
+
+		// Simple sprintf implementation - just copy format string for now
+		// A full implementation would parse format string and substitute arguments
+		output.Write(_env.Memory, formatStr, true);
+		
+		return (uint)formatStr.Length;
+	}
+
+	[DllModuleExport(20)]
+	private uint WvsprintfA(in LpStr output, in LpcStr format, uint arglist)
+	{
+		var formatStr = format.ToString() ?? string.Empty;
+		_logger.LogInformation("[User32] WvsprintfA(output=0x{Output:X8}, format=\"{FormatStr}\", arglist=0x{Arglist:X8})", 
+			output.Address, formatStr, arglist);
+
+		// Simple vsprintf implementation - just copy format string for now
+		// A full implementation would parse format string and substitute arguments from va_list
+		output.Write(_env.Memory, formatStr, true);
+		
+		return (uint)formatStr.Length;
+	}
+
 	}
 }
