@@ -914,10 +914,8 @@ namespace Win32Emu.Win32.Modules
 				// Clear the stack memory region that was used for the call
 				// This includes the return address and parameters (5 dwords = 20 bytes)
 				var stackDataSize = 20u; // Return address (4) + hwnd (4) + message (4) + wParam (4) + lParam (4)
-				for (uint i = 0; i < stackDataSize; i += 4)
-				{
-					memory.Write32(savedEsp - stackDataSize + i, 0);
-				}
+				// Use a single bulk write for efficiency
+				memory.WriteBytes(savedEsp - stackDataSize, new byte[stackDataSize]);
 				_logger.LogDebug("[User32] CallWindowProcedure: Cleaned up {Size} bytes of stack memory after failed execution", stackDataSize);
 			}
 
