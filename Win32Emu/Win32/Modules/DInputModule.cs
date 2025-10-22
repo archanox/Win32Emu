@@ -55,7 +55,8 @@ namespace Win32Emu.Win32.Modules
 			}
 		}
 
-		[DllModuleExport(1)]
+		[DllModuleExport(1, entryPoint: 0x0000B006, Version = "4.90.0.3000")]
+		[DllModuleExport(1, entryPoint: 0x0000B126, Version = "5.1.2600.6532")]
 		private uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DInput] DirectInputCreateA(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
@@ -158,7 +159,8 @@ namespace Win32Emu.Win32.Modules
 			return DirectInputCreate(hinst, dwVersion, lplpDirectInput, pUnkOuter);
 		}
 
-		[DllModuleExport(1)]
+		[DllModuleExport(2, entryPoint: 0x0000B060, Version = "4.90.0.3000")]
+		[DllModuleExport(2, entryPoint: 0x0000B18E, Version = "5.1.2600.6532")]
 		private uint DirectInputCreateEx(uint hinst, uint dwVersion, uint riidltf, uint lplpDirectInput, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DInput] DirectInputCreateEx(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, riidltf=0x{Riidltf:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, riidltf, lplpDirectInput, pUnkOuter);
@@ -241,12 +243,12 @@ namespace Win32Emu.Win32.Modules
 			{
 				// Read GUID (Data1, Data2, Data3, Data4[8])
 				var guidData1 = _env.MemRead32(rguid);
-				
+
 				// Common DirectInput device GUIDs
 				// GUID_SysKeyboard = {6F1D2B61-D5A0-11CF-BFC7-444553540000}
 				// GUID_SysMouse = {6F1D2B60-D5A0-11CF-BFC7-444553540000}
 				// GUID_Joystick = {6F1D2B70-D5A0-11CF-BFC7-444553540000}
-				
+
 				if (guidData1 == 0x6F1D2B61)
 				{
 					deviceType = IInputBackend.DeviceType.Keyboard;
@@ -524,6 +526,7 @@ namespace Win32Emu.Win32.Modules
 									_env.Memory.Write8(lpvData + (uint)i, (byte)(isPressed ? 0x80 : 0x00));
 								}
 							}
+
 							break;
 
 						case IInputBackend.DeviceType.Mouse:
@@ -540,6 +543,7 @@ namespace Win32Emu.Win32.Modules
 									_env.Memory.Write8(lpvData + 12 + (uint)i, (byte)(isPressed ? 0x80 : 0x00));
 								}
 							}
+
 							break;
 
 						case IInputBackend.DeviceType.Joystick:
@@ -557,12 +561,14 @@ namespace Win32Emu.Win32.Modules
 									_env.Memory.Write32(lpvData + offset, dinputValue);
 									offset += 4;
 								}
+
 								// POV hat
 								if (offset + 4 <= cbData)
 								{
 									_env.Memory.Write32(lpvData + offset, (uint)state.PovHat);
 									offset += 4;
 								}
+
 								// Buttons
 								for (var i = 0; i < 32 && offset < cbData; i++)
 								{
@@ -571,6 +577,7 @@ namespace Win32Emu.Win32.Modules
 									offset++;
 								}
 							}
+
 							break;
 					}
 				}
@@ -705,6 +712,52 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[DInput COM] IDirectInputDevice::Initialize() - stub");
 			return 0; // DI_OK
+		}
+
+
+		[DllModuleExport(3, entryPoint: 0x0000B033, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(3, entryPoint: 0x0000B15A, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectInputCreateW(uint hinst, uint dwVersion, uint ppDI, uint punkOuter)
+		{
+			_logger.LogWarning("[dinput] DirectInputCreateW: hinst={hinst}, dwVersion=0x{dwVersion:X8}, ppDI=0x{ppDI:X8}, punkOuter={punkOuter}", hinst, dwVersion, ppDI, punkOuter);
+			// TODO: Implement DirectInputCreateW
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(4, entryPoint: 0x0000AE2C, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(4, entryPoint: 0x0000AE99, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DllCanUnloadNow()
+		{
+			_logger.LogWarning("[dinput] DllCanUnloadNow called (stub)");
+			// TODO: Implement DllCanUnloadNow
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(5, entryPoint: 0x0000ADC1, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(5, entryPoint: 0x0000AE27, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DllGetClassObject()
+		{
+			_logger.LogWarning("[dinput] DllGetClassObject called (stub)");
+			// TODO: Implement DllGetClassObject
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(6, entryPoint: 0x00014C35, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(6, entryPoint: 0x00015E55, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DllRegisterServer()
+		{
+			_logger.LogWarning("[dinput] DllRegisterServer called (stub)");
+			// TODO: Implement DllRegisterServer
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(7, entryPoint: 0x00014C40, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(7, entryPoint: 0x00015E65, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DllUnregisterServer()
+		{
+			_logger.LogWarning("[dinput] DllUnregisterServer called (stub)");
+			// TODO: Implement DllUnregisterServer
+			return 0; // DWORD default
 		}
 	}
 }

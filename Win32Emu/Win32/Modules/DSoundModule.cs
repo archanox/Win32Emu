@@ -52,8 +52,9 @@ namespace Win32Emu.Win32.Modules
 					return false;
 			}
 		}
-		
-		[DllModuleExport(1)]
+
+		[DllModuleExport(1, entryPoint: 0x0002C7DF, Version = "4.90.0.3000")]
+		[DllModuleExport(1, entryPoint: 0x0000473B, Version = "5.1.2600.6532")]
 		private uint DirectSoundCreate(uint lpGuid, uint lplpDs, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DSound] DirectSoundCreate(lpGuid=0x{LpGuid:X8}, lplpDS=0x{LplpDs:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDs, pUnkOuter);
@@ -104,8 +105,9 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DSound] Created IDirectSound COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
 			return 0; // DS_OK
 		}
-		
-		[DllModuleExport(1)]
+
+		[DllModuleExport(2, entryPoint: 0x0002D554, Version = "4.90.0.3000")]
+		[DllModuleExport(2, entryPoint: 0x0002708D, Version = "5.1.2600.6532")]
 		private uint DirectSoundEnumerateA(uint lpDsEnumCallback, uint lpContext)
 		{
 			_logger.LogInformation("[DSound] DirectSoundEnumerateA(lpDSEnumCallback=0x{LpDsEnumCallback:X8}, lpContext=0x{LpContext:X8})", lpDsEnumCallback, lpContext);
@@ -120,17 +122,17 @@ namespace Win32Emu.Win32.Modules
 			// Enumerate audio devices and call the callback for each one
 			// For now, we'll enumerate at least one default device
 			// The callback signature is: BOOL Callback(LPGUID lpGuid, LPCSTR lpcstrDescription, LPCSTR lpcstrModule, LPVOID lpContext)
-			
+
 			// Allocate strings for the default device
 			var descriptionStr = "Primary Sound Driver";
 			var moduleStr = "Primary Sound Driver";
-			
+
 			uint descriptionPtr = _env.WriteAnsiString(descriptionStr);
 			uint modulePtr = _env.WriteAnsiString(moduleStr);
-			
+
 			// Call the callback with NULL GUID for the default device
 			bool continueEnum = CallEnumerationCallback(lpDsEnumCallback, 0, descriptionPtr, modulePtr, lpContext);
-			
+
 			if (!continueEnum)
 			{
 				_logger.LogInformation("[DSound] DirectSoundEnumerateA: Callback returned FALSE, stopping enumeration");
@@ -223,7 +225,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DSound] CallEnumerationCallback: Completed with return value {ReturnValue}", returnValue);
-			
+
 			// Return TRUE means continue enumeration, FALSE means stop
 			return returnValue != 0;
 		}
@@ -488,6 +490,96 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Restore() - stub");
 			return 0; // DS_OK
+		}
+
+		[DllModuleExport(3, entryPoint: 0x0002D571, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(3, entryPoint: 0x000270AA, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectSoundEnumerateW(uint lpDSEnumCallback, uint lpContext)
+		{
+			_logger.LogWarning("[dsound] DirectSoundEnumerateW: lpDSEnumCallback={lpDSEnumCallback}, lpContext={lpContext}", lpDSEnumCallback, lpContext);
+			// TODO: Implement DirectSoundEnumerateW
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(4, entryPoint: 0x00035E9D, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(4, entryPoint: 0x0002BE61, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DllCanUnloadNow()
+		{
+			_logger.LogWarning("[dsound] DllCanUnloadNow called (stub)");
+			// TODO: Implement DllCanUnloadNow
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(5, entryPoint: 0x00036A41, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(5, entryPoint: 0x000109C5, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DllGetClassObject()
+		{
+			_logger.LogWarning("[dsound] DllGetClassObject called (stub)");
+			// TODO: Implement DllGetClassObject
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(6, entryPoint: 0x0002C95C, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(6, entryPoint: 0x000268BB, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectSoundCaptureCreate(uint pcGuidDevice, uint ppDSC, uint pUnkOuter)
+		{
+			_logger.LogWarning("[dsound] DirectSoundCaptureCreate: pcGuidDevice={pcGuidDevice}, ppDSC=0x{ppDSC:X8}, pUnkOuter={pUnkOuter}", pcGuidDevice, ppDSC, pUnkOuter);
+			// TODO: Implement DirectSoundCaptureCreate
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(7, entryPoint: 0x0002D58E, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(7, entryPoint: 0x000270C7, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectSoundCaptureEnumerateA(uint lpDSEnumCallback, uint lpContext)
+		{
+			_logger.LogWarning("[dsound] DirectSoundCaptureEnumerateA: lpDSEnumCallback={lpDSEnumCallback}, lpContext={lpContext}", lpDSEnumCallback, lpContext);
+			// TODO: Implement DirectSoundCaptureEnumerateA
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(8, entryPoint: 0x0002D5AB, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(8, entryPoint: 0x000270E4, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectSoundCaptureEnumerateW(uint lpDSEnumCallback, uint lpContext)
+		{
+			_logger.LogWarning("[dsound] DirectSoundCaptureEnumerateW: lpDSEnumCallback={lpDSEnumCallback}, lpContext={lpContext}", lpDSEnumCallback, lpContext);
+			// TODO: Implement DirectSoundCaptureEnumerateW
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(9, entryPoint: 0x0002CDE2, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(9, entryPoint: 0x00026D42, Version = "5.1.2600.6532", IsStub = true)]
+		public uint GetDeviceID(uint pGuidSrc, uint pGuidDest)
+		{
+			_logger.LogWarning("[dsound] GetDeviceID: pGuidSrc={pGuidSrc}, pGuidDest={pGuidDest}", pGuidSrc, pGuidDest);
+			// TODO: Implement GetDeviceID
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(10, entryPoint: 0x0002CAD3, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(10, entryPoint: 0x00026A32, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectSoundFullDuplexCreate(uint pcGuidCaptureDevice, uint pcGuidRenderDevice, uint pcDSCBufferDesc, uint pcDSBufferDesc, uint hWnd, uint dwLevel, uint ppDSFD, uint ppDSCBuffer8, uint ppDSBuffer8, uint pUnkOuter)
+		{
+			_logger.LogWarning("[dsound] DirectSoundFullDuplexCreate: pcGuidCaptureDevice={pcGuidCaptureDevice}, pcGuidRenderDevice={pcGuidRenderDevice}, pcDSCBufferDesc={pcDSCBufferDesc}, pcDSBufferDesc={pcDSBufferDesc}, hWnd=0x{hWnd:X8}, dwLevel=0x{dwLevel:X8}, ppDSFD=0x{ppDSFD:X8}, ppDSCBuffer8=0x{ppDSCBuffer8:X8}, ppDSBuffer8=0x{ppDSBuffer8:X8}, pUnkOuter={pUnkOuter}", pcGuidCaptureDevice, pcGuidRenderDevice, pcDSCBufferDesc, pcDSBufferDesc, hWnd, dwLevel, ppDSFD, ppDSCBuffer8, ppDSBuffer8, pUnkOuter);
+			// TODO: Implement DirectSoundFullDuplexCreate
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(11, entryPoint: 0x0002C896, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(11, entryPoint: 0x000267F5, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectSoundCreate8(uint lpcGuidDevice, uint ppDS8, uint pUnkOuter)
+		{
+			_logger.LogWarning("[dsound] DirectSoundCreate8: lpcGuidDevice={lpcGuidDevice}, ppDS8=0x{ppDS8:X8}, pUnkOuter={pUnkOuter}", lpcGuidDevice, ppDS8, pUnkOuter);
+			// TODO: Implement DirectSoundCreate8
+			return 0; // DWORD default
+		}
+
+		[DllModuleExport(12, entryPoint: 0x0002CA10, Version = "4.90.0.3000", IsStub = true)]
+		[DllModuleExport(12, entryPoint: 0x0002696F, Version = "5.1.2600.6532", IsStub = true)]
+		public uint DirectSoundCaptureCreate8(uint lpcGUID, uint lplpDSC, uint pUnkOuter)
+		{
+			_logger.LogWarning("[dsound] DirectSoundCaptureCreate8: lpcGUID={lpcGUID}, lplpDSC=0x{lplpDSC:X8}, pUnkOuter={pUnkOuter}", lpcGUID, lplpDSC, pUnkOuter);
+			// TODO: Implement DirectSoundCaptureCreate8
+			return 0; // DWORD default
 		}
 	}
 }
