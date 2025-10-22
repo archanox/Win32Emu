@@ -208,6 +208,8 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new Glide2XModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DPlayXModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Ole32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Shell32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new DsetupModule(_env, _image.BaseAddress, loader, _logger));
 
         // Initialize the main thread in the thread scheduler
         _env.InitializeMainThread(_cpu);
