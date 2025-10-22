@@ -112,6 +112,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETENVIRONMENTSTRINGSW":
 				returnValue = GetEnvironmentStringsW();
 				return true;
+			case "GETENVIRONMENTSTRINGS":
 			case "GETENVIRONMENTSTRINGSA":
 				returnValue = GetEnvironmentStringsA();
 				return true;
