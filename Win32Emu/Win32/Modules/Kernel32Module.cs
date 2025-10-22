@@ -1003,10 +1003,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			else if (wchar is ' ' or '\t' or '\n' or '\r')
 			{
 				charType = ctCtype1Space;
-			}
-			else if (wchar is ' ' or '\t')
-			{
-				charType |= ctCtype1Blank;
+				// Space and tab are also blank characters
+				if (wchar is ' ' or '\t')
+				{
+					charType |= ctCtype1Blank;
+				}
 			}
 
 			// Control characters (0x00-0x1F, 0x7F)
