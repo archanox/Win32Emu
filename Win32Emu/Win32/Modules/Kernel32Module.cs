@@ -2076,7 +2076,6 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 
 			// Fallback to direct filesystem access if VFS not available
-			// Use the original path (not resolved) since we're working with the real filesystem
 			var fileMode = dwCreationDisposition switch
 			{
 				1 => FileMode.CreateNew,
@@ -2098,7 +2097,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				fileAccess = FileAccess.Write; // GENERIC_WRITE
 			}
 
-			var fs = new FileStream(path, fileMode, fileAccess, FileShare.ReadWrite);
+			var fs = new FileStream(resolvedPath, fileMode, fileAccess, FileShare.ReadWrite);
 			return _env.RegisterHandle(fs);
 		}
 		catch (Exception ex)

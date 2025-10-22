@@ -19,6 +19,11 @@ public class FileIoTests : IDisposable
     [Fact]
     public void CreateFileA_WithValidFileName_ShouldReturnValidHandle()
     {
+        // Set CurrentDirectory to a writable temp directory so the test works
+        // when VFS is not available (fallback to direct filesystem access)
+        var tempDir = Path.GetTempPath();
+        _testEnv.ProcessEnv.CurrentDirectory = tempDir;
+
         // Arrange
         var fileName = _testEnv.WriteString("test.txt");
         const uint desiredAccess = 0x80000000; // GENERIC_READ
@@ -35,6 +40,17 @@ public class FileIoTests : IDisposable
         // Assert
         Assert.NotEqual(0u, handle);
         Assert.NotEqual(0xFFFFFFFFu, handle); // INVALID_HANDLE_VALUE
+
+        // Cleanup - close the handle and delete the file
+        if (handle != 0xFFFFFFFF && handle != 0)
+        {
+            _testEnv.CallKernel32Api("CLOSEHANDLE", handle);
+            var testFilePath = Path.Combine(tempDir, "test.txt");
+            if (File.Exists(testFilePath))
+            {
+                File.Delete(testFilePath);
+            }
+        }
     }
 
     [Fact]
@@ -55,6 +71,58 @@ public class FileIoTests : IDisposable
 
         // Assert
         Assert.Equal(0xFFFFFFFFu, handle); // INVALID_HANDLE_VALUE
+    }
+
+    [Fact]
+    public void CreateFileA_WithRelativePath_ShouldResolveAgainstCurrentDirectory()
+    {
+        // This test verifies that CreateFileA resolves relative paths correctly
+        // against the emulated CurrentDirectory, not the actual process working directory.
+        // This is important when VFS is not available (fallback to direct filesystem access).
+        
+        // Arrange - Create a temporary test directory and file
+        var testDir = Path.Combine(Path.GetTempPath(), "Win32EmuTest_" + Guid.NewGuid().ToString());
+        Directory.CreateDirectory(testDir);
+        try
+        {
+            var testFileName = "testfile.txt";
+            var testFilePath = Path.Combine(testDir, testFileName);
+            File.WriteAllText(testFilePath, "Test content");
+
+            // Set the emulated CurrentDirectory to our test directory
+            _testEnv.ProcessEnv.CurrentDirectory = testDir;
+
+            // Create a relative path (just the filename, no directory)
+            var fileName = _testEnv.WriteString(testFileName);
+            const uint desiredAccess = 0x80000000; // GENERIC_READ
+            const uint shareMode = 0x00000001; // FILE_SHARE_READ
+            const uint securityAttributes = 0; // NULL
+            const uint creationDisposition = 3; // OPEN_EXISTING
+            const uint flagsAndAttributes = 0x80; // FILE_ATTRIBUTE_NORMAL
+            const uint templateFile = 0; // NULL
+
+            // Act
+            var handle = _testEnv.CallKernel32Api("CREATEFILEA", fileName, desiredAccess, shareMode,
+                securityAttributes, creationDisposition, flagsAndAttributes, templateFile);
+
+            // Assert
+            Assert.NotEqual(0xFFFFFFFFu, handle); // Should succeed, not INVALID_HANDLE_VALUE
+            Assert.NotEqual(0u, handle); // Should be a valid handle
+
+            // Cleanup - close the handle
+            if (handle != 0xFFFFFFFF && handle != 0)
+            {
+                _testEnv.CallKernel32Api("CLOSEHANDLE", handle);
+            }
+        }
+        finally
+        {
+            // Cleanup - delete test directory and file
+            if (Directory.Exists(testDir))
+            {
+                Directory.Delete(testDir, true);
+            }
+        }
     }
 
     #endregion
