@@ -1047,7 +1047,7 @@ public sealed class Emulator : IDisposable
                 
                 if (isImportHook || isLikelyComPointer || isUnaligned)
                 {
-                    // EBP contains an invalid value (import hook, COM pointer, or unaligned)
+                    // EBP contains a non-frame-pointer or special-purpose value (import hook address, COM pointer, or unaligned); leave unchanged to respect calling conventions
                     // Don't modify EBP - the calling code will manage it
                     // Setting EBP=ESP here would break the caller's frame pointer assumptions
                     
