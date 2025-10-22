@@ -2029,11 +2029,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
-			// Resolve relative paths relative to the current directory
-			// This ensures paths like "data\IGN1.TEX" are resolved relative to the executable's directory
-			// Only do this when VFS is available, as that's when CurrentDirectory is properly set
+			// Resolve relative paths relative to the current directory.
+			// This ensures paths like "data\IGN1.TEX" are resolved relative to the executable's directory.
+			// CurrentDirectory is always set, so we always resolve relative paths.
 			var resolvedPath = path;
-			if (_env.VirtualFileSystem != null && !Path.IsPathRooted(path))
+			if (!Path.IsPathRooted(path))
 			{
 				// Path is relative, resolve it relative to current directory
 				resolvedPath = Path.Combine(_env.CurrentDirectory, path);
