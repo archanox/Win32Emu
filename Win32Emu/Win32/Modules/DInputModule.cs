@@ -483,8 +483,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetDeviceState(this=0x{ThisPtr:X8}, cbData={CbData}, lpvData=0x{LpvData:X8})", thisPtr, cbData, lpvData);
 
 			// Find the device associated with this COM object
-			var device = _devices.Values.FirstOrDefault(d => true); // TODO: Map thisPtr to device
-			if (device == null || !device.IsAcquired)
+			if (!_devices.TryGetValue(thisPtr, out var device) || !device.IsAcquired)
 			{
 				_logger.LogWarning("[DInput COM] Device not acquired or not found");
 				return 0x8007001E; // DIERR_NOTACQUIRED
