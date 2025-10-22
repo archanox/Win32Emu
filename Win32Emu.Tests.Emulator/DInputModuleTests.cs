@@ -97,6 +97,34 @@ public class DInputModuleTests
     }
 
     [Fact]
+    public void DirectInputCreateEx_ShouldReturnSuccess()
+    {
+        // Arrange
+        var vm = new VirtualMemory(0x10000000);
+        var cpu = new IcedCpu(vm);
+        var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
+        var dinputModule = new DInputModule(env, 0x00400000);
+
+        var outputPtr = 0x001FF000u;
+        vm.Write32(outputPtr, 0x00000000);
+
+        cpu.SetRegister("ESP", 0x001FFF00);
+        vm.Write32(0x001FFF00, 0x00400000); // hinst
+        vm.Write32(0x001FFF04, 0x00000700); // dwVersion = DIRECTINPUT_VERSION (0x0700 for DInput7)
+        vm.Write32(0x001FFF08, 0x00000000); // riidltf (IID_IDirectInput7)
+        vm.Write32(0x001FFF0C, outputPtr);  // lplpDirectInput
+        vm.Write32(0x001FFF10, 0x00000000); // pUnkOuter
+
+        // Act
+        var result = dinputModule.TryInvokeUnsafe("DirectInputCreateEx", cpu, vm, out var returnValue);
+
+        // Assert
+        Assert.True(result, "DirectInputCreateEx should be found and invoked");
+        Assert.Equal(0x00000000u, returnValue); // DI_OK
+        Assert.NotNull(env.InputBackend);
+    }
+
+    [Fact]
     public void UnknownExport_ShouldReturnFalse()
     {
         // Arrange

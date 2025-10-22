@@ -41,6 +41,9 @@ namespace Win32Emu.Win32.Modules
 				case "DIRECTINPUTCREATE":
 					returnValue = DirectInputCreateA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
+				case "DIRECTINPUTCREATEEX":
+					returnValue = DirectInputCreateEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
 				// TODO: DIRECTINPUT8CREATE needs to move over to DINPUT8.DLL
 				case "DIRECTINPUT8CREATE":
 					returnValue = DirectInput8Create(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
@@ -152,6 +155,17 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DInput] DirectInput8Create(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, riidltf=0x{Riidltf:X8})", hinst, dwVersion, riidltf);
 
 			// DirectInput8 is similar to DirectInputCreate but with additional parameters
+			return DirectInputCreate(hinst, dwVersion, lplpDirectInput, pUnkOuter);
+		}
+
+		[DllModuleExport(1)]
+		private uint DirectInputCreateEx(uint hinst, uint dwVersion, uint riidltf, uint lplpDirectInput, uint pUnkOuter)
+		{
+			_logger.LogInformation("[DInput] DirectInputCreateEx(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, riidltf=0x{Riidltf:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, riidltf, lplpDirectInput, pUnkOuter);
+
+			// DirectInputCreateEx is similar to DirectInputCreate but with riidltf parameter
+			// The riidltf parameter specifies the desired interface (e.g., IID_IDirectInput7)
+			// For now, we ignore the specific interface and create a standard IDirectInput object
 			return DirectInputCreate(hinst, dwVersion, lplpDirectInput, pUnkOuter);
 		}
 
