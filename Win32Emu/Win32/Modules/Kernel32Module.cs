@@ -218,6 +218,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "MOVEFILEA":
 				returnValue = MoveFileA(a.UInt32(0), a.UInt32(1));
 				return true;
+			case "SETFILEATTRIBUTESA":
+				returnValue = SetFileAttributesA(a.LpcStr(0), a.UInt32(1));
+				return true;
+			case "GETDISKFREESPACEA":
+				returnValue = GetDiskFreeSpaceA(a.LpcStr(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
 			case "FINDFIRSTFILEA":
 				returnValue = FindFirstFileA(a.UInt32(0), a.UInt32(1));
 				return true;
@@ -367,10 +373,22 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETCURRENTDIRECTORYA":
 				returnValue = GetCurrentDirectoryA(a.UInt32(0), a.LpStr(1));
 				return true;
+			case "CREATEDIRECTORYA":
+				returnValue = CreateDirectoryA(a.LpcStr(0), a.UInt32(1));
+				return true;
+			case "GETWINDOWSDIRECTORYA":
+				returnValue = GetWindowsDirectoryA(a.LpStr(0), a.UInt32(1));
+				return true;
 
 			// String functions
 			case "LSTRCATA":
 				returnValue = LstrcatA(a.LpStr(0), a.LpcStr(1));
+				return true;
+			case "LSTRCPYA":
+				returnValue = LstrcpyA(a.LpStr(0), a.LpcStr(1));
+				return true;
+			case "LSTRLENA":
+				returnValue = LstrlenA(a.LpcStr(0));
 				return true;
 
 			// Process execution
@@ -4495,6 +4513,72 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return (uint)currentDir.Length; // Return length without null terminator
 	}
 
+	[DllModuleExport(4)]
+	private uint CreateDirectoryA(in LpcStr lpPathName, uint lpSecurityAttributes)
+	{
+		var path = lpPathName.ToString();
+		_logger.LogInformation("[Kernel32] CreateDirectoryA(\"{Path}\", 0x{LpSecurityAttributes:X8})", path, lpSecurityAttributes);
+
+		if (string.IsNullOrEmpty(path))
+		{
+			_logger.LogWarning("[Kernel32] CreateDirectoryA: Invalid path (empty or null)");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		try
+		{
+			// Create directory - just use the path directly without VFS translation for now
+			var realPath = path;
+			
+			// Create directory
+			if (!Directory.Exists(realPath))
+			{
+				Directory.CreateDirectory(realPath);
+				_logger.LogInformation("[Kernel32] CreateDirectoryA: Created directory \"{RealPath}\"", realPath);
+			}
+			else
+			{
+				_logger.LogInformation("[Kernel32] CreateDirectoryA: Directory already exists \"{RealPath}\"", realPath);
+				_lastError = NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] CreateDirectoryA: Failed to create directory \"{Path}\"", path);
+			_lastError = NativeTypes.Win32Error.ERROR_PATH_NOT_FOUND;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	[DllModuleExport(4)]
+	private uint GetWindowsDirectoryA(in LpStr lpBuffer, uint uSize)
+	{
+		// Return a typical Windows directory path
+		const string windowsDir = "C:\\WINDOWS";
+		var requiredSize = (uint)windowsDir.Length + 1; // +1 for null terminator
+
+		_logger.LogInformation("[Kernel32] GetWindowsDirectoryA(buffer=0x{Address:X8}, size={USize})", lpBuffer.Address, uSize);
+
+		if (uSize == 0)
+		{
+			return requiredSize;
+		}
+
+		if (uSize < requiredSize)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return requiredSize;
+		}
+
+		// Write the Windows directory to the buffer
+		lpBuffer.Write(_env.Memory, windowsDir, true);
+		return (uint)windowsDir.Length; // Return length without null terminator
+	}
+
 	// String functions
 	private uint LstrcatA(in LpStr lpString1, in LpcStr lpString2)
 	{
@@ -4509,6 +4593,29 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// Return pointer to destination string
 		return lpString1.Address;
+	}
+
+	[DllModuleExport(4)]
+	private uint LstrcpyA(in LpStr lpString1, in LpcStr lpString2)
+	{
+		var str2 = lpString2.ToString();
+		_logger.LogInformation("[Kernel32] LstrcpyA(dest=0x{Address:X8}, src=\"{Str2}\")", lpString1.Address, str2);
+
+		// Copy string to destination
+		lpString1.Write(_env.Memory, str2 ?? string.Empty, true);
+
+		// Return pointer to destination string
+		return lpString1.Address;
+	}
+
+	[DllModuleExport(4)]
+	private uint LstrlenA(in LpcStr lpString)
+	{
+		var str = lpString.ToString();
+		_logger.LogInformation("[Kernel32] LstrlenA(\"{Str}\")", str);
+
+		// Return the length of the string (excluding null terminator)
+		return (uint)(str?.Length ?? 0);
 	}
 
 	// Process execution
@@ -4818,4 +4925,88 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 	}
+	[DllModuleExport(4)]
+	private uint SetFileAttributesA(in LpcStr lpFileName, uint dwFileAttributes)
+	{
+		var fileName = lpFileName.ToString();
+		_logger.LogInformation("[Kernel32] SetFileAttributesA(\"{FileName}\", 0x{DwFileAttributes:X8})", fileName, dwFileAttributes);
+
+		if (string.IsNullOrEmpty(fileName))
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		try
+		{
+			// Just use the path directly for now
+			var realPath = fileName;
+
+			// Set file attributes (we'll support basic ones)
+			var fileInfo = new FileInfo(realPath);
+			if (!fileInfo.Exists)
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+
+			// Map Win32 attributes to .NET FileAttributes
+			FileAttributes attributes = FileAttributes.Normal;
+			
+			if ((dwFileAttributes & 0x01) != 0) attributes |= FileAttributes.ReadOnly;    // FILE_ATTRIBUTE_READONLY
+			if ((dwFileAttributes & 0x02) != 0) attributes |= FileAttributes.Hidden;      // FILE_ATTRIBUTE_HIDDEN
+			if ((dwFileAttributes & 0x04) != 0) attributes |= FileAttributes.System;      // FILE_ATTRIBUTE_SYSTEM
+			if ((dwFileAttributes & 0x20) != 0) attributes |= FileAttributes.Archive;     // FILE_ATTRIBUTE_ARCHIVE
+
+			fileInfo.Attributes = attributes;
+			_logger.LogInformation("[Kernel32] SetFileAttributesA: Set attributes for \"{RealPath}\"", realPath);
+			
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] SetFileAttributesA: Failed to set attributes for \"{FileName}\"", fileName);
+			_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	[DllModuleExport(4)]
+	private uint GetDiskFreeSpaceA(in LpcStr lpRootPathName, uint lpSectorsPerCluster, uint lpBytesPerSector, uint lpNumberOfFreeClusters, uint lpTotalNumberOfClusters)
+	{
+		var rootPath = lpRootPathName.ToString() ?? "C:\\";
+		_logger.LogInformation("[Kernel32] GetDiskFreeSpaceA(\"{RootPath}\", 0x{LpSectorsPerCluster:X8}, 0x{LpBytesPerSector:X8}, 0x{LpNumberOfFreeClusters:X8}, 0x{LpTotalNumberOfClusters:X8})", 
+			rootPath, lpSectorsPerCluster, lpBytesPerSector, lpNumberOfFreeClusters, lpTotalNumberOfClusters);
+
+		try
+		{
+			// Return reasonable default values for disk space
+			// These are typical values for a modern disk with 4K sectors
+			const uint sectorsPerCluster = 8;     // 8 sectors per cluster (32KB clusters)
+			const uint bytesPerSector = 512;       // 512 bytes per sector
+			const uint numberOfFreeClusters = 1000000;  // ~32GB free space
+			const uint totalNumberOfClusters = 2000000; // ~64GB total space
+
+			if (lpSectorsPerCluster != 0)
+				_env.MemWrite32(lpSectorsPerCluster, sectorsPerCluster);
+			
+			if (lpBytesPerSector != 0)
+				_env.MemWrite32(lpBytesPerSector, bytesPerSector);
+			
+			if (lpNumberOfFreeClusters != 0)
+				_env.MemWrite32(lpNumberOfFreeClusters, numberOfFreeClusters);
+			
+			if (lpTotalNumberOfClusters != 0)
+				_env.MemWrite32(lpTotalNumberOfClusters, totalNumberOfClusters);
+
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] GetDiskFreeSpaceA: Failed for \"{RootPath}\"", rootPath);
+			_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
 }
