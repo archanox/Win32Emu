@@ -1980,25 +1980,27 @@ namespace Win32Emu.Win32.Modules
 				const uint WM_INITDIALOG = 0x0110;
 				var dialogProcTimedOut = false;
 				var dialogProcCancelled = false;
+				var dialogProcFailed = false;
 
 				if (lpDialogFunc != 0)
 				{
 					_logger.LogInformation("[User32] DialogBoxParamAsync: Calling dialog procedure with WM_INITDIALOG");
-					var (initResult, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam, cancellationToken);
+					var (initResult, timedOut, cancelled, failed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam, cancellationToken);
 					_logger.LogInformation("[User32] DialogBoxParamAsync: WM_INITDIALOG returned {InitResult}", initResult);
 					dialogProcTimedOut = timedOut;
 					dialogProcCancelled = cancelled;
+					dialogProcFailed = failed;
 				}
 				else
 				{
 					_logger.LogWarning("[User32] DialogBoxParamAsync: No dialog procedure specified");
 				}
 
-				// If the dialog procedure timed out or was cancelled during initialization, end the dialog immediately
-				if (dialogProcTimedOut || dialogProcCancelled)
+				// If the dialog procedure timed out, was cancelled, or failed during initialization, end the dialog immediately
+				if (dialogProcTimedOut || dialogProcCancelled || dialogProcFailed)
 				{
-					_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status}, ending dialog with result 0",
-						dialogProcCancelled ? "cancelled" : "timed out");
+					var status = dialogProcFailed ? "failed" : (dialogProcCancelled ? "cancelled" : "timed out");
+					_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status}, ending dialog with result 0", status);
 					_env.SetDialogResult(hDlg, 0);
 				}
 
@@ -2036,14 +2038,14 @@ namespace Win32Emu.Win32.Modules
 					{
 						if (lpDialogFunc != 0)
 						{
-							var (result, timedOut, cancelled) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam, cancellationToken);
+							var (result, timedOut, cancelled, failed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam, cancellationToken);
 							_logger.LogDebug("[User32] DialogBoxParamAsync: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
 
-							// If dialog procedure times out or is cancelled, force end the dialog
-							if (timedOut || cancelled)
+							// If dialog procedure times out, is cancelled, or fails, force end the dialog
+							if (timedOut || cancelled || failed)
 							{
-								_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status} during message processing, forcing dialog end",
-									cancelled ? "cancelled" : "timed out");
+								var status = failed ? "failed" : (cancelled ? "cancelled" : "timed out");
+								_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status} during message processing, forcing dialog end", status);
 								_env.SetDialogResult(hDlg, 0);
 							}
 						}
@@ -2058,10 +2060,11 @@ namespace Win32Emu.Win32.Modules
 				{
 					consecutiveEmptyIterations++;
 
-					// If we've had too many empty iterations and the dialog proc timed out, force end
-					if (dialogProcTimedOut && consecutiveEmptyIterations >= MAX_EMPTY_ITERATIONS)
+					// If we've had too many empty iterations and the dialog proc timed out or failed, force end
+					if ((dialogProcTimedOut || dialogProcFailed) && consecutiveEmptyIterations >= MAX_EMPTY_ITERATIONS)
 					{
-						_logger.LogWarning("[User32] DialogBoxParamAsync: No messages and dialog procedure timed out, forcing dialog end");
+						var status = dialogProcFailed ? "failed" : "timed out";
+						_logger.LogWarning("[User32] DialogBoxParamAsync: No messages and dialog procedure {Status}, forcing dialog end", status);
 						_env.SetDialogResult(hDlg, 0);
 					}
 
@@ -2335,7 +2338,7 @@ namespace Win32Emu.Win32.Modules
 		/// Async version of CallDialogProcedureWithTimeout with cancellation token support.
 		/// Allows cooperative cancellation during long-running dialog procedure execution.
 		/// </summary>
-		private async Task<(uint returnValue, bool timedOut, bool cancelled)> CallDialogProcedureAsync(
+		private async Task<(uint returnValue, bool timedOut, bool cancelled, bool failed)> CallDialogProcedureAsync(
 			ICpu cpu, VirtualMemory memory, uint dialogProcAddress, uint hwndDlg, uint message, uint wParam, uint lParam, CancellationToken cancellationToken = default)
 		{
 			_logger.LogInformation("[User32] CallDialogProcedureAsync: Calling 0x{DialogProcAddress:X8} with HWND=0x{HwndDlg:X8} MSG=0x{Message:X4}", dialogProcAddress, hwndDlg, message);
@@ -2344,7 +2347,7 @@ namespace Win32Emu.Win32.Modules
 			if (dialogProcAddress == 0)
 			{
 				_logger.LogWarning("[User32] CallDialogProcedureAsync: Dialog procedure address is NULL (0x00000000), aborting");
-				return (0, true, false);
+				return (0, true, false, true); // Mark as failed since the procedure address is invalid
 			}
 
 			// Save current CPU state
@@ -2383,6 +2386,7 @@ namespace Win32Emu.Win32.Modules
 			var steps = 0;
 			var timedOut = false;
 			var cancelled = false;
+			var failed = false;
 			var lastCheckEip = cpu.GetEip();
 			var stuckCounter = 0;
 
@@ -2436,7 +2440,7 @@ namespace Win32Emu.Win32.Modules
 						{
 						}
 
-						timedOut = true;
+						failed = true;
 						break;
 					}
 
@@ -2569,7 +2573,7 @@ namespace Win32Emu.Win32.Modules
 			catch (Exception ex)
 			{
 				_logger.LogWarning(ex, "[User32] CallDialogProcedureAsync: Exception during execution: {ExMessage}", ex.Message);
-				timedOut = true;
+				failed = true;
 			}
 
 			if (steps >= MAX_STEPS)
@@ -2580,17 +2584,17 @@ namespace Win32Emu.Win32.Modules
 
 			// Get return value from EAX, but only if execution was successful
 			// Otherwise return 0 as a safe default value
-			var returnValue = (timedOut || cancelled) ? 0u : cpu.GetRegister("EAX");
+			var returnValue = (timedOut || cancelled || failed) ? 0u : cpu.GetRegister("EAX");
 
 			// Restore CPU state
 			cpu.SetEip(savedEip);
 			cpu.SetRegister("ESP", savedEsp);
 			cpu.SetRegister("EBP", savedEbp);
 
-			_logger.LogInformation("[User32] CallDialogProcedureAsync: Completed with return value 0x{ReturnValue:X8}, timedOut={TimedOut}, cancelled={Cancelled}",
-				returnValue, timedOut, cancelled);
+			_logger.LogInformation("[User32] CallDialogProcedureAsync: Completed with return value 0x{ReturnValue:X8}, timedOut={TimedOut}, cancelled={Cancelled}, failed={Failed}",
+				returnValue, timedOut, cancelled, failed);
 
-			return (returnValue, timedOut, cancelled);
+			return (returnValue, timedOut, cancelled, failed);
 		}
 
 
