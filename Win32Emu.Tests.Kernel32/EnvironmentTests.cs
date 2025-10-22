@@ -407,6 +407,158 @@ public class EnvironmentTests : IDisposable
         return Encoding.ASCII.GetString(bytes.ToArray());
     }
 
+    [Fact]
+    public void SetEnvironmentVariableA_ShouldSetVirtualizedVariable()
+    {
+        // Arrange - Create string pointers for name and value
+        var testName = "TEST_VAR_NEW";
+        var testValue = "TestValue123";
+        var namePtr = WriteAnsiString(testName);
+        var valuePtr = WriteAnsiString(testValue);
+
+        // Capture OS environment before the call
+        var osValueBefore = Environment.GetEnvironmentVariable(testName);
+
+        // Act - Call SetEnvironmentVariableA
+        var result = _testEnv.CallKernel32Api("SETENVIRONMENTVARIABLEA", namePtr, valuePtr);
+
+        // Assert - Should return TRUE (1)
+        Assert.Equal(1u, result);
+
+        // Verify the OS environment was NOT modified
+        var osValueAfter = Environment.GetEnvironmentVariable(testName);
+        Assert.Equal(osValueBefore, osValueAfter);
+
+        // Verify the virtualized environment was modified by checking GetEnvironmentStringsA
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSA");
+        var environmentStrings = ReadEnvironmentStringsFromMemoryAnsi(envStringsPtr);
+        Assert.Contains($"{testName}={testValue}", environmentStrings);
+    }
+
+    [Fact]
+    public void SetEnvironmentVariableA_ShouldDeleteVirtualizedVariable()
+    {
+        // Arrange - First set a variable
+        var testName = "TEST_VAR_DELETE";
+        var testValue = "InitialValue";
+        var namePtr = WriteAnsiString(testName);
+        var valuePtr = WriteAnsiString(testValue);
+        
+        var setResult = _testEnv.CallKernel32Api("SETENVIRONMENTVARIABLEA", namePtr, valuePtr);
+        Assert.Equal(1u, setResult);
+
+        // Capture OS environment before deletion
+        var osValueBefore = Environment.GetEnvironmentVariable(testName);
+
+        // Act - Delete the variable by passing NULL (0) for value
+        var deleteResult = _testEnv.CallKernel32Api("SETENVIRONMENTVARIABLEA", namePtr, 0u);
+
+        // Assert - Should return TRUE (1)
+        Assert.Equal(1u, deleteResult);
+
+        // Verify the OS environment was NOT modified
+        var osValueAfter = Environment.GetEnvironmentVariable(testName);
+        Assert.Equal(osValueBefore, osValueAfter);
+
+        // Verify the variable was removed from virtualized environment
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSA");
+        var environmentStrings = ReadEnvironmentStringsFromMemoryAnsi(envStringsPtr);
+        Assert.DoesNotContain(environmentStrings, s => s.StartsWith($"{testName}="));
+    }
+
+    [Fact]
+    public void SetEnvironmentVariableA_ShouldUpdateExistingVirtualizedVariable()
+    {
+        // Arrange - Set initial value
+        var testName = "TEST_VAR_UPDATE";
+        var initialValue = "InitialValue";
+        var updatedValue = "UpdatedValue";
+        var namePtr = WriteAnsiString(testName);
+        var initialValuePtr = WriteAnsiString(initialValue);
+        
+        var setResult = _testEnv.CallKernel32Api("SETENVIRONMENTVARIABLEA", namePtr, initialValuePtr);
+        Assert.Equal(1u, setResult);
+
+        // Capture OS environment before update
+        var osValueBefore = Environment.GetEnvironmentVariable(testName);
+
+        // Act - Update the variable
+        var updatedValuePtr = WriteAnsiString(updatedValue);
+        var updateResult = _testEnv.CallKernel32Api("SETENVIRONMENTVARIABLEA", namePtr, updatedValuePtr);
+
+        // Assert - Should return TRUE (1)
+        Assert.Equal(1u, updateResult);
+
+        // Verify the OS environment was NOT modified
+        var osValueAfter = Environment.GetEnvironmentVariable(testName);
+        Assert.Equal(osValueBefore, osValueAfter);
+
+        // Verify the virtualized environment has the updated value
+        var envStringsPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSA");
+        var environmentStrings = ReadEnvironmentStringsFromMemoryAnsi(envStringsPtr);
+        Assert.Contains($"{testName}={updatedValue}", environmentStrings);
+        Assert.DoesNotContain($"{testName}={initialValue}", environmentStrings);
+    }
+
+    [Fact]
+    public void SetEnvironmentVariableA_WithEmptyName_ShouldReturnFalse()
+    {
+        // Arrange - Create a pointer to an empty string
+        var emptyNamePtr = WriteAnsiString("");
+        var valuePtr = WriteAnsiString("SomeValue");
+
+        // Act - Try to set a variable with an empty name
+        var result = _testEnv.CallKernel32Api("SETENVIRONMENTVARIABLEA", emptyNamePtr, valuePtr);
+
+        // Assert - Should return FALSE (0)
+        Assert.Equal(0u, result);
+    }
+
+    [Fact]
+    public void SetEnvironmentVariableA_ShouldNotAffectOtherVirtualizedVariables()
+    {
+        // Arrange - Get existing environment before changes
+        var beforePtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSA");
+        var beforeEnv = ReadEnvironmentStringsFromMemoryAnsi(beforePtr);
+        
+        // Act - Set a new variable
+        var testName = "TEST_VAR_ISOLATED";
+        var testValue = "IsolatedValue";
+        var namePtr = WriteAnsiString(testName);
+        var valuePtr = WriteAnsiString(testValue);
+        var result = _testEnv.CallKernel32Api("SETENVIRONMENTVARIABLEA", namePtr, valuePtr);
+
+        // Assert - Should return TRUE (1)
+        Assert.Equal(1u, result);
+
+        // Verify other variables are unchanged
+        var afterPtr = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSA");
+        var afterEnv = ReadEnvironmentStringsFromMemoryAnsi(afterPtr);
+        
+        // All previous variables should still exist
+        foreach (var envVar in beforeEnv)
+        {
+            Assert.Contains(envVar, afterEnv);
+        }
+        
+        // New variable should exist
+        Assert.Contains($"{testName}={testValue}", afterEnv);
+        
+        // Should have exactly one more variable
+        Assert.Equal(beforeEnv.Count + 1, afterEnv.Count);
+    }
+
+    /// <summary>
+    /// Helper method to write an ANSI string to memory and return its pointer
+    /// </summary>
+    private uint WriteAnsiString(string str)
+    {
+        var bytes = Encoding.ASCII.GetBytes(str + '\0');
+        var addr = _testEnv.ProcessEnv.SimpleAlloc((uint)bytes.Length);
+        _testEnv.Memory.WriteBytes(addr, bytes);
+        return addr;
+    }
+
     public void Dispose()
     {
         _testEnv.Dispose();

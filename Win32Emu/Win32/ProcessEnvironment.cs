@@ -511,6 +511,42 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
+	/// Sets a virtualized environment variable.
+	/// </summary>
+	/// <param name="name">The name of the environment variable</param>
+	/// <param name="value">The value to set, or null to delete the variable</param>
+	public void SetEnvironmentVariable(string name, string? value)
+	{
+		if (value == null)
+		{
+			_environmentVariables.Remove(name);
+			_logger.LogDebug("[ProcessEnv] SetEnvironmentVariable: Deleted '{Name}'", name);
+		}
+		else
+		{
+			_environmentVariables[name] = value;
+			_logger.LogDebug("[ProcessEnv] SetEnvironmentVariable: Set '{Name}'='{Value}'", name, value);
+		}
+	}
+
+	/// <summary>
+	/// Gets a virtualized environment variable value.
+	/// </summary>
+	/// <param name="name">The name of the environment variable</param>
+	/// <returns>The value of the environment variable, or null if not found</returns>
+	public string? GetEnvironmentVariable(string name)
+	{
+		if (_environmentVariables.TryGetValue(name, out var value))
+		{
+			_logger.LogDebug("[ProcessEnv] GetEnvironmentVariable: '{Name}'='{Value}'", name, value);
+			return value;
+		}
+
+		_logger.LogDebug("[ProcessEnv] GetEnvironmentVariable: '{Name}' not found", name);
+		return null;
+	}
+
+	/// <summary>
 	/// Write text to standard output via the host callback
 	/// </summary>
 	public void WriteToStdOutput(string text)
