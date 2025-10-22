@@ -21,6 +21,10 @@ namespace Win32Emu.Win32.Modules
 		private LoadedImage? _image;
 		private PeResourceReader? _resourceReader;
 		private IEmulatorHost? _host;
+		
+		// State tracking for cursor and focus
+		private uint _currentCursor;
+		private uint _focusWindow;
 
 		// Constants for procedure execution monitoring
 		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
@@ -1579,28 +1583,44 @@ namespace Win32Emu.Win32.Modules
 			SM_YVIRTUALSCREEN = 77,
 		}
 
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(1)]
 		private uint LoadIconA(uint hInstance, uint lpIconName)
 		{
 			_logger.LogInformation("[User32] LoadIconA: hInstance=0x{HInstance:X8} lpIconName=0x{LpIconName:X8}", hInstance, lpIconName);
-			// Return a dummy icon handle
-			return _env.RegisterHandle(new object()); // Dummy icon object
+			// Return a unique icon handle
+			// For standard system icons (when hInstance is NULL), return predefined handles
+			if (hInstance == 0 && lpIconName <= 0xFFFF)
+			{
+				// Standard icon IDs (IDI_APPLICATION = 32512 = 0x7F00)
+				// Return a handle that includes the icon ID for debugging
+				return 0x00010000 | (lpIconName & 0xFFFF);
+			}
+			return _env.RegisterHandle(new object()); // Custom icon object
 		}
 
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(1)]
 		private uint LoadCursorA(uint hInstance, uint lpCursorName)
 		{
 			_logger.LogInformation("[User32] LoadCursorA: hInstance=0x{HInstance:X8} lpCursorName=0x{LpCursorName:X8}", hInstance, lpCursorName);
-			// Return a dummy cursor handle
-			return _env.RegisterHandle(new object()); // Dummy cursor object
+			// Return a unique cursor handle
+			// For standard system cursors (when hInstance is NULL), return predefined handles
+			if (hInstance == 0 && lpCursorName <= 0xFFFF)
+			{
+				// Standard cursor IDs (IDC_ARROW = 32512 = 0x7F00)
+				// Return a handle that includes the cursor ID for debugging
+				return 0x00010000 | (lpCursorName & 0xFFFF);
+			}
+			return _env.RegisterHandle(new object()); // Custom cursor object
 		}
 
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(1)]
 		private uint SetCursor(uint hCursor)
 		{
 			_logger.LogInformation("[User32] SetCursor: hCursor=0x{HCursor:X8}", hCursor);
-			// Return previous cursor handle (dummy)
-			return 0x00000001;
+			// Store and return previous cursor handle
+			var previousCursor = _currentCursor;
+			_currentCursor = hCursor;
+			return previousCursor;
 		}
 
 		[DllModuleExport(1, IsStub = true)]
@@ -1613,12 +1633,14 @@ namespace Win32Emu.Win32.Modules
 			return bShow != 0 ? 1 : 0;
 		}
 
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(1)]
 		private uint SetFocus(uint hwnd)
 		{
 			_logger.LogInformation("[User32] SetFocus: HWND=0x{Hwnd:X8}", hwnd);
-			// Return previous focus window handle
-			return 0; // NULL means no previous focus
+			// Store and return previous focus window handle
+			var previousFocus = _focusWindow;
+			_focusWindow = hwnd;
+			return previousFocus;
 		}
 
 		[DllModuleExport(1, IsStub = true)]
