@@ -8,6 +8,7 @@ namespace Win32Emu.Gui.Configuration;
 public class EmulatorSettings
 {
     public string RenderingBackend { get; set; } = "GLFW";
+    public string InputBackend { get; set; } = "GLFW"; // SDL or GLFW
     public int ResolutionScaleFactor { get; set; } = 1;
     public int ReservedMemoryMB { get; set; } = 256;
     public string WindowsVersion { get; set; } = "Windows 95";
@@ -30,4 +31,10 @@ public class EmulatorSettings
     /// Per-game settings keyed by SHA256 hash of the executable file
     /// </summary>
     public Dictionary<string, GameSettings> PerGameSettings { get; set; } = new();
+
+    /// <summary>
+    /// Controller configurations for physical controllers
+    /// Key: physical controller name or ID
+    /// </summary>
+    public Dictionary<string, ControllerConfiguration> ControllerConfigurations { get; set; } = new();
 }

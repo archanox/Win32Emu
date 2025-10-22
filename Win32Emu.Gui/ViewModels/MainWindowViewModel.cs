@@ -24,9 +24,10 @@ public partial class MainWindowViewModel : ViewModelBase
         _configService = new ConfigurationService();
         _gameDbService = new GameDbService();
         Configuration = _configService.GetEmulatorConfiguration();
+        
         GameLibraryViewModel = new GameLibraryViewModel(Configuration, _configService, _gameDbService);
         SettingsViewModel = new SettingsViewModel(Configuration, _configService);
-        ControllerMappingViewModel = new ControllerMappingViewModel();
+        ControllerMappingViewModel = new ControllerMappingViewModel(_configService, _configService.GetEmulatorSettings());
         _currentPage = GameLibraryViewModel;
     }
 

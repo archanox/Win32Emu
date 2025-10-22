@@ -14,6 +14,9 @@ public partial class SettingsViewModel : ViewModelBase
     private string _renderingBackend;
 
     [ObservableProperty]
+    private string _inputBackend;
+
+    [ObservableProperty]
     private int _resolutionScaleFactor;
 
     [ObservableProperty]
@@ -60,6 +63,12 @@ public partial class SettingsViewModel : ViewModelBase
         "Metal"
     };
 
+    public ObservableCollection<string> InputBackends { get; } = new()
+    {
+        "SDL",
+        "GLFW"
+    };
+
     public ObservableCollection<string> WindowsVersions { get; } = new()
     {
         "Windows 95",
@@ -82,6 +91,7 @@ public partial class SettingsViewModel : ViewModelBase
         
         // Initialize properties from configuration
         _renderingBackend = configuration.RenderingBackend;
+        _inputBackend = configuration.InputBackend;
         _resolutionScaleFactor = configuration.ResolutionScaleFactor;
         _reservedMemoryMb = configuration.ReservedMemoryMb;
         _windowsVersion = configuration.WindowsVersion;
@@ -100,6 +110,12 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnRenderingBackendChanged(string value)
     {
         _configuration.RenderingBackend = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+
+    partial void OnInputBackendChanged(string value)
+    {
+        _configuration.InputBackend = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
 
