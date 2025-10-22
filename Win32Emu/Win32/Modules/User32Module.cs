@@ -907,6 +907,18 @@ namespace Win32Emu.Win32.Modules
 			// Otherwise return 0 as a safe default value
 			var returnValue = executionSuccessful ? cpu.GetRegister("EAX") : 0u;
 
+			// If execution was not successful, we need to clean up the stack memory
+			// to prevent corruption that could affect subsequent calls
+			if (!executionSuccessful)
+			{
+				// Clear the stack memory region that was used for the call
+				// This includes the return address and parameters (5 dwords = 20 bytes)
+				var stackDataSize = 20u; // Return address (4) + hwnd (4) + message (4) + wParam (4) + lParam (4)
+				// Use a single bulk write for efficiency
+				memory.WriteBytes(savedEsp - stackDataSize, new byte[stackDataSize]);
+				_logger.LogDebug("[User32] CallWindowProcedure: Cleaned up {Size} bytes of stack memory after failed execution", stackDataSize);
+			}
+
 			// Restore CPU state
 			cpu.SetEip(savedEip);
 			cpu.SetRegister("ESP", savedEsp);
