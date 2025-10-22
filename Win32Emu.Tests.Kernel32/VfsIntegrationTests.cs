@@ -327,4 +327,47 @@ public class VfsIntegrationTests : IDisposable
 		// Clean up
 		testEnv.Dispose();
 	}
+
+	[Fact]
+	public void CreateFileA_RelativePath_ShouldResolveRelativeToExecutable()
+	{
+		// Arrange - Create a subdirectory with a file in the base directory
+		var dataDir = Path.Combine(_testBaseDir, "data");
+		Directory.CreateDirectory(dataDir);
+		File.WriteAllText(Path.Combine(dataDir, "test.txt"), "Test data content");
+
+		// Create a test executable in the base directory
+		var exePath = Path.Combine(_testBaseDir, "test.exe");
+		File.WriteAllText(exePath, "fake exe");
+
+		// Initialize strings first to set the executable path
+		_testEnv.ProcessEnv.InitializeStrings(exePath, []);
+
+		// Now initialize VFS - this should virtualize the path and set current directory
+		_testEnv.ProcessEnv.InitializeVirtualFileSystem(_testBaseDir, _testOverlayDir);
+
+		// Verify the current directory was set correctly
+		var expectedCurrentDir = @"C:\"; // Should be virtualized directory of the executable
+		Assert.Equal(expectedCurrentDir, _testEnv.ProcessEnv.CurrentDirectory);
+
+		// Act - Open file using relative path (like "data\test.txt")
+		var relativePathAddr = _testEnv.WriteString(@"data\test.txt");
+		var handle = _testEnv.CallKernel32Api("CREATEFILEA", relativePathAddr, 0x80000000u, 0, 0, 3, 0, 0);
+
+		// Assert
+		Assert.NotEqual(0xFFFFFFFFu, handle); // Should not be INVALID_HANDLE_VALUE
+
+		// Read file content to verify it's the correct file
+		var bufferAddr = _testEnv.ProcessEnv.SimpleAlloc(100);
+		var bytesReadAddr = _testEnv.ProcessEnv.SimpleAlloc(4);
+		var readResult = _testEnv.CallKernel32Api("READFILE", handle, bufferAddr, 100, bytesReadAddr, 0);
+		Assert.Equal(1u, readResult); // TRUE
+
+		// Verify content
+		var bytesRead = _testEnv.Memory.Read32(bytesReadAddr);
+		Assert.True(bytesRead > 0);
+
+		// Close handle
+		_testEnv.CallKernel32Api("CLOSEHANDLE", handle);
+	}
 }

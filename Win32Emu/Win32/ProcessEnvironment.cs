@@ -96,6 +96,14 @@ public class ProcessEnvironment
 		ExecutablePath = virtualizedPath;
 		ModuleFileNamePtr = WriteAnsiString(virtualizedPath + '\0');
 		ModuleFileNameLength = (uint)virtualizedPath.Length;
+		
+		// Update current directory to match the virtualized executable directory
+		var directory = Path.GetDirectoryName(virtualizedPath);
+		if (!string.IsNullOrEmpty(directory))
+		{
+			CurrentDirectory = directory;
+			_logger.LogInformation("[ProcessEnv] Updated current directory to: {CurrentDirectory}", CurrentDirectory);
+		}
 				
 		// Also update command line if it was already set
 		if (CommandLinePtr == 0)
@@ -277,6 +285,16 @@ public class ProcessEnvironment
 		}
 		
 		ExecutablePath = effectivePath;
+		
+		// Set current directory to the directory containing the executable
+		// This ensures relative paths are resolved relative to the executable's location
+		var directory = Path.GetDirectoryName(effectivePath);
+		if (!string.IsNullOrEmpty(directory))
+		{
+			CurrentDirectory = directory;
+			_logger.LogInformation("[ProcessEnv] Set current directory to: {CurrentDirectory}", CurrentDirectory);
+		}
+		
 		// Build command line: quoted exe path + space + args (if any)
 		var cmdLine = args.Length > 0 
 			? $"\"{effectivePath}\" {string.Join(" ", args)}"
