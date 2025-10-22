@@ -117,6 +117,8 @@ public static class NativeTypes
 		public const uint ERROR_SUCCESS = 0;
 		public const uint ERROR_INVALID_FUNCTION = 1;
 		public const uint ERROR_FILE_NOT_FOUND = 2;
+		public const uint ERROR_PATH_NOT_FOUND = 3;
+		public const uint ERROR_ACCESS_DENIED = 5;
 		public const uint ERROR_INVALID_PARAMETER = 87;
 		public const uint ERROR_INSUFFICIENT_BUFFER = 122;
 		public const uint ERROR_INVALID_HANDLE = 6;
