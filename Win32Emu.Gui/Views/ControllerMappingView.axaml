@@ -83,19 +83,149 @@
                     </StackPanel>
                 </Border>
 
-                <!-- SDL3 Integration Notice -->
+                <!-- Physical Controller Selection -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Physical Controller"
+                             FontWeight="Bold"
+                             FontSize="14"/>
+                    <ComboBox ItemsSource="{Binding PhysicalControllers}"
+                            SelectedItem="{Binding SelectedPhysicalController}"
+                            HorizontalAlignment="Stretch"
+                            PlaceholderText="Select a physical controller..."/>
+                    <TextBlock Text="Select the physical controller to map to the virtual controller"
+                             FontSize="12"
+                             Opacity="0.7"/>
+                </StackPanel>
+
+                <!-- Axis Mappings -->
+                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       BorderThickness="1"
+                       CornerRadius="4"
+                       Padding="15">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Axis Mappings"
+                                 FontWeight="Bold"
+                                 FontSize="14"/>
+                        <TextBlock Text="Click 'Map' next to an axis and move the physical axis you want to assign"
+                                 FontSize="12"
+                                 Opacity="0.7"
+                                 TextWrapping="Wrap"/>
+                        
+                        <ItemsControl ItemsSource="{Binding AxisMappings}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4">
+                                        <TextBlock Text="{Binding VirtualAxisName}" 
+                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" 
+                                                 Text="{Binding PhysicalAxisIndex, StringFormat='→ Axis {0}'}"
+                                                 VerticalAlignment="Center"
+                                                 Margin="10,0"
+                                                 Opacity="0.7"/>
+                                        <Button Grid.Column="2" 
+                                              Content="Map"
+                                              Command="{Binding $parent[UserControl].((vm:ControllerMappingViewModel)DataContext).StartMappingCommand}"
+                                              CommandParameter="{Binding}"
+                                              Padding="8,4"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Button Mappings -->
+                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       BorderThickness="1"
+                       CornerRadius="4"
+                       Padding="15">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Button Mappings"
+                                 FontWeight="Bold"
+                                 FontSize="14"/>
+                        <TextBlock Text="Click 'Map' next to a button and press the physical button you want to assign"
+                                 FontSize="12"
+                                 Opacity="0.7"
+                                 TextWrapping="Wrap"/>
+                        
+                        <ItemsControl ItemsSource="{Binding ButtonMappings}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4">
+                                        <TextBlock Text="{Binding VirtualButtonName}" 
+                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" 
+                                                 Text="{Binding PhysicalButtonIndex, StringFormat='→ Button {0}'}"
+                                                 VerticalAlignment="Center"
+                                                 Margin="10,0"
+                                                 Opacity="0.7"/>
+                                        <Button Grid.Column="2" 
+                                              Content="Map"
+                                              Command="{Binding $parent[UserControl].((vm:ControllerMappingViewModel)DataContext).StartMappingCommand}"
+                                              CommandParameter="{Binding}"
+                                              Padding="8,4"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Mapping Instructions (shown when mapping) -->
+                <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                       Padding="15"
+                       CornerRadius="4"
+                       IsVisible="{Binding IsMappingMode}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="🎮 Mapping Mode Active"
+                                 FontWeight="Bold"/>
+                        <TextBlock Text="{Binding MappingInstructions}"
+                                 TextWrapping="Wrap"
+                                 FontSize="12"/>
+                        <Button Content="Cancel"
+                              Command="{Binding CancelMappingCommand}"
+                              HorizontalAlignment="Left"
+                              Padding="12,6"
+                              Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Action Buttons -->
+                <Grid ColumnDefinitions="*,*,*" Margin="0,10,0,0">
+                    <Button Grid.Column="0" 
+                          Content="Test Controller"
+                          Command="{Binding TestControllerCommand}"
+                          HorizontalAlignment="Stretch"
+                          Padding="12,8"
+                          Margin="0,0,5,0"/>
+                    <Button Grid.Column="1" 
+                          Content="Save Configuration"
+                          Command="{Binding SaveConfigurationCommand}"
+                          HorizontalAlignment="Stretch"
+                          Padding="12,8"
+                          Margin="5,0"/>
+                    <Button Grid.Column="2" 
+                          Content="Load Configuration"
+                          Command="{Binding LoadConfigurationCommand}"
+                          HorizontalAlignment="Stretch"
+                          Padding="12,8"
+                          Margin="5,0,0,0"/>
+                </Grid>
+
+                <!-- Information Notice -->
                 <Border Background="{DynamicResource SystemControlBackgroundBaseMediumBrush}"
                        Padding="15"
                        CornerRadius="4">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="ℹ️ SDL3 Integration"
+                        <TextBlock Text="ℹ️ DirectInput Integration"
                                  FontWeight="Bold"/>
                         <TextBlock TextWrapping="Wrap"
                                  FontSize="12"
                                  Opacity="0.8">
-                            Controller mapping will be connected to SDL3 in a future update. 
+                            Controller mappings are now wired to DirectInput via SDL3 and GLFW backends. 
                             Virtual controllers will be created based on these settings and mapped 
-                            to your physical controllers for use in emulated games.
+                            to your physical controllers for use in emulated games. The selected input 
+                            backend (SDL or GLFW) can be changed in the main Settings.
                         </TextBlock>
                     </StackPanel>
                 </Border>

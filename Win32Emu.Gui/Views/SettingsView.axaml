@@ -32,6 +32,20 @@
                              TextWrapping="Wrap"/>
                 </StackPanel>
 
+                <!-- Input Backend -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Input Backend"
+                             FontWeight="Bold"
+                             FontSize="14"/>
+                    <ComboBox ItemsSource="{Binding InputBackends}"
+                            SelectedItem="{Binding InputBackend}"
+                            HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="Select the input backend (SDL or GLFW). SDL is the default and provides native controller, keyboard, and mouse support. GLFW is an alternative that uses OpenGL-based windowing."
+                             FontSize="12"
+                             Opacity="0.7"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+
                 <!-- Resolution Scale Factor -->
                 <StackPanel Spacing="8">
                     <TextBlock Text="Resolution Scale Factor"
