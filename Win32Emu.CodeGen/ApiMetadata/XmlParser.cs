@@ -52,7 +52,7 @@ public class XmlParser
                 var returnType = apiElement.Attribute("Return")?.Value ?? "DWORD";
                 
                 // Check if BothCharset attribute is present (generates both A and W versions)
-                var bothCharset = apiElement.Attribute("BothCharset")?.Value == "True";
+                var bothCharset = apiElement.Attribute("BothCharset")?.Value?.Equals("True", StringComparison.OrdinalIgnoreCase) == true;
                 
                 if (bothCharset)
                 {
