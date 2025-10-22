@@ -120,7 +120,7 @@ namespace Win32Emu.Win32.Modules
 				{ "AddRef", new Win32.COM.ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) }, // this only
 				{ "Release", new Win32.COM.ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) }, // this only
 				{ "CreateDevice", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_CreateDevice(cpu, mem, dinputHandle), ArgBytes: 16) }, // this + rguid + lplpDevice + pUnkOuter
-				{ "EnumDevices", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_EnumDevices(cpu, mem), ArgBytes: 16) }, // this + dwDevType + lpCallback + pvRef + dwFlags
+				{ "EnumDevices", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_EnumDevices(cpu, mem), ArgBytes: 20) }, // this + dwDevType + lpCallback + pvRef + dwFlags
 				{ "GetDeviceStatus", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_GetDeviceStatus(cpu, mem), ArgBytes: 8) }, // this + rguidInstance
 				{ "RunControlPanel", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_RunControlPanel(cpu, mem), ArgBytes: 8) }, // this + hwndOwner
 				{ "Initialize", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_Initialize(cpu, mem), ArgBytes: 8) } // this + hinst
