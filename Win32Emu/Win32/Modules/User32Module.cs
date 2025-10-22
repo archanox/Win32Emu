@@ -2106,7 +2106,7 @@ namespace Win32Emu.Win32.Modules
 		/// Uses stdcall calling convention (callee cleans stack, parameters pushed right-to-left)
 		/// Returns a tuple of (returnValue, timedOut) where timedOut indicates if the procedure exceeded max steps.
 		/// </summary>
-		private (uint returnValue, bool timedOut) CallDialogProcedureWithTimeout(ICpu cpu, VirtualMemory memory, uint dialogProcAddress, uint hwndDlg, uint message, uint wParam, uint lParam)
+		private (uint returnValue, bool timedOut, bool failed) CallDialogProcedureWithTimeout(ICpu cpu, VirtualMemory memory, uint dialogProcAddress, uint hwndDlg, uint message, uint wParam, uint lParam)
 		{
 			_logger.LogInformation("[User32] CallDialogProcedure: Calling 0x{DialogProcAddress:X8} with HWND=0x{HwndDlg:X8} MSG=0x{Message:X4}", dialogProcAddress, hwndDlg, message);
 
@@ -2156,6 +2156,7 @@ namespace Win32Emu.Win32.Modules
 			const int YIELD_INTERVAL = 10000;
 			var steps = 0;
 			var timedOut = false;
+			var failed = false;
 			var lastCheckEip = cpu.GetEip();
 			var stuckCounter = 0;
 
@@ -2174,8 +2175,8 @@ namespace Win32Emu.Win32.Modules
 					// Check for invalid EIP (NULL pointer execution)
 					if (eip == 0x00000000)
 					{
-						_logger.LogWarning("[User32] CallDialogProcedure: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
-						timedOut = true;
+						_logger.LogError("[User32] CallDialogProcedure: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+						failed = true;
 						break;
 					}
 
@@ -2311,7 +2312,7 @@ namespace Win32Emu.Win32.Modules
 			catch (Exception ex)
 			{
 				_logger.LogWarning(ex, "[User32] CallDialogProcedure: Exception during execution: {ExMessage}", ex.Message);
-				timedOut = true;
+				failed = true;
 			}
 
 			if (steps >= MAX_STEPS)
@@ -2322,16 +2323,17 @@ namespace Win32Emu.Win32.Modules
 
 			// Get return value from EAX, but only if execution was successful
 			// Otherwise return 0 as a safe default value
-			var returnValue = timedOut ? 0u : cpu.GetRegister("EAX");
+			var returnValue = (timedOut || failed) ? 0u : cpu.GetRegister("EAX");
 
 			// Restore CPU state
 			cpu.SetEip(savedEip);
 			cpu.SetRegister("ESP", savedEsp);
 			cpu.SetRegister("EBP", savedEbp);
 
-			_logger.LogInformation("[User32] CallDialogProcedure: Completed with return value 0x{ReturnValue:X8}", returnValue);
+			_logger.LogInformation("[User32] CallDialogProcedure: Completed with return value 0x{ReturnValue:X8}, timedOut={TimedOut}, failed={Failed}",
+				returnValue, timedOut, failed);
 
-			return (returnValue, timedOut);
+			return (returnValue, timedOut, failed);
 		}
 
 		/// <summary>
