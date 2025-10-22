@@ -517,7 +517,7 @@ public class IcedCpu : ICpu
 					}
 					else
 					{
-						_logger.LogWarning("[IcedCpu] Unhandled mnemonic {InsnMnemonic} at 0x{OldEip:X8}", insn.Mnemonic, oldEip);
+						_logger.LogError("[IcedCpu] Unhandled mnemonic {InsnMnemonic} at 0x{OldEip:X8}", insn.Mnemonic, oldEip);
 					}
 
 					break;
