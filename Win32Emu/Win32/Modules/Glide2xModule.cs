@@ -332,9 +332,27 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 			
-			// Clear frame buffer to black (parameters would contain color/alpha/depth in real implementation)
-			Array.Fill<byte>(_frameBuffer, 0);
-			
+			// Read color, alpha, and depth from stack (stdcall: arguments pushed right-to-left)
+			uint color = _env.Cpu.PeekStack32(0);   // First argument (color)
+			uint alpha = _env.Cpu.PeekStack32(4);   // Second argument (alpha)
+			uint depth = _env.Cpu.PeekStack32(8);   // Third argument (depth)
+
+			_logger.LogDebug($"[GLIDE2x] grBufferClear params: color=0x{color:X8}, alpha=0x{alpha:X8}, depth=0x{depth:X8}");
+
+			// Fill frame buffer with the specified color (assuming 32bpp RGBA)
+			byte r = (byte)((color >> 16) & 0xFF);
+			byte g = (byte)((color >> 8) & 0xFF);
+			byte b = (byte)(color & 0xFF);
+			byte a = (byte)((alpha) & 0xFF); // Use alpha argument if needed
+
+			// Assuming _frameBuffer is a byte[] representing RGBA pixels
+			for (int i = 0; i < _frameBuffer.Length; i += 4)
+			{
+				_frameBuffer[i + 0] = r;
+				_frameBuffer[i + 1] = g;
+				_frameBuffer[i + 2] = b;
+				_frameBuffer[i + 3] = a;
+			}
 			_logger.LogDebug("[GLIDE2x] Buffer cleared successfully");
 			return 0; // Success (void function)
 		}
