@@ -27,6 +27,7 @@ namespace Win32Emu.Win32.Modules
 		// DirectSound object handles
 		private readonly Dictionary<uint, DirectSoundObject> _dsoundObjects = new();
 		private readonly Dictionary<uint, DirectSoundBuffer> _buffers = new();
+		private readonly Dictionary<uint, uint> _comObjectToBufferHandle = new(); // Maps COM object address to buffer handle
 		private uint _nextDSoundHandle = 0x80000000;
 		private uint _nextBufferHandle = 0x81000000;
 		private ICpu? _cpu;
@@ -245,6 +246,15 @@ namespace Win32Emu.Win32.Modules
 			public int Size { get; set; }
 			public byte[]? Data { get; set; }
 			public bool IsPrimary { get; set; }
+			public int Frequency { get; set; } = 44100;
+			public int Channels { get; set; } = 2;
+			public int BitsPerSample { get; set; } = 16;
+			public int Volume { get; set; } = 0; // 0 = full volume in DirectSound
+			public int Pan { get; set; } = 0; // 0 = center
+			public uint PlayCursor { get; set; } = 0;
+			public uint WriteCursor { get; set; } = 0;
+			public bool IsPlaying { get; set; } = false;
+			public bool IsLooping { get; set; } = false;
 		}
 
 		// COM interface methods for IDirectSound
@@ -289,13 +299,68 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[DSound COM] IDirectSound::CreateSoundBuffer(this=0x{ThisPtr:X8}, pcDSBufferDesc=0x{PcDsBufferDesc:X8}, lplpDSBuffer=0x{LplpDirectSoundBuffer:X8}, pUnkOuter=0x{PUnkOuter:X8})", thisPtr, pcDSBufferDesc, lplpDirectSoundBuffer, pUnkOuter);
 
+			// Parse DSBUFFERDESC structure if provided
+			var bufferSize = 0;
+			var frequency = 44100;
+			var channels = 2;
+			var bitsPerSample = 16;
+			var isPrimary = false;
+
+			if (pcDSBufferDesc != 0)
+			{
+				// DSBUFFERDESC structure:
+				// DWORD dwSize
+				// DWORD dwFlags
+				// DWORD dwBufferBytes
+				// DWORD dwReserved
+				// LPWAVEFORMATEX lpwfxFormat
+				var dwSize = memory.Read32(pcDSBufferDesc);
+				var dwFlags = memory.Read32(pcDSBufferDesc + 4);
+				var dwBufferBytes = memory.Read32(pcDSBufferDesc + 8);
+				var lpwfxFormat = memory.Read32(pcDSBufferDesc + 16);
+
+				bufferSize = (int)dwBufferBytes;
+				
+				// DSBCAPS_PRIMARYBUFFER = 0x00000001
+				isPrimary = (dwFlags & 0x00000001) != 0;
+
+				_logger.LogInformation("[DSound COM] DSBUFFERDESC: size={DwSize}, flags=0x{DwFlags:X8}, bufferBytes={DwBufferBytes}, format=0x{LpwfxFormat:X8}", dwSize, dwFlags, dwBufferBytes, lpwfxFormat);
+
+				// Parse WAVEFORMATEX if provided and not primary buffer
+				if (lpwfxFormat != 0 && !isPrimary)
+				{
+					// WAVEFORMATEX structure:
+					// WORD wFormatTag
+					// WORD nChannels
+					// DWORD nSamplesPerSec
+					// DWORD nAvgBytesPerSec
+					// WORD nBlockAlign
+					// WORD wBitsPerSample
+					// WORD cbSize
+					var wFormatTag = memory.Read16(lpwfxFormat);
+					var nChannels = memory.Read16(lpwfxFormat + 2);
+					var nSamplesPerSec = memory.Read32(lpwfxFormat + 4);
+					var wBitsPerSample = memory.Read16(lpwfxFormat + 14);
+
+					frequency = (int)nSamplesPerSec;
+					channels = nChannels;
+					bitsPerSample = wBitsPerSample;
+
+					_logger.LogInformation("[DSound COM] WAVEFORMATEX: formatTag={WFormatTag}, channels={NChannels}, samplesPerSec={NSamplesPerSec}, bitsPerSample={WBitsPerSample}", wFormatTag, nChannels, nSamplesPerSec, wBitsPerSample);
+				}
+			}
+
 			// Create a sound buffer COM object with its own vtable
 			var bufferHandle = _nextBufferHandle++;
 			var bufferObj = new DirectSoundBuffer
 			{
 				Handle = bufferHandle,
-				Size = 0,
-				IsPrimary = false
+				Size = bufferSize,
+				IsPrimary = isPrimary,
+				Frequency = frequency,
+				Channels = channels,
+				BitsPerSample = bitsPerSample,
+				Data = bufferSize > 0 ? new byte[bufferSize] : null
 			};
 			_buffers[bufferHandle] = bufferObj;
 
@@ -327,12 +392,15 @@ namespace Win32Emu.Win32.Modules
 
 			var bufferComAddr = _env.ComDispatcher.CreateComObject("IDirectSoundBuffer", bufferMethods);
 
+			// Store the mapping from COM object address to buffer handle
+			_comObjectToBufferHandle[bufferComAddr] = bufferHandle;
+
 			if (lplpDirectSoundBuffer != 0)
 			{
 				_env.MemWrite32(lplpDirectSoundBuffer, bufferComAddr);
 			}
 
-			_logger.LogInformation("[DSound COM] Created IDirectSoundBuffer COM object at 0x{BufferComAddr:X8}", bufferComAddr);
+			_logger.LogInformation("[DSound COM] Created IDirectSoundBuffer COM object at 0x{BufferComAddr:X8} (handle=0x{BufferHandle:X8})", bufferComAddr, bufferHandle);
 			return 0; // DS_OK
 		}
 
@@ -383,6 +451,19 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DS_OK
 		}
 
+		// Helper method to get buffer from COM object address
+		private DirectSoundBuffer? GetBufferFromThisPtr(uint thisPtr)
+		{
+			if (_comObjectToBufferHandle.TryGetValue(thisPtr, out var bufferHandle))
+			{
+				if (_buffers.TryGetValue(bufferHandle, out var buffer))
+				{
+					return buffer;
+				}
+			}
+			return null;
+		}
+
 		// IDirectSoundBuffer COM methods
 		private uint DSoundBuffer_GetCaps(ICpu cpu, VirtualMemory memory)
 		{
@@ -392,37 +473,190 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DSoundBuffer_GetCurrentPosition(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetCurrentPosition() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var pdwCurrentPlayCursor = args.UInt32(1);
+			var pdwCurrentWriteCursor = args.UInt32(2);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetCurrentPosition(this=0x{ThisPtr:X8})", thisPtr);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetCurrentPosition: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			// Return current positions
+			if (pdwCurrentPlayCursor != 0)
+			{
+				memory.Write32(pdwCurrentPlayCursor, buffer.PlayCursor);
+			}
+			if (pdwCurrentWriteCursor != 0)
+			{
+				memory.Write32(pdwCurrentWriteCursor, buffer.WriteCursor);
+			}
+
 			return 0; // DS_OK
 		}
 
 		private uint DSoundBuffer_GetFormat(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetFormat() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var pwfxFormat = args.UInt32(1);
+			var dwSizeAllocated = args.UInt32(2);
+			var pdwSizeWritten = args.UInt32(3);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetFormat(this=0x{ThisPtr:X8}, format=0x{PwfxFormat:X8}, size={DwSizeAllocated})", thisPtr, pwfxFormat, dwSizeAllocated);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetFormat: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			// WAVEFORMATEX structure size
+			const uint WAVEFORMATEX_SIZE = 18;
+
+			// Write the size needed
+			if (pdwSizeWritten != 0)
+			{
+				memory.Write32(pdwSizeWritten, WAVEFORMATEX_SIZE);
+			}
+
+			// If buffer is provided and large enough, write the format
+			if (pwfxFormat != 0 && dwSizeAllocated >= WAVEFORMATEX_SIZE)
+			{
+				// WAVEFORMATEX structure:
+				// WORD wFormatTag (1 = PCM)
+				// WORD nChannels
+				// DWORD nSamplesPerSec
+				// DWORD nAvgBytesPerSec
+				// WORD nBlockAlign
+				// WORD wBitsPerSample
+				// WORD cbSize
+				memory.Write16(pwfxFormat, 1); // WAVE_FORMAT_PCM
+				memory.Write16(pwfxFormat + 2, (ushort)buffer.Channels);
+				memory.Write32(pwfxFormat + 4, (uint)buffer.Frequency);
+				var bytesPerSec = buffer.Frequency * buffer.Channels * (buffer.BitsPerSample / 8);
+				memory.Write32(pwfxFormat + 8, (uint)bytesPerSec);
+				var blockAlign = buffer.Channels * (buffer.BitsPerSample / 8);
+				memory.Write16(pwfxFormat + 12, (ushort)blockAlign);
+				memory.Write16(pwfxFormat + 14, (ushort)buffer.BitsPerSample);
+				memory.Write16(pwfxFormat + 16, 0); // cbSize = 0 for PCM
+
+				_logger.LogInformation("[DSound COM] GetFormat: Returned format {Channels}ch, {Frequency}Hz, {BitsPerSample}bit", buffer.Channels, buffer.Frequency, buffer.BitsPerSample);
+			}
+
 			return 0; // DS_OK
 		}
 
 		private uint DSoundBuffer_GetVolume(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetVolume() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var plVolume = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetVolume(this=0x{ThisPtr:X8})", thisPtr);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetVolume: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			if (plVolume != 0)
+			{
+				memory.Write32(plVolume, (uint)buffer.Volume);
+			}
+
 			return 0; // DS_OK
 		}
 
 		private uint DSoundBuffer_GetPan(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetPan() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var plPan = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetPan(this=0x{ThisPtr:X8})", thisPtr);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetPan: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			if (plPan != 0)
+			{
+				memory.Write32(plPan, (uint)buffer.Pan);
+			}
+
 			return 0; // DS_OK
 		}
 
 		private uint DSoundBuffer_GetFrequency(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetFrequency() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var pdwFrequency = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetFrequency(this=0x{ThisPtr:X8})", thisPtr);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetFrequency: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			if (pdwFrequency != 0)
+			{
+				memory.Write32(pdwFrequency, (uint)buffer.Frequency);
+			}
+
 			return 0; // DS_OK
 		}
 
 		private uint DSoundBuffer_GetStatus(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetStatus() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var pdwStatus = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetStatus(this=0x{ThisPtr:X8})", thisPtr);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetStatus: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			// DirectSound buffer status flags:
+			// DSBSTATUS_PLAYING = 0x00000001
+			// DSBSTATUS_BUFFERLOST = 0x00000002
+			// DSBSTATUS_LOOPING = 0x00000004
+			uint status = 0;
+			if (buffer.IsPlaying)
+			{
+				status |= 0x00000001; // DSBSTATUS_PLAYING
+			}
+			if (buffer.IsLooping)
+			{
+				status |= 0x00000004; // DSBSTATUS_LOOPING
+			}
+
+			if (pdwStatus != 0)
+			{
+				memory.Write32(pdwStatus, status);
+			}
+
+			_logger.LogInformation("[DSound COM] GetStatus: status=0x{Status:X8} (playing={IsPlaying}, looping={IsLooping})", status, buffer.IsPlaying, buffer.IsLooping);
 			return 0; // DS_OK
 		}
 
@@ -434,13 +668,125 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DSoundBuffer_Lock(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Lock() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwOffset = args.UInt32(1);
+			var dwBytes = args.UInt32(2);
+			var ppvAudioPtr1 = args.UInt32(3);
+			var pdwAudioBytes1 = args.UInt32(4);
+			var ppvAudioPtr2 = args.UInt32(5);
+			var pdwAudioBytes2 = args.UInt32(6);
+			var dwFlags = args.UInt32(7);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Lock(this=0x{ThisPtr:X8}, offset={DwOffset}, bytes={DwBytes}, flags=0x{DwFlags:X8})", thisPtr, dwOffset, dwBytes, dwFlags);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null || buffer.Data == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::Lock: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			// DSBLOCK_ENTIREBUFFER = 0x00000002
+			if ((dwFlags & 0x00000002) != 0)
+			{
+				dwOffset = 0;
+				dwBytes = (uint)buffer.Size;
+			}
+
+			// Ensure we don't go beyond buffer size
+			if (dwOffset + dwBytes > buffer.Size)
+			{
+				dwBytes = (uint)(buffer.Size - dwOffset);
+			}
+
+			// Allocate memory for the audio buffer pointer
+			var audioPtr = _env.SimpleAlloc(dwBytes);
+			
+			// Copy current buffer data to the allocated memory
+			if (buffer.Data != null && dwBytes > 0)
+			{
+				for (uint i = 0; i < dwBytes; i++)
+				{
+					memory.Write8(audioPtr + i, buffer.Data[dwOffset + i]);
+				}
+			}
+
+			// Write the audio pointer and size to output parameters
+			if (ppvAudioPtr1 != 0)
+			{
+				memory.Write32(ppvAudioPtr1, audioPtr);
+			}
+			if (pdwAudioBytes1 != 0)
+			{
+				memory.Write32(pdwAudioBytes1, dwBytes);
+			}
+
+			// Handle wraparound (for circular buffers) - write null for now
+			if (ppvAudioPtr2 != 0)
+			{
+				memory.Write32(ppvAudioPtr2, 0);
+			}
+			if (pdwAudioBytes2 != 0)
+			{
+				memory.Write32(pdwAudioBytes2, 0);
+			}
+
+			// Store lock info for later Unlock call
+			buffer.PlayCursor = dwOffset;
+			buffer.WriteCursor = dwOffset;
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Lock: Locked buffer at 0x{AudioPtr:X8}, size={DwBytes}", audioPtr, dwBytes);
 			return 0; // DS_OK
 		}
 
 		private uint DSoundBuffer_Play(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Play() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwReserved1 = args.UInt32(1);
+			var dwPriority = args.UInt32(2);
+			var dwFlags = args.UInt32(3);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Play(this=0x{ThisPtr:X8}, priority={DwPriority}, flags=0x{DwFlags:X8})", thisPtr, dwPriority, dwFlags);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::Play: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			// Don't play primary buffers
+			if (buffer.IsPrimary)
+			{
+				_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Play: Primary buffer, nothing to do");
+				return 0; // DS_OK
+			}
+
+			// DSBPLAY_LOOPING = 0x00000001
+			buffer.IsLooping = (dwFlags & 0x00000001) != 0;
+			buffer.IsPlaying = true;
+
+			// Create audio stream if not already created
+			if (buffer.AudioStreamId == 0 && _env.AudioBackend != null)
+			{
+				buffer.AudioStreamId = _env.AudioBackend.CreateAudioStream(
+					buffer.Frequency,
+					buffer.Channels,
+					buffer.Size
+				);
+				_logger.LogInformation("[DSound COM] Created audio stream {StreamId} for buffer", buffer.AudioStreamId);
+			}
+
+			// Write audio data to the backend if we have data
+			if (buffer.AudioStreamId != 0 && buffer.Data != null && buffer.Data.Length > 0 && _env.AudioBackend != null)
+			{
+				_env.AudioBackend.WriteAudioData(buffer.AudioStreamId, buffer.Data, 0, buffer.Data.Length);
+				_logger.LogInformation("[DSound COM] Wrote {Length} bytes of audio data to stream {StreamId}", buffer.Data.Length, buffer.AudioStreamId);
+			}
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Play: Started playback (looping={IsLooping})", buffer.IsLooping);
 			return 0; // DS_OK
 		}
 
@@ -452,37 +798,182 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DSoundBuffer_SetFormat(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetFormat() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var pcfxFormat = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetFormat(this=0x{ThisPtr:X8}, format=0x{PcfxFormat:X8})", thisPtr, pcfxFormat);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetFormat: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			// Only primary buffers can have their format set
+			if (!buffer.IsPrimary)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetFormat: Can only set format on primary buffer");
+				return 0x88780096; // DSERR_BADFORMAT
+			}
+
+			// Parse WAVEFORMATEX if provided
+			if (pcfxFormat != 0)
+			{
+				var wFormatTag = memory.Read16(pcfxFormat);
+				var nChannels = memory.Read16(pcfxFormat + 2);
+				var nSamplesPerSec = memory.Read32(pcfxFormat + 4);
+				var wBitsPerSample = memory.Read16(pcfxFormat + 14);
+
+				buffer.Frequency = (int)nSamplesPerSec;
+				buffer.Channels = nChannels;
+				buffer.BitsPerSample = wBitsPerSample;
+
+				_logger.LogInformation("[DSound COM] SetFormat: Set format to {Channels}ch, {Frequency}Hz, {BitsPerSample}bit", buffer.Channels, buffer.Frequency, buffer.BitsPerSample);
+			}
+
 			return 0; // DS_OK
 		}
 
 		private uint DSoundBuffer_SetVolume(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetVolume() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lVolume = args.Int32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetVolume(this=0x{ThisPtr:X8}, volume={LVolume})", thisPtr, lVolume);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetVolume: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			buffer.Volume = lVolume;
+
+			// Convert DirectSound volume (in hundredths of decibels, typically -10000 to 0) to 0.0-1.0 range
+			// DirectSound: 0 = full volume, -10000 = silence
+			var normalizedVolume = lVolume >= 0 ? 1.0f : Math.Max(0.0f, 1.0f + (lVolume / 10000.0f));
+
+			if (buffer.AudioStreamId != 0 && _env.AudioBackend != null)
+			{
+				_env.AudioBackend.SetStreamVolume(buffer.AudioStreamId, normalizedVolume);
+			}
+
 			return 0; // DS_OK
 		}
 
 		private uint DSoundBuffer_SetPan(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetPan() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var lPan = args.Int32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetPan(this=0x{ThisPtr:X8}, pan={LPan})", thisPtr, lPan);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetPan: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			buffer.Pan = lPan;
+			// Pan is typically -10000 (left) to 10000 (right), with 0 being center
+			// For now we just store it, full implementation would require stereo positioning in OpenAL
+
 			return 0; // DS_OK
 		}
 
 		private uint DSoundBuffer_SetFrequency(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetFrequency() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwFrequency = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetFrequency(this=0x{ThisPtr:X8}, frequency={DwFrequency})", thisPtr, dwFrequency);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetFrequency: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			buffer.Frequency = (int)dwFrequency;
+			// Changing frequency would require recreating the audio stream in OpenAL
+			// For now we just store it
+
 			return 0; // DS_OK
 		}
 
 		private uint DSoundBuffer_Stop(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Stop() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Stop(this=0x{ThisPtr:X8})", thisPtr);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::Stop: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			buffer.IsPlaying = false;
+
+			// Pause the audio stream if it exists
+			if (buffer.AudioStreamId != 0 && _env.AudioBackend != null)
+			{
+				_env.AudioBackend.SetStreamPaused(buffer.AudioStreamId, true);
+				_logger.LogInformation("[DSound COM] Paused audio stream {StreamId}", buffer.AudioStreamId);
+			}
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Stop: Stopped playback");
 			return 0; // DS_OK
 		}
 
 		private uint DSoundBuffer_Unlock(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Unlock() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var pvAudioPtr1 = args.UInt32(1);
+			var dwAudioBytes1 = args.UInt32(2);
+			var pvAudioPtr2 = args.UInt32(3);
+			var dwAudioBytes2 = args.UInt32(4);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Unlock(this=0x{ThisPtr:X8}, ptr1=0x{PvAudioPtr1:X8}, bytes1={DwAudioBytes1})", thisPtr, pvAudioPtr1, dwAudioBytes1);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null || buffer.Data == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::Unlock: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			// Copy data from the locked memory region back to the buffer
+			if (pvAudioPtr1 != 0 && dwAudioBytes1 > 0)
+			{
+				var offset = buffer.WriteCursor;
+				for (uint i = 0; i < dwAudioBytes1 && (offset + i) < buffer.Size; i++)
+				{
+					buffer.Data[offset + i] = memory.Read8(pvAudioPtr1 + i);
+				}
+			}
+
+			// Handle second buffer region if present (wraparound)
+			if (pvAudioPtr2 != 0 && dwAudioBytes2 > 0)
+			{
+				for (uint i = 0; i < dwAudioBytes2 && i < buffer.Size; i++)
+				{
+					buffer.Data[i] = memory.Read8(pvAudioPtr2 + i);
+				}
+			}
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Unlock: Unlocked buffer");
 			return 0; // DS_OK
 		}
 
