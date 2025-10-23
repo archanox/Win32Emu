@@ -91,9 +91,14 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "_GRBUFFERCLEAR@12":
-					_logger.LogInformation("[Glide2x] grBufferClear(color=0x{UInt32:X8}, alpha={U}, depth={UInt33})", a.UInt32(0), a.UInt32(1), a.UInt32(2));
-					returnValue = grBufferClear();
-					return true;
+					{
+						uint color = a.UInt32(0);
+						uint alpha = a.UInt32(1);
+						uint depth = a.UInt32(2);
+						_logger.LogInformation("[Glide2x] grBufferClear(color=0x{Color:X8}, alpha=0x{Alpha:X8}, depth=0x{Depth:X8})", color, alpha, depth);
+						returnValue = grBufferClear(color, alpha, depth);
+						return true;
+					}
 
 				case "_GRRENDERBUFFER@4":
 					_logger.LogInformation("[Glide2x] grRenderBuffer({UInt32})", a.UInt32(0));
@@ -322,9 +327,9 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(12, entryPoint: 0x00001230, Version = "4.90.0.3000", ExportName = "_grBufferClear@12")]
-		public uint grBufferClear()
+		public uint grBufferClear(uint color, uint alpha, uint depth)
 		{
-			_logger.LogDebug("[GLIDE2x] grBufferClear called");
+			_logger.LogDebug("[GLIDE2x] grBufferClear: color=0x{Color:X8}, alpha=0x{Alpha:X8}, depth=0x{Depth:X8}", color, alpha, depth);
 			
 			if (!_windowOpen || _frameBuffer == null)
 			{
@@ -332,10 +337,23 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 			
-			// Clear frame buffer to black (parameters would contain color/alpha/depth in real implementation)
-			Array.Fill<byte>(_frameBuffer, 0);
+			// Extract RGBA components from Glide color format
+			// Glide uses ARGB format packed into 32-bit integer
+			byte r = (byte)((color >> 16) & 0xFF);
+			byte g = (byte)((color >> 8) & 0xFF);
+			byte b = (byte)(color & 0xFF);
+			byte a = (byte)((alpha >> 24) & 0xFF); // Alpha is typically in high byte
 			
-			_logger.LogDebug("[GLIDE2x] Buffer cleared successfully");
+			// Fill frame buffer with the specified color
+			for (int i = 0; i < _frameBuffer.Length; i += 4)
+			{
+				_frameBuffer[i + 0] = r;
+				_frameBuffer[i + 1] = g;
+				_frameBuffer[i + 2] = b;
+				_frameBuffer[i + 3] = a;
+			}
+			
+			_logger.LogDebug("[GLIDE2x] Buffer cleared to color R={R}, G={G}, B={B}, A={A}", r, g, b, a);
 			return 0; // Success (void function)
 		}
 
@@ -713,7 +731,7 @@ namespace Win32Emu.Win32.Modules
 			
 			_frameBufferLocked = true;
 			_logger.LogDebug("[GLIDE2x] Frame buffer locked at address 0x{Address:X8}", _frameBufferAddress);
-			return 1; // TRUE - success (note: real implementation returns pointer, but we return success flag)
+			return _frameBufferAddress; // Return pointer to locked frame buffer
 		}
 
 		[DllModuleExport(53, entryPoint: 0x00001460, Version = "4.90.0.3000", ExportName = "_grLfbReadRegion@28", IsStub = true)]
