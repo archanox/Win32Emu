@@ -457,6 +457,110 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = LockResource(a.UInt32(0));
 				return true;
 
+			// Additional missing functions
+			case "DEVICEIOCONTROL":
+				returnValue = DeviceIoControl(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+				return true;
+			case "EXITTHREAD":
+				returnValue = ExitThread(a.UInt32(0));
+				return true;
+			case "FREELIBRARY":
+				returnValue = FreeLibrary(a.UInt32(0));
+				return true;
+			case "GETCOMPUTERNAMEA":
+				returnValue = GetComputerNameA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "GETCURRENTPROCESSID":
+				returnValue = GetCurrentProcessId();
+				return true;
+			case "GETENVIRONMENTVARIABLEA":
+				returnValue = GetEnvironmentVariableA(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "GETPRIORITYCLASS":
+				returnValue = GetPriorityClass(a.UInt32(0));
+				return true;
+			case "GETPROCESSVERSION":
+				returnValue = GetProcessVersion(a.UInt32(0));
+				return true;
+			case "GETSYSTEMDIRECTORYA":
+				returnValue = GetSystemDirectoryA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "GETTEMPPATHA":
+				returnValue = GetTempPathA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "GETTHREADPRIORITY":
+				returnValue = (uint)GetThreadPriority(a.UInt32(0));
+				return true;
+			case "GLOBALADDATOMA":
+				returnValue = GlobalAddAtomA(a.LpcStr(0));
+				return true;
+			case "GLOBALDELETEATOM":
+				returnValue = GlobalDeleteAtom(a.UInt32(0));
+				return true;
+			case "GLOBALFINDATOMA":
+				returnValue = GlobalFindAtomA(a.LpcStr(0));
+				return true;
+			case "GLOBALFLAGS":
+				returnValue = GlobalFlags(a.UInt32(0));
+				return true;
+			case "GLOBALGETATOMNAMEA":
+				returnValue = GlobalGetAtomNameA(a.UInt32(0), a.UInt32(1), a.Int32(2));
+				return true;
+			case "GLOBALMEMORYSTATUS":
+				returnValue = GlobalMemoryStatus(a.UInt32(0));
+				return true;
+			case "GLOBALREALLOC":
+				returnValue = GlobalReAlloc(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "GLOBALSIZE":
+				returnValue = GlobalSize(a.UInt32(0));
+				return true;
+			case "INTERLOCKEDDECREMENT":
+				returnValue = (uint)InterlockedDecrement(a.UInt32(0));
+				return true;
+			case "INTERLOCKEDINCREMENT":
+				returnValue = (uint)InterlockedIncrement(a.UInt32(0));
+				return true;
+			case "LOCALFREE":
+				returnValue = LocalFree(a.UInt32(0));
+				return true;
+			case "LOCALREALLOC":
+				returnValue = LocalReAlloc(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "LSTRCMPA":
+				returnValue = (uint)lstrcmpA(a.LpcStr(0), a.LpcStr(1));
+				return true;
+			case "LSTRCMPIA":
+				returnValue = (uint)lstrcmpiA(a.LpcStr(0), a.LpcStr(1));
+				return true;
+			case "LSTRCPYNA":
+				returnValue = lstrcpynA(a.UInt32(0), a.LpcStr(1), a.Int32(2));
+				return true;
+			case "MULDIV":
+				returnValue = (uint)MulDiv(a.Int32(0), a.Int32(1), a.Int32(2));
+				return true;
+			case "OPENMUTEXA":
+				returnValue = OpenMutexA(a.UInt32(0), a.UInt32(1), a.LpcStr(2));
+				return true;
+			case "REMOVEDIRECTORYA":
+				returnValue = RemoveDirectoryA(a.LpcStr(0));
+				return true;
+			case "SETERRORMODE":
+				returnValue = SetErrorMode(a.UInt32(0));
+				return true;
+			case "SETPRIORITYCLASS":
+				returnValue = SetPriorityClass(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "SETTHREADPRIORITY":
+				returnValue = SetThreadPriority(a.UInt32(0), a.Int32(1));
+				return true;
+			case "WRITECONSOLEA":
+				returnValue = WriteConsoleA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+			case "WRITEPRIVATEPROFILESTRINGA":
+				returnValue = WritePrivateProfileStringA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.LpcStr(3));
+				return true;
+
 			default:
 				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
 				return false;
@@ -5291,6 +5395,335 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			lpTopLevelExceptionFilter);
 		
 		return previousHandler;
+	}
+
+	// Additional missing implementations
+	[DllModuleExport(32)]
+	private uint DeviceIoControl(uint hDevice, uint dwIoControlCode, uint lpInBuffer, uint nInBufferSize, uint lpOutBuffer, uint nOutBufferSize, uint lpBytesReturned, uint lpOverlapped)
+	{
+		_logger.LogInformation("[Kernel32] DeviceIoControl(hDevice=0x{HDevice:X8}, dwIoControlCode=0x{DwIoControlCode:X})", hDevice, dwIoControlCode);
+		if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
+		return 0; // FALSE - not supported
+	}
+
+	[DllModuleExport(4)]
+	private uint ExitThread(uint dwExitCode)
+	{
+		_logger.LogInformation("[Kernel32] ExitThread(dwExitCode={DwExitCode})", dwExitCode);
+		// This function terminates the calling thread
+		// For now, just log it
+		return 0; // void function
+	}
+
+	[DllModuleExport(4)]
+	private uint FreeLibrary(uint hLibModule)
+	{
+		_logger.LogInformation("[Kernel32] FreeLibrary(hLibModule=0x{HLibModule:X8})", hLibModule);
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(8)]
+	private uint GetComputerNameA(uint lpBuffer, uint nSize)
+	{
+		_logger.LogInformation("[Kernel32] GetComputerNameA(lpBuffer=0x{LpBuffer:X8}, nSize=0x{NSize:X8})", lpBuffer, nSize);
+		var computerName = "EMULATOR";
+		if (lpBuffer != 0)
+		{
+			var size = _env.MemRead32(nSize);
+			if (size >= (uint)computerName.Length + 1)
+			{
+				_env.WriteAnsiStringAt(lpBuffer, computerName);
+				_env.MemWrite32(nSize, (uint)computerName.Length);
+				return 1; // TRUE
+			}
+		}
+		_env.MemWrite32(nSize, (uint)computerName.Length + 1);
+		return 0; // FALSE - buffer too small
+	}
+
+	[DllModuleExport(0)]
+	private uint GetCurrentProcessId()
+	{
+		_logger.LogInformation("[Kernel32] GetCurrentProcessId()");
+		return 1000; // Return a fixed process ID
+	}
+
+	[DllModuleExport(12)]
+	private uint GetEnvironmentVariableA(in LpcStr lpName, uint lpBuffer, uint nSize)
+	{
+		var name = lpName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GetEnvironmentVariableA(lpName=\"{Name}\", lpBuffer=0x{LpBuffer:X8}, nSize={NSize})",
+			name, lpBuffer, nSize);
+		
+		// Return empty (variable not found)
+		return 0;
+	}
+
+	[DllModuleExport(4)]
+	private uint GetPriorityClass(uint hProcess)
+	{
+		_logger.LogInformation("[Kernel32] GetPriorityClass(hProcess=0x{HProcess:X8})", hProcess);
+		return 0x00000020; // NORMAL_PRIORITY_CLASS
+	}
+
+	[DllModuleExport(4)]
+	private uint GetProcessVersion(uint ProcessId)
+	{
+		_logger.LogInformation("[Kernel32] GetProcessVersion(ProcessId={ProcessId})", ProcessId);
+		return 0x04005A00; // Windows 98 version
+	}
+
+	[DllModuleExport(8)]
+	private uint GetSystemDirectoryA(uint lpBuffer, uint uSize)
+	{
+		_logger.LogInformation("[Kernel32] GetSystemDirectoryA(lpBuffer=0x{LpBuffer:X8}, uSize={USize})", lpBuffer, uSize);
+		var sysDir = "C:\\WINDOWS\\SYSTEM32";
+		if (lpBuffer != 0 && uSize >= (uint)sysDir.Length + 1)
+		{
+			_env.WriteAnsiStringAt(lpBuffer, sysDir);
+			return (uint)sysDir.Length;
+		}
+		return (uint)sysDir.Length + 1;
+	}
+
+	[DllModuleExport(8)]
+	private uint GetTempPathA(uint nBufferLength, uint lpBuffer)
+	{
+		_logger.LogInformation("[Kernel32] GetTempPathA(nBufferLength={NBufferLength}, lpBuffer=0x{LpBuffer:X8})", nBufferLength, lpBuffer);
+		var tempPath = "C:\\TEMP\\";
+		if (lpBuffer != 0 && nBufferLength >= (uint)tempPath.Length + 1)
+		{
+			_env.WriteAnsiStringAt(lpBuffer, tempPath);
+			return (uint)tempPath.Length;
+		}
+		return (uint)tempPath.Length + 1;
+	}
+
+	[DllModuleExport(4)]
+	private int GetThreadPriority(uint hThread)
+	{
+		_logger.LogInformation("[Kernel32] GetThreadPriority(hThread=0x{HThread:X8})", hThread);
+		return 0; // THREAD_PRIORITY_NORMAL
+	}
+
+	[DllModuleExport(4)]
+	private uint GlobalAddAtomA(in LpcStr lpString)
+	{
+		var str = lpString.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GlobalAddAtomA(lpString=\"{Str}\")", str);
+		return 0xC000; // Return a valid atom value
+	}
+
+	[DllModuleExport(4)]
+	private uint GlobalDeleteAtom(uint nAtom)
+	{
+		_logger.LogInformation("[Kernel32] GlobalDeleteAtom(nAtom=0x{NAtom:X})", nAtom);
+		return 0; // SUCCESS
+	}
+
+	[DllModuleExport(4)]
+	private uint GlobalFindAtomA(in LpcStr lpString)
+	{
+		var str = lpString.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GlobalFindAtomA(lpString=\"{Str}\")", str);
+		return 0; // Not found
+	}
+
+	[DllModuleExport(4)]
+	private uint GlobalFlags(uint hMem)
+	{
+		_logger.LogInformation("[Kernel32] GlobalFlags(hMem=0x{HMem:X8})", hMem);
+		return 0; // GMEM_FIXED (no flags)
+	}
+
+	[DllModuleExport(12)]
+	private uint GlobalGetAtomNameA(uint nAtom, uint lpBuffer, int nSize)
+	{
+		_logger.LogInformation("[Kernel32] GlobalGetAtomNameA(nAtom=0x{NAtom:X}, lpBuffer=0x{LpBuffer:X8}, nSize={NSize})",
+			nAtom, lpBuffer, nSize);
+		return 0; // Empty string
+	}
+
+	[DllModuleExport(4)]
+	private uint GlobalMemoryStatus(uint lpBuffer)
+	{
+		_logger.LogInformation("[Kernel32] GlobalMemoryStatus(lpBuffer=0x{LpBuffer:X8})", lpBuffer);
+		if (lpBuffer != 0)
+		{
+			// MEMORYSTATUS structure
+			_env.MemWrite32(lpBuffer, 32); // dwLength
+			_env.MemWrite32(lpBuffer + 4, 50); // dwMemoryLoad (50%)
+			_env.MemWrite32(lpBuffer + 8, 0x40000000); // dwTotalPhys (1GB)
+			_env.MemWrite32(lpBuffer + 12, 0x20000000); // dwAvailPhys (512MB)
+			_env.MemWrite32(lpBuffer + 16, 0x80000000); // dwTotalPageFile (2GB)
+			_env.MemWrite32(lpBuffer + 20, 0x40000000); // dwAvailPageFile (1GB)
+			_env.MemWrite32(lpBuffer + 24, 0x7FFF0000); // dwTotalVirtual
+			_env.MemWrite32(lpBuffer + 28, 0x7FFE0000); // dwAvailVirtual
+		}
+		return 0; // void function
+	}
+
+	[DllModuleExport(12)]
+	private uint GlobalReAlloc(uint hMem, uint dwBytes, uint uFlags)
+	{
+		_logger.LogInformation("[Kernel32] GlobalReAlloc(hMem=0x{HMem:X8}, dwBytes={DwBytes}, uFlags=0x{UFlags:X})",
+			hMem, dwBytes, uFlags);
+		return hMem; // Return same handle (stub)
+	}
+
+	[DllModuleExport(4)]
+	private uint GlobalSize(uint hMem)
+	{
+		_logger.LogInformation("[Kernel32] GlobalSize(hMem=0x{HMem:X8})", hMem);
+		return 0x10000; // Return 64KB (stub)
+	}
+
+	[DllModuleExport(4)]
+	private int InterlockedDecrement(uint lpAddend)
+	{
+		_logger.LogInformation("[Kernel32] InterlockedDecrement(lpAddend=0x{LpAddend:X8})", lpAddend);
+		if (lpAddend != 0)
+		{
+			var value = (int)_env.MemRead32(lpAddend);
+			value--;
+			_env.MemWrite32(lpAddend, (uint)value);
+			return value;
+		}
+		return 0;
+	}
+
+	[DllModuleExport(4)]
+	private int InterlockedIncrement(uint lpAddend)
+	{
+		_logger.LogInformation("[Kernel32] InterlockedIncrement(lpAddend=0x{LpAddend:X8})", lpAddend);
+		if (lpAddend != 0)
+		{
+			var value = (int)_env.MemRead32(lpAddend);
+			value++;
+			_env.MemWrite32(lpAddend, (uint)value);
+			return value;
+		}
+		return 0;
+	}
+
+	[DllModuleExport(4)]
+	private uint LocalFree(uint hMem)
+	{
+		_logger.LogInformation("[Kernel32] LocalFree(hMem=0x{HMem:X8})", hMem);
+		return 0; // NULL on success
+	}
+
+	[DllModuleExport(12)]
+	private uint LocalReAlloc(uint hMem, uint uBytes, uint uFlags)
+	{
+		_logger.LogInformation("[Kernel32] LocalReAlloc(hMem=0x{HMem:X8}, uBytes={UBytes}, uFlags=0x{UFlags:X})",
+			hMem, uBytes, uFlags);
+		return hMem; // Return same handle (stub)
+	}
+
+	[DllModuleExport(8)]
+	private int lstrcmpA(in LpcStr lpString1, in LpcStr lpString2)
+	{
+		var str1 = lpString1.ToString() ?? string.Empty;
+		var str2 = lpString2.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] lstrcmpA(lpString1=\"{Str1}\", lpString2=\"{Str2}\")", str1, str2);
+		return string.Compare(str1, str2, StringComparison.Ordinal);
+	}
+
+	[DllModuleExport(8)]
+	private int lstrcmpiA(in LpcStr lpString1, in LpcStr lpString2)
+	{
+		var str1 = lpString1.ToString() ?? string.Empty;
+		var str2 = lpString2.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] lstrcmpiA(lpString1=\"{Str1}\", lpString2=\"{Str2}\")", str1, str2);
+		return string.Compare(str1, str2, StringComparison.OrdinalIgnoreCase);
+	}
+
+	[DllModuleExport(12)]
+	private uint lstrcpynA(uint lpString1, in LpcStr lpString2, int iMaxLength)
+	{
+		var str2 = lpString2.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] lstrcpynA(lpString1=0x{LpString1:X8}, lpString2=\"{Str2}\", iMaxLength={IMaxLength})",
+			lpString1, str2, iMaxLength);
+		if (lpString1 != 0 && iMaxLength > 0)
+		{
+			var toCopy = str2.Length < iMaxLength - 1 ? str2 : str2.Substring(0, iMaxLength - 1);
+			_env.WriteAnsiStringAt(lpString1, toCopy);
+		}
+		return lpString1;
+	}
+
+	[DllModuleExport(12)]
+	private int MulDiv(int nNumber, int nNumerator, int nDenominator)
+	{
+		_logger.LogInformation("[Kernel32] MulDiv(nNumber={NNumber}, nNumerator={NNumerator}, nDenominator={NDenominator})",
+			nNumber, nNumerator, nDenominator);
+		if (nDenominator == 0) return -1;
+		return (int)((long)nNumber * nNumerator / nDenominator);
+	}
+
+	[DllModuleExport(12)]
+	private uint OpenMutexA(uint dwDesiredAccess, uint bInheritHandle, in LpcStr lpName)
+	{
+		var name = lpName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] OpenMutexA(dwDesiredAccess=0x{DwDesiredAccess:X}, bInheritHandle={BInheritHandle}, lpName=\"{Name}\")",
+			dwDesiredAccess, bInheritHandle, name);
+		return 0; // NULL - mutex doesn't exist
+	}
+
+	[DllModuleExport(4)]
+	private uint RemoveDirectoryA(in LpcStr lpPathName)
+	{
+		var pathName = lpPathName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] RemoveDirectoryA(lpPathName=\"{PathName}\")", pathName);
+		return 1; // TRUE (stub)
+	}
+
+	[DllModuleExport(4)]
+	private uint SetErrorMode(uint uMode)
+	{
+		_logger.LogInformation("[Kernel32] SetErrorMode(uMode=0x{UMode:X})", uMode);
+		return 0; // Return previous mode (0)
+	}
+
+	[DllModuleExport(8)]
+	private uint SetPriorityClass(uint hProcess, uint dwPriorityClass)
+	{
+		_logger.LogInformation("[Kernel32] SetPriorityClass(hProcess=0x{HProcess:X8}, dwPriorityClass=0x{DwPriorityClass:X})",
+			hProcess, dwPriorityClass);
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(8)]
+	private uint SetThreadPriority(uint hThread, int nPriority)
+	{
+		_logger.LogInformation("[Kernel32] SetThreadPriority(hThread=0x{HThread:X8}, nPriority={NPriority})",
+			hThread, nPriority);
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(20)]
+	private uint WriteConsoleA(uint hConsoleOutput, uint lpBuffer, uint nNumberOfCharsToWrite, uint lpNumberOfCharsWritten, uint lpReserved)
+	{
+		_logger.LogInformation("[Kernel32] WriteConsoleA(hConsoleOutput=0x{HConsoleOutput:X8}, nNumberOfCharsToWrite={NNumberOfCharsToWrite})",
+			hConsoleOutput, nNumberOfCharsToWrite);
+		if (lpNumberOfCharsWritten != 0)
+		{
+			_env.MemWrite32(lpNumberOfCharsWritten, nNumberOfCharsToWrite);
+		}
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(16)]
+	private uint WritePrivateProfileStringA(in LpcStr lpAppName, in LpcStr lpKeyName, in LpcStr lpString, in LpcStr lpFileName)
+	{
+		var appName = lpAppName.ToString() ?? string.Empty;
+		var keyName = lpKeyName.ToString() ?? string.Empty;
+		var str = lpString.ToString() ?? string.Empty;
+		var fileName = lpFileName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] WritePrivateProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpString=\"{Str}\", lpFileName=\"{FileName}\")",
+			appName, keyName, str, fileName);
+		return 1; // TRUE (stub)
 	}
 
 }
