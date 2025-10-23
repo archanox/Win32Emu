@@ -40,14 +40,16 @@ public static class CpuDebuggingExtensions
     
     /// <summary>
     /// Check if the current register state looks suspicious
+    /// Note: Only checks ESP (stack pointer) since EBP can legally be used as a general-purpose register.
+    /// Many programs use EBP for loop counters, temporary values, or other purposes.
     /// </summary>
     public static bool HasSuspiciousRegisters(this IcedCpu cpu, uint threshold = 0x1000)
     {
-        var ebp = cpu.GetRegister("EBP");
         var esp = cpu.GetRegister("ESP");
         
-        return ebp <= threshold || esp <= threshold || 
-               (ebp != 0 && esp != 0 && ebp < esp - 0x10000);
+        // Only check ESP - it should always point to valid stack memory
+        // Do NOT check EBP - it can legally be used as a general-purpose register
+        return esp <= threshold;
     }
     
     /// <summary>

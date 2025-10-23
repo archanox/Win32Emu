@@ -133,8 +133,13 @@ public class CpuDebuggingTests
         // Test extension methods
         Assert.False(cpu.HasSuspiciousRegisters()); // Should be fine initially
         
-        cpu.SetRegister("EBP", 0x00000500); // Set to suspicious value
-        Assert.True(cpu.HasSuspiciousRegisters()); // Should detect it
+        // Note: HasSuspiciousRegisters now only checks ESP, not EBP
+        // EBP can legally be used as a general-purpose register (loop counter, etc.)
+        cpu.SetRegister("EBP", 0x00000500); // Small value - but this is OK (EBP can be anything)
+        Assert.False(cpu.HasSuspiciousRegisters()); // EBP is not checked
+        
+        cpu.SetRegister("ESP", 0x00000500); // Set ESP to suspicious value
+        Assert.True(cpu.HasSuspiciousRegisters()); // Should detect bad ESP
         
         // Test debugger creation
         var debugger = cpu.CreateDebugger(memory);
