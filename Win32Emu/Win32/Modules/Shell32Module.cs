@@ -57,6 +57,10 @@ public class Shell32Module : IWin32ModuleUnsafe
 				returnValue = SHGetSpecialFolderLocation(a.UInt32(0), a.Int32(1), a.UInt32(2));
 				return true;
 
+			case "SHELLEXECUTEA":
+				returnValue = ShellExecuteA(a.UInt32(0), a.LpcStr(1), a.LpcStr(2), a.LpcStr(3), a.LpcStr(4), a.Int32(5));
+				return true;
+
 			default:
 				_logger.LogInformation("[Shell32] Unimplemented export: {Export}", export);
 				return false;
@@ -152,5 +156,31 @@ public class Shell32Module : IWin32ModuleUnsafe
 		}
 
 		return 0x80004001; // E_NOTIMPL
+	}
+
+	/// <summary>
+	/// Performs an operation on a specified file.
+	/// HINSTANCE ShellExecuteA(
+	///   [in, optional] HWND   hwnd,
+	///   [in, optional] LPCSTR lpOperation,
+	///   [in]           LPCSTR lpFile,
+	///   [in, optional] LPCSTR lpParameters,
+	///   [in, optional] LPCSTR lpDirectory,
+	///   [in]           INT    nShowCmd
+	/// );
+	/// </summary>
+	[DllModuleExport(24)]
+	private uint ShellExecuteA(uint hwnd, in LpcStr lpOperation, in LpcStr lpFile, in LpcStr lpParameters, in LpcStr lpDirectory, int nShowCmd)
+	{
+		var operation = lpOperation.ToString() ?? string.Empty;
+		var file = lpFile.ToString() ?? string.Empty;
+		var parameters = lpParameters.ToString() ?? string.Empty;
+		var directory = lpDirectory.ToString() ?? string.Empty;
+		
+		_logger.LogInformation("[Shell32] ShellExecuteA(hwnd=0x{Hwnd:X8}, lpOperation=\"{Operation}\", lpFile=\"{File}\", lpParameters=\"{Parameters}\", lpDirectory=\"{Directory}\", nShowCmd={NShowCmd})",
+			hwnd, operation, file, parameters, directory, nShowCmd);
+
+		// Stub - return value > 32 indicates success
+		return 33; // Success
 	}
 }
