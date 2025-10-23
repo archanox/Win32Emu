@@ -922,6 +922,7 @@ namespace Win32Emu.Win32.Modules
 			// Unsubscribe from UI events
 			if (_renderingBackend != null)
 			{
+				// null for inputBackend - Glide doesn't manage input directly
 				_env.UnsubscribeFromUIEvents(_renderingBackend, null);
 				_renderingBackend.Dispose();
 				_renderingBackend = null;
@@ -973,7 +974,7 @@ namespace Win32Emu.Win32.Modules
 				
 				_logger.LogInformation("[GLIDE2x] Rendering backend initialized: {Width}x{Height}", _width, _height);
 				
-				// Subscribe to UI events
+				// Subscribe to UI events (null for inputBackend - Glide doesn't manage input directly)
 				_env.SubscribeToUIEvents(_renderingBackend, null);
 			}
 			
