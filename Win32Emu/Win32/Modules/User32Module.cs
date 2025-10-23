@@ -2930,7 +2930,7 @@ namespace Win32Emu.Win32.Modules
 		return (uint)title.Length;
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(8)]
 	private uint SetWindowTextA(uint hWnd, in LpcStr lpString)
 	{
 		var text = lpString.ToString() ?? string.Empty;
@@ -2981,7 +2981,7 @@ namespace Win32Emu.Win32.Modules
 		return (uint)formatStr.Length;
 	}
 
-	[DllModuleExport(20)]
+	[DllModuleExport(12)]
 	private uint WvsprintfA(in LpStr output, in LpcStr format, uint arglist)
 	{
 		var formatStr = format.ToString() ?? string.Empty;

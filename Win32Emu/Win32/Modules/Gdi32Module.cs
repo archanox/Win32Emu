@@ -230,7 +230,7 @@ namespace Win32Emu.Win32.Modules
 			};
 		}
 
-		[DllModuleExport(1)]
+		[DllModuleExport(4)]
 		private uint DeleteObject(uint hObject)
 		{
 			_logger.LogInformation("[Gdi32] DeleteObject(hObject=0x{HObject:X8})", hObject);
