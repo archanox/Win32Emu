@@ -205,6 +205,7 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new DSoundModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DInputModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new WinMmModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Msacm32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Glide2XModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DPlayXModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Ole32Module(_env, _image.BaseAddress, loader, _logger));

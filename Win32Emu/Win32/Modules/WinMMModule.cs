@@ -106,6 +106,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = MmioAdvance(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				case "MIXEROPEN":
+					returnValue = MixerOpen(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+
 				default:
 					_logger.LogInformation("[WinMM] Unimplemented export: {Export}", export);
 					return false;
@@ -392,6 +396,52 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			// For stub implementation, just return success
+			return 0; // MMSYSERR_NOERROR
+		}
+
+		// Mixer handle tracking
+		private readonly Dictionary<uint, MixerDevice> _mixerDevices = new();
+		private uint _nextMixerHandle = 0x60000000;
+
+		private class MixerDevice
+		{
+			public uint Handle { get; set; }
+			public uint DeviceId { get; set; }
+			public uint Callback { get; set; }
+			public uint Instance { get; set; }
+			public uint Flags { get; set; }
+		}
+
+		[DllModuleExport(1)]
+		private uint MixerOpen(uint phmx, uint uMxId, uint dwCallback, uint dwInstance, uint fdwOpen)
+		{
+			// MixerOpen opens an audio mixer device
+			_logger.LogInformation("[WinMM] mixerOpen(phmx=0x{Phmx:X8}, uMxId={UMxId}, dwCallback=0x{DwCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwOpen=0x{FdwOpen:X8})", 
+				phmx, uMxId, dwCallback, dwInstance, fdwOpen);
+			
+			if (phmx == 0)
+			{
+				_logger.LogWarning("[WinMM] mixerOpen: NULL handle pointer");
+				return 11; // MMSYSERR_INVALPARAM
+			}
+
+			// Create a handle for this mixer device
+			var handle = _nextMixerHandle++;
+			var mixer = new MixerDevice
+			{
+				Handle = handle,
+				DeviceId = uMxId,
+				Callback = dwCallback,
+				Instance = dwInstance,
+				Flags = fdwOpen
+			};
+			
+			_mixerDevices[handle] = mixer;
+			
+			// Write the handle to the output parameter
+			_env.MemWrite32(phmx, handle);
+			
+			_logger.LogInformation("[WinMM] mixerOpen: Created handle 0x{Handle:X8} for device {UMxId}", handle, uMxId);
 			return 0; // MMSYSERR_NOERROR
 		}
 	}
