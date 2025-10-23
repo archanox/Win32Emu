@@ -38,6 +38,23 @@ public class MultimediaTests : IDisposable
     }
 
     [Fact]
+    public void DirectSoundEnumerateA_ShouldReturnSuccess()
+    {
+        try
+        {
+            // Act - Enumerate with null callback should succeed
+            var result = _testEnv.CallDSoundApi("DIRECTSOUNDENUMERATEA", 0u, 0u);
+
+            // Assert
+            Assert.Equal(0u, result); // DS_OK
+        }
+        catch (DllNotFoundException)
+        {
+            // Native rendering library not available in CI - skip test
+        }
+    }
+
+    [Fact]
     public void DirectInputCreateA_ShouldReturnSuccess()
     {
         // Arrange
