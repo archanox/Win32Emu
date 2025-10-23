@@ -362,7 +362,7 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Aas:
 			case Mnemonic.Cbw:
 			case Mnemonic.Cwde:
-				_logger.LogDebug("[JitCpu] Stubbed BCD/ASCII arithmetic instruction: {Mnemonic}", insn.Mnemonic);
+				ExecBcdArithmetic(insn);
 				break;
 			
 			// Bit manipulation
@@ -371,7 +371,7 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Btc:
 			case Mnemonic.Btr:
 			case Mnemonic.Bts:
-				_logger.LogDebug("[JitCpu] Stubbed bit manipulation instruction: {Mnemonic}", insn.Mnemonic);
+				ExecBitManipulation(insn);
 				break;
 			
 			// Conditional jumps
@@ -393,7 +393,7 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Jnp:
 			case Mnemonic.Jcxz:
 			case Mnemonic.Jecxz:
-				_logger.LogDebug("[JitCpu] Stubbed conditional jump: {Mnemonic}", insn.Mnemonic);
+				ExecConditionalJump(insn);
 				break;
 			
 			// Conditional moves
@@ -445,7 +445,7 @@ public class JitCpu : IAsyncCpu
 			// Shift double
 			case Mnemonic.Shld:
 			case Mnemonic.Shrd:
-				_logger.LogDebug("[JitCpu] Stubbed double shift instruction: {Mnemonic}", insn.Mnemonic);
+				ExecDoubleShift(insn);
 				break;
 			
 			// String operations
@@ -714,6 +714,415 @@ public class JitCpu : IAsyncCpu
 		       Mnemonic.Jg or Mnemonic.Jge or Mnemonic.Ja or Mnemonic.Jae or Mnemonic.Jb or 
 		       Mnemonic.Jbe or Mnemonic.Jo or Mnemonic.Jno or Mnemonic.Js or Mnemonic.Jns;
 	}
+
+	// Flag bit positions (same as IcedCpu)
+	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Of = 11;
+
+	// Flag helper methods
+	private bool GetFlag(int bit) => (_eflags & (1u << bit)) != 0;
+	private void SetFlag(int bit) => _eflags |= (1u << bit);
+	private void ClearFlag(int bit) => _eflags &= ~(1u << bit);
+	private void SetFlagVal(int bit, bool val)
+	{
+		if (val)
+			SetFlag(bit);
+		else
+			ClearFlag(bit);
+	}
+
+	// Conditional jump implementation
+	private void ExecConditionalJump(Instruction insn)
+	{
+		bool condition = insn.Mnemonic switch
+		{
+			Mnemonic.Je => GetFlag(Zf),                                    // Jump if Equal (ZF=1)
+			Mnemonic.Jne => !GetFlag(Zf),                                  // Jump if Not Equal (ZF=0)
+			Mnemonic.Ja => !GetFlag(Cf) && !GetFlag(Zf),                  // Jump if Above (CF=0 and ZF=0)
+			Mnemonic.Jae => !GetFlag(Cf),                                 // Jump if Above or Equal (CF=0)
+			Mnemonic.Jb => GetFlag(Cf),                                   // Jump if Below (CF=1)
+			Mnemonic.Jbe => GetFlag(Cf) || GetFlag(Zf),                   // Jump if Below or Equal (CF=1 or ZF=1)
+			Mnemonic.Jg => !GetFlag(Zf) && GetFlag(Sf) == GetFlag(Of),    // Jump if Greater (ZF=0 and SF=OF)
+			Mnemonic.Jge => GetFlag(Sf) == GetFlag(Of),                   // Jump if Greater or Equal (SF=OF)
+			Mnemonic.Jl => GetFlag(Sf) != GetFlag(Of),                    // Jump if Less (SF!=OF)
+			Mnemonic.Jle => GetFlag(Zf) || GetFlag(Sf) != GetFlag(Of),    // Jump if Less or Equal (ZF=1 or SF!=OF)
+			Mnemonic.Jo => GetFlag(Of),                                   // Jump if Overflow (OF=1)
+			Mnemonic.Jno => !GetFlag(Of),                                 // Jump if Not Overflow (OF=0)
+			Mnemonic.Js => GetFlag(Sf),                                   // Jump if Sign (SF=1)
+			Mnemonic.Jns => !GetFlag(Sf),                                 // Jump if Not Sign (SF=0)
+			Mnemonic.Jp => GetFlag(Pf),                                   // Jump if Parity (PF=1)
+			Mnemonic.Jnp => !GetFlag(Pf),                                 // Jump if Not Parity (PF=0)
+			Mnemonic.Jcxz => (_ecx & 0xFFFF) == 0,                         // Jump if CX is Zero
+			Mnemonic.Jecxz => _ecx == 0,                                   // Jump if ECX is Zero
+			_ => false
+		};
+
+		if (condition && insn.Op0Kind == OpKind.NearBranch32)
+		{
+			_eip = (uint)insn.NearBranchTarget;
+		}
+		else if (condition && insn.Op0Kind == OpKind.NearBranch16)
+		{
+			_eip = (uint)insn.NearBranchTarget;
+		}
+	}
+
+	// Bit manipulation implementation
+	private void ExecBitManipulation(Instruction insn)
+	{
+		switch (insn.Mnemonic)
+		{
+			case Mnemonic.Bsf: // Bit Scan Forward
+			case Mnemonic.Bsr: // Bit Scan Reverse
+			{
+				uint src = GetOperandValue(insn, 1);
+				if (src == 0)
+				{
+					SetFlag(Zf);
+				}
+				else
+				{
+					ClearFlag(Zf);
+					int bitPos = 0;
+					if (insn.Mnemonic == Mnemonic.Bsf)
+					{
+						// Find first set bit from LSB
+						for (int i = 0; i < 32; i++)
+						{
+							if ((src & (1u << i)) != 0)
+							{
+								bitPos = i;
+								break;
+							}
+						}
+					}
+					else // BSR
+					{
+						// Find first set bit from MSB
+						for (int i = 31; i >= 0; i--)
+						{
+							if ((src & (1u << i)) != 0)
+							{
+								bitPos = i;
+								break;
+							}
+						}
+					}
+					SetOperandValue(insn, 0, (uint)bitPos);
+				}
+				break;
+			}
+			case Mnemonic.Btc: // Bit Test and Complement
+			case Mnemonic.Btr: // Bit Test and Reset
+			case Mnemonic.Bts: // Bit Test and Set
+			{
+				// For register-to-register, we need special handling
+				if (insn.Op0Kind == OpKind.Register && insn.Op1Kind == OpKind.Register)
+				{
+					uint baseVal = GetRegisterValue(insn, 0);
+					uint bitIndex = GetRegisterValue(insn, 1) & 31;
+					uint mask = 1u << (int)bitIndex;
+					
+					// Set CF to the value of the tested bit
+					SetFlagVal(Cf, (baseVal & mask) != 0);
+					
+					// Modify the bit based on instruction
+					if (insn.Mnemonic == Mnemonic.Btc)
+						baseVal ^= mask; // Complement
+					else if (insn.Mnemonic == Mnemonic.Btr)
+						baseVal &= ~mask; // Reset
+					else // BTS
+						baseVal |= mask; // Set
+					
+					SetRegisterValue(insn, 0, baseVal);
+				}
+				else
+				{
+					uint baseVal = GetOperandValue(insn, 0);
+					uint bitIndex = GetOperandValue(insn, 1) & 31;
+					uint mask = 1u << (int)bitIndex;
+					
+					// Set CF to the value of the tested bit
+					SetFlagVal(Cf, (baseVal & mask) != 0);
+					
+					// Modify the bit based on instruction
+					if (insn.Mnemonic == Mnemonic.Btc)
+						baseVal ^= mask; // Complement
+					else if (insn.Mnemonic == Mnemonic.Btr)
+						baseVal &= ~mask; // Reset
+					else // BTS
+						baseVal |= mask; // Set
+					
+					SetOperandValue(insn, 0, baseVal);
+				}
+				break;
+			}
+		}
+	}
+
+	// BCD/ASCII arithmetic implementation
+	private void ExecBcdArithmetic(Instruction insn)
+	{
+		switch (insn.Mnemonic)
+		{
+			case Mnemonic.Aaa: // ASCII Adjust After Addition
+			{
+				byte al = (byte)(_eax & 0xFF);
+				if ((al & 0x0F) > 9 || GetFlag(Af))
+				{
+					al = (byte)(al + 6);
+					_eax = (_eax & 0xFFFFFF00) | al;
+					_eax = (uint)((_eax & 0xFFFF00FF) | (((_eax + 0x100) & 0xFF00)));
+					SetFlag(Af);
+					SetFlag(Cf);
+				}
+				else
+				{
+					ClearFlag(Af);
+					ClearFlag(Cf);
+				}
+				_eax = (uint)((_eax & 0xFFFFFF0F) | (al & 0x0F));
+				break;
+			}
+			case Mnemonic.Aas: // ASCII Adjust After Subtraction
+			{
+				byte al = (byte)(_eax & 0xFF);
+				if ((al & 0x0F) > 9 || GetFlag(Af))
+				{
+					al = (byte)(al - 6);
+					_eax = (_eax & 0xFFFFFF00) | al;
+					_eax = (uint)((_eax & 0xFFFF00FF) | (((_eax - 0x100) & 0xFF00)));
+					SetFlag(Af);
+					SetFlag(Cf);
+				}
+				else
+				{
+					ClearFlag(Af);
+					ClearFlag(Cf);
+				}
+				_eax = (uint)((_eax & 0xFFFFFF0F) | (al & 0x0F));
+				break;
+			}
+			case Mnemonic.Cbw: // Convert Byte to Word
+			{
+				short ax = (sbyte)(_eax & 0xFF);
+				_eax = (_eax & 0xFFFF0000) | (ushort)ax;
+				break;
+			}
+			case Mnemonic.Cwde: // Convert Word to Doubleword Extended
+			{
+				int eax = (short)(_eax & 0xFFFF);
+				_eax = (uint)eax;
+				break;
+			}
+		}
+	}
+
+	// Double shift implementation
+	private void ExecDoubleShift(Instruction insn)
+	{
+		uint dest = GetOperandValue(insn, 0);
+		uint src = GetOperandValue(insn, 1);
+		byte count;
+		
+		if (insn.Op2Kind == OpKind.Immediate8)
+			count = (byte)(insn.Immediate8 & 0x1F);
+		else
+			count = (byte)(_ecx & 0x1F);
+		
+		if (count == 0)
+			return;
+		
+		if (insn.Mnemonic == Mnemonic.Shld) // Shift Left Double
+		{
+			// Shift dest left by count, filling with high bits of src
+			ulong combined = ((ulong)dest << 32) | src;
+			combined <<= count;
+			dest = (uint)(combined >> 32);
+			
+			// Set flags
+			SetFlagVal(Cf, (combined & 0x100000000UL) != 0);
+			SetFlagVal(Sf, (dest & 0x80000000) != 0);
+			SetFlagVal(Zf, dest == 0);
+			// OF is set only if count == 1
+			if (count == 1)
+				SetFlagVal(Of, ((dest ^ (dest << 1)) & 0x80000000) != 0);
+		}
+		else // SHRD - Shift Right Double
+		{
+			// Shift dest right by count, filling with low bits of src
+			ulong combined = ((ulong)src << 32) | dest;
+			combined >>= count;
+			dest = (uint)combined;
+			
+			// Set flags
+			SetFlagVal(Cf, ((combined >> (count - 1)) & 1) != 0);
+			SetFlagVal(Sf, (dest & 0x80000000) != 0);
+			SetFlagVal(Zf, dest == 0);
+			// OF is set only if count == 1
+			if (count == 1)
+				SetFlagVal(Of, ((dest ^ (dest >> 1)) & 0x80000000) != 0);
+		}
+		
+		SetOperandValue(insn, 0, dest);
+	}
+
+	// Helper methods for operand access
+	private uint GetOperandValue(Instruction insn, int operandIndex)
+	{
+		var opKind = operandIndex switch
+		{
+			0 => insn.Op0Kind,
+			1 => insn.Op1Kind,
+			2 => insn.Op2Kind,
+			_ => OpKind.Register
+		};
+
+		return opKind switch
+		{
+			OpKind.Register => GetRegisterValue(insn, operandIndex),
+			OpKind.Immediate8 => operandIndex == 0 ? insn.Immediate8 :
+			                     operandIndex == 1 ? insn.Immediate8_2nd : insn.Immediate8,
+			OpKind.Immediate16 => insn.Immediate16,
+			OpKind.Immediate32 => insn.Immediate32,
+			OpKind.Memory => _mem.Read32(CalcMemAddress(insn, operandIndex)),
+			_ => 0
+		};
+	}
+
+	private void SetOperandValue(Instruction insn, int operandIndex, uint value)
+	{
+		var opKind = operandIndex switch
+		{
+			0 => insn.Op0Kind,
+			1 => insn.Op1Kind,
+			2 => insn.Op2Kind,
+			_ => OpKind.Register
+		};
+
+		if (opKind == OpKind.Register)
+		{
+			SetRegisterValue(insn, operandIndex, value);
+		}
+		else if (opKind == OpKind.Memory)
+		{
+			_mem.Write32(CalcMemAddress(insn, operandIndex), value);
+		}
+	}
+
+	private uint GetRegisterValue(Instruction insn, int operandIndex)
+	{
+		var reg = operandIndex switch
+		{
+			0 => insn.Op0Register,
+			1 => insn.Op1Register,
+			2 => insn.Op2Register,
+			_ => Register.None
+		};
+
+		return reg switch
+		{
+			Register.EAX => _eax,
+			Register.EBX => _ebx,
+			Register.ECX => _ecx,
+			Register.EDX => _edx,
+			Register.ESI => _esi,
+			Register.EDI => _edi,
+			Register.EBP => _ebp,
+			Register.ESP => _esp,
+			Register.AX => _eax & 0xFFFF,
+			Register.BX => _ebx & 0xFFFF,
+			Register.CX => _ecx & 0xFFFF,
+			Register.DX => _edx & 0xFFFF,
+			Register.AL => _eax & 0xFF,
+			Register.BL => _ebx & 0xFF,
+			Register.CL => _ecx & 0xFF,
+			Register.DL => _edx & 0xFF,
+			Register.AH => (_eax >> 8) & 0xFF,
+			Register.BH => (_ebx >> 8) & 0xFF,
+			Register.CH => (_ecx >> 8) & 0xFF,
+			Register.DH => (_edx >> 8) & 0xFF,
+			_ => 0
+		};
+	}
+
+	private void SetRegisterValue(Instruction insn, int operandIndex, uint value)
+	{
+		var reg = operandIndex switch
+		{
+			0 => insn.Op0Register,
+			1 => insn.Op1Register,
+			2 => insn.Op2Register,
+			_ => Register.None
+		};
+
+		switch (reg)
+		{
+			case Register.EAX: _eax = value; break;
+			case Register.EBX: _ebx = value; break;
+			case Register.ECX: _ecx = value; break;
+			case Register.EDX: _edx = value; break;
+			case Register.ESI: _esi = value; break;
+			case Register.EDI: _edi = value; break;
+			case Register.EBP: _ebp = value; break;
+			case Register.ESP: _esp = value; break;
+			case Register.AX: _eax = (_eax & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.BX: _ebx = (_ebx & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.CX: _ecx = (_ecx & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.DX: _edx = (_edx & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.AL: _eax = (_eax & 0xFFFFFF00) | (value & 0xFF); break;
+			case Register.BL: _ebx = (_ebx & 0xFFFFFF00) | (value & 0xFF); break;
+			case Register.CL: _ecx = (_ecx & 0xFFFFFF00) | (value & 0xFF); break;
+			case Register.DL: _edx = (_edx & 0xFFFFFF00) | (value & 0xFF); break;
+			case Register.AH: _eax = (_eax & 0xFFFF00FF) | ((value & 0xFF) << 8); break;
+			case Register.BH: _ebx = (_ebx & 0xFFFF00FF) | ((value & 0xFF) << 8); break;
+			case Register.CH: _ecx = (_ecx & 0xFFFF00FF) | ((value & 0xFF) << 8); break;
+			case Register.DH: _edx = (_edx & 0xFFFF00FF) | ((value & 0xFF) << 8); break;
+		}
+	}
+
+	private uint CalcMemAddress(Instruction insn, int operandIndex)
+	{
+		// Simplified memory address calculation
+		// For now, just return a basic address - full SIB decoding would be more complex
+		uint addr = 0;
+		
+		if (insn.MemoryDisplSize > 0)
+		{
+			addr = insn.MemoryDisplacement32;
+		}
+		
+		var baseReg = insn.MemoryBase;
+		if (baseReg != Register.None)
+		{
+			addr += GetRegisterByEnum(baseReg);
+		}
+		
+		var indexReg = insn.MemoryIndex;
+		if (indexReg != Register.None)
+		{
+			uint indexVal = GetRegisterByEnum(indexReg);
+			addr += indexVal * (uint)insn.MemoryIndexScale;
+		}
+		
+		return addr;
+	}
+
+	private uint GetRegisterByEnum(Register reg)
+	{
+		return reg switch
+		{
+			Register.EAX => _eax,
+			Register.EBX => _ebx,
+			Register.ECX => _ecx,
+			Register.EDX => _edx,
+			Register.ESI => _esi,
+			Register.EDI => _edi,
+			Register.EBP => _ebp,
+			Register.ESP => _esp,
+			_ => 0
+		};
+	}
+
 
 	private sealed class SimpleMemoryCodeReader : CodeReader
 	{
