@@ -1,0 +1,61 @@
+name: Deploy Avalonia GUI to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Sets permissions for the GITHUB_TOKEN
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Browser Project
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        submodules: recursive
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Install wasm-tools workload
+      run: dotnet workload install wasm-tools
+        
+    - name: Restore dependencies
+      run: dotnet restore Win32Emu.Gui.Browser/Win32Emu.Gui.Browser.csproj
+      
+    - name: Publish browser project
+      run: dotnet publish Win32Emu.Gui.Browser/Win32Emu.Gui.Browser.csproj --configuration Release --output ./publish
+      
+    - name: Upload artifact for Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: './publish/wwwroot'
+
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
