@@ -956,18 +956,22 @@ namespace Win32Emu.Win32.Modules
 			if (pvAudioPtr1 != 0 && dwAudioBytes1 > 0)
 			{
 				var offset = buffer.WriteCursor;
-				for (uint i = 0; i < dwAudioBytes1 && (offset + i) < buffer.Size; i++)
+				var bytesToCopy1 = (int)Math.Min(dwAudioBytes1, buffer.Size - offset);
+				if (bytesToCopy1 > 0)
 				{
-					buffer.Data[offset + i] = memory.Read8(pvAudioPtr1 + i);
+					var temp = ReadBytes(memory, pvAudioPtr1, bytesToCopy1);
+					Buffer.BlockCopy(temp, 0, buffer.Data, (int)offset, bytesToCopy1);
 				}
 			}
 
 			// Handle second buffer region if present (wraparound)
 			if (pvAudioPtr2 != 0 && dwAudioBytes2 > 0)
 			{
-				for (uint i = 0; i < dwAudioBytes2 && i < buffer.Size; i++)
+				var bytesToCopy2 = (int)Math.Min(dwAudioBytes2, buffer.Size);
+				if (bytesToCopy2 > 0)
 				{
-					buffer.Data[i] = memory.Read8(pvAudioPtr2 + i);
+					var temp = ReadBytes(memory, pvAudioPtr2, bytesToCopy2);
+					Buffer.BlockCopy(temp, 0, buffer.Data, 0, bytesToCopy2);
 				}
 			}
 
