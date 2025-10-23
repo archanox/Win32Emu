@@ -707,7 +707,8 @@ namespace Win32Emu.Win32.Modules
 			if (buffer.Data != null && dwBytes > 0)
 			{
 				// Use a bulk memory copy for efficiency
-				memory.WriteBytes(audioPtr, buffer.Data, (int)dwOffset, (int)dwBytes);
+				var span = new ReadOnlySpan<byte>(buffer.Data, (int)dwOffset, (int)dwBytes);
+				memory.WriteBytes(audioPtr, span);
 			}
 
 			// Write the audio pointer and size to output parameters
@@ -959,7 +960,7 @@ namespace Win32Emu.Win32.Modules
 				var bytesToCopy1 = (int)Math.Min(dwAudioBytes1, buffer.Size - offset);
 				if (bytesToCopy1 > 0)
 				{
-					var temp = ReadBytes(memory, pvAudioPtr1, bytesToCopy1);
+					var temp = memory.GetSpan(pvAudioPtr1, bytesToCopy1);
 					Buffer.BlockCopy(temp, 0, buffer.Data, (int)offset, bytesToCopy1);
 				}
 			}
@@ -970,7 +971,7 @@ namespace Win32Emu.Win32.Modules
 				var bytesToCopy2 = (int)Math.Min(dwAudioBytes2, buffer.Size);
 				if (bytesToCopy2 > 0)
 				{
-					var temp = ReadBytes(memory, pvAudioPtr2, bytesToCopy2);
+					var temp = memory.GetSpan(pvAudioPtr2, bytesToCopy2);
 					Buffer.BlockCopy(temp, 0, buffer.Data, 0, bytesToCopy2);
 				}
 			}
