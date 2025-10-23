@@ -1,0 +1,74 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Web Application
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        submodules: recursive
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore Win32Emu.Browser/Win32Emu.Browser.csproj
+      
+    - name: Build Web Application
+      run: dotnet build Win32Emu.Browser/Win32Emu.Browser.csproj --configuration Release --no-restore
+      
+    - name: Publish Web Application
+      run: dotnet publish Win32Emu.Browser/Win32Emu.Browser.csproj -c Release -o publish/web
+      
+    - name: Add .nojekyll file
+      run: touch publish/web/wwwroot/.nojekyll
+      
+    - name: Copy index.html to 404.html (SPA support)
+      run: cp publish/web/wwwroot/index.html publish/web/wwwroot/404.html
+      
+    - name: Update base href for GitHub Pages
+      run: |
+        # Update base href to match the repository name
+        sed -i 's|<base href="/" />|<base href="/Win32Emu/" />|g' publish/web/wwwroot/index.html
+        sed -i 's|<base href="/" />|<base href="/Win32Emu/" />|g' publish/web/wwwroot/404.html
+      
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: publish/web/wwwroot
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

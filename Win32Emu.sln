@@ -73,6 +73,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.CodeGen", "Win32Em
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Tests.CodeGen", "Win32Emu.Tests.CodeGen\Win32Emu.Tests.CodeGen.csproj", "{39F582F0-56E6-4CD7-9A3C-5AFD08D87813}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Browser", "Win32Emu.Browser\Win32Emu.Browser.csproj", "{491155B2-CF52-482F-9FAE-3B56AACDE933}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -203,6 +205,18 @@ Global
 		{39F582F0-56E6-4CD7-9A3C-5AFD08D87813}.Release|x64.Build.0 = Release|Any CPU
 		{39F582F0-56E6-4CD7-9A3C-5AFD08D87813}.Release|x86.ActiveCfg = Release|Any CPU
 		{39F582F0-56E6-4CD7-9A3C-5AFD08D87813}.Release|x86.Build.0 = Release|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Debug|x64.Build.0 = Debug|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Debug|x86.Build.0 = Debug|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Release|Any CPU.Build.0 = Release|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Release|x64.ActiveCfg = Release|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Release|x64.Build.0 = Release|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Release|x86.ActiveCfg = Release|Any CPU
+		{491155B2-CF52-482F-9FAE-3B56AACDE933}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

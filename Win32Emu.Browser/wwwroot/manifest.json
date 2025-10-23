@@ -1,0 +1,25 @@
+{
+  "name": "Win32Emu",
+  "short_name": "Win32Emu",
+  "description": "Windows 32-bit PE executable emulator for the web",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#512bd4",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "categories": ["utilities", "development", "emulator"],
+  "screenshots": [],
+  "related_applications": []
+}
