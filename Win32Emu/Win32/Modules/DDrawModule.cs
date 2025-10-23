@@ -50,6 +50,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = DirectDrawCreateEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 
+				case "DIRECTDRAWENUMERATEEXA":
+					returnValue = DirectDrawEnumerateExA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
 				default:
 					_logger.LogInformation("[DDraw] Unimplemented export: {Export}", export);
 					return false;
