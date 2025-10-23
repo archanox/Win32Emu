@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Debugging;
@@ -13,7 +13,7 @@ namespace Win32Emu.Debugging;
 /// </summary>
 public class InteractiveDebugger
 {
-    private readonly IcedCpu _cpu;
+    private readonly ICpu _cpu;
     private readonly VirtualMemory _memory;
     private readonly BreakpointManager _breakpoints;
     private readonly EnhancedCpuDebugger _enhancedDebugger;
@@ -26,7 +26,7 @@ public class InteractiveDebugger
     private Queue<string>? _scriptCommands = null;
     private bool _scriptMode = false;
 
-    public InteractiveDebugger(IcedCpu cpu, VirtualMemory memory, IEnumerable<string>? scriptCommands = null)
+    public InteractiveDebugger(ICpu cpu, VirtualMemory memory, IEnumerable<string>? scriptCommands = null)
     {
         _cpu = cpu;
         _memory = memory;

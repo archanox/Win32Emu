@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Debugging;
@@ -12,7 +12,7 @@ public static class CpuDebuggingExtensions
     /// <summary>
     /// Create an enhanced debugger wrapper for your CPU
     /// </summary>
-    public static EnhancedCpuDebugger CreateDebugger(this IcedCpu cpu, VirtualMemory memory)
+    public static EnhancedCpuDebugger CreateDebugger(this ICpu cpu, VirtualMemory memory)
     {
         return new EnhancedCpuDebugger(cpu, memory);
     }
@@ -21,7 +21,7 @@ public static class CpuDebuggingExtensions
     /// Execute a single step with automatic error detection and logging
     /// Usage: Replace cpu.SingleStep(vm) with cpu.DebugStep(vm)
     /// </summary>
-    public static void DebugStep(this IcedCpu cpu, VirtualMemory memory, 
+    public static void DebugStep(this ICpu cpu, VirtualMemory memory, 
         bool logSuspiciousRegisters = true, 
         bool logAllInstructions = false,
         uint suspiciousThreshold = 0x1000)
@@ -43,7 +43,7 @@ public static class CpuDebuggingExtensions
     /// Note: Only checks ESP (stack pointer) since EBP can legally be used as a general-purpose register.
     /// Many programs use EBP for loop counters, temporary values, or other purposes.
     /// </summary>
-    public static bool HasSuspiciousRegisters(this IcedCpu cpu, uint threshold = 0x1000)
+    public static bool HasSuspiciousRegisters(this ICpu cpu, uint threshold = 0x1000)
     {
         var esp = cpu.GetRegister("ESP");
         
@@ -55,7 +55,7 @@ public static class CpuDebuggingExtensions
     /// <summary>
     /// Log current register state to console
     /// </summary>
-    public static void LogRegisters(this IcedCpu cpu, ILogger logger, string prefix = "")
+    public static void LogRegisters(this ICpu cpu, ILogger logger, string prefix = "")
     {
         var eip = cpu.GetEip();
         var eax = cpu.GetRegister("EAX");

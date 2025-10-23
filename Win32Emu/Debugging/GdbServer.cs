@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu;
 using Win32Emu.Memory;
 using Win32Emu.VirtualFileSystem;
 using Win32Emu.Win32;
@@ -20,7 +20,7 @@ namespace Win32Emu.Debugging;
 /// </summary>
 public class GdbServer : IDisposable
 {
-    private readonly IcedCpu _cpu;
+    private readonly ICpu _cpu;
     private readonly VirtualMemory _memory;
     private readonly BreakpointManager _breakpoints;
     private readonly ILogger _logger;
@@ -49,7 +49,7 @@ public class GdbServer : IDisposable
     private readonly Dictionary<int, IVirtualFileHandle> _openFiles = new();
     private int _nextFileDescriptor = 3; // Start after stdin(0), stdout(1), stderr(2)
     
-    public GdbServer(IcedCpu cpu, VirtualMemory memory, BreakpointManager breakpoints, ILogger logger, int port = 1234, IVirtualFileSystem? vfs = null, ProcessEnvironment? env = null)
+    public GdbServer(ICpu cpu, VirtualMemory memory, BreakpointManager breakpoints, ILogger logger, int port = 1234, IVirtualFileSystem? vfs = null, ProcessEnvironment? env = null)
     {
         _cpu = cpu;
         _memory = memory;
