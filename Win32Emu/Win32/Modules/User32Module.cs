@@ -1736,7 +1736,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(732, entryPoint: 0x000139D0, Version = "5.1.2600.6532")]
-		[DllModuleExport(1, IsStub = false)]
+		[DllModuleExport(1)]
 		private int ShowCursor(int bShow)
 		{
 			_logger.LogInformation("[User32] ShowCursor: bShow={BShow}", bShow);
