@@ -4513,7 +4513,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return (uint)currentDir.Length; // Return length without null terminator
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(8)]
 	private uint CreateDirectoryA(in LpcStr lpPathName, uint lpSecurityAttributes)
 	{
 		var path = lpPathName.ToString();
@@ -4554,7 +4554,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(8)]
 	private uint GetWindowsDirectoryA(in LpStr lpBuffer, uint uSize)
 	{
 		// Return a typical Windows directory path
@@ -4595,7 +4595,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return lpString1.Address;
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(8)]
 	private uint LstrcpyA(in LpStr lpString1, in LpcStr lpString2)
 	{
 		var str2 = lpString2.ToString();
@@ -4925,7 +4925,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 	}
-	[DllModuleExport(4)]
+	[DllModuleExport(8)]
 	private uint SetFileAttributesA(in LpcStr lpFileName, uint dwFileAttributes)
 	{
 		var fileName = lpFileName.ToString();
@@ -4971,7 +4971,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(20)]
 	private uint GetDiskFreeSpaceA(in LpcStr lpRootPathName, uint lpSectorsPerCluster, uint lpBytesPerSector, uint lpNumberOfFreeClusters, uint lpTotalNumberOfClusters)
 	{
 		var rootPath = lpRootPathName.ToString() ?? "C:\\";

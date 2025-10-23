@@ -186,7 +186,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [out, optional] LPDWORD                     lpdwDisposition
 	/// );
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(36)]
 	private uint RegCreateKeyExA(uint hKey, in LpcStr lpSubKey, uint reserved, in LpcStr lpClass, uint dwOptions, uint samDesired, uint lpSecurityAttributes, uint phkResult, uint lpdwDisposition)
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
@@ -246,7 +246,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [in]           DWORD      cbData
 	/// );
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(24)]
 	private uint RegSetValueExA(uint hKey, in LpcStr lpValueName, uint reserved, uint dwType, uint lpData, uint cbData)
 	{
 		var valueName = lpValueName.ToString() ?? string.Empty;
