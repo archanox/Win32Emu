@@ -87,6 +87,9 @@ namespace Win32Emu.Win32.Modules
 				case "GETDIBITS":
 					returnValue = GetDIBits(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
 					return true;
+				case "SETDIBITSTODEVICE":
+					returnValue = (uint)SetDIBitsToDevice(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.Int32(5), a.Int32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), a.UInt32(11));
+					return true;
 
 				// DC functions
 				case "CREATECOMPATIBLEDC":
@@ -423,6 +426,15 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] GetDIBits(stub)");
 			return 0; // 0 indicates error
+		}
+
+		[DllModuleExport(48)]
+		private int SetDIBitsToDevice(uint hdc, int xDest, int yDest, uint width, uint height, int xSrc, int ySrc, uint startScan, uint scanLines, uint lpvBits, uint lpbmi, uint colorUse)
+		{
+			_logger.LogInformation("[Gdi32] SetDIBitsToDevice(hdc=0x{Hdc:X8}, dest=({XDest},{YDest}), size=({Width}x{Height}), src=({XSrc},{YSrc}), startScan={StartScan}, scanLines={ScanLines}, lpvBits=0x{LpvBits:X8}, lpbmi=0x{Lpbmi:X8}, colorUse={ColorUse})",
+				hdc, xDest, yDest, width, height, xSrc, ySrc, startScan, scanLines, lpvBits, lpbmi, colorUse);
+			// Return the number of scan lines copied (stub implementation)
+			return (int)scanLines;
 		}
 
 		// DC functions

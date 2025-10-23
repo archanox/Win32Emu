@@ -211,6 +211,8 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new Ole32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Shell32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DsetupModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new MsvcrtModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Wsock32Module(_env, _image.BaseAddress, loader, _logger));
 
         // Initialize the main thread in the thread scheduler
         _env.InitializeMainThread(_cpu);
