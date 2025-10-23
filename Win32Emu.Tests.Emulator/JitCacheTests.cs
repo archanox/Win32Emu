@@ -167,7 +167,7 @@ public class JitCacheTests
 		// Arrange
 		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
 		var mem = new VirtualMemory(1024 * 1024);
-		var cpu = new JitCpu(mem, null, tempDir);
+		var cpu = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
 		var execPath = "/test/program.exe";
 		
 		// Setup some simple code
@@ -203,7 +203,7 @@ public class JitCacheTests
 		var execPath = "/test/program.exe";
 		
 		// Create first CPU and save cache
-		var cpu1 = new JitCpu(mem, null, tempDir);
+		var cpu1 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
 		cpu1.SetExecutablePath(execPath);
 		
 		// Write some code and compile it
@@ -219,7 +219,7 @@ public class JitCacheTests
 		var stats1 = cpu1.GetCacheStatistics();
 		
 		// Act - Create new CPU and load cache
-		var cpu2 = new JitCpu(mem, null, tempDir);
+		var cpu2 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
 		cpu2.SetExecutablePath(execPath);
 		await cpu2.LoadCacheAsync();
 		
@@ -238,7 +238,7 @@ public class JitCacheTests
 		// Arrange
 		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
 		var mem = new VirtualMemory(1024 * 1024);
-		var cpu = new JitCpu(mem, null, tempDir);
+		var cpu = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
 		
 		// Act
 		var stats = cpu.GetCacheStatistics();

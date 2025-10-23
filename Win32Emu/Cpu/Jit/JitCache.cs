@@ -216,7 +216,7 @@ public class BlockMetadata
 /// <summary>
 /// Container for serialized cache data
 /// </summary>
-internal class JitCacheData
+public class JitCacheData
 {
 	public int Version { get; set; }
 	public string ExecutablePath { get; set; } = string.Empty;

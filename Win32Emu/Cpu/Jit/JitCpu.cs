@@ -39,7 +39,7 @@ public class JitCpu : IAsyncCpu
 	private readonly Decoder _decoder;
 	private readonly SimpleMemoryCodeReader _reader;
 
-	public JitCpu(VirtualMemory mem, ILogger? logger = null, string? cacheDirectory = null)
+	public JitCpu(VirtualMemory mem, ILogger? logger = null)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
@@ -51,10 +51,19 @@ public class JitCpu : IAsyncCpu
 		_assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
 		_moduleBuilder = _assemblyBuilder.DefineDynamicModule("JitModule");
 		
-		// Initialize JIT cache
-		_jitCache = new JitCache(cacheDirectory, logger);
+		// Initialize JIT cache with default directory
+		_jitCache = new JitCache(null, logger);
 		
 		_logger.LogInformation("[JitCpu] Initialized JIT CPU backend with caching");
+	}
+	
+	/// <summary>
+	/// Creates a new JitCpu instance with a custom cache directory
+	/// </summary>
+	public JitCpu(VirtualMemory mem, ILogger? logger, string cacheDirectory) : this(mem, logger)
+	{
+		// Replace the default cache with one using the custom directory
+		_jitCache = new JitCache(cacheDirectory, logger);
 	}
 
 	public void SetEip(uint eip) => _eip = eip;
@@ -154,27 +163,14 @@ public class JitCpu : IAsyncCpu
 	
 	/// <summary>
 	/// Precompiles common code blocks to warm up the JIT cache.
-	/// This performs a "dry run" compilation of blocks found in the cache.
+	/// Note: Currently not implemented because the cache cannot be directly enumerated.
+	/// Use PrecompileRangeAsync with specific address ranges instead.
 	/// </summary>
-	public async Task<int> PrecompileFromCacheAsync(VirtualMemory mem)
+	public Task<int> PrecompileFromCacheAsync(VirtualMemory mem)
 	{
-		var stats = _jitCache.GetStatistics();
-		if (stats.TotalBlocks == 0)
-		{
-			_logger.LogInformation("[JitCpu] No cached blocks to precompile");
-			return 0;
-		}
-		
-		_logger.LogInformation("[JitCpu] Starting precompilation of {TotalBlocks} cached blocks", stats.TotalBlocks);
-		
-		var compiled = 0;
-		var cache = _jitCache.GetStatistics();
-		
-		// Since we can't enumerate the cache directly, we'll compile blocks as they're encountered
-		// This method serves as a signal that precompilation should be aggressive
-		_logger.LogInformation("[JitCpu] Precompilation complete: {Compiled} blocks ready", compiled);
-		
-		return compiled;
+		throw new NotImplementedException(
+			"PrecompileFromCacheAsync is not implemented because the JIT cache cannot be enumerated directly. " +
+			"Use PrecompileRangeAsync(mem, startAddress, endAddress) to precompile specific address ranges instead.");
 	}
 	
 	/// <summary>
@@ -203,7 +199,16 @@ public class JitCpu : IAsyncCpu
 				// Check if block is already compiled
 				if (_compiledBlocks.ContainsKey(currentAddress))
 				{
-					currentAddress += 1; // Skip to next potential block
+					// Skip this block - get its length to advance properly
+					if (_jitCache.TryGetBlockMetadata(currentAddress, out var existingMeta) && existingMeta != null)
+					{
+						currentAddress += (uint)existingMeta.ByteLength;
+					}
+					else
+					{
+						// If we don't know the block length, advance by a minimum instruction size
+						currentAddress += 1;
+					}
 					continue;
 				}
 				
@@ -212,14 +217,21 @@ public class JitCpu : IAsyncCpu
 				_compiledBlocks[currentAddress] = block;
 				compiled++;
 				
-				// Move to next potential block start
-				// For now, just advance by 1 byte to find next block
-				// A more sophisticated approach would analyze control flow
-				currentAddress += 1;
+				// Advance by the block's actual byte length
+				if (_jitCache.TryGetBlockMetadata(currentAddress, out var metadata) && metadata != null)
+				{
+					currentAddress += (uint)metadata.ByteLength;
+				}
+				else
+				{
+					// Fallback: advance by minimum instruction size if metadata is unavailable
+					currentAddress += 1;
+				}
 			}
 			catch (Exception ex)
 			{
 				_logger.LogDebug(ex, "[JitCpu] Failed to precompile block at 0x{Address:X8}", currentAddress);
+				// On error, advance by minimum instruction size to avoid infinite loop
 				currentAddress += 1;
 			}
 		}
@@ -318,7 +330,45 @@ public class JitCpu : IAsyncCpu
 
 	private CompiledBlock CompileBlock(uint startEip, VirtualMemory mem)
 	{
-		_logger.LogInformation("[JitCpu] Compiling block at EIP=0x{Eip:X8}", startEip);
+		// Check if we have cached metadata for this block
+		BlockMetadata? cachedMetadata = null;
+		var hasCachedMetadata = _jitCache.TryGetBlockMetadata(startEip, out cachedMetadata);
+		
+		if (hasCachedMetadata && cachedMetadata != null)
+		{
+			_logger.LogDebug("[JitCpu] Found cached metadata for block at EIP=0x{Eip:X8}", startEip);
+			
+			// Verify the code hasn't changed by comparing hashes
+			try
+			{
+				var verifyBytes = new byte[cachedMetadata.ByteLength];
+				var verifySpan = mem.GetSpan(startEip, cachedMetadata.ByteLength);
+				verifySpan.CopyTo(verifyBytes.AsSpan());
+				var currentHash = JitCache.ComputeCodeHash(verifyBytes);
+				
+				if (currentHash != cachedMetadata.CodeHash)
+				{
+					_logger.LogWarning("[JitCpu] Code hash mismatch at EIP=0x{Eip:X8} - code may have been modified", startEip);
+					// Continue with fresh compilation
+					hasCachedMetadata = false;
+				}
+				else
+				{
+					_logger.LogInformation("[JitCpu] Compiling block at EIP=0x{Eip:X8} (using cached metadata, {InstructionCount} instructions)", 
+						startEip, cachedMetadata.InstructionCount);
+				}
+			}
+			catch
+			{
+				// If we can't read memory or verify hash, proceed with fresh compilation
+				hasCachedMetadata = false;
+			}
+		}
+		
+		if (!hasCachedMetadata)
+		{
+			_logger.LogInformation("[JitCpu] Compiling block at EIP=0x{Eip:X8}", startEip);
+		}
 		
 		var blockId = _blockCounter++;
 		var typeName = $"Block_{blockId:X8}";
@@ -333,7 +383,7 @@ public class JitCpu : IAsyncCpu
 		var il = methodBuilder.GetILGenerator();
 		var instructions = AnalyzeBlock(startEip, mem);
 		
-		// Calculate block metadata
+		// Calculate block metadata (or use cached if available and verified)
 		var blockLength = instructions.Sum(i => i.Length);
 		var codeBytes = new byte[blockLength];
 		try
@@ -351,15 +401,15 @@ public class JitCpu : IAsyncCpu
 		var endsWithCall = instructions.Count > 0 && instructions[^1].Mnemonic == Mnemonic.Call;
 		var endsWithReturn = instructions.Count > 0 && instructions[^1].Mnemonic == Mnemonic.Ret;
 		
-		// Save metadata to cache
+		// Update or save metadata to cache
 		var metadata = new BlockMetadata
 		{
 			StartAddress = startEip,
 			InstructionCount = instructions.Count,
 			ByteLength = blockLength,
 			CodeHash = codeHash,
-			FirstCompiled = DateTime.UtcNow,
-			ExecutionCount = 0,
+			FirstCompiled = cachedMetadata?.FirstCompiled ?? DateTime.UtcNow,
+			ExecutionCount = cachedMetadata?.ExecutionCount ?? 0,
 			EndsWithCall = endsWithCall,
 			EndsWithReturn = endsWithReturn
 		};
