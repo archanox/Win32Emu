@@ -853,9 +853,9 @@ namespace Win32Emu.Win32.Modules
 
 			buffer.Volume = lVolume;
 
-			// Convert DirectSound volume (in hundredths of decibels, typically -10000 to 0) to 0.0-1.0 range
+			// Convert DirectSound volume (in hundredths of decibels, typically -10000 to 0) to 0.0-1.0 range using exponential scaling
 			// DirectSound: 0 = full volume, -10000 = silence
-			var normalizedVolume = lVolume >= 0 ? 1.0f : Math.Max(0.0f, 1.0f + (lVolume / 10000.0f));
+			var normalizedVolume = lVolume <= -10000 ? 0.0f : (float)Math.Pow(10.0, lVolume / 2000.0);
 
 			if (buffer.AudioStreamId != 0 && _env.AudioBackend != null)
 			{
