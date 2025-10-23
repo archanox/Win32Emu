@@ -47,6 +47,10 @@ public class Ole32Module : IWin32ModuleUnsafe
 				returnValue = CoCreateInstance(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
 
+			case "STRINGFROMGUID2":
+				returnValue = StringFromGUID2(a.UInt32(0), a.UInt32(1), a.Int32(2));
+				return true;
+
 			default:
 				_logger.LogInformation("[Ole32] Unimplemented export: {Export}", export);
 				return false;
@@ -132,6 +136,36 @@ public class Ole32Module : IWin32ModuleUnsafe
 		}
 
 		return 0x80004001; // E_NOTIMPL
+	}
+
+	/// <summary>
+	/// Converts a GUID into a string of printable characters.
+	/// int StringFromGUID2(
+	///   [in]  REFGUID rguid,
+	///   [out] LPOLESTR lpsz,
+	///   [in]  int cchMax
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint StringFromGUID2(uint rguid, uint lpsz, int cchMax)
+	{
+		_logger.LogInformation("[Ole32] StringFromGUID2(rguid=0x{Rguid:X8}, lpsz=0x{Lpsz:X8}, cchMax={CchMax})",
+			rguid, lpsz, cchMax);
+
+		// Stub implementation - write a placeholder GUID string
+		var guidStr = "{00000000-0000-0000-0000-000000000000}";
+		if (lpsz != 0 && cchMax >= guidStr.Length + 1)
+		{
+			// Write as wide string (2 bytes per character)
+			for (int i = 0; i < guidStr.Length; i++)
+			{
+				_env.MemWrite16(lpsz + (uint)(i * 2), (ushort)guidStr[i]);
+			}
+			_env.MemWrite16(lpsz + (uint)(guidStr.Length * 2), 0); // Null terminator
+			return (uint)guidStr.Length + 1;
+		}
+
+		return 0; // Buffer too small
 	}
 
 }
