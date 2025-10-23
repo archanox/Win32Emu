@@ -83,20 +83,19 @@ public class JitCpu : IAsyncCpu
 		return InterpretSingleInstruction(mem);
 	}
 
-	public async Task<CpuStepResult> SingleStepAsync(VirtualMemory mem)
+	public Task<CpuStepResult> SingleStepAsync(VirtualMemory mem)
 	{
 		var result = InterpretSingleInstruction(mem);
-		await Task.CompletedTask;
-		return result;
+		return Task.FromResult(result);
 	}
 
-	public async Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem, int maxInstructions = 0)
+	public async Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem)
 	{
 		var blockStart = _eip;
 		
 		if (!_compiledBlocks.TryGetValue(blockStart, out var compiledBlock))
 		{
-			compiledBlock = CompileBlock(blockStart, mem, maxInstructions);
+			compiledBlock = CompileBlock(blockStart, mem);
 			_compiledBlocks[blockStart] = compiledBlock;
 		}
 		
@@ -160,7 +159,14 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Call:
 				_esp -= 4;
 				mem.Write32(_esp, _eip);
-				_eip = callTarget;
+				if (insn.Op0Kind == OpKind.NearBranch32)
+				{
+					_eip = callTarget;
+				}
+				else
+				{
+					_logger.LogWarning("[JitCpu] Unimplemented CALL type: {Op0Kind} at EIP=0x{OldEip:X8}", insn.Op0Kind, _eip - (uint)insn.Length);
+				}
 				break;
 			case Mnemonic.Ret:
 				_eip = mem.Read32(_esp);
@@ -178,7 +184,7 @@ public class JitCpu : IAsyncCpu
 		return new CpuStepResult(isCall, callTarget);
 	}
 
-	private CompiledBlock CompileBlock(uint startEip, VirtualMemory mem, int maxInstructions)
+	private CompiledBlock CompileBlock(uint startEip, VirtualMemory mem)
 	{
 		_logger.LogInformation("[JitCpu] Compiling block at EIP=0x{Eip:X8}", startEip);
 		
@@ -193,19 +199,35 @@ public class JitCpu : IAsyncCpu
 			new[] { typeof(JitCpu), typeof(VirtualMemory) });
 		
 		var il = methodBuilder.GetILGenerator();
-		var instructions = AnalyzeBlock(startEip, mem, maxInstructions);
+		var instructions = AnalyzeBlock(startEip, mem);
 		
 		// For now, just return a default result (placeholder for actual JIT compilation)
 		il.Emit(OpCodes.Ldc_I4_0); // isCall = false
 		il.Emit(OpCodes.Ldc_I4_0); // callTarget = 0
 		var constructor = typeof(CpuStepResult).GetConstructor(new[] { typeof(bool), typeof(uint) });
-		il.Emit(OpCodes.Newobj, constructor!);
-		var fromResultMethod = typeof(Task).GetMethod(nameof(Task.FromResult))!.MakeGenericMethod(typeof(CpuStepResult));
+		if (constructor == null)
+		{
+			throw new InvalidOperationException("CpuStepResult does not have a constructor with signature (bool, uint).");
+		}
+		il.Emit(OpCodes.Newobj, constructor);
+		var fromResultMethod = typeof(Task).GetMethod(nameof(Task.FromResult))?.MakeGenericMethod(typeof(CpuStepResult));
+		if (fromResultMethod == null)
+		{
+			throw new InvalidOperationException("Task.FromResult method not found.");
+		}
 		il.Emit(OpCodes.Call, fromResultMethod);
 		il.Emit(OpCodes.Ret);
 		
 		var type = typeBuilder.CreateType();
-		var method = type!.GetMethod("Execute")!;
+		if (type == null)
+		{
+			throw new InvalidOperationException($"Failed to create type '{typeName}' for compiled block at EIP=0x{startEip:X8}.");
+		}
+		var method = type.GetMethod("Execute");
+		if (method == null)
+		{
+			throw new InvalidOperationException($"Failed to find 'Execute' method on type '{typeName}' for compiled block at EIP=0x{startEip:X8}.");
+		}
 		
 		return new CompiledBlock(
 			startEip,
@@ -214,14 +236,14 @@ public class JitCpu : IAsyncCpu
 		);
 	}
 
-	private List<Instruction> AnalyzeBlock(uint startEip, VirtualMemory mem, int maxInstructions)
+	private List<Instruction> AnalyzeBlock(uint startEip, VirtualMemory mem)
 	{
 		var instructions = new List<Instruction>();
 		
 		_reader.Reset(startEip);
 		_decoder.IP = startEip;
 		
-		while (maxInstructions == 0 || instructions.Count < maxInstructions)
+		while (true)
 		{
 			var insn = _decoder.Decode();
 			instructions.Add(insn);

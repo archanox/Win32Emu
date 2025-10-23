@@ -3622,20 +3622,18 @@ public class IcedCpu : IAsyncCpu
 	/// <summary>
 	/// Execute multiple instructions asynchronously until a breakpoint or call
 	/// </summary>
-	public Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem, int maxInstructions = 0)
+	public Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem)
 	{
-		// For the interpreter, execute instructions one at a time up to the limit
+		// For the interpreter, execute instructions one at a time until we hit a call
 		// A true JIT would compile the block and execute it as a single unit
-		var instructionCount = 0;
 		CpuStepResult result;
 		
 		do
 		{
 			result = SingleStep(mem);
-			instructionCount++;
 			
-			// Stop if we hit a call or if we've reached the limit
-			if (result.IsCall || (maxInstructions > 0 && instructionCount >= maxInstructions))
+			// Stop if we hit a call
+			if (result.IsCall)
 			{
 				break;
 			}

@@ -88,16 +88,21 @@ public class AsyncJitCpuTests
 		var cpu = new JitCpu(mem);
 		
 		cpu.SetEip(0x1000);
-		// Write multiple NOP instructions
-		for (uint i = 0; i < 10; i++)
+		// Write multiple NOP instructions followed by a RET to terminate the block
+		for (uint i = 0; i < 5; i++)
 		{
 			mem.Write8(0x1000 + i, 0x90); // NOP
 		}
+		mem.Write8(0x1005, 0xC3); // RET - terminates the block
+		
+		// Setup stack for RET
+		cpu.SetRegister("ESP", 0x10000);
+		mem.Write32(0x10000, 0x00002000); // Return address
 		
 		// Act
-		var result = await cpu.ExecuteBlockAsync(mem, 5);
+		var result = await cpu.ExecuteBlockAsync(mem);
 		
-		// Assert - execution should stop after compiling the block
+		// Assert - execution should stop at RET
 		Assert.NotNull(result);
 	}
 
@@ -210,19 +215,26 @@ public class AsyncJitCpuTests
 		var cpu = new IcedCpu(mem);
 		
 		cpu.SetEip(0x1000);
-		// Write multiple NOP instructions
-		for (uint i = 0; i < 10; i++)
+		// Write multiple NOP instructions followed by a CALL to terminate the block
+		for (uint i = 0; i < 5; i++)
 		{
 			mem.Write8(0x1000 + i, 0x90); // NOP
 		}
+		// Write a CALL instruction to terminate the block
+		mem.Write8(0x1005, 0xE8); // CALL rel32
+		mem.Write32(0x1006, 0x00000100); // displacement
+		
+		// Setup stack for CALL
+		cpu.SetRegister("ESP", 0x10000);
 		
 		var initialEip = cpu.GetEip();
 		
 		// Act
-		var result = await cpu.ExecuteBlockAsync(mem, 5);
+		var result = await cpu.ExecuteBlockAsync(mem);
 		
 		// Assert
 		Assert.NotNull(result);
+		Assert.True(result.IsCall); // Should stop at CALL
 		// EIP should have advanced by executing instructions
 		Assert.NotEqual(initialEip, cpu.GetEip());
 	}
