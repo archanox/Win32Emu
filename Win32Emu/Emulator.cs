@@ -18,7 +18,7 @@ public sealed class Emulator : IDisposable
     private readonly Telemetry.TelemetryService? _telemetryService;
     private readonly Telemetry.EmulatorMetrics? _metrics;
     private VirtualMemory? _vm;
-    private IcedCpu? _cpu;
+    private IAsyncCpu? _cpu;
     private ProcessEnvironment? _env;
     private Win32Dispatcher? _dispatcher;
     private LoadedImage? _image;
@@ -124,7 +124,7 @@ public sealed class Emulator : IDisposable
         LogDebug("[Emulator] Subscribed to UI events from backends");
     }
 
-    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false)
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -168,11 +168,21 @@ public sealed class Emulator : IDisposable
             LogDebug("[Loader] Legacy instruction decoding enabled (MPX, Cyrix, ALTINST, etc.)");
         }
 
-        _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
-        if (enableInstructionAnalyzer)
+        // Create CPU based on backend preference
+        if (useJitCpu)
         {
-            LogDebug("[Loader] Instruction analyzer enabled");
+            _cpu = new Cpu.Jit.JitCpu(_vm, _logger);
+            LogDebug("[Loader] JIT CPU backend enabled (async-capable)");
         }
+        else
+        {
+            _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
+            if (enableInstructionAnalyzer)
+            {
+                LogDebug("[Loader] Instruction analyzer enabled");
+            }
+        }
+        
         _cpu.SetEip(_image.EntryPointAddress);
         _cpu.SetRegister("ESP", 0x00200000);
         _cpu.SetRegister("EBP", 0x00200000); // Initialize frame pointer to match stack pointer
@@ -916,7 +926,7 @@ public sealed class Emulator : IDisposable
         }
     }
 
-    private static bool WillBeCall(IcedCpu cpu, VirtualMemory vm)
+    private static bool WillBeCall(ICpu cpu, VirtualMemory vm)
     {
         try
         {
@@ -955,7 +965,7 @@ public sealed class Emulator : IDisposable
         }
     }
 
-    private static uint GetCallTarget(IcedCpu cpu, VirtualMemory vm)
+    private static uint GetCallTarget(ICpu cpu, VirtualMemory vm)
     {
         try
         {

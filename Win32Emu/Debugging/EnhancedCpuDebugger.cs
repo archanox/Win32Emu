@@ -1,4 +1,4 @@
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Debugging;
@@ -8,7 +8,7 @@ namespace Win32Emu.Debugging;
 /// </summary>
 public class EnhancedCpuDebugger
 {
-    private readonly IcedCpu _cpu;
+    private readonly ICpu _cpu;
     private readonly VirtualMemory _memory;
     private readonly List<CpuState> _executionTrace = [];
     private CpuState _lastState;
@@ -18,7 +18,7 @@ public class EnhancedCpuDebugger
     public bool LogToConsole { get; set; } = true;
     public uint SuspiciousThreshold { get; set; } = 0x1000;
     
-    public EnhancedCpuDebugger(IcedCpu cpu, VirtualMemory memory)
+    public EnhancedCpuDebugger(ICpu cpu, VirtualMemory memory)
     {
         _cpu = cpu;
         _memory = memory;
