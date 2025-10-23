@@ -879,7 +879,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			buffer.Pan = lPan;
-			// Pan is typically -10000 (left) to 10000 (right), with 0 being center
+			// Pan is typically -10000 (full left) to +10000 (full right), with 0 being center
 			// For now we just store it, full implementation would require stereo positioning in OpenAL
 
 			return 0; // DS_OK
