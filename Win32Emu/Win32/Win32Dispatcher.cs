@@ -115,13 +115,12 @@ public class Win32Dispatcher(ILogger logger)
 	/// <summary>
 	/// Async version of TryInvoke for async-aware CPU backends and Win32 modules
 	/// </summary>
-	public async Task<(bool success, uint returnValue, int stdcallArgBytes)> TryInvokeAsync(string dll, string export, ICpu cpu, VirtualMemory memory)
+	public Task<(bool success, uint returnValue, int stdcallArgBytes)> TryInvokeAsync(string dll, string export, ICpu cpu, VirtualMemory memory)
 	{
 		// For now, wrap the synchronous version
 		// Future: implement IWin32ModuleAsync interface for modules that need async operations
 		var success = TryInvoke(dll, export, cpu, memory, out var returnValue, out var stdcallArgBytes);
-		await Task.CompletedTask; // Placeholder for future async operations
-		return (success, returnValue, stdcallArgBytes);
+		return Task.FromResult((success, returnValue, stdcallArgBytes));
 	}
 
 	private void LogUnknownFunctionCall(string dll, string export)

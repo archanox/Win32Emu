@@ -16,13 +16,12 @@ public interface IAsyncCpu : ICpu
 	Task<CpuStepResult> SingleStepAsync(VirtualMemory mem);
 	
 	/// <summary>
-	/// Execute multiple instructions asynchronously until a breakpoint, call, or limit is reached.
+	/// Execute multiple instructions asynchronously until a breakpoint or call is reached.
 	/// This is the primary method for JIT-compiled execution blocks.
 	/// </summary>
 	/// <param name="mem">Virtual memory instance</param>
-	/// <param name="maxInstructions">Maximum number of instructions to execute (0 = no limit)</param>
 	/// <returns>Result of the execution block including call information</returns>
-	Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem, int maxInstructions = 0);
+	Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem);
 	
 	/// <summary>
 	/// Check if this CPU backend supports JIT compilation

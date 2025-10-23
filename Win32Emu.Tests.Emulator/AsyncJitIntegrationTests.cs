@@ -22,7 +22,7 @@ public class AsyncJitIntegrationTests
 		var dispatcher = new Win32Dispatcher(NullLogger.Instance);
 		
 		cpu.SetEip(0x1000);
-		cpu.SetRegister("ESP", 0x10000); // Use lower address within 1MB range
+		cpu.SetRegister("ESP", 0x10000);
 		
 		// Write a simple call instruction
 		mem.Write8(0x1000, 0xE8); // CALL rel32
@@ -118,12 +118,12 @@ public class AsyncJitIntegrationTests
 		mem.Write8(0x1005, 0xC3); // RET
 		
 		// Write return address on stack
-		cpu.SetRegister("ESP", 0x10000); // Use lower address within 1MB range
+		cpu.SetRegister("ESP", 0x10000);
 		mem.Write32(0x10000, 0x00002000);
 		
 		// Act - Execute block asynchronously
 		var initialState = cpu.SaveState();
-		var result = await cpu.ExecuteBlockAsync(mem, 10);
+		var result = await cpu.ExecuteBlockAsync(mem);
 		
 		// Assert
 		Assert.NotNull(result);
