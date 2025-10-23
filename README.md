@@ -10,6 +10,7 @@ A Windows 32-bit PE executable emulator for running classic Windows games and ap
 - **Hardware-Accelerated**: Uses .NET intrinsics for CPU instruction acceleration
 - **Modern CPU Support**: Automatically detects and uses SSE, AVX, and NEON instructions
 - **Accurate Emulation**: Full x86 CPU and Windows API emulation
+- **JIT Caching**: Persistent JIT cache to disk for faster subsequent executions with precompilation support
 
 ## Components
 
@@ -76,6 +77,8 @@ Win32Emu game.exe --telemetry-otlp http://localhost:4317
 - [OPENTELEMETRY_USAGE.md](OPENTELEMETRY_USAGE.md) - OpenTelemetry for logging, metrics, and profiling
 - [TELEMETRY_EXAMPLE.md](TELEMETRY_EXAMPLE.md) - Practical examples of using OpenTelemetry
 - [RIDER_OPENTELEMETRY_SETUP.md](RIDER_OPENTELEMETRY_SETUP.md) - JetBrains Rider integration guide
+- [JIT_CACHE_IMPLEMENTATION.md](JIT_CACHE_IMPLEMENTATION.md) - JIT caching to disk for faster emulation
+- [JIT_CACHE_EXAMPLES.md](JIT_CACHE_EXAMPLES.md) - JIT cache usage examples and best practices
 
 ### Win32Emu.Gui
 Cross-platform desktop GUI for managing your game library and emulator settings. Built with Avalonia UI.
