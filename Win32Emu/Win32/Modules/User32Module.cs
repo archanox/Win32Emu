@@ -25,6 +25,7 @@ namespace Win32Emu.Win32.Modules
 		// State tracking for cursor and focus
 		private uint _currentCursor;
 		private uint _focusWindow;
+		private int _cursorDisplayCount = 0; // Tracks cursor visibility counter
 
 		// Constants for procedure execution monitoring
 		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
@@ -108,6 +109,10 @@ namespace Win32Emu.Win32.Modules
 
 				case "PEEKMESSAGEA":
 					returnValue = PeekMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+
+				case "WAITMESSAGE":
+					returnValue = WaitMessage();
 					return true;
 
 				case "TRANSLATEMESSAGE":
@@ -1730,14 +1735,32 @@ namespace Win32Emu.Win32.Modules
 			return previousCursor;
 		}
 
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(732, entryPoint: 0x000139D0, Version = "5.1.2600.6532")]
+		[DllModuleExport(1, IsStub = false)]
 		private int ShowCursor(int bShow)
 		{
 			_logger.LogInformation("[User32] ShowCursor: bShow={BShow}", bShow);
+			
 			// ShowCursor increments/decrements an internal display count
+			// The cursor is displayed when the count is >= 0
+			// The cursor is hidden when the count is < 0
 			// Returns the new display count after the operation
-			// For now, return a simple value indicating cursor is visible
-			return bShow != 0 ? 1 : 0;
+			
+			if (bShow != 0)
+			{
+				// TRUE - increment the display count (show cursor)
+				_cursorDisplayCount++;
+				_logger.LogInformation("[User32] ShowCursor: Incremented cursor count to {CursorDisplayCount}", _cursorDisplayCount);
+			}
+			else
+			{
+				// FALSE - decrement the display count (hide cursor)
+				_cursorDisplayCount--;
+				_logger.LogInformation("[User32] ShowCursor: Decremented cursor count to {CursorDisplayCount}", _cursorDisplayCount);
+			}
+			
+			// Return the new display count
+			return _cursorDisplayCount;
 		}
 
 		[DllModuleExport(1)]
@@ -1857,6 +1880,26 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			return 0; // No message available
+		}
+
+		[DllModuleExport(738, entryPoint: 0x00013A10, Version = "5.1.2600.6532")]
+		[DllModuleExport(1, IsStub = false)]
+		private uint WaitMessage()
+		{
+			_logger.LogInformation("[User32] WaitMessage");
+			
+			// WaitMessage waits until a message is posted to the calling thread's message queue
+			// Returns TRUE (non-zero) if a message is available
+			// Returns FALSE (0) if an error occurs
+			
+			// In our emulator, we'll do a simple wait with a small sleep
+			// to simulate waiting for a message without spinning
+			// For a stub implementation, just yield briefly and return success
+			
+			System.Threading.Thread.Sleep(1); // Brief yield to prevent spinning
+			
+			_logger.LogInformation("[User32] WaitMessage: Returning after wait");
+			return NativeTypes.Win32Bool.TRUE; // Always return success
 		}
 
 		[DllModuleExport(1)]

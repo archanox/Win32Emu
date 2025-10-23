@@ -176,6 +176,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "HEAPDESTROY":
 				returnValue = HeapDestroy((void*)a.UInt32(0));
 				return true;
+			case "HEAPSIZE":
+				returnValue = HeapSize(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
 			case "LOCALALLOC":
 				returnValue = LocalAlloc(a.UInt32(0), a.UInt32(1));
 				return true;
@@ -184,6 +187,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "VIRTUALFREE":
 				returnValue = VirtualFree(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "ISBADCODEPTR":
+				returnValue = IsBadCodePtr(a.UInt32(0));
+				return true;
+			case "ISBADREADPTR":
+				returnValue = IsBadReadPtr(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "ISBADWRITEPTR":
+				returnValue = IsBadWritePtr(a.UInt32(0), a.UInt32(1));
 				return true;
 
 			// File I/O
@@ -224,6 +236,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETDISKFREESPACEA":
 				returnValue = GetDiskFreeSpaceA(a.LpcStr(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
+			case "GETDRIVETYPEA":
+				returnValue = GetDriveTypeA(a.LpcStr(0));
+				return true;
+			case "GETLOGICALDRIVESTRINGS":
+				returnValue = GetLogicalDriveStringsA(a.UInt32(0), a.LpStr(1));
+				return true;
+			case "GETLOGICALDRIVESTRINGA":
+				returnValue = GetLogicalDriveStringsA(a.UInt32(0), a.LpStr(1));
+				return true;
 			case "FINDFIRSTFILEA":
 				returnValue = FindFirstFileA(a.UInt32(0), a.UInt32(1));
 				return true;
@@ -247,6 +268,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "UNHANDLEDEXCEPTIONFILTER":
 				returnValue = UnhandledExceptionFilter(a.UInt32(0));
+				return true;
+			case "SETUNHANDLEDEXCEPTIONFILTER":
+				returnValue = SetUnhandledExceptionFilter(a.UInt32(0));
+				return true;
+			case "OUTPUTDEBUGSTRINGA":
+				returnValue = OutputDebugStringA(a.LpcStr(0));
 				return true;
 			case "RTLUNWIND":
 				returnValue = RtlUnwind(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
@@ -279,6 +306,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "QUERYPERFORMANCEFREQUENCY":
 				returnValue = QueryPerformanceFrequency(a.UInt32(0));
+				return true;
+			case "GETSYSTEMTIME":
+				returnValue = GetSystemTime(a.UInt32(0));
+				return true;
+			case "GETLOCALTIME":
+				returnValue = GetLocalTime(a.UInt32(0));
 				return true;
 			case "GETTICKCOUNT":
 				returnValue = GetTickCount();
@@ -1935,6 +1968,76 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
+	[DllModuleExport(440, entryPoint: 0x000110B0, Version = "5.1.2600.6532")]
+	[DllModuleExport(339, entryPoint: 0x0001A017, Version = "4.90.0.3000")]
+	private uint HeapSize(uint hHeap, uint dwFlags, uint lpMem)
+	{
+		_logger.LogInformation("[Kernel32] HeapSize(hHeap=0x{HHeap:X8}, dwFlags=0x{DwFlags:X8}, lpMem=0x{LpMem:X8})", hHeap, dwFlags, lpMem);
+		
+		// Return the size of the heap memory block
+		var size = _env.HeapSize(hHeap, lpMem);
+		_logger.LogInformation("[Kernel32] HeapSize: Block at 0x{LpMem:X8} has size {Size} bytes", lpMem, size);
+		
+		return size;
+	}
+
+	[DllModuleExport(517, entryPoint: 0x00011F76, Version = "5.1.2600.6532")]
+	[DllModuleExport(411, entryPoint: 0x0001DDDE, Version = "4.90.0.3000")]
+	private uint IsBadCodePtr(uint lpfn)
+	{
+		// IsBadCodePtr verifies that the calling process has read access to the specified code address
+		// Returns FALSE (0) if the address is valid, TRUE (non-zero) if invalid
+		_logger.LogInformation("[Kernel32] IsBadCodePtr(lpfn=0x{Lpfn:X8})", lpfn);
+		
+		// For emulation purposes, we'll check if the address is within our memory space
+		// This is a simplification - real Windows checks actual page permissions
+		if (lpfn == 0)
+		{
+			return NativeTypes.Win32Bool.TRUE; // NULL pointer is invalid
+		}
+		
+		// For now, assume all non-NULL code pointers are valid
+		// A more complete implementation would check against allocated memory regions
+		return NativeTypes.Win32Bool.FALSE;
+	}
+
+	[DllModuleExport(518, entryPoint: 0x00011FAC, Version = "5.1.2600.6532")]
+	[DllModuleExport(412, entryPoint: 0x0001DE14, Version = "4.90.0.3000")]
+	private uint IsBadReadPtr(uint lp, uint ucb)
+	{
+		// IsBadReadPtr verifies that the calling process has read access to the specified range of memory
+		// Returns FALSE (0) if readable, TRUE (non-zero) if not readable
+		_logger.LogInformation("[Kernel32] IsBadReadPtr(lp=0x{Lp:X8}, ucb={Ucb})", lp, ucb);
+		
+		// For emulation, we'll do a basic check
+		if (lp == 0 || ucb == 0)
+		{
+			return NativeTypes.Win32Bool.TRUE; // NULL or zero-length is invalid
+		}
+		
+		// Assume all non-NULL memory is readable for now
+		// A complete implementation would check memory protection and allocation
+		return NativeTypes.Win32Bool.FALSE;
+	}
+
+	[DllModuleExport(519, entryPoint: 0x00011FE2, Version = "5.1.2600.6532")]
+	[DllModuleExport(413, entryPoint: 0x0001DE4A, Version = "4.90.0.3000")]
+	private uint IsBadWritePtr(uint lp, uint ucb)
+	{
+		// IsBadWritePtr verifies that the calling process has write access to the specified range of memory
+		// Returns FALSE (0) if writable, TRUE (non-zero) if not writable
+		_logger.LogInformation("[Kernel32] IsBadWritePtr(lp=0x{Lp:X8}, ucb={Ucb})", lp, ucb);
+		
+		// For emulation, similar to IsBadReadPtr
+		if (lp == 0 || ucb == 0)
+		{
+			return NativeTypes.Win32Bool.TRUE; // NULL or zero-length is invalid
+		}
+		
+		// Assume all non-NULL memory is writable for now
+		return NativeTypes.Win32Bool.FALSE;
+	}
+
 	[DllModuleExport(61)]
 	private uint LocalAlloc(uint uFlags, uint uBytes)
 	{
@@ -2803,6 +2906,77 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_logger.LogInformation("[Kernel32] GetTimeZoneInformation failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0xFFFFFFFF; // TIME_ZONE_ID_INVALID
+		}
+	}
+
+	[DllModuleExport(449, entryPoint: 0x00011630, Version = "5.1.2600.6532")]
+	[DllModuleExport(348, entryPoint: 0x0001A33E, Version = "4.90.0.3000")]
+	private uint GetSystemTime(uint lpSystemTime)
+	{
+		try
+		{
+			var now = DateTime.UtcNow;
+			
+			// Write SYSTEMTIME structure (16 bytes)
+			// typedef struct _SYSTEMTIME {
+			//   WORD wYear;
+			//   WORD wMonth;
+			//   WORD wDayOfWeek;
+			//   WORD wDay;
+			//   WORD wHour;
+			//   WORD wMinute;
+			//   WORD wSecond;
+			//   WORD wMilliseconds;
+			// } SYSTEMTIME;
+			
+			_env.MemWrite16(lpSystemTime, (ushort)now.Year);
+			_env.MemWrite16(lpSystemTime + 2, (ushort)now.Month);
+			_env.MemWrite16(lpSystemTime + 4, (ushort)now.DayOfWeek);
+			_env.MemWrite16(lpSystemTime + 6, (ushort)now.Day);
+			_env.MemWrite16(lpSystemTime + 8, (ushort)now.Hour);
+			_env.MemWrite16(lpSystemTime + 10, (ushort)now.Minute);
+			_env.MemWrite16(lpSystemTime + 12, (ushort)now.Second);
+			_env.MemWrite16(lpSystemTime + 14, (ushort)now.Millisecond);
+
+			_logger.LogInformation("[Kernel32] GetSystemTime: {Year}-{Month:D2}-{Day:D2} {Hour:D2}:{Minute:D2}:{Second:D2}.{Millisecond:D3}", 
+				now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, now.Millisecond);
+
+			return 0; // GetSystemTime returns void in the real API
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] GetSystemTime failed");
+			return 0;
+		}
+	}
+
+	[DllModuleExport(423, entryPoint: 0x0001157C, Version = "5.1.2600.6532")]
+	[DllModuleExport(322, entryPoint: 0x0001A2E4, Version = "4.90.0.3000")]
+	private uint GetLocalTime(uint lpSystemTime)
+	{
+		try
+		{
+			var now = DateTime.Now; // Local time
+			
+			// Write SYSTEMTIME structure (16 bytes)
+			_env.MemWrite16(lpSystemTime, (ushort)now.Year);
+			_env.MemWrite16(lpSystemTime + 2, (ushort)now.Month);
+			_env.MemWrite16(lpSystemTime + 4, (ushort)now.DayOfWeek);
+			_env.MemWrite16(lpSystemTime + 6, (ushort)now.Day);
+			_env.MemWrite16(lpSystemTime + 8, (ushort)now.Hour);
+			_env.MemWrite16(lpSystemTime + 10, (ushort)now.Minute);
+			_env.MemWrite16(lpSystemTime + 12, (ushort)now.Second);
+			_env.MemWrite16(lpSystemTime + 14, (ushort)now.Millisecond);
+
+			_logger.LogInformation("[Kernel32] GetLocalTime: {Year}-{Month:D2}-{Day:D2} {Hour:D2}:{Minute:D2}:{Second:D2}.{Millisecond:D3}", 
+				now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, now.Millisecond);
+
+			return 0; // GetLocalTime returns void in the real API
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] GetLocalTime failed");
+			return 0;
 		}
 	}
 
@@ -5007,6 +5181,116 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 			return NativeTypes.Win32Bool.FALSE;
 		}
+	}
+
+	[DllModuleExport(421, entryPoint: 0x00011516, Version = "5.1.2600.6532")]
+	[DllModuleExport(320, entryPoint: 0x0001A254, Version = "4.90.0.3000")]
+	private uint GetDriveTypeA(in LpcStr lpRootPathName)
+	{
+		var rootPath = lpRootPathName.ToString() ?? "C:\\";
+		_logger.LogInformation("[Kernel32] GetDriveTypeA(\"{RootPath}\")", rootPath);
+
+		// Drive types:
+		// DRIVE_UNKNOWN = 0
+		// DRIVE_NO_ROOT_DIR = 1
+		// DRIVE_REMOVABLE = 2
+		// DRIVE_FIXED = 3
+		// DRIVE_REMOTE = 4
+		// DRIVE_CDROM = 5
+		// DRIVE_RAMDISK = 6
+
+		// For simplicity, return DRIVE_FIXED (3) for all drives
+		// In a real implementation, we would check the actual drive type
+		const uint DRIVE_FIXED = 3;
+		
+		_logger.LogInformation("[Kernel32] GetDriveTypeA: Returning DRIVE_FIXED for \"{RootPath}\"", rootPath);
+		return DRIVE_FIXED;
+	}
+
+	[DllModuleExport(429, entryPoint: 0x000115C8, Version = "5.1.2600.6532")]
+	[DllModuleExport(328, entryPoint: 0x0001A308, Version = "4.90.0.3000")]
+	private uint GetLogicalDriveStringsA(uint nBufferLength, in LpStr lpBuffer)
+	{
+		_logger.LogInformation("[Kernel32] GetLogicalDriveStringsA(nBufferLength={NBufferLength}, lpBuffer=0x{LpBuffer:X8})", 
+			nBufferLength, lpBuffer.Address);
+
+		// Return a string containing available drive letters, each followed by null terminator
+		// Format: "C:\0D:\0E:\0\0" (double null at end)
+		// For simplicity, we'll return just C: drive
+		const string driveString = "C:\\\0";
+		
+		var bytes = Encoding.ASCII.GetBytes(driveString);
+		var totalLength = (uint)(bytes.Length + 1); // +1 for final null terminator
+
+		if (nBufferLength == 0 || lpBuffer.Address == 0)
+		{
+			// Caller is querying the required buffer size
+			_logger.LogInformation("[Kernel32] GetLogicalDriveStringsA: Returning required buffer size {TotalLength}", totalLength);
+			return totalLength;
+		}
+
+		if (nBufferLength < totalLength)
+		{
+			// Buffer too small
+			_logger.LogWarning("[Kernel32] GetLogicalDriveStringsA: Buffer too small (need {TotalLength}, have {NBufferLength})", 
+				totalLength, nBufferLength);
+			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return 0;
+		}
+
+		try
+		{
+			// Write the drive string to memory
+			_env.MemWriteBytes(lpBuffer.Address, bytes);
+			// Write final null terminator
+			_env.MemWrite8(lpBuffer.Address + (uint)bytes.Length, 0);
+			
+			_logger.LogInformation("[Kernel32] GetLogicalDriveStringsA: Wrote drive string \"{DriveString}\"", 
+				driveString.TrimEnd('\0'));
+			
+			return (uint)(bytes.Length); // Return length without final null
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] GetLogicalDriveStringsA: Failed to write drive strings");
+			_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			return 0;
+		}
+	}
+
+	[DllModuleExport(601, entryPoint: 0x00012E28, Version = "5.1.2600.6532")]
+	[DllModuleExport(481, entryPoint: 0x00020B87, Version = "4.90.0.3000")]
+	private uint OutputDebugStringA(in LpcStr lpOutputString)
+	{
+		var message = lpOutputString.ToString();
+		_logger.LogInformation("[Kernel32] OutputDebugStringA: {Message}", message);
+		
+		// OutputDebugStringA returns void (0) in the real API
+		// It sends the string to the debugger if one is attached
+		// For our emulator, we just log it
+		Console.WriteLine($"[DEBUG] {message}");
+		
+		return 0;
+	}
+
+	[DllModuleExport(691, entryPoint: 0x0000F3CC, Version = "5.1.2600.6532")]
+	[DllModuleExport(571, entryPoint: 0x000223DC, Version = "4.90.0.3000")]
+	private uint SetUnhandledExceptionFilter(uint lpTopLevelExceptionFilter)
+	{
+		_logger.LogInformation("[Kernel32] SetUnhandledExceptionFilter(lpTopLevelExceptionFilter=0x{LpTopLevelExceptionFilter:X8})", 
+			lpTopLevelExceptionFilter);
+		
+		// This function sets the top-level exception handler
+		// In our emulator, we don't need to fully implement exception handling
+		// Just store the handler address and return success
+		
+		// Store for potential future use
+		var previousHandler = 0u; // We don't track previous handler for now
+		
+		_logger.LogInformation("[Kernel32] SetUnhandledExceptionFilter: Set exception handler to 0x{LpTopLevelExceptionFilter:X8}", 
+			lpTopLevelExceptionFilter);
+		
+		return previousHandler;
 	}
 
 }
