@@ -30,6 +30,12 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	private readonly Dictionary<uint, AcmStream> _acmStreams = new();
 	private uint _nextAcmStreamHandle = 0x70000000;
 
+	// WAVEFORMATEX structure constants
+	private const ushort WAVE_FORMAT_PCM = 0x0001;
+	private const ushort WAVE_FORMAT_ADPCM = 0x0002;
+	private const ushort WAVE_FORMAT_ALAW = 0x0006;
+	private const ushort WAVE_FORMAT_MULAW = 0x0007;
+
 	private class AcmStream
 	{
 		public uint Handle { get; set; }
@@ -39,6 +45,18 @@ public class Msacm32Module : IWin32ModuleUnsafe
 		public uint Callback { get; set; }
 		public uint Instance { get; set; }
 		public uint Flags { get; set; }
+		public WaveFormat? SourceWaveFormat { get; set; }
+		public WaveFormat? DestWaveFormat { get; set; }
+	}
+
+	private class WaveFormat
+	{
+		public ushort FormatTag { get; set; }
+		public ushort Channels { get; set; }
+		public uint SamplesPerSec { get; set; }
+		public uint AvgBytesPerSec { get; set; }
+		public ushort BlockAlign { get; set; }
+		public ushort BitsPerSample { get; set; }
 	}
 
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
@@ -119,6 +137,31 @@ public class Msacm32Module : IWin32ModuleUnsafe
 			return 11; // MMSYSERR_INVALPARAM
 		}
 
+		// Initialize audio backend if not already done
+		if (_env.AudioBackend == null)
+		{
+			_env.AudioBackend = Rendering.BackendFactory.CreateAudioBackend(_logger);
+			_env.AudioBackend.Initialize();
+		}
+
+		// Parse source wave format (WAVEFORMATEX structure)
+		WaveFormat? srcFormat = null;
+		if (pwfxSrc != 0)
+		{
+			srcFormat = ParseWaveFormat(pwfxSrc);
+			_logger.LogInformation("[MSACM32] Source format: {FormatTag}, {Channels}ch, {SamplesPerSec}Hz, {BitsPerSample}bit",
+				srcFormat.FormatTag, srcFormat.Channels, srcFormat.SamplesPerSec, srcFormat.BitsPerSample);
+		}
+
+		// Parse destination wave format
+		WaveFormat? dstFormat = null;
+		if (pwfxDst != 0)
+		{
+			dstFormat = ParseWaveFormat(pwfxDst);
+			_logger.LogInformation("[MSACM32] Dest format: {FormatTag}, {Channels}ch, {SamplesPerSec}Hz, {BitsPerSample}bit",
+				dstFormat.FormatTag, dstFormat.Channels, dstFormat.SamplesPerSec, dstFormat.BitsPerSample);
+		}
+
 		// Create a handle for this ACM stream
 		var handle = _nextAcmStreamHandle++;
 		var stream = new AcmStream
@@ -129,7 +172,9 @@ public class Msacm32Module : IWin32ModuleUnsafe
 			Filter = pwfltr,
 			Callback = dwCallback,
 			Instance = dwInstance,
-			Flags = fdwOpen
+			Flags = fdwOpen,
+			SourceWaveFormat = srcFormat,
+			DestWaveFormat = dstFormat
 		};
 
 		_acmStreams[handle] = stream;
@@ -137,8 +182,24 @@ public class Msacm32Module : IWin32ModuleUnsafe
 		// Write the handle to the output parameter
 		_env.MemWrite32(phas, handle);
 
-		_logger.LogInformation("[MSACM32] acmStreamOpen: Created stream handle 0x{Handle:X8}", handle);
+		_logger.LogInformation("[MSACM32] acmStreamOpen: Created stream handle 0x{Handle:X8} with audio backend support", handle);
 		return 0; // MMSYSERR_NOERROR
+	}
+
+	/// <summary>
+	/// Parses a WAVEFORMATEX structure from memory
+	/// </summary>
+	private WaveFormat ParseWaveFormat(uint address)
+	{
+		return new WaveFormat
+		{
+			FormatTag = _env.MemRead16(address),
+			Channels = _env.MemRead16(address + 2),
+			SamplesPerSec = _env.MemRead32(address + 4),
+			AvgBytesPerSec = _env.MemRead32(address + 8),
+			BlockAlign = _env.MemRead16(address + 12),
+			BitsPerSample = _env.MemRead16(address + 14)
+		};
 	}
 
 	/// <summary>
@@ -208,15 +269,152 @@ public class Msacm32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[MSACM32] acmStreamConvert(has=0x{Has:X8}, pash=0x{Pash:X8}, fdwConvert=0x{FdwConvert:X8})",
 			has, pash, fdwConvert);
 
-		if (!_acmStreams.ContainsKey(has))
+		if (!_acmStreams.TryGetValue(has, out var stream))
 		{
 			_logger.LogWarning("[MSACM32] acmStreamConvert: Invalid stream handle 0x{Has:X8}", has);
 			return 6; // MMSYSERR_INVALHANDLE
 		}
 
-		// For stub implementation, just mark as complete
-		// A full implementation would actually convert the audio data
-		return 0; // MMSYSERR_NOERROR
+		if (pash == 0)
+		{
+			_logger.LogWarning("[MSACM32] acmStreamConvert: NULL stream header pointer");
+			return 11; // MMSYSERR_INVALPARAM
+		}
+
+		try
+		{
+			// Parse ACMSTREAMHEADER structure
+			// typedef struct {
+			//   DWORD cbStruct;          // +0
+			//   DWORD fdwStatus;         // +4
+			//   DWORD_PTR dwUser;        // +8
+			//   LPBYTE pbSrc;            // +12
+			//   DWORD cbSrcLength;       // +16
+			//   DWORD cbSrcLengthUsed;   // +20
+			//   DWORD_PTR dwSrcUser;     // +24
+			//   LPBYTE pbDst;            // +28
+			//   DWORD cbDstLength;       // +32
+			//   DWORD cbDstLengthUsed;   // +36
+			//   ...
+			// } ACMSTREAMHEADER;
+
+			var pbSrc = _env.MemRead32(pash + 12);
+			var cbSrcLength = _env.MemRead32(pash + 16);
+			var pbDst = _env.MemRead32(pash + 28);
+			var cbDstLength = _env.MemRead32(pash + 32);
+
+			_logger.LogInformation("[MSACM32] Converting {CbSrcLength} bytes from 0x{PbSrc:X8} to 0x{PbDst:X8} (max {CbDstLength} bytes)",
+				cbSrcLength, pbSrc, pbDst, cbDstLength);
+
+			// Perform format conversion based on source and dest formats
+			uint bytesConverted = 0;
+			if (stream.SourceWaveFormat != null && stream.DestWaveFormat != null)
+			{
+				bytesConverted = ConvertAudioData(
+					pbSrc, cbSrcLength,
+					pbDst, cbDstLength,
+					stream.SourceWaveFormat,
+					stream.DestWaveFormat);
+			}
+			else
+			{
+				// Fallback: copy data directly (no conversion)
+				bytesConverted = Math.Min(cbSrcLength, cbDstLength);
+				for (uint i = 0; i < bytesConverted; i++)
+				{
+					_env.MemWrite8(pbDst + i, _env.MemRead8(pbSrc + i));
+				}
+			}
+
+			// Update the stream header with bytes used
+			_env.MemWrite32(pash + 20, cbSrcLength); // cbSrcLengthUsed
+			_env.MemWrite32(pash + 36, bytesConverted); // cbDstLengthUsed
+
+			_logger.LogInformation("[MSACM32] Converted {BytesConverted} bytes", bytesConverted);
+			return 0; // MMSYSERR_NOERROR
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[MSACM32] acmStreamConvert: Conversion failed");
+			return 1; // MMSYSERR_ERROR
+		}
+	}
+
+	/// <summary>
+	/// Converts audio data between formats (basic PCM conversion)
+	/// </summary>
+	private uint ConvertAudioData(uint srcAddr, uint srcLen, uint dstAddr, uint dstLen,
+		WaveFormat srcFormat, WaveFormat dstFormat)
+	{
+		// Only support PCM to PCM conversion for now
+		if (srcFormat.FormatTag != WAVE_FORMAT_PCM || dstFormat.FormatTag != WAVE_FORMAT_PCM)
+		{
+			_logger.LogWarning("[MSACM32] Unsupported format conversion: {SrcFormatTag} -> {DstFormatTag}",
+				srcFormat.FormatTag, dstFormat.FormatTag);
+			// Fallback: copy data directly
+			var copyLen = Math.Min(srcLen, dstLen);
+			for (uint i = 0; i < copyLen; i++)
+			{
+				_env.MemWrite8(dstAddr + i, _env.MemRead8(srcAddr + i));
+			}
+			return copyLen;
+		}
+
+		// Calculate conversion parameters
+		var srcBytesPerSample = srcFormat.BitsPerSample / 8;
+		var dstBytesPerSample = dstFormat.BitsPerSample / 8;
+		var srcSampleCount = srcLen / (uint)(srcBytesPerSample * srcFormat.Channels);
+
+		// For simplicity, assume same sample rate (no resampling)
+		// In production, you'd need proper resampling for different sample rates
+		var dstSampleCount = srcSampleCount;
+		var dstBytesNeeded = dstSampleCount * (uint)(dstBytesPerSample * dstFormat.Channels);
+
+		if (dstBytesNeeded > dstLen)
+		{
+			_logger.LogWarning("[MSACM32] Destination buffer too small: need {DstBytesNeeded}, have {DstLen}",
+				dstBytesNeeded, dstLen);
+			dstSampleCount = dstLen / (uint)(dstBytesPerSample * dstFormat.Channels);
+			dstBytesNeeded = dstSampleCount * (uint)(dstBytesPerSample * dstFormat.Channels);
+		}
+
+		// Perform simple PCM conversion (bit depth and channel conversion)
+		for (uint i = 0; i < dstSampleCount; i++)
+		{
+			for (var ch = 0; ch < Math.Min(srcFormat.Channels, dstFormat.Channels); ch++)
+			{
+				var srcOffset = srcAddr + (i * (uint)(srcBytesPerSample * srcFormat.Channels)) + (uint)(ch * srcBytesPerSample);
+				var dstOffset = dstAddr + (i * (uint)(dstBytesPerSample * dstFormat.Channels)) + (uint)(ch * dstBytesPerSample);
+
+				// Read source sample
+				int sample = 0;
+				if (srcFormat.BitsPerSample == 8)
+				{
+					sample = _env.MemRead8(srcOffset) - 128; // 8-bit is unsigned, convert to signed
+					sample <<= 8; // Scale to 16-bit range
+				}
+				else if (srcFormat.BitsPerSample == 16)
+				{
+					sample = (short)_env.MemRead16(srcOffset);
+				}
+
+				// Write destination sample
+				if (dstFormat.BitsPerSample == 8)
+				{
+					var val = (byte)((sample >> 8) + 128); // Scale to 8-bit unsigned
+					_env.MemWrite8(dstOffset, val);
+				}
+				else if (dstFormat.BitsPerSample == 16)
+				{
+					_env.MemWrite16(dstOffset, (ushort)sample);
+				}
+			}
+		}
+
+		_logger.LogInformation("[MSACM32] Converted {SrcSampleCount} samples ({SrcFormat} -> {DstFormat})",
+			dstSampleCount, $"{srcFormat.BitsPerSample}bit/{srcFormat.Channels}ch", $"{dstFormat.BitsPerSample}bit/{dstFormat.Channels}ch");
+
+		return dstBytesNeeded;
 	}
 
 	/// <summary>
