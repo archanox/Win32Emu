@@ -327,6 +327,7 @@ public class JitCpu : IAsyncCpu
 		
 		switch (insn.Mnemonic)
 		{
+			// === Basic instructions (already implemented) ===
 			case Mnemonic.Nop:
 				break;
 			case Mnemonic.Int3:
@@ -351,6 +352,206 @@ public class JitCpu : IAsyncCpu
 					_esp += (uint)insn.Immediate16;
 				}
 				break;
+				
+			// === Pentium CPU Instructions (Stubbed) ===
+			// These are recognized but not yet fully implemented in JIT mode
+			// They will be properly compiled when JIT compilation is complete
+			
+			// Integer arithmetic
+			case Mnemonic.Aaa:
+			case Mnemonic.Aas:
+			case Mnemonic.Cbw:
+			case Mnemonic.Cwde:
+				_logger.LogDebug("[JitCpu] Stubbed BCD/ASCII arithmetic instruction: {Mnemonic}", insn.Mnemonic);
+				break;
+			
+			// Bit manipulation
+			case Mnemonic.Bsf:
+			case Mnemonic.Bsr:
+			case Mnemonic.Btc:
+			case Mnemonic.Btr:
+			case Mnemonic.Bts:
+				_logger.LogDebug("[JitCpu] Stubbed bit manipulation instruction: {Mnemonic}", insn.Mnemonic);
+				break;
+			
+			// Conditional jumps
+			case Mnemonic.Je:
+			case Mnemonic.Jne:
+			case Mnemonic.Ja:
+			case Mnemonic.Jae:
+			case Mnemonic.Jb:
+			case Mnemonic.Jbe:
+			case Mnemonic.Jg:
+			case Mnemonic.Jge:
+			case Mnemonic.Jl:
+			case Mnemonic.Jle:
+			case Mnemonic.Jo:
+			case Mnemonic.Jno:
+			case Mnemonic.Js:
+			case Mnemonic.Jns:
+			case Mnemonic.Jp:
+			case Mnemonic.Jnp:
+			case Mnemonic.Jcxz:
+			case Mnemonic.Jecxz:
+				_logger.LogDebug("[JitCpu] Stubbed conditional jump: {Mnemonic}", insn.Mnemonic);
+				break;
+			
+			// Conditional moves
+			case Mnemonic.Cmovae:
+			case Mnemonic.Cmovle:
+			case Mnemonic.Cmovno:
+			case Mnemonic.Cmovnp:
+			case Mnemonic.Cmovns:
+			case Mnemonic.Cmovo:
+			case Mnemonic.Cmovp:
+			case Mnemonic.Cmovs:
+				_logger.LogDebug("[JitCpu] Stubbed conditional move: {Mnemonic}", insn.Mnemonic);
+				break;
+			
+			// Control flow
+			case Mnemonic.Retf:
+			case Mnemonic.Into:
+				_logger.LogDebug("[JitCpu] Stubbed control flow instruction: {Mnemonic}", insn.Mnemonic);
+				break;
+			
+			// System instructions
+			case Mnemonic.Hlt:
+			case Mnemonic.Bound:
+			case Mnemonic.Enter:
+			case Mnemonic.Clts:
+				_logger.LogDebug("[JitCpu] Stubbed system instruction: {Mnemonic}", insn.Mnemonic);
+				break;
+			
+			// Segment operations
+			case Mnemonic.Lds:
+			case Mnemonic.Les:
+			case Mnemonic.Lfs:
+			case Mnemonic.Lgs:
+			case Mnemonic.Lss:
+			case Mnemonic.Lar:
+			case Mnemonic.Lsl:
+			case Mnemonic.Lgdt:
+			case Mnemonic.Sgdt:
+			case Mnemonic.Lidt:
+			case Mnemonic.Sidt:
+			case Mnemonic.Lldt:
+			case Mnemonic.Ltr:
+			case Mnemonic.Str:
+			case Mnemonic.Verr:
+			case Mnemonic.Verw:
+				_logger.LogDebug("[JitCpu] Stubbed segment/descriptor instruction: {Mnemonic}", insn.Mnemonic);
+				break;
+			
+			// Shift double
+			case Mnemonic.Shld:
+			case Mnemonic.Shrd:
+				_logger.LogDebug("[JitCpu] Stubbed double shift instruction: {Mnemonic}", insn.Mnemonic);
+				break;
+			
+			// String operations
+			case Mnemonic.Lodsw:
+				_logger.LogDebug("[JitCpu] Stubbed string instruction: {Mnemonic}", insn.Mnemonic);
+				break;
+			
+			// I/O operations
+			case Mnemonic.Out:
+				_logger.LogDebug("[JitCpu] Stubbed I/O instruction: {Mnemonic}", insn.Mnemonic);
+				break;
+			
+			// FPU instructions (x87)
+			case Mnemonic.Fclex:
+			case Mnemonic.Fcmovb:
+			case Mnemonic.Fcmovbe:
+			case Mnemonic.Fcmove:
+			case Mnemonic.Fcmovnb:
+			case Mnemonic.Fcmovne:
+			case Mnemonic.Fcmovnu:
+			case Mnemonic.Fcmovu:
+			case Mnemonic.Fcomi:
+			case Mnemonic.Fcomip:
+			case Mnemonic.Fdecstp:
+			case Mnemonic.Ffree:
+			case Mnemonic.Ffreep:
+			case Mnemonic.Ficom:
+			case Mnemonic.Ficomp:
+			case Mnemonic.Fincstp:
+			case Mnemonic.Finit:
+			case Mnemonic.Fisubr:
+			case Mnemonic.Fldenv:
+			case Mnemonic.Fldl2t:
+			case Mnemonic.Fldlg2:
+			case Mnemonic.Fldln2:
+			case Mnemonic.Fnop:
+			case Mnemonic.Fprem:
+			case Mnemonic.Fprem1:
+			case Mnemonic.Fptan:
+			case Mnemonic.Frndint:
+			case Mnemonic.Frstor:
+			case Mnemonic.Fsave:
+			case Mnemonic.Fstcw:
+			case Mnemonic.Fstenv:
+			case Mnemonic.Fstsw:
+			case Mnemonic.Ftst:
+			case Mnemonic.Fucom:
+			case Mnemonic.Fucomp:
+			case Mnemonic.Fucompp:
+			case Mnemonic.Fxtract:
+			case Mnemonic.Fyl2x:
+			case Mnemonic.Fyl2xp1:
+				_logger.LogDebug("[JitCpu] Stubbed FPU instruction: {Mnemonic}", insn.Mnemonic);
+				break;
+			
+			// MMX instructions
+			case Mnemonic.Emms:
+			case Mnemonic.Movd:
+			case Mnemonic.Movq:
+			case Mnemonic.Packssdw:
+			case Mnemonic.Packsswb:
+			case Mnemonic.Packuswb:
+			case Mnemonic.Paddb:
+			case Mnemonic.Paddd:
+			case Mnemonic.Paddsb:
+			case Mnemonic.Paddsw:
+			case Mnemonic.Paddusb:
+			case Mnemonic.Paddusw:
+			case Mnemonic.Paddw:
+			case Mnemonic.Pand:
+			case Mnemonic.Pandn:
+			case Mnemonic.Pcmpeqb:
+			case Mnemonic.Pcmpeqd:
+			case Mnemonic.Pcmpeqw:
+			case Mnemonic.Pcmpgtb:
+			case Mnemonic.Pcmpgtd:
+			case Mnemonic.Pcmpgtw:
+			case Mnemonic.Pmaddwd:
+			case Mnemonic.Pmulhw:
+			case Mnemonic.Pmullw:
+			case Mnemonic.Por:
+			case Mnemonic.Pslld:
+			case Mnemonic.Psllq:
+			case Mnemonic.Psllw:
+			case Mnemonic.Psrad:
+			case Mnemonic.Psraw:
+			case Mnemonic.Psrld:
+			case Mnemonic.Psrlq:
+			case Mnemonic.Psrlw:
+			case Mnemonic.Psubb:
+			case Mnemonic.Psubd:
+			case Mnemonic.Psubsb:
+			case Mnemonic.Psubsw:
+			case Mnemonic.Psubusb:
+			case Mnemonic.Psubusw:
+			case Mnemonic.Psubw:
+			case Mnemonic.Punpckhbw:
+			case Mnemonic.Punpckhdq:
+			case Mnemonic.Punpckhwd:
+			case Mnemonic.Punpcklbw:
+			case Mnemonic.Punpckldq:
+			case Mnemonic.Punpcklwd:
+			case Mnemonic.Pxor:
+				_logger.LogDebug("[JitCpu] Stubbed MMX instruction: {Mnemonic}", insn.Mnemonic);
+				break;
+			
 			default:
 				_logger.LogWarning("[JitCpu] Unimplemented instruction: {Mnemonic}", insn.Mnemonic);
 				break;
