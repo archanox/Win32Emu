@@ -6,7 +6,7 @@ using Win32Emu.Memory;
 
 namespace Win32Emu.Cpu.Iced;
 
-public class IcedCpu : ICpu
+public class IcedCpu : IAsyncCpu
 {
 	private readonly VirtualMemory _mem;
 	private readonly ILogger _logger;
@@ -3602,6 +3602,100 @@ public class IcedCpu : ICpu
 		var val = _fpu[_fpuTop];
 		_fpuTop = (_fpuTop + 1) & 7;
 		return val;
+	}
+
+	#endregion
+
+	#region IAsyncCpu Implementation
+
+	/// <summary>
+	/// Execute a single instruction asynchronously (wrapper around synchronous SingleStep for compatibility)
+	/// </summary>
+	public Task<CpuStepResult> SingleStepAsync(VirtualMemory mem)
+	{
+		// For the interpreter-based IcedCpu, we simply wrap the synchronous call
+		// A true JIT implementation would use this for async operations
+		var result = SingleStep(mem);
+		return Task.FromResult(result);
+	}
+
+	/// <summary>
+	/// Execute multiple instructions asynchronously until a breakpoint or call
+	/// </summary>
+	public Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem, int maxInstructions = 0)
+	{
+		// For the interpreter, execute instructions one at a time up to the limit
+		// A true JIT would compile the block and execute it as a single unit
+		var instructionCount = 0;
+		CpuStepResult result;
+		
+		do
+		{
+			result = SingleStep(mem);
+			instructionCount++;
+			
+			// Stop if we hit a call or if we've reached the limit
+			if (result.IsCall || (maxInstructions > 0 && instructionCount >= maxInstructions))
+			{
+				break;
+			}
+		} while (true);
+		
+		return Task.FromResult(result);
+	}
+
+	/// <summary>
+	/// Interpreter-based IcedCpu does not support JIT compilation
+	/// </summary>
+	public bool SupportsJit => false;
+
+	/// <summary>
+	/// Save complete CPU state for async suspension
+	/// </summary>
+	public CpuState SaveState()
+	{
+		return new CpuState
+		{
+			Eax = _eax,
+			Ebx = _ebx,
+			Ecx = _ecx,
+			Edx = _edx,
+			Esi = _esi,
+			Edi = _edi,
+			Ebp = _ebp,
+			Esp = _esp,
+			Eip = _eip,
+			Eflags = _eflags,
+			FpuStack = (double[])_fpu.Clone(),
+			FpuTop = _fpuTop,
+			FpuControlWord = _fpuControlWord,
+			FpuStatusWord = _fpuStatusWord
+		};
+	}
+
+	/// <summary>
+	/// Restore CPU state after async resumption
+	/// </summary>
+	public void RestoreState(CpuState state)
+	{
+		_eax = state.Eax;
+		_ebx = state.Ebx;
+		_ecx = state.Ecx;
+		_edx = state.Edx;
+		_esi = state.Esi;
+		_edi = state.Edi;
+		_ebp = state.Ebp;
+		_esp = state.Esp;
+		_eip = state.Eip;
+		_eflags = state.Eflags;
+		
+		if (state.FpuStack != null)
+		{
+			Array.Copy(state.FpuStack, _fpu, 8);
+			_fpuTop = state.FpuTop;
+			_fpuControlWord = state.FpuControlWord;
+			_fpuStatusWord = state.FpuStatusWord;
+		}
 	}
 
 	#endregion
