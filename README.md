@@ -88,6 +88,19 @@ Cross-platform desktop GUI for managing your game library and emulator settings.
 
 See [Win32Emu.Gui/README.md](Win32Emu.Gui/README.md) for more details.
 
+### Win32Emu.Browser
+Web deployment for testing on mobile devices and browsers. Built with Blazor WebAssembly and WebGPU.
+
+**Features:**
+- WebGPU rendering backend for hardware-accelerated graphics
+- Mobile-optimized responsive interface
+- Playwright MCP compatible for automated testing
+- Progressive Web App (PWA) support
+
+**Live Demo:** [https://archanox.github.io/Win32Emu/](https://archanox.github.io/Win32Emu/)
+
+See [Win32Emu.Browser/README.md](Win32Emu.Browser/README.md) for more details.
+
 ## Backend System
 
 Win32Emu uses pluggable backends for cross-platform multimedia support:
