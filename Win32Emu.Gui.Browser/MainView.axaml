@@ -1,0 +1,10 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Win32Emu.Gui.Browser.MainView">
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+        <TextBlock Text="Win32Emu GUI - Web Demo" FontSize="24" FontWeight="Bold" />
+        <TextBlock Text="This is a demonstration of the Win32 Emulator GUI running in your browser." TextWrapping="Wrap" MaxWidth="400" TextAlignment="Center" />
+        <Button Content="Click Me!" HorizontalAlignment="Center" />
+        <TextBlock Text="The full emulator functionality is available in the desktop version." TextWrapping="Wrap" MaxWidth="400" TextAlignment="Center" FontSize="12" Foreground="Gray" />
+    </StackPanel>
+</UserControl>
