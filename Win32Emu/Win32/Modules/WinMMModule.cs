@@ -110,6 +110,19 @@ namespace Win32Emu.Win32.Modules
 					returnValue = MixerOpen(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 					return true;
 
+				case "MIXERCLOSE":
+					returnValue = MixerClose(a.UInt32(0));
+					return true;
+
+				case "MIXERGETCONTROLDETAILS":
+				case "MIXERGETCONTROLDETAILSA":
+					returnValue = MixerGetControlDetails(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIXERSETCONTROLDETAILS":
+					returnValue = MixerSetControlDetails(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
 				default:
 					_logger.LogInformation("[WinMM] Unimplemented export: {Export}", export);
 					return false;
@@ -410,6 +423,8 @@ namespace Win32Emu.Win32.Modules
 			public uint Callback { get; set; }
 			public uint Instance { get; set; }
 			public uint Flags { get; set; }
+			public float Volume { get; set; } = 1.0f; // Default full volume
+			public float Balance { get; set; } = 0.0f; // Default centered
 		}
 
 		[DllModuleExport(1)]
@@ -425,6 +440,13 @@ namespace Win32Emu.Win32.Modules
 				return 11; // MMSYSERR_INVALPARAM
 			}
 
+			// Initialize audio backend if not already done
+			if (_env.AudioBackend == null)
+			{
+				_env.AudioBackend = Rendering.BackendFactory.CreateAudioBackend(_logger);
+				_env.AudioBackend.Initialize();
+			}
+
 			// Create a handle for this mixer device
 			var handle = _nextMixerHandle++;
 			var mixer = new MixerDevice
@@ -433,7 +455,9 @@ namespace Win32Emu.Win32.Modules
 				DeviceId = uMxId,
 				Callback = dwCallback,
 				Instance = dwInstance,
-				Flags = fdwOpen
+				Flags = fdwOpen,
+				Volume = 1.0f,
+				Balance = 0.0f
 			};
 			
 			_mixerDevices[handle] = mixer;
@@ -441,7 +465,45 @@ namespace Win32Emu.Win32.Modules
 			// Write the handle to the output parameter
 			_env.MemWrite32(phmx, handle);
 			
-			_logger.LogInformation("[WinMM] mixerOpen: Created handle 0x{Handle:X8} for device {UMxId}", handle, uMxId);
+			_logger.LogInformation("[WinMM] mixerOpen: Created handle 0x{Handle:X8} for device {UMxId} with audio backend support", handle, uMxId);
+			return 0; // MMSYSERR_NOERROR
+		}
+
+		[DllModuleExport(11)]
+		private uint MixerClose(uint hmx)
+		{
+			_logger.LogInformation("[WinMM] mixerClose(hmx=0x{Hmx:X8})", hmx);
+
+			if (_mixerDevices.ContainsKey(hmx))
+			{
+				_mixerDevices.Remove(hmx);
+				_logger.LogInformation("[WinMM] mixerClose: Closed mixer handle 0x{Hmx:X8}", hmx);
+				return 0; // MMSYSERR_NOERROR
+			}
+
+			_logger.LogWarning("[WinMM] mixerClose: Invalid mixer handle 0x{Hmx:X8}", hmx);
+			return 6; // MMSYSERR_INVALHANDLE
+		}
+
+		[DllModuleExport(12)]
+		private uint MixerGetControlDetails(uint hmxobj, uint pmxcd, uint fdwDetails)
+		{
+			_logger.LogInformation("[WinMM] mixerGetControlDetails(hmxobj=0x{Hmxobj:X8}, pmxcd=0x{Pmxcd:X8}, fdwDetails=0x{FdwDetails:X8})",
+				hmxobj, pmxcd, fdwDetails);
+
+			// For stub implementation, return success
+			// A full implementation would read mixer control values
+			return 0; // MMSYSERR_NOERROR
+		}
+
+		[DllModuleExport(13)]
+		private uint MixerSetControlDetails(uint hmxobj, uint pmxcd, uint fdwDetails)
+		{
+			_logger.LogInformation("[WinMM] mixerSetControlDetails(hmxobj=0x{Hmxobj:X8}, pmxcd=0x{Pmxcd:X8}, fdwDetails=0x{FdwDetails:X8})",
+				hmxobj, pmxcd, fdwDetails);
+
+			// For stub implementation, return success
+			// A full implementation would set mixer control values (volume, balance, etc.)
 			return 0; // MMSYSERR_NOERROR
 		}
 	}
