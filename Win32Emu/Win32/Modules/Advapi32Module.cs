@@ -26,6 +26,10 @@ public class Advapi32Module : IWin32ModuleUnsafe
 
 	public string Name => "ADVAPI32.DLL";
 
+	private uint _nextServiceHandle = 0xB0000000;
+	private readonly Dictionary<uint, ServiceData> _services = new();
+	private uint _nextSidHandle = 0xB1000000;
+
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
@@ -33,24 +37,100 @@ public class Advapi32Module : IWin32ModuleUnsafe
 
 		switch (export.ToUpperInvariant())
 		{
+			// Registry functions
 			case "REGOPENKEYEXA":
 				returnValue = RegOpenKeyExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
-
 			case "REGCREATEKEYEXA":
 				returnValue = RegCreateKeyExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.LpcStr(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8));
 				return true;
-
 			case "REGSETVALUEEXA":
 				returnValue = RegSetValueExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
 				return true;
-
 			case "REGQUERYVALUEEXA":
 				returnValue = RegQueryValueExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
 				return true;
-
+			case "REGQUERYVALUEA":
+				returnValue = RegQueryValueA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3));
+				return true;
 			case "REGCLOSEKEY":
 				returnValue = RegCloseKey(a.UInt32(0));
+				return true;
+
+			// Security functions
+			case "ACCESSCHECK":
+				returnValue = AccessCheck(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+				return true;
+			case "ADDACCESSALLOWEDACE":
+				returnValue = AddAccessAllowedAce(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+			case "ADJUSTTOKENPRIVILEGES":
+				returnValue = AdjustTokenPrivileges(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+				return true;
+			case "ALLOCATEANDINITIALIZESID":
+				returnValue = AllocateAndInitializeSid(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10));
+				return true;
+			case "FREESID":
+				returnValue = FreeSid(a.UInt32(0));
+				return true;
+			case "GETLENGTHSID":
+				returnValue = GetLengthSid(a.UInt32(0));
+				return true;
+			case "IMPERSONATESELF":
+				returnValue = ImpersonateSelf(a.UInt32(0));
+				return true;
+			case "INITIALIZEACL":
+				returnValue = InitializeAcl(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "INITIALIZESECURITYDESCRIPTOR":
+				returnValue = InitializeSecurityDescriptor(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "ISVALIDSECURITYDESCRIPTOR":
+				returnValue = IsValidSecurityDescriptor(a.UInt32(0));
+				return true;
+			case "LOOKUPPRIVILEGEVALUEA":
+				returnValue = LookupPrivilegeValueA(a.LpcStr(0), a.LpcStr(1), a.UInt32(2));
+				return true;
+			case "OPENPROCESSTOKEN":
+				returnValue = OpenProcessToken(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "OPENTHREADTOKEN":
+				returnValue = OpenThreadToken(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+			case "REVERTTOSELF":
+				returnValue = RevertToSelf();
+				return true;
+			case "SETSECURITYDESCRIPTORDACL":
+				returnValue = SetSecurityDescriptorDacl(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+			case "SETSECURITYDESCRIPTORGROUP":
+				returnValue = SetSecurityDescriptorGroup(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "SETSECURITYDESCRIPTOROWNER":
+				returnValue = SetSecurityDescriptorOwner(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+
+			// Service functions
+			case "OPENSCMANAGERA":
+				returnValue = OpenSCManagerA(a.LpcStr(0), a.LpcStr(1), a.UInt32(2));
+				return true;
+			case "OPENSERVICEA":
+				returnValue = OpenServiceA(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
+				return true;
+			case "CLOSESERVICEHANDLE":
+				returnValue = CloseServiceHandle(a.UInt32(0));
+				return true;
+			case "CREATESERVICEW":
+				returnValue = CreateServiceW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), a.UInt32(11), a.UInt32(12));
+				return true;
+			case "DELETESERVICE":
+				returnValue = DeleteService(a.UInt32(0));
+				return true;
+			case "STARTSERVICEA":
+				returnValue = StartServiceA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "CONTROLSERVICE":
+				returnValue = ControlService(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 
 			default:
@@ -268,4 +348,236 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
+	/// <summary>
+	/// Retrieves data associated with the default or unnamed value of a registry key.
+	/// LSTATUS RegQueryValueA(
+	///   HKEY   hKey,
+	///   LPCSTR lpSubKey,
+	///   LPSTR  lpData,
+	///   PLONG  lpcbData
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint RegQueryValueA(uint hKey, in LpcStr lpSubKey, uint lpData, uint lpcbData)
+	{
+		var subKey = lpSubKey.ToString() ?? string.Empty;
+		_logger.LogInformation("[Advapi32] RegQueryValueA(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\", lpData=0x{LpData:X8}, lpcbData=0x{LpcbData:X8})",
+			hKey, subKey, lpData, lpcbData);
+
+		// Return empty string (stub)
+		if (lpcbData != 0)
+		{
+			_env.MemWrite32(lpcbData, 0);
+		}
+
+		return 2; // ERROR_FILE_NOT_FOUND
+	}
+
+	// Security functions
+	[DllModuleExport(32)]
+	private uint AccessCheck(uint pSecurityDescriptor, uint ClientToken, uint DesiredAccess, uint GenericMapping, uint PrivilegeSet, uint PrivilegeSetLength, uint GrantedAccess, uint AccessStatus)
+	{
+		_logger.LogInformation("[Advapi32] AccessCheck(stub)");
+		if (AccessStatus != 0) _env.MemWrite32(AccessStatus, 1); // TRUE - access granted
+		if (GrantedAccess != 0) _env.MemWrite32(GrantedAccess, DesiredAccess);
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(16)]
+	private uint AddAccessAllowedAce(uint pAcl, uint dwAceRevision, uint AccessMask, uint pSid)
+	{
+		_logger.LogInformation("[Advapi32] AddAccessAllowedAce(stub)");
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(24)]
+	private uint AdjustTokenPrivileges(uint TokenHandle, uint DisableAllPrivileges, uint NewState, uint BufferLength, uint PreviousState, uint ReturnLength)
+	{
+		_logger.LogInformation("[Advapi32] AdjustTokenPrivileges(stub)");
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(44)]
+	private uint AllocateAndInitializeSid(uint pIdentifierAuthority, uint nSubAuthorityCount, uint nSubAuthority0, uint nSubAuthority1, uint nSubAuthority2, uint nSubAuthority3, uint nSubAuthority4, uint nSubAuthority5, uint nSubAuthority6, uint nSubAuthority7, uint pSid)
+	{
+		_logger.LogInformation("[Advapi32] AllocateAndInitializeSid(stub)");
+		var sidHandle = _nextSidHandle++;
+		if (pSid != 0) _env.MemWrite32(pSid, sidHandle);
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(4)]
+	private uint FreeSid(uint pSid)
+	{
+		_logger.LogInformation("[Advapi32] FreeSid(pSid=0x{PSid:X8})", pSid);
+		return 0; // NULL (void function returns NULL)
+	}
+
+	[DllModuleExport(4)]
+	private uint GetLengthSid(uint pSid)
+	{
+		_logger.LogInformation("[Advapi32] GetLengthSid(pSid=0x{PSid:X8})", pSid);
+		return 12; // Minimum SID size
+	}
+
+	[DllModuleExport(4)]
+	private uint ImpersonateSelf(uint ImpersonationLevel)
+	{
+		_logger.LogInformation("[Advapi32] ImpersonateSelf(ImpersonationLevel={ImpersonationLevel})", ImpersonationLevel);
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(12)]
+	private uint InitializeAcl(uint pAcl, uint nAclLength, uint dwAclRevision)
+	{
+		_logger.LogInformation("[Advapi32] InitializeAcl(stub)");
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(8)]
+	private uint InitializeSecurityDescriptor(uint pSecurityDescriptor, uint dwRevision)
+	{
+		_logger.LogInformation("[Advapi32] InitializeSecurityDescriptor(stub)");
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(4)]
+	private uint IsValidSecurityDescriptor(uint pSecurityDescriptor)
+	{
+		_logger.LogInformation("[Advapi32] IsValidSecurityDescriptor(stub)");
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(12)]
+	private uint LookupPrivilegeValueA(in LpcStr lpSystemName, in LpcStr lpName, uint lpLuid)
+	{
+		var systemName = lpSystemName.ToString() ?? string.Empty;
+		var name = lpName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Advapi32] LookupPrivilegeValueA(lpSystemName=\"{SystemName}\", lpName=\"{Name}\", lpLuid=0x{LpLuid:X8})",
+			systemName, name, lpLuid);
+		
+		if (lpLuid != 0)
+		{
+			_env.MemWrite32(lpLuid, 1); // LUID low part
+			_env.MemWrite32(lpLuid + 4, 0); // LUID high part
+		}
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(12)]
+	private uint OpenProcessToken(uint ProcessHandle, uint DesiredAccess, uint TokenHandle)
+	{
+		_logger.LogInformation("[Advapi32] OpenProcessToken(ProcessHandle=0x{ProcessHandle:X8}, DesiredAccess=0x{DesiredAccess:X}, TokenHandle=0x{TokenHandle:X8})",
+			ProcessHandle, DesiredAccess, TokenHandle);
+		
+		if (TokenHandle != 0)
+		{
+			_env.MemWrite32(TokenHandle, 0xC0000000); // Pseudo-handle for token
+		}
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(16)]
+	private uint OpenThreadToken(uint ThreadHandle, uint DesiredAccess, uint OpenAsSelf, uint TokenHandle)
+	{
+		_logger.LogInformation("[Advapi32] OpenThreadToken(stub)");
+		if (TokenHandle != 0)
+		{
+			_env.MemWrite32(TokenHandle, 0xC0000001); // Pseudo-handle for token
+		}
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(0)]
+	private uint RevertToSelf()
+	{
+		_logger.LogInformation("[Advapi32] RevertToSelf()");
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(16)]
+	private uint SetSecurityDescriptorDacl(uint pSecurityDescriptor, uint bDaclPresent, uint pDacl, uint bDaclDefaulted)
+	{
+		_logger.LogInformation("[Advapi32] SetSecurityDescriptorDacl(stub)");
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(12)]
+	private uint SetSecurityDescriptorGroup(uint pSecurityDescriptor, uint pGroup, uint bGroupDefaulted)
+	{
+		_logger.LogInformation("[Advapi32] SetSecurityDescriptorGroup(stub)");
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(12)]
+	private uint SetSecurityDescriptorOwner(uint pSecurityDescriptor, uint pOwner, uint bOwnerDefaulted)
+	{
+		_logger.LogInformation("[Advapi32] SetSecurityDescriptorOwner(stub)");
+		return 1; // TRUE
+	}
+
+	// Service functions
+	[DllModuleExport(12)]
+	private uint OpenSCManagerA(in LpcStr lpMachineName, in LpcStr lpDatabaseName, uint dwDesiredAccess)
+	{
+		var machineName = lpMachineName.ToString() ?? string.Empty;
+		var databaseName = lpDatabaseName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Advapi32] OpenSCManagerA(lpMachineName=\"{MachineName}\", lpDatabaseName=\"{DatabaseName}\", dwDesiredAccess=0x{DwDesiredAccess:X})",
+			machineName, databaseName, dwDesiredAccess);
+		
+		return _nextServiceHandle++; // Return pseudo-handle
+	}
+
+	[DllModuleExport(12)]
+	private uint OpenServiceA(uint hSCManager, in LpcStr lpServiceName, uint dwDesiredAccess)
+	{
+		var serviceName = lpServiceName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Advapi32] OpenServiceA(hSCManager=0x{HSCManager:X8}, lpServiceName=\"{ServiceName}\", dwDesiredAccess=0x{DwDesiredAccess:X})",
+			hSCManager, serviceName, dwDesiredAccess);
+		
+		return _nextServiceHandle++; // Return pseudo-handle
+	}
+
+	[DllModuleExport(4)]
+	private uint CloseServiceHandle(uint hSCObject)
+	{
+		_logger.LogInformation("[Advapi32] CloseServiceHandle(hSCObject=0x{HSCObject:X8})", hSCObject);
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(52)]
+	private uint CreateServiceW(uint hSCManager, uint lpServiceName, uint lpDisplayName, uint dwDesiredAccess, uint dwServiceType, uint dwStartType, uint dwErrorControl, uint lpBinaryPathName, uint lpLoadOrderGroup, uint lpdwTagId, uint lpDependencies, uint lpServiceStartName, uint lpPassword)
+	{
+		_logger.LogInformation("[Advapi32] CreateServiceW(stub)");
+		return _nextServiceHandle++; // Return pseudo-handle
+	}
+
+	[DllModuleExport(4)]
+	private uint DeleteService(uint hService)
+	{
+		_logger.LogInformation("[Advapi32] DeleteService(hService=0x{HService:X8})", hService);
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(12)]
+	private uint StartServiceA(uint hService, uint dwNumServiceArgs, uint lpServiceArgVectors)
+	{
+		_logger.LogInformation("[Advapi32] StartServiceA(hService=0x{HService:X8}, dwNumServiceArgs={DwNumServiceArgs})",
+			hService, dwNumServiceArgs);
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(12)]
+	private uint ControlService(uint hService, uint dwControl, uint lpServiceStatus)
+	{
+		_logger.LogInformation("[Advapi32] ControlService(hService=0x{HService:X8}, dwControl={DwControl}, lpServiceStatus=0x{LpServiceStatus:X8})",
+			hService, dwControl, lpServiceStatus);
+		return 1; // TRUE
+	}
+
+	private class ServiceData
+	{
+		public string Name { get; set; } = string.Empty;
+		public uint Handle { get; set; }
+	}
 }
