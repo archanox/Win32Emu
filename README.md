@@ -88,6 +88,31 @@ Cross-platform desktop GUI for managing your game library and emulator settings.
 
 See [Win32Emu.Gui/README.md](Win32Emu.Gui/README.md) for more details.
 
+### Win32Emu.Gui.Browser
+Web-based demonstration of the Avalonia UI running via WebAssembly. This project showcases the GUI interface in your browser, optimized for testing and Playwright automation.
+
+**Features:**
+- Runs entirely in the browser using WebAssembly
+- WebGPU renderer backend for hardware acceleration
+- Optimized for Playwright MCP interaction for automated GUI testing
+- Accessible on mobile devices for testing
+
+**Live Demo:**
+Visit the [live demo](https://archanox.github.io/Win32Emu/) to try the GUI in your browser.
+
+**Note:** The browser version is a demonstration of the GUI only. Full emulator functionality requires the desktop version.
+
+**Building locally:**
+```bash
+cd Win32Emu.Gui.Browser
+dotnet publish --configuration Release
+```
+
+The published files will be in `bin/Release/net9.0-browser/publish/wwwroot/`.
+
+**Deployment:**
+The web version is automatically deployed to GitHub Pages on every push to the `main` branch via GitHub Actions.
+
 ## Backend System
 
 Win32Emu uses pluggable backends for cross-platform multimedia support:
