@@ -249,7 +249,7 @@ namespace Win32Emu.Win32.Modules
 			public int Frequency { get; set; } = 44100;
 			public int Channels { get; set; } = 2;
 			public int BitsPerSample { get; set; } = 16;
-			public int Volume { get; set; } = 0; // 0 = full volume in DirectSound
+			public int Volume { get; set; } = 0; // 0 = 0 dB (full volume) in DirectSound; negative values reduce volume
 			public int Pan { get; set; } = 0; // 0 = center
 			public uint PlayCursor { get; set; } = 0;
 			public uint WriteCursor { get; set; } = 0;
