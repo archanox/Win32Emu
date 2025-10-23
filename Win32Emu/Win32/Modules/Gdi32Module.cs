@@ -30,6 +30,8 @@ namespace Win32Emu.Win32.Modules
 		// Device contexts
 		private readonly Dictionary<uint, DeviceContext> _deviceContexts = new();
 		private uint _nextDcHandle = 0x81000000;
+		private uint _nextGdiObjectHandle = 0x82000000;
+		private readonly Dictionary<uint, GdiObject> _gdiObjects = new();
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
@@ -41,41 +43,161 @@ namespace Win32Emu.Win32.Modules
 				case "GETSTOCKOBJECT":
 					returnValue = GetStockObject(a.Int32(0));
 					return true;
-
 				case "BEGINPAINT":
 					returnValue = BeginPaint(a.UInt32(0), a.UInt32(1));
 					return true;
-
 				case "ENDPAINT":
 					returnValue = EndPaint(a.UInt32(0), a.UInt32(1));
 					return true;
-
 				case "FILLRECT":
 					returnValue = FillRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
-
 				case "TEXTOUT":
 					returnValue = TextOut(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.Int32(4));
 					return true;
-				
 				case "TEXTOUTA":
 					returnValue = TextOutA(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.Int32(4));
 					return true;
-
 				case "SETBKMODE":
 					returnValue = SetBkMode(a.UInt32(0), a.Int32(1));
 					return true;
-
 				case "SETTEXTCOLOR":
 					returnValue = SetTextColor(a.UInt32(0), a.UInt32(1));
 					return true;
-
+				case "SETBKCOLOR":
+					returnValue = SetBkColor(a.UInt32(0), a.UInt32(1));
+					return true;
 				case "GETDEVICECAPS":
 					returnValue = (uint)GetDeviceCaps(a.UInt32(0), a.Int32(1));
 					return true;
-
 				case "DELETEOBJECT":
 					returnValue = DeleteObject(a.UInt32(0));
+					return true;
+
+				// Bitmap functions
+				case "BITBLT":
+					returnValue = BitBlt(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.UInt32(5), a.Int32(6), a.Int32(7), a.UInt32(8));
+					return true;
+				case "CREATEBITMAP":
+					returnValue = CreateBitmap(a.Int32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "CREATECOMPATIBLEBITMAP":
+					returnValue = CreateCompatibleBitmap(a.UInt32(0), a.Int32(1), a.Int32(2));
+					return true;
+				case "GETDIBITS":
+					returnValue = GetDIBits(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+					return true;
+
+				// DC functions
+				case "CREATECOMPATIBLEDC":
+					returnValue = CreateCompatibleDC(a.UInt32(0));
+					return true;
+				case "DELETEDC":
+					returnValue = DeleteDC(a.UInt32(0));
+					return true;
+				case "SAVEDC":
+					returnValue = (uint)SaveDC(a.UInt32(0));
+					return true;
+				case "RESTOREDC":
+					returnValue = RestoreDC(a.UInt32(0), a.Int32(1));
+					return true;
+				case "SELECTOBJECT":
+					returnValue = SelectObject(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETCURRENTOBJECT":
+					returnValue = GetCurrentObject(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETOBJECTA":
+					returnValue = (uint)GetObjectA(a.UInt32(0), a.Int32(1), a.UInt32(2));
+					return true;
+
+				// Drawing functions
+				case "LINETO":
+					returnValue = LineTo(a.UInt32(0), a.Int32(1), a.Int32(2));
+					return true;
+				case "MOVETOEX":
+					returnValue = MoveToEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "SETPIXEL":
+					returnValue = SetPixel(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "GETPIXEL":
+					returnValue = GetPixel(a.UInt32(0), a.Int32(1), a.Int32(2));
+					return true;
+
+				// Font and text functions
+				case "CREATEFONTA":
+					returnValue = CreateFontA(a.Int32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), a.UInt32(11), a.UInt32(12), a.LpcStr(13));
+					return true;
+				case "CREATEFONTINDIRECTA":
+					returnValue = CreateFontIndirectA(a.UInt32(0));
+					return true;
+				case "GETTEXTEXTENTPOINT32A":
+					returnValue = GetTextExtentPoint32A(a.UInt32(0), a.LpcStr(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "EXTTEXTOUTA":
+					returnValue = ExtTextOutA(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.LpcStr(5), a.UInt32(6), a.UInt32(7));
+					return true;
+
+				// Pen and brush functions
+				case "CREATEPEN":
+					returnValue = CreatePen(a.Int32(0), a.Int32(1), a.UInt32(2));
+					return true;
+				case "CREATESOLIDBRUSH":
+					returnValue = CreateSolidBrush(a.UInt32(0));
+					return true;
+
+				// Palette functions
+				case "CREATEPALETTE":
+					returnValue = CreatePalette(a.UInt32(0));
+					return true;
+				case "SELECTPALETTE":
+					returnValue = SelectPalette(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "REALIZEPALETTE":
+					returnValue = RealizePalette(a.UInt32(0));
+					return true;
+				case "GETSYSTEMPALETTEENTRIES":
+					returnValue = GetSystemPaletteEntries(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				// Viewport and mapping functions
+				case "SETMAPMODE":
+					returnValue = (uint)SetMapMode(a.UInt32(0), a.Int32(1));
+					return true;
+				case "SETVIEWPORTEXTEX":
+					returnValue = SetViewportExtEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "SETVIEWPORTORGEX":
+					returnValue = SetViewportOrgEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "SETWINDOWEXTEX":
+					returnValue = SetWindowExtEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "OFFSETVIEWPORTORGEX":
+					returnValue = OffsetViewportOrgEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "SCALEVIEWPORTEXTEX":
+					returnValue = ScaleViewportExtEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.UInt32(5));
+					return true;
+				case "SCALEWINDOWEXTEX":
+					returnValue = ScaleWindowExtEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.UInt32(5));
+					return true;
+
+				// Clipping functions
+				case "GETCLIPBOX":
+					returnValue = (uint)GetClipBox(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "PTVISIBLE":
+					returnValue = PtVisible(a.UInt32(0), a.Int32(1), a.Int32(2));
+					return true;
+				case "RECTVISIBLE":
+					returnValue = RectVisible(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				// Escape function
+				case "ESCAPE":
+					returnValue = (uint)Escape(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
 					return true;
 
 				default:
@@ -230,6 +352,13 @@ namespace Win32Emu.Win32.Modules
 			};
 		}
 
+		[DllModuleExport(8)]
+		private uint SetBkColor(uint hdc, uint color)
+		{
+			_logger.LogInformation("[Gdi32] SetBkColor(HDC=0x{Hdc:X8}, color=0x{Color:X8})", hdc, color);
+			return 0x00FFFFFF; // Previous color (white)
+		}
+
 		[DllModuleExport(4)]
 		private uint DeleteObject(uint hObject)
 		{
@@ -249,9 +378,326 @@ namespace Win32Emu.Win32.Modules
 				return 1; // TRUE
 			}
 
+			// Remove GDI object if it exists
+			if (_gdiObjects.Remove(hObject))
+			{
+				_logger.LogInformation("[Gdi32] DeleteObject: Deleted GDI object");
+				return 1; // TRUE
+			}
+
 			// For other objects, just acknowledge the deletion
 			_logger.LogInformation("[Gdi32] DeleteObject: Object deleted (stub)");
 			return 1; // TRUE
+		}
+
+		// Bitmap functions
+		[DllModuleExport(36)]
+		private uint BitBlt(uint hdcDest, int x, int y, int cx, int cy, uint hdcSrc, int x1, int y1, uint rop)
+		{
+			_logger.LogInformation("[Gdi32] BitBlt(hdcDest=0x{HdcDest:X8}, dest=({X},{Y}), size=({Cx},{Cy}), hdcSrc=0x{HdcSrc:X8}, src=({X1},{Y1}), rop=0x{Rop:X})",
+				hdcDest, x, y, cx, cy, hdcSrc, x1, y1, rop);
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(20)]
+		private uint CreateBitmap(int nWidth, int nHeight, uint nPlanes, uint nBitCount, uint lpBits)
+		{
+			_logger.LogInformation("[Gdi32] CreateBitmap(width={NWidth}, height={NHeight}, planes={NPlanes}, bitCount={NBitCount}, lpBits=0x{LpBits:X8})",
+				nWidth, nHeight, nPlanes, nBitCount, lpBits);
+			var handle = _nextGdiObjectHandle++;
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Bitmap };
+			return handle;
+		}
+
+		[DllModuleExport(12)]
+		private uint CreateCompatibleBitmap(uint hdc, int cx, int cy)
+		{
+			_logger.LogInformation("[Gdi32] CreateCompatibleBitmap(hdc=0x{Hdc:X8}, cx={Cx}, cy={Cy})", hdc, cx, cy);
+			var handle = _nextGdiObjectHandle++;
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Bitmap };
+			return handle;
+		}
+
+		[DllModuleExport(28)]
+		private uint GetDIBits(uint hdc, uint hbm, uint start, uint cLines, uint lpvBits, uint lpbmi, uint usage)
+		{
+			_logger.LogInformation("[Gdi32] GetDIBits(stub)");
+			return 0; // 0 indicates error
+		}
+
+		// DC functions
+		[DllModuleExport(4)]
+		private uint CreateCompatibleDC(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] CreateCompatibleDC(hdc=0x{Hdc:X8})", hdc);
+			var handle = _nextDcHandle++;
+			_deviceContexts[handle] = new DeviceContext { Handle = handle };
+			return handle;
+		}
+
+		[DllModuleExport(4)]
+		private uint DeleteDC(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] DeleteDC(hdc=0x{Hdc:X8})", hdc);
+			return _deviceContexts.Remove(hdc) ? 1u : 0u;
+		}
+
+		[DllModuleExport(4)]
+		private int SaveDC(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] SaveDC(hdc=0x{Hdc:X8})", hdc);
+			return 1; // Return saved DC identifier
+		}
+
+		[DllModuleExport(8)]
+		private uint RestoreDC(uint hdc, int nSavedDC)
+		{
+			_logger.LogInformation("[Gdi32] RestoreDC(hdc=0x{Hdc:X8}, nSavedDC={NSavedDC})", hdc, nSavedDC);
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(8)]
+		private uint SelectObject(uint hdc, uint hObject)
+		{
+			_logger.LogInformation("[Gdi32] SelectObject(hdc=0x{Hdc:X8}, hObject=0x{HObject:X8})", hdc, hObject);
+			return hObject; // Return previous object (stub)
+		}
+
+		[DllModuleExport(8)]
+		private uint GetCurrentObject(uint hdc, uint type)
+		{
+			_logger.LogInformation("[Gdi32] GetCurrentObject(hdc=0x{Hdc:X8}, type={Type})", hdc, type);
+			return 0; // Return NULL (no current object)
+		}
+
+		[DllModuleExport(12)]
+		private int GetObjectA(uint hObject, int c, uint pv)
+		{
+			_logger.LogInformation("[Gdi32] GetObjectA(hObject=0x{HObject:X8}, c={C}, pv=0x{Pv:X8})", hObject, c, pv);
+			return 0; // Return 0 (no data copied)
+		}
+
+		// Drawing functions
+		[DllModuleExport(12)]
+		private uint LineTo(uint hdc, int x, int y)
+		{
+			_logger.LogInformation("[Gdi32] LineTo(hdc=0x{Hdc:X8}, x={X}, y={Y})", hdc, x, y);
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(16)]
+		private uint MoveToEx(uint hdc, int x, int y, uint lppt)
+		{
+			_logger.LogInformation("[Gdi32] MoveToEx(hdc=0x{Hdc:X8}, x={X}, y={Y}, lppt=0x{Lppt:X8})", hdc, x, y, lppt);
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(16)]
+		private uint SetPixel(uint hdc, int x, int y, uint color)
+		{
+			_logger.LogInformation("[Gdi32] SetPixel(hdc=0x{Hdc:X8}, x={X}, y={Y}, color=0x{Color:X8})", hdc, x, y, color);
+			return color; // Return the color set
+		}
+
+		[DllModuleExport(12)]
+		private uint GetPixel(uint hdc, int x, int y)
+		{
+			_logger.LogInformation("[Gdi32] GetPixel(hdc=0x{Hdc:X8}, x={X}, y={Y})", hdc, x, y);
+			return 0x00000000; // Return black
+		}
+
+		// Font and text functions
+		[DllModuleExport(56)]
+		private uint CreateFontA(int cHeight, int cWidth, int cEscapement, int cOrientation, int cWeight, uint bItalic, uint bUnderline, uint bStrikeOut, uint iCharSet, uint iOutPrecision, uint iClipPrecision, uint iQuality, uint iPitchAndFamily, in LpcStr pszFaceName)
+		{
+			var faceName = pszFaceName.ToString() ?? "Arial";
+			_logger.LogInformation("[Gdi32] CreateFontA(height={CHeight}, weight={CWeight}, faceName=\"{FaceName}\")", cHeight, cWeight, faceName);
+			var handle = _nextGdiObjectHandle++;
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Font };
+			return handle;
+		}
+
+		[DllModuleExport(4)]
+		private uint CreateFontIndirectA(uint lplf)
+		{
+			_logger.LogInformation("[Gdi32] CreateFontIndirectA(lplf=0x{Lplf:X8})", lplf);
+			var handle = _nextGdiObjectHandle++;
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Font };
+			return handle;
+		}
+
+		[DllModuleExport(16)]
+		private uint GetTextExtentPoint32A(uint hdc, in LpcStr lpString, int c, uint psizl)
+		{
+			var str = lpString.ToString() ?? string.Empty;
+			_logger.LogInformation("[Gdi32] GetTextExtentPoint32A(hdc=0x{Hdc:X8}, string=\"{Str}\", c={C})", hdc, str, c);
+			if (psizl != 0)
+			{
+				_env.MemWrite32(psizl, (uint)(c * 8)); // cx
+				_env.MemWrite32(psizl + 4, 16); // cy
+			}
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(32)]
+		private uint ExtTextOutA(uint hdc, int x, int y, uint options, uint lprect, in LpcStr lpString, uint c, uint lpDx)
+		{
+			var str = lpString.ToString() ?? string.Empty;
+			_logger.LogInformation("[Gdi32] ExtTextOutA(hdc=0x{Hdc:X8}, pos=({X},{Y}), string=\"{Str}\")", hdc, x, y, str);
+			return 1; // TRUE
+		}
+
+		// Pen and brush functions
+		[DllModuleExport(12)]
+		private uint CreatePen(int iStyle, int cWidth, uint color)
+		{
+			_logger.LogInformation("[Gdi32] CreatePen(style={IStyle}, width={CWidth}, color=0x{Color:X8})", iStyle, cWidth, color);
+			var handle = _nextGdiObjectHandle++;
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Pen };
+			return handle;
+		}
+
+		[DllModuleExport(4)]
+		private uint CreateSolidBrush(uint color)
+		{
+			_logger.LogInformation("[Gdi32] CreateSolidBrush(color=0x{Color:X8})", color);
+			var handle = _nextGdiObjectHandle++;
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Brush };
+			return handle;
+		}
+
+		// Palette functions
+		[DllModuleExport(4)]
+		private uint CreatePalette(uint plpal)
+		{
+			_logger.LogInformation("[Gdi32] CreatePalette(plpal=0x{Plpal:X8})", plpal);
+			var handle = _nextGdiObjectHandle++;
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Palette };
+			return handle;
+		}
+
+		[DllModuleExport(12)]
+		private uint SelectPalette(uint hdc, uint hPal, uint bForceBkgd)
+		{
+			_logger.LogInformation("[Gdi32] SelectPalette(hdc=0x{Hdc:X8}, hPal=0x{HPal:X8}, bForceBkgd={BForceBkgd})", hdc, hPal, bForceBkgd);
+			return hPal; // Return previous palette (stub)
+		}
+
+		[DllModuleExport(4)]
+		private uint RealizePalette(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] RealizePalette(hdc=0x{Hdc:X8})", hdc);
+			return 0; // Return 0 (no palette entries changed)
+		}
+
+		[DllModuleExport(16)]
+		private uint GetSystemPaletteEntries(uint hdc, uint iStart, uint cEntries, uint pPalEntries)
+		{
+			_logger.LogInformation("[Gdi32] GetSystemPaletteEntries(hdc=0x{Hdc:X8}, iStart={IStart}, cEntries={CEntries})", hdc, iStart, cEntries);
+			return 0; // Return 0 (no entries retrieved)
+		}
+
+		// Viewport and mapping functions
+		[DllModuleExport(8)]
+		private int SetMapMode(uint hdc, int iMode)
+		{
+			_logger.LogInformation("[Gdi32] SetMapMode(hdc=0x{Hdc:X8}, iMode={IMode})", hdc, iMode);
+			return 1; // MM_TEXT (previous mode)
+		}
+
+		[DllModuleExport(16)]
+		private uint SetViewportExtEx(uint hdc, int x, int y, uint lpsz)
+		{
+			_logger.LogInformation("[Gdi32] SetViewportExtEx(hdc=0x{Hdc:X8}, x={X}, y={Y})", hdc, x, y);
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(16)]
+		private uint SetViewportOrgEx(uint hdc, int x, int y, uint lppt)
+		{
+			_logger.LogInformation("[Gdi32] SetViewportOrgEx(hdc=0x{Hdc:X8}, x={X}, y={Y})", hdc, x, y);
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(16)]
+		private uint SetWindowExtEx(uint hdc, int x, int y, uint lpsz)
+		{
+			_logger.LogInformation("[Gdi32] SetWindowExtEx(hdc=0x{Hdc:X8}, x={X}, y={Y})", hdc, x, y);
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(16)]
+		private uint OffsetViewportOrgEx(uint hdc, int x, int y, uint lppt)
+		{
+			_logger.LogInformation("[Gdi32] OffsetViewportOrgEx(hdc=0x{Hdc:X8}, x={X}, y={Y})", hdc, x, y);
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(24)]
+		private uint ScaleViewportExtEx(uint hdc, int xNum, int xDenom, int yNum, int yDenom, uint lpsz)
+		{
+			_logger.LogInformation("[Gdi32] ScaleViewportExtEx(hdc=0x{Hdc:X8}, xScale={XNum}/{XDenom}, yScale={YNum}/{YDenom})", 
+				hdc, xNum, xDenom, yNum, yDenom);
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(24)]
+		private uint ScaleWindowExtEx(uint hdc, int xNum, int xDenom, int yNum, int yDenom, uint lpsz)
+		{
+			_logger.LogInformation("[Gdi32] ScaleWindowExtEx(hdc=0x{Hdc:X8}, xScale={XNum}/{XDenom}, yScale={YNum}/{YDenom})", 
+				hdc, xNum, xDenom, yNum, yDenom);
+			return 1; // TRUE
+		}
+
+		// Clipping functions
+		[DllModuleExport(8)]
+		private int GetClipBox(uint hdc, uint lprect)
+		{
+			_logger.LogInformation("[Gdi32] GetClipBox(hdc=0x{Hdc:X8}, lprect=0x{Lprect:X8})", hdc, lprect);
+			if (lprect != 0)
+			{
+				_env.MemWrite32(lprect, 0); // left
+				_env.MemWrite32(lprect + 4, 0); // top
+				_env.MemWrite32(lprect + 8, 640); // right
+				_env.MemWrite32(lprect + 12, 480); // bottom
+			}
+			return 1; // SIMPLEREGION
+		}
+
+		[DllModuleExport(12)]
+		private uint PtVisible(uint hdc, int x, int y)
+		{
+			_logger.LogInformation("[Gdi32] PtVisible(hdc=0x{Hdc:X8}, x={X}, y={Y})", hdc, x, y);
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(8)]
+		private uint RectVisible(uint hdc, uint lprect)
+		{
+			_logger.LogInformation("[Gdi32] RectVisible(hdc=0x{Hdc:X8}, lprect=0x{Lprect:X8})", hdc, lprect);
+			return 1; // TRUE
+		}
+
+		// Escape function
+		[DllModuleExport(20)]
+		private int Escape(uint hdc, int iEscape, int cjIn, uint pvIn, uint pvOut)
+		{
+			_logger.LogInformation("[Gdi32] Escape(hdc=0x{Hdc:X8}, iEscape={IEscape}, cjIn={CjIn})", hdc, iEscape, cjIn);
+			return 0; // Return 0 (not supported)
+		}
+
+		private enum GdiObjectType
+		{
+			Pen,
+			Brush,
+			Font,
+			Bitmap,
+			Palette
+		}
+
+		private class GdiObject
+		{
+			public GdiObjectType Type { get; set; }
 		}
 
 		private class DeviceContext
