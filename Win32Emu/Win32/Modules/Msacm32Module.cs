@@ -107,7 +107,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	///   DWORD         fdwOpen
 	/// );
 	/// </summary>
-	[DllModuleExport(32)]
+	[DllModuleExport(1)]
 	private uint AcmStreamOpen(uint phas, uint had, uint pwfxSrc, uint pwfxDst, uint pwfltr, uint dwCallback, uint dwInstance, uint fdwOpen)
 	{
 		_logger.LogInformation("[MSACM32] acmStreamOpen(phas=0x{Phas:X8}, had=0x{Had:X8}, pwfxSrc=0x{PwfxSrc:X8}, pwfxDst=0x{PwfxDst:X8}, pwfltr=0x{Pwfltr:X8}, dwCallback=0x{DwCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwOpen=0x{FdwOpen:X8})",
@@ -148,7 +148,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	///   DWORD      fdwClose
 	/// );
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(2)]
 	private uint AcmStreamClose(uint has, uint fdwClose)
 	{
 		_logger.LogInformation("[MSACM32] acmStreamClose(has=0x{Has:X8}, fdwClose=0x{FdwClose:X8})", has, fdwClose);
@@ -173,7 +173,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	///   DWORD      fdwSize
 	/// );
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(3)]
 	private uint AcmStreamSize(uint has, uint cbInput, uint pdwOutputBytes, uint fdwSize)
 	{
 		_logger.LogInformation("[MSACM32] acmStreamSize(has=0x{Has:X8}, cbInput={CbInput}, pdwOutputBytes=0x{PdwOutputBytes:X8}, fdwSize=0x{FdwSize:X8})",
@@ -202,7 +202,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	///   DWORD           fdwConvert
 	/// );
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(4)]
 	private uint AcmStreamConvert(uint has, uint pash, uint fdwConvert)
 	{
 		_logger.LogInformation("[MSACM32] acmStreamConvert(has=0x{Has:X8}, pash=0x{Pash:X8}, fdwConvert=0x{FdwConvert:X8})",
@@ -226,7 +226,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	///   DWORD      fdwReset
 	/// );
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(5)]
 	private uint AcmStreamReset(uint has, uint fdwReset)
 	{
 		_logger.LogInformation("[MSACM32] acmStreamReset(has=0x{Has:X8}, fdwReset=0x{FdwReset:X8})", has, fdwReset);
@@ -248,7 +248,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	///   DWORD               fdwDetails
 	/// );
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(6)]
 	private uint AcmFormatTagDetailsA(uint had, uint paftd, uint fdwDetails)
 	{
 		_logger.LogInformation("[MSACM32] acmFormatTagDetailsA(had=0x{Had:X8}, paftd=0x{Paftd:X8}, fdwDetails=0x{FdwDetails:X8})",
@@ -266,7 +266,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	///   DWORD             fdwDetails
 	/// );
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(7)]
 	private uint AcmFormatDetailsA(uint had, uint pafd, uint fdwDetails)
 	{
 		_logger.LogInformation("[MSACM32] acmFormatDetailsA(had=0x{Had:X8}, pafd=0x{Pafd:X8}, fdwDetails=0x{FdwDetails:X8})",
@@ -282,7 +282,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	///   LPACMFORMATCHOOSE pafmtc
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(8)]
 	private uint AcmFormatChooseA(uint pafmtc)
 	{
 		_logger.LogInformation("[MSACM32] acmFormatChooseA(pafmtc=0x{Pafmtc:X8})", pafmtc);
@@ -301,7 +301,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	///   DWORD             fdwEnum
 	/// );
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(9)]
 	private uint AcmFormatEnumA(uint had, uint pafd, uint fnCallback, uint dwInstance, uint fdwEnum)
 	{
 		_logger.LogInformation("[MSACM32] acmFormatEnumA(had=0x{Had:X8}, pafd=0x{Pafd:X8}, fnCallback=0x{FnCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwEnum=0x{FdwEnum:X8})",
@@ -319,7 +319,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	///   LPVOID  pMetric
 	/// );
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(10)]
 	private uint AcmMetrics(uint hao, uint uMetric, uint pMetric)
 	{
 		_logger.LogInformation("[MSACM32] acmMetrics(hao=0x{Hao:X8}, uMetric={UMetric}, pMetric=0x{PMetric:X8})",
