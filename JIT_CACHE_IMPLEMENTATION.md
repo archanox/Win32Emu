@@ -46,7 +46,7 @@ macOS:   ~/Library/Application Support/Win32Emu/JitCache/
 - `SetExecutablePath(string path)`: Associates the CPU with a specific executable for cache management
 - `LoadCacheAsync()`: Loads cached block metadata from disk
 - `SaveCacheAsync()`: Persists current cache to disk
-- `PrecompileFromCacheAsync(VirtualMemory mem)`: Warm-up method for cached blocks
+- `PrecompileFromCacheAsync(VirtualMemory mem)`: Precompiles all blocks found in the cache for warm-up
 - `PrecompileRangeAsync(VirtualMemory mem, uint start, uint end)`: Precompiles a specific address range
 - `GetCacheStatistics()`: Returns cache statistics
 

@@ -163,14 +163,45 @@ public class JitCpu : IAsyncCpu
 	
 	/// <summary>
 	/// Precompiles common code blocks to warm up the JIT cache.
-	/// Note: Currently not implemented because the cache cannot be directly enumerated.
-	/// Use PrecompileRangeAsync with specific address ranges instead.
+	/// This compiles all blocks found in the cache for the current executable.
 	/// </summary>
-	public Task<int> PrecompileFromCacheAsync(VirtualMemory mem)
+	public async Task<int> PrecompileFromCacheAsync(VirtualMemory mem)
 	{
-		throw new NotImplementedException(
-			"PrecompileFromCacheAsync is not implemented because the JIT cache cannot be enumerated directly. " +
-			"Use PrecompileRangeAsync(mem, startAddress, endAddress) to precompile specific address ranges instead.");
+		var cachedAddresses = _jitCache.GetCachedBlockAddresses().OrderBy(a => a).ToList();
+		
+		if (cachedAddresses.Count == 0)
+		{
+			_logger.LogInformation("[JitCpu] No cached blocks to precompile");
+			return 0;
+		}
+		
+		_logger.LogInformation("[JitCpu] Starting precompilation of {TotalBlocks} cached blocks", cachedAddresses.Count);
+		
+		var compiled = 0;
+		foreach (var address in cachedAddresses)
+		{
+			try
+			{
+				// Skip if already compiled
+				if (_compiledBlocks.ContainsKey(address))
+				{
+					continue;
+				}
+				
+				// Compile the block
+				var block = CompileBlock(address, mem);
+				_compiledBlocks[address] = block;
+				compiled++;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogDebug(ex, "[JitCpu] Failed to precompile cached block at 0x{Address:X8}", address);
+			}
+		}
+		
+		_logger.LogInformation("[JitCpu] Precompilation complete: {Compiled} blocks compiled from cache", compiled);
+		
+		return await Task.FromResult(compiled);
 	}
 	
 	/// <summary>
