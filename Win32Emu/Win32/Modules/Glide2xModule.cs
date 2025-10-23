@@ -731,7 +731,7 @@ namespace Win32Emu.Win32.Modules
 			
 			_frameBufferLocked = true;
 			_logger.LogDebug("[GLIDE2x] Frame buffer locked at address 0x{Address:X8}", _frameBufferAddress);
-			return 1; // TRUE - success (note: real implementation returns pointer, but we return success flag)
+			return _frameBufferAddress; // Return pointer to locked frame buffer
 		}
 
 		[DllModuleExport(53, entryPoint: 0x00001460, Version = "4.90.0.3000", ExportName = "_grLfbReadRegion@28", IsStub = true)]
