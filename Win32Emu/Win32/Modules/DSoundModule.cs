@@ -706,10 +706,8 @@ namespace Win32Emu.Win32.Modules
 			// Copy current buffer data to the allocated memory
 			if (buffer.Data != null && dwBytes > 0)
 			{
-				for (uint i = 0; i < dwBytes; i++)
-				{
-					memory.Write8(audioPtr + i, buffer.Data[dwOffset + i]);
-				}
+				// Use a bulk memory copy for efficiency
+				memory.WriteBytes(audioPtr, buffer.Data, (int)dwOffset, (int)dwBytes);
 			}
 
 			// Write the audio pointer and size to output parameters
