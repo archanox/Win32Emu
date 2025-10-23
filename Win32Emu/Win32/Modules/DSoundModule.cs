@@ -972,7 +972,7 @@ namespace Win32Emu.Win32.Modules
 				if (bytesToCopy2 > 0)
 				{
 					var temp = memory.GetSpan(pvAudioPtr2, bytesToCopy2);
-					Buffer.BlockCopy(temp, 0, buffer.Data, 0, bytesToCopy2);
+					temp.CopyTo(new Span<byte>(buffer.Data, 0, bytesToCopy2));
 				}
 			}
 
