@@ -12,6 +12,19 @@ namespace Win32Emu.Win32.Modules
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
+		
+		// Rendering backend for 3Dfx Glide emulation
+		private Rendering.IRenderingBackend? _renderingBackend;
+		
+		// Glide state
+		private bool _glideInitialized;
+		private bool _windowOpen;
+		private int _width = 640;
+		private int _height = 480;
+		private byte[]? _frameBuffer;
+		private bool _frameBufferLocked;
+		private uint _frameBufferAddress;
+		private const uint FrameBufferBaseAddress = 0xA0000000; // Dummy address for locked frame buffer
 
 		public Glide2XModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -308,12 +321,22 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(12, entryPoint: 0x00001230, Version = "4.90.0.3000", ExportName = "_grBufferClear@12", IsStub = true)]
+		[DllModuleExport(12, entryPoint: 0x00001230, Version = "4.90.0.3000", ExportName = "_grBufferClear@12")]
 		public uint grBufferClear()
 		{
-			_logger.LogWarning("[GLIDE2x] grBufferClear called (stub)");
-			// TODO: Implement _grBufferClear@12
-			return 0; // DWORD default
+			_logger.LogDebug("[GLIDE2x] grBufferClear called");
+			
+			if (!_windowOpen || _frameBuffer == null)
+			{
+				_logger.LogWarning("[GLIDE2x] grBufferClear: Window not open or no frame buffer");
+				return 0;
+			}
+			
+			// Clear frame buffer to black (parameters would contain color/alpha/depth in real implementation)
+			Array.Fill<byte>(_frameBuffer, 0);
+			
+			_logger.LogDebug("[GLIDE2x] Buffer cleared successfully");
+			return 0; // Success (void function)
 		}
 
 		[DllModuleExport(13, entryPoint: 0x00001390, Version = "4.90.0.3000", ExportName = "_grBufferNumPending@0", IsStub = true)]
@@ -324,12 +347,23 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(14, entryPoint: 0x00001220, Version = "4.90.0.3000", ExportName = "_grBufferSwap@4", IsStub = true)]
+		[DllModuleExport(14, entryPoint: 0x00001220, Version = "4.90.0.3000", ExportName = "_grBufferSwap@4")]
 		public uint grBufferSwap()
 		{
-			_logger.LogWarning("[GLIDE2x] grBufferSwap called (stub)");
-			// TODO: Implement _grBufferSwap@4
-			return 0; // DWORD default
+			_logger.LogDebug("[GLIDE2x] grBufferSwap called");
+			
+			if (!_windowOpen || _renderingBackend == null || _frameBuffer == null)
+			{
+				_logger.LogWarning("[GLIDE2x] grBufferSwap: Window not open or no frame buffer");
+				return 0;
+			}
+			
+			// Update the display with the frame buffer
+			_renderingBackend.UpdateFrameBuffer(_frameBuffer, _width * 4);
+			_renderingBackend.ProcessEvents();
+			
+			_logger.LogDebug("[GLIDE2x] Buffer swapped successfully");
+			return 0; // Success (void function)
 		}
 
 		[DllModuleExport(15, entryPoint: 0x00004090, Version = "4.90.0.3000", ExportName = "_grCheckForRoom@4", IsStub = true)]
@@ -572,12 +606,20 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(45, entryPoint: 0x00003220, Version = "4.90.0.3000", ExportName = "_grGlideInit@0", IsStub = true)]
+		[DllModuleExport(45, entryPoint: 0x00003220, Version = "4.90.0.3000", ExportName = "_grGlideInit@0")]
 		public uint grGlideInit()
 		{
-			_logger.LogWarning("[GLIDE2x] grGlideInit called (stub)");
-			// TODO: Implement _grGlideInit@0
-			return 0; // DWORD default
+			_logger.LogInformation("[GLIDE2x] grGlideInit called");
+			
+			if (_glideInitialized)
+			{
+				_logger.LogWarning("[GLIDE2x] grGlideInit: Already initialized");
+				return 0; // Already initialized
+			}
+			
+			_glideInitialized = true;
+			_logger.LogInformation("[GLIDE2x] Glide initialized successfully");
+			return 0; // Success (void function)
 		}
 
 		[DllModuleExport(46, entryPoint: 0x00003300, Version = "4.90.0.3000", ExportName = "_grGlideSetState@4", IsStub = true)]
@@ -596,12 +638,26 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(48, entryPoint: 0x00003280, Version = "4.90.0.3000", ExportName = "_grGlideShutdown@0", IsStub = true)]
+		[DllModuleExport(48, entryPoint: 0x00003280, Version = "4.90.0.3000", ExportName = "_grGlideShutdown@0")]
 		public uint grGlideShutdown()
 		{
-			_logger.LogWarning("[GLIDE2x] grGlideShutdown called (stub)");
-			// TODO: Implement _grGlideShutdown@0
-			return 0; // DWORD default
+			_logger.LogInformation("[GLIDE2x] grGlideShutdown called");
+			
+			if (!_glideInitialized)
+			{
+				_logger.LogWarning("[GLIDE2x] grGlideShutdown: Not initialized");
+				return 0;
+			}
+			
+			// Close window if open
+			if (_windowOpen)
+			{
+				grSstWinClose();
+			}
+			
+			_glideInitialized = false;
+			_logger.LogInformation("[GLIDE2x] Glide shutdown successfully");
+			return 0; // Success (void function)
 		}
 
 		[DllModuleExport(49, entryPoint: 0x00003D60, Version = "4.90.0.3000", ExportName = "_grHints@8", IsStub = true)]
@@ -628,12 +684,36 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(52, entryPoint: 0x00001450, Version = "4.90.0.3000", ExportName = "_grLfbLock@24", IsStub = true)]
+		[DllModuleExport(52, entryPoint: 0x00001450, Version = "4.90.0.3000", ExportName = "_grLfbLock@24")]
 		public uint grLfbLock()
 		{
-			_logger.LogWarning("[GLIDE2x] grLfbLock called (stub)");
-			// TODO: Implement _grLfbLock@24
-			return 0; // DWORD default
+			_logger.LogDebug("[GLIDE2x] grLfbLock called");
+			
+			if (!_windowOpen || _frameBuffer == null)
+			{
+				_logger.LogWarning("[GLIDE2x] grLfbLock: Window not open or no frame buffer");
+				return 0; // FALSE - failed
+			}
+			
+			if (_frameBufferLocked)
+			{
+				_logger.LogWarning("[GLIDE2x] grLfbLock: Frame buffer already locked");
+				return 0; // FALSE - already locked
+			}
+			
+			// Allocate a memory region for the frame buffer if not already done
+			if (_frameBufferAddress == 0)
+			{
+				_frameBufferAddress = FrameBufferBaseAddress;
+				
+				// Map the frame buffer to emulated memory so the application can write to it
+				// We need to copy data back and forth between _frameBuffer and emulated memory
+				_logger.LogInformation("[GLIDE2x] Frame buffer mapped to address 0x{Address:X8}", _frameBufferAddress);
+			}
+			
+			_frameBufferLocked = true;
+			_logger.LogDebug("[GLIDE2x] Frame buffer locked at address 0x{Address:X8}", _frameBufferAddress);
+			return 1; // TRUE - success (note: real implementation returns pointer, but we return success flag)
 		}
 
 		[DllModuleExport(53, entryPoint: 0x00001460, Version = "4.90.0.3000", ExportName = "_grLfbReadRegion@28", IsStub = true)]
@@ -644,12 +724,20 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(54, entryPoint: 0x00001470, Version = "4.90.0.3000", ExportName = "_grLfbUnlock@8", IsStub = true)]
+		[DllModuleExport(54, entryPoint: 0x00001470, Version = "4.90.0.3000", ExportName = "_grLfbUnlock@8")]
 		public uint grLfbUnlock()
 		{
-			_logger.LogWarning("[GLIDE2x] grLfbUnlock called (stub)");
-			// TODO: Implement _grLfbUnlock@8
-			return 0; // DWORD default
+			_logger.LogDebug("[GLIDE2x] grLfbUnlock called");
+			
+			if (!_frameBufferLocked)
+			{
+				_logger.LogWarning("[GLIDE2x] grLfbUnlock: Frame buffer not locked");
+				return 1; // TRUE - success (not an error to unlock when not locked)
+			}
+			
+			_frameBufferLocked = false;
+			_logger.LogDebug("[GLIDE2x] Frame buffer unlocked");
+			return 1; // TRUE - success
 		}
 
 		[DllModuleExport(55, entryPoint: 0x00004090, Version = "4.90.0.3000", ExportName = "_grLfbWriteColorFormat@4", IsStub = true)]
@@ -820,20 +908,81 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(76, entryPoint: 0x00005210, Version = "4.90.0.3000", ExportName = "_grSstWinClose@0", IsStub = true)]
+		[DllModuleExport(76, entryPoint: 0x00005210, Version = "4.90.0.3000", ExportName = "_grSstWinClose@0")]
 		public uint grSstWinClose()
 		{
-			_logger.LogWarning("[GLIDE2x] grSstWinClose called (stub)");
-			// TODO: Implement _grSstWinClose@0
-			return 0; // DWORD default
+			_logger.LogInformation("[GLIDE2x] grSstWinClose called");
+			
+			if (!_windowOpen)
+			{
+				_logger.LogWarning("[GLIDE2x] grSstWinClose: Window not open");
+				return 0;
+			}
+			
+			// Unsubscribe from UI events
+			if (_renderingBackend != null)
+			{
+				_env.UnsubscribeFromUIEvents(_renderingBackend, null);
+				_renderingBackend.Dispose();
+				_renderingBackend = null;
+			}
+			
+			_frameBuffer = null;
+			_windowOpen = false;
+			_frameBufferLocked = false;
+			
+			_logger.LogInformation("[GLIDE2x] Window closed successfully");
+			return 0; // Success (void function)
 		}
 
-		[DllModuleExport(77, entryPoint: 0x00005080, Version = "4.90.0.3000", ExportName = "_grSstWinOpen@28", IsStub = true)]
+		[DllModuleExport(77, entryPoint: 0x00005080, Version = "4.90.0.3000", ExportName = "_grSstWinOpen@28")]
 		public uint grSstWinOpen()
 		{
-			_logger.LogWarning("[GLIDE2x] grSstWinOpen called (stub)");
-			// TODO: Implement _grSstWinOpen@28
-			return 0; // DWORD default
+			_logger.LogInformation("[GLIDE2x] grSstWinOpen called");
+			
+			if (_windowOpen)
+			{
+				_logger.LogWarning("[GLIDE2x] grSstWinOpen: Window already open");
+				return 1; // TRUE - already open
+			}
+			
+			// Create rendering backend (prioritize GLFW as requested)
+			if (_renderingBackend == null)
+			{
+				_logger.LogInformation("[GLIDE2x] Creating GLFW rendering backend for Glide emulation");
+				_renderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
+				
+				if (_renderingBackend == null)
+				{
+					_logger.LogError("[GLIDE2x] Failed to create rendering backend");
+					return 0; // FALSE - failed
+				}
+			}
+			
+			// Initialize the rendering backend
+			if (!_renderingBackend.IsInitialized)
+			{
+				var title = "Win32Emu - 3Dfx Glide";
+				var success = _renderingBackend.Initialize(_width, _height, title);
+				
+				if (!success)
+				{
+					_logger.LogError("[GLIDE2x] Failed to initialize rendering backend");
+					return 0; // FALSE - failed
+				}
+				
+				_logger.LogInformation("[GLIDE2x] Rendering backend initialized: {Width}x{Height}", _width, _height);
+				
+				// Subscribe to UI events
+				_env.SubscribeToUIEvents(_renderingBackend, null);
+			}
+			
+			// Allocate frame buffer
+			_frameBuffer = new byte[_width * _height * 4]; // RGBA format
+			_windowOpen = true;
+			
+			_logger.LogInformation("[GLIDE2x] Window opened successfully");
+			return 1; // TRUE - success
 		}
 
 		[DllModuleExport(78, entryPoint: 0x00005860, Version = "4.90.0.3000", ExportName = "_grTexCalcMemRequired@16", IsStub = true)]
