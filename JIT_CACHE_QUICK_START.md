@@ -41,7 +41,10 @@ Console.WriteLine($"Cache location: {stats.CacheDirectory}");
 For even faster startup, precompile code before running:
 
 ```csharp
-// Precompile a specific address range
+// Option 1: Precompile all cached blocks
+await cpu.PrecompileFromCacheAsync(memory);
+
+// Option 2: Precompile a specific address range
 await cpu.PrecompileRangeAsync(memory, 
     startAddress: 0x00401000,  // Start of .text section
     endAddress: 0x00450000);    // End of .text section
@@ -129,6 +132,7 @@ if (Directory.Exists(cacheDir))
 void SetExecutablePath(string path)
 Task LoadCacheAsync()
 Task SaveCacheAsync()
+Task<int> PrecompileFromCacheAsync(VirtualMemory mem)
 Task<int> PrecompileRangeAsync(VirtualMemory mem, uint start, uint end)
 CacheStatistics GetCacheStatistics()
 ```

@@ -119,6 +119,14 @@ public class JitCache
 	}
 	
 	/// <summary>
+	/// Gets all cached block addresses
+	/// </summary>
+	public IEnumerable<uint> GetCachedBlockAddresses()
+	{
+		return _blockCache.Keys;
+	}
+	
+	/// <summary>
 	/// Clears all cached blocks
 	/// </summary>
 	public void Clear()

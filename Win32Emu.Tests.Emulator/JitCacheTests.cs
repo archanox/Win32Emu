@@ -251,4 +251,52 @@ public class JitCacheTests
 		// Cleanup
 		Directory.Delete(tempDir, true);
 	}
+	
+	[Fact]
+	public async Task PrecompileFromCacheAsync_ShouldCompileCachedBlocks()
+	{
+		// Arrange
+		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
+		var mem = new VirtualMemory(1024 * 1024);
+		var execPath = "/test/program.exe";
+		
+		// Create first CPU, compile some blocks, and save cache
+		var cpu1 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+		cpu1.SetExecutablePath(execPath);
+		
+		// Write code at multiple locations
+		mem.Write8(0x1000, 0x90); // NOP
+		mem.Write8(0x1001, 0xC3); // RET
+		
+		mem.Write8(0x2000, 0x90); // NOP
+		mem.Write8(0x2001, 0x90); // NOP
+		mem.Write8(0x2002, 0xC3); // RET
+		
+		cpu1.SetRegister("ESP", 0x10000);
+		mem.Write32(0x10000, 0x3000);
+		
+		// Compile blocks
+		cpu1.SetEip(0x1000);
+		await cpu1.ExecuteBlockAsync(mem);
+		
+		cpu1.SetEip(0x2000);
+		await cpu1.ExecuteBlockAsync(mem);
+		
+		// Save cache
+		await cpu1.SaveCacheAsync();
+		
+		// Act - Create new CPU, load cache, and precompile
+		var cpu2 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+		cpu2.SetExecutablePath(execPath);
+		await cpu2.LoadCacheAsync();
+		
+		var compiled = await cpu2.PrecompileFromCacheAsync(mem);
+		
+		// Assert
+		Assert.True(compiled > 0, "Should have compiled at least one block from cache");
+		Assert.True(compiled <= 2, "Should not compile more blocks than in cache");
+		
+		// Cleanup
+		Directory.Delete(tempDir, true);
+	}
 }

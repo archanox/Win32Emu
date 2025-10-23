@@ -65,7 +65,7 @@ await cpu.SaveCacheAsync();
 
 ## Example 3: Precompilation for Faster Startup
 
-Precompile code ranges to reduce JIT overhead during gameplay:
+Precompile code to reduce JIT overhead during gameplay:
 
 ```csharp
 var cpu = new JitCpu(memory);
@@ -74,14 +74,18 @@ cpu.SetExecutablePath("/games/quake/quake.exe");
 // Load cache
 await cpu.LoadCacheAsync();
 
-// Precompile known code sections
-// For example, precompile the .text section of the PE
+// Option 1: Precompile all cached blocks
+Console.WriteLine("Precompiling all cached blocks...");
+var cachedCompiled = await cpu.PrecompileFromCacheAsync(memory);
+Console.WriteLine($"Precompiled {cachedCompiled} blocks from cache");
+
+// Option 2: Precompile specific address range (e.g., .text section)
 var textSectionStart = 0x00401000u;
 var textSectionEnd = 0x00450000u;
 
-Console.WriteLine("Precompiling code...");
-var compiled = await cpu.PrecompileRangeAsync(memory, textSectionStart, textSectionEnd);
-Console.WriteLine($"Precompiled {compiled} blocks");
+Console.WriteLine("Precompiling code range...");
+var rangeCompiled = await cpu.PrecompileRangeAsync(memory, textSectionStart, textSectionEnd);
+Console.WriteLine($"Precompiled {rangeCompiled} blocks in range");
 
 // Now execute - precompiled blocks will run immediately
 await cpu.ExecuteBlockAsync(memory);
