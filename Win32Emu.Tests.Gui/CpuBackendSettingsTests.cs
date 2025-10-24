@@ -79,6 +79,7 @@ public class CpuBackendSettingsTests
         Assert.NotEmpty(viewModel.CpuBackends);
         Assert.Contains("IcedCPU", viewModel.CpuBackends);
         Assert.Contains("JitCPU", viewModel.CpuBackends);
+        Assert.Contains("Unicorn", viewModel.CpuBackends);
     }
 
     [Fact]
@@ -116,6 +117,7 @@ public class CpuBackendSettingsTests
     [Theory]
     [InlineData("IcedCPU")]
     [InlineData("JitCPU")]
+    [InlineData("Unicorn")]
     public void SettingsViewModel_SupportsAllCpuBackends(string cpuBackend)
     {
         // Arrange
