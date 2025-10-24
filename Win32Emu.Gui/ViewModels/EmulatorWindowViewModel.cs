@@ -490,8 +490,15 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         // Post WM_COMMAND (0x0111) to parent async
         if (_emulatorService?.CurrentEmulator != null)
         {
-            await PostMessageAsync(parentHwnd, 0x0111, wParam, lParam);
-            OnDebugOutput($"Sent WM_COMMAND to parent 0x{parentHwnd:X8}: controlId={controlId}, notification=0x{notificationCode:X4}", DebugLevel.Debug);
+            try
+            {
+                await PostMessageAsync(parentHwnd, 0x0111, wParam, lParam);
+                OnDebugOutput($"Sent WM_COMMAND to parent 0x{parentHwnd:X8}: controlId={controlId}, notification=0x{notificationCode:X4}", DebugLevel.Debug);
+            }
+            catch (Exception ex)
+            {
+                OnDebugOutput($"Failed to send WM_COMMAND to parent 0x{parentHwnd:X8}: {ex.Message}", DebugLevel.Error);
+            }
         }
         else
         {
