@@ -442,6 +442,70 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Lea:
 				ExecLea(insn, mem);
 				break;
+			
+			// === Multiply/Divide ===
+			case Mnemonic.Mul:
+				ExecMul(insn, mem);
+				break;
+			case Mnemonic.Imul:
+				ExecImul(insn, mem);
+				break;
+			case Mnemonic.Div:
+				ExecDiv(insn, mem);
+				break;
+			case Mnemonic.Idiv:
+				ExecIdiv(insn, mem);
+				break;
+			
+			// === Additional Instructions ===
+			case Mnemonic.Pushad:
+				ExecPushad(mem);
+				break;
+			case Mnemonic.Popad:
+				ExecPopad(mem);
+				break;
+			case Mnemonic.Cdq:
+				ExecCdq();
+				break;
+			case Mnemonic.Bswap:
+				ExecBswap(insn);
+				break;
+			case Mnemonic.Xlatb:
+				ExecXlatb(mem);
+				break;
+			case Mnemonic.Clc:
+				ClearFlag(Cf);
+				break;
+			case Mnemonic.Stc:
+				SetFlag(Cf);
+				break;
+			case Mnemonic.Cmc:
+				SetFlagVal(Cf, !GetFlag(Cf));
+				break;
+			case Mnemonic.Cld:
+				ClearFlag(Df);
+				break;
+			case Mnemonic.Std:
+				SetFlag(Df);
+				break;
+			case Mnemonic.Seto:
+			case Mnemonic.Setno:
+			case Mnemonic.Setb:
+			case Mnemonic.Setae:
+			case Mnemonic.Sete:
+			case Mnemonic.Setne:
+			case Mnemonic.Setbe:
+			case Mnemonic.Seta:
+			case Mnemonic.Sets:
+			case Mnemonic.Setns:
+			case Mnemonic.Setp:
+			case Mnemonic.Setnp:
+			case Mnemonic.Setl:
+			case Mnemonic.Setge:
+			case Mnemonic.Setle:
+			case Mnemonic.Setg:
+				ExecSetcc(insn);
+				break;
 				
 			// === Pentium CPU Instructions (Stubbed) ===
 			// These are recognized but not yet fully implemented in JIT mode
@@ -1797,6 +1861,159 @@ public class JitCpu : IAsyncCpu
 		bits &= 0xF;
 		bool even = (((0x6996 >> bits) & 1) == 0);
 		SetFlagVal(Pf, even);
+	}
+	
+	// === Multiply/Divide Implementations ===
+	
+	private void ExecMul(Instruction insn, VirtualMemory mem)
+	{
+		uint src = GetOperandValue(insn, 0);
+		ulong result = (ulong)_eax * src;
+		_eax = (uint)result;
+		_edx = (uint)(result >> 32);
+		
+		SetFlagVal(Cf, _edx != 0);
+		SetFlagVal(Of, _edx != 0);
+	}
+	
+	private void ExecImul(Instruction insn, VirtualMemory mem)
+	{
+		if (insn.OpCount == 1)
+		{
+			int src = (int)GetOperandValue(insn, 0);
+			long result = (long)(int)_eax * src;
+			_eax = (uint)result;
+			_edx = (uint)(result >> 32);
+			
+			bool overflow = (result < int.MinValue || result > int.MaxValue);
+			SetFlagVal(Cf, overflow);
+			SetFlagVal(Of, overflow);
+		}
+		else if (insn.OpCount == 2)
+		{
+			int src1 = (int)GetOperandValue(insn, 0);
+			int src2 = (int)GetOperandValue(insn, 1);
+			long result = (long)src1 * src2;
+			SetOperandValue(insn, 0, (uint)result);
+			
+			bool overflow = (result < int.MinValue || result > int.MaxValue);
+			SetFlagVal(Cf, overflow);
+			SetFlagVal(Of, overflow);
+		}
+		else if (insn.OpCount == 3)
+		{
+			int src1 = (int)GetOperandValue(insn, 1);
+			int src2 = (int)GetOperandValue(insn, 2);
+			long result = (long)src1 * src2;
+			SetOperandValue(insn, 0, (uint)result);
+			
+			bool overflow = (result < int.MinValue || result > int.MaxValue);
+			SetFlagVal(Cf, overflow);
+			SetFlagVal(Of, overflow);
+		}
+	}
+	
+	private void ExecDiv(Instruction insn, VirtualMemory mem)
+	{
+		uint divisor = GetOperandValue(insn, 0);
+		if (divisor == 0)
+		{
+			_logger.LogWarning("[JitCpu] Division by zero");
+			return;
+		}
+		
+		ulong dividend = ((ulong)_edx << 32) | _eax;
+		_eax = (uint)(dividend / divisor);
+		_edx = (uint)(dividend % divisor);
+	}
+	
+	private void ExecIdiv(Instruction insn, VirtualMemory mem)
+	{
+		int divisor = (int)GetOperandValue(insn, 0);
+		if (divisor == 0)
+		{
+			_logger.LogWarning("[JitCpu] Division by zero");
+			return;
+		}
+		
+		long dividend = ((long)(int)_edx << 32) | _eax;
+		_eax = (uint)(dividend / divisor);
+		_edx = (uint)(dividend % divisor);
+	}
+	
+	// === Additional Implementations ===
+	
+	private void ExecPushad(VirtualMemory mem)
+	{
+		uint temp = _esp;
+		mem.Write32(_esp -= 4, _eax);
+		mem.Write32(_esp -= 4, _ecx);
+		mem.Write32(_esp -= 4, _edx);
+		mem.Write32(_esp -= 4, _ebx);
+		mem.Write32(_esp -= 4, temp);
+		mem.Write32(_esp -= 4, _ebp);
+		mem.Write32(_esp -= 4, _esi);
+		mem.Write32(_esp -= 4, _edi);
+	}
+	
+	private void ExecPopad(VirtualMemory mem)
+	{
+		_edi = mem.Read32(_esp); _esp += 4;
+		_esi = mem.Read32(_esp); _esp += 4;
+		_ebp = mem.Read32(_esp); _esp += 4;
+		_esp += 4; // Skip ESP
+		_ebx = mem.Read32(_esp); _esp += 4;
+		_edx = mem.Read32(_esp); _esp += 4;
+		_ecx = mem.Read32(_esp); _esp += 4;
+		_eax = mem.Read32(_esp); _esp += 4;
+	}
+	
+	private void ExecCdq()
+	{
+		_edx = (_eax & 0x80000000) != 0 ? 0xFFFFFFFF : 0;
+	}
+	
+	private void ExecBswap(Instruction insn)
+	{
+		uint value = GetOperandValue(insn, 0);
+		uint result = ((value & 0xFF) << 24) |
+		             ((value & 0xFF00) << 8) |
+		             ((value & 0xFF0000) >> 8) |
+		             ((value & 0xFF000000) >> 24);
+		SetOperandValue(insn, 0, result);
+	}
+	
+	private void ExecXlatb(VirtualMemory mem)
+	{
+		uint address = _ebx + (_eax & 0xFF);
+		byte value = mem.Read8(address);
+		_eax = (_eax & 0xFFFFFF00) | value;
+	}
+	
+	private void ExecSetcc(Instruction insn)
+	{
+		bool condition = insn.Mnemonic switch
+		{
+			Mnemonic.Seto => GetFlag(Of),
+			Mnemonic.Setno => !GetFlag(Of),
+			Mnemonic.Setb => GetFlag(Cf),
+			Mnemonic.Setae => !GetFlag(Cf),
+			Mnemonic.Sete => GetFlag(Zf),
+			Mnemonic.Setne => !GetFlag(Zf),
+			Mnemonic.Setbe => GetFlag(Cf) || GetFlag(Zf),
+			Mnemonic.Seta => !GetFlag(Cf) && !GetFlag(Zf),
+			Mnemonic.Sets => GetFlag(Sf),
+			Mnemonic.Setns => !GetFlag(Sf),
+			Mnemonic.Setp => GetFlag(Pf),
+			Mnemonic.Setnp => !GetFlag(Pf),
+			Mnemonic.Setl => GetFlag(Sf) != GetFlag(Of),
+			Mnemonic.Setge => GetFlag(Sf) == GetFlag(Of),
+			Mnemonic.Setle => GetFlag(Zf) || (GetFlag(Sf) != GetFlag(Of)),
+			Mnemonic.Setg => !GetFlag(Zf) && (GetFlag(Sf) == GetFlag(Of)),
+			_ => false
+		};
+		
+		SetOperandValue(insn, 0, condition ? 1u : 0u);
 	}
 
 	private sealed class SimpleMemoryCodeReader : CodeReader
