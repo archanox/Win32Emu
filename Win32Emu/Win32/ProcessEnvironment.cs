@@ -1023,12 +1023,14 @@ public class ProcessEnvironment
 			"SCROLLBAR"
 		};
 
+		uint index = 0;
 		foreach (var className in standardClasses)
 		{
 			// Each standard control class gets a unique window procedure address
 			// This allows code to get a non-NULL wndProc, while User32Module can detect
 			// these special addresses and route messages to StandardControlHandler
-			var wndProcAddress = STANDARD_CONTROL_WNDPROC_BASE + (uint)className.GetHashCode();
+			// Using a simple counter ensures no collisions (unlike GetHashCode)
+			var wndProcAddress = STANDARD_CONTROL_WNDPROC_BASE + index;
 			
 			var classInfo = new WindowClassInfo(
 				ClassName: className,
@@ -1045,6 +1047,7 @@ public class ProcessEnvironment
 
 			_windowClasses.TryAdd(className, classInfo);
 			_logger.LogInformation("[ProcessEnv] Pre-registered standard control class: {ClassName} with WndProc=0x{WndProc:X8}", className, wndProcAddress);
+			index++;
 		}
 	}
 
