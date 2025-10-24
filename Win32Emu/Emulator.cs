@@ -1114,11 +1114,16 @@ public sealed class Emulator : IDisposable
     /// Attempts to restore EBP from the stack after an emulated API call.
     /// This handles cases where the calling code used EBP to hold the function pointer for an indirect call.
     /// </summary>
+    // Import hook addresses are allocated in this range
+    private const uint IMPORT_HOOK_BASE = 0x0F000000;
+    private const uint IMPORT_HOOK_LIMIT = 0x10000000;
+    
     private void RestoreEbpFromStack(uint esp)
     {
         try
         {
             var ebpFromStack = _vm!.Read32(esp);
+            var currentEbp = _cpu!.GetRegister("EBP");
 
             // Define plausible stack region (for example, 1MB stack)
             // Assume stack grows down, so stack base is the highest address, stack limit is lowest
@@ -1146,9 +1151,7 @@ public sealed class Emulator : IDisposable
             }
 
             // Check if current EBP looks like an import hook address first
-            // Import hooks are in range 0x0F000000-0x10000000
-            var currentEbp = _cpu!.GetRegister("EBP");
-            var isImportHook = (currentEbp >= 0x0F000000 && currentEbp < 0x10000000);
+            var isImportHook = (currentEbp >= IMPORT_HOOK_BASE && currentEbp < IMPORT_HOOK_LIMIT);
             
             // If EBP is an import hook address, we must restore it from the stack
             // This happens when code uses patterns like: MOV EBP, [IAT_Entry]; CALL EBP
