@@ -579,6 +579,42 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "WRITEPRIVATEPROFILESTRINGA":
 				returnValue = WritePrivateProfileStringA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.LpcStr(3));
 				return true;
+			case "CREATEPROCESSA":
+				returnValue = CreateProcessA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9));
+				return true;
+			case "DUPLICATEHANDLE":
+				returnValue = DuplicateHandle(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+				return true;
+			case "GETEXITCODEPROCESS":
+				returnValue = GetExitCodeProcess(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "GETFILEATTRIBUTESA":
+				returnValue = GetFileAttributesA(a.LpcStr(0));
+				return true;
+			case "GETFILESIZE":
+				returnValue = GetFileSize(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "GETFILETIME":
+				returnValue = GetFileTime(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+			case "GETFULLPATHNAMEA":
+				returnValue = GetFullPathNameA(a.LpcStr(0), a.UInt32(1), a.LpStr(2), a.UInt32(3));
+				return true;
+			case "GETLOCALEINFOA":
+				returnValue = GetLocaleInfoA(a.UInt32(0), a.UInt32(1), a.LpStr(2), a.Int32(3));
+				return true;
+			case "GETLOCALEINFOW":
+				returnValue = GetLocaleInfoW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3));
+				return true;
+			case "GETVOLUMEINFORMATIONA":
+				returnValue = GetVolumeInformationA(a.LpcStr(0), a.LpStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.LpStr(6), a.UInt32(7));
+				return true;
+			case "LOCKFILE":
+				returnValue = LockFile(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+			case "UNLOCKFILE":
+				returnValue = UnlockFile(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
 
 			default:
 				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
@@ -5883,6 +5919,241 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] WritePrivateProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpString=\"{Str}\", lpFileName=\"{FileName}\")",
 			appName, keyName, str, fileName);
 		return 1; // TRUE (stub)
+	}
+
+	/// <summary>
+	/// Creates a new process and its primary thread.
+	/// </summary>
+	[DllModuleExport(72)]
+	private uint CreateProcessA(uint lpApplicationName, uint lpCommandLine, uint lpProcessAttributes, uint lpThreadAttributes, 
+		uint bInheritHandles, uint dwCreationFlags, uint lpEnvironment, uint lpCurrentDirectory, uint lpStartupInfo, uint lpProcessInformation)
+	{
+		var appName = lpApplicationName != 0 ? _env.ReadAnsiString(lpApplicationName) : null;
+		var cmdLine = lpCommandLine != 0 ? _env.ReadAnsiString(lpCommandLine) : null;
+		_logger.LogInformation("[Kernel32] CreateProcessA(lpApplicationName=\"{AppName}\", lpCommandLine=\"{CmdLine}\")", appName, cmdLine);
+		_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+		return 0; // FALSE
+	}
+
+	/// <summary>
+	/// Duplicates an object handle.
+	/// </summary>
+	[DllModuleExport(28)]
+	private uint DuplicateHandle(uint hSourceProcessHandle, uint hSourceHandle, uint hTargetProcessHandle, 
+		uint lpTargetHandle, uint dwDesiredAccess, uint bInheritHandle, uint dwOptions)
+	{
+		_logger.LogInformation("[Kernel32] DuplicateHandle(hSourceHandle=0x{HSourceHandle:X8}, lpTargetHandle=0x{LpTargetHandle:X8})", hSourceHandle, lpTargetHandle);
+		if (lpTargetHandle != 0)
+		{
+			_env.MemWrite32(lpTargetHandle, hSourceHandle);
+		}
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves the termination status of the specified process.
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint GetExitCodeProcess(uint hProcess, uint lpExitCode)
+	{
+		_logger.LogInformation("[Kernel32] GetExitCodeProcess(hProcess=0x{HProcess:X8})", hProcess);
+		const uint STILL_ACTIVE = 259;
+		if (lpExitCode != 0)
+		{
+			_env.MemWrite32(lpExitCode, STILL_ACTIVE);
+		}
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves file system attributes for a specified file or directory.
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint GetFileAttributesA(in LpcStr lpFileName)
+	{
+		var fileName = lpFileName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GetFileAttributesA(lpFileName=\"{FileName}\")", fileName);
+		const uint INVALID_FILE_ATTRIBUTES = 0xFFFFFFFF;
+		const uint FILE_ATTRIBUTE_NORMAL = 0x80;
+		// Stub - just return normal file attribute
+		return FILE_ATTRIBUTE_NORMAL;
+	}
+
+	/// <summary>
+	/// Retrieves the size of the specified file.
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint GetFileSize(uint hFile, uint lpFileSizeHigh)
+	{
+		_logger.LogInformation("[Kernel32] GetFileSize(hFile=0x{HFile:X8})", hFile);
+		const uint INVALID_FILE_SIZE = 0xFFFFFFFF;
+		// Stub - return 0 size
+		if (lpFileSizeHigh != 0)
+		{
+			_env.MemWrite32(lpFileSizeHigh, 0);
+		}
+		return 0;
+	}
+
+	/// <summary>
+	/// Retrieves the date and time that a file or directory was created, last accessed, and last modified.
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint GetFileTime(uint hFile, uint lpCreationTime, uint lpLastAccessTime, uint lpLastWriteTime)
+	{
+		_logger.LogInformation("[Kernel32] GetFileTime(hFile=0x{HFile:X8})", hFile);
+		ulong defaultTime = 0;
+		if (lpCreationTime != 0)
+		{
+			_env.MemWrite32(lpCreationTime, (uint)(defaultTime & 0xFFFFFFFF));
+			_env.MemWrite32(lpCreationTime + 4, (uint)(defaultTime >> 32));
+		}
+		if (lpLastAccessTime != 0)
+		{
+			_env.MemWrite32(lpLastAccessTime, (uint)(defaultTime & 0xFFFFFFFF));
+			_env.MemWrite32(lpLastAccessTime + 4, (uint)(defaultTime >> 32));
+		}
+		if (lpLastWriteTime != 0)
+		{
+			_env.MemWrite32(lpLastWriteTime, (uint)(defaultTime & 0xFFFFFFFF));
+			_env.MemWrite32(lpLastWriteTime + 4, (uint)(defaultTime >> 32));
+		}
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves the full path and file name of the specified file.
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint GetFullPathNameA(in LpcStr lpFileName, uint nBufferLength, in LpStr lpBuffer, uint lpFilePart)
+	{
+		var fileName = lpFileName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GetFullPathNameA(lpFileName=\"{FileName}\")", fileName);
+		var fullPath = "C:\\" + fileName; // Stub - just prepend C:\
+		var requiredLength = (uint)fullPath.Length + 1;
+		if (nBufferLength == 0 || lpBuffer.Address == 0)
+		{
+			return requiredLength;
+		}
+		if (nBufferLength < requiredLength)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return requiredLength;
+		}
+		_env.WriteAnsiStringAt(lpBuffer.Address, fullPath);
+		if (lpFilePart != 0)
+		{
+			var lastSlash = fullPath.LastIndexOfAny(new[] { '\\', '/' });
+			if (lastSlash >= 0)
+			{
+				var filePartOffset = (uint)(lastSlash + 1);
+				_env.MemWrite32(lpFilePart, lpBuffer.Address + filePartOffset);
+			}
+			else
+			{
+				_env.MemWrite32(lpFilePart, lpBuffer.Address);
+			}
+		}
+		return (uint)fullPath.Length;
+	}
+
+	/// <summary>
+	/// Retrieves information about a locale specified by identifier.
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint GetLocaleInfoA(uint Locale, uint LCType, in LpStr lpLCData, int cchData)
+	{
+		_logger.LogInformation("[Kernel32] GetLocaleInfoA(Locale=0x{Locale:X}, LCType=0x{LCType:X})", Locale, LCType);
+		var localeData = "en-US";
+		var requiredLength = localeData.Length + 1;
+		if (cchData == 0 || lpLCData.Address == 0)
+		{
+			return (uint)requiredLength;
+		}
+		if (cchData < requiredLength)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return 0;
+		}
+		_env.WriteAnsiStringAt(lpLCData.Address, localeData);
+		return (uint)requiredLength;
+	}
+
+	/// <summary>
+	/// Retrieves information about a locale specified by identifier (Unicode version).
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint GetLocaleInfoW(uint Locale, uint LCType, uint lpLCData, int cchData)
+	{
+		_logger.LogInformation("[Kernel32] GetLocaleInfoW(Locale=0x{Locale:X}, LCType=0x{LCType:X})", Locale, LCType);
+		var localeData = "en-US";
+		var requiredLength = localeData.Length + 1;
+		if (cchData == 0 || lpLCData == 0)
+		{
+			return (uint)requiredLength;
+		}
+		if (cchData < requiredLength)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return 0;
+		}
+		var wideBytes = Encoding.Unicode.GetBytes(localeData + "\0");
+		_env.MemWriteBytes(lpLCData, wideBytes);
+		return (uint)requiredLength;
+	}
+
+	/// <summary>
+	/// Retrieves information about the file system and volume associated with the specified root directory.
+	/// </summary>
+	[DllModuleExport(32)]
+	private uint GetVolumeInformationA(in LpcStr lpRootPathName, in LpStr lpVolumeNameBuffer, uint nVolumeNameSize,
+		uint lpVolumeSerialNumber, uint lpMaximumComponentLength, uint lpFileSystemFlags, in LpStr lpFileSystemNameBuffer, uint nFileSystemNameSize)
+	{
+		var rootPath = lpRootPathName.ToString() ?? "C:\\";
+		_logger.LogInformation("[Kernel32] GetVolumeInformationA(lpRootPathName=\"{RootPath}\")", rootPath);
+		if (lpVolumeNameBuffer.Address != 0 && nVolumeNameSize > 0)
+		{
+			_env.WriteAnsiStringAt(lpVolumeNameBuffer.Address, "Win32Emu");
+		}
+		if (lpVolumeSerialNumber != 0)
+		{
+			_env.MemWrite32(lpVolumeSerialNumber, 0x12345678);
+		}
+		if (lpMaximumComponentLength != 0)
+		{
+			_env.MemWrite32(lpMaximumComponentLength, 255);
+		}
+		if (lpFileSystemFlags != 0)
+		{
+			const uint FILE_CASE_PRESERVED_NAMES = 0x00000002;
+			const uint FILE_UNICODE_ON_DISK = 0x00000004;
+			_env.MemWrite32(lpFileSystemFlags, FILE_CASE_PRESERVED_NAMES | FILE_UNICODE_ON_DISK);
+		}
+		if (lpFileSystemNameBuffer.Address != 0 && nFileSystemNameSize > 0)
+		{
+			_env.WriteAnsiStringAt(lpFileSystemNameBuffer.Address, "NTFS");
+		}
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Locks a region of an open file.
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint LockFile(uint hFile, uint dwFileOffsetLow, uint dwFileOffsetHigh, uint nNumberOfBytesToLockLow, uint nNumberOfBytesToLockHigh)
+	{
+		_logger.LogInformation("[Kernel32] LockFile(hFile=0x{HFile:X8})", hFile);
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Unlocks a region of an open file.
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint UnlockFile(uint hFile, uint dwFileOffsetLow, uint dwFileOffsetHigh, uint nNumberOfBytesToUnlockLow, uint nNumberOfBytesToUnlockHigh)
+	{
+		_logger.LogInformation("[Kernel32] UnlockFile(hFile=0x{HFile:X8})", hFile);
+		return 1; // TRUE
 	}
 
 }
