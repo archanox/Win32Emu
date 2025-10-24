@@ -1145,7 +1145,29 @@ public sealed class Emulator : IDisposable
                 }
             }
 
-            if (inStackRegion && isAligned && savedEbpValid)
+            // Check if current EBP looks like an import hook address first
+            // Import hooks are in range 0x0F000000-0x10000000
+            var currentEbp = _cpu!.GetRegister("EBP");
+            var isImportHook = (currentEbp >= 0x0F000000 && currentEbp < 0x10000000);
+            
+            // If EBP is an import hook address, we must restore it from the stack
+            // This happens when code uses patterns like: MOV EBP, [IAT_Entry]; CALL EBP
+            // After the call returns, EBP still contains the import hook address and needs restoration
+            if (isImportHook)
+            {
+                if (inStackRegion && isAligned)
+                {
+                    _cpu!.SetRegister("EBP", ebpFromStack);
+                    _logger.LogDebug("[Emulator] Forcibly restored EBP from stack (was import hook 0x{OldEBP:X8}): 0x{EBP:X8}", currentEbp, ebpFromStack);
+                }
+                else
+                {
+                    // Can't restore from stack, set to ESP as a safe fallback
+                    _cpu!.SetRegister("EBP", esp);
+                    _logger.LogDebug("[Emulator] Reset EBP to ESP (was import hook 0x{OldEBP:X8}, stack restoration failed)", currentEbp);
+                }
+            }
+            else if (inStackRegion && isAligned && savedEbpValid)
             {
                 _cpu!.SetRegister("EBP", ebpFromStack);
                 _logger.LogDebug("[Emulator] Restored EBP from stack: 0x{EBP:X8}", ebpFromStack);
@@ -1153,14 +1175,9 @@ public sealed class Emulator : IDisposable
             else
             {
                 // If we can't restore EBP from stack, check if current EBP is valid
-                var currentEbp = _cpu!.GetRegister("EBP");
                 // Allow 4KB of slack above ESP to account for minor stack pointer adjustments (e.g., function prologues/epilogues, local allocations)
                 const uint StackSlackBytes = 0x1000; // 4KB slack above ESP for plausible stack frame pointers
                 var currentEbpInStackRegion = (currentEbp >= stackBottom) && (currentEbp <= esp + StackSlackBytes);
-                
-                // Check if current EBP looks like an import hook address
-                // Import hooks are in range 0x0F000000-0x10000000
-                var isImportHook = (currentEbp >= 0x0F000000 && currentEbp < 0x10000000);
                 
                 // Check if current EBP looks like a COM vtable or object pointer
                 // COM objects are typically allocated in heap regions (0x01000000-0x70000000)
@@ -1170,17 +1187,13 @@ public sealed class Emulator : IDisposable
                 // Unaligned EBP can cause address calculation overflow issues
                 var isUnaligned = (currentEbp & 0x3) != 0;
                 
-                if (isImportHook || isLikelyComPointer || isUnaligned)
+                if (isLikelyComPointer || isUnaligned)
                 {
-                    // EBP contains a non-frame-pointer or special-purpose value (import hook address, COM pointer, or unaligned); leave unchanged to respect calling conventions
+                    // EBP contains a non-frame-pointer or special-purpose value (COM pointer, or unaligned); leave unchanged to respect calling conventions
                     // Don't modify EBP - the calling code will manage it
                     // Setting EBP=ESP here would break the caller's frame pointer assumptions
                     
-                    if (isImportHook)
-                    {
-                        _logger.LogDebug("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is an import hook address, leaving unchanged", currentEbp);
-                    }
-                    else if (isLikelyComPointer)
+                    if (isLikelyComPointer)
                     {
                         _logger.LogDebug("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is likely a COM/heap pointer, leaving unchanged", currentEbp);
                     }
