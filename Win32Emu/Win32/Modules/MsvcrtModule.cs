@@ -30,8 +30,14 @@ namespace Win32Emu.Win32.Modules
 
 			switch (export.ToUpperInvariant())
 			{
+				case "__GETMAINARGS":
+					returnValue = (uint)__getmainargs(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
+					return true;
 				case "__P___INITENV":
 					returnValue = __p___initenv();
+					return true;
+				case "__P__ACMDLN":
+					returnValue = __p__acmdln();
 					return true;
 				case "__P__COMMODE":
 					returnValue = __p__commode();
@@ -48,6 +54,12 @@ namespace Win32Emu.Win32.Modules
 				case "__SETUSERMATHERR":
 					returnValue = __setusermatherr(a.UInt32(0));
 					return true;
+				case "_ACMDLN":
+					returnValue = _acmdln();
+					return true;
+				case "_ADJUST_FDIV":
+					returnValue = _adjust_fdiv();
+					return true;
 				case "_AMSG_EXIT":
 					_amsg_exit(a.Int32(0));
 					returnValue = 0;
@@ -56,9 +68,25 @@ namespace Win32Emu.Win32.Modules
 					_cexit();
 					returnValue = 0;
 					return true;
+				case "_CONTROLFP":
+					returnValue = _controlfp(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "_EXCEPT_HANDLER3":
+					returnValue = _except_handler3(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "_EXIT":
+					_exit(a.Int32(0));
+					returnValue = 0;
+					return true;
 				case "_INITTERM":
 					_initterm(a.UInt32(0), a.UInt32(1));
 					returnValue = 0;
+					return true;
+				case "_ITOA":
+					returnValue = _itoa(a.Int32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "_XCPTFILTER":
+					returnValue = (uint)_XcptFilter(a.UInt32(0));
 					return true;
 				case "ABORT":
 					abort();
@@ -170,6 +198,104 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
+		[DllModuleExport(20)]
+		private int __getmainargs(uint pargc, uint pargv, uint penv, int doWildcard, uint startupInfo)
+		{
+			_logger.LogInformation("[msvcrt] __getmainargs(pargc=0x{Pargc:X8}, pargv=0x{Pargv:X8}, penv=0x{Penv:X8}, doWildcard={DoWildcard}, startupInfo=0x{StartupInfo:X8})", 
+				pargc, pargv, penv, doWildcard, startupInfo);
+
+			// Parse command line into argc/argv
+			var cmdLinePtr = _env.CommandLinePtr;
+			var cmdLine = cmdLinePtr != 0 ? _env.ReadAnsiString(cmdLinePtr) : "";
+			
+			// Simple command line parsing - split on spaces, respecting quotes
+			var args = new List<string>();
+			var inQuote = false;
+			var current = new System.Text.StringBuilder();
+			
+			foreach (var ch in cmdLine)
+			{
+				if (ch == '"')
+				{
+					inQuote = !inQuote;
+				}
+				else if (ch == ' ' && !inQuote)
+				{
+					if (current.Length > 0)
+					{
+						args.Add(current.ToString());
+						current.Clear();
+					}
+				}
+				else
+				{
+					current.Append(ch);
+				}
+			}
+			
+			if (current.Length > 0)
+			{
+				args.Add(current.ToString());
+			}
+			
+			// Ensure we have at least one argument (program name)
+			if (args.Count == 0)
+			{
+				args.Add("msconfig.exe");
+			}
+			
+			// Allocate argv array
+			var argc = args.Count;
+			var argvArray = _env.HeapAlloc(0, (uint)(argc * 4)); // Array of pointers
+			
+			// Write each argument string and store pointer
+			for (var i = 0; i < argc; i++)
+			{
+				var argPtr = _env.WriteAnsiString(args[i] + '\0');
+				_env.MemWrite32(argvArray + (uint)(i * 4), argPtr);
+			}
+			
+			// Write argc
+			_env.MemWrite32(pargc, (uint)argc);
+			
+			// Write argv pointer
+			_env.MemWrite32(pargv, argvArray);
+			
+			// Write environment pointer
+			var envPtr = _env.GetEnvironmentStringsA();
+			_env.MemWrite32(penv, envPtr);
+			
+			_logger.LogInformation("[msvcrt] __getmainargs: argc={Argc}, argv=0x{Argv:X8}, env=0x{Env:X8}", argc, argvArray, envPtr);
+			
+			return 0; // Success
+		}
+
+		[DllModuleExport(0)]
+		private uint __p__acmdln()
+		{
+			_logger.LogInformation("[msvcrt] __p__acmdln()");
+			// Return pointer to command line string pointer
+			var cmdLinePtrPtr = _env.HeapAlloc(0, 4);
+			_env.MemWrite32(cmdLinePtrPtr, _env.CommandLinePtr);
+			return cmdLinePtrPtr;
+		}
+
+		[DllModuleExport(0)]
+		private uint _acmdln()
+		{
+			_logger.LogInformation("[msvcrt] _acmdln()");
+			// Return pointer to command line string
+			return _env.CommandLinePtr;
+		}
+
+		[DllModuleExport(0)]
+		private uint _adjust_fdiv()
+		{
+			_logger.LogInformation("[msvcrt] _adjust_fdiv()");
+			// Pentium FDIV bug adjustment - not needed on modern CPUs
+			return 0;
+		}
+
 		[DllModuleExport(4)]
 		private void _amsg_exit(int code)
 		{
@@ -189,6 +315,78 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[msvcrt] _initterm(start=0x{Start:X8}, end=0x{End:X8})", start, end);
 			// Call initializers between start and end (stub)
+		}
+
+		[DllModuleExport(8)]
+		private uint _controlfp(uint newControl, uint mask)
+		{
+			_logger.LogInformation("[msvcrt] _controlfp(newControl=0x{NewControl:X8}, mask=0x{Mask:X8})", newControl, mask);
+			// Control floating point behavior
+			// Return current control word (stub - return default x87 control word)
+			return 0x0001003F; // Default FPU control word
+		}
+
+		[DllModuleExport(16)]
+		private uint _except_handler3(uint pRecord, uint pFrame, uint pContext, uint pDispatcher)
+		{
+			_logger.LogInformation("[msvcrt] _except_handler3(pRecord=0x{PRecord:X8}, pFrame=0x{PFrame:X8}, pContext=0x{PContext:X8}, pDispatcher=0x{PDispatcher:X8})", 
+				pRecord, pFrame, pContext, pDispatcher);
+			// Exception handler - return ExceptionContinueSearch
+			return 1; // EXCEPTION_CONTINUE_SEARCH
+		}
+
+		[DllModuleExport(4)]
+		private void _exit(int code)
+		{
+			_logger.LogInformation("[msvcrt] _exit(code={Code})", code);
+			// Exit without cleanup (stub - should exit)
+		}
+
+		[DllModuleExport(12)]
+		private uint _itoa(int value, uint buffer, int radix)
+		{
+			_logger.LogInformation("[msvcrt] _itoa(value={Value}, buffer=0x{Buffer:X8}, radix={Radix})", value, buffer, radix);
+			
+			// Convert integer to string
+			string result;
+			if (radix == 10)
+			{
+				result = value.ToString();
+			}
+			else if (radix == 16)
+			{
+				result = Math.Abs(value).ToString("X");
+				if (value < 0)
+					result = "-" + result;
+			}
+			else if (radix == 8)
+			{
+				result = Convert.ToString(value, 8);
+			}
+			else if (radix == 2)
+			{
+				result = Convert.ToString(value, 2);
+			}
+			else
+			{
+				// Unsupported radix, use decimal
+				result = value.ToString();
+			}
+			
+			// Write string to buffer
+			var bytes = System.Text.Encoding.ASCII.GetBytes(result);
+			_env.MemWriteBytes(buffer, bytes);
+			_env.MemWrite8(buffer + (uint)bytes.Length, 0); // Null terminator
+			
+			return buffer;
+		}
+
+		[DllModuleExport(4)]
+		private int _XcptFilter(uint exceptionCode)
+		{
+			_logger.LogInformation("[msvcrt] _XcptFilter(exceptionCode=0x{ExceptionCode:X8})", exceptionCode);
+			// Exception filter - return EXCEPTION_CONTINUE_SEARCH
+			return 0; // EXCEPTION_CONTINUE_SEARCH
 		}
 
 		[DllModuleExport(0)]
