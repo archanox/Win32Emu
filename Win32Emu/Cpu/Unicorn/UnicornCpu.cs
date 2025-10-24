@@ -29,10 +29,22 @@ public class UnicornCpu : IAsyncCpu
 		
 		// Map the entire virtual memory space that Win32Emu uses
 		// We'll map in 1GB chunks to cover the typical address space
-		const long mapSize = 0x40000000; // 1GB
-		_unicorn.MemMap(0, mapSize, Common.UC_PROT_ALL);
-		
-		_logger.LogInformation("[UnicornCpu] Initialized Unicorn CPU backend");
+        // Map memory regions with appropriate permissions
+        // Replace the single 1GB UC_PROT_ALL mapping with per-region mappings
+        // Assume VirtualMemory exposes a Regions property: IEnumerable<MemoryRegion> Regions
+        // Each MemoryRegion has BaseAddress, Size, and Protection (or Type: Code/Data)
+        foreach (var region in _mem.Regions)
+        {
+            int prot;
+            // Example: region.Type is "Code" or "Data"
+            if (region.Type == MemoryRegionType.Code)
+                prot = Common.UC_PROT_READ | Common.UC_PROT_EXEC;
+            else // Data or other
+                prot = Common.UC_PROT_READ | Common.UC_PROT_WRITE;
+            _unicorn.MemMap(region.BaseAddress, region.Size, prot);
+        }
+        
+        _logger.LogInformation("[UnicornCpu] Initialized Unicorn CPU backend");
 	}
 
 	public void SetEip(uint eip)
