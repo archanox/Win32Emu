@@ -405,21 +405,29 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Cmovo:
 			case Mnemonic.Cmovp:
 			case Mnemonic.Cmovs:
-				_logger.LogDebug("[JitCpu] Stubbed conditional move: {Mnemonic}", insn.Mnemonic);
+				ExecConditionalMove(insn);
 				break;
 			
 			// Control flow
 			case Mnemonic.Retf:
+				ExecRetf(insn);
+				break;
 			case Mnemonic.Into:
-				_logger.LogDebug("[JitCpu] Stubbed control flow instruction: {Mnemonic}", insn.Mnemonic);
+				ExecInto();
 				break;
 			
 			// System instructions
 			case Mnemonic.Hlt:
+				ExecHlt();
+				break;
 			case Mnemonic.Bound:
+				ExecBound(insn);
+				break;
 			case Mnemonic.Enter:
+				ExecEnter(insn);
+				break;
 			case Mnemonic.Clts:
-				_logger.LogDebug("[JitCpu] Stubbed system instruction: {Mnemonic}", insn.Mnemonic);
+				ExecClts();
 				break;
 			
 			// Segment operations
@@ -428,8 +436,14 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Lfs:
 			case Mnemonic.Lgs:
 			case Mnemonic.Lss:
+				ExecLoadSegment(insn);
+				break;
 			case Mnemonic.Lar:
 			case Mnemonic.Lsl:
+			case Mnemonic.Verr:
+			case Mnemonic.Verw:
+				ExecSegmentCheck(insn);
+				break;
 			case Mnemonic.Lgdt:
 			case Mnemonic.Sgdt:
 			case Mnemonic.Lidt:
@@ -437,9 +451,7 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Lldt:
 			case Mnemonic.Ltr:
 			case Mnemonic.Str:
-			case Mnemonic.Verr:
-			case Mnemonic.Verw:
-				_logger.LogDebug("[JitCpu] Stubbed segment/descriptor instruction: {Mnemonic}", insn.Mnemonic);
+				ExecDescriptorTable(insn);
 				break;
 			
 			// Shift double
@@ -450,12 +462,12 @@ public class JitCpu : IAsyncCpu
 			
 			// String operations
 			case Mnemonic.Lodsw:
-				_logger.LogDebug("[JitCpu] Stubbed string instruction: {Mnemonic}", insn.Mnemonic);
+				ExecLodsw();
 				break;
 			
 			// I/O operations
 			case Mnemonic.Out:
-				_logger.LogDebug("[JitCpu] Stubbed I/O instruction: {Mnemonic}", insn.Mnemonic);
+				ExecOut(insn);
 				break;
 			
 			// FPU instructions (x87)
@@ -716,7 +728,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// Flag bit positions (same as IcedCpu)
-	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Of = 11;
+	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Df = 10, Of = 11;
 
 	// Flag helper methods
 	private bool GetFlag(int bit) => (_eflags & (1u << bit)) != 0;
@@ -964,6 +976,216 @@ public class JitCpu : IAsyncCpu
 		}
 		
 		SetOperandValue(insn, 0, dest);
+	}
+
+	// Conditional move implementation
+	private void ExecConditionalMove(Instruction insn)
+	{
+		bool condition = insn.Mnemonic switch
+		{
+			Mnemonic.Cmovae => !GetFlag(Cf),                               // Above or Equal (CF=0)
+			Mnemonic.Cmovle => GetFlag(Zf) || GetFlag(Sf) != GetFlag(Of), // Less or Equal (ZF=1 or SF!=OF)
+			Mnemonic.Cmovno => !GetFlag(Of),                               // Not Overflow (OF=0)
+			Mnemonic.Cmovnp => !GetFlag(Pf),                               // Not Parity (PF=0)
+			Mnemonic.Cmovns => !GetFlag(Sf),                               // Not Sign (SF=0)
+			Mnemonic.Cmovo => GetFlag(Of),                                 // Overflow (OF=1)
+			Mnemonic.Cmovp => GetFlag(Pf),                                 // Parity (PF=1)
+			Mnemonic.Cmovs => GetFlag(Sf),                                 // Sign (SF=1)
+			_ => false
+		};
+
+		if (condition)
+		{
+			uint src = GetOperandValue(insn, 1);
+			SetOperandValue(insn, 0, src);
+		}
+	}
+
+	// Control flow instructions
+	private void ExecRetf(Instruction insn)
+	{
+		// Far return - pop IP and CS from stack
+		_eip = _mem.Read32(_esp);
+		_esp += 4;
+		// In 32-bit protected mode, we ignore the segment (CS pop)
+		_esp += 4; // Skip CS
+		
+		// Handle stack cleanup parameter if present
+		if (insn.OpCount > 0 && insn.Op0Kind == OpKind.Immediate16)
+		{
+			_esp += (uint)insn.Immediate16;
+		}
+	}
+
+	private void ExecInto()
+	{
+		// INTO - Call interrupt 4 if overflow flag is set
+		if (GetFlag(Of))
+		{
+			// In a full implementation, this would trigger interrupt 4
+			// For now, we just log it
+			_logger.LogDebug("[JitCpu] INTO triggered with OF=1");
+		}
+	}
+
+	// System instructions
+	private void ExecHlt()
+	{
+		// HLT - Halt processor
+		// In emulation, this typically means we should stop or wait
+		_logger.LogDebug("[JitCpu] HLT instruction executed");
+		// In a real implementation, this might set a halted state
+	}
+
+	private void ExecBound(Instruction insn)
+	{
+		// BOUND - Check array bounds
+		// This instruction checks if a signed index is within bounds
+		// For now, we implement a simplified version that doesn't throw exceptions
+		int index = (int)GetOperandValue(insn, 0);
+		uint boundsAddr = CalcMemAddress(insn, 1);
+		int lowerBound = (int)_mem.Read32(boundsAddr);
+		int upperBound = (int)_mem.Read32(boundsAddr + 4);
+		
+		if (index < lowerBound || index > upperBound)
+		{
+			_logger.LogDebug("[JitCpu] BOUND check failed: index={0}, bounds=[{1}, {2}]", index, lowerBound, upperBound);
+			// In a real implementation, this would generate interrupt 5
+		}
+	}
+
+	private void ExecEnter(Instruction insn)
+	{
+		// ENTER - Make stack frame for procedure parameters
+		ushort allocSize = insn.Immediate16;
+		byte nestingLevel = insn.Immediate8_2nd;
+		
+		// Push EBP
+		_esp -= 4;
+		_mem.Write32(_esp, _ebp);
+		
+		uint frameTemp = _esp;
+		
+		// Create nested stack frames if nesting level > 0
+		if (nestingLevel > 0)
+		{
+			for (int i = 1; i < nestingLevel; i++)
+			{
+				_ebp -= 4;
+				uint temp = _mem.Read32(_ebp);
+				_esp -= 4;
+				_mem.Write32(_esp, temp);
+			}
+			_esp -= 4;
+			_mem.Write32(_esp, frameTemp);
+		}
+		
+		_ebp = frameTemp;
+		_esp -= allocSize;
+	}
+
+	private void ExecClts()
+	{
+		// CLTS - Clear Task-Switched Flag in CR0
+		// This is a privileged instruction used by operating systems
+		// In flat memory emulation, this is typically a no-op
+		_logger.LogDebug("[JitCpu] CLTS instruction executed (no-op in flat memory)");
+	}
+
+	// Segment operations
+	private void ExecLoadSegment(Instruction insn)
+	{
+		// LDS, LES, LFS, LGS, LSS - Load far pointer
+		// In 32-bit protected mode flat memory, segment registers are typically not used
+		// We load the offset but ignore the segment selector
+		uint addr = CalcMemAddress(insn, 1);
+		uint offset = _mem.Read32(addr);
+		// uint segment = _mem.Read16(addr + 4); // Ignored in flat memory
+		
+		SetOperandValue(insn, 0, offset);
+		_logger.LogDebug("[JitCpu] Load segment instruction: {0}", insn.Mnemonic);
+	}
+
+	private void ExecSegmentCheck(Instruction insn)
+	{
+		// LAR, LSL, VERR, VERW - Segment descriptor checks
+		// In flat memory model, these are simplified
+		switch (insn.Mnemonic)
+		{
+			case Mnemonic.Lar: // Load Access Rights
+			case Mnemonic.Lsl: // Load Segment Limit
+				// Return success values for flat memory model
+				SetOperandValue(insn, 0, 0xFFFFFFFF);
+				SetFlag(Zf); // ZF=1 indicates success
+				break;
+			case Mnemonic.Verr: // Verify Read
+			case Mnemonic.Verw: // Verify Write
+				// In flat memory, all segments are readable/writable
+				SetFlag(Zf); // ZF=1 indicates segment is accessible
+				break;
+		}
+	}
+
+	private void ExecDescriptorTable(Instruction insn)
+	{
+		// LGDT, SGDT, LIDT, SIDT, LLDT, LTR, STR - Descriptor table operations
+		// These are privileged instructions for protected mode
+		// In flat memory emulation, these are typically no-ops or simplified
+		_logger.LogDebug("[JitCpu] Descriptor table instruction: {0} (simplified in flat memory)", insn.Mnemonic);
+		
+		// For store operations (SGDT, SIDT, STR), we could write dummy values
+		// For load operations (LGDT, LIDT, LLDT, LTR), we accept but ignore
+	}
+
+	// String operations
+	private void ExecLodsw()
+	{
+		// LODSW - Load word from [ESI] into AX
+		ushort value = _mem.Read16(_esi);
+		_eax = (_eax & 0xFFFF0000) | value;
+		
+		// Update ESI based on direction flag
+		if (GetFlag(Df))
+			_esi -= 2; // Decrement for backward
+		else
+			_esi += 2; // Increment for forward
+	}
+
+	// I/O operations
+	private void ExecOut(Instruction insn)
+	{
+		// OUT - Output to port
+		// In emulation, I/O ports are typically not directly accessed
+		uint port;
+		uint value;
+		
+		if (insn.Op0Kind == OpKind.Immediate8)
+		{
+			port = insn.Immediate8;
+		}
+		else
+		{
+			port = _edx & 0xFFFF;
+		}
+		
+		// Value is always from AL, AX, or EAX depending on size
+		if (insn.Op1Kind == OpKind.Register)
+		{
+			var reg = insn.Op1Register;
+			if (reg == Register.AL)
+				value = _eax & 0xFF;
+			else if (reg == Register.AX)
+				value = _eax & 0xFFFF;
+			else
+				value = _eax;
+		}
+		else
+		{
+			value = _eax & 0xFF; // Default to AL
+		}
+		
+		_logger.LogDebug("[JitCpu] OUT port 0x{0:X}, value 0x{1:X}", port, value);
+		// In a full emulator, this would call an I/O handler
 	}
 
 	// Helper methods for operand access
