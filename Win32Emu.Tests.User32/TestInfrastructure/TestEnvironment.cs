@@ -29,7 +29,7 @@ public class TestEnvironment : IDisposable
         Memory = new VirtualMemory();
         Cpu = new MockCpu();
         ProcessEnv = new ProcessEnvironment(Memory, logger: NullLogger.Instance);
-        PeLoader = new PeImageLoader(Memory);
+        PeLoader = new PeImageLoader(Memory, NullLogger.Instance);
         User32 = new User32Module(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
         Gdi32 = new Gdi32Module(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
         DDraw = new DDrawModule(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
@@ -46,7 +46,7 @@ public class TestEnvironment : IDisposable
         Memory = new VirtualMemory();
         Cpu = new MockCpu();
         ProcessEnv = new ProcessEnvironment(Memory, host: host, logger: NullLogger.Instance);
-        PeLoader = new PeImageLoader(Memory);
+        PeLoader = new PeImageLoader(Memory, NullLogger.Instance);
         User32 = new User32Module(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
         Gdi32 = new Gdi32Module(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
         DDraw = new DDrawModule(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);

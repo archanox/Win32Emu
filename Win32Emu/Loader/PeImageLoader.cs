@@ -2,6 +2,7 @@ using AsmResolver;
 using AsmResolver.PE;
 using AsmResolver.PE.Exports;
 using AsmResolver.PE.File;
+using Microsoft.Extensions.Logging;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Loader;
@@ -10,7 +11,7 @@ namespace Win32Emu.Loader;
 /// PE loader using a single PEImage load. Maps section raw data and replaces IAT entries with synthetic
 /// addresses for interception via an import map. Relocations not yet handled.
 /// </summary>
-public class PeImageLoader(VirtualMemory vm)
+public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 {
 	/// <summary>
 	/// Validates if a file is a valid PE32 executable by parsing the PE structure (and may map sections into memory).
@@ -66,7 +67,17 @@ public class PeImageLoader(VirtualMemory vm)
 				continue;
 			}
 
-			vm.WriteBytes(imageBase + section.Rva, section.Contents.WriteIntoArray());
+			try
+			{
+				vm.WriteBytes(imageBase + section.Rva, section.Contents.WriteIntoArray());
+			}
+			catch (Exception ex) when (ex is System.IO.EndOfStreamException or ArgumentException)
+			{
+				// Skip corrupted sections that extend beyond file boundaries
+				// This can happen with malformed PE files where section headers indicate
+				// sizes that don't match actual file data
+				logger?.LogWarning($"Skipping corrupted section at RVA 0x{section.Rva:X8}: {ex.Message}");
+			}
 		}
 
 		var importMap = BuildImportMap(image, imageBase);
