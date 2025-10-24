@@ -7,12 +7,19 @@ namespace Win32Emu.Tests.Gui;
 
 public class DialogWindowTests
 {
+    // Win32 Window Styles and Button Styles constants
+    private const uint WS_DISABLED = 0x08000000;
+    private const uint BS_PUSHBUTTON = 0x00000000;
+    private const uint BS_DEFPUSHBUTTON = 0x00000001;
+    private const uint BS_CHECKBOX = 0x00000002;
+    private const uint BS_RADIOBUTTON = 0x00000004;
+    private const uint ES_LEFT = 0x0000;
+    private const uint SS_LEFT = 0x00000000;
+
     [AvaloniaFact]
     public void Button_WithWS_DISABLED_ShouldBeDisabled()
     {
         // Arrange
-        const uint WS_DISABLED = 0x08000000;
-        const uint BS_PUSHBUTTON = 0x00000000;
         
         var template = new DialogTemplate
         {
@@ -49,8 +56,6 @@ public class DialogWindowTests
     public void Button_WithoutWS_DISABLED_ShouldBeEnabled()
     {
         // Arrange
-        const uint BS_PUSHBUTTON = 0x00000000;
-        
         var template = new DialogTemplate
         {
             Title = "Test Dialog",
@@ -86,9 +91,6 @@ public class DialogWindowTests
     public void CheckBox_WithWS_DISABLED_ShouldBeDisabled()
     {
         // Arrange
-        const uint WS_DISABLED = 0x08000000;
-        const uint BS_CHECKBOX = 0x00000002;
-        
         var template = new DialogTemplate
         {
             Title = "Test Dialog",
@@ -124,8 +126,6 @@ public class DialogWindowTests
     public void CheckBox_WithoutWS_DISABLED_ShouldBeEnabled()
     {
         // Arrange
-        const uint BS_CHECKBOX = 0x00000002;
-        
         var template = new DialogTemplate
         {
             Title = "Test Dialog",
@@ -161,9 +161,6 @@ public class DialogWindowTests
     public void RadioButton_WithWS_DISABLED_ShouldBeDisabled()
     {
         // Arrange
-        const uint WS_DISABLED = 0x08000000;
-        const uint BS_RADIOBUTTON = 0x00000004;
-        
         var template = new DialogTemplate
         {
             Title = "Test Dialog",
@@ -199,8 +196,6 @@ public class DialogWindowTests
     public void RadioButton_WithoutWS_DISABLED_ShouldBeEnabled()
     {
         // Arrange
-        const uint BS_RADIOBUTTON = 0x00000004;
-        
         var template = new DialogTemplate
         {
             Title = "Test Dialog",
@@ -236,9 +231,6 @@ public class DialogWindowTests
     public void TextBox_WithWS_DISABLED_ShouldBeDisabled()
     {
         // Arrange
-        const uint WS_DISABLED = 0x08000000;
-        const uint ES_LEFT = 0x0000;
-        
         var template = new DialogTemplate
         {
             Title = "Test Dialog",
@@ -274,8 +266,6 @@ public class DialogWindowTests
     public void TextBox_WithoutWS_DISABLED_ShouldBeEnabled()
     {
         // Arrange
-        const uint ES_LEFT = 0x0000;
-        
         var template = new DialogTemplate
         {
             Title = "Test Dialog",
@@ -311,8 +301,6 @@ public class DialogWindowTests
     public void DefaultPushButton_ShouldHaveIsDefaultTrue()
     {
         // Arrange
-        const uint BS_DEFPUSHBUTTON = 0x00000001;
-        
         var template = new DialogTemplate
         {
             Title = "Test Dialog",
@@ -348,10 +336,6 @@ public class DialogWindowTests
     public void MultipleControls_WithMixedDisabledStates_ShouldRespectIndividualStates()
     {
         // Arrange
-        const uint WS_DISABLED = 0x08000000;
-        const uint BS_PUSHBUTTON = 0x00000000;
-        const uint BS_CHECKBOX = 0x00000002;
-        
         var template = new DialogTemplate
         {
             Title = "Test Dialog",
@@ -431,8 +415,6 @@ public class DialogWindowTests
     public void StaticText_ShouldBeCreatedCorrectly()
     {
         // Arrange
-        const uint SS_LEFT = 0x00000000;
-        
         var template = new DialogTemplate
         {
             Title = "Test Dialog",
