@@ -22,16 +22,17 @@ public class DialogService
 	/// </summary>
 	/// <param name="dialogHandle">Handle for the dialog (from Win32 emulator)</param>
 	/// <param name="template">Parsed dialog template</param>
+	/// <param name="controlHandles">Optional dictionary mapping control IDs to window handles</param>
 	/// <param name="parentWindow">Parent window for modal display</param>
 	/// <returns>Task that completes when dialog is closed, with the dialog result</returns>
-	public async Task<int> ShowDialogAsync(uint dialogHandle, DialogTemplate template, Avalonia.Controls.Window? parentWindow = null)
+	public async Task<int> ShowDialogAsync(uint dialogHandle, DialogTemplate template, Dictionary<ushort, uint>? controlHandles = null, Avalonia.Controls.Window? parentWindow = null)
 	{
 		DialogWindow? dialog = null;
 
 		// Create dialog on UI thread
 		await Dispatcher.UIThread.InvokeAsync(() =>
 		{
-			dialog = new DialogWindow(template, dialogHandle, null, (hwnd, msg, wParam, lParam) =>
+			dialog = new DialogWindow(template, dialogHandle, controlHandles, (hwnd, msg, wParam, lParam) =>
 			{
 				// Queue message for processing by emulator
 				EnqueueMessage(dialogHandle, new DialogMessage
