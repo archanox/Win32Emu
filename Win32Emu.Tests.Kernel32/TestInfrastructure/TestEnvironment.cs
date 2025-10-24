@@ -27,7 +27,7 @@ public class TestEnvironment : IDisposable
         Memory = new VirtualMemory();
         Cpu = new MockCpu();
         ProcessEnv = new ProcessEnvironment(Memory, logger: NullLogger.Instance);
-        PeLoader = new PeImageLoader(Memory);
+        PeLoader = new PeImageLoader(Memory, NullLogger.Instance);
         
         // Create dispatcher and register modules
         Dispatcher = new Win32Dispatcher(NullLogger.Instance);
