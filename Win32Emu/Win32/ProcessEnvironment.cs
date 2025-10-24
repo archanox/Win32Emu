@@ -1682,7 +1682,7 @@ public class ProcessEnvironment
 	/// <summary>
 	/// Stores control information for a dialog.
 	/// </summary>
-	public void StoreControlInfo(uint hDlg, ushort controlId, uint controlHandle, Win32.DialogItem controlInfo)
+	public void StoreControlInfo(uint hDlg, int controlId, uint controlHandle, Win32.DialogItem controlInfo)
 	{
 		if (_dialogStates.TryGetValue(hDlg, out var state))
 		{

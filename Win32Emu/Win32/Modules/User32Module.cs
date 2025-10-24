@@ -2042,7 +2042,7 @@ namespace Win32Emu.Win32.Modules
 				_env.InitializeDialogState(hDlg);
 
 				// Create window handles for each control in the dialog
-				var controlHandles = new Dictionary<ushort, uint>();
+				var controlHandles = new Dictionary<int, uint>();
 				foreach (var item in template.Items)
 				{
 					var controlHandle = _env.RegisterHandle(new object());
