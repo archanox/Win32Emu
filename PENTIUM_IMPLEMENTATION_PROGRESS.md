@@ -4,6 +4,94 @@
 
 This document tracks the implementation progress of Pentium CPU instructions in the JIT CPU backend.
 
+## Phase 2: Additional Common Instructions (COMPLETE)
+
+### Conditional Moves (8/8 implemented) ✅
+All additional conditional move instructions are now functional:
+
+- **CMOVAE** (Move if Above or Equal) - CF=0
+- **CMOVLE** (Move if Less or Equal) - ZF=1 or SF!=OF
+- **CMOVNO** (Move if Not Overflow) - OF=0
+- **CMOVNP** (Move if Not Parity) - PF=0
+- **CMOVNS** (Move if Not Sign) - SF=0
+- **CMOVO** (Move if Overflow) - OF=1
+- **CMOVP** (Move if Parity) - PF=1
+- **CMOVS** (Move if Sign) - SF=1
+
+**Implementation Details:**
+- Proper EFLAGS checking for each condition
+- Conditional execution - only moves if condition is true
+- Support for register and memory operands
+
+### System Instructions (4/4 implemented) ✅
+Privileged and system-level instructions:
+
+- **HLT** (Halt Processor) - Stop execution
+- **BOUND** (Check Array Bounds) - Validate array index
+- **ENTER** (Make Stack Frame) - Create procedure frame with nesting
+- **CLTS** (Clear Task-Switched Flag) - Clear CR0.TS (no-op in flat memory)
+
+**Implementation Details:**
+- HLT logs halt state
+- BOUND checks array bounds and logs violations
+- ENTER creates nested stack frames with proper EBP/ESP management
+- CLTS is a no-op in flat memory model
+
+### Control Flow (2/2 implemented) ✅
+Additional control transfer instructions:
+
+- **RETF** (Far Return) - Return from far procedure
+- **INTO** (Interrupt on Overflow) - Call INT 4 if OF=1
+
+**Implementation Details:**
+- RETF pops EIP and CS, adjusts for optional stack cleanup
+- INTO checks overflow flag and logs if triggered
+- Flat memory model simplifications
+
+### String Operations (1/1 implemented) ✅
+Word-sized string operation:
+
+- **LODSW** (Load String Word) - Load word from [ESI] to AX
+
+**Implementation Details:**
+- Loads 16-bit value from memory
+- Updates ESI based on direction flag (DF)
+- Proper forward/backward direction handling
+
+### I/O Operations (1/1 implemented) ✅
+Port output instruction:
+
+- **OUT** (Output to Port) - Write to I/O port
+
+**Implementation Details:**
+- Supports immediate and DX port addressing
+- Handles AL, AX, EAX output sizes
+- Logs I/O operations for debugging
+
+### Segment Operations (15/15 implemented) ✅
+Segment and descriptor table operations:
+
+**Load Segment Instructions:**
+- **LDS, LES, LFS, LGS, LSS** - Load far pointers (5 instructions)
+
+**Segment Checks:**
+- **LAR** (Load Access Rights) - Load segment access rights
+- **LSL** (Load Segment Limit) - Load segment limit
+- **VERR** (Verify Read) - Verify segment is readable
+- **VERW** (Verify Write) - Verify segment is writable
+
+**Descriptor Tables:**
+- **LGDT, SGDT** (Load/Store GDT) - Global Descriptor Table operations
+- **LIDT, SIDT** (Load/Store IDT) - Interrupt Descriptor Table operations
+- **LLDT** (Load LDT) - Local Descriptor Table
+- **LTR, STR** (Load/Store Task Register) - Task register operations
+
+**Implementation Details:**
+- Flat memory model simplifications
+- Load segment instructions extract offset, ignore segment selector
+- Segment checks always succeed (ZF=1)
+- Descriptor table operations are no-ops with logging
+
 ## Phase 1: High-Priority Instructions (COMPLETE)
 
 ### Conditional Jumps (18/18 implemented) ✅
@@ -94,7 +182,7 @@ Original tests verifying stub recognition:
 - Basic instructions (NOP, INT3)
 - CALL/RET functionality
 
-### Implementation Tests (8/11 passing)
+### Implementation Tests (17/20 passing)
 New tests for implemented functionality:
 - ✅ Conditional jump JE when zero
 - ✅ Conditional jump JE when not zero  
@@ -108,23 +196,21 @@ New tests for implemented functionality:
 - ❌ SHLD - test setup issue
 - ❌ SHRD - test setup issue
 
+### Phase 2 Tests (9/9 passing) ✅
+Tests for Phase 2 implementations:
+- ✅ CMOVAE when carry clear
+- ✅ CMOVAE when carry set (no move)
+- ✅ CMOVO when overflow set
+- ✅ LODSW with forward direction
+- ✅ LODSW with backward direction (DF=1)
+- ✅ RETF stack operations
+- ✅ INTO overflow check
+- ✅ HLT execution
+- ✅ ENTER stack frame creation
+
 **Note:** The 3 failing tests are due to test opcode setup issues, not implementation bugs. The core logic is correct.
 
-## Phase 2: Remaining Instructions (TODO)
-
-### Conditional Moves (8 instructions)
-- CMOVAE, CMOVLE, CMOVNO, CMOVNP, CMOVNS, CMOVO, CMOVP, CMOVS
-
-### System Instructions (7 instructions)
-- HLT, BOUND, ENTER, CLTS, RETF, INTO, OUT
-
-### Segment Operations (15 instructions)
-- LDS, LES, LFS, LGS, LSS, LAR, LSL
-- LGDT, SGDT, LIDT, SIDT, LLDT, LTR, STR
-- VERR, VERW
-
-### String Operations (1 instruction)
-- LODSW
+## Phase 3: Remaining Instructions (TODO)
 
 ### FPU Instructions (39 instructions)
 Priority subset to implement:
@@ -146,40 +232,51 @@ Basic subset to implement:
 
 - **Total Pentium instructions**: 322
 - **Previously stubbed**: 318 (98.8%)
-- **Now implemented**: 29 (9.0%)
-- **Remaining stubbed**: 289 (89.8%)
-- **Test pass rate**: 26/29 (89.7%)
+- **Phase 1 implemented**: 29 (9.0%)
+- **Phase 2 implemented**: 31 (9.6%)
+- **Total implemented**: 60 (18.6%)
+- **Remaining stubbed**: 262 (81.4%)
+- **Test pass rate**: 35/38 (92.1%)
 
 ## Files Modified
 
 1. **Win32Emu/Cpu/Jit/JitCpu.cs**
-   - Added 500+ lines of implementation code
+   - Added 500+ lines of Phase 1 implementation code
+   - Added 200+ lines of Phase 2 implementation code
    - Flag manipulation infrastructure
    - Operand access infrastructure
-   - 4 instruction category implementations
+   - 10 instruction category implementations (Phase 1 + Phase 2)
 
 2. **Win32Emu.Tests.Emulator/PentiumStubTests.cs**
    - 10 tests for stub recognition
 
-3. **Win32Emu.Tests.Emulator/PentiumImplementationTests.cs** (NEW)
-   - 11 tests for implemented instructions
+3. **Win32Emu.Tests.Emulator/PentiumImplementationTests.cs**
+   - 11 tests for Phase 1 implemented instructions
    - 8 passing, 3 with test setup issues
 
-4. **PENTIUM_JIT_STUBS.md**
+4. **Win32Emu.Tests.Emulator/PentiumPhase2Tests.cs** (NEW)
+   - 9 tests for Phase 2 implemented instructions
+   - All 9 passing
+
+5. **PENTIUM_JIT_STUBS.md**
    - Comprehensive documentation of all stubbed instructions
    - Implementation patterns and priorities
+
+6. **PENTIUM_IMPLEMENTATION_PROGRESS.md**
+   - Updated with Phase 2 completion status
+   - Detailed statistics and next steps
 
 ## Next Steps
 
 1. Fix the 3 failing tests (BTS, SHLD, SHRD) - investigate opcode setup
-2. Implement conditional moves (CMOV* - 8 instructions)
-3. Implement system instructions (HLT, ENTER, etc. - 7 instructions)
-4. Implement priority FPU instructions subset (10-15 instructions)
-5. Implement MMX basic subset (10-15 instructions)
-6. Progressively implement remaining instructions as needed
+2. Implement priority FPU instructions subset (10-15 instructions)
+3. Implement MMX basic subset (10-15 instructions)
+4. Progressively implement remaining instructions as needed
 
 ## Commit History
 
 - `98ca28f` - Add comprehensive documentation for Pentium CPU instruction stubs
 - `755e6e0` - Add stub implementations for all Pentium CPU mnemonics in JitCpu
 - `269c8c3` - Implement conditional jumps, bit scans, BCD arithmetic, and double shifts in JitCpu
+- `0883312` - Add implementation progress tracking document
+- `[current]` - Implement Phase 2: conditional moves, system instructions, I/O, string ops, segment ops (31 more instructions)
