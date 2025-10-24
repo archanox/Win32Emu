@@ -1420,7 +1420,7 @@ public class IcedCpu : IAsyncCpu
 		}
 
 		WriteOp(insn, 0, r);
-		UpdateLogicResultFlags(r);
+		// Note: Rotate instructions only affect CF and OF flags, not ZF, SF, PF
 	}
 
 	private void ExecNot(Instruction insn)
