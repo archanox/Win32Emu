@@ -8,9 +8,10 @@ This PR successfully implements a UI setting for selecting the CPU emulation bac
 
 ### User-Facing Features
 - New dropdown menu in Settings to select CPU backend
-- Two options available:
+- Three options available:
   - **IcedCPU** (Default) - Stable, feature-complete interpreter
   - **JitCPU** (Experimental) - JIT compiler with async support
+  - **Unicorn** (Reference) - Reference implementation for testing and validation
 - Settings automatically saved when changed
 - Clear descriptive text explaining each option
 - Setting persists across application restarts
