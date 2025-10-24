@@ -249,11 +249,10 @@ dotnet test --filter "FullyQualifiedName~MessageDispatcherTests"
 
 ## Future Enhancements
 
-1. **Async Handlers** - Support for async message processing
-2. **Handler Priority** - Control handler execution order
-3. **Message Filters** - Filter messages before dispatching
-4. **Handler Cancellation** - Allow handlers to stop propagation
-5. **Performance Metrics** - Built-in timing and profiling
+1. **Handler Priority** - Control handler execution order
+2. **Message Filters** - Filter messages before dispatching
+3. **Handler Cancellation** - Allow handlers to stop propagation
+4. **Performance Metrics** - Built-in timing and profiling
 
 ## Example: Complete Integration
 
