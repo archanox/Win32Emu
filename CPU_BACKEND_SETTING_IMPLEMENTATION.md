@@ -28,10 +28,15 @@ This implementation adds a new UI setting that allows users to select which CPU 
 - **Use Case**: Experimental performance testing
 
 ### Unicorn CPU
-- **Type**: Reference emulator (testing only)
-- **Status**: Not available as a runtime option
-- **Purpose**: Used only for CPU instruction conformance testing
-- **Note**: Not included in UI options
+- **Type**: Reference emulator
+- **Status**: Available for testing and validation
+- **Purpose**: QEMU-based CPU emulation engine for conformance testing and validation
+- **Features**:
+  - Complete x86 instruction set via QEMU's TCG
+  - Useful for debugging and verification
+  - Reference implementation for testing
+- **Performance**: Slower than IcedCPU, not optimized for production use
+- **Use Case**: Testing, validation, and debugging purposes
 
 ## UI Changes
 
@@ -50,14 +55,16 @@ The CPU Backend setting is located in the Settings panel between:
 │ Select the CPU emulation backend.      │
 │ IcedCPU is the stable interpreter      │
 │ (default). JitCPU is the experimental  │
-│ JIT compiler with async support for    │
-│ better performance.                     │
+│ JIT compiler with async support.       │
+│ Unicorn is a reference implementation  │
+│ for testing and validation.            │
 └─────────────────────────────────────────┘
 ```
 
 ### Dropdown Options
 1. **IcedCPU** - Default, stable interpreter
 2. **JitCPU** - Experimental JIT compiler
+3. **Unicorn** - Reference implementation for testing and validation
 
 ## Technical Implementation
 

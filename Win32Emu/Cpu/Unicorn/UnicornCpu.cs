@@ -18,6 +18,9 @@ public class UnicornCpu : IAsyncCpu
 	
 	// Track current register state
 	private uint _eip;
+	
+	// Maximum size for memory synchronization chunks to prevent excessive memory copies
+	private const int MaxSyncChunkSize = 0x100000; // 1MB
 
 	public UnicornCpu(VirtualMemory mem, ILogger? logger = null)
 	{
@@ -29,22 +32,10 @@ public class UnicornCpu : IAsyncCpu
 		
 		// Map the entire virtual memory space that Win32Emu uses
 		// We'll map in 1GB chunks to cover the typical address space
-        // Map memory regions with appropriate permissions
-        // Replace the single 1GB UC_PROT_ALL mapping with per-region mappings
-        // Assume VirtualMemory exposes a Regions property: IEnumerable<MemoryRegion> Regions
-        // Each MemoryRegion has BaseAddress, Size, and Protection (or Type: Code/Data)
-        foreach (var region in _mem.Regions)
-        {
-            int prot;
-            // Example: region.Type is "Code" or "Data"
-            if (region.Type == MemoryRegionType.Code)
-                prot = Common.UC_PROT_READ | Common.UC_PROT_EXEC;
-            else // Data or other
-                prot = Common.UC_PROT_READ | Common.UC_PROT_WRITE;
-            _unicorn.MemMap(region.BaseAddress, region.Size, prot);
-        }
-        
-        _logger.LogInformation("[UnicornCpu] Initialized Unicorn CPU backend");
+		const long mapSize = 0x40000000; // 1GB
+		_unicorn.MemMap(0, mapSize, Common.UC_PROT_ALL);
+		
+		_logger.LogInformation("[UnicornCpu] Initialized Unicorn CPU backend");
 	}
 
 	public void SetEip(uint eip)
@@ -179,7 +170,7 @@ public class UnicornCpu : IAsyncCpu
 	{
 		try
 		{
-			var size = Math.Min((int)(endAddr - startAddr), 0x100000); // Limit to 1MB chunks
+			var size = Math.Min((int)(endAddr - startAddr), MaxSyncChunkSize);
 			var buffer = new byte[size];
 			
 			// Read from Win32Emu memory
@@ -191,9 +182,11 @@ public class UnicornCpu : IAsyncCpu
 			// Write to Unicorn memory
 			_unicorn.MemWrite(startAddr, buffer);
 		}
-		catch
+		catch (Exception ex)
 		{
-			// Ignore memory sync errors - regions may not be mapped
+			// Log memory sync errors at debug level - regions may not be mapped yet
+			_logger.LogDebug(ex, "[UnicornCpu] Failed to sync memory region 0x{Start:X8}-0x{End:X8}: {Message}", 
+				startAddr, endAddr, ex.Message);
 		}
 	}
 
@@ -201,7 +194,7 @@ public class UnicornCpu : IAsyncCpu
 	{
 		try
 		{
-			var size = Math.Min((int)(endAddr - startAddr), 0x100000); // Limit to 1MB chunks
+			var size = Math.Min((int)(endAddr - startAddr), MaxSyncChunkSize);
 			var buffer = new byte[size];
 			_unicorn.MemRead(startAddr, buffer);
 			
@@ -211,9 +204,11 @@ public class UnicornCpu : IAsyncCpu
 				_mem.Write8(startAddr + (uint)i, buffer[i]);
 			}
 		}
-		catch
+		catch (Exception ex)
 		{
-			// Ignore memory sync errors
+			// Log memory sync errors at debug level - regions may not be mapped yet
+			_logger.LogDebug(ex, "[UnicornCpu] Failed to sync memory region from Unicorn 0x{Start:X8}-0x{End:X8}: {Message}", 
+				startAddr, endAddr, ex.Message);
 		}
 	}
 
