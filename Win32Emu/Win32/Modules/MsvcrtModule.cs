@@ -21,7 +21,7 @@ namespace Win32Emu.Win32.Modules
 			_logger = logger ?? NullLogger.Instance;
 		}
 
-		public string Name => "msvcrt.dll";
+		public string Name => "MSVCRT.DLL";
 
 		public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{

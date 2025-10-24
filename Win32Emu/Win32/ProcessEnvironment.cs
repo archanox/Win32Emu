@@ -175,6 +175,7 @@ public class ProcessEnvironment
 	public IInputBackend? InputBackend { get; set; }
 
 	public uint CommandLinePtr { get; private set; }
+	public uint CommandLinePtrW { get; set; }
 	public uint ModuleFileNamePtr { get; private set; }
 	public uint ModuleFileNameLength { get; private set; }
 	public bool ExitRequested { get; private set; }
@@ -432,6 +433,28 @@ public class ProcessEnvironment
 
 		var result = Encoding.ASCII.GetString(buf);
 		_logger.LogDebug("[ProcessEnv] ReadAnsiString addr=0x{Addr:X8} length={MaxLength} result='{Result}'", addr, maxLength, result);
+		return result;
+	}
+
+	public string ReadUnicodeString(uint addr)
+	{
+		var bytes = new List<byte>();
+		var i = 0u;
+		while (true)
+		{
+			var b1 = Memory.Read8(addr + i);
+			var b2 = Memory.Read8(addr + i + 1);
+			if (b1 == 0 && b2 == 0)
+			{
+				break;
+			}
+			bytes.Add(b1);
+			bytes.Add(b2);
+			i += 2;
+		}
+		
+		var result = Encoding.Unicode.GetString(bytes.ToArray());
+		_logger.LogDebug("[ProcessEnv] ReadUnicodeString addr=0x{Addr:X8} result='{Result}'", addr, result);
 		return result;
 	}
 
