@@ -27,7 +27,6 @@ public class GuiMessageDispatcherIntegration
 		{
 			await Task.Run(() =>
 			{
-				// Paint handling can be done in background
 				LogDebug($"Async paint handler for window 0x{msg.Hwnd:X8}");
 			}, ct);
 			return 0;
@@ -57,14 +56,14 @@ public class GuiMessageDispatcherIntegration
 			return 0;
 		});
 
-		// Register async handler for mouse events
+		// Register async handlers for mouse events
 		_env.MessageDispatcher.RegisterAsyncHandler(WM.LBUTTONDOWN, async (msg, ct) =>
 		{
 			if (msg is LButtonDownMessage mouseMsg)
 			{
 				await Task.Run(() =>
 				{
-					LogDebug($"Async mouse down at ({mouseMsg.X}, {mouseMsg.Y}) on window 0x{msg.Hwnd:X8}");
+					LogDebug($"Async left mouse down at ({mouseMsg.X}, {mouseMsg.Y}) on window 0x{msg.Hwnd:X8}");
 				}, ct);
 			}
 			return 0;
@@ -76,13 +75,49 @@ public class GuiMessageDispatcherIntegration
 			{
 				await Task.Run(() =>
 				{
-					LogDebug($"Async mouse up at ({mouseMsg.X}, {mouseMsg.Y}) on window 0x{msg.Hwnd:X8}");
+					LogDebug($"Async left mouse up at ({mouseMsg.X}, {mouseMsg.Y}) on window 0x{msg.Hwnd:X8}");
 				}, ct);
 			}
 			return 0;
 		});
 
-		// Register async handler for keyboard events
+		_env.MessageDispatcher.RegisterAsyncHandler(WM.RBUTTONDOWN, async (msg, ct) =>
+		{
+			if (msg is RButtonDownMessage mouseMsg)
+			{
+				await Task.Run(() =>
+				{
+					LogDebug($"Async right mouse down at ({mouseMsg.X}, {mouseMsg.Y}) on window 0x{msg.Hwnd:X8}");
+				}, ct);
+			}
+			return 0;
+		});
+
+		_env.MessageDispatcher.RegisterAsyncHandler(WM.RBUTTONUP, async (msg, ct) =>
+		{
+			if (msg is RButtonUpMessage mouseMsg)
+			{
+				await Task.Run(() =>
+				{
+					LogDebug($"Async right mouse up at ({mouseMsg.X}, {mouseMsg.Y}) on window 0x{msg.Hwnd:X8}");
+				}, ct);
+			}
+			return 0;
+		});
+
+		_env.MessageDispatcher.RegisterAsyncHandler(WM.MOUSEMOVE, async (msg, ct) =>
+		{
+			if (msg is MouseMoveMessage mouseMsg)
+			{
+				await Task.Run(() =>
+				{
+					LogDebug($"Async mouse move at ({mouseMsg.X}, {mouseMsg.Y}) on window 0x{msg.Hwnd:X8}");
+				}, ct);
+			}
+			return 0;
+		});
+
+		// Register async handlers for keyboard events
 		_env.MessageDispatcher.RegisterAsyncHandler(WM.KEYDOWN, async (msg, ct) =>
 		{
 			if (msg is KeyDownMessage keyMsg)
@@ -95,7 +130,68 @@ public class GuiMessageDispatcherIntegration
 			return 0;
 		});
 
-		LogInfo("Registered default async message handlers for GUI integration");
+		_env.MessageDispatcher.RegisterAsyncHandler(WM.KEYUP, async (msg, ct) =>
+		{
+			if (msg is KeyUpMessage keyMsg)
+			{
+				await Task.Run(() =>
+				{
+					LogDebug($"Async key up: VK={keyMsg.VirtualKeyCode} on window 0x{msg.Hwnd:X8}");
+				}, ct);
+			}
+			return 0;
+		});
+
+		_env.MessageDispatcher.RegisterAsyncHandler(WM.CHAR, async (msg, ct) =>
+		{
+			if (msg is CharMessage charMsg)
+			{
+				await Task.Run(() =>
+				{
+					LogDebug($"Async char: code={charMsg.CharCode} on window 0x{msg.Hwnd:X8}");
+				}, ct);
+			}
+			return 0;
+		});
+
+		// Register async handlers for window state changes
+		_env.MessageDispatcher.RegisterAsyncHandler(WM.MOVE, async (msg, ct) =>
+		{
+			if (msg is MoveMessage moveMsg)
+			{
+				await Task.Run(() =>
+				{
+					LogDebug($"Async window move to ({moveMsg.X}, {moveMsg.Y}) for window 0x{msg.Hwnd:X8}");
+				}, ct);
+			}
+			return 0;
+		});
+
+		_env.MessageDispatcher.RegisterAsyncHandler(WM.SIZE, async (msg, ct) =>
+		{
+			if (msg is SizeMessage sizeMsg)
+			{
+				await Task.Run(() =>
+				{
+					LogDebug($"Async window resize to {sizeMsg.Width}x{sizeMsg.Height} for window 0x{msg.Hwnd:X8}");
+				}, ct);
+			}
+			return 0;
+		});
+
+		_env.MessageDispatcher.RegisterAsyncHandler(WM.ACTIVATE, async (msg, ct) =>
+		{
+			if (msg is ActivateMessage activateMsg)
+			{
+				await Task.Run(() =>
+				{
+					LogDebug($"Async window activate: flag={activateMsg.ActiveFlag} for window 0x{msg.Hwnd:X8}");
+				}, ct);
+			}
+			return 0;
+		});
+
+		LogInfo("Registered default async message handlers for GUI integration (PAINT, CLOSE, COMMAND, MOUSE, KEYBOARD, WINDOW STATE)");
 	}
 
 	/// <summary>
