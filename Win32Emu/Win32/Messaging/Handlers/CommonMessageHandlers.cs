@@ -4,9 +4,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Win32Emu.Win32.Messaging.Handlers;
 
 /// <summary>
-/// Handles WM_PAINT messages
+/// Handles WM_PAINT messages asynchronously
 /// </summary>
-public class PaintMessageHandler : IMessageHandler<PaintMessage>
+public class PaintMessageHandler : IAsyncMessageHandler<PaintMessage>
 {
 	private readonly ProcessEnvironment _env;
 	private readonly ILogger _logger;
@@ -17,25 +17,29 @@ public class PaintMessageHandler : IMessageHandler<PaintMessage>
 		_logger = logger ?? NullLogger.Instance;
 	}
 
-	public uint Handle(PaintMessage message)
+	public async Task<uint> HandleAsync(PaintMessage message, CancellationToken cancellationToken = default)
 	{
-		_logger.LogDebug("[PaintMessageHandler] Handling WM_PAINT for window 0x{Hwnd:X8}", message.Hwnd);
+		await Task.Run(() =>
+		{
+			_logger.LogDebug("[PaintMessageHandler] Handling WM_PAINT for window 0x{Hwnd:X8}", message.Hwnd);
+			
+			// In a real implementation, this would:
+			// 1. Begin paint operation
+			// 2. Get device context
+			// 3. Draw window contents
+			// 4. End paint operation
+			
+			// For now, just acknowledge the paint message
+		}, cancellationToken);
 		
-		// In a real implementation, this would:
-		// 1. Begin paint operation
-		// 2. Get device context
-		// 3. Draw window contents
-		// 4. End paint operation
-		
-		// For now, just acknowledge the paint message
 		return 0;
 	}
 }
 
 /// <summary>
-/// Handles WM_CLOSE messages
+/// Handles WM_CLOSE messages asynchronously
 /// </summary>
-public class CloseMessageHandler : IMessageHandler<CloseMessage>
+public class CloseMessageHandler : IAsyncMessageHandler<CloseMessage>
 {
 	private readonly ProcessEnvironment _env;
 	private readonly ILogger _logger;
@@ -46,21 +50,24 @@ public class CloseMessageHandler : IMessageHandler<CloseMessage>
 		_logger = logger ?? NullLogger.Instance;
 	}
 
-	public uint Handle(CloseMessage message)
+	public async Task<uint> HandleAsync(CloseMessage message, CancellationToken cancellationToken = default)
 	{
-		_logger.LogInformation("[CloseMessageHandler] Handling WM_CLOSE for window 0x{Hwnd:X8}", message.Hwnd);
-		
-		// Default behavior: destroy the window
-		_env.DestroyWindow(message.Hwnd);
+		await Task.Run(() =>
+		{
+			_logger.LogInformation("[CloseMessageHandler] Handling WM_CLOSE for window 0x{Hwnd:X8}", message.Hwnd);
+			
+			// Default behavior: destroy the window
+			_env.DestroyWindow(message.Hwnd);
+		}, cancellationToken);
 		
 		return 0;
 	}
 }
 
 /// <summary>
-/// Handles WM_COMMAND messages
+/// Handles WM_COMMAND messages asynchronously
 /// </summary>
-public class CommandMessageHandler : IMessageHandler<CommandMessage>
+public class CommandMessageHandler : IAsyncMessageHandler<CommandMessage>
 {
 	private readonly ILogger _logger;
 
@@ -69,13 +76,17 @@ public class CommandMessageHandler : IMessageHandler<CommandMessage>
 		_logger = logger ?? NullLogger.Instance;
 	}
 
-	public uint Handle(CommandMessage message)
+	public async Task<uint> HandleAsync(CommandMessage message, CancellationToken cancellationToken = default)
 	{
-		_logger.LogInformation(
-			"[CommandMessageHandler] Handling WM_COMMAND for window 0x{Hwnd:X8}, ControlId={ControlId}, NotificationCode={NotificationCode}",
-			message.Hwnd, message.ControlId, message.NotificationCode);
+		await Task.Run(() =>
+		{
+			_logger.LogInformation(
+				"[CommandMessageHandler] Handling WM_COMMAND for window 0x{Hwnd:X8}, ControlId={ControlId}, NotificationCode={NotificationCode}",
+				message.Hwnd, message.ControlId, message.NotificationCode);
+			
+			// Default handling - specific command handlers would be registered separately
+		}, cancellationToken);
 		
-		// Default handling - specific command handlers would be registered separately
 		return 0;
 	}
 }

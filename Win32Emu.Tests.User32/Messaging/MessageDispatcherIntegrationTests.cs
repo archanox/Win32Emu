@@ -107,20 +107,20 @@ public class MessageDispatcherIntegrationTests : IDisposable
 	}
 
 	[Fact]
-	public void MessageDispatcher_WithCommonHandlers_ShouldWorkWithProcessEnvironment()
+	public async Task MessageDispatcher_WithCommonHandlers_ShouldWorkWithProcessEnvironment()
 	{
 		// Arrange
 		var hwnd = 0x00010000u;
 		
-		// Register common handlers
-		_env.MessageDispatcher.RegisterHandler(WM.PAINT, new PaintMessageHandler(_env));
-		_env.MessageDispatcher.RegisterHandler(WM.CLOSE, new CloseMessageHandler(_env));
-		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, new CommandMessageHandler());
+		// Register common async handlers
+		_env.MessageDispatcher.RegisterAsyncHandler(WM.PAINT, new PaintMessageHandler(_env));
+		_env.MessageDispatcher.RegisterAsyncHandler(WM.CLOSE, new CloseMessageHandler(_env));
+		_env.MessageDispatcher.RegisterAsyncHandler(WM.COMMAND, new CommandMessageHandler());
 
-		// Act - Dispatch various messages
-		var paintResult = _env.MessageDispatcher.Dispatch(new PaintMessage(hwnd));
-		var closeResult = _env.MessageDispatcher.Dispatch(new CloseMessage(hwnd));
-		var cmdResult = _env.MessageDispatcher.Dispatch(new CommandMessage(hwnd, 0x00010002, 0x00020000));
+		// Act - Dispatch various messages asynchronously
+		var paintResult = await _env.MessageDispatcher.DispatchAsync(new PaintMessage(hwnd));
+		var closeResult = await _env.MessageDispatcher.DispatchAsync(new CloseMessage(hwnd));
+		var cmdResult = await _env.MessageDispatcher.DispatchAsync(new CommandMessage(hwnd, 0x00010002, 0x00020000));
 
 		// Assert - All handlers should execute without error
 		Assert.Equal(0u, paintResult);
