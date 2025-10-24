@@ -461,7 +461,8 @@ void main()
             }
 
             _glfw.PollEvents();
-            _logger.LogDebug("[SilkGLFW] Events polled");
+            //_logger.LogDebug("[SilkGLFW] Events polled");
+
             // Note: GLFW event handling would typically be set up via callbacks
             // in Initialize() using SetMouseButtonCallback, SetKeyCallback, etc.
             // For now, we poll but don't translate events to UI events.

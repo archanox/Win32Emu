@@ -21,7 +21,7 @@ namespace Win32Emu.Win32.Modules
 		private LoadedImage? _image;
 		private PeResourceReader? _resourceReader;
 		private IEmulatorHost? _host;
-		
+
 		// State tracking for cursor and focus
 		private uint _currentCursor;
 		private uint _focusWindow;
@@ -417,7 +417,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			var lpStringPtr = (uint)(nint)lpString;
-			
+
 			// Read the message string from memory
 			var messageString = _env.ReadAnsiString(lpStringPtr);
 
@@ -431,7 +431,7 @@ namespace Win32Emu.Win32.Modules
 			var messageId = _env.RegisterWindowMessage(messageString);
 
 			_logger.LogInformation("[User32] RegisterWindowMessageA: '{MessageString}' -> 0x{MessageId:X4}", messageString, messageId);
-			
+
 			return messageId;
 		}
 
@@ -583,7 +583,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				currentStyle |= NativeTypes.WindowStyle.WS_VISIBLE;
 				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now visible", hwnd);
-				
+
 				// Send WM_ACTIVATEAPP message when window becomes visible
 				// WM_ACTIVATEAPP = 0x001C, wParam = TRUE (1) for activation, lParam = 0 (thread ID)
 				if (!wasPreviouslyVisible)
@@ -596,7 +596,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				currentStyle &= ~NativeTypes.WindowStyle.WS_VISIBLE;
 				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now hidden", hwnd);
-				
+
 				// Send WM_ACTIVATEAPP message when window becomes hidden
 				// WM_ACTIVATEAPP = 0x001C, wParam = FALSE (0) for deactivation, lParam = 0 (thread ID)
 				if (wasPreviouslyVisible)
@@ -832,11 +832,11 @@ namespace Win32Emu.Win32.Modules
 			// The procedure will naturally terminate when it returns (hits RETURN_ADDRESS).
 			// To prevent true infinite loops, we track progress and detect stuck execution.
 			const int MAX_STEPS = int.MaxValue; // No artificial limit
-			// YIELD_INTERVAL: Check for context switches every 10K instructions
-			// Rationale: 10K provides good balance between:
-			// - Responsiveness: Allows context switches ~50 times during max execution
-			// - Performance: Low overhead (~0.001% for scheduler checks)
-			// - Granularity: Fine enough for cooperative multitasking
+												// YIELD_INTERVAL: Check for context switches every 10K instructions
+												// Rationale: 10K provides good balance between:
+												// - Responsiveness: Allows context switches ~50 times during max execution
+												// - Performance: Low overhead (~0.001% for scheduler checks)
+												// - Granularity: Fine enough for cooperative multitasking
 			const int YIELD_INTERVAL = 10000;
 			var steps = 0;
 			var lastCheckEip = cpu.GetEip();
@@ -947,9 +947,9 @@ namespace Win32Emu.Win32.Modules
 								simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
 								_logger.LogWarning("[User32] CallWindowProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", dll, name, simulatedArgBytes);
 							}
-							catch
+							catch(Exception ex)
 							{
-								_logger.LogWarning("[User32] CallWindowProcedure: Unimplemented import {Dll}!{Name}, no metadata available, simulating return with 0, argBytes=0", dll, name);
+								_logger.LogError(ex, "[User32] CallWindowProcedure: Unimplemented import {Dll}!{Name}, no metadata available, simulating return with 0, argBytes=0", dll, name);
 							}
 
 							var currentEsp = cpu.GetRegister("ESP");
@@ -993,7 +993,7 @@ namespace Win32Emu.Win32.Modules
 			}
 			catch (Exception ex)
 			{
-				_logger.LogWarning(ex, "[User32] CallWindowProcedure: Exception during execution: {ExMessage}", ex.Message);
+				_logger.LogError(ex, "[User32] CallWindowProcedure: Exception during execution: {ExMessage}", ex.Message);
 				executionSuccessful = false;
 			}
 
@@ -1014,7 +1014,7 @@ namespace Win32Emu.Win32.Modules
 				// Clear the stack memory region that was used for the call
 				// This includes the return address and parameters (5 dwords = 20 bytes)
 				var stackDataSize = 20u; // Return address (4) + hwnd (4) + message (4) + wParam (4) + lParam (4)
-				// Use a single bulk write for efficiency
+										 // Use a single bulk write for efficiency
 				memory.WriteBytes(savedEsp - stackDataSize, new byte[stackDataSize]);
 				_logger.LogDebug("[User32] CallWindowProcedure: Cleaned up {Size} bytes of stack memory after failed execution", stackDataSize);
 			}
@@ -1740,12 +1740,12 @@ namespace Win32Emu.Win32.Modules
 		private int ShowCursor(int bShow)
 		{
 			_logger.LogInformation("[User32] ShowCursor: bShow={BShow}", bShow);
-			
+
 			// ShowCursor increments/decrements an internal display count
 			// The cursor is displayed when the count is >= 0
 			// The cursor is hidden when the count is < 0
 			// Returns the new display count after the operation
-			
+
 			if (bShow != 0)
 			{
 				// TRUE - increment the display count (show cursor)
@@ -1758,7 +1758,7 @@ namespace Win32Emu.Win32.Modules
 				_cursorDisplayCount--;
 				_logger.LogInformation("[User32] ShowCursor: Decremented cursor count to {CursorDisplayCount}", _cursorDisplayCount);
 			}
-			
+
 			// Return the new display count
 			return _cursorDisplayCount;
 		}
@@ -1813,7 +1813,7 @@ namespace Win32Emu.Win32.Modules
 			var text = lpText != 0 ? _env.ReadAnsiString(lpText) : "";
 			var caption = lpCaption != 0 ? _env.ReadAnsiString(lpCaption) : "";
 			_logger.LogInformation("[User32] MessageBoxA: \"{Caption}\" - \"{Text}\" type=0x{UType:X8}", caption, text, uType);
-			
+
 			// If a host is available, show the message box through it
 			if (_host != null)
 			{
@@ -1826,7 +1826,7 @@ namespace Win32Emu.Win32.Modules
 						Caption = caption,
 						Type = uType
 					};
-					
+
 					var result = _host.OnMessageBox(msgBoxInfo);
 					_logger.LogInformation("[User32] MessageBoxA: Host returned result {Result}", result);
 					return (uint)result;
@@ -1836,7 +1836,7 @@ namespace Win32Emu.Win32.Modules
 					_logger.LogError(ex, "[User32] MessageBoxA: Exception calling host");
 				}
 			}
-			
+
 			// Fallback: return IDOK (1) if no host available
 			return 1;
 		}
@@ -1887,17 +1887,17 @@ namespace Win32Emu.Win32.Modules
 		private uint WaitMessage()
 		{
 			_logger.LogInformation("[User32] WaitMessage");
-			
+
 			// WaitMessage waits until a message is posted to the calling thread's message queue
 			// Returns TRUE (non-zero) if a message is available
 			// Returns FALSE (0) if an error occurs
-			
+
 			// In our emulator, we'll do a simple wait with a small sleep
 			// to simulate waiting for a message without spinning
 			// For a stub implementation, just yield briefly and return success
-			
+
 			System.Threading.Thread.Sleep(1); // Brief yield to prevent spinning
-			
+
 			_logger.LogInformation("[User32] WaitMessage: Returning after wait");
 			return NativeTypes.Win32Bool.TRUE; // Always return success
 		}
@@ -2026,7 +2026,7 @@ namespace Win32Emu.Win32.Modules
 						// OnDialogCreate will create and show the window, then return immediately
 						// The window will stay open while we process messages below
 						_ = _host.OnDialogCreate(dialogInfo);
-						
+
 						_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog window shown, proceeding to message loop");
 					}
 					catch (Exception ex)
@@ -2043,7 +2043,7 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				// Call the dialog procedure with WM_INITDIALOG (continues for both Avalonia and non-Avalonia paths)
-				
+
 				// Call the dialog procedure with WM_INITDIALOG (0x0110)
 				// WM_INITDIALOG signature: BOOL CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				// wParam = hWndParent (or 0 if no focus control)
@@ -2087,88 +2087,88 @@ namespace Win32Emu.Win32.Modules
 				{
 					iterations++;
 
-				// Check for quit message
-				if (_env.HasQuitMessage())
-				{
-					_logger.LogInformation("[User32] DialogBoxParamAsync: Quit message received, breaking modal loop");
-					break;
-				}
-
-				// Try to get a message (with short timeout to avoid blocking indefinitely)
-				// Use async version for better cooperative multitasking
-				var queuedMsg = await _env.GetMessageAsync(0, 0, 0, timeoutMs: 10);
-
-				if (queuedMsg.HasValue)
-				{
-					consecutiveEmptyIterations = 0;
-					var msg = queuedMsg.Value;
-					_logger.LogDebug("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", msg.Message, msg.Hwnd);
-
-					// Dispatch the message to the dialog procedure if it's for our dialog
-					if (msg.Hwnd == hDlg || msg.Hwnd == 0)
+					// Check for quit message
+					if (_env.HasQuitMessage())
 					{
-						if (lpDialogFunc != 0)
-						{
-							var (result, timedOut, cancelled, failed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam, cancellationToken);
-							_logger.LogDebug("[User32] DialogBoxParamAsync: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Quit message received, breaking modal loop");
+						break;
+					}
 
-							// If dialog procedure times out, is cancelled, or fails, force end the dialog
-							if (timedOut || cancelled || failed)
+					// Try to get a message (with short timeout to avoid blocking indefinitely)
+					// Use async version for better cooperative multitasking
+					var queuedMsg = await _env.GetMessageAsync(0, 0, 0, timeoutMs: 10);
+
+					if (queuedMsg.HasValue)
+					{
+						consecutiveEmptyIterations = 0;
+						var msg = queuedMsg.Value;
+						_logger.LogDebug("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", msg.Message, msg.Hwnd);
+
+						// Dispatch the message to the dialog procedure if it's for our dialog
+						if (msg.Hwnd == hDlg || msg.Hwnd == 0)
+						{
+							if (lpDialogFunc != 0)
 							{
-								var status = failed ? "failed" : (cancelled ? "cancelled" : "timed out");
-								_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status} during message processing, forcing dialog end", status);
-								_env.SetDialogResult(hDlg, 0);
+								var (result, timedOut, cancelled, failed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam, cancellationToken);
+								_logger.LogDebug("[User32] DialogBoxParamAsync: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
+
+								// If dialog procedure times out, is cancelled, or fails, force end the dialog
+								if (timedOut || cancelled || failed)
+								{
+									var status = failed ? "failed" : (cancelled ? "cancelled" : "timed out");
+									_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status} during message processing, forcing dialog end", status);
+									_env.SetDialogResult(hDlg, 0);
+								}
 							}
+						}
+						else
+						{
+							// Message for a different window - requeue it
+							_env.PostMessage(msg.Hwnd, msg.Message, msg.WParam, msg.LParam);
 						}
 					}
 					else
 					{
-						// Message for a different window - requeue it
-						_env.PostMessage(msg.Hwnd, msg.Message, msg.WParam, msg.LParam);
+						consecutiveEmptyIterations++;
+
+						// If we've had too many empty iterations and the dialog proc timed out or failed, force end
+						if ((dialogProcTimedOut || dialogProcFailed) && consecutiveEmptyIterations >= MAX_EMPTY_ITERATIONS)
+						{
+							var status = dialogProcFailed ? "failed" : "timed out";
+							_logger.LogWarning("[User32] DialogBoxParamAsync: No messages and dialog procedure {Status}, forcing dialog end", status);
+							_env.SetDialogResult(hDlg, 0);
+						}
+
+						// Yield to avoid tight loop without introducing artificial delay
+						await Task.Yield();
 					}
 				}
-				else
+
+				if (iterations >= MAX_ITERATIONS)
 				{
-					consecutiveEmptyIterations++;
-
-					// If we've had too many empty iterations and the dialog proc timed out or failed, force end
-					if ((dialogProcTimedOut || dialogProcFailed) && consecutiveEmptyIterations >= MAX_EMPTY_ITERATIONS)
-					{
-						var status = dialogProcFailed ? "failed" : "timed out";
-						_logger.LogWarning("[User32] DialogBoxParamAsync: No messages and dialog procedure {Status}, forcing dialog end", status);
-						_env.SetDialogResult(hDlg, 0);
-					}
-
-					// Yield to avoid tight loop without introducing artificial delay
-					await Task.Yield();
+					_logger.LogWarning("[User32] DialogBoxParamAsync: Exceeded max iterations, forcing dialog end");
 				}
-			}
 
-			if (iterations >= MAX_ITERATIONS)
+				if (cancellationToken.IsCancellationRequested)
+				{
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Cancellation requested, ending dialog");
+				}
+
+				// Get the result from EndDialog
+				var dialogResult = _env.GetDialogResult(hDlg);
+
+				// Clean up dialog state
+				_env.CleanupDialogState(hDlg);
+				_env.CloseHandle(hDlg);
+
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Returning result={DialogResult}", dialogResult);
+				return dialogResult;
+			}
+			else
 			{
-				_logger.LogWarning("[User32] DialogBoxParamAsync: Exceeded max iterations, forcing dialog end");
+				_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to load dialog template");
+				return 0;
 			}
-
-			if (cancellationToken.IsCancellationRequested)
-			{
-				_logger.LogInformation("[User32] DialogBoxParamAsync: Cancellation requested, ending dialog");
-			}
-
-			// Get the result from EndDialog
-			var dialogResult = _env.GetDialogResult(hDlg);
-
-			// Clean up dialog state
-			_env.CleanupDialogState(hDlg);
-			_env.CloseHandle(hDlg);
-
-			_logger.LogInformation("[User32] DialogBoxParamAsync: Returning result={DialogResult}", dialogResult);
-			return dialogResult;
-		}
-		else
-		{
-			_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to load dialog template");
-			return 0;
-		}
 		}
 
 		/// <summary>
@@ -2219,11 +2219,11 @@ namespace Win32Emu.Win32.Modules
 			// - Detecting when EIP stops changing (infinite loop detection)
 			// - Monitoring for repeated execution at the same address
 			const int MAX_STEPS = int.MaxValue; // No artificial limit
-			// YIELD_INTERVAL: Check for context switches every 10K instructions
-			// Rationale: 10K provides good balance between:
-			// - Responsiveness: Allows context switches ~50 times during max execution
-			// - Performance: Low overhead (~0.001% for scheduler checks)
-			// - Granularity: Fine enough for cooperative multitasking
+												// YIELD_INTERVAL: Check for context switches every 10K instructions
+												// Rationale: 10K provides good balance between:
+												// - Responsiveness: Allows context switches ~50 times during max execution
+												// - Performance: Low overhead (~0.001% for scheduler checks)
+												// - Granularity: Fine enough for cooperative multitasking
 			const int YIELD_INTERVAL = 10000;
 			var steps = 0;
 			var timedOut = false;
@@ -2335,24 +2335,24 @@ namespace Win32Emu.Win32.Modules
 								simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
 								_logger.LogWarning("[User32] CallDialogProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", dll, name, simulatedArgBytes);
 							}
-							catch
+							catch(Exception ex)
 							{
-								_logger.LogWarning("[User32] CallDialogProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes unknown (assuming 0)", dll, name);
+								_logger.LogError(ex, "[User32] CallDialogProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes unknown (assuming 0)", dll, name);
 							}
-							
+
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
-							
+
 							// Pop return address + parameters (stdcall convention - callee cleans)
 							currentEsp += 4 + (uint)simulatedArgBytes;
-							
+
 							cpu.SetRegister("ESP", currentEsp);
 							cpu.SetRegister("EAX", 0); // Return 0 as default
 							cpu.SetEip(retEip);
-							
+
 							// Restore callee-saved registers
 							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
-							
+
 							RestoreEbpFromStack(cpu, memory, currentEsp);
 						}
 					}
@@ -2382,7 +2382,7 @@ namespace Win32Emu.Win32.Modules
 			}
 			catch (Exception ex)
 			{
-				_logger.LogWarning(ex, "[User32] CallDialogProcedure: Exception during execution: {ExMessage}", ex.Message);
+				_logger.LogError(ex, "[User32] CallDialogProcedure: Exception during execution: {ExMessage}", ex.Message);
 				failed = true;
 			}
 
@@ -2601,24 +2601,24 @@ namespace Win32Emu.Win32.Modules
 								simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
 								_logger.LogWarning("[User32] CallDialogProcedureAsync: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", dll, name, simulatedArgBytes);
 							}
-							catch
+							catch(Exception ex)
 							{
-								_logger.LogWarning("[User32] CallDialogProcedureAsync: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes unknown (assuming 0)", dll, name);
+								_logger.LogError(ex, "[User32] CallDialogProcedureAsync: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes unknown (assuming 0)", dll, name);
 							}
-							
+
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
-							
+
 							// Pop return address + parameters (stdcall convention - callee cleans)
 							currentEsp += 4 + (uint)simulatedArgBytes;
-							
+
 							cpu.SetRegister("ESP", currentEsp);
 							cpu.SetRegister("EAX", 0); // Return 0 as default
 							cpu.SetEip(retEip);
-							
+
 							// Restore callee-saved registers
 							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
-							
+
 							RestoreEbpFromStack(cpu, memory, currentEsp);
 						}
 					}
@@ -2645,7 +2645,7 @@ namespace Win32Emu.Win32.Modules
 			}
 			catch (Exception ex)
 			{
-				_logger.LogWarning(ex, "[User32] CallDialogProcedureAsync: Exception during execution: {ExMessage}", ex.Message);
+				_logger.LogError(ex, "[User32] CallDialogProcedureAsync: Exception during execution: {ExMessage}", ex.Message);
 				failed = true;
 			}
 
@@ -2736,7 +2736,7 @@ namespace Win32Emu.Win32.Modules
 			var maxLength = cchMax - 1; // Leave room for null terminator
 			if (text.Length > maxLength)
 			{
-				text = text.Substring(0, maxLength);
+				text = text[..maxLength];
 			}
 
 			// Write the text to memory using ASCII encoding (Win32 ANSI API)
@@ -2944,99 +2944,98 @@ namespace Win32Emu.Win32.Modules
 			}
 			catch (Exception ex)
 			{
-				_logger.LogDebug(ex, "[User32] Failed to restore EBP from stack");
+				_logger.LogError(ex, "[User32] Failed to restore EBP from stack");
 			}
 		}
 
-	[DllModuleExport(8)]
-	private uint ExitWindowsEx(uint uFlags, uint dwReason)
-	{
-		_logger.LogInformation("[User32] ExitWindowsEx(uFlags=0x{UFlags:X}, dwReason=0x{DwReason:X})", uFlags, dwReason);
-		// Stub - just log the call, don't actually shut down
-		return 1; // TRUE
-	}
-
-	[DllModuleExport(12)]
-	private uint GetWindowTextA(uint hWnd, in LpStr lpString, int nMaxCount)
-	{
-		_logger.LogInformation("[User32] GetWindowTextA(hWnd=0x{HWnd:X8}, lpString=0x{LpString:X8}, nMaxCount={NMaxCount})", hWnd, lpString.Address, nMaxCount);
-
-		// Stub - return empty string
-		var title = string.Empty;
-		
-		// Write to buffer
-		if (nMaxCount > 0)
+		[DllModuleExport(8)]
+		private uint ExitWindowsEx(uint uFlags, uint dwReason)
 		{
-			lpString.Write(_env.Memory, title, true);
+			_logger.LogInformation("[User32] ExitWindowsEx(uFlags=0x{UFlags:X}, dwReason=0x{DwReason:X})", uFlags, dwReason);
+			// Stub - just log the call, don't actually shut down
+			return 1; // TRUE
 		}
 
-		return (uint)title.Length;
-	}
-
-	[DllModuleExport(8)]
-	private uint SetWindowTextA(uint hWnd, in LpcStr lpString)
-	{
-		var text = lpString.ToString() ?? string.Empty;
-		_logger.LogInformation("[User32] SetWindowTextA(hWnd=0x{HWnd:X8}, lpString=\"{Text}\")", hWnd, text);
-
-		// Stub - just log the operation
-		return 1; // TRUE
-	}
-
-	[DllModuleExport(20)]
-	private uint LoadImageA(uint hInst, in LpStr name, uint type, int cx, int cy, uint fuLoad)
-	{
-		var imageName = name.Read(_env.Memory);
-		_logger.LogInformation("[User32] LoadImageA(hInst=0x{HInst:X8}, name=\"{ImageName}\", type={Type}, cx={Cx}, cy={Cy}, fuLoad=0x{FuLoad:X})", 
-			hInst, imageName, type, cx, cy, fuLoad);
-
-		// Stub - return a dummy handle
-		// Type: 0=IMAGE_BITMAP, 1=IMAGE_ICON, 2=IMAGE_CURSOR
-		var handle = 0x90000000 + (uint)imageName.GetHashCode();
-		_logger.LogInformation("[User32] LoadImageA: Returning stub handle 0x{Handle:X8}", handle);
-		return handle;
-	}
-
-	[DllModuleExport(16)]
-	private uint LoadStringA(uint hInstance, uint uID, in LpStr lpBuffer, int cchBufferMax)
-	{
-		_logger.LogInformation("[User32] LoadStringA(hInstance=0x{HInstance:X8}, uID={UID}, lpBuffer=0x{LpBuffer:X8}, cchBufferMax={CchBufferMax})", 
-			hInstance, uID, lpBuffer.Address, cchBufferMax);
-
-		// Stub - string resources not yet implemented, return empty
-		if (cchBufferMax > 0)
+		[DllModuleExport(12)]
+		private uint GetWindowTextA(uint hWnd, in LpStr lpString, int nMaxCount)
 		{
-			lpBuffer.Write(_env.Memory, string.Empty, true);
+			_logger.LogInformation("[User32] GetWindowTextA(hWnd=0x{HWnd:X8}, lpString=0x{LpString:X8}, nMaxCount={NMaxCount})", hWnd, lpString.Address, nMaxCount);
+
+			// Stub - return empty string
+			var title = string.Empty;
+
+			// Write to buffer
+			if (nMaxCount > 0)
+			{
+				lpString.Write(_env.Memory, title, true);
+			}
+
+			return (uint)title.Length;
 		}
-		return 0;
-	}
 
-	[DllModuleExport(20)]
-	private uint WsprintfA(in LpStr output, in LpcStr format, StackArgs args)
-	{
-		var formatStr = format.ToString() ?? string.Empty;
-		_logger.LogInformation("[User32] WsprintfA(output=0x{Output:X8}, format=\"{FormatStr}\")", output.Address, formatStr);
+		[DllModuleExport(8)]
+		private uint SetWindowTextA(uint hWnd, in LpcStr lpString)
+		{
+			var text = lpString.ToString() ?? string.Empty;
+			_logger.LogInformation("[User32] SetWindowTextA(hWnd=0x{HWnd:X8}, lpString=\"{Text}\")", hWnd, text);
 
-		// Simple sprintf implementation - just copy format string for now
-		// A full implementation would parse format string and substitute arguments
-		output.Write(_env.Memory, formatStr, true);
-		
-		return (uint)formatStr.Length;
-	}
+			// Stub - just log the operation
+			return 1; // TRUE
+		}
 
-	[DllModuleExport(12)]
-	private uint WvsprintfA(in LpStr output, in LpcStr format, uint arglist)
-	{
-		var formatStr = format.ToString() ?? string.Empty;
-		_logger.LogInformation("[User32] WvsprintfA(output=0x{Output:X8}, format=\"{FormatStr}\", arglist=0x{Arglist:X8})", 
-			output.Address, formatStr, arglist);
+		[DllModuleExport(20)]
+		private uint LoadImageA(uint hInst, in LpStr name, uint type, int cx, int cy, uint fuLoad)
+		{
+			var imageName = name.Read(_env.Memory);
+			_logger.LogInformation("[User32] LoadImageA(hInst=0x{HInst:X8}, name=\"{ImageName}\", type={Type}, cx={Cx}, cy={Cy}, fuLoad=0x{FuLoad:X})",
+				hInst, imageName, type, cx, cy, fuLoad);
 
-		// Simple vsprintf implementation - just copy format string for now
-		// A full implementation would parse format string and substitute arguments from va_list
-		output.Write(_env.Memory, formatStr, true);
-		
-		return (uint)formatStr.Length;
-	}
+			// Stub - return a dummy handle
+			// Type: 0=IMAGE_BITMAP, 1=IMAGE_ICON, 2=IMAGE_CURSOR
+			var handle = 0x90000000 + (uint)imageName.GetHashCode();
+			_logger.LogInformation("[User32] LoadImageA: Returning stub handle 0x{Handle:X8}", handle);
+			return handle;
+		}
 
+		[DllModuleExport(16)]
+		private uint LoadStringA(uint hInstance, uint uID, in LpStr lpBuffer, int cchBufferMax)
+		{
+			_logger.LogInformation("[User32] LoadStringA(hInstance=0x{HInstance:X8}, uID={UID}, lpBuffer=0x{LpBuffer:X8}, cchBufferMax={CchBufferMax})",
+				hInstance, uID, lpBuffer.Address, cchBufferMax);
+
+			// Stub - string resources not yet implemented, return empty
+			if (cchBufferMax > 0)
+			{
+				lpBuffer.Write(_env.Memory, string.Empty, true);
+			}
+			return 0;
+		}
+
+		[DllModuleExport(20)]
+		private uint WsprintfA(in LpStr output, in LpcStr format, StackArgs args)
+		{
+			var formatStr = format.ToString() ?? string.Empty;
+			_logger.LogInformation("[User32] WsprintfA(output=0x{Output:X8}, format=\"{FormatStr}\")", output.Address, formatStr);
+
+			// Simple sprintf implementation - just copy format string for now
+			// A full implementation would parse format string and substitute arguments
+			output.Write(_env.Memory, formatStr, true);
+
+			return (uint)formatStr.Length;
+		}
+
+		[DllModuleExport(12)]
+		private uint WvsprintfA(in LpStr output, in LpcStr format, uint arglist)
+		{
+			var formatStr = format.ToString() ?? string.Empty;
+			_logger.LogInformation("[User32] WvsprintfA(output=0x{Output:X8}, format=\"{FormatStr}\", arglist=0x{Arglist:X8})",
+				output.Address, formatStr, arglist);
+
+			// Simple vsprintf implementation - just copy format string for now
+			// A full implementation would parse format string and substitute arguments from va_list
+			output.Write(_env.Memory, formatStr, true);
+
+			return (uint)formatStr.Length;
+		}
 	}
 }

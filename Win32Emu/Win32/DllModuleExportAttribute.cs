@@ -10,7 +10,7 @@ public sealed class DllModuleExportAttribute : Attribute
 	/// <summary>
 	/// Used to indicate that this export is a stub implementation.
 	/// </summary>
-	public bool IsStub { get; init; } = false;
+	public bool IsStub { get; init; }
 	
 	/// <summary>
 	/// The export ordinal number for this function.
