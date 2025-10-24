@@ -244,9 +244,9 @@ namespace Win32Emu.Win32.Modules
 				args.Add("msconfig.exe");
 			}
 			
-			// Allocate argv array
+			// Allocate argv array (need argc+1 for NULL terminator)
 			var argc = args.Count;
-			var argvArray = _env.HeapAlloc(0, (uint)(argc * 4)); // Array of pointers
+			var argvArray = _env.HeapAlloc(0, (uint)((argc + 1) * 4)); // Array of pointers + NULL
 			
 			// Write each argument string and store pointer
 			for (var i = 0; i < argc; i++)
@@ -254,6 +254,9 @@ namespace Win32Emu.Win32.Modules
 				var argPtr = _env.WriteAnsiString(args[i] + '\0');
 				_env.MemWrite32(argvArray + (uint)(i * 4), argPtr);
 			}
+			
+			// Add NULL terminator to argv array
+			_env.MemWrite32(argvArray + (uint)(argc * 4), 0);
 			
 			// Write argc
 			_env.MemWrite32(pargc, (uint)argc);
