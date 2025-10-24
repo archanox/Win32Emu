@@ -10,6 +10,7 @@ using Win32Emu.Memory;
 using Win32Emu.Rendering;
 using Win32Emu.Threading;
 using Win32Emu.Win32.COM;
+using Win32Emu.Win32.Messaging;
 using Win32Emu.VirtualFileSystem;
 
 namespace Win32Emu.Win32;
@@ -23,6 +24,9 @@ public class ProcessEnvironment
 
 	// COM vtable dispatcher
 	private readonly ComVtableDispatcher? _comDispatcher;
+	
+	// Message dispatcher for event-driven messaging
+	private readonly MessageDispatcher _messageDispatcher;
 	
 	// Track subscribed backends to prevent duplicate event subscriptions
 	private readonly HashSet<IRenderingBackend> _subscribedRenderingBackends = new();
@@ -40,6 +44,9 @@ public class ProcessEnvironment
 
 	// Expose SynchronizationManager for use by Win32 APIs
 	public SynchronizationManager? SynchronizationManager { get; }
+	
+	// Expose MessageDispatcher for use by Win32 modules
+	public MessageDispatcher MessageDispatcher => _messageDispatcher;
 
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
 	{
@@ -48,6 +55,7 @@ public class ProcessEnvironment
 		_logger = logger ?? NullLogger.Instance;
 		_allocPtr = heapBase;
 		_comDispatcher = new ComVtableDispatcher(this, _logger);
+		_messageDispatcher = new MessageDispatcher(_logger);
 		ThreadScheduler = new ThreadScheduler(_logger);
 		SynchronizationManager = new SynchronizationManager(_logger);
 		
