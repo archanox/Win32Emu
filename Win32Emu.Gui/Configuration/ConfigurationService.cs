@@ -121,6 +121,8 @@ public class ConfigurationService
         return new EmulatorConfiguration
         {
             RenderingBackend = _settings.RenderingBackend,
+            InputBackend = _settings.InputBackend,
+            CpuBackend = _settings.CpuBackend,
             ResolutionScaleFactor = _settings.ResolutionScaleFactor,
             ReservedMemoryMb = _settings.ReservedMemoryMB,
             WindowsVersion = _settings.WindowsVersion,
@@ -128,6 +130,8 @@ public class ConfigurationService
             EnableGdbServer = _settings.EnableGdbServer,
             GdbServerPort = _settings.GdbServerPort,
             GdbPauseOnStart = _settings.GdbPauseOnStart,
+            EnableInstructionAnalyzer = _settings.EnableInstructionAnalyzer,
+            EnableLegacyInstructionDecoding = _settings.EnableLegacyInstructionDecoding,
             EnableOpenTelemetry = _settings.EnableOpenTelemetry,
             UseConsoleExporter = _settings.UseConsoleExporter,
             UseOtlpExporter = _settings.UseOtlpExporter,
@@ -167,6 +171,8 @@ public class ConfigurationService
     public void SaveEmulatorConfiguration(EmulatorConfiguration configuration)
     {
         _settings.RenderingBackend = configuration.RenderingBackend;
+        _settings.InputBackend = configuration.InputBackend;
+        _settings.CpuBackend = configuration.CpuBackend;
         _settings.ResolutionScaleFactor = configuration.ResolutionScaleFactor;
         _settings.ReservedMemoryMB = configuration.ReservedMemoryMb;
         _settings.WindowsVersion = configuration.WindowsVersion;
@@ -174,6 +180,8 @@ public class ConfigurationService
         _settings.EnableGdbServer = configuration.EnableGdbServer;
         _settings.GdbServerPort = configuration.GdbServerPort;
         _settings.GdbPauseOnStart = configuration.GdbPauseOnStart;
+        _settings.EnableInstructionAnalyzer = configuration.EnableInstructionAnalyzer;
+        _settings.EnableLegacyInstructionDecoding = configuration.EnableLegacyInstructionDecoding;
         _settings.EnableOpenTelemetry = configuration.EnableOpenTelemetry;
         _settings.UseConsoleExporter = configuration.UseConsoleExporter;
         _settings.UseOtlpExporter = configuration.UseOtlpExporter;
