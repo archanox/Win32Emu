@@ -3152,9 +3152,9 @@ public class IcedCpu : IAsyncCpu
 		SetFlagVal(Cf, carryOut);
 		SetFlagVal(Sf, (dest & 0x80000000) != 0);
 		SetFlagVal(Zf, dest == 0);
-		// OF is set only if count == 1
+		// OF is set only if count == 1 - check if sign bit changed (top two bits differ)
 		if (count == 1)
-			SetFlagVal(Of, ((dest ^ (dest << 1)) & 0x80000000) != 0);
+			SetFlagVal(Of, ((dest >> 31) ^ ((dest >> 30) & 1)) != 0);
 		
 		WriteOp(insn, 0, dest);
 	}
