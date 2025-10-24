@@ -75,7 +75,8 @@ public partial class SettingsViewModel : ViewModelBase
     public ObservableCollection<string> CpuBackends { get; } = new()
     {
         "IcedCPU",
-        "JitCPU"
+        "JitCPU",
+        "Unicorn"
     };
 
     public ObservableCollection<string> WindowsVersions { get; } = new()

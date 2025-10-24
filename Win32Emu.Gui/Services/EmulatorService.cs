@@ -61,8 +61,9 @@ public class EmulatorService
                 // Get the global telemetry service if enabled
                 var telemetryService = App.TelemetryService;
                 
-                // Determine if JIT CPU should be used based on configuration
+                // Determine which CPU backend to use based on configuration
                 var useJitCpu = _configuration.CpuBackend == "JitCPU";
+                var useUnicornCpu = _configuration.CpuBackend == "Unicorn";
                 
                 // Create and configure the emulator
                 _currentEmulator = new Emulator(_host, _logger, telemetryService);
@@ -78,7 +79,8 @@ public class EmulatorService
                     _configuration.GdbServerPort,
                     _configuration.EnableInstructionAnalyzer,
                     _configuration.EnableLegacyInstructionDecoding,
-                    useJitCpu);
+                    useJitCpu,
+                    useUnicornCpu);
                 
                 // Run the emulator
                 _currentEmulator.Run();

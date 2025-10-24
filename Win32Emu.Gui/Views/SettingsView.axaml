@@ -54,7 +54,7 @@
                     <ComboBox ItemsSource="{Binding CpuBackends}"
                             SelectedItem="{Binding CpuBackend}"
                             HorizontalAlignment="Stretch"/>
-                    <TextBlock Text="Select the CPU emulation backend. IcedCPU is the stable interpreter (default). JitCPU is the experimental JIT compiler with async support for better performance."
+                    <TextBlock Text="Select the CPU emulation backend. IcedCPU is the stable interpreter (default). JitCPU is the experimental JIT compiler with async support. Unicorn is a reference implementation for testing and validation."
                              FontSize="12"
                              Opacity="0.7"
                              TextWrapping="Wrap"/>

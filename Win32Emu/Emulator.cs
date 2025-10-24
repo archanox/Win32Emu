@@ -124,7 +124,7 @@ public sealed class Emulator : IDisposable
         LogDebug("[Emulator] Subscribed to UI events from backends");
     }
 
-    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false)
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, bool useUnicornCpu = false)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -169,7 +169,12 @@ public sealed class Emulator : IDisposable
         }
 
         // Create CPU based on backend preference
-        if (useJitCpu)
+        if (useUnicornCpu)
+        {
+            _cpu = new Cpu.Unicorn.UnicornCpu(_vm, _logger);
+            LogDebug("[Loader] Unicorn CPU backend enabled (reference implementation)");
+        }
+        else if (useJitCpu)
         {
             _cpu = new Cpu.Jit.JitCpu(_vm, _logger);
             LogDebug("[Loader] JIT CPU backend enabled (async-capable)");
