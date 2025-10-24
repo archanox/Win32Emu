@@ -27,6 +27,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 	public string Name => "KERNEL32.DLL";
 
+	// Win32 API constants for CreateFile
+	private const uint GENERIC_READ = 0x80000000;
+	private const uint GENERIC_WRITE = 0x40000000;
+	private const uint CREATE_NEW = 1;
+	private const uint CREATE_ALWAYS = 2;
+	private const uint OPEN_EXISTING = 3;
+	private const uint OPEN_ALWAYS = 4;
+	private const uint TRUNCATE_EXISTING = 5;
+
 	private Win32Dispatcher? _dispatcher;
 	private uint _lastError;
 	private ICpu? _cpu;
@@ -2316,6 +2325,63 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// When an application is finished using the object handle returned by CreateFile, use the CloseHandle function to close the handle.
 	/// </remarks>
 	// File I/O implementations
+
+	// Helper method to map Win32 creation disposition to VFS file mode
+	private VfsFileMode MapCreationDispositionToVfsMode(uint dwCreationDisposition)
+	{
+		return dwCreationDisposition switch
+		{
+			CREATE_NEW => VfsFileMode.CreateNew,
+			CREATE_ALWAYS => VfsFileMode.Create,
+			OPEN_EXISTING => VfsFileMode.Open,
+			OPEN_ALWAYS => VfsFileMode.OpenOrCreate,
+			TRUNCATE_EXISTING => VfsFileMode.Truncate,
+			_ => VfsFileMode.OpenOrCreate
+		};
+	}
+
+	// Helper method to map Win32 creation disposition to .NET FileMode
+	private FileMode MapCreationDispositionToFileMode(uint dwCreationDisposition)
+	{
+		return dwCreationDisposition switch
+		{
+			CREATE_NEW => FileMode.CreateNew,
+			CREATE_ALWAYS => FileMode.Create,
+			OPEN_EXISTING => FileMode.Open,
+			OPEN_ALWAYS => FileMode.OpenOrCreate,
+			TRUNCATE_EXISTING => FileMode.Truncate,
+			_ => FileMode.OpenOrCreate
+		};
+	}
+
+	// Helper method to map Win32 desired access to VFS file access
+	private VfsFileAccess MapDesiredAccessToVfsAccess(uint dwDesiredAccess)
+	{
+		if ((dwDesiredAccess & GENERIC_READ) != 0 && (dwDesiredAccess & GENERIC_WRITE) == 0)
+		{
+			return VfsFileAccess.Read;
+		}
+		else if ((dwDesiredAccess & GENERIC_WRITE) != 0 && (dwDesiredAccess & GENERIC_READ) == 0)
+		{
+			return VfsFileAccess.Write;
+		}
+		return VfsFileAccess.ReadWrite;
+	}
+
+	// Helper method to map Win32 desired access to .NET FileAccess
+	private FileAccess MapDesiredAccessToFileAccess(uint dwDesiredAccess)
+	{
+		if ((dwDesiredAccess & GENERIC_READ) != 0 && (dwDesiredAccess & GENERIC_WRITE) == 0)
+		{
+			return FileAccess.Read;
+		}
+		else if ((dwDesiredAccess & GENERIC_WRITE) != 0 && (dwDesiredAccess & GENERIC_READ) == 0)
+		{
+			return FileAccess.Write;
+		}
+		return FileAccess.ReadWrite;
+	}
+
 	[DllModuleExport(2)]
 	private uint CreateFileA(uint lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecAttr,
 		uint dwCreationDisposition, uint dwFlagsAndAttributes, uint hTemplateFile)
@@ -2347,25 +2413,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// If VFS is available, use it for file operations
 			if (_env.VirtualFileSystem != null)
 			{
-				var mode = dwCreationDisposition switch
-				{
-					1 => VfsFileMode.CreateNew,
-					2 => VfsFileMode.Create,
-					3 => VfsFileMode.Open,
-					4 => VfsFileMode.OpenOrCreate,
-					5 => VfsFileMode.Truncate,
-					_ => VfsFileMode.OpenOrCreate
-				};
-
-				var access = VfsFileAccess.ReadWrite;
-				if ((dwDesiredAccess & 0x80000000) != 0 && (dwDesiredAccess & 0x40000000) == 0)
-				{
-					access = VfsFileAccess.Read; // GENERIC_READ
-				}
-				else if ((dwDesiredAccess & 0x40000000) != 0 && (dwDesiredAccess & 0x80000000) == 0)
-				{
-					access = VfsFileAccess.Write; // GENERIC_WRITE
-				}
+				var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
+				var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
 
 				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
 				if (handle != null)
@@ -2379,26 +2428,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 
 			// Fallback to direct filesystem access if VFS not available. Use resolvedPath to ensure relative paths are resolved against emulated CurrentDirectory.
-			var fileMode = dwCreationDisposition switch
-			{
-				1 => FileMode.CreateNew,
-				2 => FileMode.Create,
-				3 => FileMode.Open,
-				4 => FileMode.OpenOrCreate,
-				5 => FileMode.Truncate,
-				_ => FileMode.OpenOrCreate
-			};
-
-			var fileAccess = FileAccess.ReadWrite;
-			if ((dwDesiredAccess & 0x80000000) != 0 && (dwDesiredAccess & 0x40000000) == 0)
-			{
-				fileAccess = FileAccess.Read; // GENERIC_READ
-			}
-
-			if ((dwDesiredAccess & 0x40000000) != 0 && (dwDesiredAccess & 0x80000000) == 0)
-			{
-				fileAccess = FileAccess.Write; // GENERIC_WRITE
-			}
+			var fileMode = MapCreationDispositionToFileMode(dwCreationDisposition);
+			var fileAccess = MapDesiredAccessToFileAccess(dwDesiredAccess);
 
 			var fs = new FileStream(resolvedPath, fileMode, fileAccess, FileShare.ReadWrite);
 			return _env.RegisterHandle(fs);
@@ -2443,25 +2474,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// If VFS is available, use it for file operations
 			if (_env.VirtualFileSystem != null)
 			{
-				var mode = dwCreationDisposition switch
-				{
-					1 => VfsFileMode.CreateNew,
-					2 => VfsFileMode.Create,
-					3 => VfsFileMode.Open,
-					4 => VfsFileMode.OpenOrCreate,
-					5 => VfsFileMode.Truncate,
-					_ => VfsFileMode.OpenOrCreate
-				};
-
-				var access = VfsFileAccess.ReadWrite;
-				if ((dwDesiredAccess & 0x80000000) != 0 && (dwDesiredAccess & 0x40000000) == 0)
-				{
-					access = VfsFileAccess.Read; // GENERIC_READ
-				}
-				else if ((dwDesiredAccess & 0x40000000) != 0 && (dwDesiredAccess & 0x80000000) == 0)
-				{
-					access = VfsFileAccess.Write; // GENERIC_WRITE
-				}
+				var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
+				var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
 
 				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
 				if (handle != null)
@@ -2474,26 +2488,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
-			var fileMode = dwCreationDisposition switch
-			{
-				1 => FileMode.CreateNew,
-				2 => FileMode.Create,
-				3 => FileMode.Open,
-				4 => FileMode.OpenOrCreate,
-				5 => FileMode.Truncate,
-				_ => FileMode.OpenOrCreate
-			};
-
-			var fileAccess = FileAccess.ReadWrite;
-			if ((dwDesiredAccess & 0x80000000) != 0 && (dwDesiredAccess & 0x40000000) == 0)
-			{
-				fileAccess = FileAccess.Read; // GENERIC_READ
-			}
-
-			if ((dwDesiredAccess & 0x40000000) != 0 && (dwDesiredAccess & 0x80000000) == 0)
-			{
-				fileAccess = FileAccess.Write; // GENERIC_WRITE
-			}
+			var fileMode = MapCreationDispositionToFileMode(dwCreationDisposition);
+			var fileAccess = MapDesiredAccessToFileAccess(dwDesiredAccess);
 
 			var fs = new FileStream(resolvedPath, fileMode, fileAccess, FileShare.ReadWrite);
 			return _env.RegisterHandle(fs);
