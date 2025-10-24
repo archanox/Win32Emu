@@ -152,10 +152,10 @@ public class PentiumImplementationTests
 		cpu.SetRegister("EAX", 0x00000000);
 		cpu.SetRegister("ECX", 5); // Set bit 5
 		
-		// BTS EAX, ECX (0x0F 0xAB 0xC1)
+		// BTS EAX, ECX (0x0F 0xAB 0xC8)
 		mem.Write8(0x1000, 0x0F);
 		mem.Write8(0x1001, 0xAB);
-		mem.Write8(0x1002, 0xC1);
+		mem.Write8(0x1002, 0xC8);
 		
 		// Act
 		var result = cpu.SingleStep(mem);
@@ -220,10 +220,10 @@ public class PentiumImplementationTests
 		cpu.SetRegister("EAX", 0x12345678);
 		cpu.SetRegister("EBX", 0xABCDEF01);
 		
-		// SHLD EAX, EBX, 4 (0x0F 0xA4 0xC3 0x04)
+		// SHLD EAX, EBX, 4 (0x0F 0xA4 0xD8 0x04)
 		mem.Write8(0x1000, 0x0F);
 		mem.Write8(0x1001, 0xA4);
-		mem.Write8(0x1002, 0xC3);
+		mem.Write8(0x1002, 0xD8);
 		mem.Write8(0x1003, 0x04);
 		
 		// Act
@@ -246,10 +246,10 @@ public class PentiumImplementationTests
 		cpu.SetRegister("EAX", 0x12345678);
 		cpu.SetRegister("EBX", 0xABCDEF01);
 		
-		// SHRD EAX, EBX, 4 (0x0F 0xAC 0xC3 0x04)
+		// SHRD EAX, EBX, 4 (0x0F 0xAC 0xD8 0x04)
 		mem.Write8(0x1000, 0x0F);
 		mem.Write8(0x1001, 0xAC);
-		mem.Write8(0x1002, 0xC3);
+		mem.Write8(0x1002, 0xD8);
 		mem.Write8(0x1003, 0x04);
 		
 		// Act

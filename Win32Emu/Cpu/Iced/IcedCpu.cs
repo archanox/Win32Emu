@@ -269,6 +269,12 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Wait: break; // FWAIT - no-op for now
 				// Bit operations
 				case Mnemonic.Bt: ExecBt(insn); break;
+				case Mnemonic.Bts: ExecBts(insn); break;
+				case Mnemonic.Btr: ExecBtr(insn); break;
+				case Mnemonic.Btc: ExecBtc(insn); break;
+				// Double shift operations
+				case Mnemonic.Shld: ExecShld(insn); break;
+				case Mnemonic.Shrd: ExecShrd(insn); break;
 				// String ops (byte/word/dword variants)
 				case Mnemonic.Movsb: ExecMovs(1, insn.HasRepPrefix); break;
 				case Mnemonic.Movsw: ExecMovs(2, insn.HasRepPrefix); break;
@@ -3081,6 +3087,106 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
+	}
+
+	private void ExecBts(Instruction insn)
+	{
+		// BTS - Bit test and set
+		var bitBase = ReadOp(insn, 0);
+		var bitOffset = ReadOp(insn, 1);
+		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		var bitValue = (bitBase >> bitPos) & 1;
+		SetFlagVal(Cf, bitValue != 0);
+		// Set the bit
+		bitBase |= (1u << bitPos);
+		WriteOp(insn, 0, bitBase);
+	}
+
+	private void ExecBtr(Instruction insn)
+	{
+		// BTR - Bit test and reset
+		var bitBase = ReadOp(insn, 0);
+		var bitOffset = ReadOp(insn, 1);
+		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		var bitValue = (bitBase >> bitPos) & 1;
+		SetFlagVal(Cf, bitValue != 0);
+		// Reset (clear) the bit
+		bitBase &= ~(1u << bitPos);
+		WriteOp(insn, 0, bitBase);
+	}
+
+	private void ExecBtc(Instruction insn)
+	{
+		// BTC - Bit test and complement
+		var bitBase = ReadOp(insn, 0);
+		var bitOffset = ReadOp(insn, 1);
+		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		var bitValue = (bitBase >> bitPos) & 1;
+		SetFlagVal(Cf, bitValue != 0);
+		// Complement (toggle) the bit
+		bitBase ^= (1u << bitPos);
+		WriteOp(insn, 0, bitBase);
+	}
+
+	private void ExecShld(Instruction insn)
+	{
+		// SHLD - Double precision shift left
+		var dest = ReadOp(insn, 0);
+		var src = ReadOp(insn, 1);
+		var count = (byte)(insn.Op2Kind == OpKind.Immediate8 ? insn.Immediate8 : (_ecx & 0x1F));
+		
+		if (count == 0)
+			return;
+		
+		count &= 0x1F; // Modulo 32
+		
+		// Shift dest left by count, filling with high bits of src
+		// CF is set to the last bit shifted out
+		var carryOut = ((dest >> (32 - count)) & 1) != 0;
+		
+		ulong combined = ((ulong)dest << 32) | src;
+		combined <<= count;
+		dest = (uint)(combined >> 32);
+		
+		// Set flags
+		SetFlagVal(Cf, carryOut);
+		SetFlagVal(Sf, (dest & 0x80000000) != 0);
+		SetFlagVal(Zf, dest == 0);
+		// OF is set only if count == 1
+		if (count == 1)
+			SetFlagVal(Of, ((dest ^ (dest << 1)) & 0x80000000) != 0);
+		
+		WriteOp(insn, 0, dest);
+	}
+
+	private void ExecShrd(Instruction insn)
+	{
+		// SHRD - Double precision shift right
+		var dest = ReadOp(insn, 0);
+		var src = ReadOp(insn, 1);
+		var count = (byte)(insn.Op2Kind == OpKind.Immediate8 ? insn.Immediate8 : (_ecx & 0x1F));
+		
+		if (count == 0)
+			return;
+		
+		count &= 0x1F; // Modulo 32
+		
+		// Shift dest right by count, filling with low bits of src
+		// CF is set to the last bit shifted out
+		ulong combined = ((ulong)src << 32) | dest;
+		var carryOut = ((combined >> (count - 1)) & 1) != 0;
+		combined >>= count;
+		dest = (uint)combined;
+		
+		// Set flags
+		SetFlagVal(Cf, carryOut);
+		SetFlagVal(Sf, (dest & 0x80000000) != 0);
+		SetFlagVal(Zf, dest == 0);
+		// OF is set only if count == 1
+		if (count == 1)
+			SetFlagVal(Of, ((dest ^ (dest >> 1)) & 0x80000000) != 0);
+		
+		WriteOp(insn, 0, dest);
 	}
 
 	private void ExecAad(Instruction insn)
