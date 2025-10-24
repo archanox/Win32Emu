@@ -718,12 +718,13 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, message, wParam, lParam);
 
-			// First, try dispatching through MessageDispatcher
+			// First, try dispatching through MessageDispatcher asynchronously
 			if (_env.MessageDispatcher.HasHandlers(message))
 			{
 				_logger.LogDebug("[User32] DispatchMessageA: Dispatching through MessageDispatcher");
 				var typedMessage = Messaging.MessageFactory.CreateMessage(hwnd, message, wParam, lParam);
-				var dispatchResult = _env.MessageDispatcher.Dispatch(typedMessage);
+				// Use async dispatch with synchronous wait (DispatchMessageA is called from emulated code)
+				var dispatchResult = _env.MessageDispatcher.DispatchAsync(typedMessage).GetAwaiter().GetResult();
 				_logger.LogDebug("[User32] DispatchMessageA: MessageDispatcher returned 0x{Result:X8}", dispatchResult);
 				// Continue to window procedure for compatibility
 			}

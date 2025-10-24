@@ -20,7 +20,7 @@ public class MessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public void RegisterHandler_ShouldAllowHandlerRegistration()
+	public async Task RegisterHandler_ShouldAllowHandlerRegistration()
 	{
 		// Arrange
 		var handler = new TestMessageHandler();
@@ -33,7 +33,7 @@ public class MessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public void Dispatch_WithRegisteredHandler_ShouldInvokeHandler()
+	public async Task Dispatch_WithRegisteredHandler_ShouldInvokeHandler()
 	{
 		// Arrange
 		var handler = new TestMessageHandler();
@@ -41,7 +41,7 @@ public class MessageDispatcherTests : IDisposable
 		var message = new PaintMessage(0x00010000);
 
 		// Act
-		var result = _dispatcher.Dispatch(message);
+		var result = await _dispatcher.DispatchAsync(message);
 
 		// Assert
 		Assert.Equal(42u, result); // TestMessageHandler returns 42
@@ -49,24 +49,24 @@ public class MessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public void Dispatch_WithNoHandler_ShouldReturnZero()
+	public async Task Dispatch_WithNoHandler_ShouldReturnZero()
 	{
 		// Arrange
 		var message = new PaintMessage(0x00010000);
 
 		// Act
-		var result = _dispatcher.Dispatch(message);
+		var result = await _dispatcher.DispatchAsync(message);
 
 		// Assert
 		Assert.Equal(0u, result);
 	}
 
 	[Fact]
-	public void RegisterHandler_WithLambda_ShouldWork()
+	public async Task RegisterHandler_WithLambda_ShouldWork()
 	{
 		// Arrange
 		var callCount = 0;
-		_dispatcher.RegisterHandler(WM.COMMAND, msg =>
+		_dispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) =>
 		{
 			callCount++;
 			return 123;
@@ -75,7 +75,7 @@ public class MessageDispatcherTests : IDisposable
 		var message = new CommandMessage(0x00010000, 0x00020003, 0x00040000);
 
 		// Act
-		var result = _dispatcher.Dispatch(message);
+		var result = await _dispatcher.DispatchAsync(message);
 
 		// Assert
 		Assert.Equal(123u, result);
@@ -83,18 +83,18 @@ public class MessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public void Dispatch_WithMultipleHandlers_ShouldInvokeAllHandlers()
+	public async Task Dispatch_WithMultipleHandlers_ShouldInvokeAllHandlers()
 	{
 		// Arrange
 		var callCount = 0;
-		_dispatcher.RegisterHandler(WM.CLOSE, msg => { callCount++; return 1; });
-		_dispatcher.RegisterHandler(WM.CLOSE, msg => { callCount++; return 2; });
-		_dispatcher.RegisterHandler(WM.CLOSE, msg => { callCount++; return 3; });
+		_dispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) => { callCount++; return 1; });
+		_dispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) => { callCount++; return 2; });
+		_dispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) => { callCount++; return 3; });
 
 		var message = new CloseMessage(0x00010000);
 
 		// Act
-		var result = _dispatcher.Dispatch(message);
+		var result = await _dispatcher.DispatchAsync(message);
 
 		// Assert
 		Assert.Equal(3u, result); // Last handler's return value
@@ -102,7 +102,7 @@ public class MessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public void UnregisterHandlers_ShouldRemoveAllHandlers()
+	public async Task UnregisterHandlers_ShouldRemoveAllHandlers()
 	{
 		// Arrange
 		_dispatcher.RegisterHandler(WM.PAINT, new TestMessageHandler());
@@ -116,12 +116,12 @@ public class MessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public void Clear_ShouldRemoveAllHandlers()
+	public async Task Clear_ShouldRemoveAllHandlers()
 	{
 		// Arrange
 		_dispatcher.RegisterHandler(WM.PAINT, new TestMessageHandler());
-		_dispatcher.RegisterHandler(WM.CLOSE, msg => 0);
-		_dispatcher.RegisterHandler(WM.COMMAND, msg => 0);
+		_dispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) => 0);
+		_dispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) => 0);
 		
 		Assert.True(_dispatcher.HasHandlers(WM.PAINT));
 		Assert.True(_dispatcher.HasHandlers(WM.CLOSE));
@@ -137,7 +137,7 @@ public class MessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public void CommandMessage_ShouldParsewParamCorrectly()
+	public async Task CommandMessage_ShouldParsewParamCorrectly()
 	{
 		// Arrange
 		var controlId = 0x0001u;
@@ -155,7 +155,7 @@ public class MessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public void LButtonDownMessage_ShouldParseCoordinatesCorrectly()
+	public async Task LButtonDownMessage_ShouldParseCoordinatesCorrectly()
 	{
 		// Arrange
 		var x = (short)100;
@@ -171,7 +171,7 @@ public class MessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public void KeyDownMessage_ShouldParseVirtualKeyCode()
+	public async Task KeyDownMessage_ShouldParseVirtualKeyCode()
 	{
 		// Arrange
 		var virtualKeyCode = 0x41u; // 'A' key
@@ -189,7 +189,7 @@ public class MessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public void MessageFactory_ShouldCreateTypedMessages()
+	public async Task MessageFactory_ShouldCreateTypedMessages()
 	{
 		// Act
 		var paintMsg = MessageFactory.CreateMessage(0x00010000, WM.PAINT, 0, 0);
@@ -212,7 +212,7 @@ public class MessageDispatcherTests : IDisposable
 	{
 		public bool WasCalled { get; private set; }
 
-		public uint Handle(PaintMessage message)
+		public async Task<uint> HandleAsync(PaintMessage message, CancellationToken cancellationToken = default)
 		{
 			WasCalled = true;
 			return 42;

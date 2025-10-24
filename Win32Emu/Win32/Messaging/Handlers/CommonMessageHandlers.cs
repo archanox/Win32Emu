@@ -6,7 +6,7 @@ namespace Win32Emu.Win32.Messaging.Handlers;
 /// <summary>
 /// Handles WM_PAINT messages asynchronously
 /// </summary>
-public class PaintMessageHandler : IAsyncMessageHandler<PaintMessage>
+public class PaintMessageHandler : IMessageHandler<PaintMessage>
 {
 	private readonly ProcessEnvironment _env;
 	private readonly ILogger _logger;
@@ -39,7 +39,7 @@ public class PaintMessageHandler : IAsyncMessageHandler<PaintMessage>
 /// <summary>
 /// Handles WM_CLOSE messages asynchronously
 /// </summary>
-public class CloseMessageHandler : IAsyncMessageHandler<CloseMessage>
+public class CloseMessageHandler : IMessageHandler<CloseMessage>
 {
 	private readonly ProcessEnvironment _env;
 	private readonly ILogger _logger;
@@ -67,7 +67,7 @@ public class CloseMessageHandler : IAsyncMessageHandler<CloseMessage>
 /// <summary>
 /// Handles WM_COMMAND messages asynchronously
 /// </summary>
-public class CommandMessageHandler : IAsyncMessageHandler<CommandMessage>
+public class CommandMessageHandler : IMessageHandler<CommandMessage>
 {
 	private readonly ILogger _logger;
 

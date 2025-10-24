@@ -20,13 +20,13 @@ public class AsyncMessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public async Task RegisterAsyncHandler_ShouldAllowAsyncHandlerRegistration()
+	public async Task RegisterHandler_ShouldAllowAsyncHandlerRegistration()
 	{
 		// Arrange
 		var handler = new TestAsyncMessageHandler();
 
 		// Act
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.PAINT, handler);
+		_env.MessageDispatcher.RegisterHandler(WM.PAINT, handler);
 
 		// Assert
 		Assert.True(_env.MessageDispatcher.HasHandlers(WM.PAINT));
@@ -37,7 +37,7 @@ public class AsyncMessageDispatcherTests : IDisposable
 	{
 		// Arrange
 		var handler = new TestAsyncMessageHandler();
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.PAINT, handler);
+		_env.MessageDispatcher.RegisterHandler(WM.PAINT, handler);
 		var message = new PaintMessage(0x00010000);
 
 		// Act
@@ -49,11 +49,11 @@ public class AsyncMessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public async Task RegisterAsyncHandler_WithLambda_ShouldWork()
+	public async Task RegisterHandler_WithLambda_ShouldWork()
 	{
 		// Arrange
 		var callCount = 0;
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.COMMAND, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) =>
 		{
 			await Task.Delay(10, ct); // Simulate async work
 			callCount++;
@@ -76,21 +76,21 @@ public class AsyncMessageDispatcherTests : IDisposable
 		// Arrange
 		var executionOrder = new List<int>();
 
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.CLOSE, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) =>
 		{
 			await Task.Delay(5, ct);
 			executionOrder.Add(1);
 			return 1;
 		});
 		
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.CLOSE, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) =>
 		{
 			await Task.Delay(5, ct);
 			executionOrder.Add(2);
 			return 2;
 		});
 		
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.CLOSE, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) =>
 		{
 			await Task.Delay(5, ct);
 			executionOrder.Add(3);
@@ -112,7 +112,7 @@ public class AsyncMessageDispatcherTests : IDisposable
 	{
 		// Arrange
 		var cts = new CancellationTokenSource();
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.PAINT, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.PAINT, async (msg, ct) =>
 		{
 			await Task.Delay(100, ct); // Long operation
 			return 0;
@@ -130,22 +130,22 @@ public class AsyncMessageDispatcherTests : IDisposable
 	}
 
 	[Fact]
-	public async Task DispatchAsync_WithBothSyncAndAsyncHandlers_ShouldInvokeBoth()
+	public async Task DispatchAsync_WithMultipleAsyncHandlers_ShouldInvokeBoth()
 	{
 		// Arrange
-		var syncCalled = false;
-		var asyncCalled = false;
+		var firstCalled = false;
+		var secondCalled = false;
 
-		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, msg =>
+		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) =>
 		{
-			syncCalled = true;
+			firstCalled = true;
 			return 10;
 		});
 
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.COMMAND, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) =>
 		{
 			await Task.Delay(5, ct);
-			asyncCalled = true;
+			secondCalled = true;
 			return 20;
 		});
 
@@ -155,9 +155,9 @@ public class AsyncMessageDispatcherTests : IDisposable
 		var result = await _env.MessageDispatcher.DispatchAsync(message);
 
 		// Assert
-		Assert.True(syncCalled);
-		Assert.True(asyncCalled);
-		Assert.Equal(20u, result); // Async handler's return value
+		Assert.True(firstCalled);
+		Assert.True(secondCalled);
+		Assert.Equal(20u, result); // Second handler's return value
 	}
 
 	[Fact]
@@ -165,7 +165,7 @@ public class AsyncMessageDispatcherTests : IDisposable
 	{
 		// Arrange
 		var handler = new TestTypedAsyncCommandHandler();
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.COMMAND, handler);
+		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, handler);
 
 		var controlId = 0x0001u;
 		var notificationCode = 0x0002u;
@@ -188,7 +188,7 @@ public class AsyncMessageDispatcherTests : IDisposable
 	}
 
 	// Test async message handler
-	private class TestAsyncMessageHandler : IAsyncMessageHandler<PaintMessage>
+	private class TestAsyncMessageHandler : IMessageHandler<PaintMessage>
 	{
 		public bool WasCalled { get; private set; }
 
@@ -201,7 +201,7 @@ public class AsyncMessageDispatcherTests : IDisposable
 	}
 
 	// Test typed async handler
-	private class TestTypedAsyncCommandHandler : IAsyncMessageHandler<CommandMessage>
+	private class TestTypedAsyncCommandHandler : IMessageHandler<CommandMessage>
 	{
 		public bool WasCalled { get; private set; }
 		public uint ReceivedControlId { get; private set; }

@@ -27,24 +27,10 @@ public interface IMessage
 }
 
 /// <summary>
-/// Handler for a specific message type
-/// </summary>
-/// <typeparam name="TMessage">The message type this handler processes</typeparam>
-public interface IMessageHandler<in TMessage> where TMessage : IMessage
-{
-	/// <summary>
-	/// Handle the message
-	/// </summary>
-	/// <param name="message">The message to handle</param>
-	/// <returns>The result of message processing</returns>
-	uint Handle(TMessage message);
-}
-
-/// <summary>
 /// Async handler for a specific message type
 /// </summary>
 /// <typeparam name="TMessage">The message type this handler processes</typeparam>
-public interface IAsyncMessageHandler<in TMessage> where TMessage : IMessage
+public interface IMessageHandler<in TMessage> where TMessage : IMessage
 {
 	/// <summary>
 	/// Handle the message asynchronously
