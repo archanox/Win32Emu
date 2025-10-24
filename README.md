@@ -1,6 +1,7 @@
 # Win32Emu
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/archanox/Win32Emu)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=archanox_Win32Emu&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=archanox_Win32Emu)
 
 A Windows 32-bit PE executable emulator for running classic Windows games and applications on modern systems.
 
