@@ -109,6 +109,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETCOMMANDLINEA":
 				returnValue = GetCommandLineA();
 				return true;
+			case "GETCOMMANDLINEW":
+				returnValue = GetCommandLineW();
+				return true;
 			case "GETENVIRONMENTSTRINGSW":
 				returnValue = GetEnvironmentStringsW();
 				return true;
@@ -143,6 +146,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "ATTACHCONSOLE":
 				returnValue = AttachConsole(a.UInt32(0));
+				return true;
+			case "SETCONSOLEOUTPUTCP":
+				returnValue = SetConsoleOutputCP(a.UInt32(0));
 				return true;
 
 			// Memory/heap
@@ -201,6 +207,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// File I/O
 			case "CREATEFILEA":
 				returnValue = CreateFileA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5),
+					a.UInt32(6));
+				return true;
+			case "CREATEFILEW":
+				returnValue = CreateFileW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5),
 					a.UInt32(6));
 				return true;
 			case "READFILE":
@@ -1773,6 +1783,46 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return ptr;
 	}
 
+	/// <summary>
+	/// Retrieves the command-line string for the current process (Unicode version).
+	/// </summary>
+	/// <returns>
+	/// The return value is a pointer to the command-line string for the current process.
+	/// The lifetime of the returned value is managed by the system, applications should not free or modify this value.
+	/// </returns>
+	[DllModuleExport(0)]
+	public uint GetCommandLineW()
+	{
+		var ptr = _env.CommandLinePtrW;
+		if (ptr != 0)
+		{
+			// Read the command line string for logging
+			var cmdLine = _env.ReadUnicodeString(ptr);
+			_logger.LogInformation("[Kernel32] GetCommandLineW returning 0x{Ptr:X8}: \"{CmdLine}\"", ptr, cmdLine);
+		}
+		else
+		{
+			// If no wide command line exists, convert from ANSI
+			var ansiPtr = _env.CommandLinePtr;
+			if (ansiPtr != 0)
+			{
+				var ansiCmdLine = _env.ReadAnsiString(ansiPtr);
+				var fixedCmdLine = FixCommandLineEscaping(ansiCmdLine);
+				var windowsPath = ConvertToWindowsPath(fixedCmdLine);
+				
+				// Allocate memory for wide string
+				var wideBytes = Encoding.Unicode.GetBytes(windowsPath + "\0");
+				ptr = _env.HeapAlloc(0, (uint)wideBytes.Length);
+				_env.MemWriteBytes(ptr, wideBytes);
+				_env.CommandLinePtrW = ptr;
+				
+				_logger.LogInformation("[Kernel32] GetCommandLineW created wide version at 0x{Ptr:X8}: \"{CmdLine}\"", ptr, windowsPath);
+			}
+		}
+
+		return ptr;
+	}
+
 	[DllModuleExport(12)]
 	public uint GetEnvironmentStringsW()
 	{
@@ -1926,6 +1976,21 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Sets the output code page used by the console associated with the calling process.
+	/// </summary>
+	/// <param name="wCodePageID">The code page identifier.</param>
+	/// <returns>Returns TRUE if successful, FALSE otherwise.</returns>
+	[DllModuleExport(4)]
+	private uint SetConsoleOutputCP(uint wCodePageID)
+	{
+		_logger.LogInformation("[Kernel32] SetConsoleOutputCP(wCodePageID={WCodePageID})", wCodePageID);
+		
+		// For emulation purposes, we accept the call but don't actually change the code page
+		// The emulator uses UTF-8/Unicode internally
+		return 1; // TRUE - success
 	}
 
 	[DllModuleExport(24)]
@@ -2341,6 +2406,101 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] CreateFileA failed: {ExMessage}", ex.Message);
+			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+		}
+	}
+
+	/// <summary>
+	/// Creates or opens a file or I/O device (Unicode version).
+	/// </summary>
+	[DllModuleExport(28)]
+	private uint CreateFileW(uint lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecAttr,
+		uint dwCreationDisposition, uint dwFlagsAndAttributes, uint hTemplateFile)
+	{
+		try
+		{
+			var path = _env.ReadUnicodeString(lpFileName);
+
+			// Handle invalid paths (empty, null, or invalid characters)
+			if (string.IsNullOrEmpty(path))
+			{
+				_logger.LogInformation("[Kernel32] CreateFileW failed: Invalid path (empty or null)");
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
+
+			// Resolve relative paths relative to the current directory
+			var resolvedPath = path;
+			if (!Path.IsPathRooted(path))
+			{
+				// Path is relative, resolve it relative to current directory
+				resolvedPath = Path.Combine(_env.CurrentDirectory, path);
+				_logger.LogDebug("[Kernel32] CreateFileW: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')", 
+					path, resolvedPath, _env.CurrentDirectory);
+			}
+
+			// If VFS is available, use it for file operations
+			if (_env.VirtualFileSystem != null)
+			{
+				var mode = dwCreationDisposition switch
+				{
+					1 => VfsFileMode.CreateNew,
+					2 => VfsFileMode.Create,
+					3 => VfsFileMode.Open,
+					4 => VfsFileMode.OpenOrCreate,
+					5 => VfsFileMode.Truncate,
+					_ => VfsFileMode.OpenOrCreate
+				};
+
+				var access = VfsFileAccess.ReadWrite;
+				if ((dwDesiredAccess & 0x80000000) != 0 && (dwDesiredAccess & 0x40000000) == 0)
+				{
+					access = VfsFileAccess.Read; // GENERIC_READ
+				}
+				else if ((dwDesiredAccess & 0x40000000) != 0 && (dwDesiredAccess & 0x80000000) == 0)
+				{
+					access = VfsFileAccess.Write; // GENERIC_WRITE
+				}
+
+				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
+				if (handle != null)
+				{
+					return _env.RegisterHandle(handle);
+				}
+
+				_logger.LogInformation("[Kernel32] CreateFileW (VFS) failed: {Path}", resolvedPath);
+				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
+
+			var fileMode = dwCreationDisposition switch
+			{
+				1 => FileMode.CreateNew,
+				2 => FileMode.Create,
+				3 => FileMode.Open,
+				4 => FileMode.OpenOrCreate,
+				5 => FileMode.Truncate,
+				_ => FileMode.OpenOrCreate
+			};
+
+			var fileAccess = FileAccess.ReadWrite;
+			if ((dwDesiredAccess & 0x80000000) != 0 && (dwDesiredAccess & 0x40000000) == 0)
+			{
+				fileAccess = FileAccess.Read; // GENERIC_READ
+			}
+
+			if ((dwDesiredAccess & 0x40000000) != 0 && (dwDesiredAccess & 0x80000000) == 0)
+			{
+				fileAccess = FileAccess.Write; // GENERIC_WRITE
+			}
+
+			var fs = new FileStream(resolvedPath, fileMode, fileAccess, FileShare.ReadWrite);
+			return _env.RegisterHandle(fs);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] CreateFileW failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
