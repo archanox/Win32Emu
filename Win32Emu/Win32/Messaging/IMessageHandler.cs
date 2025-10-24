@@ -41,6 +41,21 @@ public interface IMessageHandler<in TMessage> where TMessage : IMessage
 }
 
 /// <summary>
+/// Async handler for a specific message type
+/// </summary>
+/// <typeparam name="TMessage">The message type this handler processes</typeparam>
+public interface IAsyncMessageHandler<in TMessage> where TMessage : IMessage
+{
+	/// <summary>
+	/// Handle the message asynchronously
+	/// </summary>
+	/// <param name="message">The message to handle</param>
+	/// <param name="cancellationToken">Cancellation token</param>
+	/// <returns>The result of message processing</returns>
+	Task<uint> HandleAsync(TMessage message, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
 /// Base class for Win32 messages
 /// </summary>
 public record Win32Message(uint Hwnd, uint Message, uint WParam, uint LParam) : IMessage;

@@ -5,12 +5,14 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Win32Emu.Gui.Services;
+using Win32Emu.Win32.Messaging;
 
 namespace Win32Emu.Gui.ViewModels;
 
 public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 {
     private readonly EmulatorService? _emulatorService;
+    private GuiMessageDispatcherIntegration? _messageDispatcherIntegration;
 
     [ObservableProperty]
     private ObservableCollection<DebugMessage> _debugMessages = [];
@@ -61,6 +63,38 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     public EmulatorWindowViewModel(EmulatorService emulatorService)
     {
         _emulatorService = emulatorService;
+    }
+
+    /// <summary>
+    /// Initialize MessageDispatcher integration when emulator is ready
+    /// </summary>
+    public void InitializeMessageDispatcher()
+    {
+        if (_emulatorService?.CurrentEmulator?.Environment != null)
+        {
+            _messageDispatcherIntegration = new GuiMessageDispatcherIntegration(
+                _emulatorService.CurrentEmulator.Environment,
+                this
+            );
+            _messageDispatcherIntegration.RegisterDefaultHandlers();
+            OnDebugOutput("MessageDispatcher integration initialized with async handlers", DebugLevel.Info);
+        }
+    }
+
+    /// <summary>
+    /// Post a message asynchronously using the MessageDispatcher
+    /// </summary>
+    private async Task PostMessageAsync(uint hwnd, uint message, uint wParam, uint lParam)
+    {
+        if (_messageDispatcherIntegration != null)
+        {
+            await _messageDispatcherIntegration.PostMessageAsync(hwnd, message, wParam, lParam);
+        }
+        else
+        {
+            // Fallback to synchronous PostMessage
+            _emulatorService?.CurrentEmulator?.PostMessage(hwnd, message, wParam, lParam);
+        }
     }
 
     public void OnDebugOutput(string message, DebugLevel level)
@@ -264,28 +298,28 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         };
 
         // Hook window lifecycle events to send Win32 messages
-        window.Opened += (s, e) =>
+        window.Opened += async (s, e) =>
         {
             OnDebugOutput($"Avalonia window opened for HWND=0x{info.Handle:X8}, sending WM_SHOWWINDOW", DebugLevel.Debug);
             // WM_SHOWWINDOW = 0x0018, wParam = TRUE (showing)
-            _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x0018, 1, 0);
+            await PostMessageAsync(info.Handle, 0x0018, 1, 0);
         };
 
-        window.Activated += (s, e) =>
+        window.Activated += async (s, e) =>
         {
             OnDebugOutput($"Avalonia window activated for HWND=0x{info.Handle:X8}, sending WM_ACTIVATEAPP", DebugLevel.Debug);
             // WM_ACTIVATEAPP = 0x001C, wParam = TRUE (activating)
-            _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x001C, 1, 0);
+            await PostMessageAsync(info.Handle, 0x001C, 1, 0);
         };
 
-        window.Deactivated += (s, e) =>
+        window.Deactivated += async (s, e) =>
         {
             OnDebugOutput($"Avalonia window deactivated for HWND=0x{info.Handle:X8}, sending WM_ACTIVATEAPP", DebugLevel.Debug);
             // WM_ACTIVATEAPP = 0x001C, wParam = FALSE (deactivating)
-            _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x001C, 0, 0);
+            await PostMessageAsync(info.Handle, 0x001C, 0, 0);
         };
 
-        window.PositionChanged += (s, e) =>
+        window.PositionChanged += async (s, e) =>
         {
             if (s is Window w)
             {
@@ -293,11 +327,11 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 OnDebugOutput($"Avalonia window moved for HWND=0x{info.Handle:X8} to ({pos.X}, {pos.Y}), sending WM_MOVE", DebugLevel.Debug);
                 // WM_MOVE = 0x0003, wParam = 0, lParam = MAKELONG(x, y)
                 uint lParam = ((uint)pos.Y << 16) | ((uint)pos.X & 0xFFFF);
-                _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x0003, 0, lParam);
+                await PostMessageAsync(info.Handle, 0x0003, 0, lParam);
             }
         };
 
-        window.Resized += (s, e) =>
+        window.Resized += async (s, e) =>
         {
             if (s is Window w)
             {
@@ -307,7 +341,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 ushort width = (ushort)Math.Clamp(size.Width, 0, ushort.MaxValue);
                 ushort height = (ushort)Math.Clamp(size.Height, 0, ushort.MaxValue);
                 uint lParam = ((uint)height << 16) | ((uint)width & 0xFFFF);
-                _emulatorService?.CurrentEmulator?.PostMessage(info.Handle, 0x0005, 0, lParam);
+                await PostMessageAsync(info.Handle, 0x0005, 0, lParam);
             }
         };
 
@@ -384,12 +418,12 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             case "BUTTON":
                 if (control is Button button)
                 {
-                    button.Click += (s, e) =>
+                    button.Click += async (s, e) =>
                     {
                         OnDebugOutput($"Button 0x{hwnd:X8} clicked", DebugLevel.Debug);
                         // Send WM_LBUTTONDOWN and WM_LBUTTONUP to simulate a button click
                         // This will allow the StandardControlHandler to handle the click and send WM_COMMAND
-                        SendMouseClickToButton(hwnd);
+                        await SendMouseClickToButton(hwnd);
                     };
                 }
                 break;
@@ -397,10 +431,10 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             case "EDIT":
                 if (control is TextBox textBox)
                 {
-                    textBox.TextChanged += (s, e) =>
+                    textBox.TextChanged += async (s, e) =>
                     {
                         OnDebugOutput($"Edit 0x{hwnd:X8} text changed", DebugLevel.Debug);
-                        SendWmCommand(hwnd, 0x0300); // EN_CHANGE = 0x0300
+                        await SendWmCommand(hwnd, 0x0300); // EN_CHANGE = 0x0300
                     };
                 }
                 break;
@@ -412,15 +446,15 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     /// <summary>
     /// Send mouse click messages to a button control
     /// </summary>
-    private void SendMouseClickToButton(uint buttonHwnd)
+    private async Task SendMouseClickToButton(uint buttonHwnd)
     {
         if (_emulatorService?.CurrentEmulator != null)
         {
-            // Send WM_LBUTTONDOWN (0x0201)
-            _emulatorService.CurrentEmulator.PostMessage(buttonHwnd, 0x0201, 0x0001, 0);
+            // Send WM_LBUTTONDOWN (0x0201) async
+            await PostMessageAsync(buttonHwnd, 0x0201, 0x0001, 0);
             
-            // Send WM_LBUTTONUP (0x0202) 
-            _emulatorService.CurrentEmulator.PostMessage(buttonHwnd, 0x0202, 0, 0);
+            // Send WM_LBUTTONUP (0x0202) async
+            await PostMessageAsync(buttonHwnd, 0x0202, 0, 0);
             
             OnDebugOutput($"Sent mouse click messages to button 0x{buttonHwnd:X8}", DebugLevel.Debug);
         }
@@ -433,7 +467,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     /// <summary>
     /// Send WM_COMMAND message to the parent window
     /// </summary>
-    private void SendWmCommand(uint controlHwnd, uint notificationCode)
+    private async Task SendWmCommand(uint controlHwnd, uint notificationCode)
     {
         // Get parent HWND
         if (!_controlParents.TryGetValue(controlHwnd, out var parentHwnd))
@@ -453,11 +487,11 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         uint wParam = (notificationCode << 16) | (controlId & 0xFFFF);
         uint lParam = controlHwnd;
         
-        // Post WM_COMMAND (0x0111) to parent
+        // Post WM_COMMAND (0x0111) to parent async
         if (_emulatorService?.CurrentEmulator != null)
         {
-            bool success = _emulatorService.CurrentEmulator.PostMessage(parentHwnd, 0x0111, wParam, lParam);
-            OnDebugOutput($"Sent WM_COMMAND to parent 0x{parentHwnd:X8}: controlId={controlId}, notification=0x{notificationCode:X4}, success={success}", DebugLevel.Debug);
+            await PostMessageAsync(parentHwnd, 0x0111, wParam, lParam);
+            OnDebugOutput($"Sent WM_COMMAND to parent 0x{parentHwnd:X8}: controlId={controlId}, notification=0x{notificationCode:X4}", DebugLevel.Debug);
         }
         else
         {

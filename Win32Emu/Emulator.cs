@@ -88,6 +88,11 @@ public sealed class Emulator : IDisposable
     public Telemetry.EmulatorMetrics? Metrics => _metrics;
 
     /// <summary>
+    /// Get the process environment (may be null if not initialized)
+    /// </summary>
+    public ProcessEnvironment? Environment => _env;
+
+    /// <summary>
     /// Post a message to the Win32 message queue (for GUI-to-emulator communication)
     /// </summary>
     public bool PostMessage(uint hwnd, uint message, uint wParam, uint lParam)
