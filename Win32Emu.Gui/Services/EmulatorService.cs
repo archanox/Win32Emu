@@ -61,6 +61,9 @@ public class EmulatorService
                 // Get the global telemetry service if enabled
                 var telemetryService = App.TelemetryService;
                 
+                // Determine if JIT CPU should be used based on configuration
+                var useJitCpu = _configuration.CpuBackend == "JitCPU";
+                
                 // Create and configure the emulator
                 _currentEmulator = new Emulator(_host, _logger, telemetryService);
                 
@@ -74,7 +77,8 @@ public class EmulatorService
                     _configuration.EnableGdbServer,
                     _configuration.GdbServerPort,
                     _configuration.EnableInstructionAnalyzer,
-                    _configuration.EnableLegacyInstructionDecoding);
+                    _configuration.EnableLegacyInstructionDecoding,
+                    useJitCpu);
                 
                 // Run the emulator
                 _currentEmulator.Run();

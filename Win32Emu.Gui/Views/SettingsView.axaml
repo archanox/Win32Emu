@@ -46,6 +46,20 @@
                              TextWrapping="Wrap"/>
                 </StackPanel>
 
+                <!-- CPU Backend -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="CPU Emulator Backend"
+                             FontWeight="Bold"
+                             FontSize="14"/>
+                    <ComboBox ItemsSource="{Binding CpuBackends}"
+                            SelectedItem="{Binding CpuBackend}"
+                            HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="Select the CPU emulation backend. IcedCPU is the stable interpreter (default). JitCPU is the experimental JIT compiler with async support for better performance."
+                             FontSize="12"
+                             Opacity="0.7"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+
                 <!-- Resolution Scale Factor -->
                 <StackPanel Spacing="8">
                     <TextBlock Text="Resolution Scale Factor"
