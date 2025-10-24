@@ -61,6 +61,10 @@ public class Shell32Module : IWin32ModuleUnsafe
 				returnValue = ShellExecuteA(a.UInt32(0), a.LpcStr(1), a.LpcStr(2), a.LpcStr(3), a.LpcStr(4), a.Int32(5));
 				return true;
 
+			case "SHELLEXECUTEEXA":
+				returnValue = ShellExecuteExA(a.UInt32(0));
+				return true;
+
 			default:
 				_logger.LogInformation("[Shell32] Unimplemented export: {Export}", export);
 				return false;
@@ -182,5 +186,15 @@ public class Shell32Module : IWin32ModuleUnsafe
 
 		// Stub - return value > 32 indicates success
 		return 33; // Success
+	}
+
+	private uint ShellExecuteExA(uint lpExecInfo)
+	{
+		_logger.LogInformation("[Shell32] ShellExecuteExA(lpExecInfo=0x{LpExecInfo:X8})", lpExecInfo);
+		
+		// SHELLEXECUTEINFO structure
+		// Read fields from the structure if needed
+		// For now, just return success
+		return 1; // TRUE
 	}
 }

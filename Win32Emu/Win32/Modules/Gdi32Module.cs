@@ -95,6 +95,9 @@ namespace Win32Emu.Win32.Modules
 				case "CREATECOMPATIBLEDC":
 					returnValue = CreateCompatibleDC(a.UInt32(0));
 					return true;
+				case "CREATEDCA":
+					returnValue = CreateDCA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.UInt32(3));
+					return true;
 				case "DELETEDC":
 					returnValue = DeleteDC(a.UInt32(0));
 					return true;
@@ -442,6 +445,21 @@ namespace Win32Emu.Win32.Modules
 		private uint CreateCompatibleDC(uint hdc)
 		{
 			_logger.LogInformation("[Gdi32] CreateCompatibleDC(hdc=0x{Hdc:X8})", hdc);
+			var handle = _nextDcHandle++;
+			_deviceContexts[handle] = new DeviceContext { Handle = handle };
+			return handle;
+		}
+
+		private uint CreateDCA(in LpcStr lpszDriver, in LpcStr lpszDevice, in LpcStr lpszOutput, uint lpInitData)
+		{
+			var driver = lpszDriver.ToString() ?? string.Empty;
+			var device = lpszDevice.ToString() ?? string.Empty;
+			var output = lpszOutput.ToString() ?? string.Empty;
+			
+			_logger.LogInformation("[Gdi32] CreateDCA(lpszDriver=\"{Driver}\", lpszDevice=\"{Device}\", lpszOutput=\"{Output}\")", 
+				driver, device, output);
+			
+			// Create a device context handle
 			var handle = _nextDcHandle++;
 			_deviceContexts[handle] = new DeviceContext { Handle = handle };
 			return handle;
