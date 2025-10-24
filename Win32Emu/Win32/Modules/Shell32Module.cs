@@ -60,6 +60,12 @@ public class Shell32Module : IWin32ModuleUnsafe
 			case "SHELLEXECUTEA":
 				returnValue = ShellExecuteA(a.UInt32(0), a.LpcStr(1), a.LpcStr(2), a.LpcStr(3), a.LpcStr(4), a.Int32(5));
 				return true;
+			case "DRAGFINISH":
+				returnValue = DragFinish(a.UInt32(0));
+				return true;
+			case "DRAGQUERYFILEA":
+				returnValue = DragQueryFileA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
 
 			default:
 				_logger.LogInformation("[Shell32] Unimplemented export: {Export}", export);
@@ -182,5 +188,30 @@ public class Shell32Module : IWin32ModuleUnsafe
 
 		// Stub - return value > 32 indicates success
 		return 33; // Success
+	}
+
+	/// <summary>
+	/// Releases memory that the system allocated for use in transferring file names to the application.
+	/// void DragFinish(HDROP hDrop);
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint DragFinish(uint hDrop)
+	{
+		_logger.LogInformation("[Shell32] DragFinish(hDrop=0x{HDrop:X8})", hDrop);
+		return 0; // void function
+	}
+
+	/// <summary>
+	/// Retrieves the names of dropped files that result from a successful drag-and-drop operation.
+	/// UINT DragQueryFileA(HDROP hDrop, UINT iFile, LPSTR lpszFile, UINT cch);
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint DragQueryFileA(uint hDrop, uint iFile, uint lpszFile, uint cch)
+	{
+		_logger.LogInformation("[Shell32] DragQueryFileA(hDrop=0x{HDrop:X8}, iFile={IFile}, lpszFile=0x{LpszFile:X8}, cch={Cch})",
+			hDrop, iFile, lpszFile, cch);
+		
+		// Stub - return 0 (no files dropped)
+		return 0;
 	}
 }
