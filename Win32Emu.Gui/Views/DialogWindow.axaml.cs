@@ -19,18 +19,18 @@ public partial class DialogWindow : Window
 {
 	private readonly DialogTemplate _template;
 	private readonly Dictionary<ushort, Control> _controlsById = new();
-	private readonly Dictionary<ushort, uint> _controlHandles;
+	private readonly Dictionary<int, uint> _controlHandles;
 	private readonly TaskCompletionSource<int> _resultTcs = new();
 	private readonly Action<uint, uint, uint, uint>? _messageCallback;
 	private readonly uint _dialogHandle;
 
 	public int DialogResult { get; private set; }
 
-	public DialogWindow(DialogTemplate template, uint dialogHandle = 0, Dictionary<ushort, uint>? controlHandles = null, Action<uint, uint, uint, uint>? messageCallback = null)
+	public DialogWindow(DialogTemplate template, uint dialogHandle = 0, Dictionary<int, uint>? controlHandles = null, Action<uint, uint, uint, uint>? messageCallback = null)
 	{
 		_template = template ?? throw new ArgumentNullException(nameof(template));
 		_dialogHandle = dialogHandle;
-		_controlHandles = controlHandles ?? new Dictionary<ushort, uint>();
+		_controlHandles = controlHandles ?? new Dictionary<int, uint>();
 		_messageCallback = messageCallback;
 		InitializeComponent();
 		BuildDialogContent();

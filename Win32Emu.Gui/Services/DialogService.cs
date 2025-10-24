@@ -25,7 +25,7 @@ public class DialogService
 	/// <param name="parentWindow">Parent window for modal display</param>
 	/// <param name="controlHandles">Optional dictionary mapping control IDs to window handles</param>
 	/// <returns>Task that completes when dialog is closed, with the dialog result</returns>
-	public async Task<int> ShowDialogAsync(uint dialogHandle, DialogTemplate template, Avalonia.Controls.Window? parentWindow = null, Dictionary<ushort, uint>? controlHandles = null)
+	public async Task<int> ShowDialogAsync(uint dialogHandle, DialogTemplate template, Avalonia.Controls.Window? parentWindow = null, Dictionary<int, uint>? controlHandles = null)
 	{
 		DialogWindow? dialog = null;
 
