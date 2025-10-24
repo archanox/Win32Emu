@@ -20,6 +20,7 @@ The log shows successful execution of the following API categories:
    - `GetVersion` → Returns 0x040003B6 (Windows 95 version)
    - `GetVersionExA` → Successfully fills version info structure
    - `GetACP` → Returns code page 0xFDE9 (65001 = UTF-8)
+     - *Note: The emulator returns UTF-8 as the ANSI code page. Historical Windows 9x would typically return 1252 (Western European) or other locale-specific code pages.*
    - `GetCPInfo` → Successfully retrieves code page information
 
 2. **Memory Management**
