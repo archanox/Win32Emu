@@ -201,6 +201,47 @@ public class DialogTests : IDisposable
 		Assert.Equal("Control 3 Text", _testEnv.ProcessEnv.GetDialogControlText(hDlg, 103));
 	}
 
+	[Fact]
+	public void DialogControlHandle_StoreAndRetrieve_ShouldWorkCorrectly()
+	{
+		// Arrange
+		const uint hDlg = 0x00010000;
+		const ushort controlId = 101;
+		const uint controlHandle = 0x00020000;
+		_testEnv.ProcessEnv.InitializeDialogState(hDlg);
+		
+		var controlInfo = new Win32.DialogItem
+		{
+			Id = controlId,
+			WindowClass = "BUTTON",
+			Title = "OK",
+			Style = 0,
+			ExtendedStyle = 0
+		};
+
+		// Act
+		_testEnv.ProcessEnv.StoreControlInfo(hDlg, controlId, controlHandle, controlInfo);
+		var retrievedHandle = _testEnv.ProcessEnv.GetDialogControlHandle(hDlg, controlId);
+
+		// Assert
+		Assert.Equal(controlHandle, retrievedHandle);
+	}
+
+	[Fact]
+	public void GetDialogControlHandle_WithNonexistentControl_ShouldReturnZero()
+	{
+		// Arrange
+		const uint hDlg = 0x00010000;
+		const int controlId = 999;
+		_testEnv.ProcessEnv.InitializeDialogState(hDlg);
+
+		// Act
+		var handle = _testEnv.ProcessEnv.GetDialogControlHandle(hDlg, controlId);
+
+		// Assert
+		Assert.Equal(0u, handle);
+	}
+
 	public void Dispose()
 	{
 		_testEnv.Dispose();
