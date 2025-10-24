@@ -158,3 +158,178 @@ public record KeyUpMessage(uint Hwnd, uint WParam, uint LParam)
 	/// </summary>
 	public uint VirtualKeyCode => WParam;
 }
+
+/// <summary>
+/// WM_MOVE message
+/// </summary>
+public record MoveMessage(uint Hwnd, uint LParam) 
+	: Win32Message(Hwnd, WM.MOVE, 0, LParam)
+{
+	/// <summary>
+	/// X coordinate (LOWORD of lParam)
+	/// </summary>
+	public int X => (short)(LParam & 0xFFFF);
+	
+	/// <summary>
+	/// Y coordinate (HIWORD of lParam)
+	/// </summary>
+	public int Y => (short)((LParam >> 16) & 0xFFFF);
+}
+
+/// <summary>
+/// WM_SIZE message
+/// </summary>
+public record SizeMessage(uint Hwnd, uint WParam, uint LParam) 
+	: Win32Message(Hwnd, WM.SIZE, WParam, LParam)
+{
+	/// <summary>
+	/// Width (LOWORD of lParam)
+	/// </summary>
+	public ushort Width => (ushort)(LParam & 0xFFFF);
+	
+	/// <summary>
+	/// Height (HIWORD of lParam)
+	/// </summary>
+	public ushort Height => (ushort)((LParam >> 16) & 0xFFFF);
+	
+	/// <summary>
+	/// Type of resizing (SIZE_RESTORED = 0, SIZE_MINIMIZED = 1, SIZE_MAXIMIZED = 2, etc.)
+	/// </summary>
+	public uint SizeType => WParam;
+}
+
+/// <summary>
+/// WM_ACTIVATE message
+/// </summary>
+public record ActivateMessage(uint Hwnd, uint WParam, uint LParam) 
+	: Win32Message(Hwnd, WM.ACTIVATE, WParam, LParam)
+{
+	/// <summary>
+	/// Active flag (LOWORD of wParam)
+	/// </summary>
+	public uint ActiveFlag => WParam & 0xFFFF;
+	
+	/// <summary>
+	/// Minimized flag (HIWORD of wParam)
+	/// </summary>
+	public bool IsMinimized => ((WParam >> 16) & 0xFFFF) != 0;
+	
+	/// <summary>
+	/// Handle of window being activated/deactivated
+	/// </summary>
+	public uint OtherWindow => LParam;
+}
+
+/// <summary>
+/// WM_MOUSEMOVE message
+/// </summary>
+public record MouseMoveMessage(uint Hwnd, uint WParam, uint LParam) 
+	: Win32Message(Hwnd, WM.MOUSEMOVE, WParam, LParam)
+{
+	/// <summary>
+	/// X coordinate (LOWORD of lParam)
+	/// </summary>
+	public int X => (short)(LParam & 0xFFFF);
+	
+	/// <summary>
+	/// Y coordinate (HIWORD of lParam)
+	/// </summary>
+	public int Y => (short)((LParam >> 16) & 0xFFFF);
+	
+	/// <summary>
+	/// Key state flags
+	/// </summary>
+	public uint KeyFlags => WParam;
+}
+
+/// <summary>
+/// WM_RBUTTONDOWN message
+/// </summary>
+public record RButtonDownMessage(uint Hwnd, uint WParam, uint LParam) 
+	: Win32Message(Hwnd, WM.RBUTTONDOWN, WParam, LParam)
+{
+	/// <summary>
+	/// X coordinate (LOWORD of lParam)
+	/// </summary>
+	public int X => (short)(LParam & 0xFFFF);
+	
+	/// <summary>
+	/// Y coordinate (HIWORD of lParam)
+	/// </summary>
+	public int Y => (short)((LParam >> 16) & 0xFFFF);
+}
+
+/// <summary>
+/// WM_RBUTTONUP message
+/// </summary>
+public record RButtonUpMessage(uint Hwnd, uint WParam, uint LParam) 
+	: Win32Message(Hwnd, WM.RBUTTONUP, WParam, LParam)
+{
+	/// <summary>
+	/// X coordinate (LOWORD of lParam)
+	/// </summary>
+	public int X => (short)(LParam & 0xFFFF);
+	
+	/// <summary>
+	/// Y coordinate (HIWORD of lParam)
+	/// </summary>
+	public int Y => (short)((LParam >> 16) & 0xFFFF);
+}
+
+/// <summary>
+/// WM_CHAR message
+/// </summary>
+public record CharMessage(uint Hwnd, uint WParam, uint LParam) 
+	: Win32Message(Hwnd, WM.CHAR, WParam, LParam)
+{
+	/// <summary>
+	/// Character code
+	/// </summary>
+	public uint CharCode => WParam;
+	
+	/// <summary>
+	/// Repeat count
+	/// </summary>
+	public uint RepeatCount => LParam & 0xFFFF;
+}
+
+/// <summary>
+/// WM_TIMER message
+/// </summary>
+public record TimerMessage(uint Hwnd, uint WParam, uint LParam) 
+	: Win32Message(Hwnd, WM.TIMER, WParam, LParam)
+{
+	/// <summary>
+	/// Timer identifier
+	/// </summary>
+	public uint TimerId => WParam;
+	
+	/// <summary>
+	/// Timer procedure address (optional)
+	/// </summary>
+	public uint TimerProc => LParam;
+}
+
+/// <summary>
+/// WM_ERASEBKGND message
+/// </summary>
+public record EraseBackgroundMessage(uint Hwnd, uint WParam) 
+	: Win32Message(Hwnd, WM.ERASEBKGND, WParam, 0)
+{
+	/// <summary>
+	/// Device context handle
+	/// </summary>
+	public uint HDC => WParam;
+}
+
+/// <summary>
+/// WM_QUIT message
+/// </summary>
+public record QuitMessage(uint ExitCode) 
+	: Win32Message(0, WM.QUIT, ExitCode, 0)
+{
+	/// <summary>
+	/// Exit code for the application
+	/// </summary>
+	public uint ExitCode => WParam;
+}

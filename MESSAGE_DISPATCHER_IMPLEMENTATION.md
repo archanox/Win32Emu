@@ -245,7 +245,7 @@ dotnet test --filter "FullyQualifiedName~MessageDispatcherTests"
 - **Zero allocations** for lambda-based handlers
 - **O(1) lookup** for message handlers by ID
 - **Minimal overhead** - direct function calls, no reflection
-- **Thread-safe** - can be used from multiple threads
+- **Thread-safe** - uses ConcurrentDictionary for concurrent access
 
 ## Future Enhancements
 

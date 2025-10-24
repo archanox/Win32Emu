@@ -24,8 +24,18 @@ public static class MessageFactory
 			WM.COMMAND => new CommandMessage(hwnd, wParam, lParam),
 			WM.LBUTTONDOWN => new LButtonDownMessage(hwnd, wParam, lParam),
 			WM.LBUTTONUP => new LButtonUpMessage(hwnd, wParam, lParam),
+			WM.RBUTTONDOWN => new RButtonDownMessage(hwnd, wParam, lParam),
+			WM.RBUTTONUP => new RButtonUpMessage(hwnd, wParam, lParam),
 			WM.KEYDOWN => new KeyDownMessage(hwnd, wParam, lParam),
 			WM.KEYUP => new KeyUpMessage(hwnd, wParam, lParam),
+			WM.CHAR => new CharMessage(hwnd, wParam, lParam),
+			WM.MOVE => new MoveMessage(hwnd, lParam),
+			WM.SIZE => new SizeMessage(hwnd, wParam, lParam),
+			WM.ACTIVATE => new ActivateMessage(hwnd, wParam, lParam),
+			WM.MOUSEMOVE => new MouseMoveMessage(hwnd, wParam, lParam),
+			WM.TIMER => new TimerMessage(hwnd, wParam, lParam),
+			WM.ERASEBKGND => new EraseBackgroundMessage(hwnd, wParam),
+			WM.QUIT => new QuitMessage(wParam),
 			_ => new Win32Message(hwnd, message, wParam, lParam)
 		};
 	}

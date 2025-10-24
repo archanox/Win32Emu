@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -7,11 +8,12 @@ namespace Win32Emu.Win32.Messaging;
 /// Dispatches Win32 messages to registered handlers
 /// Inspired by DispatchR/MediatR pattern for zero-allocation, type-safe message handling
 /// Supports both synchronous and asynchronous handlers
+/// Thread-safe implementation using ConcurrentDictionary
 /// </summary>
 public class MessageDispatcher
 {
-	private readonly Dictionary<uint, List<Func<IMessage, uint>>> _handlers = new();
-	private readonly Dictionary<uint, List<Func<IMessage, CancellationToken, Task<uint>>>> _asyncHandlers = new();
+	private readonly ConcurrentDictionary<uint, List<Func<IMessage, uint>>> _handlers = new();
+	private readonly ConcurrentDictionary<uint, List<Func<IMessage, CancellationToken, Task<uint>>>> _asyncHandlers = new();
 	private readonly ILogger _logger;
 
 	public MessageDispatcher(ILogger? logger = null)
@@ -28,21 +30,21 @@ public class MessageDispatcher
 	public void RegisterHandler<TMessage>(uint messageId, IMessageHandler<TMessage> handler) 
 		where TMessage : IMessage
 	{
-		if (!_handlers.ContainsKey(messageId))
+		var handlerList = _handlers.GetOrAdd(messageId, _ => new List<Func<IMessage, uint>>());
+		
+		lock (handlerList)
 		{
-			_handlers[messageId] = new List<Func<IMessage, uint>>();
-		}
-
-		// Wrap the strongly-typed handler in a function that accepts IMessage
-		_handlers[messageId].Add(msg =>
-		{
-			if (msg is TMessage typedMsg)
+			// Wrap the strongly-typed handler in a function that accepts IMessage
+			handlerList.Add(msg =>
 			{
-				return handler.Handle(typedMsg);
-			}
-			_logger.LogWarning("[MessageDispatcher] Message type mismatch for message ID 0x{MessageId:X4}", messageId);
-			return 0;
-		});
+				if (msg is TMessage typedMsg)
+				{
+					return handler.Handle(typedMsg);
+				}
+				_logger.LogWarning("[MessageDispatcher] Message type mismatch for message ID 0x{MessageId:X4}", messageId);
+				return 0;
+			});
+		}
 
 		_logger.LogDebug("[MessageDispatcher] Registered handler for message ID 0x{MessageId:X4}", messageId);
 	}
@@ -56,21 +58,21 @@ public class MessageDispatcher
 	public void RegisterAsyncHandler<TMessage>(uint messageId, IAsyncMessageHandler<TMessage> handler) 
 		where TMessage : IMessage
 	{
-		if (!_asyncHandlers.ContainsKey(messageId))
+		var handlerList = _asyncHandlers.GetOrAdd(messageId, _ => new List<Func<IMessage, CancellationToken, Task<uint>>>());
+		
+		lock (handlerList)
 		{
-			_asyncHandlers[messageId] = new List<Func<IMessage, CancellationToken, Task<uint>>>();
-		}
-
-		// Wrap the strongly-typed handler in a function that accepts IMessage
-		_asyncHandlers[messageId].Add(async (msg, ct) =>
-		{
-			if (msg is TMessage typedMsg)
+			// Wrap the strongly-typed handler in a function that accepts IMessage
+			handlerList.Add(async (msg, ct) =>
 			{
-				return await handler.HandleAsync(typedMsg, ct);
-			}
-			_logger.LogWarning("[MessageDispatcher] Message type mismatch for message ID 0x{MessageId:X4}", messageId);
-			return 0;
-		});
+				if (msg is TMessage typedMsg)
+				{
+					return await handler.HandleAsync(typedMsg, ct);
+				}
+				_logger.LogWarning("[MessageDispatcher] Message type mismatch for message ID 0x{MessageId:X4}", messageId);
+				return 0;
+			});
+		}
 
 		_logger.LogDebug("[MessageDispatcher] Registered async handler for message ID 0x{MessageId:X4}", messageId);
 	}
@@ -82,12 +84,13 @@ public class MessageDispatcher
 	/// <param name="handler">The handler function</param>
 	public void RegisterHandler(uint messageId, Func<IMessage, uint> handler)
 	{
-		if (!_handlers.ContainsKey(messageId))
+		var handlerList = _handlers.GetOrAdd(messageId, _ => new List<Func<IMessage, uint>>());
+		
+		lock (handlerList)
 		{
-			_handlers[messageId] = new List<Func<IMessage, uint>>();
+			handlerList.Add(handler);
 		}
-
-		_handlers[messageId].Add(handler);
+		
 		_logger.LogDebug("[MessageDispatcher] Registered lambda handler for message ID 0x{MessageId:X4}", messageId);
 	}
 
@@ -98,12 +101,13 @@ public class MessageDispatcher
 	/// <param name="handler">The async handler function</param>
 	public void RegisterAsyncHandler(uint messageId, Func<IMessage, CancellationToken, Task<uint>> handler)
 	{
-		if (!_asyncHandlers.ContainsKey(messageId))
+		var handlerList = _asyncHandlers.GetOrAdd(messageId, _ => new List<Func<IMessage, CancellationToken, Task<uint>>>());
+		
+		lock (handlerList)
 		{
-			_asyncHandlers[messageId] = new List<Func<IMessage, CancellationToken, Task<uint>>>();
+			handlerList.Add(handler);
 		}
-
-		_asyncHandlers[messageId].Add(handler);
+		
 		_logger.LogDebug("[MessageDispatcher] Registered async lambda handler for message ID 0x{MessageId:X4}", messageId);
 	}
 
@@ -121,7 +125,13 @@ public class MessageDispatcher
 		}
 
 		uint result = 0;
-		foreach (var handler in handlers)
+		List<Func<IMessage, uint>> handlersCopy;
+		lock (handlers)
+		{
+			handlersCopy = new List<Func<IMessage, uint>>(handlers);
+		}
+
+		foreach (var handler in handlersCopy)
 		{
 			try
 			{
@@ -153,7 +163,13 @@ public class MessageDispatcher
 		// Then execute async handlers
 		if (_asyncHandlers.TryGetValue(message.Message, out var asyncHandlers))
 		{
-			foreach (var handler in asyncHandlers)
+			List<Func<IMessage, CancellationToken, Task<uint>>> handlersCopy;
+			lock (asyncHandlers)
+			{
+				handlersCopy = new List<Func<IMessage, CancellationToken, Task<uint>>>(asyncHandlers);
+			}
+
+			foreach (var handler in handlersCopy)
 			{
 				try
 				{
@@ -194,8 +210,8 @@ public class MessageDispatcher
 	/// <param name="messageId">The Win32 message ID</param>
 	public void UnregisterHandlers(uint messageId)
 	{
-		var removed = _handlers.Remove(messageId);
-		removed |= _asyncHandlers.Remove(messageId);
+		var removed = _handlers.TryRemove(messageId, out _);
+		removed |= _asyncHandlers.TryRemove(messageId, out _);
 		
 		if (removed)
 		{
@@ -208,9 +224,10 @@ public class MessageDispatcher
 	/// </summary>
 	public void Clear()
 	{
-		var count = _handlers.Count + _asyncHandlers.Count;
+		// Count unique message IDs that have handlers
+		var uniqueMessageIds = _handlers.Keys.Union(_asyncHandlers.Keys).Count();
 		_handlers.Clear();
 		_asyncHandlers.Clear();
-		_logger.LogDebug("[MessageDispatcher] Cleared all {Count} registered message handlers", count);
+		_logger.LogDebug("[MessageDispatcher] Cleared all handlers for {Count} message IDs", uniqueMessageIds);
 	}
 }
