@@ -127,6 +127,32 @@ Win32Emu leverages hardware-accelerated SIMD instructions for better performance
 
 See [INTRINSICS.md](INTRINSICS.md) for detailed documentation.
 
+## Event-Driven Messaging System
+
+Win32Emu includes a DispatchR-inspired message handling system for type-safe, zero-allocation Win32 message dispatching:
+
+- **Type-Safe Handlers**: Strongly-typed message classes with compile-time checking
+- **Zero Allocation**: Lambda-based handlers avoid heap allocations
+- **Extensible**: Easy to register custom message handlers
+- **Testable**: Handlers can be tested independently from API implementations
+
+**Example:**
+```csharp
+// Register a message handler
+env.MessageDispatcher.RegisterHandler(WM.COMMAND, msg =>
+{
+    var cmdMsg = (CommandMessage)msg;
+    Console.WriteLine($"Button {cmdMsg.ControlId} clicked!");
+    return 0;
+});
+
+// Dispatch a message
+var message = new CommandMessage(hwnd, wParam, lParam);
+env.MessageDispatcher.Dispatch(message);
+```
+
+See [MESSAGE_DISPATCHER_IMPLEMENTATION.md](MESSAGE_DISPATCHER_IMPLEMENTATION.md) for detailed documentation and examples.
+
 ## Building
 
 ```bash
