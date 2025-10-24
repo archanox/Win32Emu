@@ -23,7 +23,7 @@ public class GuiMessageDispatcherIntegration
 	public void RegisterDefaultHandlers()
 	{
 		// Register async handler for WM_PAINT messages
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.PAINT, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.PAINT, async (msg, ct) =>
 		{
 			await Task.Run(() =>
 			{
@@ -33,7 +33,7 @@ public class GuiMessageDispatcherIntegration
 		});
 
 		// Register async handler for WM_CLOSE messages
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.CLOSE, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) =>
 		{
 			await Task.Run(() =>
 			{
@@ -44,7 +44,7 @@ public class GuiMessageDispatcherIntegration
 		});
 
 		// Register async handler for WM_COMMAND messages
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.COMMAND, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) =>
 		{
 			if (msg is CommandMessage cmdMsg)
 			{
@@ -57,7 +57,7 @@ public class GuiMessageDispatcherIntegration
 		});
 
 		// Register async handlers for mouse events
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.LBUTTONDOWN, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.LBUTTONDOWN, async (msg, ct) =>
 		{
 			if (msg is LButtonDownMessage mouseMsg)
 			{
@@ -69,7 +69,7 @@ public class GuiMessageDispatcherIntegration
 			return 0;
 		});
 
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.LBUTTONUP, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.LBUTTONUP, async (msg, ct) =>
 		{
 			if (msg is LButtonUpMessage mouseMsg)
 			{
@@ -81,7 +81,7 @@ public class GuiMessageDispatcherIntegration
 			return 0;
 		});
 
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.RBUTTONDOWN, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.RBUTTONDOWN, async (msg, ct) =>
 		{
 			if (msg is RButtonDownMessage mouseMsg)
 			{
@@ -93,7 +93,7 @@ public class GuiMessageDispatcherIntegration
 			return 0;
 		});
 
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.RBUTTONUP, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.RBUTTONUP, async (msg, ct) =>
 		{
 			if (msg is RButtonUpMessage mouseMsg)
 			{
@@ -105,7 +105,7 @@ public class GuiMessageDispatcherIntegration
 			return 0;
 		});
 
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.MOUSEMOVE, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.MOUSEMOVE, async (msg, ct) =>
 		{
 			if (msg is MouseMoveMessage mouseMsg)
 			{
@@ -118,7 +118,7 @@ public class GuiMessageDispatcherIntegration
 		});
 
 		// Register async handlers for keyboard events
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.KEYDOWN, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.KEYDOWN, async (msg, ct) =>
 		{
 			if (msg is KeyDownMessage keyMsg)
 			{
@@ -130,7 +130,7 @@ public class GuiMessageDispatcherIntegration
 			return 0;
 		});
 
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.KEYUP, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.KEYUP, async (msg, ct) =>
 		{
 			if (msg is KeyUpMessage keyMsg)
 			{
@@ -142,7 +142,7 @@ public class GuiMessageDispatcherIntegration
 			return 0;
 		});
 
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.CHAR, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.CHAR, async (msg, ct) =>
 		{
 			if (msg is CharMessage charMsg)
 			{
@@ -155,7 +155,7 @@ public class GuiMessageDispatcherIntegration
 		});
 
 		// Register async handlers for window state changes
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.MOVE, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.MOVE, async (msg, ct) =>
 		{
 			if (msg is MoveMessage moveMsg)
 			{
@@ -167,7 +167,7 @@ public class GuiMessageDispatcherIntegration
 			return 0;
 		});
 
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.SIZE, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.SIZE, async (msg, ct) =>
 		{
 			if (msg is SizeMessage sizeMsg)
 			{
@@ -179,7 +179,7 @@ public class GuiMessageDispatcherIntegration
 			return 0;
 		});
 
-		_env.MessageDispatcher.RegisterAsyncHandler(WM.ACTIVATE, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler(WM.ACTIVATE, async (msg, ct) =>
 		{
 			if (msg is ActivateMessage activateMsg)
 			{
