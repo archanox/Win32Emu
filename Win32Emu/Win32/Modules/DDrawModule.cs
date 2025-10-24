@@ -491,14 +491,16 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, dwFlags, lpColorTable, lplpDDPalette, pUnkOuter);
 
 			// Determine number of entries from dwFlags
+			// Check from highest to lowest bit depth to handle multiple flags correctly
 			int numEntries;
-			if ((dwFlags & 0x1) != 0) numEntries = 2; // DDPCAPS_1BIT
-			else if ((dwFlags & 0x2) != 0)
-				numEntries = 4; // DDPCAPS_2BIT
+			if ((dwFlags & 0x8) != 0)
+				numEntries = 256; // DDPCAPS_8BIT
 			else if ((dwFlags & 0x4) != 0)
 				numEntries = 16; // DDPCAPS_4BIT
-			else if ((dwFlags & 0x8) != 0)
-				numEntries = 256; // DDPCAPS_8BIT
+			else if ((dwFlags & 0x2) != 0)
+				numEntries = 4; // DDPCAPS_2BIT
+			else if ((dwFlags & 0x1) != 0)
+				numEntries = 2; // DDPCAPS_1BIT
 			else
 				numEntries = 256; // Default
 
