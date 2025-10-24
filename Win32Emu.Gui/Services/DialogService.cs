@@ -22,10 +22,10 @@ public class DialogService
 	/// </summary>
 	/// <param name="dialogHandle">Handle for the dialog (from Win32 emulator)</param>
 	/// <param name="template">Parsed dialog template</param>
-	/// <param name="controlHandles">Optional dictionary mapping control IDs to window handles</param>
 	/// <param name="parentWindow">Parent window for modal display</param>
+	/// <param name="controlHandles">Optional dictionary mapping control IDs to window handles</param>
 	/// <returns>Task that completes when dialog is closed, with the dialog result</returns>
-	public async Task<int> ShowDialogAsync(uint dialogHandle, DialogTemplate template, Dictionary<ushort, uint>? controlHandles = null, Avalonia.Controls.Window? parentWindow = null)
+	public async Task<int> ShowDialogAsync(uint dialogHandle, DialogTemplate template, Avalonia.Controls.Window? parentWindow = null, Dictionary<ushort, uint>? controlHandles = null)
 	{
 		DialogWindow? dialog = null;
 
