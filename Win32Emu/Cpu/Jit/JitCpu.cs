@@ -352,6 +352,96 @@ public class JitCpu : IAsyncCpu
 					_esp += (uint)insn.Immediate16;
 				}
 				break;
+			
+			// === Core Arithmetic Instructions ===
+			case Mnemonic.Add:
+				ExecAdd(insn, mem);
+				break;
+			case Mnemonic.Sub:
+				ExecSub(insn, mem);
+				break;
+			case Mnemonic.Adc:
+				ExecAdc(insn, mem);
+				break;
+			case Mnemonic.Sbb:
+				ExecSbb(insn, mem);
+				break;
+			case Mnemonic.Inc:
+				ExecInc(insn, mem);
+				break;
+			case Mnemonic.Dec:
+				ExecDec(insn, mem);
+				break;
+			case Mnemonic.Neg:
+				ExecNeg(insn, mem);
+				break;
+			case Mnemonic.Cmp:
+				ExecCmp(insn, mem);
+				break;
+			
+			// === Logic Instructions ===
+			case Mnemonic.And:
+				ExecAnd(insn, mem);
+				break;
+			case Mnemonic.Or:
+				ExecOr(insn, mem);
+				break;
+			case Mnemonic.Xor:
+				ExecXor(insn, mem);
+				break;
+			case Mnemonic.Test:
+				ExecTest(insn, mem);
+				break;
+			case Mnemonic.Not:
+				ExecNot(insn, mem);
+				break;
+			
+			// === Shift/Rotate Instructions ===
+			case Mnemonic.Shl:
+			case Mnemonic.Sal:
+				ExecShl(insn, mem);
+				break;
+			case Mnemonic.Shr:
+				ExecShr(insn, mem);
+				break;
+			case Mnemonic.Sar:
+				ExecSar(insn, mem);
+				break;
+			case Mnemonic.Rol:
+				ExecRol(insn, mem);
+				break;
+			case Mnemonic.Ror:
+				ExecRor(insn, mem);
+				break;
+			case Mnemonic.Rcl:
+				ExecRcl(insn, mem);
+				break;
+			case Mnemonic.Rcr:
+				ExecRcr(insn, mem);
+				break;
+			
+			// === Data Movement ===
+			case Mnemonic.Mov:
+				ExecMov(insn, mem);
+				break;
+			case Mnemonic.Movzx:
+				ExecMovzx(insn, mem);
+				break;
+			case Mnemonic.Movsx:
+				ExecMovsx(insn, mem);
+				break;
+			case Mnemonic.Xchg:
+				ExecXchg(insn, mem);
+				break;
+			case Mnemonic.Push:
+				ExecPush(insn, mem);
+				break;
+			case Mnemonic.Pop:
+				ExecPop(insn, mem);
+				break;
+			case Mnemonic.Lea:
+				ExecLea(insn, mem);
+				break;
 				
 			// === Pentium CPU Instructions (Stubbed) ===
 			// These are recognized but not yet fully implemented in JIT mode
@@ -1352,6 +1442,362 @@ public class JitCpu : IAsyncCpu
 		};
 	}
 
+	// === Core Arithmetic Implementations ===
+	
+	private void ExecAdd(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint b = GetOperandValue(insn, 1);
+		uint r = a + b;
+		SetOperandValue(insn, 0, r);
+		SetFlagsAdd(a, b, r);
+	}
+	
+	private void ExecSub(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint b = GetOperandValue(insn, 1);
+		uint r = a - b;
+		SetOperandValue(insn, 0, r);
+		SetFlagsSub(a, b, r);
+	}
+	
+	private void ExecAdc(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint b = GetOperandValue(insn, 1);
+		uint cf = GetFlag(Cf) ? 1u : 0u;
+		ulong sum = (ulong)a + b + cf;
+		uint r = (uint)sum;
+		SetOperandValue(insn, 0, r);
+		SetFlagVal(Cf, (sum >> 32) != 0);
+		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void ExecSbb(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint b = GetOperandValue(insn, 1);
+		uint cf = GetFlag(Cf) ? 1u : 0u;
+		ulong diff = (ulong)a - (b + cf);
+		uint r = (uint)diff;
+		SetOperandValue(insn, 0, r);
+		SetFlagVal(Cf, a < b + cf);
+		SetFlagVal(Of, ((a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void ExecInc(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint r = a + 1;
+		SetOperandValue(insn, 0, r);
+		SetFlagVal(Of, (~(a ^ 1u) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Af, ((a ^ 1u ^ r) & 0x10) != 0);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void ExecDec(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint r = a - 1;
+		SetOperandValue(insn, 0, r);
+		SetFlagVal(Of, (((a ^ 0xFFFFFFFFu) & (a ^ r) & 0x80000000) != 0));
+		SetFlagVal(Af, ((a ^ 1u ^ r) & 0x10) != 0);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void ExecNeg(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint r = (uint)(-(int)a);
+		SetOperandValue(insn, 0, r);
+		SetFlagVal(Cf, a != 0);
+		SetFlagVal(Of, a == 0x80000000);
+		SetFlagVal(Af, (a & 0x0F) != 0);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void ExecCmp(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint b = GetOperandValue(insn, 1);
+		uint r = a - b;
+		SetFlagsSub(a, b, r);
+	}
+	
+	// === Logic Implementations ===
+	
+	private void ExecAnd(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint b = GetOperandValue(insn, 1);
+		uint r = a & b;
+		SetOperandValue(insn, 0, r);
+		ClearFlag(Cf);
+		ClearFlag(Of);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void ExecOr(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint b = GetOperandValue(insn, 1);
+		uint r = a | b;
+		SetOperandValue(insn, 0, r);
+		ClearFlag(Cf);
+		ClearFlag(Of);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void ExecXor(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint b = GetOperandValue(insn, 1);
+		uint r = a ^ b;
+		SetOperandValue(insn, 0, r);
+		ClearFlag(Cf);
+		ClearFlag(Of);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void ExecTest(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint b = GetOperandValue(insn, 1);
+		uint r = a & b;
+		ClearFlag(Cf);
+		ClearFlag(Of);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void ExecNot(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint r = ~a;
+		SetOperandValue(insn, 0, r);
+	}
+	
+	// === Shift/Rotate Implementations ===
+	
+	private void ExecShl(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint count = GetOperandValue(insn, 1) & 0x1F;
+		if (count == 0) return;
+		
+		uint r = a << (int)count;
+		SetOperandValue(insn, 0, r);
+		
+		SetFlagVal(Cf, ((a >> (32 - (int)count)) & 1) != 0);
+		UpdateLogicResultFlags(r);
+		
+		if (count == 1)
+			SetFlagVal(Of, ((r ^ a) & 0x80000000) != 0);
+	}
+	
+	private void ExecShr(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint count = GetOperandValue(insn, 1) & 0x1F;
+		if (count == 0) return;
+		
+		uint r = a >> (int)count;
+		SetOperandValue(insn, 0, r);
+		
+		SetFlagVal(Cf, ((a >> ((int)count - 1)) & 1) != 0);
+		UpdateLogicResultFlags(r);
+		
+		if (count == 1)
+			SetFlagVal(Of, (a & 0x80000000) != 0);
+	}
+	
+	private void ExecSar(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint count = GetOperandValue(insn, 1) & 0x1F;
+		if (count == 0) return;
+		
+		int signedA = (int)a;
+		int r = signedA >> (int)count;
+		SetOperandValue(insn, 0, (uint)r);
+		
+		SetFlagVal(Cf, ((a >> ((int)count - 1)) & 1) != 0);
+		UpdateLogicResultFlags((uint)r);
+		
+		if (count == 1)
+			ClearFlag(Of);
+	}
+	
+	private void ExecRol(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint count = GetOperandValue(insn, 1) & 0x1F;
+		if (count == 0) return;
+		
+		uint r = (a << (int)count) | (a >> (32 - (int)count));
+		SetOperandValue(insn, 0, r);
+		
+		SetFlagVal(Cf, (r & 1) != 0);
+		
+		if (count == 1)
+			SetFlagVal(Of, ((r ^ (r >> 31)) & 1) != 0);
+	}
+	
+	private void ExecRor(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint count = GetOperandValue(insn, 1) & 0x1F;
+		if (count == 0) return;
+		
+		uint r = (a >> (int)count) | (a << (32 - (int)count));
+		SetOperandValue(insn, 0, r);
+		
+		SetFlagVal(Cf, (r & 0x80000000) != 0);
+		
+		if (count == 1)
+			SetFlagVal(Of, ((r ^ (r << 1)) & 0x80000000) != 0);
+	}
+	
+	private void ExecRcl(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint count = GetOperandValue(insn, 1) & 0x1F;
+		if (count == 0) return;
+		
+		for (int i = 0; i < count; i++)
+		{
+			bool oldCf = GetFlag(Cf);
+			SetFlagVal(Cf, (a & 0x80000000) != 0);
+			a = (a << 1) | (oldCf ? 1u : 0u);
+		}
+		SetOperandValue(insn, 0, a);
+		
+		if (count == 1)
+			SetFlagVal(Of, ((a ^ (a >> 31)) & 0x80000000) != 0);
+	}
+	
+	private void ExecRcr(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint count = GetOperandValue(insn, 1) & 0x1F;
+		if (count == 0) return;
+		
+		for (int i = 0; i < count; i++)
+		{
+			bool oldCf = GetFlag(Cf);
+			SetFlagVal(Cf, (a & 1) != 0);
+			a = (a >> 1) | (oldCf ? 0x80000000u : 0u);
+		}
+		SetOperandValue(insn, 0, a);
+		
+		if (count == 1)
+			SetFlagVal(Of, ((a ^ (a << 1)) & 0x80000000) != 0);
+	}
+	
+	// === Data Movement Implementations ===
+	
+	private void ExecMov(Instruction insn, VirtualMemory mem)
+	{
+		uint value = GetOperandValue(insn, 1);
+		SetOperandValue(insn, 0, value);
+	}
+	
+	private void ExecMovzx(Instruction insn, VirtualMemory mem)
+	{
+		uint value = GetOperandValue(insn, 1);
+		SetOperandValue(insn, 0, value);
+	}
+	
+	private void ExecMovsx(Instruction insn, VirtualMemory mem)
+	{
+		uint value = GetOperandValue(insn, 1);
+		
+		var srcOpKind = insn.Op1Kind;
+		if (srcOpKind == OpKind.Register)
+		{
+			var srcReg = insn.Op1Register;
+			if (srcReg >= Register.AL && srcReg <= Register.BH)
+			{
+				value = (uint)(sbyte)value;
+			}
+			else if (srcReg >= Register.AX && srcReg <= Register.DI)
+			{
+				value = (uint)(short)value;
+			}
+		}
+		else if (insn.MemorySize == MemorySize.UInt8 || insn.MemorySize == MemorySize.Int8)
+		{
+			value = (uint)(sbyte)value;
+		}
+		else if (insn.MemorySize == MemorySize.UInt16 || insn.MemorySize == MemorySize.Int16)
+		{
+			value = (uint)(short)value;
+		}
+		
+		SetOperandValue(insn, 0, value);
+	}
+	
+	private void ExecXchg(Instruction insn, VirtualMemory mem)
+	{
+		uint a = GetOperandValue(insn, 0);
+		uint b = GetOperandValue(insn, 1);
+		SetOperandValue(insn, 0, b);
+		SetOperandValue(insn, 1, a);
+	}
+	
+	private void ExecPush(Instruction insn, VirtualMemory mem)
+	{
+		uint value = GetOperandValue(insn, 0);
+		_esp -= 4;
+		mem.Write32(_esp, value);
+	}
+	
+	private void ExecPop(Instruction insn, VirtualMemory mem)
+	{
+		uint value = mem.Read32(_esp);
+		_esp += 4;
+		SetOperandValue(insn, 0, value);
+	}
+	
+	private void ExecLea(Instruction insn, VirtualMemory mem)
+	{
+		uint address = CalcMemAddress(insn, 1);
+		SetOperandValue(insn, 0, address);
+	}
+	
+	// === Flag Helper Methods ===
+	
+	private void SetFlagsAdd(uint a, uint b, uint r)
+	{
+		SetFlagVal(Cf, r < a);
+		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void SetFlagsSub(uint a, uint b, uint r)
+	{
+		SetFlagVal(Cf, a < b);
+		SetFlagVal(Of, ((a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void UpdateLogicResultFlags(uint r)
+	{
+		SetFlagVal(Zf, r == 0);
+		SetFlagVal(Sf, (r & 0x80000000) != 0);
+		
+		byte lo = (byte)r;
+		int bits = lo ^ (lo >> 4);
+		bits &= 0xF;
+		bool even = (((0x6996 >> bits) & 1) == 0);
+		SetFlagVal(Pf, even);
+	}
 
 	private sealed class SimpleMemoryCodeReader : CodeReader
 	{
