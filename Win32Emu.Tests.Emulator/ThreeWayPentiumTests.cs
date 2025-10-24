@@ -134,6 +134,22 @@ public class ThreeWayPentiumTests : IDisposable
 		_helper.AssertFlagsMatch(CpuFlag.Zf);
 	}
 
+	[Fact]
+	public void BTS_SetBit_ShouldMatch()
+	{
+		// Arrange: BTS EAX, ECX (0F AB C8)
+		_helper.SetReg("EAX", 0x00000000);
+		_helper.SetReg("ECX", 5); // Set bit 5
+		_helper.WriteCode(0x0F, 0xAB, 0xC8);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert - Bit 5 should be set in EAX
+		_helper.AssertRegistersMatch("EAX", "ECX");
+		_helper.AssertFlagsMatch(CpuFlag.Cf);
+	}
+
 	#endregion
 
 	#region BCD Arithmetic
@@ -319,6 +335,38 @@ public class ThreeWayPentiumTests : IDisposable
 		// Assert
 		_helper.AssertRegistersMatch("EAX");
 		_helper.AssertFlagsMatch(CpuFlag.Cf, CpuFlag.Sf, CpuFlag.Zf, CpuFlag.Pf);
+	}
+
+	[Fact]
+	public void SHLD_DoubleShiftLeft_ShouldMatch()
+	{
+		// Arrange: SHLD EAX, EBX, 4 (0F A4 D8 04)
+		_helper.SetReg("EAX", 0x12345678);
+		_helper.SetReg("EBX", 0xABCDEF01);
+		_helper.WriteCode(0x0F, 0xA4, 0xD8, 0x04);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert - EAX should be shifted left by 4, filling with high bits of EBX
+		_helper.AssertRegistersMatch("EAX", "EBX");
+		_helper.AssertFlagsMatch(CpuFlag.Cf, CpuFlag.Sf, CpuFlag.Zf);
+	}
+
+	[Fact]
+	public void SHRD_DoubleShiftRight_ShouldMatch()
+	{
+		// Arrange: SHRD EAX, EBX, 4 (0F AC D8 04)
+		_helper.SetReg("EAX", 0x12345678);
+		_helper.SetReg("EBX", 0xABCDEF01);
+		_helper.WriteCode(0x0F, 0xAC, 0xD8, 0x04);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert - EAX should be shifted right by 4, filling with low bits of EBX
+		_helper.AssertRegistersMatch("EAX", "EBX");
+		_helper.AssertFlagsMatch(CpuFlag.Cf, CpuFlag.Sf, CpuFlag.Zf);
 	}
 
 	[Fact]
