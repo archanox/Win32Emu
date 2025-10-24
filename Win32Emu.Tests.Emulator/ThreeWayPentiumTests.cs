@@ -377,6 +377,171 @@ public class ThreeWayPentiumTests : IDisposable
 
 	#endregion
 
+	#region Multiply/Divide
+
+	[Fact]
+	public void MUL_EAX_EBX_ShouldMatch()
+	{
+		// Arrange: MUL EBX (F7 E3)
+		_helper.SetReg("EAX", 0x00001000);
+		_helper.SetReg("EBX", 0x00000100);
+		_helper.WriteCode(0xF7, 0xE3);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert - EDX:EAX contains result
+		_helper.AssertRegistersMatch("EAX", "EDX");
+		_helper.AssertFlagsMatch(CpuFlag.Cf, CpuFlag.Of);
+	}
+
+	[Fact]
+	public void IMUL_SignedMultiply_ShouldMatch()
+	{
+		// Arrange: IMUL EBX (F7 EB)
+		_helper.SetReg("EAX", 0xFFFFFFF0); // -16
+		_helper.SetReg("EBX", 0x00000010); // 16
+		_helper.WriteCode(0xF7, 0xEB);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert
+		_helper.AssertRegistersMatch("EAX", "EDX");
+		_helper.AssertFlagsMatch(CpuFlag.Cf, CpuFlag.Of);
+	}
+
+	[Fact]
+	public void DIV_EAX_EBX_ShouldMatch()
+	{
+		// Arrange: DIV EBX (F7 F3)
+		_helper.SetReg("EAX", 0x00001000);
+		_helper.SetReg("EDX", 0x00000000);
+		_helper.SetReg("EBX", 0x00000010);
+		_helper.WriteCode(0xF7, 0xF3);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert - EAX = quotient, EDX = remainder
+		_helper.AssertRegistersMatch("EAX", "EDX");
+	}
+
+	#endregion
+
+	#region Flag Operations
+
+	[Fact]
+	public void CLC_ShouldMatch()
+	{
+		// Arrange: STC then CLC (F9 F8)
+		_helper.WriteCode(0xF9, 0xF8);
+		
+		// Act
+		_helper.ExecuteInstruction(); // STC
+		_helper.ExecuteInstruction(); // CLC
+		
+		// Assert
+		_helper.AssertFlagsMatch(CpuFlag.Cf);
+	}
+
+	[Fact]
+	public void CMC_ShouldMatch()
+	{
+		// Arrange: CLC then CMC (F8 F5)
+		_helper.WriteCode(0xF8, 0xF5);
+		
+		// Act
+		_helper.ExecuteInstruction(); // CLC
+		_helper.ExecuteInstruction(); // CMC
+		
+		// Assert
+		_helper.AssertFlagsMatch(CpuFlag.Cf);
+	}
+
+	#endregion
+
+	#region Additional Tests
+
+	[Fact]
+	public void INC_EAX_ShouldMatch()
+	{
+		// Arrange: INC EAX (40)
+		_helper.SetReg("EAX", 0x12345678);
+		_helper.WriteCode(0x40);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert
+		_helper.AssertRegistersMatch("EAX");
+		_helper.AssertFlagsMatch(CpuFlag.Zf, CpuFlag.Sf, CpuFlag.Of, CpuFlag.Pf, CpuFlag.Af);
+	}
+
+	[Fact]
+	public void DEC_EAX_ShouldMatch()
+	{
+		// Arrange: DEC EAX (48)
+		_helper.SetReg("EAX", 0x12345678);
+		_helper.WriteCode(0x48);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert
+		_helper.AssertRegistersMatch("EAX");
+		_helper.AssertFlagsMatch(CpuFlag.Zf, CpuFlag.Sf, CpuFlag.Of, CpuFlag.Pf, CpuFlag.Af);
+	}
+
+	[Fact]
+	public void NEG_EAX_ShouldMatch()
+	{
+		// Arrange: NEG EAX (F7 D8)
+		_helper.SetReg("EAX", 0x12345678);
+		_helper.WriteCode(0xF7, 0xD8);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert
+		_helper.AssertRegistersMatch("EAX");
+		_helper.AssertFlagsMatch(CpuFlag.Cf, CpuFlag.Of, CpuFlag.Af, CpuFlag.Zf, CpuFlag.Sf, CpuFlag.Pf);
+	}
+
+	[Fact]
+	public void CMP_EAX_EBX_ShouldMatch()
+	{
+		// Arrange: CMP EAX, EBX (39 D8)
+		_helper.SetReg("EAX", 0x12345678);
+		_helper.SetReg("EBX", 0x12345670);
+		_helper.WriteCode(0x39, 0xD8);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert
+		_helper.AssertRegistersMatch("EAX", "EBX");
+		_helper.AssertFlagsMatch(CpuFlag.Cf, CpuFlag.Of, CpuFlag.Af, CpuFlag.Zf, CpuFlag.Sf, CpuFlag.Pf);
+	}
+
+	[Fact]
+	public void OR_EAX_EBX_ShouldMatch()
+	{
+		// Arrange: OR EAX, EBX (09 D8)
+		_helper.SetReg("EAX", 0xFF00FF00);
+		_helper.SetReg("EBX", 0x0F0F0F0F);
+		_helper.WriteCode(0x09, 0xD8);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert
+		_helper.AssertRegistersMatch("EAX", "EBX");
+		_helper.AssertFlagsMatch(CpuFlag.Cf, CpuFlag.Of, CpuFlag.Zf, CpuFlag.Sf, CpuFlag.Pf);
+	}
+
+	#endregion
+
 	public void Dispose()
 	{
 		_helper?.Dispose();
