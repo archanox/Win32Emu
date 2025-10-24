@@ -1,0 +1,21 @@
+# Note:
+# Specify clang-cl as compiler to pick up Windows flags, but then we must
+# pass /TP to make it believe our .h files are C++.
+
+# -ferror-limit=0 seems to work around it saying "too many errors" when there are
+# no errors, something about asm blocks?
+
+CompileFlags:
+    Compiler: clang-cl
+    Add: 
+        - -I.
+        - /TP
+        - -target
+        - i686-pc-windows-msvc
+        - /W4
+        - /std:c++17
+        - /vctoolsdir
+        - /Users/evmar/redist/crt
+        - /winsdkdir
+        - /Users/evmar/redist/sdk
+        - -ferror-limit=0
