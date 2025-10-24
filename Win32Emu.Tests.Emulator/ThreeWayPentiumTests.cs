@@ -1081,7 +1081,6 @@ public class ThreeWayPentiumTests : IDisposable
 		
 		// Act
 		_helper.ExecuteInstruction(); // PUSHAD
-		var espAfterPush = _helper;
 		_helper.ExecuteInstruction(); // POPAD
 		
 		// Assert
