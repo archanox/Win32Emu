@@ -174,8 +174,8 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                     };
                 }
                 
-                // Create DialogWindow from the template with dialog handle and message callback
-                var dialogWindow = new Views.DialogWindow(info.Template, info.Handle, messageCallback);
+                // Create DialogWindow from the template with dialog handle, control handles, and message callback
+                var dialogWindow = new Views.DialogWindow(info.Template, info.Handle, info.ControlHandles, messageCallback);
                 
                 // Track the dialog so we can close it later via EndDialog
                 _createdDialogs[info.Handle] = dialogWindow;

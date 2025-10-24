@@ -2041,6 +2041,19 @@ namespace Win32Emu.Win32.Modules
 				// Initialize dialog state for proper message loop handling
 				_env.InitializeDialogState(hDlg);
 
+				// Create window handles for each control in the dialog
+				var controlHandles = new Dictionary<ushort, uint>();
+				foreach (var item in template.Items)
+				{
+					var controlHandle = _env.RegisterHandle(new object());
+					controlHandles[item.Id] = controlHandle;
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Created control handle=0x{ControlHandle:X8} for ID={Id} ({Class})", 
+						controlHandle, item.Id, item.WindowClass);
+					
+					// Store control info for later retrieval (e.g., for GetDlgItem)
+					_env.StoreControlInfo(hDlg, item.Id, controlHandle, item);
+				}
+
 				// If we have a host, show the dialog through Avalonia (non-blocking)
 				if (_host != null)
 				{
@@ -2054,7 +2067,8 @@ namespace Win32Emu.Win32.Modules
 							Template = template,
 							ParentHandle = hWndParent,
 							DialogProcAddress = lpDialogFunc,
-							InitParam = dwInitParam
+							InitParam = dwInitParam,
+							ControlHandles = controlHandles
 						};
 
 						// Show the dialog non-blocking
@@ -2763,7 +2777,16 @@ namespace Win32Emu.Win32.Modules
 			// GetDlgItem retrieves a handle to a control in a dialog box
 			_logger.LogInformation("[User32] GetDlgItem: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem}", hDlg, nIDDlgItem);
 
-			// Return a synthetic handle (dialog handle + control ID)
+			// Try to get the actual control handle from the dialog state
+			var controlHandle = _env.GetDialogControlHandle(hDlg, nIDDlgItem);
+			if (controlHandle != 0)
+			{
+				_logger.LogInformation("[User32] GetDlgItem: Returning actual control handle 0x{ControlHandle:X8}", controlHandle);
+				return controlHandle;
+			}
+
+			// Fallback: Return a synthetic handle (dialog handle + control ID) for compatibility
+			_logger.LogInformation("[User32] GetDlgItem: Control not found, returning synthetic handle");
 			return hDlg + (uint)nIDDlgItem;
 		}
 
