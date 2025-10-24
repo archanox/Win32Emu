@@ -12,6 +12,7 @@ namespace Win32Emu.Win32.Modules
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
+		private uint _cachedAcmdlnPtr = 0;
 
 		public MsvcrtModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -278,9 +279,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[msvcrt] __p__acmdln()");
 			// Return pointer to command line string pointer
-			var cmdLinePtrPtr = _env.HeapAlloc(0, 4);
-			_env.MemWrite32(cmdLinePtrPtr, _env.CommandLinePtr);
-			return cmdLinePtrPtr;
+			// Cache to avoid memory leak from repeated allocations
+			if (_cachedAcmdlnPtr == 0)
+			{
+				_cachedAcmdlnPtr = _env.HeapAlloc(0, 4);
+				_env.MemWrite32(_cachedAcmdlnPtr, _env.CommandLinePtr);
+			}
+			return _cachedAcmdlnPtr;
 		}
 
 		[DllModuleExport(0)]
@@ -358,17 +363,25 @@ namespace Win32Emu.Win32.Modules
 			}
 			else if (radix == 16)
 			{
-				result = Math.Abs(value).ToString("X");
+				// Use unsigned conversion to avoid overflow with int.MinValue
 				if (value < 0)
-					result = "-" + result;
+				{
+					result = "-" + ((uint)-value).ToString("X");
+				}
+				else
+				{
+					result = value.ToString("X");
+				}
 			}
 			else if (radix == 8)
 			{
-				result = Convert.ToString(value, 8);
+				// Use two's complement for negative values, as in C's _itoa
+				result = Convert.ToString(unchecked((uint)value), 8);
 			}
 			else if (radix == 2)
 			{
-				result = Convert.ToString(value, 2);
+				// Use two's complement for negative values, as in C's _itoa
+				result = Convert.ToString(unchecked((uint)value), 2);
 			}
 			else
 			{
