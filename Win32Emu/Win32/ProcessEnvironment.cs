@@ -438,24 +438,47 @@ public class ProcessEnvironment
 
 	public string ReadUnicodeString(uint addr)
 	{
+		const int chunkSize = 256; // Read 256 bytes at a time
 		var bytes = new List<byte>();
-		var i = 0u;
+		var offset = 0u;
+		
 		while (true)
 		{
-			var b1 = Memory.Read8(addr + i);
-			var b2 = Memory.Read8(addr + i + 1);
-			if (b1 == 0 && b2 == 0)
+			// Read a chunk of memory
+			var chunk = new byte[chunkSize];
+			for (var i = 0; i < chunkSize; i++)
 			{
-				break;
+				chunk[i] = Memory.Read8(addr + offset + (uint)i);
 			}
-			bytes.Add(b1);
-			bytes.Add(b2);
-			i += 2;
+			
+			// Find the null terminator (two consecutive zero bytes for Unicode)
+			for (var i = 0; i < chunkSize - 1; i += 2)
+			{
+				if (chunk[i] == 0 && chunk[i + 1] == 0)
+				{
+					// Found null terminator, add remaining bytes and return
+					for (var j = 0; j < i; j++)
+					{
+						bytes.Add(chunk[j]);
+					}
+					var result = Encoding.Unicode.GetString(bytes.ToArray());
+					_logger.LogDebug("[ProcessEnv] ReadUnicodeString addr=0x{Addr:X8} result='{Result}'", addr, result);
+					return result;
+				}
+			}
+			
+			// No null terminator found in this chunk, add all bytes and continue
+			bytes.AddRange(chunk);
+			offset += chunkSize;
+			
+			// Safety check to prevent infinite loops on malformed strings
+			if (offset > 65536) // Max 64KB string
+			{
+				_logger.LogWarning("[ProcessEnv] ReadUnicodeString exceeded maximum length at addr=0x{Addr:X8}", addr);
+				var safeResult = Encoding.Unicode.GetString(bytes.ToArray());
+				return safeResult;
+			}
 		}
-		
-		var result = Encoding.Unicode.GetString(bytes.ToArray());
-		_logger.LogDebug("[ProcessEnv] ReadUnicodeString addr=0x{Addr:X8} result='{Result}'", addr, result);
-		return result;
 	}
 
 	public uint GetEnvironmentStringsW()
