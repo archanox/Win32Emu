@@ -4400,6 +4400,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// A process is only allowed to run on the processors configured in the system.
 	/// Therefore, the process affinity mask cannot specify a 1 bit for a processor when the system affinity mask specifies a 0 bit for that processor.
 	/// </remarks>
+	[DllModuleExport(0)] // Placeholder ordinal - will be updated with actual ordinal from PE exports
 	private uint GetProcessAffinityMask(uint hProcess, uint lpProcessAffinityMask, uint lpSystemAffinityMask)
 	{
 		_logger.LogInformation("[Kernel32] GetProcessAffinityMask(hProcess=0x{HProcess:X8}, lpProcessAffinityMask=0x{LpProcessAffinityMask:X8}, lpSystemAffinityMask=0x{LpSystemAffinityMask:X8})", 
@@ -4437,6 +4438,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// <remarks>
 	/// To retrieve accurate information for an application running on WOW64, call the GetNativeSystemInfo function.
 	/// </remarks>
+	[DllModuleExport(0)] // Placeholder ordinal - will be updated with actual ordinal from PE exports
 	private uint GetSystemInfo(uint lpSystemInfo)
 	{
 		_logger.LogInformation("[Kernel32] GetSystemInfo(lpSystemInfo=0x{LpSystemInfo:X8})", lpSystemInfo);
@@ -4496,6 +4498,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// Setting an affinity mask for a process or thread can result in threads receiving less processor time, as the system is restricted from running the threads on certain processors.
 	/// In most cases, it is better to let the system select an available processor.
 	/// </remarks>
+	[DllModuleExport(0)] // Placeholder ordinal - will be updated with actual ordinal from PE exports
 	private uint SetThreadAffinityMask(uint hThread, uint dwThreadAffinityMask)
 	{
 		_logger.LogInformation("[Kernel32] SetThreadAffinityMask(hThread=0x{HThread:X8}, dwThreadAffinityMask=0x{DwThreadAffinityMask:X8})", 

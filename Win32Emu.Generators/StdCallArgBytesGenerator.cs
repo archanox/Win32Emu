@@ -134,6 +134,31 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				                default: throw new System.InvalidOperationException($"Missing arg bytes for {dll}!{export}");
 				            }
 				        }
+
+				        public static bool TryGetArgBytes(string dll, string export, out int argBytes)
+				        {
+				            switch ((dll.ToUpperInvariant(), export.ToUpperInvariant()))
+				            {
+				""");
+
+			foreach (var dllGroup in byDll)
+			{
+				var distinct = dllGroup
+					.GroupBy(e => e.MethodName)
+					.Select(g => g.First())
+					.OrderBy(e => e.MethodName);
+
+				foreach (var e in distinct)
+				{
+					sb.AppendLine($"                case (\"{e.DllName}\", \"{e.MethodName.ToUpperInvariant()}\"): argBytes = {e.ArgBytes}; return true;");
+				}
+			}
+
+			sb.AppendLine(
+				"""
+				                default: argBytes = 0; return false;
+				            }
+				        }
 				    }
 				}
 				""");
