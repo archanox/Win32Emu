@@ -41,7 +41,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			case "REGOPENKEYEXA":
 				returnValue = RegOpenKeyExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
-			case "REGOPENKEYА":
+			case "REGOPENKEYA":
 				returnValue = RegOpenKeyA(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
 				return true;
 			case "REGCREATEKEYEXA":

@@ -3335,6 +3335,13 @@ namespace Win32Emu.Win32.Modules
 				var str = lpsz.Read(_env.Memory, (int)cchLength);
 				// Convert to lowercase
 				var lower = str.ToLowerInvariant();
+				
+				// Ensure the output is exactly cchLength characters
+				if (lower.Length > cchLength)
+					lower = lower.Substring(0, (int)cchLength);
+				else if (lower.Length < cchLength)
+					lower = lower.PadRight((int)cchLength, '\0');
+				
 				// Write back
 				lpsz.Write(_env.Memory, lower, false);
 			}

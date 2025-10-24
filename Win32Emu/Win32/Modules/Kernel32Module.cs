@@ -5998,8 +5998,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Common locale information requests
 		string? result = lcType switch
 		{
-			0x1000 => "English_United States.1252", // LOCALE_SISO639LANGNAME  
-			0x1001 => "USA", // LOCALE_SISO3166CTRYNAME
+			0x1000 => "en", // LOCALE_SISO639LANGNAME - ISO 639 language code
+			0x1001 => "US", // LOCALE_SISO3166CTRYNAME - ISO 3166 country code
 			0x0002 => "409", // LOCALE_ILANGUAGE
 			0x1004 => "1252", // LOCALE_IDEFAULTANSICODEPAGE
 			_ => ""
