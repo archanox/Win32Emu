@@ -218,6 +218,12 @@ public class ProcessEnvironment
 	private readonly Dictionary<uint, (string module, string export)> _syntheticExports = new();
 	private uint _nextSyntheticExport = 0x0E000000; // Synthetic export base address
 
+	// Standard control window procedure marker address range
+	// Window procedures in this range (0x0D000000 - 0x0DFFFFFF) are markers for standard controls
+	// These addresses signal to User32Module to route messages through StandardControlHandler
+	public const uint STANDARD_CONTROL_WNDPROC_BASE = 0x0D000000;
+	public const uint STANDARD_CONTROL_WNDPROC_END = 0x0DFFFFFF;
+
 	// Window management
 	private readonly Dictionary<uint, WindowInfo> _windows = new();
 	private readonly Dictionary<string, WindowClassInfo> _windowClasses = new(StringComparer.OrdinalIgnoreCase);
@@ -1019,10 +1025,15 @@ public class ProcessEnvironment
 
 		foreach (var className in standardClasses)
 		{
+			// Each standard control class gets a unique window procedure address
+			// This allows code to get a non-NULL wndProc, while User32Module can detect
+			// these special addresses and route messages to StandardControlHandler
+			var wndProcAddress = STANDARD_CONTROL_WNDPROC_BASE + (uint)className.GetHashCode();
+			
 			var classInfo = new WindowClassInfo(
 				ClassName: className,
 				Style: 0,
-				WndProc: 0, // Standard controls have their own internal window procedures
+				WndProc: wndProcAddress, // Use special marker address for standard controls
 				ClsExtra: 0,
 				WndExtra: 0,
 				HInstance: 0,
@@ -1033,7 +1044,7 @@ public class ProcessEnvironment
 			);
 
 			_windowClasses.TryAdd(className, classInfo);
-			_logger.LogInformation("[ProcessEnv] Pre-registered standard control class: {ClassName}", className);
+			_logger.LogInformation("[ProcessEnv] Pre-registered standard control class: {ClassName} with WndProc=0x{WndProc:X8}", className, wndProcAddress);
 		}
 	}
 
@@ -1416,6 +1427,17 @@ public class ProcessEnvironment
 			}
 		}
 		return null;
+	}
+
+	/// <summary>
+	/// Check if a window procedure address is a marker for a standard control.
+	/// Standard controls use addresses in the range 0x0D000000 - 0x0DFFFFFF.
+	/// These are not actual executable code, but markers to route messages through StandardControlHandler.
+	/// </summary>
+	public static bool IsStandardControlWndProc(uint wndProcAddress)
+	{
+		return wndProcAddress >= STANDARD_CONTROL_WNDPROC_BASE && 
+		       wndProcAddress <= STANDARD_CONTROL_WNDPROC_END;
 	}
 
 	// Thread management methods
