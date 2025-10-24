@@ -99,8 +99,16 @@ var result = env.MessageDispatcher.Dispatch(message);
 - Multiple handler execution order
 - Dispatcher lifecycle management
 
-**All 18 tests passing ✅**
+**Async Tests (7 tests):**
+- Async message dispatching
+- Awaitable handler execution
+- Concurrent handler registration
+- Async error propagation
+- Dispatcher shutdown with pending async handlers
+- Async message ordering
+- Integration of async and sync handlers
 
+**All 25 tests passing ✅**
 ### Running Tests
 
 ```bash
