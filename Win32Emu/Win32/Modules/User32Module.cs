@@ -2463,11 +2463,13 @@ namespace Win32Emu.Win32.Modules
 			var savedEsp = cpu.GetRegister("ESP");
 			var savedEbp = cpu.GetRegister("EBP");
 
+			// Define return address marker early to ensure it's clearly in scope for all checks below
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+
 			// Set up stack for stdcall convention (parameters pushed right-to-left)
 			var esp = savedEsp;
 
 			// Push return address (we'll use a special marker address)
-			const uint RETURN_ADDRESS = 0xDEADBEEF;
 			esp -= 4;
 			memory.Write32(esp, RETURN_ADDRESS);
 
