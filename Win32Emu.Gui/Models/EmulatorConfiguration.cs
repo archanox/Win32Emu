@@ -4,6 +4,7 @@ public class EmulatorConfiguration
 {
 	public string RenderingBackend { get; set; } = "SDL";
 	public string InputBackend { get; set; } = "SDL";
+	public string CpuBackend { get; set; } = "IcedCPU";
 	public int ResolutionScaleFactor { get; set; } = 1;
 	public int ReservedMemoryMb { get; set; } = 256;
 	public string WindowsVersion { get; set; } = "Windows 95";
