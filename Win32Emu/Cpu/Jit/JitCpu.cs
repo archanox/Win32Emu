@@ -551,8 +551,16 @@ public class JitCpu : IAsyncCpu
 				break;
 			
 			// Conditional moves
+			case Mnemonic.Cmove:
+			case Mnemonic.Cmovne:
 			case Mnemonic.Cmovae:
+			case Mnemonic.Cmovb:
+			case Mnemonic.Cmovbe:
+			case Mnemonic.Cmova:
 			case Mnemonic.Cmovle:
+			case Mnemonic.Cmovl:
+			case Mnemonic.Cmovge:
+			case Mnemonic.Cmovg:
 			case Mnemonic.Cmovno:
 			case Mnemonic.Cmovnp:
 			case Mnemonic.Cmovns:
@@ -1142,8 +1150,16 @@ public class JitCpu : IAsyncCpu
 	{
 		bool condition = insn.Mnemonic switch
 		{
+			Mnemonic.Cmove => GetFlag(Zf),                                 // Equal (ZF=1)
+			Mnemonic.Cmovne => !GetFlag(Zf),                               // Not Equal (ZF=0)
 			Mnemonic.Cmovae => !GetFlag(Cf),                               // Above or Equal (CF=0)
+			Mnemonic.Cmovb => GetFlag(Cf),                                 // Below (CF=1)
+			Mnemonic.Cmovbe => GetFlag(Cf) || GetFlag(Zf),                // Below or Equal (CF=1 or ZF=1)
+			Mnemonic.Cmova => !GetFlag(Cf) && !GetFlag(Zf),               // Above (CF=0 and ZF=0)
 			Mnemonic.Cmovle => GetFlag(Zf) || GetFlag(Sf) != GetFlag(Of), // Less or Equal (ZF=1 or SF!=OF)
+			Mnemonic.Cmovl => GetFlag(Sf) != GetFlag(Of),                 // Less (SF!=OF)
+			Mnemonic.Cmovge => GetFlag(Sf) == GetFlag(Of),                // Greater or Equal (SF=OF)
+			Mnemonic.Cmovg => !GetFlag(Zf) && GetFlag(Sf) == GetFlag(Of), // Greater (ZF=0 and SF=OF)
 			Mnemonic.Cmovno => !GetFlag(Of),                               // Not Overflow (OF=0)
 			Mnemonic.Cmovnp => !GetFlag(Pf),                               // Not Parity (PF=0)
 			Mnemonic.Cmovns => !GetFlag(Sf),                               // Not Sign (SF=0)

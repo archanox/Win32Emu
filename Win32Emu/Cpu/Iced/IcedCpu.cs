@@ -174,6 +174,8 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Not: ExecNot(insn); break;
 				case Mnemonic.Neg: ExecNeg(insn); break;
 				case Mnemonic.Bswap: ExecBswap(insn); break;
+				case Mnemonic.Cbw: ExecCbw(); break;
+				case Mnemonic.Cwde: ExecCwde(); break;
 				case Mnemonic.Cdq: ExecCdq(); break;
 				case Mnemonic.Xchg: ExecXchg(insn); break;
 				case Mnemonic.Xlatb: ExecXlatb(); break;
@@ -212,9 +214,15 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Cmovb:
 				case Mnemonic.Cmovbe:
 				case Mnemonic.Cmova:
+				case Mnemonic.Cmovae:
 				case Mnemonic.Cmovge:
 				case Mnemonic.Cmovg:
 				case Mnemonic.Cmovl:
+				case Mnemonic.Cmovo:
+				case Mnemonic.Cmovs:
+				case Mnemonic.Cmovns:
+				case Mnemonic.Cmovp:
+				case Mnemonic.Cmovnp:
 					ExecCmovcc(insn); break;
 				// FPU operations
 				case Mnemonic.Fld: ExecFld(insn); break;
@@ -272,6 +280,8 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Bts: ExecBts(insn); break;
 				case Mnemonic.Btr: ExecBtr(insn); break;
 				case Mnemonic.Btc: ExecBtc(insn); break;
+				case Mnemonic.Bsf: ExecBsf(insn); break;
+				case Mnemonic.Bsr: ExecBsr(insn); break;
 				// Double shift operations
 				case Mnemonic.Shld: ExecShld(insn); break;
 				case Mnemonic.Shrd: ExecShrd(insn); break;
@@ -1437,6 +1447,29 @@ public class IcedCpu : IAsyncCpu
 			v = (v >> 24) | ((v >> 8) & 0x0000FF00) | ((v << 8) & 0x00FF0000) | (v << 24);
 			SetReg32(r, v);
 		}
+	}
+
+	private void ExecCbw()
+	{
+		// CBW: Convert Byte to Word
+		// Sign-extend AL into AX
+		// If bit 7 of AL is 0 (positive), AH = 0x00
+		// If bit 7 of AL is 1 (negative), AH = 0xFF
+		var al = (byte)(_eax & 0xFF);
+		var sign = (al & 0x80) != 0;
+		var ah = sign ? (byte)0xFF : (byte)0x00;
+		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+	}
+
+	private void ExecCwde()
+	{
+		// CWDE: Convert Word to Doubleword Extended
+		// Sign-extend AX into EAX
+		// If bit 15 of AX is 0 (positive), high word = 0x0000
+		// If bit 15 of AX is 1 (negative), high word = 0xFFFF
+		var ax = (ushort)(_eax & 0xFFFF);
+		var sign = (ax & 0x8000) != 0;
+		_eax = sign ? (0xFFFF0000 | ax) : ax;
 	}
 
 	private void ExecCdq()
@@ -3128,6 +3161,58 @@ public class IcedCpu : IAsyncCpu
 		WriteOp(insn, 0, bitBase);
 	}
 
+	private void ExecBsf(Instruction insn)
+	{
+		// BSF - Bit Scan Forward
+		// Scans source operand for first set bit (starting from bit 0)
+		// If found, stores bit index in destination and clears ZF
+		// If not found (source is 0), sets ZF and destination is undefined
+		var src = ReadOp(insn, 1);
+		
+		if (src == 0)
+		{
+			// No bits set - set ZF, destination is undefined (we'll leave it unchanged)
+			SetFlagVal(Zf, true);
+		}
+		else
+		{
+			// Find first set bit
+			uint bitIndex = 0;
+			while ((src & (1u << (int)bitIndex)) == 0)
+			{
+				bitIndex++;
+			}
+			WriteOp(insn, 0, bitIndex);
+			SetFlagVal(Zf, false);
+		}
+	}
+
+	private void ExecBsr(Instruction insn)
+	{
+		// BSR - Bit Scan Reverse
+		// Scans source operand for last set bit (starting from bit 31 down to 0)
+		// If found, stores bit index in destination and clears ZF
+		// If not found (source is 0), sets ZF and destination is undefined
+		var src = ReadOp(insn, 1);
+		
+		if (src == 0)
+		{
+			// No bits set - set ZF, destination is undefined (we'll leave it unchanged)
+			SetFlagVal(Zf, true);
+		}
+		else
+		{
+			// Find last set bit (scan from high to low)
+			uint bitIndex = 31;
+			while ((src & (1u << (int)bitIndex)) == 0)
+			{
+				bitIndex--;
+			}
+			WriteOp(insn, 0, bitIndex);
+			SetFlagVal(Zf, false);
+		}
+	}
+
 	private void ExecShld(Instruction insn)
 	{
 		// SHLD - Double precision shift left
@@ -3418,11 +3503,21 @@ public class IcedCpu : IAsyncCpu
 
 	private bool IsCmovccTrue(Mnemonic m) => m switch
 	{
-		Mnemonic.Cmove => GetFlag(Zf), Mnemonic.Cmovne => !GetFlag(Zf), Mnemonic.Cmovb => GetFlag(Cf),
-		Mnemonic.Cmovbe => GetFlag(Cf) || GetFlag(Zf), Mnemonic.Cmova => !GetFlag(Cf) && !GetFlag(Zf),
+		Mnemonic.Cmove => GetFlag(Zf),
+		Mnemonic.Cmovne => !GetFlag(Zf),
+		Mnemonic.Cmovb => GetFlag(Cf),
+		Mnemonic.Cmovae => !GetFlag(Cf),
+		Mnemonic.Cmovbe => GetFlag(Cf) || GetFlag(Zf),
+		Mnemonic.Cmova => !GetFlag(Cf) && !GetFlag(Zf),
 		Mnemonic.Cmovge => GetFlag(Sf) == GetFlag(Of),
 		Mnemonic.Cmovg => !GetFlag(Zf) && (GetFlag(Sf) == GetFlag(Of)),
-		Mnemonic.Cmovl => GetFlag(Sf) != GetFlag(Of), _ => false
+		Mnemonic.Cmovl => GetFlag(Sf) != GetFlag(Of),
+		Mnemonic.Cmovo => GetFlag(Of),
+		Mnemonic.Cmovs => GetFlag(Sf),
+		Mnemonic.Cmovns => !GetFlag(Sf),
+		Mnemonic.Cmovp => GetFlag(Pf),
+		Mnemonic.Cmovnp => !GetFlag(Pf),
+		_ => false
 	};
 
 	private bool GetFlag(int bit) => (_eflags & (1u << bit)) != 0;
