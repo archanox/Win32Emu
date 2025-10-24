@@ -124,7 +124,7 @@ public class DispatcherTests
     [InlineData("GetSystemInfo", 4)]
     [InlineData("GetProcessAffinityMask", 12)]
     [InlineData("SetThreadAffinityMask", 8)]
-    public void Dispatcher_ShouldReturnCorrectHardcodedArgBytes(string functionName, int expectedArgBytes)
+    public void Dispatcher_ShouldReturnCorrectArgBytesFromAttribute(string functionName, int expectedArgBytes)
     {
         // Arrange
         var vm = new VirtualMemory();

@@ -48,38 +48,17 @@ public class Win32Dispatcher(ILogger logger)
 				returnValue = retUnsafe;
 				cpu.SetRegister("EAX", retUnsafe);
 
-				// Try to get arg bytes, but don't fail if not available
-				try
+				// Try to get arg bytes from metadata
+				if (StdCallMeta.TryGetArgBytes(dll, export, out stdcallArgBytes))
 				{
-					stdcallArgBytes = StdCallMeta.GetArgBytes(dll, export);
 					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes}", dll, export, returnValue, stdcallArgBytes);
 				}
-				catch (InvalidOperationException)
+				else
 				{
-					// Hardcoded fixes for functions with missing metadata (temporary workaround)
-					var dllUpper = dll.ToUpperInvariant();
-					var exportUpper = export.ToUpperInvariant();
-					stdcallArgBytes = (dllUpper, exportUpper) switch
-					{
-						("KERNEL32.DLL", "GETACP") => 0, // UINT GetACP(void)
-						("KERNEL32.DLL", "GETCPINFO") => 8, // BOOL GetCPInfo(UINT, LPCPINFO)
-						("KERNEL32.DLL", "GETMODULEFILENAMEA") => 12, // DWORD GetModuleFileNameA(HMODULE, LPSTR, DWORD)
-						("KERNEL32.DLL", "GETSYSTEMINFO") => 4, // void GetSystemInfo(LPSYSTEM_INFO)
-						("KERNEL32.DLL", "GETPROCESSAFFINITYMASK") => 12, // BOOL GetProcessAffinityMask(HANDLE, PDWORD_PTR, PDWORD_PTR)
-						("KERNEL32.DLL", "SETTHREADAFFINITYMASK") => 8, // DWORD_PTR SetThreadAffinityMask(HANDLE, DWORD_PTR)
-						_ => 0
-					};
-
-					if (stdcallArgBytes > 0)
-					{
-						logger.LogWarning("Using hardcoded arg bytes for {Dll}!{Export}: {StdcallArgBytes}", dll, export, stdcallArgBytes);
-					}
-					else
-					{
-						logger.LogWarning("No arg bytes metadata for {Dll}!{Export}, using 0", dll, export);
-					}
-
-					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes} (hardcoded)", dll, export, returnValue, stdcallArgBytes);
+					// Function is missing [DllModuleExport] attribute
+					logger.LogError("[Dispatcher] {Dll}!{Export} is missing [DllModuleExport] attribute - cannot determine stack cleanup bytes", dll, export);
+					stdcallArgBytes = 0; // Default to 0, but this may cause stack corruption
+					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes} (MISSING METADATA)", dll, export, returnValue, stdcallArgBytes);
 				}
 
 				return true;
