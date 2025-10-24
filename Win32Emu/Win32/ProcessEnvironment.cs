@@ -1680,6 +1680,33 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
+	/// Stores control information for a dialog.
+	/// </summary>
+	public void StoreControlInfo(uint hDlg, ushort controlId, uint controlHandle, Win32.DialogItem controlInfo)
+	{
+		if (_dialogStates.TryGetValue(hDlg, out var state))
+		{
+			state.ControlHandles[controlId] = controlHandle;
+			state.ControlInfo[controlId] = controlInfo;
+			_logger.LogDebug("[ProcessEnv] StoreControlInfo: hDlg=0x{HDlg:X8} controlId={ControlId} handle=0x{ControlHandle:X8}", hDlg, controlId, controlHandle);
+		}
+	}
+
+	/// <summary>
+	/// Gets a control handle by its ID for a dialog.
+	/// </summary>
+	public uint GetDialogControlHandle(uint hDlg, int controlId)
+	{
+		if (_dialogStates.TryGetValue(hDlg, out var state) && state.ControlHandles.TryGetValue(controlId, out var handle))
+		{
+			_logger.LogDebug("[ProcessEnv] GetDialogControlHandle: hDlg=0x{HDlg:X8} controlId={ControlId} -> 0x{Handle:X8}", hDlg, controlId, handle);
+			return handle;
+		}
+		_logger.LogDebug("[ProcessEnv] GetDialogControlHandle: hDlg=0x{HDlg:X8} controlId={ControlId} -> NOT FOUND", hDlg, controlId);
+		return 0;
+	}
+
+	/// <summary>
 	/// Sets a window property value for SetWindowLongA.
 	/// </summary>
 	public void SetWindowProperty(uint hwnd, int index, uint value)
@@ -1992,5 +2019,9 @@ public class ProcessEnvironment
 		public uint Result { get; set; }
 		// Storage for dialog control text: Key = control ID, Value = text
 		public Dictionary<int, string> ControlText { get; } = new();
+		// Storage for dialog control handles: Key = control ID, Value = handle
+		public Dictionary<int, uint> ControlHandles { get; } = new();
+		// Storage for dialog control info: Key = control ID, Value = DialogItem
+		public Dictionary<int, Win32.DialogItem> ControlInfo { get; } = new();
 	}
 }

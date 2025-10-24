@@ -1344,6 +1344,7 @@ public class DialogCreateInfo
     public uint ParentHandle { get; init; }
     public uint DialogProcAddress { get; init; }
     public uint InitParam { get; init; }
+    public Dictionary<ushort, uint> ControlHandles { get; init; } = new();
 }
 
 public class MessageBoxInfo

@@ -19,16 +19,18 @@ public partial class DialogWindow : Window
 {
 	private readonly DialogTemplate _template;
 	private readonly Dictionary<ushort, Control> _controlsById = new();
+	private readonly Dictionary<ushort, uint> _controlHandles;
 	private readonly TaskCompletionSource<int> _resultTcs = new();
 	private readonly Action<uint, uint, uint, uint>? _messageCallback;
 	private readonly uint _dialogHandle;
 
 	public int DialogResult { get; private set; }
 
-	public DialogWindow(DialogTemplate template, uint dialogHandle = 0, Action<uint, uint, uint, uint>? messageCallback = null)
+	public DialogWindow(DialogTemplate template, uint dialogHandle = 0, Dictionary<ushort, uint>? controlHandles = null, Action<uint, uint, uint, uint>? messageCallback = null)
 	{
 		_template = template ?? throw new ArgumentNullException(nameof(template));
 		_dialogHandle = dialogHandle;
+		_controlHandles = controlHandles ?? new Dictionary<ushort, uint>();
 		_messageCallback = messageCallback;
 		InitializeComponent();
 		BuildDialogContent();
@@ -383,7 +385,11 @@ public partial class DialogWindow : Window
 			const uint WM_COMMAND = 0x0111;
 			const uint BN_CLICKED = 0;
 			var wParam = (uint)(BN_CLICKED << 16) | id;
-			_messageCallback?.Invoke(_dialogHandle, WM_COMMAND, wParam, 0);
+			
+			// Get the control's window handle if available
+			var controlHandle = _controlHandles.TryGetValue(id, out var handle) ? handle : 0u;
+			
+			_messageCallback?.Invoke(_dialogHandle, WM_COMMAND, wParam, controlHandle);
 
 			// Note: We no longer automatically close the dialog for IDOK/IDCANCEL
 			// The dialog procedure should call EndDialog when appropriate
@@ -399,7 +405,11 @@ public partial class DialogWindow : Window
 			const uint LBN_SELCHANGE = 1;
 			const uint CBN_SELCHANGE = 1;
 			var wParam = (uint)(LBN_SELCHANGE << 16) | id;
-			_messageCallback?.Invoke(_dialogHandle, WM_COMMAND, wParam, 0);
+			
+			// Get the control's window handle if available
+			var controlHandle = _controlHandles.TryGetValue(id, out var handle) ? handle : 0u;
+			
+			_messageCallback?.Invoke(_dialogHandle, WM_COMMAND, wParam, controlHandle);
 		}
 	}
 
