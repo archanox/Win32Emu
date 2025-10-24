@@ -119,4 +119,28 @@ public class DispatcherTests
         // The logging and summary functionality is tested implicitly
         Assert.True(true); // Test passes if no exceptions are thrown
     }
+    
+    [Theory]
+    [InlineData("GetSystemInfo", 4)]
+    [InlineData("GetProcessAffinityMask", 12)]
+    [InlineData("SetThreadAffinityMask", 8)]
+    public void Dispatcher_ShouldReturnCorrectHardcodedArgBytes(string functionName, int expectedArgBytes)
+    {
+        // Arrange
+        var vm = new VirtualMemory();
+        var env = new ProcessEnvironment(vm);
+        var testCpu = new MockCpu();
+        
+        var dispatcher = new Win32Dispatcher(NullLogger.Instance);
+        var kernel32Module = new Kernel32Module(env, 0x00400000);
+        kernel32Module.SetDispatcher(dispatcher);
+        dispatcher.RegisterModule(kernel32Module);
+        
+        // Act
+        var result = dispatcher.TryInvoke("KERNEL32.DLL", functionName, testCpu, vm, out _, out var argBytes);
+        
+        // Assert
+        Assert.True(result);
+        Assert.Equal(expectedArgBytes, argBytes);
+    }
 }

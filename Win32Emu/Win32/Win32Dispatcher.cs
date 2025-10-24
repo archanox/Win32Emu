@@ -64,6 +64,9 @@ public class Win32Dispatcher(ILogger logger)
 						("KERNEL32.DLL", "GETACP") => 0, // UINT GetACP(void)
 						("KERNEL32.DLL", "GETCPINFO") => 8, // BOOL GetCPInfo(UINT, LPCPINFO)
 						("KERNEL32.DLL", "GETMODULEFILENAMEA") => 12, // DWORD GetModuleFileNameA(HMODULE, LPSTR, DWORD)
+						("KERNEL32.DLL", "GETSYSTEMINFO") => 4, // void GetSystemInfo(LPSYSTEM_INFO)
+						("KERNEL32.DLL", "GETPROCESSAFFINITYMASK") => 12, // BOOL GetProcessAffinityMask(HANDLE, PDWORD_PTR, PDWORD_PTR)
+						("KERNEL32.DLL", "SETTHREADAFFINITYMASK") => 8, // DWORD_PTR SetThreadAffinityMask(HANDLE, DWORD_PTR)
 						_ => 0
 					};
 
