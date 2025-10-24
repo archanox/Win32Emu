@@ -935,6 +935,13 @@ namespace Win32Emu.Win32.Modules
 						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
 						{
 							_logger.LogDebug("[User32] CallWindowProcedure: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
+							
+							// Warn if a function that typically returns handles/pointers returns NULL
+							if (ret == 0 && IsHandleReturningFunction(name))
+							{
+								_logger.LogWarning("[User32] CallWindowProcedure: {Dll}!{Name} returned NULL (0) - this may cause NULL pointer dereference if used as function pointer or handle", dll, name);
+							}
+							
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
 
@@ -2603,6 +2610,14 @@ namespace Win32Emu.Win32.Modules
 						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
 						{
 							_logger.LogInformation("[User32] CallDialogProcedureAsync: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
+							
+							// Warn if a function that typically returns handles/pointers returns NULL
+							// This could lead to NULL pointer dereferences later
+							if (ret == 0 && IsHandleReturningFunction(name))
+							{
+								_logger.LogWarning("[User32] CallDialogProcedureAsync: {Dll}!{Name} returned NULL (0) - this may cause NULL pointer dereference if used as function pointer or handle", dll, name);
+							}
+							
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
 
@@ -3061,6 +3076,41 @@ namespace Win32Emu.Win32.Modules
 			output.Write(_env.Memory, formatStr, true);
 
 			return (uint)formatStr.Length;
+		}
+
+		/// <summary>
+		/// Check if a Win32 API function typically returns a handle or function pointer.
+		/// Helps identify potential NULL pointer issues when these functions return 0.
+		/// </summary>
+		private static bool IsHandleReturningFunction(string functionName)
+		{
+			var upperName = functionName.ToUpperInvariant();
+			
+			// Window/control creation functions
+			if (upperName.Contains("CREATE") || upperName.Contains("LOAD"))
+			{
+				return true;
+			}
+			
+			// Functions that return window handles
+			if (upperName.StartsWith("GET") && (upperName.Contains("WINDOW") || upperName.Contains("DLG")))
+			{
+				return true;
+			}
+			
+			// Device context functions
+			if (upperName.Contains("DC") || upperName.Contains("HDC"))
+			{
+				return true;
+			}
+			
+			// Menu, icon, cursor functions
+			if (upperName.Contains("MENU") || upperName.Contains("ICON") || upperName.Contains("CURSOR"))
+			{
+				return true;
+			}
+			
+			return false;
 		}
 	}
 }
