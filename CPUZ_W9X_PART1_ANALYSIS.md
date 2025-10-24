@@ -19,7 +19,7 @@ The log shows successful execution of the following API categories:
 1. **Version/System Information**
    - `GetVersion` → Returns 0x040003B6 (Windows 95 version)
    - `GetVersionExA` → Successfully fills version info structure
-   - `GetACP` → Returns code page FDE9 (UTF-8)
+   - `GetACP` → Returns code page 0xFDE9 (65001 = UTF-8)
    - `GetCPInfo` → Successfully retrieves code page information
 
 2. **Memory Management**
@@ -142,7 +142,7 @@ This confirms our findings that the implementation is correct and robust.
 
 ### Log Truncation Explanation
 
-The log truncation with "[Di..." appears to be:
+The log truncation with "0x0..." appears to be:
 - **NOT** a crash (no exception logged)
 - **NOT** a hang (dispatcher was actively logging return value)
 - **MOST LIKELY** incomplete log capture/paste by the issue reporter
