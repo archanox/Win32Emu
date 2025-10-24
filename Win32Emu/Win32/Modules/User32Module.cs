@@ -148,6 +148,18 @@ namespace Win32Emu.Win32.Modules
 					returnValue = SetRect(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4));
 					return true;
 
+				case "OFFSETRECT":
+					returnValue = OffsetRect(a.UInt32(0), a.Int32(1), a.Int32(2));
+					return true;
+
+				case "INFLATERECT":
+					returnValue = InflateRect(a.UInt32(0), a.Int32(1), a.Int32(2));
+					return true;
+
+				case "INVALIDATERECT":
+					returnValue = InvalidateRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
 				case "GETCLIENTRECT":
 					returnValue = GetClientRect(a.UInt32(0), a.UInt32(1));
 					return true;
@@ -200,8 +212,16 @@ namespace Win32Emu.Win32.Modules
 					returnValue = (uint)ShowCursor(a.Int32(0));
 					return true;
 
+				case "SETTIMER":
+					returnValue = SetTimer(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
 				case "SETFOCUS":
 					returnValue = SetFocus(a.UInt32(0));
+					return true;
+
+				case "GETFOCUS":
+					returnValue = GetFocus();
 					return true;
 
 				case "GETMENU":
@@ -246,6 +266,26 @@ namespace Win32Emu.Win32.Modules
 
 				case "SENDDLGITEMMESSAGEA":
 					returnValue = SendDlgItemMessageA(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+
+				case "GETDLGITEMINT":
+					returnValue = GetDlgItemInt(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "SETDLGITEMINT":
+					returnValue = SetDlgItemInt(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "ISDLGBUTTONCHECKED":
+					returnValue = IsDlgButtonChecked(a.UInt32(0), a.Int32(1));
+					return true;
+
+				case "CHECKRADIOBUTTON":
+					returnValue = CheckRadioButton(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3));
+					return true;
+
+				case "CREATEDIALOGPARAMA":
+					returnValue = CreateDialogParamA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 					return true;
 
 				case "ENABLEWINDOW":
@@ -294,6 +334,18 @@ namespace Win32Emu.Win32.Modules
 
 				case "WVSPRINTFA":
 					returnValue = WvsprintfA(a.LpStr(0), a.LpcStr(1), a.UInt32(2));
+					return true;
+
+				case "CHARLOWERBUFFA":
+					returnValue = CharLowerBuffA(a.LpStr(0), a.UInt32(1));
+					return true;
+
+				case "GETKEYBOARDTYPE":
+					returnValue = GetKeyboardType(a.Int32(0));
+					return true;
+
+				case "ENUMDISPLAYSETTINGSA":
+					returnValue = EnumDisplaySettingsA(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
 				default:
@@ -3153,6 +3205,179 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			return false;
+		}
+
+		private uint GetFocus()
+		{
+			_logger.LogInformation("[User32] GetFocus()");
+			return _focusWindow;
+		}
+
+		private uint GetDlgItemInt(uint hDlg, int nIDDlgItem, uint lpTranslated, uint bSigned)
+		{
+			_logger.LogInformation("[User32] GetDlgItemInt(hDlg=0x{HDlg:X8}, nIDDlgItem={NIDDlgItem})", hDlg, nIDDlgItem);
+			
+			// Stub implementation - return 0
+			if (lpTranslated != 0)
+			{
+				_env.MemWrite32(lpTranslated, 1); // TRUE - translation successful
+			}
+			return 0;
+		}
+
+		private uint SetDlgItemInt(uint hDlg, int nIDDlgItem, uint uValue, uint bSigned)
+		{
+			_logger.LogInformation("[User32] SetDlgItemInt(hDlg=0x{HDlg:X8}, nIDDlgItem={NIDDlgItem}, uValue={UValue})", 
+				hDlg, nIDDlgItem, uValue);
+			return 1; // TRUE
+		}
+
+		private uint IsDlgButtonChecked(uint hDlg, int nIDButton)
+		{
+			_logger.LogInformation("[User32] IsDlgButtonChecked(hDlg=0x{HDlg:X8}, nIDButton={NIDButton})", hDlg, nIDButton);
+			// Stub - return BST_UNCHECKED
+			return 0;
+		}
+
+		private uint CheckRadioButton(uint hDlg, int nIDFirstButton, int nIDLastButton, int nIDCheckButton)
+		{
+			_logger.LogInformation("[User32] CheckRadioButton(hDlg=0x{HDlg:X8}, first={First}, last={Last}, check={Check})", 
+				hDlg, nIDFirstButton, nIDLastButton, nIDCheckButton);
+			return 1; // TRUE
+		}
+
+		private uint CreateDialogParamA(uint hInstance, uint lpTemplate, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
+		{
+			_logger.LogInformation("[User32] CreateDialogParamA(hInstance=0x{HInstance:X8}, lpTemplate=0x{LpTemplate:X8})", 
+				hInstance, lpTemplate);
+			
+			// Stub implementation - similar to DialogBoxParamA but modeless
+			// Create a basic window for the dialog
+			var hwnd = _env.CreateWindow(
+				"#32770", // Dialog class
+				"Dialog", // Title
+				0x80000000, // WS_POPUP
+				0, // No extended style
+				100, 100, 300, 200, // Position and size
+				hWndParent, 0, hInstance, 0
+			);
+			
+			return hwnd;
+		}
+
+		private uint OffsetRect(uint lprc, int dx, int dy)
+		{
+			_logger.LogInformation("[User32] OffsetRect(lprc=0x{Lprc:X8}, dx={Dx}, dy={Dy})", lprc, dx, dy);
+			
+			if (lprc != 0)
+			{
+				// Read RECT structure (left, top, right, bottom)
+				var left = (int)_env.MemRead32(lprc);
+				var top = (int)_env.MemRead32(lprc + 4);
+				var right = (int)_env.MemRead32(lprc + 8);
+				var bottom = (int)_env.MemRead32(lprc + 12);
+				
+				// Offset the rectangle
+				_env.MemWrite32(lprc, (uint)(left + dx));
+				_env.MemWrite32(lprc + 4, (uint)(top + dy));
+				_env.MemWrite32(lprc + 8, (uint)(right + dx));
+				_env.MemWrite32(lprc + 12, (uint)(bottom + dy));
+			}
+			
+			return 1; // TRUE
+		}
+
+		private uint InflateRect(uint lprc, int dx, int dy)
+		{
+			_logger.LogInformation("[User32] InflateRect(lprc=0x{Lprc:X8}, dx={Dx}, dy={Dy})", lprc, dx, dy);
+			
+			if (lprc != 0)
+			{
+				// Read RECT structure (left, top, right, bottom)
+				var left = (int)_env.MemRead32(lprc);
+				var top = (int)_env.MemRead32(lprc + 4);
+				var right = (int)_env.MemRead32(lprc + 8);
+				var bottom = (int)_env.MemRead32(lprc + 12);
+				
+				// Inflate the rectangle
+				_env.MemWrite32(lprc, (uint)(left - dx));
+				_env.MemWrite32(lprc + 4, (uint)(top - dy));
+				_env.MemWrite32(lprc + 8, (uint)(right + dx));
+				_env.MemWrite32(lprc + 12, (uint)(bottom + dy));
+			}
+			
+			return 1; // TRUE
+		}
+
+		private uint InvalidateRect(uint hWnd, uint lpRect, uint bErase)
+		{
+			_logger.LogInformation("[User32] InvalidateRect(hWnd=0x{HWnd:X8}, lpRect=0x{LpRect:X8}, bErase={BErase})", 
+				hWnd, lpRect, bErase);
+			// Stub - always succeed
+			return 1; // TRUE
+		}
+
+		private uint SetTimer(uint hWnd, uint nIDEvent, uint uElapse, uint lpTimerFunc)
+		{
+			_logger.LogInformation("[User32] SetTimer(hWnd=0x{HWnd:X8}, nIDEvent={NIDEvent}, uElapse={UElapse}ms)", 
+				hWnd, nIDEvent, uElapse);
+			// Stub - return the timer ID
+			return nIDEvent != 0 ? nIDEvent : 1;
+		}
+
+		private uint CharLowerBuffA(in LpStr lpsz, uint cchLength)
+		{
+			_logger.LogInformation("[User32] CharLowerBuffA(lpsz=0x{Lpsz:X8}, cchLength={CchLength})", lpsz.Address, cchLength);
+			
+			if (lpsz.Address != 0 && cchLength > 0)
+			{
+				// Read the string
+				var str = lpsz.Read(_env.Memory, (int)cchLength);
+				// Convert to lowercase
+				var lower = str.ToLowerInvariant();
+				// Write back
+				lpsz.Write(_env.Memory, lower, false);
+			}
+			
+			return cchLength;
+		}
+
+		private uint GetKeyboardType(int nTypeFlag)
+		{
+			_logger.LogInformation("[User32] GetKeyboardType(nTypeFlag={NTypeFlag})", nTypeFlag);
+			
+			return nTypeFlag switch
+			{
+				0 => 4, // Keyboard type: Enhanced 101- or 102-key keyboards
+				1 => 0, // Keyboard subtype
+				2 => 12, // Number of function keys
+				_ => 0
+			};
+		}
+
+		private uint EnumDisplaySettingsA(in LpcStr lpszDeviceName, uint iModeNum, uint lpDevMode)
+		{
+			var deviceName = lpszDeviceName.ToString() ?? string.Empty;
+			_logger.LogInformation("[User32] EnumDisplaySettingsA(lpszDeviceName=\"{DeviceName}\", iModeNum={IModeNum})", 
+				deviceName, iModeNum);
+			
+			// Stub implementation - fill in basic DEVMODE structure
+			if (lpDevMode != 0)
+			{
+				// DEVMODE structure size
+				const uint DM_BITSPERPEL = 0x00040000;
+				const uint DM_PELSWIDTH = 0x00080000;
+				const uint DM_PELSHEIGHT = 0x00100000;
+				
+				// Write some basic values
+				_env.MemWrite32(lpDevMode + 0x68, 640); // dmPelsWidth
+				_env.MemWrite32(lpDevMode + 0x6C, 480); // dmPelsHeight
+				_env.MemWrite32(lpDevMode + 0x70, 32); // dmBitsPerPel
+				_env.MemWrite32(lpDevMode + 0x40, DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL); // dmFields
+			}
+			
+			// Return TRUE for mode 0 (current settings), FALSE for others
+			return iModeNum == 0xFFFFFFFF || iModeNum == 0 ? 1u : 0u;
 		}
 	}
 }
