@@ -31,7 +31,7 @@ public class DialogService
 		// Create dialog on UI thread
 		await Dispatcher.UIThread.InvokeAsync(() =>
 		{
-			dialog = new DialogWindow(template, dialogHandle, (hwnd, msg, wParam, lParam) =>
+			dialog = new DialogWindow(template, dialogHandle, null, (hwnd, msg, wParam, lParam) =>
 			{
 				// Queue message for processing by emulator
 				EnqueueMessage(dialogHandle, new DialogMessage
