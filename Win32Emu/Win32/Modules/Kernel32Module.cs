@@ -6029,7 +6029,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var fileName = lpFileName.ToString() ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetFullPathNameA(lpFileName=\"{FileName}\")", fileName);
-		var fullPath = "C:\\" + fileName; // Stub - just prepend C:\
+		var fullPath = "C:\\\\" + fileName; // Stub - just prepend C:\
 		var requiredLength = (uint)fullPath.Length + 1;
 		if (nBufferLength == 0 || lpBuffer.Address == 0)
 		{

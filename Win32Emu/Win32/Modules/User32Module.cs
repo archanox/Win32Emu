@@ -3197,8 +3197,8 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(16)]
 	private uint CheckRadioButton(uint hDlg, int nIDFirstButton, int nIDLastButton, int nIDCheckButton)
 	{
-		_logger.LogInformation("[User32] CheckRadioButton(hDlg=0x{HDlg:X8}, nIDCheckButton={NIDCheckButton})",
-			hDlg, nIDCheckButton);
+		_logger.LogInformation("[User32] CheckRadioButton(hDlg=0x{HDlg:X8}, nIDFirstButton={NIDFirstButton}, nIDLastButton={NIDLastButton}, nIDCheckButton={NIDCheckButton})",
+			hDlg, nIDFirstButton, nIDLastButton, nIDCheckButton);
 		return 1; // TRUE
 	}
 

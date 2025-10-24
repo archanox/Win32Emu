@@ -121,7 +121,7 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 		
 		if (lpszTitle.Address != 0 && cchSize > 0)
 		{
-			var toCopy = fileName.Length < cchSize - 1 ? fileName : fileName.Substring(0, (int)cchSize - 1);
+			var toCopy = fileName.Length < cchSize ? fileName : fileName.Substring(0, (int)cchSize - 1);
 			_env.WriteAnsiStringAt(lpszTitle.Address, toCopy);
 			return 0; // Success
 		}
