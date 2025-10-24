@@ -76,7 +76,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				// Skip corrupted sections that extend beyond file boundaries
 				// This can happen with malformed PE files where section headers indicate
 				// sizes that don't match actual file data
-				logger?.LogWarning($"Skipping corrupted section at RVA 0x{section.Rva:X8}: {ex.Message}");
+				logger?.LogWarning("Skipping corrupted section at RVA {SectionRva:X8}: {ErrorMessage}", section.Rva, ex.Message);
 			}
 		}
 
