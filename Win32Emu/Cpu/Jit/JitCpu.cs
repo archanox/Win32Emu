@@ -882,8 +882,8 @@ public class JitCpu : IAsyncCpu
 				if ((al & 0x0F) > 9 || GetFlag(Af))
 				{
 					al = (byte)(al + 6);
-					_eax = (_eax & 0xFFFFFF00) | al;
-					_eax = (uint)((_eax & 0xFFFF00FF) | (((_eax + 0x100) & 0xFF00)));
+					// Combine operations: set AL and increment AH in single assignment
+					_eax = (uint)((_eax & 0xFFFF0000) | (((_eax + 0x106) & 0xFF00)) | (al & 0x0F));
 					SetFlag(Af);
 					SetFlag(Cf);
 				}
@@ -891,8 +891,8 @@ public class JitCpu : IAsyncCpu
 				{
 					ClearFlag(Af);
 					ClearFlag(Cf);
+					_eax = (uint)((_eax & 0xFFFFFF0F) | (al & 0x0F));
 				}
-				_eax = (uint)((_eax & 0xFFFFFF0F) | (al & 0x0F));
 				break;
 			}
 			case Mnemonic.Aas: // ASCII Adjust After Subtraction
@@ -901,8 +901,8 @@ public class JitCpu : IAsyncCpu
 				if ((al & 0x0F) > 9 || GetFlag(Af))
 				{
 					al = (byte)(al - 6);
-					_eax = (_eax & 0xFFFFFF00) | al;
-					_eax = (uint)((_eax & 0xFFFF00FF) | (((_eax - 0x100) & 0xFF00)));
+					// Combine operations: set AL and decrement AH in single assignment
+					_eax = (uint)((_eax & 0xFFFF0000) | (((_eax - 0x100) & 0xFF00)) | (al & 0x0F));
 					SetFlag(Af);
 					SetFlag(Cf);
 				}
@@ -910,8 +910,8 @@ public class JitCpu : IAsyncCpu
 				{
 					ClearFlag(Af);
 					ClearFlag(Cf);
+					_eax = (uint)((_eax & 0xFFFFFF0F) | (al & 0x0F));
 				}
-				_eax = (uint)((_eax & 0xFFFFFF0F) | (al & 0x0F));
 				break;
 			}
 			case Mnemonic.Cbw: // Convert Byte to Word
@@ -947,12 +947,15 @@ public class JitCpu : IAsyncCpu
 		if (insn.Mnemonic == Mnemonic.Shld) // Shift Left Double
 		{
 			// Shift dest left by count, filling with high bits of src
+			// CF is set to the last bit shifted out (MSB of original dest)
+			bool carryOut = ((dest >> (32 - count)) & 1) != 0;
+			
 			ulong combined = ((ulong)dest << 32) | src;
 			combined <<= count;
 			dest = (uint)(combined >> 32);
 			
 			// Set flags
-			SetFlagVal(Cf, (combined & 0x100000000UL) != 0);
+			SetFlagVal(Cf, carryOut);
 			SetFlagVal(Sf, (dest & 0x80000000) != 0);
 			SetFlagVal(Zf, dest == 0);
 			// OF is set only if count == 1
@@ -962,12 +965,14 @@ public class JitCpu : IAsyncCpu
 		else // SHRD - Shift Right Double
 		{
 			// Shift dest right by count, filling with low bits of src
+			// CF is set to the last bit shifted out
 			ulong combined = ((ulong)src << 32) | dest;
+			bool carryOut = ((combined >> (count - 1)) & 1) != 0;
 			combined >>= count;
 			dest = (uint)combined;
 			
 			// Set flags
-			SetFlagVal(Cf, ((combined >> (count - 1)) & 1) != 0);
+			SetFlagVal(Cf, carryOut);
 			SetFlagVal(Sf, (dest & 0x80000000) != 0);
 			SetFlagVal(Zf, dest == 0);
 			// OF is set only if count == 1
@@ -1005,10 +1010,12 @@ public class JitCpu : IAsyncCpu
 	private void ExecRetf(Instruction insn)
 	{
 		// Far return - pop IP and CS from stack
+		// In 32-bit protected mode with a flat memory model, the segment selector (CS) is ignored on far returns,
+		// so we only update EIP and skip the CS value on the stack. This differs from real-mode far returns,
+		// where both CS and IP are restored from the stack.
 		_eip = _mem.Read32(_esp);
 		_esp += 4;
-		// In 32-bit protected mode, we ignore the segment (CS pop)
-		_esp += 4; // Skip CS
+		_esp += 4; // Skip CS value on stack
 		
 		// Handle stack cleanup parameter if present
 		if (insn.OpCount > 0 && insn.Op0Kind == OpKind.Immediate16)
@@ -1202,8 +1209,8 @@ public class JitCpu : IAsyncCpu
 		return opKind switch
 		{
 			OpKind.Register => GetRegisterValue(insn, operandIndex),
-			OpKind.Immediate8 => operandIndex == 0 ? insn.Immediate8 :
-			                     operandIndex == 1 ? insn.Immediate8_2nd : insn.Immediate8,
+			// For Immediate8, operand 0 uses Immediate8, operand 1 uses Immediate8_2nd, others use Immediate8
+			OpKind.Immediate8 => operandIndex == 1 ? insn.Immediate8_2nd : insn.Immediate8,
 			OpKind.Immediate16 => insn.Immediate16,
 			OpKind.Immediate32 => insn.Immediate32,
 			OpKind.Memory => _mem.Read32(CalcMemAddress(insn, operandIndex)),
