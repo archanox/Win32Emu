@@ -807,6 +807,23 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] CallWindowProcedure: Calling 0x{WndProcAddress:X8} with HWND=0x{Hwnd:X8} MSG=0x{Message:X4}", wndProcAddress, hwnd, message);
 
+			// Check if this is a standard control window procedure marker
+			// These are not actual code addresses, but markers to route through StandardControlHandler
+			if (ProcessEnvironment.IsStandardControlWndProc(wndProcAddress))
+			{
+				_logger.LogInformation("[User32] CallWindowProcedure: Detected standard control WndProc marker at 0x{WndProcAddress:X8}, routing to StandardControlHandler", wndProcAddress);
+				var windowInfo = _env.GetWindow(hwnd);
+				if (windowInfo.HasValue && StandardControlHandler.IsStandardControl(windowInfo.Value.ClassName))
+				{
+					return _standardControlHandler.HandleMessage(hwnd, message, wParam, lParam, windowInfo.Value.ClassName);
+				}
+				else
+				{
+					_logger.LogWarning("[User32] CallWindowProcedure: Window 0x{Hwnd:X8} has standard control WndProc but is not a standard control class", hwnd);
+					return 0;
+				}
+			}
+
 			// Save current CPU state
 			var savedEip = cpu.GetEip();
 			var savedEsp = cpu.GetRegister("ESP");
