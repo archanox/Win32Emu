@@ -2506,14 +2506,16 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
-					// Check for invalid EIP (NULL pointer execution)
+					// Check for invalid EIP (NULL pointer execution or other invalid addresses)
+					// NULL pointer (0x00000000) is always invalid
+					// Also check for other obviously invalid addresses (e.g., unaligned, too low, etc.)
 					if (eip == 0x00000000)
 					{
 						_logger.LogError("[User32] CallDialogProcedureAsync: Execution jumped to NULL address (0x00000000) at step {Steps}", steps);
 						_logger.LogError("[User32] CallDialogProcedureAsync: This typically means the code called a NULL function pointer");
 						_logger.LogError("[User32] CallDialogProcedureAsync: ESP=0x{Esp:X8} EBP=0x{Ebp:X8}",
 							cpu.GetRegister("ESP"), cpu.GetRegister("EBP"));
-						// Log stack contents
+						// Log stack contents to help identify what function returned NULL
 						try
 						{
 							var stackPtr = cpu.GetRegister("ESP");
@@ -2522,8 +2524,20 @@ namespace Win32Emu.Win32.Modules
 						}
 						catch
 						{
+							// Ignore errors reading stack
 						}
 
+						failed = true;
+						break;
+					}
+					
+					// Check for other invalid EIP values that might indicate corruption
+					// Image base is typically 0x00400000, and code/data is usually above 0x00001000
+					// Stack is typically in high memory (>= 0x00100000)
+					if (eip < 0x00001000 && eip != RETURN_ADDRESS)
+					{
+						_logger.LogError("[User32] CallDialogProcedureAsync: Execution jumped to invalid low address 0x{Eip:X8} at step {Steps}", eip, steps);
+						_logger.LogError("[User32] CallDialogProcedureAsync: This may indicate memory corruption or an invalid function pointer");
 						failed = true;
 						break;
 					}
