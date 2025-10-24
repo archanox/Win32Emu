@@ -3184,7 +3184,7 @@ public class IcedCpu : IAsyncCpu
 		SetFlagVal(Zf, dest == 0);
 		// OF is set only if count == 1
 		if (count == 1)
-			SetFlagVal(Of, ((dest ^ (dest >> 1)) & 0x80000000) != 0);
+			SetFlagVal(Of, (((dest >> 31) ^ ((dest >> 30) & 1)) != 0));
 		
 		WriteOp(insn, 0, dest);
 	}
