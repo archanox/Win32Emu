@@ -479,7 +479,7 @@ public class IcedCpu : IAsyncCpu
 
 					break;
 				case Mnemonic.Int3:
-					// Handle INT3 (0xCC) instruction used for import stubs and COM vtable methods
+					// Handle INT3 (0xCC) instruction used for import stubs, synthetic exports, and COM vtable methods
 					if (oldEip is >= 0x0F000000 and < 0x10000000)
 					{
 						// This is a synthetic import stub - signal this as a call
@@ -489,6 +489,16 @@ public class IcedCpu : IAsyncCpu
 
 						// Don't actually execute the INT3, just treat it as a call
 						// The main loop will handle the import invocation
+					}
+					else if (oldEip is >= 0x0E000000 and < 0x0F000000)
+					{
+						// This is a synthetic export stub - signal this as a call
+						isCall = true;
+						callTarget = oldEip;
+						_logger.LogInformation("[IcedCpu] INT3 (0xCC) hooking synthetic export stub at address 0x{OldEip:X8}", oldEip);
+
+						// Don't actually execute the INT3, just treat it as a call
+						// The main loop will handle the synthetic export invocation
 					}
 					else if (oldEip is >= 0x0D000000 and < 0x0E000000)
 					{
