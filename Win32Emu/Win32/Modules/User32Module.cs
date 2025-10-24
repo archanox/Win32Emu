@@ -3361,23 +3361,30 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] EnumDisplaySettingsA(lpszDeviceName=\"{DeviceName}\", iModeNum={IModeNum})", 
 				deviceName, iModeNum);
 			
+			// DEVMODE constants
+			const uint DM_BITSPERPEL = 0x00040000;
+			const uint DM_PELSWIDTH = 0x00080000;
+			const uint DM_PELSHEIGHT = 0x00100000;
+			const uint ENUM_CURRENT_SETTINGS = 0xFFFFFFFF;
+			
+			// DEVMODE structure offsets
+			const uint DEVMODE_OFFSET_DMFIELDS = 0x40;
+			const uint DEVMODE_OFFSET_DMPELSWIDTH = 0x68;
+			const uint DEVMODE_OFFSET_DMPELSHEIGHT = 0x6C;
+			const uint DEVMODE_OFFSET_DMBITSPERPEL = 0x70;
+			
 			// Stub implementation - fill in basic DEVMODE structure
 			if (lpDevMode != 0)
 			{
-				// DEVMODE structure size
-				const uint DM_BITSPERPEL = 0x00040000;
-				const uint DM_PELSWIDTH = 0x00080000;
-				const uint DM_PELSHEIGHT = 0x00100000;
-				
 				// Write some basic values
-				_env.MemWrite32(lpDevMode + 0x68, 640); // dmPelsWidth
-				_env.MemWrite32(lpDevMode + 0x6C, 480); // dmPelsHeight
-				_env.MemWrite32(lpDevMode + 0x70, 32); // dmBitsPerPel
-				_env.MemWrite32(lpDevMode + 0x40, DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL); // dmFields
+				_env.MemWrite32(lpDevMode + DEVMODE_OFFSET_DMPELSWIDTH, 640); // dmPelsWidth
+				_env.MemWrite32(lpDevMode + DEVMODE_OFFSET_DMPELSHEIGHT, 480); // dmPelsHeight
+				_env.MemWrite32(lpDevMode + DEVMODE_OFFSET_DMBITSPERPEL, 32); // dmBitsPerPel
+				_env.MemWrite32(lpDevMode + DEVMODE_OFFSET_DMFIELDS, DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL); // dmFields
 			}
 			
 			// Return TRUE for mode 0 (current settings), FALSE for others
-			return iModeNum == 0xFFFFFFFF || iModeNum == 0 ? 1u : 0u;
+			return iModeNum == ENUM_CURRENT_SETTINGS || iModeNum == 0 ? 1u : 0u;
 		}
 	}
 }
