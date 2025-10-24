@@ -82,6 +82,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "TERMINATEPROCESS":
 				returnValue = TerminateProcess(a.UInt32(0), a.UInt32(1));
 				return true;
+			case "CREATEPROCESSA":
+				returnValue = CreateProcessA(a.LpcStr(0), a.LpStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.LpcStr(7), a.UInt32(8), a.UInt32(9));
+				return true;
 			case "GETCURRENTPROCESS":
 				returnValue = GetCurrentProcess();
 				return true;
@@ -93,6 +96,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "GETOEMCP":
 				returnValue = (uint)GetOemCp();
+				return true;
+			case "GETSYSTEMDEFAULTLCID":
+				returnValue = GetSystemDefaultLCID();
+				return true;
+			case "GETLOCALEINFOA":
+				returnValue = GetLocaleInfoA(a.UInt32(0), a.UInt32(1), a.LpStr(2), a.Int32(3));
+				return true;
+			case "GETDATEFORMATA":
+				returnValue = GetDateFormatA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3), a.LpStr(4), a.Int32(5));
 				return true;
 			case "GETSTRINGTYPEA":
 				returnValue = GetStringTypeA(a.UInt32(0), a.UInt32(1), a.Lpstr(2), a.Int32(3), a.UInt32(4));
@@ -132,6 +144,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "SETENVIRONMENTVARIABLEA":
 				returnValue = SetEnvironmentVariableA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "EXPANDENVIRONMENTSTRINGSA":
+				returnValue = ExpandEnvironmentStringsA(a.LpcStr(0), a.LpStr(1), a.UInt32(2));
 				return true;
 			case "FREEENVIRONMENTSTRINGSW":
 				returnValue = FreeEnvironmentStringsW(a.UInt32(0));
@@ -194,6 +209,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "HEAPSIZE":
 				returnValue = HeapSize(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
+			case "GETPROCESSHEAP":
+				returnValue = GetProcessHeap();
+				return true;
 			case "LOCALALLOC":
 				returnValue = LocalAlloc(a.UInt32(0), a.UInt32(1));
 				return true;
@@ -251,6 +269,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "SETFILEATTRIBUTESA":
 				returnValue = SetFileAttributesA(a.LpcStr(0), a.UInt32(1));
+				return true;
+			case "GETFILEATTRIBUTESA":
+				returnValue = GetFileAttributesA(a.LpcStr(0));
 				return true;
 			case "GETDISKFREESPACEA":
 				returnValue = GetDiskFreeSpaceA(a.LpcStr(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
@@ -430,6 +451,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "GETWINDOWSDIRECTORYA":
 				returnValue = GetWindowsDirectoryA(a.LpStr(0), a.UInt32(1));
+				return true;
+			case "GETPRIVATEPROFILESTRINGA":
+				returnValue = GetPrivateProfileStringA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.LpStr(3), a.UInt32(4), a.LpcStr(5));
 				return true;
 
 			// String functions
@@ -5883,6 +5907,258 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] WritePrivateProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpString=\"{Str}\", lpFileName=\"{FileName}\")",
 			appName, keyName, str, fileName);
 		return 1; // TRUE (stub)
+	}
+
+	private uint GetProcessHeap()
+	{
+		_logger.LogInformation("[Kernel32] GetProcessHeap()");
+		// Return a handle to the default process heap
+		// We use a constant value (0x00500000) to represent the process heap
+		const uint PROCESS_HEAP_HANDLE = 0x00500000;
+		return PROCESS_HEAP_HANDLE;
+	}
+
+	private uint GetFileAttributesA(in LpcStr lpFileName)
+	{
+		var fileName = lpFileName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GetFileAttributesA(lpFileName=\"{FileName}\")", fileName);
+		
+		if (string.IsNullOrEmpty(fileName))
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0xFFFFFFFF; // INVALID_FILE_ATTRIBUTES
+		}
+		
+		// Resolve relative paths
+		var resolvedPath = fileName;
+		if (!Path.IsPathRooted(fileName))
+		{
+			resolvedPath = Path.Combine(_env.CurrentDirectory, fileName);
+		}
+		
+		// Try to get file attributes
+		try
+		{
+			// If VFS is available, use it
+			if (_env.VirtualFileSystem != null)
+			{
+				if (_env.VirtualFileSystem.FileExists(resolvedPath))
+				{
+					// For now, return FILE_ATTRIBUTE_NORMAL for all files
+					// A full implementation would check actual file attributes
+					_logger.LogInformation("[Kernel32] GetFileAttributesA: file exists, returning FILE_ATTRIBUTE_NORMAL");
+					return 0x80; // FILE_ATTRIBUTE_NORMAL
+				}
+			}
+			else
+			{
+				// Fallback to direct file access
+				if (File.Exists(resolvedPath))
+				{
+					var fileInfo = new FileInfo(resolvedPath);
+					uint attributes = 0x80; // FILE_ATTRIBUTE_NORMAL
+					
+					if ((fileInfo.Attributes & System.IO.FileAttributes.ReadOnly) != 0)
+					{
+						attributes = 0x01; // FILE_ATTRIBUTE_READONLY
+					}
+					
+					return attributes;
+				}
+				else if (Directory.Exists(resolvedPath))
+				{
+					return 0x10; // FILE_ATTRIBUTE_DIRECTORY
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning(ex, "[Kernel32] GetFileAttributesA: Exception while checking file attributes");
+		}
+		
+		// File not found
+		_logger.LogInformation("[Kernel32] GetFileAttributesA: file not found");
+		_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+		return 0xFFFFFFFF; // INVALID_FILE_ATTRIBUTES
+	}
+
+	private uint GetSystemDefaultLCID()
+	{
+		_logger.LogInformation("[Kernel32] GetSystemDefaultLCID()");
+		// Return US English locale ID: 0x0409
+		const uint LOCALE_US_ENGLISH = 0x0409;
+		return LOCALE_US_ENGLISH;
+	}
+
+	private uint GetLocaleInfoA(uint locale, uint lcType, in LpStr lpLCData, int cchData)
+	{
+		_logger.LogInformation("[Kernel32] GetLocaleInfoA(locale=0x{Locale:X8}, lcType=0x{LcType:X8}, cchData={CchData})",
+			locale, lcType, cchData);
+		
+		// Common locale information requests
+		string? result = lcType switch
+		{
+			0x1000 => "English_United States.1252", // LOCALE_SISO639LANGNAME  
+			0x1001 => "USA", // LOCALE_SISO3166CTRYNAME
+			0x0002 => "409", // LOCALE_ILANGUAGE
+			0x1004 => "1252", // LOCALE_IDEFAULTANSICODEPAGE
+			_ => ""
+		};
+		
+		if (result == null || result.Length == 0)
+		{
+			_logger.LogInformation("[Kernel32] GetLocaleInfoA: unsupported lcType, returning empty");
+			return 0;
+		}
+		
+		// If lpLCData is null, return required buffer size
+		if (lpLCData.Address == 0)
+		{
+			return (uint)(result.Length + 1);
+		}
+		
+		// Write the result to the buffer
+		if (cchData >= result.Length + 1)
+		{
+			lpLCData.Write(_env.Memory, result, true);
+			return (uint)(result.Length + 1);
+		}
+		
+		// Buffer too small
+		return 0;
+	}
+
+	private uint GetDateFormatA(uint locale, uint dwFlags, uint lpDate, in LpcStr lpFormat, in LpStr lpDateStr, int cchDate)
+	{
+		var format = lpFormat.ToString();
+		_logger.LogInformation("[Kernel32] GetDateFormatA(locale=0x{Locale:X8}, dwFlags=0x{DwFlags:X8}, lpFormat=\"{Format}\", cchDate={CchDate})",
+			locale, dwFlags, format, cchDate);
+		
+		// Get current date if lpDate is null (0)
+		DateTime date = DateTime.Now;
+		
+		// If lpDate is provided, read SYSTEMTIME structure
+		if (lpDate != 0)
+		{
+			var year = _env.MemRead16(lpDate);
+			var month = _env.MemRead16(lpDate + 2);
+			var day = _env.MemRead16(lpDate + 6);
+			try
+			{
+				date = new DateTime(year, month, day);
+			}
+			catch
+			{
+				date = DateTime.Now;
+			}
+		}
+		
+		// Format the date
+		string result;
+		if (!string.IsNullOrEmpty(format))
+		{
+			// Use custom format (simplified, not full Win32 format string support)
+			result = date.ToString(format);
+		}
+		else
+		{
+			// Use default short date format
+			result = date.ToString("MM/dd/yyyy");
+		}
+		
+		// If lpDateStr is null, return required buffer size
+		if (lpDateStr.Address == 0)
+		{
+			return (uint)(result.Length + 1);
+		}
+		
+		// Write the result to the buffer
+		if (cchDate >= result.Length + 1)
+		{
+			lpDateStr.Write(_env.Memory, result, true);
+			return (uint)(result.Length + 1);
+		}
+		
+		// Buffer too small
+		return 0;
+	}
+
+	private uint ExpandEnvironmentStringsA(in LpcStr lpSrc, in LpStr lpDst, uint nSize)
+	{
+		var src = lpSrc.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] ExpandEnvironmentStringsA(lpSrc=\"{Src}\", nSize={NSize})", src, nSize);
+		
+		// Simple environment variable expansion
+		// For now, just copy the string without expansion
+		// A full implementation would expand %VARIABLE% patterns
+		var result = src;
+		
+		// If lpDst is null, return required buffer size
+		if (lpDst.Address == 0)
+		{
+			return (uint)(result.Length + 1);
+		}
+		
+		// Write the result to the buffer
+		if (nSize >= result.Length + 1)
+		{
+			lpDst.Write(_env.Memory, result, true);
+			return (uint)(result.Length + 1);
+		}
+		
+		// Buffer too small
+		_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+		return (uint)(result.Length + 1);
+	}
+
+	private uint GetPrivateProfileStringA(in LpcStr lpAppName, in LpcStr lpKeyName, in LpcStr lpDefault, in LpStr lpReturnedString, uint nSize, in LpcStr lpFileName)
+	{
+		var appName = lpAppName.ToString() ?? string.Empty;
+		var keyName = lpKeyName.ToString() ?? string.Empty;
+		var defaultValue = lpDefault.ToString() ?? string.Empty;
+		var fileName = lpFileName.ToString() ?? string.Empty;
+		
+		_logger.LogInformation("[Kernel32] GetPrivateProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpDefault=\"{Default}\", nSize={NSize}, lpFileName=\"{FileName}\")",
+			appName, keyName, defaultValue, nSize, fileName);
+		
+		// For now, always return the default value
+		// A full implementation would read from INI files
+		var result = defaultValue;
+		
+		// Write the result to the buffer
+		if (nSize > 0)
+		{
+			var writeSize = Math.Min(result.Length, (int)nSize - 1);
+			if (writeSize > 0)
+			{
+				lpReturnedString.Write(_env.Memory, result.Substring(0, writeSize), true);
+			}
+			else
+			{
+				// Write empty string
+				lpReturnedString.Write(_env.Memory, "", true);
+			}
+			return (uint)writeSize;
+		}
+		
+		return 0;
+	}
+
+	private uint CreateProcessA(in LpcStr lpApplicationName, in LpStr lpCommandLine, uint lpProcessAttributes,
+		uint lpThreadAttributes, uint bInheritHandles, uint dwCreationFlags, uint lpEnvironment,
+		in LpcStr lpCurrentDirectory, uint lpStartupInfo, uint lpProcessInformation)
+	{
+		var appName = lpApplicationName.ToString() ?? string.Empty;
+		var cmdLine = lpCommandLine.ToString() ?? string.Empty;
+		var currentDir = lpCurrentDirectory.ToString() ?? string.Empty;
+		
+		_logger.LogInformation("[Kernel32] CreateProcessA(lpApplicationName=\"{AppName}\", lpCommandLine=\"{CmdLine}\", dwCreationFlags=0x{Flags:X8}, lpCurrentDirectory=\"{CurrentDir}\")",
+			appName, cmdLine, dwCreationFlags, currentDir);
+		
+		// Stub implementation - CreateProcess is complex and not fully supported
+		// Return failure for now
+		_lastError = 2; // ERROR_FILE_NOT_FOUND
+		return 0; // FALSE
 	}
 
 }
