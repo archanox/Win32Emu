@@ -520,6 +520,7 @@ public class JitCpu : IAsyncCpu
 				break;
 			
 			// Bit manipulation
+			case Mnemonic.Bt:
 			case Mnemonic.Bsf:
 			case Mnemonic.Bsr:
 			case Mnemonic.Btc:
@@ -983,6 +984,16 @@ public class JitCpu : IAsyncCpu
 					}
 					SetOperandValue(insn, 0, (uint)bitPos);
 				}
+				break;
+			}
+			case Mnemonic.Bt: // Bit Test
+			{
+				uint baseVal = GetOperandValue(insn, 0);
+				uint bitIndex = GetOperandValue(insn, 1) & 31;
+				uint mask = 1u << (int)bitIndex;
+				
+				// Set CF to the value of the tested bit
+				SetFlagVal(Cf, (baseVal & mask) != 0);
 				break;
 			}
 			case Mnemonic.Btc: // Bit Test and Complement
@@ -1626,7 +1637,16 @@ public class JitCpu : IAsyncCpu
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
 		uint r = a - b;
-		SetFlagsSub(a, b, r);
+		
+		// Get sign bit mask based on operand size
+		int opSize = GetOpSizeBits(insn, 0);
+		uint signBitMask = opSize switch
+		{
+			8 => 0x80,
+			16 => 0x8000,
+			_ => 0x80000000
+		};
+		SetFlagsSub(a, b, r, signBitMask);
 	}
 	
 	// === Logic Implementations ===
@@ -1881,7 +1901,7 @@ public class JitCpu : IAsyncCpu
 		SetFlagVal(Cf, r < a);
 		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
-		UpdateLogicResultFlags(r);
+		UpdateLogicResultFlags(r, signBitMask);
 	}
 	
 	private void SetFlagsSub(uint a, uint b, uint r)
@@ -1894,13 +1914,18 @@ public class JitCpu : IAsyncCpu
 		SetFlagVal(Cf, a < b);
 		SetFlagVal(Of, ((a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
-		UpdateLogicResultFlags(r);
+		UpdateLogicResultFlags(r, signBitMask);
 	}
 	
 	private void UpdateLogicResultFlags(uint r)
 	{
+		UpdateLogicResultFlags(r, 0x80000000);
+	}
+
+	private void UpdateLogicResultFlags(uint r, uint signBitMask)
+	{
 		SetFlagVal(Zf, r == 0);
-		SetFlagVal(Sf, (r & 0x80000000) != 0);
+		SetFlagVal(Sf, (r & signBitMask) != 0);
 		
 		byte lo = (byte)r;
 		int bits = lo ^ (lo >> 4);
