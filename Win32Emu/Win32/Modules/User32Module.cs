@@ -4394,5 +4394,82 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] WinHelpA(hWndMain=0x{HWndMain:X8}, lpszHelp=\"{HelpFile}\", uCommand={UCommand})", hWndMain, helpFile, uCommand);
 			return 1; // TRUE
 		}
+
+	// Missing functions for calc.exe
+
+	[DllModuleExport(20)]
+	private uint CheckMenuRadioItem(uint hMenu, uint idFirst, uint idLast, uint idCheck, uint uFlags)
+	{
+		_logger.LogInformation("[User32] CheckMenuRadioItem(hMenu=0x{HMenu:X8}, idFirst={IdFirst}, idLast={IdLast}, idCheck={IdCheck}, uFlags=0x{UFlags:X})",
+			hMenu, idFirst, idLast, idCheck, uFlags);
+		return 1; // TRUE (stub)
+	}
+
+	[DllModuleExport(12)]
+	private uint ChildWindowFromPoint(uint hWndParent, int x, int y)
+	{
+		_logger.LogInformation("[User32] ChildWindowFromPoint(hWndParent=0x{HWndParent:X8}, x={X}, y={Y})",
+			hWndParent, x, y);
+		return 0; // NULL (stub - no child window found)
+	}
+
+	[DllModuleExport(0)]
+	private uint CloseClipboard()
+	{
+		_logger.LogInformation("[User32] CloseClipboard()");
+		return 1; // TRUE (stub)
+	}
+
+	[DllModuleExport(16)]
+	private uint DrawEdge(uint hdc, uint qrc, uint edge, uint grfFlags)
+	{
+		_logger.LogInformation("[User32] DrawEdge(hdc=0x{Hdc:X8}, qrc=0x{Qrc:X8}, edge=0x{Edge:X}, grfFlags=0x{GrfFlags:X})",
+			hdc, qrc, edge, grfFlags);
+		return 1; // TRUE (stub)
+	}
+
+	[DllModuleExport(4)]
+	private uint GetClipboardData(uint uFormat)
+	{
+		_logger.LogInformation("[User32] GetClipboardData(uFormat={UFormat})", uFormat);
+		return 0; // NULL (stub - no data available)
+	}
+
+	[DllModuleExport(4)]
+	private uint HideCaret(uint hWnd)
+	{
+		_logger.LogInformation("[User32] HideCaret(hWnd=0x{HWnd:X8})", hWnd);
+		return 1; // TRUE (stub)
+	}
+
+	[DllModuleExport(4)]
+	private uint IsClipboardFormatAvailable(uint format)
+	{
+		_logger.LogInformation("[User32] IsClipboardFormatAvailable(format={Format})", format);
+		return 0; // FALSE (stub - format not available)
+	}
+
+	[DllModuleExport(4)]
+	private uint OpenClipboard(uint hWndNewOwner)
+	{
+		_logger.LogInformation("[User32] OpenClipboard(hWndNewOwner=0x{HWndNewOwner:X8})", hWndNewOwner);
+		return 1; // TRUE (stub)
+	}
+
+	[DllModuleExport(4)]
+	private uint RegisterClassExA(uint lpWndClass)
+	{
+		_logger.LogInformation("[User32] RegisterClassExA(lpWndClass=0x{LpWndClass:X8})", lpWndClass);
+		// Return a fake class atom (stub)
+		return 0xC000; // Arbitrary class atom
+	}
+
+	[DllModuleExport(24)]
+	private uint TrackPopupMenuEx(uint hMenu, uint uFlags, int x, int y, uint hWnd, uint lptpm)
+	{
+		_logger.LogInformation("[User32] TrackPopupMenuEx(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X}, x={X}, y={Y}, hWnd=0x{HWnd:X8})",
+			hMenu, uFlags, x, y, hWnd);
+		return 0; // FALSE (stub - no menu item selected)
+	}
 	}
 }
