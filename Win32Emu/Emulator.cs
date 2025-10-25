@@ -184,18 +184,15 @@ public sealed class Emulator : IDisposable
             catch (ApplicationException ex) when (ex.Message.Contains("Control Flow Guard"))
             {
                 // Unicorn cannot run with CFG enabled on Windows
-                // Fall back to IcedCpu and log a warning
                 _logger.LogWarning("[Loader] Unicorn CPU backend is not compatible with Control Flow Guard (CFG). Falling back to IcedCpu.");
                 _logger.LogWarning("[Loader] To use Unicorn, disable CFG in project properties or build without CFG.");
-                _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
-                LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
+                CreateFallbackIcedCpu(decoderOptions, enableInstructionAnalyzer);
             }
             catch (Exception ex)
             {
                 // Handle any other Unicorn initialization failures
                 _logger.LogWarning(ex, "[Loader] Failed to initialize Unicorn CPU backend: {Message}. Falling back to IcedCpu.", ex.Message);
-                _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
-                LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
+                CreateFallbackIcedCpu(decoderOptions, enableInstructionAnalyzer);
             }
         }
         else if (useJitCpu)
@@ -1129,6 +1126,12 @@ public sealed class Emulator : IDisposable
         {
             _host.OnDebugOutput(message, DebugLevel.Debug);
         }
+    }
+
+    private void CreateFallbackIcedCpu(Iced.Intel.DecoderOptions decoderOptions, bool enableInstructionAnalyzer)
+    {
+        _cpu = new IcedCpu(_vm!, _logger, decoderOptions, enableInstructionAnalyzer);
+        LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
     }
 
     /// <summary>
