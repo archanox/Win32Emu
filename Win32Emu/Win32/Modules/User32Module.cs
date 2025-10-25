@@ -22,6 +22,9 @@ namespace Win32Emu.Win32.Modules
 		private PeResourceReader? _resourceReader;
 		private IEmulatorHost? _host;
 
+		// ATOM generation counter for window classes
+		private uint _nextAtom = 0xC000; // Start at 0xC000 (standard user atom range)
+
 		// State tracking for cursor and focus
 		private uint _currentCursor;
 		private uint _focusWindow;
@@ -729,12 +732,8 @@ namespace Win32Emu.Win32.Modules
 			{
 				// Return an ATOM (non-zero value) on success
 				// Windows uses atoms (16-bit values) for class registration
-				// We'll return a simple non-zero value to indicate success
-				var atom = (uint)(className.GetHashCode() & 0xFFFF);
-				if (atom == 0)
-				{
-					atom = 1;
-				}
+				// Use a counter to ensure uniqueness and avoid hash collisions
+				var atom = _nextAtom++;
 
 				// Register the atom-to-classname mapping
 				_env.RegisterAtom(atom, className);
@@ -4518,12 +4517,8 @@ namespace Win32Emu.Win32.Modules
 		{
 			// Return an ATOM (non-zero value) on success
 			// Windows uses atoms (16-bit values) for class registration
-			// We'll return a simple non-zero value to indicate success
-			var atom = (uint)(className.GetHashCode() & 0xFFFF);
-			if (atom == 0)
-			{
-				atom = 1;
-			}
+			// Use a counter to ensure uniqueness and avoid hash collisions
+			var atom = _nextAtom++;
 
 			// Register the atom-to-classname mapping
 			_env.RegisterAtom(atom, className);
