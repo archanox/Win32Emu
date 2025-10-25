@@ -176,8 +176,24 @@ public sealed class Emulator : IDisposable
         // Create CPU based on backend preference
         if (useUnicornCpu)
         {
-            _cpu = new Cpu.Unicorn.UnicornCpu(_vm, _logger);
-            LogDebug("[Loader] Unicorn CPU backend enabled (reference implementation)");
+            try
+            {
+                _cpu = new Cpu.Unicorn.UnicornCpu(_vm, _logger);
+                LogDebug("[Loader] Unicorn CPU backend enabled (reference implementation)");
+            }
+            catch (ApplicationException ex) when (ex.Message.Contains("Control Flow Guard"))
+            {
+                // Unicorn cannot run with CFG enabled on Windows
+                _logger.LogWarning("[Loader] Unicorn CPU backend is not compatible with Control Flow Guard (CFG). Falling back to IcedCpu.");
+                _logger.LogWarning("[Loader] To use Unicorn, disable CFG in project properties or build without CFG.");
+                CreateFallbackIcedCpu(decoderOptions, enableInstructionAnalyzer);
+            }
+            catch (Exception ex)
+            {
+                // Handle any other Unicorn initialization failures
+                _logger.LogWarning(ex, "[Loader] Failed to initialize Unicorn CPU backend: {Message}. Falling back to IcedCpu.", ex.Message);
+                CreateFallbackIcedCpu(decoderOptions, enableInstructionAnalyzer);
+            }
         }
         else if (useJitCpu)
         {
@@ -1110,6 +1126,18 @@ public sealed class Emulator : IDisposable
         {
             _host.OnDebugOutput(message, DebugLevel.Debug);
         }
+    }
+
+    private void CreateFallbackIcedCpu(Iced.Intel.DecoderOptions decoderOptions, bool enableInstructionAnalyzer)
+    {
+        // _vm is guaranteed to be non-null here as this method is only called from LoadExecutable
+        // after _vm has been initialized
+        if (_vm == null)
+        {
+            throw new InvalidOperationException("Virtual memory must be initialized before creating fallback CPU.");
+        }
+        _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
+        LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
     }
 
     /// <summary>
