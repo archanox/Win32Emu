@@ -1132,7 +1132,11 @@ public sealed class Emulator : IDisposable
     {
         // _vm is guaranteed to be non-null here as this method is only called from LoadExecutable
         // after _vm has been initialized
-        _cpu = new IcedCpu(_vm!, _logger, decoderOptions, enableInstructionAnalyzer);
+        if (_vm == null)
+        {
+            throw new InvalidOperationException("Virtual memory must be initialized before creating fallback CPU.");
+        }
+        _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
         LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
     }
 
