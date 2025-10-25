@@ -76,6 +76,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "SETLASTERROR":
 				returnValue = SetLastError(a.UInt32(0));
 				return true;
+			case "FORMATMESSAGEA":
+				returnValue = FormatMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.LpStr(4), a.UInt32(5), a.UInt32(6));
+				return true;
 			case "EXITPROCESS":
 				returnValue = ExitProcess(a.UInt32(0));
 				return true;
@@ -924,6 +927,50 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint SetLastError(uint e)
 	{
 		_lastError = e;
+		return 0;
+	}
+
+	/// <summary>
+	/// Formats a message string. The function requires a message definition as input.
+	/// DWORD FormatMessageA(
+	///   [in]           DWORD   dwFlags,
+	///   [in, optional] LPCVOID lpSource,
+	///   [in]           DWORD   dwMessageId,
+	///   [in]           DWORD   dwLanguageId,
+	///   [out]          LPSTR   lpBuffer,
+	///   [in]           DWORD   nSize,
+	///   [in, optional] va_list *Arguments
+	/// );
+	/// </summary>
+	[DllModuleExport(28)]
+	private uint FormatMessageA(uint dwFlags, uint lpSource, uint dwMessageId, uint dwLanguageId, in LpStr lpBuffer, uint nSize, uint arguments)
+	{
+		_logger.LogInformation("[Kernel32] FormatMessageA(dwFlags=0x{DwFlags:X}, lpSource=0x{LpSource:X8}, dwMessageId=0x{DwMessageId:X}, dwLanguageId=0x{DwLanguageId:X}, lpBuffer=0x{LpBuffer:X8}, nSize={NSize})",
+			dwFlags, lpSource, dwMessageId, dwLanguageId, lpBuffer.Address, nSize);
+
+		const uint FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000;
+		const uint FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200;
+		const uint FORMAT_MESSAGE_FROM_STRING = 0x00000400;
+
+		// For now, provide a simple stub implementation
+		// A full implementation would look up error messages from a table
+		if (lpBuffer.Address != 0 && nSize > 0)
+		{
+			// Write a generic error message
+			var message = $"Error 0x{dwMessageId:X8}";
+			var bytes = System.Text.Encoding.ASCII.GetBytes(message);
+			var bytesToWrite = Math.Min(bytes.Length, (int)nSize - 1);
+			
+			for (int i = 0; i < bytesToWrite; i++)
+			{
+				_env.MemWrite8(lpBuffer.Address + (uint)i, bytes[i]);
+			}
+			// Null terminate
+			_env.MemWrite8(lpBuffer.Address + (uint)bytesToWrite, 0);
+			
+			return (uint)bytesToWrite; // Return number of characters written
+		}
+
 		return 0;
 	}
 
