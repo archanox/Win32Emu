@@ -320,9 +320,20 @@ public class JitCpu : IAsyncCpu
 		var isCall = insn.Mnemonic == Mnemonic.Call;
 		uint callTarget = 0;
 		
-		if (isCall && insn.Op0Kind == OpKind.NearBranch32)
+		if (isCall)
 		{
-			callTarget = (uint)insn.NearBranch32;
+			if (insn.Op0Kind == OpKind.NearBranch32)
+			{
+				callTarget = (uint)insn.NearBranch32;
+			}
+			else if (insn.Op0Kind == OpKind.Register)
+			{
+				callTarget = GetRegisterValue(insn, 0);
+			}
+			else if (insn.Op0Kind == OpKind.Memory)
+			{
+				callTarget = mem.Read32(CalcMemAddress(insn, 0));
+			}
 		}
 		
 		switch (insn.Mnemonic)
@@ -335,7 +346,7 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Call:
 				_esp -= 4;
 				mem.Write32(_esp, _eip);
-				if (insn.Op0Kind == OpKind.NearBranch32)
+				if (insn.Op0Kind == OpKind.NearBranch32 || insn.Op0Kind == OpKind.Register || insn.Op0Kind == OpKind.Memory)
 				{
 					_eip = callTarget;
 				}
@@ -550,6 +561,17 @@ public class JitCpu : IAsyncCpu
 				ExecConditionalJump(insn);
 				break;
 			
+			// Loop instructions
+			case Mnemonic.Loop:
+				ExecLoop(insn);
+				break;
+			case Mnemonic.Loope:
+				ExecLoope(insn);
+				break;
+			case Mnemonic.Loopne:
+				ExecLoopne(insn);
+				break;
+			
 			// Conditional moves
 			case Mnemonic.Cmove:
 			case Mnemonic.Cmovne:
@@ -628,6 +650,9 @@ public class JitCpu : IAsyncCpu
 				break;
 			
 			// I/O operations
+			case Mnemonic.In:
+				ExecIn(insn);
+				break;
 			case Mnemonic.Out:
 				ExecOut(insn);
 				break;
@@ -935,6 +960,37 @@ public class JitCpu : IAsyncCpu
 			_eip = (uint)insn.NearBranchTarget;
 		}
 		else if (condition && insn.Op0Kind == OpKind.NearBranch16)
+		{
+			_eip = (uint)insn.NearBranchTarget;
+		}
+	}
+
+	// Loop instructions
+	private void ExecLoop(Instruction insn)
+	{
+		// LOOP - Decrement ECX and jump if ECX != 0
+		_ecx--;
+		if (_ecx != 0)
+		{
+			_eip = (uint)insn.NearBranchTarget;
+		}
+	}
+
+	private void ExecLoope(Instruction insn)
+	{
+		// LOOPE/LOOPZ - Decrement ECX and jump if ECX != 0 and ZF = 1
+		_ecx--;
+		if (_ecx != 0 && GetFlag(Zf))
+		{
+			_eip = (uint)insn.NearBranchTarget;
+		}
+	}
+
+	private void ExecLoopne(Instruction insn)
+	{
+		// LOOPNE/LOOPNZ - Decrement ECX and jump if ECX != 0 and ZF = 0
+		_ecx--;
+		if (_ecx != 0 && !GetFlag(Zf))
 		{
 			_eip = (uint)insn.NearBranchTarget;
 		}
@@ -1329,6 +1385,41 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// I/O operations
+	private void ExecIn(Instruction insn)
+	{
+		// IN accumulator, port
+		// In emulation, I/O ports are typically not directly accessed
+		// We return 0 to prevent crashes, but this may not be functionally correct for all programs
+		uint port;
+		
+		if (insn.Op1Kind == OpKind.Immediate8)
+		{
+			port = insn.Immediate8;
+		}
+		else
+		{
+			port = _edx & 0xFFFF;
+		}
+		
+		_logger.LogDebug("[JitCpu] IN from port 0x{0:X} (returning 0)", port);
+		
+		// Set the accumulator based on operand size
+		if (insn.Op0Kind == OpKind.Register)
+		{
+			var reg = insn.Op0Register;
+			if (reg == Register.AL)
+				_eax = (_eax & 0xFFFFFF00);  // Set AL to 0
+			else if (reg == Register.AX)
+				_eax = (_eax & 0xFFFF0000);  // Set AX to 0
+			else
+				_eax = 0;  // Set EAX to 0
+		}
+		else
+		{
+			_eax = (_eax & 0xFFFFFF00);  // Default to AL = 0
+		}
+	}
+	
 	private void ExecOut(Instruction insn)
 	{
 		// OUT - Output to port
