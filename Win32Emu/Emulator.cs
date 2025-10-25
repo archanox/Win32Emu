@@ -176,8 +176,20 @@ public sealed class Emulator : IDisposable
         // Create CPU based on backend preference
         if (useUnicornCpu)
         {
-            _cpu = new Cpu.Unicorn.UnicornCpu(_vm, _logger);
-            LogDebug("[Loader] Unicorn CPU backend enabled (reference implementation)");
+            try
+            {
+                _cpu = new Cpu.Unicorn.UnicornCpu(_vm, _logger);
+                LogDebug("[Loader] Unicorn CPU backend enabled (reference implementation)");
+            }
+            catch (ApplicationException ex) when (ex.Message.Contains("Control Flow Guard"))
+            {
+                // Unicorn cannot run with CFG enabled on Windows
+                // Fall back to IcedCpu and log a warning
+                _logger.LogWarning("[Loader] Unicorn CPU backend is not compatible with Control Flow Guard (CFG). Falling back to IcedCpu.");
+                _logger.LogWarning("[Loader] To use Unicorn, disable CFG in project properties or build without CFG.");
+                _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
+                LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
+            }
         }
         else if (useJitCpu)
         {
