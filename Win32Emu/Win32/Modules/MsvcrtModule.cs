@@ -146,6 +146,33 @@ namespace Win32Emu.Win32.Modules
 				case "VFPRINTF":
 					returnValue = (uint)vfprintf(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
 					return true;
+				case "_SPAWNV":
+					returnValue = (uint)_spawnv(a.Int32(0), a.LpcStr(1), a.UInt32(2));
+					return true;
+				case "_STRICMP":
+					returnValue = (uint)_stricmp(a.LpcStr(0), a.LpcStr(1));
+					return true;
+				case "FCLOSE":
+					returnValue = (uint)fclose(a.UInt32(0));
+					return true;
+				case "FGETS":
+					returnValue = fgets(a.UInt32(0), a.Int32(1), a.UInt32(2));
+					return true;
+				case "FOPEN":
+					returnValue = fopen(a.LpcStr(0), a.LpcStr(1));
+					return true;
+				case "PRINTF":
+					returnValue = (uint)printf(a.LpcStr(0), a.UInt32(1));
+					return true;
+				case "SPRINTF":
+					returnValue = (uint)sprintf(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
+					return true;
+				case "STRCHR":
+					returnValue = strchr(a.LpcStr(0), a.Int32(1));
+					return true;
+				case "STRRCHR":
+					returnValue = strrchr(a.LpcStr(0), a.Int32(1));
+					return true;
 
 				default:
 					_logger.LogInformation("[msvcrt] Unimplemented export: {Export}", export);
@@ -616,5 +643,101 @@ namespace Win32Emu.Win32.Modules
 			// Print formatted string with varargs (stub)
 			return fmt.Length;
 		}
+
+	[DllModuleExport(12)]
+	private int _spawnv(int mode, in LpcStr path, uint argv)
+	{
+		var pathStr = path.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] _spawnv(mode={Mode}, path=\"{Path}\", argv=0x{Argv:X8})", mode, pathStr, argv);
+		// Stub - return -1 (error)
+		return -1;
 	}
+
+	[DllModuleExport(8)]
+	private int _stricmp(in LpcStr str1, in LpcStr str2)
+	{
+		var s1 = str1.ToString() ?? string.Empty;
+		var s2 = str2.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] _stricmp(\"{S1}\", \"{S2}\")", s1, s2);
+		return string.Compare(s1, s2, StringComparison.OrdinalIgnoreCase);
+	}
+
+	[DllModuleExport(4)]
+	private int fclose(uint stream)
+	{
+		_logger.LogInformation("[msvcrt] fclose(stream=0x{Stream:X8})", stream);
+		// Stub - return 0 (success)
+		return 0;
+	}
+
+	[DllModuleExport(12)]
+	private uint fgets(uint str, int n, uint stream)
+	{
+		_logger.LogInformation("[msvcrt] fgets(str=0x{Str:X8}, n={N}, stream=0x{Stream:X8})", str, n, stream);
+		// Stub - return NULL
+		return 0;
+	}
+
+	[DllModuleExport(8)]
+	private uint fopen(in LpcStr filename, in LpcStr mode)
+	{
+		var fname = filename.ToString() ?? string.Empty;
+		var modeStr = mode.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] fopen(\"{Fname}\", \"{Mode}\")", fname, modeStr);
+		// Stub - return NULL
+		return 0;
+	}
+
+	[DllModuleExport(8)]
+	private int printf(in LpcStr format, uint args)
+	{
+		var fmt = format.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] printf(\"{Fmt}\", args=0x{Args:X8})", fmt, args);
+		// Stub - return length
+		return fmt.Length;
+	}
+
+	[DllModuleExport(12)]
+	private int sprintf(uint buffer, in LpcStr format, uint args)
+	{
+		var fmt = format.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] sprintf(buffer=0x{Buffer:X8}, format=\"{Fmt}\", args=0x{Args:X8})", buffer, fmt, args);
+		// Stub - write format string to buffer and return length
+		if (buffer != 0)
+		{
+			_env.WriteAnsiStringAt(buffer, fmt);
+		}
+		return fmt.Length;
+	}
+
+	[DllModuleExport(8)]
+	private uint strchr(in LpcStr str, int c)
+	{
+		var s = str.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] strchr(\"{S}\", {C})", s, c);
+		var ch = (char)c;
+		var index = s.IndexOf(ch);
+		if (index >= 0)
+		{
+			// Return pointer to the character
+			return str.Address + (uint)index;
+		}
+		return 0; // NULL
+	}
+
+	[DllModuleExport(8)]
+	private uint strrchr(in LpcStr str, int c)
+	{
+		var s = str.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] strrchr(\"{S}\", {C})", s, c);
+		var ch = (char)c;
+		var index = s.LastIndexOf(ch);
+		if (index >= 0)
+		{
+			// Return pointer to the character
+			return str.Address + (uint)index;
+		}
+		return 0; // NULL
+	}
+}
 }

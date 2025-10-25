@@ -335,6 +335,15 @@ namespace Win32Emu.Win32.Modules
 				case "WVSPRINTFA":
 					returnValue = WvsprintfA(a.LpStr(0), a.LpcStr(1), a.UInt32(2));
 					return true;
+				case "GETDESKTOPWINDOW":
+					returnValue = GetDesktopWindow();
+					return true;
+				case "CHECKDLGBUTTON":
+					returnValue = CheckDlgButton(a.UInt32(0), a.Int32(1), a.UInt32(2));
+					return true;
+				case "MSGWAITFORMULTIPLEOBJECTS":
+					returnValue = MsgWaitForMultipleObjects(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
 
 				case "CHARLOWERBUFFA":
 					returnValue = CharLowerBuffA(a.LpStr(0), a.UInt32(1));
@@ -3207,6 +3216,59 @@ namespace Win32Emu.Win32.Modules
 			return false;
 		}
 
+	/// <summary>
+	/// Retrieves a handle to the desktop window.
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint GetDesktopWindow()
+	{
+		_logger.LogInformation("[User32] GetDesktopWindow()");
+		return 0x00010001; // Fake desktop handle
+	}
+
+	/// <summary>
+	/// Changes the check state of a button control.
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint CheckDlgButton(uint hDlg, int nIDButton, uint uCheck)
+	{
+		_logger.LogInformation("[User32] CheckDlgButton(hDlg=0x{HDlg:X8}, nIDButton={NIDButton}, uCheck={UCheck})",
+			hDlg, nIDButton, uCheck);
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Adds a check mark to a specified radio button in a group.
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint CheckRadioButton(uint hDlg, int nIDFirstButton, int nIDLastButton, int nIDCheckButton)
+	{
+		_logger.LogInformation("[User32] CheckRadioButton(hDlg=0x{HDlg:X8}, nIDFirstButton={NIDFirstButton}, nIDLastButton={NIDLastButton}, nIDCheckButton={NIDCheckButton})",
+			hDlg, nIDFirstButton, nIDLastButton, nIDCheckButton);
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Determines whether a button control has a check mark.
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint IsDlgButtonChecked(uint hDlg, int nIDButton)
+	{
+		_logger.LogInformation("[User32] IsDlgButtonChecked(hDlg=0x{HDlg:X8}, nIDButton={NIDButton})",
+			hDlg, nIDButton);
+		return 0; // BST_UNCHECKED
+	}
+
+	/// <summary>
+	/// Waits until objects are signaled or time-out interval elapses.
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint MsgWaitForMultipleObjects(uint nCount, uint pHandles, uint fWaitAll, uint dwMilliseconds, uint dwWakeMask)
+	{
+		_logger.LogInformation("[User32] MsgWaitForMultipleObjects(nCount={NCount}, dwMilliseconds={DwMilliseconds})",
+			nCount, dwMilliseconds);
+		return 0; // WAIT_OBJECT_0
+	}
 		private uint GetFocus()
 		{
 			_logger.LogInformation("[User32] GetFocus()");
@@ -3229,20 +3291,6 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] SetDlgItemInt(hDlg=0x{HDlg:X8}, nIDDlgItem={NIDDlgItem}, uValue={UValue})", 
 				hDlg, nIDDlgItem, uValue);
-			return 1; // TRUE
-		}
-
-		private uint IsDlgButtonChecked(uint hDlg, int nIDButton)
-		{
-			_logger.LogInformation("[User32] IsDlgButtonChecked(hDlg=0x{HDlg:X8}, nIDButton={NIDButton})", hDlg, nIDButton);
-			// Stub - return BST_UNCHECKED
-			return 0;
-		}
-
-		private uint CheckRadioButton(uint hDlg, int nIDFirstButton, int nIDLastButton, int nIDCheckButton)
-		{
-			_logger.LogInformation("[User32] CheckRadioButton(hDlg=0x{HDlg:X8}, first={First}, last={Last}, check={Check})", 
-				hDlg, nIDFirstButton, nIDLastButton, nIDCheckButton);
 			return 1; // TRUE
 		}
 

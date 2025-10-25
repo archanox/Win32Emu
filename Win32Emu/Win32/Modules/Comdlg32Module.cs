@@ -40,6 +40,9 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 			case "GETSAVEFILENAMEA":
 				returnValue = GetSaveFileNameA(a.UInt32(0));
 				return true;
+			case "GETFILETITLEA":
+				returnValue = GetFileTitleA(a.LpcStr(0), a.LpStr(1), a.UInt32(2));
+				return true;
 
 			default:
 				_logger.LogInformation("[Comdlg32] Unimplemented export: {Export}", export);
@@ -101,5 +104,28 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 		// A full implementation would show a save file dialog
 		_logger.LogInformation("[Comdlg32] GetSaveFileNameA: Dialog cancelled (stub)");
 		return 0; // FALSE
+	}
+
+	/// <summary>
+	/// Retrieves the name of the specified file.
+	/// short GetFileTitleA(LPCSTR lpszFile, LPSTR lpszTitle, WORD cchSize);
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint GetFileTitleA(in LpcStr lpszFile, in LpStr lpszTitle, uint cchSize)
+	{
+		var file = lpszFile.ToString() ?? string.Empty;
+		_logger.LogInformation("[Comdlg32] GetFileTitleA(lpszFile=\"{File}\", cchSize={CchSize})", file, cchSize);
+		
+		// Extract just the file name without path
+		var fileName = Path.GetFileNameWithoutExtension(file);
+		
+		if (lpszTitle.Address != 0 && cchSize > 0)
+		{
+			var toCopy = fileName.Length < cchSize ? fileName : fileName.Substring(0, (int)cchSize - 1);
+			_env.WriteAnsiStringAt(lpszTitle.Address, toCopy);
+			return 0; // Success
+		}
+		
+		return 1; // Error
 	}
 }
