@@ -221,6 +221,7 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(user32Module);
         
         _dispatcher.RegisterModule(new Gdi32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Comdlg32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DDrawModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DSoundModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DInputModule(_env, _image.BaseAddress, loader, _logger));
