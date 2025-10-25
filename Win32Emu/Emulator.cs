@@ -1066,7 +1066,8 @@ public sealed class Emulator : IDisposable
                 return true;
             }
 
-            if (opcode == 0xCC && eip is >= 0x0F000000 and < 0x10000000)
+            // Check for INT3 breakpoints in emulation stub ranges (COM vtables, synthetic exports, import hooks)
+            if (opcode == 0xCC && eip is >= COM_VTABLE_BASE and < IMPORT_HOOK_LIMIT)
             {
                 return true;
             }
@@ -1106,7 +1107,8 @@ public sealed class Emulator : IDisposable
                 return (uint)(eip + 5 + (int)displacement);
             }
 
-            if (opcode == 0xCC && eip is >= 0x0F000000 and < 0x10000000)
+            // INT3 breakpoints in emulation stub ranges return their own address as the target
+            if (opcode == 0xCC && eip is >= COM_VTABLE_BASE and < IMPORT_HOOK_LIMIT)
             {
 	            return eip;
             }
@@ -1144,8 +1146,13 @@ public sealed class Emulator : IDisposable
     /// Attempts to restore EBP from the stack after an emulated API call.
     /// This handles cases where the calling code used EBP to hold the function pointer for an indirect call.
     /// </summary>
-    // Import hook addresses are allocated in this range
-    private const uint IMPORT_HOOK_BASE = 0x0F000000;
+    
+    // Memory address ranges for various emulation stubs (all use INT3/0xCC for interception)
+    private const uint COM_VTABLE_BASE = 0x0D000000;      // COM interface vtable methods
+    private const uint COM_VTABLE_LIMIT = 0x0E000000;
+    private const uint SYNTHETIC_EXPORT_BASE = 0x0E000000; // Dynamically resolved exports (e.g., GetProcAddress)
+    private const uint SYNTHETIC_EXPORT_LIMIT = 0x0F000000;
+    private const uint IMPORT_HOOK_BASE = 0x0F000000;      // Static import table hooks
     private const uint IMPORT_HOOK_LIMIT = 0x10000000;
     
     private void RestoreEbpFromStack(uint esp)
