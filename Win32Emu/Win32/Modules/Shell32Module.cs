@@ -76,6 +76,9 @@ public class Shell32Module : IWin32ModuleUnsafe
 			case "SHGETFILEINFOA":
 				returnValue = SHGetFileInfoA(a.LpcStr(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
+			case "SHELLABOUTA":
+				returnValue = ShellAboutA(a.UInt32(0), a.LpcStr(1), a.LpcStr(2), a.UInt32(3));
+				return true;
 
 			default:
 				_logger.LogInformation("[Shell32] Unimplemented export: {Export}", export);
@@ -264,5 +267,21 @@ public class Shell32Module : IWin32ModuleUnsafe
 		
 		// Stub - return 0 (failure)
 		return 0;
+	}
+
+	/// <summary>
+	/// Displays a ShellAbout dialog box.
+	/// INT ShellAboutA(HWND hWnd, LPCSTR szApp, LPCSTR szOtherStuff, HICON hIcon);
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint ShellAboutA(uint hWnd, in LpcStr szApp, in LpcStr szOtherStuff, uint hIcon)
+	{
+		var app = szApp.ToString() ?? string.Empty;
+		var otherStuff = szOtherStuff.ToString() ?? string.Empty;
+		_logger.LogInformation("[Shell32] ShellAboutA(hWnd=0x{HWnd:X8}, szApp=\"{App}\", szOtherStuff=\"{OtherStuff}\", hIcon=0x{HIcon:X8})",
+			hWnd, app, otherStuff, hIcon);
+		
+		// Stub - return TRUE (success)
+		return 1;
 	}
 }

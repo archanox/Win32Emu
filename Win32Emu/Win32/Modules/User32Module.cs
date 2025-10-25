@@ -437,6 +437,9 @@ namespace Win32Emu.Win32.Modules
 				case "CHECKMENUITEM":
 					returnValue = CheckMenuItem(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
+				case "CHECKMENURADIOITEM":
+					returnValue = CheckMenuRadioItem(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
 				case "ENABLEMENUITEM":
 					returnValue = EnableMenuItem(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
