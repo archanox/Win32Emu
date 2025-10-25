@@ -132,5 +132,5 @@ The fix is minimal and surgical, only changing the EBP restoration behavior when
 
 ## Related Documentation
 
-- `EBP_COM_POINTER_FIX.md` - Previous fix that introduced the EBP=ESP pattern (now refined)
+- `EBP_COM_POINTER_FIX.md` - Previous fix that introduced the problematic EBP=ESP pattern (this fix refines that approach by leaving EBP unchanged instead)
 - `PSEUDO_HANDLE_ERROR_FIX.md` - Enhanced diagnostics for pseudo-handle errors
