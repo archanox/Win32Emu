@@ -6455,7 +6455,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Stub - just copy the long path as the short path
 		if (cchBuffer > 0 && lpszShortPath.Address != 0)
 		{
-			var toCopy = longPath.Length < cchBuffer - 1 ? longPath : longPath.Substring(0, (int)cchBuffer - 1);
+			string toCopy;
+			if (cchBuffer > 1)
+			{
+				toCopy = longPath.Length < cchBuffer - 1 ? longPath : longPath.Substring(0, (int)cchBuffer - 1);
+			}
+			else
+			{
+				toCopy = string.Empty;
+			}
 			lpszShortPath.Write(_env.Memory, toCopy, true);
 			return (uint)toCopy.Length + 1;
 		}
