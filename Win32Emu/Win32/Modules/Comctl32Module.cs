@@ -43,6 +43,10 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				returnValue = ImageList_AddMasked(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 
+			case "IMAGELIST_REPLACEICON":
+				returnValue = ImageList_ReplaceIcon(a.UInt32(0), a.Int32(1), a.UInt32(2));
+				return true;
+
 			case "IMAGELIST_DESTROY":
 				returnValue = ImageList_Destroy(a.UInt32(0));
 				return true;
@@ -105,6 +109,31 @@ public class Comctl32Module : IWin32ModuleUnsafe
 			var index = imageList.Images.Count;
 			imageList.Images.Add(hbmImage);
 			return (uint)index;
+		}
+
+		return 0xFFFFFFFF; // -1 on error
+	}
+
+	private uint ImageList_ReplaceIcon(uint himl, int i, uint hicon)
+	{
+		_logger.LogInformation("[Comctl32] ImageList_ReplaceIcon(himl=0x{Himl:X8}, i={I}, hicon=0x{Hicon:X8})",
+			himl, i, hicon);
+
+		if (_imageLists.TryGetValue(himl, out var imageList))
+		{
+			if (i == -1)
+			{
+				// Add new icon
+				var index = imageList.Images.Count;
+				imageList.Images.Add(hicon);
+				return (uint)index;
+			}
+			else if (i >= 0 && i < imageList.Images.Count)
+			{
+				// Replace existing icon
+				imageList.Images[i] = hicon;
+				return (uint)i;
+			}
 		}
 
 		return 0xFFFFFFFF; // -1 on error

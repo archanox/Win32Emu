@@ -123,6 +123,18 @@ namespace Win32Emu.Win32.Modules
 					returnValue = MixerSetControlDetails(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				case "WAVEOUTGETNUMDEVS":
+					returnValue = WaveOutGetNumDevs();
+					return true;
+
+				case "WAVEOUTGETDEVCAPSA":
+					returnValue = WaveOutGetDevCapsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEOUTMESSAGE":
+					returnValue = WaveOutMessage(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
 				default:
 					_logger.LogInformation("[WinMM] Unimplemented export: {Export}", export);
 					return false;
@@ -505,6 +517,41 @@ namespace Win32Emu.Win32.Modules
 			// For stub implementation, return success
 			// A full implementation would set mixer control values (volume, balance, etc.)
 			return 0; // MMSYSERR_NOERROR
+		}
+
+		private uint WaveOutGetNumDevs()
+		{
+			_logger.LogInformation("[WinMM] waveOutGetNumDevs()");
+			// Return 1 device available
+			return 1;
+		}
+
+		private uint WaveOutGetDevCapsA(uint uDeviceID, uint pwoc, uint cbwoc)
+		{
+			_logger.LogInformation("[WinMM] waveOutGetDevCapsA(uDeviceID={UDeviceID}, pwoc=0x{Pwoc:X8}, cbwoc={Cbwoc})",
+				uDeviceID, pwoc, cbwoc);
+			
+			// Fill in WAVEOUTCAPS structure if pwoc is valid
+			if (pwoc != 0 && cbwoc > 0)
+			{
+				// For simplicity, just zero out the structure
+				// A full implementation would fill in device capabilities
+				for (uint i = 0; i < cbwoc; i++)
+				{
+					_env.MemWrite8(pwoc + i, 0);
+				}
+			}
+			
+			return 0; // MMSYSERR_NOERROR
+		}
+
+		private uint WaveOutMessage(uint hwo, uint uMsg, uint dw1, uint dw2)
+		{
+			_logger.LogInformation("[WinMM] waveOutMessage(hwo=0x{Hwo:X8}, uMsg={UMsg}, dw1=0x{Dw1:X8}, dw2=0x{Dw2:X8})",
+				hwo, uMsg, dw1, dw2);
+			
+			// Stub implementation - return 0 (success)
+			return 0;
 		}
 	}
 }

@@ -67,6 +67,10 @@ public class Shell32Module : IWin32ModuleUnsafe
 				returnValue = DragQueryFileA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
 
+			case "SHELLEXECUTEEXA":
+				returnValue = ShellExecuteExA(a.UInt32(0));
+				return true;
+
 			default:
 				_logger.LogInformation("[Shell32] Unimplemented export: {Export}", export);
 				return false;
@@ -213,5 +217,13 @@ public class Shell32Module : IWin32ModuleUnsafe
 		
 		// Stub - return 0 (no files dropped)
 		return 0;
+	private uint ShellExecuteExA(uint lpExecInfo)
+	{
+		_logger.LogInformation("[Shell32] ShellExecuteExA(lpExecInfo=0x{LpExecInfo:X8})", lpExecInfo);
+		
+		// SHELLEXECUTEINFO structure
+		// Read fields from the structure if needed
+		// For now, just return success
+		return 1; // TRUE
 	}
 }

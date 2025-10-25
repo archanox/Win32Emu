@@ -41,6 +41,9 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			case "REGOPENKEYEXA":
 				returnValue = RegOpenKeyExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
+			case "REGOPENKEYA":
+				returnValue = RegOpenKeyA(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
+				return true;
 			case "REGCREATEKEYEXA":
 				returnValue = RegCreateKeyExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.LpcStr(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8));
 				return true;
@@ -52,6 +55,24 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				return true;
 			case "REGQUERYVALUEA":
 				returnValue = RegQueryValueA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3));
+				return true;
+			case "REGQUERYINFOKEYA":
+				returnValue = RegQueryInfoKeyA(a.UInt32(0), a.LpStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), a.UInt32(11));
+				return true;
+			case "REGENUMKEYA":
+				returnValue = RegEnumKeyA(a.UInt32(0), a.UInt32(1), a.LpStr(2), a.UInt32(3));
+				return true;
+			case "REGENUMKEYEXA":
+				returnValue = RegEnumKeyExA(a.UInt32(0), a.UInt32(1), a.LpStr(2), a.UInt32(3), a.UInt32(4), a.LpStr(5), a.UInt32(6), a.UInt32(7));
+				return true;
+			case "REGENUMVALUEA":
+				returnValue = RegEnumValueA(a.UInt32(0), a.UInt32(1), a.LpStr(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+				return true;
+			case "REGDELETEKEYA":
+				returnValue = RegDeleteKeyA(a.UInt32(0), a.LpcStr(1));
+				return true;
+			case "REGDELETEVALUEA":
+				returnValue = RegDeleteValueA(a.UInt32(0), a.LpcStr(1));
 				return true;
 			case "REGCLOSEKEY":
 				returnValue = RegCloseKey(a.UInt32(0));
@@ -573,6 +594,77 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Advapi32] ControlService(hService=0x{HService:X8}, dwControl={DwControl}, lpServiceStatus=0x{LpServiceStatus:X8})",
 			hService, dwControl, lpServiceStatus);
 		return 1; // TRUE
+	}
+
+	private uint RegOpenKeyA(uint hKey, in LpcStr lpSubKey, uint phkResult)
+	{
+		// RegOpenKeyA is equivalent to RegOpenKeyExA with samDesired = KEY_ALL_ACCESS
+		return RegOpenKeyExA(hKey, lpSubKey, 0, 0xF003F, phkResult);
+	}
+
+	private uint RegQueryInfoKeyA(uint hKey, in LpStr lpClass, uint lpcchClass, uint lpReserved,
+		uint lpcSubKeys, uint lpcchMaxSubKeyLen, uint lpcchMaxClassLen, uint lpcValues,
+		uint lpcchMaxValueNameLen, uint lpcbMaxValueLen, uint lpcbSecurityDescriptor, uint lpftLastWriteTime)
+	{
+		_logger.LogInformation("[Advapi32] RegQueryInfoKeyA(hKey=0x{HKey:X8})", hKey);
+		
+		// Stub implementation - return zeros for all counts
+		if (lpcSubKeys != 0)
+			_env.MemWrite32(lpcSubKeys, 0);
+		if (lpcValues != 0)
+			_env.MemWrite32(lpcValues, 0);
+		if (lpcchMaxSubKeyLen != 0)
+			_env.MemWrite32(lpcchMaxSubKeyLen, 0);
+		if (lpcchMaxValueNameLen != 0)
+			_env.MemWrite32(lpcchMaxValueNameLen, 0);
+		if (lpcbMaxValueLen != 0)
+			_env.MemWrite32(lpcbMaxValueLen, 0);
+		
+		return 0; // ERROR_SUCCESS
+	}
+
+	private uint RegEnumKeyA(uint hKey, uint dwIndex, in LpStr lpName, uint cchName)
+	{
+		_logger.LogInformation("[Advapi32] RegEnumKeyA(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
+		
+		// Stub implementation - no keys to enumerate
+		return 259; // ERROR_NO_MORE_ITEMS
+	}
+
+	private uint RegEnumKeyExA(uint hKey, uint dwIndex, in LpStr lpName, uint lpcchName, uint lpReserved,
+		in LpStr lpClass, uint lpcchClass, uint lpftLastWriteTime)
+	{
+		_logger.LogInformation("[Advapi32] RegEnumKeyExA(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
+		
+		// Stub implementation - no keys to enumerate
+		return 259; // ERROR_NO_MORE_ITEMS
+	}
+
+	private uint RegEnumValueA(uint hKey, uint dwIndex, in LpStr lpValueName, uint lpcchValueName,
+		uint lpReserved, uint lpType, uint lpData, uint lpcbData)
+	{
+		_logger.LogInformation("[Advapi32] RegEnumValueA(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
+		
+		// Stub implementation - no values to enumerate
+		return 259; // ERROR_NO_MORE_ITEMS
+	}
+
+	private uint RegDeleteKeyA(uint hKey, in LpcStr lpSubKey)
+	{
+		var subKey = lpSubKey.ToString() ?? string.Empty;
+		_logger.LogInformation("[Advapi32] RegDeleteKeyA(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\")", hKey, subKey);
+		
+		// Stub implementation - report success
+		return 0; // ERROR_SUCCESS
+	}
+
+	private uint RegDeleteValueA(uint hKey, in LpcStr lpValueName)
+	{
+		var valueName = lpValueName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Advapi32] RegDeleteValueA(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\")", hKey, valueName);
+		
+		// Stub implementation - report success
+		return 0; // ERROR_SUCCESS
 	}
 
 	private class ServiceData
