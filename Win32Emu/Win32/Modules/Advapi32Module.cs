@@ -83,6 +83,9 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			case "REGCLOSEKEY":
 				returnValue = RegCloseKey(a.UInt32(0));
 				return true;
+			case "REGFLUSHKEY":
+				returnValue = RegFlushKey(a.UInt32(0));
+				return true;
 
 			// Security functions
 			case "ACCESSCHECK":
@@ -141,6 +144,9 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				return true;
 			case "SETFILESECURITYA":
 				returnValue = SetFileSecurityA(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "GETUSERNAMEA":
+				returnValue = GetUserNameA(a.UInt32(0), a.UInt32(1));
 				return true;
 
 			// Service functions
@@ -285,6 +291,25 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		// ERROR_SUCCESS
 		return 0;
 	}
+
+	/// <summary>
+	/// Writes all the attributes of the specified open registry key into the registry.
+	/// LSTATUS RegFlushKey(
+	///   [in] HKEY hKey
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint RegFlushKey(uint hKey)
+	{
+		_logger.LogInformation("[Advapi32] RegFlushKey(hKey=0x{HKey:X8})", hKey);
+		
+		// In a real system, this would flush the key to disk
+		// For emulation purposes, we just acknowledge the call
+		
+		// ERROR_SUCCESS
+		return 0;
+	}
+
 	/// <summary>
 	/// Creates the specified registry key. If the key already exists, the function opens it.
 	/// LSTATUS RegCreateKeyExA(
@@ -737,6 +762,64 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			fileName, SecurityInformation, pSecurityDescriptor);
 		
 		// Stub implementation - report success
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves the name of the user associated with the current thread.
+	/// BOOL GetUserNameA(
+	///   [out]     LPSTR   lpBuffer,
+	///   [in, out] LPDWORD pcbBuffer
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint GetUserNameA(uint lpBuffer, uint pcbBuffer)
+	{
+		_logger.LogInformation("[Advapi32] GetUserNameA(lpBuffer=0x{LpBuffer:X8}, pcbBuffer=0x{PcbBuffer:X8})",
+			lpBuffer, pcbBuffer);
+		
+		// Default username for emulation
+		const string username = "Player";
+		var usernameBytes = System.Text.Encoding.ASCII.GetBytes(username);
+		var requiredSize = (uint)(usernameBytes.Length + 1); // +1 for null terminator
+		
+		// Read the buffer size
+		uint bufferSize = 0;
+		if (pcbBuffer != 0)
+		{
+			bufferSize = _env.MemRead32(pcbBuffer);
+		}
+		
+		// Check if buffer is large enough
+		if (bufferSize < requiredSize)
+		{
+			// Write required size
+			if (pcbBuffer != 0)
+			{
+				_env.MemWrite32(pcbBuffer, requiredSize);
+			}
+			// ERROR_INSUFFICIENT_BUFFER would normally be set via SetLastError
+			// but Advapi32Module doesn't have direct access to that
+			return 0; // FALSE
+		}
+		
+		// Write username to buffer
+		if (lpBuffer != 0)
+		{
+			for (int i = 0; i < usernameBytes.Length; i++)
+			{
+				_env.MemWrite8(lpBuffer + (uint)i, usernameBytes[i]);
+			}
+			// Write null terminator
+			_env.MemWrite8(lpBuffer + (uint)usernameBytes.Length, 0);
+		}
+		
+		// Write actual size (including null terminator)
+		if (pcbBuffer != 0)
+		{
+			_env.MemWrite32(pcbBuffer, requiredSize);
+		}
+		
 		return 1; // TRUE
 	}
 

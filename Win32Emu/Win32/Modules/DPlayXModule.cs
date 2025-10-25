@@ -38,6 +38,10 @@ namespace Win32Emu.Win32.Modules
 				case "ORDINAL_2":
 					returnValue = DirectPlayEnumerateA(a.UInt32(0), a.UInt32(1));
 					return true;
+				case "DIRECTPLAYLOBBYCREATEA":
+				case "ORDINAL_4":
+					returnValue = DirectPlayLobbyCreateA();
+					return true;
 				default:
 					_logger.LogInformation("[DPlayX] Unimplemented export: {Export}", export);
 					return false;

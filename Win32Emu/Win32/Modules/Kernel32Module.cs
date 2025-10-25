@@ -103,6 +103,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETSYSTEMDEFAULTLCID":
 				returnValue = GetSystemDefaultLCID();
 				return true;
+			case "GETUSERDEFAULTLCID":
+				returnValue = GetUserDefaultLCID();
+				return true;
+			case "ISVALIDCODEPAGE":
+				returnValue = IsValidCodePage(a.UInt32(0));
+				return true;
+			case "ISVALIDLOCALE":
+				returnValue = IsValidLocale(a.UInt32(0), a.UInt32(1));
+				return true;
 			case "GETLOCALEINFOA":
 				returnValue = GetLocaleInfoA(a.UInt32(0), a.UInt32(1), a.LpStr(2), a.Int32(3));
 				return true;
@@ -176,6 +185,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "SETCONSOLEOUTPUTCP":
 				returnValue = SetConsoleOutputCP(a.UInt32(0));
+				return true;
+			case "SETCONSOLECTRLHANDLER":
+				returnValue = SetConsoleCtrlHandler(a.UInt32(0), a.UInt32(1));
 				return true;
 
 			// Memory/heap
@@ -327,6 +339,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "OUTPUTDEBUGSTRINGA":
 				returnValue = OutputDebugStringA(a.LpcStr(0));
 				return true;
+			case "DEBUGBREAK":
+				returnValue = DebugBreak();
+				return true;
 			case "RTLUNWIND":
 				returnValue = RtlUnwind(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
@@ -443,6 +458,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "CREATESEMAPHOREA":
 				returnValue = CreateSemaphoreA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3));
+				return true;
+			case "OPENSEMAPHOREA":
+				returnValue = OpenSemaphoreA(a.UInt32(0), a.UInt32(1), a.LpcStr(2));
 				return true;
 			case "RELEASESEMAPHORE":
 				returnValue = ReleaseSemaphore(a.UInt32(0), a.UInt32(1), a.UInt32(2));
@@ -576,6 +594,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "INTERLOCKEDINCREMENT":
 				returnValue = (uint)InterlockedIncrement(a.UInt32(0));
 				return true;
+			case "INTERLOCKEDEXCHANGE":
+				returnValue = InterlockedExchange(a.UInt32(0), a.UInt32(1));
+				return true;
 			case "LOCALFREE":
 				returnValue = LocalFree(a.UInt32(0));
 				return true;
@@ -693,6 +714,26 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[kernel32] CreateSemaphoreA: lpSemaphoreAttributes={lpSemaphoreAttributes}, lInitialCount={lInitialCount}, lMaximumCount={lMaximumCount}, lpName={lpName}", lpSemaphoreAttributes, lInitialCount, lMaximumCount, lpName);
 		return CreateSemaphore(lpSemaphoreAttributes, lInitialCount, lMaximumCount, lpName);
+	}
+
+	/// <summary>
+	/// Opens an existing named semaphore object.
+	/// HANDLE OpenSemaphoreA(
+	///   [in] DWORD   dwDesiredAccess,
+	///   [in] BOOL    bInheritHandle,
+	///   [in] LPCSTR  lpName
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	public uint OpenSemaphoreA(uint dwDesiredAccess, uint bInheritHandle, LpcStr lpName)
+	{
+		var name = lpName.ToString() ?? string.Empty;
+		_logger.LogInformation("[kernel32] OpenSemaphoreA(dwDesiredAccess=0x{DwDesiredAccess:X8}, bInheritHandle={BInheritHandle}, lpName=\"{LpName}\")",
+			dwDesiredAccess, bInheritHandle, name);
+		
+		// Try to find an existing semaphore by name
+		// For now, just create a new one if not found
+		return CreateSemaphore(0, 0, 0x7FFFFFFF, lpName);
 	}
 	
 	[DllModuleExport(184, entryPoint: 0x00039B1E, Version = "4.90.0.3000")]
@@ -2157,6 +2198,24 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		
 		// For emulation purposes, we accept the call but don't actually change the code page
 		// The emulator uses UTF-8/Unicode internally
+		return 1; // TRUE - success
+	}
+
+	/// <summary>
+	/// Sets the handler routine to be called when a console receives certain control signals.
+	/// BOOL SetConsoleCtrlHandler(
+	///   [in, optional] PHANDLER_ROUTINE HandlerRoutine,
+	///   [in]           BOOL            Add
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint SetConsoleCtrlHandler(uint handlerRoutine, uint add)
+	{
+		_logger.LogInformation("[Kernel32] SetConsoleCtrlHandler(handlerRoutine=0x{HandlerRoutine:X8}, add={Add})",
+			handlerRoutine, add);
+		
+		// For emulation purposes, we accept the call but don't install a handler
+		// The emulator handles its own termination
 		return 1; // TRUE - success
 	}
 
@@ -5694,6 +5753,22 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
+	/// <summary>
+	/// Causes a breakpoint exception in the current process.
+	/// void DebugBreak();
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint DebugBreak()
+	{
+		_logger.LogInformation("[Kernel32] DebugBreak()");
+		
+		// In a real system, this would cause a breakpoint exception
+		// For emulation, we just log it and continue
+		// Could potentially trigger debugger if one is attached
+		
+		return 0; // void function
+	}
+
 	[DllModuleExport(691, entryPoint: 0x0000F3CC, Version = "5.1.2600.6532")]
 	[DllModuleExport(571, entryPoint: 0x000223DC, Version = "4.90.0.3000")]
 	private uint SetUnhandledExceptionFilter(uint lpTopLevelExceptionFilter)
@@ -5919,6 +5994,28 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			value++;
 			_env.MemWrite32(lpAddend, (uint)value);
 			return value;
+		}
+		return 0;
+	}
+
+	/// <summary>
+	/// Sets a 32-bit variable to the specified value as an atomic operation.
+	/// LONG InterlockedExchange(
+	///   [in, out] LONG volatile *Target,
+	///   [in]      LONG          Value
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint InterlockedExchange(uint target, uint value)
+	{
+		_logger.LogInformation("[Kernel32] InterlockedExchange(target=0x{Target:X8}, value=0x{Value:X8})",
+			target, value);
+		
+		if (target != 0)
+		{
+			var oldValue = _env.MemRead32(target);
+			_env.MemWrite32(target, value);
+			return oldValue;
 		}
 		return 0;
 	}
@@ -6325,6 +6422,53 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Return US English locale ID: 0x0409
 		const uint LOCALE_US_ENGLISH = 0x0409;
 		return LOCALE_US_ENGLISH;
+	}
+
+	/// <summary>
+	/// Retrieves the user default locale identifier.
+	/// LCID GetUserDefaultLCID();
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint GetUserDefaultLCID()
+	{
+		_logger.LogInformation("[Kernel32] GetUserDefaultLCID()");
+		// Return US English locale ID: 0x0409
+		const uint LOCALE_US_ENGLISH = 0x0409;
+		return LOCALE_US_ENGLISH;
+	}
+
+	/// <summary>
+	/// Determines whether a specified code page is valid.
+	/// BOOL IsValidCodePage(
+	///   [in] UINT CodePage
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint IsValidCodePage(uint codePage)
+	{
+		_logger.LogInformation("[Kernel32] IsValidCodePage(codePage={CodePage})", codePage);
+		
+		// Common code pages that we'll consider valid
+		// 437 = OEM United States, 1252 = Windows Latin 1
+		// For simplicity, accept any code page
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Determines whether a specified locale identifier is valid.
+	/// BOOL IsValidLocale(
+	///   [in] LCID   Locale,
+	///   [in] DWORD  dwFlags
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint IsValidLocale(uint locale, uint dwFlags)
+	{
+		_logger.LogInformation("[Kernel32] IsValidLocale(locale=0x{Locale:X8}, dwFlags=0x{DwFlags:X8})",
+			locale, dwFlags);
+		
+		// For simplicity, accept any locale as valid
+		return 1; // TRUE
 	}
 
 	/// <summary>

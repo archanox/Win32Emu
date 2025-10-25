@@ -135,6 +135,30 @@ namespace Win32Emu.Win32.Modules
 					returnValue = WaveOutMessage(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 
+				case "WAVEOUTGETVOLUME":
+					returnValue = WaveOutGetVolume(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "WAVEOUTSETVOLUME":
+					returnValue = WaveOutSetVolume(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "AUXGETNUMDEVS":
+					returnValue = AuxGetNumDevs();
+					return true;
+
+				case "AUXGETDEVCAPSA":
+					returnValue = AuxGetDevCapsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "AUXGETVOLUME":
+					returnValue = AuxGetVolume(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "AUXSETVOLUME":
+					returnValue = AuxSetVolume(a.UInt32(0), a.UInt32(1));
+					return true;
+
 				default:
 					_logger.LogInformation("[WinMM] Unimplemented export: {Export}", export);
 					return false;
@@ -555,6 +579,124 @@ namespace Win32Emu.Win32.Modules
 			
 			// Stub implementation - return 0 (success)
 			return 0;
+		}
+
+		/// <summary>
+		/// Retrieves the current volume setting of the specified waveform-audio output device.
+		/// MMRESULT waveOutGetVolume(
+		///   [in]  HWAVEOUT hwo,
+		///   [out] LPDWORD  pdwVolume
+		/// );
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint WaveOutGetVolume(uint hwo, uint pdwVolume)
+		{
+			_logger.LogInformation("[WinMM] waveOutGetVolume(hwo=0x{Hwo:X8}, pdwVolume=0x{PdwVolume:X8})",
+				hwo, pdwVolume);
+			
+			// Return full volume (0xFFFFFFFF = max volume for both left and right channels)
+			if (pdwVolume != 0)
+			{
+				_env.MemWrite32(pdwVolume, 0xFFFFFFFF);
+			}
+			
+			return 0; // MMSYSERR_NOERROR
+		}
+
+		/// <summary>
+		/// Sets the volume level of the specified waveform-audio output device.
+		/// MMRESULT waveOutSetVolume(
+		///   [in] HWAVEOUT hwo,
+		///   [in] DWORD    dwVolume
+		/// );
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint WaveOutSetVolume(uint hwo, uint dwVolume)
+		{
+			_logger.LogInformation("[WinMM] waveOutSetVolume(hwo=0x{Hwo:X8}, dwVolume=0x{DwVolume:X8})",
+				hwo, dwVolume);
+			
+			// Accept the volume setting (but don't actually change anything)
+			return 0; // MMSYSERR_NOERROR
+		}
+
+		/// <summary>
+		/// Retrieves the number of auxiliary output devices present in the system.
+		/// UINT auxGetNumDevs();
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint AuxGetNumDevs()
+		{
+			_logger.LogInformation("[WinMM] auxGetNumDevs()");
+			
+			// Return 1 device for compatibility
+			return 1;
+		}
+
+		/// <summary>
+		/// Retrieves the capabilities of a given auxiliary output device.
+		/// MMRESULT auxGetDevCapsA(
+		///   [in]  UINT_PTR  uDeviceID,
+		///   [out] LPAUXCAPS pac,
+		///   [in]  UINT      cbac
+		/// );
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint AuxGetDevCapsA(uint uDeviceID, uint pac, uint cbac)
+		{
+			_logger.LogInformation("[WinMM] auxGetDevCapsA(uDeviceID={UDeviceID}, pac=0x{Pac:X8}, cbac={Cbac})",
+				uDeviceID, pac, cbac);
+			
+			// Fill in AUXCAPS structure if pac is valid
+			if (pac != 0 && cbac > 0)
+			{
+				// For simplicity, just zero out the structure
+				for (uint i = 0; i < cbac; i++)
+				{
+					_env.MemWrite8(pac + i, 0);
+				}
+			}
+			
+			return 0; // MMSYSERR_NOERROR
+		}
+
+		/// <summary>
+		/// Retrieves the current volume setting of the specified auxiliary output device.
+		/// MMRESULT auxGetVolume(
+		///   [in]  UINT    uDeviceID,
+		///   [out] LPDWORD pdwVolume
+		/// );
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint AuxGetVolume(uint uDeviceID, uint pdwVolume)
+		{
+			_logger.LogInformation("[WinMM] auxGetVolume(uDeviceID={UDeviceID}, pdwVolume=0x{PdwVolume:X8})",
+				uDeviceID, pdwVolume);
+			
+			// Return full volume (0xFFFFFFFF = max volume for both left and right channels)
+			if (pdwVolume != 0)
+			{
+				_env.MemWrite32(pdwVolume, 0xFFFFFFFF);
+			}
+			
+			return 0; // MMSYSERR_NOERROR
+		}
+
+		/// <summary>
+		/// Sets the volume of the specified auxiliary output device.
+		/// MMRESULT auxSetVolume(
+		///   [in] UINT  uDeviceID,
+		///   [in] DWORD dwVolume
+		/// );
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint AuxSetVolume(uint uDeviceID, uint dwVolume)
+		{
+			_logger.LogInformation("[WinMM] auxSetVolume(uDeviceID={UDeviceID}, dwVolume=0x{DwVolume:X8})",
+				uDeviceID, dwVolume);
+			
+			// Accept the volume setting (but don't actually change anything)
+			return 0; // MMSYSERR_NOERROR
 		}
 	}
 }
