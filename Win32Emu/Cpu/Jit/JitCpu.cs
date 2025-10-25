@@ -1532,7 +1532,16 @@ public class JitCpu : IAsyncCpu
 		uint b = GetOperandValue(insn, 1);
 		uint r = a + b;
 		SetOperandValue(insn, 0, r);
-		SetFlagsAdd(a, b, r);
+		
+		// Get sign bit mask based on operand size
+		int opSize = GetOpSizeBits(insn, 0);
+		uint signBitMask = opSize switch
+		{
+			8 => 0x80,
+			16 => 0x8000,
+			_ => 0x80000000
+		};
+		SetFlagsAdd(a, b, r, signBitMask);
 	}
 	
 	private void ExecSub(Instruction insn, VirtualMemory mem)
@@ -1541,7 +1550,16 @@ public class JitCpu : IAsyncCpu
 		uint b = GetOperandValue(insn, 1);
 		uint r = a - b;
 		SetOperandValue(insn, 0, r);
-		SetFlagsSub(a, b, r);
+		
+		// Get sign bit mask based on operand size
+		int opSize = GetOpSizeBits(insn, 0);
+		uint signBitMask = opSize switch
+		{
+			8 => 0x80,
+			16 => 0x8000,
+			_ => 0x80000000
+		};
+		SetFlagsSub(a, b, r, signBitMask);
 	}
 	
 	private void ExecAdc(Instruction insn, VirtualMemory mem)
@@ -1855,16 +1873,26 @@ public class JitCpu : IAsyncCpu
 	
 	private void SetFlagsAdd(uint a, uint b, uint r)
 	{
+		SetFlagsAdd(a, b, r, 0x80000000);
+	}
+
+	private void SetFlagsAdd(uint a, uint b, uint r, uint signBitMask)
+	{
 		SetFlagVal(Cf, r < a);
-		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
 		UpdateLogicResultFlags(r);
 	}
 	
 	private void SetFlagsSub(uint a, uint b, uint r)
 	{
+		SetFlagsSub(a, b, r, 0x80000000);
+	}
+
+	private void SetFlagsSub(uint a, uint b, uint r, uint signBitMask)
+	{
 		SetFlagVal(Cf, a < b);
-		SetFlagVal(Of, ((a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Of, ((a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
 		UpdateLogicResultFlags(r);
 	}
@@ -1879,6 +1907,38 @@ public class JitCpu : IAsyncCpu
 		bits &= 0xF;
 		bool even = (((0x6996 >> bits) & 1) == 0);
 		SetFlagVal(Pf, even);
+	}
+	
+	private int GetOpSizeBits(Instruction insn, int opIndex)
+	{
+		if (insn.GetOpKind(opIndex) == OpKind.Memory)
+		{
+			return insn.MemorySize switch
+			{
+				MemorySize.UInt8 or MemorySize.Int8 => 8,
+				MemorySize.UInt16 or MemorySize.Int16 => 16,
+				_ => 32
+			};
+		}
+
+		if (insn.GetOpKind(opIndex) == OpKind.Register)
+		{
+			var r = insn.GetOpRegister(opIndex);
+			if (r is Register.AL or Register.CL or Register.DL or Register.BL or Register.AH or Register.CH or Register.DH or Register.BH)
+			{
+				return 8;
+			}
+
+			if (r is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP or Register.BP)
+			{
+				return 16;
+			}
+
+			return 32;
+		}
+
+		// For immediates, default to 32
+		return 32;
 	}
 	
 	// === Multiply/Divide Implementations ===

@@ -787,7 +787,7 @@ public class IcedCpu : IAsyncCpu
 					_mem.Write8(CalcMemAddress(insn), r);
 				}
 				
-				SetFlagsAdd(a, b, r);
+				SetFlagsAdd(a, b, r, 0x80); // 8-bit sign bit
 				break;
 			}
 			case 16:
@@ -831,7 +831,7 @@ public class IcedCpu : IAsyncCpu
 					_mem.Write16(CalcMemAddress(insn), r);
 				}
 				
-				SetFlagsAdd(a, b, r);
+				SetFlagsAdd(a, b, r, 0x8000); // 16-bit sign bit
 				break;
 			}
 			default:
@@ -3448,16 +3448,26 @@ public class IcedCpu : IAsyncCpu
 
 	private void SetFlagsAdd(uint a, uint b, uint r)
 	{
+		SetFlagsAdd(a, b, r, 0x80000000);
+	}
+
+	private void SetFlagsAdd(uint a, uint b, uint r, uint signBitMask)
+	{
 		SetFlagVal(Cf, r < a);
-		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
 		UpdateLogicResultFlags(r);
 	}
 
 	private void SetFlagsSub(uint a, uint b, uint r)
 	{
+		SetFlagsSub(a, b, r, 0x80000000);
+	}
+
+	private void SetFlagsSub(uint a, uint b, uint r, uint signBitMask)
+	{
 		SetFlagVal(Cf, a < b);
-		SetFlagVal(Of, ((a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Of, ((a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
 		UpdateLogicResultFlags(r);
 	}
