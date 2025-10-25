@@ -670,6 +670,76 @@ namespace Win32Emu.Win32.Modules
 					returnValue = WinHelpA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3));
 					return true;
 
+				// Caret functions
+				case "SHOWCARET":
+					returnValue = ShowCaret(a.UInt32(0));
+					return true;
+				case "HIDECARET":
+					returnValue = HideCaret(a.UInt32(0));
+					return true;
+
+				// Drawing functions
+				case "DRAWFOCUSRECT":
+					returnValue = DrawFocusRect(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "EXCLUDEUPDATERGN":
+					returnValue = (uint)ExcludeUpdateRgn(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				// Rectangle functions
+				case "INTERSECTRECT":
+					returnValue = IntersectRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				// Window DC functions
+				case "GETWINDOWDC":
+					returnValue = GetWindowDC(a.UInt32(0));
+					return true;
+
+				// Dialog functions
+				case "DEFDLGPROCA":
+					returnValue = DefDlgProcA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "GETNEXTDLGGROUPITEM":
+					returnValue = GetNextDlgGroupItem(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "MAPDIALOGRECT":
+					returnValue = MapDialogRect(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				// Class functions
+				case "GETCLASSLONGA":
+					returnValue = GetClassLongA(a.UInt32(0), a.Int32(1));
+					return true;
+
+				// Window state functions
+				case "GETWINDOWPLACEMENT":
+					returnValue = GetWindowPlacement(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "ISWINDOWUNICODE":
+					returnValue = IsWindowUnicode(a.UInt32(0));
+					return true;
+
+				// Clipboard functions
+				case "REGISTERCLIPBOARDFORMATA":
+					returnValue = RegisterClipboardFormatA(a.LpcStr(0));
+					return true;
+
+				// Thread message function
+				case "POSTTHREADMESSAGEA":
+					returnValue = PostThreadMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				// Accelerator function
+				case "COPYACCELERATORTABLEA":
+					returnValue = CopyAcceleratorTableA(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+
+				// Window context help
+				case "SETWINDOWCONTEXTHELPID":
+					returnValue = SetWindowContextHelpId(a.UInt32(0), a.UInt32(1));
+					return true;
+
 				default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
@@ -4518,6 +4588,13 @@ namespace Win32Emu.Win32.Modules
 	}
 
 	[DllModuleExport(4)]
+	private uint ShowCaret(uint hWnd)
+	{
+		_logger.LogInformation("[User32] ShowCaret(hWnd=0x{HWnd:X8})", hWnd);
+		return 1; // TRUE (stub)
+	}
+
+	[DllModuleExport(4)]
 	private uint IsClipboardFormatAvailable(uint format)
 	{
 		_logger.LogInformation("[User32] IsClipboardFormatAvailable(format={Format})", format);
@@ -4608,6 +4685,260 @@ namespace Win32Emu.Win32.Modules
 		_logger.LogInformation("[User32] TrackPopupMenuEx(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X}, x={X}, y={Y}, hWnd=0x{HWnd:X8})",
 			hMenu, uFlags, x, y, hWnd);
 		return 0; // FALSE (stub - no menu item selected)
+	}
+
+	/// <summary>
+	/// Draws a rectangle in the style used to indicate focus.
+	/// BOOL DrawFocusRect(HDC hDC, const RECT *lprc);
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint DrawFocusRect(uint hDC, uint lprc)
+	{
+		_logger.LogInformation("[User32] DrawFocusRect(hDC=0x{HDC:X8}, lprc=0x{Lprc:X8})", hDC, lprc);
+		// Stub: Return TRUE (success)
+		return 1;
+	}
+
+	/// <summary>
+	/// Excludes the update region from the clipping region of the specified device context.
+	/// int ExcludeUpdateRgn(HDC hDC, HWND hWnd);
+	/// </summary>
+	[DllModuleExport(8)]
+	private int ExcludeUpdateRgn(uint hDC, uint hWnd)
+	{
+		_logger.LogInformation("[User32] ExcludeUpdateRgn(hDC=0x{HDC:X8}, hWnd=0x{HWnd:X8})", hDC, hWnd);
+		// Stub: Return SIMPLEREGION
+		return 2; // SIMPLEREGION
+	}
+
+	/// <summary>
+	/// Calculates the intersection of two rectangles.
+	/// BOOL IntersectRect(LPRECT lprcDst, const RECT *lprcSrc1, const RECT *lprcSrc2);
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint IntersectRect(uint lprcDst, uint lprcSrc1, uint lprcSrc2)
+	{
+		_logger.LogInformation("[User32] IntersectRect(lprcDst=0x{LprcDst:X8}, lprcSrc1=0x{LprcSrc1:X8}, lprcSrc2=0x{LprcSrc2:X8})",
+			lprcDst, lprcSrc1, lprcSrc2);
+
+		if (lprcSrc1 == 0 || lprcSrc2 == 0 || lprcDst == 0)
+		{
+			return 0; // FALSE
+		}
+
+		// Read both source rectangles
+		var left1 = (int)_env.MemRead32(lprcSrc1 + 0);
+		var top1 = (int)_env.MemRead32(lprcSrc1 + 4);
+		var right1 = (int)_env.MemRead32(lprcSrc1 + 8);
+		var bottom1 = (int)_env.MemRead32(lprcSrc1 + 12);
+
+		var left2 = (int)_env.MemRead32(lprcSrc2 + 0);
+		var top2 = (int)_env.MemRead32(lprcSrc2 + 4);
+		var right2 = (int)_env.MemRead32(lprcSrc2 + 8);
+		var bottom2 = (int)_env.MemRead32(lprcSrc2 + 12);
+
+		// Calculate intersection
+		var leftDst = Math.Max(left1, left2);
+		var topDst = Math.Max(top1, top2);
+		var rightDst = Math.Min(right1, right2);
+		var bottomDst = Math.Min(bottom1, bottom2);
+
+		// Check if rectangles intersect
+		if (leftDst >= rightDst || topDst >= bottomDst)
+		{
+			// No intersection - set to empty rectangle
+			_env.MemWrite32(lprcDst + 0, 0);
+			_env.MemWrite32(lprcDst + 4, 0);
+			_env.MemWrite32(lprcDst + 8, 0);
+			_env.MemWrite32(lprcDst + 12, 0);
+			return 0; // FALSE
+		}
+
+		// Write intersection rectangle
+		_env.MemWrite32(lprcDst + 0, (uint)leftDst);
+		_env.MemWrite32(lprcDst + 4, (uint)topDst);
+		_env.MemWrite32(lprcDst + 8, (uint)rightDst);
+		_env.MemWrite32(lprcDst + 12, (uint)bottomDst);
+
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves a device context (DC) for the entire window, including title bar, menus, and scroll bars.
+	/// HDC GetWindowDC(HWND hWnd);
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint GetWindowDC(uint hWnd)
+	{
+		_logger.LogInformation("[User32] GetWindowDC(hWnd=0x{HWnd:X8})", hWnd);
+		// Return a fake DC handle
+		return 0x10001000;
+	}
+
+	/// <summary>
+	/// Calls the default dialog box window procedure.
+	/// LRESULT DefDlgProcA(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lParam);
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint DefDlgProcA(uint hDlg, uint Msg, uint wParam, uint lParam)
+	{
+		_logger.LogInformation("[User32] DefDlgProcA(hDlg=0x{HDlg:X8}, Msg=0x{Msg:X}, wParam=0x{WParam:X}, lParam=0x{LParam:X})",
+			hDlg, Msg, wParam, lParam);
+		// Stub: Return 0 (message processed)
+		return 0;
+	}
+
+	/// <summary>
+	/// Retrieves the identifier of the next (or previous) control in a group.
+	/// HWND GetNextDlgGroupItem(HWND hDlg, HWND hCtl, BOOL bPrevious);
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint GetNextDlgGroupItem(uint hDlg, uint hCtl, uint bPrevious)
+	{
+		_logger.LogInformation("[User32] GetNextDlgGroupItem(hDlg=0x{HDlg:X8}, hCtl=0x{HCtl:X8}, bPrevious={BPrevious})",
+			hDlg, hCtl, bPrevious);
+		// Stub: Return NULL (no next item)
+		return 0;
+	}
+
+	/// <summary>
+	/// Converts dialog box units to pixels.
+	/// BOOL MapDialogRect(HWND hDlg, LPRECT lpRect);
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint MapDialogRect(uint hDlg, uint lpRect)
+	{
+		_logger.LogInformation("[User32] MapDialogRect(hDlg=0x{HDlg:X8}, lpRect=0x{LpRect:X8})", hDlg, lpRect);
+
+		// Stub: Dialog units to pixels conversion (typical: 1 DLU = 1 pixel for simplicity)
+		// In reality, this depends on the dialog base units
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves the specified value from the WNDCLASSEX structure associated with the window.
+	/// DWORD GetClassLongA(HWND hWnd, int nIndex);
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint GetClassLongA(uint hWnd, int nIndex)
+	{
+		_logger.LogInformation("[User32] GetClassLongA(hWnd=0x{HWnd:X8}, nIndex={NIndex})", hWnd, nIndex);
+
+		// Common indices:
+		// GCL_MENUNAME = -8, GCL_HBRBACKGROUND = -10, GCL_HCURSOR = -12, GCL_HICON = -14
+		// GCL_HMODULE = -16, GCL_CBWNDEXTRA = -18, GCL_CBCLSEXTRA = -20, GCL_WNDPROC = -24
+		// GCL_STYLE = -26, GCW_ATOM = -32, GCL_HICONSM = -34
+
+		// Stub: Return 0 for all indices
+		return 0;
+	}
+
+	/// <summary>
+	/// Retrieves the placement of the specified window.
+	/// BOOL GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint GetWindowPlacement(uint hWnd, uint lpwndpl)
+	{
+		_logger.LogInformation("[User32] GetWindowPlacement(hWnd=0x{HWnd:X8}, lpwndpl=0x{Lpwndpl:X8})", hWnd, lpwndpl);
+
+		if (lpwndpl == 0)
+		{
+			return 0; // FALSE
+		}
+
+		// WINDOWPLACEMENT structure:
+		// UINT length; UINT flags; UINT showCmd; POINT ptMinPosition; POINT ptMaxPosition; RECT rcNormalPosition;
+
+		// Write a default placement
+		_env.MemWrite32(lpwndpl + 0, 44);  // length (sizeof(WINDOWPLACEMENT))
+		_env.MemWrite32(lpwndpl + 4, 0);   // flags
+		_env.MemWrite32(lpwndpl + 8, 1);   // showCmd (SW_SHOWNORMAL)
+		_env.MemWrite32(lpwndpl + 12, 0);  // ptMinPosition.x
+		_env.MemWrite32(lpwndpl + 16, 0);  // ptMinPosition.y
+		_env.MemWrite32(lpwndpl + 20, 0);  // ptMaxPosition.x
+		_env.MemWrite32(lpwndpl + 24, 0);  // ptMaxPosition.y
+		_env.MemWrite32(lpwndpl + 28, 0);  // rcNormalPosition.left
+		_env.MemWrite32(lpwndpl + 32, 0);  // rcNormalPosition.top
+		_env.MemWrite32(lpwndpl + 36, 640); // rcNormalPosition.right
+		_env.MemWrite32(lpwndpl + 40, 480); // rcNormalPosition.bottom
+
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Determines whether the specified window is a native Unicode window.
+	/// BOOL IsWindowUnicode(HWND hWnd);
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint IsWindowUnicode(uint hWnd)
+	{
+		_logger.LogInformation("[User32] IsWindowUnicode(hWnd=0x{HWnd:X8})", hWnd);
+		// Stub: Return FALSE (ANSI window)
+		return 0;
+	}
+
+	/// <summary>
+	/// Registers a new clipboard format.
+	/// UINT RegisterClipboardFormatA(LPCSTR lpszFormat);
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint RegisterClipboardFormatA(in LpcStr lpszFormat)
+	{
+		var format = lpszFormat.ToString() ?? string.Empty;
+		_logger.LogInformation("[User32] RegisterClipboardFormatA(lpszFormat=\"{Format}\")", format);
+
+		// Return a fake clipboard format ID
+		// Standard formats are < 0xC000, custom formats are >= 0xC000
+		return 0xC001;
+	}
+
+	/// <summary>
+	/// Posts a message to the thread's message queue.
+	/// BOOL PostThreadMessageA(DWORD idThread, UINT Msg, WPARAM wParam, LPARAM lParam);
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint PostThreadMessageA(uint idThread, uint Msg, uint wParam, uint lParam)
+	{
+		_logger.LogInformation("[User32] PostThreadMessageA(idThread={IdThread}, Msg=0x{Msg:X}, wParam=0x{WParam:X}, lParam=0x{LParam:X})",
+			idThread, Msg, wParam, lParam);
+
+		// Stub: Return TRUE (success)
+		return 1;
+	}
+
+	/// <summary>
+	/// Copies an accelerator table.
+	/// int CopyAcceleratorTableA(HACCEL hAccelSrc, LPACCEL lpAccelDst, int cAccelEntries);
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint CopyAcceleratorTableA(uint hAccelSrc, uint lpAccelDst, int cAccelEntries)
+	{
+		_logger.LogInformation("[User32] CopyAcceleratorTableA(hAccelSrc=0x{HAccelSrc:X8}, lpAccelDst=0x{LpAccelDst:X8}, cAccelEntries={CAccelEntries})",
+			hAccelSrc, lpAccelDst, cAccelEntries);
+
+		// If lpAccelDst is NULL, return the number of entries
+		if (lpAccelDst == 0)
+		{
+			return 0; // No entries (stub)
+		}
+
+		// Stub: Return 0 (no entries copied)
+		return 0;
+	}
+
+	/// <summary>
+	/// Sets the Help context identifier for the window.
+	/// BOOL SetWindowContextHelpId(HWND hWnd, DWORD dwContextHelpId);
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint SetWindowContextHelpId(uint hWnd, uint dwContextHelpId)
+	{
+		_logger.LogInformation("[User32] SetWindowContextHelpId(hWnd=0x{HWnd:X8}, dwContextHelpId=0x{DwContextHelpId:X})",
+			hWnd, dwContextHelpId);
+
+		// Stub: Return TRUE (success)
+		return 1;
 	}
 	}
 }

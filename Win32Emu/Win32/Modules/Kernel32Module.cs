@@ -496,6 +496,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "LSTRLENA":
 				returnValue = LstrlenA(a.LpcStr(0));
 				return true;
+			case "LSTRLENW":
+				returnValue = LstrlenW(a.UInt32(0));
+				return true;
 
 			// Process execution
 			case "WINEXEC":
@@ -5270,6 +5273,27 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// Return the length of the string (excluding null terminator)
 		return (uint)(str?.Length ?? 0);
+	}
+
+	/// <summary>
+	/// Determines the length of the specified wide string (Unicode).
+	/// int lstrlenW(LPCWSTR lpString);
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint LstrlenW(uint lpString)
+	{
+		if (lpString == 0)
+		{
+			_logger.LogInformation("[Kernel32] LstrlenW(NULL)");
+			return 0;
+		}
+
+		var wstr = new LpWStr(lpString);
+		var str = wstr.Read(_env.Memory);
+		_logger.LogInformation("[Kernel32] LstrlenW(\"{Str}\")", str);
+
+		// Return the length of the string (excluding null terminator)
+		return (uint)str.Length;
 	}
 
 	// Process execution

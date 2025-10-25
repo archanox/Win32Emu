@@ -55,6 +55,18 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				returnValue = Ordinal_17(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 
+			case "CREATEPROPERTYSHEETPAGEA":
+				returnValue = CreatePropertySheetPageA(a.UInt32(0));
+				return true;
+
+			case "DESTROYPROPERTYSHEETPAGE":
+				returnValue = DestroyPropertySheetPage(a.UInt32(0));
+				return true;
+
+			case "PROPERTYSHEETA":
+				returnValue = PropertySheetA(a.UInt32(0));
+				return true;
+
 			default:
 				_logger.LogInformation("[Comctl32] Unimplemented export: {Export}", export);
 				return false;
@@ -172,6 +184,48 @@ public class Comctl32Module : IWin32ModuleUnsafe
 		// InitCommonControls typically doesn't return a value, but we return success
 		return 1;
 	}
+
+	/// <summary>
+	/// Creates a property sheet page.
+	/// HPROPSHEETPAGE CreatePropertySheetPageA(LPCPROPSHEETPAGEA lppsp);
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint CreatePropertySheetPageA(uint lppsp)
+	{
+		_logger.LogInformation("[Comctl32] CreatePropertySheetPageA(lppsp=0x{Lppsp:X8})", lppsp);
+		
+		// Stub: Return a fake handle for the property sheet page
+		// A real implementation would parse the PROPSHEETPAGE structure and create a page
+		return lppsp != 0 ? 0x90010000 : 0;
+	}
+
+	/// <summary>
+	/// Destroys a property sheet page.
+	/// BOOL DestroyPropertySheetPage(HPROPSHEETPAGE hPSPage);
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint DestroyPropertySheetPage(uint hPSPage)
+	{
+		_logger.LogInformation("[Comctl32] DestroyPropertySheetPage(hPSPage=0x{HPSPage:X8})", hPSPage);
+		
+		// Stub: Always return TRUE (success)
+		return 1;
+	}
+
+	/// <summary>
+	/// Creates and displays a property sheet.
+	/// INT_PTR PropertySheetA(LPCPROPSHEETHEADERA lppsh);
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint PropertySheetA(uint lppsh)
+	{
+		_logger.LogInformation("[Comctl32] PropertySheetA(lppsh=0x{Lppsh:X8})", lppsh);
+		
+		// Stub: Return 0 (user cancelled or closed the property sheet)
+		// A real implementation would parse PROPSHEETHEADER and display the property sheet dialog
+		return 0;
+	}
+
 
 	private class ImageListData
 	{

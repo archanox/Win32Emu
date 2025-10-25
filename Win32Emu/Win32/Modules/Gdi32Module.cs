@@ -81,6 +81,9 @@ namespace Win32Emu.Win32.Modules
 				case "CREATEBITMAP":
 					returnValue = CreateBitmap(a.Int32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 					return true;
+				case "CREATEDIBITMAP":
+					returnValue = CreateDIBitmap(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
 				case "CREATECOMPATIBLEBITMAP":
 					returnValue = CreateCompatibleBitmap(a.UInt32(0), a.Int32(1), a.Int32(2));
 					return true;
@@ -194,6 +197,9 @@ namespace Win32Emu.Win32.Modules
 				case "GETCLIPBOX":
 					returnValue = (uint)GetClipBox(a.UInt32(0), a.UInt32(1));
 					return true;
+				case "INTERSECTCLIPRECT":
+					returnValue = (uint)IntersectClipRect(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4));
+					return true;
 				case "PTVISIBLE":
 					returnValue = PtVisible(a.UInt32(0), a.Int32(1), a.Int32(2));
 					return true;
@@ -232,6 +238,32 @@ namespace Win32Emu.Win32.Modules
 				// Text functions
 				case "GETTEXTMETRICSA":
 					returnValue = GetTextMetricsA(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETTEXTEXTENTPOINTA":
+					returnValue = GetTextExtentPointA(a.UInt32(0), a.LpcStr(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "GETTEXTCOLOR":
+					returnValue = GetTextColor(a.UInt32(0));
+					return true;
+				case "GETBKCOLOR":
+					returnValue = GetBkColor(a.UInt32(0));
+					return true;
+
+				// Coordinate transformation functions
+				case "DPTOLP":
+					returnValue = DPtoLP(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "LPTODP":
+					returnValue = LPtoDP(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "GETVIEWPORTEXTEX":
+					returnValue = GetViewportExtEx(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETWINDOWEXTEX":
+					returnValue = GetWindowExtEx(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETMAPMODE":
+					returnValue = (uint)GetMapMode(a.UInt32(0));
 					return true;
 
 				// Advanced drawing functions
@@ -918,6 +950,167 @@ namespace Win32Emu.Win32.Modules
 				hdc, left, top, right, bottom, width, height);
 			// Stub - return TRUE (success)
 			return 1;
+		}
+
+		/// <summary>
+		/// Determines whether a specified string fits within a specified rectangle.
+		/// BOOL GetTextExtentPointA(HDC hdc, LPCSTR lpString, int c, LPSIZE lpsz);
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint GetTextExtentPointA(uint hdc, in LpcStr lpString, int c, uint lpsz)
+		{
+			var str = lpString.ToString() ?? string.Empty;
+			_logger.LogInformation("[Gdi32] GetTextExtentPointA(hdc=0x{Hdc:X8}, lpString=\"{Str}\", c={C}, lpsz=0x{Lpsz:X8})",
+				hdc, str, c, lpsz);
+
+			// Stub: Return a default size (8x16 per character)
+			if (lpsz != 0)
+			{
+				var width = c * 8;
+				var height = 16;
+				_env.MemWrite32(lpsz, (uint)width);      // cx
+				_env.MemWrite32(lpsz + 4, (uint)height); // cy
+			}
+
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Retrieves the current text color.
+		/// COLORREF GetTextColor(HDC hdc);
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint GetTextColor(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] GetTextColor(hdc=0x{Hdc:X8})", hdc);
+
+			if (_deviceContexts.TryGetValue(hdc, out var dc))
+			{
+				return dc.TextColor;
+			}
+
+			// Return default black color
+			return 0x00000000;
+		}
+
+		/// <summary>
+		/// Retrieves the current background color.
+		/// COLORREF GetBkColor(HDC hdc);
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint GetBkColor(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] GetBkColor(hdc=0x{Hdc:X8})", hdc);
+
+			// Stub: Return white background
+			return 0x00FFFFFF;
+		}
+
+		/// <summary>
+		/// Converts device points to logical points.
+		/// BOOL DPtoLP(HDC hdc, LPPOINT lppt, int c);
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint DPtoLP(uint hdc, uint lppt, int c)
+		{
+			_logger.LogInformation("[Gdi32] DPtoLP(hdc=0x{Hdc:X8}, lppt=0x{Lppt:X8}, c={C})", hdc, lppt, c);
+
+			// Stub: In MM_TEXT mode (default), device points = logical points, so no conversion needed
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Converts logical points to device points.
+		/// BOOL LPtoDP(HDC hdc, LPPOINT lppt, int c);
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint LPtoDP(uint hdc, uint lppt, int c)
+		{
+			_logger.LogInformation("[Gdi32] LPtoDP(hdc=0x{Hdc:X8}, lppt=0x{Lppt:X8}, c={C})", hdc, lppt, c);
+
+			// Stub: In MM_TEXT mode (default), logical points = device points, so no conversion needed
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Retrieves the viewport extent.
+		/// BOOL GetViewportExtEx(HDC hdc, LPSIZE lpsize);
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint GetViewportExtEx(uint hdc, uint lpsize)
+		{
+			_logger.LogInformation("[Gdi32] GetViewportExtEx(hdc=0x{Hdc:X8}, lpsize=0x{Lpsize:X8})", hdc, lpsize);
+
+			// Stub: Return default extent (1:1 mapping)
+			if (lpsize != 0)
+			{
+				_env.MemWrite32(lpsize, 1);     // cx
+				_env.MemWrite32(lpsize + 4, 1); // cy
+			}
+
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Retrieves the window extent.
+		/// BOOL GetWindowExtEx(HDC hdc, LPSIZE lpsize);
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint GetWindowExtEx(uint hdc, uint lpsize)
+		{
+			_logger.LogInformation("[Gdi32] GetWindowExtEx(hdc=0x{Hdc:X8}, lpsize=0x{Lpsize:X8})", hdc, lpsize);
+
+			// Stub: Return default extent (1:1 mapping)
+			if (lpsize != 0)
+			{
+				_env.MemWrite32(lpsize, 1);     // cx
+				_env.MemWrite32(lpsize + 4, 1); // cy
+			}
+
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Retrieves the current mapping mode.
+		/// int GetMapMode(HDC hdc);
+		/// </summary>
+		[DllModuleExport(4)]
+		private int GetMapMode(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] GetMapMode(hdc=0x{Hdc:X8})", hdc);
+
+			// Stub: Return MM_TEXT (default mapping mode)
+			return 1; // MM_TEXT
+		}
+
+		/// <summary>
+		/// Creates a device-dependent bitmap (DDB) from a device-independent bitmap (DIB).
+		/// HBITMAP CreateDIBitmap(HDC hdc, const BITMAPINFOHEADER *pbmih, DWORD flInit, const VOID *pjBits, const BITMAPINFO *pbmi, UINT iUsage);
+		/// </summary>
+		[DllModuleExport(24)]
+		private uint CreateDIBitmap(uint hdc, uint pbmih, uint flInit, uint pjBits, uint pbmi, uint iUsage)
+		{
+			_logger.LogInformation("[Gdi32] CreateDIBitmap(hdc=0x{Hdc:X8}, pbmih=0x{Pbmih:X8}, flInit=0x{FlInit:X}, pjBits=0x{PjBits:X8}, pbmi=0x{Pbmi:X8}, iUsage=0x{IUsage:X})",
+				hdc, pbmih, flInit, pjBits, pbmi, iUsage);
+
+			// Stub: Return a fake bitmap handle
+			var handle = _nextGdiObjectHandle++;
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Bitmap };
+			return handle;
+		}
+
+		/// <summary>
+		/// Creates a rectangular clipping region that is the intersection of the current clipping region and the specified rectangle.
+		/// int IntersectClipRect(HDC hdc, int left, int top, int right, int bottom);
+		/// </summary>
+		[DllModuleExport(20)]
+		private int IntersectClipRect(uint hdc, int left, int top, int right, int bottom)
+		{
+			_logger.LogInformation("[Gdi32] IntersectClipRect(hdc=0x{Hdc:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom})",
+				hdc, left, top, right, bottom);
+
+			// Stub: Return SIMPLEREGION (simple rectangular region)
+			return 2; // SIMPLEREGION
 		}
 
 		private enum GdiObjectType
