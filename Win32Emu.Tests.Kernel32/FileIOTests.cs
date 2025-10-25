@@ -588,6 +588,71 @@ public class FileIoTests : IDisposable
 
     #endregion
 
+    #region EBP Restoration Tests
+
+    // Import hook base address range defined in Emulator.cs (0x0F000000-0x10000000)
+    // This is an arbitrary valid address within the import hook range
+    private const uint IMPORT_HOOK_TEST_ADDRESS = 0x0F0000A0;
+    
+    // Stack memory range in the emulator (see Emulator.cs line 213 and 1168)
+    // Stack is initialized at 0x00200000 with 1MB size, bottom at 0x00100000
+    private const uint STACK_REGION_MIN = 0x00100000; // 1MB
+    private const uint STACK_REGION_MAX = 0x00300000; // Initial ESP (0x00200000) + 1MB slack
+
+    [Fact]
+    public void GetStdHandle_WithImportHookInEBP_ShouldNotCorruptEBP()
+    {
+        // This test verifies the fix for the ign_3dfx.exe crash where EBP restoration
+        // after GetStdHandle was setting EBP=ESP, corrupting the frame pointer
+        
+        // Simulate the scenario: EBP contains an import hook address (indirect call pattern)
+        // MOV EBP, [IAT_Entry]; CALL EBP
+        // Import hooks are in range 0x0F000000-0x10000000 (see Emulator.cs IMPORT_HOOK_BASE)
+        _testEnv.Cpu.SetRegister("EBP", IMPORT_HOOK_TEST_ADDRESS);
+        
+        // Record the stack pointer before the call
+        var espBefore = _testEnv.Cpu.GetRegister("ESP");
+        
+        // Act - call GetStdHandle (which returns NULL for GUI apps without console)
+        _testEnv.CallKernel32Api("GETSTDHANDLE", 0xFFFFFFF6u); // STD_INPUT_HANDLE
+        
+        // Assert - EBP should NOT be set to ESP
+        var ebpAfter = _testEnv.Cpu.GetRegister("EBP");
+        var espAfter = _testEnv.Cpu.GetRegister("ESP");
+        
+        // EBP should still contain the import hook address (unchanged when restoration fails)
+        // This is correct because the caller code that used EBP for the indirect call
+        // will handle restoring it appropriately
+        Assert.Equal(IMPORT_HOOK_TEST_ADDRESS, ebpAfter);
+        
+        // EBP should NOT equal ESP (the bug that caused the crash)
+        Assert.NotEqual(espAfter, ebpAfter);
+    }
+
+    [Fact]
+    public void GetFileType_AfterGetStdHandle_ShouldNotCrashWithCorruptedStack()
+    {
+        // This test verifies the fix for the ign_3dfx.exe crash where sequential calls
+        // to GetStdHandle and GetFileType would corrupt the stack due to EBP=ESP
+        
+        // Simulate the import hook indirect call pattern
+        _testEnv.Cpu.SetRegister("EBP", IMPORT_HOOK_TEST_ADDRESS);
+        
+        // Act - call GetStdHandle followed by GetFileType (same sequence as ign_3dfx.exe)
+        var stdHandle = _testEnv.CallKernel32Api("GETSTDHANDLE", 0xFFFFFFF6u); // Returns NULL
+        var fileType = _testEnv.CallKernel32Api("GETFILETYPE", stdHandle); // Should not crash
+        
+        // Assert - both calls should succeed
+        Assert.Equal(0u, stdHandle); // NULL (no console)
+        Assert.Equal(0u, fileType); // FILE_TYPE_UNKNOWN for NULL handle
+        
+        // Stack should still be valid (no corruption)
+        var esp = _testEnv.Cpu.GetRegister("ESP");
+        Assert.True(esp >= STACK_REGION_MIN && esp <= STACK_REGION_MAX, "ESP should be in valid stack range");
+    }
+
+    #endregion
+
     public void Dispose()
     {
         _testEnv?.Dispose();
