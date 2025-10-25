@@ -1,4 +1,3 @@
-using System.Linq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
@@ -790,7 +789,9 @@ namespace Win32Emu.Win32.Modules
 		if (str != 0)
 		{
 			var s = _env.ReadAnsiString(str) ?? string.Empty;
-			var reversed = new string(s.Reverse().ToArray());
+			var charArray = s.ToCharArray();
+			Array.Reverse(charArray);
+			var reversed = new string(charArray);
 			_env.WriteAnsiStringAt(str, reversed);
 		}
 		return str;

@@ -6607,8 +6607,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Return default string (stub - no Win.ini support)
 		if (lpReturnedString != 0 && nSize > 0)
 		{
-			_env.WriteAnsiStringAt(lpReturnedString, defaultStr);
-			return (uint)Math.Min(defaultStr.Length, (int)nSize - 1);
+			int charsToWrite = Math.Min(defaultStr.Length, (int)nSize - 1);
+			string truncated = charsToWrite > 0 ? defaultStr.Substring(0, charsToWrite) : string.Empty;
+			_env.WriteAnsiStringAt(lpReturnedString, truncated);
+			return (uint)charsToWrite;
 		}
 		return 0;
 	}
