@@ -191,6 +191,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GLOBALHANDLE":
 				returnValue = GlobalHandle((void*)a.UInt32(0));
 				return true;
+			case "GLOBALCOMPACT":
+				returnValue = GlobalCompact(a.UInt32(0));
+				return true;
 			case "HEAPCREATE":
 				returnValue = HeapCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
@@ -211,6 +214,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "GETPROCESSHEAP":
 				returnValue = GetProcessHeap();
+				return true;
+			case "GETPROFILEINTA":
+				returnValue = GetProfileIntA(a.LpcStr(0), a.LpcStr(1), a.Int32(2));
+				return true;
+			case "GETPROFILESTRINGA":
+				returnValue = GetProfileStringA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.UInt32(3), a.UInt32(4));
 				return true;
 			case "LOCALALLOC":
 				returnValue = LocalAlloc(a.UInt32(0), a.UInt32(1));
@@ -602,6 +611,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "WRITEPRIVATEPROFILESTRINGA":
 				returnValue = WritePrivateProfileStringA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.LpcStr(3));
+				return true;
+			case "WRITEPROFILESTRINGA":
+				returnValue = WriteProfileStringA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2));
 				return true;
 			case "DUPLICATEHANDLE":
 				returnValue = DuplicateHandle(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
@@ -6561,6 +6573,57 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite32(lpFileTime + 4, 0); // dwHighDateTime
 		}
 		
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(4)]
+	private uint GlobalCompact(uint dwMinFree)
+	{
+		_logger.LogInformation("[Kernel32] GlobalCompact(dwMinFree={DwMinFree})", dwMinFree);
+		// Return a reasonable amount of free memory (stub)
+		return 0x10000000; // 256 MB
+	}
+
+	[DllModuleExport(12)]
+	private uint GetProfileIntA(in LpcStr lpAppName, in LpcStr lpKeyName, int nDefault)
+	{
+		var appName = lpAppName.ToString() ?? string.Empty;
+		var keyName = lpKeyName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GetProfileIntA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", nDefault={NDefault})",
+			appName, keyName, nDefault);
+		// Return default value (stub - no Win.ini support)
+		return (uint)nDefault;
+	}
+
+	[DllModuleExport(20)]
+	private uint GetProfileStringA(in LpcStr lpAppName, in LpcStr lpKeyName, in LpcStr lpDefault, uint lpReturnedString, uint nSize)
+	{
+		var appName = lpAppName.ToString() ?? string.Empty;
+		var keyName = lpKeyName.ToString() ?? string.Empty;
+		var defaultStr = lpDefault.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GetProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpDefault=\"{Default}\", lpReturnedString=0x{LpReturnedString:X8}, nSize={NSize})",
+			appName, keyName, defaultStr, lpReturnedString, nSize);
+		
+		// Return default string (stub - no Win.ini support)
+		if (lpReturnedString != 0 && nSize > 0)
+		{
+			int charsToWrite = Math.Min(defaultStr.Length, (int)nSize - 1);
+			string truncated = charsToWrite > 0 ? defaultStr.Substring(0, charsToWrite) : string.Empty;
+			_env.WriteAnsiStringAt(lpReturnedString, truncated);
+			return (uint)charsToWrite;
+		}
+		return 0;
+	}
+
+	[DllModuleExport(12)]
+	private uint WriteProfileStringA(in LpcStr lpAppName, in LpcStr lpKeyName, in LpcStr lpString)
+	{
+		var appName = lpAppName.ToString() ?? string.Empty;
+		var keyName = lpKeyName.ToString() ?? string.Empty;
+		var str = lpString.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] WriteProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpString=\"{Str}\")",
+			appName, keyName, str);
+		// Return success (stub - no Win.ini support)
 		return 1; // TRUE
 	}
 

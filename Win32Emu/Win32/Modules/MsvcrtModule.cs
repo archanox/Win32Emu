@@ -31,6 +31,9 @@ namespace Win32Emu.Win32.Modules
 
 			switch (export.ToUpperInvariant())
 			{
+				case "__CXXFRAMEHANDLER":
+					returnValue = __CxxFrameHandler(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
 				case "__GETMAINARGS":
 					returnValue = (uint)__getmainargs(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
 					return true;
@@ -71,6 +74,13 @@ namespace Win32Emu.Win32.Modules
 					return true;
 				case "_CONTROLFP":
 					returnValue = _controlfp(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "_CXXTHROWEXCEPTION":
+					_CxxThrowException(a.UInt32(0), a.UInt32(1));
+					returnValue = 0;
+					return true;
+				case "_EH_PROLOG":
+					returnValue = _EH_prolog();
 					return true;
 				case "_EXCEPT_HANDLER3":
 					returnValue = _except_handler3(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
@@ -152,6 +162,9 @@ namespace Win32Emu.Win32.Modules
 				case "_STRICMP":
 					returnValue = (uint)_stricmp(a.LpcStr(0), a.LpcStr(1));
 					return true;
+				case "_STRREV":
+					returnValue = _strrev(a.UInt32(0));
+					return true;
 				case "FCLOSE":
 					returnValue = (uint)fclose(a.UInt32(0));
 					return true;
@@ -172,6 +185,9 @@ namespace Win32Emu.Win32.Modules
 					return true;
 				case "STRRCHR":
 					returnValue = strrchr(a.LpcStr(0), a.Int32(1));
+					return true;
+				case "TOUPPER":
+					returnValue = (uint)toupper(a.Int32(0));
 					return true;
 
 				default:
@@ -738,6 +754,58 @@ namespace Win32Emu.Win32.Modules
 			return str.Address + (uint)index;
 		}
 		return 0; // NULL
+	}
+
+	[DllModuleExport(16)]
+	private uint __CxxFrameHandler(uint pExcept, uint pRN, uint pContext, uint pDC)
+	{
+		_logger.LogInformation("[msvcrt] __CxxFrameHandler(pExcept=0x{PExcept:X8}, pRN=0x{PRN:X8}, pContext=0x{PContext:X8}, pDC=0x{PDC:X8})", 
+			pExcept, pRN, pContext, pDC);
+		// Stub for C++ exception handler - return 0 (exception not handled)
+		return 0;
+	}
+
+	[DllModuleExport(8)]
+	private void _CxxThrowException(uint pExceptionObject, uint pThrowInfo)
+	{
+		_logger.LogInformation("[msvcrt] _CxxThrowException(pExceptionObject=0x{PExceptionObject:X8}, pThrowInfo=0x{PThrowInfo:X8})", 
+			pExceptionObject, pThrowInfo);
+		// Stub for C++ throw exception - just log it
+		_logger.LogWarning("[msvcrt] C++ exception thrown but not handled in emulator");
+	}
+
+	[DllModuleExport(0)]
+	private uint _EH_prolog()
+	{
+		_logger.LogInformation("[msvcrt] _EH_prolog()");
+		// Stub for exception handler prolog - return 0
+		return 0;
+	}
+
+	[DllModuleExport(4)]
+	private uint _strrev(uint str)
+	{
+		_logger.LogInformation("[msvcrt] _strrev(str=0x{Str:X8})", str);
+		if (str != 0)
+		{
+			var s = _env.ReadAnsiString(str) ?? string.Empty;
+			var charArray = s.ToCharArray();
+			Array.Reverse(charArray);
+			var reversed = new string(charArray);
+			_env.WriteAnsiStringAt(str, reversed);
+		}
+		return str;
+	}
+
+	[DllModuleExport(4)]
+	private int toupper(int c)
+	{
+		_logger.LogInformation("[msvcrt] toupper({C})", c);
+		if (c >= 'a' && c <= 'z')
+		{
+			return c - ('a' - 'A');
+		}
+		return c;
 	}
 }
 }
