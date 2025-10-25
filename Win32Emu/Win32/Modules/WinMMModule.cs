@@ -519,6 +519,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // MMSYSERR_NOERROR
 		}
 
+		[DllModuleExport(1)]
 		private uint WaveOutGetNumDevs()
 		{
 			_logger.LogInformation("[WinMM] waveOutGetNumDevs()");
@@ -526,6 +527,7 @@ namespace Win32Emu.Win32.Modules
 			return 1;
 		}
 
+		[DllModuleExport(1)]
 		private uint WaveOutGetDevCapsA(uint uDeviceID, uint pwoc, uint cbwoc)
 		{
 			_logger.LogInformation("[WinMM] waveOutGetDevCapsA(uDeviceID={UDeviceID}, pwoc=0x{Pwoc:X8}, cbwoc={Cbwoc})",
@@ -545,6 +547,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // MMSYSERR_NOERROR
 		}
 
+		[DllModuleExport(1)]
 		private uint WaveOutMessage(uint hwo, uint uMsg, uint dw1, uint dw2)
 		{
 			_logger.LogInformation("[WinMM] waveOutMessage(hwo=0x{Hwo:X8}, uMsg={UMsg}, dw1=0x{Dw1:X8}, dw2=0x{Dw2:X8})",

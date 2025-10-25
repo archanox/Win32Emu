@@ -608,12 +608,14 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
+	[DllModuleExport(1)]
 	private uint RegOpenKeyA(uint hKey, in LpcStr lpSubKey, uint phkResult)
 	{
 		// RegOpenKeyA is equivalent to RegOpenKeyExA with samDesired = KEY_ALL_ACCESS
 		return RegOpenKeyExA(hKey, lpSubKey, 0, 0xF003F, phkResult);
 	}
 
+	[DllModuleExport(1)]
 	private uint RegQueryInfoKeyA(uint hKey, in LpStr lpClass, uint lpcchClass, uint lpReserved,
 		uint lpcSubKeys, uint lpcchMaxSubKeyLen, uint lpcchMaxClassLen, uint lpcValues,
 		uint lpcchMaxValueNameLen, uint lpcbMaxValueLen, uint lpcbSecurityDescriptor, uint lpftLastWriteTime)
@@ -635,6 +637,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 0; // ERROR_SUCCESS
 	}
 
+	[DllModuleExport(1)]
 	private uint RegEnumKeyA(uint hKey, uint dwIndex, in LpStr lpName, uint cchName)
 	{
 		_logger.LogInformation("[Advapi32] RegEnumKeyA(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
@@ -643,6 +646,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 259; // ERROR_NO_MORE_ITEMS
 	}
 
+	[DllModuleExport(1)]
 	private uint RegEnumKeyExA(uint hKey, uint dwIndex, in LpStr lpName, uint lpcchName, uint lpReserved,
 		in LpStr lpClass, uint lpcchClass, uint lpftLastWriteTime)
 	{
@@ -652,6 +656,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 259; // ERROR_NO_MORE_ITEMS
 	}
 
+	[DllModuleExport(1)]
 	private uint RegEnumValueA(uint hKey, uint dwIndex, in LpStr lpValueName, uint lpcchValueName,
 		uint lpReserved, uint lpType, uint lpData, uint lpcbData)
 	{
@@ -661,6 +666,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 259; // ERROR_NO_MORE_ITEMS
 	}
 
+	[DllModuleExport(1)]
 	private uint RegDeleteKeyA(uint hKey, in LpcStr lpSubKey)
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
@@ -670,6 +676,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 0; // ERROR_SUCCESS
 	}
 
+	[DllModuleExport(1)]
 	private uint RegDeleteValueA(uint hKey, in LpcStr lpValueName)
 	{
 		var valueName = lpValueName.ToString() ?? string.Empty;

@@ -114,6 +114,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 		return 0xFFFFFFFF; // -1 on error
 	}
 
+	[DllModuleExport(1)]
 	private uint ImageList_ReplaceIcon(uint himl, int i, uint hicon)
 	{
 		_logger.LogInformation("[Comctl32] ImageList_ReplaceIcon(himl=0x{Himl:X8}, i={I}, hicon=0x{Hicon:X8})",
