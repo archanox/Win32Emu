@@ -866,7 +866,9 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lptm + 20, 8);   // tmAveCharWidth
 				_env.MemWrite32(lptm + 24, 8);   // tmMaxCharWidth
 				_env.MemWrite32(lptm + 28, 400); // tmWeight
-				// ... more fields would be filled here
+				// NOTE: The TEXTMETRIC structure has additional fields beyond tmWeight (such as tmItalic, tmUnderlined, tmStruckOut, tmFirstChar, etc.)
+				// that are not initialized here. The structure is only partially initialized; additional fields may need to be filled
+				// if required by the application.
 			}
 			
 			return 1; // TRUE
