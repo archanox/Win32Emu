@@ -590,8 +590,14 @@ public class FileIoTests : IDisposable
 
     #region EBP Restoration Tests
 
-    // Import hook base address range defined in Emulator.cs
+    // Import hook base address range defined in Emulator.cs (0x0F000000-0x10000000)
+    // This is an arbitrary valid address within the import hook range
     private const uint IMPORT_HOOK_TEST_ADDRESS = 0x0F0000A0;
+    
+    // Stack memory range in the emulator (see Emulator.cs line 213 and 1168)
+    // Stack is initialized at 0x00200000 with 1MB size, bottom at 0x00100000
+    private const uint STACK_REGION_MIN = 0x00100000; // 1MB
+    private const uint STACK_REGION_MAX = 0x00300000; // Initial ESP (0x00200000) + 1MB slack
 
     [Fact]
     public void GetStdHandle_WithImportHookInEBP_ShouldNotCorruptEBP()
@@ -642,7 +648,7 @@ public class FileIoTests : IDisposable
         
         // Stack should still be valid (no corruption)
         var esp = _testEnv.Cpu.GetRegister("ESP");
-        Assert.True(esp >= 0x00100000 && esp <= 0x00300000, "ESP should be in valid stack range");
+        Assert.True(esp >= STACK_REGION_MIN && esp <= STACK_REGION_MAX, "ESP should be in valid stack range");
     }
 
     #endregion
