@@ -500,6 +500,7 @@ namespace Win32Emu.Win32.Modules
 			return handle;
 		}
 
+		[DllModuleExport(1)]
 		private uint CreateDCA(in LpcStr lpszDriver, in LpcStr lpszDevice, in LpcStr lpszOutput, uint lpInitData)
 		{
 			var driver = lpszDriver.ToString() ?? string.Empty;

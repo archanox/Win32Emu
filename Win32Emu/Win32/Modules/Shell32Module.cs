@@ -225,6 +225,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
+	[DllModuleExport(1)]
 	private uint ShellExecuteExA(uint lpExecInfo)
 	{
 		_logger.LogInformation("[Shell32] ShellExecuteExA(lpExecInfo=0x{LpExecInfo:X8})", lpExecInfo);
