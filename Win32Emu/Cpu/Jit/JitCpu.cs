@@ -1403,21 +1403,8 @@ public class JitCpu : IAsyncCpu
 		
 		_logger.LogDebug("[JitCpu] IN from port 0x{0:X} (returning 0)", port);
 		
-		// Set the accumulator based on operand size
-		if (insn.Op0Kind == OpKind.Register)
-		{
-			var reg = insn.Op0Register;
-			if (reg == Register.AL)
-				_eax = (_eax & 0xFFFFFF00);  // Set AL to 0
-			else if (reg == Register.AX)
-				_eax = (_eax & 0xFFFF0000);  // Set AX to 0
-			else
-				_eax = 0;  // Set EAX to 0
-		}
-		else
-		{
-			_eax = (_eax & 0xFFFFFF00);  // Default to AL = 0
-		}
+		// Set the accumulator to 0 using SetOperandValue which properly handles register sizes
+		SetOperandValue(insn, 0, 0);
 	}
 	
 	private void ExecOut(Instruction insn)
