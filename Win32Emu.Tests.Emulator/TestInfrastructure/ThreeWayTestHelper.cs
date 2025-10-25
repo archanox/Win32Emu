@@ -22,6 +22,11 @@ public class ThreeWayTestHelper : IDisposable
 	private const long StackBaseAddress = 0x00100000;
 	private const long DataBaseAddress = 0x00200000;
 	private const long MemorySize = 0x100000; // 1MB
+	
+	// Public accessors for debugging
+	public IcedCpu GetIcedCpu() => _icedCpu;
+	public JitCpu GetJitCpu() => _jitCpu;
+	public Unicorn GetUnicorn() => _unicorn;
 
 	public ThreeWayTestHelper()
 	{
@@ -232,7 +237,7 @@ public class ThreeWayTestHelper : IDisposable
 		}
 	}
 
-	private uint GetUnicornReg(string name)
+	public uint GetUnicornReg(string name)
 	{
 		var regId = name.ToUpperInvariant() switch
 		{

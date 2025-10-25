@@ -1376,16 +1376,18 @@ public class JitCpu : IAsyncCpu
 			_ => OpKind.Register
 		};
 
-		return opKind switch
+		uint result = opKind switch
 		{
 			OpKind.Register => GetRegisterValue(insn, operandIndex),
-			// For Immediate8, operand 0 uses Immediate8, operand 1 uses Immediate8_2nd, others use Immediate8
-			OpKind.Immediate8 => operandIndex == 1 ? insn.Immediate8_2nd : insn.Immediate8,
-			OpKind.Immediate16 => insn.Immediate16,
+			// For Immediate8, always use Immediate8 (the Iced library sets the correct one)
+			OpKind.Immediate8 => (uint)insn.Immediate8,
+			OpKind.Immediate16 => (uint)insn.Immediate16,
 			OpKind.Immediate32 => insn.Immediate32,
 			OpKind.Memory => _mem.Read32(CalcMemAddress(insn, operandIndex)),
-			_ => 0
+			_ => 0u
 		};
+		
+		return result;
 	}
 
 	private void SetOperandValue(Instruction insn, int operandIndex, uint value)
