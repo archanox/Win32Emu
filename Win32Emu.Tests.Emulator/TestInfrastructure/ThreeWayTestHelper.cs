@@ -164,6 +164,27 @@ public class ThreeWayTestHelper : IDisposable
 			var icedValue = _icedCpu.GetRegister(name);
 			var jitValue = _jitCpu.GetRegister(name);
 			
+			// Debug output to help identify which emulator is failing
+			if (unicornValue != icedValue || unicornValue != jitValue || icedValue != jitValue)
+			{
+				Console.WriteLine($"Register {name} mismatch:");
+				Console.WriteLine($"  Unicorn: 0x{unicornValue:X8}");
+				Console.WriteLine($"  IcedCpu: 0x{icedValue:X8}");
+				Console.WriteLine($"  JitCpu:  0x{jitValue:X8}");
+				
+				// Also print EFLAGS for debugging
+				if (name == "EAX" || name == "EBX" || name == "ECX" || name == "EDX")
+				{
+					var unicornEflags = (uint)_unicorn.RegRead(X86.UC_X86_REG_EFLAGS);
+					var icedEflags = _icedCpu.GetRegister("EFLAGS");
+					var jitEflags = _jitCpu.GetRegister("EFLAGS");
+					Console.WriteLine($"EFLAGS:");
+					Console.WriteLine($"  Unicorn: 0x{unicornEflags:X8}");
+					Console.WriteLine($"  IcedCpu: 0x{icedEflags:X8}");
+					Console.WriteLine($"  JitCpu:  0x{jitEflags:X8}");
+				}
+			}
+			
 			Assert.Equal(unicornValue, icedValue);
 			Assert.Equal(unicornValue, jitValue);
 			Assert.Equal(icedValue, jitValue);
