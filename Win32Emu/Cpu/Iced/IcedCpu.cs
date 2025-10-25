@@ -787,7 +787,7 @@ public class IcedCpu : IAsyncCpu
 					_mem.Write8(CalcMemAddress(insn), r);
 				}
 				
-				SetFlagsAdd(a, b, r);
+				SetFlagsAdd(a, b, r, 0x80); // 8-bit sign bit
 				break;
 			}
 			case 16:
@@ -831,7 +831,7 @@ public class IcedCpu : IAsyncCpu
 					_mem.Write16(CalcMemAddress(insn), r);
 				}
 				
-				SetFlagsAdd(a, b, r);
+				SetFlagsAdd(a, b, r, 0x8000); // 16-bit sign bit
 				break;
 			}
 			default:
@@ -1442,10 +1442,41 @@ public class IcedCpu : IAsyncCpu
 
 	private void ExecNeg(Instruction insn)
 	{
-		var a = ReadOp(insn, 0);
-		var r = 0u - a;
-		WriteOp(insn, 0, r);
-		SetFlagsSub(0, a, r);
+		var opSize = GetOpSizeBits(insn, 0);
+		
+		switch (opSize)
+		{
+			case 8:
+			{
+				byte a = insn.GetOpKind(0) == OpKind.Register ? GetReg8(insn.GetOpRegister(0)) : _mem.Read8(CalcMemAddress(insn));
+				byte r = (byte)(0 - a);
+				if (insn.GetOpKind(0) == OpKind.Register)
+					SetReg8(insn.GetOpRegister(0), r);
+				else
+					_mem.Write8(CalcMemAddress(insn), r);
+				SetFlagsSub(0, a, r, 0x80);
+				break;
+			}
+			case 16:
+			{
+				ushort a = insn.GetOpKind(0) == OpKind.Register ? GetReg16(insn.GetOpRegister(0)) : _mem.Read16(CalcMemAddress(insn));
+				ushort r = (ushort)(0 - a);
+				if (insn.GetOpKind(0) == OpKind.Register)
+					SetReg16(insn.GetOpRegister(0), r);
+				else
+					_mem.Write16(CalcMemAddress(insn), r);
+				SetFlagsSub(0, a, r, 0x8000);
+				break;
+			}
+			default:
+			{
+				var a = ReadOp(insn, 0);
+				var r = 0u - a;
+				WriteOp(insn, 0, r);
+				SetFlagsSub(0, a, r);
+				break;
+			}
+		}
 	}
 
 	private void ExecBswap(Instruction insn)
@@ -3448,18 +3479,28 @@ public class IcedCpu : IAsyncCpu
 
 	private void SetFlagsAdd(uint a, uint b, uint r)
 	{
+		SetFlagsAdd(a, b, r, 0x80000000);
+	}
+
+	private void SetFlagsAdd(uint a, uint b, uint r, uint signBitMask)
+	{
 		SetFlagVal(Cf, r < a);
-		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
-		UpdateLogicResultFlags(r);
+		UpdateLogicResultFlags(r, signBitMask);
 	}
 
 	private void SetFlagsSub(uint a, uint b, uint r)
 	{
+		SetFlagsSub(a, b, r, 0x80000000);
+	}
+
+	private void SetFlagsSub(uint a, uint b, uint r, uint signBitMask)
+	{
 		SetFlagVal(Cf, a < b);
-		SetFlagVal(Of, ((a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Of, ((a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
-		UpdateLogicResultFlags(r);
+		UpdateLogicResultFlags(r, signBitMask);
 	}
 
 	private void SetFlagsIncDecAdd(uint a, uint r)
@@ -3478,8 +3519,13 @@ public class IcedCpu : IAsyncCpu
 
 	private void UpdateLogicResultFlags(uint r)
 	{
+		UpdateLogicResultFlags(r, 0x80000000);
+	}
+
+	private void UpdateLogicResultFlags(uint r, uint signBitMask)
+	{
 		SetFlagVal(Zf, r == 0);
-		SetFlagVal(Sf, (r & 0x80000000) != 0);
+		SetFlagVal(Sf, (r & signBitMask) != 0);
 		var lo = (byte)r;
 		var bits = lo ^ (lo >> 4);
 		bits &= 0xF;

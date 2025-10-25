@@ -531,6 +531,7 @@ public class JitCpu : IAsyncCpu
 				break;
 			
 			// Bit manipulation
+			case Mnemonic.Bt:
 			case Mnemonic.Bsf:
 			case Mnemonic.Bsr:
 			case Mnemonic.Btc:
@@ -1041,6 +1042,16 @@ public class JitCpu : IAsyncCpu
 				}
 				break;
 			}
+			case Mnemonic.Bt: // Bit Test
+			{
+				uint baseVal = GetOperandValue(insn, 0);
+				uint bitIndex = GetOperandValue(insn, 1) & 31;
+				uint mask = 1u << (int)bitIndex;
+				
+				// Set CF to the value of the tested bit
+				SetFlagVal(Cf, (baseVal & mask) != 0);
+				break;
+			}
 			case Mnemonic.Btc: // Bit Test and Complement
 			case Mnemonic.Btr: // Bit Test and Reset
 			case Mnemonic.Bts: // Bit Test and Set
@@ -1454,16 +1465,18 @@ public class JitCpu : IAsyncCpu
 			_ => OpKind.Register
 		};
 
-		return opKind switch
+		uint result = opKind switch
 		{
 			OpKind.Register => GetRegisterValue(insn, operandIndex),
-			// For Immediate8, operand 0 uses Immediate8, operand 1 uses Immediate8_2nd, others use Immediate8
-			OpKind.Immediate8 => operandIndex == 1 ? insn.Immediate8_2nd : insn.Immediate8,
-			OpKind.Immediate16 => insn.Immediate16,
+			// For Immediate8, always use Immediate8 (the Iced library sets the correct one)
+			OpKind.Immediate8 => (uint)insn.Immediate8,
+			OpKind.Immediate16 => (uint)insn.Immediate16,
 			OpKind.Immediate32 => insn.Immediate32,
 			OpKind.Memory => _mem.Read32(CalcMemAddress(insn, operandIndex)),
-			_ => 0
+			_ => 0u
 		};
+		
+		return result;
 	}
 
 	private void SetOperandValue(Instruction insn, int operandIndex, uint value)
@@ -1608,7 +1621,16 @@ public class JitCpu : IAsyncCpu
 		uint b = GetOperandValue(insn, 1);
 		uint r = a + b;
 		SetOperandValue(insn, 0, r);
-		SetFlagsAdd(a, b, r);
+		
+		// Get sign bit mask based on operand size
+		int opSize = GetOpSizeBits(insn, 0);
+		uint signBitMask = opSize switch
+		{
+			8 => 0x80,
+			16 => 0x8000,
+			_ => 0x80000000
+		};
+		SetFlagsAdd(a, b, r, signBitMask);
 	}
 	
 	private void ExecSub(Instruction insn, VirtualMemory mem)
@@ -1617,7 +1639,16 @@ public class JitCpu : IAsyncCpu
 		uint b = GetOperandValue(insn, 1);
 		uint r = a - b;
 		SetOperandValue(insn, 0, r);
-		SetFlagsSub(a, b, r);
+		
+		// Get sign bit mask based on operand size
+		int opSize = GetOpSizeBits(insn, 0);
+		uint signBitMask = opSize switch
+		{
+			8 => 0x80,
+			16 => 0x8000,
+			_ => 0x80000000
+		};
+		SetFlagsSub(a, b, r, signBitMask);
 	}
 	
 	private void ExecAdc(Instruction insn, VirtualMemory mem)
@@ -1684,7 +1715,16 @@ public class JitCpu : IAsyncCpu
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
 		uint r = a - b;
-		SetFlagsSub(a, b, r);
+		
+		// Get sign bit mask based on operand size
+		int opSize = GetOpSizeBits(insn, 0);
+		uint signBitMask = opSize switch
+		{
+			8 => 0x80,
+			16 => 0x8000,
+			_ => 0x80000000
+		};
+		SetFlagsSub(a, b, r, signBitMask);
 	}
 	
 	// === Logic Implementations ===
@@ -1931,30 +1971,77 @@ public class JitCpu : IAsyncCpu
 	
 	private void SetFlagsAdd(uint a, uint b, uint r)
 	{
+		SetFlagsAdd(a, b, r, 0x80000000);
+	}
+
+	private void SetFlagsAdd(uint a, uint b, uint r, uint signBitMask)
+	{
 		SetFlagVal(Cf, r < a);
-		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
-		UpdateLogicResultFlags(r);
+		UpdateLogicResultFlags(r, signBitMask);
 	}
 	
 	private void SetFlagsSub(uint a, uint b, uint r)
 	{
+		SetFlagsSub(a, b, r, 0x80000000);
+	}
+
+	private void SetFlagsSub(uint a, uint b, uint r, uint signBitMask)
+	{
 		SetFlagVal(Cf, a < b);
-		SetFlagVal(Of, ((a ^ b) & (a ^ r) & 0x80000000) != 0);
+		SetFlagVal(Of, ((a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
-		UpdateLogicResultFlags(r);
+		UpdateLogicResultFlags(r, signBitMask);
 	}
 	
 	private void UpdateLogicResultFlags(uint r)
 	{
+		UpdateLogicResultFlags(r, 0x80000000);
+	}
+
+	private void UpdateLogicResultFlags(uint r, uint signBitMask)
+	{
 		SetFlagVal(Zf, r == 0);
-		SetFlagVal(Sf, (r & 0x80000000) != 0);
+		SetFlagVal(Sf, (r & signBitMask) != 0);
 		
 		byte lo = (byte)r;
 		int bits = lo ^ (lo >> 4);
 		bits &= 0xF;
 		bool even = (((0x6996 >> bits) & 1) == 0);
 		SetFlagVal(Pf, even);
+	}
+	
+	private int GetOpSizeBits(Instruction insn, int opIndex)
+	{
+		if (insn.GetOpKind(opIndex) == OpKind.Memory)
+		{
+			return insn.MemorySize switch
+			{
+				MemorySize.UInt8 or MemorySize.Int8 => 8,
+				MemorySize.UInt16 or MemorySize.Int16 => 16,
+				_ => 32
+			};
+		}
+
+		if (insn.GetOpKind(opIndex) == OpKind.Register)
+		{
+			var r = insn.GetOpRegister(opIndex);
+			if (r is Register.AL or Register.CL or Register.DL or Register.BL or Register.AH or Register.CH or Register.DH or Register.BH)
+			{
+				return 8;
+			}
+
+			if (r is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP or Register.BP)
+			{
+				return 16;
+			}
+
+			return 32;
+		}
+
+		// For immediates, default to 32
+		return 32;
 	}
 	
 	// === Multiply/Divide Implementations ===

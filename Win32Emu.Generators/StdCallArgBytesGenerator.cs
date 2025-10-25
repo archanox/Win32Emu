@@ -310,15 +310,32 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				})
 			).OrderBy(e => e.DllName).ThenBy(e => e.ExportName);
 
-			foreach (var export in flatExports)
+			// Group by DLL and export name to handle version-agnostic queries
+			var exportGroups = flatExports.GroupBy(e => (e.DllName, e.ExportName));
+			
+			foreach (var group in exportGroups)
 			{
-				if (export.Version != null)
+				var dll = group.Key.DllName;
+				var exportName = group.Key.ExportName;
+				var versions = group.ToList();
+				
+				// If all exports have versions, also add a version-agnostic case for when version==null
+				if (versions.All(v => v.Version != null))
 				{
-					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\") when version == \"{export.Version}\": return true;");
+					sb.AppendLine($"                case (\"{dll.ToUpperInvariant()}\", \"{exportName.ToUpperInvariant()}\") when version == null: return true;");
 				}
-				else
+				
+				// Generate versioned cases
+				foreach (var export in versions)
 				{
-					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\"): return true;");
+					if (export.Version != null)
+					{
+						sb.AppendLine($"                case (\"{dll.ToUpperInvariant()}\", \"{exportName.ToUpperInvariant()}\") when version == \"{export.Version}\": return true;");
+					}
+					else
+					{
+						sb.AppendLine($"                case (\"{dll.ToUpperInvariant()}\", \"{exportName.ToUpperInvariant()}\"): return true;");
+					}
 				}
 			}
 
@@ -388,15 +405,33 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				})
 			).OrderBy(e => e.DllName).ThenBy(e => e.ExportName);
 
-			foreach (var export in flatForwardedExports)
+			// Group by DLL and export name to handle version-agnostic queries
+			var forwardedExportGroups = flatForwardedExports.GroupBy(e => (e.DllName, e.ExportName));
+			
+			foreach (var group in forwardedExportGroups)
 			{
-				if (export.Version != null)
+				var dll = group.Key.DllName;
+				var exportName = group.Key.ExportName;
+				var versions = group.ToList();
+				
+				// If all exports have versions, also add a version-agnostic case for when version==null
+				// In this case, return the first ForwardedTo target
+				if (versions.All(v => v.Version != null))
 				{
-					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\") when version == \"{export.Version}\": return \"{export.ForwardedTo}\";");
+					sb.AppendLine($"                case (\"{dll.ToUpperInvariant()}\", \"{exportName.ToUpperInvariant()}\") when version == null: return \"{versions.First().ForwardedTo}\";");
 				}
-				else
+				
+				// Generate versioned cases
+				foreach (var export in versions)
 				{
-					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\"): return \"{export.ForwardedTo}\";");
+					if (export.Version != null)
+					{
+						sb.AppendLine($"                case (\"{dll.ToUpperInvariant()}\", \"{exportName.ToUpperInvariant()}\") when version == \"{export.Version}\": return \"{export.ForwardedTo}\";");
+					}
+					else
+					{
+						sb.AppendLine($"                case (\"{dll.ToUpperInvariant()}\", \"{exportName.ToUpperInvariant()}\"): return \"{export.ForwardedTo}\";");
+					}
 				}
 			}
 
@@ -431,15 +466,32 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				})
 			).OrderBy(e => e.DllName).ThenBy(e => e.ExportName);
 
-			foreach (var export in flatStubExports)
+			// Group by DLL and export name to handle version-agnostic queries
+			var stubExportGroups = flatStubExports.GroupBy(e => (e.DllName, e.ExportName));
+			
+			foreach (var group in stubExportGroups)
 			{
-				if (export.Version != null)
+				var dll = group.Key.DllName;
+				var exportName = group.Key.ExportName;
+				var versions = group.ToList();
+				
+				// If all exports have versions, also add a version-agnostic case for when version==null
+				if (versions.All(v => v.Version != null))
 				{
-					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\") when version == \"{export.Version}\": return true;");
+					sb.AppendLine($"                case (\"{dll.ToUpperInvariant()}\", \"{exportName.ToUpperInvariant()}\") when version == null: return true;");
 				}
-				else
+				
+				// Generate versioned cases
+				foreach (var export in versions)
 				{
-					sb.AppendLine($"                case (\"{export.DllName.ToUpperInvariant()}\", \"{export.ExportName.ToUpperInvariant()}\"): return true;");
+					if (export.Version != null)
+					{
+						sb.AppendLine($"                case (\"{dll.ToUpperInvariant()}\", \"{exportName.ToUpperInvariant()}\") when version == \"{export.Version}\": return true;");
+					}
+					else
+					{
+						sb.AppendLine($"                case (\"{dll.ToUpperInvariant()}\", \"{exportName.ToUpperInvariant()}\"): return true;");
+					}
 				}
 			}
 
