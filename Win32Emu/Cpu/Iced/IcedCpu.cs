@@ -2037,14 +2037,16 @@ public class IcedCpu : IAsyncCpu
 		var divisor = ReadOp(insn, 0);
 		if (divisor == 0)
 		{
-			throw new DivideByZeroException();
+			_logger.LogWarning("[IcedCpu] Division by zero at EIP=0x{Eip:X8}", _eip);
+			return;
 		}
 
 		var dividend = ((ulong)_edx << 32) | _eax;
 		var q = dividend / divisor;
 		if (q > 0xFFFFFFFFu)
 		{
-			throw new OverflowException("DIV overflow");
+			_logger.LogWarning("[IcedCpu] DIV overflow at EIP=0x{Eip:X8}", _eip);
+			return;
 		}
 
 		var r = (uint)(dividend % divisor);
@@ -2057,14 +2059,16 @@ public class IcedCpu : IAsyncCpu
 		var divisor = (int)ReadOp(insn, 0);
 		if (divisor == 0)
 		{
-			throw new DivideByZeroException();
+			_logger.LogWarning("[IcedCpu] Division by zero at EIP=0x{Eip:X8}", _eip);
+			return;
 		}
 
 		var dividend = ((long)_edx << 32) | _eax;
 		var q = dividend / divisor;
 		if (q is > int.MaxValue or < int.MinValue)
 		{
-			throw new OverflowException("IDIV overflow");
+			_logger.LogWarning("[IcedCpu] IDIV overflow at EIP=0x{Eip:X8}", _eip);
+			return;
 		}
 
 		var r = (int)(dividend % divisor);

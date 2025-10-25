@@ -313,6 +313,42 @@ public class BasicInstructionTests : IDisposable
     }
 
     [Fact]
+    public void DIV_ByZero_ShouldNotCrashAndPreserveRegisters()
+    {
+        // Arrange: DIV EBX (F7 F3) with divisor = 0
+        // In real x86, this triggers INT 0, but emulator should handle gracefully
+        _helper.SetReg("EAX", 0x00000010); // 16
+        _helper.SetReg("EDX", 0x00000000);
+        _helper.SetReg("EBX", 0x00000000); // divisor = 0
+        _helper.WriteCode(0xF7, 0xF3);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert - registers should be preserved (not modified)
+        Assert.Equal(0x00000010u, _helper.GetReg("EAX")); // EAX unchanged
+        Assert.Equal(0x00000000u, _helper.GetReg("EDX")); // EDX unchanged
+    }
+
+    [Fact]
+    public void IDIV_ByZero_ShouldNotCrashAndPreserveRegisters()
+    {
+        // Arrange: IDIV EBX (F7 FB) with divisor = 0
+        // In real x86, this triggers INT 0, but emulator should handle gracefully
+        _helper.SetReg("EAX", 0x00000010); // 16
+        _helper.SetReg("EDX", 0x00000000);
+        _helper.SetReg("EBX", 0x00000000); // divisor = 0
+        _helper.WriteCode(0xF7, 0xFB);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert - registers should be preserved (not modified)
+        Assert.Equal(0x00000010u, _helper.GetReg("EAX")); // EAX unchanged
+        Assert.Equal(0x00000000u, _helper.GetReg("EDX")); // EDX unchanged
+    }
+
+    [Fact]
     public void CDQ_WithPositiveEAX_ShouldSetEDXToZero()
     {
         // Arrange: CDQ (99) - sign-extends EAX into EDX:EAX
