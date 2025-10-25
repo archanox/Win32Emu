@@ -190,6 +190,13 @@ public sealed class Emulator : IDisposable
                 _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
                 LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
             }
+            catch (Exception ex)
+            {
+                // Handle any other Unicorn initialization failures
+                _logger.LogWarning(ex, "[Loader] Failed to initialize Unicorn CPU backend: {Message}. Falling back to IcedCpu.", ex.Message);
+                _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
+                LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
+            }
         }
         else if (useJitCpu)
         {
