@@ -70,6 +70,12 @@ public class Shell32Module : IWin32ModuleUnsafe
 			case "SHELLEXECUTEEXA":
 				returnValue = ShellExecuteExA(a.UInt32(0));
 				return true;
+			case "EXTRACTICONA":
+				returnValue = ExtractIconA(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
+				return true;
+			case "SHGETFILEINFOA":
+				returnValue = SHGetFileInfoA(a.LpcStr(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
 
 			default:
 				_logger.LogInformation("[Shell32] Unimplemented export: {Export}", export);
@@ -227,5 +233,35 @@ public class Shell32Module : IWin32ModuleUnsafe
 		// Read fields from the structure if needed
 		// For now, just return success
 		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves a handle to an icon from the specified executable file, DLL, or icon file.
+	/// HICON ExtractIconA(HINSTANCE hInst, LPCSTR pszExeFileName, UINT nIconIndex);
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint ExtractIconA(uint hInst, in LpcStr pszExeFileName, uint nIconIndex)
+	{
+		var fileName = pszExeFileName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Shell32] ExtractIconA(hInst=0x{HInst:X8}, pszExeFileName=\"{FileName}\", nIconIndex={NIconIndex})",
+			hInst, fileName, nIconIndex);
+		
+		// Stub - return NULL (no icon)
+		return 0;
+	}
+
+	/// <summary>
+	/// Retrieves information about an object in the file system, such as a file, folder, directory, or drive root.
+	/// DWORD_PTR SHGetFileInfoA(LPCSTR pszPath, DWORD dwFileAttributes, SHFILEINFOA *psfi, UINT cbFileInfo, UINT uFlags);
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint SHGetFileInfoA(in LpcStr pszPath, uint dwFileAttributes, uint psfi, uint cbFileInfo, uint uFlags)
+	{
+		var path = pszPath.ToString() ?? string.Empty;
+		_logger.LogInformation("[Shell32] SHGetFileInfoA(pszPath=\"{Path}\", dwFileAttributes=0x{DwFileAttributes:X}, uFlags=0x{UFlags:X})",
+			path, dwFileAttributes, uFlags);
+		
+		// Stub - return 0 (failure)
+		return 0;
 	}
 }
