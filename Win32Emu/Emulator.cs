@@ -1130,6 +1130,8 @@ public sealed class Emulator : IDisposable
 
     private void CreateFallbackIcedCpu(Iced.Intel.DecoderOptions decoderOptions, bool enableInstructionAnalyzer)
     {
+        // _vm is guaranteed to be non-null here as this method is only called from LoadExecutable
+        // after _vm has been initialized
         _cpu = new IcedCpu(_vm!, _logger, decoderOptions, enableInstructionAnalyzer);
         LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
     }
