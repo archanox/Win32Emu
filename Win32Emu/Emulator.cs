@@ -1066,7 +1066,9 @@ public sealed class Emulator : IDisposable
                 return true;
             }
 
-            if (opcode == 0xCC && eip is >= 0x0F000000 and < 0x10000000)
+            // Check for INT3 breakpoints in COM vtable range (0x0D000000-0x0E000000),
+            // synthetic export range (0x0E000000-0x0F000000), and import hook range (0x0F000000-0x10000000)
+            if (opcode == 0xCC && eip is >= 0x0D000000 and < 0x10000000)
             {
                 return true;
             }
@@ -1106,7 +1108,10 @@ public sealed class Emulator : IDisposable
                 return (uint)(eip + 5 + (int)displacement);
             }
 
-            if (opcode == 0xCC && eip is >= 0x0F000000 and < 0x10000000)
+            // INT3 breakpoints in COM vtable range (0x0D000000-0x0E000000),
+            // synthetic export range (0x0E000000-0x0F000000), and import hook range (0x0F000000-0x10000000)
+            // return their own address as the target
+            if (opcode == 0xCC && eip is >= 0x0D000000 and < 0x10000000)
             {
 	            return eip;
             }
