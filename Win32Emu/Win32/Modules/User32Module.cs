@@ -219,6 +219,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = (uint)ShowCursor(a.Int32(0));
 					return true;
 
+				case "SETCURSORPOS":
+					returnValue = SetCursorPos(a.Int32(0), a.Int32(1));
+					return true;
+
 				case "SETTIMER":
 					returnValue = SetTimer(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
@@ -392,6 +396,9 @@ namespace Win32Emu.Win32.Modules
 				case "FINDWINDOWA":
 					returnValue = FindWindowA(a.LpcStr(0), a.LpcStr(1));
 					return true;
+				case "ENUMWINDOWS":
+					returnValue = EnumWindows(a.UInt32(0), a.UInt32(1));
+					return true;
 				case "GETPARENT":
 					returnValue = GetParent(a.UInt32(0));
 					return true;
@@ -426,6 +433,9 @@ namespace Win32Emu.Win32.Modules
 				// String and character functions
 				case "CHARUPPERA":
 					returnValue = CharUpperA(a.UInt32(0));
+					return true;
+				case "ISCHARALPHAA":
+					returnValue = IsCharAlphaA(a.UInt32(0));
 					return true;
 				case "DRAWTEXTA":
 					returnValue = (uint)DrawTextA(a.UInt32(0), a.LpcStr(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
@@ -2159,6 +2169,24 @@ namespace Win32Emu.Win32.Modules
 			return _cursorDisplayCount;
 		}
 
+		/// <summary>
+		/// Sets the cursor position in screen coordinates.
+		/// BOOL SetCursorPos(
+		///   [in] int X,
+		///   [in] int Y
+		/// );
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint SetCursorPos(int x, int y)
+		{
+			_logger.LogInformation("[User32] SetCursorPos: X={X}, Y={Y}", x, y);
+			
+			// For emulation purposes, we accept the call but don't actually move the cursor
+			// A full implementation would update the cursor position in the rendering backend
+			
+			return 1; // TRUE - success
+		}
+
 		[DllModuleExport(1)]
 		private uint SetFocus(uint hwnd)
 		{
@@ -3808,6 +3836,26 @@ namespace Win32Emu.Win32.Modules
 			return 0; // NULL
 		}
 
+		/// <summary>
+		/// Enumerates all top-level windows by passing the handle to each window to a callback function.
+		/// BOOL EnumWindows(
+		///   [in] WNDENUMPROC lpEnumFunc,
+		///   [in] LPARAM      lParam
+		/// );
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint EnumWindows(uint lpEnumFunc, uint lParam)
+		{
+			_logger.LogInformation("[User32] EnumWindows(lpEnumFunc=0x{LpEnumFunc:X8}, lParam=0x{LParam:X8})",
+				lpEnumFunc, lParam);
+			
+			// For emulation purposes, we don't have a real window hierarchy to enumerate
+			// We could call the callback with our main window handle if we tracked them
+			// For now, just return TRUE to indicate success without calling the callback
+			
+			return 1; // TRUE - success
+		}
+
 		[DllModuleExport(4)]
 		private uint GetParent(uint hWnd)
 		{
@@ -3884,6 +3932,29 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] CharUpperA(lpsz=0x{Lpsz:X8})", lpsz);
 			return lpsz; // Return as-is (stub)
+		}
+
+		/// <summary>
+		/// Determines whether a character is an alphabetic character.
+		/// BOOL IsCharAlphaA(
+		///   [in] CHAR ch
+		/// );
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint IsCharAlphaA(uint ch)
+		{
+			_logger.LogInformation("[User32] IsCharAlphaA(ch=0x{Ch:X8})", ch);
+			
+			// Extract the character (lower byte)
+			char c = (char)(ch & 0xFF);
+			
+			// Check if it's an alphabetic character
+			if (char.IsLetter(c))
+			{
+				return 1; // TRUE
+			}
+			
+			return 0; // FALSE
 		}
 
 		[DllModuleExport(20)]
