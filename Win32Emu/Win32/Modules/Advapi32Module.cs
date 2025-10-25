@@ -608,7 +608,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(1)]
+	[DllModuleExport(12)]
 	private uint RegOpenKeyA(uint hKey, in LpcStr lpSubKey, uint phkResult)
 	{
 		// RegOpenKeyA is equivalent to RegOpenKeyExA with samDesired = KEY_ALL_ACCESS

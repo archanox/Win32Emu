@@ -22,6 +22,9 @@ namespace Win32Emu.Win32.Modules
 		private PeResourceReader? _resourceReader;
 		private IEmulatorHost? _host;
 
+		// ATOM generation counter for window classes
+		private uint _nextAtom = 0xC000; // Start at 0xC000 (standard user atom range)
+
 		// State tracking for cursor and focus
 		private uint _currentCursor;
 		private uint _focusWindow;
@@ -76,6 +79,10 @@ namespace Win32Emu.Win32.Modules
 			{
 				case "REGISTERCLASSA":
 					returnValue = RegisterClassA(a.UInt32(0));
+					return true;
+
+				case "REGISTERCLASSEXA":
+					returnValue = RegisterClassExA(a.UInt32(0));
 					return true;
 
 				case "REGISTERWINDOWMESSAGEA":
@@ -725,12 +732,8 @@ namespace Win32Emu.Win32.Modules
 			{
 				// Return an ATOM (non-zero value) on success
 				// Windows uses atoms (16-bit values) for class registration
-				// We'll return a simple non-zero value to indicate success
-				var atom = (uint)(className.GetHashCode() & 0xFFFF);
-				if (atom == 0)
-				{
-					atom = 1;
-				}
+				// Use a counter to ensure uniqueness and avoid hash collisions
+				var atom = _nextAtom++;
 
 				// Register the atom-to-classname mapping
 				_env.RegisterAtom(atom, className);
@@ -742,6 +745,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] RegisterClassA: Failed to register '{ClassName}'", className);
 			return 0;
 		}
+
 
 		/// <summary>
 		/// Defines a new window message that is guaranteed to be unique throughout the system.
@@ -4457,11 +4461,74 @@ namespace Win32Emu.Win32.Modules
 	}
 
 	[DllModuleExport(4)]
-	private uint RegisterClassExA(uint lpWndClass)
+	private uint RegisterClassExA(uint lpWndClassEx)
 	{
-		_logger.LogInformation("[User32] RegisterClassExA(lpWndClass=0x{LpWndClass:X8})", lpWndClass);
-		// Return a fake class atom (stub)
-		return 0xC000; // Arbitrary class atom
+		if (lpWndClassEx == 0)
+		{
+			_logger.LogInformation("[User32] RegisterClassExA: NULL WNDCLASSEX pointer");
+			return 0;
+		}
+
+		// WNDCLASSEXA structure layout:
+		// UINT      cbSize;        // 0
+		// UINT      style;         // 4
+		// WNDPROC   lpfnWndProc;   // 8
+		// int       cbClsExtra;    // 12
+		// int       cbWndExtra;    // 16
+		// HINSTANCE hInstance;     // 20
+		// HICON     hIcon;         // 24
+		// HCURSOR   hCursor;       // 28
+		// HBRUSH    hbrBackground; // 32
+		// LPCSTR    lpszMenuName;  // 36
+		// LPCSTR    lpszClassName; // 40
+		// HICON     hIconSm;       // 44
+
+		var cbSize = _env.MemRead32(lpWndClassEx + 0);
+		var style = _env.MemRead32(lpWndClassEx + 4);
+		var wndProc = _env.MemRead32(lpWndClassEx + 8);
+		var clsExtra = (int)_env.MemRead32(lpWndClassEx + 12);
+		var wndExtra = (int)_env.MemRead32(lpWndClassEx + 16);
+		var hInstance = _env.MemRead32(lpWndClassEx + 20);
+		var hIcon = _env.MemRead32(lpWndClassEx + 24);
+		var hCursor = _env.MemRead32(lpWndClassEx + 28);
+		var hbrBackground = _env.MemRead32(lpWndClassEx + 32);
+		var menuNamePtr = _env.MemRead32(lpWndClassEx + 36);
+		var classNamePtr = _env.MemRead32(lpWndClassEx + 40);
+		var hIconSm = _env.MemRead32(lpWndClassEx + 44);
+
+		if (classNamePtr == 0)
+		{
+			_logger.LogInformation("[User32] RegisterClassExA: NULL class name");
+			return 0;
+		}
+
+		var className = _env.ReadAnsiString(classNamePtr);
+		var menuName = menuNamePtr != 0 ? _env.ReadAnsiString(menuNamePtr) : null;
+
+		_logger.LogInformation("[User32] RegisterClassExA: cbSize={CbSize}, style=0x{Style:X}, wndProc=0x{WndProc:X8}, className='{ClassName}'",
+			cbSize, style, wndProc, className);
+
+		var classInfo = new ProcessEnvironment.WindowClassInfo(
+			className, style, wndProc, clsExtra, wndExtra,
+			hInstance, hIcon, hCursor, hbrBackground, menuName
+		);
+
+		if (_env.RegisterWindowClass(className, classInfo))
+		{
+			// Return an ATOM (non-zero value) on success
+			// Windows uses atoms (16-bit values) for class registration
+			// Use a counter to ensure uniqueness and avoid hash collisions
+			var atom = _nextAtom++;
+
+			// Register the atom-to-classname mapping
+			_env.RegisterAtom(atom, className);
+
+			_logger.LogInformation("[User32] RegisterClassExA: '{ClassName}' -> atom 0x{Atom:X4}", className, atom);
+			return atom;
+		}
+
+		_logger.LogInformation("[User32] RegisterClassExA: Failed to register '{ClassName}'", className);
+		return 0;
 	}
 
 	[DllModuleExport(24)]
