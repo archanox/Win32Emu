@@ -630,6 +630,33 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "UNLOCKFILE":
 				returnValue = UnlockFile(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
+			case "FATALAPPEXITA":
+				returnValue = FatalAppExitA(a.UInt32(0), a.LpcStr(1));
+				return true;
+			case "GETPRIVATEPROFILEINTA":
+				returnValue = GetPrivateProfileIntA(a.LpcStr(0), a.LpcStr(1), a.Int32(2), a.LpcStr(3));
+				return true;
+			case "GETSHORTPATHNAMEA":
+				returnValue = GetShortPathNameA(a.LpcStr(0), a.LpStr(1), a.UInt32(2));
+				return true;
+			case "GETSTRINGTYPEEXA":
+				returnValue = GetStringTypeExA(a.UInt32(0), a.UInt32(1), a.LpcStr(2), a.Int32(3), a.UInt32(4));
+				return true;
+			case "GETTEMPFILENAMEA":
+				returnValue = GetTempFileNameA(a.LpcStr(0), a.LpcStr(1), a.UInt32(2), a.LpStr(3));
+				return true;
+			case "GETTHREADLOCALE":
+				returnValue = GetThreadLocale();
+				return true;
+			case "LOCALFILETIMETOFILETIME":
+				returnValue = LocalFileTimeToFileTime(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "SETFILETIME":
+				returnValue = SetFileTime(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+			case "SYSTEMTIMETOFILETIME":
+				returnValue = SystemTimeToFileTime(a.UInt32(0), a.UInt32(1));
+				return true;
 
 			default:
 				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
@@ -6393,6 +6420,148 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Return failure for now
 		_lastError = 2; // ERROR_FILE_NOT_FOUND
 		return 0; // FALSE
+	}
+
+	[DllModuleExport(8)]
+	private uint FatalAppExitA(uint uAction, in LpcStr lpMessageText)
+	{
+		var message = lpMessageText.ToString() ?? string.Empty;
+		_logger.LogError("[Kernel32] FatalAppExitA(uAction={UAction}, lpMessageText=\"{Message}\")", uAction, message);
+		
+		// Stub - just log the error
+		return 0; // void function
+	}
+
+	[DllModuleExport(16)]
+	private uint GetPrivateProfileIntA(in LpcStr lpAppName, in LpcStr lpKeyName, int nDefault, in LpcStr lpFileName)
+	{
+		var appName = lpAppName.ToString() ?? string.Empty;
+		var keyName = lpKeyName.ToString() ?? string.Empty;
+		var fileName = lpFileName.ToString() ?? string.Empty;
+		
+		_logger.LogInformation("[Kernel32] GetPrivateProfileIntA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", nDefault={NDefault}, lpFileName=\"{FileName}\")",
+			appName, keyName, nDefault, fileName);
+		
+		// Stub - return default value
+		return (uint)nDefault;
+	}
+
+	[DllModuleExport(12)]
+	private uint GetShortPathNameA(in LpcStr lpszLongPath, in LpStr lpszShortPath, uint cchBuffer)
+	{
+		var longPath = lpszLongPath.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GetShortPathNameA(lpszLongPath=\"{LongPath}\", cchBuffer={CchBuffer})", longPath, cchBuffer);
+		
+		// Stub - just copy the long path as the short path
+		if (cchBuffer > 0 && lpszShortPath.Address != 0)
+		{
+			string toCopy;
+			if (cchBuffer > 1)
+			{
+				toCopy = longPath.Length < cchBuffer - 1 ? longPath : longPath.Substring(0, (int)cchBuffer - 1);
+			}
+			else
+			{
+				toCopy = string.Empty;
+			}
+			lpszShortPath.Write(_env.Memory, toCopy, true);
+			return (uint)toCopy.Length + 1;
+		}
+		
+		return (uint)longPath.Length + 1;
+	}
+
+	[DllModuleExport(20)]
+	private uint GetStringTypeExA(uint Locale, uint dwInfoType, in LpcStr lpSrcStr, int cchSrc, uint lpCharType)
+	{
+		var srcStr = lpSrcStr.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GetStringTypeExA(Locale=0x{Locale:X}, dwInfoType=0x{DwInfoType:X}, cchSrc={CchSrc})",
+			Locale, dwInfoType, cchSrc);
+		
+		// Stub - just set all character types to 0
+		if (lpCharType != 0)
+		{
+			int count = cchSrc == -1 ? srcStr.Length : cchSrc;
+			for (int i = 0; i < count; i++)
+			{
+				_env.MemWrite16(lpCharType + (uint)(i * 2), 0);
+			}
+		}
+		
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(16)]
+	private uint GetTempFileNameA(in LpcStr lpPathName, in LpcStr lpPrefixString, uint uUnique, in LpStr lpTempFileName)
+	{
+		var pathName = lpPathName.ToString() ?? string.Empty;
+		var prefix = lpPrefixString.ToString() ?? string.Empty;
+		
+		_logger.LogInformation("[Kernel32] GetTempFileNameA(lpPathName=\"{PathName}\", lpPrefixString=\"{Prefix}\", uUnique={UUnique})",
+			pathName, prefix, uUnique);
+		
+		// Generate a temporary file name
+		var uniqueNum = uUnique != 0 ? uUnique : (uint)Random.Shared.Next(0x1, 0xFFFF);
+		var tempFileName = $"{prefix}{uniqueNum:X4}.TMP";
+		
+		if (lpTempFileName.Address != 0)
+		{
+			lpTempFileName.Write(_env.Memory, tempFileName, true);
+		}
+		
+		return uniqueNum;
+	}
+
+	[DllModuleExport(0)]
+	private uint GetThreadLocale()
+	{
+		_logger.LogInformation("[Kernel32] GetThreadLocale()");
+		// Return English (United States) locale
+		return 0x0409; // MAKELCID(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), SORT_DEFAULT)
+	}
+
+	[DllModuleExport(8)]
+	private uint LocalFileTimeToFileTime(uint lpLocalFileTime, uint lpFileTime)
+	{
+		_logger.LogInformation("[Kernel32] LocalFileTimeToFileTime(lpLocalFileTime=0x{LpLocalFileTime:X8}, lpFileTime=0x{LpFileTime:X8})",
+			lpLocalFileTime, lpFileTime);
+		
+		// Stub - just copy the time
+		if (lpLocalFileTime != 0 && lpFileTime != 0)
+		{
+			var low = _env.MemRead32(lpLocalFileTime);
+			var high = _env.MemRead32(lpLocalFileTime + 4);
+			_env.MemWrite32(lpFileTime, low);
+			_env.MemWrite32(lpFileTime + 4, high);
+		}
+		
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(16)]
+	private uint SetFileTime(uint hFile, uint lpCreationTime, uint lpLastAccessTime, uint lpLastWriteTime)
+	{
+		_logger.LogInformation("[Kernel32] SetFileTime(hFile=0x{HFile:X8}, lpCreationTime=0x{LpCreationTime:X8}, lpLastAccessTime=0x{LpLastAccessTime:X8}, lpLastWriteTime=0x{LpLastWriteTime:X8})",
+			hFile, lpCreationTime, lpLastAccessTime, lpLastWriteTime);
+		
+		// Stub - return success
+		return 1; // TRUE
+	}
+
+	[DllModuleExport(8)]
+	private uint SystemTimeToFileTime(uint lpSystemTime, uint lpFileTime)
+	{
+		_logger.LogInformation("[Kernel32] SystemTimeToFileTime(lpSystemTime=0x{LpSystemTime:X8}, lpFileTime=0x{LpFileTime:X8})",
+			lpSystemTime, lpFileTime);
+		
+		// Stub - write dummy FILETIME value
+		if (lpFileTime != 0)
+		{
+			_env.MemWrite32(lpFileTime, 0);     // dwLowDateTime
+			_env.MemWrite32(lpFileTime + 4, 0); // dwHighDateTime
+		}
+		
+		return 1; // TRUE
 	}
 
 }

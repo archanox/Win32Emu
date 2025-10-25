@@ -221,6 +221,7 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(user32Module);
         
         _dispatcher.RegisterModule(new Gdi32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Comdlg32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DDrawModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DSoundModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DInputModule(_env, _image.BaseAddress, loader, _logger));
@@ -233,6 +234,7 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new DsetupModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new MsvcrtModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Wsock32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Wavmix32Module(_env, _image.BaseAddress, loader, _logger));
 
         // Initialize the main thread in the thread scheduler
         _env.InitializeMainThread(_cpu);

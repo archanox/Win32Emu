@@ -201,6 +201,56 @@ namespace Win32Emu.Win32.Modules
 					returnValue = RectVisible(a.UInt32(0), a.UInt32(1));
 					return true;
 
+				// Additional bitmap functions
+				case "GETBITMAPBITS":
+					returnValue = (uint)GetBitmapBits(a.UInt32(0), a.Int32(1), a.UInt32(2));
+					return true;
+				case "SETBITMAPBITS":
+					returnValue = (uint)SetBitmapBits(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "CREATEDIBSECTION":
+					returnValue = CreateDIBSection(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+				case "SETDIBCOLORTABLE":
+					returnValue = SetDIBColorTable(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				// Palette functions
+				case "ANIMATEPALETTE":
+					returnValue = AnimatePalette(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "CREATEHALFTONEPALETTE":
+					returnValue = CreateHalftonePalette(a.UInt32(0));
+					return true;
+				case "GETNEARESTPALETTEINDEX":
+					returnValue = GetNearestPaletteIndex(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETPALETTEENTRIES":
+					returnValue = GetPaletteEntries(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				// Text functions
+				case "GETTEXTMETRICSA":
+					returnValue = GetTextMetricsA(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				// Advanced drawing functions
+				case "PATBLT":
+					returnValue = PatBlt(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.UInt32(5));
+					return true;
+				case "CHORD":
+					returnValue = Chord(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.Int32(8));
+					return true;
+				case "PIE":
+					returnValue = Pie(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.Int32(8));
+					return true;
+				case "POLYGON":
+					returnValue = Polygon(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "ROUNDRECT":
+					returnValue = RoundRect(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6));
+					return true;
+
 				// Escape function
 				case "ESCAPE":
 					returnValue = (uint)Escape(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
@@ -714,6 +764,159 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] Escape(hdc=0x{Hdc:X8}, iEscape={IEscape}, cjIn={CjIn})", hdc, iEscape, cjIn);
 			return 0; // Return 0 (not supported)
+		}
+
+		// Additional bitmap functions
+		[DllModuleExport(12)]
+		private int GetBitmapBits(uint hBitmap, int cb, uint lpvBits)
+		{
+			_logger.LogInformation("[Gdi32] GetBitmapBits(hBitmap=0x{HBitmap:X8}, cb={Cb}, lpvBits=0x{LpvBits:X8})", hBitmap, cb, lpvBits);
+			// Stub - return 0 (no bits copied)
+			return 0;
+		}
+
+		[DllModuleExport(12)]
+		private int SetBitmapBits(uint hBitmap, uint cb, uint pvBits)
+		{
+			_logger.LogInformation("[Gdi32] SetBitmapBits(hBitmap=0x{HBitmap:X8}, cb={Cb}, pvBits=0x{PvBits:X8})", hBitmap, cb, pvBits);
+			// Stub - return cb (all bits set)
+			return (int)cb;
+		}
+
+		[DllModuleExport(24)]
+		private uint CreateDIBSection(uint hdc, uint pbmi, uint usage, uint ppvBits, uint hSection, uint offset)
+		{
+			_logger.LogInformation("[Gdi32] CreateDIBSection(hdc=0x{Hdc:X8}, pbmi=0x{Pbmi:X8}, usage={Usage})", hdc, pbmi, usage);
+			
+			// Create a dummy bitmap handle
+			var bitmapHandle = _nextGdiObjectHandle++;
+			_gdiObjects[bitmapHandle] = new GdiObject { Type = GdiObjectType.Bitmap };
+			
+			// If ppvBits is provided, write a dummy pointer
+			if (ppvBits != 0)
+			{
+				_env.MemWrite32(ppvBits, 0x90000000); // Dummy bits pointer
+			}
+			
+			return bitmapHandle;
+		}
+
+		[DllModuleExport(16)]
+		private uint SetDIBColorTable(uint hdc, uint iStart, uint cEntries, uint prgbq)
+		{
+			_logger.LogInformation("[Gdi32] SetDIBColorTable(hdc=0x{Hdc:X8}, iStart={IStart}, cEntries={CEntries}, prgbq=0x{Prgbq:X8})",
+				hdc, iStart, cEntries, prgbq);
+			// Stub - return number of entries set
+			return cEntries;
+		}
+
+		// Palette functions
+		[DllModuleExport(16)]
+		private uint AnimatePalette(uint hPal, uint iStartIndex, uint cEntries, uint ppe)
+		{
+			_logger.LogInformation("[Gdi32] AnimatePalette(hPal=0x{HPal:X8}, iStartIndex={IStartIndex}, cEntries={CEntries})",
+				hPal, iStartIndex, cEntries);
+			// Stub - return TRUE (success)
+			return 1;
+		}
+
+		[DllModuleExport(4)]
+		private uint CreateHalftonePalette(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] CreateHalftonePalette(hdc=0x{Hdc:X8})", hdc);
+			
+			// Create a dummy palette handle
+			var paletteHandle = _nextGdiObjectHandle++;
+			_gdiObjects[paletteHandle] = new GdiObject { Type = GdiObjectType.Palette };
+			
+			return paletteHandle;
+		}
+
+		[DllModuleExport(8)]
+		private uint GetNearestPaletteIndex(uint hPal, uint color)
+		{
+			_logger.LogInformation("[Gdi32] GetNearestPaletteIndex(hPal=0x{HPal:X8}, color=0x{Color:X8})", hPal, color);
+			// Stub - return 0 (first palette entry)
+			return 0;
+		}
+
+		[DllModuleExport(16)]
+		private uint GetPaletteEntries(uint hPal, uint iStart, uint cEntries, uint pPalEntries)
+		{
+			_logger.LogInformation("[Gdi32] GetPaletteEntries(hPal=0x{HPal:X8}, iStart={IStart}, cEntries={CEntries}, pPalEntries=0x{PPalEntries:X8})",
+				hPal, iStart, cEntries, pPalEntries);
+			// Stub - return 0 (no entries)
+			return 0;
+		}
+
+		// Text functions
+		[DllModuleExport(8)]
+		private uint GetTextMetricsA(uint hdc, uint lptm)
+		{
+			_logger.LogInformation("[Gdi32] GetTextMetricsA(hdc=0x{Hdc:X8}, lptm=0x{Lptm:X8})", hdc, lptm);
+			
+			if (lptm != 0)
+			{
+				// Fill in TEXTMETRIC structure with default values
+				_env.MemWrite32(lptm, 16);       // tmHeight
+				_env.MemWrite32(lptm + 4, 14);   // tmAscent
+				_env.MemWrite32(lptm + 8, 2);    // tmDescent
+				_env.MemWrite32(lptm + 12, 0);   // tmInternalLeading
+				_env.MemWrite32(lptm + 16, 0);   // tmExternalLeading
+				_env.MemWrite32(lptm + 20, 8);   // tmAveCharWidth
+				_env.MemWrite32(lptm + 24, 8);   // tmMaxCharWidth
+				_env.MemWrite32(lptm + 28, 400); // tmWeight
+				// NOTE: The TEXTMETRIC structure has additional fields beyond tmWeight (such as tmItalic, tmUnderlined, tmStruckOut, tmFirstChar, etc.)
+				// that are not initialized here. The structure is only partially initialized; additional fields may need to be filled
+				// if required by the application.
+			}
+			
+			return 1; // TRUE
+		}
+
+		// Advanced drawing functions
+		[DllModuleExport(24)]
+		private uint PatBlt(uint hdc, int x, int y, int w, int h, uint rop)
+		{
+			_logger.LogInformation("[Gdi32] PatBlt(hdc=0x{Hdc:X8}, x={X}, y={Y}, w={W}, h={H}, rop=0x{Rop:X8})",
+				hdc, x, y, w, h, rop);
+			// Stub - return TRUE (success)
+			return 1;
+		}
+
+		[DllModuleExport(36)]
+		private uint Chord(uint hdc, int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
+		{
+			_logger.LogInformation("[Gdi32] Chord(hdc=0x{Hdc:X8}, x1={X1}, y1={Y1}, x2={X2}, y2={Y2}, x3={X3}, y3={Y3}, x4={X4}, y4={Y4})",
+				hdc, x1, y1, x2, y2, x3, y3, x4, y4);
+			// Stub - return TRUE (success)
+			return 1;
+		}
+
+		[DllModuleExport(36)]
+		private uint Pie(uint hdc, int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
+		{
+			_logger.LogInformation("[Gdi32] Pie(hdc=0x{Hdc:X8}, x1={X1}, y1={Y1}, x2={X2}, y2={Y2}, x3={X3}, y3={Y3}, x4={X4}, y4={Y4})",
+				hdc, x1, y1, x2, y2, x3, y3, x4, y4);
+			// Stub - return TRUE (success)
+			return 1;
+		}
+
+		[DllModuleExport(12)]
+		private uint Polygon(uint hdc, uint apt, int cpt)
+		{
+			_logger.LogInformation("[Gdi32] Polygon(hdc=0x{Hdc:X8}, apt=0x{Apt:X8}, cpt={Cpt})", hdc, apt, cpt);
+			// Stub - return TRUE (success)
+			return 1;
+		}
+
+		[DllModuleExport(28)]
+		private uint RoundRect(uint hdc, int left, int top, int right, int bottom, int width, int height)
+		{
+			_logger.LogInformation("[Gdi32] RoundRect(hdc=0x{Hdc:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom}, width={Width}, height={Height})",
+				hdc, left, top, right, bottom, width, height);
+			// Stub - return TRUE (success)
+			return 1;
 		}
 
 		private enum GdiObjectType

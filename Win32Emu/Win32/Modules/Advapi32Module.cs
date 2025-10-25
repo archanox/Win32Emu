@@ -47,8 +47,14 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			case "REGCREATEKEYEXA":
 				returnValue = RegCreateKeyExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.LpcStr(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8));
 				return true;
+			case "REGCREATEKEYA":
+				returnValue = RegCreateKeyA(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
+				return true;
 			case "REGSETVALUEEXA":
 				returnValue = RegSetValueExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+				return true;
+			case "REGSETVALUEA":
+				returnValue = RegSetValueA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
 			case "REGQUERYVALUEEXA":
 				returnValue = RegQueryValueExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
@@ -129,6 +135,12 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				return true;
 			case "SETSECURITYDESCRIPTOROWNER":
 				returnValue = SetSecurityDescriptorOwner(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "GETFILESECURITYA":
+				returnValue = GetFileSecurityA(a.LpcStr(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+			case "SETFILESECURITYA":
+				returnValue = SetFileSecurityA(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
 				return true;
 
 			// Service functions
@@ -665,6 +677,60 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		
 		// Stub implementation - report success
 		return 0; // ERROR_SUCCESS
+	}
+
+	[DllModuleExport(12)]
+	private uint RegCreateKeyA(uint hKey, in LpcStr lpSubKey, uint phkResult)
+	{
+		var subKey = lpSubKey.ToString() ?? string.Empty;
+		_logger.LogInformation("[Advapi32] RegCreateKeyA(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\", phkResult=0x{PhkResult:X8})", hKey, subKey, phkResult);
+		
+		// Create a dummy handle
+		uint handle = 0xABCD0000 | (uint)(subKey.GetHashCode() & 0xFFFF);
+		if (phkResult != 0)
+		{
+			_env.MemWrite32(phkResult, handle);
+		}
+		
+		return 0; // ERROR_SUCCESS
+	}
+
+	[DllModuleExport(16)]
+	private uint RegSetValueA(uint hKey, in LpcStr lpSubKey, uint dwType, uint lpData, uint cbData)
+	{
+		var subKey = lpSubKey.ToString() ?? string.Empty;
+		_logger.LogInformation("[Advapi32] RegSetValueA(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\", dwType={DwType}, lpData=0x{LpData:X8}, cbData={CbData})",
+			hKey, subKey, dwType, lpData, cbData);
+		
+		// Stub implementation - report success
+		return 0; // ERROR_SUCCESS
+	}
+
+	[DllModuleExport(20)]
+	private uint GetFileSecurityA(in LpcStr lpFileName, uint RequestedInformation, uint pSecurityDescriptor, uint nLength, uint lpnLengthNeeded)
+	{
+		var fileName = lpFileName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Advapi32] GetFileSecurityA(lpFileName=\"{FileName}\", RequestedInformation=0x{RequestedInformation:X}, nLength={NLength})",
+			fileName, RequestedInformation, nLength);
+		
+		// Stub implementation - report insufficient buffer
+		if (lpnLengthNeeded != 0)
+		{
+			_env.MemWrite32(lpnLengthNeeded, 20); // Minimal security descriptor size
+		}
+		
+		return 0; // FALSE (insufficient buffer)
+	}
+
+	[DllModuleExport(12)]
+	private uint SetFileSecurityA(in LpcStr lpFileName, uint SecurityInformation, uint pSecurityDescriptor)
+	{
+		var fileName = lpFileName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Advapi32] SetFileSecurityA(lpFileName=\"{FileName}\", SecurityInformation=0x{SecurityInformation:X}, pSecurityDescriptor=0x{PSecurityDescriptor:X8})",
+			fileName, SecurityInformation, pSecurityDescriptor);
+		
+		// Stub implementation - report success
+		return 1; // TRUE
 	}
 
 	private class ServiceData
