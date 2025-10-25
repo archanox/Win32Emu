@@ -341,12 +341,6 @@ namespace Win32Emu.Win32.Modules
 				case "CHECKDLGBUTTON":
 					returnValue = CheckDlgButton(a.UInt32(0), a.Int32(1), a.UInt32(2));
 					return true;
-				case "CHECKRADIOBUTTON":
-					returnValue = CheckRadioButton(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3));
-					return true;
-				case "ISDLGBUTTONCHECKED":
-					returnValue = IsDlgButtonChecked(a.UInt32(0), a.Int32(1));
-					return true;
 				case "MSGWAITFORMULTIPLEOBJECTS":
 					returnValue = MsgWaitForMultipleObjects(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 					return true;
@@ -3297,20 +3291,6 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] SetDlgItemInt(hDlg=0x{HDlg:X8}, nIDDlgItem={NIDDlgItem}, uValue={UValue})", 
 				hDlg, nIDDlgItem, uValue);
-			return 1; // TRUE
-		}
-
-		private uint IsDlgButtonChecked(uint hDlg, int nIDButton)
-		{
-			_logger.LogInformation("[User32] IsDlgButtonChecked(hDlg=0x{HDlg:X8}, nIDButton={NIDButton})", hDlg, nIDButton);
-			// Stub - return BST_UNCHECKED
-			return 0;
-		}
-
-		private uint CheckRadioButton(uint hDlg, int nIDFirstButton, int nIDLastButton, int nIDCheckButton)
-		{
-			_logger.LogInformation("[User32] CheckRadioButton(hDlg=0x{HDlg:X8}, first={First}, last={Last}, check={Check})", 
-				hDlg, nIDFirstButton, nIDLastButton, nIDCheckButton);
 			return 1; // TRUE
 		}
 

@@ -214,9 +214,11 @@ public class Shell32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Shell32] DragQueryFileA(hDrop=0x{HDrop:X8}, iFile={IFile}, lpszFile=0x{LpszFile:X8}, cch={Cch})",
 			hDrop, iFile, lpszFile, cch);
-		
+
 		// Stub - return 0 (no files dropped)
 		return 0;
+	}
+
 	private uint ShellExecuteExA(uint lpExecInfo)
 	{
 		_logger.LogInformation("[Shell32] ShellExecuteExA(lpExecInfo=0x{LpExecInfo:X8})", lpExecInfo);

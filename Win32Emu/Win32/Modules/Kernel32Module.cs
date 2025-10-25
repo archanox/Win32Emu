@@ -603,17 +603,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "WRITEPRIVATEPROFILESTRINGA":
 				returnValue = WritePrivateProfileStringA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.LpcStr(3));
 				return true;
-			case "CREATEPROCESSA":
-				returnValue = CreateProcessA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9));
-				return true;
 			case "DUPLICATEHANDLE":
 				returnValue = DuplicateHandle(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
 				return true;
 			case "GETEXITCODEPROCESS":
 				returnValue = GetExitCodeProcess(a.UInt32(0), a.UInt32(1));
-				return true;
-			case "GETFILEATTRIBUTESA":
-				returnValue = GetFileAttributesA(a.LpcStr(0));
 				return true;
 			case "GETFILESIZE":
 				returnValue = GetFileSize(a.UInt32(0), a.UInt32(1));
@@ -623,9 +617,6 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "GETFULLPATHNAMEA":
 				returnValue = GetFullPathNameA(a.LpcStr(0), a.UInt32(1), a.LpStr(2), a.UInt32(3));
-				return true;
-			case "GETLOCALEINFOA":
-				returnValue = GetLocaleInfoA(a.UInt32(0), a.UInt32(1), a.LpStr(2), a.Int32(3));
 				return true;
 			case "GETLOCALEINFOW":
 				returnValue = GetLocaleInfoW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3));
@@ -6145,28 +6136,6 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	/// <summary>
-	/// Retrieves information about a locale specified by identifier.
-	/// </summary>
-	[DllModuleExport(16)]
-	private uint GetLocaleInfoA(uint Locale, uint LCType, in LpStr lpLCData, int cchData)
-	{
-		_logger.LogInformation("[Kernel32] GetLocaleInfoA(Locale=0x{Locale:X}, LCType=0x{LCType:X})", Locale, LCType);
-		var localeData = "en-US";
-		var requiredLength = localeData.Length + 1;
-		if (cchData == 0 || lpLCData.Address == 0)
-		{
-			return (uint)requiredLength;
-		}
-		if (cchData < requiredLength)
-		{
-			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
-			return 0;
-		}
-		_env.WriteAnsiStringAt(lpLCData.Address, localeData);
-		return (uint)requiredLength;
-	}
-
-	/// <summary>
 	/// Retrieves information about a locale specified by identifier (Unicode version).
 	/// </summary>
 	[DllModuleExport(16)]
@@ -6251,6 +6220,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return LOCALE_US_ENGLISH;
 	}
 
+	/// <summary>
+	/// Retrieves information about a locale specified by identifier.
+	/// </summary>
+	[DllModuleExport(16)]
 	private uint GetLocaleInfoA(uint locale, uint lcType, in LpStr lpLCData, int cchData)
 	{
 		_logger.LogInformation("[Kernel32] GetLocaleInfoA(locale=0x{Locale:X8}, lcType=0x{LcType:X8}, cchData={CchData})",
