@@ -1202,9 +1202,10 @@ public sealed class Emulator : IDisposable
                 }
                 else
                 {
-                    // Can't restore from stack, set to ESP as a safe fallback
-                    _cpu!.SetRegister("EBP", esp);
-                    _logger.LogDebug("[Emulator] Reset EBP to ESP (was import hook 0x{OldEBP:X8}, stack restoration failed)", currentEbp);
+                    // Can't restore from stack - leave EBP unchanged
+                    // Setting EBP=ESP would corrupt the frame pointer if the caller relies on it
+                    // The caller code that used EBP for the indirect call will handle restoring it
+                    _logger.LogDebug("[Emulator] Cannot restore EBP from stack (was import hook 0x{OldEBP:X8}), leaving unchanged", currentEbp);
                 }
             }
             else if (inStackRegion && isAligned && savedEbpValid)
