@@ -222,19 +222,21 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private void PurgeJitCache()
     {
-        try
+        // Create a temporary JitCache instance with default directory to purge
+        // This will delete all cache files from disk, regardless of which
+        // JitCache instance created them
+        var cache = new JitCache();
+        var success = cache.PurgeCache();
+        
+        if (success)
         {
-            // Create a temporary JitCache instance with default directory to purge
-            var cache = new JitCache();
-            cache.PurgeCache();
-            
-            // Show success message (could be enhanced with a dialog service)
+            // Success - cache has been purged
             System.Diagnostics.Debug.WriteLine("[SettingsViewModel] JIT cache purged successfully");
         }
-        catch (Exception ex)
+        else
         {
-            // Log error (could be enhanced with proper error handling/dialog)
-            System.Diagnostics.Debug.WriteLine($"[SettingsViewModel] Failed to purge JIT cache: {ex.Message}");
+            // Failure - error was logged by JitCache
+            System.Diagnostics.Debug.WriteLine("[SettingsViewModel] Failed to purge JIT cache - check logs for details");
         }
     }
 }

@@ -139,7 +139,8 @@ public class JitCache
 	/// <summary>
 	/// Purges all cache files from disk and clears in-memory cache
 	/// </summary>
-	public void PurgeCache()
+	/// <returns>True if the operation succeeded, false otherwise</returns>
+	public bool PurgeCache()
 	{
 		try
 		{
@@ -155,11 +156,12 @@ public class JitCache
 			}
 			
 			Clear();
+			return true;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[JitCache] Failed to purge cache from {CacheDirectory}", _cacheDirectory);
-			throw;
+			return false;
 		}
 	}
 	

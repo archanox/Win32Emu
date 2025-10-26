@@ -198,7 +198,10 @@ public class JitCacheTests
 		Assert.True(cacheFiles.Length >= 1, "Cache files should exist before purge");
 		
 		// Act - Purge the cache
-		cache.PurgeCache();
+		var success = cache.PurgeCache();
+		
+		// Assert - Purge should succeed
+		Assert.True(success);
 		
 		// Assert - Check memory cache is cleared
 		var stats = cache.GetStatistics();
