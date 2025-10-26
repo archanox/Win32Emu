@@ -709,10 +709,6 @@ public sealed class Emulator : IDisposable
                         var retEip = _vm!.Read32(esp);
                         LogDebug($"[Import] Return address from stack: 0x{retEip:X8}");
                         
-                        // Restore EBP from stack BEFORE cleanup to get the frame pointer from the caller's stack
-                        var espBeforeCleanup = esp;
-                        RestoreEbpFromStack(espBeforeCleanup);
-                        
                         esp += 4 + (uint)argBytes;
                         LogDebug($"[Import] ESP after cleanup: 0x{esp:X8} (added {4 + argBytes} bytes)");
                         _cpu.SetRegister("ESP", esp);
@@ -721,6 +717,9 @@ public sealed class Emulator : IDisposable
                         
                         // Restore callee-saved registers (except EBP - see above)
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                        
+                        // Restore EBP from stack to handle indirect call cases
+                        RestoreEbpFromStack(esp);
                         
                         // Log final state after import return
                         LogDebug($"[Import] After return: EIP=0x{_cpu.GetEip():X8} ESP=0x{_cpu.GetRegister("ESP"):X8} EBP=0x{_cpu.GetRegister("EBP"):X8}");
