@@ -421,7 +421,7 @@ public sealed class Emulator : IDisposable
                 
                 if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
                 {
-                    LogDebug($"[COM] Method returned 0x{ret:X8}");
+                    LogDebug($"[COM] Method returned 0x{ret:X8}, argBytes={comArgBytes}");
                     var esp = _cpu.GetRegister("ESP");
                     var retEip = _vm!.Read32(esp);
                     // COM methods use stdcall convention - callee cleans up the stack
