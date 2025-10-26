@@ -6909,7 +6909,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		
 		// Return a dummy file handle
 		// A full implementation would actually create the file
-		var handle = 0x4000u + (uint)pathName.GetHashCode() & 0xFFF;
+		var handle = 0x4000u + ((uint)pathName.GetHashCode() & 0xFFF);
 		_logger.LogInformation("[Kernel32] _lcreat: Created file handle 0x{Handle:X8}", handle);
 		return handle;
 	}
