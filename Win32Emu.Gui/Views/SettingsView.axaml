@@ -111,6 +111,37 @@
                              Margin="0,-8,0,0"/>
                 </StackPanel>
 
+                <!-- JIT Cache Management -->
+                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="0,20,0,0"
+                        Margin="0,20,0,0">
+                    <StackPanel Spacing="20">
+                        <TextBlock Text="JIT Cache Management"
+                                 FontWeight="Bold"
+                                 FontSize="16"/>
+                        
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Clear JIT Compilation Cache"
+                                     FontWeight="Bold"
+                                     FontSize="14"/>
+                            <TextBlock Text="The JIT compiler caches compiled code blocks to improve startup performance. If you experience issues, you can purge the cache."
+                                     FontSize="12"
+                                     Opacity="0.7"
+                                     TextWrapping="Wrap"/>
+                            <Button Command="{Binding PurgeJitCacheCommand}"
+                                  Content="Purge JIT Cache"
+                                  HorizontalAlignment="Left"
+                                  Margin="0,8,0,0"/>
+                            <TextBlock Text="{Binding CacheStatusMessage}"
+                                     FontSize="12"
+                                     FontWeight="SemiBold"
+                                     Margin="0,4,0,0"
+                                     IsVisible="{Binding CacheStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- Instruction Analyzer Section -->
                 <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                         BorderThickness="0,1,0,0"

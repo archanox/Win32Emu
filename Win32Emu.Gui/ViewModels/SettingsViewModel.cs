@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
+using Win32Emu.Cpu.Jit;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -57,6 +59,9 @@ public partial class SettingsViewModel : ViewModelBase
     
     [ObservableProperty]
     private string _otlpEndpoint;
+    
+    [ObservableProperty]
+    private string _cacheStatusMessage = string.Empty;
 
     public ObservableCollection<string> RenderingBackends { get; } = new()
     {
@@ -212,5 +217,29 @@ public partial class SettingsViewModel : ViewModelBase
     {
         _configuration.OtlpEndpoint = value;
         _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    /// <summary>
+    /// Command to purge the JIT cache
+    /// </summary>
+    [RelayCommand]
+    private void PurgeJitCache()
+    {
+        // Purge the JIT cache using the static method to avoid unnecessary instantiation
+        // This will delete all cache files from disk, regardless of which
+        // JitCache instance created them
+        var success = JitCache.PurgeCache(JitCache.DefaultCacheDirectory);
+        
+        if (success)
+        {
+            CacheStatusMessage = "✓ JIT cache purged successfully";
+        }
+        else
+        {
+            CacheStatusMessage = "✗ Failed to purge JIT cache - check logs for details";
+        }
+        
+        // Clear the message after 5 seconds
+        Task.Delay(5000).ContinueWith(_ => CacheStatusMessage = string.Empty);
     }
 }
