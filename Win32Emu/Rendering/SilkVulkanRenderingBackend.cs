@@ -877,7 +877,7 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
             }
 
             _window.DoEvents();
-            _logger.LogDebug("[Vulkan] Events processed");
+            // _logger.LogDebug("[Vulkan] Events processed");
             // Note: Silk.NET.Windowing handles events internally via DoEvents()
             // Event translation would require hooking into window events.
         }
