@@ -646,8 +646,68 @@ public class JitCpu : IAsyncCpu
 				break;
 			
 			// String operations
+			case Mnemonic.Movsb:
+				ExecMovsb();
+				break;
+			case Mnemonic.Movsw:
+				ExecMovsw();
+				break;
+			case Mnemonic.Movsd:
+				ExecMovsd();
+				break;
+			case Mnemonic.Stosb:
+				ExecStosb();
+				break;
+			case Mnemonic.Stosw:
+				ExecStosw();
+				break;
+			case Mnemonic.Stosd:
+				ExecStosd();
+				break;
+			case Mnemonic.Lodsb:
+				ExecLodsb();
+				break;
 			case Mnemonic.Lodsw:
 				ExecLodsw();
+				break;
+			case Mnemonic.Lodsd:
+				ExecLodsd();
+				break;
+			case Mnemonic.Scasb:
+				ExecScasb();
+				break;
+			case Mnemonic.Scasw:
+				ExecScasw();
+				break;
+			case Mnemonic.Scasd:
+				ExecScasd();
+				break;
+			case Mnemonic.Cmpsb:
+				ExecCmpsb();
+				break;
+			case Mnemonic.Cmpsw:
+				ExecCmpsw();
+				break;
+			case Mnemonic.Cmpsd:
+				ExecCmpsd();
+				break;
+			case Mnemonic.Insb:
+				ExecInsb();
+				break;
+			case Mnemonic.Insw:
+				ExecInsw();
+				break;
+			case Mnemonic.Insd:
+				ExecInsd();
+				break;
+			case Mnemonic.Outsb:
+				ExecOutsb();
+				break;
+			case Mnemonic.Outsw:
+				ExecOutsw();
+				break;
+			case Mnemonic.Outsd:
+				ExecOutsd();
 				break;
 			
 			// I/O operations
@@ -1382,6 +1442,19 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// String operations
+	private void ExecLodsb()
+	{
+		// LODSB - Load byte from [ESI] into AL
+		byte value = _mem.Read8(_esi);
+		_eax = (_eax & 0xFFFFFF00) | value;
+		
+		// Update ESI based on direction flag
+		if (GetFlag(Df))
+			_esi -= 1; // Decrement for backward
+		else
+			_esi += 1; // Increment for forward
+	}
+	
 	private void ExecLodsw()
 	{
 		// LODSW - Load word from [ESI] into AX
@@ -1393,6 +1466,378 @@ public class JitCpu : IAsyncCpu
 			_esi -= 2; // Decrement for backward
 		else
 			_esi += 2; // Increment for forward
+	}
+	
+	private void ExecLodsd()
+	{
+		// LODSD - Load dword from [ESI] into EAX
+		_eax = _mem.Read32(_esi);
+		
+		// Update ESI based on direction flag
+		if (GetFlag(Df))
+			_esi -= 4; // Decrement for backward
+		else
+			_esi += 4; // Increment for forward
+	}
+	
+	private void ExecMovsb()
+	{
+		// MOVSB - Move byte from [ESI] to [EDI]
+		byte value = _mem.Read8(_esi);
+		_mem.Write8(_edi, value);
+		
+		// Update ESI and EDI based on direction flag
+		if (GetFlag(Df))
+		{
+			_esi -= 1; // Decrement for backward
+			_edi -= 1;
+		}
+		else
+		{
+			_esi += 1; // Increment for forward
+			_edi += 1;
+		}
+	}
+	
+	private void ExecMovsw()
+	{
+		// MOVSW - Move word from [ESI] to [EDI]
+		ushort value = _mem.Read16(_esi);
+		_mem.Write16(_edi, value);
+		
+		// Update ESI and EDI based on direction flag
+		if (GetFlag(Df))
+		{
+			_esi -= 2; // Decrement for backward
+			_edi -= 2;
+		}
+		else
+		{
+			_esi += 2; // Increment for forward
+			_edi += 2;
+		}
+	}
+	
+	private void ExecMovsd()
+	{
+		// MOVSD - Move dword from [ESI] to [EDI]
+		uint value = _mem.Read32(_esi);
+		_mem.Write32(_edi, value);
+		
+		// Update ESI and EDI based on direction flag
+		if (GetFlag(Df))
+		{
+			_esi -= 4; // Decrement for backward
+			_edi -= 4;
+		}
+		else
+		{
+			_esi += 4; // Increment for forward
+			_edi += 4;
+		}
+	}
+	
+	private void ExecStosb()
+	{
+		// STOSB - Store AL to [EDI]
+		_mem.Write8(_edi, (byte)_eax);
+		
+		// Update EDI based on direction flag
+		if (GetFlag(Df))
+			_edi -= 1; // Decrement for backward
+		else
+			_edi += 1; // Increment for forward
+	}
+	
+	private void ExecStosw()
+	{
+		// STOSW - Store AX to [EDI]
+		_mem.Write16(_edi, (ushort)_eax);
+		
+		// Update EDI based on direction flag
+		if (GetFlag(Df))
+			_edi -= 2; // Decrement for backward
+		else
+			_edi += 2; // Increment for forward
+	}
+	
+	private void ExecStosd()
+	{
+		// STOSD - Store EAX to [EDI]
+		_mem.Write32(_edi, _eax);
+		
+		// Update EDI based on direction flag
+		if (GetFlag(Df))
+			_edi -= 4; // Decrement for backward (4 bytes for doubleword)
+		else
+			_edi += 4; // Increment for forward
+	}
+	
+	private void ExecScasb()
+	{
+		// SCASB - Scan byte: compare AL with [EDI]
+		byte al = (byte)_eax;
+		byte value = _mem.Read8(_edi);
+		uint result = (uint)(al - value);
+		
+		// Set flags based on comparison
+		SetFlagVal(Cf, al < value);
+		SetFlagVal(Of, ((al ^ value) & (al ^ result) & 0x80) != 0);
+		SetFlagVal(Af, ((al ^ value ^ result) & 0x10) != 0);
+		SetFlagVal(Sf, (result & 0x80) != 0);
+		SetFlagVal(Zf, (byte)result == 0);
+		
+		// Calculate parity
+		byte lo = (byte)result;
+		int bits = lo ^ (lo >> 4);
+		bits &= 0xF;
+		bool even = (((0x6996 >> bits) & 1) == 0);
+		SetFlagVal(Pf, even);
+		
+		// Update EDI based on direction flag
+		if (GetFlag(Df))
+			_edi -= 1;
+		else
+			_edi += 1;
+	}
+	
+	private void ExecScasw()
+	{
+		// SCASW - Scan word: compare AX with [EDI]
+		ushort ax = (ushort)_eax;
+		ushort value = _mem.Read16(_edi);
+		uint result = (uint)(ax - value);
+		
+		// Set flags based on comparison
+		SetFlagVal(Cf, ax < value);
+		SetFlagVal(Of, ((ax ^ value) & (ax ^ result) & 0x8000) != 0);
+		SetFlagVal(Af, ((ax ^ value ^ result) & 0x10) != 0);
+		SetFlagVal(Sf, (result & 0x8000) != 0);
+		SetFlagVal(Zf, (ushort)result == 0);
+		
+		// Calculate parity
+		byte lo = (byte)result;
+		int bits = lo ^ (lo >> 4);
+		bits &= 0xF;
+		bool even = (((0x6996 >> bits) & 1) == 0);
+		SetFlagVal(Pf, even);
+		
+		// Update EDI based on direction flag
+		if (GetFlag(Df))
+			_edi -= 2;
+		else
+			_edi += 2;
+	}
+	
+	private void ExecScasd()
+	{
+		// SCASD - Scan dword: compare EAX with [EDI]
+		uint eax = _eax;
+		uint value = _mem.Read32(_edi);
+		uint result = eax - value;
+		
+		// Set flags based on comparison (same as SUB)
+		SetFlagVal(Cf, eax < value);
+		SetFlagVal(Of, ((eax ^ value) & (eax ^ result) & 0x80000000) != 0);
+		SetFlagVal(Af, ((eax ^ value ^ result) & 0x10) != 0);
+		SetFlagVal(Sf, (result & 0x80000000) != 0);
+		SetFlagVal(Zf, result == 0);
+		
+		// Calculate parity
+		byte lo = (byte)result;
+		int bits = lo ^ (lo >> 4);
+		bits &= 0xF;
+		bool even = (((0x6996 >> bits) & 1) == 0);
+		SetFlagVal(Pf, even);
+		
+		// Update EDI based on direction flag
+		if (GetFlag(Df))
+			_edi -= 4;
+		else
+			_edi += 4;
+	}
+	
+	private void ExecCmpsb()
+	{
+		// CMPSB - Compare byte [ESI] with [EDI]
+		byte a = _mem.Read8(_esi);
+		byte b = _mem.Read8(_edi);
+		uint result = (uint)(a - b);
+		
+		// Set flags based on comparison
+		SetFlagVal(Cf, a < b);
+		SetFlagVal(Of, ((a ^ b) & (a ^ result) & 0x80) != 0);
+		SetFlagVal(Af, ((a ^ b ^ result) & 0x10) != 0);
+		SetFlagVal(Sf, (result & 0x80) != 0);
+		SetFlagVal(Zf, (byte)result == 0);
+		
+		// Calculate parity
+		byte lo = (byte)result;
+		int bits = lo ^ (lo >> 4);
+		bits &= 0xF;
+		bool even = (((0x6996 >> bits) & 1) == 0);
+		SetFlagVal(Pf, even);
+		
+		// Update ESI and EDI based on direction flag
+		if (GetFlag(Df))
+		{
+			_esi -= 1;
+			_edi -= 1;
+		}
+		else
+		{
+			_esi += 1;
+			_edi += 1;
+		}
+	}
+	
+	private void ExecCmpsw()
+	{
+		// CMPSW - Compare word [ESI] with [EDI]
+		ushort a = _mem.Read16(_esi);
+		ushort b = _mem.Read16(_edi);
+		uint result = (uint)(a - b);
+		
+		// Set flags based on comparison
+		SetFlagVal(Cf, a < b);
+		SetFlagVal(Of, ((a ^ b) & (a ^ result) & 0x8000) != 0);
+		SetFlagVal(Af, ((a ^ b ^ result) & 0x10) != 0);
+		SetFlagVal(Sf, (result & 0x8000) != 0);
+		SetFlagVal(Zf, (ushort)result == 0);
+		
+		// Calculate parity
+		byte lo = (byte)result;
+		int bits = lo ^ (lo >> 4);
+		bits &= 0xF;
+		bool even = (((0x6996 >> bits) & 1) == 0);
+		SetFlagVal(Pf, even);
+		
+		// Update ESI and EDI based on direction flag
+		if (GetFlag(Df))
+		{
+			_esi -= 2;
+			_edi -= 2;
+		}
+		else
+		{
+			_esi += 2;
+			_edi += 2;
+		}
+	}
+	
+	private void ExecCmpsd()
+	{
+		// CMPSD - Compare dword [ESI] with [EDI]
+		uint a = _mem.Read32(_esi);
+		uint b = _mem.Read32(_edi);
+		uint result = a - b;
+		
+		// Set flags based on comparison (same as SUB)
+		SetFlagVal(Cf, a < b);
+		SetFlagVal(Of, ((a ^ b) & (a ^ result) & 0x80000000) != 0);
+		SetFlagVal(Af, ((a ^ b ^ result) & 0x10) != 0);
+		SetFlagVal(Sf, (result & 0x80000000) != 0);
+		SetFlagVal(Zf, result == 0);
+		
+		// Calculate parity
+		byte lo = (byte)result;
+		int bits = lo ^ (lo >> 4);
+		bits &= 0xF;
+		bool even = (((0x6996 >> bits) & 1) == 0);
+		SetFlagVal(Pf, even);
+		
+		// Update ESI and EDI based on direction flag
+		if (GetFlag(Df))
+		{
+			_esi -= 4;
+			_edi -= 4;
+		}
+		else
+		{
+			_esi += 4;
+			_edi += 4;
+		}
+	}
+	
+	private void ExecInsb()
+	{
+		// INSB - Input byte from port DX to [EDI]
+		// In emulation, I/O ports are not directly accessed, so we write 0
+		_mem.Write8(_edi, 0);
+		
+		// Update EDI based on direction flag
+		if (GetFlag(Df))
+			_edi -= 1;
+		else
+			_edi += 1;
+	}
+	
+	private void ExecInsw()
+	{
+		// INSW - Input word from port DX to [EDI]
+		// In emulation, I/O ports are not directly accessed, so we write 0
+		_mem.Write16(_edi, 0);
+		
+		// Update EDI based on direction flag
+		if (GetFlag(Df))
+			_edi -= 2;
+		else
+			_edi += 2;
+	}
+	
+	private void ExecInsd()
+	{
+		// INSD - Input dword from port DX to [EDI]
+		// In emulation, I/O ports are not directly accessed, so we write 0
+		_mem.Write32(_edi, 0);
+		
+		// Update EDI based on direction flag
+		if (GetFlag(Df))
+			_edi -= 4;
+		else
+			_edi += 4;
+	}
+	
+	private void ExecOutsb()
+	{
+		// OUTSB - Output byte from [ESI] to port DX
+		// In emulation, I/O ports are not directly accessed
+		// We just read the value (required for proper ESI advancement)
+		_ = _mem.Read8(_esi);
+		
+		// Update ESI based on direction flag
+		if (GetFlag(Df))
+			_esi -= 1;
+		else
+			_esi += 1;
+	}
+	
+	private void ExecOutsw()
+	{
+		// OUTSW - Output word from [ESI] to port DX
+		// In emulation, I/O ports are not directly accessed
+		// We just read the value (required for proper ESI advancement)
+		_ = _mem.Read16(_esi);
+		
+		// Update ESI based on direction flag
+		if (GetFlag(Df))
+			_esi -= 2;
+		else
+			_esi += 2;
+	}
+	
+	private void ExecOutsd()
+	{
+		// OUTSD - Output dword from [ESI] to port DX
+		// In emulation, I/O ports are not directly accessed
+		// We just read the value (required for proper ESI advancement)
+		_ = _mem.Read32(_esi);
+		
+		// Update ESI based on direction flag
+		if (GetFlag(Df))
+			_esi -= 4;
+		else
+			_esi += 4;
 	}
 
 	// I/O operations
