@@ -112,6 +112,42 @@ public class MultimediaTests : IDisposable
     }
 
     [Fact]
+    public void PlaySoundA_WithNullSound_ShouldReturnSuccess()
+    {
+        // Act - Playing NULL sound should stop any currently playing sound
+        var result = _testEnv.CallWinMmApi("PLAYSOUNDA", 0u, 0u, 0u);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE - success
+    }
+
+    [Fact]
+    public void PlaySoundA_WithSoundFile_ShouldReturnSuccess()
+    {
+        // Arrange - Allocate memory for sound filename
+        var soundPath = _testEnv.WriteString("test.wav");
+
+        // Act - Play sound asynchronously (SND_ASYNC = 0x0001)
+        var result = _testEnv.CallWinMmApi("PLAYSOUNDA", soundPath, 0u, 0x0001u);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE - success
+    }
+
+    [Fact]
+    public void SndPlaySoundA_WithSoundFile_ShouldReturnSuccess()
+    {
+        // Arrange - Allocate memory for sound filename
+        var soundPath = _testEnv.WriteString("test.wav");
+
+        // Act - Play sound asynchronously (SND_ASYNC = 0x0001)
+        var result = _testEnv.CallWinMmApi("SNDPLAYSOUNDA", soundPath, 0x0001u);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE - success
+    }
+
+    [Fact]
     public void GetDeviceCaps_ShouldReturnResolution()
     {
         // Arrange
