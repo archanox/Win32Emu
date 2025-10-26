@@ -753,7 +753,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] DWORD fdwSound
 		/// );
 		/// </summary>
-		[DllModuleExport(12)]
+		[DllModuleExport(1)]
 		private uint PlaySoundA(in LpcStr pszSound, uint hmod, uint fdwSound)
 		{
 			var soundName = pszSound.ToString() ?? string.Empty;
@@ -771,7 +771,7 @@ namespace Win32Emu.Win32.Modules
 			// SND_APPLICATION (0x0080) - Use application-specific association
 			// SND_ALIAS (0x00010000) - pszSound is a system event alias
 			// SND_FILENAME (0x00020000) - pszSound is a filename
-			// SND_RESOURCE (0x00040004) - pszSound is a resource identifier; hmod identifies the module
+			// SND_RESOURCE (0x00040000) - pszSound is a resource identifier; hmod identifies the module
 			// SND_PURGE (0x0040) - Stop all sounds
 			// SND_NOWAIT (0x00002000) - Don't wait if driver is busy
 			// SND_ALIAS_ID (0x00110000) - pszSound is a predefined sound identifier
