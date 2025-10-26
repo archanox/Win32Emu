@@ -420,22 +420,31 @@ namespace Win32Emu.Win32.Modules
 				return 0x80070057; // DDERR_INVALIDPARAMS
 			}
 
-			// Check bounds
-			if (dwStartingEntry >= palette.Entries.Length || dwStartingEntry + dwCount > palette.Entries.Length)
+			// Check starting entry is valid
+			if (dwStartingEntry >= palette.Entries.Length)
 			{
-				_logger.LogError("[DDraw] SetEntries: invalid range (start={Start}, count={Count}, max={Max})",
-					dwStartingEntry, dwCount, palette.Entries.Length);
+				_logger.LogError("[DDraw] SetEntries: starting entry {Start} is beyond palette size {Max}",
+					dwStartingEntry, palette.Entries.Length);
 				return 0x80070057; // DDERR_INVALIDPARAMS
 			}
 
+			// Clamp count to available entries (for compatibility with games that try to set more entries than palette has)
+			var actualCount = dwCount;
+			if (dwStartingEntry + dwCount > palette.Entries.Length)
+			{
+				actualCount = (uint)palette.Entries.Length - dwStartingEntry;
+				_logger.LogWarning("[DDraw] SetEntries: clamping count from {RequestedCount} to {ActualCount} (start={Start}, max={Max})",
+					dwCount, actualCount, dwStartingEntry, palette.Entries.Length);
+			}
+
 			// Read and update palette entries (PALETTEENTRY is 4 bytes: r,g,b,flags)
-			for (var i = 0u; i < dwCount; i++)
+			for (var i = 0u; i < actualCount; i++)
 			{
 				var entry = _env.MemRead32(lpEntries + (i * 4));
 				palette.Entries[dwStartingEntry + i] = entry;
 			}
 
-			_logger.LogInformation("[DDraw] Updated {Count} palette entries starting at index {Start}", dwCount, dwStartingEntry);
+			_logger.LogInformation("[DDraw] Updated {Count} palette entries starting at index {Start}", actualCount, dwStartingEntry);
 			return 0; // DD_OK
 		}
 
