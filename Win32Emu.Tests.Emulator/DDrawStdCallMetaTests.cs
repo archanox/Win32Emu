@@ -1,5 +1,6 @@
 using Xunit;
 using Win32Emu.Win32;
+using Win32Emu.Win32.Modules;
 
 namespace Win32Emu.Tests.Emulator;
 
@@ -76,18 +77,8 @@ public class DDrawStdCallMetaTests
 		// - 1-bit (0x1) → 2 entries
 		// - No flags (0x0) → 256 entries (default)
 
-		// Replicate the logic from DDrawModule.DDraw_CreatePalette
-		int numEntries;
-		if ((dwFlags & 0x8) != 0)
-			numEntries = 256; // DDPCAPS_8BIT
-		else if ((dwFlags & 0x4) != 0)
-			numEntries = 16; // DDPCAPS_4BIT
-		else if ((dwFlags & 0x2) != 0)
-			numEntries = 4; // DDPCAPS_2BIT
-		else if ((dwFlags & 0x1) != 0)
-			numEntries = 2; // DDPCAPS_1BIT
-		else
-			numEntries = 256; // Default
+		// Test the actual production code method
+		int numEntries = DDrawModule.DeterminePaletteSizeFromFlags(dwFlags);
 
 		Assert.Equal(expectedEntries, numEntries);
 	}
