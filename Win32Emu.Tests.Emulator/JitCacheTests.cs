@@ -162,6 +162,59 @@ public class JitCacheTests
 	}
 	
 	[Fact]
+	public async Task PurgeCache_ShouldDeleteAllCacheFilesAndClearMemory()
+	{
+		// Arrange
+		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
+		var cache = new JitCache(tempDir);
+		var executablePath1 = "/test/program1.exe";
+		var executablePath2 = "/test/program2.exe";
+		
+		// Add some blocks
+		cache.AddBlockMetadata(0x1000, new BlockMetadata
+		{
+			StartAddress = 0x1000,
+			InstructionCount = 3,
+			ByteLength = 10,
+			CodeHash = "HASH1",
+			FirstCompiled = DateTime.UtcNow
+		});
+		
+		cache.AddBlockMetadata(0x2000, new BlockMetadata
+		{
+			StartAddress = 0x2000,
+			InstructionCount = 5,
+			ByteLength = 15,
+			CodeHash = "HASH2",
+			FirstCompiled = DateTime.UtcNow
+		});
+		
+		// Save cache for two different executables
+		await cache.SaveCacheAsync(executablePath1);
+		await cache.SaveCacheAsync(executablePath2);
+		
+		// Verify cache files exist
+		var cacheFiles = Directory.GetFiles(tempDir, "jit_cache_*.json");
+		Assert.True(cacheFiles.Length >= 1, "Cache files should exist before purge");
+		
+		// Act - Purge the cache
+		cache.PurgeCache();
+		
+		// Assert - Check memory cache is cleared
+		var stats = cache.GetStatistics();
+		Assert.Equal(0, stats.TotalBlocks);
+		Assert.False(cache.TryGetBlockMetadata(0x1000, out _));
+		Assert.False(cache.TryGetBlockMetadata(0x2000, out _));
+		
+		// Assert - Check disk cache files are deleted
+		cacheFiles = Directory.GetFiles(tempDir, "jit_cache_*.json");
+		Assert.Empty(cacheFiles);
+		
+		// Cleanup
+		Directory.Delete(tempDir, true);
+	}
+	
+	[Fact]
 	public async Task JitCpu_ShouldIntegrateWithCache()
 	{
 		// Arrange

@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Models;
+using Win32Emu.Cpu.Jit;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -212,5 +214,27 @@ public partial class SettingsViewModel : ViewModelBase
     {
         _configuration.OtlpEndpoint = value;
         _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    /// <summary>
+    /// Command to purge the JIT cache
+    /// </summary>
+    [RelayCommand]
+    private void PurgeJitCache()
+    {
+        try
+        {
+            // Create a temporary JitCache instance with default directory to purge
+            var cache = new JitCache();
+            cache.PurgeCache();
+            
+            // Show success message (could be enhanced with a dialog service)
+            System.Diagnostics.Debug.WriteLine("[SettingsViewModel] JIT cache purged successfully");
+        }
+        catch (Exception ex)
+        {
+            // Log error (could be enhanced with proper error handling/dialog)
+            System.Diagnostics.Debug.WriteLine($"[SettingsViewModel] Failed to purge JIT cache: {ex.Message}");
+        }
     }
 }

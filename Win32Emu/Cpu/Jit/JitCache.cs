@@ -21,7 +21,7 @@ public class JitCache
 	{
 		_logger = logger ?? NullLogger.Instance;
 		_cacheDirectory = cacheDirectory ?? Path.Combine(
-			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+			Path.GetTempPath(),
 			"Win32Emu",
 			"JitCache"
 		);
@@ -127,13 +127,40 @@ public class JitCache
 	}
 	
 	/// <summary>
-	/// Clears all cached blocks
+	/// Clears all cached blocks from memory
 	/// </summary>
 	public void Clear()
 	{
 		_blockCache.Clear();
 		_hashToAddress.Clear();
 		_logger.LogInformation("[JitCache] Cache cleared");
+	}
+	
+	/// <summary>
+	/// Purges all cache files from disk and clears in-memory cache
+	/// </summary>
+	public void PurgeCache()
+	{
+		try
+		{
+			if (Directory.Exists(_cacheDirectory))
+			{
+				var files = Directory.GetFiles(_cacheDirectory, "jit_cache_*.json");
+				foreach (var file in files)
+				{
+					File.Delete(file);
+					_logger.LogInformation("[JitCache] Deleted cache file: {File}", file);
+				}
+				_logger.LogInformation("[JitCache] Purged {Count} cache files from disk", files.Length);
+			}
+			
+			Clear();
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[JitCache] Failed to purge cache from {CacheDirectory}", _cacheDirectory);
+			throw;
+		}
 	}
 	
 	/// <summary>

@@ -279,6 +279,14 @@ public class JitCpu : IAsyncCpu
 	{
 		return _jitCache.GetStatistics();
 	}
+	
+	/// <summary>
+	/// Purges all JIT cache files from disk and clears in-memory cache
+	/// </summary>
+	public void PurgeCache()
+	{
+		_jitCache.PurgeCache();
+	}
 
 	public CpuState SaveState()
 	{
