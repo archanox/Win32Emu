@@ -740,6 +740,37 @@ namespace Win32Emu.Win32.Modules
 					returnValue = SetWindowContextHelpId(a.UInt32(0), a.UInt32(1));
 					return true;
 
+				// Scrolling functions
+				case "SCROLLWINDOW":
+					returnValue = ScrollWindow(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "SETSCROLLINFO":
+					returnValue = SetScrollInfo(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				// DDE (Dynamic Data Exchange) functions
+				case "DDEINITIALIZEA":
+					returnValue = DdeInitializeA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "DDECONNECT":
+					returnValue = DdeConnect(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "DDEDISCONNECT":
+					returnValue = DdeDisconnect(a.UInt32(0));
+					return true;
+				case "DDECREATESTRINGHANDLEA":
+					returnValue = DdeCreateStringHandleA(a.UInt32(0), a.LpcStr(1), a.Int32(2));
+					return true;
+				case "DDEFREESTRINGHANDLE":
+					returnValue = DdeFreeStringHandle(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "DDECLIENTTRANSACTION":
+					returnValue = DdeClientTransaction(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+					return true;
+				case "DDEGETDATA":
+					returnValue = DdeGetData(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
 				default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
@@ -4905,6 +4936,259 @@ namespace Win32Emu.Win32.Modules
 
 		// Stub: Return TRUE (success)
 		return 1;
+	}
+
+	/// <summary>
+	/// Scrolls the contents of the specified window's client area.
+	/// BOOL ScrollWindow(
+	///   [in] HWND       hWnd,
+	///   [in] int        XAmount,
+	///   [in] int        YAmount,
+	///   [in] const RECT *lpRect,
+	///   [in] const RECT *lpClipRect
+	/// );
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint ScrollWindow(uint hWnd, int xAmount, int yAmount, uint lpRect, uint lpClipRect)
+	{
+		_logger.LogInformation("[User32] ScrollWindow(hWnd=0x{HWnd:X8}, xAmount={XAmount}, yAmount={YAmount}, lpRect=0x{LpRect:X8}, lpClipRect=0x{LpClipRect:X8})",
+			hWnd, xAmount, yAmount, lpRect, lpClipRect);
+		
+		// ScrollWindow scrolls the contents of a window's client area
+		// For a stub implementation, we just return success
+		// A full implementation would:
+		// 1. Scroll the window contents by the specified amount
+		// 2. Invalidate the uncovered region
+		// 3. Optionally clip to the specified rectangles
+		
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Sets the parameters of a scroll bar.
+	/// int SetScrollInfo(
+	///   [in] HWND          hWnd,
+	///   [in] int           nBar,
+	///   [in] LPCSCROLLINFO lpsi,
+	///   [in] BOOL          redraw
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint SetScrollInfo(uint hWnd, int nBar, uint lpsi, uint redraw)
+	{
+		_logger.LogInformation("[User32] SetScrollInfo(hWnd=0x{HWnd:X8}, nBar={NBar}, lpsi=0x{Lpsi:X8}, redraw={Redraw})",
+			hWnd, nBar, lpsi, redraw);
+		
+		// SetScrollInfo sets the parameters of a scroll bar
+		// nBar can be SB_HORZ (0), SB_VERT (1), or SB_CTL (2)
+		// lpsi points to a SCROLLINFO structure with new values
+		
+		if (lpsi != 0)
+		{
+			// SCROLLINFO structure:
+			// UINT cbSize; UINT fMask; int nMin; int nMax; UINT nPage; int nPos; int nTrackPos;
+			var cbSize = _env.MemRead32(lpsi + 0);
+			var fMask = _env.MemRead32(lpsi + 4);
+			var nMin = (int)_env.MemRead32(lpsi + 8);
+			var nMax = (int)_env.MemRead32(lpsi + 12);
+			var nPage = _env.MemRead32(lpsi + 16);
+			var nPos = (int)_env.MemRead32(lpsi + 20);
+			var nTrackPos = (int)_env.MemRead32(lpsi + 24);
+			
+			_logger.LogInformation("[User32] SetScrollInfo: nMin={NMin}, nMax={NMax}, nPage={NPage}, nPos={NPos}",
+				nMin, nMax, nPage, nPos);
+		}
+		
+		// Return the current position (stub)
+		return 0;
+	}
+
+	// DDE (Dynamic Data Exchange) functions
+	// DDE is a legacy IPC mechanism used by older Windows applications
+	private uint _nextDdeInstance = 0x10000000;
+	private uint _nextDdeConv = 0x20000000;
+	private uint _nextDdeString = 0x30000000;
+	private readonly Dictionary<uint, string> _ddeStrings = new();
+
+	/// <summary>
+	/// Registers an application with the Dynamic Data Exchange (DDE) Management Library.
+	/// UINT DdeInitializeA(
+	///   [in]  LPDWORD      pidInst,
+	///   [in]  PFNCALLBACK  pfnCallback,
+	///   [in]  DWORD        afCmd,
+	///   [in]  DWORD        ulRes
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint DdeInitializeA(uint pidInst, uint pfnCallback, uint afCmd, uint ulRes)
+	{
+		_logger.LogInformation("[User32] DdeInitializeA(pidInst=0x{PidInst:X8}, pfnCallback=0x{PfnCallback:X8}, afCmd=0x{AfCmd:X8}, ulRes={UlRes})",
+			pidInst, pfnCallback, afCmd, ulRes);
+		
+		// DdeInitialize registers an application with DDE
+		// pidInst points to a DWORD that receives the instance identifier
+		// pfnCallback is the callback function for DDE transactions
+		// afCmd specifies the DDE filters
+		
+		if (pidInst != 0)
+		{
+			var instance = _nextDdeInstance++;
+			_env.MemWrite32(pidInst, instance);
+			_logger.LogInformation("[User32] DdeInitializeA: Created instance 0x{Instance:X8}", instance);
+		}
+		
+		return 0; // DMLERR_NO_ERROR
+	}
+
+	/// <summary>
+	/// Establishes a conversation with a server application.
+	/// HCONV DdeConnect(
+	///   [in] DWORD   idInst,
+	///   [in] HSZ     hszService,
+	///   [in] HSZ     hszTopic,
+	///   [in] PCONVCONTEXT pCC
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint DdeConnect(uint idInst, uint hszService, uint hszTopic, uint pCC)
+	{
+		_logger.LogInformation("[User32] DdeConnect(idInst=0x{IdInst:X8}, hszService=0x{HszService:X8}, hszTopic=0x{HszTopic:X8}, pCC=0x{PCC:X8})",
+			idInst, hszService, hszTopic, pCC);
+		
+		// DdeConnect establishes a DDE conversation
+		// hszService and hszTopic are string handles
+		// Returns a conversation handle, or NULL on failure
+		
+		var serviceName = _ddeStrings.TryGetValue(hszService, out var svc) ? svc : "unknown";
+		var topicName = _ddeStrings.TryGetValue(hszTopic, out var top) ? top : "unknown";
+		
+		_logger.LogInformation("[User32] DdeConnect: Connecting to service \"{ServiceName}\" topic \"{TopicName}\"",
+			serviceName, topicName);
+		
+		// For stub, just return NULL to indicate no server available
+		return 0; // NULL - connection failed
+	}
+
+	/// <summary>
+	/// Terminates a DDE conversation.
+	/// BOOL DdeDisconnect(
+	///   [in] HCONV hConv
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint DdeDisconnect(uint hConv)
+	{
+		_logger.LogInformation("[User32] DdeDisconnect(hConv=0x{HConv:X8})", hConv);
+		
+		// DdeDisconnect terminates a DDE conversation
+		// Returns TRUE on success, FALSE on failure
+		
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Creates a DDE string handle.
+	/// HSZ DdeCreateStringHandleA(
+	///   [in] DWORD  idInst,
+	///   [in] LPCSTR psz,
+	///   [in] int    iCodePage
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint DdeCreateStringHandleA(uint idInst, in LpcStr psz, int iCodePage)
+	{
+		var str = psz.ToString() ?? string.Empty;
+		_logger.LogInformation("[User32] DdeCreateStringHandleA(idInst=0x{IdInst:X8}, psz=\"{Str}\", iCodePage={ICodePage})",
+			idInst, str, iCodePage);
+		
+		// DdeCreateStringHandle creates a string handle for DDE
+		// The string handle can be used in DDE transactions
+		
+		if (string.IsNullOrEmpty(str))
+		{
+			return 0; // NULL
+		}
+		
+		var handle = _nextDdeString++;
+		_ddeStrings[handle] = str;
+		
+		_logger.LogInformation("[User32] DdeCreateStringHandleA: Created handle 0x{Handle:X8} for \"{Str}\"", handle, str);
+		return handle;
+	}
+
+	/// <summary>
+	/// Frees a DDE string handle.
+	/// BOOL DdeFreeStringHandle(
+	///   [in] DWORD idInst,
+	///   [in] HSZ   hsz
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint DdeFreeStringHandle(uint idInst, uint hsz)
+	{
+		_logger.LogInformation("[User32] DdeFreeStringHandle(idInst=0x{IdInst:X8}, hsz=0x{Hsz:X8})",
+			idInst, hsz);
+		
+		// DdeFreeStringHandle frees a string handle
+		
+		if (_ddeStrings.Remove(hsz))
+		{
+			_logger.LogInformation("[User32] DdeFreeStringHandle: Freed handle 0x{Hsz:X8}", hsz);
+		}
+		
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Begins a DDE transaction.
+	/// HDDEDATA DdeClientTransaction(
+	///   [in] LPBYTE   pData,
+	///   [in] DWORD    cbData,
+	///   [in] HCONV    hConv,
+	///   [in] HSZ      hszItem,
+	///   [in] UINT     wFmt,
+	///   [in] UINT     wType,
+	///   [in] DWORD    dwTimeout,
+	///   [out] LPDWORD pdwResult
+	/// );
+	/// </summary>
+	[DllModuleExport(32)]
+	private uint DdeClientTransaction(uint pData, uint cbData, uint hConv, uint hszItem, uint wFmt, uint wType, uint dwTimeout, uint pdwResult)
+	{
+		_logger.LogInformation("[User32] DdeClientTransaction(pData=0x{PData:X8}, cbData={CbData}, hConv=0x{HConv:X8}, hszItem=0x{HszItem:X8}, wFmt={WFmt}, wType={WType}, dwTimeout={DwTimeout})",
+			pData, cbData, hConv, hszItem, wFmt, wType, dwTimeout);
+		
+		// DdeClientTransaction performs a DDE transaction
+		// wType specifies the transaction type (XTYP_EXECUTE, XTYP_REQUEST, etc.)
+		// Returns a DDE data handle, or NULL on failure
+		
+		var itemName = _ddeStrings.TryGetValue(hszItem, out var item) ? item : "unknown";
+		_logger.LogInformation("[User32] DdeClientTransaction: Transaction on item \"{ItemName}\"", itemName);
+		
+		// For stub, return NULL to indicate transaction failed
+		return 0; // NULL
+	}
+
+	/// <summary>
+	/// Retrieves data from a DDE data handle.
+	/// DWORD DdeGetData(
+	///   [in]  HDDEDATA hData,
+	///   [out] LPBYTE   pDst,
+	///   [in]  DWORD    cbMax,
+	///   [in]  DWORD    cbOff
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint DdeGetData(uint hData, uint pDst, uint cbMax, uint cbOff)
+	{
+		_logger.LogInformation("[User32] DdeGetData(hData=0x{HData:X8}, pDst=0x{PDst:X8}, cbMax={CbMax}, cbOff={CbOff})",
+			hData, pDst, cbMax, cbOff);
+		
+		// DdeGetData retrieves data from a DDE data handle
+		// Returns the number of bytes copied, or 0 on failure
+		
+		// For stub, return 0 (no data)
+		return 0;
 	}
 
 	/// <summary>

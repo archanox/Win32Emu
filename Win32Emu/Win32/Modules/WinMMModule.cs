@@ -159,6 +159,11 @@ namespace Win32Emu.Win32.Modules
 					returnValue = AuxSetVolume(a.UInt32(0), a.UInt32(1));
 					return true;
 
+				case "SNDPLAYSOUND":
+				case "SNDPLAYSOUNDA":
+					returnValue = SndPlaySoundA(a.LpcStr(0), a.UInt32(1));
+					return true;
+
 				default:
 					_logger.LogInformation("[WinMM] Unimplemented export: {Export}", export);
 					return false;
@@ -697,6 +702,42 @@ namespace Win32Emu.Win32.Modules
 			
 			// Accept the volume setting (but don't actually change anything)
 			return 0; // MMSYSERR_NOERROR
+		}
+
+		/// <summary>
+		/// Plays a waveform sound specified by a filename.
+		/// BOOL sndPlaySoundA(
+		///   [in] LPCSTR pszSound,
+		///   [in] UINT   fuSound
+		/// );
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint SndPlaySoundA(in LpcStr pszSound, uint fuSound)
+		{
+			var soundName = pszSound.ToString() ?? string.Empty;
+			_logger.LogInformation("[WinMM] sndPlaySoundA(pszSound=\"{SoundName}\", fuSound=0x{FuSound:X8})",
+				soundName, fuSound);
+			
+			// sndPlaySound plays a sound file
+			// fuSound flags include:
+			// SND_SYNC (0x0000) - Play synchronously
+			// SND_ASYNC (0x0001) - Play asynchronously
+			// SND_NODEFAULT (0x0002) - Don't play default sound if file not found
+			// SND_MEMORY (0x0004) - pszSound is a memory image
+			// SND_LOOP (0x0008) - Loop the sound until called again
+			// SND_NOSTOP (0x0010) - Don't stop currently playing sound
+			
+			// For stub implementation, we just log and return success
+			// A full implementation would actually play the sound file
+			
+			if (string.IsNullOrEmpty(soundName))
+			{
+				_logger.LogInformation("[WinMM] sndPlaySoundA: NULL sound name, stopping sound");
+				return 1; // TRUE - stopping sound
+			}
+			
+			_logger.LogInformation("[WinMM] sndPlaySoundA: Stub - would play sound \"{SoundName}\"", soundName);
+			return 1; // TRUE - success
 		}
 	}
 }

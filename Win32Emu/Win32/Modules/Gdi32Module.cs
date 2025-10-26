@@ -234,6 +234,12 @@ namespace Win32Emu.Win32.Modules
 				case "GETPALETTEENTRIES":
 					returnValue = GetPaletteEntries(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
+				case "SETPALETTEENTRIES":
+					returnValue = SetPaletteEntries(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "UNREALIZEOBJECT":
+					returnValue = UnrealizeObject(a.UInt32(0));
+					return true;
 
 				// Text functions
 				case "GETTEXTMETRICSA":
@@ -1111,6 +1117,66 @@ namespace Win32Emu.Win32.Modules
 
 			// Stub: Return SIMPLEREGION (simple rectangular region)
 			return 2; // SIMPLEREGION
+		}
+
+		/// <summary>
+		/// Sets RGB values and flags in a range of entries in a logical palette.
+		/// UINT SetPaletteEntries(
+		///   [in] HPALETTE       hpal,
+		///   [in] UINT           iStart,
+		///   [in] UINT           cEntries,
+		///   [in] const PALETTEENTRY *pPalEntries
+		/// );
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint SetPaletteEntries(uint hpal, uint iStart, uint cEntries, uint pPalEntries)
+		{
+			_logger.LogInformation("[Gdi32] SetPaletteEntries(hpal=0x{Hpal:X8}, iStart={IStart}, cEntries={CEntries}, pPalEntries=0x{PPalEntries:X8})",
+				hpal, iStart, cEntries, pPalEntries);
+			
+			// PALETTEENTRY structure is 4 bytes: peRed, peGreen, peBlue, peFlags
+			// For a stub implementation, we just acknowledge the entries were set
+			// In a real implementation, we would store the palette data
+			
+			if (pPalEntries == 0 || cEntries == 0)
+			{
+				return 0; // Return 0 if invalid parameters
+			}
+			
+			// Return the number of entries set (stub)
+			return cEntries;
+		}
+
+		/// <summary>
+		/// Resets the origin of a brush or resets a logical palette.
+		/// BOOL UnrealizeObject(
+		///   [in] HGDIOBJ h
+		/// );
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint UnrealizeObject(uint hgdiobj)
+		{
+			_logger.LogInformation("[Gdi32] UnrealizeObject(hgdiobj=0x{Hgdiobj:X8})", hgdiobj);
+			
+			// UnrealizeObject is used primarily for palette objects
+			// It indicates that the palette should be completely remapped next time it's selected
+			// For brushes, it resets the brush origin
+			
+			// Check if this is a known GDI object
+			if (_gdiObjects.TryGetValue(hgdiobj, out var obj))
+			{
+				_logger.LogInformation("[Gdi32] UnrealizeObject: Object type is {Type}", obj.Type);
+				
+				// For palettes, this marks them as needing to be realized again
+				// For other object types, this typically does nothing
+				// Return TRUE to indicate success
+				return 1;
+			}
+			
+			// If object is not in our tracking, still return success
+			// as this may be a stock object or system object
+			_logger.LogInformation("[Gdi32] UnrealizeObject: Object not tracked, returning success");
+			return 1; // TRUE
 		}
 
 		private enum GdiObjectType
