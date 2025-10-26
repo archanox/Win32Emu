@@ -6869,7 +6869,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// );
 	/// </summary>
 	[DllModuleExport(4)]
-	private uint _lclose(uint hFile)
+	private unsafe uint _lclose(uint hFile)
 	{
 		_logger.LogInformation("[Kernel32] _lclose(hFile=0x{HFile:X8})", hFile);
 		
