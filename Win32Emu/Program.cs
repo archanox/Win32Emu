@@ -83,6 +83,14 @@ namespace Win32Emu
 				builder
 					.AddConsole()
 					.SetMinimumLevel(debugMode ? LogLevel.Debug : LogLevel.Information);
+
+				//TODO: Add custom logger to add logs to emulator host if needed
+				/*
+				if (_host != null)
+				{
+					_host.OnDebugOutput(message, DebugLevel.Debug);
+				}
+				*/
 			});
 
 			var logger = loggerFactory.CreateLogger<Emulator>();
