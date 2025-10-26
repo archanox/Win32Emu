@@ -6,11 +6,16 @@ using Win32Emu.Memory;
 namespace Win32Emu.Win32.COM;
 
 /// <summary>
-/// Metadata for a COM method including handler and argument information
+/// Metadata for a COM method including handler and argument information.
 /// </summary>
+/// <remarks>
+/// DEPRECATED: Use ComVtableDispatcher.FromDelegate&lt;T&gt;() instead for automatic argBytes calculation.
+/// Manual argBytes specification is error-prone and can lead to stack corruption.
+/// </remarks>
+[Obsolete("Use ComVtableDispatcher.FromDelegate<T>() to automatically calculate argBytes from delegate signatures", false)]
 public record ComMethodInfo(
 	Func<ICpu, VirtualMemory, uint> Handler,
-	int ArgBytes = 0  // Argument byte count for stdcall stack cleanup (0 if unknown)
+	int ArgBytes = 0  // Argument byte count for stdcall stack cleanup (deprecated - use FromDelegate<T>())
 );
 
 /// <summary>
@@ -164,10 +169,7 @@ public class ComVtableDispatcher
 			_vtableMethodNames[methodStubAddr] = $"{interfaceName}::{methodName}";
 			
 			// Register argument byte count for stack cleanup
-			if (methodInfo.ArgBytes > 0)
-			{
-				_vtableArgBytes[methodStubAddr] = methodInfo.ArgBytes;
-			}
+			_vtableArgBytes[methodStubAddr] = methodInfo.ArgBytes;
 			
 			_logger.LogDebug("[COM] {InterfaceName}::{MethodName} -> 0x{MethodStubAddr:X8} (argBytes={ArgBytes})", 
 				interfaceName, methodName, methodStubAddr, methodInfo.ArgBytes);
@@ -188,6 +190,29 @@ public class ComVtableDispatcher
 		_logger.LogInformation("[COM] Created {InterfaceName} object at 0x{ObjectAddr:X8} (vtable at 0x{VtableAddr:X8})", interfaceName, objectAddr, vtableAddr);
 		
 		return objectAddr;
+	}
+	
+	/// <summary>
+	/// Helper to create ComMethodInfo from a delegate type.
+	/// Automatically calculates argBytes from the delegate signature.
+	/// </summary>
+	/// <typeparam name="TDelegate">Delegate type with [UnmanagedFunctionPointer(CallingConvention.StdCall)]</typeparam>
+	/// <param name="handler">Handler function that implements the delegate logic</param>
+	/// <returns>ComMethodInfo with automatically calculated argBytes</returns>
+	public static ComMethodInfo FromDelegate<TDelegate>(Func<ICpu, VirtualMemory, uint> handler) where TDelegate : Delegate
+	{
+		var delegateType = typeof(TDelegate);
+		
+		// Verify the delegate has the correct attribute
+		if (!ComDelegateHelper.HasStdCallConvention(delegateType))
+		{
+			throw new InvalidOperationException($"Delegate type {delegateType.Name} must have [UnmanagedFunctionPointer(CallingConvention.StdCall)] attribute");
+		}
+		
+		// Calculate argument bytes from delegate signature
+		var argBytes = ComDelegateHelper.GetArgBytes(delegateType);
+		
+		return new ComMethodInfo(handler, argBytes);
 	}
 	
 	private sealed class ComObjectInfo

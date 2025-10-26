@@ -2,6 +2,7 @@ using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
+using Win32Emu.Win32.COM;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -81,17 +82,17 @@ namespace Win32Emu.Win32.Modules
 // Create COM vtable for IDirectSound interface
 			var vtableMethods = new Dictionary<string, Win32.COM.ComMethodInfo>
 			{
-				{ "QueryInterface", new Win32.COM.ComMethodInfo((cpu, mem) => ComQueryInterface(cpu, mem), ArgBytes: 12) }, // this + riid + ppvObject
-				{ "AddRef", new Win32.COM.ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) }, // this only
-				{ "Release", new Win32.COM.ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) }, // this only
-				{ "CreateSoundBuffer", new Win32.COM.ComMethodInfo((cpu, mem) => DSound_CreateSoundBuffer(cpu, mem, dsHandle), ArgBytes: 16) }, // this + pcDSBufferDesc + ppDSBuffer + pUnkOuter
-				{ "GetCaps", new Win32.COM.ComMethodInfo((cpu, mem) => DSound_GetCaps(cpu, mem), ArgBytes: 8) }, // this + pDSCaps
-				{ "DuplicateSoundBuffer", new Win32.COM.ComMethodInfo((cpu, mem) => DSound_DuplicateSoundBuffer(cpu, mem), ArgBytes: 12) }, // this + pDSBufferOriginal + ppDSBufferDuplicate
-				{ "SetCooperativeLevel", new Win32.COM.ComMethodInfo((cpu, mem) => DSound_SetCooperativeLevel(cpu, mem), ArgBytes: 12) }, // this + hwnd + dwLevel
-				{ "Compact", new Win32.COM.ComMethodInfo((cpu, mem) => DSound_Compact(cpu, mem), ArgBytes: 4) }, // this only
-				{ "GetSpeakerConfig", new Win32.COM.ComMethodInfo((cpu, mem) => DSound_GetSpeakerConfig(cpu, mem), ArgBytes: 8) }, // this + pdwSpeakerConfig
-				{ "SetSpeakerConfig", new Win32.COM.ComMethodInfo((cpu, mem) => DSound_SetSpeakerConfig(cpu, mem), ArgBytes: 8) }, // this + dwSpeakerConfig
-				{ "Initialize", new Win32.COM.ComMethodInfo((cpu, mem) => DSound_Initialize(cpu, mem), ArgBytes: 8) } // this + pcGuidDevice
+				{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectSound.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) }, // this + riid + ppvObject
+				{ "AddRef", ComVtableDispatcher.FromDelegate<IDirectSound.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) }, // this only
+				{ "Release", ComVtableDispatcher.FromDelegate<IDirectSound.Release>((cpu, mem) => ComRelease(cpu, mem)) }, // this only
+				{ "CreateSoundBuffer", ComVtableDispatcher.FromDelegate<IDirectSound.CreateSoundBuffer>((cpu, mem) => DSound_CreateSoundBuffer(cpu, mem, dsHandle)) }, // this + pcDSBufferDesc + ppDSBuffer + pUnkOuter
+				{ "GetCaps", ComVtableDispatcher.FromDelegate<IDirectSound.GetCaps>((cpu, mem) => DSound_GetCaps(cpu, mem)) }, // this + pDSCaps
+				{ "DuplicateSoundBuffer", ComVtableDispatcher.FromDelegate<IDirectSound.DuplicateSoundBuffer>((cpu, mem) => DSound_DuplicateSoundBuffer(cpu, mem)) }, // this + pDSBufferOriginal + ppDSBufferDuplicate
+				{ "SetCooperativeLevel", ComVtableDispatcher.FromDelegate<IDirectSound.SetCooperativeLevel>((cpu, mem) => DSound_SetCooperativeLevel(cpu, mem)) }, // this + hwnd + dwLevel
+				{ "Compact", ComVtableDispatcher.FromDelegate<IDirectSound.Compact>((cpu, mem) => DSound_Compact(cpu, mem)) }, // this only
+				{ "GetSpeakerConfig", ComVtableDispatcher.FromDelegate<IDirectSound.GetSpeakerConfig>((cpu, mem) => DSound_GetSpeakerConfig(cpu, mem)) }, // this + pdwSpeakerConfig
+				{ "SetSpeakerConfig", ComVtableDispatcher.FromDelegate<IDirectSound.SetSpeakerConfig>((cpu, mem) => DSound_SetSpeakerConfig(cpu, mem)) }, // this + dwSpeakerConfig
+				{ "Initialize", ComVtableDispatcher.FromDelegate<IDirectSound.Initialize>((cpu, mem) => DSound_Initialize(cpu, mem)) } // this + pcGuidDevice
 			};
 
 // Create the COM object with vtable
@@ -367,27 +368,27 @@ namespace Win32Emu.Win32.Modules
 			// Create COM vtable for IDirectSoundBuffer interface
 			var bufferMethods = new Dictionary<string, Win32.COM.ComMethodInfo>
 			{
-				{ "QueryInterface", new Win32.COM.ComMethodInfo((cpu, mem) => ComQueryInterface(cpu, mem), ArgBytes: 12) }, // this + riid + ppvObject
-				{ "AddRef", new Win32.COM.ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) }, // this only
-				{ "Release", new Win32.COM.ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) }, // this only
-				{ "GetCaps", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_GetCaps(cpu, mem), ArgBytes: 8) }, // this + pDSBufferCaps
-				{ "GetCurrentPosition", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_GetCurrentPosition(cpu, mem), ArgBytes: 12) }, // this + pdwCurrentPlayCursor + pdwCurrentWriteCursor
-				{ "GetFormat", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_GetFormat(cpu, mem), ArgBytes: 16) }, // this + pwfxFormat + dwSizeAllocated + pdwSizeWritten
-				{ "GetVolume", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_GetVolume(cpu, mem), ArgBytes: 8) }, // this + plVolume
-				{ "GetPan", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_GetPan(cpu, mem), ArgBytes: 8) }, // this + plPan
-				{ "GetFrequency", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_GetFrequency(cpu, mem), ArgBytes: 8) }, // this + pdwFrequency
-				{ "GetStatus", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_GetStatus(cpu, mem), ArgBytes: 8) }, // this + pdwStatus
-				{ "Initialize", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_Initialize(cpu, mem), ArgBytes: 12) }, // this + pDirectSound + pcDSBufferDesc
-				{ "Lock", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_Lock(cpu, mem), ArgBytes: 28) }, // this + dwOffset + dwBytes + ppvAudioPtr1 + pdwAudioBytes1 + ppvAudioPtr2 + pdwAudioBytes2 + dwFlags
-				{ "Play", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_Play(cpu, mem), ArgBytes: 16) }, // this + dwReserved1 + dwPriority + dwFlags
-				{ "SetCurrentPosition", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_SetCurrentPosition(cpu, mem), ArgBytes: 8) }, // this + dwNewPosition
-				{ "SetFormat", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_SetFormat(cpu, mem), ArgBytes: 8) }, // this + pcfxFormat
-				{ "SetVolume", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_SetVolume(cpu, mem), ArgBytes: 8) }, // this + lVolume
-				{ "SetPan", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_SetPan(cpu, mem), ArgBytes: 8) }, // this + lPan
-				{ "SetFrequency", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_SetFrequency(cpu, mem), ArgBytes: 8) }, // this + dwFrequency
-				{ "Stop", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_Stop(cpu, mem), ArgBytes: 4) }, // this only
-				{ "Unlock", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_Unlock(cpu, mem), ArgBytes: 20) }, // this + pvAudioPtr1 + dwAudioBytes1 + pvAudioPtr2 + dwAudioBytes2
-				{ "Restore", new Win32.COM.ComMethodInfo((cpu, mem) => DSoundBuffer_Restore(cpu, mem), ArgBytes: 4) } // this only
+				{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectSound.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) }, // this + riid + ppvObject
+				{ "AddRef", ComVtableDispatcher.FromDelegate<IDirectSound.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) }, // this only
+				{ "Release", ComVtableDispatcher.FromDelegate<IDirectSound.Release>((cpu, mem) => ComRelease(cpu, mem)) }, // this only
+				{ "GetCaps", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.GetCaps>((cpu, mem) => DSoundBuffer_GetCaps(cpu, mem)) }, // this + pDSBufferCaps
+				{ "GetCurrentPosition", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.GetCurrentPosition>((cpu, mem) => DSoundBuffer_GetCurrentPosition(cpu, mem)) }, // this + pdwCurrentPlayCursor + pdwCurrentWriteCursor
+				{ "GetFormat", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.GetFormat>((cpu, mem) => DSoundBuffer_GetFormat(cpu, mem)) }, // this + pwfxFormat + dwSizeAllocated + pdwSizeWritten
+				{ "GetVolume", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.GetVolume>((cpu, mem) => DSoundBuffer_GetVolume(cpu, mem)) }, // this + plVolume
+				{ "GetPan", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.GetPan>((cpu, mem) => DSoundBuffer_GetPan(cpu, mem)) }, // this + plPan
+				{ "GetFrequency", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.GetFrequency>((cpu, mem) => DSoundBuffer_GetFrequency(cpu, mem)) }, // this + pdwFrequency
+				{ "GetStatus", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.GetStatus>((cpu, mem) => DSoundBuffer_GetStatus(cpu, mem)) }, // this + pdwStatus
+				{ "Initialize", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.Initialize>((cpu, mem) => DSoundBuffer_Initialize(cpu, mem)) }, // this + pDirectSound + pcDSBufferDesc
+				{ "Lock", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.Lock>((cpu, mem) => DSoundBuffer_Lock(cpu, mem)) }, // this + dwOffset + dwBytes + ppvAudioPtr1 + pdwAudioBytes1 + ppvAudioPtr2 + pdwAudioBytes2 + dwFlags
+				{ "Play", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.Play>((cpu, mem) => DSoundBuffer_Play(cpu, mem)) }, // this + dwReserved1 + dwPriority + dwFlags
+				{ "SetCurrentPosition", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.SetCurrentPosition>((cpu, mem) => DSoundBuffer_SetCurrentPosition(cpu, mem)) }, // this + dwNewPosition
+				{ "SetFormat", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.SetFormat>((cpu, mem) => DSoundBuffer_SetFormat(cpu, mem)) }, // this + pcfxFormat
+				{ "SetVolume", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.SetVolume>((cpu, mem) => DSoundBuffer_SetVolume(cpu, mem)) }, // this + lVolume
+				{ "SetPan", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.SetPan>((cpu, mem) => DSoundBuffer_SetPan(cpu, mem)) }, // this + lPan
+				{ "SetFrequency", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.SetFrequency>((cpu, mem) => DSoundBuffer_SetFrequency(cpu, mem)) }, // this + dwFrequency
+				{ "Stop", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.Stop>((cpu, mem) => DSoundBuffer_Stop(cpu, mem)) }, // this only
+				{ "Unlock", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.Unlock>((cpu, mem) => DSoundBuffer_Unlock(cpu, mem)) }, // this + pvAudioPtr1 + dwAudioBytes1 + pvAudioPtr2 + dwAudioBytes2
+				{ "Restore", ComVtableDispatcher.FromDelegate<IDirectSoundBuffer.Restore>((cpu, mem) => DSoundBuffer_Restore(cpu, mem)) } // this only
 			};
 
 			var bufferComAddr = _env.ComDispatcher.CreateComObject("IDirectSoundBuffer", bufferMethods);

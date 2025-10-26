@@ -78,14 +78,14 @@ namespace Win32Emu.Win32.Modules
 // Create COM vtable for IDirectInput interface
 			var vtableMethods = new Dictionary<string, Win32.COM.ComMethodInfo>
 			{
-				{ "QueryInterface", new Win32.COM.ComMethodInfo((cpu, mem) => ComQueryInterface(cpu, mem), ArgBytes: 12) }, // this + riid + ppvObject
-				{ "AddRef", new Win32.COM.ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) }, // this only
-				{ "Release", new Win32.COM.ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) }, // this only
-				{ "CreateDevice", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_CreateDevice(cpu, mem, dinputHandle), ArgBytes: 16) }, // this + rguid + lplpDevice + pUnkOuter
-				{ "EnumDevices", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_EnumDevices(cpu, mem), ArgBytes: 20) }, // this + dwDevType + lpCallback + pvRef + dwFlags
-				{ "GetDeviceStatus", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_GetDeviceStatus(cpu, mem), ArgBytes: 8) }, // this + rguidInstance
-				{ "RunControlPanel", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_RunControlPanel(cpu, mem), ArgBytes: 8) }, // this + hwndOwner
-				{ "Initialize", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_Initialize(cpu, mem), ArgBytes: 8) } // this + hinst
+				{ "QueryInterface", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
+				{ "AddRef", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) },
+				{ "Release", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.Release>((cpu, mem) => ComRelease(cpu, mem)) },
+				{ "CreateDevice", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.CreateDevice>((cpu, mem) => DInput_CreateDevice(cpu, mem, dinputHandle)) },
+				{ "EnumDevices", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.EnumDevices>((cpu, mem) => DInput_EnumDevices(cpu, mem)) },
+				{ "GetDeviceStatus", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.GetDeviceStatus>((cpu, mem) => DInput_GetDeviceStatus(cpu, mem)) },
+				{ "RunControlPanel", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.RunControlPanel>((cpu, mem) => DInput_RunControlPanel(cpu, mem)) },
+				{ "Initialize", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.Initialize>((cpu, mem) => DInput_Initialize(cpu, mem)) }
 			};
 
 // Create the COM object with vtable
@@ -125,14 +125,14 @@ namespace Win32Emu.Win32.Modules
 			// Create COM vtable for IDirectInput interface
 			var vtableMethods = new Dictionary<string, Win32.COM.ComMethodInfo>
 			{
-				{ "QueryInterface", new Win32.COM.ComMethodInfo((cpu, mem) => ComQueryInterface(cpu, mem), ArgBytes: 12) }, // this + riid + ppvObject
-				{ "AddRef", new Win32.COM.ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) }, // this only
-				{ "Release", new Win32.COM.ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) }, // this only
-				{ "CreateDevice", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_CreateDevice(cpu, mem, dinputHandle), ArgBytes: 16) }, // this + rguid + lplpDevice + pUnkOuter
-				{ "EnumDevices", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_EnumDevices(cpu, mem), ArgBytes: 20) }, // this + dwDevType + lpCallback + pvRef + dwFlags
-				{ "GetDeviceStatus", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_GetDeviceStatus(cpu, mem), ArgBytes: 8) }, // this + rguidInstance
-				{ "RunControlPanel", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_RunControlPanel(cpu, mem), ArgBytes: 8) }, // this + hwndOwner
-				{ "Initialize", new Win32.COM.ComMethodInfo((cpu, mem) => DInput_Initialize(cpu, mem), ArgBytes: 8) } // this + hinst
+				{ "QueryInterface", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
+				{ "AddRef", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) },
+				{ "Release", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.Release>((cpu, mem) => ComRelease(cpu, mem)) },
+				{ "CreateDevice", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.CreateDevice>((cpu, mem) => DInput_CreateDevice(cpu, mem, dinputHandle)) },
+				{ "EnumDevices", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.EnumDevices>((cpu, mem) => DInput_EnumDevices(cpu, mem)) },
+				{ "GetDeviceStatus", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.GetDeviceStatus>((cpu, mem) => DInput_GetDeviceStatus(cpu, mem)) },
+				{ "RunControlPanel", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.RunControlPanel>((cpu, mem) => DInput_RunControlPanel(cpu, mem)) },
+				{ "Initialize", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.Initialize>((cpu, mem) => DInput_Initialize(cpu, mem)) }
 			};
 
 			// Create the COM object with vtable
@@ -294,24 +294,24 @@ namespace Win32Emu.Win32.Modules
 			// Create COM vtable for IDirectInputDevice interface
 			var deviceMethods = new Dictionary<string, Win32.COM.ComMethodInfo>
 			{
-				{ "QueryInterface", new Win32.COM.ComMethodInfo((cpu, mem) => ComQueryInterface(cpu, mem), ArgBytes: 12) }, // this + riid + ppvObject
-				{ "AddRef", new Win32.COM.ComMethodInfo((cpu, mem) => ComAddRef(cpu, mem), ArgBytes: 4) }, // this only
-				{ "Release", new Win32.COM.ComMethodInfo((cpu, mem) => ComRelease(cpu, mem), ArgBytes: 4) }, // this only
-				{ "GetCapabilities", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_GetCapabilities(cpu, mem), ArgBytes: 8) }, // this + lpDIDevCaps
-				{ "EnumObjects", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_EnumObjects(cpu, mem), ArgBytes: 16) }, // this + lpCallback + pvRef + dwFlags
-				{ "GetProperty", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_GetProperty(cpu, mem), ArgBytes: 12) }, // this + rguidProp + pdiph
-				{ "SetProperty", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_SetProperty(cpu, mem), ArgBytes: 12) }, // this + rguidProp + lpdiph
-				{ "Acquire", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_Acquire(cpu, mem), ArgBytes: 4) }, // this only
-				{ "Unacquire", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_Unacquire(cpu, mem), ArgBytes: 4) }, // this only
-				{ "GetDeviceState", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_GetDeviceState(cpu, mem), ArgBytes: 12) }, // this + cbData + lpvData
-				{ "GetDeviceData", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_GetDeviceData(cpu, mem), ArgBytes: 20) }, // this + cbObjectData + rgdod + pdwInOut + dwFlags
-				{ "SetDataFormat", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_SetDataFormat(cpu, mem), ArgBytes: 8) }, // this + lpdf
-				{ "SetEventNotification", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_SetEventNotification(cpu, mem), ArgBytes: 8) }, // this + hEvent
-				{ "SetCooperativeLevel", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_SetCooperativeLevel(cpu, mem), ArgBytes: 12) }, // this + hwnd + dwFlags
-				{ "GetObjectInfo", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_GetObjectInfo(cpu, mem), ArgBytes: 12) }, // this + pdidoi + dwObj + dwHow
-				{ "GetDeviceInfo", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_GetDeviceInfo(cpu, mem), ArgBytes: 8) }, // this + pdidi
-				{ "RunControlPanel", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_RunControlPanel(cpu, mem), ArgBytes: 12) }, // this + hwndOwner + dwFlags
-				{ "Initialize", new Win32.COM.ComMethodInfo((cpu, mem) => DInputDevice_Initialize(cpu, mem), ArgBytes: 16) } // this + hinst + dwVersion + rguid
+				{ "QueryInterface", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
+				{ "AddRef", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) },
+				{ "Release", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.Release>((cpu, mem) => ComRelease(cpu, mem)) },
+				{ "GetCapabilities", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.GetCapabilities>((cpu, mem) => DInputDevice_GetCapabilities(cpu, mem)) },
+				{ "EnumObjects", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.EnumObjects>((cpu, mem) => DInputDevice_EnumObjects(cpu, mem)) },
+				{ "GetProperty", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.GetProperty>((cpu, mem) => DInputDevice_GetProperty(cpu, mem)) },
+				{ "SetProperty", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.SetProperty>((cpu, mem) => DInputDevice_SetProperty(cpu, mem)) },
+				{ "Acquire", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.Acquire>((cpu, mem) => DInputDevice_Acquire(cpu, mem)) },
+				{ "Unacquire", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.Unacquire>((cpu, mem) => DInputDevice_Unacquire(cpu, mem)) },
+				{ "GetDeviceState", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.GetDeviceState>((cpu, mem) => DInputDevice_GetDeviceState(cpu, mem)) },
+				{ "GetDeviceData", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.GetDeviceData>((cpu, mem) => DInputDevice_GetDeviceData(cpu, mem)) },
+				{ "SetDataFormat", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.SetDataFormat>((cpu, mem) => DInputDevice_SetDataFormat(cpu, mem)) },
+				{ "SetEventNotification", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.SetEventNotification>((cpu, mem) => DInputDevice_SetEventNotification(cpu, mem)) },
+				{ "SetCooperativeLevel", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.SetCooperativeLevel>((cpu, mem) => DInputDevice_SetCooperativeLevel(cpu, mem)) },
+				{ "GetObjectInfo", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.GetObjectInfo>((cpu, mem) => DInputDevice_GetObjectInfo(cpu, mem)) },
+				{ "GetDeviceInfo", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.GetDeviceInfo>((cpu, mem) => DInputDevice_GetDeviceInfo(cpu, mem)) },
+				{ "RunControlPanel", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.RunControlPanel>((cpu, mem) => DInputDevice_RunControlPanel(cpu, mem)) },
+				{ "Initialize", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInputDevice.Initialize>((cpu, mem) => DInputDevice_Initialize(cpu, mem)) }
 			};
 
 			var deviceComAddr = _env.ComDispatcher.CreateComObject("IDirectInputDevice", deviceMethods);
