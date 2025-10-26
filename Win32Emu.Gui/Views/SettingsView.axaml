@@ -133,6 +133,11 @@
                                   Content="Purge JIT Cache"
                                   HorizontalAlignment="Left"
                                   Margin="0,8,0,0"/>
+                            <TextBlock Text="{Binding CacheStatusMessage}"
+                                     FontSize="12"
+                                     FontWeight="SemiBold"
+                                     Margin="0,4,0,0"
+                                     IsVisible="{Binding CacheStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>

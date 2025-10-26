@@ -59,6 +59,9 @@ public partial class SettingsViewModel : ViewModelBase
     
     [ObservableProperty]
     private string _otlpEndpoint;
+    
+    [ObservableProperty]
+    private string _cacheStatusMessage = string.Empty;
 
     public ObservableCollection<string> RenderingBackends { get; } = new()
     {
@@ -222,21 +225,21 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private void PurgeJitCache()
     {
-        // Create a temporary JitCache instance with default directory to purge
+        // Purge the JIT cache using the static method to avoid unnecessary instantiation
         // This will delete all cache files from disk, regardless of which
         // JitCache instance created them
-        var cache = new JitCache();
-        var success = cache.PurgeCache();
+        var success = JitCache.PurgeCache(JitCache.DefaultCacheDirectory);
         
         if (success)
         {
-            // Success - cache has been purged
-            System.Diagnostics.Debug.WriteLine("[SettingsViewModel] JIT cache purged successfully");
+            CacheStatusMessage = "✓ JIT cache purged successfully";
         }
         else
         {
-            // Failure - error was logged by JitCache
-            System.Diagnostics.Debug.WriteLine("[SettingsViewModel] Failed to purge JIT cache - check logs for details");
+            CacheStatusMessage = "✗ Failed to purge JIT cache - check logs for details";
         }
+        
+        // Clear the message after 5 seconds
+        Task.Delay(5000).ContinueWith(_ => CacheStatusMessage = string.Empty);
     }
 }

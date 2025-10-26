@@ -17,14 +17,19 @@ public class JitCache
 	private readonly ConcurrentDictionary<uint, BlockMetadata> _blockCache = new();
 	private readonly ConcurrentDictionary<string, uint> _hashToAddress = new();
 	
+	/// <summary>
+	/// Gets the default cache directory path
+	/// </summary>
+	public static string DefaultCacheDirectory => Path.Combine(
+		Path.GetTempPath(),
+		"Win32Emu",
+		"JitCache"
+	);
+	
 	public JitCache(string? cacheDirectory = null, ILogger? logger = null)
 	{
 		_logger = logger ?? NullLogger.Instance;
-		_cacheDirectory = cacheDirectory ?? Path.Combine(
-			Path.GetTempPath(),
-			"Win32Emu",
-			"JitCache"
-		);
+		_cacheDirectory = cacheDirectory ?? DefaultCacheDirectory;
 		
 		Directory.CreateDirectory(_cacheDirectory);
 		_logger.LogInformation("[JitCache] Initialized with cache directory: {CacheDirectory}", _cacheDirectory);
@@ -161,6 +166,36 @@ public class JitCache
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[JitCache] Failed to purge cache from {CacheDirectory}", _cacheDirectory);
+			return false;
+		}
+	}
+	
+	/// <summary>
+	/// Static method to purge all cache files from the specified directory
+	/// </summary>
+	/// <param name="cacheDirectory">The cache directory to purge</param>
+	/// <param name="logger">Optional logger for logging operations</param>
+	/// <returns>True if the operation succeeded, false otherwise</returns>
+	public static bool PurgeCache(string cacheDirectory, ILogger? logger = null)
+	{
+		try
+		{
+			if (Directory.Exists(cacheDirectory))
+			{
+				var files = Directory.GetFiles(cacheDirectory, "jit_cache_*.json");
+				foreach (var file in files)
+				{
+					File.Delete(file);
+					logger?.LogInformation("[JitCache] Deleted cache file: {File}", file);
+				}
+				logger?.LogInformation("[JitCache] Purged {Count} cache files from disk", files.Length);
+			}
+			
+			return true;
+		}
+		catch (Exception ex)
+		{
+			logger?.LogError(ex, "[JitCache] Failed to purge cache from {CacheDirectory}", cacheDirectory);
 			return false;
 		}
 	}

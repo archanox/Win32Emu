@@ -28,16 +28,24 @@ public class JitCacheTests
 		// Arrange
 		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
 		
-		// Act
-		var cache = new JitCache(tempDir);
-		var stats = cache.GetStatistics();
-		
-		// Assert
-		Assert.Equal(tempDir, stats.CacheDirectory);
-		Assert.True(Directory.Exists(tempDir));
-		
-		// Cleanup
-		Directory.Delete(tempDir, true);
+		try
+		{
+			// Act
+			var cache = new JitCache(tempDir);
+			var stats = cache.GetStatistics();
+			
+			// Assert
+			Assert.Equal(tempDir, stats.CacheDirectory);
+			Assert.True(Directory.Exists(tempDir));
+		}
+		finally
+		{
+			// Cleanup
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir, true);
+			}
+		}
 	}
 	
 	[Fact]
@@ -72,52 +80,61 @@ public class JitCacheTests
 	{
 		// Arrange
 		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
-		var cache = new JitCache(tempDir);
-		var executablePath = "/test/program.exe";
 		
-		// Add some blocks
-		cache.AddBlockMetadata(0x1000, new BlockMetadata
+		try
 		{
-			StartAddress = 0x1000,
-			InstructionCount = 3,
-			ByteLength = 10,
-			CodeHash = "HASH1",
-			FirstCompiled = DateTime.UtcNow
-		});
-		
-		cache.AddBlockMetadata(0x2000, new BlockMetadata
+			var cache = new JitCache(tempDir);
+			var executablePath = "/test/program.exe";
+			
+			// Add some blocks
+			cache.AddBlockMetadata(0x1000, new BlockMetadata
+			{
+				StartAddress = 0x1000,
+				InstructionCount = 3,
+				ByteLength = 10,
+				CodeHash = "HASH1",
+				FirstCompiled = DateTime.UtcNow
+			});
+			
+			cache.AddBlockMetadata(0x2000, new BlockMetadata
+			{
+				StartAddress = 0x2000,
+				InstructionCount = 7,
+				ByteLength = 20,
+				CodeHash = "HASH2",
+				FirstCompiled = DateTime.UtcNow
+			});
+			
+			// Act - Save
+			await cache.SaveCacheAsync(executablePath);
+			
+			// Create new cache and load
+			var newCache = new JitCache(tempDir);
+			await newCache.LoadCacheAsync(executablePath);
+			
+			// Assert
+			var stats = newCache.GetStatistics();
+			Assert.Equal(2, stats.TotalBlocks);
+			Assert.Equal(10, stats.TotalInstructions);
+			
+			Assert.True(newCache.TryGetBlockMetadata(0x1000, out var block1));
+			Assert.NotNull(block1);
+			Assert.Equal(3, block1.InstructionCount);
+			Assert.Equal("HASH1", block1.CodeHash);
+			
+			Assert.True(newCache.TryGetBlockMetadata(0x2000, out var block2));
+			Assert.NotNull(block2);
+			Assert.Equal(7, block2.InstructionCount);
+			Assert.Equal("HASH2", block2.CodeHash);
+		}
+		finally
 		{
-			StartAddress = 0x2000,
-			InstructionCount = 7,
-			ByteLength = 20,
-			CodeHash = "HASH2",
-			FirstCompiled = DateTime.UtcNow
-		});
-		
-		// Act - Save
-		await cache.SaveCacheAsync(executablePath);
-		
-		// Create new cache and load
-		var newCache = new JitCache(tempDir);
-		await newCache.LoadCacheAsync(executablePath);
-		
-		// Assert
-		var stats = newCache.GetStatistics();
-		Assert.Equal(2, stats.TotalBlocks);
-		Assert.Equal(10, stats.TotalInstructions);
-		
-		Assert.True(newCache.TryGetBlockMetadata(0x1000, out var block1));
-		Assert.NotNull(block1);
-		Assert.Equal(3, block1.InstructionCount);
-		Assert.Equal("HASH1", block1.CodeHash);
-		
-		Assert.True(newCache.TryGetBlockMetadata(0x2000, out var block2));
-		Assert.NotNull(block2);
-		Assert.Equal(7, block2.InstructionCount);
-		Assert.Equal("HASH2", block2.CodeHash);
-		
-		// Cleanup
-		Directory.Delete(tempDir, true);
+			// Cleanup
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir, true);
+			}
+		}
 	}
 	
 	[Fact]
@@ -166,55 +183,64 @@ public class JitCacheTests
 	{
 		// Arrange
 		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
-		var cache = new JitCache(tempDir);
-		var executablePath1 = "/test/program1.exe";
-		var executablePath2 = "/test/program2.exe";
 		
-		// Add some blocks
-		cache.AddBlockMetadata(0x1000, new BlockMetadata
+		try
 		{
-			StartAddress = 0x1000,
-			InstructionCount = 3,
-			ByteLength = 10,
-			CodeHash = "HASH1",
-			FirstCompiled = DateTime.UtcNow
-		});
-		
-		cache.AddBlockMetadata(0x2000, new BlockMetadata
+			var cache = new JitCache(tempDir);
+			var executablePath1 = "/test/program1.exe";
+			var executablePath2 = "/test/program2.exe";
+			
+			// Add some blocks
+			cache.AddBlockMetadata(0x1000, new BlockMetadata
+			{
+				StartAddress = 0x1000,
+				InstructionCount = 3,
+				ByteLength = 10,
+				CodeHash = "HASH1",
+				FirstCompiled = DateTime.UtcNow
+			});
+			
+			cache.AddBlockMetadata(0x2000, new BlockMetadata
+			{
+				StartAddress = 0x2000,
+				InstructionCount = 5,
+				ByteLength = 15,
+				CodeHash = "HASH2",
+				FirstCompiled = DateTime.UtcNow
+			});
+			
+			// Save cache for two different executables
+			await cache.SaveCacheAsync(executablePath1);
+			await cache.SaveCacheAsync(executablePath2);
+			
+			// Verify cache files exist
+			var cacheFiles = Directory.GetFiles(tempDir, "jit_cache_*.json");
+			Assert.True(cacheFiles.Length >= 1, "Cache files should exist before purge");
+			
+			// Act - Purge the cache
+			var success = cache.PurgeCache();
+			
+			// Assert - Purge should succeed
+			Assert.True(success);
+			
+			// Assert - Check memory cache is cleared
+			var stats = cache.GetStatistics();
+			Assert.Equal(0, stats.TotalBlocks);
+			Assert.False(cache.TryGetBlockMetadata(0x1000, out _));
+			Assert.False(cache.TryGetBlockMetadata(0x2000, out _));
+			
+			// Assert - Check disk cache files are deleted
+			cacheFiles = Directory.GetFiles(tempDir, "jit_cache_*.json");
+			Assert.Empty(cacheFiles);
+		}
+		finally
 		{
-			StartAddress = 0x2000,
-			InstructionCount = 5,
-			ByteLength = 15,
-			CodeHash = "HASH2",
-			FirstCompiled = DateTime.UtcNow
-		});
-		
-		// Save cache for two different executables
-		await cache.SaveCacheAsync(executablePath1);
-		await cache.SaveCacheAsync(executablePath2);
-		
-		// Verify cache files exist
-		var cacheFiles = Directory.GetFiles(tempDir, "jit_cache_*.json");
-		Assert.True(cacheFiles.Length >= 1, "Cache files should exist before purge");
-		
-		// Act - Purge the cache
-		var success = cache.PurgeCache();
-		
-		// Assert - Purge should succeed
-		Assert.True(success);
-		
-		// Assert - Check memory cache is cleared
-		var stats = cache.GetStatistics();
-		Assert.Equal(0, stats.TotalBlocks);
-		Assert.False(cache.TryGetBlockMetadata(0x1000, out _));
-		Assert.False(cache.TryGetBlockMetadata(0x2000, out _));
-		
-		// Assert - Check disk cache files are deleted
-		cacheFiles = Directory.GetFiles(tempDir, "jit_cache_*.json");
-		Assert.Empty(cacheFiles);
-		
-		// Cleanup
-		Directory.Delete(tempDir, true);
+			// Cleanup - ensure temp directory is deleted even if test fails
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir, true);
+			}
+		}
 	}
 	
 	[Fact]
@@ -222,32 +248,41 @@ public class JitCacheTests
 	{
 		// Arrange
 		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
-		var mem = new VirtualMemory(1024 * 1024);
-		var cpu = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
-		var execPath = "/test/program.exe";
 		
-		// Setup some simple code
-		cpu.SetEip(0x1000);
-		mem.Write8(0x1000, 0x90); // NOP
-		mem.Write8(0x1001, 0x90); // NOP
-		mem.Write8(0x1002, 0xC3); // RET
-		
-		cpu.SetRegister("ESP", 0x10000);
-		mem.Write32(0x10000, 0x2000); // Return address
-		
-		// Act - Set executable path and execute block (which will compile and cache it)
-		cpu.SetExecutablePath(execPath);
-		await cpu.ExecuteBlockAsync(mem);
-		
-		// Save cache
-		await cpu.SaveCacheAsync();
-		
-		// Assert - Check cache was created
-		var stats = cpu.GetCacheStatistics();
-		Assert.True(stats.TotalBlocks > 0);
-		
-		// Cleanup
-		Directory.Delete(tempDir, true);
+		try
+		{
+			var mem = new VirtualMemory(1024 * 1024);
+			var cpu = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			var execPath = "/test/program.exe";
+			
+			// Setup some simple code
+			cpu.SetEip(0x1000);
+			mem.Write8(0x1000, 0x90); // NOP
+			mem.Write8(0x1001, 0x90); // NOP
+			mem.Write8(0x1002, 0xC3); // RET
+			
+			cpu.SetRegister("ESP", 0x10000);
+			mem.Write32(0x10000, 0x2000); // Return address
+			
+			// Act - Set executable path and execute block (which will compile and cache it)
+			cpu.SetExecutablePath(execPath);
+			await cpu.ExecuteBlockAsync(mem);
+			
+			// Save cache
+			await cpu.SaveCacheAsync();
+			
+			// Assert - Check cache was created
+			var stats = cpu.GetCacheStatistics();
+			Assert.True(stats.TotalBlocks > 0);
+		}
+		finally
+		{
+			// Cleanup
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir, true);
+			}
+		}
 	}
 	
 	[Fact]
@@ -255,37 +290,46 @@ public class JitCacheTests
 	{
 		// Arrange
 		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
-		var mem = new VirtualMemory(1024 * 1024);
-		var execPath = "/test/program.exe";
 		
-		// Create first CPU and save cache
-		var cpu1 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
-		cpu1.SetExecutablePath(execPath);
-		
-		// Write some code and compile it
-		mem.Write8(0x1000, 0x90); // NOP
-		mem.Write8(0x1001, 0xC3); // RET
-		cpu1.SetEip(0x1000);
-		cpu1.SetRegister("ESP", 0x10000);
-		mem.Write32(0x10000, 0x2000);
-		
-		await cpu1.ExecuteBlockAsync(mem);
-		await cpu1.SaveCacheAsync();
-		
-		var stats1 = cpu1.GetCacheStatistics();
-		
-		// Act - Create new CPU and load cache
-		var cpu2 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
-		cpu2.SetExecutablePath(execPath);
-		await cpu2.LoadCacheAsync();
-		
-		var stats2 = cpu2.GetCacheStatistics();
-		
-		// Assert
-		Assert.Equal(stats1.TotalBlocks, stats2.TotalBlocks);
-		
-		// Cleanup
-		Directory.Delete(tempDir, true);
+		try
+		{
+			var mem = new VirtualMemory(1024 * 1024);
+			var execPath = "/test/program.exe";
+			
+			// Create first CPU and save cache
+			var cpu1 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			cpu1.SetExecutablePath(execPath);
+			
+			// Write some code and compile it
+			mem.Write8(0x1000, 0x90); // NOP
+			mem.Write8(0x1001, 0xC3); // RET
+			cpu1.SetEip(0x1000);
+			cpu1.SetRegister("ESP", 0x10000);
+			mem.Write32(0x10000, 0x2000);
+			
+			await cpu1.ExecuteBlockAsync(mem);
+			await cpu1.SaveCacheAsync();
+			
+			var stats1 = cpu1.GetCacheStatistics();
+			
+			// Act - Create new CPU and load cache
+			var cpu2 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			cpu2.SetExecutablePath(execPath);
+			await cpu2.LoadCacheAsync();
+			
+			var stats2 = cpu2.GetCacheStatistics();
+			
+			// Assert
+			Assert.Equal(stats1.TotalBlocks, stats2.TotalBlocks);
+		}
+		finally
+		{
+			// Cleanup
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir, true);
+			}
+		}
 	}
 	
 	[Fact]
@@ -293,19 +337,28 @@ public class JitCacheTests
 	{
 		// Arrange
 		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
-		var mem = new VirtualMemory(1024 * 1024);
-		var cpu = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
 		
-		// Act
-		var stats = cpu.GetCacheStatistics();
-		
-		// Assert
-		Assert.NotNull(stats);
-		Assert.Equal(0, stats.TotalBlocks);
-		Assert.Equal(tempDir, stats.CacheDirectory);
-		
-		// Cleanup
-		Directory.Delete(tempDir, true);
+		try
+		{
+			var mem = new VirtualMemory(1024 * 1024);
+			var cpu = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			
+			// Act
+			var stats = cpu.GetCacheStatistics();
+			
+			// Assert
+			Assert.NotNull(stats);
+			Assert.Equal(0, stats.TotalBlocks);
+			Assert.Equal(tempDir, stats.CacheDirectory);
+		}
+		finally
+		{
+			// Cleanup
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir, true);
+			}
+		}
 	}
 	
 	[Fact]
@@ -313,46 +366,55 @@ public class JitCacheTests
 	{
 		// Arrange
 		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
-		var mem = new VirtualMemory(1024 * 1024);
-		var execPath = "/test/program.exe";
 		
-		// Create first CPU, compile some blocks, and save cache
-		var cpu1 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
-		cpu1.SetExecutablePath(execPath);
-		
-		// Write code at multiple locations
-		mem.Write8(0x1000, 0x90); // NOP
-		mem.Write8(0x1001, 0xC3); // RET
-		
-		mem.Write8(0x2000, 0x90); // NOP
-		mem.Write8(0x2001, 0x90); // NOP
-		mem.Write8(0x2002, 0xC3); // RET
-		
-		cpu1.SetRegister("ESP", 0x10000);
-		mem.Write32(0x10000, 0x3000);
-		
-		// Compile blocks
-		cpu1.SetEip(0x1000);
-		await cpu1.ExecuteBlockAsync(mem);
-		
-		cpu1.SetEip(0x2000);
-		await cpu1.ExecuteBlockAsync(mem);
-		
-		// Save cache
-		await cpu1.SaveCacheAsync();
-		
-		// Act - Create new CPU, load cache, and precompile
-		var cpu2 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
-		cpu2.SetExecutablePath(execPath);
-		await cpu2.LoadCacheAsync();
-		
-		var compiled = await cpu2.PrecompileFromCacheAsync(mem);
-		
-		// Assert
-		Assert.True(compiled > 0, "Should have compiled at least one block from cache");
-		Assert.True(compiled <= 2, "Should not compile more blocks than in cache");
-		
-		// Cleanup
-		Directory.Delete(tempDir, true);
+		try
+		{
+			var mem = new VirtualMemory(1024 * 1024);
+			var execPath = "/test/program.exe";
+			
+			// Create first CPU, compile some blocks, and save cache
+			var cpu1 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			cpu1.SetExecutablePath(execPath);
+			
+			// Write code at multiple locations
+			mem.Write8(0x1000, 0x90); // NOP
+			mem.Write8(0x1001, 0xC3); // RET
+			
+			mem.Write8(0x2000, 0x90); // NOP
+			mem.Write8(0x2001, 0x90); // NOP
+			mem.Write8(0x2002, 0xC3); // RET
+			
+			cpu1.SetRegister("ESP", 0x10000);
+			mem.Write32(0x10000, 0x3000);
+			
+			// Compile blocks
+			cpu1.SetEip(0x1000);
+			await cpu1.ExecuteBlockAsync(mem);
+			
+			cpu1.SetEip(0x2000);
+			await cpu1.ExecuteBlockAsync(mem);
+			
+			// Save cache
+			await cpu1.SaveCacheAsync();
+			
+			// Act - Create new CPU, load cache, and precompile
+			var cpu2 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			cpu2.SetExecutablePath(execPath);
+			await cpu2.LoadCacheAsync();
+			
+			var compiled = await cpu2.PrecompileFromCacheAsync(mem);
+			
+			// Assert
+			Assert.True(compiled > 0, "Should have compiled at least one block from cache");
+			Assert.True(compiled <= 2, "Should not compile more blocks than in cache");
+		}
+		finally
+		{
+			// Cleanup
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir, true);
+			}
+		}
 	}
 }
