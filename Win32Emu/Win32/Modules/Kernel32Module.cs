@@ -697,6 +697,17 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = SystemTimeToFileTime(a.UInt32(0), a.UInt32(1));
 				return true;
 
+			// Legacy file I/O functions (16-bit compatibility)
+			case "_LCLOSE":
+				returnValue = _lclose(a.UInt32(0));
+				return true;
+			case "_LCREAT":
+				returnValue = _lcreat(a.LpcStr(0), a.Int32(1));
+				return true;
+			case "_LWRITE":
+				returnValue = _lwrite(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+
 			default:
 				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
 				return false;
@@ -6849,6 +6860,87 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return (uint)charsToWrite;
 		}
 		return 0;
+	}
+
+	/// <summary>
+	/// Closes a file opened with _lopen or _lcreat (legacy 16-bit API).
+	/// HFILE _lclose(
+	///   [in] HFILE hFile
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint _lclose(uint hFile)
+	{
+		_logger.LogInformation("[Kernel32] _lclose(hFile=0x{HFile:X8})", hFile);
+		
+		// _lclose is a legacy 16-bit API for closing files
+		// It maps to CloseHandle in Win32
+		// Return 0 for success, -1 (0xFFFFFFFF) for error
+		
+		return CloseHandle((void*)hFile);
+	}
+
+	/// <summary>
+	/// Creates a new file or rewrites an existing file (legacy 16-bit API).
+	/// HFILE _lcreat(
+	///   [in] LPCSTR lpPathName,
+	///   [in] int    iAttribute
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint _lcreat(in LpcStr lpPathName, int iAttribute)
+	{
+		var pathName = lpPathName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] _lcreat(lpPathName=\"{PathName}\", iAttribute={IAttribute})", 
+			pathName, iAttribute);
+		
+		// _lcreat is a legacy 16-bit API for creating/rewriting files
+		// iAttribute can be 0 (normal), 1 (read-only), 2 (hidden), 4 (system)
+		// Maps to CreateFile with CREATE_ALWAYS disposition
+		
+		// For simplicity, use the VFS or return a dummy handle
+		// In a real implementation, this would create the file
+		
+		if (string.IsNullOrEmpty(pathName))
+		{
+			_logger.LogWarning("[Kernel32] _lcreat: NULL or empty path");
+			return 0xFFFFFFFF; // HFILE_ERROR
+		}
+		
+		// Return a dummy file handle
+		// A full implementation would actually create the file
+		var handle = 0x4000u + (uint)pathName.GetHashCode() & 0xFFF;
+		_logger.LogInformation("[Kernel32] _lcreat: Created file handle 0x{Handle:X8}", handle);
+		return handle;
+	}
+
+	/// <summary>
+	/// Writes to a file (legacy 16-bit API).
+	/// UINT _lwrite(
+	///   [in] HFILE  hFile,
+	///   [in] LPCSTR lpBuffer,
+	///   [in] UINT   uBytes
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint _lwrite(uint hFile, uint lpBuffer, uint uBytes)
+	{
+		_logger.LogInformation("[Kernel32] _lwrite(hFile=0x{HFile:X8}, lpBuffer=0x{LpBuffer:X8}, uBytes={UBytes})",
+			hFile, lpBuffer, uBytes);
+		
+		// _lwrite is a legacy 16-bit API for writing to files
+		// Returns the number of bytes written, or 0xFFFFFFFF on error
+		
+		if (lpBuffer == 0)
+		{
+			_logger.LogWarning("[Kernel32] _lwrite: NULL buffer");
+			return 0xFFFFFFFF; // HFILE_ERROR
+		}
+		
+		// For stub implementation, just return the number of bytes written
+		// A full implementation would actually write the data
+		_logger.LogInformation("[Kernel32] _lwrite: Stub returning {UBytes} bytes written", uBytes);
+		return uBytes;
 	}
 
 	[DllModuleExport(12)]
