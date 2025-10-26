@@ -6877,7 +6877,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// It maps to CloseHandle in Win32
 		// Return 0 for success, -1 (0xFFFFFFFF) for error
 		
-		return CloseHandle((void*)hFile);
+		return CloseHandle((void*)hFile) != 0 ? 0u : 0xFFFFFFFF;
 	}
 
 	/// <summary>
