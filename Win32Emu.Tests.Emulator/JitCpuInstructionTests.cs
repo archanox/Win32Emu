@@ -239,4 +239,108 @@ public class JitCpuInstructionTests
 		Assert.Equal(4u, cpu.GetRegister("ECX")); // ECX should be decremented
 		Assert.Equal(0x1002u, cpu.GetEip()); // Should NOT jump due to ZF=0
 	}
+
+	[Fact]
+	public void MovsbInstruction_ShouldCopyByteAndIncrementRegisters()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("ESI", 0x2000); // Source address
+		cpu.SetRegister("EDI", 0x3000); // Destination address
+		cpu.SetRegister("EFLAGS", 0); // Clear DF (direction flag)
+		
+		// Write test value at source
+		mem.Write8(0x2000, 0x42); // Test byte value
+		
+		// MOVSB = A4
+		mem.Write8(0x1000, 0xA4);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x42, mem.Read8(0x3000)); // Byte should be copied to destination
+		Assert.Equal(0x2001u, cpu.GetRegister("ESI")); // ESI should be incremented
+		Assert.Equal(0x3001u, cpu.GetRegister("EDI")); // EDI should be incremented
+		Assert.Equal(0x1001u, cpu.GetEip()); // EIP should advance
+	}
+
+	[Fact]
+	public void MovsbInstruction_WithDirectionFlag_ShouldDecrementRegisters()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("ESI", 0x2000); // Source address
+		cpu.SetRegister("EDI", 0x3000); // Destination address
+		cpu.SetRegister("EFLAGS", 0x400); // Set DF (direction flag, bit 10)
+		
+		// Write test value at source
+		mem.Write8(0x2000, 0x55); // Test byte value
+		
+		// MOVSB = A4
+		mem.Write8(0x1000, 0xA4);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x55, mem.Read8(0x3000)); // Byte should be copied to destination
+		Assert.Equal(0x1FFFu, cpu.GetRegister("ESI")); // ESI should be decremented
+		Assert.Equal(0x2FFFu, cpu.GetRegister("EDI")); // EDI should be decremented
+		Assert.Equal(0x1001u, cpu.GetEip()); // EIP should advance
+	}
+
+	[Fact]
+	public void StosdInstruction_ShouldStoreEaxAndIncrementEdi()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0x12345678); // Value to store
+		cpu.SetRegister("EDI", 0x3000); // Destination address
+		cpu.SetRegister("EFLAGS", 0); // Clear DF (direction flag)
+		
+		// STOSD = AB
+		mem.Write8(0x1000, 0xAB);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x12345678u, mem.Read32(0x3000)); // EAX value should be stored
+		Assert.Equal(0x3004u, cpu.GetRegister("EDI")); // EDI should be incremented by 4
+		Assert.Equal(0x1001u, cpu.GetEip()); // EIP should advance
+	}
+
+	[Fact]
+	public void StosdInstruction_WithDirectionFlag_ShouldDecrementEdi()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0xDEADBEEF); // Value to store
+		cpu.SetRegister("EDI", 0x3000); // Destination address
+		cpu.SetRegister("EFLAGS", 0x400); // Set DF (direction flag, bit 10)
+		
+		// STOSD = AB
+		mem.Write8(0x1000, 0xAB);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0xDEADBEEFu, mem.Read32(0x3000)); // EAX value should be stored
+		Assert.Equal(0x2FFCu, cpu.GetRegister("EDI")); // EDI should be decremented by 4
+		Assert.Equal(0x1001u, cpu.GetEip()); // EIP should advance
+	}
 }

@@ -646,8 +646,14 @@ public class JitCpu : IAsyncCpu
 				break;
 			
 			// String operations
+			case Mnemonic.Movsb:
+				ExecMovsb();
+				break;
 			case Mnemonic.Lodsw:
 				ExecLodsw();
+				break;
+			case Mnemonic.Stosd:
+				ExecStosd();
 				break;
 			
 			// I/O operations
@@ -1393,6 +1399,37 @@ public class JitCpu : IAsyncCpu
 			_esi -= 2; // Decrement for backward
 		else
 			_esi += 2; // Increment for forward
+	}
+	
+	private void ExecMovsb()
+	{
+		// MOVSB - Move byte from [ESI] to [EDI]
+		byte value = _mem.Read8(_esi);
+		_mem.Write8(_edi, value);
+		
+		// Update ESI and EDI based on direction flag
+		if (GetFlag(Df))
+		{
+			_esi -= 1; // Decrement for backward
+			_edi -= 1;
+		}
+		else
+		{
+			_esi += 1; // Increment for forward
+			_edi += 1;
+		}
+	}
+	
+	private void ExecStosd()
+	{
+		// STOSD - Store EAX to [EDI]
+		_mem.Write32(_edi, _eax);
+		
+		// Update EDI based on direction flag
+		if (GetFlag(Df))
+			_edi -= 4; // Decrement for backward (4 bytes for doubleword)
+		else
+			_edi += 4; // Increment for forward
 	}
 
 	// I/O operations
