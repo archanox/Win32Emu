@@ -1,5 +1,6 @@
 using Xunit;
 using Win32Emu.Win32;
+using Win32Emu.Win32.Modules;
 
 namespace Win32Emu.Tests.Emulator;
 
@@ -50,22 +51,35 @@ public class DDrawStdCallMetaTests
 		Assert.True(true, "DirectDraw COM methods now have proper argBytes metadata in ComVtableDispatcher");
 	}
 
-	[Fact]
-	public void CreatePalette_WithMultipleFlagsSet_ShouldUseHighestBitDepth()
+	[Theory]
+	[InlineData(0x1u, 2)]    // DDPCAPS_1BIT → 2 entries
+	[InlineData(0x2u, 4)]    // DDPCAPS_2BIT → 4 entries
+	[InlineData(0x4u, 16)]   // DDPCAPS_4BIT → 16 entries
+	[InlineData(0x8u, 256)]  // DDPCAPS_8BIT → 256 entries
+	[InlineData(0xCu, 256)]  // Both 4BIT and 8BIT set → should use 8BIT (256 entries)
+	[InlineData(0xFu, 256)]  // All flags set → should use 8BIT (256 entries)
+	[InlineData(0x6u, 16)]   // Both 2BIT and 4BIT set → should use 4BIT (16 entries)
+	[InlineData(0x0u, 256)]  // No flags set → default to 256 entries
+	public void CreatePalette_WithVariousFlags_ShouldSelectCorrectPaletteSize(uint dwFlags, int expectedEntries)
 	{
-		// This test documents the fix for the palette size determination issue
+		// This test verifies the fix for the palette size determination issue.
 		// When multiple bit depth flags are set (e.g., 0x4 | 0x8 = 0xC),
 		// the palette should be created with the highest bit depth (256 entries for 8-bit)
-		// not the first matching flag (16 entries for 4-bit).
+		// not a lower bit depth (16 entries for 4-bit).
 		//
 		// This prevents the error: "SetEntries: invalid range (start=0, count=256, max=16)"
 		// when applications set 256 palette entries on what they expect to be a 256-entry palette.
 		//
-		// Fix: Check flags from highest to lowest bit depth:
+		// The implementation checks flags from highest to lowest bit depth:
 		// - 8-bit (0x8) → 256 entries (checked first)
 		// - 4-bit (0x4) → 16 entries
 		// - 2-bit (0x2) → 4 entries
 		// - 1-bit (0x1) → 2 entries
-		Assert.True(true, "CreatePalette now checks bit depth flags from highest to lowest priority");
+		// - No flags (0x0) → 256 entries (default)
+
+		// Test the actual production code method
+		int numEntries = DDrawModule.DeterminePaletteSizeFromFlags(dwFlags);
+
+		Assert.Equal(expectedEntries, numEntries);
 	}
 }

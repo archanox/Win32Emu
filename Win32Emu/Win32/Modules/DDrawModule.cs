@@ -251,6 +251,28 @@ namespace Win32Emu.Win32.Modules
 			public bool IsWindowedMode { get; set; }
 		}
 
+		/// <summary>
+		/// Determines the number of palette entries based on DirectDraw palette capability flags.
+		/// Checks flags from highest to lowest bit depth to handle multiple flags correctly.
+		/// </summary>
+		/// <param name="dwFlags">DirectDraw palette capability flags (DDPCAPS_*)</param>
+		/// <returns>Number of entries for the palette (2, 4, 16, or 256)</returns>
+		public static int DeterminePaletteSizeFromFlags(uint dwFlags)
+		{
+			// Check from highest to lowest bit depth to handle multiple flags correctly
+			// When multiple bit depth flags are set (e.g., 0x4 | 0x8 = 0xC),
+			// the palette should be created with the highest bit depth (256 entries for 8-bit)
+			if ((dwFlags & 0x8) != 0)
+				return 256; // DDPCAPS_8BIT
+			if ((dwFlags & 0x4) != 0)
+				return 16; // DDPCAPS_4BIT
+			if ((dwFlags & 0x2) != 0)
+				return 4; // DDPCAPS_2BIT
+			if ((dwFlags & 0x1) != 0)
+				return 2; // DDPCAPS_1BIT
+			return 256; // Default to 8-bit if no flags set
+		}
+
 		// COM interface methods (stubs for IDirectDraw)
 		private uint ComQueryInterface(ICpu cpu, VirtualMemory memory)
 		{
@@ -398,22 +420,31 @@ namespace Win32Emu.Win32.Modules
 				return 0x80070057; // DDERR_INVALIDPARAMS
 			}
 
-			// Check bounds
-			if (dwStartingEntry >= palette.Entries.Length || dwStartingEntry + dwCount > palette.Entries.Length)
+			// Check starting entry is valid
+			if (dwStartingEntry >= palette.Entries.Length)
 			{
-				_logger.LogError("[DDraw] SetEntries: invalid range (start={Start}, count={Count}, max={Max})",
-					dwStartingEntry, dwCount, palette.Entries.Length);
+				_logger.LogError("[DDraw] SetEntries: starting entry {Start} is beyond palette size {Max}",
+					dwStartingEntry, palette.Entries.Length);
 				return 0x80070057; // DDERR_INVALIDPARAMS
 			}
 
+			// Clamp count to available entries (for compatibility with games that try to set more entries than palette has)
+			var actualCount = dwCount;
+			if (dwStartingEntry + dwCount > palette.Entries.Length)
+			{
+				actualCount = (uint)palette.Entries.Length - dwStartingEntry;
+				_logger.LogWarning("[DDraw] SetEntries: clamping count from {RequestedCount} to {ActualCount} (start={Start}, max={Max})",
+					dwCount, actualCount, dwStartingEntry, palette.Entries.Length);
+			}
+
 			// Read and update palette entries (PALETTEENTRY is 4 bytes: r,g,b,flags)
-			for (var i = 0u; i < dwCount; i++)
+			for (var i = 0u; i < actualCount; i++)
 			{
 				var entry = _env.MemRead32(lpEntries + (i * 4));
 				palette.Entries[dwStartingEntry + i] = entry;
 			}
 
-			_logger.LogInformation("[DDraw] Updated {Count} palette entries starting at index {Start}", dwCount, dwStartingEntry);
+			_logger.LogInformation("[DDraw] Updated {Count} palette entries starting at index {Start}", actualCount, dwStartingEntry);
 			return 0; // DD_OK
 		}
 
@@ -491,18 +522,7 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, dwFlags, lpColorTable, lplpDDPalette, pUnkOuter);
 
 			// Determine number of entries from dwFlags
-			// Check from highest to lowest bit depth to handle multiple flags correctly
-			int numEntries;
-			if ((dwFlags & 0x8) != 0)
-				numEntries = 256; // DDPCAPS_8BIT
-			else if ((dwFlags & 0x4) != 0)
-				numEntries = 16; // DDPCAPS_4BIT
-			else if ((dwFlags & 0x2) != 0)
-				numEntries = 4; // DDPCAPS_2BIT
-			else if ((dwFlags & 0x1) != 0)
-				numEntries = 2; // DDPCAPS_1BIT
-			else
-				numEntries = 256; // Default
+			int numEntries = DeterminePaletteSizeFromFlags(dwFlags);
 
 			var paletteEntries = new uint[numEntries];
 			if (lpColorTable != 0)
