@@ -412,11 +412,7 @@ public sealed class Emulator : IDisposable
             {
                 _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                 
-                // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
-                // Note: We do NOT save EBP here because some calling code uses EBP to hold the function
-                // pointer for indirect calls (e.g., MOV EBP, [IAT_Entry]; CALL EBP). If we preserve
-                // the EBP value at the time of the call, we'll restore the function pointer value
-                // instead of the original frame pointer, causing crashes.
+                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                 var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                 
                 if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
@@ -430,18 +426,15 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("EAX", ret); // Return value in EAX
                     _cpu.SetEip(retEip);
                     
-                    // Restore callee-saved registers (except EBP - see above)
+                    // Restore callee-saved registers
                     CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-                    
-                    // Restore EBP from stack to handle indirect call cases
-                    RestoreEbpFromStack(esp);
                 }
             }
             else if (step.IsCall && _env.TryGetSyntheticExport(step.CallTarget, out var moduleName, out var exportName))
             {
                 _logger.LogInformation("[SyntheticExport] Hooked function: {ModuleName}!{ExportName} at address 0x{CallTarget:X8}", moduleName, exportName, step.CallTarget);
                 
-                // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
+                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                 var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                 
                 if (_dispatcher!.TryInvoke(moduleName, exportName, _cpu, _vm!, out var ret, out var argBytes))
@@ -455,11 +448,8 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
                     
-                    // Restore callee-saved registers (except EBP - see above)
+                    // Restore callee-saved registers
                     CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-                    
-                    // Restore EBP from stack to handle indirect call cases
-                    RestoreEbpFromStack(esp);
                 }
             }
             else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
@@ -468,11 +458,7 @@ public sealed class Emulator : IDisposable
                 var name = imp.name;
                 _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
                 
-                // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
-                // Note: We do NOT save EBP here because some calling code uses EBP to hold the function
-                // pointer for indirect calls (e.g., MOV EBP, [IAT_Entry]; CALL EBP). If we preserve
-                // the EBP value at the time of the call, we'll restore the function pointer value
-                // instead of the original frame pointer, causing crashes.
+                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                 var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                 
                 if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
@@ -486,11 +472,8 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
                     
-                    // Restore callee-saved registers (except EBP - see above)
+                    // Restore callee-saved registers
                     CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-                    
-                    // Restore EBP from stack to handle indirect call cases
-                    RestoreEbpFromStack(esp);
                 }
             }
             else if (step.IsCall)
@@ -629,7 +612,7 @@ public sealed class Emulator : IDisposable
                 {
                     _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                     
-                    // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                     var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                     
                     if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
@@ -643,18 +626,15 @@ public sealed class Emulator : IDisposable
                         _cpu.SetRegister("EAX", ret); // Return value in EAX
                         _cpu.SetEip(retEip);
                         
-                        // Restore callee-saved registers (except EBP)
+                        // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-                        
-                        // Restore EBP from stack
-                        RestoreEbpFromStack(esp);
                     }
                 }
                 else if (step.IsCall && _env.TryGetSyntheticExport(step.CallTarget, out var synModuleName, out var synExportName))
                 {
                     _logger.LogInformation("[SyntheticExport] Hooked function: {ModuleName}!{ExportName} at address 0x{CallTarget:X8}", synModuleName, synExportName, step.CallTarget);
                     
-                    // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                     var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                     
                     if (_dispatcher!.TryInvoke(synModuleName, synExportName, _cpu, _vm!, out var ret, out var argBytes))
@@ -669,11 +649,8 @@ public sealed class Emulator : IDisposable
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetEip(retEip);
                         
-                        // Restore callee-saved registers (except EBP)
+                        // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-                        
-                        // Restore EBP from stack
-                        RestoreEbpFromStack(esp);
                     }
                 }
                 else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
@@ -682,11 +659,7 @@ public sealed class Emulator : IDisposable
                     var name = imp.name;
                     _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
                     
-                    // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
-                    // Note: We do NOT save EBP here because some calling code uses EBP to hold the function
-                    // pointer for indirect calls (e.g., MOV EBP, [IAT_Entry]; CALL EBP). If we preserve
-                    // the EBP value at the time of the call, we'll restore the function pointer value
-                    // instead of the original frame pointer, causing crashes.
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                     var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                     
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
@@ -709,17 +682,13 @@ public sealed class Emulator : IDisposable
                         var retEip = _vm!.Read32(esp);
                         LogDebug($"[Import] Return address from stack: 0x{retEip:X8}");
                         
-                        // Restore EBP from stack BEFORE cleanup to get the frame pointer from the caller's stack
-                        var espBeforeCleanup = esp;
-                        RestoreEbpFromStack(espBeforeCleanup);
-                        
                         esp += 4 + (uint)argBytes;
                         LogDebug($"[Import] ESP after cleanup: 0x{esp:X8} (added {4 + argBytes} bytes)");
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetEip(retEip);
                         LogDebug($"[Import] Set EIP to 0x{retEip:X8}");
                         
-                        // Restore callee-saved registers (except EBP - see above)
+                        // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                         
                         // Log final state after import return
@@ -977,7 +946,7 @@ public sealed class Emulator : IDisposable
                 {
                     _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                     
-                    // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                     var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                     
                     if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
@@ -991,18 +960,15 @@ public sealed class Emulator : IDisposable
                         _cpu.SetRegister("EAX", ret); // Return value in EAX
                         _cpu.SetEip(retEip);
                         
-                        // Restore callee-saved registers (except EBP)
+                        // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-                        
-                        // Restore EBP from stack
-                        RestoreEbpFromStack(esp);
                     }
                 }
                 else if (step.IsCall && _env.TryGetSyntheticExport(step.CallTarget, out var gdbModuleName, out var gdbExportName))
                 {
                     _logger.LogInformation("[SyntheticExport] Hooked function: {ModuleName}!{ExportName} at address 0x{CallTarget:X8}", gdbModuleName, gdbExportName, step.CallTarget);
                     
-                    // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                     var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                     
                     if (_dispatcher!.TryInvoke(gdbModuleName, gdbExportName, _cpu, _vm!, out var ret, out var argBytes))
@@ -1014,11 +980,8 @@ public sealed class Emulator : IDisposable
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetEip(retEip);
                         
-                        // Restore callee-saved registers (except EBP)
+                        // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-                        
-                        // Restore EBP from stack
-                        RestoreEbpFromStack(esp);
                     }
                 }
                 else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
@@ -1027,7 +990,7 @@ public sealed class Emulator : IDisposable
                     var name = imp.name;
                     _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
                     
-                    // Save callee-saved registers (EBX, ESI, EDI) per x86 calling convention
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                     var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                     
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
@@ -1039,11 +1002,8 @@ public sealed class Emulator : IDisposable
                         _cpu.SetRegister("ESP", esp);
                         _cpu.SetEip(retEip);
                         
-                        // Restore callee-saved registers (except EBP)
+                        // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-                        
-                        // Restore EBP from stack
-                        RestoreEbpFromStack(esp);
                     }
                 }
             }
