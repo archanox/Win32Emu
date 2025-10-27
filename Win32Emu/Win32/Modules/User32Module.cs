@@ -771,6 +771,21 @@ namespace Win32Emu.Win32.Modules
 					returnValue = DdeGetData(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 
+				// Window state functions
+				case "ISZOOMED":
+					returnValue = IsZoomed(a.UInt32(0));
+					return true;
+
+				// Hotkey functions
+				case "REGISTERHOTKEY":
+					returnValue = RegisterHotKey(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				// Dialog functions
+				case "DIALOGBOXINDIRECTPARAMA":
+					returnValue = DialogBoxIndirectParamA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+
 				default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
@@ -5223,6 +5238,116 @@ namespace Win32Emu.Win32.Modules
 
 		// Stub: Return TRUE (success)
 		return 1;
+	}
+
+	/// <summary>
+	/// Determines whether a window is maximized.
+	/// BOOL IsZoomed(
+	///   [in] HWND hWnd
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint IsZoomed(uint hWnd)
+	{
+		_logger.LogInformation("[User32] IsZoomed(hWnd=0x{HWnd:X8})", hWnd);
+
+		// IsZoomed checks if a window is maximized (has WS_MAXIMIZE style)
+		// Get the window style
+		var style = _env.GetWindowProperty(hWnd, NativeTypes.WindowLong.GWL_STYLE);
+		
+		if (style == 0)
+		{
+			// Window not found or no custom style, check the window info
+			var window = _env.GetWindow(hWnd);
+			if (window.HasValue)
+			{
+				style = window.Value.Style;
+			}
+		}
+
+		// Check for WS_MAXIMIZE (0x01000000)
+		const uint WS_MAXIMIZE = 0x01000000;
+		var isMaximized = (style & WS_MAXIMIZE) != 0;
+
+		_logger.LogInformation("[User32] IsZoomed: Window 0x{HWnd:X8} is {State}",
+			hWnd, isMaximized ? "maximized" : "not maximized");
+
+		return isMaximized ? 1u : 0u;
+	}
+
+	/// <summary>
+	/// Defines a system-wide hot key.
+	/// BOOL RegisterHotKey(
+	///   [in, optional] HWND hWnd,
+	///   [in]           int  id,
+	///   [in]           UINT fsModifiers,
+	///   [in]           UINT vk
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint RegisterHotKey(uint hWnd, int id, uint fsModifiers, uint vk)
+	{
+		_logger.LogInformation("[User32] RegisterHotKey(hWnd=0x{HWnd:X8}, id={Id}, fsModifiers=0x{FsModifiers:X}, vk=0x{Vk:X})",
+			hWnd, id, fsModifiers, vk);
+
+		// RegisterHotKey defines a system-wide hotkey
+		// fsModifiers can be:
+		// MOD_ALT = 0x0001, MOD_CONTROL = 0x0002, MOD_SHIFT = 0x0004, MOD_WIN = 0x0008
+		// vk is a virtual key code
+
+		// For a stub implementation, we just return success
+		// A full implementation would:
+		// 1. Register the hotkey globally
+		// 2. Post WM_HOTKEY messages when the hotkey is pressed
+		// 3. Track registered hotkeys to prevent duplicates
+
+		_logger.LogInformation("[User32] RegisterHotKey: Registered hotkey id={Id} with modifiers=0x{FsModifiers:X} and key=0x{Vk:X}",
+			id, fsModifiers, vk);
+
+		return 1; // TRUE (success)
+	}
+
+	/// <summary>
+	/// Creates a modal dialog box from a dialog box template in memory.
+	/// INT_PTR DialogBoxIndirectParamA(
+	///   [in, optional] HINSTANCE       hInstance,
+	///   [in]           LPCDLGTEMPLATEA lpTemplate,
+	///   [in, optional] HWND            hWndParent,
+	///   [in, optional] DLGPROC         lpDialogFunc,
+	///   [in]           LPARAM          dwInitParam
+	/// );
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint DialogBoxIndirectParamA(uint hInstance, uint lpTemplate, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
+	{
+		_logger.LogInformation("[User32] DialogBoxIndirectParamA(hInstance=0x{HInstance:X8}, lpTemplate=0x{LpTemplate:X8}, hWndParent=0x{HWndParent:X8}, lpDialogFunc=0x{LpDialogFunc:X8}, dwInitParam=0x{DwInitParam:X8})",
+			hInstance, lpTemplate, hWndParent, lpDialogFunc, dwInitParam);
+
+		// DialogBoxIndirectParamA creates a modal dialog from a template in memory
+		// This is similar to DialogBoxParamA, but uses a template in memory instead of a resource
+
+		if (lpTemplate == 0)
+		{
+			_logger.LogWarning("[User32] DialogBoxIndirectParamA: NULL template pointer");
+			return unchecked((uint)-1); // Return -1 for error
+		}
+
+		if (lpDialogFunc == 0)
+		{
+			_logger.LogWarning("[User32] DialogBoxIndirectParamA: NULL dialog proc");
+			return unchecked((uint)-1); // Return -1 for error
+		}
+
+		// For stub implementation, we return IDCANCEL (2)
+		// A full implementation would:
+		// 1. Parse the dialog template
+		// 2. Create the dialog window and controls
+		// 3. Enter a modal message loop
+		// 4. Call the dialog procedure for messages
+		// 5. Return the result from EndDialog
+
+		_logger.LogInformation("[User32] DialogBoxIndirectParamA: Stub returning IDCANCEL");
+		return 2; // IDCANCEL
 	}
 	}
 }
