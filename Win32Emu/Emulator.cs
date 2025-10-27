@@ -1150,6 +1150,7 @@ public sealed class Emulator : IDisposable
         var ebpIsZero = (ebp == 0);
         var ebpIsVerySmall = (ebp < MIN_VALID_EBP);
         var ebpIsImportHook = (ebp >= IMPORT_HOOK_BASE && ebp < IMPORT_HOOK_LIMIT);
+        var ebpIsBeyondMemory = (ebp >= _vm!.Size);
         
         // Check if EBP looks like a COM/heap pointer being used for special purposes
         var ebpIsHeapPointer = (ebp >= HEAP_BASE && ebp < HEAP_LIMIT) && !ebpInStackRegion;
@@ -1165,6 +1166,12 @@ public sealed class Emulator : IDisposable
             // EBP contains an import hook address - reset to ESP
             _cpu!.SetRegister("EBP", esp);
             _logger.LogDebug("[Emulator] Reset EBP from import hook 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", ebp, esp);
+        }
+        else if (ebpIsBeyondMemory)
+        {
+            // EBP is beyond valid memory range - reset to ESP
+            _cpu!.SetRegister("EBP", esp);
+            _logger.LogDebug("[Emulator] Reset EBP beyond memory 0x{OldEBP:X8} to ESP 0x{NewEBP:X8} (size=0x{Size:X})", ebp, esp, _vm!.Size);
         }
         else if (!ebpAligned && ebpInStackRegion)
         {
