@@ -401,17 +401,25 @@ public sealed class Emulator : IDisposable
                     // This import address is not mapped - simulate a return with error
                     _logger.LogError("[Import] Attempted to execute unmapped import stub at address 0x{Eip:X8}", currentEip);
                     _logger.LogError("[Import] This address is in the import stub range but not in the ImportAddressMap");
-                    _logger.LogError("[Import] Simulating return with EAX=0 to prevent crash");
-                    
-                    // Read return address from stack and return
                     var esp = _cpu.GetRegister("ESP");
-                    var retEip = _vm!.Read32(esp);
-                    esp += 4; // Pop return address only
-                    _cpu.SetRegister("ESP", esp);
-                    _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
-                    _cpu.SetEip(retEip);
+                    _logger.LogError("[Import] ESP=0x{Esp:X8}, trying to read return address from stack", esp);
                     
-                    _logger.LogWarning("[Import] Simulated return to 0x{RetEip:X8} with EAX=0", retEip);
+                    try
+                    {
+                        // Read return address from stack and return
+                        var retEip = _vm!.Read32(esp);
+                        esp += 4; // Pop return address only
+                        _cpu.SetRegister("ESP", esp);
+                        _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
+                        _cpu.SetEip(retEip);
+                        
+                        _logger.LogWarning("[Import] Simulated return to 0x{RetEip:X8} with EAX=0", retEip);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[Import] Failed to simulate return - stack may be corrupted");
+                        throw; // Re-throw if we can't recover
+                    }
                     continue; // Skip to next iteration
                 }
             }
