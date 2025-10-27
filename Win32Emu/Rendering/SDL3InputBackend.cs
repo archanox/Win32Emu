@@ -15,12 +15,52 @@ public class Sdl3InputBackend : IInputBackend
     private readonly object _lock = new();
     private int _nextDeviceId = 1;
 
+    // Shared state for keyboard and mouse (updated by SDL3RenderingBackend)
+    private static readonly ConcurrentDictionary<int, bool> _sharedKeyboardState = new();
+    private static readonly ConcurrentDictionary<int, bool> _sharedMouseButtons = new();
+    private static int _sharedMouseX = 0;
+    private static int _sharedMouseY = 0;
+    private static int _sharedMouseZ = 0;
+
     private class DeviceInfo
     {
         public int Id { get; set; }
         public IInputBackend.DeviceType Type { get; set; }
         public string Name { get; set; } = string.Empty;
         public IntPtr JoystickHandle { get; set; }
+    }
+
+    /// <summary>
+    /// Update keyboard state from SDL3 events (called by SDL3RenderingBackend)
+    /// </summary>
+    public static void UpdateKeyState(int scancode, bool pressed)
+    {
+        _sharedKeyboardState[scancode] = pressed;
+    }
+
+    /// <summary>
+    /// Update mouse button state from SDL3 events (called by SDL3RenderingBackend)
+    /// </summary>
+    public static void UpdateMouseButton(int button, bool pressed)
+    {
+        _sharedMouseButtons[button] = pressed;
+    }
+
+    /// <summary>
+    /// Update mouse position from SDL3 events (called by SDL3RenderingBackend)
+    /// </summary>
+    public static void UpdateMousePosition(int x, int y)
+    {
+        _sharedMouseX = x;
+        _sharedMouseY = y;
+    }
+
+    /// <summary>
+    /// Update mouse wheel from SDL3 events (called by SDL3RenderingBackend)
+    /// </summary>
+    public static void UpdateMouseWheel(int delta)
+    {
+        _sharedMouseZ += delta;
     }
 
     public Sdl3InputBackend(ILogger logger)
@@ -152,19 +192,18 @@ public class Sdl3InputBackend : IInputBackend
         {
             case IInputBackend.DeviceType.Keyboard:
             {
-                // Note: SDL3 keyboard state is best obtained through events
-                // For now, return empty state. Rendering backend should update
-                // state through ProcessEvents.
-                // TODO: Integrate with SDL3RenderingBackend event processing
+                // Return actual keyboard state from shared state
+                state.KeyStates = new Dictionary<int, bool>(_sharedKeyboardState);
                 return true;
             }
 
             case IInputBackend.DeviceType.Mouse:
             {
-                // Note: SDL3 mouse state is best obtained through events
-                // For now, return empty state. Rendering backend should update
-                // state through ProcessEvents.
-                // TODO: Integrate with SDL3RenderingBackend event processing
+                // Return actual mouse state from shared state
+                state.MouseX = _sharedMouseX;
+                state.MouseY = _sharedMouseY;
+                state.MouseZ = _sharedMouseZ;
+                state.MouseButtons = new Dictionary<int, bool>(_sharedMouseButtons);
                 return true;
             }
 

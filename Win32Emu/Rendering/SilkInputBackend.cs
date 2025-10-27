@@ -14,6 +14,14 @@ public class SilkInputBackend : IInputBackend
     private readonly Dictionary<uint, InputDevice> _devices = new();
     private uint _nextDeviceId = 1;
 
+    // Shared state for keyboard and mouse (updated by SilkGlfwRenderingBackend)
+    private static readonly Dictionary<int, bool> _sharedKeyboardState = new();
+    private static readonly Dictionary<int, bool> _sharedMouseButtons = new();
+    private static int _sharedMouseX = 0;
+    private static int _sharedMouseY = 0;
+    private static int _sharedMouseZ = 0;
+    private static readonly object _sharedStateLock = new();
+
     /// <summary>
     /// Event fired when a UI event occurs (mouse, keyboard, window)
     /// </summary>
@@ -123,14 +131,30 @@ public class SilkInputBackend : IInputBackend
                 return false;
             }
 
-            // Return current state of the device.
-            // Note: This is a basic implementation that returns the cached state.
-            // A full implementation would:
-            // - Query Silk.NET.Input's IInputContext for actual keyboard/mouse/gamepad state
-            // - Requires integration with a windowing system (SDL, GLFW) to get input context
-            // - Update device.State with current button presses, axis positions, etc.
-            // For now, backends that use GLFW (SilkGlfwRenderingBackend) should update
-            // the input state directly when processing window events.
+            // For keyboard and mouse, return state from shared state
+            if (device.Type == IInputBackend.DeviceType.Keyboard)
+            {
+                state = new IInputBackend.InputState();
+                lock (_sharedStateLock)
+                {
+                    state.KeyStates = new Dictionary<int, bool>(_sharedKeyboardState);
+                }
+                return true;
+            }
+            else if (device.Type == IInputBackend.DeviceType.Mouse)
+            {
+                state = new IInputBackend.InputState();
+                lock (_sharedStateLock)
+                {
+                    state.MouseX = _sharedMouseX;
+                    state.MouseY = _sharedMouseY;
+                    state.MouseZ = _sharedMouseZ;
+                    state.MouseButtons = new Dictionary<int, bool>(_sharedMouseButtons);
+                }
+                return true;
+            }
+
+            // For other device types, return cached state
             state = device.State;
             return true;
         }
@@ -147,6 +171,51 @@ public class SilkInputBackend : IInputBackend
             {
                 device.State = newState;
             }
+        }
+    }
+
+    /// <summary>
+    /// Update keyboard state from GLFW events (called by SilkGlfwRenderingBackend)
+    /// </summary>
+    public static void UpdateKeyState(int keyCode, bool pressed)
+    {
+        lock (_sharedStateLock)
+        {
+            _sharedKeyboardState[keyCode] = pressed;
+        }
+    }
+
+    /// <summary>
+    /// Update mouse button state from GLFW events (called by SilkGlfwRenderingBackend)
+    /// </summary>
+    public static void UpdateMouseButton(int button, bool pressed)
+    {
+        lock (_sharedStateLock)
+        {
+            _sharedMouseButtons[button] = pressed;
+        }
+    }
+
+    /// <summary>
+    /// Update mouse position from GLFW events (called by SilkGlfwRenderingBackend)
+    /// </summary>
+    public static void UpdateMousePosition(int x, int y)
+    {
+        lock (_sharedStateLock)
+        {
+            _sharedMouseX = x;
+            _sharedMouseY = y;
+        }
+    }
+
+    /// <summary>
+    /// Update mouse wheel from GLFW events (called by SilkGlfwRenderingBackend)
+    /// </summary>
+    public static void UpdateMouseWheel(int delta)
+    {
+        lock (_sharedStateLock)
+        {
+            _sharedMouseZ += delta;
         }
     }
 
