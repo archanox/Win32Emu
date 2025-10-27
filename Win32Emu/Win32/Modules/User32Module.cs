@@ -1239,7 +1239,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogInformation("[User32] DispatchMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
 
-				var result = CallWindowProcedure(_cpu!, _memory!, wndProc.Value, hwnd, message, wParam, lParam);
+				var result = CallWindowProcedure(wndProc.Value, hwnd, message, wParam, lParam);
 				_logger.LogInformation("[User32] DispatchMessageA: WndProc returned 0x{Result:X8}", result);
 				return result;
 			}
@@ -1299,7 +1299,7 @@ namespace Win32Emu.Win32.Modules
 		/// WndProc signature: LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		/// Uses stdcall calling convention (callee cleans stack, parameters pushed right-to-left)
 		/// </summary>
-		private uint CallWindowProcedure(ICpu cpu, VirtualMemory memory, uint wndProcAddress, uint hwnd, uint message, uint wParam, uint lParam)
+		private uint CallWindowProcedure(uint wndProcAddress, uint hwnd, uint message, uint wParam, uint lParam)
 		{
 			_logger.LogInformation("[User32] CallWindowProcedure: Calling 0x{WndProcAddress:X8} with HWND=0x{Hwnd:X8} MSG=0x{Message:X4}", wndProcAddress, hwnd, message);
 
@@ -1321,35 +1321,35 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Save current CPU state
-			var savedEip = cpu.GetEip();
-			var savedEsp = cpu.GetRegister("ESP");
-			var savedEbp = cpu.GetRegister("EBP");
+			var savedEip = _cpu.GetEip();
+			var savedEsp = _cpu.GetRegister("ESP");
+			var savedEbp = _cpu.GetRegister("EBP");
 
 			// Set up stack for stdcall convention (parameters pushed right-to-left)
 			var esp = savedEsp;
 
 			// Push parameters (right-to-left for stdcall)
 			esp -= 4;
-			memory.Write32(esp, lParam);
+			_memory.Write32(esp, lParam);
 
 			esp -= 4;
-			memory.Write32(esp, wParam);
+			_memory.Write32(esp, wParam);
 
 			esp -= 4;
-			memory.Write32(esp, message);
+			_memory.Write32(esp, message);
 
 			esp -= 4;
-			memory.Write32(esp, hwnd);
+			_memory.Write32(esp, hwnd);
 
 			// Push return address (we'll use a special marker address)
 			// This must be pushed AFTER parameters so it's on top of the stack
 			const uint RETURN_ADDRESS = 0xDEADBEEF;
 			esp -= 4;
-			memory.Write32(esp, RETURN_ADDRESS);
+			_memory.Write32(esp, RETURN_ADDRESS);
 
 			// Update CPU registers
-			cpu.SetRegister("ESP", esp);
-			cpu.SetEip(wndProcAddress);
+			_cpu.SetRegister("ESP", esp);
+			_cpu.SetEip(wndProcAddress);
 
 			// Execute until we hit the return address
 			// Use unlimited steps for window procedures to support complex UI operations.
@@ -1363,7 +1363,7 @@ namespace Win32Emu.Win32.Modules
 												// - Granularity: Fine enough for cooperative multitasking
 			const int YIELD_INTERVAL = 10000;
 			var steps = 0;
-			var lastCheckEip = cpu.GetEip();
+			var lastCheckEip = _cpu.GetEip();
 			var stuckCounter = 0;
 			var executionSuccessful = true;
 
@@ -1371,7 +1371,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				while (steps < MAX_STEPS)
 				{
-					var eip = cpu.GetEip();
+					var eip = _cpu.GetEip();
 
 					// Check if we've returned to our marker address
 					if (eip == RETURN_ADDRESS)
@@ -1390,7 +1390,7 @@ namespace Win32Emu.Win32.Modules
 					// Detect potential infinite loops by checking if we're making progress
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
-						var currentEip = cpu.GetEip();
+						var currentEip = _cpu.GetEip();
 						if (currentEip == lastCheckEip)
 						{
 							stuckCounter++;
@@ -1410,7 +1410,7 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Execute one instruction
-					var step = cpu.SingleStep(memory);
+					var step = _cpu.SingleStep(_memory);
 
 					// Check for COM vtable method calls
 					if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
@@ -1418,21 +1418,21 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogDebug("[User32] CallWindowProcedure: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
 
 						// Save callee-saved registers (EBX, ESI, EDI)
-						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+						var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
 
-						if (_env.ComDispatcher.TryInvoke(step.CallTarget, cpu, memory, out var comRet, out var comArgBytes))
+						if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _memory, out var comRet, out var comArgBytes))
 						{
-							var currentEsp = cpu.GetRegister("ESP");
-							var retEip = memory.Read32(currentEsp);
+							var currentEsp = _cpu.GetRegister("ESP");
+							var retEip = _memory.Read32(currentEsp);
 							currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
-							cpu.SetRegister("ESP", currentEsp);
-							cpu.SetRegister("EAX", comRet);
-							cpu.SetEip(retEip);
+							_cpu.SetRegister("ESP", currentEsp);
+							_cpu.SetRegister("EAX", comRet);
+							_cpu.SetEip(retEip);
 
 							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+							CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
 
-							RestoreEbpFromStack(cpu, memory, currentEsp);
+							RestoreEbpFromStack(currentEsp);
 						}
 					}
 					// Check for import calls - these need to be dispatched to emulated Win32 functions
@@ -1443,9 +1443,9 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogDebug("[User32] CallWindowProcedure: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
 
 						// Save callee-saved registers (EBX, ESI, EDI)
-						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+						var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
 
-						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
+						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, _cpu, _memory, out var ret, out var argBytes))
 						{
 							_logger.LogDebug("[User32] CallWindowProcedure: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
 							
@@ -1455,19 +1455,19 @@ namespace Win32Emu.Win32.Modules
 								_logger.LogWarning("[User32] CallWindowProcedure: {Dll}!{Name} returned NULL (0) - this may cause NULL pointer dereference if used as function pointer or handle", dll, name);
 							}
 							
-							var currentEsp = cpu.GetRegister("ESP");
-							var retEip = memory.Read32(currentEsp);
+							var currentEsp = _cpu.GetRegister("ESP");
+							var retEip = _memory.Read32(currentEsp);
 
 							currentEsp += 4 + (uint)argBytes;
 
-							cpu.SetRegister("ESP", currentEsp);
-							cpu.SetRegister("EAX", ret);
-							cpu.SetEip(retEip);
+							_cpu.SetRegister("ESP", currentEsp);
+							_cpu.SetRegister("EAX", ret);
+							_cpu.SetEip(retEip);
 
 							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+							CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
 
-							RestoreEbpFromStack(cpu, memory, currentEsp);
+							RestoreEbpFromStack(currentEsp);
 						}
 						else
 						{
@@ -1483,19 +1483,19 @@ namespace Win32Emu.Win32.Modules
 								_logger.LogError(ex, "[User32] CallWindowProcedure: Unimplemented import {Dll}!{Name}, no metadata available, simulating return with 0, argBytes=0", dll, name);
 							}
 
-							var currentEsp = cpu.GetRegister("ESP");
-							var retEip = memory.Read32(currentEsp);
+							var currentEsp = _cpu.GetRegister("ESP");
+							var retEip = _memory.Read32(currentEsp);
 
 							currentEsp += 4 + (uint)simulatedArgBytes;
 
-							cpu.SetRegister("ESP", currentEsp);
-							cpu.SetRegister("EAX", 0);
-							cpu.SetEip(retEip);
+							_cpu.SetRegister("ESP", currentEsp);
+							_cpu.SetRegister("EAX", 0);
+							_cpu.SetEip(retEip);
 
 							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+							CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
 
-							RestoreEbpFromStack(cpu, memory, currentEsp);
+							RestoreEbpFromStack(currentEsp);
 						}
 					}
 
@@ -1536,7 +1536,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Get return value from EAX, but only if execution was successful
 			// Otherwise return 0 as a safe default value
-			var returnValue = executionSuccessful ? cpu.GetRegister("EAX") : 0u;
+			var returnValue = executionSuccessful ? _cpu.GetRegister("EAX") : 0u;
 
 			// If execution was not successful, we need to clean up the stack memory
 			// to prevent corruption that could affect subsequent calls
@@ -1546,14 +1546,14 @@ namespace Win32Emu.Win32.Modules
 				// This includes the return address and parameters (5 dwords = 20 bytes)
 				var stackDataSize = 20u; // Return address (4) + hwnd (4) + message (4) + wParam (4) + lParam (4)
 										 // Use a single bulk write for efficiency
-				memory.WriteBytes(savedEsp - stackDataSize, new byte[stackDataSize]);
+				_memory.WriteBytes(savedEsp - stackDataSize, new byte[stackDataSize]);
 				_logger.LogDebug("[User32] CallWindowProcedure: Cleaned up {Size} bytes of stack memory after failed execution", stackDataSize);
 			}
 
 			// Restore CPU state
-			cpu.SetEip(savedEip);
-			cpu.SetRegister("ESP", savedEsp);
-			cpu.SetRegister("EBP", savedEbp);
+			_cpu.SetEip(savedEip);
+			_cpu.SetRegister("ESP", savedEsp);
+			_cpu.SetRegister("EBP", savedEbp);
 
 			_logger.LogInformation("[User32] CallWindowProcedure: Completed with return value 0x{ReturnValue:X8}", returnValue);
 
@@ -1604,7 +1604,7 @@ namespace Win32Emu.Win32.Modules
 			if (wndProc.HasValue && wndProc.Value != 0)
 			{
 				_logger.LogInformation("[User32] SendMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
-				var result = CallWindowProcedure(_cpu!, _memory!, wndProc.Value, hwnd, msg, wParam, lParam);
+				var result = CallWindowProcedure(wndProc.Value, hwnd, msg, wParam, lParam);
 				_logger.LogInformation("[User32] SendMessageA: WndProc returned 0x{Result:X8}", result);
 				return result;
 			}
@@ -2416,13 +2416,7 @@ namespace Win32Emu.Win32.Modules
 			if (_env.TryPeekMessage(out var queuedMsg, hwnd, wMsgFilterMin, wMsgFilterMax, remove))
 			{
 				// Fill MSG structure
-				_env.MemWrite32(lpMsg + 0, queuedMsg.Hwnd);
-				_env.MemWrite32(lpMsg + 4, queuedMsg.Message);
-				_env.MemWrite32(lpMsg + 8, queuedMsg.WParam);
-				_env.MemWrite32(lpMsg + 12, queuedMsg.LParam);
-				_env.MemWrite32(lpMsg + 16, queuedMsg.Time);
-				_env.MemWrite32(lpMsg + 20, queuedMsg.PtX);
-				_env.MemWrite32(lpMsg + 24, queuedMsg.PtY);
+				_env.MemWriteStruct(lpMsg, ref queuedMsg);
 
 				_logger.LogInformation("[User32] PeekMessageA: found MSG=0x{QueuedMsgMessage:X4}", queuedMsg.Message);
 				return 1; // Message available
@@ -2641,15 +2635,9 @@ namespace Win32Emu.Win32.Modules
 				// Run modal message loop until EndDialog is called
 				_logger.LogInformation("[User32] DialogBoxParamAsync: Entering modal message loop");
 
-				const int MAX_ITERATIONS = 10000; // Safety limit to prevent infinite loops
-				var iterations = 0;
-				var consecutiveEmptyIterations = 0;
-				const int MAX_EMPTY_ITERATIONS = 100; // Exit if no messages for 100 iterations
 
-				while (!_env.IsDialogEnded(hDlg) && iterations < MAX_ITERATIONS && !cancellationToken.IsCancellationRequested)
+				while (!_env.IsDialogEnded(hDlg) && !cancellationToken.IsCancellationRequested)
 				{
-					iterations++;
-
 					// Check for quit message
 					if (_env.HasQuitMessage())
 					{
@@ -2663,7 +2651,6 @@ namespace Win32Emu.Win32.Modules
 
 					if (queuedMsg.HasValue)
 					{
-						consecutiveEmptyIterations = 0;
 						var msg = queuedMsg.Value;
 						_logger.LogDebug("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", msg.Message, msg.Hwnd);
 
@@ -2692,10 +2679,8 @@ namespace Win32Emu.Win32.Modules
 					}
 					else
 					{
-						consecutiveEmptyIterations++;
-
 						// If we've had too many empty iterations and the dialog proc timed out or failed, force end
-						if ((dialogProcTimedOut || dialogProcFailed) && consecutiveEmptyIterations >= MAX_EMPTY_ITERATIONS)
+						if ((dialogProcTimedOut || dialogProcFailed))
 						{
 							var status = dialogProcFailed ? "failed" : "timed out";
 							_logger.LogWarning("[User32] DialogBoxParamAsync: No messages and dialog procedure {Status}, forcing dialog end", status);
@@ -2705,11 +2690,6 @@ namespace Win32Emu.Win32.Modules
 						// Yield to avoid tight loop without introducing artificial delay
 						await Task.Yield();
 					}
-				}
-
-				if (iterations >= MAX_ITERATIONS)
-				{
-					_logger.LogWarning("[User32] DialogBoxParamAsync: Exceeded max iterations, forcing dialog end");
 				}
 
 				if (cancellationToken.IsCancellationRequested)
@@ -2732,242 +2712,6 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogWarning("[User32] DialogBoxParamAsync: Failed to load dialog template");
 				return 0;
 			}
-		}
-
-		/// <summary>
-		/// Call a dialog procedure by setting up CPU state and executing the callback.
-		/// DialogProc signature: INT_PTR CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
-		/// Uses stdcall calling convention (callee cleans stack, parameters pushed right-to-left)
-		/// Returns a tuple of (returnValue, timedOut) where timedOut indicates if the procedure exceeded max steps.
-		/// </summary>
-		private (uint returnValue, bool timedOut, bool failed) CallDialogProcedureWithTimeout(ICpu cpu, VirtualMemory memory, uint dialogProcAddress, uint hwndDlg, uint message, uint wParam, uint lParam)
-		{
-			_logger.LogInformation("[User32] CallDialogProcedure: Calling 0x{DialogProcAddress:X8} with HWND=0x{HwndDlg:X8} MSG=0x{Message:X4}", dialogProcAddress, hwndDlg, message);
-
-			// Save current CPU state
-			var savedEip = cpu.GetEip();
-			var savedEsp = cpu.GetRegister("ESP");
-			var savedEbp = cpu.GetRegister("EBP");
-
-			// Set up stack for stdcall convention (parameters pushed right-to-left)
-			var esp = savedEsp;
-
-			// Push return address (we'll use a special marker address)
-			const uint RETURN_ADDRESS = 0xDEADBEEF;
-			esp -= 4;
-			memory.Write32(esp, RETURN_ADDRESS);
-
-			// Push parameters (right-to-left for stdcall)
-			esp -= 4;
-			memory.Write32(esp, lParam);
-
-			esp -= 4;
-			memory.Write32(esp, wParam);
-
-			esp -= 4;
-			memory.Write32(esp, message);
-
-			esp -= 4;
-			memory.Write32(esp, hwndDlg);
-
-			// Update CPU registers
-			cpu.SetRegister("ESP", esp);
-			cpu.SetEip(dialogProcAddress);
-
-			// Execute until we hit the return address
-			// Use unlimited steps for dialog procedures to support complex UI operations
-			// that may involve extensive initialization, layout calculations, or event processing.
-			// The procedure will naturally terminate when it returns (hits RETURN_ADDRESS).
-			// To prevent true infinite loops, we track progress via:
-			// - Detecting when EIP stops changing (infinite loop detection)
-			// - Monitoring for repeated execution at the same address
-			const int MAX_STEPS = int.MaxValue; // No artificial limit
-												// YIELD_INTERVAL: Check for context switches every 10K instructions
-												// Rationale: 10K provides good balance between:
-												// - Responsiveness: Allows context switches ~50 times during max execution
-												// - Performance: Low overhead (~0.001% for scheduler checks)
-												// - Granularity: Fine enough for cooperative multitasking
-			const int YIELD_INTERVAL = 10000;
-			var steps = 0;
-			var timedOut = false;
-			var failed = false;
-			var lastCheckEip = cpu.GetEip();
-			var stuckCounter = 0;
-
-			try
-			{
-				while (steps < MAX_STEPS)
-				{
-					var eip = cpu.GetEip();
-
-					// Check if we've returned to our marker address
-					if (eip == RETURN_ADDRESS)
-					{
-						break;
-					}
-
-					// Check for invalid EIP (NULL pointer execution)
-					if (eip == 0x00000000)
-					{
-						_logger.LogError("[User32] CallDialogProcedure: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
-						failed = true;
-						break;
-					}
-
-					// Detect potential infinite loops by checking if we're making progress
-					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
-					{
-						var currentEip = cpu.GetEip();
-						if (currentEip == lastCheckEip)
-						{
-							stuckCounter++;
-							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
-							{
-								// We've been at the same instruction for multiple check intervals - likely an infinite loop
-								_logger.LogWarning("[User32] CallDialogProcedure: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", currentEip, stuckCounter);
-								timedOut = true;
-								break;
-							}
-						}
-						else
-						{
-							stuckCounter = 0;
-							lastCheckEip = currentEip;
-						}
-					}
-
-					// Execute one instruction and check for import calls
-					var step = cpu.SingleStep(memory);
-
-					// Check for COM vtable method calls
-					if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
-					{
-						_logger.LogDebug("[User32] CallDialogProcedure: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
-
-						// Save callee-saved registers (EBX, ESI, EDI)
-						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
-
-						if (_env.ComDispatcher.TryInvoke(step.CallTarget, cpu, memory, out var comRet, out var comArgBytes))
-						{
-							var currentEsp = cpu.GetRegister("ESP");
-							var retEip = memory.Read32(currentEsp);
-							currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
-							cpu.SetRegister("ESP", currentEsp);
-							cpu.SetRegister("EAX", comRet);
-							cpu.SetEip(retEip);
-
-							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
-
-							RestoreEbpFromStack(cpu, memory, currentEsp);
-						}
-					}
-					// Check for import calls
-					else if (step.IsCall && _image != null && _image.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
-					{
-						var dll = imp.dll.ToUpperInvariant();
-						var name = imp.name;
-						_logger.LogDebug("[User32] CallDialogProcedure: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
-
-						// Save callee-saved registers (EBX, ESI, EDI)
-						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
-
-						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
-						{
-							_logger.LogDebug("[User32] CallDialogProcedure: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
-							var currentEsp = cpu.GetRegister("ESP");
-							var retEip = memory.Read32(currentEsp);
-
-							currentEsp += 4 + (uint)argBytes;
-
-							cpu.SetRegister("ESP", currentEsp);
-							cpu.SetRegister("EAX", ret);
-							cpu.SetEip(retEip);
-
-							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
-
-							RestoreEbpFromStack(cpu, memory, currentEsp);
-						}
-						else
-						{
-							// Import function not implemented - try to get arg bytes from metadata and simulate return
-							var simulatedArgBytes = 0;
-							try
-							{
-								simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
-								_logger.LogWarning("[User32] CallDialogProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", dll, name, simulatedArgBytes);
-							}
-							catch(Exception ex)
-							{
-								_logger.LogError(ex, "[User32] CallDialogProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes unknown (assuming 0)", dll, name);
-							}
-
-							var currentEsp = cpu.GetRegister("ESP");
-							var retEip = memory.Read32(currentEsp);
-
-							// Pop return address + parameters (stdcall convention - callee cleans)
-							currentEsp += 4 + (uint)simulatedArgBytes;
-
-							cpu.SetRegister("ESP", currentEsp);
-							cpu.SetRegister("EAX", 0); // Return 0 as default
-							cpu.SetEip(retEip);
-
-							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
-
-							RestoreEbpFromStack(cpu, memory, currentEsp);
-						}
-					}
-
-					steps++;
-
-					// Periodically check if we should yield to other threads
-					if (steps % YIELD_INTERVAL == 0)
-					{
-						var scheduler = _env.ThreadScheduler;
-						if (scheduler != null)
-						{
-							// Process any waiting thread timeouts
-							scheduler.ProcessWaitTimeouts();
-
-							// Check if there are other threads that need CPU time
-							if (scheduler.ShouldContextSwitch())
-							{
-								_logger.LogDebug("[User32] CallDialogProcedure: Cooperative yield at {Steps} steps", steps);
-								// Note: We can't actually context switch here since we're mid-call
-								// But we log it for diagnostics. In a future enhancement, we could
-								// save state and resume the call later.
-							}
-						}
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "[User32] CallDialogProcedure: Exception during execution: {ExMessage}", ex.Message);
-				failed = true;
-			}
-
-			if (steps >= MAX_STEPS)
-			{
-				_logger.LogWarning("[User32] CallDialogProcedure: Exceeded max steps ({MaxSteps}), aborting - DialogProc may be in infinite loop", MAX_STEPS);
-				timedOut = true;
-			}
-
-			// Get return value from EAX, but only if execution was successful
-			// Otherwise return 0 as a safe default value
-			var returnValue = (timedOut || failed) ? 0u : cpu.GetRegister("EAX");
-
-			// Restore CPU state
-			cpu.SetEip(savedEip);
-			cpu.SetRegister("ESP", savedEsp);
-			cpu.SetRegister("EBP", savedEbp);
-
-			_logger.LogInformation("[User32] CallDialogProcedure: Completed with return value 0x{ReturnValue:X8}, timedOut={TimedOut}, failed={Failed}",
-				returnValue, timedOut, failed);
-
-			return (returnValue, timedOut, failed);
 		}
 
 		/// <summary>
@@ -3019,7 +2763,6 @@ namespace Win32Emu.Win32.Modules
 			cpu.SetEip(dialogProcAddress);
 
 			// Execute until we hit the return address with cancellation support
-			const int MAX_STEPS = int.MaxValue; // No artificial limit
 			const int YIELD_INTERVAL = 10000;
 			var steps = 0;
 			var timedOut = false;
@@ -3030,7 +2773,7 @@ namespace Win32Emu.Win32.Modules
 
 			try
 			{
-				while (steps < MAX_STEPS)
+				while (true)
 				{
 					// Check for cancellation at regular intervals
 					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
@@ -3141,7 +2884,7 @@ namespace Win32Emu.Win32.Modules
 							// Restore callee-saved registers
 							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
 
-							RestoreEbpFromStack(cpu, memory, currentEsp);
+							RestoreEbpFromStack(currentEsp);
 						}
 					}
 					// Check for import calls
@@ -3177,7 +2920,7 @@ namespace Win32Emu.Win32.Modules
 							// Restore callee-saved registers
 							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
 
-							RestoreEbpFromStack(cpu, memory, currentEsp);
+							RestoreEbpFromStack(currentEsp);
 						}
 						else
 						{
@@ -3206,7 +2949,7 @@ namespace Win32Emu.Win32.Modules
 							// Restore callee-saved registers
 							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
 
-							RestoreEbpFromStack(cpu, memory, currentEsp);
+							RestoreEbpFromStack(currentEsp);
 						}
 					}
 
@@ -3234,12 +2977,6 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogError(ex, "[User32] CallDialogProcedureAsync: Exception during execution: {ExMessage}", ex.Message);
 				failed = true;
-			}
-
-			if (steps >= MAX_STEPS)
-			{
-				_logger.LogWarning("[User32] CallDialogProcedureAsync: Exceeded max steps ({MaxSteps}), aborting - DialogProc may be in infinite loop", MAX_STEPS);
-				timedOut = true;
 			}
 
 			// Get return value from EAX, but only if execution was successful
@@ -3497,11 +3234,11 @@ namespace Win32Emu.Win32.Modules
 		/// Attempts to restore EBP from the stack after an emulated API call.
 		/// This handles cases where the calling code used EBP to hold the function pointer for an indirect call.
 		/// </summary>
-		private void RestoreEbpFromStack(ICpu cpu, VirtualMemory memory, uint esp)
+		private void RestoreEbpFromStack(uint esp)
 		{
 			try
 			{
-				var ebpFromStack = memory.Read32(esp);
+				var ebpFromStack = _memory.Read32(esp);
 
 				// Define plausible stack region (for example, 1MB stack)
 				// Assume stack grows down, so stack base is the highest address, stack limit is lowest
@@ -3518,7 +3255,7 @@ namespace Win32Emu.Win32.Modules
 				{
 					try
 					{
-						var savedEbp = memory.Read32(ebpFromStack);
+						var savedEbp = _memory.Read32(ebpFromStack);
 						// Check that savedEbp is also within stack region (optional, but plausible)
 						savedEbpValid = (savedEbp >= stackBottom) && (savedEbp <= esp);
 					}
@@ -3530,7 +3267,7 @@ namespace Win32Emu.Win32.Modules
 
 				if (inStackRegion && isAligned && savedEbpValid)
 				{
-					cpu.SetRegister("EBP", ebpFromStack);
+					_cpu.SetRegister("EBP", ebpFromStack);
 					_logger.LogDebug("[User32] Restored EBP from stack: 0x{EBP:X8}", ebpFromStack);
 				}
 				else
