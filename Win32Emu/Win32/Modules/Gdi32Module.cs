@@ -294,6 +294,28 @@ namespace Win32Emu.Win32.Modules
 					returnValue = (uint)Escape(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
 					return true;
 
+				// Printing functions
+				case "STARTDOCA":
+					returnValue = (uint)StartDocA(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "ENDDOC":
+					returnValue = (uint)EndDoc(a.UInt32(0));
+					return true;
+				case "STARTPAGE":
+					returnValue = (uint)StartPage(a.UInt32(0));
+					return true;
+				case "ENDPAGE":
+					returnValue = (uint)EndPage(a.UInt32(0));
+					return true;
+
+				// GDI utility functions
+				case "GDIFLUSH":
+					returnValue = GdiFlush();
+					return true;
+				case "GETSYSTEMPALETTEUSE":
+					returnValue = GetSystemPaletteUse(a.UInt32(0));
+					return true;
+
 				default:
 					_logger.LogInformation("[Gdi32] Unimplemented export: {Export}", export);
 					return false;
@@ -803,6 +825,125 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] Escape(hdc=0x{Hdc:X8}, iEscape={IEscape}, cjIn={CjIn})", hdc, iEscape, cjIn);
 			return 0; // Return 0 (not supported)
+		}
+
+		// Printing functions
+		/// <summary>
+		/// Starts a print job.
+		/// int StartDocA(
+		///   [in] HDC            hdc,
+		///   [in] const DOCINFOA *lpdi
+		/// );
+		/// </summary>
+		[DllModuleExport(8)]
+		private int StartDocA(uint hdc, uint lpdi)
+		{
+			_logger.LogInformation("[Gdi32] StartDocA(hdc=0x{Hdc:X8}, lpdi=0x{Lpdi:X8})", hdc, lpdi);
+			
+			// DOCINFO structure (simplified):
+			// int cbSize;
+			// LPCSTR lpszDocName;
+			// LPCSTR lpszOutput;
+			// LPCSTR lpszDatatype;
+			// DWORD fwType;
+			
+			if (lpdi != 0)
+			{
+				var cbSize = (int)_env.MemRead32(lpdi + 0);
+				var lpszDocName = _env.MemRead32(lpdi + 4);
+				
+				if (lpszDocName != 0)
+				{
+					var docName = _env.ReadAnsiString(lpszDocName);
+					_logger.LogInformation("[Gdi32] StartDocA: Document name=\"{DocName}\"", docName);
+				}
+			}
+			
+			// Return a positive job identifier
+			return 1;
+		}
+
+		/// <summary>
+		/// Ends a print job.
+		/// int EndDoc(
+		///   [in] HDC hdc
+		/// );
+		/// </summary>
+		[DllModuleExport(4)]
+		private int EndDoc(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] EndDoc(hdc=0x{Hdc:X8})", hdc);
+			
+			// EndDoc ends the current print job
+			// Return success
+			return 1;
+		}
+
+		/// <summary>
+		/// Prepares the printer driver to accept data.
+		/// int StartPage(
+		///   [in] HDC hdc
+		/// );
+		/// </summary>
+		[DllModuleExport(4)]
+		private int StartPage(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] StartPage(hdc=0x{Hdc:X8})", hdc);
+			
+			// StartPage prepares the printer driver to accept data
+			// Return success (greater than zero)
+			return 1;
+		}
+
+		/// <summary>
+		/// Notifies the device that the application has finished writing to a page.
+		/// int EndPage(
+		///   [in] HDC hdc
+		/// );
+		/// </summary>
+		[DllModuleExport(4)]
+		private int EndPage(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] EndPage(hdc=0x{Hdc:X8})", hdc);
+			
+			// EndPage notifies the device that the application has finished writing to a page
+			// Return success (greater than zero)
+			return 1;
+		}
+
+		// GDI utility functions
+		/// <summary>
+		/// Flushes the calling thread's current batch.
+		/// BOOL GdiFlush();
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint GdiFlush()
+		{
+			_logger.LogInformation("[Gdi32] GdiFlush()");
+			
+			// GdiFlush forces all pending GDI operations to complete
+			// For emulation, we don't have batching, so just return success
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Retrieves the current system palette use for the specified device context.
+		/// UINT GetSystemPaletteUse(
+		///   [in] HDC hdc
+		/// );
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint GetSystemPaletteUse(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] GetSystemPaletteUse(hdc=0x{Hdc:X8})", hdc);
+			
+			// GetSystemPaletteUse returns the palette mode for the device context
+			// SYSPAL_NOSTATIC (2) - System palette contains no static colors except black and white
+			// SYSPAL_STATIC (1) - System palette contains static colors (default)
+			// SYSPAL_ERROR (0) - Error
+			
+			// Return SYSPAL_STATIC (default mode)
+			return 1;
 		}
 
 		// Additional bitmap functions
