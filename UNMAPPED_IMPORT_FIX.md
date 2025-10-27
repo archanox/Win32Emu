@@ -7,6 +7,8 @@ When running `IGN_TEAS.EXE`, the emulator would crash with:
 Calculated memory address out of range: 0xFFFFFFFD (EIP=0x0F000532)
 ```
 
+The EIP shows `0x0F000532` (2 bytes after `0x0F000530`) because the CPU had already advanced past the INT3 instruction (0xCC) at `0x0F000530` and was trying to decode the next byte.
+
 ## Root Cause
 
 The program was attempting to execute code at address `0x0F000530`, which is in the import stub address range (`0x0F000000` - `0x0FFFFFFF`) but was never mapped to an actual import.
@@ -18,6 +20,7 @@ The program was attempting to execute code at address `0x0F000530`, which is in 
 - `IGN_TEAS.EXE` has 83 imports (indices 0-82)
 - These map to addresses `0x0F000000` through `0x0F000520`
 - Address `0x0F000530` would be for index 83 (the 84th import), which doesn't exist
+- The emulator checks for addresses in the range `[0x0F000000, 0x10000000)` (exclusive upper bound)
 
 ### What Was Happening
 
@@ -38,7 +41,7 @@ The exact cause of why `0x0F000530` ended up as a return address is unclear, but
 
 ## The Fix
 
-Added a safety check at the beginning of the emulator's main loop to detect when EIP is in the import stub range (`0x0F000000` - `0x0FFFFFFF`) but not in the `ImportAddressMap`. When this occurs:
+Added a safety check at the beginning of the emulator's main loop to detect when EIP is in the import stub range `[0x0F000000, 0x10000000)` but not in the `ImportAddressMap`. When this occurs:
 
 1. Log an error with details about the unmapped address
 2. Read the return address from the stack
