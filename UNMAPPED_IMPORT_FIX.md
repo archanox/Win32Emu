@@ -57,7 +57,7 @@ The fix is in `Win32Emu/Emulator.cs` in the `RunNormalAsync` method, right befor
 
 ## Impact
 
-This fix prevents crashes when code attempts to execute at unmapped import addresses. It provides graceful degradation by simulating a return with a safe default value, allowing the program to continue (though functionality may be limited if the unmapped import was actually needed).
+This fix prevents crashes when code attempts to execute at unmapped import addresses (in the range `[0x0F000000, 0x10000000)`). It provides graceful degradation by simulating a return with a safe default value, allowing the program to continue (though functionality may be limited if the unmapped import was actually needed).
 
 ## Future Work
 
