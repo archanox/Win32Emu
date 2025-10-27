@@ -1138,7 +1138,7 @@ public sealed class Emulator : IDisposable
         var esp = _cpu!.GetRegister("ESP");
         
         // Define plausible stack region
-        var stackBottom = (esp > STACK_SIZE) ? (esp - STACK_SIZE) : DEFAULT_STACK_BOTTOM;
+        var stackBottom = (esp >= STACK_SIZE) ? (esp - STACK_SIZE) : DEFAULT_STACK_BOTTOM;
         
         // Check if EBP is within reasonable stack range
         var ebpInStackRegion = (ebp >= stackBottom) && (ebp <= esp + STACK_SLACK_BYTES);
