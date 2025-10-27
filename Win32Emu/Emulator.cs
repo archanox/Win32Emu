@@ -399,10 +399,8 @@ public sealed class Emulator : IDisposable
                 if (!_image!.ImportAddressMap.ContainsKey(currentEip))
                 {
                     // This import address is not mapped - simulate a return with error
-                    _logger.LogError("[Import] Attempted to execute unmapped import stub at address 0x{Eip:X8}", currentEip);
-                    _logger.LogError("[Import] This address is in the import stub range but not in the ImportAddressMap");
                     var esp = _cpu.GetRegister("ESP");
-                    _logger.LogError("[Import] ESP=0x{Esp:X8}, trying to read return address from stack", esp);
+                    _logger.LogError("[Import] Attempted to execute unmapped import stub at address 0x{Eip:X8} (not in ImportAddressMap). ESP=0x{Esp:X8}, attempting to read return address from stack", currentEip, esp);
                     
                     try
                     {
