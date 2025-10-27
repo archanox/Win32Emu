@@ -376,4 +376,113 @@ public class JitCpuInstructionTests
 		uint valueAfter = mem.Read32(targetAddr);
 		Assert.NotEqual(0x80000001u, valueAfter); // Value should have been rotated
 	}
+
+	[Fact]
+	public void MemoryAccess_WithNegativeDisplacement_ShouldCalculateCorrectAddress()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EBP", 0x10000); // Base pointer
+		
+		// Write a value at [EBP-68] (0x10000 - 0x44 = 0xFFBC)
+		uint expectedAddr = 0x10000 - 0x44;
+		mem.Write32(expectedAddr, 0x12345678);
+		
+		// MOV EAX, [EBP-68] = 8B 45 BC
+		// This uses a signed displacement of -68 (0xFFFFFFBC as uint)
+		mem.Write8(0x1000, 0x8B); // MOV opcode
+		mem.Write8(0x1001, 0x45); // ModRM byte: [EBP+disp8]
+		mem.Write8(0x1002, 0xBC); // Displacement -68 (as signed byte)
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x12345678u, cpu.GetRegister("EAX")); // Should read value from [EBP-68]
+		Assert.Equal(0x1003u, cpu.GetEip()); // EIP should advance
+	}
+
+	[Fact]
+	public void RclInstruction_WithNegativeDisplacement_ShouldNotCrash()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EBP", 0x10000); // Base pointer
+		
+		// Write a value at [EBP-68]
+		uint targetAddr = 0x10000 - 0x44;
+		mem.Write32(targetAddr, 0x80000001);
+		
+		// RCL DWORD PTR [EBP-68], 1
+		// This instruction uses a negative displacement
+		mem.Write8(0x1000, 0xD1); // RCL opcode
+		mem.Write8(0x1001, 0x55); // ModRM byte: [EBP+disp8], reg=2 (RCL)
+		mem.Write8(0x1002, 0xBC); // Displacement -68 (as signed byte)
+		
+		// Act & Assert - should not throw
+		cpu.SingleStep(mem);
+		
+		Assert.Equal(0x1003u, cpu.GetEip()); // EIP should advance
+	}
+
+	[Fact]
+	public void MemoryAccess_WithNegativeDisplacement32_ShouldCalculateCorrectAddress()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EBP", 0x100); // Small base pointer to test wraparound
+		
+		// This test checks if large negative displacements (as uint) are handled correctly
+		// MOV EAX, [EBP+0xFFFFFFBC] should be interpreted as [EBP-68]
+		// If EBP=0x100, the address should be 0x100 + 0xFFFFFFBC = 0xBC (wrapping around)
+		// But this is incorrect! It should be 0x100 - 68 = 0xBC (same result but by accident)
+		
+		// Let's use a value where the bug is more obvious
+		cpu.SetRegister("EBP", 0x200); // Base pointer
+		uint expectedAddr = 0x200 - 0x44; // = 0x1BC
+		mem.Write32(expectedAddr, 0xDEADBEEF);
+		
+		// MOV EAX, [EBP-68] using 32-bit displacement
+		// This would be encoded as: 8B 85 BC FF FF FF
+		mem.Write8(0x1000, 0x8B); // MOV opcode
+		mem.Write8(0x1001, 0x85); // ModRM byte: [EBP+disp32]
+		mem.Write32(0x1002, 0xFFFFFFBC); // Displacement -68 as 32-bit value
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0xDEADBEEFu, cpu.GetRegister("EAX")); // Should read value from [EBP-68]
+		Assert.Equal(0x1006u, cpu.GetEip()); // EIP should advance
+	}
+
+	[Fact]
+	public void MemoryAccess_WithNegativeDisplacementAndZeroBase_ShouldThrow()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EBP", 0); // Base pointer is 0!
+		
+		// MOV EAX, [EBP-68] using 32-bit displacement
+		// With EBP=0, this becomes [0xFFFFFFBC] which is out of range
+		mem.Write8(0x1000, 0x8B); // MOV opcode
+		mem.Write8(0x1001, 0x85); // ModRM byte: [EBP+disp32]
+		mem.Write32(0x1002, 0xFFFFFFBC); // Displacement -68 as 32-bit value
+		
+		// Act & Assert
+		var ex = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(mem));
+		Assert.Contains("0xFFFFFFBC", ex.Message);
+	}
 }
