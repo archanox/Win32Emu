@@ -5088,7 +5088,6 @@ namespace Win32Emu.Win32.Modules
 		{
 			// SCROLLINFO structure:
 			// UINT cbSize; UINT fMask; int nMin; int nMax; UINT nPage; int nPos; int nTrackPos;
-			var cbSize = _env.MemRead32(lpsi + 0);
 			var fMask = _env.MemRead32(lpsi + 4);
 			
 			// For stub implementation, fill in default values

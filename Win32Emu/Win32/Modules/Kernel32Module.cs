@@ -7027,7 +7027,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 		}
 		
-		// Return a dummy file handle for compatibility
+		// File not found or VFS not available - return a dummy handle for compatibility
+		// This allows legacy apps to continue even if the file doesn't exist
 		var dummyHandle = 0x4000u + ((uint)pathName.GetHashCode() & 0xFFF);
 		_logger.LogInformation("[Kernel32] _lopen: Created dummy file handle 0x{Handle:X8}", dummyHandle);
 		return dummyHandle;
@@ -7088,9 +7089,27 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// FILE_END (2) - Seek from end
 		// Returns the new file pointer position, or 0xFFFFFFFF on error
 		
-		// For stub implementation, return the offset as the new position
-		// A full implementation would track file positions
-		uint newPosition = (uint)Math.Max(0, lOffset);
+		// For stub implementation, calculate position based on origin
+		// A full implementation would track actual file positions and sizes
+		uint newPosition;
+		switch (iOrigin)
+		{
+			case 0: // FILE_BEGIN
+				newPosition = (uint)Math.Max(0, lOffset);
+				break;
+			case 1: // FILE_CURRENT
+				// Would need to track current position - for now assume position 0
+				newPosition = (uint)Math.Max(0, lOffset);
+				break;
+			case 2: // FILE_END
+				// Would need to know file size - for now just use offset
+				newPosition = (uint)Math.Max(0, lOffset);
+				break;
+			default:
+				_logger.LogWarning("[Kernel32] _llseek: Invalid origin {IOrigin}", iOrigin);
+				return 0xFFFFFFFF; // Error
+		}
+		
 		_logger.LogInformation("[Kernel32] _llseek: Stub returning position 0x{NewPosition:X8}", newPosition);
 		return newPosition;
 	}
