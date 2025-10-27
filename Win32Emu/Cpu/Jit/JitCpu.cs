@@ -388,7 +388,7 @@ public class JitCpu : IAsyncCpu
 				}
 				else
 				{
-					_logger.LogWarning("[JitCpu] Unimplemented JMP type: {Op0Kind} at EIP=0x{OldEip:X8}", insn.Op0Kind, _eip - (uint)insn.Length);
+					throw new NotImplementedException($"[JitCpu] Unimplemented JMP type: {insn.Op0Kind} at EIP=0x{_eip - (uint)insn.Length:X8}");
 				}
 				break;
 			
