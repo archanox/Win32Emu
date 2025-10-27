@@ -577,7 +577,57 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DInputDevice_GetDeviceData(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetDeviceData() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var cbObjectData = args.UInt32(1);
+			var rgdod = args.UInt32(2);
+			var pdwInOut = args.UInt32(3);
+			var dwFlags = args.UInt32(4);
+
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetDeviceData(this=0x{ThisPtr:X8}, cbObjectData={CbObjectData}, rgdod=0x{Rgdod:X8}, pdwInOut=0x{PdwInOut:X8}, dwFlags=0x{DwFlags:X8})",
+				thisPtr, cbObjectData, rgdod, pdwInOut, dwFlags);
+
+			// Find the device associated with this COM object
+			DirectInputDevice? device = null;
+			foreach (var dev in _devices.Values)
+			{
+				device = dev;
+				break; // For now, use the first device
+			}
+
+			if (device == null || !device.IsAcquired)
+			{
+				_logger.LogWarning("[DInput COM] Device not acquired or not found");
+				return 0x8007001E; // DIERR_NOTACQUIRED
+			}
+
+			// Read the number of elements requested
+			uint dwInOut = 0;
+			if (pdwInOut != 0)
+			{
+				dwInOut = _env.MemRead32(pdwInOut);
+			}
+
+			_logger.LogInformation("[DInput COM]   Requested elements: {DwInOut}", dwInOut);
+
+			// For now, return 0 elements (no buffered events)
+			// In a full implementation, we would:
+			// 1. Check if there are buffered input events
+			// 2. Fill the rgdod buffer with DIDEVICEOBJECTDATA structures
+			// 3. Update pdwInOut with the actual number of elements returned
+			//
+			// DIDEVICEOBJECTDATA structure (16 bytes):
+			//   DWORD dwOfs;       // +0: Offset in data format
+			//   DWORD dwData;      // +4: Value (key code, button state, etc.)
+			//   DWORD dwTimeStamp; // +8: Timestamp
+			//   DWORD dwSequence;  // +12: Sequence number
+
+			// Return 0 elements for now
+			if (pdwInOut != 0)
+			{
+				_env.MemWrite32(pdwInOut, 0);
+			}
+
 			return 0; // DI_OK
 		}
 
