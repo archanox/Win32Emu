@@ -28,7 +28,7 @@ namespace Win32Emu.Win32.Modules
 		// State tracking for cursor and focus
 		private uint _currentCursor;
 		private uint _focusWindow;
-		private int _cursorDisplayCount = 0; // Tracks cursor visibility counter
+		private int _cursorDisplayCount = 1; // Tracks cursor visibility counter (starts visible in Windows)
 
 		// Constants for procedure execution monitoring
 		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
