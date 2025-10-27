@@ -3,13 +3,15 @@ using System.Reflection.Emit;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Memory;
+using Win32Emu.Rtl;
 using Iced.Intel;
 
 namespace Win32Emu.Cpu.Jit;
 
 /// <summary>
 /// JIT-based x86 CPU emulator that compiles x86 code to .NET CIL for improved performance
-/// and native async/await support
+/// and native async/await support.
+/// Now uses RTL-based JIT pipeline for readable C# code generation and optimization.
 /// </summary>
 public class JitCpu : IAsyncCpu
 {
@@ -25,14 +27,11 @@ public class JitCpu : IAsyncCpu
 	private ushort _fpuControlWord = 0x037F;
 	private ushort _fpuStatusWord = 0x0000;
 	
-	// JIT compilation infrastructure
-	private readonly Dictionary<uint, CompiledBlock> _compiledBlocks = new();
-	private readonly AssemblyBuilder _assemblyBuilder;
-	private readonly ModuleBuilder _moduleBuilder;
-	private int _blockCounter = 0;
+	// JIT compilation infrastructure - now using RTL pipeline
+	private readonly Dictionary<uint, RtlCompiledBlock> _compiledBlocks = new();
 	
-	// JIT cache for persistent storage
-	private readonly JitCache _jitCache;
+	// RTL-based JIT cache for persistent storage with readable C# output
+	private readonly RtlJitCache _rtlJitCache;
 	private string? _currentExecutablePath;
 	
 	// Decoder for analyzing x86 instructions before compilation
@@ -46,15 +45,10 @@ public class JitCpu : IAsyncCpu
 		_reader = new SimpleMemoryCodeReader(this);
 		_decoder = Decoder.Create(32, _reader, DecoderOptions.None);
 		
-		// Create a dynamic assembly for JIT compilation
-		var assemblyName = new AssemblyName("Win32Emu.Jit.Dynamic");
-		_assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
-		_moduleBuilder = _assemblyBuilder.DefineDynamicModule("JitModule");
+		// Initialize RTL-based JIT cache
+		_rtlJitCache = new RtlJitCache(null, logger);
 		
-		// Initialize JIT cache with default directory
-		_jitCache = new JitCache(null, logger);
-		
-		_logger.LogInformation("[JitCpu] Initialized JIT CPU backend with caching");
+		_logger.LogInformation("[JitCpu] Initialized RTL-based JIT CPU backend with readable C# code generation");
 	}
 	
 	/// <summary>
@@ -63,7 +57,7 @@ public class JitCpu : IAsyncCpu
 	public JitCpu(VirtualMemory mem, ILogger? logger, string cacheDirectory) : this(mem, logger)
 	{
 		// Replace the default cache with one using the custom directory
-		_jitCache = new JitCache(cacheDirectory, logger);
+		_rtlJitCache = new RtlJitCache(cacheDirectory, logger);
 	}
 
 	public void SetEip(uint eip) => _eip = eip;
@@ -115,7 +109,8 @@ public class JitCpu : IAsyncCpu
 			_compiledBlocks[blockStart] = compiledBlock;
 		}
 		
-		var result = await compiledBlock.ExecuteAsync(this, mem);
+		// Execute the compiled block using dynamic invocation
+		var result = await ExecuteRtlBlock(compiledBlock, this, mem);
 		return result;
 	}
 
@@ -141,10 +136,12 @@ public class JitCpu : IAsyncCpu
 			return;
 		}
 		
-		await _jitCache.LoadCacheAsync(_currentExecutablePath);
-		var stats = _jitCache.GetStatistics();
-		_logger.LogInformation("[JitCpu] Cache loaded: {TotalBlocks} blocks, {TotalInstructions} instructions",
-			stats.TotalBlocks, stats.TotalInstructions);
+		_rtlJitCache.LoadCachedAssemblies(_currentExecutablePath);
+		var stats = _rtlJitCache.GetStatistics();
+		_logger.LogInformation("[JitCpu] RTL cache loaded: {TotalBlocks} blocks from {SourceDir}",
+			stats.TotalBlocks, stats.SourceDirectory);
+		
+		await Task.CompletedTask;
 	}
 	
 	/// <summary>
@@ -158,7 +155,10 @@ public class JitCpu : IAsyncCpu
 			return;
 		}
 		
-		await _jitCache.SaveCacheAsync(_currentExecutablePath);
+		_rtlJitCache.SaveCacheMetadata(_currentExecutablePath);
+		_logger.LogInformation("[JitCpu] RTL cache saved with C# source files");
+		
+		await Task.CompletedTask;
 	}
 	
 	/// <summary>
@@ -167,41 +167,10 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task<int> PrecompileFromCacheAsync(VirtualMemory mem)
 	{
-		var cachedAddresses = _jitCache.GetCachedBlockAddresses().OrderBy(a => a).ToList();
-		
-		if (cachedAddresses.Count == 0)
-		{
-			_logger.LogInformation("[JitCpu] No cached blocks to precompile");
-			return 0;
-		}
-		
-		_logger.LogInformation("[JitCpu] Starting precompilation of {TotalBlocks} cached blocks", cachedAddresses.Count);
-		
-		var compiled = 0;
-		foreach (var address in cachedAddresses)
-		{
-			try
-			{
-				// Skip if already compiled
-				if (_compiledBlocks.ContainsKey(address))
-				{
-					continue;
-				}
-				
-				// Compile the block
-				var block = CompileBlock(address, mem);
-				_compiledBlocks[address] = block;
-				compiled++;
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "[JitCpu] Failed to precompile cached block at 0x{Address:X8}", address);
-			}
-		}
-		
-		_logger.LogInformation("[JitCpu] Precompilation complete: {Compiled} blocks compiled from cache", compiled);
-		
-		return await Task.FromResult(compiled);
+		_logger.LogInformation("[JitCpu] RTL-based precompilation - blocks are loaded on demand");
+		// With RTL cache, blocks are already compiled and saved as assemblies
+		// They will be loaded from disk when needed
+		return await Task.FromResult(0);
 	}
 	
 	/// <summary>
@@ -209,84 +178,26 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task<int> PrecompileRangeAsync(VirtualMemory mem, uint startAddress, uint endAddress)
 	{
-		if (startAddress >= endAddress)
-		{
-			_logger.LogError("[JitCpu] Invalid address range for precompilation: 0x{Start:X8} - 0x{End:X8}",
-				startAddress, endAddress);
-			return 0;
-		}
-		
-		_logger.LogInformation("[JitCpu] Precompiling address range: 0x{Start:X8} - 0x{End:X8}",
-			startAddress, endAddress);
-		
-		var compiled = 0;
-		var currentAddress = startAddress;
-		
-		// Analyze and compile blocks in the range
-		while (currentAddress < endAddress)
-		{
-			try
-			{
-				// Check if block is already compiled
-				if (_compiledBlocks.ContainsKey(currentAddress))
-				{
-					// Skip this block - get its length to advance properly
-					if (_jitCache.TryGetBlockMetadata(currentAddress, out var existingMeta) && existingMeta != null)
-					{
-						currentAddress += (uint)existingMeta.ByteLength;
-					}
-					else
-					{
-						// If we don't know the block length, advance by a minimum instruction size
-						currentAddress += 1;
-					}
-					continue;
-				}
-				
-				// Compile the block
-				var block = CompileBlock(currentAddress, mem);
-				_compiledBlocks[currentAddress] = block;
-				compiled++;
-				
-				// Advance by the block's actual byte length
-				if (_jitCache.TryGetBlockMetadata(currentAddress, out var metadata) && metadata != null)
-				{
-					currentAddress += (uint)metadata.ByteLength;
-				}
-				else
-				{
-					// Fallback: advance by minimum instruction size if metadata is unavailable
-					currentAddress += 1;
-				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "[JitCpu] Failed to precompile block at 0x{Address:X8}", currentAddress);
-				// On error, advance by minimum instruction size to avoid infinite loop
-				currentAddress += 1;
-			}
-		}
-		
-		_logger.LogInformation("[JitCpu] Precompilation complete: {Compiled} blocks compiled in range", compiled);
-		
-		return await Task.FromResult(compiled);
+		_logger.LogInformation("[JitCpu] RTL-based JIT compiles blocks on demand - precompilation not needed");
+		// With RTL cache, blocks are compiled and saved as they're encountered
+		return await Task.FromResult(0);
 	}
 	
 	/// <summary>
 	/// Gets statistics about the JIT cache
 	/// </summary>
-	public CacheStatistics GetCacheStatistics()
+	public RtlCacheStatistics GetCacheStatistics()
 	{
-		return _jitCache.GetStatistics();
+		return _rtlJitCache.GetStatistics();
 	}
 	
 	/// <summary>
 	/// Purges all JIT cache files from disk and clears in-memory cache
 	/// </summary>
-	/// <returns>True if the operation succeeded, false otherwise</returns>
-	public bool PurgeCache()
+	public void PurgeCache()
 	{
-		return _jitCache.PurgeCache();
+		_rtlJitCache.PurgeCache();
+		_compiledBlocks.Clear();
 	}
 
 	public CpuState SaveState()
@@ -846,127 +757,69 @@ public class JitCpu : IAsyncCpu
 		return new CpuStepResult(isCall, callTarget);
 	}
 
-	private CompiledBlock CompileBlock(uint startEip, VirtualMemory mem)
+	private RtlCompiledBlock CompileBlock(uint startEip, VirtualMemory mem)
 	{
-		// Check if we have cached metadata for this block
-		BlockMetadata? cachedMetadata = null;
-		var hasCachedMetadata = _jitCache.TryGetBlockMetadata(startEip, out cachedMetadata);
+		_logger.LogInformation("[JitCpu] Compiling block at EIP=0x{Eip:X8} using RTL pipeline", startEip);
 		
-		if (hasCachedMetadata && cachedMetadata != null)
-		{
-			_logger.LogDebug("[JitCpu] Found cached metadata for block at EIP=0x{Eip:X8}", startEip);
-			
-			// Verify the code hasn't changed by comparing hashes
-			try
-			{
-				var verifyBytes = new byte[cachedMetadata.ByteLength];
-				var verifySpan = mem.GetSpan(startEip, cachedMetadata.ByteLength);
-				verifySpan.CopyTo(verifyBytes.AsSpan());
-				var currentHash = JitCache.ComputeCodeHash(verifyBytes);
-				
-				if (currentHash != cachedMetadata.CodeHash)
-				{
-					_logger.LogWarning("[JitCpu] Code hash mismatch at EIP=0x{Eip:X8} - code may have been modified", startEip);
-					// Continue with fresh compilation
-					hasCachedMetadata = false;
-				}
-				else
-				{
-					_logger.LogInformation("[JitCpu] Compiling block at EIP=0x{Eip:X8} (using cached metadata, {InstructionCount} instructions)", 
-						startEip, cachedMetadata.InstructionCount);
-				}
-			}
-			catch
-			{
-				// If we can't read memory or verify hash, proceed with fresh compilation
-				hasCachedMetadata = false;
-			}
-		}
-		
-		if (!hasCachedMetadata)
-		{
-			_logger.LogInformation("[JitCpu] Compiling block at EIP=0x{Eip:X8}", startEip);
-		}
-		
-		var blockId = _blockCounter++;
-		var typeName = $"Block_{blockId:X8}";
-		var typeBuilder = _moduleBuilder.DefineType(typeName, TypeAttributes.Public | TypeAttributes.Sealed);
-		
-		var methodBuilder = typeBuilder.DefineMethod(
-			"Execute",
-			MethodAttributes.Public | MethodAttributes.Static,
-			typeof(Task<CpuStepResult>),
-			new[] { typeof(JitCpu), typeof(VirtualMemory) });
-		
-		var il = methodBuilder.GetILGenerator();
+		// Analyze the block to get x86 instructions
 		var instructions = AnalyzeBlock(startEip, mem);
 		
-		// Calculate block metadata (or use cached if available and verified)
-		var blockLength = instructions.Sum(i => i.Length);
-		var codeBytes = new byte[blockLength];
+		// Use RTL pipeline to compile the block
+		var rtlBlock = _rtlJitCache.CompileBlock(startEip, instructions);
+		
+		_logger.LogInformation("[JitCpu] Block at EIP=0x{Eip:X8} compiled successfully. C# source saved to {SourceDir}",
+			startEip, _rtlJitCache.GetStatistics().SourceDirectory);
+		
+		return rtlBlock;
+	}
+	
+	/// <summary>
+	/// Execute a compiled RTL block by invoking the generated method
+	/// </summary>
+	private async Task<CpuStepResult> ExecuteRtlBlock(RtlCompiledBlock block, JitCpu cpu, VirtualMemory mem)
+	{
 		try
 		{
-			var span = mem.GetSpan(startEip, blockLength);
-			span.CopyTo(codeBytes.AsSpan());
+			// Get the compiled type from the assembly
+			if (block.Assembly == null)
+			{
+				_logger.LogError("[JitCpu] RTL block assembly is null at 0x{Address:X8}", block.StartAddress);
+				return new CpuStepResult { IsCall = false, CallTarget = 0 };
+			}
+			
+			var fullTypeName = $"Win32Emu.Jit.Generated.{block.ClassName}";
+			var type = block.Assembly.GetType(fullTypeName);
+			
+			if (type == null)
+			{
+				_logger.LogError("[JitCpu] Could not find type {TypeName} in assembly", fullTypeName);
+				return new CpuStepResult { IsCall = false, CallTarget = 0 };
+			}
+			
+			var method = type.GetMethod(block.MethodName);
+			if (method == null)
+			{
+				_logger.LogError("[JitCpu] Could not find method {MethodName} in type {TypeName}", 
+					block.MethodName, fullTypeName);
+				return new CpuStepResult { IsCall = false, CallTarget = 0 };
+			}
+			
+			// Invoke the generated method
+			var result = method.Invoke(null, new object[] { cpu, mem });
+			
+			if (result is Task<CpuStepResult> task)
+			{
+				return await task;
+			}
+			
+			_logger.LogError("[JitCpu] Method returned unexpected type");
+			return new CpuStepResult { IsCall = false, CallTarget = 0 };
 		}
-		catch
+		catch (Exception ex)
 		{
-			// If we can't read the memory, use zeros
-			Array.Fill(codeBytes, (byte)0);
+			_logger.LogError(ex, "[JitCpu] Failed to execute RTL block at 0x{Address:X8}", block.StartAddress);
+			return new CpuStepResult { IsCall = false, CallTarget = 0 };
 		}
-		
-		var codeHash = JitCache.ComputeCodeHash(codeBytes);
-		var endsWithCall = instructions.Count > 0 && instructions[^1].Mnemonic == Mnemonic.Call;
-		var endsWithReturn = instructions.Count > 0 && instructions[^1].Mnemonic == Mnemonic.Ret;
-		
-		// Update or save metadata to cache
-		var metadata = new BlockMetadata
-		{
-			StartAddress = startEip,
-			InstructionCount = instructions.Count,
-			ByteLength = blockLength,
-			CodeHash = codeHash,
-			FirstCompiled = cachedMetadata?.FirstCompiled ?? DateTime.UtcNow,
-			ExecutionCount = cachedMetadata?.ExecutionCount ?? 0,
-			EndsWithCall = endsWithCall,
-			EndsWithReturn = endsWithReturn
-		};
-		
-		_jitCache.AddBlockMetadata(startEip, metadata);
-		
-		// For now, just return a default result (placeholder for actual JIT compilation)
-		il.Emit(OpCodes.Ldc_I4_0); // isCall = false
-		il.Emit(OpCodes.Ldc_I4_0); // callTarget = 0
-		var constructor = typeof(CpuStepResult).GetConstructor(new[] { typeof(bool), typeof(uint) });
-		if (constructor == null)
-		{
-			throw new InvalidOperationException("CpuStepResult does not have a constructor with signature (bool, uint).");
-		}
-		il.Emit(OpCodes.Newobj, constructor);
-		var fromResultMethod = typeof(Task).GetMethod(nameof(Task.FromResult))?.MakeGenericMethod(typeof(CpuStepResult));
-		if (fromResultMethod == null)
-		{
-			throw new InvalidOperationException("Task.FromResult method not found.");
-		}
-		il.Emit(OpCodes.Call, fromResultMethod);
-		il.Emit(OpCodes.Ret);
-		
-		var type = typeBuilder.CreateType();
-		if (type == null)
-		{
-			throw new InvalidOperationException($"Failed to create type '{typeName}' for compiled block at EIP=0x{startEip:X8}.");
-		}
-		var method = type.GetMethod("Execute");
-		if (method == null)
-		{
-			throw new InvalidOperationException($"Failed to find 'Execute' method on type '{typeName}' for compiled block at EIP=0x{startEip:X8}.");
-		}
-		
-		return new CompiledBlock(
-			startEip,
-			instructions.Count,
-			(cpu, memory) => (Task<CpuStepResult>)method.Invoke(null, new object[] { cpu, memory })!
-		);
 	}
 
 	private List<Instruction> AnalyzeBlock(uint startEip, VirtualMemory mem)
@@ -2696,25 +2549,5 @@ public class JitCpu : IAsyncCpu
 		
 		public void Reset(uint ip) => _ptr = ip;
 		public override int ReadByte() => _cpu._mem.Read8(_ptr++);
-	}
-}
-
-internal class CompiledBlock
-{
-	private readonly Func<JitCpu, VirtualMemory, Task<CpuStepResult>> _execute;
-	
-	public CompiledBlock(uint startEip, int instructionCount, Func<JitCpu, VirtualMemory, Task<CpuStepResult>> execute)
-	{
-		StartEip = startEip;
-		InstructionCount = instructionCount;
-		_execute = execute;
-	}
-	
-	public uint StartEip { get; }
-	public int InstructionCount { get; }
-	
-	public Task<CpuStepResult> ExecuteAsync(JitCpu cpu, VirtualMemory memory)
-	{
-		return _execute(cpu, memory);
 	}
 }
