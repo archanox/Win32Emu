@@ -43,6 +43,9 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 			case "GETFILETITLEA":
 				returnValue = GetFileTitleA(a.LpcStr(0), a.LpStr(1), a.UInt32(2));
 				return true;
+			case "PAGESETUPDLGA":
+				returnValue = PageSetupDlgA(a.UInt32(0));
+				return true;
 
 			default:
 				_logger.LogInformation("[Comdlg32] Unimplemented export: {Export}", export);
@@ -127,5 +130,38 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 		}
 		
 		return 1; // Error
+	}
+
+	/// <summary>
+	/// Displays a Page Setup dialog box.
+	/// BOOL PageSetupDlgA(
+	///   [in, out] LPPAGESETUPDLGA lppsd
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint PageSetupDlgA(uint lppsd)
+	{
+		_logger.LogInformation("[Comdlg32] PageSetupDlgA(lppsd=0x{Lppsd:X8})", lppsd);
+
+		if (lppsd == 0)
+		{
+			return 0; // FALSE - dialog cancelled
+		}
+
+		// PAGESETUPDLG structure fields (simplified):
+		// DWORD lStructSize;
+		// HWND hwndOwner;
+		// HGLOBAL hDevMode;
+		// HGLOBAL hDevNames;
+		// DWORD Flags;
+		// POINT ptPaperSize;
+		// RECT rtMinMargin;
+		// RECT rtMargin;
+		// ... more fields
+
+		// For now, just return FALSE to indicate user cancelled
+		// A full implementation would show a page setup dialog
+		_logger.LogInformation("[Comdlg32] PageSetupDlgA: Dialog cancelled (stub)");
+		return 0; // FALSE
 	}
 }

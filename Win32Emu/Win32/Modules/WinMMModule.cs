@@ -159,6 +159,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = AuxSetVolume(a.UInt32(0), a.UInt32(1));
 					return true;
 
+				case "MIDIOUTGETNUMDEVS":
+					returnValue = MidiOutGetNumDevs();
+					return true;
+
 				case "SNDPLAYSOUND":
 				case "SNDPLAYSOUNDA":
 					returnValue = SndPlaySoundA(a.LpcStr(0), a.UInt32(1));
@@ -707,6 +711,20 @@ namespace Win32Emu.Win32.Modules
 			
 			// Accept the volume setting (but don't actually change anything)
 			return 0; // MMSYSERR_NOERROR
+		}
+
+		/// <summary>
+		/// Retrieves the number of MIDI output devices present in the system.
+		/// UINT midiOutGetNumDevs();
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint MidiOutGetNumDevs()
+		{
+			_logger.LogInformation("[WinMM] midiOutGetNumDevs()");
+			
+			// Return 1 device for compatibility
+			// A full implementation would enumerate actual MIDI devices
+			return 1;
 		}
 
 		/// <summary>

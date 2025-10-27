@@ -490,6 +490,12 @@ namespace Win32Emu.Win32.Modules
 				case "GETMENUCHECKMARKDIMENSIONS":
 					returnValue = GetMenuCheckMarkDimensions();
 					return true;
+				case "REMOVEMENU":
+					returnValue = RemoveMenu(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "DRAWMENUBAR":
+					returnValue = DrawMenuBar(a.UInt32(0));
+					return true;
 
 				// Rectangle functions
 				case "COPYRECT":
@@ -746,6 +752,9 @@ namespace Win32Emu.Win32.Modules
 					return true;
 				case "SETSCROLLINFO":
 					returnValue = SetScrollInfo(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "GETSCROLLINFO":
+					returnValue = GetScrollInfo(a.UInt32(0), a.Int32(1), a.UInt32(2));
 					return true;
 
 				// DDE (Dynamic Data Exchange) functions
@@ -4190,6 +4199,45 @@ namespace Win32Emu.Win32.Modules
 			return 0x000D000D; // 13x13 pixels (MAKELONG(13, 13))
 		}
 
+		/// <summary>
+		/// Deletes a menu item or detaches a submenu from the specified menu.
+		/// BOOL RemoveMenu(
+		///   [in] HMENU hMenu,
+		///   [in] UINT  uPosition,
+		///   [in] UINT  uFlags
+		/// );
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint RemoveMenu(uint hMenu, uint uPosition, uint uFlags)
+		{
+			_logger.LogInformation("[User32] RemoveMenu(hMenu=0x{HMenu:X8}, uPosition={UPosition}, uFlags=0x{UFlags:X})",
+				hMenu, uPosition, uFlags);
+			
+			// RemoveMenu removes a menu item from a menu
+			// uFlags can be:
+			// MF_BYCOMMAND (0x0000) - uPosition is menu item ID
+			// MF_BYPOSITION (0x0400) - uPosition is zero-based position
+			
+			// For stub implementation, just acknowledge the removal
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Redraws the menu bar of the specified window.
+		/// BOOL DrawMenuBar(
+		///   [in] HWND hWnd
+		/// );
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint DrawMenuBar(uint hWnd)
+		{
+			_logger.LogInformation("[User32] DrawMenuBar(hWnd=0x{HWnd:X8})", hWnd);
+			
+			// DrawMenuBar redraws the menu bar after changes
+			// For stub implementation, just acknowledge the redraw
+			return 1; // TRUE
+		}
+
 		// Rectangle functions
 		[DllModuleExport(8)]
 		private uint CopyRect(uint lprcDst, uint lprcSrc)
@@ -5016,6 +5064,64 @@ namespace Win32Emu.Win32.Modules
 		
 		// Return the current position (stub)
 		return 0;
+	}
+
+	/// <summary>
+	/// Retrieves the parameters of a scroll bar.
+	/// BOOL GetScrollInfo(
+	///   [in]      HWND          hWnd,
+	///   [in]      int           nBar,
+	///   [in, out] LPSCROLLINFO  lpsi
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint GetScrollInfo(uint hWnd, int nBar, uint lpsi)
+	{
+		_logger.LogInformation("[User32] GetScrollInfo(hWnd=0x{HWnd:X8}, nBar={NBar}, lpsi=0x{Lpsi:X8})",
+			hWnd, nBar, lpsi);
+		
+		// GetScrollInfo retrieves the parameters of a scroll bar
+		// nBar can be SB_HORZ (0), SB_VERT (1), or SB_CTL (2)
+		// lpsi points to a SCROLLINFO structure to receive values
+		
+		if (lpsi != 0)
+		{
+			// SCROLLINFO structure offsets
+			const uint SCROLLINFO_CBSIZE_OFFSET = 0;
+			const uint SCROLLINFO_FMASK_OFFSET = 4;
+			const uint SCROLLINFO_NMIN_OFFSET = 8;
+			const uint SCROLLINFO_NMAX_OFFSET = 12;
+			const uint SCROLLINFO_NPAGE_OFFSET = 16;
+			const uint SCROLLINFO_NPOS_OFFSET = 20;
+			const uint SCROLLINFO_NTRACKPOS_OFFSET = 24;
+			
+			var fMask = _env.MemRead32(lpsi + SCROLLINFO_FMASK_OFFSET);
+			
+			// For stub implementation, fill in default values
+			// SIF_RANGE (0x0001), SIF_PAGE (0x0002), SIF_POS (0x0004), SIF_TRACKPOS (0x0010)
+			
+			if ((fMask & 0x0001) != 0) // SIF_RANGE
+			{
+				_env.MemWrite32(lpsi + SCROLLINFO_NMIN_OFFSET, 0); // nMin = 0
+				_env.MemWrite32(lpsi + SCROLLINFO_NMAX_OFFSET, 100); // nMax = 100
+			}
+			if ((fMask & 0x0002) != 0) // SIF_PAGE
+			{
+				_env.MemWrite32(lpsi + SCROLLINFO_NPAGE_OFFSET, 10); // nPage = 10
+			}
+			if ((fMask & 0x0004) != 0) // SIF_POS
+			{
+				_env.MemWrite32(lpsi + SCROLLINFO_NPOS_OFFSET, 0); // nPos = 0
+			}
+			if ((fMask & 0x0010) != 0) // SIF_TRACKPOS
+			{
+				_env.MemWrite32(lpsi + SCROLLINFO_NTRACKPOS_OFFSET, 0); // nTrackPos = 0
+			}
+			
+			_logger.LogInformation("[User32] GetScrollInfo: Returning default scroll info");
+		}
+		
+		return 1; // TRUE
 	}
 
 	// DDE (Dynamic Data Exchange) functions

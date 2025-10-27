@@ -707,6 +707,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "_LWRITE":
 				returnValue = _lwrite(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
+			case "_LOPEN":
+				returnValue = _lopen(a.LpcStr(0), a.Int32(1));
+				return true;
+			case "_LREAD":
+				returnValue = _lread(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "_LLSEEK":
+				returnValue = _llseek(a.UInt32(0), a.Int32(1), a.Int32(2));
+				return true;
 
 			// Memory mapping functions
 			case "CREATEFILEMAPPINGA":
@@ -6970,6 +6979,139 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// A full implementation would actually write the data
 		_logger.LogInformation("[Kernel32] _lwrite: Stub returning {UBytes} bytes written", uBytes);
 		return uBytes;
+	}
+
+	/// <summary>
+	/// Opens an existing file (legacy 16-bit API).
+	/// HFILE _lopen(
+	///   [in] LPCSTR lpPathName,
+	///   [in] int    iReadWrite
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint _lopen(in LpcStr lpPathName, int iReadWrite)
+	{
+		var pathName = lpPathName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] _lopen(lpPathName=\"{PathName}\", iReadWrite={IReadWrite})", 
+			pathName, iReadWrite);
+		
+		// _lopen is a legacy 16-bit API for opening files
+		// iReadWrite can be:
+		// OF_READ (0x0000) - Open for reading
+		// OF_WRITE (0x0001) - Open for writing
+		// OF_READWRITE (0x0002) - Open for reading and writing
+		// Plus various flags like OF_SHARE_DENY_NONE, etc.
+		
+		if (string.IsNullOrEmpty(pathName))
+		{
+			_logger.LogWarning("[Kernel32] _lopen: NULL or empty path");
+			return 0xFFFFFFFF; // HFILE_ERROR
+		}
+		
+		// Try to use VirtualFileSystem if available
+		if (_env.VirtualFileSystem != null)
+		{
+			try
+			{
+				if (_env.VirtualFileSystem.FileExists(pathName))
+				{
+					// Return a dummy file handle
+					var handle = 0x4000u + ((uint)pathName.GetHashCode() & 0xFFF);
+					_logger.LogInformation("[Kernel32] _lopen: Opened file handle 0x{Handle:X8}", handle);
+					return handle;
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "[Kernel32] _lopen: VFS error accessing \"{PathName}\"", pathName);
+			}
+		}
+		
+		// File not found or VFS not available - return a dummy handle for compatibility
+		// This allows legacy apps to continue even if the file doesn't exist
+		var dummyHandle = 0x4000u + ((uint)pathName.GetHashCode() & 0xFFF);
+		_logger.LogInformation("[Kernel32] _lopen: Created dummy file handle 0x{Handle:X8}", dummyHandle);
+		return dummyHandle;
+	}
+
+	/// <summary>
+	/// Reads from a file (legacy 16-bit API).
+	/// UINT _lread(
+	///   [in]  HFILE  hFile,
+	///   [out] LPVOID lpBuffer,
+	///   [in]  UINT   uBytes
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint _lread(uint hFile, uint lpBuffer, uint uBytes)
+	{
+		_logger.LogInformation("[Kernel32] _lread(hFile=0x{HFile:X8}, lpBuffer=0x{LpBuffer:X8}, uBytes={UBytes})",
+			hFile, lpBuffer, uBytes);
+		
+		// _lread is a legacy 16-bit API for reading from files
+		// Returns the number of bytes read, or 0xFFFFFFFF on error
+		
+		if (lpBuffer == 0)
+		{
+			_logger.LogWarning("[Kernel32] _lread: NULL buffer");
+			return 0xFFFFFFFF; // HFILE_ERROR
+		}
+		
+		// For stub implementation, zero out the buffer and return 0 bytes read
+		// A full implementation would actually read from the file
+		for (uint i = 0; i < uBytes; i++)
+		{
+			_env.MemWrite8(lpBuffer + i, 0);
+		}
+		
+		_logger.LogInformation("[Kernel32] _lread: Stub returning 0 bytes read (EOF)");
+		return 0; // EOF
+	}
+
+	/// <summary>
+	/// Repositions the file pointer in a file (legacy 16-bit API).
+	/// LONG _llseek(
+	///   [in] HFILE hFile,
+	///   [in] LONG  lOffset,
+	///   [in] int   iOrigin
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint _llseek(uint hFile, int lOffset, int iOrigin)
+	{
+		_logger.LogInformation("[Kernel32] _llseek(hFile=0x{HFile:X8}, lOffset={LOffset}, iOrigin={IOrigin})",
+			hFile, lOffset, iOrigin);
+		
+		// _llseek is a legacy 16-bit API for seeking in files
+		// iOrigin can be:
+		// FILE_BEGIN (0) - Seek from beginning
+		// FILE_CURRENT (1) - Seek from current position
+		// FILE_END (2) - Seek from end
+		// Returns the new file pointer position, or 0xFFFFFFFF on error
+		
+		// For stub implementation, calculate position based on origin
+		// A full implementation would track actual file positions and sizes
+		uint newPosition;
+		switch (iOrigin)
+		{
+			case 0: // FILE_BEGIN
+				newPosition = (uint)Math.Max(0, lOffset);
+				break;
+			case 1: // FILE_CURRENT
+				// Would need to track current position - for now assume position 0
+				newPosition = (uint)Math.Max(0, lOffset);
+				break;
+			case 2: // FILE_END
+				// Would need to know file size - for now just use offset
+				newPosition = (uint)Math.Max(0, lOffset);
+				break;
+			default:
+				_logger.LogWarning("[Kernel32] _llseek: Invalid origin {IOrigin}", iOrigin);
+				return 0xFFFFFFFF; // Error
+		}
+		
+		_logger.LogInformation("[Kernel32] _llseek: Stub returning position 0x{NewPosition:X8}", newPosition);
+		return newPosition;
 	}
 
 	[DllModuleExport(12)]
