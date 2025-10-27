@@ -374,13 +374,9 @@ public class JitCpu : IAsyncCpu
 				break;
 			case Mnemonic.Jmp:
 				// Unconditional jump - set EIP to target address
-				if (insn.Op0Kind == OpKind.NearBranch32)
+				if (insn.Op0Kind == OpKind.NearBranch32 || insn.Op0Kind == OpKind.NearBranch16)
 				{
-					_eip = (uint)insn.NearBranch32;
-				}
-				else if (insn.Op0Kind == OpKind.NearBranch16)
-				{
-					_eip = (uint)insn.NearBranch16;
+					_eip = (uint)insn.NearBranchTarget;
 				}
 				else if (insn.Op0Kind == OpKind.Register)
 				{
