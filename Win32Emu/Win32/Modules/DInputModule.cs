@@ -30,6 +30,9 @@ namespace Win32Emu.Win32.Modules
 		private uint _nextDInputHandle = 0x90000000;
 		private uint _nextDeviceHandle = 0x91000000;
 
+		// DirectInput constants
+		private const uint DIDEVICEOBJECTDATA_SIZE = 16; // sizeof(DIDEVICEOBJECTDATA)
+
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
@@ -577,7 +580,63 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DInputDevice_GetDeviceData(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetDeviceData() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var cbObjectData = args.UInt32(1);
+			var rgdod = args.UInt32(2);
+			var pdwInOut = args.UInt32(3);
+			var dwFlags = args.UInt32(4);
+
+			_logger.LogInformation("[DInput COM] IDirectInputDevice::GetDeviceData(this=0x{ThisPtr:X8}, cbObjectData={CbObjectData}, rgdod=0x{Rgdod:X8}, pdwInOut=0x{PdwInOut:X8}, dwFlags=0x{DwFlags:X8})",
+				thisPtr, cbObjectData, rgdod, pdwInOut, dwFlags);
+
+			// Find the device associated with this COM object
+			DirectInputDevice? device = null;
+			foreach (var dev in _devices.Values)
+			{
+				device = dev;
+				break; // For now, use the first device
+			}
+
+			if (device == null || !device.IsAcquired)
+			{
+				_logger.LogWarning("[DInput COM] Device not acquired or not found");
+				return 0x8007001E; // DIERR_NOTACQUIRED
+			}
+
+			// Read the number of elements requested
+			uint requestedElementCount = 0;
+			if (pdwInOut != 0)
+			{
+				requestedElementCount = _env.MemRead32(pdwInOut);
+			}
+
+			_logger.LogInformation("[DInput COM]   Requested elements: {RequestedElementCount}", requestedElementCount);
+
+			// Validate cbObjectData parameter
+			if (cbObjectData != DIDEVICEOBJECTDATA_SIZE)
+			{
+				_logger.LogWarning("[DInput COM] Invalid cbObjectData: {CbObjectData}, expected {Expected}", cbObjectData, DIDEVICEOBJECTDATA_SIZE);
+				return 0x80070057; // E_INVALIDARG
+			}
+
+			// For now, return 0 elements (no buffered events)
+			// In a full implementation, we would:
+			// 1. Check if there are buffered input events in the device's event queue
+			// 2. Validate that rgdod buffer size (requestedElementCount * DIDEVICEOBJECTDATA_SIZE) is valid
+			// 3. Fill the rgdod buffer with DIDEVICEOBJECTDATA structures:
+			//    - DWORD dwOfs       // +0: Offset in data format
+			//    - DWORD dwData      // +4: Value (key code, button state, etc.)
+			//    - DWORD dwTimeStamp // +8: Timestamp
+			//    - DWORD dwSequence  // +12: Sequence number
+			// 4. Update pdwInOut with the actual number of elements returned
+
+			// Return 0 elements for now
+			if (pdwInOut != 0)
+			{
+				_env.MemWrite32(pdwInOut, 0);
+			}
+
 			return 0; // DI_OK
 		}
 

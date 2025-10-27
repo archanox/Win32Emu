@@ -157,6 +157,32 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
                 }
             });
 
+            // Set up keyboard callback
+            _glfw.SetKeyCallback(_window, (window, key, scancode, action, mods) =>
+            {
+                bool pressed = action == InputAction.Press || action == InputAction.Repeat;
+                SilkInputBackend.UpdateKeyState((int)key, pressed);
+            });
+
+            // Set up mouse button callback
+            _glfw.SetMouseButtonCallback(_window, (window, button, action, mods) =>
+            {
+                bool pressed = action == InputAction.Press;
+                SilkInputBackend.UpdateMouseButton((int)button, pressed);
+            });
+
+            // Set up cursor position callback
+            _glfw.SetCursorPosCallback(_window, (window, xpos, ypos) =>
+            {
+                SilkInputBackend.UpdateMousePosition((int)xpos, (int)ypos);
+            });
+
+            // Set up scroll callback
+            _glfw.SetScrollCallback(_window, (window, xoffset, yoffset) =>
+            {
+                SilkInputBackend.UpdateMouseWheel((int)yoffset);
+            });
+
             _initialized = true;
             _logger.LogInformation("[SilkGLFW] Initialized {Width}x{Height} display", width, height);
             return true;

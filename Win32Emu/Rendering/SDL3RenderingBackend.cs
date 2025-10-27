@@ -433,6 +433,36 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                         WindowHandle = 0
                     });
                     break;
+
+                case SDL.EventType.KeyDown:
+                    // Update keyboard state in SDL3InputBackend
+                    Sdl3InputBackend.UpdateKeyState((int)evt.Key.Scancode, true);
+                    break;
+
+                case SDL.EventType.KeyUp:
+                    // Update keyboard state in SDL3InputBackend
+                    Sdl3InputBackend.UpdateKeyState((int)evt.Key.Scancode, false);
+                    break;
+
+                case SDL.EventType.MouseButtonDown:
+                    // Update mouse button state in SDL3InputBackend
+                    Sdl3InputBackend.UpdateMouseButton(evt.Button.Button, true);
+                    break;
+
+                case SDL.EventType.MouseButtonUp:
+                    // Update mouse button state in SDL3InputBackend
+                    Sdl3InputBackend.UpdateMouseButton(evt.Button.Button, false);
+                    break;
+
+                case SDL.EventType.MouseMotion:
+                    // Update mouse position in SDL3InputBackend
+                    Sdl3InputBackend.UpdateMousePosition((int)evt.Motion.X, (int)evt.Motion.Y);
+                    break;
+
+                case SDL.EventType.MouseWheel:
+                    // Update mouse wheel in SDL3InputBackend
+                    Sdl3InputBackend.UpdateMouseWheel((int)evt.Wheel.Y);
+                    break;
             }
         }
     }
