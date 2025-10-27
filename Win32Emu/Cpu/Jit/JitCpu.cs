@@ -137,7 +137,7 @@ public class JitCpu : IAsyncCpu
 	{
 		if (string.IsNullOrEmpty(_currentExecutablePath))
 		{
-			_logger.LogWarning("[JitCpu] Cannot load cache: executable path not set");
+			_logger.LogError("[JitCpu] Cannot load cache: executable path not set");
 			return;
 		}
 		
@@ -154,7 +154,7 @@ public class JitCpu : IAsyncCpu
 	{
 		if (string.IsNullOrEmpty(_currentExecutablePath))
 		{
-			_logger.LogWarning("[JitCpu] Cannot save cache: executable path not set");
+			_logger.LogError("[JitCpu] Cannot save cache: executable path not set");
 			return;
 		}
 		
@@ -195,7 +195,7 @@ public class JitCpu : IAsyncCpu
 			}
 			catch (Exception ex)
 			{
-				_logger.LogDebug(ex, "[JitCpu] Failed to precompile cached block at 0x{Address:X8}", address);
+				_logger.LogError(ex, "[JitCpu] Failed to precompile cached block at 0x{Address:X8}", address);
 			}
 		}
 		
@@ -211,7 +211,7 @@ public class JitCpu : IAsyncCpu
 	{
 		if (startAddress >= endAddress)
 		{
-			_logger.LogWarning("[JitCpu] Invalid address range for precompilation: 0x{Start:X8} - 0x{End:X8}",
+			_logger.LogError("[JitCpu] Invalid address range for precompilation: 0x{Start:X8} - 0x{End:X8}",
 				startAddress, endAddress);
 			return 0;
 		}
@@ -261,7 +261,7 @@ public class JitCpu : IAsyncCpu
 			}
 			catch (Exception ex)
 			{
-				_logger.LogDebug(ex, "[JitCpu] Failed to precompile block at 0x{Address:X8}", currentAddress);
+				_logger.LogError(ex, "[JitCpu] Failed to precompile block at 0x{Address:X8}", currentAddress);
 				// On error, advance by minimum instruction size to avoid infinite loop
 				currentAddress += 1;
 			}
@@ -361,7 +361,7 @@ public class JitCpu : IAsyncCpu
 				}
 				else
 				{
-					_logger.LogWarning("[JitCpu] Unimplemented CALL type: {Op0Kind} at EIP=0x{OldEip:X8}", insn.Op0Kind, _eip - (uint)insn.Length);
+					throw new NotImplementedException($"[JitCpu] Unimplemented CALL type: {insn.Op0Kind} at EIP=0x{_eip - (uint)insn.Length:X8}");
 				}
 				break;
 			case Mnemonic.Ret:
@@ -786,8 +786,7 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Fxtract:
 			case Mnemonic.Fyl2x:
 			case Mnemonic.Fyl2xp1:
-				_logger.LogDebug("[JitCpu] Stubbed FPU instruction: {Mnemonic}", insn.Mnemonic);
-				break;
+				throw new NotImplementedException($"[JitCpu] Stubbed FPU instruction: {insn.Mnemonic}");
 			
 			// MMX instructions
 			case Mnemonic.Emms:
@@ -837,11 +836,10 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Punpckldq:
 			case Mnemonic.Punpcklwd:
 			case Mnemonic.Pxor:
-				_logger.LogDebug("[JitCpu] Stubbed MMX instruction: {Mnemonic}", insn.Mnemonic);
-				break;
+				throw new NotImplementedException($"[JitCpu] Stubbed MMX instruction: {insn.Mnemonic}");
 			
 			default:
-				_logger.LogWarning("[JitCpu] Unimplemented instruction: {Mnemonic}", insn.Mnemonic);
+				throw new NotImplementedException($"[JitCpu] Unimplemented instruction: {insn.Mnemonic}");
 				break;
 		}
 		
@@ -2588,7 +2586,7 @@ public class JitCpu : IAsyncCpu
 		uint divisor = GetOperandValue(insn, 0);
 		if (divisor == 0)
 		{
-			_logger.LogWarning("[JitCpu] Division by zero");
+			_logger.LogError("[JitCpu] Division by zero");
 			return;
 		}
 		
@@ -2602,7 +2600,7 @@ public class JitCpu : IAsyncCpu
 		int divisor = (int)GetOperandValue(insn, 0);
 		if (divisor == 0)
 		{
-			_logger.LogWarning("[JitCpu] Division by zero");
+			_logger.LogError("[JitCpu] Division by zero");
 			return;
 		}
 		
