@@ -62,4 +62,5 @@ public class CpuState
 	public int FpuTop { get; set; }
 	public ushort FpuControlWord { get; set; }
 	public ushort FpuStatusWord { get; set; }
+	public ushort FpuTagWord { get; set; }
 }
