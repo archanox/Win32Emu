@@ -123,7 +123,6 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				
 				var name = sym.Name ?? ($"Ordinal_{sym.Hint}");
 				map[synthetic] = (dll.ToUpperInvariant(), name);
-				logger?.LogDebug("[Loader] Mapped import #{Index}: {Dll}!{Name} at 0x{Synthetic:X8}", synth - 1, dll.ToUpperInvariant(), name, synthetic);
 			}
 		}
 
