@@ -788,8 +788,14 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Fyl2xp1:
 				throw new NotImplementedException($"[JitCpu] Stubbed FPU instruction: {insn.Mnemonic}");
 			
+			case Mnemonic.Fninit:
+				ExecFninit();
+				break;
+			
 			// MMX instructions
 			case Mnemonic.Emms:
+				ExecEmms();
+				break;
 			case Mnemonic.Movd:
 			case Mnemonic.Movq:
 			case Mnemonic.Packssdw:
@@ -2682,6 +2688,27 @@ public class JitCpu : IAsyncCpu
 		};
 		
 		SetOperandValue(insn, 0, condition ? 1u : 0u);
+	}
+
+	private void ExecFninit()
+	{
+		// FNINIT - Initialize FPU (no wait)
+		// Reset FPU to default state
+		_fpuControlWord = 0x037F;
+		_fpuStatusWord = 0x0000;
+		_fpuTop = 0;
+		Array.Clear(_fpu, 0, _fpu.Length);
+	}
+
+	private void ExecEmms()
+	{
+		// EMMS - Empty MMX State
+		// This instruction marks all FPU/MMX registers as empty
+		// In our simplified implementation, we just reset the FPU tag word
+		// by clearing the FPU status word (which contains the tag info)
+		_fpuStatusWord = 0x0000;
+		_fpuTop = 0;
+		// Note: In a full MMX implementation, this would set all tag bits to 11b (empty)
 	}
 
 	private sealed class SimpleMemoryCodeReader : CodeReader
