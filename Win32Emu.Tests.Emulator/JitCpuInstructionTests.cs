@@ -348,7 +348,7 @@ public class JitCpuInstructionTests
 	public void RclWithNegativeESPDisplacement_ShouldAccessCorrectMemory()
 	{
 		// Arrange - This test reproduces the bug from the issue
-		// RCL dword [ESP-0x44], CL should access memory at ESP-0x44, not at 0xFFFFFFBC
+		// RCL dword [ESP-0x44], CL should calculate address as ESP+displacement (0x001FFFB4+0xFFFFFFBC), not use displacement alone (0xFFFFFFBC)
 		const int memorySize = 16 * 1024 * 1024; // 16MB like in the error
 		var mem = new VirtualMemory(memorySize);
 		var cpu = new JitCpu(mem);
