@@ -1700,29 +1700,28 @@ public class ThreeWayPentiumTests : IDisposable
 		_helper.AssertFlagsMatch(CpuFlag.Cf, CpuFlag.Zf, CpuFlag.Sf, CpuFlag.Of, CpuFlag.Pf);
 	}
 
-	// TODO: Re-enable this test after fixing the underlying issue
-	// [Fact]
-	// public void AND_MemoryNegativeDisplacement_ShouldMatch()
-	// {
-	// 	// Arrange: AND DWORD PTR [EBP-0x44], 0xFF
-	// 	// This is the type of instruction that was failing in the bug report
-	// 	// Instruction: 83 65 BC FF (AND DWORD PTR [EBP-0x44], 0xFF)
-	// 	var stackAddr = (uint)(StackBaseAddress + 0x8000);
-	// 	_helper.SetReg("EBP", stackAddr);
-	// 	
-	// 	// Write test value at [EBP-0x44]
-	// 	var targetAddr = stackAddr - 0x44;
-	// 	_helper.WriteMemory(targetAddr, 0x12, 0x34, 0x56, 0x78); // Value: 0x78563412
-	// 	
-	// 	// AND DWORD PTR [EBP-0x44], 0xFF = 83 65 BC FF
-	// 	_helper.WriteCode(0x83, 0x65, 0xBC, 0xFF);
-	// 	
-	// 	// Act
-	// 	_helper.ExecuteInstruction();
-	// 	
-	// 	// Assert - Memory should be ANDed with 0xFF
-	// 	_helper.AssertMemoryMatch(targetAddr, 4);
-	// }
+	[Fact]
+	public void AND_MemoryNegativeDisplacement_ShouldMatch()
+	{
+		// Arrange: AND DWORD PTR [EBP-0x44], 0xFF
+		// This is the type of instruction that was failing in the bug report
+		// Instruction: 83 65 BC FF (AND DWORD PTR [EBP-0x44], 0xFF)
+		var stackAddr = (uint)(StackBaseAddress + 0x8000);
+		_helper.SetReg("EBP", stackAddr);
+		
+		// Write test value at [EBP-0x44]
+		var targetAddr = stackAddr - 0x44;
+		_helper.WriteMemory(targetAddr, 0x12, 0x34, 0x56, 0x78); // Value: 0x78563412
+		
+		// AND DWORD PTR [EBP-0x44], 0xFF = 83 65 BC FF
+		_helper.WriteCode(0x83, 0x65, 0xBC, 0xFF);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert - Memory should be ANDed with 0xFF
+		_helper.AssertMemoryMatch(targetAddr, 4);
+	}
 
 	#endregion
 
