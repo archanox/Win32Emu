@@ -2026,8 +2026,8 @@ public class JitCpu : IAsyncCpu
 
 	private uint CalcMemAddress(Instruction insn, int operandIndex)
 	{
-		// Calculate memory address from instruction operand
-		// Always start with displacement (it's 0 if there's no displacement)
+		// Full SIB (Scale-Index-Base) memory address calculation
+		// The Iced library parses the SIB byte and provides displacement, base, index, and scale
 		uint addr = insn.MemoryDisplacement32;
 		
 		// Add base register if present
@@ -2037,7 +2037,7 @@ public class JitCpu : IAsyncCpu
 			addr += GetRegisterByEnum(baseReg);
 		}
 		
-		// Add index register * scale if present
+		// Add (index * scale) if index register is present
 		var indexReg = insn.MemoryIndex;
 		if (indexReg != Register.None)
 		{
