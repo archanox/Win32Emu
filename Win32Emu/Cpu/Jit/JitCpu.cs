@@ -2045,6 +2045,23 @@ public class JitCpu : IAsyncCpu
 			addr += indexVal * (uint)insn.MemoryIndexScale;
 		}
 		
+		// Check if address is within valid memory range
+		// Convert to ulong to avoid overflow issues when comparing with memory size
+		if (addr >= _mem.Size)
+		{
+			byte[]? instrBytes = null;
+			try
+			{
+				instrBytes = _mem.GetSpan(_eip, 8);
+			}
+			catch
+			{
+			}
+
+			Diagnostics.Diagnostics.LogCalcMemAddressFailure(addr, _mem.Size, _eip, _esp, _ebp, _eax, _ebx, _ecx, _edx, _esi, _edi, instrBytes);
+			throw new IndexOutOfRangeException($"Calculated memory address out of range: 0x{addr:X} (EIP=0x{_eip:X8})");
+		}
+		
 		return addr;
 	}
 
