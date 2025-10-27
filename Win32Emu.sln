@@ -73,6 +73,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.CodeGen", "Win32Em
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Tests.CodeGen", "Win32Emu.Tests.CodeGen\Win32Emu.Tests.CodeGen.csproj", "{39F582F0-56E6-4CD7-9A3C-5AFD08D87813}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Tools.ApiAnalyzer", "Win32Emu.Tools.ApiAnalyzer\Win32Emu.Tools.ApiAnalyzer.csproj", "{87A1A206-9551-41AA-99FF-CA305D73D019}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -203,6 +205,18 @@ Global
 		{39F582F0-56E6-4CD7-9A3C-5AFD08D87813}.Release|x64.Build.0 = Release|Any CPU
 		{39F582F0-56E6-4CD7-9A3C-5AFD08D87813}.Release|x86.ActiveCfg = Release|Any CPU
 		{39F582F0-56E6-4CD7-9A3C-5AFD08D87813}.Release|x86.Build.0 = Release|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Debug|x64.Build.0 = Debug|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Debug|x86.Build.0 = Debug|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Release|x64.ActiveCfg = Release|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Release|x64.Build.0 = Release|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Release|x86.ActiveCfg = Release|Any CPU
+		{87A1A206-9551-41AA-99FF-CA305D73D019}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
