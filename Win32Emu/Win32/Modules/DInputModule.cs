@@ -602,25 +602,32 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Read the number of elements requested
-			uint dwInOut = 0;
+			uint requestedElementCount = 0;
 			if (pdwInOut != 0)
 			{
-				dwInOut = _env.MemRead32(pdwInOut);
+				requestedElementCount = _env.MemRead32(pdwInOut);
 			}
 
-			_logger.LogInformation("[DInput COM]   Requested elements: {DwInOut}", dwInOut);
+			_logger.LogInformation("[DInput COM]   Requested elements: {RequestedElementCount}", requestedElementCount);
+
+			// Validate cbObjectData parameter
+			const uint DIDEVICEOBJECTDATA_SIZE = 16; // sizeof(DIDEVICEOBJECTDATA)
+			if (cbObjectData != DIDEVICEOBJECTDATA_SIZE)
+			{
+				_logger.LogWarning("[DInput COM] Invalid cbObjectData: {CbObjectData}, expected {Expected}", cbObjectData, DIDEVICEOBJECTDATA_SIZE);
+				return 0x80070057; // E_INVALIDARG
+			}
 
 			// For now, return 0 elements (no buffered events)
 			// In a full implementation, we would:
-			// 1. Check if there are buffered input events
-			// 2. Fill the rgdod buffer with DIDEVICEOBJECTDATA structures
-			// 3. Update pdwInOut with the actual number of elements returned
-			//
-			// DIDEVICEOBJECTDATA structure (16 bytes):
-			//   DWORD dwOfs;       // +0: Offset in data format
-			//   DWORD dwData;      // +4: Value (key code, button state, etc.)
-			//   DWORD dwTimeStamp; // +8: Timestamp
-			//   DWORD dwSequence;  // +12: Sequence number
+			// 1. Check if there are buffered input events in the device's event queue
+			// 2. Validate that rgdod buffer size (requestedElementCount * DIDEVICEOBJECTDATA_SIZE) is valid
+			// 3. Fill the rgdod buffer with DIDEVICEOBJECTDATA structures:
+			//    - DWORD dwOfs       // +0: Offset in data format
+			//    - DWORD dwData      // +4: Value (key code, button state, etc.)
+			//    - DWORD dwTimeStamp // +8: Timestamp
+			//    - DWORD dwSequence  // +12: Sequence number
+			// 4. Update pdwInOut with the actual number of elements returned
 
 			// Return 0 elements for now
 			if (pdwInOut != 0)
