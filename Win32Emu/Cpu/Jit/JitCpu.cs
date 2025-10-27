@@ -515,6 +515,20 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Xlatb:
 				ExecXlatb(mem);
 				break;
+			case Mnemonic.Leave:
+				ExecLeave(mem);
+				break;
+			case Mnemonic.Cmpxchg:
+				ExecCmpxchg(insn, mem);
+				break;
+			case Mnemonic.Xadd:
+				ExecXadd(insn, mem);
+				break;
+			case Mnemonic.Cmpxchg8b:
+				ExecCmpxchg8b(insn, mem);
+				break;
+			
+			// Flag manipulation
 			case Mnemonic.Clc:
 				ClearFlag(Cf);
 				break;
@@ -529,6 +543,38 @@ public class JitCpu : IAsyncCpu
 				break;
 			case Mnemonic.Std:
 				SetFlag(Df);
+				break;
+			case Mnemonic.Cli:
+				ClearFlag(If);
+				break;
+			case Mnemonic.Sti:
+				SetFlag(If);
+				break;
+			case Mnemonic.Pushf:
+				_esp -= 2;
+				_mem.Write16(_esp, (ushort)_eflags);
+				break;
+			case Mnemonic.Popf:
+				_eflags = (_eflags & 0xFFFF0000) | _mem.Read16(_esp);
+				_esp += 2;
+				break;
+			case Mnemonic.Pushfd:
+				_esp -= 4;
+				_mem.Write32(_esp, _eflags);
+				break;
+			case Mnemonic.Popfd:
+				_eflags = _mem.Read32(_esp);
+				_esp += 4;
+				break;
+			case Mnemonic.Lahf:
+				ExecLahf();
+				break;
+			case Mnemonic.Sahf:
+				ExecSahf();
+				break;
+			case Mnemonic.Iret:
+			case Mnemonic.Iretd:
+				ExecIret(mem);
 				break;
 			case Mnemonic.Seto:
 			case Mnemonic.Setno:
@@ -553,11 +599,15 @@ public class JitCpu : IAsyncCpu
 			// These are recognized but not yet fully implemented in JIT mode
 			// They will be properly compiled when JIT compilation is complete
 			
-			// Integer arithmetic
+			// Integer arithmetic - BCD instructions
 			case Mnemonic.Aaa:
 			case Mnemonic.Aas:
 			case Mnemonic.Cbw:
 			case Mnemonic.Cwde:
+			case Mnemonic.Daa:
+			case Mnemonic.Das:
+			case Mnemonic.Aam:
+			case Mnemonic.Aad:
 				ExecBcdArithmetic(insn);
 				break;
 			
@@ -741,6 +791,41 @@ public class JitCpu : IAsyncCpu
 				ExecOutsd();
 				break;
 			
+			// System/Privileged instructions
+			case Mnemonic.Rdtsc:
+				ExecRdtsc();
+				break;
+			case Mnemonic.Cpuid:
+				ExecCpuid();
+				break;
+			case Mnemonic.Rdmsr:
+				ExecRdmsr();
+				break;
+			case Mnemonic.Wrmsr:
+				ExecWrmsr();
+				break;
+			case Mnemonic.Invd:
+				ExecInvd();
+				break;
+			case Mnemonic.Wbinvd:
+				ExecWbinvd();
+				break;
+			case Mnemonic.Invlpg:
+				ExecInvlpg(insn);
+				break;
+			case Mnemonic.Rsm:
+				ExecRsm();
+				break;
+			case Mnemonic.Sldt:
+				ExecSldt(insn);
+				break;
+			case Mnemonic.Arpl:
+				ExecArpl(insn);
+				break;
+			case Mnemonic.Wait:
+				// WAIT/FWAIT - no-op for now
+				break;
+			
 			// I/O operations
 			case Mnemonic.In:
 				ExecIn(insn);
@@ -750,6 +835,151 @@ public class JitCpu : IAsyncCpu
 				break;
 			
 			// FPU instructions (x87)
+			case Mnemonic.Fld:
+				ExecFld(insn, mem);
+				break;
+			case Mnemonic.Fst:
+				ExecFst(insn, mem, false);
+				break;
+			case Mnemonic.Fstp:
+				ExecFst(insn, mem, true);
+				break;
+			case Mnemonic.Fild:
+				ExecFild(insn, mem);
+				break;
+			case Mnemonic.Fistp:
+				ExecFistp(insn, mem);
+				break;
+			case Mnemonic.Fist:
+				ExecFist(insn, mem);
+				break;
+			case Mnemonic.Fadd:
+				ExecFadd(insn, mem);
+				break;
+			case Mnemonic.Faddp:
+				ExecFaddp(insn);
+				break;
+			case Mnemonic.Fsub:
+				ExecFsub(insn, mem);
+				break;
+			case Mnemonic.Fsubp:
+				ExecFsubp(insn);
+				break;
+			case Mnemonic.Fsubr:
+				ExecFsubr(insn, mem);
+				break;
+			case Mnemonic.Fsubrp:
+				ExecFsubrp(insn);
+				break;
+			case Mnemonic.Fmul:
+				ExecFmul(insn, mem);
+				break;
+			case Mnemonic.Fmulp:
+				ExecFmulp(insn);
+				break;
+			case Mnemonic.Fdiv:
+				ExecFdiv(insn, mem);
+				break;
+			case Mnemonic.Fdivp:
+				ExecFdivp(insn);
+				break;
+			case Mnemonic.Fdivr:
+				ExecFdivr(insn, mem);
+				break;
+			case Mnemonic.Fdivrp:
+				ExecFdivrp(insn);
+				break;
+			case Mnemonic.Fiadd:
+				ExecFiadd(insn, mem);
+				break;
+			case Mnemonic.Fimul:
+				ExecFimul(insn, mem);
+				break;
+			case Mnemonic.Fisub:
+				ExecFisub(insn, mem);
+				break;
+			case Mnemonic.Fisubr:
+				ExecFisubr(insn, mem);
+				break;
+			case Mnemonic.Fidiv:
+				ExecFidiv(insn, mem);
+				break;
+			case Mnemonic.Fidivr:
+				ExecFidivr(insn, mem);
+				break;
+			case Mnemonic.Fsqrt:
+				ExecFsqrt();
+				break;
+			case Mnemonic.Fxch:
+				ExecFxch(insn);
+				break;
+			case Mnemonic.Fchs:
+				ExecFchs();
+				break;
+			case Mnemonic.Fabs:
+				ExecFabs();
+				break;
+			case Mnemonic.Fldz:
+				ExecFldz();
+				break;
+			case Mnemonic.Fld1:
+				ExecFld1();
+				break;
+			case Mnemonic.Fldpi:
+				ExecFldpi();
+				break;
+			case Mnemonic.Fldl2e:
+				ExecFldl2e();
+				break;
+			case Mnemonic.Fsin:
+				ExecFsin();
+				break;
+			case Mnemonic.Fcos:
+				ExecFcos();
+				break;
+			case Mnemonic.Fsincos:
+				ExecFsincos();
+				break;
+			case Mnemonic.Fpatan:
+				ExecFpatan();
+				break;
+			case Mnemonic.F2xm1:
+				ExecF2xm1();
+				break;
+			case Mnemonic.Fscale:
+				ExecFscale();
+				break;
+			case Mnemonic.Fcom:
+				ExecFcom(insn, mem);
+				break;
+			case Mnemonic.Fcomp:
+				ExecFcomp(insn, mem);
+				break;
+			case Mnemonic.Fcompp:
+				ExecFcompp();
+				break;
+			case Mnemonic.Fucomi:
+				ExecFucomi(insn);
+				break;
+			case Mnemonic.Fucomip:
+				ExecFucomip(insn);
+				break;
+			case Mnemonic.Fcmovnbe:
+				ExecFcmovnbe(insn);
+				break;
+			case Mnemonic.Fnstcw:
+				ExecFnstcw(insn, mem);
+				break;
+			case Mnemonic.Fldcw:
+				ExecFldcw(insn, mem);
+				break;
+			case Mnemonic.Fnstsw:
+				ExecFnstsw(insn, mem);
+				break;
+			case Mnemonic.Fxam:
+				ExecFxam();
+				break;
+			
 			case Mnemonic.Fclex:
 			case Mnemonic.Fcmovb:
 			case Mnemonic.Fcmovbe:
@@ -767,7 +997,6 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Ficomp:
 			case Mnemonic.Fincstp:
 			case Mnemonic.Finit:
-			case Mnemonic.Fisubr:
 			case Mnemonic.Fldenv:
 			case Mnemonic.Fldl2t:
 			case Mnemonic.Fldlg2:
@@ -789,6 +1018,7 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Fxtract:
 			case Mnemonic.Fyl2x:
 			case Mnemonic.Fyl2xp1:
+			case Mnemonic.Fnclex:
 				throw new NotImplementedException($"[JitCpu] Stubbed FPU instruction: {insn.Mnemonic}");
 			
 			case Mnemonic.Fninit:
@@ -2461,6 +2691,1257 @@ public class JitCpu : IAsyncCpu
 	{
 		uint address = CalcMemAddress(insn, 1);
 		SetOperandValue(insn, 0, address);
+	}
+	
+	// === Additional instruction implementations ===
+	
+	private void ExecLeave(VirtualMemory mem)
+	{
+		// LEAVE - Set ESP to EBP, then pop EBP
+		_esp = _ebp;
+		_ebp = mem.Read32(_esp);
+		_esp += 4;
+	}
+	
+	private void ExecCmpxchg(Instruction insn, VirtualMemory mem)
+	{
+		// CMPXCHG - Compare and exchange
+		// Compares AL/AX/EAX with destination. If equal, source is loaded into destination.
+		// Otherwise, destination is loaded into AL/AX/EAX.
+		uint dest = GetOperandValue(insn, 0);
+		uint src = GetOperandValue(insn, 1);
+		uint accum = _eax;
+		
+		// Compare accumulator with destination (sets flags like CMP)
+		uint result = accum - dest;
+		SetFlagsSub(accum, dest, result);
+		
+		if (accum == dest)
+		{
+			// Equal: write source to destination
+			SetOperandValue(insn, 0, src);
+		}
+		else
+		{
+			// Not equal: write destination to accumulator
+			_eax = dest;
+		}
+	}
+	
+	private void ExecXadd(Instruction insn, VirtualMemory mem)
+	{
+		// XADD - Exchange and add
+		// Exchanges dest and src, then stores the sum in dest
+		uint dest = GetOperandValue(insn, 0);
+		uint src = GetOperandValue(insn, 1);
+		
+		// Exchange
+		SetOperandValue(insn, 1, dest);
+		
+		// Add and store in dest
+		uint sum = dest + src;
+		SetOperandValue(insn, 0, sum);
+		
+		// Set flags like ADD
+		SetFlagsAdd(dest, src, sum);
+	}
+	
+	private void ExecCmpxchg8b(Instruction insn, VirtualMemory mem)
+	{
+		// CMPXCHG8B - Compare and exchange 8 bytes
+		// Compares EDX:EAX with destination. If equal, ECX:EBX is loaded into destination.
+		// Otherwise, destination is loaded into EDX:EAX.
+		uint addr = CalcMemAddress(insn, 0);
+		ulong dest = ((ulong)mem.Read32(addr + 4) << 32) | mem.Read32(addr);
+		ulong accum = ((ulong)_edx << 32) | _eax;
+		
+		if (accum == dest)
+		{
+			// Equal: write ECX:EBX to destination
+			ulong src = ((ulong)_ecx << 32) | _ebx;
+			mem.Write32(addr, (uint)src);
+			mem.Write32(addr + 4, (uint)(src >> 32));
+			SetFlag(Zf);
+		}
+		else
+		{
+			// Not equal: write destination to EDX:EAX
+			_eax = (uint)dest;
+			_edx = (uint)(dest >> 32);
+			ClearFlag(Zf);
+		}
+	}
+	
+	private void ExecLahf()
+	{
+		// LAHF - Load AH from flags
+		byte ah = 0;
+		if (GetFlag(Sf)) ah |= 0x80;
+		if (GetFlag(Zf)) ah |= 0x40;
+		if (GetFlag(Af)) ah |= 0x10;
+		if (GetFlag(Pf)) ah |= 0x04;
+		ah |= 0x02; // Bit 1 is always set
+		if (GetFlag(Cf)) ah |= 0x01;
+		
+		_eax = (_eax & 0xFFFF00FF) | (uint)(ah << 8);
+	}
+	
+	private void ExecSahf()
+	{
+		// SAHF - Store AH into flags
+		byte ah = (byte)((_eax >> 8) & 0xFF);
+		SetFlagVal(Sf, (ah & 0x80) != 0);
+		SetFlagVal(Zf, (ah & 0x40) != 0);
+		SetFlagVal(Af, (ah & 0x10) != 0);
+		SetFlagVal(Pf, (ah & 0x04) != 0);
+		SetFlagVal(Cf, (ah & 0x01) != 0);
+	}
+	
+	private void ExecIret(VirtualMemory mem)
+	{
+		// IRET/IRETD - Interrupt return
+		// Pops EIP, CS (ignored in flat memory), and EFLAGS from stack
+		_eip = mem.Read32(_esp);
+		_esp += 4;
+		_esp += 4; // Skip CS (we don't use segmentation)
+		_eflags = mem.Read32(_esp);
+		_esp += 4;
+	}
+	
+	// === BCD Arithmetic Extensions ===
+	
+	private void ExecDaa()
+	{
+		// DAA - Decimal Adjust AL After Addition
+		byte al = (byte)(_eax & 0xFF);
+		byte oldAl = al;
+		bool oldCf = GetFlag(Cf);
+		
+		ClearFlag(Cf);
+		
+		// Check low nibble
+		if (((al & 0x0F) > 9) || GetFlag(Af))
+		{
+			al += 6;
+			SetFlagVal(Cf, oldCf || (al < oldAl));
+			SetFlag(Af);
+		}
+		else
+		{
+			ClearFlag(Af);
+		}
+		
+		// Check high nibble
+		if ((oldAl > 0x99) || oldCf)
+		{
+			al += 0x60;
+			SetFlag(Cf);
+		}
+		
+		_eax = (_eax & 0xFFFFFF00) | al;
+		UpdateLogicResultFlags(al);
+	}
+	
+	private void ExecDas()
+	{
+		// DAS - Decimal Adjust AL After Subtraction
+		byte al = (byte)(_eax & 0xFF);
+		byte oldAl = al;
+		bool oldCf = GetFlag(Cf);
+		
+		ClearFlag(Cf);
+		
+		// Check low nibble
+		if (((al & 0x0F) > 9) || GetFlag(Af))
+		{
+			al -= 6;
+			SetFlagVal(Cf, oldCf || (al > oldAl));
+			SetFlag(Af);
+		}
+		else
+		{
+			ClearFlag(Af);
+		}
+		
+		// Check high nibble
+		if ((oldAl > 0x99) || oldCf)
+		{
+			al -= 0x60;
+			SetFlag(Cf);
+		}
+		
+		_eax = (_eax & 0xFFFFFF00) | al;
+		UpdateLogicResultFlags(al);
+	}
+	
+	private void ExecAam(Instruction insn)
+	{
+		// AAM - ASCII Adjust AX After Multiply
+		byte base_ = insn.OpCount > 0 ? insn.Immediate8 : (byte)10;
+		if (base_ == 0) base_ = 10;
+		
+		byte al = (byte)(_eax & 0xFF);
+		byte ah = (byte)(al / base_);
+		al = (byte)(al % base_);
+		
+		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+		UpdateLogicResultFlags(al);
+	}
+	
+	private void ExecAad(Instruction insn)
+	{
+		// AAD - ASCII Adjust AX Before Division
+		byte base_ = insn.OpCount > 0 ? insn.Immediate8 : (byte)10;
+		if (base_ == 0) base_ = 10;
+		
+		byte al = (byte)(_eax & 0xFF);
+		byte ah = (byte)((_eax >> 8) & 0xFF);
+		
+		al = (byte)(ah * base_ + al);
+		ah = 0;
+		
+		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+		UpdateLogicResultFlags(al);
+	}
+	
+	// === System/Privileged Instructions ===
+	
+	private void ExecRdtsc()
+	{
+		// RDTSC - Read Time-Stamp Counter
+		// Returns a 64-bit value in EDX:EAX
+		// Use a simple counter based on Environment.TickCount for deterministic behavior
+		long tsc = Environment.TickCount64 * 1000000; // Convert to approximate CPU cycles
+		_eax = (uint)tsc;
+		_edx = (uint)(tsc >> 32);
+	}
+	
+	private void ExecCpuid()
+	{
+		// CPUID - CPU Identification
+		// Returns CPU information based on EAX input
+		uint function = _eax;
+		
+		switch (function)
+		{
+			case 0: // Get vendor string
+				_eax = 1; // Maximum supported function
+				_ebx = 0x756E6547; // "Genu"
+				_edx = 0x49656E69; // "ineI"
+				_ecx = 0x6C65746E; // "ntel"
+				break;
+			case 1: // Get processor info and feature bits
+				_eax = 0x00000F00; // Family 15, Model 0, Stepping 0
+				_ebx = 0x00000800; // Brand index, CLFLUSH size, etc.
+				_ecx = 0x00000001; // Feature flags (SSE3, etc.)
+				_edx = 0x078BFBFF; // Feature flags (FPU, TSC, MSR, etc.)
+				break;
+			default:
+				_eax = _ebx = _ecx = _edx = 0;
+				break;
+		}
+	}
+	
+	private void ExecRdmsr()
+	{
+		// RDMSR - Read Model-Specific Register
+		// In emulation, return 0 for all MSRs
+		_logger.LogDebug("[JitCpu] RDMSR ECX=0x{0:X} (returning 0)", _ecx);
+		_eax = 0;
+		_edx = 0;
+	}
+	
+	private void ExecWrmsr()
+	{
+		// WRMSR - Write Model-Specific Register
+		// In emulation, this is a no-op
+		_logger.LogDebug("[JitCpu] WRMSR ECX=0x{0:X}, EDX:EAX=0x{1:X}:{2:X}", _ecx, _edx, _eax);
+	}
+	
+	private void ExecInvd()
+	{
+		// INVD - Invalidate Cache (no-op in emulation)
+		_logger.LogDebug("[JitCpu] INVD executed (no-op)");
+	}
+	
+	private void ExecWbinvd()
+	{
+		// WBINVD - Write Back and Invalidate Cache (no-op in emulation)
+		_logger.LogDebug("[JitCpu] WBINVD executed (no-op)");
+	}
+	
+	private void ExecInvlpg(Instruction insn)
+	{
+		// INVLPG - Invalidate TLB Entry (no-op in emulation)
+		_logger.LogDebug("[JitCpu] INVLPG executed (no-op)");
+	}
+	
+	private void ExecRsm()
+	{
+		// RSM - Resume from System Management Mode (no-op in emulation)
+		_logger.LogDebug("[JitCpu] RSM executed (no-op)");
+	}
+	
+	private void ExecSldt(Instruction insn)
+	{
+		// SLDT - Store Local Descriptor Table Register
+		// In flat memory model, store 0
+		SetOperandValue(insn, 0, 0);
+	}
+	
+	private void ExecArpl(Instruction insn)
+	{
+		// ARPL - Adjust RPL Field of Segment Selector
+		// In flat memory model, always report no adjustment
+		ClearFlag(Zf);
+	}
+	
+	// === FPU Helper Methods ===
+	
+	// FPU stack constants (same position as IcedCpu)
+	private const int If = 9; // Interrupt flag position
+	
+	// Get ST(i) - ST(0) is the top of stack
+	private double FpuGetSt(int i)
+	{
+		int idx = (_fpuTop + i) & 7;
+		return _fpu[idx];
+	}
+	
+	// Set ST(i)
+	private void FpuSetSt(int i, double val)
+	{
+		int idx = (_fpuTop + i) & 7;
+		_fpu[idx] = val;
+	}
+	
+	// Push a value onto the FPU stack
+	private void FpuPush(double val)
+	{
+		_fpuTop = (_fpuTop - 1) & 7;
+		_fpu[_fpuTop] = val;
+	}
+	
+	// Pop a value from the FPU stack
+	private double FpuPop()
+	{
+		double val = _fpu[_fpuTop];
+		_fpuTop = (_fpuTop + 1) & 7;
+		return val;
+	}
+	
+	// === FPU Instructions ===
+	
+	private void ExecFld(Instruction insn, VirtualMemory mem)
+	{
+		// FLD - Load floating point value
+		double val;
+		
+		if (insn.Op0Kind == OpKind.Memory)
+		{
+			uint addr = CalcMemAddress(insn, 0);
+			if (insn.MemorySize == MemorySize.Float32)
+			{
+				val = BitConverter.Int32BitsToSingle((int)mem.Read32(addr));
+			}
+			else if (insn.MemorySize == MemorySize.Float64)
+			{
+				ulong bits = mem.Read64(addr);
+				val = BitConverter.Int64BitsToDouble((long)bits);
+			}
+			else
+			{
+				// Default to 64-bit
+				ulong bits = mem.Read64(addr);
+				val = BitConverter.Int64BitsToDouble((long)bits);
+			}
+		}
+		else
+		{
+			// FLD ST(i) - duplicate ST(i) to ST(0)
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			val = FpuGetSt(i);
+		}
+		
+		FpuPush(val);
+	}
+	
+	private void ExecFst(Instruction insn, VirtualMemory mem, bool pop)
+	{
+		// FST/FSTP - Store floating point value
+		double st0 = FpuGetSt(0);
+		
+		if (insn.Op0Kind == OpKind.Memory)
+		{
+			uint addr = CalcMemAddress(insn, 0);
+			if (insn.MemorySize == MemorySize.Float32)
+			{
+				float f = (float)st0;
+				mem.Write32(addr, (uint)BitConverter.SingleToInt32Bits(f));
+			}
+			else
+			{
+				// Default to 64-bit
+				mem.Write64(addr, (ulong)BitConverter.DoubleToInt64Bits(st0));
+			}
+		}
+		else
+		{
+			// FST ST(i) - copy ST(0) to ST(i)
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(i, st0);
+		}
+		
+		if (pop)
+		{
+			FpuPop();
+		}
+	}
+	
+	private void ExecFild(Instruction insn, VirtualMemory mem)
+	{
+		// FILD - Load integer and convert to float
+		uint addr = CalcMemAddress(insn, 0);
+		double val;
+		
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			val = (short)mem.Read16(addr);
+		}
+		else if (insn.MemorySize == MemorySize.Int32)
+		{
+			val = (int)mem.Read32(addr);
+		}
+		else if (insn.MemorySize == MemorySize.Int64)
+		{
+			val = (long)mem.Read64(addr);
+		}
+		else
+		{
+			// Default to 32-bit
+			val = (int)mem.Read32(addr);
+		}
+		
+		FpuPush(val);
+	}
+	
+	private void ExecFistp(Instruction insn, VirtualMemory mem)
+	{
+		// FISTP - Store integer and pop
+		double val = FpuGetSt(0);
+		uint addr = CalcMemAddress(insn, 0);
+		
+		// Round to nearest integer
+		long rounded = (long)Math.Round(val);
+		
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			mem.Write16(addr, unchecked((ushort)(short)rounded));
+		}
+		else if (insn.MemorySize == MemorySize.Int32)
+		{
+			mem.Write32(addr, unchecked((uint)(int)rounded));
+		}
+		else if (insn.MemorySize == MemorySize.Int64)
+		{
+			mem.Write64(addr, unchecked((ulong)rounded));
+		}
+		else
+		{
+			// Default to 32-bit
+			mem.Write32(addr, unchecked((uint)(int)rounded));
+		}
+		
+		FpuPop();
+	}
+	
+	private void ExecFist(Instruction insn, VirtualMemory mem)
+	{
+		// FIST - Store integer (no pop)
+		double val = FpuGetSt(0);
+		uint addr = CalcMemAddress(insn, 0);
+		
+		long rounded = (long)Math.Round(val);
+		
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			mem.Write16(addr, unchecked((ushort)(short)rounded));
+		}
+		else
+		{
+			mem.Write32(addr, unchecked((uint)(int)rounded));
+		}
+	}
+	
+	private void ExecFadd(Instruction insn, VirtualMemory mem)
+	{
+		// FADD - Add
+		if (insn.OpCount == 0)
+		{
+			// FADD - Add ST(1) to ST(0)
+			FpuSetSt(0, FpuGetSt(0) + FpuGetSt(1));
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.Op0Kind == OpKind.Memory)
+			{
+				// FADD m32/m64 - Add memory to ST(0)
+				uint addr = CalcMemAddress(insn, 0);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)mem.Read32(addr));
+				}
+				else
+				{
+					ulong bits = mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, FpuGetSt(0) + val);
+			}
+			else
+			{
+				// FADD ST(i) - Add ST(i) to ST(0)
+				var reg = insn.Op0Register;
+				int i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(0) + FpuGetSt(i));
+			}
+		}
+		else
+		{
+			// FADD ST(i), ST(0) - Add ST(0) to ST(i)
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) + FpuGetSt(0));
+		}
+	}
+	
+	private void ExecFaddp(Instruction insn)
+	{
+		// FADDP - Add and pop
+		if (insn.OpCount == 0)
+		{
+			// FADDP - Add ST(0) to ST(1) and pop
+			double st0 = FpuGetSt(0);
+			double st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st0 + st1);
+		}
+		else
+		{
+			// FADDP ST(i), ST(0) - Add ST(0) to ST(i) and pop
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) + FpuGetSt(0));
+			FpuPop();
+		}
+	}
+	
+	private void ExecFsub(Instruction insn, VirtualMemory mem)
+	{
+		// FSUB - Subtract
+		if (insn.OpCount == 0)
+		{
+			// FSUB - Subtract ST(1) from ST(0)
+			FpuSetSt(0, FpuGetSt(0) - FpuGetSt(1));
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.Op0Kind == OpKind.Memory)
+			{
+				// FSUB m32/m64 - Subtract memory from ST(0)
+				uint addr = CalcMemAddress(insn, 0);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)mem.Read32(addr));
+				}
+				else
+				{
+					ulong bits = mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, FpuGetSt(0) - val);
+			}
+			else
+			{
+				// FSUB ST(i) - Subtract ST(i) from ST(0)
+				var reg = insn.Op0Register;
+				int i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(0) - FpuGetSt(i));
+			}
+		}
+		else
+		{
+			// FSUB ST(i), ST(0) - Subtract ST(0) from ST(i)
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) - FpuGetSt(0));
+		}
+	}
+	
+	private void ExecFsubp(Instruction insn)
+	{
+		// FSUBP - Subtract and pop
+		if (insn.OpCount == 0)
+		{
+			// FSUBP - Subtract ST(0) from ST(1) and pop
+			double st0 = FpuGetSt(0);
+			double st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st1 - st0);
+		}
+		else
+		{
+			// FSUBP ST(i), ST(0) - Subtract ST(0) from ST(i) and pop
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) - FpuGetSt(0));
+			FpuPop();
+		}
+	}
+	
+	private void ExecFsubr(Instruction insn, VirtualMemory mem)
+	{
+		// FSUBR - Reverse subtract
+		if (insn.OpCount == 0)
+		{
+			// FSUBR - Subtract ST(0) from ST(1), store in ST(0)
+			FpuSetSt(0, FpuGetSt(1) - FpuGetSt(0));
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.Op0Kind == OpKind.Memory)
+			{
+				// FSUBR m32/m64 - Subtract ST(0) from memory
+				uint addr = CalcMemAddress(insn, 0);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)mem.Read32(addr));
+				}
+				else
+				{
+					ulong bits = mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, val - FpuGetSt(0));
+			}
+			else
+			{
+				// FSUBR ST(i) - Subtract ST(0) from ST(i), store in ST(0)
+				var reg = insn.Op0Register;
+				int i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(i) - FpuGetSt(0));
+			}
+		}
+		else
+		{
+			// FSUBR ST(i), ST(0) - Subtract ST(0) from ST(i)
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) - FpuGetSt(0));
+		}
+	}
+	
+	private void ExecFsubrp(Instruction insn)
+	{
+		// FSUBRP - Reverse subtract and pop
+		if (insn.OpCount == 0)
+		{
+			// FSUBRP - Subtract ST(0) from ST(1) and pop
+			double st0 = FpuGetSt(0);
+			double st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st1 - st0);
+		}
+		else
+		{
+			// FSUBRP ST(i), ST(0) - Subtract ST(0) from ST(i) and pop
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) - FpuGetSt(0));
+			FpuPop();
+		}
+	}
+	
+	private void ExecFmul(Instruction insn, VirtualMemory mem)
+	{
+		// FMUL - Multiply
+		if (insn.OpCount == 0)
+		{
+			// FMUL - Multiply ST(0) by ST(1)
+			FpuSetSt(0, FpuGetSt(0) * FpuGetSt(1));
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.Op0Kind == OpKind.Memory)
+			{
+				// FMUL m32/m64 - Multiply ST(0) by memory
+				uint addr = CalcMemAddress(insn, 0);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)mem.Read32(addr));
+				}
+				else
+				{
+					ulong bits = mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, FpuGetSt(0) * val);
+			}
+			else
+			{
+				// FMUL ST(i) - Multiply ST(0) by ST(i)
+				var reg = insn.Op0Register;
+				int i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(0) * FpuGetSt(i));
+			}
+		}
+		else
+		{
+			// FMUL ST(i), ST(0) - Multiply ST(i) by ST(0)
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) * FpuGetSt(0));
+		}
+	}
+	
+	private void ExecFmulp(Instruction insn)
+	{
+		// FMULP - Multiply and pop
+		if (insn.OpCount == 0)
+		{
+			// FMULP - Multiply ST(0) by ST(1) and pop
+			double st0 = FpuGetSt(0);
+			double st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st0 * st1);
+		}
+		else
+		{
+			// FMULP ST(i), ST(0) - Multiply ST(i) by ST(0) and pop
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) * FpuGetSt(0));
+			FpuPop();
+		}
+	}
+	
+	private void ExecFdiv(Instruction insn, VirtualMemory mem)
+	{
+		// FDIV - Divide
+		if (insn.OpCount == 0)
+		{
+			// FDIV - Divide ST(0) by ST(1)
+			FpuSetSt(0, FpuGetSt(0) / FpuGetSt(1));
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.Op0Kind == OpKind.Memory)
+			{
+				// FDIV m32/m64 - Divide ST(0) by memory
+				uint addr = CalcMemAddress(insn, 0);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)mem.Read32(addr));
+				}
+				else
+				{
+					ulong bits = mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, FpuGetSt(0) / val);
+			}
+			else
+			{
+				// FDIV ST(i) - Divide ST(0) by ST(i)
+				var reg = insn.Op0Register;
+				int i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(0) / FpuGetSt(i));
+			}
+		}
+		else
+		{
+			// FDIV ST(i), ST(0) - Divide ST(i) by ST(0)
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(i) / FpuGetSt(0));
+		}
+	}
+	
+	private void ExecFdivp(Instruction insn)
+	{
+		// FDIVP - Divide and pop
+		if (insn.OpCount == 0)
+		{
+			// FDIVP - Divide ST(1) by ST(0) and pop
+			double st0 = FpuGetSt(0);
+			double st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st1 / st0);
+		}
+		else
+		{
+			// FDIVP ST(i), ST(0) - Divide ST(i) by ST(0) and pop
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			double st0 = FpuGetSt(0);
+			double sti = FpuGetSt(i);
+			FpuPop();
+			FpuSetSt(i - 1, sti / st0);
+		}
+	}
+	
+	private void ExecFdivr(Instruction insn, VirtualMemory mem)
+	{
+		// FDIVR - Reverse divide
+		if (insn.OpCount == 0)
+		{
+			// FDIVR - Divide ST(1) by ST(0), store in ST(0)
+			FpuSetSt(0, FpuGetSt(1) / FpuGetSt(0));
+		}
+		else if (insn.OpCount == 1)
+		{
+			if (insn.Op0Kind == OpKind.Memory)
+			{
+				// FDIVR m32/m64 - Divide memory by ST(0)
+				uint addr = CalcMemAddress(insn, 0);
+				double val;
+				if (insn.MemorySize == MemorySize.Float32)
+				{
+					val = BitConverter.Int32BitsToSingle((int)mem.Read32(addr));
+				}
+				else
+				{
+					ulong bits = mem.Read64(addr);
+					val = BitConverter.Int64BitsToDouble((long)bits);
+				}
+				FpuSetSt(0, val / FpuGetSt(0));
+			}
+			else
+			{
+				// FDIVR ST(i) - Divide ST(i) by ST(0), store in ST(0)
+				var reg = insn.Op0Register;
+				int i = reg - Register.ST0;
+				FpuSetSt(0, FpuGetSt(i) / FpuGetSt(0));
+			}
+		}
+		else
+		{
+			// FDIVR ST(i), ST(0) - Divide ST(0) by ST(i)
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(i, FpuGetSt(0) / FpuGetSt(i));
+		}
+	}
+	
+	private void ExecFdivrp(Instruction insn)
+	{
+		// FDIVRP - Reverse divide and pop
+		if (insn.OpCount == 0)
+		{
+			// FDIVRP - Divide ST(1) by ST(0) and pop
+			double st0 = FpuGetSt(0);
+			double st1 = FpuGetSt(1);
+			FpuPop();
+			FpuSetSt(0, st1 / st0);
+		}
+		else
+		{
+			// FDIVRP ST(i), ST(0) - Divide ST(0) by ST(i) and pop
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			double st0 = FpuGetSt(0);
+			double sti = FpuGetSt(i);
+			FpuPop();
+			FpuSetSt(i - 1, st0 / sti);
+		}
+	}
+	
+	private void ExecFiadd(Instruction insn, VirtualMemory mem)
+	{
+		// FIADD - Integer add
+		uint addr = CalcMemAddress(insn, 0);
+		int ival;
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			ival = (short)mem.Read16(addr);
+		}
+		else
+		{
+			ival = (int)mem.Read32(addr);
+		}
+		FpuSetSt(0, FpuGetSt(0) + ival);
+	}
+	
+	private void ExecFimul(Instruction insn, VirtualMemory mem)
+	{
+		// FIMUL - Integer multiply
+		uint addr = CalcMemAddress(insn, 0);
+		int ival;
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			ival = (short)mem.Read16(addr);
+		}
+		else
+		{
+			ival = (int)mem.Read32(addr);
+		}
+		FpuSetSt(0, FpuGetSt(0) * ival);
+	}
+	
+	private void ExecFisub(Instruction insn, VirtualMemory mem)
+	{
+		// FISUB - Integer subtract
+		uint addr = CalcMemAddress(insn, 0);
+		int ival;
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			ival = (short)mem.Read16(addr);
+		}
+		else
+		{
+			ival = (int)mem.Read32(addr);
+		}
+		FpuSetSt(0, FpuGetSt(0) - ival);
+	}
+	
+	private void ExecFisubr(Instruction insn, VirtualMemory mem)
+	{
+		// FISUBR - Integer reverse subtract
+		uint addr = CalcMemAddress(insn, 0);
+		int ival;
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			ival = (short)mem.Read16(addr);
+		}
+		else
+		{
+			ival = (int)mem.Read32(addr);
+		}
+		FpuSetSt(0, ival - FpuGetSt(0));
+	}
+	
+	private void ExecFidiv(Instruction insn, VirtualMemory mem)
+	{
+		// FIDIV - Integer divide
+		uint addr = CalcMemAddress(insn, 0);
+		int ival;
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			ival = (short)mem.Read16(addr);
+		}
+		else
+		{
+			ival = (int)mem.Read32(addr);
+		}
+		FpuSetSt(0, FpuGetSt(0) / ival);
+	}
+	
+	private void ExecFidivr(Instruction insn, VirtualMemory mem)
+	{
+		// FIDIVR - Integer reverse divide
+		uint addr = CalcMemAddress(insn, 0);
+		int ival;
+		if (insn.MemorySize == MemorySize.Int16)
+		{
+			ival = (short)mem.Read16(addr);
+		}
+		else
+		{
+			ival = (int)mem.Read32(addr);
+		}
+		FpuSetSt(0, ival / FpuGetSt(0));
+	}
+	
+	private void ExecFsqrt()
+	{
+		// FSQRT - Square root
+		FpuSetSt(0, Math.Sqrt(FpuGetSt(0)));
+	}
+	
+	private void ExecFxch(Instruction insn)
+	{
+		// FXCH - Exchange registers
+		int i = insn.OpCount > 0 ? insn.Op0Register - Register.ST0 : 1;
+		double st0 = FpuGetSt(0);
+		double sti = FpuGetSt(i);
+		FpuSetSt(0, sti);
+		FpuSetSt(i, st0);
+	}
+	
+	private void ExecFchs()
+	{
+		// FCHS - Change sign
+		FpuSetSt(0, -FpuGetSt(0));
+	}
+	
+	private void ExecFabs()
+	{
+		// FABS - Absolute value
+		FpuSetSt(0, Math.Abs(FpuGetSt(0)));
+	}
+	
+	private void ExecFldz()
+	{
+		// FLDZ - Load +0.0
+		FpuPush(0.0);
+	}
+	
+	private void ExecFld1()
+	{
+		// FLD1 - Load +1.0
+		FpuPush(1.0);
+	}
+	
+	private void ExecFldpi()
+	{
+		// FLDPI - Load π
+		FpuPush(Math.PI);
+	}
+	
+	private void ExecFldl2e()
+	{
+		// FLDL2E - Load log2(e)
+		FpuPush(Math.Log2(Math.E));
+	}
+	
+	private void ExecFsin()
+	{
+		// FSIN - Sine
+		FpuSetSt(0, Math.Sin(FpuGetSt(0)));
+	}
+	
+	private void ExecFcos()
+	{
+		// FCOS - Cosine
+		FpuSetSt(0, Math.Cos(FpuGetSt(0)));
+	}
+	
+	private void ExecFsincos()
+	{
+		// FSINCOS - Sine and cosine
+		double angle = FpuGetSt(0);
+		FpuSetSt(0, Math.Sin(angle));
+		FpuPush(Math.Cos(angle));
+	}
+	
+	private void ExecFpatan()
+	{
+		// FPATAN - Partial arctangent
+		double x = FpuGetSt(1);
+		double y = FpuGetSt(0);
+		FpuPop();
+		FpuSetSt(0, Math.Atan2(y, x));
+	}
+	
+	private void ExecF2xm1()
+	{
+		// F2XM1 - 2^x - 1
+		FpuSetSt(0, Math.Pow(2, FpuGetSt(0)) - 1);
+	}
+	
+	private void ExecFscale()
+	{
+		// FSCALE - Scale
+		FpuSetSt(0, FpuGetSt(0) * Math.Pow(2, Math.Truncate(FpuGetSt(1))));
+	}
+	
+	private void ExecFcom(Instruction insn, VirtualMemory mem)
+	{
+		// FCOM - Compare (no pop)
+		double st0 = FpuGetSt(0);
+		double source;
+		
+		if (insn.OpCount == 0)
+		{
+			source = FpuGetSt(1);
+		}
+		else if (insn.Op0Kind == OpKind.Memory)
+		{
+			uint addr = CalcMemAddress(insn, 0);
+			if (insn.MemorySize == MemorySize.Float32)
+			{
+				source = BitConverter.Int32BitsToSingle((int)mem.Read32(addr));
+			}
+			else
+			{
+				ulong bits = mem.Read64(addr);
+				source = BitConverter.Int64BitsToDouble((long)bits);
+			}
+		}
+		else
+		{
+			var reg = insn.Op0Register;
+			int i = reg - Register.ST0;
+			source = FpuGetSt(i);
+		}
+		
+		// Set EFLAGS based on comparison
+		if (double.IsNaN(st0) || double.IsNaN(source))
+		{
+			SetFlag(Zf); SetFlag(Pf); SetFlag(Cf);
+		}
+		else if (st0 > source)
+		{
+			ClearFlag(Zf); ClearFlag(Pf); ClearFlag(Cf);
+		}
+		else if (st0 < source)
+		{
+			ClearFlag(Zf); ClearFlag(Pf); SetFlag(Cf);
+		}
+		else
+		{
+			SetFlag(Zf); ClearFlag(Pf); ClearFlag(Cf);
+		}
+	}
+	
+	private void ExecFcomp(Instruction insn, VirtualMemory mem)
+	{
+		// FCOMP - Compare and pop
+		ExecFcom(insn, mem);
+		FpuPop();
+	}
+	
+	private void ExecFcompp()
+	{
+		// FCOMPP - Compare and pop twice
+		double st0 = FpuGetSt(0);
+		double st1 = FpuGetSt(1);
+		
+		if (double.IsNaN(st0) || double.IsNaN(st1))
+		{
+			SetFlag(Zf); SetFlag(Pf); SetFlag(Cf);
+		}
+		else if (st0 > st1)
+		{
+			ClearFlag(Zf); ClearFlag(Pf); ClearFlag(Cf);
+		}
+		else if (st0 < st1)
+		{
+			ClearFlag(Zf); ClearFlag(Pf); SetFlag(Cf);
+		}
+		else
+		{
+			SetFlag(Zf); ClearFlag(Pf); ClearFlag(Cf);
+		}
+		
+		FpuPop();
+		FpuPop();
+	}
+	
+	private void ExecFucomi(Instruction insn)
+	{
+		// FUCOMI - Unordered compare and set EFLAGS
+		double st0 = FpuGetSt(0);
+		int i = insn.OpCount > 0 ? insn.Op0Register - Register.ST0 : 1;
+		double sti = FpuGetSt(i);
+		
+		if (double.IsNaN(st0) || double.IsNaN(sti))
+		{
+			SetFlag(Zf); SetFlag(Pf); SetFlag(Cf);
+		}
+		else if (st0 > sti)
+		{
+			ClearFlag(Zf); ClearFlag(Pf); ClearFlag(Cf);
+		}
+		else if (st0 < sti)
+		{
+			ClearFlag(Zf); ClearFlag(Pf); SetFlag(Cf);
+		}
+		else
+		{
+			SetFlag(Zf); ClearFlag(Pf); ClearFlag(Cf);
+		}
+	}
+	
+	private void ExecFucomip(Instruction insn)
+	{
+		// FUCOMIP - Unordered compare, set EFLAGS, and pop
+		ExecFucomi(insn);
+		FpuPop();
+	}
+	
+	private void ExecFcmovnbe(Instruction insn)
+	{
+		// FCMOVNBE - Conditional move if not below or equal
+		if (!GetFlag(Cf) && !GetFlag(Zf))
+		{
+			var reg = insn.Op1Register;
+			int i = reg - Register.ST0;
+			FpuSetSt(0, FpuGetSt(i));
+		}
+	}
+	
+	private void ExecFnstcw(Instruction insn, VirtualMemory mem)
+	{
+		// FNSTCW - Store FPU control word
+		uint addr = CalcMemAddress(insn, 0);
+		mem.Write16(addr, _fpuControlWord);
+	}
+	
+	private void ExecFldcw(Instruction insn, VirtualMemory mem)
+	{
+		// FLDCW - Load FPU control word
+		uint addr = CalcMemAddress(insn, 0);
+		_fpuControlWord = mem.Read16(addr);
+	}
+	
+	private void ExecFnstsw(Instruction insn, VirtualMemory mem)
+	{
+		// FNSTSW - Store FPU status word
+		if (insn.OpCount == 0 || insn.Op0Kind == OpKind.Register)
+		{
+			// FNSTSW AX - Store to AX register
+			_eax = (_eax & 0xFFFF0000) | _fpuStatusWord;
+		}
+		else
+		{
+			// FNSTSW mem16 - Store to memory
+			uint addr = CalcMemAddress(insn, 0);
+			mem.Write16(addr, _fpuStatusWord);
+		}
+	}
+	
+	private void ExecFxam()
+	{
+		// FXAM - Examine ST(0)
+		double st0 = FpuGetSt(0);
+		
+		// Clear C0, C2, C3 bits
+		_fpuStatusWord &= 0xB8FF;
+		
+		// Set condition codes based on ST(0) value
+		if (double.IsNaN(st0))
+		{
+			// NaN: C0=0, C2=0, C3=0
+		}
+		else if (double.IsInfinity(st0))
+		{
+			// Infinity: C0=1, C2=1, C3=0
+			_fpuStatusWord |= 0x0500;
+		}
+		else if (st0 == 0.0)
+		{
+			// Zero: C0=0, C2=0, C3=1
+			_fpuStatusWord |= 0x4000;
+		}
+		else
+		{
+			// Normal: C0=1, C2=0, C3=0
+			_fpuStatusWord |= 0x0100;
+		}
+		
+		// Set sign bit (C1, bit 9)
+		if ((BitConverter.DoubleToInt64Bits(st0) & (1L << 63)) != 0)
+		{
+			_fpuStatusWord |= 0x0200;
+		}
 	}
 	
 	// === Flag Helper Methods ===
