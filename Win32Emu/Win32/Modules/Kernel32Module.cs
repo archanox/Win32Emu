@@ -7011,7 +7011,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// 3. Support both file-backed and page file-backed mappings
 
 		// Return a dummy file mapping handle (non-zero for success)
-		return 0x50000000 + (uint)name.GetHashCode();
+		return 0x50000000 + ((uint)name.GetHashCode() & 0x7FFFFFFF);
 	}
 
 	/// <summary>
