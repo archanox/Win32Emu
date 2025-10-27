@@ -58,6 +58,10 @@ public static class CpuHelpers
 	/// </summary>
 	public static void RestoreCalleeSavedRegisters(ICpu cpu, SavedCalleeSavedRegisters saved, bool skipInvalidEbp = false, uint memorySize = 0)
 	{
+		if (skipInvalidEbp && memorySize == 0)
+		{
+			throw new ArgumentException("memorySize must be provided and nonzero when skipInvalidEbp is true.", nameof(memorySize));
+		}
 		cpu.SetRegister("EBX", saved.Ebx);
 		cpu.SetRegister("ESI", saved.Esi);
 		cpu.SetRegister("EDI", saved.Edi);
