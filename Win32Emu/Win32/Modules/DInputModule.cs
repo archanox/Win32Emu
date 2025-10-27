@@ -30,6 +30,9 @@ namespace Win32Emu.Win32.Modules
 		private uint _nextDInputHandle = 0x90000000;
 		private uint _nextDeviceHandle = 0x91000000;
 
+		// DirectInput constants
+		private const uint DIDEVICEOBJECTDATA_SIZE = 16; // sizeof(DIDEVICEOBJECTDATA)
+
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
@@ -611,7 +614,6 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DInput COM]   Requested elements: {RequestedElementCount}", requestedElementCount);
 
 			// Validate cbObjectData parameter
-			const uint DIDEVICEOBJECTDATA_SIZE = 16; // sizeof(DIDEVICEOBJECTDATA)
 			if (cbObjectData != DIDEVICEOBJECTDATA_SIZE)
 			{
 				_logger.LogWarning("[DInput COM] Invalid cbObjectData: {CbObjectData}, expected {Expected}", cbObjectData, DIDEVICEOBJECTDATA_SIZE);
