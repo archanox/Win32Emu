@@ -396,11 +396,14 @@ public sealed class Emulator : IDisposable
             if (currentEip >= 0x0F000000 && currentEip < 0x10000000)
             {
                 // EIP is in the import stub address range
-                if (!_image!.ImportAddressMap.ContainsKey(currentEip))
+                // Import stubs are aligned to 16-byte boundaries (0x10)
+                // We need to align down to check if this is a valid stub
+                var alignedEip = currentEip & 0xFFFFFFF0u;
+                if (!_image!.ImportAddressMap.ContainsKey(alignedEip))
                 {
                     // This import address is not mapped - simulate a return with error
                     var esp = _cpu.GetRegister("ESP");
-                    _logger.LogError("[Import] Attempted to execute unmapped import stub at address 0x{Eip:X8} (not in ImportAddressMap). ESP=0x{Esp:X8}, attempting to read return address from stack", currentEip, esp);
+                    _logger.LogError("[Import] Attempted to execute unmapped import stub at address 0x{Eip:X8} (aligned: 0x{AlignedEip:X8}, not in ImportAddressMap). ESP=0x{Esp:X8}, attempting to read return address from stack", currentEip, alignedEip, esp);
                     
                     try
                     {
