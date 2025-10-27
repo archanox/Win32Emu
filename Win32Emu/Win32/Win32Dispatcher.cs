@@ -65,7 +65,7 @@ public class Win32Dispatcher(ILogger logger)
 			}
 
 			// Known module but unknown export - log this
-			logger.LogWarning("Unimplemented function in known module: {Dll}!{Export}", dll, export);
+			logger.LogError("Unimplemented function in known module: {Dll}!{Export}", dll, export);
 			LogUnknownFunctionCall(dll, export);
 
 			// Return success with default behavior
@@ -76,7 +76,7 @@ public class Win32Dispatcher(ILogger logger)
 		}
 
 		// Handle unknown DLLs - this is the main enhancement
-		logger.LogWarning("Unknown DLL function call: {Dll}!{Export}", dll, export);
+		logger.LogError("Unknown DLL function call: {Dll}!{Export}", dll, export);
 		LogUnknownFunctionCall(dll, export);
 
 		// Check if this DLL was dynamically loaded
