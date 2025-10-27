@@ -372,6 +372,25 @@ public class JitCpu : IAsyncCpu
 					_esp += (uint)insn.Immediate16;
 				}
 				break;
+			case Mnemonic.Jmp:
+				// Unconditional jump - set EIP to target address
+				if (insn.Op0Kind == OpKind.NearBranch32 || insn.Op0Kind == OpKind.NearBranch16)
+				{
+					_eip = (uint)insn.NearBranchTarget;
+				}
+				else if (insn.Op0Kind == OpKind.Register)
+				{
+					_eip = GetRegisterValue(insn, 0);
+				}
+				else if (insn.Op0Kind == OpKind.Memory)
+				{
+					_eip = mem.Read32(CalcMemAddress(insn, 0));
+				}
+				else
+				{
+					throw new NotImplementedException($"[JitCpu] Unimplemented JMP type: {insn.Op0Kind} at EIP=0x{_eip - (uint)insn.Length:X8}");
+				}
+				break;
 			
 			// === Core Arithmetic Instructions ===
 			case Mnemonic.Add:
