@@ -439,14 +439,6 @@ public class JitCpuInstructionTests
 		var cpu = new JitCpu(mem);
 		
 		cpu.SetEip(0x1000);
-		cpu.SetRegister("EBP", 0x100); // Small base pointer to test wraparound
-		
-		// This test checks if large negative displacements (as uint) are handled correctly
-		// MOV EAX, [EBP+0xFFFFFFBC] should be interpreted as [EBP-68]
-		// If EBP=0x100, the address should be 0x100 + 0xFFFFFFBC = 0xBC (wrapping around)
-		// But this is incorrect! It should be 0x100 - 68 = 0xBC (same result but by accident)
-		
-		// Let's use a value where the bug is more obvious
 		cpu.SetRegister("EBP", 0x200); // Base pointer
 		uint expectedAddr = 0x200 - 0x44; // = 0x1BC
 		mem.Write32(expectedAddr, 0xDEADBEEF);

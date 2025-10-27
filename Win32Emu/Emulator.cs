@@ -1158,7 +1158,7 @@ public sealed class Emulator : IDisposable
         if ((ebpIsZero || ebpIsVerySmall) && !ebpIsHeapPointer)
         {
             _cpu!.SetRegister("EBP", esp);
-            _logger.LogDebug("[Emulator] Reset invalid EBP 0x{OldEBP:X8} to ESP 0x{NewEBP:X8} (too small/zero)", ebp, esp);
+            _logger.LogDebug("[Emulator] Reset invalid EBP 0x{OldEBP:X8} to ESP 0x{NewEBP:X8} (zero/too small)", ebp, esp);
         }
         else if (ebpIsImportHook)
         {
