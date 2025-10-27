@@ -45,10 +45,9 @@ Added four new three-way tests for memory operations with negative displacements
    - Tests: `ADD EAX, [EBP-0x08]`
    - Verifies: Arithmetic operation with memory operand and negative displacement
 
-4. **AND_MemoryNegativeDisplacement_ShouldMatch** ❌ DISABLED (investigation needed)
+4. **AND_MemoryNegativeDisplacement_ShouldMatch** ✅ PASSING
    - Tests: `AND DWORD PTR [EBP-0x44], 0xFF`
-   - Status: Temporarily disabled - reveals potential bug in one implementation
-   - Needs further investigation
+   - Verifies: Bitwise AND operation with memory operand and negative displacement
 
 ## Test Results
 

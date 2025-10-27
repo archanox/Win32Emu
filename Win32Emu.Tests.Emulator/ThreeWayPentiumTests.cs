@@ -9,7 +9,6 @@ namespace Win32Emu.Tests.Emulator;
 public class ThreeWayPentiumTests : IDisposable
 {
 	private readonly ThreeWayTestHelper _helper;
-	private const long StackBaseAddress = 0x00100000;  // Must match ThreeWayTestHelper.StackBaseAddress
 
 	public ThreeWayPentiumTests()
 	{
@@ -1637,7 +1636,7 @@ public class ThreeWayPentiumTests : IDisposable
 		// Arrange: MOV EAX, [EBP-0x44] 
 		// This tests memory access with negative displacement
 		// Instruction: 8B 45 BC (MOV EAX, [EBP-0x44])
-		var stackAddr = (uint)(StackBaseAddress + 0x8000);
+		var stackAddr = (uint)(ThreeWayTestHelper.StackBaseAddress + 0x8000);
 		_helper.SetReg("EBP", stackAddr);
 		_helper.SetReg("EAX", 0x00000000);
 		
@@ -1661,7 +1660,7 @@ public class ThreeWayPentiumTests : IDisposable
 		// Arrange: MOV [EBP-0x10], EAX
 		// This tests memory write with negative displacement
 		// Instruction: 89 45 F0 (MOV [EBP-0x10], EAX)
-		var stackAddr = (uint)(StackBaseAddress + 0x8000);
+		var stackAddr = (uint)(ThreeWayTestHelper.StackBaseAddress + 0x8000);
 		_helper.SetReg("EBP", stackAddr);
 		_helper.SetReg("EAX", 0xDEADBEEF);
 		
@@ -1681,7 +1680,7 @@ public class ThreeWayPentiumTests : IDisposable
 	{
 		// Arrange: ADD EAX, [EBP-0x08]
 		// Instruction: 03 45 F8 (ADD EAX, [EBP-0x08])
-		var stackAddr = (uint)(StackBaseAddress + 0x8000);
+		var stackAddr = (uint)(ThreeWayTestHelper.StackBaseAddress + 0x8000);
 		_helper.SetReg("EBP", stackAddr);
 		_helper.SetReg("EAX", 0x00000100);
 		
@@ -1706,7 +1705,7 @@ public class ThreeWayPentiumTests : IDisposable
 		// Arrange: AND DWORD PTR [EBP-0x44], 0xFF
 		// This is the type of instruction that was failing in the bug report
 		// Instruction: 83 65 BC FF (AND DWORD PTR [EBP-0x44], 0xFF)
-		var stackAddr = (uint)(StackBaseAddress + 0x8000);
+		var stackAddr = (uint)(ThreeWayTestHelper.StackBaseAddress + 0x8000);
 		_helper.SetReg("EBP", stackAddr);
 		
 		// Write test value at [EBP-0x44]
