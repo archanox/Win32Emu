@@ -99,6 +99,7 @@ public class RtlToCSharpGenerator
                 "return await Task.FromResult(new CpuStepResult { IsCall = false, CallTarget = 0 });",
             RtlLoad load => $"{ExpressionToString(load.Destination)} = mem.Read{load.Size * 8}({ExpressionToString(load.Address)});",
             RtlStore store => $"mem.Write{store.Size * 8}({ExpressionToString(store.Address)}, {ExpressionToString(store.Value)});",
+            RtlSimdOp simd => $"// {simd.Comment}",
             RtlNop => "// nop",
             _ => "// unknown instruction"
         };

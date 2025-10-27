@@ -42,6 +42,7 @@ public class RtlBranch : RtlInstruction
 {
     public RtlExpression Condition { get; set; } = null!;
     public int TargetOffset { get; set; }
+    public uint TargetAddress { get; set; }
     
     public override string ToReadableString() => $"if ({Condition}) goto {TargetOffset:X}";
 }
@@ -115,6 +116,18 @@ public class RtlNop : RtlInstruction
     public override string ToReadableString() => "nop";
 }
 
+/// <summary>
+/// SIMD operation: vectorized operation on multiple values
+/// </summary>
+public class RtlSimdOp : RtlInstruction
+{
+    public string Operation { get; set; } = "";
+    public int VectorSize { get; set; } // Number of elements in vector (4, 8, 16)
+    public string Comment { get; set; } = "";
+    
+    public override string ToReadableString() => $"SIMD[{VectorSize}]: {Operation} // {Comment}";
+}
+
 // === RTL Expressions ===
 
 public abstract class RtlExpression
@@ -181,6 +194,7 @@ public class RtlUnaryExpression : RtlExpression
 public class RtlBasicBlock
 {
     public int StartOffset { get; set; }
+    public uint StartAddress { get; set; }
     public List<RtlInstruction> Instructions { get; set; } = new();
     public List<int> Successors { get; set; } = new(); // Block offsets that can follow this one
     

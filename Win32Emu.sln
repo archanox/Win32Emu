@@ -81,6 +81,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Tools.CallingConve
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Rtl", "Win32Emu.Rtl\Win32Emu.Rtl.csproj", "{8A83AC35-FAD7-4E65-809A-1CED501D5812}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Tools.AotCompiler", "Win32Emu.Tools.AotCompiler\Win32Emu.Tools.AotCompiler.csproj", "{BF94CF8C-EE01-4811-A8E4-9F798222C81E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -259,6 +261,18 @@ Global
 		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Release|x64.Build.0 = Release|Any CPU
 		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Release|x86.ActiveCfg = Release|Any CPU
 		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Release|x86.Build.0 = Release|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Debug|x64.Build.0 = Debug|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Debug|x86.Build.0 = Debug|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Release|x64.ActiveCfg = Release|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Release|x64.Build.0 = Release|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Release|x86.ActiveCfg = Release|Any CPU
+		{BF94CF8C-EE01-4811-A8E4-9F798222C81E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
