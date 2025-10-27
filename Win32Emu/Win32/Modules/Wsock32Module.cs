@@ -82,7 +82,7 @@ namespace Win32Emu.Win32.Modules
 					returnValue = WSAGetLastError();
 					return true;
 				case "WSASTARTUP":
-				returnValue = (uint)WSAStartup((ushort)(a.UInt32(0) & 0xFFFF), a.UInt32(1));
+					returnValue = (uint)WSAStartup((ushort)(a.UInt32(0) & 0xFFFF), a.UInt32(1));
 					return true;
 
 				default:
