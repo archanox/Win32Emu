@@ -2028,7 +2028,7 @@ public class JitCpu : IAsyncCpu
 	{
 		// Calculate memory address from instruction operand
 		// Always start with displacement (it's 0 if there's no displacement)
-		var addr = insn.MemoryDisplacement32;
+		uint addr = insn.MemoryDisplacement32;
 		
 		// Add base register if present
 		var baseReg = insn.MemoryBase;

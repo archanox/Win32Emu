@@ -349,7 +349,8 @@ public class JitCpuInstructionTests
 	{
 		// Arrange - This test reproduces the bug from the issue
 		// RCL dword [ESP-0x44], CL should access memory at ESP-0x44, not at 0xFFFFFFBC
-		var mem = new VirtualMemory(16 * 1024 * 1024); // 16MB like in the error
+		const int memorySize = 16 * 1024 * 1024; // 16MB like in the error
+		var mem = new VirtualMemory(memorySize);
 		var cpu = new JitCpu(mem);
 		
 		cpu.SetEip(0x1000);
@@ -357,8 +358,7 @@ public class JitCpuInstructionTests
 		cpu.SetRegister("ECX", 1); // CL = 1 (rotate count)
 		
 		// Write a test value at [ESP-0x44]
-		// 0x001FFFB4 - 0x44 = 0x001FFF70
-		uint targetAddr = 0x001FFF70;
+		uint targetAddr = cpu.GetRegister("ESP") - 0x44;
 		mem.Write32(targetAddr, 0x80000001); // Value with bit 31 set
 		
 		// RCL dword [ESP-0x44], CL = D3 94 24 BC FF FF FF
