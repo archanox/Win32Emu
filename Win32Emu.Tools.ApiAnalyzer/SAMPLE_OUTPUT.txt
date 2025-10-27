@@ -1,0 +1,118 @@
+Win32Emu API Coverage Analyzer
+================================
+
+This proof-of-concept tool demonstrates how Reko's API definitions
+could be used to analyze and improve Win32Emu's API coverage.
+
+Step 1: Parsing Reko XML API definitions...
+  Loaded 20 APIs from gdi32.xml
+  Loaded 1 APIs from oleaut32.xml
+  Loaded 1 APIs from shell32.xml
+  Loaded 5 APIs from ntoskrnl.xml
+  Loaded 10 APIs from wininet.xml
+  Loaded 63 APIs from kernel32.xml
+  Warning: Failed to parse winspool.xml: Root element is missing.
+  Loaded 3 APIs from comdlg32.xml
+  Loaded 51 APIs from wsock32.xml
+  Loaded 1 APIs from windows_CE.xml
+  Loaded 58 APIs from user32.xml
+  Loaded 109 APIs from commctrl.xml
+  Loaded 15 APIs from advapi32.xml
+Step 2: Analyzing Win32Emu module implementations...
+  Found 60 APIs in DDrawModule.cs
+  Found 123 APIs in Glide2xModule.cs
+  Found 9 APIs in DPlayXModule.cs
+  Found 5 APIs in DInputModule.cs
+  Found 13 APIs in Kernel32Module.cs
+  Found 5 APIs in DInput8Module.cs
+  Found 10 APIs in DSoundModule.cs
+
+Step 3: Generating Coverage Report...
+
+advapi32.dll:
+  Total APIs in Reko: 15
+  Implemented in Win32Emu: 0 (0.0%)
+  Missing: 15
+  Sample missing APIs: CloseServiceHandle, IsTextUnicode, OpenSCManagerW, OpenServiceW, QueryServiceConfigW, RegCloseKey, RegCreateKeyA, RegCreateKeyW, RegFlushKey, RegOpenKeyA...
+
+comdlg32.dll:
+  Total APIs in Reko: 3
+  Implemented in Win32Emu: 0 (0.0%)
+  Missing: 3
+  Missing APIs: ChooseColorA, GetOpenFileNameA, GetSaveFileNameA
+
+commctrl.dll:
+  Total APIs in Reko: 109
+  Implemented in Win32Emu: 0 (0.0%)
+  Missing: 109
+  Sample missing APIs: _TrackMouseEvent, CreateMappedBitmap, CreateStatusWindowA, CreateStatusWindowW, CreateToolbarEx, CreateUpDownControl, DefSubclassProc, DPA_Clone, DPA_Create, DPA_CreateEx...
+
+gdi32.dll:
+  Total APIs in Reko: 20
+  Implemented in Win32Emu: 0 (0.0%)
+  Missing: 20
+  Sample missing APIs: BitBlt, CreateCompatibleDC, CreateDCA, CreateFontA, CreatePen, CreateRectRgn, CreateSolidBrush, DeleteDC, DeleteObject, GetObjectA...
+
+kernel32.dll:
+  Total APIs in Reko: 63
+  Implemented in Win32Emu: 5 (7.9%)
+  Missing: 58
+  Extra (not in Reko): 8
+  Sample missing APIs: CloseHandle, CreateFileA, DisableThreadLibraryCalls, ExitProcess, FindResourceA, FlushFileBuffers, FreeEnvironmentStringsA, FreeEnvironmentStringsW, FreeResource, GetCPInfo...
+
+ntoskrnl.dll:
+  Total APIs in Reko: 5
+  Implemented in Win32Emu: 0 (0.0%)
+  Missing: 5
+  Missing APIs: DbgPrint, IoCreateDevice, IoCreateSymbolicLink, IoGetCurrentProcess, KeGetCurrentThread
+
+oleaut32.dll:
+  Total APIs in Reko: 1
+  Implemented in Win32Emu: 0 (0.0%)
+  Missing: 1
+  Missing APIs: SysFreeString
+
+shell32.dll:
+  Total APIs in Reko: 1
+  Implemented in Win32Emu: 0 (0.0%)
+  Missing: 1
+  Missing APIs: ShellExecuteA
+
+user32.dll:
+  Total APIs in Reko: 58
+  Implemented in Win32Emu: 0 (0.0%)
+  Missing: 58
+  Sample missing APIs: AppendMenuA, BeginPaint, BringWindowToTop, CheckRadioButton, ClientToScreen, CreatePopupMenu, CreateWindowExA, DefWindowProcA, DestroyMenu, DestroyWindow...
+
+windows_ce.dll:
+  Total APIs in Reko: 1
+  Implemented in Win32Emu: 0 (0.0%)
+  Missing: 1
+  Missing APIs: ShellExecuteEx
+
+wininet.dll:
+  Total APIs in Reko: 10
+  Implemented in Win32Emu: 0 (0.0%)
+  Missing: 10
+  Missing APIs: DeleteUrlCacheEntry, HttpQueryInfoA, InternetAutodial, InternetCloseHandle, InternetGetConnectedState, InternetGoOnline, InternetOpenA, InternetOpenUrlA, InternetQueryDataAvailable, InternetReadFile
+
+wsock32.dll:
+  Total APIs in Reko: 51
+  Implemented in Win32Emu: 0 (0.0%)
+  Missing: 51
+  Sample missing APIs: __WSAFDIsSet, accept, AcceptEx, bind, closesocket, connect, GetAcceptExSockaddrs, gethostbyaddr, gethostbyname, gethostname...
+
+Overall Summary
+===============
+Total APIs in Reko definitions: 337
+Total implemented in Win32Emu: 5
+Total missing: 332
+Overall coverage: 1.5%
+
+Analysis Complete!
+
+Next Steps:
+1. Review missing APIs - which ones are used by target applications?
+2. Prioritize implementation based on usage frequency
+3. Use Reko XML as specification when implementing new APIs
+4. Consider auto-generating stub implementations from XML
