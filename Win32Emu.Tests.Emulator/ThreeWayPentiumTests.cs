@@ -9,6 +9,7 @@ namespace Win32Emu.Tests.Emulator;
 public class ThreeWayPentiumTests : IDisposable
 {
 	private readonly ThreeWayTestHelper _helper;
+	private const long StackBaseAddress = 0x00100000;  // Must match ThreeWayTestHelper.StackBaseAddress
 
 	public ThreeWayPentiumTests()
 	{
@@ -1624,6 +1625,102 @@ public class ThreeWayPentiumTests : IDisposable
 		
 		// Assert
 		_helper.AssertFlagsMatch(CpuFlag.Df);
+	}
+
+	#endregion
+
+	#region Memory Operations with Negative Displacement
+
+	[Fact]
+	public void MOV_MemoryNegativeDisplacement_ShouldMatch()
+	{
+		// Arrange: MOV EAX, [EBP-0x44] 
+		// This tests memory access with negative displacement
+		// Instruction: 8B 45 BC (MOV EAX, [EBP-0x44])
+		var stackAddr = (uint)(StackBaseAddress + 0x8000);
+		_helper.SetReg("EBP", stackAddr);
+		_helper.SetReg("EAX", 0x00000000);
+		
+		// Write test value at [EBP-0x44]
+		var targetAddr = stackAddr - 0x44;
+		_helper.WriteMemory(targetAddr, 0x12, 0x34, 0x56, 0x78);
+		
+		// MOV EAX, [EBP-0x44] = 8B 45 BC
+		_helper.WriteCode(0x8B, 0x45, 0xBC);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert - EAX should contain the value from memory
+		_helper.AssertRegistersMatch("EAX", "EBP");
+	}
+
+	[Fact]
+	public void MOV_MemoryWrite_NegativeDisplacement_ShouldMatch()
+	{
+		// Arrange: MOV [EBP-0x10], EAX
+		// This tests memory write with negative displacement
+		// Instruction: 89 45 F0 (MOV [EBP-0x10], EAX)
+		var stackAddr = (uint)(StackBaseAddress + 0x8000);
+		_helper.SetReg("EBP", stackAddr);
+		_helper.SetReg("EAX", 0xDEADBEEF);
+		
+		// MOV [EBP-0x10], EAX = 89 45 F0
+		_helper.WriteCode(0x89, 0x45, 0xF0);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert - Memory should contain the value from EAX
+		var targetAddr = stackAddr - 0x10;
+		_helper.AssertMemoryMatch(targetAddr, 4);
+	}
+
+	[Fact]
+	public void ADD_MemoryNegativeDisplacement_ShouldMatch()
+	{
+		// Arrange: ADD EAX, [EBP-0x08]
+		// Instruction: 03 45 F8 (ADD EAX, [EBP-0x08])
+		var stackAddr = (uint)(StackBaseAddress + 0x8000);
+		_helper.SetReg("EBP", stackAddr);
+		_helper.SetReg("EAX", 0x00000100);
+		
+		// Write test value at [EBP-0x08]
+		var targetAddr = stackAddr - 0x08;
+		_helper.WriteMemory(targetAddr, 0x50, 0x00, 0x00, 0x00); // Value: 0x00000050
+		
+		// ADD EAX, [EBP-0x08] = 03 45 F8
+		_helper.WriteCode(0x03, 0x45, 0xF8);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert - EAX should be 0x100 + 0x50 = 0x150
+		_helper.AssertRegistersMatch("EAX", "EBP");
+		_helper.AssertFlagsMatch(CpuFlag.Cf, CpuFlag.Zf, CpuFlag.Sf, CpuFlag.Of, CpuFlag.Pf);
+	}
+
+	[Fact]
+	public void AND_MemoryNegativeDisplacement_ShouldMatch()
+	{
+		// Arrange: AND DWORD PTR [EBP-0x44], 0xFF
+		// This is the type of instruction that was failing in the bug report
+		// Instruction: 83 65 BC FF (AND DWORD PTR [EBP-0x44], 0xFF)
+		var stackAddr = (uint)(StackBaseAddress + 0x8000);
+		_helper.SetReg("EBP", stackAddr);
+		
+		// Write test value at [EBP-0x44]
+		var targetAddr = stackAddr - 0x44;
+		_helper.WriteMemory(targetAddr, 0x12, 0x34, 0x56, 0x78); // Value: 0x78563412
+		
+		// AND DWORD PTR [EBP-0x44], 0xFF = 83 65 BC FF
+		_helper.WriteCode(0x83, 0x65, 0xBC, 0xFF);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert - Memory should be ANDed with 0xFF
+		_helper.AssertMemoryMatch(targetAddr, 4);
 	}
 
 	#endregion
