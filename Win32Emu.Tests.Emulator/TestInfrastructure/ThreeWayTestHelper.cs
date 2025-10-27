@@ -19,7 +19,7 @@ public class ThreeWayTestHelper : IDisposable
 	private readonly VirtualMemory _jitMemory;
 	
 	private const long CodeBaseAddress = 0x00400000;
-	private const long StackBaseAddress = 0x00100000;
+	public const long StackBaseAddress = 0x00100000;
 	private const long DataBaseAddress = 0x00200000;
 	private const long MemorySize = 0x100000; // 1MB
 	

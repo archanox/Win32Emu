@@ -1924,6 +1924,8 @@ public class JitCpu : IAsyncCpu
 			OpKind.Register => GetRegisterValue(insn, operandIndex),
 			// For Immediate8, always use Immediate8 (the Iced library sets the correct one)
 			OpKind.Immediate8 => (uint)insn.Immediate8,
+			OpKind.Immediate8to16 => (uint)(short)(sbyte)insn.Immediate8,  // Sign-extend 8->16->32
+			OpKind.Immediate8to32 => (uint)(sbyte)insn.Immediate8,          // Sign-extend 8->32
 			OpKind.Immediate16 => (uint)insn.Immediate16,
 			OpKind.Immediate32 => insn.Immediate32,
 			OpKind.Memory => _mem.Read32(CalcMemAddress(insn, operandIndex)),
