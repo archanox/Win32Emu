@@ -115,8 +115,11 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "MIXERGETCONTROLDETAILS":
-				case "MIXERGETCONTROLDETAILSA":
 					returnValue = MixerGetControlDetails(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIXERGETCONTROLDETAILSA":
+					returnValue = MixerGetControlDetailsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
 				case "MIXERSETCONTROLDETAILS":
@@ -164,11 +167,17 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "SNDPLAYSOUND":
+					returnValue = SndPlaySound(a.LpcStr(0), a.UInt32(1));
+					return true;
+
 				case "SNDPLAYSOUNDA":
 					returnValue = SndPlaySoundA(a.LpcStr(0), a.UInt32(1));
 					return true;
 
 				case "PLAYSOUND":
+					returnValue = PlaySound(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
 				case "PLAYSOUNDA":
 					returnValue = PlaySoundA(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
 					return true;
@@ -536,6 +545,16 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(12)]
+		private uint MixerGetControlDetailsA(uint hmxobj, uint pmxcd, uint fdwDetails)
+		{
+			_logger.LogInformation("[WinMM] mixerGetControlDetailsA(hmxobj=0x{Hmxobj:X8}, pmxcd=0x{Pmxcd:X8}, fdwDetails=0x{FdwDetails:X8})",
+				hmxobj, pmxcd, fdwDetails);
+
+			// For stub implementation, return success
+			// A full implementation would read mixer control values
+			return 0; // MMSYSERR_NOERROR
+		}
+		[DllModuleExport(12)]
 		private uint MixerGetControlDetails(uint hmxobj, uint pmxcd, uint fdwDetails)
 		{
 			_logger.LogInformation("[WinMM] mixerGetControlDetails(hmxobj=0x{Hmxobj:X8}, pmxcd=0x{Pmxcd:X8}, fdwDetails=0x{FdwDetails:X8})",
@@ -729,6 +748,42 @@ namespace Win32Emu.Win32.Modules
 
 		/// <summary>
 		/// Plays a waveform sound specified by a filename.
+		/// BOOL sndPlaySound(
+		///   [in] LPCSTR pszSound,
+		///   [in] UINT   fuSound
+		/// );
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint SndPlaySound(in LpcStr pszSound, uint fuSound)
+		{
+			var soundName = pszSound.ToString() ?? string.Empty;
+			_logger.LogInformation("[WinMM] sndPlaySound(pszSound=\"{SoundName}\", fuSound=0x{FuSound:X8})",
+				soundName, fuSound);
+
+			// sndPlaySound plays a sound file
+			// fuSound flags include:
+			// SND_SYNC (0x0000) - Play synchronously
+			// SND_ASYNC (0x0001) - Play asynchronously
+			// SND_NODEFAULT (0x0002) - Don't play default sound if file not found
+			// SND_MEMORY (0x0004) - pszSound is a memory image
+			// SND_LOOP (0x0008) - Loop the sound until called again
+			// SND_NOSTOP (0x0010) - Don't stop currently playing sound
+
+			// For stub implementation, we just log and return success
+			// A full implementation would actually play the sound file
+
+			if (string.IsNullOrEmpty(soundName))
+			{
+				_logger.LogInformation("[WinMM] sndPlaySound: NULL sound name, stopping sound");
+				return 1; // TRUE - stopping sound
+			}
+
+			_logger.LogInformation("[WinMM] sndPlaySound: Stub - would play sound \"{SoundName}\"", soundName);
+			return 1; // TRUE - success
+		}
+
+		/// <summary>
+		/// Plays a waveform sound specified by a filename.
 		/// BOOL sndPlaySoundA(
 		///   [in] LPCSTR pszSound,
 		///   [in] UINT   fuSound
@@ -804,6 +859,50 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			_logger.LogInformation("[WinMM] PlaySoundA: Stub - would play sound \"{SoundName}\" from module 0x{Hmod:X8}", soundName, hmod);
+			return 1; // TRUE - success
+		}
+
+		/// <summary>
+		/// Plays a waveform sound specified by a filename or resource.
+		/// BOOL PlaySound(
+		///   [in] LPCSTR pszSound,
+		///   [in] HMODULE hmod,
+		///   [in] DWORD fdwSound
+		/// );
+		/// </summary>
+		[DllModuleExport(1)]
+		private uint PlaySound(in LpcStr pszSound, uint hmod, uint fdwSound)
+		{
+			var soundName = pszSound.ToString() ?? string.Empty;
+			_logger.LogInformation("[WinMM] PlaySound(pszSound=\"{SoundName}\", hmod=0x{Hmod:X8}, fdwSound=0x{FdwSound:X8})",
+				soundName, hmod, fdwSound);
+
+			// PlaySound plays a sound file or resource
+			// fdwSound flags include:
+			// SND_SYNC (0x0000) - Play synchronously
+			// SND_ASYNC (0x0001) - Play asynchronously
+			// SND_NODEFAULT (0x0002) - Don't play default sound if file not found
+			// SND_MEMORY (0x0004) - pszSound is a memory image
+			// SND_LOOP (0x0008) - Loop the sound until called again
+			// SND_NOSTOP (0x0010) - Don't stop currently playing sound
+			// SND_APPLICATION (0x0080) - Use application-specific association
+			// SND_ALIAS (0x00010000) - pszSound is a system event alias
+			// SND_FILENAME (0x00020000) - pszSound is a filename
+			// SND_RESOURCE (0x00040000) - pszSound is a resource identifier; hmod identifies the module
+			// SND_PURGE (0x0040) - Stop all sounds
+			// SND_NOWAIT (0x00002000) - Don't wait if driver is busy
+			// SND_ALIAS_ID (0x00110000) - pszSound is a predefined sound identifier
+
+			// For stub implementation, we just log and return success
+			// A full implementation would actually play the sound file or resource
+
+			if (string.IsNullOrEmpty(soundName))
+			{
+				_logger.LogInformation("[WinMM] PlaySound: NULL sound name, stopping sound");
+				return 1; // TRUE - stopping sound
+			}
+
+			_logger.LogInformation("[WinMM] PlaySound: Stub - would play sound \"{SoundName}\" from module 0x{Hmod:X8}", soundName, hmod);
 			return 1; // TRUE - success
 		}
 	}
