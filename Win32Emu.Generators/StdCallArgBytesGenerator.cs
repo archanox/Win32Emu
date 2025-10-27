@@ -508,6 +508,21 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 		});
 	}
 
+	/// <summary>
+	/// Calculate the size in bytes of a parameter on the x86 stack.
+	/// 
+	/// NOTE: This method ONLY calculates parameter sizes, NOT return values.
+	/// In stdcall calling convention:
+	/// - Return values are passed via EAX register (not on stack)
+	/// - argBytes is used for stack cleanup (RET N instruction)
+	/// - RET N pops N bytes of PARAMETERS from the stack
+	/// - Return type (void, uint32, etc.) does NOT affect argBytes
+	/// 
+	/// This applies to both Win32 API functions and COM interface methods.
+	/// Whether a function returns void or uint32, only parameters matter for stack cleanup.
+	/// </summary>
+	/// <param name="t">The parameter type symbol</param>
+	/// <returns>Size in bytes that this parameter occupies on the x86 stack</returns>
 	private static int GetParamSize(ITypeSymbol t)
 	{
 		if (t is IPointerTypeSymbol)

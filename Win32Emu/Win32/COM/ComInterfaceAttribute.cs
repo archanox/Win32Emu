@@ -29,6 +29,15 @@ public static class ComDelegateHelper
 	/// <summary>
 	/// Calculate the number of bytes of arguments for a delegate type.
 	/// This matches the stdcall calling convention where the callee cleans up the stack.
+	/// 
+	/// IMPORTANT: This method ONLY calculates parameter sizes, NOT return values.
+	/// In stdcall calling convention:
+	/// - Return values are passed via EAX register (or EAX:EDX for 64-bit)
+	/// - argBytes is used for stack cleanup (RET N instruction)
+	/// - RET N pops N bytes of PARAMETERS from the stack
+	/// - Return type (void, int, HRESULT, etc.) does NOT affect argBytes
+	/// 
+	/// This applies to all COM interface methods, regardless of return type.
 	/// </summary>
 	/// <param name="delegateType">The delegate type (must have UnmanagedFunctionPointer attribute)</param>
 	/// <returns>Number of bytes of arguments on the stack</returns>
