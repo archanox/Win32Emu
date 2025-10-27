@@ -79,6 +79,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.CallingConvention"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Tools.CallingConventionDemo", "Win32Emu.Tools.CallingConventionDemo\Win32Emu.Tools.CallingConventionDemo.csproj", "{386E40FC-F7E5-42A9-8BA4-D490461CF636}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Win32Emu.Rtl", "Win32Emu.Rtl\Win32Emu.Rtl.csproj", "{8A83AC35-FAD7-4E65-809A-1CED501D5812}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -245,6 +247,18 @@ Global
 		{386E40FC-F7E5-42A9-8BA4-D490461CF636}.Release|x64.Build.0 = Release|Any CPU
 		{386E40FC-F7E5-42A9-8BA4-D490461CF636}.Release|x86.ActiveCfg = Release|Any CPU
 		{386E40FC-F7E5-42A9-8BA4-D490461CF636}.Release|x86.Build.0 = Release|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Debug|x64.Build.0 = Debug|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Debug|x86.Build.0 = Debug|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Release|x64.ActiveCfg = Release|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Release|x64.Build.0 = Release|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Release|x86.ActiveCfg = Release|Any CPU
+		{8A83AC35-FAD7-4E65-809A-1CED501D5812}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
