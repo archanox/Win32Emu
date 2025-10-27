@@ -390,6 +390,38 @@ public sealed class Emulator : IDisposable
             // This prevents crashes when code tries to access [EBP+offset] with invalid EBP
             ValidateAndFixEbp();
 
+            // Check if EIP is in the import stub range but not properly mapped
+            // This can happen if code returns to or jumps to an unmapped import address
+            var currentEip = _cpu!.GetEip();
+            if (currentEip >= 0x0F000000 && currentEip < 0x10000000)
+            {
+                // EIP is in the import stub address range
+                if (!_image!.ImportAddressMap.ContainsKey(currentEip))
+                {
+                    // This import address is not mapped - simulate a return with error
+                    var esp = _cpu.GetRegister("ESP");
+                    _logger.LogError("[Import] Attempted to execute unmapped import stub at address 0x{Eip:X8} (not in ImportAddressMap). ESP=0x{Esp:X8}, attempting to read return address from stack", currentEip, esp);
+                    
+                    try
+                    {
+                        // Read return address from stack and return
+                        var retEip = _vm!.Read32(esp);
+                        esp += 4; // Pop return address only
+                        _cpu.SetRegister("ESP", esp);
+                        _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
+                        _cpu.SetEip(retEip);
+                        
+                        _logger.LogWarning("[Import] Simulated return to 0x{RetEip:X8} with EAX=0", retEip);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[Import] Failed to simulate return - stack may be corrupted");
+                        throw; // Re-throw if we can't recover
+                    }
+                    continue; // Skip to next iteration
+                }
+            }
+
             var step = _cpu!.SingleStep(_vm!);
             
             // Record instruction execution
