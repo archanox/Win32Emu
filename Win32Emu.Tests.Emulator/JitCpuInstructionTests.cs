@@ -511,4 +511,70 @@ public class JitCpuInstructionTests
 		// The emulator-level fix would prevent this by resetting EBP before execution
 		Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(mem));
 	}
+
+	[Fact]
+	public void JmpNearBranch32_ShouldJumpToTarget()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		
+		// JMP 0x2000 (relative jump)
+		// E9 FB 0F 00 00 - JMP rel32 (0x2000 - 0x1005 = 0x0FFB)
+		mem.Write8(0x1000, 0xE9); // JMP opcode
+		mem.Write32(0x1001, 0x0FFB); // Relative offset
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x2000u, cpu.GetEip()); // Should jump to target address
+	}
+
+	[Fact]
+	public void JmpWithRegisterOperand_ShouldJumpToAddressInRegister()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0x3000); // Target address in EAX
+		
+		// JMP EAX = FF E0
+		mem.Write8(0x1000, 0xFF); // JMP opcode
+		mem.Write8(0x1001, 0xE0); // ModRM byte for register EAX
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x3000u, cpu.GetEip()); // Should jump to address in EAX
+	}
+
+	[Fact]
+	public void JmpWithMemoryOperand_ShouldJumpToAddressInMemory()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		
+		// Write target address to memory location
+		mem.Write32(0x2000, 0x3000); // Target address is 0x3000
+		
+		// JMP [0x2000] = FF 25 00 20 00 00
+		mem.Write8(0x1000, 0xFF); // JMP opcode
+		mem.Write8(0x1001, 0x25); // ModRM byte for [disp32]
+		mem.Write32(0x1002, 0x2000); // Address 0x2000
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x3000u, cpu.GetEip()); // Should jump to address stored in memory
+	}
 }
