@@ -164,6 +164,11 @@ namespace Win32Emu.Win32.Modules
 					returnValue = SndPlaySoundA(a.LpcStr(0), a.UInt32(1));
 					return true;
 
+				case "PLAYSOUND":
+				case "PLAYSOUNDA":
+					returnValue = PlaySoundA(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
 				default:
 					_logger.LogInformation("[WinMM] Unimplemented export: {Export}", export);
 					return false;
@@ -737,6 +742,50 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			_logger.LogInformation("[WinMM] sndPlaySoundA: Stub - would play sound \"{SoundName}\"", soundName);
+			return 1; // TRUE - success
+		}
+
+		/// <summary>
+		/// Plays a waveform sound specified by a filename or resource.
+		/// BOOL PlaySoundA(
+		///   [in] LPCSTR pszSound,
+		///   [in] HMODULE hmod,
+		///   [in] DWORD fdwSound
+		/// );
+		/// </summary>
+		[DllModuleExport(1)]
+		private uint PlaySoundA(in LpcStr pszSound, uint hmod, uint fdwSound)
+		{
+			var soundName = pszSound.ToString() ?? string.Empty;
+			_logger.LogInformation("[WinMM] PlaySoundA(pszSound=\"{SoundName}\", hmod=0x{Hmod:X8}, fdwSound=0x{FdwSound:X8})",
+				soundName, hmod, fdwSound);
+			
+			// PlaySound plays a sound file or resource
+			// fdwSound flags include:
+			// SND_SYNC (0x0000) - Play synchronously
+			// SND_ASYNC (0x0001) - Play asynchronously
+			// SND_NODEFAULT (0x0002) - Don't play default sound if file not found
+			// SND_MEMORY (0x0004) - pszSound is a memory image
+			// SND_LOOP (0x0008) - Loop the sound until called again
+			// SND_NOSTOP (0x0010) - Don't stop currently playing sound
+			// SND_APPLICATION (0x0080) - Use application-specific association
+			// SND_ALIAS (0x00010000) - pszSound is a system event alias
+			// SND_FILENAME (0x00020000) - pszSound is a filename
+			// SND_RESOURCE (0x00040000) - pszSound is a resource identifier; hmod identifies the module
+			// SND_PURGE (0x0040) - Stop all sounds
+			// SND_NOWAIT (0x00002000) - Don't wait if driver is busy
+			// SND_ALIAS_ID (0x00110000) - pszSound is a predefined sound identifier
+			
+			// For stub implementation, we just log and return success
+			// A full implementation would actually play the sound file or resource
+			
+			if (string.IsNullOrEmpty(soundName))
+			{
+				_logger.LogInformation("[WinMM] PlaySoundA: NULL sound name, stopping sound");
+				return 1; // TRUE - stopping sound
+			}
+			
+			_logger.LogInformation("[WinMM] PlaySoundA: Stub - would play sound \"{SoundName}\" from module 0x{Hmod:X8}", soundName, hmod);
 			return 1; // TRUE - success
 		}
 	}
