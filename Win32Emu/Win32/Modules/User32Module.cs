@@ -5086,29 +5086,36 @@ namespace Win32Emu.Win32.Modules
 		
 		if (lpsi != 0)
 		{
-			// SCROLLINFO structure:
-			// UINT cbSize; UINT fMask; int nMin; int nMax; UINT nPage; int nPos; int nTrackPos;
-			var fMask = _env.MemRead32(lpsi + 4);
+			// SCROLLINFO structure offsets
+			const uint SCROLLINFO_CBSIZE_OFFSET = 0;
+			const uint SCROLLINFO_FMASK_OFFSET = 4;
+			const uint SCROLLINFO_NMIN_OFFSET = 8;
+			const uint SCROLLINFO_NMAX_OFFSET = 12;
+			const uint SCROLLINFO_NPAGE_OFFSET = 16;
+			const uint SCROLLINFO_NPOS_OFFSET = 20;
+			const uint SCROLLINFO_NTRACKPOS_OFFSET = 24;
+			
+			var fMask = _env.MemRead32(lpsi + SCROLLINFO_FMASK_OFFSET);
 			
 			// For stub implementation, fill in default values
 			// SIF_RANGE (0x0001), SIF_PAGE (0x0002), SIF_POS (0x0004), SIF_TRACKPOS (0x0010)
 			
 			if ((fMask & 0x0001) != 0) // SIF_RANGE
 			{
-				_env.MemWrite32(lpsi + 8, 0); // nMin = 0
-				_env.MemWrite32(lpsi + 12, 100); // nMax = 100
+				_env.MemWrite32(lpsi + SCROLLINFO_NMIN_OFFSET, 0); // nMin = 0
+				_env.MemWrite32(lpsi + SCROLLINFO_NMAX_OFFSET, 100); // nMax = 100
 			}
 			if ((fMask & 0x0002) != 0) // SIF_PAGE
 			{
-				_env.MemWrite32(lpsi + 16, 10); // nPage = 10
+				_env.MemWrite32(lpsi + SCROLLINFO_NPAGE_OFFSET, 10); // nPage = 10
 			}
 			if ((fMask & 0x0004) != 0) // SIF_POS
 			{
-				_env.MemWrite32(lpsi + 20, 0); // nPos = 0
+				_env.MemWrite32(lpsi + SCROLLINFO_NPOS_OFFSET, 0); // nPos = 0
 			}
 			if ((fMask & 0x0010) != 0) // SIF_TRACKPOS
 			{
-				_env.MemWrite32(lpsi + 24, 0); // nTrackPos = 0
+				_env.MemWrite32(lpsi + SCROLLINFO_NTRACKPOS_OFFSET, 0); // nTrackPos = 0
 			}
 			
 			_logger.LogInformation("[User32] GetScrollInfo: Returning default scroll info");
