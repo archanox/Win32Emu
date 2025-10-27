@@ -7089,29 +7089,45 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// FILE_END (2) - Seek from end
 		// Returns the new file pointer position, or 0xFFFFFFFF on error
 		
-		// For stub implementation, calculate position based on origin
-		// A full implementation would track actual file positions and sizes
-		uint newPosition;
+		// Try to get the file object from the handle
+		var vfs = _env.VirtualFileSystem;
+		var file = vfs.GetFileByHandle(hFile);
+		if (file == null)
+		{
+			_logger.LogWarning("[Kernel32] _llseek: Invalid file handle 0x{HFile:X8}", hFile);
+			return 0xFFFFFFFF;
+		}
+
+		long basePos;
 		switch (iOrigin)
 		{
 			case 0: // FILE_BEGIN
-				newPosition = (uint)Math.Max(0, lOffset);
+				basePos = 0;
 				break;
 			case 1: // FILE_CURRENT
-				// Would need to track current position - for now assume position 0
-				newPosition = (uint)Math.Max(0, lOffset);
+				basePos = file.Position;
 				break;
 			case 2: // FILE_END
-				// Would need to know file size - for now just use offset
-				newPosition = (uint)Math.Max(0, lOffset);
+				basePos = file.Length;
 				break;
 			default:
 				_logger.LogWarning("[Kernel32] _llseek: Invalid origin {IOrigin}", iOrigin);
 				return 0xFFFFFFFF; // Error
 		}
-		
-		_logger.LogInformation("[Kernel32] _llseek: Stub returning position 0x{NewPosition:X8}", newPosition);
-		return newPosition;
+
+		long newPos = basePos + lOffset;
+		if (newPos < 0)
+		{
+			_logger.LogWarning("[Kernel32] _llseek: Attempt to seek before start of file (pos={NewPos})", newPos);
+			newPos = 0;
+		}
+
+		// Optionally, clamp to file length (for non-growing files)
+		// if (newPos > file.Length) newPos = file.Length;
+
+		file.Position = newPos;
+		_logger.LogInformation("[Kernel32] _llseek: Returning position 0x{NewPos:X8}", newPos);
+		return (uint)newPos;
 	}
 
 	[DllModuleExport(12)]
