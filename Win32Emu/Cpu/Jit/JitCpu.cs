@@ -2026,21 +2026,18 @@ public class JitCpu : IAsyncCpu
 
 	private uint CalcMemAddress(Instruction insn, int operandIndex)
 	{
-		// Simplified memory address calculation
-		// For now, just return a basic address - full SIB decoding would be more complex
-		uint addr = 0;
+		// Calculate memory address from instruction operand
+		// Always start with displacement (it's 0 if there's no displacement)
+		var addr = insn.MemoryDisplacement32;
 		
-		if (insn.MemoryDisplSize > 0)
-		{
-			addr = insn.MemoryDisplacement32;
-		}
-		
+		// Add base register if present
 		var baseReg = insn.MemoryBase;
 		if (baseReg != Register.None)
 		{
 			addr += GetRegisterByEnum(baseReg);
 		}
 		
+		// Add index register * scale if present
 		var indexReg = insn.MemoryIndex;
 		if (indexReg != Register.None)
 		{
