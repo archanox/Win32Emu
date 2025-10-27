@@ -76,7 +76,7 @@ public class DInputModuleTests
         var vm = new VirtualMemory(0x10000000);
         var cpu = new IcedCpu(vm);
         var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
-        var dinputModule = new DInputModule(env, 0x00400000);
+        var dinputModule = new DInput8Module(env, 0x00400000);
 
         var outputPtr = 0x001FF000u;
         vm.Write32(outputPtr, 0x00000000);
