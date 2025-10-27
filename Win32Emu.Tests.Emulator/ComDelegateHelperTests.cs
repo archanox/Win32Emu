@@ -32,6 +32,19 @@ delegate int CdeclMethod(IntPtr pThis);
 
 delegate int RegularDelegate(IntPtr pThis); // No attribute
 
+// Void return type delegates - to test that return type doesn't affect argBytes
+[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+delegate void VoidNoParamsDelegate();
+
+[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+delegate void VoidOneParamDelegate(IntPtr pThis);
+
+[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+delegate void VoidTwoParamsDelegate(IntPtr pThis, uint dwFlags);
+
+[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+delegate void VoidFiveParamsDelegate(IntPtr pThis, uint param1, IntPtr param2, uint param3, IntPtr param4);
+
 public class ComDelegateHelperTests
 {
 	[Fact]
@@ -192,5 +205,53 @@ public class ComDelegateHelperTests
 		Assert.Equal(8, ComDelegateHelper.GetArgBytes(typeof(IDirectInputDevice.GetDeviceInfo)));
 		Assert.Equal(12, ComDelegateHelper.GetArgBytes(typeof(IDirectInputDevice.RunControlPanel)));
 		Assert.Equal(16, ComDelegateHelper.GetArgBytes(typeof(IDirectInputDevice.Initialize)));
+	}
+	
+	/// <summary>
+	/// Tests that void-returning functions have the same argBytes as int-returning functions
+	/// with the same parameters. This validates that return type does NOT affect stack cleanup.
+	/// 
+	/// In stdcall convention:
+	/// - Return values are in EAX register, not on stack
+	/// - RET N instruction pops N bytes of parameters (not return value)
+	/// - void vs int return type should not change argBytes
+	/// </summary>
+	[Fact]
+	public void GetArgBytes_VoidReturnType_ShouldOnlyCountParameters()
+	{
+		// Arrange & Act - void functions with different parameter counts
+		var noParams = ComDelegateHelper.GetArgBytes(typeof(VoidNoParamsDelegate));
+		var oneParam = ComDelegateHelper.GetArgBytes(typeof(VoidOneParamDelegate));
+		var twoParams = ComDelegateHelper.GetArgBytes(typeof(VoidTwoParamsDelegate));
+		var fiveParams = ComDelegateHelper.GetArgBytes(typeof(VoidFiveParamsDelegate));
+		
+		// Assert - argBytes should match parameter count * 4, regardless of void return
+		Assert.Equal(0, noParams);   // 0 parameters = 0 bytes
+		Assert.Equal(4, oneParam);   // 1 parameter (IntPtr) = 4 bytes
+		Assert.Equal(8, twoParams);  // 2 parameters (IntPtr + uint) = 8 bytes
+		Assert.Equal(20, fiveParams); // 5 parameters (IntPtr + uint + IntPtr + uint + IntPtr) = 20 bytes
+	}
+	
+	[Fact]
+	public void GetArgBytes_VoidVsIntReturnType_ShouldBeIdentical()
+	{
+		// Arrange - compare void and int delegates with same parameters
+		// Both have just IntPtr pThis parameter
+		var voidMethod = ComDelegateHelper.GetArgBytes(typeof(VoidOneParamDelegate));
+		var intMethod = ComDelegateHelper.GetArgBytes(typeof(SimpleMethod));
+		
+		// Assert - return type should NOT affect argBytes
+		Assert.Equal(voidMethod, intMethod);
+		Assert.Equal(4, voidMethod); // Both should be 4 bytes (one IntPtr parameter)
+	}
+	
+	[Fact]
+	public void GetArgBytes_VoidWithTwoParams_MatchesIntWithTwoParams()
+	{
+		// Arrange - VoidTwoParamsDelegate has IntPtr + uint (same as some int-returning methods)
+		var voidTwoParams = ComDelegateHelper.GetArgBytes(typeof(VoidTwoParamsDelegate));
+		
+		// Assert - 2 parameters = 8 bytes, regardless of return type
+		Assert.Equal(8, voidTwoParams); // IntPtr (4) + uint (4) = 8 bytes
 	}
 }
