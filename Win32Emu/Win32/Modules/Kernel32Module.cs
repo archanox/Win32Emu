@@ -708,6 +708,35 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = _lwrite(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 
+			// Memory mapping functions
+			case "CREATEFILEMAPPINGA":
+				returnValue = CreateFileMappingA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.LpcStr(5));
+				return true;
+			case "MAPVIEWOFFILE":
+				returnValue = MapViewOfFile(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+			case "UNMAPVIEWOFFILE":
+				returnValue = UnmapViewOfFile(a.UInt32(0));
+				return true;
+
+			// Memory protection functions
+			case "VIRTUALPROTECT":
+				returnValue = VirtualProtect(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+			case "VIRTUALQUERY":
+				returnValue = VirtualQuery(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+
+			// Locale functions
+			case "ENUMSYSTEMLOCALESA":
+				returnValue = EnumSystemLocalesA(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			// Time conversion functions
+			case "FILETIMETODOSDATETIME":
+				returnValue = FileTimeToDosDateTime(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+
 			default:
 				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
 				return false;
@@ -6953,6 +6982,264 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			appName, keyName, str);
 		// Return success (stub - no Win.ini support)
 		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Creates or opens a named or unnamed file mapping object for a specified file.
+	/// HANDLE CreateFileMappingA(
+	///   [in]           HANDLE                hFile,
+	///   [in, optional] LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
+	///   [in]           DWORD                 flProtect,
+	///   [in]           DWORD                 dwMaximumSizeHigh,
+	///   [in]           DWORD                 dwMaximumSizeLow,
+	///   [in, optional] LPCSTR                lpName
+	/// );
+	/// </summary>
+	[DllModuleExport(24)]
+	private uint CreateFileMappingA(uint hFile, uint lpFileMappingAttributes, uint flProtect, 
+		uint dwMaximumSizeHigh, uint dwMaximumSizeLow, in LpcStr lpName)
+	{
+		var name = lpName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] CreateFileMappingA(hFile=0x{HFile:X8}, flProtect=0x{FlProtect:X}, dwMaximumSizeHigh={DwMaximumSizeHigh}, dwMaximumSizeLow={DwMaximumSizeLow}, lpName=\"{Name}\")",
+			hFile, flProtect, dwMaximumSizeHigh, dwMaximumSizeLow, name);
+
+		// File mapping objects allow multiple processes to access the same file or memory
+		// For now, return a dummy handle
+		// A full implementation would:
+		// 1. Track the mapping in memory management
+		// 2. Associate it with the file handle
+		// 3. Support both file-backed and page file-backed mappings
+
+		// Return a dummy file mapping handle (non-zero for success)
+		return 0x50000000 + (uint)name.GetHashCode();
+	}
+
+	/// <summary>
+	/// Maps a view of a file mapping into the address space of a calling process.
+	/// LPVOID MapViewOfFile(
+	///   [in] HANDLE hFileMappingObject,
+	///   [in] DWORD  dwDesiredAccess,
+	///   [in] DWORD  dwFileOffsetHigh,
+	///   [in] DWORD  dwFileOffsetLow,
+	///   [in] SIZE_T dwNumberOfBytesToMap
+	/// );
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint MapViewOfFile(uint hFileMappingObject, uint dwDesiredAccess, 
+		uint dwFileOffsetHigh, uint dwFileOffsetLow, uint dwNumberOfBytesToMap)
+	{
+		_logger.LogInformation("[Kernel32] MapViewOfFile(hFileMappingObject=0x{HFileMappingObject:X8}, dwDesiredAccess=0x{DwDesiredAccess:X}, dwFileOffsetHigh={DwFileOffsetHigh}, dwFileOffsetLow={DwFileOffsetLow}, dwNumberOfBytesToMap={DwNumberOfBytesToMap})",
+			hFileMappingObject, dwDesiredAccess, dwFileOffsetHigh, dwFileOffsetLow, dwNumberOfBytesToMap);
+
+		// MapViewOfFile creates a view of the file mapping in the process's address space
+		// For a stub implementation:
+		// 1. Allocate memory for the view
+		// 2. Return the address
+
+		if (dwNumberOfBytesToMap == 0)
+		{
+			// If size is 0, map the entire file (we'll use a default size)
+			dwNumberOfBytesToMap = 0x10000; // 64KB default
+		}
+
+		// Allocate memory for the view
+		var baseAddress = VirtualAlloc(0, dwNumberOfBytesToMap, 0x1000 | 0x2000, 0x04); // MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
+
+		_logger.LogInformation("[Kernel32] MapViewOfFile: Allocated view at 0x{BaseAddress:X8}", baseAddress);
+		return baseAddress;
+	}
+
+	/// <summary>
+	/// Unmaps a mapped view of a file from the calling process's address space.
+	/// BOOL UnmapViewOfFile(
+	///   [in] LPCVOID lpBaseAddress
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint UnmapViewOfFile(uint lpBaseAddress)
+	{
+		_logger.LogInformation("[Kernel32] UnmapViewOfFile(lpBaseAddress=0x{LpBaseAddress:X8})", lpBaseAddress);
+
+		// UnmapViewOfFile unmaps a view created by MapViewOfFile
+		// For a stub implementation, we just log it
+		// A full implementation would:
+		// 1. Free the memory allocated for the view
+		// 2. Update internal tracking structures
+
+		return 1; // TRUE (success)
+	}
+
+	/// <summary>
+	/// Changes the protection on a region of committed pages in the virtual address space.
+	/// BOOL VirtualProtect(
+	///   [in]  LPVOID lpAddress,
+	///   [in]  SIZE_T dwSize,
+	///   [in]  DWORD  flNewProtect,
+	///   [out] PDWORD lpflOldProtect
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint VirtualProtect(uint lpAddress, uint dwSize, uint flNewProtect, uint lpflOldProtect)
+	{
+		_logger.LogInformation("[Kernel32] VirtualProtect(lpAddress=0x{LpAddress:X8}, dwSize={DwSize}, flNewProtect=0x{FlNewProtect:X}, lpflOldProtect=0x{LpflOldProtect:X8})",
+			lpAddress, dwSize, flNewProtect, lpflOldProtect);
+
+		// VirtualProtect changes memory protection attributes
+		// Common protection values:
+		// PAGE_NOACCESS = 0x01, PAGE_READONLY = 0x02, PAGE_READWRITE = 0x04
+		// PAGE_EXECUTE = 0x10, PAGE_EXECUTE_READ = 0x20, PAGE_EXECUTE_READWRITE = 0x40
+
+		if (lpflOldProtect != 0)
+		{
+			// Return the old protection (assume it was PAGE_READWRITE)
+			_env.MemWrite32(lpflOldProtect, 0x04); // PAGE_READWRITE
+		}
+
+		// For emulation, we don't enforce memory protection
+		// But we log the request for debugging purposes
+		_logger.LogInformation("[Kernel32] VirtualProtect: Changed protection at 0x{LpAddress:X8} to 0x{FlNewProtect:X}",
+			lpAddress, flNewProtect);
+
+		return 1; // TRUE (success)
+	}
+
+	/// <summary>
+	/// Provides information about a range of pages in the virtual address space.
+	/// SIZE_T VirtualQuery(
+	///   [in, optional] LPCVOID                   lpAddress,
+	///   [out]          PMEMORY_BASIC_INFORMATION lpBuffer,
+	///   [in]           SIZE_T                    dwLength
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint VirtualQuery(uint lpAddress, uint lpBuffer, uint dwLength)
+	{
+		_logger.LogInformation("[Kernel32] VirtualQuery(lpAddress=0x{LpAddress:X8}, lpBuffer=0x{LpBuffer:X8}, dwLength={DwLength})",
+			lpAddress, lpBuffer, dwLength);
+
+		// VirtualQuery returns information about a memory region
+		// MEMORY_BASIC_INFORMATION structure (32-bit):
+		// PVOID  BaseAddress;        // 0
+		// PVOID  AllocationBase;     // 4
+		// DWORD  AllocationProtect;  // 8
+		// SIZE_T RegionSize;         // 12
+		// DWORD  State;              // 16
+		// DWORD  Protect;            // 20
+		// DWORD  Type;               // 24
+		// Total size: 28 bytes
+
+		if (lpBuffer == 0 || dwLength < 28)
+		{
+			_logger.LogWarning("[Kernel32] VirtualQuery: Invalid buffer or size");
+			return 0; // Return 0 on error
+		}
+
+		// Fill in dummy memory information
+		_env.MemWrite32(lpBuffer + 0, lpAddress);      // BaseAddress
+		_env.MemWrite32(lpBuffer + 4, lpAddress);      // AllocationBase
+		_env.MemWrite32(lpBuffer + 8, 0x04);           // AllocationProtect (PAGE_READWRITE)
+		_env.MemWrite32(lpBuffer + 12, 0x10000);       // RegionSize (64KB)
+		_env.MemWrite32(lpBuffer + 16, 0x1000);        // State (MEM_COMMIT)
+		_env.MemWrite32(lpBuffer + 20, 0x04);          // Protect (PAGE_READWRITE)
+		_env.MemWrite32(lpBuffer + 24, 0x20000);       // Type (MEM_PRIVATE)
+
+		return 28; // Return size of structure written
+	}
+
+	/// <summary>
+	/// Enumerates the locales that are either installed on or supported by an operating system.
+	/// BOOL EnumSystemLocalesA(
+	///   [in] LOCALE_ENUMPROCA lpLocaleEnumProc,
+	///   [in] DWORD            dwFlags
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint EnumSystemLocalesA(uint lpLocaleEnumProc, uint dwFlags)
+	{
+		_logger.LogInformation("[Kernel32] EnumSystemLocalesA(lpLocaleEnumProc=0x{LpLocaleEnumProc:X8}, dwFlags=0x{DwFlags:X})",
+			lpLocaleEnumProc, dwFlags);
+
+		// EnumSystemLocalesA enumerates system locales by calling a callback for each
+		// dwFlags can be LCID_INSTALLED (0x01) or LCID_SUPPORTED (0x02)
+
+		if (lpLocaleEnumProc == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// For a stub implementation, we'll enumerate a few common locales
+		// Real implementation would call the callback for each locale
+		// Callback signature: BOOL CALLBACK EnumLocalesProc(LPSTR lpLocaleString)
+
+		string[] locales = new[]
+		{
+			"00000409", // English (United States)
+			"00000809", // English (United Kingdom)
+			"0000040c", // French (France)
+			"00000407", // German (Germany)
+		};
+
+		foreach (var locale in locales)
+		{
+			// Allocate memory for locale string
+			var localeAddr = _env.HeapAlloc(0, (uint)(locale.Length + 1));
+			_env.WriteAnsiStringAt(localeAddr, locale);
+
+			// Call the callback
+			// Callback returns TRUE to continue enumeration, FALSE to stop
+			// For stub, we just log it instead of calling
+			_logger.LogInformation("[Kernel32] EnumSystemLocalesA: Would enumerate locale \"{Locale}\"", locale);
+
+			// Free the allocated memory
+			// _env.HeapFree(0, 0, localeAddr);
+		}
+
+		return 1; // TRUE (success)
+	}
+
+	/// <summary>
+	/// Converts a file time to MS-DOS date and time values.
+	/// BOOL FileTimeToDosDateTime(
+	///   [in]  const FILETIME *lpFileTime,
+	///   [out] LPWORD         lpFatDate,
+	///   [out] LPWORD         lpFatTime
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint FileTimeToDosDateTime(uint lpFileTime, uint lpFatDate, uint lpFatTime)
+	{
+		_logger.LogInformation("[Kernel32] FileTimeToDosDateTime(lpFileTime=0x{LpFileTime:X8}, lpFatDate=0x{LpFatDate:X8}, lpFatTime=0x{LpFatTime:X8})",
+			lpFileTime, lpFatDate, lpFatTime);
+
+		if (lpFileTime == 0 || lpFatDate == 0 || lpFatTime == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// Read FILETIME (64-bit value split into two 32-bit values)
+		var ftLow = _env.MemRead32(lpFileTime);
+		var ftHigh = _env.MemRead32(lpFileTime + 4);
+
+		// For stub, convert to a default DOS date/time
+		// DOS date format (16-bit):
+		// Bits 0-4: Day (1-31)
+		// Bits 5-8: Month (1-12)
+		// Bits 9-15: Year (0 = 1980, 127 = 2107)
+		// DOS time format (16-bit):
+		// Bits 0-4: Seconds/2 (0-29)
+		// Bits 5-10: Minutes (0-59)
+		// Bits 11-15: Hours (0-23)
+
+		// Use current time as default (January 1, 2000, 12:00:00)
+		ushort dosDate = (ushort)((20 << 9) | (1 << 5) | 1);  // Year 2000, Month 1, Day 1
+		ushort dosTime = (ushort)((12 << 11) | (0 << 5) | 0); // 12:00:00
+
+		_env.MemWrite16(lpFatDate, dosDate);
+		_env.MemWrite16(lpFatTime, dosTime);
+
+		return 1; // TRUE (success)
 	}
 
 }
