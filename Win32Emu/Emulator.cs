@@ -454,6 +454,8 @@ public sealed class Emulator : IDisposable
                 
                 // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                 var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+                var ebpBeforeCall = saved.Ebp;
+                _logger.LogDebug("[COM] Before call: EBP=0x{Ebp:X8}", ebpBeforeCall);
                 
                 if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
                 {
@@ -466,8 +468,11 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("EAX", ret); // Return value in EAX
                     _cpu.SetEip(retEip);
                     
-                    // Restore callee-saved registers
-                    CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                    var ebpAfterCall = _cpu.GetRegister("EBP");
+                    _logger.LogDebug("[COM] After call: EBP=0x{Ebp:X8}", ebpAfterCall);
+                    
+                    // Restore callee-saved registers with selective EBP restore
+                    CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: (uint)_vm!.Size);
                 }
             }
             else if (step.IsCall && _env.TryGetSyntheticExport(step.CallTarget, out var moduleName, out var exportName))
@@ -476,6 +481,8 @@ public sealed class Emulator : IDisposable
                 
                 // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                 var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+                var ebpBeforeCall = saved.Ebp;
+                _logger.LogDebug("[SyntheticExport] Before {ModuleName}!{ExportName}: EBP=0x{Ebp:X8}", moduleName, exportName, ebpBeforeCall);
                 
                 if (_dispatcher!.TryInvoke(moduleName, exportName, _cpu, _vm!, out var ret, out var argBytes))
                 {
@@ -488,8 +495,11 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
                     
-                    // Restore callee-saved registers
-                    CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                    var ebpAfterCall = _cpu.GetRegister("EBP");
+                    _logger.LogDebug("[SyntheticExport] After {ModuleName}!{ExportName}: EBP=0x{Ebp:X8}", moduleName, exportName, ebpAfterCall);
+                    
+                    // Restore callee-saved registers with selective EBP restore
+                    CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: (uint)_vm!.Size);
                 }
             }
             else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
@@ -500,6 +510,10 @@ public sealed class Emulator : IDisposable
                 
                 // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                 var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+                var ebpBeforeCall = saved.Ebp;
+                var ebpWasValid = CpuHelpers.IsEbpValid(ebpBeforeCall, (uint)_vm!.Size);
+                
+                _logger.LogDebug("[Import] Before {Dll}!{Name}: EBP=0x{Ebp:X8} (valid={Valid})", dll, name, ebpBeforeCall, ebpWasValid);
                 
                 if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                 {
@@ -512,8 +526,18 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("ESP", esp);
                     _cpu.SetEip(retEip);
                     
-                    // Restore callee-saved registers
-                    CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                    var ebpAfterCall = _cpu.GetRegister("EBP");
+                    _logger.LogDebug("[Import] After {Dll}!{Name}: EBP=0x{Ebp:X8}", dll, name, ebpAfterCall);
+                    
+                    // Restore callee-saved registers, but skip EBP if it was invalid when saved
+                    // This prevents restoring corrupted EBP values
+                    CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: (uint)_vm!.Size);
+                    
+                    var ebpAfterRestore = _cpu.GetRegister("EBP");
+                    if (ebpAfterRestore != ebpBeforeCall)
+                    {
+                        _logger.LogDebug("[Import] EBP selective restore: 0x{Before:X8} -> 0x{After:X8} (skipped invalid)", ebpBeforeCall, ebpAfterRestore);
+                    }
                 }
             }
             else if (step.IsCall)
