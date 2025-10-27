@@ -25,6 +25,7 @@ public class IcedCpu : IAsyncCpu
 	private int _fpuTop = 0; // Index of ST(0) in the circular stack
 	private ushort _fpuControlWord = 0x037F; // Default FPU control word
 	private ushort _fpuStatusWord = 0x0000; // FPU status word
+	private ushort _fpuTagWord = 0xFFFF; // FPU tag word (all tags set to 11b = empty)
 
 	// RDTSC support - use Stopwatch for high-resolution timing
 	private static readonly Stopwatch RdtscStopwatch = Stopwatch.StartNew();
@@ -3109,6 +3110,7 @@ public class IcedCpu : IAsyncCpu
 		// Reset FPU to default state
 		_fpuControlWord = 0x037F;
 		_fpuStatusWord = 0x0000;
+		_fpuTagWord = 0xFFFF; // All tags set to 11b (empty)
 		_fpuTop = 0;
 		Array.Clear(_fpu, 0, _fpu.Length);
 	}
@@ -3928,7 +3930,8 @@ public class IcedCpu : IAsyncCpu
 			FpuStack = (double[])_fpu.Clone(),
 			FpuTop = _fpuTop,
 			FpuControlWord = _fpuControlWord,
-			FpuStatusWord = _fpuStatusWord
+			FpuStatusWord = _fpuStatusWord,
+			FpuTagWord = _fpuTagWord
 		};
 	}
 
@@ -3954,6 +3957,7 @@ public class IcedCpu : IAsyncCpu
 			_fpuTop = state.FpuTop;
 			_fpuControlWord = state.FpuControlWord;
 			_fpuStatusWord = state.FpuStatusWord;
+			_fpuTagWord = state.FpuTagWord;
 		}
 	}
 

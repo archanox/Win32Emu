@@ -24,6 +24,7 @@ public class JitCpu : IAsyncCpu
 	private int _fpuTop = 0;
 	private ushort _fpuControlWord = 0x037F;
 	private ushort _fpuStatusWord = 0x0000;
+	private ushort _fpuTagWord = 0xFFFF; // All tags set to 11b (empty)
 	
 	// JIT compilation infrastructure
 	private readonly Dictionary<uint, CompiledBlock> _compiledBlocks = new();
@@ -299,7 +300,8 @@ public class JitCpu : IAsyncCpu
 			FpuStack = (double[])_fpu.Clone(),
 			FpuTop = _fpuTop,
 			FpuControlWord = _fpuControlWord,
-			FpuStatusWord = _fpuStatusWord
+			FpuStatusWord = _fpuStatusWord,
+			FpuTagWord = _fpuTagWord
 		};
 	}
 
@@ -315,6 +317,7 @@ public class JitCpu : IAsyncCpu
 			_fpuTop = state.FpuTop;
 			_fpuControlWord = state.FpuControlWord;
 			_fpuStatusWord = state.FpuStatusWord;
+			_fpuTagWord = state.FpuTagWord;
 		}
 	}
 
@@ -788,8 +791,14 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Fyl2xp1:
 				throw new NotImplementedException($"[JitCpu] Stubbed FPU instruction: {insn.Mnemonic}");
 			
+			case Mnemonic.Fninit:
+				ExecFninit();
+				break;
+			
 			// MMX instructions
 			case Mnemonic.Emms:
+				ExecEmms();
+				break;
 			case Mnemonic.Movd:
 			case Mnemonic.Movq:
 			case Mnemonic.Packssdw:
@@ -2682,6 +2691,27 @@ public class JitCpu : IAsyncCpu
 		};
 		
 		SetOperandValue(insn, 0, condition ? 1u : 0u);
+	}
+
+	private void ExecFninit()
+	{
+		// FNINIT - Initialize FPU (no wait)
+		// Reset FPU to default state
+		_fpuControlWord = 0x037F;
+		_fpuStatusWord = 0x0000;
+		_fpuTagWord = 0xFFFF; // All tags set to 11b (empty)
+		_fpuTop = 0;
+		Array.Clear(_fpu, 0, _fpu.Length);
+	}
+
+	private void ExecEmms()
+	{
+		// EMMS - Empty MMX State
+		// This instruction sets the x87 FPU tag word to empty (all tags = 11b)
+		// This is required after using MMX instructions before using x87 FPU instructions
+		// Each of the 8 FPU registers uses 2 bits in the tag word:
+		//   00b = Valid, 01b = Zero, 10b = Special, 11b = Empty
+		_fpuTagWord = 0xFFFF; // Set all 8 tags to 11b (empty)
 	}
 
 	private sealed class SimpleMemoryCodeReader : CodeReader
