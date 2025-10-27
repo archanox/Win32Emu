@@ -385,6 +385,11 @@ public sealed class Emulator : IDisposable
                 }
             }
 
+            // Defensive check: Detect and fix obviously invalid EBP before execution
+            // EBP should generally point to a stack frame, not be 0 or very small values
+            // This prevents crashes when code tries to access [EBP+offset] with invalid EBP
+            ValidateAndFixEbp();
+
             var step = _cpu!.SingleStep(_vm!);
             
             // Record instruction execution
@@ -1114,6 +1119,55 @@ public sealed class Emulator : IDisposable
     private const uint SYNTHETIC_EXPORT_LIMIT = 0x0F000000;
     private const uint IMPORT_HOOK_BASE = 0x0F000000;      // Static import table hooks
     private const uint IMPORT_HOOK_LIMIT = 0x10000000;
+    
+    /// <summary>
+    /// Validates EBP register and fixes it if it contains an obviously invalid value.
+    /// This prevents crashes when code tries to access [EBP+offset] with invalid EBP.
+    /// </summary>
+    private void ValidateAndFixEbp()
+    {
+        var ebp = _cpu!.GetRegister("EBP");
+        var esp = _cpu!.GetRegister("ESP");
+        
+        // Define plausible stack region (assume 1MB stack)
+        const uint STACK_SIZE = 0x100000; // 1MB
+        var stackBottom = (esp > STACK_SIZE) ? (esp - STACK_SIZE) : 0x00100000;
+        const uint STACK_SLACK_BYTES = 0x1000; // 4KB slack above ESP
+        
+        // Check if EBP is within reasonable stack range
+        var ebpInStackRegion = (ebp >= stackBottom) && (ebp <= esp + STACK_SLACK_BYTES);
+        
+        // Check if EBP is aligned (should be 4-byte aligned)
+        var ebpAligned = (ebp & 0x3) == 0;
+        
+        // Check for obviously invalid values
+        var ebpIsZero = (ebp == 0);
+        var ebpIsVerySmall = (ebp < 0x1000); // Below 4KB is suspicious
+        var ebpIsImportHook = (ebp >= IMPORT_HOOK_BASE && ebp < IMPORT_HOOK_LIMIT);
+        
+        // Check if EBP looks like a COM/heap pointer being used for special purposes
+        var ebpIsHeapPointer = (ebp >= 0x01000000 && ebp < 0x70000000) && !ebpInStackRegion;
+        
+        // If EBP is clearly invalid and not a special-purpose pointer, fix it
+        if ((ebpIsZero || ebpIsVerySmall) && !ebpIsHeapPointer)
+        {
+            _cpu!.SetRegister("EBP", esp);
+            _logger.LogDebug("[Emulator] Reset invalid EBP 0x{OldEBP:X8} to ESP 0x{NewEBP:X8} (too small/zero)", ebp, esp);
+        }
+        else if (ebpIsImportHook)
+        {
+            // EBP contains an import hook address - reset to ESP
+            _cpu!.SetRegister("EBP", esp);
+            _logger.LogDebug("[Emulator] Reset EBP from import hook 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", ebp, esp);
+        }
+        else if (!ebpAligned && ebpInStackRegion)
+        {
+            // EBP is unaligned but in stack region - this is clearly wrong
+            _cpu!.SetRegister("EBP", esp);
+            _logger.LogDebug("[Emulator] Reset unaligned EBP 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", ebp, esp);
+        }
+        // Otherwise, leave EBP alone - it might be a valid heap pointer or special-purpose value
+    }
     
     private void RestoreEbpFromStack(uint esp)
     {
