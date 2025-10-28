@@ -1,34 +1,26 @@
 using Microsoft.Extensions.Logging;
-using Silk.NET.GLFW;
-using Silk.NET.OpenGL;
+using SDL3;
 using System.Runtime.InteropServices;
 
 namespace Win32Emu.Rendering;
 
 /// <summary>
 /// Software (CPU-based) rendering backend for DirectDraw operations.
-/// This backend uses CPU-based rendering with a windowed display using Silk.NET.GLFW.
+/// This backend uses SDL3's software renderer for true CPU-only rendering without GPU acceleration.
 /// Suitable for macOS and other platforms where GPU acceleration may not be available or desired.
 /// </summary>
 public unsafe class SoftwareRenderingBackend : IRenderingBackend
 {
     private readonly ILogger _logger;
-    private readonly Glfw _glfw;
-    private WindowHandle* _window;
-    private GL? _gl;
-    private uint _textureId;
+    private IntPtr _window;
+    private IntPtr _renderer;
+    private IntPtr _texture;
     private int _width;
     private int _height;
     private bool _initialized;
     private readonly object _lock = new();
     private bool _disposed;
     private byte[]? _frameBuffer;
-    private GlfwCallbacks.ErrorCallback? _errorCallback;
-    
-    // OpenGL rendering pipeline components
-    private uint _shaderProgram;
-    private uint _vao;
-    private uint _vbo;
 
     /// <summary>
     /// Event fired when a UI event occurs (mouse, keyboard, window)
@@ -38,7 +30,6 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
     public SoftwareRenderingBackend(ILogger logger)
     {
         _logger = logger;
-        _glfw = Glfw.GetApi();
     }
 
     public bool Initialize(int width, int height, string title = "Win32Emu Display")
@@ -55,59 +46,57 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
 
             try
             {
-                _logger.LogInformation("[Software] Initializing software rendering backend ({Width}x{Height})...", width, height);
+                _logger.LogInformation("[Software] Initializing SDL3 software rendering backend ({Width}x{Height})...", width, height);
 
-                // Set up GLFW error callback
-                _errorCallback = (Silk.NET.GLFW.ErrorCode error, string description) =>
-                {
-                    _logger.LogError("[Software] GLFW Error {ErrorCode}: {Description}", error, description);
-                };
-                _glfw.SetErrorCallback(_errorCallback);
+                // Critical: Set app metadata before any SDL initialization
+                Sdl3Initializer.EnsureAppMetadataSet();
 
-                // Initialize GLFW
-                if (!_glfw.Init())
+                // Initialize SDL video subsystem
+                if (!SDL.Init(SDL.InitFlags.Video))
                 {
-                    _logger.LogError("[Software] Failed to initialize GLFW");
+                    _logger.LogError("[Software] Failed to initialize SDL video: {Error}", SDL.GetError());
                     return false;
                 }
-
-                // Set window hints for OpenGL 3.2 Core
-                _glfw.WindowHint(WindowHintInt.ContextVersionMajor, 3);
-                _glfw.WindowHint(WindowHintInt.ContextVersionMinor, 2);
-                _glfw.WindowHint(WindowHintOpenGlProfile.OpenGlProfile, OpenGlProfile.Core);
-                _glfw.WindowHint(WindowHintBool.Resizable, true);
-                _glfw.WindowHint(WindowHintBool.OpenGLForwardCompat, true); // Required for macOS
 
                 // Create window
-                _window = _glfw.CreateWindow(width, height, title, null, null);
-                if (_window == null)
+                _window = SDL.CreateWindow(title, width, height, SDL.WindowFlags.Hidden);
+                if (_window == IntPtr.Zero)
                 {
-                    _logger.LogError("[Software] Failed to create window");
-                    _glfw.Terminate();
+                    _logger.LogError("[Software] Failed to create window: {Error}", SDL.GetError());
+                    SDL.Quit();
                     return false;
                 }
 
-                // Make context current and load OpenGL
-                _glfw.MakeContextCurrent(_window);
-                _gl = GL.GetApi(_glfw.GetProcAddress);
-
-                if (_gl == null)
+                // Create software renderer (CPU-only, no GPU acceleration)
+                _renderer = SDL.CreateRenderer(_window, null);
+                if (_renderer == IntPtr.Zero)
                 {
-                    _logger.LogError("[Software] Failed to load OpenGL");
-                    _glfw.DestroyWindow(_window);
-                    _glfw.Terminate();
+                    _logger.LogError("[Software] Failed to create software renderer: {Error}", SDL.GetError());
+                    SDL.DestroyWindow(_window);
+                    SDL.Quit();
                     return false;
                 }
 
-                // Set up window callbacks for event processing
-                SetupWindowCallbacks();
+                _logger.LogInformation("[Software] Created software renderer");
 
-                // Initialize OpenGL rendering pipeline
-                InitializeOpenGL();
+                // Create streaming texture for frame updates (RGBA format)
+                _texture = SDL.CreateTexture(_renderer, SDL.PixelFormat.RGBA8888, 
+                    SDL.TextureAccess.Streaming, width, height);
+                if (_texture == IntPtr.Zero)
+                {
+                    _logger.LogError("[Software] Failed to create texture: {Error}", SDL.GetError());
+                    SDL.DestroyRenderer(_renderer);
+                    SDL.DestroyWindow(_window);
+                    SDL.Quit();
+                    return false;
+                }
 
                 // Allocate frame buffer (RGBA format)
                 var bufferSize = width * height * 4; // 4 bytes per pixel (RGBA)
                 _frameBuffer = new byte[bufferSize];
+
+                // Show the window
+                SDL.ShowWindow(_window);
 
                 _initialized = true;
                 _logger.LogInformation("[Software] Software rendering backend initialized successfully");
@@ -120,197 +109,6 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
                 return false;
             }
         }
-    }
-
-    private void SetupWindowCallbacks()
-    {
-        // Window focus callback
-        _glfw.SetWindowFocusCallback(_window, (window, focused) =>
-        {
-            if (focused)
-            {
-                OnUIEvent(new UIEventArgs
-                {
-                    EventType = UIEventType.WindowActivate,
-                    WindowHandle = (uint)(nint)window
-                });
-            }
-            else
-            {
-                OnUIEvent(new UIEventArgs
-                {
-                    EventType = UIEventType.WindowDeactivate,
-                    WindowHandle = (uint)(nint)window
-                });
-            }
-        });
-
-        // Keyboard callback
-        _glfw.SetKeyCallback(_window, (window, key, scancode, action, mods) =>
-        {
-            OnUIEvent(new UIEventArgs
-            {
-                EventType = action == InputAction.Press ? UIEventType.KeyDown : UIEventType.KeyUp,
-                WindowHandle = (uint)(nint)window,
-                KeyCode = (int)key,
-                IsPressed = action == InputAction.Press
-            });
-        });
-
-        // Mouse button callback
-        _glfw.SetMouseButtonCallback(_window, (window, button, action, mods) =>
-        {
-            _glfw.GetCursorPos(window, out double xPos, out double yPos);
-            OnUIEvent(new UIEventArgs
-            {
-                EventType = action == InputAction.Press ? UIEventType.MouseButtonDown : UIEventType.MouseButtonUp,
-                WindowHandle = (uint)(nint)window,
-                MouseX = (int)xPos,
-                MouseY = (int)yPos,
-                IsPressed = action == InputAction.Press
-            });
-        });
-
-        // Mouse move callback
-        _glfw.SetCursorPosCallback(_window, (window, xPos, yPos) =>
-        {
-            OnUIEvent(new UIEventArgs
-            {
-                EventType = UIEventType.MouseMove,
-                WindowHandle = (uint)(nint)window,
-                MouseX = (int)xPos,
-                MouseY = (int)yPos
-            });
-        });
-
-        // Window close callback
-        _glfw.SetWindowCloseCallback(_window, (window) =>
-        {
-            OnUIEvent(new UIEventArgs
-            {
-                EventType = UIEventType.WindowClose,
-                WindowHandle = (uint)(nint)window
-            });
-        });
-    }
-
-    private void InitializeOpenGL()
-    {
-        if (_gl == null) return;
-
-        // Create and compile vertex shader
-        const string vertexShaderSource = @"
-            #version 330 core
-            layout (location = 0) in vec2 aPosition;
-            layout (location = 1) in vec2 aTexCoord;
-            out vec2 TexCoord;
-            void main()
-            {
-                gl_Position = vec4(aPosition, 0.0, 1.0);
-                TexCoord = aTexCoord;
-            }
-        ";
-
-        const string fragmentShaderSource = @"
-            #version 330 core
-            in vec2 TexCoord;
-            out vec4 FragColor;
-            uniform sampler2D uTexture;
-            void main()
-            {
-                FragColor = texture(uTexture, TexCoord);
-            }
-        ";
-
-        var vertexShader = _gl.CreateShader(ShaderType.VertexShader);
-        _gl.ShaderSource(vertexShader, vertexShaderSource);
-        _gl.CompileShader(vertexShader);
-        CheckShaderCompilation(vertexShader, "vertex");
-
-        var fragmentShader = _gl.CreateShader(ShaderType.FragmentShader);
-        _gl.ShaderSource(fragmentShader, fragmentShaderSource);
-        _gl.CompileShader(fragmentShader);
-        CheckShaderCompilation(fragmentShader, "fragment");
-
-        _shaderProgram = _gl.CreateProgram();
-        _gl.AttachShader(_shaderProgram, vertexShader);
-        _gl.AttachShader(_shaderProgram, fragmentShader);
-        _gl.LinkProgram(_shaderProgram);
-        CheckProgramLinking(_shaderProgram);
-
-        _gl.DeleteShader(vertexShader);
-        _gl.DeleteShader(fragmentShader);
-
-        // Create fullscreen quad
-        float[] vertices = new float[]
-        {
-            // positions   // texCoords
-            -1.0f,  1.0f,  0.0f, 1.0f, // top left
-            -1.0f, -1.0f,  0.0f, 0.0f, // bottom left
-             1.0f, -1.0f,  1.0f, 0.0f, // bottom right
-            -1.0f,  1.0f,  0.0f, 1.0f, // top left
-             1.0f, -1.0f,  1.0f, 0.0f, // bottom right
-             1.0f,  1.0f,  1.0f, 1.0f  // top right
-        };
-
-        _vao = _gl.GenVertexArray();
-        _gl.BindVertexArray(_vao);
-
-        _vbo = _gl.GenBuffer();
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
-        
-        // Use fixed pointer for BufferData
-        fixed (float* verticesPtr = vertices)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), verticesPtr, BufferUsageARB.StaticDraw);
-        }
-
-        _gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), (void*)0);
-        _gl.EnableVertexAttribArray(0);
-        _gl.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-        _gl.EnableVertexAttribArray(1);
-
-        // Create texture
-        _textureId = _gl.GenTexture();
-        _gl.BindTexture(TextureTarget.Texture2D, _textureId);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-
-        // Allocate texture storage
-        _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)_width, (uint)_height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, null);
-
-        _gl.BindVertexArray(0);
-    }
-
-    private void CheckShaderCompilation(uint shader, string type)
-    {
-        if (_gl == null) return;
-        
-        _gl.GetShader(shader, ShaderParameterName.CompileStatus, out int success);
-        if (success == 0)
-        {
-            var infoLog = _gl.GetShaderInfoLog(shader);
-            _logger.LogError("[Software] {Type} shader compilation failed: {InfoLog}", type, infoLog);
-        }
-    }
-
-    private void CheckProgramLinking(uint program)
-    {
-        if (_gl == null) return;
-        
-        _gl.GetProgram(program, ProgramPropertyARB.LinkStatus, out int success);
-        if (success == 0)
-        {
-            var infoLog = _gl.GetProgramInfoLog(program);
-            _logger.LogError("[Software] Shader program linking failed: {InfoLog}", infoLog);
-        }
-    }
-
-    protected virtual void OnUIEvent(UIEventArgs e)
-    {
-        UIEvent?.Invoke(this, e);
     }
 
     public byte[] ConvertPalettizedToRGBA(byte[] indexedData, uint[] palette, int width, int height, int pitch)
@@ -460,20 +258,20 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
                 var copySize = Math.Min(data.Length, _frameBuffer.Length);
                 Array.Copy(data, 0, _frameBuffer, 0, copySize);
 
-                // Upload to OpenGL texture for display
-                if (_gl != null && _textureId != 0)
+                // Update SDL texture with CPU-rendered data (software blit, no GPU)
+                fixed (byte* dataPtr = _frameBuffer)
                 {
-                    _gl.BindTexture(TextureTarget.Texture2D, _textureId);
-                    
-                    fixed (byte* dataPtr = _frameBuffer)
+                    if (!SDL.UpdateTexture(_texture, IntPtr.Zero, (IntPtr)dataPtr, _width * 4))
                     {
-                        _gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, 0, (uint)_width, (uint)_height, 
-                            PixelFormat.Rgba, PixelType.UnsignedByte, dataPtr);
+                        _logger.LogError("[Software] Failed to update texture: {Error}", SDL.GetError());
+                        return false;
                     }
-
-                    // Render the texture to the window
-                    RenderFrame();
                 }
+
+                // Render to window using software renderer
+                SDL.RenderClear(_renderer);
+                SDL.RenderTexture(_renderer, _texture, IntPtr.Zero, IntPtr.Zero);
+                SDL.RenderPresent(_renderer);
 
                 _logger.LogDebug("[Software] Frame buffer updated: {Size} bytes copied", copySize);
                 return true;
@@ -484,20 +282,6 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
                 return false;
             }
         }
-    }
-
-    private void RenderFrame()
-    {
-        if (_gl == null || _window == null) return;
-
-        _gl.Clear(ClearBufferMask.ColorBufferBit);
-        
-        _gl.UseProgram(_shaderProgram);
-        _gl.BindVertexArray(_vao);
-        _gl.BindTexture(TextureTarget.Texture2D, _textureId);
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
-        
-        _glfw.SwapBuffers(_window);
     }
 
     public void Clear(byte r, byte g, byte b, byte a = 255)
@@ -526,23 +310,100 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
     {
         lock (_lock)
         {
-            if (!_initialized || _window == null)
+            if (!_initialized || _window == IntPtr.Zero)
             {
                 return;
             }
 
             try
             {
-                _glfw.PollEvents();
-                
-                // Check if window should close
-                if (_glfw.WindowShouldClose(_window))
+                // Poll SDL events
+                SDL.Event evt;
+                while (SDL.PollEvent(out evt))
                 {
-                    OnUIEvent(new UIEventArgs
+                    switch ((SDL.EventType)evt.Type)
                     {
-                        EventType = UIEventType.WindowClose,
-                        WindowHandle = (uint)(nint)_window
-                    });
+                        case SDL.EventType.WindowShown:
+                        case SDL.EventType.WindowExposed:
+                        case SDL.EventType.WindowFocusGained:
+                            OnUIEvent(new UIEventArgs
+                            {
+                                EventType = UIEventType.WindowActivate,
+                                WindowHandle = evt.Window.WindowID
+                            });
+                            break;
+
+                        case SDL.EventType.WindowHidden:
+                        case SDL.EventType.WindowMinimized:
+                        case SDL.EventType.WindowFocusLost:
+                            OnUIEvent(new UIEventArgs
+                            {
+                                EventType = UIEventType.WindowDeactivate,
+                                WindowHandle = evt.Window.WindowID
+                            });
+                            break;
+
+                        case SDL.EventType.WindowCloseRequested:
+                        case SDL.EventType.Quit:
+                            OnUIEvent(new UIEventArgs
+                            {
+                                EventType = UIEventType.WindowClose,
+                                WindowHandle = evt.Window.WindowID
+                            });
+                            break;
+
+                        case SDL.EventType.KeyDown:
+                            OnUIEvent(new UIEventArgs
+                            {
+                                EventType = UIEventType.KeyDown,
+                                WindowHandle = evt.Key.WindowID,
+                                KeyCode = (int)evt.Key.Key,
+                                IsPressed = true
+                            });
+                            break;
+
+                        case SDL.EventType.KeyUp:
+                            OnUIEvent(new UIEventArgs
+                            {
+                                EventType = UIEventType.KeyUp,
+                                WindowHandle = evt.Key.WindowID,
+                                KeyCode = (int)evt.Key.Key,
+                                IsPressed = false
+                            });
+                            break;
+
+                        case SDL.EventType.MouseMotion:
+                            OnUIEvent(new UIEventArgs
+                            {
+                                EventType = UIEventType.MouseMove,
+                                WindowHandle = evt.Motion.WindowID,
+                                MouseX = (int)evt.Motion.X,
+                                MouseY = (int)evt.Motion.Y
+                            });
+                            break;
+
+                        case SDL.EventType.MouseButtonDown:
+                            OnUIEvent(new UIEventArgs
+                            {
+                                EventType = UIEventType.MouseButtonDown,
+                                WindowHandle = evt.Button.WindowID,
+                                MouseX = (int)evt.Button.X,
+                                MouseY = (int)evt.Button.Y,
+                                IsPressed = true
+                            });
+                            break;
+
+                        case SDL.EventType.MouseButtonUp:
+                            OnUIEvent(new UIEventArgs
+                            {
+                                EventType = UIEventType.MouseButtonUp,
+                                WindowHandle = evt.Button.WindowID,
+                                MouseX = (int)evt.Button.X,
+                                MouseY = (int)evt.Button.Y,
+                                IsPressed = false
+                            });
+                            break;
+                    }
                 }
             }
             catch (Exception ex)
@@ -550,6 +411,11 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
                 _logger.LogError(ex, "[Software] Error processing events");
             }
         }
+    }
+
+    protected virtual void OnUIEvent(UIEventArgs e)
+    {
+        UIEvent?.Invoke(this, e);
     }
 
     public bool IsInitialized => _initialized;
@@ -578,46 +444,28 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
 
     private void Cleanup()
     {
-        // Clean up OpenGL resources
-        if (_gl != null)
+        // Clean up SDL resources
+        if (_texture != IntPtr.Zero)
         {
-            if (_textureId != 0)
-            {
-                _gl.DeleteTexture(_textureId);
-                _textureId = 0;
-            }
-
-            if (_vbo != 0)
-            {
-                _gl.DeleteBuffer(_vbo);
-                _vbo = 0;
-            }
-
-            if (_vao != 0)
-            {
-                _gl.DeleteVertexArray(_vao);
-                _vao = 0;
-            }
-
-            if (_shaderProgram != 0)
-            {
-                _gl.DeleteProgram(_shaderProgram);
-                _shaderProgram = 0;
-            }
-
-            _gl = null;
+            SDL.DestroyTexture(_texture);
+            _texture = IntPtr.Zero;
         }
 
-        // Clean up GLFW resources
-        if (_window != null)
+        if (_renderer != IntPtr.Zero)
         {
-            _glfw.DestroyWindow(_window);
-            _window = null;
+            SDL.DestroyRenderer(_renderer);
+            _renderer = IntPtr.Zero;
+        }
+
+        if (_window != IntPtr.Zero)
+        {
+            SDL.DestroyWindow(_window);
+            _window = IntPtr.Zero;
         }
 
         if (_initialized)
         {
-            _glfw.Terminate();
+            SDL.Quit();
         }
 
         _frameBuffer = null;
