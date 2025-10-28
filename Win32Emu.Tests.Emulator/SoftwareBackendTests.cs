@@ -8,7 +8,7 @@ public class SoftwareBackendTests
     [Fact]
     public void SoftwareRenderingBackend_Initialize_ShouldSucceed()
     {
-        // Arrange & Act & Assert - should not throw even if GLFW is not available
+        // Arrange & Act & Assert - should not throw even if SDL3 is not available
         try
         {
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
@@ -26,11 +26,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available in CI - this is OK
+            // SDL3 not available in CI - this is OK
         }
         catch (Exception)
         {
-            // GLFW initialization can fail for various reasons (no display, etc.) - OK in CI
+            // SDL3 initialization can fail for various reasons (no display, etc.) - OK in CI
         }
     }
 
@@ -52,11 +52,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available in CI - skip test
+            // SDL3 not available in CI - skip test
         }
         catch (Exception)
         {
-            // GLFW initialization can fail - skip test
+            // SDL3 initialization can fail - skip test
         }
     }
 
@@ -92,11 +92,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available in CI - skip test
+            // SDL3 not available in CI - skip test
         }
         catch (Exception)
         {
-            // GLFW operations can fail - skip test
+            // SDL3 operations can fail - skip test
         }
     }
 
@@ -117,11 +117,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available - test passes
+            // SDL3 not available - test passes
         }
         catch (Exception)
         {
-            // GLFW initialization can fail - test passes
+            // SDL3 initialization can fail - test passes
         }
     }
 
@@ -146,11 +146,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available - skip test
+            // SDL3 not available - skip test
         }
         catch (Exception)
         {
-            // GLFW operations can fail - skip test
+            // SDL3 operations can fail - skip test
         }
     }
 
@@ -172,11 +172,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available in CI - skip test
+            // SDL3 not available in CI - skip test
         }
         catch (Exception)
         {
-            // GLFW operations can fail - skip test
+            // SDL3 operations can fail - skip test
         }
     }
 
@@ -198,11 +198,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available in CI - skip test
+            // SDL3 not available in CI - skip test
         }
         catch (Exception)
         {
-            // GLFW operations can fail - skip test
+            // SDL3 operations can fail - skip test
         }
     }
 
@@ -237,11 +237,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available - skip test
+            // SDL3 not available - skip test
         }
         catch (Exception)
         {
-            // GLFW operations can fail - skip test
+            // SDL3 operations can fail - skip test
         }
     }
 
@@ -270,11 +270,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available - skip test
+            // SDL3 not available - skip test
         }
         catch (Exception)
         {
-            // GLFW operations can fail - skip test
+            // SDL3 operations can fail - skip test
         }
     }
 
@@ -304,11 +304,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available - skip test
+            // SDL3 not available - skip test
         }
         catch (Exception)
         {
-            // GLFW operations can fail - skip test
+            // SDL3 operations can fail - skip test
         }
     }
 
@@ -329,11 +329,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available - test passes
+            // SDL3 not available - test passes
         }
         catch (Exception)
         {
-            // GLFW initialization can fail - test passes
+            // SDL3 initialization can fail - test passes
         }
     }
 
@@ -352,11 +352,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available - test passes
+            // SDL3 not available - test passes
         }
         catch (Exception)
         {
-            // GLFW initialization can fail - test passes
+            // SDL3 initialization can fail - test passes
         }
     }
 
@@ -375,11 +375,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available - skip test
+            // SDL3 not available - skip test
         }
         catch (Exception)
         {
-            // GLFW operations can fail - skip test
+            // SDL3 operations can fail - skip test
         }
     }
 
@@ -398,11 +398,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available - skip test
+            // SDL3 not available - skip test
         }
         catch (Exception)
         {
-            // GLFW operations can fail - skip test
+            // SDL3 operations can fail - skip test
         }
     }
 
@@ -420,11 +420,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available - skip test
+            // SDL3 not available - skip test
         }
         catch (Exception)
         {
-            // GLFW operations can fail - skip test
+            // SDL3 operations can fail - skip test
         }
     }
 
@@ -442,11 +442,11 @@ public class SoftwareBackendTests
         }
         catch (DllNotFoundException)
         {
-            // GLFW not available - skip test
+            // SDL3 not available - skip test
         }
         catch (Exception)
         {
-            // GLFW operations can fail - skip test
+            // SDL3 operations can fail - skip test
         }
     }
 }
