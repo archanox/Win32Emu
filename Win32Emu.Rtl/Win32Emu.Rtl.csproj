@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Iced" Version="1.21.0" />
-    <PackageReference Include="Lokad.ILPack" Version="0.2.0" />
+    <PackageReference Include="Lokad.ILPack" Version="0.3.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
   </ItemGroup>
