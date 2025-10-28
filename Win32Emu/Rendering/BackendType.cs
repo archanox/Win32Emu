@@ -23,5 +23,10 @@ public enum BackendType
     /// <summary>
     /// Metal backend using SharpMetal (macOS only)
     /// </summary>
-    Metal
+    Metal,
+
+    /// <summary>
+    /// Software (CPU-based) rendering backend - no GPU acceleration required
+    /// </summary>
+    Software
 }

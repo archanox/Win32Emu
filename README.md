@@ -49,6 +49,12 @@ Win32Emu game.exe --backend GLFW
 # Run with Vulkan backend (uses MoltenVK on macOS)
 Win32Emu game.exe --backend Vulkan
 
+# Run with Metal backend (macOS only, hardware-accelerated)
+Win32Emu game.exe --backend Metal
+
+# Run with Software backend (CPU-based, no GPU required)
+Win32Emu game.exe --backend Software
+
 # Run with enhanced debugging
 Win32Emu game.exe --debug
 
@@ -100,6 +106,8 @@ Win32Emu uses pluggable backends for cross-platform multimedia support:
 - **SDL** (default): SDL3-CS - Native Metal on macOS, Vulkan on Linux, DirectX 12 on Windows. Best compatibility, hardware-accelerated
 - **GLFW**: Silk.NET.GLFW + OpenGL - Alternative for systems where SDL has issues
 - **Vulkan**: Silk.NET.Vulkan - Modern GPU API with cross-platform support (uses MoltenVK on macOS)
+- **Metal**: SharpMetal - Native Metal backend for macOS (hardware-accelerated)
+- **Software**: SDL3 software renderer - True CPU-only rendering with windowing and event support. No GPU acceleration required, ideal for macOS, debugging, or systems without GPU support
 
 ### Audio Backend
 - **SDL Audio**: SDL3-CS audio when using SDL backend - Native audio support
@@ -110,8 +118,8 @@ Win32Emu uses pluggable backends for cross-platform multimedia support:
 - **Silk.NET.Input**: Unified keyboard, mouse, and gamepad support for GLFW/Vulkan backends
 
 **Configuration:**
-- Command-line: `--backend SDL`, `--backend GLFW`, or `--backend Vulkan`
-- Environment variable: `WIN32EMU_BACKEND=SDL`, `WIN32EMU_BACKEND=GLFW` or `WIN32EMU_BACKEND=Vulkan`
+- Command-line: `--backend SDL`, `--backend GLFW`, `--backend Vulkan`, `--backend Metal`, or `--backend Software`
+- Environment variable: `WIN32EMU_BACKEND=SDL`, `WIN32EMU_BACKEND=GLFW`, `WIN32EMU_BACKEND=Vulkan`, `WIN32EMU_BACKEND=Metal`, or `WIN32EMU_BACKEND=Software`
 - Programmatic: `BackendFactory.CurrentBackendType = BackendType.SDL;`
 
 See [SILK_NET_MIGRATION.md](SILK_NET_MIGRATION.md) for detailed documentation.
