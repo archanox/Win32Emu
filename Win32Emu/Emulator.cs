@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Runtime.InteropServices;
 using Win32Emu.Cpu;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Debugging;
@@ -140,6 +141,17 @@ public sealed class Emulator : IDisposable
         {
             throw new FileNotFoundException($"File not found: {path}");
         }
+
+        // Log system information
+        var osDescription = RuntimeInformation.OSDescription;
+        var osArchitecture = RuntimeInformation.OSArchitecture;
+        var processArchitecture = RuntimeInformation.ProcessArchitecture;
+        _logger.LogInformation("[Loader] Host OS: {OSDescription} ({OSArchitecture})", osDescription, osArchitecture);
+        _logger.LogInformation("[Loader] Process Architecture: {ProcessArchitecture}", processArchitecture);
+        
+        // Log CPU backend selection
+        var cpuBackend = useUnicornCpu ? "Unicorn" : (useJitCpu ? "JitCpu" : "IcedCpu");
+        _logger.LogInformation("[Loader] Selected CPU Emulator: {CpuBackend}", cpuBackend);
 
         LogDebug($"[Loader] Loading PE: {path}");
         // Convert MB to bytes for VirtualMemory constructor
