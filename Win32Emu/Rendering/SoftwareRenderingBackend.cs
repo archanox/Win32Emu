@@ -60,6 +60,8 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
 
                 // Force SDL to use the software rendering driver
                 SDL.SetHint("SDL_RENDER_DRIVER", "software");
+                // Force SDL to use the software rendering driver
+                SDL.SetHint("SDL_RENDER_DRIVER", "software");
                 // Create window
                 _window = SDL.CreateWindow(title, width, height, SDL.WindowFlags.Hidden);
                 if (_window == IntPtr.Zero)
