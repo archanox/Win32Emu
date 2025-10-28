@@ -384,7 +384,7 @@ public uint GetModuleHandleA(uint lpModuleName)
 {
     var lpModuleNameStr = _memory?.ReadCString(lpModuleName) ?? string.Empty;
     _logger.LogWarning("GetModuleHandleA called but not fully implemented");
-    return 0 // NULL handle;
+    return 0; // NULL handle;
 }
 ```
 
