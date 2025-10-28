@@ -7,89 +7,112 @@ class Program
 {
     static async Task<int> Main(string[] args)
     {
-        var rootCommand = new RootCommand("Win32Emu Code Generation Tools - API Metadata Parser and Validator");
-        
         // Command: analyze-dlls
-        var analyzeDllsCommand = new Command("analyze-dlls", "Analyze PE DLL exports and compare with implemented APIs");
         var dllDirOption = new Option<string>(
             "--dll-dir",
-            description: "Directory containing DLLs to analyze (e.g., DLLs/WinME)",
-            getDefaultValue: () => "DLLs/WinME"
-        );
+            "Directory containing DLLs to analyze (e.g., DLLs/WinME)"
+        ) { DefaultValueFactory = _ => "DLLs/WinME" };
         var outputOption = new Option<string?>(
             "--output",
-            description: "Output file for the report (optional, defaults to console)"
+            "Output file for the report (optional, defaults to console)"
         );
-        
-        analyzeDllsCommand.AddOption(dllDirOption);
-        analyzeDllsCommand.AddOption(outputOption);
-        analyzeDllsCommand.SetHandler(AnalyzeDlls, dllDirOption, outputOption);
+        var analyzeDllsCommand = new Command("analyze-dlls", "Analyze PE DLL exports and compare with implemented APIs")
+        {
+            dllDirOption,
+            outputOption
+        };
+        analyzeDllsCommand.SetAction((parseResult) =>
+        {
+            var dllDir = parseResult.GetValue(dllDirOption)!;
+            var output = parseResult.GetValue(outputOption);
+            AnalyzeDlls(dllDir, output);
+        });
         
         // Command: parse-xml
-        var parseXmlCommand = new Command("parse-xml", "Parse API Monitor XML files");
         var xmlDirOption = new Option<string>(
             "--xml-dir",
-            description: "Directory containing API Monitor XML files"
+            "Directory containing API Monitor XML files"
         );
-        
-        parseXmlCommand.AddOption(xmlDirOption);
-        parseXmlCommand.SetHandler(ParseXml, xmlDirOption);
+        var parseXmlCommand = new Command("parse-xml", "Parse API Monitor XML files")
+        {
+            xmlDirOption
+        };
+        parseXmlCommand.SetAction((parseResult) =>
+        {
+            var xmlDir = parseResult.GetValue(xmlDirOption)!;
+            ParseXml(xmlDir);
+        });
         
         // Command: coverage-report
-        var coverageCommand = new Command("coverage-report", "Generate API coverage report");
         var winmeOption = new Option<string>(
             "--winme",
-            description: "Path to WinME DLLs directory",
-            getDefaultValue: () => "DLLs/WinME"
-        );
+            "Path to WinME DLLs directory"
+        ) { DefaultValueFactory = _ => "DLLs/WinME" };
         var winxpOption = new Option<string>(
             "--winxp",
-            description: "Path to WinXP DLLs directory",
-            getDefaultValue: () => "DLLs/WinXP"
-        );
+            "Path to WinXP DLLs directory"
+        ) { DefaultValueFactory = _ => "DLLs/WinXP" };
         var reportOutputOption = new Option<string?>(
             "--output",
-            description: "Output file for the report (optional, defaults to console)"
+            "Output file for the report (optional, defaults to console)"
         );
         var assemblyOption = new Option<string?>(
             "--assembly",
-            description: "Path to Win32Emu.dll to extract implemented APIs (optional)"
+            "Path to Win32Emu.dll to extract implemented APIs (optional)"
         );
-        
-        coverageCommand.AddOption(winmeOption);
-        coverageCommand.AddOption(winxpOption);
-        coverageCommand.AddOption(reportOutputOption);
-        coverageCommand.AddOption(assemblyOption);
-        coverageCommand.SetHandler(GenerateCoverageReport, winmeOption, winxpOption, reportOutputOption, assemblyOption);
+        var coverageCommand = new Command("coverage-report", "Generate API coverage report")
+        {
+            winmeOption,
+            winxpOption,
+            reportOutputOption,
+            assemblyOption
+        };
+        coverageCommand.SetAction((parseResult) =>
+        {
+            var winmePath = parseResult.GetValue(winmeOption)!;
+            var winxpPath = parseResult.GetValue(winxpOption)!;
+            var output = parseResult.GetValue(reportOutputOption);
+            var assemblyPath = parseResult.GetValue(assemblyOption);
+            GenerateCoverageReport(winmePath, winxpPath, output, assemblyPath);
+        });
         
         // Command: generate-stubs
-        var generateStubsCommand = new Command("generate-stubs", "Generate C# stub methods for APIs");
         var dllNameOption = new Option<string>(
             "--dll",
-            description: "DLL name to generate stubs for (e.g., ADVAPI32.DLL)"
-        ) { IsRequired = true };
+            "DLL name to generate stubs for (e.g., ADVAPI32.DLL)"
+        ) { Required = true };
         var stubOutputOption = new Option<string>(
             "--output",
-            description: "Output file for generated stubs",
-            getDefaultValue: () => "GeneratedStubs.cs"
-        );
+            "Output file for generated stubs"
+        ) { DefaultValueFactory = _ => "GeneratedStubs.cs" };
         var moduleClassOption = new Option<bool>(
             "--module-class",
-            description: "Generate a complete module class instead of just methods",
-            getDefaultValue: () => false
-        );
+            "Generate a complete module class instead of just methods"
+        ) { DefaultValueFactory = _ => false };
+        var generateStubsCommand = new Command("generate-stubs", "Generate C# stub methods for APIs")
+        {
+            dllNameOption,
+            stubOutputOption,
+            moduleClassOption
+        };
+        generateStubsCommand.SetAction((parseResult) =>
+        {
+            var dllName = parseResult.GetValue(dllNameOption)!;
+            var output = parseResult.GetValue(stubOutputOption)!;
+            var moduleClass = parseResult.GetValue(moduleClassOption);
+            GenerateStubs(dllName, output, moduleClass);
+        });
         
-        generateStubsCommand.AddOption(dllNameOption);
-        generateStubsCommand.AddOption(stubOutputOption);
-        generateStubsCommand.AddOption(moduleClassOption);
-        generateStubsCommand.SetHandler(GenerateStubs, dllNameOption, stubOutputOption, moduleClassOption);
+        var rootCommand = new RootCommand("Win32Emu Code Generation Tools - API Metadata Parser and Validator")
+        {
+            analyzeDllsCommand,
+            parseXmlCommand,
+            coverageCommand,
+            generateStubsCommand
+        };
         
-        rootCommand.AddCommand(analyzeDllsCommand);
-        rootCommand.AddCommand(parseXmlCommand);
-        rootCommand.AddCommand(coverageCommand);
-        rootCommand.AddCommand(generateStubsCommand);
-        
-        return await rootCommand.InvokeAsync(args);
+        var parseResult = rootCommand.Parse(args);
+        return await parseResult.InvokeAsync();
     }
     
     static void AnalyzeDlls(string dllDir, string? output)
