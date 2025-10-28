@@ -22,7 +22,8 @@ public class RenderingBackendTests
         Assert.Contains("GLFW", backends);
         Assert.Contains("Vulkan", backends);
         Assert.Contains("Metal", backends);
-        Assert.Equal(4, backends.Count);
+        Assert.Contains("Software", backends);
+        Assert.Equal(5, backends.Count);
     }
 
     [Fact]
@@ -107,7 +108,7 @@ public class RenderingBackendTests
         var config = configService.GetEmulatorConfiguration();
 
         // Act - Save each backend
-        var backends = new[] { "SDL", "GLFW", "Vulkan", "Metal" };
+        var backends = new[] { "SDL", "GLFW", "Vulkan", "Metal", "Software" };
         foreach (var backend in backends)
         {
             config.RenderingBackend = backend;
@@ -117,5 +118,21 @@ public class RenderingBackendTests
             // Assert
             Assert.Equal(backend, loadedConfig.RenderingBackend);
         }
+    }
+
+    [Fact]
+    public void SettingsViewModel_CanSetRenderingBackend_ToSoftware()
+    {
+        // Arrange
+        var config = new EmulatorConfiguration();
+        var configService = new ConfigurationService();
+        var viewModel = new SettingsViewModel(config, configService);
+
+        // Act
+        viewModel.RenderingBackend = "Software";
+
+        // Assert
+        Assert.Equal("Software", viewModel.RenderingBackend);
+        Assert.Equal("Software", config.RenderingBackend);
     }
 }

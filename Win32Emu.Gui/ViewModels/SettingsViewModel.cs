@@ -68,7 +68,8 @@ public partial class SettingsViewModel : ViewModelBase
         "SDL",
         "GLFW",
         "Vulkan",
-        "Metal"
+        "Metal",
+        "Software"
     };
 
     public ObservableCollection<string> InputBackends { get; } = new()
