@@ -120,30 +120,16 @@ namespace Win32Emu.Jit.Generated
             // CPU state
             uint EAX = cpu.GetRegister("EAX");
             uint EBX = cpu.GetRegister("EBX");
-            uint ECX = cpu.GetRegister("ECX");
-            uint EDX = cpu.GetRegister("EDX");
-            uint ESI = cpu.GetRegister("ESI");
-            uint EDI = cpu.GetRegister("EDI");
-            uint EBP = cpu.GetRegister("EBP");
-            uint ESP = cpu.GetRegister("ESP");
-            uint FLAGS = 0;
+            // Unmodified registers like ECX, EDX, etc. are not needed here.
 
             // Block at offset 0x401000
             EAX = 0x5u; // @0x401000
             EBX = EAX + 0x3u; // @0x401002
             mem.Write32(0x403000u, EBX); // @0x401005
 
-            // Save CPU state
+            // Save only modified CPU state
             cpu.SetRegister("EAX", EAX);
             cpu.SetRegister("EBX", EBX);
-            cpu.SetRegister("ECX", ECX);
-            cpu.SetRegister("EDX", EDX);
-            cpu.SetRegister("ESI", ESI);
-            cpu.SetRegister("EDI", EDI);
-            cpu.SetRegister("EBP", EBP);
-            cpu.SetRegister("ESP", ESP);
-
-            return await Task.FromResult(new CpuStepResult { IsCall = false, CallTarget = 0 });
         }
     }
 }
