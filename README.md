@@ -107,7 +107,7 @@ Win32Emu uses pluggable backends for cross-platform multimedia support:
 - **GLFW**: Silk.NET.GLFW + OpenGL - Alternative for systems where SDL has issues
 - **Vulkan**: Silk.NET.Vulkan - Modern GPU API with cross-platform support (uses MoltenVK on macOS)
 - **Metal**: SharpMetal - Native Metal backend for macOS (hardware-accelerated)
-- **Software**: CPU-based rendering - No GPU required, works on all platforms. Ideal for headless environments or systems without GPU support
+- **Software**: CPU-based rendering with Silk.NET.GLFW windowing - Full window and event support without GPU acceleration. Useful for macOS, headless environments, or debugging
 
 ### Audio Backend
 - **SDL Audio**: SDL3-CS audio when using SDL backend - Native audio support
