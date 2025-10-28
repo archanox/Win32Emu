@@ -66,7 +66,7 @@ public class EmulatorLoggingTests
 
         // Verify that system information was logged
         Assert.Contains(logMessages, msg => msg.Contains("[Loader] Host OS:"));
-        Assert.Contains(logMessages, msg => msg.Contains("[Loader] Process Architecture:"));
+        Assert.Contains(logMessages, msg => msg.Contains("[Loader] Host Architecture:"));
         Assert.Contains(logMessages, msg => msg.Contains("[Loader] Selected CPU Emulator:"));
         
         // Verify default CPU emulator is logged (IcedCpu is the default)

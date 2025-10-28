@@ -144,10 +144,9 @@ public sealed class Emulator : IDisposable
 
         // Log system information
         var osDescription = RuntimeInformation.OSDescription;
-        var osArchitecture = RuntimeInformation.OSArchitecture;
         var processArchitecture = RuntimeInformation.ProcessArchitecture;
-        _logger.LogInformation("[Loader] Host OS: {OSDescription} ({OSArchitecture})", osDescription, osArchitecture);
-        _logger.LogInformation("[Loader] Process Architecture: {ProcessArchitecture}", processArchitecture);
+        _logger.LogInformation("[Loader] Host OS: {OSDescription}", osDescription);
+        _logger.LogInformation("[Loader] Host Architecture: {ProcessArchitecture}", processArchitecture);
         
         // Log CPU backend selection
         var cpuBackend = useUnicornCpu ? "Unicorn" : (useJitCpu ? "JitCpu" : "IcedCpu");
