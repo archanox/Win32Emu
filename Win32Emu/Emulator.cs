@@ -906,7 +906,7 @@ public sealed class Emulator : IDisposable
                     _logger.LogError("[InteractiveDebugger] INFINITE LOOP DETECTED! EIP stuck at 0x{Eip:X8} for {Count} checks (iteration {Iteration})", eip, stuckCount, loopIter);
                     if (stuckCount >= MAX_STUCK_ITERATIONS)
                     {
-                        _logger.LogCritical("[InteractiveDebugger] Breaking out of execution loop - EIP has not advanced in {StuckCount}00,000 iterations", MAX_STUCK_ITERATIONS);
+                        _logger.LogCritical("[InteractiveDebugger] Breaking out of execution loop - EIP has not advanced in {TotalIterations} iterations", stuckCount * 10000);
                         break;
                     }
                 }
