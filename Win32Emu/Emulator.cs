@@ -888,8 +888,23 @@ public sealed class Emulator : IDisposable
         }
 
         // Run indefinitely until stop/exit requested
+        var loopIter = 0;
+        var lastLoggedEip = 0u;
         while (!_stopRequested && !_env!.ExitRequested && !debugger.ShouldStop)
         {
+            loopIter++;
+            // Log every 10000 iterations to detect infinite loops
+            if (loopIter % 10000 == 0)
+            {
+                var eip = _cpu!.GetEip();
+                _logger.LogWarning("[InteractiveDebugger] Loop iteration {Iteration}, EIP=0x{Eip:X8}", loopIter, eip);
+                if (eip == lastLoggedEip)
+                {
+                    _logger.LogError("[InteractiveDebugger] INFINITE LOOP DETECTED! EIP stuck at 0x{Eip:X8} for {Count} iterations", eip, loopIter);
+                }
+                lastLoggedEip = eip;
+            }
+            
             // Check if debugger wants to break
             currentEip = _cpu!.GetEip();
             if (debugger.ShouldBreak(currentEip))
