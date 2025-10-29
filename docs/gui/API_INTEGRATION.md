@@ -169,7 +169,7 @@ Implemented the Windows message loop infrastructure that allows emulated applica
 - ✅ DirectDraw stub API (DirectDrawCreate/DirectDrawCreateEx)
 - ✅ Basic GDI32 functions (BeginPaint, EndPaint, FillRect, TextOut, SetBkMode, SetTextColor)
 
-**Documentation**: See [`SDL3_INTEGRATION.md`](/SDL3_INTEGRATION.md) for detailed integration architecture
+**Documentation**: See [`SDL3_INTEGRATION.md`](../implementation/SDL3_INTEGRATION.md) for detailed integration architecture
 
 **Next Steps**:
 1. **Complete DirectDraw Integration**

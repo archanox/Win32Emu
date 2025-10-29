@@ -53,7 +53,7 @@ Located in `/Decomp/ign_teas/`:
 | [recstudio.cpp](./Decomp/ign_teas/recstudio.cpp) | 616 KB | Rec Studio | Commercial |
 | [boomerang.cpp](./Decomp/ign_teas/boomerang.cpp) | 877 KB | Boomerang | Research-oriented |
 
-See [Decomp/ign_teas/README.md](./Decomp/ign_teas/README.md) for detailed guide on using these files.
+See [Decomp/ign_teas/README.md](../../Decomp/ign_teas/README.md) for detailed guide on using these files.
 
 ## Reading Order by Role
 
@@ -172,7 +172,7 @@ For questions about:
 
 - **High-level findings**: See [DECOMPILATION_REVIEW_SUMMARY.md](DECOMPILATION_REVIEW_SUMMARY.md)
 - **Technical details**: See [IGN_TEAS_MISSING_FEATURES.md](IGN_TEAS_MISSING_FEATURES.md)
-- **Decompilation specifics**: See [Decomp/ign_teas/README.md](./Decomp/ign_teas/README.md)
+- **Decompilation specifics**: See [Decomp/ign_teas/README.md](../../Decomp/ign_teas/README.md)
 - **Implementation guidance**: See "Code Structure Recommendations" in [IGN_TEAS_MISSING_FEATURES.md](IGN_TEAS_MISSING_FEATURES.md)
 
 ## Conclusion
