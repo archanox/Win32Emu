@@ -2807,11 +2807,13 @@ namespace Win32Emu.Win32.Modules
 					
 					// Detect and track stack execution
 					// Stack typically starts high (e.g., 0x00200000) and grows down
-					// ESP is the current stack pointer, but code could be anywhere in the stack region
-					// Check if EIP is in the typical stack memory range (0x00100000 - 0x00300000)
-					// and significantly different from code segment (which is typically 0x00400000+)
+					// ESP is the current stack pointer. Check if EIP is in stack region.
+					// Stack region is typically ESP ± 64KB to account for stack growth
+					// Also check that EIP is significantly below code segment (0x00400000+)
 					var espForStackCheck = cpu.GetRegister("ESP");
-					var isExecutingFromStack = eip >= 0x00100000 && eip < 0x00300000 && eip < 0x00400000;
+					var stackLower = espForStackCheck >= 0x10000 ? espForStackCheck - 0x10000 : 0;
+					var stackUpper = espForStackCheck + 0x10000;
+					var isExecutingFromStack = eip >= stackLower && eip <= stackUpper && eip < 0x00400000;
 					
 					// Log transitions into/out of stack execution
 					if (isExecutingFromStack && !wasExecutingFromStack)
