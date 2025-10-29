@@ -546,7 +546,7 @@ Potential improvements for the GDB server:
 
 - [GHIDRA_DEBUGGING_FAQ.md](GHIDRA_DEBUGGING_FAQ.md) - **START HERE** - Answers common questions about "No debugging symbols" and effective debugging without PDB files
 - [INTERACTIVE_DEBUGGER_GUIDE.md](INTERACTIVE_DEBUGGER_GUIDE.md) - Built-in command-line debugger
-- [DEBUGGER_IMPLEMENTATION_SUMMARY.md](DEBUGGER_IMPLEMENTATION_SUMMARY.md) - Technical implementation details
+- [DEBUGGER_IMPLEMENTATION_SUMMARY.md](../implementation/DEBUGGER_IMPLEMENTATION_SUMMARY.md) - Technical implementation details
 - [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) - Enhanced debug mode
 - [Ghidra Debugger Documentation](https://ghidra.re/courses/debugger/A1-GettingStarted.html)
 - [GDB Remote Serial Protocol](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Remote-Protocol.html)

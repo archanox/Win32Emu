@@ -414,7 +414,7 @@ public RtlCodeBlock OptimizeCustom(RtlCodeBlock block, OptimizationFlags flags)
 
 - [RTL_JIT_IMPLEMENTATION.md](RTL_JIT_IMPLEMENTATION.md) - RTL pipeline overview
 - [RTL_JIT_INTEGRATION.md](RTL_JIT_INTEGRATION.md) - JitCpu integration
-- [Win32Emu.Tools.AotCompiler/README.md](Win32Emu.Tools.AotCompiler/README.md) - AoT compilation
+- [Win32Emu.Tools.AotCompiler/README.md](../../Win32Emu.Tools.AotCompiler/README.md) - AoT compilation
 
 ---
 

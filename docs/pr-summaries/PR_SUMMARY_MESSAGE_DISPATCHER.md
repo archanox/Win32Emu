@@ -207,7 +207,7 @@ The system is fully tested with 18 passing tests, comprehensively documented, an
 
 ## Links
 
-- [MESSAGE_DISPATCHER_IMPLEMENTATION.md](MESSAGE_DISPATCHER_IMPLEMENTATION.md) - Full documentation
+- [MESSAGE_DISPATCHER_IMPLEMENTATION.md](../implementation/MESSAGE_DISPATCHER_IMPLEMENTATION.md) - Full documentation
 - [DispatchR GitHub](https://github.com/hasanxdev/DispatchR) - Inspiration for this implementation
-- [MESSAGE_QUEUE_IMPLEMENTATION.md](MESSAGE_QUEUE_IMPLEMENTATION.md) - Related message queue documentation
-- [EVENT_DRIVEN_UI_IMPLEMENTATION.md](EVENT_DRIVEN_UI_IMPLEMENTATION.md) - Related UI event documentation
+- [MESSAGE_QUEUE_IMPLEMENTATION.md](../implementation/MESSAGE_QUEUE_IMPLEMENTATION.md) - Related message queue documentation
+- [EVENT_DRIVEN_UI_IMPLEMENTATION.md](../implementation/EVENT_DRIVEN_UI_IMPLEMENTATION.md) - Related UI event documentation

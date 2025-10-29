@@ -226,7 +226,7 @@ For reverse engineering or debugging closed-source binaries (like old games), **
 
 - See [GDB_SERVER_GUIDE.md](GDB_SERVER_GUIDE.md) for general debugging guide
 - See [INTERACTIVE_DEBUGGER_GUIDE.md](INTERACTIVE_DEBUGGER_GUIDE.md) for command-line debugging
-- See [IGN_TEAS_DEBUG_REPORT.md](IGN_TEAS_DEBUG_REPORT.md) for a real debugging example
+- See [IGN_TEAS_DEBUG_REPORT.md](../analysis/IGN_TEAS_DEBUG_REPORT.md) for a real debugging example
 - Check GitHub issues for specific problems
 
 ## Other Common Questions

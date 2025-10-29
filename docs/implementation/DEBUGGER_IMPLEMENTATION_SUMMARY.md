@@ -238,7 +238,7 @@ A GDB Remote Serial Protocol server has been implemented, enabling debugging wit
 - **GDB/LLDB Compatible**: Standard GDB protocol for flexibility
 - **Remote Debugging**: Connect from any tool that supports GDB protocol
 
-See [GDB_SERVER_GUIDE.md](GDB_SERVER_GUIDE.md) for detailed usage instructions.
+See [GDB_SERVER_GUIDE.md](../guides/GDB_SERVER_GUIDE.md) for detailed usage instructions.
 
 ## Future Enhancements
 
