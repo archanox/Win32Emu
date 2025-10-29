@@ -133,24 +133,39 @@ public class VirtualMemory
     {
         EnsureRange(addr, (ulong)data.Length);
         
-        // Optimized write for page-aligned or single-page writes
         uint startPage = (uint)(addr >> PageSizeBits);
         uint endPage = (uint)((addr + (ulong)data.Length - 1) >> PageSizeBits);
-        
-        if (startPage == endPage)
+
+        int dataOffset = 0;
+        int bytesRemaining = data.Length;
+
+        // Handle first partial page
+        uint firstPageOffset = (uint)(addr & PageMask);
+        if (firstPageOffset != 0)
         {
-            // Single page write
+            int bytesInFirstPage = Math.Min(PageSize - (int)firstPageOffset, bytesRemaining);
             var page = GetOrCreatePage(startPage);
-            uint offset = (uint)(addr & PageMask);
-            data.CopyTo(new Span<byte>(page, (int)offset, data.Length));
+            data.Slice(dataOffset, bytesInFirstPage).CopyTo(new Span<byte>(page, (int)firstPageOffset, bytesInFirstPage));
+            dataOffset += bytesInFirstPage;
+            bytesRemaining -= bytesInFirstPage;
+            startPage++;
         }
-        else
+
+        // Handle full pages in the middle
+        while (bytesRemaining >= PageSize)
         {
-            // Multi-page write - write byte by byte for simplicity
-            for (int i = 0; i < data.Length; i++)
-            {
-                WriteByteInternal(addr + (ulong)i, data[i]);
-            }
+            var page = GetOrCreatePage(startPage);
+            data.Slice(dataOffset, PageSize).CopyTo(new Span<byte>(page, 0, PageSize));
+            dataOffset += PageSize;
+            bytesRemaining -= PageSize;
+            startPage++;
+        }
+
+        // Handle last partial page
+        if (bytesRemaining > 0)
+        {
+            var page = GetOrCreatePage(startPage);
+            data.Slice(dataOffset, bytesRemaining).CopyTo(new Span<byte>(page, 0, bytesRemaining));
         }
     }
 
