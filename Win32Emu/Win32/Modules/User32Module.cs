@@ -2800,6 +2800,14 @@ namespace Win32Emu.Win32.Modules
 					{
 						_logger.LogInformation("[User32] CallDialogProcedureAsync: Step {Steps}: EIP=0x{Eip:X8}", steps, eip);
 					}
+					
+					// Detect and warn about stack execution
+					var espForStackCheck = cpu.GetRegister("ESP");
+					var isExecutingFromStack = eip >= espForStackCheck - 0x1000 && eip <= espForStackCheck + 0x1000;
+					if (isExecutingFromStack && steps > 20 && steps % 100 == 0)
+					{
+						_logger.LogWarning("[User32] CallDialogProcedureAsync: Executing from stack at EIP=0x{Eip:X8} (ESP=0x{Esp:X8}) at step {Steps}", eip, espForStackCheck, steps);
+					}
 
 					// Check if we've returned to our marker address
 					if (eip == RETURN_ADDRESS)
