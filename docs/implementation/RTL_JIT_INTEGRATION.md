@@ -237,9 +237,9 @@ dotnet decompile /tmp/Win32Emu/RtlJitCache/JitBlock_00401000.dll
 
 ## See Also
 
-- [RTL_JIT_IMPLEMENTATION.md](../../RTL_JIT_IMPLEMENTATION.md) - Complete RTL pipeline documentation
+- [RTL_JIT_IMPLEMENTATION.md](RTL_JIT_IMPLEMENTATION.md) - Complete RTL pipeline documentation
 - [Win32Emu.Rtl](../../Win32Emu.Rtl/) - RTL library implementation
-- [REKO_INTEGRATION_ANALYSIS.md](../../REKO_INTEGRATION_ANALYSIS.md) - Integration opportunities
+- [REKO_INTEGRATION_ANALYSIS.md](REKO_INTEGRATION_ANALYSIS.md) - Integration opportunities
 
 ---
 

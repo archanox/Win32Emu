@@ -6,13 +6,13 @@ This directory contains comprehensive documentation from the review of IGN_TEAS.
 
 **New to this analysis? Start here:**
 
-1. 📄 **[DECOMPILATION_REVIEW_SUMMARY.md](./DECOMPILATION_REVIEW_SUMMARY.md)** (13 KB)
+1. 📄 **[DECOMPILATION_REVIEW_SUMMARY.md](DECOMPILATION_REVIEW_SUMMARY.md)** (13 KB)
    - Executive summary of all findings
    - Quick comparison matrices  
    - Priority recommendations with time estimates
    - **Read this first for overview**
 
-2. 📄 **[IGN_TEAS_MISSING_FEATURES.md](./IGN_TEAS_MISSING_FEATURES.md)** (17 KB)
+2. 📄 **[IGN_TEAS_MISSING_FEATURES.md](IGN_TEAS_MISSING_FEATURES.md)** (17 KB)
    - Detailed method-by-method analysis
    - Decompilation evidence with code snippets
    - Implementation recommendations
@@ -24,19 +24,19 @@ This directory contains comprehensive documentation from the review of IGN_TEAS.
 
 | File | Size | Purpose | Audience |
 |------|------|---------|----------|
-| [DECOMPILATION_REVIEW_SUMMARY.md](./DECOMPILATION_REVIEW_SUMMARY.md) | 13 KB | Executive summary of findings | Everyone |
-| [IGN_TEAS_MISSING_FEATURES.md](./IGN_TEAS_MISSING_FEATURES.md) | 17 KB | Detailed technical analysis | Developers |
+| [DECOMPILATION_REVIEW_SUMMARY.md](DECOMPILATION_REVIEW_SUMMARY.md) | 13 KB | Executive summary of findings | Everyone |
+| [IGN_TEAS_MISSING_FEATURES.md](IGN_TEAS_MISSING_FEATURES.md) | 17 KB | Detailed technical analysis | Developers |
 
 ### Supporting Documentation (Existing)
 
 | File | Size | Purpose | Audience |
 |------|------|---------|----------|
-| [IGN_TEAS_IMPLEMENTATION_ANALYSIS.md](./IGN_TEAS_IMPLEMENTATION_ANALYSIS.md) | 8 KB | Window messages and activation | Developers |
-| [DECOMPILATION_FINDINGS.md](./DECOMPILATION_FINDINGS.md) | 9 KB | Original decompilation findings | Reference |
-| [IGN_TEAS_REVIEW_SUMMARY.md](./IGN_TEAS_REVIEW_SUMMARY.md) | 13 KB | Earlier review summary | Historical |
-| [IGN_TEAS_DEBUG_REPORT.md](./IGN_TEAS_DEBUG_REPORT.md) | 9 KB | Debug session findings | Reference |
-| [IGN_TEAS_DIAGNOSTIC_REPORT.md](./IGN_TEAS_DIAGNOSTIC_REPORT.md) | 6 KB | Diagnostic test results | Reference |
-| [IGN_TEAS_INFINITE_LOOP_INVESTIGATION.md](./IGN_TEAS_INFINITE_LOOP_INVESTIGATION.md) | 12 KB | Loop analysis | Historical |
+| [IGN_TEAS_IMPLEMENTATION_ANALYSIS.md](IGN_TEAS_IMPLEMENTATION_ANALYSIS.md) | 8 KB | Window messages and activation | Developers |
+| [DECOMPILATION_FINDINGS.md](DECOMPILATION_FINDINGS.md) | 9 KB | Original decompilation findings | Reference |
+| [IGN_TEAS_REVIEW_SUMMARY.md](IGN_TEAS_REVIEW_SUMMARY.md) | 13 KB | Earlier review summary | Historical |
+| [IGN_TEAS_DEBUG_REPORT.md](IGN_TEAS_DEBUG_REPORT.md) | 9 KB | Debug session findings | Reference |
+| [IGN_TEAS_DIAGNOSTIC_REPORT.md](IGN_TEAS_DIAGNOSTIC_REPORT.md) | 6 KB | Diagnostic test results | Reference |
+| [IGN_TEAS_INFINITE_LOOP_INVESTIGATION.md](IGN_TEAS_INFINITE_LOOP_INVESTIGATION.md) | 12 KB | Loop analysis | Historical |
 
 ### Decompilation Files
 
@@ -58,22 +58,22 @@ See [Decomp/ign_teas/README.md](./Decomp/ign_teas/README.md) for detailed guide 
 ## Reading Order by Role
 
 ### For Project Maintainers
-1. [DECOMPILATION_REVIEW_SUMMARY.md](./DECOMPILATION_REVIEW_SUMMARY.md) - Executive summary
+1. [DECOMPILATION_REVIEW_SUMMARY.md](DECOMPILATION_REVIEW_SUMMARY.md) - Executive summary
 2. Priority section for implementation roadmap
 3. Impact assessment for planning
 
 ### For Developers Implementing Features
-1. [DECOMPILATION_REVIEW_SUMMARY.md](./DECOMPILATION_REVIEW_SUMMARY.md) - Context
-2. [IGN_TEAS_MISSING_FEATURES.md](./IGN_TEAS_MISSING_FEATURES.md) - Technical specs
+1. [DECOMPILATION_REVIEW_SUMMARY.md](DECOMPILATION_REVIEW_SUMMARY.md) - Context
+2. [IGN_TEAS_MISSING_FEATURES.md](IGN_TEAS_MISSING_FEATURES.md) - Technical specs
 3. [Decomp/ign_teas/hexrays.cpp](./Decomp/ign_teas/hexrays.cpp) - Code reference
 
 ### For Code Reviewers
-1. [DECOMPILATION_REVIEW_SUMMARY.md](./DECOMPILATION_REVIEW_SUMMARY.md) - Overview
-2. [IGN_TEAS_MISSING_FEATURES.md](./IGN_TEAS_MISSING_FEATURES.md) - Detailed analysis
+1. [DECOMPILATION_REVIEW_SUMMARY.md](DECOMPILATION_REVIEW_SUMMARY.md) - Overview
+2. [IGN_TEAS_MISSING_FEATURES.md](IGN_TEAS_MISSING_FEATURES.md) - Detailed analysis
 3. Compare with implementation in `Win32Emu/Win32/Modules/`
 
 ### For Testers
-1. [DECOMPILATION_REVIEW_SUMMARY.md](./DECOMPILATION_REVIEW_SUMMARY.md) - Test strategy section
+1. [DECOMPILATION_REVIEW_SUMMARY.md](DECOMPILATION_REVIEW_SUMMARY.md) - Test strategy section
 2. Current test status in [Win32Emu.Tests.Emulator/IgnitionTeaserTests.cs](./Win32Emu.Tests.Emulator/IgnitionTeaserTests.cs)
 
 ## Key Findings Summary
@@ -147,7 +147,7 @@ All findings are based on:
 
 ## Next Steps
 
-See [DECOMPILATION_REVIEW_SUMMARY.md](./DECOMPILATION_REVIEW_SUMMARY.md) "Next Actions" section for:
+See [DECOMPILATION_REVIEW_SUMMARY.md](DECOMPILATION_REVIEW_SUMMARY.md) "Next Actions" section for:
 
 - Immediate actions (this week)
 - Short term goals (next 2 weeks)
@@ -156,7 +156,7 @@ See [DECOMPILATION_REVIEW_SUMMARY.md](./DECOMPILATION_REVIEW_SUMMARY.md) "Next A
 ## Related Documentation
 
 ### API Coverage
-- [IGNITION_API_STATUS.md](./IGNITION_API_STATUS.md) - Complete Win32 API status
+- [IGNITION_API_STATUS.md](IGNITION_API_STATUS.md) - Complete Win32 API status
 
 ### Emulator Implementation
 - [Win32Emu/Win32/Modules/](./Win32Emu/Win32/Modules/) - Module implementations
@@ -170,10 +170,10 @@ See [DECOMPILATION_REVIEW_SUMMARY.md](./DECOMPILATION_REVIEW_SUMMARY.md) "Next A
 
 For questions about:
 
-- **High-level findings**: See [DECOMPILATION_REVIEW_SUMMARY.md](./DECOMPILATION_REVIEW_SUMMARY.md)
-- **Technical details**: See [IGN_TEAS_MISSING_FEATURES.md](./IGN_TEAS_MISSING_FEATURES.md)
+- **High-level findings**: See [DECOMPILATION_REVIEW_SUMMARY.md](DECOMPILATION_REVIEW_SUMMARY.md)
+- **Technical details**: See [IGN_TEAS_MISSING_FEATURES.md](IGN_TEAS_MISSING_FEATURES.md)
 - **Decompilation specifics**: See [Decomp/ign_teas/README.md](./Decomp/ign_teas/README.md)
-- **Implementation guidance**: See "Code Structure Recommendations" in [IGN_TEAS_MISSING_FEATURES.md](./IGN_TEAS_MISSING_FEATURES.md)
+- **Implementation guidance**: See "Code Structure Recommendations" in [IGN_TEAS_MISSING_FEATURES.md](IGN_TEAS_MISSING_FEATURES.md)
 
 ## Conclusion
 

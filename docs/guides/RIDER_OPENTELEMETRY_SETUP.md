@@ -105,5 +105,5 @@ Command-line flags will override environment variables if both are set.
 ## See Also
 
 - [OPENTELEMETRY_USAGE.md](OPENTELEMETRY_USAGE.md) - Complete OpenTelemetry documentation
-- [TELEMETRY_EXAMPLE.md](TELEMETRY_EXAMPLE.md) - Practical examples
+- [TELEMETRY_EXAMPLE.md](../examples/TELEMETRY_EXAMPLE.md) - Practical examples
 - [JetBrains Rider OpenTelemetry Documentation](https://www.jetbrains.com/help/rider/2025.2/OpenTelemetry.html)

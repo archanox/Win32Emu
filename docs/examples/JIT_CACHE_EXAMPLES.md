@@ -272,6 +272,6 @@ The speedup is most noticeable for:
 
 ## See Also
 
-- [JIT_CACHE_IMPLEMENTATION.md](JIT_CACHE_IMPLEMENTATION.md) - Technical implementation details
-- [ASYNC_JIT_ARCHITECTURE.md](ASYNC_JIT_ARCHITECTURE.md) - JIT CPU architecture
+- [JIT_CACHE_IMPLEMENTATION.md](../implementation/JIT_CACHE_IMPLEMENTATION.md) - Technical implementation details
+- [ASYNC_JIT_ARCHITECTURE.md](../implementation/ASYNC_JIT_ARCHITECTURE.md) - JIT CPU architecture
 - Win32Emu.Tests.Emulator/JitCacheTests.cs - Unit tests demonstrating usage

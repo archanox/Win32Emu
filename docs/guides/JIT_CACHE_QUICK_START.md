@@ -119,8 +119,8 @@ if (Directory.Exists(cacheDir))
 
 ## Next Steps
 
-- See [JIT_CACHE_EXAMPLES.md](JIT_CACHE_EXAMPLES.md) for detailed examples
-- Read [JIT_CACHE_IMPLEMENTATION.md](JIT_CACHE_IMPLEMENTATION.md) for technical details
+- See [JIT_CACHE_EXAMPLES.md](../examples/JIT_CACHE_EXAMPLES.md) for detailed examples
+- Read [JIT_CACHE_IMPLEMENTATION.md](../implementation/JIT_CACHE_IMPLEMENTATION.md) for technical details
 - Check test files in `Win32Emu.Tests.Emulator/JitCacheTests.cs` for more patterns
 
 ## API Reference

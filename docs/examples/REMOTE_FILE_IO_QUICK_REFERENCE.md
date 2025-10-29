@@ -253,6 +253,6 @@ F-1,9
 
 ## See Also
 
-- [GDB_SERVER_GUIDE.md](GDB_SERVER_GUIDE.md) - Complete GDB server guide
-- [VFS_DOCUMENTATION.md](VFS_DOCUMENTATION.md) - Virtual File System documentation
-- [REMOTE_FILE_IO_IMPLEMENTATION.md](REMOTE_FILE_IO_IMPLEMENTATION.md) - Implementation details
+- [GDB_SERVER_GUIDE.md](../guides/GDB_SERVER_GUIDE.md) - Complete GDB server guide
+- [VFS_DOCUMENTATION.md](../guides/VFS_DOCUMENTATION.md) - Virtual File System documentation
+- [REMOTE_FILE_IO_IMPLEMENTATION.md](../implementation/REMOTE_FILE_IO_IMPLEMENTATION.md) - Implementation details

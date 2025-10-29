@@ -259,5 +259,5 @@ The tool will significantly accelerate Win32 API implementation by:
 ---
 
 **See Also:**
-- [Win32Emu.CodeGen/README.md](Win32Emu.CodeGen/README.md) - Detailed usage guide
-- [API_COVERAGE_REPORT.md](API_COVERAGE_REPORT.md) - Latest coverage statistics
+- [Win32Emu.CodeGen/README.md](../../Win32Emu.CodeGen/README.md) - Detailed usage guide
+- [API_COVERAGE_REPORT.md](../analysis/API_COVERAGE_REPORT.md) - Latest coverage statistics

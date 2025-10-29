@@ -443,8 +443,8 @@ var lpWindowName = a.Lpstr(2);    // LPCSTR
 
 ## See Also
 
-- [REKO_INTEGRATION_ANALYSIS.md](../REKO_INTEGRATION_ANALYSIS.md) - Full integration analysis
-- [Win32Emu.Tools.ApiAnalyzer](../Win32Emu.Tools.ApiAnalyzer/) - API coverage analyzer
+- [REKO_INTEGRATION_ANALYSIS.md](REKO_INTEGRATION_ANALYSIS.md) - Full integration analysis
+- [Win32Emu.Tools.ApiAnalyzer](../../Win32Emu.Tools.ApiAnalyzer/) - API coverage analyzer
 - [Reko Project](https://github.com/uxmal/reko) - Source of XML definitions
 
 ## License Note

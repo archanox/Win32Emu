@@ -223,6 +223,6 @@ The remote file I/O implementation provides essential file access capabilities t
 
 ## See Also
 
-- [GDB_SERVER_GUIDE.md](GDB_SERVER_GUIDE.md) - Complete GDB server documentation
-- [VFS_DOCUMENTATION.md](VFS_DOCUMENTATION.md) - Virtual File System documentation
+- [GDB_SERVER_GUIDE.md](../guides/GDB_SERVER_GUIDE.md) - Complete GDB server documentation
+- [VFS_DOCUMENTATION.md](../guides/VFS_DOCUMENTATION.md) - Virtual File System documentation
 - [GDB Remote Serial Protocol Specification](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Remote-Protocol.html)
