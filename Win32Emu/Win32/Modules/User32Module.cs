@@ -2772,7 +2772,7 @@ namespace Win32Emu.Win32.Modules
 			var stuckCounter = 0;
 			
 			// Track last N instructions to help debug NULL jumps
-			const int HISTORY_SIZE = 50;
+			const int HISTORY_SIZE = 200;  // Increased to capture more context before crash
 			var instructionHistory = new Queue<(int step, uint eip, string? description)>(HISTORY_SIZE);
 			
 			// Track stack execution
