@@ -438,6 +438,7 @@ public class IcedCpu : IAsyncCpu
 				// Legacy BCD (Binary Coded Decimal) instructions
 				case Mnemonic.Aad: ExecAad(insn); break;
 				case Mnemonic.Aam: ExecAam(insn); break;
+				case Mnemonic.Aas: ExecAas(); break;
 				case Mnemonic.Das: ExecDas(); break;
 				case Mnemonic.Daa: ExecDaa(); break;
 				// Protected mode / privileged instructions - no-op in flat memory model
@@ -3373,6 +3374,38 @@ public class IcedCpu : IAsyncCpu
 		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
 		
 		// Update flags: SF, ZF, PF (OF, AF, CF are undefined)
+		UpdateLogicResultFlags(al);
+	}
+
+	private void ExecAas()
+	{
+		// AAS - ASCII Adjust AL After Subtraction
+		// Adjusts result of unpacked BCD subtraction
+		var al = (byte)(_eax & 0xFF);
+		var ah = (byte)((_eax >> 8) & 0xFF);
+		
+		// Check if adjustment is needed
+		if (((al & 0x0F) > 9) || GetFlag(Af))
+		{
+			// Adjust AL and AH
+			al -= 6;
+			ah -= 1;
+			SetFlag(Af);
+			SetFlag(Cf);
+		}
+		else
+		{
+			ClearFlag(Af);
+			ClearFlag(Cf);
+		}
+		
+		// Clear high nibble of AL
+		al &= 0x0F;
+		
+		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+		
+		// OF, SF, ZF, PF are undefined after AAS, but we'll update them for consistency
+		// Some implementations leave these flags undefined, but updating them doesn't hurt
 		UpdateLogicResultFlags(al);
 	}
 
