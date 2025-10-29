@@ -2772,7 +2772,7 @@ namespace Win32Emu.Win32.Modules
 			var stuckCounter = 0;
 			
 			// Track last N instructions to help debug NULL jumps
-			const int HISTORY_SIZE = 200;  // Increased to capture more context before crash
+			const int HISTORY_SIZE = 500;  // Increased to capture more context before crash
 			var instructionHistory = new Queue<(int step, uint eip, string? description)>(HISTORY_SIZE);
 			
 			// Track stack execution
@@ -2820,6 +2820,15 @@ namespace Win32Emu.Win32.Modules
 					{
 						stackExecutionStartStep = steps;
 						_logger.LogError("[User32] CallDialogProcedureAsync: ⚠️ ENTERED STACK EXECUTION at step {Steps}, EIP=0x{Eip:X8} (ESP=0x{Esp:X8})", steps, eip, espForStackCheck);
+						// Log previous 10 instructions from history to see what led here
+						var historyList = instructionHistory.ToList();
+						var startIdx = Math.Max(0, historyList.Count - 10);
+						_logger.LogError("[User32] CallDialogProcedureAsync: Previous 10 instructions before entering stack:");
+						for (int i = startIdx; i < historyList.Count; i++)
+						{
+							var (prevStep, prevEip, prevDesc) = historyList[i];
+							_logger.LogError("  Step {Step}: EIP=0x{Eip:X8} {Desc}", prevStep, prevEip, prevDesc ?? "");
+						}
 					}
 					else if (!isExecutingFromStack && wasExecutingFromStack)
 					{
