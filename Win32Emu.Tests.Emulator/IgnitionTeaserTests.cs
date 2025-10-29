@@ -64,7 +64,7 @@ public class IgnitionTeaserTests
         var repoRoot = currentDir;
         
         // Navigate up until we find the .sln file
-        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "Win32Emu.sln")))
+        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "Win32Emu.slnx")))
         {
             var parent = Directory.GetParent(repoRoot);
             if (parent == null)
@@ -235,7 +235,7 @@ public class IgnitionTeaserTests
         var currentDir = Directory.GetCurrentDirectory();
         var repoRoot = currentDir;
         
-        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "Win32Emu.sln")))
+        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "Win32Emu.slnx")))
         {
             var parent = Directory.GetParent(repoRoot);
             if (parent == null)

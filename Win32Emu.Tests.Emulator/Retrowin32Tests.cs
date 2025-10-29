@@ -272,8 +272,8 @@ public class Retrowin32Tests
         var currentDir = Directory.GetCurrentDirectory();
         var repoRoot = currentDir;
 
-        // Navigate up until we find the .sln file
-        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "Win32Emu.sln")))
+        // Navigate up until we find the .slnx file
+        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "Win32Emu.slnx")))
         {
             var parent = Directory.GetParent(repoRoot);
             if (parent == null)
