@@ -133,6 +133,19 @@ public class IcedCpu : IAsyncCpu
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
 		//_logger.LogInformation("Instruction: {Insn}", insn.ToString());
+		
+		// Debug logging for specific addresses - BEFORE EIP update
+		if (_eip >= 0x00413600 && _eip <= 0x00413620)
+		{
+			Console.WriteLine($"[DEBUG] DECODED at EIP=0x{_eip:X8}: {insn.Mnemonic} {insn} | Len={insn.Length} | EDI=0x{_edi:X8} EAX=0x{_eax:X8} EBX=0x{_ebx:X8}");
+		}
+		
+		// Debug logging for specific addresses - AFTER decoding with current register values
+		if (_eip == 0x0041360B || _eip == 0x0041360F || _eip == 0x00413616)
+		{
+			Console.WriteLine($"[DEBUG] BEFORE EXEC at EIP=0x{_eip:X8}: {insn.Mnemonic} {insn} | EDI=0x{_edi:X8} EAX=0x{_eax:X8} | OpCount={insn.OpCount} Op0Kind={insn.GetOpKind(0)}");
+		}
+		
 		var oldEip = _eip;
 		_eip = (uint)_decoder.IP;
 		var isCall = false;
@@ -705,6 +718,16 @@ public class IcedCpu : IAsyncCpu
 	private void ExecPop(Instruction insn)
 	{
 		var v = Pop32();
+		var targetReg = insn.GetOpRegister(0);
+		
+		// Debug logging for POP instruction  
+		// Note: Using the instruction string since EIP has already been incremented
+		var instrStr = insn.ToString();
+		if (instrStr.Contains("pop ebp") || instrStr.Contains("pop edi") || instrStr.Contains("pop eax"))
+		{
+			Console.WriteLine($"[DEBUG] ExecPop: Instruction={insn}, OpCount={insn.OpCount}, OpKind(0)={insn.GetOpKind(0)}, OpRegister(0)={targetReg}, Value=0x{v:X8}");
+		}
+		
 		WriteOp(insn, 0, v);
 	}
 
@@ -3609,6 +3632,14 @@ public class IcedCpu : IAsyncCpu
 
 	private void WriteOp(Instruction insn, int index, uint value)
 	{
+		// Debug logging at specific addresses
+		if (_eip >= 0x0041360B && _eip <= 0x00413620)
+		{
+			var opKind = insn.GetOpKind(index);
+			var opReg = opKind == OpKind.Register ? insn.GetOpRegister(index) : Register.None;
+			Console.WriteLine($"[DEBUG] WriteOp: EIP=0x{_eip:X8}, insn={insn}, index={index}, OpKind={opKind}, OpReg={opReg}, value=0x{value:X8}");
+		}
+		
 		switch (insn.GetOpKind(index))
 		{
 			case OpKind.Register: SetReg32(insn.GetOpRegister(index), value); break;
@@ -3699,17 +3730,12 @@ public class IcedCpu : IAsyncCpu
 	// replace CalcMemAddress to report via Diagnostics on failure
 	private uint CalcMemAddress(Instruction insn)
 	{
-		var addr = insn.MemoryDisplacement32;
-		if (insn.MemoryBase != Register.None)
-		{
-			addr += GetReg32(insn.MemoryBase);
-		}
-
-		if (insn.MemoryIndex != Register.None)
-		{
-			var scale = insn.MemoryIndexScale;
-			addr += (uint)(GetReg32(insn.MemoryIndex) * scale);
-		}
+		var disp = insn.MemoryDisplacement32;
+		var baseReg = insn.MemoryBase != Register.None ? GetReg32(insn.MemoryBase) : 0;
+		var indexVal = insn.MemoryIndex != Register.None ? GetReg32(insn.MemoryIndex) * insn.MemoryIndexScale : 0;
+		
+		// Calculate address using unchecked arithmetic to allow wrapping
+		var addr = unchecked(disp + baseReg + (uint)indexVal);
 
 		// Check if address is within valid memory range
 		// Convert to ulong to avoid overflow issues when comparing with memory size
@@ -3724,6 +3750,10 @@ public class IcedCpu : IAsyncCpu
 			{
 			}
 
+			// Log the address calculation details for debugging
+			var dispSigned = unchecked((int)disp);
+			Console.WriteLine($"[DEBUG] CalcMemAddress: disp=0x{disp:X8} ({dispSigned}), base={insn.MemoryBase}=0x{baseReg:X8}, index={insn.MemoryIndex}*{insn.MemoryIndexScale}=0x{indexVal:X8}, result=0x{addr:X8}");
+
 			Diagnostics.Diagnostics.LogCalcMemAddressFailure(addr, _mem.Size, _eip, _esp, _ebp, _eax, _ebx, _ecx, _edx, _esi, _edi, instrBytes);
 			throw new IndexOutOfRangeException($"Calculated memory address out of range: 0x{addr:X} (EIP=0x{_eip:X8})");
 		}
@@ -3735,16 +3765,18 @@ public class IcedCpu : IAsyncCpu
 	// LEA (Load Effective Address) doesn't actually access memory, so out-of-bounds addresses are valid
 	private uint CalcLeaAddress(Instruction insn)
 	{
-		var addr = insn.MemoryDisplacement32;
-		if (insn.MemoryBase != Register.None)
-		{
-			addr += GetReg32(insn.MemoryBase);
-		}
+		var disp = insn.MemoryDisplacement32;
+		var baseReg = insn.MemoryBase != Register.None ? GetReg32(insn.MemoryBase) : 0;
+		var indexVal = insn.MemoryIndex != Register.None ? GetReg32(insn.MemoryIndex) * insn.MemoryIndexScale : 0;
+		
+		// Calculate address using unchecked arithmetic to allow wrapping
+		var addr = unchecked(disp + baseReg + (uint)indexVal);
 
-		if (insn.MemoryIndex != Register.None)
+		// Debug logging for LEA instructions that produce suspicious addresses
+		if (addr > 0xC0000000) // Likely invalid address (> 3GB)
 		{
-			var scale = insn.MemoryIndexScale;
-			addr += (uint)(GetReg32(insn.MemoryIndex) * scale);
+			var dispSigned = unchecked((int)disp);
+			Console.WriteLine($"[DEBUG] CalcLeaAddress: disp=0x{disp:X8} ({dispSigned}), base={insn.MemoryBase}=0x{baseReg:X8}, index={insn.MemoryIndex}*{insn.MemoryIndexScale}=0x{indexVal:X8}, result=0x{addr:X8} at EIP=0x{_eip:X8}");
 		}
 
 		return addr;
@@ -3805,6 +3837,23 @@ public class IcedCpu : IAsyncCpu
 
 	private void SetReg32(Register reg, uint v)
 	{
+		// Debug logging for suspicious EDI values
+		if (reg == Register.EDI && v > 0xC0000000)
+		{
+			// Try to get current instruction being executed
+			var stackTrace = new System.Diagnostics.StackTrace(1, false);
+			var caller = stackTrace.GetFrame(0)?.GetMethod()?.Name ?? "Unknown";
+			Console.WriteLine($"[DEBUG] SetReg32: EDI set to suspicious value 0x{v:X8} at EIP=0x{_eip:X8} from {caller}");
+		}
+		
+		// Debug logging for register assignment at specific addresses
+		if (_eip == 0x0041360B || _eip == 0x0041360F || _eip == 0x00413616)
+		{
+			var stackTrace = new System.Diagnostics.StackTrace(1, false);
+			var caller = stackTrace.GetFrame(0)?.GetMethod()?.Name ?? "Unknown";
+			Console.WriteLine($"[DEBUG] SetReg32: Setting {reg} = 0x{v:X8} at EIP=0x{_eip:X8} from {caller}");
+		}
+		
 		switch (reg)
 		{
 			case Register.EAX: _eax = v; break;
