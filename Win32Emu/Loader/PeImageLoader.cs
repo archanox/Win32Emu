@@ -124,13 +124,13 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				vm.Write32(va, synthetic);
 				
 				// Create import stub using retrowin32-style approach:
-				// CALL [syscall_dispatcher]; RET
-				// (RET here is a plain 0xC3; no stack cleanup is performed by the stub)
-				// This allows the CPU to naturally execute and return without manual EIP manipulation
+				// CALL [syscall_dispatcher]; RET argBytes
+				// The RET instruction will be patched at runtime with the correct argBytes value
+				// This allows proper stdcall stack cleanup
 				//
 				// Format:
 				// - CALL to syscall dispatcher (5 bytes: E8 + rel32 offset)
-				// - RET (1 byte: C3) - CPU will execute this to return naturally after syscall
+				// - RET imm16 (3 bytes: C2 + imm16) - Will be patched at runtime with argBytes
 				// 
 				// Calculate relative offset from stub address to syscall dispatcher
 				var stubAddr = synthetic;
@@ -143,10 +143,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 					(byte)((callOffset >> 8) & 0xFF),
 					(byte)((callOffset >> 16) & 0xFF),
 					(byte)((callOffset >> 24) & 0xFF),
-					0xC3, // RET - CPU will execute this to return naturally
+					0xC2, 0x00, 0x00, // RET 0 - will be patched at runtime with actual argBytes
 					// Padding to maintain 16-byte alignment
-					0x90, 0x90, 0x90, 0x90,
-					0x90, 0x90, 0x90, 0x90, 0x90, 0x90
+					0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90
 				};
 				vm.WriteBytes(synthetic, stub);
 				

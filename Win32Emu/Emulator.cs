@@ -490,11 +490,26 @@ public sealed class Emulator : IDisposable
                         // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                         
-                        _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, CPU will execute RET naturally", ret);
+                        _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, argBytes={ArgBytes}, CPU will execute RET naturally", ret, argBytes);
+                        
+                        // Patch the import stub's RET instruction with the correct argBytes value for stdcall cleanup
+                        // The stub RET instruction is at importStubAddr + 5 (after the 5-byte CALL instruction)
+                        // Format: RET imm16 = 0xC2 <low_byte> <high_byte>
+                        if (argBytes > 0 && argBytes <= 0xFFFF)
+                        {
+                            var retInstrAddr = importStubAddr + 5;
+                            var opcode = _vm!.Read8(retInstrAddr);
+                            _logger.LogInformation("[Syscall] Patching RET at 0x{RetAddr:X8}: opcode before=0x{Opcode:X2}", retInstrAddr, opcode);
+                            _vm!.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
+                            _vm!.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
+                            var arg1 = _vm!.Read8(retInstrAddr + 1);
+                            var arg2 = _vm!.Read8(retInstrAddr + 2);
+                            _logger.LogInformation("[Syscall] Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes} (bytes: {Arg1:X2} {Arg2:X2})", retInstrAddr, argBytes, arg1, arg2);
+                        }
                         
                         // The CPU will now execute the RET instruction in the syscall dispatcher,
-                        // which returns to the import stub, which then executes its own RET
-                        // to return to the original caller. All naturally through CPU execution!
+                        // which returns to the import stub, which then executes its RET imm16
+                        // to return to the original caller with proper stack cleanup!
                     }
                     else
                     {
