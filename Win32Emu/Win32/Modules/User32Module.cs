@@ -2774,6 +2774,10 @@ namespace Win32Emu.Win32.Modules
 			// Track last N instructions to help debug NULL jumps
 			const int HISTORY_SIZE = 50;
 			var instructionHistory = new Queue<(int step, uint eip, string? description)>(HISTORY_SIZE);
+			
+			// Track stack execution
+			var wasExecutingFromStack = false;
+			var stackExecutionStartStep = -1;
 
 			try
 			{
@@ -2801,13 +2805,22 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogInformation("[User32] CallDialogProcedureAsync: Step {Steps}: EIP=0x{Eip:X8}", steps, eip);
 					}
 					
-					// Detect and warn about stack execution
+					// Detect and track stack execution
 					var espForStackCheck = cpu.GetRegister("ESP");
 					var isExecutingFromStack = eip >= espForStackCheck - 0x1000 && eip <= espForStackCheck + 0x1000;
-					if (isExecutingFromStack && steps > 20 && steps % 100 == 0)
+					
+					// Log transitions into/out of stack execution
+					if (isExecutingFromStack && !wasExecutingFromStack)
 					{
-						_logger.LogWarning("[User32] CallDialogProcedureAsync: Executing from stack at EIP=0x{Eip:X8} (ESP=0x{Esp:X8}) at step {Steps}", eip, espForStackCheck, steps);
+						stackExecutionStartStep = steps;
+						_logger.LogError("[User32] CallDialogProcedureAsync: ⚠️ ENTERED STACK EXECUTION at step {Steps}, EIP=0x{Eip:X8} (ESP=0x{Esp:X8})", steps, eip, espForStackCheck);
 					}
+					else if (!isExecutingFromStack && wasExecutingFromStack)
+					{
+						_logger.LogWarning("[User32] CallDialogProcedureAsync: Exited stack execution at step {Steps} (ran for {Count} steps)", steps, steps - stackExecutionStartStep);
+					}
+					
+					wasExecutingFromStack = isExecutingFromStack;
 
 					// Check if we've returned to our marker address
 					if (eip == RETURN_ADDRESS)
@@ -2825,14 +2838,21 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogError("[User32] CallDialogProcedureAsync: ESP=0x{Esp:X8} EBP=0x{Ebp:X8}",
 							cpu.GetRegister("ESP"), cpu.GetRegister("EBP"));
 
-// Log instruction history
-_logger.LogError("[User32] CallDialogProcedureAsync: Last {Count} instructions before NULL jump:", instructionHistory.Count);
-foreach (var (histStep, histEip, histDesc) in instructionHistory)
-{
-_logger.LogError("  Step {Step}: EIP=0x{Eip:X8} {Desc}", histStep, histEip, histDesc ?? "");
-}
+					// Log stack execution context
+					if (stackExecutionStartStep >= 0)
+					{
+						_logger.LogError("[User32] CallDialogProcedureAsync: ⚠️ Was executing from STACK (started at step {StartStep}, ran for {Count} steps before NULL jump)", 
+							stackExecutionStartStep, steps - stackExecutionStartStep);
+					}
 
-// Log stack contents to help identify what function returned NULL
+					// Log instruction history
+					_logger.LogError("[User32] CallDialogProcedureAsync: Last {Count} instructions before NULL jump:", instructionHistory.Count);
+					foreach (var (histStep, histEip, histDesc) in instructionHistory)
+					{
+						_logger.LogError("  Step {Step}: EIP=0x{Eip:X8} {Desc}", histStep, histEip, histDesc ?? "");
+					}
+
+					// Log stack contents to help identify what function returned NULL
 						try
 						{
 							var stackPtr = cpu.GetRegister("ESP");
