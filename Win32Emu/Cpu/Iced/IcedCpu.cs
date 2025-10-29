@@ -294,6 +294,7 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Stosw: ExecStos(2, insn.HasRepPrefix); break;
 				case Mnemonic.Stosd: ExecStos(4, insn.HasRepPrefix); break;
 				case Mnemonic.Lodsb: ExecLods(1, insn.HasRepPrefix); break;
+				case Mnemonic.Lodsw: ExecLods(2, insn.HasRepPrefix); break;
 				case Mnemonic.Lodsd: ExecLods(4, insn.HasRepPrefix); break;
 				case Mnemonic.Insb: ExecIns(1, insn.HasRepPrefix); break;
 				case Mnemonic.Insw: ExecIns(2, insn.HasRepPrefix); break;

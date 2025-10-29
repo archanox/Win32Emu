@@ -1240,25 +1240,25 @@ public sealed class Emulator : IDisposable
         if ((ebpIsZero || ebpIsVerySmall) && !ebpIsHeapPointer)
         {
             _cpu!.SetRegister("EBP", esp);
-            _logger.LogDebug("[Emulator] Reset invalid EBP 0x{OldEBP:X8} to ESP 0x{NewEBP:X8} (zero/too small)", ebp, esp);
+            _logger.LogTrace("[Emulator] Reset invalid EBP 0x{OldEBP:X8} to ESP 0x{NewEBP:X8} (zero/too small)", ebp, esp);
         }
         else if (ebpIsImportHook)
         {
             // EBP contains an import hook address - reset to ESP
             _cpu!.SetRegister("EBP", esp);
-            _logger.LogDebug("[Emulator] Reset EBP from import hook 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", ebp, esp);
+            _logger.LogTrace("[Emulator] Reset EBP from import hook 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", ebp, esp);
         }
         else if (ebpIsBeyondMemory)
         {
             // EBP is beyond valid memory range - reset to ESP
             _cpu!.SetRegister("EBP", esp);
-            _logger.LogDebug("[Emulator] Reset EBP beyond memory 0x{OldEBP:X8} to ESP 0x{NewEBP:X8} (size=0x{Size:X})", ebp, esp, _vm!.Size);
+            _logger.LogTrace("[Emulator] Reset EBP beyond memory 0x{OldEBP:X8} to ESP 0x{NewEBP:X8} (size=0x{Size:X})", ebp, esp, _vm!.Size);
         }
         else if (!ebpAligned && ebpInStackRegion)
         {
             // EBP is unaligned but in stack region - this is clearly wrong
             _cpu!.SetRegister("EBP", esp);
-            _logger.LogDebug("[Emulator] Reset unaligned EBP 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", ebp, esp);
+            _logger.LogTrace("[Emulator] Reset unaligned EBP 0x{OldEBP:X8} to ESP 0x{NewEBP:X8}", ebp, esp);
         }
         // Otherwise, leave EBP alone - it might be a valid heap pointer or special-purpose value
     }
@@ -1306,7 +1306,7 @@ public sealed class Emulator : IDisposable
                 if (inStackRegion && isAligned)
                 {
                     _cpu!.SetRegister("EBP", ebpFromStack);
-                    _logger.LogDebug("[Emulator] Forcibly restored EBP from stack (was import hook 0x{OldEBP:X8}): 0x{EBP:X8}", currentEbp, ebpFromStack);
+                    _logger.LogTrace("[Emulator] Forcibly restored EBP from stack (was import hook 0x{OldEBP:X8}): 0x{EBP:X8}", currentEbp, ebpFromStack);
                 }
                 else
                 {
@@ -1316,13 +1316,13 @@ public sealed class Emulator : IDisposable
                     // Reset EBP to ESP as a safe fallback to prevent subsequent memory access errors
                     // when the program tries to use EBP for stack frame access (e.g., MOV EAX, [EBP+offset])
                     _cpu!.SetRegister("EBP", esp);
-                    _logger.LogDebug("[Emulator] Reset EBP to ESP (was import hook 0x{OldEBP:X8}, stack restoration failed)", currentEbp);
+                    _logger.LogTrace("[Emulator] Reset EBP to ESP (was import hook 0x{OldEBP:X8}, stack restoration failed)", currentEbp);
                 }
             }
             else if (inStackRegion && isAligned && savedEbpValid)
             {
                 _cpu!.SetRegister("EBP", ebpFromStack);
-                _logger.LogDebug("[Emulator] Restored EBP from stack: 0x{EBP:X8}", ebpFromStack);
+                _logger.LogTrace("[Emulator] Restored EBP from stack: 0x{EBP:X8}", ebpFromStack);
             }
             else
             {
@@ -1347,11 +1347,11 @@ public sealed class Emulator : IDisposable
                     
                     if (isLikelyComPointer)
                     {
-                        _logger.LogDebug("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is likely a COM/heap pointer, leaving unchanged", currentEbp);
+                        _logger.LogTrace("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is likely a COM/heap pointer, leaving unchanged", currentEbp);
                     }
                     else if (isUnaligned)
                     {
-                        _logger.LogDebug("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is unaligned, leaving unchanged", currentEbp);
+                        _logger.LogTrace("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is unaligned, leaving unchanged", currentEbp);
                     }
                 }
                 else if (!currentEbpInStackRegion)
@@ -1359,17 +1359,17 @@ public sealed class Emulator : IDisposable
                     // EBP is out of stack region but not obviously wrong (aligned, not a hook/pointer)
                     // This might be a valid heap pointer or global variable address used intentionally
                     // Don't modify it
-                    _logger.LogDebug("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is out of stack region but looks intentional, leaving unchanged", currentEbp);
+                    _logger.LogTrace("[Emulator] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is out of stack region but looks intentional, leaving unchanged", currentEbp);
                 }
                 else
                 {
-                    _logger.LogDebug("[Emulator] Skipped restoring EBP from stack: 0x{EBP:X8} (not a valid frame pointer), current EBP 0x{CurrentEBP:X8} looks valid", ebpFromStack, currentEbp);
+                    _logger.LogTrace("[Emulator] Skipped restoring EBP from stack: 0x{EBP:X8} (not a valid frame pointer), current EBP 0x{CurrentEBP:X8} looks valid", ebpFromStack, currentEbp);
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "[Emulator] Failed to restore EBP from stack");
+            _logger.LogTrace(ex, "[Emulator] Failed to restore EBP from stack");
         }
     }
 
