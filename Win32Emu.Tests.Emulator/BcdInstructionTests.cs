@@ -85,6 +85,95 @@ public class BcdInstructionTests : IDisposable
     }
 
     [Fact]
+    public void AAS_ShouldAdjustAfterUnpackedBcdSubtraction()
+    {
+        // AAS - ASCII Adjust AL After Subtraction
+        // Opcode: 3F
+        // If (AL & 0x0F) > 9 or AF = 1, then AL -= 6, AH -= 1, and set AF and CF
+        // Always clear high nibble of AL (AL &= 0x0F)
+        
+        // Arrange: AL=0x0A (low nibble > 9, needs adjustment)
+        _helper.SetReg("EAX", 0x0000010A);
+        _helper.WriteCode(0x3F); // AAS
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        // AL = 0x0A - 6 = 0x04, then AL &= 0x0F = 0x04
+        // AH = 0x01 - 1 = 0x00
+        // AF and CF should be set
+        Assert.Equal(0x0004u, _helper.GetReg("EAX") & 0xFFFF);
+        Assert.True(_helper.IsFlagSet(CpuFlag.Af), "AF should be set");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set");
+    }
+
+    [Fact]
+    public void AAS_WithNoAdjustment_ShouldClearFlags()
+    {
+        // Arrange: AL=0x05 (low nibble <= 9, no adjustment needed)
+        _helper.SetReg("EAX", 0x00000305);
+        _helper.WriteCode(0x3F); // AAS
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        // AL = 0x05 & 0x0F = 0x05 (no subtraction)
+        // AH = 0x03 (unchanged)
+        // AF and CF should be cleared
+        Assert.Equal(0x0305u, _helper.GetReg("EAX") & 0xFFFF);
+        Assert.False(_helper.IsFlagSet(CpuFlag.Af), "AF should be cleared");
+        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be cleared");
+    }
+
+    [Fact]
+    public void AAS_WithAuxiliaryFlag_ShouldAdjust()
+    {
+        // Arrange: AL=0x05, but AF is set (indicating previous borrow)
+        _helper.SetReg("EAX", 0x00000205);
+        
+        // Set AF flag by performing a subtraction that causes auxiliary borrow
+        // SUB AL, 0x06 will set AF
+        _helper.WriteCode(0x2C, 0x06); // SUB AL, 6
+        _helper.ExecuteInstruction();
+        Assert.True(_helper.IsFlagSet(CpuFlag.Af), "AF should be set by SUB");
+        
+        // Now reset AL to 0x05 and execute AAS
+        _helper.SetReg("EAX", 0x00000305);
+        _helper.WriteCode(0x3F); // AAS
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        // Since AF was set, adjustment should occur
+        // AL = 0x05 - 6 = 0xFF, then AL &= 0x0F = 0x0F
+        // AH = 0x03 - 1 = 0x02
+        Assert.Equal(0x020Fu, _helper.GetReg("EAX") & 0xFFFF);
+        Assert.True(_helper.IsFlagSet(CpuFlag.Af), "AF should remain set");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set");
+    }
+
+    [Fact]
+    public void AAS_WithHighNibbleValue_ShouldClearHighNibble()
+    {
+        // Arrange: AL=0x1A (has value in high nibble)
+        _helper.SetReg("EAX", 0x0000021A);
+        _helper.WriteCode(0x3F); // AAS
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        // Low nibble 0xA > 9, so AL = 0x1A - 6 = 0x14, then AL &= 0x0F = 0x04
+        // AH = 0x02 - 1 = 0x01
+        Assert.Equal(0x0104u, _helper.GetReg("EAX") & 0xFFFF);
+        Assert.True(_helper.IsFlagSet(CpuFlag.Af), "AF should be set");
+        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set");
+    }
+
+    [Fact]
     public void DAA_ShouldAdjustAfterBcdAddition()
     {
         // DAA - Decimal Adjust AL After Addition
