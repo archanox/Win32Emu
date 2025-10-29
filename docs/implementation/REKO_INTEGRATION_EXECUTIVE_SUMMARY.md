@@ -256,7 +256,7 @@ Include link in API implementation files:
 
 - [Reko GitHub](https://github.com/uxmal/reko)
 - [Full Analysis](REKO_INTEGRATION_ANALYSIS.md)
-- [Tool README](Win32Emu.Tools.ApiAnalyzer/README.md)
+- [Tool README](../../Win32Emu.Tools.ApiAnalyzer/README.md)
 - [Sample Output](Win32Emu.Tools.ApiAnalyzer/SAMPLE_OUTPUT.txt)
 
 ---

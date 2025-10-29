@@ -200,7 +200,7 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "GETSYSTEMMETRICS":
-					returnValue = (uint)GetSystemMetrics(a.Int32(0));
+					returnValue = (uint)GetSystemMetrics((SystemMetric)a.Int32(0));
 					return true;
 
 				case "LOADICONA":
@@ -1798,32 +1798,32 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(11)]
-		private int GetSystemMetrics(int nIndex)
+		private int GetSystemMetrics(SystemMetric nIndex)
 		{
 			_logger.LogInformation("[User32] GetSystemMetrics: nIndex={NIndex}", nIndex);
 
 			// Return common system metrics
 			switch (nIndex)
 			{
-				case 0:
+				case SystemMetric.SM_CXSCREEN: //0:
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 1920");
 					return 1920; // SM_CXSCREEN - Screen width
-				case 1:
+				case SystemMetric.SM_CYSCREEN://1:
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 1080");
 					return 1080; // SM_CYSCREEN - Screen height
-				case 4:
+				case SystemMetric.SM_CXMIN://4:
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXSCREEN (4): 640");
 					return 640; // SM_CXMIN - Minimum window width
-				case 5:
+				case SystemMetric.SM_CYMIN://5:
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXSCREEN (5): 480");
 					return 480; // SM_CYMIN - Minimum window height
 				default:
-					_logger.LogInformation("[User32] GetSystemMetrics: Returning {SystemMetric} ({SystemMetricValue}): 0", ((SystemMetric)nIndex).ToString(), nIndex);
+					_logger.LogInformation("[User32] GetSystemMetrics: Returning {SystemMetric} ({SystemMetricValue}): 0", nIndex.ToString(), (int)nIndex);
 					return 0;
 			}
 		}
 
-		enum SystemMetric
+		enum SystemMetric : int
 		{
 			/// <summary>
 			/// The flags that specify how the system arranged minimized windows. For more information, see the Remarks section in this topic.

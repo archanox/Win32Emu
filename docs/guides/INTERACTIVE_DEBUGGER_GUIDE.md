@@ -354,5 +354,5 @@ Potential improvements for the debugger:
 ## See Also
 
 - [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) - Enhanced debugging mode
-- [DECOMPILATION_FINDINGS.md](DECOMPILATION_FINDINGS.md) - Analysis of IGN_TEAS.EXE
-- [Decomp/ign_teas/INDEX.md](Decomp/ign_teas/INDEX.md) - Decompilation index
+- [DECOMPILATION_FINDINGS.md](../analysis/DECOMPILATION_FINDINGS.md) - Analysis of IGN_TEAS.EXE
+- [Decomp/ign_teas/INDEX.md](../../Decomp/ign_teas/INDEX.md) - Decompilation index
