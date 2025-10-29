@@ -17,10 +17,11 @@ public class EmulatorLoggingTests
         _output = output;
     }
 
-    [Fact]
-    public void LoadExecutable_ShouldLogSystemInformation()
+    /// <summary>
+    /// Helper method to find the repository root by looking for Win32Emu.sln
+    /// </summary>
+    private static string? FindRepositoryRoot()
     {
-        // Arrange
         var currentDir = Directory.GetCurrentDirectory();
         var repoRoot = currentDir;
         
@@ -34,6 +35,15 @@ public class EmulatorLoggingTests
             }
             repoRoot = parent.FullName;
         }
+        
+        return repoRoot;
+    }
+
+    [Fact]
+    public void LoadExecutable_ShouldLogSystemInformation()
+    {
+        // Arrange
+        var repoRoot = FindRepositoryRoot();
         
         var exePath = Path.Combine(repoRoot!, "EXEs", "ign_teas", "IGN_TEAS.EXE");
         
@@ -77,19 +87,7 @@ public class EmulatorLoggingTests
     public void LoadExecutable_WithJitCpu_ShouldLogJitCpuBackend()
     {
         // Arrange
-        var currentDir = Directory.GetCurrentDirectory();
-        var repoRoot = currentDir;
-        
-        // Navigate up until we find the .sln file
-        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "Win32Emu.sln")))
-        {
-            var parent = Directory.GetParent(repoRoot);
-            if (parent == null)
-            {
-                break;
-            }
-            repoRoot = parent.FullName;
-        }
+        var repoRoot = FindRepositoryRoot();
         
         var exePath = Path.Combine(repoRoot!, "EXEs", "ign_teas", "IGN_TEAS.EXE");
         
