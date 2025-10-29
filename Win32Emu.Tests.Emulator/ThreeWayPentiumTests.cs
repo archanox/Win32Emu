@@ -226,6 +226,24 @@ public class ThreeWayPentiumTests : IDisposable
 		_helper.AssertRegistersMatch("EAX");
 	}
 
+	[Fact]
+	public void CMOVNO_WhenNoOverflow_ShouldMatch()
+	{
+		// Arrange: Set OF=0 (no overflow), then CMOVNO
+		// ADD AL, 0x01 (04 01) with AL=0x01 does not cause overflow
+		// CMOVNO EAX, EBX (0F 41 C3)
+		_helper.SetReg("EAX", 0x00000001);
+		_helper.SetReg("EBX", 0xFFFFFFFF);
+		_helper.WriteCode(0x04, 0x01, 0x0F, 0x41, 0xC3);
+		
+		// Act
+		_helper.ExecuteInstruction(); // ADD - should not set OF
+		_helper.ExecuteInstruction(); // CMOVNO - should move since OF=0
+		
+		// Assert
+		_helper.AssertRegistersMatch("EAX");
+	}
+
 	#endregion
 
 	#region System Instructions

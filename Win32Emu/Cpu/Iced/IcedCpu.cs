@@ -220,6 +220,7 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Cmovg:
 				case Mnemonic.Cmovl:
 				case Mnemonic.Cmovo:
+				case Mnemonic.Cmovno:
 				case Mnemonic.Cmovs:
 				case Mnemonic.Cmovns:
 				case Mnemonic.Cmovp:
@@ -3576,6 +3577,7 @@ public class IcedCpu : IAsyncCpu
 		Mnemonic.Cmovg => !GetFlag(Zf) && (GetFlag(Sf) == GetFlag(Of)),
 		Mnemonic.Cmovl => GetFlag(Sf) != GetFlag(Of),
 		Mnemonic.Cmovo => GetFlag(Of),
+		Mnemonic.Cmovno => !GetFlag(Of),
 		Mnemonic.Cmovs => GetFlag(Sf),
 		Mnemonic.Cmovns => !GetFlag(Sf),
 		Mnemonic.Cmovp => GetFlag(Pf),
