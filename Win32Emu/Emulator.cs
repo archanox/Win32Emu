@@ -452,6 +452,66 @@ public sealed class Emulator : IDisposable
             // Record instruction execution
             _metrics?.RecordInstructionsExecuted();
             
+            // Check for syscall (INT 0x80 from import stubs)
+            // This is the retrowin32-style approach where import stubs CALL syscall dispatcher
+            // The syscall dispatcher triggers INT 0x80, we handle it, then CPU executes RET naturally
+            if (step.IsSyscall)
+            {
+                // The stack looks like:
+                // [ESP+0] = return address to import stub (points to RET instruction after CALL)
+                // [ESP+4+] = function arguments (pushed by original caller)
+                
+                
+                var esp = _cpu.GetRegister("ESP");
+                
+                // Read the return address - this points to the RET instruction in the import stub
+                var retToStub = _vm!.Read32(esp);
+                
+                // The import stub address is 5 bytes before the return address
+                // (5 bytes for CALL instruction, then RET is at +5, which is what retToStub points to)
+                var importStubAddr = retToStub - 5;
+                
+                // Look up which import this is
+                if (_image!.ImportAddressMap.TryGetValue(importStubAddr, out var imp))
+                {
+                    var dll = imp.dll.ToUpperInvariant();
+                    var name = imp.name;
+                    _logger.LogInformation("[Syscall] {Dll}!{Name} from stub at 0x{Stub:X8}", dll, name, importStubAddr);
+                    
+                    // Save callee-saved registers
+                    var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+                    
+                    // The actual function arguments start at ESP+4 (after return address to stub)
+                    if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
+                    {
+                        // Set return value - this is all we do, no EIP/ESP manipulation!
+                        _cpu.SetRegister("EAX", ret);
+                        
+                        // Restore callee-saved registers
+                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                        
+                        _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, CPU will execute RET naturally", ret);
+                        
+                        // The CPU will now execute the RET instruction in the syscall dispatcher,
+                        // which returns to the import stub, which then executes its own RET
+                        // to return to the original caller. All naturally through CPU execution!
+                    }
+                    else
+                    {
+                        _logger.LogError("[Syscall] Dispatcher failed to invoke {Dll}!{Name}", dll, name);
+                        _cpu.SetRegister("EAX", 0);
+                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                    }
+                }
+                else
+                {
+                    _logger.LogError("[Syscall] Unknown import stub at 0x{Stub:X8} (retAddr=0x{RetAddr:X8})", importStubAddr, retToStub);
+                    _cpu.SetRegister("EAX", 0);
+                }
+                
+                continue; // Continue to next iteration, let CPU execute RET
+            }
+            
             // Check for thread exit (return address is 0xFFFFFFFF)
             var eip = _cpu!.GetEip();
             if (eip == 0xFFFFFFFF && scheduler != null)
@@ -524,7 +584,12 @@ public sealed class Emulator : IDisposable
                     CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
                 }
             }
-            else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+            // OLD IMPORT HANDLING CODE - DISABLED
+            // Import stubs now use CALL/RET and syscall mechanism (INT 0x80)
+            // This old code intercepted calls to import stub addresses and manually manipulated EIP/ESP
+            // which caused the infinite loop bug. Import handling now happens via syscall mechanism.
+            /* 
+            else if (step.IsCall && !IsImportStubAddress(step.CallTarget) && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
             {
                 var dll = imp.dll.ToUpperInvariant();
                 var name = imp.name;
@@ -562,6 +627,7 @@ public sealed class Emulator : IDisposable
                     }
                 }
             }
+            */
             else if (step.IsCall)
             {
 	            // TODO: wire up to native program function overrides in c#
@@ -739,7 +805,7 @@ public sealed class Emulator : IDisposable
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     }
                 }
-                else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                else if (step.IsCall && !IsImportStubAddress(step.CallTarget) && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
                 {
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;
@@ -958,7 +1024,7 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("EBP", savedEbp);
                 }
             }
-            else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+            else if (step.IsCall && !IsImportStubAddress(step.CallTarget) && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
             {
                 var dll = imp.dll.ToUpperInvariant();
                 var name = imp.name;
@@ -1070,7 +1136,7 @@ public sealed class Emulator : IDisposable
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     }
                 }
-                else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                else if (step.IsCall && !IsImportStubAddress(step.CallTarget) && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
                 {
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;
@@ -1138,6 +1204,16 @@ public sealed class Emulator : IDisposable
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Checks if an address is in the import stub range (0x0F000000-0x10000000).
+    /// Import stubs now use CALL/RET and syscall mechanism, so they should not be
+    /// intercepted as direct import calls.
+    /// </summary>
+    private static bool IsImportStubAddress(uint address)
+    {
+        return address >= 0x0F000000 && address < 0x10000000;
     }
 
     private static uint GetCallTarget(ICpu cpu, VirtualMemory vm)
