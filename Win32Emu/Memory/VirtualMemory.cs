@@ -133,6 +133,12 @@ public class VirtualMemory
     {
         EnsureRange(addr, (ulong)data.Length);
         
+        // Early return for empty data to avoid underflow in endPage calculation
+        if (data.Length == 0)
+        {
+            return;
+        }
+        
         uint startPage = (uint)(addr >> PageSizeBits);
         uint endPage = (uint)((addr + (ulong)data.Length - 1) >> PageSizeBits);
 
