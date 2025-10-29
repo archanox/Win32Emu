@@ -63,11 +63,11 @@ Ignition is a racing game from the mid-1990s that includes:
 - Basic COM initialization
 - Resource loading (stubbed)
 
-## Relationship to Game (ign_teas)
+## Relationship to Game
 
 The **installer** and **game** have different requirements:
 
-| Component | SETUP.EXE | IGN_TEAS.EXE |
+| Component | SETUP.EXE | IGN_TEAS.EXE / IGN_WIN.EXE |
 |-----------|-----------|--------------|
 | **Type** | Installer utility | Game executable |
 | **UI** | Standard dialogs | DirectDraw rendering |
@@ -76,7 +76,9 @@ The **installer** and **game** have different requirements:
 | **Priority** | Medium | High |
 | **Workaround** | Manual install possible | None |
 
-**See:** `/Decomp/ign_teas/ANALYSIS.md` for game analysis
+**Note:** IGN_TEAS.EXE is the game teaser/demo, IGN_WIN.EXE is the full game. Both use DirectX and have similar COM requirements.
+
+**See:** `../ign_teas/ANALYSIS.md` for game teaser analysis
 
 ## Implementation Recommendations
 
@@ -172,19 +174,19 @@ Win32Emu EXEs/ign_install/SETUP.EXE
 ## Related Files
 
 ### Executables
-- `/EXEs/ign_install/SETUP.EXE` - Installer (analyzed here)
-- `/EXEs/ign_install/IGN_WIN.EXE` - Main game
-- `/EXEs/ign_install/REMOVE.EXE` - Uninstaller
-- `/EXEs/ign_teas/IGN_TEAS.EXE` - Game demo/teaser
+- `../../EXEs/ign_install/SETUP.EXE` - Installer (analyzed here)
+- `../../EXEs/ign_install/IGN_WIN.EXE` - Main game (full version)
+- `../../EXEs/ign_install/REMOVE.EXE` - Uninstaller
+- `../../EXEs/ign_teas/IGN_TEAS.EXE` - Game teaser/demo (separate from IGN_WIN.EXE)
 
 ### Decompilations
-- `/Decomp/ign_install/setup.exe/*.cpp` - 8 decompiler outputs
-- `/Decomp/ign_teas/*.cpp` - Game decompilations
+- `setup.exe/*.cpp` - 8 decompiler outputs for SETUP.EXE installer
+- `../ign_teas/*.cpp` - Decompilations for IGN_TEAS.EXE game teaser
 
 ### Emulator Code
-- `/Win32Emu/Win32/Modules/Shell32Module.cs` - Shell APIs
-- `/Win32Emu/Win32/Modules/Ole32Module.cs` - COM APIs
-- `/Win32Emu/Win32/Modules/User32Module.cs` - Dialog APIs
+- `../../Win32Emu/Win32/Modules/Shell32Module.cs` - Shell APIs
+- `../../Win32Emu/Win32/Modules/Ole32Module.cs` - COM APIs
+- `../../Win32Emu/Win32/Modules/User32Module.cs` - Dialog APIs
 
 ## Quick Reference
 
