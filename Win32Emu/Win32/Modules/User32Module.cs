@@ -2770,6 +2770,10 @@ namespace Win32Emu.Win32.Modules
 			var failed = false;
 			var lastCheckEip = cpu.GetEip();
 			var stuckCounter = 0;
+			
+			// Track last N instructions to help debug NULL jumps
+			const int HISTORY_SIZE = 50;
+			var instructionHistory = new Queue<(int step, uint eip, string? description)>(HISTORY_SIZE);
 
 			try
 			{
@@ -2812,7 +2816,15 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogError("[User32] CallDialogProcedureAsync: This typically means the code called a NULL function pointer");
 						_logger.LogError("[User32] CallDialogProcedureAsync: ESP=0x{Esp:X8} EBP=0x{Ebp:X8}",
 							cpu.GetRegister("ESP"), cpu.GetRegister("EBP"));
-						// Log stack contents to help identify what function returned NULL
+
+// Log instruction history
+_logger.LogError("[User32] CallDialogProcedureAsync: Last {Count} instructions before NULL jump:", instructionHistory.Count);
+foreach (var (histStep, histEip, histDesc) in instructionHistory)
+{
+_logger.LogError("  Step {Step}: EIP=0x{Eip:X8} {Desc}", histStep, histEip, histDesc ?? "");
+}
+
+// Log stack contents to help identify what function returned NULL
 						try
 						{
 							var stackPtr = cpu.GetRegister("ESP");
@@ -2862,7 +2874,9 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Execute one instruction and check for import calls
+					string? stepDesc = null;
 					var step = cpu.SingleStep(memory);
+					
 
 					// Check for COM vtable method calls
 					if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
@@ -2874,6 +2888,7 @@ namespace Win32Emu.Win32.Modules
 
 						if (_env.ComDispatcher.TryInvoke(step.CallTarget, cpu, memory, out var comRet, out var comArgBytes))
 						{
+							stepDesc = $"COM vtable call -> 0x{step.CallTarget:X8}";
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
 							currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
@@ -2893,6 +2908,7 @@ namespace Win32Emu.Win32.Modules
 						var dll = imp.dll.ToUpperInvariant();
 						var name = imp.name;
 						_logger.LogInformation("[User32] CallDialogProcedureAsync: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
+						stepDesc = $"Import call {dll}!{name}";
 
 						// Save callee-saved registers (EBX, ESI, EDI)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
