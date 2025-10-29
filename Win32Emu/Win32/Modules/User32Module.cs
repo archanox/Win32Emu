@@ -2770,6 +2770,14 @@ namespace Win32Emu.Win32.Modules
 			var failed = false;
 			var lastCheckEip = cpu.GetEip();
 			var stuckCounter = 0;
+			
+			// Track last N instructions to help debug NULL jumps
+			const int HISTORY_SIZE = 30000;  // Large buffer to capture transition from code to stack
+			var instructionHistory = new Queue<(int step, uint eip, string? description)>(HISTORY_SIZE);
+			
+			// Track stack execution
+			var wasExecutingFromStack = false;
+			var stackExecutionStartStep = -1;
 
 			try
 			{
@@ -2796,6 +2804,38 @@ namespace Win32Emu.Win32.Modules
 					{
 						_logger.LogInformation("[User32] CallDialogProcedureAsync: Step {Steps}: EIP=0x{Eip:X8}", steps, eip);
 					}
+					
+					// Detect and track stack execution
+					// Stack typically starts high (e.g., 0x00200000) and grows down
+					// ESP is the current stack pointer. Check if EIP is in stack region.
+					// Stack region is typically ESP ± 64KB to account for stack growth
+					// Also check that EIP is significantly below code segment (0x00400000+)
+					var espForStackCheck = cpu.GetRegister("ESP");
+					var stackLower = espForStackCheck >= 0x10000 ? espForStackCheck - 0x10000 : 0;
+					var stackUpper = espForStackCheck + 0x10000;
+					var isExecutingFromStack = eip >= stackLower && eip <= stackUpper && eip < 0x00400000;
+					
+					// Log transitions into/out of stack execution
+					if (isExecutingFromStack && !wasExecutingFromStack)
+					{
+						stackExecutionStartStep = steps;
+						_logger.LogError("[User32] CallDialogProcedureAsync: ⚠️ ENTERED STACK EXECUTION at step {Steps}, EIP=0x{Eip:X8} (ESP=0x{Esp:X8})", steps, eip, espForStackCheck);
+						// Log previous 10 instructions from history to see what led here
+						var historyList = instructionHistory.ToList();
+						var startIdx = Math.Max(0, historyList.Count - 10);
+						_logger.LogError("[User32] CallDialogProcedureAsync: Previous 10 instructions before entering stack:");
+						for (int i = startIdx; i < historyList.Count; i++)
+						{
+							var (prevStep, prevEip, prevDesc) = historyList[i];
+							_logger.LogError("  Step {Step}: EIP=0x{Eip:X8} {Desc}", prevStep, prevEip, prevDesc ?? "");
+						}
+					}
+					else if (!isExecutingFromStack && wasExecutingFromStack)
+					{
+						_logger.LogWarning("[User32] CallDialogProcedureAsync: Exited stack execution at step {Steps} (ran for {Count} steps)", steps, steps - stackExecutionStartStep);
+					}
+					
+					wasExecutingFromStack = isExecutingFromStack;
 
 					// Check if we've returned to our marker address
 					if (eip == RETURN_ADDRESS)
@@ -2812,7 +2852,22 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogError("[User32] CallDialogProcedureAsync: This typically means the code called a NULL function pointer");
 						_logger.LogError("[User32] CallDialogProcedureAsync: ESP=0x{Esp:X8} EBP=0x{Ebp:X8}",
 							cpu.GetRegister("ESP"), cpu.GetRegister("EBP"));
-						// Log stack contents to help identify what function returned NULL
+
+					// Log stack execution context
+					if (stackExecutionStartStep >= 0)
+					{
+						_logger.LogError("[User32] CallDialogProcedureAsync: ⚠️ Was executing from STACK (started at step {StartStep}, ran for {Count} steps before NULL jump)", 
+							stackExecutionStartStep, steps - stackExecutionStartStep);
+					}
+
+					// Log instruction history
+					_logger.LogError("[User32] CallDialogProcedureAsync: Last {Count} instructions before NULL jump:", instructionHistory.Count);
+					foreach (var (histStep, histEip, histDesc) in instructionHistory)
+					{
+						_logger.LogError("  Step {Step}: EIP=0x{Eip:X8} {Desc}", histStep, histEip, histDesc ?? "");
+					}
+
+					// Log stack contents to help identify what function returned NULL
 						try
 						{
 							var stackPtr = cpu.GetRegister("ESP");
@@ -2862,7 +2917,9 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Execute one instruction and check for import calls
+					string? stepDesc = null;
 					var step = cpu.SingleStep(memory);
+					
 
 					// Check for COM vtable method calls
 					if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
@@ -2874,6 +2931,7 @@ namespace Win32Emu.Win32.Modules
 
 						if (_env.ComDispatcher.TryInvoke(step.CallTarget, cpu, memory, out var comRet, out var comArgBytes))
 						{
+							stepDesc = $"COM vtable call -> 0x{step.CallTarget:X8}";
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
 							currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
@@ -2893,6 +2951,7 @@ namespace Win32Emu.Win32.Modules
 						var dll = imp.dll.ToUpperInvariant();
 						var name = imp.name;
 						_logger.LogInformation("[User32] CallDialogProcedureAsync: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
+						stepDesc = $"Import call {dll}!{name}";
 
 						// Save callee-saved registers (EBX, ESI, EDI)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
@@ -2952,6 +3011,13 @@ namespace Win32Emu.Win32.Modules
 							RestoreEbpFromStack(currentEsp);
 						}
 					}
+
+					// Add to instruction history
+					if (instructionHistory.Count >= HISTORY_SIZE)
+					{
+						instructionHistory.Dequeue();
+					}
+					instructionHistory.Enqueue((steps, eip, stepDesc));
 
 					steps++;
 
