@@ -131,9 +131,9 @@ public class IcedCpu : IAsyncCpu
 
 		_reader.Reset(_eip);
 		_decoder.IP = _eip;
+		var oldEip = _eip; // Capture instruction address BEFORE decoding
 		var insn = _decoder.Decode();
 		//_logger.LogInformation("Instruction: {Insn}", insn.ToString());
-		var oldEip = _eip;
 		_eip = (uint)_decoder.IP;
 		var isCall = false;
 		uint callTarget = 0;
