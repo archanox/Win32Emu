@@ -85,11 +85,26 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		return new LoadedImage(imageBase, entryPoint, imageSize, importMap, path, exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal, (ushort)subsystem);
 	}
 
+	// Syscall dispatcher address - this is where all import stubs will call into
+	private const uint SYSCALL_DISPATCHER_ADDRESS = 0x0E000000;
+	
 	private Dictionary<uint, (string dll, string name)> BuildImportMap(PEImage image, uint imageBase)
 	{
 		var map = new Dictionary<uint, (string dll, string name)>();
 		var imports = image.Imports; // IEnumerable<ImportModule>
 		var synth = 0;
+		
+		// First, create the syscall dispatcher stub at a fixed address
+		// This stub will be hit by all import calls and will trigger our syscall handler
+		// Format: INT 0x80 (syscall); RET (won't execute normally)
+		var syscallStub = new byte[]
+		{
+			0xCD, 0x80, // INT 0x80 - triggers syscall
+			0xC3        // RET - return (won't execute in normal flow)
+		};
+		vm.WriteBytes(SYSCALL_DISPATCHER_ADDRESS, syscallStub);
+		logger?.LogDebug("[Loader] Created syscall dispatcher at 0x{Address:X8}", SYSCALL_DISPATCHER_ADDRESS);
+		
 		foreach (var module in imports)
 		{
 			var dll = module.Name ?? string.Empty;
@@ -108,22 +123,36 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				// Write the synthetic address to the IAT entry
 				vm.Write32(va, synthetic);
 				
-				// Create an executable stub at the synthetic address
-				// This stub will be a simple INT3 (breakpoint) that we can intercept
-				// INT3 = 0xCC, followed by padding
-				var stub = new byte[] 
-				{ 
-					0xCC, // INT3 - breakpoint instruction
-					0x90, 0x90, 0x90, // NOP padding
+				// Create import stub using retrowin32-style approach:
+				// CALL [syscall_dispatcher]; RET N
+				// This allows the CPU to naturally execute and return without manual EIP manipulation
+				//
+				// Format:
+				// - CALL to syscall dispatcher (5 bytes: E8 + rel32 offset)
+				// - RET (1 byte: C3) - CPU will execute this to return naturally after syscall
+				// 
+				// Calculate relative offset from stub address to syscall dispatcher
+				var stubAddr = synthetic;
+				var callOffset = (int)(SYSCALL_DISPATCHER_ADDRESS - (stubAddr + 5)); // +5 for size of CALL instruction
+				
+				var stub = new byte[]
+				{
+					0xE8, // CALL rel32
+					(byte)(callOffset & 0xFF),
+					(byte)((callOffset >> 8) & 0xFF),
+					(byte)((callOffset >> 16) & 0xFF),
+					(byte)((callOffset >> 24) & 0xFF),
+					0xC3, // RET - CPU will execute this to return naturally
+					// Padding to maintain 16-byte alignment
 					0x90, 0x90, 0x90, 0x90,
-					0x90, 0x90, 0x90, 0x90,
-					0x90, 0x90, 0x90, 0x90
+					0x90, 0x90, 0x90, 0x90, 0x90, 0x90
 				};
 				vm.WriteBytes(synthetic, stub);
 				
 				var name = sym.Name ?? ($"Ordinal_{sym.Hint}");
 				map[synthetic] = (dll.ToUpperInvariant(), name);
-				logger?.LogTrace("[Loader] Mapped import #{Index}: {Dll}!{Name} at 0x{Synthetic:X8}", synth - 1, dll.ToUpperInvariant(), name, synthetic);
+				logger?.LogTrace("[Loader] Mapped import #{Index}: {Dll}!{Name} at 0x{Synthetic:X8} -> syscall at 0x{Syscall:X8}", 
+					synth - 1, dll.ToUpperInvariant(), name, synthetic, SYSCALL_DISPATCHER_ADDRESS);
 			}
 		}
 

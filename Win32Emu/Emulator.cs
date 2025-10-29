@@ -452,6 +452,66 @@ public sealed class Emulator : IDisposable
             // Record instruction execution
             _metrics?.RecordInstructionsExecuted();
             
+            // Check for syscall (INT 0x80 from import stubs)
+            // This is the retrowin32-style approach where import stubs CALL syscall dispatcher
+            // The syscall dispatcher triggers INT 0x80, we handle it, then CPU executes RET naturally
+            if (step.IsSyscall)
+            {
+                // The stack looks like:
+                // [ESP+0] = return address to import stub (after CALL instruction)  
+                // [ESP+4] = return address to original caller
+                // [ESP+8+] = function arguments
+                
+                var esp = _cpu.GetRegister("ESP");
+                
+                // Read the return address - this points back into the import stub
+                var retToStub = _vm!.Read32(esp);
+                
+                // The import stub address is 6 bytes before the return address
+                // (5 bytes for CALL instruction + 1 byte for RET)
+                var importStubAddr = retToStub - 6;
+                
+                // Look up which import this is
+                if (_image!.ImportAddressMap.TryGetValue(importStubAddr, out var imp))
+                {
+                    var dll = imp.dll.ToUpperInvariant();
+                    var name = imp.name;
+                    _logger.LogInformation("[Syscall] {Dll}!{Name} from stub at 0x{Stub:X8}", dll, name, importStubAddr);
+                    
+                    // Save callee-saved registers
+                    var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+                    
+                    // The actual function arguments start at ESP+4 (after return address to stub)
+                    if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
+                    {
+                        // Set return value - this is all we do, no EIP/ESP manipulation!
+                        _cpu.SetRegister("EAX", ret);
+                        
+                        // Restore callee-saved registers
+                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                        
+                        _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, CPU will execute RET naturally", ret);
+                        
+                        // The CPU will now execute the RET instruction in the syscall dispatcher,
+                        // which returns to the import stub, which then executes its own RET
+                        // to return to the original caller. All naturally through CPU execution!
+                    }
+                    else
+                    {
+                        _logger.LogError("[Syscall] Dispatcher failed to invoke {Dll}!{Name}", dll, name);
+                        _cpu.SetRegister("EAX", 0);
+                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                    }
+                }
+                else
+                {
+                    _logger.LogError("[Syscall] Unknown import stub at 0x{Stub:X8}", importStubAddr);
+                    _cpu.SetRegister("EAX", 0);
+                }
+                
+                continue; // Continue to next iteration, let CPU execute RET
+            }
+            
             // Check for thread exit (return address is 0xFFFFFFFF)
             var eip = _cpu!.GetEip();
             if (eip == 0xFFFFFFFF && scheduler != null)

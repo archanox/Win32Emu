@@ -136,6 +136,7 @@ public class IcedCpu : IAsyncCpu
 		//_logger.LogInformation("Instruction: {Insn}", insn.ToString());
 		_eip = (uint)_decoder.IP;
 		var isCall = false;
+		var isSyscall = false;
 		uint callTarget = 0;
 		try
 		{
@@ -476,6 +477,15 @@ public class IcedCpu : IAsyncCpu
 							_logger.LogWarning("[IcedCpu] INT3 breakpoint at 0x{OldEip:X8}", oldEip);
 						}
 					}
+					else if (insn.Immediate8 == 0x80)
+					{
+						// INT 0x80 - Syscall dispatcher (retrowin32-style)
+						// This is triggered when import stubs call the syscall dispatcher
+						// We signal this as a syscall and let the emulator handle it
+						isSyscall = true;
+						_logger.LogDebug("[IcedCpu] INT 0x80 syscall at 0x{OldEip:X8}", oldEip);
+						// Don't execute the INT, the emulator will handle the syscall
+					}
 					else
 					{
 						_logger.LogWarning("[IcedCpu] Unhandled interrupt INT {InsnImmediate8:X2} at 0x{OldEip:X8}", insn.Immediate8, oldEip);
@@ -566,7 +576,7 @@ public class IcedCpu : IAsyncCpu
 			Diagnostics.Diagnostics.ClearCpuContext();
 		}
 
-		return new CpuStepResult(isCall, callTarget);
+		return new CpuStepResult(isCall, callTarget, isSyscall);
 	}
 
 	#region Exec helpers
