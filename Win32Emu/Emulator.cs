@@ -366,35 +366,8 @@ public sealed class Emulator : IDisposable
         var scheduler = _env!.ThreadScheduler;
 
         // Run indefinitely until stop/exit requested or no threads running
-        var loopIter = 0;
-        var lastLoggedEip = 0u;
-        var stuckCount = 0;
-        const int MAX_STUCK_ITERATIONS = 3; // Break after EIP is stuck for 3 consecutive checks
         while (!_stopRequested && !_env!.ExitRequested)
         {
-            loopIter++;
-            // Log every 10000 iterations to detect infinite loops
-            if (loopIter % 10000 == 0)
-            {
-                var currentLoopEip = _cpu!.GetEip();
-                _logger.LogWarning("[Emulator] Loop iteration {Iteration}, EIP=0x{Eip:X8}", loopIter, currentLoopEip);
-                if (currentLoopEip == lastLoggedEip)
-                {
-                    stuckCount++;
-                    _logger.LogError("[Emulator] INFINITE LOOP DETECTED! EIP stuck at 0x{Eip:X8} for {Count} checks (iteration {Iteration})", currentLoopEip, stuckCount, loopIter);
-                    if (stuckCount >= MAX_STUCK_ITERATIONS)
-                    {
-                        _logger.LogCritical("[Emulator] Breaking out of execution loop - EIP has not advanced in {TotalIterations} iterations", stuckCount * 10000);
-                        break;
-                    }
-                }
-                else
-                {
-                    stuckCount = 0; // Reset counter if EIP has changed
-                }
-                lastLoggedEip = currentLoopEip;
-            }
-            
             // Check pause state periodically without blocking
             if (!_pauseEvent.WaitOne(0))
             {
@@ -915,35 +888,8 @@ public sealed class Emulator : IDisposable
         }
 
         // Run indefinitely until stop/exit requested
-        var loopIter = 0;
-        var lastLoggedEip = 0u;
-        var stuckCount = 0;
-        const int MAX_STUCK_ITERATIONS = 3; // Break after EIP is stuck for 3 consecutive checks
         while (!_stopRequested && !_env!.ExitRequested && !debugger.ShouldStop)
         {
-            loopIter++;
-            // Log every 10000 iterations to detect infinite loops
-            if (loopIter % 10000 == 0)
-            {
-                var eip = _cpu!.GetEip();
-                _logger.LogWarning("[InteractiveDebugger] Loop iteration {Iteration}, EIP=0x{Eip:X8}", loopIter, eip);
-                if (eip == lastLoggedEip)
-                {
-                    stuckCount++;
-                    _logger.LogError("[InteractiveDebugger] INFINITE LOOP DETECTED! EIP stuck at 0x{Eip:X8} for {Count} checks (iteration {Iteration})", eip, stuckCount, loopIter);
-                    if (stuckCount >= MAX_STUCK_ITERATIONS)
-                    {
-                        _logger.LogCritical("[InteractiveDebugger] Breaking out of execution loop - EIP has not advanced in {TotalIterations} iterations", stuckCount * 10000);
-                        break;
-                    }
-                }
-                else
-                {
-                    stuckCount = 0; // Reset counter if EIP has changed
-                }
-                lastLoggedEip = eip;
-            }
-            
             // Check if debugger wants to break
             currentEip = _cpu!.GetEip();
             if (debugger.ShouldBreak(currentEip))
