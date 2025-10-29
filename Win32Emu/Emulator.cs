@@ -890,6 +890,8 @@ public sealed class Emulator : IDisposable
         // Run indefinitely until stop/exit requested
         var loopIter = 0;
         var lastLoggedEip = 0u;
+        var stuckCount = 0;
+        const int MAX_STUCK_ITERATIONS = 3; // Break after EIP is stuck for 3 consecutive checks
         while (!_stopRequested && !_env!.ExitRequested && !debugger.ShouldStop)
         {
             loopIter++;
@@ -900,7 +902,17 @@ public sealed class Emulator : IDisposable
                 _logger.LogWarning("[InteractiveDebugger] Loop iteration {Iteration}, EIP=0x{Eip:X8}", loopIter, eip);
                 if (eip == lastLoggedEip)
                 {
-                    _logger.LogError("[InteractiveDebugger] INFINITE LOOP DETECTED! EIP stuck at 0x{Eip:X8} for {Count} iterations", eip, loopIter);
+                    stuckCount++;
+                    _logger.LogError("[InteractiveDebugger] INFINITE LOOP DETECTED! EIP stuck at 0x{Eip:X8} for {Count} checks (iteration {Iteration})", eip, stuckCount, loopIter);
+                    if (stuckCount >= MAX_STUCK_ITERATIONS)
+                    {
+                        _logger.LogCritical("[InteractiveDebugger] Breaking out of execution loop - EIP has not advanced in {StuckCount}00,000 iterations", MAX_STUCK_ITERATIONS);
+                        break;
+                    }
+                }
+                else
+                {
+                    stuckCount = 0; // Reset counter if EIP has changed
                 }
                 lastLoggedEip = eip;
             }
