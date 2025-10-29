@@ -41,7 +41,7 @@ public static class CpuHelpers
 	/// <summary>
 	/// Check if an EBP value is obviously invalid (0, import hook address, etc.)
 	/// </summary>
-	public static bool IsEbpValid(uint ebp, uint memorySize)
+	public static bool IsEbpValid(uint ebp, ulong memorySize)
 	{
 		// Check for obviously invalid values
 		if (ebp == 0) return false;
@@ -56,7 +56,7 @@ public static class CpuHelpers
 	/// Restore callee-saved registers (EBX, ESI, EDI, EBP) that were previously saved.
 	/// Optionally skip restoring EBP if it was invalid when saved (prevents corruption cycle).
 	/// </summary>
-	public static void RestoreCalleeSavedRegisters(ICpu cpu, SavedCalleeSavedRegisters saved, bool skipInvalidEbp = false, uint memorySize = 0)
+	public static void RestoreCalleeSavedRegisters(ICpu cpu, SavedCalleeSavedRegisters saved, bool skipInvalidEbp = false, ulong memorySize = 0)
 	{
 		if (skipInvalidEbp && memorySize == 0)
 		{
