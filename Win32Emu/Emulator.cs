@@ -589,7 +589,7 @@ public sealed class Emulator : IDisposable
             // This old code intercepted calls to import stub addresses and manually manipulated EIP/ESP
             // which caused the infinite loop bug. Import handling now happens via syscall mechanism.
             /* 
-            else if (step.IsCall && step.CallTarget is < 0x0F000000 or >= 0x10000000 && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+            else if (step.IsCall && !IsImportStubAddress(step.CallTarget) && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
             {
                 var dll = imp.dll.ToUpperInvariant();
                 var name = imp.name;
@@ -805,7 +805,7 @@ public sealed class Emulator : IDisposable
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     }
                 }
-                else if (step.IsCall && step.CallTarget is < 0x0F000000 or >= 0x10000000 && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                else if (step.IsCall && !IsImportStubAddress(step.CallTarget) && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
                 {
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;
@@ -1024,7 +1024,7 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("EBP", savedEbp);
                 }
             }
-            else if (step.IsCall && step.CallTarget is < 0x0F000000 or >= 0x10000000 && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+            else if (step.IsCall && !IsImportStubAddress(step.CallTarget) && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
             {
                 var dll = imp.dll.ToUpperInvariant();
                 var name = imp.name;
@@ -1136,7 +1136,7 @@ public sealed class Emulator : IDisposable
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     }
                 }
-                else if (step.IsCall && step.CallTarget is < 0x0F000000 or >= 0x10000000 && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                else if (step.IsCall && !IsImportStubAddress(step.CallTarget) && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
                 {
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;
@@ -1204,6 +1204,16 @@ public sealed class Emulator : IDisposable
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Checks if an address is in the import stub range (0x0F000000-0x10000000).
+    /// Import stubs now use CALL/RET and syscall mechanism, so they should not be
+    /// intercepted as direct import calls.
+    /// </summary>
+    private static bool IsImportStubAddress(uint address)
+    {
+        return address >= 0x0F000000 && address < 0x10000000;
     }
 
     private static uint GetCallTarget(ICpu cpu, VirtualMemory vm)
