@@ -96,7 +96,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		
 		// First, create the syscall dispatcher stub at a fixed address
 		// This stub will be hit by all import calls and will trigger our syscall handler
-		// Format: INT 0x80 (syscall); RET (won't execute normally)
+		// Format: INT 0x80 (syscall); RET (RET executes after the syscall handler returns control to the CPU/emulator)
 		var syscallStub = new byte[]
 		{
 			0xCD, 0x80, // INT 0x80 - triggers syscall
