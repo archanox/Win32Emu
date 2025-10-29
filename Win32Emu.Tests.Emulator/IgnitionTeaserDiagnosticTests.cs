@@ -23,7 +23,7 @@ public class IgnitionTeaserDiagnosticTests
         var currentDir = Directory.GetCurrentDirectory();
         var repoRoot = currentDir;
         
-        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "Win32Emu.sln")))
+        while (!string.IsNullOrEmpty(repoRoot) && !File.Exists(Path.Combine(repoRoot, "Win32Emu.slnx")))
         {
             var parent = Directory.GetParent(repoRoot);
             if (parent == null) break;

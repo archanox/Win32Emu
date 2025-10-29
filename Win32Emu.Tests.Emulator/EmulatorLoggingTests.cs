@@ -18,15 +18,15 @@ public class EmulatorLoggingTests
     }
 
     /// <summary>
-    /// Helper method to find the repository root by looking for Win32Emu.sln
+    /// Helper method to find the repository root by looking for Win32Emu.slnx
     /// </summary>
     private static string? FindRepositoryRoot()
     {
         var currentDir = Directory.GetCurrentDirectory();
         var repoRoot = currentDir;
         
-        // Navigate up until we find the .sln file
-        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "Win32Emu.sln")))
+        // Navigate up until we find the .slnx file
+        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot, "Win32Emu.slnx")))
         {
             var parent = Directory.GetParent(repoRoot);
             if (parent == null)
