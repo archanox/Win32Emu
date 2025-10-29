@@ -103,7 +103,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			0xC3        // RET - return (won't execute in normal flow)
 		};
 		vm.WriteBytes(SYSCALL_DISPATCHER_ADDRESS, syscallStub);
-		logger?.LogDebug("[Loader] Created syscall dispatcher at 0x{Address:X8}", SYSCALL_DISPATCHER_ADDRESS);
+		logger?.LogInformation("[Loader] Created syscall dispatcher at 0x{Address:X8}", SYSCALL_DISPATCHER_ADDRESS);
 		
 		foreach (var module in imports)
 		{

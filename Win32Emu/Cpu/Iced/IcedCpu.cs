@@ -450,16 +450,17 @@ public class IcedCpu : IAsyncCpu
 					// Handle INT instruction with immediate
 					if (insn.Immediate8 == 3)
 					{
-						// This is an INT3 breakpoint - check if it's at a synthetic import or COM vtable address
-						if (oldEip is >= 0x0F000000 and < 0x10000000)
+						// INT3 breakpoint - check if it's at a synthetic export or COM vtable address
+						// Note: Import stubs (0x0F000000-0x10000000) now use CALL/RET and syscall mechanism
+						if (oldEip is >= 0x0E000000 and < 0x0F000000)
 						{
-							// This is a synthetic import stub - signal this as a call
+							// This is a synthetic export stub - signal this as a call
 							isCall = true;
 							callTarget = oldEip;
-							_logger.LogInformation("[IcedCpu] INT 3 hooking import stub at address 0x{OldEip:X8}", oldEip);
+							_logger.LogInformation("[IcedCpu] INT 3 hooking synthetic export stub at address 0x{OldEip:X8}", oldEip);
 
 							// Don't actually execute the INT3, just treat it as a call
-							// The main loop will handle the import invocation
+							// The main loop will handle the synthetic export invocation
 						}
 						else if (oldEip is >= 0x0D000000 and < 0x0E000000)
 						{
@@ -493,18 +494,10 @@ public class IcedCpu : IAsyncCpu
 
 					break;
 				case Mnemonic.Int3:
-					// Handle INT3 (0xCC) instruction used for import stubs, synthetic exports, and COM vtable methods
-					if (oldEip is >= 0x0F000000 and < 0x10000000)
-					{
-						// This is a synthetic import stub - signal this as a call
-						isCall = true;
-						callTarget = oldEip;
-						_logger.LogInformation("[IcedCpu] INT3 (0xCC) hooking import stub at address 0x{OldEip:X8}", oldEip);
-
-						// Don't actually execute the INT3, just treat it as a call
-						// The main loop will handle the import invocation
-					}
-					else if (oldEip is >= 0x0E000000 and < 0x0F000000)
+					// Handle INT3 (0xCC) instruction used for synthetic exports and COM vtable methods
+					// Note: Import stubs (0x0F000000-0x10000000) now use CALL/RET and syscall mechanism,
+					// so they don't trigger INT3 anymore
+					if (oldEip is >= 0x0E000000 and < 0x0F000000)
 					{
 						// This is a synthetic export stub - signal this as a call
 						isCall = true;

@@ -458,18 +458,18 @@ public sealed class Emulator : IDisposable
             if (step.IsSyscall)
             {
                 // The stack looks like:
-                // [ESP+0] = return address to import stub (after CALL instruction)  
+                // [ESP+0] = return address to import stub (points to RET instruction after CALL)  
                 // [ESP+4] = return address to original caller
                 // [ESP+8+] = function arguments
                 
                 var esp = _cpu.GetRegister("ESP");
                 
-                // Read the return address - this points back into the import stub
+                // Read the return address - this points to the RET instruction in the import stub
                 var retToStub = _vm!.Read32(esp);
                 
-                // The import stub address is 6 bytes before the return address
-                // (5 bytes for CALL instruction + 1 byte for RET)
-                var importStubAddr = retToStub - 6;
+                // The import stub address is 5 bytes before the return address
+                // (5 bytes for CALL instruction, then RET is at +5, which is what retToStub points to)
+                var importStubAddr = retToStub - 5;
                 
                 // Look up which import this is
                 if (_image!.ImportAddressMap.TryGetValue(importStubAddr, out var imp))
@@ -505,7 +505,7 @@ public sealed class Emulator : IDisposable
                 }
                 else
                 {
-                    _logger.LogError("[Syscall] Unknown import stub at 0x{Stub:X8}", importStubAddr);
+                    _logger.LogError("[Syscall] Unknown import stub at 0x{Stub:X8} (retAddr=0x{RetAddr:X8})", importStubAddr, retToStub);
                     _cpu.SetRegister("EAX", 0);
                 }
                 
