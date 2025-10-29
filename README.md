@@ -75,17 +75,17 @@ Win32Emu game.exe --telemetry-otlp http://localhost:4317
 ```
 
 **See Also:**
-- [SILK_NET_MIGRATION.md](SILK_NET_MIGRATION.md) - Backend system and configuration
-- [GHIDRA_DEBUGGING_FAQ.md](GHIDRA_DEBUGGING_FAQ.md) - Troubleshooting "no debugging symbols" and debugging tips
-- [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) - Enhanced debugging mode
-- [INTERACTIVE_DEBUGGER_GUIDE.md](INTERACTIVE_DEBUGGER_GUIDE.md) - Interactive debugger
-- [GDB_SERVER_GUIDE.md](GDB_SERVER_GUIDE.md) - GDB server for Ghidra/IDA integration
-- [VFS_DOCUMENTATION.md](VFS_DOCUMENTATION.md) - Virtual File System for game file isolation
-- [OPENTELEMETRY_USAGE.md](OPENTELEMETRY_USAGE.md) - OpenTelemetry for logging, metrics, and profiling
-- [TELEMETRY_EXAMPLE.md](TELEMETRY_EXAMPLE.md) - Practical examples of using OpenTelemetry
-- [RIDER_OPENTELEMETRY_SETUP.md](RIDER_OPENTELEMETRY_SETUP.md) - JetBrains Rider integration guide
-- [JIT_CACHE_IMPLEMENTATION.md](JIT_CACHE_IMPLEMENTATION.md) - JIT caching to disk for faster emulation
-- [JIT_CACHE_EXAMPLES.md](JIT_CACHE_EXAMPLES.md) - JIT cache usage examples and best practices
+- [docs/implementation/SILK_NET_MIGRATION.md](docs/implementation/SILK_NET_MIGRATION.md) - Backend system and configuration
+- [docs/guides/GHIDRA_DEBUGGING_FAQ.md](docs/guides/GHIDRA_DEBUGGING_FAQ.md) - Troubleshooting "no debugging symbols" and debugging tips
+- [docs/guides/DEBUGGING_GUIDE.md](docs/guides/DEBUGGING_GUIDE.md) - Enhanced debugging mode
+- [docs/guides/INTERACTIVE_DEBUGGER_GUIDE.md](docs/guides/INTERACTIVE_DEBUGGER_GUIDE.md) - Interactive debugger
+- [docs/guides/GDB_SERVER_GUIDE.md](docs/guides/GDB_SERVER_GUIDE.md) - GDB server for Ghidra/IDA integration
+- [docs/guides/VFS_DOCUMENTATION.md](docs/guides/VFS_DOCUMENTATION.md) - Virtual File System for game file isolation
+- [docs/guides/OPENTELEMETRY_USAGE.md](docs/guides/OPENTELEMETRY_USAGE.md) - OpenTelemetry for logging, metrics, and profiling
+- [docs/examples/TELEMETRY_EXAMPLE.md](docs/examples/TELEMETRY_EXAMPLE.md) - Practical examples of using OpenTelemetry
+- [docs/guides/RIDER_OPENTELEMETRY_SETUP.md](docs/guides/RIDER_OPENTELEMETRY_SETUP.md) - JetBrains Rider integration guide
+- [docs/implementation/JIT_CACHE_IMPLEMENTATION.md](docs/implementation/JIT_CACHE_IMPLEMENTATION.md) - JIT caching to disk for faster emulation
+- [docs/examples/JIT_CACHE_EXAMPLES.md](docs/examples/JIT_CACHE_EXAMPLES.md) - JIT cache usage examples and best practices
 
 ### Win32Emu.Gui
 Cross-platform desktop GUI for managing your game library and emulator settings. Built with Avalonia UI.
@@ -122,7 +122,7 @@ Win32Emu uses pluggable backends for cross-platform multimedia support:
 - Environment variable: `WIN32EMU_BACKEND=SDL`, `WIN32EMU_BACKEND=GLFW`, `WIN32EMU_BACKEND=Vulkan`, `WIN32EMU_BACKEND=Metal`, or `WIN32EMU_BACKEND=Software`
 - Programmatic: `BackendFactory.CurrentBackendType = BackendType.SDL;`
 
-See [SILK_NET_MIGRATION.md](SILK_NET_MIGRATION.md) for detailed documentation.
+See [docs/implementation/SILK_NET_MIGRATION.md](docs/implementation/SILK_NET_MIGRATION.md) for detailed documentation.
 
 ## CPU Intrinsics Support
 
@@ -133,7 +133,7 @@ Win32Emu leverages hardware-accelerated SIMD instructions for better performance
 - **Automatic detection**: CPUID reports accurate host CPU capabilities
 - **Fallback support**: Software implementations when intrinsics aren't available
 
-See [INTRINSICS.md](INTRINSICS.md) for detailed documentation.
+See [docs/implementation/INTRINSICS.md](docs/implementation/INTRINSICS.md) for detailed documentation.
 
 ## Event-Driven Messaging System
 
@@ -159,7 +159,7 @@ var message = new CommandMessage(hwnd, wParam, lParam);
 env.MessageDispatcher.Dispatch(message);
 ```
 
-See [MESSAGE_DISPATCHER_IMPLEMENTATION.md](MESSAGE_DISPATCHER_IMPLEMENTATION.md) for detailed documentation and examples.
+See [docs/implementation/MESSAGE_DISPATCHER_IMPLEMENTATION.md](docs/implementation/MESSAGE_DISPATCHER_IMPLEMENTATION.md) for detailed documentation and examples.
 
 ## Building
 
