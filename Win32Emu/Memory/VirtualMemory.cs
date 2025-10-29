@@ -1,15 +1,30 @@
+using System.Collections.Concurrent;
+
 namespace Win32Emu.Memory;
 
 /// <summary>
-/// Very early simplistic linear virtual memory model for 32-bit address space.
-/// Backed by a single byte[] region. No paging yet.
+/// Sparse virtual memory model for 32-bit address space.
+/// Uses page-based allocation to support full 4GB address space without allocating all memory upfront.
+/// Pages are allocated on-demand when accessed.
 /// </summary>
-public class VirtualMemory(ulong size = VirtualMemory.DefaultSize)
+public class VirtualMemory
 {
-	private const ulong DefaultSize = 512 * 1024 * 1024; // 256 MB = 268,435,456
-	private readonly byte[] _mem = new byte[size];
+	private const ulong DefaultSize = 512 * 1024 * 1024; // Default tracked size for compatibility
+	private const int PageSizeBits = 12; // 4KB pages (2^12 = 4096)
+	private const int PageSize = 1 << PageSizeBits; // 4096 bytes
+	private const uint PageMask = PageSize - 1; // 0xFFF
+	private const ulong MaxAddress = 0x100000000; // 4GB for 32-bit address space
+	
+	private readonly ConcurrentDictionary<uint, byte[]> _pages;
+	private readonly ulong _trackedSize; // For compatibility with existing code
+	
+	public VirtualMemory(ulong size = DefaultSize)
+	{
+		_pages = new ConcurrentDictionary<uint, byte[]>();
+		_trackedSize = size;
+	}
 
-    public ulong Size => (ulong)_mem.LongLength;
+    public ulong Size => MaxAddress; // Report full 32-bit address space
 
     private void EnsureRange(ulong addr, ulong length = 1)
     {
@@ -21,22 +36,50 @@ public class VirtualMemory(ulong size = VirtualMemory.DefaultSize)
         // Check for overflow in address calculation
         if (addr > ulong.MaxValue - length + 1)
         {
-            Diagnostics.Diagnostics.LogMemoryEnsureFailure(addr, length, Size);
-            throw new IndexOutOfRangeException($"Memory access causes address overflow: addr=0x{addr:X}, len={length}, size=0x{(ulong)_mem.LongLength:X}");
+            Diagnostics.Diagnostics.LogMemoryEnsureFailure(addr, length, MaxAddress);
+            throw new IndexOutOfRangeException($"Memory access causes address overflow: addr=0x{addr:X}, len={length}, size=0x{MaxAddress:X}");
         }
             
-        // Check if the entire range is within bounds
-        if (addr + length > (ulong)_mem.LongLength)
+        // Check if the entire range is within 32-bit address space
+        if (addr + length > MaxAddress)
         {
-            Diagnostics.Diagnostics.LogMemoryEnsureFailure(addr, length, Size);
-            throw new IndexOutOfRangeException($"Memory access out of range: addr=0x{addr:X}, len={length}, size=0x{(ulong)_mem.LongLength:X}");
+            Diagnostics.Diagnostics.LogMemoryEnsureFailure(addr, length, MaxAddress);
+            throw new IndexOutOfRangeException($"Memory access out of range: addr=0x{addr:X}, len={length}, size=0x{MaxAddress:X}");
         }
+    }
+    
+    private byte[] GetOrCreatePage(uint pageIndex)
+    {
+        return _pages.GetOrAdd(pageIndex, _ => new byte[PageSize]);
+    }
+    
+    private byte ReadByteInternal(ulong addr)
+    {
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        if (_pages.TryGetValue(pageIndex, out var page))
+        {
+            return page[offset];
+        }
+        
+        // Unallocated pages return zero
+        return 0;
+    }
+    
+    private void WriteByteInternal(ulong addr, byte value)
+    {
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        var page = GetOrCreatePage(pageIndex);
+        page[offset] = value;
     }
 
     public byte Read8(ulong addr)
     {
         EnsureRange(addr);
-        return _mem[(int)addr];
+        return ReadByteInternal(addr);
     }
 
     public ushort Read16(ulong addr)
@@ -54,7 +97,7 @@ public class VirtualMemory(ulong size = VirtualMemory.DefaultSize)
     public void Write8(ulong addr, byte value)
     {
         EnsureRange(addr);
-        _mem[(int)addr] = value;
+        WriteByteInternal(addr, value);
     }
 
     public void Write16(ulong addr, ushort value)
@@ -84,12 +127,47 @@ public class VirtualMemory(ulong size = VirtualMemory.DefaultSize)
     public void WriteBytes(ulong addr, ReadOnlySpan<byte> data)
     {
         EnsureRange(addr, (ulong)data.Length);
-        data.CopyTo(new Span<byte>(_mem, (int)addr, data.Length));
+        
+        // Optimized write for page-aligned or single-page writes
+        uint startPage = (uint)(addr >> PageSizeBits);
+        uint endPage = (uint)((addr + (ulong)data.Length - 1) >> PageSizeBits);
+        
+        if (startPage == endPage)
+        {
+            // Single page write
+            var page = GetOrCreatePage(startPage);
+            uint offset = (uint)(addr & PageMask);
+            data.CopyTo(new Span<byte>(page, (int)offset, data.Length));
+        }
+        else
+        {
+            // Multi-page write - write byte by byte for simplicity
+            for (int i = 0; i < data.Length; i++)
+            {
+                WriteByteInternal(addr + (ulong)i, data[i]);
+            }
+        }
     }
 
     public byte[] GetSpan(ulong addr, int length)
     {
         EnsureRange(addr, (ulong)length);
-        return _mem.AsSpan((int)addr, length).ToArray();
+        
+        byte[] result = new byte[length];
+        for (int i = 0; i < length; i++)
+        {
+            result[i] = ReadByteInternal(addr + (ulong)i);
+        }
+        return result;
+    }
+    
+    /// <summary>
+    /// Gets statistics about memory usage
+    /// </summary>
+    public (int AllocatedPages, long AllocatedBytes) GetMemoryStats()
+    {
+        int pageCount = _pages.Count;
+        long bytes = pageCount * PageSize;
+        return (pageCount, bytes);
     }
 }
