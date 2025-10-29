@@ -129,11 +129,11 @@ public class IcedCpu : IAsyncCpu
 
 		Diagnostics.Diagnostics.SetCpuContext(new Diagnostics.Diagnostics.CpuContext(_eip, _esp, _ebp, _eax, _ecx, _edx, instrBytes));
 
+		var oldEip = _eip; // Capture instruction address BEFORE any decoder operations
 		_reader.Reset(_eip);
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
 		//_logger.LogInformation("Instruction: {Insn}", insn.ToString());
-		var oldEip = _eip;
 		_eip = (uint)_decoder.IP;
 		var isCall = false;
 		uint callTarget = 0;
