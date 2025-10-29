@@ -153,7 +153,10 @@ public sealed class Emulator : IDisposable
         var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
         _vm = new VirtualMemory(memorySizeBytes);
         
-        _logger.LogInformation("[Memory] Using sparse memory model with 4GB address space (pages allocated on-demand)");
+        var configuredSizeMB = _vm.ConfiguredSize / (1024 * 1024);
+        var addressSpaceSizeMB = _vm.Size / (1024 * 1024);
+        _logger.LogInformation("[Memory] Configured size: {ConfiguredMB} MB, Address space: {AddressSpaceMB} MB (sparse, pages allocated on-demand)", 
+            configuredSizeMB, addressSpaceSizeMB);
         var loader = new PeImageLoader(_vm, _logger);
         _image = loader.Load(path);
         LogDebug($"[Loader] Image base=0x{_image.BaseAddress:X8} EntryPoint=0x{_image.EntryPointAddress:X8} Size=0x{_image.ImageSize:X}");

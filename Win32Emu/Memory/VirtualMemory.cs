@@ -16,15 +16,20 @@ public class VirtualMemory
 	private const ulong MaxAddress = 0x100000000; // 4GB for 32-bit address space
 	
 	private readonly ConcurrentDictionary<uint, byte[]> _pages;
-	private readonly ulong _trackedSize; // For compatibility with existing code
+	private readonly ulong _configuredSize; // Configured size from settings (not enforced, for logging/stats only)
 	
 	public VirtualMemory(ulong size = DefaultSize)
 	{
 		_pages = new ConcurrentDictionary<uint, byte[]>();
-		_trackedSize = size;
+		_configuredSize = size;
 	}
 
     public ulong Size => MaxAddress; // Report full 32-bit address space
+    
+    /// <summary>
+    /// Gets the configured memory size from settings (not enforced in sparse model)
+    /// </summary>
+    public ulong ConfiguredSize => _configuredSize;
 
     private void EnsureRange(ulong addr, ulong length = 1)
     {
