@@ -124,7 +124,8 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				vm.Write32(va, synthetic);
 				
 				// Create import stub using retrowin32-style approach:
-				// CALL [syscall_dispatcher]; RET N
+				// CALL [syscall_dispatcher]; RET
+				// (RET here is a plain 0xC3; no stack cleanup is performed by the stub)
 				// This allows the CPU to naturally execute and return without manual EIP manipulation
 				//
 				// Format:
