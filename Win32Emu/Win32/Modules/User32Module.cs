@@ -25,6 +25,9 @@ namespace Win32Emu.Win32.Modules
 		// ATOM generation counter for window classes
 		private uint _nextAtom = 0xC000; // Start at 0xC000 (standard user atom range)
 
+		// Cursor handle generation counter (Windows uses simple sequential handles)
+		private uint _nextCursorHandle = 0x00010001; // Start at 0x00010001 to match Windows pattern
+
 		// State tracking for cursor and focus
 		private uint _currentCursor;
 		private uint _focusWindow;
@@ -2245,15 +2248,13 @@ namespace Win32Emu.Win32.Modules
 		private uint LoadCursorA(uint hInstance, uint lpCursorName)
 		{
 			_logger.LogInformation("[User32] LoadCursorA: hInstance=0x{HInstance:X8} lpCursorName=0x{LpCursorName:X8}", hInstance, lpCursorName);
-			// Return a unique cursor handle
-			// For standard system cursors (when hInstance is NULL), return predefined handles
-			if (hInstance == 0 && lpCursorName <= 0xFFFF)
-			{
-				// Standard cursor IDs (IDC_ARROW = 32512 = 0x7F00)
-				// Return a handle that includes the cursor ID for debugging
-				return 0x00010000 | (lpCursorName & 0xFFFF);
-			}
-			return _env.RegisterHandle(new object()); // Custom cursor object
+			
+			// Windows returns simple sequential cursor handles, not handles that encode the resource ID
+			// This matches the observed behavior from ApiMon logs where LoadCursorA returns values like 0x00010003
+			// instead of encoding the IDC_ARROW value (0x7F00) in the handle
+			
+			// Return a simple incrementing handle to match Windows behavior
+			return _nextCursorHandle++;
 		}
 
 		[DllModuleExport(1)]
