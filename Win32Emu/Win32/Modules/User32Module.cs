@@ -2969,6 +2969,13 @@ _logger.LogError("  Step {Step}: EIP=0x{Eip:X8} {Desc}", histStep, histEip, hist
 						}
 					}
 
+					// Add to instruction history
+					if (instructionHistory.Count >= HISTORY_SIZE)
+					{
+						instructionHistory.Dequeue();
+					}
+					instructionHistory.Enqueue((steps, eip, stepDesc));
+
 					steps++;
 
 					// Periodically check if we should yield to other threads
