@@ -458,9 +458,9 @@ public sealed class Emulator : IDisposable
             if (step.IsSyscall)
             {
                 // The stack looks like:
-                // [ESP+0] = return address to import stub (points to RET instruction after CALL)  
-                // [ESP+4] = return address to original caller
-                // [ESP+8+] = function arguments
+                // [ESP+0] = return address to import stub (points to RET instruction after CALL)
+                // [ESP+4+] = function arguments (pushed by original caller)
+                
                 
                 var esp = _cpu.GetRegister("ESP");
                 
