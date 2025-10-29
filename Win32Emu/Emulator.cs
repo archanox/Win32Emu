@@ -584,7 +584,12 @@ public sealed class Emulator : IDisposable
                     CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
                 }
             }
-            else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+            // OLD IMPORT HANDLING CODE - DISABLED
+            // Import stubs now use CALL/RET and syscall mechanism (INT 0x80)
+            // This old code intercepted calls to import stub addresses and manually manipulated EIP/ESP
+            // which caused the infinite loop bug. Import handling now happens via syscall mechanism.
+            /* 
+            else if (step.IsCall && step.CallTarget is < 0x0F000000 or >= 0x10000000 && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
             {
                 var dll = imp.dll.ToUpperInvariant();
                 var name = imp.name;
@@ -622,6 +627,7 @@ public sealed class Emulator : IDisposable
                     }
                 }
             }
+            */
             else if (step.IsCall)
             {
 	            // TODO: wire up to native program function overrides in c#
@@ -799,7 +805,7 @@ public sealed class Emulator : IDisposable
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     }
                 }
-                else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                else if (step.IsCall && step.CallTarget is < 0x0F000000 or >= 0x10000000 && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
                 {
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;
@@ -1018,7 +1024,7 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("EBP", savedEbp);
                 }
             }
-            else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+            else if (step.IsCall && step.CallTarget is < 0x0F000000 or >= 0x10000000 && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
             {
                 var dll = imp.dll.ToUpperInvariant();
                 var name = imp.name;
@@ -1130,7 +1136,7 @@ public sealed class Emulator : IDisposable
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     }
                 }
-                else if (step.IsCall && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                else if (step.IsCall && step.CallTarget is < 0x0F000000 or >= 0x10000000 && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
                 {
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;
