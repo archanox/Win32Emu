@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Runtime.InteropServices;
 using Win32Emu.Cpu;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Debugging;
@@ -141,6 +142,12 @@ public sealed class Emulator : IDisposable
             throw new FileNotFoundException($"File not found: {path}");
         }
 
+        // Log system information
+        var osDescription = RuntimeInformation.OSDescription;
+        var processArchitecture = RuntimeInformation.ProcessArchitecture;
+        _logger.LogInformation("[Loader] Host OS: {OSDescription}", osDescription);
+        _logger.LogInformation("[Loader] Host Architecture: {ProcessArchitecture}", processArchitecture);
+
         LogDebug($"[Loader] Loading PE: {path}");
         // Convert MB to bytes for VirtualMemory constructor
         var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
@@ -208,6 +215,16 @@ public sealed class Emulator : IDisposable
                 LogDebug("[Loader] Instruction analyzer enabled");
             }
         }
+        
+        // Log the actual CPU backend being used (after initialization and potential fallback)
+        var actualCpuBackend = _cpu switch
+        {
+            Cpu.Unicorn.UnicornCpu => "Unicorn",
+            Cpu.Jit.JitCpu => "JitCpu",
+            IcedCpu => "IcedCpu",
+            _ => "Unknown"
+        };
+        _logger.LogInformation("[Loader] Selected CPU Emulator: {CpuBackend}", actualCpuBackend);
         
         _cpu.SetEip(_image.EntryPointAddress);
         _cpu.SetRegister("ESP", 0x00200000);
