@@ -239,6 +239,8 @@ public class ThreeWayPentiumTests : IDisposable
 		// Act
 		_helper.ExecuteInstruction(); // ADD - should not set OF
 		_helper.AssertFlagsClear(CpuFlag.Of); // Assert that OF is 0
+		_helper.ExecuteInstruction(); // ADD - should not set OF
+		_helper.AssertFlagsClear(CpuFlag.Of); // Assert that OF is 0
 
 		_helper.ExecuteInstruction(); // CMOVNO - should move since OF=0
 		
