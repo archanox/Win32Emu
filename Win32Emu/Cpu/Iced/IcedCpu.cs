@@ -3404,8 +3404,8 @@ public class IcedCpu : IAsyncCpu
 		
 		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
 		
-		// OF, SF, ZF, PF are undefined after AAS, but we'll update them for consistency
-		// Some implementations leave these flags undefined, but updating them doesn't hurt
+		// Update flags: SF, ZF, PF (technically undefined per Intel spec, but set for consistency)
+		// This matches the behavior of other BCD instructions (AAD, AAM, DAS, DAA) in this emulator
 		UpdateLogicResultFlags(al);
 	}
 
