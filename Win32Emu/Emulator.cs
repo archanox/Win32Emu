@@ -457,6 +457,16 @@ public sealed class Emulator : IDisposable
             // Record instruction execution
             _metrics?.RecordInstructionsExecuted();
             
+            // Validate EIP after execution to catch bad jumps/returns early
+            var eipAfterStep = _cpu.GetEip();
+            if (eipAfterStep > 0 && eipAfterStep < 0x00010000)
+            {
+                // EIP in low memory range (0x1-0xFFFF) is highly suspicious
+                // This usually indicates a corrupted return address or bad function pointer
+                var esp = _cpu.GetRegister("ESP");
+                _logger.LogError("[Emulator] EIP=0x{Eip:X8} is in suspicious low memory range. ESP=0x{Esp:X8}. Likely corrupted return address.", eipAfterStep, esp);
+            }
+            
             // Check for syscall (INT 0x80 from import stubs)
             // This is the retrowin32-style approach where import stubs CALL syscall dispatcher
             // The syscall dispatcher triggers INT 0x80, we handle it, then CPU executes RET naturally
@@ -533,6 +543,19 @@ public sealed class Emulator : IDisposable
                         // The CPU will now execute the RET instruction in the syscall dispatcher,
                         // which returns to the import stub, which then executes its RET imm16
                         // to return to the original caller with proper stack cleanup!
+                        
+                        // Validate that the return-to-stub address looks reasonable
+                        if (retToStub < 0x0F000000 || retToStub >= 0x10000000)
+                        {
+                            _logger.LogWarning("[Syscall] Return-to-stub address 0x{RetToStub:X8} is outside import stub range [0x0F000000-0x10000000). This may indicate stack corruption.", retToStub);
+                        }
+                        
+                        // Validate ESP is in a reasonable range (not extremely small)
+                        var restoredEsp = _cpu.GetRegister("ESP");
+                        if (restoredEsp < 0x00010000)
+                        {
+                            _logger.LogError("[Syscall] ESP=0x{Esp:X8} after syscall return is suspiciously low. This indicates possible stack corruption.", restoredEsp);
+                        }
                     }
                     else
                     {
