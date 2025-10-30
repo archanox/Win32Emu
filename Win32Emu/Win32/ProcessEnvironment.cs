@@ -998,14 +998,17 @@ public class ProcessEnvironment
 		var size = AlignUp(dwSize == 0 ? 1u : dwSize, 0x1000);
 		if (lpAddress != 0)
 		{
-			if (lpAddress + size <= Memory.Size)
+			// Calculate end of allocation once, checking for overflow
+			// In 32-bit address space, we cap at uint.MaxValue
+			uint endOfAllocation = (lpAddress > uint.MaxValue - size) ? uint.MaxValue : lpAddress + size;
+			
+			if (endOfAllocation <= Memory.Size)
 			{
 				Memory.WriteBytes(lpAddress, new byte[size]);
 			}
 
 			// Track the allocation to prevent future allocations from overlapping
 			// Update _allocPtr if the requested region extends beyond current allocation pointer
-			uint endOfAllocation = lpAddress + size;
 			if (endOfAllocation > _allocPtr)
 			{
 				_allocPtr = endOfAllocation;
