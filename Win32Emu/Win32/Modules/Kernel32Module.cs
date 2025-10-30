@@ -3265,13 +3265,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		catch (IOException ex)
 		{
 			_logger.LogInformation(ex, "[Kernel32] CopyFileA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_WRITE_FAULT;
+			_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 			return NativeTypes.Win32Bool.FALSE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogInformation(ex, "[Kernel32] CopyFileA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_GEN_FAILURE;
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 			return NativeTypes.Win32Bool.FALSE;
 		}
 	}
@@ -3599,9 +3599,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			
 			return 0; // GetSystemTimeAsFileTime returns void in the real API
 		}
-		catch (Exception ex)
+		catch (ArgumentOutOfRangeException ex)
 		{
-			_logger.LogError(ex, "[Kernel32] GetSystemTimeAsFileTime failed");
+			_logger.LogError(ex, "[Kernel32] GetSystemTimeAsFileTime failed: Invalid time range");
+			return 0;
+		}
+		catch (OverflowException ex)
+		{
+			_logger.LogError(ex, "[Kernel32] GetSystemTimeAsFileTime failed: Arithmetic overflow");
 			return 0;
 		}
 	}
