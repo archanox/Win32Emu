@@ -16,9 +16,9 @@ public class TestEnvironment : IDisposable
     public VirtualMemory Memory { get; }
     public MockCpu Cpu { get; }
     public ProcessEnvironment ProcessEnv { get; }
-    public Kernel32Module Kernel32 { get; }
-    public User32Module User32 { get; }
-    public Gdi32Module Gdi32 { get; }
+    internal Kernel32Module Kernel32 { get; }
+    internal User32Module User32 { get; }
+    internal Gdi32Module Gdi32 { get; }
     public PeImageLoader PeLoader { get; }
     public Win32Dispatcher Dispatcher { get; }
 

@@ -66,4 +66,12 @@
     <Folder Include="Examples\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Win32Emu.Tests.Kernel32" />
+    <InternalsVisibleTo Include="Win32Emu.Tests.User32" />
+    <InternalsVisibleTo Include="Win32Emu.Tests.Emulator" />
+    <InternalsVisibleTo Include="Win32Emu.Tests.Gui" />
+    <InternalsVisibleTo Include="Win32Emu.Tests.CodeGen" />
+  </ItemGroup>
+
 </Project>
