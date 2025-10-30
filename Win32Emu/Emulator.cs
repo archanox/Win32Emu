@@ -495,7 +495,7 @@ public sealed class Emulator : IDisposable
                         // Patch the import stub's RET instruction with the correct argBytes value for stdcall cleanup
                         // The stub RET instruction is at importStubAddr + 5 (after the 5-byte CALL instruction)
                         // Format: RET imm16 = 0xC2 <low_byte> <high_byte>
-                        if (argBytes > 0 && argBytes <= 0xFFFF)
+                        if (argBytes <= 0xFFFF)
                         {
                             var retInstrAddr = importStubAddr + 5;
                             var opcode = _vm!.Read8(retInstrAddr);
