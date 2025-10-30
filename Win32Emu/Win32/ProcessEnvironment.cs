@@ -213,6 +213,7 @@ public class ProcessEnvironment
 	private readonly Dictionary<string, uint> _loadedModules = new(StringComparer.OrdinalIgnoreCase);
 	private readonly Dictionary<string, LoadedImage> _loadedImages = new(StringComparer.OrdinalIgnoreCase);
 	private uint _nextModuleHandle = 0x10000000;
+	private string? _mainExecutableName; // Track the main executable's name for reliable lookup
 
 	// Syscall dispatcher address - shared with PeImageLoader
 	private const uint SYSCALL_DISPATCHER_ADDRESS = 0x0E000000;
@@ -749,6 +750,7 @@ public class ProcessEnvironment
 		var normalizedName = Path.GetFileName(imagePath).ToUpperInvariant();
 		_loadedModules[normalizedName] = image.BaseAddress;
 		_loadedImages[normalizedName] = image;
+		_mainExecutableName = normalizedName; // Track the main executable for synthetic exports
 		_logger.LogInformation("[ProcessEnv] Registered main executable: {ImagePath} at 0x{BaseAddress:X8}", imagePath, image.BaseAddress);
 	}
 
@@ -823,11 +825,21 @@ public class ProcessEnvironment
 		Memory.WriteBytes(address, stub);
 		
 		// Add to the main executable's import map so syscall handler can find it
-		// We need to get the main executable's LoadedImage and add to its ImportAddressMap
-		var mainExeImage = _loadedImages.Values.FirstOrDefault();
-		if (mainExeImage != null)
+		// Get the main executable's LoadedImage using the tracked name
+		if (_mainExecutableName != null && _loadedImages.TryGetValue(_mainExecutableName, out var mainExeImage))
 		{
-			mainExeImage.ImportAddressMap[address] = (moduleName.ToUpperInvariant(), exportName);
+			// Create a new ImportAddressMap with the synthetic export added (respecting record immutability)
+			var newImportAddressMap = new Dictionary<uint, (string dll, string name)>(mainExeImage.ImportAddressMap)
+			{
+				[address] = (moduleName.ToUpperInvariant(), exportName)
+			};
+			
+			// Create a new LoadedImage with the updated ImportAddressMap
+			var updatedMainExeImage = mainExeImage with { ImportAddressMap = newImportAddressMap };
+			
+			// Replace the main executable's LoadedImage in the dictionary
+			_loadedImages[_mainExecutableName] = updatedMainExeImage;
+			
 			_logger.LogInformation("[ProcessEnv] Registered synthetic export: {Module}!{Export} at 0x{Address:X8}", moduleName, exportName, address);
 		}
 		else
