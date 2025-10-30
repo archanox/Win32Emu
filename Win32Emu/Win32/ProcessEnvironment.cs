@@ -1003,6 +1003,14 @@ public class ProcessEnvironment
 				Memory.WriteBytes(lpAddress, new byte[size]);
 			}
 
+			// Track the allocation to prevent future allocations from overlapping
+			// Update _allocPtr if the requested region extends beyond current allocation pointer
+			uint endOfAllocation = lpAddress + size;
+			if (endOfAllocation > _allocPtr)
+			{
+				_allocPtr = endOfAllocation;
+			}
+
 			return lpAddress;
 		}
 

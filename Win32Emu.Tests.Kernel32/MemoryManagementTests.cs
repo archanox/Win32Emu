@@ -183,6 +183,42 @@ public class MemoryManagementTests : IDisposable
         Assert.NotEqual(address1, address2); // Different allocations should have different addresses
     }
 
+    [Fact]
+    public void VirtualAlloc_SpecificAddressThenAutoAlloc_ShouldNotOverlap()
+    {
+        // Arrange - This test verifies the fix for the memory overlap bug
+        // where VirtualAlloc with a specific address didn't update the allocation pointer
+        const uint dwSize = 0x4000000; // Large allocation (64MB)
+        const uint flAllocationType = 0x00001000; // MEM_COMMIT
+        const uint flProtect = 0x04; // PAGE_READWRITE
+
+        // Act
+        // First allocation with automatic address selection
+        var address1 = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, dwSize, flAllocationType, flProtect);
+        
+        // Second allocation with specific address (same as first)
+        // This simulates the bug scenario from the issue where the app requests 
+        // a specific address that was just allocated
+        var address2 = _testEnv.CallKernel32Api("VIRTUALALLOC", address1, 0x10000, flAllocationType, flProtect);
+        
+        // Third allocation with automatic address selection
+        // This should NOT overlap with the previous allocations
+        var address3 = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, 0x10000, flAllocationType, flProtect);
+
+        // Assert
+        Assert.NotEqual(0u, address1);
+        Assert.NotEqual(0u, address2);
+        Assert.NotEqual(0u, address3);
+        
+        // address2 should be the same as address1 since it was requested
+        Assert.Equal(address1, address2);
+        
+        // address3 should NOT overlap with address1/address2
+        // It should be at least dwSize bytes after address1
+        Assert.True(address3 >= address1 + dwSize || address3 + 0x10000 <= address1,
+            $"address3 (0x{address3:X8}) should not overlap with address1 (0x{address1:X8}) range [0x{address1:X8}, 0x{address1 + dwSize:X8})");
+    }
+
     #endregion
 
     public void Dispose()
