@@ -52,6 +52,9 @@ namespace Win32Emu.Win32.Modules
 				case "FILLRECT":
 					returnValue = FillRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
+				case "RECTANGLE":
+					returnValue = Rectangle(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4));
+					return true;
 				case "TEXTOUT":
 					returnValue = TextOut(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.Int32(4));
 					return true;
@@ -66,6 +69,9 @@ namespace Win32Emu.Win32.Modules
 					return true;
 				case "SETBKCOLOR":
 					returnValue = SetBkColor(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "SETTEXTALIGN":
+					returnValue = SetTextAlign(a.UInt32(0), a.UInt32(1));
 					return true;
 				case "GETDEVICECAPS":
 					returnValue = (uint)GetDeviceCaps(a.UInt32(0), a.Int32(1));
@@ -411,6 +417,17 @@ namespace Win32Emu.Win32.Modules
 			return 1; // Non-zero on success
 		}
 
+		[DllModuleExport(20)]
+		private uint Rectangle(uint hdc, int left, int top, int right, int bottom)
+		{
+			_logger.LogInformation("[Gdi32] Rectangle(HDC=0x{Hdc:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom})", 
+				hdc, left, top, right, bottom);
+			
+			// Rectangle draws a rectangle outline using the current pen
+			// For stub implementation, we just log and return success
+			return 1; // Non-zero on success
+		}
+
 		[DllModuleExport(1, IsStub = true)]
 		private uint TextOut(uint hdc, int x, int y, uint lpString, int cbString)
 		{
@@ -448,6 +465,19 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] SetTextColor(HDC=0x{Hdc:X8}, color=0x{Color:X8})", hdc, color);
 			return 0x00000000; // Previous color (black)
+		}
+
+		[DllModuleExport(8)]
+		private uint SetTextAlign(uint hdc, uint align)
+		{
+			_logger.LogInformation("[Gdi32] SetTextAlign(HDC=0x{Hdc:X8}, align=0x{Align:X8})", hdc, align);
+			// SetTextAlign sets the text alignment flags
+			// Common flags:
+			// TA_LEFT = 0, TA_RIGHT = 2, TA_CENTER = 6
+			// TA_TOP = 0, TA_BOTTOM = 8, TA_BASELINE = 24
+			// TA_NOUPDATECP = 0, TA_UPDATECP = 1
+			// Return previous alignment (default: TA_LEFT | TA_TOP | TA_NOUPDATECP = 0)
+			return 0; // Previous alignment
 		}
 
 		[DllModuleExport(1)]
