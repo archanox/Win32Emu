@@ -216,7 +216,7 @@ public class ProcessEnvironment
 
 	// Emulated module exports tracking (for GetProcAddress on system DLLs)
 	private readonly Dictionary<uint, (string module, string export)> _syntheticExports = new();
-	private uint _nextSyntheticExport = 0x0E000000; // Synthetic export base address
+	private uint _nextSyntheticExport = 0x0E000010; // Synthetic export base address (offset from syscall dispatcher at 0x0E000000)
 
 	// Standard control window procedure marker address range
 	// Window procedures in this range (0x0D000000 - 0x0DFFFFFF) are markers for standard controls
