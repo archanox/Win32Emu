@@ -16,12 +16,12 @@ public class TestEnvironment : IDisposable
     public VirtualMemory Memory { get; }
     public MockCpu Cpu { get; }
     public ProcessEnvironment ProcessEnv { get; }
-    public User32Module User32 { get; }
-    public Gdi32Module Gdi32 { get; }
+    internal User32Module User32 { get; }
+    internal Gdi32Module Gdi32 { get; }
     public DDrawModule DDraw { get; }
     public DSoundModule DSound { get; }
     public DInputModule DInput { get; }
-    public WinMmModule WinMm { get; }
+    internal WinMmModule WinMm { get; }
     public PeImageLoader PeLoader { get; }
 
     public TestEnvironment()
