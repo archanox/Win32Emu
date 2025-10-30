@@ -4691,43 +4691,43 @@ namespace Win32Emu.Win32.Modules
 		return 1;
 	}
 
-[DllModuleExport(16)]
-private uint DrawCaption(uint hwnd, uint hdc, uint lprect, uint flags)
-{
-_logger.LogInformation("[User32] DrawCaption(hwnd=0x{Hwnd:X8}, hdc=0x{Hdc:X8}, lprect=0x{Lprect:X8}, flags=0x{Flags:X8})",
-hwnd, hdc, lprect, flags);
+	[DllModuleExport(16)]
+	private uint DrawCaption(uint hwnd, uint hdc, uint lprect, uint flags)
+	{
+		_logger.LogInformation("[User32] DrawCaption(hwnd=0x{Hwnd:X8}, hdc=0x{Hdc:X8}, lprect=0x{Lprect:X8}, flags=0x{Flags:X8})",
+			hwnd, hdc, lprect, flags);
 
-// DrawCaption draws a window caption in the specified device context
-// Flags can include:
-// DC_ACTIVE (0x0001) - Active window caption
-// DC_SMALLCAP (0x0002) - Small caption (tool window)
-// DC_ICON (0x0004) - Draw icon
-// DC_TEXT (0x0008) - Draw caption text
-// DC_INBUTTON (0x0010) - Draw in button style
-// DC_GRADIENT (0x0020) - Use gradient for caption background
-// DC_BUTTONS (0x1000) - Draw caption buttons
+		// DrawCaption draws a window caption in the specified device context
+		// Flags can include:
+		// DC_ACTIVE (0x0001) - Active window caption
+		// DC_SMALLCAP (0x0002) - Small caption (tool window)
+		// DC_ICON (0x0004) - Draw icon
+		// DC_TEXT (0x0008) - Draw caption text
+		// DC_INBUTTON (0x0010) - Draw in button style
+		// DC_GRADIENT (0x0020) - Use gradient for caption background
+		// DC_BUTTONS (0x1000) - Draw caption buttons
 
-// Stub: Return TRUE (success)
-return 1;
-}
+		// Stub: Return TRUE (success)
+		return 1;
+	}
 
-[DllModuleExport(16)]
-private uint DrawFrameControl(uint hdc, uint lprc, uint uType, uint uState)
-{
-_logger.LogInformation("[User32] DrawFrameControl(hdc=0x{Hdc:X8}, lprc=0x{Lprc:X8}, uType={UType}, uState=0x{UState:X8})",
-hdc, lprc, uType, uState);
+	[DllModuleExport(16)]
+	private uint DrawFrameControl(uint hdc, uint lprc, uint uType, uint uState)
+	{
+		_logger.LogInformation("[User32] DrawFrameControl(hdc=0x{Hdc:X8}, lprc=0x{Lprc:X8}, uType={UType}, uState=0x{UState:X8})",
+			hdc, lprc, uType, uState);
 
-// DrawFrameControl draws a frame control of the specified type and in the specified state
-// uType can be:
-// DFC_CAPTION (1) - Title bar
-// DFC_MENU (2) - Menu
-// DFC_SCROLL (3) - Scroll bar
-// DFC_BUTTON (4) - Standard button
-// DFC_POPUPMENU (5) - Popup menu
+		// DrawFrameControl draws a frame control of the specified type and in the specified state
+		// uType can be:
+		// DFC_CAPTION (1) - Title bar
+		// DFC_MENU (2) - Menu
+		// DFC_SCROLL (3) - Scroll bar
+		// DFC_BUTTON (4) - Standard button
+		// DFC_POPUPMENU (5) - Popup menu
 
-// Stub: Return TRUE (success)
-return 1;
-}
+		// Stub: Return TRUE (success)
+		return 1;
+	}
 
 
 	/// <summary>
