@@ -31,6 +31,7 @@ public sealed class Emulator : IDisposable
     private readonly ManualResetEvent _pauseEvent;
     private Task? _eventProcessingTask;
     private CancellationTokenSource? _eventProcessingCts;
+    private readonly HashSet<uint> _patchedImportStubs = new();
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -495,18 +496,17 @@ public sealed class Emulator : IDisposable
                         // Patch the import stub's RET instruction with the correct argBytes value for stdcall cleanup
                         // The stub RET instruction is at importStubAddr + 5 (after the 5-byte CALL instruction)
                         // Format: RET imm16 = 0xC2 <low_byte> <high_byte>
-                        if (argBytes <= 0xFFFF)
+                        // Only patch if not already patched to avoid redundant memory writes
+                        if (argBytes <= 0xFFFF && !_patchedImportStubs.Contains(importStubAddr))
                         {
                             var retInstrAddr = importStubAddr + 5;
                             var opcode = _vm!.Read8(retInstrAddr);
                             if (opcode == 0xC2)
                             {
-                                _logger.LogInformation("[Syscall] Patching RET at 0x{RetAddr:X8}: opcode before=0x{Opcode:X2}", retInstrAddr, opcode);
                                 _vm!.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
                                 _vm!.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
-                                var arg1 = _vm!.Read8(retInstrAddr + 1);
-                                var arg2 = _vm!.Read8(retInstrAddr + 2);
-                                _logger.LogInformation("[Syscall] Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes} (bytes: {Arg1:X2} {Arg2:X2})", retInstrAddr, argBytes, arg1, arg2);
+                                _patchedImportStubs.Add(importStubAddr);
+                                _logger.LogDebug("[Syscall] Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes}", retInstrAddr, argBytes);
                             }
                             else
                             {
