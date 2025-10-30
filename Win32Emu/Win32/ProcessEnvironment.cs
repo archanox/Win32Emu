@@ -998,9 +998,10 @@ public class ProcessEnvironment
 		var size = AlignUp(dwSize == 0 ? 1u : dwSize, 0x1000);
 		if (lpAddress != 0)
 		{
-			// Calculate end of allocation once, checking for overflow
-			// In 32-bit address space, we cap at uint.MaxValue
-			uint endOfAllocation = (lpAddress > uint.MaxValue - size) ? uint.MaxValue : lpAddress + size;
+			// Calculate end of allocation once
+			// We use ulong to avoid overflow, then cap to uint range
+			ulong endOfAllocation64 = (ulong)lpAddress + size;
+			uint endOfAllocation = endOfAllocation64 > uint.MaxValue ? uint.MaxValue : (uint)endOfAllocation64;
 			
 			if (endOfAllocation <= Memory.Size)
 			{
