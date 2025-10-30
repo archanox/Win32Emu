@@ -7,7 +7,7 @@ using Win32Emu.Memory;
 
 namespace Win32Emu.Win32.Modules
 {
-	public class WinMmModule : IWin32ModuleUnsafe
+	internal class WinMmModule : IWin32ModuleUnsafe
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
@@ -182,6 +182,11 @@ namespace Win32Emu.Win32.Modules
 					returnValue = PlaySoundA(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				// Joystick functions
+				case "JOYCONFIGCHANGED":
+					returnValue = JoyConfigChanged(a.UInt32(0));
+					return true;
+
 				default:
 					_logger.LogInformation("[WinMM] Unimplemented export: {Export}", export);
 					return false;
@@ -225,7 +230,7 @@ namespace Win32Emu.Win32.Modules
 			// TimeSetEvent sets a timer event
 			// Returns a timer identifier or 0 if it failed
 			_logger.LogInformation("[WinMM] timeSetEvent(delay={UDelay}, resolution={UResolution}, callback=0x{LpTimeProc:X8})", uDelay, uResolution, lpTimeProc);
-			
+
 			// Return a synthetic timer ID
 			return 0x1000 + uDelay; // Simple unique ID based on delay
 		}
@@ -235,7 +240,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			// JoyGetPosEx queries the position and button status of a joystick
 			_logger.LogInformation("[WinMM] joyGetPosEx(uJoyID={UJoyId}, pji=0x{Pji:X8})", uJoyID, pji);
-			
+
 			if (pji == 0)
 			{
 				return 165; // JOYERR_PARMS
@@ -250,7 +255,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			// JoyGetDevCapsA queries the capabilities of a joystick
 			_logger.LogInformation("[WinMM] joyGetDevCapsA(uJoyID={UJoyId}, pjc=0x{Pjc:X8}, cbjc={Cbjc})", uJoyID, pjc, cbjc);
-			
+
 			if (pjc == 0)
 			{
 				return 165; // JOYERR_PARMS
@@ -266,7 +271,7 @@ namespace Win32Emu.Win32.Modules
 			// MciSendStringA sends a command string to an MCI device
 			var command = lpszCommand != 0 ? _env.ReadAnsiString(lpszCommand) : "";
 			_logger.LogInformation("[WinMM] mciSendStringA: \"{Command}\"", command);
-			
+
 			// For now, just return success
 			return 0; // MMSYSERR_NOERROR
 		}
@@ -275,9 +280,9 @@ namespace Win32Emu.Win32.Modules
 		private uint MciSendCommandA(uint wDeviceID, uint uMsg, uint dwParam1, uint dwParam2)
 		{
 			// MciSendCommandA sends a command message to an MCI device
-			_logger.LogInformation("[WinMM] mciSendCommandA(wDeviceID={WDeviceId}, uMsg=0x{UMsg:X8}, dwParam1=0x{DwParam1:X8}, dwParam2=0x{DwParam2:X8})", 
+			_logger.LogInformation("[WinMM] mciSendCommandA(wDeviceID={WDeviceId}, uMsg=0x{UMsg:X8}, dwParam1=0x{DwParam1:X8}, dwParam2=0x{DwParam2:X8})",
 				wDeviceID, uMsg, dwParam1, dwParam2);
-			
+
 			// For now, just return success
 			return 0; // MMSYSERR_NOERROR
 		}
@@ -301,9 +306,9 @@ namespace Win32Emu.Win32.Modules
 		{
 			// MmioOpenA opens a file for multimedia I/O
 			var fileName = lpszFileName != 0 ? _env.ReadAnsiString(lpszFileName) : "";
-			_logger.LogInformation("[WinMM] mmioOpenA(\"{FileName}\", lpmmioinfo=0x{Lpmmioinfo:X8}, dwOpenFlags=0x{DwOpenFlags:X8})", 
+			_logger.LogInformation("[WinMM] mmioOpenA(\"{FileName}\", lpmmioinfo=0x{Lpmmioinfo:X8}, dwOpenFlags=0x{DwOpenFlags:X8})",
 				fileName, lpmmioinfo, dwOpenFlags);
-			
+
 			// Create a handle for this MMIO file
 			var handle = _nextMmioHandle++;
 			var mmioFile = new MmioFile
@@ -315,9 +320,9 @@ namespace Win32Emu.Win32.Modules
 				Buffer = new byte[4096], // Default buffer size
 				BufferSize = 4096
 			};
-			
+
 			_mmioFiles[handle] = mmioFile;
-			
+
 			_logger.LogInformation("[WinMM] mmioOpenA: Created handle 0x{Handle:X8} for \"{FileName}\"", handle, fileName);
 			return handle;
 		}
@@ -327,14 +332,14 @@ namespace Win32Emu.Win32.Modules
 		{
 			// MmioClose closes a file opened with mmioOpen
 			_logger.LogInformation("[WinMM] mmioClose(hmmio=0x{Hmmio:X8}, wFlags=0x{WFlags:X8})", hmmio, wFlags);
-			
+
 			if (_mmioFiles.ContainsKey(hmmio))
 			{
 				_mmioFiles.Remove(hmmio);
 				_logger.LogInformation("[WinMM] mmioClose: Closed handle 0x{Hmmio:X8}", hmmio);
 				return 0; // MMSYSERR_NOERROR
 			}
-			
+
 			_logger.LogWarning("[WinMM] mmioClose: Invalid handle 0x{Hmmio:X8}", hmmio);
 			return 256; // MMIOERR_INVALIDHANDLE
 		}
@@ -344,13 +349,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			// MmioRead reads data from a file opened with mmioOpen
 			_logger.LogInformation("[WinMM] mmioRead(hmmio=0x{Hmmio:X8}, pch=0x{Pch:X8}, cch={Cch})", hmmio, pch, cch);
-			
+
 			if (!_mmioFiles.ContainsKey(hmmio))
 			{
 				_logger.LogWarning("[WinMM] mmioRead: Invalid handle 0x{Hmmio:X8}", hmmio);
 				return 0xFFFFFFFF; // -1 indicates error
 			}
-			
+
 			// For stub implementation, return 0 bytes read
 			// A full implementation would read from the actual file
 			_logger.LogInformation("[WinMM] mmioRead: Stub returning 0 bytes");
@@ -362,13 +367,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			// MmioSeek moves the file pointer in a file opened with mmioOpen
 			_logger.LogInformation("[WinMM] mmioSeek(hmmio=0x{Hmmio:X8}, lOffset={LOffset}, iOrigin={IOrigin})", hmmio, lOffset, iOrigin);
-			
+
 			if (!_mmioFiles.TryGetValue(hmmio, out var mmioFile))
 			{
 				_logger.LogWarning("[WinMM] mmioSeek: Invalid handle 0x{Hmmio:X8}", hmmio);
 				return 0xFFFFFFFF; // -1 indicates error
 			}
-			
+
 			// Calculate new position based on origin
 			// SEEK_SET = 0, SEEK_CUR = 1, SEEK_END = 2
 			uint newPosition = iOrigin switch
@@ -378,7 +383,7 @@ namespace Win32Emu.Win32.Modules
 				2 => 0, // SEEK_END - would need file size
 				_ => mmioFile.Position
 			};
-			
+
 			mmioFile.Position = newPosition;
 			_logger.LogInformation("[WinMM] mmioSeek: New position {NewPosition}", newPosition);
 			return newPosition;
@@ -388,15 +393,15 @@ namespace Win32Emu.Win32.Modules
 		private uint MmioGetInfo(uint hmmio, uint lpmmioinfo, uint wFlags)
 		{
 			// MmioGetInfo retrieves information about a file opened with mmioOpen
-			_logger.LogInformation("[WinMM] mmioGetInfo(hmmio=0x{Hmmio:X8}, lpmmioinfo=0x{Lpmmioinfo:X8}, wFlags=0x{WFlags:X8})", 
+			_logger.LogInformation("[WinMM] mmioGetInfo(hmmio=0x{Hmmio:X8}, lpmmioinfo=0x{Lpmmioinfo:X8}, wFlags=0x{WFlags:X8})",
 				hmmio, lpmmioinfo, wFlags);
-			
+
 			if (!_mmioFiles.ContainsKey(hmmio))
 			{
 				_logger.LogWarning("[WinMM] mmioGetInfo: Invalid handle 0x{Hmmio:X8}", hmmio);
 				return 256; // MMIOERR_INVALIDHANDLE
 			}
-			
+
 			// For stub implementation, just return success
 			// A full implementation would fill in the MMIOINFO structure
 			return 0; // MMSYSERR_NOERROR
@@ -406,15 +411,15 @@ namespace Win32Emu.Win32.Modules
 		private uint MmioSetInfo(uint hmmio, uint lpmmioinfo, uint wFlags)
 		{
 			// MmioSetInfo sets information about a file opened with mmioOpen
-			_logger.LogInformation("[WinMM] mmioSetInfo(hmmio=0x{Hmmio:X8}, lpmmioinfo=0x{Lpmmioinfo:X8}, wFlags=0x{WFlags:X8})", 
+			_logger.LogInformation("[WinMM] mmioSetInfo(hmmio=0x{Hmmio:X8}, lpmmioinfo=0x{Lpmmioinfo:X8}, wFlags=0x{WFlags:X8})",
 				hmmio, lpmmioinfo, wFlags);
-			
+
 			if (!_mmioFiles.ContainsKey(hmmio))
 			{
 				_logger.LogWarning("[WinMM] mmioSetInfo: Invalid handle 0x{Hmmio:X8}", hmmio);
 				return 256; // MMIOERR_INVALIDHANDLE
 			}
-			
+
 			// For stub implementation, just return success
 			return 0; // MMSYSERR_NOERROR
 		}
@@ -423,15 +428,15 @@ namespace Win32Emu.Win32.Modules
 		private uint MmioDescend(uint hmmio, uint lpck, uint lpckParent, uint wFlags)
 		{
 			// MmioDescend descends into a RIFF chunk
-			_logger.LogInformation("[WinMM] mmioDescend(hmmio=0x{Hmmio:X8}, lpck=0x{Lpck:X8}, lpckParent=0x{LpckParent:X8}, wFlags=0x{WFlags:X8})", 
+			_logger.LogInformation("[WinMM] mmioDescend(hmmio=0x{Hmmio:X8}, lpck=0x{Lpck:X8}, lpckParent=0x{LpckParent:X8}, wFlags=0x{WFlags:X8})",
 				hmmio, lpck, lpckParent, wFlags);
-			
+
 			if (!_mmioFiles.ContainsKey(hmmio))
 			{
 				_logger.LogWarning("[WinMM] mmioDescend: Invalid handle 0x{Hmmio:X8}", hmmio);
 				return 256; // MMIOERR_INVALIDHANDLE
 			}
-			
+
 			// For stub implementation, just return success
 			// A full implementation would parse RIFF chunks
 			return 0; // MMSYSERR_NOERROR
@@ -441,15 +446,15 @@ namespace Win32Emu.Win32.Modules
 		private uint MmioAscend(uint hmmio, uint lpck, uint wFlags)
 		{
 			// MmioAscend ascends out of a RIFF chunk
-			_logger.LogInformation("[WinMM] mmioAscend(hmmio=0x{Hmmio:X8}, lpck=0x{Lpck:X8}, wFlags=0x{WFlags:X8})", 
+			_logger.LogInformation("[WinMM] mmioAscend(hmmio=0x{Hmmio:X8}, lpck=0x{Lpck:X8}, wFlags=0x{WFlags:X8})",
 				hmmio, lpck, wFlags);
-			
+
 			if (!_mmioFiles.ContainsKey(hmmio))
 			{
 				_logger.LogWarning("[WinMM] mmioAscend: Invalid handle 0x{Hmmio:X8}", hmmio);
 				return 256; // MMIOERR_INVALIDHANDLE
 			}
-			
+
 			// For stub implementation, just return success
 			return 0; // MMSYSERR_NOERROR
 		}
@@ -458,15 +463,15 @@ namespace Win32Emu.Win32.Modules
 		private uint MmioAdvance(uint hmmio, uint lpmmioinfo, uint wFlags)
 		{
 			// MmioAdvance advances the I/O buffer of a file opened with mmioOpen
-			_logger.LogInformation("[WinMM] mmioAdvance(hmmio=0x{Hmmio:X8}, lpmmioinfo=0x{Lpmmioinfo:X8}, wFlags=0x{WFlags:X8})", 
+			_logger.LogInformation("[WinMM] mmioAdvance(hmmio=0x{Hmmio:X8}, lpmmioinfo=0x{Lpmmioinfo:X8}, wFlags=0x{WFlags:X8})",
 				hmmio, lpmmioinfo, wFlags);
-			
+
 			if (!_mmioFiles.ContainsKey(hmmio))
 			{
 				_logger.LogWarning("[WinMM] mmioAdvance: Invalid handle 0x{Hmmio:X8}", hmmio);
 				return 256; // MMIOERR_INVALIDHANDLE
 			}
-			
+
 			// For stub implementation, just return success
 			return 0; // MMSYSERR_NOERROR
 		}
@@ -490,9 +495,9 @@ namespace Win32Emu.Win32.Modules
 		private uint MixerOpen(uint phmx, uint uMxId, uint dwCallback, uint dwInstance, uint fdwOpen)
 		{
 			// MixerOpen opens an audio mixer device
-			_logger.LogInformation("[WinMM] mixerOpen(phmx=0x{Phmx:X8}, uMxId={UMxId}, dwCallback=0x{DwCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwOpen=0x{FdwOpen:X8})", 
+			_logger.LogInformation("[WinMM] mixerOpen(phmx=0x{Phmx:X8}, uMxId={UMxId}, dwCallback=0x{DwCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwOpen=0x{FdwOpen:X8})",
 				phmx, uMxId, dwCallback, dwInstance, fdwOpen);
-			
+
 			if (phmx == 0)
 			{
 				_logger.LogWarning("[WinMM] mixerOpen: NULL handle pointer");
@@ -518,12 +523,12 @@ namespace Win32Emu.Win32.Modules
 				Volume = 1.0f,
 				Balance = 0.0f
 			};
-			
+
 			_mixerDevices[handle] = mixer;
-			
+
 			// Write the handle to the output parameter
 			_env.MemWrite32(phmx, handle);
-			
+
 			_logger.LogInformation("[WinMM] mixerOpen: Created handle 0x{Handle:X8} for device {UMxId} with audio backend support", handle, uMxId);
 			return 0; // MMSYSERR_NOERROR
 		}
@@ -589,7 +594,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[WinMM] waveOutGetDevCapsA(uDeviceID={UDeviceID}, pwoc=0x{Pwoc:X8}, cbwoc={Cbwoc})",
 				uDeviceID, pwoc, cbwoc);
-			
+
 			// Fill in WAVEOUTCAPS structure if pwoc is valid
 			if (pwoc != 0 && cbwoc > 0)
 			{
@@ -600,7 +605,7 @@ namespace Win32Emu.Win32.Modules
 					_env.MemWrite8(pwoc + i, 0);
 				}
 			}
-			
+
 			return 0; // MMSYSERR_NOERROR
 		}
 
@@ -609,7 +614,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[WinMM] waveOutMessage(hwo=0x{Hwo:X8}, uMsg={UMsg}, dw1=0x{Dw1:X8}, dw2=0x{Dw2:X8})",
 				hwo, uMsg, dw1, dw2);
-			
+
 			// Stub implementation - return 0 (success)
 			return 0;
 		}
@@ -626,13 +631,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[WinMM] waveOutGetVolume(hwo=0x{Hwo:X8}, pdwVolume=0x{PdwVolume:X8})",
 				hwo, pdwVolume);
-			
+
 			// Return full volume (0xFFFFFFFF = max volume for both left and right channels)
 			if (pdwVolume != 0)
 			{
 				_env.MemWrite32(pdwVolume, 0xFFFFFFFF);
 			}
-			
+
 			return 0; // MMSYSERR_NOERROR
 		}
 
@@ -648,7 +653,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[WinMM] waveOutSetVolume(hwo=0x{Hwo:X8}, dwVolume=0x{DwVolume:X8})",
 				hwo, dwVolume);
-			
+
 			// Accept the volume setting (but don't actually change anything)
 			return 0; // MMSYSERR_NOERROR
 		}
@@ -661,7 +666,7 @@ namespace Win32Emu.Win32.Modules
 		private uint AuxGetNumDevs()
 		{
 			_logger.LogInformation("[WinMM] auxGetNumDevs()");
-			
+
 			// Return 1 device for compatibility
 			return 1;
 		}
@@ -679,7 +684,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[WinMM] auxGetDevCapsA(uDeviceID={UDeviceID}, pac=0x{Pac:X8}, cbac={Cbac})",
 				uDeviceID, pac, cbac);
-			
+
 			// Fill in AUXCAPS structure if pac is valid
 			if (pac != 0 && cbac > 0)
 			{
@@ -689,7 +694,7 @@ namespace Win32Emu.Win32.Modules
 					_env.MemWrite8(pac + i, 0);
 				}
 			}
-			
+
 			return 0; // MMSYSERR_NOERROR
 		}
 
@@ -705,13 +710,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[WinMM] auxGetVolume(uDeviceID={UDeviceID}, pdwVolume=0x{PdwVolume:X8})",
 				uDeviceID, pdwVolume);
-			
+
 			// Return full volume (0xFFFFFFFF = max volume for both left and right channels)
 			if (pdwVolume != 0)
 			{
 				_env.MemWrite32(pdwVolume, 0xFFFFFFFF);
 			}
-			
+
 			return 0; // MMSYSERR_NOERROR
 		}
 
@@ -727,7 +732,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[WinMM] auxSetVolume(uDeviceID={UDeviceID}, dwVolume=0x{DwVolume:X8})",
 				uDeviceID, dwVolume);
-			
+
 			// Accept the volume setting (but don't actually change anything)
 			return 0; // MMSYSERR_NOERROR
 		}
@@ -740,7 +745,7 @@ namespace Win32Emu.Win32.Modules
 		private uint MidiOutGetNumDevs()
 		{
 			_logger.LogInformation("[WinMM] midiOutGetNumDevs()");
-			
+
 			// Return 1 device for compatibility
 			// A full implementation would enumerate actual MIDI devices
 			return 1;
@@ -795,7 +800,7 @@ namespace Win32Emu.Win32.Modules
 			var soundName = pszSound.ToString() ?? string.Empty;
 			_logger.LogInformation("[WinMM] sndPlaySoundA(pszSound=\"{SoundName}\", fuSound=0x{FuSound:X8})",
 				soundName, fuSound);
-			
+
 			// sndPlaySound plays a sound file
 			// fuSound flags include:
 			// SND_SYNC (0x0000) - Play synchronously
@@ -804,16 +809,16 @@ namespace Win32Emu.Win32.Modules
 			// SND_MEMORY (0x0004) - pszSound is a memory image
 			// SND_LOOP (0x0008) - Loop the sound until called again
 			// SND_NOSTOP (0x0010) - Don't stop currently playing sound
-			
+
 			// For stub implementation, we just log and return success
 			// A full implementation would actually play the sound file
-			
+
 			if (string.IsNullOrEmpty(soundName))
 			{
 				_logger.LogInformation("[WinMM] sndPlaySoundA: NULL sound name, stopping sound");
 				return 1; // TRUE - stopping sound
 			}
-			
+
 			_logger.LogInformation("[WinMM] sndPlaySoundA: Stub - would play sound \"{SoundName}\"", soundName);
 			return 1; // TRUE - success
 		}
@@ -832,7 +837,7 @@ namespace Win32Emu.Win32.Modules
 			var soundName = pszSound.ToString() ?? string.Empty;
 			_logger.LogInformation("[WinMM] PlaySoundA(pszSound=\"{SoundName}\", hmod=0x{Hmod:X8}, fdwSound=0x{FdwSound:X8})",
 				soundName, hmod, fdwSound);
-			
+
 			// PlaySound plays a sound file or resource
 			// fdwSound flags include:
 			// SND_SYNC (0x0000) - Play synchronously
@@ -848,16 +853,16 @@ namespace Win32Emu.Win32.Modules
 			// SND_PURGE (0x0040) - Stop all sounds
 			// SND_NOWAIT (0x00002000) - Don't wait if driver is busy
 			// SND_ALIAS_ID (0x00110000) - pszSound is a predefined sound identifier
-			
+
 			// For stub implementation, we just log and return success
 			// A full implementation would actually play the sound file or resource
-			
+
 			if (string.IsNullOrEmpty(soundName))
 			{
 				_logger.LogInformation("[WinMM] PlaySoundA: NULL sound name, stopping sound");
 				return 1; // TRUE - stopping sound
 			}
-			
+
 			_logger.LogInformation("[WinMM] PlaySoundA: Stub - would play sound \"{SoundName}\" from module 0x{Hmod:X8}", soundName, hmod);
 			return 1; // TRUE - success
 		}
@@ -904,6 +909,17 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[WinMM] PlaySound: Stub - would play sound \"{SoundName}\" from module 0x{Hmod:X8}", soundName, hmod);
 			return 1; // TRUE - success
+		}
+
+		/// <summary>
+		/// Notifies the system that joystick configuration has changed.
+		/// MMRESULT joyConfigChanged(DWORD dwFlags);
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint JoyConfigChanged(uint dwFlags)
+		{
+			_logger.LogInformation("[WinMM] JoyConfigChanged(dwFlags=0x{DwFlags:X8})", dwFlags);
+			return 0; // JOYERR_NOERROR
 		}
 	}
 }

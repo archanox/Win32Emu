@@ -6,7 +6,7 @@ using Win32Emu.Memory;
 
 namespace Win32Emu.Win32.Modules
 {
-	public class Gdi32Module : IWin32ModuleUnsafe
+	internal class Gdi32Module : IWin32ModuleUnsafe
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
@@ -322,6 +322,14 @@ namespace Win32Emu.Win32.Modules
 					returnValue = GetSystemPaletteUse(a.UInt32(0));
 					return true;
 
+				// Region functions
+				case "CREATERECTRGN":
+					returnValue = CreateRectRgn(a.Int32(0), a.Int32(1), a.Int32(2), a.Int32(3));
+					return true;
+				case "GETREGIONDATA":
+					returnValue = GetRegionData(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
 				default:
 					_logger.LogInformation("[Gdi32] Unimplemented export: {Export}", export);
 					return false;
@@ -420,9 +428,9 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(20)]
 		private uint Rectangle(uint hdc, int left, int top, int right, int bottom)
 		{
-			_logger.LogInformation("[Gdi32] Rectangle(HDC=0x{Hdc:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom})", 
+			_logger.LogInformation("[Gdi32] Rectangle(HDC=0x{Hdc:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom})",
 				hdc, left, top, right, bottom);
-			
+
 			// Rectangle draws a rectangle outline using the current pen
 			// For stub implementation, we just log and return success
 			return 1; // Non-zero on success
@@ -596,10 +604,10 @@ namespace Win32Emu.Win32.Modules
 			var driver = lpszDriver.ToString() ?? string.Empty;
 			var device = lpszDevice.ToString() ?? string.Empty;
 			var output = lpszOutput.ToString() ?? string.Empty;
-			
-			_logger.LogInformation("[Gdi32] CreateDCA(lpszDriver=\"{Driver}\", lpszDevice=\"{Device}\", lpszOutput=\"{Output}\")", 
+
+			_logger.LogInformation("[Gdi32] CreateDCA(lpszDriver=\"{Driver}\", lpszDevice=\"{Device}\", lpszOutput=\"{Output}\")",
 				driver, device, output);
-			
+
 			// Create a device context handle
 			var handle = _nextDcHandle++;
 			_deviceContexts[handle] = new DeviceContext { Handle = handle };
@@ -807,7 +815,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(24)]
 		private uint ScaleViewportExtEx(uint hdc, int xNum, int xDenom, int yNum, int yDenom, uint lpsz)
 		{
-			_logger.LogInformation("[Gdi32] ScaleViewportExtEx(hdc=0x{Hdc:X8}, xScale={XNum}/{XDenom}, yScale={YNum}/{YDenom})", 
+			_logger.LogInformation("[Gdi32] ScaleViewportExtEx(hdc=0x{Hdc:X8}, xScale={XNum}/{XDenom}, yScale={YNum}/{YDenom})",
 				hdc, xNum, xDenom, yNum, yDenom);
 			return 1; // TRUE
 		}
@@ -815,7 +823,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(24)]
 		private uint ScaleWindowExtEx(uint hdc, int xNum, int xDenom, int yNum, int yDenom, uint lpsz)
 		{
-			_logger.LogInformation("[Gdi32] ScaleWindowExtEx(hdc=0x{Hdc:X8}, xScale={XNum}/{XDenom}, yScale={YNum}/{YDenom})", 
+			_logger.LogInformation("[Gdi32] ScaleWindowExtEx(hdc=0x{Hdc:X8}, xScale={XNum}/{XDenom}, yScale={YNum}/{YDenom})",
 				hdc, xNum, xDenom, yNum, yDenom);
 			return 1; // TRUE
 		}
@@ -869,26 +877,26 @@ namespace Win32Emu.Win32.Modules
 		private int StartDocA(uint hdc, uint lpdi)
 		{
 			_logger.LogInformation("[Gdi32] StartDocA(hdc=0x{Hdc:X8}, lpdi=0x{Lpdi:X8})", hdc, lpdi);
-			
+
 			// DOCINFO structure (simplified):
 			// int cbSize;
 			// LPCSTR lpszDocName;
 			// LPCSTR lpszOutput;
 			// LPCSTR lpszDatatype;
 			// DWORD fwType;
-			
+
 			if (lpdi != 0)
 			{
 				var cbSize = (int)_env.MemRead32(lpdi + 0);
 				var lpszDocName = _env.MemRead32(lpdi + 4);
-				
+
 				if (lpszDocName != 0)
 				{
 					var docName = _env.ReadAnsiString(lpszDocName);
 					_logger.LogInformation("[Gdi32] StartDocA: Document name=\"{DocName}\"", docName);
 				}
 			}
-			
+
 			// Return a positive job identifier
 			return 1;
 		}
@@ -903,7 +911,7 @@ namespace Win32Emu.Win32.Modules
 		private int EndDoc(uint hdc)
 		{
 			_logger.LogInformation("[Gdi32] EndDoc(hdc=0x{Hdc:X8})", hdc);
-			
+
 			// EndDoc ends the current print job
 			// Return success
 			return 1;
@@ -919,7 +927,7 @@ namespace Win32Emu.Win32.Modules
 		private int StartPage(uint hdc)
 		{
 			_logger.LogInformation("[Gdi32] StartPage(hdc=0x{Hdc:X8})", hdc);
-			
+
 			// StartPage prepares the printer driver to accept data
 			// Return success (greater than zero)
 			return 1;
@@ -935,7 +943,7 @@ namespace Win32Emu.Win32.Modules
 		private int EndPage(uint hdc)
 		{
 			_logger.LogInformation("[Gdi32] EndPage(hdc=0x{Hdc:X8})", hdc);
-			
+
 			// EndPage notifies the device that the application has finished writing to a page
 			// Return success (greater than zero)
 			return 1;
@@ -950,7 +958,7 @@ namespace Win32Emu.Win32.Modules
 		private uint GdiFlush()
 		{
 			_logger.LogInformation("[Gdi32] GdiFlush()");
-			
+
 			// GdiFlush forces all pending GDI operations to complete
 			// For emulation, we don't have batching, so just return success
 			return 1; // TRUE
@@ -966,12 +974,12 @@ namespace Win32Emu.Win32.Modules
 		private uint GetSystemPaletteUse(uint hdc)
 		{
 			_logger.LogInformation("[Gdi32] GetSystemPaletteUse(hdc=0x{Hdc:X8})", hdc);
-			
+
 			// GetSystemPaletteUse returns the palette mode for the device context
 			// SYSPAL_NOSTATIC (2) - System palette contains no static colors except black and white
 			// SYSPAL_STATIC (1) - System palette contains static colors (default)
 			// SYSPAL_ERROR (0) - Error
-			
+
 			// Return SYSPAL_STATIC (default mode)
 			return 1;
 		}
@@ -997,17 +1005,17 @@ namespace Win32Emu.Win32.Modules
 		private uint CreateDIBSection(uint hdc, uint pbmi, uint usage, uint ppvBits, uint hSection, uint offset)
 		{
 			_logger.LogInformation("[Gdi32] CreateDIBSection(hdc=0x{Hdc:X8}, pbmi=0x{Pbmi:X8}, usage={Usage})", hdc, pbmi, usage);
-			
+
 			// Create a dummy bitmap handle
 			var bitmapHandle = _nextGdiObjectHandle++;
 			_gdiObjects[bitmapHandle] = new GdiObject { Type = GdiObjectType.Bitmap };
-			
+
 			// If ppvBits is provided, write a dummy pointer
 			if (ppvBits != 0)
 			{
 				_env.MemWrite32(ppvBits, 0x90000000); // Dummy bits pointer
 			}
-			
+
 			return bitmapHandle;
 		}
 
@@ -1034,11 +1042,11 @@ namespace Win32Emu.Win32.Modules
 		private uint CreateHalftonePalette(uint hdc)
 		{
 			_logger.LogInformation("[Gdi32] CreateHalftonePalette(hdc=0x{Hdc:X8})", hdc);
-			
+
 			// Create a dummy palette handle
 			var paletteHandle = _nextGdiObjectHandle++;
 			_gdiObjects[paletteHandle] = new GdiObject { Type = GdiObjectType.Palette };
-			
+
 			return paletteHandle;
 		}
 
@@ -1064,7 +1072,7 @@ namespace Win32Emu.Win32.Modules
 		private uint GetTextMetricsA(uint hdc, uint lptm)
 		{
 			_logger.LogInformation("[Gdi32] GetTextMetricsA(hdc=0x{Hdc:X8}, lptm=0x{Lptm:X8})", hdc, lptm);
-			
+
 			if (lptm != 0)
 			{
 				// Fill in TEXTMETRIC structure with default values
@@ -1076,11 +1084,11 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lptm + 20, 8);   // tmAveCharWidth
 				_env.MemWrite32(lptm + 24, 8);   // tmMaxCharWidth
 				_env.MemWrite32(lptm + 28, 400); // tmWeight
-				// NOTE: The TEXTMETRIC structure has additional fields beyond tmWeight (such as tmItalic, tmUnderlined, tmStruckOut, tmFirstChar, etc.)
-				// that are not initialized here. The structure is only partially initialized; additional fields may need to be filled
-				// if required by the application.
+												 // NOTE: The TEXTMETRIC structure has additional fields beyond tmWeight (such as tmItalic, tmUnderlined, tmStruckOut, tmFirstChar, etc.)
+												 // that are not initialized here. The structure is only partially initialized; additional fields may need to be filled
+												 // if required by the application.
 			}
-			
+
 			return 1; // TRUE
 		}
 
@@ -1304,16 +1312,16 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] SetPaletteEntries(hpal=0x{Hpal:X8}, iStart={IStart}, cEntries={CEntries}, pPalEntries=0x{PPalEntries:X8})",
 				hpal, iStart, cEntries, pPalEntries);
-			
+
 			// PALETTEENTRY structure is 4 bytes: peRed, peGreen, peBlue, peFlags
 			// For a stub implementation, we just acknowledge the entries were set
 			// In a real implementation, we would store the palette data
-			
+
 			if (pPalEntries == 0 || cEntries == 0)
 			{
 				return 0; // Return 0 if invalid parameters
 			}
-			
+
 			// Return the number of entries set (stub)
 			return cEntries;
 		}
@@ -1328,26 +1336,113 @@ namespace Win32Emu.Win32.Modules
 		private uint UnrealizeObject(uint hgdiobj)
 		{
 			_logger.LogInformation("[Gdi32] UnrealizeObject(hgdiobj=0x{Hgdiobj:X8})", hgdiobj);
-			
+
 			// UnrealizeObject is used primarily for palette objects
 			// It indicates that the palette should be completely remapped next time it's selected
 			// For brushes, it resets the brush origin
-			
+
 			// Check if this is a known GDI object
 			if (_gdiObjects.TryGetValue(hgdiobj, out var obj))
 			{
 				_logger.LogInformation("[Gdi32] UnrealizeObject: Object type is {Type}", obj.Type);
-				
+
 				// For palettes, this marks them as needing to be realized again
 				// For other object types, this typically does nothing
 				// Return TRUE to indicate success
 				return 1;
 			}
-			
+
 			// If object is not in our tracking, still return success
 			// as this may be a stock object or system object
 			_logger.LogInformation("[Gdi32] UnrealizeObject: Object not tracked, returning success");
 			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Creates a rectangular region.
+		/// HRGN CreateRectRgn(
+		///   int x1,
+		///   int y1,
+		///   int x2,
+		///   int y2
+		/// );
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint CreateRectRgn(int x1, int y1, int x2, int y2)
+		{
+			_logger.LogInformation("[Gdi32] CreateRectRgn(x1={X1}, y1={Y1}, x2={X2}, y2={Y2})", x1, y1, x2, y2);
+
+			// Create a new region object
+			var regionHandle = _nextGdiObjectHandle++;
+			_gdiObjects[regionHandle] = new GdiObject
+			{
+				Type = GdiObjectType.Region
+			};
+
+			return regionHandle;
+		}
+
+		/// <summary>
+		/// Retrieves data for a specified region.
+		/// DWORD GetRegionData(
+		///   HRGN   hrgn,
+		///   DWORD  nCount,
+		///   LPRGNDATA lpRgnData
+		/// );
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint GetRegionData(uint hrgn, uint nCount, uint lpRgnData)
+		{
+			_logger.LogInformation("[Gdi32] GetRegionData(hrgn=0x{Hrgn:X8}, nCount={NCount}, lpRgnData=0x{LpRgnData:X8})",
+				hrgn, nCount, lpRgnData);
+
+			if (!_gdiObjects.ContainsKey(hrgn))
+			{
+				_logger.LogWarning("[Gdi32] GetRegionData: Invalid region handle");
+				return 0;
+			}
+
+			// Return a minimal RGNDATA structure
+			// RGNDATA header is 32 bytes:
+			// - dwSize: 32 (DWORD)
+			// - iType: 1 (RDH_RECTANGLES) (DWORD)
+			// - nCount: 1 (DWORD)
+			// - nRgnSize: 16 (DWORD)
+			// - rcBound: RECT (16 bytes)
+			const uint headerSize = 32;
+			const uint rectSize = 16;
+			const uint totalSize = headerSize + rectSize;
+
+			if (lpRgnData == 0)
+			{
+				// Return required buffer size
+				return totalSize;
+			}
+
+			if (nCount < totalSize)
+			{
+				// Buffer too small
+				_logger.LogWarning("[Gdi32] GetRegionData: Buffer too small");
+				return 0;
+			}
+
+			// Write RGNDATA structure
+			_env.MemWrite32(lpRgnData + 0, headerSize);      // dwSize
+			_env.MemWrite32(lpRgnData + 4, 1);               // iType (RDH_RECTANGLES)
+			_env.MemWrite32(lpRgnData + 8, 1);               // nCount
+			_env.MemWrite32(lpRgnData + 12, rectSize);       // nRgnSize
+															 // rcBound (RECT)
+			_env.MemWrite32(lpRgnData + 16, 0);              // left
+			_env.MemWrite32(lpRgnData + 20, 0);              // top
+			_env.MemWrite32(lpRgnData + 24, 100);            // right
+			_env.MemWrite32(lpRgnData + 28, 100);            // bottom
+															 // Rectangle data
+			_env.MemWrite32(lpRgnData + 32, 0);              // left
+			_env.MemWrite32(lpRgnData + 36, 0);              // top
+			_env.MemWrite32(lpRgnData + 40, 100);            // right
+			_env.MemWrite32(lpRgnData + 44, 100);            // bottom
+
+			return totalSize;
 		}
 
 		private enum GdiObjectType
@@ -1356,7 +1451,8 @@ namespace Win32Emu.Win32.Modules
 			Brush,
 			Font,
 			Bitmap,
-			Palette
+			Palette,
+			Region
 		}
 
 		private class GdiObject

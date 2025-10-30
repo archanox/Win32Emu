@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Win32Emu.Win32.Modules;
 
-public class Kernel32Module : IWin32ModuleUnsafe
+internal class Kernel32Module : IWin32ModuleUnsafe
 {
 	private readonly ProcessEnvironment _env;
 	private readonly uint _imageBase;
@@ -117,6 +117,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "GETUSERDEFAULTLANGID":
 				returnValue = GetUserDefaultLangID();
+				return true;
+			case "GETSYSTEMDEFAULTLANGID":
+				returnValue = GetSystemDefaultLangID();
 				return true;
 			case "GETDATEFORMATA":
 				returnValue = GetDateFormatA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3), a.LpStr(4), a.Int32(5));
@@ -550,6 +553,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "LOCKRESOURCE":
 				returnValue = LockResource(a.UInt32(0));
 				return true;
+			case "FREERESOURCE":
+				returnValue = FreeResource(a.UInt32(0));
+				return true;
 
 			// Additional missing functions
 			case "DEVICEIOCONTROL":
@@ -753,6 +759,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "VIRTUALQUERY":
 				returnValue = VirtualQuery(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
+			case "READPROCESSMEMORY":
+				returnValue = ReadProcessMemory(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+
+			// File path functions
+			case "SEARCHPATHA":
+				returnValue = SearchPathA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.UInt32(3), a.LpStr(4), a.UInt32(5));
+				return true;
 
 			// Locale functions
 			case "ENUMSYSTEMLOCALESA":
@@ -769,7 +783,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return false;
 		}
 	}
-	
+
 	[DllModuleExport(203, entryPoint: 0x00039B1E, Version = "4.90.0.3000")]
 	[DllModuleExport(106, entryPoint: 0x00010156, Version = "5.1.2600.6532")]
 	public uint CreateSemaphoreW(uint lpSemaphoreAttributes, uint lInitialCount, uint lMaximumCount, LpcStr lpName)
@@ -777,7 +791,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[kernel32] CreateSemaphoreW: lpSemaphoreAttributes={lpSemaphoreAttributes}, lInitialCount={lInitialCount}, lMaximumCount={lMaximumCount}, lpName={lpName}", lpSemaphoreAttributes, lInitialCount, lMaximumCount, lpName);
 		return CreateSemaphore(lpSemaphoreAttributes, lInitialCount, lMaximumCount, lpName);
 	}
-	
+
 	[DllModuleExport(202, entryPoint: 0x000075C5, Version = "4.90.0.3000")]
 	[DllModuleExport(105, entryPoint: 0x00010B6D, Version = "5.1.2600.6532")]
 	public uint CreateSemaphoreA(uint lpSemaphoreAttributes, uint lInitialCount, uint lMaximumCount, LpcStr lpName)
@@ -800,12 +814,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var name = lpName.ToString() ?? string.Empty;
 		_logger.LogInformation("[kernel32] OpenSemaphoreA(dwDesiredAccess=0x{DwDesiredAccess:X8}, bInheritHandle={BInheritHandle}, lpName=\"{LpName}\")",
 			dwDesiredAccess, bInheritHandle, name);
-		
+
 		// Try to find an existing semaphore by name
 		// For now, just create a new one if not found
 		return CreateSemaphore(0, 0, 0x7FFFFFFF, lpName);
 	}
-	
+
 	[DllModuleExport(184, entryPoint: 0x00039B1E, Version = "4.90.0.3000")]
 	[DllModuleExport(77, entryPoint: 0x0000A749, Version = "5.1.2600.6532")]
 	public uint CreateEventW(uint lpEventAttributes, uint bManualReset, uint bInitialState, LpcStr lpName)
@@ -813,7 +827,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogWarning("[kernel32] CreateEventW: lpEventAttributes={lpEventAttributes}, bManualReset={bManualReset}, bInitialState={bInitialState}, lpName={lpName}", lpEventAttributes, bManualReset, bInitialState, lpName);
 		return CreateEvent(lpEventAttributes, bManualReset, bInitialState, lpName);
 	}
-	
+
 	[DllModuleExport(183, entryPoint: 0x00007568, Version = "4.90.0.3000", IsStub = true)]
 	[DllModuleExport(76, entryPoint: 0x00030922, Version = "5.1.2600.6532", IsStub = true)]
 	public uint CreateEventA(uint lpEventAttributes, uint bManualReset, uint bInitialState, LpcStr lpName)
@@ -821,7 +835,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogWarning("[kernel32] CreateEventA: lpEventAttributes={lpEventAttributes}, bManualReset={bManualReset}, bInitialState={bInitialState}, lpName={lpName}", lpEventAttributes, bManualReset, bInitialState, lpName);
 		return CreateEvent(lpEventAttributes, bManualReset, bInitialState, lpName);
 	}
-	
+
 	[DllModuleExport(194, entryPoint: 0x00007532, Version = "4.90.0.3000", IsStub = true)]
 	[DllModuleExport(93, entryPoint: 0x0000E9DF, Version = "5.1.2600.6532", IsStub = true)]
 	private uint CreateMutexA(uint lpMutexAttributes, uint bInitialOwner, LpcStr lpName)
@@ -1092,14 +1106,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		{
 			// Write a generic error message
 			var bytesToWrite = Math.Min(bytes.Length, (int)nSize - 1);
-			
+
 			for (int i = 0; i < bytesToWrite; i++)
 			{
 				_env.MemWrite8(lpBuffer + (uint)i, bytes[i]);
 			}
 			// Null terminate
 			_env.MemWrite8(lpBuffer + (uint)bytesToWrite, 0);
-			
+
 			return (uint)bytesToWrite; // Return number of characters written
 		}
 
@@ -1209,11 +1223,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case CodePage.EastEurope: // Windows Central Europe
 			case CodePage.Russian: // Windows Cyrillic
 			case CodePage.Iso88591LatinI: // ISO 8859-1 Latin I
-				// Single-byte code page setup
+										  // Single-byte code page setup
 				cpInfo.MaxCharSize = 1;
 				cpInfo.DefaultChar[0] = 0x3F; // '?' character
 				cpInfo.DefaultChar[1] = 0x00; // Null terminator
-				// LeadByte array - all zeros for single-byte code page
+											  // LeadByte array - all zeros for single-byte code page
 				for (var i = 0; i < 12; i++)
 				{
 					cpInfo.LeadByte[i] = 0;
@@ -1222,11 +1236,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				break;
 
 			case CodePage.Utf8: // UTF-8
-				// UTF-8 is a multi-byte encoding with variable length (1-4 bytes per character)
+								// UTF-8 is a multi-byte encoding with variable length (1-4 bytes per character)
 				cpInfo.MaxCharSize = 4;
 				cpInfo.DefaultChar[0] = 0x3F; // '?' character
 				cpInfo.DefaultChar[1] = 0x00; // Null terminator
-				// LeadByte array - all zeros for UTF-8 (no traditional lead bytes like DBCS)
+											  // LeadByte array - all zeros for UTF-8 (no traditional lead bytes like DBCS)
 				for (var i = 0; i < 12; i++)
 				{
 					cpInfo.LeadByte[i] = 0;
@@ -1960,51 +1974,51 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			switch (c)
 			{
 				case '\\':
-				{
-					// Count consecutive backslashes
-					var backslashCount = 1;
-					while (i + 1 < path.Length && path[i + 1] == '\\')
 					{
-						backslashCount++;
-						i++;
-					}
-
-					// Check if next char is a quote
-					if (i + 1 < path.Length && path[i + 1] == '"')
-					{
-						// For backslashes before quotes, ensure they're properly escaped
-						// In Windows, each backslash before a quote needs to be doubled
-						for (var j = 0; j < backslashCount; j++)
+						// Count consecutive backslashes
+						var backslashCount = 1;
+						while (i + 1 < path.Length && path[i + 1] == '\\')
 						{
-							result.Append('\\');
+							backslashCount++;
+							i++;
 						}
-					}
-					else
-					{
-						// For regular backslashes, just add them normally
-						for (var j = 0; j < backslashCount; j++)
-						{
-							result.Append('\\');
-						}
-					}
 
-					break;
-				}
+						// Check if next char is a quote
+						if (i + 1 < path.Length && path[i + 1] == '"')
+						{
+							// For backslashes before quotes, ensure they're properly escaped
+							// In Windows, each backslash before a quote needs to be doubled
+							for (var j = 0; j < backslashCount; j++)
+							{
+								result.Append('\\');
+							}
+						}
+						else
+						{
+							// For regular backslashes, just add them normally
+							for (var j = 0; j < backslashCount; j++)
+							{
+								result.Append('\\');
+							}
+						}
+
+						break;
+					}
 				case '"':
-				{
-					// Toggle quote state and add the quote
-					inQuote = !inQuote;
-
-					// Ensure quotes are properly escaped
-					if (result.Length > 0 && result[result.Length - 1] != '\\')
 					{
-						// Add a backslash before the quote if there isn't one already
-						result.Append('\\');
-					}
+						// Toggle quote state and add the quote
+						inQuote = !inQuote;
 
-					result.Append(c);
-					break;
-				}
+						// Ensure quotes are properly escaped
+						if (result.Length > 0 && result[result.Length - 1] != '\\')
+						{
+							// Add a backslash before the quote if there isn't one already
+							result.Append('\\');
+						}
+
+						result.Append(c);
+						break;
+					}
 				default:
 					// Regular character
 					result.Append(c);
@@ -2087,13 +2101,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				var ansiCmdLine = _env.ReadAnsiString(ansiPtr);
 				var fixedCmdLine = FixCommandLineEscaping(ansiCmdLine);
 				var windowsPath = ConvertToWindowsPath(fixedCmdLine);
-				
+
 				// Allocate memory for wide string
 				var wideBytes = Encoding.Unicode.GetBytes(windowsPath + "\0");
 				ptr = _env.HeapAlloc(0, (uint)wideBytes.Length);
 				_env.MemWriteBytes(ptr, wideBytes);
 				_env.CommandLinePtrW = ptr;
-				
+
 				_logger.LogInformation("[Kernel32] GetCommandLineW created wide version at 0x{Ptr:X8}: \"{CmdLine}\"", ptr, windowsPath);
 			}
 		}
@@ -2265,7 +2279,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint SetConsoleOutputCP(uint wCodePageID)
 	{
 		_logger.LogInformation("[Kernel32] SetConsoleOutputCP(wCodePageID={WCodePageID})", wCodePageID);
-		
+
 		// For emulation purposes, we accept the call but don't actually change the code page
 		// The emulator uses UTF-8/Unicode internally
 		return 1; // TRUE - success
@@ -2283,7 +2297,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] SetConsoleCtrlHandler(handlerRoutine=0x{HandlerRoutine:X8}, add={Add})",
 			handlerRoutine, add);
-		
+
 		// For emulation purposes, we accept the call but don't install a handler
 		// The emulator handles its own termination
 		return 1; // TRUE - success
@@ -2438,11 +2452,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint HeapSize(uint hHeap, uint dwFlags, uint lpMem)
 	{
 		_logger.LogInformation("[Kernel32] HeapSize(hHeap=0x{HHeap:X8}, dwFlags=0x{DwFlags:X8}, lpMem=0x{LpMem:X8})", hHeap, dwFlags, lpMem);
-		
+
 		// Return the size of the heap memory block
 		var size = _env.HeapSize(hHeap, lpMem);
 		_logger.LogInformation("[Kernel32] HeapSize: Block at 0x{LpMem:X8} has size {Size} bytes", lpMem, size);
-		
+
 		return size;
 	}
 
@@ -2453,14 +2467,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// IsBadCodePtr verifies that the calling process has read access to the specified code address
 		// Returns FALSE (0) if the address is valid, TRUE (non-zero) if invalid
 		_logger.LogInformation("[Kernel32] IsBadCodePtr(lpfn=0x{Lpfn:X8})", lpfn);
-		
+
 		// For emulation purposes, we'll check if the address is within our memory space
 		// This is a simplification - real Windows checks actual page permissions
 		if (lpfn == 0)
 		{
 			return NativeTypes.Win32Bool.TRUE; // NULL pointer is invalid
 		}
-		
+
 		// For now, assume all non-NULL code pointers are valid
 		// A more complete implementation would check against allocated memory regions
 		return NativeTypes.Win32Bool.FALSE;
@@ -2473,13 +2487,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// IsBadReadPtr verifies that the calling process has read access to the specified range of memory
 		// Returns FALSE (0) if readable, TRUE (non-zero) if not readable
 		_logger.LogInformation("[Kernel32] IsBadReadPtr(lp=0x{Lp:X8}, ucb={Ucb})", lp, ucb);
-		
+
 		// For emulation, we'll do a basic check
 		if (lp == 0 || ucb == 0)
 		{
 			return NativeTypes.Win32Bool.TRUE; // NULL or zero-length is invalid
 		}
-		
+
 		// Assume all non-NULL memory is readable for now
 		// A complete implementation would check memory protection and allocation
 		return NativeTypes.Win32Bool.FALSE;
@@ -2492,13 +2506,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// IsBadWritePtr verifies that the calling process has write access to the specified range of memory
 		// Returns FALSE (0) if writable, TRUE (non-zero) if not writable
 		_logger.LogInformation("[Kernel32] IsBadWritePtr(lp=0x{Lp:X8}, ucb={Ucb})", lp, ucb);
-		
+
 		// For emulation, similar to IsBadReadPtr
 		if (lp == 0 || ucb == 0)
 		{
 			return NativeTypes.Win32Bool.TRUE; // NULL or zero-length is invalid
 		}
-		
+
 		// Assume all non-NULL memory is writable for now
 		return NativeTypes.Win32Bool.FALSE;
 	}
@@ -2693,7 +2707,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				// Path is relative, resolve it relative to current directory
 				resolvedPath = Path.Combine(_env.CurrentDirectory, path);
-				_logger.LogDebug("[Kernel32] CreateFileA: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')", 
+				_logger.LogDebug("[Kernel32] CreateFileA: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
 					path, resolvedPath, _env.CurrentDirectory);
 			}
 
@@ -2754,7 +2768,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				// Path is relative, resolve it relative to current directory
 				resolvedPath = Path.Combine(_env.CurrentDirectory, path);
-				_logger.LogDebug("[Kernel32] CreateFileW: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')", 
+				_logger.LogDebug("[Kernel32] CreateFileW: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
 					path, resolvedPath, _env.CurrentDirectory);
 			}
 
@@ -3062,7 +3076,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		{
 			var origin = dwMoveMethod switch
 			{
-				0 => SeekOrigin.Begin, 1 => SeekOrigin.Current, 2 => SeekOrigin.End, _ => SeekOrigin.Begin
+				0 => SeekOrigin.Begin,
+				1 => SeekOrigin.Current,
+				2 => SeekOrigin.End,
+				_ => SeekOrigin.Begin
 			};
 			long dist = (int)lDistanceToMove; // ignore high for now
 			var pos = vfsHandle.Seek(dist, origin);
@@ -3074,7 +3091,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		{
 			var origin = dwMoveMethod switch
 			{
-				0 => SeekOrigin.Begin, 1 => SeekOrigin.Current, 2 => SeekOrigin.End, _ => SeekOrigin.Begin
+				0 => SeekOrigin.Begin,
+				1 => SeekOrigin.Current,
+				2 => SeekOrigin.End,
+				_ => SeekOrigin.Begin
 			};
 			long dist = (int)lDistanceToMove; // ignore high for now
 			var pos = fs.Seek(dist, origin);
@@ -3517,7 +3537,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		try
 		{
 			var now = DateTime.UtcNow;
-			
+
 			// Write SYSTEMTIME structure (16 bytes)
 			// typedef struct _SYSTEMTIME {
 			//   WORD wYear;
@@ -3529,7 +3549,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			//   WORD wSecond;
 			//   WORD wMilliseconds;
 			// } SYSTEMTIME;
-			
+
 			_env.MemWrite16(lpSystemTime, (ushort)now.Year);
 			_env.MemWrite16(lpSystemTime + 2, (ushort)now.Month);
 			_env.MemWrite16(lpSystemTime + 4, (ushort)now.DayOfWeek);
@@ -3539,7 +3559,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite16(lpSystemTime + 12, (ushort)now.Second);
 			_env.MemWrite16(lpSystemTime + 14, (ushort)now.Millisecond);
 
-			_logger.LogInformation("[Kernel32] GetSystemTime: {Year}-{Month:D2}-{Day:D2} {Hour:D2}:{Minute:D2}:{Second:D2}.{Millisecond:D3}", 
+			_logger.LogInformation("[Kernel32] GetSystemTime: {Year}-{Month:D2}-{Day:D2} {Hour:D2}:{Minute:D2}:{Second:D2}.{Millisecond:D3}",
 				now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, now.Millisecond);
 
 			return 0; // GetSystemTime returns void in the real API
@@ -3558,7 +3578,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		try
 		{
 			var now = DateTime.Now; // Local time
-			
+
 			// Write SYSTEMTIME structure (16 bytes)
 			_env.MemWrite16(lpSystemTime, (ushort)now.Year);
 			_env.MemWrite16(lpSystemTime + 2, (ushort)now.Month);
@@ -3569,7 +3589,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite16(lpSystemTime + 12, (ushort)now.Second);
 			_env.MemWrite16(lpSystemTime + 14, (ushort)now.Millisecond);
 
-			_logger.LogInformation("[Kernel32] GetLocalTime: {Year}-{Month:D2}-{Day:D2} {Hour:D2}:{Minute:D2}:{Second:D2}.{Millisecond:D3}", 
+			_logger.LogInformation("[Kernel32] GetLocalTime: {Year}-{Month:D2}-{Day:D2} {Hour:D2}:{Minute:D2}:{Second:D2}.{Millisecond:D3}",
 				now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, now.Millisecond);
 
 			return 0; // GetLocalTime returns void in the real API
@@ -3590,13 +3610,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			var now = DateTime.UtcNow;
 			var epoch = new DateTime(1601, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 			var ticks = (now - epoch).Ticks; // .NET ticks are 100-nanosecond intervals
-			
+
 			// Write FILETIME structure (8 bytes: two 32-bit DWORDs)
 			_env.MemWrite32(lpSystemTimeAsFileTime, (uint)(ticks & 0xFFFFFFFF)); // dwLowDateTime
 			_env.MemWrite32(lpSystemTimeAsFileTime + 4, (uint)(ticks >> 32)); // dwHighDateTime
-			
+
 			_logger.LogInformation("[Kernel32] GetSystemTimeAsFileTime: {Ticks}", ticks);
-			
+
 			return 0; // GetSystemTimeAsFileTime returns void in the real API
 		}
 		catch (ArgumentOutOfRangeException ex)
@@ -3781,38 +3801,38 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				case CodePage.WestEurope: // Windows-1252 (Western European)
 				case CodePage.Iso88591LatinI: // ISO 8859-1 (Latin-1)
-					// Both Windows-1252 and ISO 8859-1 are single-byte encodings
-					// For compatibility with InvariantGlobalization, use Latin1 fallback
+											  // Both Windows-1252 and ISO 8859-1 are single-byte encodings
+											  // For compatibility with InvariantGlobalization, use Latin1 fallback
 					multiByteBytes = Encoding.Latin1.GetBytes(wideString);
 					break;
 				case CodePage.Oem437: // OEM US
 				case CodePage.OemMultilingualLatinI: // OEM Latin-1  
 				case CodePage.EastEurope: // Windows Central Europe
 				case CodePage.Russian: // Windows Cyrillic
-					// For other single-byte code pages, fallback to UTF-8 since Latin1 may not cover all characters
-					// This provides better Unicode support even if not 100% code page accurate
+									   // For other single-byte code pages, fallback to UTF-8 since Latin1 may not cover all characters
+									   // This provides better Unicode support even if not 100% code page accurate
 					multiByteBytes = Encoding.UTF8.GetBytes(wideString);
 					break;
 				case CodePage.Utf8: // UTF-8
 					multiByteBytes = Encoding.UTF8.GetBytes(wideString);
 					break;
 				default:
-				{
-					try
 					{
-						var encoding = Encoding.GetEncoding((int)actualCodePage);
-						multiByteBytes = encoding.GetBytes(wideString);
-						_logger.LogDebug("[Kernel32] Found bonus codepage {EncodingName} {WebName} ({CodePageInt})", encoding.EncodingName, encoding.WebName, (int)actualCodePage);
-						break;
+						try
+						{
+							var encoding = Encoding.GetEncoding((int)actualCodePage);
+							multiByteBytes = encoding.GetBytes(wideString);
+							_logger.LogDebug("[Kernel32] Found bonus codepage {EncodingName} {WebName} ({CodePageInt})", encoding.EncodingName, encoding.WebName, (int)actualCodePage);
+							break;
+						}
+						catch (Exception ex)
+						{
+							// Unsupported code page
+							_logger.LogError(ex, "[Kernel32] Unsupported code page {CodePage} ({CodePageInt})", actualCodePage, (int)actualCodePage);
+							_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+							return 0;
+						}
 					}
-					catch (Exception ex)
-					{
-						// Unsupported code page
-						_logger.LogError(ex, "[Kernel32] Unsupported code page {CodePage} ({CodePageInt})", actualCodePage, (int)actualCodePage);
-						_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-						return 0;
-					}
-				}
 			}
 
 			_logger.LogDebug("[Kernel32] WideCharToMultiByte: Conversion complete, got {BytesLength} bytes", multiByteBytes.Length);
@@ -4416,14 +4436,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		{
 			// Sleep(0) means "yield to other threads"
 			_logger.LogInformation("[Kernel32] Sleep(0): yielding to other threads");
-			
+
 			// Cooperate with the thread scheduler if available
 			var scheduler = _env.ThreadScheduler;
 			if (scheduler != null)
 			{
 				var currentThreadId = _env.GetCurrentThreadId();
 				_logger.LogDebug("[Kernel32] Sleep(0): Current thread {ThreadId} yielding", currentThreadId);
-				
+
 				// Mark as yielding but don't actually suspend
 				// The main execution loop will handle context switching
 				Thread.Yield();
@@ -4455,19 +4475,19 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		else
 		{
 			_logger.LogInformation("[Kernel32] Sleep: {DwMilliseconds} ms", dwMilliseconds);
-			
+
 			// For timed sleeps, cooperate with the threading system
 			var scheduler = _env.ThreadScheduler;
 			if (scheduler != null && dwMilliseconds > 10)
 			{
 				var currentThreadId = _env.GetCurrentThreadId();
 				_logger.LogDebug("[Kernel32] Sleep: Thread {ThreadId} sleeping for {Ms}ms", currentThreadId, dwMilliseconds);
-				
+
 				// Mark thread as waiting with timeout
 				// The scheduler will wake it after the timeout expires
 				var sleepToken = new object(); // Unique token for this sleep
 				scheduler.SetThreadWaiting(currentThreadId, sleepToken, dwMilliseconds);
-				
+
 				// Do a minimal actual sleep to prevent busy-waiting
 				Thread.Sleep(1);
 			}
@@ -4742,7 +4762,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Return pseudo-handle for current thread
 		// This is a special constant that Windows interprets as "current thread"
 		const uint CURRENT_THREAD_PSEUDO_HANDLE = 0xFFFFFFFE; // -2 as unsigned
-		
+
 		_logger.LogInformation("[Kernel32] GetCurrentThread() = 0xFFFFFFFE (pseudo-handle)");
 		return CURRENT_THREAD_PSEUDO_HANDLE;
 	}
@@ -4774,7 +4794,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(0)] // Placeholder ordinal - will be updated with actual ordinal from PE exports
 	private uint GetProcessAffinityMask(uint hProcess, uint lpProcessAffinityMask, uint lpSystemAffinityMask)
 	{
-		_logger.LogInformation("[Kernel32] GetProcessAffinityMask(hProcess=0x{HProcess:X8}, lpProcessAffinityMask=0x{LpProcessAffinityMask:X8}, lpSystemAffinityMask=0x{LpSystemAffinityMask:X8})", 
+		_logger.LogInformation("[Kernel32] GetProcessAffinityMask(hProcess=0x{HProcess:X8}, lpProcessAffinityMask=0x{LpProcessAffinityMask:X8}, lpSystemAffinityMask=0x{LpSystemAffinityMask:X8})",
 			hProcess, lpProcessAffinityMask, lpSystemAffinityMask);
 
 		if (lpProcessAffinityMask == 0 || lpSystemAffinityMask == 0)
@@ -4791,7 +4811,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_env.MemWrite32(lpProcessAffinityMask, SINGLE_PROCESSOR_MASK);
 		_env.MemWrite32(lpSystemAffinityMask, SINGLE_PROCESSOR_MASK);
 
-		_logger.LogDebug("[Kernel32] GetProcessAffinityMask: ProcessMask=0x{ProcessMask:X8}, SystemMask=0x{SystemMask:X8}", 
+		_logger.LogDebug("[Kernel32] GetProcessAffinityMask: ProcessMask=0x{ProcessMask:X8}, SystemMask=0x{SystemMask:X8}",
 			SINGLE_PROCESSOR_MASK, SINGLE_PROCESSOR_MASK);
 
 		return NativeTypes.Win32Bool.TRUE;
@@ -4840,7 +4860,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// Write the structure to memory
 		_env.MemWriteStruct(lpSystemInfo, ref sysInfo);
 
-		_logger.LogDebug("[Kernel32] GetSystemInfo: Arch={Arch}, Processors={Procs}, PageSize={PageSize}", 
+		_logger.LogDebug("[Kernel32] GetSystemInfo: Arch={Arch}, Processors={Procs}, PageSize={PageSize}",
 			sysInfo.ProcessorArchitecture, sysInfo.NumberOfProcessors, sysInfo.PageSize);
 
 		// Note: The Windows API GetSystemInfo function returns void, but for consistency with the emulator's calling convention (which expects all API stubs to return a uint), we return 0 here.
@@ -4872,12 +4892,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(0)] // Placeholder ordinal - will be updated with actual ordinal from PE exports
 	private uint SetThreadAffinityMask(uint hThread, uint dwThreadAffinityMask)
 	{
-		_logger.LogInformation("[Kernel32] SetThreadAffinityMask(hThread=0x{HThread:X8}, dwThreadAffinityMask=0x{DwThreadAffinityMask:X8})", 
+		_logger.LogInformation("[Kernel32] SetThreadAffinityMask(hThread=0x{HThread:X8}, dwThreadAffinityMask=0x{DwThreadAffinityMask:X8})",
 			hThread, dwThreadAffinityMask);
 
 		// In our single-threaded emulator, we don't actually enforce affinity
 		// But we validate the mask and return the previous affinity (which is always 0x1 for processor 0)
-		
+
 		// Validate the affinity mask - must be non-zero
 		if (dwThreadAffinityMask == 0)
 		{
@@ -4890,7 +4910,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		const uint SYSTEM_AFFINITY_MASK = 0x00000001; // Single processor
 		if ((dwThreadAffinityMask & ~SYSTEM_AFFINITY_MASK) != 0)
 		{
-			_logger.LogWarning("[Kernel32] SetThreadAffinityMask: Invalid affinity mask 0x{Mask:X8} (not subset of system mask 0x{SystemMask:X8})", 
+			_logger.LogWarning("[Kernel32] SetThreadAffinityMask: Invalid affinity mask 0x{Mask:X8} (not subset of system mask 0x{SystemMask:X8})",
 				dwThreadAffinityMask, SYSTEM_AFFINITY_MASK);
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
@@ -4898,8 +4918,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// Return the previous affinity mask (always processor 0 in our emulator)
 		const uint PREVIOUS_AFFINITY_MASK = 0x00000001;
-		
-		_logger.LogDebug("[Kernel32] SetThreadAffinityMask: Success, returning previous mask 0x{PrevMask:X8}", 
+
+		_logger.LogDebug("[Kernel32] SetThreadAffinityMask: Success, returning previous mask 0x{PrevMask:X8}",
 			PREVIOUS_AFFINITY_MASK);
 
 		return PREVIOUS_AFFINITY_MASK;
@@ -4917,10 +4937,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			{
 				// Get previous suspend count (0 if running, >0 if suspended)
 				var previousSuspendCount = thread.State == Threading.ThreadState.Suspended ? 1u : 0u;
-				
+
 				_env.ThreadScheduler.ResumeThread(thread.ThreadId);
 				_logger.LogInformation("[Kernel32] ResumeThread: thread {ThreadId} resumed", thread.ThreadId);
-				
+
 				return previousSuspendCount;
 			}
 		}
@@ -4940,10 +4960,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		{
 			// Get previous suspend count (0 if running, >0 if suspended)
 			var previousSuspendCount = thread.State == Threading.ThreadState.Suspended ? 1u : 0u;
-				
+
 			_env.ThreadScheduler.SuspendThread(thread.ThreadId);
 			_logger.LogInformation("[Kernel32] SuspendThread: thread {ThreadId} suspended", thread.ThreadId);
-				
+
 			return previousSuspendCount;
 		}
 
@@ -4961,7 +4981,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		if (thread != null)
 		{
 			_env.ThreadScheduler.TerminateThread(thread.ThreadId, dwExitCode);
-			_logger.LogInformation("[Kernel32] TerminateThread: thread {ThreadId} terminated with code {ExitCode}", 
+			_logger.LogInformation("[Kernel32] TerminateThread: thread {ThreadId} terminated with code {ExitCode}",
 				thread.ThreadId, dwExitCode);
 			return NativeTypes.Win32Bool.TRUE;
 		}
@@ -4975,7 +4995,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint GetExitCodeThread(uint hThread, uint lpExitCode)
 	{
-		_logger.LogInformation("[Kernel32] GetExitCodeThread(handle=0x{Handle:X8}, lpExitCode=0x{LpExitCode:X8})", 
+		_logger.LogInformation("[Kernel32] GetExitCodeThread(handle=0x{Handle:X8}, lpExitCode=0x{LpExitCode:X8})",
 			hThread, lpExitCode);
 
 		if (lpExitCode == 0)
@@ -4990,9 +5010,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// STILL_ACTIVE = 259 (0x103)
 			const uint STILL_ACTIVE = 259;
 			uint exitCode = thread.State == Threading.ThreadState.Terminated ? thread.ExitCode : STILL_ACTIVE;
-			
+
 			_env.MemWrite32(lpExitCode, exitCode);
-			_logger.LogInformation("[Kernel32] GetExitCodeThread: thread {ThreadId} exit code = {ExitCode}", 
+			_logger.LogInformation("[Kernel32] GetExitCodeThread: thread {ThreadId} exit code = {ExitCode}",
 				thread.ThreadId, exitCode);
 			return NativeTypes.Win32Bool.TRUE;
 		}
@@ -5075,7 +5095,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		var success = _env.SynchronizationManager.ReleaseMutex(hMutex, currentThreadId);
-		
+
 		if (!success)
 		{
 			_lastError = NativeTypes.Win32Error.ERROR_NOT_OWNER;
@@ -5252,7 +5272,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint WaitForSingleObject(uint hHandle, uint dwMilliseconds)
 	{
 		var currentThreadId = _env.GetCurrentThreadId();
-		_logger.LogInformation("[Kernel32] WaitForSingleObject(handle=0x{Handle:X8}, timeout={Timeout}ms) - Thread {ThreadId}", 
+		_logger.LogInformation("[Kernel32] WaitForSingleObject(handle=0x{Handle:X8}, timeout={Timeout}ms) - Thread {ThreadId}",
 			hHandle, dwMilliseconds, currentThreadId);
 
 		if (_env.SynchronizationManager == null)
@@ -5267,7 +5287,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// Check what type of object this is
 		var objectType = _env.SynchronizationManager.GetObjectType(hHandle);
-		
+
 		if (objectType == null)
 		{
 			_logger.LogWarning("[Kernel32] WaitForSingleObject: invalid handle 0x{Handle:X8}", hHandle);
@@ -5276,8 +5296,8 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// Start time for timeout tracking
 		var startTime = DateTime.UtcNow;
-		var timeoutSpan = dwMilliseconds == 0xFFFFFFFF 
-			? TimeSpan.MaxValue 
+		var timeoutSpan = dwMilliseconds == 0xFFFFFFFF
+			? TimeSpan.MaxValue
 			: TimeSpan.FromMilliseconds(dwMilliseconds);
 
 		// Polling loop to wait for object - implements blocking behavior
@@ -5295,7 +5315,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			if (signaled)
 			{
 				// Object is now available
-				_logger.LogDebug("[Kernel32] WaitForSingleObject: Thread {ThreadId} successfully acquired {Type} 0x{Handle:X8}", 
+				_logger.LogDebug("[Kernel32] WaitForSingleObject: Thread {ThreadId} successfully acquired {Type} 0x{Handle:X8}",
 					currentThreadId, objectType, hHandle);
 				return WAIT_OBJECT_0;
 			}
@@ -5319,7 +5339,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// Object not available yet - yield and retry
 			// Use a small sleep to prevent busy-waiting and allow other threads to run
 			Thread.Sleep(1);
-			
+
 			// Yield to thread scheduler if available
 			_env.ThreadScheduler?.ProcessWaitTimeouts();
 		}
@@ -5389,7 +5409,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		{
 			// Create directory - just use the path directly without VFS translation for now
 			var realPath = path;
-			
+
 			// Create directory
 			if (!Directory.Exists(realPath))
 			{
@@ -5503,7 +5523,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var cmdLine = lpCmdLine.ToString();
 		_logger.LogInformation("[Kernel32] WinExec(\"{CmdLine}\", {UCmdShow})", cmdLine, uCmdShow);
-		
+
 		if (cmdLine == null)
 		{
 			_logger.LogWarning("[Kernel32] WinExec: null command line");
@@ -5606,7 +5626,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// In a single-threaded emulator, this is a no-op since there's no contention
 		// However, we update the structure to maintain correct state for any code that reads it
-		
+
 		// Read current state
 		var criticalSection = _env.MemReadStruct<NativeTypes.CriticalSection>(lpCriticalSection);
 		var currentThreadId = _env.GetCurrentThreadId();
@@ -5659,7 +5679,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		// Decrement recursion count
 		criticalSection.RecursionCount--;
-		
+
 		if (criticalSection.RecursionCount == 0)
 		{
 			// Fully releasing the critical section
@@ -5805,6 +5825,23 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 	}
+
+	/// <summary>
+	/// Frees a resource loaded by LoadResource.
+	/// In Win32, this function is obsolete and does nothing - resources are freed automatically.
+	/// BOOL FreeResource(HGLOBAL hResData);
+	/// </summary>
+	/// <param name="hResData">Handle to the resource data</param>
+	/// <returns>Always returns TRUE (non-zero) for compatibility</returns>
+	[DllModuleExport(0)]
+	private uint FreeResource(uint hResData)
+	{
+		_logger.LogInformation("[Kernel32] FreeResource: hResData=0x{HResData:X8} (obsolete, no-op)", hResData);
+		// In Win32, FreeResource is obsolete and does nothing
+		// Resources are freed automatically when the module is unloaded
+		return 1; // TRUE
+	}
+
 	[DllModuleExport(8)]
 	private uint SetFileAttributesA(in LpcStr lpFileName, uint dwFileAttributes)
 	{
@@ -5832,7 +5869,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 			// Map Win32 attributes to .NET FileAttributes
 			FileAttributes attributes = FileAttributes.Normal;
-			
+
 			if ((dwFileAttributes & 0x01) != 0) attributes |= FileAttributes.ReadOnly;    // FILE_ATTRIBUTE_READONLY
 			if ((dwFileAttributes & 0x02) != 0) attributes |= FileAttributes.Hidden;      // FILE_ATTRIBUTE_HIDDEN
 			if ((dwFileAttributes & 0x04) != 0) attributes |= FileAttributes.System;      // FILE_ATTRIBUTE_SYSTEM
@@ -5840,7 +5877,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 			fileInfo.Attributes = attributes;
 			_logger.LogInformation("[Kernel32] SetFileAttributesA: Set attributes for \"{RealPath}\"", realPath);
-			
+
 			return NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
@@ -5855,7 +5892,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint GetDiskFreeSpaceA(in LpcStr lpRootPathName, uint lpSectorsPerCluster, uint lpBytesPerSector, uint lpNumberOfFreeClusters, uint lpTotalNumberOfClusters)
 	{
 		var rootPath = lpRootPathName.ToString() ?? "C:\\";
-		_logger.LogInformation("[Kernel32] GetDiskFreeSpaceA(\"{RootPath}\", 0x{LpSectorsPerCluster:X8}, 0x{LpBytesPerSector:X8}, 0x{LpNumberOfFreeClusters:X8}, 0x{LpTotalNumberOfClusters:X8})", 
+		_logger.LogInformation("[Kernel32] GetDiskFreeSpaceA(\"{RootPath}\", 0x{LpSectorsPerCluster:X8}, 0x{LpBytesPerSector:X8}, 0x{LpNumberOfFreeClusters:X8}, 0x{LpTotalNumberOfClusters:X8})",
 			rootPath, lpSectorsPerCluster, lpBytesPerSector, lpNumberOfFreeClusters, lpTotalNumberOfClusters);
 
 		try
@@ -5869,13 +5906,13 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 			if (lpSectorsPerCluster != 0)
 				_env.MemWrite32(lpSectorsPerCluster, sectorsPerCluster);
-			
+
 			if (lpBytesPerSector != 0)
 				_env.MemWrite32(lpBytesPerSector, bytesPerSector);
-			
+
 			if (lpNumberOfFreeClusters != 0)
 				_env.MemWrite32(lpNumberOfFreeClusters, numberOfFreeClusters);
-			
+
 			if (lpTotalNumberOfClusters != 0)
 				_env.MemWrite32(lpTotalNumberOfClusters, totalNumberOfClusters);
 
@@ -5908,7 +5945,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		// For simplicity, return DRIVE_FIXED (3) for all drives
 		// In a real implementation, we would check the actual drive type
 		const uint DRIVE_FIXED = 3;
-		
+
 		_logger.LogInformation("[Kernel32] GetDriveTypeA: Returning DRIVE_FIXED for \"{RootPath}\"", rootPath);
 		return DRIVE_FIXED;
 	}
@@ -5917,14 +5954,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint GetLogicalDrives()
 	{
 		_logger.LogInformation("[Kernel32] GetLogicalDrives()");
-		
+
 		// Return a bitmask of available drives
 		// Bit 0 = A:, Bit 1 = B:, Bit 2 = C:, etc.
 		// For simplicity, we'll return only C: drive (bit 2 set)
 		uint driveMask = 0x04; // C: drive (1 << 2)
-		
+
 		_logger.LogInformation("[Kernel32] GetLogicalDrives: Returning drive mask 0x{DriveMask:X8}", driveMask);
-		
+
 		return driveMask;
 	}
 
@@ -5932,14 +5969,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(328, entryPoint: 0x0001A308, Version = "4.90.0.3000")]
 	private uint GetLogicalDriveStringsA(uint nBufferLength, in LpStr lpBuffer)
 	{
-		_logger.LogInformation("[Kernel32] GetLogicalDriveStringsA(nBufferLength={NBufferLength}, lpBuffer=0x{LpBuffer:X8})", 
+		_logger.LogInformation("[Kernel32] GetLogicalDriveStringsA(nBufferLength={NBufferLength}, lpBuffer=0x{LpBuffer:X8})",
 			nBufferLength, lpBuffer.Address);
 
 		// Return a string containing available drive letters, each followed by null terminator
 		// Format: "C:\0D:\0E:\0\0" (double null at end)
 		// For simplicity, we'll return just C: drive
 		const string driveString = "C:\\\0";
-		
+
 		var bytes = Encoding.ASCII.GetBytes(driveString);
 		var totalLength = (uint)(bytes.Length + 1); // +1 for final null terminator
 
@@ -5953,7 +5990,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		if (nBufferLength < totalLength)
 		{
 			// Buffer too small
-			_logger.LogWarning("[Kernel32] GetLogicalDriveStringsA: Buffer too small (need {TotalLength}, have {NBufferLength})", 
+			_logger.LogWarning("[Kernel32] GetLogicalDriveStringsA: Buffer too small (need {TotalLength}, have {NBufferLength})",
 				totalLength, nBufferLength);
 			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return 0;
@@ -5965,10 +6002,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWriteBytes(lpBuffer.Address, bytes);
 			// Write final null terminator
 			_env.MemWrite8(lpBuffer.Address + (uint)bytes.Length, 0);
-			
-			_logger.LogInformation("[Kernel32] GetLogicalDriveStringsA: Wrote drive string \"{DriveString}\"", 
+
+			_logger.LogInformation("[Kernel32] GetLogicalDriveStringsA: Wrote drive string \"{DriveString}\"",
 				driveString.TrimEnd('\0'));
-			
+
 			return (uint)(bytes.Length); // Return length without final null
 		}
 		catch (Exception ex)
@@ -5985,12 +6022,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var message = lpOutputString.ToString();
 		_logger.LogInformation("[Kernel32] OutputDebugStringA: {Message}", message);
-		
+
 		// OutputDebugStringA returns void (0) in the real API
 		// It sends the string to the debugger if one is attached
 		// For our emulator, we just log it
 		Console.WriteLine($"[DEBUG] {message}");
-		
+
 		return 0;
 	}
 
@@ -6002,11 +6039,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint DebugBreak()
 	{
 		_logger.LogInformation("[Kernel32] DebugBreak()");
-		
+
 		// In a real system, this would cause a breakpoint exception
 		// For emulation, we just log it and continue
 		// Could potentially trigger debugger if one is attached
-		
+
 		return 0; // void function
 	}
 
@@ -6014,19 +6051,19 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(571, entryPoint: 0x000223DC, Version = "4.90.0.3000")]
 	private uint SetUnhandledExceptionFilter(uint lpTopLevelExceptionFilter)
 	{
-		_logger.LogInformation("[Kernel32] SetUnhandledExceptionFilter(lpTopLevelExceptionFilter=0x{LpTopLevelExceptionFilter:X8})", 
+		_logger.LogInformation("[Kernel32] SetUnhandledExceptionFilter(lpTopLevelExceptionFilter=0x{LpTopLevelExceptionFilter:X8})",
 			lpTopLevelExceptionFilter);
-		
+
 		// This function sets the top-level exception handler
 		// In our emulator, we don't need to fully implement exception handling
 		// Just store the handler address and return success
-		
+
 		// Store for potential future use
 		var previousHandler = 0u; // We don't track previous handler for now
-		
-		_logger.LogInformation("[Kernel32] SetUnhandledExceptionFilter: Set exception handler to 0x{LpTopLevelExceptionFilter:X8}", 
+
+		_logger.LogInformation("[Kernel32] SetUnhandledExceptionFilter: Set exception handler to 0x{LpTopLevelExceptionFilter:X8}",
 			lpTopLevelExceptionFilter);
-		
+
 		return previousHandler;
 	}
 
@@ -6087,7 +6124,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var name = lpName.ToString() ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetEnvironmentVariableA(lpName=\"{Name}\", lpBuffer=0x{LpBuffer:X8}, nSize={NSize})",
 			name, lpBuffer, nSize);
-		
+
 		// Return empty (variable not found)
 		return 0;
 	}
@@ -6251,7 +6288,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] InterlockedExchange(target=0x{Target:X8}, value=0x{Value:X8})",
 			target, value);
-		
+
 		if (target != 0)
 		{
 			var oldValue = _env.MemRead32(target);
@@ -6385,7 +6422,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// Creates a new process and its primary thread.
 	/// </summary>
 	[DllModuleExport(72)]
-	private uint CreateProcessA(uint lpApplicationName, uint lpCommandLine, uint lpProcessAttributes, uint lpThreadAttributes, 
+	private uint CreateProcessA(uint lpApplicationName, uint lpCommandLine, uint lpProcessAttributes, uint lpThreadAttributes,
 		uint bInheritHandles, uint dwCreationFlags, uint lpEnvironment, uint lpCurrentDirectory, uint lpStartupInfo, uint lpProcessInformation)
 	{
 		var appName = lpApplicationName != 0 ? _env.ReadAnsiString(lpApplicationName) : null;
@@ -6399,7 +6436,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// Duplicates an object handle.
 	/// </summary>
 	[DllModuleExport(28)]
-	private uint DuplicateHandle(uint hSourceProcessHandle, uint hSourceHandle, uint hTargetProcessHandle, 
+	private uint DuplicateHandle(uint hSourceProcessHandle, uint hSourceHandle, uint hTargetProcessHandle,
 		uint lpTargetHandle, uint dwDesiredAccess, uint bInheritHandle, uint dwOptions)
 	{
 		_logger.LogInformation("[Kernel32] DuplicateHandle(hSourceHandle=0x{HSourceHandle:X8}, lpTargetHandle=0x{LpTargetHandle:X8})", hSourceHandle, lpTargetHandle);
@@ -6442,20 +6479,20 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var fileName = lpFileName.ToString() ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetFileAttributesA(lpFileName=\"{FileName}\")", fileName);
-		
+
 		if (string.IsNullOrEmpty(fileName))
 		{
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0xFFFFFFFF; // INVALID_FILE_ATTRIBUTES
 		}
-		
+
 		// Resolve relative paths
 		var resolvedPath = fileName;
 		if (!Path.IsPathRooted(fileName))
 		{
 			resolvedPath = Path.Combine(_env.CurrentDirectory, fileName);
 		}
-		
+
 		// Try to get file attributes
 		try
 		{
@@ -6477,12 +6514,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				{
 					var fileInfo = new FileInfo(resolvedPath);
 					uint attributes = 0x80; // FILE_ATTRIBUTE_NORMAL
-					
+
 					if ((fileInfo.Attributes & System.IO.FileAttributes.ReadOnly) != 0)
 					{
 						attributes = 0x01; // FILE_ATTRIBUTE_READONLY
 					}
-					
+
 					return attributes;
 				}
 				else if (Directory.Exists(resolvedPath))
@@ -6495,7 +6532,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		{
 			_logger.LogWarning(ex, "[Kernel32] GetFileAttributesA: Exception while checking file attributes");
 		}
-		
+
 		// File not found
 		_logger.LogInformation("[Kernel32] GetFileAttributesA: file not found");
 		_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
@@ -6655,7 +6692,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] UnlockFile(hFile=0x{HFile:X8})", hFile);
 		return 1; // TRUE
-		}
+	}
 
 	private uint GetSystemDefaultLCID()
 	{
@@ -6688,7 +6725,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint IsValidCodePage(uint codePage)
 	{
 		_logger.LogInformation("[Kernel32] IsValidCodePage(codePage={CodePage})", codePage);
-		
+
 		// Common code pages that we'll consider valid
 		// 437 = OEM United States, 1252 = Windows Latin 1
 		// For simplicity, accept any code page
@@ -6707,7 +6744,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] IsValidLocale(locale=0x{Locale:X8}, dwFlags=0x{DwFlags:X8})",
 			locale, dwFlags);
-		
+
 		// For simplicity, accept any locale as valid
 		return 1; // TRUE
 	}
@@ -6720,7 +6757,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] GetLocaleInfoA(locale=0x{Locale:X8}, lcType=0x{LcType:X8}, cchData={CchData})",
 			locale, lcType, cchData);
-		
+
 		// Common locale information requests
 		string? result = lcType switch
 		{
@@ -6730,26 +6767,26 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			0x1004 => "1252", // LOCALE_IDEFAULTANSICODEPAGE
 			_ => ""
 		};
-		
+
 		if (result == null || result.Length == 0)
 		{
 			_logger.LogInformation("[Kernel32] GetLocaleInfoA: unsupported lcType, returning empty");
 			return 0;
 		}
-		
+
 		// If lpLCData is null, return required buffer size
 		if (lpLCData.Address == 0)
 		{
 			return (uint)(result.Length + 1);
 		}
-		
+
 		// Write the result to the buffer
 		if (cchData >= result.Length + 1)
 		{
 			lpLCData.Write(_env.Memory, result, true);
 			return (uint)(result.Length + 1);
 		}
-		
+
 		// Buffer too small
 		return 0;
 	}
@@ -6759,10 +6796,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var format = lpFormat.ToString();
 		_logger.LogInformation("[Kernel32] GetDateFormatA(locale=0x{Locale:X8}, dwFlags=0x{DwFlags:X8}, lpFormat=\"{Format}\", cchDate={CchDate})",
 			locale, dwFlags, format, cchDate);
-		
+
 		// Get current date if lpDate is null (0)
 		DateTime date = DateTime.Now;
-		
+
 		// If lpDate is provided, read SYSTEMTIME structure
 		if (lpDate != 0)
 		{
@@ -6778,7 +6815,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				date = DateTime.Now;
 			}
 		}
-		
+
 		// Format the date
 		string result;
 		if (!string.IsNullOrEmpty(format))
@@ -6791,20 +6828,20 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			// Use default short date format
 			result = date.ToString("MM/dd/yyyy");
 		}
-		
+
 		// If lpDateStr is null, return required buffer size
 		if (lpDateStr.Address == 0)
 		{
 			return (uint)(result.Length + 1);
 		}
-		
+
 		// Write the result to the buffer
 		if (cchDate >= result.Length + 1)
 		{
 			lpDateStr.Write(_env.Memory, result, true);
 			return (uint)(result.Length + 1);
 		}
-		
+
 		// Buffer too small
 		return 0;
 	}
@@ -6813,25 +6850,25 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var src = lpSrc.ToString() ?? string.Empty;
 		_logger.LogInformation("[Kernel32] ExpandEnvironmentStringsA(lpSrc=\"{Src}\", nSize={NSize})", src, nSize);
-		
+
 		// Simple environment variable expansion
 		// For now, just copy the string without expansion
 		// A full implementation would expand %VARIABLE% patterns
 		var result = src;
-		
+
 		// If lpDst is null, return required buffer size
 		if (lpDst.Address == 0)
 		{
 			return (uint)(result.Length + 1);
 		}
-		
+
 		// Write the result to the buffer
 		if (nSize >= result.Length + 1)
 		{
 			lpDst.Write(_env.Memory, result, true);
 			return (uint)(result.Length + 1);
 		}
-		
+
 		// Buffer too small
 		_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 		return (uint)(result.Length + 1);
@@ -6843,14 +6880,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var keyName = lpKeyName.ToString() ?? string.Empty;
 		var defaultValue = lpDefault.ToString() ?? string.Empty;
 		var fileName = lpFileName.ToString() ?? string.Empty;
-		
+
 		_logger.LogInformation("[Kernel32] GetPrivateProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpDefault=\"{Default}\", nSize={NSize}, lpFileName=\"{FileName}\")",
 			appName, keyName, defaultValue, nSize, fileName);
-		
+
 		// For now, always return the default value
 		// A full implementation would read from INI files
 		var result = defaultValue;
-		
+
 		// Write the result to the buffer
 		if (nSize > 0)
 		{
@@ -6866,7 +6903,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			}
 			return (uint)writeSize;
 		}
-		
+
 		return 0;
 	}
 
@@ -6877,10 +6914,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var appName = lpApplicationName.ToString() ?? string.Empty;
 		var cmdLine = lpCommandLine.ToString() ?? string.Empty;
 		var currentDir = lpCurrentDirectory.ToString() ?? string.Empty;
-		
+
 		_logger.LogInformation("[Kernel32] CreateProcessA(lpApplicationName=\"{AppName}\", lpCommandLine=\"{CmdLine}\", dwCreationFlags=0x{Flags:X8}, lpCurrentDirectory=\"{CurrentDir}\")",
 			appName, cmdLine, dwCreationFlags, currentDir);
-		
+
 		// Stub implementation - CreateProcess is complex and not fully supported
 		// Return failure for now
 		_lastError = 2; // ERROR_FILE_NOT_FOUND
@@ -6892,7 +6929,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var message = lpMessageText.ToString() ?? string.Empty;
 		_logger.LogError("[Kernel32] FatalAppExitA(uAction={UAction}, lpMessageText=\"{Message}\")", uAction, message);
-		
+
 		// Stub - just log the error
 		return 0; // void function
 	}
@@ -6903,10 +6940,10 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var appName = lpAppName.ToString() ?? string.Empty;
 		var keyName = lpKeyName.ToString() ?? string.Empty;
 		var fileName = lpFileName.ToString() ?? string.Empty;
-		
+
 		_logger.LogInformation("[Kernel32] GetPrivateProfileIntA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", nDefault={NDefault}, lpFileName=\"{FileName}\")",
 			appName, keyName, nDefault, fileName);
-		
+
 		// Stub - return default value
 		return (uint)nDefault;
 	}
@@ -6916,7 +6953,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var longPath = lpszLongPath.ToString() ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetShortPathNameA(lpszLongPath=\"{LongPath}\", cchBuffer={CchBuffer})", longPath, cchBuffer);
-		
+
 		// Stub - just copy the long path as the short path
 		if (cchBuffer > 0 && lpszShortPath.Address != 0)
 		{
@@ -6932,7 +6969,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			lpszShortPath.Write(_env.Memory, toCopy, true);
 			return (uint)toCopy.Length + 1;
 		}
-		
+
 		return (uint)longPath.Length + 1;
 	}
 
@@ -6942,7 +6979,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var srcStr = lpSrcStr.ToString() ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetStringTypeExA(Locale=0x{Locale:X}, dwInfoType=0x{DwInfoType:X}, cchSrc={CchSrc})",
 			Locale, dwInfoType, cchSrc);
-		
+
 		// Stub - just set all character types to 0
 		if (lpCharType != 0)
 		{
@@ -6952,7 +6989,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				_env.MemWrite16(lpCharType + (uint)(i * 2), 0);
 			}
 		}
-		
+
 		return 1; // TRUE
 	}
 
@@ -6961,19 +6998,19 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var pathName = lpPathName.ToString() ?? string.Empty;
 		var prefix = lpPrefixString.ToString() ?? string.Empty;
-		
+
 		_logger.LogInformation("[Kernel32] GetTempFileNameA(lpPathName=\"{PathName}\", lpPrefixString=\"{Prefix}\", uUnique={UUnique})",
 			pathName, prefix, uUnique);
-		
+
 		// Generate a temporary file name
 		var uniqueNum = uUnique != 0 ? uUnique : (uint)Random.Shared.Next(0x1, 0xFFFF);
 		var tempFileName = $"{prefix}{uniqueNum:X4}.TMP";
-		
+
 		if (lpTempFileName.Address != 0)
 		{
 			lpTempFileName.Write(_env.Memory, tempFileName, true);
 		}
-		
+
 		return uniqueNum;
 	}
 
@@ -6994,12 +7031,25 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return 0x0409; // English (United States)
 	}
 
+	/// <summary>
+	/// Returns the language identifier for the system locale.
+	/// LANGID GetSystemDefaultLangID(void);
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint GetSystemDefaultLangID()
+	{
+		_logger.LogInformation("[Kernel32] GetSystemDefaultLangID()");
+		// Return English (United States) language ID
+		// LANGID is a 16-bit value: MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)
+		return 0x0409; // English (United States)
+	}
+
 	[DllModuleExport(8)]
 	private uint LocalFileTimeToFileTime(uint lpLocalFileTime, uint lpFileTime)
 	{
 		_logger.LogInformation("[Kernel32] LocalFileTimeToFileTime(lpLocalFileTime=0x{LpLocalFileTime:X8}, lpFileTime=0x{LpFileTime:X8})",
 			lpLocalFileTime, lpFileTime);
-		
+
 		// Stub - just copy the time
 		if (lpLocalFileTime != 0 && lpFileTime != 0)
 		{
@@ -7008,7 +7058,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite32(lpFileTime, low);
 			_env.MemWrite32(lpFileTime + 4, high);
 		}
-		
+
 		return 1; // TRUE
 	}
 
@@ -7017,7 +7067,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] SetFileTime(hFile=0x{HFile:X8}, lpCreationTime=0x{LpCreationTime:X8}, lpLastAccessTime=0x{LpLastAccessTime:X8}, lpLastWriteTime=0x{LpLastWriteTime:X8})",
 			hFile, lpCreationTime, lpLastAccessTime, lpLastWriteTime);
-		
+
 		// Stub - return success
 		return 1; // TRUE
 	}
@@ -7027,14 +7077,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] SystemTimeToFileTime(lpSystemTime=0x{LpSystemTime:X8}, lpFileTime=0x{LpFileTime:X8})",
 			lpSystemTime, lpFileTime);
-		
+
 		// Stub - write dummy FILETIME value
 		if (lpFileTime != 0)
 		{
 			_env.MemWrite32(lpFileTime, 0);     // dwLowDateTime
 			_env.MemWrite32(lpFileTime + 4, 0); // dwHighDateTime
 		}
-		
+
 		return 1; // TRUE
 	}
 
@@ -7065,7 +7115,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		var defaultStr = lpDefault.ToString() ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpDefault=\"{Default}\", lpReturnedString=0x{LpReturnedString:X8}, nSize={NSize})",
 			appName, keyName, defaultStr, lpReturnedString, nSize);
-		
+
 		// Return default string (stub - no Win.ini support)
 		if (lpReturnedString != 0 && nSize > 0)
 		{
@@ -7087,11 +7137,11 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private unsafe uint _lclose(uint hFile)
 	{
 		_logger.LogInformation("[Kernel32] _lclose(hFile=0x{HFile:X8})", hFile);
-		
+
 		// _lclose is a legacy 16-bit API for closing files
 		// It maps to CloseHandle in Win32
 		// Return 0 for success, -1 (0xFFFFFFFF) for error
-		
+
 		return CloseHandle((void*)hFile) != 0 ? 0u : 0xFFFFFFFF;
 	}
 
@@ -7106,22 +7156,22 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint _lcreat(in LpcStr lpPathName, int iAttribute)
 	{
 		var pathName = lpPathName.ToString() ?? string.Empty;
-		_logger.LogInformation("[Kernel32] _lcreat(lpPathName=\"{PathName}\", iAttribute={IAttribute})", 
+		_logger.LogInformation("[Kernel32] _lcreat(lpPathName=\"{PathName}\", iAttribute={IAttribute})",
 			pathName, iAttribute);
-		
+
 		// _lcreat is a legacy 16-bit API for creating/rewriting files
 		// iAttribute can be 0 (normal), 1 (read-only), 2 (hidden), 4 (system)
 		// Maps to CreateFile with CREATE_ALWAYS disposition
-		
+
 		// For simplicity, use the VFS or return a dummy handle
 		// In a real implementation, this would create the file
-		
+
 		if (string.IsNullOrEmpty(pathName))
 		{
 			_logger.LogWarning("[Kernel32] _lcreat: NULL or empty path");
 			return 0xFFFFFFFF; // HFILE_ERROR
 		}
-		
+
 		// Return a dummy file handle
 		// A full implementation would actually create the file
 		var handle = 0x4000u + ((uint)pathName.GetHashCode() & 0xFFF);
@@ -7142,16 +7192,16 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] _lwrite(hFile=0x{HFile:X8}, lpBuffer=0x{LpBuffer:X8}, uBytes={UBytes})",
 			hFile, lpBuffer, uBytes);
-		
+
 		// _lwrite is a legacy 16-bit API for writing to files
 		// Returns the number of bytes written, or 0xFFFFFFFF on error
-		
+
 		if (lpBuffer == 0)
 		{
 			_logger.LogWarning("[Kernel32] _lwrite: NULL buffer");
 			return 0xFFFFFFFF; // HFILE_ERROR
 		}
-		
+
 		// For stub implementation, just return the number of bytes written
 		// A full implementation would actually write the data
 		_logger.LogInformation("[Kernel32] _lwrite: Stub returning {UBytes} bytes written", uBytes);
@@ -7169,22 +7219,22 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	private uint _lopen(in LpcStr lpPathName, int iReadWrite)
 	{
 		var pathName = lpPathName.ToString() ?? string.Empty;
-		_logger.LogInformation("[Kernel32] _lopen(lpPathName=\"{PathName}\", iReadWrite={IReadWrite})", 
+		_logger.LogInformation("[Kernel32] _lopen(lpPathName=\"{PathName}\", iReadWrite={IReadWrite})",
 			pathName, iReadWrite);
-		
+
 		// _lopen is a legacy 16-bit API for opening files
 		// iReadWrite can be:
 		// OF_READ (0x0000) - Open for reading
 		// OF_WRITE (0x0001) - Open for writing
 		// OF_READWRITE (0x0002) - Open for reading and writing
 		// Plus various flags like OF_SHARE_DENY_NONE, etc.
-		
+
 		if (string.IsNullOrEmpty(pathName))
 		{
 			_logger.LogWarning("[Kernel32] _lopen: NULL or empty path");
 			return 0xFFFFFFFF; // HFILE_ERROR
 		}
-		
+
 		// Try to use VirtualFileSystem if available
 		if (_env.VirtualFileSystem != null)
 		{
@@ -7203,7 +7253,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				_logger.LogWarning(ex, "[Kernel32] _lopen: VFS error accessing \"{PathName}\"", pathName);
 			}
 		}
-		
+
 		// File not found or VFS not available - return a dummy handle for compatibility
 		// This allows legacy apps to continue even if the file doesn't exist
 		var dummyHandle = 0x4000u + ((uint)pathName.GetHashCode() & 0xFFF);
@@ -7224,23 +7274,23 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] _lread(hFile=0x{HFile:X8}, lpBuffer=0x{LpBuffer:X8}, uBytes={UBytes})",
 			hFile, lpBuffer, uBytes);
-		
+
 		// _lread is a legacy 16-bit API for reading from files
 		// Returns the number of bytes read, or 0xFFFFFFFF on error
-		
+
 		if (lpBuffer == 0)
 		{
 			_logger.LogWarning("[Kernel32] _lread: NULL buffer");
 			return 0xFFFFFFFF; // HFILE_ERROR
 		}
-		
+
 		// For stub implementation, zero out the buffer and return 0 bytes read
 		// A full implementation would actually read from the file
 		for (uint i = 0; i < uBytes; i++)
 		{
 			_env.MemWrite8(lpBuffer + i, 0);
 		}
-		
+
 		_logger.LogInformation("[Kernel32] _lread: Stub returning 0 bytes read (EOF)");
 		return 0; // EOF
 	}
@@ -7258,14 +7308,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] _llseek(hFile=0x{HFile:X8}, lOffset={LOffset}, iOrigin={IOrigin})",
 			hFile, lOffset, iOrigin);
-		
+
 		// _llseek is a legacy 16-bit API for seeking in files
 		// iOrigin can be:
 		// FILE_BEGIN (0) - Seek from beginning
 		// FILE_CURRENT (1) - Seek from current position
 		// FILE_END (2) - Seek from end
 		// Returns the new file pointer position, or 0xFFFFFFFF on error
-		
+
 		// For stub implementation, calculate position based on origin
 		// A full implementation would track actual file positions and sizes
 		uint newPosition;
@@ -7275,18 +7325,18 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				newPosition = (uint)Math.Max(0, lOffset);
 				break;
 			case 1: // FILE_CURRENT
-				// Would need to track current position - for now assume position 0
+					// Would need to track current position - for now assume position 0
 				newPosition = (uint)Math.Max(0, lOffset);
 				break;
 			case 2: // FILE_END
-				// Would need to know file size - for now just use offset
+					// Would need to know file size - for now just use offset
 				newPosition = (uint)Math.Max(0, lOffset);
 				break;
 			default:
 				_logger.LogWarning("[Kernel32] _llseek: Invalid origin {IOrigin}", iOrigin);
 				return 0xFFFFFFFF; // Error
 		}
-		
+
 		_logger.LogInformation("[Kernel32] _llseek: Stub returning position 0x{NewPosition:X8}", newPosition);
 		return newPosition;
 	}
@@ -7315,7 +7365,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// );
 	/// </summary>
 	[DllModuleExport(24)]
-	private uint CreateFileMappingA(uint hFile, uint lpFileMappingAttributes, uint flProtect, 
+	private uint CreateFileMappingA(uint hFile, uint lpFileMappingAttributes, uint flProtect,
 		uint dwMaximumSizeHigh, uint dwMaximumSizeLow, in LpcStr lpName)
 	{
 		var name = lpName.ToString() ?? string.Empty;
@@ -7344,7 +7394,7 @@ public class Kernel32Module : IWin32ModuleUnsafe
 	/// );
 	/// </summary>
 	[DllModuleExport(20)]
-	private uint MapViewOfFile(uint hFileMappingObject, uint dwDesiredAccess, 
+	private uint MapViewOfFile(uint hFileMappingObject, uint dwDesiredAccess,
 		uint dwFileOffsetHigh, uint dwFileOffsetLow, uint dwNumberOfBytesToMap)
 	{
 		_logger.LogInformation("[Kernel32] MapViewOfFile(hFileMappingObject=0x{HFileMappingObject:X8}, dwDesiredAccess=0x{DwDesiredAccess:X}, dwFileOffsetHigh={DwFileOffsetHigh}, dwFileOffsetLow={DwFileOffsetLow}, dwNumberOfBytesToMap={DwNumberOfBytesToMap})",
@@ -7559,6 +7609,116 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_env.MemWrite16(lpFatTime, dosTime);
 
 		return 1; // TRUE (success)
+	}
+
+
+	/// <summary>
+	/// Reads memory from a specified process.
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint ReadProcessMemory(uint hProcess, uint lpBaseAddress, uint lpBuffer, uint nSize, uint lpNumberOfBytesRead)
+	{
+		_logger.LogInformation("[Kernel32] ReadProcessMemory(hProcess=0x{HProcess:X8}, lpBaseAddress=0x{LpBaseAddress:X8}, lpBuffer=0x{LpBuffer:X8}, nSize={NSize}, lpNumberOfBytesRead=0x{LpNumberOfBytesRead:X8})",
+		hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesRead);
+
+		// For self-process (pseudo-handle or current process), just copy memory
+		if (hProcess == 0xFFFFFFFF || hProcess == GetCurrentProcess())
+		{
+			try
+			{
+				// Copy memory from source to destination
+				for (uint i = 0; i < nSize; i++)
+				{
+					var value = _env.MemRead8(lpBaseAddress + i);
+					_env.MemWrite8(lpBuffer + i, value);
+				}
+
+				// Write the number of bytes read
+				if (lpNumberOfBytesRead != 0)
+				{
+					_env.MemWrite32(lpNumberOfBytesRead, nSize);
+				}
+
+				return 1; // TRUE
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[Kernel32] ReadProcessMemory: Exception occurred");
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				if (lpNumberOfBytesRead != 0)
+				{
+					_env.MemWrite32(lpNumberOfBytesRead, 0);
+				}
+				return 0; // FALSE
+			}
+		}
+
+		// For other processes, we don't support cross-process memory access in the emulator
+		_logger.LogWarning("[Kernel32] ReadProcessMemory: Cross-process memory access not supported");
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		if (lpNumberOfBytesRead != 0)
+		{
+			_env.MemWrite32(lpNumberOfBytesRead, 0);
+		}
+		return 0; // FALSE
+	}
+
+	/// <summary>
+	/// Searches for a file in a specified path.
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint SearchPathA(in LpcStr lpPath, in LpcStr lpFileName, in LpcStr lpExtension, uint nBufferLength, in LpStr lpBuffer, uint lpFilePart)
+	{
+		var path = lpPath.ToString();
+		var fileName = lpFileName.ToString();
+		var extension = lpExtension.ToString();
+
+		_logger.LogInformation("[Kernel32] SearchPathA(lpPath=\"{Path}\", lpFileName=\"{FileName}\", lpExtension=\"{Extension}\", nBufferLength={NBufferLength})",
+		path ?? "(null)", fileName ?? "(null)", extension ?? "(null)", nBufferLength);
+
+		if (string.IsNullOrEmpty(fileName))
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		// Build the complete filename with extension if provided
+		var fullFileName = fileName;
+		if (!string.IsNullOrEmpty(extension) && !fileName.Contains('.'))
+		{
+			fullFileName = fileName + extension;
+		}
+
+		// For stub, just return the filename in current directory
+		var resultPath = System.IO.Path.Combine(_env.CurrentDirectory, fullFileName);
+		var resultPathLength = (uint)(resultPath.Length + 1); // +1 for null terminator
+
+		if (nBufferLength < resultPathLength)
+		{
+			_logger.LogInformation("[Kernel32] SearchPathA: Buffer too small, need {ResultPathLength} bytes", resultPathLength);
+			return resultPathLength; // Return required size
+		}
+
+		// Write the path to the buffer
+		lpBuffer.Write(_env.Memory, resultPath, true);
+
+		// Write the file part pointer if requested
+		if (lpFilePart != 0)
+		{
+			var lastSlash = resultPath.LastIndexOfAny(new[] { '\\', '/' });
+			if (lastSlash >= 0)
+			{
+				var filePartOffset = (uint)(lastSlash + 1);
+				_env.MemWrite32(lpFilePart, lpBuffer.Address + filePartOffset);
+			}
+			else
+			{
+				_env.MemWrite32(lpFilePart, lpBuffer.Address);
+			}
+		}
+
+		_logger.LogInformation("[Kernel32] SearchPathA: Returning \"{ResultPath}\"", resultPath);
+		return (uint)resultPath.Length; // Return length without null terminator
 	}
 
 }
