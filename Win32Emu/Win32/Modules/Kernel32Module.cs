@@ -115,6 +115,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETLOCALEINFOA":
 				returnValue = GetLocaleInfoA(a.UInt32(0), a.UInt32(1), a.LpStr(2), a.Int32(3));
 				return true;
+			case "GETUSERDEFAULTLANGID":
+				returnValue = GetUserDefaultLangID();
+				return true;
 			case "GETDATEFORMATA":
 				returnValue = GetDateFormatA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3), a.LpStr(4), a.Int32(5));
 				return true;
@@ -291,6 +294,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "MOVEFILEA":
 				returnValue = MoveFileA(a.UInt32(0), a.UInt32(1));
 				return true;
+			case "COPYFILEA":
+				returnValue = CopyFileA(a.LpcStr(0), a.LpcStr(1), a.UInt32(2));
+				return true;
 			case "SETFILEATTRIBUTESA":
 				returnValue = SetFileAttributesA(a.LpcStr(0), a.UInt32(1));
 				return true;
@@ -308,6 +314,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "GETLOGICALDRIVESTRINGA":
 				returnValue = GetLogicalDriveStringsA(a.UInt32(0), a.LpStr(1));
+				return true;
+			case "GETLOGICALDRIVES":
+				returnValue = GetLogicalDrives();
 				return true;
 			case "FINDFIRSTFILEA":
 				returnValue = FindFirstFileA(a.UInt32(0), a.UInt32(1));
@@ -380,6 +389,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETLOCALTIME":
 				returnValue = GetLocalTime(a.UInt32(0));
 				return true;
+			case "GETSYSTEMTIMEASFILETIME":
+				returnValue = GetSystemTimeAsFileTime(a.UInt32(0));
+				return true;
 			case "GETTICKCOUNT":
 				returnValue = GetTickCount();
 				return true;
@@ -399,6 +411,12 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "SUSPENDTHREAD":
 				returnValue = SuspendThread(a.UInt32(0));
+				return true;
+			case "TERMINATETHREAD":
+				returnValue = TerminateThread(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "GETEXITCODETHREAD":
+				returnValue = GetExitCodeThread(a.UInt32(0), a.UInt32(1));
 				return true;
 			case "GETCURRENTTHREADID":
 				returnValue = GetCurrentThreadId();
@@ -3204,6 +3222,42 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		}
 	}
 
+	[DllModuleExport(12)]
+	private uint CopyFileA(uint lpExistingFileName, uint lpNewFileName, uint bFailIfExists)
+	{
+		try
+		{
+			var existingPath = _env.ReadAnsiString(lpExistingFileName);
+			var newPath = _env.ReadAnsiString(lpNewFileName);
+			var failIfExists = bFailIfExists != 0;
+
+			if (string.IsNullOrEmpty(existingPath) || string.IsNullOrEmpty(newPath))
+			{
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+
+			// Check if destination exists when bFailIfExists is true
+			if (failIfExists && File.Exists(newPath))
+			{
+				_logger.LogInformation("[Kernel32] CopyFileA: Destination '{NewPath}' already exists", newPath);
+				_lastError = NativeTypes.Win32Error.ERROR_FILE_EXISTS;
+				return NativeTypes.Win32Bool.FALSE;
+			}
+
+			// Perform the copy
+			File.Copy(existingPath, newPath, !failIfExists);
+			_logger.LogInformation("[Kernel32] CopyFileA: Copied '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
+			return NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation(ex, "[Kernel32] CopyFileA failed: {ExMessage}", ex.Message);
+			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
 	// Simple structure to hold find file data
 	private class FindFileHandle
 	{
@@ -3505,6 +3559,31 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] GetLocalTime failed");
+			return 0;
+		}
+	}
+
+	[DllModuleExport(0)]
+	private uint GetSystemTimeAsFileTime(uint lpSystemTimeAsFileTime)
+	{
+		try
+		{
+			// FILETIME is a 64-bit value representing the number of 100-nanosecond intervals since January 1, 1601 UTC
+			var now = DateTime.UtcNow;
+			var epoch = new DateTime(1601, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+			var ticks = (now - epoch).Ticks; // .NET ticks are 100-nanosecond intervals
+			
+			// Write FILETIME structure (8 bytes: two 32-bit DWORDs)
+			_env.MemWrite32(lpSystemTimeAsFileTime, (uint)(ticks & 0xFFFFFFFF)); // dwLowDateTime
+			_env.MemWrite32(lpSystemTimeAsFileTime + 4, (uint)(ticks >> 32)); // dwHighDateTime
+			
+			_logger.LogInformation("[Kernel32] GetSystemTimeAsFileTime: {Ticks}", ticks);
+			
+			return 0; // GetSystemTimeAsFileTime returns void in the real API
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] GetSystemTimeAsFileTime failed");
 			return 0;
 		}
 	}
@@ -4850,6 +4929,57 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return 0xFFFFFFFF; // -1 = error
 	}
 
+	[DllModuleExport(8)]
+	private uint TerminateThread(uint hThread, uint dwExitCode)
+	{
+		_logger.LogInformation("[Kernel32] TerminateThread(handle=0x{Handle:X8}, exitCode={ExitCode})", hThread, dwExitCode);
+
+		var thread = _env.ThreadScheduler?.GetThreadByHandle(hThread);
+		if (thread != null)
+		{
+			_env.ThreadScheduler.TerminateThread(thread.ThreadId, dwExitCode);
+			_logger.LogInformation("[Kernel32] TerminateThread: thread {ThreadId} terminated with code {ExitCode}", 
+				thread.ThreadId, dwExitCode);
+			return NativeTypes.Win32Bool.TRUE;
+		}
+
+		// Thread not found or scheduler not available
+		_logger.LogWarning("[Kernel32] TerminateThread: invalid thread handle 0x{Handle:X8}", hThread);
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return NativeTypes.Win32Bool.FALSE;
+	}
+
+	[DllModuleExport(8)]
+	private uint GetExitCodeThread(uint hThread, uint lpExitCode)
+	{
+		_logger.LogInformation("[Kernel32] GetExitCodeThread(handle=0x{Handle:X8}, lpExitCode=0x{LpExitCode:X8})", 
+			hThread, lpExitCode);
+
+		if (lpExitCode == 0)
+		{
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+
+		var thread = _env.ThreadScheduler?.GetThreadByHandle(hThread);
+		if (thread != null)
+		{
+			// STILL_ACTIVE = 259 (0x103)
+			const uint STILL_ACTIVE = 259;
+			uint exitCode = thread.State == Threading.ThreadState.Terminated ? thread.ExitCode : STILL_ACTIVE;
+			
+			_env.MemWrite32(lpExitCode, exitCode);
+			_logger.LogInformation("[Kernel32] GetExitCodeThread: thread {ThreadId} exit code = {ExitCode}", 
+				thread.ThreadId, exitCode);
+			return NativeTypes.Win32Bool.TRUE;
+		}
+
+		// Thread not found - assume it terminated with code 0
+		_env.MemWrite32(lpExitCode, 0);
+		_logger.LogWarning("[Kernel32] GetExitCodeThread: invalid thread handle 0x{Handle:X8}, returning 0", hThread);
+		return NativeTypes.Win32Bool.TRUE;
+	}
+
 	[DllModuleExport(37)]
 	private uint TlsAlloc()
 	{
@@ -5758,6 +5888,21 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		
 		_logger.LogInformation("[Kernel32] GetDriveTypeA: Returning DRIVE_FIXED for \"{RootPath}\"", rootPath);
 		return DRIVE_FIXED;
+	}
+
+	[DllModuleExport(0)]
+	private uint GetLogicalDrives()
+	{
+		_logger.LogInformation("[Kernel32] GetLogicalDrives()");
+		
+		// Return a bitmask of available drives
+		// Bit 0 = A:, Bit 1 = B:, Bit 2 = C:, etc.
+		// For simplicity, we'll return only C: drive (bit 2 set)
+		uint driveMask = 0x04; // C: drive (1 << 2)
+		
+		_logger.LogInformation("[Kernel32] GetLogicalDrives: Returning drive mask 0x{DriveMask:X8}", driveMask);
+		
+		return driveMask;
 	}
 
 	[DllModuleExport(429, entryPoint: 0x000115C8, Version = "5.1.2600.6532")]
@@ -6815,6 +6960,15 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] GetThreadLocale()");
 		// Return English (United States) locale
 		return 0x0409; // MAKELCID(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), SORT_DEFAULT)
+	}
+
+	[DllModuleExport(0)]
+	private uint GetUserDefaultLangID()
+	{
+		_logger.LogInformation("[Kernel32] GetUserDefaultLangID()");
+		// Return English (United States) language ID
+		// LANGID is a 16-bit value: MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)
+		return 0x0409; // English (United States)
 	}
 
 	[DllModuleExport(8)]
