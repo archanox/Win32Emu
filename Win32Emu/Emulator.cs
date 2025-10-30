@@ -499,12 +499,19 @@ public sealed class Emulator : IDisposable
                         {
                             var retInstrAddr = importStubAddr + 5;
                             var opcode = _vm!.Read8(retInstrAddr);
-                            _logger.LogInformation("[Syscall] Patching RET at 0x{RetAddr:X8}: opcode before=0x{Opcode:X2}", retInstrAddr, opcode);
-                            _vm!.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
-                            _vm!.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
-                            var arg1 = _vm!.Read8(retInstrAddr + 1);
-                            var arg2 = _vm!.Read8(retInstrAddr + 2);
-                            _logger.LogInformation("[Syscall] Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes} (bytes: {Arg1:X2} {Arg2:X2})", retInstrAddr, argBytes, arg1, arg2);
+                            if (opcode == 0xC2)
+                            {
+                                _logger.LogInformation("[Syscall] Patching RET at 0x{RetAddr:X8}: opcode before=0x{Opcode:X2}", retInstrAddr, opcode);
+                                _vm!.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
+                                _vm!.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
+                                var arg1 = _vm!.Read8(retInstrAddr + 1);
+                                var arg2 = _vm!.Read8(retInstrAddr + 2);
+                                _logger.LogInformation("[Syscall] Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes} (bytes: {Arg1:X2} {Arg2:X2})", retInstrAddr, argBytes, arg1, arg2);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("[Syscall] Expected RET imm16 (0xC2) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", retInstrAddr, opcode);
+                            }
                         }
                         
                         // The CPU will now execute the RET instruction in the syscall dispatcher,
