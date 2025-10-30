@@ -754,6 +754,18 @@ public class ProcessEnvironment
 		_logger.LogInformation("[ProcessEnv] Registered main executable: {ImagePath} at 0x{BaseAddress:X8}", imagePath, image.BaseAddress);
 	}
 
+	/// <summary>
+	/// Get the current main executable's LoadedImage (may have been updated with synthetic exports).
+	/// </summary>
+	public LoadedImage? GetMainExecutable()
+	{
+		if (_mainExecutableName != null && _loadedImages.TryGetValue(_mainExecutableName, out var mainExeImage))
+		{
+			return mainExeImage;
+		}
+		return null;
+	}
+
 	public bool IsModuleLoaded(string moduleName)
 	{
 		var normalizedName = Path.GetFileName(moduleName).ToUpperInvariant();
