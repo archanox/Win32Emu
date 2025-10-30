@@ -71,27 +71,37 @@ public class CpuMemoryAccessTests
         var memory = new VirtualMemory(1024 * 1024);
         var cpu = new IcedCpu(memory);
         
-        // Test various scenarios that could cause underflow
-        var testCases = new[]
-        {
-            new { EBP = 0x00000000u, Description = "EBP at zero with negative displacement" },
-            new { EBP = 0x00000001u, Description = "EBP at 1 with large negative displacement" },
-            new { EBP = 0x00000002u, Description = "EBP at 2 with displacement -5" }
-        };
+        // Test scenarios where address calculation wraps around due to pointer underflow
+        // Only operations that extend BEYOND 0x100000000 should throw
         
-        foreach (var testCase in testCases)
-        {
-            cpu.SetRegister("EBP", testCase.EBP);
-            cpu.SetEip(0x00001000);
-            
-            // MOV EAX, [EBP-5]
-            var testCode = new byte[] { 0x8B, 0x45, 0xFB };
-            memory.WriteBytes(0x00001000, testCode);
-            
-            // Act & Assert
-            var exception = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
-            Assert.Contains("out of range", exception.Message);
-        }
+        // Test case 1: EBP=0, MOV EAX, [EBP-5] -> address 0xFFFFFFFB
+        // Reading 4 bytes: 0xFFFFFFFB to 0xFFFFFFFE (ends at 0xFFFFFFFF, within bounds)
+        cpu.SetRegister("EBP", 0x00000000);
+        cpu.SetEip(0x00001000);
+        var testCode1 = new byte[] { 0x8B, 0x45, 0xFB };  // MOV EAX, [EBP-5]
+        memory.WriteBytes(0x00001000, testCode1);
+        
+        // Should NOT throw - the read is within the 4GB boundary
+        cpu.SingleStep(memory);  // This should succeed
+        
+        // Test case 2: EBP=1, MOV EAX, [EBP-5] -> address 0xFFFFFFFC
+        // Reading 4 bytes: 0xFFFFFFFC to 0xFFFFFFFF (ends at 0xFFFFFFFF, within bounds)
+        cpu.SetRegister("EBP", 0x00000001);
+        cpu.SetEip(0x00001000);
+        memory.WriteBytes(0x00001000, testCode1);
+        
+        // Should NOT throw - the read is within the 4GB boundary
+        cpu.SingleStep(memory);  // This should succeed
+        
+        // Test case 3: EBP=2, MOV EAX, [EBP-5] -> address 0xFFFFFFFD
+        // Reading 4 bytes: 0xFFFFFFFD to 0x100000000 (crosses the 4GB boundary!)
+        cpu.SetRegister("EBP", 0x00000002);
+        cpu.SetEip(0x00001000);
+        memory.WriteBytes(0x00001000, testCode1);
+        
+        // Should throw - the read extends beyond the 4GB boundary
+        var exception = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
+        Assert.Contains("out of range", exception.Message);
     }
     
     [Theory]
@@ -109,13 +119,16 @@ public class CpuMemoryAccessTests
     public void VirtualMemory_ShouldRejectLargeAddresses()
     {
         // Arrange
-        var memory = new VirtualMemory(1024 * 1024); // 1MB
+        var memory = new VirtualMemory(1024 * 1024); // 1MB (note: configured size is not enforced in sparse model)
         
-        // Act & Assert - These should all throw
-        Assert.Throws<IndexOutOfRangeException>(() => memory.Read8(0xFFFFFFFD));
-        Assert.Throws<IndexOutOfRangeException>(() => memory.Read32(0xFFFFFFFD));
-        Assert.Throws<IndexOutOfRangeException>(() => memory.Write8(0xFFFFFFFD, 0x42));
-        Assert.Throws<IndexOutOfRangeException>(() => memory.Write32(0xFFFFFFFD, 0x12345678));
+        // Act & Assert
+        // Single-byte operations should succeed at 0xFFFFFFFD since it's within the 4GB boundary
+        memory.Read8(0xFFFFFFFD);  // Should succeed
+        memory.Write8(0xFFFFFFFD, 0x42);  // Should succeed
+        
+        // Multi-byte operations should throw because they extend beyond the 4GB boundary (0x100000000)
+        Assert.Throws<IndexOutOfRangeException>(() => memory.Read32(0xFFFFFFFD));  // Would read up to 0x100000000
+        Assert.Throws<IndexOutOfRangeException>(() => memory.Write32(0xFFFFFFFD, 0x12345678));  // Would write up to 0x100000000
     }
     
     [Fact]
@@ -125,24 +138,24 @@ public class CpuMemoryAccessTests
         var memory = new VirtualMemory(1024 * 1024);
         var cpu = new IcedCpu(memory);
         
-        // Set up problematic register values that could cause the issue
+        // Set up register values that will cause boundary crossing
         cpu.SetRegister("EBP", 0x00000001);
         cpu.SetRegister("ESP", 0x00100000); // Valid stack
         cpu.SetEip(0x00001000);
         
-        // Test instruction that would cause underflow: ADD EAX, [EBP-8]
+        // Test instruction that crosses boundary: ADD EAX, [EBP-4]
+        // Address: 1 + (-4) = 0xFFFFFFFD
+        // Reading 4 bytes from 0xFFFFFFFD would access bytes up to 0x100000000
         var testCode = new byte[]
         {
-            0x03, 0x45, 0xF8  // ADD EAX, [EBP-8]  (F8 = -8)
+            0x03, 0x45, 0xFC  // ADD EAX, [EBP-4]  (FC = -4)
         };
         
         memory.WriteBytes(0x00001000, testCode);
         
-        // Act & Assert
+        // Act & Assert - Should throw because read crosses 4GB boundary
         var exception = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
-        
-        // The exception should mention the problematic address
-        Assert.Contains("0xFFFFFFF9", exception.Message); // 1 + (-8) = 0xFFFFFFF9
+        Assert.Contains("0xFFFFFFFD", exception.Message); // 1 + (-4) = 0xFFFFFFFD
     }
     
     [Fact]
@@ -243,91 +256,46 @@ public class CpuMemoryAccessTests
     [Fact]
     public void DiagnoseRealWorldScenario()
     {
-        // This test identifies the most likely real-world causes of the 0xFFFFFFFD error
+        // This test demonstrates a boundary crossing scenario that can occur in real programs
         var memory = new VirtualMemory();
         var cpu = new IcedCpu(memory);
         
-        // === Scenario 1: Uninitialized frame pointer ===
-        Console.WriteLine("=== Scenario 1: Uninitialized EBP ===");
-        cpu.SetRegister("EBP", 0x00000000); // Common issue: EBP not set up properly
+        Console.WriteLine("=== Boundary Crossing Scenario ===");
+        cpu.SetRegister("EBP", 0x00000001); // Small frame pointer value
         cpu.SetRegister("ESP", 0x00200000); // Valid stack
         cpu.SetEip(0x00401000);
         
-        // Function trying to access local variables or parameters
-        var code1 = new byte[] { 0x8B, 0x45, 0xF8 }; // MOV EAX, [EBP-8] - accessing local variable
-        memory.WriteBytes(0x00401000, code1);
+        // Trying to access [EBP-4] when EBP=1
+        // Address: 1 + (-4) = 0xFFFFFFFD
+        // Reading 32 bits would extend beyond 0x100000000
+        var code = new byte[] { 0x8B, 0x45, 0xFC }; // MOV EAX, [EBP-4]
+        memory.WriteBytes(0x00401000, code);
         
-        var ex1 = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
-        Console.WriteLine($"  Error: {ex1.Message}");
-        Console.WriteLine("  Cause: Function prologue didn't set up frame pointer properly");
-        Console.WriteLine("  Solution: Ensure 'PUSH EBP; MOV EBP, ESP' happens before accessing locals");
-        
-        // === Scenario 2: Corrupted frame pointer (small value that wraps) ===
-        Console.WriteLine("\n=== Scenario 2: Corrupted EBP that wraps around ===");
-        cpu.SetRegister("EBP", 0x00000002); // Small value that will wrap when accessing [EBP-8]
-        cpu.SetEip(0x00402000);
-        
-        var code2 = new byte[] { 0x8B, 0x55, 0xF8 }; // MOV EDX, [EBP-8] - accessing local variable
-        memory.WriteBytes(0x00402000, code2);
-        
-        var ex2 = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
-        Console.WriteLine($"  Error: {ex2.Message}");
-        Console.WriteLine("  Cause: Frame pointer was corrupted to small value, arithmetic wraps around");
-        Console.WriteLine("  Solution: Check for buffer overflows in calling functions");
-        
-        // === Scenario 3: Stack overflow/underflow ===
-        Console.WriteLine("\n=== Scenario 3: Stack Issues ===");
-        cpu.SetRegister("ESP", 0x00000008); // Very low stack pointer
-        cpu.SetRegister("EBP", 0x00000001); // Frame pointer that will wrap when accessing parameters
-        cpu.SetEip(0x00403000);
-        
-        var code3 = new byte[] { 0x8B, 0x45, 0xFC }; // MOV EAX, [EBP-4] -> 1 + (-4) = 0xFFFFFFFD
-        memory.WriteBytes(0x00403000, code3);
-        
-        var ex3 = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
-        Console.WriteLine($"  Error: {ex3.Message}");
-        Console.WriteLine("  Cause: Stack/frame pointers too low, possibly from stack overflow");
-        Console.WriteLine("  Solution: Check for infinite recursion or excessive local variable allocation");
-        
-        Console.WriteLine("\n=== Diagnostic Summary ===");
-        Console.WriteLine("The 0xFFFFFFFD error occurs when:");
-        Console.WriteLine("1. A register (usually EBP) contains a very small value (0-10)");
-        Console.WriteLine("2. Code tries to access memory with negative displacement [reg-N]");  
-        Console.WriteLine("3. Arithmetic wraps around: small_value + (-N) = 0xFFFFFFFF - (N-small_value-1)");
-        Console.WriteLine("\nTo fix in your program:");
-        Console.WriteLine("- Check that function prologues properly set up frame pointers");
-        Console.WriteLine("- Verify stack pointer initialization");
-        Console.WriteLine("- Look for buffer overflows that might corrupt registers");
-        Console.WriteLine("- Add bounds checking for pointer arithmetic");
-        Console.WriteLine("\nSpecific address calculations that cause 0xFFFFFFFD:");
-        Console.WriteLine("- EBP=0, access [EBP-3]: 0 + (-3) = 0xFFFFFFFD");
-        Console.WriteLine("- EBP=1, access [EBP-4]: 1 + (-4) = 0xFFFFFFFD");  
-        Console.WriteLine("- EBP=2, access [EBP-5]: 2 + (-5) = 0xFFFFFFFD");
+        var ex = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
+        Console.WriteLine($"  Error: {ex.Message}");
+        Console.WriteLine("  Cause: Frame pointer value too small, memory operation crosses 4GB boundary");
+        Console.WriteLine("  Solution: Ensure frame pointer is properly initialized");
     }
     
     [Theory]
-    [InlineData(0xFFFFFFF6u, "STD_INPUT_HANDLE")]
-    [InlineData(0xFFFFFFF5u, "STD_OUTPUT_HANDLE")]
-    [InlineData(0xFFFFFFF4u, "STD_ERROR_HANDLE")]
-    public void CalcMemAddress_PseudoHandleErrorMessage_ShouldIncludeHelpfulHint(uint pseudoHandleValue, string handleName)
+    [InlineData(0xFFFFFFFCu, "Safe - Read32 stays within bounds")]
+    [InlineData(0xFFFFFFFDu, "Crosses - Read32 extends to 0x100000001")]
+    [InlineData(0xFFFFFFFEu, "Crosses - Read32 extends to 0x100000002")]
+    [InlineData(0xFFFFFFFFu, "Crosses - Read32 extends to 0x100000003")]
+    public void CalcMemAddress_BoundaryConditions(uint address, string description)
     {
-        // This test verifies that when code tries to dereference a Windows pseudo-handle value
-        // as a memory address, the error message includes a helpful explanation
+        // This test verifies boundary checking for memory operations near the 4GB limit
         
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
         var cpu = new IcedCpu(memory);
         
-        // Set up a register to contain the small value that will wrap to the pseudo-handle
-        // For 0xFFFFFFF5 (STD_OUTPUT_HANDLE = -11), we can use EBX=0 and displacement=-11
-        // For 0xFFFFFFF6 (STD_INPUT_HANDLE = -10), we can use EBX=0 and displacement=-10  
-        // For 0xFFFFFFF4 (STD_ERROR_HANDLE = -12), we can use EBX=0 and displacement=-12
-        
-        int displacement = (int)pseudoHandleValue; // This is already a negative value when cast to int
+        // Calculate displacement to reach the target address from EBX=0
+        int displacement = (int)address;
         byte displacementByte = (byte)displacement;
         
         cpu.SetRegister("EBX", 0x00000000);
-        cpu.SetEip(0x00001000);  // Valid EIP within the 1MB memory
+        cpu.SetEip(0x00001000);
         
         // Create instruction: MOV EAX, [EBX+displacement]
         var testCode = new byte[]
@@ -337,53 +305,54 @@ public class CpuMemoryAccessTests
         
         memory.WriteBytes(0x00001000, testCode);
         
-        // Act - This should throw with an enhanced error message
-        var exception = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
-        
-        // Assert - The exception message should mention the specific address and handle name
-        Assert.Contains($"0x{pseudoHandleValue:X}", exception.Message);
-        // The handleName parameter is used to make the test data more readable in test output
-        _ = handleName;
+        // Act & Assert
+        // Only addresses where Read32 would extend beyond 0x100000000 should throw
+        // Need to use ulong to avoid uint overflow in the check
+        if ((ulong)address + 4 > 0x100000000UL)
+        {
+            var exception = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
+            Assert.Contains("out of range", exception.Message);
+        }
+        else
+        {
+            // Should succeed - the read is within bounds
+            cpu.SingleStep(memory);
+        }
     }
     
     [Fact]
     public void CalcMemAddress_WithAllRegisters_ShouldLogAllRegisterValues()
     {
-        // This test verifies that the enhanced diagnostic logging includes all general-purpose registers
-        // This helps diagnose issues where the problem is in EBX, ESI, or EDI (not shown in old error messages)
+        // This test verifies that boundary checking works when using different base registers
         
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
         var cpu = new IcedCpu(memory);
         
-        // Set unique values for all registers to verify they're all logged
+        // Set unique values for all registers
         cpu.SetRegister("EAX", 0x11111111);
-        cpu.SetRegister("EBX", 0x00000000); // This will cause the wraparound
+        cpu.SetRegister("EBX", 0x00000000); // Using EBX for address calculation
         cpu.SetRegister("ECX", 0x33333333);
         cpu.SetRegister("EDX", 0x44444444);
         cpu.SetRegister("ESI", 0x55555555);
         cpu.SetRegister("EDI", 0x66666666);
         cpu.SetRegister("EBP", 0x77777777);
         cpu.SetRegister("ESP", 0x00100000);
-        cpu.SetEip(0x00001000);  // Valid EIP within the 1MB memory
+        cpu.SetEip(0x00001000);
         
-        // Create instruction that will cause wraparound using EBX: MOV EAX, [EBX-11]
+        // Create instruction that will cross the boundary: MOV EAX, [EBX-3]
+        // This calculates address 0 + (-3) = 0xFFFFFFFD
+        // Reading 4 bytes from 0xFFFFFFFD would access 0xFFFFFFFD, 0xFFFFFFFE, 0xFFFFFFFF, 0x100000000
         var testCode = new byte[]
         {
-            0x8B, 0x43, 0xF5  // MOV EAX, [EBX-11] -> 0 + (-11) = 0xFFFFFFF5
+            0x8B, 0x43, 0xFD  // MOV EAX, [EBX-3] -> 0 + (-3) = 0xFFFFFFFD
         };
         
         memory.WriteBytes(0x00001000, testCode);
         
-        // Act
+        // Act & Assert - Should throw because the read crosses the 4GB boundary
         var exception = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
-        
-        // Assert - The address should be 0xFFFFFFF5 (STD_OUTPUT_HANDLE)
-        Assert.Contains("0xFFFFFFF5", exception.Message);
-        
-        // Note: We can't easily verify the log output in unit tests, but the exception message
-        // confirms the error occurred. The actual log output with all registers will be visible
-        // when running real programs like winapi.exe
+        Assert.Contains("0xFFFFFFFD", exception.Message);
     }
     
     [Fact]
