@@ -125,6 +125,7 @@ public static class NativeTypes
 		public const uint ERROR_PROC_NOT_FOUND = 127;
 		public const uint ERROR_MOD_NOT_FOUND = 126;
 		public const uint ERROR_ALREADY_EXISTS = 183;
+		public const uint ERROR_FILE_EXISTS = 80;
 		public const uint ERROR_NOT_OWNER = 288;
 	}
 

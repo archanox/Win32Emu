@@ -549,6 +549,18 @@ namespace Win32Emu.Win32.Modules
 				case "GETKEYSTATE":
 					returnValue = (uint)GetKeyState(a.Int32(0));
 					return true;
+				case "GETKEYBOARDSTATE":
+					returnValue = GetKeyboardState(a.UInt32(0));
+					return true;
+				case "MAPVIRTUALKEYA":
+					returnValue = MapVirtualKeyA(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "TOASCII":
+					returnValue = (uint)ToAscii(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "TOUNICODE":
+					returnValue = (uint)ToUnicode(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4), a.UInt32(5));
+					return true;
 				case "GETCAPTURE":
 					returnValue = GetCapture();
 					return true;
@@ -687,6 +699,12 @@ namespace Win32Emu.Win32.Modules
 				// Drawing functions
 				case "DRAWFOCUSRECT":
 					returnValue = DrawFocusRect(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "DRAWCAPTION":
+					returnValue = DrawCaption(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "DRAWFRAMECONTROL":
+					returnValue = DrawFrameControl(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 				case "EXCLUDEUPDATERGN":
 					returnValue = (uint)ExcludeUpdateRgn(a.UInt32(0), a.UInt32(1));
@@ -4166,6 +4184,83 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
+		[DllModuleExport(4)]
+		private uint GetKeyboardState(uint lpKeyState)
+		{
+			_logger.LogInformation("[User32] GetKeyboardState(lpKeyState=0x{LpKeyState:X8})", lpKeyState);
+			
+			if (lpKeyState == 0)
+			{
+				return 0; // FALSE
+			}
+			
+			// Keyboard state is an array of 256 bytes, one for each virtual key
+			// Clear all keys to "not pressed" state
+			for (uint i = 0; i < 256; i++)
+			{
+				_env.MemWrite8(lpKeyState + i, 0);
+			}
+			
+			return 1; // TRUE
+		}
+
+		[DllModuleExport(8)]
+		private uint MapVirtualKeyA(uint uCode, uint uMapType)
+		{
+			_logger.LogInformation("[User32] MapVirtualKeyA(uCode={UCode}, uMapType={UMapType})", uCode, uMapType);
+			
+			// MapVirtualKey maps virtual key codes to scan codes or vice versa
+			// uMapType:
+			// 0 = virtual key to scan code
+			// 1 = scan code to virtual key
+			// 2 = virtual key to unshifted character
+			// 3 = scan code to virtual key (extended keys)
+			
+			// Stub: return 0 (unmapped)
+			return 0;
+		}
+
+		[DllModuleExport(20)]
+		private int ToAscii(uint uVirtKey, uint uScanCode, uint lpKeyState, uint lpChar, uint uFlags)
+		{
+			_logger.LogInformation("[User32] ToAscii(uVirtKey={UVirtKey}, uScanCode={UScanCode}, lpKeyState=0x{LpKeyState:X8}, lpChar=0x{LpChar:X8}, uFlags={UFlags})",
+				uVirtKey, uScanCode, lpKeyState, lpChar, uFlags);
+			
+			// ToAscii translates a virtual key code and keyboard state to ASCII character(s)
+			// Returns:
+			// -1 = dead key
+			// 0 = no translation
+			// 1 = one character translated
+			// 2 = two characters translated
+			
+			// Stub: return 0 (no translation)
+			if (lpChar != 0)
+			{
+				_env.MemWrite16(lpChar, 0);
+			}
+			return 0;
+		}
+
+		[DllModuleExport(20)]
+		private int ToUnicode(uint wVirtKey, uint wScanCode, uint lpKeyState, uint pwszBuff, int cchBuff, uint wFlags)
+		{
+			_logger.LogInformation("[User32] ToUnicode(wVirtKey={WVirtKey}, wScanCode={WScanCode}, lpKeyState=0x{LpKeyState:X8}, pwszBuff=0x{PwszBuff:X8}, cchBuff={CchBuff}, wFlags={WFlags})",
+				wVirtKey, wScanCode, lpKeyState, pwszBuff, cchBuff, wFlags);
+			
+			// ToUnicode translates a virtual key code and keyboard state to Unicode character(s)
+			// Returns:
+			// -1 = dead key
+			// 0 = no translation
+			// >0 = number of characters translated
+			
+			// Stub: return 0 (no translation)
+			if (pwszBuff != 0 && cchBuff > 0)
+			{
+				_env.MemWrite16(pwszBuff, 0);
+			}
+			return 0;
+		}
+
 		[DllModuleExport(0)]
 		private uint GetCapture()
 		{
@@ -4595,6 +4690,45 @@ namespace Win32Emu.Win32.Modules
 		// Stub: Return TRUE (success)
 		return 1;
 	}
+
+	[DllModuleExport(16)]
+	private uint DrawCaption(uint hwnd, uint hdc, uint lprect, uint flags)
+	{
+		_logger.LogInformation("[User32] DrawCaption(hwnd=0x{Hwnd:X8}, hdc=0x{Hdc:X8}, lprect=0x{Lprect:X8}, flags=0x{Flags:X8})",
+			hwnd, hdc, lprect, flags);
+
+		// DrawCaption draws a window caption in the specified device context
+		// Flags can include:
+		// DC_ACTIVE (0x0001) - Active window caption
+		// DC_SMALLCAP (0x0002) - Small caption (tool window)
+		// DC_ICON (0x0004) - Draw icon
+		// DC_TEXT (0x0008) - Draw caption text
+		// DC_INBUTTON (0x0010) - Draw in button style
+		// DC_GRADIENT (0x0020) - Use gradient for caption background
+		// DC_BUTTONS (0x1000) - Draw caption buttons
+
+		// Stub: Return TRUE (success)
+		return 1;
+	}
+
+	[DllModuleExport(16)]
+	private uint DrawFrameControl(uint hdc, uint lprc, uint uType, uint uState)
+	{
+		_logger.LogInformation("[User32] DrawFrameControl(hdc=0x{Hdc:X8}, lprc=0x{Lprc:X8}, uType={UType}, uState=0x{UState:X8})",
+			hdc, lprc, uType, uState);
+
+		// DrawFrameControl draws a frame control of the specified type and in the specified state
+		// uType can be:
+		// DFC_CAPTION (1) - Title bar
+		// DFC_MENU (2) - Menu
+		// DFC_SCROLL (3) - Scroll bar
+		// DFC_BUTTON (4) - Standard button
+		// DFC_POPUPMENU (5) - Popup menu
+
+		// Stub: Return TRUE (success)
+		return 1;
+	}
+
 
 	/// <summary>
 	/// Excludes the update region from the clipping region of the specified device context.
