@@ -7,7 +7,7 @@ using Win32Emu.Memory;
 
 namespace Win32Emu.Win32.Modules
 {
-	public class User32Module : IWin32ModuleUnsafe
+	internal class User32Module : IWin32ModuleUnsafe
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
@@ -1503,13 +1503,13 @@ namespace Win32Emu.Win32.Modules
 						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, _cpu, _memory, out var ret, out var argBytes))
 						{
 							_logger.LogDebug("[User32] CallWindowProcedure: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
-							
+
 							// Warn if a function that typically returns handles/pointers returns NULL
 							if (ret == 0 && IsHandleReturningFunction(name))
 							{
 								_logger.LogWarning("[User32] CallWindowProcedure: {Dll}!{Name} returned NULL (0) - this may cause NULL pointer dereference if used as function pointer or handle", dll, name);
 							}
-							
+
 							var currentEsp = _cpu.GetRegister("ESP");
 							var retEip = _memory.Read32(currentEsp);
 
@@ -1533,7 +1533,7 @@ namespace Win32Emu.Win32.Modules
 								simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
 								_logger.LogWarning("[User32] CallWindowProcedure: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", dll, name, simulatedArgBytes);
 							}
-							catch(Exception ex)
+							catch (Exception ex)
 							{
 								_logger.LogError(ex, "[User32] CallWindowProcedure: Unimplemented import {Dll}!{Name}, no metadata available, simulating return with 0, argBytes=0", dll, name);
 							}
@@ -2360,10 +2360,10 @@ namespace Win32Emu.Win32.Modules
 		private uint SetCursorPos(int x, int y)
 		{
 			_logger.LogInformation("[User32] SetCursorPos: X={X}, Y={Y}", x, y);
-			
+
 			// For emulation purposes, we accept the call but don't actually move the cursor
 			// A full implementation would update the cursor position in the rendering backend
-			
+
 			return 1; // TRUE - success
 		}
 
@@ -2610,9 +2610,9 @@ namespace Win32Emu.Win32.Modules
 				{
 					var controlHandle = _env.RegisterHandle(new object());
 					controlHandles[item.Id] = controlHandle;
-					_logger.LogInformation("[User32] DialogBoxParamAsync: Created control handle=0x{ControlHandle:X8} for ID={Id} ({Class})", 
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Created control handle=0x{ControlHandle:X8} for ID={Id} ({Class})",
 						controlHandle, item.Id, item.WindowClass);
-					
+
 					// Store control info for later retrieval (e.g., for GetDlgItem)
 					_env.StoreControlInfo(hDlg, item.Id, controlHandle, item);
 				}
@@ -2668,7 +2668,7 @@ namespace Win32Emu.Win32.Modules
 				if (lpDialogFunc != 0)
 				{
 					_logger.LogInformation("[User32] DialogBoxParamAsync: Calling dialog procedure with WM_INITDIALOG");
-					var (initResult, timedOut, cancelled, failed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam, cancellationToken);
+					var (initResult, timedOut, cancelled, failed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, WM_INITDIALOG, 0, dwInitParam, cancellationToken).ConfigureAwait(false);
 					_logger.LogInformation("[User32] DialogBoxParamAsync: WM_INITDIALOG returned {InitResult}", initResult);
 					dialogProcTimedOut = timedOut;
 					dialogProcCancelled = cancelled;
@@ -2702,7 +2702,7 @@ namespace Win32Emu.Win32.Modules
 
 					// Try to get a message (with short timeout to avoid blocking indefinitely)
 					// Use async version for better cooperative multitasking
-					var queuedMsg = await _env.GetMessageAsync(0, 0, 0, timeoutMs: 10);
+					var queuedMsg = await _env.GetMessageAsync(0, 0, 0, timeoutMs: 10).ConfigureAwait(false);
 
 					if (queuedMsg.HasValue)
 					{
@@ -2714,7 +2714,7 @@ namespace Win32Emu.Win32.Modules
 						{
 							if (lpDialogFunc != 0)
 							{
-								var (result, timedOut, cancelled, failed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam, cancellationToken);
+								var (result, timedOut, cancelled, failed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam, cancellationToken).ConfigureAwait(false);
 								_logger.LogDebug("[User32] DialogBoxParamAsync: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
 
 								// If dialog procedure times out, is cancelled, or fails, force end the dialog
@@ -2825,11 +2825,11 @@ namespace Win32Emu.Win32.Modules
 			var failed = false;
 			var lastCheckEip = cpu.GetEip();
 			var stuckCounter = 0;
-			
+
 			// Track last N instructions to help debug NULL jumps
 			const int HISTORY_SIZE = 30000;  // Large buffer to capture transition from code to stack
 			var instructionHistory = new Queue<(int step, uint eip, string? description)>(HISTORY_SIZE);
-			
+
 			// Track stack execution
 			var wasExecutingFromStack = false;
 			var stackExecutionStartStep = -1;
@@ -2859,7 +2859,7 @@ namespace Win32Emu.Win32.Modules
 					{
 						_logger.LogInformation("[User32] CallDialogProcedureAsync: Step {Steps}: EIP=0x{Eip:X8}", steps, eip);
 					}
-					
+
 					// Detect and track stack execution
 					// Stack typically starts high (e.g., 0x00200000) and grows down
 					// ESP is the current stack pointer. Check if EIP is in stack region.
@@ -2869,7 +2869,7 @@ namespace Win32Emu.Win32.Modules
 					var stackLower = espForStackCheck >= 0x10000 ? espForStackCheck - 0x10000 : 0;
 					var stackUpper = espForStackCheck + 0x10000;
 					var isExecutingFromStack = eip >= stackLower && eip <= stackUpper && eip < 0x00400000;
-					
+
 					// Log transitions into/out of stack execution
 					if (isExecutingFromStack && !wasExecutingFromStack)
 					{
@@ -2889,7 +2889,7 @@ namespace Win32Emu.Win32.Modules
 					{
 						_logger.LogWarning("[User32] CallDialogProcedureAsync: Exited stack execution at step {Steps} (ran for {Count} steps)", steps, steps - stackExecutionStartStep);
 					}
-					
+
 					wasExecutingFromStack = isExecutingFromStack;
 
 					// Check if we've returned to our marker address
@@ -2908,21 +2908,21 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogError("[User32] CallDialogProcedureAsync: ESP=0x{Esp:X8} EBP=0x{Ebp:X8}",
 							cpu.GetRegister("ESP"), cpu.GetRegister("EBP"));
 
-					// Log stack execution context
-					if (stackExecutionStartStep >= 0)
-					{
-						_logger.LogError("[User32] CallDialogProcedureAsync: ⚠️ Was executing from STACK (started at step {StartStep}, ran for {Count} steps before NULL jump)", 
-							stackExecutionStartStep, steps - stackExecutionStartStep);
-					}
+						// Log stack execution context
+						if (stackExecutionStartStep >= 0)
+						{
+							_logger.LogError("[User32] CallDialogProcedureAsync: ⚠️ Was executing from STACK (started at step {StartStep}, ran for {Count} steps before NULL jump)",
+								stackExecutionStartStep, steps - stackExecutionStartStep);
+						}
 
-					// Log instruction history
-					_logger.LogError("[User32] CallDialogProcedureAsync: Last {Count} instructions before NULL jump:", instructionHistory.Count);
-					foreach (var (histStep, histEip, histDesc) in instructionHistory)
-					{
-						_logger.LogError("  Step {Step}: EIP=0x{Eip:X8} {Desc}", histStep, histEip, histDesc ?? "");
-					}
+						// Log instruction history
+						_logger.LogError("[User32] CallDialogProcedureAsync: Last {Count} instructions before NULL jump:", instructionHistory.Count);
+						foreach (var (histStep, histEip, histDesc) in instructionHistory)
+						{
+							_logger.LogError("  Step {Step}: EIP=0x{Eip:X8} {Desc}", histStep, histEip, histDesc ?? "");
+						}
 
-					// Log stack contents to help identify what function returned NULL
+						// Log stack contents to help identify what function returned NULL
 						try
 						{
 							var stackPtr = cpu.GetRegister("ESP");
@@ -2937,7 +2937,7 @@ namespace Win32Emu.Win32.Modules
 						failed = true;
 						break;
 					}
-					
+
 					// Check for other invalid EIP values that might indicate corruption
 					// Image base is typically 0x00400000, and code/data is usually above 0x00001000
 					// Stack is typically in high memory (>= 0x00100000)
@@ -2974,7 +2974,7 @@ namespace Win32Emu.Win32.Modules
 					// Execute one instruction and check for import calls
 					string? stepDesc = null;
 					var step = cpu.SingleStep(memory);
-					
+
 
 					// Check for COM vtable method calls
 					if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
@@ -3014,14 +3014,14 @@ namespace Win32Emu.Win32.Modules
 						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
 						{
 							_logger.LogInformation("[User32] CallDialogProcedureAsync: Import {Dll}!{Name} returned 0x{Ret:X8}", dll, name, ret);
-							
+
 							// Warn if a function that typically returns handles/pointers returns NULL
 							// This could lead to NULL pointer dereferences later
 							if (ret == 0 && IsHandleReturningFunction(name))
 							{
 								_logger.LogWarning("[User32] CallDialogProcedureAsync: {Dll}!{Name} returned NULL (0) - this may cause NULL pointer dereference if used as function pointer or handle", dll, name);
 							}
-							
+
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
 
@@ -3045,7 +3045,7 @@ namespace Win32Emu.Win32.Modules
 								simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
 								_logger.LogWarning("[User32] CallDialogProcedureAsync: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", dll, name, simulatedArgBytes);
 							}
-							catch(Exception ex)
+							catch (Exception ex)
 							{
 								_logger.LogError(ex, "[User32] CallDialogProcedureAsync: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes unknown (assuming 0)", dll, name);
 							}
@@ -3499,87 +3499,87 @@ namespace Win32Emu.Win32.Modules
 		private static bool IsHandleReturningFunction(string functionName)
 		{
 			var upperName = functionName.ToUpperInvariant();
-			
+
 			// Window/control creation functions
 			if (upperName.Contains("CREATE") || upperName.Contains("LOAD"))
 			{
 				return true;
 			}
-			
+
 			// Functions that return window handles
 			if (upperName.StartsWith("GET") && (upperName.Contains("WINDOW") || upperName.Contains("DLG")))
 			{
 				return true;
 			}
-			
+
 			// Device context functions
 			if (upperName.Contains("DC") || upperName.Contains("HDC"))
 			{
 				return true;
 			}
-			
+
 			// Menu, icon, cursor functions
 			if (upperName.Contains("MENU") || upperName.Contains("ICON") || upperName.Contains("CURSOR"))
 			{
 				return true;
 			}
-			
+
 			return false;
 		}
 
-	/// <summary>
-	/// Retrieves a handle to the desktop window.
-	/// </summary>
-	[DllModuleExport(0)]
-	private uint GetDesktopWindow()
-	{
-		_logger.LogInformation("[User32] GetDesktopWindow()");
-		return 0x00010001; // Fake desktop handle
-	}
+		/// <summary>
+		/// Retrieves a handle to the desktop window.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint GetDesktopWindow()
+		{
+			_logger.LogInformation("[User32] GetDesktopWindow()");
+			return 0x00010001; // Fake desktop handle
+		}
 
-	/// <summary>
-	/// Changes the check state of a button control.
-	/// </summary>
-	[DllModuleExport(12)]
-	private uint CheckDlgButton(uint hDlg, int nIDButton, uint uCheck)
-	{
-		_logger.LogInformation("[User32] CheckDlgButton(hDlg=0x{HDlg:X8}, nIDButton={NIDButton}, uCheck={UCheck})",
-			hDlg, nIDButton, uCheck);
-		return 1; // TRUE
-	}
+		/// <summary>
+		/// Changes the check state of a button control.
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint CheckDlgButton(uint hDlg, int nIDButton, uint uCheck)
+		{
+			_logger.LogInformation("[User32] CheckDlgButton(hDlg=0x{HDlg:X8}, nIDButton={NIDButton}, uCheck={UCheck})",
+				hDlg, nIDButton, uCheck);
+			return 1; // TRUE
+		}
 
-	/// <summary>
-	/// Adds a check mark to a specified radio button in a group.
-	/// </summary>
-	[DllModuleExport(16)]
-	private uint CheckRadioButton(uint hDlg, int nIDFirstButton, int nIDLastButton, int nIDCheckButton)
-	{
-		_logger.LogInformation("[User32] CheckRadioButton(hDlg=0x{HDlg:X8}, nIDFirstButton={NIDFirstButton}, nIDLastButton={NIDLastButton}, nIDCheckButton={NIDCheckButton})",
-			hDlg, nIDFirstButton, nIDLastButton, nIDCheckButton);
-		return 1; // TRUE
-	}
+		/// <summary>
+		/// Adds a check mark to a specified radio button in a group.
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint CheckRadioButton(uint hDlg, int nIDFirstButton, int nIDLastButton, int nIDCheckButton)
+		{
+			_logger.LogInformation("[User32] CheckRadioButton(hDlg=0x{HDlg:X8}, nIDFirstButton={NIDFirstButton}, nIDLastButton={NIDLastButton}, nIDCheckButton={NIDCheckButton})",
+				hDlg, nIDFirstButton, nIDLastButton, nIDCheckButton);
+			return 1; // TRUE
+		}
 
-	/// <summary>
-	/// Determines whether a button control has a check mark.
-	/// </summary>
-	[DllModuleExport(8)]
-	private uint IsDlgButtonChecked(uint hDlg, int nIDButton)
-	{
-		_logger.LogInformation("[User32] IsDlgButtonChecked(hDlg=0x{HDlg:X8}, nIDButton={NIDButton})",
-			hDlg, nIDButton);
-		return 0; // BST_UNCHECKED
-	}
+		/// <summary>
+		/// Determines whether a button control has a check mark.
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint IsDlgButtonChecked(uint hDlg, int nIDButton)
+		{
+			_logger.LogInformation("[User32] IsDlgButtonChecked(hDlg=0x{HDlg:X8}, nIDButton={NIDButton})",
+				hDlg, nIDButton);
+			return 0; // BST_UNCHECKED
+		}
 
-	/// <summary>
-	/// Waits until objects are signaled or time-out interval elapses.
-	/// </summary>
-	[DllModuleExport(20)]
-	private uint MsgWaitForMultipleObjects(uint nCount, uint pHandles, uint fWaitAll, uint dwMilliseconds, uint dwWakeMask)
-	{
-		_logger.LogInformation("[User32] MsgWaitForMultipleObjects(nCount={NCount}, dwMilliseconds={DwMilliseconds})",
-			nCount, dwMilliseconds);
-		return 0; // WAIT_OBJECT_0
-	}
+		/// <summary>
+		/// Waits until objects are signaled or time-out interval elapses.
+		/// </summary>
+		[DllModuleExport(20)]
+		private uint MsgWaitForMultipleObjects(uint nCount, uint pHandles, uint fWaitAll, uint dwMilliseconds, uint dwWakeMask)
+		{
+			_logger.LogInformation("[User32] MsgWaitForMultipleObjects(nCount={NCount}, dwMilliseconds={DwMilliseconds})",
+				nCount, dwMilliseconds);
+			return 0; // WAIT_OBJECT_0
+		}
 		private uint GetFocus()
 		{
 			_logger.LogInformation("[User32] GetFocus()");
@@ -3589,7 +3589,7 @@ namespace Win32Emu.Win32.Modules
 		private uint GetDlgItemInt(uint hDlg, int nIDDlgItem, uint lpTranslated, uint bSigned)
 		{
 			_logger.LogInformation("[User32] GetDlgItemInt(hDlg=0x{HDlg:X8}, nIDDlgItem={NIDDlgItem})", hDlg, nIDDlgItem);
-			
+
 			// Stub implementation - return 0
 			if (lpTranslated != 0)
 			{
@@ -3600,16 +3600,16 @@ namespace Win32Emu.Win32.Modules
 
 		private uint SetDlgItemInt(uint hDlg, int nIDDlgItem, uint uValue, uint bSigned)
 		{
-			_logger.LogInformation("[User32] SetDlgItemInt(hDlg=0x{HDlg:X8}, nIDDlgItem={NIDDlgItem}, uValue={UValue})", 
+			_logger.LogInformation("[User32] SetDlgItemInt(hDlg=0x{HDlg:X8}, nIDDlgItem={NIDDlgItem}, uValue={UValue})",
 				hDlg, nIDDlgItem, uValue);
 			return 1; // TRUE
 		}
 
 		private uint CreateDialogParamA(uint hInstance, uint lpTemplate, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
 		{
-			_logger.LogInformation("[User32] CreateDialogParamA(hInstance=0x{HInstance:X8}, lpTemplate=0x{LpTemplate:X8})", 
+			_logger.LogInformation("[User32] CreateDialogParamA(hInstance=0x{HInstance:X8}, lpTemplate=0x{LpTemplate:X8})",
 				hInstance, lpTemplate);
-			
+
 			// Stub implementation - similar to DialogBoxParamA but modeless
 			// Create a basic window for the dialog
 			var hwnd = _env.CreateWindow(
@@ -3620,14 +3620,14 @@ namespace Win32Emu.Win32.Modules
 				100, 100, 300, 200, // Position and size
 				hWndParent, 0, hInstance, 0
 			);
-			
+
 			return hwnd;
 		}
 
 		private uint OffsetRect(uint lprc, int dx, int dy)
 		{
 			_logger.LogInformation("[User32] OffsetRect(lprc=0x{Lprc:X8}, dx={Dx}, dy={Dy})", lprc, dx, dy);
-			
+
 			if (lprc != 0)
 			{
 				// Read RECT structure (left, top, right, bottom)
@@ -3635,21 +3635,21 @@ namespace Win32Emu.Win32.Modules
 				var top = (int)_env.MemRead32(lprc + 4);
 				var right = (int)_env.MemRead32(lprc + 8);
 				var bottom = (int)_env.MemRead32(lprc + 12);
-				
+
 				// Offset the rectangle
 				_env.MemWrite32(lprc, (uint)(left + dx));
 				_env.MemWrite32(lprc + 4, (uint)(top + dy));
 				_env.MemWrite32(lprc + 8, (uint)(right + dx));
 				_env.MemWrite32(lprc + 12, (uint)(bottom + dy));
 			}
-			
+
 			return 1; // TRUE
 		}
 
 		private uint InflateRect(uint lprc, int dx, int dy)
 		{
 			_logger.LogInformation("[User32] InflateRect(lprc=0x{Lprc:X8}, dx={Dx}, dy={Dy})", lprc, dx, dy);
-			
+
 			if (lprc != 0)
 			{
 				// Read RECT structure (left, top, right, bottom)
@@ -3657,20 +3657,20 @@ namespace Win32Emu.Win32.Modules
 				var top = (int)_env.MemRead32(lprc + 4);
 				var right = (int)_env.MemRead32(lprc + 8);
 				var bottom = (int)_env.MemRead32(lprc + 12);
-				
+
 				// Inflate the rectangle
 				_env.MemWrite32(lprc, (uint)(left - dx));
 				_env.MemWrite32(lprc + 4, (uint)(top - dy));
 				_env.MemWrite32(lprc + 8, (uint)(right + dx));
 				_env.MemWrite32(lprc + 12, (uint)(bottom + dy));
 			}
-			
+
 			return 1; // TRUE
 		}
 
 		private uint InvalidateRect(uint hWnd, uint lpRect, uint bErase)
 		{
-			_logger.LogInformation("[User32] InvalidateRect(hWnd=0x{HWnd:X8}, lpRect=0x{LpRect:X8}, bErase={BErase})", 
+			_logger.LogInformation("[User32] InvalidateRect(hWnd=0x{HWnd:X8}, lpRect=0x{LpRect:X8}, bErase={BErase})",
 				hWnd, lpRect, bErase);
 			// Stub - always succeed
 			return 1; // TRUE
@@ -3678,7 +3678,7 @@ namespace Win32Emu.Win32.Modules
 
 		private uint SetTimer(uint hWnd, uint nIDEvent, uint uElapse, uint lpTimerFunc)
 		{
-			_logger.LogInformation("[User32] SetTimer(hWnd=0x{HWnd:X8}, nIDEvent={NIDEvent}, uElapse={UElapse}ms)", 
+			_logger.LogInformation("[User32] SetTimer(hWnd=0x{HWnd:X8}, nIDEvent={NIDEvent}, uElapse={UElapse}ms)",
 				hWnd, nIDEvent, uElapse);
 			// Stub - return the timer ID
 			return nIDEvent != 0 ? nIDEvent : 1;
@@ -3687,31 +3687,31 @@ namespace Win32Emu.Win32.Modules
 		private uint CharLowerBuffA(in LpStr lpsz, uint cchLength)
 		{
 			_logger.LogInformation("[User32] CharLowerBuffA(lpsz=0x{Lpsz:X8}, cchLength={CchLength})", lpsz.Address, cchLength);
-			
+
 			if (lpsz.Address != 0 && cchLength > 0)
 			{
 				// Read the string
 				var str = lpsz.Read(_env.Memory, (int)cchLength);
 				// Convert to lowercase
 				var lower = str.ToLowerInvariant();
-				
+
 				// Ensure the output is exactly cchLength characters
 				if (lower.Length > cchLength)
 					lower = lower.Substring(0, (int)cchLength);
 				else if (lower.Length < cchLength)
 					lower = lower.PadRight((int)cchLength, '\0');
-				
+
 				// Write back
 				lpsz.Write(_env.Memory, lower, false);
 			}
-			
+
 			return cchLength;
 		}
 
 		private uint GetKeyboardType(int nTypeFlag)
 		{
 			_logger.LogInformation("[User32] GetKeyboardType(nTypeFlag={NTypeFlag})", nTypeFlag);
-			
+
 			return nTypeFlag switch
 			{
 				0 => 4, // Keyboard type: Enhanced 101- or 102-key keyboards
@@ -3724,21 +3724,21 @@ namespace Win32Emu.Win32.Modules
 		private uint EnumDisplaySettingsA(in LpcStr lpszDeviceName, uint iModeNum, uint lpDevMode)
 		{
 			var deviceName = lpszDeviceName.ToString() ?? string.Empty;
-			_logger.LogInformation("[User32] EnumDisplaySettingsA(lpszDeviceName=\"{DeviceName}\", iModeNum={IModeNum})", 
+			_logger.LogInformation("[User32] EnumDisplaySettingsA(lpszDeviceName=\"{DeviceName}\", iModeNum={IModeNum})",
 				deviceName, iModeNum);
-			
+
 			// DEVMODE constants
 			const uint DM_BITSPERPEL = 0x00040000;
 			const uint DM_PELSWIDTH = 0x00080000;
 			const uint DM_PELSHEIGHT = 0x00100000;
 			const uint ENUM_CURRENT_SETTINGS = 0xFFFFFFFF;
-			
+
 			// DEVMODE structure offsets
 			const uint DEVMODE_OFFSET_DMFIELDS = 0x40;
 			const uint DEVMODE_OFFSET_DMPELSWIDTH = 0x68;
 			const uint DEVMODE_OFFSET_DMPELSHEIGHT = 0x6C;
 			const uint DEVMODE_OFFSET_DMBITSPERPEL = 0x70;
-			
+
 			// Stub implementation - fill in basic DEVMODE structure
 			if (lpDevMode != 0)
 			{
@@ -3748,7 +3748,7 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lpDevMode + DEVMODE_OFFSET_DMBITSPERPEL, 32); // dmBitsPerPel
 				_env.MemWrite32(lpDevMode + DEVMODE_OFFSET_DMFIELDS, DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL); // dmFields
 			}
-			
+
 			// Return TRUE for mode 0 (current settings), FALSE for others
 			return iModeNum == ENUM_CURRENT_SETTINGS || iModeNum == 0 ? 1u : 0u;
 		}
@@ -3831,11 +3831,11 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] EnumWindows(lpEnumFunc=0x{LpEnumFunc:X8}, lParam=0x{LParam:X8})",
 				lpEnumFunc, lParam);
-			
+
 			// For emulation purposes, we don't have a real window hierarchy to enumerate
 			// We could call the callback with our main window handle if we tracked them
 			// For now, just return TRUE to indicate success without calling the callback
-			
+
 			return 1; // TRUE - success
 		}
 
@@ -3927,16 +3927,16 @@ namespace Win32Emu.Win32.Modules
 		private uint IsCharAlphaA(uint ch)
 		{
 			_logger.LogInformation("[User32] IsCharAlphaA(ch=0x{Ch:X8})", ch);
-			
+
 			// Extract the character (lower byte)
 			char c = (char)(ch & 0xFF);
-			
+
 			// Check if it's an alphabetic character
 			if (char.IsLetter(c))
 			{
 				return 1; // TRUE
 			}
-			
+
 			return 0; // FALSE
 		}
 
@@ -4070,12 +4070,12 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] RemoveMenu(hMenu=0x{HMenu:X8}, uPosition={UPosition}, uFlags=0x{UFlags:X})",
 				hMenu, uPosition, uFlags);
-			
+
 			// RemoveMenu removes a menu item from a menu
 			// uFlags can be:
 			// MF_BYCOMMAND (0x0000) - uPosition is menu item ID
 			// MF_BYPOSITION (0x0400) - uPosition is zero-based position
-			
+
 			// For stub implementation, just acknowledge the removal
 			return 1; // TRUE
 		}
@@ -4090,7 +4090,7 @@ namespace Win32Emu.Win32.Modules
 		private uint DrawMenuBar(uint hWnd)
 		{
 			_logger.LogInformation("[User32] DrawMenuBar(hWnd=0x{HWnd:X8})", hWnd);
-			
+
 			// DrawMenuBar redraws the menu bar after changes
 			// For stub implementation, just acknowledge the redraw
 			return 1; // TRUE
@@ -4225,19 +4225,19 @@ namespace Win32Emu.Win32.Modules
 		private uint GetKeyboardState(uint lpKeyState)
 		{
 			_logger.LogInformation("[User32] GetKeyboardState(lpKeyState=0x{LpKeyState:X8})", lpKeyState);
-			
+
 			if (lpKeyState == 0)
 			{
 				return 0; // FALSE
 			}
-			
+
 			// Keyboard state is an array of 256 bytes, one for each virtual key
 			// Clear all keys to "not pressed" state
 			for (uint i = 0; i < 256; i++)
 			{
 				_env.MemWrite8(lpKeyState + i, 0);
 			}
-			
+
 			return 1; // TRUE
 		}
 
@@ -4245,14 +4245,14 @@ namespace Win32Emu.Win32.Modules
 		private uint MapVirtualKeyA(uint uCode, uint uMapType)
 		{
 			_logger.LogInformation("[User32] MapVirtualKeyA(uCode={UCode}, uMapType={UMapType})", uCode, uMapType);
-			
+
 			// MapVirtualKey maps virtual key codes to scan codes or vice versa
 			// uMapType:
 			// 0 = virtual key to scan code
 			// 1 = scan code to virtual key
 			// 2 = virtual key to unshifted character
 			// 3 = scan code to virtual key (extended keys)
-			
+
 			// Stub: return 0 (unmapped)
 			return 0;
 		}
@@ -4262,14 +4262,14 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] ToAscii(uVirtKey={UVirtKey}, uScanCode={UScanCode}, lpKeyState=0x{LpKeyState:X8}, lpChar=0x{LpChar:X8}, uFlags={UFlags})",
 				uVirtKey, uScanCode, lpKeyState, lpChar, uFlags);
-			
+
 			// ToAscii translates a virtual key code and keyboard state to ASCII character(s)
 			// Returns:
 			// -1 = dead key
 			// 0 = no translation
 			// 1 = one character translated
 			// 2 = two characters translated
-			
+
 			// Stub: return 0 (no translation)
 			if (lpChar != 0)
 			{
@@ -4283,13 +4283,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] ToUnicode(wVirtKey={WVirtKey}, wScanCode={WScanCode}, lpKeyState=0x{LpKeyState:X8}, pwszBuff=0x{PwszBuff:X8}, cchBuff={CchBuff}, wFlags={WFlags})",
 				wVirtKey, wScanCode, lpKeyState, pwszBuff, cchBuff, wFlags);
-			
+
 			// ToUnicode translates a virtual key code and keyboard state to Unicode character(s)
 			// Returns:
 			// -1 = dead key
 			// 0 = no translation
 			// >0 = number of characters translated
-			
+
 			// Stub: return 0 (no translation)
 			if (pwszBuff != 0 && cchBuff > 0)
 			{
@@ -4569,967 +4569,966 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
-	// Missing functions for calc.exe
+		// Missing functions for calc.exe
 
-	[DllModuleExport(20)]
-	private uint CheckMenuRadioItem(uint hMenu, uint idFirst, uint idLast, uint idCheck, uint uFlags)
-	{
-		_logger.LogInformation("[User32] CheckMenuRadioItem(hMenu=0x{HMenu:X8}, idFirst={IdFirst}, idLast={IdLast}, idCheck={IdCheck}, uFlags=0x{UFlags:X})",
-			hMenu, idFirst, idLast, idCheck, uFlags);
-		return 1; // TRUE (stub)
-	}
-
-	[DllModuleExport(12)]
-	private uint ChildWindowFromPoint(uint hWndParent, int x, int y)
-	{
-		_logger.LogInformation("[User32] ChildWindowFromPoint(hWndParent=0x{HWndParent:X8}, x={X}, y={Y})",
-			hWndParent, x, y);
-		return 0; // NULL (stub - no child window found)
-	}
-
-	[DllModuleExport(0)]
-	private uint CloseClipboard()
-	{
-		_logger.LogInformation("[User32] CloseClipboard()");
-		return 1; // TRUE (stub)
-	}
-
-	[DllModuleExport(16)]
-	private uint DrawEdge(uint hdc, uint qrc, uint edge, uint grfFlags)
-	{
-		_logger.LogInformation("[User32] DrawEdge(hdc=0x{Hdc:X8}, qrc=0x{Qrc:X8}, edge=0x{Edge:X}, grfFlags=0x{GrfFlags:X})",
-			hdc, qrc, edge, grfFlags);
-		return 1; // TRUE (stub)
-	}
-
-	[DllModuleExport(4)]
-	private uint GetClipboardData(uint uFormat)
-	{
-		_logger.LogInformation("[User32] GetClipboardData(uFormat={UFormat})", uFormat);
-		return 0; // NULL (stub - no data available)
-	}
-
-	[DllModuleExport(4)]
-	private uint HideCaret(uint hWnd)
-	{
-		_logger.LogInformation("[User32] HideCaret(hWnd=0x{HWnd:X8})", hWnd);
-		return 1; // TRUE (stub)
-	}
-
-	[DllModuleExport(4)]
-	private uint ShowCaret(uint hWnd)
-	{
-		_logger.LogInformation("[User32] ShowCaret(hWnd=0x{HWnd:X8})", hWnd);
-		return 1; // TRUE (stub)
-	}
-
-	[DllModuleExport(4)]
-	private uint IsClipboardFormatAvailable(uint format)
-	{
-		_logger.LogInformation("[User32] IsClipboardFormatAvailable(format={Format})", format);
-		return 0; // FALSE (stub - format not available)
-	}
-
-	[DllModuleExport(4)]
-	private uint OpenClipboard(uint hWndNewOwner)
-	{
-		_logger.LogInformation("[User32] OpenClipboard(hWndNewOwner=0x{HWndNewOwner:X8})", hWndNewOwner);
-		return 1; // TRUE (stub)
-	}
-
-	[DllModuleExport(4)]
-	private uint RegisterClassExA(uint lpWndClassEx)
-	{
-		if (lpWndClassEx == 0)
+		[DllModuleExport(20)]
+		private uint CheckMenuRadioItem(uint hMenu, uint idFirst, uint idLast, uint idCheck, uint uFlags)
 		{
-			_logger.LogInformation("[User32] RegisterClassExA: NULL WNDCLASSEX pointer");
+			_logger.LogInformation("[User32] CheckMenuRadioItem(hMenu=0x{HMenu:X8}, idFirst={IdFirst}, idLast={IdLast}, idCheck={IdCheck}, uFlags=0x{UFlags:X})",
+				hMenu, idFirst, idLast, idCheck, uFlags);
+			return 1; // TRUE (stub)
+		}
+
+		[DllModuleExport(12)]
+		private uint ChildWindowFromPoint(uint hWndParent, int x, int y)
+		{
+			_logger.LogInformation("[User32] ChildWindowFromPoint(hWndParent=0x{HWndParent:X8}, x={X}, y={Y})",
+				hWndParent, x, y);
+			return 0; // NULL (stub - no child window found)
+		}
+
+		[DllModuleExport(0)]
+		private uint CloseClipboard()
+		{
+			_logger.LogInformation("[User32] CloseClipboard()");
+			return 1; // TRUE (stub)
+		}
+
+		[DllModuleExport(16)]
+		private uint DrawEdge(uint hdc, uint qrc, uint edge, uint grfFlags)
+		{
+			_logger.LogInformation("[User32] DrawEdge(hdc=0x{Hdc:X8}, qrc=0x{Qrc:X8}, edge=0x{Edge:X}, grfFlags=0x{GrfFlags:X})",
+				hdc, qrc, edge, grfFlags);
+			return 1; // TRUE (stub)
+		}
+
+		[DllModuleExport(4)]
+		private uint GetClipboardData(uint uFormat)
+		{
+			_logger.LogInformation("[User32] GetClipboardData(uFormat={UFormat})", uFormat);
+			return 0; // NULL (stub - no data available)
+		}
+
+		[DllModuleExport(4)]
+		private uint HideCaret(uint hWnd)
+		{
+			_logger.LogInformation("[User32] HideCaret(hWnd=0x{HWnd:X8})", hWnd);
+			return 1; // TRUE (stub)
+		}
+
+		[DllModuleExport(4)]
+		private uint ShowCaret(uint hWnd)
+		{
+			_logger.LogInformation("[User32] ShowCaret(hWnd=0x{HWnd:X8})", hWnd);
+			return 1; // TRUE (stub)
+		}
+
+		[DllModuleExport(4)]
+		private uint IsClipboardFormatAvailable(uint format)
+		{
+			_logger.LogInformation("[User32] IsClipboardFormatAvailable(format={Format})", format);
+			return 0; // FALSE (stub - format not available)
+		}
+
+		[DllModuleExport(4)]
+		private uint OpenClipboard(uint hWndNewOwner)
+		{
+			_logger.LogInformation("[User32] OpenClipboard(hWndNewOwner=0x{HWndNewOwner:X8})", hWndNewOwner);
+			return 1; // TRUE (stub)
+		}
+
+		[DllModuleExport(4)]
+		private uint RegisterClassExA(uint lpWndClassEx)
+		{
+			if (lpWndClassEx == 0)
+			{
+				_logger.LogInformation("[User32] RegisterClassExA: NULL WNDCLASSEX pointer");
+				return 0;
+			}
+
+			// WNDCLASSEXA structure layout:
+			// UINT      cbSize;        // 0
+			// UINT      style;         // 4
+			// WNDPROC   lpfnWndProc;   // 8
+			// int       cbClsExtra;    // 12
+			// int       cbWndExtra;    // 16
+			// HINSTANCE hInstance;     // 20
+			// HICON     hIcon;         // 24
+			// HCURSOR   hCursor;       // 28
+			// HBRUSH    hbrBackground; // 32
+			// LPCSTR    lpszMenuName;  // 36
+			// LPCSTR    lpszClassName; // 40
+			// HICON     hIconSm;       // 44
+
+			var cbSize = _env.MemRead32(lpWndClassEx + 0);
+			var style = _env.MemRead32(lpWndClassEx + 4);
+			var wndProc = _env.MemRead32(lpWndClassEx + 8);
+			var clsExtra = (int)_env.MemRead32(lpWndClassEx + 12);
+			var wndExtra = (int)_env.MemRead32(lpWndClassEx + 16);
+			var hInstance = _env.MemRead32(lpWndClassEx + 20);
+			var hIcon = _env.MemRead32(lpWndClassEx + 24);
+			var hCursor = _env.MemRead32(lpWndClassEx + 28);
+			var hbrBackground = _env.MemRead32(lpWndClassEx + 32);
+			var menuNamePtr = _env.MemRead32(lpWndClassEx + 36);
+			var classNamePtr = _env.MemRead32(lpWndClassEx + 40);
+			var hIconSm = _env.MemRead32(lpWndClassEx + 44);
+
+			if (classNamePtr == 0)
+			{
+				_logger.LogInformation("[User32] RegisterClassExA: NULL class name");
+				return 0;
+			}
+
+			var className = _env.ReadAnsiString(classNamePtr);
+			var menuName = menuNamePtr != 0 ? _env.ReadAnsiString(menuNamePtr) : null;
+
+			_logger.LogInformation("[User32] RegisterClassExA: cbSize={CbSize}, style=0x{Style:X}, wndProc=0x{WndProc:X8}, className='{ClassName}'",
+				cbSize, style, wndProc, className);
+
+			var classInfo = new ProcessEnvironment.WindowClassInfo(
+				className, style, wndProc, clsExtra, wndExtra,
+				hInstance, hIcon, hCursor, hbrBackground, menuName
+			);
+
+			if (_env.RegisterWindowClass(className, classInfo))
+			{
+				// Return an ATOM (non-zero value) on success
+				// Windows uses atoms (16-bit values) for class registration
+				// Use a counter to ensure uniqueness and avoid hash collisions
+				var atom = _nextAtom++;
+
+				// Register the atom-to-classname mapping
+				_env.RegisterAtom(atom, className);
+
+				_logger.LogInformation("[User32] RegisterClassExA: '{ClassName}' -> atom 0x{Atom:X4}", className, atom);
+				return atom;
+			}
+
+			_logger.LogInformation("[User32] RegisterClassExA: Failed to register '{ClassName}'", className);
 			return 0;
 		}
 
-		// WNDCLASSEXA structure layout:
-		// UINT      cbSize;        // 0
-		// UINT      style;         // 4
-		// WNDPROC   lpfnWndProc;   // 8
-		// int       cbClsExtra;    // 12
-		// int       cbWndExtra;    // 16
-		// HINSTANCE hInstance;     // 20
-		// HICON     hIcon;         // 24
-		// HCURSOR   hCursor;       // 28
-		// HBRUSH    hbrBackground; // 32
-		// LPCSTR    lpszMenuName;  // 36
-		// LPCSTR    lpszClassName; // 40
-		// HICON     hIconSm;       // 44
-
-		var cbSize = _env.MemRead32(lpWndClassEx + 0);
-		var style = _env.MemRead32(lpWndClassEx + 4);
-		var wndProc = _env.MemRead32(lpWndClassEx + 8);
-		var clsExtra = (int)_env.MemRead32(lpWndClassEx + 12);
-		var wndExtra = (int)_env.MemRead32(lpWndClassEx + 16);
-		var hInstance = _env.MemRead32(lpWndClassEx + 20);
-		var hIcon = _env.MemRead32(lpWndClassEx + 24);
-		var hCursor = _env.MemRead32(lpWndClassEx + 28);
-		var hbrBackground = _env.MemRead32(lpWndClassEx + 32);
-		var menuNamePtr = _env.MemRead32(lpWndClassEx + 36);
-		var classNamePtr = _env.MemRead32(lpWndClassEx + 40);
-		var hIconSm = _env.MemRead32(lpWndClassEx + 44);
-
-		if (classNamePtr == 0)
+		[DllModuleExport(24)]
+		private uint TrackPopupMenuEx(uint hMenu, uint uFlags, int x, int y, uint hWnd, uint lptpm)
 		{
-			_logger.LogInformation("[User32] RegisterClassExA: NULL class name");
+			_logger.LogInformation("[User32] TrackPopupMenuEx(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X}, x={X}, y={Y}, hWnd=0x{HWnd:X8})",
+				hMenu, uFlags, x, y, hWnd);
+			return 0; // FALSE (stub - no menu item selected)
+		}
+
+		/// <summary>
+		/// Draws a rectangle in the style used to indicate focus.
+		/// BOOL DrawFocusRect(HDC hDC, const RECT *lprc);
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint DrawFocusRect(uint hDC, uint lprc)
+		{
+			_logger.LogInformation("[User32] DrawFocusRect(hDC=0x{HDC:X8}, lprc=0x{Lprc:X8})", hDC, lprc);
+			// Stub: Return TRUE (success)
+			return 1;
+		}
+
+		[DllModuleExport(16)]
+		private uint DrawCaption(uint hwnd, uint hdc, uint lprect, uint flags)
+		{
+			_logger.LogInformation("[User32] DrawCaption(hwnd=0x{Hwnd:X8}, hdc=0x{Hdc:X8}, lprect=0x{Lprect:X8}, flags=0x{Flags:X8})",
+				hwnd, hdc, lprect, flags);
+
+			// DrawCaption draws a window caption in the specified device context
+			// Flags can include:
+			// DC_ACTIVE (0x0001) - Active window caption
+			// DC_SMALLCAP (0x0002) - Small caption (tool window)
+			// DC_ICON (0x0004) - Draw icon
+			// DC_TEXT (0x0008) - Draw caption text
+			// DC_INBUTTON (0x0010) - Draw in button style
+			// DC_GRADIENT (0x0020) - Use gradient for caption background
+			// DC_BUTTONS (0x1000) - Draw caption buttons
+
+			// Stub: Return TRUE (success)
+			return 1;
+		}
+
+		[DllModuleExport(16)]
+		private uint DrawFrameControl(uint hdc, uint lprc, uint uType, uint uState)
+		{
+			_logger.LogInformation("[User32] DrawFrameControl(hdc=0x{Hdc:X8}, lprc=0x{Lprc:X8}, uType={UType}, uState=0x{UState:X8})",
+				hdc, lprc, uType, uState);
+
+			// DrawFrameControl draws a frame control of the specified type and in the specified state
+			// uType can be:
+			// DFC_CAPTION (1) - Title bar
+			// DFC_MENU (2) - Menu
+			// DFC_SCROLL (3) - Scroll bar
+			// DFC_BUTTON (4) - Standard button
+			// DFC_POPUPMENU (5) - Popup menu
+
+			// Stub: Return TRUE (success)
+			return 1;
+		}
+
+
+		/// <summary>
+		/// Excludes the update region from the clipping region of the specified device context.
+		/// int ExcludeUpdateRgn(HDC hDC, HWND hWnd);
+		/// </summary>
+		[DllModuleExport(8)]
+		private int ExcludeUpdateRgn(uint hDC, uint hWnd)
+		{
+			_logger.LogInformation("[User32] ExcludeUpdateRgn(hDC=0x{HDC:X8}, hWnd=0x{HWnd:X8})", hDC, hWnd);
+			// Stub: Return SIMPLEREGION
+			return 2; // SIMPLEREGION
+		}
+
+		/// <summary>
+		/// Calculates the intersection of two rectangles.
+		/// BOOL IntersectRect(LPRECT lprcDst, const RECT *lprcSrc1, const RECT *lprcSrc2);
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint IntersectRect(uint lprcDst, uint lprcSrc1, uint lprcSrc2)
+		{
+			_logger.LogInformation("[User32] IntersectRect(lprcDst=0x{LprcDst:X8}, lprcSrc1=0x{LprcSrc1:X8}, lprcSrc2=0x{LprcSrc2:X8})",
+				lprcDst, lprcSrc1, lprcSrc2);
+
+			if (lprcSrc1 == 0 || lprcSrc2 == 0 || lprcDst == 0)
+			{
+				return 0; // FALSE
+			}
+
+			// Read both source rectangles
+			var left1 = (int)_env.MemRead32(lprcSrc1 + 0);
+			var top1 = (int)_env.MemRead32(lprcSrc1 + 4);
+			var right1 = (int)_env.MemRead32(lprcSrc1 + 8);
+			var bottom1 = (int)_env.MemRead32(lprcSrc1 + 12);
+
+			var left2 = (int)_env.MemRead32(lprcSrc2 + 0);
+			var top2 = (int)_env.MemRead32(lprcSrc2 + 4);
+			var right2 = (int)_env.MemRead32(lprcSrc2 + 8);
+			var bottom2 = (int)_env.MemRead32(lprcSrc2 + 12);
+
+			// Calculate intersection
+			var leftDst = Math.Max(left1, left2);
+			var topDst = Math.Max(top1, top2);
+			var rightDst = Math.Min(right1, right2);
+			var bottomDst = Math.Min(bottom1, bottom2);
+
+			// Check if rectangles intersect
+			if (leftDst >= rightDst || topDst >= bottomDst)
+			{
+				// No intersection - set to empty rectangle
+				_env.MemWrite32(lprcDst + 0, 0);
+				_env.MemWrite32(lprcDst + 4, 0);
+				_env.MemWrite32(lprcDst + 8, 0);
+				_env.MemWrite32(lprcDst + 12, 0);
+				return 0; // FALSE
+			}
+
+			// Write intersection rectangle
+			_env.MemWrite32(lprcDst + 0, (uint)leftDst);
+			_env.MemWrite32(lprcDst + 4, (uint)topDst);
+			_env.MemWrite32(lprcDst + 8, (uint)rightDst);
+			_env.MemWrite32(lprcDst + 12, (uint)bottomDst);
+
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Retrieves a device context (DC) for the entire window, including title bar, menus, and scroll bars.
+		/// HDC GetWindowDC(HWND hWnd);
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint GetWindowDC(uint hWnd)
+		{
+			_logger.LogInformation("[User32] GetWindowDC(hWnd=0x{HWnd:X8})", hWnd);
+			// Return a fake DC handle
+			return 0x10001000;
+		}
+
+		/// <summary>
+		/// Calls the default dialog box window procedure.
+		/// LRESULT DefDlgProcA(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lParam);
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint DefDlgProcA(uint hDlg, uint Msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] DefDlgProcA(hDlg=0x{HDlg:X8}, Msg=0x{Msg:X}, wParam=0x{WParam:X}, lParam=0x{LParam:X})",
+				hDlg, Msg, wParam, lParam);
+			// Stub: Return 0 (message processed)
 			return 0;
 		}
 
-		var className = _env.ReadAnsiString(classNamePtr);
-		var menuName = menuNamePtr != 0 ? _env.ReadAnsiString(menuNamePtr) : null;
-
-		_logger.LogInformation("[User32] RegisterClassExA: cbSize={CbSize}, style=0x{Style:X}, wndProc=0x{WndProc:X8}, className='{ClassName}'",
-			cbSize, style, wndProc, className);
-
-		var classInfo = new ProcessEnvironment.WindowClassInfo(
-			className, style, wndProc, clsExtra, wndExtra,
-			hInstance, hIcon, hCursor, hbrBackground, menuName
-		);
-
-		if (_env.RegisterWindowClass(className, classInfo))
+		/// <summary>
+		/// Retrieves the identifier of the next (or previous) control in a group.
+		/// HWND GetNextDlgGroupItem(HWND hDlg, HWND hCtl, BOOL bPrevious);
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint GetNextDlgGroupItem(uint hDlg, uint hCtl, uint bPrevious)
 		{
-			// Return an ATOM (non-zero value) on success
-			// Windows uses atoms (16-bit values) for class registration
-			// Use a counter to ensure uniqueness and avoid hash collisions
-			var atom = _nextAtom++;
-
-			// Register the atom-to-classname mapping
-			_env.RegisterAtom(atom, className);
-
-			_logger.LogInformation("[User32] RegisterClassExA: '{ClassName}' -> atom 0x{Atom:X4}", className, atom);
-			return atom;
+			_logger.LogInformation("[User32] GetNextDlgGroupItem(hDlg=0x{HDlg:X8}, hCtl=0x{HCtl:X8}, bPrevious={BPrevious})",
+				hDlg, hCtl, bPrevious);
+			// Stub: Return NULL (no next item)
+			return 0;
 		}
 
-		_logger.LogInformation("[User32] RegisterClassExA: Failed to register '{ClassName}'", className);
-		return 0;
-	}
-
-	[DllModuleExport(24)]
-	private uint TrackPopupMenuEx(uint hMenu, uint uFlags, int x, int y, uint hWnd, uint lptpm)
-	{
-		_logger.LogInformation("[User32] TrackPopupMenuEx(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X}, x={X}, y={Y}, hWnd=0x{HWnd:X8})",
-			hMenu, uFlags, x, y, hWnd);
-		return 0; // FALSE (stub - no menu item selected)
-	}
-
-	/// <summary>
-	/// Draws a rectangle in the style used to indicate focus.
-	/// BOOL DrawFocusRect(HDC hDC, const RECT *lprc);
-	/// </summary>
-	[DllModuleExport(8)]
-	private uint DrawFocusRect(uint hDC, uint lprc)
-	{
-		_logger.LogInformation("[User32] DrawFocusRect(hDC=0x{HDC:X8}, lprc=0x{Lprc:X8})", hDC, lprc);
-		// Stub: Return TRUE (success)
-		return 1;
-	}
-
-	[DllModuleExport(16)]
-	private uint DrawCaption(uint hwnd, uint hdc, uint lprect, uint flags)
-	{
-		_logger.LogInformation("[User32] DrawCaption(hwnd=0x{Hwnd:X8}, hdc=0x{Hdc:X8}, lprect=0x{Lprect:X8}, flags=0x{Flags:X8})",
-			hwnd, hdc, lprect, flags);
-
-		// DrawCaption draws a window caption in the specified device context
-		// Flags can include:
-		// DC_ACTIVE (0x0001) - Active window caption
-		// DC_SMALLCAP (0x0002) - Small caption (tool window)
-		// DC_ICON (0x0004) - Draw icon
-		// DC_TEXT (0x0008) - Draw caption text
-		// DC_INBUTTON (0x0010) - Draw in button style
-		// DC_GRADIENT (0x0020) - Use gradient for caption background
-		// DC_BUTTONS (0x1000) - Draw caption buttons
-
-		// Stub: Return TRUE (success)
-		return 1;
-	}
-
-	[DllModuleExport(16)]
-	private uint DrawFrameControl(uint hdc, uint lprc, uint uType, uint uState)
-	{
-		_logger.LogInformation("[User32] DrawFrameControl(hdc=0x{Hdc:X8}, lprc=0x{Lprc:X8}, uType={UType}, uState=0x{UState:X8})",
-			hdc, lprc, uType, uState);
-
-		// DrawFrameControl draws a frame control of the specified type and in the specified state
-		// uType can be:
-		// DFC_CAPTION (1) - Title bar
-		// DFC_MENU (2) - Menu
-		// DFC_SCROLL (3) - Scroll bar
-		// DFC_BUTTON (4) - Standard button
-		// DFC_POPUPMENU (5) - Popup menu
-
-		// Stub: Return TRUE (success)
-		return 1;
-	}
-
-
-	/// <summary>
-	/// Excludes the update region from the clipping region of the specified device context.
-	/// int ExcludeUpdateRgn(HDC hDC, HWND hWnd);
-	/// </summary>
-	[DllModuleExport(8)]
-	private int ExcludeUpdateRgn(uint hDC, uint hWnd)
-	{
-		_logger.LogInformation("[User32] ExcludeUpdateRgn(hDC=0x{HDC:X8}, hWnd=0x{HWnd:X8})", hDC, hWnd);
-		// Stub: Return SIMPLEREGION
-		return 2; // SIMPLEREGION
-	}
-
-	/// <summary>
-	/// Calculates the intersection of two rectangles.
-	/// BOOL IntersectRect(LPRECT lprcDst, const RECT *lprcSrc1, const RECT *lprcSrc2);
-	/// </summary>
-	[DllModuleExport(12)]
-	private uint IntersectRect(uint lprcDst, uint lprcSrc1, uint lprcSrc2)
-	{
-		_logger.LogInformation("[User32] IntersectRect(lprcDst=0x{LprcDst:X8}, lprcSrc1=0x{LprcSrc1:X8}, lprcSrc2=0x{LprcSrc2:X8})",
-			lprcDst, lprcSrc1, lprcSrc2);
-
-		if (lprcSrc1 == 0 || lprcSrc2 == 0 || lprcDst == 0)
+		/// <summary>
+		/// Converts dialog box units to pixels.
+		/// BOOL MapDialogRect(HWND hDlg, LPRECT lpRect);
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint MapDialogRect(uint hDlg, uint lpRect)
 		{
-			return 0; // FALSE
+			_logger.LogInformation("[User32] MapDialogRect(hDlg=0x{HDlg:X8}, lpRect=0x{LpRect:X8})", hDlg, lpRect);
+
+			// Stub: Dialog units to pixels conversion (typical: 1 DLU = 1 pixel for simplicity)
+			// In reality, this depends on the dialog base units
+			return 1; // TRUE
 		}
 
-		// Read both source rectangles
-		var left1 = (int)_env.MemRead32(lprcSrc1 + 0);
-		var top1 = (int)_env.MemRead32(lprcSrc1 + 4);
-		var right1 = (int)_env.MemRead32(lprcSrc1 + 8);
-		var bottom1 = (int)_env.MemRead32(lprcSrc1 + 12);
-
-		var left2 = (int)_env.MemRead32(lprcSrc2 + 0);
-		var top2 = (int)_env.MemRead32(lprcSrc2 + 4);
-		var right2 = (int)_env.MemRead32(lprcSrc2 + 8);
-		var bottom2 = (int)_env.MemRead32(lprcSrc2 + 12);
-
-		// Calculate intersection
-		var leftDst = Math.Max(left1, left2);
-		var topDst = Math.Max(top1, top2);
-		var rightDst = Math.Min(right1, right2);
-		var bottomDst = Math.Min(bottom1, bottom2);
-
-		// Check if rectangles intersect
-		if (leftDst >= rightDst || topDst >= bottomDst)
+		/// <summary>
+		/// Retrieves the specified value from the WNDCLASSEX structure associated with the window.
+		/// DWORD GetClassLongA(HWND hWnd, int nIndex);
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint GetClassLongA(uint hWnd, int nIndex)
 		{
-			// No intersection - set to empty rectangle
-			_env.MemWrite32(lprcDst + 0, 0);
-			_env.MemWrite32(lprcDst + 4, 0);
-			_env.MemWrite32(lprcDst + 8, 0);
-			_env.MemWrite32(lprcDst + 12, 0);
-			return 0; // FALSE
+			_logger.LogInformation("[User32] GetClassLongA(hWnd=0x{HWnd:X8}, nIndex={NIndex})", hWnd, nIndex);
+
+			// Common indices:
+			// GCL_MENUNAME = -8, GCL_HBRBACKGROUND = -10, GCL_HCURSOR = -12, GCL_HICON = -14
+			// GCL_HMODULE = -16, GCL_CBWNDEXTRA = -18, GCL_CBCLSEXTRA = -20, GCL_WNDPROC = -24
+			// GCL_STYLE = -26, GCW_ATOM = -32, GCL_HICONSM = -34
+
+			// Stub: Return 0 for all indices
+			return 0;
 		}
 
-		// Write intersection rectangle
-		_env.MemWrite32(lprcDst + 0, (uint)leftDst);
-		_env.MemWrite32(lprcDst + 4, (uint)topDst);
-		_env.MemWrite32(lprcDst + 8, (uint)rightDst);
-		_env.MemWrite32(lprcDst + 12, (uint)bottomDst);
-
-		return 1; // TRUE
-	}
-
-	/// <summary>
-	/// Retrieves a device context (DC) for the entire window, including title bar, menus, and scroll bars.
-	/// HDC GetWindowDC(HWND hWnd);
-	/// </summary>
-	[DllModuleExport(4)]
-	private uint GetWindowDC(uint hWnd)
-	{
-		_logger.LogInformation("[User32] GetWindowDC(hWnd=0x{HWnd:X8})", hWnd);
-		// Return a fake DC handle
-		return 0x10001000;
-	}
-
-	/// <summary>
-	/// Calls the default dialog box window procedure.
-	/// LRESULT DefDlgProcA(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lParam);
-	/// </summary>
-	[DllModuleExport(16)]
-	private uint DefDlgProcA(uint hDlg, uint Msg, uint wParam, uint lParam)
-	{
-		_logger.LogInformation("[User32] DefDlgProcA(hDlg=0x{HDlg:X8}, Msg=0x{Msg:X}, wParam=0x{WParam:X}, lParam=0x{LParam:X})",
-			hDlg, Msg, wParam, lParam);
-		// Stub: Return 0 (message processed)
-		return 0;
-	}
-
-	/// <summary>
-	/// Retrieves the identifier of the next (or previous) control in a group.
-	/// HWND GetNextDlgGroupItem(HWND hDlg, HWND hCtl, BOOL bPrevious);
-	/// </summary>
-	[DllModuleExport(12)]
-	private uint GetNextDlgGroupItem(uint hDlg, uint hCtl, uint bPrevious)
-	{
-		_logger.LogInformation("[User32] GetNextDlgGroupItem(hDlg=0x{HDlg:X8}, hCtl=0x{HCtl:X8}, bPrevious={BPrevious})",
-			hDlg, hCtl, bPrevious);
-		// Stub: Return NULL (no next item)
-		return 0;
-	}
-
-	/// <summary>
-	/// Converts dialog box units to pixels.
-	/// BOOL MapDialogRect(HWND hDlg, LPRECT lpRect);
-	/// </summary>
-	[DllModuleExport(8)]
-	private uint MapDialogRect(uint hDlg, uint lpRect)
-	{
-		_logger.LogInformation("[User32] MapDialogRect(hDlg=0x{HDlg:X8}, lpRect=0x{LpRect:X8})", hDlg, lpRect);
-
-		// Stub: Dialog units to pixels conversion (typical: 1 DLU = 1 pixel for simplicity)
-		// In reality, this depends on the dialog base units
-		return 1; // TRUE
-	}
-
-	/// <summary>
-	/// Retrieves the specified value from the WNDCLASSEX structure associated with the window.
-	/// DWORD GetClassLongA(HWND hWnd, int nIndex);
-	/// </summary>
-	[DllModuleExport(8)]
-	private uint GetClassLongA(uint hWnd, int nIndex)
-	{
-		_logger.LogInformation("[User32] GetClassLongA(hWnd=0x{HWnd:X8}, nIndex={NIndex})", hWnd, nIndex);
-
-		// Common indices:
-		// GCL_MENUNAME = -8, GCL_HBRBACKGROUND = -10, GCL_HCURSOR = -12, GCL_HICON = -14
-		// GCL_HMODULE = -16, GCL_CBWNDEXTRA = -18, GCL_CBCLSEXTRA = -20, GCL_WNDPROC = -24
-		// GCL_STYLE = -26, GCW_ATOM = -32, GCL_HICONSM = -34
-
-		// Stub: Return 0 for all indices
-		return 0;
-	}
-
-	/// <summary>
-	/// Retrieves the placement of the specified window.
-	/// BOOL GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
-	/// </summary>
-	[DllModuleExport(8)]
-	private uint GetWindowPlacement(uint hWnd, uint lpwndpl)
-	{
-		_logger.LogInformation("[User32] GetWindowPlacement(hWnd=0x{HWnd:X8}, lpwndpl=0x{Lpwndpl:X8})", hWnd, lpwndpl);
-
-		if (lpwndpl == 0)
+		/// <summary>
+		/// Retrieves the placement of the specified window.
+		/// BOOL GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint GetWindowPlacement(uint hWnd, uint lpwndpl)
 		{
-			return 0; // FALSE
-		}
+			_logger.LogInformation("[User32] GetWindowPlacement(hWnd=0x{HWnd:X8}, lpwndpl=0x{Lpwndpl:X8})", hWnd, lpwndpl);
 
-		// WINDOWPLACEMENT structure:
-		// UINT length; UINT flags; UINT showCmd; POINT ptMinPosition; POINT ptMaxPosition; RECT rcNormalPosition;
-
-		// Write a default placement
-		_env.MemWrite32(lpwndpl + 0, 44);  // length (sizeof(WINDOWPLACEMENT))
-		_env.MemWrite32(lpwndpl + 4, 0);   // flags
-		_env.MemWrite32(lpwndpl + 8, 1);   // showCmd (SW_SHOWNORMAL)
-		_env.MemWrite32(lpwndpl + 12, 0);  // ptMinPosition.x
-		_env.MemWrite32(lpwndpl + 16, 0);  // ptMinPosition.y
-		_env.MemWrite32(lpwndpl + 20, 0);  // ptMaxPosition.x
-		_env.MemWrite32(lpwndpl + 24, 0);  // ptMaxPosition.y
-		_env.MemWrite32(lpwndpl + 28, 0);  // rcNormalPosition.left
-		_env.MemWrite32(lpwndpl + 32, 0);  // rcNormalPosition.top
-		_env.MemWrite32(lpwndpl + 36, 640); // rcNormalPosition.right
-		_env.MemWrite32(lpwndpl + 40, 480); // rcNormalPosition.bottom
-
-		return 1; // TRUE
-	}
-
-	/// <summary>
-	/// Determines whether the specified window is a native Unicode window.
-	/// BOOL IsWindowUnicode(HWND hWnd);
-	/// </summary>
-	[DllModuleExport(4)]
-	private uint IsWindowUnicode(uint hWnd)
-	{
-		_logger.LogInformation("[User32] IsWindowUnicode(hWnd=0x{HWnd:X8})", hWnd);
-		// Stub: Return FALSE (ANSI window)
-		return 0;
-	}
-
-	/// <summary>
-	/// Registers a new clipboard format.
-	/// UINT RegisterClipboardFormatA(LPCSTR lpszFormat);
-	/// </summary>
-	[DllModuleExport(4)]
-	private uint RegisterClipboardFormatA(in LpcStr lpszFormat)
-	{
-		var format = lpszFormat.ToString() ?? string.Empty;
-		_logger.LogInformation("[User32] RegisterClipboardFormatA(lpszFormat=\"{Format}\")", format);
-
-		// Return a fake clipboard format ID
-		// Standard formats are < 0xC000, custom formats are >= 0xC000
-		return 0xC001;
-	}
-
-	/// <summary>
-	/// Posts a message to the thread's message queue.
-	/// BOOL PostThreadMessageA(DWORD idThread, UINT Msg, WPARAM wParam, LPARAM lParam);
-	/// </summary>
-	[DllModuleExport(16)]
-	private uint PostThreadMessageA(uint idThread, uint Msg, uint wParam, uint lParam)
-	{
-		_logger.LogInformation("[User32] PostThreadMessageA(idThread={IdThread}, Msg=0x{Msg:X}, wParam=0x{WParam:X}, lParam=0x{LParam:X})",
-			idThread, Msg, wParam, lParam);
-
-		// Stub: Return TRUE (success)
-		return 1;
-	}
-
-	/// <summary>
-	/// Scrolls the contents of the specified window's client area.
-	/// BOOL ScrollWindow(
-	///   [in] HWND       hWnd,
-	///   [in] int        XAmount,
-	///   [in] int        YAmount,
-	///   [in] const RECT *lpRect,
-	///   [in] const RECT *lpClipRect
-	/// );
-	/// </summary>
-	[DllModuleExport(20)]
-	private uint ScrollWindow(uint hWnd, int xAmount, int yAmount, uint lpRect, uint lpClipRect)
-	{
-		_logger.LogInformation("[User32] ScrollWindow(hWnd=0x{HWnd:X8}, xAmount={XAmount}, yAmount={YAmount}, lpRect=0x{LpRect:X8}, lpClipRect=0x{LpClipRect:X8})",
-			hWnd, xAmount, yAmount, lpRect, lpClipRect);
-		
-		// ScrollWindow scrolls the contents of a window's client area
-		// For a stub implementation, we just return success
-		// A full implementation would:
-		// 1. Scroll the window contents by the specified amount
-		// 2. Invalidate the uncovered region
-		// 3. Optionally clip to the specified rectangles
-		
-		return 1; // TRUE
-	}
-
-	/// <summary>
-	/// Sets the parameters of a scroll bar.
-	/// int SetScrollInfo(
-	///   [in] HWND          hWnd,
-	///   [in] int           nBar,
-	///   [in] LPCSCROLLINFO lpsi,
-	///   [in] BOOL          redraw
-	/// );
-	/// </summary>
-	[DllModuleExport(16)]
-	private uint SetScrollInfo(uint hWnd, int nBar, uint lpsi, uint redraw)
-	{
-		_logger.LogInformation("[User32] SetScrollInfo(hWnd=0x{HWnd:X8}, nBar={NBar}, lpsi=0x{Lpsi:X8}, redraw={Redraw})",
-			hWnd, nBar, lpsi, redraw);
-		
-		// SetScrollInfo sets the parameters of a scroll bar
-		// nBar can be SB_HORZ (0), SB_VERT (1), or SB_CTL (2)
-		// lpsi points to a SCROLLINFO structure with new values
-		
-		if (lpsi != 0)
-		{
-			// SCROLLINFO structure:
-			// UINT cbSize; UINT fMask; int nMin; int nMax; UINT nPage; int nPos; int nTrackPos;
-			var cbSize = _env.MemRead32(lpsi + 0);
-			var fMask = _env.MemRead32(lpsi + 4);
-			var nMin = (int)_env.MemRead32(lpsi + 8);
-			var nMax = (int)_env.MemRead32(lpsi + 12);
-			var nPage = _env.MemRead32(lpsi + 16);
-			var nPos = (int)_env.MemRead32(lpsi + 20);
-			var nTrackPos = (int)_env.MemRead32(lpsi + 24);
-			
-			_logger.LogInformation("[User32] SetScrollInfo: nMin={NMin}, nMax={NMax}, nPage={NPage}, nPos={NPos}",
-				nMin, nMax, nPage, nPos);
-		}
-		
-		// Return the current position (stub)
-		return 0;
-	}
-
-	/// <summary>
-	/// Retrieves the parameters of a scroll bar.
-	/// BOOL GetScrollInfo(
-	///   [in]      HWND          hWnd,
-	///   [in]      int           nBar,
-	///   [in, out] LPSCROLLINFO  lpsi
-	/// );
-	/// </summary>
-	[DllModuleExport(12)]
-	private uint GetScrollInfo(uint hWnd, int nBar, uint lpsi)
-	{
-		_logger.LogInformation("[User32] GetScrollInfo(hWnd=0x{HWnd:X8}, nBar={NBar}, lpsi=0x{Lpsi:X8})",
-			hWnd, nBar, lpsi);
-		
-		// GetScrollInfo retrieves the parameters of a scroll bar
-		// nBar can be SB_HORZ (0), SB_VERT (1), or SB_CTL (2)
-		// lpsi points to a SCROLLINFO structure to receive values
-		
-		if (lpsi != 0)
-		{
-			// SCROLLINFO structure offsets
-			const uint SCROLLINFO_CBSIZE_OFFSET = 0;
-			const uint SCROLLINFO_FMASK_OFFSET = 4;
-			const uint SCROLLINFO_NMIN_OFFSET = 8;
-			const uint SCROLLINFO_NMAX_OFFSET = 12;
-			const uint SCROLLINFO_NPAGE_OFFSET = 16;
-			const uint SCROLLINFO_NPOS_OFFSET = 20;
-			const uint SCROLLINFO_NTRACKPOS_OFFSET = 24;
-			
-			var fMask = _env.MemRead32(lpsi + SCROLLINFO_FMASK_OFFSET);
-			
-			// For stub implementation, fill in default values
-			// SIF_RANGE (0x0001), SIF_PAGE (0x0002), SIF_POS (0x0004), SIF_TRACKPOS (0x0010)
-			
-			if ((fMask & 0x0001) != 0) // SIF_RANGE
+			if (lpwndpl == 0)
 			{
-				_env.MemWrite32(lpsi + SCROLLINFO_NMIN_OFFSET, 0); // nMin = 0
-				_env.MemWrite32(lpsi + SCROLLINFO_NMAX_OFFSET, 100); // nMax = 100
+				return 0; // FALSE
 			}
-			if ((fMask & 0x0002) != 0) // SIF_PAGE
-			{
-				_env.MemWrite32(lpsi + SCROLLINFO_NPAGE_OFFSET, 10); // nPage = 10
-			}
-			if ((fMask & 0x0004) != 0) // SIF_POS
-			{
-				_env.MemWrite32(lpsi + SCROLLINFO_NPOS_OFFSET, 0); // nPos = 0
-			}
-			if ((fMask & 0x0010) != 0) // SIF_TRACKPOS
-			{
-				_env.MemWrite32(lpsi + SCROLLINFO_NTRACKPOS_OFFSET, 0); // nTrackPos = 0
-			}
-			
-			_logger.LogInformation("[User32] GetScrollInfo: Returning default scroll info");
+
+			// WINDOWPLACEMENT structure:
+			// UINT length; UINT flags; UINT showCmd; POINT ptMinPosition; POINT ptMaxPosition; RECT rcNormalPosition;
+
+			// Write a default placement
+			_env.MemWrite32(lpwndpl + 0, 44);  // length (sizeof(WINDOWPLACEMENT))
+			_env.MemWrite32(lpwndpl + 4, 0);   // flags
+			_env.MemWrite32(lpwndpl + 8, 1);   // showCmd (SW_SHOWNORMAL)
+			_env.MemWrite32(lpwndpl + 12, 0);  // ptMinPosition.x
+			_env.MemWrite32(lpwndpl + 16, 0);  // ptMinPosition.y
+			_env.MemWrite32(lpwndpl + 20, 0);  // ptMaxPosition.x
+			_env.MemWrite32(lpwndpl + 24, 0);  // ptMaxPosition.y
+			_env.MemWrite32(lpwndpl + 28, 0);  // rcNormalPosition.left
+			_env.MemWrite32(lpwndpl + 32, 0);  // rcNormalPosition.top
+			_env.MemWrite32(lpwndpl + 36, 640); // rcNormalPosition.right
+			_env.MemWrite32(lpwndpl + 40, 480); // rcNormalPosition.bottom
+
+			return 1; // TRUE
 		}
-		
-		return 1; // TRUE
-	}
 
-	// DDE (Dynamic Data Exchange) functions
-	// DDE is a legacy IPC mechanism used by older Windows applications
-	private uint _nextDdeInstance = 0x10000000;
-	private uint _nextDdeConv = 0x20000000;
-	private uint _nextDdeString = 0x30000000;
-	private readonly Dictionary<uint, string> _ddeStrings = new();
-
-	/// <summary>
-	/// Registers an application with the Dynamic Data Exchange (DDE) Management Library.
-	/// UINT DdeInitializeA(
-	///   [in]  LPDWORD      pidInst,
-	///   [in]  PFNCALLBACK  pfnCallback,
-	///   [in]  DWORD        afCmd,
-	///   [in]  DWORD        ulRes
-	/// );
-	/// </summary>
-	[DllModuleExport(16)]
-	private uint DdeInitializeA(uint pidInst, uint pfnCallback, uint afCmd, uint ulRes)
-	{
-		_logger.LogInformation("[User32] DdeInitializeA(pidInst=0x{PidInst:X8}, pfnCallback=0x{PfnCallback:X8}, afCmd=0x{AfCmd:X8}, ulRes={UlRes})",
-			pidInst, pfnCallback, afCmd, ulRes);
-		
-		// DdeInitialize registers an application with DDE
-		// pidInst points to a DWORD that receives the instance identifier
-		// pfnCallback is the callback function for DDE transactions
-		// afCmd specifies the DDE filters
-		
-		if (pidInst != 0)
+		/// <summary>
+		/// Determines whether the specified window is a native Unicode window.
+		/// BOOL IsWindowUnicode(HWND hWnd);
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint IsWindowUnicode(uint hWnd)
 		{
-			var instance = _nextDdeInstance++;
-			_env.MemWrite32(pidInst, instance);
-			_logger.LogInformation("[User32] DdeInitializeA: Created instance 0x{Instance:X8}", instance);
+			_logger.LogInformation("[User32] IsWindowUnicode(hWnd=0x{HWnd:X8})", hWnd);
+			// Stub: Return FALSE (ANSI window)
+			return 0;
 		}
-		
-		return 0; // DMLERR_NO_ERROR
-	}
 
-	/// <summary>
-	/// Establishes a conversation with a server application.
-	/// HCONV DdeConnect(
-	///   [in] DWORD   idInst,
-	///   [in] HSZ     hszService,
-	///   [in] HSZ     hszTopic,
-	///   [in] PCONVCONTEXT pCC
-	/// );
-	/// </summary>
-	[DllModuleExport(16)]
-	private uint DdeConnect(uint idInst, uint hszService, uint hszTopic, uint pCC)
-	{
-		_logger.LogInformation("[User32] DdeConnect(idInst=0x{IdInst:X8}, hszService=0x{HszService:X8}, hszTopic=0x{HszTopic:X8}, pCC=0x{PCC:X8})",
-			idInst, hszService, hszTopic, pCC);
-		
-		// DdeConnect establishes a DDE conversation
-		// hszService and hszTopic are string handles
-		// Returns a conversation handle, or NULL on failure
-		
-		var serviceName = _ddeStrings.TryGetValue(hszService, out var svc) ? svc : "unknown";
-		var topicName = _ddeStrings.TryGetValue(hszTopic, out var top) ? top : "unknown";
-		
-		_logger.LogInformation("[User32] DdeConnect: Connecting to service \"{ServiceName}\" topic \"{TopicName}\"",
-			serviceName, topicName);
-		
-		// For stub, just return NULL to indicate no server available
-		return 0; // NULL - connection failed
-	}
-
-	/// <summary>
-	/// Terminates a DDE conversation.
-	/// BOOL DdeDisconnect(
-	///   [in] HCONV hConv
-	/// );
-	/// </summary>
-	[DllModuleExport(4)]
-	private uint DdeDisconnect(uint hConv)
-	{
-		_logger.LogInformation("[User32] DdeDisconnect(hConv=0x{HConv:X8})", hConv);
-		
-		// DdeDisconnect terminates a DDE conversation
-		// Returns TRUE on success, FALSE on failure
-		
-		return 1; // TRUE
-	}
-
-	/// <summary>
-	/// Creates a DDE string handle.
-	/// HSZ DdeCreateStringHandleA(
-	///   [in] DWORD  idInst,
-	///   [in] LPCSTR psz,
-	///   [in] int    iCodePage
-	/// );
-	/// </summary>
-	[DllModuleExport(12)]
-	private uint DdeCreateStringHandleA(uint idInst, in LpcStr psz, int iCodePage)
-	{
-		var str = psz.ToString() ?? string.Empty;
-		_logger.LogInformation("[User32] DdeCreateStringHandleA(idInst=0x{IdInst:X8}, psz=\"{Str}\", iCodePage={ICodePage})",
-			idInst, str, iCodePage);
-		
-		// DdeCreateStringHandle creates a string handle for DDE
-		// The string handle can be used in DDE transactions
-		
-		if (string.IsNullOrEmpty(str))
+		/// <summary>
+		/// Registers a new clipboard format.
+		/// UINT RegisterClipboardFormatA(LPCSTR lpszFormat);
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint RegisterClipboardFormatA(in LpcStr lpszFormat)
 		{
+			var format = lpszFormat.ToString() ?? string.Empty;
+			_logger.LogInformation("[User32] RegisterClipboardFormatA(lpszFormat=\"{Format}\")", format);
+
+			// Return a fake clipboard format ID
+			// Standard formats are < 0xC000, custom formats are >= 0xC000
+			return 0xC001;
+		}
+
+		/// <summary>
+		/// Posts a message to the thread's message queue.
+		/// BOOL PostThreadMessageA(DWORD idThread, UINT Msg, WPARAM wParam, LPARAM lParam);
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint PostThreadMessageA(uint idThread, uint Msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] PostThreadMessageA(idThread={IdThread}, Msg=0x{Msg:X}, wParam=0x{WParam:X}, lParam=0x{LParam:X})",
+				idThread, Msg, wParam, lParam);
+
+			// Stub: Return TRUE (success)
+			return 1;
+		}
+
+		/// <summary>
+		/// Scrolls the contents of the specified window's client area.
+		/// BOOL ScrollWindow(
+		///   [in] HWND       hWnd,
+		///   [in] int        XAmount,
+		///   [in] int        YAmount,
+		///   [in] const RECT *lpRect,
+		///   [in] const RECT *lpClipRect
+		/// );
+		/// </summary>
+		[DllModuleExport(20)]
+		private uint ScrollWindow(uint hWnd, int xAmount, int yAmount, uint lpRect, uint lpClipRect)
+		{
+			_logger.LogInformation("[User32] ScrollWindow(hWnd=0x{HWnd:X8}, xAmount={XAmount}, yAmount={YAmount}, lpRect=0x{LpRect:X8}, lpClipRect=0x{LpClipRect:X8})",
+				hWnd, xAmount, yAmount, lpRect, lpClipRect);
+
+			// ScrollWindow scrolls the contents of a window's client area
+			// For a stub implementation, we just return success
+			// A full implementation would:
+			// 1. Scroll the window contents by the specified amount
+			// 2. Invalidate the uncovered region
+			// 3. Optionally clip to the specified rectangles
+
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Sets the parameters of a scroll bar.
+		/// int SetScrollInfo(
+		///   [in] HWND          hWnd,
+		///   [in] int           nBar,
+		///   [in] LPCSCROLLINFO lpsi,
+		///   [in] BOOL          redraw
+		/// );
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint SetScrollInfo(uint hWnd, int nBar, uint lpsi, uint redraw)
+		{
+			_logger.LogInformation("[User32] SetScrollInfo(hWnd=0x{HWnd:X8}, nBar={NBar}, lpsi=0x{Lpsi:X8}, redraw={Redraw})",
+				hWnd, nBar, lpsi, redraw);
+
+			// SetScrollInfo sets the parameters of a scroll bar
+			// nBar can be SB_HORZ (0), SB_VERT (1), or SB_CTL (2)
+			// lpsi points to a SCROLLINFO structure with new values
+
+			if (lpsi != 0)
+			{
+				// SCROLLINFO structure:
+				// UINT cbSize; UINT fMask; int nMin; int nMax; UINT nPage; int nPos; int nTrackPos;
+				var cbSize = _env.MemRead32(lpsi + 0);
+				var fMask = _env.MemRead32(lpsi + 4);
+				var nMin = (int)_env.MemRead32(lpsi + 8);
+				var nMax = (int)_env.MemRead32(lpsi + 12);
+				var nPage = _env.MemRead32(lpsi + 16);
+				var nPos = (int)_env.MemRead32(lpsi + 20);
+				var nTrackPos = (int)_env.MemRead32(lpsi + 24);
+
+				_logger.LogInformation("[User32] SetScrollInfo: nMin={NMin}, nMax={NMax}, nPage={NPage}, nPos={NPos}",
+					nMin, nMax, nPage, nPos);
+			}
+
+			// Return the current position (stub)
+			return 0;
+		}
+
+		/// <summary>
+		/// Retrieves the parameters of a scroll bar.
+		/// BOOL GetScrollInfo(
+		///   [in]      HWND          hWnd,
+		///   [in]      int           nBar,
+		///   [in, out] LPSCROLLINFO  lpsi
+		/// );
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint GetScrollInfo(uint hWnd, int nBar, uint lpsi)
+		{
+			_logger.LogInformation("[User32] GetScrollInfo(hWnd=0x{HWnd:X8}, nBar={NBar}, lpsi=0x{Lpsi:X8})",
+				hWnd, nBar, lpsi);
+
+			// GetScrollInfo retrieves the parameters of a scroll bar
+			// nBar can be SB_HORZ (0), SB_VERT (1), or SB_CTL (2)
+			// lpsi points to a SCROLLINFO structure to receive values
+
+			if (lpsi != 0)
+			{
+				// SCROLLINFO structure offsets
+				const uint SCROLLINFO_CBSIZE_OFFSET = 0;
+				const uint SCROLLINFO_FMASK_OFFSET = 4;
+				const uint SCROLLINFO_NMIN_OFFSET = 8;
+				const uint SCROLLINFO_NMAX_OFFSET = 12;
+				const uint SCROLLINFO_NPAGE_OFFSET = 16;
+				const uint SCROLLINFO_NPOS_OFFSET = 20;
+				const uint SCROLLINFO_NTRACKPOS_OFFSET = 24;
+
+				var fMask = _env.MemRead32(lpsi + SCROLLINFO_FMASK_OFFSET);
+
+				// For stub implementation, fill in default values
+				// SIF_RANGE (0x0001), SIF_PAGE (0x0002), SIF_POS (0x0004), SIF_TRACKPOS (0x0010)
+
+				if ((fMask & 0x0001) != 0) // SIF_RANGE
+				{
+					_env.MemWrite32(lpsi + SCROLLINFO_NMIN_OFFSET, 0); // nMin = 0
+					_env.MemWrite32(lpsi + SCROLLINFO_NMAX_OFFSET, 100); // nMax = 100
+				}
+				if ((fMask & 0x0002) != 0) // SIF_PAGE
+				{
+					_env.MemWrite32(lpsi + SCROLLINFO_NPAGE_OFFSET, 10); // nPage = 10
+				}
+				if ((fMask & 0x0004) != 0) // SIF_POS
+				{
+					_env.MemWrite32(lpsi + SCROLLINFO_NPOS_OFFSET, 0); // nPos = 0
+				}
+				if ((fMask & 0x0010) != 0) // SIF_TRACKPOS
+				{
+					_env.MemWrite32(lpsi + SCROLLINFO_NTRACKPOS_OFFSET, 0); // nTrackPos = 0
+				}
+
+				_logger.LogInformation("[User32] GetScrollInfo: Returning default scroll info");
+			}
+
+			return 1; // TRUE
+		}
+
+		// DDE (Dynamic Data Exchange) functions
+		// DDE is a legacy IPC mechanism used by older Windows applications
+		private uint _nextDdeInstance = 0x10000000;
+		private uint _nextDdeString = 0x30000000;
+		private readonly Dictionary<uint, string> _ddeStrings = new();
+
+		/// <summary>
+		/// Registers an application with the Dynamic Data Exchange (DDE) Management Library.
+		/// UINT DdeInitializeA(
+		///   [in]  LPDWORD      pidInst,
+		///   [in]  PFNCALLBACK  pfnCallback,
+		///   [in]  DWORD        afCmd,
+		///   [in]  DWORD        ulRes
+		/// );
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint DdeInitializeA(uint pidInst, uint pfnCallback, uint afCmd, uint ulRes)
+		{
+			_logger.LogInformation("[User32] DdeInitializeA(pidInst=0x{PidInst:X8}, pfnCallback=0x{PfnCallback:X8}, afCmd=0x{AfCmd:X8}, ulRes={UlRes})",
+				pidInst, pfnCallback, afCmd, ulRes);
+
+			// DdeInitialize registers an application with DDE
+			// pidInst points to a DWORD that receives the instance identifier
+			// pfnCallback is the callback function for DDE transactions
+			// afCmd specifies the DDE filters
+
+			if (pidInst != 0)
+			{
+				var instance = _nextDdeInstance++;
+				_env.MemWrite32(pidInst, instance);
+				_logger.LogInformation("[User32] DdeInitializeA: Created instance 0x{Instance:X8}", instance);
+			}
+
+			return 0; // DMLERR_NO_ERROR
+		}
+
+		/// <summary>
+		/// Establishes a conversation with a server application.
+		/// HCONV DdeConnect(
+		///   [in] DWORD   idInst,
+		///   [in] HSZ     hszService,
+		///   [in] HSZ     hszTopic,
+		///   [in] PCONVCONTEXT pCC
+		/// );
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint DdeConnect(uint idInst, uint hszService, uint hszTopic, uint pCC)
+		{
+			_logger.LogInformation("[User32] DdeConnect(idInst=0x{IdInst:X8}, hszService=0x{HszService:X8}, hszTopic=0x{HszTopic:X8}, pCC=0x{PCC:X8})",
+				idInst, hszService, hszTopic, pCC);
+
+			// DdeConnect establishes a DDE conversation
+			// hszService and hszTopic are string handles
+			// Returns a conversation handle, or NULL on failure
+
+			var serviceName = _ddeStrings.TryGetValue(hszService, out var svc) ? svc : "unknown";
+			var topicName = _ddeStrings.TryGetValue(hszTopic, out var top) ? top : "unknown";
+
+			_logger.LogInformation("[User32] DdeConnect: Connecting to service \"{ServiceName}\" topic \"{TopicName}\"",
+				serviceName, topicName);
+
+			// For stub, just return NULL to indicate no server available
+			return 0; // NULL - connection failed
+		}
+
+		/// <summary>
+		/// Terminates a DDE conversation.
+		/// BOOL DdeDisconnect(
+		///   [in] HCONV hConv
+		/// );
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint DdeDisconnect(uint hConv)
+		{
+			_logger.LogInformation("[User32] DdeDisconnect(hConv=0x{HConv:X8})", hConv);
+
+			// DdeDisconnect terminates a DDE conversation
+			// Returns TRUE on success, FALSE on failure
+
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Creates a DDE string handle.
+		/// HSZ DdeCreateStringHandleA(
+		///   [in] DWORD  idInst,
+		///   [in] LPCSTR psz,
+		///   [in] int    iCodePage
+		/// );
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint DdeCreateStringHandleA(uint idInst, in LpcStr psz, int iCodePage)
+		{
+			var str = psz.ToString() ?? string.Empty;
+			_logger.LogInformation("[User32] DdeCreateStringHandleA(idInst=0x{IdInst:X8}, psz=\"{Str}\", iCodePage={ICodePage})",
+				idInst, str, iCodePage);
+
+			// DdeCreateStringHandle creates a string handle for DDE
+			// The string handle can be used in DDE transactions
+
+			if (string.IsNullOrEmpty(str))
+			{
+				return 0; // NULL
+			}
+
+			var handle = _nextDdeString++;
+			_ddeStrings[handle] = str;
+
+			_logger.LogInformation("[User32] DdeCreateStringHandleA: Created handle 0x{Handle:X8} for \"{Str}\"", handle, str);
+			return handle;
+		}
+
+		/// <summary>
+		/// Frees a DDE string handle.
+		/// BOOL DdeFreeStringHandle(
+		///   [in] DWORD idInst,
+		///   [in] HSZ   hsz
+		/// );
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint DdeFreeStringHandle(uint idInst, uint hsz)
+		{
+			_logger.LogInformation("[User32] DdeFreeStringHandle(idInst=0x{IdInst:X8}, hsz=0x{Hsz:X8})",
+				idInst, hsz);
+
+			// DdeFreeStringHandle frees a string handle
+
+			if (_ddeStrings.Remove(hsz))
+			{
+				_logger.LogInformation("[User32] DdeFreeStringHandle: Freed handle 0x{Hsz:X8}", hsz);
+			}
+
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Begins a DDE transaction.
+		/// HDDEDATA DdeClientTransaction(
+		///   [in] LPBYTE   pData,
+		///   [in] DWORD    cbData,
+		///   [in] HCONV    hConv,
+		///   [in] HSZ      hszItem,
+		///   [in] UINT     wFmt,
+		///   [in] UINT     wType,
+		///   [in] DWORD    dwTimeout,
+		///   [out] LPDWORD pdwResult
+		/// );
+		/// </summary>
+		[DllModuleExport(32)]
+		private uint DdeClientTransaction(uint pData, uint cbData, uint hConv, uint hszItem, uint wFmt, uint wType, uint dwTimeout, uint pdwResult)
+		{
+			_logger.LogInformation("[User32] DdeClientTransaction(pData=0x{PData:X8}, cbData={CbData}, hConv=0x{HConv:X8}, hszItem=0x{HszItem:X8}, wFmt={WFmt}, wType={WType}, dwTimeout={DwTimeout})",
+				pData, cbData, hConv, hszItem, wFmt, wType, dwTimeout);
+
+			// DdeClientTransaction performs a DDE transaction
+			// wType specifies the transaction type (XTYP_EXECUTE, XTYP_REQUEST, etc.)
+			// Returns a DDE data handle, or NULL on failure
+
+			var itemName = _ddeStrings.TryGetValue(hszItem, out var item) ? item : "unknown";
+			_logger.LogInformation("[User32] DdeClientTransaction: Transaction on item \"{ItemName}\"", itemName);
+
+			// For stub, return NULL to indicate transaction failed
 			return 0; // NULL
 		}
-		
-		var handle = _nextDdeString++;
-		_ddeStrings[handle] = str;
-		
-		_logger.LogInformation("[User32] DdeCreateStringHandleA: Created handle 0x{Handle:X8} for \"{Str}\"", handle, str);
-		return handle;
-	}
 
-	/// <summary>
-	/// Frees a DDE string handle.
-	/// BOOL DdeFreeStringHandle(
-	///   [in] DWORD idInst,
-	///   [in] HSZ   hsz
-	/// );
-	/// </summary>
-	[DllModuleExport(8)]
-	private uint DdeFreeStringHandle(uint idInst, uint hsz)
-	{
-		_logger.LogInformation("[User32] DdeFreeStringHandle(idInst=0x{IdInst:X8}, hsz=0x{Hsz:X8})",
-			idInst, hsz);
-		
-		// DdeFreeStringHandle frees a string handle
-		
-		if (_ddeStrings.Remove(hsz))
+		/// <summary>
+		/// Retrieves data from a DDE data handle.
+		/// DWORD DdeGetData(
+		///   [in]  HDDEDATA hData,
+		///   [out] LPBYTE   pDst,
+		///   [in]  DWORD    cbMax,
+		///   [in]  DWORD    cbOff
+		/// );
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint DdeGetData(uint hData, uint pDst, uint cbMax, uint cbOff)
 		{
-			_logger.LogInformation("[User32] DdeFreeStringHandle: Freed handle 0x{Hsz:X8}", hsz);
-		}
-		
-		return 1; // TRUE
-	}
+			_logger.LogInformation("[User32] DdeGetData(hData=0x{HData:X8}, pDst=0x{PDst:X8}, cbMax={CbMax}, cbOff={CbOff})",
+				hData, pDst, cbMax, cbOff);
 
-	/// <summary>
-	/// Begins a DDE transaction.
-	/// HDDEDATA DdeClientTransaction(
-	///   [in] LPBYTE   pData,
-	///   [in] DWORD    cbData,
-	///   [in] HCONV    hConv,
-	///   [in] HSZ      hszItem,
-	///   [in] UINT     wFmt,
-	///   [in] UINT     wType,
-	///   [in] DWORD    dwTimeout,
-	///   [out] LPDWORD pdwResult
-	/// );
-	/// </summary>
-	[DllModuleExport(32)]
-	private uint DdeClientTransaction(uint pData, uint cbData, uint hConv, uint hszItem, uint wFmt, uint wType, uint dwTimeout, uint pdwResult)
-	{
-		_logger.LogInformation("[User32] DdeClientTransaction(pData=0x{PData:X8}, cbData={CbData}, hConv=0x{HConv:X8}, hszItem=0x{HszItem:X8}, wFmt={WFmt}, wType={WType}, dwTimeout={DwTimeout})",
-			pData, cbData, hConv, hszItem, wFmt, wType, dwTimeout);
-		
-		// DdeClientTransaction performs a DDE transaction
-		// wType specifies the transaction type (XTYP_EXECUTE, XTYP_REQUEST, etc.)
-		// Returns a DDE data handle, or NULL on failure
-		
-		var itemName = _ddeStrings.TryGetValue(hszItem, out var item) ? item : "unknown";
-		_logger.LogInformation("[User32] DdeClientTransaction: Transaction on item \"{ItemName}\"", itemName);
-		
-		// For stub, return NULL to indicate transaction failed
-		return 0; // NULL
-	}
+			// DdeGetData retrieves data from a DDE data handle
+			// Returns the number of bytes copied, or 0 on failure
 
-	/// <summary>
-	/// Retrieves data from a DDE data handle.
-	/// DWORD DdeGetData(
-	///   [in]  HDDEDATA hData,
-	///   [out] LPBYTE   pDst,
-	///   [in]  DWORD    cbMax,
-	///   [in]  DWORD    cbOff
-	/// );
-	/// </summary>
-	[DllModuleExport(16)]
-	private uint DdeGetData(uint hData, uint pDst, uint cbMax, uint cbOff)
-	{
-		_logger.LogInformation("[User32] DdeGetData(hData=0x{HData:X8}, pDst=0x{PDst:X8}, cbMax={CbMax}, cbOff={CbOff})",
-			hData, pDst, cbMax, cbOff);
-		
-		// DdeGetData retrieves data from a DDE data handle
-		// Returns the number of bytes copied, or 0 on failure
-		
-		// For stub, return 0 (no data)
-		return 0;
-	}
-
-	/// <summary>
-	/// Copies an accelerator table.
-	/// int CopyAcceleratorTableA(HACCEL hAccelSrc, LPACCEL lpAccelDst, int cAccelEntries);
-	/// </summary>
-	[DllModuleExport(12)]
-	private uint CopyAcceleratorTableA(uint hAccelSrc, uint lpAccelDst, int cAccelEntries)
-	{
-		_logger.LogInformation("[User32] CopyAcceleratorTableA(hAccelSrc=0x{HAccelSrc:X8}, lpAccelDst=0x{LpAccelDst:X8}, cAccelEntries={CAccelEntries})",
-			hAccelSrc, lpAccelDst, cAccelEntries);
-
-		// If lpAccelDst is NULL, return the number of entries
-		if (lpAccelDst == 0)
-		{
-			return 0; // No entries (stub)
+			// For stub, return 0 (no data)
+			return 0;
 		}
 
-		// Stub: Return 0 (no entries copied)
-		return 0;
-	}
-
-	/// <summary>
-	/// Sets the Help context identifier for the window.
-	/// BOOL SetWindowContextHelpId(HWND hWnd, DWORD dwContextHelpId);
-	/// </summary>
-	[DllModuleExport(8)]
-	private uint SetWindowContextHelpId(uint hWnd, uint dwContextHelpId)
-	{
-		_logger.LogInformation("[User32] SetWindowContextHelpId(hWnd=0x{HWnd:X8}, dwContextHelpId=0x{DwContextHelpId:X})",
-			hWnd, dwContextHelpId);
-
-		// Stub: Return TRUE (success)
-		return 1;
-	}
-
-	/// <summary>
-	/// Determines whether a window is maximized.
-	/// BOOL IsZoomed(
-	///   [in] HWND hWnd
-	/// );
-	/// </summary>
-	[DllModuleExport(4)]
-	private uint IsZoomed(uint hWnd)
-	{
-		_logger.LogInformation("[User32] IsZoomed(hWnd=0x{HWnd:X8})", hWnd);
-
-		// IsZoomed checks if a window is maximized (has WS_MAXIMIZE style)
-		// Get the window style
-		var style = _env.GetWindowProperty(hWnd, NativeTypes.WindowLong.GWL_STYLE);
-		
-		if (style == 0)
+		/// <summary>
+		/// Copies an accelerator table.
+		/// int CopyAcceleratorTableA(HACCEL hAccelSrc, LPACCEL lpAccelDst, int cAccelEntries);
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint CopyAcceleratorTableA(uint hAccelSrc, uint lpAccelDst, int cAccelEntries)
 		{
-			// Window not found or no custom style, check the window info
-			var window = _env.GetWindow(hWnd);
-			if (window.HasValue)
+			_logger.LogInformation("[User32] CopyAcceleratorTableA(hAccelSrc=0x{HAccelSrc:X8}, lpAccelDst=0x{LpAccelDst:X8}, cAccelEntries={CAccelEntries})",
+				hAccelSrc, lpAccelDst, cAccelEntries);
+
+			// If lpAccelDst is NULL, return the number of entries
+			if (lpAccelDst == 0)
 			{
-				style = window.Value.Style;
+				return 0; // No entries (stub)
 			}
+
+			// Stub: Return 0 (no entries copied)
+			return 0;
 		}
 
-		// Check for WS_MAXIMIZE (0x01000000)
-		const uint WS_MAXIMIZE = 0x01000000;
-		var isMaximized = (style & WS_MAXIMIZE) != 0;
-
-		_logger.LogInformation("[User32] IsZoomed: Window 0x{HWnd:X8} is {State}",
-			hWnd, isMaximized ? "maximized" : "not maximized");
-
-		return isMaximized ? 1u : 0u;
-	}
-
-	/// <summary>
-	/// Defines a system-wide hot key.
-	/// BOOL RegisterHotKey(
-	///   [in, optional] HWND hWnd,
-	///   [in]           int  id,
-	///   [in]           UINT fsModifiers,
-	///   [in]           UINT vk
-	/// );
-	/// </summary>
-	[DllModuleExport(16)]
-	private uint RegisterHotKey(uint hWnd, int id, uint fsModifiers, uint vk)
-	{
-		_logger.LogInformation("[User32] RegisterHotKey(hWnd=0x{HWnd:X8}, id={Id}, fsModifiers=0x{FsModifiers:X}, vk=0x{Vk:X})",
-			hWnd, id, fsModifiers, vk);
-
-		// RegisterHotKey defines a system-wide hotkey
-		// fsModifiers can be:
-		// MOD_ALT = 0x0001, MOD_CONTROL = 0x0002, MOD_SHIFT = 0x0004, MOD_WIN = 0x0008
-		// vk is a virtual key code
-
-		// For a stub implementation, we just return success
-		// A full implementation would:
-		// 1. Register the hotkey globally
-		// 2. Post WM_HOTKEY messages when the hotkey is pressed
-		// 3. Track registered hotkeys to prevent duplicates
-
-		_logger.LogInformation("[User32] RegisterHotKey: Registered hotkey id={Id} with modifiers=0x{FsModifiers:X} and key=0x{Vk:X}",
-			id, fsModifiers, vk);
-
-		return 1; // TRUE (success)
-	}
-
-	/// <summary>
-	/// Creates a modal dialog box from a dialog box template in memory.
-	/// INT_PTR DialogBoxIndirectParamA(
-	///   [in, optional] HINSTANCE       hInstance,
-	///   [in]           LPCDLGTEMPLATEA lpTemplate,
-	///   [in, optional] HWND            hWndParent,
-	///   [in, optional] DLGPROC         lpDialogFunc,
-	///   [in]           LPARAM          dwInitParam
-	/// );
-	/// </summary>
-	[DllModuleExport(20)]
-	private uint DialogBoxIndirectParamA(uint hInstance, uint lpTemplate, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
-	{
-		_logger.LogInformation("[User32] DialogBoxIndirectParamA(hInstance=0x{HInstance:X8}, lpTemplate=0x{LpTemplate:X8}, hWndParent=0x{HWndParent:X8}, lpDialogFunc=0x{LpDialogFunc:X8}, dwInitParam=0x{DwInitParam:X8})",
-			hInstance, lpTemplate, hWndParent, lpDialogFunc, dwInitParam);
-
-		// DialogBoxIndirectParamA creates a modal dialog from a template in memory
-		// This is similar to DialogBoxParamA, but uses a template in memory instead of a resource
-
-		if (lpTemplate == 0)
+		/// <summary>
+		/// Sets the Help context identifier for the window.
+		/// BOOL SetWindowContextHelpId(HWND hWnd, DWORD dwContextHelpId);
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint SetWindowContextHelpId(uint hWnd, uint dwContextHelpId)
 		{
-			_logger.LogWarning("[User32] DialogBoxIndirectParamA: NULL template pointer");
-			return unchecked((uint)-1); // Return -1 for error
+			_logger.LogInformation("[User32] SetWindowContextHelpId(hWnd=0x{HWnd:X8}, dwContextHelpId=0x{DwContextHelpId:X})",
+				hWnd, dwContextHelpId);
+
+			// Stub: Return TRUE (success)
+			return 1;
 		}
 
-		if (lpDialogFunc == 0)
+		/// <summary>
+		/// Determines whether a window is maximized.
+		/// BOOL IsZoomed(
+		///   [in] HWND hWnd
+		/// );
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint IsZoomed(uint hWnd)
 		{
-			_logger.LogWarning("[User32] DialogBoxIndirectParamA: NULL dialog proc");
-			return unchecked((uint)-1); // Return -1 for error
+			_logger.LogInformation("[User32] IsZoomed(hWnd=0x{HWnd:X8})", hWnd);
+
+			// IsZoomed checks if a window is maximized (has WS_MAXIMIZE style)
+			// Get the window style
+			var style = _env.GetWindowProperty(hWnd, NativeTypes.WindowLong.GWL_STYLE);
+
+			if (style == 0)
+			{
+				// Window not found or no custom style, check the window info
+				var window = _env.GetWindow(hWnd);
+				if (window.HasValue)
+				{
+					style = window.Value.Style;
+				}
+			}
+
+			// Check for WS_MAXIMIZE (0x01000000)
+			const uint WS_MAXIMIZE = 0x01000000;
+			var isMaximized = (style & WS_MAXIMIZE) != 0;
+
+			_logger.LogInformation("[User32] IsZoomed: Window 0x{HWnd:X8} is {State}",
+				hWnd, isMaximized ? "maximized" : "not maximized");
+
+			return isMaximized ? 1u : 0u;
 		}
 
-		// For stub implementation, we return IDCANCEL (2)
-		// A full implementation would:
-		// 1. Parse the dialog template
-		// 2. Create the dialog window and controls
-		// 3. Enter a modal message loop
-		// 4. Call the dialog procedure for messages
-		// 5. Return the result from EndDialog
+		/// <summary>
+		/// Defines a system-wide hot key.
+		/// BOOL RegisterHotKey(
+		///   [in, optional] HWND hWnd,
+		///   [in]           int  id,
+		///   [in]           UINT fsModifiers,
+		///   [in]           UINT vk
+		/// );
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint RegisterHotKey(uint hWnd, int id, uint fsModifiers, uint vk)
+		{
+			_logger.LogInformation("[User32] RegisterHotKey(hWnd=0x{HWnd:X8}, id={Id}, fsModifiers=0x{FsModifiers:X}, vk=0x{Vk:X})",
+				hWnd, id, fsModifiers, vk);
 
-		_logger.LogInformation("[User32] DialogBoxIndirectParamA: Stub returning IDCANCEL");
-		return 2; // IDCANCEL
+			// RegisterHotKey defines a system-wide hotkey
+			// fsModifiers can be:
+			// MOD_ALT = 0x0001, MOD_CONTROL = 0x0002, MOD_SHIFT = 0x0004, MOD_WIN = 0x0008
+			// vk is a virtual key code
+
+			// For a stub implementation, we just return success
+			// A full implementation would:
+			// 1. Register the hotkey globally
+			// 2. Post WM_HOTKEY messages when the hotkey is pressed
+			// 3. Track registered hotkeys to prevent duplicates
+
+			_logger.LogInformation("[User32] RegisterHotKey: Registered hotkey id={Id} with modifiers=0x{FsModifiers:X} and key=0x{Vk:X}",
+				id, fsModifiers, vk);
+
+			return 1; // TRUE (success)
+		}
+
+		/// <summary>
+		/// Creates a modal dialog box from a dialog box template in memory.
+		/// INT_PTR DialogBoxIndirectParamA(
+		///   [in, optional] HINSTANCE       hInstance,
+		///   [in]           LPCDLGTEMPLATEA lpTemplate,
+		///   [in, optional] HWND            hWndParent,
+		///   [in, optional] DLGPROC         lpDialogFunc,
+		///   [in]           LPARAM          dwInitParam
+		/// );
+		/// </summary>
+		[DllModuleExport(20)]
+		private uint DialogBoxIndirectParamA(uint hInstance, uint lpTemplate, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
+		{
+			_logger.LogInformation("[User32] DialogBoxIndirectParamA(hInstance=0x{HInstance:X8}, lpTemplate=0x{LpTemplate:X8}, hWndParent=0x{HWndParent:X8}, lpDialogFunc=0x{LpDialogFunc:X8}, dwInitParam=0x{DwInitParam:X8})",
+				hInstance, lpTemplate, hWndParent, lpDialogFunc, dwInitParam);
+
+			// DialogBoxIndirectParamA creates a modal dialog from a template in memory
+			// This is similar to DialogBoxParamA, but uses a template in memory instead of a resource
+
+			if (lpTemplate == 0)
+			{
+				_logger.LogWarning("[User32] DialogBoxIndirectParamA: NULL template pointer");
+				return unchecked((uint)-1); // Return -1 for error
+			}
+
+			if (lpDialogFunc == 0)
+			{
+				_logger.LogWarning("[User32] DialogBoxIndirectParamA: NULL dialog proc");
+				return unchecked((uint)-1); // Return -1 for error
+			}
+
+			// For stub implementation, we return IDCANCEL (2)
+			// A full implementation would:
+			// 1. Parse the dialog template
+			// 2. Create the dialog window and controls
+			// 3. Enter a modal message loop
+			// 4. Call the dialog procedure for messages
+			// 5. Return the result from EndDialog
+
+			_logger.LogInformation("[User32] DialogBoxIndirectParamA: Stub returning IDCANCEL");
+			return 2; // IDCANCEL
+		}
+
+		/// <summary>
+		/// Converts a string to OEM character set.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint CharToOemA(in LpStr lpszSrc, in LpStr lpszDst)
+		{
+			_logger.LogInformation("[User32] CharToOemA(lpszSrc=0x{LpszSrc:X8}, lpszDst=0x{LpszDst:X8})", lpszSrc.Address, lpszDst.Address);
+			// Stub: just copy the string as-is
+			var src = lpszSrc.ToString();
+			if (!string.IsNullOrEmpty(src))
+			{
+				lpszDst.Write(_memory!, src, true);
+			}
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Creates an accelerator table.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint CreateAcceleratorTableA(uint lpaccl, int cAccel)
+		{
+			_logger.LogInformation("[User32] CreateAcceleratorTableA(lpaccl=0x{Lpaccl:X8}, cAccel={CAccel})", lpaccl, cAccel);
+			// Return a fake accelerator table handle
+			return 0x80001000;
+		}
+
+		/// <summary>
+		/// Destroys an accelerator table.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint DestroyAcceleratorTable(uint hAccel)
+		{
+			_logger.LogInformation("[User32] DestroyAcceleratorTable(hAccel=0x{HAccel:X8})", hAccel);
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Retrieves the coordinates of the update region for a window.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint GetUpdateRect(uint hWnd, uint lpRect, uint bErase)
+		{
+			_logger.LogInformation("[User32] GetUpdateRect(hWnd=0x{HWnd:X8}, lpRect=0x{LpRect:X8}, bErase={BErase})", hWnd, lpRect, bErase);
+			// Stub: return FALSE (no update region)
+			return 0;
+		}
+
+		/// <summary>
+		/// Retrieves the update region for a window.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint GetUpdateRgn(uint hWnd, uint hRgn, uint bErase)
+		{
+			_logger.LogInformation("[User32] GetUpdateRgn(hWnd=0x{HWnd:X8}, hRgn=0x{HRgn:X8}, bErase={BErase})", hWnd, hRgn, bErase);
+			// Stub: return NULLREGION (no update region)
+			return 1;
+		}
+
+		/// <summary>
+		/// Invalidates a region in a window.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint InvalidateRgn(uint hWnd, uint hRgn, uint bErase)
+		{
+			_logger.LogInformation("[User32] InvalidateRgn(hWnd=0x{HWnd:X8}, hRgn=0x{HRgn:X8}, bErase={BErase})", hWnd, hRgn, bErase);
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Validates a region in a window.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint ValidateRgn(uint hWnd, uint hRgn)
+		{
+			_logger.LogInformation("[User32] ValidateRgn(hWnd=0x{HWnd:X8}, hRgn=0x{HRgn:X8})", hWnd, hRgn);
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Loads a cursor from a file.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint LoadCursorFromFileA(in LpcStr lpFileName)
+		{
+			var fileName = lpFileName.ToString();
+			_logger.LogInformation("[User32] LoadCursorFromFileA(lpFileName=\"{FileName}\")", fileName ?? "(null)");
+			// Return a fake cursor handle
+			return 0x80002000;
+		}
+
+		/// <summary>
+		/// Sets a window class field.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint SetClassLongA(uint hWnd, int nIndex, uint dwNewLong)
+		{
+			_logger.LogInformation("[User32] SetClassLongA(hWnd=0x{HWnd:X8}, nIndex={NIndex}, dwNewLong=0x{DwNewLong:X8})", hWnd, nIndex, dwNewLong);
+			// Return previous value (stub: return 0)
+			return 0;
+		}
 	}
-
-/// <summary>
-/// Converts a string to OEM character set.
-/// </summary>
-[DllModuleExport(0)]
-private uint CharToOemA(in LpStr lpszSrc, in LpStr lpszDst)
-{
-_logger.LogInformation("[User32] CharToOemA(lpszSrc=0x{LpszSrc:X8}, lpszDst=0x{LpszDst:X8})", lpszSrc.Address, lpszDst.Address);
-// Stub: just copy the string as-is
-var src = lpszSrc.ToString();
-if (!string.IsNullOrEmpty(src))
-{
-lpszDst.Write(_memory!, src, true);
-}
-return 1; // TRUE
-}
-
-/// <summary>
-/// Creates an accelerator table.
-/// </summary>
-[DllModuleExport(0)]
-private uint CreateAcceleratorTableA(uint lpaccl, int cAccel)
-{
-_logger.LogInformation("[User32] CreateAcceleratorTableA(lpaccl=0x{Lpaccl:X8}, cAccel={CAccel})", lpaccl, cAccel);
-// Return a fake accelerator table handle
-return 0x80001000;
-}
-
-/// <summary>
-/// Destroys an accelerator table.
-/// </summary>
-[DllModuleExport(0)]
-private uint DestroyAcceleratorTable(uint hAccel)
-{
-_logger.LogInformation("[User32] DestroyAcceleratorTable(hAccel=0x{HAccel:X8})", hAccel);
-return 1; // TRUE
-}
-
-/// <summary>
-/// Retrieves the coordinates of the update region for a window.
-/// </summary>
-[DllModuleExport(0)]
-private uint GetUpdateRect(uint hWnd, uint lpRect, uint bErase)
-{
-_logger.LogInformation("[User32] GetUpdateRect(hWnd=0x{HWnd:X8}, lpRect=0x{LpRect:X8}, bErase={BErase})", hWnd, lpRect, bErase);
-// Stub: return FALSE (no update region)
-return 0;
-}
-
-/// <summary>
-/// Retrieves the update region for a window.
-/// </summary>
-[DllModuleExport(0)]
-private uint GetUpdateRgn(uint hWnd, uint hRgn, uint bErase)
-{
-_logger.LogInformation("[User32] GetUpdateRgn(hWnd=0x{HWnd:X8}, hRgn=0x{HRgn:X8}, bErase={BErase})", hWnd, hRgn, bErase);
-// Stub: return NULLREGION (no update region)
-return 1;
-}
-
-/// <summary>
-/// Invalidates a region in a window.
-/// </summary>
-[DllModuleExport(0)]
-private uint InvalidateRgn(uint hWnd, uint hRgn, uint bErase)
-{
-_logger.LogInformation("[User32] InvalidateRgn(hWnd=0x{HWnd:X8}, hRgn=0x{HRgn:X8}, bErase={BErase})", hWnd, hRgn, bErase);
-return 1; // TRUE
-}
-
-/// <summary>
-/// Validates a region in a window.
-/// </summary>
-[DllModuleExport(0)]
-private uint ValidateRgn(uint hWnd, uint hRgn)
-{
-_logger.LogInformation("[User32] ValidateRgn(hWnd=0x{HWnd:X8}, hRgn=0x{HRgn:X8})", hWnd, hRgn);
-return 1; // TRUE
-}
-
-/// <summary>
-/// Loads a cursor from a file.
-/// </summary>
-[DllModuleExport(0)]
-private uint LoadCursorFromFileA(in LpcStr lpFileName)
-{
-var fileName = lpFileName.ToString();
-_logger.LogInformation("[User32] LoadCursorFromFileA(lpFileName=\"{FileName}\")", fileName ?? "(null)");
-// Return a fake cursor handle
-return 0x80002000;
-}
-
-/// <summary>
-/// Sets a window class field.
-/// </summary>
-[DllModuleExport(0)]
-private uint SetClassLongA(uint hWnd, int nIndex, uint dwNewLong)
-{
-_logger.LogInformation("[User32] SetClassLongA(hWnd=0x{HWnd:X8}, nIndex={NIndex}, dwNewLong=0x{DwNewLong:X8})", hWnd, nIndex, dwNewLong);
-// Return previous value (stub: return 0)
-return 0;
-}
-}
 }
