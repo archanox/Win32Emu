@@ -53,17 +53,18 @@ public class EbpInitializationTests
         cpu.SetRegister("EBP", 0x00000000); // This is the problematic state
         cpu.SetEip(0x00401000);
         
-        // Test instruction: ADD EAX, [EBP-11]
-        // With EBP=0, this calculates address 0xFFFFFFF5 which is out of range
+        // Test instruction: ADD EAX, [EBP-3]
+        // With EBP=0, this calculates address 0xFFFFFFFD
+        // Reading 4 bytes from 0xFFFFFFFD (addresses 0xFFFFFFFD-0x100000000) crosses the 4GB boundary at 0x100000000
         var testCode = new byte[]
         {
-            0x03, 0x45, 0xF5  // ADD EAX, [EBP-11]  (F5 = -11)
+            0x03, 0x45, 0xFD  // ADD EAX, [EBP-3]  (FD = -3)
         };
         
         memory.WriteBytes(0x00401000, testCode);
         
-        // Act & Assert - this should throw the exact error from the issue
+        // Act & Assert - this should throw because the read crosses the boundary
         var exception = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
-        Assert.Contains("0xFFFFFFF5", exception.Message);
+        Assert.Contains("0xFFFFFFFD", exception.Message);
     }
 }

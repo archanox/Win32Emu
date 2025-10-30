@@ -107,12 +107,14 @@ public class VirtualMemory
 
     public void Write16(ulong addr, ushort value)
     {
+        EnsureRange(addr, 2);
         Write8(addr, (byte)(value & 0xFF));
         Write8(addr + 1, (byte)(value >> 8));
     }
 
     public void Write32(ulong addr, uint value)
     {
+        EnsureRange(addr, 4);
         Write16(addr, (ushort)(value & 0xFFFF));
         Write16(addr + 2, (ushort)(value >> 16));
     }
@@ -125,6 +127,7 @@ public class VirtualMemory
 
     public void Write64(ulong addr, ulong value)
     {
+        EnsureRange(addr, 8);
         Write32(addr, (uint)(value & 0xFFFFFFFF));
         Write32(addr + 4, (uint)(value >> 32));
     }
