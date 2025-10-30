@@ -7605,15 +7605,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return 1; // TRUE (success)
 	}
 
+
 /// <summary>
 /// Reads memory from a specified process.
-/// BOOL ReadProcessMemory(
-///   HANDLE  hProcess,
-///   LPCVOID lpBaseAddress,
-///   LPVOID  lpBuffer,
-///   SIZE_T  nSize,
-///   SIZE_T  *lpNumberOfBytesRead
-/// );
 /// </summary>
 [DllModuleExport(0)]
 private uint ReadProcessMemory(uint hProcess, uint lpBaseAddress, uint lpBuffer, uint nSize, uint lpNumberOfBytesRead)
@@ -7644,7 +7638,7 @@ return 1; // TRUE
 catch (Exception ex)
 {
 _logger.LogError(ex, "[Kernel32] ReadProcessMemory: Exception occurred");
-_lastError = NativeTypes.Win32Error.ERROR_PARTIAL_COPY;
+_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 if (lpNumberOfBytesRead != 0)
 {
 _env.MemWrite32(lpNumberOfBytesRead, 0);
@@ -7665,14 +7659,6 @@ return 0; // FALSE
 
 /// <summary>
 /// Searches for a file in a specified path.
-/// DWORD SearchPathA(
-///   LPCSTR lpPath,
-///   LPCSTR lpFileName,
-///   LPCSTR lpExtension,
-///   DWORD  nBufferLength,
-///   LPSTR  lpBuffer,
-///   LPSTR  *lpFilePart
-/// );
 /// </summary>
 [DllModuleExport(0)]
 private uint SearchPathA(in LpcStr lpPath, in LpcStr lpFileName, in LpcStr lpExtension, uint nBufferLength, in LpStr lpBuffer, uint lpFilePart)
@@ -7697,56 +7683,23 @@ if (!string.IsNullOrEmpty(extension) && !fileName.Contains('.'))
 fullFileName = fileName + extension;
 }
 
-// Try to find the file in the specified paths
-string? foundPath = null;
-var searchPaths = new List<string>();
+// For stub, just return the filename in current directory
+var resultPath = System.IO.Path.Combine(_env.CurrentDirectory, fullFileName);
+var resultPathLength = (uint)(resultPath.Length + 1); // +1 for null terminator
 
-// If path is specified, search there first
-if (!string.IsNullOrEmpty(path))
+if (nBufferLength < resultPathLength)
 {
-searchPaths.AddRange(path.Split(';'));
-}
-else
-{
-// Search in current directory
-searchPaths.Add(_env.FileSystem.CurrentDirectory);
-// Search in system directory
-searchPaths.Add(@"C:\Windows\System32");
-searchPaths.Add(@"C:\Windows");
-}
-
-foreach (var searchPath in searchPaths)
-{
-var testPath = System.IO.Path.Combine(searchPath.Trim(), fullFileName);
-if (_env.FileSystem.FileExists(testPath))
-{
-foundPath = testPath;
-break;
-}
-}
-
-if (foundPath == null)
-{
-_logger.LogInformation("[Kernel32] SearchPathA: File not found");
-_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-return 0;
-}
-
-// Return the found path
-var foundPathLength = (uint)(foundPath.Length + 1); // +1 for null terminator
-if (nBufferLength < foundPathLength)
-{
-_logger.LogInformation("[Kernel32] SearchPathA: Buffer too small, need {FoundPathLength} bytes", foundPathLength);
-return foundPathLength; // Return required size
+_logger.LogInformation("[Kernel32] SearchPathA: Buffer too small, need {ResultPathLength} bytes", resultPathLength);
+return resultPathLength; // Return required size
 }
 
 // Write the path to the buffer
-lpBuffer.WriteString(foundPath);
+lpBuffer.Write(_env.Memory, resultPath, true);
 
 // Write the file part pointer if requested
 if (lpFilePart != 0)
 {
-var lastSlash = foundPath.LastIndexOfAny(new[] { '\\', '/' });
+var lastSlash = resultPath.LastIndexOfAny(new[] { '\\', '/' });
 if (lastSlash >= 0)
 {
 var filePartOffset = (uint)(lastSlash + 1);
@@ -7758,8 +7711,8 @@ _env.MemWrite32(lpFilePart, lpBuffer.Address);
 }
 }
 
-_logger.LogInformation("[Kernel32] SearchPathA: Found \"{FoundPath}\"", foundPath);
-return foundPathLength - 1; // Return length without null terminator
+_logger.LogInformation("[Kernel32] SearchPathA: Returning \"{ResultPath}\"", resultPath);
+return (uint)resultPath.Length; // Return length without null terminator
 }
 
 }

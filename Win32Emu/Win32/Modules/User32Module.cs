@@ -815,7 +815,7 @@ namespace Win32Emu.Win32.Modules
 
 				// Character conversion functions
 				case "CHARTOOEMA":
-					returnValue = CharToOemA(a.Lpstr(0), a.LpStr(1));
+					returnValue = CharToOemA(a.LpStr(0), a.LpStr(1));
 					return true;
 
 				// Accelerator functions
@@ -5429,5 +5429,107 @@ namespace Win32Emu.Win32.Modules
 		_logger.LogInformation("[User32] DialogBoxIndirectParamA: Stub returning IDCANCEL");
 		return 2; // IDCANCEL
 	}
-	}
+
+/// <summary>
+/// Converts a string to OEM character set.
+/// </summary>
+[DllModuleExport(0)]
+private uint CharToOemA(in LpStr lpszSrc, in LpStr lpszDst)
+{
+_logger.LogInformation("[User32] CharToOemA(lpszSrc=0x{LpszSrc:X8}, lpszDst=0x{LpszDst:X8})", lpszSrc.Address, lpszDst.Address);
+// Stub: just copy the string as-is
+var src = lpszSrc.ToString();
+if (!string.IsNullOrEmpty(src))
+{
+lpszDst.Write(_memory!, src, true);
+}
+return 1; // TRUE
+}
+
+/// <summary>
+/// Creates an accelerator table.
+/// </summary>
+[DllModuleExport(0)]
+private uint CreateAcceleratorTableA(uint lpaccl, int cAccel)
+{
+_logger.LogInformation("[User32] CreateAcceleratorTableA(lpaccl=0x{Lpaccl:X8}, cAccel={CAccel})", lpaccl, cAccel);
+// Return a fake accelerator table handle
+return 0x80001000;
+}
+
+/// <summary>
+/// Destroys an accelerator table.
+/// </summary>
+[DllModuleExport(0)]
+private uint DestroyAcceleratorTable(uint hAccel)
+{
+_logger.LogInformation("[User32] DestroyAcceleratorTable(hAccel=0x{HAccel:X8})", hAccel);
+return 1; // TRUE
+}
+
+/// <summary>
+/// Retrieves the coordinates of the update region for a window.
+/// </summary>
+[DllModuleExport(0)]
+private uint GetUpdateRect(uint hWnd, uint lpRect, uint bErase)
+{
+_logger.LogInformation("[User32] GetUpdateRect(hWnd=0x{HWnd:X8}, lpRect=0x{LpRect:X8}, bErase={BErase})", hWnd, lpRect, bErase);
+// Stub: return FALSE (no update region)
+return 0;
+}
+
+/// <summary>
+/// Retrieves the update region for a window.
+/// </summary>
+[DllModuleExport(0)]
+private uint GetUpdateRgn(uint hWnd, uint hRgn, uint bErase)
+{
+_logger.LogInformation("[User32] GetUpdateRgn(hWnd=0x{HWnd:X8}, hRgn=0x{HRgn:X8}, bErase={BErase})", hWnd, hRgn, bErase);
+// Stub: return NULLREGION (no update region)
+return 1;
+}
+
+/// <summary>
+/// Invalidates a region in a window.
+/// </summary>
+[DllModuleExport(0)]
+private uint InvalidateRgn(uint hWnd, uint hRgn, uint bErase)
+{
+_logger.LogInformation("[User32] InvalidateRgn(hWnd=0x{HWnd:X8}, hRgn=0x{HRgn:X8}, bErase={BErase})", hWnd, hRgn, bErase);
+return 1; // TRUE
+}
+
+/// <summary>
+/// Validates a region in a window.
+/// </summary>
+[DllModuleExport(0)]
+private uint ValidateRgn(uint hWnd, uint hRgn)
+{
+_logger.LogInformation("[User32] ValidateRgn(hWnd=0x{HWnd:X8}, hRgn=0x{HRgn:X8})", hWnd, hRgn);
+return 1; // TRUE
+}
+
+/// <summary>
+/// Loads a cursor from a file.
+/// </summary>
+[DllModuleExport(0)]
+private uint LoadCursorFromFileA(in LpcStr lpFileName)
+{
+var fileName = lpFileName.ToString();
+_logger.LogInformation("[User32] LoadCursorFromFileA(lpFileName=\"{FileName}\")", fileName ?? "(null)");
+// Return a fake cursor handle
+return 0x80002000;
+}
+
+/// <summary>
+/// Sets a window class field.
+/// </summary>
+[DllModuleExport(0)]
+private uint SetClassLongA(uint hWnd, int nIndex, uint dwNewLong)
+{
+_logger.LogInformation("[User32] SetClassLongA(hWnd=0x{HWnd:X8}, nIndex={NIndex}, dwNewLong=0x{DwNewLong:X8})", hWnd, nIndex, dwNewLong);
+// Return previous value (stub: return 0)
+return 0;
+}
+}
 }

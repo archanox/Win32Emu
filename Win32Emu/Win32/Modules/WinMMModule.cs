@@ -182,6 +182,11 @@ namespace Win32Emu.Win32.Modules
 					returnValue = PlaySoundA(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				// Joystick functions
+				case "JOYCONFIGCHANGED":
+					returnValue = JoyConfigChanged(a.UInt32(0));
+					return true;
+
 				default:
 					_logger.LogInformation("[WinMM] Unimplemented export: {Export}", export);
 					return false;
@@ -904,6 +909,17 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[WinMM] PlaySound: Stub - would play sound \"{SoundName}\" from module 0x{Hmod:X8}", soundName, hmod);
 			return 1; // TRUE - success
+		}
+
+		/// <summary>
+		/// Notifies the system that joystick configuration has changed.
+		/// MMRESULT joyConfigChanged(DWORD dwFlags);
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint JoyConfigChanged(uint dwFlags)
+		{
+			_logger.LogInformation("[WinMM] JoyConfigChanged(dwFlags=0x{DwFlags:X8})", dwFlags);
+			return 0; // JOYERR_NOERROR
 		}
 	}
 }
