@@ -118,6 +118,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "GETUSERDEFAULTLANGID":
 				returnValue = GetUserDefaultLangID();
 				return true;
+			case "GETSYSTEMDEFAULTLANGID":
+				returnValue = GetSystemDefaultLangID();
+				return true;
 			case "GETDATEFORMATA":
 				returnValue = GetDateFormatA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3), a.LpStr(4), a.Int32(5));
 				return true;
@@ -550,6 +553,9 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			case "LOCKRESOURCE":
 				returnValue = LockResource(a.UInt32(0));
 				return true;
+			case "FREERESOURCE":
+				returnValue = FreeResource(a.UInt32(0));
+				return true;
 
 			// Additional missing functions
 			case "DEVICEIOCONTROL":
@@ -752,6 +758,14 @@ public class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "VIRTUALQUERY":
 				returnValue = VirtualQuery(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "READPROCESSMEMORY":
+				returnValue = ReadProcessMemory(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+
+			// File path functions
+			case "SEARCHPATHA":
+				returnValue = SearchPathA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.UInt32(3), a.LpStr(4), a.UInt32(5));
 				return true;
 
 			// Locale functions
@@ -5805,6 +5819,23 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 	}
+
+	/// <summary>
+	/// Frees a resource loaded by LoadResource.
+	/// In Win32, this function is obsolete and does nothing - resources are freed automatically.
+	/// BOOL FreeResource(HGLOBAL hResData);
+	/// </summary>
+	/// <param name="hResData">Handle to the resource data</param>
+	/// <returns>Always returns TRUE (non-zero) for compatibility</returns>
+	[DllModuleExport(0)]
+	private uint FreeResource(uint hResData)
+	{
+		_logger.LogInformation("[Kernel32] FreeResource: hResData=0x{HResData:X8} (obsolete, no-op)", hResData);
+		// In Win32, FreeResource is obsolete and does nothing
+		// Resources are freed automatically when the module is unloaded
+		return 1; // TRUE
+	}
+
 	[DllModuleExport(8)]
 	private uint SetFileAttributesA(in LpcStr lpFileName, uint dwFileAttributes)
 	{
@@ -6994,6 +7025,19 @@ public class Kernel32Module : IWin32ModuleUnsafe
 		return 0x0409; // English (United States)
 	}
 
+	/// <summary>
+	/// Returns the language identifier for the system locale.
+	/// LANGID GetSystemDefaultLangID(void);
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint GetSystemDefaultLangID()
+	{
+		_logger.LogInformation("[Kernel32] GetSystemDefaultLangID()");
+		// Return English (United States) language ID
+		// LANGID is a 16-bit value: MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)
+		return 0x0409; // English (United States)
+	}
+
 	[DllModuleExport(8)]
 	private uint LocalFileTimeToFileTime(uint lpLocalFileTime, uint lpFileTime)
 	{
@@ -7560,5 +7604,162 @@ public class Kernel32Module : IWin32ModuleUnsafe
 
 		return 1; // TRUE (success)
 	}
+
+/// <summary>
+/// Reads memory from a specified process.
+/// BOOL ReadProcessMemory(
+///   HANDLE  hProcess,
+///   LPCVOID lpBaseAddress,
+///   LPVOID  lpBuffer,
+///   SIZE_T  nSize,
+///   SIZE_T  *lpNumberOfBytesRead
+/// );
+/// </summary>
+[DllModuleExport(0)]
+private uint ReadProcessMemory(uint hProcess, uint lpBaseAddress, uint lpBuffer, uint nSize, uint lpNumberOfBytesRead)
+{
+_logger.LogInformation("[Kernel32] ReadProcessMemory(hProcess=0x{HProcess:X8}, lpBaseAddress=0x{LpBaseAddress:X8}, lpBuffer=0x{LpBuffer:X8}, nSize={NSize}, lpNumberOfBytesRead=0x{LpNumberOfBytesRead:X8})",
+hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesRead);
+
+// For self-process (pseudo-handle or current process), just copy memory
+if (hProcess == 0xFFFFFFFF || hProcess == GetCurrentProcess())
+{
+try
+{
+// Copy memory from source to destination
+for (uint i = 0; i < nSize; i++)
+{
+var value = _env.MemRead8(lpBaseAddress + i);
+_env.MemWrite8(lpBuffer + i, value);
+}
+
+// Write the number of bytes read
+if (lpNumberOfBytesRead != 0)
+{
+_env.MemWrite32(lpNumberOfBytesRead, nSize);
+}
+
+return 1; // TRUE
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "[Kernel32] ReadProcessMemory: Exception occurred");
+_lastError = NativeTypes.Win32Error.ERROR_PARTIAL_COPY;
+if (lpNumberOfBytesRead != 0)
+{
+_env.MemWrite32(lpNumberOfBytesRead, 0);
+}
+return 0; // FALSE
+}
+}
+
+// For other processes, we don't support cross-process memory access in the emulator
+_logger.LogWarning("[Kernel32] ReadProcessMemory: Cross-process memory access not supported");
+_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+if (lpNumberOfBytesRead != 0)
+{
+_env.MemWrite32(lpNumberOfBytesRead, 0);
+}
+return 0; // FALSE
+}
+
+/// <summary>
+/// Searches for a file in a specified path.
+/// DWORD SearchPathA(
+///   LPCSTR lpPath,
+///   LPCSTR lpFileName,
+///   LPCSTR lpExtension,
+///   DWORD  nBufferLength,
+///   LPSTR  lpBuffer,
+///   LPSTR  *lpFilePart
+/// );
+/// </summary>
+[DllModuleExport(0)]
+private uint SearchPathA(in LpcStr lpPath, in LpcStr lpFileName, in LpcStr lpExtension, uint nBufferLength, in LpStr lpBuffer, uint lpFilePart)
+{
+var path = lpPath.ToString();
+var fileName = lpFileName.ToString();
+var extension = lpExtension.ToString();
+
+_logger.LogInformation("[Kernel32] SearchPathA(lpPath=\"{Path}\", lpFileName=\"{FileName}\", lpExtension=\"{Extension}\", nBufferLength={NBufferLength})",
+path ?? "(null)", fileName ?? "(null)", extension ?? "(null)", nBufferLength);
+
+if (string.IsNullOrEmpty(fileName))
+{
+_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+return 0;
+}
+
+// Build the complete filename with extension if provided
+var fullFileName = fileName;
+if (!string.IsNullOrEmpty(extension) && !fileName.Contains('.'))
+{
+fullFileName = fileName + extension;
+}
+
+// Try to find the file in the specified paths
+string? foundPath = null;
+var searchPaths = new List<string>();
+
+// If path is specified, search there first
+if (!string.IsNullOrEmpty(path))
+{
+searchPaths.AddRange(path.Split(';'));
+}
+else
+{
+// Search in current directory
+searchPaths.Add(_env.FileSystem.CurrentDirectory);
+// Search in system directory
+searchPaths.Add(@"C:\Windows\System32");
+searchPaths.Add(@"C:\Windows");
+}
+
+foreach (var searchPath in searchPaths)
+{
+var testPath = System.IO.Path.Combine(searchPath.Trim(), fullFileName);
+if (_env.FileSystem.FileExists(testPath))
+{
+foundPath = testPath;
+break;
+}
+}
+
+if (foundPath == null)
+{
+_logger.LogInformation("[Kernel32] SearchPathA: File not found");
+_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+return 0;
+}
+
+// Return the found path
+var foundPathLength = (uint)(foundPath.Length + 1); // +1 for null terminator
+if (nBufferLength < foundPathLength)
+{
+_logger.LogInformation("[Kernel32] SearchPathA: Buffer too small, need {FoundPathLength} bytes", foundPathLength);
+return foundPathLength; // Return required size
+}
+
+// Write the path to the buffer
+lpBuffer.WriteString(foundPath);
+
+// Write the file part pointer if requested
+if (lpFilePart != 0)
+{
+var lastSlash = foundPath.LastIndexOfAny(new[] { '\\', '/' });
+if (lastSlash >= 0)
+{
+var filePartOffset = (uint)(lastSlash + 1);
+_env.MemWrite32(lpFilePart, lpBuffer.Address + filePartOffset);
+}
+else
+{
+_env.MemWrite32(lpFilePart, lpBuffer.Address);
+}
+}
+
+_logger.LogInformation("[Kernel32] SearchPathA: Found \"{FoundPath}\"", foundPath);
+return foundPathLength - 1; // Return length without null terminator
+}
 
 }

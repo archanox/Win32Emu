@@ -322,6 +322,14 @@ namespace Win32Emu.Win32.Modules
 					returnValue = GetSystemPaletteUse(a.UInt32(0));
 					return true;
 
+				// Region functions
+				case "CREATERECTRGN":
+					returnValue = CreateRectRgn(a.Int32(0), a.Int32(1), a.Int32(2), a.Int32(3));
+					return true;
+				case "GETREGIONDATA":
+					returnValue = GetRegionData(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
 				default:
 					_logger.LogInformation("[Gdi32] Unimplemented export: {Export}", export);
 					return false;
@@ -1350,13 +1358,101 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
+		/// <summary>
+		/// Creates a rectangular region.
+		/// HRGN CreateRectRgn(
+		///   int x1,
+		///   int y1,
+		///   int x2,
+		///   int y2
+		/// );
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint CreateRectRgn(int x1, int y1, int x2, int y2)
+		{
+			_logger.LogInformation("[Gdi32] CreateRectRgn(x1={X1}, y1={Y1}, x2={X2}, y2={Y2})", x1, y1, x2, y2);
+
+			// Create a new region object
+			var regionHandle = _nextGdiObjectHandle++;
+			_gdiObjects[regionHandle] = new GdiObject
+			{
+				Type = GdiObjectType.Region
+			};
+
+			return regionHandle;
+		}
+
+		/// <summary>
+		/// Retrieves data for a specified region.
+		/// DWORD GetRegionData(
+		///   HRGN   hrgn,
+		///   DWORD  nCount,
+		///   LPRGNDATA lpRgnData
+		/// );
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint GetRegionData(uint hrgn, uint nCount, uint lpRgnData)
+		{
+			_logger.LogInformation("[Gdi32] GetRegionData(hrgn=0x{Hrgn:X8}, nCount={NCount}, lpRgnData=0x{LpRgnData:X8})",
+				hrgn, nCount, lpRgnData);
+
+			if (!_gdiObjects.ContainsKey(hrgn))
+			{
+				_logger.LogWarning("[Gdi32] GetRegionData: Invalid region handle");
+				return 0;
+			}
+
+			// Return a minimal RGNDATA structure
+			// RGNDATA header is 32 bytes:
+			// - dwSize: 32 (DWORD)
+			// - iType: 1 (RDH_RECTANGLES) (DWORD)
+			// - nCount: 1 (DWORD)
+			// - nRgnSize: 16 (DWORD)
+			// - rcBound: RECT (16 bytes)
+			const uint headerSize = 32;
+			const uint rectSize = 16;
+			const uint totalSize = headerSize + rectSize;
+
+			if (lpRgnData == 0)
+			{
+				// Return required buffer size
+				return totalSize;
+			}
+
+			if (nCount < totalSize)
+			{
+				// Buffer too small
+				_logger.LogWarning("[Gdi32] GetRegionData: Buffer too small");
+				return 0;
+			}
+
+			// Write RGNDATA structure
+			_env.MemWrite32(lpRgnData + 0, headerSize);      // dwSize
+			_env.MemWrite32(lpRgnData + 4, 1);               // iType (RDH_RECTANGLES)
+			_env.MemWrite32(lpRgnData + 8, 1);               // nCount
+			_env.MemWrite32(lpRgnData + 12, rectSize);       // nRgnSize
+			// rcBound (RECT)
+			_env.MemWrite32(lpRgnData + 16, 0);              // left
+			_env.MemWrite32(lpRgnData + 20, 0);              // top
+			_env.MemWrite32(lpRgnData + 24, 100);            // right
+			_env.MemWrite32(lpRgnData + 28, 100);            // bottom
+			// Rectangle data
+			_env.MemWrite32(lpRgnData + 32, 0);              // left
+			_env.MemWrite32(lpRgnData + 36, 0);              // top
+			_env.MemWrite32(lpRgnData + 40, 100);            // right
+			_env.MemWrite32(lpRgnData + 44, 100);            // bottom
+
+			return totalSize;
+		}
+
 		private enum GdiObjectType
 		{
 			Pen,
 			Brush,
 			Font,
 			Bitmap,
-			Palette
+			Palette,
+			Region
 		}
 
 		private class GdiObject

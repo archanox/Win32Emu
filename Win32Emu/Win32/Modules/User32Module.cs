@@ -813,6 +813,43 @@ namespace Win32Emu.Win32.Modules
 					returnValue = DialogBoxIndirectParamA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 					return true;
 
+				// Character conversion functions
+				case "CHARTOOEMA":
+					returnValue = CharToOemA(a.Lpstr(0), a.LpStr(1));
+					return true;
+
+				// Accelerator functions
+				case "CREATEACCELERATORTABLEA":
+					returnValue = CreateAcceleratorTableA(a.UInt32(0), a.Int32(1));
+					return true;
+				case "DESTROYACCELERATORTABLE":
+					returnValue = DestroyAcceleratorTable(a.UInt32(0));
+					return true;
+
+				// Window region functions
+				case "GETUPDATERECT":
+					returnValue = GetUpdateRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "GETUPDATERGN":
+					returnValue = GetUpdateRgn(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "INVALIDATERGN":
+					returnValue = InvalidateRgn(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "VALIDATERGN":
+					returnValue = ValidateRgn(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				// Cursor functions
+				case "LOADCURSORFROMFILEA":
+					returnValue = LoadCursorFromFileA(a.LpcStr(0));
+					return true;
+
+				// Window class functions
+				case "SETCLASSLONGA":
+					returnValue = SetClassLongA(a.UInt32(0), a.Int32(1), a.UInt32(2));
+					return true;
+
 				default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
