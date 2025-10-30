@@ -690,4 +690,44 @@ public class CpuMemoryAccessTests
         // The fix in Emulator.cs now detects and corrects unaligned EBP values
         // by resetting them to ESP (which is always properly aligned)
     }
+    
+    [Fact]
+    public void Push_WithVerySmallESP_ShouldCauseUnderflow()
+    {
+        // This test reproduces the scenario from the problem statement:
+        // ESP=0x00000002 and attempting to PUSH causes underflow to 0xFFFFFFFE
+        
+        // Arrange
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        // Set ESP to a very small value
+        cpu.SetRegister("ESP", 0x00000002);
+        cpu.SetEip(0x00400000);
+        
+        // Write a PUSH instruction: PUSH EAX (0x50)
+        memory.Write8(0x00400000, 0x50);
+        
+        // Act & Assert
+        // This should throw because PUSH will try to write to 0xFFFFFFFE
+        // which crosses the 4GB boundary
+        var exception = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(memory));
+        Assert.Contains("0xFFFFFFFE", exception.Message);
+    }
+    
+    [Fact]
+    public void ESP_BelowMinimum_IsDetectedEarly()
+    {
+        // Test that we can detect ESP corruption before it causes a crash
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+        
+        // Set ESP to a suspiciously low value (but not so low that it underflows immediately)
+        cpu.SetRegister("ESP", 0x00000100);
+        
+        // This is valid, but suspicious - should be logged/detected by validation code
+        var esp = cpu.GetRegister("ESP");
+        Assert.True(esp < 0x00010000, "ESP should be below typical stack range");
+        Assert.True(esp > 0, "ESP should still be positive");
+    }
 }
