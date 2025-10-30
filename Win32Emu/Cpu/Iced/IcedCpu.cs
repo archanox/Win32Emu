@@ -450,19 +450,9 @@ public class IcedCpu : IAsyncCpu
 					// Handle INT instruction with immediate
 					if (insn.Immediate8 == 3)
 					{
-						// INT3 breakpoint - check if it's at a synthetic export or COM vtable address
-						// Note: Import stubs (0x0F000000-0x10000000) now use CALL/RET and syscall mechanism
-						if (oldEip is >= 0x0E000000 and < 0x0F000000)
-						{
-							// This is a synthetic export stub - signal this as a call
-							isCall = true;
-							callTarget = oldEip;
-							_logger.LogInformation("[IcedCpu] INT 3 hooking synthetic export stub at address 0x{OldEip:X8}", oldEip);
-
-							// Don't actually execute the INT3, just treat it as a call
-							// The main loop will handle the synthetic export invocation
-						}
-						else if (oldEip is >= 0x0D000000 and < 0x0E000000)
+						// INT3 breakpoint - check if it's at a COM vtable address
+						// Note: Import stubs (0x0F000000-0x10000000) and synthetic exports (0x0F800000+) now use CALL/RET and syscall mechanism
+						if (oldEip is >= 0x0D000000 and < 0x0E000000)
 						{
 							// This is a COM vtable method stub - signal this as a call
 							isCall = true;
@@ -494,20 +484,10 @@ public class IcedCpu : IAsyncCpu
 
 					break;
 				case Mnemonic.Int3:
-					// Handle INT3 (0xCC) instruction used for synthetic exports and COM vtable methods
-					// Note: Import stubs (0x0F000000-0x10000000) now use CALL/RET and syscall mechanism,
+					// Handle INT3 (0xCC) instruction used for COM vtable methods
+					// Note: Import stubs (0x0F000000-0x10000000) and synthetic exports (0x0F800000+) now use CALL/RET and syscall mechanism,
 					// so they don't trigger INT3 anymore
-					if (oldEip is >= 0x0E000000 and < 0x0F000000)
-					{
-						// This is a synthetic export stub - signal this as a call
-						isCall = true;
-						callTarget = oldEip;
-						_logger.LogInformation("[IcedCpu] INT3 (0xCC) hooking synthetic export stub at address 0x{OldEip:X8}", oldEip);
-
-						// Don't actually execute the INT3, just treat it as a call
-						// The main loop will handle the synthetic export invocation
-					}
-					else if (oldEip is >= 0x0D000000 and < 0x0E000000)
+					if (oldEip is >= 0x0D000000 and < 0x0E000000)
 					{
 						// This is a COM vtable method stub - signal this as a call
 						isCall = true;

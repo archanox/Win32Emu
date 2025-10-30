@@ -4,7 +4,7 @@ using Xunit;
 namespace Win32Emu.Tests.Kernel32;
 
 /// <summary>
-/// Test to verify the synthetic export address collision fix
+/// Test to verify synthetic exports use the syscall mechanism
 /// </summary>
 public class SyntheticExportAddressFixTests : IDisposable
 {
@@ -16,10 +16,10 @@ public class SyntheticExportAddressFixTests : IDisposable
     }
 
     [Fact]
-    public void SyntheticExport_ShouldNotCollideWithSyscallDispatcher()
+    public void SyntheticExport_ShouldUseSyscallMechanism()
     {
-        // The syscall dispatcher is at 0x0E000000
-        // Synthetic exports should start at 0x0E000010 to avoid collision
+        // Synthetic exports now use the syscall mechanism (CALL/RET stubs) like import stubs
+        // They should be in the 0x0F800000 range, distinct from import stubs at 0x0F000000
         
         var kernel32Name = _testEnv.WriteString("KERNEL32");
         var moduleHandle = _testEnv.CallKernel32Api("GETMODULEHANDLEA", kernel32Name);
@@ -30,8 +30,8 @@ public class SyntheticExportAddressFixTests : IDisposable
         // Verify synthetic export is NOT at 0x0E000000 (syscall dispatcher)
         Assert.NotEqual(0x0E000000u, functionAddress);
         
-        // Verify it's at 0x0E000010 or later (with 16-byte alignment)
-        Assert.True(functionAddress >= 0x0E000010u);
+        // Verify it's in the synthetic export range (0x0F800000+) with 16-byte alignment
+        Assert.True(functionAddress >= 0x0F800000u);
         Assert.Equal(0u, functionAddress % 16);
     }
 
