@@ -422,7 +422,11 @@ public sealed class Emulator : IDisposable
                 // Import stubs are aligned to 16-byte boundaries (0x10)
                 // We need to align down to check if this is a valid stub
                 var alignedEip = currentEip & 0xFFFFFFF0u;
-                if (!_image!.ImportAddressMap.ContainsKey(alignedEip))
+                
+                // Get the current main executable (may have been updated with synthetic exports)
+                var currentImage = _env!.GetMainExecutable() ?? _image!;
+                
+                if (!currentImage.ImportAddressMap.ContainsKey(alignedEip))
                 {
                     // This import address is not mapped - simulate a return with error
                     var esp = _cpu.GetRegister("ESP");
@@ -472,8 +476,11 @@ public sealed class Emulator : IDisposable
                 // (5 bytes for CALL instruction, then RET is at +5, which is what retToStub points to)
                 var importStubAddr = retToStub - 5;
                 
+                // Get the current main executable (may have been updated with synthetic exports)
+                var currentImage = _env!.GetMainExecutable() ?? _image!;
+                
                 // Look up which import this is
-                if (_image!.ImportAddressMap.TryGetValue(importStubAddr, out var imp))
+                if (currentImage.ImportAddressMap.TryGetValue(importStubAddr, out var imp))
                 {
                     var dll = imp.dll.ToUpperInvariant();
                     var name = imp.name;
@@ -697,7 +704,10 @@ public sealed class Emulator : IDisposable
                 LogDebug("\n[Debug] *** CPU TRYING TO EXECUTE SYNTHETIC IMPORT ADDRESS! ***");
                 LogDebug($"[Debug] EIP=0x{currentEip:X8} at instruction {i}");
 
-                if (_image!.ImportAddressMap.TryGetValue(currentEip, out var importInfo))
+                // Get the current main executable (may have been updated with synthetic exports)
+                var currentImage = _env!.GetMainExecutable() ?? _image!;
+                
+                if (currentImage.ImportAddressMap.TryGetValue(currentEip, out var importInfo))
                 {
                     LogDebug($"[Debug] This is import: {importInfo.dll}!{importInfo.name}");
                 }
@@ -788,16 +798,21 @@ public sealed class Emulator : IDisposable
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     }
                 }
-                else if (step.IsCall && !IsImportStubAddress(step.CallTarget) && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                else if (step.IsCall && !IsImportStubAddress(step.CallTarget))
                 {
-                    var dll = imp.dll.ToUpperInvariant();
-                    var name = imp.name;
-                    _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                    // Get the current main executable (may have been updated with synthetic exports)
+                    var currentImage = _env!.GetMainExecutable() ?? _image!;
                     
-                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
-                    var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
-                    
-                    if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
+                    if (currentImage.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                    {
+                        var dll = imp.dll.ToUpperInvariant();
+                        var name = imp.name;
+                        _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                        
+                        // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                        var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+                        
+                        if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                     {
                         LogDebug($"[Import] Returned 0x{ret:X8}, argBytes={argBytes}");
                         var esp = _cpu.GetRegister("ESP");
@@ -853,6 +868,7 @@ public sealed class Emulator : IDisposable
                         
                         _logger.LogWarning("[Import] Simulated return to 0x{RetEip:X8} with EAX=0 (this may cause incorrect behavior)", retEip);
                     }
+                    }
                 }
                 else if (step.IsCall && step.CallTarget >= 0x0F000000 && step.CallTarget < 0x10000000)
                 {
@@ -882,7 +898,11 @@ public sealed class Emulator : IDisposable
                 if (currentEip is >= 0x0F000000 and < 0x10000000)
                 {
                     LogDebug($"[Debug] ERROR CAUSE: Trying to execute synthetic import address 0x{currentEip:X8}");
-                    if (_image!.ImportAddressMap.TryGetValue(currentEip, out var importInfo))
+                    
+                    // Get the current main executable (may have been updated with synthetic exports)
+                    var currentImage = _env!.GetMainExecutable() ?? _image!;
+                    
+                    if (currentImage.ImportAddressMap.TryGetValue(currentEip, out var importInfo))
                     {
                         LogDebug($"[Debug] This is import: {importInfo.dll}!{importInfo.name}");
                     }
@@ -981,19 +1001,24 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("EBP", savedEbp);
                 }
             }
-            else if (step.IsCall && !IsImportStubAddress(step.CallTarget) && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+            else if (step.IsCall && !IsImportStubAddress(step.CallTarget))
             {
-                var dll = imp.dll.ToUpperInvariant();
-                var name = imp.name;
-                _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                // Get the current main executable (may have been updated with synthetic exports)
+                var currentImage = _env!.GetMainExecutable() ?? _image!;
                 
-                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
-                var savedEbx = _cpu.GetRegister("EBX");
-                var savedEsi = _cpu.GetRegister("ESI");
-                var savedEdi = _cpu.GetRegister("EDI");
-                var savedEbp = _cpu.GetRegister("EBP");
-                
-                if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
+                if (currentImage.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                {
+                    var dll = imp.dll.ToUpperInvariant();
+                    var name = imp.name;
+                    _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                    
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                    var savedEbx = _cpu.GetRegister("EBX");
+                    var savedEsi = _cpu.GetRegister("ESI");
+                    var savedEdi = _cpu.GetRegister("EDI");
+                    var savedEbp = _cpu.GetRegister("EBP");
+                    
+                    if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                 {
                     LogDebug($"[Import] Returned 0x{ret:X8}");
                     var esp = _cpu.GetRegister("ESP");
@@ -1007,6 +1032,7 @@ public sealed class Emulator : IDisposable
                     _cpu.SetRegister("ESI", savedEsi);
                     _cpu.SetRegister("EDI", savedEdi);
                     _cpu.SetRegister("EBP", savedEbp);
+                }
                 }
             }
         }
@@ -1073,16 +1099,21 @@ public sealed class Emulator : IDisposable
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     }
                 }
-                else if (step.IsCall && !IsImportStubAddress(step.CallTarget) && _image!.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                else if (step.IsCall && !IsImportStubAddress(step.CallTarget))
                 {
-                    var dll = imp.dll.ToUpperInvariant();
-                    var name = imp.name;
-                    _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                    // Get the current main executable (may have been updated with synthetic exports)
+                    var currentImage = _env!.GetMainExecutable() ?? _image!;
                     
-                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
-                    var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
-                    
-                    if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
+                    if (currentImage.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+                    {
+                        var dll = imp.dll.ToUpperInvariant();
+                        var name = imp.name;
+                        _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                        
+                        // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
+                        var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+                        
+                        if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                     {
                         LogDebug($"[Import] Returned 0x{ret:X8}");
                         var esp = _cpu.GetRegister("ESP");
@@ -1093,6 +1124,7 @@ public sealed class Emulator : IDisposable
                         
                         // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                    }
                     }
                 }
             }
