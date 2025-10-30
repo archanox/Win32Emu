@@ -30,25 +30,27 @@ public class SyntheticExportTests : IDisposable
         
         // Assert - Should return a non-zero function address in the synthetic export range
         Assert.NotEqual(0u, functionAddress);
-        Assert.InRange(functionAddress, 0x0E000000u, 0x0F000000u);
+        Assert.InRange(functionAddress, 0x0F800000u, 0x10000000u); // Synthetic exports at 0x0F800000+
     }
 
     [Fact]
-    public void SyntheticExport_ShouldBeRegisteredInProcessEnvironment()
+    public void SyntheticExport_ShouldUse_SyscallMechanism()
     {
         // Arrange
         var kernel32Name = _testEnv.WriteString("KERNEL32");
-        var moduleHandle = _testEnv.CallKernel32Api("GETMODULEHANDLEA", kernel32Name);
+        var kernel32Handle = _testEnv.CallKernel32Api("GETMODULEHANDLEA", kernel32Name);
         var procNamePtr = _testEnv.WriteString("IsProcessorFeaturePresent");
         
         // Act
-        var functionAddress = _testEnv.CallKernel32Api("GETPROCADDRESS", moduleHandle, procNamePtr);
+        var functionAddress = _testEnv.CallKernel32Api("GETPROCADDRESS", kernel32Handle, procNamePtr);
         
-        // Assert - Should be able to look up the synthetic export
-        var found = _testEnv.ProcessEnv.TryGetSyntheticExport(functionAddress, out var moduleName, out var exportName);
-        Assert.True(found);
-        Assert.Equal("KERNEL32.DLL", moduleName);
-        Assert.Equal("ISPROCESSORFEATUREPRESENT", exportName);
+        // Assert - Synthetic exports now use the syscall mechanism (CALL/RET stubs)
+        // They should be in the 0x0F800000+ range and have CALL instruction as first byte
+        Assert.InRange(functionAddress, 0x0F800000u, 0x10000000u);
+        
+        // The stub should start with CALL instruction (0xE8)
+        var firstByte = _testEnv.Memory.Read8(functionAddress);
+        Assert.Equal(0xE8, firstByte);
     }
 
     [Fact]
@@ -70,7 +72,7 @@ public class SyntheticExportTests : IDisposable
     }
 
     [Fact]
-    public void SyntheticExport_MemoryAt_ShouldContainINT3Stub()
+    public void SyntheticExport_MemoryAt_ShouldContainCALLStub()
     {
         // Arrange
         var kernel32Name = _testEnv.WriteString("KERNEL32");
@@ -80,9 +82,9 @@ public class SyntheticExportTests : IDisposable
         // Act
         var functionAddress = _testEnv.CallKernel32Api("GETPROCADDRESS", moduleHandle, procNamePtr);
         
-        // Assert - Should have INT3 (0xCC) as the first byte
+        // Assert - Should have CALL (0xE8) as the first byte (CALL rel32 instruction)
         var firstByte = _testEnv.Memory.Read8(functionAddress);
-        Assert.Equal(0xCC, firstByte);
+        Assert.Equal(0xE8, firstByte); // CALL instruction
     }
 
     public void Dispose()

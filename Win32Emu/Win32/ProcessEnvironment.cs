@@ -213,10 +213,14 @@ public class ProcessEnvironment
 	private readonly Dictionary<string, uint> _loadedModules = new(StringComparer.OrdinalIgnoreCase);
 	private readonly Dictionary<string, LoadedImage> _loadedImages = new(StringComparer.OrdinalIgnoreCase);
 	private uint _nextModuleHandle = 0x10000000;
+	private string? _mainExecutableName; // Track the main executable's name for reliable lookup
 
-	// Emulated module exports tracking (for GetProcAddress on system DLLs)
-	private readonly Dictionary<uint, (string module, string export)> _syntheticExports = new();
-	private uint _nextSyntheticExport = 0x0E000000; // Synthetic export base address
+	// Syscall dispatcher address - shared with PeImageLoader
+	private const uint SYSCALL_DISPATCHER_ADDRESS = 0x0E000000;
+	
+	// Synthetic exports now use syscall mechanism (CALL/RET stubs) starting at 0x0F000000 range
+	// They are stored in the main executable's ImportAddressMap for unified handling
+	private uint _nextSyntheticExport = 0x0F800000; // Synthetic export stub base address (distinct from import stubs at 0x0F000000)
 
 	// Standard control window procedure marker address range
 	// Window procedures in this range (0x0D000000 - 0x0DFFFFFF) are markers for standard controls
@@ -746,6 +750,7 @@ public class ProcessEnvironment
 		var normalizedName = Path.GetFileName(imagePath).ToUpperInvariant();
 		_loadedModules[normalizedName] = image.BaseAddress;
 		_loadedImages[normalizedName] = image;
+		_mainExecutableName = normalizedName; // Track the main executable for synthetic exports
 		_logger.LogInformation("[ProcessEnv] Registered main executable: {ImagePath} at 0x{BaseAddress:X8}", imagePath, image.BaseAddress);
 	}
 
@@ -791,35 +796,58 @@ public class ProcessEnvironment
 	/// <summary>
 	/// Register a synthetic export for an emulated module.
 	/// Returns a synthetic address that can be used to call this export.
+	/// Uses the syscall mechanism (CALL/RET stub) for unified handling with import stubs.
 	/// </summary>
 	public uint RegisterSyntheticExport(string moduleName, string exportName)
 	{
 		var address = _nextSyntheticExport;
 		_nextSyntheticExport += 0x10;
-		_syntheticExports[address] = (moduleName.ToUpperInvariant(), exportName.ToUpperInvariant());
 		
-		// Create a stub at the synthetic address (INT3 for breakpoint interception)
-		var stub = new byte[] { 0xCC, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 };
+		// Create import stub using syscall mechanism (same as regular imports):
+		// CALL [syscall_dispatcher]; RET argBytes
+		// The RET instruction will be patched at runtime with the correct argBytes value
+		
+		// Calculate relative offset from stub address to syscall dispatcher
+		var stubAddr = address;
+		var callOffset = (int)(SYSCALL_DISPATCHER_ADDRESS - (stubAddr + 5)); // +5 for size of CALL instruction
+		
+		var stub = new byte[]
+		{
+			0xE8, // CALL rel32
+			(byte)(callOffset & 0xFF),
+			(byte)((callOffset >> 8) & 0xFF),
+			(byte)((callOffset >> 16) & 0xFF),
+			(byte)((callOffset >> 24) & 0xFF),
+			0xC2, 0x00, 0x00, // RET 0 - will be patched at runtime with actual argBytes
+			// Padding to maintain 16-byte alignment
+			0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90
+		};
 		Memory.WriteBytes(address, stub);
 		
-		return address;
-	}
-
-	/// <summary>
-	/// Try to get the module and export name for a synthetic export address.
-	/// </summary>
-	public bool TryGetSyntheticExport(uint address, out string moduleName, out string exportName)
-	{
-		if (_syntheticExports.TryGetValue(address, out var export))
+		// Add to the main executable's import map so syscall handler can find it
+		// Get the main executable's LoadedImage using the tracked name
+		if (_mainExecutableName != null && _loadedImages.TryGetValue(_mainExecutableName, out var mainExeImage))
 		{
-			moduleName = export.module;
-			exportName = export.export;
-			return true;
+			// Create a new ImportAddressMap with the synthetic export added (respecting record immutability)
+			var newImportAddressMap = new Dictionary<uint, (string dll, string name)>(mainExeImage.ImportAddressMap)
+			{
+				[address] = (moduleName.ToUpperInvariant(), exportName)
+			};
+			
+			// Create a new LoadedImage with the updated ImportAddressMap
+			var updatedMainExeImage = mainExeImage with { ImportAddressMap = newImportAddressMap };
+			
+			// Replace the main executable's LoadedImage in the dictionary
+			_loadedImages[_mainExecutableName] = updatedMainExeImage;
+			
+			_logger.LogInformation("[ProcessEnv] Registered synthetic export: {Module}!{Export} at 0x{Address:X8}", moduleName, exportName, address);
 		}
-
-		moduleName = string.Empty;
-		exportName = string.Empty;
-		return false;
+		else
+		{
+			_logger.LogWarning("[ProcessEnv] Could not register synthetic export {Module}!{Export} - no main executable loaded", moduleName, exportName);
+		}
+		
+		return address;
 	}
 
 	// Heaps
