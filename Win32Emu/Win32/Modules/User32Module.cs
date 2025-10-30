@@ -4240,6 +4240,39 @@ namespace Win32Emu.Win32.Modules
 						if (idx < 10) return 0x30 + idx; // 0-9
 					}
 					if (uCode == 0x1C) return 0x0D; // VK_RETURN
+			_logger.LogInformation("[User32] MapVirtualKeyA(uCode={UCode}, uMapType={UMapType})", uCode, uMapType);
+
+			// Very light-weight fallback mappings to avoid returning 0 for basic keys.
+			// These are not hardware-accurate but keep software paths functioning.
+			switch (uMapType)
+			{
+				// VK -> Scan
+				case 0:
+					// A-Z
+					if (uCode >= 0x41 && uCode <= 0x5A)
+						return (uCode - 0x41) + 0x1E; // placeholder sequential scancodes
+					// 0-9
+					if (uCode >= 0x30 && uCode <= 0x39)
+						return (uCode - 0x30) + 0x0B;
+					// Enter, Escape, Space as common keys
+					if (uCode == 0x0D) return 0x1C; // VK_RETURN
+					if (uCode == 0x1B) return 0x01; // VK_ESCAPE
+					if (uCode == 0x20) return 0x39; // VK_SPACE
+					return 0; // unmapped
+				// Scan -> VK
+				case 1:
+					// Reverse of above minimal set
+					if (uCode >= 0x1E && uCode <= 0x3B)
+					{
+						var idx = uCode - 0x1E;
+						if (idx < 26) return 0x41 + idx; // A-Z
+					}
+					if (uCode >= 0x0B && uCode <= 0x14)
+					{
+						var idx = uCode - 0x0B;
+						if (idx < 10) return 0x30 + idx; // 0-9
+					}
+					if (uCode == 0x1C) return 0x0D; // VK_RETURN
 					if (uCode == 0x01) return 0x1B; // VK_ESCAPE
 					if (uCode == 0x39) return 0x20; // VK_SPACE
 					return 0;
