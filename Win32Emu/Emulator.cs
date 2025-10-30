@@ -482,11 +482,20 @@ public sealed class Emulator : IDisposable
                     // Save callee-saved registers
                     var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                     
-                    // The actual function arguments start at ESP+4 (after return address to stub)
+                    // Adjust ESP to skip the return address to stub (at [ESP+0]),
+                    // so that StackArgs reads arguments from the correct offsets:
+                    // Before adjustment: [ESP+0] = return to stub, [ESP+4] = return to caller, [ESP+8] = arg1, ...
+                    // After adjustment:  [ESP+0] = return to caller, [ESP+4] = arg1, [ESP+8] = arg2, ...
+                    // This matches the layout expected by StackArgs and Win32 function signatures
+                    _cpu.SetRegister("ESP", esp + 4);
+                    
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                     {
                         // Set return value - this is all we do, no EIP/ESP manipulation!
                         _cpu.SetRegister("EAX", ret);
+                        
+                        // Restore ESP to its original value (pointing to return address to stub)
+                        _cpu.SetRegister("ESP", esp);
                         
                         // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
@@ -522,6 +531,8 @@ public sealed class Emulator : IDisposable
                     {
                         _logger.LogError("[Syscall] Dispatcher failed to invoke {Dll}!{Name}", dll, name);
                         _cpu.SetRegister("EAX", 0);
+                        // Restore ESP to its original value
+                        _cpu.SetRegister("ESP", esp);
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     }
                 }
