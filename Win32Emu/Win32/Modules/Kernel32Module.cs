@@ -3250,10 +3250,28 @@ public class Kernel32Module : IWin32ModuleUnsafe
 			_logger.LogInformation("[Kernel32] CopyFileA: Copied '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
 			return NativeTypes.Win32Bool.TRUE;
 		}
-		catch (Exception ex)
+		catch (FileNotFoundException ex)
 		{
 			_logger.LogInformation(ex, "[Kernel32] CopyFileA failed: {ExMessage}", ex.Message);
 			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		catch (UnauthorizedAccessException ex)
+		{
+			_logger.LogInformation(ex, "[Kernel32] CopyFileA failed: {ExMessage}", ex.Message);
+			_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		catch (IOException ex)
+		{
+			_logger.LogInformation(ex, "[Kernel32] CopyFileA failed: {ExMessage}", ex.Message);
+			_lastError = NativeTypes.Win32Error.ERROR_WRITE_FAULT;
+			return NativeTypes.Win32Bool.FALSE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation(ex, "[Kernel32] CopyFileA failed: {ExMessage}", ex.Message);
+			_lastError = NativeTypes.Win32Error.ERROR_GEN_FAILURE;
 			return NativeTypes.Win32Bool.FALSE;
 		}
 	}
