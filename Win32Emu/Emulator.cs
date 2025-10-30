@@ -31,6 +31,7 @@ public sealed class Emulator : IDisposable
     private readonly ManualResetEvent _pauseEvent;
     private Task? _eventProcessingTask;
     private CancellationTokenSource? _eventProcessingCts;
+    private readonly HashSet<uint> _patchedImportStubs = new();
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -490,11 +491,32 @@ public sealed class Emulator : IDisposable
                         // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                         
-                        _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, CPU will execute RET naturally", ret);
+                        _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, argBytes={ArgBytes}, CPU will execute RET naturally", ret, argBytes);
+                        
+                        // Patch the import stub's RET instruction with the correct argBytes value for stdcall cleanup
+                        // The stub RET instruction is at importStubAddr + 5 (after the 5-byte CALL instruction)
+                        // Format: RET imm16 = 0xC2 <low_byte> <high_byte>
+                        // Only patch if not already patched to avoid redundant memory writes
+                        if (argBytes <= 0xFFFF && !_patchedImportStubs.Contains(importStubAddr))
+                        {
+                            var retInstrAddr = importStubAddr + 5;
+                            var opcode = _vm!.Read8(retInstrAddr);
+                            if (opcode == 0xC2)
+                            {
+                                _vm!.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
+                                _vm!.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
+                                _patchedImportStubs.Add(importStubAddr);
+                                _logger.LogDebug("[Syscall] Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes}", retInstrAddr, argBytes);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("[Syscall] Expected RET imm16 (0xC2) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", retInstrAddr, opcode);
+                            }
+                        }
                         
                         // The CPU will now execute the RET instruction in the syscall dispatcher,
-                        // which returns to the import stub, which then executes its own RET
-                        // to return to the original caller. All naturally through CPU execution!
+                        // which returns to the import stub, which then executes its RET imm16
+                        // to return to the original caller with proper stack cleanup!
                     }
                     else
                     {
