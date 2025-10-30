@@ -55,7 +55,7 @@ public class EbpInitializationTests
         
         // Test instruction: ADD EAX, [EBP-3]
         // With EBP=0, this calculates address 0xFFFFFFFD
-        // Reading 4 bytes from 0xFFFFFFFD crosses the 4GB boundary
+        // Reading 4 bytes from 0xFFFFFFFD (addresses 0xFFFFFFFD-0x100000000) crosses the 4GB boundary at 0x100000000
         var testCode = new byte[]
         {
             0x03, 0x45, 0xFD  // ADD EAX, [EBP-3]  (FD = -3)
