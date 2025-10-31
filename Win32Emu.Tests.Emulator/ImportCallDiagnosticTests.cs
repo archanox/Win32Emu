@@ -231,4 +231,73 @@ public class ImportCallDiagnosticTests
 
         Assert.Fail($"Did not reach HLT after {maxInstructions} instructions. Last EIP: 0x{cpu.GetEip():X8}");
     }
+
+    [Fact]
+    public void InvalidInstruction_ShouldThrowException()
+    {
+        // This test verifies that INVALID instructions halt execution by throwing an exception
+        // This prevents the cascading stack corruption described in the issue
+
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+
+        var codeBase = 0x00400000u;
+        var stackBase = 0x00100000u;
+        cpu.SetEip(codeBase);
+        cpu.SetRegister("ESP", stackBase);
+
+        // Write invalid instruction bytes
+        // 0xFF 0xFF is decoded as INVALID by the Iced decoder
+        const byte INVALID_INSTRUCTION_BYTE = 0xFF;
+        memory.Write8(codeBase + 0, INVALID_INSTRUCTION_BYTE);
+        memory.Write8(codeBase + 1, INVALID_INSTRUCTION_BYTE);
+
+        // Attempting to execute the INVALID instruction should throw an exception
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+        {
+            cpu.SingleStep(memory);
+        });
+
+        _output.WriteLine($"Exception message: {exception.Message}");
+        Assert.Contains("INVALID instruction", exception.Message);
+        Assert.Contains($"0x{codeBase:X8}", exception.Message);
+    }
+
+    [Fact]
+    public void InvalidInstruction_PreventsStackCorruption()
+    {
+        // This test verifies that execution halts on the FIRST INVALID instruction
+        // and doesn't continue to cause cascading corruption
+
+        var memory = new VirtualMemory();
+        var cpu = new IcedCpu(memory);
+
+        var codeBase = 0x00400000u;
+        var stackBase = 0x00100000u;
+        cpu.SetEip(codeBase);
+        cpu.SetRegister("ESP", stackBase);
+
+        // Write a sequence of invalid instruction bytes
+        // 0xFF 0xFF is decoded as INVALID by the Iced decoder
+        const byte INVALID_INSTRUCTION_BYTE = 0xFF;
+        for (uint i = 0; i < 100; i++)
+        {
+            memory.Write8(codeBase + i, INVALID_INSTRUCTION_BYTE);
+        }
+
+        // First execution should throw
+        Assert.Throws<InvalidOperationException>(() =>
+        {
+            cpu.SingleStep(memory);
+        });
+
+        // ESP should still be at its original value - not corrupted
+        var espAfter = cpu.GetRegister("ESP");
+        Assert.Equal(stackBase, espAfter);
+
+        // EIP should have been advanced by the decoder, but execution should have halted
+        // The important thing is that we didn't continue executing dozens of INVALID instructions
+        _output.WriteLine($"ESP after INVALID: 0x{espAfter:X8} (expected 0x{stackBase:X8})");
+        _output.WriteLine($"EIP after INVALID: 0x{cpu.GetEip():X8}");
+    }
 }
