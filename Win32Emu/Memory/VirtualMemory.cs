@@ -114,13 +114,6 @@ public class VirtualMemory
 
     public void Write32(ulong addr, uint value)
     {
-        // Debug: Track writes to LoadIconA IAT entry (0x4552F8)
-        // This helps diagnose IAT corruption issues
-        if (addr == 0x004552F8 && value != 0x0F000060 && value < 0x0F000000)
-        {
-            throw new InvalidOperationException($"IAT entry for LoadIconA at 0x{addr:X8} being corrupted with value 0x{value:X8}! This should only contain import stub addresses (0x0F000xxx range).");
-        }
-        
         EnsureRange(addr, 4);
         Write16(addr, (ushort)(value & 0xFFFF));
         Write16(addr + 2, (ushort)(value >> 16));
