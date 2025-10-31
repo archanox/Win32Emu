@@ -324,14 +324,6 @@ TLS access is inherently thread-safe because:
 - ✅ InterlockedExchange
 - ✅ InterlockedCompareExchange
 
-### Recently Implemented
-- ✅ WaitForMultipleObjects
-- ✅ TerminateThread
-- ✅ GetExitCodeThread
-- ✅ SetThreadPriority / GetThreadPriority
-- ✅ InterlockedIncrement / InterlockedDecrement
-- ✅ InterlockedCompareExchange
-
 ### Not Yet Implemented (Future Work)
 - Thread pool APIs (QueueUserWorkItem, etc.)
 - Advanced synchronization (Condition Variables, Slim Reader/Writer locks)
