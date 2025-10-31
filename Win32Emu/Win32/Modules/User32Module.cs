@@ -29,6 +29,9 @@ namespace Win32Emu.Win32.Modules
 		private uint _currentCursor;
 		private uint _focusWindow;
 		private int _cursorDisplayCount = 1; // Tracks cursor visibility counter (starts visible in Windows)
+		
+		// Counter for generating unique bitmap handles
+		private uint _nextBitmapHandle = 0;
 
 		// Constants for procedure execution monitoring
 		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
@@ -3449,8 +3452,6 @@ namespace Win32Emu.Win32.Modules
 
 			// Type: 0=IMAGE_BITMAP, 1=IMAGE_ICON, 2=IMAGE_CURSOR
 			const uint IMAGE_BITMAP = 0;
-			const uint IMAGE_ICON = 1;
-			const uint IMAGE_CURSOR = 2;
 			
 			if (type == IMAGE_BITMAP && _resourceReader != null)
 			{
@@ -3474,7 +3475,7 @@ namespace Win32Emu.Win32.Modules
 				{
 					// Store the bitmap data for later retrieval by the UI
 					// Use a handle that starts at 0x90000000 to avoid conflicts
-					var handle = 0x90000000u + (uint)_loadedBitmaps.Count;
+					var handle = 0x90000000u + _nextBitmapHandle++;
 					_loadedBitmaps[handle] = new LoadedBitmap
 					{
 						Data = bitmapData,
@@ -3494,7 +3495,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Stub for icons and cursors - return a dummy handle
-			var stubHandle = 0x90000000 + (uint)imageName.GetHashCode();
+			var stubHandle = 0x90000000u + ((uint)imageName.GetHashCode() & 0x0FFFFFFF);
 			_logger.LogInformation("[User32] LoadImageA: Returning stub handle 0x{Handle:X8} for type {Type}", stubHandle, type);
 			return stubHandle;
 		}
@@ -3533,10 +3534,12 @@ namespace Win32Emu.Win32.Modules
 				var str = _resourceReader.LoadString(uID);
 				if (str != null)
 				{
-					// Limit string to buffer size - 1 (for null terminator)
-					if (str.Length >= cchBufferMax && cchBufferMax > 0)
+					// Calculate the actual length to write (limited by buffer size)
+					var writeLen = str.Length;
+					if (cchBufferMax > 0 && str.Length >= cchBufferMax)
 					{
-						str = str.Substring(0, cchBufferMax - 1);
+						writeLen = cchBufferMax - 1;
+						str = str.Substring(0, writeLen);
 					}
 
 					_logger.LogInformation("[User32] LoadStringA: Loaded string \"{String}\" (length {Length})", str, str.Length);
@@ -3546,7 +3549,7 @@ namespace Win32Emu.Win32.Modules
 						lpBuffer.Write(_env.Memory, str, true);
 					}
 					
-					return (uint)str.Length;
+					return (uint)writeLen;
 				}
 			}
 

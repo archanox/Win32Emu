@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using AsmResolver;
 using AsmResolver.PE;
@@ -331,7 +332,7 @@ public class PeResourceReader
 				return null; // Not enough data
 			}
 
-			// Read the length (in WCHARs)
+			// Read the length (in WCHARs) - already validated offset is in bounds
 			var length = BitConverter.ToUInt16(resourceData, offset);
 			offset += 2;
 
@@ -394,30 +395,17 @@ public class PeResourceReader
 		}
 
 		// Navigate: Type (RT_BITMAP) -> Name -> Language
-		foreach (var typeEntry in resources.Entries)
+		var typeEntry = resources.Entries.Where(e => e.Id == RT_BITMAP).FirstOrDefault();
+		if (typeEntry is ResourceDirectory typeDir)
 		{
-			if (typeEntry.Id == RT_BITMAP)
+			var nameEntry = typeDir.Entries.Where(e => e.Name == bitmapName).FirstOrDefault();
+			if (nameEntry is ResourceDirectory nameDir)
 			{
-				if (typeEntry is ResourceDirectory typeDir)
+				// Get first language version
+				var langEntry = nameDir.Entries.OfType<ResourceData>().Where(d => d.Contents != null).FirstOrDefault();
+				if (langEntry?.Contents != null)
 				{
-					foreach (var nameEntry in typeDir.Entries)
-					{
-						// Check if name matches
-						if (nameEntry.Name == bitmapName)
-						{
-							if (nameEntry is ResourceDirectory nameDir)
-							{
-								// Get first language version
-								foreach (var langEntry in nameDir.Entries)
-								{
-									if (langEntry is ResourceData data && data.Contents != null)
-									{
-										return data.Contents.WriteIntoArray();
-									}
-								}
-							}
-						}
-					}
+					return langEntry.Contents.WriteIntoArray();
 				}
 			}
 		}

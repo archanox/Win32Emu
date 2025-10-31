@@ -496,9 +496,19 @@ public partial class DialogWindow : Window
 						};
 					}
 				}
-				catch (Exception ex)
+				catch (ArgumentException ex)
 				{
 					// If bitmap conversion fails, show error in the border
+					border.Child = new TextBlock
+					{
+						Text = $"Error loading bitmap: {ex.Message}",
+						FontSize = 10,
+						Foreground = Brushes.Red
+					};
+				}
+				catch (System.IO.IOException ex)
+				{
+					// If bitmap I/O fails, show error in the border
 					border.Child = new TextBlock
 					{
 						Text = $"Error loading bitmap: {ex.Message}",
@@ -523,8 +533,6 @@ public partial class DialogWindow : Window
 		// DIB format starts with BITMAPINFOHEADER
 		// We need to add a BITMAPFILEHEADER to make it a valid BMP file
 		var headerSize = BitConverter.ToInt32(dibData, 0);
-		var width = BitConverter.ToInt32(dibData, 4);
-		var height = BitConverter.ToInt32(dibData, 8);
 		var bitsPerPixel = BitConverter.ToInt16(dibData, 14);
 		
 		// Calculate the size of the color table (palette)
@@ -546,18 +554,26 @@ public partial class DialogWindow : Window
 		// Create BMP file header
 		var bmpData = new byte[fileHeaderSize + dibData.Length];
 		
+		// Validate the final size
+		if (bmpData.Length > int.MaxValue)
+		{
+			// File size too large for BMP format
+			return null;
+		}
+		
 		// BITMAPFILEHEADER
 		bmpData[0] = (byte)'B';
 		bmpData[1] = (byte)'M';
-		BitConverter.GetBytes(bmpData.Length).CopyTo(bmpData, 2); // File size
+		BitConverter.GetBytes((int)bmpData.Length).CopyTo(bmpData, 2); // File size
 		// Reserved fields are 0
-		BitConverter.GetBytes(pixelDataOffset).CopyTo(bmpData, 10); // Offset to pixel data
+		BitConverter.GetBytes((int)pixelDataOffset).CopyTo(bmpData, 10); // Offset to pixel data
 
 		// Copy DIB data (BITMAPINFOHEADER + color table + pixels)
 		dibData.CopyTo(bmpData, fileHeaderSize);
 
 		// Create Avalonia bitmap from the BMP data
-		using var stream = new System.IO.MemoryStream(bmpData);
+		// Don't use 'using' - the Bitmap needs the stream to remain open
+		var stream = new System.IO.MemoryStream(bmpData);
 		return new Avalonia.Media.Imaging.Bitmap(stream);
 	}
 }
