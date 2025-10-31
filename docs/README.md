@@ -29,8 +29,9 @@ Technical implementation details and architecture:
 - [DIRECTDRAW_SDL3_IMPLEMENTATION.md](implementation/DIRECTDRAW_SDL3_IMPLEMENTATION.md) - DirectDraw SDL3 implementation
 - [DIRECTINPUT_IMPLEMENTATION.md](implementation/DIRECTINPUT_IMPLEMENTATION.md) - DirectInput implementation
 - [DIRECTSOUND_IMPLEMENTATION.md](implementation/DIRECTSOUND_IMPLEMENTATION.md) - DirectSound implementation
-- [SDL3_IMPLEMENTATION_SUMMARY.md](implementation/SDL3_IMPLEMENTATION_SUMMARY.md) - SDL3 implementation summary
-- [SDL3_INTEGRATION.md](implementation/SDL3_INTEGRATION.md) - SDL3 integration
+- [SDL3_INTEGRATION.md](implementation/SDL3_INTEGRATION.md) - SDL3 integration overview
+- [SDL3_GPU_BACKEND.md](implementation/SDL3_GPU_BACKEND.md) - SDL3 GPU backend details
+- [SDL3_AUDIO_INPUT_INTEGRATION.md](implementation/SDL3_AUDIO_INPUT_INTEGRATION.md) - SDL3 audio and input integration
 - [MULTITHREADING_IMPLEMENTATION.md](implementation/MULTITHREADING_IMPLEMENTATION.md) - Multithreading implementation
 - [OLE32_IMPLEMENTATION.md](implementation/OLE32_IMPLEMENTATION.md) - OLE32 implementation
 - [VFS_IMPLEMENTATION_SUMMARY.md](implementation/VFS_IMPLEMENTATION_SUMMARY.md) - VFS implementation summary
@@ -59,9 +60,11 @@ See the [fixes](fixes/) directory for detailed information about bug fixes and i
 
 ## Analysis
 
-Technical analysis and investigations:
+Current technical analysis:
 
-See the [analysis](analysis/) directory for issue analysis and investigations.
+- [API_COVERAGE_REPORT.md](analysis/API_COVERAGE_REPORT.md) - API implementation coverage statistics
+
+For historical analysis and investigations, see the [archive](archive/) directory.
 
 ## Diagrams
 
@@ -107,3 +110,13 @@ See the [tools](tools/) directory for tool documentation.
 Pull request summaries and change logs:
 
 See the [pr-summaries](pr-summaries/) directory for PR summaries.
+
+## Archive
+
+Historical documentation including completed features, past bug fixes, and development analysis:
+
+See the [archive](archive/) directory for archived documentation. Includes:
+- Historical implementation summaries (Phase 2/3, completed features)
+- Game-specific analysis (IGN_TEAS, Issue #17, CPU-Z)
+- Historical bug fix documentation
+- Development investigations and tool analysis

@@ -100,7 +100,7 @@ When an `IEmulatorHost` is provided, the service redirects process stdout/stderr
 
 ### Phase 2: Window Management ✅ COMPLETED
 
-**Implementation**: See `PHASE2_IMPLEMENTATION.md` for complete details.
+**Implementation**: Window creation fully functional (see [archived Phase 2 docs](../archive/PHASE2_IMPLEMENTATION.md) for historical details).
 
 When `CreateWindowExA` is called by emulated applications:
 1. User32Module validates and processes the window creation request
@@ -127,7 +127,7 @@ When `CreateWindowExA` is called by emulated applications:
 
 ### Phase 3: Message Loop and Window Display ✅ COMPLETED
 
-**Implementation**: See `PHASE3_IMPLEMENTATION.md` for complete details.
+**Implementation**: Message loop infrastructure complete (see [archived Phase 3 docs](../archive/PHASE3_IMPLEMENTATION.md) for historical details).
 
 Implemented the Windows message loop infrastructure that allows emulated applications to:
 1. Display windows with ShowWindow

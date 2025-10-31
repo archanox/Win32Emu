@@ -141,7 +141,7 @@ This implementation marks `GetProcAddress` as ✅ Implemented in the Issue #17 t
 
 ## Files Modified
 
-1. `ISSUE_17_IMPLEMENTATION.md` - Updated status
+1. [docs/archive/ISSUE_17_IMPLEMENTATION.md](../archive/ISSUE_17_IMPLEMENTATION.md) - Historical Issue #17 status (archived)
 2. `Win32Emu.Tests.Kernel32/NewFunctionsTests.cs` - Enhanced tests
 3. `Win32Emu/Loader/LoadedImage.cs` - Added export dictionaries
 4. `Win32Emu/Loader/PeImageLoader.cs` - Added export parsing
