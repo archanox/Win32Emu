@@ -467,10 +467,11 @@ public sealed class Emulator : IDisposable
                 
                 try
                 {
-                    // Try to read a few bytes to check if memory is mapped
-                    _ = _vm!.Read8(eipBeforeStep);
+                    // Try to read a few bytes to check if memory is mapped and accessible
+                    // Reading 4 bytes validates enough memory for a typical instruction
+                    _ = _vm!.Read32(eipBeforeStep);
                 }
-                catch (Exception ex)
+                catch (IndexOutOfRangeException ex)
                 {
                     var esp = _cpu.GetRegister("ESP");
                     _logger.LogError(ex, "[Emulator] EIP=0x{Eip:X8} points to unmapped memory. ESP=0x{Esp:X8}. Execution cannot continue.", eipBeforeStep, esp);
