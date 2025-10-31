@@ -236,6 +236,126 @@ public class MemoryManagementTests : IDisposable
         Assert.Equal(nearMaxAddress, address);
     }
 
+    [Fact]
+    public void VirtualFree_WithValidAddress_ShouldReturnTrue()
+    {
+        // Arrange
+        const uint dwSize = 0x1000;
+        const uint flAllocationType = 0x00001000; // MEM_COMMIT
+        const uint flProtect = 0x04; // PAGE_READWRITE
+        
+        var address = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, dwSize, flAllocationType, flProtect);
+        Assert.NotEqual(0u, address);
+
+        // Act
+        const uint memRelease = 0x8000;
+        var result = _testEnv.CallKernel32Api("VIRTUALFREE", address, 0, memRelease);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+    }
+
+    [Fact]
+    public void VirtualFree_ThenReallocate_ShouldReuseMemory()
+    {
+        // Arrange - Allocate, free, then allocate again
+        const uint dwSize = 0x10000;
+        const uint flAllocationType = 0x00001000; // MEM_COMMIT
+        const uint flProtect = 0x04; // PAGE_READWRITE
+        const uint memRelease = 0x8000;
+        
+        // First allocation
+        var address1 = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, dwSize, flAllocationType, flProtect);
+        Assert.NotEqual(0u, address1);
+        
+        // Free it
+        var freeResult = _testEnv.CallKernel32Api("VIRTUALFREE", address1, 0, memRelease);
+        Assert.Equal(1u, freeResult);
+        
+        // Act - Allocate again with same size
+        var address2 = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, dwSize, flAllocationType, flProtect);
+        
+        // Assert - Should reuse the freed block
+        Assert.NotEqual(0u, address2);
+        Assert.Equal(address1, address2); // Should get same address back
+    }
+
+    [Fact]
+    public void VirtualAlloc_AfterFreeingMiddleBlock_ShouldReuseFreedSpace()
+    {
+        // Arrange - Allocate 3 blocks, free the middle one, then allocate again
+        const uint dwSize = 0x1000;
+        const uint flAllocationType = 0x00001000; // MEM_COMMIT
+        const uint flProtect = 0x04; // PAGE_READWRITE
+        const uint memRelease = 0x8000;
+        
+        var address1 = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, dwSize, flAllocationType, flProtect);
+        var address2 = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, dwSize, flAllocationType, flProtect);
+        var address3 = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, dwSize, flAllocationType, flProtect);
+        
+        Assert.NotEqual(0u, address1);
+        Assert.NotEqual(0u, address2);
+        Assert.NotEqual(0u, address3);
+        
+        // Free the middle block
+        var freeResult = _testEnv.CallKernel32Api("VIRTUALFREE", address2, 0, memRelease);
+        Assert.Equal(1u, freeResult);
+        
+        // Act - Allocate a small block that fits in the freed space
+        var address4 = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, dwSize, flAllocationType, flProtect);
+        
+        // Assert - Should reuse address2's space
+        Assert.NotEqual(0u, address4);
+        Assert.Equal(address2, address4);
+    }
+
+    [Fact]
+    public void VirtualFree_WithInvalidAddress_ShouldReturnFalse()
+    {
+        // Arrange - Try to free an address that was never allocated
+        const uint invalidAddress = 0x12345000;
+        const uint memRelease = 0x8000;
+        
+        // Act
+        var result = _testEnv.CallKernel32Api("VIRTUALFREE", invalidAddress, 0, memRelease);
+        
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+    }
+
+    [Fact]
+    public void VirtualAlloc_MultipleAllocAndFree_ShouldMergeAdjacentBlocks()
+    {
+        // Arrange - Allocate multiple blocks, free them in reverse order
+        const uint dwSize = 0x1000;
+        const uint flAllocationType = 0x00001000; // MEM_COMMIT
+        const uint flProtect = 0x04; // PAGE_READWRITE
+        const uint memRelease = 0x8000;
+        
+        var addresses = new uint[5];
+        for (int i = 0; i < 5; i++)
+        {
+            addresses[i] = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, dwSize, flAllocationType, flProtect);
+            Assert.NotEqual(0u, addresses[i]);
+        }
+        
+        // Free all blocks (this should merge them into one large free block)
+        for (int i = 0; i < 5; i++)
+        {
+            var result = _testEnv.CallKernel32Api("VIRTUALFREE", addresses[i], 0, memRelease);
+            Assert.Equal(1u, result);
+        }
+        
+        // Act - Allocate a large block that spans multiple freed blocks
+        var largeSize = dwSize * 5;
+        var largeAddress = _testEnv.CallKernel32Api("VIRTUALALLOC", 0, largeSize, flAllocationType, flProtect);
+        
+        // Assert - Should successfully allocate from the merged free space
+        Assert.NotEqual(0u, largeAddress);
+        // Should get the first address back since the blocks were merged
+        Assert.Equal(addresses[0], largeAddress);
+    }
+
     #endregion
 
     public void Dispose()
