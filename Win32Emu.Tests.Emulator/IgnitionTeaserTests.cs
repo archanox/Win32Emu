@@ -265,6 +265,7 @@ public class IgnitionTeaserTests
         // Act
         Exception? caughtException = null;
         var startTime = DateTime.UtcNow;
+        var emulatorCompletedNormally = false;
         try
         {
             using var emulator = new Win32Emu.Emulator(testHost, logger);
@@ -290,10 +291,17 @@ public class IgnitionTeaserTests
                 {
                     _output.WriteLine("Emulator did not stop within 2 seconds after timeout.");
                 }
+                emulatorCompletedNormally = false; // Timeout is not a normal completion
             }
             else
             {
+                // Check if runTask completed successfully or with exception
+                if (runTask.IsFaulted && runTask.Exception != null)
+                {
+                    throw runTask.Exception.InnerException ?? runTask.Exception;
+                }
                 _output.WriteLine("Emulation completed");
+                emulatorCompletedNormally = true;
             }
         }
         catch (Exception ex)
@@ -381,20 +389,13 @@ public class IgnitionTeaserTests
         }
         
         _output.WriteLine("\n=== Test Result ===");
-        if (caughtException == null)
-        {
-            _output.WriteLine("✓ The executable loaded and ran successfully (with timeout)");
-            _output.WriteLine("  No exceptions were thrown during execution");
-        }
-        else
-        {
-            _output.WriteLine("✗ The executable encountered an exception during execution");
-            _output.WriteLine($"  Exception type: {caughtException.GetType().Name}");
-        }
         
-        // The test always succeeds - we're just documenting what happens
-        _output.WriteLine("\nNote: This test documents the behavior when running with IcedCpu backend.");
-        _output.WriteLine("Check the output above for details on what was encountered.");
+        // Actual assertions - the test should fail if there are critical errors
+        Assert.Null(caughtException); // No exceptions should be thrown
+        Assert.Empty(testHost.ErrorMessages); // No error messages should be logged
+        
+        _output.WriteLine("✓ Test passed - executable loaded and ran without errors");
+        _output.WriteLine("  This test verifies IcedCpu can execute IGN_TEAS.EXE startup sequence");
     }
 
     [Fact(Skip = "Very verbose - enable manually to see detailed debugging output")]
