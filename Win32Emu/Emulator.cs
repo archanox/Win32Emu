@@ -454,12 +454,16 @@ public sealed class Emulator : IDisposable
             
             // Validate that EIP points to valid/mapped memory before execution
             // This catches bad jumps/returns early before they cause cascading errors
+            const uint SUSPICIOUS_MEMORY_RANGE_START = 0x01000000;
+            const uint SUSPICIOUS_MEMORY_RANGE_END = 0x02000000;
+            
             var eipBeforeStep = _cpu!.GetEip();
-            if (eipBeforeStep >= 0x01000000 && eipBeforeStep < 0x02000000)
+            if (eipBeforeStep >= SUSPICIOUS_MEMORY_RANGE_START && eipBeforeStep < SUSPICIOUS_MEMORY_RANGE_END)
             {
                 // EIP in range 0x01000000-0x01FFFFFF is suspicious - likely executing data or unmapped memory
                 // This range is typically used for data segments, not code
-                _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is in suspicious memory range (0x01000000-0x01FFFFFF). This may indicate a bad jump or return address. Attempting to verify memory is mapped...", eipBeforeStep);
+                _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is in suspicious memory range (0x{Start:X8}-0x{End:X8}). This may indicate a bad jump or return address. Attempting to verify memory is mapped...", 
+                    eipBeforeStep, SUSPICIOUS_MEMORY_RANGE_START, SUSPICIOUS_MEMORY_RANGE_END - 1);
                 
                 try
                 {

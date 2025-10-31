@@ -246,9 +246,11 @@ public class ImportCallDiagnosticTests
         cpu.SetEip(codeBase);
         cpu.SetRegister("ESP", stackBase);
 
-        // Write invalid instruction bytes (0xFF 0xFF is INVALID)
-        memory.Write8(codeBase + 0, 0xFF);
-        memory.Write8(codeBase + 1, 0xFF);
+        // Write invalid instruction bytes
+        // 0xFF 0xFF is decoded as INVALID by the Iced decoder
+        const byte INVALID_INSTRUCTION_BYTE = 0xFF;
+        memory.Write8(codeBase + 0, INVALID_INSTRUCTION_BYTE);
+        memory.Write8(codeBase + 1, INVALID_INSTRUCTION_BYTE);
 
         // Attempting to execute the INVALID instruction should throw an exception
         var exception = Assert.Throws<InvalidOperationException>(() =>
@@ -276,9 +278,11 @@ public class ImportCallDiagnosticTests
         cpu.SetRegister("ESP", stackBase);
 
         // Write a sequence of invalid instruction bytes
+        // 0xFF 0xFF is decoded as INVALID by the Iced decoder
+        const byte INVALID_INSTRUCTION_BYTE = 0xFF;
         for (uint i = 0; i < 100; i++)
         {
-            memory.Write8(codeBase + i, 0xFF);
+            memory.Write8(codeBase + i, INVALID_INSTRUCTION_BYTE);
         }
 
         // First execution should throw
