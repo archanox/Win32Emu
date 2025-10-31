@@ -4104,6 +4104,10 @@ public class JitCpu : IAsyncCpu
 			uint addr = CalcMemAddress(insn, 0);
 			_mem.Write16(addr, _fpuStatusWord);
 		}
+		else
+		{
+			throw new NotImplementedException($"[JitCpu] FSTSW with unsupported operand type: {insn.Op0Kind}");
+		}
 	}
 
 	private void ExecEmms()
