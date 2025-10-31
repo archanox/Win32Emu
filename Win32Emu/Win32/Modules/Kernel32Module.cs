@@ -3,6 +3,7 @@ using System.Text;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using Win32Emu.Threading;
 using Win32Emu.VirtualFileSystem;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -489,6 +490,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "WAITFORSINGLEOBJECT":
 				returnValue = WaitForSingleObject(a.UInt32(0), a.UInt32(1));
 				return true;
+			case "WAITFORMULTIPLEOBJECTS":
+				returnValue = WaitForMultipleObjects(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
 
 			// Directory functions
 			case "SETCURRENTDIRECTORYA":
@@ -623,6 +627,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "INTERLOCKEDEXCHANGE":
 				returnValue = InterlockedExchange(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "INTERLOCKEDCOMPAREEXCHANGE":
+				returnValue = InterlockedCompareExchange(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 			case "LOCALFREE":
 				returnValue = LocalFree(a.UInt32(0));
@@ -5334,6 +5341,175 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 	}
 
+	/// <summary>
+	/// Waits until one or all of the specified objects are in the signaled state or the time-out interval elapses.
+	/// DWORD WaitForMultipleObjects(
+	///   [in] DWORD  nCount,
+	///   [in] const HANDLE *lpHandles,
+	///   [in] BOOL   bWaitAll,
+	///   [in] DWORD  dwMilliseconds
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint WaitForMultipleObjects(uint nCount, uint lpHandles, uint bWaitAll, uint dwMilliseconds)
+	{
+		var currentThreadId = _env.GetCurrentThreadId();
+		_logger.LogInformation("[Kernel32] WaitForMultipleObjects(count={Count}, handles=0x{Handles:X8}, waitAll={WaitAll}, timeout={Timeout}ms) - Thread {ThreadId}",
+			nCount, lpHandles, bWaitAll, dwMilliseconds, currentThreadId);
+
+		const uint WAIT_OBJECT_0 = 0;
+		const uint WAIT_TIMEOUT = 0x102;
+		const uint WAIT_FAILED = 0xFFFFFFFF;
+		const uint MAXIMUM_WAIT_OBJECTS = 64;
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] WaitForMultipleObjects: SynchronizationManager not available");
+			return WAIT_FAILED;
+		}
+
+		// Validate parameters
+		if (nCount == 0 || nCount > MAXIMUM_WAIT_OBJECTS)
+		{
+			_logger.LogWarning("[Kernel32] WaitForMultipleObjects: invalid count {Count}", nCount);
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return WAIT_FAILED;
+		}
+
+		if (lpHandles == 0)
+		{
+			_logger.LogWarning("[Kernel32] WaitForMultipleObjects: null handle array");
+			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return WAIT_FAILED;
+		}
+
+		// Read handle array from memory
+		var handles = new uint[nCount];
+		for (uint i = 0; i < nCount; i++)
+		{
+			handles[i] = _env.MemRead32(lpHandles + (i * 4));
+		}
+
+		// Validate all handles
+		for (uint i = 0; i < nCount; i++)
+		{
+			var objectType = _env.SynchronizationManager.GetObjectType(handles[i]);
+			if (objectType == null)
+			{
+				_logger.LogWarning("[Kernel32] WaitForMultipleObjects: invalid handle 0x{Handle:X8} at index {Index}", handles[i], i);
+				_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+				return WAIT_FAILED;
+			}
+		}
+
+		// Start time for timeout tracking
+		var startTime = DateTime.UtcNow;
+		var timeoutSpan = dwMilliseconds == 0xFFFFFFFF
+			? TimeSpan.MaxValue
+			: TimeSpan.FromMilliseconds(dwMilliseconds);
+
+		bool waitAll = bWaitAll != 0;
+
+		// Polling loop to wait for objects
+		while (true)
+		{
+			if (waitAll)
+			{
+				// Wait for ALL objects to be signaled
+				bool allSignaled = true;
+				var tempStates = new List<(uint handle, string type, bool acquired)>();
+
+				// Check if all objects can be acquired
+				for (uint i = 0; i < nCount; i++)
+				{
+					var handle = handles[i];
+					var objectType = _env.SynchronizationManager.GetObjectType(handle);
+					
+					var signaled = objectType switch
+					{
+						"Mutex" => _env.SynchronizationManager.CanAcquireMutex(handle, currentThreadId),
+						"Event" => _env.SynchronizationManager.IsEventSignaled(handle),
+						"Semaphore" => _env.SynchronizationManager.IsSemaphoreSignaled(handle),
+						_ => false
+					};
+
+					tempStates.Add((handle, objectType ?? "Unknown", signaled));
+					
+					if (!signaled)
+					{
+						allSignaled = false;
+						break;
+					}
+				}
+
+				if (allSignaled)
+				{
+					// Acquire all objects
+					foreach (var (handle, type, _) in tempStates)
+					{
+						_ = type switch
+						{
+							"Mutex" => _env.SynchronizationManager.AcquireMutex(handle, currentThreadId),
+							"Event" => _env.SynchronizationManager.WaitOnEvent(handle, currentThreadId),
+							"Semaphore" => _env.SynchronizationManager.WaitOnSemaphore(handle, currentThreadId),
+							_ => false
+						};
+					}
+
+					_logger.LogDebug("[Kernel32] WaitForMultipleObjects: Thread {ThreadId} acquired all {Count} objects",
+						currentThreadId, nCount);
+					return WAIT_OBJECT_0;
+				}
+			}
+			else
+			{
+				// Wait for ANY object to be signaled
+				for (uint i = 0; i < nCount; i++)
+				{
+					var handle = handles[i];
+					var objectType = _env.SynchronizationManager.GetObjectType(handle);
+					
+					var signaled = objectType switch
+					{
+						"Mutex" => _env.SynchronizationManager.AcquireMutex(handle, currentThreadId),
+						"Event" => _env.SynchronizationManager.WaitOnEvent(handle, currentThreadId),
+						"Semaphore" => _env.SynchronizationManager.WaitOnSemaphore(handle, currentThreadId),
+						_ => false
+					};
+
+					if (signaled)
+					{
+						_logger.LogDebug("[Kernel32] WaitForMultipleObjects: Thread {ThreadId} acquired {Type} 0x{Handle:X8} at index {Index}",
+							currentThreadId, objectType, handle, i);
+						return WAIT_OBJECT_0 + i;
+					}
+				}
+			}
+
+			// Check timeout
+			if (dwMilliseconds == 0)
+			{
+				// Zero timeout - return immediately without waiting
+				_logger.LogDebug("[Kernel32] WaitForMultipleObjects: Zero timeout, returning WAIT_TIMEOUT");
+				return WAIT_TIMEOUT;
+			}
+
+			var elapsed = DateTime.UtcNow - startTime;
+			if (elapsed >= timeoutSpan)
+			{
+				// Timeout expired
+				_logger.LogDebug("[Kernel32] WaitForMultipleObjects: Timeout expired after {Elapsed}ms", elapsed.TotalMilliseconds);
+				return WAIT_TIMEOUT;
+			}
+
+			// Objects not available yet - yield and retry
+			Thread.Sleep(1);
+
+			// Yield to thread scheduler if available
+			_env.ThreadScheduler?.ProcessWaitTimeouts();
+		}
+	}
+
 	// Directory functions
 	private uint SetCurrentDirectoryA(in LpcStr lpPathName)
 	{
@@ -6162,7 +6338,31 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private int GetThreadPriority(uint hThread)
 	{
 		_logger.LogInformation("[Kernel32] GetThreadPriority(hThread=0x{HThread:X8})", hThread);
-		return 0; // THREAD_PRIORITY_NORMAL
+		
+		// Handle pseudo-handle for current thread
+		const uint CURRENT_THREAD_PSEUDO_HANDLE = 0xFFFFFFFE;
+		EmulatedThread? thread;
+
+		if (hThread == CURRENT_THREAD_PSEUDO_HANDLE)
+		{
+			thread = _env.ThreadScheduler?.CurrentThread;
+		}
+		else
+		{
+			thread = _env.ThreadScheduler?.GetThreadByHandle(hThread);
+		}
+
+		if (thread != null)
+		{
+			_logger.LogInformation("[Kernel32] GetThreadPriority: thread {ThreadId} priority = {Priority}",
+				thread.ThreadId, thread.Priority);
+			return thread.Priority;
+		}
+
+		_logger.LogWarning("[Kernel32] GetThreadPriority: invalid thread handle 0x{Handle:X8}", hThread);
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		const int THREAD_PRIORITY_ERROR_RETURN = int.MaxValue; // 0x7FFFFFFF
+		return THREAD_PRIORITY_ERROR_RETURN;
 	}
 
 	[DllModuleExport(4)]
@@ -6287,6 +6487,33 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
+	/// <summary>
+	/// Performs an atomic compare-and-exchange operation on the specified values.
+	/// LONG InterlockedCompareExchange(
+	///   [in, out] LONG volatile *Destination,
+	///   [in]      LONG          Exchange,
+	///   [in]      LONG          Comparand
+	/// );
+	/// Returns the initial value of the Destination parameter.
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint InterlockedCompareExchange(uint destination, uint exchange, uint comparand)
+	{
+		_logger.LogInformation("[Kernel32] InterlockedCompareExchange(destination=0x{Destination:X8}, exchange=0x{Exchange:X8}, comparand=0x{Comparand:X8})",
+			destination, exchange, comparand);
+
+		if (destination != 0)
+		{
+			var currentValue = _env.MemRead32(destination);
+			if (currentValue == comparand)
+			{
+				_env.MemWrite32(destination, exchange);
+			}
+			return currentValue;
+		}
+		return 0;
+	}
+
 	[DllModuleExport(4)]
 	private uint LocalFree(uint hMem)
 	{
@@ -6380,7 +6607,31 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] SetThreadPriority(hThread=0x{HThread:X8}, nPriority={NPriority})",
 			hThread, nPriority);
-		return 1; // TRUE
+
+		// Handle pseudo-handle for current thread
+		const uint CURRENT_THREAD_PSEUDO_HANDLE = 0xFFFFFFFE;
+		EmulatedThread? thread;
+
+		if (hThread == CURRENT_THREAD_PSEUDO_HANDLE)
+		{
+			thread = _env.ThreadScheduler?.CurrentThread;
+		}
+		else
+		{
+			thread = _env.ThreadScheduler?.GetThreadByHandle(hThread);
+		}
+
+		if (thread != null)
+		{
+			thread.Priority = nPriority;
+			_logger.LogInformation("[Kernel32] SetThreadPriority: thread {ThreadId} priority set to {Priority}",
+				thread.ThreadId, nPriority);
+			return NativeTypes.Win32Bool.TRUE;
+		}
+
+		_logger.LogWarning("[Kernel32] SetThreadPriority: invalid thread handle 0x{Handle:X8}", hThread);
+		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(20)]

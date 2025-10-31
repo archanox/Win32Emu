@@ -29,6 +29,9 @@ public class TestEnvironment : IDisposable
         ProcessEnv = new ProcessEnvironment(Memory, logger: NullLogger.Instance);
         PeLoader = new PeImageLoader(Memory, NullLogger.Instance);
         
+        // Initialize main thread for threading tests
+        ProcessEnv.InitializeMainThread(Cpu);
+        
         // Create dispatcher and register modules
         Dispatcher = new Win32Dispatcher(NullLogger.Instance);
         
