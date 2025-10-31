@@ -6607,14 +6607,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		const uint CURRENT_THREAD_PSEUDO_HANDLE = 0xFFFFFFFE;
 		EmulatedThread? thread;
 
-		if (hThread == CURRENT_THREAD_PSEUDO_HANDLE)
-		{
-			thread = _env.ThreadScheduler?.CurrentThread;
-		}
-		else
-		{
-			thread = _env.ThreadScheduler?.GetThreadByHandle(hThread);
-		}
+		thread = (hThread == CURRENT_THREAD_PSEUDO_HANDLE)
+			? _env.ThreadScheduler?.CurrentThread
+			: _env.ThreadScheduler?.GetThreadByHandle(hThread);
 
 		if (thread != null)
 		{
