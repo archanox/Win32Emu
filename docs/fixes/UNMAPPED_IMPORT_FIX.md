@@ -101,10 +101,12 @@ Created comprehensive test suites:
 
 To fully resolve this issue, we need to:
 
-1. ~~Investigate why the return address `0x0F000530` appears on the stack~~ ✅ **Done**: Stack validation now detects when this happens and logs diagnostics
-2. ~~Determine if there's an IAT entry that shouldn't be there~~ ✅ **Done**: IAT validation scans for extra entries and duplicates
-3. Check if the C runtime initialization is correct - **In Progress**: Validation will now catch if CRT corrupts stack during initialization
-4. ~~Possibly add validation of the stack after each import call to detect corruption early~~ ✅ **Done**: Return address is validated before/after each import call
+1. ~~Investigate why the return address `0x0F000530` appears on the stack~~ ✅ **Detection Implemented**: Stack validation now detects when this happens and logs comprehensive diagnostics to aid investigation
+2. ~~Determine if there's an IAT entry that shouldn't be there~~ ✅ **Validation Implemented**: IAT validation scans for extra entries, duplicates, and unexpected data
+3. **Identify root cause of C runtime corruption** - In Progress: Validation will catch if CRT corrupts stack, providing diagnostics to identify the specific cause
+4. ~~Possibly add validation of the stack after each import call to detect corruption early~~ ✅ **Validation Implemented**: Return address is validated before/after each import call
+
+**Note:** Items 1, 2, and 4 provide detection and diagnostic capabilities to help investigate the issue. The underlying root cause (item 3) may still require fixing once identified through these diagnostics.
 
 ### Next Steps
 

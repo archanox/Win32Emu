@@ -185,7 +185,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		if (synth > 0)
 		{
 			var maxMappedAddr = 0x0F000000u + (uint)((synth - 1) * 0x10u);
-			var scanRangeEnd = 0x0F000000u + 0x1000u; // Scan first 256 possible import slots
+			var scanRangeEnd = 0x0F000000u + 0x1000u; // Scan up to slot index 255 (slots 0-255, total 256 slots)
 			for (uint addr = maxMappedAddr + 0x10; addr < scanRangeEnd; addr += 0x10)
 			{
 				try

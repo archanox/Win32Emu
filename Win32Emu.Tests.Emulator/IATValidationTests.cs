@@ -155,9 +155,10 @@ public class IATValidationTests
         const uint STUB_ADDR = 0x0F000000u;
         
         // Calculate relative offset for CALL instruction
-        // Need to be careful with the calculation to avoid overflow
+        // The offset between these addresses is well within int range (-16777221 in this case)
+        // We use checked() to ensure the test fails cleanly if addresses are changed to invalid values
         long callOffsetLong = (long)SYSCALL_DISPATCHER - ((long)STUB_ADDR + 5);
-        var callOffset = checked((int)callOffsetLong); // Explicit overflow check
+        var callOffset = checked((int)callOffsetLong); // Will throw OverflowException if out of range
         
         var stub = new byte[]
         {
