@@ -83,6 +83,11 @@ public class EmulatedThread
 	/// </summary>
 	public DateTime? WaitTimeout { get; set; }
 
+	/// <summary>
+	/// Thread priority (Win32 priority value)
+	/// </summary>
+	public int Priority { get; set; }
+
 	public EmulatedThread(uint threadId, uint handle, uint entryPoint, uint parameter, uint stackBase, uint stackSize)
 	{
 		ThreadId = threadId;
@@ -93,6 +98,7 @@ public class EmulatedThread
 		StackSize = stackSize;
 		State = ThreadState.Suspended;
 		Context = new CpuContext();
+		Priority = 0; // THREAD_PRIORITY_NORMAL
 	}
 
 	/// <summary>

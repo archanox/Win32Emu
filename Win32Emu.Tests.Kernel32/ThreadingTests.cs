@@ -423,6 +423,192 @@ public sealed class ThreadingTests : IDisposable
         }
     }
 
+    [Fact]
+    public void SetThreadPriority_ShouldSucceed()
+    {
+        // Arrange
+        var threadHandle = _testEnv.CallKernel32Api("GETCURRENTTHREAD");
+        const int THREAD_PRIORITY_ABOVE_NORMAL = 1;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("SETTHREADPRIORITY", threadHandle, (uint)THREAD_PRIORITY_ABOVE_NORMAL);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE = 1
+    }
+
+    [Fact]
+    public void GetThreadPriority_ShouldReturnSetValue()
+    {
+        // Arrange
+        var threadHandle = _testEnv.CallKernel32Api("GETCURRENTTHREAD");
+        const int THREAD_PRIORITY_HIGHEST = 2;
+        
+        // Set priority first
+        _testEnv.CallKernel32Api("SETTHREADPRIORITY", threadHandle, (uint)THREAD_PRIORITY_HIGHEST);
+
+        // Act
+        var priority = (int)_testEnv.CallKernel32Api("GETTHREADPRIORITY", threadHandle);
+
+        // Assert
+        Assert.Equal(THREAD_PRIORITY_HIGHEST, priority);
+    }
+
+    [Fact]
+    public void GetThreadPriority_DefaultPriority_ShouldBeNormal()
+    {
+        // Arrange
+        var threadHandle = _testEnv.CallKernel32Api("GETCURRENTTHREAD");
+
+        // Act
+        var priority = (int)_testEnv.CallKernel32Api("GETTHREADPRIORITY", threadHandle);
+
+        // Assert
+        Assert.Equal(0, priority); // THREAD_PRIORITY_NORMAL = 0
+    }
+
+    [Fact]
+    public void InterlockedCompareExchange_WhenEqual_ShouldExchange()
+    {
+        // Arrange
+        var valueAddr = _testEnv.AllocateMemory(4);
+        const uint initialValue = 100;
+        const uint exchangeValue = 200;
+        const uint comparand = 100;
+        
+        _testEnv.Memory.Write32(valueAddr, initialValue);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("INTERLOCKEDCOMPAREEXCHANGE", 
+            valueAddr, exchangeValue, comparand);
+
+        // Assert
+        Assert.Equal(initialValue, result); // Should return initial value
+        var newValue = _testEnv.Memory.Read32(valueAddr);
+        Assert.Equal(exchangeValue, newValue); // Should have exchanged the value
+    }
+
+    [Fact]
+    public void InterlockedCompareExchange_WhenNotEqual_ShouldNotExchange()
+    {
+        // Arrange
+        var valueAddr = _testEnv.AllocateMemory(4);
+        const uint initialValue = 100;
+        const uint exchangeValue = 200;
+        const uint comparand = 50; // Different from initial value
+        
+        _testEnv.Memory.Write32(valueAddr, initialValue);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("INTERLOCKEDCOMPAREEXCHANGE", 
+            valueAddr, exchangeValue, comparand);
+
+        // Assert
+        Assert.Equal(initialValue, result); // Should return initial value
+        var newValue = _testEnv.Memory.Read32(valueAddr);
+        Assert.Equal(initialValue, newValue); // Should NOT have exchanged the value
+    }
+
+    [Fact]
+    public void WaitForMultipleObjects_WithNoObjects_ShouldFail()
+    {
+        // Arrange
+        var handlesAddr = _testEnv.AllocateMemory(4);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("WAITFORMULTIPLEOBJECTS", 
+            0u,           // count = 0 (invalid)
+            handlesAddr,  // handles array
+            0u,           // bWaitAll = FALSE
+            0u);          // dwMilliseconds = 0 (no wait)
+
+        // Assert
+        Assert.Equal(0xFFFFFFFFu, result); // WAIT_FAILED
+    }
+
+    [Fact]
+    public void WaitForMultipleObjects_WithTooManyObjects_ShouldFail()
+    {
+        // Arrange
+        var handlesAddr = _testEnv.AllocateMemory(4);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("WAITFORMULTIPLEOBJECTS", 
+            65u,          // count = 65 (> MAXIMUM_WAIT_OBJECTS)
+            handlesAddr,  // handles array
+            0u,           // bWaitAll = FALSE
+            0u);          // dwMilliseconds = 0 (no wait)
+
+        // Assert
+        Assert.Equal(0xFFFFFFFFu, result); // WAIT_FAILED
+    }
+
+    [Fact]
+    public void WaitForMultipleObjects_WaitAny_WithSignaledEvent_ShouldReturnImmediately()
+    {
+        // Arrange - Create two events, one signaled, one not
+        var event1 = _testEnv.CallKernel32Api("CREATEEVENTA", 0u, 0u, 0u, 0u); // Manual reset, not signaled
+        var event2 = _testEnv.CallKernel32Api("CREATEEVENTA", 0u, 0u, 1u, 0u); // Manual reset, signaled
+        
+        var handlesAddr = _testEnv.AllocateMemory(8);
+        _testEnv.Memory.Write32(handlesAddr, event1);
+        _testEnv.Memory.Write32(handlesAddr + 4, event2);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("WAITFORMULTIPLEOBJECTS", 
+            2u,           // count = 2
+            handlesAddr,  // handles array
+            0u,           // bWaitAll = FALSE (wait for any)
+            0u);          // dwMilliseconds = 0 (no wait)
+
+        // Assert
+        Assert.Equal(1u, result); // WAIT_OBJECT_0 + 1 (second event is signaled)
+    }
+
+    [Fact]
+    public void WaitForMultipleObjects_WaitAll_WithAllSignaled_ShouldReturnImmediately()
+    {
+        // Arrange - Create two signaled events
+        var event1 = _testEnv.CallKernel32Api("CREATEEVENTA", 0u, 0u, 1u, 0u); // Manual reset, signaled
+        var event2 = _testEnv.CallKernel32Api("CREATEEVENTA", 0u, 0u, 1u, 0u); // Manual reset, signaled
+        
+        var handlesAddr = _testEnv.AllocateMemory(8);
+        _testEnv.Memory.Write32(handlesAddr, event1);
+        _testEnv.Memory.Write32(handlesAddr + 4, event2);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("WAITFORMULTIPLEOBJECTS", 
+            2u,           // count = 2
+            handlesAddr,  // handles array
+            1u,           // bWaitAll = TRUE (wait for all)
+            0u);          // dwMilliseconds = 0 (no wait)
+
+        // Assert
+        Assert.Equal(0u, result); // WAIT_OBJECT_0 (all objects signaled)
+    }
+
+    [Fact]
+    public void WaitForMultipleObjects_WaitAll_WithOneNotSignaled_ShouldTimeout()
+    {
+        // Arrange - Create two events, one signaled, one not
+        var event1 = _testEnv.CallKernel32Api("CREATEEVENTA", 0u, 0u, 1u, 0u); // Manual reset, signaled
+        var event2 = _testEnv.CallKernel32Api("CREATEEVENTA", 0u, 0u, 0u, 0u); // Manual reset, not signaled
+        
+        var handlesAddr = _testEnv.AllocateMemory(8);
+        _testEnv.Memory.Write32(handlesAddr, event1);
+        _testEnv.Memory.Write32(handlesAddr + 4, event2);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("WAITFORMULTIPLEOBJECTS", 
+            2u,           // count = 2
+            handlesAddr,  // handles array
+            1u,           // bWaitAll = TRUE (wait for all)
+            0u);          // dwMilliseconds = 0 (no wait)
+
+        // Assert
+        Assert.Equal(0x102u, result); // WAIT_TIMEOUT (not all objects signaled)
+    }
+
     public void Dispose()
     {
         _testEnv.Dispose();

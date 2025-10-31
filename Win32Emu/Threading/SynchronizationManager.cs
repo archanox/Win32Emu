@@ -163,6 +163,29 @@ public class SynchronizationManager(ILogger? logger = null)
 	}
 
 	/// <summary>
+	/// Check if a mutex can be acquired by the specified thread (without actually acquiring it)
+	/// </summary>
+	public bool CanAcquireMutex(uint handle, uint threadId)
+	{
+		lock (_lock)
+		{
+			if (!_mutexes.TryGetValue(handle, out var mutex))
+			{
+				return false;
+			}
+
+			// Already owned by this thread - can recursively acquire
+			if (mutex.OwningThreadId == threadId)
+			{
+				return true;
+			}
+
+			// Not owned - can acquire it
+			return !mutex.IsOwned;
+		}
+	}
+
+	/// <summary>
 	/// Release a mutex
 	/// </summary>
 	public bool ReleaseMutex(uint handle, uint threadId)
@@ -409,6 +432,17 @@ public class SynchronizationManager(ILogger? logger = null)
 				semaphore.WaitingThreads.Enqueue(threadId);
 			}
 			return false;
+		}
+	}
+
+	/// <summary>
+	/// Check if a semaphore is signaled (has available count)
+	/// </summary>
+	public bool IsSemaphoreSignaled(uint handle)
+	{
+		lock (_lock)
+		{
+			return _semaphores.TryGetValue(handle, out var semaphore) && semaphore.IsSignaled;
 		}
 	}
 
