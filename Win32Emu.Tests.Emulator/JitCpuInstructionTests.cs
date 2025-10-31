@@ -643,4 +643,324 @@ public class JitCpuInstructionTests
 		Assert.False(result.IsCall); // Should not signal call
 		Assert.Equal(0x00401002u, cpu.GetEip()); // Should advance EIP past the instruction
 	}
+
+	#region MMX Instruction Tests
+
+	[Fact]
+	public void EMMS_ShouldExecuteWithoutError()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// EMMS = 0F 77
+		mem.Write8(0x1000, 0x0F);
+		mem.Write8(0x1001, 0x77);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert - Should advance EIP without error
+		Assert.Equal(0x1002u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void MOVD_MMXFromGPR_ShouldTransferValue()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0x12345678);
+		
+		// MOVD MM0, EAX = 0F 6E C0
+		mem.Write8(0x1000, 0x0F);
+		mem.Write8(0x1001, 0x6E);
+		mem.Write8(0x1002, 0xC0);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert - EIP should advance
+		Assert.Equal(0x1003u, cpu.GetEip());
+		Assert.Equal(0x12345678u, cpu.GetRegister("EAX")); // EAX unchanged
+	}
+
+	[Fact]
+	public void MOVD_GPRFromMMX_ShouldTransferValue()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0xABCD1234);
+		cpu.SetRegister("EBX", 0x00000000);
+		
+		// MOVD MM0, EAX = 0F 6E C0
+		mem.Write8(0x1000, 0x0F);
+		mem.Write8(0x1001, 0x6E);
+		mem.Write8(0x1002, 0xC0);
+		
+		// MOVD EBX, MM0 = 0F 7E C3
+		mem.Write8(0x1003, 0x0F);
+		mem.Write8(0x1004, 0x7E);
+		mem.Write8(0x1005, 0xC3);
+		
+		// Act
+		cpu.SingleStep(mem); // MOVD MM0, EAX
+		cpu.SingleStep(mem); // MOVD EBX, MM0
+		
+		// Assert - EBX should now equal EAX
+		Assert.Equal(0x1006u, cpu.GetEip());
+		Assert.Equal(0xABCD1234u, cpu.GetRegister("EBX"));
+	}
+
+	[Fact]
+	public void MOVQ_MMXToMMX_ShouldTransferValue()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0x12345678);
+		
+		// MOVD MM0, EAX = 0F 6E C0
+		mem.Write8(0x1000, 0x0F);
+		mem.Write8(0x1001, 0x6E);
+		mem.Write8(0x1002, 0xC0);
+		
+		// MOVQ MM1, MM0 = 0F 6F C8
+		mem.Write8(0x1003, 0x0F);
+		mem.Write8(0x1004, 0x6F);
+		mem.Write8(0x1005, 0xC8);
+		
+		// Act
+		cpu.SingleStep(mem); // MOVD MM0, EAX
+		cpu.SingleStep(mem); // MOVQ MM1, MM0
+		
+		// Assert
+		Assert.Equal(0x1006u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void PADDB_ShouldAddPackedBytes()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0x01020304);
+		cpu.SetRegister("EBX", 0x05060708);
+		
+		// MOVD MM0, EAX = 0F 6E C0
+		mem.Write8(0x1000, 0x0F);
+		mem.Write8(0x1001, 0x6E);
+		mem.Write8(0x1002, 0xC0);
+		
+		// MOVD MM1, EBX = 0F 6E CB
+		mem.Write8(0x1003, 0x0F);
+		mem.Write8(0x1004, 0x6E);
+		mem.Write8(0x1005, 0xCB);
+		
+		// PADDB MM0, MM1 = 0F FC C1
+		mem.Write8(0x1006, 0x0F);
+		mem.Write8(0x1007, 0xFC);
+		mem.Write8(0x1008, 0xC1);
+		
+		// Act
+		cpu.SingleStep(mem); // MOVD MM0, EAX
+		cpu.SingleStep(mem); // MOVD MM1, EBX
+		cpu.SingleStep(mem); // PADDB MM0, MM1
+		
+		// Assert - Result in MM0 should be 0x06080A0C (each byte added separately)
+		Assert.Equal(0x1009u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void PAND_ShouldAndPackedData()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0xFFFF0000);
+		cpu.SetRegister("EBX", 0xFF00FF00);
+		
+		// MOVD MM0, EAX = 0F 6E C0
+		mem.Write8(0x1000, 0x0F);
+		mem.Write8(0x1001, 0x6E);
+		mem.Write8(0x1002, 0xC0);
+		
+		// MOVD MM1, EBX = 0F 6E CB
+		mem.Write8(0x1003, 0x0F);
+		mem.Write8(0x1004, 0x6E);
+		mem.Write8(0x1005, 0xCB);
+		
+		// PAND MM0, MM1 = 0F DB C1
+		mem.Write8(0x1006, 0x0F);
+		mem.Write8(0x1007, 0xDB);
+		mem.Write8(0x1008, 0xC1);
+		
+		// Act
+		cpu.SingleStep(mem); // MOVD MM0, EAX
+		cpu.SingleStep(mem); // MOVD MM1, EBX
+		cpu.SingleStep(mem); // PAND MM0, MM1
+		
+		// Assert - Result in MM0 should be 0xFF000000
+		Assert.Equal(0x1009u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void POR_ShouldOrPackedData()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0xF0F00F0F);
+		cpu.SetRegister("EBX", 0x0F0FF0F0);
+		
+		// MOVD MM0, EAX = 0F 6E C0
+		mem.Write8(0x1000, 0x0F);
+		mem.Write8(0x1001, 0x6E);
+		mem.Write8(0x1002, 0xC0);
+		
+		// MOVD MM1, EBX = 0F 6E CB
+		mem.Write8(0x1003, 0x0F);
+		mem.Write8(0x1004, 0x6E);
+		mem.Write8(0x1005, 0xCB);
+		
+		// POR MM0, MM1 = 0F EB C1
+		mem.Write8(0x1006, 0x0F);
+		mem.Write8(0x1007, 0xEB);
+		mem.Write8(0x1008, 0xC1);
+		
+		// Act
+		cpu.SingleStep(mem); // MOVD MM0, EAX
+		cpu.SingleStep(mem); // MOVD MM1, EBX
+		cpu.SingleStep(mem); // POR MM0, MM1
+		
+		// Assert - Result in MM0 should be 0xFFFFFFFF
+		Assert.Equal(0x1009u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void PXOR_ShouldXorPackedData()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0xAAAAAAAA);
+		cpu.SetRegister("EBX", 0x55555555);
+		
+		// MOVD MM0, EAX = 0F 6E C0
+		mem.Write8(0x1000, 0x0F);
+		mem.Write8(0x1001, 0x6E);
+		mem.Write8(0x1002, 0xC0);
+		
+		// MOVD MM1, EBX = 0F 6E CB
+		mem.Write8(0x1003, 0x0F);
+		mem.Write8(0x1004, 0x6E);
+		mem.Write8(0x1005, 0xCB);
+		
+		// PXOR MM0, MM1 = 0F EF C1
+		mem.Write8(0x1006, 0x0F);
+		mem.Write8(0x1007, 0xEF);
+		mem.Write8(0x1008, 0xC1);
+		
+		// Act
+		cpu.SingleStep(mem); // MOVD MM0, EAX
+		cpu.SingleStep(mem); // MOVD MM1, EBX
+		cpu.SingleStep(mem); // PXOR MM0, MM1
+		
+		// Assert - Result in MM0 should be 0xFFFFFFFF
+		Assert.Equal(0x1009u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void PSLLW_ShouldShiftLeftWords()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0x00010002);
+		
+		// MOVD MM0, EAX = 0F 6E C0
+		mem.Write8(0x1000, 0x0F);
+		mem.Write8(0x1001, 0x6E);
+		mem.Write8(0x1002, 0xC0);
+		
+		// PSLLW MM0, 4 = 0F 71 F0 04
+		mem.Write8(0x1003, 0x0F);
+		mem.Write8(0x1004, 0x71);
+		mem.Write8(0x1005, 0xF0);
+		mem.Write8(0x1006, 0x04);
+		
+		// Act
+		cpu.SingleStep(mem); // MOVD MM0, EAX
+		cpu.SingleStep(mem); // PSLLW MM0, 4
+		
+		// Assert - Result in MM0 should be 0x00100020 (each word shifted left by 4)
+		Assert.Equal(0x1007u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void MOVQ_ToMemory_ShouldWrite64Bits()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0x12345678);
+		cpu.SetRegister("EBX", 0x2000);
+		
+		// MOVD MM0, EAX = 0F 6E C0
+		mem.Write8(0x1000, 0x0F);
+		mem.Write8(0x1001, 0x6E);
+		mem.Write8(0x1002, 0xC0);
+		
+		// MOVQ [EBX], MM0 = 0F 7F 03
+		mem.Write8(0x1003, 0x0F);
+		mem.Write8(0x1004, 0x7F);
+		mem.Write8(0x1005, 0x03);
+		
+		// Act
+		cpu.SingleStep(mem); // MOVD MM0, EAX
+		cpu.SingleStep(mem); // MOVQ [EBX], MM0
+		
+		// Assert
+		Assert.Equal(0x1006u, cpu.GetEip());
+		Assert.Equal(0x12345678u, mem.Read32(0x2000)); // Lower 32 bits
+		Assert.Equal(0x00000000u, mem.Read32(0x2004)); // Upper 32 bits (zero-extended)
+	}
+
+	[Fact]
+	public void MOVQ_FromMemory_ShouldRead64Bits()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EBX", 0x2000);
+		
+		// Write test data to memory
+		mem.Write64(0x2000, 0x123456789ABCDEF0);
+		
+		// MOVQ MM0, [EBX] = 0F 6F 03
+		mem.Write8(0x1000, 0x0F);
+		mem.Write8(0x1001, 0x6F);
+		mem.Write8(0x1002, 0x03);
+		
+		// Act
+		cpu.SingleStep(mem); // MOVQ MM0, [EBX]
+		
+		// Assert - MM0 should contain the 64-bit value
+		Assert.Equal(0x1003u, cpu.GetEip());
+	}
+
+	#endregion
 }
+
