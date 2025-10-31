@@ -134,6 +134,13 @@ public class IcedCpu : IAsyncCpu
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
 		//_logger.LogInformation("Instruction: {Insn}", insn.ToString());
+		
+		// Log instructions executed right after syscall returns for debugging
+		if (oldEip >= 0x00403160 && oldEip <= 0x00403190)
+		{
+			_logger.LogInformation("[IcedCpu] At 0x{Eip:X8}: {Instruction}, decoder.IP after decode=0x{DecoderIP:X8}", oldEip, insn.ToString(), _decoder.IP);
+		}
+		
 		_eip = (uint)_decoder.IP;
 		var isCall = false;
 		var isSyscall = false;
@@ -579,6 +586,12 @@ public class IcedCpu : IAsyncCpu
 		finally
 		{
 			Diagnostics.Diagnostics.ClearCpuContext();
+		}
+
+		// Log EIP right before returning from SingleStep
+		if (oldEip >= 0x0E000000 && oldEip < 0x10000000)
+		{
+			_logger.LogDebug("[IcedCpu] SingleStep returning: oldEip=0x{OldEip:X8}, final _eip=0x{Eip:X8}", oldEip, _eip);
 		}
 
 		return new CpuStepResult(isCall, callTarget, isSyscall);
