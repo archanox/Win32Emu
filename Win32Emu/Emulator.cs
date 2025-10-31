@@ -451,6 +451,28 @@ public sealed class Emulator : IDisposable
                     continue; // Skip to next iteration
                 }
             }
+            
+            // Validate that EIP points to valid/mapped memory before execution
+            // This catches bad jumps/returns early before they cause cascading errors
+            var eipBeforeStep = _cpu!.GetEip();
+            if (eipBeforeStep >= 0x01000000 && eipBeforeStep < 0x02000000)
+            {
+                // EIP in range 0x01000000-0x01FFFFFF is suspicious - likely executing data or unmapped memory
+                // This range is typically used for data segments, not code
+                _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is in suspicious memory range (0x01000000-0x01FFFFFF). This may indicate a bad jump or return address. Attempting to verify memory is mapped...", eipBeforeStep);
+                
+                try
+                {
+                    // Try to read a few bytes to check if memory is mapped
+                    _ = _vm!.Read8(eipBeforeStep);
+                }
+                catch (Exception ex)
+                {
+                    var esp = _cpu.GetRegister("ESP");
+                    _logger.LogError(ex, "[Emulator] EIP=0x{Eip:X8} points to unmapped memory. ESP=0x{Esp:X8}. Execution cannot continue.", eipBeforeStep, esp);
+                    throw new InvalidOperationException($"EIP=0x{eipBeforeStep:X8} points to unmapped memory. Likely a bad jump or corrupted return address.", ex);
+                }
+            }
 
             var step = _cpu!.SingleStep(_vm!);
             

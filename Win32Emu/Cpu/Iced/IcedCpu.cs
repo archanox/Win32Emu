@@ -558,10 +558,15 @@ public class IcedCpu : IAsyncCpu
 						_logger.LogError("[IcedCpu] Unhandled mnemonic {InsnMnemonic} at 0x{OldEip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}, EAX=0x{Eax:X8}. Likely executing data as code or invalid jump target.", 
 							insn.Mnemonic, oldEip, _esp, _ebp, _eax);
 						
-						// If this is INVALID mnemonic, it's particularly bad
+						// If this is INVALID mnemonic, it's particularly bad - halt execution
 						if (insn.Mnemonic == Mnemonic.INVALID)
 						{
 							_logger.LogError("[IcedCpu] INVALID instruction encountered - definitely not valid code. Check for corrupted return addresses or bad jumps.");
+							
+							// Throw exception to halt execution and prevent further corruption
+							// This prevents the CPU from continuing to execute random data as code,
+							// which would lead to cascading errors and stack corruption
+							throw new InvalidOperationException($"INVALID instruction at 0x{oldEip:X8}. This indicates execution has jumped to invalid memory (data or unmapped region). EIP=0x{oldEip:X8}, ESP=0x{_esp:X8}, EBP=0x{_ebp:X8}");
 						}
 					}
 
