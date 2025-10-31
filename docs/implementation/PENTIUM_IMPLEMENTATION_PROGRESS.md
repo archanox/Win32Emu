@@ -265,8 +265,8 @@ Basic subset to implement:
 - **Total Pentium instructions**: 323
 - **Previously stubbed**: 319 (98.8%)
 - **Phase 1 implemented**: 30 (9.29%)
-- **Phase 2 implemented**: 43 (13.31%)
-- **Total implemented**: 73 (22.60%)
+- **Phase 2 implemented**: 42 (13.00%)
+- **Total implemented**: 72 (22.29%)
 - **Remaining stubbed**: 250 (77.40%)
 - **Test pass rate**: 38/41 (92.7%)
 
