@@ -10,6 +10,7 @@ This directory contains comprehensive analysis of the SETUP.EXE installer from t
 - **[ANALYSIS.md](ANALYSIS.md)** - Detailed technical analysis of installer functionality
 - **[INDEX.md](INDEX.md)** - Quick reference for functions, APIs, and data structures
 - **[EXECUTION_ISSUES.md](EXECUTION_ISSUES.md)** - Current runtime problems and debugging info
+- **[APIMON_LOG_ANALYSIS.md](APIMON_LOG_ANALYSIS.md)** - Runtime API call analysis from real Windows execution
 
 ## Key Findings
 
@@ -188,6 +189,7 @@ Decomp/ign_install/setup.exe/
 ├── INDEX.md                  # Quick reference guide
 ├── EXECUTION_ISSUES.md       # Current runtime problems
 ├── SUMMARY.md                # This file
+├── APIMON_LOG_ANALYSIS.md    # Runtime API call analysis
 ├── binaryninja.cpp           # Binary Ninja decompilation (5,542 lines)
 ├── boomerang.cpp             # Boomerang decompilation (13,187 lines)
 ├── hexrays.cpp               # IDA Hex-Rays decompilation (1,608 lines) ⭐ BEST
@@ -198,13 +200,14 @@ Decomp/ign_install/setup.exe/
 └── snowman.cpp               # Snowman decompilation (7,272 lines)
 ```
 
-**⭐ Recommended:** Start with `hexrays.cpp` for cleanest, most readable code.
+**⭐ Recommended:** Start with `hexrays.cpp` for cleanest, most readable code. Use `APIMON_LOG_ANALYSIS.md` to validate with actual runtime behavior.
 
 ## Related Files
 
 - `/EXEs/ign_install/SETUP.EXE` - Original executable
 - `/EXEs/ign_install/*.DLL` - DirectX setup DLLs
 - `/EXEs/ign_install/*.*` - 294 game files to be installed
+- `/ApiMon Logs/ign_install/setup.exe.log` - Runtime API call log from real Windows
 - `/Decomp/ign_teas/ANALYSIS.md` - Similar COM analysis for game exe
 - `/Win32Emu/Win32/Modules/Shell32Module.cs` - Shell32 API implementation
 - `/Win32Emu/Win32/Modules/Ole32Module.cs` - COM implementation

@@ -7,7 +7,7 @@ This directory contains decompilation analysis for the Ignition game installer c
 ## Contents
 
 ### setup.exe/
-Complete analysis of the SETUP.EXE installer executable with decompilations from 8 different tools.
+Complete analysis of the SETUP.EXE installer executable with decompilations from 8 different tools and runtime API logs.
 
 **See:** [setup.exe/SUMMARY.md](setup.exe/SUMMARY.md) for executive summary
 
@@ -16,6 +16,10 @@ Complete analysis of the SETUP.EXE installer executable with decompilations from
 - [setup.exe/ANALYSIS.md](setup.exe/ANALYSIS.md) - Detailed technical analysis
 - [setup.exe/INDEX.md](setup.exe/INDEX.md) - Quick reference
 - [setup.exe/EXECUTION_ISSUES.md](setup.exe/EXECUTION_ISSUES.md) - Current runtime problems
+- [setup.exe/APIMON_LOG_ANALYSIS.md](setup.exe/APIMON_LOG_ANALYSIS.md) - Runtime API call analysis
+
+**Runtime data:**
+- [/ApiMon Logs/ign_install/setup.exe.log](../../ApiMon%20Logs/ign_install/setup.exe.log) - Captured API calls from real Windows execution
 
 ## What is Ignition?
 
