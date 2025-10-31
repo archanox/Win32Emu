@@ -30,6 +30,9 @@ public class JitCpu : IAsyncCpu
 	
 	// MMX state - shares physical registers with FPU (MM0-MM7 alias to ST(0)-ST(7))
 	// Each MMX register is 64 bits
+	// NOTE: In real hardware, MMX and FPU share the same physical registers. This implementation
+	// maintains separate arrays for simplicity and to avoid complex conversion between FPU double
+	// format and MMX integer format. The tag word management ensures proper state transitions.
 	private readonly ulong[] _mmx = new ulong[8];
 	
 	// JIT compilation infrastructure - now using RTL pipeline
@@ -4130,6 +4133,9 @@ public class JitCpu : IAsyncCpu
 		// Each of the 8 FPU registers uses 2 bits in the tag word:
 		//   00b = Valid, 01b = Zero, 10b = Special, 11b = Empty
 		_fpuTagWord = 0xFFFF; // Set all 8 tags to 11b (empty)
+		
+		// Clear MMX register state to prevent data leakage
+		Array.Clear(_mmx, 0, _mmx.Length);
 	}
 
 	// MMX instruction implementations
