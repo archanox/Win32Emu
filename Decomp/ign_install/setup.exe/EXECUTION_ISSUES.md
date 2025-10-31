@@ -4,12 +4,15 @@
 
 Setup.exe is **partially working** but crashes during WM_INITDIALOG handling, causing the dialog to close immediately.
 
+**See also:** [APIMON_LOG_ANALYSIS.md](APIMON_LOG_ANALYSIS.md) for runtime API call analysis from real Windows execution that validates the decompilation.
+
 ### What Works ✅
 - CoInitialize() - COM initialization
 - DialogBoxParamA() - Dialog creation and template parsing
 - Dialog control creation (all 11 controls created successfully)
 - Initial call to dialog procedure with WM_INITDIALOG
 - Dialog window is created and shown to user
+- **WM_INITDIALOG executes successfully up to SetFocus** (confirmed by ApiMon log)
 
 ### What Fails ❌
 - Dialog procedure execution crashes at NULL address (0x00000000)
@@ -17,6 +20,7 @@ Setup.exe is **partially working** but crashes during WM_INITDIALOG handling, ca
 - This typically indicates calling through a NULL function pointer
 - **Dialog closes immediately after the crash, before user can interact**
 - User sees the dialog flash on screen and disappear
+- **Crash happens AFTER WM_INITDIALOG completes** (see ApiMon log analysis)
 
 ## Error Details
 

@@ -29,6 +29,9 @@ namespace Win32Emu.Win32.Modules
 		private uint _currentCursor;
 		private uint _focusWindow;
 		private int _cursorDisplayCount = 1; // Tracks cursor visibility counter (starts visible in Windows)
+		
+		// Counter for generating unique bitmap handles
+		private uint _nextBitmapHandle = 0;
 
 		// Constants for procedure execution monitoring
 		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
@@ -3220,6 +3223,9 @@ namespace Win32Emu.Win32.Modules
 
 			// Store the text in the dialog control
 			_env.SetDialogControlText(hDlg, nIDDlgItem, text);
+			
+			// Notify the host (GUI) to update the control
+			_host?.OnDialogControlTextChanged(hDlg, nIDDlgItem, text);
 
 			_logger.LogInformation("[User32] SetDlgItemTextA: Set text '{Text}' for control {NIdDlgItem}", text, nIDDlgItem);
 
@@ -3444,11 +3450,76 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] LoadImageA(hInst=0x{HInst:X8}, name=\"{ImageName}\", type={Type}, cx={Cx}, cy={Cy}, fuLoad=0x{FuLoad:X})",
 				hInst, imageName, type, cx, cy, fuLoad);
 
-			// Stub - return a dummy handle
 			// Type: 0=IMAGE_BITMAP, 1=IMAGE_ICON, 2=IMAGE_CURSOR
-			var handle = 0x90000000 + (uint)imageName.GetHashCode();
-			_logger.LogInformation("[User32] LoadImageA: Returning stub handle 0x{Handle:X8}", handle);
-			return handle;
+			const uint IMAGE_BITMAP = 0;
+			
+			if (type == IMAGE_BITMAP && _resourceReader != null)
+			{
+				// Try to load bitmap resource
+				byte[]? bitmapData = null;
+				
+				// Check if name is an integer resource ID or string name
+				if (name.Address < 0x10000)
+				{
+					// It's an integer resource ID
+					var resourceId = name.Address;
+					bitmapData = _resourceReader.LoadBitmap(resourceId);
+				}
+				else
+				{
+					// It's a string name
+					bitmapData = _resourceReader.LoadBitmapByName(imageName);
+				}
+				
+				if (bitmapData != null && bitmapData.Length > 0)
+				{
+					// Store the bitmap data for later retrieval by the UI
+					// Use a handle that starts at 0x90000000 to avoid conflicts
+					var handle = 0x90000000u + _nextBitmapHandle++;
+					_loadedBitmaps[handle] = new LoadedBitmap
+					{
+						Data = bitmapData,
+						Name = imageName,
+						Width = cx > 0 ? cx : 0,
+						Height = cy > 0 ? cy : 0
+					};
+					
+					_logger.LogInformation("[User32] LoadImageA: Successfully loaded bitmap \"{ImageName}\" with {Size} bytes, handle 0x{Handle:X8}", 
+						imageName, bitmapData.Length, handle);
+					return handle;
+				}
+				
+				_logger.LogWarning("[User32] LoadImageA: Bitmap resource \"{ImageName}\" not found", imageName);
+				// Error 1814 = ERROR_RESOURCE_NAME_NOT_FOUND
+				return 0;
+			}
+
+			// Stub for icons and cursors - return a dummy handle
+			var stubHandle = 0x90000000u + ((uint)imageName.GetHashCode() & 0x0FFFFFFF);
+			_logger.LogInformation("[User32] LoadImageA: Returning stub handle 0x{Handle:X8} for type {Type}", stubHandle, type);
+			return stubHandle;
+		}
+		
+		private readonly Dictionary<uint, LoadedBitmap> _loadedBitmaps = new();
+		
+		private class LoadedBitmap
+		{
+			public byte[] Data { get; set; } = Array.Empty<byte>();
+			public string Name { get; set; } = string.Empty;
+			public int Width { get; set; }
+			public int Height { get; set; }
+		}
+		
+		/// <summary>
+		/// Gets a loaded bitmap by handle. Used by the UI to display bitmaps.
+		/// </summary>
+		public byte[]? GetLoadedBitmapData(uint handle)
+		{
+			if (_loadedBitmaps.TryGetValue(handle, out var bitmap))
+			{
+				return bitmap.Data;
+			}
+			return null;
 		}
 
 		[DllModuleExport(16)]
@@ -3457,7 +3528,34 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] LoadStringA(hInstance=0x{HInstance:X8}, uID={UID}, lpBuffer=0x{LpBuffer:X8}, cchBufferMax={CchBufferMax})",
 				hInstance, uID, lpBuffer.Address, cchBufferMax);
 
-			// Stub - string resources not yet implemented, return empty
+			// Try to load the string from resources
+			if (_resourceReader != null)
+			{
+				var str = _resourceReader.LoadString(uID);
+				if (str != null)
+				{
+					// Calculate the actual length to write (limited by buffer size)
+					var writeLen = str.Length;
+					if (cchBufferMax > 0 && str.Length >= cchBufferMax)
+					{
+						writeLen = cchBufferMax - 1;
+						str = str.Substring(0, writeLen);
+					}
+
+					_logger.LogInformation("[User32] LoadStringA: Loaded string \"{String}\" (length {Length})", str, str.Length);
+					
+					if (cchBufferMax > 0)
+					{
+						lpBuffer.Write(_env.Memory, str, true);
+					}
+					
+					return (uint)writeLen;
+				}
+			}
+
+			_logger.LogWarning("[User32] LoadStringA: String resource {UID} not found", uID);
+			
+			// String not found - return empty
 			if (cchBufferMax > 0)
 			{
 				lpBuffer.Write(_env.Memory, string.Empty, true);

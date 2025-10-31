@@ -290,6 +290,8 @@ grep -n "LoadStringA" hexrays.cpp
 
 - `/Decomp/ign_install/setup.exe/README.md` - This directory's overview
 - `/Decomp/ign_install/setup.exe/ANALYSIS.md` - Detailed analysis and recommendations
+- `/Decomp/ign_install/setup.exe/APIMON_LOG_ANALYSIS.md` - Runtime API call analysis from real Windows
 - `/Decomp/ign_teas/ANALYSIS.md` - COM vtable analysis for games (similar concepts)
+- `/ApiMon Logs/ign_install/setup.exe.log` - Raw ApiMon log file
 - `/EXEs/ign_install/SETUP.EXE` - Original executable
 - `/EXEs/ign_install/DSETUP.DLL` - DirectX setup library

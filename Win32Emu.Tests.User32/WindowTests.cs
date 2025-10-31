@@ -938,4 +938,7 @@ internal class MockEmulatorHost : IEmulatorHost
         // Mock implementation - return IDOK
         return 1;
     }
+
+    public void OnDialogControlTextChanged(uint dialogHandle, int controlId, string text) { }
+    public void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData) { }
 }

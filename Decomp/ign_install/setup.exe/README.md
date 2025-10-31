@@ -65,6 +65,13 @@ This directory contains decompilation outputs from various decompilers analyzing
   - API call locations
   - Key data structures
 
+- **`APIMON_LOG_ANALYSIS.md`** - Runtime API call analysis from ApiMon logs
+  - Analyzes actual API calls made during execution on real Windows
+  - Confirms decompilation accuracy with runtime data
+  - Documents dialog initialization sequence
+  - Identifies crash location and missing APIs
+  - Provides debugging recommendations
+
 ## Key Findings
 
 After analyzing these decompilation files, we identified that SETUP.EXE:
@@ -259,11 +266,13 @@ Always cross-reference with:
 - Win32 API documentation
 - Shell API documentation
 - Actual emulator behavior
+- **Runtime ApiMon logs** (see `APIMON_LOG_ANALYSIS.md`)
 
 ## Related Files
 
 - `/EXEs/ign_install/SETUP.EXE` - The original executable
 - `/EXEs/ign_install/DSETUP.DLL` - DirectX setup library
+- `/ApiMon Logs/ign_install/setup.exe.log` - Runtime API call log from real Windows
 - `/Win32Emu/Win32/Modules/Shell32Module.cs` - Shell32 API emulation (if exists)
 - `/Win32Emu/Win32/Modules/Ole32Module.cs` - COM/OLE emulation (if exists)
 
