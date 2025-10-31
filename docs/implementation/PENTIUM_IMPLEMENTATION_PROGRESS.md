@@ -110,18 +110,19 @@ All conditional jump instructions are now fully functional:
 - Support for near branch targets (8-bit, 16-bit, 32-bit offsets)
 - EIP updated correctly on conditional/unconditional paths
 
-### Bit Manipulation (5/5 implemented) ✅
+### Bit Manipulation (6/6 implemented) ✅
 All core bit manipulation instructions are functional:
 
 - **BSF** (Bit Scan Forward) - Finds first set bit from LSB
-- **BSR** (Bit Scan Reverse) - Finds first set bit from MSB  
+- **BSR** (Bit Scan Reverse) - Finds first set bit from MSB
+- **BT** (Bit Test) - Tests a bit and sets CF
 - **BTS** (Bit Test and Set) - Tests and sets a bit
 - **BTR** (Bit Test and Reset) - Tests and resets a bit
 - **BTC** (Bit Test and Complement) - Tests and toggles a bit
 
 **Implementation Details:**
 - Zero flag set when source is zero (BSF/BSR)
-- Carry flag set to tested bit value (BTS/BTR/BTC)
+- Carry flag set to tested bit value (BT/BTS/BTR/BTC)
 - Support for both register and memory operands
 - Proper bit masking (modulo 32 for 32-bit operands)
 
@@ -230,12 +231,12 @@ Basic subset to implement:
 
 ## Statistics
 
-- **Total Pentium instructions**: 322
-- **Previously stubbed**: 318 (98.8%)
-- **Phase 1 implemented**: 29 (9.0%)
+- **Total Pentium instructions**: 323
+- **Previously stubbed**: 319 (98.8%)
+- **Phase 1 implemented**: 30 (9.3%)
 - **Phase 2 implemented**: 31 (9.6%)
-- **Total implemented**: 60 (18.6%)
-- **Remaining stubbed**: 262 (81.4%)
+- **Total implemented**: 61 (18.9%)
+- **Remaining stubbed**: 262 (81.1%)
 - **Test pass rate**: 35/38 (92.1%)
 
 ## Files Modified
