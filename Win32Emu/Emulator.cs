@@ -369,6 +369,14 @@ public sealed class Emulator : IDisposable
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
         {
+            // DEBUG: Log EIP at start of each iteration to catch when it gets corrupted
+            var eipAtLoopStart = _cpu!.GetEip();
+            if (eipAtLoopStart >= 0x01000000 && eipAtLoopStart < 0x02000000)
+            {
+                var esp = _cpu.GetRegister("ESP");
+                _logger.LogWarning("[Emulator] LOOP START: EIP=0x{Eip:X8} is already in suspicious range at loop start! ESP=0x{Esp:X8}", eipAtLoopStart, esp);
+            }
+            
             // Check pause state periodically without blocking
             if (!_pauseEvent.WaitOne(0))
             {
@@ -395,7 +403,15 @@ public sealed class Emulator : IDisposable
             // Check if we should context switch
             if (scheduler != null && scheduler.ShouldContextSwitch())
             {
+                var eipBeforeSwitch = _cpu!.GetEip();
                 var nextThread = scheduler.ContextSwitch(_cpu!);
+                var eipAfterSwitch = _cpu!.GetEip();
+                
+                if (eipBeforeSwitch != eipAfterSwitch)
+                {
+                    _logger.LogWarning("[Emulator] Context switch changed EIP from 0x{Before:X8} to 0x{After:X8}",  eipBeforeSwitch, eipAfterSwitch);
+                }
+                
                 if (nextThread != null)
                 {
                     LogDebug($"[Emulator] Context switched to thread {nextThread.ThreadId}");
