@@ -240,7 +240,7 @@ Comprehensive three-way validation tests comparing JitCpu, IcedCpu, and Unicorn:
 - All Priority 1 instructions fully tested (BT, BTS, BTR, BTC, JE, JNE, JA, JG, SHLD, SHRD, etc.)
 - All Priority 2 instructions tested (CMOV*, FPU control, segment operations)
 - **MMX instruction tests (EMMS, MOVD, MOVQ, PADD*, PAND, POR, PXOR, PCMPEQ*, PSLL*)** - 12 tests
-- 110/112 tests passing (2 failures unrelated to MMX: 1 pre-existing CMOVNO issue, 1 IcedCpu MMX compatibility)
+- 110/112 tests passing (2 pre-existing failures: CMOVNO flag handling issue, IcedCpu lacks MMX support)
 
 All tests verify that:
 - Instructions are decoded without crashing

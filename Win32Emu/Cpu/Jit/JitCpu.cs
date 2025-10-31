@@ -4134,7 +4134,8 @@ public class JitCpu : IAsyncCpu
 		//   00b = Valid, 01b = Zero, 10b = Special, 11b = Empty
 		_fpuTagWord = 0xFFFF; // Set all 8 tags to 11b (empty)
 		
-		// Clear MMX register state to prevent data leakage
+		// Implementation note: Clearing MMX register state here is for code cleanliness in the emulator.
+		// On real hardware, EMMS does NOT clear MMX register values; it only marks the FPU tag word as empty.
 		Array.Clear(_mmx, 0, _mmx.Length);
 	}
 
