@@ -480,9 +480,9 @@ public sealed class Emulator : IDisposable
                 var esp = _cpu.GetRegister("ESP");
                 
                 // Validate ESP is in a reasonable range before attempting to read from stack
-                if (esp < 0x00010000 || esp >= _vm!.Size)
+                if (esp < 0x00010000)
                 {
-                    _logger.LogError("[Syscall] ESP=0x{Esp:X8} is out of valid range [0x10000-0x{Size:X}). Skipping syscall.", esp, _vm.Size);
+                    _logger.LogError("[Syscall] ESP=0x{Esp:X8} is suspiciously low (< 0x10000). Skipping syscall.", esp);
                     _cpu.SetRegister("EAX", 0); // Return 0 as error
                     continue;
                 }
