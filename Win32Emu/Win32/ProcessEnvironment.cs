@@ -24,7 +24,7 @@ public class ProcessEnvironment
 
 	// Free-list allocator for VirtualAlloc/VirtualFree
 	private readonly List<MemoryBlock> _freeList = new();
-	private readonly List<MemoryBlock> _allocatedBlocks = new();
+	private readonly Dictionary<uint, MemoryBlock> _allocatedBlocks = new();
 
 	// COM vtable dispatcher
 	private readonly ComVtableDispatcher? _comDispatcher;
@@ -1021,16 +1021,13 @@ public class ProcessEnvironment
 		uint endOfAllocation = endOfAllocation64 > uint.MaxValue ? uint.MaxValue : (uint)endOfAllocation64;
 		
 		// Check if this exact region is already allocated (re-commit scenario)
-		bool alreadyAllocated = false;
-		foreach (var block in _allocatedBlocks)
+		bool alreadyAllocated = _allocatedBlocks.TryGetValue(lpAddress, out var existingBlock) 
+			&& existingBlock.Size >= size;
+		
+		if (alreadyAllocated)
 		{
-			if (block.Address == lpAddress && block.Size >= size)
-			{
-				alreadyAllocated = true;
-				_logger.LogInformation("[ProcessEnv] VirtualAlloc: Re-committing already allocated region at 0x{Address:X8}",
-					lpAddress);
-				break;
-			}
+			_logger.LogInformation("[ProcessEnv] VirtualAlloc: Re-committing already allocated region at 0x{Address:X8}",
+				lpAddress);
 		}
 		
 		if (!alreadyAllocated)
@@ -1092,7 +1089,7 @@ public class ProcessEnvironment
 				}
 				
 				// Add to allocated blocks
-				_allocatedBlocks.Add(new MemoryBlock(address, size, false));
+				_allocatedBlocks[address] = new MemoryBlock(address, size, false);
 				
 				// Zero out the memory
 				Memory.WriteBytes(address, new byte[size]);
@@ -1109,7 +1106,7 @@ public class ProcessEnvironment
 		_allocPtr = addr + size;
 		
 		// Add to allocated blocks
-		_allocatedBlocks.Add(new MemoryBlock(addr, size, false));
+		_allocatedBlocks[addr] = new MemoryBlock(addr, size, false);
 		
 		// Zero out the memory
 		Memory.WriteBytes(addr, new byte[size]);
@@ -1130,7 +1127,7 @@ public class ProcessEnvironment
 		uint endAddress = endAddress64 > uint.MaxValue ? uint.MaxValue : (uint)endAddress64;
 		
 		// Check against all allocated blocks
-		foreach (var block in _allocatedBlocks)
+		foreach (var block in _allocatedBlocks.Values)
 		{
 			if (!(endAddress <= block.Address || address >= block.EndAddress))
 			{
@@ -1188,7 +1185,7 @@ public class ProcessEnvironment
 		}
 		
 		// Add to allocated blocks
-		_allocatedBlocks.Add(new MemoryBlock(address, size, false));
+		_allocatedBlocks[address] = new MemoryBlock(address, size, false);
 	}
 
 	/// <summary>
@@ -1213,21 +1210,7 @@ public class ProcessEnvironment
 		}
 		
 		// Find the allocated block
-		MemoryBlock? blockToFree = null;
-		int blockIndex = -1;
-		
-		for (int i = 0; i < _allocatedBlocks.Count; i++)
-		{
-			var block = _allocatedBlocks[i];
-			if (block.Address == lpAddress)
-			{
-				blockToFree = block;
-				blockIndex = i;
-				break;
-			}
-		}
-		
-		if (blockToFree == null)
+		if (!_allocatedBlocks.TryGetValue(lpAddress, out var blockToFree))
 		{
 			_logger.LogWarning("[ProcessEnv] VirtualFree: Address 0x{Address:X8} not found in allocated blocks",
 				lpAddress);
@@ -1235,7 +1218,7 @@ public class ProcessEnvironment
 		}
 		
 		// Remove from allocated blocks
-		_allocatedBlocks.RemoveAt(blockIndex);
+		_allocatedBlocks.Remove(lpAddress);
 		
 		// Add to free list
 		var freedBlock = new MemoryBlock(blockToFree.Address, blockToFree.Size, true);
@@ -2361,6 +2344,13 @@ public class ProcessEnvironment
 			IsFree = isFree;
 		}
 
-		public uint EndAddress => Address + Size;
+		public uint EndAddress
+		{
+			get
+			{
+				ulong end = (ulong)Address + (ulong)Size;
+				return end > uint.MaxValue ? uint.MaxValue : (uint)end;
+			}
+		}
 	}
 }
