@@ -1125,7 +1125,9 @@ public class ProcessEnvironment
 	/// </summary>
 	private bool IsRangeAvailable(uint address, uint size)
 	{
-		uint endAddress = address + size;
+		// Calculate end address with overflow protection
+		ulong endAddress64 = (ulong)address + size;
+		uint endAddress = endAddress64 > uint.MaxValue ? uint.MaxValue : (uint)endAddress64;
 		
 		// Check against all allocated blocks
 		foreach (var block in _allocatedBlocks)
@@ -1145,7 +1147,9 @@ public class ProcessEnvironment
 	/// </summary>
 	private void MarkRangeAsAllocated(uint address, uint size)
 	{
-		uint endAddress = address + size;
+		// Calculate end address with overflow protection
+		ulong endAddress64 = (ulong)address + size;
+		uint endAddress = endAddress64 > uint.MaxValue ? uint.MaxValue : (uint)endAddress64;
 		
 		// Remove or split any free blocks that overlap with this range
 		for (int i = _freeList.Count - 1; i >= 0; i--)
@@ -2341,6 +2345,13 @@ public class ProcessEnvironment
 	{
 		public uint Address { get; set; }
 		public uint Size { get; set; }
+		
+		/// <summary>
+		/// Indicates whether this block is free or allocated.
+		/// Currently used for debugging and validation purposes.
+		/// In the future, this could be used to maintain a single unified list
+		/// instead of separate _freeList and _allocatedBlocks lists.
+		/// </summary>
 		public bool IsFree { get; set; }
 
 		public MemoryBlock(uint address, uint size, bool isFree = true)
