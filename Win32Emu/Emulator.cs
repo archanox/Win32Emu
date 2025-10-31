@@ -504,23 +504,36 @@ public sealed class Emulator : IDisposable
                     var name = imp.name;
                     _logger.LogInformation("[Syscall] {Dll}!{Name} from stub at 0x{Stub:X8}", dll, name, importStubAddr);
                     
-                    // Save callee-saved registers
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP per stdcall convention)
                     var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                     
-                    // Adjust ESP to skip the return address to stub (at [ESP+0]),
-                    // so that StackArgs reads arguments from the correct offsets:
-                    // Before adjustment: [ESP+0] = return to stub, [ESP+4] = return to caller, [ESP+8] = arg1, ...
-                    // After adjustment:  [ESP+0] = return to caller, [ESP+4] = arg1, [ESP+8] = arg2, ...
-                    // This matches the layout expected by StackArgs and Win32 function signatures
+                    // Temporarily adjust ESP to skip the return-to-stub address on the stack.
+                    // This allows StackArgs to read arguments at the correct offsets.
+                    //
+                    // Current stack layout:
+                    //   [ESP+0] = return address to import stub (after CALL to syscall dispatcher)
+                    //   [ESP+4] = return address to caller (after CALL to import stub)
+                    //   [ESP+8] = arg1
+                    //   [ESP+12] = arg2, etc.
+                    //
+                    // After adjustment (ESP += 4):
+                    //   [ESP+0] = return address to caller  
+                    //   [ESP+4] = arg1  (StackArgs reads this for index 0)
+                    //   [ESP+8] = arg2  (StackArgs reads this for index 1)
+                    //
+                    // This matches retrowin32's approach where they pass stack_args = esp + 8
+                    // (skipping both return addresses) to their generated wrapper functions.
+                    // We restore ESP before returning so the CPU can execute RET naturally.
+                    var originalEsp = esp;
                     _cpu.SetRegister("ESP", esp + 4);
                     
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                     {
-                        // Set return value - this is all we do, no EIP/ESP manipulation!
+                        // Set return value in EAX (stdcall convention)
                         _cpu.SetRegister("EAX", ret);
                         
-                        // Restore ESP to its original value (pointing to return address to stub)
-                        _cpu.SetRegister("ESP", esp);
+                        // Restore ESP to original value so CPU can execute RET instructions naturally
+                        _cpu.SetRegister("ESP", originalEsp);
                         
                         // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
@@ -569,8 +582,8 @@ public sealed class Emulator : IDisposable
                     {
                         _logger.LogError("[Syscall] Dispatcher failed to invoke {Dll}!{Name}", dll, name);
                         _cpu.SetRegister("EAX", 0);
-                        // Restore ESP to its original value
-                        _cpu.SetRegister("ESP", esp);
+                        // Restore ESP to original value
+                        _cpu.SetRegister("ESP", originalEsp);
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     }
                 }
