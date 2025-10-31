@@ -40,6 +40,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private Win32Dispatcher? _dispatcher;
 	private uint _lastError;
 	private ICpu? _cpu;
+	private readonly object _interlockedLock = new();
 
 	public void SetResourceReader(PeResourceReader resourceReader)
 	{
@@ -5505,7 +5506,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Objects not available yet - yield and retry
 			Thread.Sleep(1);
 
-			// Yield to thread scheduler if available
+			// Process scheduler timeout checks if available
 			_env.ThreadScheduler?.ProcessWaitTimeouts();
 		}
 	}
@@ -6499,12 +6500,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (destination != 0)
 		{
-			var currentValue = _env.MemRead32(destination);
-			if (currentValue == comparand)
+			lock (_interlockedLock)
 			{
-				_env.MemWrite32(destination, exchange);
+				var currentValue = _env.MemRead32(destination);
+				if (currentValue == comparand)
+				{
+					_env.MemWrite32(destination, exchange);
+				}
+				return currentValue;
 			}
-			return currentValue;
 		}
 		return 0;
 	}
