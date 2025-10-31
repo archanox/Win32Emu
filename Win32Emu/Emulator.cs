@@ -457,6 +457,16 @@ public sealed class Emulator : IDisposable
             // Record instruction execution
             _metrics?.RecordInstructionsExecuted();
             
+            // Validate EIP after execution to catch bad jumps/returns early
+            var eipAfterStep = _cpu.GetEip();
+            if (eipAfterStep > 0 && eipAfterStep < 0x00010000)
+            {
+                // EIP in low memory range (0x1-0xFFFF) is highly suspicious
+                // This usually indicates a corrupted return address or bad function pointer
+                var esp = _cpu.GetRegister("ESP");
+                _logger.LogError("[Emulator] EIP=0x{Eip:X8} is in suspicious low memory range. ESP=0x{Esp:X8}. Likely corrupted return address.", eipAfterStep, esp);
+            }
+            
             // Check for syscall (INT 0x80 from import stubs)
             // This is the retrowin32-style approach where import stubs CALL syscall dispatcher
             // The syscall dispatcher triggers INT 0x80, we handle it, then CPU executes RET naturally
@@ -468,6 +478,14 @@ public sealed class Emulator : IDisposable
                 
                 
                 var esp = _cpu.GetRegister("ESP");
+                
+                // Validate ESP is in a reasonable range before attempting to read from stack
+                if (esp < 0x00010000)
+                {
+                    _logger.LogError("[Syscall] ESP=0x{Esp:X8} is suspiciously low (< 0x10000). Skipping syscall.", esp);
+                    _cpu.SetRegister("EAX", 0); // Return 0 as error
+                    continue;
+                }
                 
                 // Read the return address - this points to the RET instruction in the import stub
                 var retToStub = _vm!.Read32(esp);
@@ -486,23 +504,36 @@ public sealed class Emulator : IDisposable
                     var name = imp.name;
                     _logger.LogInformation("[Syscall] {Dll}!{Name} from stub at 0x{Stub:X8}", dll, name, importStubAddr);
                     
-                    // Save callee-saved registers
+                    // Save callee-saved registers (EBX, ESI, EDI, EBP per stdcall convention)
                     var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
                     
-                    // Adjust ESP to skip the return address to stub (at [ESP+0]),
-                    // so that StackArgs reads arguments from the correct offsets:
-                    // Before adjustment: [ESP+0] = return to stub, [ESP+4] = return to caller, [ESP+8] = arg1, ...
-                    // After adjustment:  [ESP+0] = return to caller, [ESP+4] = arg1, [ESP+8] = arg2, ...
-                    // This matches the layout expected by StackArgs and Win32 function signatures
+                    // Temporarily adjust ESP to skip the return-to-stub address on the stack.
+                    // This allows StackArgs to read arguments at the correct offsets.
+                    //
+                    // Current stack layout:
+                    //   [ESP+0] = return address to import stub (after CALL to syscall dispatcher)
+                    //   [ESP+4] = return address to caller (after CALL to import stub)
+                    //   [ESP+8] = arg1
+                    //   [ESP+12] = arg2, etc.
+                    //
+                    // After adjustment (ESP += 4):
+                    //   [ESP+0] = return address to caller  
+                    //   [ESP+4] = arg1  (StackArgs reads this for index 0)
+                    //   [ESP+8] = arg2  (StackArgs reads this for index 1)
+                    //
+                    // This matches retrowin32's approach where they pass stack_args = esp + 8
+                    // (skipping both return addresses) to their generated wrapper functions.
+                    // We restore ESP before returning so the CPU can execute RET naturally.
+                    var originalEsp = esp;
                     _cpu.SetRegister("ESP", esp + 4);
                     
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                     {
-                        // Set return value - this is all we do, no EIP/ESP manipulation!
+                        // Set return value in EAX (stdcall convention)
                         _cpu.SetRegister("EAX", ret);
                         
-                        // Restore ESP to its original value (pointing to return address to stub)
-                        _cpu.SetRegister("ESP", esp);
+                        // Restore ESP to original value so CPU can execute RET instructions naturally
+                        _cpu.SetRegister("ESP", originalEsp);
                         
                         // Restore callee-saved registers
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
@@ -533,13 +564,26 @@ public sealed class Emulator : IDisposable
                         // The CPU will now execute the RET instruction in the syscall dispatcher,
                         // which returns to the import stub, which then executes its RET imm16
                         // to return to the original caller with proper stack cleanup!
+                        
+                        // Validate that the return-to-stub address looks reasonable
+                        if (retToStub < 0x0F000000 || retToStub >= 0x10000000)
+                        {
+                            _logger.LogWarning("[Syscall] Return-to-stub address 0x{RetToStub:X8} is outside import stub range [0x0F000000-0x10000000). This may indicate stack corruption.", retToStub);
+                        }
+                        
+                        // Validate ESP is in a reasonable range (not extremely small)
+                        var restoredEsp = _cpu.GetRegister("ESP");
+                        if (restoredEsp < 0x00010000)
+                        {
+                            _logger.LogError("[Syscall] ESP=0x{Esp:X8} after syscall return is suspiciously low. This indicates possible stack corruption.", restoredEsp);
+                        }
                     }
                     else
                     {
                         _logger.LogError("[Syscall] Dispatcher failed to invoke {Dll}!{Name}", dll, name);
                         _cpu.SetRegister("EAX", 0);
-                        // Restore ESP to its original value
-                        _cpu.SetRegister("ESP", esp);
+                        // Restore ESP to original value
+                        _cpu.SetRegister("ESP", originalEsp);
                         CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
                     }
                 }

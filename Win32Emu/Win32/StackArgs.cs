@@ -3,9 +3,9 @@ using Win32Emu.Memory;
 
 namespace Win32Emu.Win32;
 
-public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem)
+public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem, uint baseOffset = 0)
 {
-	private readonly uint _esp = cpu.GetRegister("ESP");
+	private readonly uint _esp = cpu.GetRegister("ESP") + baseOffset;
 
 	public uint UInt32(int index) => mem.Read32(_esp + (uint)((index + 1) * 4));
 	public int Int32(int index) => (int)mem.Read32(_esp + (uint)((index + 1) * 4));

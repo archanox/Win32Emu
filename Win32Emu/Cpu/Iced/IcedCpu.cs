@@ -350,11 +350,26 @@ public class IcedCpu : IAsyncCpu
 					break;
 				case Mnemonic.Ret:
 					var ret = Read32(_esp);
+					var oldEsp = _esp;
 					_esp += 4;
 					_eip = ret;
 					if (insn.Immediate16 != 0)
 					{
 						_esp += insn.Immediate16;
+					}
+					
+					// Log detailed RET information when in import stub or syscall dispatcher range
+					if (oldEip >= 0x0E000000 && oldEip < 0x10000000)
+					{
+						_logger.LogDebug("[IcedCpu] RET at 0x{OldEip:X8}: popped 0x{RetAddr:X8} from ESP=0x{OldEsp:X8}, cleanup={Cleanup} bytes, new ESP=0x{NewEsp:X8}", 
+							oldEip, ret, oldEsp, insn.Immediate16, _esp);
+						
+						// Warn if return address looks suspicious
+						if (ret < 0x00400000 && ret != 0xFFFFFFFF)
+						{
+							_logger.LogWarning("[IcedCpu] RET at 0x{OldEip:X8}: return address 0x{RetAddr:X8} is suspiciously low (< 0x00400000). Possible stack corruption.", 
+								oldEip, ret);
+						}
 					}
 
 					break;
@@ -538,7 +553,16 @@ public class IcedCpu : IAsyncCpu
 					}
 					else
 					{
-						_logger.LogError("[IcedCpu] Unhandled mnemonic {InsnMnemonic} at 0x{OldEip:X8}", insn.Mnemonic, oldEip);
+						// Log extensive diagnostics for unhandled/invalid instructions
+						// This helps identify code/data confusion and control flow issues
+						_logger.LogError("[IcedCpu] Unhandled mnemonic {InsnMnemonic} at 0x{OldEip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}, EAX=0x{Eax:X8}. Likely executing data as code or invalid jump target.", 
+							insn.Mnemonic, oldEip, _esp, _ebp, _eax);
+						
+						// If this is INVALID mnemonic, it's particularly bad
+						if (insn.Mnemonic == Mnemonic.INVALID)
+						{
+							_logger.LogError("[IcedCpu] INVALID instruction encountered - definitely not valid code. Check for corrupted return addresses or bad jumps.");
+						}
 					}
 
 					break;
