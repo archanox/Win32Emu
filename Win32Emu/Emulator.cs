@@ -584,6 +584,38 @@ public sealed class Emulator : IDisposable
                         var returnToCallerAfter = _vm!.Read32(returnToCallerAddr);
                         _logger.LogInformation("[Syscall] AFTER API: Return address at 0x{Addr:X8} = 0x{RetAddr:X8}", returnToCallerAddr, returnToCallerAfter);
                         
+                        // VALIDATION: Detect stack corruption by checking if return address changed during API call
+                        if (returnToCaller != returnToCallerAfter)
+                        {
+                            _logger.LogError("[Syscall] STACK CORRUPTION DETECTED: Return address changed from 0x{Before:X8} to 0x{After:X8} during {Dll}!{Name} call. This indicates the API corrupted the stack.", 
+                                returnToCaller, returnToCallerAfter, dll, name);
+                            
+                            // Additional diagnostic: Check if the new return address is in unmapped import range
+                            if (returnToCallerAfter >= 0x0F000000 && returnToCallerAfter < 0x10000000)
+                            {
+                                var alignedAddr = returnToCallerAfter & 0xFFFFFFF0u;
+                                var isMapped = currentImage.ImportAddressMap.ContainsKey(alignedAddr);
+                                _logger.LogError("[Syscall] Corrupted return address 0x{Addr:X8} is in import stub range. Aligned: 0x{Aligned:X8}, Mapped: {Mapped}", 
+                                    returnToCallerAfter, alignedAddr, isMapped);
+                                
+                                if (!isMapped)
+                                {
+                                    var importCount = currentImage.ImportAddressMap.Count;
+                                    var wouldBeIndex = (returnToCallerAfter - 0x0F000000) / 0x10;
+                                    _logger.LogError("[Syscall] This would be import index {Index} but only {Count} imports exist (indices 0-{MaxIndex}). " +
+                                        "This is likely a C runtime bug with uninitialized function pointer or array bounds issue.",
+                                        wouldBeIndex, importCount, importCount - 1);
+                                }
+                            }
+                        }
+                        
+                        // VALIDATION: Check if return-to-caller address looks valid
+                        // It should point to code in the main executable's address space
+                        if (returnToCallerAfter >= 0x0F000000 && returnToCallerAfter < 0x10000000)
+                        {
+                            _logger.LogWarning("[Syscall] Return-to-caller address 0x{Addr:X8} is in import stub range, not in executable code. Possible stack corruption.", returnToCallerAfter);
+                        }
+                        
                         // Set return value in EAX (stdcall convention)
                         _cpu.SetRegister("EAX", ret);
                         
