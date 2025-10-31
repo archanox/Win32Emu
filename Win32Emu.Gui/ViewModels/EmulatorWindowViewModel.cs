@@ -497,7 +497,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             
             // Win32 wheel delta is in units of WHEEL_DELTA (120)
             short wheelDelta = (short)(delta * 120);
-            uint wParam = ((uint)wheelDelta << 16) | Win32InputMapper.GetMouseButtonState(properties);
+            uint wParam = ((uint)(ushort)wheelDelta << 16) | Win32InputMapper.GetMouseButtonState(properties);
             uint lParam = Win32InputMapper.MakeMouseLParam(pos.X, pos.Y);
             
             OnDebugOutput($"Avalonia window mouse wheel at ({pos.X:F0}, {pos.Y:F0}) delta={delta} for HWND=0x{info.Handle:X8}, sending WM_MOUSEWHEEL", DebugLevel.Debug);
