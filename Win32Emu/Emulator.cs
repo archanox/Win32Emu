@@ -1592,6 +1592,8 @@ public interface IEmulatorHost
     Task<int> OnDialogCreate(DialogCreateInfo info);
     void OnDialogEnd(uint dialogHandle, int result);
     int OnMessageBox(MessageBoxInfo info);
+    void OnDialogControlTextChanged(uint dialogHandle, int controlId, string text);
+    void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData);
 }
 
 public enum DebugLevel

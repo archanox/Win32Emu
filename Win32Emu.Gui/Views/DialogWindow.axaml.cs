@@ -449,4 +449,115 @@ public partial class DialogWindow : Window
 		_controlsById.TryGetValue(id, out var control);
 		return control;
 	}
+
+	/// <summary>
+	/// Sets the text of a control by its ID.
+	/// </summary>
+	public void SetControlText(ushort id, string text)
+	{
+		Dispatcher.UIThread.Post(() =>
+		{
+			var control = GetControlById(id);
+			if (control is TextBox textBox)
+			{
+				textBox.Text = text;
+			}
+			else if (control is Button button)
+			{
+				button.Content = text;
+			}
+			else if (control is TextBlock textBlock)
+			{
+				textBlock.Text = text;
+			}
+		});
+	}
+
+	/// <summary>
+	/// Sets a bitmap on a static control.
+	/// </summary>
+	public void SetControlBitmap(ushort id, byte[] bitmapData)
+	{
+		Dispatcher.UIThread.Post(() =>
+		{
+			var control = GetControlById(id);
+			if (control is Border border)
+			{
+				try
+				{
+					// Convert DIB bitmap data to Avalonia-compatible image
+					var bitmap = ConvertDibToBitmap(bitmapData);
+					if (bitmap != null)
+					{
+						border.Child = new Avalonia.Controls.Image
+						{
+							Source = bitmap,
+							Stretch = Avalonia.Media.Stretch.Uniform
+						};
+					}
+				}
+				catch (Exception ex)
+				{
+					// If bitmap conversion fails, show error in the border
+					border.Child = new TextBlock
+					{
+						Text = $"Error loading bitmap: {ex.Message}",
+						FontSize = 10,
+						Foreground = Brushes.Red
+					};
+				}
+			}
+		});
+	}
+
+	/// <summary>
+	/// Converts a DIB (Device Independent Bitmap) to an Avalonia Bitmap.
+	/// </summary>
+	private Avalonia.Media.Imaging.Bitmap? ConvertDibToBitmap(byte[] dibData)
+	{
+		if (dibData == null || dibData.Length < 40)
+		{
+			return null;
+		}
+
+		// DIB format starts with BITMAPINFOHEADER
+		// We need to add a BITMAPFILEHEADER to make it a valid BMP file
+		var headerSize = BitConverter.ToInt32(dibData, 0);
+		var width = BitConverter.ToInt32(dibData, 4);
+		var height = BitConverter.ToInt32(dibData, 8);
+		var bitsPerPixel = BitConverter.ToInt16(dibData, 14);
+		
+		// Calculate the size of the color table (palette)
+		var colorTableSize = 0;
+		if (bitsPerPixel <= 8)
+		{
+			var numColors = BitConverter.ToInt32(dibData, 32); // biClrUsed
+			if (numColors == 0)
+			{
+				numColors = 1 << bitsPerPixel; // 2^bitsPerPixel
+			}
+			colorTableSize = numColors * 4; // Each color is 4 bytes (RGBQUAD)
+		}
+
+		// Calculate file header size and offset to pixel data
+		var fileHeaderSize = 14;
+		var pixelDataOffset = fileHeaderSize + headerSize + colorTableSize;
+
+		// Create BMP file header
+		var bmpData = new byte[fileHeaderSize + dibData.Length];
+		
+		// BITMAPFILEHEADER
+		bmpData[0] = (byte)'B';
+		bmpData[1] = (byte)'M';
+		BitConverter.GetBytes(bmpData.Length).CopyTo(bmpData, 2); // File size
+		// Reserved fields are 0
+		BitConverter.GetBytes(pixelDataOffset).CopyTo(bmpData, 10); // Offset to pixel data
+
+		// Copy DIB data (BITMAPINFOHEADER + color table + pixels)
+		dibData.CopyTo(bmpData, fileHeaderSize);
+
+		// Create Avalonia bitmap from the BMP data
+		using var stream = new System.IO.MemoryStream(bmpData);
+		return new Avalonia.Media.Imaging.Bitmap(stream);
+	}
 }

@@ -292,4 +292,136 @@ public class PeResourceReader
 		}
 		return sb.ToString();
 	}
+
+	/// <summary>
+	/// Loads a string from the string table resource.
+	/// String resources are stored in blocks of 16 strings per resource.
+	/// </summary>
+	/// <param name="stringId">The string resource ID</param>
+	/// <returns>The string, or null if not found</returns>
+	public string? LoadString(uint stringId)
+	{
+		// String resources are organized in blocks of 16 strings
+		// The block ID is (stringId / 16) + 1
+		// The index within the block is stringId % 16
+		var blockId = (stringId / 16) + 1;
+		var indexInBlock = (int)(stringId % 16);
+
+		// Find the string table resource
+		var resources = _image.Resources;
+		if (resources == null)
+		{
+			return null;
+		}
+		
+		var resourceData = FindResourceData(resources, RT_STRING, blockId);
+		if (resourceData == null || resourceData.Length == 0)
+		{
+			return null;
+		}
+
+		// String table format:
+		// Each entry is a length-prefixed WCHAR string (length is in WCHARs, not bytes)
+		// Length is stored as a WORD (2 bytes), followed by that many WCHARs
+		var offset = 0;
+		for (var i = 0; i <= indexInBlock; i++)
+		{
+			if (offset + 2 > resourceData.Length)
+			{
+				return null; // Not enough data
+			}
+
+			// Read the length (in WCHARs)
+			var length = BitConverter.ToUInt16(resourceData, offset);
+			offset += 2;
+
+			if (i == indexInBlock)
+			{
+				// This is the string we want
+				if (length == 0)
+				{
+					return string.Empty;
+				}
+
+				if (offset + (length * 2) > resourceData.Length)
+				{
+					return null; // Not enough data
+				}
+
+				// Read the Unicode string
+				var stringBytes = new byte[length * 2];
+				Array.Copy(resourceData, offset, stringBytes, 0, length * 2);
+				return Encoding.Unicode.GetString(stringBytes);
+			}
+
+			// Skip this string
+			offset += length * 2;
+		}
+
+		return null;
+	}
+
+	/// <summary>
+	/// Loads a bitmap resource and returns the raw bitmap data.
+	/// </summary>
+	/// <param name="bitmapId">The bitmap resource ID or name</param>
+	/// <returns>The bitmap data (DIB format), or null if not found</returns>
+	public byte[]? LoadBitmap(uint bitmapId)
+	{
+		// Try to find the bitmap resource
+		var resources = _image.Resources;
+		if (resources == null)
+		{
+			return null;
+		}
+		
+		var resourceData = FindResourceData(resources, RT_BITMAP, bitmapId);
+		return resourceData;
+	}
+
+	/// <summary>
+	/// Loads a bitmap resource by name.
+	/// </summary>
+	/// <param name="bitmapName">The bitmap resource name</param>
+	/// <returns>The bitmap data (DIB format), or null if not found</returns>
+	public byte[]? LoadBitmapByName(string bitmapName)
+	{
+		// Find bitmap by name
+		var resources = _image.Resources;
+		if (resources == null)
+		{
+			return null;
+		}
+
+		// Navigate: Type (RT_BITMAP) -> Name -> Language
+		foreach (var typeEntry in resources.Entries)
+		{
+			if (typeEntry.Id == RT_BITMAP)
+			{
+				if (typeEntry is ResourceDirectory typeDir)
+				{
+					foreach (var nameEntry in typeDir.Entries)
+					{
+						// Check if name matches
+						if (nameEntry.Name == bitmapName)
+						{
+							if (nameEntry is ResourceDirectory nameDir)
+							{
+								// Get first language version
+								foreach (var langEntry in nameDir.Entries)
+								{
+									if (langEntry is ResourceData data && data.Contents != null)
+									{
+										return data.Contents.WriteIntoArray();
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return null;
+	}
 }
