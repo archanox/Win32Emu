@@ -102,11 +102,11 @@ Path: "\\Mac\RiderProjects\Win32Emu\EXEs\ign_install\SETUP.EXE"
 **Analysis:**
 - Running from development path (not CD/Program Files)
 - Network share or macOS mount point ("\\Mac")
-- Indicates testing environment, not production installation
+- **Note:** This is a development environment example; production would use paths like "D:\SETUP.EXE" or "C:\Program Files\..."
 
 #### Path Parsing via CharNextA
 ```
-CharNextA() x 55 times
+CharNextA() called 55 times (once per character)
 ```
 
 **Analysis:**
@@ -183,7 +183,8 @@ EnableWindow(0x00070550, FALSE)
 GetModuleHandleA(NULL)                → 0x00400000
 LoadStringA(0x00400000, 118, buffer)  → 6 chars
 GetDlgItem(0x00040568, 1002)          → 0x00050612
-LoadImageA(0x00400000, buffer, IMAGE_BITMAP, 175, 195, flags)
+LoadImageA(0x00400000, buffer, IMAGE_BITMAP, 175, 195, 
+           LR_CREATEDIBSECTION | LR_LOADMAP3DCOLORS | LR_LOADTRANSPARENT)
   → NULL (Error 1814: resource not found)
 ```
 
@@ -206,18 +207,19 @@ GetModuleHandleA(NULL)                → 0x00400000
 LoadStringA(0x00400000, 100, buffer)  → 17 chars
 SetDlgItemTextA(0x00040568, 1000, "C:\Games\Ignition") → TRUE
 SendDlgItemMessageA(0x00040568, 1000, EM_SETSEL, 0, 16777472) → 1
+  # 16777472 = 0x00FFFFFF = -1 in MAKELPARAM format = select all text
 ```
 
 **Analysis:**
 - Control 1000 is an EDIT control (installation path textbox)
 - Character limit: 260 (MAX_PATH)
 - Default path: "C:\Games\Ignition" (string resource #100)
-- Text selected after setting (EM_SETSEL with large value = select all)
+- Text selected after setting (EM_SETSEL with -1 = select all)
 
 **Control 1000 Message Sequence:**
 1. Set character limit to 260
 2. Set text to default path
-3. Select all text (ready for user to type)
+3. Select all text (ready for user to type new path)
 
 #### 5.5. Focus Management
 ```
