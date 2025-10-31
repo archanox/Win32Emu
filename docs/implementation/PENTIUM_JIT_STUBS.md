@@ -15,7 +15,7 @@ The JIT CPU backend (`JitCpu.cs`) is designed to compile x86 instructions to .NE
 
 ## Implementation Status
 
-### Fully Implemented Instructions (74)
+### Fully Implemented Instructions (76)
 These instructions are properly handled in the JitCpu implementation:
 
 #### Core Instructions (4)
@@ -96,6 +96,11 @@ These instructions are properly handled in the JitCpu implementation:
 #### I/O Operations (1)
 - **OUT** - Output to Port
 
+#### FPU Instructions (3)
+- **FNINIT** - Initialize FPU (no wait)
+- **FNCLEX** - Clear FPU Exceptions (no wait)
+- **FSTSW** - Store FPU Status Word
+
 #### Segment Operations (16)
 - **LDS** - Load Pointer to DS
 - **LES** - Load Pointer to ES
@@ -114,25 +119,22 @@ These instructions are properly handled in the JitCpu implementation:
 - **VERR** - Verify Read Access
 - **VERW** - Verify Write Access
 
-### Stubbed Instruction Categories (91 instructions)
+### Stubbed Instruction Categories (89 instructions)
 
 The following categories of Pentium CPU instructions are recognized but not yet fully implemented. They are logged at Debug level and execution continues.
 
-#### 1. FPU Instructions (39 instructions)
+#### 1. FPU Instructions (37 instructions)
 x87 Floating-Point Unit instructions:
 
 **Control Instructions:**
 - **FCLEX** - Clear FPU Exceptions
 - **FINIT** - Initialize FPU
-- **FNINIT** - Initialize FPU (no wait)
-- **FNCLEX** - Clear FPU Exceptions (no wait)
 - **FNOP** - FPU No Operation
 - **FLDENV** - Load FPU Environment
 - **FSTENV** - Store FPU Environment
 - **FSAVE** - Save FPU State
 - **FRSTOR** - Restore FPU State
 - **FSTCW** - Store Control Word
-- **FSTSW** - Store Status Word
 
 **Stack Management:**
 - **FDECSTP** - Decrement Stack Top Pointer
@@ -247,12 +249,13 @@ Tests for Phase 1 implemented instructions:
 - BCD arithmetic (CBW, CWDE) - 2 tests
 - Double shifts (SHLD, SHRD) - 2 tests
 
-### PentiumPhase2Tests.cs (9 tests)
+### PentiumPhase2Tests.cs (12 tests)
 Tests for Phase 2 implemented instructions:
 - Conditional moves (CMOVAE, CMOVO) - 3 tests
 - String operations (LODSW) - 2 tests
 - Control flow (RETF, INTO) - 2 tests
 - System instructions (HLT, ENTER) - 2 tests
+- FPU instructions (FNCLEX, FSTSW) - 3 tests
 
 ### ThreeWayPentiumTests.cs (100+ tests)
 Comprehensive three-way validation tests comparing JitCpu, IcedCpu, and reference implementation:
