@@ -107,6 +107,19 @@ Segment and descriptor table operations:
 - Segment checks always succeed (ZF=1)
 - Descriptor table operations are no-ops with logging
 
+### FPU Instructions (3/3 implemented) ✅
+Floating-Point Unit control and state management:
+
+- **FNINIT** (Initialize FPU, no wait) - Reset FPU to default state
+- **FNCLEX** (Clear FPU Exceptions, no wait) - Clear exception flags
+- **FSTSW** (Store FPU Status Word) - Store status to AX or memory
+
+**Implementation Details:**
+- FNINIT resets control word (0x037F), status word (0x0000), tag word (0xFFFF)
+- FNCLEX clears exception flags (bits 0-5, 7) while preserving other status bits
+- FSTSW supports both register (AX) and memory operands
+- Proper 16-bit status word handling
+
 ## Phase 1: High-Priority Instructions (COMPLETE)
 
 ### Conditional Jumps (18/18 implemented) ✅
@@ -212,7 +225,7 @@ New tests for implemented functionality:
 - ❌ SHLD - test setup issue
 - ❌ SHRD - test setup issue
 
-### Phase 2 Tests (9/9 passing) ✅
+### Phase 2 Tests (12/12 passing) ✅
 Tests for Phase 2 implementations:
 - ✅ CMOVAE when carry clear
 - ✅ CMOVAE when carry set (no move)
@@ -223,14 +236,17 @@ Tests for Phase 2 implementations:
 - ✅ INTO overflow check
 - ✅ HLT execution
 - ✅ ENTER stack frame creation
+- ✅ FNCLEX exception flag clearing
+- ✅ FSTSW to AX register
+- ✅ FSTSW to memory
 
 **Note:** The 3 failing tests are due to test opcode setup issues, not implementation bugs. The core logic is correct.
 
 ## Phase 3: Remaining Instructions (TODO)
 
-### FPU Instructions (39 instructions)
+### FPU Instructions (37 instructions)
 Priority subset to implement:
-- FNINIT, FNCLEX, FSTSW, FSTCW (control/status)
+- FSTCW (control/status)
 - FUCOM, FUCOMP, FUCOMPP, FTST (comparison)
 - FCOMI, FCOMIP (conditional)
 - FICOM, FICOMP (integer comparison)
@@ -249,10 +265,10 @@ Basic subset to implement:
 - **Total Pentium instructions**: 323
 - **Previously stubbed**: 319 (98.8%)
 - **Phase 1 implemented**: 30 (9.29%)
-- **Phase 2 implemented**: 40 (12.38%)
-- **Total implemented**: 70 (21.67%)
-- **Remaining stubbed**: 253 (78.33%)
-- **Test pass rate**: 35/38 (92.1%)
+- **Phase 2 implemented**: 42 (13.00%)
+- **Total implemented**: 72 (22.29%)
+- **Remaining stubbed**: 250 (77.40%)
+- **Test pass rate**: 38/41 (92.7%)
 
 ## Files Modified
 
@@ -270,9 +286,10 @@ Basic subset to implement:
    - 11 tests for Phase 1 implemented instructions
    - 8 passing, 3 with test setup issues
 
-4. **Win32Emu.Tests.Emulator/PentiumPhase2Tests.cs** (NEW)
-   - 9 tests for Phase 2 implemented instructions
-   - All 9 passing
+4. **Win32Emu.Tests.Emulator/PentiumPhase2Tests.cs**
+   - 12 tests for Phase 2 implemented instructions
+   - All 12 passing
+   - Added 3 FPU tests (FNCLEX, FSTSW AX, FSTSW memory)
 
 5. **PENTIUM_JIT_STUBS.md**
    - Comprehensive documentation of all stubbed instructions
