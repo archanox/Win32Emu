@@ -135,13 +135,15 @@ public class IcedCpu : IAsyncCpu
 		var insn = _decoder.Decode();
 		//_logger.LogInformation("Instruction: {Insn}", insn.ToString());
 		
-		// Log instructions executed right after syscall returns for debugging
-		if (oldEip >= 0x00403160 && oldEip <= 0x00403190)
+		_eip = (uint)_decoder.IP;
+		
+		// Detect if decoder advanced EIP incorrectly (sanity check)
+		if (_eip < oldEip || _eip > oldEip + 15)
 		{
-			_logger.LogInformation("[IcedCpu] At 0x{Eip:X8}: {Instruction}, decoder.IP after decode=0x{DecoderIP:X8}", oldEip, insn.ToString(), _decoder.IP);
+			_logger.LogWarning("[IcedCpu] Decoder set suspicious EIP: oldEip=0x{OldEip:X8}, new EIP=0x{NewEip:X8}, instruction={Insn}", 
+				oldEip, _eip, insn.ToString());
 		}
 		
-		_eip = (uint)_decoder.IP;
 		var isCall = false;
 		var isSyscall = false;
 		uint callTarget = 0;
@@ -588,10 +590,46 @@ public class IcedCpu : IAsyncCpu
 			Diagnostics.Diagnostics.ClearCpuContext();
 		}
 
-		// Log EIP right before returning from SingleStep
-		if (oldEip >= 0x0E000000 && oldEip < 0x10000000)
+		// Sanity check: verify EIP is still reasonable after instruction execution
+		// For non-control-flow instructions, EIP should be the value set by the decoder
+		// For control-flow instructions (JMP, CALL, RET), EIP will be different
+		var eipChanged = (_eip != (uint)_decoder.IP);
+		if (eipChanged)
 		{
-			_logger.LogDebug("[IcedCpu] SingleStep returning: oldEip=0x{OldEip:X8}, final _eip=0x{Eip:X8}", oldEip, _eip);
+			// EIP was modified by the instruction - this is expected for JMP, CALL, RET, conditional jumps
+			var isControlFlow = insn.Mnemonic switch
+			{
+				Mnemonic.Jmp => true,
+				Mnemonic.Call => true,
+				Mnemonic.Ret => true,
+				Mnemonic.Iretd => true,
+				Mnemonic.Ja => true,
+				Mnemonic.Jae => true,
+				Mnemonic.Jb => true,
+				Mnemonic.Jbe => true,
+				Mnemonic.Je => true,
+				Mnemonic.Jg => true,
+				Mnemonic.Jge => true,
+				Mnemonic.Jl => true,
+				Mnemonic.Jle => true,
+				Mnemonic.Jne => true,
+				Mnemonic.Jno => true,
+				Mnemonic.Jnp => true,
+				Mnemonic.Jns => true,
+				Mnemonic.Jo => true,
+				Mnemonic.Jp => true,
+				Mnemonic.Js => true,
+				Mnemonic.Loop => true,
+				Mnemonic.Loope => true,
+				Mnemonic.Loopne => true,
+				_ => false
+			};
+			
+			if (!isControlFlow)
+			{
+				_logger.LogError("[IcedCpu] EIP corrupted! At 0x{OldEip:X8}, instruction '{Insn}' changed EIP to 0x{NewEip:X8} (decoder expected 0x{DecoderIP:X8})",
+					oldEip, insn.ToString(), _eip, _decoder.IP);
+			}
 		}
 
 		return new CpuStepResult(isCall, callTarget, isSyscall);

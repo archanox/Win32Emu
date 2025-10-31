@@ -481,9 +481,6 @@ public sealed class Emulator : IDisposable
 
             var step = _cpu!.SingleStep(_vm!);
             
-            // Log EIP immediately after SingleStep for debugging
-            _logger.LogDebug("[Emulator] After SingleStep, EIP is now 0x{Eip:X8}", _cpu.GetEip());
-            
             // Record instruction execution
             _metrics?.RecordInstructionsExecuted();
             
@@ -494,7 +491,9 @@ public sealed class Emulator : IDisposable
                 // EIP in low memory range (0x1-0xFFFF) is highly suspicious
                 // This usually indicates a corrupted return address or bad function pointer
                 var esp = _cpu.GetRegister("ESP");
-                _logger.LogError("[Emulator] EIP=0x{Eip:X8} is in suspicious low memory range. ESP=0x{Esp:X8}. Likely corrupted return address.", eipAfterStep, esp);
+                var ebp = _cpu.GetRegister("EBP");
+                _logger.LogError("[Emulator] EIP=0x{Eip:X8} is in suspicious low memory range. Previous EIP=0x{PrevEip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}. Likely corrupted return address or indirect jump.", 
+                    eipAfterStep, eipBeforeStep, esp, ebp);
             }
             
             // Check for syscall (INT 0x80 from import stubs)
