@@ -481,6 +481,9 @@ public sealed class Emulator : IDisposable
 
             var step = _cpu!.SingleStep(_vm!);
             
+            // Log EIP immediately after SingleStep for debugging
+            _logger.LogDebug("[Emulator] After SingleStep, EIP is now 0x{Eip:X8}", _cpu.GetEip());
+            
             // Record instruction execution
             _metrics?.RecordInstructionsExecuted();
             

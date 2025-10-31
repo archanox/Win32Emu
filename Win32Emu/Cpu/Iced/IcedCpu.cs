@@ -364,6 +364,9 @@ public class IcedCpu : IAsyncCpu
 						_logger.LogDebug("[IcedCpu] RET at 0x{OldEip:X8}: popped 0x{RetAddr:X8} from ESP=0x{OldEsp:X8}, cleanup={Cleanup} bytes, new ESP=0x{NewEsp:X8}", 
 							oldEip, ret, oldEsp, insn.Immediate16, _esp);
 						
+						// Verify EIP was actually set correctly
+						_logger.LogDebug("[IcedCpu] RET: After setting _eip, current _eip value is 0x{Eip:X8}", _eip);
+						
 						// Warn if return address looks suspicious
 						if (ret < 0x00400000 && ret != 0xFFFFFFFF)
 						{
