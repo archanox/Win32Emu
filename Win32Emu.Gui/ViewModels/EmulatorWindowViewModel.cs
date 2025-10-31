@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Win32Emu.Gui.Services;
+using Win32Emu.Gui.Utilities;
 using Win32Emu.Win32.Messaging;
 
 namespace Win32Emu.Gui.ViewModels;
@@ -363,6 +365,146 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             }
         };
 
+        // Hook keyboard events
+        window.KeyDown += async (s, e) =>
+        {
+            var virtualKey = Win32InputMapper.MapKeyToVirtualKeyCode(e.Key);
+            if (virtualKey != 0)
+            {
+                OnDebugOutput($"Avalonia window key down for HWND=0x{info.Handle:X8}: Key={e.Key} VK=0x{virtualKey:X2}, sending WM_KEYDOWN", DebugLevel.Debug);
+                // WM_KEYDOWN = 0x0100, wParam = virtual key code, lParam = key data (repeat count, scan code, etc.)
+                // For simplicity, we use a basic lParam with repeat count = 1
+                uint lParam = 0x00000001; // Repeat count = 1, scan code = 0, extended key = 0, context code = 0, previous state = 0, transition state = 0
+                await PostMessageAsync(info.Handle, 0x0100, virtualKey, lParam);
+                
+                // Also send WM_CHAR for character input (simplified - real implementation should check if it's a character key)
+                if (e.Key >= Key.A && e.Key <= Key.Z || e.Key >= Key.D0 && e.Key <= Key.D9 || e.Key == Key.Space)
+                {
+                    // For now, just send the virtual key as char code (simplified)
+                    // A proper implementation would translate based on keyboard layout and shift state
+                    char charCode = e.Key >= Key.A && e.Key <= Key.Z 
+                        ? (char)('A' + (e.Key - Key.A))
+                        : e.Key >= Key.D0 && e.Key <= Key.D9
+                            ? (char)('0' + (e.Key - Key.D0))
+                            : ' ';
+                    
+                    // Apply shift modifier for letters
+                    if ((e.KeyModifiers & KeyModifiers.Shift) == 0 && charCode >= 'A' && charCode <= 'Z')
+                    {
+                        charCode = (char)(charCode + 32); // Convert to lowercase
+                    }
+                    
+                    OnDebugOutput($"Avalonia window char for HWND=0x{info.Handle:X8}: Char='{charCode}' (0x{(uint)charCode:X2}), sending WM_CHAR", DebugLevel.Debug);
+                    // WM_CHAR = 0x0102
+                    await PostMessageAsync(info.Handle, 0x0102, (uint)charCode, lParam);
+                }
+            }
+        };
+
+        window.KeyUp += async (s, e) =>
+        {
+            var virtualKey = Win32InputMapper.MapKeyToVirtualKeyCode(e.Key);
+            if (virtualKey != 0)
+            {
+                OnDebugOutput($"Avalonia window key up for HWND=0x{info.Handle:X8}: Key={e.Key} VK=0x{virtualKey:X2}, sending WM_KEYUP", DebugLevel.Debug);
+                // WM_KEYUP = 0x0101, wParam = virtual key code, lParam = key data
+                uint lParam = 0xC0000001; // Repeat count = 1, previous state = 1, transition state = 1 (key being released)
+                await PostMessageAsync(info.Handle, 0x0101, virtualKey, lParam);
+            }
+        };
+
+        // Hook mouse events
+        window.PointerPressed += async (s, e) =>
+        {
+            var point = e.GetCurrentPoint(window);
+            var pos = point.Position;
+            var properties = point.Properties;
+            
+            uint wParam = Win32InputMapper.GetMouseButtonState(properties);
+            uint lParam = Win32InputMapper.MakeMouseLParam(pos.X, pos.Y);
+            
+            if (properties.IsLeftButtonPressed)
+            {
+                OnDebugOutput($"Avalonia window left button down at ({pos.X:F0}, {pos.Y:F0}) for HWND=0x{info.Handle:X8}, sending WM_LBUTTONDOWN", DebugLevel.Debug);
+                // WM_LBUTTONDOWN = 0x0201
+                await PostMessageAsync(info.Handle, 0x0201, wParam, lParam);
+            }
+            else if (properties.IsRightButtonPressed)
+            {
+                OnDebugOutput($"Avalonia window right button down at ({pos.X:F0}, {pos.Y:F0}) for HWND=0x{info.Handle:X8}, sending WM_RBUTTONDOWN", DebugLevel.Debug);
+                // WM_RBUTTONDOWN = 0x0204
+                await PostMessageAsync(info.Handle, 0x0204, wParam, lParam);
+            }
+            else if (properties.IsMiddleButtonPressed)
+            {
+                OnDebugOutput($"Avalonia window middle button down at ({pos.X:F0}, {pos.Y:F0}) for HWND=0x{info.Handle:X8}, sending WM_MBUTTONDOWN", DebugLevel.Debug);
+                // WM_MBUTTONDOWN = 0x0207
+                await PostMessageAsync(info.Handle, 0x0207, wParam, lParam);
+            }
+        };
+
+        window.PointerReleased += async (s, e) =>
+        {
+            var point = e.GetCurrentPoint(window);
+            var pos = point.Position;
+            var properties = point.Properties;
+            
+            uint wParam = Win32InputMapper.GetMouseButtonState(properties);
+            uint lParam = Win32InputMapper.MakeMouseLParam(pos.X, pos.Y);
+            
+            // Determine which button was released based on the button type
+            if (e.InitialPressMouseButton == MouseButton.Left)
+            {
+                OnDebugOutput($"Avalonia window left button up at ({pos.X:F0}, {pos.Y:F0}) for HWND=0x{info.Handle:X8}, sending WM_LBUTTONUP", DebugLevel.Debug);
+                // WM_LBUTTONUP = 0x0202
+                await PostMessageAsync(info.Handle, 0x0202, wParam, lParam);
+            }
+            else if (e.InitialPressMouseButton == MouseButton.Right)
+            {
+                OnDebugOutput($"Avalonia window right button up at ({pos.X:F0}, {pos.Y:F0}) for HWND=0x{info.Handle:X8}, sending WM_RBUTTONUP", DebugLevel.Debug);
+                // WM_RBUTTONUP = 0x0205
+                await PostMessageAsync(info.Handle, 0x0205, wParam, lParam);
+            }
+            else if (e.InitialPressMouseButton == MouseButton.Middle)
+            {
+                OnDebugOutput($"Avalonia window middle button up at ({pos.X:F0}, {pos.Y:F0}) for HWND=0x{info.Handle:X8}, sending WM_MBUTTONUP", DebugLevel.Debug);
+                // WM_MBUTTONUP = 0x0208
+                await PostMessageAsync(info.Handle, 0x0208, wParam, lParam);
+            }
+        };
+
+        window.PointerMoved += async (s, e) =>
+        {
+            var point = e.GetCurrentPoint(window);
+            var pos = point.Position;
+            var properties = point.Properties;
+            
+            uint wParam = Win32InputMapper.GetMouseButtonState(properties);
+            uint lParam = Win32InputMapper.MakeMouseLParam(pos.X, pos.Y);
+            
+            // WM_MOUSEMOVE = 0x0200
+            // Only log mouse move at Debug level to avoid spam
+            OnDebugOutput($"Avalonia window mouse move at ({pos.X:F0}, {pos.Y:F0}) for HWND=0x{info.Handle:X8}, sending WM_MOUSEMOVE", DebugLevel.Trace);
+            await PostMessageAsync(info.Handle, 0x0200, wParam, lParam);
+        };
+
+        window.PointerWheelChanged += async (s, e) =>
+        {
+            var point = e.GetCurrentPoint(window);
+            var pos = point.Position;
+            var properties = point.Properties;
+            var delta = e.Delta.Y; // Vertical scroll delta
+            
+            // Win32 wheel delta is in units of WHEEL_DELTA (120)
+            short wheelDelta = (short)(delta * 120);
+            uint wParam = ((uint)wheelDelta << 16) | Win32InputMapper.GetMouseButtonState(properties);
+            uint lParam = Win32InputMapper.MakeMouseLParam(pos.X, pos.Y);
+            
+            OnDebugOutput($"Avalonia window mouse wheel at ({pos.X:F0}, {pos.Y:F0}) delta={delta} for HWND=0x{info.Handle:X8}, sending WM_MOUSEWHEEL", DebugLevel.Debug);
+            // WM_MOUSEWHEEL = 0x020A
+            await PostMessageAsync(info.Handle, 0x020A, wParam, lParam);
+        };
+
         // Show the window with owner if available
         if (_ownerWindow != null)
         {
@@ -373,7 +515,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             window.Show();
         }
         
-        OnDebugOutput($"Avalonia window shown for HWND=0x{info.Handle:X8}", DebugLevel.Info);
+        OnDebugOutput($"Avalonia window shown for HWND=0x{info.Handle:X8} with keyboard and mouse input routing enabled", DebugLevel.Info);
     }
 
     private void CreateChildControl(WindowCreateInfo info)
