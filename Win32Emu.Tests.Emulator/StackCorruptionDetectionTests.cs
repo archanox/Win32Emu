@@ -27,7 +27,7 @@ public class StackCorruptionDetectionTests
     public void ValidateReturnAddress_DetectsUnmappedImportAddress()
     {
         // This test validates that if a return address points to an unmapped import address
-        // (like 0x0F000530 which would be import index 83 when only 83 imports exist),
+        // (like 0x0F000530 which would be import index 83, but only indices 0-82 exist),
         // we can detect it as invalid
 
         var memory = new VirtualMemory();

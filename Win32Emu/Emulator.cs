@@ -601,7 +601,8 @@ public sealed class Emulator : IDisposable
                                 if (!isMapped)
                                 {
                                     var importCount = currentImage.ImportAddressMap.Count;
-                                    var wouldBeIndex = (returnToCallerAfter - 0x0F000000) / 0x10;
+                                    // Calculate import index using aligned address to ensure correct calculation
+                                    var wouldBeIndex = (alignedAddr - 0x0F000000) / 0x10;
                                     _logger.LogError("[Syscall] This would be import index {Index} but only {Count} imports exist (indices 0-{MaxIndex}). " +
                                         "This is likely a C runtime bug with uninitialized function pointer or array bounds issue.",
                                         wouldBeIndex, importCount, importCount - 1);

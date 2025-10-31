@@ -178,30 +178,33 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		
 		// VALIDATION: Log summary of import mapping to detect anomalies
 		logger?.LogInformation("[Loader] Import mapping complete: {Count} imports mapped to addresses 0x0F000000 - 0x{LastAddr:X8}", 
-			synth, 0x0F000000u + (uint)((synth - 1) * 0x10u));
+			synth, synth > 0 ? 0x0F000000u + (uint)((synth - 1) * 0x10u) : 0x0F000000u);
 		
 		// VALIDATION: Check if there are any IAT entries in memory beyond what we mapped
 		// This could indicate extra entries that shouldn't exist
-		var maxMappedAddr = synth > 0 ? 0x0F000000u + (uint)((synth - 1) * 0x10u) : 0x0F000000u;
-		var scanRangeEnd = 0x0F000000u + 0x1000u; // Scan first 256 possible import slots
-		for (uint addr = maxMappedAddr + 0x10; addr < scanRangeEnd; addr += 0x10)
+		if (synth > 0)
 		{
-			try
+			var maxMappedAddr = 0x0F000000u + (uint)((synth - 1) * 0x10u);
+			var scanRangeEnd = 0x0F000000u + 0x1000u; // Scan first 256 possible import slots
+			for (uint addr = maxMappedAddr + 0x10; addr < scanRangeEnd; addr += 0x10)
 			{
-				// Read first few bytes to check if there's any code/data at unmapped import addresses
-				var byte1 = vm.Read8(addr);
-				var byte2 = vm.Read8(addr + 1);
-				// Check if it looks like it might be code (not all zeros)
-				if (byte1 != 0 || byte2 != 0)
+				try
 				{
-					logger?.LogWarning("[Loader] Unexpected non-zero data at unmapped import address 0x{Addr:X8}: 0x{B1:X2} 0x{B2:X2}. This should be investigated.", 
-						addr, byte1, byte2);
+					// Read first few bytes to check if there's any code/data at unmapped import addresses
+					var byte1 = vm.Read8(addr);
+					var byte2 = vm.Read8(addr + 1);
+					// Check if it looks like it might be code (not all zeros)
+					if (byte1 != 0 || byte2 != 0)
+					{
+						logger?.LogWarning("[Loader] Unexpected non-zero data at unmapped import address 0x{Addr:X8}: 0x{B1:X2} 0x{B2:X2}. This should be investigated.", 
+							addr, byte1, byte2);
+					}
 				}
-			}
-			catch
-			{
-				// Memory not mapped at this address - this is expected and fine
-				break;
+				catch
+				{
+					// Memory not mapped at this address - this is expected and fine
+					break;
+				}
 			}
 		}
 

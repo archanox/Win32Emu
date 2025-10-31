@@ -157,7 +157,7 @@ public class IATValidationTests
         // Calculate relative offset for CALL instruction
         // Need to be careful with the calculation to avoid overflow
         long callOffsetLong = (long)SYSCALL_DISPATCHER - ((long)STUB_ADDR + 5);
-        var callOffset = (int)callOffsetLong;
+        var callOffset = checked((int)callOffsetLong); // Explicit overflow check
         
         var stub = new byte[]
         {
