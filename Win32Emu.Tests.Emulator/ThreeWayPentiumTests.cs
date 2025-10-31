@@ -1744,6 +1744,273 @@ public class ThreeWayPentiumTests : IDisposable
 
 	#endregion
 
+	#region MMX Instructions
+
+	[Fact]
+	public void EMMS_EmptyMMXState_ShouldMatch()
+	{
+		// Arrange: EMMS (0F 77)
+		_helper.WriteCode(0x0F, 0x77);
+		
+		// Act
+		_helper.ExecuteInstruction();
+		
+		// Assert - Instruction should execute without errors
+		_helper.AssertRegistersMatch("EIP");
+	}
+
+	[Fact]
+	public void MOVD_MMXFromGPR_ShouldMatch()
+	{
+		// Arrange: MOVD MM0, EAX (0F 6E C0)
+		_helper.SetReg("EAX", 0x12345678);
+		_helper.WriteCode(0x0F, 0x6E, 0xC0, 0x0F, 0x77); // MOVD MM0, EAX; EMMS
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert - Should execute without errors
+		_helper.AssertRegistersMatch("EIP", "EAX");
+	}
+
+	[Fact]
+	public void MOVD_GPRFromMMX_ShouldMatch()
+	{
+		// Arrange: MOVD MM0, EAX then MOVD EBX, MM0 (0F 7E C3)
+		_helper.SetReg("EAX", 0xABCD1234);
+		_helper.SetReg("EBX", 0x00000000);
+		_helper.WriteCode(0x0F, 0x6E, 0xC0, 0x0F, 0x7E, 0xC3, 0x0F, 0x77); // MOVD MM0,EAX; MOVD EBX,MM0; EMMS
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD MM0, EAX
+		_helper.ExecuteInstruction(); // MOVD EBX, MM0
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert - EBX should equal EAX
+		_helper.AssertRegistersMatch("EAX", "EBX", "EIP");
+	}
+
+	[Fact]
+	public void MOVQ_MMXToMMX_ShouldMatch()
+	{
+		// Arrange: MOVD MM0, EAX; MOVQ MM1, MM0 (0F 6F C8)
+		_helper.SetReg("EAX", 0x12345678);
+		_helper.WriteCode(0x0F, 0x6E, 0xC0, 0x0F, 0x6F, 0xC8, 0x0F, 0x77); // MOVD MM0,EAX; MOVQ MM1,MM0; EMMS
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD MM0, EAX
+		_helper.ExecuteInstruction(); // MOVQ MM1, MM0
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert
+		_helper.AssertRegistersMatch("EIP");
+	}
+
+	[Fact]
+	public void PADDB_PackedAddByte_ShouldMatch()
+	{
+		// Arrange: Load two values and add them
+		// MOVD MM0, EAX; MOVD MM1, EBX; PADDB MM0, MM1 (0F FC C1)
+		_helper.SetReg("EAX", 0x01020304);
+		_helper.SetReg("EBX", 0x05060708);
+		_helper.WriteCode(
+			0x0F, 0x6E, 0xC0,  // MOVD MM0, EAX
+			0x0F, 0x6E, 0xCB,  // MOVD MM1, EBX
+			0x0F, 0xFC, 0xC1,  // PADDB MM0, MM1
+			0x0F, 0x77         // EMMS
+		);
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD MM0, EAX
+		_helper.ExecuteInstruction(); // MOVD MM1, EBX
+		_helper.ExecuteInstruction(); // PADDB MM0, MM1
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert
+		_helper.AssertRegistersMatch("EIP");
+	}
+
+	[Fact]
+	public void PADDW_PackedAddWord_ShouldMatch()
+	{
+		// Arrange: MOVD MM0, EAX; MOVD MM1, EBX; PADDW MM0, MM1 (0F FD C1)
+		_helper.SetReg("EAX", 0x00010002);
+		_helper.SetReg("EBX", 0x00030004);
+		_helper.WriteCode(
+			0x0F, 0x6E, 0xC0,  // MOVD MM0, EAX
+			0x0F, 0x6E, 0xCB,  // MOVD MM1, EBX
+			0x0F, 0xFD, 0xC1,  // PADDW MM0, MM1
+			0x0F, 0x77         // EMMS
+		);
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // PADDW
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert
+		_helper.AssertRegistersMatch("EIP");
+	}
+
+	[Fact]
+	public void PSUBB_PackedSubByte_ShouldMatch()
+	{
+		// Arrange: MOVD MM0, EAX; MOVD MM1, EBX; PSUBB MM0, MM1 (0F F8 C1)
+		_helper.SetReg("EAX", 0x0A0B0C0D);
+		_helper.SetReg("EBX", 0x01020304);
+		_helper.WriteCode(
+			0x0F, 0x6E, 0xC0,  // MOVD MM0, EAX
+			0x0F, 0x6E, 0xCB,  // MOVD MM1, EBX
+			0x0F, 0xF8, 0xC1,  // PSUBB MM0, MM1
+			0x0F, 0x77         // EMMS
+		);
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // PSUBB
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert
+		_helper.AssertRegistersMatch("EIP");
+	}
+
+	[Fact]
+	public void PAND_PackedAnd_ShouldMatch()
+	{
+		// Arrange: MOVD MM0, EAX; MOVD MM1, EBX; PAND MM0, MM1 (0F DB C1)
+		_helper.SetReg("EAX", 0xFFFF0000);
+		_helper.SetReg("EBX", 0xFF00FF00);
+		_helper.WriteCode(
+			0x0F, 0x6E, 0xC0,  // MOVD MM0, EAX
+			0x0F, 0x6E, 0xCB,  // MOVD MM1, EBX
+			0x0F, 0xDB, 0xC1,  // PAND MM0, MM1
+			0x0F, 0x77         // EMMS
+		);
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // PAND
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert
+		_helper.AssertRegistersMatch("EIP");
+	}
+
+	[Fact]
+	public void POR_PackedOr_ShouldMatch()
+	{
+		// Arrange: MOVD MM0, EAX; MOVD MM1, EBX; POR MM0, MM1 (0F EB C1)
+		_helper.SetReg("EAX", 0xF0F00F0F);
+		_helper.SetReg("EBX", 0x0F0FF0F0);
+		_helper.WriteCode(
+			0x0F, 0x6E, 0xC0,  // MOVD MM0, EAX
+			0x0F, 0x6E, 0xCB,  // MOVD MM1, EBX
+			0x0F, 0xEB, 0xC1,  // POR MM0, MM1
+			0x0F, 0x77         // EMMS
+		);
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // POR
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert
+		_helper.AssertRegistersMatch("EIP");
+	}
+
+	[Fact]
+	public void PXOR_PackedXor_ShouldMatch()
+	{
+		// Arrange: MOVD MM0, EAX; MOVD MM1, EBX; PXOR MM0, MM1 (0F EF C1)
+		_helper.SetReg("EAX", 0xAAAAAAAA);
+		_helper.SetReg("EBX", 0x55555555);
+		_helper.WriteCode(
+			0x0F, 0x6E, 0xC0,  // MOVD MM0, EAX
+			0x0F, 0x6E, 0xCB,  // MOVD MM1, EBX
+			0x0F, 0xEF, 0xC1,  // PXOR MM0, MM1
+			0x0F, 0x77         // EMMS
+		);
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // PXOR
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert
+		_helper.AssertRegistersMatch("EIP");
+	}
+
+	[Fact]
+	public void PCMPEQB_PackedCompareEqualByte_ShouldMatch()
+	{
+		// Arrange: MOVD MM0, EAX; MOVD MM1, EBX; PCMPEQB MM0, MM1 (0F 74 C1)
+		_helper.SetReg("EAX", 0x01020304);
+		_helper.SetReg("EBX", 0x01020305);
+		_helper.WriteCode(
+			0x0F, 0x6E, 0xC0,  // MOVD MM0, EAX
+			0x0F, 0x6E, 0xCB,  // MOVD MM1, EBX
+			0x0F, 0x74, 0xC1,  // PCMPEQB MM0, MM1
+			0x0F, 0x77         // EMMS
+		);
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // PCMPEQB
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert
+		_helper.AssertRegistersMatch("EIP");
+	}
+
+	[Fact]
+	public void PSLLW_PackedShiftLeftLogicalWord_ShouldMatch()
+	{
+		// Arrange: MOVD MM0, EAX; PSLLW MM0, 4 (0F 71 F0 04)
+		_helper.SetReg("EAX", 0x00010002);
+		_helper.WriteCode(
+			0x0F, 0x6E, 0xC0,  // MOVD MM0, EAX
+			0x0F, 0x71, 0xF0, 0x04,  // PSLLW MM0, 4
+			0x0F, 0x77         // EMMS
+		);
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // PSLLW
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert
+		_helper.AssertRegistersMatch("EIP");
+	}
+
+	[Fact]
+	public void PSRLW_PackedShiftRightLogicalWord_ShouldMatch()
+	{
+		// Arrange: MOVD MM0, EAX; PSRLW MM0, 4 (0F 71 D0 04)
+		_helper.SetReg("EAX", 0x00100020);
+		_helper.WriteCode(
+			0x0F, 0x6E, 0xC0,  // MOVD MM0, EAX
+			0x0F, 0x71, 0xD0, 0x04,  // PSRLW MM0, 4
+			0x0F, 0x77         // EMMS
+		);
+		
+		// Act
+		_helper.ExecuteInstruction(); // MOVD
+		_helper.ExecuteInstruction(); // PSRLW
+		_helper.ExecuteInstruction(); // EMMS
+		
+		// Assert
+		_helper.AssertRegistersMatch("EIP");
+	}
+
+	#endregion
+
 	public void Dispose()
 	{
 		_helper?.Dispose();

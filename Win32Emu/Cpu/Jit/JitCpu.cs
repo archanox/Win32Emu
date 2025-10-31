@@ -28,6 +28,10 @@ public class JitCpu : IAsyncCpu
 	private ushort _fpuStatusWord = 0x0000;
 	private ushort _fpuTagWord = 0xFFFF; // All tags set to 11b (empty)
 	
+	// MMX state - shares physical registers with FPU (MM0-MM7 alias to ST(0)-ST(7))
+	// Each MMX register is 64 bits
+	private readonly ulong[] _mmx = new ulong[8];
+	
 	// JIT compilation infrastructure - now using RTL pipeline
 	private readonly Dictionary<uint, RtlCompiledBlock> _compiledBlocks = new();
 	
@@ -976,52 +980,67 @@ public class JitCpu : IAsyncCpu
 				ExecEmms();
 				break;
 			case Mnemonic.Movd:
+				ExecMmxMovd(insn);
+				break;
 			case Mnemonic.Movq:
-			case Mnemonic.Packssdw:
-			case Mnemonic.Packsswb:
-			case Mnemonic.Packuswb:
+				ExecMmxMovq(insn);
+				break;
+			
+			// MMX arithmetic and logical operations
 			case Mnemonic.Paddb:
+			case Mnemonic.Paddw:
 			case Mnemonic.Paddd:
 			case Mnemonic.Paddsb:
 			case Mnemonic.Paddsw:
 			case Mnemonic.Paddusb:
 			case Mnemonic.Paddusw:
-			case Mnemonic.Paddw:
-			case Mnemonic.Pand:
-			case Mnemonic.Pandn:
-			case Mnemonic.Pcmpeqb:
-			case Mnemonic.Pcmpeqd:
-			case Mnemonic.Pcmpeqw:
-			case Mnemonic.Pcmpgtb:
-			case Mnemonic.Pcmpgtd:
-			case Mnemonic.Pcmpgtw:
-			case Mnemonic.Pmaddwd:
-			case Mnemonic.Pmulhw:
-			case Mnemonic.Pmullw:
-			case Mnemonic.Por:
-			case Mnemonic.Pslld:
-			case Mnemonic.Psllq:
-			case Mnemonic.Psllw:
-			case Mnemonic.Psrad:
-			case Mnemonic.Psraw:
-			case Mnemonic.Psrld:
-			case Mnemonic.Psrlq:
-			case Mnemonic.Psrlw:
 			case Mnemonic.Psubb:
+			case Mnemonic.Psubw:
 			case Mnemonic.Psubd:
 			case Mnemonic.Psubsb:
 			case Mnemonic.Psubsw:
 			case Mnemonic.Psubusb:
 			case Mnemonic.Psubusw:
-			case Mnemonic.Psubw:
-			case Mnemonic.Punpckhbw:
-			case Mnemonic.Punpckhdq:
-			case Mnemonic.Punpckhwd:
-			case Mnemonic.Punpcklbw:
-			case Mnemonic.Punpckldq:
-			case Mnemonic.Punpcklwd:
+			case Mnemonic.Pmullw:
+			case Mnemonic.Pmulhw:
+			case Mnemonic.Pmaddwd:
+			case Mnemonic.Pand:
+			case Mnemonic.Pandn:
+			case Mnemonic.Por:
 			case Mnemonic.Pxor:
-				throw new NotImplementedException($"[JitCpu] Stubbed MMX instruction: {insn.Mnemonic}");
+			case Mnemonic.Pcmpeqb:
+			case Mnemonic.Pcmpeqw:
+			case Mnemonic.Pcmpeqd:
+			case Mnemonic.Pcmpgtb:
+			case Mnemonic.Pcmpgtw:
+			case Mnemonic.Pcmpgtd:
+				ExecMmxArithmetic(insn);
+				break;
+			
+			// MMX shift operations
+			case Mnemonic.Psllw:
+			case Mnemonic.Pslld:
+			case Mnemonic.Psllq:
+			case Mnemonic.Psrlw:
+			case Mnemonic.Psrld:
+			case Mnemonic.Psrlq:
+			case Mnemonic.Psraw:
+			case Mnemonic.Psrad:
+				ExecMmxShift(insn);
+				break;
+			
+			// MMX packing/unpacking operations
+			case Mnemonic.Packsswb:
+			case Mnemonic.Packssdw:
+			case Mnemonic.Packuswb:
+			case Mnemonic.Punpckhbw:
+			case Mnemonic.Punpckhwd:
+			case Mnemonic.Punpckhdq:
+			case Mnemonic.Punpcklbw:
+			case Mnemonic.Punpcklwd:
+			case Mnemonic.Punpckldq:
+				ExecMmxPack(insn);
+				break;
 			
 			default:
 				throw new NotImplementedException($"[JitCpu] Unimplemented instruction: {insn.Mnemonic}");
@@ -4111,6 +4130,809 @@ public class JitCpu : IAsyncCpu
 		// Each of the 8 FPU registers uses 2 bits in the tag word:
 		//   00b = Valid, 01b = Zero, 10b = Special, 11b = Empty
 		_fpuTagWord = 0xFFFF; // Set all 8 tags to 11b (empty)
+	}
+
+	// MMX instruction implementations
+	private void ExecMmxMovd(Instruction insn)
+	{
+		// MOVD - Move Doubleword between MMX register and memory/GPR
+		if (insn.Op0Kind == OpKind.Register && insn.Op0Register >= Register.MM0 && insn.Op0Register <= Register.MM7)
+		{
+			// Destination is MMX register
+			int mmReg = insn.Op0Register - Register.MM0;
+			uint value = GetOperandValue(insn, 1);
+			_mmx[mmReg] = value; // Zero-extend to 64 bits
+		}
+		else if (insn.Op1Kind == OpKind.Register && insn.Op1Register >= Register.MM0 && insn.Op1Register <= Register.MM7)
+		{
+			// Source is MMX register
+			int mmReg = insn.Op1Register - Register.MM0;
+			uint value = (uint)_mmx[mmReg];
+			SetOperandValue(insn, 0, value);
+		}
+		else
+		{
+			throw new NotImplementedException($"[JitCpu] MOVD with unsupported operand types: {insn.Op0Kind}, {insn.Op1Kind}");
+		}
+	}
+
+	private void ExecMmxMovq(Instruction insn)
+	{
+		// MOVQ - Move Quadword between MMX registers or memory
+		if (insn.Op0Kind == OpKind.Register && insn.Op0Register >= Register.MM0 && insn.Op0Register <= Register.MM7)
+		{
+			// Destination is MMX register
+			int mmRegDst = insn.Op0Register - Register.MM0;
+			
+			if (insn.Op1Kind == OpKind.Register && insn.Op1Register >= Register.MM0 && insn.Op1Register <= Register.MM7)
+			{
+				// Source is also MMX register
+				int mmRegSrc = insn.Op1Register - Register.MM0;
+				_mmx[mmRegDst] = _mmx[mmRegSrc];
+			}
+			else if (insn.Op1Kind == OpKind.Memory)
+			{
+				// Source is memory
+				uint addr = CalcMemAddress(insn, 1);
+				_mmx[mmRegDst] = _mem.Read64(addr);
+			}
+			else
+			{
+				throw new NotImplementedException($"[JitCpu] MOVQ with unsupported source: {insn.Op1Kind}");
+			}
+		}
+		else if (insn.Op0Kind == OpKind.Memory && insn.Op1Kind == OpKind.Register && insn.Op1Register >= Register.MM0 && insn.Op1Register <= Register.MM7)
+		{
+			// Destination is memory, source is MMX register
+			int mmRegSrc = insn.Op1Register - Register.MM0;
+			uint addr = CalcMemAddress(insn, 0);
+			_mem.Write64(addr, _mmx[mmRegSrc]);
+		}
+		else
+		{
+			throw new NotImplementedException($"[JitCpu] MOVQ with unsupported operand types: {insn.Op0Kind}, {insn.Op1Kind}");
+		}
+	}
+
+	private void ExecMmxArithmetic(Instruction insn)
+	{
+		// Get destination and source MMX registers
+		if (insn.Op0Kind != OpKind.Register || insn.Op0Register < Register.MM0 || insn.Op0Register > Register.MM7)
+		{
+			throw new NotImplementedException($"[JitCpu] MMX arithmetic with non-MMX destination: {insn.Op0Kind}");
+		}
+
+		int mmRegDst = insn.Op0Register - Register.MM0;
+		ulong src;
+
+		if (insn.Op1Kind == OpKind.Register && insn.Op1Register >= Register.MM0 && insn.Op1Register <= Register.MM7)
+		{
+			int mmRegSrc = insn.Op1Register - Register.MM0;
+			src = _mmx[mmRegSrc];
+		}
+		else if (insn.Op1Kind == OpKind.Memory)
+		{
+			uint addr = CalcMemAddress(insn, 1);
+			src = _mem.Read64(addr);
+		}
+		else
+		{
+			throw new NotImplementedException($"[JitCpu] MMX arithmetic with unsupported source: {insn.Op1Kind}");
+		}
+
+		ulong dst = _mmx[mmRegDst];
+
+		// Perform the operation based on mnemonic
+		switch (insn.Mnemonic)
+		{
+			// Packed Add
+			case Mnemonic.Paddb:
+				_mmx[mmRegDst] = MmxPaddB(dst, src);
+				break;
+			case Mnemonic.Paddw:
+				_mmx[mmRegDst] = MmxPaddW(dst, src);
+				break;
+			case Mnemonic.Paddd:
+				_mmx[mmRegDst] = MmxPaddD(dst, src);
+				break;
+			case Mnemonic.Paddsb:
+				_mmx[mmRegDst] = MmxPaddSB(dst, src);
+				break;
+			case Mnemonic.Paddsw:
+				_mmx[mmRegDst] = MmxPaddSW(dst, src);
+				break;
+			case Mnemonic.Paddusb:
+				_mmx[mmRegDst] = MmxPaddUSB(dst, src);
+				break;
+			case Mnemonic.Paddusw:
+				_mmx[mmRegDst] = MmxPaddUSW(dst, src);
+				break;
+			
+			// Packed Subtract
+			case Mnemonic.Psubb:
+				_mmx[mmRegDst] = MmxPsubB(dst, src);
+				break;
+			case Mnemonic.Psubw:
+				_mmx[mmRegDst] = MmxPsubW(dst, src);
+				break;
+			case Mnemonic.Psubd:
+				_mmx[mmRegDst] = MmxPsubD(dst, src);
+				break;
+			case Mnemonic.Psubsb:
+				_mmx[mmRegDst] = MmxPsubSB(dst, src);
+				break;
+			case Mnemonic.Psubsw:
+				_mmx[mmRegDst] = MmxPsubSW(dst, src);
+				break;
+			case Mnemonic.Psubusb:
+				_mmx[mmRegDst] = MmxPsubUSB(dst, src);
+				break;
+			case Mnemonic.Psubusw:
+				_mmx[mmRegDst] = MmxPsubUSW(dst, src);
+				break;
+			
+			// Packed Multiply
+			case Mnemonic.Pmullw:
+				_mmx[mmRegDst] = MmxPmullW(dst, src);
+				break;
+			case Mnemonic.Pmulhw:
+				_mmx[mmRegDst] = MmxPmulhW(dst, src);
+				break;
+			case Mnemonic.Pmaddwd:
+				_mmx[mmRegDst] = MmxPmaddWD(dst, src);
+				break;
+			
+			// Logical Operations
+			case Mnemonic.Pand:
+				_mmx[mmRegDst] = dst & src;
+				break;
+			case Mnemonic.Pandn:
+				_mmx[mmRegDst] = (~dst) & src;
+				break;
+			case Mnemonic.Por:
+				_mmx[mmRegDst] = dst | src;
+				break;
+			case Mnemonic.Pxor:
+				_mmx[mmRegDst] = dst ^ src;
+				break;
+			
+			// Comparison
+			case Mnemonic.Pcmpeqb:
+				_mmx[mmRegDst] = MmxPcmpeqB(dst, src);
+				break;
+			case Mnemonic.Pcmpeqw:
+				_mmx[mmRegDst] = MmxPcmpeqW(dst, src);
+				break;
+			case Mnemonic.Pcmpeqd:
+				_mmx[mmRegDst] = MmxPcmpeqD(dst, src);
+				break;
+			case Mnemonic.Pcmpgtb:
+				_mmx[mmRegDst] = MmxPcmpgtB(dst, src);
+				break;
+			case Mnemonic.Pcmpgtw:
+				_mmx[mmRegDst] = MmxPcmpgtW(dst, src);
+				break;
+			case Mnemonic.Pcmpgtd:
+				_mmx[mmRegDst] = MmxPcmpgtD(dst, src);
+				break;
+			
+			default:
+				throw new NotImplementedException($"[JitCpu] Unhandled MMX arithmetic: {insn.Mnemonic}");
+		}
+	}
+
+	private void ExecMmxShift(Instruction insn)
+	{
+		if (insn.Op0Kind != OpKind.Register || insn.Op0Register < Register.MM0 || insn.Op0Register > Register.MM7)
+		{
+			throw new NotImplementedException($"[JitCpu] MMX shift with non-MMX destination: {insn.Op0Kind}");
+		}
+
+		int mmRegDst = insn.Op0Register - Register.MM0;
+		ulong dst = _mmx[mmRegDst];
+		
+		// Get shift count
+		int count;
+		if (insn.Op1Kind == OpKind.Immediate8)
+		{
+			count = (int)insn.Immediate8;
+		}
+		else if (insn.Op1Kind == OpKind.Register && insn.Op1Register >= Register.MM0 && insn.Op1Register <= Register.MM7)
+		{
+			// Shift count is in lower 64 bits of source MMX register
+			int mmRegSrc = insn.Op1Register - Register.MM0;
+			count = (int)(_mmx[mmRegSrc] & 0xFF);
+		}
+		else if (insn.Op1Kind == OpKind.Memory)
+		{
+			uint addr = CalcMemAddress(insn, 1);
+			count = (int)(_mem.Read64(addr) & 0xFF);
+		}
+		else
+		{
+			throw new NotImplementedException($"[JitCpu] MMX shift with unsupported count source: {insn.Op1Kind}");
+		}
+
+		// Perform the shift operation
+		switch (insn.Mnemonic)
+		{
+			case Mnemonic.Psllw:
+				_mmx[mmRegDst] = MmxPsllW(dst, count);
+				break;
+			case Mnemonic.Pslld:
+				_mmx[mmRegDst] = MmxPsllD(dst, count);
+				break;
+			case Mnemonic.Psllq:
+				_mmx[mmRegDst] = MmxPsllQ(dst, count);
+				break;
+			case Mnemonic.Psrlw:
+				_mmx[mmRegDst] = MmxPsrlW(dst, count);
+				break;
+			case Mnemonic.Psrld:
+				_mmx[mmRegDst] = MmxPsrlD(dst, count);
+				break;
+			case Mnemonic.Psrlq:
+				_mmx[mmRegDst] = MmxPsrlQ(dst, count);
+				break;
+			case Mnemonic.Psraw:
+				_mmx[mmRegDst] = MmxPsraW(dst, count);
+				break;
+			case Mnemonic.Psrad:
+				_mmx[mmRegDst] = MmxPsraD(dst, count);
+				break;
+			default:
+				throw new NotImplementedException($"[JitCpu] Unhandled MMX shift: {insn.Mnemonic}");
+		}
+	}
+
+	private void ExecMmxPack(Instruction insn)
+	{
+		if (insn.Op0Kind != OpKind.Register || insn.Op0Register < Register.MM0 || insn.Op0Register > Register.MM7)
+		{
+			throw new NotImplementedException($"[JitCpu] MMX pack with non-MMX destination: {insn.Op0Kind}");
+		}
+
+		int mmRegDst = insn.Op0Register - Register.MM0;
+		ulong dst = _mmx[mmRegDst];
+		ulong src;
+
+		if (insn.Op1Kind == OpKind.Register && insn.Op1Register >= Register.MM0 && insn.Op1Register <= Register.MM7)
+		{
+			int mmRegSrc = insn.Op1Register - Register.MM0;
+			src = _mmx[mmRegSrc];
+		}
+		else if (insn.Op1Kind == OpKind.Memory)
+		{
+			uint addr = CalcMemAddress(insn, 1);
+			src = _mem.Read64(addr);
+		}
+		else
+		{
+			throw new NotImplementedException($"[JitCpu] MMX pack with unsupported source: {insn.Op1Kind}");
+		}
+
+		switch (insn.Mnemonic)
+		{
+			case Mnemonic.Packsswb:
+				_mmx[mmRegDst] = MmxPacksswb(dst, src);
+				break;
+			case Mnemonic.Packssdw:
+				_mmx[mmRegDst] = MmxPackssdw(dst, src);
+				break;
+			case Mnemonic.Packuswb:
+				_mmx[mmRegDst] = MmxPackuswb(dst, src);
+				break;
+			case Mnemonic.Punpckhbw:
+				_mmx[mmRegDst] = MmxPunpckhbw(dst, src);
+				break;
+			case Mnemonic.Punpckhwd:
+				_mmx[mmRegDst] = MmxPunpckhwd(dst, src);
+				break;
+			case Mnemonic.Punpckhdq:
+				_mmx[mmRegDst] = MmxPunpckhdq(dst, src);
+				break;
+			case Mnemonic.Punpcklbw:
+				_mmx[mmRegDst] = MmxPunpcklbw(dst, src);
+				break;
+			case Mnemonic.Punpcklwd:
+				_mmx[mmRegDst] = MmxPunpcklwd(dst, src);
+				break;
+			case Mnemonic.Punpckldq:
+				_mmx[mmRegDst] = MmxPunpckldq(dst, src);
+				break;
+			default:
+				throw new NotImplementedException($"[JitCpu] Unhandled MMX pack: {insn.Mnemonic}");
+		}
+	}
+
+	// MMX helper methods for packed operations
+	private ulong MmxPaddB(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			byte va = (byte)((a >> (i * 8)) & 0xFF);
+			byte vb = (byte)((b >> (i * 8)) & 0xFF);
+			result |= (ulong)((byte)(va + vb)) << (i * 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPaddW(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			ushort va = (ushort)((a >> (i * 16)) & 0xFFFF);
+			ushort vb = (ushort)((b >> (i * 16)) & 0xFFFF);
+			result |= (ulong)((ushort)(va + vb)) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPaddD(ulong a, ulong b)
+	{
+		uint lo_a = (uint)(a & 0xFFFFFFFF);
+		uint lo_b = (uint)(b & 0xFFFFFFFF);
+		uint hi_a = (uint)((a >> 32) & 0xFFFFFFFF);
+		uint hi_b = (uint)((b >> 32) & 0xFFFFFFFF);
+		return ((ulong)(hi_a + hi_b) << 32) | (lo_a + lo_b);
+	}
+
+	private ulong MmxPaddSB(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			sbyte va = (sbyte)((a >> (i * 8)) & 0xFF);
+			sbyte vb = (sbyte)((b >> (i * 8)) & 0xFF);
+			int sum = va + vb;
+			if (sum > 127) sum = 127;
+			if (sum < -128) sum = -128;
+			result |= (ulong)((byte)sum) << (i * 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPaddSW(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			short va = (short)((a >> (i * 16)) & 0xFFFF);
+			short vb = (short)((b >> (i * 16)) & 0xFFFF);
+			int sum = va + vb;
+			if (sum > 32767) sum = 32767;
+			if (sum < -32768) sum = -32768;
+			result |= (ulong)((ushort)sum) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPaddUSB(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			byte va = (byte)((a >> (i * 8)) & 0xFF);
+			byte vb = (byte)((b >> (i * 8)) & 0xFF);
+			int sum = va + vb;
+			if (sum > 255) sum = 255;
+			result |= (ulong)((byte)sum) << (i * 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPaddUSW(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			ushort va = (ushort)((a >> (i * 16)) & 0xFFFF);
+			ushort vb = (ushort)((b >> (i * 16)) & 0xFFFF);
+			int sum = va + vb;
+			if (sum > 65535) sum = 65535;
+			result |= (ulong)((ushort)sum) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPsubB(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			byte va = (byte)((a >> (i * 8)) & 0xFF);
+			byte vb = (byte)((b >> (i * 8)) & 0xFF);
+			result |= (ulong)((byte)(va - vb)) << (i * 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPsubW(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			ushort va = (ushort)((a >> (i * 16)) & 0xFFFF);
+			ushort vb = (ushort)((b >> (i * 16)) & 0xFFFF);
+			result |= (ulong)((ushort)(va - vb)) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPsubD(ulong a, ulong b)
+	{
+		uint lo_a = (uint)(a & 0xFFFFFFFF);
+		uint lo_b = (uint)(b & 0xFFFFFFFF);
+		uint hi_a = (uint)((a >> 32) & 0xFFFFFFFF);
+		uint hi_b = (uint)((b >> 32) & 0xFFFFFFFF);
+		return ((ulong)(hi_a - hi_b) << 32) | (lo_a - lo_b);
+	}
+
+	private ulong MmxPsubSB(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			sbyte va = (sbyte)((a >> (i * 8)) & 0xFF);
+			sbyte vb = (sbyte)((b >> (i * 8)) & 0xFF);
+			int diff = va - vb;
+			if (diff > 127) diff = 127;
+			if (diff < -128) diff = -128;
+			result |= (ulong)((byte)diff) << (i * 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPsubSW(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			short va = (short)((a >> (i * 16)) & 0xFFFF);
+			short vb = (short)((b >> (i * 16)) & 0xFFFF);
+			int diff = va - vb;
+			if (diff > 32767) diff = 32767;
+			if (diff < -32768) diff = -32768;
+			result |= (ulong)((ushort)diff) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPsubUSB(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			byte va = (byte)((a >> (i * 8)) & 0xFF);
+			byte vb = (byte)((b >> (i * 8)) & 0xFF);
+			int diff = va - vb;
+			if (diff < 0) diff = 0;
+			result |= (ulong)((byte)diff) << (i * 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPsubUSW(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			ushort va = (ushort)((a >> (i * 16)) & 0xFFFF);
+			ushort vb = (ushort)((b >> (i * 16)) & 0xFFFF);
+			int diff = va - vb;
+			if (diff < 0) diff = 0;
+			result |= (ulong)((ushort)diff) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPmullW(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			short va = (short)((a >> (i * 16)) & 0xFFFF);
+			short vb = (short)((b >> (i * 16)) & 0xFFFF);
+			int product = va * vb;
+			result |= (ulong)((ushort)product) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPmulhW(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			short va = (short)((a >> (i * 16)) & 0xFFFF);
+			short vb = (short)((b >> (i * 16)) & 0xFFFF);
+			int product = va * vb;
+			result |= (ulong)((ushort)(product >> 16)) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPmaddWD(ulong a, ulong b)
+	{
+		short a0 = (short)(a & 0xFFFF);
+		short a1 = (short)((a >> 16) & 0xFFFF);
+		short a2 = (short)((a >> 32) & 0xFFFF);
+		short a3 = (short)((a >> 48) & 0xFFFF);
+		short b0 = (short)(b & 0xFFFF);
+		short b1 = (short)((b >> 16) & 0xFFFF);
+		short b2 = (short)((b >> 32) & 0xFFFF);
+		short b3 = (short)((b >> 48) & 0xFFFF);
+		
+		int lo = (a0 * b0) + (a1 * b1);
+		int hi = (a2 * b2) + (a3 * b3);
+		
+		return ((ulong)(uint)hi << 32) | (uint)lo;
+	}
+
+	private ulong MmxPcmpeqB(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			byte va = (byte)((a >> (i * 8)) & 0xFF);
+			byte vb = (byte)((b >> (i * 8)) & 0xFF);
+			result |= (ulong)(va == vb ? 0xFF : 0x00) << (i * 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPcmpeqW(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			ushort va = (ushort)((a >> (i * 16)) & 0xFFFF);
+			ushort vb = (ushort)((b >> (i * 16)) & 0xFFFF);
+			result |= (ulong)(va == vb ? 0xFFFF : 0x0000) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPcmpeqD(ulong a, ulong b)
+	{
+		uint lo_a = (uint)(a & 0xFFFFFFFF);
+		uint lo_b = (uint)(b & 0xFFFFFFFF);
+		uint hi_a = (uint)((a >> 32) & 0xFFFFFFFF);
+		uint hi_b = (uint)((b >> 32) & 0xFFFFFFFF);
+		return ((ulong)(hi_a == hi_b ? 0xFFFFFFFF : 0x00000000) << 32) | (lo_a == lo_b ? 0xFFFFFFFF : 0x00000000);
+	}
+
+	private ulong MmxPcmpgtB(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			sbyte va = (sbyte)((a >> (i * 8)) & 0xFF);
+			sbyte vb = (sbyte)((b >> (i * 8)) & 0xFF);
+			result |= (ulong)(va > vb ? 0xFF : 0x00) << (i * 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPcmpgtW(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			short va = (short)((a >> (i * 16)) & 0xFFFF);
+			short vb = (short)((b >> (i * 16)) & 0xFFFF);
+			result |= (ulong)(va > vb ? 0xFFFF : 0x0000) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPcmpgtD(ulong a, ulong b)
+	{
+		int lo_a = (int)(a & 0xFFFFFFFF);
+		int lo_b = (int)(b & 0xFFFFFFFF);
+		int hi_a = (int)((a >> 32) & 0xFFFFFFFF);
+		int hi_b = (int)((b >> 32) & 0xFFFFFFFF);
+		return ((ulong)(hi_a > hi_b ? 0xFFFFFFFF : 0x00000000) << 32) | (uint)(lo_a > lo_b ? 0xFFFFFFFF : 0x00000000);
+	}
+
+	private ulong MmxPsllW(ulong value, int count)
+	{
+		if (count > 15) return 0;
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			ushort v = (ushort)((value >> (i * 16)) & 0xFFFF);
+			result |= (ulong)((ushort)(v << count)) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPsllD(ulong value, int count)
+	{
+		if (count > 31) return 0;
+		uint lo = (uint)(value & 0xFFFFFFFF);
+		uint hi = (uint)((value >> 32) & 0xFFFFFFFF);
+		return ((ulong)(hi << count) << 32) | (lo << count);
+	}
+
+	private ulong MmxPsllQ(ulong value, int count)
+	{
+		if (count > 63) return 0;
+		return value << count;
+	}
+
+	private ulong MmxPsrlW(ulong value, int count)
+	{
+		if (count > 15) return 0;
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			ushort v = (ushort)((value >> (i * 16)) & 0xFFFF);
+			result |= (ulong)((ushort)(v >> count)) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPsrlD(ulong value, int count)
+	{
+		if (count > 31) return 0;
+		uint lo = (uint)(value & 0xFFFFFFFF);
+		uint hi = (uint)((value >> 32) & 0xFFFFFFFF);
+		return ((ulong)(hi >> count) << 32) | (lo >> count);
+	}
+
+	private ulong MmxPsrlQ(ulong value, int count)
+	{
+		if (count > 63) return 0;
+		return value >> count;
+	}
+
+	private ulong MmxPsraW(ulong value, int count)
+	{
+		if (count > 15) count = 15;
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			short v = (short)((value >> (i * 16)) & 0xFFFF);
+			result |= (ulong)((ushort)(v >> count)) << (i * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPsraD(ulong value, int count)
+	{
+		if (count > 31) count = 31;
+		int lo = (int)(value & 0xFFFFFFFF);
+		int hi = (int)((value >> 32) & 0xFFFFFFFF);
+		return ((ulong)(uint)(hi >> count) << 32) | (uint)(lo >> count);
+	}
+
+	private ulong MmxPacksswb(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			short v = (short)((a >> (i * 16)) & 0xFFFF);
+			if (v > 127) v = 127;
+			if (v < -128) v = -128;
+			result |= (ulong)((byte)v) << (i * 8);
+		}
+		for (int i = 0; i < 4; i++)
+		{
+			short v = (short)((b >> (i * 16)) & 0xFFFF);
+			if (v > 127) v = 127;
+			if (v < -128) v = -128;
+			result |= (ulong)((byte)v) << ((i + 4) * 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPackssdw(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 2; i++)
+		{
+			int v = (int)((a >> (i * 32)) & 0xFFFFFFFF);
+			if (v > 32767) v = 32767;
+			if (v < -32768) v = -32768;
+			result |= (ulong)((ushort)v) << (i * 16);
+		}
+		for (int i = 0; i < 2; i++)
+		{
+			int v = (int)((b >> (i * 32)) & 0xFFFFFFFF);
+			if (v > 32767) v = 32767;
+			if (v < -32768) v = -32768;
+			result |= (ulong)((ushort)v) << ((i + 2) * 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPackuswb(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			short v = (short)((a >> (i * 16)) & 0xFFFF);
+			if (v > 255) v = 255;
+			if (v < 0) v = 0;
+			result |= (ulong)((byte)v) << (i * 8);
+		}
+		for (int i = 0; i < 4; i++)
+		{
+			short v = (short)((b >> (i * 16)) & 0xFFFF);
+			if (v > 255) v = 255;
+			if (v < 0) v = 0;
+			result |= (ulong)((byte)v) << ((i + 4) * 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPunpckhbw(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			byte va = (byte)((a >> ((i + 4) * 8)) & 0xFF);
+			byte vb = (byte)((b >> ((i + 4) * 8)) & 0xFF);
+			result |= (ulong)va << (i * 16);
+			result |= (ulong)vb << (i * 16 + 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPunpckhwd(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 2; i++)
+		{
+			ushort va = (ushort)((a >> ((i + 2) * 16)) & 0xFFFF);
+			ushort vb = (ushort)((b >> ((i + 2) * 16)) & 0xFFFF);
+			result |= (ulong)va << (i * 32);
+			result |= (ulong)vb << (i * 32 + 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPunpckhdq(ulong a, ulong b)
+	{
+		uint va = (uint)((a >> 32) & 0xFFFFFFFF);
+		uint vb = (uint)((b >> 32) & 0xFFFFFFFF);
+		return ((ulong)vb << 32) | va;
+	}
+
+	private ulong MmxPunpcklbw(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			byte va = (byte)((a >> (i * 8)) & 0xFF);
+			byte vb = (byte)((b >> (i * 8)) & 0xFF);
+			result |= (ulong)va << (i * 16);
+			result |= (ulong)vb << (i * 16 + 8);
+		}
+		return result;
+	}
+
+	private ulong MmxPunpcklwd(ulong a, ulong b)
+	{
+		ulong result = 0;
+		for (int i = 0; i < 2; i++)
+		{
+			ushort va = (ushort)((a >> (i * 16)) & 0xFFFF);
+			ushort vb = (ushort)((b >> (i * 16)) & 0xFFFF);
+			result |= (ulong)va << (i * 32);
+			result |= (ulong)vb << (i * 32 + 16);
+		}
+		return result;
+	}
+
+	private ulong MmxPunpckldq(ulong a, ulong b)
+	{
+		uint va = (uint)(a & 0xFFFFFFFF);
+		uint vb = (uint)(b & 0xFFFFFFFF);
+		return ((ulong)vb << 32) | va;
 	}
 
 	private sealed class SimpleMemoryCodeReader : CodeReader
