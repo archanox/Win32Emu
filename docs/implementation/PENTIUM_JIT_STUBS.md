@@ -15,7 +15,7 @@ The JIT CPU backend (`JitCpu.cs`) is designed to compile x86 instructions to .NE
 
 ## Implementation Status
 
-### Fully Implemented Instructions (64)
+### Fully Implemented Instructions (74)
 These instructions are properly handled in the JitCpu implementation:
 
 #### Core Instructions (4)
@@ -96,7 +96,7 @@ These instructions are properly handled in the JitCpu implementation:
 #### I/O Operations (1)
 - **OUT** - Output to Port
 
-#### Segment Operations (6)
+#### Segment Operations (16)
 - **LDS** - Load Pointer to DS
 - **LES** - Load Pointer to ES
 - **LFS** - Load Pointer to FS
@@ -114,7 +114,7 @@ These instructions are properly handled in the JitCpu implementation:
 - **VERR** - Verify Read Access
 - **VERW** - Verify Write Access
 
-### Stubbed Instruction Categories (86 instructions)
+### Stubbed Instruction Categories (91 instructions)
 
 The following categories of Pentium CPU instructions are recognized but not yet fully implemented. They are logged at Debug level and execution continues.
 

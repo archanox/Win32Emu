@@ -6,16 +6,31 @@ This document tracks the implementation progress of Pentium CPU instructions in 
 
 ## Phase 2: Additional Common Instructions (COMPLETE)
 
-### Conditional Moves (8/8 implemented) ✅
-All additional conditional move instructions are now functional:
+### Conditional Moves (16/16 implemented) ✅
+All conditional move instructions are now functional:
 
+**Equality/Inequality:**
+- **CMOVE** (Move if Equal) - ZF=1
+- **CMOVNE** (Move if Not Equal) - ZF=0
+
+**Unsigned Comparisons:**
+- **CMOVA** (Move if Above) - CF=0 and ZF=0
 - **CMOVAE** (Move if Above or Equal) - CF=0
+- **CMOVB** (Move if Below) - CF=1
+- **CMOVBE** (Move if Below or Equal) - CF=1 or ZF=1
+
+**Signed Comparisons:**
+- **CMOVG** (Move if Greater) - ZF=0 and SF=OF
+- **CMOVGE** (Move if Greater or Equal) - SF=OF
+- **CMOVL** (Move if Less) - SF!=OF
 - **CMOVLE** (Move if Less or Equal) - ZF=1 or SF!=OF
+
+**Flag-based:**
 - **CMOVNO** (Move if Not Overflow) - OF=0
-- **CMOVNP** (Move if Not Parity) - PF=0
-- **CMOVNS** (Move if Not Sign) - SF=0
 - **CMOVO** (Move if Overflow) - OF=1
+- **CMOVNP** (Move if Not Parity) - PF=0
 - **CMOVP** (Move if Parity) - PF=1
+- **CMOVNS** (Move if Not Sign) - SF=0
 - **CMOVS** (Move if Sign) - SF=1
 
 **Implementation Details:**
@@ -68,7 +83,7 @@ Port output instruction:
 - Handles AL, AX, EAX output sizes
 - Logs I/O operations for debugging
 
-### Segment Operations (15/15 implemented) ✅
+### Segment Operations (16/16 implemented) ✅
 Segment and descriptor table operations:
 
 **Load Segment Instructions:**
@@ -233,10 +248,10 @@ Basic subset to implement:
 
 - **Total Pentium instructions**: 323
 - **Previously stubbed**: 319 (98.8%)
-- **Phase 1 implemented**: 30 (9.3%)
-- **Phase 2 implemented**: 31 (9.6%)
-- **Total implemented**: 61 (18.9%)
-- **Remaining stubbed**: 262 (81.1%)
+- **Phase 1 implemented**: 30 (9.29%)
+- **Phase 2 implemented**: 40 (12.38%)
+- **Total implemented**: 70 (21.67%)
+- **Remaining stubbed**: 253 (78.33%)
 - **Test pass rate**: 35/38 (92.1%)
 
 ## Files Modified
