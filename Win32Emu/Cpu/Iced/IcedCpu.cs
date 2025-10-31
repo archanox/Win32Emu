@@ -381,6 +381,23 @@ public class IcedCpu : IAsyncCpu
 						{
 							_logger.LogWarning("[IcedCpu] RET at 0x{OldEip:X8}: return address 0x{RetAddr:X8} is suspiciously low (< 0x00400000). Possible stack corruption.", 
 								oldEip, ret);
+							
+							// Dump stack contents for debugging
+							try
+							{
+								var stackDump = new System.Text.StringBuilder();
+								for (int i = -4; i <= 16; i += 4)
+								{
+									var addr = (uint)(oldEsp + i);
+									var val = Read32(addr);
+									stackDump.Append($"  [ESP{i:+0;-#}]=0x{addr:X8}: 0x{val:X8}");
+								}
+								_logger.LogWarning("[IcedCpu] Stack dump around ESP=0x{Esp:X8}:{StackDump}", oldEsp, stackDump.ToString());
+							}
+							catch
+							{
+								// Ignore errors reading stack
+							}
 						}
 					}
 
