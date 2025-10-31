@@ -952,7 +952,6 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Fsave:
 			case Mnemonic.Fstcw:
 			case Mnemonic.Fstenv:
-			case Mnemonic.Fstsw:
 			case Mnemonic.Ftst:
 			case Mnemonic.Fucom:
 			case Mnemonic.Fucomp:
@@ -960,11 +959,16 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Fxtract:
 			case Mnemonic.Fyl2x:
 			case Mnemonic.Fyl2xp1:
-			case Mnemonic.Fnclex:
 				throw new NotImplementedException($"[JitCpu] Stubbed FPU instruction: {insn.Mnemonic}");
 			
 			case Mnemonic.Fninit:
 				ExecFninit();
+				break;
+			case Mnemonic.Fnclex:
+				ExecFnclex();
+				break;
+			case Mnemonic.Fstsw:
+				ExecFstsw(insn);
 				break;
 			
 			// MMX instructions
@@ -4067,6 +4071,39 @@ public class JitCpu : IAsyncCpu
 		_fpuTagWord = 0xFFFF; // All tags set to 11b (empty)
 		_fpuTop = 0;
 		Array.Clear(_fpu, 0, _fpu.Length);
+	}
+
+	private void ExecFnclex()
+	{
+		// FNCLEX - Clear FPU Exceptions (no wait)
+		// Clear the exception flags in the FPU status word
+		// Exception flags are bits 0-5 and bit 7 (B - busy bit)
+		// Bit 0: IE (Invalid Operation)
+		// Bit 1: DE (Denormalized Operand)
+		// Bit 2: ZE (Zero Divide)
+		// Bit 3: OE (Overflow)
+		// Bit 4: UE (Underflow)
+		// Bit 5: PE (Precision)
+		// Bit 7: ES (Error Summary Status)
+		// We preserve bits 6, 8-15 (stack fault, condition codes, top)
+		_fpuStatusWord = (ushort)(_fpuStatusWord & 0xFF40); // Clear bits 0-5 and 7
+	}
+
+	private void ExecFstsw(Instruction insn)
+	{
+		// FSTSW - Store FPU Status Word
+		// Stores the FPU status word to AX register or memory (16-bit)
+		if (insn.Op0Kind == OpKind.Register && insn.Op0Register == Register.AX)
+		{
+			// FSTSW AX - Store to AX register
+			_eax = (_eax & 0xFFFF0000) | _fpuStatusWord;
+		}
+		else if (insn.Op0Kind == OpKind.Memory)
+		{
+			// FSTSW m16 - Store to memory
+			uint addr = CalcMemAddress(insn, 0);
+			_mem.Write16(addr, _fpuStatusWord);
+		}
 	}
 
 	private void ExecEmms()

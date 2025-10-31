@@ -235,4 +235,105 @@ public class PentiumPhase2Tests
 		Assert.Equal(0x2FECu, newEsp); // ESP = frame - 16
 		Assert.Equal(0x1004u, cpu.GetEip());
 	}
+
+	[Fact]
+	public void JitCpu_FNCLEX_ShouldClearExceptionFlags()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem, NullLogger.Instance);
+		
+		cpu.SetEip(0x1000);
+		
+		// Set FPU status word with exception flags set (bits 0-5 and 7)
+		// We'll set it via reflection since there's no public setter
+		var fpuStatusField = typeof(JitCpu).GetField("_fpuStatusWord", 
+			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+		fpuStatusField!.SetValue(cpu, (ushort)0xFFFF); // All bits set
+		
+		// FNCLEX (0xDB 0xE2) - Clear FPU exceptions
+		mem.Write8(0x1000, 0xDB);
+		mem.Write8(0x1001, 0xE2);
+		
+		// Act
+		var result = cpu.SingleStep(mem);
+		
+		// Assert
+		// Exception flags (bits 0-5, 7) should be cleared
+		// Other bits (6, 8-15) should be preserved
+		ushort fpuStatus = (ushort)fpuStatusField!.GetValue(cpu)!;
+		
+		// Bits 0-5 and 7 should be 0
+		Assert.Equal(0, fpuStatus & 0x3F); // Bits 0-5
+		Assert.Equal(0, fpuStatus & 0x80); // Bit 7
+		
+		// Bits 6 and 8-15 should be preserved (0xFF40)
+		Assert.Equal(0xFF40, fpuStatus & 0xFF40);
+		
+		Assert.Equal(0x1002u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void JitCpu_FSTSW_AX_ShouldStoreStatusWordToAX()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem, NullLogger.Instance);
+		
+		cpu.SetEip(0x1000);
+		cpu.SetRegister("EAX", 0x12345678);
+		
+		// Set FPU status word to a known value
+		var fpuStatusField = typeof(JitCpu).GetField("_fpuStatusWord", 
+			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+		fpuStatusField!.SetValue(cpu, (ushort)0xABCD);
+		
+		// FSTSW AX (0x9B 0xDF 0xE0) - Store status word to AX
+		// Note: 0x9B is FWAIT prefix, but FSTSW AX encoding is 0xDF 0xE0
+		mem.Write8(0x1000, 0xDF);
+		mem.Write8(0x1001, 0xE0);
+		
+		// Act
+		var result = cpu.SingleStep(mem);
+		
+		// Assert
+		// Lower 16 bits of EAX should contain FPU status word
+		// Upper 16 bits should be preserved
+		uint eax = cpu.GetRegister("EAX");
+		Assert.Equal(0x1234ABCDu, eax);
+		Assert.Equal(0x1002u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void JitCpu_FSTSW_Memory_ShouldStoreStatusWordToMemory()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem, NullLogger.Instance);
+		
+		cpu.SetEip(0x1000);
+		
+		// Set FPU status word to a known value
+		var fpuStatusField = typeof(JitCpu).GetField("_fpuStatusWord", 
+			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+		fpuStatusField!.SetValue(cpu, (ushort)0x5678);
+		
+		// Clear destination memory
+		mem.Write16(0x2000, 0x0000);
+		
+		// FSTSW [0x2000] (0xDD 0x3D + 4-byte displacement)
+		// ModRM: 00 111 101 = 0x3D (MEM with disp32, reg=7)
+		mem.Write8(0x1000, 0xDD);
+		mem.Write8(0x1001, 0x3D);
+		mem.Write32(0x1002, 0x2000);
+		
+		// Act
+		var result = cpu.SingleStep(mem);
+		
+		// Assert
+		// Memory at 0x2000 should contain FPU status word
+		ushort stored = mem.Read16(0x2000);
+		Assert.Equal((ushort)0x5678, stored);
+		Assert.Equal(0x1006u, cpu.GetEip());
+	}
 }
