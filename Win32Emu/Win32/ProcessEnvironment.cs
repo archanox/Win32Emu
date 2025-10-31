@@ -22,6 +22,10 @@ public class ProcessEnvironment
 	private uint _allocPtr;
 	private string _currentDirectory = @"C:\"; // Default to C:\ root
 
+	// Free-list allocator for VirtualAlloc/VirtualFree
+	private readonly List<MemoryBlock> _freeList = new();
+	private readonly List<MemoryBlock> _allocatedBlocks = new();
+
 	// COM vtable dispatcher
 	private readonly ComVtableDispatcher? _comDispatcher;
 	
@@ -996,32 +1000,285 @@ public class ProcessEnvironment
 	public uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect)
 	{
 		var size = AlignUp(dwSize == 0 ? 1u : dwSize, 0x1000);
+		
 		if (lpAddress != 0)
 		{
-			// Calculate end of allocation once
-			// We use ulong to avoid overflow, then cap to uint range
-			ulong endOfAllocation64 = (ulong)lpAddress + size;
-			uint endOfAllocation = endOfAllocation64 > uint.MaxValue ? uint.MaxValue : (uint)endOfAllocation64;
-			
-			if (endOfAllocation <= Memory.Size)
-			{
-				Memory.WriteBytes(lpAddress, new byte[size]);
-			}
-
-			// Track the allocation to prevent future allocations from overlapping
-			// Update _allocPtr if the requested region extends beyond current allocation pointer
-			if (endOfAllocation > _allocPtr)
-			{
-				_allocPtr = endOfAllocation;
-			}
-
-			return lpAddress;
+			// Specific address requested
+			return AllocateAtSpecificAddress(lpAddress, size);
 		}
+		
+		// No specific address - find a suitable block in the free list
+		return AllocateFromFreeList(size);
+	}
 
+	/// <summary>
+	/// Allocates memory at a specific address.
+	/// </summary>
+	private uint AllocateAtSpecificAddress(uint lpAddress, uint size)
+	{
+		// Calculate end of allocation with overflow protection
+		ulong endOfAllocation64 = (ulong)lpAddress + size;
+		uint endOfAllocation = endOfAllocation64 > uint.MaxValue ? uint.MaxValue : (uint)endOfAllocation64;
+		
+		// Check if this exact region is already allocated (re-commit scenario)
+		bool alreadyAllocated = false;
+		foreach (var block in _allocatedBlocks)
+		{
+			if (block.Address == lpAddress && block.Size >= size)
+			{
+				alreadyAllocated = true;
+				_logger.LogInformation("[ProcessEnv] VirtualAlloc: Re-committing already allocated region at 0x{Address:X8}",
+					lpAddress);
+				break;
+			}
+		}
+		
+		if (!alreadyAllocated)
+		{
+			// Verify the requested range is available
+			if (!IsRangeAvailable(lpAddress, size))
+			{
+				_logger.LogWarning("[ProcessEnv] VirtualAlloc: Requested address range 0x{Address:X8}-0x{EndAddress:X8} is not available",
+					lpAddress, endOfAllocation);
+				return 0; // Failed to allocate
+			}
+			
+			// Mark the range as allocated
+			MarkRangeAsAllocated(lpAddress, size);
+		}
+		
+		// Zero out the memory
+		if (endOfAllocation <= Memory.Size)
+		{
+			Memory.WriteBytes(lpAddress, new byte[size]);
+		}
+		
+		// Update _allocPtr if the allocation extends beyond it
+		if (endOfAllocation > _allocPtr)
+		{
+			_allocPtr = endOfAllocation;
+		}
+		
+		_logger.LogInformation("[ProcessEnv] VirtualAlloc: Allocated 0x{Size:X} bytes at specific address 0x{Address:X8}",
+			size, lpAddress);
+		
+		return lpAddress;
+	}
+
+	/// <summary>
+	/// Allocates memory from the free list.
+	/// </summary>
+	private uint AllocateFromFreeList(uint size)
+	{
+		// Try to find a suitable free block
+		for (int i = 0; i < _freeList.Count; i++)
+		{
+			var block = _freeList[i];
+			if (block.Size >= size)
+			{
+				// Found a suitable block
+				var address = block.Address;
+				
+				if (block.Size > size)
+				{
+					// Split the block - keep remainder in free list
+					block.Address += size;
+					block.Size -= size;
+				}
+				else
+				{
+					// Use entire block
+					_freeList.RemoveAt(i);
+				}
+				
+				// Add to allocated blocks
+				_allocatedBlocks.Add(new MemoryBlock(address, size, false));
+				
+				// Zero out the memory
+				Memory.WriteBytes(address, new byte[size]);
+				
+				_logger.LogInformation("[ProcessEnv] VirtualAlloc: Allocated 0x{Size:X} bytes from free list at 0x{Address:X8}",
+					size, address);
+				
+				return address;
+			}
+		}
+		
+		// No suitable free block found - allocate from the end
 		var addr = AlignUp(_allocPtr, 0x1000);
 		_allocPtr = addr + size;
+		
+		// Add to allocated blocks
+		_allocatedBlocks.Add(new MemoryBlock(addr, size, false));
+		
+		// Zero out the memory
 		Memory.WriteBytes(addr, new byte[size]);
+		
+		_logger.LogInformation("[ProcessEnv] VirtualAlloc: Allocated 0x{Size:X} bytes at end 0x{Address:X8}",
+			size, addr);
+		
 		return addr;
+	}
+
+	/// <summary>
+	/// Checks if a memory range is available (not already allocated).
+	/// </summary>
+	private bool IsRangeAvailable(uint address, uint size)
+	{
+		uint endAddress = address + size;
+		
+		// Check against all allocated blocks
+		foreach (var block in _allocatedBlocks)
+		{
+			if (!(endAddress <= block.Address || address >= block.EndAddress))
+			{
+				// Ranges overlap
+				return false;
+			}
+		}
+		
+		return true;
+	}
+
+	/// <summary>
+	/// Marks a memory range as allocated by removing it from free list and adding to allocated list.
+	/// </summary>
+	private void MarkRangeAsAllocated(uint address, uint size)
+	{
+		uint endAddress = address + size;
+		
+		// Remove or split any free blocks that overlap with this range
+		for (int i = _freeList.Count - 1; i >= 0; i--)
+		{
+			var block = _freeList[i];
+			
+			// Check if this free block overlaps with the requested range
+			if (block.Address < endAddress && block.EndAddress > address)
+			{
+				// There's an overlap - we need to handle it
+				if (block.Address >= address && block.EndAddress <= endAddress)
+				{
+					// Free block is completely contained - remove it
+					_freeList.RemoveAt(i);
+				}
+				else if (block.Address < address && block.EndAddress > endAddress)
+				{
+					// Free block contains the requested range - split into two
+					var afterBlock = new MemoryBlock(endAddress, block.EndAddress - endAddress, true);
+					block.Size = address - block.Address;
+					_freeList.Add(afterBlock);
+				}
+				else if (block.Address < address)
+				{
+					// Free block overlaps at the end - trim it
+					block.Size = address - block.Address;
+				}
+				else
+				{
+					// Free block overlaps at the start - trim it
+					uint newStart = endAddress;
+					block.Size = block.EndAddress - newStart;
+					block.Address = newStart;
+				}
+			}
+		}
+		
+		// Add to allocated blocks
+		_allocatedBlocks.Add(new MemoryBlock(address, size, false));
+	}
+
+	/// <summary>
+	/// Frees allocated virtual memory.
+	/// </summary>
+	public bool VirtualFree(uint lpAddress, uint dwSize, uint dwFreeType)
+	{
+		const uint memRelease = 0x8000;
+		
+		// Validate parameters
+		if (lpAddress == 0)
+		{
+			_logger.LogWarning("[ProcessEnv] VirtualFree: Invalid address 0x00000000");
+			return false;
+		}
+		
+		// When using MEM_RELEASE, dwSize must be 0
+		if ((dwFreeType & memRelease) != 0 && dwSize != 0)
+		{
+			_logger.LogWarning("[ProcessEnv] VirtualFree: MEM_RELEASE requires dwSize to be 0");
+			return false;
+		}
+		
+		// Find the allocated block
+		MemoryBlock? blockToFree = null;
+		int blockIndex = -1;
+		
+		for (int i = 0; i < _allocatedBlocks.Count; i++)
+		{
+			var block = _allocatedBlocks[i];
+			if (block.Address == lpAddress)
+			{
+				blockToFree = block;
+				blockIndex = i;
+				break;
+			}
+		}
+		
+		if (blockToFree == null)
+		{
+			_logger.LogWarning("[ProcessEnv] VirtualFree: Address 0x{Address:X8} not found in allocated blocks",
+				lpAddress);
+			return false;
+		}
+		
+		// Remove from allocated blocks
+		_allocatedBlocks.RemoveAt(blockIndex);
+		
+		// Add to free list
+		var freedBlock = new MemoryBlock(blockToFree.Address, blockToFree.Size, true);
+		_freeList.Add(freedBlock);
+		
+		// Merge adjacent free blocks
+		MergeAdjacentFreeBlocks();
+		
+		_logger.LogInformation("[ProcessEnv] VirtualFree: Freed 0x{Size:X} bytes at 0x{Address:X8}",
+			blockToFree.Size, lpAddress);
+		
+		return true;
+	}
+
+	/// <summary>
+	/// Merges adjacent free blocks to reduce fragmentation.
+	/// </summary>
+	private void MergeAdjacentFreeBlocks()
+	{
+		if (_freeList.Count <= 1)
+		{
+			return;
+		}
+		
+		// Sort free list by address
+		_freeList.Sort((a, b) => a.Address.CompareTo(b.Address));
+		
+		// Merge adjacent blocks
+		for (int i = 0; i < _freeList.Count - 1; )
+		{
+			var current = _freeList[i];
+			var next = _freeList[i + 1];
+			
+			if (current.EndAddress == next.Address)
+			{
+				// Adjacent blocks - merge them
+				current.Size += next.Size;
+				_freeList.RemoveAt(i + 1);
+				
+				_logger.LogDebug("[ProcessEnv] Merged adjacent free blocks at 0x{Address:X8} (new size: 0x{Size:X})",
+					current.Address, current.Size);
+			}
+			else
+			{
+				i++;
+			}
+		}
 	}
 
 	private static uint AlignUp(uint value, uint align) => (value + (align - 1)) & ~(align - 1);
@@ -2075,5 +2332,24 @@ public class ProcessEnvironment
 		public Dictionary<int, uint> ControlHandles { get; } = new();
 		// Storage for dialog control info: Key = control ID, Value = DialogItem
 		public Dictionary<int, Win32.DialogItem> ControlInfo { get; } = new();
+	}
+
+	/// <summary>
+	/// Represents a memory block for the free-list allocator.
+	/// </summary>
+	private class MemoryBlock
+	{
+		public uint Address { get; set; }
+		public uint Size { get; set; }
+		public bool IsFree { get; set; }
+
+		public MemoryBlock(uint address, uint size, bool isFree = true)
+		{
+			Address = address;
+			Size = size;
+			IsFree = isFree;
+		}
+
+		public uint EndAddress => Address + Size;
 	}
 }

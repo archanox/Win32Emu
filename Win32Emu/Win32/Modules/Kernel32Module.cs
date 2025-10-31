@@ -2563,28 +2563,17 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	{
 		// VirtualFree releases or decommits virtual memory
 		// dwFreeType: MEM_DECOMMIT (0x4000) or MEM_RELEASE (0x8000)
-		// For simplicity in our emulator, we accept the call but don't actually free memory
-		// The bump allocator doesn't support freeing
 		_logger.LogInformation("[Kernel32] VirtualFree(0x{LpAddress:X8}, {DwSize}, 0x{DwFreeType:X})", lpAddress, dwSize, dwFreeType);
 
-		const uint memDecommit = 0x4000;
-		const uint memRelease = 0x8000;
-
-		// Validate parameters
-		if (lpAddress == 0)
+		// Call the ProcessEnvironment's VirtualFree implementation
+		bool success = _env.VirtualFree(lpAddress, dwSize, dwFreeType);
+		
+		if (!success)
 		{
 			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return NativeTypes.Win32Bool.FALSE;
 		}
 
-		// When using MEM_RELEASE, dwSize must be 0
-		if ((dwFreeType & memRelease) != 0 && dwSize != 0)
-		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
-		}
-
-		// Return success - memory will be cleaned up when process terminates
 		return NativeTypes.Win32Bool.TRUE;
 	}
 
