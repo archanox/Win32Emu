@@ -555,10 +555,20 @@ public sealed class Emulator : IDisposable
                     // (skipping both return addresses) to their generated wrapper functions.
                     // We restore ESP before returning so the CPU can execute RET naturally.
                     var originalEsp = esp;
+                    
+                    // DEBUG: Log stack contents before API call
+                    var returnToCallerAddr = originalEsp + 4;
+                    var returnToCaller = _vm!.Read32(returnToCallerAddr);
+                    _logger.LogInformation("[Syscall] BEFORE API: Return address at 0x{Addr:X8} = 0x{RetAddr:X8}", returnToCallerAddr, returnToCaller);
+                    
                     _cpu.SetRegister("ESP", esp + 4);
                     
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                     {
+                        // DEBUG: Log stack contents after API call
+                        var returnToCallerAfter = _vm!.Read32(returnToCallerAddr);
+                        _logger.LogInformation("[Syscall] AFTER API: Return address at 0x{Addr:X8} = 0x{RetAddr:X8}", returnToCallerAddr, returnToCallerAfter);
+                        
                         // Set return value in EAX (stdcall convention)
                         _cpu.SetRegister("EAX", ret);
                         
