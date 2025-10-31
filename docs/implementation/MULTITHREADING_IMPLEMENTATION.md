@@ -297,6 +297,10 @@ TLS access is inherently thread-safe because:
 - ✅ TlsSetValue
 - ✅ TlsGetValue
 - ✅ TlsFree
+- ✅ TerminateThread
+- ✅ GetExitCodeThread
+- ✅ SetThreadPriority
+- ✅ GetThreadPriority
 
 ### Implemented Synchronization APIs
 - ✅ CreateMutex / CreateMutexW / CreateMutexA
@@ -308,26 +312,41 @@ TLS access is inherently thread-safe because:
 - ✅ CreateSemaphore / CreateSemaphoreW / CreateSemaphoreA
 - ✅ ReleaseSemaphore
 - ✅ WaitForSingleObject
+- ✅ WaitForMultipleObjects
 - ✅ InitializeCriticalSection
 - ✅ EnterCriticalSection
 - ✅ LeaveCriticalSection
 - ✅ DeleteCriticalSection
 
+### Implemented Interlocked APIs
+- ✅ InterlockedIncrement
+- ✅ InterlockedDecrement
+- ✅ InterlockedExchange
+- ✅ InterlockedCompareExchange
+
+### Recently Implemented
+- ✅ WaitForMultipleObjects
+- ✅ TerminateThread
+- ✅ GetExitCodeThread
+- ✅ SetThreadPriority / GetThreadPriority
+- ✅ InterlockedIncrement / InterlockedDecrement
+- ✅ InterlockedCompareExchange
+
 ### Not Yet Implemented (Future Work)
-- WaitForMultipleObjects
-- TerminateThread
-- GetExitCodeThread
-- SetThreadPriority / GetThreadPriority
-- InterlockedIncrement / InterlockedDecrement
-- InterlockedCompareExchange
+- Thread pool APIs (QueueUserWorkItem, etc.)
+- Advanced synchronization (Condition Variables, Slim Reader/Writer locks)
+- Thread affinity APIs beyond current stub implementations
 
 ## Testing
 
-All existing tests pass:
-- ✅ 16 threading tests in Win32Emu.Tests.Kernel32
+All threading tests pass:
+- ✅ 33 threading tests in Win32Emu.Tests.Kernel32
 - ✅ TLS allocation and value storage
 - ✅ Critical section locking
 - ✅ Thread creation and ID management
+- ✅ Thread priority get/set operations
+- ✅ WaitForMultipleObjects with various scenarios
+- ✅ InterlockedCompareExchange atomic operations
 - ✅ Backward compatibility with existing code
 
 ## Usage Examples
@@ -413,6 +432,120 @@ int main()
     Sleep(1000); // Simulate some work
     
     SetEvent(g_hEvent); // Signal the waiter
+    
+    return 0;
+}
+```
+
+### Example 4: WaitForMultipleObjects
+
+```c
+HANDLE g_hEvents[3];
+
+DWORD WINAPI WorkerThread(LPVOID lpParam)
+{
+    int index = (int)lpParam;
+    
+    // Wait for any of the events to be signaled
+    DWORD result = WaitForMultipleObjects(3, g_hEvents, FALSE, INFINITE);
+    
+    if (result >= WAIT_OBJECT_0 && result < WAIT_OBJECT_0 + 3)
+    {
+        int eventIndex = result - WAIT_OBJECT_0;
+        printf("Thread %d: Event %d was signaled!\n", index, eventIndex);
+    }
+    
+    return 0;
+}
+
+int main()
+{
+    // Create multiple events
+    for (int i = 0; i < 3; i++)
+    {
+        g_hEvents[i] = CreateEvent(NULL, TRUE, FALSE, NULL);
+    }
+    
+    // Create worker thread
+    HANDLE hThread = CreateThread(NULL, 0, WorkerThread, (LPVOID)1, 0, NULL);
+    
+    Sleep(1000);
+    
+    // Signal one of the events
+    SetEvent(g_hEvents[1]);
+    
+    // Wait for all events to be signaled
+    WaitForMultipleObjects(3, g_hEvents, TRUE, INFINITE);
+    
+    return 0;
+}
+```
+
+### Example 5: InterlockedCompareExchange
+
+```c
+volatile LONG g_sharedValue = 0;
+
+DWORD WINAPI IncrementThread(LPVOID lpParam)
+{
+    for (int i = 0; i < 10000; i++)
+    {
+        LONG oldValue;
+        LONG newValue;
+        
+        do
+        {
+            oldValue = g_sharedValue;
+            newValue = oldValue + 1;
+        } while (InterlockedCompareExchange(&g_sharedValue, newValue, oldValue) != oldValue);
+    }
+    return 0;
+}
+
+int main()
+{
+    HANDLE threads[5];
+    
+    // Create multiple threads that increment shared value
+    for (int i = 0; i < 5; i++)
+    {
+        threads[i] = CreateThread(NULL, 0, IncrementThread, NULL, 0, NULL);
+    }
+    
+    // Wait for all threads
+    WaitForMultipleObjects(5, threads, TRUE, INFINITE);
+    
+    printf("Final value: %d (expected 50000)\n", g_sharedValue);
+    
+    return 0;
+}
+```
+
+### Example 6: Thread Priorities
+
+```c
+DWORD WINAPI WorkerThread(LPVOID lpParam)
+{
+    HANDLE hThread = GetCurrentThread();
+    int priority = GetThreadPriority(hThread);
+    
+    printf("Thread running at priority %d\n", priority);
+    
+    // Do some work...
+    
+    return 0;
+}
+
+int main()
+{
+    // Create thread with default priority
+    HANDLE hThread = CreateThread(NULL, 0, WorkerThread, NULL, 0, NULL);
+    
+    // Boost priority
+    SetThreadPriority(hThread, THREAD_PRIORITY_ABOVE_NORMAL);
+    
+    // Later, restore to normal
+    SetThreadPriority(hThread, THREAD_PRIORITY_NORMAL);
     
     return 0;
 }
