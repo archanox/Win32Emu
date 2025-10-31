@@ -260,7 +260,7 @@ public class IgnitionTeaserTests
         }
 
         var testHost = new TestEmulatorHost(_output);
-        var logger = new XunitLogger(_output, LogLevel.Information); // Only log Info and above
+        var logger = new XunitLogger(_output, LogLevel.Debug); // Enable Debug logging to capture diagnostic info
         
         // Act
         Exception? caughtException = null;
