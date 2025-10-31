@@ -135,6 +135,12 @@ public class IcedCpu : IAsyncCpu
 		var insn = _decoder.Decode();
 		//_logger.LogInformation("Instruction: {Insn}", insn.ToString());
 		
+		// Log instructions in the problematic range (after LoadCursorA returns)
+		if (oldEip >= 0x00403160 && oldEip <= 0x004031A0)
+		{
+			_logger.LogInformation("[IcedCpu] Executing at 0x{Eip:X8}: {Insn}", oldEip, insn.ToString());
+		}
+		
 		_eip = (uint)_decoder.IP;
 		
 		// Detect if decoder advanced EIP incorrectly (sanity check)
