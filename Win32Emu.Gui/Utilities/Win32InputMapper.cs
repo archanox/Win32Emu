@@ -173,6 +173,6 @@ public static class Win32InputMapper
 		short yPos = (short)Math.Clamp(y, short.MinValue, short.MaxValue);
 		
 		// Pack into lParam: LOWORD = x, HIWORD = y
-		return (uint)((yPos << 16) | (xPos & 0xFFFF));
+		return (uint)(((ushort)yPos << 16) | ((ushort)xPos & 0xFFFF));
 	}
 }
