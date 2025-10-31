@@ -378,13 +378,13 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 await PostMessageAsync(info.Handle, 0x0100, virtualKey, lParam);
                 
                 // Also send WM_CHAR for character input (simplified - real implementation should check if it's a character key)
-                if (e.Key >= Key.A && e.Key <= Key.Z || e.Key >= Key.D0 && e.Key <= Key.D9 || e.Key == Key.Space)
+                if ((e.Key >= Key.A && e.Key <= Key.Z) || (e.Key >= Key.D0 && e.Key <= Key.D9) || e.Key == Key.Space)
                 {
                     // For now, just send the virtual key as char code (simplified)
                     // A proper implementation would translate based on keyboard layout and shift state
-                    char charCode = e.Key >= Key.A && e.Key <= Key.Z 
+                    char charCode = (e.Key >= Key.A && e.Key <= Key.Z)
                         ? (char)('A' + (e.Key - Key.A))
-                        : e.Key >= Key.D0 && e.Key <= Key.D9
+                        : (e.Key >= Key.D0 && e.Key <= Key.D9)
                             ? (char)('0' + (e.Key - Key.D0))
                             : ' ';
                     

@@ -148,6 +148,8 @@ public static class Win32InputMapper
 	/// <summary>
 	/// Gets the mouse button state for Win32 messages
 	/// </summary>
+	/// <param name="properties">Pointer point properties from Avalonia containing button states</param>
+	/// <returns>Win32 button state flags (MK_LBUTTON, MK_RBUTTON, MK_MBUTTON)</returns>
 	public static uint GetMouseButtonState(PointerPointProperties properties)
 	{
 		uint result = 0;
