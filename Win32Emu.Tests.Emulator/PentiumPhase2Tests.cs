@@ -267,8 +267,13 @@ public class PentiumPhase2Tests
 		Assert.Equal(0, fpuStatus & 0x3F); // Bits 0-5
 		Assert.Equal(0, fpuStatus & 0x80); // Bit 7
 		
-		// Bits 6 and 8-15 should be preserved (0xFF40)
-		Assert.Equal(0xFF40, fpuStatus & 0xFF40);
+		// Bits 8-14 (condition codes, TOP) should be preserved.
+		// Bits 0-7 and 15 should be cleared.
+		// The preserved bits from 0xFFFF are 0x7F00.
+		Assert.Equal(0x7F00, fpuStatus & 0x7F00);
+
+		// Explicitly check that other bits are cleared
+		Assert.Equal(0, fpuStatus & 0x80FF);
 		
 		Assert.Equal(0x1002u, cpu.GetEip());
 	}
