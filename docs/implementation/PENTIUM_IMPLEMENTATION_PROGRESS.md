@@ -244,7 +244,7 @@ Tests for Phase 2 implementations:
 
 ## Phase 3: Remaining Instructions (TODO)
 
-### FPU Instructions (36 instructions)
+### FPU Instructions (37 instructions)
 Priority subset to implement:
 - FSTCW (control/status)
 - FUCOM, FUCOMP, FUCOMPP, FTST (comparison)
