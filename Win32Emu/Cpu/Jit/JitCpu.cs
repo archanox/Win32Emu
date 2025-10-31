@@ -4075,18 +4075,11 @@ public class JitCpu : IAsyncCpu
 
 	private void ExecFnclex()
 	{
-		// FNCLEX - Clear FPU Exceptions (no wait)
-		// Clear the exception flags in the FPU status word
-		// Exception flags are bits 0-5 and bit 7 (B - busy bit)
-		// Bit 0: IE (Invalid Operation)
-		// Bit 1: DE (Denormalized Operand)
-		// Bit 2: ZE (Zero Divide)
-		// Bit 3: OE (Overflow)
-		// Bit 4: UE (Underflow)
-		// Bit 5: PE (Precision)
-		// Bit 7: ES (Error Summary Status)
-		// We preserve bits 6, 8-15 (stack fault, condition codes, top)
-		_fpuStatusWord = (ushort)(_fpuStatusWord & 0xFF40); // Clear bits 0-5 and 7
+	    // FNCLEX - Clear FPU Exceptions (no wait)
+	    // Clears the exception flags (bits 0-5), stack fault (bit 6),
+	    // error summary (bit 7), and busy (bit 15) flags in the FPU status word.
+	    // Preserves condition codes (bits 8-10, 14) and TOP (bits 11-13).
+	    _fpuStatusWord &= 0x7F00;
 	}
 
 	private void ExecFstsw(Instruction insn)
