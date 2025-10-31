@@ -157,9 +157,44 @@ Implemented the Windows message loop infrastructure that allows emulated applica
 - ShowWindow logs visibility changes
 - Message logging and debugging
 
-**What's Next**: Phase 4 - Window procedure callbacks, real message queue with input routing
+**What's Next**: Phase 5 - Enhanced GDI32 drawing and DirectDraw integration
 
-### Phase 4: Display Rendering ⚡ IN PROGRESS
+### Phase 4: Window Procedure Callbacks and Input Routing ✅ COMPLETED
+
+**Status**: ✅ Fully implemented and tested (see [Phase 4 docs](../archive/PHASE4_IMPLEMENTATION.md) for details)
+
+**Implementation**: Complete keyboard and mouse input routing from Avalonia windows to Win32 message queue.
+
+When user interacts with Avalonia windows:
+1. Avalonia captures keyboard/mouse events
+2. Win32InputMapper converts events to Win32 virtual key codes and button states
+3. Event handlers post WM_KEYDOWN, WM_LBUTTONDOWN, WM_MOUSEMOVE, etc. to message queue
+4. GetMessageA retrieves messages from queue
+5. DispatchMessageA routes to window procedure
+6. CallWindowProcedure executes emulated code
+
+**Completed:**
+- ✅ Win32InputMapper utility class with 65+ key mappings
+- ✅ Keyboard input routing (WM_KEYDOWN, WM_KEYUP, WM_CHAR)
+- ✅ Mouse button routing (WM_LBUTTONDOWN, WM_RBUTTONDOWN, WM_MBUTTONDOWN, *UP variants)
+- ✅ Mouse movement routing (WM_MOUSEMOVE)
+- ✅ Mouse wheel routing (WM_MOUSEWHEEL)
+- ✅ Window procedure callback execution (CallWindowProcedure)
+- ✅ Real message queue with Channel<QueuedMessage>
+- ✅ Comprehensive testing (42 tests, all passing)
+
+**What's Working:**
+- Window procedure callbacks with proper stdcall convention
+- Keyboard input (letters, numbers, function keys, arrows, modifiers, numpad)
+- Mouse buttons (left, right, middle) with position
+- Mouse movement tracking
+- Mouse wheel scrolling
+- Message ordering preserved in queue
+- All input events logged at appropriate levels
+
+**What's Next**: Phase 5 - Enhanced GDI32 drawing and DirectDraw integration
+
+### Phase 5: Display Rendering ⚡ IN PROGRESS
 
 **Status**: Foundation complete, integration in progress
 
@@ -188,11 +223,12 @@ Implemented the Windows message loop infrastructure that allows emulated applica
    - Route frame buffer updates to Avalonia
    - Implement OnDisplayUpdate callback
 
-### Phase 5: Additional Features
+### Phase 6: Additional Features
 
-1. **Input Routing**
-   - Route Avalonia keyboard/mouse input to emulated program
-   - Use controller mapping configuration for joystick input
+1. **Advanced Input**
+   - GetKeyState, GetAsyncKeyState for keyboard state
+   - Mouse capture (SetCapture, ReleaseCapture)
+   - Joystick/controller support via DirectInput
 
 2. **Audio**
    - Route DSound output to system audio
