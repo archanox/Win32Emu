@@ -134,7 +134,22 @@ public class IcedCpu : IAsyncCpu
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
 		//_logger.LogInformation("Instruction: {Insn}", insn.ToString());
+		
+		// Log instructions in the problematic range (after LoadCursorA returns)
+		if (oldEip >= 0x00403160 && oldEip <= 0x004031A0)
+		{
+			_logger.LogInformation("[IcedCpu] Executing at 0x{Eip:X8}: {Insn}", oldEip, insn.ToString());
+		}
+		
 		_eip = (uint)_decoder.IP;
+		
+		// Detect if decoder advanced EIP incorrectly (sanity check)
+		if (_eip < oldEip || _eip > oldEip + 15)
+		{
+			_logger.LogWarning("[IcedCpu] Decoder set suspicious EIP: oldEip=0x{OldEip:X8}, new EIP=0x{NewEip:X8}, instruction={Insn}", 
+				oldEip, _eip, insn.ToString());
+		}
+		
 		var isCall = false;
 		var isSyscall = false;
 		uint callTarget = 0;
@@ -364,11 +379,31 @@ public class IcedCpu : IAsyncCpu
 						_logger.LogDebug("[IcedCpu] RET at 0x{OldEip:X8}: popped 0x{RetAddr:X8} from ESP=0x{OldEsp:X8}, cleanup={Cleanup} bytes, new ESP=0x{NewEsp:X8}", 
 							oldEip, ret, oldEsp, insn.Immediate16, _esp);
 						
+						// Verify EIP was actually set correctly
+						_logger.LogDebug("[IcedCpu] RET: After setting _eip, current _eip value is 0x{Eip:X8}", _eip);
+						
 						// Warn if return address looks suspicious
 						if (ret < 0x00400000 && ret != 0xFFFFFFFF)
 						{
 							_logger.LogWarning("[IcedCpu] RET at 0x{OldEip:X8}: return address 0x{RetAddr:X8} is suspiciously low (< 0x00400000). Possible stack corruption.", 
 								oldEip, ret);
+							
+							// Dump stack contents for debugging
+							try
+							{
+								var stackDump = new System.Text.StringBuilder();
+								for (int i = -4; i <= 16; i += 4)
+								{
+									var addr = (uint)(oldEsp + i);
+									var val = Read32(addr);
+									stackDump.Append($"  [ESP{i:+0;-#}]=0x{addr:X8}: 0x{val:X8}");
+								}
+								_logger.LogWarning("[IcedCpu] Stack dump around ESP=0x{Esp:X8}:{StackDump}", oldEsp, stackDump.ToString());
+							}
+							catch
+							{
+								// Ignore errors reading stack
+							}
 						}
 					}
 
@@ -576,6 +611,48 @@ public class IcedCpu : IAsyncCpu
 		finally
 		{
 			Diagnostics.Diagnostics.ClearCpuContext();
+		}
+
+		// Sanity check: verify EIP is still reasonable after instruction execution
+		// For non-control-flow instructions, EIP should be the value set by the decoder
+		// For control-flow instructions (JMP, CALL, RET), EIP will be different
+		var eipChanged = (_eip != (uint)_decoder.IP);
+		if (eipChanged)
+		{
+			// EIP was modified by the instruction - this is expected for JMP, CALL, RET, conditional jumps
+			var isControlFlow = insn.Mnemonic switch
+			{
+				Mnemonic.Jmp => true,
+				Mnemonic.Call => true,
+				Mnemonic.Ret => true,
+				Mnemonic.Iretd => true,
+				Mnemonic.Ja => true,
+				Mnemonic.Jae => true,
+				Mnemonic.Jb => true,
+				Mnemonic.Jbe => true,
+				Mnemonic.Je => true,
+				Mnemonic.Jg => true,
+				Mnemonic.Jge => true,
+				Mnemonic.Jl => true,
+				Mnemonic.Jle => true,
+				Mnemonic.Jne => true,
+				Mnemonic.Jno => true,
+				Mnemonic.Jnp => true,
+				Mnemonic.Jns => true,
+				Mnemonic.Jo => true,
+				Mnemonic.Jp => true,
+				Mnemonic.Js => true,
+				Mnemonic.Loop => true,
+				Mnemonic.Loope => true,
+				Mnemonic.Loopne => true,
+				_ => false
+			};
+			
+			if (!isControlFlow)
+			{
+				_logger.LogError("[IcedCpu] EIP corrupted! At 0x{OldEip:X8}, instruction '{Insn}' changed EIP to 0x{NewEip:X8} (decoder expected 0x{DecoderIP:X8})",
+					oldEip, insn.ToString(), _eip, _decoder.IP);
+			}
 		}
 
 		return new CpuStepResult(isCall, callTarget, isSyscall);

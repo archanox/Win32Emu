@@ -74,16 +74,43 @@ namespace Win32Emu.Tests.Kernel32
 			// 5828	3:21:04.708 PM	1	20904	KERNEL32.DLL	Process	FreeEnvironmentStringsW ( "=::=::\" )	BOOL	TRUE		0.0000039
 			// 5831	3:21:04.708 PM	1	20904	KERNEL32.DLL	Dynamic-Link Libraries	GetModuleFileNameA ( NULL, 0x00452760, 260 )	DWORD	34		0.0000725
 
+			// Get the heap handle that was created earlier
+			var heapHandle = _testEnv.CallKernel32Api("HEAPCREATE", 1u /* HEAP_NO_SERIALIZE */, 4096u, 0u);
+			Assert.NotEqual(0u, heapHandle);
 
-			// -- BELOW IS MISSING --
 			// 5844	3:21:04.708 PM	1	20904	KERNEL32.DLL	Heaps	HeapAlloc ( 0x0a4c0000, 0, 1696 )	LPVOID	0x0a4c12b0		0.0000022
+			var heapAlloc1 = _testEnv.CallKernel32Api("HEAPALLOC", heapHandle, 0u, 1696u);
+			Assert.NotEqual(0u, heapAlloc1);
+			
 			// 5846	3:21:04.708 PM	1	20904	KERNEL32.DLL	Heaps	HeapFree ( 0x0a4c0000, 0, 0x0a4c0498 )	BOOL	TRUE		0.0000016
+			var heapFreeResult = _testEnv.CallKernel32Api("HEAPFREE", heapHandle, 0u, heapAlloc1);
+			Assert.Equal(1u, heapFreeResult);
+			
 			// 5847	3:21:04.708 PM	1	20904	KERNEL32.DLL	Dynamic-Link Libraries	GetModuleHandleA ( "KERNEL32" )	HMODULE	0x75680000		0.0000280
+			var kernel32Name = _testEnv.CreateAnsiString("KERNEL32");
+			var kernel32Handle = _testEnv.CallKernel32Api("GETMODULEHANDLEA", kernel32Name);
+			Assert.NotEqual(0u, kernel32Handle);
+			
 			// 5870	3:21:04.710 PM	1	20904	KERNEL32.DLL	Dynamic-Link Libraries	GetProcAddress ( 0x75680000, "IsProcessorFeaturePresent" )	FARPROC	0x756843c0		0.0171529
+			var procName = _testEnv.CreateAnsiString("IsProcessorFeaturePresent");
+			var procAddress = _testEnv.CallKernel32Api("GETPROCADDRESS", kernel32Handle, procName);
+			Assert.NotEqual(0u, procAddress);
+			
 			// 6141	3:21:04.728 PM	1	20904	KERNEL32.DLL	System Information	IsProcessorFeaturePresent ( PF_FLOATING_POINT_PRECISION_ERRATA )	BOOL	FALSE		0.0000043
+			var isFeaturePresent = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", 0u /* PF_FLOATING_POINT_PRECISION_ERRATA */);
+			Assert.Equal(0u, isFeaturePresent);
+			
 			// 6142	3:21:04.728 PM	1	20904	KERNEL32.DLL	Heaps	HeapAlloc ( 0x0a4c0000, HEAP_ZERO_MEMORY, 2048 )	LPVOID	0x0a4c0498		0.0000027
+			var heapAlloc2 = _testEnv.CallKernel32Api("HEAPALLOC", heapHandle, 8u /* HEAP_ZERO_MEMORY */, 2048u);
+			Assert.NotEqual(0u, heapAlloc2);
+			
 			// 6143	3:21:04.728 PM	1	20904	KERNEL32.DLL	Process	GetStartupInfoA ( 0x001afe88 )	VOID			0.0000013
+			var startupInfoAddr2 = _testEnv.AllocateMemory(68); // STARTUPINFO structure size
+			_testEnv.CallKernel32Api("GETSTARTUPINFOA", startupInfoAddr2);
+			
 			// 6144	3:21:04.728 PM	1	20904	KERNEL32.DLL	Dynamic-Link Libraries	GetModuleHandleA ( NULL )	HMODULE	0x00400000		0.0000263
+			var mainModuleHandle = _testEnv.CallKernel32Api("GETMODULEHANDLEA", 0u);
+			Assert.NotEqual(0u, mainModuleHandle);
 			// 6145	3:21:04.728 PM	1	20904	USER32.DLL	Cursors	LoadCursorA ( NULL, IDC_ARROW )	HCURSOR	0x00010003		0.0003329
 			// 6147	3:21:04.728 PM	1	20904	USER32.DLL	Icons	LoadIconA ( NULL, IDI_APPLICATION )	HICON	0x0001002b		0.0000782
 			// 6149	3:21:04.728 PM	1	20904	GDI32.DLL	Device Contexts	GetStockObject ( BLACK_BRUSH )	HGDIOBJ	0x00900011		0.0000045

@@ -369,6 +369,14 @@ public sealed class Emulator : IDisposable
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
         {
+            // DEBUG: Log EIP at start of each iteration to catch when it gets corrupted
+            var eipAtLoopStart = _cpu!.GetEip();
+            if (eipAtLoopStart >= 0x01000000 && eipAtLoopStart < 0x02000000)
+            {
+                var esp = _cpu.GetRegister("ESP");
+                _logger.LogWarning("[Emulator] LOOP START: EIP=0x{Eip:X8} is already in suspicious range at loop start! ESP=0x{Esp:X8}", eipAtLoopStart, esp);
+            }
+            
             // Check pause state periodically without blocking
             if (!_pauseEvent.WaitOne(0))
             {
@@ -395,7 +403,15 @@ public sealed class Emulator : IDisposable
             // Check if we should context switch
             if (scheduler != null && scheduler.ShouldContextSwitch())
             {
+                var eipBeforeSwitch = _cpu!.GetEip();
                 var nextThread = scheduler.ContextSwitch(_cpu!);
+                var eipAfterSwitch = _cpu!.GetEip();
+                
+                if (eipBeforeSwitch != eipAfterSwitch)
+                {
+                    _logger.LogWarning("[Emulator] Context switch changed EIP from 0x{Before:X8} to 0x{After:X8}",  eipBeforeSwitch, eipAfterSwitch);
+                }
+                
                 if (nextThread != null)
                 {
                     LogDebug($"[Emulator] Context switched to thread {nextThread.ThreadId}");
@@ -491,7 +507,9 @@ public sealed class Emulator : IDisposable
                 // EIP in low memory range (0x1-0xFFFF) is highly suspicious
                 // This usually indicates a corrupted return address or bad function pointer
                 var esp = _cpu.GetRegister("ESP");
-                _logger.LogError("[Emulator] EIP=0x{Eip:X8} is in suspicious low memory range. ESP=0x{Esp:X8}. Likely corrupted return address.", eipAfterStep, esp);
+                var ebp = _cpu.GetRegister("EBP");
+                _logger.LogError("[Emulator] EIP=0x{Eip:X8} is in suspicious low memory range. Previous EIP=0x{PrevEip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}. Likely corrupted return address or indirect jump.", 
+                    eipAfterStep, eipBeforeStep, esp, ebp);
             }
             
             // Check for syscall (INT 0x80 from import stubs)
@@ -552,10 +570,20 @@ public sealed class Emulator : IDisposable
                     // (skipping both return addresses) to their generated wrapper functions.
                     // We restore ESP before returning so the CPU can execute RET naturally.
                     var originalEsp = esp;
+                    
+                    // DEBUG: Log stack contents before API call
+                    var returnToCallerAddr = originalEsp + 4;
+                    var returnToCaller = _vm!.Read32(returnToCallerAddr);
+                    _logger.LogInformation("[Syscall] BEFORE API: Return address at 0x{Addr:X8} = 0x{RetAddr:X8}", returnToCallerAddr, returnToCaller);
+                    
                     _cpu.SetRegister("ESP", esp + 4);
                     
                     if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
                     {
+                        // DEBUG: Log stack contents after API call
+                        var returnToCallerAfter = _vm!.Read32(returnToCallerAddr);
+                        _logger.LogInformation("[Syscall] AFTER API: Return address at 0x{Addr:X8} = 0x{RetAddr:X8}", returnToCallerAddr, returnToCallerAfter);
+                        
                         // Set return value in EAX (stdcall convention)
                         _cpu.SetRegister("EAX", ret);
                         
