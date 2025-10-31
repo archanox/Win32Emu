@@ -234,6 +234,7 @@ public class JitCpu : IAsyncCpu
 
 	private CpuStepResult InterpretSingleInstruction(VirtualMemory mem)
 	{
+		var oldEip = _eip; // Capture instruction address BEFORE any decoder operations
 		_reader.Reset(_eip);
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
@@ -241,6 +242,7 @@ public class JitCpu : IAsyncCpu
 		_eip = (uint)_decoder.IP;
 		
 		var isCall = insn.Mnemonic == Mnemonic.Call;
+		var isSyscall = false;
 		uint callTarget = 0;
 		
 		if (isCall)
@@ -265,6 +267,35 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Nop:
 				break;
 			case Mnemonic.Int3:
+				break;
+			case Mnemonic.Int:
+				// Handle INT instruction with immediate
+				if (insn.Immediate8 == 3)
+				{
+					// INT3 breakpoint - check if it's at a COM vtable address
+					if (oldEip is >= 0x0D000000 and < 0x0E000000)
+					{
+						// This is a COM vtable method stub - signal this as a call
+						isCall = true;
+						callTarget = oldEip;
+						_logger.LogInformation("[JitCpu] INT 3 hooking COM vtable stub at address 0x{OldEip:X8}", oldEip);
+					}
+					else
+					{
+						// Regular INT3 - for now, just print a message and continue
+						_logger.LogWarning("[JitCpu] INT3 breakpoint at 0x{OldEip:X8}", oldEip);
+					}
+				}
+				else if (insn.Immediate8 == 0x80)
+				{
+					// INT 0x80 - Syscall dispatcher
+					isSyscall = true;
+					_logger.LogDebug("[JitCpu] INT 0x80 syscall at 0x{OldEip:X8}", oldEip);
+				}
+				else
+				{
+					_logger.LogWarning("[JitCpu] Unhandled interrupt INT {InsnImmediate8:X2} at 0x{OldEip:X8}", insn.Immediate8, oldEip);
+				}
 				break;
 			case Mnemonic.Call:
 				_esp -= 4;
@@ -993,7 +1024,7 @@ public class JitCpu : IAsyncCpu
 				break;
 		}
 		
-		return new CpuStepResult(isCall, callTarget);
+		return new CpuStepResult(isCall, callTarget, isSyscall);
 	}
 
 	private RtlCompiledBlock CompileBlock(uint startEip, VirtualMemory mem)

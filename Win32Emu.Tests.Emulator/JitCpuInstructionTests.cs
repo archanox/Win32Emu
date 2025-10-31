@@ -577,4 +577,70 @@ public class JitCpuInstructionTests
 		// Assert
 		Assert.Equal(0x3000u, cpu.GetEip()); // Should jump to address stored in memory
 	}
+
+	[Fact]
+	public void IntInstruction_WithImmediate80_ShouldSignalSyscall()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		cpu.SetEip(0x1000);
+		
+		// INT 0x80 = CD 80
+		mem.Write8(0x1000, 0xCD); // INT opcode
+		mem.Write8(0x1001, 0x80); // Immediate 0x80 (syscall)
+		
+		// Act
+		var result = cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.True(result.IsSyscall); // Should signal syscall
+		Assert.Equal(0x1002u, cpu.GetEip()); // Should advance EIP past the instruction
+	}
+
+	[Fact]
+	public void IntInstruction_WithImmediate03_AtComVtableAddress_ShouldSignalCall()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		// Set EIP to a COM vtable address (0x0D000000 to 0x0E000000)
+		cpu.SetEip(0x0D000100);
+		
+		// INT 0x03 = CD 03
+		mem.Write8(0x0D000100, 0xCD); // INT opcode
+		mem.Write8(0x0D000101, 0x03); // Immediate 0x03 (breakpoint)
+		
+		// Act
+		var result = cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.True(result.IsCall); // Should signal call
+		Assert.Equal(0x0D000100u, result.CallTarget); // Call target should be the instruction address
+		Assert.Equal(0x0D000102u, cpu.GetEip()); // Should advance EIP past the instruction
+	}
+
+	[Fact]
+	public void IntInstruction_WithImmediate03_NotAtComVtableAddress_ShouldNotSignalCall()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		
+		// Set EIP to a regular address (not a COM vtable address)
+		cpu.SetEip(0x00401000);
+		
+		// INT 0x03 = CD 03
+		mem.Write8(0x00401000, 0xCD); // INT opcode
+		mem.Write8(0x00401001, 0x03); // Immediate 0x03 (breakpoint)
+		
+		// Act
+		var result = cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.False(result.IsCall); // Should not signal call
+		Assert.Equal(0x00401002u, cpu.GetEip()); // Should advance EIP past the instruction
+	}
 }
