@@ -850,3 +850,368 @@ public readonly ref struct DiDataFormatRef
 	/// </summary>
 	public static implicit operator NativeTypes.DIDATAFORMAT(DiDataFormatRef refStruct) => refStruct.ToStruct();
 }
+
+/// <summary>
+/// Ref struct wrapper for FILETIME with automatic memory read/write.
+/// 64-bit value representing the number of 100-nanosecond intervals since January 1, 1601 (UTC).
+/// </summary>
+public readonly ref struct FileTimeRef
+{
+	private readonly VirtualMemory _memory;
+	private readonly uint _address;
+
+	public FileTimeRef(VirtualMemory memory, uint address)
+	{
+		_memory = memory;
+		_address = address;
+	}
+
+	public uint dwLowDateTime
+	{
+		get => _memory.Read32(_address + 0);
+		set => _memory.Write32(_address + 0, value);
+	}
+
+	public uint dwHighDateTime
+	{
+		get => _memory.Read32(_address + 4);
+		set => _memory.Write32(_address + 4, value);
+	}
+
+	/// <summary>
+	/// Converts this ref struct to a value struct snapshot.
+	/// </summary>
+	public NativeTypes.FILETIME ToStruct()
+	{
+		return new NativeTypes.FILETIME
+		{
+			dwLowDateTime = dwLowDateTime,
+			dwHighDateTime = dwHighDateTime
+		};
+	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.FILETIME(FileTimeRef refStruct) => refStruct.ToStruct();
+}
+
+/// <summary>
+/// Ref struct wrapper for SYSTEMTIME with automatic memory read/write.
+/// Specifies a date and time using individual members.
+/// </summary>
+public readonly ref struct SystemTimeRef
+{
+	private readonly VirtualMemory _memory;
+	private readonly uint _address;
+
+	public SystemTimeRef(VirtualMemory memory, uint address)
+	{
+		_memory = memory;
+		_address = address;
+	}
+
+	public ushort wYear
+	{
+		get => _memory.Read16(_address + 0);
+		set => _memory.Write16(_address + 0, value);
+	}
+
+	public ushort wMonth
+	{
+		get => _memory.Read16(_address + 2);
+		set => _memory.Write16(_address + 2, value);
+	}
+
+	public ushort wDayOfWeek
+	{
+		get => _memory.Read16(_address + 4);
+		set => _memory.Write16(_address + 4, value);
+	}
+
+	public ushort wDay
+	{
+		get => _memory.Read16(_address + 6);
+		set => _memory.Write16(_address + 6, value);
+	}
+
+	public ushort wHour
+	{
+		get => _memory.Read16(_address + 8);
+		set => _memory.Write16(_address + 8, value);
+	}
+
+	public ushort wMinute
+	{
+		get => _memory.Read16(_address + 10);
+		set => _memory.Write16(_address + 10, value);
+	}
+
+	public ushort wSecond
+	{
+		get => _memory.Read16(_address + 12);
+		set => _memory.Write16(_address + 12, value);
+	}
+
+	public ushort wMilliseconds
+	{
+		get => _memory.Read16(_address + 14);
+		set => _memory.Write16(_address + 14, value);
+	}
+
+	/// <summary>
+	/// Converts this ref struct to a value struct snapshot.
+	/// </summary>
+	public NativeTypes.SYSTEMTIME ToStruct()
+	{
+		return new NativeTypes.SYSTEMTIME
+		{
+			wYear = wYear,
+			wMonth = wMonth,
+			wDayOfWeek = wDayOfWeek,
+			wDay = wDay,
+			wHour = wHour,
+			wMinute = wMinute,
+			wSecond = wSecond,
+			wMilliseconds = wMilliseconds
+		};
+	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.SYSTEMTIME(SystemTimeRef refStruct) => refStruct.ToStruct();
+}
+
+/// <summary>
+/// Ref struct wrapper for WAVEFORMATEX with automatic memory read/write.
+/// Defines the format of waveform-audio data.
+/// </summary>
+public readonly ref struct WaveFormatExRef
+{
+	private readonly VirtualMemory _memory;
+	private readonly uint _address;
+
+	public WaveFormatExRef(VirtualMemory memory, uint address)
+	{
+		_memory = memory;
+		_address = address;
+	}
+
+	public ushort wFormatTag
+	{
+		get => _memory.Read16(_address + 0);
+		set => _memory.Write16(_address + 0, value);
+	}
+
+	public ushort nChannels
+	{
+		get => _memory.Read16(_address + 2);
+		set => _memory.Write16(_address + 2, value);
+	}
+
+	public uint nSamplesPerSec
+	{
+		get => _memory.Read32(_address + 4);
+		set => _memory.Write32(_address + 4, value);
+	}
+
+	public uint nAvgBytesPerSec
+	{
+		get => _memory.Read32(_address + 8);
+		set => _memory.Write32(_address + 8, value);
+	}
+
+	public ushort nBlockAlign
+	{
+		get => _memory.Read16(_address + 12);
+		set => _memory.Write16(_address + 12, value);
+	}
+
+	public ushort wBitsPerSample
+	{
+		get => _memory.Read16(_address + 14);
+		set => _memory.Write16(_address + 14, value);
+	}
+
+	public ushort cbSize
+	{
+		get => _memory.Read16(_address + 16);
+		set => _memory.Write16(_address + 16, value);
+	}
+
+	/// <summary>
+	/// Converts this ref struct to a value struct snapshot.
+	/// </summary>
+	public NativeTypes.WAVEFORMATEX ToStruct()
+	{
+		return new NativeTypes.WAVEFORMATEX
+		{
+			wFormatTag = wFormatTag,
+			nChannels = nChannels,
+			nSamplesPerSec = nSamplesPerSec,
+			nAvgBytesPerSec = nAvgBytesPerSec,
+			nBlockAlign = nBlockAlign,
+			wBitsPerSample = wBitsPerSample,
+			cbSize = cbSize
+		};
+	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.WAVEFORMATEX(WaveFormatExRef refStruct) => refStruct.ToStruct();
+}
+
+/// <summary>
+/// Ref struct wrapper for DDCOLORKEY with automatic memory read/write.
+/// Specifies a color key for DirectDraw surfaces.
+/// </summary>
+public readonly ref struct DDColorKeyRef
+{
+	private readonly VirtualMemory _memory;
+	private readonly uint _address;
+
+	public DDColorKeyRef(VirtualMemory memory, uint address)
+	{
+		_memory = memory;
+		_address = address;
+	}
+
+	public uint dwColorSpaceLowValue
+	{
+		get => _memory.Read32(_address + 0);
+		set => _memory.Write32(_address + 0, value);
+	}
+
+	public uint dwColorSpaceHighValue
+	{
+		get => _memory.Read32(_address + 4);
+		set => _memory.Write32(_address + 4, value);
+	}
+
+	/// <summary>
+	/// Converts this ref struct to a value struct snapshot.
+	/// </summary>
+	public NativeTypes.DDCOLORKEY ToStruct()
+	{
+		return new NativeTypes.DDCOLORKEY
+		{
+			dwColorSpaceLowValue = dwColorSpaceLowValue,
+			dwColorSpaceHighValue = dwColorSpaceHighValue
+		};
+	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.DDCOLORKEY(DDColorKeyRef refStruct) => refStruct.ToStruct();
+}
+
+/// <summary>
+/// Ref struct wrapper for ACMSTREAMHEADER with automatic memory read/write.
+/// Used for ACM audio conversion stream headers.
+/// </summary>
+public readonly ref struct AcmStreamHeaderRef
+{
+	private readonly VirtualMemory _memory;
+	private readonly uint _address;
+
+	public AcmStreamHeaderRef(VirtualMemory memory, uint address)
+	{
+		_memory = memory;
+		_address = address;
+	}
+
+	public uint cbStruct
+	{
+		get => _memory.Read32(_address + 0);
+		set => _memory.Write32(_address + 0, value);
+	}
+
+	public uint fdwStatus
+	{
+		get => _memory.Read32(_address + 4);
+		set => _memory.Write32(_address + 4, value);
+	}
+
+	public uint dwUser
+	{
+		get => _memory.Read32(_address + 8);
+		set => _memory.Write32(_address + 8, value);
+	}
+
+	public uint pbSrc
+	{
+		get => _memory.Read32(_address + 12);
+		set => _memory.Write32(_address + 12, value);
+	}
+
+	public uint cbSrcLength
+	{
+		get => _memory.Read32(_address + 16);
+		set => _memory.Write32(_address + 16, value);
+	}
+
+	public uint cbSrcLengthUsed
+	{
+		get => _memory.Read32(_address + 20);
+		set => _memory.Write32(_address + 20, value);
+	}
+
+	public uint dwSrcUser
+	{
+		get => _memory.Read32(_address + 24);
+		set => _memory.Write32(_address + 24, value);
+	}
+
+	public uint pbDst
+	{
+		get => _memory.Read32(_address + 28);
+		set => _memory.Write32(_address + 28, value);
+	}
+
+	public uint cbDstLength
+	{
+		get => _memory.Read32(_address + 32);
+		set => _memory.Write32(_address + 32, value);
+	}
+
+	public uint cbDstLengthUsed
+	{
+		get => _memory.Read32(_address + 36);
+		set => _memory.Write32(_address + 36, value);
+	}
+
+	public uint dwDstUser
+	{
+		get => _memory.Read32(_address + 40);
+		set => _memory.Write32(_address + 40, value);
+	}
+
+	/// <summary>
+	/// Converts this ref struct to a value struct snapshot.
+	/// </summary>
+	public NativeTypes.ACMSTREAMHEADER ToStruct()
+	{
+		return new NativeTypes.ACMSTREAMHEADER
+		{
+			cbStruct = cbStruct,
+			fdwStatus = fdwStatus,
+			dwUser = dwUser,
+			pbSrc = pbSrc,
+			cbSrcLength = cbSrcLength,
+			cbSrcLengthUsed = cbSrcLengthUsed,
+			dwSrcUser = dwSrcUser,
+			pbDst = pbDst,
+			cbDstLength = cbDstLength,
+			cbDstLengthUsed = cbDstLengthUsed,
+			dwDstUser = dwDstUser
+		};
+	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.ACMSTREAMHEADER(AcmStreamHeaderRef refStruct) => refStruct.ToStruct();
+}

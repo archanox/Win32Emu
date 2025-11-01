@@ -48,4 +48,14 @@ public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem, uint baseOffse
 	public DiPropHeaderRef DiPropHeader(int index) => new DiPropHeaderRef(mem, UInt32(index));
 	
 	public DiDataFormatRef DiDataFormat(int index) => new DiDataFormatRef(mem, UInt32(index));
+	
+	public FileTimeRef FileTime(int index) => new FileTimeRef(mem, UInt32(index));
+	
+	public SystemTimeRef SystemTime(int index) => new SystemTimeRef(mem, UInt32(index));
+	
+	public WaveFormatExRef WaveFormatEx(int index) => new WaveFormatExRef(mem, UInt32(index));
+	
+	public DDColorKeyRef DDColorKey(int index) => new DDColorKeyRef(mem, UInt32(index));
+	
+	public AcmStreamHeaderRef AcmStreamHeader(int index) => new AcmStreamHeaderRef(mem, UInt32(index));
 }

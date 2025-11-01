@@ -871,14 +871,14 @@ namespace Win32Emu.Win32.Modules
 			if (lpDDColorKey != 0)
 			{
 				// Read DDCOLORKEY structure
-				var colorKeyLow = _env.MemRead32(lpDDColorKey);
-				var colorKeyHigh = _env.MemRead32(lpDDColorKey + 4);
+				var colorKey = new DDColorKeyRef(_env.Memory, lpDDColorKey);
 
-				surface.ColorKeyLow = colorKeyLow;
-				surface.ColorKeyHigh = colorKeyHigh;
+				surface.ColorKeyLow = colorKey.dwColorSpaceLowValue;
+				surface.ColorKeyHigh = colorKey.dwColorSpaceHighValue;
 				surface.HasColorKey = true;
 
-				_logger.LogInformation("[DDraw] Set color key: low=0x{Low:X8}, high=0x{High:X8}", colorKeyLow, colorKeyHigh);
+				_logger.LogInformation("[DDraw] Set color key: low=0x{Low:X8}, high=0x{High:X8}", 
+					colorKey.dwColorSpaceLowValue, colorKey.dwColorSpaceHighValue);
 			}
 			else
 			{

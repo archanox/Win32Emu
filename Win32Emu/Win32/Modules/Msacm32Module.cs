@@ -191,14 +191,15 @@ public class Msacm32Module : IWin32ModuleUnsafe
 	/// </summary>
 	private WaveFormat ParseWaveFormat(uint address)
 	{
+		var waveFormat = new WaveFormatExRef(_env.Memory, address);
 		return new WaveFormat
 		{
-			FormatTag = _env.MemRead16(address),
-			Channels = _env.MemRead16(address + 2),
-			SamplesPerSec = _env.MemRead32(address + 4),
-			AvgBytesPerSec = _env.MemRead32(address + 8),
-			BlockAlign = _env.MemRead16(address + 12),
-			BitsPerSample = _env.MemRead16(address + 14)
+			FormatTag = waveFormat.wFormatTag,
+			Channels = waveFormat.nChannels,
+			SamplesPerSec = waveFormat.nSamplesPerSec,
+			AvgBytesPerSec = waveFormat.nAvgBytesPerSec,
+			BlockAlign = waveFormat.nBlockAlign,
+			BitsPerSample = waveFormat.wBitsPerSample
 		};
 	}
 
@@ -298,37 +299,34 @@ public class Msacm32Module : IWin32ModuleUnsafe
 			//   ...
 			// } ACMSTREAMHEADER;
 
-			var pbSrc = _env.MemRead32(pash + 12);
-			var cbSrcLength = _env.MemRead32(pash + 16);
-			var pbDst = _env.MemRead32(pash + 28);
-			var cbDstLength = _env.MemRead32(pash + 32);
+			var header = new AcmStreamHeaderRef(_env.Memory, pash);
 
 			_logger.LogInformation("[MSACM32] Converting {CbSrcLength} bytes from 0x{PbSrc:X8} to 0x{PbDst:X8} (max {CbDstLength} bytes)",
-				cbSrcLength, pbSrc, pbDst, cbDstLength);
+				header.cbSrcLength, header.pbSrc, header.pbDst, header.cbDstLength);
 
 			// Perform format conversion based on source and dest formats
 			uint bytesConverted = 0;
 			if (stream.SourceWaveFormat != null && stream.DestWaveFormat != null)
 			{
 				bytesConverted = ConvertAudioData(
-					pbSrc, cbSrcLength,
-					pbDst, cbDstLength,
+					header.pbSrc, header.cbSrcLength,
+					header.pbDst, header.cbDstLength,
 					stream.SourceWaveFormat,
 					stream.DestWaveFormat);
 			}
 			else
 			{
 				// Fallback: copy data directly (no conversion)
-				bytesConverted = Math.Min(cbSrcLength, cbDstLength);
+				bytesConverted = Math.Min(header.cbSrcLength, header.cbDstLength);
 				for (uint i = 0; i < bytesConverted; i++)
 				{
-					_env.MemWrite8(pbDst + i, _env.MemRead8(pbSrc + i));
+					_env.MemWrite8(header.pbDst + i, _env.MemRead8(header.pbSrc + i));
 				}
 			}
 
 			// Update the stream header with bytes used
-			_env.MemWrite32(pash + 20, cbSrcLength); // cbSrcLengthUsed
-			_env.MemWrite32(pash + 36, bytesConverted); // cbDstLengthUsed
+			header.cbSrcLengthUsed = header.cbSrcLength;
+			header.cbDstLengthUsed = bytesConverted;
 
 			_logger.LogInformation("[MSACM32] Converted {BytesConverted} bytes", bytesConverted);
 			return 0; // MMSYSERR_NOERROR

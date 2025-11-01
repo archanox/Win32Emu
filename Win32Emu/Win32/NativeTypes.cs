@@ -391,4 +391,63 @@ public static class NativeTypes
 		public uint dwNumObjs;   // Offset 16
 		public uint rgodf;       // Offset 20 (pointer to array)
 	}
+
+	// FILETIME structure (8 bytes)
+	// 64-bit value representing the number of 100-nanosecond intervals since January 1, 1601 (UTC)
+	public struct FILETIME
+	{
+		public uint dwLowDateTime;  // Offset 0
+		public uint dwHighDateTime; // Offset 4
+	}
+
+	// SYSTEMTIME structure (16 bytes)
+	// Specifies a date and time using individual members for month, day, year, weekday, hour, minute, second, and millisecond
+	public struct SYSTEMTIME
+	{
+		public ushort wYear;         // Offset 0
+		public ushort wMonth;        // Offset 2
+		public ushort wDayOfWeek;    // Offset 4
+		public ushort wDay;          // Offset 6
+		public ushort wHour;         // Offset 8
+		public ushort wMinute;       // Offset 10
+		public ushort wSecond;       // Offset 12
+		public ushort wMilliseconds; // Offset 14
+	}
+
+	// WAVEFORMATEX structure (18 bytes minimum)
+	// Defines the format of waveform-audio data
+	public struct WAVEFORMATEX
+	{
+		public ushort wFormatTag;      // Offset 0 - Format type
+		public ushort nChannels;       // Offset 2 - Number of channels
+		public uint nSamplesPerSec;    // Offset 4 - Sample rate
+		public uint nAvgBytesPerSec;   // Offset 8 - For buffer estimation
+		public ushort nBlockAlign;     // Offset 12 - Block alignment
+		public ushort wBitsPerSample;  // Offset 14 - Bits per sample
+		public ushort cbSize;          // Offset 16 - Size of extra format information
+	}
+
+	// DDCOLORKEY structure (8 bytes)
+	// Specifies a color key for DirectDraw surfaces
+	public struct DDCOLORKEY
+	{
+		public uint dwColorSpaceLowValue;  // Offset 0 - Low boundary of color space
+		public uint dwColorSpaceHighValue; // Offset 4 - High boundary of color space
+	}
+
+	// ACMSTREAMHEADER structure (used for ACM audio conversion)
+	public struct ACMSTREAMHEADER
+	{
+		public uint cbStruct;       // Offset 0 - Size of structure
+		public uint fdwStatus;      // Offset 4 - Flags
+		public uint dwUser;         // Offset 8 - User data
+		public uint pbSrc;          // Offset 12 - Source buffer pointer
+		public uint cbSrcLength;    // Offset 16 - Source buffer length
+		public uint cbSrcLengthUsed;// Offset 20 - Source bytes used
+		public uint dwSrcUser;      // Offset 24 - Source user data
+		public uint pbDst;          // Offset 28 - Destination buffer pointer
+		public uint cbDstLength;    // Offset 32 - Destination buffer length
+		public uint cbDstLengthUsed;// Offset 36 - Destination bytes used
+		public uint dwDstUser;      // Offset 40 - Destination user data
+	}
 }
