@@ -1184,52 +1184,85 @@ namespace Win32Emu.Win32.Modules
 				return 0xFFFFFFFF; // -1 for error
 			}
 
-			while (true)
+			// EMULATOR DESIGN NOTE: 
+			// Real Win32 GetMessage blocks indefinitely until a message arrives.
+			// However, in an emulator context, indefinite blocking would:
+			// 1. Prevent cooperative multitasking with the host
+			// 2. Make debugging and testing difficult (tests would hang)
+			// 3. Reduce responsiveness of the emulator
+			// 
+			// Our implementation uses a 100ms timeout and returns WM_NULL when no messages
+			// are available. Applications should handle WM_NULL gracefully (most ignore it).
+			// This approach provides better emulator responsiveness while maintaining
+			// compatibility with most Win32 applications that don't rely on strict blocking.
+			
+			// Check if there's a quit message
+			if (_env.HasQuitMessage())
 			{
-				// Check if there's a quit message
-				if (_env.HasQuitMessage())
-				{
-					var exitCode = _env.GetQuitExitCode();
-					_logger.LogInformation("[User32] GetMessageA: WM_QUIT (exitCode={ExitCode})", exitCode);
+				var exitCode = _env.GetQuitExitCode();
+				_logger.LogInformation("[User32] GetMessageA: WM_QUIT (exitCode={ExitCode})", exitCode);
 
+				// Fill MSG structure with WM_QUIT
+				_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
+				_env.MemWrite32(lpMsg + 4, 0x0012); // WM_QUIT = 0x0012
+				_env.MemWrite32(lpMsg + 8, (uint)exitCode); // wParam = exit code
+				_env.MemWrite32(lpMsg + 12, 0); // lParam = 0
+				_env.MemWrite32(lpMsg + 16, 0); // time = 0
+				_env.MemWrite32(lpMsg + 20, 0); // pt.x = 0
+				_env.MemWrite32(lpMsg + 24, 0); // pt.y = 0
+
+				return 0; // GetMessage returns 0 for WM_QUIT
+			}
+
+			// Try to get a message from the queue (with short timeout to avoid hanging the emulator)
+			// Real Windows GetMessage blocks indefinitely, but we use a timeout for better responsiveness
+			var queuedMsg = _env.GetMessageBlocking(hWnd, wMsgFilterMin, wMsgFilterMax, timeoutMs: 100);
+			if (queuedMsg.HasValue)
+			{
+				if (queuedMsg.Value.Message == 0x0012)
+				{
+					// WM_QUIT - already being processed from the queue; do not set the quit flag again
+					
 					// Fill MSG structure with WM_QUIT
 					_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
 					_env.MemWrite32(lpMsg + 4, 0x0012); // WM_QUIT = 0x0012
-					_env.MemWrite32(lpMsg + 8, (uint)exitCode); // wParam = exit code
+					_env.MemWrite32(lpMsg + 8, queuedMsg.Value.WParam); // wParam = exit code
 					_env.MemWrite32(lpMsg + 12, 0); // lParam = 0
-					_env.MemWrite32(lpMsg + 16, 0); // time = 0
-					_env.MemWrite32(lpMsg + 20, 0); // pt.x = 0
-					_env.MemWrite32(lpMsg + 24, 0); // pt.y = 0
-
+					_env.MemWrite32(lpMsg + 16, queuedMsg.Value.Time); // time
+					_env.MemWrite32(lpMsg + 20, queuedMsg.Value.PtX); // pt.x
+					_env.MemWrite32(lpMsg + 24, queuedMsg.Value.PtY); // pt.y
+					
 					return 0; // GetMessage returns 0 for WM_QUIT
 				}
 
-				// Try to get a message from the queue (with short timeout to simulate blocking)
-				// Real Windows GetMessage blocks indefinitely, but we use a timeout to avoid hanging the emulator
-				var queuedMsg = _env.GetMessageBlocking(hWnd, wMsgFilterMin, wMsgFilterMax, timeoutMs: -1);
-				if (queuedMsg.HasValue)
-				{
-					if (queuedMsg.Value.Message == 0x0012)
-					{
-						// WM_QUIT
-						_env.PostQuitMessage((int)queuedMsg.Value.WParam);
-						continue; // Loop again to handle quit message
-					}
+				_logger.LogInformation("[User32] GetMessageA: retrieved MSG=0x{ValueMessage:X4} HWND=0x{ValueHwnd:X8}", queuedMsg.Value.Message, queuedMsg.Value.Hwnd);
 
-					_logger.LogInformation("[User32] GetMessageA: retrieved MSG=0x{ValueMessage:X4} HWND=0x{ValueHwnd:X8}", queuedMsg.Value.Message, queuedMsg.Value.Hwnd);
+				// Fill MSG structure
+				_env.MemWrite32(lpMsg + 0, queuedMsg.Value.Hwnd);
+				_env.MemWrite32(lpMsg + 4, queuedMsg.Value.Message);
+				_env.MemWrite32(lpMsg + 8, queuedMsg.Value.WParam);
+				_env.MemWrite32(lpMsg + 12, queuedMsg.Value.LParam);
+				_env.MemWrite32(lpMsg + 16, queuedMsg.Value.Time);
+				_env.MemWrite32(lpMsg + 20, queuedMsg.Value.PtX);
+				_env.MemWrite32(lpMsg + 24, queuedMsg.Value.PtY);
 
-					// Fill MSG structure
-					_env.MemWrite32(lpMsg + 0, queuedMsg.Value.Hwnd);
-					_env.MemWrite32(lpMsg + 4, queuedMsg.Value.Message);
-					_env.MemWrite32(lpMsg + 8, queuedMsg.Value.WParam);
-					_env.MemWrite32(lpMsg + 12, queuedMsg.Value.LParam);
-					_env.MemWrite32(lpMsg + 16, queuedMsg.Value.Time);
-					_env.MemWrite32(lpMsg + 20, queuedMsg.Value.PtX);
-					_env.MemWrite32(lpMsg + 24, queuedMsg.Value.PtY);
-
-					return 1; // GetMessage returns non-zero for all messages except WM_QUIT
-				}
+				return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 			}
+			
+			// No message available after timeout - return WM_NULL to allow graceful handling
+			// This prevents tests and applications from hanging when no messages are available
+			_logger.LogTrace("[User32] GetMessageA: No messages available, returning WM_NULL");
+			
+			// Fill MSG structure with WM_NULL
+			_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
+			_env.MemWrite32(lpMsg + 4, 0); // WM_NULL = 0
+			_env.MemWrite32(lpMsg + 8, 0); // wParam = 0
+			_env.MemWrite32(lpMsg + 12, 0); // lParam = 0
+			_env.MemWrite32(lpMsg + 16, (uint)Environment.TickCount); // time
+			_env.MemWrite32(lpMsg + 20, 0); // pt.x = 0
+			_env.MemWrite32(lpMsg + 24, 0); // pt.y = 0
+			
+			return 1; // GetMessage returns non-zero for WM_NULL (only 0 for WM_QUIT)
 		}
 
 		[DllModuleExport(30)]
