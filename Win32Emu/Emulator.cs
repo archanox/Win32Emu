@@ -365,10 +365,26 @@ public sealed class Emulator : IDisposable
     private async Task RunNormalAsync()
     {
         var scheduler = _env!.ThreadScheduler;
+        var iterationCount = 0ul;
+        var lastLogTime = DateTime.UtcNow;
 
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
         {
+            iterationCount++;
+            
+            // Log progress every 10000 iterations (to help detect infinite loops or hangs)
+            if (iterationCount % 10000 == 0)
+            {
+                var now = DateTime.UtcNow;
+                var elapsed = (now - lastLogTime).TotalMilliseconds;
+                var progressEip = _cpu!.GetEip();
+                var progressEsp = _cpu.GetRegister("ESP");
+                _logger.LogDebug("[Emulator] Progress: {Iterations} iterations ({Elapsed:F2}ms), EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
+                    iterationCount, elapsed, progressEip, progressEsp);
+                lastLogTime = now;
+            }
+            
             // DEBUG: Log EIP at start of each iteration to catch when it gets corrupted
             var eipAtLoopStart = _cpu!.GetEip();
             if (eipAtLoopStart >= 0x01000000 && eipAtLoopStart < 0x02000000)
@@ -390,15 +406,16 @@ public sealed class Emulator : IDisposable
 	            break;
             }
 
+            // Process wait timeouts BEFORE checking for runnable threads
+            // This ensures sleeping threads are woken up before we check if any threads are runnable
+            scheduler?.ProcessWaitTimeouts();
+
             // Check if we have any runnable threads
             if (scheduler != null && !scheduler.HasRunningThreads())
             {
                 LogDebug("[Emulator] No more runnable threads, stopping execution");
                 break;
             }
-
-            // Process wait timeouts
-            scheduler?.ProcessWaitTimeouts();
 
             // Check if we should context switch
             if (scheduler != null && scheduler.ShouldContextSwitch())
@@ -495,7 +512,19 @@ public sealed class Emulator : IDisposable
                 }
             }
 
-            var step = _cpu!.SingleStep(_vm!);
+            CpuStepResult step;
+            try
+            {
+                step = _cpu!.SingleStep(_vm!);
+            }
+            catch (Exception ex)
+            {
+                var esp = _cpu!.GetRegister("ESP");
+                var ebp = _cpu.GetRegister("EBP");
+                _logger.LogError(ex, "[Emulator] Exception during SingleStep at EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}: {Message}", 
+                    eipBeforeStep, esp, ebp, ex.Message);
+                throw; // Re-throw to stop emulation
+            }
             
             // Record instruction execution
             _metrics?.RecordInstructionsExecuted();
