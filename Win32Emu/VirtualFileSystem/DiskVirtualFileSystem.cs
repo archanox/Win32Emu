@@ -199,24 +199,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 
 	private static void CreateVmdkDisk(string diskPath, long sizeBytes, ILogger logger)
 	{
-		// VMDK creation is not supported - default to VHD instead
-		logger.LogWarning("[DiskVFS] VMDK creation not fully supported, creating VHD instead");
-		var vhdPath = Path.ChangeExtension(diskPath, ".vhd");
-		CreateVhdDisk(vhdPath, sizeBytes, logger);
-		
-		// If the original path was different, try to use it
-		if (vhdPath != diskPath)
-		{
-			try
-			{
-				File.Move(vhdPath, diskPath);
-			}
-			catch
-			{
-				// If move fails, just use the VHD path
-				logger.LogWarning("[DiskVFS] Could not rename disk to .vmdk, using .vhd instead");
-			}
-		}
+		throw new NotSupportedException("VMDK disk creation is not supported.");
 	}
 
 	/// <summary>
