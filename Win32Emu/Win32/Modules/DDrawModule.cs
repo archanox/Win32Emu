@@ -2241,7 +2241,17 @@ namespace Win32Emu.Win32.Modules
 				// Initialize rendering backend if not already done
 				if (obj.RenderingBackend == null)
 				{
-					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
+					// Use Avalonia backend if host is available for GUI integration
+					// Otherwise use default SDL/platform-specific backend
+					if (_env.Host != null)
+					{
+						obj.RenderingBackend = new Rendering.AvaloniaRenderingBackend(_logger, _env.Host);
+						_logger.LogInformation("[DDraw] Using Avalonia rendering backend for GUI integration");
+					}
+					else
+					{
+						obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
+					}
 				}
 
 				// Subscribe to UI events from the rendering backend
@@ -2287,7 +2297,17 @@ namespace Win32Emu.Win32.Modules
 				// Initialize rendering backend with the specified dimensions
 				if (obj.RenderingBackend == null)
 				{
-					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
+					// Use Avalonia backend if host is available for GUI integration
+					// Otherwise use default SDL/platform-specific backend
+					if (_env.Host != null)
+					{
+						obj.RenderingBackend = new Rendering.AvaloniaRenderingBackend(_logger, _env.Host);
+						_logger.LogInformation("[DDraw] Using Avalonia rendering backend for GUI integration");
+					}
+					else
+					{
+						obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackend(_logger);
+					}
 				}
 
 				// Initialize the window with the specified dimensions

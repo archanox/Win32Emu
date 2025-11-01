@@ -19,23 +19,33 @@
         <!-- Main Content Area -->
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
             
-            <!-- Game Display Area (placeholder for SDL3/GDI32 rendering) -->
+            <!-- Game Display Area (shows DirectDraw/GDI32 rendering) -->
             <Border Grid.Column="0"
                     Background="Black"
                     BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                     BorderThickness="1">
                 <Grid>
-                    <TextBlock Text="🎮 Game Rendering Area"
-                             FontSize="24"
-                             Foreground="Gray"
-                             HorizontalAlignment="Center"
-                             VerticalAlignment="Center"/>
-                    <TextBlock Text="(SDL3/DirectDraw output will appear here)"
-                             FontSize="14"
-                             Foreground="Gray"
-                             HorizontalAlignment="Center"
-                             VerticalAlignment="Center"
-                             Margin="0,40,0,0"/>
+                    <!-- Frame buffer display image -->
+                    <Image x:Name="DisplayImage"
+                           Source="{Binding DisplayBitmap}"
+                           Stretch="Uniform"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+                    
+                    <!-- Placeholder text when no display is active -->
+                    <Grid IsVisible="{Binding !HasDisplay}">
+                        <TextBlock Text="🎮 Game Rendering Area"
+                                 FontSize="24"
+                                 Foreground="Gray"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"/>
+                        <TextBlock Text="(DirectDraw/GDI32 output will appear here)"
+                                 FontSize="14"
+                                 Foreground="Gray"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 Margin="0,40,0,0"/>
+                    </Grid>
                 </Grid>
             </Border>
 

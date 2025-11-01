@@ -1648,6 +1648,7 @@ public interface IEmulatorHost
     int OnMessageBox(MessageBoxInfo info);
     void OnDialogControlTextChanged(uint dialogHandle, int controlId, string text);
     void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData);
+    void OnDisplayUpdate(DisplayUpdateInfo info);
 }
 
 public enum DebugLevel
@@ -1690,4 +1691,12 @@ public class MessageBoxInfo
     public required string Text { get; init; }
     public required string Caption { get; init; }
     public uint Type { get; init; }
+}
+
+public class DisplayUpdateInfo
+{
+    public required byte[] FrameBuffer { get; init; }
+    public int Width { get; init; }
+    public int Height { get; init; }
+    public int Stride { get; init; }
 }

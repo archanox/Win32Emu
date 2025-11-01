@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -33,6 +35,12 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 
     [ObservableProperty]
     private bool _showStdOutputPanel = true;
+
+    [ObservableProperty]
+    private WriteableBitmap? _displayBitmap;
+
+    [ObservableProperty]
+    private bool _hasDisplay = false;
 
     // Track created windows - maps Win32 HWND to Avalonia Window
     private readonly Dictionary<uint, Window> _createdWindows = new();
@@ -668,8 +676,45 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 
     public void OnDisplayUpdate(DisplayUpdateInfo info)
     {
-        // TODO: Update rendering backend display rendering
-        OnDebugOutput($"Display updated: {info.Width}x{info.Height}", DebugLevel.Debug);
+        // Update the Avalonia display with the frame buffer
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                // Create or resize the bitmap if needed
+                if (DisplayBitmap == null || DisplayBitmap.PixelSize.Width != info.Width || DisplayBitmap.PixelSize.Height != info.Height)
+                {
+                    DisplayBitmap = new WriteableBitmap(
+                        new PixelSize(info.Width, info.Height),
+                        new Vector(96, 96),
+                        PixelFormat.Rgba8888,
+                        AlphaFormat.Premul);
+                    
+                    HasDisplay = true;
+                    OnDebugOutput($"Created display bitmap: {info.Width}x{info.Height}", DebugLevel.Info);
+                }
+
+                // Update the bitmap with the new frame buffer data
+                using (var framebuffer = DisplayBitmap.Lock())
+                {
+                    // Calculate the size to copy
+                    var bytesToCopy = Math.Min(info.FrameBuffer.Length, framebuffer.Size.Width * framebuffer.Size.Height * 4);
+                    
+                    // Copy using Marshal for safety
+                    System.Runtime.InteropServices.Marshal.Copy(
+                        info.FrameBuffer,
+                        0,
+                        framebuffer.Address,
+                        bytesToCopy);
+                }
+
+                OnDebugOutput($"Display updated: {info.Width}x{info.Height}, stride={info.Stride}", DebugLevel.Trace);
+            }
+            catch (Exception ex)
+            {
+                OnDebugOutput($"Error updating display: {ex.Message}", DebugLevel.Error);
+            }
+        });
     }
 
     public void OnStateChanged(EmulatorState state)

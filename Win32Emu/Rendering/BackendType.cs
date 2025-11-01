@@ -28,5 +28,10 @@ public enum BackendType
     /// <summary>
     /// Software (CPU-based) rendering backend - no GPU acceleration required
     /// </summary>
-    Software
+    Software,
+
+    /// <summary>
+    /// Avalonia UI integration backend - renders to Avalonia WriteableBitmap instead of separate window
+    /// </summary>
+    Avalonia
 }
