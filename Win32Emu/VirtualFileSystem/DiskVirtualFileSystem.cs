@@ -155,44 +155,46 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 
 	private static void CreateVhdDisk(string diskPath, long sizeBytes, ILogger logger)
 	{
+		// Create and initialize the VHD file
 		using (Stream vhdStream = File.Create(diskPath))
 		{
 			// Default block size for dynamic VHDs is 2MB
 			long blockSize = 2 * 1024 * 1024;
 			VhdDisk.InitializeDynamic(vhdStream, Ownership.None, sizeBytes, blockSize);
+		}
+		
+		// Re-open the disk to format it (must be done after stream is closed)
+		using (var disk = new VhdDisk(diskPath, FileAccess.ReadWrite))
+		{
+			BiosPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsFat);
 			
-			// Re-open the disk to format it
-			using (var disk = new VhdDisk(diskPath, FileAccess.ReadWrite))
+			using (FatFileSystem.FormatPartition(disk, 0, null))
 			{
-				BiosPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsFat);
-				
-				using (FatFileSystem.FormatPartition(disk, 0, null))
-				{
-					// Disk is now formatted and ready to use
-					logger.LogDebug("[DiskVFS] VHD disk formatted with FAT32");
-				}
+				// Disk is now formatted and ready to use
+				logger.LogDebug("[DiskVFS] VHD disk formatted with FAT32");
 			}
 		}
 	}
 
 	private static void CreateVhdxDisk(string diskPath, long sizeBytes, ILogger logger)
 	{
+		// Create and initialize the VHDX file
 		using (Stream vhdxStream = File.Create(diskPath))
 		{
 			// VHDX uses 1MB block size by default
 			long blockSize = 1 * 1024 * 1024;
 			VhdxDisk.InitializeDynamic(vhdxStream, Ownership.None, sizeBytes, blockSize);
+		}
+		
+		// Re-open the disk to format it (must be done after stream is closed)
+		using (var disk = new VhdxDisk(diskPath, FileAccess.ReadWrite))
+		{
+			BiosPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsFat);
 			
-			// Re-open the disk to format it
-			using (var disk = new VhdxDisk(diskPath, FileAccess.ReadWrite))
+			using (FatFileSystem.FormatPartition(disk, 0, null))
 			{
-				BiosPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsFat);
-				
-				using (FatFileSystem.FormatPartition(disk, 0, null))
-				{
-					// Disk is now formatted and ready to use
-					logger.LogDebug("[DiskVFS] VHDX disk formatted with FAT32");
-				}
+				// Disk is now formatted and ready to use
+				logger.LogDebug("[DiskVFS] VHDX disk formatted with FAT32");
 			}
 		}
 	}
@@ -264,13 +266,50 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 
 	private static DiscFileSystem GetFileSystemFromDisk(VirtualDisk disk)
 	{
-		// Use the disk's content stream directly
-		var diskStream = disk.Content;
-
-		// Try to detect filesystem
-		if (FatFileSystem.Detect(diskStream))
+		// Check if the disk has partitions
+		if (disk.IsPartitioned)
 		{
-			return new FatFileSystem(diskStream);
+			var partitionTable = disk.Partitions;
+			if (partitionTable.Count > 0)
+			{
+				// Use the first partition
+				var partition = partitionTable[0];
+				Stream? partitionStream = partition.Open();
+				
+				try
+				{
+					// Try to detect filesystem on the partition
+					if (FatFileSystem.Detect(partitionStream))
+					{
+						// Reset stream position before creating filesystem
+						partitionStream.Position = 0;
+						var fs = new FatFileSystem(partitionStream);
+						partitionStream = null; // Ownership transferred to FatFileSystem
+						return fs;
+					}
+				}
+				finally
+				{
+					// Dispose stream only if ownership was not transferred
+					if (partitionStream != null)
+					{
+						partitionStream.Dispose();
+					}
+				}
+			}
+		}
+		else
+		{
+			// Try raw disk (no partition table)
+			var diskStream = disk.Content;
+			
+			// Try to detect filesystem
+			if (FatFileSystem.Detect(diskStream))
+			{
+				// Reset stream position before creating filesystem
+				diskStream.Position = 0;
+				return new FatFileSystem(diskStream);
+			}
 		}
 
 		throw new InvalidOperationException("No supported filesystem found on disk. Use Create() to format a new disk.");
