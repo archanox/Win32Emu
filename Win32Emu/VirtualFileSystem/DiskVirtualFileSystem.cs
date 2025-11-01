@@ -276,12 +276,20 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 				var partition = partitionTable[0];
 				var partitionStream = partition.Open();
 				
-				// Try to detect filesystem on the partition
-				if (FatFileSystem.Detect(partitionStream))
+				try
 				{
-					// Reset stream position before creating filesystem
-					partitionStream.Position = 0;
-					return new FatFileSystem(partitionStream);
+					// Try to detect filesystem on the partition
+					if (FatFileSystem.Detect(partitionStream))
+					{
+						// Reset stream position before creating filesystem
+						partitionStream.Position = 0;
+						return new FatFileSystem(partitionStream);
+					}
+				}
+				catch
+				{
+					partitionStream.Dispose();
+					throw;
 				}
 				
 				// Clean up if detection failed
