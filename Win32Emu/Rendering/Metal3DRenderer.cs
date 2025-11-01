@@ -153,7 +153,7 @@ public unsafe class Metal3DRenderer : IDisposable
             }
 
             // Copy index data
-            var bytes = MemoryMarshal.AsBytes(new Span<uint>(indices));
+            var bytes = MemoryMarshal.Cast<uint, byte>(indices);
             
             fixed (byte* bytesPtr = bytes)
             {
@@ -241,7 +241,6 @@ public unsafe class Metal3DRenderer : IDisposable
 
             var descriptor = new MTLDepthStencilDescriptor();
             descriptor.DepthCompareFunction = depthCompareFunction;
-            // Note: DepthWriteEnabled is handled automatically by Metal based on depth compare function
 
             _depthStencilState = _device.NewDepthStencilState(descriptor);
             
