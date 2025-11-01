@@ -1553,7 +1553,6 @@ namespace Win32Emu.Win32.Modules
 			var text = lpchText.ToString() ?? string.Empty;
 			
 			// Read rectangle if provided
-			// Read rectangle if provided
 			int left = 0, top = 0, right = 0, bottom = 0;
 			if (lprc != 0)
 			{
