@@ -896,6 +896,152 @@ public class WindowTests : IDisposable
         Assert.Equal(0u, retrievedLParam); // Thread ID (0 for simplicity)
     }
 
+    [Fact]
+    public void DestroyWindow_WithValidWindow_ShouldReturnTrue()
+    {
+        // Arrange - Create a window first
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            100, 100, 640, 480, 0, 0, 0, 0
+        );
+
+        // Act
+        var result = _testEnv.CallUser32Api("DESTROYWINDOW", hwnd);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE - window destroyed successfully
+    }
+
+    [Fact]
+    public void DestroyWindow_WithInvalidWindow_ShouldReturnFalse()
+    {
+        // Arrange - Use an invalid window handle
+        uint invalidHwnd = 0x99999999;
+
+        // Act
+        var result = _testEnv.CallUser32Api("DESTROYWINDOW", invalidHwnd);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE - invalid window
+    }
+
+    [Fact]
+    public void DestroyWindow_ShouldSendWmDestroyMessage()
+    {
+        // Arrange - Create a window
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            100, 100, 640, 480, 0, 0, 0, 0
+        );
+
+        // Clear the message queue (WM_CREATE, WM_SIZE, WM_MOVE)
+        var dummyMsg = _testEnv.AllocateMemory(28);
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+
+        // Act - Destroy the window
+        _testEnv.CallUser32Api("DESTROYWINDOW", hwnd);
+
+        // Assert - WM_DESTROY message should be queued
+        var msgAddr = _testEnv.AllocateMemory(28); // MSG structure size
+        var result = _testEnv.CallUser32Api("PEEKMESSAGEA", msgAddr, 0, 0, 0, 0x0001); // PM_REMOVE
+        Assert.Equal(1u, result); // Message should be available
+        var retrievedHwnd = _testEnv.Memory.Read32(msgAddr + 0);
+        var retrievedMsg = _testEnv.Memory.Read32(msgAddr + 4);
+        Assert.Equal(hwnd, retrievedHwnd);
+        Assert.Equal(0x0002u, retrievedMsg); // WM_DESTROY
+    }
+
+    [Fact]
+    public void DestroyWindow_ShouldSendWmNcDestroyMessage()
+    {
+        // Arrange - Create a window
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            100, 100, 640, 480, 0, 0, 0, 0
+        );
+
+        // Clear the message queue (WM_CREATE, WM_SIZE, WM_MOVE)
+        var dummyMsg = _testEnv.AllocateMemory(28);
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+        _testEnv.CallUser32Api("PEEKMESSAGEA", dummyMsg, 0, 0, 0, 0x0001); // PM_REMOVE
+
+        // Act - Destroy the window
+        _testEnv.CallUser32Api("DESTROYWINDOW", hwnd);
+
+        // Assert - Both WM_DESTROY and WM_NCDESTROY messages should be queued
+        var msgAddr = _testEnv.AllocateMemory(28); // MSG structure size
+        
+        // First message should be WM_DESTROY
+        var result1 = _testEnv.CallUser32Api("PEEKMESSAGEA", msgAddr, 0, 0, 0, 0x0001); // PM_REMOVE
+        Assert.Equal(1u, result1);
+        var msg1 = _testEnv.Memory.Read32(msgAddr + 4);
+        Assert.Equal(0x0002u, msg1); // WM_DESTROY
+
+        // Second message should be WM_NCDESTROY
+        var result2 = _testEnv.CallUser32Api("PEEKMESSAGEA", msgAddr, 0, 0, 0, 0x0001); // PM_REMOVE
+        Assert.Equal(1u, result2);
+        var msg2 = _testEnv.Memory.Read32(msgAddr + 4);
+        Assert.Equal(0x0082u, msg2); // WM_NCDESTROY
+    }
+
+    [Fact]
+    public void DestroyWindow_CalledTwice_ShouldFailSecondTime()
+    {
+        // Arrange - Create and destroy a window
+        var wndClassAddr = _testEnv.WriteWndClassA(
+            className: "TestClass",
+            wndProc: 0x00401000
+        );
+        _testEnv.CallUser32Api("REGISTERCLASSA", wndClassAddr);
+
+        var classNamePtr = _testEnv.WriteString("TestClass");
+        var titlePtr = _testEnv.WriteString("Test Window");
+
+        var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            100, 100, 640, 480, 0, 0, 0, 0
+        );
+
+        var result1 = _testEnv.CallUser32Api("DESTROYWINDOW", hwnd);
+
+        // Act - Try to destroy the same window again
+        var result2 = _testEnv.CallUser32Api("DESTROYWINDOW", hwnd);
+
+        // Assert
+        Assert.Equal(1u, result1); // First destroy should succeed
+        Assert.Equal(0u, result2); // Second destroy should fail
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();

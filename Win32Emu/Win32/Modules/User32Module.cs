@@ -1871,12 +1871,34 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] DestroyWindow: HWND=0x{Hwnd:X8}", hwnd);
 
+			// Check if window exists
+			var window = _env.GetWindow(hwnd);
+			if (!window.HasValue)
+			{
+				_logger.LogWarning("[User32] DestroyWindow: Window 0x{Hwnd:X8} not found", hwnd);
+				return 0; // FALSE - window doesn't exist
+			}
+
+			// Send WM_DESTROY message first (0x0002)
+			// This is sent before the window is removed from the screen
+			const uint WM_DESTROY = 0x0002;
+			_env.SendMessageToWindow(hwnd, WM_DESTROY, 0, 0);
+			_logger.LogDebug("[User32] DestroyWindow: Sent WM_DESTROY to window 0x{Hwnd:X8}", hwnd);
+
+			// Send WM_NCDESTROY message (0x0082)
+			// This is sent after WM_DESTROY and after child windows are destroyed
+			const uint WM_NCDESTROY = 0x0082;
+			_env.SendMessageToWindow(hwnd, WM_NCDESTROY, 0, 0);
+			_logger.LogDebug("[User32] DestroyWindow: Sent WM_NCDESTROY to window 0x{Hwnd:X8}", hwnd);
+
 			// Remove window from tracking
 			if (_env.DestroyWindow(hwnd))
 			{
+				_logger.LogInformation("[User32] DestroyWindow: Successfully destroyed window 0x{Hwnd:X8}", hwnd);
 				return 1; // TRUE
 			}
 
+			_logger.LogWarning("[User32] DestroyWindow: Failed to destroy window 0x{Hwnd:X8}", hwnd);
 			return 0; // FALSE
 		}
 
