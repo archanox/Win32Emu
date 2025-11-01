@@ -4,7 +4,6 @@ using AsmResolver.PE.Exports;
 using AsmResolver.PE.File;
 using Microsoft.Extensions.Logging;
 using Win32Emu.Memory;
-using System.Linq;
 using System.IO;
 
 namespace Win32Emu.Loader;
@@ -74,21 +73,34 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			
 			try
 			{
-				// Read the raw file bytes for the headers
-				// Headers go from file offset 0 to SizeOfHeaders
-				var headerBytes = File.ReadAllBytes(path);
-				var actualHeaderSize = (int)Math.Min(sizeOfHeaders, (uint)headerBytes.Length);
-				
 				// Additional safety: ensure we don't overwrite any sections
 				// Headers should end before the first section starts
-				var firstSectionRva = pe.Sections.Any() ? pe.Sections.Min(s => s.Rva) : sizeOfHeaders;
-				if (actualHeaderSize > firstSectionRva)
+				var firstSectionRva = sizeOfHeaders;
+				foreach (var section in pe.Sections)
 				{
-					logger?.LogWarning("[Loader] SizeOfHeaders (0x{Size:X8}) extends beyond first section RVA (0x{FirstRva:X8}), truncating to first section", actualHeaderSize, firstSectionRva);
-					actualHeaderSize = (int)firstSectionRva;
+					if (section.Rva < firstSectionRva)
+					{
+						firstSectionRva = section.Rva;
+					}
 				}
 				
-				var headerData = headerBytes.Take(actualHeaderSize).ToArray();
+				var actualHeaderSize = (int)Math.Min(sizeOfHeaders, firstSectionRva);
+				if (actualHeaderSize < sizeOfHeaders)
+				{
+					logger?.LogWarning("[Loader] SizeOfHeaders (0x{Size:X8}) extends beyond first section RVA (0x{FirstRva:X8}), truncating to first section", sizeOfHeaders, firstSectionRva);
+				}
+				
+				// Read only the required header bytes from the file
+				var headerData = new byte[actualHeaderSize];
+				using (var fileStream = File.OpenRead(path))
+				{
+					var bytesRead = fileStream.Read(headerData, 0, actualHeaderSize);
+					if (bytesRead < actualHeaderSize)
+					{
+						logger?.LogWarning("[Loader] Only read 0x{BytesRead:X8} of 0x{Expected:X8} header bytes", bytesRead, actualHeaderSize);
+					}
+				}
+				
 				vm.WriteBytes(imageBase, headerData);
 				logger?.LogDebug("[Loader] Loaded 0x{Size:X8} bytes of PE headers", headerData.Length);
 			}
