@@ -274,7 +274,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			{
 				// Use the first partition
 				var partition = partitionTable[0];
-				var partitionStream = partition.Open();
+				Stream? partitionStream = partition.Open();
 				
 				try
 				{
@@ -283,17 +283,19 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 					{
 						// Reset stream position before creating filesystem
 						partitionStream.Position = 0;
-						return new FatFileSystem(partitionStream);
+						var fs = new FatFileSystem(partitionStream);
+						partitionStream = null; // Ownership transferred to FatFileSystem
+						return fs;
 					}
 				}
-				catch
+				finally
 				{
-					partitionStream.Dispose();
-					throw;
+					// Dispose stream only if ownership was not transferred
+					if (partitionStream != null)
+					{
+						partitionStream.Dispose();
+					}
 				}
-				
-				// Clean up if detection failed
-				partitionStream.Dispose();
 			}
 		}
 		else
