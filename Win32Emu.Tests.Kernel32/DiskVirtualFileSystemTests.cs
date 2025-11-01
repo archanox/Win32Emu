@@ -127,14 +127,59 @@ public class DiskVirtualFileSystemTests : IDisposable
 	}
 
 	[Fact]
-	public void Create_ThrowsNotImplementedException()
+	public void Create_VhdDisk_SuccessfullyCreatesAndFormats()
 	{
 		// Arrange
 		var diskPath = Path.Combine(_testDir, "new.vhd");
 
-		// Act & Assert
-		Assert.Throws<NotImplementedException>(() => 
-			DiskVirtualFileSystem.Create(diskPath, DiskFormat.Vhd, 10 * 1024 * 1024));
+		// Act
+		using (var vfs = DiskVirtualFileSystem.Create(diskPath, DiskFormat.Vhd, 10 * 1024 * 1024, NullLogger.Instance))
+		{
+			// Assert
+			Assert.NotNull(vfs);
+			Assert.False(vfs.IsReadOnly);
+		}
+		
+		// Verify the file was created
+		Assert.True(File.Exists(diskPath));
+	}
+
+	[Fact]
+	public void Create_VhdxDisk_SuccessfullyCreatesAndFormats()
+	{
+		// Arrange
+		var diskPath = Path.Combine(_testDir, "new.vhdx");
+
+		// Act
+		using (var vfs = DiskVirtualFileSystem.Create(diskPath, DiskFormat.Vhdx, 10 * 1024 * 1024, NullLogger.Instance))
+		{
+			// Assert
+			Assert.NotNull(vfs);
+			Assert.False(vfs.IsReadOnly);
+		}
+		
+		// Verify the file was created
+		Assert.True(File.Exists(diskPath));
+	}
+
+	[Fact]
+	public void Create_VhdDisk_CanBeReopenedAfterCreation()
+	{
+		// Arrange
+		var diskPath = Path.Combine(_testDir, "reopenable.vhd");
+
+		// Act
+		using (var vfs1 = DiskVirtualFileSystem.Create(diskPath, DiskFormat.Vhd, 10 * 1024 * 1024, NullLogger.Instance))
+		{
+			Assert.NotNull(vfs1);
+		}
+		
+		// Verify we can reopen the disk after creation
+		using (var vfs2 = new DiskVirtualFileSystem(diskPath, NullLogger.Instance))
+		{
+			Assert.NotNull(vfs2);
+			Assert.False(vfs2.IsReadOnly);
+		}
 	}
 
 	[Fact]
