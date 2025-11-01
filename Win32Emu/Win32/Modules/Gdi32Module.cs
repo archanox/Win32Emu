@@ -344,10 +344,10 @@ namespace Win32Emu.Win32.Modules
 				case "POLYLINE":
 					returnValue = Polyline(a.UInt32(0), a.UInt32(1), a.Int32(2));
 					return true;
-				case "DRAWTEXT":
+				case "DRAWTEXT": // Unicode version - stub
 					returnValue = (uint)DrawText(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
 					return true;
-				case "DRAWTEXTA":
+				case "DRAWTEXTA": // ANSI version - implemented
 					returnValue = (uint)DrawTextA(a.UInt32(0), a.LpcStr(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
 					return true;
 				case "FRAMERECT":
@@ -1536,6 +1536,11 @@ namespace Win32Emu.Win32.Modules
 		///   UINT format
 		/// );
 		/// </summary>
+		/// <remarks>
+		/// This is the Unicode version of DrawText. It is intentionally stubbed as most
+		/// Win32 applications use the ANSI version (DrawTextA). If Unicode support is needed,
+		/// this function should be implemented similar to DrawTextA.
+		/// </remarks>
 		[DllModuleExport(20, IsStub = true)]
 		private int DrawText(uint hdc, uint lpchText, int cchText, uint lprc, uint format)
 		{
@@ -1543,7 +1548,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
-		/// Draws formatted text in the specified rectangle.
+		/// Draws formatted text in the specified rectangle (ANSI version).
 		/// int DrawTextA(
 		///   HDC hdc,
 		///   LPCSTR lpchText,
