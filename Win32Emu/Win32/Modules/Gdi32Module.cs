@@ -442,11 +442,9 @@ namespace Win32Emu.Win32.Modules
 		{
 			if (lpRect != 0)
 			{
-				var left = _env.MemRead32(lpRect);
-				var top = _env.MemRead32(lpRect + 4);
-				var right = _env.MemRead32(lpRect + 8);
-				var bottom = _env.MemRead32(lpRect + 12);
-				_logger.LogInformation("[Gdi32] FillRect(HDC=0x{Hdc:X8}, rect=({Left},{Top},{Right},{Bottom}), hBrush=0x{HBrush:X8})", hdc, left, top, right, bottom, hBrush);
+				var rect = StructMarshaller.ReadRECT(_env.Memory, lpRect);
+				_logger.LogInformation("[Gdi32] FillRect(HDC=0x{Hdc:X8}, rect=({Left},{Top},{Right},{Bottom}), hBrush=0x{HBrush:X8})", 
+					hdc, rect.left, rect.top, rect.right, rect.bottom, hBrush);
 			}
 
 			return 1; // Non-zero on success
@@ -905,21 +903,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] StartDocA(hdc=0x{Hdc:X8}, lpdi=0x{Lpdi:X8})", hdc, lpdi);
 
-			// DOCINFO structure (simplified):
-			// int cbSize;
-			// LPCSTR lpszDocName;
-			// LPCSTR lpszOutput;
-			// LPCSTR lpszDatatype;
-			// DWORD fwType;
-
 			if (lpdi != 0)
 			{
-				var cbSize = (int)_env.MemRead32(lpdi + 0);
-				var lpszDocName = _env.MemRead32(lpdi + 4);
+				var docInfo = StructMarshaller.ReadDOCINFOA(_env.Memory, lpdi);
 
-				if (lpszDocName != 0)
+				if (docInfo.lpszDocName != 0)
 				{
-					var docName = _env.ReadAnsiString(lpszDocName);
+					var docName = _env.ReadAnsiString(docInfo.lpszDocName);
 					_logger.LogInformation("[Gdi32] StartDocA: Document name=\"{DocName}\"", docName);
 				}
 			}
@@ -1563,17 +1553,14 @@ namespace Win32Emu.Win32.Modules
 			var text = lpchText.ToString() ?? string.Empty;
 			
 			// Read rectangle if provided
-			int left = 0, top = 0, right = 0, bottom = 0;
+			NativeTypes.RECT rect = default;
 			if (lprc != 0)
 			{
-				left = (int)_env.MemRead32(lprc);
-				top = (int)_env.MemRead32(lprc + 4);
-				right = (int)_env.MemRead32(lprc + 8);
-				bottom = (int)_env.MemRead32(lprc + 12);
+				rect = StructMarshaller.ReadRECT(_env.Memory, lprc);
 			}
 
 			_logger.LogInformation("[Gdi32] DrawTextA(hdc=0x{Hdc:X8}, text=\"{Text}\", rect=({Left},{Top},{Right},{Bottom}), format=0x{Format:X})",
-				hdc, text, left, top, right, bottom, format);
+				hdc, text, rect.left, rect.top, rect.right, rect.bottom, format);
 
 			// Calculate text height (stub implementation)
 			// DT_CALCRECT (0x400) means calculate the rectangle needed
@@ -1581,8 +1568,9 @@ namespace Win32Emu.Win32.Modules
 			{
 				// Update rectangle with calculated size
 				var textLength = cchText < 0 ? text.Length : Math.Min(cchText, text.Length);
-				_env.MemWrite32(lprc + 8, (uint)(left + textLength * DefaultCharWidth)); // right
-				_env.MemWrite32(lprc + 12, (uint)(top + DefaultFontHeight)); // bottom
+				rect.right = rect.left + textLength * DefaultCharWidth;
+				rect.bottom = rect.top + DefaultFontHeight;
+				StructMarshaller.WriteRECT(_env.Memory, lprc, rect);
 			}
 
 			// Return height of text drawn
@@ -1602,12 +1590,9 @@ namespace Win32Emu.Win32.Modules
 		{
 			if (lprc != 0)
 			{
-				var left = (int)_env.MemRead32(lprc);
-				var top = (int)_env.MemRead32(lprc + 4);
-				var right = (int)_env.MemRead32(lprc + 8);
-				var bottom = (int)_env.MemRead32(lprc + 12);
+				var rect = StructMarshaller.ReadRECT(_env.Memory, lprc);
 				_logger.LogInformation("[Gdi32] FrameRect(hdc=0x{Hdc:X8}, rect=({Left},{Top},{Right},{Bottom}), hbr=0x{Hbr:X8})",
-					hdc, left, top, right, bottom, hbr);
+					hdc, rect.left, rect.top, rect.right, rect.bottom, hbr);
 			}
 			// Stub - return non-zero on success
 			return 1;
@@ -1625,12 +1610,9 @@ namespace Win32Emu.Win32.Modules
 		{
 			if (lprc != 0)
 			{
-				var left = (int)_env.MemRead32(lprc);
-				var top = (int)_env.MemRead32(lprc + 4);
-				var right = (int)_env.MemRead32(lprc + 8);
-				var bottom = (int)_env.MemRead32(lprc + 12);
+				var rect = StructMarshaller.ReadRECT(_env.Memory, lprc);
 				_logger.LogInformation("[Gdi32] InvertRect(hdc=0x{Hdc:X8}, rect=({Left},{Top},{Right},{Bottom}))",
-					hdc, left, top, right, bottom);
+					hdc, rect.left, rect.top, rect.right, rect.bottom);
 			}
 			// Stub - return TRUE (success)
 			return 1;

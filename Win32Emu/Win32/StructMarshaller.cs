@@ -178,4 +178,19 @@ public static class StructMarshaller
 			}
 		}
 	}
+
+	/// <summary>
+	/// Reads a DOCINFOA structure from memory.
+	/// </summary>
+	public static NativeTypes.DOCINFOA ReadDOCINFOA(VirtualMemory memory, uint address)
+	{
+		return new NativeTypes.DOCINFOA
+		{
+			cbSize = (int)memory.Read32(address + 0),
+			lpszDocName = memory.Read32(address + 4),
+			lpszOutput = memory.Read32(address + 8),
+			lpszDatatype = memory.Read32(address + 12),
+			fwType = memory.Read32(address + 16)
+		};
+	}
 }

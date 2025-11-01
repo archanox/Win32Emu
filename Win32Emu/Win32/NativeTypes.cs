@@ -331,4 +331,15 @@ public static class NativeTypes
 		public uint fIncUpdate;     // Offset 28
 		public unsafe fixed byte rgbReserved[32]; // Offset 32
 	}
+
+	// DOCINFO structure (20 bytes)
+	// Used with StartDocA in GDI32
+	public struct DOCINFOA
+	{
+		public int cbSize;        // Offset 0
+		public uint lpszDocName;  // Offset 4 (pointer to string)
+		public uint lpszOutput;   // Offset 8 (pointer to string)
+		public uint lpszDatatype; // Offset 12 (pointer to string)
+		public uint fwType;       // Offset 16
+	}
 }
