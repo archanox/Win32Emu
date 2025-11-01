@@ -98,6 +98,11 @@ public readonly ref struct WndClassARef
 			lpszClassName = lpszClassName
 		};
 	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.WNDCLASSA(WndClassARef refStruct) => refStruct.ToStruct();
 }
 
 /// <summary>
@@ -210,6 +215,11 @@ public readonly ref struct WndClassExARef
 			hIconSm = hIconSm
 		};
 	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.WNDCLASSEXA(WndClassExARef refStruct) => refStruct.ToStruct();
 }
 
 /// <summary>
@@ -287,6 +297,11 @@ public readonly ref struct MsgRef
 			ptY = ptY
 		};
 	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.MSG(MsgRef refStruct) => refStruct.ToStruct();
 }
 
 /// <summary>
@@ -343,6 +358,11 @@ public readonly ref struct RectRef
 			bottom = bottom
 		};
 	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.RECT(RectRef refStruct) => refStruct.ToStruct();
 }
 
 /// <summary>
@@ -385,6 +405,11 @@ public readonly ref struct PointRef
 			y = y
 		};
 	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.POINT(PointRef refStruct) => refStruct.ToStruct();
 }
 
 /// <summary>
@@ -448,4 +473,9 @@ public readonly ref struct DocInfoARef
 			fwType = fwType
 		};
 	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.DOCINFOA(DocInfoARef refStruct) => refStruct.ToStruct();
 }

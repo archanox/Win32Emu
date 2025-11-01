@@ -98,4 +98,26 @@ public class StructWrapperExamples
 		
 		// No explicit write call needed!
 	}
+
+	// NEW: Implicit cast to value struct
+	public void ImplicitCastExample(uint lpWndClass)
+	{
+		// Create ref struct wrapper
+		var wndClassRef = new WndClassARef(_memory, lpWndClass);
+		
+		// Implicit cast to value struct - creates a snapshot
+		NativeTypes.WNDCLASSA snapshot = wndClassRef;
+		
+		// Can also pass directly where value struct is expected
+		ProcessValueStruct(wndClassRef); // Implicitly casts to NativeTypes.WNDCLASSA
+		
+		// This is cleaner than calling .ToStruct() explicitly
+		// var snapshot = wndClassRef.ToStruct(); // Old way (still available)
+	}
+
+	private void ProcessValueStruct(NativeTypes.WNDCLASSA wndClass)
+	{
+		// Work with the value struct snapshot
+		uint style = wndClass.style;
+	}
 }
