@@ -65,7 +65,7 @@ public class ModuleProcessTests : IDisposable
         
         // Verify error code is set
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        Assert.Equal(NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND, lastError);
+        Assert.Equal((uint)NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND, lastError);
     }
 
     #endregion
@@ -86,7 +86,7 @@ public class ModuleProcessTests : IDisposable
         
         // Check that last error was set to ERROR_INVALID_PARAMETER
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+        Assert.Equal((uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class ModuleProcessTests : IDisposable
         
         // Check that last error was set to ERROR_INVALID_PARAMETER
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+        Assert.Equal((uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
     }
 
     [Fact]

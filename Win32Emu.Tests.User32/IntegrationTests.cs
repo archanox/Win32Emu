@@ -25,7 +25,7 @@ public class IntegrationTests : IDisposable
         // 4. Create button window (child)
 
         // Step 1: Get DEFAULT_GUI_FONT (as in get_default_font())
-        var hfont = _testEnv.CallGdi32Api("GETSTOCKOBJECT", NativeTypes.StockObject.DEFAULT_GUI_FONT);
+        var hfont = _testEnv.CallGdi32Api("GETSTOCKOBJECT", (int)NativeTypes.StockObject.DEFAULT_GUI_FONT);
         Assert.NotEqual(0u, hfont);
 
         // Step 2: Register window class (as in create_window())
@@ -46,7 +46,7 @@ public class IntegrationTests : IDisposable
             0,                                              // dwExStyle
             classNamePtr,                                   // lpClassName
             titlePtr,                                       // lpWindowName
-            NativeTypes.WindowStyle.WS_OVERLAPPED,         // dwStyle
+            (uint)NativeTypes.WindowStyle.WS_OVERLAPPED,         // dwStyle
             0x80000000,                                     // CW_USEDEFAULT for x
             0x80000000,                                     // CW_USEDEFAULT for y
             400,                                            // width
@@ -66,9 +66,9 @@ public class IntegrationTests : IDisposable
             0,                                              // dwExStyle
             buttonClassPtr,                                 // lpClassName
             buttonTextPtr,                                  // lpWindowName
-            NativeTypes.WindowStyle.WS_CHILD |             // WS_CHILD
-            NativeTypes.WindowStyle.WS_VISIBLE |           // WS_VISIBLE
-            NativeTypes.WindowStyle.WS_TABSTOP,            // WS_TABSTOP
+            (uint)NativeTypes.WindowStyle.WS_CHILD |             // WS_CHILD
+            (uint)NativeTypes.WindowStyle.WS_VISIBLE |           // WS_VISIBLE
+            (uint)NativeTypes.WindowStyle.WS_TABSTOP,            // WS_TABSTOP
             10,                                             // x
             10,                                             // y
             100,                                            // width
@@ -103,9 +103,9 @@ public class IntegrationTests : IDisposable
     public void MultipleStockObjects_ShouldWorkCorrectly()
     {
         // Test getting multiple stock objects as would be used in a real application
-        var font = _testEnv.CallGdi32Api("GETSTOCKOBJECT", NativeTypes.StockObject.DEFAULT_GUI_FONT);
-        var whiteBrush = _testEnv.CallGdi32Api("GETSTOCKOBJECT", NativeTypes.StockObject.WHITE_BRUSH);
-        var blackPen = _testEnv.CallGdi32Api("GETSTOCKOBJECT", NativeTypes.StockObject.BLACK_PEN);
+        var font = _testEnv.CallGdi32Api("GETSTOCKOBJECT", (int)NativeTypes.StockObject.DEFAULT_GUI_FONT);
+        var whiteBrush = _testEnv.CallGdi32Api("GETSTOCKOBJECT", (int)NativeTypes.StockObject.WHITE_BRUSH);
+        var blackPen = _testEnv.CallGdi32Api("GETSTOCKOBJECT", (int)NativeTypes.StockObject.BLACK_PEN);
 
         Assert.NotEqual(0u, font);
         Assert.NotEqual(0u, whiteBrush);

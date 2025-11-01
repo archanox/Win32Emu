@@ -1096,7 +1096,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Check if window was previously visible (has WS_VISIBLE style)
-			var wasPreviouslyVisible = (window.Value.Style & NativeTypes.WindowStyle.WS_VISIBLE) != 0;
+			var wasPreviouslyVisible = (window.Value.Style & (uint)NativeTypes.WindowStyle.WS_VISIBLE) != 0;
 
 			// Update visibility based on nCmdShow
 			// SW_HIDE = 0, SW_SHOWNORMAL = 1, SW_SHOWMINIMIZED = 2, SW_SHOWMAXIMIZED = 3,
@@ -1105,7 +1105,7 @@ namespace Win32Emu.Win32.Modules
 			bool shouldBeVisible = nCmdShow != 0; // SW_HIDE = 0, all others show the window
 
 			// Get current style from window properties (which may have been modified)
-			var currentStyle = _env.GetWindowProperty(hwnd, NativeTypes.WindowLong.GWL_STYLE);
+			var currentStyle = _env.GetWindowProperty(hwnd, (int)NativeTypes.WindowLong.GWL_STYLE);
 			if (currentStyle == 0)
 			{
 				// No custom style set, use the window's original style
@@ -1115,7 +1115,7 @@ namespace Win32Emu.Win32.Modules
 			// Update the WS_VISIBLE flag
 			if (shouldBeVisible)
 			{
-				currentStyle |= NativeTypes.WindowStyle.WS_VISIBLE;
+				currentStyle |= (uint)NativeTypes.WindowStyle.WS_VISIBLE;
 				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now visible", hwnd);
 
 				// Send WM_ACTIVATEAPP message when window becomes visible
@@ -1128,7 +1128,7 @@ namespace Win32Emu.Win32.Modules
 			}
 			else
 			{
-				currentStyle &= ~NativeTypes.WindowStyle.WS_VISIBLE;
+				currentStyle &= ~(uint)NativeTypes.WindowStyle.WS_VISIBLE;
 				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now hidden", hwnd);
 
 				// Send WM_ACTIVATEAPP message when window becomes hidden
@@ -1141,7 +1141,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Store the updated style in window properties
-			_env.SetWindowProperty(hwnd, NativeTypes.WindowLong.GWL_STYLE, currentStyle);
+			_env.SetWindowProperty(hwnd, (int)NativeTypes.WindowLong.GWL_STYLE, currentStyle);
 
 			// Return non-zero if window was previously visible, zero if it was previously hidden
 			return wasPreviouslyVisible ? 1u : 0u;
@@ -1255,7 +1255,7 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogInformation("[User32] TranslateMessage: Called with null lpMsg");
 			}
 
-			return NativeTypes.Win32Bool.FALSE;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		[DllModuleExport(6)]
@@ -2516,7 +2516,7 @@ namespace Win32Emu.Win32.Modules
 			System.Threading.Thread.Sleep(1); // Brief yield to prevent spinning
 
 			_logger.LogInformation("[User32] WaitMessage: Returning after wait");
-			return NativeTypes.Win32Bool.TRUE; // Always return success
+			return (uint)NativeTypes.Win32Bool.TRUE; // Always return success
 		}
 
 		[DllModuleExport(1)]
@@ -5401,7 +5401,7 @@ namespace Win32Emu.Win32.Modules
 
 			// IsZoomed checks if a window is maximized (has WS_MAXIMIZE style)
 			// Get the window style
-			var style = _env.GetWindowProperty(hWnd, NativeTypes.WindowLong.GWL_STYLE);
+			var style = _env.GetWindowProperty(hWnd, (int)NativeTypes.WindowLong.GWL_STYLE);
 
 			if (style == 0)
 			{

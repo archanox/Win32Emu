@@ -3,77 +3,77 @@ namespace Win32Emu.Win32.Messaging;
 /// <summary>
 /// Common Win32 message identifiers
 /// </summary>
-public static class WM
+public enum WM : uint
 {
-	public const uint NULL = 0x0000;
-	public const uint CREATE = 0x0001;
-	public const uint DESTROY = 0x0002;
-	public const uint MOVE = 0x0003;
-	public const uint SIZE = 0x0005;
-	public const uint ACTIVATE = 0x0006;
-	public const uint SETFOCUS = 0x0007;
-	public const uint KILLFOCUS = 0x0008;
-	public const uint ENABLE = 0x000A;
-	public const uint PAINT = 0x000F;
-	public const uint CLOSE = 0x0010;
-	public const uint QUIT = 0x0012;
-	public const uint ERASEBKGND = 0x0014;
-	public const uint ACTIVATEAPP = 0x001C;
+	NULL = 0x0000,
+	CREATE = 0x0001,
+	DESTROY = 0x0002,
+	MOVE = 0x0003,
+	SIZE = 0x0005,
+	ACTIVATE = 0x0006,
+	SETFOCUS = 0x0007,
+	KILLFOCUS = 0x0008,
+	ENABLE = 0x000A,
+	PAINT = 0x000F,
+	CLOSE = 0x0010,
+	QUIT = 0x0012,
+	ERASEBKGND = 0x0014,
+	ACTIVATEAPP = 0x001C,
 	
 	// Keyboard messages
-	public const uint KEYDOWN = 0x0100;
-	public const uint KEYUP = 0x0101;
-	public const uint CHAR = 0x0102;
-	public const uint SYSKEYDOWN = 0x0104;
-	public const uint SYSKEYUP = 0x0105;
+	KEYDOWN = 0x0100,
+	KEYUP = 0x0101,
+	CHAR = 0x0102,
+	SYSKEYDOWN = 0x0104,
+	SYSKEYUP = 0x0105,
 	
 	// Mouse messages
-	public const uint MOUSEMOVE = 0x0200;
-	public const uint LBUTTONDOWN = 0x0201;
-	public const uint LBUTTONUP = 0x0202;
-	public const uint RBUTTONDOWN = 0x0204;
-	public const uint RBUTTONUP = 0x0205;
-	public const uint MBUTTONDOWN = 0x0207;
-	public const uint MBUTTONUP = 0x0208;
+	MOUSEMOVE = 0x0200,
+	LBUTTONDOWN = 0x0201,
+	LBUTTONUP = 0x0202,
+	RBUTTONDOWN = 0x0204,
+	RBUTTONUP = 0x0205,
+	MBUTTONDOWN = 0x0207,
+	MBUTTONUP = 0x0208,
 	
 	// Control messages
-	public const uint COMMAND = 0x0111;
-	public const uint SYSCOMMAND = 0x0112;
-	public const uint TIMER = 0x0113;
+	COMMAND = 0x0111,
+	SYSCOMMAND = 0x0112,
+	TIMER = 0x0113,
 	
 	// User messages start at 0x0400
-	public const uint USER = 0x0400;
+	USER = 0x0400
 }
 
 /// <summary>
 /// WM_CREATE message
 /// </summary>
 public record CreateMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.CREATE, WParam, LParam);
+	: Win32Message(Hwnd, (uint)WM.CREATE, WParam, LParam);
 
 /// <summary>
 /// WM_DESTROY message
 /// </summary>
 public record DestroyMessage(uint Hwnd) 
-	: Win32Message(Hwnd, WM.DESTROY, 0, 0);
+	: Win32Message(Hwnd, (uint)WM.DESTROY, 0, 0);
 
 /// <summary>
 /// WM_PAINT message
 /// </summary>
 public record PaintMessage(uint Hwnd) 
-	: Win32Message(Hwnd, WM.PAINT, 0, 0);
+	: Win32Message(Hwnd, (uint)WM.PAINT, 0, 0);
 
 /// <summary>
 /// WM_CLOSE message
 /// </summary>
 public record CloseMessage(uint Hwnd) 
-	: Win32Message(Hwnd, WM.CLOSE, 0, 0);
+	: Win32Message(Hwnd, (uint)WM.CLOSE, 0, 0);
 
 /// <summary>
 /// WM_COMMAND message
 /// </summary>
 public record CommandMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.COMMAND, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.COMMAND, WParam, LParam)
 {
 	/// <summary>
 	/// Control ID (LOWORD of wParam)
@@ -95,7 +95,7 @@ public record CommandMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_LBUTTONDOWN message
 /// </summary>
 public record LButtonDownMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.LBUTTONDOWN, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.LBUTTONDOWN, WParam, LParam)
 {
 	/// <summary>
 	/// X coordinate (LOWORD of lParam)
@@ -112,7 +112,7 @@ public record LButtonDownMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_LBUTTONUP message
 /// </summary>
 public record LButtonUpMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.LBUTTONUP, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.LBUTTONUP, WParam, LParam)
 {
 	/// <summary>
 	/// X coordinate (LOWORD of lParam)
@@ -129,7 +129,7 @@ public record LButtonUpMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_KEYDOWN message
 /// </summary>
 public record KeyDownMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.KEYDOWN, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.KEYDOWN, WParam, LParam)
 {
 	/// <summary>
 	/// Virtual key code
@@ -151,7 +151,7 @@ public record KeyDownMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_KEYUP message
 /// </summary>
 public record KeyUpMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.KEYUP, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.KEYUP, WParam, LParam)
 {
 	/// <summary>
 	/// Virtual key code
@@ -163,7 +163,7 @@ public record KeyUpMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_MOVE message
 /// </summary>
 public record MoveMessage(uint Hwnd, uint LParam) 
-	: Win32Message(Hwnd, WM.MOVE, 0, LParam)
+	: Win32Message(Hwnd, (uint)WM.MOVE, 0, LParam)
 {
 	/// <summary>
 	/// X coordinate (LOWORD of lParam)
@@ -180,7 +180,7 @@ public record MoveMessage(uint Hwnd, uint LParam)
 /// WM_SIZE message
 /// </summary>
 public record SizeMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.SIZE, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.SIZE, WParam, LParam)
 {
 	/// <summary>
 	/// Width (LOWORD of lParam)
@@ -202,7 +202,7 @@ public record SizeMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_ACTIVATE message
 /// </summary>
 public record ActivateMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.ACTIVATE, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.ACTIVATE, WParam, LParam)
 {
 	/// <summary>
 	/// Active flag (LOWORD of wParam)
@@ -224,7 +224,7 @@ public record ActivateMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_MOUSEMOVE message
 /// </summary>
 public record MouseMoveMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.MOUSEMOVE, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.MOUSEMOVE, WParam, LParam)
 {
 	/// <summary>
 	/// X coordinate (LOWORD of lParam)
@@ -246,7 +246,7 @@ public record MouseMoveMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_RBUTTONDOWN message
 /// </summary>
 public record RButtonDownMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.RBUTTONDOWN, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.RBUTTONDOWN, WParam, LParam)
 {
 	/// <summary>
 	/// X coordinate (LOWORD of lParam)
@@ -263,7 +263,7 @@ public record RButtonDownMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_RBUTTONUP message
 /// </summary>
 public record RButtonUpMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.RBUTTONUP, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.RBUTTONUP, WParam, LParam)
 {
 	/// <summary>
 	/// X coordinate (LOWORD of lParam)
@@ -280,7 +280,7 @@ public record RButtonUpMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_CHAR message
 /// </summary>
 public record CharMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.CHAR, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.CHAR, WParam, LParam)
 {
 	/// <summary>
 	/// Character code
@@ -297,7 +297,7 @@ public record CharMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_TIMER message
 /// </summary>
 public record TimerMessage(uint Hwnd, uint WParam, uint LParam) 
-	: Win32Message(Hwnd, WM.TIMER, WParam, LParam)
+	: Win32Message(Hwnd, (uint)WM.TIMER, WParam, LParam)
 {
 	/// <summary>
 	/// Timer identifier
@@ -314,7 +314,7 @@ public record TimerMessage(uint Hwnd, uint WParam, uint LParam)
 /// WM_ERASEBKGND message
 /// </summary>
 public record EraseBackgroundMessage(uint Hwnd, uint WParam) 
-	: Win32Message(Hwnd, WM.ERASEBKGND, WParam, 0)
+	: Win32Message(Hwnd, (uint)WM.ERASEBKGND, WParam, 0)
 {
 	/// <summary>
 	/// Device context handle
@@ -326,7 +326,7 @@ public record EraseBackgroundMessage(uint Hwnd, uint WParam)
 /// WM_QUIT message
 /// </summary>
 public record QuitMessage(uint ExitCode) 
-	: Win32Message(0, WM.QUIT, ExitCode, 0)
+	: Win32Message(0, (uint)WM.QUIT, ExitCode, 0)
 {
 	/// <summary>
 	/// Exit code for the application

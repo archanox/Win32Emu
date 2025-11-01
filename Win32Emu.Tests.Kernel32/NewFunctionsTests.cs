@@ -30,7 +30,7 @@ public class NewFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("VIRTUALFREE", address, 0, 0x8000);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public class NewFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("VIRTUALFREE", 0, 0, 0x8000);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.FALSE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.FALSE, result);
     }
 
     #endregion
@@ -58,7 +58,7 @@ public class NewFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("HEAPDESTROY", heapHandle);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class NewFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("HEAPDESTROY", 0);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.FALSE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.FALSE, result);
     }
 
     #endregion
@@ -82,7 +82,7 @@ public class NewFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("TERMINATEPROCESS", 0xFFFFFFFF, 0);
 
         // Assert - Should return TRUE (though process would exit in real scenario)
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
     }
 
     #endregion
@@ -274,7 +274,7 @@ public class NewFunctionsTests : IDisposable
             0, 1, srcPtr, (uint)testString.Length, charTypeBuffer);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
     }
 
     #endregion

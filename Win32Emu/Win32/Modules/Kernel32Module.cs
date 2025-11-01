@@ -951,13 +951,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(479, entryPoint: 0x00010830, Version = "5.1.2600.6532")]
 	public uint GetVersionExA(uint lpVersionInformation)
 	{
-		if (lpVersionInformation == 0) return NativeTypes.Win32Bool.FALSE;
+		if (lpVersionInformation == 0) return (uint)NativeTypes.Win32Bool.FALSE;
 
 		var size = _env.MemRead32(lpVersionInformation);
 		if (size != 156 && size != 148) // sizeof(OSVERSIONINFOEXA) and sizeof(OSVERSIONINFOA)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		_env.MemWrite32(lpVersionInformation + 4, 5); // dwMajorVersion = 5 (Windows XP)
@@ -974,7 +974,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite8(lpVersionInformation + 155, 0); // wReserved = 0
 		}
 
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	/// <summary>
@@ -998,13 +998,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(480, entryPoint: 0x0000AF05, Version = "5.1.2600.6532")]
 	public uint GetVersionExW(uint lpVersionInformation)
 	{
-		if (lpVersionInformation == 0) return NativeTypes.Win32Bool.FALSE;
+		if (lpVersionInformation == 0) return (uint)NativeTypes.Win32Bool.FALSE;
 
 		var size = _env.MemRead32(lpVersionInformation);
 		if (size != 284 && size != 276) // sizeof(OSVERSIONINFOEXW) and sizeof(OSVERSIONINFOW)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		_env.MemWrite32(lpVersionInformation + 4, 5); // dwMajorVersion = 5 (Windows XP)
@@ -1026,7 +1026,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite8(lpVersionInformation + 283, 0); // wReserved = 0
 		}
 
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	/// <summary>
@@ -1167,13 +1167,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (hProcess is 0xFFFFFFFF or 0)
 		{
 			_env.RequestExit();
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 
 		// We don't support terminating other processes
 		_logger.LogInformation("[Kernel32] TerminateProcess: Cannot terminate external process handle 0x{HProcess:X8}", hProcess);
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-		return NativeTypes.Win32Bool.FALSE;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(35)]
@@ -1208,7 +1208,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (lpCpInfo.Value == null)
 		{
 			_logger.LogWarning("[Kernel32] GetCPInfo: null pointer");
-			return NativeTypes.Win32Bool.FALSE; // Return FALSE if null pointer
+			return (uint)NativeTypes.Win32Bool.FALSE; // Return FALSE if null pointer
 		}
 
 		// Handle special code page values
@@ -1259,8 +1259,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			default:
 				// Unsupported code page
 				_logger.LogWarning("[Kernel32] GetCPInfo: unsupported code page {ActualCodePage}", actualCodePage);
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// Write the CPINFO structure to emulated memory
@@ -1269,13 +1269,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Assume emulated memory is 32-bit addressable (0..0xFFFFFFFF)
 		if (ptrValue is > uint.MaxValue or 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		_env.MemWriteStruct((uint)ptrValue, ref cpInfo);
 
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	[DllModuleExport(17)]
@@ -1290,15 +1290,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		var srcStrAddr = (uint)(nint)lpSrcStr;
 		if (srcStrAddr == 0 || lpCharType == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// We only support CT_CTYPE1 for simplicity
 		if (dwInfoType != 1)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// Determine the length of the string if cchSrc is -1
@@ -1322,8 +1322,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Validate length
 		if (length is <= 0 or > maxStringLengthLimit)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// Character type constants from Windows API
@@ -1399,7 +1399,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite16(lpCharType + (uint)(i * 2), charType);
 		}
 
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	[DllModuleExport(22)]
@@ -1411,15 +1411,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (lpSrcStr == 0 || lpCharType == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// We only support CT_CTYPE1 for simplicity
 		if (dwInfoType != 1)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// Determine the length of the string if cchSrc is -1
@@ -1443,8 +1443,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			if (length >= maxStringLengthLimit)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 		}
 
@@ -1517,7 +1517,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite16(lpCharType + (uint)(i * 2), charType);
 		}
 
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	/// <summary>
@@ -1575,7 +1575,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		// Module not found
 		_logger.LogWarning("[Kernel32] GetModuleHandleA: module '{ModuleName}' not found", moduleName);
-		_lastError = NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
 		return 0;
 	}
 
@@ -1604,7 +1604,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	{
 		if (lpLibFileName.IsNull)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 
@@ -1612,7 +1612,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		var libraryName = lpLibFileName.ToString();
 		if (string.IsNullOrEmpty(libraryName))
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 
@@ -1685,7 +1685,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (hModule == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 
@@ -1747,7 +1747,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			// Export not found in PE image
 			_logger.LogInformation("[Kernel32] GetProcAddress: Export not found in PE image");
-			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
 
@@ -1756,7 +1756,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (moduleName == null)
 		{
 			_logger.LogInformation("[Kernel32] GetProcAddress: Module handle 0x{HModule:X8} not recognized", hModule);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 			return 0;
 		}
 
@@ -1764,7 +1764,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (_dispatcher == null || !_dispatcher.TryGetModule(moduleName, out var emulatedModule) || emulatedModule == null)
 		{
 			_logger.LogInformation("[Kernel32] GetProcAddress: Emulated module '{ModuleName}' not found in dispatcher", moduleName);
-			_lastError = NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
 			return 0;
 		}
 
@@ -1792,7 +1792,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (exportName == null)
 		{
 			_logger.LogInformation("[Kernel32] GetProcAddress: Export not found in emulated module '{ModuleName}'", moduleName);
-			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
 
@@ -1821,7 +1821,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (parts.Length < 2)
 		{
 			_logger.LogInformation("[Kernel32] ResolveForwardedExport: Invalid forwarder format '{ForwarderName}'", forwarderName);
-			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
 
@@ -1858,7 +1858,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (targetModuleHandle == 0)
 		{
 			_logger.LogInformation("[Kernel32] ResolveForwardedExport: Failed to load target module '{TargetDll}'", targetDll);
-			_lastError = NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
 			return 0;
 		}
 
@@ -1900,7 +1900,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			if ((ulong)(nint)h == 0xFFFFFFFFul)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -1912,14 +1912,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			}
 			else
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 		}
 
 		if (path == null)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 
@@ -1947,7 +1947,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			// write null terminator
 			_env.MemWriteBytes(lpAddr + copyLen, [0]);
-			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			_logger.LogDebug("[Kernel32] GetModuleFileNameA truncated; copyLen={CopyLen} returned", copyLen);
 			return copyLen;
 		}
@@ -2142,12 +2142,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Validate that the pointer is not null (basic error checking)
 		if (lpszEnvironmentBlock == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// Return success - in a real implementation this would free the memory
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	[DllModuleExport(11)]
@@ -2169,12 +2169,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Validate that the pointer is not null (basic error checking)
 		if (lpszEnvironmentBlock == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// Return success - in a real implementation this would free the memory
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	[DllModuleExport(19)]
@@ -2333,7 +2333,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// GlobalUnlock decrements the lock count
 		// Returns TRUE (1) if still locked, FALSE (0) if unlocked
 		// In our simplified implementation, always return TRUE
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	[DllModuleExport(1)]
@@ -2399,7 +2399,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			{
 				// If we don't have size info, this might be an invalid pointer
 				_logger.LogWarning("[Kernel32] HeapReAlloc: Could not determine size of block at 0x{LpMem:X8}", (uint)lpMem);
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -2407,7 +2407,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var newMem = _env.HeapAlloc((uint)hHeap, dwBytes);
 			if (newMem == 0)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -2434,7 +2434,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] HeapReAlloc failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 	}
@@ -2449,11 +2449,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (hHeap == null)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	[DllModuleExport(440, entryPoint: 0x000110B0, Version = "5.1.2600.6532")]
@@ -2481,12 +2481,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// This is a simplification - real Windows checks actual page permissions
 		if (lpfn == 0)
 		{
-			return NativeTypes.Win32Bool.TRUE; // NULL pointer is invalid
+			return (uint)NativeTypes.Win32Bool.TRUE; // NULL pointer is invalid
 		}
 
 		// For now, assume all non-NULL code pointers are valid
 		// A more complete implementation would check against allocated memory regions
-		return NativeTypes.Win32Bool.FALSE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(518, entryPoint: 0x00011FAC, Version = "5.1.2600.6532")]
@@ -2500,12 +2500,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// For emulation, we'll do a basic check
 		if (lp == 0 || ucb == 0)
 		{
-			return NativeTypes.Win32Bool.TRUE; // NULL or zero-length is invalid
+			return (uint)NativeTypes.Win32Bool.TRUE; // NULL or zero-length is invalid
 		}
 
 		// Assume all non-NULL memory is readable for now
 		// A complete implementation would check memory protection and allocation
-		return NativeTypes.Win32Bool.FALSE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(519, entryPoint: 0x00011FE2, Version = "5.1.2600.6532")]
@@ -2519,11 +2519,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// For emulation, similar to IsBadReadPtr
 		if (lp == 0 || ucb == 0)
 		{
-			return NativeTypes.Win32Bool.TRUE; // NULL or zero-length is invalid
+			return (uint)NativeTypes.Win32Bool.TRUE; // NULL or zero-length is invalid
 		}
 
 		// Assume all non-NULL memory is writable for now
-		return NativeTypes.Win32Bool.FALSE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(61)]
@@ -2579,11 +2579,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		
 		if (!success)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	/// <summary>
@@ -2693,8 +2693,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			if (string.IsNullOrEmpty(path))
 			{
 				_logger.LogInformation("[Kernel32] CreateFileA failed: Invalid path (empty or null)");
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
 			// Resolve relative paths relative to the current directory.
@@ -2722,8 +2722,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				}
 
 				_logger.LogInformation("[Kernel32] CreateFileA (VFS) failed: {Path}", resolvedPath);
-				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
 			// Fallback to direct filesystem access if VFS not available. Use resolvedPath to ensure relative paths are resolved against emulated CurrentDirectory.
@@ -2736,8 +2736,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] CreateFileA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
 	}
 
@@ -2756,8 +2756,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			if (string.IsNullOrEmpty(path))
 			{
 				_logger.LogInformation("[Kernel32] CreateFileW failed: Invalid path (empty or null)");
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
 			// Resolve relative paths relative to the current directory
@@ -2783,8 +2783,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				}
 
 				_logger.LogInformation("[Kernel32] CreateFileW (VFS) failed: {Path}", resolvedPath);
-				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
 			var fileMode = MapCreationDispositionToFileMode(dwCreationDisposition);
@@ -2796,8 +2796,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] CreateFileW failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
 	}
 
@@ -2829,8 +2829,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[Kernel32] ReadFile (VFS) failed: {ExMessage}", ex.Message);
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 		}
 
@@ -2856,13 +2856,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[Kernel32] ReadFile failed: {ExMessage}", ex.Message);
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 		}
 
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-		return NativeTypes.Win32Bool.FALSE;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	/// <summary>
@@ -2918,8 +2918,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// NULL handle is invalid
 		if (handle == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// Handle standard handles specially (only if they're not NULL)
@@ -2950,8 +2950,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[Kernel32] WriteFile to standard handle failed: {ExMessage}", ex.Message);
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 		}
 		else
@@ -2977,8 +2977,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[Kernel32] WriteFile (VFS) failed: {ExMessage}", ex.Message);
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 		}
 
@@ -2999,13 +2999,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[Kernel32] WriteFile failed: {ExMessage}", ex.Message);
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 		}
 
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-		return NativeTypes.Win32Bool.FALSE;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(1)]
@@ -3099,7 +3099,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return (uint)pos;
 		}
 
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 		return 0xFFFFFFFF;
 	}
 
@@ -3129,8 +3129,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 1;
 		}
 
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-		return NativeTypes.Win32Bool.FALSE;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(38)]
@@ -3152,8 +3152,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 1;
 		}
 
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-		return NativeTypes.Win32Bool.FALSE;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(1)]
@@ -3164,8 +3164,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var path = _env.ReadAnsiString(lpFileName);
 			if (string.IsNullOrEmpty(path))
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
 			// If VFS is available, use it
@@ -3175,24 +3175,24 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				if (success)
 				{
 					_logger.LogInformation("[Kernel32] DeleteFileA (VFS): Deleted '{Path}'", path);
-					return NativeTypes.Win32Bool.TRUE;
+					return (uint)NativeTypes.Win32Bool.TRUE;
 				}
 
 				_logger.LogInformation("[Kernel32] DeleteFileA (VFS) failed: '{Path}'", path);
-				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
 			// Fallback to direct filesystem
 			File.Delete(path);
 			_logger.LogInformation("[Kernel32] DeleteFileA: Deleted '{Path}'", path);
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogInformation(ex, "[Kernel32] DeleteFileA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -3206,8 +3206,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			if (string.IsNullOrEmpty(existingPath) || string.IsNullOrEmpty(newPath))
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
 			// If VFS is available, use it
@@ -3218,25 +3218,25 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				{
 					_logger.LogInformation("[Kernel32] MoveFileA (VFS): Moved '{ExistingPath}' to '{NewPath}'",
 						existingPath, newPath);
-					return NativeTypes.Win32Bool.TRUE;
+					return (uint)NativeTypes.Win32Bool.TRUE;
 				}
 
 				_logger.LogInformation("[Kernel32] MoveFileA (VFS) failed: '{ExistingPath}' to '{NewPath}'",
 					existingPath, newPath);
-				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
 			// Fallback to direct filesystem
 			File.Move(existingPath, newPath);
 			_logger.LogInformation("[Kernel32] MoveFileA: Moved '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogInformation(ex, "[Kernel32] MoveFileA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -3251,46 +3251,46 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			if (string.IsNullOrEmpty(existingPath) || string.IsNullOrEmpty(newPath))
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
 			// Check if destination exists when bFailIfExists is true
 			if (failIfExists && File.Exists(newPath))
 			{
 				_logger.LogInformation("[Kernel32] CopyFileA: Destination '{NewPath}' already exists", newPath);
-				_lastError = NativeTypes.Win32Error.ERROR_FILE_EXISTS;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_EXISTS;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
 			// Perform the copy
 			File.Copy(existingPath, newPath, !failIfExists);
 			_logger.LogInformation("[Kernel32] CopyFileA: Copied '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (FileNotFoundException ex)
 		{
 			_logger.LogInformation(ex, "[Kernel32] CopyFileA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 		catch (UnauthorizedAccessException ex)
 		{
 			_logger.LogInformation(ex, "[Kernel32] CopyFileA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 		catch (IOException ex)
 		{
 			_logger.LogInformation(ex, "[Kernel32] CopyFileA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogInformation(ex, "[Kernel32] CopyFileA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -3330,8 +3330,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var searchPattern = _env.ReadAnsiString(lpFileName);
 			if (string.IsNullOrEmpty(searchPattern))
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
 			// Get directory and pattern
@@ -3358,8 +3358,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			if (files.Length == 0)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-				return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
 			// Create handle for this search
@@ -3384,8 +3384,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogInformation("[Kernel32] FindFirstFileA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
 	}
 
@@ -3396,14 +3396,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			if (!_findFileHandles.TryGetValue(hFindFile, out var handle))
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
 			if (handle.CurrentIndex >= handle.Files.Length)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
 			// Write next file data
@@ -3413,13 +3413,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_logger.LogInformation("[Kernel32] FindNextFileA: Found '{FileName}'", fileName);
 			handle.CurrentIndex++;
 
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogInformation("[Kernel32] FindNextFileA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -3430,11 +3430,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (_findFileHandles.Remove(handle))
 		{
 			_logger.LogInformation("[Kernel32] FindClose: Closed handle 0x{Handle:X8}", handle);
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-		return NativeTypes.Win32Bool.FALSE;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(1)]
@@ -3461,13 +3461,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			systemTime.wSecond = (ushort)dateTime.Second;
 			systemTime.wMilliseconds = (ushort)dateTime.Millisecond;
 
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogInformation("[Kernel32] FileTimeToSystemTime failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -3488,13 +3488,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			localFileTime.dwLowDateTime = (uint)(localFileTimeValue & 0xFFFFFFFF);
 			localFileTime.dwHighDateTime = (uint)(localFileTimeValue >> 32);
 
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] FileTimeToLocalFileTime failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -3523,7 +3523,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogInformation("[Kernel32] GetTimeZoneInformation failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0xFFFFFFFF; // TIME_ZONE_ID_INVALID
 		}
 	}
@@ -3638,8 +3638,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			if (string.IsNullOrEmpty(name))
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
 			// If lpValue is NULL, delete the variable
@@ -3655,13 +3655,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				_logger.LogInformation("[Kernel32] SetEnvironmentVariableA: Set '{Name}'='{Value}'", name, value);
 			}
 
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] SetEnvironmentVariableA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -3713,7 +3713,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		// For the emulator, we'll return EXCEPTION_EXECUTE_HANDLER to terminate the process
 		// This is the safest default behavior for unhandled exceptions in an emulated environment
-		return NativeTypes.ExceptionHandling.EXCEPTION_EXECUTE_HANDLER;
+		return (uint)NativeTypes.ExceptionHandling.EXCEPTION_EXECUTE_HANDLER;
 	}
 
 	[DllModuleExport(47)]
@@ -3736,7 +3736,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Handle null input string
 			if (lpWideCharStr == 0)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -3818,7 +3818,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 						{
 							// Unsupported code page
 							_logger.LogError(ex, "[Kernel32] Unsupported code page {CodePage} ({CodePageInt})", actualCodePage, (int)actualCodePage);
-							_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+							_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 							return 0;
 						}
 					}
@@ -3845,7 +3845,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			if (multiByteBytes.Length > cbMultiByte)
 			{
 				_logger.LogInformation("[Kernel32] WideCharToMultiByte: Buffer too small - need {NeedSize} bytes but only have {CbMultiByte}", multiByteBytes.Length, cbMultiByte);
-				_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 				return 0;
 			}
 
@@ -3868,7 +3868,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] WideCharToMultiByte failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 	}
@@ -3883,14 +3883,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			if (lpMultiByteStr == 0)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
 			// Validate code page
 			if (codePage != 0 && codePage != (CodePage)1 && codePage != (CodePage)1252 && codePage != (CodePage)437 && codePage != (CodePage)65001)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -3919,7 +3919,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 					currentAddr++;
 					if (byteList.Count > 10000) // Safety limit
 					{
-						_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+						_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 						return 0;
 					}
 				}
@@ -3955,7 +3955,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Check if output buffer is large enough
 			if (str.Length > cchWideChar)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 				return 0;
 			}
 
@@ -3976,7 +3976,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] MultiByteToWideChar failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 	}
@@ -3991,7 +3991,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			if (lpSrcStr == 0)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -4035,7 +4035,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Check buffer size
 			if (destStr.Length + 1 > cchDest)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 				return 0;
 			}
 
@@ -4049,7 +4049,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] LCMapStringA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 	}
@@ -4063,7 +4063,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			if (lpSrcStr == 0)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -4089,7 +4089,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 					currentAddr += 2;
 					if (chars.Count > 10000) // Safety limit
 					{
-						_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+						_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 						return 0;
 					}
 				}
@@ -4127,7 +4127,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Check buffer size
 			if (destStr.Length + 1 > cchDest)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 				return 0;
 			}
 
@@ -4144,7 +4144,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] LCMapStringW failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 	}
@@ -4162,7 +4162,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			if (lpString1 == 0 || lpString2 == 0)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -4211,7 +4211,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] CompareStringA failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 	}
@@ -4229,7 +4229,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			if (lpString1 == 0 || lpString2 == 0)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -4302,7 +4302,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] CompareStringW failed: {ExMessage}", ex.Message);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 	}
@@ -4314,8 +4314,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// lpPerformanceCount is a pointer to a LARGE_INTEGER (64-bit value)
 		if (lpPerformanceCount == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		try
@@ -4326,13 +4326,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Write the 64-bit timestamp to the provided memory location
 			_env.MemWrite64(lpPerformanceCount, (ulong)timestamp);
 
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] QueryPerformanceCounter failed");
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -4344,8 +4344,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// The frequency is in counts per second
 		if (lpFrequency == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		try
@@ -4357,13 +4357,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite64(lpFrequency, (ulong)frequency);
 
 			_logger.LogInformation("[Kernel32] QueryPerformanceFrequency: {Frequency} Hz", frequency);
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] QueryPerformanceFrequency failed");
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -4390,7 +4390,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (lpTickCount == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 
@@ -4409,7 +4409,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] GetTickCount64 failed");
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 	}
@@ -4788,8 +4788,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (lpProcessAffinityMask == 0 || lpSystemAffinityMask == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// For our emulator, we'll report a single processor system
@@ -4803,7 +4803,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogDebug("[Kernel32] GetProcessAffinityMask: ProcessMask=0x{ProcessMask:X8}, SystemMask=0x{SystemMask:X8}",
 			SINGLE_PROCESSOR_MASK, SINGLE_PROCESSOR_MASK);
 
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	/// <summary>
@@ -4891,7 +4891,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (dwThreadAffinityMask == 0)
 		{
 			_logger.LogWarning("[Kernel32] SetThreadAffinityMask: Invalid affinity mask (zero)");
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 
@@ -4901,7 +4901,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			_logger.LogWarning("[Kernel32] SetThreadAffinityMask: Invalid affinity mask 0x{Mask:X8} (not subset of system mask 0x{SystemMask:X8})",
 				dwThreadAffinityMask, SYSTEM_AFFINITY_MASK);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 
@@ -4972,13 +4972,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_env.ThreadScheduler.TerminateThread(thread.ThreadId, dwExitCode);
 			_logger.LogInformation("[Kernel32] TerminateThread: thread {ThreadId} terminated with code {ExitCode}",
 				thread.ThreadId, dwExitCode);
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 
 		// Thread not found or scheduler not available
 		_logger.LogWarning("[Kernel32] TerminateThread: invalid thread handle 0x{Handle:X8}", hThread);
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-		return NativeTypes.Win32Bool.FALSE;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(8)]
@@ -4989,8 +4989,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (lpExitCode == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		var thread = _env.ThreadScheduler?.GetThreadByHandle(hThread);
@@ -5003,13 +5003,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite32(lpExitCode, exitCode);
 			_logger.LogInformation("[Kernel32] GetExitCodeThread: thread {ThreadId} exit code = {ExitCode}",
 				thread.ThreadId, exitCode);
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 
 		// Thread not found - assume it terminated with code 0
 		_env.MemWrite32(lpExitCode, 0);
 		_logger.LogWarning("[Kernel32] GetExitCodeThread: invalid thread handle 0x{Handle:X8}, returning 0", hThread);
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	[DllModuleExport(37)]
@@ -5033,7 +5033,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var success = _env.TlsSetValue(dwTlsIndex, lpTlsValue);
 		_logger.LogInformation("[Kernel32] TlsSetValue({DwTlsIndex}, 0x{LpTlsValue:X8}) = {Success}", dwTlsIndex, lpTlsValue, success);
-		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+		return success ? (uint)NativeTypes.Win32Bool.TRUE : (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(37)]
@@ -5041,7 +5041,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	{
 		var success = _env.TlsFree(dwTlsIndex);
 		_logger.LogInformation("[Kernel32] TlsFree({DwTlsIndex}) = {Success}", dwTlsIndex, success);
-		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+		return success ? (uint)NativeTypes.Win32Bool.TRUE : (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	// Synchronization primitives
@@ -5065,7 +5065,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (alreadyExists)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
 		}
 
 		return handle;
@@ -5080,14 +5080,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (_env.SynchronizationManager == null)
 		{
 			_logger.LogWarning("[Kernel32] ReleaseMutex: SynchronizationManager not available");
-			return NativeTypes.Win32Bool.FALSE;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		var success = _env.SynchronizationManager.ReleaseMutex(hMutex, currentThreadId);
 
 		if (!success)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_NOT_OWNER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_NOT_OWNER;
 		}
 
 		// Check if there are waiting threads
@@ -5097,7 +5097,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_env.ThreadScheduler.WakeThread(nextWaiter.Value);
 		}
 
-		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+		return success ? (uint)NativeTypes.Win32Bool.TRUE : (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(37)]
@@ -5120,7 +5120,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (alreadyExists)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
 		}
 
 		return handle;
@@ -5134,7 +5134,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (_env.SynchronizationManager == null)
 		{
 			_logger.LogWarning("[Kernel32] SetEvent: SynchronizationManager not available");
-			return NativeTypes.Win32Bool.FALSE;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		var success = _env.SynchronizationManager.SetEvent(hEvent);
@@ -5142,7 +5142,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Wake all threads waiting on this event
 		if (!success || _env.ThreadScheduler == null)
 		{
-			return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+			return success ? (uint)NativeTypes.Win32Bool.TRUE : (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		var waiters = _env.SynchronizationManager.GetEventWaiters(hEvent);
@@ -5151,7 +5151,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_env.ThreadScheduler.WakeThread(waiterId);
 		}
 
-		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+		return success ? (uint)NativeTypes.Win32Bool.TRUE : (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(37)]
@@ -5162,11 +5162,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (_env.SynchronizationManager == null)
 		{
 			_logger.LogWarning("[Kernel32] ResetEvent: SynchronizationManager not available");
-			return NativeTypes.Win32Bool.FALSE;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		var success = _env.SynchronizationManager.ResetEvent(hEvent);
-		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+		return success ? (uint)NativeTypes.Win32Bool.TRUE : (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(37)]
@@ -5177,14 +5177,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (_env.SynchronizationManager == null)
 		{
 			_logger.LogWarning("[Kernel32] PulseEvent: SynchronizationManager not available");
-			return NativeTypes.Win32Bool.FALSE;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// PulseEvent sets and immediately resets the event
 		// Wake threads waiting on this event
 		if (_env.ThreadScheduler == null)
 		{
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 
 		var waiters = _env.SynchronizationManager.GetEventWaiters(hEvent);
@@ -5194,7 +5194,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// The event remains in non-signaled state
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	[DllModuleExport(37)]
@@ -5215,7 +5215,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (alreadyExists)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
 		}
 
 		return handle;
@@ -5229,7 +5229,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (_env.SynchronizationManager == null)
 		{
 			_logger.LogWarning("[Kernel32] ReleaseSemaphore: SynchronizationManager not available");
-			return NativeTypes.Win32Bool.FALSE;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		var success = _env.SynchronizationManager.ReleaseSemaphore(hSemaphore, lReleaseCount, out var previousCount);
@@ -5242,7 +5242,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Wake waiting threads
 		if (!success || _env.ThreadScheduler == null)
 		{
-			return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+			return success ? (uint)NativeTypes.Win32Bool.TRUE : (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		for (var i = 0; i < lReleaseCount; i++)
@@ -5254,7 +5254,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			}
 		}
 
-		return success ? NativeTypes.Win32Bool.TRUE : NativeTypes.Win32Bool.FALSE;
+		return success ? (uint)NativeTypes.Win32Bool.TRUE : (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(37)]
@@ -5365,14 +5365,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (nCount == 0 || nCount > MAXIMUM_WAIT_OBJECTS)
 		{
 			_logger.LogWarning("[Kernel32] WaitForMultipleObjects: invalid count {Count}", nCount);
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return WAIT_FAILED;
 		}
 
 		if (lpHandles == 0)
 		{
 			_logger.LogWarning("[Kernel32] WaitForMultipleObjects: null handle array");
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return WAIT_FAILED;
 		}
 
@@ -5390,7 +5390,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			if (objectType == null)
 			{
 				_logger.LogWarning("[Kernel32] WaitForMultipleObjects: invalid handle 0x{Handle:X8} at index {Index}", handles[i], i);
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 				return WAIT_FAILED;
 			}
 		}
@@ -5510,8 +5510,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (string.IsNullOrEmpty(path))
 		{
 			_logger.LogInformation("[Kernel32] SetCurrentDirectoryA failed: Invalid path (empty or null)");
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// Convert to Windows path format if using VFS
@@ -5522,7 +5522,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		_logger.LogInformation("[Kernel32] SetCurrentDirectoryA(\"{Path}\")", path);
 		_env.CurrentDirectory = path;
-		return NativeTypes.Win32Bool.TRUE;
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	private uint GetCurrentDirectoryA(uint nBufferLength, in LpStr lpBuffer)
@@ -5541,7 +5541,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (nBufferLength < requiredLength)
 		{
 			// Buffer too small, return required size
-			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return requiredLength;
 		}
 
@@ -5559,8 +5559,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (string.IsNullOrEmpty(path))
 		{
 			_logger.LogWarning("[Kernel32] CreateDirectoryA: Invalid path (empty or null)");
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		try
@@ -5577,17 +5577,17 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			else
 			{
 				_logger.LogInformation("[Kernel32] CreateDirectoryA: Directory already exists \"{RealPath}\"", realPath);
-				_lastError = NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] CreateDirectoryA: Failed to create directory \"{Path}\"", path);
-			_lastError = NativeTypes.Win32Error.ERROR_PATH_NOT_FOUND;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_PATH_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -5607,7 +5607,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (uSize < requiredSize)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return requiredSize;
 		}
 
@@ -5871,7 +5871,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (_resourceReader == null)
 		{
 			_logger.LogWarning("[Kernel32] FindResourceA: Resource reader not initialized");
-			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
 
@@ -5880,14 +5880,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var result = _resourceReader.FindResource(lpType, lpName, 0);
 			if (result == 0)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			}
 			return result;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] FindResourceA: Exception occurred");
-			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
 	}
@@ -5907,7 +5907,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (_resourceReader == null)
 		{
 			_logger.LogWarning("[Kernel32] LoadResource: Resource reader not initialized");
-			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
 
@@ -5916,14 +5916,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var result = _resourceReader.LoadResource(hModule, hResInfo);
 			if (result == 0)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			}
 			return result;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] LoadResource: Exception occurred");
-			_lastError = NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
 	}
@@ -6008,8 +6008,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (string.IsNullOrEmpty(fileName))
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		try
@@ -6021,8 +6021,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var fileInfo = new FileInfo(realPath);
 			if (!fileInfo.Exists)
 			{
-				_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-				return NativeTypes.Win32Bool.FALSE;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
 			// Map Win32 attributes to .NET FileAttributes
@@ -6036,13 +6036,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			fileInfo.Attributes = attributes;
 			_logger.LogInformation("[Kernel32] SetFileAttributesA: Set attributes for \"{RealPath}\"", realPath);
 
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] SetFileAttributesA: Failed to set attributes for \"{FileName}\"", fileName);
-			_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -6074,13 +6074,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			if (lpTotalNumberOfClusters != 0)
 				_env.MemWrite32(lpTotalNumberOfClusters, totalNumberOfClusters);
 
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] GetDiskFreeSpaceA: Failed for \"{RootPath}\"", rootPath);
-			_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
-			return NativeTypes.Win32Bool.FALSE;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
@@ -6150,7 +6150,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Buffer too small
 			_logger.LogWarning("[Kernel32] GetLogicalDriveStringsA: Buffer too small (need {TotalLength}, have {NBufferLength})",
 				totalLength, nBufferLength);
-			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return 0;
 		}
 
@@ -6169,7 +6169,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] GetLogicalDriveStringsA: Failed to write drive strings");
-			_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 			return 0;
 		}
 	}
@@ -6348,7 +6348,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		_logger.LogWarning("[Kernel32] GetThreadPriority: invalid thread handle 0x{Handle:X8}", hThread);
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 		const int THREAD_PRIORITY_ERROR_RETURN = int.MaxValue; // 0x7FFFFFFF
 		return THREAD_PRIORITY_ERROR_RETURN;
 	}
@@ -6612,12 +6612,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			thread.Priority = nPriority;
 			_logger.LogInformation("[Kernel32] SetThreadPriority: thread {ThreadId} priority set to {Priority}",
 				thread.ThreadId, nPriority);
-			return NativeTypes.Win32Bool.TRUE;
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 
 		_logger.LogWarning("[Kernel32] SetThreadPriority: invalid thread handle 0x{Handle:X8}", hThread);
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-		return NativeTypes.Win32Bool.FALSE;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	[DllModuleExport(20)]
@@ -6654,7 +6654,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		var appName = lpApplicationName != 0 ? _env.ReadAnsiString(lpApplicationName) : null;
 		var cmdLine = lpCommandLine != 0 ? _env.ReadAnsiString(lpCommandLine) : null;
 		_logger.LogInformation("[Kernel32] CreateProcessA(lpApplicationName=\"{AppName}\", lpCommandLine=\"{CmdLine}\")", appName, cmdLine);
-		_lastError = NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 		return 0; // FALSE
 	}
 
@@ -6708,7 +6708,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (string.IsNullOrEmpty(fileName))
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0xFFFFFFFF; // INVALID_FILE_ATTRIBUTES
 		}
 
@@ -6761,7 +6761,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		// File not found
 		_logger.LogInformation("[Kernel32] GetFileAttributesA: file not found");
-		_lastError = NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 		return 0xFFFFFFFF; // INVALID_FILE_ATTRIBUTES
 	}
 
@@ -6826,7 +6826,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 		if (nBufferLength < requiredLength)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return requiredLength;
 		}
 		_env.WriteAnsiStringAt(lpBuffer.Address, fullPath);
@@ -6861,7 +6861,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 		if (cchData < requiredLength)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return 0;
 		}
 		var wideBytes = Encoding.Unicode.GetBytes(localeData + "\0");
@@ -7097,7 +7097,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Buffer too small
-		_lastError = NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 		return (uint)(result.Length + 1);
 	}
 
@@ -7760,7 +7760,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (lpLocaleEnumProc == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0; // FALSE
 		}
 
@@ -7810,7 +7810,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (lpFileTime == 0 || lpFatDate == 0 || lpFatTime == 0)
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0; // FALSE
 		}
 
@@ -7870,7 +7870,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[Kernel32] ReadProcessMemory: Exception occurred");
-				_lastError = NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				if (lpNumberOfBytesRead != 0)
 				{
 					_env.MemWrite32(lpNumberOfBytesRead, 0);
@@ -7881,7 +7881,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		// For other processes, we don't support cross-process memory access in the emulator
 		_logger.LogWarning("[Kernel32] ReadProcessMemory: Cross-process memory access not supported");
-		_lastError = NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 		if (lpNumberOfBytesRead != 0)
 		{
 			_env.MemWrite32(lpNumberOfBytesRead, 0);
@@ -7904,7 +7904,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		if (string.IsNullOrEmpty(fileName))
 		{
-			_lastError = NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0;
 		}
 

@@ -26,10 +26,10 @@ public class MessageDispatcherTests : IDisposable
 		var handler = new TestMessageHandler();
 
 		// Act
-		_dispatcher.RegisterHandler(WM.PAINT, handler);
+		_dispatcher.RegisterHandler((uint)WM.PAINT, handler);
 
 		// Assert
-		Assert.True(_dispatcher.HasHandlers(WM.PAINT));
+		Assert.True(_dispatcher.HasHandlers((uint)WM.PAINT));
 	}
 
 	[Fact]
@@ -37,7 +37,7 @@ public class MessageDispatcherTests : IDisposable
 	{
 		// Arrange
 		var handler = new TestMessageHandler();
-		_dispatcher.RegisterHandler(WM.PAINT, handler);
+		_dispatcher.RegisterHandler((uint)WM.PAINT, handler);
 		var message = new PaintMessage(0x00010000);
 
 		// Act
@@ -66,7 +66,7 @@ public class MessageDispatcherTests : IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_dispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) =>
+		_dispatcher.RegisterHandler((uint)WM.COMMAND, async (msg, ct) =>
 		{
 			callCount++;
 			return 123;
@@ -87,9 +87,9 @@ public class MessageDispatcherTests : IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_dispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) => { callCount++; return 1; });
-		_dispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) => { callCount++; return 2; });
-		_dispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) => { callCount++; return 3; });
+		_dispatcher.RegisterHandler((uint)WM.CLOSE, async (msg, ct) => { callCount++; return 1; });
+		_dispatcher.RegisterHandler((uint)WM.CLOSE, async (msg, ct) => { callCount++; return 2; });
+		_dispatcher.RegisterHandler((uint)WM.CLOSE, async (msg, ct) => { callCount++; return 3; });
 
 		var message = new CloseMessage(0x00010000);
 
@@ -105,35 +105,35 @@ public class MessageDispatcherTests : IDisposable
 	public async Task UnregisterHandlers_ShouldRemoveAllHandlers()
 	{
 		// Arrange
-		_dispatcher.RegisterHandler(WM.PAINT, new TestMessageHandler());
-		Assert.True(_dispatcher.HasHandlers(WM.PAINT));
+		_dispatcher.RegisterHandler((uint)WM.PAINT, new TestMessageHandler());
+		Assert.True(_dispatcher.HasHandlers((uint)WM.PAINT));
 
 		// Act
-		_dispatcher.UnregisterHandlers(WM.PAINT);
+		_dispatcher.UnregisterHandlers((uint)WM.PAINT);
 
 		// Assert
-		Assert.False(_dispatcher.HasHandlers(WM.PAINT));
+		Assert.False(_dispatcher.HasHandlers((uint)WM.PAINT));
 	}
 
 	[Fact]
 	public async Task Clear_ShouldRemoveAllHandlers()
 	{
 		// Arrange
-		_dispatcher.RegisterHandler(WM.PAINT, new TestMessageHandler());
-		_dispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) => 0);
-		_dispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) => 0);
+		_dispatcher.RegisterHandler((uint)WM.PAINT, new TestMessageHandler());
+		_dispatcher.RegisterHandler((uint)WM.CLOSE, async (msg, ct) => 0);
+		_dispatcher.RegisterHandler((uint)WM.COMMAND, async (msg, ct) => 0);
 		
-		Assert.True(_dispatcher.HasHandlers(WM.PAINT));
-		Assert.True(_dispatcher.HasHandlers(WM.CLOSE));
-		Assert.True(_dispatcher.HasHandlers(WM.COMMAND));
+		Assert.True(_dispatcher.HasHandlers((uint)WM.PAINT));
+		Assert.True(_dispatcher.HasHandlers((uint)WM.CLOSE));
+		Assert.True(_dispatcher.HasHandlers((uint)WM.COMMAND));
 
 		// Act
 		_dispatcher.Clear();
 
 		// Assert
-		Assert.False(_dispatcher.HasHandlers(WM.PAINT));
-		Assert.False(_dispatcher.HasHandlers(WM.CLOSE));
-		Assert.False(_dispatcher.HasHandlers(WM.COMMAND));
+		Assert.False(_dispatcher.HasHandlers((uint)WM.PAINT));
+		Assert.False(_dispatcher.HasHandlers((uint)WM.CLOSE));
+		Assert.False(_dispatcher.HasHandlers((uint)WM.COMMAND));
 	}
 
 	[Fact]
@@ -192,9 +192,9 @@ public class MessageDispatcherTests : IDisposable
 	public async Task MessageFactory_ShouldCreateTypedMessages()
 	{
 		// Act
-		var paintMsg = MessageFactory.CreateMessage(0x00010000, WM.PAINT, 0, 0);
-		var closeMsg = MessageFactory.CreateMessage(0x00010000, WM.CLOSE, 0, 0);
-		var commandMsg = MessageFactory.CreateMessage(0x00010000, WM.COMMAND, 0x00020001, 0x00030000);
+		var paintMsg = MessageFactory.CreateMessage(0x00010000, (uint)WM.PAINT, 0, 0);
+		var closeMsg = MessageFactory.CreateMessage(0x00010000, (uint)WM.CLOSE, 0, 0);
+		var commandMsg = MessageFactory.CreateMessage(0x00010000, (uint)WM.COMMAND, 0x00020001, 0x00030000);
 
 		// Assert
 		Assert.IsType<PaintMessage>(paintMsg);

@@ -26,10 +26,10 @@ public class AsyncMessageDispatcherTests : IDisposable
 		var handler = new TestAsyncMessageHandler();
 
 		// Act
-		_env.MessageDispatcher.RegisterHandler(WM.PAINT, handler);
+		_env.MessageDispatcher.RegisterHandler((uint)WM.PAINT, handler);
 
 		// Assert
-		Assert.True(_env.MessageDispatcher.HasHandlers(WM.PAINT));
+		Assert.True(_env.MessageDispatcher.HasHandlers((uint)WM.PAINT));
 	}
 
 	[Fact]
@@ -37,7 +37,7 @@ public class AsyncMessageDispatcherTests : IDisposable
 	{
 		// Arrange
 		var handler = new TestAsyncMessageHandler();
-		_env.MessageDispatcher.RegisterHandler(WM.PAINT, handler);
+		_env.MessageDispatcher.RegisterHandler((uint)WM.PAINT, handler);
 		var message = new PaintMessage(0x00010000);
 
 		// Act
@@ -53,7 +53,7 @@ public class AsyncMessageDispatcherTests : IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler((uint)WM.COMMAND, async (msg, ct) =>
 		{
 			await Task.Delay(10, ct); // Simulate async work
 			callCount++;
@@ -76,21 +76,21 @@ public class AsyncMessageDispatcherTests : IDisposable
 		// Arrange
 		var executionOrder = new List<int>();
 
-		_env.MessageDispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler((uint)WM.CLOSE, async (msg, ct) =>
 		{
 			await Task.Delay(5, ct);
 			executionOrder.Add(1);
 			return 1;
 		});
 		
-		_env.MessageDispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler((uint)WM.CLOSE, async (msg, ct) =>
 		{
 			await Task.Delay(5, ct);
 			executionOrder.Add(2);
 			return 2;
 		});
 		
-		_env.MessageDispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler((uint)WM.CLOSE, async (msg, ct) =>
 		{
 			await Task.Delay(5, ct);
 			executionOrder.Add(3);
@@ -112,7 +112,7 @@ public class AsyncMessageDispatcherTests : IDisposable
 	{
 		// Arrange
 		var cts = new CancellationTokenSource();
-		_env.MessageDispatcher.RegisterHandler(WM.PAINT, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler((uint)WM.PAINT, async (msg, ct) =>
 		{
 			await Task.Delay(100, ct); // Long operation
 			return 0;
@@ -136,13 +136,13 @@ public class AsyncMessageDispatcherTests : IDisposable
 		var firstCalled = false;
 		var secondCalled = false;
 
-		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler((uint)WM.COMMAND, async (msg, ct) =>
 		{
 			firstCalled = true;
 			return 10;
 		});
 
-		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler((uint)WM.COMMAND, async (msg, ct) =>
 		{
 			await Task.Delay(5, ct);
 			secondCalled = true;
@@ -165,7 +165,7 @@ public class AsyncMessageDispatcherTests : IDisposable
 	{
 		// Arrange
 		var handler = new TestTypedAsyncCommandHandler();
-		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, handler);
+		_env.MessageDispatcher.RegisterHandler((uint)WM.COMMAND, handler);
 
 		var controlId = 0x0001u;
 		var notificationCode = 0x0002u;

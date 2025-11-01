@@ -139,7 +139,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETCPINFO", codePage1252, cpInfoPtr);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
         
         // Verify CPINFO structure contents
         var maxCharSize = _testEnv.Memory.Read32(cpInfoPtr + 0);
@@ -169,7 +169,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETCPINFO", cpAcp, cpInfoPtr);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
         
         // Should behave same as getting UTF-8 (the default ACP)
         var maxCharSize = _testEnv.Memory.Read32(cpInfoPtr + 0);
@@ -187,7 +187,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETCPINFO", utf8CodePage, cpInfoPtr);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
         
         // Verify CPINFO structure contents
         var maxCharSize = _testEnv.Memory.Read32(cpInfoPtr + 0);
@@ -221,7 +221,7 @@ public sealed class BasicFunctionsTests : IDisposable
         
         // Check that last error was set
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+        Assert.Equal((uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
     }
 
     [Fact]
@@ -235,7 +235,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETCPINFO", codePage1252, nullPointer);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.FALSE, result); // Should return FALSE (0)
+        Assert.Equal((uint)NativeTypes.Win32Bool.FALSE, result); // Should return FALSE (0)
     }
 
     [Fact]
@@ -258,7 +258,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", counterPtr);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result); // Should return TRUE (1)
         
         // Verify that a 64-bit counter value was written
         var fullCounter = _testEnv.Memory.Read64(counterPtr);
@@ -278,7 +278,7 @@ public sealed class BasicFunctionsTests : IDisposable
         
         // Check that last error was set to ERROR_INVALID_PARAMETER
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+        Assert.Equal((uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
     }
 
     [Fact]
@@ -297,8 +297,8 @@ public sealed class BasicFunctionsTests : IDisposable
         var result2 = _testEnv.CallKernel32Api("QUERYPERFORMANCECOUNTER", counterPtr2);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result1);
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result2);
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result1);
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result2);
         
         // Read the counter values
         var counter1Full = _testEnv.Memory.Read64(counterPtr1);
@@ -337,7 +337,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, testString, 1u, charTypeBuffer);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
     }
 
     [Fact]
@@ -353,7 +353,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, testString, unchecked((uint)-1), charTypeBuffer);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
 
         // Check character types for "Hello123"
         // H - uppercase letter
@@ -385,7 +385,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, testString, unchecked((uint)-1), charTypeBuffer);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
 
         // A - uppercase letter
         var aType = _testEnv.Memory.Read16(charTypeBuffer + 0);
@@ -416,7 +416,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, nullString, 1, charTypeBuffer);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.FALSE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.FALSE, result);
     }
 
     [Fact]
@@ -432,7 +432,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, testString, unchecked((uint)-1), nullBuffer);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.FALSE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.FALSE, result);
     }
 
     [Fact]
@@ -448,7 +448,7 @@ public sealed class BasicFunctionsTests : IDisposable
         var result = _testEnv.CallKernel32Api("GETSTRINGTYPEA", locale, ctCtype1, testString, 3, charTypeBuffer);
 
         // Assert
-        Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+        Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
 
         // Verify that only 3 character types were written
         // H - uppercase
@@ -542,7 +542,7 @@ public sealed class BasicFunctionsTests : IDisposable
         
         // Check that last error was set
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+        Assert.Equal((uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
     }
 
     [Fact]
@@ -561,7 +561,7 @@ public sealed class BasicFunctionsTests : IDisposable
         
         // Check that last error was set
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        Assert.Equal(NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+        Assert.Equal((uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
     }
 
     [Fact]
@@ -692,7 +692,7 @@ public sealed class BasicFunctionsTests : IDisposable
         
         // Verify GetLastError returns ERROR_INSUFFICIENT_BUFFER
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        Assert.Equal(NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER, lastError);
+        Assert.Equal((uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER, lastError);
     }
 
     [Fact]

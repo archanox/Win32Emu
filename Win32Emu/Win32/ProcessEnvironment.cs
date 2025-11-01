@@ -2064,11 +2064,11 @@ public class ProcessEnvironment
 		{
 			return index switch
 			{
-				NativeTypes.WindowLong.GWL_STYLE => windowInfo.Style,
-				NativeTypes.WindowLong.GWL_EXSTYLE => windowInfo.ExStyle,
-				NativeTypes.WindowLong.GWL_HWNDPARENT => windowInfo.Parent,
-				NativeTypes.WindowLong.GWL_HINSTANCE => windowInfo.Instance,
-				NativeTypes.WindowLong.GWL_ID => windowInfo.Menu, // For child windows, this is the control ID
+				(int)NativeTypes.WindowLong.GWL_STYLE => windowInfo.Style,
+				(int)NativeTypes.WindowLong.GWL_EXSTYLE => windowInfo.ExStyle,
+				(int)NativeTypes.WindowLong.GWL_HWNDPARENT => windowInfo.Parent,
+				(int)NativeTypes.WindowLong.GWL_HINSTANCE => windowInfo.Instance,
+				(int)NativeTypes.WindowLong.GWL_ID => windowInfo.Menu, // For child windows, this is the control ID
 				_ => 0
 			};
 		}
