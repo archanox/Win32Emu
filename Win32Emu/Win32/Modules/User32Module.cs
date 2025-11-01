@@ -3770,8 +3770,6 @@ namespace Win32Emu.Win32.Modules
 				rect.top -= dy;
 				rect.right += dx;
 				rect.bottom += dy;
-
-	
 			}
 
 			return 1; // TRUE
