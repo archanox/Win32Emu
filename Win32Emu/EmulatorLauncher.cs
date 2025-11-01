@@ -58,12 +58,10 @@ public static class EmulatorLauncher
 
 		// Check for backend selection
 		var backendIndex = Array.IndexOf(args, "--backend");
-		if (backendIndex >= 0 && backendIndex + 1 < args.Length)
+		if (backendIndex >= 0 && backendIndex + 1 < args.Length &&
+		    Enum.TryParse<Rendering.BackendType>(args[backendIndex + 1], ignoreCase: true, out var backendType))
 		{
-			if (Enum.TryParse<Rendering.BackendType>(args[backendIndex + 1], ignoreCase: true, out var backendType))
-			{
-				Rendering.BackendFactory.CurrentBackendType = backendType;
-			}
+			Rendering.BackendFactory.CurrentBackendType = backendType;
 		}
 		
 		var path = args[0];
