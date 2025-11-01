@@ -93,6 +93,9 @@ class Program
                 case "--tests":
                     showTests = true;
                     break;
+                default:
+                    Console.WriteLine($"Warning: Unrecognized option '{args[i]}'");
+                    return;
             }
         }
 

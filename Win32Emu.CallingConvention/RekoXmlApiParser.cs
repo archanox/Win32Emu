@@ -332,9 +332,13 @@ public class RekoXmlApiParser
                 }
             }
         }
-        catch (Exception ex)
+        catch (System.IO.IOException ex)
         {
-            Console.WriteLine($"Warning: Failed to parse type definitions from {xmlPath}: {ex.Message}");
+            Console.WriteLine($"Warning: IO error while reading {xmlPath}: {ex.Message}");
+        }
+        catch (System.Xml.XmlException ex)
+        {
+            Console.WriteLine($"Warning: XML parse error in {xmlPath}: {ex.Message}");
         }
         
         return definitions;
@@ -485,7 +489,7 @@ public class RekoXmlApiParser
         }
         
         // Also check if base type is LPVOID which is common for callbacks
-        return baseType == "LPVOID" && (name.Contains("CALLBACK") || name.Contains("PROC"));
+        return baseType == "LPVOID" && (name.Contains("CALLBACK", StringComparison.OrdinalIgnoreCase) || name.Contains("PROC", StringComparison.OrdinalIgnoreCase));
     }
     
     private ApiSignature? ParseProcedure(XElement procedure, string dllName)

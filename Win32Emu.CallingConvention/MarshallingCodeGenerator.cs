@@ -426,7 +426,8 @@ public class MarshallingCodeGenerator
         sb.AppendLine($"    public void Test_{signature.Name}_Basic()");
         sb.AppendLine("    {");
         sb.AppendLine("        // Arrange");
-        sb.AppendLine("        var module = CreateModule();");
+        sb.AppendLine("        // TODO: Provide an instance of the module under test");
+        sb.AppendLine("        var module = /* Create or mock your module here */;");
         
         // Generate mock parameter values
         foreach (var param in signature.Parameters)
@@ -444,10 +445,27 @@ public class MarshallingCodeGenerator
         sb.AppendLine();
         sb.AppendLine("        // Assert");
         sb.AppendLine("        // TODO: Add assertions");
-        sb.AppendLine($"        Assert.NotNull(result);");
+        
+        // Only generate Assert.NotNull for reference types
+        var returnType = MapType(signature.ReturnType);
+        if (returnType != "void" && !IsValueType(returnType))
+        {
+            sb.AppendLine($"        Assert.NotNull(result);");
+        }
+        
         sb.AppendLine("    }");
         
         return sb.ToString();
+    }
+    
+    private bool IsValueType(string csharpType)
+    {
+        // Check if the type is a value type (primitive or struct)
+        return csharpType == "uint" || csharpType == "int" || csharpType == "ushort" || 
+               csharpType == "byte" || csharpType == "bool" || csharpType == "long" ||
+               csharpType == "ulong" || csharpType == "short" || csharpType == "sbyte" ||
+               csharpType == "float" || csharpType == "double" || csharpType == "decimal" ||
+               csharpType == "char";
     }
     
     /// <summary>
@@ -471,6 +489,10 @@ public class MarshallingCodeGenerator
             if (Guid.TryParse(interfaceDef.Guid, out _))
             {
                 sb.AppendLine($"    [Guid(\"{interfaceDef.Guid}\")]");
+            }
+            else
+            {
+                Console.WriteLine($"[Warning] Invalid GUID format for interface '{interfaceDef.Name}': '{interfaceDef.Guid}'. The [Guid] attribute will not be generated.");
             }
         }
         sb.AppendLine($"    [ComImport]");
