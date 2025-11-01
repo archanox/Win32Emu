@@ -402,8 +402,9 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			var normalizedPath = NormalizePath(path);
 			return _fileSystem.FileExists(normalizedPath);
 		}
-		catch
+		catch (Exception ex)
 		{
+			_logger.LogDebug(ex, "[DiskVFS] Failed to check if file exists: {Path}", path);
 			return false;
 		}
 	}
