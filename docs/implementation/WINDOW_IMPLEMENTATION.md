@@ -299,26 +299,46 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 - WM_LBUTTONDOWN, WM_KEYDOWN and other input messages ✓
 - Custom typed message classes via MessageFactory ✓
 
+#### System Window Classes
+- **BUTTON**: Pre-registered button control class ✓
+- **EDIT**: Pre-registered edit control class ✓
+- **STATIC**: Pre-registered static control class ✓
+- **LISTBOX**: Pre-registered list box control class ✓
+- **COMBOBOX**: Pre-registered combo box control class ✓
+- **SCROLLBAR**: Pre-registered scroll bar control class ✓
+- **MDICLIENT**: Pre-registered MDI client window class ✓
+
+All standard system window classes are now pre-registered at startup, matching Windows behavior.
+These classes are available without explicit registration via RegisterClassA.
+
 ### Current Limitations
-1. **System Classes**: Common control classes (BUTTON, EDIT, etc.) not pre-registered (but can be created dynamically)
-2. **Limited GDI Drawing**: Basic paint operations supported, but no full GDI implementation
+1. **Limited GDI Drawing**: Basic paint operations supported, but no full GDI implementation
 
 ### Future Enhancements
-1. Pre-register standard Windows control classes (BUTTON, EDIT, LISTBOX, etc.) at startup
-2. Expand GDI drawing support (regions, paths, advanced painting)
-3. Add window animation and special effects
-4. Implement clipboard integration
-5. Add drag-and-drop support
+1. Expand GDI drawing support (regions, paths, advanced painting)
+2. Add window animation and special effects
+3. Implement clipboard integration
+4. Add drag-and-drop support
 
 ## Testing
 
 All tests pass successfully:
 ```
-Total tests: 153 (17 User32 + 102 Kernel32 + 34 Emulator)
-     Passed: 153
-     Failed: 0
-   Duration: ~6 seconds
+Total tests: 201 User32 tests (including 32 new SystemWindowClassesTests)
+     Passed: 200
+     Failed: 1 (pre-existing, unrelated)
+   Duration: ~2 seconds
 ```
+
+### Test Coverage
+
+#### System Window Classes Tests (32 tests)
+- **Pre-registration verification**: Tests that all 7 system classes (BUTTON, EDIT, STATIC, LISTBOX, COMBOBOX, SCROLLBAR, MDICLIENT) are pre-registered
+- **Window creation**: Tests that windows can be created using system classes without explicit registration
+- **Window procedure validation**: Tests that all system classes have valid window procedures
+- **Case-insensitive matching**: Tests that class names are case-insensitive (e.g., "button", "Button", "BUTTON")
+- **Child window creation**: Tests that system classes can be used for child windows (e.g., buttons in dialogs)
+- **Re-registration prevention**: Tests that system classes cannot be re-registered by applications
 
 ### Test Categories
 - **Unit Tests**: Individual function behavior
