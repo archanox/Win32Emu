@@ -32,6 +32,9 @@ public sealed class Emulator : IDisposable
     private Task? _eventProcessingTask;
     private CancellationTokenSource? _eventProcessingCts;
     private readonly HashSet<uint> _patchedImportStubs = new();
+    
+    // Progress logging interval for emulation loop
+    private const ulong PROGRESS_LOG_INTERVAL = 10000;
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -373,8 +376,8 @@ public sealed class Emulator : IDisposable
         {
             iterationCount++;
             
-            // Log progress every 10000 iterations (to help detect infinite loops or hangs)
-            if (iterationCount % 10000 == 0)
+            // Log progress every PROGRESS_LOG_INTERVAL iterations (to help detect infinite loops or hangs)
+            if (iterationCount % PROGRESS_LOG_INTERVAL == 0)
             {
                 var now = DateTime.UtcNow;
                 var elapsed = (now - lastLogTime).TotalMilliseconds;
