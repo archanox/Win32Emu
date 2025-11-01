@@ -59,8 +59,8 @@ public static class StructMarshaller
 		memory.Write32(address + 8, msg.wParam);
 		memory.Write32(address + 12, msg.lParam);
 		memory.Write32(address + 16, msg.time);
-		memory.Write32(address + 20, (uint)msg.ptX);
-		memory.Write32(address + 24, (uint)msg.ptY);
+		memory.Write32(address + 20, unchecked((uint)msg.ptX));
+		memory.Write32(address + 24, unchecked((uint)msg.ptY));
 	}
 
 	/// <summary>
@@ -97,8 +97,8 @@ public static class StructMarshaller
 	/// </summary>
 	public static void WritePOINT(VirtualMemory memory, uint address, NativeTypes.POINT point)
 	{
-		memory.Write32(address + 0, (uint)point.x);
-		memory.Write32(address + 4, (uint)point.y);
+		memory.Write32(address + 0, unchecked((uint)point.x));
+		memory.Write32(address + 4, unchecked((uint)point.y));
 	}
 
 	/// <summary>
@@ -120,10 +120,10 @@ public static class StructMarshaller
 	/// </summary>
 	public static void WriteRECT(VirtualMemory memory, uint address, NativeTypes.RECT rect)
 	{
-		memory.Write32(address + 0, (uint)rect.left);
-		memory.Write32(address + 4, (uint)rect.top);
-		memory.Write32(address + 8, (uint)rect.right);
-		memory.Write32(address + 12, (uint)rect.bottom);
+		memory.Write32(address + 0, unchecked((uint)rect.left));
+		memory.Write32(address + 4, unchecked((uint)rect.top));
+		memory.Write32(address + 8, unchecked((uint)rect.right));
+		memory.Write32(address + 12, unchecked((uint)rect.bottom));
 	}
 
 	/// <summary>
@@ -162,10 +162,10 @@ public static class StructMarshaller
 	{
 		memory.Write32(address + 0, ps.hdc);
 		memory.Write32(address + 4, ps.fErase);
-		memory.Write32(address + 8, (uint)ps.rcPaintLeft);
-		memory.Write32(address + 12, (uint)ps.rcPaintTop);
-		memory.Write32(address + 16, (uint)ps.rcPaintRight);
-		memory.Write32(address + 20, (uint)ps.rcPaintBottom);
+		memory.Write32(address + 8, unchecked((uint)ps.rcPaintLeft));
+		memory.Write32(address + 12, unchecked((uint)ps.rcPaintTop));
+		memory.Write32(address + 16, unchecked((uint)ps.rcPaintRight));
+		memory.Write32(address + 20, unchecked((uint)ps.rcPaintBottom));
 		memory.Write32(address + 24, ps.fRestore);
 		memory.Write32(address + 28, ps.fIncUpdate);
 
