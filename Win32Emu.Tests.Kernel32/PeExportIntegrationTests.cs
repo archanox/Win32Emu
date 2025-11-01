@@ -17,9 +17,10 @@ public class PeExportIntegrationTests : IDisposable
         _testEnv = new TestEnvironment();
         
         // Use a real Windows DLL from the repository for testing
-        _testDllPath = Path.Combine(
-            Path.GetDirectoryName(typeof(PeExportIntegrationTests).Assembly.Location) ?? string.Empty,
-            "..", "..", "..", "..", "..", "DLLs", "WinXP", "kernel32.dll");
+        // Use Path.GetFullPath to normalize the relative path for better maintainability
+        var assemblyLocation = Path.GetDirectoryName(typeof(PeExportIntegrationTests).Assembly.Location) ?? string.Empty;
+        var relativePath = Path.Combine(assemblyLocation, "..", "..", "..", "..", "..", "DLLs", "WinXP", "kernel32.dll");
+        _testDllPath = Path.GetFullPath(relativePath);
     }
 
     [Fact]
