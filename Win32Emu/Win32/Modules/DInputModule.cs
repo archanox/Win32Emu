@@ -403,9 +403,6 @@ namespace Win32Emu.Win32.Modules
 				// } DIPROPHEADER;
 
 				var diph = new DiPropHeaderRef(_env.Memory, pdiph);
-				// Removed: using diph.dwHeaderSize
-				// Removed: using diph.dwObj
-				// Removed: using diph.dwHow
 
 				_logger.LogInformation("[DInput COM]   DIPROPHEADER: size={DwSize}, headerSize={DwHeaderSize}, obj={DwObj}, how={DwHow}",
 					diph.dwSize, diph.dwHeaderSize, diph.dwObj, diph.dwHow);
