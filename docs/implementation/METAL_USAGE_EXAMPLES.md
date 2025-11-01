@@ -137,6 +137,9 @@ var view = Metal3DRenderer.CreateLookAt(
     new Vector3(0, 1, 0)     // Up is Y
 );
 
+// Enable depth testing (done once during initialization, not in render loop)
+renderer3D.CreateDepthStencilState();
+
 // Animation loop
 float rotation = 0;
 while (running)
@@ -155,7 +158,6 @@ while (running)
     };
     
     renderer3D.UpdateUniforms(uniforms);
-    renderer3D.CreateDepthStencilState();
     
     // Render
     var encoder = commandBuffer.RenderCommandEncoder(renderPassDesc);

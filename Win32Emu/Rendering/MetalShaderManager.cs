@@ -177,21 +177,15 @@ public unsafe class MetalShaderManager : IDisposable
             return;
         }
 
-        foreach (var function in _shaderFunctions.Values)
+        foreach (var function in _shaderFunctions.Values.Where(f => (IntPtr)f != IntPtr.Zero))
         {
-            if ((IntPtr)function != IntPtr.Zero)
-            {
-                function.Dispose();
-            }
+            function.Dispose();
         }
         _shaderFunctions.Clear();
 
-        foreach (var library in _libraries.Values)
+        foreach (var library in _libraries.Values.Where(l => (IntPtr)l != IntPtr.Zero))
         {
-            if ((IntPtr)library != IntPtr.Zero)
-            {
-                library.Dispose();
-            }
+            library.Dispose();
         }
         _libraries.Clear();
 

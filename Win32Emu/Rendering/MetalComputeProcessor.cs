@@ -75,9 +75,9 @@ public unsafe class MetalComputeProcessor : IDisposable
             }
 
             // Store pipeline
-            if (_pipelines.ContainsKey(name))
+            if (_pipelines.TryGetValue(name, out var oldPipeline))
             {
-                _pipelines[name].Dispose();
+                oldPipeline.Dispose();
             }
             _pipelines[name] = pipelineState;
 
@@ -189,12 +189,9 @@ public unsafe class MetalComputeProcessor : IDisposable
         finally
         {
             // Clean up parameter buffers
-            foreach (var buffer in parameterBuffers)
+            foreach (var buffer in parameterBuffers.Where(b => (IntPtr)b != IntPtr.Zero))
             {
-                if ((IntPtr)buffer != IntPtr.Zero)
-                {
-                    buffer.Dispose();
-                }
+                buffer.Dispose();
             }
         }
     }
@@ -371,12 +368,9 @@ kernel void computeMain(texture2d<float, access::read> inputTexture [[texture(0)
             return;
         }
 
-        foreach (var pipeline in _pipelines.Values)
+        foreach (var pipeline in _pipelines.Values.Where(p => (IntPtr)p != IntPtr.Zero))
         {
-            if ((IntPtr)pipeline != IntPtr.Zero)
-            {
-                pipeline.Dispose();
-            }
+            pipeline.Dispose();
         }
         _pipelines.Clear();
 

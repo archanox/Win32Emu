@@ -216,12 +216,9 @@ public unsafe class MetalMultiRenderTarget : IDisposable
 
     private void DisposeTargets()
     {
-        foreach (var target in _colorTargets)
+        foreach (var target in _colorTargets.Where(t => (IntPtr)t != IntPtr.Zero))
         {
-            if ((IntPtr)target != IntPtr.Zero)
-            {
-                target.Dispose();
-            }
+            target.Dispose();
         }
         _colorTargets = Array.Empty<MTLTexture>();
 

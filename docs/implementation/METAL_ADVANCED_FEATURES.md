@@ -174,10 +174,7 @@ var uniforms = new Metal3DRenderer.Uniforms3D
 renderer.UpdateUniforms(uniforms);
 
 // Enable depth testing
-renderer.CreateDepthStencilState(
-    depthWriteEnabled: true,
-    depthCompareFunction: MTLCompareFunction.Less
-);
+renderer.CreateDepthStencilState(MTLCompareFunction.Less);
 
 // Configure render encoder
 renderer.Configure3DRenderEncoder(encoder);
