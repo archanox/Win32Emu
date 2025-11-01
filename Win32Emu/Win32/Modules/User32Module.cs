@@ -1221,8 +1221,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				if (queuedMsg.Value.Message == 0x0012)
 				{
-					// WM_QUIT - set the quit message flag so next call will return it properly
-					_env.PostQuitMessage((int)queuedMsg.Value.WParam);
+					// WM_QUIT - already being processed from the queue; do not set the quit flag again
 					
 					// Fill MSG structure with WM_QUIT
 					_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
