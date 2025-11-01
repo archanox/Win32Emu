@@ -17,9 +17,9 @@ public class PeExportIntegrationTests : IDisposable
         _testEnv = new TestEnvironment();
         
         // Use a real Windows DLL from the repository for testing
-        _testDllPath = Path.Combine(
+        _testDllPath = Path.GetFullPath(Path.Combine(
             Path.GetDirectoryName(typeof(PeExportIntegrationTests).Assembly.Location) ?? string.Empty,
-            "..", "..", "..", "..", "..", "DLLs", "WinXP", "kernel32.dll");
+            "..", "..", "..", "..", "..", "DLLs", "WinXP", "kernel32.dll"));
     }
 
     [Fact]
@@ -184,18 +184,17 @@ public class PeExportIntegrationTests : IDisposable
 
         // Get the first forwarded export
         var forwardedExportName = loadedImage.ForwardedExportsByName.Keys.First();
-        var forwarderTarget = loadedImage.ForwardedExportsByName[forwardedExportName];
 
         // Act - Try to resolve the forwarded export
         var exportNamePtr = _testEnv.WriteString(forwardedExportName);
         
         // This test verifies that GetProcAddress handles forwarded exports without crashing
         // The resolution may succeed (if target DLL is available) or fail (if not), but should not throw
-        var exportAddress = _testEnv.CallKernel32Api("GETPROCADDRESS", handle, exportNamePtr);
+        _testEnv.CallKernel32Api("GETPROCADDRESS", handle, exportNamePtr);
         
         // Assert - Execution completed without exceptions
-        // The actual result depends on whether the target DLL is available in the test environment
-        // What we're really testing is that the code handles forwarded exports gracefully
+        // This test only verifies that resolving a forwarded export does not throw an exception.
+        // It does not assert on the resolution result, as it may vary depending on the environment.
     }
 
     [Fact]
