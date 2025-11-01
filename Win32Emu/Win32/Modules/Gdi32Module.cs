@@ -330,6 +330,29 @@ namespace Win32Emu.Win32.Modules
 					returnValue = GetRegionData(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				// Additional drawing functions
+				case "ELLIPSE":
+					returnValue = Ellipse(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4));
+					return true;
+				case "ARC":
+					returnValue = Arc(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.Int32(8));
+					return true;
+				case "POLYLINE":
+					returnValue = Polyline(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "DRAWTEXT":
+					returnValue = (uint)DrawText(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "DRAWTEXTA":
+					returnValue = (uint)DrawTextA(a.UInt32(0), a.LpcStr(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "FRAMERECT":
+					returnValue = FrameRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "INVERTRECT":
+					returnValue = InvertRect(a.UInt32(0), a.UInt32(1));
+					return true;
+
 				default:
 					_logger.LogInformation("[Gdi32] Unimplemented export: {Export}", export);
 					return false;
@@ -1443,6 +1466,166 @@ namespace Win32Emu.Win32.Modules
 			_env.MemWrite32(lpRgnData + 44, 100);            // bottom
 
 			return totalSize;
+		}
+
+		/// <summary>
+		/// Draws an ellipse.
+		/// BOOL Ellipse(
+		///   HDC hdc,
+		///   int left,
+		///   int top,
+		///   int right,
+		///   int bottom
+		/// );
+		/// </summary>
+		[DllModuleExport(20)]
+		private uint Ellipse(uint hdc, int left, int top, int right, int bottom)
+		{
+			_logger.LogInformation("[Gdi32] Ellipse(hdc=0x{Hdc:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom})",
+				hdc, left, top, right, bottom);
+			// Stub - return TRUE (success)
+			return 1;
+		}
+
+		/// <summary>
+		/// Draws an elliptical arc.
+		/// BOOL Arc(
+		///   HDC hdc,
+		///   int x1, int y1,
+		///   int x2, int y2,
+		///   int x3, int y3,
+		///   int x4, int y4
+		/// );
+		/// </summary>
+		[DllModuleExport(36)]
+		private uint Arc(uint hdc, int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
+		{
+			_logger.LogInformation("[Gdi32] Arc(hdc=0x{Hdc:X8}, x1={X1}, y1={Y1}, x2={X2}, y2={Y2}, x3={X3}, y3={Y3}, x4={X4}, y4={Y4})",
+				hdc, x1, y1, x2, y2, x3, y3, x4, y4);
+			// Stub - return TRUE (success)
+			return 1;
+		}
+
+		/// <summary>
+		/// Draws a series of line segments.
+		/// BOOL Polyline(
+		///   HDC hdc,
+		///   const POINT *apt,
+		///   int cpt
+		/// );
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint Polyline(uint hdc, uint apt, int cpt)
+		{
+			_logger.LogInformation("[Gdi32] Polyline(hdc=0x{Hdc:X8}, apt=0x{Apt:X8}, cpt={Cpt})", hdc, apt, cpt);
+			// Stub - return TRUE (success)
+			return 1;
+		}
+
+		/// <summary>
+		/// Draws formatted text (stub for UNICODE version).
+		/// int DrawText(
+		///   HDC hdc,
+		///   LPCWSTR lpchText,
+		///   int cchText,
+		///   LPRECT lprc,
+		///   UINT format
+		/// );
+		/// </summary>
+		[DllModuleExport(20, IsStub = true)]
+		private int DrawText(uint hdc, uint lpchText, int cchText, uint lprc, uint format)
+		{
+			return 0;
+		}
+
+		/// <summary>
+		/// Draws formatted text in the specified rectangle.
+		/// int DrawTextA(
+		///   HDC hdc,
+		///   LPCSTR lpchText,
+		///   int cchText,
+		///   LPRECT lprc,
+		///   UINT format
+		/// );
+		/// </summary>
+		[DllModuleExport(20)]
+		private int DrawTextA(uint hdc, in LpcStr lpchText, int cchText, uint lprc, uint format)
+		{
+			var text = lpchText.ToString() ?? string.Empty;
+			
+			// Read rectangle if provided
+			int left = 0, top = 0, right = 0, bottom = 0;
+			if (lprc != 0)
+			{
+				left = (int)_env.MemRead32(lprc);
+				top = (int)_env.MemRead32(lprc + 4);
+				right = (int)_env.MemRead32(lprc + 8);
+				bottom = (int)_env.MemRead32(lprc + 12);
+			}
+
+			_logger.LogInformation("[Gdi32] DrawTextA(hdc=0x{Hdc:X8}, text=\"{Text}\", rect=({Left},{Top},{Right},{Bottom}), format=0x{Format:X})",
+				hdc, text, left, top, right, bottom, format);
+
+			// Calculate text height (stub implementation)
+			// DT_CALCRECT (0x400) means calculate the rectangle needed
+			if ((format & 0x400) != 0 && lprc != 0)
+			{
+				// Update rectangle with calculated size
+				var textLength = cchText < 0 ? text.Length : Math.Min(cchText, text.Length);
+				var height = 16; // Default font height
+				_env.MemWrite32(lprc + 8, (uint)(left + textLength * 8)); // right
+				_env.MemWrite32(lprc + 12, (uint)(top + height)); // bottom
+			}
+
+			// Return height of text drawn
+			return 16;
+		}
+
+		/// <summary>
+		/// Draws a border around a rectangle.
+		/// int FrameRect(
+		///   HDC hdc,
+		///   const RECT *lprc,
+		///   HBRUSH hbr
+		/// );
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint FrameRect(uint hdc, uint lprc, uint hbr)
+		{
+			if (lprc != 0)
+			{
+				var left = (int)_env.MemRead32(lprc);
+				var top = (int)_env.MemRead32(lprc + 4);
+				var right = (int)_env.MemRead32(lprc + 8);
+				var bottom = (int)_env.MemRead32(lprc + 12);
+				_logger.LogInformation("[Gdi32] FrameRect(hdc=0x{Hdc:X8}, rect=({Left},{Top},{Right},{Bottom}), hbr=0x{Hbr:X8})",
+					hdc, left, top, right, bottom, hbr);
+			}
+			// Stub - return non-zero on success
+			return 1;
+		}
+
+		/// <summary>
+		/// Inverts the colors in a rectangle.
+		/// BOOL InvertRect(
+		///   HDC hdc,
+		///   const RECT *lprc
+		/// );
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint InvertRect(uint hdc, uint lprc)
+		{
+			if (lprc != 0)
+			{
+				var left = (int)_env.MemRead32(lprc);
+				var top = (int)_env.MemRead32(lprc + 4);
+				var right = (int)_env.MemRead32(lprc + 8);
+				var bottom = (int)_env.MemRead32(lprc + 12);
+				_logger.LogInformation("[Gdi32] InvertRect(hdc=0x{Hdc:X8}, rect=({Left},{Top},{Right},{Bottom}))",
+					hdc, left, top, right, bottom);
+			}
+			// Stub - return TRUE (success)
+			return 1;
 		}
 
 		private enum GdiObjectType
