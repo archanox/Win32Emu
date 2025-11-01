@@ -377,7 +377,8 @@ public sealed class Emulator : IDisposable
             iterationCount++;
             
             // Log progress every PROGRESS_LOG_INTERVAL iterations (to help detect infinite loops or hangs)
-            if (iterationCount % PROGRESS_LOG_INTERVAL == 0)
+            // Only do this if debug logging is enabled to avoid overhead
+            if (_logger.IsEnabled(LogLevel.Debug) && iterationCount % PROGRESS_LOG_INTERVAL == 0)
             {
                 var now = DateTime.UtcNow;
                 var elapsed = (now - lastLogTime).TotalMilliseconds;
