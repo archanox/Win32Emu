@@ -442,7 +442,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			if (lpRect != 0)
 			{
-				var rect = StructMarshaller.ReadRECT(_env.Memory, lpRect);
+				var rect = new RectRef(_env.Memory, lpRect);
 				_logger.LogInformation("[Gdi32] FillRect(HDC=0x{Hdc:X8}, rect=({Left},{Top},{Right},{Bottom}), hBrush=0x{HBrush:X8})", 
 					hdc, rect.left, rect.top, rect.right, rect.bottom, hBrush);
 			}
@@ -905,7 +905,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (lpdi != 0)
 			{
-				var docInfo = StructMarshaller.ReadDOCINFOA(_env.Memory, lpdi);
+				var docInfo = new DocInfoARef(_env.Memory, lpdi);
 
 				if (docInfo.lpszDocName != 0)
 				{
@@ -1553,14 +1553,19 @@ namespace Win32Emu.Win32.Modules
 			var text = lpchText.ToString() ?? string.Empty;
 			
 			// Read rectangle if provided
-			NativeTypes.RECT rect = default;
+			// Read rectangle if provided
+			int left = 0, top = 0, right = 0, bottom = 0;
 			if (lprc != 0)
 			{
-				rect = StructMarshaller.ReadRECT(_env.Memory, lprc);
+				var rect = new RectRef(_env.Memory, lprc);
+				left = rect.left;
+				top = rect.top;
+				right = rect.right;
+				bottom = rect.bottom;
 			}
 
 			_logger.LogInformation("[Gdi32] DrawTextA(hdc=0x{Hdc:X8}, text=\"{Text}\", rect=({Left},{Top},{Right},{Bottom}), format=0x{Format:X})",
-				hdc, text, rect.left, rect.top, rect.right, rect.bottom, format);
+				hdc, text, left, top, right, bottom, format);
 
 			// Calculate text height (stub implementation)
 			// DT_CALCRECT (0x400) means calculate the rectangle needed
@@ -1568,9 +1573,9 @@ namespace Win32Emu.Win32.Modules
 			{
 				// Update rectangle with calculated size
 				var textLength = cchText < 0 ? text.Length : Math.Min(cchText, text.Length);
+				var rect = new RectRef(_env.Memory, lprc);
 				rect.right = rect.left + textLength * DefaultCharWidth;
 				rect.bottom = rect.top + DefaultFontHeight;
-				StructMarshaller.WriteRECT(_env.Memory, lprc, rect);
 			}
 
 			// Return height of text drawn
@@ -1590,7 +1595,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			if (lprc != 0)
 			{
-				var rect = StructMarshaller.ReadRECT(_env.Memory, lprc);
+				var rect = new RectRef(_env.Memory, lprc);
 				_logger.LogInformation("[Gdi32] FrameRect(hdc=0x{Hdc:X8}, rect=({Left},{Top},{Right},{Bottom}), hbr=0x{Hbr:X8})",
 					hdc, rect.left, rect.top, rect.right, rect.bottom, hbr);
 			}
@@ -1610,7 +1615,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			if (lprc != 0)
 			{
-				var rect = StructMarshaller.ReadRECT(_env.Memory, lprc);
+				var rect = new RectRef(_env.Memory, lprc);
 				_logger.LogInformation("[Gdi32] InvertRect(hdc=0x{Hdc:X8}, rect=({Left},{Top},{Right},{Bottom}))",
 					hdc, rect.left, rect.top, rect.right, rect.bottom);
 			}

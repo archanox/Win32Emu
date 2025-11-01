@@ -1245,7 +1245,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (lpMsg != 0)
 			{
-				var msg = StructMarshaller.ReadMSG(_env.Memory, lpMsg);
+				var msg = new MsgRef(_env.Memory, lpMsg);
 				_logger.LogInformation(
 					"[User32] TranslateMessage: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}",
 					msg.hwnd, msg.message, msg.wParam, msg.lParam);
@@ -1268,7 +1268,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Read MSG structure
-			var msg = StructMarshaller.ReadMSG(_env.Memory, lpMsg);
+			var msg = new MsgRef(_env.Memory, lpMsg);
 
 			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", 
 				msg.hwnd, msg.message, msg.wParam, msg.lParam);
@@ -1682,7 +1682,7 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			var point = StructMarshaller.ReadPOINT(_env.Memory, lpPoint);
+			var point = new PointRef(_env.Memory, lpPoint);
 
 			_logger.LogInformation("[User32] ClientToScreen: HWND=0x{Hwnd:X8} Point=({X},{Y})", hwnd, point.x, point.y);
 
@@ -1704,14 +1704,11 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[User32] SetRect: lpRect=0x{LpRect:X8} ({Left},{Top},{Right},{Bottom})", lpRect, left, top, right, bottom);
 
-			var rect = new NativeTypes.RECT
-			{
-				left = left,
-				top = top,
-				right = right,
-				bottom = bottom
-			};
-			StructMarshaller.WriteRECT(_env.Memory, lpRect, rect);
+			var rect = new RectRef(_env.Memory, lpRect);
+			rect.left = left;
+			rect.top = top;
+			rect.right = right;
+			rect.bottom = bottom;
 
 			return 1; // TRUE
 		}
@@ -1727,14 +1724,11 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] GetClientRect: HWND=0x{Hwnd:X8}", hwnd);
 
 			// Return a default client rect (0, 0, 640, 480)
-			var rect = new NativeTypes.RECT
-			{
-				left = 0,
-				top = 0,
-				right = 640,
-				bottom = 480
-			};
-			StructMarshaller.WriteRECT(_env.Memory, lpRect, rect);
+			var rect = new RectRef(_env.Memory, lpRect);
+			rect.left = 0;
+			rect.top = 0;
+			rect.right = 640;
+			rect.bottom = 480;
 
 			return 1; // TRUE
 		}
@@ -1750,14 +1744,11 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] GetWindowRect: HWND=0x{Hwnd:X8}", hwnd);
 
 			// Return a default window rect (100, 100, 740, 580)
-			var rect = new NativeTypes.RECT
-			{
-				left = 100,
-				top = 100,
-				right = 740,
-				bottom = 580
-			};
-			StructMarshaller.WriteRECT(_env.Memory, lpRect, rect);
+			var rect = new RectRef(_env.Memory, lpRect);
+			rect.left = 100;
+			rect.top = 100;
+			rect.right = 740;
+			rect.bottom = 580;
 
 			return 1; // TRUE
 		}
@@ -1770,7 +1761,7 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			var rect = StructMarshaller.ReadRECT(_env.Memory, lpRect);
+			var rect = new RectRef(_env.Memory, lpRect);
 
 			_logger.LogInformation("[User32] AdjustWindowRectEx: rect=({Left},{Top},{Right},{Bottom}) style=0x{DwStyle:X8}", 
 				rect.left, rect.top, rect.right, rect.bottom, dwStyle);
@@ -1790,8 +1781,6 @@ namespace Win32Emu.Win32.Modules
 			{
 				rect.top -= menuHeight;
 			}
-
-			StructMarshaller.WriteRECT(_env.Memory, lpRect, rect);
 
 			return 1; // TRUE
 		}
@@ -3755,7 +3744,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (lprc != 0)
 			{
-				var rect = StructMarshaller.ReadRECT(_env.Memory, lprc);
+				var rect = new RectRef(_env.Memory, lprc);
 
 				// Offset the rectangle
 				rect.left += dx;
@@ -3763,7 +3752,7 @@ namespace Win32Emu.Win32.Modules
 				rect.right += dx;
 				rect.bottom += dy;
 
-				StructMarshaller.WriteRECT(_env.Memory, lprc, rect);
+	
 			}
 
 			return 1; // TRUE
@@ -3775,7 +3764,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (lprc != 0)
 			{
-				var rect = StructMarshaller.ReadRECT(_env.Memory, lprc);
+				var rect = new RectRef(_env.Memory, lprc);
 
 				// Inflate the rectangle
 				rect.left -= dx;
@@ -3783,7 +3772,7 @@ namespace Win32Emu.Win32.Modules
 				rect.right += dx;
 				rect.bottom += dy;
 
-				StructMarshaller.WriteRECT(_env.Memory, lprc, rect);
+	
 			}
 
 			return 1; // TRUE
@@ -4892,8 +4881,8 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Read both source rectangles
-			var rect1 = StructMarshaller.ReadRECT(_env.Memory, lprcSrc1);
-			var rect2 = StructMarshaller.ReadRECT(_env.Memory, lprcSrc2);
+			var rect1 = new RectRef(_env.Memory, lprcSrc1);
+			var rect2 = new RectRef(_env.Memory, lprcSrc2);
 
 			// Calculate intersection
 			var leftDst = Math.Max(rect1.left, rect2.left);
@@ -4905,20 +4894,16 @@ namespace Win32Emu.Win32.Modules
 			if (leftDst >= rightDst || topDst >= bottomDst)
 			{
 				// No intersection - set to empty rectangle
-				var emptyRect = new NativeTypes.RECT { left = 0, top = 0, right = 0, bottom = 0 };
-				StructMarshaller.WriteRECT(_env.Memory, lprcDst, emptyRect);
+				var emptyRect = new RectRef(_env.Memory, lprcDst);
 				return 0; // FALSE
 			}
 
 			// Write intersection rectangle
-			var dstRect = new NativeTypes.RECT
-			{
-				left = leftDst,
-				top = topDst,
-				right = rightDst,
-				bottom = bottomDst
-			};
-			StructMarshaller.WriteRECT(_env.Memory, lprcDst, dstRect);
+			var dstRect = new RectRef(_env.Memory, lprcDst);
+			dstRect.left = leftDst;
+			dstRect.top = topDst;
+			dstRect.right = rightDst;
+			dstRect.bottom = bottomDst;
 
 			return 1; // TRUE
 		}
