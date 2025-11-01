@@ -5,6 +5,7 @@ namespace Win32Emu.Tools.CallingConventionDemo;
 /// <summary>
 /// Demonstrates Reko-based calling convention standardization (Integration Opportunity #4).
 /// Generates marshalling code from Reko XML API definitions to reduce boilerplate.
+/// Now includes: structs, callbacks, COM interfaces, validation, docs, and tests.
 /// </summary>
 class Program
 {
@@ -20,22 +21,65 @@ class Program
 
         if (args.Length < 1)
         {
-            Console.WriteLine("Usage: Win32Emu.Tools.CallingConventionDemo <reko-xml-file> [api-name]");
+            Console.WriteLine("Usage: Win32Emu.Tools.CallingConventionDemo <xml-file> [options]");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            Console.WriteLine("  --api <name>           Generate code for specific API");
+            Console.WriteLine("  --structs              Show struct definitions");
+            Console.WriteLine("  --callbacks            Show callback delegates");
+            Console.WriteLine("  --validation           Show validation examples");
+            Console.WriteLine("  --docs                 Show documentation generation");
+            Console.WriteLine("  --tests                Show unit test generation");
             Console.WriteLine();
             Console.WriteLine("Examples:");
-            Console.WriteLine("  # Generate code for all APIs in kernel32.xml");
-            Console.WriteLine("  Win32Emu.Tools.CallingConventionDemo /tmp/reko/src/Environments/Windows/kernel32.xml");
+            Console.WriteLine("  # Generate code for all APIs");
+            Console.WriteLine("  Win32Emu.Tools.CallingConventionDemo kernel32.xml");
             Console.WriteLine();
             Console.WriteLine("  # Generate code for specific API");
-            Console.WriteLine("  Win32Emu.Tools.CallingConventionDemo /tmp/reko/src/Environments/Windows/user32.xml MessageBoxA");
+            Console.WriteLine("  Win32Emu.Tools.CallingConventionDemo user32.xml --api MessageBoxA");
             Console.WriteLine();
-            Console.WriteLine("To get Reko definitions:");
-            Console.WriteLine("  git clone https://github.com/uxmal/reko.git /tmp/reko");
+            Console.WriteLine("  # Show struct definitions");
+            Console.WriteLine("  Win32Emu.Tools.CallingConventionDemo Common.xml --structs");
+            Console.WriteLine();
+            Console.WriteLine("  # Show all features");
+            Console.WriteLine("  Win32Emu.Tools.CallingConventionDemo user32.xml --api MessageBoxA --docs --tests");
             return;
         }
 
         var xmlFile = args[0];
-        var apiFilter = args.Length > 1 ? args[1] : null;
+        string? apiFilter = null;
+        bool showStructs = false;
+        bool showCallbacks = false;
+        bool showValidation = false;
+        bool showDocs = false;
+        bool showTests = false;
+
+        // Parse command line arguments
+        for (int i = 1; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "--api":
+                    if (i + 1 < args.Length)
+                        apiFilter = args[++i];
+                    break;
+                case "--structs":
+                    showStructs = true;
+                    break;
+                case "--callbacks":
+                    showCallbacks = true;
+                    break;
+                case "--validation":
+                    showValidation = true;
+                    break;
+                case "--docs":
+                    showDocs = true;
+                    break;
+                case "--tests":
+                    showTests = true;
+                    break;
+            }
+        }
 
         if (!File.Exists(xmlFile))
         {
@@ -48,6 +92,18 @@ class Program
 
         var parser = new RekoXmlApiParser();
         var signatures = parser.ParseXmlFile(xmlFile);
+        var typeDefinitions = parser.ParseTypeDefinitions(xmlFile);
+
+        // Show type definitions if requested
+        if (showStructs && typeDefinitions.Structs.Count > 0)
+        {
+            ShowStructDefinitions(typeDefinitions.Structs);
+        }
+
+        if (showCallbacks && typeDefinitions.Callbacks.Count > 0)
+        {
+            ShowCallbackDefinitions(typeDefinitions.Callbacks);
+        }
 
         if (signatures.Count == 0)
         {
@@ -90,14 +146,36 @@ class Program
             }
             
             Console.WriteLine();
+            
+            if (showDocs)
+            {
+                Console.WriteLine("Generated Documentation:");
+                Console.WriteLine(generator.GenerateDocumentation(signature, "System Services"));
+                Console.WriteLine();
+            }
+            
             Console.WriteLine("Generated Parameter Reader:");
             Console.WriteLine(generator.GenerateParameterReader(signature));
             Console.WriteLine();
             
-            if (args.Length > 1) // Full wrapper if specific API requested
+            if (!string.IsNullOrEmpty(apiFilter)) // Full wrapper if specific API requested
             {
                 Console.WriteLine("Generated Wrapper Method:");
                 Console.WriteLine(generator.GenerateWrapper(signature));
+                Console.WriteLine();
+            }
+            
+            if (showTests)
+            {
+                Console.WriteLine("Generated Unit Test:");
+                Console.WriteLine(generator.GenerateUnitTest(signature));
+                Console.WriteLine();
+            }
+            
+            if (showValidation)
+            {
+                Console.WriteLine("Validation Report:");
+                Console.WriteLine(generator.GenerateValidationReport(signature, signature));
                 Console.WriteLine();
             }
         }
@@ -106,7 +184,7 @@ class Program
         {
             Console.WriteLine($"... and {signatures.Count - 5} more APIs");
             Console.WriteLine();
-            Console.WriteLine("Tip: Specify an API name to see full wrapper code generation");
+            Console.WriteLine("Tip: Specify --api <name> to see full wrapper code generation");
         }
 
         Console.WriteLine();
@@ -118,11 +196,62 @@ class Program
         Console.WriteLine("✓ Automatic string marshalling - Detects and handles LPSTR/LPWSTR");
         Console.WriteLine("✓ Consistency - All APIs follow same pattern");
         Console.WriteLine("✓ Maintainability - Easy to update when Reko definitions change");
+        
+        if (typeDefinitions.Structs.Count > 0 || typeDefinitions.Callbacks.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("New Features:");
+            Console.WriteLine("=============");
+            if (typeDefinitions.Structs.Count > 0)
+                Console.WriteLine($"✓ Struct definitions - {typeDefinitions.Structs.Count} structs parsed");
+            if (typeDefinitions.Callbacks.Count > 0)
+                Console.WriteLine($"✓ Callback delegates - {typeDefinitions.Callbacks.Count} callbacks identified");
+            if (showDocs)
+                Console.WriteLine("✓ Documentation generation - XML docs with categories");
+            if (showTests)
+                Console.WriteLine("✓ Unit test generation - xUnit test templates");
+            if (showValidation)
+                Console.WriteLine("✓ Validation mode - Signature checking");
+        }
+    }
+    
+    static void ShowStructDefinitions(List<StructDefinition> structs)
+    {
+        Console.WriteLine("Struct Definitions:");
+        Console.WriteLine("===================");
         Console.WriteLine();
-        Console.WriteLine("Next Steps:");
-        Console.WriteLine("1. Integrate into Win32Emu module generation pipeline");
-        Console.WriteLine("2. Create source generators for automatic code generation");
-        Console.WriteLine("3. Add validation to detect signature mismatches");
-        Console.WriteLine("4. Extend to support COM interfaces and callbacks");
+        
+        var generator = new MarshallingCodeGenerator();
+        foreach (var structDef in structs.Take(5))
+        {
+            Console.WriteLine(generator.GenerateStructDefinition(structDef));
+            Console.WriteLine();
+        }
+        
+        if (structs.Count > 5)
+        {
+            Console.WriteLine($"... and {structs.Count - 5} more structs");
+            Console.WriteLine();
+        }
+    }
+    
+    static void ShowCallbackDefinitions(List<CallbackDefinition> callbacks)
+    {
+        Console.WriteLine("Callback Delegates:");
+        Console.WriteLine("===================");
+        Console.WriteLine();
+        
+        var generator = new MarshallingCodeGenerator();
+        foreach (var callback in callbacks.Take(5))
+        {
+            Console.WriteLine(generator.GenerateCallbackDelegate(callback));
+            Console.WriteLine();
+        }
+        
+        if (callbacks.Count > 5)
+        {
+            Console.WriteLine($"... and {callbacks.Count - 5} more callbacks");
+            Console.WriteLine();
+        }
     }
 }

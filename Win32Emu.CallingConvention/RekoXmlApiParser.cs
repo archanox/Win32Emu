@@ -3,6 +3,106 @@ using System.Xml.Linq;
 namespace Win32Emu.CallingConvention;
 
 /// <summary>
+/// Represents a field in a struct definition.
+/// </summary>
+public class StructField
+{
+    /// <summary>
+    /// Field name (e.g., "cbSize", "dwMajorVersion")
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Field type (e.g., "DWORD", "LPCTSTR")
+    /// </summary>
+    public string Type { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents a struct definition parsed from XML.
+/// </summary>
+public class StructDefinition
+{
+    /// <summary>
+    /// Struct name (e.g., "MSGBOXPARAMS", "DLLVERSIONINFO")
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Fields in the struct
+    /// </summary>
+    public List<StructField> Fields { get; set; } = new();
+}
+
+/// <summary>
+/// Represents a callback/delegate type definition.
+/// </summary>
+public class CallbackDefinition
+{
+    /// <summary>
+    /// Callback type name (e.g., "WNDPROC", "MSGBOXCALLBACK")
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Base type if it's an alias (e.g., "LPVOID")
+    /// </summary>
+    public string? BaseType { get; set; }
+    
+    /// <summary>
+    /// Return type for the callback
+    /// </summary>
+    public string? ReturnType { get; set; }
+    
+    /// <summary>
+    /// Parameters for the callback
+    /// </summary>
+    public List<ApiParameter> Parameters { get; set; } = new();
+}
+
+/// <summary>
+/// Represents a type alias definition.
+/// </summary>
+public class TypeAlias
+{
+    /// <summary>
+    /// Alias name (e.g., "HDESK", "SIZE_T")
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Base type (e.g., "HANDLE", "DWORD")
+    /// </summary>
+    public string BaseType { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Enum values if this is an enum type
+    /// </summary>
+    public Dictionary<string, string>? EnumValues { get; set; }
+}
+
+/// <summary>
+/// Represents all type definitions parsed from an XML file.
+/// </summary>
+public class TypeDefinitions
+{
+    /// <summary>
+    /// Struct definitions
+    /// </summary>
+    public List<StructDefinition> Structs { get; set; } = new();
+    
+    /// <summary>
+    /// Callback/delegate definitions
+    /// </summary>
+    public List<CallbackDefinition> Callbacks { get; set; } = new();
+    
+    /// <summary>
+    /// Type aliases
+    /// </summary>
+    public List<TypeAlias> Aliases { get; set; } = new();
+}
+
+/// <summary>
 /// Represents a Win32 API parameter parsed from Reko XML definitions.
 /// </summary>
 public class ApiParameter
@@ -123,6 +223,160 @@ public class RekoXmlApiParser
         }
         
         return signatures;
+    }
+    
+    /// <summary>
+    /// Parse type definitions (structs, callbacks, aliases) from ApiMonitor XML files.
+    /// </summary>
+    /// <param name="xmlPath">Path to the ApiMonitor XML file</param>
+    /// <returns>Type definitions found in the file</returns>
+    public TypeDefinitions ParseTypeDefinitions(string xmlPath)
+    {
+        var definitions = new TypeDefinitions();
+        
+        try
+        {
+            var doc = XDocument.Load(xmlPath);
+            
+            // Parse Variable elements which contain struct, alias, and callback definitions
+            var variables = doc.Descendants()
+                .Where(e => e.Name.LocalName == "Variable");
+            
+            foreach (var variable in variables)
+            {
+                var name = variable.Attribute("Name")?.Value;
+                var type = variable.Attribute("Type")?.Value;
+                
+                if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(type))
+                    continue;
+                
+                switch (type)
+                {
+                    case "Struct":
+                        var structDef = ParseStructDefinition(variable, name);
+                        if (structDef != null)
+                            definitions.Structs.Add(structDef);
+                        break;
+                    
+                    case "Alias":
+                        var aliasDef = ParseTypeAlias(variable, name);
+                        if (aliasDef != null)
+                        {
+                            // Check if it's a callback/function pointer
+                            if (IsCallbackType(name, aliasDef.BaseType))
+                            {
+                                var callback = new CallbackDefinition
+                                {
+                                    Name = name,
+                                    BaseType = aliasDef.BaseType
+                                };
+                                definitions.Callbacks.Add(callback);
+                            }
+                            else
+                            {
+                                definitions.Aliases.Add(aliasDef);
+                            }
+                        }
+                        break;
+                    
+                    case "Pointer":
+                        // Pointer types are typically handled as aliases
+                        var baseType = variable.Attribute("Base")?.Value;
+                        if (!string.IsNullOrEmpty(baseType))
+                        {
+                            var pointerAlias = new TypeAlias
+                            {
+                                Name = name,
+                                BaseType = baseType + "*"
+                            };
+                            definitions.Aliases.Add(pointerAlias);
+                        }
+                        break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Failed to parse type definitions from {xmlPath}: {ex.Message}");
+        }
+        
+        return definitions;
+    }
+    
+    private StructDefinition? ParseStructDefinition(XElement variable, string name)
+    {
+        var structDef = new StructDefinition { Name = name };
+        
+        var fields = variable.Elements()
+            .Where(e => e.Name.LocalName == "Field");
+        
+        foreach (var field in fields)
+        {
+            var fieldName = field.Attribute("Name")?.Value;
+            var fieldType = field.Attribute("Type")?.Value;
+            
+            if (!string.IsNullOrEmpty(fieldName) && !string.IsNullOrEmpty(fieldType))
+            {
+                structDef.Fields.Add(new StructField
+                {
+                    Name = fieldName,
+                    Type = fieldType
+                });
+            }
+        }
+        
+        return structDef.Fields.Count > 0 ? structDef : null;
+    }
+    
+    private TypeAlias? ParseTypeAlias(XElement variable, string name)
+    {
+        var baseType = variable.Attribute("Base")?.Value;
+        if (string.IsNullOrEmpty(baseType))
+            return null;
+        
+        var alias = new TypeAlias
+        {
+            Name = name,
+            BaseType = baseType
+        };
+        
+        // Parse enum values if present
+        var enumElement = variable.Element(variable.Name.Namespace + "Enum");
+        if (enumElement != null)
+        {
+            alias.EnumValues = new Dictionary<string, string>();
+            
+            var sets = enumElement.Elements()
+                .Where(e => e.Name.LocalName == "Set");
+            
+            foreach (var set in sets)
+            {
+                var setName = set.Attribute("Name")?.Value;
+                var setValue = set.Attribute("Value")?.Value;
+                
+                if (!string.IsNullOrEmpty(setName) && !string.IsNullOrEmpty(setValue))
+                {
+                    alias.EnumValues[setName] = setValue;
+                }
+            }
+        }
+        
+        return alias;
+    }
+    
+    private bool IsCallbackType(string name, string? baseType)
+    {
+        // Heuristic: callback types often have specific naming patterns
+        if (name.EndsWith("PROC", StringComparison.OrdinalIgnoreCase) ||
+            name.EndsWith("CALLBACK", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("PFN", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("LP", StringComparison.OrdinalIgnoreCase) && name.EndsWith("PROC", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        
+        // Also check if base type is LPVOID which is common for callbacks
+        return baseType == "LPVOID" && (name.Contains("CALLBACK") || name.Contains("PROC"));
     }
     
     private ApiSignature? ParseProcedure(XElement procedure, string dllName)
