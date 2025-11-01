@@ -236,4 +236,385 @@ public class MarshallingCodeGenerator
             _ => "0"
         };
     }
+    
+    /// <summary>
+    /// Generate C# struct definition from parsed struct metadata.
+    /// </summary>
+    public string GenerateStructDefinition(StructDefinition structDef)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine($"    /// <summary>");
+        sb.AppendLine($"    /// {structDef.Name} - Auto-generated from XML definition");
+        sb.AppendLine($"    /// </summary>");
+        sb.AppendLine($"    [StructLayout(LayoutKind.Sequential)]");
+        sb.AppendLine($"    public struct {structDef.Name}");
+        sb.AppendLine("    {");
+        
+        foreach (var field in structDef.Fields)
+        {
+            var csharpType = MapType(field.Type);
+            sb.AppendLine($"        public {csharpType} {field.Name};");
+        }
+        
+        sb.AppendLine("    }");
+        
+        return sb.ToString();
+    }
+    
+    /// <summary>
+    /// Generate C# delegate definition for callbacks.
+    /// </summary>
+    public string GenerateCallbackDelegate(CallbackDefinition callback)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine($"    /// <summary>");
+        sb.AppendLine($"    /// {callback.Name} - Auto-generated callback delegate");
+        sb.AppendLine($"    /// </summary>");
+        
+        var returnType = callback.ReturnType != null ? MapType(callback.ReturnType) : "uint";
+        sb.Append($"    public delegate {returnType} {callback.Name}(");
+        
+        var paramList = new List<string>();
+        foreach (var param in callback.Parameters)
+        {
+            var paramType = MapType(param.Type);
+            paramList.Add($"{paramType} {param.Name}");
+        }
+        
+        sb.Append(string.Join(", ", paramList));
+        sb.AppendLine(");");
+        
+        return sb.ToString();
+    }
+    
+    /// <summary>
+    /// Generate C# type alias or enum.
+    /// </summary>
+    public string GenerateTypeAlias(TypeAlias alias)
+    {
+        var sb = new StringBuilder();
+        
+        if (alias.EnumValues != null && alias.EnumValues.Count > 0)
+        {
+            // Generate enum
+            sb.AppendLine($"    /// <summary>");
+            sb.AppendLine($"    /// {alias.Name} - Auto-generated enum");
+            sb.AppendLine($"    /// </summary>");
+            
+            var baseEnumType = MapType(alias.BaseType);
+            sb.AppendLine($"    public enum {alias.Name} : {baseEnumType}");
+            sb.AppendLine("    {");
+            
+            foreach (var (name, value) in alias.EnumValues)
+            {
+                sb.AppendLine($"        {name} = {value},");
+            }
+            
+            sb.AppendLine("    }");
+        }
+        else
+        {
+            // Generate using directive or type alias
+            var csharpType = MapType(alias.BaseType);
+            sb.AppendLine($"    /// <summary>");
+            sb.AppendLine($"    /// {alias.Name} - Alias for {alias.BaseType}");
+            sb.AppendLine($"    /// </summary>");
+            sb.AppendLine($"    using {alias.Name} = {csharpType};");
+        }
+        
+        return sb.ToString();
+    }
+    
+    /// <summary>
+    /// Generate validation code to check API signature against XML definition.
+    /// </summary>
+    public string GenerateValidationReport(ApiSignature signature, ApiSignature? actualSignature)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine($"Validation Report for {signature.Name}");
+        sb.AppendLine("=".PadRight(50, '='));
+        
+        if (actualSignature == null)
+        {
+            sb.AppendLine("Status: NOT IMPLEMENTED");
+            return sb.ToString();
+        }
+        
+        var issues = new List<string>();
+        
+        // Check parameter count
+        if (signature.Parameters.Count != actualSignature.Parameters.Count)
+        {
+            issues.Add($"Parameter count mismatch: Expected {signature.Parameters.Count}, got {actualSignature.Parameters.Count}");
+        }
+        
+        // Check return type
+        if (signature.ReturnType != actualSignature.ReturnType)
+        {
+            issues.Add($"Return type mismatch: Expected {signature.ReturnType}, got {actualSignature.ReturnType}");
+        }
+        
+        // Check parameter types
+        for (int i = 0; i < Math.Min(signature.Parameters.Count, actualSignature.Parameters.Count); i++)
+        {
+            var expected = signature.Parameters[i];
+            var actual = actualSignature.Parameters[i];
+            
+            if (expected.Type != actual.Type)
+            {
+                issues.Add($"Parameter {i} ({expected.Name}) type mismatch: Expected {expected.Type}, got {actual.Type}");
+            }
+        }
+        
+        if (issues.Count == 0)
+        {
+            sb.AppendLine("Status: VALID ✓");
+        }
+        else
+        {
+            sb.AppendLine("Status: INVALID ✗");
+            sb.AppendLine("\nIssues:");
+            foreach (var issue in issues)
+            {
+                sb.AppendLine($"  - {issue}");
+            }
+        }
+        
+        return sb.ToString();
+    }
+    
+    /// <summary>
+    /// Generate XML documentation comments from API signature.
+    /// </summary>
+    public string GenerateDocumentation(ApiSignature signature, string? category = null)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine("        /// <summary>");
+        sb.AppendLine($"        /// {signature.Name}");
+        if (!string.IsNullOrEmpty(category))
+        {
+            sb.AppendLine($"        /// Category: {category}");
+        }
+        sb.AppendLine($"        /// </summary>");
+        
+        foreach (var param in signature.Parameters)
+        {
+            sb.AppendLine($"        /// <param name=\"{param.Name}\">{param.Type}</param>");
+        }
+        
+        sb.AppendLine($"        /// <returns>{signature.ReturnType}</returns>");
+        sb.AppendLine($"        /// <remarks>");
+        sb.AppendLine($"        /// DLL: {signature.DllName}");
+        sb.AppendLine($"        /// Calling Convention: {signature.CallingConvention}");
+        sb.AppendLine($"        /// </remarks>");
+        
+        return sb.ToString();
+    }
+    
+    /// <summary>
+    /// Generate unit test template for an API.
+    /// </summary>
+    public string GenerateUnitTest(ApiSignature signature)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine($"    [Fact]");
+        sb.AppendLine($"    public void Test_{signature.Name}_Basic()");
+        sb.AppendLine("    {");
+        sb.AppendLine("        // Arrange");
+        sb.AppendLine("        // TODO: Provide an instance of the module under test");
+        sb.AppendLine("        var module = /* Create or mock your module here */;");
+        
+        // Generate mock parameter values
+        foreach (var param in signature.Parameters)
+        {
+            var mockValue = GetMockValue(param);
+            sb.AppendLine($"        var {param.Name} = {mockValue};");
+        }
+        
+        sb.AppendLine();
+        sb.AppendLine("        // Act");
+        sb.Append($"        var result = module.{signature.Name}(");
+        sb.Append(string.Join(", ", signature.Parameters.Select(p => p.Name)));
+        sb.AppendLine(");");
+        
+        sb.AppendLine();
+        sb.AppendLine("        // Assert");
+        sb.AppendLine("        // TODO: Add assertions");
+        
+        // Only generate Assert.NotNull for reference types
+        var returnType = MapType(signature.ReturnType);
+        if (returnType != "void" && !IsValueType(returnType))
+        {
+            sb.AppendLine($"        Assert.NotNull(result);");
+        }
+        
+        sb.AppendLine("    }");
+        
+        return sb.ToString();
+    }
+    
+    private bool IsValueType(string csharpType)
+    {
+        // Check if the type is a value type (primitive or struct)
+        return csharpType == "uint" || csharpType == "int" || csharpType == "ushort" || 
+               csharpType == "byte" || csharpType == "bool" || csharpType == "long" ||
+               csharpType == "ulong" || csharpType == "short" || csharpType == "sbyte" ||
+               csharpType == "float" || csharpType == "double" || csharpType == "decimal" ||
+               csharpType == "char";
+    }
+    
+    /// <summary>
+    /// Generate C# COM interface definition with vtable dispatch.
+    /// </summary>
+    public string GenerateComInterface(ComInterfaceDefinition interfaceDef)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine($"    /// <summary>");
+        sb.AppendLine($"    /// {interfaceDef.Name} - Auto-generated COM interface");
+        if (!string.IsNullOrEmpty(interfaceDef.Guid))
+        {
+            sb.AppendLine($"    /// GUID: {interfaceDef.Guid}");
+        }
+        sb.AppendLine($"    /// </summary>");
+        
+        if (!string.IsNullOrEmpty(interfaceDef.Guid))
+        {
+            // Validate GUID format to prevent injection
+            if (Guid.TryParse(interfaceDef.Guid, out _))
+            {
+                sb.AppendLine($"    [Guid(\"{interfaceDef.Guid}\")]");
+            }
+            else
+            {
+                Console.WriteLine($"[Warning] Invalid GUID format for interface '{interfaceDef.Name}': '{interfaceDef.Guid}'. The [Guid] attribute will not be generated.");
+            }
+        }
+        sb.AppendLine($"    [ComImport]");
+        sb.AppendLine($"    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]");
+        
+        var baseInterface = !string.IsNullOrEmpty(interfaceDef.BaseInterface) 
+            ? interfaceDef.BaseInterface 
+            : "IUnknown";
+        
+        sb.AppendLine($"    public interface {interfaceDef.Name} : {baseInterface}");
+        sb.AppendLine("    {");
+        
+        // Generate method declarations
+        if (interfaceDef.Methods.Count > 0)
+        {
+            foreach (var method in interfaceDef.Methods)
+            {
+                sb.AppendLine($"        /// <summary>");
+                sb.AppendLine($"        /// {method.Name}");
+                sb.AppendLine($"        /// </summary>");
+                
+                var returnType = MapType(method.ReturnType);
+                sb.Append($"        {returnType} {method.Name}(");
+                
+                var paramList = new List<string>();
+                foreach (var param in method.Parameters)
+                {
+                    var paramType = MapType(param.Type);
+                    paramList.Add($"{paramType} {param.Name}");
+                }
+                
+                sb.Append(string.Join(", ", paramList));
+                sb.AppendLine(");");
+                sb.AppendLine();
+            }
+        }
+        else
+        {
+            sb.AppendLine("        // No methods defined - extend manually");
+            sb.AppendLine("        // Add interface methods here based on COM specification");
+        }
+        
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        
+        // Generate vtable wrapper helper
+        sb.AppendLine($"    /// <summary>");
+        sb.AppendLine($"    /// Vtable dispatch helper for {interfaceDef.Name}");
+        sb.AppendLine($"    /// </summary>");
+        sb.AppendLine($"    public class {interfaceDef.Name}VTable");
+        sb.AppendLine("    {");
+        sb.AppendLine("        private readonly uint _thisPtr;");
+        sb.AppendLine("        private readonly uint _vtablePtr;");
+        sb.AppendLine();
+        sb.AppendLine($"        public {interfaceDef.Name}VTable(uint thisPtr, uint vtablePtr)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            _thisPtr = thisPtr;");
+        sb.AppendLine("            _vtablePtr = vtablePtr;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        
+        // Generate vtable dispatch methods
+        if (interfaceDef.Methods.Count > 0)
+        {
+            int methodIndex = 0;
+            foreach (var method in interfaceDef.Methods)
+            {
+                sb.AppendLine($"        /// <summary>");
+                sb.AppendLine($"        /// Dispatch {method.Name} via vtable[{methodIndex}]");
+                sb.AppendLine($"        /// </summary>");
+                
+                var returnType = MapType(method.ReturnType);
+                sb.Append($"        public {returnType} {method.Name}(");
+                
+                var paramList = new List<string>();
+                foreach (var param in method.Parameters)
+                {
+                    var paramType = MapType(param.Type);
+                    paramList.Add($"{paramType} {param.Name}");
+                }
+                
+                sb.Append(string.Join(", ", paramList));
+                sb.AppendLine(")");
+                sb.AppendLine("        {");
+                sb.AppendLine($"            // Read function pointer from vtable[{methodIndex}]");
+                sb.AppendLine($"            // var functionPtr = Memory.ReadUInt32(_vtablePtr + {methodIndex * 4});");
+                sb.AppendLine($"            // Call function with _thisPtr as first parameter (thiscall convention)");
+                sb.AppendLine($"            // return CallNativeFunction(functionPtr, _thisPtr, {string.Join(", ", method.Parameters.Select(p => p.Name))});");
+                sb.AppendLine($"            throw new NotImplementedException(\"Vtable dispatch for {method.Name} not yet implemented\");");
+                sb.AppendLine("        }");
+                sb.AppendLine();
+                
+                methodIndex++;
+            }
+        }
+        
+        sb.AppendLine("    }");
+        
+        return sb.ToString();
+    }
+    
+    private string GetMockValue(ApiParameter param)
+    {
+        if (param.IsStringPointer)
+        {
+            return "0x1000u // Mock string pointer";
+        }
+        else if (param.IsPointer)
+        {
+            return "0x2000u // Mock pointer";
+        }
+        else if (param.Type == "BOOL")
+        {
+            return "1u // TRUE";
+        }
+        else if (param.Type.StartsWith("H")) // Handles
+        {
+            return "0x3000u // Mock handle";
+        }
+        else
+        {
+            return "0u";
+        }
+    }
 }
