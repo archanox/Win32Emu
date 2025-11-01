@@ -30,10 +30,12 @@ namespace Win32Emu.Win32.Modules
 		private readonly Dictionary<uint, DirectDrawSurface> _surfaces = new();
 		private readonly Dictionary<uint, DirectDrawPalette> _palettes = new();
 		private readonly Dictionary<uint, DirectDrawClipper> _clippers = new();
+		private readonly Dictionary<uint, uint> _surfaceDCs = new(); // Maps DC handle to surface COM object address
 		private uint _nextDDrawHandle = 0x70000000;
 		private uint _nextSurfaceHandle = 0x71000000;
 		private uint _nextPaletteHandle = 0x72000000;
 		private uint _nextClipperHandle = 0x73000000;
+		private uint _nextDCHandle = 0x74000000;
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
@@ -957,8 +959,22 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::ReleaseDC(this=0x{ThisPtr:X8}, hDC=0x{HDC:X8})",
 				thisPtr, hDC);
 
-			// In a real implementation, this would release the GDI DC
-			// For now, just acknowledge the release
+			// Validate and release the DC
+			if (_surfaceDCs.TryGetValue(hDC, out var surfaceAddr))
+			{
+				if (surfaceAddr != thisPtr)
+				{
+					_logger.LogError("[DDraw] ReleaseDC: DC 0x{HDC:X8} belongs to surface 0x{SurfaceAddr:X8}, not 0x{ThisPtr:X8}",
+						hDC, surfaceAddr, thisPtr);
+					return 0x88760066; // DDERR_INVALIDOBJECT
+				}
+
+				_surfaceDCs.Remove(hDC);
+				_logger.LogInformation("[DDraw] Released DC 0x{HDC:X8} for surface 0x{ThisPtr:X8}", hDC, thisPtr);
+				return 0; // DD_OK
+			}
+
+			_logger.LogWarning("[DDraw] ReleaseDC: DC 0x{HDC:X8} not found, treating as success", hDC);
 			return 0; // DD_OK
 		}
 
@@ -1202,13 +1218,13 @@ namespace Win32Emu.Win32.Modules
 				return 0x80070057; // DDERR_INVALIDPARAMS
 			}
 
-			// Create a fake device context handle
-			// In a real implementation, this would create an actual GDI DC
-			// For now, we return a non-zero handle to indicate success
-			var fakeDC = 0x12340000u;
-			_env.MemWrite32(lphDC, fakeDC);
+			// Create a device context handle and track which surface it belongs to
+			// This allows ReleaseDC to properly validate and clean up
+			var dcHandle = _nextDCHandle++;
+			_surfaceDCs[dcHandle] = thisPtr;
+			_env.MemWrite32(lphDC, dcHandle);
 
-			_logger.LogInformation("[DDraw] Returning fake DC handle: 0x{FakeDC:X8}", fakeDC);
+			_logger.LogInformation("[DDraw] Created DC handle 0x{DcHandle:X8} for surface COM object 0x{ThisPtr:X8}", dcHandle, thisPtr);
 			return 0; // DD_OK
 		}
 
@@ -1885,13 +1901,51 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DDraw_EnumDisplayModes(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::EnumDisplayModes() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+			var lpDDSurfaceDesc = args.UInt32(2);
+			var lpContext = args.UInt32(3);
+			var lpEnumModesCallback = args.UInt32(4);
+
+			_logger.LogInformation("[DDraw COM] IDirectDraw::EnumDisplayModes(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lpDDSurfaceDesc=0x{LpDDSurfaceDesc:X8}, lpContext=0x{LpContext:X8}, lpEnumModesCallback=0x{LpEnumModesCallback:X8})",
+				thisPtr, dwFlags, lpDDSurfaceDesc, lpContext, lpEnumModesCallback);
+
+			if (lpEnumModesCallback == 0)
+			{
+				_logger.LogError("[DDraw] EnumDisplayModes: callback is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Note: Full callback implementation requires saving/restoring CPU state and properly calling stdcall functions
+			// For now, return success without enumerating modes
+			// Applications typically handle this gracefully and use SetDisplayMode directly
+			_logger.LogInformation("[DDraw] EnumDisplayModes: Callback enumeration not fully implemented, returning success");
 			return 0; // DD_OK
 		}
 
 		private uint DDraw_EnumSurfaces(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::EnumSurfaces() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+			var lpDDSD = args.UInt32(2);
+			var lpContext = args.UInt32(3);
+			var lpEnumSurfacesCallback = args.UInt32(4);
+
+			_logger.LogInformation("[DDraw COM] IDirectDraw::EnumSurfaces(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lpDDSD=0x{LpDDSD:X8}, lpContext=0x{LpContext:X8}, lpEnumSurfacesCallback=0x{LpEnumSurfacesCallback:X8})",
+				thisPtr, dwFlags, lpDDSD, lpContext, lpEnumSurfacesCallback);
+
+			if (lpEnumSurfacesCallback == 0)
+			{
+				_logger.LogError("[DDraw] EnumSurfaces: callback is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Note: Full callback implementation requires saving/restoring CPU state and properly calling stdcall functions
+			// For now, return success without enumerating surfaces
+			// Most applications don't rely on this for critical functionality
+			_logger.LogInformation("[DDraw] EnumSurfaces: Callback enumeration not fully implemented, returning success");
 			return 0; // DD_OK
 		}
 
@@ -2059,12 +2113,11 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Return the COM object address of the primary surface
-			// Note: In a real implementation, we'd need to track the COM object addresses for surfaces
-			// For now, we'll return 0 to indicate no GDI surface
-			_env.MemWrite32(lplpGDIDDSSurface, 0);
-			_logger.LogInformation("[DDraw] GDI surface tracking not fully implemented");
+			// The COM object addresses are already being tracked in the DirectDrawSurface.ComObjectAddress field
+			_env.MemWrite32(lplpGDIDDSSurface, primarySurface.ComObjectAddress);
+			_logger.LogInformation("[DDraw] Returning GDI surface COM object at 0x{ComObjectAddr:X8}", primarySurface.ComObjectAddress);
 
-			return 0x887601C2; // DDERR_NOTFOUND
+			return 0; // DD_OK
 		}
 
 		private uint DDraw_GetMonitorFrequency(ICpu cpu, VirtualMemory memory)
