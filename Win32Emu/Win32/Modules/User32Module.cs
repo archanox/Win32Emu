@@ -1141,7 +1141,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Store the updated style in window properties
-			_env.SetWindowProperty(hwnd, (int)(int)NativeTypes.WindowLong.GWL_STYLE, currentStyle);
+			_env.SetWindowProperty(hwnd, (int)NativeTypes.WindowLong.GWL_STYLE, currentStyle);
 
 			// Return non-zero if window was previously visible, zero if it was previously hidden
 			return wasPreviouslyVisible ? 1u : 0u;
