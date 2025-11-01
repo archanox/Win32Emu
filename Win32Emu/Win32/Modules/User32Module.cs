@@ -884,41 +884,20 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			// WNDCLASSA structure layout:
-			// UINT      style;         // 0
-			// WNDPROC   lpfnWndProc;   // 4
-			// int       cbClsExtra;    // 8
-			// int       cbWndExtra;    // 12
-			// HINSTANCE hInstance;     // 16
-			// HICON     hIcon;         // 20
-			// HCURSOR   hCursor;       // 24
-			// HBRUSH    hbrBackground; // 28
-			// LPCSTR    lpszMenuName;  // 32
-			// LPCSTR    lpszClassName; // 36
+			var wndClass = StructMarshaller.ReadWNDCLASSA(_env.Memory, lpWndClass);
 
-			var style = _env.MemRead32(lpWndClass + 0);
-			var wndProc = _env.MemRead32(lpWndClass + 4);
-			var clsExtra = (int)_env.MemRead32(lpWndClass + 8);
-			var wndExtra = (int)_env.MemRead32(lpWndClass + 12);
-			var hInstance = _env.MemRead32(lpWndClass + 16);
-			var hIcon = _env.MemRead32(lpWndClass + 20);
-			var hCursor = _env.MemRead32(lpWndClass + 24);
-			var hbrBackground = _env.MemRead32(lpWndClass + 28);
-			var menuNamePtr = _env.MemRead32(lpWndClass + 32);
-			var classNamePtr = _env.MemRead32(lpWndClass + 36);
-
-			if (classNamePtr == 0)
+			if (wndClass.lpszClassName == 0)
 			{
 				_logger.LogInformation("[User32] RegisterClassA: NULL class name");
 				return 0;
 			}
 
-			var className = _env.ReadAnsiString(classNamePtr);
-			var menuName = menuNamePtr != 0 ? _env.ReadAnsiString(menuNamePtr) : null;
+			var className = _env.ReadAnsiString(wndClass.lpszClassName);
+			var menuName = wndClass.lpszMenuName != 0 ? _env.ReadAnsiString(wndClass.lpszMenuName) : null;
 
 			var classInfo = new ProcessEnvironment.WindowClassInfo(
-				className, style, wndProc, clsExtra, wndExtra,
-				hInstance, hIcon, hCursor, hbrBackground, menuName
+				className, wndClass.style, wndClass.lpfnWndProc, wndClass.cbClsExtra, wndClass.cbWndExtra,
+				wndClass.hInstance, wndClass.hIcon, wndClass.hCursor, wndClass.hbrBackground, menuName
 			);
 
 			if (_env.RegisterWindowClass(className, classInfo))
@@ -1170,14 +1149,6 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(10)]
 		private uint GetMessageA(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax)
 		{
-			// MSG structure layout (28 bytes):
-			// HWND   hwnd;      // 0
-			// UINT   message;   // 4
-			// WPARAM wParam;    // 8
-			// LPARAM lParam;    // 12
-			// DWORD  time;      // 16
-			// POINT  pt;        // 20 (x, y each 4 bytes)
-
 			if (lpMsg == 0)
 			{
 				_logger.LogInformation("[User32] GetMessageA: NULL MSG pointer");
@@ -1202,14 +1173,17 @@ namespace Win32Emu.Win32.Modules
 				var exitCode = _env.GetQuitExitCode();
 				_logger.LogInformation("[User32] GetMessageA: WM_QUIT (exitCode={ExitCode})", exitCode);
 
-				// Fill MSG structure with WM_QUIT
-				_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
-				_env.MemWrite32(lpMsg + 4, 0x0012); // WM_QUIT = 0x0012
-				_env.MemWrite32(lpMsg + 8, (uint)exitCode); // wParam = exit code
-				_env.MemWrite32(lpMsg + 12, 0); // lParam = 0
-				_env.MemWrite32(lpMsg + 16, 0); // time = 0
-				_env.MemWrite32(lpMsg + 20, 0); // pt.x = 0
-				_env.MemWrite32(lpMsg + 24, 0); // pt.y = 0
+				var quitMsg = new NativeTypes.MSG
+				{
+					hwnd = 0,
+					message = 0x0012, // WM_QUIT
+					wParam = (uint)exitCode,
+					lParam = 0,
+					time = 0,
+					ptX = 0,
+					ptY = 0
+				};
+				StructMarshaller.WriteMSG(_env.Memory, lpMsg, quitMsg);
 
 				return 0; // GetMessage returns 0 for WM_QUIT
 			}
@@ -1222,29 +1196,34 @@ namespace Win32Emu.Win32.Modules
 				if (queuedMsg.Value.Message == 0x0012)
 				{
 					// WM_QUIT - already being processed from the queue; do not set the quit flag again
-					
-					// Fill MSG structure with WM_QUIT
-					_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
-					_env.MemWrite32(lpMsg + 4, 0x0012); // WM_QUIT = 0x0012
-					_env.MemWrite32(lpMsg + 8, queuedMsg.Value.WParam); // wParam = exit code
-					_env.MemWrite32(lpMsg + 12, 0); // lParam = 0
-					_env.MemWrite32(lpMsg + 16, queuedMsg.Value.Time); // time
-					_env.MemWrite32(lpMsg + 20, queuedMsg.Value.PtX); // pt.x
-					_env.MemWrite32(lpMsg + 24, queuedMsg.Value.PtY); // pt.y
+					var quitMsg = new NativeTypes.MSG
+					{
+						hwnd = 0,
+						message = 0x0012, // WM_QUIT
+						wParam = queuedMsg.Value.WParam,
+						lParam = 0,
+						time = queuedMsg.Value.Time,
+						ptX = (int)queuedMsg.Value.PtX,
+						ptY = (int)queuedMsg.Value.PtY
+					};
+					StructMarshaller.WriteMSG(_env.Memory, lpMsg, quitMsg);
 					
 					return 0; // GetMessage returns 0 for WM_QUIT
 				}
 
 				_logger.LogInformation("[User32] GetMessageA: retrieved MSG=0x{ValueMessage:X4} HWND=0x{ValueHwnd:X8}", queuedMsg.Value.Message, queuedMsg.Value.Hwnd);
 
-				// Fill MSG structure
-				_env.MemWrite32(lpMsg + 0, queuedMsg.Value.Hwnd);
-				_env.MemWrite32(lpMsg + 4, queuedMsg.Value.Message);
-				_env.MemWrite32(lpMsg + 8, queuedMsg.Value.WParam);
-				_env.MemWrite32(lpMsg + 12, queuedMsg.Value.LParam);
-				_env.MemWrite32(lpMsg + 16, queuedMsg.Value.Time);
-				_env.MemWrite32(lpMsg + 20, queuedMsg.Value.PtX);
-				_env.MemWrite32(lpMsg + 24, queuedMsg.Value.PtY);
+				var msg = new NativeTypes.MSG
+				{
+					hwnd = queuedMsg.Value.Hwnd,
+					message = queuedMsg.Value.Message,
+					wParam = queuedMsg.Value.WParam,
+					lParam = queuedMsg.Value.LParam,
+					time = queuedMsg.Value.Time,
+					ptX = (int)queuedMsg.Value.PtX,
+					ptY = (int)queuedMsg.Value.PtY
+				};
+				StructMarshaller.WriteMSG(_env.Memory, lpMsg, msg);
 
 				return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 			}
@@ -1253,14 +1232,17 @@ namespace Win32Emu.Win32.Modules
 			// This prevents tests and applications from hanging when no messages are available
 			_logger.LogTrace("[User32] GetMessageA: No messages available, returning WM_NULL");
 			
-			// Fill MSG structure with WM_NULL
-			_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
-			_env.MemWrite32(lpMsg + 4, 0); // WM_NULL = 0
-			_env.MemWrite32(lpMsg + 8, 0); // wParam = 0
-			_env.MemWrite32(lpMsg + 12, 0); // lParam = 0
-			_env.MemWrite32(lpMsg + 16, (uint)Environment.TickCount); // time
-			_env.MemWrite32(lpMsg + 20, 0); // pt.x = 0
-			_env.MemWrite32(lpMsg + 24, 0); // pt.y = 0
+			var nullMsg = new NativeTypes.MSG
+			{
+				hwnd = 0,
+				message = 0, // WM_NULL
+				wParam = 0,
+				lParam = 0,
+				time = (uint)Environment.TickCount,
+				ptX = 0,
+				ptY = 0
+			};
+			StructMarshaller.WriteMSG(_env.Memory, lpMsg, nullMsg);
 			
 			return 1; // GetMessage returns non-zero for WM_NULL (only 0 for WM_QUIT)
 		}
@@ -1272,13 +1254,10 @@ namespace Win32Emu.Win32.Modules
 
 			if (lpMsg != 0)
 			{
-				var hwnd = _env.MemRead32(lpMsg + 0);
-				var message = _env.MemRead32(lpMsg + 4);
-				var wParam = _env.MemRead32(lpMsg + 8);
-				var lParam = _env.MemRead32(lpMsg + 12);
+				var msg = StructMarshaller.ReadMSG(_env.Memory, lpMsg);
 				_logger.LogInformation(
 					"[User32] TranslateMessage: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}",
-					hwnd, message, wParam, lParam);
+					msg.hwnd, msg.message, msg.wParam, msg.lParam);
 			}
 			else
 			{
@@ -1298,18 +1277,16 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Read MSG structure
-			var hwnd = _env.MemRead32(lpMsg + 0);
-			var message = _env.MemRead32(lpMsg + 4);
-			var wParam = _env.MemRead32(lpMsg + 8);
-			var lParam = _env.MemRead32(lpMsg + 12);
+			var msg = StructMarshaller.ReadMSG(_env.Memory, lpMsg);
 
-			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, message, wParam, lParam);
+			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", 
+				msg.hwnd, msg.message, msg.wParam, msg.lParam);
 
 			// First, try dispatching through MessageDispatcher asynchronously
-			if (_env.MessageDispatcher.HasHandlers(message))
+			if (_env.MessageDispatcher.HasHandlers(msg.message))
 			{
 				_logger.LogDebug("[User32] DispatchMessageA: Dispatching through MessageDispatcher");
-				var typedMessage = Messaging.MessageFactory.CreateMessage(hwnd, message, wParam, lParam);
+				var typedMessage = Messaging.MessageFactory.CreateMessage(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 				// Use async dispatch with synchronous wait (DispatchMessageA is called from emulated code)
 				var dispatchResult = _env.MessageDispatcher.DispatchAsync(typedMessage).GetAwaiter().GetResult();
 				_logger.LogDebug("[User32] DispatchMessageA: MessageDispatcher returned 0x{Result:X8}", dispatchResult);
@@ -1317,25 +1294,25 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Check if this is a standard control first
-			var windowInfo = _env.GetWindow(hwnd);
+			var windowInfo = _env.GetWindow(msg.hwnd);
 			if (windowInfo.HasValue && StandardControlHandler.IsStandardControl(windowInfo.Value.ClassName))
 			{
 				_logger.LogInformation("[User32] DispatchMessageA: Routing to standard control handler for class '{ClassName}'", windowInfo.Value.ClassName);
-				return _standardControlHandler.HandleMessage(hwnd, message, wParam, lParam, windowInfo.Value.ClassName);
+				return _standardControlHandler.HandleMessage(msg.hwnd, msg.message, msg.wParam, msg.lParam, windowInfo.Value.ClassName);
 			}
 
 			// Try to get the window procedure for this window
-			var wndProc = _env.GetWindowProc(hwnd);
+			var wndProc = _env.GetWindowProc(msg.hwnd);
 			if (wndProc.HasValue && wndProc.Value != 0)
 			{
-				_logger.LogInformation("[User32] DispatchMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
+				_logger.LogInformation("[User32] DispatchMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, msg.hwnd);
 
-				var result = CallWindowProcedure(wndProc.Value, hwnd, message, wParam, lParam);
+				var result = CallWindowProcedure(wndProc.Value, msg.hwnd, msg.message, msg.wParam, msg.lParam);
 				_logger.LogInformation("[User32] DispatchMessageA: WndProc returned 0x{Result:X8}", result);
 				return result;
 			}
 
-			_logger.LogInformation("[User32] DispatchMessageA: No WndProc found for HWND=0x{Hwnd:X8}", hwnd);
+			_logger.LogInformation("[User32] DispatchMessageA: No WndProc found for HWND=0x{Hwnd:X8}", msg.hwnd);
 
 			// For now, just return 0 (message processed)
 			return 0;
@@ -4799,48 +4776,23 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			// WNDCLASSEXA structure layout:
-			// UINT      cbSize;        // 0
-			// UINT      style;         // 4
-			// WNDPROC   lpfnWndProc;   // 8
-			// int       cbClsExtra;    // 12
-			// int       cbWndExtra;    // 16
-			// HINSTANCE hInstance;     // 20
-			// HICON     hIcon;         // 24
-			// HCURSOR   hCursor;       // 28
-			// HBRUSH    hbrBackground; // 32
-			// LPCSTR    lpszMenuName;  // 36
-			// LPCSTR    lpszClassName; // 40
-			// HICON     hIconSm;       // 44
+			var wndClassEx = StructMarshaller.ReadWNDCLASSEXA(_env.Memory, lpWndClassEx);
 
-			var cbSize = _env.MemRead32(lpWndClassEx + 0);
-			var style = _env.MemRead32(lpWndClassEx + 4);
-			var wndProc = _env.MemRead32(lpWndClassEx + 8);
-			var clsExtra = (int)_env.MemRead32(lpWndClassEx + 12);
-			var wndExtra = (int)_env.MemRead32(lpWndClassEx + 16);
-			var hInstance = _env.MemRead32(lpWndClassEx + 20);
-			var hIcon = _env.MemRead32(lpWndClassEx + 24);
-			var hCursor = _env.MemRead32(lpWndClassEx + 28);
-			var hbrBackground = _env.MemRead32(lpWndClassEx + 32);
-			var menuNamePtr = _env.MemRead32(lpWndClassEx + 36);
-			var classNamePtr = _env.MemRead32(lpWndClassEx + 40);
-			var hIconSm = _env.MemRead32(lpWndClassEx + 44);
-
-			if (classNamePtr == 0)
+			if (wndClassEx.lpszClassName == 0)
 			{
 				_logger.LogInformation("[User32] RegisterClassExA: NULL class name");
 				return 0;
 			}
 
-			var className = _env.ReadAnsiString(classNamePtr);
-			var menuName = menuNamePtr != 0 ? _env.ReadAnsiString(menuNamePtr) : null;
+			var className = _env.ReadAnsiString(wndClassEx.lpszClassName);
+			var menuName = wndClassEx.lpszMenuName != 0 ? _env.ReadAnsiString(wndClassEx.lpszMenuName) : null;
 
 			_logger.LogInformation("[User32] RegisterClassExA: cbSize={CbSize}, style=0x{Style:X}, wndProc=0x{WndProc:X8}, className='{ClassName}'",
-				cbSize, style, wndProc, className);
+				wndClassEx.cbSize, wndClassEx.style, wndClassEx.lpfnWndProc, className);
 
 			var classInfo = new ProcessEnvironment.WindowClassInfo(
-				className, style, wndProc, clsExtra, wndExtra,
-				hInstance, hIcon, hCursor, hbrBackground, menuName
+				className, wndClassEx.style, wndClassEx.lpfnWndProc, wndClassEx.cbClsExtra, wndClassEx.cbWndExtra,
+				wndClassEx.hInstance, wndClassEx.hIcon, wndClassEx.hCursor, wndClassEx.hbrBackground, menuName
 			);
 
 			if (_env.RegisterWindowClass(className, classInfo))

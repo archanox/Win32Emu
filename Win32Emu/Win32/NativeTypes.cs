@@ -254,4 +254,81 @@ public static class NativeTypes
 		public const int GWL_EXSTYLE = -20;     // Extended window style
 		public const int GWL_USERDATA = -21;    // User data (32-bit value)
 	}
+
+	// WNDCLASSA structure (40 bytes)
+	// Used with RegisterClassA
+	public struct WNDCLASSA
+	{
+		public uint style;         // Offset 0
+		public uint lpfnWndProc;   // Offset 4
+		public int cbClsExtra;     // Offset 8
+		public int cbWndExtra;     // Offset 12
+		public uint hInstance;     // Offset 16
+		public uint hIcon;         // Offset 20
+		public uint hCursor;       // Offset 24
+		public uint hbrBackground; // Offset 28
+		public uint lpszMenuName;  // Offset 32 (pointer to string)
+		public uint lpszClassName; // Offset 36 (pointer to string)
+	}
+
+	// WNDCLASSEXA structure (48 bytes)
+	// Used with RegisterClassExA
+	public struct WNDCLASSEXA
+	{
+		public uint cbSize;        // Offset 0
+		public uint style;         // Offset 4
+		public uint lpfnWndProc;   // Offset 8
+		public int cbClsExtra;     // Offset 12
+		public int cbWndExtra;     // Offset 16
+		public uint hInstance;     // Offset 20
+		public uint hIcon;         // Offset 24
+		public uint hCursor;       // Offset 28
+		public uint hbrBackground; // Offset 32
+		public uint lpszMenuName;  // Offset 36 (pointer to string)
+		public uint lpszClassName; // Offset 40 (pointer to string)
+		public uint hIconSm;       // Offset 44
+	}
+
+	// MSG structure (28 bytes)
+	// Used with GetMessage, PeekMessage, DispatchMessage
+	public struct MSG
+	{
+		public uint hwnd;      // Offset 0
+		public uint message;   // Offset 4
+		public uint wParam;    // Offset 8
+		public uint lParam;    // Offset 12
+		public uint time;      // Offset 16
+		public int ptX;        // Offset 20
+		public int ptY;        // Offset 24
+	}
+
+	// POINT structure (8 bytes)
+	public struct POINT
+	{
+		public int x;  // Offset 0
+		public int y;  // Offset 4
+	}
+
+	// RECT structure (16 bytes)
+	public struct RECT
+	{
+		public int left;    // Offset 0
+		public int top;     // Offset 4
+		public int right;   // Offset 8
+		public int bottom;  // Offset 12
+	}
+
+	// PAINTSTRUCT structure (64 bytes)
+	public struct PAINTSTRUCT
+	{
+		public uint hdc;            // Offset 0
+		public uint fErase;         // Offset 4
+		public int rcPaintLeft;     // Offset 8
+		public int rcPaintTop;      // Offset 12
+		public int rcPaintRight;    // Offset 16
+		public int rcPaintBottom;   // Offset 20
+		public uint fRestore;       // Offset 24
+		public uint fIncUpdate;     // Offset 28
+		public unsafe fixed byte rgbReserved[32]; // Offset 32
+	}
 }
