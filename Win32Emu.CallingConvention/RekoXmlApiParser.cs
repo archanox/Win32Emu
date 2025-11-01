@@ -479,7 +479,7 @@ public class RekoXmlApiParser
         if (name.EndsWith("PROC", StringComparison.OrdinalIgnoreCase) ||
             name.EndsWith("CALLBACK", StringComparison.OrdinalIgnoreCase) ||
             name.StartsWith("PFN", StringComparison.OrdinalIgnoreCase) ||
-            name.StartsWith("LP", StringComparison.OrdinalIgnoreCase) && name.EndsWith("PROC", StringComparison.OrdinalIgnoreCase))
+            (name.StartsWith("LP", StringComparison.OrdinalIgnoreCase) && name.EndsWith("PROC", StringComparison.OrdinalIgnoreCase)))
         {
             return true;
         }

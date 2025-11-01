@@ -66,7 +66,14 @@ class Program
             {
                 case "--api":
                     if (i + 1 < args.Length)
+                    {
                         apiFilter = args[++i];
+                    }
+                    else
+                    {
+                        Console.WriteLine("Error: --api requires an API name");
+                        return;
+                    }
                     break;
                 case "--structs":
                     showStructs = true;

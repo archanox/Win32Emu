@@ -467,7 +467,11 @@ public class MarshallingCodeGenerator
         
         if (!string.IsNullOrEmpty(interfaceDef.Guid))
         {
-            sb.AppendLine($"    [Guid(\"{interfaceDef.Guid}\")]");
+            // Validate GUID format to prevent injection
+            if (Guid.TryParse(interfaceDef.Guid, out _))
+            {
+                sb.AppendLine($"    [Guid(\"{interfaceDef.Guid}\")]");
+            }
         }
         sb.AppendLine($"    [ComImport]");
         sb.AppendLine($"    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]");
@@ -551,9 +555,11 @@ public class MarshallingCodeGenerator
                 sb.Append(string.Join(", ", paramList));
                 sb.AppendLine(")");
                 sb.AppendLine("        {");
-                sb.AppendLine($"            // TODO: Read function pointer from vtable[{methodIndex}]");
-                sb.AppendLine($"            // TODO: Call function with _thisPtr as first parameter");
-                sb.AppendLine($"            throw new NotImplementedException(\"Vtable dispatch for {method.Name} not implemented\");");
+                sb.AppendLine($"            // Read function pointer from vtable[{methodIndex}]");
+                sb.AppendLine($"            // var functionPtr = Memory.ReadUInt32(_vtablePtr + {methodIndex * 4});");
+                sb.AppendLine($"            // Call function with _thisPtr as first parameter (thiscall convention)");
+                sb.AppendLine($"            // return CallNativeFunction(functionPtr, _thisPtr, {string.Join(", ", method.Parameters.Select(p => p.Name))});");
+                sb.AppendLine($"            throw new NotImplementedException(\"Vtable dispatch for {method.Name} not yet implemented\");");
                 sb.AppendLine("        }");
                 sb.AppendLine();
                 
