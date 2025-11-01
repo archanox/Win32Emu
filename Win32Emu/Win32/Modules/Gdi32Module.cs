@@ -33,6 +33,10 @@ namespace Win32Emu.Win32.Modules
 		private uint _nextGdiObjectHandle = 0x82000000;
 		private readonly Dictionary<uint, GdiObject> _gdiObjects = new();
 
+		// Default font metrics for stub implementations
+		private const int DefaultCharWidth = 8;
+		private const int DefaultFontHeight = 16;
+
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
@@ -735,8 +739,8 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[Gdi32] GetTextExtentPoint32A(hdc=0x{Hdc:X8}, string=\"{Str}\", c={C})", hdc, str, c);
 			if (psizl != 0)
 			{
-				_env.MemWrite32(psizl, (uint)(c * 8)); // cx
-				_env.MemWrite32(psizl + 4, 16); // cy
+				_env.MemWrite32(psizl, (uint)(c * DefaultCharWidth)); // cx
+				_env.MemWrite32(psizl + 4, DefaultFontHeight); // cy
 			}
 			return 1; // TRUE
 		}
@@ -1171,11 +1175,11 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[Gdi32] GetTextExtentPointA(hdc=0x{Hdc:X8}, lpString=\"{Str}\", c={C}, lpsz=0x{Lpsz:X8})",
 				hdc, str, c, lpsz);
 
-			// Stub: Return a default size (8x16 per character)
+			// Stub: Return a default size
 			if (lpsz != 0)
 			{
-				var width = c * 8;
-				var height = 16;
+				var width = c * DefaultCharWidth;
+				var height = DefaultFontHeight;
 				_env.MemWrite32(lpsz, (uint)width);      // cx
 				_env.MemWrite32(lpsz + 4, (uint)height); // cy
 			}
@@ -1572,13 +1576,12 @@ namespace Win32Emu.Win32.Modules
 			{
 				// Update rectangle with calculated size
 				var textLength = cchText < 0 ? text.Length : Math.Min(cchText, text.Length);
-				var height = 16; // Default font height
-				_env.MemWrite32(lprc + 8, (uint)(left + textLength * 8)); // right
-				_env.MemWrite32(lprc + 12, (uint)(top + height)); // bottom
+				_env.MemWrite32(lprc + 8, (uint)(left + textLength * DefaultCharWidth)); // right
+				_env.MemWrite32(lprc + 12, (uint)(top + DefaultFontHeight)); // bottom
 			}
 
 			// Return height of text drawn
-			return 16;
+			return DefaultFontHeight;
 		}
 
 		/// <summary>
