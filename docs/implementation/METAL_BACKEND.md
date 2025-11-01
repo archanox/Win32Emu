@@ -89,7 +89,7 @@ Metal provides excellent performance on macOS by:
 
 ## See Also
 
-- [METAL_ADVANCED_FEATURES.md](METAL_ADVANCED_FEATURES.md) - Advanced Metal backend features documentation
+- [METAL_USAGE_EXAMPLES.md](METAL_USAGE_EXAMPLES.md) - Practical usage examples and code samples
 - [SharpMetal Repository](https://github.com/IsaacMarovitz/SharpMetal)
 - [Apple Metal Documentation](https://developer.apple.com/metal/)
 - [Win32Emu Rendering Backends](../Rendering/)

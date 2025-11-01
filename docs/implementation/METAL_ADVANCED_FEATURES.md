@@ -331,5 +331,6 @@ Potential future improvements could include:
 
 - [MACOS_METAL_FIX.md](../fixes/MACOS_METAL_FIX.md) - Original Metal backend implementation
 - [METAL_BACKEND.md](METAL_BACKEND.md) - Basic Metal backend documentation
+- [METAL_USAGE_EXAMPLES.md](METAL_USAGE_EXAMPLES.md) - Practical code examples
 - [SharpMetal Repository](https://github.com/IsaacMarovitz/SharpMetal)
 - [Apple Metal Documentation](https://developer.apple.com/metal/)
