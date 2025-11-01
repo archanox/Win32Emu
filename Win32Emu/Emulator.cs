@@ -370,22 +370,54 @@ public sealed class Emulator : IDisposable
         var scheduler = _env!.ThreadScheduler;
         var iterationCount = 0ul;
         var lastLogTime = DateTime.UtcNow;
+        
+        // Infinite loop detection - track EIP to detect stuck loops
+        var lastProgressEip = 0u;
+        var sameEipCount = 0ul;
+        const ulong MAX_SAME_EIP_ITERATIONS = 1000000; // 1 million iterations at same EIP = infinite loop
 
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
         {
             iterationCount++;
             
-            // Log progress every PROGRESS_LOG_INTERVAL iterations (to help detect infinite loops or hangs)
-            // Only do this if debug logging is enabled to avoid overhead
+            // Infinite loop detection - check every PROGRESS_LOG_INTERVAL iterations
             if (_logger.IsEnabled(LogLevel.Debug) && iterationCount % PROGRESS_LOG_INTERVAL == 0)
             {
                 var now = DateTime.UtcNow;
                 var elapsed = (now - lastLogTime).TotalMilliseconds;
                 var progressEip = _cpu!.GetEip();
                 var progressEsp = _cpu.GetRegister("ESP");
-                _logger.LogDebug("[Emulator] Progress: {Iterations} iterations ({Elapsed:F2}ms), EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
-                    iterationCount, elapsed, progressEip, progressEsp);
+                
+                // Check if we're stuck at the same EIP
+                if (progressEip == lastProgressEip)
+                {
+                    sameEipCount += PROGRESS_LOG_INTERVAL;
+                    
+                    // Only log every 100K iterations when stuck to reduce spam
+                    if (sameEipCount % 100000 == 0)
+                    {
+                        _logger.LogWarning("[Emulator] Possible infinite loop: {SameEipCount} iterations at EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
+                            sameEipCount, progressEip, progressEsp);
+                    }
+                    
+                    // Stop execution if we've been stuck too long
+                    if (sameEipCount >= MAX_SAME_EIP_ITERATIONS)
+                    {
+                        _logger.LogError("[Emulator] INFINITE LOOP DETECTED: Stuck at EIP=0x{Eip:X8} for {Iterations} iterations. Stopping emulation.", 
+                            progressEip, sameEipCount);
+                        break;
+                    }
+                }
+                else
+                {
+                    // EIP changed - reset counter and log progress
+                    sameEipCount = 0;
+                    _logger.LogDebug("[Emulator] Progress: {Iterations} iterations ({Elapsed:F2}ms), EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
+                        iterationCount, elapsed, progressEip, progressEsp);
+                }
+                
+                lastProgressEip = progressEip;
                 lastLogTime = now;
             }
             
