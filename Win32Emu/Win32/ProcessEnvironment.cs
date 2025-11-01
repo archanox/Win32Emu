@@ -1314,7 +1314,9 @@ public class ProcessEnvironment
 	/// </summary>
 	private void RegisterStandardControlClasses()
 	{
-		// Common window class names from Windows
+		// Standard system window class names from Windows
+		// These are the predefined window classes available to all processes
+		// See: https://learn.microsoft.com/en-us/windows/win32/winmsg/about-window-classes#system-classes
 		var standardClasses = new[]
 		{
 			"BUTTON",
@@ -1322,7 +1324,8 @@ public class ProcessEnvironment
 			"STATIC",
 			"LISTBOX",
 			"COMBOBOX",
-			"SCROLLBAR"
+			"SCROLLBAR",
+			"MDICLIENT"
 		};
 
 		uint index = 0;
