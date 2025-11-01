@@ -166,7 +166,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			{
 				BiosPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsFat);
 				
-				using (var fs = FatFileSystem.FormatPartition(disk, 0, null))
+				using (FatFileSystem.FormatPartition(disk, 0, null))
 				{
 					// Disk is now formatted and ready to use
 					logger.LogDebug("[DiskVFS] VHD disk formatted with FAT32");
@@ -188,7 +188,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			{
 				BiosPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsFat);
 				
-				using (var fs = FatFileSystem.FormatPartition(disk, 0, null))
+				using (FatFileSystem.FormatPartition(disk, 0, null))
 				{
 					// Disk is now formatted and ready to use
 					logger.LogDebug("[DiskVFS] VHDX disk formatted with FAT32");
@@ -388,9 +388,24 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			_logger.LogDebug("[DiskVFS] Moved file: {ExistingPath} -> {NewPath}", existingPath, newPath);
 			return true;
 		}
-		catch (Exception ex)
+		catch (UnauthorizedAccessException ex)
 		{
-			_logger.LogDebug(ex, "[DiskVFS] Failed to move file: {ExistingPath} -> {NewPath}", existingPath, newPath);
+			_logger.LogDebug(ex, "[DiskVFS] Failed to move file (unauthorized): {ExistingPath} -> {NewPath}", existingPath, newPath);
+			return false;
+		}
+		catch (IOException ex)
+		{
+			_logger.LogDebug(ex, "[DiskVFS] Failed to move file (IO error): {ExistingPath} -> {NewPath}", existingPath, newPath);
+			return false;
+		}
+		catch (ArgumentException ex)
+		{
+			_logger.LogDebug(ex, "[DiskVFS] Failed to move file (argument error): {ExistingPath} -> {NewPath}", existingPath, newPath);
+			return false;
+		}
+		catch (NotSupportedException ex)
+		{
+			_logger.LogDebug(ex, "[DiskVFS] Failed to move file (not supported): {ExistingPath} -> {NewPath}", existingPath, newPath);
 			return false;
 		}
 	}

@@ -142,7 +142,11 @@ public class EmulatorService
                             diskVfs.CopyDirectoryIn(gameSettings.VirtualDiskSourceDirectory, "/");
                         }
                     }
-                    catch (Exception ex)
+                    catch (IOException ex)
+                    {
+                        _logger.LogError(ex, "[EmulatorService] Failed to copy source directory into virtual disk");
+                    }
+                    catch (UnauthorizedAccessException ex)
                     {
                         _logger.LogError(ex, "[EmulatorService] Failed to copy source directory into virtual disk");
                     }

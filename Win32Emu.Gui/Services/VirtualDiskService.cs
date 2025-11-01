@@ -52,10 +52,18 @@ public class VirtualDiskService
 
 		// Auto-create disk path
 		var diskDir = GetVirtualDisksDirectory();
+		if (string.IsNullOrWhiteSpace(diskDir))
+		{
+			throw new InvalidOperationException("Virtual disks directory is null or empty");
+		}
 		Directory.CreateDirectory(diskDir);
 
 		// Use game title (sanitized) as the disk filename
 		var sanitizedTitle = SanitizeFileName(game.Title);
+		if (string.IsNullOrWhiteSpace(sanitizedTitle))
+		{
+			throw new InvalidOperationException($"Cannot create virtual disk: game title '{game.Title}' resulted in empty filename");
+		}
 		var format = _configuration.VirtualDiskFormat?.ToLowerInvariant() ?? "vhd";
 		var diskPath = Path.Combine(diskDir, $"{sanitizedTitle}.{format}");
 
@@ -85,7 +93,7 @@ public class VirtualDiskService
 			format, diskPath, sizeBytes / 1024 / 1024);
 
 		// Use DiskVirtualFileSystem.Create to create and format the disk
-		using (var _ = DiskVirtualFileSystem.Create(diskPath, format, sizeBytes, _logger))
+		using (DiskVirtualFileSystem.Create(diskPath, format, sizeBytes, _logger))
 		{
 			// Disk created and formatted successfully
 		}
@@ -116,13 +124,12 @@ public class VirtualDiskService
 			return _configuration.VirtualDisksDirectory;
 		}
 
-		// Default to a "VirtualDisks" folder next to the emulator configuration
+		// Default to a "VirtualDisks" folder in LocalApplicationData
 		var appDataDir = Path.Combine(
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
 			"Win32Emu",
 			"VirtualDisks");
 
-		_configuration.VirtualDisksDirectory = appDataDir;
 		return appDataDir;
 	}
 
@@ -175,7 +182,17 @@ public class VirtualDiskService
 	public void DeleteVirtualDisk(Game game)
 	{
 		var diskDir = GetVirtualDisksDirectory();
+		if (string.IsNullOrWhiteSpace(diskDir))
+		{
+			throw new InvalidOperationException("Virtual disks directory is null or empty");
+		}
+		
 		var sanitizedTitle = SanitizeFileName(game.Title);
+		if (string.IsNullOrWhiteSpace(sanitizedTitle))
+		{
+			_logger.LogWarning("[VirtualDisk] Cannot delete disk for game with empty title: {Title}", game.Title);
+			return;
+		}
 		
 		// Try all supported formats
 		var formats = new[] { "vhd", "vhdx", "vmdk" };

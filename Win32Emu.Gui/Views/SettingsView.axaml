@@ -322,7 +322,7 @@
                                      FontSize="12"
                                      Opacity="0.7"
                                      Margin="0,-8,0,0">
-                                <Run Text="When enabled, each game gets its own virtual disk file (VHD/VMDK/VHDX) as the C: drive. This isolates game saves and settings per-game."/>
+                                <Run Text="When enabled, each game gets its own virtual disk file (VHD/VHDX) as the C: drive. This isolates game saves and settings per-game."/>
                             </TextBlock>
                         </StackPanel>
 
@@ -394,6 +394,11 @@
                                          FontSize="12"
                                          Opacity="0.9">
                                     <Run Text="• Disks are dynamically sized and only use space as needed"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9">
+                                    <Run Text="• VHD and VHDX formats supported for creation; VMDK can be mounted but not created"/>
                                 </TextBlock>
                             </StackPanel>
                         </Border>
