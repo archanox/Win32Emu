@@ -2186,13 +2186,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		_env.MemZero(lpStartupInfo, 68);
-		_env.MemWrite32(lpStartupInfo + 0, 68);
+		var si = new StartupInfoARef(_env.Memory, lpStartupInfo);
+		si.cb = 68;
 		// Write actual handle values, not pseudo-handle constants
 		// When a console is allocated, these should be real inheritable handles
 		// When no console exists, these will be 0 (NULL)
-		_env.MemWrite32(lpStartupInfo + 56, _env.StdInputHandle);
-		_env.MemWrite32(lpStartupInfo + 60, _env.StdOutputHandle);
-		_env.MemWrite32(lpStartupInfo + 64, _env.StdErrorHandle);
+		si.hStdInput = _env.StdInputHandle;
+		si.hStdOutput = _env.StdOutputHandle;
+		si.hStdError = _env.StdErrorHandle;
 		return 0;
 	}
 
@@ -3444,21 +3445,21 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// FileTime is a 64-bit value representing the number of 100-nanosecond intervals since Jan 1, 1601
 			// SystemTime is a SYSTEMTIME structure (16 bytes)
 
-			// Read 64-bit file time as two 32-bit values
-			var low = _env.MemRead32(lpFileTime);
-			var high = _env.MemRead32(lpFileTime + 4);
-			var fileTime = ((ulong)high << 32) | low;
-			var dateTime = DateTime.FromFileTimeUtc((long)fileTime);
+			// Read FILETIME structure
+			var fileTime = new FileTimeRef(_env.Memory, lpFileTime);
+			var fileTimeValue = ((ulong)fileTime.dwHighDateTime << 32) | fileTime.dwLowDateTime;
+			var dateTime = DateTime.FromFileTimeUtc((long)fileTimeValue);
 
 			// Write SYSTEMTIME structure
-			_env.MemWrite16(lpSystemTime, (ushort)dateTime.Year);
-			_env.MemWrite16(lpSystemTime + 2, (ushort)dateTime.Month);
-			_env.MemWrite16(lpSystemTime + 4, (ushort)dateTime.DayOfWeek);
-			_env.MemWrite16(lpSystemTime + 6, (ushort)dateTime.Day);
-			_env.MemWrite16(lpSystemTime + 8, (ushort)dateTime.Hour);
-			_env.MemWrite16(lpSystemTime + 10, (ushort)dateTime.Minute);
-			_env.MemWrite16(lpSystemTime + 12, (ushort)dateTime.Second);
-			_env.MemWrite16(lpSystemTime + 14, (ushort)dateTime.Millisecond);
+			var systemTime = new SystemTimeRef(_env.Memory, lpSystemTime);
+			systemTime.wYear = (ushort)dateTime.Year;
+			systemTime.wMonth = (ushort)dateTime.Month;
+			systemTime.wDayOfWeek = (ushort)dateTime.DayOfWeek;
+			systemTime.wDay = (ushort)dateTime.Day;
+			systemTime.wHour = (ushort)dateTime.Hour;
+			systemTime.wMinute = (ushort)dateTime.Minute;
+			systemTime.wSecond = (ushort)dateTime.Second;
+			systemTime.wMilliseconds = (ushort)dateTime.Millisecond;
 
 			return NativeTypes.Win32Bool.TRUE;
 		}
@@ -3476,16 +3477,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		try
 		{
 			// Convert UTC file time to local file time
-			var low = _env.MemRead32(lpFileTime);
-			var high = _env.MemRead32(lpFileTime + 4);
-			var fileTime = ((ulong)high << 32) | low;
-			var dateTime = DateTime.FromFileTimeUtc((long)fileTime);
+			var fileTime = new FileTimeRef(_env.Memory, lpFileTime);
+			var fileTimeValue = ((ulong)fileTime.dwHighDateTime << 32) | fileTime.dwLowDateTime;
+			var dateTime = DateTime.FromFileTimeUtc((long)fileTimeValue);
 			var localTime = dateTime.ToLocalTime();
 			// Use ToFileTime() (not ToFileTimeUtc()) to get the local file time
-			var localFileTime = (ulong)localTime.ToFileTime();
+			var localFileTimeValue = (ulong)localTime.ToFileTime();
 
-			_env.MemWrite32(lpLocalFileTime, (uint)(localFileTime & 0xFFFFFFFF));
-			_env.MemWrite32(lpLocalFileTime + 4, (uint)(localFileTime >> 32));
+			var localFileTime = new FileTimeRef(_env.Memory, lpLocalFileTime);
+			localFileTime.dwLowDateTime = (uint)(localFileTimeValue & 0xFFFFFFFF);
+			localFileTime.dwHighDateTime = (uint)(localFileTimeValue >> 32);
 
 			return NativeTypes.Win32Bool.TRUE;
 		}
@@ -3684,14 +3685,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			try
 			{
-				// EXCEPTION_POINTERS structure:
-				// typedef struct _EXCEPTION_POINTERS {
-				//   PEXCEPTION_RECORD ExceptionRecord;    // offset 0, 4 bytes
-				//   PCONTEXT          ContextRecord;       // offset 4, 4 bytes  
-				// } EXCEPTION_POINTERS;
-
-				var exceptionRecordPtr = _env.MemRead32(exceptionInfo);
-				var contextRecordPtr = _env.MemRead32(exceptionInfo + 4);
+				var exceptionPointers = new ExceptionPointersRef(_env.Memory, exceptionInfo);
+				var exceptionRecordPtr = exceptionPointers.ExceptionRecord;
+				var contextRecordPtr = exceptionPointers.ContextRecord;
 
 				_logger.LogInformation("[Kernel32]   ExceptionRecord: 0x{ExceptionRecordPtr:X8}", exceptionRecordPtr);
 				_logger.LogInformation("[Kernel32]   ContextRecord: 0x{ContextRecordPtr:X8}", contextRecordPtr);
@@ -3699,14 +3695,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				// If we have a valid exception record, read some basic info
 				if (exceptionRecordPtr != 0)
 				{
-					// EXCEPTION_RECORD structure (first few fields):
-					//   DWORD ExceptionCode;        // offset 0
-					//   DWORD ExceptionFlags;       // offset 4
-					//   PEXCEPTION_RECORD ExceptionRecord; // offset 8
-					//   PVOID ExceptionAddress;     // offset 12
-					var exceptionCode = _env.MemRead32(exceptionRecordPtr);
-					var exceptionFlags = _env.MemRead32(exceptionRecordPtr + 4);
-					var exceptionAddress = _env.MemRead32(exceptionRecordPtr + 12);
+					var exceptionRecord = new ExceptionRecordRef(_env.Memory, exceptionRecordPtr);
+					var exceptionCode = exceptionRecord.ExceptionCode;
+					var exceptionFlags = exceptionRecord.ExceptionFlags;
+					var exceptionAddress = exceptionRecord.ExceptionAddress;
 
 					_logger.LogInformation("[Kernel32]     ExceptionCode: 0x{ExceptionCode:X8}", exceptionCode);
 					_logger.LogInformation("[Kernel32]     ExceptionFlags: 0x{ExceptionFlags:X8}", exceptionFlags);
@@ -6799,18 +6791,21 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		ulong defaultTime = 0;
 		if (lpCreationTime != 0)
 		{
-			_env.MemWrite32(lpCreationTime, (uint)(defaultTime & 0xFFFFFFFF));
-			_env.MemWrite32(lpCreationTime + 4, (uint)(defaultTime >> 32));
+			var ft = new FileTimeRef(_env.Memory, lpCreationTime);
+			ft.dwLowDateTime = (uint)(defaultTime & 0xFFFFFFFF);
+			ft.dwHighDateTime = (uint)(defaultTime >> 32);
 		}
 		if (lpLastAccessTime != 0)
 		{
-			_env.MemWrite32(lpLastAccessTime, (uint)(defaultTime & 0xFFFFFFFF));
-			_env.MemWrite32(lpLastAccessTime + 4, (uint)(defaultTime >> 32));
+			var ft = new FileTimeRef(_env.Memory, lpLastAccessTime);
+			ft.dwLowDateTime = (uint)(defaultTime & 0xFFFFFFFF);
+			ft.dwHighDateTime = (uint)(defaultTime >> 32);
 		}
 		if (lpLastWriteTime != 0)
 		{
-			_env.MemWrite32(lpLastWriteTime, (uint)(defaultTime & 0xFFFFFFFF));
-			_env.MemWrite32(lpLastWriteTime + 4, (uint)(defaultTime >> 32));
+			var ft = new FileTimeRef(_env.Memory, lpLastWriteTime);
+			ft.dwLowDateTime = (uint)(defaultTime & 0xFFFFFFFF);
+			ft.dwHighDateTime = (uint)(defaultTime >> 32);
 		}
 		return 1; // TRUE
 	}
@@ -7037,12 +7032,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// If lpDate is provided, read SYSTEMTIME structure
 		if (lpDate != 0)
 		{
-			var year = _env.MemRead16(lpDate);
-			var month = _env.MemRead16(lpDate + 2);
-			var day = _env.MemRead16(lpDate + 6);
+			var systemTime = new SystemTimeRef(_env.Memory, lpDate);
 			try
 			{
-				date = new DateTime(year, month, day);
+				date = new DateTime(systemTime.wYear, systemTime.wMonth, systemTime.wDay);
 			}
 			catch
 			{
@@ -7287,10 +7280,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Stub - just copy the time
 		if (lpLocalFileTime != 0 && lpFileTime != 0)
 		{
-			var low = _env.MemRead32(lpLocalFileTime);
-			var high = _env.MemRead32(lpLocalFileTime + 4);
-			_env.MemWrite32(lpFileTime, low);
-			_env.MemWrite32(lpFileTime + 4, high);
+			var localTime = new FileTimeRef(_env.Memory, lpLocalFileTime);
+			var fileTime = new FileTimeRef(_env.Memory, lpFileTime);
+			fileTime.dwLowDateTime = localTime.dwLowDateTime;
+			fileTime.dwHighDateTime = localTime.dwHighDateTime;
 		}
 
 		return 1; // TRUE
@@ -7821,9 +7814,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0; // FALSE
 		}
 
-		// Read FILETIME (64-bit value split into two 32-bit values)
-		var ftLow = _env.MemRead32(lpFileTime);
-		var ftHigh = _env.MemRead32(lpFileTime + 4);
+		// Read FILETIME structure
+		var fileTime = new FileTimeRef(_env.Memory, lpFileTime);
 
 		// For stub, convert to a default DOS date/time
 		// DOS date format (16-bit):

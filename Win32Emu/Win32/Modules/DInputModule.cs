@@ -402,19 +402,16 @@ namespace Win32Emu.Win32.Modules
 				//   DWORD dwHow;       // +12: DIPH_DEVICE, DIPH_BYOFFSET, DIPH_BYID, etc.
 				// } DIPROPHEADER;
 
-				var dwSize = _env.MemRead32(pdiph);
-				var dwHeaderSize = _env.MemRead32(pdiph + 4);
-				var dwObj = _env.MemRead32(pdiph + 8);
-				var dwHow = _env.MemRead32(pdiph + 12);
+				var diph = new DiPropHeaderRef(_env.Memory, pdiph);
 
 				_logger.LogInformation("[DInput COM]   DIPROPHEADER: size={DwSize}, headerSize={DwHeaderSize}, obj={DwObj}, how={DwHow}",
-					dwSize, dwHeaderSize, dwObj, dwHow);
+					diph.dwSize, diph.dwHeaderSize, diph.dwObj, diph.dwHow);
 
 				// For properties like DIPROP_BUFFERSIZE, there's additional data after the header
 				// DIPROPDWORD contains: DIPROPHEADER diph; DWORD dwData;
-				if (dwSize >= dwHeaderSize + 4)
+			if (diph.dwSize >= diph.dwHeaderSize + 4)
 				{
-					var dwData = _env.MemRead32(pdiph + dwHeaderSize);
+					var dwData = _env.MemRead32(pdiph + diph.dwHeaderSize);
 					_logger.LogInformation("[DInput COM]   Property value: {DwData}", dwData);
 
 					// Store the property
@@ -669,19 +666,14 @@ namespace Win32Emu.Win32.Modules
 				//   LPDIOBJECTDATAFORMAT rgodf; // +20: Array of object formats
 				// } DIDATAFORMAT;
 
-				var dwSize = _env.MemRead32(lpdf);
-				var dwObjSize = _env.MemRead32(lpdf + 4);
-				var dwFlags = _env.MemRead32(lpdf + 8);
-				var dwDataSize = _env.MemRead32(lpdf + 12);
-				var dwNumObjs = _env.MemRead32(lpdf + 16);
-				var rgodf = _env.MemRead32(lpdf + 20);
+			var df = new DiDataFormatRef(_env.Memory, lpdf);
 
 				_logger.LogInformation("[DInput COM]   DIDATAFORMAT: size={DwSize}, objSize={DwObjSize}, flags=0x{DwFlags:X}, dataSize={DwDataSize}, numObjs={DwNumObjs}, rgodf=0x{Rgodf:X8}",
-					dwSize, dwObjSize, dwFlags, dwDataSize, dwNumObjs, rgodf);
+					df.dwSize, df.dwObjSize, df.dwFlags, df.dwDataSize, df.dwNumObjs, df.rgodf);
 
 				// Store the data format information
 				device.DataFormat = lpdf;
-				device.DataFormatSize = dwDataSize;
+				device.DataFormatSize = df.dwDataSize;
 			}
 
 			return 0; // DI_OK

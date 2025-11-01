@@ -25,4 +25,45 @@ public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem, uint baseOffse
 	public LpWStr LpWStr(int index) => new LpWStr(UInt32(index));
 	
 	public unsafe NativeTypes.Lpcpinfo Lpcpinfo(int index) => (NativeTypes.Cpinfo*)UInt32(index);
+	
+	// Ref struct wrappers for Win32 structures with automatic memory read/write
+	public WndClassARef WndClassA(int index) => new WndClassARef(mem, UInt32(index));
+	
+	public WndClassExARef WndClassExA(int index) => new WndClassExARef(mem, UInt32(index));
+	
+	public MsgRef Msg(int index) => new MsgRef(mem, UInt32(index));
+	
+	public RectRef Rect(int index) => new RectRef(mem, UInt32(index));
+	
+	public PointRef Point(int index) => new PointRef(mem, UInt32(index));
+	
+	public DocInfoARef DocInfoA(int index) => new DocInfoARef(mem, UInt32(index));
+	
+	public ScrollInfoRef ScrollInfo(int index) => new ScrollInfoRef(mem, UInt32(index));
+	
+	public PaintStructRef PaintStruct(int index) => new PaintStructRef(mem, UInt32(index));
+	
+	public DDSurfaceDescRef DDSurfaceDesc(int index) => new DDSurfaceDescRef(mem, UInt32(index));
+	
+	public DiPropHeaderRef DiPropHeader(int index) => new DiPropHeaderRef(mem, UInt32(index));
+	
+	public DiDataFormatRef DiDataFormat(int index) => new DiDataFormatRef(mem, UInt32(index));
+	
+	public FileTimeRef FileTime(int index) => new FileTimeRef(mem, UInt32(index));
+	
+	public SystemTimeRef SystemTime(int index) => new SystemTimeRef(mem, UInt32(index));
+	
+	public WaveFormatExRef WaveFormatEx(int index) => new WaveFormatExRef(mem, UInt32(index));
+	
+	public DDColorKeyRef DDColorKey(int index) => new DDColorKeyRef(mem, UInt32(index));
+	
+	public AcmStreamHeaderRef AcmStreamHeader(int index) => new AcmStreamHeaderRef(mem, UInt32(index));
+	
+	public DDPixelFormatRef DDPixelFormat(int index) => new DDPixelFormatRef(mem, UInt32(index));
+	
+	public StartupInfoARef StartupInfoA(int index) => new StartupInfoARef(mem, UInt32(index));
+	
+	public ExceptionPointersRef ExceptionPointers(int index) => new ExceptionPointersRef(mem, UInt32(index));
+	
+	public ExceptionRecordRef ExceptionRecord(int index) => new ExceptionRecordRef(mem, UInt32(index));
 }

@@ -254,4 +254,258 @@ public static class NativeTypes
 		public const int GWL_EXSTYLE = -20;     // Extended window style
 		public const int GWL_USERDATA = -21;    // User data (32-bit value)
 	}
+
+	// WNDCLASSA structure (40 bytes)
+	// Used with RegisterClassA
+	public struct WNDCLASSA
+	{
+		public uint style;         // Offset 0
+		public uint lpfnWndProc;   // Offset 4
+		public int cbClsExtra;     // Offset 8
+		public int cbWndExtra;     // Offset 12
+		public uint hInstance;     // Offset 16
+		public uint hIcon;         // Offset 20
+		public uint hCursor;       // Offset 24
+		public uint hbrBackground; // Offset 28
+		public uint lpszMenuName;  // Offset 32 (pointer to string)
+		public uint lpszClassName; // Offset 36 (pointer to string)
+	}
+
+	// WNDCLASSEXA structure (48 bytes)
+	// Used with RegisterClassExA
+	public struct WNDCLASSEXA
+	{
+		public uint cbSize;        // Offset 0
+		public uint style;         // Offset 4
+		public uint lpfnWndProc;   // Offset 8
+		public int cbClsExtra;     // Offset 12
+		public int cbWndExtra;     // Offset 16
+		public uint hInstance;     // Offset 20
+		public uint hIcon;         // Offset 24
+		public uint hCursor;       // Offset 28
+		public uint hbrBackground; // Offset 32
+		public uint lpszMenuName;  // Offset 36 (pointer to string)
+		public uint lpszClassName; // Offset 40 (pointer to string)
+		public uint hIconSm;       // Offset 44
+	}
+
+	// MSG structure (28 bytes)
+	// Used with GetMessage, PeekMessage, DispatchMessage
+	public struct MSG
+	{
+		public uint hwnd;      // Offset 0
+		public uint message;   // Offset 4
+		public uint wParam;    // Offset 8
+		public uint lParam;    // Offset 12
+		public uint time;      // Offset 16
+		public int ptX;        // Offset 20
+		public int ptY;        // Offset 24
+	}
+
+	// POINT structure (8 bytes)
+	public struct POINT
+	{
+		public int x;  // Offset 0
+		public int y;  // Offset 4
+	}
+
+	// RECT structure (16 bytes)
+	public struct RECT
+	{
+		public int left;    // Offset 0
+		public int top;     // Offset 4
+		public int right;   // Offset 8
+		public int bottom;  // Offset 12
+	}
+
+	// PAINTSTRUCT structure (64 bytes)
+	public struct PAINTSTRUCT
+	{
+		public uint hdc;            // Offset 0
+		public uint fErase;         // Offset 4
+		public int rcPaintLeft;     // Offset 8
+		public int rcPaintTop;      // Offset 12
+		public int rcPaintRight;    // Offset 16
+		public int rcPaintBottom;   // Offset 20
+		public uint fRestore;       // Offset 24
+		public uint fIncUpdate;     // Offset 28
+		public unsafe fixed byte rgbReserved[32]; // Offset 32
+	}
+
+	// DOCINFO structure (20 bytes)
+	// Used with StartDocA in GDI32
+	public struct DOCINFOA
+	{
+		public int cbSize;        // Offset 0
+		public uint lpszDocName;  // Offset 4 (pointer to string)
+		public uint lpszOutput;   // Offset 8 (pointer to string)
+		public uint lpszDatatype; // Offset 12 (pointer to string)
+		public uint fwType;       // Offset 16
+	}
+
+	// SCROLLINFO structure (28 bytes)
+	// Used with SetScrollInfo/GetScrollInfo in User32
+	public struct SCROLLINFO
+	{
+		public uint cbSize;      // Offset 0
+		public uint fMask;       // Offset 4
+		public int nMin;         // Offset 8
+		public int nMax;         // Offset 12
+		public uint nPage;       // Offset 16
+		public int nPos;         // Offset 20
+		public int nTrackPos;    // Offset 24
+	}
+
+	// DDSURFACEDESC structure (108 bytes minimum)
+	// Used in DirectDraw for surface description
+	public struct DDSURFACEDESC
+	{
+		public uint dwSize;           // Offset 0
+		public uint dwFlags;          // Offset 4
+		public uint dwWidth;          // Offset 8
+		public uint dwHeight;         // Offset 12
+		public uint lPitch;           // Offset 16
+		public uint dwBackBufferCount;// Offset 20
+		// Additional fields exist but these are the most commonly used
+		// dwSurfaceCaps is at offset 108
+	}
+
+	// DIPROPHEADER structure (16 bytes)
+	// Used in DirectInput for property headers
+	public struct DIPROPHEADER
+	{
+		public uint dwSize;       // Offset 0
+		public uint dwHeaderSize; // Offset 4
+		public uint dwObj;        // Offset 8
+		public uint dwHow;        // Offset 12
+	}
+
+	// DIDATAFORMAT structure (24 bytes)
+	// Used in DirectInput for data format specification
+	public struct DIDATAFORMAT
+	{
+		public uint dwSize;      // Offset 0
+		public uint dwObjSize;   // Offset 4
+		public uint dwFlags;     // Offset 8
+		public uint dwDataSize;  // Offset 12
+		public uint dwNumObjs;   // Offset 16
+		public uint rgodf;       // Offset 20 (pointer to array)
+	}
+
+	// FILETIME structure (8 bytes)
+	// 64-bit value representing the number of 100-nanosecond intervals since January 1, 1601 (UTC)
+	public struct FILETIME
+	{
+		public uint dwLowDateTime;  // Offset 0
+		public uint dwHighDateTime; // Offset 4
+	}
+
+	// SYSTEMTIME structure (16 bytes)
+	// Specifies a date and time using individual members for month, day, year, weekday, hour, minute, second, and millisecond
+	public struct SYSTEMTIME
+	{
+		public ushort wYear;         // Offset 0
+		public ushort wMonth;        // Offset 2
+		public ushort wDayOfWeek;    // Offset 4
+		public ushort wDay;          // Offset 6
+		public ushort wHour;         // Offset 8
+		public ushort wMinute;       // Offset 10
+		public ushort wSecond;       // Offset 12
+		public ushort wMilliseconds; // Offset 14
+	}
+
+	// WAVEFORMATEX structure (18 bytes minimum)
+	// Defines the format of waveform-audio data
+	public struct WAVEFORMATEX
+	{
+		public ushort wFormatTag;      // Offset 0 - Format type
+		public ushort nChannels;       // Offset 2 - Number of channels
+		public uint nSamplesPerSec;    // Offset 4 - Sample rate
+		public uint nAvgBytesPerSec;   // Offset 8 - For buffer estimation
+		public ushort nBlockAlign;     // Offset 12 - Block alignment
+		public ushort wBitsPerSample;  // Offset 14 - Bits per sample
+		public ushort cbSize;          // Offset 16 - Size of extra format information
+	}
+
+	// DDCOLORKEY structure (8 bytes)
+	// Specifies a color key for DirectDraw surfaces
+	public struct DDCOLORKEY
+	{
+		public uint dwColorSpaceLowValue;  // Offset 0 - Low boundary of color space
+		public uint dwColorSpaceHighValue; // Offset 4 - High boundary of color space
+	}
+
+	// ACMSTREAMHEADER structure (used for ACM audio conversion)
+	public struct ACMSTREAMHEADER
+	{
+		public uint cbStruct;       // Offset 0 - Size of structure
+		public uint fdwStatus;      // Offset 4 - Flags
+		public uint dwUser;         // Offset 8 - User data
+		public uint pbSrc;          // Offset 12 - Source buffer pointer
+		public uint cbSrcLength;    // Offset 16 - Source buffer length
+		public uint cbSrcLengthUsed;// Offset 20 - Source bytes used
+		public uint dwSrcUser;      // Offset 24 - Source user data
+		public uint pbDst;          // Offset 28 - Destination buffer pointer
+		public uint cbDstLength;    // Offset 32 - Destination buffer length
+		public uint cbDstLengthUsed;// Offset 36 - Destination bytes used
+		public uint dwDstUser;      // Offset 40 - Destination user data
+	}
+
+	// DDPIXELFORMAT structure (32 bytes)
+	// Describes the pixel format of a DirectDraw surface
+	public struct DDPIXELFORMAT
+	{
+		public uint dwSize;             // Offset 0 - Size of structure (32)
+		public uint dwFlags;            // Offset 4 - Pixel format flags
+		public uint dwFourCC;           // Offset 8 - FourCC code
+		public uint dwRGBBitCount;      // Offset 12 - RGB bit count
+		public uint dwRBitMask;         // Offset 16 - Red bit mask
+		public uint dwGBitMask;         // Offset 20 - Green bit mask
+		public uint dwBBitMask;         // Offset 24 - Blue bit mask
+		public uint dwRGBAlphaBitMask;  // Offset 28 - Alpha bit mask
+	}
+
+	// STARTUPINFOA structure (68 bytes)
+	// Specifies startup information for a process
+	public struct STARTUPINFOA
+	{
+		public uint cb;              // Offset 0 - Size of structure
+		public uint lpReserved;      // Offset 4
+		public uint lpDesktop;       // Offset 8
+		public uint lpTitle;         // Offset 12
+		public uint dwX;             // Offset 16
+		public uint dwY;             // Offset 20
+		public uint dwXSize;         // Offset 24
+		public uint dwYSize;         // Offset 28
+		public uint dwXCountChars;   // Offset 32
+		public uint dwYCountChars;   // Offset 36
+		public uint dwFillAttribute; // Offset 40
+		public uint dwFlags;         // Offset 44
+		public ushort wShowWindow;   // Offset 48
+		public ushort cbReserved2;   // Offset 50
+		public uint lpReserved2;     // Offset 52
+		public uint hStdInput;       // Offset 56
+		public uint hStdOutput;      // Offset 60
+		public uint hStdError;       // Offset 64
+	}
+
+	// EXCEPTION_POINTERS structure (8 bytes)
+	// Contains exception record and context pointers
+	public struct EXCEPTION_POINTERS
+	{
+		public uint ExceptionRecord; // Offset 0 - Pointer to EXCEPTION_RECORD
+		public uint ContextRecord;   // Offset 4 - Pointer to CONTEXT
+	}
+
+	// EXCEPTION_RECORD structure (partial - 20 bytes minimum)
+	// Describes an exception
+	public struct EXCEPTION_RECORD
+	{
+		public uint ExceptionCode;       // Offset 0
+		public uint ExceptionFlags;      // Offset 4
+		public uint ExceptionRecord;     // Offset 8 - Pointer to nested record
+		public uint ExceptionAddress;    // Offset 12
+		public uint NumberParameters;    // Offset 16
+		// ExceptionInformation array follows...
+	}
 }

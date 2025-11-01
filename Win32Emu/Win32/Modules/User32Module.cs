@@ -884,41 +884,21 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			// WNDCLASSA structure layout:
-			// UINT      style;         // 0
-			// WNDPROC   lpfnWndProc;   // 4
-			// int       cbClsExtra;    // 8
-			// int       cbWndExtra;    // 12
-			// HINSTANCE hInstance;     // 16
-			// HICON     hIcon;         // 20
-			// HCURSOR   hCursor;       // 24
-			// HBRUSH    hbrBackground; // 28
-			// LPCSTR    lpszMenuName;  // 32
-			// LPCSTR    lpszClassName; // 36
+			// Use ref struct wrapper for automatic memory access
+			var wndClass = new WndClassARef(_env.Memory, lpWndClass);
 
-			var style = _env.MemRead32(lpWndClass + 0);
-			var wndProc = _env.MemRead32(lpWndClass + 4);
-			var clsExtra = (int)_env.MemRead32(lpWndClass + 8);
-			var wndExtra = (int)_env.MemRead32(lpWndClass + 12);
-			var hInstance = _env.MemRead32(lpWndClass + 16);
-			var hIcon = _env.MemRead32(lpWndClass + 20);
-			var hCursor = _env.MemRead32(lpWndClass + 24);
-			var hbrBackground = _env.MemRead32(lpWndClass + 28);
-			var menuNamePtr = _env.MemRead32(lpWndClass + 32);
-			var classNamePtr = _env.MemRead32(lpWndClass + 36);
-
-			if (classNamePtr == 0)
+			if (wndClass.lpszClassName == 0)
 			{
 				_logger.LogInformation("[User32] RegisterClassA: NULL class name");
 				return 0;
 			}
 
-			var className = _env.ReadAnsiString(classNamePtr);
-			var menuName = menuNamePtr != 0 ? _env.ReadAnsiString(menuNamePtr) : null;
+			var className = _env.ReadAnsiString(wndClass.lpszClassName);
+			var menuName = wndClass.lpszMenuName != 0 ? _env.ReadAnsiString(wndClass.lpszMenuName) : null;
 
 			var classInfo = new ProcessEnvironment.WindowClassInfo(
-				className, style, wndProc, clsExtra, wndExtra,
-				hInstance, hIcon, hCursor, hbrBackground, menuName
+				className, wndClass.style, wndClass.lpfnWndProc, wndClass.cbClsExtra, wndClass.cbWndExtra,
+				wndClass.hInstance, wndClass.hIcon, wndClass.hCursor, wndClass.hbrBackground, menuName
 			);
 
 			if (_env.RegisterWindowClass(className, classInfo))
@@ -1170,14 +1150,6 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(10)]
 		private uint GetMessageA(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax)
 		{
-			// MSG structure layout (28 bytes):
-			// HWND   hwnd;      // 0
-			// UINT   message;   // 4
-			// WPARAM wParam;    // 8
-			// LPARAM lParam;    // 12
-			// DWORD  time;      // 16
-			// POINT  pt;        // 20 (x, y each 4 bytes)
-
 			if (lpMsg == 0)
 			{
 				_logger.LogInformation("[User32] GetMessageA: NULL MSG pointer");
@@ -1196,20 +1168,23 @@ namespace Win32Emu.Win32.Modules
 			// This approach provides better emulator responsiveness while maintaining
 			// compatibility with most Win32 applications that don't rely on strict blocking.
 			
+			// Use ref struct wrapper - writes happen automatically on property assignment
+			var msg = new MsgRef(_env.Memory, lpMsg);
+			
 			// Check if there's a quit message
 			if (_env.HasQuitMessage())
 			{
 				var exitCode = _env.GetQuitExitCode();
 				_logger.LogInformation("[User32] GetMessageA: WM_QUIT (exitCode={ExitCode})", exitCode);
 
-				// Fill MSG structure with WM_QUIT
-				_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
-				_env.MemWrite32(lpMsg + 4, 0x0012); // WM_QUIT = 0x0012
-				_env.MemWrite32(lpMsg + 8, (uint)exitCode); // wParam = exit code
-				_env.MemWrite32(lpMsg + 12, 0); // lParam = 0
-				_env.MemWrite32(lpMsg + 16, 0); // time = 0
-				_env.MemWrite32(lpMsg + 20, 0); // pt.x = 0
-				_env.MemWrite32(lpMsg + 24, 0); // pt.y = 0
+				// Direct property assignments automatically write to memory
+				msg.hwnd = 0;
+				msg.message = 0x0012; // WM_QUIT
+				msg.wParam = (uint)exitCode;
+				msg.lParam = 0;
+				msg.time = 0;
+				msg.ptX = 0;
+				msg.ptY = 0;
 
 				return 0; // GetMessage returns 0 for WM_QUIT
 			}
@@ -1222,29 +1197,27 @@ namespace Win32Emu.Win32.Modules
 				if (queuedMsg.Value.Message == 0x0012)
 				{
 					// WM_QUIT - already being processed from the queue; do not set the quit flag again
-					
-					// Fill MSG structure with WM_QUIT
-					_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
-					_env.MemWrite32(lpMsg + 4, 0x0012); // WM_QUIT = 0x0012
-					_env.MemWrite32(lpMsg + 8, queuedMsg.Value.WParam); // wParam = exit code
-					_env.MemWrite32(lpMsg + 12, 0); // lParam = 0
-					_env.MemWrite32(lpMsg + 16, queuedMsg.Value.Time); // time
-					_env.MemWrite32(lpMsg + 20, queuedMsg.Value.PtX); // pt.x
-					_env.MemWrite32(lpMsg + 24, queuedMsg.Value.PtY); // pt.y
+					msg.hwnd = 0;
+					msg.message = 0x0012; // WM_QUIT
+					msg.wParam = queuedMsg.Value.WParam;
+					msg.lParam = 0;
+					msg.time = queuedMsg.Value.Time;
+					msg.ptX = (int)queuedMsg.Value.PtX;
+					msg.ptY = (int)queuedMsg.Value.PtY;
 					
 					return 0; // GetMessage returns 0 for WM_QUIT
 				}
 
 				_logger.LogInformation("[User32] GetMessageA: retrieved MSG=0x{ValueMessage:X4} HWND=0x{ValueHwnd:X8}", queuedMsg.Value.Message, queuedMsg.Value.Hwnd);
 
-				// Fill MSG structure
-				_env.MemWrite32(lpMsg + 0, queuedMsg.Value.Hwnd);
-				_env.MemWrite32(lpMsg + 4, queuedMsg.Value.Message);
-				_env.MemWrite32(lpMsg + 8, queuedMsg.Value.WParam);
-				_env.MemWrite32(lpMsg + 12, queuedMsg.Value.LParam);
-				_env.MemWrite32(lpMsg + 16, queuedMsg.Value.Time);
-				_env.MemWrite32(lpMsg + 20, queuedMsg.Value.PtX);
-				_env.MemWrite32(lpMsg + 24, queuedMsg.Value.PtY);
+				// Direct property assignments automatically write to memory
+				msg.hwnd = queuedMsg.Value.Hwnd;
+				msg.message = queuedMsg.Value.Message;
+				msg.wParam = queuedMsg.Value.WParam;
+				msg.lParam = queuedMsg.Value.LParam;
+				msg.time = queuedMsg.Value.Time;
+				msg.ptX = (int)queuedMsg.Value.PtX;
+				msg.ptY = (int)queuedMsg.Value.PtY;
 
 				return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 			}
@@ -1253,14 +1226,14 @@ namespace Win32Emu.Win32.Modules
 			// This prevents tests and applications from hanging when no messages are available
 			_logger.LogTrace("[User32] GetMessageA: No messages available, returning WM_NULL");
 			
-			// Fill MSG structure with WM_NULL
-			_env.MemWrite32(lpMsg + 0, 0); // hwnd = NULL
-			_env.MemWrite32(lpMsg + 4, 0); // WM_NULL = 0
-			_env.MemWrite32(lpMsg + 8, 0); // wParam = 0
-			_env.MemWrite32(lpMsg + 12, 0); // lParam = 0
-			_env.MemWrite32(lpMsg + 16, (uint)Environment.TickCount); // time
-			_env.MemWrite32(lpMsg + 20, 0); // pt.x = 0
-			_env.MemWrite32(lpMsg + 24, 0); // pt.y = 0
+			// Direct property assignments automatically write to memory
+			msg.hwnd = 0;
+			msg.message = 0; // WM_NULL
+			msg.wParam = 0;
+			msg.lParam = 0;
+			msg.time = (uint)Environment.TickCount;
+			msg.ptX = 0;
+			msg.ptY = 0;
 			
 			return 1; // GetMessage returns non-zero for WM_NULL (only 0 for WM_QUIT)
 		}
@@ -1272,13 +1245,10 @@ namespace Win32Emu.Win32.Modules
 
 			if (lpMsg != 0)
 			{
-				var hwnd = _env.MemRead32(lpMsg + 0);
-				var message = _env.MemRead32(lpMsg + 4);
-				var wParam = _env.MemRead32(lpMsg + 8);
-				var lParam = _env.MemRead32(lpMsg + 12);
+				var msg = new MsgRef(_env.Memory, lpMsg);
 				_logger.LogInformation(
 					"[User32] TranslateMessage: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}",
-					hwnd, message, wParam, lParam);
+					msg.hwnd, msg.message, msg.wParam, msg.lParam);
 			}
 			else
 			{
@@ -1298,18 +1268,16 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Read MSG structure
-			var hwnd = _env.MemRead32(lpMsg + 0);
-			var message = _env.MemRead32(lpMsg + 4);
-			var wParam = _env.MemRead32(lpMsg + 8);
-			var lParam = _env.MemRead32(lpMsg + 12);
+			var msg = new MsgRef(_env.Memory, lpMsg);
 
-			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, message, wParam, lParam);
+			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", 
+				msg.hwnd, msg.message, msg.wParam, msg.lParam);
 
 			// First, try dispatching through MessageDispatcher asynchronously
-			if (_env.MessageDispatcher.HasHandlers(message))
+			if (_env.MessageDispatcher.HasHandlers(msg.message))
 			{
 				_logger.LogDebug("[User32] DispatchMessageA: Dispatching through MessageDispatcher");
-				var typedMessage = Messaging.MessageFactory.CreateMessage(hwnd, message, wParam, lParam);
+				var typedMessage = Messaging.MessageFactory.CreateMessage(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 				// Use async dispatch with synchronous wait (DispatchMessageA is called from emulated code)
 				var dispatchResult = _env.MessageDispatcher.DispatchAsync(typedMessage).GetAwaiter().GetResult();
 				_logger.LogDebug("[User32] DispatchMessageA: MessageDispatcher returned 0x{Result:X8}", dispatchResult);
@@ -1317,25 +1285,25 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Check if this is a standard control first
-			var windowInfo = _env.GetWindow(hwnd);
+			var windowInfo = _env.GetWindow(msg.hwnd);
 			if (windowInfo.HasValue && StandardControlHandler.IsStandardControl(windowInfo.Value.ClassName))
 			{
 				_logger.LogInformation("[User32] DispatchMessageA: Routing to standard control handler for class '{ClassName}'", windowInfo.Value.ClassName);
-				return _standardControlHandler.HandleMessage(hwnd, message, wParam, lParam, windowInfo.Value.ClassName);
+				return _standardControlHandler.HandleMessage(msg.hwnd, msg.message, msg.wParam, msg.lParam, windowInfo.Value.ClassName);
 			}
 
 			// Try to get the window procedure for this window
-			var wndProc = _env.GetWindowProc(hwnd);
+			var wndProc = _env.GetWindowProc(msg.hwnd);
 			if (wndProc.HasValue && wndProc.Value != 0)
 			{
-				_logger.LogInformation("[User32] DispatchMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
+				_logger.LogInformation("[User32] DispatchMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, msg.hwnd);
 
-				var result = CallWindowProcedure(wndProc.Value, hwnd, message, wParam, lParam);
+				var result = CallWindowProcedure(wndProc.Value, msg.hwnd, msg.message, msg.wParam, msg.lParam);
 				_logger.LogInformation("[User32] DispatchMessageA: WndProc returned 0x{Result:X8}", result);
 				return result;
 			}
 
-			_logger.LogInformation("[User32] DispatchMessageA: No WndProc found for HWND=0x{Hwnd:X8}", hwnd);
+			_logger.LogInformation("[User32] DispatchMessageA: No WndProc found for HWND=0x{Hwnd:X8}", msg.hwnd);
 
 			// For now, just return 0 (message processed)
 			return 0;
@@ -1714,11 +1682,9 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			// POINT structure: LONG x, LONG y (8 bytes)
-			var x = (int)_env.MemRead32(lpPoint);
-			var y = (int)_env.MemRead32(lpPoint + 4);
+			var point = new PointRef(_env.Memory, lpPoint);
 
-			_logger.LogInformation("[User32] ClientToScreen: HWND=0x{Hwnd:X8} Point=({I},{I1})", hwnd, x, y);
+			_logger.LogInformation("[User32] ClientToScreen: HWND=0x{Hwnd:X8} Point=({X},{Y})", hwnd, point.x, point.y);
 
 			// For now, treat client coordinates same as screen coordinates (no offset)
 			// In a real implementation, this would add window position to client coords
@@ -1738,11 +1704,11 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[User32] SetRect: lpRect=0x{LpRect:X8} ({Left},{Top},{Right},{Bottom})", lpRect, left, top, right, bottom);
 
-			// RECT structure: LONG left, top, right, bottom (16 bytes)
-			_env.MemWrite32(lpRect, (uint)left);
-			_env.MemWrite32(lpRect + 4, (uint)top);
-			_env.MemWrite32(lpRect + 8, (uint)right);
-			_env.MemWrite32(lpRect + 12, (uint)bottom);
+			var rect = new RectRef(_env.Memory, lpRect);
+			rect.left = left;
+			rect.top = top;
+			rect.right = right;
+			rect.bottom = bottom;
 
 			return 1; // TRUE
 		}
@@ -1758,10 +1724,11 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] GetClientRect: HWND=0x{Hwnd:X8}", hwnd);
 
 			// Return a default client rect (0, 0, 640, 480)
-			_env.MemWrite32(lpRect, 0); // left
-			_env.MemWrite32(lpRect + 4, 0); // top
-			_env.MemWrite32(lpRect + 8, 640); // right
-			_env.MemWrite32(lpRect + 12, 480); // bottom
+			var rect = new RectRef(_env.Memory, lpRect);
+			rect.left = 0;
+			rect.top = 0;
+			rect.right = 640;
+			rect.bottom = 480;
 
 			return 1; // TRUE
 		}
@@ -1777,10 +1744,11 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] GetWindowRect: HWND=0x{Hwnd:X8}", hwnd);
 
 			// Return a default window rect (100, 100, 740, 580)
-			_env.MemWrite32(lpRect, 100); // left
-			_env.MemWrite32(lpRect + 4, 100); // top
-			_env.MemWrite32(lpRect + 8, 740); // right
-			_env.MemWrite32(lpRect + 12, 580); // bottom
+			var rect = new RectRef(_env.Memory, lpRect);
+			rect.left = 100;
+			rect.top = 100;
+			rect.right = 740;
+			rect.bottom = 580;
 
 			return 1; // TRUE
 		}
@@ -1793,12 +1761,10 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			var left = (int)_env.MemRead32(lpRect);
-			var top = (int)_env.MemRead32(lpRect + 4);
-			var right = (int)_env.MemRead32(lpRect + 8);
-			var bottom = (int)_env.MemRead32(lpRect + 12);
+			var rect = new RectRef(_env.Memory, lpRect);
 
-			_logger.LogInformation("[User32] AdjustWindowRectEx: rect=({Left},{Top},{Right},{Bottom}) style=0x{DwStyle:X8}", left, top, right, bottom, dwStyle);
+			_logger.LogInformation("[User32] AdjustWindowRectEx: rect=({Left},{Top},{Right},{Bottom}) style=0x{DwStyle:X8}", 
+				rect.left, rect.top, rect.right, rect.bottom, dwStyle);
 
 			// Add window frame size (typical values)
 			const int frameWidth = 8;
@@ -1806,20 +1772,15 @@ namespace Win32Emu.Win32.Modules
 			const int titleBarHeight = 32;
 			const int menuHeight = 20;
 
-			left -= frameWidth;
-			top -= titleBarHeight;
-			right += frameWidth;
-			bottom += frameHeight;
+			rect.left -= frameWidth;
+			rect.top -= titleBarHeight;
+			rect.right += frameWidth;
+			rect.bottom += frameHeight;
 
 			if (bMenu != 0)
 			{
-				top -= menuHeight;
+				rect.top -= menuHeight;
 			}
-
-			_env.MemWrite32(lpRect, (uint)left);
-			_env.MemWrite32(lpRect + 4, (uint)top);
-			_env.MemWrite32(lpRect + 8, (uint)right);
-			_env.MemWrite32(lpRect + 12, (uint)bottom);
 
 			return 1; // TRUE
 		}
@@ -3335,8 +3296,9 @@ namespace Win32Emu.Win32.Modules
 			// BOOL fIncUpdate;  // 28
 			// BYTE rgbReserved[32]; // 32
 
-			_env.MemWrite32(lpPaint + 0, hdc);
-			_env.MemWrite32(lpPaint + 4, 1); // fErase = TRUE
+			var ps = new PaintStructRef(_env.Memory, lpPaint);
+			ps.hdc = hdc;
+			ps.fErase = 1; // TRUE
 
 			// Get the client rectangle for rcPaint
 			GetClientRect(hwnd, lpPaint + 8);
@@ -3357,8 +3319,8 @@ namespace Win32Emu.Win32.Modules
 
 			if (lpPaint != 0)
 			{
-				var hdc = _env.MemRead32(lpPaint + 0);
-				ReleaseDc(hwnd, hdc);
+				var ps = new PaintStructRef(_env.Memory, lpPaint);
+				ReleaseDc(hwnd, ps.hdc);
 			}
 
 			return 1; // Always returns non-zero
@@ -3371,11 +3333,9 @@ namespace Win32Emu.Win32.Modules
 
 			if (lprc != 0)
 			{
-				var left = (int)_env.MemRead32(lprc);
-				var top = (int)_env.MemRead32(lprc + 4);
-				var right = (int)_env.MemRead32(lprc + 8);
-				var bottom = (int)_env.MemRead32(lprc + 12);
-				_logger.LogInformation("[User32] FillRect: rect=({Left},{Top},{Right},{Bottom})", left, top, right, bottom);
+				var rect = new RectRef(_env.Memory, lprc);
+				_logger.LogInformation("[User32] FillRect: rect=({Left},{Top},{Right},{Bottom})", 
+					rect.left, rect.top, rect.right, rect.bottom);
 			}
 
 			// For now, we don't do any actual drawing.
@@ -3783,17 +3743,15 @@ namespace Win32Emu.Win32.Modules
 
 			if (lprc != 0)
 			{
-				// Read RECT structure (left, top, right, bottom)
-				var left = (int)_env.MemRead32(lprc);
-				var top = (int)_env.MemRead32(lprc + 4);
-				var right = (int)_env.MemRead32(lprc + 8);
-				var bottom = (int)_env.MemRead32(lprc + 12);
+				var rect = new RectRef(_env.Memory, lprc);
 
 				// Offset the rectangle
-				_env.MemWrite32(lprc, (uint)(left + dx));
-				_env.MemWrite32(lprc + 4, (uint)(top + dy));
-				_env.MemWrite32(lprc + 8, (uint)(right + dx));
-				_env.MemWrite32(lprc + 12, (uint)(bottom + dy));
+				rect.left += dx;
+				rect.top += dy;
+				rect.right += dx;
+				rect.bottom += dy;
+
+	
 			}
 
 			return 1; // TRUE
@@ -3805,17 +3763,13 @@ namespace Win32Emu.Win32.Modules
 
 			if (lprc != 0)
 			{
-				// Read RECT structure (left, top, right, bottom)
-				var left = (int)_env.MemRead32(lprc);
-				var top = (int)_env.MemRead32(lprc + 4);
-				var right = (int)_env.MemRead32(lprc + 8);
-				var bottom = (int)_env.MemRead32(lprc + 12);
+				var rect = new RectRef(_env.Memory, lprc);
 
 				// Inflate the rectangle
-				_env.MemWrite32(lprc, (uint)(left - dx));
-				_env.MemWrite32(lprc + 4, (uint)(top - dy));
-				_env.MemWrite32(lprc + 8, (uint)(right + dx));
-				_env.MemWrite32(lprc + 12, (uint)(bottom + dy));
+				rect.left -= dx;
+				rect.top -= dy;
+				rect.right += dx;
+				rect.bottom += dy;
 			}
 
 			return 1; // TRUE
@@ -4799,48 +4753,24 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			// WNDCLASSEXA structure layout:
-			// UINT      cbSize;        // 0
-			// UINT      style;         // 4
-			// WNDPROC   lpfnWndProc;   // 8
-			// int       cbClsExtra;    // 12
-			// int       cbWndExtra;    // 16
-			// HINSTANCE hInstance;     // 20
-			// HICON     hIcon;         // 24
-			// HCURSOR   hCursor;       // 28
-			// HBRUSH    hbrBackground; // 32
-			// LPCSTR    lpszMenuName;  // 36
-			// LPCSTR    lpszClassName; // 40
-			// HICON     hIconSm;       // 44
+			// Use ref struct wrapper for automatic memory access
+			var wndClassEx = new WndClassExARef(_env.Memory, lpWndClassEx);
 
-			var cbSize = _env.MemRead32(lpWndClassEx + 0);
-			var style = _env.MemRead32(lpWndClassEx + 4);
-			var wndProc = _env.MemRead32(lpWndClassEx + 8);
-			var clsExtra = (int)_env.MemRead32(lpWndClassEx + 12);
-			var wndExtra = (int)_env.MemRead32(lpWndClassEx + 16);
-			var hInstance = _env.MemRead32(lpWndClassEx + 20);
-			var hIcon = _env.MemRead32(lpWndClassEx + 24);
-			var hCursor = _env.MemRead32(lpWndClassEx + 28);
-			var hbrBackground = _env.MemRead32(lpWndClassEx + 32);
-			var menuNamePtr = _env.MemRead32(lpWndClassEx + 36);
-			var classNamePtr = _env.MemRead32(lpWndClassEx + 40);
-			var hIconSm = _env.MemRead32(lpWndClassEx + 44);
-
-			if (classNamePtr == 0)
+			if (wndClassEx.lpszClassName == 0)
 			{
 				_logger.LogInformation("[User32] RegisterClassExA: NULL class name");
 				return 0;
 			}
 
-			var className = _env.ReadAnsiString(classNamePtr);
-			var menuName = menuNamePtr != 0 ? _env.ReadAnsiString(menuNamePtr) : null;
+			var className = _env.ReadAnsiString(wndClassEx.lpszClassName);
+			var menuName = wndClassEx.lpszMenuName != 0 ? _env.ReadAnsiString(wndClassEx.lpszMenuName) : null;
 
 			_logger.LogInformation("[User32] RegisterClassExA: cbSize={CbSize}, style=0x{Style:X}, wndProc=0x{WndProc:X8}, className='{ClassName}'",
-				cbSize, style, wndProc, className);
+				wndClassEx.cbSize, wndClassEx.style, wndClassEx.lpfnWndProc, className);
 
 			var classInfo = new ProcessEnvironment.WindowClassInfo(
-				className, style, wndProc, clsExtra, wndExtra,
-				hInstance, hIcon, hCursor, hbrBackground, menuName
+				className, wndClassEx.style, wndClassEx.lpfnWndProc, wndClassEx.cbClsExtra, wndClassEx.cbWndExtra,
+				wndClassEx.hInstance, wndClassEx.hIcon, wndClassEx.hCursor, wndClassEx.hbrBackground, menuName
 			);
 
 			if (_env.RegisterWindowClass(className, classInfo))
@@ -4948,38 +4878,33 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Read both source rectangles
-			var left1 = (int)_env.MemRead32(lprcSrc1 + 0);
-			var top1 = (int)_env.MemRead32(lprcSrc1 + 4);
-			var right1 = (int)_env.MemRead32(lprcSrc1 + 8);
-			var bottom1 = (int)_env.MemRead32(lprcSrc1 + 12);
-
-			var left2 = (int)_env.MemRead32(lprcSrc2 + 0);
-			var top2 = (int)_env.MemRead32(lprcSrc2 + 4);
-			var right2 = (int)_env.MemRead32(lprcSrc2 + 8);
-			var bottom2 = (int)_env.MemRead32(lprcSrc2 + 12);
+			var rect1 = new RectRef(_env.Memory, lprcSrc1);
+			var rect2 = new RectRef(_env.Memory, lprcSrc2);
 
 			// Calculate intersection
-			var leftDst = Math.Max(left1, left2);
-			var topDst = Math.Max(top1, top2);
-			var rightDst = Math.Min(right1, right2);
-			var bottomDst = Math.Min(bottom1, bottom2);
+			var leftDst = Math.Max(rect1.left, rect2.left);
+			var topDst = Math.Max(rect1.top, rect2.top);
+			var rightDst = Math.Min(rect1.right, rect2.right);
+			var bottomDst = Math.Min(rect1.bottom, rect2.bottom);
 
 			// Check if rectangles intersect
 			if (leftDst >= rightDst || topDst >= bottomDst)
 			{
 				// No intersection - set to empty rectangle
-				_env.MemWrite32(lprcDst + 0, 0);
-				_env.MemWrite32(lprcDst + 4, 0);
-				_env.MemWrite32(lprcDst + 8, 0);
-				_env.MemWrite32(lprcDst + 12, 0);
+				var emptyRect = new RectRef(_env.Memory, lprcDst);
+				emptyRect.left = 0;
+				emptyRect.top = 0;
+				emptyRect.right = 0;
+				emptyRect.bottom = 0;
 				return 0; // FALSE
 			}
 
 			// Write intersection rectangle
-			_env.MemWrite32(lprcDst + 0, (uint)leftDst);
-			_env.MemWrite32(lprcDst + 4, (uint)topDst);
-			_env.MemWrite32(lprcDst + 8, (uint)rightDst);
-			_env.MemWrite32(lprcDst + 12, (uint)bottomDst);
+			var dstRect = new RectRef(_env.Memory, lprcDst);
+			dstRect.left = leftDst;
+			dstRect.top = topDst;
+			dstRect.right = rightDst;
+			dstRect.bottom = bottomDst;
 
 			return 1; // TRUE
 		}
@@ -5175,18 +5100,9 @@ namespace Win32Emu.Win32.Modules
 
 			if (lpsi != 0)
 			{
-				// SCROLLINFO structure:
-				// UINT cbSize; UINT fMask; int nMin; int nMax; UINT nPage; int nPos; int nTrackPos;
-				var cbSize = _env.MemRead32(lpsi + 0);
-				var fMask = _env.MemRead32(lpsi + 4);
-				var nMin = (int)_env.MemRead32(lpsi + 8);
-				var nMax = (int)_env.MemRead32(lpsi + 12);
-				var nPage = _env.MemRead32(lpsi + 16);
-				var nPos = (int)_env.MemRead32(lpsi + 20);
-				var nTrackPos = (int)_env.MemRead32(lpsi + 24);
-
+				var si = new ScrollInfoRef(_env.Memory, lpsi);
 				_logger.LogInformation("[User32] SetScrollInfo: nMin={NMin}, nMax={NMax}, nPage={NPage}, nPos={NPos}",
-					nMin, nMax, nPage, nPos);
+					si.nMin, si.nMax, si.nPage, si.nPos);
 			}
 
 			// Return the current position (stub)

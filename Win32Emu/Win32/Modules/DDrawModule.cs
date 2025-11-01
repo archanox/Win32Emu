@@ -871,14 +871,14 @@ namespace Win32Emu.Win32.Modules
 			if (lpDDColorKey != 0)
 			{
 				// Read DDCOLORKEY structure
-				var colorKeyLow = _env.MemRead32(lpDDColorKey);
-				var colorKeyHigh = _env.MemRead32(lpDDColorKey + 4);
+				var colorKey = new DDColorKeyRef(_env.Memory, lpDDColorKey);
 
-				surface.ColorKeyLow = colorKeyLow;
-				surface.ColorKeyHigh = colorKeyHigh;
+				surface.ColorKeyLow = colorKey.dwColorSpaceLowValue;
+				surface.ColorKeyHigh = colorKey.dwColorSpaceHighValue;
 				surface.HasColorKey = true;
 
-				_logger.LogInformation("[DDraw] Set color key: low=0x{Low:X8}, high=0x{High:X8}", colorKeyLow, colorKeyHigh);
+				_logger.LogInformation("[DDraw] Set color key: low=0x{Low:X8}, high=0x{High:X8}", 
+					colorKey.dwColorSpaceLowValue, colorKey.dwColorSpaceHighValue);
 			}
 			else
 			{
@@ -1092,34 +1092,35 @@ namespace Win32Emu.Win32.Modules
 				if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
 				{
 					// Fill DDPIXELFORMAT structure
-					_env.MemWrite32(lpDDPixelFormat, 32); // dwSize
-					_env.MemWrite32(lpDDPixelFormat + 4, 0x00000040); // dwFlags: DDPF_RGB
-					_env.MemWrite32(lpDDPixelFormat + 8, 0); // dwFourCC
-					_env.MemWrite32(lpDDPixelFormat + 12, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
+					var pf = new DDPixelFormatRef(_env.Memory, lpDDPixelFormat);
+					pf.dwSize = 32;
+					pf.dwFlags = 0x00000040; // DDPF_RGB
+					pf.dwFourCC = 0;
+					pf.dwRGBBitCount = (uint)ddrawObj.BitsPerPixel;
 
 					// Set RGB masks based on bit depth
 					if (ddrawObj.BitsPerPixel == 8)
 					{
 						// Palettized mode
-						_env.MemWrite32(lpDDPixelFormat + 4, 0x00000020); // DDPF_PALETTEINDEXED8
-						_env.MemWrite32(lpDDPixelFormat + 16, 0);
-						_env.MemWrite32(lpDDPixelFormat + 20, 0);
-						_env.MemWrite32(lpDDPixelFormat + 24, 0);
+						pf.dwFlags = 0x00000020; // DDPF_PALETTEINDEXED8
+						pf.dwRBitMask = 0;
+						pf.dwGBitMask = 0;
+						pf.dwBBitMask = 0;
 					}
 					else if (ddrawObj.BitsPerPixel == 16)
 					{
-						_env.MemWrite32(lpDDPixelFormat + 16, 0xF800); // Red mask (5 bits)
-						_env.MemWrite32(lpDDPixelFormat + 20, 0x07E0); // Green mask (6 bits)
-						_env.MemWrite32(lpDDPixelFormat + 24, 0x001F); // Blue mask (5 bits)
+						pf.dwRBitMask = 0xF800; // Red mask (5 bits)
+						pf.dwGBitMask = 0x07E0; // Green mask (6 bits)
+						pf.dwBBitMask = 0x001F; // Blue mask (5 bits)
 					}
 					else if (ddrawObj.BitsPerPixel == 24 || ddrawObj.BitsPerPixel == 32)
 					{
-						_env.MemWrite32(lpDDPixelFormat + 16, 0x00FF0000); // Red mask
-						_env.MemWrite32(lpDDPixelFormat + 20, 0x0000FF00); // Green mask
-						_env.MemWrite32(lpDDPixelFormat + 24, 0x000000FF); // Blue mask
+						pf.dwRBitMask = 0x00FF0000; // Red mask
+						pf.dwGBitMask = 0x0000FF00; // Green mask
+						pf.dwBBitMask = 0x000000FF; // Blue mask
 					}
 
-					_env.MemWrite32(lpDDPixelFormat + 28, 0); // dwRGBAlphaBitMask
+					pf.dwRGBAlphaBitMask = 0;
 				}
 			}
 
@@ -1682,10 +1683,11 @@ namespace Win32Emu.Win32.Modules
 			int srcX = 0, srcY = 0, srcWidth = srcSurface.Width, srcHeight = srcSurface.Height;
 			if (lpSrcRect != 0)
 			{
-				srcX = (int)_env.MemRead32(lpSrcRect);
-				srcY = (int)_env.MemRead32(lpSrcRect + 4);
-				srcWidth = (int)_env.MemRead32(lpSrcRect + 8) - srcX;
-				srcHeight = (int)_env.MemRead32(lpSrcRect + 12) - srcY;
+				var srcRect = new RectRef(_env.Memory, lpSrcRect);
+				srcX = srcRect.left;
+				srcY = srcRect.top;
+				srcWidth = srcRect.right - srcX;
+				srcHeight = srcRect.bottom - srcY;
 			}
 
 			// Get bits per pixel from DirectDraw object
@@ -1776,10 +1778,11 @@ namespace Win32Emu.Win32.Modules
 			int destX = 0, destY = 0, destWidth = destSurface.Width, destHeight = destSurface.Height;
 			if (lpDestRect != 0)
 			{
-				destX = (int)_env.MemRead32(lpDestRect);
-				destY = (int)_env.MemRead32(lpDestRect + 4);
-				destWidth = (int)_env.MemRead32(lpDestRect + 8) - destX;
-				destHeight = (int)_env.MemRead32(lpDestRect + 12) - destY;
+				var destRect = new RectRef(_env.Memory, lpDestRect);
+				destX = destRect.left;
+				destY = destRect.top;
+				destWidth = destRect.right - destX;
+				destHeight = destRect.bottom - destY;
 			}
 
 			// Check for color fill operation (DDBLT_COLORFILL = 0x00000400)
@@ -1856,10 +1859,11 @@ namespace Win32Emu.Win32.Modules
 					int srcX = 0, srcY = 0, srcWidth = srcSurface.Width, srcHeight = srcSurface.Height;
 					if (lpSrcRect != 0)
 					{
-						srcX = (int)_env.MemRead32(lpSrcRect);
-						srcY = (int)_env.MemRead32(lpSrcRect + 4);
-						srcWidth = (int)_env.MemRead32(lpSrcRect + 8) - srcX;
-						srcHeight = (int)_env.MemRead32(lpSrcRect + 12) - srcY;
+						var srcRect = new RectRef(_env.Memory, lpSrcRect);
+						srcX = srcRect.left;
+						srcY = srcRect.top;
+						srcWidth = srcRect.right - srcX;
+						srcHeight = srcRect.bottom - srcY;
 					}
 
 					// Perform simple blit (copy pixels)
