@@ -701,8 +701,8 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                     var framebufferBytes = framebuffer.RowBytes * framebuffer.Size.Height;
                     
                     // Ensure we don't copy more data than available or than the framebuffer can hold
-                    var bytesToCopy = Math.Min(Math.Min(info.FrameBuffer.Length, framebufferBytes), 
-                                               info.Width * info.Height * 4);
+                    var maxCopy = Math.Min(framebufferBytes, info.Width * info.Height * 4);
+                    var bytesToCopy = Math.Min(info.FrameBuffer.Length, maxCopy);
                     
                     if (bytesToCopy != info.FrameBuffer.Length)
                     {
