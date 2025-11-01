@@ -884,7 +884,8 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			var wndClass = StructMarshaller.ReadWNDCLASSA(_env.Memory, lpWndClass);
+			// Use ref struct wrapper for automatic memory access
+			var wndClass = new WndClassARef(_env.Memory, lpWndClass);
 
 			if (wndClass.lpszClassName == 0)
 			{
@@ -1167,23 +1168,23 @@ namespace Win32Emu.Win32.Modules
 			// This approach provides better emulator responsiveness while maintaining
 			// compatibility with most Win32 applications that don't rely on strict blocking.
 			
+			// Use ref struct wrapper - writes happen automatically on property assignment
+			var msg = new MsgRef(_env.Memory, lpMsg);
+			
 			// Check if there's a quit message
 			if (_env.HasQuitMessage())
 			{
 				var exitCode = _env.GetQuitExitCode();
 				_logger.LogInformation("[User32] GetMessageA: WM_QUIT (exitCode={ExitCode})", exitCode);
 
-				var quitMsg = new NativeTypes.MSG
-				{
-					hwnd = 0,
-					message = 0x0012, // WM_QUIT
-					wParam = (uint)exitCode,
-					lParam = 0,
-					time = 0,
-					ptX = 0,
-					ptY = 0
-				};
-				StructMarshaller.WriteMSG(_env.Memory, lpMsg, quitMsg);
+				// Direct property assignments automatically write to memory
+				msg.hwnd = 0;
+				msg.message = 0x0012; // WM_QUIT
+				msg.wParam = (uint)exitCode;
+				msg.lParam = 0;
+				msg.time = 0;
+				msg.ptX = 0;
+				msg.ptY = 0;
 
 				return 0; // GetMessage returns 0 for WM_QUIT
 			}
@@ -1196,34 +1197,27 @@ namespace Win32Emu.Win32.Modules
 				if (queuedMsg.Value.Message == 0x0012)
 				{
 					// WM_QUIT - already being processed from the queue; do not set the quit flag again
-					var quitMsg = new NativeTypes.MSG
-					{
-						hwnd = 0,
-						message = 0x0012, // WM_QUIT
-						wParam = queuedMsg.Value.WParam,
-						lParam = 0,
-						time = queuedMsg.Value.Time,
-						ptX = (int)queuedMsg.Value.PtX,
-						ptY = (int)queuedMsg.Value.PtY
-					};
-					StructMarshaller.WriteMSG(_env.Memory, lpMsg, quitMsg);
+					msg.hwnd = 0;
+					msg.message = 0x0012; // WM_QUIT
+					msg.wParam = queuedMsg.Value.WParam;
+					msg.lParam = 0;
+					msg.time = queuedMsg.Value.Time;
+					msg.ptX = (int)queuedMsg.Value.PtX;
+					msg.ptY = (int)queuedMsg.Value.PtY;
 					
 					return 0; // GetMessage returns 0 for WM_QUIT
 				}
 
 				_logger.LogInformation("[User32] GetMessageA: retrieved MSG=0x{ValueMessage:X4} HWND=0x{ValueHwnd:X8}", queuedMsg.Value.Message, queuedMsg.Value.Hwnd);
 
-				var msg = new NativeTypes.MSG
-				{
-					hwnd = queuedMsg.Value.Hwnd,
-					message = queuedMsg.Value.Message,
-					wParam = queuedMsg.Value.WParam,
-					lParam = queuedMsg.Value.LParam,
-					time = queuedMsg.Value.Time,
-					ptX = (int)queuedMsg.Value.PtX,
-					ptY = (int)queuedMsg.Value.PtY
-				};
-				StructMarshaller.WriteMSG(_env.Memory, lpMsg, msg);
+				// Direct property assignments automatically write to memory
+				msg.hwnd = queuedMsg.Value.Hwnd;
+				msg.message = queuedMsg.Value.Message;
+				msg.wParam = queuedMsg.Value.WParam;
+				msg.lParam = queuedMsg.Value.LParam;
+				msg.time = queuedMsg.Value.Time;
+				msg.ptX = (int)queuedMsg.Value.PtX;
+				msg.ptY = (int)queuedMsg.Value.PtY;
 
 				return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 			}
@@ -1232,17 +1226,14 @@ namespace Win32Emu.Win32.Modules
 			// This prevents tests and applications from hanging when no messages are available
 			_logger.LogTrace("[User32] GetMessageA: No messages available, returning WM_NULL");
 			
-			var nullMsg = new NativeTypes.MSG
-			{
-				hwnd = 0,
-				message = 0, // WM_NULL
-				wParam = 0,
-				lParam = 0,
-				time = (uint)Environment.TickCount,
-				ptX = 0,
-				ptY = 0
-			};
-			StructMarshaller.WriteMSG(_env.Memory, lpMsg, nullMsg);
+			// Direct property assignments automatically write to memory
+			msg.hwnd = 0;
+			msg.message = 0; // WM_NULL
+			msg.wParam = 0;
+			msg.lParam = 0;
+			msg.time = (uint)Environment.TickCount;
+			msg.ptX = 0;
+			msg.ptY = 0;
 			
 			return 1; // GetMessage returns non-zero for WM_NULL (only 0 for WM_QUIT)
 		}
@@ -4776,7 +4767,8 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			var wndClassEx = StructMarshaller.ReadWNDCLASSEXA(_env.Memory, lpWndClassEx);
+			// Use ref struct wrapper for automatic memory access
+			var wndClassEx = new WndClassExARef(_env.Memory, lpWndClassEx);
 
 			if (wndClassEx.lpszClassName == 0)
 			{
