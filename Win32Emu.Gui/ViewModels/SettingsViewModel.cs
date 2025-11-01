@@ -62,6 +62,19 @@ public partial class SettingsViewModel : ViewModelBase
     
     [ObservableProperty]
     private string _cacheStatusMessage = string.Empty;
+    
+    // Virtual Disk Settings
+    [ObservableProperty]
+    private bool _useVirtualDiskByDefault;
+    
+    [ObservableProperty]
+    private int _defaultVirtualDiskSizeMb;
+    
+    [ObservableProperty]
+    private string _virtualDiskFormat;
+    
+    [ObservableProperty]
+    private string? _virtualDisksDirectory;
 
     public ObservableCollection<string> RenderingBackends { get; } = new()
     {
@@ -99,6 +112,13 @@ public partial class SettingsViewModel : ViewModelBase
     {
         1, 2, 3, 4
     };
+    
+    public ObservableCollection<string> VirtualDiskFormats { get; } = new()
+    {
+        "VHD",
+        "VHDX",
+        "VMDK"
+    };
 
     public SettingsViewModel(EmulatorConfiguration configuration, ConfigurationService configService)
     {
@@ -122,6 +142,10 @@ public partial class SettingsViewModel : ViewModelBase
         _useConsoleExporter = configuration.UseConsoleExporter;
         _useOtlpExporter = configuration.UseOtlpExporter;
         _otlpEndpoint = configuration.OtlpEndpoint;
+        _useVirtualDiskByDefault = configuration.UseVirtualDiskByDefault;
+        _defaultVirtualDiskSizeMb = configuration.DefaultVirtualDiskSizeMb;
+        _virtualDiskFormat = configuration.VirtualDiskFormat;
+        _virtualDisksDirectory = configuration.VirtualDisksDirectory;
     }
 
     partial void OnRenderingBackendChanged(string value)
@@ -217,6 +241,30 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnOtlpEndpointChanged(string value)
     {
         _configuration.OtlpEndpoint = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnUseVirtualDiskByDefaultChanged(bool value)
+    {
+        _configuration.UseVirtualDiskByDefault = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnDefaultVirtualDiskSizeMbChanged(int value)
+    {
+        _configuration.DefaultVirtualDiskSizeMb = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnVirtualDiskFormatChanged(string value)
+    {
+        _configuration.VirtualDiskFormat = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnVirtualDisksDirectoryChanged(string? value)
+    {
+        _configuration.VirtualDisksDirectory = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
     

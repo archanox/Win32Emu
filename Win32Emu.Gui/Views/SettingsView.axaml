@@ -304,6 +304,107 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Virtual Disk Section -->
+                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="0,20,0,0"
+                        Margin="0,20,0,0">
+                    <StackPanel Spacing="20">
+                        <TextBlock Text="Virtual Disk (C: Drive)"
+                                 FontWeight="Bold"
+                                 FontSize="16"/>
+
+                        <!-- Use Virtual Disk By Default -->
+                        <StackPanel Spacing="8">
+                            <CheckBox IsChecked="{Binding UseVirtualDiskByDefault}"
+                                    Content="Use Virtual Disk by Default"/>
+                            <TextBlock TextWrapping="Wrap"
+                                     FontSize="12"
+                                     Opacity="0.7"
+                                     Margin="0,-8,0,0">
+                                <Run Text="When enabled, each game gets its own virtual disk file (VHD/VHDX) as the C: drive. This isolates game saves and settings per-game."/>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <!-- Virtual Disk Format -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Virtual Disk Format"
+                                     FontWeight="Bold"
+                                     FontSize="14"/>
+                            <ComboBox ItemsSource="{Binding VirtualDiskFormats}"
+                                    SelectedItem="{Binding VirtualDiskFormat}"
+                                    HorizontalAlignment="Stretch"/>
+                            <TextBlock Text="Format for auto-created virtual disks (VHD = Hyper-V, VHDX = Hyper-V Gen2, VMDK = VMware)"
+                                     FontSize="12"
+                                     Opacity="0.7"/>
+                        </StackPanel>
+
+                        <!-- Default Virtual Disk Size -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Default Virtual Disk Size (MB)"
+                                     FontWeight="Bold"
+                                     FontSize="14"/>
+                            <NumericUpDown Value="{Binding DefaultVirtualDiskSizeMb}"
+                                         Minimum="100"
+                                         Maximum="10240"
+                                         Increment="128"
+                                         HorizontalAlignment="Stretch"/>
+                            <TextBlock Text="Size of auto-created virtual disks (100 MB - 10 GB)"
+                                     FontSize="12"
+                                     Opacity="0.7"/>
+                        </StackPanel>
+
+                        <!-- Virtual Disks Directory -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Virtual Disks Directory"
+                                     FontWeight="Bold"
+                                     FontSize="14"/>
+                            <TextBox Text="{Binding VirtualDisksDirectory}"
+                                   Watermark="(Default: LocalAppData/Win32Emu/VirtualDisks)"
+                                   HorizontalAlignment="Stretch"/>
+                            <TextBlock Text="Directory where virtual disk files are stored"
+                                     FontSize="12"
+                                     Opacity="0.7"/>
+                        </StackPanel>
+
+                        <!-- Information Panel -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                                Padding="12"
+                                CornerRadius="4">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="ℹ️ Virtual Disk Information"
+                                         FontWeight="Bold"
+                                         FontSize="13"/>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9">
+                                    <Run Text="• Virtual disks are automatically created and formatted with FAT32"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9">
+                                    <Run Text="• Each game gets an isolated C: drive - no interaction with host filesystem"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9">
+                                    <Run Text="• ISO files can be mounted read-only for game installation"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9">
+                                    <Run Text="• Disks are dynamically sized and only use space as needed"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9">
+                                    <Run Text="• VHD and VHDX formats supported for creation; VMDK can be mounted but not created"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
                 <!-- OpenTelemetry Section -->
                 <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                         BorderThickness="0,1,0,0"
