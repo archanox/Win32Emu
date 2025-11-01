@@ -55,7 +55,7 @@ Located in `Win32Emu/Win32/Modules/DDrawModule.cs`:
 
 ### Implementation
 - **Primary Backend**: `SDL3InputBackend` (Win32Emu/Rendering/SDL3InputBackend.cs)
-- **Alternative Backend**: SilkInputBackend
+- **Alternative Backends**: SilkInputBackend
 
 ### Features Implemented
 1. **Device Enumeration**
@@ -97,7 +97,7 @@ Located in `Win32Emu/Win32/Modules/DInputModule.cs`:
 
 ### Implementation
 - **Primary Backend**: `SDL3AudioBackend` (Win32Emu/Rendering/SDL3AudioBackend.cs)
-- **Alternative Backend**: SilkOpenAlAudioBackend
+- **Alternative Backends**: SilkOpenAlAudioBackend
 
 ### Features Implemented
 1. **Audio Stream Management**
