@@ -14,8 +14,10 @@ Previously, `GetProcAddress` was a stub that always returned 0. The infrastructu
 **Changes:**
 - Added `ExportsByName` dictionary: Maps export names (case-insensitive) to virtual addresses
 - Added `ExportsByOrdinal` dictionary: Maps export ordinals to virtual addresses
+- Added `ForwardedExportsByName` dictionary: Maps forwarded export names to forwarder strings
+- Added `ForwardedExportsByOrdinal` dictionary: Maps forwarded export ordinals to forwarder strings
 
-**Purpose:** Store parsed export information for quick lookup during `GetProcAddress` calls.
+**Purpose:** Store parsed export information for quick lookup during `GetProcAddress` calls, including forwarded exports.
 
 #### 2. PeImageLoader (`Win32Emu/Loader/PeImageLoader.cs`)
 **Changes:**
@@ -25,14 +27,15 @@ Previously, `GetProcAddress` was a stub that always returned 0. The infrastructu
 
 **Export Parsing Logic:**
 ```csharp
-private (Dictionary<string, uint> byName, Dictionary<uint, uint> byOrdinal) BuildExportMaps(PEImage image, uint imageBase)
+private (Dictionary<string, uint> byName, Dictionary<uint, uint> byOrdinal, 
+         Dictionary<string, string> forwardedByName, Dictionary<uint, string> forwardedByOrdinal) 
+    BuildExportMaps(PEImage image, uint imageBase)
 {
     // Parse image.Exports.Entries
     // For each export:
-    //   - Skip forwarded exports (no RVA)
-    //   - Calculate virtual address = imageBase + RVA
-    //   - Add to byOrdinal dictionary
-    //   - Add to byName dictionary if export has a name
+    //   - If forwarded: Store in forwarded dictionaries
+    //   - Else: Calculate virtual address = imageBase + RVA
+    //           Add to byOrdinal and byName dictionaries
 }
 ```
 
@@ -49,14 +52,18 @@ private (Dictionary<string, uint> byName, Dictionary<uint, uint> byOrdinal) Buil
   - Retrieve LoadedImage from ProcessEnvironment
   - Distinguish between ordinal and name lookups
   - Query appropriate export dictionary
+  - Resolve forwarded exports recursively
   - Return virtual address or 0 if not found
+- Added `ResolveForwardedExport()` method to handle export forwarding
 - Added proper error handling with specific error codes
 
 **Export Lookup Flow:**
 1. Parse `lpProcName` parameter (ordinal vs. string pointer)
 2. Look up module handle to get LoadedImage
 3. Query `ExportsByName` or `ExportsByOrdinal` dictionary
-4. Return VA on success, 0 on failure with appropriate error code
+4. If not found, check `ForwardedExportsByName` or `ForwardedExportsByOrdinal`
+5. If forwarded, recursively resolve via `ResolveForwardedExport()`
+6. Return VA on success, 0 on failure with appropriate error code
 
 #### 5. NativeTypes (`Win32Emu/Win32/NativeTypes.cs`)
 **Changes:**
@@ -98,20 +105,35 @@ Windows `GetProcAddress` supports two lookup modes:
 The implementation checks `(lpProcName & 0xFFFF0000) == 0` to distinguish between these modes.
 
 ### Forwarded Exports
-Forwarded exports (exports that redirect to another DLL) are skipped during parsing since they have no RVA. These would require additional implementation to resolve the forwarding chain.
+Forwarded exports (exports that redirect to another DLL) are fully supported. The implementation:
+- Detects forwarded exports during PE parsing using `export.IsForwarder`
+- Stores forwarder strings (e.g., "NTDLL.RtlAllocateHeap") in separate dictionaries
+- Resolves forwarding chains at runtime via `ResolveForwardedExport()` method
+- Supports both "DLL.Export" and "DLL.DLL.Export" forwarder formats
+- Recursively loads target DLLs and resolves final export addresses
 
-## Limitations and Future Work
+**Forwarder Resolution:**
+```csharp
+// Example: kernel32.HeapAlloc -> NTDLL.RtlAllocateHeap
+// 1. Parse forwarder string to extract target DLL and export name
+// 2. Load target DLL via LoadModule()
+// 3. Recursively call GetProcAddress() on target DLL
+// 4. Return final resolved address
+```
 
-### Current Limitations
-1. **Forwarded Exports**: Not supported - these exports are skipped
-2. **LoadLibraryA Integration**: GetModuleHandleA returns imageBase which may not be a LoadedImage
-3. **Test Coverage**: Current tests only verify non-loaded module behavior
+## Current Status
 
-### Suggested Enhancements
-1. Implement forwarded export resolution
-2. Enhance LoadLibraryA to use PeImageLoader for DLL loading
-3. Add integration tests with actual PE files containing exports
-4. Support export name hints for optimization
+### Completed Features
+1. ✅ **Forwarded Exports**: Fully implemented with recursive resolution
+2. ✅ **LoadLibraryA Integration**: Uses PeImageLoader for local DLLs
+3. ✅ **Export Lookup Optimization**: Dictionary-based O(1) lookups (better than PE hints)
+4. ✅ **Integration Tests**: Comprehensive tests with real PE files (8 tests in PeExportIntegrationTests.cs)
+5. ✅ **Case-Insensitive Lookups**: Export names matched case-insensitively
+6. ✅ **Ordinal Support**: Full support for ordinal-based export lookups
+7. ✅ **Error Handling**: Proper Win32 error codes (ERROR_PROC_NOT_FOUND, ERROR_INVALID_HANDLE)
+
+### Performance Optimizations
+The implementation uses `Dictionary<string, uint>` for export lookups, providing O(1) average-case performance. This is superior to the PE format's hint-based approach, which is designed for linear searches through the export name table. No additional hint optimization is needed.
 
 ## Usage Example
 
@@ -130,10 +152,22 @@ var address = GetProcAddress(handle, ordinal);
 
 ## Testing Results
 
-All 117 Kernel32 tests pass, including:
+All Kernel32 tests pass, including:
+
+**Basic Tests:**
 - `GetProcAddress_WithNonLoadedModule_ShouldReturnZero`
 - `GetProcAddress_WithNullModule_ShouldReturnZero`
 - `GetProcAddress_ByOrdinal_WithNonLoadedModule_ShouldReturnZero`
+
+**Integration Tests (PeExportIntegrationTests.cs):**
+- `LoadLibraryA_WithRealPeDll_ShouldLoadSuccessfully`
+- `GetProcAddress_WithRealPeDll_ByName_ShouldResolveExport`
+- `GetProcAddress_WithRealPeDll_ByOrdinal_ShouldResolveExport`
+- `GetProcAddress_WithRealPeDll_NonExistentExport_ShouldReturnZero`
+- `LoadLibraryA_AndGetProcAddress_EndToEnd_ShouldWork`
+- `GetProcAddress_WithForwardedExport_ShouldResolveCorrectly`
+- `PeImageLoader_ShouldParseExportTable_WithAllExportTypes`
+- `GetProcAddress_CaseInsensitiveNameLookup_ShouldWork`
 
 ## Impact on Issue #17
 
@@ -141,12 +175,15 @@ This implementation marks `GetProcAddress` as ✅ Implemented in the Issue #17 t
 
 ## Files Modified
 
+### Initial Implementation
 1. [docs/archive/ISSUE_17_IMPLEMENTATION.md](../archive/ISSUE_17_IMPLEMENTATION.md) - Historical Issue #17 status (archived)
 2. `Win32Emu.Tests.Kernel32/NewFunctionsTests.cs` - Enhanced tests
-3. `Win32Emu/Loader/LoadedImage.cs` - Added export dictionaries
-4. `Win32Emu/Loader/PeImageLoader.cs` - Added export parsing
-5. `Win32Emu/Win32/Kernel32Module.cs` - Implemented GetProcAddress
+3. `Win32Emu/Loader/LoadedImage.cs` - Added export dictionaries and forwarded export support
+4. `Win32Emu/Loader/PeImageLoader.cs` - Added export parsing with forwarded export handling
+5. `Win32Emu/Win32/Modules/Kernel32Module.cs` - Implemented GetProcAddress with ResolveForwardedExport
 6. `Win32Emu/Win32/NativeTypes.cs` - Added error codes
 7. `Win32Emu/Win32/ProcessEnvironment.cs` - Added TryGetLoadedImage
 
-**Total Changes:** 133 insertions, 17 deletions across 7 files
+### Enhancement (Current)
+8. `Win32Emu.Tests.Kernel32/PeExportIntegrationTests.cs` - Comprehensive integration tests with real PE files
+9. `docs/implementation/GETPROCADDRESS_IMPLEMENTATION.md` - Updated documentation to reflect current state
