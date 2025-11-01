@@ -62,17 +62,33 @@ public class AvaloniaRenderingBackend : IRenderingBackend
         var rgbaData = new byte[width * height * 4];
         var rgbaIndex = 0;
 
+        // Pre-validate palette indices to avoid repeated checks and excessive logging
+        byte maxPaletteIndex = 0;
+        for (int i = 0; i < height; i++)
+        {
+            int rowOffset = i * pitch;
+            for (int j = 0; j < width; j++)
+            {
+                byte idx = indexedData[rowOffset + j];
+                if (idx > maxPaletteIndex)
+                    maxPaletteIndex = idx;
+            }
+        }
+        if (maxPaletteIndex >= palette.Length)
+        {
+            _logger.LogWarning("[Avalonia] Maximum palette index in data ({MaxIndex}) exceeds palette size ({PaletteSize}). Out-of-bounds indices will be rendered as black.", maxPaletteIndex, palette.Length);
+        }
+
         for (var y = 0; y < height; y++)
         {
             var rowOffset = y * pitch;
             for (var x = 0; x < width; x++)
             {
                 var paletteIndex = indexedData[rowOffset + x];
-                
-                // Validate palette index to prevent out of bounds access
+
+                // Use black for out-of-bounds palette indices, but do not log per-pixel
                 if (paletteIndex >= palette.Length)
                 {
-                    _logger.LogWarning("[Avalonia] Invalid palette index {Index} (palette size: {Size}), using black", paletteIndex, palette.Length);
                     rgbaData[rgbaIndex++] = 0;
                     rgbaData[rgbaIndex++] = 0;
                     rgbaData[rgbaIndex++] = 0;
@@ -216,9 +232,14 @@ public class AvaloniaRenderingBackend : IRenderingBackend
                 _logger.LogTrace("[Avalonia] Frame buffer updated: {Size} bytes, {Width}x{Height}", copySize, _width, _height);
                 return true;
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
-                _logger.LogError(ex, "[Avalonia] Failed to update frame buffer");
+                _logger.LogError(ex, "[Avalonia] Failed to update frame buffer due to invalid argument");
+                return false;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "[Avalonia] Failed to update frame buffer due to invalid operation");
                 return false;
             }
         }

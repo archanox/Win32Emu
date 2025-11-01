@@ -40,7 +40,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     private WriteableBitmap? _displayBitmap;
 
     [ObservableProperty]
-    private bool _hasDisplay = false;
+    private bool _hasDisplay;
 
     // Track created windows - maps Win32 HWND to Avalonia Window
     private readonly Dictionary<uint, Window> _createdWindows = new();
@@ -684,6 +684,9 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 // Create or resize the bitmap if needed
                 if (DisplayBitmap == null || DisplayBitmap.PixelSize.Width != info.Width || DisplayBitmap.PixelSize.Height != info.Height)
                 {
+                    // Dispose old bitmap if it exists
+                    DisplayBitmap?.Dispose();
+                    
                     DisplayBitmap = new WriteableBitmap(
                         new PixelSize(info.Width, info.Height),
                         new Vector(96, 96),
@@ -719,9 +722,21 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 
                 OnDebugOutput($"Display updated: {info.Width}x{info.Height}, stride={info.Stride}", DebugLevel.Trace);
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
-                OnDebugOutput($"Error updating display: {ex.Message}", DebugLevel.Error);
+                OnDebugOutput($"Argument error updating display: {ex.Message}", DebugLevel.Error);
+            }
+            catch (InvalidOperationException ex)
+            {
+                OnDebugOutput($"Invalid operation updating display: {ex.Message}", DebugLevel.Error);
+            }
+            catch (System.Runtime.InteropServices.ExternalException ex)
+            {
+                OnDebugOutput($"Interop error updating display: {ex.Message}", DebugLevel.Error);
+            }
+            catch (Exception ex) when (!(ex is OutOfMemoryException) && !(ex is StackOverflowException) && !(ex is System.Threading.ThreadAbortException))
+            {
+                OnDebugOutput($"Unexpected error updating display: {ex.Message}", DebugLevel.Error);
             }
         });
     }
