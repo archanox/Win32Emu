@@ -19,7 +19,11 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 	private readonly ILogger _logger;
 	private readonly VirtualDisk? _disk;
 	private readonly DiscFileSystem _fileSystem;
-	private readonly bool _isReadOnly;
+	
+	/// <summary>
+	/// Gets whether this disk is read-only
+	/// </summary>
+	public bool IsReadOnly { get; }
 	private readonly Dictionary<string, Stream> _openFiles = new();
 
 	/// <summary>
@@ -39,7 +43,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 				case ".iso":
 					var isoStream = File.Open(diskPath, FileMode.Open, FileAccess.Read, FileShare.Read);
 					_fileSystem = new CDReader(isoStream, true);
-					_isReadOnly = true;
+					IsReadOnly = true;
 					_logger.LogInformation("[DiskVFS] Mounted ISO: {DiskPath}", diskPath);
 					break;
 
@@ -51,10 +55,10 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 					catch (UnauthorizedAccessException)
 					{
 						_disk = new VmdkDisk(diskPath, FileAccess.Read);
-						_isReadOnly = true;
+						IsReadOnly = true;
 					}
 					_fileSystem = GetFileSystemFromDisk(_disk);
-					_logger.LogInformation("[DiskVFS] Mounted VMDK: {DiskPath} ({Mode})", diskPath, _isReadOnly ? "Read-Only" : "Read-Write");
+					_logger.LogInformation("[DiskVFS] Mounted VMDK: {DiskPath} ({Mode})", diskPath, IsReadOnly ? "Read-Only" : "Read-Write");
 					break;
 
 				case ".vhd":
@@ -65,10 +69,10 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 					catch (UnauthorizedAccessException)
 					{
 						_disk = new VhdDisk(diskPath, FileAccess.Read);
-						_isReadOnly = true;
+						IsReadOnly = true;
 					}
 					_fileSystem = GetFileSystemFromDisk(_disk);
-					_logger.LogInformation("[DiskVFS] Mounted VHD: {DiskPath} ({Mode})", diskPath, _isReadOnly ? "Read-Only" : "Read-Write");
+					_logger.LogInformation("[DiskVFS] Mounted VHD: {DiskPath} ({Mode})", diskPath, IsReadOnly ? "Read-Only" : "Read-Write");
 					break;
 
 				case ".vhdx":
@@ -79,10 +83,10 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 					catch (UnauthorizedAccessException)
 					{
 						_disk = new VhdxDisk(diskPath, FileAccess.Read);
-						_isReadOnly = true;
+						IsReadOnly = true;
 					}
 					_fileSystem = GetFileSystemFromDisk(_disk);
-					_logger.LogInformation("[DiskVFS] Mounted VHDX: {DiskPath} ({Mode})", diskPath, _isReadOnly ? "Read-Only" : "Read-Write");
+					_logger.LogInformation("[DiskVFS] Mounted VHDX: {DiskPath} ({Mode})", diskPath, IsReadOnly ? "Read-Only" : "Read-Write");
 					break;
 
 				default:
@@ -123,7 +127,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 	/// <param name="targetPath">Target path in the virtual disk (e.g., "/" or "/games")</param>
 	public void CopyDirectoryIn(string sourcePath, string targetPath = "/")
 	{
-		if (_isReadOnly)
+		if (IsReadOnly)
 		{
 			throw new InvalidOperationException("Cannot copy files into a read-only disk (ISO)");
 		}
@@ -223,7 +227,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 
 	public IVirtualFileHandle? OpenFile(string path, VfsFileMode mode, VfsFileAccess access)
 	{
-		if (_isReadOnly && (access == VfsFileAccess.Write || access == VfsFileAccess.ReadWrite))
+		if (IsReadOnly && (access == VfsFileAccess.Write || access == VfsFileAccess.ReadWrite))
 		{
 			_logger.LogDebug("[DiskVFS] Cannot write to read-only disk: {Path}", path);
 			return null;
@@ -255,7 +259,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 
 	public bool DeleteFile(string path)
 	{
-		if (_isReadOnly)
+		if (IsReadOnly)
 		{
 			_logger.LogDebug("[DiskVFS] Cannot delete from read-only disk: {Path}", path);
 			return false;
@@ -282,7 +286,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 
 	public bool MoveFile(string existingPath, string newPath)
 	{
-		if (_isReadOnly)
+		if (IsReadOnly)
 		{
 			_logger.LogDebug("[DiskVFS] Cannot move files on read-only disk");
 			return false;

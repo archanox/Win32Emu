@@ -94,7 +94,33 @@ public class ProcessEnvironment
 	{
 		VirtualFileSystem = new LayeredVirtualFileSystem(baseDirectory, overlayDirectory, _logger);
 		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with base: {BaseDirectory}", baseDirectory);
-		
+		VirtualizeExecutablePath();
+	}
+
+	/// <summary>
+	/// Initializes the virtual file system with a virtual disk file (VHD/VMDK/VHDX/ISO).
+	/// </summary>
+	/// <param name="diskPath">Path to the virtual disk file</param>
+	public void InitializeVirtualFileSystemWithDisk(string diskPath)
+	{
+		VirtualFileSystem = new DiskVirtualFileSystem(diskPath, _logger);
+		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with disk: {DiskPath}", diskPath);
+		VirtualizeExecutablePath();
+	}
+
+	/// <summary>
+	/// Initializes the virtual file system with an existing IVirtualFileSystem instance.
+	/// </summary>
+	/// <param name="vfs">The virtual file system instance to use</param>
+	public void InitializeVirtualFileSystem(IVirtualFileSystem vfs)
+	{
+		VirtualFileSystem = vfs;
+		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with custom instance");
+		VirtualizeExecutablePath();
+	}
+
+	private void VirtualizeExecutablePath()
+	{
 		// If executable path is already set, virtualize it to Windows-style path
 		if (string.IsNullOrEmpty(ExecutablePath))
 		{
