@@ -342,4 +342,53 @@ public static class NativeTypes
 		public uint lpszDatatype; // Offset 12 (pointer to string)
 		public uint fwType;       // Offset 16
 	}
+
+	// SCROLLINFO structure (28 bytes)
+	// Used with SetScrollInfo/GetScrollInfo in User32
+	public struct SCROLLINFO
+	{
+		public uint cbSize;      // Offset 0
+		public uint fMask;       // Offset 4
+		public int nMin;         // Offset 8
+		public int nMax;         // Offset 12
+		public uint nPage;       // Offset 16
+		public int nPos;         // Offset 20
+		public int nTrackPos;    // Offset 24
+	}
+
+	// DDSURFACEDESC structure (108 bytes minimum)
+	// Used in DirectDraw for surface description
+	public struct DDSURFACEDESC
+	{
+		public uint dwSize;           // Offset 0
+		public uint dwFlags;          // Offset 4
+		public uint dwWidth;          // Offset 8
+		public uint dwHeight;         // Offset 12
+		public uint lPitch;           // Offset 16
+		public uint dwBackBufferCount;// Offset 20
+		// Additional fields exist but these are the most commonly used
+		// dwSurfaceCaps is at offset 108
+	}
+
+	// DIPROPHEADER structure (16 bytes)
+	// Used in DirectInput for property headers
+	public struct DIPROPHEADER
+	{
+		public uint dwSize;       // Offset 0
+		public uint dwHeaderSize; // Offset 4
+		public uint dwObj;        // Offset 8
+		public uint dwHow;        // Offset 12
+	}
+
+	// DIDATAFORMAT structure (24 bytes)
+	// Used in DirectInput for data format specification
+	public struct DIDATAFORMAT
+	{
+		public uint dwSize;      // Offset 0
+		public uint dwObjSize;   // Offset 4
+		public uint dwFlags;     // Offset 8
+		public uint dwDataSize;  // Offset 12
+		public uint dwNumObjs;   // Offset 16
+		public uint rgodf;       // Offset 20 (pointer to array)
+	}
 }

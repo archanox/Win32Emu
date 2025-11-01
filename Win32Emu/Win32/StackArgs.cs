@@ -38,4 +38,14 @@ public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem, uint baseOffse
 	public PointRef Point(int index) => new PointRef(mem, UInt32(index));
 	
 	public DocInfoARef DocInfoA(int index) => new DocInfoARef(mem, UInt32(index));
+	
+	public ScrollInfoRef ScrollInfo(int index) => new ScrollInfoRef(mem, UInt32(index));
+	
+	public PaintStructRef PaintStruct(int index) => new PaintStructRef(mem, UInt32(index));
+	
+	public DDSurfaceDescRef DDSurfaceDesc(int index) => new DDSurfaceDescRef(mem, UInt32(index));
+	
+	public DiPropHeaderRef DiPropHeader(int index) => new DiPropHeaderRef(mem, UInt32(index));
+	
+	public DiDataFormatRef DiDataFormat(int index) => new DiDataFormatRef(mem, UInt32(index));
 }

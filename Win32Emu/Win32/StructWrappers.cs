@@ -479,3 +479,374 @@ public readonly ref struct DocInfoARef
 	/// </summary>
 	public static implicit operator NativeTypes.DOCINFOA(DocInfoARef refStruct) => refStruct.ToStruct();
 }
+
+/// <summary>
+/// Ref struct wrapper for SCROLLINFO that provides direct memory access via properties.
+/// Properties automatically read from and write to the underlying memory address.
+/// </summary>
+public readonly ref struct ScrollInfoRef
+{
+	private readonly VirtualMemory _memory;
+	private readonly uint _address;
+
+	public ScrollInfoRef(VirtualMemory memory, uint address)
+	{
+		_memory = memory;
+		_address = address;
+	}
+
+	public uint Address => _address;
+
+	public uint cbSize
+	{
+		get => _memory.Read32(_address + 0);
+		set => _memory.Write32(_address + 0, value);
+	}
+
+	public uint fMask
+	{
+		get => _memory.Read32(_address + 4);
+		set => _memory.Write32(_address + 4, value);
+	}
+
+	public int nMin
+	{
+		get => (int)_memory.Read32(_address + 8);
+		set => _memory.Write32(_address + 8, unchecked((uint)value));
+	}
+
+	public int nMax
+	{
+		get => (int)_memory.Read32(_address + 12);
+		set => _memory.Write32(_address + 12, unchecked((uint)value));
+	}
+
+	public uint nPage
+	{
+		get => _memory.Read32(_address + 16);
+		set => _memory.Write32(_address + 16, value);
+	}
+
+	public int nPos
+	{
+		get => (int)_memory.Read32(_address + 20);
+		set => _memory.Write32(_address + 20, unchecked((uint)value));
+	}
+
+	public int nTrackPos
+	{
+		get => (int)_memory.Read32(_address + 24);
+		set => _memory.Write32(_address + 24, unchecked((uint)value));
+	}
+
+	/// <summary>
+	/// Converts this ref struct to a value struct snapshot.
+	/// </summary>
+	public NativeTypes.SCROLLINFO ToStruct()
+	{
+		return new NativeTypes.SCROLLINFO
+		{
+			cbSize = cbSize,
+			fMask = fMask,
+			nMin = nMin,
+			nMax = nMax,
+			nPage = nPage,
+			nPos = nPos,
+			nTrackPos = nTrackPos
+		};
+	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.SCROLLINFO(ScrollInfoRef refStruct) => refStruct.ToStruct();
+}
+
+/// <summary>
+/// Ref struct wrapper for PAINTSTRUCT that provides direct memory access via properties.
+/// Properties automatically read from and write to the underlying memory address.
+/// Note: rcPaint is represented as a RectRef at offset 8.
+/// </summary>
+public readonly ref struct PaintStructRef
+{
+	private readonly VirtualMemory _memory;
+	private readonly uint _address;
+
+	public PaintStructRef(VirtualMemory memory, uint address)
+	{
+		_memory = memory;
+		_address = address;
+	}
+
+	public uint Address => _address;
+
+	public uint hdc
+	{
+		get => _memory.Read32(_address + 0);
+		set => _memory.Write32(_address + 0, value);
+	}
+
+	public uint fErase
+	{
+		get => _memory.Read32(_address + 4);
+		set => _memory.Write32(_address + 4, value);
+	}
+
+	/// <summary>
+	/// Gets a RectRef for the rcPaint field (at offset 8).
+	/// </summary>
+	public RectRef rcPaint => new RectRef(_memory, _address + 8);
+
+	public uint fRestore
+	{
+		get => _memory.Read32(_address + 24);
+		set => _memory.Write32(_address + 24, value);
+	}
+
+	public uint fIncUpdate
+	{
+		get => _memory.Read32(_address + 28);
+		set => _memory.Write32(_address + 28, value);
+	}
+
+	/// <summary>
+	/// Converts this ref struct to a value struct snapshot.
+	/// </summary>
+	public NativeTypes.PAINTSTRUCT ToStruct()
+	{
+		var rect = rcPaint;
+		return new NativeTypes.PAINTSTRUCT
+		{
+			hdc = hdc,
+			fErase = fErase,
+			rcPaintLeft = rect.left,
+			rcPaintTop = rect.top,
+			rcPaintRight = rect.right,
+			rcPaintBottom = rect.bottom,
+			fRestore = fRestore,
+			fIncUpdate = fIncUpdate
+		};
+	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.PAINTSTRUCT(PaintStructRef refStruct) => refStruct.ToStruct();
+}
+
+/// <summary>
+/// Ref struct wrapper for DDSURFACEDESC that provides direct memory access via properties.
+/// Properties automatically read from and write to the underlying memory address.
+/// </summary>
+public readonly ref struct DDSurfaceDescRef
+{
+	private readonly VirtualMemory _memory;
+	private readonly uint _address;
+
+	public DDSurfaceDescRef(VirtualMemory memory, uint address)
+	{
+		_memory = memory;
+		_address = address;
+	}
+
+	public uint Address => _address;
+
+	public uint dwSize
+	{
+		get => _memory.Read32(_address + 0);
+		set => _memory.Write32(_address + 0, value);
+	}
+
+	public uint dwFlags
+	{
+		get => _memory.Read32(_address + 4);
+		set => _memory.Write32(_address + 4, value);
+	}
+
+	public uint dwWidth
+	{
+		get => _memory.Read32(_address + 8);
+		set => _memory.Write32(_address + 8, value);
+	}
+
+	public uint dwHeight
+	{
+		get => _memory.Read32(_address + 12);
+		set => _memory.Write32(_address + 12, value);
+	}
+
+	public uint lPitch
+	{
+		get => _memory.Read32(_address + 16);
+		set => _memory.Write32(_address + 16, value);
+	}
+
+	public uint dwBackBufferCount
+	{
+		get => _memory.Read32(_address + 20);
+		set => _memory.Write32(_address + 20, value);
+	}
+
+	public uint dwSurfaceCaps
+	{
+		get => _memory.Read32(_address + 108);
+		set => _memory.Write32(_address + 108, value);
+	}
+
+	/// <summary>
+	/// Converts this ref struct to a value struct snapshot.
+	/// </summary>
+	public NativeTypes.DDSURFACEDESC ToStruct()
+	{
+		return new NativeTypes.DDSURFACEDESC
+		{
+			dwSize = dwSize,
+			dwFlags = dwFlags,
+			dwWidth = dwWidth,
+			dwHeight = dwHeight,
+			lPitch = lPitch,
+			dwBackBufferCount = dwBackBufferCount
+		};
+	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.DDSURFACEDESC(DDSurfaceDescRef refStruct) => refStruct.ToStruct();
+}
+
+/// <summary>
+/// Ref struct wrapper for DIPROPHEADER that provides direct memory access via properties.
+/// Properties automatically read from and write to the underlying memory address.
+/// </summary>
+public readonly ref struct DiPropHeaderRef
+{
+	private readonly VirtualMemory _memory;
+	private readonly uint _address;
+
+	public DiPropHeaderRef(VirtualMemory memory, uint address)
+	{
+		_memory = memory;
+		_address = address;
+	}
+
+	public uint Address => _address;
+
+	public uint dwSize
+	{
+		get => _memory.Read32(_address + 0);
+		set => _memory.Write32(_address + 0, value);
+	}
+
+	public uint dwHeaderSize
+	{
+		get => _memory.Read32(_address + 4);
+		set => _memory.Write32(_address + 4, value);
+	}
+
+	public uint dwObj
+	{
+		get => _memory.Read32(_address + 8);
+		set => _memory.Write32(_address + 8, value);
+	}
+
+	public uint dwHow
+	{
+		get => _memory.Read32(_address + 12);
+		set => _memory.Write32(_address + 12, value);
+	}
+
+	/// <summary>
+	/// Converts this ref struct to a value struct snapshot.
+	/// </summary>
+	public NativeTypes.DIPROPHEADER ToStruct()
+	{
+		return new NativeTypes.DIPROPHEADER
+		{
+			dwSize = dwSize,
+			dwHeaderSize = dwHeaderSize,
+			dwObj = dwObj,
+			dwHow = dwHow
+		};
+	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.DIPROPHEADER(DiPropHeaderRef refStruct) => refStruct.ToStruct();
+}
+
+/// <summary>
+/// Ref struct wrapper for DIDATAFORMAT that provides direct memory access via properties.
+/// Properties automatically read from and write to the underlying memory address.
+/// </summary>
+public readonly ref struct DiDataFormatRef
+{
+	private readonly VirtualMemory _memory;
+	private readonly uint _address;
+
+	public DiDataFormatRef(VirtualMemory memory, uint address)
+	{
+		_memory = memory;
+		_address = address;
+	}
+
+	public uint Address => _address;
+
+	public uint dwSize
+	{
+		get => _memory.Read32(_address + 0);
+		set => _memory.Write32(_address + 0, value);
+	}
+
+	public uint dwObjSize
+	{
+		get => _memory.Read32(_address + 4);
+		set => _memory.Write32(_address + 4, value);
+	}
+
+	public uint dwFlags
+	{
+		get => _memory.Read32(_address + 8);
+		set => _memory.Write32(_address + 8, value);
+	}
+
+	public uint dwDataSize
+	{
+		get => _memory.Read32(_address + 12);
+		set => _memory.Write32(_address + 12, value);
+	}
+
+	public uint dwNumObjs
+	{
+		get => _memory.Read32(_address + 16);
+		set => _memory.Write32(_address + 16, value);
+	}
+
+	public uint rgodf
+	{
+		get => _memory.Read32(_address + 20);
+		set => _memory.Write32(_address + 20, value);
+	}
+
+	/// <summary>
+	/// Converts this ref struct to a value struct snapshot.
+	/// </summary>
+	public NativeTypes.DIDATAFORMAT ToStruct()
+	{
+		return new NativeTypes.DIDATAFORMAT
+		{
+			dwSize = dwSize,
+			dwObjSize = dwObjSize,
+			dwFlags = dwFlags,
+			dwDataSize = dwDataSize,
+			dwNumObjs = dwNumObjs,
+			rgodf = rgodf
+		};
+	}
+
+	/// <summary>
+	/// Implicit conversion to the underlying value struct.
+	/// </summary>
+	public static implicit operator NativeTypes.DIDATAFORMAT(DiDataFormatRef refStruct) => refStruct.ToStruct();
+}
