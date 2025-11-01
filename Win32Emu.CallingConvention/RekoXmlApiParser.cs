@@ -82,6 +82,32 @@ public class TypeAlias
 }
 
 /// <summary>
+/// Represents a COM interface definition.
+/// </summary>
+public class ComInterfaceDefinition
+{
+    /// <summary>
+    /// Interface name (e.g., "IUnknown", "IDispatch")
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Base interface (e.g., "IUnknown")
+    /// </summary>
+    public string? BaseInterface { get; set; }
+    
+    /// <summary>
+    /// Interface methods (if defined in XML)
+    /// </summary>
+    public List<ApiSignature> Methods { get; set; } = new();
+    
+    /// <summary>
+    /// GUID if specified
+    /// </summary>
+    public string? Guid { get; set; }
+}
+
+/// <summary>
 /// Represents all type definitions parsed from an XML file.
 /// </summary>
 public class TypeDefinitions
@@ -95,6 +121,11 @@ public class TypeDefinitions
     /// Callback/delegate definitions
     /// </summary>
     public List<CallbackDefinition> Callbacks { get; set; } = new();
+    
+    /// <summary>
+    /// COM interface definitions
+    /// </summary>
+    public List<ComInterfaceDefinition> ComInterfaces { get; set; } = new();
     
     /// <summary>
     /// Type aliases
@@ -258,6 +289,12 @@ public class RekoXmlApiParser
                             definitions.Structs.Add(structDef);
                         break;
                     
+                    case "Interface":
+                        var interfaceDef = ParseComInterface(variable, name);
+                        if (interfaceDef != null)
+                            definitions.ComInterfaces.Add(interfaceDef);
+                        break;
+                    
                     case "Alias":
                         var aliasDef = ParseTypeAlias(variable, name);
                         if (aliasDef != null)
@@ -362,6 +399,78 @@ public class RekoXmlApiParser
         }
         
         return alias;
+    }
+    
+    private ComInterfaceDefinition? ParseComInterface(XElement variable, string name)
+    {
+        var interfaceDef = new ComInterfaceDefinition { Name = name };
+        
+        // Look for base interface attribute
+        var baseAttr = variable.Attribute("Base");
+        if (baseAttr != null)
+        {
+            interfaceDef.BaseInterface = baseAttr.Value;
+        }
+        
+        // Look for GUID attribute
+        var guidAttr = variable.Attribute("Guid");
+        if (guidAttr != null)
+        {
+            interfaceDef.Guid = guidAttr.Value;
+        }
+        
+        // Look for method definitions (if present in XML)
+        var methods = variable.Elements()
+            .Where(e => e.Name.LocalName == "Method");
+        
+        foreach (var method in methods)
+        {
+            var methodName = method.Attribute("Name")?.Value;
+            if (!string.IsNullOrEmpty(methodName))
+            {
+                // Parse method signature similar to API signatures
+                var methodSig = new ApiSignature
+                {
+                    Name = methodName,
+                    CallingConvention = Win32CallingConvention.Thiscall // COM uses thiscall
+                };
+                
+                // Parse return type
+                var returnElement = method.Element(method.Name.Namespace + "Return");
+                if (returnElement != null)
+                {
+                    var typeElement = returnElement.Element(returnElement.Name.Namespace + "Type");
+                    if (typeElement != null)
+                    {
+                        methodSig.ReturnType = typeElement.Value;
+                    }
+                }
+                
+                // Parse parameters
+                var paramElements = method.Elements()
+                    .Where(e => e.Name.LocalName == "Param");
+                
+                foreach (var param in paramElements)
+                {
+                    var paramName = param.Attribute("Name")?.Value;
+                    var paramType = param.Attribute("Type")?.Value;
+                    
+                    if (!string.IsNullOrEmpty(paramName) && !string.IsNullOrEmpty(paramType))
+                    {
+                        methodSig.Parameters.Add(new ApiParameter
+                        {
+                            Name = paramName,
+                            Type = paramType,
+                            IsStackParameter = true
+                        });
+                    }
+                }
+                
+                interfaceDef.Methods.Add(methodSig);
+            }
+        }
+        
+        return interfaceDef;
     }
     
     private bool IsCallbackType(string name, string? baseType)

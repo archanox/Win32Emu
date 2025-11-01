@@ -450,6 +450,122 @@ public class MarshallingCodeGenerator
         return sb.ToString();
     }
     
+    /// <summary>
+    /// Generate C# COM interface definition with vtable dispatch.
+    /// </summary>
+    public string GenerateComInterface(ComInterfaceDefinition interfaceDef)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine($"    /// <summary>");
+        sb.AppendLine($"    /// {interfaceDef.Name} - Auto-generated COM interface");
+        if (!string.IsNullOrEmpty(interfaceDef.Guid))
+        {
+            sb.AppendLine($"    /// GUID: {interfaceDef.Guid}");
+        }
+        sb.AppendLine($"    /// </summary>");
+        
+        if (!string.IsNullOrEmpty(interfaceDef.Guid))
+        {
+            sb.AppendLine($"    [Guid(\"{interfaceDef.Guid}\")]");
+        }
+        sb.AppendLine($"    [ComImport]");
+        sb.AppendLine($"    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]");
+        
+        var baseInterface = !string.IsNullOrEmpty(interfaceDef.BaseInterface) 
+            ? interfaceDef.BaseInterface 
+            : "IUnknown";
+        
+        sb.AppendLine($"    public interface {interfaceDef.Name} : {baseInterface}");
+        sb.AppendLine("    {");
+        
+        // Generate method declarations
+        if (interfaceDef.Methods.Count > 0)
+        {
+            foreach (var method in interfaceDef.Methods)
+            {
+                sb.AppendLine($"        /// <summary>");
+                sb.AppendLine($"        /// {method.Name}");
+                sb.AppendLine($"        /// </summary>");
+                
+                var returnType = MapType(method.ReturnType);
+                sb.Append($"        {returnType} {method.Name}(");
+                
+                var paramList = new List<string>();
+                foreach (var param in method.Parameters)
+                {
+                    var paramType = MapType(param.Type);
+                    paramList.Add($"{paramType} {param.Name}");
+                }
+                
+                sb.Append(string.Join(", ", paramList));
+                sb.AppendLine(");");
+                sb.AppendLine();
+            }
+        }
+        else
+        {
+            sb.AppendLine("        // No methods defined - extend manually");
+            sb.AppendLine("        // Add interface methods here based on COM specification");
+        }
+        
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        
+        // Generate vtable wrapper helper
+        sb.AppendLine($"    /// <summary>");
+        sb.AppendLine($"    /// Vtable dispatch helper for {interfaceDef.Name}");
+        sb.AppendLine($"    /// </summary>");
+        sb.AppendLine($"    public class {interfaceDef.Name}VTable");
+        sb.AppendLine("    {");
+        sb.AppendLine("        private readonly uint _thisPtr;");
+        sb.AppendLine("        private readonly uint _vtablePtr;");
+        sb.AppendLine();
+        sb.AppendLine($"        public {interfaceDef.Name}VTable(uint thisPtr, uint vtablePtr)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            _thisPtr = thisPtr;");
+        sb.AppendLine("            _vtablePtr = vtablePtr;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        
+        // Generate vtable dispatch methods
+        if (interfaceDef.Methods.Count > 0)
+        {
+            int methodIndex = 0;
+            foreach (var method in interfaceDef.Methods)
+            {
+                sb.AppendLine($"        /// <summary>");
+                sb.AppendLine($"        /// Dispatch {method.Name} via vtable[{methodIndex}]");
+                sb.AppendLine($"        /// </summary>");
+                
+                var returnType = MapType(method.ReturnType);
+                sb.Append($"        public {returnType} {method.Name}(");
+                
+                var paramList = new List<string>();
+                foreach (var param in method.Parameters)
+                {
+                    var paramType = MapType(param.Type);
+                    paramList.Add($"{paramType} {param.Name}");
+                }
+                
+                sb.Append(string.Join(", ", paramList));
+                sb.AppendLine(")");
+                sb.AppendLine("        {");
+                sb.AppendLine($"            // TODO: Read function pointer from vtable[{methodIndex}]");
+                sb.AppendLine($"            // TODO: Call function with _thisPtr as first parameter");
+                sb.AppendLine($"            throw new NotImplementedException(\"Vtable dispatch for {method.Name} not implemented\");");
+                sb.AppendLine("        }");
+                sb.AppendLine();
+                
+                methodIndex++;
+            }
+        }
+        
+        sb.AppendLine("    }");
+        
+        return sb.ToString();
+    }
+    
     private string GetMockValue(ApiParameter param)
     {
         if (param.IsStringPointer)

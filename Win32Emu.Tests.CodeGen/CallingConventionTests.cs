@@ -341,4 +341,109 @@ public class CallingConventionTests
         // Assert
         Assert.Contains("using HDESK", code);
     }
+    
+    [Fact]
+    public void ParseTypeDefinitions_ShouldParseComInterfaces()
+    {
+        // Arrange
+        var xmlContent = @"<?xml version=""1.0""?>
+<ApiMonitor>
+    <Module Name=""Test.dll"">
+        <Variable Name=""ITestInterface"" Type=""Interface"" />
+        <Variable Name=""ICustomInterface"" Type=""Interface"" Base=""IUnknown"" />
+    </Module>
+</ApiMonitor>";
+        
+        var tempFile = Path.GetTempFileName();
+        File.WriteAllText(tempFile, xmlContent);
+        
+        try
+        {
+            // Act
+            var parser = new RekoXmlApiParser();
+            var types = parser.ParseTypeDefinitions(tempFile);
+            
+            // Assert
+            Assert.Equal(2, types.ComInterfaces.Count);
+            Assert.Contains(types.ComInterfaces, c => c.Name == "ITestInterface");
+            Assert.Contains(types.ComInterfaces, c => c.Name == "ICustomInterface");
+            var customInterface = types.ComInterfaces.First(c => c.Name == "ICustomInterface");
+            Assert.Equal("IUnknown", customInterface.BaseInterface);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+    
+    [Fact]
+    public void GenerateComInterface_ShouldCreateValidInterface()
+    {
+        // Arrange
+        var generator = new MarshallingCodeGenerator();
+        var interfaceDef = new ComInterfaceDefinition
+        {
+            Name = "ITestInterface",
+            BaseInterface = "IUnknown",
+            Guid = "{12345678-1234-1234-1234-123456789ABC}"
+        };
+        
+        // Act
+        var code = generator.GenerateComInterface(interfaceDef);
+        
+        // Assert
+        Assert.Contains("interface ITestInterface", code);
+        Assert.Contains("[ComImport]", code);
+        Assert.Contains("[Guid(\"", code);
+        Assert.Contains("IUnknown", code);
+    }
+    
+    [Fact]
+    public void GenerateComInterface_ShouldGenerateVTableWrapper()
+    {
+        // Arrange
+        var generator = new MarshallingCodeGenerator();
+        var interfaceDef = new ComInterfaceDefinition
+        {
+            Name = "ITestInterface",
+            Methods = new List<ApiSignature>
+            {
+                new() 
+                { 
+                    Name = "TestMethod",
+                    ReturnType = "HRESULT",
+                    Parameters = new List<ApiParameter>
+                    {
+                        new() { Name = "param1", Type = "DWORD" }
+                    }
+                }
+            }
+        };
+        
+        // Act
+        var code = generator.GenerateComInterface(interfaceDef);
+        
+        // Assert
+        Assert.Contains("ITestInterfaceVTable", code);
+        Assert.Contains("vtable", code.ToLower());
+        Assert.Contains("TestMethod", code);
+    }
+    
+    [Fact]
+    public void GenerateComInterface_WithNoMethods_ShouldGenerateEmptyInterface()
+    {
+        // Arrange
+        var generator = new MarshallingCodeGenerator();
+        var interfaceDef = new ComInterfaceDefinition
+        {
+            Name = "IEmptyInterface"
+        };
+        
+        // Act
+        var code = generator.GenerateComInterface(interfaceDef);
+        
+        // Assert
+        Assert.Contains("interface IEmptyInterface", code);
+        Assert.Contains("No methods defined", code);
+    }
 }

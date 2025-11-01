@@ -27,6 +27,7 @@ class Program
             Console.WriteLine("  --api <name>           Generate code for specific API");
             Console.WriteLine("  --structs              Show struct definitions");
             Console.WriteLine("  --callbacks            Show callback delegates");
+            Console.WriteLine("  --com                  Show COM interface generation");
             Console.WriteLine("  --validation           Show validation examples");
             Console.WriteLine("  --docs                 Show documentation generation");
             Console.WriteLine("  --tests                Show unit test generation");
@@ -41,6 +42,9 @@ class Program
             Console.WriteLine("  # Show struct definitions");
             Console.WriteLine("  Win32Emu.Tools.CallingConventionDemo Common.xml --structs");
             Console.WriteLine();
+            Console.WriteLine("  # Show COM interfaces");
+            Console.WriteLine("  Win32Emu.Tools.CallingConventionDemo Combase.xml --com");
+            Console.WriteLine();
             Console.WriteLine("  # Show all features");
             Console.WriteLine("  Win32Emu.Tools.CallingConventionDemo user32.xml --api MessageBoxA --docs --tests");
             return;
@@ -50,6 +54,7 @@ class Program
         string? apiFilter = null;
         bool showStructs = false;
         bool showCallbacks = false;
+        bool showCom = false;
         bool showValidation = false;
         bool showDocs = false;
         bool showTests = false;
@@ -68,6 +73,9 @@ class Program
                     break;
                 case "--callbacks":
                     showCallbacks = true;
+                    break;
+                case "--com":
+                    showCom = true;
                     break;
                 case "--validation":
                     showValidation = true;
@@ -103,6 +111,11 @@ class Program
         if (showCallbacks && typeDefinitions.Callbacks.Count > 0)
         {
             ShowCallbackDefinitions(typeDefinitions.Callbacks);
+        }
+        
+        if (showCom && typeDefinitions.ComInterfaces.Count > 0)
+        {
+            ShowComInterfaceDefinitions(typeDefinitions.ComInterfaces);
         }
 
         if (signatures.Count == 0)
@@ -197,7 +210,7 @@ class Program
         Console.WriteLine("✓ Consistency - All APIs follow same pattern");
         Console.WriteLine("✓ Maintainability - Easy to update when Reko definitions change");
         
-        if (typeDefinitions.Structs.Count > 0 || typeDefinitions.Callbacks.Count > 0)
+        if (typeDefinitions.Structs.Count > 0 || typeDefinitions.Callbacks.Count > 0 || typeDefinitions.ComInterfaces.Count > 0)
         {
             Console.WriteLine();
             Console.WriteLine("New Features:");
@@ -206,6 +219,8 @@ class Program
                 Console.WriteLine($"✓ Struct definitions - {typeDefinitions.Structs.Count} structs parsed");
             if (typeDefinitions.Callbacks.Count > 0)
                 Console.WriteLine($"✓ Callback delegates - {typeDefinitions.Callbacks.Count} callbacks identified");
+            if (typeDefinitions.ComInterfaces.Count > 0)
+                Console.WriteLine($"✓ COM interfaces - {typeDefinitions.ComInterfaces.Count} interfaces parsed");
             if (showDocs)
                 Console.WriteLine("✓ Documentation generation - XML docs with categories");
             if (showTests)
@@ -251,6 +266,26 @@ class Program
         if (callbacks.Count > 5)
         {
             Console.WriteLine($"... and {callbacks.Count - 5} more callbacks");
+            Console.WriteLine();
+        }
+    }
+    
+    static void ShowComInterfaceDefinitions(List<ComInterfaceDefinition> interfaces)
+    {
+        Console.WriteLine("COM Interface Definitions:");
+        Console.WriteLine("==========================");
+        Console.WriteLine();
+        
+        var generator = new MarshallingCodeGenerator();
+        foreach (var interfaceDef in interfaces.Take(3))
+        {
+            Console.WriteLine(generator.GenerateComInterface(interfaceDef));
+            Console.WriteLine();
+        }
+        
+        if (interfaces.Count > 3)
+        {
+            Console.WriteLine($"... and {interfaces.Count - 3} more COM interfaces");
             Console.WriteLine();
         }
     }
