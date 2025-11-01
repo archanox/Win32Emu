@@ -64,7 +64,13 @@ public static class EmulatorLauncher
 			Rendering.BackendFactory.CurrentBackendType = backendType;
 		}
 		
-		var path = args[0];
+		// Find the first non-flag argument as the path
+		var path = args.FirstOrDefault(arg => !arg.StartsWith("--"));
+		if (string.IsNullOrEmpty(path))
+		{
+			PrintUsage();
+			return 1;
+		}
 
 		// Set up logging - use provided factory or create default
 		var shouldDisposeLoggerFactory = false;
