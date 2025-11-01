@@ -119,8 +119,8 @@ emulator.Run();
 
 New (same API works):
 ```csharp
-// Option 1: Use EmulatorLauncher API
-EmulatorLauncher.Launch(args, loggerFactory);
+// Option 1: Use EmulatorLauncher API (loggerFactory is optional - pass null to use default console logger)
+EmulatorLauncher.Launch(args, loggerFactory: null);
 
 // Option 2: Direct emulator usage still works
 var emulator = new Emulator(null, logger, telemetryService);
