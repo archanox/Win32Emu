@@ -197,6 +197,108 @@ public class Gdi32Tests : IDisposable
         Assert.Equal(0u, result);
     }
 
+    [Fact]
+    public void Ellipse_ShouldReturnTrue()
+    {
+        // Arrange
+        var hdc = 0x81000000u;
+
+        // Act
+        var result = _testEnv.CallGdi32Api("ELLIPSE", hdc, 10, 10, 100, 100);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+    }
+
+    [Fact]
+    public void Arc_ShouldReturnTrue()
+    {
+        // Arrange
+        var hdc = 0x81000000u;
+
+        // Act
+        var result = _testEnv.CallGdi32Api("ARC", hdc, 10, 10, 100, 100, 50, 10, 10, 50);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+    }
+
+    [Fact]
+    public void Polyline_ShouldReturnTrue()
+    {
+        // Arrange
+        var hdc = 0x81000000u;
+        var points = _testEnv.AllocateMemory(16); // 2 POINT structures (8 bytes each)
+        _testEnv.Memory.Write32(points, 10);      // x1
+        _testEnv.Memory.Write32(points + 4, 10);  // y1
+        _testEnv.Memory.Write32(points + 8, 100); // x2
+        _testEnv.Memory.Write32(points + 12, 100); // y2
+
+        // Act
+        var result = _testEnv.CallGdi32Api("POLYLINE", hdc, points, 2);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+    }
+
+    [Fact]
+    public void DrawTextA_ShouldReturnHeight()
+    {
+        // Arrange
+        var hdc = 0x81000000u;
+        var text = "Hello, World!";
+        var lpString = _testEnv.WriteString(text);
+        var lpRect = _testEnv.AllocateMemory(16);
+        _testEnv.Memory.Write32(lpRect, 10);      // left
+        _testEnv.Memory.Write32(lpRect + 4, 10);  // top
+        _testEnv.Memory.Write32(lpRect + 8, 200); // right
+        _testEnv.Memory.Write32(lpRect + 12, 200); // bottom
+        uint format = 0; // DT_LEFT | DT_TOP
+
+        // Act
+        var result = _testEnv.CallGdi32Api("DRAWTEXTA", hdc, lpString, (uint)text.Length, lpRect, format);
+
+        // Assert
+        Assert.NotEqual(0u, result); // Should return height of text
+    }
+
+    [Fact]
+    public void FrameRect_ShouldReturnSuccess()
+    {
+        // Arrange
+        var hdc = 0x81000000;
+        var lpRect = _testEnv.AllocateMemory(16);
+        _testEnv.Memory.Write32(lpRect, 10);      // left
+        _testEnv.Memory.Write32(lpRect + 4, 10);  // top
+        _testEnv.Memory.Write32(lpRect + 8, 100); // right
+        _testEnv.Memory.Write32(lpRect + 12, 100); // bottom
+        var hBrush = 0x80000000;
+
+        // Act
+        var result = _testEnv.CallGdi32Api("FRAMERECT", hdc, lpRect, hBrush);
+
+        // Assert
+        Assert.NotEqual(0u, result); // Non-zero on success
+    }
+
+    [Fact]
+    public void InvertRect_ShouldReturnTrue()
+    {
+        // Arrange
+        var hdc = 0x81000000;
+        var lpRect = _testEnv.AllocateMemory(16);
+        _testEnv.Memory.Write32(lpRect, 10);      // left
+        _testEnv.Memory.Write32(lpRect + 4, 10);  // top
+        _testEnv.Memory.Write32(lpRect + 8, 100); // right
+        _testEnv.Memory.Write32(lpRect + 12, 100); // bottom
+
+        // Act
+        var result = _testEnv.CallGdi32Api("INVERTRECT", hdc, lpRect);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
