@@ -4,6 +4,8 @@ using AsmResolver.PE.Exports;
 using AsmResolver.PE.File;
 using Microsoft.Extensions.Logging;
 using Win32Emu.Memory;
+using System.Linq;
+using System.IO;
 
 namespace Win32Emu.Loader;
 
@@ -59,24 +61,61 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		var imageSize = opt.SizeOfImage;
 		var subsystem = (ushort)opt.SubSystem;
 
+		// Load PE headers into memory at the image base
+		// The Windows PE loader maps headers into memory, which some programs may read
+		// Headers include DOS header, NT headers, section table, etc.
+		var sizeOfHeaders = opt.SizeOfHeaders;
+		logger?.LogDebug("[Loader] Loading PE headers: Size=0x{HeaderSize:X8} at ImageBase=0x{ImageBase:X8}", sizeOfHeaders, imageBase);
+		
+		try
+		{
+			// Read the raw file bytes for the headers
+			// Headers go from file offset 0 to SizeOfHeaders
+			var headerBytes = File.ReadAllBytes(path);
+			var headerData = headerBytes.Take((int)Math.Min(sizeOfHeaders, (uint)headerBytes.Length)).ToArray();
+			vm.WriteBytes(imageBase, headerData);
+			logger?.LogDebug("[Loader] Loaded 0x{Size:X8} bytes of PE headers", headerData.Length);
+		}
+		catch (Exception ex)
+		{
+			logger?.LogWarning("[Loader] Failed to load PE headers: {ErrorMessage}", ex.Message);
+		}
+
 		// Map sections (raw contents only; uninitialized data left zeroed).
 		foreach (var section in pe.Sections)
 		{
 			if (section.Contents is null)
 			{
+				logger?.LogDebug("[Loader] Skipping section {SectionName} at RVA 0x{Rva:X8}: Contents is null", section.Name, section.Rva);
 				continue;
 			}
 
 			try
 			{
-				vm.WriteBytes(imageBase + section.Rva, section.Contents.WriteIntoArray());
+				var rawData = section.Contents.WriteIntoArray();
+				var virtualSize = section.Contents.GetVirtualSize();
+				var sectionRva = section.Rva;
+				
+				logger?.LogDebug("[Loader] Loading section {SectionName}: RVA=0x{Rva:X8}, VirtualSize=0x{VSize:X8}, RawDataSize=0x{RawSize:X8}, Flags=0x{Flags:X8}", 
+					section.Name, sectionRva, virtualSize, rawData.Length, (uint)section.Characteristics);
+				
+				// Write the raw data from the file
+				vm.WriteBytes(imageBase + sectionRva, rawData);
+				
+				// If VirtualSize is larger than raw data size, the extra bytes should remain zero
+				// (VirtualMemory already initializes to zero, so we don't need to explicitly zero-fill)
+				if (virtualSize > rawData.Length)
+				{
+					logger?.LogDebug("[Loader] Section {SectionName} has VirtualSize (0x{VSize:X8}) > RawDataSize (0x{RawSize:X8}), extra 0x{Extra:X8} bytes remain zero-filled", 
+						section.Name, virtualSize, rawData.Length, virtualSize - (uint)rawData.Length);
+				}
 			}
 			catch (Exception ex) when (ex is System.IO.EndOfStreamException or ArgumentException)
 			{
 				// Skip corrupted sections that extend beyond file boundaries
 				// This can happen with malformed PE files where section headers indicate
 				// sizes that don't match actual file data
-				logger?.LogWarning("Skipping corrupted section at RVA {SectionRva:X8}: {ErrorMessage}", section.Rva, ex.Message);
+				logger?.LogWarning("Skipping corrupted section {SectionName} at RVA {SectionRva:X8}: {ErrorMessage}", section.Name, section.Rva, ex.Message);
 			}
 		}
 
