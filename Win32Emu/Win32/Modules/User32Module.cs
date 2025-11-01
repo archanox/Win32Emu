@@ -1873,7 +1873,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Check if window exists
 			var window = _env.GetWindow(hwnd);
-			if (window == null)
+			if (!window.HasValue)
 			{
 				_logger.LogWarning("[User32] DestroyWindow: Window 0x{Hwnd:X8} not found", hwnd);
 				return 0; // FALSE - window doesn't exist
