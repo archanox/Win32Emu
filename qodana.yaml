@@ -3,7 +3,7 @@
 ####################################################################################################################
 
 version: "1.0"
-linter: jetbrains/qodana-cdnet:2025.2
+linter: jetbrains/qodana-cdnet:2025.2.1
 profile:
   name: qodana.recommended
 include:
