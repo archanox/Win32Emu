@@ -276,6 +276,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 #### Message Queue Infrastructure
 - **PostMessageA**: Queue messages to windows ✓
 - **GetMessageA**: Retrieve messages from queue (blocking with timeout) ✓
+  - *Emulator Note*: Uses 100ms timeout instead of indefinite blocking for better responsiveness
+  - Returns WM_NULL when no messages available (most apps handle this gracefully)
 - **PeekMessageA**: Peek at messages without removing (PM_REMOVE/PM_NOREMOVE) ✓
 - **PostQuitMessage**: Queue WM_QUIT to terminate message loop ✓
 - **TranslateMessage**: Translate virtual-key messages ✓

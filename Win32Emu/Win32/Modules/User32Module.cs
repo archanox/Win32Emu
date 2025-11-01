@@ -1184,6 +1184,18 @@ namespace Win32Emu.Win32.Modules
 				return 0xFFFFFFFF; // -1 for error
 			}
 
+			// EMULATOR DESIGN NOTE: 
+			// Real Win32 GetMessage blocks indefinitely until a message arrives.
+			// However, in an emulator context, indefinite blocking would:
+			// 1. Prevent cooperative multitasking with the host
+			// 2. Make debugging and testing difficult (tests would hang)
+			// 3. Reduce responsiveness of the emulator
+			// 
+			// Our implementation uses a 100ms timeout and returns WM_NULL when no messages
+			// are available. Applications should handle WM_NULL gracefully (most ignore it).
+			// This approach provides better emulator responsiveness while maintaining
+			// compatibility with most Win32 applications that don't rely on strict blocking.
+			
 			// Check if there's a quit message
 			if (_env.HasQuitMessage())
 			{
