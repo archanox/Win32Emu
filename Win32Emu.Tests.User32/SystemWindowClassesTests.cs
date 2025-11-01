@@ -83,8 +83,9 @@ public class SystemWindowClassesTests : IDisposable
 		// Verify window info
 		var windowInfo = _testEnv.ProcessEnv.GetWindow(hwnd);
 		Assert.NotNull(windowInfo);
-		Assert.Equal(className, windowInfo.Value.ClassName);
-		Assert.Equal(windowName, windowInfo.Value.WindowName);
+		var info = windowInfo.Value;
+		Assert.Equal(className, info.ClassName);
+		Assert.Equal(windowName, info.WindowName);
 	}
 
 	/// <summary>
@@ -105,10 +106,11 @@ public class SystemWindowClassesTests : IDisposable
 
 		// Assert
 		Assert.NotNull(classInfo);
-		Assert.NotEqual(0u, classInfo.Value.WndProc);
+		var info = classInfo.Value;
+		Assert.NotEqual(0u, info.WndProc);
 		
 		// Verify it's a standard control window procedure marker
-		Assert.True(ProcessEnvironment.IsStandardControlWndProc(classInfo.Value.WndProc),
+		Assert.True(ProcessEnvironment.IsStandardControlWndProc(info.WndProc),
 			$"Window procedure for '{className}' should be a standard control marker");
 	}
 
@@ -149,7 +151,8 @@ public class SystemWindowClassesTests : IDisposable
 		var windowInfo = _testEnv.ProcessEnv.GetWindow(hwnd);
 		Assert.NotNull(windowInfo);
 		// Class name is stored as provided (preserving the input case)
-		Assert.Equal(inputClassName, windowInfo.Value.ClassName);
+		var nonNullWindowInfo = windowInfo.Value;
+		Assert.Equal(inputClassName, nonNullWindowInfo.ClassName);
 	}
 
 	/// <summary>
@@ -197,9 +200,9 @@ public class SystemWindowClassesTests : IDisposable
 
 		var buttonInfo = _testEnv.ProcessEnv.GetWindow(buttonHwnd);
 		Assert.NotNull(buttonInfo);
-		Assert.Equal("BUTTON", buttonInfo.Value.ClassName);
-		Assert.Equal("Click Me", buttonInfo.Value.WindowName);
-		Assert.Equal(parentHwnd, buttonInfo.Value.Parent);
+		Assert.Equal("BUTTON", buttonInfo!.Value.ClassName);
+		Assert.Equal("Click Me", buttonInfo!.Value.WindowName);
+		Assert.Equal(parentHwnd, buttonInfo!.Value.Parent);
 	}
 
 	/// <summary>
