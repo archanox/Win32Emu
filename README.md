@@ -1,5 +1,6 @@
 # Win32Emu
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/6fc20db31e734cc191fc9cb9881ebe57)](https://app.codacy.com/gh/archanox/Win32Emu?utm_source=github.com&utm_medium=referral&utm_content=archanox/Win32Emu&utm_campaign=Badge_Grade)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/archanox/Win32Emu)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=archanox_Win32Emu&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=archanox_Win32Emu)
 [![Codeac](https://static.codeac.io/badges/2-1063646816.svg "Codeac")](https://app.codeac.io/github/archanox/Win32Emu)
