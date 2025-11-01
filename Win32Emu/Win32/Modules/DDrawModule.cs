@@ -960,13 +960,15 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, hDC);
 
 			// Validate and release the DC
+			// Note: TryGetValue and Remove are not atomic, but this is acceptable
+			// as the emulator runs Win32 applications in a single-threaded context
 			if (_surfaceDCs.TryGetValue(hDC, out var surfaceAddr))
 			{
 				if (surfaceAddr != thisPtr)
 				{
 					_logger.LogError("[DDraw] ReleaseDC: DC 0x{HDC:X8} belongs to surface 0x{SurfaceAddr:X8}, not 0x{ThisPtr:X8}",
 						hDC, surfaceAddr, thisPtr);
-					return 0x88760066; // DDERR_INVALIDOBJECT
+					return 0x887601E6; // DDERR_INVALIDOBJECT
 				}
 
 				_surfaceDCs.Remove(hDC);
@@ -1220,6 +1222,8 @@ namespace Win32Emu.Win32.Modules
 
 			// Create a device context handle and track which surface it belongs to
 			// This allows ReleaseDC to properly validate and clean up
+			// Note: The emulator runs Win32 applications in a single-threaded context,
+			// so thread safety for _nextDCHandle++ and _surfaceDCs is not a concern
 			var dcHandle = _nextDCHandle++;
 			_surfaceDCs[dcHandle] = thisPtr;
 			_env.MemWrite32(lphDC, dcHandle);
@@ -2095,6 +2099,8 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Find the primary surface (which would be the GDI surface)
+			// Note: Linear search is acceptable here as there are typically only 1-3 surfaces
+			// (primary, backbuffer, and possibly one more) in a DirectDraw application
 			DirectDrawSurface? primarySurface = null;
 			foreach (var s in _surfaces.Values)
 			{
