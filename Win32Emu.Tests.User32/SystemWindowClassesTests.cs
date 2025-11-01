@@ -114,18 +114,20 @@ public class SystemWindowClassesTests : IDisposable
 
 	/// <summary>
 	/// Verifies that all system window classes are case-insensitive.
+	/// Windows accepts class names in any case and stores them as provided.
 	/// </summary>
 	[Theory]
-	[InlineData("button", "BUTTON")]
-	[InlineData("Button", "BUTTON")]
-	[InlineData("edit", "EDIT")]
-	[InlineData("EDIT", "EDIT")]
-	[InlineData("static", "STATIC")]
-	[InlineData("listbox", "LISTBOX")]
-	[InlineData("combobox", "COMBOBOX")]
-	[InlineData("scrollbar", "SCROLLBAR")]
-	[InlineData("mdiclient", "MDICLIENT")]
-	public void SystemWindowClass_ShouldBeCaseInsensitive(string inputClassName, string expectedClassName)
+	[InlineData("button")]
+	[InlineData("Button")]
+	[InlineData("BUTTON")]
+	[InlineData("edit")]
+	[InlineData("EDIT")]
+	[InlineData("static")]
+	[InlineData("listbox")]
+	[InlineData("combobox")]
+	[InlineData("scrollbar")]
+	[InlineData("mdiclient")]
+	public void SystemWindowClass_ShouldBeCaseInsensitive(string inputClassName)
 	{
 		// Arrange
 		var classNamePtr = _testEnv.WriteString(inputClassName);
@@ -141,13 +143,13 @@ public class SystemWindowClassesTests : IDisposable
 			0, 0, 0, 0
 		);
 
-		// Assert
+		// Assert - Window should be created successfully regardless of case
 		Assert.NotEqual(0u, hwnd);
 
 		var windowInfo = _testEnv.ProcessEnv.GetWindow(hwnd);
 		Assert.NotNull(windowInfo);
-		// Class name should be normalized to uppercase
-		Assert.Equal(expectedClassName, windowInfo.Value.ClassName.ToUpperInvariant());
+		// Class name is stored as provided (preserving the input case)
+		Assert.Equal(inputClassName, windowInfo.Value.ClassName);
 	}
 
 	/// <summary>

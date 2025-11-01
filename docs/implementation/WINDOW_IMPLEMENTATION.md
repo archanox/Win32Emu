@@ -311,7 +311,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 All standard system window classes are now pre-registered at startup, matching Windows behavior.
 These classes are available without explicit registration via RegisterClassA.
 
-### Current Limitations
+### Current Limitation
 1. **Limited GDI Drawing**: Basic paint operations supported, but no full GDI implementation
 
 ### Future Enhancements
