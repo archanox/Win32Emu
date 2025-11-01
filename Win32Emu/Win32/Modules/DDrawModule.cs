@@ -976,8 +976,8 @@ namespace Win32Emu.Win32.Modules
 				return 0; // DD_OK
 			}
 
-			_logger.LogWarning("[DDraw] ReleaseDC: DC 0x{HDC:X8} not found, treating as success", hDC);
-			return 0; // DD_OK
+			_logger.LogWarning("[DDraw] ReleaseDC: DC 0x{HDC:X8} not found, returning DDERR_INVALIDOBJECT", hDC);
+			return 0x887601E6; // DDERR_INVALIDOBJECT
 		}
 
 		private uint Surface_IsLost(ICpu cpu, VirtualMemory mem)
