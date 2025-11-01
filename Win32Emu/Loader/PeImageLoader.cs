@@ -65,20 +65,41 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		// The Windows PE loader maps headers into memory, which some programs may read
 		// Headers include DOS header, NT headers, section table, etc.
 		var sizeOfHeaders = opt.SizeOfHeaders;
-		logger?.LogDebug("[Loader] Loading PE headers: Size=0x{HeaderSize:X8} at ImageBase=0x{ImageBase:X8}", sizeOfHeaders, imageBase);
 		
-		try
+		// Safety check: ensure SizeOfHeaders is reasonable (typically <= 4KB for most PE files)
+		// Some malformed PE files might have invalid SizeOfHeaders values
+		if (sizeOfHeaders > 0 && sizeOfHeaders <= 0x10000) // Cap at 64KB
 		{
-			// Read the raw file bytes for the headers
-			// Headers go from file offset 0 to SizeOfHeaders
-			var headerBytes = File.ReadAllBytes(path);
-			var headerData = headerBytes.Take((int)Math.Min(sizeOfHeaders, (uint)headerBytes.Length)).ToArray();
-			vm.WriteBytes(imageBase, headerData);
-			logger?.LogDebug("[Loader] Loaded 0x{Size:X8} bytes of PE headers", headerData.Length);
+			logger?.LogDebug("[Loader] Loading PE headers: Size=0x{HeaderSize:X8} at ImageBase=0x{ImageBase:X8}", sizeOfHeaders, imageBase);
+			
+			try
+			{
+				// Read the raw file bytes for the headers
+				// Headers go from file offset 0 to SizeOfHeaders
+				var headerBytes = File.ReadAllBytes(path);
+				var actualHeaderSize = (int)Math.Min(sizeOfHeaders, (uint)headerBytes.Length);
+				
+				// Additional safety: ensure we don't overwrite any sections
+				// Headers should end before the first section starts
+				var firstSectionRva = pe.Sections.Any() ? pe.Sections.Min(s => s.Rva) : sizeOfHeaders;
+				if (actualHeaderSize > firstSectionRva)
+				{
+					logger?.LogWarning("[Loader] SizeOfHeaders (0x{Size:X8}) extends beyond first section RVA (0x{FirstRva:X8}), truncating to first section", actualHeaderSize, firstSectionRva);
+					actualHeaderSize = (int)firstSectionRva;
+				}
+				
+				var headerData = headerBytes.Take(actualHeaderSize).ToArray();
+				vm.WriteBytes(imageBase, headerData);
+				logger?.LogDebug("[Loader] Loaded 0x{Size:X8} bytes of PE headers", headerData.Length);
+			}
+			catch (Exception ex)
+			{
+				logger?.LogWarning("[Loader] Failed to load PE headers: {ErrorMessage}", ex.Message);
+			}
 		}
-		catch (Exception ex)
+		else
 		{
-			logger?.LogWarning("[Loader] Failed to load PE headers: {ErrorMessage}", ex.Message);
+			logger?.LogWarning("[Loader] Skipping PE header loading: SizeOfHeaders (0x{Size:X8}) is invalid or out of range", sizeOfHeaders);
 		}
 
 		// Map sections (raw contents only; uninitialized data left zeroed).
