@@ -34,11 +34,24 @@ var renderer = BackendFactory.CreateRenderingBackend(logger);
 
 ## Features
 
+### Basic Features
+
 - **Native Metal Rendering**: Utilizes Apple's Metal API for optimal performance on macOS
 - **Full IRenderingBackend Implementation**: Compatible with all Win32Emu rendering requirements
 - **Pixel Format Support**: Converts 8-bit palettized, 16-bit RGB565, and 24-bit RGB/BGR to RGBA
 - **GLFW Integration**: Uses GLFW for window management and attaches Metal layers to native NSView
 - **Resource Management**: Proper disposal of Metal resources (devices, command queues, textures, buffers)
+
+### Advanced Features (NEW)
+
+The Metal backend has been significantly enhanced with GPU-accelerated advanced features:
+
+- **Custom Shader Support**: Load and compile Metal shaders at runtime for custom effects
+- **Multiple Render Targets (MRT)**: Render to up to 8 textures simultaneously for deferred shading
+- **3D Graphics Emulation**: Full 3D rendering pipeline with vertex/index buffers, depth testing, and transformations
+- **Compute Shaders**: GPU-accelerated image processing with built-in kernels (blur, sharpen, edge detection, etc.)
+
+**See**: [METAL_ADVANCED_FEATURES.md](METAL_ADVANCED_FEATURES.md) for detailed documentation and usage examples.
 
 ## Architecture
 
@@ -76,6 +89,7 @@ Metal provides excellent performance on macOS by:
 
 ## See Also
 
+- [METAL_USAGE_EXAMPLES.md](METAL_USAGE_EXAMPLES.md) - Practical usage examples and code samples
 - [SharpMetal Repository](https://github.com/IsaacMarovitz/SharpMetal)
 - [Apple Metal Documentation](https://developer.apple.com/metal/)
 - [Win32Emu Rendering Backends](../Rendering/)
