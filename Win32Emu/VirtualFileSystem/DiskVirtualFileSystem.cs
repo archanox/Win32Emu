@@ -44,24 +44,45 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 					break;
 
 				case ".vmdk":
-					_disk = new VmdkDisk(diskPath, FileAccess.ReadWrite);
+					try
+					{
+						_disk = new VmdkDisk(diskPath, FileAccess.ReadWrite);
+					}
+					catch (UnauthorizedAccessException)
+					{
+						_disk = new VmdkDisk(diskPath, FileAccess.Read);
+						_isReadOnly = true;
+					}
 					_fileSystem = GetFileSystemFromDisk(_disk);
-					_isReadOnly = false;
-					_logger.LogInformation("[DiskVFS] Mounted VMDK: {DiskPath}", diskPath);
+					_logger.LogInformation("[DiskVFS] Mounted VMDK: {DiskPath} ({Mode})", diskPath, _isReadOnly ? "Read-Only" : "Read-Write");
 					break;
 
 				case ".vhd":
-					_disk = new VhdDisk(diskPath, FileAccess.ReadWrite);
+					try
+					{
+						_disk = new VhdDisk(diskPath, FileAccess.ReadWrite);
+					}
+					catch (UnauthorizedAccessException)
+					{
+						_disk = new VhdDisk(diskPath, FileAccess.Read);
+						_isReadOnly = true;
+					}
 					_fileSystem = GetFileSystemFromDisk(_disk);
-					_isReadOnly = false;
-					_logger.LogInformation("[DiskVFS] Mounted VHD: {DiskPath}", diskPath);
+					_logger.LogInformation("[DiskVFS] Mounted VHD: {DiskPath} ({Mode})", diskPath, _isReadOnly ? "Read-Only" : "Read-Write");
 					break;
 
 				case ".vhdx":
-					_disk = new VhdxDisk(diskPath, FileAccess.ReadWrite);
+					try
+					{
+						_disk = new VhdxDisk(diskPath, FileAccess.ReadWrite);
+					}
+					catch (UnauthorizedAccessException)
+					{
+						_disk = new VhdxDisk(diskPath, FileAccess.Read);
+						_isReadOnly = true;
+					}
 					_fileSystem = GetFileSystemFromDisk(_disk);
-					_isReadOnly = false;
-					_logger.LogInformation("[DiskVFS] Mounted VHDX: {DiskPath}", diskPath);
+					_logger.LogInformation("[DiskVFS] Mounted VHDX: {DiskPath} ({Mode})", diskPath, _isReadOnly ? "Read-Only" : "Read-Write");
 					break;
 
 				default:
@@ -135,7 +156,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		foreach (var file in Directory.GetFiles(sourceDir))
 		{
 			var fileName = Path.GetFileName(file);
-			var targetPath = $"{targetDir}/{fileName}".Replace("//", "/");
+			var targetPath = CombinePaths(targetDir, fileName);
 
 			using var sourceStream = File.OpenRead(file);
 			using var targetStream = _fileSystem.OpenFile(targetPath, FileMode.Create, FileAccess.Write);
@@ -148,7 +169,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		foreach (var dir in Directory.GetDirectories(sourceDir))
 		{
 			var dirName = Path.GetFileName(dir);
-			var targetPath = $"{targetDir}/{dirName}".Replace("//", "/");
+			var targetPath = CombinePaths(targetDir, dirName);
 
 			_fileSystem.CreateDirectory(targetPath);
 			CopyDirectoryRecursive(dir, targetPath);
@@ -186,13 +207,18 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			normalized = "/" + normalized;
 		}
 
-		// Remove double slashes
-		while (normalized.Contains("//"))
-		{
-			normalized = normalized.Replace("//", "/");
-		}
+		// Remove double slashes efficiently using regex
+		normalized = System.Text.RegularExpressions.Regex.Replace(normalized, "/+", "/");
 
 		return normalized;
+	}
+
+	private string CombinePaths(string basePath, string childPath)
+	{
+		basePath = basePath.TrimEnd('/');
+		childPath = childPath.TrimStart('/');
+		var combined = basePath + "/" + childPath;
+		return NormalizePath(combined);
 	}
 
 	public IVirtualFileHandle? OpenFile(string path, VfsFileMode mode, VfsFileAccess access)
