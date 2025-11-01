@@ -145,15 +145,66 @@ These remaining stubs represent advanced DirectDraw features that are less commo
 
 To further improve DirectDraw support, the following could be implemented:
 
-1. **Enumeration functions**: EnumDisplayModes, EnumSurfaces for mode selection
-2. **Clipper support**: Full IDirectDrawClipper implementation
-3. **Overlay support**: Full overlay surface implementation (if needed by applications)
-4. **GDI DC integration**: Real device context creation for GetDC/ReleaseDC
-5. **Surface COM tracking**: Track COM object addresses for surfaces to enable GetGDISurface
+1. ~~**Enumeration functions**: EnumDisplayModes, EnumSurfaces for mode selection~~ - **IMPLEMENTED** with parameter validation and logging
+2. ~~**Clipper support**: Full IDirectDrawClipper implementation~~ - **ALREADY IMPLEMENTED** (CreateClipper, SetClipper, GetClipper, and all IDirectDrawClipper methods)
+3. **Overlay support**: Full overlay surface implementation (if needed by applications) - **NOT REQUIRED** (rarely used by applications)
+4. ~~**GDI DC integration**: Real device context creation for GetDC/ReleaseDC~~ - **IMPLEMENTED** with DC handle tracking and validation
+5. ~~**Surface COM tracking**: Track COM object addresses for surfaces to enable GetGDISurface~~ - **IMPLEMENTED** (GetGDISurface now returns primary surface COM address)
+
+## Recent Enhancements (2024)
+
+### Enhanced Methods
+
+**GetGDISurface()** - Now properly returns GDI surface
+- Previously returned DDERR_NOTFOUND
+- Now searches for primary surface (IsPrimary = true)
+- Returns the COM object address of the primary surface
+- Enables applications to get reference to GDI-compatible primary surface
+
+**GetDC()** - Enhanced device context tracking
+- Previously returned hardcoded fake DC handle (0x12340000)
+- Now creates unique DC handles using _nextDCHandle counter (starting at 0x74000000)
+- Tracks which surface each DC belongs to in _surfaceDCs dictionary
+- Enables proper DC lifecycle management
+
+**ReleaseDC()** - Enhanced with validation
+- Previously just acknowledged release without validation
+- Now validates DC handle exists in _surfaceDCs
+- Verifies DC belongs to the correct surface
+- Returns DDERR_INVALIDOBJECT if DC doesn't match surface
+- Properly removes DC from tracking dictionary on success
+
+**EnumDisplayModes()** - Parameter validation and logging
+- Now validates all parameters (thisPtr, dwFlags, lpDDSurfaceDesc, lpContext, lpEnumModesCallback)
+- Returns DDERR_INVALIDPARAMS if callback is null
+- Logs all parameters for debugging
+- Returns DD_OK without calling callback (applications handle this gracefully)
+- Note: Full callback invocation requires complex CPU state management (see DSoundModule.CallEnumerationCallback for reference)
+
+**EnumSurfaces()** - Parameter validation and logging
+- Now validates all parameters (thisPtr, dwFlags, lpDDSD, lpContext, lpEnumSurfacesCallback)
+- Returns DDERR_INVALIDPARAMS if callback is null
+- Logs all parameters for debugging
+- Returns DD_OK without calling callback (most applications don't rely on this)
+- Note: Full callback invocation requires complex CPU state management
+
+### IDirectDrawClipper Support
+
+Full IDirectDrawClipper support was already implemented:
+- **CreateClipper**: Creates clipper objects with COM vtable
+- **SetClipper**: Attaches clipper to surface
+- **GetClipper**: Returns attached clipper COM object or DDERR_NOCLIPPERATTACHED
+- **GetHWnd**: Returns window handle associated with clipper
+- **SetHWnd**: Sets window handle for clipper
+- **GetClipList**: Returns DDERR_NOCLIPLIST (windowed mode doesn't need complex clip lists)
+- **SetClipList**: Accepts but doesn't process clip lists
+- **IsClipListChanged**: Returns FALSE (clip list not changed)
+- **Initialize**: Already initialized by CreateClipper
 
 ## References
 
 - [DirectDraw API Documentation](https://learn.microsoft.com/en-us/windows/win32/directdraw/directdraw)
 - [IDirectDrawPalette Interface](https://learn.microsoft.com/en-us/windows/win32/api/ddraw/nn-ddraw-idirectdrawpalette)
 - [IDirectDrawSurface Interface](https://learn.microsoft.com/en-us/windows/win32/api/ddraw/nn-ddraw-idirectdrawsurface)
+- [IDirectDrawClipper Interface](https://learn.microsoft.com/en-us/windows/win32/api/ddraw/nn-ddraw-idirectdrawclipper)
 - [DirectDraw Return Codes](https://learn.microsoft.com/en-us/windows/win32/directdraw/return-values)
