@@ -201,11 +201,10 @@ public class Gdi32Tests : IDisposable
     public void Ellipse_ShouldReturnTrue()
     {
         // Arrange
-        var hdc = 0x81000000;
-        int left = 10, top = 10, right = 100, bottom = 100;
+        var hdc = 0x81000000u;
 
         // Act
-        var result = _testEnv.CallGdi32Api("ELLIPSE", hdc, (uint)left, (uint)top, (uint)right, (uint)bottom);
+        var result = _testEnv.CallGdi32Api("ELLIPSE", hdc, 10, 10, 100, 100);
 
         // Assert
         Assert.Equal(1u, result); // TRUE
@@ -215,10 +214,10 @@ public class Gdi32Tests : IDisposable
     public void Arc_ShouldReturnTrue()
     {
         // Arrange
-        var hdc = 0x81000000;
+        var hdc = 0x81000000u;
 
         // Act
-        var result = _testEnv.CallGdi32Api("ARC", hdc, 10u, 10u, 100u, 100u, 50u, 10u, 10u, 50u);
+        var result = _testEnv.CallGdi32Api("ARC", hdc, 10, 10, 100, 100, 50, 10, 10, 50);
 
         // Assert
         Assert.Equal(1u, result); // TRUE
@@ -228,7 +227,7 @@ public class Gdi32Tests : IDisposable
     public void Polyline_ShouldReturnTrue()
     {
         // Arrange
-        var hdc = 0x81000000;
+        var hdc = 0x81000000u;
         var points = _testEnv.AllocateMemory(16); // 2 POINT structures (8 bytes each)
         _testEnv.Memory.Write32(points, 10);      // x1
         _testEnv.Memory.Write32(points + 4, 10);  // y1
@@ -236,7 +235,7 @@ public class Gdi32Tests : IDisposable
         _testEnv.Memory.Write32(points + 12, 100); // y2
 
         // Act
-        var result = _testEnv.CallGdi32Api("POLYLINE", hdc, points, 2u);
+        var result = _testEnv.CallGdi32Api("POLYLINE", hdc, points, 2);
 
         // Assert
         Assert.Equal(1u, result); // TRUE
@@ -246,7 +245,7 @@ public class Gdi32Tests : IDisposable
     public void DrawTextA_ShouldReturnHeight()
     {
         // Arrange
-        var hdc = 0x81000000;
+        var hdc = 0x81000000u;
         var text = "Hello, World!";
         var lpString = _testEnv.WriteString(text);
         var lpRect = _testEnv.AllocateMemory(16);
