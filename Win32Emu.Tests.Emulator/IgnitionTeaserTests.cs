@@ -528,6 +528,10 @@ public class IgnitionTeaserTests
 
         public void OnDialogControlTextChanged(uint dialogHandle, int controlId, string text) { }
         public void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData) { }
+        public void OnDisplayUpdate(DisplayUpdateInfo info)
+        {
+            _output.WriteLine($"[DISPLAY] Frame buffer updated: {info.Width}x{info.Height}");
+        }
     }
 
     /// <summary>

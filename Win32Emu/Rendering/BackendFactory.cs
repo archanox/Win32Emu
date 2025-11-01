@@ -55,6 +55,26 @@ public static class BackendFactory
     }
 
     /// <summary>
+    /// Create a rendering backend with automatic Avalonia integration.
+    /// If a host is provided, creates an AvaloniaRenderingBackend for GUI integration.
+    /// Otherwise, creates a platform-specific backend based on CurrentBackendType.
+    /// </summary>
+    /// <param name="logger">Logger instance</param>
+    /// <param name="host">Optional emulator host for GUI integration</param>
+    /// <returns>Rendering backend instance</returns>
+    public static IRenderingBackend CreateRenderingBackendWithHost(ILogger logger, IEmulatorHost? host)
+    {
+        // Use Avalonia backend if host is available for GUI integration
+        if (host != null)
+        {
+            return new AvaloniaRenderingBackend(logger, host);
+        }
+        
+        // Otherwise use default platform-specific backend
+        return CreateRenderingBackend(logger);
+    }
+
+    /// <summary>
     /// Create an audio backend instance
     /// </summary>
     public static IAudioBackend CreateAudioBackend(ILogger logger)

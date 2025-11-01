@@ -70,6 +70,12 @@ public class ProcessEnvironment
 	// COM vtable dispatcher access
 	public ComVtableDispatcher ComDispatcher => _comDispatcher ?? throw new InvalidOperationException("COM dispatcher not initialized");
 
+	// Host interface access
+	/// <summary>
+	/// Gets the emulator host interface for GUI callbacks
+	/// </summary>
+	public IEmulatorHost? Host => _host;
+
 	// Virtual File System access
 	/// <summary>
 	/// Gets the current virtual file system instance for this process environment.
