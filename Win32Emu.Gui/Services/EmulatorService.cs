@@ -120,23 +120,10 @@ public class EmulatorService
 
         if (useVirtualDisk)
         {
-            // Use virtual disk (VHD/VMDK/VHDX)
+            // Use virtual disk (VHD/VMDK/VHDX) - always enabled, no fallback
             try
             {
                 var diskPath = _virtualDiskService.GetOrCreateVirtualDisk(game, gameSettings);
-                
-                // Check if disk exists, if not warn user
-                if (!File.Exists(diskPath))
-                {
-                    _logger.LogWarning("[EmulatorService] Virtual disk does not exist: {Path}", diskPath);
-                    _logger.LogWarning("[EmulatorService] Please create it manually using: qemu-img create -f vhd \"{Path}\" {SizeMb}M", 
-                        diskPath, gameSettings?.VirtualDiskSizeMb ?? _configuration.DefaultVirtualDiskSizeMb);
-                    _host?.OnDebugOutput($"Virtual disk not found. Create manually: qemu-img create -f vhd \"{diskPath}\" {gameSettings?.VirtualDiskSizeMb ?? _configuration.DefaultVirtualDiskSizeMb}M", DebugLevel.Warning);
-                    
-                    // Fall back to layered VFS
-                    InitializeLayeredVFS(game);
-                    return;
-                }
                 
                 _currentEmulator.Environment.InitializeVirtualFileSystemWithDisk(diskPath);
                 _logger.LogInformation("[EmulatorService] Using virtual disk for game: {Title}", game.Title);
@@ -163,27 +150,18 @@ public class EmulatorService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[EmulatorService] Failed to initialize virtual disk, falling back to layered VFS");
-                InitializeLayeredVFS(game);
+                _logger.LogError(ex, "[EmulatorService] Failed to initialize virtual disk");
+                throw;
             }
         }
         else
         {
-            // Use traditional layered VFS
-            InitializeLayeredVFS(game);
+            // Virtual disk disabled - this should not happen with the new system
+            _logger.LogWarning("[EmulatorService] Virtual disk is disabled for game: {Title}. This is not recommended.", game.Title);
+            
+            // Use game directory as base for minimal VFS support
+            var baseDir = Path.GetDirectoryName(game.ExecutablePath) ?? Directory.GetCurrentDirectory();
+            _currentEmulator.Environment.InitializeVirtualFileSystem(baseDir);
         }
-    }
-
-    private void InitializeLayeredVFS(Game game)
-    {
-        if (_currentEmulator?.Environment == null)
-        {
-            return;
-        }
-
-        // Use game directory as base, with temp overlay
-        var baseDir = Path.GetDirectoryName(game.ExecutablePath) ?? Directory.GetCurrentDirectory();
-        _currentEmulator.Environment.InitializeVirtualFileSystem(baseDir);
-        _logger.LogInformation("[EmulatorService] Using layered VFS for game: {Title}", game.Title);
     }
 }

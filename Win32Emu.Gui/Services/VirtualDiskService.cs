@@ -44,7 +44,10 @@ public class VirtualDiskService
 				return explicitPath;
 			}
 			
-			_logger.LogWarning("[VirtualDisk] Specified disk path does not exist: {Path}. Will auto-create.", explicitPath);
+			_logger.LogInformation("[VirtualDisk] Specified disk path does not exist, will create: {Path}", explicitPath);
+			// Create the disk at the explicit path
+			CreateVirtualDisk(explicitPath, gameSettings);
+			return explicitPath;
 		}
 
 		// Auto-create disk path
@@ -56,13 +59,11 @@ public class VirtualDiskService
 		var format = _configuration.VirtualDiskFormat?.ToLowerInvariant() ?? "vhd";
 		var diskPath = Path.Combine(diskDir, $"{sanitizedTitle}.{format}");
 
-		// If disk doesn't exist, we'll need to create it
+		// If disk doesn't exist, create it
 		if (!File.Exists(diskPath))
 		{
-			_logger.LogInformation("[VirtualDisk] Virtual disk does not exist, will be created on first use: {Path}", diskPath);
-			
-			// Note: Actual creation happens when mounting, as we use external tools
-			// The disk will be created by mounting logic
+			_logger.LogInformation("[VirtualDisk] Creating new virtual disk: {Path}", diskPath);
+			CreateVirtualDisk(diskPath, gameSettings);
 		}
 		else
 		{
@@ -70,6 +71,39 @@ public class VirtualDiskService
 		}
 
 		return diskPath;
+	}
+
+	/// <summary>
+	/// Creates a new virtual disk file
+	/// </summary>
+	private void CreateVirtualDisk(string diskPath, GameSettings? gameSettings)
+	{
+		var format = GetDiskFormatFromPath(diskPath);
+		var sizeBytes = (gameSettings?.VirtualDiskSizeMb ?? _configuration.DefaultVirtualDiskSizeMb) * 1024L * 1024L;
+
+		_logger.LogInformation("[VirtualDisk] Creating {Format} disk at {Path} with size {SizeMb} MB", 
+			format, diskPath, sizeBytes / 1024 / 1024);
+
+		// Use DiskVirtualFileSystem.Create to create and format the disk
+		using (var _ = DiskVirtualFileSystem.Create(diskPath, format, sizeBytes, _logger))
+		{
+			// Disk created and formatted successfully
+		}
+	}
+
+	/// <summary>
+	/// Determines the disk format from the file extension
+	/// </summary>
+	private DiskFormat GetDiskFormatFromPath(string diskPath)
+	{
+		var extension = Path.GetExtension(diskPath).ToLowerInvariant();
+		return extension switch
+		{
+			".vhd" => DiskFormat.Vhd,
+			".vhdx" => DiskFormat.Vhdx,
+			".vmdk" => DiskFormat.Vmdk,
+			_ => DiskFormat.Vhd // Default to VHD
+		};
 	}
 
 	/// <summary>
@@ -112,29 +146,27 @@ public class VirtualDiskService
 	/// </summary>
 	public async Task<string> PrepareVirtualDiskAsync(Game game, GameSettings? gameSettings = null)
 	{
-		var diskPath = GetOrCreateVirtualDisk(game, gameSettings);
-
-		// If disk doesn't exist and we have a source directory, we need to create and populate it
-		if (!File.Exists(diskPath) && !string.IsNullOrEmpty(gameSettings?.VirtualDiskSourceDirectory))
+		return await Task.Run(() =>
 		{
-			await Task.Run(() =>
+			var diskPath = GetOrCreateVirtualDisk(game, gameSettings);
+
+			// If we have a source directory, populate the disk
+			if (!string.IsNullOrEmpty(gameSettings?.VirtualDiskSourceDirectory))
 			{
 				var sourceDir = gameSettings.VirtualDiskSourceDirectory;
-				if (!Directory.Exists(sourceDir))
+				if (Directory.Exists(sourceDir))
+				{
+					_logger.LogInformation("[VirtualDisk] Will populate disk with source directory: {SourceDir}", sourceDir);
+					// The actual copying will be done by EmulatorService after mounting
+				}
+				else
 				{
 					_logger.LogWarning("[VirtualDisk] Source directory does not exist: {Path}", sourceDir);
-					return;
 				}
+			}
 
-				// Note: Disk creation with DiscUtils.Create is not implemented
-				// User must create the disk manually using external tools
-				_logger.LogWarning("[VirtualDisk] Disk creation is not automated. Please create the disk manually using tools like qemu-img or VBoxManage");
-				_logger.LogInformation("[VirtualDisk] Example: qemu-img create -f vhd {DiskPath} {SizeMb}M", 
-					diskPath, gameSettings.VirtualDiskSizeMb ?? _configuration.DefaultVirtualDiskSizeMb);
-			});
-		}
-
-		return diskPath;
+			return diskPath;
+		});
 	}
 
 	/// <summary>

@@ -372,25 +372,13 @@
                                 Padding="12"
                                 CornerRadius="4">
                             <StackPanel Spacing="8">
-                                <TextBlock Text="⚠️ Important Notes"
+                                <TextBlock Text="ℹ️ Virtual Disk Information"
                                          FontWeight="Bold"
                                          FontSize="13"/>
                                 <TextBlock TextWrapping="Wrap"
                                          FontSize="12"
                                          Opacity="0.9">
-                                    <Run Text="• Virtual disks must be created manually using external tools (qemu-img, VBoxManage, etc.)"/>
-                                </TextBlock>
-                                <TextBlock TextWrapping="Wrap"
-                                         FontSize="12"
-                                         Opacity="0.9"
-                                         Margin="12,0,0,0">
-                                    <Run FontFamily="Consolas" Text="qemu-img create -f vhd disk.vhd 512M"/>
-                                </TextBlock>
-                                <TextBlock TextWrapping="Wrap"
-                                         FontSize="12"
-                                         Opacity="0.9"
-                                         Margin="0,4,0,0">
-                                    <Run Text="• Disks must be formatted with FAT filesystem before use"/>
+                                    <Run Text="• Virtual disks are automatically created and formatted with FAT32"/>
                                 </TextBlock>
                                 <TextBlock TextWrapping="Wrap"
                                          FontSize="12"
@@ -401,6 +389,11 @@
                                          FontSize="12"
                                          Opacity="0.9">
                                     <Run Text="• ISO files can be mounted read-only for game installation"/>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap"
+                                         FontSize="12"
+                                         Opacity="0.9">
+                                    <Run Text="• Disks are dynamically sized and only use space as needed"/>
                                 </TextBlock>
                             </StackPanel>
                         </Border>
