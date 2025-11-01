@@ -68,6 +68,18 @@ public class AvaloniaRenderingBackend : IRenderingBackend
             for (var x = 0; x < width; x++)
             {
                 var paletteIndex = indexedData[rowOffset + x];
+                
+                // Validate palette index to prevent out of bounds access
+                if (paletteIndex >= palette.Length)
+                {
+                    _logger.LogWarning("[Avalonia] Invalid palette index {Index} (palette size: {Size}), using black", paletteIndex, palette.Length);
+                    rgbaData[rgbaIndex++] = 0;
+                    rgbaData[rgbaIndex++] = 0;
+                    rgbaData[rgbaIndex++] = 0;
+                    rgbaData[rgbaIndex++] = 0xFF;
+                    continue;
+                }
+                
                 var color = palette[paletteIndex];
 
                 // Extract RGBA components from palette entry (format: 0xAABBGGRR or 0x00BBGGRR)

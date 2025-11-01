@@ -697,10 +697,19 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 // Update the bitmap with the new frame buffer data
                 using (var framebuffer = DisplayBitmap.Lock())
                 {
-                    // Calculate the size to copy
-                    var bytesToCopy = Math.Min(info.FrameBuffer.Length, framebuffer.Size.Width * framebuffer.Size.Height * 4);
+                    // Calculate the actual framebuffer size accounting for stride/row padding
+                    var framebufferBytes = framebuffer.RowBytes * framebuffer.Size.Height;
                     
-                    // Copy using Marshal for safety
+                    // Ensure we don't copy more data than available or than the framebuffer can hold
+                    var bytesToCopy = Math.Min(Math.Min(info.FrameBuffer.Length, framebufferBytes), 
+                                               info.Width * info.Height * 4);
+                    
+                    if (bytesToCopy != info.FrameBuffer.Length)
+                    {
+                        OnDebugOutput($"Frame buffer size mismatch: provided={info.FrameBuffer.Length}, framebuffer={framebufferBytes}, copying={bytesToCopy}", DebugLevel.Warning);
+                    }
+                    
+                    // Copy using Marshal for safety - bounds are validated above
                     System.Runtime.InteropServices.Marshal.Copy(
                         info.FrameBuffer,
                         0,
