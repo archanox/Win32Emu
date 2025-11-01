@@ -300,17 +300,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 - Custom typed message classes via MessageFactory ✓
 
 ### Current Limitations
-1. **No Visual Rendering**: Windows created but not visually displayed
-2. **System Classes**: Common control classes (BUTTON, EDIT, etc.) not pre-registered
-3. **Limited GDI Drawing**: Basic paint operations supported, but no full GDI implementation
+1. **System Classes**: Common control classes (BUTTON, EDIT, etc.) not pre-registered (but can be created dynamically)
+2. **Limited GDI Drawing**: Basic paint operations supported, but no full GDI implementation
 
 ### Future Enhancements
-1. Integrate with Avalonia UI for visual rendering (as per API_INTEGRATION.md)
-2. Pre-register system window classes (BUTTON, EDIT, LISTBOX, etc.) 
-3. Expand GDI drawing support (regions, paths, advanced painting)
-4. Add window animation and special effects
-5. Implement clipboard integration
-6. Add drag-and-drop support
+1. Pre-register standard Windows control classes (BUTTON, EDIT, LISTBOX, etc.) at startup
+2. Expand GDI drawing support (regions, paths, advanced painting)
+3. Add window animation and special effects
+4. Implement clipboard integration
+5. Add drag-and-drop support
 
 ## Testing
 
