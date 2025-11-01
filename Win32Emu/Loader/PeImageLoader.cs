@@ -75,7 +75,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			{
 				// Additional safety: ensure we don't overwrite any sections
 				// Headers should end before the first section starts
-				var firstSectionRva = sizeOfHeaders;
+				uint firstSectionRva = uint.MaxValue;
 				foreach (var section in pe.Sections)
 				{
 					if (section.Rva < firstSectionRva)
@@ -84,7 +84,21 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 					}
 				}
 				
-				var actualHeaderSize = (int)Math.Min(sizeOfHeaders, firstSectionRva);
+				// If no sections found or all sections start after SizeOfHeaders, use SizeOfHeaders
+				if (firstSectionRva == uint.MaxValue || firstSectionRva > sizeOfHeaders)
+				{
+					firstSectionRva = sizeOfHeaders;
+				}
+				
+				// Safely calculate header size, ensuring we don't overflow int.MaxValue
+				long headerSizeLong = Math.Min((long)sizeOfHeaders, (long)firstSectionRva);
+				if (headerSizeLong > int.MaxValue)
+				{
+					logger?.LogWarning("[Loader] Calculated header size (0x{Size:X8}) exceeds int.MaxValue, capping at 0x{Max:X8}", headerSizeLong, int.MaxValue);
+					headerSizeLong = int.MaxValue;
+				}
+				var actualHeaderSize = (int)headerSizeLong;
+				
 				if (actualHeaderSize < sizeOfHeaders)
 				{
 					logger?.LogWarning("[Loader] SizeOfHeaders (0x{Size:X8}) extends beyond first section RVA (0x{FirstRva:X8}), truncating to first section", sizeOfHeaders, firstSectionRva);
