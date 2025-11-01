@@ -610,13 +610,6 @@ public sealed class Emulator : IDisposable
                             }
                         }
                         
-                        // VALIDATION: Check if return-to-caller address looks valid
-                        // It should point to code in the main executable's address space
-                        if (returnToCallerAfter >= 0x0F000000 && returnToCallerAfter < 0x10000000)
-                        {
-                            _logger.LogWarning("[Syscall] Return-to-caller address 0x{Addr:X8} is in import stub range, not in executable code. Possible stack corruption.", returnToCallerAfter);
-                        }
-                        
                         // Set return value in EAX (stdcall convention)
                         _cpu.SetRegister("EAX", ret);
                         

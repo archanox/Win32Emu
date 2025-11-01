@@ -43,8 +43,8 @@ public class IATValidationTests
         Assert.Equal(EXPECTED_IMPORT_COUNT, importMap.Count);
         
         // Verify first import
-        Assert.True(importMap.ContainsKey(0x0F000000u));
-        Assert.Equal("KERNEL32.DLL", importMap[0x0F000000u].dll);
+        Assert.True(importMap.TryGetValue(0x0F000000u, out var firstImport));
+        Assert.Equal("KERNEL32.DLL", firstImport.dll);
         
         // Verify last valid import (index 82)
         var lastValidAddr = 0x0F000000u + (uint)((EXPECTED_IMPORT_COUNT - 1) * 0x10);
@@ -155,10 +155,9 @@ public class IATValidationTests
         const uint STUB_ADDR = 0x0F000000u;
         
         // Calculate relative offset for CALL instruction
-        // The offset between these addresses is well within int range (-16777221 in this case)
-        // We use checked() to ensure the test fails cleanly if addresses are changed to invalid values
+        // The offset must fit in a 32-bit signed integer for the x86 CALL instruction.
         long callOffsetLong = (long)SYSCALL_DISPATCHER - ((long)STUB_ADDR + 5);
-        var callOffset = checked((int)callOffsetLong); // Will throw OverflowException if out of range
+        var callOffset = (int)callOffsetLong;
         
         var stub = new byte[]
         {
@@ -272,9 +271,10 @@ public class IATValidationTests
                     _output.WriteLine($"WARNING: Unexpected non-zero data at unmapped address 0x{addr:X8}: 0x{byte1:X2} 0x{byte2:X2}");
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // Memory not mapped - this is expected and fine
+                _output.WriteLine($"Memory read exception at 0x{addr:X8}: {ex.Message}");
                 break;
             }
         }

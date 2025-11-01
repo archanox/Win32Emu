@@ -29,8 +29,6 @@ public class StackCorruptionDetectionTests
         // This test validates that if a return address points to an unmapped import address
         // (like 0x0F000530 which would be import index 83, but only indices 0-82 exist),
         // we can detect it as invalid
-
-        var memory = new VirtualMemory();
         
         // Simulate the scenario from IGN_TEAS.EXE:
         // - 83 imports exist (indices 0-82, addresses 0x0F000000 - 0x0F000520)
@@ -54,20 +52,39 @@ public class StackCorruptionDetectionTests
         // Verify the unmapped address is NOT in the map
         Assert.False(importMap.ContainsKey(UNMAPPED_IMPORT_ADDR));
         
-        // Verify we can detect this address is in the import range but unmapped
-        var isInImportRange = UNMAPPED_IMPORT_ADDR >= 0x0F000000 && UNMAPPED_IMPORT_ADDR < 0x10000000;
-        var alignedAddr = UNMAPPED_IMPORT_ADDR & 0xFFFFFFF0u;
-        var isMapped = importMap.ContainsKey(alignedAddr);
-        
-        Assert.True(isInImportRange, "Address should be in import stub range");
-        Assert.False(isMapped, "Address should NOT be mapped to any import");
-        
-        // Calculate which import index this would be
-        var wouldBeIndex = (UNMAPPED_IMPORT_ADDR - 0x0F000000) / 0x10;
-        _output.WriteLine($"Address 0x{UNMAPPED_IMPORT_ADDR:X8} would be import index {wouldBeIndex}, but only {IMPORT_COUNT} imports exist (0-{IMPORT_COUNT - 1})");
-        
-        Assert.Equal(83, (int)wouldBeIndex);
-        Assert.True(wouldBeIndex >= IMPORT_COUNT, "Import index out of bounds");
+        // Verify we can detect addresses in and out of the import range, and whether they are mapped
+        var testAddresses = new[]
+        {
+            0x0F000530u, // in range, unmapped
+            0x0F000520u, // in range, mapped (last valid)
+            0x10000000u, // out of range (just above)
+            0x0EFFFFFFu  // out of range (just below)
+        };
+        foreach (var addr in testAddresses)
+        {
+            var isInImportRange = addr >= 0x0F000000 && addr < 0x10000000;
+            var alignedAddr = addr & 0xFFFFFFF0u;
+            var isMapped = importMap.ContainsKey(alignedAddr);
+
+            if (addr == 0x0F000530u)
+            {
+                Assert.True(isInImportRange, "0x0F000530 should be in import stub range");
+                Assert.False(isMapped, "0x0F000530 should NOT be mapped to any import");
+                var wouldBeIndex = (addr - 0x0F000000) / 0x10;
+                _output.WriteLine($"Address 0x{addr:X8} would be import index {wouldBeIndex}, but only {IMPORT_COUNT} imports exist (0-{IMPORT_COUNT - 1})");
+                Assert.Equal(83, (int)wouldBeIndex);
+                Assert.True(wouldBeIndex >= IMPORT_COUNT, "Import index out of bounds");
+            }
+            else if (addr == 0x0F000520u)
+            {
+                Assert.True(isInImportRange, "0x0F000520 should be in import stub range");
+                Assert.True(isMapped, "0x0F000520 should be mapped to an import");
+            }
+            else
+            {
+                Assert.False(isInImportRange, $"0x{addr:X8} should NOT be in import stub range");
+            }
+        }
     }
 
     [Fact]
