@@ -4892,6 +4892,10 @@ namespace Win32Emu.Win32.Modules
 			{
 				// No intersection - set to empty rectangle
 				var emptyRect = new RectRef(_env.Memory, lprcDst);
+				emptyRect.left = 0;
+				emptyRect.top = 0;
+				emptyRect.right = 0;
+				emptyRect.bottom = 0;
 				return 0; // FALSE
 			}
 
