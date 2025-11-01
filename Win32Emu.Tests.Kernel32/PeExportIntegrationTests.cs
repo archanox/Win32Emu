@@ -17,10 +17,9 @@ public class PeExportIntegrationTests : IDisposable
         _testEnv = new TestEnvironment();
         
         // Use a real Windows DLL from the repository for testing
-        // Use Path.GetFullPath to normalize the relative path for better maintainability
-        var assemblyLocation = Path.GetDirectoryName(typeof(PeExportIntegrationTests).Assembly.Location) ?? string.Empty;
-        var relativePath = Path.Combine(assemblyLocation, "..", "..", "..", "..", "..", "DLLs", "WinXP", "kernel32.dll");
-        _testDllPath = Path.GetFullPath(relativePath);
+        _testDllPath = Path.Combine(
+            Path.GetDirectoryName(typeof(PeExportIntegrationTests).Assembly.Location) ?? string.Empty,
+            "..", "..", "..", "..", "..", "DLLs", "WinXP", "kernel32.dll");
     }
 
     [Fact]
@@ -189,15 +188,14 @@ public class PeExportIntegrationTests : IDisposable
 
         // Act - Try to resolve the forwarded export
         var exportNamePtr = _testEnv.WriteString(forwardedExportName);
-        var exportAddress = _testEnv.CallKernel32Api("GETPROCADDRESS", handle, exportNamePtr);
-
-        // Assert - Should either resolve to an address or return 0 if the target DLL isn't available
-        // Note: This test verifies that forwarded exports are handled, even if resolution fails
-        // due to missing target DLL in the test environment
         
-        // The result should be deterministic - either a valid address or 0
-        // We're testing that the code doesn't crash or hang when encountering forwarded exports
-        Assert.True(exportAddress == 0 || exportAddress != 0);
+        // This test verifies that GetProcAddress handles forwarded exports without crashing
+        // The resolution may succeed (if target DLL is available) or fail (if not), but should not throw
+        var exportAddress = _testEnv.CallKernel32Api("GETPROCADDRESS", handle, exportNamePtr);
+        
+        // Assert - Execution completed without exceptions
+        // The actual result depends on whether the target DLL is available in the test environment
+        // What we're really testing is that the code handles forwarded exports gracefully
     }
 
     [Fact]
