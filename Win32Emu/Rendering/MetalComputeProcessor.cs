@@ -129,6 +129,8 @@ public unsafe class MetalComputeProcessor : IDisposable
             return false;
         }
 
+        var parameterBuffers = new List<MTLBuffer>();
+        
         try
         {
             var commandBuffer = _commandQueue.CommandBuffer();
@@ -153,7 +155,7 @@ public unsafe class MetalComputeProcessor : IDisposable
             // Set parameters if provided
             if (parameters != null)
             {
-                SetComputeParameters(computeEncoder, parameters);
+                SetComputeParameters(computeEncoder, parameters, parameterBuffers);
             }
 
             // Calculate thread group sizes
@@ -184,9 +186,21 @@ public unsafe class MetalComputeProcessor : IDisposable
             _logger.LogError(ex, "[MetalCompute] Failed to process texture with pipeline '{Name}'", pipelineName);
             return false;
         }
+        finally
+        {
+            // Clean up parameter buffers
+            foreach (var buffer in parameterBuffers)
+            {
+                if ((IntPtr)buffer != IntPtr.Zero)
+                {
+                    buffer.Dispose();
+                }
+            }
+        }
     }
 
-    private void SetComputeParameters(MTLComputeCommandEncoder encoder, Dictionary<string, object> parameters)
+    private void SetComputeParameters(MTLComputeCommandEncoder encoder, Dictionary<string, object> parameters, 
+        List<MTLBuffer> parameterBuffers)
     {
         int bufferIndex = 2; // Start after textures
         
@@ -196,13 +210,17 @@ public unsafe class MetalComputeProcessor : IDisposable
             {
                 var buffer = _device.NewBuffer((ulong)sizeof(float), MTLResourceOptions.ResourceStorageModeManaged);
                 Marshal.StructureToPtr(floatValue, buffer.Contents, false);
+                buffer.DidModifyRange(new SharpMetal.Foundation.NSRange { location = 0, length = (ulong)sizeof(float) });
                 encoder.SetBuffer(buffer, 0, (ulong)bufferIndex++);
+                parameterBuffers.Add(buffer);
             }
             else if (param.Value is int intValue)
             {
                 var buffer = _device.NewBuffer((ulong)sizeof(int), MTLResourceOptions.ResourceStorageModeManaged);
                 Marshal.StructureToPtr(intValue, buffer.Contents, false);
+                buffer.DidModifyRange(new SharpMetal.Foundation.NSRange { location = 0, length = (ulong)sizeof(int) });
                 encoder.SetBuffer(buffer, 0, (ulong)bufferIndex++);
+                parameterBuffers.Add(buffer);
             }
         }
     }

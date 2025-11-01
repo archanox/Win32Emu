@@ -224,8 +224,8 @@ public unsafe class Metal3DRenderer : IDisposable
     /// <summary>
     /// Creates a depth stencil state for depth testing
     /// </summary>
-    public bool CreateDepthStencilState(bool depthWriteEnabled = true, 
-        MTLCompareFunction depthCompareFunction = MTLCompareFunction.Less)
+    /// <param name="depthCompareFunction">The depth comparison function to use</param>
+    public bool CreateDepthStencilState(MTLCompareFunction depthCompareFunction = MTLCompareFunction.Less)
     {
         if (_disposed)
         {
