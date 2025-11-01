@@ -105,6 +105,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		vm.WriteBytes(SYSCALL_DISPATCHER_ADDRESS, syscallStub);
 		logger?.LogInformation("[Loader] Created syscall dispatcher at 0x{Address:X8}", SYSCALL_DISPATCHER_ADDRESS);
 		
+		// Track all IAT entry addresses to validate for duplicates or invalid entries
+		var iatEntries = new HashSet<uint>();
+		
 		foreach (var module in imports)
 		{
 			var dll = module.Name ?? string.Empty;
@@ -118,7 +121,24 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				}
 
 				var va = imageBase + rva.Value;
+				
+				// VALIDATION: Check for duplicate IAT entries (potential corruption)
+				if (iatEntries.Contains(va))
+				{
+					logger?.LogWarning("[Loader] Duplicate IAT entry detected at VA 0x{Va:X8} for {Dll}!{Name}. This may indicate PE corruption or incorrect parsing.", 
+						va, dll.ToUpperInvariant(), sym.Name ?? $"Ordinal_{sym.Hint}");
+				}
+				iatEntries.Add(va);
+				
 				var synthetic = 0x0F000000u + (uint)(synth++ * 0x10u);
+				
+				// VALIDATION: Read existing value at IAT entry to check if it's already been written
+				// A non-zero value here might indicate the IAT has already been processed or contains unexpected data
+				var existingValue = vm.Read32(va);
+				if (existingValue != 0)
+				{
+					logger?.LogDebug("[Loader] IAT entry at VA 0x{Va:X8} already contains value 0x{Value:X8} before writing synthetic address. This is normal for some loaders.", va, existingValue);
+				}
 				
 				// Write the synthetic address to the IAT entry
 				vm.Write32(va, synthetic);
@@ -153,6 +173,39 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				map[synthetic] = (dll.ToUpperInvariant(), name);
 				logger?.LogTrace("[Loader] Mapped import #{Index}: {Dll}!{Name} at 0x{Synthetic:X8} -> syscall at 0x{Syscall:X8}", 
 					synth - 1, dll.ToUpperInvariant(), name, synthetic, SYSCALL_DISPATCHER_ADDRESS);
+			}
+		}
+		
+		// VALIDATION: Log summary of import mapping to detect anomalies
+		logger?.LogInformation("[Loader] Import mapping complete: {Count} imports mapped to addresses 0x0F000000 - 0x{LastAddr:X8}", 
+			synth, synth > 0 ? 0x0F000000u + (uint)((synth - 1) * 0x10u) : 0x0F000000u);
+		
+		// VALIDATION: Check if there are any IAT entries in memory beyond what we mapped
+		// This could indicate extra entries that shouldn't exist
+		if (synth > 0)
+		{
+			var maxMappedAddr = 0x0F000000u + (uint)((synth - 1) * 0x10u);
+			var scanRangeEnd = 0x0F000000u + 0x1000u; // Scan up to 256 slots (indices 0-255)
+			for (uint addr = maxMappedAddr + 0x10; addr < scanRangeEnd; addr += 0x10)
+			{
+				try
+				{
+					// Read first few bytes to check if there's any code/data at unmapped import addresses
+					var byte1 = vm.Read8(addr);
+					var byte2 = vm.Read8(addr + 1);
+					// Check if it looks like it might be code (not all zeros)
+					if (byte1 != 0 || byte2 != 0)
+					{
+						logger?.LogWarning("[Loader] Unexpected non-zero data at unmapped import address 0x{Addr:X8}: 0x{B1:X2} 0x{B2:X2}. This should be investigated.", 
+							addr, byte1, byte2);
+					}
+				}
+				catch (Exception ex)
+				{
+					// Memory not mapped at this address - this is expected and fine
+					logger?.LogDebug("[Loader] Exception while reading unmapped import address 0x{Addr:X8}: {Message}", addr, ex.Message);
+					break;
+				}
 			}
 		}
 
