@@ -3296,8 +3296,9 @@ namespace Win32Emu.Win32.Modules
 			// BOOL fIncUpdate;  // 28
 			// BYTE rgbReserved[32]; // 32
 
-			_env.MemWrite32(lpPaint + 0, hdc);
-			_env.MemWrite32(lpPaint + 4, 1); // fErase = TRUE
+			var ps = new PaintStructRef(_env.Memory, lpPaint);
+			ps.hdc = hdc;
+			ps.fErase = 1; // TRUE
 
 			// Get the client rectangle for rcPaint
 			GetClientRect(hwnd, lpPaint + 8);
@@ -3318,8 +3319,8 @@ namespace Win32Emu.Win32.Modules
 
 			if (lpPaint != 0)
 			{
-				var hdc = _env.MemRead32(lpPaint + 0);
-				ReleaseDc(hwnd, hdc);
+				var ps = new PaintStructRef(_env.Memory, lpPaint);
+				ReleaseDc(hwnd, ps.hdc);
 			}
 
 			return 1; // Always returns non-zero
@@ -3332,11 +3333,9 @@ namespace Win32Emu.Win32.Modules
 
 			if (lprc != 0)
 			{
-				var left = (int)_env.MemRead32(lprc);
-				var top = (int)_env.MemRead32(lprc + 4);
-				var right = (int)_env.MemRead32(lprc + 8);
-				var bottom = (int)_env.MemRead32(lprc + 12);
-				_logger.LogInformation("[User32] FillRect: rect=({Left},{Top},{Right},{Bottom})", left, top, right, bottom);
+				var rect = new RectRef(_env.Memory, lprc);
+				_logger.LogInformation("[User32] FillRect: rect=({Left},{Top},{Right},{Bottom})", 
+					rect.left, rect.top, rect.right, rect.bottom);
 			}
 
 			// For now, we don't do any actual drawing.
@@ -5099,18 +5098,9 @@ namespace Win32Emu.Win32.Modules
 
 			if (lpsi != 0)
 			{
-				// SCROLLINFO structure:
-				// UINT cbSize; UINT fMask; int nMin; int nMax; UINT nPage; int nPos; int nTrackPos;
-				var cbSize = _env.MemRead32(lpsi + 0);
-				var fMask = _env.MemRead32(lpsi + 4);
-				var nMin = (int)_env.MemRead32(lpsi + 8);
-				var nMax = (int)_env.MemRead32(lpsi + 12);
-				var nPage = _env.MemRead32(lpsi + 16);
-				var nPos = (int)_env.MemRead32(lpsi + 20);
-				var nTrackPos = (int)_env.MemRead32(lpsi + 24);
-
+				var si = new ScrollInfoRef(_env.Memory, lpsi);
 				_logger.LogInformation("[User32] SetScrollInfo: nMin={NMin}, nMax={NMax}, nPage={NPage}, nPos={NPos}",
-					nMin, nMax, nPage, nPos);
+					si.nMin, si.nMax, si.nPage, si.nPos);
 			}
 
 			// Return the current position (stub)

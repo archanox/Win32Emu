@@ -2186,13 +2186,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		_env.MemZero(lpStartupInfo, 68);
-		_env.MemWrite32(lpStartupInfo + 0, 68);
+		var si = new StartupInfoARef(_env.Memory, lpStartupInfo);
+		si.cb = 68;
 		// Write actual handle values, not pseudo-handle constants
 		// When a console is allocated, these should be real inheritable handles
 		// When no console exists, these will be 0 (NULL)
-		_env.MemWrite32(lpStartupInfo + 56, _env.StdInputHandle);
-		_env.MemWrite32(lpStartupInfo + 60, _env.StdOutputHandle);
-		_env.MemWrite32(lpStartupInfo + 64, _env.StdErrorHandle);
+		si.hStdInput = _env.StdInputHandle;
+		si.hStdOutput = _env.StdOutputHandle;
+		si.hStdError = _env.StdErrorHandle;
 		return 0;
 	}
 
@@ -3684,14 +3685,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			try
 			{
-				// EXCEPTION_POINTERS structure:
-				// typedef struct _EXCEPTION_POINTERS {
-				//   PEXCEPTION_RECORD ExceptionRecord;    // offset 0, 4 bytes
-				//   PCONTEXT          ContextRecord;       // offset 4, 4 bytes  
-				// } EXCEPTION_POINTERS;
-
-				var exceptionRecordPtr = _env.MemRead32(exceptionInfo);
-				var contextRecordPtr = _env.MemRead32(exceptionInfo + 4);
+				var exceptionPointers = new ExceptionPointersRef(_env.Memory, exceptionInfo);
+				var exceptionRecordPtr = exceptionPointers.ExceptionRecord;
+				var contextRecordPtr = exceptionPointers.ContextRecord;
 
 				_logger.LogInformation("[Kernel32]   ExceptionRecord: 0x{ExceptionRecordPtr:X8}", exceptionRecordPtr);
 				_logger.LogInformation("[Kernel32]   ContextRecord: 0x{ContextRecordPtr:X8}", contextRecordPtr);
@@ -3699,14 +3695,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				// If we have a valid exception record, read some basic info
 				if (exceptionRecordPtr != 0)
 				{
-					// EXCEPTION_RECORD structure (first few fields):
-					//   DWORD ExceptionCode;        // offset 0
-					//   DWORD ExceptionFlags;       // offset 4
-					//   PEXCEPTION_RECORD ExceptionRecord; // offset 8
-					//   PVOID ExceptionAddress;     // offset 12
-					var exceptionCode = _env.MemRead32(exceptionRecordPtr);
-					var exceptionFlags = _env.MemRead32(exceptionRecordPtr + 4);
-					var exceptionAddress = _env.MemRead32(exceptionRecordPtr + 12);
+					var exceptionRecord = new ExceptionRecordRef(_env.Memory, exceptionRecordPtr);
+					var exceptionCode = exceptionRecord.ExceptionCode;
+					var exceptionFlags = exceptionRecord.ExceptionFlags;
+					var exceptionAddress = exceptionRecord.ExceptionAddress;
 
 					_logger.LogInformation("[Kernel32]     ExceptionCode: 0x{ExceptionCode:X8}", exceptionCode);
 					_logger.LogInformation("[Kernel32]     ExceptionFlags: 0x{ExceptionFlags:X8}", exceptionFlags);
@@ -6799,18 +6791,21 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		ulong defaultTime = 0;
 		if (lpCreationTime != 0)
 		{
-			_env.MemWrite32(lpCreationTime, (uint)(defaultTime & 0xFFFFFFFF));
-			_env.MemWrite32(lpCreationTime + 4, (uint)(defaultTime >> 32));
+			var ft = new FileTimeRef(_env.Memory, lpCreationTime);
+			ft.dwLowDateTime = (uint)(defaultTime & 0xFFFFFFFF);
+			ft.dwHighDateTime = (uint)(defaultTime >> 32);
 		}
 		if (lpLastAccessTime != 0)
 		{
-			_env.MemWrite32(lpLastAccessTime, (uint)(defaultTime & 0xFFFFFFFF));
-			_env.MemWrite32(lpLastAccessTime + 4, (uint)(defaultTime >> 32));
+			var ft = new FileTimeRef(_env.Memory, lpLastAccessTime);
+			ft.dwLowDateTime = (uint)(defaultTime & 0xFFFFFFFF);
+			ft.dwHighDateTime = (uint)(defaultTime >> 32);
 		}
 		if (lpLastWriteTime != 0)
 		{
-			_env.MemWrite32(lpLastWriteTime, (uint)(defaultTime & 0xFFFFFFFF));
-			_env.MemWrite32(lpLastWriteTime + 4, (uint)(defaultTime >> 32));
+			var ft = new FileTimeRef(_env.Memory, lpLastWriteTime);
+			ft.dwLowDateTime = (uint)(defaultTime & 0xFFFFFFFF);
+			ft.dwHighDateTime = (uint)(defaultTime >> 32);
 		}
 		return 1; // TRUE
 	}

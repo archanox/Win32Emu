@@ -58,4 +58,12 @@ public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem, uint baseOffse
 	public DDColorKeyRef DDColorKey(int index) => new DDColorKeyRef(mem, UInt32(index));
 	
 	public AcmStreamHeaderRef AcmStreamHeader(int index) => new AcmStreamHeaderRef(mem, UInt32(index));
+	
+	public DDPixelFormatRef DDPixelFormat(int index) => new DDPixelFormatRef(mem, UInt32(index));
+	
+	public StartupInfoARef StartupInfoA(int index) => new StartupInfoARef(mem, UInt32(index));
+	
+	public ExceptionPointersRef ExceptionPointers(int index) => new ExceptionPointersRef(mem, UInt32(index));
+	
+	public ExceptionRecordRef ExceptionRecord(int index) => new ExceptionRecordRef(mem, UInt32(index));
 }

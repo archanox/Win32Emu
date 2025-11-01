@@ -450,4 +450,62 @@ public static class NativeTypes
 		public uint cbDstLengthUsed;// Offset 36 - Destination bytes used
 		public uint dwDstUser;      // Offset 40 - Destination user data
 	}
+
+	// DDPIXELFORMAT structure (32 bytes)
+	// Describes the pixel format of a DirectDraw surface
+	public struct DDPIXELFORMAT
+	{
+		public uint dwSize;             // Offset 0 - Size of structure (32)
+		public uint dwFlags;            // Offset 4 - Pixel format flags
+		public uint dwFourCC;           // Offset 8 - FourCC code
+		public uint dwRGBBitCount;      // Offset 12 - RGB bit count
+		public uint dwRBitMask;         // Offset 16 - Red bit mask
+		public uint dwGBitMask;         // Offset 20 - Green bit mask
+		public uint dwBBitMask;         // Offset 24 - Blue bit mask
+		public uint dwRGBAlphaBitMask;  // Offset 28 - Alpha bit mask
+	}
+
+	// STARTUPINFOA structure (68 bytes)
+	// Specifies startup information for a process
+	public struct STARTUPINFOA
+	{
+		public uint cb;              // Offset 0 - Size of structure
+		public uint lpReserved;      // Offset 4
+		public uint lpDesktop;       // Offset 8
+		public uint lpTitle;         // Offset 12
+		public uint dwX;             // Offset 16
+		public uint dwY;             // Offset 20
+		public uint dwXSize;         // Offset 24
+		public uint dwYSize;         // Offset 28
+		public uint dwXCountChars;   // Offset 32
+		public uint dwYCountChars;   // Offset 36
+		public uint dwFillAttribute; // Offset 40
+		public uint dwFlags;         // Offset 44
+		public ushort wShowWindow;   // Offset 48
+		public ushort cbReserved2;   // Offset 50
+		public uint lpReserved2;     // Offset 52
+		public uint hStdInput;       // Offset 56
+		public uint hStdOutput;      // Offset 60
+		public uint hStdError;       // Offset 64
+	}
+
+	// EXCEPTION_POINTERS structure (8 bytes)
+	// Contains exception record and context pointers
+	public struct EXCEPTION_POINTERS
+	{
+		public uint ExceptionRecord; // Offset 0 - Pointer to EXCEPTION_RECORD
+		public uint ContextRecord;   // Offset 4 - Pointer to CONTEXT
+	}
+
+	// EXCEPTION_RECORD structure (partial - 20 bytes minimum)
+	// Describes an exception
+	public struct EXCEPTION_RECORD
+	{
+		public uint ExceptionCode;       // Offset 0
+		public uint ExceptionFlags;      // Offset 4
+		public uint ExceptionRecord;     // Offset 8 - Pointer to nested record
+		public uint ExceptionAddress;    // Offset 12
+		public uint NumberParameters;    // Offset 16
+		// ExceptionInformation array follows...
+	}
 }
