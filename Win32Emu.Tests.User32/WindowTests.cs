@@ -97,7 +97,7 @@ public class WindowTests : IDisposable
             0,              // dwExStyle
             classNamePtr,   // lpClassName
             titlePtr,       // lpWindowName
-            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
+            (uint)NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
             100,            // x
             100,            // y
             640,            // width
@@ -124,7 +124,7 @@ public class WindowTests : IDisposable
             0,              // dwExStyle
             classNamePtr,   // lpClassName
             titlePtr,       // lpWindowName
-            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
+            (uint)NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
             100,            // x
             100,            // y
             640,            // width
@@ -147,7 +147,7 @@ public class WindowTests : IDisposable
             0,              // dwExStyle
             0,              // lpClassName (NULL)
             0,              // lpWindowName
-            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
+            (uint)NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
             100,            // x
             100,            // y
             640,            // width
@@ -177,11 +177,11 @@ public class WindowTests : IDisposable
 
         // Act
         var hwnd1 = _testEnv.CallUser32Api("CREATEWINDOWEXA",
-            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            0, classNamePtr, titlePtr, (uint)NativeTypes.WindowStyle.WS_OVERLAPPED,
             100, 100, 640, 480, 0, 0, 0, 0
         );
         var hwnd2 = _testEnv.CallUser32Api("CREATEWINDOWEXA",
-            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            0, classNamePtr, titlePtr, (uint)NativeTypes.WindowStyle.WS_OVERLAPPED,
             100, 100, 640, 480, 0, 0, 0, 0
         );
 
@@ -211,7 +211,7 @@ public class WindowTests : IDisposable
             0,              // dwExStyle
             classNamePtr,   // lpClassName
             titlePtr,       // lpWindowName
-            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
+            (uint)NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
             cwUsedefault,  // x
             cwUsedefault,  // y
             cwUsedefault,  // width
@@ -245,7 +245,7 @@ public class WindowTests : IDisposable
             0,              // dwExStyle
             atom,           // lpClassName (using atom instead of string pointer)
             titlePtr,       // lpWindowName
-            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
+            (uint)NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
             100,            // x
             100,            // y
             640,            // width
@@ -397,7 +397,7 @@ public class WindowTests : IDisposable
         var titlePtr = _testEnv.WriteString("Test Window");
         
         var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
-            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            0, classNamePtr, titlePtr, (uint)NativeTypes.WindowStyle.WS_OVERLAPPED,
             100, 100, 640, 480, 0, 0, 0, 0
         );
 
@@ -435,7 +435,7 @@ public class WindowTests : IDisposable
         var titlePtr = _testEnv.WriteString("Test Window");
         
         var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
-            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            0, classNamePtr, titlePtr, (uint)NativeTypes.WindowStyle.WS_OVERLAPPED,
             100, 100, 640, 480, 0, 0, 0, 0
         );
 
@@ -460,7 +460,7 @@ public class WindowTests : IDisposable
         var titlePtr = _testEnv.WriteString("Test Window");
         
         var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
-            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            0, classNamePtr, titlePtr, (uint)NativeTypes.WindowStyle.WS_OVERLAPPED,
             100, 100, 640, 480, 0, 0, 0, 0
         );
 
@@ -487,7 +487,7 @@ public class WindowTests : IDisposable
         var titlePtr = _testEnv.WriteString("Test Window");
         
         var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
-            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            0, classNamePtr, titlePtr, (uint)NativeTypes.WindowStyle.WS_OVERLAPPED,
             100, 100, 640, 480, 0, 0, 0, 0
         );
 
@@ -518,7 +518,7 @@ public class WindowTests : IDisposable
         var classNamePtr = _testEnv.WriteString("TestClass");
         var titlePtr = _testEnv.WriteString("Test Window");
         
-        var testStyle = NativeTypes.WindowStyle.WS_OVERLAPPED | NativeTypes.WindowStyle.WS_CAPTION;
+        var testStyle = (uint)NativeTypes.WindowStyle.WS_OVERLAPPED | (uint)NativeTypes.WindowStyle.WS_CAPTION;
         
         var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
             0, classNamePtr, titlePtr, testStyle,
@@ -593,7 +593,7 @@ public class WindowTests : IDisposable
             0,              // dwExStyle
             classNamePtr,   // lpClassName
             titlePtr,       // lpWindowName
-            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
+            (uint)NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
             100,            // x
             100,            // y
             640,            // width
@@ -750,7 +750,7 @@ public class WindowTests : IDisposable
             0,              // dwExStyle
             classNamePtr,   // lpClassName
             titlePtr,       // lpWindowName
-            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
+            (uint)NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle
             x,              // x
             y,              // y
             width,          // width
@@ -811,7 +811,7 @@ public class WindowTests : IDisposable
             0,              // dwExStyle
             classNamePtr,   // lpClassName
             titlePtr,       // lpWindowName
-            NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle (not visible initially)
+            (uint)NativeTypes.WindowStyle.WS_OVERLAPPED, // dwStyle (not visible initially)
             100,            // x
             100,            // y
             640,            // width
@@ -862,7 +862,7 @@ public class WindowTests : IDisposable
             0,              // dwExStyle
             classNamePtr,   // lpClassName
             titlePtr,       // lpWindowName
-            NativeTypes.WindowStyle.WS_OVERLAPPED | NativeTypes.WindowStyle.WS_VISIBLE, // dwStyle - visible
+            (uint)NativeTypes.WindowStyle.WS_OVERLAPPED | (uint)NativeTypes.WindowStyle.WS_VISIBLE, // dwStyle - visible
             100,            // x
             100,            // y
             640,            // width
@@ -910,7 +910,7 @@ public class WindowTests : IDisposable
         var titlePtr = _testEnv.WriteString("Test Window");
 
         var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
-            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            0, classNamePtr, titlePtr, (uint)NativeTypes.WindowStyle.WS_OVERLAPPED,
             100, 100, 640, 480, 0, 0, 0, 0
         );
 
@@ -948,7 +948,7 @@ public class WindowTests : IDisposable
         var titlePtr = _testEnv.WriteString("Test Window");
 
         var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
-            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            0, classNamePtr, titlePtr, (uint)NativeTypes.WindowStyle.WS_OVERLAPPED,
             100, 100, 640, 480, 0, 0, 0, 0
         );
 
@@ -985,7 +985,7 @@ public class WindowTests : IDisposable
         var titlePtr = _testEnv.WriteString("Test Window");
 
         var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
-            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            0, classNamePtr, titlePtr, (uint)NativeTypes.WindowStyle.WS_OVERLAPPED,
             100, 100, 640, 480, 0, 0, 0, 0
         );
 
@@ -1028,7 +1028,7 @@ public class WindowTests : IDisposable
         var titlePtr = _testEnv.WriteString("Test Window");
 
         var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
-            0, classNamePtr, titlePtr, NativeTypes.WindowStyle.WS_OVERLAPPED,
+            0, classNamePtr, titlePtr, (uint)NativeTypes.WindowStyle.WS_OVERLAPPED,
             100, 100, 640, 480, 0, 0, 0, 0
         );
 

@@ -112,7 +112,7 @@ public sealed class ApiMonLogTests : IDisposable
 		{
 			var lpCpInfo = new NativeTypes.Lpcpinfo((NativeTypes.Cpinfo*)cpInfoAddr);
 			var result = _testEnv.Kernel32.GetCpInfo(CodePage.Utf8, lpCpInfo);
-			Assert.Equal(NativeTypes.Win32Bool.TRUE, result);
+			Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
 			
 			// Read back the structure
 			var cpInfo = _testEnv.ProcessEnv.MemReadStruct<NativeTypes.Cpinfo>(cpInfoAddr);

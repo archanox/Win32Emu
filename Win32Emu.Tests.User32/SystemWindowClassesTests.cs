@@ -173,7 +173,7 @@ public class SystemWindowClassesTests : IDisposable
 
 		var parentHwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
 			0, parentClassPtr, parentTitlePtr,
-			NativeTypes.WindowStyle.WS_OVERLAPPEDWINDOW,
+			(uint)NativeTypes.WindowStyle.WS_OVERLAPPEDWINDOW,
 			0, 0, 400, 300,
 			0, 0, 0, 0
 		);
@@ -187,8 +187,8 @@ public class SystemWindowClassesTests : IDisposable
 			0,                                          // dwExStyle
 			buttonClassPtr,                             // lpClassName
 			buttonTextPtr,                              // lpWindowName
-			NativeTypes.WindowStyle.WS_CHILD |         // WS_CHILD
-			NativeTypes.WindowStyle.WS_VISIBLE,        // WS_VISIBLE
+			(uint)NativeTypes.WindowStyle.WS_CHILD |         // WS_CHILD
+			(uint)NativeTypes.WindowStyle.WS_VISIBLE,        // WS_VISIBLE
 			10, 10, 100, 30,                           // position and size
 			parentHwnd,                                 // parent window
 			1,                                          // control ID

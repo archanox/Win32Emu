@@ -39,7 +39,7 @@ public class MessageDispatcherIntegrationTests : IDisposable
 	{
 		// Arrange
 		var hwnd = 0x00010000u;
-		_env.MessageDispatcher.RegisterHandler(WM.PAINT, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler((uint)WM.PAINT, async (msg, ct) =>
 		{
 			_handlerCallCount++;
 			_lastHandledHwnd = msg.Hwnd;
@@ -62,7 +62,7 @@ public class MessageDispatcherIntegrationTests : IDisposable
 		// Arrange
 		var hwnd = 0x00010000u;
 		var handler = new TestCloseHandler(_env);
-		_env.MessageDispatcher.RegisterHandler(WM.CLOSE, handler);
+		_env.MessageDispatcher.RegisterHandler((uint)WM.CLOSE, handler);
 
 		// Act
 		var message = new CloseMessage(hwnd);
@@ -85,7 +85,7 @@ public class MessageDispatcherIntegrationTests : IDisposable
 		var lParam = 0x00020000u;
 
 		var commandHandlerCalled = false;
-		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, async (msg, ct) =>
+		_env.MessageDispatcher.RegisterHandler((uint)WM.COMMAND, async (msg, ct) =>
 		{
 			if (msg is CommandMessage cmdMsg)
 			{
@@ -98,7 +98,7 @@ public class MessageDispatcherIntegrationTests : IDisposable
 		});
 
 		// Act
-		var message = MessageFactory.CreateMessage(hwnd, WM.COMMAND, wParam, lParam);
+		var message = MessageFactory.CreateMessage(hwnd, (uint)WM.COMMAND, wParam, lParam);
 		await _env.MessageDispatcher.DispatchAsync(message);
 
 		// Assert
@@ -113,9 +113,9 @@ public class MessageDispatcherIntegrationTests : IDisposable
 		var hwnd = 0x00010000u;
 		
 		// Register common async handlers
-		_env.MessageDispatcher.RegisterHandler(WM.PAINT, new PaintMessageHandler(_env));
-		_env.MessageDispatcher.RegisterHandler(WM.CLOSE, new CloseMessageHandler(_env));
-		_env.MessageDispatcher.RegisterHandler(WM.COMMAND, new CommandMessageHandler());
+		_env.MessageDispatcher.RegisterHandler((uint)WM.PAINT, new PaintMessageHandler(_env));
+		_env.MessageDispatcher.RegisterHandler((uint)WM.CLOSE, new CloseMessageHandler(_env));
+		_env.MessageDispatcher.RegisterHandler((uint)WM.COMMAND, new CommandMessageHandler());
 
 		// Act - Dispatch various messages asynchronously
 		var paintResult = await _env.MessageDispatcher.DispatchAsync(new PaintMessage(hwnd));
@@ -134,9 +134,9 @@ public class MessageDispatcherIntegrationTests : IDisposable
 		// Arrange
 		var executionOrder = new List<int>();
 		
-		_env.MessageDispatcher.RegisterHandler(WM.PAINT, async (msg, ct) => { executionOrder.Add(1); return 1; });
-		_env.MessageDispatcher.RegisterHandler(WM.PAINT, async (msg, ct) => { executionOrder.Add(2); return 2; });
-		_env.MessageDispatcher.RegisterHandler(WM.PAINT, async (msg, ct) => { executionOrder.Add(3); return 3; });
+		_env.MessageDispatcher.RegisterHandler((uint)WM.PAINT, async (msg, ct) => { executionOrder.Add(1); return 1; });
+		_env.MessageDispatcher.RegisterHandler((uint)WM.PAINT, async (msg, ct) => { executionOrder.Add(2); return 2; });
+		_env.MessageDispatcher.RegisterHandler((uint)WM.PAINT, async (msg, ct) => { executionOrder.Add(3); return 3; });
 
 		// Act
 		var result = await _env.MessageDispatcher.DispatchAsync(new PaintMessage(0x00010000));
@@ -150,17 +150,17 @@ public class MessageDispatcherIntegrationTests : IDisposable
 	public async Task MessageDispatcher_CanBeCleared_AfterRegistration()
 	{
 		// Arrange
-		_env.MessageDispatcher.RegisterHandler(WM.PAINT, async (msg, ct) => 42);
-		_env.MessageDispatcher.RegisterHandler(WM.CLOSE, async (msg, ct) => 43);
-		Assert.True(_env.MessageDispatcher.HasHandlers(WM.PAINT));
-		Assert.True(_env.MessageDispatcher.HasHandlers(WM.CLOSE));
+		_env.MessageDispatcher.RegisterHandler((uint)WM.PAINT, async (msg, ct) => 42);
+		_env.MessageDispatcher.RegisterHandler((uint)WM.CLOSE, async (msg, ct) => 43);
+		Assert.True(_env.MessageDispatcher.HasHandlers((uint)WM.PAINT));
+		Assert.True(_env.MessageDispatcher.HasHandlers((uint)WM.CLOSE));
 
 		// Act
 		_env.MessageDispatcher.Clear();
 
 		// Assert
-		Assert.False(_env.MessageDispatcher.HasHandlers(WM.PAINT));
-		Assert.False(_env.MessageDispatcher.HasHandlers(WM.CLOSE));
+		Assert.False(_env.MessageDispatcher.HasHandlers((uint)WM.PAINT));
+		Assert.False(_env.MessageDispatcher.HasHandlers((uint)WM.CLOSE));
 	}
 
 	public void Dispose()

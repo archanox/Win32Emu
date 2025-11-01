@@ -54,7 +54,7 @@ namespace Win32Emu.Tests.Kernel32
 			{
 				var lpCpInfo = new NativeTypes.Lpcpinfo((NativeTypes.Cpinfo*)cpInfoAddr);
 				var cpInfoResult = _testEnv.Kernel32.GetCpInfo(CodePage.Utf8, lpCpInfo);
-				Assert.Equal(NativeTypes.Win32Bool.TRUE, cpInfoResult);
+				Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, cpInfoResult);
 				
 				// Read back into struct and assert
 				var cpInfo = _testEnv.ProcessEnv.MemReadStruct<NativeTypes.Cpinfo>(cpInfoAddr);
