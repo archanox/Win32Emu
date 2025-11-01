@@ -15,64 +15,85 @@ A Windows 32-bit PE executable emulator for running classic Windows games and ap
 
 ## Components
 
-### Win32Emu (CLI)
-Command-line emulator that loads and executes Windows PE executables.
+### Win32Emu.Gui
+Cross-platform desktop GUI for managing your game library and emulator settings. Built with Avalonia UI.
 
-**Usage:**
+**Note:** This is now the primary executable for Win32Emu. The standalone CLI has been integrated into this application.
+
+**Features:**
+- Game library with thumbnail views
+- File picker for adding games
+- Emulator configuration (rendering backend, resolution scaling, memory, Windows version)
+- One-click game launching
+- **CLI mode** with `--nogui` flag for headless operation
+
+**GUI Usage:**
 ```bash
-Win32Emu <path-to-pe> [options]
+# Launch the GUI application
+Win32Emu.Gui
 ```
 
-**Options:**
+**CLI Usage (with --nogui flag):**
+```bash
+# Run in command-line mode without GUI
+Win32Emu.Gui --nogui <path-to-pe> [options]
+```
+
+**CLI Options:**
 - `--debug`: Enable enhanced debugging mode with automatic error detection
 - `--interactive-debug`: Enable interactive step-through debugger (GDB-like)
 - `--gdb-server [port]`: Start GDB server for remote debugging with Ghidra/IDA (default port: 1234)
   - Supports remote file I/O when VFS is initialized (access game files from debugger)
-- `--backend <SDL|GLFW|Vulkan>`: Select rendering backend (default: SDL)
+- `--backend <SDL|GLFW|Vulkan|Metal|Software>`: Select rendering backend (default: SDL)
 - `--telemetry-console`: Enable OpenTelemetry with console exporter for logging and metrics
 - `--telemetry-otlp [endpoint]`: Enable OpenTelemetry with OTLP exporter (default: http://localhost:4317)
 
 **Environment Variables:**
-- `WIN32EMU_BACKEND`: Set rendering backend (SDL, GLFW, or Vulkan)
+- `WIN32EMU_BACKEND`: Set rendering backend (SDL, GLFW, Vulkan, Metal, or Software)
 - `OTEL_EXPORTER_OTLP_ENDPOINT`: OpenTelemetry OTLP endpoint (e.g., `http://localhost:4317`)
   - Automatically enables OpenTelemetry when set
   - Useful for IDE integrations like JetBrains Rider
 
-**Examples:**
+**CLI Examples:**
 ```bash
 # Run normally (uses SDL backend)
-Win32Emu game.exe
+Win32Emu.Gui --nogui game.exe
 
 # Run with GLFW backend (alternative if SDL has issues)
-Win32Emu game.exe --backend GLFW
+Win32Emu.Gui --nogui game.exe --backend GLFW
 
 # Run with Vulkan backend (uses MoltenVK on macOS)
-Win32Emu game.exe --backend Vulkan
+Win32Emu.Gui --nogui game.exe --backend Vulkan
 
 # Run with Metal backend (macOS only, hardware-accelerated)
-Win32Emu game.exe --backend Metal
+Win32Emu.Gui --nogui game.exe --backend Metal
 
 # Run with Software backend (CPU-based, no GPU required)
-Win32Emu game.exe --backend Software
+Win32Emu.Gui --nogui game.exe --backend Software
 
 # Run with enhanced debugging
-Win32Emu game.exe --debug
+Win32Emu.Gui --nogui game.exe --debug
 
 # Run with interactive debugger for step-through debugging
-Win32Emu game.exe --interactive-debug
+Win32Emu.Gui --nogui game.exe --interactive-debug
 
 # Run with GDB server for debugging in Ghidra or IDA
-Win32Emu game.exe --gdb-server
+Win32Emu.Gui --nogui game.exe --gdb-server
 
 # Run with GDB server on custom port
-Win32Emu game.exe --gdb-server 5678
+Win32Emu.Gui --nogui game.exe --gdb-server 5678
 
 # Run with OpenTelemetry console exporter for observability
-Win32Emu game.exe --telemetry-console
+Win32Emu.Gui --nogui game.exe --telemetry-console
 
 # Run with OpenTelemetry OTLP exporter (for Jaeger, Prometheus, etc.)
-Win32Emu game.exe --telemetry-otlp http://localhost:4317
+Win32Emu.Gui --nogui game.exe --telemetry-otlp http://localhost:4317
 ```
+
+**Important Note for macOS Users:**
+Running with `--nogui` ensures that rendering backends run on the main thread, which is required for proper operation of Metal, SDL, and other graphics APIs on macOS.
+
+See [Win32Emu.Gui/README.md](Win32Emu.Gui/README.md) for more details about the GUI features.
 
 **See Also:**
 - [docs/implementation/SILK_NET_MIGRATION.md](docs/implementation/SILK_NET_MIGRATION.md) - Backend system and configuration
@@ -87,16 +108,8 @@ Win32Emu game.exe --telemetry-otlp http://localhost:4317
 - [docs/implementation/JIT_CACHE_IMPLEMENTATION.md](docs/implementation/JIT_CACHE_IMPLEMENTATION.md) - JIT caching to disk for faster emulation
 - [docs/examples/JIT_CACHE_EXAMPLES.md](docs/examples/JIT_CACHE_EXAMPLES.md) - JIT cache usage examples and best practices
 
-### Win32Emu.Gui
-Cross-platform desktop GUI for managing your game library and emulator settings. Built with Avalonia UI.
-
-**Features:**
-- Game library with thumbnail views
-- File picker for adding games
-- Emulator configuration (rendering backend, resolution scaling, memory, Windows version)
-- One-click game launching
-
-See [Win32Emu.Gui/README.md](Win32Emu.Gui/README.md) for more details.
+### Win32Emu (Library)
+The core emulation library that powers Win32Emu.Gui. This library provides the `Emulator` class and `EmulatorLauncher` API for embedding Win32 emulation into .NET applications.
 
 ## Backend System
 
