@@ -54,9 +54,17 @@ public class ApiCallTracer : IDisposable
 				_traceWriter.WriteLine("=" + new string('=', 79));
 				_traceWriter.WriteLine();
 			}
-			catch (Exception ex)
+			catch (DirectoryNotFoundException ex)
 			{
-				_logger.LogWarning(ex, "Failed to create trace output file: {Path}", _outputPath);
+				_logger.LogWarning(ex, "Failed to create trace output file (directory not found): {Path}", _outputPath);
+			}
+			catch (UnauthorizedAccessException ex)
+			{
+				_logger.LogWarning(ex, "Failed to create trace output file (unauthorized): {Path}", _outputPath);
+			}
+			catch (IOException ex)
+			{
+				_logger.LogWarning(ex, "Failed to create trace output file (IO error): {Path}", _outputPath);
 			}
 		}
 
@@ -101,11 +109,24 @@ public class ApiCallTracer : IDisposable
 		_callQueue.Enqueue(record);
 		
 		// Prevent unbounded growth by limiting queue size
-		while (_callQueue.Count > _maxQueueSize)
+		// Note: This is an approximate check for performance. Between checking Count and TryDequeue,
+		// other threads might modify the queue, but this is acceptable for our use case.
+		while (true)
 		{
+			// Check if the queue is over the size limit
+			if (_callQueue.Count <= _maxQueueSize)
+			{
+				break;
+			}
+			// Try to dequeue an item if possible
 			if (_callQueue.TryDequeue(out _))
 			{
 				Interlocked.Increment(ref _droppedCalls);
+			}
+			else
+			{
+				// If we failed to dequeue, exit to avoid spinning
+				break;
 			}
 		}
 
@@ -354,9 +375,13 @@ public class ApiCallTracer : IDisposable
 				_traceWriter.WriteLine();
 				_traceWriter.WriteLine(GenerateDiagnosticReport());
 			}
-			catch
+			catch (IOException ex)
 			{
-				// Ignore errors during shutdown
+				_logger.LogError(ex, "[ApiTracer] IO error during Dispose while writing trace file");
+			}
+			catch (ObjectDisposedException ex)
+			{
+				_logger.LogError(ex, "[ApiTracer] Object disposed error during Dispose");
 			}
 			finally
 			{

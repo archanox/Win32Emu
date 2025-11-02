@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -48,18 +47,36 @@ public class ApiMonComparator
 						recordCount++;
 					}
 				}
-				catch (Exception ex)
+				catch (FormatException ex)
 				{
-					_logger.LogWarning(ex, "Failed to parse CSV line {LineNumber}", i + 1);
+					_logger.LogWarning(ex, "Failed to parse CSV line {LineNumber} due to format error", i + 1);
+				}
+				catch (ArgumentException ex)
+				{
+					_logger.LogWarning(ex, "Failed to parse CSV line {LineNumber} due to argument error", i + 1);
+				}
+				catch (IndexOutOfRangeException ex)
+				{
+					_logger.LogWarning(ex, "Failed to parse CSV line {LineNumber} due to index error", i + 1);
 				}
 			}
 
 			_logger.LogInformation("Loaded {RecordCount} API Monitor records", recordCount);
 			return recordCount > 0;
 		}
-		catch (Exception ex)
+		catch (IOException ex)
 		{
-			_logger.LogError(ex, "Failed to load API Monitor CSV: {Message}", ex.Message);
+			_logger.LogError(ex, "IO error while loading API Monitor CSV: {Message}", ex.Message);
+			return false;
+		}
+		catch (UnauthorizedAccessException ex)
+		{
+			_logger.LogError(ex, "Access denied while loading API Monitor CSV: {Message}", ex.Message);
+			return false;
+		}
+		catch (FormatException ex)
+		{
+			_logger.LogError(ex, "Format error while loading API Monitor CSV: {Message}", ex.Message);
 			return false;
 		}
 	}
@@ -279,7 +296,7 @@ public class ApiMonComparator
 			}
 			else if (c == ',' && !inQuotes)
 			{
-				fields.Add(line.Substring(fieldStart, i - fieldStart).Trim(' ', '"'));
+				fields.Add(line[fieldStart..i].Trim(' ', '"'));
 				fieldStart = i + 1;
 			}
 		}
@@ -287,7 +304,7 @@ public class ApiMonComparator
 		// Add last field
 		if (fieldStart < line.Length)
 		{
-			fields.Add(line.Substring(fieldStart).Trim(' ', '"'));
+			fields.Add(line[fieldStart..].Trim(' ', '"'));
 		}
 
 		return fields;
