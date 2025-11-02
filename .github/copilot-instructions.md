@@ -195,17 +195,18 @@ catch (Exception ex)
 ### Adding Tests
 ```csharp
 [Fact]
-public void MyFunction_ReturnsExpectedValue_WhenParametersAreValid()
+public void MyFunction_ReturnsSuccess_WhenParametersAreValid()
 {
     // Arrange
     using var testEnv = new TestEnvironment();
     var param1 = 42u;
+    var param2 = new IntPtr(0x1000); // Valid pointer
     
     // Act
-    var result = MyModule.MyFunction(testEnv.Environment, param1, IntPtr.Zero);
+    var result = MyModule.MyFunction(testEnv.Environment, param1, param2);
     
     // Assert
-    Assert.Equal(expectedValue, result);
+    Assert.Equal(1u, result); // 1 indicates success
 }
 ```
 
