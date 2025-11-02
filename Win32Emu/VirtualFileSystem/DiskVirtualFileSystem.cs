@@ -30,7 +30,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 	/// <summary>
 	/// Opens an existing virtual disk or ISO file.
 	/// </summary>
-	/// <param name="diskPath">Path to the disk file (VMDK/VHD/VHDX/ISO)</param>
+	/// <param name="diskPath">Path to the disk file (VMDK/VHD/VHDX/ISO/CHD)</param>
 	/// <param name="logger">Optional logger</param>
 	public DiskVirtualFileSystem(string diskPath, ILogger? logger = null)
 	{
@@ -46,6 +46,34 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 					_fileSystem = new CDReader(isoStream, true);
 					IsReadOnly = true;
 					_logger.LogInformation("[DiskVFS] Mounted ISO: {DiskPath}", diskPath);
+					break;
+
+				case ".chd":
+					// CHD (Compressed Hunks of Data) format used by MAME for disc images
+					// CHD files are always read-only
+					var chdReader = new ChdDiscReader(diskPath, _logger);
+					if (!chdReader.IsValid)
+					{
+						chdReader.Dispose();
+						throw new InvalidOperationException($"Invalid or unsupported CHD file: {diskPath}");
+					}
+					
+					// Try to extract ISO filesystem from CHD
+					var chdIsoFs = chdReader.TryGetIsoFileSystem();
+					if (chdIsoFs != null)
+					{
+						_fileSystem = chdIsoFs;
+						_logger.LogInformation("[DiskVFS] Mounted CHD with ISO filesystem: {DiskPath} (Version: {Version})", 
+							diskPath, chdReader.Version);
+					}
+					else
+					{
+						// CHD detected but filesystem extraction not available yet
+						_logger.LogWarning("[DiskVFS] CHD file detected but full support not implemented: {DiskPath}", diskPath);
+						chdReader.Dispose();
+						throw new NotSupportedException($"CHD file format is recognized but full filesystem access is not yet implemented: {diskPath}");
+					}
+					IsReadOnly = true;
 					break;
 
 				case ".vmdk":

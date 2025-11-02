@@ -1,9 +1,12 @@
-﻿<Solution>
+<Solution>
   <Configurations>
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/CHDSharp/">
+    <Project Path="CHDSharp/CHDSharpLib.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
   </Folder>
@@ -44,91 +47,91 @@
     <File Path="DLLs\WinXP\dinput.dll" />
     <File Path="DLLs\WinXP\ddraw.dll" />
   </Folder>
-  <Project Path="Win32Emu.CallingConvention\Win32Emu.CallingConvention.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.CallingConvention\Win32Emu.CallingConvention.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.CodeGen\Win32Emu.CodeGen.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.CodeGen\Win32Emu.CodeGen.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Generators\Win32Emu.Generators.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Generators\Win32Emu.Generators.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Gui\Win32Emu.Gui.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Gui\Win32Emu.Gui.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Rtl\Win32Emu.Rtl.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Rtl\Win32Emu.Rtl.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Tests.CodeGen\Win32Emu.Tests.CodeGen.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Tests.CodeGen\Win32Emu.Tests.CodeGen.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Tests.Emulator\Win32Emu.Tests.Emulator.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Tests.Emulator\Win32Emu.Tests.Emulator.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Tests.Gui\Win32Emu.Tests.Gui.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Tests.Gui\Win32Emu.Tests.Gui.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Tests.Kernel32\Win32Emu.Tests.Kernel32.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Tests.Kernel32\Win32Emu.Tests.Kernel32.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Tests.User32\Win32Emu.Tests.User32.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Tests.User32\Win32Emu.Tests.User32.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Tools.AotCompiler\Win32Emu.Tools.AotCompiler.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Tools.AotCompiler\Win32Emu.Tools.AotCompiler.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Tools.ApiAnalyzer\Win32Emu.Tools.ApiAnalyzer.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Tools.ApiAnalyzer\Win32Emu.Tools.ApiAnalyzer.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Tools.CallingConventionDemo\Win32Emu.Tools.CallingConventionDemo.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Tools.CallingConventionDemo\Win32Emu.Tools.CallingConventionDemo.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu.Tools.WikidataEnricher\Win32Emu.Tools.WikidataEnricher.csproj" Type="Classic C#">
+  <Project Path="Win32Emu.Tools.WikidataEnricher\Win32Emu.Tools.WikidataEnricher.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Win32Emu\Win32Emu.csproj" Type="Classic C#">
+  <Project Path="Win32Emu\Win32Emu.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
