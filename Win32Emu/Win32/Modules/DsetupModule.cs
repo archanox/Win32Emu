@@ -9,7 +9,7 @@ namespace Win32Emu.Win32.Modules;
 /// <summary>
 /// DSETUP.DLL module - provides DirectX setup functions.
 /// </summary>
-public class DsetupModule : IWin32ModuleUnsafe
+public partial class DsetupModule : IWin32ModuleUnsafe
 {
 	private readonly ProcessEnvironment _env;
 	private readonly uint _imageBase;
@@ -38,7 +38,7 @@ public class DsetupModule : IWin32ModuleUnsafe
 				return true;
 
 			default:
-				_logger.LogInformation("[Dsetup] Unimplemented export: {Export}", export);
+				LogUnimplementedExport(export);
 				return false;
 		}
 	}
@@ -51,11 +51,17 @@ public class DsetupModule : IWin32ModuleUnsafe
 	private uint DirectXSetupA(uint hWnd, in LpcStr lpszRootPath, uint dwFlags)
 	{
 		var rootPath = lpszRootPath.ToString() ?? string.Empty;
-		_logger.LogInformation("[Dsetup] DirectXSetupA(hWnd=0x{HWnd:X8}, lpszRootPath=\"{RootPath}\", dwFlags=0x{DwFlags:X})",
-			hWnd, rootPath, dwFlags);
+		LogDirectXSetupA(hWnd, rootPath, dwFlags);
 
 		// Stub - return success (DirectX already installed)
 		const int DSETUPERR_SUCCESS = 0;
 		return (uint)DSETUPERR_SUCCESS;
 	}
+
+	// High-performance logging using source generators
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Dsetup] Unimplemented export: {Export}")]
+	partial void LogUnimplementedExport(string export);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Dsetup] DirectXSetupA(hWnd=0x{HWnd:X8}, lpszRootPath=\"{RootPath}\", dwFlags=0x{DwFlags:X})")]
+	partial void LogDirectXSetupA(uint hWnd, string rootPath, uint dwFlags);
 }

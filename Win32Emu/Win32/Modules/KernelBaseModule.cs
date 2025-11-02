@@ -9,7 +9,7 @@ namespace Win32Emu.Win32.Modules;
 /// KERNELBASE.DLL module - used for testing forwarded exports.
 /// In real Windows, many KERNEL32.DLL functions forward to KERNELBASE.DLL.
 /// </summary>
-public class KernelBaseModule : IWin32ModuleUnsafe
+public partial class KernelBaseModule : IWin32ModuleUnsafe
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
@@ -36,7 +36,7 @@ public class KernelBaseModule : IWin32ModuleUnsafe
 				return true;
 
 			default:
-				_logger.LogInformation("[KernelBase] Unimplemented export: {Export}", export);
+				LogUnimplementedExport(export);
 				return false;
 		}
 	}
@@ -45,7 +45,14 @@ public class KernelBaseModule : IWin32ModuleUnsafe
 	private uint GetVersionEx()
 	{
 		// Simplified implementation for testing
-		_logger.LogInformation("[KernelBase] GetVersionEx called (forwarded from KERNEL32)");
+		LogGetVersionEx();
 		return 1; // TRUE
 	}
+
+	// High-performance logging using source generators
+	[LoggerMessage(Level = LogLevel.Information, Message = "[KernelBase] Unimplemented export: {Export}")]
+	partial void LogUnimplementedExport(string export);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[KernelBase] GetVersionEx called (forwarded from KERNEL32)")]
+	partial void LogGetVersionEx();
 }

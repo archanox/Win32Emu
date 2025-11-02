@@ -9,7 +9,7 @@ namespace Win32Emu.Win32.Modules;
 /// <summary>
 /// SHELL32.DLL module - provides Windows Shell functions including file operations and special folders.
 /// </summary>
-public class Shell32Module : IWin32ModuleUnsafe
+public partial class Shell32Module : IWin32ModuleUnsafe
 {
 	private readonly ProcessEnvironment _env;
 	private readonly uint _imageBase;
@@ -81,7 +81,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 				return true;
 
 			default:
-				_logger.LogInformation("[Shell32] Unimplemented export: {Export}", export);
+				LogUnimplementedExport(export);
 				return false;
 		}
 	}
@@ -93,7 +93,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint SHBrowseForFolderA(uint lpbi)
 	{
-		_logger.LogInformation("[Shell32] SHBrowseForFolderA(lpbi=0x{Lpbi:X8})", lpbi);
+		LogSHBrowseForFolderA(lpbi);
 
 		// Stub - return NULL (user canceled)
 		return 0;
@@ -106,8 +106,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private uint SHChangeNotify(uint wEventId, uint uFlags, uint dwItem1, uint dwItem2)
 	{
-		_logger.LogInformation("[Shell32] SHChangeNotify(wEventId=0x{WEventId:X}, uFlags=0x{UFlags:X}, dwItem1=0x{DwItem1:X8}, dwItem2=0x{DwItem2:X8})",
-			wEventId, uFlags, dwItem1, dwItem2);
+		LogSHChangeNotify(wEventId, uFlags, dwItem1, dwItem2);
 
 		// Stub - just log the notification, no actual effect
 		return 0; // void function
@@ -120,7 +119,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint SHFileOperationA(uint lpFileOp)
 	{
-		_logger.LogInformation("[Shell32] SHFileOperationA(lpFileOp=0x{LpFileOp:X8})", lpFileOp);
+		LogSHFileOperationA(lpFileOp);
 
 		// Stub - return success without performing operation
 		return 0; // Success
@@ -133,7 +132,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint SHGetMalloc(uint ppMalloc)
 	{
-		_logger.LogInformation("[Shell32] SHGetMalloc(ppMalloc=0x{PpMalloc:X8})", ppMalloc);
+		LogSHGetMalloc(ppMalloc);
 
 		// Stub - return E_NOTIMPL
 		if (ppMalloc != 0)
@@ -151,8 +150,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint SHGetPathFromIDListA(uint pidl, in LpStr pszPath)
 	{
-		_logger.LogInformation("[Shell32] SHGetPathFromIDListA(pidl=0x{Pidl:X8}, pszPath=0x{PszPath:X8})", 
-			pidl, pszPath.Address);
+		LogSHGetPathFromIDListA(pidl, pszPath.Address);
 
 		// Stub - return FALSE (conversion failed)
 		return 0; // FALSE
@@ -165,8 +163,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint SHGetSpecialFolderLocation(uint hwnd, int csidl, uint ppidl)
 	{
-		_logger.LogInformation("[Shell32] SHGetSpecialFolderLocation(hwnd=0x{Hwnd:X8}, csidl={Csidl}, ppidl=0x{Ppidl:X8})", 
-			hwnd, csidl, ppidl);
+		LogSHGetSpecialFolderLocation(hwnd, csidl, ppidl);
 
 		// Stub - return E_NOTIMPL
 		if (ppidl != 0)
@@ -196,8 +193,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 		var parameters = lpParameters.ToString() ?? string.Empty;
 		var directory = lpDirectory.ToString() ?? string.Empty;
 		
-		_logger.LogInformation("[Shell32] ShellExecuteA(hwnd=0x{Hwnd:X8}, lpOperation=\"{Operation}\", lpFile=\"{File}\", lpParameters=\"{Parameters}\", lpDirectory=\"{Directory}\", nShowCmd={NShowCmd})",
-			hwnd, operation, file, parameters, directory, nShowCmd);
+		LogShellExecuteA(hwnd, operation, file, parameters, directory, nShowCmd);
 
 		// Stub - return value > 32 indicates success
 		return 33; // Success
@@ -210,7 +206,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 	[DllModuleExport(4)]
 	private uint DragFinish(uint hDrop)
 	{
-		_logger.LogInformation("[Shell32] DragFinish(hDrop=0x{HDrop:X8})", hDrop);
+		LogDragFinish(hDrop);
 		return 0; // void function
 	}
 
@@ -221,8 +217,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private uint DragQueryFileA(uint hDrop, uint iFile, uint lpszFile, uint cch)
 	{
-		_logger.LogInformation("[Shell32] DragQueryFileA(hDrop=0x{HDrop:X8}, iFile={IFile}, lpszFile=0x{LpszFile:X8}, cch={Cch})",
-			hDrop, iFile, lpszFile, cch);
+		LogDragQueryFileA(hDrop, iFile, lpszFile, cch);
 
 		// Stub - return 0 (no files dropped)
 		return 0;
@@ -231,7 +226,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 	[DllModuleExport(1)]
 	private uint ShellExecuteExA(uint lpExecInfo)
 	{
-		_logger.LogInformation("[Shell32] ShellExecuteExA(lpExecInfo=0x{LpExecInfo:X8})", lpExecInfo);
+		LogShellExecuteExA(lpExecInfo);
 		
 		// SHELLEXECUTEINFO structure
 		// Read fields from the structure if needed
@@ -247,8 +242,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 	private uint ExtractIconA(uint hInst, in LpcStr pszExeFileName, uint nIconIndex)
 	{
 		var fileName = pszExeFileName.ToString() ?? string.Empty;
-		_logger.LogInformation("[Shell32] ExtractIconA(hInst=0x{HInst:X8}, pszExeFileName=\"{FileName}\", nIconIndex={NIconIndex})",
-			hInst, fileName, nIconIndex);
+		LogExtractIconA(hInst, fileName, nIconIndex);
 		
 		// Stub - return NULL (no icon)
 		return 0;
@@ -262,8 +256,7 @@ public class Shell32Module : IWin32ModuleUnsafe
 	private uint SHGetFileInfoA(in LpcStr pszPath, uint dwFileAttributes, uint psfi, uint cbFileInfo, uint uFlags)
 	{
 		var path = pszPath.ToString() ?? string.Empty;
-		_logger.LogInformation("[Shell32] SHGetFileInfoA(pszPath=\"{Path}\", dwFileAttributes=0x{DwFileAttributes:X}, uFlags=0x{UFlags:X})",
-			path, dwFileAttributes, uFlags);
+		LogSHGetFileInfoA(path, dwFileAttributes, uFlags);
 		
 		// Stub - return 0 (failure)
 		return 0;
@@ -278,10 +271,52 @@ public class Shell32Module : IWin32ModuleUnsafe
 	{
 		var app = szApp.ToString() ?? string.Empty;
 		var otherStuff = szOtherStuff.ToString() ?? string.Empty;
-		_logger.LogInformation("[Shell32] ShellAboutA(hWnd=0x{HWnd:X8}, szApp=\"{App}\", szOtherStuff=\"{OtherStuff}\", hIcon=0x{HIcon:X8})",
-			hWnd, app, otherStuff, hIcon);
+		LogShellAboutA(hWnd, app, otherStuff, hIcon);
 		
 		// Stub - return TRUE (success)
 		return 1;
 	}
+
+	// High-performance logging using source generators
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] Unimplemented export: {Export}")]
+	partial void LogUnimplementedExport(string export);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] SHBrowseForFolderA(lpbi=0x{Lpbi:X8})")]
+	partial void LogSHBrowseForFolderA(uint lpbi);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] SHChangeNotify(wEventId=0x{WEventId:X}, uFlags=0x{UFlags:X}, dwItem1=0x{DwItem1:X8}, dwItem2=0x{DwItem2:X8})")]
+	partial void LogSHChangeNotify(uint wEventId, uint uFlags, uint dwItem1, uint dwItem2);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] SHFileOperationA(lpFileOp=0x{LpFileOp:X8})")]
+	partial void LogSHFileOperationA(uint lpFileOp);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] SHGetMalloc(ppMalloc=0x{PpMalloc:X8})")]
+	partial void LogSHGetMalloc(uint ppMalloc);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] SHGetPathFromIDListA(pidl=0x{Pidl:X8}, pszPath=0x{PszPath:X8})")]
+	partial void LogSHGetPathFromIDListA(uint pidl, uint pszPath);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] SHGetSpecialFolderLocation(hwnd=0x{Hwnd:X8}, csidl={Csidl}, ppidl=0x{Ppidl:X8})")]
+	partial void LogSHGetSpecialFolderLocation(uint hwnd, int csidl, uint ppidl);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] ShellExecuteA(hwnd=0x{Hwnd:X8}, lpOperation=\"{Operation}\", lpFile=\"{File}\", lpParameters=\"{Parameters}\", lpDirectory=\"{Directory}\", nShowCmd={NShowCmd})")]
+	partial void LogShellExecuteA(uint hwnd, string operation, string file, string parameters, string directory, int nShowCmd);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] DragFinish(hDrop=0x{HDrop:X8})")]
+	partial void LogDragFinish(uint hDrop);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] DragQueryFileA(hDrop=0x{HDrop:X8}, iFile={IFile}, lpszFile=0x{LpszFile:X8}, cch={Cch})")]
+	partial void LogDragQueryFileA(uint hDrop, uint iFile, uint lpszFile, uint cch);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] ShellExecuteExA(lpExecInfo=0x{LpExecInfo:X8})")]
+	partial void LogShellExecuteExA(uint lpExecInfo);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] ExtractIconA(hInst=0x{HInst:X8}, pszExeFileName=\"{FileName}\", nIconIndex={NIconIndex})")]
+	partial void LogExtractIconA(uint hInst, string fileName, uint nIconIndex);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] SHGetFileInfoA(pszPath=\"{Path}\", dwFileAttributes=0x{DwFileAttributes:X}, uFlags=0x{UFlags:X})")]
+	partial void LogSHGetFileInfoA(string path, uint dwFileAttributes, uint uFlags);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] ShellAboutA(hWnd=0x{HWnd:X8}, szApp=\"{App}\", szOtherStuff=\"{OtherStuff}\", hIcon=0x{HIcon:X8})")]
+	partial void LogShellAboutA(uint hWnd, string app, string otherStuff, uint hIcon);
 }

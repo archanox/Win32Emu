@@ -9,7 +9,7 @@ namespace Win32Emu.Win32.Modules;
 /// <summary>
 /// OLEDLG.DLL module - provides OLE user interface dialogs.
 /// </summary>
-public class OledlgModule : IWin32ModuleUnsafe
+public partial class OledlgModule : IWin32ModuleUnsafe
 {
 	private readonly ProcessEnvironment _env;
 	private readonly uint _imageBase;
@@ -38,7 +38,7 @@ public class OledlgModule : IWin32ModuleUnsafe
 				return true;
 
 			default:
-				_logger.LogInformation("[Oledlg] Unimplemented export: {Export}", export);
+				LogUnimplementedExport(export);
 				return false;
 		}
 	}
@@ -50,9 +50,16 @@ public class OledlgModule : IWin32ModuleUnsafe
 	[DllModuleExport(4)]
 	private uint Ordinal_8(uint lpOleObj)
 	{
-		_logger.LogInformation("[Oledlg] Ordinal_8(lpOleObj=0x{LpOleObj:X8})", lpOleObj);
+		LogOrdinal_8(lpOleObj);
 
 		// Stub: Return FALSE (no verbs added)
 		return 0;
 	}
+
+	// High-performance logging using source generators
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Oledlg] Unimplemented export: {Export}")]
+	partial void LogUnimplementedExport(string export);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Oledlg] Ordinal_8(lpOleObj=0x{LpOleObj:X8})")]
+	partial void LogOrdinal_8(uint lpOleObj);
 }
