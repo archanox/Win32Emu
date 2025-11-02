@@ -20,6 +20,14 @@ public class IcedCpu : IAsyncCpu
 	// EFLAGS bit positions
 	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Tf = 8, If = 9, Df = 10, Of = 11;
 
+	// Special memory ranges for emulator infrastructure
+	// These constants document the different sub-ranges, but validation only checks the overall range
+	// [COM_VTABLE_BASE, SPECIAL_RANGE_LIMIT) to avoid false positives for any emulator infrastructure
+	private const uint COM_VTABLE_BASE = 0x0D000000;      // COM interface vtable methods
+	private const uint SYSCALL_DISPATCHER_BASE = 0x0E000000; // Syscall dispatcher and synthetic exports
+	private const uint IMPORT_HOOK_BASE = 0x0F000000;      // Static import table hooks
+	private const uint SPECIAL_RANGE_LIMIT = 0x10000000;   // End of special ranges
+
 	// x87 FPU state (8 registers in a stack, ST(0) to ST(7))
 	private readonly double[] _fpu = new double[8];
 	private int _fpuTop = 0; // Index of ST(0) in the circular stack
@@ -668,8 +676,9 @@ public class IcedCpu : IAsyncCpu
 
 	/// <summary>
 	/// Validates an indirect jump/call target and logs a warning if it's suspiciously low.
-	/// Addresses below 0x00400000 (except NULL) are considered suspicious as they are typically
-	/// below the normal image base, indicating possible invalid function pointers or corrupted registers.
+	/// Addresses below 0x00400000 (except NULL and special emulator ranges) are considered suspicious 
+	/// as they are typically below the normal image base, indicating possible invalid function pointers 
+	/// or corrupted registers.
 	/// </summary>
 	/// <param name="target">The target address to validate</param>
 	/// <param name="sourceEip">The EIP of the instruction performing the jump/call</param>
@@ -677,9 +686,17 @@ public class IcedCpu : IAsyncCpu
 	/// <param name="sourceRegister">Optional source register for better diagnostics</param>
 	private void ValidateIndirectTarget(uint target, uint sourceEip, string operation, Register? sourceRegister = null)
 	{
-		// Check if target is suspiciously low (< typical image base), but allow NULL to avoid false positives
+		// Check if target is suspiciously low (< typical image base)
+		// Allow NULL and special emulator infrastructure ranges to avoid false positives
 		if (target < 0x00400000 && target != 0x00000000)
 		{
+			// Allow special emulator ranges: COM vtables (0x0D000000), syscalls (0x0E000000), and import hooks (0x0F000000)
+			if (target >= COM_VTABLE_BASE && target < SPECIAL_RANGE_LIMIT)
+			{
+				// Valid special range - no warning needed
+				return;
+			}
+			
 			if (sourceRegister.HasValue)
 			{
 				_logger.LogWarning("[IcedCpu] {Operation} at 0x{SourceEip:X8}: indirect {OperationLower} target 0x{Target:X8} is suspiciously low (< 0x00400000). Possible invalid function pointer or corrupted register. Register: {Reg}",
