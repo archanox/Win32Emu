@@ -9,7 +9,7 @@ namespace Win32Emu.Win32.Modules;
 /// <summary>
 /// VERSION.DLL module - provides version information functions.
 /// </summary>
-public class VersionModule : IWin32ModuleUnsafe
+public partial class VersionModule : IWin32ModuleUnsafe
 {
 	private readonly ProcessEnvironment _env;
 	private readonly uint _imageBase;
@@ -46,7 +46,7 @@ public class VersionModule : IWin32ModuleUnsafe
 				return true;
 
 			default:
-				_logger.LogInformation("[Version] Unimplemented export: {Export}", export);
+				LogUnimplementedExport(export);
 				return false;
 		}
 	}
@@ -62,8 +62,7 @@ public class VersionModule : IWin32ModuleUnsafe
 	private uint GetFileVersionInfoSizeA(in LpcStr lptstrFilename, uint lpdwHandle)
 	{
 		var filename = lptstrFilename.ToString() ?? string.Empty;
-		_logger.LogInformation("[Version] GetFileVersionInfoSizeA(filename=\"{Filename}\", lpdwHandle=0x{LpdwHandle:X8})",
-			filename, lpdwHandle);
+		LogGetFileVersionInfoSizeA(filename, lpdwHandle);
 
 		// Clear the handle output parameter
 		if (lpdwHandle != 0)
@@ -88,8 +87,7 @@ public class VersionModule : IWin32ModuleUnsafe
 	private uint GetFileVersionInfoA(in LpcStr lptstrFilename, uint dwHandle, uint dwLen, uint lpData)
 	{
 		var filename = lptstrFilename.ToString() ?? string.Empty;
-		_logger.LogInformation("[Version] GetFileVersionInfoA(filename=\"{Filename}\", dwHandle=0x{DwHandle:X}, dwLen={DwLen}, lpData=0x{LpData:X8})",
-			filename, dwHandle, dwLen, lpData);
+		LogGetFileVersionInfoA(filename, dwHandle, dwLen, lpData);
 
 		// For a stub implementation, just zero out the buffer
 		if (lpData != 0 && dwLen > 0)
@@ -116,8 +114,7 @@ public class VersionModule : IWin32ModuleUnsafe
 	private uint VerQueryValueA(uint pBlock, in LpcStr lpSubBlock, uint lplpBuffer, uint puLen)
 	{
 		var subBlock = lpSubBlock.ToString() ?? string.Empty;
-		_logger.LogInformation("[Version] VerQueryValueA(pBlock=0x{PBlock:X8}, lpSubBlock=\"{SubBlock}\", lplpBuffer=0x{LplpBuffer:X8}, puLen=0x{PuLen:X8})",
-			pBlock, subBlock, lplpBuffer, puLen);
+		LogVerQueryValueA(pBlock, subBlock, lplpBuffer, puLen);
 
 		// Return NULL pointer and 0 length (not found)
 		if (lplpBuffer != 0)
@@ -131,4 +128,17 @@ public class VersionModule : IWin32ModuleUnsafe
 
 		return 0; // FALSE - not found (stub)
 	}
+
+	// High-performance logging using source generators
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Version] Unimplemented export: {Export}")]
+	partial void LogUnimplementedExport(string export);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Version] GetFileVersionInfoSizeA(filename=\"{Filename}\", lpdwHandle=0x{LpdwHandle:X8})")]
+	partial void LogGetFileVersionInfoSizeA(string filename, uint lpdwHandle);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Version] GetFileVersionInfoA(filename=\"{Filename}\", dwHandle=0x{DwHandle:X}, dwLen={DwLen}, lpData=0x{LpData:X8})")]
+	partial void LogGetFileVersionInfoA(string filename, uint dwHandle, uint dwLen, uint lpData);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Version] VerQueryValueA(pBlock=0x{PBlock:X8}, lpSubBlock=\"{SubBlock}\", lplpBuffer=0x{LplpBuffer:X8}, puLen=0x{PuLen:X8})")]
+	partial void LogVerQueryValueA(uint pBlock, string subBlock, uint lplpBuffer, uint puLen);
 }
