@@ -640,7 +640,7 @@ public class IcedCpu : IAsyncCpu
 							// Throw exception to halt execution and prevent further corruption
 							// This prevents the CPU from continuing to execute random data as code,
 							// which would lead to cascading errors and stack corruption
-							throw new InvalidOperationException($"INVALID instruction at 0x{oldEip:X8} ({addressInfo}). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. EIP=0x{oldEip:X8}, ESP=0x{_esp:X8}, EBP=0x{_ebp:X8}");
+							throw new InvalidOperationException($"INVALID instruction at 0x{oldEip:X8} ({addressInfo}). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x{_esp:X8}, EBP=0x{_ebp:X8}");
 						}
 					}
 
