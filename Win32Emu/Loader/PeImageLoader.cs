@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Win32Emu.Memory;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace Win32Emu.Loader;
 
@@ -204,6 +205,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		foreach (var module in imports)
 		{
 			var dll = module.Name ?? string.Empty;
+			var dllUpper = dll.ToUpperInvariant();
 			foreach (var sym in module.Symbols)
 			{
 				// Get the IAT entry RVA from AddressTableEntry
@@ -215,7 +217,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 					var symName = sym.Name ?? $"Ordinal_{sym.Hint}";
 					skippedImports.Add((dll, symName, "AddressTableEntry RVA is null or zero"));
 					logger?.LogWarning("[Loader] Skipping import {Dll}!{Name}: no IAT entry location available", 
-						dll.ToUpperInvariant(), symName);
+						dllUpper, symName);
 					continue;
 				}
 
@@ -225,7 +227,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				if (iatEntries.Contains(va))
 				{
 					logger?.LogWarning("[Loader] Duplicate IAT entry detected at VA 0x{Va:X8} for {Dll}!{Name}. This may indicate PE corruption or incorrect parsing.", 
-						va, dll.ToUpperInvariant(), sym.Name ?? $"Ordinal_{sym.Hint}");
+						va, dllUpper, sym.Name ?? $"Ordinal_{sym.Hint}");
 				}
 				iatEntries.Add(va);
 				
@@ -269,9 +271,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				vm.WriteBytes(synthetic, stub);
 				
 				var name = sym.Name ?? ($"Ordinal_{sym.Hint}");
-				map[synthetic] = (dll.ToUpperInvariant(), name);
+				map[synthetic] = (dllUpper, name);
 				logger?.LogTrace("[Loader] Mapped import #{Index}: {Dll}!{Name} at 0x{Synthetic:X8} -> syscall at 0x{Syscall:X8}", 
-					synth - 1, dll.ToUpperInvariant(), name, synthetic, SYSCALL_DISPATCHER_ADDRESS);
+					synth - 1, dllUpper, name, synthetic, SYSCALL_DISPATCHER_ADDRESS);
 			}
 		}
 		
@@ -282,7 +284,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		// Report any skipped imports as a summary
 		if (skippedImports.Count > 0)
 		{
-			var summary = new System.Text.StringBuilder();
+			var summary = new StringBuilder();
 			summary.AppendLine($"[Loader] {skippedImports.Count} import(s) were skipped and will not be available:");
 			foreach (var (skippedDll, skippedName, reason) in skippedImports)
 			{
