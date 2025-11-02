@@ -21,20 +21,24 @@ public class ApiCallTracer : IDisposable
 	private readonly ConcurrentQueue<ApiCallRecord> _callQueue = new();
 	private readonly ConcurrentDictionary<string, ApiCallStats> _callStats = new();
 	private readonly Stopwatch _sessionStopwatch = Stopwatch.StartNew();
+	private readonly int _maxQueueSize;
 	private long _totalCalls;
+	private long _droppedCalls;
 
 	public ApiCallTracer(
 		ILogger? logger = null,
 		bool enableTracing = true,
 		bool enableDetailedParameters = true,
 		bool enableExecutionFlow = false,
-		string? outputPath = null)
+		string? outputPath = null,
+		int maxQueueSize = 10000)
 	{
 		_logger = logger ?? NullLogger.Instance;
 		_enableTracing = enableTracing;
 		_enableDetailedParameters = enableDetailedParameters;
 		_enableExecutionFlow = enableExecutionFlow;
 		_outputPath = outputPath;
+		_maxQueueSize = maxQueueSize;
 
 		if (_enableTracing && !string.IsNullOrEmpty(_outputPath))
 		{
@@ -95,6 +99,15 @@ public class ApiCallTracer : IDisposable
 		};
 
 		_callQueue.Enqueue(record);
+		
+		// Prevent unbounded growth by limiting queue size
+		while (_callQueue.Count > _maxQueueSize)
+		{
+			if (_callQueue.TryDequeue(out _))
+			{
+				Interlocked.Increment(ref _droppedCalls);
+			}
+		}
 
 		// Update statistics
 		var key = $"{moduleName}.{functionName}";
@@ -163,6 +176,11 @@ public class ApiCallTracer : IDisposable
 		sb.AppendLine();
 		sb.AppendLine($"Session Duration: {_sessionStopwatch.Elapsed:hh\\:mm\\:ss\\.fff}");
 		sb.AppendLine($"Total API Calls: {_totalCalls:N0}");
+		if (_droppedCalls > 0)
+		{
+			sb.AppendLine($"Dropped Calls (queue full): {_droppedCalls:N0}");
+			sb.AppendLine($"  (Queue size limit: {_maxQueueSize:N0} - increase if needed)");
+		}
 		sb.AppendLine();
 
 		// Top called APIs

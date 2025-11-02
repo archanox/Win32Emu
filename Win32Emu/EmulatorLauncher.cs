@@ -155,10 +155,14 @@ public static class EmulatorLauncher
 					}
 					
 					// Load API Monitor comparison data if requested
+					// TODO(enhancement): Implement real-time comparison during execution
+					// Currently comparison is manual via ApiMonComparator.GenerateComparisonReport()
+					// Could be enhanced to show divergence in real-time during emulation.
+					// See issue: (create issue to track this enhancement)
 					if (compareApiMonLog && !string.IsNullOrEmpty(apiMonLogPath))
 					{
-						// TODO: Implement comparison logic in emulator shutdown
 						logger.LogInformation("API Monitor comparison enabled - log: {ApiMonLog}", apiMonLogPath);
+						logger.LogInformation("Note: Comparison report can be generated manually using ApiMonComparator");
 					}
 				}
 				

@@ -73,10 +73,13 @@ public class Win32Dispatcher(ILogger logger)
 				}
 
 				// Log to API tracer if enabled
+				// TODO(enhancement): Parse parameters from stack using metadata from [DllModuleExport]
+				// This would provide detailed parameter values in the trace for better diagnostics.
+				// See issue: (create issue to track this enhancement)
 				_apiCallTracer?.LogApiCall(
 					moduleName: dll,
 					functionName: export,
-					parameters: null, // TODO: Parse parameters from stack
+					parameters: null, // Parameters not yet parsed - would require stack walking
 					returnValue: returnValue,
 					eip: eip);
 
