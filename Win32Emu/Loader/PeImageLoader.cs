@@ -198,15 +198,24 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		// Track all IAT entry addresses to validate for duplicates or invalid entries
 		var iatEntries = new HashSet<uint>();
 		
+		// Track imports that couldn't be processed
+		var skippedImports = new List<(string dll, string name, string reason)>();
+		
 		foreach (var module in imports)
 		{
 			var dll = module.Name ?? string.Empty;
 			foreach (var sym in module.Symbols)
 			{
-				// Prefer IAT entry RVA when available.
-				var rva = sym.AddressTableEntry?.Rva; // fallback
+				// Get the IAT entry RVA from AddressTableEntry
+				// If this is null or 0, the import cannot be processed
+				var rva = sym.AddressTableEntry?.Rva;
 				if (rva is null or 0)
 				{
+					// This import cannot be processed - no IAT entry location available
+					var symName = sym.Name ?? $"Ordinal_{sym.Hint}";
+					skippedImports.Add((dll, symName, "AddressTableEntry RVA is null or zero - no IAT entry location"));
+					logger?.LogWarning("[Loader] Skipping import {Dll}!{Name}: AddressTableEntry RVA is null/zero. This import will not be available and may cause crashes if called.", 
+						dll.ToUpperInvariant(), symName);
 					continue;
 				}
 
@@ -269,6 +278,17 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		// VALIDATION: Log summary of import mapping to detect anomalies
 		logger?.LogInformation("[Loader] Import mapping complete: {Count} imports mapped to addresses 0x0F000000 - 0x{LastAddr:X8}", 
 			synth, synth > 0 ? 0x0F000000u + (uint)((synth - 1) * 0x10u) : 0x0F000000u);
+		
+		// Report any skipped imports as a summary
+		if (skippedImports.Count > 0)
+		{
+			logger?.LogWarning("[Loader] {Count} import(s) were skipped and will not be available:", skippedImports.Count);
+			foreach (var (skippedDll, skippedName, reason) in skippedImports)
+			{
+				logger?.LogWarning("[Loader]   - {Dll}!{Name}: {Reason}", skippedDll.ToUpperInvariant(), skippedName, reason);
+			}
+			logger?.LogWarning("[Loader] If the application attempts to call these imports, it will likely crash with INVALID instruction errors.");
+		}
 		
 		// VALIDATION: Check if there are any IAT entries in memory beyond what we mapped
 		// This could indicate extra entries that shouldn't exist
