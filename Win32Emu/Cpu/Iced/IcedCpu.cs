@@ -626,7 +626,7 @@ public class IcedCpu : IAsyncCpu
 							}
 							else if (oldEip >= 0x00400000 && oldEip < 0x00401000)
 							{
-								addressInfo = "PE header region - code should start later (e.g., 0x00401000+). This suggests: (1) corrupted return address on stack, (2) bad function pointer in jump table, (3) buffer overflow";
+								addressInfo = "PE header region - code should start later (e.g., 0x00401000+). This suggests a corrupted return address on the stack, a bad function pointer in a jump table, or a buffer overflow.";
 							}
 							else if (oldEip < 0x00400000)
 							{
