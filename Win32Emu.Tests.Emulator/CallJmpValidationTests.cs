@@ -20,11 +20,13 @@ public class CallJmpValidationTests
 		var memory = new VirtualMemory();
 		var cpu = new IcedCpu(memory, logger);
 		
-		cpu.SetEip(0x00400000);
-		cpu.SetRegister("ESP", 0x00100000);
+		var originalEip = 0x00400000u;
+		var originalEsp = 0x00100000u;
+		cpu.SetEip(originalEip);
+		cpu.SetRegister("ESP", originalEsp);
 		cpu.SetRegister("EBX", 0x00001000); // Suspiciously low address
 		
-		// Write CALL EBX instruction
+		// Write CALL EBX instruction (2 bytes)
 		memory.Write8(0x00400000, 0xFF); // CALL r/m32
 		memory.Write8(0x00400001, 0xD3); // ModRM: 11 010 011 = register EBX
 
@@ -37,6 +39,12 @@ public class CallJmpValidationTests
 			log.Contains("0x00001000") && 
 			log.Contains("suspiciously low"));
 		Assert.Equal(0x00001000u, cpu.GetEip()); // EIP should still be set to the target
+		
+		// Verify CALL semantics: return address pushed to stack
+		var expectedReturnAddress = originalEip + 2; // 2-byte instruction
+		var expectedEsp = originalEsp - 4; // ESP decremented by 4
+		Assert.Equal(expectedEsp, cpu.GetRegister("ESP"));
+		Assert.Equal(expectedReturnAddress, memory.Read32(expectedEsp));
 	}
 
 	[Fact]
@@ -48,14 +56,16 @@ public class CallJmpValidationTests
 		var memory = new VirtualMemory();
 		var cpu = new IcedCpu(memory, logger);
 		
-		cpu.SetEip(0x00400000);
-		cpu.SetRegister("ESP", 0x00100000);
+		var originalEip = 0x00400000u;
+		var originalEsp = 0x00100000u;
+		cpu.SetEip(originalEip);
+		cpu.SetRegister("ESP", originalEsp);
 		cpu.SetRegister("EBX", 0x00450000);
 		
 		// Write low address to memory
 		memory.Write32(0x00450000, 0x00002000); // Suspiciously low address
 		
-		// Write CALL [EBX] instruction
+		// Write CALL [EBX] instruction (2 bytes)
 		memory.Write8(0x00400000, 0xFF); // CALL r/m32
 		memory.Write8(0x00400001, 0x13); // ModRM: 00 010 011 = memory indirect through EBX
 
@@ -68,6 +78,12 @@ public class CallJmpValidationTests
 			log.Contains("0x00002000") && 
 			log.Contains("suspiciously low"));
 		Assert.Equal(0x00002000u, cpu.GetEip()); // EIP should still be set to the target
+		
+		// Verify CALL semantics: return address pushed to stack
+		var expectedReturnAddress = originalEip + 2; // 2-byte instruction
+		var expectedEsp = originalEsp - 4; // ESP decremented by 4
+		Assert.Equal(expectedEsp, cpu.GetRegister("ESP"));
+		Assert.Equal(expectedReturnAddress, memory.Read32(expectedEsp));
 	}
 
 	[Fact]
@@ -79,11 +95,13 @@ public class CallJmpValidationTests
 		var memory = new VirtualMemory();
 		var cpu = new IcedCpu(memory, logger);
 		
-		cpu.SetEip(0x00400000);
-		cpu.SetRegister("ESP", 0x00100000);
+		var originalEip = 0x00400000u;
+		var originalEsp = 0x00100000u;
+		cpu.SetEip(originalEip);
+		cpu.SetRegister("ESP", originalEsp);
 		cpu.SetRegister("EBX", 0x00401000); // Valid address
 
-		// Write CALL EBX instruction
+		// Write CALL EBX instruction (2 bytes)
 		memory.Write8(0x00400000, 0xFF); // CALL r/m32
 		memory.Write8(0x00400001, 0xD3); // ModRM: 11 010 011 = register EBX
 
@@ -94,6 +112,12 @@ public class CallJmpValidationTests
 		Assert.DoesNotContain(logger.Logs, log => 
 			log.Contains("suspiciously low"));
 		Assert.Equal(0x00401000u, cpu.GetEip());
+		
+		// Verify CALL semantics: return address pushed to stack
+		var expectedReturnAddress = originalEip + 2; // 2-byte instruction
+		var expectedEsp = originalEsp - 4; // ESP decremented by 4
+		Assert.Equal(expectedEsp, cpu.GetRegister("ESP"));
+		Assert.Equal(expectedReturnAddress, memory.Read32(expectedEsp));
 	}
 
 	[Fact]
@@ -162,11 +186,13 @@ public class CallJmpValidationTests
 		var memory = new VirtualMemory();
 		var cpu = new IcedCpu(memory, logger);
 		
-		cpu.SetEip(0x00400000);
-		cpu.SetRegister("ESP", 0x00100000);
+		var originalEip = 0x00400000u;
+		var originalEsp = 0x00100000u;
+		cpu.SetEip(originalEip);
+		cpu.SetRegister("ESP", originalEsp);
 		cpu.SetRegister("EBX", 0x00000000); // NULL pointer
 
-		// Write CALL EBX instruction
+		// Write CALL EBX instruction (2 bytes)
 		memory.Write8(0x00400000, 0xFF); // CALL r/m32
 		memory.Write8(0x00400001, 0xD3); // ModRM: 11 010 011 = register EBX
 
@@ -177,6 +203,12 @@ public class CallJmpValidationTests
 		Assert.DoesNotContain(logger.Logs, log => 
 			log.Contains("suspiciously low"));
 		Assert.Equal(0x00000000u, cpu.GetEip());
+		
+		// Verify CALL semantics: return address pushed to stack
+		var expectedReturnAddress = originalEip + 2; // 2-byte instruction
+		var expectedEsp = originalEsp - 4; // ESP decremented by 4
+		Assert.Equal(expectedEsp, cpu.GetRegister("ESP"));
+		Assert.Equal(expectedReturnAddress, memory.Read32(expectedEsp));
 	}
 }
 
