@@ -141,7 +141,39 @@ public static class EmulatorLauncher
 			{
 				using var emulator = new Emulator(null, logger, telemetryService);
 				emulator.LoadExecutable(path, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort);
+				
+				// Enable API tracing if requested
+				if (enableApiTrace && emulator.Environment != null)
+				{
+					emulator.Environment.EnableApiTracing(apiTraceOutputPath, enableDetailedParameters: true);
+					logger.LogInformation("API call tracing enabled - output: {Output}", apiTraceOutputPath ?? "console");
+					
+					// Set the tracer on the dispatcher if available
+					if (emulator.Win32Dispatcher != null && emulator.Environment.ApiCallTracer != null)
+					{
+						emulator.Win32Dispatcher.SetApiCallTracer(emulator.Environment.ApiCallTracer);
+					}
+					
+					// Load API Monitor comparison data if requested
+					if (compareApiMonLog && !string.IsNullOrEmpty(apiMonLogPath))
+					{
+						// TODO: Implement comparison logic in emulator shutdown
+						logger.LogInformation("API Monitor comparison enabled - log: {ApiMonLog}", apiMonLogPath);
+					}
+				}
+				
 				emulator.Run();
+				
+				// Generate diagnostic report if tracing was enabled
+				if (enableApiTrace && emulator.Environment != null)
+				{
+					var report = emulator.Environment.DisableApiTracing();
+					if (!string.IsNullOrEmpty(report))
+					{
+						logger.LogInformation("API Call Diagnostic Report:\n{Report}", report);
+					}
+				}
+				
 				return 0;
 			}
 			catch (FileNotFoundException ex)

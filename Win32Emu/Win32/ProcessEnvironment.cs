@@ -5,6 +5,7 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
+using Win32Emu.Diagnostics;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
@@ -32,6 +33,9 @@ public class ProcessEnvironment
 	// Message dispatcher for event-driven messaging
 	private readonly MessageDispatcher _messageDispatcher;
 	
+	// API call tracer for diagnostics
+	private ApiCallTracer? _apiCallTracer;
+	
 	// Track subscribed backends to prevent duplicate event subscriptions
 	private readonly HashSet<IRenderingBackend> _subscribedRenderingBackends = new();
 	private readonly HashSet<IInputBackend> _subscribedInputBackends = new();
@@ -51,6 +55,12 @@ public class ProcessEnvironment
 	
 	// Expose MessageDispatcher for use by Win32 modules
 	public MessageDispatcher MessageDispatcher => _messageDispatcher;
+	
+	// Expose API call tracer for diagnostic purposes
+	/// <summary>
+	/// Gets the API call tracer for this process environment, if enabled.
+	/// </summary>
+	public ApiCallTracer? ApiCallTracer => _apiCallTracer;
 
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
 	{
@@ -117,6 +127,50 @@ public class ProcessEnvironment
 		VirtualFileSystem = vfs;
 		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with custom instance");
 		VirtualizeExecutablePath();
+	}
+	
+	/// <summary>
+	/// Enables comprehensive API call tracing for diagnostic purposes.
+	/// </summary>
+	/// <param name="outputPath">Optional path to write trace log file. If null, logs only to console.</param>
+	/// <param name="enableDetailedParameters">Whether to log detailed parameter values (default: true)</param>
+	/// <param name="enableExecutionFlow">Whether to log execution flow markers (default: false)</param>
+	public void EnableApiTracing(string? outputPath = null, bool enableDetailedParameters = true, bool enableExecutionFlow = false)
+	{
+		if (_apiCallTracer != null)
+		{
+			_logger.LogWarning("[ProcessEnv] API tracing already enabled");
+			return;
+		}
+
+		_apiCallTracer = new ApiCallTracer(
+			_logger,
+			enableTracing: true,
+			enableDetailedParameters: enableDetailedParameters,
+			enableExecutionFlow: enableExecutionFlow,
+			outputPath: outputPath);
+
+		_logger.LogInformation("[ProcessEnv] API call tracing enabled (output: {Output})", 
+			outputPath ?? "console only");
+	}
+	
+	/// <summary>
+	/// Disables API call tracing and generates a final diagnostic report.
+	/// </summary>
+	/// <returns>Diagnostic report summarizing all traced calls</returns>
+	public string? DisableApiTracing()
+	{
+		if (_apiCallTracer == null)
+		{
+			return null;
+		}
+
+		var report = _apiCallTracer.GenerateDiagnosticReport();
+		_apiCallTracer.Dispose();
+		_apiCallTracer = null;
+
+		_logger.LogInformation("[ProcessEnv] API call tracing disabled");
+		return report;
 	}
 
 	private void VirtualizeExecutablePath()

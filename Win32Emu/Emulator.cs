@@ -99,6 +99,11 @@ public sealed class Emulator : IDisposable
     /// Get the process environment (may be null if not initialized)
     /// </summary>
     public ProcessEnvironment? Environment => _env;
+    
+    /// <summary>
+    /// Get the Win32 API dispatcher (may be null if not initialized)
+    /// </summary>
+    public Win32Dispatcher? Win32Dispatcher => _dispatcher;
 
     /// <summary>
     /// Post a message to the Win32 message queue (for GUI-to-emulator communication)
