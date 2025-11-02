@@ -903,16 +903,42 @@ public sealed class Emulator : IDisposable
                 // Get the current main executable (may have been updated with synthetic exports)
                 var currentImage = _env!.GetMainExecutable() ?? _image!;
                 
-                if (currentImage.ImportAddressMap.TryGetValue(currentEip, out var importInfo))
+                // Import stubs are aligned to 16-byte boundaries (0x10)
+                // We need to align down to check if this is a valid stub
+                var alignedEip = currentEip & 0xFFFFFFF0u;
+                
+                if (currentImage.ImportAddressMap.TryGetValue(alignedEip, out var importInfo))
                 {
                     LogDebug($"[Debug] This is import: {importInfo.dll}!{importInfo.name}");
+                    LogDebug("[Debug] This should now execute an INT3 stub that will be handled as an import call");
                 }
                 else
                 {
+                    // This import address is not mapped - simulate a return with warning
                     LogDebug("[Debug] Unknown synthetic address - not in import map");
+                    var esp = _cpu.GetRegister("ESP");
+                    _logger.LogWarning("[Import] Attempted to execute unmapped import stub at address 0x{Eip:X8} (aligned: 0x{AlignedEip:X8}, not in ImportAddressMap). ESP=0x{Esp:X8}, attempting to read return address from stack", currentEip, alignedEip, esp);
+                    
+                    try
+                    {
+                        // Read return address from stack and return
+                        var retEip = _vm!.Read32(esp);
+                        esp += 4; // Pop return address only
+                        _cpu.SetRegister("ESP", esp);
+                        _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
+                        _cpu.SetEip(retEip);
+                        
+                        _logger.LogDebug("[Import] Simulated return to 0x{RetEip:X8} with EAX=0", retEip);
+                        LogDebug($"[Debug] Recovered from unmapped import by simulating return to 0x{retEip:X8}");
+                        i++; // Count this as an instruction
+                        continue; // Skip to next iteration
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[Import] Failed to simulate return - stack may be corrupted");
+                        throw; // Re-throw if we can't recover
+                    }
                 }
-
-                LogDebug("[Debug] This should now execute an INT3 stub that will be handled as an import call");
             }
 
             if (debugger.IsProblematicEip())
