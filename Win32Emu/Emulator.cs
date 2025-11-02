@@ -895,6 +895,33 @@ public sealed class Emulator : IDisposable
 
             var currentEip = _cpu!.GetEip();
 
+            // Check for extremely low EIP values that indicate corruption
+            // Skip NULL (0) as that's handled separately
+            if (currentEip > 0 && currentEip < 0x00400000 && !(currentEip >= 0x0D000000 && currentEip < 0x10000000))
+            {
+                _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is suspiciously low (< 0x00400000) at instruction {Instruction}. This likely indicates a corrupted function pointer, bad jump, or API returning invalid address.", currentEip, i);
+                _logger.LogDebug("[Emulator] ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}", _cpu.GetRegister("ESP"), _cpu.GetRegister("EBP"));
+                
+                // Try to recover by simulating a return
+                try
+                {
+                    var esp = _cpu.GetRegister("ESP");
+                    var retEip = _vm!.Read32(esp);
+                    esp += 4;
+                    _cpu.SetRegister("ESP", esp);
+                    _cpu.SetRegister("EAX", 0);
+                    _cpu.SetEip(retEip);
+                    _logger.LogDebug("[Emulator] Attempted recovery by simulating return to 0x{RetEip:X8}", retEip);
+                    i++;
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[Emulator] Failed to recover from corrupted EIP");
+                    throw;
+                }
+            }
+
             if (currentEip is >= 0x0F000000 and < 0x10000000)
             {
                 LogDebug("\n[Debug] *** CPU TRYING TO EXECUTE SYNTHETIC IMPORT ADDRESS! ***");
