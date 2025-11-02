@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
-using Win32Emu.Tests.Emulator.TestInfrastructure;
 using Xunit.Abstractions;
 
 namespace Win32Emu.Tests.Emulator;
@@ -10,23 +9,16 @@ namespace Win32Emu.Tests.Emulator;
 /// Tests for CALL and JMP instruction target validation
 /// These tests verify that suspicious call/jump targets are detected and logged
 /// </summary>
-public class CallJmpValidationTests : IDisposable
+public class CallJmpValidationTests
 {
-	private readonly CpuTestHelper _helper;
-	private readonly TestLogger _logger;
-
-	public CallJmpValidationTests(ITestOutputHelper output)
-	{
-		_logger = new TestLogger(output);
-		_helper = new CpuTestHelper();
-	}
-
 	[Fact]
 	public void CALL_Register_WithLowAddress_ShouldLogWarning()
 	{
 		// Arrange: CALL EBX (FF D3) with EBX containing a suspiciously low address
+		var output = new TestOutputHelper();
+		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, _logger);
+		var cpu = new IcedCpu(memory, logger);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ESP", 0x00100000);
@@ -40,7 +32,7 @@ public class CallJmpValidationTests : IDisposable
 		cpu.SingleStep(memory);
 
 		// Assert
-		Assert.Contains(_logger.Logs, log => 
+		Assert.Contains(logger.Logs, log => 
 			log.Contains("CALL") && 
 			log.Contains("0x00001000") && 
 			log.Contains("suspiciously low"));
@@ -51,8 +43,10 @@ public class CallJmpValidationTests : IDisposable
 	public void CALL_Memory_WithLowAddress_ShouldLogWarning()
 	{
 		// Arrange: CALL [EBX] with memory containing a suspiciously low address
+		var output = new TestOutputHelper();
+		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, _logger);
+		var cpu = new IcedCpu(memory, logger);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ESP", 0x00100000);
@@ -69,7 +63,7 @@ public class CallJmpValidationTests : IDisposable
 		cpu.SingleStep(memory);
 
 		// Assert
-		Assert.Contains(_logger.Logs, log => 
+		Assert.Contains(logger.Logs, log => 
 			log.Contains("CALL") && 
 			log.Contains("0x00002000") && 
 			log.Contains("suspiciously low"));
@@ -80,8 +74,10 @@ public class CallJmpValidationTests : IDisposable
 	public void CALL_Register_WithValidAddress_ShouldNotLogWarning()
 	{
 		// Arrange: CALL EBX with EBX containing a valid address
+		var output = new TestOutputHelper();
+		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, _logger);
+		var cpu = new IcedCpu(memory, logger);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ESP", 0x00100000);
@@ -95,7 +91,7 @@ public class CallJmpValidationTests : IDisposable
 		cpu.SingleStep(memory);
 
 		// Assert
-		Assert.DoesNotContain(_logger.Logs, log => 
+		Assert.DoesNotContain(logger.Logs, log => 
 			log.Contains("suspiciously low"));
 		Assert.Equal(0x00401000u, cpu.GetEip());
 	}
@@ -104,8 +100,10 @@ public class CallJmpValidationTests : IDisposable
 	public void JMP_Register_WithLowAddress_ShouldLogWarning()
 	{
 		// Arrange: JMP EAX with EAX containing a suspiciously low address
+		var output = new TestOutputHelper();
+		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, _logger);
+		var cpu = new IcedCpu(memory, logger);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("EAX", 0x00003000); // Suspiciously low address
@@ -118,7 +116,7 @@ public class CallJmpValidationTests : IDisposable
 		cpu.SingleStep(memory);
 
 		// Assert
-		Assert.Contains(_logger.Logs, log => 
+		Assert.Contains(logger.Logs, log => 
 			log.Contains("JMP") && 
 			log.Contains("0x00003000") && 
 			log.Contains("suspiciously low"));
@@ -129,8 +127,10 @@ public class CallJmpValidationTests : IDisposable
 	public void JMP_Memory_WithLowAddress_ShouldLogWarning()
 	{
 		// Arrange: JMP [ECX] with memory containing a suspiciously low address
+		var output = new TestOutputHelper();
+		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, _logger);
+		var cpu = new IcedCpu(memory, logger);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ECX", 0x00450000);
@@ -146,7 +146,7 @@ public class CallJmpValidationTests : IDisposable
 		cpu.SingleStep(memory);
 
 		// Assert
-		Assert.Contains(_logger.Logs, log => 
+		Assert.Contains(logger.Logs, log => 
 			log.Contains("JMP") && 
 			log.Contains("0x00004000") && 
 			log.Contains("suspiciously low"));
@@ -157,8 +157,10 @@ public class CallJmpValidationTests : IDisposable
 	public void CALL_Register_WithZeroAddress_ShouldNotLogWarning()
 	{
 		// Arrange: CALL EBX with EBX = 0 (NULL pointer, explicitly allowed)
+		var output = new TestOutputHelper();
+		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, _logger);
+		var cpu = new IcedCpu(memory, logger);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ESP", 0x00100000);
@@ -172,15 +174,9 @@ public class CallJmpValidationTests : IDisposable
 		cpu.SingleStep(memory);
 
 		// Assert - NULL is explicitly allowed to avoid false positives
-		Assert.DoesNotContain(_logger.Logs, log => 
+		Assert.DoesNotContain(logger.Logs, log => 
 			log.Contains("suspiciously low"));
 		Assert.Equal(0x00000000u, cpu.GetEip());
-	}
-
-	public void Dispose()
-	{
-		_helper?.Dispose();
-		GC.SuppressFinalize(this);
 	}
 }
 
@@ -208,3 +204,23 @@ internal class TestLogger : ILogger
 		_output.WriteLine($"[{logLevel}] {message}");
 	}
 }
+
+/// <summary>
+/// Simple implementation of ITestOutputHelper for use without xUnit test context
+/// </summary>
+internal class TestOutputHelper : ITestOutputHelper
+{
+	private readonly List<string> _output = new();
+
+	public void WriteLine(string message)
+	{
+		_output.Add(message);
+		Console.WriteLine(message);
+	}
+
+	public void WriteLine(string format, params object[] args)
+	{
+		WriteLine(string.Format(format, args));
+	}
+}
+
