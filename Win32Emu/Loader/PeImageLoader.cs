@@ -215,7 +215,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				{
 					// This import cannot be processed - no IAT entry location available
 					var symName = sym.Name ?? $"Ordinal_{sym.Hint}";
-					skippedImports.Add((dll, symName, "AddressTableEntry RVA is null or zero"));
+					skippedImports.Add((dllUpper, symName, "AddressTableEntry RVA is null or zero"));
 					logger?.LogWarning("[Loader] Skipping import {Dll}!{Name}: no IAT entry location available", 
 						dllUpper, symName);
 					continue;
@@ -288,7 +288,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			summary.AppendLine($"[Loader] {skippedImports.Count} import(s) were skipped and will not be available:");
 			foreach (var (skippedDll, skippedName, reason) in skippedImports)
 			{
-				summary.AppendLine($"[Loader]   - {skippedDll.ToUpperInvariant()}!{skippedName}: {reason}");
+				summary.AppendLine($"[Loader]   - {skippedDll}!{skippedName}: {reason}");
 			}
 			summary.Append("[Loader] If the application attempts to call these imports, it will likely crash.");
 			logger?.LogWarning(summary.ToString());
