@@ -203,11 +203,18 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			var dll = module.Name ?? string.Empty;
 			foreach (var sym in module.Symbols)
 			{
-				// Prefer IAT entry RVA when available.
-				var rva = sym.AddressTableEntry?.Rva; // fallback
+				// Get IAT entry RVA - this is required to write the import stub address
+				var rva = sym.AddressTableEntry?.Rva;
 				if (rva is null or 0)
 				{
-					continue;
+					// Cannot process this import - no IAT entry location available
+					// This can happen with delay-loaded imports or malformed PE files
+					// Throw an error rather than silently skipping, as calling this import will crash
+					var symName = sym.Name ?? $"Ordinal_{sym.Ordinal}";
+					throw new InvalidOperationException(
+						$"Cannot load PE file: Import {dll.ToUpperInvariant()}!{symName} has no AddressTableEntry RVA. " +
+						$"This may indicate a delay-loaded import, bound import, or corrupted PE file. " +
+						$"The emulator cannot safely load this executable.");
 				}
 
 				var va = imageBase + rva.Value;
