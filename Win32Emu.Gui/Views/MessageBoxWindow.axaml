@@ -33,7 +33,8 @@
         </StackPanel>
         
         <!-- Buttons area -->
-        <StackPanel Grid.Row="1" 
+        <StackPanel Name="ButtonPanel"
+                    Grid.Row="1" 
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right"
                     Spacing="10">
