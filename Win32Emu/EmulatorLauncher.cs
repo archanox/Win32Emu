@@ -41,6 +41,31 @@ public static class EmulatorLauncher
 			}
 		}
 		
+		// Parse API tracing options
+		var enableApiTrace = args.Contains("--trace-api");
+		string? apiTraceOutputPath = null;
+		if (enableApiTrace)
+		{
+			var traceIndex = Array.IndexOf(args, "--trace-api");
+			if (traceIndex >= 0 && traceIndex + 1 < args.Length && 
+			    !args[traceIndex + 1].StartsWith("--"))
+			{
+				apiTraceOutputPath = args[traceIndex + 1];
+			}
+		}
+		
+		var compareApiMonLog = args.Contains("--compare-apimon");
+		string? apiMonLogPath = null;
+		if (compareApiMonLog)
+		{
+			var compareIndex = Array.IndexOf(args, "--compare-apimon");
+			if (compareIndex >= 0 && compareIndex + 1 < args.Length && 
+			    !args[compareIndex + 1].StartsWith("--"))
+			{
+				apiMonLogPath = args[compareIndex + 1];
+			}
+		}
+		
 		// Parse OpenTelemetry options
 		var telemetryConsoleMode = args.Contains("--telemetry-console");
 		var telemetryOtlpMode = args.Contains("--telemetry-otlp");
@@ -159,6 +184,8 @@ public static class EmulatorLauncher
 		Console.WriteLine("  --interactive-debug  Enable interactive step-through debugger (GDB-like)");
 		Console.WriteLine("  --gdb-server [port]  Start GDB server for remote debugging (default port: 1234)");
 		Console.WriteLine("  --backend <SDL|GLFW|Vulkan|Metal|Software> Select rendering backend (default: SDL)");
+		Console.WriteLine("  --trace-api [file]   Enable comprehensive API call tracing (optional output file)");
+		Console.WriteLine("  --compare-apimon <csv> Compare behavior against API Monitor CSV log");
 		Console.WriteLine("  --telemetry-console  Enable OpenTelemetry with console exporter");
 		Console.WriteLine("  --telemetry-otlp [endpoint] Enable OpenTelemetry with OTLP exporter (default: http://localhost:4317)");
 		Console.WriteLine();
@@ -169,6 +196,8 @@ public static class EmulatorLauncher
 		Console.WriteLine("Examples:");
 		Console.WriteLine("  Win32Emu game.exe");
 		Console.WriteLine("  Win32Emu game.exe --debug");
+		Console.WriteLine("  Win32Emu game.exe --trace-api trace.log");
+		Console.WriteLine("  Win32Emu game.exe --trace-api --compare-apimon ApiMonLogs/game.csv");
 		Console.WriteLine("  Win32Emu game.exe --backend SDL");
 		Console.WriteLine("  Win32Emu game.exe --backend GLFW");
 		Console.WriteLine("  Win32Emu game.exe --backend Vulkan");
