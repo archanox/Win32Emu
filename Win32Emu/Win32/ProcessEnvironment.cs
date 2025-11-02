@@ -289,6 +289,9 @@ public class ProcessEnvironment
 	// Message queue with Channels
 	private readonly Channel<QueuedMessage> _messageQueue = Channel.CreateUnbounded<QueuedMessage>();
 	
+	// Message queue wait token - used by thread scheduler to identify threads waiting for messages
+	private readonly object _messageQueueWaitToken = new object();
+	
 	// Message structure for queueing
 	public record struct QueuedMessage(
 		uint Hwnd,
@@ -1561,11 +1564,32 @@ public class ProcessEnvironment
 		if (_messageQueue.Writer.TryWrite(queuedMsg))
 		{
 			_logger.LogInformation("[ProcessEnv] PostMessage: queued MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", message, hwnd);
+			
+			// Wake any threads waiting for messages in GetMessage
+			WakeThreadsWaitingForMessages();
+			
 			return true;
 		}
 
 		_logger.LogWarning("[ProcessEnv] PostMessage: failed to queue MSG=0x{Message:X4}", message);
 		return false;
+	}
+	
+	/// <summary>
+	/// Wake all threads that are waiting for messages (blocked in GetMessage)
+	/// </summary>
+	private void WakeThreadsWaitingForMessages()
+	{
+		if (ThreadScheduler == null)
+			return;
+			
+		// Find all threads waiting on the message queue and wake them
+		var allThreads = ThreadScheduler.GetAllThreads();
+		foreach (var thread in allThreads.Where(t => t.State == Threading.ThreadState.Waiting && ReferenceEquals(t.WaitingOn, _messageQueueWaitToken)))
+		{
+			ThreadScheduler.WakeThread(thread.ThreadId);
+			_logger.LogDebug("[ProcessEnv] Woke thread {ThreadId} waiting for messages", thread.ThreadId);
+		}
 	}
 
 	/// <summary>
@@ -1704,6 +1728,70 @@ public class ProcessEnvironment
 			_logger.LogWarning(ex, "[ProcessEnv] GetMessageBlocking");
 			return null;
 		}
+	}
+	
+	/// <summary>
+	/// Get the message queue wait token for thread scheduler integration
+	/// </summary>
+	public object GetMessageQueueWaitToken()
+	{
+		return _messageQueueWaitToken;
+	}
+	
+	/// <summary>
+	/// Try to get a message from the queue without blocking (polls once)
+	/// Returns null if no message is immediately available
+	/// </summary>
+	public QueuedMessage? TryGetMessageNonBlocking(uint hwnd, uint msgFilterMin, uint msgFilterMax)
+	{
+		// Use a temporary list to hold messages that don't match the filter
+		List<QueuedMessage> requeueList = null;
+
+		while (_messageQueue.Reader.TryRead(out var message))
+		{
+			bool match = true;
+			// Apply filters if specified
+			if (hwnd != 0 && message.Hwnd != hwnd)
+			{
+				match = false;
+			}
+
+			if (match && (msgFilterMin != 0 || msgFilterMax != 0) &&
+			    (message.Message < msgFilterMin || message.Message > msgFilterMax))
+			{
+				match = false;
+			}
+
+			if (match)
+			{
+				// Found a matching message, re-queue any held messages and return
+				if (requeueList != null)
+				{
+					foreach (var msgToRequeue in requeueList)
+					{
+						_messageQueue.Writer.TryWrite(msgToRequeue);
+					}
+				}
+				return message;
+			}
+			else
+			{
+				// Message does not match, hold it for re-queueing
+				requeueList ??= new List<QueuedMessage>();
+				requeueList.Add(message);
+			}
+		}
+
+		// No matching message found, re-queue all held messages
+		if (requeueList != null)
+		{
+			foreach (var msgToRequeue in requeueList)
+			{
+				_messageQueue.Writer.TryWrite(msgToRequeue);
+			}
+		}
+
+		return null;
 	}
 
 	/// <summary>

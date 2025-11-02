@@ -32,6 +32,12 @@ public sealed class Emulator : IDisposable
     private Task? _eventProcessingTask;
     private CancellationTokenSource? _eventProcessingCts;
     private readonly HashSet<uint> _patchedImportStubs = new();
+    
+    // Progress logging interval for emulation loop
+    private const ulong PROGRESS_LOG_INTERVAL = 10000;
+    
+    // Logging throttle interval when stuck at same EIP (reduce spam)
+    private const ulong STUCK_EIP_LOG_INTERVAL = 100000;
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -365,10 +371,62 @@ public sealed class Emulator : IDisposable
     private async Task RunNormalAsync()
     {
         var scheduler = _env!.ThreadScheduler;
+        var iterationCount = 0ul;
+        var lastLogTime = DateTime.UtcNow;
+        
+        // Infinite loop detection - track EIP to detect stuck loops
+        var lastProgressEip = 0u;
+        var sameEipCount = 0ul;
+        // Stop emulation after 1M iterations at same EIP
+        // This threshold allows legitimate tight loops (spinlocks, busy waits) to run
+        // but catches applications stuck in true infinite loops (e.g., message pump with no messages)
+        const ulong MAX_SAME_EIP_ITERATIONS = 1000000;
 
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
         {
+            iterationCount++;
+            
+            // Infinite loop detection - check every PROGRESS_LOG_INTERVAL iterations
+            if (_logger.IsEnabled(LogLevel.Debug) && iterationCount % PROGRESS_LOG_INTERVAL == 0)
+            {
+                var now = DateTime.UtcNow;
+                var elapsed = (now - lastLogTime).TotalMilliseconds;
+                var progressEip = _cpu!.GetEip();
+                var progressEsp = _cpu.GetRegister("ESP");
+                
+                // Check if we're stuck at the same EIP
+                if (progressEip == lastProgressEip)
+                {
+                    sameEipCount += PROGRESS_LOG_INTERVAL;
+                    
+                    // Only log every STUCK_EIP_LOG_INTERVAL iterations when stuck to reduce spam
+                    if (sameEipCount % STUCK_EIP_LOG_INTERVAL == 0)
+                    {
+                        _logger.LogWarning("[Emulator] Possible infinite loop: {SameEipCount} iterations at EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
+                            sameEipCount, progressEip, progressEsp);
+                    }
+                    
+                    // Stop execution if we've been stuck too long
+                    if (sameEipCount >= MAX_SAME_EIP_ITERATIONS)
+                    {
+                        _logger.LogError("[Emulator] INFINITE LOOP DETECTED: Stuck at EIP=0x{Eip:X8} for {Iterations} iterations. Stopping emulation.", 
+                            progressEip, sameEipCount);
+                        break;
+                    }
+                }
+                else
+                {
+                    // EIP changed - reset counter and log progress
+                    sameEipCount = 0;
+                    _logger.LogDebug("[Emulator] Progress: {Iterations} iterations ({Elapsed:F2}ms), EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
+                        iterationCount, elapsed, progressEip, progressEsp);
+                }
+                
+                lastProgressEip = progressEip;
+                lastLogTime = now;
+            }
+            
             // DEBUG: Log EIP at start of each iteration to catch when it gets corrupted
             var eipAtLoopStart = _cpu!.GetEip();
             if (eipAtLoopStart >= 0x01000000 && eipAtLoopStart < 0x02000000)
@@ -390,15 +448,16 @@ public sealed class Emulator : IDisposable
 	            break;
             }
 
+            // Process wait timeouts BEFORE checking for runnable threads
+            // This ensures sleeping threads are woken up before we check if any threads are runnable
+            scheduler?.ProcessWaitTimeouts();
+
             // Check if we have any runnable threads
             if (scheduler != null && !scheduler.HasRunningThreads())
             {
                 LogDebug("[Emulator] No more runnable threads, stopping execution");
                 break;
             }
-
-            // Process wait timeouts
-            scheduler?.ProcessWaitTimeouts();
 
             // Check if we should context switch
             if (scheduler != null && scheduler.ShouldContextSwitch())
@@ -495,7 +554,19 @@ public sealed class Emulator : IDisposable
                 }
             }
 
-            var step = _cpu!.SingleStep(_vm!);
+            CpuStepResult step;
+            try
+            {
+                step = _cpu!.SingleStep(_vm!);
+            }
+            catch (Exception ex)
+            {
+                var esp = _cpu!.GetRegister("ESP");
+                var ebp = _cpu.GetRegister("EBP");
+                _logger.LogError(ex, "[Emulator] Exception during SingleStep at EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}: {Message}", 
+                    eipBeforeStep, esp, ebp, ex.Message);
+                throw; // Re-throw to stop emulation
+            }
             
             // Record instruction execution
             _metrics?.RecordInstructionsExecuted();
