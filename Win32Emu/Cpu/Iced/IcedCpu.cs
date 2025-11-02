@@ -326,13 +326,30 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Scasw: ExecScas(2, insn.HasRepePrefix, insn.HasRepnePrefix); break;
 				case Mnemonic.Scasd: ExecScas(4, insn.HasRepePrefix, insn.HasRepnePrefix); break;
 				case Mnemonic.Jmp:
+					uint jmpTarget;
 					if (insn.GetOpKind(0) == OpKind.Register)
 					{
-						_eip = GetReg32(insn.GetOpRegister(0));
+						jmpTarget = GetReg32(insn.GetOpRegister(0));
+						_eip = jmpTarget;
+						
+						// Validate indirect jump target
+						if (jmpTarget < 0x00400000 && jmpTarget != 0x00000000)
+						{
+							_logger.LogWarning("[IcedCpu] JMP at 0x{OldEip:X8}: indirect jump target 0x{Target:X8} is suspiciously low (< 0x00400000). Possible invalid function pointer or corrupted register. Register: {Reg}", 
+								oldEip, jmpTarget, insn.GetOpRegister(0));
+						}
 					}
 					else if (insn.GetOpKind(0) == OpKind.Memory)
 					{
-						_eip = Read32(CalcMemAddress(insn));
+						jmpTarget = Read32(CalcMemAddress(insn));
+						_eip = jmpTarget;
+						
+						// Validate indirect jump target
+						if (jmpTarget < 0x00400000 && jmpTarget != 0x00000000)
+						{
+							_logger.LogWarning("[IcedCpu] JMP at 0x{OldEip:X8}: indirect jump target 0x{Target:X8} is suspiciously low (< 0x00400000). Possible invalid function pointer or uninitialized memory.", 
+								oldEip, jmpTarget);
+						}
 					}
 					else
 					{
@@ -348,12 +365,26 @@ public class IcedCpu : IAsyncCpu
 						_eip = GetReg32(insn.GetOpRegister(0));
 						callTarget = _eip;
 						isCall = true;
+						
+						// Validate indirect call target
+						if (_eip < 0x00400000 && _eip != 0x00000000)
+						{
+							_logger.LogWarning("[IcedCpu] CALL at 0x{OldEip:X8}: indirect call target 0x{Target:X8} is suspiciously low (< 0x00400000). Possible invalid function pointer or corrupted register. Register: {Reg}", 
+								oldEip, _eip, insn.GetOpRegister(0));
+						}
 					}
 					else if (insn.GetOpKind(0) == OpKind.Memory)
 					{
 						_eip = Read32(CalcMemAddress(insn));
 						callTarget = _eip;
 						isCall = true;
+						
+						// Validate indirect call target
+						if (_eip < 0x00400000 && _eip != 0x00000000)
+						{
+							_logger.LogWarning("[IcedCpu] CALL at 0x{OldEip:X8}: indirect call target 0x{Target:X8} is suspiciously low (< 0x00400000). Possible invalid function pointer or uninitialized memory.", 
+								oldEip, _eip);
+						}
 					}
 					else
 					{
