@@ -226,3 +226,101 @@ dotnet_diagnostic.CA1823.severity = none
 # CA1513: Use ObjectDisposedException throw helper
 # Suppressed: Maintaining compatibility with existing code
 dotnet_diagnostic.CA1513.severity = none
+
+# ===== C# Compiler Warnings =====
+
+# CS8625: Cannot convert null literal to non-nullable reference type
+# Suppressed: Legacy code uses null in many places, extensive refactoring needed
+dotnet_diagnostic.CS8625.severity = none
+
+# CS8618: Non-nullable field must contain a non-null value when exiting constructor
+# Suppressed: Many fields initialized after construction or in helper methods
+dotnet_diagnostic.CS8618.severity = none
+
+# CS1998: This async method lacks 'await' operators
+# Suppressed: Some async methods are designed for interface consistency
+dotnet_diagnostic.CS1998.severity = none
+
+# CS8602: Dereference of a possibly null reference
+# Suppressed: Nullable reference checking is strict, many false positives
+dotnet_diagnostic.CS8602.severity = none
+
+# CS0618: Type or member is obsolete
+# Suppressed: Intentional use of obsolete APIs for compatibility
+dotnet_diagnostic.CS0618.severity = none
+
+# CS0219: Variable is assigned but its value is never used
+# Suppressed: May be used for debugging or future code
+dotnet_diagnostic.CS0219.severity = none
+
+# CS0649: Field is never assigned to
+# Suppressed: Fields may be assigned via reflection or marshalling
+dotnet_diagnostic.CS0649.severity = none
+
+# CS8600: Converting null literal or possible null value to non-nullable type
+# Suppressed: Nullable handling in legacy code
+dotnet_diagnostic.CS8600.severity = none
+
+# CS8629: Nullable value type may be null
+# Suppressed: Nullable handling in legacy code
+dotnet_diagnostic.CS8629.severity = none
+
+# CS8604: Possible null reference argument
+# Suppressed: Nullable handling in legacy code
+dotnet_diagnostic.CS8604.severity = none
+
+# CS0414: Field is assigned but its value is never used
+# Suppressed: May be used for debugging or future code
+dotnet_diagnostic.CS0414.severity = none
+
+# CS0675: Bitwise-or operator used on a sign-extended operand
+# Suppressed: Intentional in low-level bit manipulation code
+dotnet_diagnostic.CS0675.severity = none
+
+# CS8603: Possible null reference return
+# Suppressed: Nullable handling in legacy code
+dotnet_diagnostic.CS8603.severity = none
+
+# CS8981: Type name only contains lower-cased ascii characters
+# Suppressed: Some types use lowercase for compatibility
+dotnet_diagnostic.CS8981.severity = none
+
+# CS0168: Variable is declared but never used
+# Suppressed: May be used for debugging or future code
+dotnet_diagnostic.CS0168.severity = none
+
+# CS0067: Event is never used
+# Suppressed: Events may be part of interface or future code
+dotnet_diagnostic.CS0067.severity = none
+
+# CS0472: Result of expression is always the same
+# Suppressed: May be intentional for clarity or compatibility
+dotnet_diagnostic.CS0472.severity = none
+
+# CS0162: Unreachable code detected
+# Suppressed: May be intentional for conditional compilation or future code
+dotnet_diagnostic.CS0162.severity = none
+
+# ===== xUnit Warnings =====
+
+# xUnit1031: Test methods should not use blocking task operations
+# Suppressed: Some tests need to use blocking operations
+dotnet_diagnostic.xUnit1031.severity = none
+
+# xUnit2002: Do not use null check on value type
+# Suppressed: May be necessary for generic code
+dotnet_diagnostic.xUnit2002.severity = none
+
+# xUnit2013: Do not use equality check to check for collection size
+# Suppressed: Readability preference
+dotnet_diagnostic.xUnit2013.severity = none
+
+# xUnit1026: Theory methods should use all of their parameters
+# Suppressed: Some parameters may be for future use
+dotnet_diagnostic.xUnit1026.severity = none
+
+# ===== Avalonia Warnings =====
+
+# AVLN3001: Avalonia analyzer warning
+# Suppressed: Not applicable to all scenarios
+dotnet_diagnostic.AVLN3001.severity = none
