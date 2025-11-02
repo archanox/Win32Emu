@@ -8,9 +8,9 @@ using System.IO.Compression;
 
 namespace CHDSharpLib;
 
-internal delegate chd_error CHDReader(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, CHDCodec codec);
+public delegate chd_error CHDReader(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, CHDCodec codec);
 
-internal static partial class CHDReaders
+public static partial class CHDReaders
 {
 
     internal static chd_error zlib(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, CHDCodec codec)

@@ -63,15 +63,15 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 					if (chdIsoFs != null)
 					{
 						_fileSystem = chdIsoFs;
-						_logger.LogInformation("[DiskVFS] Mounted CHD with ISO filesystem: {DiskPath} (Version: {Version})", 
-							diskPath, chdReader.Version);
+						_logger.LogInformation("[DiskVFS] Mounted CHD with ISO filesystem: {DiskPath} (Version: {Version}, TOC: {Tracks} tracks)", 
+							diskPath, chdReader.Version, chdReader.Toc?.Tracks.Count ?? 0);
 					}
 					else
 					{
-						// CHD detected but filesystem extraction not available yet
-						_logger.LogWarning("[DiskVFS] CHD file detected but full support not implemented: {DiskPath}", diskPath);
+						// CHD detected but no ISO filesystem found
+						_logger.LogWarning("[DiskVFS] CHD file opened but no ISO filesystem detected: {DiskPath}", diskPath);
 						chdReader.Dispose();
-						throw new NotSupportedException($"CHD file format is recognized but full filesystem access is not yet implemented: {diskPath}");
+						throw new NotSupportedException($"CHD file opened successfully but no ISO 9660 filesystem detected: {diskPath}");
 					}
 					IsReadOnly = true;
 					break;

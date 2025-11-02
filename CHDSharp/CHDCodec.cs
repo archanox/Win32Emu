@@ -3,7 +3,7 @@ using CUETools.Codecs.Flake;
 
 namespace CHDSharpLib
 {
-    internal class CHDCodec
+    public class CHDCodec
     {
         internal AudioPCMConfig FLAC_settings = null;
         internal AudioDecoder FLAC_audioDecoder = null;

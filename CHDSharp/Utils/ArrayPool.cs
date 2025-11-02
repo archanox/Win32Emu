@@ -2,14 +2,14 @@
 
 namespace CHDSharpLib.Utils;
 
-internal class ArrayPool
+public class ArrayPool
 {
     private uint _arraySize;
     private List<byte[]> _array;
     private int _count;
     private int _issuedArraysTotal;
 
-    internal ArrayPool(uint arraySize)
+    public ArrayPool(uint arraySize)
     {
         _array = new List<byte[]>();
         _arraySize = arraySize;
@@ -17,7 +17,7 @@ internal class ArrayPool
         _issuedArraysTotal = 0;
     }
 
-    internal byte[] Rent()
+    public byte[] Rent()
     {
         byte[] ret;
         lock (_array)
@@ -38,7 +38,7 @@ internal class ArrayPool
 
     }
 
-    internal void Return(byte[] ret)
+    public void Return(byte[] ret)
     {
         lock (_array)
         {
@@ -47,7 +47,7 @@ internal class ArrayPool
         }
     }
 
-    internal void ReadStats(out int issuedArraysTotal, out int returnedArraysTotal)
+    public void ReadStats(out int issuedArraysTotal, out int returnedArraysTotal)
     {
         issuedArraysTotal = _issuedArraysTotal;
         returnedArraysTotal = _count;

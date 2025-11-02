@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CHDSharpLib;
 
-internal static class CHDHeaders
+public static class CHDHeaders
 {
     public static chd_error ReadHeaderV1(Stream file, out CHDHeader chd)
     {

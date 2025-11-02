@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace CHDSharpLib;
 
-internal class CHDHeader
+public class CHDHeader
 {
     public chd_codec[] compression;
     public CHDReader[] chdReader;
@@ -31,7 +31,7 @@ internal class CHDHeader
     public ulong metaoffset;
 }
 
-internal class mapentry
+public class mapentry
 {
     public compression_type comptype;
     public uint length; // length of compressed data

@@ -4,7 +4,7 @@ using CUETools.Codecs.Flake;
 using System;
 
 namespace CHDSharpLib;
-internal static partial class CHDReaders
+public static partial class CHDReaders
 {
     /*
      Source input buffer structure:

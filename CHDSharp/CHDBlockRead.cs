@@ -7,14 +7,14 @@ using System.Threading.Tasks;
 
 namespace CHDSharpLib
 {
-    internal static class CHDBlockRead
+    public static class CHDBlockRead
     {
         // search for all COMPRESSION_SELF block, and increase the counter of the block it is referencing.
         // the first time the referenced block is decompressed a copy of its data is kept.
         // this copy is then used (instead of re-decompressing.) until the use count returns to zero
         // at which time the backup copy if removed.
 
-        internal static void FindRepeatedBlocks(CHDHeader chd, Message consoleOut)
+        public static void FindRepeatedBlocks(CHDHeader chd, Message consoleOut)
         {
             int totalFound = 0;
             int[] compressionCount = new int[5];
@@ -157,7 +157,7 @@ namespace CHDSharpLib
             }
         }
 
-        internal static void FindBlockReaders(CHDHeader chd)
+        public static void FindBlockReaders(CHDHeader chd)
         {
             chd.chdReader = new CHDReader[chd.compression.Length];
             for (int i = 0; i < chd.compression.Length; i++)
@@ -180,7 +180,7 @@ namespace CHDSharpLib
             }
         }
 
-        internal static chd_error ReadBlock(mapentry mapentry, ArrayPool arrPool, CHDReader[] compression, CHDCodec codec, byte[] buffOut, int buffOutLength)
+        public static chd_error ReadBlock(mapentry mapentry, ArrayPool arrPool, CHDReader[] compression, CHDCodec codec, byte[] buffOut, int buffOutLength)
         {
             bool checkCrc = true;
 
