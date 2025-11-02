@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Win32Emu.Memory;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace Win32Emu.Loader;
 
@@ -199,26 +198,23 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		// Track all IAT entry addresses to validate for duplicates or invalid entries
 		var iatEntries = new HashSet<uint>();
 		
-		// Track imports that couldn't be processed
-		var skippedImports = new List<(string dll, string name, string reason)>();
-		
 		foreach (var module in imports)
 		{
 			var dll = module.Name ?? string.Empty;
-			var dllUpper = dll.ToUpperInvariant();
 			foreach (var sym in module.Symbols)
 			{
-				// Get the IAT entry RVA from AddressTableEntry
-				// If this is null or 0, the import cannot be processed
+				// Get IAT entry RVA - this is required to write the import stub address
 				var rva = sym.AddressTableEntry?.Rva;
 				if (rva is null or 0)
 				{
-					// This import cannot be processed - no IAT entry location available
+					// Cannot process this import - no IAT entry location available
+					// This can happen with delay-loaded imports or malformed PE files
+					// Throw an error rather than silently skipping, as calling this import will crash
 					var symName = sym.Name ?? $"Ordinal_{sym.Hint}";
-					skippedImports.Add((dllUpper, symName, "AddressTableEntry RVA is null or zero"));
-					logger?.LogWarning("[Loader] Skipping import {Dll}!{Name}: no IAT entry location available", 
-						dllUpper, symName);
-					continue;
+					throw new InvalidOperationException(
+						$"Cannot load PE file: Import {dll.ToUpperInvariant()}!{symName} has no AddressTableEntry RVA. " +
+						$"This may indicate a delay-loaded import, bound import, or corrupted PE file. " +
+						$"The emulator cannot safely load this executable.");
 				}
 
 				var va = imageBase + rva.Value;
@@ -227,7 +223,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				if (iatEntries.Contains(va))
 				{
 					logger?.LogWarning("[Loader] Duplicate IAT entry detected at VA 0x{Va:X8} for {Dll}!{Name}. This may indicate PE corruption or incorrect parsing.", 
-						va, dllUpper, sym.Name ?? $"Ordinal_{sym.Hint}");
+						va, dll.ToUpperInvariant(), sym.Name ?? $"Ordinal_{sym.Hint}");
 				}
 				iatEntries.Add(va);
 				
@@ -271,31 +267,15 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				vm.WriteBytes(synthetic, stub);
 				
 				var name = sym.Name ?? ($"Ordinal_{sym.Hint}");
-				map[synthetic] = (dllUpper, name);
+				map[synthetic] = (dll.ToUpperInvariant(), name);
 				logger?.LogTrace("[Loader] Mapped import #{Index}: {Dll}!{Name} at 0x{Synthetic:X8} -> syscall at 0x{Syscall:X8}", 
-					synth - 1, dllUpper, name, synthetic, SYSCALL_DISPATCHER_ADDRESS);
+					synth - 1, dll.ToUpperInvariant(), name, synthetic, SYSCALL_DISPATCHER_ADDRESS);
 			}
 		}
 		
 		// VALIDATION: Log summary of import mapping to detect anomalies
 		logger?.LogInformation("[Loader] Import mapping complete: {Count} imports mapped to addresses 0x0F000000 - 0x{LastAddr:X8}", 
 			synth, synth > 0 ? 0x0F000000u + (uint)((synth - 1) * 0x10u) : 0x0F000000u);
-		
-		// Report any skipped imports as a summary
-		if (skippedImports.Count > 0)
-		{
-			// Pre-allocate StringBuilder capacity to avoid reallocations
-			// Estimate: ~100 for header/footer + ~80 per skipped import line
-			var estimatedCapacity = 100 + (skippedImports.Count * 80);
-			var summary = new StringBuilder(estimatedCapacity);
-			summary.AppendLine($"[Loader] {skippedImports.Count} import(s) were skipped and will not be available:");
-			foreach (var (skippedDll, skippedName, reason) in skippedImports)
-			{
-				summary.AppendLine($"[Loader]   - {skippedDll}!{skippedName}: {reason}");
-			}
-			summary.Append("[Loader] If the application attempts to call these imports, it will likely crash.");
-			logger?.LogWarning(summary.ToString());
-		}
 		
 		// VALIDATION: Check if there are any IAT entries in memory beyond what we mapped
 		// This could indicate extra entries that shouldn't exist
