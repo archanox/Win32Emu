@@ -210,7 +210,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 					// Cannot process this import - no IAT entry location available
 					// This can happen with delay-loaded imports or malformed PE files
 					// Throw an error rather than silently skipping, as calling this import will crash
-					var symName = sym.Name ?? $"Ordinal_{sym.Hint}";
+					var symName = sym.Name ?? $"Ordinal_{sym.Ordinal}";
 					throw new InvalidOperationException(
 						$"Cannot load PE file: Import {dll.ToUpperInvariant()}!{symName} has no AddressTableEntry RVA. " +
 						$"This may indicate a delay-loaded import, bound import, or corrupted PE file. " +
