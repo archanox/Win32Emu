@@ -496,7 +496,7 @@ public sealed class Emulator : IDisposable
                 // EIP is in the import stub address range
                 // Import stubs are aligned to 16-byte boundaries (0x10)
                 // We need to align down to check if this is a valid stub
-                var alignedEip = currentEip & 0xFFFFFFF0u;
+                var alignedEip = currentEip & IMPORT_STUB_ALIGNMENT_MASK;
                 
                 // Get the current main executable (may have been updated with synthetic exports)
                 var currentImage = _env!.GetMainExecutable() ?? _image!;
@@ -895,6 +895,25 @@ public sealed class Emulator : IDisposable
 
             var currentEip = _cpu!.GetEip();
 
+            // Check for extremely low EIP values that indicate corruption
+            // Skip NULL (0) as that's handled separately
+            // Exclude valid synthetic address ranges (COM vtables, syscalls, imports)
+            var isValidSyntheticRange = currentEip >= COM_VTABLE_BASE && currentEip < IMPORT_HOOK_LIMIT;
+            if (currentEip > 0 && currentEip < 0x00400000 && !isValidSyntheticRange)
+            {
+                _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is suspiciously low (< 0x00400000) at instruction {Instruction}. This likely indicates a corrupted function pointer, bad jump, or API returning invalid address.", currentEip, i);
+                
+                if (TrySimulateReturn("Low EIP recovery", currentEip))
+                {
+                    i++; // Count this as an instruction
+                    continue; // Skip to next iteration
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Failed to recover from corrupted EIP=0x{currentEip:X8}");
+                }
+            }
+
             if (currentEip is >= 0x0F000000 and < 0x10000000)
             {
                 LogDebug("\n[Debug] *** CPU TRYING TO EXECUTE SYNTHETIC IMPORT ADDRESS! ***");
@@ -903,16 +922,32 @@ public sealed class Emulator : IDisposable
                 // Get the current main executable (may have been updated with synthetic exports)
                 var currentImage = _env!.GetMainExecutable() ?? _image!;
                 
-                if (currentImage.ImportAddressMap.TryGetValue(currentEip, out var importInfo))
+                // Import stubs are aligned to 16-byte boundaries (0x10)
+                // We need to align down to check if this is a valid stub
+                var alignedEip = currentEip & IMPORT_STUB_ALIGNMENT_MASK;
+                
+                if (currentImage.ImportAddressMap.TryGetValue(alignedEip, out var importInfo))
                 {
                     LogDebug($"[Debug] This is import: {importInfo.dll}!{importInfo.name}");
+                    LogDebug("[Debug] This should now execute an INT3 stub that will be handled as an import call");
                 }
                 else
                 {
+                    // This import address is not mapped - simulate a return
                     LogDebug("[Debug] Unknown synthetic address - not in import map");
+                    _logger.LogWarning("[Import] Attempted to execute unmapped import stub at address 0x{Eip:X8} (aligned: 0x{AlignedEip:X8}, not in ImportAddressMap). ESP=0x{Esp:X8}", 
+                        currentEip, alignedEip, _cpu.GetRegister("ESP"));
+                    
+                    if (TrySimulateReturn("Unmapped import recovery", currentEip))
+                    {
+                        i++; // Count this as an instruction
+                        continue; // Skip to next iteration
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Failed to recover from unmapped import at 0x{currentEip:X8}");
+                    }
                 }
-
-                LogDebug("[Debug] This should now execute an INT3 stub that will be handled as an import call");
             }
 
             if (debugger.IsProblematicEip())
@@ -1441,6 +1476,7 @@ public sealed class Emulator : IDisposable
     private const uint SYNTHETIC_EXPORT_LIMIT = 0x0F000000;
     private const uint IMPORT_HOOK_BASE = 0x0F000000;      // Static import table hooks
     private const uint IMPORT_HOOK_LIMIT = 0x10000000;
+    private const uint IMPORT_STUB_ALIGNMENT_MASK = 0xFFFFFFF0u; // 16-byte alignment for import stubs
     
     // Constants for EBP validation
     private const uint HEAP_BASE = 0x01000000;            // Start of heap region
@@ -1450,6 +1486,68 @@ public sealed class Emulator : IDisposable
     private const uint STACK_SIZE = 0x100000;             // Assumed stack size (1MB)
     private const uint STACK_SLACK_BYTES = 0x1000;        // Stack slack above ESP (4KB)
     
+    /// <summary>
+    /// Attempts to recover from a corrupted EIP by simulating a return instruction.
+    /// Pops the return address from the stack, sets EAX to 0, and updates EIP.
+    /// Validates that the return address is plausible before using it.
+    /// </summary>
+    /// <param name="reason">Description of why recovery is needed (for logging)</param>
+    /// <param name="corruptedEip">The corrupted EIP value that triggered recovery</param>
+    /// <returns>True if recovery succeeded, false otherwise</returns>
+    private bool TrySimulateReturn(string reason, uint corruptedEip)
+    {
+        try
+        {
+            var esp = _cpu!.GetRegister("ESP");
+            var retEip = _vm!.Read32(esp);
+            
+            // Validate the return address is plausible
+            // Reject obviously invalid addresses: NULL or extremely high (kernel space)
+            if (retEip == 0 || retEip >= 0x80000000)
+            {
+                _logger.LogWarning("[Emulator] {Reason} at 0x{CorruptedEip:X8}: Return address 0x{RetEip:X8} from stack is invalid (NULL or kernel space), recovery aborted", 
+                    reason, corruptedEip, retEip);
+                return false;
+            }
+            
+            // Warn if return address looks suspicious but allow recovery to proceed
+            var isInImageRange = retEip >= 0x00400000 && retEip < 0x80000000;
+            var isInSyntheticRange = retEip >= COM_VTABLE_BASE && retEip < IMPORT_HOOK_LIMIT;
+            if (!isInImageRange && !isInSyntheticRange)
+            {
+                _logger.LogWarning("[Emulator] {Reason} at 0x{CorruptedEip:X8}: Return address 0x{RetEip:X8} is outside typical code ranges but attempting recovery anyway", 
+                    reason, corruptedEip, retEip);
+            }
+            
+            esp += 4; // Pop return address only
+            _cpu.SetRegister("ESP", esp);
+            _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
+            _cpu.SetEip(retEip);
+            
+            _logger.LogDebug("[Emulator] {Reason} at 0x{CorruptedEip:X8}: Simulated return to 0x{RetEip:X8} with EAX=0", 
+                reason, corruptedEip, retEip);
+            return true;
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "[Emulator] {Reason} at 0x{CorruptedEip:X8}: Failed to simulate return - invalid argument", 
+                reason, corruptedEip);
+            return false;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "[Emulator] {Reason} at 0x{CorruptedEip:X8}: Failed to simulate return - invalid operation", 
+                reason, corruptedEip);
+            return false;
+        }
+        catch (IndexOutOfRangeException ex)
+        {
+            _logger.LogError(ex, "[Emulator] {Reason} at 0x{CorruptedEip:X8}: Failed to simulate return - stack may be corrupted", 
+                reason, corruptedEip);
+            return false;
+        }
+    }
+
     /// <summary>
     /// Validates EBP register and fixes it if it contains an obviously invalid value.
     /// This prevents crashes when code tries to access [EBP+offset] with invalid EBP.
