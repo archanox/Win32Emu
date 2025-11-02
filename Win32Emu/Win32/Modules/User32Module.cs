@@ -1226,11 +1226,13 @@ namespace Win32Emu.Win32.Modules
 				// The thread will be woken when a message is posted via PostMessage
 				scheduler.SetThreadWaiting(currentThreadId, messageQueueToken, 0xFFFFFFFF);
 				
-				// Return a sentinel value that will never be used because the thread is now suspended
-				// The emulator will context switch to another thread, and this thread will resume
-				// when PostMessage wakes it up. At that point, GetMessageA will be called again
-				// and will find the message in the queue.
-				return 0xFFFFFFFF; // This return value doesn't matter as thread is suspended
+				// IMPORTANT: Thread is now suspended - execution does not continue past this point
+				// The emulator will context switch to another thread. When PostMessage wakes this
+				// thread, execution resumes at the BEGINNING of GetMessageA (not here), so this
+				// return statement never actually returns a value to the caller.
+				// The return value 0xFFFFFFFF is a sentinel that indicates "thread suspended" but
+				// is never used since the thread state prevents normal return flow.
+				return 0xFFFFFFFF; // Sentinel: thread suspended, this value is never used
 			}
 			else
 			{

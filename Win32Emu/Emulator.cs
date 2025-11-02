@@ -35,6 +35,9 @@ public sealed class Emulator : IDisposable
     
     // Progress logging interval for emulation loop
     private const ulong PROGRESS_LOG_INTERVAL = 10000;
+    
+    // Logging throttle interval when stuck at same EIP (reduce spam)
+    private const ulong STUCK_EIP_LOG_INTERVAL = 100000;
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -374,7 +377,10 @@ public sealed class Emulator : IDisposable
         // Infinite loop detection - track EIP to detect stuck loops
         var lastProgressEip = 0u;
         var sameEipCount = 0ul;
-        const ulong MAX_SAME_EIP_ITERATIONS = 1000000; // 1 million iterations at same EIP = infinite loop
+        // Stop emulation after 1M iterations at same EIP
+        // This threshold allows legitimate tight loops (spinlocks, busy waits) to run
+        // but catches applications stuck in true infinite loops (e.g., message pump with no messages)
+        const ulong MAX_SAME_EIP_ITERATIONS = 1000000;
 
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
@@ -394,8 +400,8 @@ public sealed class Emulator : IDisposable
                 {
                     sameEipCount += PROGRESS_LOG_INTERVAL;
                     
-                    // Only log every 100K iterations when stuck to reduce spam
-                    if (sameEipCount % 100000 == 0)
+                    // Only log every STUCK_EIP_LOG_INTERVAL iterations when stuck to reduce spam
+                    if (sameEipCount % STUCK_EIP_LOG_INTERVAL == 0)
                     {
                         _logger.LogWarning("[Emulator] Possible infinite loop: {SameEipCount} iterations at EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
                             sameEipCount, progressEip, progressEsp);

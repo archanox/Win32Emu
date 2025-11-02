@@ -1585,13 +1585,10 @@ public class ProcessEnvironment
 			
 		// Find all threads waiting on the message queue and wake them
 		var allThreads = ThreadScheduler.GetAllThreads();
-		foreach (var thread in allThreads)
+		foreach (var thread in allThreads.Where(t => t.State == Threading.ThreadState.Waiting && ReferenceEquals(t.WaitingOn, _messageQueueWaitToken)))
 		{
-			if (thread.State == Threading.ThreadState.Waiting && ReferenceEquals(thread.WaitingOn, _messageQueueWaitToken))
-			{
-				ThreadScheduler.WakeThread(thread.ThreadId);
-				_logger.LogDebug("[ProcessEnv] Woke thread {ThreadId} waiting for messages", thread.ThreadId);
-			}
+			ThreadScheduler.WakeThread(thread.ThreadId);
+			_logger.LogDebug("[ProcessEnv] Woke thread {ThreadId} waiting for messages", thread.ThreadId);
 		}
 	}
 
@@ -1759,12 +1756,10 @@ public class ProcessEnvironment
 				match = false;
 			}
 
-			if (match && (msgFilterMin != 0 || msgFilterMax != 0))
+			if (match && (msgFilterMin != 0 || msgFilterMax != 0) &&
+			    (message.Message < msgFilterMin || message.Message > msgFilterMax))
 			{
-				if (message.Message < msgFilterMin || message.Message > msgFilterMax)
-				{
-					match = false;
-				}
+				match = false;
 			}
 
 			if (match)
