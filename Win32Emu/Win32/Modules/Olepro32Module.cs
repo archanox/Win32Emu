@@ -9,7 +9,7 @@ namespace Win32Emu.Win32.Modules;
 /// <summary>
 /// OLEPRO32.DLL module - provides OLE property support.
 /// </summary>
-public class Olepro32Module : IWin32ModuleUnsafe
+public partial class Olepro32Module : IWin32ModuleUnsafe
 {
 	private readonly ProcessEnvironment _env;
 	private readonly uint _imageBase;
@@ -38,7 +38,7 @@ public class Olepro32Module : IWin32ModuleUnsafe
 				return true;
 
 			default:
-				_logger.LogInformation("[Olepro32] Unimplemented export: {Export}", export);
+				LogUnimplementedExport(export);
 				return false;
 		}
 	}
@@ -49,10 +49,16 @@ public class Olepro32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint Ordinal_253(uint param1, uint param2)
 	{
-		_logger.LogInformation("[Olepro32] Ordinal_253(param1=0x{Param1:X8}, param2=0x{Param2:X8})", 
-			param1, param2);
+		LogOrdinal_253(param1, param2);
 
 		// Stub: Return success
 		return 0x00000000; // S_OK
 	}
+
+	// High-performance logging using source generators
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Olepro32] Unimplemented export: {Export}")]
+	partial void LogUnimplementedExport(string export);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Olepro32] Ordinal_253(param1=0x{Param1:X8}, param2=0x{Param2:X8})")]
+	partial void LogOrdinal_253(uint param1, uint param2);
 }
