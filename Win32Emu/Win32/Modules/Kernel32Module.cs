@@ -6230,8 +6230,44 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private uint DeviceIoControl(uint hDevice, uint dwIoControlCode, uint lpInBuffer, uint nInBufferSize, uint lpOutBuffer, uint nOutBufferSize, uint lpBytesReturned, uint lpOverlapped)
 	{
 		_logger.LogInformation("[Kernel32] DeviceIoControl(hDevice=0x{HDevice:X8}, dwIoControlCode=0x{DwIoControlCode:X})", hDevice, dwIoControlCode);
-		if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
-		return 0; // FALSE - not supported
+		
+		// Common CD-ROM IOCTL codes (from winioctl.h)
+		const uint IOCTL_CDROM_BASE = 0x00000002;
+		const uint METHOD_BUFFERED = 0;
+		const uint FILE_READ_ACCESS = 0x0001;
+		
+		// IOCTL_CDROM_READ_TOC = (IOCTL_CDROM_BASE << 16) | (FILE_READ_ACCESS << 14) | (0x0000 << 2) | METHOD_BUFFERED
+		const uint IOCTL_CDROM_READ_TOC = 0x00024000;
+		// IOCTL_CDROM_GET_LAST_SESSION = (IOCTL_CDROM_BASE << 16) | (FILE_READ_ACCESS << 14) | (0x000E << 2) | METHOD_BUFFERED
+		const uint IOCTL_CDROM_GET_LAST_SESSION = 0x00024038;
+		// IOCTL_CDROM_RAW_READ = (IOCTL_CDROM_BASE << 16) | (FILE_READ_ACCESS << 14) | (0x000F << 2) | METHOD_BUFFERED
+		const uint IOCTL_CDROM_RAW_READ = 0x0002403C;
+		
+		// Handle CD-ROM specific IOCTLs
+		switch (dwIoControlCode)
+		{
+			case IOCTL_CDROM_READ_TOC:
+				_logger.LogInformation("[Kernel32] DeviceIoControl: IOCTL_CDROM_READ_TOC - not fully implemented");
+				// This would require reading CD track information from CHD metadata
+				// For now, return failure
+				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
+				return 0; // FALSE
+				
+			case IOCTL_CDROM_GET_LAST_SESSION:
+				_logger.LogInformation("[Kernel32] DeviceIoControl: IOCTL_CDROM_GET_LAST_SESSION - not fully implemented");
+				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
+				return 0; // FALSE
+				
+			case IOCTL_CDROM_RAW_READ:
+				_logger.LogInformation("[Kernel32] DeviceIoControl: IOCTL_CDROM_RAW_READ - not fully implemented");
+				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
+				return 0; // FALSE
+				
+			default:
+				_logger.LogDebug("[Kernel32] DeviceIoControl: Unsupported IOCTL code 0x{DwIoControlCode:X}", dwIoControlCode);
+				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
+				return 0; // FALSE - not supported
+		}
 	}
 
 	[DllModuleExport(4)]

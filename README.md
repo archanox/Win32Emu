@@ -14,6 +14,7 @@ A Windows 32-bit PE executable emulator for running classic Windows games and ap
 - **Modern CPU Support**: Automatically detects and uses SSE, AVX, and NEON instructions
 - **Accurate Emulation**: Full x86 CPU and Windows API emulation
 - **JIT Caching**: Persistent JIT cache to disk for faster subsequent executions with precompilation support
+- **Disc Image Support**: CHD (Compressed Hunks of Data) detection and validation for CD-ROM games
 
 ## Components
 
@@ -109,6 +110,7 @@ See [Win32Emu.Gui/README.md](Win32Emu.Gui/README.md) for more details about the 
 - [docs/guides/RIDER_OPENTELEMETRY_SETUP.md](docs/guides/RIDER_OPENTELEMETRY_SETUP.md) - JetBrains Rider integration guide
 - [docs/implementation/JIT_CACHE_IMPLEMENTATION.md](docs/implementation/JIT_CACHE_IMPLEMENTATION.md) - JIT caching to disk for faster emulation
 - [docs/examples/JIT_CACHE_EXAMPLES.md](docs/examples/JIT_CACHE_EXAMPLES.md) - JIT cache usage examples and best practices
+- [docs/features/CHD_DISC_IMAGE_SUPPORT.md](docs/features/CHD_DISC_IMAGE_SUPPORT.md) - CHD disc image format support
 
 ### Win32Emu (Library)
 The core emulation library that powers Win32Emu.Gui. This library provides the `Emulator` class and `EmulatorLauncher` API for embedding Win32 emulation into .NET applications.
