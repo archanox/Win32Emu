@@ -284,7 +284,10 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		// Report any skipped imports as a summary
 		if (skippedImports.Count > 0)
 		{
-			var summary = new StringBuilder();
+			// Pre-allocate StringBuilder capacity to avoid reallocations
+			// Estimate: ~100 for header/footer + ~80 per skipped import line
+			var estimatedCapacity = 100 + (skippedImports.Count * 80);
+			var summary = new StringBuilder(estimatedCapacity);
 			summary.AppendLine($"[Loader] {skippedImports.Count} import(s) were skipped and will not be available:");
 			foreach (var (skippedDll, skippedName, reason) in skippedImports)
 			{
