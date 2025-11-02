@@ -496,7 +496,7 @@ public sealed class Emulator : IDisposable
                 // EIP is in the import stub address range
                 // Import stubs are aligned to 16-byte boundaries (0x10)
                 // We need to align down to check if this is a valid stub
-                var alignedEip = currentEip & 0xFFFFFFF0u;
+                var alignedEip = currentEip & IMPORT_STUB_ALIGNMENT_MASK;
                 
                 // Get the current main executable (may have been updated with synthetic exports)
                 var currentImage = _env!.GetMainExecutable() ?? _image!;
@@ -897,7 +897,9 @@ public sealed class Emulator : IDisposable
 
             // Check for extremely low EIP values that indicate corruption
             // Skip NULL (0) as that's handled separately
-            if (currentEip > 0 && currentEip < 0x00400000 && !(currentEip >= 0x0D000000 && currentEip < 0x10000000))
+            // Exclude valid synthetic address ranges (COM vtables, syscalls, imports)
+            var isValidSyntheticRange = currentEip >= COM_VTABLE_BASE && currentEip < IMPORT_HOOK_LIMIT;
+            if (currentEip > 0 && currentEip < 0x00400000 && !isValidSyntheticRange)
             {
                 _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is suspiciously low (< 0x00400000) at instruction {Instruction}. This likely indicates a corrupted function pointer, bad jump, or API returning invalid address.", currentEip, i);
                 
@@ -1487,6 +1489,7 @@ public sealed class Emulator : IDisposable
     /// <summary>
     /// Attempts to recover from a corrupted EIP by simulating a return instruction.
     /// Pops the return address from the stack, sets EAX to 0, and updates EIP.
+    /// Validates that the return address is plausible before using it.
     /// </summary>
     /// <param name="reason">Description of why recovery is needed (for logging)</param>
     /// <param name="corruptedEip">The corrupted EIP value that triggered recovery</param>
@@ -1497,6 +1500,25 @@ public sealed class Emulator : IDisposable
         {
             var esp = _cpu!.GetRegister("ESP");
             var retEip = _vm!.Read32(esp);
+            
+            // Validate the return address is plausible
+            // Reject obviously invalid addresses: NULL or extremely high (kernel space)
+            if (retEip == 0 || retEip >= 0x80000000)
+            {
+                _logger.LogWarning("[Emulator] {Reason} at 0x{CorruptedEip:X8}: Return address 0x{RetEip:X8} from stack is invalid (NULL or kernel space), recovery aborted", 
+                    reason, corruptedEip, retEip);
+                return false;
+            }
+            
+            // Warn if return address looks suspicious but allow recovery to proceed
+            var isInImageRange = retEip >= 0x00400000 && retEip < 0x80000000;
+            var isInSyntheticRange = retEip >= COM_VTABLE_BASE && retEip < IMPORT_HOOK_LIMIT;
+            if (!isInImageRange && !isInSyntheticRange)
+            {
+                _logger.LogWarning("[Emulator] {Reason} at 0x{CorruptedEip:X8}: Return address 0x{RetEip:X8} is outside typical code ranges but attempting recovery anyway", 
+                    reason, corruptedEip, retEip);
+            }
+            
             esp += 4; // Pop return address only
             _cpu.SetRegister("ESP", esp);
             _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
@@ -1506,7 +1528,19 @@ public sealed class Emulator : IDisposable
                 reason, corruptedEip, retEip);
             return true;
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "[Emulator] {Reason} at 0x{CorruptedEip:X8}: Failed to simulate return - invalid argument", 
+                reason, corruptedEip);
+            return false;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "[Emulator] {Reason} at 0x{CorruptedEip:X8}: Failed to simulate return - invalid operation", 
+                reason, corruptedEip);
+            return false;
+        }
+        catch (IndexOutOfRangeException ex)
         {
             _logger.LogError(ex, "[Emulator] {Reason} at 0x{CorruptedEip:X8}: Failed to simulate return - stack may be corrupted", 
                 reason, corruptedEip);
