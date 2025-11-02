@@ -614,10 +614,33 @@ public class IcedCpu : IAsyncCpu
 						{
 							_logger.LogError("[IcedCpu] INVALID instruction encountered - definitely not valid code. Check for corrupted return addresses or bad jumps.");
 							
+							// Provide additional context about the address range to help debugging
+							string addressInfo;
+							if (oldEip == 0)
+							{
+								addressInfo = "NULL pointer - likely corrupted function pointer";
+							}
+							else if (oldEip < 0x00010000)
+							{
+								addressInfo = "NULL page/guard pages - likely NULL pointer dereference";
+							}
+							else if (oldEip >= 0x00400000 && oldEip < 0x00401000)
+							{
+								addressInfo = "PE header region - code should start later (e.g., 0x00401000+). This suggests a corrupted return address on the stack, a bad function pointer in a jump table, or a buffer overflow.";
+							}
+							else if (oldEip < 0x00400000)
+							{
+								addressInfo = $"below typical image base (0x00400000) - likely stack/heap/data being executed as code";
+							}
+							else
+							{
+								addressInfo = "unknown region - could be data section, uninitialized memory, or beyond loaded code";
+							}
+							
 							// Throw exception to halt execution and prevent further corruption
 							// This prevents the CPU from continuing to execute random data as code,
 							// which would lead to cascading errors and stack corruption
-							throw new InvalidOperationException($"INVALID instruction at 0x{oldEip:X8}. This indicates execution has jumped to invalid memory (data or unmapped region). EIP=0x{oldEip:X8}, ESP=0x{_esp:X8}, EBP=0x{_ebp:X8}");
+							throw new InvalidOperationException($"INVALID instruction at 0x{oldEip:X8} ({addressInfo}). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x{_esp:X8}, EBP=0x{_ebp:X8}");
 						}
 					}
 
