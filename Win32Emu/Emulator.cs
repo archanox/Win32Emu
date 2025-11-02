@@ -900,25 +900,15 @@ public sealed class Emulator : IDisposable
             if (currentEip > 0 && currentEip < 0x00400000 && !(currentEip >= 0x0D000000 && currentEip < 0x10000000))
             {
                 _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is suspiciously low (< 0x00400000) at instruction {Instruction}. This likely indicates a corrupted function pointer, bad jump, or API returning invalid address.", currentEip, i);
-                _logger.LogDebug("[Emulator] ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}", _cpu.GetRegister("ESP"), _cpu.GetRegister("EBP"));
                 
-                // Try to recover by simulating a return
-                try
+                if (TrySimulateReturn("Low EIP recovery", currentEip))
                 {
-                    var esp = _cpu.GetRegister("ESP");
-                    var retEip = _vm!.Read32(esp);
-                    esp += 4;
-                    _cpu.SetRegister("ESP", esp);
-                    _cpu.SetRegister("EAX", 0);
-                    _cpu.SetEip(retEip);
-                    _logger.LogDebug("[Emulator] Attempted recovery by simulating return to 0x{RetEip:X8}", retEip);
-                    i++;
-                    continue;
+                    i++; // Count this as an instruction
+                    continue; // Skip to next iteration
                 }
-                catch (Exception ex)
+                else
                 {
-                    _logger.LogError(ex, "[Emulator] Failed to recover from corrupted EIP");
-                    throw;
+                    throw new InvalidOperationException($"Failed to recover from corrupted EIP=0x{currentEip:X8}");
                 }
             }
 
@@ -932,7 +922,7 @@ public sealed class Emulator : IDisposable
                 
                 // Import stubs are aligned to 16-byte boundaries (0x10)
                 // We need to align down to check if this is a valid stub
-                var alignedEip = currentEip & 0xFFFFFFF0u;
+                var alignedEip = currentEip & IMPORT_STUB_ALIGNMENT_MASK;
                 
                 if (currentImage.ImportAddressMap.TryGetValue(alignedEip, out var importInfo))
                 {
@@ -941,29 +931,19 @@ public sealed class Emulator : IDisposable
                 }
                 else
                 {
-                    // This import address is not mapped - simulate a return with warning
+                    // This import address is not mapped - simulate a return
                     LogDebug("[Debug] Unknown synthetic address - not in import map");
-                    var esp = _cpu.GetRegister("ESP");
-                    _logger.LogWarning("[Import] Attempted to execute unmapped import stub at address 0x{Eip:X8} (aligned: 0x{AlignedEip:X8}, not in ImportAddressMap). ESP=0x{Esp:X8}, attempting to read return address from stack", currentEip, alignedEip, esp);
+                    _logger.LogWarning("[Import] Attempted to execute unmapped import stub at address 0x{Eip:X8} (aligned: 0x{AlignedEip:X8}, not in ImportAddressMap). ESP=0x{Esp:X8}", 
+                        currentEip, alignedEip, _cpu.GetRegister("ESP"));
                     
-                    try
+                    if (TrySimulateReturn("Unmapped import recovery", currentEip))
                     {
-                        // Read return address from stack and return
-                        var retEip = _vm!.Read32(esp);
-                        esp += 4; // Pop return address only
-                        _cpu.SetRegister("ESP", esp);
-                        _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
-                        _cpu.SetEip(retEip);
-                        
-                        _logger.LogDebug("[Import] Simulated return to 0x{RetEip:X8} with EAX=0", retEip);
-                        LogDebug($"[Debug] Recovered from unmapped import by simulating return to 0x{retEip:X8}");
                         i++; // Count this as an instruction
                         continue; // Skip to next iteration
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        _logger.LogError(ex, "[Import] Failed to simulate return - stack may be corrupted");
-                        throw; // Re-throw if we can't recover
+                        throw new InvalidOperationException($"Failed to recover from unmapped import at 0x{currentEip:X8}");
                     }
                 }
             }
@@ -1494,6 +1474,7 @@ public sealed class Emulator : IDisposable
     private const uint SYNTHETIC_EXPORT_LIMIT = 0x0F000000;
     private const uint IMPORT_HOOK_BASE = 0x0F000000;      // Static import table hooks
     private const uint IMPORT_HOOK_LIMIT = 0x10000000;
+    private const uint IMPORT_STUB_ALIGNMENT_MASK = 0xFFFFFFF0u; // 16-byte alignment for import stubs
     
     // Constants for EBP validation
     private const uint HEAP_BASE = 0x01000000;            // Start of heap region
@@ -1503,6 +1484,36 @@ public sealed class Emulator : IDisposable
     private const uint STACK_SIZE = 0x100000;             // Assumed stack size (1MB)
     private const uint STACK_SLACK_BYTES = 0x1000;        // Stack slack above ESP (4KB)
     
+    /// <summary>
+    /// Attempts to recover from a corrupted EIP by simulating a return instruction.
+    /// Pops the return address from the stack, sets EAX to 0, and updates EIP.
+    /// </summary>
+    /// <param name="reason">Description of why recovery is needed (for logging)</param>
+    /// <param name="corruptedEip">The corrupted EIP value that triggered recovery</param>
+    /// <returns>True if recovery succeeded, false otherwise</returns>
+    private bool TrySimulateReturn(string reason, uint corruptedEip)
+    {
+        try
+        {
+            var esp = _cpu!.GetRegister("ESP");
+            var retEip = _vm!.Read32(esp);
+            esp += 4; // Pop return address only
+            _cpu.SetRegister("ESP", esp);
+            _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
+            _cpu.SetEip(retEip);
+            
+            _logger.LogDebug("[Emulator] {Reason} at 0x{CorruptedEip:X8}: Simulated return to 0x{RetEip:X8} with EAX=0", 
+                reason, corruptedEip, retEip);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[Emulator] {Reason} at 0x{CorruptedEip:X8}: Failed to simulate return - stack may be corrupted", 
+                reason, corruptedEip);
+            return false;
+        }
+    }
+
     /// <summary>
     /// Validates EBP register and fixes it if it contains an obviously invalid value.
     /// This prevents crashes when code tries to access [EBP+offset] with invalid EBP.
