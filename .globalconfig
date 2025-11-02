@@ -84,7 +84,7 @@ dotnet_diagnostic.CA1816.severity = none
 dotnet_diagnostic.CA1028.severity = none
 
 # CA1860: Avoid using 'Enumerable.Any()' extension method
-# Suppressed: Readability preference
+# Suppressed: Code uses Count > 0 for readability; performance difference is negligible
 dotnet_diagnostic.CA1860.severity = none
 
 # CA2253: Named placeholders should not be numeric values
