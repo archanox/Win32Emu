@@ -5,6 +5,7 @@ using AsmResolver.PE.File;
 using Microsoft.Extensions.Logging;
 using Win32Emu.Memory;
 using System.IO;
+using System.Linq;
 
 namespace Win32Emu.Loader;
 
@@ -75,23 +76,24 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			{
 				// Additional safety: ensure we don't overwrite any sections
 				// Headers should end before the first section starts
-				uint firstSectionRva = uint.MaxValue;
-				foreach (var section in pe.Sections)
+				// Find the minimum RVA among all sections
+				uint minSectionRva = uint.MaxValue;
+				foreach (var section in pe.Sections.Where(s => s.Rva > 0))
 				{
-					if (section.Rva < firstSectionRva)
+					if (section.Rva < minSectionRva)
 					{
-						firstSectionRva = section.Rva;
+						minSectionRva = section.Rva;
 					}
 				}
 				
+				// Determine effective header size: use minimum of SizeOfHeaders and first section RVA
 				// If no sections found or all sections start after SizeOfHeaders, use SizeOfHeaders
-				if (firstSectionRva == uint.MaxValue || firstSectionRva > sizeOfHeaders)
-				{
-					firstSectionRva = sizeOfHeaders;
-				}
+				uint headerEndRva = (minSectionRva == uint.MaxValue || minSectionRva > sizeOfHeaders) 
+					? sizeOfHeaders 
+					: minSectionRva;
 				
 				// Safely calculate header size, ensuring we don't overflow int.MaxValue
-				long headerSizeLong = Math.Min((long)sizeOfHeaders, (long)firstSectionRva);
+				long headerSizeLong = Math.Min((long)sizeOfHeaders, (long)headerEndRva);
 				if (headerSizeLong > int.MaxValue)
 				{
 					logger?.LogWarning("[Loader] Calculated header size (0x{Size:X8}) exceeds int.MaxValue, capping at 0x{Max:X8}", headerSizeLong, int.MaxValue);
@@ -101,10 +103,12 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				
 				if (actualHeaderSize < sizeOfHeaders)
 				{
-					logger?.LogWarning("[Loader] SizeOfHeaders (0x{Size:X8}) extends beyond first section RVA (0x{FirstRva:X8}), truncating to first section", sizeOfHeaders, firstSectionRva);
+					logger?.LogWarning("[Loader] SizeOfHeaders (0x{Size:X8}) extends beyond first section RVA (0x{FirstRva:X8}), truncating to first section", sizeOfHeaders, headerEndRva);
 				}
 				
 				// Read only the required header bytes from the file
+				// Note: While PEImage.FromFile has already read the file, AsmResolver doesn't provide
+				// direct access to the raw header bytes, so we must re-read this small portion
 				var headerData = new byte[actualHeaderSize];
 				using (var fileStream = File.OpenRead(path))
 				{
@@ -120,7 +124,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			}
 			catch (Exception ex)
 			{
-				logger?.LogWarning("[Loader] Failed to load PE headers: {ErrorMessage}", ex.Message);
+				logger?.LogWarning(ex, "[Loader] Failed to load PE headers");
 			}
 		}
 		else
