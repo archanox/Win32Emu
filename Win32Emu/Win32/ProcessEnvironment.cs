@@ -1747,27 +1747,53 @@ public class ProcessEnvironment
 	/// </summary>
 	public QueuedMessage? TryGetMessageNonBlocking(uint hwnd, uint msgFilterMin, uint msgFilterMax)
 	{
-		if (_messageQueue.Reader.TryRead(out var message))
+		// Use a temporary list to hold messages that don't match the filter
+		List<QueuedMessage> requeueList = null;
+
+		while (_messageQueue.Reader.TryRead(out var message))
 		{
+			bool match = true;
 			// Apply filters if specified
 			if (hwnd != 0 && message.Hwnd != hwnd)
 			{
-				// Re-queue and return null
-				_messageQueue.Writer.TryWrite(message);
-				return null;
+				match = false;
 			}
 
-			if (msgFilterMin != 0 || msgFilterMax != 0)
+			if (match && (msgFilterMin != 0 || msgFilterMax != 0))
 			{
 				if (message.Message < msgFilterMin || message.Message > msgFilterMax)
 				{
-					// Re-queue and return null
-					_messageQueue.Writer.TryWrite(message);
-					return null;
+					match = false;
 				}
 			}
 
-			return message;
+			if (match)
+			{
+				// Found a matching message, re-queue any held messages and return
+				if (requeueList != null)
+				{
+					foreach (var msgToRequeue in requeueList)
+					{
+						_messageQueue.Writer.TryWrite(msgToRequeue);
+					}
+				}
+				return message;
+			}
+			else
+			{
+				// Message does not match, hold it for re-queueing
+				requeueList ??= new List<QueuedMessage>();
+				requeueList.Add(message);
+			}
+		}
+
+		// No matching message found, re-queue all held messages
+		if (requeueList != null)
+		{
+			foreach (var msgToRequeue in requeueList)
+			{
+				_messageQueue.Writer.TryWrite(msgToRequeue);
+			}
 		}
 
 		return null;
