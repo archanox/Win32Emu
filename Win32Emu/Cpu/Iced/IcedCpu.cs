@@ -21,6 +21,8 @@ public class IcedCpu : IAsyncCpu
 	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Tf = 8, If = 9, Df = 10, Of = 11;
 
 	// Special memory ranges for emulator infrastructure
+	// These constants document the different sub-ranges, but validation only checks the overall range
+	// [COM_VTABLE_BASE, SPECIAL_RANGE_LIMIT) to avoid false positives for any emulator infrastructure
 	private const uint COM_VTABLE_BASE = 0x0D000000;      // COM interface vtable methods
 	private const uint SYSCALL_DISPATCHER_BASE = 0x0E000000; // Syscall dispatcher and synthetic exports
 	private const uint IMPORT_HOOK_BASE = 0x0F000000;      // Static import table hooks
