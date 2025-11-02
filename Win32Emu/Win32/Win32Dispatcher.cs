@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Win32Emu.Cpu;
+using Win32Emu.Diagnostics;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Win32;
@@ -9,6 +10,15 @@ public class Win32Dispatcher(ILogger logger)
 	private readonly Dictionary<string, IWin32ModuleUnsafe> _modules = new(StringComparer.OrdinalIgnoreCase);
 	private readonly HashSet<string> _dynamicallyLoadedDlls = new(StringComparer.OrdinalIgnoreCase);
 	private readonly Dictionary<string, HashSet<string>> _unknownFunctionCalls = new(StringComparer.OrdinalIgnoreCase);
+	private ApiCallTracer? _apiCallTracer;
+	
+	/// <summary>
+	/// Sets the API call tracer for this dispatcher
+	/// </summary>
+	public void SetApiCallTracer(ApiCallTracer? tracer)
+	{
+		_apiCallTracer = tracer;
+	}
 
 	public void RegisterModule(IWin32ModuleUnsafe module) => _modules[module.Name] = module;
 
@@ -28,6 +38,7 @@ public class Win32Dispatcher(ILogger logger)
 		returnValue = 0;
 		stdcallArgBytes = 0;
 
+		var eip = cpu.GetEip();
 		var esp = cpu.GetRegister("ESP");
 		byte[]? stackSnippet = null;
 		try
@@ -38,7 +49,7 @@ public class Win32Dispatcher(ILogger logger)
 		{
 		}
 
-		logger.LogInformation("Dispatching {Dll}!{Export} at EIP=0x{GetEip:X8} ESP=0x{Esp:X8} stack={Unreadable}", dll, export, cpu.GetEip(), esp, stackSnippet == null ? "<unreadable>" : BitConverter.ToString(stackSnippet).Replace('-', ' '));
+		logger.LogInformation("Dispatching {Dll}!{Export} at EIP=0x{GetEip:X8} ESP=0x{Esp:X8} stack={Unreadable}", dll, export, eip, esp, stackSnippet == null ? "<unreadable>" : BitConverter.ToString(stackSnippet).Replace('-', ' '));
 
 		// Try to invoke with known modules first
 		if (_modules.TryGetValue(dll, out var mod))
@@ -60,6 +71,17 @@ public class Win32Dispatcher(ILogger logger)
 					stdcallArgBytes = 0; // Default to 0, but this may cause stack corruption
 					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes} (MISSING METADATA)", dll, export, returnValue, stdcallArgBytes);
 				}
+
+				// Log to API tracer if enabled
+				// TODO(enhancement): Parse parameters from stack using metadata from [DllModuleExport]
+				// This would provide detailed parameter values in the trace for better diagnostics.
+				// See issue: (create issue to track this enhancement)
+				_apiCallTracer?.LogApiCall(
+					moduleName: dll,
+					functionName: export,
+					parameters: null, // Parameters not yet parsed - would require stack walking
+					returnValue: returnValue,
+					eip: eip);
 
 				return true;
 			}
