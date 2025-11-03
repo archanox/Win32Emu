@@ -3423,49 +3423,7 @@ namespace Win32Emu.Win32.Modules
 		/// </summary>
 		private void RestoreEbpFromStack(uint esp)
 		{
-			try
-			{
-				var ebpFromStack = _memory.Read32(esp);
-
-				// Define plausible stack region (for example, 1MB stack)
-				// Assume stack grows down, so stack base is the highest address, stack limit is lowest
-				// Here, we use current ESP as the top of the stack, and allow up to 1MB below
-				const uint STACK_SIZE = 0x100000; // 1MB
-				var stackBottom = (esp > STACK_SIZE) ? (esp - STACK_SIZE) : 0x00100000; // Don't go below 1MB
-
-				var inStackRegion = (ebpFromStack >= stackBottom) && (ebpFromStack <= esp);
-				var isAligned = (ebpFromStack & 0x3) == 0;
-
-				// Optionally, check that the memory at ebpFromStack is readable and contains a plausible saved EBP
-				var savedEbpValid = false;
-				if (inStackRegion && isAligned)
-				{
-					try
-					{
-						var savedEbp = _memory.Read32(ebpFromStack);
-						// Check that savedEbp is also within stack region (optional, but plausible)
-						savedEbpValid = (savedEbp >= stackBottom) && (savedEbp <= esp);
-					}
-					catch
-					{
-						savedEbpValid = false;
-					}
-				}
-
-				if (inStackRegion && isAligned && savedEbpValid)
-				{
-					_cpu.SetRegister("EBP", ebpFromStack);
-					_logger.LogDebug("[User32] Restored EBP from stack: 0x{EBP:X8}", ebpFromStack);
-				}
-				else
-				{
-					_logger.LogDebug("[User32] Skipped restoring EBP from stack: 0x{EBP:X8} (not a valid frame pointer)", ebpFromStack);
-				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "[User32] Failed to restore EBP from stack");
-			}
+			CpuHelpers.RestoreEbpFromStack(_cpu!, _memory!, esp, _logger);
 		}
 
 		[DllModuleExport(8)]
