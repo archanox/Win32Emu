@@ -5292,8 +5292,6 @@ public class JitCpu : IAsyncCpu
 		if (count == 0)
 			return;
 		
-		count &= 0x1F;
-		
 		var carryOut = ((dest >> (32 - count)) & 1) != 0;
 		
 		ulong combined = ((ulong)dest << 32) | src;
