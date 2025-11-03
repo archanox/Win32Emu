@@ -5574,22 +5574,28 @@ public class JitCpu : IAsyncCpu
 	{
 		var count = (repe || repne) ? _ecx : 1u;
 		var delta = GetFlag(Df) ? -size : size;
-		var a = size switch
+		uint a = size switch
 		{
-			1 => (byte)_eax,
-			2 => (ushort)_eax,
+			1 => (uint)((byte)_eax),
+			2 => (uint)((ushort)_eax),
 			_ => _eax
 		};
 		for (uint i = 0; i < count; i++)
 		{
-			var b = size switch
+			uint b = size switch
 			{
-				1 => mem.Read8(_edi),
-				2 => mem.Read16(_edi),
+				1 => (uint)mem.Read8(_edi),
+				2 => (uint)mem.Read16(_edi),
 				_ => mem.Read32(_edi)
 			};
-			var r = a - b;
-			SetFlagsSub(a, b, r);
+			uint mask = size switch
+			{
+				1 => 0xFFu,
+				2 => 0xFFFFu,
+				_ => 0xFFFFFFFFu
+			};
+			uint r = (a - b) & mask;
+			SetFlagsSub(a & mask, b & mask, r);
 			_edi = (uint)(_edi + delta);
 			_ecx--;
 			if (repe && !GetFlag(Zf))
