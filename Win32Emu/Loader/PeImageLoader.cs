@@ -453,9 +453,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 						// IMAGE_REL_BASED_HIGHLOW (3): Apply all 32 bits of delta
 						// This is the most common relocation type for PE32
 						{
-							var originalValue = vm.Read32(va);
+							var originalValue = vm.Read32((ulong)va);
 							var newValue = (uint)((long)originalValue + delta);
-							vm.Write32(va, newValue);
+							vm.Write32((ulong)va, newValue);
 							relocationsApplied++;
 							logger?.LogTrace("[Loader] Applied HIGHLOW relocation at RVA 0x{Rva:X8} (VA 0x{Va:X8}): 0x{Original:X8} -> 0x{New:X8}", 
 								rva, va, originalValue, newValue);
@@ -465,9 +465,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 					case RelocationType.High:
 						// IMAGE_REL_BASED_HIGH (1): Apply high 16 bits of delta to high 16 bits
 						{
-							var originalValue = vm.Read16(va);
+							var originalValue = vm.Read16((ulong)va);
 							var newValue = (ushort)(originalValue + (delta >> 16));
-							vm.Write16(va, newValue);
+							vm.Write16((ulong)va, newValue);
 							relocationsApplied++;
 							logger?.LogTrace("[Loader] Applied HIGH relocation at RVA 0x{Rva:X8} (VA 0x{Va:X8}): 0x{Original:X4} -> 0x{New:X4}", 
 								rva, va, originalValue, newValue);
@@ -477,9 +477,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 					case RelocationType.Low:
 						// IMAGE_REL_BASED_LOW (2): Apply low 16 bits of delta to low 16 bits
 						{
-							var originalValue = vm.Read16(va);
+							var originalValue = vm.Read16((ulong)va);
 							var newValue = (ushort)(originalValue + (delta & 0xFFFF));
-							vm.Write16(va, newValue);
+							vm.Write16((ulong)va, newValue);
 							relocationsApplied++;
 							logger?.LogTrace("[Loader] Applied LOW relocation at RVA 0x{Rva:X8} (VA 0x{Va:X8}): 0x{Original:X4} -> 0x{New:X4}", 
 								rva, va, originalValue, newValue);
