@@ -1039,12 +1039,176 @@ public sealed class Emulator : IDisposable
 
             try
             {
-                var wasCall = WillBeCall(_cpu, _vm!);
-                var callTarget = wasCall ? GetCallTarget(_cpu, _vm!) : 0u;
+                var step = debugger.SafeSingleStep();
 
-                debugger.SafeSingleStep();
+                // Check for direct calls to import stubs
+                // In some cases, the game may call import stubs directly instead of through the syscall mechanism
+                if (step.IsCall && step.CallTarget >= 0x0F000000 && step.CallTarget < 0x10000000)
+                {
+                    var currentImage = _env!.GetMainExecutable() ?? _image!;
+                    
+                    // Align the call target to 16-byte boundary (import stubs are aligned)
+                    var alignedTarget = step.CallTarget & IMPORT_STUB_ALIGNMENT_MASK;
+                    
+                    if (currentImage.ImportAddressMap.TryGetValue(alignedTarget, out var imp))
+                    {
+                        var dll = imp.dll.ToUpperInvariant();
+                        var name = imp.name;
+                        _logger.LogInformation("[Import] Direct call to {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                        
+                        // Save callee-saved registers
+                        var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+                        
+                        if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
+                        {
+                            // Set return value in EAX
+                            _cpu.SetRegister("EAX", ret);
+                            
+                            // Restore callee-saved registers
+                            CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                            
+                            // Simulate stdcall return: pop return address + arguments
+                            var esp = _cpu.GetRegister("ESP");
+                            var retEip = _vm!.Read32(esp);
+                            esp += 4 + (uint)argBytes;
+                            _cpu.SetRegister("ESP", esp);
+                            _cpu.SetEip(retEip);
+                            
+                            _logger.LogDebug("[Import] Returned 0x{Ret:X8}, argBytes={ArgBytes}", ret, argBytes);
+                        }
+                        else
+                        {
+                            _logger.LogError("[Import] Dispatcher failed to invoke {Dll}!{Name}", dll, name);
+                            
+                            // Restore callee-saved registers
+                            CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                            
+                            // Simulate return with error
+                            var esp = _cpu.GetRegister("ESP");
+                            var retEip = _vm!.Read32(esp);
+                            esp += 4;
+                            _cpu.SetRegister("ESP", esp);
+                            _cpu.SetRegister("EAX", 0);
+                            _cpu.SetEip(retEip);
+                        }
+                        
+                        i++;
+                        continue;
+                    }
+                    else
+                    {
+                        _logger.LogError("[Import] Attempted to call unmapped import stub at address 0x{CallTarget:X8}", step.CallTarget);
+                        _logger.LogError("[Import] This address is in the import stub range but not in the ImportAddressMap");
+                        _logger.LogError("[Import] EIP=0x{Eip:X8} ESP=0x{Esp:X8}", _cpu.GetEip(), _cpu.GetRegister("ESP"));
+                        
+                        // Simulate return
+                        var esp = _cpu.GetRegister("ESP");
+                        var retEip = _vm!.Read32(esp);
+                        esp += 4;
+                        _cpu.SetRegister("ESP", esp);
+                        _cpu.SetRegister("EAX", 0);
+                        _cpu.SetEip(retEip);
+                        
+                        _logger.LogWarning("[Import] Simulated return to 0x{RetEip:X8} with EAX=0", retEip);
+                        
+                        i++;
+                        continue;
+                    }
+                }
 
-                var step = new CpuStepResult(wasCall, callTarget);
+                // Check for syscall (INT 0x80 from import stubs)
+                // This is the retrowin32-style approach where import stubs CALL syscall dispatcher
+                // The syscall dispatcher triggers INT 0x80, we handle it, then CPU executes RET naturally
+                if (step.IsSyscall)
+                {
+                    // The stack looks like:
+                    // [ESP+0] = return address to import stub (points to RET instruction after CALL)
+                    // [ESP+4+] = function arguments (pushed by original caller)
+                    
+                    var esp = _cpu.GetRegister("ESP");
+                    
+                    // Validate ESP is in a reasonable range before attempting to read from stack
+                    if (esp < 0x00010000)
+                    {
+                        _logger.LogError("[Syscall] ESP=0x{Esp:X8} is suspiciously low (< 0x10000). Skipping syscall.", esp);
+                        _cpu.SetRegister("EAX", 0); // Return 0 as error
+                        i++;
+                        continue;
+                    }
+                    
+                    // Read the return address - this points to the RET instruction in the import stub
+                    var retToStub = _vm!.Read32(esp);
+                    
+                    // The import stub address is 5 bytes before the return address
+                    // (5 bytes for CALL instruction, then RET is at +5, which is what retToStub points to)
+                    var importStubAddr = retToStub - 5;
+                    
+                    // Get the current main executable (may have been updated with synthetic exports)
+                    var currentImage = _env!.GetMainExecutable() ?? _image!;
+                    
+                    // Look up which import this is
+                    if (currentImage.ImportAddressMap.TryGetValue(importStubAddr, out var imp))
+                    {
+                        var dll = imp.dll.ToUpperInvariant();
+                        var name = imp.name;
+                        _logger.LogInformation("[Syscall] {Dll}!{Name} from stub at 0x{Stub:X8}", dll, name, importStubAddr);
+                        
+                        // Save callee-saved registers (EBX, ESI, EDI, EBP per stdcall convention)
+                        var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+                        
+                        // Temporarily adjust ESP to skip the return-to-stub address on the stack.
+                        var originalEsp = esp;
+                        _cpu.SetRegister("ESP", esp + 4);
+                        
+                        if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
+                        {
+                            // Set return value in EAX (stdcall convention)
+                            _cpu.SetRegister("EAX", ret);
+                            
+                            // Restore ESP to original value so CPU can execute RET instructions naturally
+                            _cpu.SetRegister("ESP", originalEsp);
+                            
+                            // Restore callee-saved registers
+                            CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                            
+                            _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, argBytes={ArgBytes}, CPU will execute RET naturally", ret, argBytes);
+                            
+                            // Patch the import stub's RET instruction with the correct argBytes value for stdcall cleanup
+                            if (argBytes <= 0xFFFF && !_patchedImportStubs.Contains(importStubAddr))
+                            {
+                                var retInstrAddr = importStubAddr + 5;
+                                var opcode = _vm!.Read8(retInstrAddr);
+                                if (opcode == 0xC2)
+                                {
+                                    _vm!.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
+                                    _vm!.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
+                                    _patchedImportStubs.Add(importStubAddr);
+                                    _logger.LogDebug("[Syscall] Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes}", retInstrAddr, argBytes);
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("[Syscall] Expected RET imm16 (0xC2) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", retInstrAddr, opcode);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogError("[Syscall] Dispatcher failed to invoke {Dll}!{Name}", dll, name);
+                            _cpu.SetRegister("EAX", 0);
+                            // Restore ESP to original value
+                            _cpu.SetRegister("ESP", originalEsp);
+                            CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogError("[Syscall] Import stub at 0x{StubAddr:X8} not found in ImportAddressMap", importStubAddr);
+                        _cpu.SetRegister("EAX", 0);
+                    }
+                    
+                    i++;
+                    continue;
+                }
 
                 // Check for COM vtable method calls
                 if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
