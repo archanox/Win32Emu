@@ -74,7 +74,7 @@ public class EnhancedCpuDebugger
     /// <summary>
     /// Execute a single step with enhanced error handling and logging
     /// </summary>
-    public void SafeSingleStep()
+    public CpuStepResult SafeSingleStep()
     {
         var stateBefore = CaptureCurrentState();
         
@@ -85,7 +85,7 @@ public class EnhancedCpuDebugger
         
         try
         {
-            _cpu.SingleStep(_memory);
+            var result = _cpu.SingleStep(_memory);
             
             // Add to execution trace
             _executionTrace.Add(stateBefore);
@@ -95,6 +95,8 @@ public class EnhancedCpuDebugger
             {
                 _executionTrace.RemoveAt(0);
             }
+            
+            return result;
         }
         catch (IndexOutOfRangeException ex) when (ex.Message.Contains("0xFFFFFFFD") || 
                                                   ex.Message.Contains("0xFFFFFFFF") ||
