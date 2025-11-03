@@ -432,32 +432,10 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			try
 			{
 				// Get the RVA of the location to be relocated
-				// The Location property is an ISegmentReference which needs to be cast to get the Rva
-				if (relocation.Location == null)
+				if (!TryGetRvaFromLocation(relocation.Location, out var rva))
 				{
-					logger?.LogWarning("[Loader] Skipping relocation with null location");
-					relocationsFailed++;
-					continue;
-				}
-
-				// Try to get RVA from the location
-				uint rva;
-				if (relocation.Location is SegmentReference segRef)
-				{
-					rva = segRef.Rva;
-				}
-				else if (relocation.Location is RelativeReference relRef)
-				{
-					rva = relRef.Rva;
-				}
-				else if (relocation.Location is VirtualAddress virtAddr)
-				{
-					rva = virtAddr.Rva;
-				}
-				else
-				{
-					logger?.LogWarning("[Loader] Skipping relocation with unsupported location type: {Type}", 
-						relocation.Location.GetType().Name);
+					logger?.LogWarning("[Loader] Skipping relocation with unsupported or null location type: {Type}", 
+						relocation.Location?.GetType().Name ?? "null");
 					relocationsFailed++;
 					continue;
 				}
@@ -533,14 +511,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			catch (Exception ex)
 			{
 				// Try to get RVA for error logging, default to 0 if unavailable
-				uint errorRva = 0;
-				if (relocation.Location is SegmentReference segRef2)
-					errorRva = segRef2.Rva;
-				else if (relocation.Location is RelativeReference relRef2)
-					errorRva = relRef2.Rva;
-				else if (relocation.Location is VirtualAddress virtAddr2)
-					errorRva = virtAddr2.Rva;
-					
+				TryGetRvaFromLocation(relocation.Location, out var errorRva);
 				logger?.LogError(ex, "[Loader] Failed to apply relocation at RVA 0x{Rva:X8}", errorRva);
 				relocationsFailed++;
 			}
@@ -548,5 +519,40 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 
 		logger?.LogInformation("[Loader] Relocations complete: {Applied} applied, {Failed} failed", 
 			relocationsApplied, relocationsFailed);
+	}
+
+	/// <summary>
+	/// Extracts the RVA (Relative Virtual Address) from an ISegmentReference.
+	/// Handles the concrete types that implement ISegmentReference.
+	/// </summary>
+	/// <param name="location">The segment reference to extract RVA from</param>
+	/// <param name="rva">The extracted RVA, or 0 if extraction failed</param>
+	/// <returns>True if RVA was successfully extracted, false otherwise</returns>
+	private static bool TryGetRvaFromLocation(ISegmentReference? location, out uint rva)
+	{
+		rva = 0;
+		
+		if (location == null)
+			return false;
+
+		if (location is SegmentReference segRef)
+		{
+			rva = segRef.Rva;
+			return true;
+		}
+		
+		if (location is RelativeReference relRef)
+		{
+			rva = relRef.Rva;
+			return true;
+		}
+		
+		if (location is VirtualAddress virtAddr)
+		{
+			rva = virtAddr.Rva;
+			return true;
+		}
+
+		return false;
 	}
 }
