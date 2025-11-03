@@ -23,6 +23,12 @@ public class ProcessEnvironment
 	private uint _allocPtr;
 	private string _currentDirectory = @"C:\"; // Default to C:\ root
 
+	// Constants for memory allocation flags
+	private const uint MEM_COMMIT = 0x00001000;
+	private const uint MEM_RESERVE = 0x00002000;
+	private const uint MEM_RELEASE = 0x00008000;
+	private const uint PAGE_READWRITE = 0x00000004;
+
 	// Free-list allocator for VirtualAlloc/VirtualFree
 	private readonly List<MemoryBlock> _freeList = new();
 	private readonly Dictionary<uint, MemoryBlock> _allocatedBlocks = new();
@@ -974,8 +980,6 @@ public class ProcessEnvironment
 		{
 			// No heap with this handle - use VirtualAlloc for fallback allocation
 			// This allows the memory to be properly freed later
-			const uint MEM_COMMIT = 0x00001000;
-			const uint PAGE_READWRITE = 0x04;
 			var addr = VirtualAlloc(0, dwBytes, MEM_COMMIT, PAGE_READWRITE);
 			if (addr != 0)
 			{
@@ -996,9 +1000,7 @@ public class ProcessEnvironment
 
 		// Heap is full - use VirtualAlloc for fallback allocation
 		// This allows the memory to be properly freed later
-		const uint MEM_COMMIT_2 = 0x00001000;
-		const uint PAGE_READWRITE_2 = 0x04;
-		var fallbackAddr = VirtualAlloc(0, dwBytes, MEM_COMMIT_2, PAGE_READWRITE_2);
+		var fallbackAddr = VirtualAlloc(0, dwBytes, MEM_COMMIT, PAGE_READWRITE);
 		if (fallbackAddr != 0)
 		{
 			_heapAllocationSizes[fallbackAddr] = dwBytes;
@@ -1038,9 +1040,8 @@ public class ProcessEnvironment
 		}
 
 		// This is a fallback allocation (from VirtualAlloc) - free it properly
-		const uint MEM_RELEASE = 0x8000;
-		var success = VirtualFree(lpMem, 0, MEM_RELEASE);
-		if (!success)
+		var freeResult = VirtualFree(lpMem, 0, MEM_RELEASE);
+		if (freeResult == 0)
 		{
 			_logger.LogWarning("[ProcessEnv] HeapFree: VirtualFree failed for address 0x{Address:X8}", lpMem);
 			return 0;
