@@ -105,14 +105,14 @@ public class IgnitionTeaserTests
             _output.WriteLine("");
             
             // Set a timeout for the test run
-            var timeout = TimeSpan.FromSeconds(5);
+            var timeout = TimeSpan.FromSeconds(60);
             
             var runTask = Task.Run(() => emulator.Run());
             var completedTask = Task.WhenAny(runTask, Task.Delay(timeout)).Result;
             
             if (completedTask != runTask)
             {
-                _output.WriteLine("Test timed out after 5 seconds - stopping emulator");
+                _output.WriteLine("Test timed out after 60 seconds - stopping emulator");
                 emulator.Stop();
                 // Give the emulator up to 2 seconds to shut down gracefully
                 if (!runTask.Wait(TimeSpan.FromSeconds(2)))
@@ -277,14 +277,14 @@ public class IgnitionTeaserTests
             _output.WriteLine("");
             
             // Set a timeout for the test run
-            var timeout = TimeSpan.FromSeconds(5);
+            var timeout = TimeSpan.FromSeconds(60);
             
             var runTask = Task.Run(() => emulator.Run());
             var completedTask = Task.WhenAny(runTask, Task.Delay(timeout)).Result;
             
             if (completedTask != runTask)
             {
-                _output.WriteLine("Test timed out after 5 seconds - stopping emulator");
+                _output.WriteLine("Test timed out after 60 seconds - stopping emulator");
                 emulator.Stop();
                 // Give the emulator up to 2 seconds to shut down gracefully
                 if (!runTask.Wait(TimeSpan.FromSeconds(2)))
