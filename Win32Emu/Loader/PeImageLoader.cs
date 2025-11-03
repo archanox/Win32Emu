@@ -532,8 +532,16 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			}
 			catch (Exception ex)
 			{
-				logger?.LogError(ex, "[Loader] Failed to apply relocation at RVA 0x{Rva:X8}", 
-					relocation.Location?.Rva ?? 0);
+				// Try to get RVA for error logging, default to 0 if unavailable
+				uint errorRva = 0;
+				if (relocation.Location is SegmentReference segRef2)
+					errorRva = segRef2.Rva;
+				else if (relocation.Location is RelativeReference relRef2)
+					errorRva = relRef2.Rva;
+				else if (relocation.Location is VirtualAddress virtAddr2)
+					errorRva = virtAddr2.Rva;
+					
+				logger?.LogError(ex, "[Loader] Failed to apply relocation at RVA 0x{Rva:X8}", errorRva);
 				relocationsFailed++;
 			}
 		}
