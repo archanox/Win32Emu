@@ -219,10 +219,11 @@ public class PeLoaderValidationTests
 		var peNet = new PeFile(TestPeFile);
 		var peNetImportedDlls = peNet.ImportedFunctions?
 			.Select(f => f.DLL?.ToUpperInvariant())
-			.Distinct()
 			.Where(dll => !string.IsNullOrEmpty(dll))
+			.Distinct()
 			.OrderBy(dll => dll)
-			.ToList() ?? new List<string?>();
+			.Cast<string>() // Safe because we filtered out nulls
+			.ToList() ?? new List<string>();
 
 		var memory = new VirtualMemory();
 		var loader = new PeImageLoader(memory, NullLogger.Instance);
