@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -7,7 +6,6 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 
 namespace Win32Emu.Gui.Views;
 
@@ -105,9 +103,7 @@ public partial class MessageBoxWindow : Window
 
     private void CreateButtons(uint type)
     {
-        var buttonPanel = this.GetVisualDescendants()
-            .OfType<StackPanel>()
-            .FirstOrDefault(sp => sp.Orientation == Orientation.Horizontal);
+        var buttonPanel = this.FindControl<StackPanel>("ButtonPanel");
         
         if (buttonPanel == null) return;
 
