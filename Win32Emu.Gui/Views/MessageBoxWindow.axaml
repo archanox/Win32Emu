@@ -21,6 +21,7 @@
             <!-- Icon (if any) -->
             <TextBlock Name="IconText" 
                        FontSize="32" 
+                       FontFamily="Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,Segoe UI Symbol,Arial"
                        Margin="0,0,15,0"
                        VerticalAlignment="Top"
                        IsVisible="False"/>
