@@ -1746,7 +1746,7 @@ public sealed class Emulator : IDisposable
     
     private void RestoreEbpFromStack(uint esp)
     {
-        CpuHelpers.RestoreEbpFromStack(_cpu!, _vm!, esp, _logger);
+        CpuHelpers.RestoreEbpFromStack(_cpu!, _vm!, esp, _logger, "Emulator");
     }
 
     /// <summary>

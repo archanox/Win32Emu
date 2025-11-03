@@ -3423,7 +3423,7 @@ namespace Win32Emu.Win32.Modules
 		/// </summary>
 		private void RestoreEbpFromStack(uint esp)
 		{
-			CpuHelpers.RestoreEbpFromStack(_cpu!, _memory!, esp, _logger);
+			CpuHelpers.RestoreEbpFromStack(_cpu!, _memory!, esp, _logger, "User32");
 		}
 
 		[DllModuleExport(8)]

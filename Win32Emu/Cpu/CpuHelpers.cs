@@ -94,7 +94,8 @@ public static class CpuHelpers
 	/// <param name="memory">The virtual memory instance</param>
 	/// <param name="esp">Current stack pointer value</param>
 	/// <param name="logger">Logger for diagnostic messages (optional)</param>
-	public static void RestoreEbpFromStack(ICpu cpu, VirtualMemory memory, uint esp, ILogger? logger = null)
+	/// <param name="logPrefix">Prefix for log messages (default: "CpuHelpers")</param>
+	public static void RestoreEbpFromStack(ICpu cpu, VirtualMemory memory, uint esp, ILogger? logger = null, string logPrefix = "CpuHelpers")
 	{
 		try
 		{
@@ -137,7 +138,7 @@ public static class CpuHelpers
 				if (inStackRegion && isAligned)
 				{
 					cpu.SetRegister("EBP", ebpFromStack);
-					logger?.LogTrace("[CpuHelpers] Forcibly restored EBP from stack (was import hook 0x{OldEBP:X8}): 0x{EBP:X8}", currentEbp, ebpFromStack);
+					logger?.LogTrace("[{LogPrefix}] Forcibly restored EBP from stack (was import hook 0x{OldEBP:X8}): 0x{EBP:X8}", logPrefix, currentEbp, ebpFromStack);
 				}
 				else
 				{
@@ -147,13 +148,13 @@ public static class CpuHelpers
 					// Reset EBP to ESP as a safe fallback to prevent subsequent memory access errors
 					// when the program tries to use EBP for stack frame access (e.g., MOV EAX, [EBP+offset])
 					cpu.SetRegister("EBP", esp);
-					logger?.LogTrace("[CpuHelpers] Reset EBP to ESP (was import hook 0x{OldEBP:X8}, stack restoration failed)", currentEbp);
+					logger?.LogTrace("[{LogPrefix}] Reset EBP to ESP (was import hook 0x{OldEBP:X8}, stack restoration failed)", logPrefix, currentEbp);
 				}
 			}
 			else if (inStackRegion && isAligned && savedEbpValid)
 			{
 				cpu.SetRegister("EBP", ebpFromStack);
-				logger?.LogTrace("[CpuHelpers] Restored EBP from stack: 0x{EBP:X8}", ebpFromStack);
+				logger?.LogTrace("[{LogPrefix}] Restored EBP from stack: 0x{EBP:X8}", logPrefix, ebpFromStack);
 			}
 			else
 			{
@@ -178,11 +179,11 @@ public static class CpuHelpers
 					
 					if (isLikelyComPointer)
 					{
-						logger?.LogTrace("[CpuHelpers] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is likely a COM/heap pointer, leaving unchanged", currentEbp);
+						logger?.LogTrace("[{LogPrefix}] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is likely a COM/heap pointer, leaving unchanged", logPrefix, currentEbp);
 					}
 					else if (isUnaligned)
 					{
-						logger?.LogTrace("[CpuHelpers] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is unaligned, leaving unchanged", currentEbp);
+						logger?.LogTrace("[{LogPrefix}] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is unaligned, leaving unchanged", logPrefix, currentEbp);
 					}
 				}
 				else if (!currentEbpInStackRegion)
@@ -190,17 +191,17 @@ public static class CpuHelpers
 					// EBP is out of stack region but not obviously wrong (aligned, not a hook/pointer)
 					// This might be a valid heap pointer or global variable address used intentionally
 					// Don't modify it
-					logger?.LogTrace("[CpuHelpers] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is out of stack region but looks intentional, leaving unchanged", currentEbp);
+					logger?.LogTrace("[{LogPrefix}] Skipped EBP restoration: current EBP 0x{CurrentEBP:X8} is out of stack region but looks intentional, leaving unchanged", logPrefix, currentEbp);
 				}
 				else
 				{
-					logger?.LogTrace("[CpuHelpers] Skipped restoring EBP from stack: 0x{EBP:X8} (not a valid frame pointer), current EBP 0x{CurrentEBP:X8} looks valid", ebpFromStack, currentEbp);
+					logger?.LogTrace("[{LogPrefix}] Skipped restoring EBP from stack: 0x{EBP:X8} (not a valid frame pointer), current EBP 0x{CurrentEBP:X8} looks valid", logPrefix, ebpFromStack, currentEbp);
 				}
 			}
 		}
 		catch (Exception ex)
 		{
-			logger?.LogTrace(ex, "[CpuHelpers] Failed to restore EBP from stack");
+			logger?.LogTrace(ex, "[{LogPrefix}] Failed to restore EBP from stack", logPrefix);
 		}
 	}
 }
