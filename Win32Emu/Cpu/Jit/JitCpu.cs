@@ -4977,15 +4977,9 @@ public class JitCpu : IAsyncCpu
 			value = GetOperandValue(insn, 1);
 		}
 		
-		uint result;
-		if (signExtend)
-		{
-			result = srcBits == 8 ? (uint)(sbyte)(byte)value : (uint)(short)(ushort)value;
-		}
-		else
-		{
-			result = srcBits == 8 ? (byte)value : (uint)(ushort)value;
-		}
+		uint result = signExtend
+			? (srcBits == 8 ? (uint)(sbyte)(byte)value : (uint)(short)(ushort)value)
+			: (srcBits == 8 ? (byte)value : (uint)(ushort)value);
 		
 		SetOperandValue(insn, 0, result);
 	}
@@ -5325,7 +5319,7 @@ public class JitCpu : IAsyncCpu
 		SetFlagVal(Sf, (dest & 0x80000000) != 0);
 		SetFlagVal(Zf, dest == 0);
 		if (count == 1)
-			SetFlagVal(Of, (((dest >> 31) ^ ((dest >> 30) & 1)) != 0));
+			SetFlagVal(Of, ((dest >> 31) ^ ((dest >> 30) & 1)) != 0);
 		
 		SetOperandValue(insn, 0, dest);
 	}
@@ -5591,7 +5585,13 @@ public class JitCpu : IAsyncCpu
 				_ => 0xFFFFFFFFu
 			};
 			uint r = (a - b) & mask;
-			SetFlagsSub(a & mask, b & mask, r);
+			uint signBit = size switch
+			{
+				1 => 0x80u,
+				2 => 0x8000u,
+				_ => 0x80000000u
+			};
+			SetFlagsSub(a & mask, b & mask, r, signBit);
 			_edi = (uint)(_edi + delta);
 			_ecx--;
 			if (repe && !GetFlag(Zf))
@@ -5611,20 +5611,32 @@ public class JitCpu : IAsyncCpu
 		var delta = GetFlag(Df) ? -size : size;
 		for (uint i = 0; i < count; i++)
 		{
-			var a = size switch
+			uint a = size switch
 			{
-				1 => mem.Read8(_esi),
-				2 => mem.Read16(_esi),
+				1 => (uint)mem.Read8(_esi),
+				2 => (uint)mem.Read16(_esi),
 				_ => mem.Read32(_esi)
 			};
-			var b = size switch
+			uint b = size switch
 			{
-				1 => mem.Read8(_edi),
-				2 => mem.Read16(_edi),
+				1 => (uint)mem.Read8(_edi),
+				2 => (uint)mem.Read16(_edi),
 				_ => mem.Read32(_edi)
 			};
-			var r = a - b;
-			SetFlagsSub(a, b, r);
+			uint mask = size switch
+			{
+				1 => 0xFFu,
+				2 => 0xFFFFu,
+				_ => 0xFFFFFFFFu
+			};
+			uint r = (a - b) & mask;
+			uint signBit = size switch
+			{
+				1 => 0x80u,
+				2 => 0x8000u,
+				_ => 0x80000000u
+			};
+			SetFlagsSub(a & mask, b & mask, r, signBit);
 			_esi = (uint)(_esi + delta);
 			_edi = (uint)(_edi + delta);
 			_ecx--;
