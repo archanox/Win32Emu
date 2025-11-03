@@ -1360,36 +1360,14 @@ public class JitCpu : IAsyncCpu
 				break;
 			}
 			case Mnemonic.Aas: // ASCII Adjust After Subtraction
-			{
-				byte al = (byte)(_eax & 0xFF);
-				if ((al & 0x0F) > 9 || GetFlag(Af))
-				{
-					al = (byte)(al - 6);
-					// Combine operations: set AL and decrement AH in single assignment
-					_eax = (uint)((_eax & 0xFFFF0000) | (((_eax - 0x100) & 0xFF00)) | (al & 0x0F));
-					SetFlag(Af);
-					SetFlag(Cf);
-				}
-				else
-				{
-					ClearFlag(Af);
-					ClearFlag(Cf);
-					_eax = (uint)((_eax & 0xFFFFFF0F) | (al & 0x0F));
-				}
+				ExecAas();
 				break;
-			}
 			case Mnemonic.Cbw: // Convert Byte to Word
-			{
-				short ax = (sbyte)(_eax & 0xFF);
-				_eax = (_eax & 0xFFFF0000) | (ushort)ax;
+				ExecCbw();
 				break;
-			}
 			case Mnemonic.Cwde: // Convert Word to Doubleword Extended
-			{
-				int eax = (short)(_eax & 0xFFFF);
-				_eax = (uint)eax;
+				ExecCwde();
 				break;
-			}
 		}
 	}
 
@@ -4940,6 +4918,818 @@ public class JitCpu : IAsyncCpu
 		uint va = (uint)(a & 0xFFFFFFFF);
 		uint vb = (uint)(b & 0xFFFFFFFF);
 		return ((ulong)vb << 32) | va;
+	}
+
+	// === Missing methods for feature parity with IcedCpu ===
+	
+	private void ExecCbw()
+	{
+		// CBW: Convert Byte to Word
+		// Sign-extend AL into AX
+		var al = (byte)(_eax & 0xFF);
+		var sign = (al & 0x80) != 0;
+		var ah = sign ? (byte)0xFF : (byte)0x00;
+		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+	}
+	
+	private void ExecCwde()
+	{
+		// CWDE: Convert Word to Doubleword Extended
+		// Sign-extend AX into EAX
+		var ax = (ushort)(_eax & 0xFFFF);
+		var sign = (ax & 0x8000) != 0;
+		_eax = sign ? (0xFFFF0000 | ax) : ax;
+	}
+	
+	private void ExecMovx(Instruction insn, bool signExtend)
+	{
+		uint value;
+		var srcBits = insn.MemorySize switch
+		{
+			MemorySize.UInt8 or MemorySize.Int8 => 8,
+			MemorySize.UInt16 or MemorySize.Int16 => 16,
+			_ => 32
+		};
+		
+		// If not memory, check source register size
+		if (insn.Op1Kind != OpKind.Memory)
+		{
+			var r = insn.Op1Register;
+			if (r is Register.AL or Register.CL or Register.DL or Register.BL or 
+			    Register.AH or Register.CH or Register.DH or Register.BH)
+			{
+				srcBits = 8;
+			}
+			else if (r is Register.AX or Register.CX or Register.DX or Register.BX or 
+			         Register.SI or Register.DI or Register.SP or Register.BP)
+			{
+				srcBits = 16;
+			}
+		}
+		
+		if (insn.Op1Kind == OpKind.Memory)
+		{
+			var a = CalcMemAddress(insn, 1);
+			value = srcBits == 8 ? _mem.Read8(a) : _mem.Read16(a);
+		}
+		else
+		{
+			value = GetOperandValue(insn, 1);
+		}
+		
+		uint result;
+		if (signExtend)
+		{
+			result = srcBits == 8 ? (uint)(sbyte)(byte)value : (uint)(short)(ushort)value;
+		}
+		else
+		{
+			result = srcBits == 8 ? (byte)value : (uint)(ushort)value;
+		}
+		
+		SetOperandValue(insn, 0, result);
+	}
+	
+	private void ExecLogic(Instruction insn, LogicOp op, VirtualMemory mem)
+	{
+		var opSize = GetOpSizeBits(insn, 0);
+		
+		switch (opSize)
+		{
+			case 8:
+			{
+				byte a, b;
+				if (insn.Op0Kind == OpKind.Register)
+				{
+					a = (byte)GetRegisterValue(insn, 0);
+				}
+				else if (insn.Op0Kind == OpKind.Memory)
+				{
+					a = mem.Read8(CalcMemAddress(insn, 0));
+				}
+				else
+				{
+					a = (byte)GetOperandValue(insn, 0);
+				}
+				
+				if (insn.Op1Kind == OpKind.Register)
+				{
+					b = (byte)GetRegisterValue(insn, 1);
+				}
+				else if (insn.Op1Kind == OpKind.Memory)
+				{
+					b = mem.Read8(CalcMemAddress(insn, 1));
+				}
+				else
+				{
+					b = (byte)GetOperandValue(insn, 1);
+				}
+				
+				var r = op == LogicOp.And ? (byte)(a & b) : (byte)(a | b);
+				
+				if (insn.Op0Kind == OpKind.Register)
+				{
+					SetRegisterValue(insn, 0, r);
+				}
+				else if (insn.Op0Kind == OpKind.Memory)
+				{
+					mem.Write8(CalcMemAddress(insn, 0), r);
+				}
+				
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				UpdateLogicResultFlags(r);
+				break;
+			}
+			case 16:
+			{
+				ushort a, b;
+				if (insn.Op0Kind == OpKind.Register)
+				{
+					a = (ushort)GetRegisterValue(insn, 0);
+				}
+				else if (insn.Op0Kind == OpKind.Memory)
+				{
+					a = mem.Read16(CalcMemAddress(insn, 0));
+				}
+				else
+				{
+					a = (ushort)GetOperandValue(insn, 0);
+				}
+				
+				if (insn.Op1Kind == OpKind.Register)
+				{
+					b = (ushort)GetRegisterValue(insn, 1);
+				}
+				else if (insn.Op1Kind == OpKind.Memory)
+				{
+					b = mem.Read16(CalcMemAddress(insn, 1));
+				}
+				else
+				{
+					b = (ushort)GetOperandValue(insn, 1);
+				}
+				
+				var r = op == LogicOp.And ? (ushort)(a & b) : (ushort)(a | b);
+				
+				if (insn.Op0Kind == OpKind.Register)
+				{
+					SetRegisterValue(insn, 0, r);
+				}
+				else if (insn.Op0Kind == OpKind.Memory)
+				{
+					mem.Write16(CalcMemAddress(insn, 0), r);
+				}
+				
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				UpdateLogicResultFlags(r);
+				break;
+			}
+			default:
+			{
+				uint a = GetOperandValue(insn, 0);
+				uint b = GetOperandValue(insn, 1);
+				uint r = op == LogicOp.And ? a & b : a | b;
+				SetOperandValue(insn, 0, r);
+				ClearFlag(Cf);
+				ClearFlag(Of);
+				ClearFlag(Af);
+				UpdateLogicResultFlags(r);
+				break;
+			}
+		}
+	}
+	
+	private void ExecRotate(Instruction insn, RotateKind kind, VirtualMemory mem)
+	{
+		var a = GetOperandValue(insn, 0);
+		int c = insn.OpCount >= 2 && insn.Op1Kind == OpKind.Immediate8 
+			? insn.Immediate8 
+			: (int)(_ecx & 0xFF);
+		
+		if (c == 0)
+		{
+			return;
+		}
+		
+		if (kind is RotateKind.Rol or RotateKind.Ror)
+		{
+			c &= 0x1F;
+		}
+		else
+		{
+			c %= 33;
+		}
+		
+		if (c == 0)
+		{
+			return;
+		}
+		
+		var r = a;
+		switch (kind)
+		{
+			case RotateKind.Rol:
+				r = (a << c) | (a >> (32 - c));
+				SetFlagVal(Cf, (r & 1) != 0);
+				if (c == 1)
+				{
+					var msb = (r & 0x80000000) != 0;
+					var cf = GetFlag(Cf);
+					SetFlagVal(Of, msb ^ cf);
+				}
+				else
+				{
+					ClearFlag(Of);
+				}
+				break;
+			case RotateKind.Ror:
+				r = (a >> c) | (a << (32 - c));
+				SetFlagVal(Cf, ((r >> 31) & 1) != 0);
+				if (c == 1)
+				{
+					var bit31 = (r & 0x80000000) != 0;
+					var bit30 = (r & 0x40000000) != 0;
+					SetFlagVal(Of, bit31 ^ bit30);
+				}
+				else
+				{
+					ClearFlag(Of);
+				}
+				break;
+			case RotateKind.Rcl:
+				for (var i = 0; i < c; i++)
+				{
+					var carry = GetFlag(Cf) ? 1u : 0u;
+					var newCarry = (a >> 31) & 1u;
+					r = (a << 1) | carry;
+					SetFlagVal(Cf, newCarry != 0);
+					a = r;
+				}
+				if (c == 1)
+				{
+					SetFlagVal(Of, ((a ^ r) & 0x80000000) != 0);
+				}
+				else
+				{
+					ClearFlag(Of);
+				}
+				break;
+			case RotateKind.Rcr:
+				for (var i = 0; i < c; i++)
+				{
+					var carry = GetFlag(Cf) ? 1u : 0u;
+					var newCarry = a & 1u;
+					r = (a >> 1) | (carry << 31);
+					SetFlagVal(Cf, newCarry != 0);
+					a = r;
+				}
+				if (c == 1)
+				{
+					SetFlagVal(Of, ((a ^ r) & 0x80000000) != 0);
+				}
+				else
+				{
+					ClearFlag(Of);
+				}
+				break;
+		}
+		
+		SetOperandValue(insn, 0, r);
+	}
+	
+	private void ExecShiftLeft(Instruction insn, VirtualMemory mem)
+	{
+		var a = GetOperandValue(insn, 0);
+		int c = insn.OpCount >= 2 && insn.Op1Kind == OpKind.Immediate8 
+			? insn.Immediate8 
+			: (int)(_ecx & 0xFF);
+		
+		if (c == 0)
+		{
+			return;
+		}
+		
+		c &= 0x1F;
+		if (c == 0)
+		{
+			return;
+		}
+		
+		var r = a << c;
+		var lastOut = (a >> (32 - c)) & 1u;
+		SetFlagVal(Cf, lastOut != 0);
+		if (c == 1)
+		{
+			bool before = (a & 0x80000000) != 0;
+			bool after = (r & 0x80000000) != 0;
+			SetFlagVal(Of, before ^ after);
+		}
+		else
+		{
+			ClearFlag(Of);
+		}
+		
+		ClearFlag(Af);
+		SetOperandValue(insn, 0, r);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void ExecShiftRight(Instruction insn, bool arithmetic, VirtualMemory mem)
+	{
+		var a = GetOperandValue(insn, 0);
+		int c = insn.OpCount >= 2 && insn.Op1Kind == OpKind.Immediate8 
+			? insn.Immediate8 
+			: (int)(_ecx & 0xFF);
+		
+		if (c == 0)
+		{
+			return;
+		}
+		
+		c &= 0x1F;
+		if (c == 0)
+		{
+			return;
+		}
+		
+		uint r;
+		if (arithmetic)
+		{
+			var s = (int)a;
+			r = (uint)(s >> c);
+			SetFlagVal(Of, false);
+		}
+		else
+		{
+			r = a >> c;
+			if (c == 1)
+			{
+				SetFlagVal(Of, (a & 0x80000000) != 0);
+			}
+			else
+			{
+				ClearFlag(Of);
+			}
+		}
+		
+		var lastOut = (a >> (c - 1)) & 1u;
+		SetFlagVal(Cf, lastOut != 0);
+		ClearFlag(Af);
+		SetOperandValue(insn, 0, r);
+		UpdateLogicResultFlags(r);
+	}
+	
+	private void ExecShld(Instruction insn, VirtualMemory mem)
+	{
+		var dest = GetOperandValue(insn, 0);
+		var src = GetOperandValue(insn, 1);
+		var count = (byte)(insn.Op2Kind == OpKind.Immediate8 ? insn.Immediate8 : (_ecx & 0x1F));
+		
+		if (count == 0)
+			return;
+		
+		count &= 0x1F;
+		
+		var carryOut = ((dest >> (32 - count)) & 1) != 0;
+		
+		ulong combined = ((ulong)dest << 32) | src;
+		combined <<= count;
+		dest = (uint)(combined >> 32);
+		
+		SetFlagVal(Cf, carryOut);
+		SetFlagVal(Sf, (dest & 0x80000000) != 0);
+		SetFlagVal(Zf, dest == 0);
+		if (count == 1)
+			SetFlagVal(Of, ((dest >> 31) ^ ((dest >> 30) & 1)) != 0);
+		
+		SetOperandValue(insn, 0, dest);
+	}
+	
+	private void ExecShrd(Instruction insn, VirtualMemory mem)
+	{
+		var dest = GetOperandValue(insn, 0);
+		var src = GetOperandValue(insn, 1);
+		var count = (byte)(insn.Op2Kind == OpKind.Immediate8 ? insn.Immediate8 : (_ecx & 0x1F));
+		
+		if (count == 0)
+			return;
+		
+		count &= 0x1F;
+		
+		ulong combined = ((ulong)src << 32) | dest;
+		var carryOut = ((combined >> (count - 1)) & 1) != 0;
+		combined >>= count;
+		dest = (uint)combined;
+		
+		SetFlagVal(Cf, carryOut);
+		SetFlagVal(Sf, (dest & 0x80000000) != 0);
+		SetFlagVal(Zf, dest == 0);
+		if (count == 1)
+			SetFlagVal(Of, (((dest >> 31) ^ ((dest >> 30) & 1)) != 0));
+		
+		SetOperandValue(insn, 0, dest);
+	}
+	
+	private void ExecBt(Instruction insn, VirtualMemory mem)
+	{
+		var bitBase = GetOperandValue(insn, 0);
+		var bitOffset = GetOperandValue(insn, 1);
+		var bitPos = (int)(bitOffset & 0x1F);
+		var bitValue = (bitBase >> bitPos) & 1;
+		SetFlagVal(Cf, bitValue != 0);
+	}
+	
+	private void ExecBts(Instruction insn, VirtualMemory mem)
+	{
+		var bitBase = GetOperandValue(insn, 0);
+		var bitOffset = GetOperandValue(insn, 1);
+		var bitPos = (int)(bitOffset & 0x1F);
+		var bitValue = (bitBase >> bitPos) & 1;
+		SetFlagVal(Cf, bitValue != 0);
+		bitBase |= (1u << bitPos);
+		SetOperandValue(insn, 0, bitBase);
+	}
+	
+	private void ExecBtr(Instruction insn, VirtualMemory mem)
+	{
+		var bitBase = GetOperandValue(insn, 0);
+		var bitOffset = GetOperandValue(insn, 1);
+		var bitPos = (int)(bitOffset & 0x1F);
+		var bitValue = (bitBase >> bitPos) & 1;
+		SetFlagVal(Cf, bitValue != 0);
+		bitBase &= ~(1u << bitPos);
+		SetOperandValue(insn, 0, bitBase);
+	}
+	
+	private void ExecBtc(Instruction insn, VirtualMemory mem)
+	{
+		var bitBase = GetOperandValue(insn, 0);
+		var bitOffset = GetOperandValue(insn, 1);
+		var bitPos = (int)(bitOffset & 0x1F);
+		var bitValue = (bitBase >> bitPos) & 1;
+		SetFlagVal(Cf, bitValue != 0);
+		bitBase ^= (1u << bitPos);
+		SetOperandValue(insn, 0, bitBase);
+	}
+	
+	private void ExecBsf(Instruction insn, VirtualMemory mem)
+	{
+		var src = GetOperandValue(insn, 1);
+		
+		if (src == 0)
+		{
+			SetFlagVal(Zf, true);
+		}
+		else
+		{
+			uint bitIndex = 0;
+			while ((src & (1u << (int)bitIndex)) == 0)
+			{
+				bitIndex++;
+			}
+			SetOperandValue(insn, 0, bitIndex);
+			SetFlagVal(Zf, false);
+		}
+	}
+	
+	private void ExecBsr(Instruction insn, VirtualMemory mem)
+	{
+		var src = GetOperandValue(insn, 1);
+		
+		if (src == 0)
+		{
+			SetFlagVal(Zf, true);
+		}
+		else
+		{
+			uint bitIndex = 31;
+			while ((src & (1u << (int)bitIndex)) == 0)
+			{
+				bitIndex--;
+			}
+			SetOperandValue(insn, 0, bitIndex);
+			SetFlagVal(Zf, false);
+		}
+	}
+	
+	private void ExecCmovcc(Instruction insn, VirtualMemory mem)
+	{
+		bool condition = insn.Mnemonic switch
+		{
+			Mnemonic.Cmove => GetFlag(Zf),
+			Mnemonic.Cmovne => !GetFlag(Zf),
+			Mnemonic.Cmovb => GetFlag(Cf),
+			Mnemonic.Cmovae => !GetFlag(Cf),
+			Mnemonic.Cmovbe => GetFlag(Cf) || GetFlag(Zf),
+			Mnemonic.Cmova => !GetFlag(Cf) && !GetFlag(Zf),
+			Mnemonic.Cmovge => GetFlag(Sf) == GetFlag(Of),
+			Mnemonic.Cmovg => !GetFlag(Zf) && (GetFlag(Sf) == GetFlag(Of)),
+			Mnemonic.Cmovl => GetFlag(Sf) != GetFlag(Of),
+			Mnemonic.Cmovle => GetFlag(Zf) || (GetFlag(Sf) != GetFlag(Of)),
+			Mnemonic.Cmovo => GetFlag(Of),
+			Mnemonic.Cmovno => !GetFlag(Of),
+			Mnemonic.Cmovs => GetFlag(Sf),
+			Mnemonic.Cmovns => !GetFlag(Sf),
+			Mnemonic.Cmovp => GetFlag(Pf),
+			Mnemonic.Cmovnp => !GetFlag(Pf),
+			_ => false
+		};
+		
+		if (condition)
+		{
+			var src = GetOperandValue(insn, 1);
+			SetOperandValue(insn, 0, src);
+		}
+	}
+	
+	private void ExecCmpxchg8B(Instruction insn, VirtualMemory mem)
+	{
+		var addr = CalcMemAddress(insn, 0);
+		
+		var memLow = mem.Read32(addr);
+		var memHigh = mem.Read32(addr + 4);
+		
+		if (_eax == memLow && _edx == memHigh)
+		{
+			mem.Write32(addr, _ebx);
+			mem.Write32(addr + 4, _ecx);
+			SetFlag(Zf);
+		}
+		else
+		{
+			_eax = memLow;
+			_edx = memHigh;
+			ClearFlag(Zf);
+		}
+	}
+	
+	private void ExecMovs(int size, bool rep, VirtualMemory mem)
+	{
+		var count = rep ? _ecx : 1u;
+		var delta = GetFlag(Df) ? -size : size;
+		for (uint i = 0; i < count; i++)
+		{
+			var v = size switch
+			{
+				1 => mem.Read8(_esi),
+				2 => mem.Read16(_esi),
+				_ => mem.Read32(_esi)
+			};
+			if (size == 1)
+			{
+				mem.Write8(_edi, (byte)v);
+			}
+			else if (size == 2)
+			{
+				mem.Write16(_edi, (ushort)v);
+			}
+			else
+			{
+				mem.Write32(_edi, v);
+			}
+			
+			_esi = (uint)(_esi + delta);
+			_edi = (uint)(_edi + delta);
+		}
+		
+		if (rep)
+		{
+			_ecx = 0;
+		}
+	}
+	
+	private void ExecStos(int size, bool rep, VirtualMemory mem)
+	{
+		var count = rep ? _ecx : 1u;
+		var delta = GetFlag(Df) ? -size : size;
+		var src = size switch
+		{
+			1 => (byte)_eax,
+			2 => (ushort)_eax,
+			_ => _eax
+		};
+		for (uint i = 0; i < count; i++)
+		{
+			if (size == 1)
+			{
+				mem.Write8(_edi, (byte)src);
+			}
+			else if (size == 2)
+			{
+				mem.Write16(_edi, (ushort)src);
+			}
+			else
+			{
+				mem.Write32(_edi, src);
+			}
+			
+			_edi = (uint)(_edi + delta);
+		}
+		
+		if (rep)
+		{
+			_ecx = 0;
+		}
+	}
+	
+	private void ExecLods(int size, bool rep, VirtualMemory mem)
+	{
+		var count = rep ? _ecx : 1u;
+		var delta = GetFlag(Df) ? -size : size;
+		for (uint i = 0; i < count; i++)
+		{
+			var v = size switch
+			{
+				1 => mem.Read8(_esi),
+				2 => mem.Read16(_esi),
+				_ => mem.Read32(_esi)
+			};
+			if (size == 1)
+			{
+				_eax = (_eax & 0xFFFFFF00) | (v & 0xFF);
+			}
+			else if (size == 2)
+			{
+				_eax = (_eax & 0xFFFF0000) | (v & 0xFFFF);
+			}
+			else
+			{
+				_eax = v;
+			}
+			
+			_esi = (uint)(_esi + delta);
+		}
+		
+		if (rep)
+		{
+			_ecx = 0;
+		}
+	}
+	
+	private void ExecScas(int size, bool repe, bool repne, VirtualMemory mem)
+	{
+		var count = (repe || repne) ? _ecx : 1u;
+		var delta = GetFlag(Df) ? -size : size;
+		var a = size switch
+		{
+			1 => (byte)_eax,
+			2 => (ushort)_eax,
+			_ => _eax
+		};
+		for (uint i = 0; i < count; i++)
+		{
+			var b = size switch
+			{
+				1 => mem.Read8(_edi),
+				2 => mem.Read16(_edi),
+				_ => mem.Read32(_edi)
+			};
+			var r = a - b;
+			SetFlagsSub(a, b, r);
+			_edi = (uint)(_edi + delta);
+			_ecx--;
+			if (repe && !GetFlag(Zf))
+			{
+				break;
+			}
+			if (repne && GetFlag(Zf))
+			{
+				break;
+			}
+		}
+	}
+	
+	private void ExecCmps(int size, bool repe, bool repne, VirtualMemory mem)
+	{
+		var count = (repe || repne) ? _ecx : 1u;
+		var delta = GetFlag(Df) ? -size : size;
+		for (uint i = 0; i < count; i++)
+		{
+			var a = size switch
+			{
+				1 => mem.Read8(_esi),
+				2 => mem.Read16(_esi),
+				_ => mem.Read32(_esi)
+			};
+			var b = size switch
+			{
+				1 => mem.Read8(_edi),
+				2 => mem.Read16(_edi),
+				_ => mem.Read32(_edi)
+			};
+			var r = a - b;
+			SetFlagsSub(a, b, r);
+			_esi = (uint)(_esi + delta);
+			_edi = (uint)(_edi + delta);
+			_ecx--;
+			if (repe && !GetFlag(Zf))
+			{
+				break;
+			}
+			if (repne && GetFlag(Zf))
+			{
+				break;
+			}
+		}
+	}
+	
+	private void ExecIns(int size, bool rep, VirtualMemory mem)
+	{
+		var count = rep ? _ecx : 1u;
+		var delta = GetFlag(Df) ? -size : size;
+		for (uint i = 0; i < count; i++)
+		{
+			uint value = 0;
+			
+			if (size == 1)
+			{
+				mem.Write8(_edi, (byte)value);
+			}
+			else if (size == 2)
+			{
+				mem.Write16(_edi, (ushort)value);
+			}
+			else
+			{
+				mem.Write32(_edi, value);
+			}
+			
+			_edi = (uint)(_edi + delta);
+		}
+		
+		if (rep)
+		{
+			_ecx = 0;
+		}
+	}
+	
+	private void ExecOuts(int size, bool rep, VirtualMemory mem)
+	{
+		var count = rep ? _ecx : 1u;
+		var delta = GetFlag(Df) ? -size : size;
+		for (uint i = 0; i < count; i++)
+		{
+			if (size == 1)
+			{
+				_ = mem.Read8(_esi);
+			}
+			else if (size == 2)
+			{
+				_ = mem.Read16(_esi);
+			}
+			else
+			{
+				_ = mem.Read32(_esi);
+			}
+			
+			_esi = (uint)(_esi + delta);
+		}
+		
+		if (rep)
+		{
+			_ecx = 0;
+		}
+	}
+	
+	private void ExecAas()
+	{
+		var al = (byte)(_eax & 0xFF);
+		var ah = (byte)((_eax >> 8) & 0xFF);
+		
+		if (((al & 0x0F) > 9) || GetFlag(Af))
+		{
+			al -= 6;
+			ah -= 1;
+			SetFlag(Af);
+			SetFlag(Cf);
+		}
+		else
+		{
+			ClearFlag(Af);
+			ClearFlag(Cf);
+		}
+		
+		al &= 0x0F;
+		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+		UpdateLogicResultFlags(al);
+	}
+	
+	private enum LogicOp
+	{
+		And,
+		Or
+	}
+	
+	private enum RotateKind
+	{
+		Rol,
+		Ror,
+		Rcl,
+		Rcr
 	}
 
 	private sealed class SimpleMemoryCodeReader : CodeReader
