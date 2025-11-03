@@ -178,7 +178,10 @@ public class GdbServerTests
             exportsByOrdinal,
             forwardedByName,
             forwardedByOrdinal,
-            3
+            3,
+            0x00001000, // HeaderEndRva
+            0x00100000, // SizeOfStackReserve (1MB)
+            0x00010000  // SizeOfStackCommit (64KB)
         );
         
         // Act

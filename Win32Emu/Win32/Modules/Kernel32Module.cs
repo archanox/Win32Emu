@@ -2564,8 +2564,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// VirtualAlloc cannot reserve a reserved page. It can commit a page that is already committed.
 	/// </remarks>
 	[DllModuleExport(45)]
-	private uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect) =>
-		_env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
+	private uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect)
+	{
+		_logger.LogInformation("[Kernel32] VirtualAlloc(lpAddress=0x{Lp:X8}, dwSize=0x{Size:X8}, alloc=0x{Alloc:X8}, protect=0x{Prot:X8})", lpAddress, dwSize, flAllocationType, flProtect);
+		var addr = _env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
+		_logger.LogInformation("[Kernel32] VirtualAlloc -> 0x{Addr:X8}", addr);
+		return addr;
+	}
 
 	[DllModuleExport(46)]
 	private uint VirtualFree(uint lpAddress, uint dwSize, uint dwFreeType)

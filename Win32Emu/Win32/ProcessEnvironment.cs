@@ -1085,41 +1085,101 @@ public class ProcessEnvironment
 		}
 	}
 
-	// VirtualAlloc
+	/// <summary>
+	/// Reserves and/or commits virtual memory following Windows semantics:
+	/// MEM_RESERVE aligns base/size to 64KB and does not touch memory; MEM_COMMIT aligns to 4KB.
+	/// Bottom-up search by default; honors MEM_TOP_DOWN when scanning free list; avoids emulator internal ranges.
+	/// Returns 0 on failure instead of throwing; normal failures do not write to memory.
+	/// </summary>
 	public uint VirtualAlloc(uint lpAddress, uint dwSize, uint flAllocationType, uint flProtect)
 	{
-		var size = AlignUp(dwSize == 0 ? 1u : dwSize, 0x1000);
+		// Flags
+		const uint MEM_COMMIT   = 0x00001000;
+		const uint MEM_RESERVE  = 0x00002000;
+		const uint MEM_TOP_DOWN = 0x00100000;
+		const uint PAGE_SIZE    = 0x1000;   // 4KB
+		const uint ALLOC_GRAN   = 0x10000;  // 64KB
+		const uint SPECIAL_MIN  = 0x0D000000; // emulator special ranges (COM/syscall/import)
+		const uint SPECIAL_MAX  = 0x10000000;
 		
-		if (lpAddress != 0)
+		bool reserve = (flAllocationType & MEM_RESERVE) != 0;
+		bool commit  = (flAllocationType & MEM_COMMIT) != 0;
+		bool topDown = (flAllocationType & MEM_TOP_DOWN) != 0;
+		
+		_logger.LogInformation("[ProcessEnv] VirtualAlloc(lp=0x{Lp:X8}, size=0x{Size:X8}, alloc=0x{Alloc:X8}, prot=0x{Prot:X8})",
+			lpAddress, dwSize, flAllocationType, flProtect);
+		
+		if (!reserve && !commit)
 		{
-			// Specific address requested
-			return AllocateAtSpecificAddress(lpAddress, size);
+			_logger.LogWarning("[ProcessEnv] VirtualAlloc: neither MEM_RESERVE nor MEM_COMMIT specified");
+			return 0;
 		}
 		
-		// No specific address - find a suitable block in the free list
-		return AllocateFromFreeList(size);
+		uint requested = dwSize == 0 ? 1u : dwSize;
+		// Align sizes respecting semantics
+		uint reserveSize = reserve ? AlignUp(requested, ALLOC_GRAN) : 0u;
+		uint commitSize  = commit  ? AlignUp(requested, PAGE_SIZE)  : 0u;
+		uint effectiveSize = reserve ? reserveSize : commitSize;
+		if (effectiveSize == 0)
+		{
+			// Should not happen because requested >= 1 and either reserve or commit is true
+			return 0;
+		}
+		
+		// If specific address provided
+		if (lpAddress != 0)
+		{
+			uint alignedBase = reserve ? AlignDown(lpAddress, ALLOC_GRAN) : AlignDown(lpAddress, PAGE_SIZE);
+			if (!RangeFits(alignedBase, effectiveSize, Memory.Size))
+			{
+				_logger.LogWarning("[ProcessEnv] VirtualAlloc: requested range overflows address space (base=0x{Base:X8}, size=0x{Size:X8})", alignedBase, effectiveSize);
+				return 0;
+			}
+			// Avoid emulator special ranges
+			if (!(alignedBase + effectiveSize <= SPECIAL_MIN || alignedBase >= SPECIAL_MAX))
+			{
+				_logger.LogWarning("[ProcessEnv] VirtualAlloc: requested range overlaps emulator special range [0x{Min:X8}-0x{Max:X8}), failing", SPECIAL_MIN, SPECIAL_MAX);
+				return 0;
+			}
+			return AllocateAtSpecificAddress(alignedBase, effectiveSize, reserve, commit);
+		}
+		
+		// No specific address - find a suitable block or allocate from end
+		var addr = AllocateFromFreeList(effectiveSize, reserve, commit, topDown, SPECIAL_MIN, SPECIAL_MAX);
+		if (addr != 0)
+		{
+			_logger.LogInformation("[ProcessEnv] VirtualAlloc: allocated at 0x{Addr:X8}, size=0x{Size:X8}, reserve={Reserve}, commit={Commit}, topDown={TopDown}",
+				addr, effectiveSize, reserve, commit, topDown);
+			return addr;
+		}
+		
+		_logger.LogWarning("[ProcessEnv] VirtualAlloc: allocation failed (size=0x{Size:X8})", effectiveSize);
+		return 0;
 	}
 
 	/// <summary>
 	/// Allocates memory at a specific address.
 	/// </summary>
-	private uint AllocateAtSpecificAddress(uint lpAddress, uint size)
+	private uint AllocateAtSpecificAddress(uint lpAddress, uint size, bool reserve, bool commit)
 	{
-		// Calculate end of allocation with overflow protection
-		ulong endOfAllocation64 = (ulong)lpAddress + size;
-		uint endOfAllocation = endOfAllocation64 > uint.MaxValue ? uint.MaxValue : (uint)endOfAllocation64;
+		// Bounds check: ensure [lpAddress, lpAddress+size) fits in 32-bit address space
+		ulong end64 = (ulong)lpAddress + (ulong)size;
+		if (end64 < lpAddress || end64 > Memory.Size)
+		{
+			_logger.LogWarning("[ProcessEnv] AllocateAtSpecificAddress: range overflow (base=0x{Base:X8}, size=0x{Size:X8})", lpAddress, size);
+			return 0;
+		}
+		uint endOfAllocation = (uint)end64;
 		
 		// Check if this exact region is already allocated (re-commit scenario)
-		bool alreadyAllocated = _allocatedBlocks.TryGetValue(lpAddress, out var existingBlock) 
+		bool alreadyAllocated = _allocatedBlocks.TryGetValue(lpAddress, out var existingBlock)
 			&& existingBlock.Size >= size;
 		
 		if (alreadyAllocated)
 		{
-			_logger.LogInformation("[ProcessEnv] VirtualAlloc: Re-committing already allocated region at 0x{Address:X8}",
-				lpAddress);
+			_logger.LogInformation("[ProcessEnv] VirtualAlloc: Re-committing already allocated region at 0x{Address:X8}", lpAddress);
 		}
-		
-		if (!alreadyAllocated)
+		else
 		{
 			// Verify the requested range is available
 			if (!IsRangeAvailable(lpAddress, size))
@@ -1133,11 +1193,8 @@ public class ProcessEnvironment
 			MarkRangeAsAllocated(lpAddress, size);
 		}
 		
-		// Zero out the memory
-		if (endOfAllocation <= Memory.Size)
-		{
-			Memory.WriteBytes(lpAddress, new byte[size]);
-		}
+		// Do not touch memory for MEM_RESERVE. For MEM_COMMIT we can rely on sparse pages being zeroed by default.
+		// Therefore we skip any bulk writes here to avoid boundary issues and unnecessary work.
 		
 		// Update _allocPtr if the allocation extends beyond it
 		if (endOfAllocation > _allocPtr)
@@ -1145,8 +1202,8 @@ public class ProcessEnvironment
 			_allocPtr = endOfAllocation;
 		}
 		
-		_logger.LogInformation("[ProcessEnv] VirtualAlloc: Allocated 0x{Size:X} bytes at specific address 0x{Address:X8}",
-			size, lpAddress);
+		_logger.LogInformation("[ProcessEnv] VirtualAlloc: Allocated 0x{Size:X} bytes at specific address 0x{Address:X8} (reserve={Reserve}, commit={Commit})",
+			size, lpAddress, reserve, commit);
 		
 		return lpAddress;
 	}
@@ -1154,55 +1211,132 @@ public class ProcessEnvironment
 	/// <summary>
 	/// Allocates memory from the free list.
 	/// </summary>
-	private uint AllocateFromFreeList(uint size)
+	private uint AllocateFromFreeList(uint size, bool reserve, bool commit, bool topDown, uint avoidStart, uint avoidEnd)
 	{
-		// Try to find a suitable free block
-		for (int i = 0; i < _freeList.Count; i++)
+		const uint PAGE_SIZE = 0x1000;
+		const uint ALLOC_GRAN = 0x10000;
+		uint align = reserve ? ALLOC_GRAN : PAGE_SIZE;
+		
+		// Helper to validate a candidate range and avoid reserved internal ranges
+		bool IsCandidateValid(uint baseAddr, uint span)
 		{
-			var block = _freeList[i];
-			if (block.Size >= size)
+			if (!RangeFits(baseAddr, span, Memory.Size)) return false;
+			// reject if overlaps [avoidStart, avoidEnd)
+			ulong start = baseAddr;
+			ulong end = start + span;
+			return (end <= avoidStart) || (start >= avoidEnd);
+		}
+		
+		// Search free list according to direction
+		if (_freeList.Count > 0)
+		{
+			if (topDown)
 			{
-				// Found a suitable block
-				var address = block.Address;
-				
-				if (block.Size > size)
+				for (int i = _freeList.Count - 1; i >= 0; i--)
 				{
-					// Split the block - keep remainder in free list
-					block.Address += size;
-					block.Size -= size;
+					var block = _freeList[i];
+					// choose the highest aligned start within this block where [addr, addr+size) fits
+					uint blockStart = block.Address;
+					uint blockEnd = block.EndAddress;
+					if (block.Size < size) continue;
+					uint maxStart = blockEnd - size;
+					uint cand = AlignDown(maxStart, align);
+					if (cand < blockStart) cand = blockStart; // clamp
+					// Also ensure alignment
+					cand = AlignUp(cand, align);
+					if (cand < blockStart || cand + size > blockEnd) continue;
+					if (!IsCandidateValid(cand, size)) continue;
+					
+					// Carve this allocation from the end of the block
+					uint usedStart = cand;
+					uint usedEnd = cand + size;
+					// Adjust free block(s)
+					if (block.Address == usedStart && block.EndAddress == usedEnd)
+					{
+						_freeList.RemoveAt(i);
+					}
+					else if (block.Address == usedStart)
+					{
+						block.Address = usedEnd;
+						block.Size = blockEnd - usedEnd;
+					}
+					else if (block.EndAddress == usedEnd)
+					{
+						block.Size = usedStart - block.Address;
+					}
+					else
+					{
+						// Split into two blocks
+						var after = new MemoryBlock(usedEnd, blockEnd - usedEnd, true);
+						block.Size = usedStart - block.Address;
+						_freeList.Add(after);
+					}
+					
+					_allocatedBlocks[usedStart] = new MemoryBlock(usedStart, size, false);
+					return usedStart;
 				}
-				else
+			}
+			else
+			{
+				for (int i = 0; i < _freeList.Count; i++)
 				{
-					// Use entire block
-					_freeList.RemoveAt(i);
+					var block = _freeList[i];
+					if (block.Size < size) continue;
+					uint cand = AlignUp(block.Address, align);
+					if (cand + size > block.EndAddress) continue;
+					if (!IsCandidateValid(cand, size))
+					{
+						// Try to move to after avoidEnd if it splits inside this block
+						if (block.Address < avoidStart && block.EndAddress > avoidStart)
+						{
+							cand = AlignUp(avoidEnd, align);
+							if (cand + size > block.EndAddress) continue;
+							if (!IsCandidateValid(cand, size)) continue;
+						}
+						else continue;
+					}
+					// Carve from start
+					uint usedStart = cand;
+					uint usedEnd = cand + size;
+					if (block.Address == usedStart && block.EndAddress == usedEnd)
+					{
+						_freeList.RemoveAt(i);
+					}
+					else if (block.Address == usedStart)
+					{
+						block.Address = usedEnd;
+						block.Size = block.EndAddress - usedEnd;
+					}
+					else if (block.EndAddress == usedEnd)
+					{
+						block.Size = usedStart - block.Address;
+					}
+					else
+					{
+						var after = new MemoryBlock(usedEnd, block.EndAddress - usedEnd, true);
+						block.Size = usedStart - block.Address;
+						_freeList.Add(after);
+					}
+					_allocatedBlocks[usedStart] = new MemoryBlock(usedStart, size, false);
+					return usedStart;
 				}
-				
-				// Add to allocated blocks
-				_allocatedBlocks[address] = new MemoryBlock(address, size, false);
-				
-				// Zero out the memory
-				Memory.WriteBytes(address, new byte[size]);
-				
-				_logger.LogInformation("[ProcessEnv] VirtualAlloc: Allocated 0x{Size:X} bytes from free list at 0x{Address:X8}",
-					size, address);
-				
-				return address;
 			}
 		}
 		
-		// No suitable free block found - allocate from the end
-		var addr = AlignUp(_allocPtr, 0x1000);
+		// No suitable free block found - allocate from the end (bump pointer)
+		uint addr = AlignUp(_allocPtr, align);
+		// Skip over avoid range if we would overlap it
+		if (!(addr + size <= avoidStart || addr >= avoidEnd))
+		{
+			addr = AlignUp(avoidEnd, align);
+		}
+		if (!RangeFits(addr, size, Memory.Size))
+		{
+			_logger.LogWarning("[ProcessEnv] VirtualAlloc: bump-pointer allocation would overflow (addr=0x{Addr:X8}, size=0x{Size:X8})", addr, size);
+			return 0;
+		}
 		_allocPtr = addr + size;
-		
-		// Add to allocated blocks
 		_allocatedBlocks[addr] = new MemoryBlock(addr, size, false);
-		
-		// Zero out the memory
-		Memory.WriteBytes(addr, new byte[size]);
-		
-		_logger.LogInformation("[ProcessEnv] VirtualAlloc: Allocated 0x{Size:X} bytes at end 0x{Address:X8}",
-			size, addr);
-		
 		return addr;
 	}
 
@@ -1358,6 +1492,13 @@ public class ProcessEnvironment
 	}
 
 	private static uint AlignUp(uint value, uint align) => (value + (align - 1)) & ~(align - 1);
+	private static uint AlignDown(uint value, uint align) => value & ~(align - 1);
+	private static bool RangeFits(uint baseAddr, uint size, ulong limit)
+	{
+		ulong start = baseAddr;
+		ulong end = start + size;
+		return end >= start && end <= limit;
+	}
 
 	private record struct HeapState(uint Base, uint Current, uint Limit);
 

@@ -66,6 +66,20 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		// Headers include DOS header, NT headers, section table, etc.
 		var sizeOfHeaders = opt.SizeOfHeaders;
 		
+		// Compute first section RVA and headerEndRva up front so other components can use it
+		uint minSectionRva = uint.MaxValue;
+		foreach (var section in pe.Sections.Where(s => s.Rva > 0))
+		{
+			if (section.Rva < minSectionRva)
+			{
+				minSectionRva = section.Rva;
+			}
+		}
+		// Determine effective header size: use minimum of SizeOfHeaders and first section RVA
+		uint headerEndRva = (minSectionRva == uint.MaxValue || minSectionRva > sizeOfHeaders)
+			? sizeOfHeaders
+			: minSectionRva;
+		
 		// Safety check: ensure SizeOfHeaders is reasonable (typically <= 4KB for most PE files)
 		// Some malformed PE files might have invalid SizeOfHeaders values
 		if (sizeOfHeaders > 0 && sizeOfHeaders <= 0x10000) // Cap at 64KB
@@ -74,24 +88,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			
 			try
 			{
-				// Additional safety: ensure we don't overwrite any sections
-				// Headers should end before the first section starts
-				// Find the minimum RVA among all sections
-				uint minSectionRva = uint.MaxValue;
-				foreach (var section in pe.Sections.Where(s => s.Rva > 0))
-				{
-					if (section.Rva < minSectionRva)
-					{
-						minSectionRva = section.Rva;
-					}
-				}
-				
-				// Determine effective header size: use minimum of SizeOfHeaders and first section RVA
-				// If no sections found or all sections start after SizeOfHeaders, use SizeOfHeaders
-				uint headerEndRva = (minSectionRva == uint.MaxValue || minSectionRva > sizeOfHeaders) 
-					? sizeOfHeaders 
-					: minSectionRva;
-				
+				// We already computed headerEndRva above using the first section RVA.
 				// Safely calculate header size, ensuring we don't overflow int.MaxValue
 				long headerSizeLong = Math.Min((long)sizeOfHeaders, (long)headerEndRva);
 				if (headerSizeLong > int.MaxValue)
@@ -172,7 +169,36 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 
 		var importMap = BuildImportMap(image, imageBase);
 		var (exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal) = BuildExportMaps(image, imageBase);
-		return new LoadedImage(imageBase, entryPoint, imageSize, importMap, path, exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal, (ushort)subsystem);
+
+		// Stack sizes from optional header (PE-provided)
+		uint sizeOfStackReserve;
+		uint sizeOfStackCommit;
+		try
+		{
+			sizeOfStackReserve = (uint)opt.SizeOfStackReserve;
+			sizeOfStackCommit = (uint)opt.SizeOfStackCommit;
+		}
+		catch
+		{
+			// Fallback if types are larger than uint (shouldn't happen for PE32), cap to uint max
+			sizeOfStackReserve = (uint)Math.Min((ulong)uint.MaxValue, Convert.ToUInt64(opt.SizeOfStackReserve));
+			sizeOfStackCommit  = (uint)Math.Min((ulong)uint.MaxValue, Convert.ToUInt64(opt.SizeOfStackCommit));
+		}
+
+		return new LoadedImage(
+			imageBase,
+			entryPoint,
+			imageSize,
+			importMap,
+			path,
+			exportsByName,
+			exportsByOrdinal,
+			forwardedByName,
+			forwardedByOrdinal,
+			(ushort)subsystem,
+			headerEndRva,
+			sizeOfStackReserve,
+			sizeOfStackCommit);
 	}
 
 	// Syscall dispatcher address - this is where all import stubs will call into

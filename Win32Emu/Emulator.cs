@@ -244,8 +244,21 @@ public sealed class Emulator : IDisposable
         _logger.LogInformation("[Loader] Selected CPU Emulator: {CpuBackend}", actualCpuBackend);
         
         _cpu.SetEip(_image.EntryPointAddress);
-        _cpu.SetRegister("ESP", 0x00200000);
-        _cpu.SetRegister("EBP", 0x00200000); // Initialize frame pointer to match stack pointer
+        // Initialize stack using PE-provided SizeOfStackCommit when available
+        var stackBase = 0x00200000u; // keep existing base location for now
+        var commitSize = _image.SizeOfStackCommit;
+        if (commitSize == 0)
+        {
+            commitSize = 0x8000; // sensible default if PE doesn't specify
+        }
+        if (commitSize >= stackBase)
+        {
+            // Avoid underflow; keep at least one page
+            commitSize = stackBase - 0x1000;
+        }
+        var initialEsp = stackBase - commitSize;
+        _cpu.SetRegister("ESP", initialEsp);
+        _cpu.SetRegister("EBP", initialEsp); // Initialize frame pointer to match stack pointer
 
         _dispatcher = new Win32Dispatcher(_logger);
 
@@ -538,6 +551,28 @@ public sealed class Emulator : IDisposable
             const uint SUSPICIOUS_MEMORY_RANGE_END = 0x02000000;
             
             var eipBeforeStep = _cpu!.GetEip();
+            
+            // Guard: detect execution in PE header region (e.g., 0x00400000–0x00401000)
+            // This typically indicates a corrupted return address or bad jump target
+            var imgForHeaderCheck = _env!.GetMainExecutable() ?? _image!;
+            if (imgForHeaderCheck != null)
+            {
+                var imageBase = imgForHeaderCheck.BaseAddress;
+                var headerEndVa = imageBase + imgForHeaderCheck.HeaderEndRva;
+                if (eipBeforeStep >= imageBase && eipBeforeStep < headerEndVa)
+                {
+                    _logger.LogError("[Emulator] EIP=0x{Eip:X8} is in PE header region [0x{Base:X8}-0x{End:X8}). Attempting to recover by simulating a return.", eipBeforeStep, imageBase, headerEndVa);
+                    if (TrySimulateReturn("PE header EIP recovery", eipBeforeStep))
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"EIP=0x{eipBeforeStep:X8} in PE header region. Failed to auto-recover.");
+                    }
+                }
+            }
+            
             if (eipBeforeStep >= SUSPICIOUS_MEMORY_RANGE_START && eipBeforeStep < SUSPICIOUS_MEMORY_RANGE_END)
             {
                 // EIP in range 0x01000000-0x01FFFFFF is suspicious - likely executing data or unmapped memory
