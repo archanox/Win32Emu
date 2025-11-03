@@ -123,7 +123,16 @@ public class ComVtableValidationTests
 			repoRoot = parent.FullName;
 		}
 
-		return Path.Combine(repoRoot!, "retrowin32", "exe", relativePath);
+		if (repoRoot == null)
+			throw new InvalidOperationException("Could not locate repository root: 'Win32Emu.slnx' not found in any parent directory.");
+
+		// Ensure relativePath is not rooted to avoid truncating the combined path
+		if (Path.IsPathRooted(relativePath))
+		{
+			relativePath = relativePath.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+		}
+
+		return Path.Combine(repoRoot, "retrowin32", "exe", relativePath);
 	}
 
 	private class TestEmulatorHost : IEmulatorHost

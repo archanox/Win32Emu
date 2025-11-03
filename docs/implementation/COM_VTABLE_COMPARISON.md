@@ -141,4 +141,4 @@ If desired for compatibility or other reasons, could consider:
 
 **Win32Emu's COM vtable emulation is functioning correctly.** The INT3 breakpoint approach is a valid alternative to retrowin32's syscall-based shims, with trade-offs that favor simplicity and performance over native-code compatibility. All validation tests pass, confirming correct parameter passing, stack management, and return value handling.
 
-No fixes are required. The user's suspicion of "fucky" virtual function emulation was unfounded - the implementation is sound and validated.
+No fixes are required. The user's suspicion of problematic virtual function emulation was unfounded - the implementation is sound and validated.
