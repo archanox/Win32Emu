@@ -2,6 +2,7 @@ using AsmResolver;
 using AsmResolver.PE;
 using AsmResolver.PE.Exports;
 using AsmResolver.PE.File;
+using AsmResolver.PE.Relocations;
 using Microsoft.Extensions.Logging;
 using Win32Emu.Memory;
 using System.IO;
@@ -10,8 +11,8 @@ using System.Linq;
 namespace Win32Emu.Loader;
 
 /// <summary>
-/// PE loader using a single PEImage load. Maps section raw data and replaces IAT entries with synthetic
-/// addresses for interception via an import map. Relocations not yet handled.
+/// PE loader using a single PEImage load. Maps section raw data, applies base relocations if needed,
+/// and replaces IAT entries with synthetic addresses for interception via an import map.
 /// </summary>
 public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 {
@@ -166,6 +167,11 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				logger?.LogWarning("Skipping corrupted section {SectionName} at RVA {SectionRva:X8}: {ErrorMessage}", section.Name, section.Rva, ex.Message);
 			}
 		}
+
+		// Apply base relocations if the image is loaded at a different address than preferred
+		// Note: For emulation purposes, we typically load at the preferred base, but this
+		// implements the full PE loader behavior for correctness
+		ApplyRelocations(image, imageBase, opt.ImageBase, vm, logger);
 
 		var importMap = BuildImportMap(image, imageBase);
 		var (exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal) = BuildExportMaps(image, imageBase);
@@ -382,5 +388,157 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		}
 
 		return (byName, byOrdinal, forwardedByName, forwardedByOrdinal);
+	}
+
+	/// <summary>
+	/// Applies base relocations to the loaded PE image if it's loaded at a different address than preferred.
+	/// Base relocations fix up absolute addresses in the code and data sections when the image cannot be
+	/// loaded at its preferred ImageBase address.
+	/// </summary>
+	/// <param name="image">The PE image containing relocation information</param>
+	/// <param name="actualBase">The actual address where the image is loaded</param>
+	/// <param name="preferredBase">The preferred ImageBase address from the PE header</param>
+	/// <param name="vm">Virtual memory to apply relocations to</param>
+	/// <param name="logger">Logger for diagnostic messages</param>
+	private static void ApplyRelocations(PEImage image, uint actualBase, ulong preferredBase, VirtualMemory vm, ILogger? logger)
+	{
+		// Calculate the delta (difference) between actual and preferred base addresses
+		// Note: For PE32, both values should fit in 32 bits
+		var delta = (long)actualBase - (long)preferredBase;
+		
+		// If loaded at preferred base, no relocations needed
+		if (delta == 0)
+		{
+			logger?.LogDebug("[Loader] Image loaded at preferred base 0x{PreferredBase:X8}, no relocations needed", preferredBase);
+			return;
+		}
+
+		// Check if relocations are available
+		if (image.Relocations == null || image.Relocations.Count == 0)
+		{
+			logger?.LogWarning("[Loader] Image loaded at 0x{ActualBase:X8} instead of preferred 0x{PreferredBase:X8}, but no relocations available. Image may not function correctly.", 
+				actualBase, preferredBase);
+			return;
+		}
+
+		logger?.LogInformation("[Loader] Applying {Count} base relocations (delta: 0x{Delta:X})", image.Relocations.Count, delta);
+
+		var relocationsApplied = 0;
+		var relocationsFailed = 0;
+
+		// Process each relocation entry
+		foreach (var relocation in image.Relocations)
+		{
+			try
+			{
+				// Get the RVA of the location to be relocated
+				// The Location property is an ISegmentReference which needs to be cast to get the Rva
+				if (relocation.Location == null)
+				{
+					logger?.LogWarning("[Loader] Skipping relocation with null location");
+					relocationsFailed++;
+					continue;
+				}
+
+				// Try to get RVA from the location
+				uint rva;
+				if (relocation.Location is SegmentReference segRef)
+				{
+					rva = segRef.Rva;
+				}
+				else if (relocation.Location is RelativeReference relRef)
+				{
+					rva = relRef.Rva;
+				}
+				else if (relocation.Location is VirtualAddress virtAddr)
+				{
+					rva = virtAddr.Rva;
+				}
+				else
+				{
+					logger?.LogWarning("[Loader] Skipping relocation with unsupported location type: {Type}", 
+						relocation.Location.GetType().Name);
+					relocationsFailed++;
+					continue;
+				}
+
+				var va = actualBase + rva;
+
+				// Apply the relocation based on its type
+				switch (relocation.Type)
+				{
+					case RelocationType.Absolute:
+						// IMAGE_REL_BASED_ABSOLUTE (0): No-op, used for padding
+						break;
+
+					case RelocationType.HighLow:
+						// IMAGE_REL_BASED_HIGHLOW (3): Apply all 32 bits of delta
+						// This is the most common relocation type for PE32
+						{
+							var originalValue = vm.Read32(va);
+							var newValue = (uint)((long)originalValue + delta);
+							vm.Write32(va, newValue);
+							relocationsApplied++;
+							logger?.LogTrace("[Loader] Applied HIGHLOW relocation at RVA 0x{Rva:X8} (VA 0x{Va:X8}): 0x{Original:X8} -> 0x{New:X8}", 
+								rva, va, originalValue, newValue);
+						}
+						break;
+
+					case RelocationType.High:
+						// IMAGE_REL_BASED_HIGH (1): Apply high 16 bits of delta to high 16 bits
+						{
+							var originalValue = vm.Read16(va);
+							var newValue = (ushort)(originalValue + (delta >> 16));
+							vm.Write16(va, newValue);
+							relocationsApplied++;
+							logger?.LogTrace("[Loader] Applied HIGH relocation at RVA 0x{Rva:X8} (VA 0x{Va:X8}): 0x{Original:X4} -> 0x{New:X4}", 
+								rva, va, originalValue, newValue);
+						}
+						break;
+
+					case RelocationType.Low:
+						// IMAGE_REL_BASED_LOW (2): Apply low 16 bits of delta to low 16 bits
+						{
+							var originalValue = vm.Read16(va);
+							var newValue = (ushort)(originalValue + (delta & 0xFFFF));
+							vm.Write16(va, newValue);
+							relocationsApplied++;
+							logger?.LogTrace("[Loader] Applied LOW relocation at RVA 0x{Rva:X8} (VA 0x{Va:X8}): 0x{Original:X4} -> 0x{New:X4}", 
+								rva, va, originalValue, newValue);
+						}
+						break;
+
+					case RelocationType.Dir64:
+						// IMAGE_REL_BASED_DIR64 (10): Apply 64-bit delta (PE32+ only, but handle for completeness)
+						// This should not occur in PE32 files, but if it does, log a warning
+						logger?.LogWarning("[Loader] Encountered DIR64 relocation in PE32 image at RVA 0x{Rva:X8}, skipping", rva);
+						relocationsFailed++;
+						break;
+
+					case RelocationType.HighAdj:
+						// IMAGE_REL_BASED_HIGHADJ (4): Complex relocation occupying two slots
+						// This is rarely used and requires special handling
+						logger?.LogWarning("[Loader] Encountered unsupported HIGHADJ relocation at RVA 0x{Rva:X8}, skipping", rva);
+						relocationsFailed++;
+						break;
+
+					default:
+						// Unknown or unsupported relocation type
+						logger?.LogWarning("[Loader] Encountered unknown relocation type {Type} at RVA 0x{Rva:X8}, skipping", 
+							relocation.Type, rva);
+						relocationsFailed++;
+						break;
+				}
+			}
+			catch (Exception ex)
+			{
+				logger?.LogError(ex, "[Loader] Failed to apply relocation at RVA 0x{Rva:X8}", 
+					relocation.Location?.Rva ?? 0);
+				relocationsFailed++;
+			}
+		}
+
+		logger?.LogInformation("[Loader] Relocations complete: {Applied} applied, {Failed} failed", 
+			relocationsApplied, relocationsFailed);
 	}
 }
