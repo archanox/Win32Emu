@@ -972,8 +972,15 @@ public class ProcessEnvironment
 	{
 		if (!_heaps.TryGetValue(hHeap, out var hs))
 		{
-			var addr = SimpleAlloc(dwBytes);
-			_heapAllocationSizes[addr] = dwBytes;
+			// No heap with this handle - use VirtualAlloc for fallback allocation
+			// This allows the memory to be properly freed later
+			const uint MEM_COMMIT = 0x00001000;
+			const uint PAGE_READWRITE = 0x04;
+			var addr = VirtualAlloc(0, dwBytes, MEM_COMMIT, PAGE_READWRITE);
+			if (addr != 0)
+			{
+				_heapAllocationSizes[addr] = dwBytes;
+			}
 			return addr;
 		}
 
@@ -987,15 +994,59 @@ public class ProcessEnvironment
 			return ptr;
 		}
 
-		var fallbackAddr = SimpleAlloc(dwBytes);
-		_heapAllocationSizes[fallbackAddr] = dwBytes;
+		// Heap is full - use VirtualAlloc for fallback allocation
+		// This allows the memory to be properly freed later
+		const uint MEM_COMMIT_2 = 0x00001000;
+		const uint PAGE_READWRITE_2 = 0x04;
+		var fallbackAddr = VirtualAlloc(0, dwBytes, MEM_COMMIT_2, PAGE_READWRITE_2);
+		if (fallbackAddr != 0)
+		{
+			_heapAllocationSizes[fallbackAddr] = dwBytes;
+		}
 		return fallbackAddr;
 	}
 
 	public uint HeapFree(uint hHeap, uint lpMem)
 	{
-		// Remove allocation size tracking
+		if (lpMem == 0)
+		{
+			_logger.LogWarning("[ProcessEnv] HeapFree: Invalid address 0x00000000");
+			return 0;
+		}
+
+		// Check if this allocation has a tracked size
+		if (!_heapAllocationSizes.TryGetValue(lpMem, out var size))
+		{
+			_logger.LogWarning("[ProcessEnv] HeapFree: Address 0x{Address:X8} not found in allocation tracking", lpMem);
+			return 0;
+		}
+
+		// Remove from tracking
 		_heapAllocationSizes.Remove(lpMem);
+
+		// Check if this allocation is within a heap's memory pool
+		if (_heaps.TryGetValue(hHeap, out var hs))
+		{
+			// Check if the address is within the heap's range
+			if (lpMem >= hs.Base && lpMem < hs.Limit)
+			{
+				// This is a heap pool allocation - don't free it individually
+				// The memory will be freed when the heap is destroyed
+				_logger.LogDebug("[ProcessEnv] HeapFree: Address 0x{Address:X8} is within heap pool, not freeing individually", lpMem);
+				return 1;
+			}
+		}
+
+		// This is a fallback allocation (from VirtualAlloc) - free it properly
+		const uint MEM_RELEASE = 0x8000;
+		var success = VirtualFree(lpMem, 0, MEM_RELEASE);
+		if (!success)
+		{
+			_logger.LogWarning("[ProcessEnv] HeapFree: VirtualFree failed for address 0x{Address:X8}", lpMem);
+			return 0;
+		}
+
+		_logger.LogDebug("[ProcessEnv] HeapFree: Freed fallback allocation at 0x{Address:X8}, size=0x{Size:X}", lpMem, size);
 		return 1;
 	}
 
