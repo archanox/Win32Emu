@@ -1041,7 +1041,7 @@ public class ProcessEnvironment
 
 		// This is a fallback allocation (from VirtualAlloc) - free it properly
 		var freeResult = VirtualFree(lpMem, 0, MEM_RELEASE);
-		if (freeResult == 0)
+		if (!freeResult)
 		{
 			_logger.LogWarning("[ProcessEnv] HeapFree: VirtualFree failed for address 0x{Address:X8}", lpMem);
 			return 0;
