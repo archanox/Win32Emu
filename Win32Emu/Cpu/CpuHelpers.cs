@@ -121,8 +121,9 @@ public static class CpuHelpers
 					// Check that savedEbp is also within stack region (optional, but plausible)
 					savedEbpValid = (savedEbp >= stackBottom) && (savedEbp <= esp);
 				}
-				catch
+				catch (Exception ex)
 				{
+					logger?.LogTrace(ex, "[{LogPrefix}] Exception while probing saved EBP at 0x{EbpFromStack:X8}", logPrefix, ebpFromStack);
 					savedEbpValid = false;
 				}
 			}
@@ -201,6 +202,9 @@ public static class CpuHelpers
 		}
 		catch (Exception ex)
 		{
+			// Do not catch critical exceptions that should not be handled
+			if (ex is StackOverflowException || ex is OutOfMemoryException || ex is ThreadAbortException)
+				throw;
 			logger?.LogTrace(ex, "[{LogPrefix}] Failed to restore EBP from stack", logPrefix);
 		}
 	}
