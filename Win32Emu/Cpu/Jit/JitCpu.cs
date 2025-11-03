@@ -5721,7 +5721,6 @@ public class JitCpu : IAsyncCpu
 		
 		al &= 0x0F;
 		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
-		UpdateLogicResultFlags(al);
 	}
 	
 	private enum LogicOp
