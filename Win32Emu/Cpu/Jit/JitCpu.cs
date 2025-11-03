@@ -5311,12 +5311,10 @@ public class JitCpu : IAsyncCpu
 	{
 		var dest = GetOperandValue(insn, 0);
 		var src = GetOperandValue(insn, 1);
-		var count = (byte)(insn.Op2Kind == OpKind.Immediate8 ? insn.Immediate8 : (_ecx & 0x1F));
+		var count = (byte)((insn.Op2Kind == OpKind.Immediate8 ? insn.Immediate8 : _ecx) & 0x1F);
 		
 		if (count == 0)
 			return;
-		
-		count &= 0x1F;
 		
 		ulong combined = ((ulong)src << 32) | dest;
 		var carryOut = ((combined >> (count - 1)) & 1) != 0;
