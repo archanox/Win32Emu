@@ -208,4 +208,73 @@ public static class CpuHelpers
 			logger?.LogTrace(ex, "[{LogPrefix}] Failed to restore EBP from stack", logPrefix);
 		}
 	}
+
+	/// <summary>
+	/// Validates and logs the state of callee-saved registers before/after API calls.
+	/// Helps diagnose register corruption issues.
+	/// </summary>
+	/// <param name="cpu">The CPU instance</param>
+	/// <param name="saved">Previously saved register values</param>
+	/// <param name="memorySize">Total memory size for validation</param>
+	/// <param name="logger">Logger for diagnostic output</param>
+	/// <param name="context">Context string for log messages (e.g., "COM call", "Syscall")</param>
+	/// <param name="logLevel">Minimum log level for validation messages (default: Debug)</param>
+	public static void ValidateRegisterState(
+		ICpu cpu,
+		SavedCalleeSavedRegisters saved,
+		ulong memorySize,
+		ILogger? logger = null,
+		string context = "API call",
+		LogLevel logLevel = LogLevel.Debug)
+	{
+		if (logger == null || !logger.IsEnabled(logLevel))
+			return;
+
+		var currentEbx = cpu.GetRegister("EBX");
+		var currentEsi = cpu.GetRegister("ESI");
+		var currentEdi = cpu.GetRegister("EDI");
+		var currentEbp = cpu.GetRegister("EBP");
+		var currentEsp = cpu.GetRegister("ESP");
+
+		// Check if callee-saved registers were preserved
+		var ebxPreserved = currentEbx == saved.Ebx;
+		var esiPreserved = currentEsi == saved.Esi;
+		var ediPreserved = currentEdi == saved.Edi;
+		var ebpPreserved = currentEbp == saved.Ebp;
+
+		// Check if EBP is valid (not corrupted)
+		var ebpValid = IsEbpValid(currentEbp, memorySize);
+		var savedEbpValid = IsEbpValid(saved.Ebp, memorySize);
+
+		// Log detailed register state
+		logger.Log(logLevel,
+			"[RegisterValidation] After {Context}: EBX={Ebx:X8} (saved={SavedEbx:X8}, preserved={EbxPreserved}), " +
+			"ESI={Esi:X8} (saved={SavedEsi:X8}, preserved={EsiPreserved}), " +
+			"EDI={Edi:X8} (saved={SavedEdi:X8}, preserved={EdiPreserved}), " +
+			"EBP={Ebp:X8} (saved={SavedEbp:X8}, preserved={EbpPreserved}, valid={EbpValid}, savedValid={SavedEbpValid}), " +
+			"ESP={Esp:X8}",
+			context,
+			currentEbx, saved.Ebx, ebxPreserved,
+			currentEsi, saved.Esi, esiPreserved,
+			currentEdi, saved.Edi, ediPreserved,
+			currentEbp, saved.Ebp, ebpPreserved, ebpValid, savedEbpValid,
+			currentEsp);
+
+		// Warn if registers were not preserved (violation of calling convention)
+		if (!ebxPreserved || !esiPreserved || !ediPreserved)
+		{
+			logger.LogWarning(
+				"[RegisterValidation] Callee-saved registers NOT preserved after {Context}: " +
+				"EBX changed={EbxChanged}, ESI changed={EsiChanged}, EDI changed={EdiChanged}",
+				context, !ebxPreserved, !esiPreserved, !ediPreserved);
+		}
+
+		// Warn if EBP was corrupted during the call
+		if (savedEbpValid && !ebpValid && !ebpPreserved)
+		{
+			logger.LogWarning(
+				"[RegisterValidation] EBP corrupted during {Context}: was valid 0x{SavedEbp:X8}, now invalid 0x{CurrentEbp:X8}",
+				context, saved.Ebp, currentEbp);
+		}
+	}
 }

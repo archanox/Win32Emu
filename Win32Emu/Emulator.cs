@@ -928,7 +928,7 @@ public sealed class Emulator : IDisposable
                         _cpu.SetEip(retEip);
                         
                         // Restore callee-saved registers
-                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
                     }
                 }
                 else if (step.IsCall && !IsImportStubAddress(step.CallTarget))
@@ -971,8 +971,8 @@ public sealed class Emulator : IDisposable
                         _cpu.SetEip(retEip);
                         LogDebug($"[Import] Set EIP to 0x{retEip:X8}");
                         
-                        // Restore callee-saved registers
-                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                        // Restore callee-saved registers (with EBP validation)
+                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
                         
                         // Log final state after import return
                         LogDebug($"[Import] After return: EIP=0x{_cpu.GetEip():X8} ESP=0x{_cpu.GetRegister("ESP"):X8} EBP=0x{_cpu.GetRegister("EBP"):X8}");
@@ -996,8 +996,8 @@ public sealed class Emulator : IDisposable
                         _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
                         _cpu.SetEip(retEip);
                         
-                        // Restore callee-saved registers
-                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                        // Restore callee-saved registers (with EBP validation)
+                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
                         
                         _logger.LogWarning("[Import] Simulated return to 0x{RetEip:X8} with EAX=0 (this may cause incorrect behavior)", retEip);
                     }
@@ -1229,7 +1229,7 @@ public sealed class Emulator : IDisposable
                         _cpu.SetEip(retEip);
                         
                         // Restore callee-saved registers
-                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
                     }
                 }
                 else if (step.IsCall && !IsImportStubAddress(step.CallTarget))
@@ -1256,7 +1256,7 @@ public sealed class Emulator : IDisposable
                         _cpu.SetEip(retEip);
                         
                         // Restore callee-saved registers
-                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
                     }
                     }
                 }
@@ -1344,7 +1344,7 @@ public sealed class Emulator : IDisposable
                 _cpu.SetRegister("EAX", ret);
                 
                 // Restore callee-saved registers
-                CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
                 
                 // Simulate stdcall return: pop return address + arguments
                 var esp = _cpu.GetRegister("ESP");
@@ -1360,7 +1360,7 @@ public sealed class Emulator : IDisposable
                 _logger.LogError("[Import] Dispatcher failed to invoke {Dll}!{Name}", dll, name);
                 
                 // Restore callee-saved registers
-                CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
                 
                 // Simulate return with error
                 var esp = _cpu.GetRegister("ESP");
@@ -1497,8 +1497,12 @@ public sealed class Emulator : IDisposable
                 // Restore ESP to original value so CPU can execute RET instructions naturally
                 _cpu.SetRegister("ESP", originalEsp);
                 
-                // Restore callee-saved registers
-                CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                // Restore callee-saved registers (with EBP validation to prevent corruption)
+                CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
+                
+                // Validate register state after syscall (helps diagnose corruption issues)
+                // Uses logging level check instead of debug mode to allow selective enablement
+                CpuHelpers.ValidateRegisterState(_cpu, saved, _vm!.Size, _logger, $"Syscall {dll}!{name}", LogLevel.Debug);
                 
                 _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, argBytes={ArgBytes}, CPU will execute RET naturally", ret, argBytes);
                 
@@ -1546,7 +1550,8 @@ public sealed class Emulator : IDisposable
                 _cpu.SetRegister("EAX", 0);
                 // Restore ESP to original value
                 _cpu.SetRegister("ESP", originalEsp);
-                CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
+                // Restore callee-saved registers (with EBP validation)
+                CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
             }
         }
         else

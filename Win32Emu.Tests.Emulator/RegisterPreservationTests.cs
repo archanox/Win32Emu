@@ -1,4 +1,8 @@
 using Xunit;
+using Win32Emu.Cpu;
+using Win32Emu.Cpu.Iced;
+using Win32Emu.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Win32Emu.Tests.Emulator;
 
@@ -8,6 +12,119 @@ namespace Win32Emu.Tests.Emulator;
 /// </summary>
 public class RegisterPreservationTests
 {
+    [Fact]
+    public void SaveCalleeSavedRegisters_ShouldSaveAllRequiredRegisters()
+    {
+        // Arrange
+        var memory = new VirtualMemory(1024 * 1024); // 1MB
+        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        
+        // Set registers to known values
+        cpu.SetRegister("EBX", 0x11111111);
+        cpu.SetRegister("ESI", 0x22222222);
+        cpu.SetRegister("EDI", 0x33333333);
+        cpu.SetRegister("EBP", 0x44444444);
+        cpu.SetRegister("EAX", 0x55555555); // caller-saved, not included
+        cpu.SetRegister("ECX", 0x66666666); // caller-saved, not included
+        
+        // Act
+        var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+        
+        // Assert
+        Assert.Equal(0x11111111u, saved.Ebx);
+        Assert.Equal(0x22222222u, saved.Esi);
+        Assert.Equal(0x33333333u, saved.Edi);
+        Assert.Equal(0x44444444u, saved.Ebp);
+    }
+
+    [Fact]
+    public void RestoreCalleeSavedRegisters_ShouldRestoreAllRegisters()
+    {
+        // Arrange
+        var memory = new VirtualMemory(1024 * 1024);
+        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        
+        var saved = new SavedCalleeSavedRegisters
+        {
+            Ebx = 0x11111111,
+            Esi = 0x22222222,
+            Edi = 0x33333333,
+            Ebp = 0x44444444
+        };
+        
+        // Modify registers to different values
+        cpu.SetRegister("EBX", 0xAAAAAAAA);
+        cpu.SetRegister("ESI", 0xBBBBBBBB);
+        cpu.SetRegister("EDI", 0xCCCCCCCC);
+        cpu.SetRegister("EBP", 0xDDDDDDDD);
+        
+        // Act
+        CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
+        
+        // Assert
+        Assert.Equal(0x11111111u, cpu.GetRegister("EBX"));
+        Assert.Equal(0x22222222u, cpu.GetRegister("ESI"));
+        Assert.Equal(0x33333333u, cpu.GetRegister("EDI"));
+        Assert.Equal(0x44444444u, cpu.GetRegister("EBP"));
+    }
+
+    [Fact]
+    public void RestoreCalleeSavedRegisters_WithSkipInvalidEbp_ShouldNotRestoreInvalidEbp()
+    {
+        // Arrange
+        var memory = new VirtualMemory(1024 * 1024);
+        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        
+        // Save state with invalid EBP (import hook address)
+        var saved = new SavedCalleeSavedRegisters
+        {
+            Ebx = 0x11111111,
+            Esi = 0x22222222,
+            Edi = 0x33333333,
+            Ebp = 0x0F000070 // Import hook address - invalid
+        };
+        
+        // Set current EBP to a valid stack address
+        cpu.SetRegister("EBP", 0x00100000);
+        
+        // Act
+        CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
+        
+        // Assert
+        Assert.Equal(0x11111111u, cpu.GetRegister("EBX")); // Other registers restored
+        Assert.Equal(0x22222222u, cpu.GetRegister("ESI"));
+        Assert.Equal(0x33333333u, cpu.GetRegister("EDI"));
+        Assert.Equal(0x00100000u, cpu.GetRegister("EBP")); // EBP NOT restored (kept current valid value)
+    }
+
+    [Fact]
+    public void IsEbpValid_ShouldReturnFalse_ForImportHookAddresses()
+    {
+        // Arrange & Act & Assert
+        Assert.False(CpuHelpers.IsEbpValid(0x0F000000, 1024 * 1024)); // Import hook base
+        Assert.False(CpuHelpers.IsEbpValid(0x0F000070, 1024 * 1024)); // Import hook address
+        Assert.False(CpuHelpers.IsEbpValid(0x0FFFFFFF, 1024 * 1024)); // Import hook end
+    }
+
+    [Fact]
+    public void IsEbpValid_ShouldReturnFalse_ForZeroAndLowAddresses()
+    {
+        // Arrange & Act & Assert
+        Assert.False(CpuHelpers.IsEbpValid(0, 1024 * 1024)); // Zero
+        Assert.False(CpuHelpers.IsEbpValid(0x00000FFF, 1024 * 1024)); // Below MIN_VALID_EBP
+    }
+
+    [Fact]
+    public void IsEbpValid_ShouldReturnTrue_ForValidStackAddresses()
+    {
+        // Arrange - use larger memory size to accommodate stack addresses
+        var memorySize = (ulong)(2 * 1024 * 1024); // 2MB = 0x200000
+        
+        // Act & Assert
+        Assert.True(CpuHelpers.IsEbpValid(0x00100000, memorySize)); // Valid stack address
+        Assert.True(CpuHelpers.IsEbpValid(0x001FF000, memorySize)); // Valid stack address
+    }
+
     [Fact]
     public void CalleeRegisters_ShouldBePreserved_AcrossHookedFunctions()
     {
