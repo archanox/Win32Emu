@@ -255,7 +255,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				if (iatEntries.Contains(va))
 				{
 					logger?.LogWarning("[Loader] Duplicate IAT entry detected at VA 0x{Va:X8} for {Dll}!{Name}. This may indicate PE corruption or incorrect parsing.", 
-						va, dll.ToUpperInvariant(), sym.Name ?? $"Ordinal_{sym.Hint}");
+						va, dll.ToUpperInvariant(), sym.Name ?? $"Ordinal_{sym.Ordinal}");
 				}
 				iatEntries.Add(va);
 				
@@ -298,7 +298,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				};
 				vm.WriteBytes(synthetic, stub);
 				
-				var name = sym.Name ?? ($"Ordinal_{sym.Hint}");
+				var name = sym.Name ?? ($"Ordinal_{sym.Ordinal}");
 				map[synthetic] = (dll.ToUpperInvariant(), name);
 				logger?.LogTrace("[Loader] Mapped import #{Index}: {Dll}!{Name} at 0x{Synthetic:X8} -> syscall at 0x{Syscall:X8}", 
 					synth - 1, dll.ToUpperInvariant(), name, synthetic, SYSCALL_DISPATCHER_ADDRESS);
