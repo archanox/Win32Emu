@@ -1501,10 +1501,8 @@ public sealed class Emulator : IDisposable
                 CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
                 
                 // Validate register state after syscall (helps diagnose corruption issues)
-                if (_debugMode)
-                {
-                    CpuHelpers.ValidateRegisterState(_cpu, saved, _vm!.Size, _logger, $"Syscall {dll}!{name}", LogLevel.Debug);
-                }
+                // Uses logging level check instead of debug mode to allow selective enablement
+                CpuHelpers.ValidateRegisterState(_cpu, saved, _vm!.Size, _logger, $"Syscall {dll}!{name}", LogLevel.Debug);
                 
                 _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, argBytes={ArgBytes}, CPU will execute RET naturally", ret, argBytes);
                 
