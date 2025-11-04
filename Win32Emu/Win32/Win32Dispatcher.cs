@@ -57,6 +57,11 @@ public class Win32Dispatcher(ILogger logger)
 			if (mod.TryInvokeUnsafe(export, cpu, memory, out var retUnsafe))
 			{
 				returnValue = retUnsafe;
+				// Set EAX with return value per x86 stdcall convention
+				// NOTE: This is REQUIRED for debugger modes (interactive debugger, GDB server)
+				// which call TryInvoke directly and rely on the dispatcher to set EAX.
+				// For HandleSyscall path, this is redundant (HandleSyscall also sets EAX at line 1495),
+				// but keeping it here ensures all callers get consistent behavior.
 				cpu.SetRegister("EAX", retUnsafe);
 
 				// Try to get arg bytes from metadata
@@ -93,6 +98,7 @@ public class Win32Dispatcher(ILogger logger)
 			// Return success with default behavior
 			returnValue = 0;
 			stdcallArgBytes = 0; // Default for unknown functions
+			// Set EAX for consistency (see comment above about debugger modes)
 			cpu.SetRegister("EAX", returnValue);
 			return true;
 		}
@@ -111,6 +117,7 @@ public class Win32Dispatcher(ILogger logger)
 		// Provide default behavior for unknown DLL calls
 		returnValue = 0; // Default return value
 		stdcallArgBytes = 0; // Default arg bytes (let caller handle stack cleanup)
+		// Set EAX for consistency (see comment above about debugger modes)
 		cpu.SetRegister("EAX", returnValue);
 
 		return true; // Always return true now - we handle all calls

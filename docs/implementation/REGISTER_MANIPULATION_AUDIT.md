@@ -220,60 +220,127 @@ else
 
 ## Potential Issues Identified
 
-### Issue 1: Redundant EAX Setting (Low Priority)
+### Issue 1: Redundant EAX Setting (Low Priority) - CLARIFIED
 
 **Location:** Win32Dispatcher.TryInvoke() sets EAX, then HandleSyscall also sets EAX
 
 **Impact:** Minimal - the second write simply overwrites the first
 
-**Recommendation:** Remove EAX manipulation from Win32Dispatcher for clarity
+**Original Recommendation:** Remove EAX manipulation from Win32Dispatcher for clarity
 
-### Issue 2: Inconsistent EBP Validation (Medium Priority)
+**Current Status:** ✅ NOT AN ISSUE
+- Further analysis shows EAX setting in Win32Dispatcher is REQUIRED for debugger modes
+- Interactive debugger (lines 1080-1174) and GDB server mode (lines 1180-1269) call Win32Dispatcher directly
+- These modes do NOT set EAX after TryInvoke, relying on Win32Dispatcher to do so
+- HandleSyscall path (line 1462) does redundantly set EAX (line 1495), but this is harmless
+- **Recommendation:** Keep current implementation. The redundancy in HandleSyscall is acceptable for code clarity.
+
+### Issue 2: Inconsistent EBP Validation (Medium Priority) - RESOLVED
 
 **Location:** Different code paths use different EBP validation strategies
 
-**Details:**
+**Original Details:**
 - COM vtable calls use `skipInvalidEbp: true`
 - Import hook calls use `skipInvalidEbp: true`
 - HandleSyscall does NOT use `skipInvalidEbp`
 
-**Recommendation:** Standardize on using `skipInvalidEbp: true` for all paths
+**Current Status:** ✅ RESOLVED
+- Audit document was outdated
+- Verification shows ALL code paths now consistently use `skipInvalidEbp: true`:
+  - Line 677: COM vtable calls
+  - Line 714: Import hook calls (commented out code)
+  - Line 931: COM vtable calls (alternative path)
+  - Line 975: Import hook calls (alternative path)
+  - Line 1000: Import hook calls (error path)
+  - Line 1232: GDB server COM calls
+  - Line 1259: GDB server import calls
+  - Line 1347: Direct import calls
+  - Line 1363: Direct import calls (error path)
+  - **Line 1501: HandleSyscall** ✅ USES skipInvalidEbp: true
+  - **Line 1554: HandleSyscall error path** ✅ USES skipInvalidEbp: true
 
-### Issue 3: Multiple Register Manipulation Code Paths (Medium Priority)
+**Recommendation:** No action needed. EBP validation is already consistent across all paths.
+
+### Issue 3: Multiple Register Manipulation Code Paths (Medium Priority) - DEFERRED
 
 **Location:** Emulator.cs has 6+ different code paths for handling different call types
 
 **Details:** Each path has slightly different register handling logic:
 1. COM vtable calls (lines 658-677)
-2. Import hook calls (lines 692-714)
+2. Import hook calls (lines 692-714) - commented out, now uses syscall mechanism
 3. Syscall dispatcher (lines 1400-1559)
-4. Synthetic export calls (lines 917-1000)
-5. And several more...
+4. Interactive debugger paths (lines 1080-1174, 1180-1269)
+5. Direct import calls (lines 1335-1365)
+6. And several more...
 
 **Impact:** Error-prone, difficult to maintain, easy to introduce bugs
 
-**Recommendation:** Refactor into a common helper function that handles register save/restore consistently
+**Original Recommendation:** Refactor into a common helper function that handles register save/restore consistently
+
+**Current Status:** ⏸️ DEFERRED
+- Code consolidation would require significant refactoring
+- Current implementation is working correctly (verified by comprehensive tests)
+- Register preservation is already standardized via CpuHelpers.SaveCalleeSavedRegisters/RestoreCalleeSavedRegisters
+- Each path has slightly different requirements (stack manipulation, EIP handling, etc.)
+- Risk of introducing bugs outweighs benefit of consolidation at this time
+
+**Recommendation:** 
+- Defer major refactoring to avoid introducing regressions
+- Current helper functions (CpuHelpers) provide sufficient abstraction
+- Comprehensive tests (18 tests added) now guard against future regressions
+- Consider refactoring as future enhancement when more test coverage exists
 
 ## Summary
 
-Overall, register manipulation follows x86 calling conventions correctly. The main areas for improvement are:
+Overall, register manipulation follows x86 calling conventions correctly. Analysis of the original issues shows:
 
-1. **Code consolidation:** Reduce duplication across different call handling paths
-2. **Consistency:** Use consistent EBP validation across all paths
-3. **Clarity:** Remove redundant operations (like duplicate EAX setting)
-4. **Testing:** Add explicit tests for register preservation across syscalls
+1. **Issue 1 (Redundant EAX):** ✅ CLARIFIED - Not actually redundant; required for debugger modes
+2. **Issue 2 (EBP Validation):** ✅ RESOLVED - Already fixed; all paths use `skipInvalidEbp: true`
+3. **Issue 3 (Code Consolidation):** ⏸️ DEFERRED - Would require major refactoring; current approach is sound
+
+**Improvements Made:**
+1. ✅ **Testing:** Added 18 comprehensive register preservation tests
+   - Tests verify callee-saved registers (EBX, ESI, EDI, EBP) are preserved
+   - Tests verify EAX receives correct return values
+   - Tests verify ESP is correctly adjusted
+   - Tests cover edge cases (invalid EBP, import hooks, etc.)
+2. ✅ **Documentation:** Updated audit to reflect current code state
+3. ✅ **Validation:** Existing validation logging confirmed working (line 1505 in Emulator.cs)
+
+**No Code Changes Required:**
+- All identified issues are either non-issues or already resolved
+- Current implementation is correct and well-tested
+- Register preservation works as expected per x86 calling conventions
 
 ## Testing Recommendations
 
-1. Test that callee-saved registers (EBX, ESI, EDI, EBP) are preserved across Win32 API calls
-2. Test that EAX receives the correct return value
-3. Test that ESP is correctly adjusted after stdcall functions
-4. Test edge cases: EBP used as function pointer, unaligned EBP, etc.
-5. Test all different call paths: COM, import hooks, syscall dispatcher, synthetic exports
+✅ **COMPLETED:** Comprehensive register preservation tests added (18 tests in RegisterPreservationTests.cs)
+
+Tests now verify:
+1. ✅ Callee-saved registers (EBX, ESI, EDI, EBP) are preserved across Win32 API calls
+2. ✅ EAX receives the correct return value
+3. ✅ ESP is correctly adjusted after stdcall functions
+4. ✅ Edge cases: EBP used as function pointer, unaligned EBP, invalid EBP, etc.
+5. ✅ Multiple API call sequences preserve registers consistently
+6. ✅ SaveCalleeSavedRegisters/RestoreCalleeSavedRegisters helper functions work correctly
+7. ✅ IsEbpValid correctly identifies invalid EBP values (import hooks, zero, low addresses)
+8. ✅ RestoreEbpFromStack handles import hook addresses correctly
+
+**Test Coverage:**
+- Basic unit tests for CpuHelpers functions
+- Integration tests calling actual Win32 APIs (GetTickCount)
+- Edge case testing for invalid and corrupted register values
+- Stack restoration scenarios
 
 ## Next Steps
 
-1. Add validation logging for register state before/after each call type
-2. Implement comprehensive register preservation tests
-3. Consider refactoring to reduce code duplication
-4. Add runtime assertions for register invariants
+✅ **COMPLETED:**
+1. ✅ Add validation logging for register state before/after each call type (already exists at line 1505)
+2. ✅ Implement comprehensive register preservation tests (18 tests added)
+3. ⏸️ Consider refactoring to reduce code duplication (deferred - would require major changes)
+4. ✅ Add runtime assertions for register invariants (ValidateRegisterState function exists)
+
+**Future Enhancements (Optional):**
+1. Consider consolidating register save/restore code if adding new call paths
+2. Add performance profiling to identify optimization opportunities
+3. Expand test coverage to include all Win32 modules (currently focuses on Kernel32)

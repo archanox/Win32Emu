@@ -60,6 +60,18 @@ public static class CpuHelpers
 	/// <summary>
 	/// Restore callee-saved registers (EBX, ESI, EDI, EBP) that were previously saved.
 	/// Optionally skip restoring EBP if it was invalid when saved (prevents corruption cycle).
+	/// 
+	/// EBP Validation Strategy:
+	/// - Per x86 calling conventions, EBP must be preserved by callees
+	/// - However, some real-world code uses EBP for non-standard purposes (e.g., holding function pointers)
+	/// - When skipInvalidEbp=true, we detect obviously invalid EBP values (import hooks, null, etc.)
+	/// - Invalid EBP values are NOT restored, preventing corruption cycles
+	/// - This handles edge cases like: MOV EBP, [IAT_Entry]; CALL EBP
+	/// - After such calls, EBP contains an import hook address that should not be restored
+	/// 
+	/// Current Implementation (as of Issue #583):
+	/// - All code paths in Emulator.cs use skipInvalidEbp=true for consistency
+	/// - This provides defensive protection against EBP corruption without breaking standard code
 	/// </summary>
 	public static void RestoreCalleeSavedRegisters(ICpu cpu, SavedCalleeSavedRegisters saved, bool skipInvalidEbp = false, ulong memorySize = 0)
 	{
