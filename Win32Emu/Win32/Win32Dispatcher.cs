@@ -60,7 +60,7 @@ public class Win32Dispatcher(ILogger logger)
 				// Set EAX with return value per x86 stdcall convention
 				// NOTE: This is REQUIRED for debugger modes (interactive debugger, GDB server)
 				// which call TryInvoke directly and rely on the dispatcher to set EAX.
-				// For HandleSyscall path, this is redundant (HandleSyscall also sets EAX at line 1495),
+				// For the HandleSyscall code path, this is redundant (that path also sets EAX),
 				// but keeping it here ensures all callers get consistent behavior.
 				cpu.SetRegister("EAX", retUnsafe);
 

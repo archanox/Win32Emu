@@ -218,10 +218,8 @@ public class RegisterPreservationTests
         public TestCpu Cpu => _cpu;
         public VirtualMemory Memory => _memory;
 
-        public void Dispose()
-        {
-            // VirtualMemory doesn't implement IDisposable, nothing to dispose
-        }
+        // IDisposable implementation - no resources to dispose in this test helper
+        public void Dispose() { }
     }
 
     /// <summary>

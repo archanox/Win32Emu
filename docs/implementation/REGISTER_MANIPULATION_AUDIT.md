@@ -267,8 +267,8 @@ else
 
 **Details:** Each path has slightly different register handling logic:
 1. COM vtable calls (lines 658-677)
-2. Import hook calls (lines 692-714) - commented out, now uses syscall mechanism
-3. Syscall dispatcher (lines 1400-1559)
+2. Import hook calls (lines 692-714) - LEGACY CODE: Commented out, now uses syscall mechanism (INT 0x80) instead
+3. Syscall dispatcher (lines 1400-1559) - PRIMARY PATH: All import calls route through here
 4. Interactive debugger paths (lines 1080-1174, 1180-1269)
 5. Direct import calls (lines 1335-1365)
 6. And several more...
