@@ -289,4 +289,86 @@ public static class CpuHelpers
 				context, saved.Ebp, currentEbp);
 		}
 	}
+
+	/// <summary>
+	/// Consolidated helper to handle stdcall function invocation with register preservation.
+	/// This reduces code duplication across different call paths in Emulator.cs.
+	/// 
+	/// Handles the complete flow:
+	/// 1. Save callee-saved registers
+	/// 2. Invoke the function
+	/// 3. Set return value in EAX
+	/// 4. Clean up stack (pop return address + arguments)
+	/// 5. Set EIP to return address
+	/// 6. Restore callee-saved registers
+	/// 
+	/// This function implements the x86 stdcall calling convention where:
+	/// - Callee cleans up arguments from stack
+	/// - Return value is in EAX
+	/// - EBX, ESI, EDI, EBP must be preserved
+	/// </summary>
+	/// <param name="cpu">The CPU instance</param>
+	/// <param name="memory">Virtual memory instance</param>
+	/// <param name="invokeFunc">Function to invoke that returns (success, returnValue, argBytes)</param>
+	/// <param name="memorySize">Total memory size for EBP validation</param>
+	/// <param name="logger">Optional logger for diagnostics</param>
+	/// <param name="context">Context string for logging (e.g., "COM call", "Import")</param>
+	/// <returns>True if invocation succeeded, false otherwise</returns>
+	public static bool InvokeWithRegisterPreservation(
+		ICpu cpu,
+		VirtualMemory memory,
+		Func<(bool success, uint returnValue, int argBytes)> invokeFunc,
+		ulong memorySize,
+		ILogger? logger = null,
+		string context = "API call")
+	{
+		// Save callee-saved registers
+		var saved = SaveCalleeSavedRegisters(cpu);
+		
+		// Invoke the function
+		var (success, returnValue, argBytes) = invokeFunc();
+		
+		if (success)
+		{
+			// Set return value in EAX (stdcall convention)
+			cpu.SetRegister("EAX", returnValue);
+			
+			// Get current stack pointer and return address
+			var esp = cpu.GetRegister("ESP");
+			var retEip = memory.Read32(esp);
+			
+			// Clean up stack: pop return address + arguments (stdcall convention)
+			esp += 4 + (uint)argBytes;
+			cpu.SetRegister("ESP", esp);
+			
+			// Set EIP to return address
+			cpu.SetEip(retEip);
+			
+			// Restore callee-saved registers with EBP validation
+			RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memorySize);
+			
+			// Optionally validate register state for diagnostics
+			if (logger != null && logger.IsEnabled(LogLevel.Debug))
+			{
+				ValidateRegisterState(cpu, saved, memorySize, logger, context, LogLevel.Debug);
+			}
+			
+			return true;
+		}
+		else
+		{
+			// Restore registers even on failure
+			RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memorySize);
+			
+			// Simulate error return
+			var esp = cpu.GetRegister("ESP");
+			var retEip = memory.Read32(esp);
+			esp += 4; // Pop return address only (no args since call failed)
+			cpu.SetRegister("ESP", esp);
+			cpu.SetRegister("EAX", 0); // Return 0 as error
+			cpu.SetEip(retEip);
+			
+			return false;
+		}
+	}
 }
