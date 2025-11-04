@@ -141,6 +141,38 @@ The game code itself might have a bug.
 
 All of these are working correctly as evidenced by the successful execution.
 
+## UPDATE: User Feedback Indicates This IS an Emulator Bug
+
+**The user reports the game works correctly on real Windows hardware.** This is critical information that changes our analysis:
+
+- If the game works on real Windows, the value at `0x004552F8` MUST be getting initialized correctly there
+- The fact that our emulator has a stack pointer there instead means we have a bug in:
+  1. How we initialize this memory location
+  2. How we implement the API that should write to this location
+  3. Missing TLS callbacks or DLL initialization
+  4. Incorrect relocation handling
+
+See `FURTHER_INVESTIGATION.md` for detailed analysis of possible causes and investigation steps.
+
+### Most Likely Causes (Updated)
+
+1. **DirectDraw/DirectInput API Implementation Bug**
+   - The game calls `DirectDrawCreate` or similar API
+   - Our implementation may not be writing the COM interface pointer to the correct address
+   - Or it's writing a stack pointer instead of the interface pointer due to incorrect parameter handling
+
+2. **Missing TLS (Thread Local Storage) Initialization**
+   - The PE file might have TLS callbacks that initialize global variables
+   - Our emulator might not be executing these callbacks
+
+3. **GetProcAddress Not Working Correctly**
+   - The game might use `GetProcAddress` to get DirectDraw function pointers
+   - Our implementation might be returning incorrect addresses
+
+4. **Parameter Reading Bug in StackArgs**
+   - When reading the output parameter pointer for DirectDrawCreate
+   - We might be reading the wrong value from the stack
+
 ### Recommendations
 
 1. **Investigate PE Loader**
