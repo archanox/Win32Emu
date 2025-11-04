@@ -131,6 +131,18 @@ public class PeHeaderRespectTests
 				_output.WriteLine($"  First byte: Expected 0x{expectedFirstByte:X2}, Got 0x{firstByte:X2}");
 				Assert.Equal(expectedFirstByte, firstByte);
 			}
+			catch (InvalidOperationException ex)
+			{
+				_output.WriteLine($"Section {section.Name} cannot be read (InvalidOperation): {ex.Message}");
+			}
+			catch (ArgumentOutOfRangeException ex)
+			{
+				_output.WriteLine($"Section {section.Name} cannot be read (ArgumentOutOfRange): {ex.Message}");
+			}
+			catch (IOException ex)
+			{
+				_output.WriteLine($"Section {section.Name} cannot be read (IO): {ex.Message}");
+			}
 			catch (Exception ex)
 			{
 				_output.WriteLine($"Section {section.Name} cannot be read: {ex.Message}");
@@ -311,10 +323,11 @@ public class PeHeaderRespectTests
 				Assert.InRange(thunkValue, 0x0F000000u, 0x0FFFFFFFu);
 				
 				// Verify this synthetic address is in our import map
-				Assert.True(loadedImage.ImportAddressMap.ContainsKey(thunkValue),
-					$"Synthetic address 0x{thunkValue:X8} should be in import map");
-				
-				var (mappedDll, mappedName) = loadedImage.ImportAddressMap[thunkValue];
+				if (!loadedImage.ImportAddressMap.TryGetValue(thunkValue, out var mapping))
+				{
+					Assert.Fail($"Synthetic address 0x{thunkValue:X8} should be in import map");
+				}
+				var (mappedDll, mappedName) = mapping;
 				_output.WriteLine($"  Mapped to: {mappedDll}!{mappedName}");
 				
 				// Verify the mapping is correct
@@ -482,10 +495,6 @@ public class PeHeaderRespectTests
 		var imports = image.Imports;
 		Assert.NotNull(imports);
 
-		var memory = new VirtualMemory();
-		var loader = new PeImageLoader(memory, NullLogger.Instance);
-		var loadedImage = loader.Load(TestPeFile);
-
 		foreach (var module in imports)
 		{
 			foreach (var symbol in module.Symbols)
@@ -527,14 +536,10 @@ public class PeHeaderRespectTests
 
 		_output.WriteLine($"PE file has {relocations.Count} relocations");
 
-		var relocationTypeCount = new Dictionary<string, int>();
-
-		foreach (var reloc in relocations.Take(10)) // Check first 10 for performance
-		{
-			var typeName = reloc.Type.ToString();
-			relocationTypeCount.TryGetValue(typeName, out var count);
-			relocationTypeCount[typeName] = count + 1;
-		}
+		var relocationTypeCount = relocations
+			.Take(10) // Check first 10 for performance
+			.GroupBy(reloc => reloc.Type.ToString())
+			.ToDictionary(g => g.Key, g => g.Count());
 
 		foreach (var (type, count) in relocationTypeCount)
 		{
