@@ -171,9 +171,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				// PE sections should never be this large in practice (>2GB), but we check defensively
 				if (bytesToWrite > int.MaxValue)
 				{
-					logger?.LogError("[Loader] Section {SectionName} is too large to load: bytesToWrite=0x{BytesToWrite:X8} (min of RawDataSize=0x{RawSize:X8}, VirtualSize=0x{VSize:X8}) exceeds int.MaxValue", 
+					logger?.LogError("[Loader] Section {SectionName} is too large to load: bytesToWrite=0x{BytesToWrite:X} (min of RawDataSize=0x{RawSize:X}, VirtualSize=0x{VSize:X}) exceeds int.MaxValue", 
 						section.Name, bytesToWrite, rawData.Length, virtualSize);
-					throw new InvalidOperationException($"Section {section.Name} size (0x{bytesToWrite:X8}) exceeds maximum supported size (0x{int.MaxValue:X8})");
+					throw new InvalidOperationException($"Section {section.Name} size (0x{bytesToWrite:X}) exceeds maximum supported size (0x{int.MaxValue:X})");
 				}
 				
 				if (bytesToWrite < rawData.Length)
