@@ -1745,13 +1745,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				}
 			}
 
-			// Export not found in PE image
-			_logger.LogInformation("[Kernel32] GetProcAddress: Export not found in PE image");
-			_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
-			return 0;
+			// Export not found in PE image - fall through to check emulated module
+			_logger.LogInformation("[Kernel32] GetProcAddress: Export not found in PE image, checking emulated module");
+			// Don't return here - fall through to emulated module check below
 		}
 
-		// Not in loaded images - check if it's an emulated module
+		// Check if it's an emulated module (either because hModule was not a PE image, or because the export wasn't found in the PE)
 		var moduleName = _env.GetModuleFileNameForHandle(hModule);
 		if (moduleName == null)
 		{
