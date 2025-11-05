@@ -167,12 +167,22 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				// - If VirtualSize > RawDataSize, write all RawDataSize bytes (extra virtual bytes remain zero)
 				var bytesToWrite = Math.Min((uint)rawData.Length, virtualSize);
 				
+				// Safety check: ensure bytesToWrite fits in int for array indexing
+				// PE sections should never be this large in practice (>2GB), but we check defensively
+				if (bytesToWrite > int.MaxValue)
+				{
+					logger?.LogError("[Loader] Section {SectionName} is too large to load: bytesToWrite=0x{BytesToWrite:X8} (min of RawDataSize=0x{RawSize:X8}, VirtualSize=0x{VSize:X8}) exceeds int.MaxValue", 
+						section.Name, bytesToWrite, rawData.Length, virtualSize);
+					throw new InvalidOperationException($"Section {section.Name} size (0x{bytesToWrite:X8}) exceeds maximum supported size (0x{int.MaxValue:X8})");
+				}
+				
 				if (bytesToWrite < rawData.Length)
 				{
 					logger?.LogDebug("[Loader] Section {SectionName} has RawDataSize (0x{RawSize:X8}) > VirtualSize (0x{VSize:X8}), truncating to VirtualSize to avoid writing beyond section bounds", 
 						section.Name, rawData.Length, virtualSize);
 					
 					// Only write VirtualSize bytes, ignoring extra bytes in the file
+					// Cast is safe here because we've verified bytesToWrite <= int.MaxValue above
 					vm.WriteBytes(imageBase + sectionRva, rawData.AsSpan(0, (int)bytesToWrite));
 				}
 				else
