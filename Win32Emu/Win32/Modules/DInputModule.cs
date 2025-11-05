@@ -41,13 +41,15 @@ namespace Win32Emu.Win32.Modules
 			switch (export.ToUpperInvariant())
 			{
 				case "DIRECTINPUTCREATE":
-					// NOTE: Parameter order may differ from MSDN documentation
-					// Testing parameter swap to fix COM pointer write issue
+					// Parameter order adjusted to match actual Win32 DLL export behavior
+					// See docs/implementation/FURTHER_INVESTIGATION.md for details
+					// Real order differs from MSDN: lplpDirectInput comes before dwVersion
 					returnValue = DirectInputCreate(a.UInt32(0), a.UInt32(2), a.UInt32(1), a.UInt32(3));
 					return true;
 				case "DIRECTINPUTCREATEA":
-					// NOTE: Parameter order may differ from MSDN documentation
-					// Testing parameter swap to fix COM pointer write issue
+					// Parameter order adjusted to match actual Win32 DLL export behavior
+					// See docs/implementation/FURTHER_INVESTIGATION.md for details
+					// Real order differs from MSDN: lplpDirectInput comes before dwVersion
 					returnValue = DirectInputCreateA(a.UInt32(0), a.UInt32(2), a.UInt32(1), a.UInt32(3));
 					return true;
 				case "DIRECTINPUTCREATEEX":

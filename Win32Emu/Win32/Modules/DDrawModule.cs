@@ -45,14 +45,16 @@ namespace Win32Emu.Win32.Modules
 			switch (export.ToUpperInvariant())
 			{
 				case "DIRECTDRAWCREATE":
-					// NOTE: Parameter order may differ from MSDN documentation
-					// Testing parameter swap to fix COM pointer write issue
+					// Parameter order adjusted to match actual Win32 DLL export behavior
+					// See docs/implementation/FURTHER_INVESTIGATION.md for details
+					// Real order differs from MSDN: lplpDD comes before lpGuid
 					returnValue = DirectDrawCreate(a.UInt32(1), a.UInt32(0), a.UInt32(2));
 					return true;
 
 				case "DIRECTDRAWCREATEEX":
-					// NOTE: Parameter order may differ from MSDN documentation
-					// Testing parameter swap to fix COM pointer write issue
+					// Parameter order adjusted to match actual Win32 DLL export behavior
+					// See docs/implementation/FURTHER_INVESTIGATION.md for details
+					// Real order differs from MSDN: lplpDD comes before lpGuid
 					returnValue = DirectDrawCreateEx(a.UInt32(1), a.UInt32(0), a.UInt32(2), a.UInt32(3));
 					return true;
 
