@@ -654,28 +654,17 @@ public sealed class Emulator : IDisposable
             {
                 _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                 
-                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
-                var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
-                var ebpBeforeCall = saved.Ebp;
-                _logger.LogDebug("[COM] Before call: EBP=0x{Ebp:X8}", ebpBeforeCall);
-                
-                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
-                {
-                    LogDebug($"[COM] Method returned 0x{ret:X8}, argBytes={comArgBytes}");
-                    var esp = _cpu.GetRegister("ESP");
-                    var retEip = _vm!.Read32(esp);
-                    // COM methods use stdcall convention - callee cleans up the stack
-                    esp += 4 + (uint)comArgBytes; // Pop return address + arguments
-                    _cpu.SetRegister("ESP", esp);
-                    _cpu.SetRegister("EAX", ret); // Return value in EAX
-                    _cpu.SetEip(retEip);
-                    
-                    var ebpAfterCall = _cpu.GetRegister("EBP");
-                    _logger.LogDebug("[COM] After call: EBP=0x{Ebp:X8}", ebpAfterCall);
-                    
-                    // Restore callee-saved registers with selective EBP restore
-                    CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
-                }
+                // Use consolidated helper for register preservation and stdcall convention
+                CpuHelpers.InvokeWithRegisterPreservation(
+                    _cpu,
+                    _vm!,
+                    () => {
+                        var success = _env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var returnValue, out var argBytes);
+                        return (success, returnValue, argBytes);
+                    },
+                    _vm!.Size,
+                    _logger,
+                    "COM vtable");
             }
             // OLD IMPORT HANDLING CODE - DISABLED
             // Import stubs now use CALL/RET and syscall mechanism (INT 0x80)
@@ -913,23 +902,21 @@ public sealed class Emulator : IDisposable
                 {
                     _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                     
-                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
-                    var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
-                    
-                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
-                    {
-                        LogDebug($"[COM] Method returned 0x{ret:X8}");
-                        var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm!.Read32(esp);
-                        // COM methods use stdcall convention - callee cleans up the stack
-                        esp += 4 + (uint)comArgBytes; // Pop return address + arguments
-                        _cpu.SetRegister("ESP", esp);
-                        _cpu.SetRegister("EAX", ret); // Return value in EAX
-                        _cpu.SetEip(retEip);
-                        
-                        // Restore callee-saved registers
-                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
-                    }
+                    // Use consolidated helper for register preservation and stdcall convention
+                    CpuHelpers.InvokeWithRegisterPreservation(
+                        _cpu,
+                        _vm!,
+                        () => {
+                            var success = _env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var returnValue, out var argBytes);
+                            if (success)
+                            {
+                                LogDebug($"[COM] Method returned 0x{returnValue:X8}");
+                            }
+                            return (success, returnValue, argBytes);
+                        },
+                        _vm!.Size,
+                        _logger,
+                        "COM vtable");
                 }
                 else if (step.IsCall && !IsImportStubAddress(step.CallTarget))
                 {
@@ -942,65 +929,37 @@ public sealed class Emulator : IDisposable
                         var name = imp.name;
                         _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
                         
-                        // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
-                        var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+                        // Debug logging before invocation
+                        var espBefore = _cpu.GetRegister("ESP");
+                        LogDebug($"[Import] ESP before call: 0x{espBefore:X8}");
                         
-                        if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
-                    {
-                        LogDebug($"[Import] Returned 0x{ret:X8}, argBytes={argBytes}");
-                        var esp = _cpu.GetRegister("ESP");
-                        LogDebug($"[Import] ESP before return: 0x{esp:X8}");
+                        // Use consolidated helper for register preservation and stdcall convention
+                        var success = CpuHelpers.InvokeWithRegisterPreservation(
+                            _cpu,
+                            _vm!,
+                            () => {
+                                var invokeSuccess = _dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var returnValue, out var argBytes);
+                                if (invokeSuccess)
+                                {
+                                    LogDebug($"[Import] Returned 0x{returnValue:X8}, argBytes={argBytes}");
+                                }
+                                return (invokeSuccess, returnValue, argBytes);
+                            },
+                            _vm!.Size,
+                            _logger,
+                            $"Import {dll}!{name}");
                         
-                        // Read first 4 stack values for debugging
-                        try
+                        if (!success)
                         {
-                            var stack0 = _vm!.Read32(esp);
-                            var stack4 = _vm!.Read32(esp + 4);
-                            var stack8 = _vm!.Read32(esp + 8);
-                            var stack12 = _vm!.Read32(esp + 12);
-                            LogDebug($"[Import] Stack: [ESP+0]=0x{stack0:X8} [ESP+4]=0x{stack4:X8} [ESP+8]=0x{stack8:X8} [ESP+12]=0x{stack12:X8}");
+                            _logger.LogError("[Import] Dispatcher failed to invoke {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
+                            _logger.LogError("[Import] This import is not implemented in the emulator");
+                            _logger.LogWarning("[Import] Simulated return with EAX=0 (this may cause incorrect behavior)");
                         }
-                        catch { }
-                        
-                        var retEip = _vm!.Read32(esp);
-                        LogDebug($"[Import] Return address from stack: 0x{retEip:X8}");
-                        
-                        esp += 4 + (uint)argBytes;
-                        LogDebug($"[Import] ESP after cleanup: 0x{esp:X8} (added {4 + argBytes} bytes)");
-                        _cpu.SetRegister("ESP", esp);
-                        _cpu.SetEip(retEip);
-                        LogDebug($"[Import] Set EIP to 0x{retEip:X8}");
-                        
-                        // Restore callee-saved registers (with EBP validation)
-                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
-                        
-                        // Log final state after import return
-                        LogDebug($"[Import] After return: EIP=0x{_cpu.GetEip():X8} ESP=0x{_cpu.GetRegister("ESP"):X8} EBP=0x{_cpu.GetRegister("EBP"):X8}");
-                    }
-                    else
-                    {
-                        // TryInvoke returned false - the dispatcher doesn't know how to handle this import
-                        _logger.LogError("[Import] Dispatcher failed to invoke {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
-                        _logger.LogError("[Import] This import is not implemented in the emulator");
-                        
-                        // Simulate a return from the call to prevent executing into uninitialized memory
-                        var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm!.Read32(esp);
-                        esp += 4; // Pop return address only.
-                        // WARNING: In stdcall (common in Win32), the callee is responsible for cleaning up the arguments.
-                        // By only popping the return address here (since we don't know argBytes), the stack may become misaligned
-                        // if the failed import expected to clean up arguments. This can cause stack corruption or crashes later.
-                        // This is an error recovery scenario: we do this to prevent executing into uninitialized memory,
-                        // but correct stack alignment cannot be guaranteed. See log warning below.
-                        _cpu.SetRegister("ESP", esp);
-                        _cpu.SetRegister("EAX", 0); // Return 0 as a safe default
-                        _cpu.SetEip(retEip);
-                        
-                        // Restore callee-saved registers (with EBP validation)
-                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
-                        
-                        _logger.LogWarning("[Import] Simulated return to 0x{RetEip:X8} with EAX=0 (this may cause incorrect behavior)", retEip);
-                    }
+                        else
+                        {
+                            // Log final state after import return
+                            LogDebug($"[Import] After return: EIP=0x{_cpu.GetEip():X8} ESP=0x{_cpu.GetRegister("ESP"):X8} EBP=0x{_cpu.GetRegister("EBP"):X8}");
+                        }
                     }
                 }
                 else if (step.IsCall && step.CallTarget >= 0x0F000000 && step.CallTarget < 0x10000000)
@@ -1214,23 +1173,21 @@ public sealed class Emulator : IDisposable
                 {
                     _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                     
-                    // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
-                    var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
-                    
-                    if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
-                    {
-                        LogDebug($"[COM] Method returned 0x{ret:X8}");
-                        var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm!.Read32(esp);
-                        // COM methods use stdcall convention - callee cleans up the stack
-                        esp += 4 + (uint)comArgBytes; // Pop return address + arguments
-                        _cpu.SetRegister("ESP", esp);
-                        _cpu.SetRegister("EAX", ret); // Return value in EAX
-                        _cpu.SetEip(retEip);
-                        
-                        // Restore callee-saved registers
-                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
-                    }
+                    // Use consolidated helper for register preservation and stdcall convention
+                    CpuHelpers.InvokeWithRegisterPreservation(
+                        _cpu,
+                        _vm!,
+                        () => {
+                            var success = _env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var returnValue, out var argBytes);
+                            if (success)
+                            {
+                                LogDebug($"[COM] Method returned 0x{returnValue:X8}");
+                            }
+                            return (success, returnValue, argBytes);
+                        },
+                        _vm!.Size,
+                        _logger,
+                        "COM vtable (GDB)");
                 }
                 else if (step.IsCall && !IsImportStubAddress(step.CallTarget))
                 {
@@ -1243,21 +1200,26 @@ public sealed class Emulator : IDisposable
                         var name = imp.name;
                         _logger.LogInformation("[Import] Hooked function: {Dll}!{Name} at address 0x{CallTarget:X8}", dll, name, step.CallTarget);
                         
-                        // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
-                        var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+                        // Use consolidated helper for register preservation and stdcall convention
+                        var success = CpuHelpers.InvokeWithRegisterPreservation(
+                            _cpu,
+                            _vm!,
+                            () => {
+                                var invokeSuccess = _dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var returnValue, out var argBytes);
+                                if (invokeSuccess)
+                                {
+                                    LogDebug($"[Import] Returned 0x{returnValue:X8}");
+                                }
+                                return (invokeSuccess, returnValue, argBytes);
+                            },
+                            _vm!.Size,
+                            _logger,
+                            $"Import {dll}!{name} (GDB)");
                         
-                        if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
-                    {
-                        LogDebug($"[Import] Returned 0x{ret:X8}");
-                        var esp = _cpu.GetRegister("ESP");
-                        var retEip = _vm!.Read32(esp);
-                        esp += 4 + (uint)argBytes;
-                        _cpu.SetRegister("ESP", esp);
-                        _cpu.SetEip(retEip);
-                        
-                        // Restore callee-saved registers
-                        CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
-                    }
+                        if (!success)
+                        {
+                            _logger.LogError("[Import] Dispatcher failed to invoke {Dll}!{Name}", dll, name);
+                        }
                     }
                 }
             }
@@ -1335,40 +1297,25 @@ public sealed class Emulator : IDisposable
             var name = imp.name;
             _logger.LogInformation("[Import] Direct call to {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, callTarget);
             
-            // Save callee-saved registers
-            var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
+            // Use consolidated helper for register preservation and stdcall convention
+            var success = CpuHelpers.InvokeWithRegisterPreservation(
+                _cpu,
+                _vm!,
+                () => {
+                    var invokeSuccess = _dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var returnValue, out var argBytes);
+                    return (invokeSuccess, returnValue, argBytes);
+                },
+                _vm!.Size,
+                _logger,
+                $"Import {dll}!{name}");
             
-            if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
+            if (!success)
             {
-                // Set return value in EAX
-                _cpu.SetRegister("EAX", ret);
-                
-                // Restore callee-saved registers
-                CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
-                
-                // Simulate stdcall return: pop return address + arguments
-                var esp = _cpu.GetRegister("ESP");
-                var retEip = _vm!.Read32(esp);
-                esp += 4 + (uint)argBytes;
-                _cpu.SetRegister("ESP", esp);
-                _cpu.SetEip(retEip);
-                
-                _logger.LogDebug("[Import] Returned 0x{Ret:X8}, argBytes={ArgBytes}", ret, argBytes);
+                _logger.LogError("[Import] Dispatcher failed to invoke {Dll}!{Name}", dll, name);
             }
             else
             {
-                _logger.LogError("[Import] Dispatcher failed to invoke {Dll}!{Name}", dll, name);
-                
-                // Restore callee-saved registers
-                CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _vm!.Size);
-                
-                // Simulate return with error
-                var esp = _cpu.GetRegister("ESP");
-                var retEip = _vm!.Read32(esp);
-                esp += 4;
-                _cpu.SetRegister("ESP", esp);
-                _cpu.SetRegister("EAX", 0);
-                _cpu.SetEip(retEip);
+                _logger.LogDebug("[Import] Successfully invoked {Dll}!{Name}", dll, name);
             }
             
             return true;
