@@ -670,12 +670,12 @@ public sealed class Emulator : IDisposable
             // Check if EIP is in the import stub range but not properly mapped
             // This can happen if code returns to or jumps to an unmapped import address
             var currentEip = _cpu!.GetEip();
-            if (currentEip >= 0x0F000000 && currentEip < 0x10000000)
+            if (MemoryRegions.IsInImportHookRange(currentEip))
             {
                 // EIP is in the import stub address range
                 // Import stubs are aligned to 16-byte boundaries (0x10)
                 // We need to align down to check if this is a valid stub
-                var alignedEip = currentEip & IMPORT_STUB_ALIGNMENT_MASK;
+                var alignedEip = currentEip & MemoryRegions.ImportStubAlignmentMask;
                 
                 // Get the current main executable (may have been updated with synthetic exports)
                 var currentImage = _env!.GetMainExecutable() ?? _image!;
@@ -934,7 +934,7 @@ public sealed class Emulator : IDisposable
             // Check for extremely low EIP values that indicate corruption
             // Skip NULL (0) as that's handled separately
             // Exclude valid synthetic address ranges (COM vtables, syscalls, imports)
-            var isValidSyntheticRange = currentEip >= COM_VTABLE_BASE && currentEip < IMPORT_HOOK_LIMIT;
+            var isValidSyntheticRange = MemoryRegions.IsInSpecialRange(currentEip);
             if (currentEip > 0 && currentEip < 0x00400000 && !isValidSyntheticRange)
             {
                 _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is suspiciously low (< 0x00400000) at instruction {Instruction}. This likely indicates a corrupted function pointer, bad jump, or API returning invalid address.", currentEip, i);
@@ -950,7 +950,7 @@ public sealed class Emulator : IDisposable
                 }
             }
 
-            if (currentEip is >= 0x0F000000 and < 0x10000000)
+            if (MemoryRegions.IsInImportHookRange(currentEip))
             {
                 LogDebug("\n[Debug] *** CPU TRYING TO EXECUTE SYNTHETIC IMPORT ADDRESS! ***");
                 LogDebug($"[Debug] EIP=0x{currentEip:X8} at instruction {i}");
@@ -960,7 +960,7 @@ public sealed class Emulator : IDisposable
                 
                 // Import stubs are aligned to 16-byte boundaries (0x10)
                 // We need to align down to check if this is a valid stub
-                var alignedEip = currentEip & IMPORT_STUB_ALIGNMENT_MASK;
+                var alignedEip = currentEip & MemoryRegions.ImportStubAlignmentMask;
                 
                 if (currentImage.ImportAddressMap.TryGetValue(alignedEip, out var importInfo))
                 {
@@ -1039,7 +1039,7 @@ public sealed class Emulator : IDisposable
 
                 // Check for direct calls to import stubs
                 // In some cases, the game may call import stubs directly instead of through the syscall mechanism
-                if (step.IsCall && step.CallTarget >= 0x0F000000 && step.CallTarget < 0x10000000)
+                if (step.IsCall && MemoryRegions.IsInImportHookRange(step.CallTarget))
                 {
                     if (HandleDirectImportCall(step.CallTarget))
                     {
@@ -1125,7 +1125,7 @@ public sealed class Emulator : IDisposable
                         }
                     }
                 }
-                else if (step.IsCall && step.CallTarget >= 0x0F000000 && step.CallTarget < 0x10000000)
+                else if (step.IsCall && MemoryRegions.IsInImportHookRange(step.CallTarget))
                 {
                     // This is a call to an address in the import stub range, but it's not in the ImportAddressMap
                     // This typically means the program is trying to call an import that wasn't loaded
@@ -1150,7 +1150,7 @@ public sealed class Emulator : IDisposable
                 LogDebug($"\n[Debug] *** CAUGHT MEMORY ACCESS VIOLATION AT INSTRUCTION {i} ***");
                 LogDebug($"[Debug] Exception: {ex.Message}");
 
-                if (currentEip is >= 0x0F000000 and < 0x10000000)
+                if (MemoryRegions.IsInImportHookRange(currentEip))
                 {
                     LogDebug($"[Debug] ERROR CAUSE: Trying to execute synthetic import address 0x{currentEip:X8}");
                     
@@ -1406,7 +1406,7 @@ public sealed class Emulator : IDisposable
             }
 
             // Check for INT3 breakpoints in emulation stub ranges (COM vtables, synthetic exports, import hooks)
-            if (opcode == 0xCC && eip is >= COM_VTABLE_BASE and < IMPORT_HOOK_LIMIT)
+            if (opcode == 0xCC && MemoryRegions.IsInSpecialRange(eip))
             {
                 return true;
             }
@@ -1434,13 +1434,13 @@ public sealed class Emulator : IDisposable
     }
 
     /// <summary>
-    /// Checks if an address is in the import stub range (0x0F000000-0x10000000).
+    /// Checks if an address is in the import stub range.
     /// Import stubs now use CALL/RET and syscall mechanism, so they should not be
     /// intercepted as direct import calls.
     /// </summary>
     private static bool IsImportStubAddress(uint address)
     {
-        return address >= 0x0F000000 && address < 0x10000000;
+        return MemoryRegions.IsInImportHookRange(address);
     }
 
     /// <summary>
@@ -1452,7 +1452,7 @@ public sealed class Emulator : IDisposable
         var currentImage = _env!.GetMainExecutable() ?? _image!;
         
         // Align the call target to 16-byte boundary (import stubs are aligned)
-        var alignedTarget = callTarget & IMPORT_STUB_ALIGNMENT_MASK;
+        var alignedTarget = callTarget & MemoryRegions.ImportStubAlignmentMask;
         
         if (currentImage.ImportAddressMap.TryGetValue(alignedTarget, out var imp))
         {
@@ -1582,9 +1582,9 @@ public sealed class Emulator : IDisposable
                         returnToCaller, returnToCallerAfter, dll, name);
                     
                     // Additional diagnostic: Check if the new return address is in unmapped import range
-                    if (returnToCallerAfter >= 0x0F000000 && returnToCallerAfter < 0x10000000)
+                    if (MemoryRegions.IsInImportHookRange(returnToCallerAfter))
                     {
-                        var alignedAddr = returnToCallerAfter & 0xFFFFFFF0u;
+                        var alignedAddr = returnToCallerAfter & MemoryRegions.ImportStubAlignmentMask;
                         var isMapped = currentImage.ImportAddressMap.ContainsKey(alignedAddr);
                         _logger.LogError("[Syscall] Corrupted return address 0x{Addr:X8} is in import stub range. Aligned: 0x{Aligned:X8}, Mapped: {Mapped}", 
                             returnToCallerAfter, alignedAddr, isMapped);
@@ -1593,7 +1593,7 @@ public sealed class Emulator : IDisposable
                         {
                             var importCount = currentImage.ImportAddressMap.Count;
                             // Calculate import index using aligned address to ensure correct calculation
-                            var wouldBeIndex = (alignedAddr - 0x0F000000) / 0x10;
+                            var wouldBeIndex = (alignedAddr - MemoryRegions.ImportHookBase) / MemoryRegions.ImportStubSize;
                             _logger.LogError("[Syscall] This would be import index {Index} but only {Count} imports exist (indices 0-{MaxIndex}). " +
                                 "This is likely a C runtime bug with uninitialized function pointer or array bounds issue.",
                                 wouldBeIndex, importCount, importCount - 1);
@@ -1642,9 +1642,9 @@ public sealed class Emulator : IDisposable
                 // to return to the original caller with proper stack cleanup!
                 
                 // Validate that the return-to-stub address looks reasonable
-                if (retToStub < 0x0F000000 || retToStub >= 0x10000000)
+                if (!MemoryRegions.IsInImportHookRange(retToStub))
                 {
-                    _logger.LogWarning("[Syscall] Return-to-stub address 0x{RetToStub:X8} is outside import stub range [0x0F000000-0x10000000). This may indicate stack corruption.", retToStub);
+                    _logger.LogWarning("[Syscall] Return-to-stub address 0x{RetToStub:X8} is outside import stub range. This may indicate stack corruption.", retToStub);
                 }
                 
                 // Validate ESP is in a reasonable range (not extremely small)
@@ -1687,7 +1687,7 @@ public sealed class Emulator : IDisposable
             }
 
             // INT3 breakpoints in emulation stub ranges return their own address as the target
-            if (opcode == 0xCC && eip is >= COM_VTABLE_BASE and < IMPORT_HOOK_LIMIT)
+            if (opcode == 0xCC && MemoryRegions.IsInSpecialRange(eip))
             {
 	            return eip;
             }
@@ -1733,15 +1733,6 @@ public sealed class Emulator : IDisposable
     /// This handles cases where the calling code used EBP to hold the function pointer for an indirect call.
     /// </summary>
     
-    // Memory address ranges for various emulation stubs (all use INT3/0xCC for interception)
-    private const uint COM_VTABLE_BASE = 0x0D000000;      // COM interface vtable methods
-    private const uint COM_VTABLE_LIMIT = 0x0E000000;
-    private const uint SYNTHETIC_EXPORT_BASE = 0x0E000000; // Dynamically resolved exports (e.g., GetProcAddress)
-    private const uint SYNTHETIC_EXPORT_LIMIT = 0x0F000000;
-    private const uint IMPORT_HOOK_BASE = 0x0F000000;      // Static import table hooks
-    private const uint IMPORT_HOOK_LIMIT = 0x10000000;
-    private const uint IMPORT_STUB_ALIGNMENT_MASK = 0xFFFFFFF0u; // 16-byte alignment for import stubs
-    
     /// <summary>
     /// Returns the default heap base address for memory allocation.
     /// The heap base is always set to 0x01000000 for compatibility.
@@ -1786,7 +1777,7 @@ public sealed class Emulator : IDisposable
             
             // Warn if return address looks suspicious but allow recovery to proceed
             var isInImageRange = retEip >= 0x00400000 && retEip < 0x80000000;
-            var isInSyntheticRange = retEip >= COM_VTABLE_BASE && retEip < IMPORT_HOOK_LIMIT;
+            var isInSyntheticRange = MemoryRegions.IsInSpecialRange(retEip);
             if (!isInImageRange && !isInSyntheticRange)
             {
                 _logger.LogWarning("[Emulator] {Reason} at 0x{CorruptedEip:X8}: Return address 0x{RetEip:X8} is outside typical code ranges but attempting recovery anyway", 
@@ -1843,7 +1834,7 @@ public sealed class Emulator : IDisposable
         // Check for obviously invalid values
         var ebpIsZero = (ebp == 0);
         var ebpIsVerySmall = (ebp < MIN_VALID_EBP);
-        var ebpIsImportHook = (ebp >= IMPORT_HOOK_BASE && ebp < IMPORT_HOOK_LIMIT);
+        var ebpIsImportHook = MemoryRegions.IsInImportHookRange(ebp);
         var ebpIsBeyondMemory = (ebp >= _vm!.Size);
         
         // Check if EBP looks like a COM/heap pointer being used for special purposes

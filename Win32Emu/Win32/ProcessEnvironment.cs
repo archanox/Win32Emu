@@ -328,18 +328,9 @@ public class ProcessEnvironment
 	private uint _nextModuleHandle = 0x10000000;
 	private string? _mainExecutableName; // Track the main executable's name for reliable lookup
 
-	// Syscall dispatcher address - shared with PeImageLoader
-	private const uint SYSCALL_DISPATCHER_ADDRESS = 0x0E000000;
-	
-	// Synthetic exports now use syscall mechanism (CALL/RET stubs) starting at 0x0F000000 range
+	// Synthetic exports - use syscall mechanism (CALL/RET stubs) in the import hook range
 	// They are stored in the main executable's ImportAddressMap for unified handling
-	private uint _nextSyntheticExport = 0x0F800000; // Synthetic export stub base address (distinct from import stubs at 0x0F000000)
-
-	// Standard control window procedure marker address range
-	// Window procedures in this range (0x0D000000 - 0x0DFFFFFF) are markers for standard controls
-	// These addresses signal to User32Module to route messages through StandardControlHandler
-	public const uint STANDARD_CONTROL_WNDPROC_BASE = 0x0D000000;
-	public const uint STANDARD_CONTROL_WNDPROC_END = 0x0DFFFFFF;
+	private uint _nextSyntheticExport = MemoryRegions.SyntheticExportBase;
 
 	// Window management
 	private readonly Dictionary<uint, WindowInfo> _windows = new();
@@ -939,7 +930,7 @@ public class ProcessEnvironment
 	public uint RegisterSyntheticExport(string moduleName, string exportName)
 	{
 		var address = _nextSyntheticExport;
-		_nextSyntheticExport += 0x10;
+		_nextSyntheticExport += MemoryRegions.ImportStubSize;
 		
 		// Create import stub using syscall mechanism (same as regular imports):
 		// CALL [syscall_dispatcher]; RET argBytes
@@ -947,7 +938,7 @@ public class ProcessEnvironment
 		
 		// Calculate relative offset from stub address to syscall dispatcher
 		var stubAddr = address;
-		var callOffset = (int)(SYSCALL_DISPATCHER_ADDRESS - (stubAddr + 5)); // +5 for size of CALL instruction
+		var callOffset = (int)(MemoryRegions.SyscallDispatcherAddress - (stubAddr + 5)); // +5 for size of CALL instruction
 		
 		var stub = new byte[]
 		{
@@ -1178,8 +1169,6 @@ public class ProcessEnvironment
 		const uint MEM_TOP_DOWN = 0x00100000;
 		const uint PAGE_SIZE    = 0x1000;   // 4KB
 		const uint ALLOC_GRAN   = 0x10000;  // 64KB
-		const uint SPECIAL_MIN  = 0x0D000000; // emulator special ranges (COM/syscall/import)
-		const uint SPECIAL_MAX  = 0x10000000;
 		
 		bool reserve = (flAllocationType & MEM_RESERVE) != 0;
 		bool commit  = (flAllocationType & MEM_COMMIT) != 0;
@@ -1215,16 +1204,17 @@ public class ProcessEnvironment
 				return 0;
 			}
 			// Avoid emulator special ranges
-			if (!(alignedBase + effectiveSize <= SPECIAL_MIN || alignedBase >= SPECIAL_MAX))
+			if (!(alignedBase + effectiveSize <= MemoryRegions.ComVtableBase || alignedBase >= MemoryRegions.SpecialRangeLimit))
 			{
-				_logger.LogWarning("[ProcessEnv] VirtualAlloc: requested range overlaps emulator special range [0x{Min:X8}-0x{Max:X8}), failing", SPECIAL_MIN, SPECIAL_MAX);
+				_logger.LogWarning("[ProcessEnv] VirtualAlloc: requested range overlaps emulator special range [0x{Min:X8}-0x{Max:X8}), failing", 
+					MemoryRegions.ComVtableBase, MemoryRegions.SpecialRangeLimit);
 				return 0;
 			}
 			return AllocateAtSpecificAddress(alignedBase, effectiveSize, reserve, commit);
 		}
 		
 		// No specific address - find a suitable block or allocate from end
-		var addr = AllocateFromFreeList(effectiveSize, reserve, commit, topDown, SPECIAL_MIN, SPECIAL_MAX);
+		var addr = AllocateFromFreeList(effectiveSize, reserve, commit, topDown, MemoryRegions.ComVtableBase, MemoryRegions.SpecialRangeLimit);
 		if (addr != 0)
 		{
 			_logger.LogInformation("[ProcessEnv] VirtualAlloc: allocated at 0x{Addr:X8}, size=0x{Size:X8}, reserve={Reserve}, commit={Commit}, topDown={TopDown}",
@@ -1638,7 +1628,7 @@ public class ProcessEnvironment
 			// This allows code to get a non-NULL wndProc, while User32Module can detect
 			// these special addresses and route messages to StandardControlHandler
 			// Using a simple counter ensures no collisions (unlike GetHashCode)
-			var wndProcAddress = STANDARD_CONTROL_WNDPROC_BASE + index;
+			var wndProcAddress = MemoryRegions.ComVtableBase + index;
 			
 			var classInfo = new WindowClassInfo(
 				ClassName: className,
@@ -2132,8 +2122,7 @@ public class ProcessEnvironment
 	/// </summary>
 	public static bool IsStandardControlWndProc(uint wndProcAddress)
 	{
-		return wndProcAddress >= STANDARD_CONTROL_WNDPROC_BASE && 
-		       wndProcAddress <= STANDARD_CONTROL_WNDPROC_END;
+		return MemoryRegions.IsInComVtableRange(wndProcAddress);
 	}
 
 	// Thread management methods

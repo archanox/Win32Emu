@@ -19,9 +19,7 @@ public readonly struct SavedCalleeSavedRegisters
 /// </summary>
 public static class CpuHelpers
 {
-	// Constants for EBP validation (matching Emulator.cs)
-	private const uint IMPORT_HOOK_BASE = 0x0F000000;
-	private const uint IMPORT_HOOK_LIMIT = 0x10000000;
+	// Constants for EBP validation
 	private const uint MIN_VALID_EBP = 0x1000;
 	private const uint HEAP_BASE = 0x01000000;
 	private const uint HEAP_LIMIT = 0x70000000;
@@ -51,7 +49,7 @@ public static class CpuHelpers
 		// Check for obviously invalid values
 		if (ebp == 0) return false;
 		if (ebp < MIN_VALID_EBP) return false;
-		if (ebp >= IMPORT_HOOK_BASE && ebp < IMPORT_HOOK_LIMIT) return false;
+		if (MemoryRegions.IsInImportHookRange(ebp)) return false;
 		if (ebp >= memorySize) return false;
 		
 		return true;
@@ -141,7 +139,7 @@ public static class CpuHelpers
 			}
 
 			// Check if current EBP looks like an import hook address first
-			var isImportHook = (currentEbp >= IMPORT_HOOK_BASE && currentEbp < IMPORT_HOOK_LIMIT);
+			var isImportHook = MemoryRegions.IsInImportHookRange(currentEbp);
 			
 			// If EBP is an import hook address, we must restore it from the stack
 			// This happens when code uses patterns like: MOV EBP, [IAT_Entry]; CALL EBP
@@ -155,7 +153,7 @@ public static class CpuHelpers
 				}
 				else
 				{
-					// EBP contains an import hook address (0x0F000000-0x10000000) but can't be restored from stack
+					// EBP contains an import hook address but can't be restored from stack
 					// This occurs when calling code uses EBP for indirect calls (e.g., MOV EBP, [IAT_Entry]; CALL EBP)
 					// and the stack contains invalid or unaligned data
 					// Reset EBP to ESP as a safe fallback to prevent subsequent memory access errors

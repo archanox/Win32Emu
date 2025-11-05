@@ -20,14 +20,6 @@ public class IcedCpu : IAsyncCpu
 	// EFLAGS bit positions
 	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Tf = 8, If = 9, Df = 10, Of = 11;
 
-	// Special memory ranges for emulator infrastructure
-	// These constants document the different sub-ranges, but validation only checks the overall range
-	// [COM_VTABLE_BASE, SPECIAL_RANGE_LIMIT) to avoid false positives for any emulator infrastructure
-	private const uint COM_VTABLE_BASE = 0x0D000000;      // COM interface vtable methods
-	private const uint SYSCALL_DISPATCHER_BASE = 0x0E000000; // Syscall dispatcher and synthetic exports
-	private const uint IMPORT_HOOK_BASE = 0x0F000000;      // Static import table hooks
-	private const uint SPECIAL_RANGE_LIMIT = 0x10000000;   // End of special ranges
-	
 	// Default image base if not specified (typical default for Win32 executables)
 	private const uint DEFAULT_IMAGE_BASE = 0x00400000;
 	
@@ -410,7 +402,7 @@ public class IcedCpu : IAsyncCpu
 					}
 					
 					// Log detailed RET information when in import stub or syscall dispatcher range
-					if (oldEip >= 0x0E000000 && oldEip < 0x10000000)
+					if (MemoryRegions.IsInSyscallRange(oldEip) || MemoryRegions.IsInImportHookRange(oldEip))
 					{
 						_logger.LogDebug("[IcedCpu] RET at 0x{OldEip:X8}: popped 0x{RetAddr:X8} from ESP=0x{OldEsp:X8}, cleanup={Cleanup} bytes, new ESP=0x{NewEsp:X8}", 
 							oldEip, ret, oldEsp, insn.Immediate16, _esp);
@@ -537,8 +529,8 @@ public class IcedCpu : IAsyncCpu
 					if (insn.Immediate8 == 3)
 					{
 						// INT3 breakpoint - check if it's at a COM vtable address
-						// Note: Import stubs (0x0F000000-0x10000000) and synthetic exports (0x0F800000+) now use CALL/RET and syscall mechanism
-						if (oldEip is >= 0x0D000000 and < 0x0E000000)
+						// Note: Import stubs and synthetic exports now use CALL/RET and syscall mechanism
+						if (MemoryRegions.IsInComVtableRange(oldEip))
 						{
 							// This is a COM vtable method stub - signal this as a call
 							isCall = true;
@@ -571,9 +563,8 @@ public class IcedCpu : IAsyncCpu
 					break;
 				case Mnemonic.Int3:
 					// Handle INT3 (0xCC) instruction used for COM vtable methods
-					// Note: Import stubs (0x0F000000-0x10000000) and synthetic exports (0x0F800000+) now use CALL/RET and syscall mechanism,
-					// so they don't trigger INT3 anymore
-					if (oldEip is >= 0x0D000000 and < 0x0E000000)
+					// Note: Import stubs and synthetic exports now use CALL/RET and syscall mechanism
+					if (MemoryRegions.IsInComVtableRange(oldEip))
 					{
 						// This is a COM vtable method stub - signal this as a call
 						isCall = true;
@@ -738,8 +729,8 @@ public class IcedCpu : IAsyncCpu
 			return;
 		}
 		
-		// Allow special emulator ranges: COM vtables (0x0D000000), syscalls (0x0E000000), and import hooks (0x0F000000)
-		if (target >= COM_VTABLE_BASE && target < SPECIAL_RANGE_LIMIT)
+		// Allow special emulator ranges: COM vtables, syscalls, and import hooks
+		if (MemoryRegions.IsInSpecialRange(target))
 		{
 			// Valid special range - no validation needed
 			return;
