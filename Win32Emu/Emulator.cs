@@ -174,6 +174,20 @@ public sealed class Emulator : IDisposable
         LogDebug($"[Loader] Image base=0x{_image.BaseAddress:X8} EntryPoint=0x{_image.EntryPointAddress:X8} Size=0x{_image.ImageSize:X}");
         LogDebug($"[Loader] Imports mapped: {_image.ImportAddressMap.Count}");
         LogDebug($"[Loader] Subsystem: {_image.Subsystem} (2=GUI, 3=CUI)");
+        LogDebug($"[Loader] PE Header Stack: Reserve=0x{_image.SizeOfStackReserve:X} Commit=0x{_image.SizeOfStackCommit:X}");
+        LogDebug($"[Loader] PE Header Heap: Reserve=0x{_image.SizeOfHeapReserve:X} Commit=0x{_image.SizeOfHeapCommit:X}");
+        LogDebug($"[Loader] Sections loaded: {_image.Sections.Length}");
+        
+        // Log section information for debugging data/instruction ranges
+        foreach (var section in _image.Sections)
+        {
+            var flags = new List<string>();
+            if (section.IsExecutable) flags.Add("EXEC");
+            if (section.IsData) flags.Add("DATA");
+            if (section.IsReadable) flags.Add("READ");
+            if (section.IsWritable) flags.Add("WRITE");
+            LogDebug($"[Loader]   Section '{section.Name}': RVA=0x{section.VirtualAddress:X8} Size=0x{section.VirtualSize:X8} Flags=[{string.Join(",", flags)}]");
+        }
 
         _env = new ProcessEnvironment(_vm, 0x01000000, _host, _logger);
         // Register the main executable so GetModuleFileNameA can find it

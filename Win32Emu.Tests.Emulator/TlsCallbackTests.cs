@@ -35,7 +35,10 @@ public class TlsCallbackTests
             0x00001000,
             0x00100000,
             0x00010000,
-            [] // No TLS callbacks
+            0x00100000, // SizeOfHeapReserve
+            0x00010000, // SizeOfHeapCommit
+            [], // No TLS callbacks
+            []  // No sections
         );
         
         // Assert
@@ -69,7 +72,10 @@ public class TlsCallbackTests
             0x00001000,
             0x00100000,
             0x00010000,
-            tlsCallbacks
+            0x00100000, // SizeOfHeapReserve
+            0x00010000, // SizeOfHeapCommit
+            tlsCallbacks,
+            []  // No sections
         );
         
         // Assert

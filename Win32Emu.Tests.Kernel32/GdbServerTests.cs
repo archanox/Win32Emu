@@ -182,7 +182,10 @@ public class GdbServerTests
             0x00001000, // HeaderEndRva
             0x00100000, // SizeOfStackReserve (1MB)
             0x00010000, // SizeOfStackCommit (64KB)
-            []          // TlsCallbacks (empty array)
+            0x00100000, // SizeOfHeapReserve (1MB)
+            0x00010000, // SizeOfHeapCommit (64KB)
+            [],         // TlsCallbacks (empty array)
+            []          // Sections (empty array)
         );
         
         // Act
