@@ -124,6 +124,8 @@ public class RtlJitCache
             MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Task).Assembly.Location),
             MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location),
+            MetadataReference.CreateFromFile(typeof(Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo).Assembly.Location), // For 'dynamic'
+            MetadataReference.CreateFromFile(typeof(System.Linq.Expressions.Expression).Assembly.Location), // For DynamicAttribute
         };
         
         var compilation = CSharpCompilation.Create(
