@@ -302,6 +302,111 @@ public sealed class Emulator : IDisposable
         // Initialize the main thread in the thread scheduler
         _env.InitializeMainThread(_cpu);
         LogDebug("[Loader] Main thread initialized");
+
+        // Execute TLS callbacks if present
+        // TLS callbacks must be executed AFTER all modules are registered but BEFORE the main entry point
+        ExecuteTlsCallbacks();
+    }
+
+    /// <summary>
+    /// Executes TLS (Thread Local Storage) callbacks for process attach.
+    /// TLS callbacks are invoked before the main entry point with DLL_PROCESS_ATTACH reason.
+    /// </summary>
+    private void ExecuteTlsCallbacks()
+    {
+        if (_image == null || _cpu == null || _vm == null || _env == null)
+        {
+            return;
+        }
+
+        if (_image.TlsCallbacks == null || _image.TlsCallbacks.Length == 0)
+        {
+            _logger.LogDebug("[Emulator] No TLS callbacks to execute");
+            return;
+        }
+
+        _logger.LogInformation("[Emulator] Executing {Count} TLS callbacks", _image.TlsCallbacks.Length);
+
+        // TLS callback signature: void NTAPI TlsCallback(PVOID DllHandle, DWORD Reason, PVOID Reserved)
+        // Parameters:
+        //   DllHandle: Base address of the image (hModule)
+        //   Reason: DLL_PROCESS_ATTACH (1) for process initialization
+        //   Reserved: NULL (0)
+        const uint DLL_PROCESS_ATTACH = 1;
+
+        var originalEip = _cpu.GetEip();
+        var originalEsp = _cpu.GetRegister("ESP");
+
+        for (var i = 0; i < _image.TlsCallbacks.Length; i++)
+        {
+            var callbackAddress = _image.TlsCallbacks[i];
+            _logger.LogInformation("[Emulator] Executing TLS callback #{Index} at 0x{Address:X8}", i, callbackAddress);
+
+            try
+            {
+                // Set up the stack for the callback call (stdcall convention)
+                // TLS callback signature: void NTAPI TlsCallback(PVOID DllHandle, DWORD Reason, PVOID Reserved)
+                // Parameters pushed right-to-left: Reserved, Reason, DllHandle
+                // Each callback starts with a fresh stack from originalEsp
+                var esp = originalEsp;
+                
+                // Push Reserved (last parameter, NULL)
+                esp -= 4;
+                _vm.Write32(esp, 0);
+                
+                // Push Reason (second parameter, DLL_PROCESS_ATTACH)
+                esp -= 4;
+                _vm.Write32(esp, DLL_PROCESS_ATTACH);
+                
+                // Push DllHandle (first parameter, image base address)
+                esp -= 4;
+                _vm.Write32(esp, _image.BaseAddress);
+                
+                // Push return address (we'll use a special marker to detect return)
+                // Use an address in the NULL page that will cause a fault if executed
+                const uint RETURN_MARKER = 0x00000001;
+                esp -= 4;
+                _vm.Write32(esp, RETURN_MARKER);
+                
+                // Update ESP and set EIP to callback
+                _cpu.SetRegister("ESP", esp);
+                _cpu.SetEip(callbackAddress);
+                
+                // Execute the callback until it returns
+                // We'll detect return when EIP reaches our RETURN_MARKER
+                // Note: Unlike the main emulation loop, TLS callbacks run to completion without instruction limits
+                // to match Windows behavior. If a callback never returns, the emulator will hang.
+                while (_cpu.GetEip() != RETURN_MARKER)
+                {
+                    _cpu.SingleStep(_vm);
+                }
+                
+                _logger.LogDebug("[Emulator] TLS callback #{Index} returned successfully", i);
+            }
+            catch (Exception ex)
+            {
+                // Re-throw critical exceptions that should not be caught
+                if (ex is OutOfMemoryException || ex is StackOverflowException)
+                {
+                    throw;
+                }
+                
+                // For other exceptions, restore CPU state and abort TLS callbacks execution
+                // since the process state is now undefined
+                _logger.LogCritical(ex, "[Emulator] Error executing TLS callback #{Index} at 0x{Address:X8}", 
+                    i, callbackAddress);
+                _cpu.SetEip(originalEip);
+                _cpu.SetRegister("ESP", originalEsp);
+                _logger.LogCritical("[Emulator] Aborting TLS callbacks execution due to exception in callback #{Index}", i);
+                break;
+            }
+        }
+
+        // Restore original EIP and ESP
+        _cpu.SetEip(originalEip);
+        _cpu.SetRegister("ESP", originalEsp);
+        
+        _logger.LogInformation("[Emulator] TLS callbacks execution complete");
     }
 
     public async Task RunAsync()
