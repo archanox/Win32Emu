@@ -605,9 +605,11 @@ public sealed class Emulator : IDisposable
             // DEBUG: Log EIP at start of each iteration to catch when it gets corrupted
             var eipAtLoopStart = _cpu!.GetEip();
             // Check if EIP is in heap area (likely executing data)
+            // Exclude special emulator infrastructure ranges (syscall dispatcher, import stubs, COM vtables)
             // Throttle: Only log this warning when EIP changes to reduce log noise
             var isInHeapRange = eipAtLoopStart >= _heapBase && eipAtLoopStart < HEAP_LIMIT;
-            if (isInHeapRange && eipAtLoopStart != lastSuspiciousEipWarning)
+            var isInSpecialRange = MemoryRegions.IsInSpecialRange(eipAtLoopStart);
+            if (isInHeapRange && !isInSpecialRange && eipAtLoopStart != lastSuspiciousEipWarning)
             {
                 var esp = _cpu.GetRegister("ESP");
                 _logger.LogWarning("[Emulator] LOOP START: EIP=0x{Eip:X8} is already in suspicious range at loop start! ESP=0x{Esp:X8}", eipAtLoopStart, esp);
@@ -733,9 +735,11 @@ public sealed class Emulator : IDisposable
             }
             
             // Guard: detect execution in heap memory (likely executing data)
+            // Exclude special emulator infrastructure ranges (syscall dispatcher, import stubs, COM vtables)
             // Throttle: Only log this warning when EIP changes to reduce log noise
             var isExecutingInHeapRange = eipBeforeStep >= _heapBase && eipBeforeStep < HEAP_LIMIT;
-            if (isExecutingInHeapRange && eipBeforeStep != lastHeapEipWarning)
+            var isExecutingInSpecialRange = MemoryRegions.IsInSpecialRange(eipBeforeStep);
+            if (isExecutingInHeapRange && !isExecutingInSpecialRange && eipBeforeStep != lastHeapEipWarning)
             {
                 // EIP in heap range is suspicious - likely executing data or unmapped memory
                 // This range is typically used for data segments, not code
