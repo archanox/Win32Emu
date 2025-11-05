@@ -116,8 +116,8 @@ namespace Win32Emu.Win32.Modules
 			if (verification != comObjectAddr)
 			{
 				_logger.LogError("[DInput] Verification failed! Wrote 0x{Expected:X8} but read back 0x{Actual:X8} from address 0x{Addr:X8}", 
-					comObjectAddr, verification, lplpDirectInput);
-				return 1; // DIERR_GENERIC
+			        comObjectAddr, verification, lplpDirectInput);
+			    return 0x80004005; // DIERR_GENERIC (E_FAIL)
 			}
 			_logger.LogInformation("[DInput] Verification: Read back 0x{Value:X8} from 0x{Addr:X8} - SUCCESS", verification, lplpDirectInput);
 
