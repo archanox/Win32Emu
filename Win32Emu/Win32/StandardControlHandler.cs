@@ -114,7 +114,10 @@ public class StandardControlHandler
 		WM_RBUTTONUP = 0x0205,
 		WM_XBUTTONDBLCLK = 0x020D,
 		WM_XBUTTONDOWN = 0x020B,
-		WM_XBUTTONUP = 0x020C
+		WM_XBUTTONUP = 0x020C,
+
+		// Button control messages
+		BM_CLICK = 0x00F1
 	}
 
 	private uint HandleButtonMessage(uint hwnd, WindowNotifications msg, uint wParam, uint lParam)
@@ -145,6 +148,12 @@ public class StandardControlHandler
 				_logger.LogDebug("[Button] WM_LBUTTONUP");
 				// Send BN_CLICKED notification to parent (no mouse capture or state change implemented)
 				SendButtonNotification(hwnd, NotificationCode.BN_CLICKED); // BN_CLICKED = 0
+				return 0;
+
+			case WindowNotifications.BM_CLICK:
+				_logger.LogDebug("[Button] BM_CLICK - simulating button click");
+				// BM_CLICK simulates a button click by sending the notification directly
+				SendButtonNotification(hwnd, NotificationCode.BN_CLICKED);
 				return 0;
 
 			default:
