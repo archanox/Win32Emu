@@ -286,8 +286,8 @@ public class VirtualMemory
         uint pageIndex = (uint)(addr >> PageSizeBits);
         uint offset = (uint)(addr & PageMask);
         
-        // Check if the request spans multiple pages
-        if (offset + length > PageSize)
+        // Check if the request spans multiple pages (use long to prevent overflow)
+        if ((long)offset + length > PageSize)
         {
             memory = Memory<byte>.Empty;
             return false;
