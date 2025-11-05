@@ -758,7 +758,17 @@ public class ProcessEnvironment
 		try { Diagnostics.Diagnostics.LogMemWrite(addr, data.Length, data.ToArray()); } catch { }
 	}
 	public uint MemRead32(uint addr) => Memory.Read32(addr);
-	public void MemWrite32(uint addr, uint value) => Memory.Write32(addr, value);
+	public void MemWrite32(uint addr, uint value)
+	{
+		// Log writes to .data section to help debug DirectDraw/DirectInput COM pointer issues
+		// Typical .data section range for Win32 executables: 0x00400000-0x00500000
+		if (addr >= 0x00400000 && addr < 0x00500000)
+		{
+			_logger.LogDebug("[MemoryWrite] Write32 at 0x{Addr:X8}: 0x{Value:X8} (from EIP=0x{Eip:X8})", 
+				addr, value, _cpu?.GetEip() ?? 0);
+		}
+		Memory.Write32(addr, value);
+	}
 	public void MemWriteBytes(uint addr, byte[] bytes) => Memory.WriteBytes(addr, bytes);
 	public void MemWrite16(uint addr, ushort value) => Memory.Write16(addr, value);
 	public void MemWrite8(uint addr, byte value) => Memory.Write8(addr, value);
