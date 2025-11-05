@@ -285,6 +285,10 @@ public class PeExportIntegrationTests : IDisposable
 
         // Find a function that exists in our emulated KERNEL32 but NOT in the real DLL
         // We'll try several candidates and use the first one that's missing from the PE but exists in emulated module
+        // NOTE: This list is intentionally hardcoded with functions added in later Windows versions.
+        // The test is robust: if all candidates are found in the PE (e.g., newer kernel32.dll), 
+        // the test gracefully skips. If any candidate is missing from PE but exists in emulated module,
+        // we test the fallback behavior.
         string[] candidates = 
         {
             "GetSystemWindowsDirectoryA",  // Vista+
