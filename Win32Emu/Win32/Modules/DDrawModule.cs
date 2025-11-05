@@ -86,6 +86,20 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[DDraw] DirectDrawCreate(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, pUnkOuter);
 
+		// Validate output pointer parameter
+		if (lplpDd == 0)
+		{
+			_logger.LogError("[DDraw] DirectDrawCreate: lplpDD is NULL");
+			return 0x80070057; // DDERR_INVALIDPARAMS
+		}
+
+		// Detect if lplpDD looks like a stack pointer (potential parameter handling bug)
+		// Stack addresses are typically in the range 0x00100000-0x00400000 (lower memory)
+		if (lplpDd >= 0x00100000 && lplpDd < 0x00400000)
+		{
+			_logger.LogWarning("[DDraw] DirectDrawCreate: lplpDD=0x{LplpDd:X8} appears to be a stack/low-memory address - this might indicate a parameter handling issue", lplpDd);
+		}
+
 // Create DirectDraw object with COM vtable
 			var ddrawHandle = _nextDDrawHandle++;
 			var ddrawObj = new DirectDrawObject
@@ -132,11 +146,19 @@ namespace Win32Emu.Win32.Modules
 			ddrawObj.ComObjectAddress = comObjectAddr;
 			_comObjectToHandle[comObjectAddr] = ddrawHandle;
 
-// Write COM object pointer to output parameter
-			if (lplpDd != 0)
+// Write COM object pointer to output parameter with verification
+			_logger.LogInformation("[DDraw] Writing COM object 0x{ComObjectAddr:X8} to address 0x{Addr:X8}", comObjectAddr, lplpDd);
+			_env.MemWrite32(lplpDd, comObjectAddr);
+			
+			// Verify the write succeeded by reading back
+			var verification = _env.MemRead32(lplpDd);
+			if (verification != comObjectAddr)
 			{
-				_env.MemWrite32(lplpDd, comObjectAddr);
+				_logger.LogError("[DDraw] Verification failed! Wrote 0x{Expected:X8} but read back 0x{Actual:X8} from address 0x{Addr:X8}", 
+					comObjectAddr, verification, lplpDd);
+				return 1; // DDERR_GENERIC
 			}
+			_logger.LogInformation("[DDraw] Verification: Read back 0x{Value:X8} from 0x{Addr:X8} - SUCCESS", verification, lplpDd);
 
 			_logger.LogInformation("[DDraw] Created IDirectDraw COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
 			return 0; // DD_OK
@@ -148,6 +170,19 @@ namespace Win32Emu.Win32.Modules
 		private uint DirectDrawCreateEx(uint lpGuid, uint lplpDd, uint iid, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DDraw] DirectDrawCreateEx(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, iid=0x{Iid:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, iid, pUnkOuter);
+
+			// Validate output pointer parameter
+			if (lplpDd == 0)
+			{
+				_logger.LogError("[DDraw] DirectDrawCreateEx: lplpDD is NULL");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Detect if lplpDD looks like a stack pointer (potential parameter handling bug)
+			if (lplpDd >= 0x00100000 && lplpDd < 0x00400000)
+			{
+				_logger.LogWarning("[DDraw] DirectDrawCreateEx: lplpDD=0x{LplpDd:X8} appears to be a stack/low-memory address - this might indicate a parameter handling issue", lplpDd);
+			}
 
 			// Create DirectDraw object with COM vtable (similar to DirectDrawCreate)
 			var ddrawHandle = _nextDDrawHandle++;
@@ -195,11 +230,19 @@ namespace Win32Emu.Win32.Modules
 			ddrawObj.ComObjectAddress = comObjectAddr;
 			_comObjectToHandle[comObjectAddr] = ddrawHandle;
 
-			// Write COM object pointer to output parameter
-			if (lplpDd != 0)
+			// Write COM object pointer to output parameter with verification
+			_logger.LogInformation("[DDraw] Writing COM object 0x{ComObjectAddr:X8} to address 0x{Addr:X8}", comObjectAddr, lplpDd);
+			_env.MemWrite32(lplpDd, comObjectAddr);
+			
+			// Verify the write succeeded by reading back
+			var verification = _env.MemRead32(lplpDd);
+			if (verification != comObjectAddr)
 			{
-				_env.MemWrite32(lplpDd, comObjectAddr);
+				_logger.LogError("[DDraw] Verification failed! Wrote 0x{Expected:X8} but read back 0x{Actual:X8} from address 0x{Addr:X8}", 
+					comObjectAddr, verification, lplpDd);
+				return 1; // DDERR_GENERIC
 			}
+			_logger.LogInformation("[DDraw] Verification: Read back 0x{Value:X8} from 0x{Addr:X8} - SUCCESS", verification, lplpDd);
 
 			_logger.LogInformation("[DDraw] Created IDirectDraw COM object (Ex) at 0x{ComObjectAddr:X8}", comObjectAddr);
 			return 0; // DD_OK

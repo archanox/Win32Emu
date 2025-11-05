@@ -62,6 +62,19 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[DInput] DirectInputCreateA(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
 
+			// Validate output pointer parameter
+			if (lplpDirectInput == 0)
+			{
+				_logger.LogError("[DInput] DirectInputCreateA: lplpDirectInput is NULL");
+				return 0x80004003; // DIERR_INVALIDPARAM
+			}
+
+			// Detect if lplpDirectInput looks like a stack pointer (potential parameter handling bug)
+			if (lplpDirectInput >= 0x00100000 && lplpDirectInput < 0x00400000)
+			{
+				_logger.LogWarning("[DInput] DirectInputCreateA: lplpDirectInput=0x{LplpDirectInput:X8} appears to be a stack/low-memory address - this might indicate a parameter handling issue", lplpDirectInput);
+			}
+
 			// Create DirectInput object with COM vtable
 			var dinputHandle = _nextDInputHandle++;
 			var dinputObj = new DirectInputObject
@@ -94,11 +107,19 @@ namespace Win32Emu.Win32.Modules
 // Create the COM object with vtable
 			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectInput", vtableMethods);
 
-// Write COM object pointer to output parameter
-			if (lplpDirectInput != 0)
+// Write COM object pointer to output parameter with verification
+			_logger.LogInformation("[DInput] Writing COM object 0x{ComObjectAddr:X8} to address 0x{Addr:X8}", comObjectAddr, lplpDirectInput);
+			_env.MemWrite32(lplpDirectInput, comObjectAddr);
+			
+			// Verify the write succeeded by reading back
+			var verification = _env.MemRead32(lplpDirectInput);
+			if (verification != comObjectAddr)
 			{
-				_env.MemWrite32(lplpDirectInput, comObjectAddr);
+				_logger.LogError("[DInput] Verification failed! Wrote 0x{Expected:X8} but read back 0x{Actual:X8} from address 0x{Addr:X8}", 
+					comObjectAddr, verification, lplpDirectInput);
+				return 1; // DIERR_GENERIC
 			}
+			_logger.LogInformation("[DInput] Verification: Read back 0x{Value:X8} from 0x{Addr:X8} - SUCCESS", verification, lplpDirectInput);
 
 			_logger.LogInformation("[DInput] Created IDirectInput COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
 			return 0; // DI_OK
@@ -108,6 +129,19 @@ namespace Win32Emu.Win32.Modules
 		private uint DirectInputCreate(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
 			_logger.LogInformation("[DInput] DirectInputCreate(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
+
+			// Validate output pointer parameter
+			if (lplpDirectInput == 0)
+			{
+				_logger.LogError("[DInput] DirectInputCreate: lplpDirectInput is NULL");
+				return 0x80004003; // DIERR_INVALIDPARAM
+			}
+
+			// Detect if lplpDirectInput looks like a stack pointer (potential parameter handling bug)
+			if (lplpDirectInput >= 0x00100000 && lplpDirectInput < 0x00400000)
+			{
+				_logger.LogWarning("[DInput] DirectInputCreate: lplpDirectInput=0x{LplpDirectInput:X8} appears to be a stack/low-memory address - this might indicate a parameter handling issue", lplpDirectInput);
+			}
 
 			// Create DirectInput object with COM vtable (same as DirectInputCreateA)
 			var dinputHandle = _nextDInputHandle++;
@@ -141,11 +175,19 @@ namespace Win32Emu.Win32.Modules
 			// Create the COM object with vtable
 			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectInput", vtableMethods);
 
-			// Write COM object pointer to output parameter
-			if (lplpDirectInput != 0)
+			// Write COM object pointer to output parameter with verification
+			_logger.LogInformation("[DInput] Writing COM object 0x{ComObjectAddr:X8} to address 0x{Addr:X8}", comObjectAddr, lplpDirectInput);
+			_env.MemWrite32(lplpDirectInput, comObjectAddr);
+			
+			// Verify the write succeeded by reading back
+			var verification = _env.MemRead32(lplpDirectInput);
+			if (verification != comObjectAddr)
 			{
-				_env.MemWrite32(lplpDirectInput, comObjectAddr);
+				_logger.LogError("[DInput] Verification failed! Wrote 0x{Expected:X8} but read back 0x{Actual:X8} from address 0x{Addr:X8}", 
+					comObjectAddr, verification, lplpDirectInput);
+				return 1; // DIERR_GENERIC
 			}
+			_logger.LogInformation("[DInput] Verification: Read back 0x{Value:X8} from 0x{Addr:X8} - SUCCESS", verification, lplpDirectInput);
 
 			_logger.LogInformation("[DInput] Created IDirectInput COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
 			return 0; // DI_OK
