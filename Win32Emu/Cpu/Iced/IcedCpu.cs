@@ -698,15 +698,18 @@ public class IcedCpu : IAsyncCpu
 	}
 
 	/// <summary>
-	/// Validates an indirect jump/call target and logs a warning if it's suspiciously low.
-	/// Addresses below 0x00400000 (except NULL and special emulator ranges) are considered suspicious 
-	/// as they are typically below the normal image base, indicating possible invalid function pointers 
-	/// or corrupted registers.
+	/// Validates an indirect jump/call target and throws an exception if it points to an invalid region.
+	/// Addresses below 0x00400000 (except NULL and special emulator ranges) are considered invalid 
+	/// as they are typically below the normal image base, indicating possible invalid function pointers,
+	/// corrupted registers, or uninitialized memory being executed as code.
+	/// Stack and low heap addresses are especially problematic as they indicate function pointers
+	/// pointing to data rather than code.
 	/// </summary>
 	/// <param name="target">The target address to validate</param>
 	/// <param name="sourceEip">The EIP of the instruction performing the jump/call</param>
 	/// <param name="operation">The operation type ("JMP" or "CALL")</param>
 	/// <param name="sourceRegister">Optional source register for better diagnostics</param>
+	/// <exception cref="InvalidOperationException">Thrown when target points to an invalid memory region</exception>
 	private void ValidateIndirectTarget(uint target, uint sourceEip, string operation, Register? sourceRegister = null)
 	{
 		// Check if target is suspiciously low (< typical image base)
@@ -720,16 +723,57 @@ public class IcedCpu : IAsyncCpu
 				return;
 			}
 			
-			if (sourceRegister.HasValue)
+			// Determine the type of invalid address for better error messaging
+			string addressType;
+			string diagnosticInfo;
+			
+			if (target >= 0x00100000 && target < 0x01000000)
 			{
-				_logger.LogWarning("[IcedCpu] {Operation} at 0x{SourceEip:X8}: indirect {OperationLower} target 0x{Target:X8} is suspiciously low (< 0x00400000). Possible invalid function pointer or corrupted register. Register: {Reg}",
-					operation, sourceEip, operation.ToLowerInvariant(), target, sourceRegister.Value);
+				// Stack region (typically 1MB-16MB range)
+				addressType = "stack";
+				diagnosticInfo = "This indicates a function pointer was loaded with a stack address instead of a code address. " +
+				                "Common causes: (1) Uninitialized function pointer in .data/.bss section, " +
+				                "(2) Corruption of Import Address Table (IAT) entry, " +
+				                "(3) Missing C runtime initialization, " +
+				                "(4) Buffer overflow corrupting function pointers.";
+			}
+			else if (target >= 0x01000000 && target < 0x0D000000)
+			{
+				// Heap region
+				addressType = "heap";
+				diagnosticInfo = "This indicates a function pointer was loaded with a heap address instead of a code address. " +
+				                "Common causes: (1) Uninitialized or corrupted function pointer, " +
+				                "(2) COM interface pointer being used incorrectly, " +
+				                "(3) Vtable corruption.";
 			}
 			else
 			{
-				_logger.LogWarning("[IcedCpu] {Operation} at 0x{SourceEip:X8}: indirect {OperationLower} target 0x{Target:X8} is suspiciously low (< 0x00400000). Possible invalid function pointer or uninitialized memory.",
-					operation, sourceEip, operation.ToLowerInvariant(), target);
+				// Other low address
+				addressType = "low memory";
+				diagnosticInfo = "This indicates an invalid or uninitialized function pointer. " +
+				                "The address is below the typical image base (0x00400000).";
 			}
+			
+			string errorMessage;
+			if (sourceRegister.HasValue)
+			{
+				var regName = sourceRegister.Value.ToString();
+				errorMessage = $"Invalid indirect {operation} at 0x{sourceEip:X8}: " +
+				              $"Target address 0x{target:X8} (from register {regName}) points to {addressType} instead of code. " +
+				              $"{diagnosticInfo}";
+				
+				_logger.LogError("[IcedCpu] {ErrorMessage}", errorMessage);
+			}
+			else
+			{
+				errorMessage = $"Invalid indirect {operation} at 0x{sourceEip:X8}: " +
+				              $"Target address 0x{target:X8} (from memory) points to {addressType} instead of code. " +
+				              $"{diagnosticInfo}";
+				
+				_logger.LogError("[IcedCpu] {ErrorMessage}", errorMessage);
+			}
+			
+			throw new InvalidOperationException(errorMessage);
 		}
 	}
 
