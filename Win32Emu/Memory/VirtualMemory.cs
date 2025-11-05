@@ -267,6 +267,10 @@ public class VirtualMemory
     /// </summary>
     public Memory<byte> GetMemory(ulong addr, int length)
     {
+        if (TryGetPageMemory(addr, length, out var memory))
+        {
+            return memory;
+        }
         return new Memory<byte>(GetSpan(addr, length));
     }
     
