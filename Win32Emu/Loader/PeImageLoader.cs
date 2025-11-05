@@ -161,15 +161,32 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				logger?.LogDebug("[Loader] Loading section {SectionName}: RVA=0x{Rva:X8}, VirtualSize=0x{VSize:X8}, RawDataSize=0x{RawSize:X8}, Flags=0x{Flags:X8}", 
 					section.Name, sectionRva, virtualSize, rawData.Length, (uint)section.Characteristics);
 				
-				// Write the raw data from the file
-				vm.WriteBytes(imageBase + sectionRva, rawData);
+				// Determine how many bytes to actually write to memory
+				// Per PE format specification:
+				// - If RawDataSize > VirtualSize, only write VirtualSize bytes (extra bytes in file are padding/garbage)
+				// - If VirtualSize > RawDataSize, write all RawDataSize bytes (extra virtual bytes remain zero)
+				var bytesToWrite = Math.Min((uint)rawData.Length, virtualSize);
 				
-				// If VirtualSize is larger than raw data size, the extra bytes should remain zero
-				// (VirtualMemory already initializes to zero, so we don't need to explicitly zero-fill)
-				if (virtualSize > rawData.Length)
+				if (bytesToWrite < rawData.Length)
 				{
-					logger?.LogDebug("[Loader] Section {SectionName} has VirtualSize (0x{VSize:X8}) > RawDataSize (0x{RawSize:X8}), extra 0x{Extra:X8} bytes remain zero-filled", 
-						section.Name, virtualSize, rawData.Length, virtualSize - (uint)rawData.Length);
+					logger?.LogDebug("[Loader] Section {SectionName} has RawDataSize (0x{RawSize:X8}) > VirtualSize (0x{VSize:X8}), truncating to VirtualSize to avoid writing beyond section bounds", 
+						section.Name, rawData.Length, virtualSize);
+					
+					// Only write VirtualSize bytes, ignoring extra bytes in the file
+					vm.WriteBytes(imageBase + sectionRva, rawData.AsSpan(0, (int)bytesToWrite));
+				}
+				else
+				{
+					// Write all raw data from the file
+					vm.WriteBytes(imageBase + sectionRva, rawData);
+					
+					// If VirtualSize is larger than raw data size, the extra bytes should remain zero
+					// (VirtualMemory already initializes to zero, so we don't need to explicitly zero-fill)
+					if (virtualSize > rawData.Length)
+					{
+						logger?.LogDebug("[Loader] Section {SectionName} has VirtualSize (0x{VSize:X8}) > RawDataSize (0x{RawSize:X8}), extra 0x{Extra:X8} bytes remain zero-filled", 
+							section.Name, virtualSize, rawData.Length, virtualSize - (uint)rawData.Length);
+					}
 				}
 			}
 			catch (Exception ex) when (ex is System.IO.EndOfStreamException or ArgumentException)
