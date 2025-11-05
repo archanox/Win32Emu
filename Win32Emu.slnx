@@ -47,6 +47,10 @@
     <File Path="DLLs\WinXP\dinput.dll" />
     <File Path="DLLs\WinXP\ddraw.dll" />
   </Folder>
+  <Folder Name="/Solution Items/logs/">
+    <File Path="win32emu_2025-11-05_2211.log" />
+    <File Path="win32emu_2025-11-06_0006.log" />
+  </Folder>
   <Project Path="Win32Emu.CallingConvention\Win32Emu.CallingConvention.csproj" Type="C#">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
