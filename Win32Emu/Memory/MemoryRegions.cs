@@ -7,8 +7,10 @@ namespace Win32Emu.Memory;
 /// <remarks>
 /// Memory layout:
 /// - 0x0D000000 - 0x0DFFFFFF: COM vtables and standard control window procedures (16 MB)
-/// - 0x0E000000 - 0x0EFFFFFF: Syscall dispatcher and synthetic exports (16 MB)
+/// - 0x0E000000 - 0x0EFFFFFF: Syscall dispatcher (16 MB)
 /// - 0x0F000000 - 0x0FFFFFFF: Import hooks and stubs (16 MB)
+///   - 0x0F000000 - 0x0F7FFFFF: Static import stubs
+///   - 0x0F800000 - 0x0FFFFFFF: Dynamic synthetic exports
 /// - 0x10000000+: Other uses (thread stacks, module handles, etc.)
 /// </remarks>
 public static class MemoryRegions
@@ -21,10 +23,10 @@ public static class MemoryRegions
 	public const uint ComVtableLimit = 0x0E000000;
 	public const uint ComVtableSize = ComVtableLimit - ComVtableBase; // 16 MB
 	
-	// Syscall dispatcher and synthetic exports range (0x0E000000 - 0x0EFFFFFF)
+	// Syscall dispatcher range (0x0E000000 - 0x0EFFFFFF)
 	// This range is used for:
 	// - The main syscall dispatcher entry point (at 0x0E000000)
-	// - Synthetic exports created via GetProcAddress (starting at 0x0F800000+)
+	// Note: Synthetic exports are in the import hook range (0x0F800000+), not here
 	public const uint SyscallDispatcherBase = 0x0E000000;
 	public const uint SyscallDispatcherLimit = 0x0F000000;
 	public const uint SyscallDispatcherSize = SyscallDispatcherLimit - SyscallDispatcherBase; // 16 MB
