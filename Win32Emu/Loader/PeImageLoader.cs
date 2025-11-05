@@ -659,12 +659,12 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			// it only happens once during PE load time (not performance-critical path).
 			// AsmResolver doesn't provide a direct way to get raw data length without materializing it.
 			var rawSize = (uint)(section.Contents?.WriteIntoArray().Length ?? 0);
-			var characteristics = (uint)section.Characteristics;
+			var characteristics = (PeSectionCharacteristics)(uint)section.Characteristics;
 
 			sections.Add(new PeSection(name, rva, virtualSize, rawSize, characteristics));
 
 			logger?.LogDebug("[Loader] Section {Name}: RVA=0x{Rva:X8}, VirtualSize=0x{VSize:X8}, RawSize=0x{RawSize:X8}, Characteristics=0x{Chars:X8}",
-				name, rva, virtualSize, rawSize, characteristics);
+				name, rva, virtualSize, rawSize, (uint)characteristics);
 		}
 
 		logger?.LogInformation("[Loader] Extracted {Count} sections from PE file", sections.Count);

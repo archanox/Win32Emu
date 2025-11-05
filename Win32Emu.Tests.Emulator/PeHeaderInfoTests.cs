@@ -12,7 +12,7 @@ public class PeHeaderInfoTests
 	public void PeSection_IsExecutable_DetectsCodeSections()
 	{
 		// Arrange - Create a section with executable flag
-		var codeSection = new PeSection(".text", 0x1000, 0x2000, 0x2000, 0x20000020);
+		var codeSection = new PeSection(".text", 0x1000, 0x2000, 0x2000, (PeSectionCharacteristics)0x20000020);
 		
 		// Act & Assert
 		Assert.True(codeSection.IsExecutable);
@@ -22,7 +22,7 @@ public class PeHeaderInfoTests
 	public void PeSection_IsData_DetectsDataSections()
 	{
 		// Arrange - Create a section with initialized data flag
-		var dataSection = new PeSection(".data", 0x3000, 0x1000, 0x1000, 0x40000040);
+		var dataSection = new PeSection(".data", 0x3000, 0x1000, 0x1000, (PeSectionCharacteristics)0x40000040);
 		
 		// Act & Assert
 		Assert.True(dataSection.IsData);
@@ -34,9 +34,9 @@ public class PeHeaderInfoTests
 		// Arrange
 		var sections = new[]
 		{
-			new PeSection(".text", 0x1000, 0x2000, 0x2000, 0x20000020), // Executable
-			new PeSection(".data", 0x3000, 0x1000, 0x1000, 0xC0000040), // Data, readable, writable
-			new PeSection(".rdata", 0x4000, 0x500, 0x500, 0x40000040),  // Data, readable
+			new PeSection(".text", 0x1000, 0x2000, 0x2000, (PeSectionCharacteristics)0x20000020), // Executable
+			new PeSection(".data", 0x3000, 0x1000, 0x1000, (PeSectionCharacteristics)0xC0000040), // Data, readable, writable
+			new PeSection(".rdata", 0x4000, 0x500, 0x500, (PeSectionCharacteristics)0x40000040),  // Data, readable
 		};
 		
 		var loadedImage = new LoadedImage(
@@ -73,7 +73,7 @@ public class PeHeaderInfoTests
 		// Arrange
 		var sections = new[]
 		{
-			new PeSection(".text", 0x1000, 0x2000, 0x2000, 0x20000020), // Executable at RVA 0x1000-0x3000
+			new PeSection(".text", 0x1000, 0x2000, 0x2000, (PeSectionCharacteristics)0x20000020), // Executable at RVA 0x1000-0x3000
 		};
 		
 		var loadedImage = new LoadedImage(
