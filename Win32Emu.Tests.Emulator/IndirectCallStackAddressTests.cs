@@ -16,7 +16,8 @@ public class IndirectCallStackAddressTests
 		// Arrange: This reproduces the exact scenario from the problem statement
 		// At 0x0040319A, code executes "call ebp" where EBP=0x001FEF10 (stack address)
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, null);
+		var imageBase = 0x00400000u; // Typical Win32 executable image base
+		var cpu = new IcedCpu(memory, null, imageBase: imageBase);
 		
 		cpu.SetEip(0x0040319A);
 		cpu.SetRegister("ESP", 0x001FEF0C);
@@ -46,7 +47,8 @@ public class IndirectCallStackAddressTests
 		// Arrange: This tests the pattern "call [memory]" where memory contains a stack address
 		// This simulates the scenario where [0x004552F8] contains 0x001FEF10
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, null);
+		var imageBase = 0x00400000u; // Typical Win32 executable image base
+		var cpu = new IcedCpu(memory, null, imageBase: imageBase);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ESP", 0x001FEF0C);
@@ -74,13 +76,14 @@ public class IndirectCallStackAddressTests
 	[Fact]
 	public void CALL_Register_WithValidCodeAddress_ShouldNotThrow()
 	{
-		// Arrange: CALL with valid code address (>= 0x00400000)
+		// Arrange: CALL with valid code address (>= image base)
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, null);
+		var imageBase = 0x00400000u; // Typical Win32 executable image base
+		var cpu = new IcedCpu(memory, null, imageBase: imageBase);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ESP", 0x00100000);
-		cpu.SetRegister("EAX", 0x00401000); // Valid code address
+		cpu.SetRegister("EAX", 0x00401000); // Valid code address (above image base)
 		
 		// Write CALL EAX instruction
 		memory.Write8(0x00400000, 0xFF);
@@ -98,7 +101,8 @@ public class IndirectCallStackAddressTests
 	{
 		// Arrange: CALL with import stub address (0x0F000000 - 0x0FFFFFFF)
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, null);
+		var imageBase = 0x00400000u; // Typical Win32 executable image base
+		var cpu = new IcedCpu(memory, null, imageBase: imageBase);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ESP", 0x00100000);

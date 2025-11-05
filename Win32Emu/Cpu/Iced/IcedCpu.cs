@@ -31,6 +31,11 @@ public class IcedCpu : IAsyncCpu
 	// Default image base if not specified (typical default for Win32 executables)
 	private const uint DEFAULT_IMAGE_BASE = 0x00400000;
 	
+	// Stack region estimation (typical range for Windows applications)
+	// Note: Actual stack location can vary based on PE header and OS configuration
+	private const uint STACK_REGION_START = 0x00100000; // 1 MB
+	private const uint STACK_REGION_END = 0x01000000;   // 16 MB
+	
 	// Image base from PE header (used for validation of indirect calls/jumps)
 	private readonly uint _imageBase;
 
@@ -741,21 +746,17 @@ public class IcedCpu : IAsyncCpu
 			string addressType;
 			string diagnosticInfo;
 			
-			// Stack region estimation: typically 1MB-16MB range
+			// Stack region estimation using defined constants
 			// Note: Actual stack location can vary based on PE header and OS
-			if (target >= 0x00100000 && target < 0x01000000)
+			if (target >= STACK_REGION_START && target < STACK_REGION_END)
 			{
-				// Stack region (typically 1MB-16MB range)
+				// Stack region
 				addressType = "stack";
-				diagnosticInfo = "This indicates a function pointer was loaded with a stack address instead of a code address. " +
-				                "Common causes: (1) Uninitialized function pointer in .data/.bss section, " +
-				                "(2) Corruption of Import Address Table (IAT) entry, " +
-				                "(3) Missing C runtime initialization, " +
-				                "(4) Buffer overflow corrupting function pointers.";
+				diagnosticInfo = GetStackAddressDiagnostic();
 			}
 			else
 			{
-				// Other low address (< 1MB or >= 1MB but < image base)
+				// Other low address (< stack region or >= stack region but < image base)
 				addressType = "low memory";
 				diagnosticInfo = $"This indicates an invalid or uninitialized function pointer. " +
 				                $"The address is below the image base (0x{_imageBase:X8} from PE header).";
@@ -782,6 +783,18 @@ public class IcedCpu : IAsyncCpu
 			
 			throw new InvalidOperationException(errorMessage);
 		}
+	}
+	
+	/// <summary>
+	/// Gets diagnostic information for stack address validation failures.
+	/// </summary>
+	private static string GetStackAddressDiagnostic()
+	{
+		return "This indicates a function pointer was loaded with a stack address instead of a code address. " +
+		       "Common causes: (1) Uninitialized function pointer in .data/.bss section, " +
+		       "(2) Corruption of Import Address Table (IAT) entry, " +
+		       "(3) Missing C runtime initialization, " +
+		       "(4) Buffer overflow corrupting function pointers.";
 	}
 
 	#region Exec helpers
