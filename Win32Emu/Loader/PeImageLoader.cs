@@ -21,8 +21,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	private const uint SYSCALL_DISPATCHER_ADDRESS = 0x0E000000;
 	
 	// Minimum expected value for IAT entries in normal PE executables
-	// IAT entries typically point to addresses in the image base range (0x00400000+)
-	// Values below this are likely uninitialized or corrupted
+	// IAT entries typically point to addresses in the image base range.
+	// The default image base for Win32 PE executables is 0x00400000.
+	// Values below this threshold are likely uninitialized (0x00000000) or corrupted.
 	private const uint MIN_EXPECTED_IAT_VALUE = 0x00400000;
 	
 	// Maximum number of TLS callbacks to extract (safety limit to prevent infinite loops on corrupted PE files)
