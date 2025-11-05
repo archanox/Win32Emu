@@ -20,7 +20,7 @@ public record ComMethodInfo(
 
 /// <summary>
 /// Dispatcher for COM vtable method calls
-/// Handles calls to COM interface methods at addresses 0x0E000000-0x0EFFFFFF
+/// Handles calls to COM interface methods in the COM vtable memory range
 /// 
 /// Threading Model:
 /// COM method invocations are synchronous but designed to be non-blocking.
@@ -34,10 +34,6 @@ public class ComVtableDispatcher
 {
 	private readonly ProcessEnvironment _env;
 	private readonly ILogger _logger;
-	
-	// Base address for COM vtable stubs
-	private const uint COM_VTABLE_BASE = 0x0D000000;
-	private const uint COM_VTABLE_END = 0x0DFFFFFF;
 	
 	// Map of vtable stub addresses to handler functions
 	private readonly Dictionary<uint, Func<ICpu, VirtualMemory, uint>> _vtableHandlers = new();
@@ -63,7 +59,7 @@ public class ComVtableDispatcher
 	/// </summary>
 	public bool IsComVtableAddress(uint address)
 	{
-		return address >= COM_VTABLE_BASE && address <= COM_VTABLE_END;
+		return MemoryRegions.IsInComVtableRange(address);
 	}
 	
 	/// <summary>
@@ -137,7 +133,7 @@ public class ComVtableDispatcher
 		_env.MemWrite32(objectAddr, vtableAddr);
 		
 		// Create vtable stubs and write function pointers
-		var stubAddr = COM_VTABLE_BASE + (objectId * 0x1000); // Each object gets 4KB of address space
+		var stubAddr = MemoryRegions.ComVtableBase + (objectId * 0x1000); // Each object gets 4KB of address space
 		uint methodIndex = 0;
 		
 		foreach (var kvp in methods)

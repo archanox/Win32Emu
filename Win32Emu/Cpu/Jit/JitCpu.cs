@@ -280,7 +280,7 @@ public class JitCpu : IAsyncCpu
 				if (insn.Immediate8 == 3)
 				{
 					// INT3 breakpoint - check if it's at a COM vtable address
-					if (oldEip is >= 0x0D000000 and < 0x0E000000)
+					if (MemoryRegions.IsInComVtableRange(oldEip))
 					{
 						// This is a COM vtable method stub - signal this as a call
 						isCall = true;

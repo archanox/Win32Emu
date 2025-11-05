@@ -17,9 +17,6 @@ namespace Win32Emu.Loader;
 /// </summary>
 public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 {
-	// Syscall dispatcher address - this is where all import stubs will call into
-	private const uint SYSCALL_DISPATCHER_ADDRESS = 0x0E000000;
-	
 	// Threshold for filtering likely uninitialized IAT entries during initial processing.
 	// IAT entries below this value (0x00400000) are likely uninitialized (e.g., 0x00000000) or corrupted.
 	// This is NOT used for validating final IAT values, which may be >= 0x00400000 (image base) or emulator special ranges (e.g., 0x0F000000).
@@ -286,8 +283,8 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			0xCD, 0x80, // INT 0x80 - triggers syscall
 			0xC3        // RET - return (won't execute in normal flow)
 		};
-		vm.WriteBytes(SYSCALL_DISPATCHER_ADDRESS, syscallStub);
-		logger?.LogInformation("[Loader] Created syscall dispatcher at 0x{Address:X8}", SYSCALL_DISPATCHER_ADDRESS);
+		vm.WriteBytes(MemoryRegions.SyscallDispatcherAddress, syscallStub);
+		logger?.LogInformation("[Loader] Created syscall dispatcher at 0x{Address:X8}", MemoryRegions.SyscallDispatcherAddress);
 		
 		// Track all IAT entry addresses to validate for duplicates or invalid entries
 		var iatEntries = new HashSet<uint>();
@@ -358,7 +355,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				// 
 				// Calculate relative offset from stub address to syscall dispatcher
 				var stubAddr = synthetic;
-				var callOffset = (int)(SYSCALL_DISPATCHER_ADDRESS - (stubAddr + 5)); // +5 for size of CALL instruction
+				var callOffset = (int)(MemoryRegions.SyscallDispatcherAddress - (stubAddr + 5)); // +5 for size of CALL instruction
 				
 				var stub = new byte[]
 				{
@@ -379,13 +376,13 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				var name = sym.Name ?? ($"Ordinal_{sym.Ordinal}");
 				map[synthetic] = (dll.ToUpperInvariant(), name);
 				logger?.LogTrace("[Loader] Mapped import #{Index}: {Dll}!{Name} at 0x{Synthetic:X8} -> syscall at 0x{Syscall:X8}", 
-					synth - 1, dll.ToUpperInvariant(), name, synthetic, SYSCALL_DISPATCHER_ADDRESS);
+					synth - 1, dll.ToUpperInvariant(), name, synthetic, MemoryRegions.SyscallDispatcherAddress);
 			}
 		}
 		
 		// VALIDATION: Log summary of import mapping to detect anomalies
-		logger?.LogInformation("[Loader] Import mapping complete: {Count} imports mapped to addresses 0x0F000000 - 0x{LastAddr:X8}", 
-			synth, synth > 0 ? 0x0F000000u + (uint)((synth - 1) * 0x10u) : 0x0F000000u);
+		logger?.LogInformation("[Loader] Import mapping complete: {Count} imports mapped to addresses 0x{StartAddr:X8} - 0x{LastAddr:X8}", 
+			synth, MemoryRegions.ImportHookBase, synth > 0 ? MemoryRegions.ImportHookBase + (uint)((synth - 1) * MemoryRegions.ImportStubSize) : MemoryRegions.ImportHookBase);
 		
 		// VALIDATION: Check if there are any IAT entries in memory beyond what we mapped
 		// This could indicate extra entries that shouldn't exist
