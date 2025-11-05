@@ -764,8 +764,7 @@ public class ProcessEnvironment
 		// Typical .data section range for Win32 executables: 0x00400000-0x00500000
 		if (addr >= 0x00400000 && addr < 0x00500000)
 		{
-			_logger.LogDebug("[MemoryWrite] Write32 at 0x{Addr:X8}: 0x{Value:X8} (from EIP=0x{Eip:X8})", 
-				addr, value, _cpu?.GetEip() ?? 0);
+			_logger.LogDebug("[MemoryWrite] Write32 at 0x{Addr:X8}: 0x{Value:X8}", addr, value);
 		}
 		Memory.Write32(addr, value);
 	}

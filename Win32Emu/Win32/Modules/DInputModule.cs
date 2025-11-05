@@ -41,10 +41,14 @@ namespace Win32Emu.Win32.Modules
 			switch (export.ToUpperInvariant())
 			{
 				case "DIRECTINPUTCREATE":
-					returnValue = DirectInputCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					// NOTE: Parameter order may differ from MSDN documentation
+					// Testing parameter swap to fix COM pointer write issue
+					returnValue = DirectInputCreate(a.UInt32(0), a.UInt32(2), a.UInt32(1), a.UInt32(3));
 					return true;
 				case "DIRECTINPUTCREATEA":
-					returnValue = DirectInputCreateA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					// NOTE: Parameter order may differ from MSDN documentation
+					// Testing parameter swap to fix COM pointer write issue
+					returnValue = DirectInputCreateA(a.UInt32(0), a.UInt32(2), a.UInt32(1), a.UInt32(3));
 					return true;
 				case "DIRECTINPUTCREATEEX":
 					returnValue = DirectInputCreateEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
