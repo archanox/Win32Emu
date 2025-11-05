@@ -363,7 +363,7 @@ public static class CpuHelpers
 			// Simulate error return
 			var esp = cpu.GetRegister("ESP");
 			var retEip = memory.Read32(esp);
-			esp += 4; // Pop return address only (no args since call failed)
+			esp += 4 + (uint)argBytes; // Pop return address and arguments to maintain stack alignment
 			cpu.SetRegister("ESP", esp);
 			cpu.SetRegister("EAX", 0); // Return 0 as error
 			cpu.SetEip(retEip);
