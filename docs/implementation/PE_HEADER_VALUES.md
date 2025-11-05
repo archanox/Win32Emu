@@ -62,10 +62,10 @@ This document details which PE (Portable Executable) header values are properly 
 | CheckSum | 📝 | Present in memory, not validated |
 | **Subsystem** | ✅ | **Stored in LoadedImage (GUI vs CUI)** |
 | DllCharacteristics | 📝 | Present in memory, not actively enforced |
-| **SizeOfStackReserve** | ✅ | **Stored in LoadedImage for stack setup** |
-| **SizeOfStackCommit** | ✅ | **Stored in LoadedImage for stack setup** |
-| SizeOfHeapReserve | 📝 | Present in memory, not actively used |
-| SizeOfHeapCommit | 📝 | Present in memory, not actively used |
+| **SizeOfStackReserve** | ✅ | **Stored in LoadedImage, used for stack initialization** |
+| **SizeOfStackCommit** | ✅ | **Stored in LoadedImage, used for stack initialization** |
+| **SizeOfHeapReserve** | ✅ | **Stored in LoadedImage (available for heap setup)** |
+| **SizeOfHeapCommit** | ✅ | **Stored in LoadedImage (available for heap setup)** |
 | LoaderFlags | 📝 | Present in memory, not actively used (deprecated) |
 | NumberOfRvaAndSizes | ✅ | Used to parse data directories |
 
@@ -82,7 +82,7 @@ This document details which PE (Portable Executable) header values are properly 
 | Debug Directory | 📝 | Present in memory, not actively used |
 | Architecture | 📝 | Present in memory, not actively used |
 | Global Ptr | 📝 | Present in memory, not actively used |
-| TLS Table | 📝 | Present in memory, not yet implemented |
+| **TLS Table** | ✅ | **TLS callbacks extracted and stored in LoadedImage** |
 | Load Config Table | 📝 | Present in memory, not actively used |
 | Bound Import | 📝 | Present in memory, not actively used |
 | IAT | ✅ | Overwritten with synthetic addresses for syscall interception |
@@ -102,15 +102,18 @@ This document details which PE (Portable Executable) header values are properly 
 | PointerToLinenumbers | 📝 | Present in memory, not actively used (deprecated) |
 | NumberOfRelocations | 📝 | Present in memory, not actively used (for OBJ files) |
 | NumberOfLinenumbers | 📝 | Present in memory, not actively used (deprecated) |
-| **Characteristics** | ⚠️ | **Logged but not enforced** (read/write/execute flags) |
+| **Characteristics** | ✅ | **Stored in LoadedImage.Sections array with helper properties** |
 
 ### Section Characteristics Details
 
 Section characteristics (flags) are:
-- ✅ **Preserved in memory** - Available for inspection
-- ✅ **Logged during load** - Visible in debug output
-- ⚠️ **Not enforced** - No memory protection applied based on flags
-- 📝 **Available for future use** - Could be used to implement memory protection
+- ✅ **Stored in LoadedImage** - Each section's characteristics are stored in the `Sections` array
+- ✅ **Logged during load** - Visible in debug output with decoded flags (EXEC, DATA, READ, WRITE)
+- ✅ **Available via helper methods** - `IsExecutable`, `IsData`, `IsReadable`, `IsWritable` properties on `PeSection`
+- ✅ **Code/Data section identification** - `CodeSections` and `DataSections` properties on `LoadedImage`
+- ✅ **Address range checking** - `IsAddressInCodeSection()` and `IsAddressInDataSection()` methods available
+- ⚠️ **Not enforced for memory protection** - No actual page protection applied based on flags
+- 📝 **Available for future use** - Could be used to implement full memory protection system
 
 This is acceptable for emulation because:
 1. The emulated x86 code expects to be able to read/write/execute based on its own assumptions

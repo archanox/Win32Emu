@@ -188,17 +188,26 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		// Stack sizes from optional header (PE-provided)
 		uint sizeOfStackReserve;
 		uint sizeOfStackCommit;
+		uint sizeOfHeapReserve;
+		uint sizeOfHeapCommit;
 		try
 		{
 			sizeOfStackReserve = (uint)opt.SizeOfStackReserve;
 			sizeOfStackCommit = (uint)opt.SizeOfStackCommit;
+			sizeOfHeapReserve = (uint)opt.SizeOfHeapReserve;
+			sizeOfHeapCommit = (uint)opt.SizeOfHeapCommit;
 		}
 		catch
 		{
 			// Fallback if types are larger than uint (shouldn't happen for PE32), cap to uint max
 			sizeOfStackReserve = (uint)Math.Min((ulong)uint.MaxValue, Convert.ToUInt64(opt.SizeOfStackReserve));
 			sizeOfStackCommit  = (uint)Math.Min((ulong)uint.MaxValue, Convert.ToUInt64(opt.SizeOfStackCommit));
+			sizeOfHeapReserve = (uint)Math.Min((ulong)uint.MaxValue, Convert.ToUInt64(opt.SizeOfHeapReserve));
+			sizeOfHeapCommit  = (uint)Math.Min((ulong)uint.MaxValue, Convert.ToUInt64(opt.SizeOfHeapCommit));
 		}
+
+		// Extract section information for identifying code/data regions
+		var sections = ExtractSectionInfo(pe, logger);
 
 		return new LoadedImage(
 			imageBase,
@@ -214,7 +223,10 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			headerEndRva,
 			sizeOfStackReserve,
 			sizeOfStackCommit,
-			tlsCallbacks);
+			sizeOfHeapReserve,
+			sizeOfHeapCommit,
+			tlsCallbacks,
+			sections);
 	}
 	
 	private Dictionary<uint, (string dll, string name)> BuildImportMap(PEImage image, uint imageBase)
@@ -625,5 +637,37 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		}
 
 		return false;
+	}
+
+	/// <summary>
+	/// Extracts section information from the PE file, including name, address, size, and characteristics.
+	/// This information is used to identify code vs data regions, executable sections, etc.
+	/// </summary>
+	/// <param name="pe">The PE file to extract sections from</param>
+	/// <param name="logger">Logger for diagnostic messages</param>
+	/// <returns>Array of PeSection records describing each section</returns>
+	private static PeSection[] ExtractSectionInfo(PEFile pe, ILogger? logger)
+	{
+		var sections = new List<PeSection>();
+
+		foreach (var section in pe.Sections)
+		{
+			var name = section.Name ?? string.Empty;
+			var rva = section.Rva;
+			var virtualSize = section.Contents?.GetVirtualSize() ?? 0;
+			// Note: WriteIntoArray() creates a copy to get the length. This is acceptable since
+			// it only happens once during PE load time (not performance-critical path).
+			// AsmResolver's PESection doesn't expose raw data size directly - must materialize contents.
+			var rawSize = (uint)(section.Contents?.WriteIntoArray().Length ?? 0);
+			var characteristics = (PeSectionCharacteristics)(uint)section.Characteristics;
+
+			sections.Add(new PeSection(name, rva, virtualSize, rawSize, characteristics));
+
+			logger?.LogDebug("[Loader] Section {Name}: RVA=0x{Rva:X8}, VirtualSize=0x{VSize:X8}, RawSize=0x{RawSize:X8}, Characteristics=0x{Chars:X8}",
+				name, rva, virtualSize, rawSize, (uint)characteristics);
+		}
+
+		logger?.LogInformation("[Loader] Extracted {Count} sections from PE file", sections.Count);
+		return sections.ToArray();
 	}
 }

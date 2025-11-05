@@ -94,10 +94,11 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		// Detect if lplpDD looks like a stack pointer (potential parameter handling bug)
-		// Stack addresses are typically in the range 0x00100000-0x00400000 (lower memory)
-		if (lplpDd >= 0x00100000 && lplpDd < 0x00400000)
+		// Check against actual stack range from PE headers
+		if (lplpDd >= _env.StackLimit && lplpDd < _env.StackBase)
 		{
-			_logger.LogWarning("[DDraw] DirectDrawCreate: lplpDD=0x{LplpDd:X8} appears to be a stack/low-memory address - this might indicate a parameter handling issue", lplpDd);
+			_logger.LogWarning("[DDraw] DirectDrawCreate: lplpDD=0x{LplpDd:X8} appears to be a stack address (stack range: 0x{StackLimit:X8}-0x{StackBase:X8}) - this might indicate a parameter handling issue", 
+				lplpDd, _env.StackLimit, _env.StackBase);
 		}
 
 // Create DirectDraw object with COM vtable
@@ -179,9 +180,11 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Detect if lplpDD looks like a stack pointer (potential parameter handling bug)
-			if (lplpDd >= 0x00100000 && lplpDd < 0x00400000)
+			// Check against actual stack range from PE headers
+			if (lplpDd >= _env.StackLimit && lplpDd < _env.StackBase)
 			{
-				_logger.LogWarning("[DDraw] DirectDrawCreateEx: lplpDD=0x{LplpDd:X8} appears to be a stack/low-memory address - this might indicate a parameter handling issue", lplpDd);
+				_logger.LogWarning("[DDraw] DirectDrawCreateEx: lplpDD=0x{LplpDd:X8} appears to be a stack address (stack range: 0x{StackLimit:X8}-0x{StackBase:X8}) - this might indicate a parameter handling issue", 
+					lplpDd, _env.StackLimit, _env.StackBase);
 			}
 
 			// Create DirectDraw object with COM vtable (similar to DirectDrawCreate)

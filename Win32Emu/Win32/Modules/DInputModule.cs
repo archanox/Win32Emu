@@ -70,9 +70,11 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Detect if lplpDirectInput looks like a stack pointer (potential parameter handling bug)
-			if (lplpDirectInput >= 0x00100000 && lplpDirectInput < 0x00400000)
+			// Check against actual stack range from PE headers
+			if (lplpDirectInput >= _env.StackLimit && lplpDirectInput < _env.StackBase)
 			{
-				_logger.LogWarning("[DInput] DirectInputCreateA: lplpDirectInput=0x{LplpDirectInput:X8} appears to be a stack/low-memory address - this might indicate a parameter handling issue", lplpDirectInput);
+				_logger.LogWarning("[DInput] DirectInputCreateA: lplpDirectInput=0x{LplpDirectInput:X8} appears to be a stack address (stack range: 0x{StackLimit:X8}-0x{StackBase:X8}) - this might indicate a parameter handling issue", 
+					lplpDirectInput, _env.StackLimit, _env.StackBase);
 			}
 
 			// Create DirectInput object with COM vtable
@@ -138,9 +140,11 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Detect if lplpDirectInput looks like a stack pointer (potential parameter handling bug)
-			if (lplpDirectInput >= 0x00100000 && lplpDirectInput < 0x00400000)
+			// Check against actual stack range from PE headers
+			if (lplpDirectInput >= _env.StackLimit && lplpDirectInput < _env.StackBase)
 			{
-				_logger.LogWarning("[DInput] DirectInputCreate: lplpDirectInput=0x{LplpDirectInput:X8} appears to be a stack/low-memory address - this might indicate a parameter handling issue", lplpDirectInput);
+				_logger.LogWarning("[DInput] DirectInputCreate: lplpDirectInput=0x{LplpDirectInput:X8} appears to be a stack address (stack range: 0x{StackLimit:X8}-0x{StackBase:X8}) - this might indicate a parameter handling issue", 
+					lplpDirectInput, _env.StackLimit, _env.StackBase);
 			}
 
 			// Create DirectInput object with COM vtable (same as DirectInputCreateA)

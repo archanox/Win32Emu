@@ -67,6 +67,22 @@ public class ProcessEnvironment
 	/// Gets the API call tracer for this process environment, if enabled.
 	/// </summary>
 	public ApiCallTracer? ApiCallTracer => _apiCallTracer;
+	
+	// Memory layout information (set by Emulator after initialization)
+	/// <summary>
+	/// Gets the stack base address (top of stack, highest address). Stack grows downward from this address.
+	/// </summary>
+	public uint StackBase { get; internal set; }
+	
+	/// <summary>
+	/// Gets the stack limit address (bottom of stack, lowest valid address).
+	/// </summary>
+	public uint StackLimit { get; internal set; }
+	
+	/// <summary>
+	/// Gets the heap base address (start of heap region).
+	/// </summary>
+	public uint HeapBase { get; private set; }
 
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
 	{
@@ -74,6 +90,7 @@ public class ProcessEnvironment
 		_host = host;
 		_logger = logger ?? NullLogger.Instance;
 		_allocPtr = heapBase;
+		HeapBase = heapBase;
 		_comDispatcher = new ComVtableDispatcher(this, _logger);
 		_messageDispatcher = new MessageDispatcher(_logger);
 		ThreadScheduler = new ThreadScheduler(_logger);
