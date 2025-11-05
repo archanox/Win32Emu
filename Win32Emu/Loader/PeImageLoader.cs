@@ -17,6 +17,13 @@ namespace Win32Emu.Loader;
 /// </summary>
 public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 {
+	// Syscall dispatcher address - this is where all import stubs will call into
+	private const uint SYSCALL_DISPATCHER_ADDRESS = 0x0E000000;
+	
+	// Maximum number of TLS callbacks to extract (safety limit to prevent infinite loops on corrupted PE files)
+	// While the PE format allows unlimited callbacks, legitimate executables rarely have more than a few
+	private const int MAX_TLS_CALLBACKS = 64;
+	
 	/// <summary>
 	/// Validates if a file is a valid PE32 executable by parsing the PE structure (and may map sections into memory).
 	/// </summary>
@@ -209,9 +216,6 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			sizeOfStackCommit,
 			tlsCallbacks);
 	}
-
-	// Syscall dispatcher address - this is where all import stubs will call into
-	private const uint SYSCALL_DISPATCHER_ADDRESS = 0x0E000000;
 	
 	private Dictionary<uint, (string dll, string name)> BuildImportMap(PEImage image, uint imageBase)
 	{
@@ -445,10 +449,10 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				index++;
 			}
 
-			// Safety check: prevent infinite loops in case of corrupted data
-			if (index >= 64)
+			// Safety check: prevent infinite loops in case of corrupted PE files
+			if (index >= MAX_TLS_CALLBACKS)
 			{
-				logger?.LogWarning("[Loader] TLS callback array exceeds reasonable size (64 entries), stopping extraction");
+				logger?.LogWarning("[Loader] TLS callback array exceeds maximum size ({Max} entries), stopping extraction", MAX_TLS_CALLBACKS);
 				break;
 			}
 		}

@@ -38,6 +38,10 @@ public sealed class Emulator : IDisposable
     
     // Logging throttle interval when stuck at same EIP (reduce spam)
     private const ulong STUCK_EIP_LOG_INTERVAL = 100000;
+    
+    // Maximum instructions to execute per TLS callback (safety limit to prevent infinite loops)
+    // This is generous enough for legitimate initialization code but prevents runaway callbacks
+    private const int MAX_TLS_CALLBACK_INSTRUCTIONS = 10_000_000;
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -344,22 +348,20 @@ public sealed class Emulator : IDisposable
 
             try
             {
-                // Set up the stack for the callback call
-                // Push parameters in reverse order (stdcall convention: right-to-left)
-                // 1. Reserved (NULL)
-                // 2. Reason (DLL_PROCESS_ATTACH = 1)
-                // 3. DllHandle (image base address)
+                // Set up the stack for the callback call (stdcall convention)
+                // TLS callback signature: void NTAPI TlsCallback(PVOID DllHandle, DWORD Reason, PVOID Reserved)
+                // Parameters pushed right-to-left: Reserved, Reason, DllHandle
                 var esp = _cpu.GetRegister("ESP");
                 
-                // Push Reserved (NULL)
+                // Push Reserved (last parameter, NULL)
                 esp -= 4;
                 _vm.Write32(esp, 0);
                 
-                // Push Reason (DLL_PROCESS_ATTACH)
+                // Push Reason (second parameter, DLL_PROCESS_ATTACH)
                 esp -= 4;
                 _vm.Write32(esp, DLL_PROCESS_ATTACH);
                 
-                // Push DllHandle (image base)
+                // Push DllHandle (first parameter, image base address)
                 esp -= 4;
                 _vm.Write32(esp, _image.BaseAddress);
                 
@@ -375,10 +377,9 @@ public sealed class Emulator : IDisposable
                 
                 // Execute the callback until it returns
                 // We'll detect return when EIP reaches our RETURN_MARKER
-                var maxInstructions = 10000000; // Safety limit
                 var instructionsExecuted = 0;
                 
-                while (_cpu.GetEip() != RETURN_MARKER && instructionsExecuted < maxInstructions)
+                while (_cpu.GetEip() != RETURN_MARKER && instructionsExecuted < MAX_TLS_CALLBACK_INSTRUCTIONS)
                 {
                     _cpu.SingleStep(_vm);
                     instructionsExecuted++;
