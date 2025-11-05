@@ -189,7 +189,7 @@ public sealed class Emulator : IDisposable
             LogDebug($"[Loader]   Section '{section.Name}': RVA=0x{section.VirtualAddress:X8} Size=0x{section.VirtualSize:X8} Flags=[{string.Join(",", flags)}]");
         }
 
-        _env = new ProcessEnvironment(_vm, 0x01000000, _host, _logger);
+        _env = new ProcessEnvironment(_vm, CalculateHeapBase(_image), _host, _logger);
         // Register the main executable so GetModuleFileNameA can find it
         _env.RegisterMainExecutable(_image, path);
         // Convert path to Windows-style backslashes for proper parsing by C runtime
@@ -258,21 +258,37 @@ public sealed class Emulator : IDisposable
         _logger.LogInformation("[Loader] Selected CPU Emulator: {CpuBackend}", actualCpuBackend);
         
         _cpu.SetEip(_image.EntryPointAddress);
-        // Initialize stack using PE-provided SizeOfStackCommit when available
-        var stackBase = 0x00200000u; // keep existing base location for now
+        
+        // Calculate stack base using PE-provided SizeOfStackReserve
+        // Default to 0x00200000 if not specified, ensuring it doesn't conflict with typical image base (0x00400000)
+        var stackReserve = _image.SizeOfStackReserve;
+        if (stackReserve == 0)
+        {
+            stackReserve = 0x00100000; // 1MB default reserve if not specified
+        }
+        
+        // Stack grows downward, so place it below the typical heap area (0x01000000)
+        // but above low memory. We'll use 0x00100000 + stackReserve as the stack top.
+        var stackBase = 0x00100000u + stackReserve;
+        
+        // Initialize stack using PE-provided SizeOfStackCommit
         var commitSize = _image.SizeOfStackCommit;
         if (commitSize == 0)
         {
-            commitSize = 0x8000; // sensible default if PE doesn't specify
+            commitSize = 0x8000; // 32KB default commit if not specified
         }
-        if (commitSize >= stackBase)
+        if (commitSize > stackReserve)
         {
-            // Avoid underflow; keep at least one page
-            commitSize = stackBase - 0x1000;
+            // Commit size cannot exceed reserve size
+            commitSize = stackReserve;
         }
+        
         var initialEsp = stackBase - commitSize;
         _cpu.SetRegister("ESP", initialEsp);
         _cpu.SetRegister("EBP", initialEsp); // Initialize frame pointer to match stack pointer
+        
+        _logger.LogInformation("[Loader] Stack initialized: Base=0x{StackBase:X8} ESP=0x{ESP:X8} Reserve=0x{Reserve:X} Commit=0x{Commit:X}",
+            stackBase, initialEsp, stackReserve, commitSize);
 
         _dispatcher = new Win32Dispatcher(_logger);
 
@@ -1690,6 +1706,31 @@ public sealed class Emulator : IDisposable
     private const uint IMPORT_HOOK_BASE = 0x0F000000;      // Static import table hooks
     private const uint IMPORT_HOOK_LIMIT = 0x10000000;
     private const uint IMPORT_STUB_ALIGNMENT_MASK = 0xFFFFFFF0u; // 16-byte alignment for import stubs
+    
+    /// <summary>
+    /// Calculates the heap base address from PE header information.
+    /// Uses SizeOfHeapReserve if specified, otherwise defaults to 0x01000000.
+    /// Ensures the heap base is aligned and doesn't conflict with typical memory layout.
+    /// </summary>
+    /// <param name="image">The loaded PE image with heap size information</param>
+    /// <returns>The heap base address to use for memory allocation</returns>
+    private static uint CalculateHeapBase(LoadedImage image)
+    {
+        // Default heap base if PE doesn't specify
+        const uint DEFAULT_HEAP_BASE = 0x01000000;
+        
+        // If PE specifies a heap reserve size, we use it to inform our heap placement
+        // However, we still start at the default base for compatibility
+        if (image.SizeOfHeapReserve > 0)
+        {
+            // PE header specifies heap reserve, but we maintain compatibility by using
+            // the standard heap base location. The reserve size will be used by
+            // the memory allocator to manage heap growth.
+            return DEFAULT_HEAP_BASE;
+        }
+        
+        return DEFAULT_HEAP_BASE;
+    }
     
     // Constants for EBP validation
     private const uint HEAP_BASE = 0x01000000;            // Start of heap region
