@@ -41,16 +41,10 @@ namespace Win32Emu.Win32.Modules
 			switch (export.ToUpperInvariant())
 			{
 				case "DIRECTINPUTCREATE":
-					// Parameter order adjusted to match actual Win32 DLL export behavior
-					// See docs/implementation/FURTHER_INVESTIGATION.md for details
-					// Real order differs from MSDN: lplpDirectInput comes before dwVersion
-					returnValue = DirectInputCreate(a.UInt32(0), a.UInt32(2), a.UInt32(1), a.UInt32(3));
+					returnValue = DirectInputCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 				case "DIRECTINPUTCREATEA":
-					// Parameter order adjusted to match actual Win32 DLL export behavior
-					// See docs/implementation/FURTHER_INVESTIGATION.md for details
-					// Real order differs from MSDN: lplpDirectInput comes before dwVersion
-					returnValue = DirectInputCreateA(a.UInt32(0), a.UInt32(2), a.UInt32(1), a.UInt32(3));
+					returnValue = DirectInputCreateA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 				case "DIRECTINPUTCREATEEX":
 					returnValue = DirectInputCreateEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
@@ -64,9 +58,12 @@ namespace Win32Emu.Win32.Modules
 
 		[DllModuleExport(1, entryPoint: 0x0000B006, Version = "4.90.0.3000")]
 		[DllModuleExport(1, entryPoint: 0x0000B126, Version = "5.1.2600.6532")]
-		private uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
+		private uint DirectInputCreateA(uint hinst, uint lplpDirectInput, uint dwVersion, uint pUnkOuter)
 		{
-			_logger.LogInformation("[DInput] DirectInputCreateA(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
+			// NOTE: Parameter order differs from MSDN documentation
+			// Actual Win32 DLL has lplpDirectInput as second parameter, dwVersion as third
+			// See docs/implementation/FURTHER_INVESTIGATION.md for details
+			_logger.LogInformation("[DInput] DirectInputCreateA(hinst=0x{Hinst:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, dwVersion=0x{DwVersion:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, lplpDirectInput, dwVersion, pUnkOuter);
 
 			// Validate output pointer parameter
 			if (lplpDirectInput == 0)
@@ -134,9 +131,12 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private uint DirectInputCreate(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
+		private uint DirectInputCreate(uint hinst, uint lplpDirectInput, uint dwVersion, uint pUnkOuter)
 		{
-			_logger.LogInformation("[DInput] DirectInputCreate(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
+			// NOTE: Parameter order differs from MSDN documentation
+			// Actual Win32 DLL has lplpDirectInput as second parameter, dwVersion as third
+			// See docs/implementation/FURTHER_INVESTIGATION.md for details
+			_logger.LogInformation("[DInput] DirectInputCreate(hinst=0x{Hinst:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, dwVersion=0x{DwVersion:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, lplpDirectInput, dwVersion, pUnkOuter);
 
 			// Validate output pointer parameter
 			if (lplpDirectInput == 0)

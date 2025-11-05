@@ -761,10 +761,11 @@ public class ProcessEnvironment
 	public void MemWrite32(uint addr, uint value)
 	{
 		// Log writes to .data section to help debug DirectDraw/DirectInput COM pointer issues
-		// Typical .data section range for Win32 executables: 0x00400000-0x00500000
-		if (addr >= 0x00400000 && addr < 0x00500000)
+		// Check if address is in any data section of the main executable
+		var mainExe = GetMainExecutable();
+		if (mainExe != null && mainExe.IsAddressInDataSection(addr))
 		{
-			_logger.LogDebug("[MemoryWrite] Write32 at 0x{Addr:X8}: 0x{Value:X8}", addr, value);
+			_logger.LogDebug("[MemoryWrite] Write32 to .data section at 0x{Addr:X8}: 0x{Value:X8}", addr, value);
 		}
 		Memory.Write32(addr, value);
 	}
