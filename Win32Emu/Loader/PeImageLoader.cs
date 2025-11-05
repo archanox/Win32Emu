@@ -235,6 +235,20 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		var imports = image.Imports; // IEnumerable<ImportModule>
 		var synth = 0;
 		
+		// IMPORT HINTS: We do NOT use import hints for optimization
+		// 
+		// In a traditional Windows PE loader:
+		// - Hints suggest the index in a DLL's export table where a function name might be found
+		// - This speeds up the search from O(log n) binary search to O(1) if the hint is correct
+		// 
+		// In Win32Emu:
+		// - We intercept ALL imports with synthetic addresses at load time
+		// - We never load real DLLs or search their export tables
+		// - Therefore, hints provide zero benefit
+		// - We use symbol.Name (for named imports) or symbol.Ordinal (for ordinal imports)
+		// 
+		// See docs/implementation/IMPORT_HINTS.md for detailed explanation
+		
 		// First, create the syscall dispatcher stub at a fixed address
 		// This stub will be hit by all import calls and will trigger our syscall handler
 		// Format: INT 0x80 (syscall); RET (RET executes after the syscall handler returns control to the CPU/emulator)
@@ -317,6 +331,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				};
 				vm.WriteBytes(synthetic, stub);
 				
+				// Use Ordinal for ordinal-based imports, NOT Hint
+				// Ordinal is the actual export ordinal number (for imports by ordinal)
+				// Hint is just an optimization suggestion for searching export tables
 				var name = sym.Name ?? ($"Ordinal_{sym.Ordinal}");
 				map[synthetic] = (dll.ToUpperInvariant(), name);
 				logger?.LogTrace("[Loader] Mapped import #{Index}: {Dll}!{Name} at 0x{Synthetic:X8} -> syscall at 0x{Syscall:X8}", 
