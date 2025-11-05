@@ -298,11 +298,14 @@ public class PeExportIntegrationTests : IDisposable
             "InitializeCriticalSectionEx"   // Vista+
         };
 
+        // Derive the module name from the loaded DLL path
+        var moduleName = Path.GetFileName(_testDllPath).ToUpperInvariant();
+
         string? testFunction = null;
         foreach (var candidate in candidates)
         {
             // Check if it's in our emulated module but not in the real PE
-            bool inEmulated = DllModuleExportInfo.IsExportImplemented("KERNEL32.DLL", candidate);
+            bool inEmulated = DllModuleExportInfo.IsExportImplemented(moduleName, candidate);
             bool inPeExports = loadedImage.ExportsByName.ContainsKey(candidate);
             
             if (inEmulated && !inPeExports)
@@ -324,17 +327,8 @@ public class PeExportIntegrationTests : IDisposable
 
         // Assert - Should return a valid synthetic export address, not 0
         // After the fix, GetProcAddress should check the emulated module and create a synthetic export
-        if (exportAddress == 0)
-        {
-            // This is the buggy behavior
-            Assert.Fail($"GetProcAddress should fall back to emulated module for '{testFunction}' when PE export not found, but it returned 0");
-        }
-        else
-        {
-            // After the fix, this should be the behavior
-            // The address should be a synthetic export (in the 0x0F800000 range)
-            Assert.InRange(exportAddress, 0x0F800000u, 0x10000000u);
-        }
+        // The address should be a synthetic export (in the 0x0F800000 range)
+        Assert.InRange(exportAddress, 0x0F800000u, 0x10000000u);
     }
 
     public void Dispose()
