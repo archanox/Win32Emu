@@ -245,7 +245,7 @@ public sealed class Emulator : IDisposable
         }
         else
         {
-            _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
+            _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress);
             if (enableInstructionAnalyzer)
             {
                 LogDebug("[Loader] Instruction analyzer enabled");
@@ -1702,7 +1702,14 @@ public sealed class Emulator : IDisposable
         {
             throw new InvalidOperationException("Virtual memory must be initialized before creating fallback CPU.");
         }
-        _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer);
+        
+        // _image is also guaranteed to be non-null at this point as fallback is only called after image loading
+        if (_image == null)
+        {
+            throw new InvalidOperationException("Image must be loaded before creating fallback CPU.");
+        }
+        
+        _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress);
         LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
     }
 

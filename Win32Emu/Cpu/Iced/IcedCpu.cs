@@ -27,6 +27,12 @@ public class IcedCpu : IAsyncCpu
 	private const uint SYSCALL_DISPATCHER_BASE = 0x0E000000; // Syscall dispatcher and synthetic exports
 	private const uint IMPORT_HOOK_BASE = 0x0F000000;      // Static import table hooks
 	private const uint SPECIAL_RANGE_LIMIT = 0x10000000;   // End of special ranges
+	
+	// Default image base if not specified (typical default for Win32 executables)
+	private const uint DEFAULT_IMAGE_BASE = 0x00400000;
+	
+	// Image base from PE header (used for validation of indirect calls/jumps)
+	private readonly uint _imageBase;
 
 	// x87 FPU state (8 registers in a stack, ST(0) to ST(7))
 	private readonly double[] _fpu = new double[8];
@@ -40,10 +46,11 @@ public class IcedCpu : IAsyncCpu
 	private static readonly bool RdtscIsHighResolution = Stopwatch.IsHighResolution;
 	private static readonly long RdtscFrequency = Stopwatch.Frequency;
 
-	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false)
+	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
+		_imageBase = imageBase;
 		_reader = new SimpleMemoryCodeReader(this);
 		_decoder = Decoder.Create(32, _reader, decoderOptions);
 		
@@ -699,8 +706,8 @@ public class IcedCpu : IAsyncCpu
 
 	/// <summary>
 	/// Validates an indirect jump/call target and throws an exception if it points to an invalid region.
-	/// Addresses below 0x00400000 (except NULL and special emulator ranges) are considered invalid 
-	/// as they are typically below the normal image base, indicating possible invalid function pointers,
+	/// Addresses below the image base (from PE header, typically 0x00400000) are considered invalid,
+	/// except for NULL and special emulator ranges. This indicates possible invalid function pointers,
 	/// corrupted registers, or uninitialized memory being executed as code.
 	/// Stack and low heap addresses are especially problematic as they indicate function pointers
 	/// pointing to data rather than code.
@@ -712,21 +719,30 @@ public class IcedCpu : IAsyncCpu
 	/// <exception cref="InvalidOperationException">Thrown when target points to an invalid memory region</exception>
 	private void ValidateIndirectTarget(uint target, uint sourceEip, string operation, Register? sourceRegister = null)
 	{
-		// Check if target is suspiciously low (< typical image base)
-		// Allow NULL and special emulator infrastructure ranges to avoid false positives
-		if (target < 0x00400000 && target != 0x00000000)
+		// Allow NULL (0x00000000) to avoid false positives
+		if (target == 0x00000000)
 		{
-			// Allow special emulator ranges: COM vtables (0x0D000000), syscalls (0x0E000000), and import hooks (0x0F000000)
-			if (target >= COM_VTABLE_BASE && target < SPECIAL_RANGE_LIMIT)
-			{
-				// Valid special range - no warning needed
-				return;
-			}
-			
+			return;
+		}
+		
+		// Allow special emulator ranges: COM vtables (0x0D000000), syscalls (0x0E000000), and import hooks (0x0F000000)
+		if (target >= COM_VTABLE_BASE && target < SPECIAL_RANGE_LIMIT)
+		{
+			// Valid special range - no validation needed
+			return;
+		}
+		
+		// Check if target is suspiciously low (< image base from PE header)
+		// The image base can vary based on the PE header (typically 0x00400000 for executables,
+		// but can be different for DLLs or executables with custom image bases)
+		if (target < _imageBase)
+		{
 			// Determine the type of invalid address for better error messaging
 			string addressType;
 			string diagnosticInfo;
 			
+			// Stack region estimation: typically 1MB-16MB range
+			// Note: Actual stack location can vary based on PE header and OS
 			if (target >= 0x00100000 && target < 0x01000000)
 			{
 				// Stack region (typically 1MB-16MB range)
@@ -737,21 +753,12 @@ public class IcedCpu : IAsyncCpu
 				                "(3) Missing C runtime initialization, " +
 				                "(4) Buffer overflow corrupting function pointers.";
 			}
-			else if (target >= 0x01000000 && target < 0x0D000000)
-			{
-				// Heap region
-				addressType = "heap";
-				diagnosticInfo = "This indicates a function pointer was loaded with a heap address instead of a code address. " +
-				                "Common causes: (1) Uninitialized or corrupted function pointer, " +
-				                "(2) COM interface pointer being used incorrectly, " +
-				                "(3) Vtable corruption.";
-			}
 			else
 			{
-				// Other low address
+				// Other low address (< 1MB or >= 1MB but < image base)
 				addressType = "low memory";
-				diagnosticInfo = "This indicates an invalid or uninitialized function pointer. " +
-				                "The address is below the typical image base (0x00400000).";
+				diagnosticInfo = $"This indicates an invalid or uninitialized function pointer. " +
+				                $"The address is below the image base (0x{_imageBase:X8} from PE header).";
 			}
 			
 			string errorMessage;
