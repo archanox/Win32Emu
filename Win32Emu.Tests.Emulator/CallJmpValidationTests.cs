@@ -12,7 +12,7 @@ namespace Win32Emu.Tests.Emulator;
 public class CallJmpValidationTests
 {
 	[Fact]
-	public void CALL_Register_WithLowAddress_ShouldLogWarning()
+	public void CALL_Register_WithLowAddress_ShouldThrowException()
 	{
 		// Arrange: CALL EBX (FF D3) with EBX containing a suspiciously low address
 		var output = new TestOutputHelper();
@@ -30,25 +30,22 @@ public class CallJmpValidationTests
 		memory.Write8(0x00400000, 0xFF); // CALL r/m32
 		memory.Write8(0x00400001, 0xD3); // ModRM: 11 010 011 = register EBX
 
-		// Act
-		cpu.SingleStep(memory);
-
-		// Assert
+		// Act & Assert
+		var exception = Assert.Throws<InvalidOperationException>(() => cpu.SingleStep(memory));
+		
+		// Verify exception message contains relevant details
+		Assert.Contains("CALL", exception.Message);
+		Assert.Contains("0x00001000", exception.Message);
+		Assert.Contains("low memory", exception.Message);
+		
+		// Verify error was logged
 		Assert.Contains(logger.Logs, log => 
 			log.Contains("CALL") && 
-			log.Contains("0x00001000") && 
-			log.Contains("suspiciously low"));
-		Assert.Equal(0x00001000u, cpu.GetEip()); // EIP should still be set to the target
-		
-		// Verify CALL semantics: return address pushed to stack
-		var expectedReturnAddress = originalEip + 2; // 2-byte instruction
-		var expectedEsp = originalEsp - 4; // ESP decremented by 4
-		Assert.Equal(expectedEsp, cpu.GetRegister("ESP"));
-		Assert.Equal(expectedReturnAddress, memory.Read32(expectedEsp));
+			log.Contains("0x00001000"));
 	}
 
 	[Fact]
-	public void CALL_Memory_WithLowAddress_ShouldLogWarning()
+	public void CALL_Memory_WithLowAddress_ShouldThrowException()
 	{
 		// Arrange: CALL [EBX] with memory containing a suspiciously low address
 		var output = new TestOutputHelper();
@@ -69,21 +66,18 @@ public class CallJmpValidationTests
 		memory.Write8(0x00400000, 0xFF); // CALL r/m32
 		memory.Write8(0x00400001, 0x13); // ModRM: 00 010 011 = memory indirect through EBX
 
-		// Act
-		cpu.SingleStep(memory);
-
-		// Assert
+		// Act & Assert
+		var exception = Assert.Throws<InvalidOperationException>(() => cpu.SingleStep(memory));
+		
+		// Verify exception message contains relevant details
+		Assert.Contains("CALL", exception.Message);
+		Assert.Contains("0x00002000", exception.Message);
+		Assert.Contains("low memory", exception.Message);
+		
+		// Verify error was logged
 		Assert.Contains(logger.Logs, log => 
 			log.Contains("CALL") && 
-			log.Contains("0x00002000") && 
-			log.Contains("suspiciously low"));
-		Assert.Equal(0x00002000u, cpu.GetEip()); // EIP should still be set to the target
-		
-		// Verify CALL semantics: return address pushed to stack
-		var expectedReturnAddress = originalEip + 2; // 2-byte instruction
-		var expectedEsp = originalEsp - 4; // ESP decremented by 4
-		Assert.Equal(expectedEsp, cpu.GetRegister("ESP"));
-		Assert.Equal(expectedReturnAddress, memory.Read32(expectedEsp));
+			log.Contains("0x00002000"));
 	}
 
 	[Fact]
@@ -121,7 +115,7 @@ public class CallJmpValidationTests
 	}
 
 	[Fact]
-	public void JMP_Register_WithLowAddress_ShouldLogWarning()
+	public void JMP_Register_WithLowAddress_ShouldThrowException()
 	{
 		// Arrange: JMP EAX with EAX containing a suspiciously low address
 		var output = new TestOutputHelper();
@@ -136,19 +130,22 @@ public class CallJmpValidationTests
 		memory.Write8(0x00400000, 0xFF); // JMP r/m32
 		memory.Write8(0x00400001, 0xE0); // ModRM: 11 100 000 = register EAX
 
-		// Act
-		cpu.SingleStep(memory);
-
-		// Assert
+		// Act & Assert
+		var exception = Assert.Throws<InvalidOperationException>(() => cpu.SingleStep(memory));
+		
+		// Verify exception message contains relevant details
+		Assert.Contains("JMP", exception.Message);
+		Assert.Contains("0x00003000", exception.Message);
+		Assert.Contains("low memory", exception.Message);
+		
+		// Verify error was logged
 		Assert.Contains(logger.Logs, log => 
 			log.Contains("JMP") && 
-			log.Contains("0x00003000") && 
-			log.Contains("suspiciously low"));
-		Assert.Equal(0x00003000u, cpu.GetEip());
+			log.Contains("0x00003000"));
 	}
 
 	[Fact]
-	public void JMP_Memory_WithLowAddress_ShouldLogWarning()
+	public void JMP_Memory_WithLowAddress_ShouldThrowException()
 	{
 		// Arrange: JMP [ECX] with memory containing a suspiciously low address
 		var output = new TestOutputHelper();
@@ -166,15 +163,18 @@ public class CallJmpValidationTests
 		memory.Write8(0x00400000, 0xFF); // JMP r/m32
 		memory.Write8(0x00400001, 0x21); // ModRM: 00 100 001 = memory indirect through ECX
 
-		// Act
-		cpu.SingleStep(memory);
-
-		// Assert
+		// Act & Assert
+		var exception = Assert.Throws<InvalidOperationException>(() => cpu.SingleStep(memory));
+		
+		// Verify exception message contains relevant details
+		Assert.Contains("JMP", exception.Message);
+		Assert.Contains("0x00004000", exception.Message);
+		Assert.Contains("low memory", exception.Message);
+		
+		// Verify error was logged
 		Assert.Contains(logger.Logs, log => 
 			log.Contains("JMP") && 
-			log.Contains("0x00004000") && 
-			log.Contains("suspiciously low"));
-		Assert.Equal(0x00004000u, cpu.GetEip());
+			log.Contains("0x00004000"));
 	}
 
 	[Fact]

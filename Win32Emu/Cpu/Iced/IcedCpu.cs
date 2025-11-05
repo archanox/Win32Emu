@@ -27,6 +27,21 @@ public class IcedCpu : IAsyncCpu
 	private const uint SYSCALL_DISPATCHER_BASE = 0x0E000000; // Syscall dispatcher and synthetic exports
 	private const uint IMPORT_HOOK_BASE = 0x0F000000;      // Static import table hooks
 	private const uint SPECIAL_RANGE_LIMIT = 0x10000000;   // End of special ranges
+	
+	// Default image base if not specified (typical default for Win32 executables)
+	private const uint DEFAULT_IMAGE_BASE = 0x00400000;
+	
+	// Default stack region bounds if not specified (typical range for Windows applications)
+	private const uint DEFAULT_STACK_LIMIT = 0x00100000;  // 1 MB (bottom of stack)
+	private const uint DEFAULT_STACK_BASE = 0x01000000;   // 16 MB (top of stack)
+	
+	// Image base from PE header (used for validation of indirect calls/jumps)
+	private readonly uint _imageBase;
+	
+	// Stack bounds from PE header (used for validation of indirect calls/jumps)
+	// Stack grows downward from _stackBase to _stackLimit
+	private readonly uint _stackLimit;
+	private readonly uint _stackBase;
 
 	// x87 FPU state (8 registers in a stack, ST(0) to ST(7))
 	private readonly double[] _fpu = new double[8];
@@ -40,10 +55,13 @@ public class IcedCpu : IAsyncCpu
 	private static readonly bool RdtscIsHighResolution = Stopwatch.IsHighResolution;
 	private static readonly long RdtscFrequency = Stopwatch.Frequency;
 
-	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false)
+	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
+		_imageBase = imageBase;
+		_stackLimit = stackLimit;
+		_stackBase = stackBase;
 		_reader = new SimpleMemoryCodeReader(this);
 		_decoder = Decoder.Create(32, _reader, decoderOptions);
 		
@@ -146,7 +164,9 @@ public class IcedCpu : IAsyncCpu
 		// Log instructions in the problematic range (after LoadCursorA returns)
 		if (oldEip >= 0x00403160 && oldEip <= 0x004031A0)
 		{
-			_logger.LogInformation("[IcedCpu] Executing at 0x{Eip:X8}: {Insn}", oldEip, insn.ToString());
+			var bytes = mem.GetSpan(oldEip, 16).ToArray();
+			var byteString = string.Join(" ", bytes.Select(b => b.ToString("X2")));
+			_logger.LogInformation("[IcedCpu] Executing at 0x{Eip:X8}: {Insn} (Bytes: {Bytes})", oldEip, insn.ToString(), byteString);
 		}
 		
 		_eip = (uint)_decoder.IP;
@@ -698,39 +718,91 @@ public class IcedCpu : IAsyncCpu
 	}
 
 	/// <summary>
-	/// Validates an indirect jump/call target and logs a warning if it's suspiciously low.
-	/// Addresses below 0x00400000 (except NULL and special emulator ranges) are considered suspicious 
-	/// as they are typically below the normal image base, indicating possible invalid function pointers 
-	/// or corrupted registers.
+	/// Validates an indirect jump/call target and throws an exception if it points to an invalid region.
+	/// Addresses below the image base (from PE header, typically 0x00400000) are considered invalid,
+	/// except for NULL and special emulator ranges. This indicates possible invalid function pointers,
+	/// corrupted registers, or uninitialized memory being executed as code.
+	/// Stack and low heap addresses are especially problematic as they indicate function pointers
+	/// pointing to data rather than code.
 	/// </summary>
 	/// <param name="target">The target address to validate</param>
 	/// <param name="sourceEip">The EIP of the instruction performing the jump/call</param>
 	/// <param name="operation">The operation type ("JMP" or "CALL")</param>
 	/// <param name="sourceRegister">Optional source register for better diagnostics</param>
+	/// <exception cref="InvalidOperationException">Thrown when target points to an invalid memory region</exception>
 	private void ValidateIndirectTarget(uint target, uint sourceEip, string operation, Register? sourceRegister = null)
 	{
-		// Check if target is suspiciously low (< typical image base)
-		// Allow NULL and special emulator infrastructure ranges to avoid false positives
-		if (target < 0x00400000 && target != 0x00000000)
+		// Allow NULL (0x00000000) to avoid false positives
+		if (target == 0x00000000)
 		{
-			// Allow special emulator ranges: COM vtables (0x0D000000), syscalls (0x0E000000), and import hooks (0x0F000000)
-			if (target >= COM_VTABLE_BASE && target < SPECIAL_RANGE_LIMIT)
-			{
-				// Valid special range - no warning needed
-				return;
-			}
+			return;
+		}
+		
+		// Allow special emulator ranges: COM vtables (0x0D000000), syscalls (0x0E000000), and import hooks (0x0F000000)
+		if (target >= COM_VTABLE_BASE && target < SPECIAL_RANGE_LIMIT)
+		{
+			// Valid special range - no validation needed
+			return;
+		}
+		
+		// Check if target is suspiciously low (< image base from PE header)
+		// The image base can vary based on the PE header (typically 0x00400000 for executables,
+		// but can be different for DLLs or executables with custom image bases)
+		if (target < _imageBase)
+		{
+			// Determine the type of invalid address for better error messaging
+			string addressType;
+			string diagnosticInfo;
 			
-			if (sourceRegister.HasValue)
+			// Check if target is within the stack region (from PE header)
+			// Stack grows downward from _stackBase to _stackLimit
+			if (target >= _stackLimit && target < _stackBase)
 			{
-				_logger.LogWarning("[IcedCpu] {Operation} at 0x{SourceEip:X8}: indirect {OperationLower} target 0x{Target:X8} is suspiciously low (< 0x00400000). Possible invalid function pointer or corrupted register. Register: {Reg}",
-					operation, sourceEip, operation.ToLowerInvariant(), target, sourceRegister.Value);
+				// Stack region
+				addressType = "stack";
+				diagnosticInfo = GetStackAddressDiagnostic();
 			}
 			else
 			{
-				_logger.LogWarning("[IcedCpu] {Operation} at 0x{SourceEip:X8}: indirect {OperationLower} target 0x{Target:X8} is suspiciously low (< 0x00400000). Possible invalid function pointer or uninitialized memory.",
-					operation, sourceEip, operation.ToLowerInvariant(), target);
+				// Other low address (< stack region or >= stack region but < image base)
+				addressType = "low memory";
+				diagnosticInfo = $"This indicates an invalid or uninitialized function pointer. " +
+				                $"The address is below the image base (0x{_imageBase:X8} from PE header).";
 			}
+			
+			string errorMessage;
+			if (sourceRegister.HasValue)
+			{
+				var regName = sourceRegister.Value.ToString();
+				errorMessage = $"Invalid indirect {operation} at 0x{sourceEip:X8}: " +
+				              $"Target address 0x{target:X8} (from register {regName}) points to {addressType} instead of code. " +
+				              $"{diagnosticInfo}";
+				
+				_logger.LogError("[IcedCpu] {ErrorMessage}", errorMessage);
+			}
+			else
+			{
+				errorMessage = $"Invalid indirect {operation} at 0x{sourceEip:X8}: " +
+				              $"Target address 0x{target:X8} (from memory) points to {addressType} instead of code. " +
+				              $"{diagnosticInfo}";
+				
+				_logger.LogError("[IcedCpu] {ErrorMessage}", errorMessage);
+			}
+			
+			throw new InvalidOperationException(errorMessage);
 		}
+	}
+	
+	/// <summary>
+	/// Gets diagnostic information for stack address validation failures.
+	/// </summary>
+	private static string GetStackAddressDiagnostic()
+	{
+		return "This indicates a function pointer was loaded with a stack address instead of a code address. " +
+		       "Common causes: (1) Uninitialized function pointer in .data/.bss section, " +
+		       "(2) Corruption of Import Address Table (IAT) entry, " +
+		       "(3) Missing C runtime initialization, " +
+		       "(4) Buffer overflow corrupting function pointers.";
 	}
 
 	#region Exec helpers
