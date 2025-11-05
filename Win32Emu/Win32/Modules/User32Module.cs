@@ -1215,7 +1215,9 @@ namespace Win32Emu.Win32.Modules
 			// This integrates with the thread scheduler to properly suspend the thread
 			// instead of busy-waiting in a loop
 			var scheduler = _env.ThreadScheduler;
-			if (scheduler != null)
+			// Only use thread suspension if we have a real emulator host that can handle thread switching
+			// In test environments without a host, fall back to timeout behavior
+			if (scheduler != null && _env.Host != null)
 			{
 				var currentThreadId = _env.GetCurrentThreadId();
 				var messageQueueToken = _env.GetMessageQueueWaitToken();
