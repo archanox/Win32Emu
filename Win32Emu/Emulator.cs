@@ -216,6 +216,19 @@ public sealed class Emulator : IDisposable
             LogDebug("[Loader] Legacy instruction decoding enabled (MPX, Cyrix, ALTINST, etc.)");
         }
 
+        // Calculate stack bounds from PE header before creating CPU
+        // This allows CPU validation to use actual stack bounds
+        var stackReserve = _image.SizeOfStackReserve;
+        if (stackReserve == 0)
+        {
+            stackReserve = 0x00100000; // 1MB default reserve if not specified
+        }
+        
+        // Stack grows downward, so place it below the typical heap area
+        // but above low memory. We'll use 0x00100000 + stackReserve as the stack top.
+        var stackBase = 0x00100000u + stackReserve;
+        var stackLimit = 0x00100000u; // Bottom of stack (lowest valid address)
+
         // Create CPU based on backend preference
         if (useUnicornCpu)
         {
@@ -229,13 +242,13 @@ public sealed class Emulator : IDisposable
                 // Unicorn cannot run with CFG enabled on Windows
                 _logger.LogWarning("[Loader] Unicorn CPU backend is not compatible with Control Flow Guard (CFG). Falling back to IcedCpu.");
                 _logger.LogWarning("[Loader] To use Unicorn, disable CFG in project properties or build without CFG.");
-                CreateFallbackIcedCpu(decoderOptions, enableInstructionAnalyzer);
+                CreateFallbackIcedCpu(decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase);
             }
             catch (Exception ex)
             {
                 // Handle any other Unicorn initialization failures
                 _logger.LogWarning(ex, "[Loader] Failed to initialize Unicorn CPU backend: {Message}. Falling back to IcedCpu.", ex.Message);
-                CreateFallbackIcedCpu(decoderOptions, enableInstructionAnalyzer);
+                CreateFallbackIcedCpu(decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase);
             }
         }
         else if (useJitCpu)
@@ -245,7 +258,7 @@ public sealed class Emulator : IDisposable
         }
         else
         {
-            _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress);
+            _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase);
             if (enableInstructionAnalyzer)
             {
                 LogDebug("[Loader] Instruction analyzer enabled");
@@ -264,17 +277,9 @@ public sealed class Emulator : IDisposable
         
         _cpu.SetEip(_image.EntryPointAddress);
         
-        // Calculate stack base using PE-provided SizeOfStackReserve
-        var stackReserve = _image.SizeOfStackReserve;
-        if (stackReserve == 0)
-        {
-            stackReserve = 0x00100000; // 1MB default reserve if not specified
-        }
-        
-        // Stack grows downward, so place it below the typical heap area
-        // but above low memory. We'll use 0x00100000 + stackReserve as the stack top.
-        _stackBase = 0x00100000u + stackReserve;
-        _stackLimit = 0x00100000u; // Bottom of stack (lowest valid address)
+        // Use the stack bounds calculated earlier (before CPU creation)
+        _stackBase = stackBase;
+        _stackLimit = stackLimit;
         
         // Initialize stack using PE-provided SizeOfStackCommit
         var commitSize = _image.SizeOfStackCommit;
@@ -1694,7 +1699,7 @@ public sealed class Emulator : IDisposable
         }
     }
 
-    private void CreateFallbackIcedCpu(Iced.Intel.DecoderOptions decoderOptions, bool enableInstructionAnalyzer)
+    private void CreateFallbackIcedCpu(Iced.Intel.DecoderOptions decoderOptions, bool enableInstructionAnalyzer, uint imageBase, uint stackLimit, uint stackBase)
     {
         // _vm is guaranteed to be non-null here as this method is only called from LoadExecutable
         // after _vm has been initialized
@@ -1709,7 +1714,7 @@ public sealed class Emulator : IDisposable
             throw new InvalidOperationException("Image must be loaded before creating fallback CPU.");
         }
         
-        _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress);
+        _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, imageBase, stackLimit, stackBase);
         LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
     }
 

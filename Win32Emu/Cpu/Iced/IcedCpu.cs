@@ -31,13 +31,17 @@ public class IcedCpu : IAsyncCpu
 	// Default image base if not specified (typical default for Win32 executables)
 	private const uint DEFAULT_IMAGE_BASE = 0x00400000;
 	
-	// Stack region estimation (typical range for Windows applications)
-	// Note: Actual stack location can vary based on PE header and OS configuration
-	private const uint STACK_REGION_START = 0x00100000; // 1 MB
-	private const uint STACK_REGION_END = 0x01000000;   // 16 MB
+	// Default stack region bounds if not specified (typical range for Windows applications)
+	private const uint DEFAULT_STACK_LIMIT = 0x00100000;  // 1 MB (bottom of stack)
+	private const uint DEFAULT_STACK_BASE = 0x01000000;   // 16 MB (top of stack)
 	
 	// Image base from PE header (used for validation of indirect calls/jumps)
 	private readonly uint _imageBase;
+	
+	// Stack bounds from PE header (used for validation of indirect calls/jumps)
+	// Stack grows downward from _stackBase to _stackLimit
+	private readonly uint _stackLimit;
+	private readonly uint _stackBase;
 
 	// x87 FPU state (8 registers in a stack, ST(0) to ST(7))
 	private readonly double[] _fpu = new double[8];
@@ -51,11 +55,13 @@ public class IcedCpu : IAsyncCpu
 	private static readonly bool RdtscIsHighResolution = Stopwatch.IsHighResolution;
 	private static readonly long RdtscFrequency = Stopwatch.Frequency;
 
-	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE)
+	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
 		_imageBase = imageBase;
+		_stackLimit = stackLimit;
+		_stackBase = stackBase;
 		_reader = new SimpleMemoryCodeReader(this);
 		_decoder = Decoder.Create(32, _reader, decoderOptions);
 		
@@ -748,9 +754,9 @@ public class IcedCpu : IAsyncCpu
 			string addressType;
 			string diagnosticInfo;
 			
-			// Stack region estimation using defined constants
-			// Note: Actual stack location can vary based on PE header and OS
-			if (target >= STACK_REGION_START && target < STACK_REGION_END)
+			// Check if target is within the stack region (from PE header)
+			// Stack grows downward from _stackBase to _stackLimit
+			if (target >= _stackLimit && target < _stackBase)
 			{
 				// Stack region
 				addressType = "stack";
