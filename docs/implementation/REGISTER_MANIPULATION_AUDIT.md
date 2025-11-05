@@ -361,7 +361,7 @@ Tests now verify:
 ✅ **COMPLETED:**
 1. ✅ Add validation logging for register state before/after each call type (already exists at line 1505)
 2. ✅ Implement comprehensive register preservation tests (18 tests added)
-3. ⏸️ Consider refactoring to reduce code duplication (deferred - would require major changes)
+3. ✅ Refactored to reduce code duplication (completed)
 4. ✅ Add runtime assertions for register invariants (ValidateRegisterState function exists)
 
 **Future Enhancements (Optional):**
