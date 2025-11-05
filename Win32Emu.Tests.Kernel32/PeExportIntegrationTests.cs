@@ -1,5 +1,6 @@
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Win32Emu.Loader;
+using Win32Emu.Win32;
 
 namespace Win32Emu.Tests.Kernel32;
 
@@ -258,6 +259,77 @@ public class PeExportIntegrationTests : IDisposable
         {
             Assert.Equal(addressLower, addressUpper);
             Assert.Equal(addressLower, addressMixed);
+        }
+    }
+
+    [Fact]
+    public void GetProcAddress_WithRealPeDll_MissingExport_ShouldFallBackToEmulatedModule()
+    {
+        // This test verifies that when GetProcAddress is called on a real PE DLL (e.g., kernel32.dll)
+        // for an export that doesn't exist in the PE file, but DOES exist in our emulated module,
+        // it should fall back to creating a synthetic export instead of returning 0.
+        
+        // Skip test if the DLL doesn't exist
+        if (!File.Exists(_testDllPath))
+        {
+            return;
+        }
+
+        // Arrange - Load the real kernel32.dll PE file
+        var handle = _testEnv.ProcessEnv.LoadPeImage(_testDllPath, _testEnv.PeLoader);
+        Assert.NotEqual(0u, handle);
+
+        // Check what exports the real DLL actually has
+        _testEnv.ProcessEnv.TryGetLoadedImage(handle, out var loadedImage);
+        Assert.NotNull(loadedImage);
+
+        // Find a function that exists in our emulated KERNEL32 but NOT in the real DLL
+        // We'll try several candidates and use the first one that's missing from the PE but exists in emulated module
+        string[] candidates = 
+        {
+            "GetSystemWindowsDirectoryA",  // Vista+
+            "GetNativeSystemInfo",          // XP 64-bit+
+            "IsWow64Process",               // XP 64-bit+
+            "SetThreadStackGuarantee",      // Vista+
+            "InitializeCriticalSectionEx"   // Vista+
+        };
+
+        string? testFunction = null;
+        foreach (var candidate in candidates)
+        {
+            // Check if it's in our emulated module but not in the real PE
+            bool inEmulated = DllModuleExportInfo.IsExportImplemented("KERNEL32.DLL", candidate);
+            bool inPeExports = loadedImage.ExportsByName.ContainsKey(candidate);
+            
+            if (inEmulated && !inPeExports)
+            {
+                testFunction = candidate;
+                break;
+            }
+        }
+
+        // If we couldn't find a suitable test function, skip the test
+        if (testFunction == null)
+        {
+            return; // The real DLL has all the functions we tried, can't test the fallback
+        }
+
+        // Act - Call GetProcAddress for a function that's NOT in the PE but IS in emulated module
+        var exportNamePtr = _testEnv.WriteString(testFunction);
+        var exportAddress = _testEnv.CallKernel32Api("GETPROCADDRESS", handle, exportNamePtr);
+
+        // Assert - Should return a valid synthetic export address, not 0
+        // After the fix, GetProcAddress should check the emulated module and create a synthetic export
+        if (exportAddress == 0)
+        {
+            // This is the buggy behavior
+            Assert.Fail($"GetProcAddress should fall back to emulated module for '{testFunction}' when PE export not found, but it returned 0");
+        }
+        else
+        {
+            // After the fix, this should be the behavior
+            // The address should be a synthetic export (in the 0x0F800000 range)
+            Assert.InRange(exportAddress, 0x0F800000u, 0x10000000u);
         }
     }
 
