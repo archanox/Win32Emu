@@ -552,6 +552,10 @@ public sealed class Emulator : IDisposable
         // This threshold allows legitimate tight loops (spinlocks, busy waits) to run
         // but catches applications stuck in true infinite loops (e.g., message pump with no messages)
         const ulong MAX_SAME_EIP_ITERATIONS = 1000000;
+        
+        // Throttle noisy warning logs to reduce spam
+        var lastSuspiciousEipWarning = 0u;
+        var lastHeapEipWarning = 0u;
 
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
@@ -601,10 +605,13 @@ public sealed class Emulator : IDisposable
             // DEBUG: Log EIP at start of each iteration to catch when it gets corrupted
             var eipAtLoopStart = _cpu!.GetEip();
             // Check if EIP is in heap area (likely executing data)
-            if (eipAtLoopStart >= _heapBase && eipAtLoopStart < HEAP_LIMIT)
+            // Throttle: Only log this warning when EIP changes to reduce log noise
+            var isInHeapRange = eipAtLoopStart >= _heapBase && eipAtLoopStart < HEAP_LIMIT;
+            if (isInHeapRange && eipAtLoopStart != lastSuspiciousEipWarning)
             {
                 var esp = _cpu.GetRegister("ESP");
                 _logger.LogWarning("[Emulator] LOOP START: EIP=0x{Eip:X8} is already in suspicious range at loop start! ESP=0x{Esp:X8}", eipAtLoopStart, esp);
+                lastSuspiciousEipWarning = eipAtLoopStart;
             }
             
             // Check pause state periodically without blocking
@@ -726,12 +733,15 @@ public sealed class Emulator : IDisposable
             }
             
             // Guard: detect execution in heap memory (likely executing data)
-            if (eipBeforeStep >= _heapBase && eipBeforeStep < HEAP_LIMIT)
+            // Throttle: Only log this warning when EIP changes to reduce log noise
+            var isExecutingInHeapRange = eipBeforeStep >= _heapBase && eipBeforeStep < HEAP_LIMIT;
+            if (isExecutingInHeapRange && eipBeforeStep != lastHeapEipWarning)
             {
                 // EIP in heap range is suspicious - likely executing data or unmapped memory
                 // This range is typically used for data segments, not code
                 _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is in heap memory range (0x{HeapBase:X8}-0x{HeapLimit:X8}). This may indicate a bad jump or return address. Attempting to verify memory is mapped...", 
                     eipBeforeStep, _heapBase, HEAP_LIMIT - 1);
+                lastHeapEipWarning = eipBeforeStep;
                 
                 try
                 {
