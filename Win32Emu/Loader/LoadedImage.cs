@@ -13,5 +13,6 @@ public record LoadedImage(
 	ushort Subsystem, // PE subsystem type (IMAGE_SUBSYSTEM_WINDOWS_CUI = 3, IMAGE_SUBSYSTEM_WINDOWS_GUI = 2)
 	uint HeaderEndRva,           // End of headers (RVA) based on PE: min(SizeOfHeaders, first section RVA)
 	uint SizeOfStackReserve,     // From OptionalHeader
-	uint SizeOfStackCommit       // From OptionalHeader
+	uint SizeOfStackCommit,      // From OptionalHeader
+	uint[] TlsCallbacks          // TLS callback function addresses (VA)
 );

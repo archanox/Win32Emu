@@ -3,6 +3,7 @@ using AsmResolver.PE;
 using AsmResolver.PE.Exports;
 using AsmResolver.PE.File;
 using AsmResolver.PE.Relocations;
+using AsmResolver.PE.Tls;
 using Microsoft.Extensions.Logging;
 using Win32Emu.Memory;
 using System.IO;
@@ -175,6 +176,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 
 		var importMap = BuildImportMap(image, imageBase);
 		var (exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal) = BuildExportMaps(image, imageBase);
+		var tlsCallbacks = ExtractTlsCallbacks(image, imageBase, vm, logger);
 
 		// Stack sizes from optional header (PE-provided)
 		uint sizeOfStackReserve;
@@ -204,7 +206,8 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			(ushort)subsystem,
 			headerEndRva,
 			sizeOfStackReserve,
-			sizeOfStackCommit);
+			sizeOfStackCommit,
+			tlsCallbacks);
 	}
 
 	// Syscall dispatcher address - this is where all import stubs will call into
@@ -388,6 +391,70 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		}
 
 		return (byName, byOrdinal, forwardedByName, forwardedByOrdinal);
+	}
+
+	/// <summary>
+	/// Extracts TLS (Thread Local Storage) callback function addresses from the PE image.
+	/// TLS callbacks are executed before the main entry point and on thread attach/detach events.
+	/// </summary>
+	/// <param name="image">The PE image to extract TLS callbacks from</param>
+	/// <param name="imageBase">The base address where the image is loaded</param>
+	/// <param name="vm">Virtual memory (unused, kept for consistency)</param>
+	/// <param name="logger">Logger for diagnostic messages</param>
+	/// <returns>Array of TLS callback virtual addresses</returns>
+	private static uint[] ExtractTlsCallbacks(PEImage image, uint imageBase, VirtualMemory vm, ILogger? logger)
+	{
+		var callbacks = new List<uint>();
+
+		// Check if the image has a TLS directory
+		var tlsDirectory = image.TlsDirectory;
+		if (tlsDirectory == null)
+		{
+			logger?.LogDebug("[Loader] No TLS directory found in PE image");
+			return callbacks.ToArray();
+		}
+
+		logger?.LogInformation("[Loader] TLS directory found, extracting callbacks");
+
+		// Get the callback functions from the TLS directory
+		var callbackFunctions = tlsDirectory.CallbackFunctions;
+		if (callbackFunctions == null)
+		{
+			logger?.LogDebug("[Loader] TLS directory has no callback functions");
+			return callbacks.ToArray();
+		}
+
+		// Extract callback addresses
+		// CallbackFunctions contains ISegmentReferences which have RVAs
+		// We need to convert these to VAs by adding the image base
+		var index = 0;
+		foreach (var callback in callbackFunctions)
+		{
+			if (callback != null && callback.IsBounded)
+			{
+				var callbackRva = callback.Rva;
+				var callbackVa = imageBase + callbackRva;
+				callbacks.Add(callbackVa);
+				logger?.LogInformation("[Loader] TLS callback #{Index} at VA 0x{CallbackVa:X8} (RVA 0x{CallbackRva:X8})", 
+					index, callbackVa, callbackRva);
+				index++;
+			}
+			else
+			{
+				logger?.LogWarning("[Loader] TLS callback #{Index} is null or unbounded, skipping", index);
+				index++;
+			}
+
+			// Safety check: prevent infinite loops in case of corrupted data
+			if (index >= 64)
+			{
+				logger?.LogWarning("[Loader] TLS callback array exceeds reasonable size (64 entries), stopping extraction");
+				break;
+			}
+		}
+
+		logger?.LogInformation("[Loader] Extracted {Count} TLS callbacks", callbacks.Count);
+		return callbacks.ToArray();
 	}
 
 	/// <summary>
