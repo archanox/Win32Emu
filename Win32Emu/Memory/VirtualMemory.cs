@@ -178,16 +178,130 @@ public class VirtualMemory
         }
     }
 
+    /// <summary>
+    /// Reads bytes from memory into a newly allocated array.
+    /// For better performance, consider using ReadBytes(ulong, Span&lt;byte&gt;) to avoid allocations.
+    /// </summary>
     public byte[] GetSpan(ulong addr, int length)
     {
         EnsureRange(addr, (ulong)length);
         
         byte[] result = new byte[length];
-        for (int i = 0; i < length; i++)
-        {
-            result[i] = ReadByteInternal(addr + (ulong)i);
-        }
+        ReadBytes(addr, result);
         return result;
+    }
+    
+    /// <summary>
+    /// Reads bytes from memory into the provided span.
+    /// This is more efficient than GetSpan as it avoids allocations.
+    /// </summary>
+    public void ReadBytes(ulong addr, Span<byte> destination)
+    {
+        EnsureRange(addr, (ulong)destination.Length);
+        
+        if (destination.Length == 0)
+        {
+            return;
+        }
+        
+        uint startPage = (uint)(addr >> PageSizeBits);
+        uint endPage = (uint)((addr + (ulong)destination.Length - 1) >> PageSizeBits);
+        
+        int destOffset = 0;
+        int bytesRemaining = destination.Length;
+        
+        // Handle first partial page
+        uint firstPageOffset = (uint)(addr & PageMask);
+        if (firstPageOffset != 0)
+        {
+            int bytesInFirstPage = Math.Min(PageSize - (int)firstPageOffset, bytesRemaining);
+            if (_pages.TryGetValue(startPage, out var page))
+            {
+                new ReadOnlySpan<byte>(page, (int)firstPageOffset, bytesInFirstPage).CopyTo(destination.Slice(destOffset, bytesInFirstPage));
+            }
+            else
+            {
+                // Unallocated pages read as zeros
+                destination.Slice(destOffset, bytesInFirstPage).Clear();
+            }
+            destOffset += bytesInFirstPage;
+            bytesRemaining -= bytesInFirstPage;
+            startPage++;
+        }
+        
+        // Handle full pages in the middle
+        while (bytesRemaining >= PageSize)
+        {
+            if (_pages.TryGetValue(startPage, out var page))
+            {
+                new ReadOnlySpan<byte>(page, 0, PageSize).CopyTo(destination.Slice(destOffset, PageSize));
+            }
+            else
+            {
+                // Unallocated pages read as zeros
+                destination.Slice(destOffset, PageSize).Clear();
+            }
+            destOffset += PageSize;
+            bytesRemaining -= PageSize;
+            startPage++;
+        }
+        
+        // Handle last partial page
+        if (bytesRemaining > 0)
+        {
+            if (_pages.TryGetValue(startPage, out var page))
+            {
+                new ReadOnlySpan<byte>(page, 0, bytesRemaining).CopyTo(destination.Slice(destOffset, bytesRemaining));
+            }
+            else
+            {
+                // Unallocated pages read as zeros
+                destination.Slice(destOffset, bytesRemaining).Clear();
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets a Memory&lt;byte&gt; view of the specified memory region.
+    /// Note: This allocates a new array. For zero-copy access, use TryGetPageMemory when possible.
+    /// </summary>
+    public Memory<byte> GetMemory(ulong addr, int length)
+    {
+        return new Memory<byte>(GetSpan(addr, length));
+    }
+    
+    /// <summary>
+    /// Tries to get a Memory&lt;byte&gt; view of a single page without copying.
+    /// This is only possible if the requested region fits within a single page boundary.
+    /// Returns false if the region spans multiple pages or requires allocation.
+    /// </summary>
+    public bool TryGetPageMemory(ulong addr, int length, out Memory<byte> memory)
+    {
+        if (length == 0 || length > PageSize)
+        {
+            memory = Memory<byte>.Empty;
+            return false;
+        }
+        
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        // Check if the request spans multiple pages
+        if (offset + length > PageSize)
+        {
+            memory = Memory<byte>.Empty;
+            return false;
+        }
+        
+        if (_pages.TryGetValue(pageIndex, out var page))
+        {
+            memory = new Memory<byte>(page, (int)offset, length);
+            return true;
+        }
+        
+        // Page not allocated yet
+        memory = Memory<byte>.Empty;
+        return false;
     }
     
     /// <summary>
