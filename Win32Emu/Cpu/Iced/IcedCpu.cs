@@ -158,7 +158,9 @@ public class IcedCpu : IAsyncCpu
 		// Log instructions in the problematic range (after LoadCursorA returns)
 		if (oldEip >= 0x00403160 && oldEip <= 0x004031A0)
 		{
-			_logger.LogInformation("[IcedCpu] Executing at 0x{Eip:X8}: {Insn}", oldEip, insn.ToString());
+			var bytes = mem.GetSpan(oldEip, 16).ToArray();
+			var byteString = string.Join(" ", bytes.Select(b => b.ToString("X2")));
+			_logger.LogInformation("[IcedCpu] Executing at 0x{Eip:X8}: {Insn} (Bytes: {Bytes})", oldEip, insn.ToString(), byteString);
 		}
 		
 		_eip = (uint)_decoder.IP;
