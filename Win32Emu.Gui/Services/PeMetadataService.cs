@@ -130,13 +130,16 @@ public static class PeMetadataService
                 
                 foreach (var symbol in module.Symbols)
                 {
-                    var functionName = symbol.Name ?? $"Ordinal_{symbol.Hint}";
+                    // Use Ordinal for ordinal-based imports, not Hint
+                    // Hint is just an optimization suggestion for the Windows loader
+                    // See docs/implementation/IMPORT_HINTS.md for details
+                    var functionName = symbol.Name ?? $"Ordinal_{symbol.Ordinal}";
                     
                     imports.Add(new PeImport
                     {
                         DllName = dllName,
                         FunctionName = functionName,
-                        Ordinal = symbol.Hint
+                        Ordinal = symbol.Ordinal
                     });
                 }
             }
