@@ -776,7 +776,6 @@ public class IcedCpu : IAsyncCpu
 				var regName = sourceRegister.Value.ToString();
 				
 				// Try to provide additional context by checking if the source might be an IAT entry
-				var sourceAddr = sourceEip;
 				var debugHint = string.Empty;
 				
 				// Check if this might be loading from an IAT entry (common pattern: mov reg,[iat_addr]; call reg)

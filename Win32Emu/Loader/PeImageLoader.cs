@@ -317,10 +317,8 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				var verifyValue = vm.Read32(va);
 				if (verifyValue != synthetic)
 				{
-					logger?.LogError("[Loader] IAT entry at VA 0x{Va:X8} was not written correctly. Expected 0x{Expected:X8}, got 0x{Actual:X8}", 
-						va, synthetic, verifyValue);
 					throw new InvalidOperationException(
-						$"Failed to initialize IAT entry at VA 0x{va:X8}. " +
+						$"Failed to initialize IAT entry at VA 0x{va:X8} for {dll.ToUpperInvariant()}!{sym.Name ?? $"Ordinal_{sym.Ordinal}"}. " +
 						$"Expected synthetic address 0x{synthetic:X8}, but read back 0x{verifyValue:X8}. " +
 						$"This may indicate memory protection issues or PE loading conflicts.");
 				}
