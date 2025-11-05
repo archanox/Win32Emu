@@ -313,6 +313,18 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				// Write the synthetic address to the IAT entry
 				vm.Write32(va, synthetic);
 				
+				// Verify the write was successful
+				var verifyValue = vm.Read32(va);
+				if (verifyValue != synthetic)
+				{
+					logger?.LogError("[Loader] IAT entry at VA 0x{Va:X8} was not written correctly. Expected 0x{Expected:X8}, got 0x{Actual:X8}", 
+						va, synthetic, verifyValue);
+					throw new InvalidOperationException(
+						$"Failed to initialize IAT entry at VA 0x{va:X8}. " +
+						$"Expected synthetic address 0x{synthetic:X8}, but read back 0x{verifyValue:X8}. " +
+						$"This may indicate memory protection issues or PE loading conflicts.");
+				}
+				
 				// Create import stub using retrowin32-style approach:
 				// CALL [syscall_dispatcher]; RET argBytes
 				// The RET instruction will be patched at runtime with the correct argBytes value
