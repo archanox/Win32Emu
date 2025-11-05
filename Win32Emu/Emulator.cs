@@ -38,10 +38,6 @@ public sealed class Emulator : IDisposable
     
     // Logging throttle interval when stuck at same EIP (reduce spam)
     private const ulong STUCK_EIP_LOG_INTERVAL = 100000;
-    
-    // Maximum instructions to execute per TLS callback (safety limit to prevent infinite loops)
-    // This is generous enough for legitimate initialization code but prevents runaway callbacks
-    private const int MAX_TLS_CALLBACK_INSTRUCTIONS = 10_000_000;
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -377,24 +373,14 @@ public sealed class Emulator : IDisposable
                 
                 // Execute the callback until it returns
                 // We'll detect return when EIP reaches our RETURN_MARKER
-                var instructionsExecuted = 0;
-                
-                while (_cpu.GetEip() != RETURN_MARKER && instructionsExecuted < MAX_TLS_CALLBACK_INSTRUCTIONS)
+                // Note: Unlike the main emulation loop, TLS callbacks run to completion without instruction limits
+                // to match Windows behavior. If a callback never returns, the emulator will hang.
+                while (_cpu.GetEip() != RETURN_MARKER)
                 {
                     _cpu.SingleStep(_vm);
-                    instructionsExecuted++;
                 }
                 
-                if (_cpu.GetEip() == RETURN_MARKER)
-                {
-                    _logger.LogDebug("[Emulator] TLS callback #{Index} returned after {Instructions} instructions", 
-                        i, instructionsExecuted);
-                }
-                else
-                {
-                    _logger.LogWarning("[Emulator] TLS callback #{Index} did not return after {Instructions} instructions", 
-                        i, instructionsExecuted);
-                }
+                _logger.LogDebug("[Emulator] TLS callback #{Index} returned successfully", i);
             }
             catch (Exception ex)
             {

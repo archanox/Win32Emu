@@ -122,10 +122,13 @@ Current implementation:
 - ✅ Executes TLS callbacks with `DLL_PROCESS_ATTACH` on process start
 - ✅ Properly sets up stack and parameters
 - ✅ Restores CPU state after callback execution
+- ✅ Callbacks run to completion without instruction limits (matching Windows behavior)
 - ⚠️ Does not execute callbacks on thread attach/detach events
 - ⚠️ Does not execute callbacks on process detach
 
 These limitations match the most common use cases and can be extended in the future if needed.
+
+**Note**: TLS callbacks that never return will cause the emulator to hang, matching Windows behavior but requiring manual intervention to stop the process.
 
 ## Security Considerations
 
