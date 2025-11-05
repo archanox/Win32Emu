@@ -71,7 +71,7 @@ if (existingValue != 0)
 **After:**
 ```csharp
 // Only log if value seems unexpected (outside normal stub/thunk ranges)
-if (existingValue != 0 && existingValue < 0x00400000)
+if (existingValue != 0 && existingValue < IMAGE_BASE_THRESHOLD)
 {
     logger?.LogDebug("...contains unusual value...");
 }

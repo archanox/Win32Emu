@@ -756,7 +756,8 @@ public class IcedCpu : IAsyncCpu
 			
 			// Check if target is within the stack region (from PE header)
 			// Stack grows downward from _stackBase to _stackLimit
-			if (target >= _stackLimit && target < _stackBase)
+			var isStackAddress = target >= _stackLimit && target < _stackBase;
+			if (isStackAddress)
 			{
 				// Stack region
 				addressType = "stack";
@@ -779,7 +780,7 @@ public class IcedCpu : IAsyncCpu
 				var debugHint = string.Empty;
 				
 				// Check if this might be loading from an IAT entry (common pattern: mov reg,[iat_addr]; call reg)
-				if (target >= _stackLimit && target < _stackBase)
+				if (isStackAddress)
 				{
 					debugHint = " DEBUGGING: Check if the IAT entry that loaded this register was properly initialized. " +
 					           $"Register {regName} was loaded from memory before this CALL instruction.";

@@ -20,11 +20,10 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	// Syscall dispatcher address - this is where all import stubs will call into
 	private const uint SYSCALL_DISPATCHER_ADDRESS = 0x0E000000;
 	
-	// Minimum expected value for IAT entries in normal PE executables
-	// IAT entries typically point to addresses in the image base range.
-	// The default image base for Win32 PE executables is 0x00400000.
-	// Values below this threshold are likely uninitialized (0x00000000) or corrupted.
-	private const uint MIN_EXPECTED_IAT_VALUE = 0x00400000;
+	// Threshold for filtering likely uninitialized IAT entries during initial processing.
+	// IAT entries below this value (0x00400000) are likely uninitialized (e.g., 0x00000000) or corrupted.
+	// This is NOT used for validating final IAT values, which may be >= 0x00400000 (image base) or emulator special ranges (e.g., 0x0F000000).
+	private const uint IMAGE_BASE_THRESHOLD = 0x00400000;
 	
 	// Maximum number of TLS callbacks to extract (safety limit to prevent infinite loops on corrupted PE files)
 	// While the PE format allows unlimited callbacks, legitimate executables rarely have more than a few
@@ -304,8 +303,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				// A non-zero value here might indicate the IAT has already been processed or contains unexpected data
 				var existingValue = vm.Read32(va);
 				// Note: It's normal for some loaders to have non-zero values in IAT entries before processing
-				// Only log if value seems unexpected (outside normal stub/thunk ranges)
-				if (existingValue != 0 && existingValue < MIN_EXPECTED_IAT_VALUE)
+				// Only log if value seems unexpected (below image base threshold and not in emulator special ranges)
+				// Values >= IMAGE_BASE_THRESHOLD (0x00400000) are typically valid pre-filled IAT entries or in image base range
+				if (existingValue != 0 && existingValue < IMAGE_BASE_THRESHOLD)
 				{
 					logger?.LogDebug("[Loader] IAT entry at VA 0x{Va:X8} contains unusual value 0x{Value:X8} before writing synthetic address.", va, existingValue);
 				}
