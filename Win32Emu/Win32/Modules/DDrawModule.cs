@@ -146,7 +146,7 @@ namespace Win32Emu.Win32.Modules
 			ddrawObj.ComObjectAddress = comObjectAddr;
 			_comObjectToHandle[comObjectAddr] = ddrawHandle;
 
-// Write COM object pointer to output parameter with verification
+			// Write COM object pointer to output parameter with verification
 			_logger.LogInformation("[DDraw] Writing COM object 0x{ComObjectAddr:X8} to address 0x{Addr:X8}", comObjectAddr, lplpDd);
 			_env.MemWrite32(lplpDd, comObjectAddr);
 			

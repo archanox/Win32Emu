@@ -107,7 +107,7 @@ namespace Win32Emu.Win32.Modules
 // Create the COM object with vtable
 			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectInput", vtableMethods);
 
-// Write COM object pointer to output parameter with verification
+			// Write COM object pointer to output parameter with verification
 			_logger.LogInformation("[DInput] Writing COM object 0x{ComObjectAddr:X8} to address 0x{Addr:X8}", comObjectAddr, lplpDirectInput);
 			_env.MemWrite32(lplpDirectInput, comObjectAddr);
 			
@@ -116,8 +116,8 @@ namespace Win32Emu.Win32.Modules
 			if (verification != comObjectAddr)
 			{
 				_logger.LogError("[DInput] Verification failed! Wrote 0x{Expected:X8} but read back 0x{Actual:X8} from address 0x{Addr:X8}", 
-			        comObjectAddr, verification, lplpDirectInput);
-			    return 0x80004005; // DIERR_GENERIC (E_FAIL)
+					comObjectAddr, verification, lplpDirectInput);
+				return 1; // DIERR_GENERIC
 			}
 			_logger.LogInformation("[DInput] Verification: Read back 0x{Value:X8} from 0x{Addr:X8} - SUCCESS", verification, lplpDirectInput);
 
