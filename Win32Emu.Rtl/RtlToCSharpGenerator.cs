@@ -80,6 +80,15 @@ public class RtlToCSharpGenerator
         sb.AppendLine("            return await Task.FromResult(new CpuStepResult { IsCall = false, CallTarget = 0 });");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// CPU step result (matches Win32Emu.Cpu.CpuStepResult)");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public struct CpuStepResult");
+        sb.AppendLine("    {");
+        sb.AppendLine("        public bool IsCall { get; set; }");
+        sb.AppendLine("        public uint CallTarget { get; set; }");
+        sb.AppendLine("    }");
         sb.AppendLine("}");
         
         return sb.ToString();
