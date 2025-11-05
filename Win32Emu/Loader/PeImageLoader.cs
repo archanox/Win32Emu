@@ -20,6 +20,11 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	// Syscall dispatcher address - this is where all import stubs will call into
 	private const uint SYSCALL_DISPATCHER_ADDRESS = 0x0E000000;
 	
+	// Minimum expected value for IAT entries in normal PE executables
+	// IAT entries typically point to addresses in the image base range (0x00400000+)
+	// Values below this are likely uninitialized or corrupted
+	private const uint MIN_EXPECTED_IAT_VALUE = 0x00400000;
+	
 	// Maximum number of TLS callbacks to extract (safety limit to prevent infinite loops on corrupted PE files)
 	// While the PE format allows unlimited callbacks, legitimate executables rarely have more than a few
 	private const int MAX_TLS_CALLBACKS = 64;
@@ -299,7 +304,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				var existingValue = vm.Read32(va);
 				// Note: It's normal for some loaders to have non-zero values in IAT entries before processing
 				// Only log if value seems unexpected (outside normal stub/thunk ranges)
-				if (existingValue != 0 && existingValue < 0x00400000)
+				if (existingValue != 0 && existingValue < MIN_EXPECTED_IAT_VALUE)
 				{
 					logger?.LogDebug("[Loader] IAT entry at VA 0x{Va:X8} contains unusual value 0x{Value:X8} before writing synthetic address.", va, existingValue);
 				}
