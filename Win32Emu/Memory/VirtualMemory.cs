@@ -277,14 +277,20 @@ public class VirtualMemory
     /// </summary>
     public bool TryGetPageMemory(ulong addr, int length, out Memory<byte> memory)
     {
-        if (length == 0 || length > PageSize)
-        {
-            memory = Memory<byte>.Empty;
-            return false;
-        }
+    if (length < 0 || length > PageSize)
+    {
+        memory = Memory<byte>.Empty;
+        return false;
+    }
         
-        uint pageIndex = (uint)(addr >> PageSizeBits);
-        uint offset = (uint)(addr & PageMask);
+    if (length == 0)
+    {
+        memory = Memory<byte>.Empty;
+        return true;
+    }
+        
+    uint pageIndex = (uint)(addr >> PageSizeBits);
+    uint offset = (uint)(addr & PageMask);
         
         // Check if the request spans multiple pages (use long to prevent overflow)
         if ((long)offset + length > PageSize)
