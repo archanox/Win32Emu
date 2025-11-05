@@ -24,11 +24,12 @@ public class DInputModuleTests
         vm.Write32(outputPtr, 0x00000000);
 
         // Set up stack with parameters: hinst, dwVersion, lplpDirectInput, pUnkOuter
+        // Note: StackArgs reads starting from ESP+4, so we write parameters there
         cpu.SetRegister("ESP", 0x001FFF00);
-        vm.Write32(0x001FFF00, 0x00400000); // hinst
-        vm.Write32(0x001FFF04, 0x00000300); // dwVersion = DIRECTINPUT_VERSION (0x0300)
-        vm.Write32(0x001FFF08, outputPtr);  // lplpDirectInput
-        vm.Write32(0x001FFF0C, 0x00000000); // pUnkOuter = NULL
+        vm.Write32(0x001FFF04, 0x00400000); // hinst (ESP+4 = a.UInt32(0))
+        vm.Write32(0x001FFF08, 0x00000300); // dwVersion = DIRECTINPUT_VERSION (0x0300) (ESP+8 = a.UInt32(1))
+        vm.Write32(0x001FFF0C, outputPtr);  // lplpDirectInput (ESP+12 = a.UInt32(2))
+        vm.Write32(0x001FFF10, 0x00000000); // pUnkOuter = NULL (ESP+16 = a.UInt32(3))
 
         // Act
         var result = dinputModule.TryInvokeUnsafe("DirectInputCreateA", cpu, vm, out var returnValue);
@@ -54,11 +55,12 @@ public class DInputModuleTests
         var outputPtr = 0x001FF000u;
         vm.Write32(outputPtr, 0x00000000);
 
+        // Note: StackArgs reads starting from ESP+4
         cpu.SetRegister("ESP", 0x001FFF00);
-        vm.Write32(0x001FFF00, 0x00400000);
-        vm.Write32(0x001FFF04, 0x00000300);
-        vm.Write32(0x001FFF08, outputPtr);
-        vm.Write32(0x001FFF0C, 0x00000000);
+        vm.Write32(0x001FFF04, 0x00400000); // hinst (ESP+4 = a.UInt32(0))
+        vm.Write32(0x001FFF08, 0x00000300); // dwVersion (ESP+8 = a.UInt32(1))
+        vm.Write32(0x001FFF0C, outputPtr);  // lplpDirectInput (ESP+12 = a.UInt32(2))
+        vm.Write32(0x001FFF10, 0x00000000); // pUnkOuter (ESP+16 = a.UInt32(3))
 
         // Act
         var result = dinputModule.TryInvokeUnsafe("DirectInputCreate", cpu, vm, out var returnValue);
@@ -81,12 +83,13 @@ public class DInputModuleTests
         var outputPtr = 0x001FF000u;
         vm.Write32(outputPtr, 0x00000000);
 
+        // Note: StackArgs reads starting from ESP+4
         cpu.SetRegister("ESP", 0x001FFF00);
-        vm.Write32(0x001FFF00, 0x00400000); // hinst
-        vm.Write32(0x001FFF04, 0x00000800); // dwVersion = DIRECTINPUT_VERSION (0x0800 for DInput8)
-        vm.Write32(0x001FFF08, 0x00000000); // riidltf
-        vm.Write32(0x001FFF0C, outputPtr);  // lplpDirectInput
-        vm.Write32(0x001FFF10, 0x00000000); // pUnkOuter
+        vm.Write32(0x001FFF04, 0x00400000); // hinst (ESP+4 = a.UInt32(0))
+        vm.Write32(0x001FFF08, 0x00000800); // dwVersion = DIRECTINPUT_VERSION (0x0800 for DInput8) (ESP+8 = a.UInt32(1))
+        vm.Write32(0x001FFF0C, 0x00000000); // riidltf (ESP+12 = a.UInt32(2))
+        vm.Write32(0x001FFF10, outputPtr);  // lplpDirectInput (ESP+16 = a.UInt32(3))
+        vm.Write32(0x001FFF14, 0x00000000); // pUnkOuter (ESP+20 = a.UInt32(4))
 
         // Act
         var result = dinputModule.TryInvokeUnsafe("DirectInput8Create", cpu, vm, out var returnValue);
@@ -108,12 +111,13 @@ public class DInputModuleTests
         var outputPtr = 0x001FF000u;
         vm.Write32(outputPtr, 0x00000000);
 
+        // Note: StackArgs reads starting from ESP+4
         cpu.SetRegister("ESP", 0x001FFF00);
-        vm.Write32(0x001FFF00, 0x00400000); // hinst
-        vm.Write32(0x001FFF04, 0x00000700); // dwVersion = DIRECTINPUT_VERSION (0x0700 for DInput7)
-        vm.Write32(0x001FFF08, 0x00000000); // riidltf (IID_IDirectInput7)
-        vm.Write32(0x001FFF0C, outputPtr);  // lplpDirectInput
-        vm.Write32(0x001FFF10, 0x00000000); // pUnkOuter
+        vm.Write32(0x001FFF04, 0x00400000); // hinst (ESP+4 = a.UInt32(0))
+        vm.Write32(0x001FFF08, 0x00000700); // dwVersion = DIRECTINPUT_VERSION (0x0700 for DInput7) (ESP+8 = a.UInt32(1))
+        vm.Write32(0x001FFF0C, 0x00000000); // riidltf (IID_IDirectInput7) (ESP+12 = a.UInt32(2))
+        vm.Write32(0x001FFF10, outputPtr);  // lplpDirectInput (ESP+16 = a.UInt32(3))
+        vm.Write32(0x001FFF14, 0x00000000); // pUnkOuter (ESP+20 = a.UInt32(4))
 
         // Act
         var result = dinputModule.TryInvokeUnsafe("DirectInputCreateEx", cpu, vm, out var returnValue);

@@ -82,12 +82,11 @@ namespace Win32Emu.Win32.Modules
 		///	DDERR_OUTOFMEMORY</returns>
 		[DllModuleExport(31, entryPoint: 0x0001DDA5, Version = "4.90.0.3000")]
 		[DllModuleExport(9, entryPoint: 0x0002CCA3, Version = "5.1.2600.6532")]
-		private uint DirectDrawCreate(uint lplpDd, uint lpGuid, uint pUnkOuter)
+		private uint DirectDrawCreate(uint lpGuid, uint lplpDd, uint pUnkOuter)
 		{
-			// NOTE: Parameter order differs from MSDN documentation
-			// Actual Win32 DLL has lplpDD as first parameter, lpGuid as second
-			// See docs/implementation/FURTHER_INVESTIGATION.md for details
-			_logger.LogInformation("[DDraw] DirectDrawCreate(lplpDD=0x{LplpDd:X8}, lpGuid=0x{LpGuid:X8}, pUnkOuter=0x{PUnkOuter:X8})", lplpDd, lpGuid, pUnkOuter);
+			// Fixed: Parameter order now matches MSDN documentation
+			// Win32 API: DirectDrawCreate(GUID *lpGUID, LPDIRECTDRAW *lplpDD, IUnknown *pUnkOuter)
+			_logger.LogInformation("[DDraw] DirectDrawCreate(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, pUnkOuter);
 
 		// Validate output pointer parameter
 		if (lplpDd == 0)
@@ -171,12 +170,11 @@ namespace Win32Emu.Win32.Modules
 
 		[DllModuleExport(33, entryPoint: 0x0001DDF9, Version = "4.90.0.3000", IsStub = true)]
 		[DllModuleExport(11, entryPoint: 0x0000CCF6, Version = "5.1.2600.6532", IsStub = true)]
-		private uint DirectDrawCreateEx(uint lplpDd, uint lpGuid, uint iid, uint pUnkOuter)
+		private uint DirectDrawCreateEx(uint lpGuid, uint lplpDd, uint iid, uint pUnkOuter)
 		{
-			// NOTE: Parameter order differs from MSDN documentation
-			// Actual Win32 DLL has lplpDD as first parameter, lpGuid as second
-			// See docs/implementation/FURTHER_INVESTIGATION.md for details
-			_logger.LogInformation("[DDraw] DirectDrawCreateEx(lplpDD=0x{LplpDd:X8}, lpGuid=0x{LpGuid:X8}, iid=0x{Iid:X8}, pUnkOuter=0x{PUnkOuter:X8})", lplpDd, lpGuid, iid, pUnkOuter);
+			// Fixed: Parameter order now matches MSDN documentation
+			// Win32 API: DirectDrawCreateEx(GUID *lpGuid, LPDIRECTDRAW *lplpDD, REFIID iid, IUnknown *pUnkOuter)
+			_logger.LogInformation("[DDraw] DirectDrawCreateEx(lpGuid=0x{LpGuid:X8}, lplpDD=0x{LplpDd:X8}, iid=0x{Iid:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDd, iid, pUnkOuter);
 
 			// Validate output pointer parameter
 			if (lplpDd == 0)
