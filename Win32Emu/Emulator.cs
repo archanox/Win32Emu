@@ -33,6 +33,11 @@ public sealed class Emulator : IDisposable
     private CancellationTokenSource? _eventProcessingCts;
     private readonly HashSet<uint> _patchedImportStubs = new();
     
+    // Actual memory layout from PE headers
+    private uint _stackBase;
+    private uint _stackLimit; // Bottom of stack (lowest address)
+    private uint _heapBase;
+    
     // Progress logging interval for emulation loop
     private const ulong PROGRESS_LOG_INTERVAL = 10000;
     
@@ -260,16 +265,16 @@ public sealed class Emulator : IDisposable
         _cpu.SetEip(_image.EntryPointAddress);
         
         // Calculate stack base using PE-provided SizeOfStackReserve
-        // Default to 0x00200000 if not specified, ensuring it doesn't conflict with typical image base (0x00400000)
         var stackReserve = _image.SizeOfStackReserve;
         if (stackReserve == 0)
         {
             stackReserve = 0x00100000; // 1MB default reserve if not specified
         }
         
-        // Stack grows downward, so place it below the typical heap area (0x01000000)
+        // Stack grows downward, so place it below the typical heap area
         // but above low memory. We'll use 0x00100000 + stackReserve as the stack top.
-        var stackBase = 0x00100000u + stackReserve;
+        _stackBase = 0x00100000u + stackReserve;
+        _stackLimit = 0x00100000u; // Bottom of stack (lowest valid address)
         
         // Initialize stack using PE-provided SizeOfStackCommit
         var commitSize = _image.SizeOfStackCommit;
@@ -283,12 +288,20 @@ public sealed class Emulator : IDisposable
             commitSize = stackReserve;
         }
         
-        var initialEsp = stackBase - commitSize;
+        var initialEsp = _stackBase - commitSize;
         _cpu.SetRegister("ESP", initialEsp);
         _cpu.SetRegister("EBP", initialEsp); // Initialize frame pointer to match stack pointer
         
-        _logger.LogInformation("[Loader] Stack initialized: Base=0x{StackBase:X8} ESP=0x{ESP:X8} Reserve=0x{Reserve:X} Commit=0x{Commit:X}",
-            stackBase, initialEsp, stackReserve, commitSize);
+        // Store heap base for use in checks
+        _heapBase = CalculateHeapBase(_image);
+        
+        // Store memory layout in ProcessEnvironment for use by Win32 modules
+        _env.StackBase = _stackBase;
+        _env.StackLimit = _stackLimit;
+        
+        _logger.LogInformation("[Loader] Stack initialized: Base=0x{StackBase:X8} Limit=0x{StackLimit:X8} ESP=0x{ESP:X8} Reserve=0x{Reserve:X} Commit=0x{Commit:X}",
+            _stackBase, _stackLimit, initialEsp, stackReserve, commitSize);
+        _logger.LogInformation("[Loader] Heap base: 0x{HeapBase:X8}", _heapBase);
 
         _dispatcher = new Win32Dispatcher(_logger);
 
@@ -582,7 +595,8 @@ public sealed class Emulator : IDisposable
             
             // DEBUG: Log EIP at start of each iteration to catch when it gets corrupted
             var eipAtLoopStart = _cpu!.GetEip();
-            if (eipAtLoopStart >= 0x01000000 && eipAtLoopStart < 0x02000000)
+            // Check if EIP is in heap area (likely executing data)
+            if (eipAtLoopStart >= _heapBase && eipAtLoopStart < HEAP_LIMIT)
             {
                 var esp = _cpu.GetRegister("ESP");
                 _logger.LogWarning("[Emulator] LOOP START: EIP=0x{Eip:X8} is already in suspicious range at loop start! ESP=0x{Esp:X8}", eipAtLoopStart, esp);
@@ -682,8 +696,6 @@ public sealed class Emulator : IDisposable
             
             // Validate that EIP points to valid/mapped memory before execution
             // This catches bad jumps/returns early before they cause cascading errors
-            const uint SUSPICIOUS_MEMORY_RANGE_START = 0x01000000;
-            const uint SUSPICIOUS_MEMORY_RANGE_END = 0x02000000;
             
             var eipBeforeStep = _cpu!.GetEip();
             
@@ -708,12 +720,13 @@ public sealed class Emulator : IDisposable
                 }
             }
             
-            if (eipBeforeStep >= SUSPICIOUS_MEMORY_RANGE_START && eipBeforeStep < SUSPICIOUS_MEMORY_RANGE_END)
+            // Guard: detect execution in heap memory (likely executing data)
+            if (eipBeforeStep >= _heapBase && eipBeforeStep < HEAP_LIMIT)
             {
-                // EIP in range 0x01000000-0x01FFFFFF is suspicious - likely executing data or unmapped memory
+                // EIP in heap range is suspicious - likely executing data or unmapped memory
                 // This range is typically used for data segments, not code
-                _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is in suspicious memory range (0x{Start:X8}-0x{End:X8}). This may indicate a bad jump or return address. Attempting to verify memory is mapped...", 
-                    eipBeforeStep, SUSPICIOUS_MEMORY_RANGE_START, SUSPICIOUS_MEMORY_RANGE_END - 1);
+                _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is in heap memory range (0x{HeapBase:X8}-0x{HeapLimit:X8}). This may indicate a bad jump or return address. Attempting to verify memory is mapped...", 
+                    eipBeforeStep, _heapBase, HEAP_LIMIT - 1);
                 
                 try
                 {
@@ -1732,12 +1745,9 @@ public sealed class Emulator : IDisposable
         return DEFAULT_HEAP_BASE;
     }
     
-    // Constants for EBP validation
-    private const uint HEAP_BASE = 0x01000000;            // Start of heap region
-    private const uint HEAP_LIMIT = 0x70000000;           // End of heap region
+    // Constants for memory validation
+    private const uint HEAP_LIMIT = 0x70000000;           // End of heap region (conservative upper limit)
     private const uint MIN_VALID_EBP = 0x1000;            // Minimum valid EBP (4KB)
-    private const uint DEFAULT_STACK_BOTTOM = 0x00100000; // Default stack bottom (1MB)
-    private const uint STACK_SIZE = 0x100000;             // Assumed stack size (1MB)
     private const uint STACK_SLACK_BYTES = 0x1000;        // Stack slack above ESP (4KB)
     
     /// <summary>
@@ -1811,11 +1821,11 @@ public sealed class Emulator : IDisposable
         var ebp = _cpu!.GetRegister("EBP");
         var esp = _cpu!.GetRegister("ESP");
         
-        // Define plausible stack region
-        var stackBottom = (esp >= STACK_SIZE) ? (esp - STACK_SIZE) : DEFAULT_STACK_BOTTOM;
+        // Use actual stack region from PE headers
+        var stackBottom = _stackLimit;
         
         // Check if EBP is within reasonable stack range
-        var ebpInStackRegion = (ebp >= stackBottom) && (ebp <= esp + STACK_SLACK_BYTES);
+        var ebpInStackRegion = (ebp >= stackBottom) && (ebp <= _stackBase + STACK_SLACK_BYTES);
         
         // Check if EBP is aligned (should be 4-byte aligned)
         var ebpAligned = (ebp & 0x3) == 0;
@@ -1827,7 +1837,7 @@ public sealed class Emulator : IDisposable
         var ebpIsBeyondMemory = (ebp >= _vm!.Size);
         
         // Check if EBP looks like a COM/heap pointer being used for special purposes
-        var ebpIsHeapPointer = (ebp >= HEAP_BASE && ebp < HEAP_LIMIT) && !ebpInStackRegion;
+        var ebpIsHeapPointer = (ebp >= _heapBase && ebp < HEAP_LIMIT) && !ebpInStackRegion;
         
         // If EBP is clearly invalid and not a special-purpose pointer, fix it
         if ((ebpIsZero || ebpIsVerySmall) && !ebpIsHeapPointer)

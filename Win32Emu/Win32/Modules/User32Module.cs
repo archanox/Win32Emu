@@ -2925,14 +2925,16 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Detect and track stack execution
-					// Stack typically starts high (e.g., 0x00200000) and grows down
+					// Stack grows downward from StackBase
 					// ESP is the current stack pointer. Check if EIP is in stack region.
 					// Stack region is typically ESP ± 64KB to account for stack growth
-					// Also check that EIP is significantly below code segment (0x00400000+)
+					// Also check that EIP is significantly below typical code segment
 					var espForStackCheck = cpu.GetRegister("ESP");
-					var stackLower = espForStackCheck >= 0x10000 ? espForStackCheck - 0x10000 : 0;
+					var stackLower = espForStackCheck >= 0x10000 ? espForStackCheck - 0x10000 : _env.StackLimit;
 					var stackUpper = espForStackCheck + 0x10000;
-					var isExecutingFromStack = eip >= stackLower && eip <= stackUpper && eip < 0x00400000;
+					// Consider executing from stack if EIP is in stack region and below the image base
+					var imgBase = _image?.BaseAddress ?? 0x00400000;
+					var isExecutingFromStack = eip >= stackLower && eip <= stackUpper && eip < imgBase;
 
 					// Log transitions into/out of stack execution
 					if (isExecutingFromStack && !wasExecutingFromStack)
@@ -3004,7 +3006,7 @@ namespace Win32Emu.Win32.Modules
 
 					// Check for other invalid EIP values that might indicate corruption
 					// Image base is typically 0x00400000, and code/data is usually above 0x00001000
-					// Stack is typically in high memory (>= 0x00100000)
+					// Check for extremely low addresses that are clearly invalid
 					if (eip < 0x00001000 && eip != RETURN_ADDRESS)
 					{
 						_logger.LogError("[User32] CallDialogProcedureAsync: Execution jumped to invalid low address 0x{Eip:X8} at step {Steps}", eip, steps);
