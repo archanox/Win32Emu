@@ -24,7 +24,7 @@ public static class MemoryRegions
 	// Syscall dispatcher and synthetic exports range (0x0E000000 - 0x0EFFFFFF)
 	// This range is used for:
 	// - The main syscall dispatcher entry point (at 0x0E000000)
-	// - Synthetic exports created via GetProcAddress (starting at 0x0E000000+)
+	// - Synthetic exports created via GetProcAddress (starting at 0x0F800000+)
 	public const uint SyscallDispatcherBase = 0x0E000000;
 	public const uint SyscallDispatcherLimit = 0x0F000000;
 	public const uint SyscallDispatcherSize = SyscallDispatcherLimit - SyscallDispatcherBase; // 16 MB
