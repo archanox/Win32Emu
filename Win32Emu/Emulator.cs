@@ -347,7 +347,8 @@ public sealed class Emulator : IDisposable
                 // Set up the stack for the callback call (stdcall convention)
                 // TLS callback signature: void NTAPI TlsCallback(PVOID DllHandle, DWORD Reason, PVOID Reserved)
                 // Parameters pushed right-to-left: Reserved, Reason, DllHandle
-                var esp = _cpu.GetRegister("ESP");
+                // Each callback starts with a fresh stack from originalEsp
+                var esp = originalEsp;
                 
                 // Push Reserved (last parameter, NULL)
                 esp -= 4;
@@ -384,8 +385,20 @@ public sealed class Emulator : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[Emulator] Error executing TLS callback #{Index} at 0x{Address:X8}", 
+                // Re-throw critical exceptions that should not be caught
+                if (ex is OutOfMemoryException || ex is StackOverflowException)
+                {
+                    throw;
+                }
+                
+                // For other exceptions, restore CPU state and abort TLS callbacks execution
+                // since the process state is now undefined
+                _logger.LogCritical(ex, "[Emulator] Error executing TLS callback #{Index} at 0x{Address:X8}", 
                     i, callbackAddress);
+                _cpu.SetEip(originalEip);
+                _cpu.SetRegister("ESP", originalEsp);
+                _logger.LogCritical("[Emulator] Aborting TLS callbacks execution due to exception in callback #{Index}", i);
+                break;
             }
         }
 
