@@ -178,25 +178,22 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				
 				if (bytesToWrite < rawData.Length)
 				{
-					logger?.LogDebug("[Loader] Section {SectionName} has RawDataSize (0x{RawSize:X8}) > VirtualSize (0x{VSize:X8}), truncating to VirtualSize to avoid writing beyond section bounds", 
-						section.Name, rawData.Length, virtualSize);
-					
-					// Only write VirtualSize bytes, ignoring extra bytes in the file
-					// Cast is safe here because we've verified bytesToWrite <= int.MaxValue above
-					vm.WriteBytes(imageBase + sectionRva, rawData.AsSpan(0, (int)bytesToWrite));
+				    logger?.LogDebug("[Loader] Section {SectionName} has RawDataSize (0x{RawSize:X8}) > VirtualSize (0x{VSize:X8}), truncating to VirtualSize to avoid writing beyond section bounds",
+				        section.Name, rawData.Length, virtualSize);
 				}
-				else
+				else if (virtualSize > rawData.Length)
 				{
-					// Write all raw data from the file
-					vm.WriteBytes(imageBase + sectionRva, rawData);
-					
-					// If VirtualSize is larger than raw data size, the extra bytes should remain zero
-					// (VirtualMemory already initializes to zero, so we don't need to explicitly zero-fill)
-					if (virtualSize > rawData.Length)
-					{
-						logger?.LogDebug("[Loader] Section {SectionName} has VirtualSize (0x{VSize:X8}) > RawDataSize (0x{RawSize:X8}), extra 0x{Extra:X8} bytes remain zero-filled", 
-							section.Name, virtualSize, rawData.Length, virtualSize - (uint)rawData.Length);
-					}
+				    // If VirtualSize is larger than raw data size, the extra bytes should remain zero
+				    // (VirtualMemory already initializes to zero, so we don't need to explicitly zero-fill)
+				    logger?.LogDebug("[Loader] Section {SectionName} has VirtualSize (0x{VSize:X8}) > RawDataSize (0x{RawSize:X8}), extra 0x{Extra:X8} bytes remain zero-filled",
+				        section.Name, virtualSize, rawData.Length, virtualSize - (uint)rawData.Length);
+				}
+
+				// Only write if there is data to write.
+				// Cast is safe because we've verified bytesToWrite <= int.MaxValue above.
+				if (bytesToWrite > 0)
+				{
+				    vm.WriteBytes(imageBase + sectionRva, rawData.AsSpan(0, (int)bytesToWrite));
 				}
 			}
 			catch (Exception ex) when (ex is System.IO.EndOfStreamException or ArgumentException)
