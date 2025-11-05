@@ -20,6 +20,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 	private readonly ILogger _logger;
 	private readonly VirtualDisk? _disk;
 	private readonly DiscFileSystem _fileSystem;
+	private readonly Stream? _underlyingStream; // Keep stream alive for ISO/CHD files
 	
 	/// <summary>
 	/// Gets whether this disk is read-only
@@ -42,8 +43,8 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			switch (extension)
 			{
 				case ".iso":
-					var isoStream = File.Open(diskPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-					_fileSystem = new CDReader(isoStream, true);
+					_underlyingStream = File.Open(diskPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+					_fileSystem = new CDReader(_underlyingStream, true);
 					IsReadOnly = true;
 					_logger.LogInformation("[DiskVFS] Mounted ISO: {DiskPath}", diskPath);
 					break;
@@ -564,6 +565,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		// Dispose filesystem and disk
 		_fileSystem?.Dispose();
 		_disk?.Dispose();
+		_underlyingStream?.Dispose();
 
 		_logger.LogInformation("[DiskVFS] Disposed");
 	}
