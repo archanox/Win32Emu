@@ -67,6 +67,8 @@ public record LoadedImage(
 
 	/// <summary>
 	/// Gets all sections that contain data (initialized or writable).
+	/// Note: This may include executable sections that are also writable (e.g., self-modifying code).
+	/// Typical data sections have IMAGE_SCN_CNT_INITIALIZED_DATA or IMAGE_SCN_MEM_WRITE flags.
 	/// </summary>
 	public IEnumerable<PeSection> DataSections => Sections.Where(s => s.IsData || s.IsWritable);
 
