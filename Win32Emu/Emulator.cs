@@ -194,7 +194,7 @@ public sealed class Emulator : IDisposable
             LogDebug($"[Loader]   Section '{section.Name}': RVA=0x{section.VirtualAddress:X8} Size=0x{section.VirtualSize:X8} Flags=[{string.Join(",", flags)}]");
         }
 
-        _env = new ProcessEnvironment(_vm, CalculateHeapBase(_image), _host, _logger);
+        _env = new ProcessEnvironment(_vm, CalculateHeapBase(), _host, _logger);
         // Register the main executable so GetModuleFileNameA can find it
         _env.RegisterMainExecutable(_image, path);
         // Convert path to Windows-style backslashes for proper parsing by C runtime
@@ -293,7 +293,7 @@ public sealed class Emulator : IDisposable
         _cpu.SetRegister("EBP", initialEsp); // Initialize frame pointer to match stack pointer
         
         // Store heap base for use in checks
-        _heapBase = CalculateHeapBase(_image);
+        _heapBase = CalculateHeapBase();
         
         // Store memory layout in ProcessEnvironment for use by Win32 modules
         _env.StackBase = _stackBase;
@@ -1721,27 +1721,15 @@ public sealed class Emulator : IDisposable
     private const uint IMPORT_STUB_ALIGNMENT_MASK = 0xFFFFFFF0u; // 16-byte alignment for import stubs
     
     /// <summary>
-    /// Calculates the heap base address from PE header information.
-    /// Uses SizeOfHeapReserve if specified, otherwise defaults to 0x01000000.
-    /// Ensures the heap base is aligned and doesn't conflict with typical memory layout.
+    /// Returns the default heap base address for memory allocation.
+    /// The heap base is always set to 0x01000000 for compatibility.
+    /// The PE header's SizeOfHeapReserve value is available in LoadedImage but not used
+    /// to determine heap placement - it's available for the memory allocator to manage heap growth.
     /// </summary>
-    /// <param name="image">The loaded PE image with heap size information</param>
     /// <returns>The heap base address to use for memory allocation</returns>
-    private static uint CalculateHeapBase(LoadedImage image)
+    private static uint CalculateHeapBase()
     {
-        // Default heap base if PE doesn't specify
         const uint DEFAULT_HEAP_BASE = 0x01000000;
-        
-        // If PE specifies a heap reserve size, we use it to inform our heap placement
-        // However, we still start at the default base for compatibility
-        if (image.SizeOfHeapReserve > 0)
-        {
-            // PE header specifies heap reserve, but we maintain compatibility by using
-            // the standard heap base location. The reserve size will be used by
-            // the memory allocator to manage heap growth.
-            return DEFAULT_HEAP_BASE;
-        }
-        
         return DEFAULT_HEAP_BASE;
     }
     

@@ -23,9 +23,8 @@ public class PeLoaderIntegrationTests
 		var vm = new VirtualMemory();
 		var loader = new PeImageLoader(vm, NullLogger.Instance);
 		
-		// Use a relative path from the current directory (tests run in the bin/Debug/net9.0 directory)
-		// The retrowin32 folder is copied to the output directory during build
-		var testExe = Path.Combine(".", "retrowin32", "exe", "cpp", "thread.exe");
+		// Use AppContext.BaseDirectory for portable path resolution across different environments
+		var testExe = Path.Combine(AppContext.BaseDirectory, "retrowin32", "exe", "cpp", "thread.exe");
 		
 		// Skip if test file doesn't exist
 		if (!System.IO.File.Exists(testExe))

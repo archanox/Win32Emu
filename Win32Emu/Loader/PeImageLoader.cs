@@ -657,7 +657,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			var virtualSize = section.Contents?.GetVirtualSize() ?? 0;
 			// Note: WriteIntoArray() creates a copy to get the length. This is acceptable since
 			// it only happens once during PE load time (not performance-critical path).
-			// AsmResolver doesn't provide a direct way to get raw data length without materializing it.
+			// AsmResolver's PESection doesn't expose raw data size directly - must materialize contents.
 			var rawSize = (uint)(section.Contents?.WriteIntoArray().Length ?? 0);
 			var characteristics = (PeSectionCharacteristics)(uint)section.Characteristics;
 
