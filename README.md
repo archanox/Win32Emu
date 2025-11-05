@@ -4,6 +4,7 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=archanox_Win32Emu&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=archanox_Win32Emu)
 [![Codeac](https://static.codeac.io/badges/2-1063646816.svg "Codeac")](https://app.codeac.io/github/archanox/Win32Emu)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/421f38603fdf478dbffee73008830ade)](https://app.codacy.com/gh/archanox/Win32Emu/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/archanox/Win32Emu?utm_source=oss&utm_medium=github&utm_campaign=archanox%2FWin32Emu&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 A Windows 32-bit PE executable emulator for running classic Windows games and applications on modern systems.
 
