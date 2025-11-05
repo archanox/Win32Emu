@@ -32,9 +32,10 @@ public class MemoryRegionsTests
 	}
 	
 	[Theory]
-	[InlineData(0x0D000000, true)]
-	[InlineData(0x0DFFFFFF, true)]
-	[InlineData(0x0E000000, false)]
+	[InlineData(0x0D000000, true)]  // Start of COM vtable range
+	[InlineData(0x0DFFFFFF, true)]  // End of COM vtable range
+	[InlineData(0x0CFFFFFF, false)] // Just before COM vtable range
+	[InlineData(0x0E000000, false)] // Just after COM vtable range
 	public void IsInComVtableRange_ShouldIdentifyComVtableRange(uint address, bool expected)
 	{
 		// Act
