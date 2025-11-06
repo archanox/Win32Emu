@@ -3986,10 +3986,11 @@ public class IcedCpu : IAsyncCpu
 			addr += (uint)(GetReg32(insn.MemoryIndex) * scale);
 		}
 
-		// Debug logging for the problematic instruction
-		if (_eip == 0x00403180)
+		// Debug logging for IAT address calculations (displacement in IAT range 0x004552E0-0x00455360)
+		// This will catch the problematic LoadIconA read from 0x004552F8
+		if (insn.MemoryDisplacement32 >= 0x004552E0 && insn.MemoryDisplacement32 <= 0x00455360)
 		{
-			_logger.LogWarning("[IcedCpu] CalcMemAddress at 0x{Eip:X8}: disp=0x{Disp:X8}, base={Base}, baseVal=0x{BaseVal:X8}, index={Index}, indexVal=0x{IndexVal:X8}, scale={Scale}, finalAddr=0x{Addr:X8}",
+			_logger.LogWarning("[IcedCpu] CalcMemAddress for IAT: EIP=0x{Eip:X8}, disp=0x{Disp:X8}, base={Base}, baseVal=0x{BaseVal:X8}, index={Index}, indexVal=0x{IndexVal:X8}, scale={Scale}, finalAddr=0x{Addr:X8}",
 				_eip, insn.MemoryDisplacement32, insn.MemoryBase,
 				insn.MemoryBase != Register.None ? GetReg32(insn.MemoryBase) : 0,
 				insn.MemoryIndex,
