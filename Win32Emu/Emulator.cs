@@ -669,7 +669,11 @@ public sealed class Emulator : IDisposable
             // Defensive check: Detect and fix obviously invalid EBP before execution
             // EBP should generally point to a stack frame, not be 0 or very small values
             // This prevents crashes when code tries to access [EBP+offset] with invalid EBP
-            ValidateAndFixEbp();
+            // DISABLED: This was causing false positives when EBP holds import stub addresses for indirect calls
+            // Example: mov ebp,[IAT_entry]; call ebp - EBP legitimately contains 0x0F000060 (import stub)
+            // ValidateAndFixEbp() would reset this to ESP, breaking the indirect call
+            // EBP validation is already handled properly in CpuHelpers.RestoreCalleeSavedRegisters after syscalls
+            // ValidateAndFixEbp();
 
             // Check if EIP is in the import stub range but not properly mapped
             // This can happen if code returns to or jumps to an unmapped import address
