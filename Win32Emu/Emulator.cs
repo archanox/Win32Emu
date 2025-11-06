@@ -110,6 +110,8 @@ public sealed class Emulator : IDisposable
     /// </summary>
     public Win32Dispatcher? Win32Dispatcher => _dispatcher;
 
+    public LoadedImage? LoadedImage => _image;
+    
     /// <summary>
     /// Post a message to the Win32 message queue (for GUI-to-emulator communication)
     /// </summary>

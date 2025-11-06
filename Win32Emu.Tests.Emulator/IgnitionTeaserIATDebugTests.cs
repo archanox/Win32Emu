@@ -47,8 +47,8 @@ public class IgnitionTeaserIATDebugTests
 
 		// Get access to internal state for validation
 		var cpu = emulator.GetType().GetField("_cpu", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(emulator);
-		var memory = emulator.GetType().GetField("_memory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(emulator) as VirtualMemory;
-		var loadedImage = emulator.GetType().GetField("_loadedImage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(emulator) as LoadedImage;
+		var memory = emulator.Environment?.Memory;
+		var loadedImage = emulator.LoadedImage;
 
 		Assert.NotNull(memory);
 		Assert.NotNull(loadedImage);
