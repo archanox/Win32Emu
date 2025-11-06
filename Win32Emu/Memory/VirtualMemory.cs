@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 
 namespace Win32Emu.Memory;
 
@@ -20,11 +21,13 @@ public class VirtualMemory
 	
 	// IAT protection: maps IAT VA -> expected synthetic address for runtime verification
 	private Dictionary<uint, uint>? _iatEntryMap;
+	private readonly ILogger? _logger;
 	
-	public VirtualMemory(ulong size = DefaultSize)
+	public VirtualMemory(ulong size = DefaultSize, ILogger? logger = null)
 	{
 		_pages = new ConcurrentDictionary<uint, byte[]>();
 		_configuredSize = size;
+		_logger = logger;
 	}
 	
 	/// <summary>
@@ -115,7 +118,9 @@ public class VirtualMemory
         {
             if (value != expectedValue)
             {
-                // IAT entry was corrupted - fix it automatically
+                // IAT entry was corrupted - log and fix it automatically
+                _logger?.LogWarning("[VirtualMemory] IAT corruption detected and auto-fixed at 0x{Addr:X8}: was 0x{Value:X8}, expected 0x{Expected:X8}", 
+                    addr, value, expectedValue);
                 Write32(addr, expectedValue);
                 return expectedValue;
             }
