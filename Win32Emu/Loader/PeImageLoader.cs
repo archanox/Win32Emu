@@ -384,10 +384,49 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		logger?.LogInformation("[Loader] Import mapping complete: {Count} imports mapped to addresses 0x{StartAddr:X8} - 0x{LastAddr:X8}", 
 			synth, MemoryRegions.ImportHookBase, synth > 0 ? MemoryRegions.ImportHookBase + (uint)((synth - 1) * MemoryRegions.ImportStubSize) : MemoryRegions.ImportHookBase);
 		
-		// DEBUGGING: Verify critical IAT entries (LoadIconA specifically at 0x004552F8)
-		var loadIconAIatAddr = 0x004552F8u;
-		var loadIconAValue = vm.Read32(loadIconAIatAddr);
-		logger?.LogInformation("[Loader] VERIFY: IAT entry at 0x{Addr:X8} (LoadIconA) contains value 0x{Value:X8}", loadIconAIatAddr, loadIconAValue);
+		// VERIFICATION: Check all IAT entries to ensure they contain the correct synthetic addresses
+		// This detects if anything corrupted the IAT after we wrote to it
+		var verificationErrors = 0;
+		var verificationIndex = 0;
+		foreach (var module in imports)
+		{
+			var dll = module.Name ?? string.Empty;
+			foreach (var sym in module.Symbols)
+			{
+				var rva = sym.AddressTableEntry?.Rva;
+				if (rva is null or 0)
+				{
+					continue; // Skip entries without IAT slots
+				}
+				
+				var va = imageBase + rva.Value;
+				var expectedSynthetic = MemoryRegions.ImportHookBase + (uint)(verificationIndex * MemoryRegions.ImportStubSize);
+				var actualValue = vm.Read32(va);
+				
+				if (actualValue != expectedSynthetic)
+				{
+					var symName = sym.Name ?? $"Ordinal_{sym.Ordinal}";
+					logger?.LogError("[Loader] IAT VERIFICATION FAILED: {Dll}!{Name} at VA 0x{Va:X8} contains 0x{Actual:X8}, expected 0x{Expected:X8}", 
+						dll.ToUpperInvariant(), symName, va, actualValue, expectedSynthetic);
+					verificationErrors++;
+					
+					// FIX: Re-write the correct synthetic address
+					logger?.LogWarning("[Loader] Fixing IAT entry at 0x{Va:X8}: writing 0x{Synthetic:X8}", va, expectedSynthetic);
+					vm.Write32(va, expectedSynthetic);
+				}
+				
+				verificationIndex++;
+			}
+		}
+		
+		if (verificationErrors > 0)
+		{
+			logger?.LogWarning("[Loader] Fixed {Count} corrupted IAT entries", verificationErrors);
+		}
+		else
+		{
+			logger?.LogInformation("[Loader] IAT verification passed: all {Count} entries are correct", verificationIndex);
+		}
 		
 		// VALIDATION: Check if there are any IAT entries in memory beyond what we mapped
 		// This could indicate extra entries that shouldn't exist
