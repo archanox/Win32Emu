@@ -384,6 +384,11 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		logger?.LogInformation("[Loader] Import mapping complete: {Count} imports mapped to addresses 0x{StartAddr:X8} - 0x{LastAddr:X8}", 
 			synth, MemoryRegions.ImportHookBase, synth > 0 ? MemoryRegions.ImportHookBase + (uint)((synth - 1) * MemoryRegions.ImportStubSize) : MemoryRegions.ImportHookBase);
 		
+		// DEBUGGING: Verify critical IAT entries (LoadIconA specifically at 0x004552F8)
+		var loadIconAIatAddr = 0x004552F8u;
+		var loadIconAValue = vm.Read32(loadIconAIatAddr);
+		logger?.LogInformation("[Loader] VERIFY: IAT entry at 0x{Addr:X8} (LoadIconA) contains value 0x{Value:X8}", loadIconAIatAddr, loadIconAValue);
+		
 		// VALIDATION: Check if there are any IAT entries in memory beyond what we mapped
 		// This could indicate extra entries that shouldn't exist
 		if (synth > 0)
