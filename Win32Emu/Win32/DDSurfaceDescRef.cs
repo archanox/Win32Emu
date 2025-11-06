@@ -31,13 +31,13 @@ namespace Win32Emu.Win32
 			set => _memory.Write32(_address + 4, value);
 		}
 
-		public uint dwWidth
+		public uint dwHeight
 		{
 			get => _memory.Read32(_address + 8);
 			set => _memory.Write32(_address + 8, value);
 		}
 
-		public uint dwHeight
+		public uint dwWidth
 		{
 			get => _memory.Read32(_address + 12);
 			set => _memory.Write32(_address + 12, value);
@@ -57,8 +57,8 @@ namespace Win32Emu.Win32
 
 		public uint dwSurfaceCaps
 		{
-			get => _memory.Read32(_address + 108);
-			set => _memory.Write32(_address + 108, value);
+			get => _memory.Read32(_address + 104);
+			set => _memory.Write32(_address + 104, value);
 		}
 
 		/// <summary>
