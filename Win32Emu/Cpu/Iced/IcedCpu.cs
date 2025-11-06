@@ -3986,6 +3986,18 @@ public class IcedCpu : IAsyncCpu
 			addr += (uint)(GetReg32(insn.MemoryIndex) * scale);
 		}
 
+		// Debug logging for the problematic instruction
+		if (_eip == 0x00403180)
+		{
+			_logger.LogWarning("[IcedCpu] CalcMemAddress at 0x{Eip:X8}: disp=0x{Disp:X8}, base={Base}, baseVal=0x{BaseVal:X8}, index={Index}, indexVal=0x{IndexVal:X8}, scale={Scale}, finalAddr=0x{Addr:X8}",
+				_eip, insn.MemoryDisplacement32, insn.MemoryBase,
+				insn.MemoryBase != Register.None ? GetReg32(insn.MemoryBase) : 0,
+				insn.MemoryIndex,
+				insn.MemoryIndex != Register.None ? GetReg32(insn.MemoryIndex) : 0,
+				insn.MemoryIndexScale,
+				addr);
+		}
+
 		// Check if address is within valid memory range
 		// Convert to ulong to avoid overflow issues when comparing with memory size
 		if (addr >= _mem.Size)
