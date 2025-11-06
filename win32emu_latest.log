@@ -449,7 +449,7 @@ dbug: Win32Emu.Emulator[0]
 dbug: Win32Emu.Emulator[0]
       [IcedCpu] RET: After setting _eip, current _eip value is 0x00413031
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 10000 iterations (274.02ms), EIP=0x0041341D, ESP=0x001FEEE8
+      [Emulator] Progress: 10000 iterations (222.47ms), EIP=0x0041341D, ESP=0x001FEEE8
 dbug: Win32Emu.Emulator[0]
       [IcedCpu] INT 0x80 syscall at 0x0E000000
 info: Win32Emu.Emulator[0]
@@ -709,7 +709,7 @@ dbug: Win32Emu.Emulator[0]
 dbug: Win32Emu.Emulator[0]
       [IcedCpu] RET: After setting _eip, current _eip value is 0x0041281A
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 20000 iterations (32.22ms), EIP=0x0041287F, ESP=0x001FEF4C
+      [Emulator] Progress: 20000 iterations (61.67ms), EIP=0x0041287F, ESP=0x001FEF4C
 dbug: Win32Emu.Emulator[0]
       [IcedCpu] INT 0x80 syscall at 0x0E000000
 info: Win32Emu.Emulator[0]
@@ -965,75 +965,75 @@ dbug: Win32Emu.Emulator[0]
 dbug: Win32Emu.Emulator[0]
       [IcedCpu] RET: After setting _eip, current _eip value is 0x00413501
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 30000 iterations (50.75ms), EIP=0x00413638, ESP=0x001FEF08
+      [Emulator] Progress: 30000 iterations (66.96ms), EIP=0x00413638, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 40000 iterations (24.93ms), EIP=0x00413383, ESP=0x001FEF28
+      [Emulator] Progress: 40000 iterations (24.12ms), EIP=0x00413383, ESP=0x001FEF28
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 50000 iterations (27.95ms), EIP=0x004133BB, ESP=0x001FEF28
+      [Emulator] Progress: 50000 iterations (50.75ms), EIP=0x004133BB, ESP=0x001FEF28
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 60000 iterations (26.71ms), EIP=0x004133C2, ESP=0x001FEF28
+      [Emulator] Progress: 60000 iterations (72.68ms), EIP=0x004133C2, ESP=0x001FEF28
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 70000 iterations (23.43ms), EIP=0x00413638, ESP=0x001FEF08
+      [Emulator] Progress: 70000 iterations (24.99ms), EIP=0x00413638, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 90000 iterations (46.85ms), EIP=0x0041363D, ESP=0x001FEF08
+      [Emulator] Progress: 90000 iterations (46.13ms), EIP=0x0041363D, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 100000 iterations (50.84ms), EIP=0x0041367B, ESP=0x001FEF08
+      [Emulator] Progress: 100000 iterations (71.89ms), EIP=0x0041367B, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 110000 iterations (25.28ms), EIP=0x00413668, ESP=0x001FEF08
+      [Emulator] Progress: 110000 iterations (74.97ms), EIP=0x00413668, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 120000 iterations (14.15ms), EIP=0x0041364A, ESP=0x001FEF08
+      [Emulator] Progress: 120000 iterations (40.95ms), EIP=0x0041364A, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 130000 iterations (14.76ms), EIP=0x00413664, ESP=0x001FEF08
+      [Emulator] Progress: 130000 iterations (15.55ms), EIP=0x00413664, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 140000 iterations (13.90ms), EIP=0x00413668, ESP=0x001FEF08
+      [Emulator] Progress: 140000 iterations (15.02ms), EIP=0x00413668, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 150000 iterations (14.07ms), EIP=0x00413655, ESP=0x001FEF08
+      [Emulator] Progress: 150000 iterations (14.86ms), EIP=0x00413655, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 160000 iterations (14.72ms), EIP=0x00413638, ESP=0x001FEF08
+      [Emulator] Progress: 160000 iterations (15.55ms), EIP=0x00413638, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 180000 iterations (14.66ms), EIP=0x004135D0, ESP=0x001FEF18
+      [Emulator] Progress: 180000 iterations (15.34ms), EIP=0x004135D0, ESP=0x001FEF18
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 190000 iterations (13.64ms), EIP=0x00413385, ESP=0x001FEF28
+      [Emulator] Progress: 190000 iterations (14.73ms), EIP=0x00413385, ESP=0x001FEF28
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 200000 iterations (13.45ms), EIP=0x0041363B, ESP=0x001FEF08
+      [Emulator] Progress: 200000 iterations (14.76ms), EIP=0x0041363B, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 210000 iterations (14.49ms), EIP=0x00413659, ESP=0x001FEF08
+      [Emulator] Progress: 210000 iterations (15.69ms), EIP=0x00413659, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 220000 iterations (13.69ms), EIP=0x00413672, ESP=0x001FEF08
+      [Emulator] Progress: 220000 iterations (15.10ms), EIP=0x00413672, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 230000 iterations (13.46ms), EIP=0x00413385, ESP=0x001FEF28
+      [Emulator] Progress: 230000 iterations (14.62ms), EIP=0x00413385, ESP=0x001FEF28
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 240000 iterations (14.49ms), EIP=0x0041364A, ESP=0x001FEF08
+      [Emulator] Progress: 240000 iterations (15.66ms), EIP=0x0041364A, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 250000 iterations (13.88ms), EIP=0x00413655, ESP=0x001FEF08
+      [Emulator] Progress: 250000 iterations (14.55ms), EIP=0x00413655, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 270000 iterations (14.67ms), EIP=0x0041366A, ESP=0x001FEF08
+      [Emulator] Progress: 270000 iterations (16.02ms), EIP=0x0041366A, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 280000 iterations (13.96ms), EIP=0x00413672, ESP=0x001FEF08
+      [Emulator] Progress: 280000 iterations (15.66ms), EIP=0x00413672, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 290000 iterations (15.00ms), EIP=0x00413666, ESP=0x001FEF08
+      [Emulator] Progress: 290000 iterations (15.57ms), EIP=0x00413666, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 310000 iterations (13.92ms), EIP=0x00413655, ESP=0x001FEF08
+      [Emulator] Progress: 310000 iterations (14.24ms), EIP=0x00413655, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 330000 iterations (14.39ms), EIP=0x00413638, ESP=0x001FEF08
+      [Emulator] Progress: 330000 iterations (14.56ms), EIP=0x00413638, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 340000 iterations (14.51ms), EIP=0x00413664, ESP=0x001FEF08
+      [Emulator] Progress: 340000 iterations (15.84ms), EIP=0x00413664, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 350000 iterations (15.25ms), EIP=0x00413655, ESP=0x001FEF08
+      [Emulator] Progress: 350000 iterations (14.60ms), EIP=0x00413655, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 360000 iterations (14.49ms), EIP=0x0041366A, ESP=0x001FEF08
+      [Emulator] Progress: 360000 iterations (14.69ms), EIP=0x0041366A, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 370000 iterations (15.10ms), EIP=0x00413662, ESP=0x001FEF08
+      [Emulator] Progress: 370000 iterations (15.46ms), EIP=0x00413662, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 380000 iterations (14.55ms), EIP=0x0041367D, ESP=0x001FEF08
+      [Emulator] Progress: 380000 iterations (14.54ms), EIP=0x0041367D, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 390000 iterations (14.32ms), EIP=0x00413642, ESP=0x001FEF08
+      [Emulator] Progress: 390000 iterations (14.40ms), EIP=0x00413642, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 400000 iterations (15.21ms), EIP=0x00413638, ESP=0x001FEF08
+      [Emulator] Progress: 400000 iterations (15.36ms), EIP=0x00413638, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 410000 iterations (14.19ms), EIP=0x0041367D, ESP=0x001FEF08
+      [Emulator] Progress: 410000 iterations (14.48ms), EIP=0x0041367D, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 460000 iterations (13.99ms), EIP=0x00413675, ESP=0x001FEF08
+      [Emulator] Progress: 460000 iterations (14.33ms), EIP=0x00413675, ESP=0x001FEF08
 dbug: Win32Emu.Emulator[0]
       [IcedCpu] INT 0x80 syscall at 0x0E000000
 info: Win32Emu.Emulator[0]
@@ -2029,7 +2029,7 @@ dbug: Win32Emu.Emulator[0]
 dbug: Win32Emu.Emulator[0]
       [IcedCpu] RET: After setting _eip, current _eip value is 0x00411A93
 dbug: Win32Emu.Emulator[0]
-      [Emulator] Progress: 470000 iterations (127.35ms), EIP=0x004157D8, ESP=0x001FEF4C
+      [Emulator] Progress: 470000 iterations (93.89ms), EIP=0x004157D8, ESP=0x001FEF4C
 dbug: Win32Emu.Emulator[0]
       [IcedCpu] INT 0x80 syscall at 0x0E000000
 info: Win32Emu.Emulator[0]
@@ -2116,6 +2116,8 @@ info: Win32Emu.Emulator[0]
       [IcedCpu] Executing at 0x00403162: call dword ptr ds:[4552FCh] (Bytes: FF 15 FC 52 45 00 A3 90 C7 43 00 89 74 24 34 A1)
 warn: Win32Emu.Emulator[0]
       [IcedCpu] CalcMemAddress for IAT: EIP=0x00403168, disp=0x004552FC, base=None, baseVal=0x00000000, index=None, indexVal=0x00000000, scale=1, finalAddr=0x004552FC
+warn: Win32Emu.Emulator[0]
+      [IcedCpu] Read32 from IAT: addr=0x004552FC, value=0x0F000070, EIP=0x00403168
 dbug: Win32Emu.Emulator[0]
       [IcedCpu] INT 0x80 syscall at 0x0E000000
 info: Win32Emu.Emulator[0]
@@ -2160,6 +2162,10 @@ info: Win32Emu.Emulator[0]
       [IcedCpu] Executing at 0x00403180: mov ebp,ds:[4552F8h] (Bytes: 8B 2D F8 52 45 00 89 44 24 44 C7 44 24 34 08 00)
 warn: Win32Emu.Emulator[0]
       [IcedCpu] CalcMemAddress for IAT: EIP=0x00403186, disp=0x004552F8, base=None, baseVal=0x00000000, index=None, indexVal=0x00000000, scale=1, finalAddr=0x004552F8
+warn: Win32Emu.Emulator[0]
+      [IcedCpu] Read32 from IAT: addr=0x004552F8, value=0x0F000060, EIP=0x00403186
+warn: Win32Emu.Emulator[0]
+      [IcedCpu] SetReg32: EBP=0x0F000060, EIP=0x00403186, ESP=0x001FEF10
 info: Win32Emu.Emulator[0]
       [IcedCpu] Executing at 0x00403186: mov [esp+44h],eax (Bytes: 89 44 24 44 C7 44 24 34 08 00 00 00 C7 44 24 38)
 info: Win32Emu.Emulator[0]
