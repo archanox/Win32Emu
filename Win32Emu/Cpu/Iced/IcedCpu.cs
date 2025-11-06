@@ -4093,6 +4093,13 @@ public class IcedCpu : IAsyncCpu
 
 	private void SetReg32(Register reg, uint v)
 	{
+		// Debug logging for EBP changes around the problematic instruction
+		if (reg == Register.EBP && _eip >= 0x00403180 && _eip <= 0x004031A0)
+		{
+			_logger.LogWarning("[IcedCpu] SetReg32: EBP=0x{Value:X8}, EIP=0x{Eip:X8}, ESP=0x{Esp:X8}",
+				v, _eip, _esp);
+		}
+		
 		switch (reg)
 		{
 			case Register.EAX: _eax = v; break;
@@ -4108,7 +4115,16 @@ public class IcedCpu : IAsyncCpu
 
 	private uint Read32(uint addr)
 	{
-		return _mem.Read32(addr);
+		var value = _mem.Read32(addr);
+		
+		// Debug logging for IAT reads
+		if (addr >= 0x004552E0 && addr <= 0x00455360)
+		{
+			_logger.LogWarning("[IcedCpu] Read32 from IAT: addr=0x{Addr:X8}, value=0x{Value:X8}, EIP=0x{Eip:X8}",
+				addr, value, _eip);
+		}
+		
+		return value;
 	}
 	private void Write32(uint addr, uint v)
 	{
