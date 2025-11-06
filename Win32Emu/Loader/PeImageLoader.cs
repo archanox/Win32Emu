@@ -207,7 +207,12 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		// implements the full PE loader behavior for correctness
 		ApplyRelocations(image, imageBase, opt.ImageBase, vm, logger);
 
-		var importMap = BuildImportMap(image, imageBase);
+		var (importMap, iatEntryMap) = BuildImportMap(image, imageBase);
+		
+		// Register IAT entries for runtime verification and auto-fix
+		vm.RegisterIatEntries(iatEntryMap);
+		logger?.LogInformation("[Loader] Registered {Count} IAT entries for runtime protection", iatEntryMap.Count);
+		
 		var (exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal) = BuildExportMaps(image, imageBase);
 		var tlsCallbacks = ExtractTlsCallbacks(image, imageBase, vm, logger);
 
@@ -252,12 +257,14 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			sizeOfHeapReserve,
 			sizeOfHeapCommit,
 			tlsCallbacks,
-			sections);
+			sections,
+			iatEntryMap);
 	}
 	
-	private Dictionary<uint, (string dll, string name)> BuildImportMap(PEImage image, uint imageBase)
+	private (Dictionary<uint, (string dll, string name)> importMap, Dictionary<uint, uint> iatEntryMap) BuildImportMap(PEImage image, uint imageBase)
 	{
 		var map = new Dictionary<uint, (string dll, string name)>();
+		var iatEntryMap = new Dictionary<uint, uint>(); // IAT VA -> expected synthetic address
 		var imports = image.Imports; // IEnumerable<ImportModule>
 		var synth = 0;
 		
@@ -333,6 +340,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				
 				// Write the synthetic address to the IAT entry
 				vm.Write32(va, synthetic);
+				
+				// Store IAT entry mapping for runtime verification
+				iatEntryMap[va] = synthetic;
 				
 				// Verify the write was successful
 				var verifyValue = vm.Read32(va);
@@ -457,7 +467,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			}
 		}
 
-		return map;
+		return (map, iatEntryMap);
 	}
 
 	private (Dictionary<string, uint> byName, Dictionary<uint, uint> byOrdinal, Dictionary<string, string> forwardedByName, Dictionary<uint, string> forwardedByOrdinal) BuildExportMaps(PEImage image, uint imageBase)

@@ -185,7 +185,8 @@ public class GdbServerTests
             0x00100000, // SizeOfHeapReserve (1MB)
             0x00010000, // SizeOfHeapCommit (64KB)
             [],         // TlsCallbacks (empty array)
-            []          // Sections (empty array)
+            [],         // Sections (empty array)
+            new Dictionary<uint, uint>() // IatEntryMap (empty)
         );
         
         // Act

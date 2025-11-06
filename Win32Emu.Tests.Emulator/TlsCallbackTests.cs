@@ -38,7 +38,8 @@ public class TlsCallbackTests
             0x00100000, // SizeOfHeapReserve
             0x00010000, // SizeOfHeapCommit
             [], // No TLS callbacks
-            []  // No sections
+            [],  // No sections
+            new Dictionary<uint, uint>() // IatEntryMap (empty)
         );
         
         // Assert
@@ -75,7 +76,8 @@ public class TlsCallbackTests
             0x00100000, // SizeOfHeapReserve
             0x00010000, // SizeOfHeapCommit
             tlsCallbacks,
-            []  // No sections
+            [],  // No sections
+            new Dictionary<uint, uint>() // IatEntryMap (empty)
         );
         
         // Assert
