@@ -393,28 +393,3 @@ public class ApiCallTracer : IDisposable
 		_logger.LogInformation("[ApiTracer] Session complete - {TotalCalls} API calls traced", _totalCalls);
 	}
 }
-
-/// <summary>
-/// Record of a single API call
-/// </summary>
-public class ApiCallRecord
-{
-	public long CallNumber { get; init; }
-	public TimeSpan Timestamp { get; init; }
-	public string ModuleName { get; init; } = string.Empty;
-	public string FunctionName { get; init; } = string.Empty;
-	public Dictionary<string, object> Parameters { get; init; } = new();
-	public object? ReturnValue { get; init; }
-	public uint Eip { get; init; }
-	public long? DurationMicroseconds { get; init; }
-}
-
-/// <summary>
-/// Statistics for a specific API call
-/// </summary>
-public class ApiCallStats
-{
-	public string FunctionName { get; init; } = string.Empty;
-	public long Count { get; set; }
-	public long TotalDurationUs { get; set; }
-}

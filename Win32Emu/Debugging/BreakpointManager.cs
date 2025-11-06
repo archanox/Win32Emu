@@ -184,39 +184,3 @@ public class BreakpointManager
         return _watchpoints.Values;
     }
 }
-
-/// <summary>
-/// Represents a breakpoint in the debugger
-/// </summary>
-public class Breakpoint
-{
-    public uint Id { get; init; }
-    public uint Address { get; init; }
-    public string Description { get; init; } = "";
-    public bool Enabled { get; set; }
-    public int HitCount { get; set; }
-}
-
-/// <summary>
-/// Represents a watchpoint in the debugger
-/// </summary>
-public class Watchpoint
-{
-    public uint Id { get; init; }
-    public uint Address { get; init; }
-    public WatchpointType Type { get; init; }
-    public uint Length { get; init; }
-    public string Description { get; init; } = "";
-    public bool Enabled { get; set; }
-    public int HitCount { get; set; }
-}
-
-/// <summary>
-/// Type of watchpoint
-/// </summary>
-public enum WatchpointType
-{
-    Write,    // Break on write
-    Read,     // Break on read
-    Access    // Break on read or write
-}

@@ -378,15 +378,3 @@ kernel void computeMain(texture2d<float, access::read> inputTexture [[texture(0)
         GC.SuppressFinalize(this);
     }
 }
-
-/// <summary>
-/// Built-in image processing kernels
-/// </summary>
-public enum ImageProcessingKernel
-{
-    GaussianBlur,
-    Sharpen,
-    EdgeDetection,
-    Grayscale,
-    BrightnessContrast
-}

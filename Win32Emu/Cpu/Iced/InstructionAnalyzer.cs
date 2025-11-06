@@ -114,32 +114,3 @@ public class InstructionAnalyzer
 		return address;
 	}
 }
-
-/// <summary>
-/// Contains detailed analysis of an instruction.
-/// </summary>
-public class InstructionAnalysis
-{
-	public string FormattedInstruction { get; set; } = "";
-	public ulong Address { get; set; }
-	public int Length { get; set; }
-	public string Mnemonic { get; set; } = "";
-	public string OpCodeString { get; set; } = "";
-	
-	public List<string> ReadRegisters { get; set; } = [];
-	public List<string> WrittenRegisters { get; set; } = [];
-	public List<MemoryAccess> MemoryAccesses { get; set; } = [];
-}
-
-/// <summary>
-/// Represents a memory access by an instruction.
-/// </summary>
-public class MemoryAccess
-{
-	public string Segment { get; set; } = "";
-	public string Base { get; set; } = "";
-	public string Index { get; set; } = "";
-	public int Scale { get; set; }
-	public ulong Displacement { get; set; }
-	public string Access { get; set; } = "";
-}
