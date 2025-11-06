@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Xunit;
 using Win32Emu.Cpu;
 using Win32Emu.Cpu.Iced;
@@ -244,7 +245,7 @@ public class RegisterPreservationTests
         }
 
         public uint GetRegister(string name) => _registers.TryGetValue(name, out var value) ? value : 0;
-        public void SetRegister(string name, uint value) => _registers[name] = value;
+        public void SetRegister(string name, uint value, [CallerMemberName] string callerName = "") => _registers[name] = value;
         public uint GetEip() => GetRegister("EIP");
         public void SetEip(uint eip) => SetRegister("EIP", eip);
         public CpuStepResult SingleStep(VirtualMemory memory) => throw new NotImplementedException();

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Iced.Intel;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -115,7 +116,7 @@ public class IcedCpu : IAsyncCpu
 		return _decoder.Decode();
 	}
 
-	public void SetRegister(string name, uint value)
+	public void SetRegister(string name, uint value, [CallerMemberName] string callerName = "")
 	{
 		switch (name.ToUpperInvariant())
 		{
@@ -128,8 +129,8 @@ public class IcedCpu : IAsyncCpu
 			case "EBP":
 				if (_eip >= 0x00403180 && _eip <= 0x004031A0)
 				{
-					_logger.LogWarning("[IcedCpu] SetRegister(EBP): value=0x{Value:X8}, EIP=0x{Eip:X8}, ESP=0x{Esp:X8}",
-						value, _eip, _esp);
+					_logger.LogWarning("[IcedCpu] SetRegister(EBP): value=0x{Value:X8}, EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, Caller={CallerName}",
+						value, _eip, _esp, callerName);
 				}
 				_ebp = value;
 				break;

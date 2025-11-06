@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Win32Emu.Cpu;
 using Win32Emu.Memory;
 
@@ -32,7 +33,7 @@ public class MockCpu : ICpu
         return _registers.TryGetValue(name, out var value) ? value : 0;
     }
 
-    public void SetRegister(string name, uint value)
+    public void SetRegister(string name, uint value, [CallerMemberName] string callerName = "")
     {
         _registers[name] = value;
         if (name.Equals("ESP", StringComparison.OrdinalIgnoreCase))
