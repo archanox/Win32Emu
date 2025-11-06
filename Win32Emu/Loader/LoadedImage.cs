@@ -159,7 +159,8 @@ public record LoadedImage(
 	uint SizeOfHeapReserve,      // From OptionalHeader
 	uint SizeOfHeapCommit,       // From OptionalHeader
 	uint[] TlsCallbacks,         // TLS callback function addresses (VA)
-	PeSection[] Sections         // PE sections with characteristics (for identifying code/data regions)
+	PeSection[] Sections,        // PE sections with characteristics (for identifying code/data regions)
+	Dictionary<uint, uint> IatEntryMap  // IAT VA -> expected synthetic address mapping for runtime verification
 )
 {
 	/// <summary>

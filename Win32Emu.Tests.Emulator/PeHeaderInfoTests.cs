@@ -57,6 +57,8 @@ public class PeHeaderInfoTests
 			0x10000,
 			[],
 			sections
+		,
+			new Dictionary<uint, uint>() // IatEntryMap (empty)
 		);
 		
 		// Act
@@ -94,6 +96,8 @@ public class PeHeaderInfoTests
 			0x10000,
 			[],
 			sections
+		,
+			new Dictionary<uint, uint>() // IatEntryMap (empty)
 		);
 		
 		// Act & Assert
@@ -124,7 +128,8 @@ public class PeHeaderInfoTests
 			0x100000,  // Heap reserve
 			0x8000,    // Heap commit
 			[],
-			[]
+			[],
+			new Dictionary<uint, uint>() // IatEntryMap (empty)
 		);
 		
 		// Assert

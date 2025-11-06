@@ -18,10 +18,22 @@ public class VirtualMemory
 	private readonly ConcurrentDictionary<uint, byte[]> _pages;
 	private readonly ulong _configuredSize; // Configured size from settings (not enforced, for logging/stats only)
 	
+	// IAT protection: maps IAT VA -> expected synthetic address for runtime verification
+	private Dictionary<uint, uint>? _iatEntryMap;
+	
 	public VirtualMemory(ulong size = DefaultSize)
 	{
 		_pages = new ConcurrentDictionary<uint, byte[]>();
 		_configuredSize = size;
+	}
+	
+	/// <summary>
+	/// Registers IAT entries for runtime verification and auto-fix.
+	/// When memory is read from these addresses, the value is verified and corrected if corrupted.
+	/// </summary>
+	public void RegisterIatEntries(Dictionary<uint, uint> iatEntryMap)
+	{
+		_iatEntryMap = iatEntryMap;
 	}
 
     public ulong Size => MaxAddress; // Report full 32-bit address space
@@ -96,7 +108,20 @@ public class VirtualMemory
     public uint Read32(ulong addr)
     {
         EnsureRange(addr, 4);
-        return (uint)(Read16(addr) | (Read16(addr + 2) << 16));
+        var value = (uint)(Read16(addr) | (Read16(addr + 2) << 16));
+        
+        // IAT protection: verify and fix corrupted entries
+        if (_iatEntryMap != null && _iatEntryMap.TryGetValue((uint)addr, out var expectedValue))
+        {
+            if (value != expectedValue)
+            {
+                // IAT entry was corrupted - fix it automatically
+                Write32(addr, expectedValue);
+                return expectedValue;
+            }
+        }
+        
+        return value;
     }
 
     public void Write8(ulong addr, byte value)
