@@ -3986,13 +3986,6 @@ public class IcedCpu : IAsyncCpu
 			addr += (uint)(GetReg32(insn.MemoryIndex) * scale);
 		}
 
-		// Debug logging for IAT area address calculations
-		if (addr >= 0x004552E0 && addr <= 0x00455360)
-		{
-			_logger.LogInformation("[IcedCpu] CalcMemAddress for IAT area: disp=0x{Disp:X8} base={Base} index={Index} -> addr=0x{Addr:X8} at EIP=0x{Eip:X8}", 
-				insn.MemoryDisplacement32, insn.MemoryBase, insn.MemoryIndex, addr, _eip);
-		}
-
 		// Check if address is within valid memory range
 		// Convert to ulong to avoid overflow issues when comparing with memory size
 		if (addr >= _mem.Size)
@@ -4102,21 +4095,10 @@ public class IcedCpu : IAsyncCpu
 
 	private uint Read32(uint addr)
 	{
-		var value = _mem.Read32(addr);
-		// Debug logging for IAT entry reads (specifically LoadIconA at 0x004552F8)
-		if (addr >= 0x004552E0 && addr <= 0x00455360)
-		{
-			_logger.LogInformation("[IcedCpu] Read32 from IAT area: addr=0x{Addr:X8} -> value=0x{Value:X8} at EIP=0x{Eip:X8}", addr, value, _eip);
-		}
-		return value;
+		return _mem.Read32(addr);
 	}
 	private void Write32(uint addr, uint v)
 	{
-		// Debug logging for IAT entry writes (specifically LoadIconA at 0x004552F8)
-		if (addr >= 0x004552E0 && addr <= 0x00455360)
-		{
-			_logger.LogWarning("[IcedCpu] Write32 to IAT area: addr=0x{Addr:X8} <- value=0x{Value:X8} at EIP=0x{Eip:X8}", addr, v, _eip);
-		}
 		_mem.Write32(addr, v);
 	}
 	private ushort Read16(uint addr) => _mem.Read16(addr);
