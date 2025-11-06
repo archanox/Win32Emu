@@ -127,11 +127,6 @@ public class IcedCpu : IAsyncCpu
 			case "ESI": _esi = value; break;
 			case "EDI": _edi = value; break;
 			case "EBP":
-				if (_eip >= 0x00403180 && _eip <= 0x004031A0)
-				{
-					_logger.LogWarning("[IcedCpu] SetRegister(EBP): value=0x{Value:X8}, EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, Caller={CallerName}",
-						value, _eip, _esp, callerName);
-				}
 				_ebp = value;
 				break;
 			case "ESP": _esp = value; break;
