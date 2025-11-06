@@ -125,7 +125,14 @@ public class IcedCpu : IAsyncCpu
 			case "EDX": _edx = value; break;
 			case "ESI": _esi = value; break;
 			case "EDI": _edi = value; break;
-			case "EBP": _ebp = value; break;
+			case "EBP":
+				if (_eip >= 0x00403180 && _eip <= 0x004031A0)
+				{
+					_logger.LogWarning("[IcedCpu] SetRegister(EBP): value=0x{Value:X8}, EIP=0x{Eip:X8}, ESP=0x{Esp:X8}",
+						value, _eip, _esp);
+				}
+				_ebp = value;
+				break;
 			case "ESP": _esp = value; break;
 			case "EIP": _eip = value; break;
 			case "EFLAGS": _eflags = value; break;
@@ -976,7 +983,13 @@ public class IcedCpu : IAsyncCpu
 	{
 		_edi = Pop32();
 		_esi = Pop32();
-		_ebp = Pop32();
+		var ebpValue = Pop32();
+		if (_eip >= 0x00403180 && _eip <= 0x004031A0)
+		{
+			_logger.LogWarning("[IcedCpu] ExecPopad: EBP=0x{Value:X8}, EIP=0x{Eip:X8}, ESP=0x{Esp:X8}",
+				ebpValue, _eip, _esp);
+		}
+		_ebp = ebpValue;
 		_ = Pop32();
 		_ebx = Pop32();
 		_edx = Pop32();
@@ -2331,7 +2344,13 @@ public class IcedCpu : IAsyncCpu
 	private void ExecLeave()
 	{
 		_esp = _ebp;
-		_ebp = Pop32();
+		var ebpValue = Pop32();
+		if (_eip >= 0x00403180 && _eip <= 0x004031A0)
+		{
+			_logger.LogWarning("[IcedCpu] ExecLeave: EBP=0x{Value:X8}, EIP=0x{Eip:X8}, ESP=0x{Esp:X8}",
+				ebpValue, _eip, _esp);
+		}
+		_ebp = ebpValue;
 	}
 
 	private void ExecIn(Instruction insn)
@@ -4093,7 +4112,14 @@ public class IcedCpu : IAsyncCpu
 			case Register.DX: _edx = (_edx & 0xFFFF0000) | v; break;
 			case Register.SI: _esi = (_esi & 0xFFFF0000) | v; break;
 			case Register.DI: _edi = (_edi & 0xFFFF0000) | v; break;
-			case Register.BP: _ebp = (_ebp & 0xFFFF0000) | v; break;
+			case Register.BP:
+				if (_eip >= 0x00403180 && _eip <= 0x004031A0)
+				{
+					_logger.LogWarning("[IcedCpu] SetReg16(BP): value=0x{Value:X4}, newEBP=0x{NewEbp:X8}, EIP=0x{Eip:X8}, ESP=0x{Esp:X8}",
+						v, (_ebp & 0xFFFF0000) | v, _eip, _esp);
+				}
+				_ebp = (_ebp & 0xFFFF0000) | v;
+				break;
 			case Register.SP: _esp = (_esp & 0xFFFF0000) | v; break;
 			default:
 				throw new ArgumentOutOfRangeException(nameof(reg), reg, "Invalid 16-bit register specified in SetReg16.");
@@ -4265,6 +4291,11 @@ public class IcedCpu : IAsyncCpu
 		_edx = state.Edx;
 		_esi = state.Esi;
 		_edi = state.Edi;
+		if (_eip >= 0x00403180 && _eip <= 0x004031A0)
+		{
+			_logger.LogWarning("[IcedCpu] RestoreState: EBP=0x{Value:X8}, EIP=0x{Eip:X8}, ESP=0x{Esp:X8}",
+				state.Ebp, _eip, _esp);
+		}
 		_ebp = state.Ebp;
 		_esp = state.Esp;
 		_eip = state.Eip;
