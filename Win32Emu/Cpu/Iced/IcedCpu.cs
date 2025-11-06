@@ -369,8 +369,17 @@ public class IcedCpu : IAsyncCpu
 					Write32(_esp, _eip);
 					if (insn.GetOpKind(0) == OpKind.Register)
 					{
-						var callTargetAddr = GetReg32(insn.GetOpRegister(0));
-						ValidateIndirectTarget(callTargetAddr, oldEip, "CALL", insn.GetOpRegister(0));
+						var targetReg = insn.GetOpRegister(0);
+						var callTargetAddr = GetReg32(targetReg);
+						
+						// Debug logging for register-based CALL in problematic range
+						if (oldEip >= 0x00403180 && oldEip <= 0x004031A0)
+						{
+							_logger.LogWarning("[IcedCpu] CALL {Reg} at EIP=0x{OldEip:X8}: reg={Reg}, value=0x{Value:X8}, EBP=0x{Ebp:X8}, ESP=0x{Esp:X8}",
+								targetReg, oldEip, targetReg, callTargetAddr, _ebp, _esp);
+						}
+						
+						ValidateIndirectTarget(callTargetAddr, oldEip, "CALL", targetReg);
 						_eip = callTargetAddr;
 						callTarget = callTargetAddr;
 						isCall = true;
