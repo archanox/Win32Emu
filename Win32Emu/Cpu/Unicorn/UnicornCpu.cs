@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using UnicornEngine;
@@ -59,7 +60,7 @@ public class UnicornCpu : IAsyncCpu
 		return (uint)_unicorn.RegRead(regId);
 	}
 
-	public void SetRegister(string name, uint value)
+	public void SetRegister(string name, uint value, [CallerMemberName] string callerName = "")
 	{
 		var regId = GetUnicornRegister(name);
 		if (regId == -1)

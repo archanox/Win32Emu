@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Memory;
@@ -79,7 +80,7 @@ public class JitCpu : IAsyncCpu
 		_ => 0
 	};
 
-	public void SetRegister(string name, uint value)
+	public void SetRegister(string name, uint value, [CallerMemberName] string callerName = "")
 	{
 		switch (name.ToUpperInvariant())
 		{
