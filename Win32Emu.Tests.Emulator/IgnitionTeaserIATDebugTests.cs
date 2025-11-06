@@ -142,12 +142,20 @@ public class IgnitionTeaserIATDebugTests
 		_output.WriteLine($"\n--- IAT Validation: {phase} ---");
 
 		// Key IAT entries we care about
-		var criticalIATEntries = new Dictionary<uint, (string name, uint expectedValue)>
-		{
-			{ 0x004552E0, ("ClientToScreen", 0x0F000000) },
-			{ 0x004552F8, ("LoadIconA", 0x0F000060) },
-			{ 0x004552FC, ("LoadCursorA", 0x0F000070) }
-		};
+  var baseAddress = loadedImage.BaseAddress;
+  var importMap = loadedImage.ImportAddressMap;
+
+  uint StubFor(string dll, string name) =>
+  	importMap.Single(kvp =>
+  		kvp.Value.dll.Equals(dll, StringComparison.OrdinalIgnoreCase) &&
+  		kvp.Value.name.Equals(name, StringComparison.OrdinalIgnoreCase)).Key;
+
+  var criticalIATEntries = new Dictionary<uint, (string name, uint expectedValue)>
+  {
+  	{ baseAddress + 0x000552E0u, ("ClientToScreen", StubFor("USER32.DLL", "ClientToScreen")) },
+  	{ baseAddress + 0x000552F8u, ("LoadIconA", StubFor("USER32.DLL", "LoadIconA")) },
+  	{ baseAddress + 0x000552FCu, ("LoadCursorA", StubFor("USER32.DLL", "LoadCursorA")) },
+  };
 
 		var corruptedCount = 0;
 		foreach (var (iatAddress, (name, expectedValue)) in criticalIATEntries)
