@@ -37,6 +37,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private const uint OPEN_ALWAYS = 4;
 	private const uint TRUNCATE_EXISTING = 5;
 
+	// Toolhelp32 snapshot constants
+	private const uint TH32_SNAPSHOT_HANDLE = 0x00007000;
+	private const int PROCESSENTRY32_SIZE = 296;
+	private const int THREADENTRY32_SIZE = 28;
+	private const int MODULEENTRY32_SIZE = 548;
+
 	private Win32Dispatcher? _dispatcher;
 	private uint _lastError;
 	private ICpu? _cpu;
@@ -8046,8 +8052,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// 3. Return a handle to the snapshot
 
 		// Return a dummy snapshot handle (non-zero for success)
-		const uint SNAPSHOT_HANDLE = 0x00007000;
-		return SNAPSHOT_HANDLE;
+		return TH32_SNAPSHOT_HANDLE;
 	}
 
 	/// <summary>
@@ -8083,7 +8088,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Total: 296 bytes (0x128)
 
 		var dwSize = _env.MemRead32(lppe);
-		if (dwSize < 296)
+		if (dwSize < PROCESSENTRY32_SIZE)
 		{
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return 0; // FALSE
@@ -8154,7 +8159,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Total: 28 bytes (0x1C)
 
 		var dwSize = _env.MemRead32(lpte);
-		if (dwSize < 28)
+		if (dwSize < THREADENTRY32_SIZE)
 		{
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return 0; // FALSE
@@ -8222,7 +8227,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Total: 548 bytes (0x224)
 
 		var dwSize = _env.MemRead32(lpme);
-		if (dwSize < 548)
+		if (dwSize < MODULEENTRY32_SIZE)
 		{
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return 0; // FALSE
