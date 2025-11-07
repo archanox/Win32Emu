@@ -54,7 +54,7 @@ public class EmulatorService
         var gameHash = HashUtility.ComputeSha256(game.ExecutablePath);
         var gameSettings = _configuration.PerGameSettings.GetValueOrDefault(gameHash);
 
-        await Task.Run(() =>
+        await Task.Run(async () =>
         {
             try
             {
@@ -94,6 +94,33 @@ public class EmulatorService
                 
                 // Run the emulator
                 _currentEmulator.Run();
+                
+                // Check if there was an unhandled exception during emulation
+                if (_currentEmulator.LastException != null)
+                {
+                    _logger.LogError(_currentEmulator.LastException, "Unhandled exception during emulation");
+                    _host?.OnDebugOutput($"Unhandled exception: {_currentEmulator.LastException.Message}", DebugLevel.Error);
+                    
+                    // Show exception dialog on UI thread
+                    if (_host != null)
+                    {
+                        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+                        {
+                            try
+                            {
+                                var mainWindow = Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                                    ? desktop.MainWindow
+                                    : null;
+                                
+                                await Views.ExceptionDialog.ShowExceptionDialogAsync(mainWindow, _currentEmulator.LastException!, "Emulation");
+                            }
+                            catch (Exception dialogEx)
+                            {
+                                _logger.LogError(dialogEx, "Failed to show exception dialog");
+                            }
+                        });
+                    }
+                }
             }
             catch (Exception ex)
             {
