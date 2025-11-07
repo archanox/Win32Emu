@@ -22,7 +22,8 @@ public static class FileLoggingHelper
 			throw new FileNotFoundException($"File not found: {filePath}");
 		}
 
-		using var stream = File.OpenRead(filePath);
+		// Use FileStream with buffering to avoid loading large files entirely into memory
+		using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 81920);
 		var hashBytes = MD5.HashData(stream);
 		return Convert.ToHexString(hashBytes).ToLowerInvariant();
 	}
@@ -90,7 +91,7 @@ internal sealed class FileLoggerProvider : ILoggerProvider
 				AutoFlush = true
 			};
 		}
-		catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
+		catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is DirectoryNotFoundException)
 		{
 			// If we can't open the file, log to console and continue without file logging
 			Console.WriteLine($"Warning: Could not open log file '{logFilePath}': {ex.Message}");
