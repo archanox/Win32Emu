@@ -40,14 +40,26 @@ namespace Win32Emu.Win32.Modules
 					returnValue = __CxxFrameHandler(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 				case "__FTOL":
-					returnValue = (uint)__ftol();
-					return true;
+					{
+						var result = __ftol();
+						returnValue = (uint)result;
+						_cpu!.Edx = (uint)((ulong)result >> 32);
+						return true;
+					}
 				case "__FTOL2":
-					returnValue = (uint)__ftol2();
-					return true;
+					{
+						var result = __ftol2();
+						returnValue = (uint)result;
+						_cpu!.Edx = (uint)((ulong)result >> 32);
+						return true;
+					}
 				case "__FTOL2_SSE":
-					returnValue = (uint)__ftol2_sse();
-					return true;
+					{
+						var result = __ftol2_sse();
+						returnValue = (uint)result;
+						_cpu!.Edx = (uint)((ulong)result >> 32);
+						return true;
+					}
 				case "__GETMAINARGS":
 					returnValue = (uint)__getmainargs(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
 					return true;
