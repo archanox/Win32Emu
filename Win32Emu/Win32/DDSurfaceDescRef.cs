@@ -25,10 +25,10 @@ namespace Win32Emu.Win32
 			set => _memory.Write32(_address + 0, value);
 		}
 
-		public uint dwFlags
+		public NativeTypes.DDSD dwFlags
 		{
-			get => _memory.Read32(_address + 4);
-			set => _memory.Write32(_address + 4, value);
+			get => (NativeTypes.DDSD)_memory.Read32(_address + 4);
+			set => _memory.Write32(_address + 4, (uint)value);
 		}
 
 		public uint dwHeight
