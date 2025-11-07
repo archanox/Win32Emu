@@ -32,6 +32,7 @@ public sealed class Emulator : IDisposable
     private Task? _eventProcessingTask;
     private CancellationTokenSource? _eventProcessingCts;
     private readonly HashSet<uint> _patchedImportStubs = new();
+    private Exception? _lastException;
     
     // Actual memory layout from PE headers
     private uint _stackBase;
@@ -94,6 +95,11 @@ public sealed class Emulator : IDisposable
     /// Check if emulator is currently paused
     /// </summary>
     public bool IsPaused => !_pauseEvent.WaitOne(0);
+
+    /// <summary>
+    /// Get the last exception that occurred during emulation (may be null if no exception occurred)
+    /// </summary>
+    public Exception? LastException => _lastException;
 
     /// <summary>
     /// Get the emulator metrics (may be null if telemetry is not enabled)
@@ -504,33 +510,43 @@ public sealed class Emulator : IDisposable
                 await RunNormalAsync();
             }
         }
+        catch (Exception ex)
+        {
+            // Log the unhandled exception
+            _logger.LogError(ex, "[Emulator] Unhandled exception during emulation");
+            
+            // Store exception for later reporting (GUI will handle display)
+            _lastException = ex;
+        }
         finally
         {
             // Stop event processing thread
             StopEventProcessing();
+            
+            // Always print exit message and summary, even if there was an exception
+            string exitMessage;
+            if (_lastException != null)
+            {
+                exitMessage = $"[Exit] Emulation terminated due to unhandled exception: {_lastException.GetType().Name}";
+            }
+            else if (_stopRequested)
+            {
+                exitMessage = "[Exit] Stop requested by user.";
+            }
+            else if (_env.ExitRequested)
+            {
+                exitMessage = "[Exit] Process requested exit.";
+            }
+            else
+            {
+                exitMessage = "[Exit] Execution completed.";
+            }
+            
+            LogDebug(exitMessage);
+            
+            LogDebug("=== Unknown Function Summary ===");
+            _dispatcher.PrintUnknownFunctionsSummary();
         }
-
-        string exitMessage;
-        if (_stopRequested)
-        {
-	        exitMessage = "[Exit] Stop requested by user.";
-        }
-        else
-        {
-	        if (_env.ExitRequested)
-	        {
-		        exitMessage = "[Exit] Process requested exit.";
-	        }
-	        else
-	        {
-		        exitMessage = "[Exit] Execution completed.";
-	        }
-        }
-
-        LogDebug(exitMessage);
-
-        LogDebug("=== Unknown Function Summary ===");
-        _dispatcher.PrintUnknownFunctionsSummary();
     }
 
     /// <summary>

@@ -148,6 +148,14 @@ public class Win32Dispatcher(ILogger logger)
 		}
 	}
 
+	/// <summary>
+	/// Public method to track unknown function calls from other components (e.g., GetProcAddress failures)
+	/// </summary>
+	public void TrackUnknownFunction(string dll, string export)
+	{
+		LogUnknownFunctionCall(dll, export);
+	}
+
 	public void PrintUnknownFunctionsSummary()
 	{
 		if (_unknownFunctionCalls.Count == 0)
