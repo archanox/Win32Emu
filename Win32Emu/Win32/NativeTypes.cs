@@ -393,8 +393,8 @@ public static class NativeTypes
 	{
 		public uint dwSize;           // Offset 0
 		public DDSD dwFlags;          // Offset 4
-		public uint dwWidth;          // Offset 8
-		public uint dwHeight;         // Offset 12
+		public uint dwHeight;         // Offset 8
+		public uint dwWidth;          // Offset 12
 		public uint lPitch;           // Offset 16
 		public uint dwBackBufferCount;// Offset 20
 		// Additional fields exist but these are the most commonly used
