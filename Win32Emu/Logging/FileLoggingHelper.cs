@@ -94,6 +94,8 @@ internal sealed class FileLoggerProvider : ILoggerProvider
 		catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is DirectoryNotFoundException)
 		{
 			// If we can't open the file, log to console and continue without file logging
+			// Note: Using Console.WriteLine here is acceptable because this occurs during logger initialization
+			// where an ILogger instance may not be available yet. This is the bootstrap logging path.
 			Console.WriteLine($"Warning: Could not open log file '{logFilePath}': {ex.Message}");
 			_writer = null;
 		}

@@ -381,9 +381,21 @@ public partial class GameLibraryViewModel : ViewModelBase
 			                _configuration.LogFileDirectory);
 		                builder.AddFileLogging(logFilePath);
 	                }
-	                catch (Exception ex)
+	                catch (DirectoryNotFoundException ex)
 	                {
-		                _logger.LogWarning(ex, "Could not enable file logging");
+		                _logger.LogWarning(ex, "Could not enable file logging (directory not found)");
+	                }
+	                catch (UnauthorizedAccessException ex)
+	                {
+		                _logger.LogWarning(ex, "Could not enable file logging (unauthorized access)");
+	                }
+	                catch (ArgumentException ex)
+	                {
+		                _logger.LogWarning(ex, "Could not enable file logging (invalid argument)");
+	                }
+	                catch (IOException ex)
+	                {
+		                _logger.LogWarning(ex, "Could not enable file logging (I/O error)");
 	                }
                 }
             });
