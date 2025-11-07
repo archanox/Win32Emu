@@ -49,6 +49,9 @@ Win32Emu.Gui --nogui <path-to-pe> [options]
 - `--gdb-server [port]`: Start GDB server for remote debugging with Ghidra/IDA (default port: 1234)
   - Supports remote file I/O when VFS is initialized (access game files from debugger)
 - `--backend <SDL|GLFW|Vulkan|Metal|Software>`: Select rendering backend (default: SDL)
+- `--log-file [path]`: Enable logging to file (auto-generates MD5-based filename if path not provided)
+  - Filename format: `<executable>_<md5hash>_<timestamp>.log`
+  - Useful for capturing logs when reporting issues
 - `--telemetry-console`: Enable OpenTelemetry with console exporter for logging and metrics
 - `--telemetry-otlp [endpoint]`: Enable OpenTelemetry with OTLP exporter (default: http://localhost:4317)
 
@@ -86,6 +89,12 @@ Win32Emu.Gui --nogui game.exe --gdb-server
 
 # Run with GDB server on custom port
 Win32Emu.Gui --nogui game.exe --gdb-server 5678
+
+# Enable file logging (auto-generates filename with MD5 hash)
+Win32Emu.Gui --nogui game.exe --log-file
+
+# Enable file logging with custom path
+Win32Emu.Gui --nogui game.exe --log-file my_debug.log
 
 # Run with OpenTelemetry console exporter for observability
 Win32Emu.Gui --nogui game.exe --telemetry-console
