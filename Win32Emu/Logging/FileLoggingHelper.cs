@@ -10,6 +10,8 @@ public static class FileLoggingHelper
 {
 	/// <summary>
 	/// Compute MD5 hash of a file
+	/// Note: MD5 is used here for filename generation only, not for security purposes.
+	/// It provides a reasonably unique identifier for game executables while being fast to compute.
 	/// </summary>
 	/// <param name="filePath">Path to the file</param>
 	/// <returns>Hexadecimal MD5 hash string (lowercase)</returns>
@@ -35,7 +37,7 @@ public static class FileLoggingHelper
 	{
 		var md5Hash = ComputeMd5(executablePath);
 		var executableName = Path.GetFileNameWithoutExtension(executablePath);
-		var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+		var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
 		
 		// Format: <executableName>_<md5hash>_<timestamp>.log
 		var logFileName = $"{executableName}_{md5Hash}_{timestamp}.log";
@@ -74,17 +76,26 @@ public static class FileLoggingHelper
 internal sealed class FileLoggerProvider : ILoggerProvider
 {
 	private readonly string _logFilePath;
-	private readonly StreamWriter _writer;
+	private readonly StreamWriter? _writer;
 	private readonly object _lock = new();
 
 	public FileLoggerProvider(string logFilePath)
 	{
 		_logFilePath = logFilePath;
-		// Open file in append mode with UTF-8 encoding
-		_writer = new StreamWriter(logFilePath, append: true, encoding: System.Text.Encoding.UTF8)
+		try
 		{
-			AutoFlush = true
-		};
+			// Open file in append mode with UTF-8 encoding
+			_writer = new StreamWriter(logFilePath, append: true, encoding: System.Text.Encoding.UTF8)
+			{
+				AutoFlush = true
+			};
+		}
+		catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
+		{
+			// If we can't open the file, log to console and continue without file logging
+			Console.WriteLine($"Warning: Could not open log file '{logFilePath}': {ex.Message}");
+			_writer = null;
+		}
 	}
 
 	public ILogger CreateLogger(string categoryName)
@@ -104,10 +115,10 @@ internal sealed class FileLoggerProvider : ILoggerProvider
 internal sealed class FileLogger : ILogger
 {
 	private readonly string _categoryName;
-	private readonly StreamWriter _writer;
+	private readonly StreamWriter? _writer;
 	private readonly object _lock;
 
-	public FileLogger(string categoryName, StreamWriter writer, object lockObject)
+	public FileLogger(string categoryName, StreamWriter? writer, object lockObject)
 	{
 		_categoryName = categoryName;
 		_writer = writer;
@@ -121,7 +132,7 @@ internal sealed class FileLogger : ILogger
 
 	public bool IsEnabled(LogLevel logLevel)
 	{
-		return logLevel != LogLevel.None;
+		return logLevel != LogLevel.None && _writer != null;
 	}
 
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -132,12 +143,12 @@ internal sealed class FileLogger : ILogger
 		}
 
 		var message = formatter(state, exception);
-		var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+		var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 		var logLevelString = GetLogLevelString(logLevel);
 
 		lock (_lock)
 		{
-			_writer.WriteLine($"{timestamp} [{logLevelString}] {_categoryName}: {message}");
+			_writer!.WriteLine($"{timestamp} [{logLevelString}] {_categoryName}: {message}");
 			if (exception != null)
 			{
 				_writer.WriteLine(exception.ToString());
