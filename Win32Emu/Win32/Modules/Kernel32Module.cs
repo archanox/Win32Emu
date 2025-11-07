@@ -37,11 +37,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private const uint OPEN_ALWAYS = 4;
 	private const uint TRUNCATE_EXISTING = 5;
 
-	// Toolhelp32 snapshot constants
+	// Toolhelp32 snapshot handle (dummy value for stub implementation)
 	private const uint TH32_SNAPSHOT_HANDLE = 0x00007000;
-	private const int PROCESSENTRY32_SIZE = 296;
-	private const int THREADENTRY32_SIZE = 28;
-	private const int MODULEENTRY32_SIZE = 548;
 
 	private Win32Dispatcher? _dispatcher;
 	private uint _lastError;
@@ -8037,13 +8034,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] CreateToolhelp32Snapshot(dwFlags=0x{DwFlags:X8}, th32ProcessID={Th32ProcessID})",
 			dwFlags, th32ProcessID);
 
-		// Toolhelp32 flags:
-		// TH32CS_SNAPHEAPLIST  = 0x00000001
-		// TH32CS_SNAPPROCESS   = 0x00000002
-		// TH32CS_SNAPTHREAD    = 0x00000004
-		// TH32CS_SNAPMODULE    = 0x00000008
-		// TH32CS_SNAPALL       = (TH32CS_SNAPHEAPLIST | TH32CS_SNAPPROCESS | TH32CS_SNAPTHREAD | TH32CS_SNAPMODULE)
-		// TH32CS_INHERIT       = 0x80000000
+		// Parse the snapshot flags
+		var flags = (NativeTypes.Th32SnapshotFlags)dwFlags;
+		_logger.LogDebug("[Kernel32] Snapshot flags: {Flags}", flags);
 
 		// For stub implementation, return a dummy snapshot handle
 		// A full implementation would:
@@ -8074,21 +8067,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0; // FALSE
 		}
 
-		// PROCESSENTRY32 structure:
-		// dwSize (4 bytes)
-		// cntUsage (4 bytes)
-		// th32ProcessID (4 bytes)
-		// th32DefaultHeapID (4 bytes)
-		// th32ModuleID (4 bytes)
-		// cntThreads (4 bytes)
-		// th32ParentProcessID (4 bytes)
-		// pcPriClassBase (4 bytes)
-		// dwFlags (4 bytes)
-		// szExeFile (MAX_PATH = 260 bytes)
-		// Total: 296 bytes (0x128)
-
 		var dwSize = _env.MemRead32(lppe);
-		if (dwSize < PROCESSENTRY32_SIZE)
+		if (dwSize < NativeTypes.PROCESSENTRY32.Size)
 		{
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return 0; // FALSE
@@ -8148,18 +8128,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0; // FALSE
 		}
 
-		// THREADENTRY32 structure:
-		// dwSize (4 bytes)
-		// cntUsage (4 bytes)
-		// th32ThreadID (4 bytes)
-		// th32OwnerProcessID (4 bytes)
-		// tpBasePri (4 bytes)
-		// tpDeltaPri (4 bytes)
-		// dwFlags (4 bytes)
-		// Total: 28 bytes (0x1C)
-
 		var dwSize = _env.MemRead32(lpte);
-		if (dwSize < THREADENTRY32_SIZE)
+		if (dwSize < NativeTypes.THREADENTRY32.Size)
 		{
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return 0; // FALSE
@@ -8213,21 +8183,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0; // FALSE
 		}
 
-		// MODULEENTRY32 structure:
-		// dwSize (4 bytes)
-		// th32ModuleID (4 bytes)
-		// th32ProcessID (4 bytes)
-		// GlblcntUsage (4 bytes)
-		// ProccntUsage (4 bytes)
-		// modBaseAddr (4 bytes)
-		// modBaseSize (4 bytes)
-		// hModule (4 bytes)
-		// szModule (MAX_MODULE_NAME32 + 1 = 256 bytes)
-		// szExePath (MAX_PATH = 260 bytes)
-		// Total: 548 bytes (0x224)
-
 		var dwSize = _env.MemRead32(lpme);
-		if (dwSize < MODULEENTRY32_SIZE)
+		if (dwSize < NativeTypes.MODULEENTRY32.Size)
 		{
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 			return 0; // FALSE
