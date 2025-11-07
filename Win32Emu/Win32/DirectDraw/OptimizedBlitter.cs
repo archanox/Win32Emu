@@ -125,16 +125,19 @@ namespace Win32Emu.Win32.DirectDraw
 						for (; x <= width - 16; x += 16)
 						{
 							var srcData = Sse2.LoadVector128(srcRow + x);
-							var isGteLow = Sse2.CompareGreaterThan(srcData.AsSByte(), keyLow.AsSByte()).AsByte();
-							var isLteHigh = Sse2.CompareLessThan(srcData.AsSByte(), keyHigh.AsSByte()).AsByte();
+							// Check if pixels are >= colorKeyLow AND <= colorKeyHigh (in transparent range)
+							var isGteLow = Sse2.CompareGreaterThan(srcData.AsSByte(), Sse2.Subtract(keyLow, Vector128.Create((byte)1)).AsSByte()).AsByte();
+							var isLteHigh = Sse2.CompareGreaterThan(Sse2.Add(keyHigh, Vector128.Create((byte)1)).AsSByte(), srcData.AsSByte()).AsByte();
 							var isInRange = Sse2.And(isGteLow, isLteHigh);
 
+							var mask = Sse2.MoveMask(isInRange);
+							
 							// If all bytes are transparent (in color key range), skip
-							if (Sse2.MoveMask(isInRange) == 0xFFFF)
+							if (mask == 0xFFFF)
 								continue;
 
 							// If no bytes are transparent, copy entire vector
-							if (Sse2.MoveMask(isInRange) == 0)
+							if (mask == 0)
 							{
 								Sse2.Store(dstRow + x, srcData);
 								continue;
@@ -270,17 +273,19 @@ namespace Win32Emu.Win32.DirectDraw
 						{
 							var srcData = Sse2.LoadVector128((ushort*)(srcRow + x * 2));
 							
-							// Check if pixels are outside color key range
-							var isLtLow = Sse2.CompareLessThan(srcData.AsInt16(), keyLow.AsInt16()).AsUInt16();
-							var isGtHigh = Sse2.CompareGreaterThan(srcData.AsInt16(), keyHigh.AsInt16()).AsUInt16();
-							var isNotTransparent = Sse2.Or(isLtLow, isGtHigh);
+							// Check if pixels are in color key range (transparent)
+							var isGteLow = Sse2.CompareGreaterThan(srcData.AsInt16(), Sse2.Subtract(keyLow, Vector128.Create((ushort)1)).AsInt16()).AsUInt16();
+							var isLteHigh = Sse2.CompareGreaterThan(Sse2.Add(keyHigh, Vector128.Create((ushort)1)).AsInt16(), srcData.AsInt16()).AsUInt16();
+							var isTransparent = Sse2.And(isGteLow, isLteHigh);
 
+							var mask = Sse2.MoveMask(isTransparent.AsByte());
+							
 							// If all pixels are transparent, skip
-							if (Sse2.MoveMask(isNotTransparent.AsByte()) == 0)
+							if (mask == 0xFFFF)
 								continue;
 
-							// If all pixels are opaque, copy entire vector
-							if (Sse2.MoveMask(isNotTransparent.AsByte()) == 0xFFFF)
+							// If no pixels are transparent, copy entire vector
+							if (mask == 0)
 							{
 								Sse2.Store((ushort*)(dstRow + x * 2), srcData);
 								continue;
@@ -437,19 +442,19 @@ namespace Win32Emu.Win32.DirectDraw
 						{
 							var srcData = Sse2.LoadVector128((uint*)(srcRow + x * 4));
 							
-							// Check if pixels are outside color key range
-							// For 32-bit, we use signed comparison after XOR trick
-							var isLtLow = Sse2.CompareLessThan(srcData.AsInt32(), keyLow.AsInt32()).AsUInt32();
-							var isGtHigh = Sse2.CompareGreaterThan(srcData.AsInt32(), keyHigh.AsInt32()).AsUInt32();
-							var isNotTransparent = Sse2.Or(isLtLow, isGtHigh);
+							// Check if pixels are in color key range (transparent)
+							var isGteLow = Sse2.CompareGreaterThan(srcData.AsInt32(), Sse2.Subtract(keyLow, Vector128.Create(1u)).AsInt32()).AsUInt32();
+							var isLteHigh = Sse2.CompareGreaterThan(Sse2.Add(keyHigh, Vector128.Create(1u)).AsInt32(), srcData.AsInt32()).AsUInt32();
+							var isTransparent = Sse2.And(isGteLow, isLteHigh);
 
+							var mask = Sse2.MoveMask(isTransparent.AsByte());
+							
 							// If all pixels are transparent, skip
-							var mask = Sse2.MoveMask(isNotTransparent.AsByte());
-							if (mask == 0)
+							if (mask == 0xFFFF)
 								continue;
 
-							// If all pixels are opaque, copy entire vector
-							if (mask == 0xFFFF)
+							// If no pixels are transparent, copy entire vector
+							if (mask == 0)
 							{
 								Sse2.Store((uint*)(dstRow + x * 4), srcData);
 								continue;
