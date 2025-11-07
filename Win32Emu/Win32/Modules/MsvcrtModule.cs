@@ -13,6 +13,9 @@ namespace Win32Emu.Win32.Modules
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
 		private uint _cachedAcmdlnPtr = 0;
+		
+		// CPU instance is set by TryInvokeUnsafe before calling exported methods
+		// Cannot be passed as parameter to [DllModuleExport] methods as it breaks source generation
 		private ICpu? _cpu;
 
 		public MsvcrtModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
@@ -859,10 +862,10 @@ namespace Win32Emu.Win32.Modules
 	/// </summary>
 	private long AccessFpuAndConvert()
 	{
+		// _cpu is guaranteed to be set by TryInvokeUnsafe before this method is called
 		if (_cpu == null)
 		{
-			_logger.LogWarning("[msvcrt] __ftol: CPU not available, returning 0");
-			return 0;
+			throw new InvalidOperationException("CPU instance is not available - this should never happen");
 		}
 		
 		double st0;
