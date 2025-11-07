@@ -34,84 +34,122 @@ The crash occurs because the CPU is **executing code from the stack**, not from 
 
 3. **Constant ESP**: The stack pointer (ESP=0x001FEE64) remains constant throughout this execution, suggesting the program isn't making normal function calls.
 
-## Possible Causes
+## Root Cause Analysis
 
-### 1. Self-Modifying Code or JIT Compilation
-Some games, especially those with anti-debugging or copy protection, generate code on the stack and execute it. This is a legitimate technique but requires:
-- Stack execution permissions (DEP/NX must be disabled)
-- Proper code generation
+Based on decompilation analysis in `Decomp/ign_teas/` and documentation in `docs/archive/DECOMPILATION_FINDINGS.md`:
 
-### 2. Corrupted Return Address
-A return address on the stack may have been overwritten, causing the CPU to jump into stack memory:
-- Buffer overflow
-- Stack corruption
-- Incorrect pointer arithmetic
+**The stack execution at 0x001FEC40 is a SYMPTOM, not the root cause.**
 
-### 3. Unimplemented or Incorrectly Emulated Win32 API
-The game may be calling a Win32 API function that:
-- Returns an incorrect value
-- Modifies memory incorrectly
-- Doesn't set up the stack properly
+### Actual Root Cause: DirectX Initialization Failure
 
-### 4. Timing or Threading Issues
-The game may be sensitive to timing:
-- Race conditions between threads
-- Events not being processed in time
-- Message pump issues
+The game's initialization sequence (from Ghidra decompilation):
+1. `WinMain` calls `sub_403510()` for DirectX initialization
+2. `sub_403510` calls `FUN_00404640()` to initialize DirectDraw
+3. DirectDraw initialization calls `DirectDrawCreate()` ✅ (succeeds)
+4. Then immediately calls COM vtable methods: ✅ (COM vtables implemented)
+   - `lpDD->lpVtbl->SetCooperativeLevel()`
+   - `lpDD->lpVtbl->SetDisplayMode()`
+5. If DirectDraw init returns 0 (failure), `sub_403510` returns 0
+6. WinMain takes error path, which likely corrupts stack/function pointers
+7. Eventually execution jumps to invalid stack address 0x001FEC40 ❌
+
+**Note:** COM vtable support was implemented (see `docs/fixes/COM_VTABLE_FIX_SUMMARY.md`), but some vtable method may be:
+- Returning incorrect value
+- Not preserving registers correctly
+- Corrupting stack during execution
+
+## Possible Causes (Updated)
+
+### 1. COM Vtable Method Implementation Issue (Most Likely)
+One of the DirectDraw COM methods is failing or corrupting state:
+- `SetCooperativeLevel` may not handle parameters correctly
+- `SetDisplayMode` may not validate/store display mode properly
+- Method may not preserve EBP/EBX/ESI/EDI registers
+- Return value may be incorrect (game expects S_OK/DD_OK)
+
+### 2. Stack Corruption During WndProc or Message Handling
+After DirectX init fails, the error handling path may:
+- Call WndProc with corrupted parameters
+- Incorrectly clean up the stack
+- Leave function pointers in invalid state
+
+### 3. Missing or Incorrect DirectX Object State
+The COM objects created may be missing required state:
+- DirectDraw object missing display mode information
+- Surface objects not properly initialized
+- Cooperative level not set correctly
+
+### 4. Register Preservation Issue
+COM method calls may not be preserving registers correctly:
+- EBP corruption (documented fix in `docs/archive/EBP_COM_POINTER_FIX.md`)
+- Other callee-saved registers (EBX, ESI, EDI) may be corrupted
+- ESP misalignment after method return
 
 ## Recommendations for Debugging
 
-### 1. Enable Enhanced Debugging
-Run with `--debug` flag to catch issues earlier:
+### 1. Enable Enhanced Debugging with GDB Server
+Run with GDB server to trace exact execution path:
 ```bash
-Win32Emu.Gui --nogui IGN_TEAS.EXE --debug
+Win32Emu.Gui --nogui IGN_TEAS.EXE --gdb-server
 ```
+Then attach Ghidra to:
+- Set breakpoint at `sub_403510` (DirectX init function)
+- Trace through DirectDraw COM method calls
+- Identify which method returns failure or corrupts state
 
-### 2. Enable File Logging
+### 2. Enable File Logging with Debug Mode
 Capture full logs for analysis:
 ```bash
 Win32Emu.Gui --nogui IGN_TEAS.EXE --debug --log-file
 ```
 
-### 3. Use GDB Server for Detailed Inspection
-Connect a debugger to examine the execution:
-```bash
-Win32Emu.Gui --nogui IGN_TEAS.EXE --gdb-server
-```
+### 3. Add Detailed COM Method Logging
+Temporarily add logging in `DDrawModule.cs` COM methods:
+- Log entry to each vtable method (SetCooperativeLevel, SetDisplayMode, etc.)
+- Log parameters and return values
+- Log register state before/after
+- Identify which method fails or returns incorrect value
 
-Then connect with Ghidra or IDA Pro to:
-- Set breakpoints before the crash
-- Examine the stack contents
-- Trace the execution flow
-- Identify what called the stack address
+### 4. Check Decompilation for Expected Behavior
+Review `Decomp/ign_teas/ghidra.cpp` to understand:
+Review `Decomp/ign_teas/ghidra.cpp` to understand:
+- Exact sequence of DirectDraw method calls in `FUN_00404640`
+- Expected parameters for each COM method
+- Expected return values (should be 0 for success/DD_OK)
+- What the game does if DirectX init fails
 
-### 4. Check Stack Execution Protection
-The emulator may need to allow stack execution for this game. Look for:
-- DEP/NX settings
-- Memory page permissions
-- Stack protection flags
-
-### 5. Examine the Last Valid Code Address
-Before jumping to the stack, the EIP was likely in the normal code section. Check logs around iteration 1,130,000 to see:
-- What function was being executed
-- What Win32 APIs were being called
-- Any error or warning messages
+### 5. Cross-Reference with Existing Fixes
+Check these documentation files for related issues:
+- `docs/fixes/COM_VTABLE_FIX_SUMMARY.md` - COM vtable implementation
+- `docs/archive/EBP_COM_POINTER_FIX.md` - Register preservation issues
+- `docs/archive/STACK_CORRUPTION_FIX.md` - Stack corruption during WndProc
+- `docs/archive/DECOMPILATION_FINDINGS.md` - Original root cause analysis
 
 ## Next Steps
 
-1. **Re-enable the "suspicious low memory" logging** - This was temporarily disabled but may provide valuable insights about when execution enters unexpected memory ranges.
+1. **Add COM method call tracing** - Log every COM vtable method invocation with parameters and return values
 
-2. **Add memory access logging** - Enable detailed logging of:
-   - Memory writes to the stack
-   - Indirect jumps and calls
-   - Return address modifications
+2. **Verify DirectDraw initialization** - Check that:
+   - SetCooperativeLevel is called with correct flags
+   - SetDisplayMode is called with valid dimensions
+   - Both methods return success (0/DD_OK)
 
-3. **Check for self-modifying code patterns** - Look for:
-   - Writes to memory addresses that are later executed
-   - VirtualProtect calls changing memory permissions
-   - Code unpacking or decryption routines
+3. **Check register preservation** - Ensure COM methods preserve:
+   - EBP (base pointer)
+   - EBX, ESI, EDI (callee-saved registers)
+   - ESP properly aligned after return
 
-4. **Compare with API Monitor logs** - If available, compare the emulator's API calls with those captured from API Monitor on a real Windows system to identify discrepancies.
+4. **Investigate error path** - If DirectX init fails:
+   - What does the game do in the error handler?
+   - Does it clean up properly?
+   - Does it corrupt stack or function pointers?
+
+## Related Documentation
+
+- `Decomp/ign_teas/ghidra.cpp` - Full decompilation showing execution flow
+- `docs/archive/DECOMPILATION_FINDINGS.md` - Detailed analysis of initialization sequence
+- `docs/fixes/COM_VTABLE_FIX_SUMMARY.md` - COM implementation details
+- `docs/archive/EBP_COM_POINTER_FIX.md` - Register corruption fix
 
 ## File Logging Feature
 To make issue reporting easier, the new file logging feature has been implemented:
