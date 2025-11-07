@@ -786,6 +786,29 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = FileTimeToDosDateTime(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 
+			// Toolhelp32 snapshot functions
+			case "CREATETOOLHELP32SNAPSHOT":
+				returnValue = CreateToolhelp32Snapshot(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "PROCESS32FIRST":
+				returnValue = Process32First(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "PROCESS32NEXT":
+				returnValue = Process32Next(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "THREAD32FIRST":
+				returnValue = Thread32First(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "THREAD32NEXT":
+				returnValue = Thread32Next(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "MODULE32FIRST":
+				returnValue = Module32First(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "MODULE32NEXT":
+				returnValue = Module32Next(a.UInt32(0), a.UInt32(1));
+				return true;
+
 			default:
 				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
 				return false;
@@ -1791,6 +1814,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (exportName == null)
 		{
 			_logger.LogInformation("[Kernel32] GetProcAddress: Export not found in emulated module '{ModuleName}'", moduleName);
+			
+			// Track this as an unknown function call
+			if (_dispatcher != null)
+			{
+				var lookupName = byOrdinal ? $"#{ordinal}" : procName ?? "(null)";
+				_dispatcher.TrackUnknownFunction(moduleName, lookupName);
+			}
+			
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
@@ -7985,6 +8016,250 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		_logger.LogInformation("[Kernel32] SearchPathA: Returning \"{ResultPath}\"", resultPath);
 		return (uint)resultPath.Length; // Return length without null terminator
+	}
+
+	/// <summary>
+	/// Takes a snapshot of the specified processes, as well as the heaps, modules, and threads used by these processes.
+	/// HANDLE CreateToolhelp32Snapshot(
+	///   [in] DWORD dwFlags,
+	///   [in] DWORD th32ProcessID
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID)
+	{
+		_logger.LogInformation("[Kernel32] CreateToolhelp32Snapshot(dwFlags=0x{DwFlags:X8}, th32ProcessID={Th32ProcessID})",
+			dwFlags, th32ProcessID);
+
+		// Toolhelp32 flags:
+		// TH32CS_SNAPHEAPLIST  = 0x00000001
+		// TH32CS_SNAPPROCESS   = 0x00000002
+		// TH32CS_SNAPTHREAD    = 0x00000004
+		// TH32CS_SNAPMODULE    = 0x00000008
+		// TH32CS_SNAPALL       = (TH32CS_SNAPHEAPLIST | TH32CS_SNAPPROCESS | TH32CS_SNAPTHREAD | TH32CS_SNAPMODULE)
+		// TH32CS_INHERIT       = 0x80000000
+
+		// For stub implementation, return a dummy snapshot handle
+		// A full implementation would:
+		// 1. Capture the current system state based on dwFlags
+		// 2. Store the snapshot data for later retrieval
+		// 3. Return a handle to the snapshot
+
+		// Return a dummy snapshot handle (non-zero for success)
+		const uint SNAPSHOT_HANDLE = 0x00007000;
+		return SNAPSHOT_HANDLE;
+	}
+
+	/// <summary>
+	/// Retrieves information about the first process encountered in a system snapshot.
+	/// BOOL Process32First(
+	///   [in]      HANDLE           hSnapshot,
+	///   [in, out] LPPROCESSENTRY32 lppe
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint Process32First(uint hSnapshot, uint lppe)
+	{
+		_logger.LogInformation("[Kernel32] Process32First(hSnapshot=0x{HSnapshot:X8}, lppe=0x{Lppe:X8})",
+			hSnapshot, lppe);
+
+		if (lppe == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// PROCESSENTRY32 structure:
+		// dwSize (4 bytes)
+		// cntUsage (4 bytes)
+		// th32ProcessID (4 bytes)
+		// th32DefaultHeapID (4 bytes)
+		// th32ModuleID (4 bytes)
+		// cntThreads (4 bytes)
+		// th32ParentProcessID (4 bytes)
+		// pcPriClassBase (4 bytes)
+		// dwFlags (4 bytes)
+		// szExeFile (MAX_PATH = 260 bytes)
+		// Total: 296 bytes (0x128)
+
+		var dwSize = _env.MemRead32(lppe);
+		if (dwSize < 296)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return 0; // FALSE
+		}
+
+		// For stub, return information about the current process
+		_env.MemWrite32(lppe + 4, 0);  // cntUsage
+		_env.MemWrite32(lppe + 8, GetCurrentProcessId());  // th32ProcessID
+		_env.MemWrite32(lppe + 12, 0); // th32DefaultHeapID
+		_env.MemWrite32(lppe + 16, 0); // th32ModuleID
+		_env.MemWrite32(lppe + 20, 1); // cntThreads
+		_env.MemWrite32(lppe + 24, 0); // th32ParentProcessID
+		_env.MemWrite32(lppe + 28, 8); // pcPriClassBase (NORMAL_PRIORITY_CLASS)
+		_env.MemWrite32(lppe + 32, 0); // dwFlags
+		// szExeFile - write process name
+		_env.WriteAnsiStringAt(lppe + 36, "setup.exe");
+
+		// No more processes after this one (stub)
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves information about the next process recorded in a system snapshot.
+	/// BOOL Process32Next(
+	///   [in]  HANDLE           hSnapshot,
+	///   [out] LPPROCESSENTRY32 lppe
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint Process32Next(uint hSnapshot, uint lppe)
+	{
+		_logger.LogInformation("[Kernel32] Process32Next(hSnapshot=0x{HSnapshot:X8}, lppe=0x{Lppe:X8})",
+			hSnapshot, lppe);
+
+		// For stub implementation, there are no more processes
+		// Return FALSE to indicate end of snapshot
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_NO_MORE_FILES;
+		return 0; // FALSE
+	}
+
+	/// <summary>
+	/// Retrieves information about the first thread of any process encountered in a system snapshot.
+	/// BOOL Thread32First(
+	///   [in]  HANDLE          hSnapshot,
+	///   [out] LPTHREADENTRY32 lpte
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint Thread32First(uint hSnapshot, uint lpte)
+	{
+		_logger.LogInformation("[Kernel32] Thread32First(hSnapshot=0x{HSnapshot:X8}, lpte=0x{Lpte:X8})",
+			hSnapshot, lpte);
+
+		if (lpte == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// THREADENTRY32 structure:
+		// dwSize (4 bytes)
+		// cntUsage (4 bytes)
+		// th32ThreadID (4 bytes)
+		// th32OwnerProcessID (4 bytes)
+		// tpBasePri (4 bytes)
+		// tpDeltaPri (4 bytes)
+		// dwFlags (4 bytes)
+		// Total: 28 bytes (0x1C)
+
+		var dwSize = _env.MemRead32(lpte);
+		if (dwSize < 28)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return 0; // FALSE
+		}
+
+		// For stub, return information about the main thread
+		_env.MemWrite32(lpte + 4, 0);  // cntUsage
+		_env.MemWrite32(lpte + 8, GetCurrentThreadId());  // th32ThreadID
+		_env.MemWrite32(lpte + 12, GetCurrentProcessId()); // th32OwnerProcessID
+		_env.MemWrite32(lpte + 16, 8); // tpBasePri (THREAD_PRIORITY_NORMAL)
+		_env.MemWrite32(lpte + 20, 0); // tpDeltaPri
+		_env.MemWrite32(lpte + 24, 0); // dwFlags
+
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves information about the next thread of any process encountered in the system memory snapshot.
+	/// BOOL Thread32Next(
+	///   [in]  HANDLE          hSnapshot,
+	///   [out] LPTHREADENTRY32 lpte
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint Thread32Next(uint hSnapshot, uint lpte)
+	{
+		_logger.LogInformation("[Kernel32] Thread32Next(hSnapshot=0x{HSnapshot:X8}, lpte=0x{Lpte:X8})",
+			hSnapshot, lpte);
+
+		// For stub implementation, there are no more threads
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_NO_MORE_FILES;
+		return 0; // FALSE
+	}
+
+	/// <summary>
+	/// Retrieves information about the first module associated with a process.
+	/// BOOL Module32First(
+	///   [in]  HANDLE           hSnapshot,
+	///   [out] LPMODULEENTRY32 lpme
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint Module32First(uint hSnapshot, uint lpme)
+	{
+		_logger.LogInformation("[Kernel32] Module32First(hSnapshot=0x{HSnapshot:X8}, lpme=0x{Lpme:X8})",
+			hSnapshot, lpme);
+
+		if (lpme == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// MODULEENTRY32 structure:
+		// dwSize (4 bytes)
+		// th32ModuleID (4 bytes)
+		// th32ProcessID (4 bytes)
+		// GlblcntUsage (4 bytes)
+		// ProccntUsage (4 bytes)
+		// modBaseAddr (4 bytes)
+		// modBaseSize (4 bytes)
+		// hModule (4 bytes)
+		// szModule (MAX_MODULE_NAME32 + 1 = 256 bytes)
+		// szExePath (MAX_PATH = 260 bytes)
+		// Total: 548 bytes (0x224)
+
+		var dwSize = _env.MemRead32(lpme);
+		if (dwSize < 548)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return 0; // FALSE
+		}
+
+		// For stub, return information about the main module
+		_env.MemWrite32(lpme + 4, 1);  // th32ModuleID
+		_env.MemWrite32(lpme + 8, GetCurrentProcessId()); // th32ProcessID
+		_env.MemWrite32(lpme + 12, 0); // GlblcntUsage
+		_env.MemWrite32(lpme + 16, 0); // ProccntUsage
+		_env.MemWrite32(lpme + 20, 0x00400000); // modBaseAddr (typical base address)
+		_env.MemWrite32(lpme + 24, 0x00100000); // modBaseSize (1 MB)
+		_env.MemWrite32(lpme + 28, 0x00400000); // hModule
+		// szModule
+		_env.WriteAnsiStringAt(lpme + 32, "setup.exe");
+		// szExePath
+		_env.WriteAnsiStringAt(lpme + 288, "C:\\setup.exe");
+
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves information about the next module associated with a process or thread.
+	/// BOOL Module32Next(
+	///   [in]  HANDLE          hSnapshot,
+	///   [out] LPMODULEENTRY32 lpme
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint Module32Next(uint hSnapshot, uint lpme)
+	{
+		_logger.LogInformation("[Kernel32] Module32Next(hSnapshot=0x{HSnapshot:X8}, lpme=0x{Lpme:X8})",
+			hSnapshot, lpme);
+
+		// For stub implementation, there are no more modules
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_NO_MORE_FILES;
+		return 0; // FALSE
 	}
 
 }
