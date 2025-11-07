@@ -849,51 +849,32 @@ namespace Win32Emu.Win32.Modules
 		// Note: This uses reflection which is brittle but necessary since ICpu doesn't expose FPU methods
 		// TODO: Consider adding FPU methods to ICpu interface or creating IFpuCpu interface
 		
-		double st0;
-		bool success = false;
-		
-		if (cpu is Cpu.Iced.IcedCpu)
+		if (cpu is not (Cpu.Iced.IcedCpu or Cpu.Jit.JitCpu))
 		{
-			var cpuType = cpu.GetType();
-			var fpuGetStMethod = cpuType.GetMethod("FpuGetSt", 
-				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-			var fpuPopMethod = cpuType.GetMethod("FpuPop",
-				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-			
-			if (fpuGetStMethod != null && fpuPopMethod != null)
-			{
-				st0 = (double)fpuGetStMethod.Invoke(cpu, new object[] { 0 })!;
-				fpuPopMethod.Invoke(cpu, null);
-				success = true;
-				_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result}", st0, (long)st0);
-				return (long)st0;
-			}
-		}
-		else if (cpu is Cpu.Jit.JitCpu)
-		{
-			var cpuType = cpu.GetType();
-			var fpuGetStMethod = cpuType.GetMethod("FpuGetSt",
-				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-			var fpuPopMethod = cpuType.GetMethod("FpuPop",
-				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-			
-			if (fpuGetStMethod != null && fpuPopMethod != null)
-			{
-				st0 = (double)fpuGetStMethod.Invoke(cpu, new object[] { 0 })!;
-				fpuPopMethod.Invoke(cpu, null);
-				success = true;
-				_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result}", st0, (long)st0);
-				return (long)st0;
-			}
-		}
-		
-		if (!success)
-		{
-			_logger.LogWarning("[msvcrt] __ftol: Could not access FPU methods, returning 0. CPU type: {CpuType}", 
+			_logger.LogWarning("[msvcrt] __ftol: Unsupported CPU type {CpuType}, returning 0", 
 				cpu.GetType().Name);
+			return 0;
 		}
 		
-		return 0;
+		var cpuType = cpu.GetType();
+		var fpuGetStMethod = cpuType.GetMethod("FpuGetSt", 
+			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+		var fpuPopMethod = cpuType.GetMethod("FpuPop",
+			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+		
+		if (fpuGetStMethod == null || fpuPopMethod == null)
+		{
+			_logger.LogWarning("[msvcrt] __ftol: Could not access FPU methods on {CpuType}, returning 0", 
+				cpu.GetType().Name);
+			return 0;
+		}
+		
+		var st0 = (double)fpuGetStMethod.Invoke(cpu, new object[] { 0 })!;
+		fpuPopMethod.Invoke(cpu, null);
+		var result = (long)st0;
+		
+		_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result}", st0, result);
+		return result;
 	}
 }
 }
