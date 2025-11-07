@@ -1,0 +1,83 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Win32Emu.Gui.Views.ExceptionDialog"
+        Title="Emulation Error"
+        Width="700"
+        Height="500"
+        MinWidth="500"
+        MinHeight="300"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/icon.ico">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header with icon and message -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+            <TextBlock Text="❌" 
+                       FontSize="32" 
+                       FontFamily="Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,Segoe UI Symbol,Arial"
+                       Margin="0,0,15,0"
+                       VerticalAlignment="Top"/>
+            
+            <StackPanel>
+                <TextBlock Text="An unhandled exception occurred during emulation" 
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"/>
+                <TextBlock Name="ExceptionTypeText"
+                           FontSize="14"
+                           Foreground="Gray"
+                           Margin="0,5,0,0"/>
+            </StackPanel>
+        </StackPanel>
+        
+        <!-- Exception details (scrollable) -->
+        <Border Grid.Row="1" 
+                BorderBrush="Gray" 
+                BorderThickness="1" 
+                Background="#F5F5F5"
+                CornerRadius="4"
+                Padding="10">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Text="Exception Message:" 
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,5"/>
+                    <TextBlock Name="ExceptionMessageText" 
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,15"/>
+                    
+                    <TextBlock Text="Stack Trace:" 
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,5"/>
+                    <TextBlock Name="StackTraceText" 
+                               TextWrapping="Wrap"
+                               FontFamily="Consolas,Courier New,monospace"
+                               FontSize="11"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+        
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Margin="0,20,0,0"
+                    Spacing="10">
+            <Button Name="CopyButton"
+                    Content="Copy to Clipboard"
+                    MinWidth="120"
+                    Padding="15,8"/>
+            <Button Name="CloseButton"
+                    Content="Close"
+                    MinWidth="80"
+                    Padding="15,8"
+                    IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>
