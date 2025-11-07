@@ -13,6 +13,7 @@ namespace Win32Emu.Win32.Modules
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
 		private uint _cachedAcmdlnPtr = 0;
+		private ICpu? _cpu;
 
 		public MsvcrtModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -27,6 +28,7 @@ namespace Win32Emu.Win32.Modules
 		public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
+			_cpu = cpu;
 			var a = new StackArgs(cpu, memory);
 
 			switch (export.ToUpperInvariant())
@@ -35,9 +37,13 @@ namespace Win32Emu.Win32.Modules
 					returnValue = __CxxFrameHandler(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 				case "__FTOL":
+					returnValue = (uint)__ftol();
+					return true;
 				case "__FTOL2":
+					returnValue = (uint)__ftol2();
+					return true;
 				case "__FTOL2_SSE":
-					returnValue = (uint)__ftol(cpu);
+					returnValue = (uint)__ftol2_sse();
 					return true;
 				case "__GETMAINARGS":
 					returnValue = (uint)__getmainargs(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
@@ -819,61 +825,75 @@ namespace Win32Emu.Win32.Modules
 	/// Returns 64-bit result in EDX:EAX (high:low 32 bits)
 	/// </summary>
 	[DllModuleExport(0)]
-	private long __ftol(ICpu cpu)
+	private long __ftol()
 	{
 		_logger.LogInformation("[msvcrt] __ftol()");
-		
-		// __ftol reads the floating point value from ST(0) and converts to long
-		// The result is returned in EDX:EAX (high:low 32 bits) per x86 convention
-		// ST(0) is popped from the FPU stack
-		
-		long result = AccessFpuAndConvert(cpu);
-		
-		// Set both EAX (low 32 bits) and EDX (high 32 bits)
-		cpu.SetRegister("EAX", (uint)(result & 0xFFFFFFFF));
-		cpu.SetRegister("EDX", (uint)((result >> 32) & 0xFFFFFFFF));
-		
-		_logger.LogDebug("[msvcrt] __ftol: result={Result:X16} (EDX:EAX = {Edx:X8}:{Eax:X8})", 
-			result, (uint)((result >> 32) & 0xFFFFFFFF), (uint)(result & 0xFFFFFFFF));
-		
-		return result;
+		return AccessFpuAndConvert();
+	}
+	
+	/// <summary>
+	/// __ftol2 - Convert floating point value in ST(0) to signed long integer
+	/// Variant of __ftol for newer compilers
+	/// </summary>
+	[DllModuleExport(0)]
+	private long __ftol2()
+	{
+		_logger.LogInformation("[msvcrt] __ftol2()");
+		return AccessFpuAndConvert();
+	}
+	
+	/// <summary>
+	/// __ftol2_sse - Convert floating point value in ST(0) to signed long integer
+	/// SSE-optimized variant of __ftol
+	/// </summary>
+	[DllModuleExport(0)]
+	private long __ftol2_sse()
+	{
+		_logger.LogInformation("[msvcrt] __ftol2_sse()");
+		return AccessFpuAndConvert();
 	}
 	
 	/// <summary>
 	/// Helper method to access FPU stack and convert ST(0) to long integer
-	/// Uses reflection to access private FPU methods on concrete CPU implementations
+	/// Accesses public FPU methods on concrete CPU implementations
 	/// </summary>
-	private long AccessFpuAndConvert(ICpu cpu)
+	private long AccessFpuAndConvert()
 	{
-		// Try to access FPU state through concrete CPU implementations
-		// Note: This uses reflection which is brittle but necessary since ICpu doesn't expose FPU methods
-		// TODO: Consider adding FPU methods to ICpu interface or creating IFpuCpu interface
+		if (_cpu == null)
+		{
+			_logger.LogWarning("[msvcrt] __ftol: CPU not available, returning 0");
+			return 0;
+		}
 		
-		if (cpu is not (Cpu.Iced.IcedCpu or Cpu.Jit.JitCpu))
+		double st0;
+		
+		// Access FPU state through concrete CPU implementations
+		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
+		{
+			st0 = icedCpu.FpuGetSt(0);
+			icedCpu.FpuPop();
+		}
+		else if (_cpu is Cpu.Jit.JitCpu jitCpu)
+		{
+			st0 = jitCpu.FpuGetSt(0);
+			jitCpu.FpuPop();
+		}
+		else
 		{
 			_logger.LogWarning("[msvcrt] __ftol: Unsupported CPU type {CpuType}, returning 0", 
-				cpu.GetType().Name);
+				_cpu.GetType().Name);
 			return 0;
 		}
 		
-		var cpuType = cpu.GetType();
-		var fpuGetStMethod = cpuType.GetMethod("FpuGetSt", 
-			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-		var fpuPopMethod = cpuType.GetMethod("FpuPop",
-			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-		
-		if (fpuGetStMethod == null || fpuPopMethod == null)
-		{
-			_logger.LogWarning("[msvcrt] __ftol: Could not access FPU methods on {CpuType}, returning 0", 
-				cpu.GetType().Name);
-			return 0;
-		}
-		
-		var st0 = (double)fpuGetStMethod.Invoke(cpu, new object[] { 0 })!;
-		fpuPopMethod.Invoke(cpu, null);
 		var result = (long)st0;
 		
-		_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result}", st0, result);
+		// Set both EAX (low 32 bits) and EDX (high 32 bits)
+		_cpu.SetRegister("EAX", (uint)(result & 0xFFFFFFFF));
+		_cpu.SetRegister("EDX", (uint)((result >> 32) & 0xFFFFFFFF));
+		
+		_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result:X16} (EDX:EAX = {Edx:X8}:{Eax:X8})", 
+			st0, result, (uint)((result >> 32) & 0xFFFFFFFF), (uint)(result & 0xFFFFFFFF));
+		
 		return result;
 	}
 }

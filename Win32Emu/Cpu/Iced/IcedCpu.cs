@@ -4180,7 +4180,7 @@ public class IcedCpu : IAsyncCpu
 	#region FPU Helpers
 
 	// Get ST(i) - ST(0) is the top of stack
-	private double FpuGetSt(int i)
+	public double FpuGetSt(int i)
 	{
 		var idx = (_fpuTop + i) & 7;
 		return _fpu[idx];
@@ -4201,7 +4201,7 @@ public class IcedCpu : IAsyncCpu
 	}
 
 	// Pop a value from the FPU stack
-	private double FpuPop()
+	public double FpuPop()
 	{
 		var val = _fpu[_fpuTop];
 		_fpuTop = (_fpuTop + 1) & 7;
