@@ -40,26 +40,14 @@ namespace Win32Emu.Win32.Modules
 					returnValue = __CxxFrameHandler(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 				case "__FTOL":
-					{
-						var result = __ftol();
-						returnValue = (uint)result;
-						_cpu!.Edx = (uint)((ulong)result >> 32);
-						return true;
-					}
+					returnValue = (uint)__ftol();
+					return true;
 				case "__FTOL2":
-					{
-						var result = __ftol2();
-						returnValue = (uint)result;
-						_cpu!.Edx = (uint)((ulong)result >> 32);
-						return true;
-					}
+					returnValue = (uint)__ftol2();
+					return true;
 				case "__FTOL2_SSE":
-					{
-						var result = __ftol2_sse();
-						returnValue = (uint)result;
-						_cpu!.Edx = (uint)((ulong)result >> 32);
-						return true;
-					}
+					returnValue = (uint)__ftol2_sse();
+					return true;
 				case "__GETMAINARGS":
 					returnValue = (uint)__getmainargs(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
 					return true;
@@ -900,44 +888,16 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 		
-		// Emulate x86 FPU rounding mode for __ftol conversion
-		ushort fpuControlWord = 0x037F; // Default: round to nearest
-		if (_cpu is Cpu.Iced.IcedCpu icedCpu2)
-		{
-			fpuControlWord = icedCpu2.FpuControlWord;
-		}
-		else if (_cpu is Cpu.Jit.JitCpu jitCpu2)
-		{
-			fpuControlWord = jitCpu2.FpuControlWord;
-		}
-		// Bits 10-11: rounding control
-		// 00 = round to nearest (even), 01 = round down, 10 = round up, 11 = truncate
-		var rc = (fpuControlWord >> 10) & 0x3;
-		double rounded;
-		switch (rc)
-		{
-			case 0: // round to nearest (even)
-				rounded = Math.Round(st0, MidpointRounding.ToEven);
-				break;
-			case 1: // round down (toward -infinity)
-				rounded = Math.Floor(st0);
-				break;
-			case 2: // round up (toward +infinity)
-				rounded = Math.Ceiling(st0);
-				break;
-			case 3: // truncate (toward zero)
-				rounded = Math.Truncate(st0);
-				break;
-			default:
-				rounded = Math.Round(st0, MidpointRounding.ToEven);
-				break;
-		}
-		var result = (long)rounded;
+		var result = (long)st0;
 		
 		// Set both EAX (low 32 bits) and EDX (high 32 bits)
 		_cpu.SetRegister("EAX", (uint)(result & 0xFFFFFFFF));
 		_cpu.SetRegister("EDX", (uint)((result >> 32) & 0xFFFFFFFF));
 		
+		_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result:X16} (EDX:EAX = {Edx:X8}:{Eax:X8})", 
+			st0, result, (uint)((result >> 32) & 0xFFFFFFFF), (uint)(result & 0xFFFFFFFF));
+		
+		return result;
 		_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result:X16} (EDX:EAX = {Edx:X8}:{Eax:X8})", 
 			st0, result, (uint)((result >> 32) & 0xFFFFFFFF), (uint)(result & 0xFFFFFFFF));
 		
