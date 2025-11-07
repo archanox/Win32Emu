@@ -8199,9 +8199,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_env.MemWrite32(lpme + 24, 0x00100000); // modBaseSize (1 MB)
 		_env.MemWrite32(lpme + 28, 0x00400000); // hModule
 		// szModule
-		_env.WriteAnsiStringAt(lpme + 32, "setup.exe");
+		_env.WriteAnsiStringAt(lpme + 32, _env.MainModuleName);
 		// szExePath
-		_env.WriteAnsiStringAt(lpme + 288, "C:\\setup.exe");
+		_env.WriteAnsiStringAt(lpme + 288, _env.MainModulePath);
 
 		return 1; // TRUE
 	}
