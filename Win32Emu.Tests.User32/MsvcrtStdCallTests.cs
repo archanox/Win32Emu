@@ -16,9 +16,9 @@ namespace Win32Emu.Tests.User32
         [InlineData("MSVCRT.DLL", "__p___initenv", 0)]
         [InlineData("MSVCRT.DLL", "_initterm", 8)]
         [InlineData("MSVCRT.DLL", "atexit", 4)]
-        // Note: __ftol has 4 bytes due to ICpu parameter in C# implementation,
-        // but the actual Win32 __ftol doesn't take stack arguments (uses FPU regs)
-        [InlineData("MSVCRT.DLL", "__ftol", 4)]
+        [InlineData("MSVCRT.DLL", "__ftol", 0)]
+        [InlineData("MSVCRT.DLL", "__ftol2", 0)]
+        [InlineData("MSVCRT.DLL", "__ftol2_sse", 0)]
         public void Msvcrt_ShouldHaveCorrectArgBytes(string dll, string export, int expectedBytes)
         {
             // Act
