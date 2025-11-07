@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Text;
+using Win32Emu.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -120,6 +121,87 @@ public class EmulatorLoggingTests
 
         // Verify that JitCpu backend is logged
         Assert.Contains(logMessages, msg => msg.Contains("[Loader] Selected CPU Emulator: JitCpu"));
+    }
+
+    [Fact]
+    public void FileLoggingHelper_GenerateLogFilePath_ShouldIncludeMd5Hash()
+    {
+        // Arrange
+        var repoRoot = FindRepositoryRoot();
+        var exePath = Path.Combine(repoRoot!, "EXEs", "ign_teas", "IGN_TEAS.EXE");
+        
+        if (!File.Exists(exePath))
+        {
+            _output.WriteLine($"Test executable not found at: {exePath}");
+            return; // Skip test if executable is not available
+        }
+
+        // Act
+        var logFilePath = FileLoggingHelper.GenerateLogFilePath(exePath);
+
+        // Assert
+        _output.WriteLine($"Generated log file path: {logFilePath}");
+        Assert.NotNull(logFilePath);
+        Assert.Contains("IGN_TEAS", logFilePath);
+        Assert.Contains(".log", logFilePath);
+        
+        // Verify MD5 hash is included (should be 32 hex chars)
+        // Filename format: <name>_<hash>_<timestamp>.log
+        // We need to find the 32-char hex string
+        var fileName = Path.GetFileNameWithoutExtension(logFilePath);
+        
+        // Look for 32 consecutive hex characters
+        var match = System.Text.RegularExpressions.Regex.Match(fileName, @"[0-9a-f]{32}");
+        Assert.True(match.Success, "Should contain a 32-character MD5 hash");
+        Assert.Equal(32, match.Value.Length);
+    }
+
+    [Fact]
+    public void FileLoggingHelper_AddFileLogging_ShouldWriteToFile()
+    {
+        // Arrange
+        var tempFile = Path.Combine(Path.GetTempPath(), $"win32emu_test_{Guid.NewGuid()}.log");
+        
+        try
+        {
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddFileLogging(tempFile);
+                builder.SetMinimumLevel(LogLevel.Information);
+            });
+            
+            var logger = loggerFactory.CreateLogger("TestLogger");
+
+            // Act
+            logger.LogInformation("Test message 1");
+            logger.LogWarning("Test warning");
+            logger.LogError("Test error");
+
+            // Force flush by disposing the factory
+            loggerFactory.Dispose();
+
+            // Assert
+            Assert.True(File.Exists(tempFile), "Log file should be created");
+            
+            var logContent = File.ReadAllText(tempFile);
+            _output.WriteLine("=== Log File Content ===");
+            _output.WriteLine(logContent);
+            
+            Assert.Contains("Test message 1", logContent);
+            Assert.Contains("Test warning", logContent);
+            Assert.Contains("Test error", logContent);
+            Assert.Contains("[INFO]", logContent);
+            Assert.Contains("[WARN]", logContent);
+            Assert.Contains("[ERROR]", logContent);
+        }
+        finally
+        {
+            // Clean up
+            if (File.Exists(tempFile))
+            {
+                File.Delete(tempFile);
+            }
+        }
     }
 
     /// <summary>
