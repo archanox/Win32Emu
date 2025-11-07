@@ -34,6 +34,11 @@ namespace Win32Emu.Win32.Modules
 				case "__CXXFRAMEHANDLER":
 					returnValue = __CxxFrameHandler(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
+				case "__FTOL":
+				case "__FTOL2":
+				case "__FTOL2_SSE":
+					returnValue = (uint)__ftol(cpu);
+					return true;
 				case "__GETMAINARGS":
 					returnValue = (uint)__getmainargs(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
 					return true;
@@ -806,6 +811,72 @@ namespace Win32Emu.Win32.Modules
 			return c - ('a' - 'A');
 		}
 		return c;
+	}
+
+	/// <summary>
+	/// __ftol - Convert floating point value in ST(0) to signed long integer
+	/// This is a special CRT function that reads from the x87 FPU stack
+	/// </summary>
+	private long __ftol(ICpu cpu)
+	{
+		_logger.LogInformation("[msvcrt] __ftol()");
+		
+		// __ftol reads the floating point value from ST(0) and converts to long
+		// The result is returned in EDX:EAX (high:low)
+		// ST(0) is popped from the FPU stack
+		
+		long result;
+		
+		// Try to access FPU state through concrete CPU implementations
+		if (cpu is Cpu.Iced.IcedCpu icedCpu)
+		{
+			// Use reflection to access private FPU methods on IcedCpu
+			var fpuGetStMethod = typeof(Cpu.Iced.IcedCpu).GetMethod("FpuGetSt", 
+				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+			var fpuPopMethod = typeof(Cpu.Iced.IcedCpu).GetMethod("FpuPop",
+				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+			
+			if (fpuGetStMethod != null && fpuPopMethod != null)
+			{
+				var st0 = (double)fpuGetStMethod.Invoke(icedCpu, new object[] { 0 })!;
+				fpuPopMethod.Invoke(icedCpu, null);
+				result = (long)st0;
+				_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result}", st0, result);
+			}
+			else
+			{
+				_logger.LogWarning("[msvcrt] __ftol: Could not access FPU methods via reflection, returning 0");
+				result = 0;
+			}
+		}
+		else if (cpu is Cpu.Jit.JitCpu jitCpu)
+		{
+			// Use reflection to access private FPU methods on JitCpu
+			var fpuGetStMethod = typeof(Cpu.Jit.JitCpu).GetMethod("FpuGetSt",
+				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+			var fpuPopMethod = typeof(Cpu.Jit.JitCpu).GetMethod("FpuPop",
+				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+			
+			if (fpuGetStMethod != null && fpuPopMethod != null)
+			{
+				var st0 = (double)fpuGetStMethod.Invoke(jitCpu, new object[] { 0 })!;
+				fpuPopMethod.Invoke(jitCpu, null);
+				result = (long)st0;
+				_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result}", st0, result);
+			}
+			else
+			{
+				_logger.LogWarning("[msvcrt] __ftol: Could not access FPU methods via reflection, returning 0");
+				result = 0;
+			}
+		}
+		else
+		{
+			_logger.LogWarning("[msvcrt] __ftol: Unknown CPU type, returning 0");
+			result = 0;
+		}
+		
+		return result;
 	}
 }
 }
