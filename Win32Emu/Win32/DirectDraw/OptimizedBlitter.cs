@@ -3,8 +3,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Runtime.Intrinsics.Arm;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Win32Emu.Win32.DirectDraw
 {
@@ -14,7 +12,6 @@ namespace Win32Emu.Win32.DirectDraw
 	/// </summary>
 	public static class OptimizedBlitter
 	{
-		private static readonly ILogger _logger = NullLogger.Instance;
 
 		/// <summary>
 		/// Performs a fast blit operation without color key.
@@ -151,15 +148,12 @@ namespace Win32Emu.Win32.DirectDraw
 								continue;
 							}
 
-							// Mixed case: copy non-transparent bytes individually
-							for (var i = 0; i < 16; i++)
-							{
-								var pixel = srcRow[x + i];
-								if (pixel < colorKeyLow || pixel > colorKeyHigh)
-								{
-									dstRow[x + i] = pixel;
-								}
-							}
+							// Mixed case: use SIMD to blend source and destination
+							var destData = Sse2.LoadVector128(dstRow + x);
+							var maskedSrc = Sse2.And(srcData, isNotTransparent.AsByte());
+							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData); // AndNot(a,b) is (~a) & b
+							var result = Sse2.Or(maskedSrc, maskedDest);
+							Sse2.Store(dstRow + x, result);
 						}
 
 						// Handle remaining bytes
@@ -304,15 +298,12 @@ namespace Win32Emu.Win32.DirectDraw
 								continue;
 							}
 
-							// Mixed case: copy non-transparent pixels individually
-							for (var i = 0; i < 8; i++)
-							{
-								var pixel = ((ushort*)(srcRow + (x + i) * 2))[0];
-								if (pixel < colorKeyLow || pixel > colorKeyHigh)
-								{
-									((ushort*)(dstRow + (x + i) * 2))[0] = pixel;
-								}
-							}
+							// Mixed case: use SIMD to blend source and destination
+							var destData = Sse2.LoadVector128((ushort*)(dstRow + x * 2));
+							var maskedSrc = Sse2.And(srcData.AsByte(), isNotTransparent.AsByte());
+							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData.AsByte()); // AndNot(a,b) is (~a) & b
+							var result = Sse2.Or(maskedSrc, maskedDest);
+							Sse2.Store((ushort*)(dstRow + x * 2), result.AsUInt16());
 						}
 
 						// Handle remaining pixels
@@ -478,15 +469,12 @@ namespace Win32Emu.Win32.DirectDraw
 								continue;
 							}
 
-							// Mixed case: copy non-transparent pixels individually
-							for (var i = 0; i < 4; i++)
-							{
-								var pixel = ((uint*)(srcRow + (x + i) * 4))[0];
-								if (pixel < colorKeyLow || pixel > colorKeyHigh)
-								{
-									((uint*)(dstRow + (x + i) * 4))[0] = pixel;
-								}
-							}
+							// Mixed case: use SIMD to blend source and destination
+							var destData = Sse2.LoadVector128((uint*)(dstRow + x * 4));
+							var maskedSrc = Sse2.And(srcData.AsByte(), isNotTransparent.AsByte());
+							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData.AsByte()); // AndNot(a,b) is (~a) & b
+							var result = Sse2.Or(maskedSrc, maskedDest);
+							Sse2.Store((uint*)(dstRow + x * 4), result.AsUInt32());
 						}
 
 						// Handle remaining pixels
