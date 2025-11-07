@@ -40,14 +40,26 @@ namespace Win32Emu.Win32.Modules
 					returnValue = __CxxFrameHandler(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 				case "__FTOL":
-					returnValue = (uint)__ftol();
-					return true;
+					{
+						var result = __ftol();
+						returnValue = (uint)result;
+						_cpu!.SetRegister("EDX", (uint)((ulong)result >> 32));
+						return true;
+					}
 				case "__FTOL2":
-					returnValue = (uint)__ftol2();
-					return true;
+					{
+						var result = __ftol2();
+						returnValue = (uint)result;
+						_cpu!.SetRegister("EDX", (uint)((ulong)result >> 32));
+						return true;
+					}
 				case "__FTOL2_SSE":
-					returnValue = (uint)__ftol2_sse();
-					return true;
+					{
+						var result = __ftol2_sse();
+						returnValue = (uint)result;
+						_cpu!.SetRegister("EDX", (uint)((ulong)result >> 32));
+						return true;
+					}
 				case "__GETMAINARGS":
 					returnValue = (uint)__getmainargs(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
 					return true;
@@ -890,16 +902,10 @@ namespace Win32Emu.Win32.Modules
 		
 		var result = (long)st0;
 		
-		// Set both EAX (low 32 bits) and EDX (high 32 bits)
-		_cpu.SetRegister("EAX", (uint)(result & 0xFFFFFFFF));
-		_cpu.SetRegister("EDX", (uint)((result >> 32) & 0xFFFFFFFF));
+		// Note: EDX:EAX registers are set by the caller in the switch statement
+		// to avoid redundant setting (Win32Dispatcher also sets EAX from returnValue)
 		
-		_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result:X16} (EDX:EAX = {Edx:X8}:{Eax:X8})", 
-			st0, result, (uint)((result >> 32) & 0xFFFFFFFF), (uint)(result & 0xFFFFFFFF));
-		
-		return result;
-		_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result:X16} (EDX:EAX = {Edx:X8}:{Eax:X8})", 
-			st0, result, (uint)((result >> 32) & 0xFFFFFFFF), (uint)(result & 0xFFFFFFFF));
+		_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result:X16}", st0, result);
 		
 		return result;
 	}
