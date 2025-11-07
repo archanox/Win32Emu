@@ -817,6 +817,7 @@ namespace Win32Emu.Win32.Modules
 	/// __ftol - Convert floating point value in ST(0) to signed long integer
 	/// This is a special CRT function that reads from the x87 FPU stack
 	/// </summary>
+	[DllModuleExport(0)]
 	private long __ftol(ICpu cpu)
 	{
 		_logger.LogInformation("[msvcrt] __ftol()");
