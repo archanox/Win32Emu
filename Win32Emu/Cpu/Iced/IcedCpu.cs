@@ -2377,6 +2377,7 @@ public class IcedCpu : IAsyncCpu
 		// This prevents crashes but may not be functionally correct for all programs.
 		// The instruction reads from AL/AX/EAX but we don't need to do anything with the value.
 		// Just let the instruction complete successfully as a no-op.
+		_logger.LogDebug("[IcedCpu] OUT instruction at EIP=0x{Eip:X8} - I/O port operations not emulated", _eip);
 	}
 
 	private void ExecFld(Instruction insn)
