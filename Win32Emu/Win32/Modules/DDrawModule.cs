@@ -2297,6 +2297,16 @@ namespace Win32Emu.Win32.Modules
 			var dwFlags = args.UInt32(2);
 
 			_logger.LogInformation("[DDraw COM] IDirectDraw::SetCooperativeLevel(this=0x{ThisPtr:X8}, hWnd=0x{HWnd:X8}, flags=0x{DwFlags:X8})", thisPtr, hWnd, dwFlags);
+			
+			// Decode and log flags for better debugging
+			var flagsStr = new List<string>();
+			if ((dwFlags & 0x00000008) != 0) flagsStr.Add("DDSCL_FULLSCREEN");
+			if ((dwFlags & 0x00000010) != 0) flagsStr.Add("DDSCL_EXCLUSIVE");
+			if ((dwFlags & 0x00000002) != 0) flagsStr.Add("DDSCL_NORMAL");
+			if ((dwFlags & 0x00000020) != 0) flagsStr.Add("DDSCL_ALLOWMODEX");
+			if ((dwFlags & 0x00000040) != 0) flagsStr.Add("DDSCL_ALLOWREBOOT");
+			if ((dwFlags & 0x00000080) != 0) flagsStr.Add("DDSCL_NOWINDOWCHANGES");
+			_logger.LogDebug("[DDraw COM] SetCooperativeLevel flags: {Flags}", string.Join(" | ", flagsStr));
 
 			// Look up the actual handle from the COM object address
 			if (!_comObjectToHandle.TryGetValue(thisPtr, out var actualHandle))
@@ -2328,16 +2338,20 @@ namespace Win32Emu.Win32.Modules
 					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
 					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
 				}
+				
+				_logger.LogInformation("[DDraw COM] SetCooperativeLevel succeeded, returning DD_OK (0)");
 			}
 			else
 			{
 				_logger.LogError("[DDraw] SetCooperativeLevel: Could not find DirectDraw object with handle 0x{Handle:X8}", actualHandle);
+				_logger.LogError("[DDraw COM] SetCooperativeLevel failed, returning DDERR_GENERIC (1)");
+				return 1; // DDERR_GENERIC
 			}
 
 			return 0; // DD_OK
 		}
 
-		private uint DDraw_SetDisplayMode(ICpu cpu, VirtualMemory memory, uint ddrawHandle)
+			private uint DDraw_SetDisplayMode(ICpu cpu, VirtualMemory memory, uint ddrawHandle)
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
@@ -2346,6 +2360,17 @@ namespace Win32Emu.Win32.Modules
 			var dwBPP = args.UInt32(3);
 
 			_logger.LogInformation("[DDraw COM] IDirectDraw::SetDisplayMode(this=0x{ThisPtr:X8}, width={DwWidth}, height={DwHeight}, bpp={DwBpp})", thisPtr, dwWidth, dwHeight, dwBPP);
+			
+			// Validate parameters
+			if (dwWidth == 0 || dwHeight == 0)
+			{
+				_logger.LogError("[DDraw COM] SetDisplayMode: Invalid dimensions ({Width}x{Height})", dwWidth, dwHeight);
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+			if (dwBPP != 8 && dwBPP != 16 && dwBPP != 24 && dwBPP != 32)
+			{
+				_logger.LogWarning("[DDraw COM] SetDisplayMode: Unusual BPP value {Bpp}, accepting anyway", dwBPP);
+			}
 
 			// Look up the actual handle from the COM object address
 			if (!_comObjectToHandle.TryGetValue(thisPtr, out var actualHandle))
@@ -2385,8 +2410,10 @@ namespace Win32Emu.Win32.Modules
 					if (!success)
 					{
 						_logger.LogError("[DDraw] Failed to initialize rendering backend");
+						_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
 						return 1; // DDERR_GENERIC
 					}
+					_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}", dwWidth, dwHeight);
 				}
 
 				// Subscribe to UI events from the rendering backend
@@ -2396,10 +2423,13 @@ namespace Win32Emu.Win32.Modules
 					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
 					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
 				}
+				
+				_logger.LogInformation("[DDraw COM] SetDisplayMode succeeded, returning DD_OK (0)");
 			}
 			else
 			{
 				_logger.LogError("[DDraw] SetDisplayMode: Could not find DirectDraw object with handle 0x{Handle:X8}", actualHandle);
+				_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
 				return 1; // DDERR_GENERIC
 			}
 

@@ -75,11 +75,62 @@ public class ComVtableDispatcher
 		
 		if (_vtableHandlers.TryGetValue(address, out var handler))
 		{
+			// Capture register state before method invocation for debugging
+			var eipBefore = cpu.GetEip();
+			var espBefore = cpu.GetRegister("ESP");
+			var ebpBefore = cpu.GetRegister("EBP");
+			var ebxBefore = cpu.GetRegister("EBX");
+			var esiBefore = cpu.GetRegister("ESI");
+			var ediBefore = cpu.GetRegister("EDI");
+			
 			_logger.LogInformation("[COM] Invoking vtable method: {MethodName} at address 0x{Address:X8}", methodName, address);
+			_logger.LogDebug("[COM] Register state before {MethodName}: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}, EBX=0x{Ebx:X8}, ESI=0x{Esi:X8}, EDI=0x{Edi:X8}", 
+				methodName, eipBefore, espBefore, ebpBefore, ebxBefore, esiBefore, ediBefore);
+			
+			// Invoke the method
 			returnValue = handler(cpu, memory);
+			
+			// Capture register state after method invocation
+			var eipAfter = cpu.GetEip();
+			var espAfter = cpu.GetRegister("ESP");
+			var ebpAfter = cpu.GetRegister("EBP");
+			var ebxAfter = cpu.GetRegister("EBX");
+			var esiAfter = cpu.GetRegister("ESI");
+			var ediAfter = cpu.GetRegister("EDI");
 			
 			// Get argument byte count for stack cleanup (0 if not registered)
 			argBytes = _vtableArgBytes.GetValueOrDefault(address, 0);
+			
+			// Log return value and register state after
+			_logger.LogInformation("[COM] {MethodName} returned 0x{ReturnValue:X8} (argBytes={ArgBytes})", methodName, returnValue, argBytes);
+			_logger.LogDebug("[COM] Register state after {MethodName}: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}, EBX=0x{Ebx:X8}, ESI=0x{Esi:X8}, EDI=0x{Edi:X8}", 
+				methodName, eipAfter, espAfter, ebpAfter, ebxAfter, esiAfter, ediAfter);
+			
+			// Verify callee-saved registers are preserved (EBX, ESI, EDI, EBP)
+			if (ebxBefore != ebxAfter)
+			{
+				_logger.LogWarning("[COM] {MethodName} corrupted EBX: before=0x{Before:X8}, after=0x{After:X8}", methodName, ebxBefore, ebxAfter);
+			}
+			if (esiBefore != esiAfter)
+			{
+				_logger.LogWarning("[COM] {MethodName} corrupted ESI: before=0x{Before:X8}, after=0x{After:X8}", methodName, esiBefore, esiAfter);
+			}
+			if (ediBefore != ediAfter)
+			{
+				_logger.LogWarning("[COM] {MethodName} corrupted EDI: before=0x{Before:X8}, after=0x{After:X8}", methodName, ediBefore, ediAfter);
+			}
+			if (ebpBefore != ebpAfter)
+			{
+				_logger.LogWarning("[COM] {MethodName} corrupted EBP: before=0x{Before:X8}, after=0x{After:X8}", methodName, ebpBefore, ebpAfter);
+			}
+			
+			// Verify ESP alignment (should be aligned after stack cleanup)
+			var expectedEsp = espBefore; // For thiscall/stdcall, ESP should be managed by caller or callee
+			if (argBytes > 0)
+			{
+				// For stdcall, callee cleans the stack
+				expectedEsp = espBefore + (uint)argBytes;
+			}
 			
 			return true;
 		}
