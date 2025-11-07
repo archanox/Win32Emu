@@ -8084,7 +8084,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_env.MemWrite32(lppe + 28, 8); // pcPriClassBase (NORMAL_PRIORITY_CLASS)
 		_env.MemWrite32(lppe + 32, 0); // dwFlags
 		// szExeFile - write process name
-		_env.WriteAnsiStringAt(lppe + 36, "setup.exe");
+		_env.WriteAnsiStringAt(lppe + 36, _env.GetMainExecutableName());
 
 		// No more processes after this one (stub)
 		return 1; // TRUE
