@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Win32Emu.Logging;
 
 namespace Win32Emu;
 
@@ -81,6 +82,19 @@ public static class EmulatorLauncher
 			}
 		}
 
+		// Parse file logging options
+		var enableFileLogging = args.Contains("--log-file");
+		string? logFilePath = null;
+		if (enableFileLogging)
+		{
+			var logFileIndex = Array.IndexOf(args, "--log-file");
+			if (logFileIndex >= 0 && logFileIndex + 1 < args.Length && 
+			    !args[logFileIndex + 1].StartsWith("--"))
+			{
+				logFilePath = args[logFileIndex + 1];
+			}
+		}
+
 		// Check for backend selection
 		var backendIndex = Array.IndexOf(args, "--backend");
 		if (backendIndex >= 0 && backendIndex + 1 < args.Length &&
@@ -97,6 +111,20 @@ public static class EmulatorLauncher
 			return 1;
 		}
 
+		// Generate log file path based on MD5 hash if file logging is enabled
+		if (enableFileLogging && string.IsNullOrEmpty(logFilePath))
+		{
+			try
+			{
+				logFilePath = FileLoggingHelper.GenerateLogFilePath(path);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Warning: Could not generate log file path: {ex.Message}");
+				enableFileLogging = false;
+			}
+		}
+
 		// Set up logging - use provided factory or create default
 		var shouldDisposeLoggerFactory = false;
 		if (loggerFactory == null)
@@ -106,6 +134,12 @@ public static class EmulatorLauncher
 				builder
 					.AddConsole()
 					.SetMinimumLevel(debugMode ? LogLevel.Debug : LogLevel.Information);
+				
+				// Add file logging if enabled
+				if (enableFileLogging && !string.IsNullOrEmpty(logFilePath))
+				{
+					builder.AddFileLogging(logFilePath);
+				}
 			});
 			shouldDisposeLoggerFactory = true;
 		}
@@ -113,6 +147,12 @@ public static class EmulatorLauncher
 		try
 		{
 			var logger = loggerFactory.CreateLogger<Emulator>();
+
+			// Log file path if file logging is enabled
+			if (enableFileLogging && !string.IsNullOrEmpty(logFilePath))
+			{
+				logger.LogInformation("Logging to file: {LogFilePath}", logFilePath);
+			}
 
 			// Initialize OpenTelemetry if enabled
 			Telemetry.TelemetryService? telemetryService = null;
@@ -222,6 +262,7 @@ public static class EmulatorLauncher
 		Console.WriteLine("  --backend <SDL|GLFW|Vulkan|Metal|Software> Select rendering backend (default: SDL)");
 		Console.WriteLine("  --trace-api [file]   Enable comprehensive API call tracing (optional output file)");
 		Console.WriteLine("  --compare-apimon <csv> Compare behavior against API Monitor CSV log");
+		Console.WriteLine("  --log-file [path]    Enable logging to file (auto-generates MD5-based filename if path not provided)");
 		Console.WriteLine("  --telemetry-console  Enable OpenTelemetry with console exporter");
 		Console.WriteLine("  --telemetry-otlp [endpoint] Enable OpenTelemetry with OTLP exporter (default: http://localhost:4317)");
 		Console.WriteLine();
@@ -232,6 +273,8 @@ public static class EmulatorLauncher
 		Console.WriteLine("Examples:");
 		Console.WriteLine("  Win32Emu game.exe");
 		Console.WriteLine("  Win32Emu game.exe --debug");
+		Console.WriteLine("  Win32Emu game.exe --log-file");
+		Console.WriteLine("  Win32Emu game.exe --log-file custom.log");
 		Console.WriteLine("  Win32Emu game.exe --trace-api trace.log");
 		Console.WriteLine("  Win32Emu game.exe --trace-api --compare-apimon ApiMonLogs/game.csv");
 		Console.WriteLine("  Win32Emu game.exe --backend SDL");

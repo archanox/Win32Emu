@@ -23,6 +23,10 @@ public class EmulatorConfiguration
 	public bool UseOtlpExporter { get; set; }
 	public string OtlpEndpoint { get; set; } = "http://localhost:4317";
 	
+	// File Logging Settings
+	public bool EnableFileLogging { get; set; }
+	public string? LogFileDirectory { get; set; }
+	
 	// Virtual Disk Settings
 	/// <summary>
 	/// Enable virtual disk by default for all games (can be overridden per-game)

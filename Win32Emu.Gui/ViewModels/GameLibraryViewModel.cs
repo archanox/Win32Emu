@@ -9,6 +9,7 @@ using Win32Emu.Gui.Models;
 using Win32Emu.Gui.Services;
 using Win32Emu.Gui.Views;
 using Win32Emu.Loader;
+using Win32Emu.Logging;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -369,6 +370,22 @@ public partial class GameLibraryViewModel : ViewModelBase
 	                    LogLevel.Debug //: 
 	                    //LogLevel.Information
 	                    );
+                
+                // Add file logging if enabled
+                if (_configuration.EnableFileLogging)
+                {
+	                try
+	                {
+		                var logFilePath = FileLoggingHelper.GenerateLogFilePath(
+			                game.ExecutablePath, 
+			                _configuration.LogFileDirectory);
+		                builder.AddFileLogging(logFilePath);
+	                }
+	                catch (Exception ex)
+	                {
+		                _logger.LogWarning(ex, "Could not enable file logging");
+	                }
+                }
             });
             
             var logger = loggerFactory.CreateLogger<Emulator>();
