@@ -1084,7 +1084,7 @@ namespace Win32Emu.Win32.Modules
 					_env.MemWrite32(lpDDSurfaceDesc + 12, (uint)surface.Width); // dwWidth
 					_env.MemWrite32(lpDDSurfaceDesc + 16, (uint)surface.Pitch); // lPitch
 
-					// Write pixel format (offset 76)
+					// Write pixel format (offset 76 for DDSURFACEDESC, 72 for actual spec)
 					if (dwSize >= 108)
 					{
 						_env.MemWrite32(lpDDSurfaceDesc + 76, 32); // dwSize of DDPIXELFORMAT
@@ -1107,6 +1107,16 @@ namespace Win32Emu.Win32.Modules
 						}
 
 						_env.MemWrite32(lpDDSurfaceDesc + 104, 0); // dwRGBAlphaBitMask
+					}
+
+					// Write ddsCaps (offset 108)
+					// For primary surfaces, set DDSCAPS_PRIMARYSURFACE; for others, set DDSCAPS_OFFSCREENPLAIN
+					if (dwSize >= 112)
+					{
+						const uint DDSCAPS_PRIMARYSURFACE = 0x00000200;
+						const uint DDSCAPS_OFFSCREENPLAIN = 0x00000040;
+						var caps = surface.IsPrimary ? DDSCAPS_PRIMARYSURFACE : DDSCAPS_OFFSCREENPLAIN;
+						_env.MemWrite32(lpDDSurfaceDesc + 108, caps); // ddsCaps.dwCaps
 					}
 				}
 			}
@@ -2108,6 +2118,14 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					_env.MemWrite32(lpDDSurfaceDesc + 104, 0); // dwRGBAlphaBitMask
+				}
+
+				// Write ddsCaps (offset 108)
+				// For display mode, set DDSCAPS_PRIMARYSURFACE
+				if (dwSize >= 112)
+				{
+					const uint DDSCAPS_PRIMARYSURFACE = 0x00000200;
+					_env.MemWrite32(lpDDSurfaceDesc + 108, DDSCAPS_PRIMARYSURFACE); // ddsCaps.dwCaps
 				}
 			}
 
