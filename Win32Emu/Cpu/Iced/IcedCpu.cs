@@ -536,6 +536,7 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Sldt: ExecSldt(insn); break;
 				case Mnemonic.Arpl: ExecArpl(insn); break;
 				case Mnemonic.In: ExecIn(insn); break;
+				case Mnemonic.Out: ExecOut(insn); break;
 				case Mnemonic.Int:
 					// Handle INT instruction with immediate
 					if (insn.Immediate8 == 3)
@@ -2367,6 +2368,15 @@ public class IcedCpu : IAsyncCpu
 				_eax = 0;
 				break;
 		}
+	}
+
+	private void ExecOut(Instruction insn)
+	{
+		// OUT port, accumulator
+		// We don't emulate I/O ports, so we'll just discard the value.
+		// This prevents crashes but may not be functionally correct for all programs.
+		// The instruction reads from AL/AX/EAX but we don't need to do anything with the value.
+		// Just let the instruction complete successfully as a no-op.
 	}
 
 	private void ExecFld(Instruction insn)
