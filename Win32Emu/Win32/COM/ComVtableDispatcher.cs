@@ -132,6 +132,11 @@ public class ComVtableDispatcher
 				expectedEsp = espBefore + (uint)argBytes;
 			}
 			
+			if (espAfter != expectedEsp)
+			{
+				_logger.LogWarning("[COM] {MethodName} stack pointer mismatch: expected ESP=0x{Expected:X8}, actual ESP=0x{Actual:X8} (argBytes={ArgBytes})", methodName, expectedEsp, espAfter, argBytes);
+			}
+			
 			return true;
 		}
 		

@@ -118,9 +118,19 @@ public static class EmulatorLauncher
 			{
 				logFilePath = FileLoggingHelper.GenerateLogFilePath(path);
 			}
-			catch (Exception ex)
+			catch (IOException ex)
 			{
-				Console.WriteLine($"Warning: Could not generate log file path: {ex.Message}");
+				Console.WriteLine($"Warning: Could not generate log file path for {path}: {ex.Message}");
+				enableFileLogging = false;
+			}
+			catch (UnauthorizedAccessException ex)
+			{
+				Console.WriteLine($"Warning: Could not generate log file path for {path}: {ex.Message}");
+				enableFileLogging = false;
+			}
+			catch (ArgumentException ex)
+			{
+				Console.WriteLine($"Warning: Could not generate log file path for {path}: {ex.Message}");
 				enableFileLogging = false;
 			}
 		}
