@@ -469,6 +469,131 @@ public class BasicInstructionTests : IDisposable
         Assert.Equal(flagsValue, newFlags); // All 32 bits should be restored
     }
 
+    [Fact]
+    public void IN_AL_Imm8_ShouldReturnZero()
+    {
+        // Arrange: IN AL, 0x60 (E4 60)
+        // I/O ports are not emulated, so IN should return 0
+        _helper.SetReg("EAX", 0xFFFFFFFF); // Set AL to 0xFF
+        _helper.WriteCode(0xE4, 0x60);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(0xFFFFFF00u, _helper.GetReg("EAX")); // AL should be 0x00, high bytes preserved
+    }
+
+    [Fact]
+    public void IN_AX_Imm8_ShouldReturnZero()
+    {
+        // Arrange: IN AX, 0x60 (66 E5 60) - 16-bit operand size prefix
+        _helper.SetReg("EAX", 0xFFFFFFFF); // Set AX to 0xFFFF
+        _helper.WriteCode(0x66, 0xE5, 0x60);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(0xFFFF0000u, _helper.GetReg("EAX")); // AX should be 0x0000, high word preserved
+    }
+
+    [Fact]
+    public void IN_EAX_Imm8_ShouldReturnZero()
+    {
+        // Arrange: IN EAX, 0x60 (E5 60)
+        _helper.SetReg("EAX", 0xFFFFFFFF);
+        _helper.WriteCode(0xE5, 0x60);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        Assert.Equal(0x00000000u, _helper.GetReg("EAX")); // EAX should be 0x00000000
+    }
+
+    [Fact]
+    public void OUT_Imm8_AL_ShouldNotCrash()
+    {
+        // Arrange: OUT 0x60, AL (E6 60)
+        // I/O ports are not emulated, so OUT should be a no-op
+        _helper.SetReg("EAX", 0x12345678); // Set AL to 0x78
+        _helper.WriteCode(0xE6, 0x60);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        // Instruction should complete without crashing
+        // EAX should remain unchanged since OUT doesn't modify the accumulator
+        Assert.Equal(0x12345678u, _helper.GetReg("EAX"));
+    }
+
+    [Fact]
+    public void OUT_Imm8_AX_ShouldNotCrash()
+    {
+        // Arrange: OUT 0x60, AX (66 E7 60) - 16-bit operand size prefix
+        _helper.SetReg("EAX", 0x12345678); // Set AX to 0x5678
+        _helper.WriteCode(0x66, 0xE7, 0x60);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        // Instruction should complete without crashing
+        Assert.Equal(0x12345678u, _helper.GetReg("EAX"));
+    }
+
+    [Fact]
+    public void OUT_Imm8_EAX_ShouldNotCrash()
+    {
+        // Arrange: OUT 0x60, EAX (E7 60)
+        _helper.SetReg("EAX", 0x12345678);
+        _helper.WriteCode(0xE7, 0x60);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        // Instruction should complete without crashing
+        Assert.Equal(0x12345678u, _helper.GetReg("EAX"));
+    }
+
+    [Fact]
+    public void OUT_DX_AL_ShouldNotCrash()
+    {
+        // Arrange: OUT DX, AL (EE)
+        // Port number in DX, value to output in AL
+        _helper.SetReg("EDX", 0x00000060); // Port 0x60
+        _helper.SetReg("EAX", 0x12345678); // Value 0x78 in AL
+        _helper.WriteCode(0xEE);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        // Instruction should complete without crashing
+        Assert.Equal(0x12345678u, _helper.GetReg("EAX"));
+        Assert.Equal(0x00000060u, _helper.GetReg("EDX"));
+    }
+
+    [Fact]
+    public void OUT_DX_EAX_ShouldNotCrash()
+    {
+        // Arrange: OUT DX, EAX (EF)
+        _helper.SetReg("EDX", 0x00000060); // Port 0x60
+        _helper.SetReg("EAX", 0x12345678);
+        _helper.WriteCode(0xEF);
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        // Instruction should complete without crashing
+        Assert.Equal(0x12345678u, _helper.GetReg("EAX"));
+        Assert.Equal(0x00000060u, _helper.GetReg("EDX"));
+    }
+
     public void Dispose()
     {
         _helper?.Dispose();
