@@ -94,10 +94,11 @@ public partial class ExceptionDialog : Window
 				}
 			}
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
 		{
-			// Fallback if clipboard access fails
-			Console.WriteLine($"Failed to copy to clipboard: {ex.Message}");
+			// Fallback if clipboard access fails - log to debug output only
+			// Cannot use ILogger here as this is a UI component without DI
+			System.Diagnostics.Debug.WriteLine($"Failed to copy to clipboard: {ex.Message}");
 		}
 	}
 

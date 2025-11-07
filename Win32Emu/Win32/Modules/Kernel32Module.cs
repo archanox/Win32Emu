@@ -8074,17 +8074,22 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0; // FALSE
 		}
 
+		// Create ref wrapper to read/write the structure
+		var entry = new ProcessEntry32Ref(_env.Memory, lppe);
+
 		// For stub, return information about the current process
-		_env.MemWrite32(lppe + 4, 0);  // cntUsage
-		_env.MemWrite32(lppe + 8, GetCurrentProcessId());  // th32ProcessID
-		_env.MemWrite32(lppe + 12, 0); // th32DefaultHeapID
-		_env.MemWrite32(lppe + 16, 0); // th32ModuleID
-		_env.MemWrite32(lppe + 20, 1); // cntThreads
-		_env.MemWrite32(lppe + 24, 0); // th32ParentProcessID
-		_env.MemWrite32(lppe + 28, 8); // pcPriClassBase (NORMAL_PRIORITY_CLASS)
-		_env.MemWrite32(lppe + 32, 0); // dwFlags
-		// szExeFile - write process name
-		_env.WriteAnsiStringAt(lppe + 36, _env.GetMainExecutableName());
+		entry.cntUsage = 0;
+		entry.th32ProcessID = GetCurrentProcessId();
+		entry.th32DefaultHeapID = 0;
+		entry.th32ModuleID = 0;
+		entry.cntThreads = 1;
+		entry.th32ParentProcessID = 0;
+		entry.pcPriClassBase = 8; // NORMAL_PRIORITY_CLASS
+		entry.dwFlags = 0;
+		entry.szExeFile = System.IO.Path.GetFileName(_env.ExecutablePath);
+
+		// Log the filled structure
+		_logger.LogDebug("[Kernel32] Process32First: Returned {Entry}", entry.ToString());
 
 		// No more processes after this one (stub)
 		return 1; // TRUE
@@ -8135,13 +8140,19 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0; // FALSE
 		}
 
+		// Create ref wrapper to read/write the structure
+		var entry = new ThreadEntry32Ref(_env.Memory, lpte);
+
 		// For stub, return information about the main thread
-		_env.MemWrite32(lpte + 4, 0);  // cntUsage
-		_env.MemWrite32(lpte + 8, GetCurrentThreadId());  // th32ThreadID
-		_env.MemWrite32(lpte + 12, GetCurrentProcessId()); // th32OwnerProcessID
-		_env.MemWrite32(lpte + 16, 8); // tpBasePri (THREAD_PRIORITY_NORMAL)
-		_env.MemWrite32(lpte + 20, 0); // tpDeltaPri
-		_env.MemWrite32(lpte + 24, 0); // dwFlags
+		entry.cntUsage = 0;
+		entry.th32ThreadID = GetCurrentThreadId();
+		entry.th32OwnerProcessID = GetCurrentProcessId();
+		entry.tpBasePri = 8; // THREAD_PRIORITY_NORMAL
+		entry.tpDeltaPri = 0;
+		entry.dwFlags = 0;
+
+		// Log the filled structure
+		_logger.LogDebug("[Kernel32] Thread32First: Returned {Entry}", entry.ToString());
 
 		return 1; // TRUE
 	}
@@ -8190,18 +8201,22 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0; // FALSE
 		}
 
+		// Create ref wrapper to read/write the structure
+		var entry = new ModuleEntry32Ref(_env.Memory, lpme);
+
 		// For stub, return information about the main module
-		_env.MemWrite32(lpme + 4, 1);  // th32ModuleID
-		_env.MemWrite32(lpme + 8, GetCurrentProcessId()); // th32ProcessID
-		_env.MemWrite32(lpme + 12, 0); // GlblcntUsage
-		_env.MemWrite32(lpme + 16, 0); // ProccntUsage
-		_env.MemWrite32(lpme + 20, 0x00400000); // modBaseAddr (typical base address)
-		_env.MemWrite32(lpme + 24, 0x00100000); // modBaseSize (1 MB)
-		_env.MemWrite32(lpme + 28, 0x00400000); // hModule
-		// szModule
-		_env.WriteAnsiStringAt(lpme + 32, _env.MainModuleName);
-		// szExePath
-		_env.WriteAnsiStringAt(lpme + 288, _env.MainModulePath);
+		entry.th32ModuleID = 1;
+		entry.th32ProcessID = GetCurrentProcessId();
+		entry.GlblcntUsage = 0;
+		entry.ProccntUsage = 0;
+		entry.modBaseAddr = 0x00400000; // typical base address
+		entry.modBaseSize = 0x00100000; // 1 MB
+		entry.hModule = 0x00400000;
+		entry.szModule = System.IO.Path.GetFileName(_env.ExecutablePath);
+		entry.szExePath = _env.ExecutablePath;
+
+		// Log the filled structure
+		_logger.LogDebug("[Kernel32] Module32First: Returned {Entry}", entry.ToString());
 
 		return 1; // TRUE
 	}

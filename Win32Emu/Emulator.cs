@@ -510,7 +510,7 @@ public sealed class Emulator : IDisposable
                 await RunNormalAsync();
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException && ex is not System.Threading.ThreadAbortException)
         {
             // Log the unhandled exception
             _logger.LogError(ex, "[Emulator] Unhandled exception during emulation");

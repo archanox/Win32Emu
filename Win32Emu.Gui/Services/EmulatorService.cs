@@ -114,7 +114,7 @@ public class EmulatorService
                                 
                                 await Views.ExceptionDialog.ShowExceptionDialogAsync(mainWindow, _currentEmulator.LastException!, "Emulation");
                             }
-                            catch (Exception dialogEx)
+                            catch (Exception dialogEx) when (dialogEx is not OutOfMemoryException && dialogEx is not StackOverflowException)
                             {
                                 _logger.LogError(dialogEx, "Failed to show exception dialog");
                             }
