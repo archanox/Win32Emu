@@ -4,6 +4,7 @@ using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Win32.COM;
+using static Win32Emu.Win32.NativeTypes;
 
 namespace Win32Emu.Win32.Modules
 {
@@ -627,13 +628,13 @@ namespace Win32Emu.Win32.Modules
 
 			// Read surface description
 			var dwSize = _env.MemRead32(lpDDSurfaceDesc);
-			var dwFlags = _env.MemRead32(lpDDSurfaceDesc + 4);
+			var dwFlags = (DDSD)_env.MemRead32(lpDDSurfaceDesc + 4);
 			var dwHeight = _env.MemRead32(lpDDSurfaceDesc + 8);
 			var dwWidth = _env.MemRead32(lpDDSurfaceDesc + 12);
 
 			// Read backbuffer count if DDSD_BACKBUFFERCOUNT flag is set
 			var dwBackBufferCount = 0u;
-			if ((dwFlags & 0x00000020) != 0) // DDSD_BACKBUFFERCOUNT
+			if (dwFlags.HasFlag(DDSD.BACKBUFFERCOUNT))
 			{
 				dwBackBufferCount = _env.MemRead32(lpDDSurfaceDesc + 20);
 			}
@@ -1078,7 +1079,7 @@ namespace Win32Emu.Win32.Modules
 					var dwSize = _env.MemRead32(lpDDSurfaceDesc);
 
 					// Fill DDSURFACEDESC structure
-					_env.MemWrite32(lpDDSurfaceDesc + 4, 0x0000100F); // dwFlags: DDSD_WIDTH | DDSD_HEIGHT | DDSD_PITCH | DDSD_PIXELFORMAT
+					_env.MemWrite32(lpDDSurfaceDesc + 4, (uint)(DDSD.WIDTH | DDSD.HEIGHT | DDSD.PITCH | DDSD.PIXELFORMAT));
 					_env.MemWrite32(lpDDSurfaceDesc + 8, (uint)surface.Height); // dwHeight
 					_env.MemWrite32(lpDDSurfaceDesc + 12, (uint)surface.Width); // dwWidth
 					_env.MemWrite32(lpDDSurfaceDesc + 16, (uint)surface.Pitch); // lPitch
@@ -2079,7 +2080,7 @@ namespace Win32Emu.Win32.Modules
 				// Fill DDSURFACEDESC structure
 				var dwSize = _env.MemRead32(lpDDSurfaceDesc);
 
-				_env.MemWrite32(lpDDSurfaceDesc + 4, 0x0000100F); // dwFlags: DDSD_WIDTH | DDSD_HEIGHT | DDSD_PITCH | DDSD_PIXELFORMAT
+				_env.MemWrite32(lpDDSurfaceDesc + 4, (uint)(DDSD.WIDTH | DDSD.HEIGHT | DDSD.PITCH | DDSD.PIXELFORMAT));
 				_env.MemWrite32(lpDDSurfaceDesc + 8, (uint)ddrawObj.Height); // dwHeight
 				_env.MemWrite32(lpDDSurfaceDesc + 12, (uint)ddrawObj.Width); // dwWidth
 				_env.MemWrite32(lpDDSurfaceDesc + 16, (uint)(ddrawObj.Width * (ddrawObj.BitsPerPixel / 8))); // lPitch
@@ -2453,7 +2454,7 @@ namespace Win32Emu.Win32.Modules
 				var dwSize = _env.MemRead32(lpDDSurfaceDesc);
 
 				// Write the surface description
-				_env.MemWrite32(lpDDSurfaceDesc + 4, 0x00001007); // DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PITCH | DDSD_PIXELFORMAT
+				_env.MemWrite32(lpDDSurfaceDesc + 4, (uint)(DDSD.CAPS | DDSD.HEIGHT | DDSD.WIDTH | DDSD.PITCH | DDSD.PIXELFORMAT));
 				_env.MemWrite32(lpDDSurfaceDesc + 8, (uint)surface.Height); // dwHeight
 				_env.MemWrite32(lpDDSurfaceDesc + 12, (uint)surface.Width); // dwWidth
 				_env.MemWrite32(lpDDSurfaceDesc + 16, (uint)surface.Pitch); // lPitch

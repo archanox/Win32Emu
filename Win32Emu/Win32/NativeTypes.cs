@@ -358,12 +358,41 @@ public static class NativeTypes
 		public int nTrackPos;    // Offset 24
 	}
 
+	/// <summary>
+	/// Flags for DDSURFACEDESC dwFlags field
+	/// </summary>
+	[Flags]
+	public enum DDSD : uint
+	{
+		CAPS = 0x00000001,           // dwCaps field is valid
+		HEIGHT = 0x00000002,         // dwHeight field is valid
+		WIDTH = 0x00000004,          // dwWidth field is valid
+		PITCH = 0x00000008,          // lPitch field is valid
+		BACKBUFFERCOUNT = 0x00000020, // dwBackBufferCount field is valid
+		ZBUFFERBITDEPTH = 0x00000040, // dwZBufferBitDepth field is valid
+		ALPHABITDEPTH = 0x00000080,  // dwAlphaBitDepth field is valid
+		LPSURFACE = 0x00000800,      // lpSurface field is valid
+		PIXELFORMAT = 0x00001000,    // ddpfPixelFormat field is valid
+		CKDESTOVERLAY = 0x00002000,  // ddckCKDestOverlay field is valid
+		CKDESTBLT = 0x00004000,      // ddckCKDestBlt field is valid
+		CKSRCOVERLAY = 0x00008000,   // ddckCKSrcOverlay field is valid
+		CKSRCBLT = 0x00010000,       // ddckCKSrcBlt field is valid
+		MIPMAPCOUNT = 0x00020000,    // dwMipMapCount field is valid
+		REFRESHRATE = 0x00040000,    // dwRefreshRate field is valid
+		LINEARSIZE = 0x00080000,     // dwLinearSize field is valid
+		TEXTURESTAGE = 0x00100000,   // dwTextureStage field is valid
+		FVF = 0x00200000,            // dwFVF field is valid
+		SRCVBHANDLE = 0x00400000,    // dwSrcVBHandle field is valid
+		DEPTH = 0x00800000,          // dwDepth field is valid
+		ALL = 0x00FFF9EE,            // All fields are valid
+	}
+
 	// DDSURFACEDESC structure (108 bytes minimum)
 	// Used in DirectDraw for surface description
 	public struct DDSURFACEDESC
 	{
 		public uint dwSize;           // Offset 0
-		public uint dwFlags;          // Offset 4
+		public DDSD dwFlags;          // Offset 4
 		public uint dwWidth;          // Offset 8
 		public uint dwHeight;         // Offset 12
 		public uint lPitch;           // Offset 16
