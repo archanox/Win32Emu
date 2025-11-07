@@ -149,10 +149,11 @@ namespace Win32Emu.Win32.DirectDraw
 							}
 
 							// Mixed case: use SIMD to blend source and destination
+							// isNotTransparent has bits set to 1 for pixels to copy from source
 							var destData = Sse2.LoadVector128(dstRow + x);
-							var maskedSrc = Sse2.And(srcData, isNotTransparent.AsByte());
-							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData); // AndNot(a,b) is (~a) & b
-							var result = Sse2.Or(maskedSrc, maskedDest);
+							var maskedSrc = Sse2.And(srcData, isNotTransparent.AsByte()); // Select src where mask=1
+							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData); // AndNot(a,b) = (~a) & b, selects dest where mask=0
+							var result = Sse2.Or(maskedSrc, maskedDest); // Combine: src where non-transparent, dest where transparent
 							Sse2.Store(dstRow + x, result);
 						}
 
@@ -299,10 +300,11 @@ namespace Win32Emu.Win32.DirectDraw
 							}
 
 							// Mixed case: use SIMD to blend source and destination
+							// isNotTransparent has bits set to 1 for pixels to copy from source
 							var destData = Sse2.LoadVector128((ushort*)(dstRow + x * 2));
-							var maskedSrc = Sse2.And(srcData.AsByte(), isNotTransparent.AsByte());
-							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData.AsByte()); // AndNot(a,b) is (~a) & b
-							var result = Sse2.Or(maskedSrc, maskedDest);
+							var maskedSrc = Sse2.And(srcData.AsByte(), isNotTransparent.AsByte()); // Select src where mask=1
+							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData.AsByte()); // AndNot(a,b) = (~a) & b, selects dest where mask=0
+							var result = Sse2.Or(maskedSrc, maskedDest); // Combine: src where non-transparent, dest where transparent
 							Sse2.Store((ushort*)(dstRow + x * 2), result.AsUInt16());
 						}
 
@@ -470,10 +472,11 @@ namespace Win32Emu.Win32.DirectDraw
 							}
 
 							// Mixed case: use SIMD to blend source and destination
+							// isNotTransparent has bits set to 1 for pixels to copy from source
 							var destData = Sse2.LoadVector128((uint*)(dstRow + x * 4));
-							var maskedSrc = Sse2.And(srcData.AsByte(), isNotTransparent.AsByte());
-							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData.AsByte()); // AndNot(a,b) is (~a) & b
-							var result = Sse2.Or(maskedSrc, maskedDest);
+							var maskedSrc = Sse2.And(srcData.AsByte(), isNotTransparent.AsByte()); // Select src where mask=1
+							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData.AsByte()); // AndNot(a,b) = (~a) & b, selects dest where mask=0
+							var result = Sse2.Or(maskedSrc, maskedDest); // Combine: src where non-transparent, dest where transparent
 							Sse2.Store((uint*)(dstRow + x * 4), result.AsUInt32());
 						}
 
