@@ -529,6 +529,70 @@ public static class NativeTypes
 		public uint ContextRecord;   // Offset 4 - Pointer to CONTEXT
 	}
 
+	// Toolhelp32 snapshot flags
+	[Flags]
+	public enum Th32SnapshotFlags : uint
+	{
+		TH32CS_SNAPHEAPLIST = 0x00000001,  // Include all heaps of the process in the snapshot
+		TH32CS_SNAPPROCESS = 0x00000002,   // Include all processes in the system
+		TH32CS_SNAPTHREAD = 0x00000004,    // Include all threads in the system
+		TH32CS_SNAPMODULE = 0x00000008,    // Include all modules of the process
+		TH32CS_SNAPMODULE32 = 0x00000010,  // Include all 32-bit modules
+		TH32CS_SNAPALL = TH32CS_SNAPHEAPLIST | TH32CS_SNAPPROCESS | TH32CS_SNAPTHREAD | TH32CS_SNAPMODULE,
+		TH32CS_INHERIT = 0x80000000        // Inherit from parent process
+	}
+
+	// PROCESSENTRY32 structure (296 bytes)
+	// Describes an entry from a list of the processes residing in the system address space
+	public unsafe struct PROCESSENTRY32
+	{
+		public uint dwSize;              // Offset 0 - Size of the structure (296 bytes)
+		public uint cntUsage;            // Offset 4 - Reference count (no longer used, always 0)
+		public uint th32ProcessID;       // Offset 8 - Process identifier
+		public uint th32DefaultHeapID;   // Offset 12 - Default heap ID (not used)
+		public uint th32ModuleID;        // Offset 16 - Module identifier (not used)
+		public uint cntThreads;          // Offset 20 - Number of execution threads
+		public uint th32ParentProcessID; // Offset 24 - Parent process identifier
+		public int pcPriClassBase;       // Offset 28 - Base priority of threads
+		public uint dwFlags;             // Offset 32 - Reserved (not used)
+		public fixed byte szExeFile[260]; // Offset 36 - Path and filename of executable (MAX_PATH)
+		
+		public const int Size = 296;
+	}
+
+	// THREADENTRY32 structure (28 bytes)
+	// Describes an entry from a list of the threads executing in the system
+	public struct THREADENTRY32
+	{
+		public uint dwSize;              // Offset 0 - Size of the structure (28 bytes)
+		public uint cntUsage;            // Offset 4 - Reference count (no longer used, always 0)
+		public uint th32ThreadID;        // Offset 8 - Thread identifier
+		public uint th32OwnerProcessID;  // Offset 12 - Identifier of the process that created the thread
+		public int tpBasePri;            // Offset 16 - Base priority level
+		public int tpDeltaPri;           // Offset 20 - Delta priority value
+		public uint dwFlags;             // Offset 24 - Reserved (not used)
+		
+		public const int Size = 28;
+	}
+
+	// MODULEENTRY32 structure (548 bytes)
+	// Describes an entry from a list of the modules belonging to a process
+	public unsafe struct MODULEENTRY32
+	{
+		public uint dwSize;              // Offset 0 - Size of the structure (548 bytes)
+		public uint th32ModuleID;        // Offset 4 - Module identifier (not used)
+		public uint th32ProcessID;       // Offset 8 - Process identifier
+		public uint GlblcntUsage;        // Offset 12 - Global usage count (not used)
+		public uint ProccntUsage;        // Offset 16 - Module usage count (not used)
+		public uint modBaseAddr;         // Offset 20 - Base address of module
+		public uint modBaseSize;         // Offset 24 - Size of module in bytes
+		public uint hModule;             // Offset 28 - Module handle
+		public fixed byte szModule[256]; // Offset 32 - Module name (MAX_MODULE_NAME32 + 1)
+		public fixed byte szExePath[260]; // Offset 288 - Module path (MAX_PATH)
+		
+		public const int Size = 548;
+	}
+
 	// EXCEPTION_RECORD structure (partial - 20 bytes minimum)
 	// Describes an exception
 	public struct EXCEPTION_RECORD
