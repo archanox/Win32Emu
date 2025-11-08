@@ -40,6 +40,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	// Toolhelp32 snapshot handle (dummy value for stub implementation)
 	private const uint TH32_SNAPSHOT_HANDLE = 0x00007000;
 
+	// SetSearchPathMode constants
+	private const uint BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE = 0x00000001;
+	private const uint BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE = 0x00010000;
+	private const uint BASE_SEARCH_PATH_PERMANENT = 0x00008000;
+
 	private Win32Dispatcher? _dispatcher;
 	private uint _lastError;
 	private ICpu? _cpu;
@@ -777,6 +782,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// File path functions
 			case "SEARCHPATHA":
 				returnValue = SearchPathA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.UInt32(3), a.LpStr(4), a.UInt32(5));
+				return true;
+			case "SETSEARCHPATHMODE":
+				returnValue = SetSearchPathMode(a.UInt32(0));
 				return true;
 
 			// Locale functions
@@ -8019,6 +8027,76 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		_logger.LogInformation("[Kernel32] SearchPathA: Returning \"{ResultPath}\"", resultPath);
 		return (uint)resultPath.Length; // Return length without null terminator
+	}
+
+	/// <summary>
+	/// Sets the per-process mode that the SearchPath function uses when locating files.
+	/// BOOL SetSearchPathMode(
+	///   [in] DWORD Flags
+	/// );
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint SetSearchPathMode(uint flags)
+	{
+		_logger.LogInformation("[Kernel32] SetSearchPathMode(flags=0x{Flags:X8})", flags);
+
+		// Check if search path mode is already set to permanent
+		if (_env.SearchPathModePermanent)
+		{
+			_logger.LogWarning("[Kernel32] SetSearchPathMode: Cannot change mode - already set to permanent");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Extract the mode flags
+		bool enableSafeMode = (flags & BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE) != 0;
+		bool disableSafeMode = (flags & BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE) != 0;
+		bool permanent = (flags & BASE_SEARCH_PATH_PERMANENT) != 0;
+
+		// Validate flag combinations
+		if (enableSafeMode && disableSafeMode)
+		{
+			_logger.LogWarning("[Kernel32] SetSearchPathMode: Invalid parameter - both enable and disable flags set");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Cannot set permanent with disable flag
+		if (permanent && disableSafeMode)
+		{
+			_logger.LogWarning("[Kernel32] SetSearchPathMode: Invalid parameter - permanent flag cannot be combined with disable flag");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Must specify either enable or disable
+		if (!enableSafeMode && !disableSafeMode)
+		{
+			_logger.LogWarning("[Kernel32] SetSearchPathMode: Invalid parameter - must specify enable or disable flag");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Set the search path mode
+		if (enableSafeMode)
+		{
+			_env.SearchPathMode = BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE;
+			_logger.LogInformation("[Kernel32] SetSearchPathMode: Safe search mode enabled");
+		}
+		else // disableSafeMode
+		{
+			_env.SearchPathMode = BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE;
+			_logger.LogInformation("[Kernel32] SetSearchPathMode: Safe search mode disabled");
+		}
+
+		// Set permanent flag if specified
+		if (permanent)
+		{
+			_env.SearchPathModePermanent = true;
+			_logger.LogInformation("[Kernel32] SetSearchPathMode: Mode set to permanent");
+		}
+
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 	/// <summary>

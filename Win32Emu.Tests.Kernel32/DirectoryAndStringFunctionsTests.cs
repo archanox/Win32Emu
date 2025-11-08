@@ -208,6 +208,117 @@ public sealed class DirectoryAndStringFunctionsTests : IDisposable
         Assert.Equal(0u, returnValue); // ERROR_SUCCESS
     }
 
+    [Fact]
+    public void SetSearchPathMode_EnableSafeMode_ShouldSucceed()
+    {
+        // Arrange
+        const uint BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE = 0x00000001;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("SETSEARCHPATHMODE", BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+        Assert.Equal(BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE, _testEnv.ProcessEnv.SearchPathMode);
+        Assert.False(_testEnv.ProcessEnv.SearchPathModePermanent);
+    }
+
+    [Fact]
+    public void SetSearchPathMode_DisableSafeMode_ShouldSucceed()
+    {
+        // Arrange
+        const uint BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE = 0x00010000;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("SETSEARCHPATHMODE", BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+        Assert.Equal(BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE, _testEnv.ProcessEnv.SearchPathMode);
+        Assert.False(_testEnv.ProcessEnv.SearchPathModePermanent);
+    }
+
+    [Fact]
+    public void SetSearchPathMode_EnableWithPermanent_ShouldSucceed()
+    {
+        // Arrange
+        const uint BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE = 0x00000001;
+        const uint BASE_SEARCH_PATH_PERMANENT = 0x00008000;
+        var flags = BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE | BASE_SEARCH_PATH_PERMANENT;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("SETSEARCHPATHMODE", flags);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+        Assert.Equal(BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE, _testEnv.ProcessEnv.SearchPathMode);
+        Assert.True(_testEnv.ProcessEnv.SearchPathModePermanent);
+    }
+
+    [Fact]
+    public void SetSearchPathMode_BothEnableAndDisable_ShouldFail()
+    {
+        // Arrange
+        const uint BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE = 0x00000001;
+        const uint BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE = 0x00010000;
+        var flags = BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE | BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("SETSEARCHPATHMODE", flags);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+    }
+
+    [Fact]
+    public void SetSearchPathMode_DisableWithPermanent_ShouldFail()
+    {
+        // Arrange
+        const uint BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE = 0x00010000;
+        const uint BASE_SEARCH_PATH_PERMANENT = 0x00008000;
+        var flags = BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE | BASE_SEARCH_PATH_PERMANENT;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("SETSEARCHPATHMODE", flags);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+    }
+
+    [Fact]
+    public void SetSearchPathMode_NoFlags_ShouldFail()
+    {
+        // Arrange
+        const uint flags = 0;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("SETSEARCHPATHMODE", flags);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+    }
+
+    [Fact]
+    public void SetSearchPathMode_AfterPermanent_ShouldFail()
+    {
+        // Arrange
+        const uint BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE = 0x00000001;
+        const uint BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE = 0x00010000;
+        const uint BASE_SEARCH_PATH_PERMANENT = 0x00008000;
+
+        // Set to permanent first
+        var flags = BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE | BASE_SEARCH_PATH_PERMANENT;
+        var firstResult = _testEnv.CallKernel32Api("SETSEARCHPATHMODE", flags);
+        Assert.Equal(1u, firstResult); // Should succeed
+
+        // Act - Try to change it
+        var secondResult = _testEnv.CallKernel32Api("SETSEARCHPATHMODE", BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE);
+
+        // Assert
+        Assert.Equal(0u, secondResult); // Should fail
+        Assert.Equal(BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE, _testEnv.ProcessEnv.SearchPathMode); // Mode should not have changed
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();

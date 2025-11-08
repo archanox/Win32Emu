@@ -309,6 +309,22 @@ public class ProcessEnvironment
 		set => _currentDirectory = value ?? @"C:\";
 	}
 
+	// Search path mode for SearchPath function
+	private uint _searchPathMode = 0; // Default: safe search mode disabled (0)
+	private bool _searchPathModePermanent = false;
+
+	public uint SearchPathMode
+	{
+		get => _searchPathMode;
+		set => _searchPathMode = value;
+	}
+
+	public bool SearchPathModePermanent
+	{
+		get => _searchPathModePermanent;
+		set => _searchPathModePermanent = value;
+	}
+
 	// Console state
 	public bool HasConsole { get; private set; }
 
