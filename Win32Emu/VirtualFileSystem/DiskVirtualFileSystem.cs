@@ -270,20 +270,29 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		foreach (var file in Directory.GetFiles(sourceDir))
 		{
 			var fileName = Path.GetFileName(file);
-			var targetPath = CombinePaths(targetDir, fileName);
+			var sanitizedFileName = SanitizeFileName(fileName);
+			var targetPath = CombinePaths(targetDir, sanitizedFileName);
 
 			using var sourceStream = File.OpenRead(file);
 			using var targetStream = _fileSystem.OpenFile(targetPath, FileMode.Create, FileAccess.Write);
 			sourceStream.CopyTo(targetStream);
 
-			_logger.LogDebug("[DiskVFS] Copied file: {TargetPath}", targetPath);
+			if (sanitizedFileName != fileName)
+			{
+				_logger.LogDebug("[DiskVFS] Copied file: {OriginalName} -> {TargetPath} (sanitized)", fileName, targetPath);
+			}
+			else
+			{
+				_logger.LogDebug("[DiskVFS] Copied file: {TargetPath}", targetPath);
+			}
 		}
 
 		// Recursively copy subdirectories
 		foreach (var dir in Directory.GetDirectories(sourceDir))
 		{
 			var dirName = Path.GetFileName(dir);
-			var targetPath = CombinePaths(targetDir, dirName);
+			var sanitizedDirName = SanitizeFileName(dirName);
+			var targetPath = CombinePaths(targetDir, sanitizedDirName);
 
 			_fileSystem.CreateDirectory(targetPath);
 			CopyDirectoryRecursive(dir, targetPath);
@@ -372,6 +381,59 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		childPath = childPath.TrimStart('/', '\\');
 		var combined = basePath + "\\" + childPath;
 		return NormalizePath(combined);
+	}
+
+	/// <summary>
+	/// Sanitizes a filename to be compatible with FAT filesystems.
+	/// FAT has restrictions on filename length and characters.
+	/// </summary>
+	private string SanitizeFileName(string fileName)
+	{
+		// For FAT filesystems, we need to handle filenames carefully
+		// FAT supports Long File Names (LFN) but has limitations:
+		// - Multiple dots in filenames can cause issues
+		// - Very long names without extensions can fail
+		
+		if (!(_fileSystem is FatFileSystem))
+		{
+			// Non-FAT filesystems may have different rules
+			return fileName;
+		}
+
+		// Replace multiple consecutive dots with a single underscore
+		// This handles cases like "file.name.ext.backup" -> "file_name_ext.backup"
+		while (fileName.Contains(".."))
+		{
+			fileName = fileName.Replace("..", "._");
+		}
+
+		// Split into name and extension
+		var lastDotIndex = fileName.LastIndexOf('.');
+		if (lastDotIndex > 0 && lastDotIndex < fileName.Length - 1)
+		{
+			var baseName = fileName.Substring(0, lastDotIndex);
+			var extension = fileName.Substring(lastDotIndex + 1);
+			
+			// Check if basename contains dots (multiple extensions)
+			if (baseName.Contains('.'))
+			{
+				// Replace dots in basename with underscores
+				baseName = baseName.Replace('.', '_');
+				fileName = baseName + "." + extension;
+			}
+		}
+		else if (lastDotIndex == -1)
+		{
+			// No extension - check if name is too long
+			// FAT has issues with very long names without extensions
+			// Limit to a reasonable length to avoid issues
+			if (fileName.Length > 200)
+			{
+				fileName = fileName.Substring(0, 200);
+			}
+		}
+
+		return fileName;
 	}
 
 	public IVirtualFileHandle? OpenFile(string path, VfsFileMode mode, VfsFileAccess access)
