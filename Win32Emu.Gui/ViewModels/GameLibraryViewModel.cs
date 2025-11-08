@@ -241,13 +241,38 @@ public partial class GameLibraryViewModel : ViewModelBase
             var game = new Game
             {
                 Title = Path.GetFileNameWithoutExtension(fileName),
-                ExecutablePath = filePath,
+                ExecutablePath = filePath, // Keep original path for reference
                 Description = "Added from file picker",
                 TimesPlayed = 0
             };
             
             // Enrich with GameDB metadata if available
             EnrichGameFromDb(game);
+            
+            // Install the game to VHD
+            try
+            {
+                _logger.LogInformation("Installing game {Title} to VHD from {FilePath}", game.Title, filePath);
+                
+                var virtualDiskService = new VirtualDiskService(_configuration, _logger);
+                var (diskPath, vhdExecutablePath) = await virtualDiskService.InstallGameToVirtualDiskAsync(
+                    game, 
+                    filePath, 
+                    _configService.GetGameSettings(filePath));
+                
+                // Update game with VHD information
+                game.VirtualDiskPath = diskPath;
+                game.VhdExecutablePath = vhdExecutablePath;
+                
+                _logger.LogInformation("Successfully installed game {Title} to VHD. Disk: {DiskPath}, Executable: {VhdPath}", 
+                    game.Title, diskPath, vhdExecutablePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to install game {Title} to VHD", game.Title);
+                // Continue to add the game even if VHD installation fails
+                // The game will try to create VHD on first launch
+            }
             
             Games.Add(game);
         }
@@ -291,11 +316,12 @@ public partial class GameLibraryViewModel : ViewModelBase
 
     private async Task ScanFolderForGames(string folderPath)
     {
-        await Task.Run(() =>
+        await Task.Run(async () =>
         {
             try
             {
                 var exeFiles = Directory.GetFiles(folderPath, "*.exe", SearchOption.TopDirectoryOnly);
+                var virtualDiskService = new VirtualDiskService(_configuration, _logger);
                 
                 foreach (var exeFile in exeFiles)
                 {
@@ -320,6 +346,29 @@ public partial class GameLibraryViewModel : ViewModelBase
                         
                         // Enrich with GameDB metadata if available
                         EnrichGameFromDb(game);
+                        
+                        // Install the game to VHD
+                        try
+                        {
+                            _logger.LogInformation("Installing game {Title} to VHD from {FilePath}", game.Title, exeFile);
+                            
+                            var (diskPath, vhdExecutablePath) = await virtualDiskService.InstallGameToVirtualDiskAsync(
+                                game, 
+                                exeFile, 
+                                _configService.GetGameSettings(exeFile));
+                            
+                            // Update game with VHD information
+                            game.VirtualDiskPath = diskPath;
+                            game.VhdExecutablePath = vhdExecutablePath;
+                            
+                            _logger.LogInformation("Successfully installed game {Title} to VHD. Disk: {DiskPath}, Executable: {VhdPath}", 
+                                game.Title, diskPath, vhdExecutablePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to install game {Title} to VHD", game.Title);
+                            // Continue to add the game even if VHD installation fails
+                        }
                         
                         Games.Add(game);
                     }
