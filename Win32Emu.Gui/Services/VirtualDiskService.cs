@@ -177,6 +177,71 @@ public class VirtualDiskService
 	}
 
 	/// <summary>
+	/// Install a game directory into a virtual disk and return the VHD path to the executable
+	/// </summary>
+	/// <param name="game">The game being installed</param>
+	/// <param name="sourceExecutablePath">Path to the executable on the host filesystem</param>
+	/// <param name="gameSettings">Optional per-game settings</param>
+	/// <returns>Tuple of (VHD file path, path to executable within VHD)</returns>
+	public async Task<(string DiskPath, string VhdExecutablePath)> InstallGameToVirtualDiskAsync(
+		Game game, 
+		string sourceExecutablePath,
+		GameSettings? gameSettings = null)
+	{
+		return await Task.Run(() =>
+		{
+			if (!File.Exists(sourceExecutablePath))
+			{
+				throw new FileNotFoundException($"Source executable not found: {sourceExecutablePath}");
+			}
+
+			// Get the source directory (the directory containing the executable)
+			var sourceDir = Path.GetDirectoryName(sourceExecutablePath);
+			if (string.IsNullOrEmpty(sourceDir))
+			{
+				throw new InvalidOperationException($"Could not determine directory for executable: {sourceExecutablePath}");
+			}
+
+			// Get the folder name to use as the installation directory in VHD
+			var folderName = Path.GetFileName(sourceDir);
+			if (string.IsNullOrWhiteSpace(folderName))
+			{
+				folderName = "game";
+			}
+
+			// Get the executable filename
+			var executableName = Path.GetFileName(sourceExecutablePath);
+
+			// Create or get the virtual disk for this game
+			var diskPath = GetOrCreateVirtualDisk(game, gameSettings);
+
+			_logger.LogInformation("[VirtualDisk] Installing game from {SourceDir} to virtual disk {DiskPath}", 
+				sourceDir, diskPath);
+
+			// Open the disk and copy the game directory
+			using (var diskVfs = new DiskVirtualFileSystem(diskPath, _logger))
+			{
+				if (diskVfs.IsReadOnly)
+				{
+					throw new InvalidOperationException("Cannot install game to read-only virtual disk");
+				}
+
+				// Copy the entire source directory to the root of the VHD with the folder name
+				var targetPath = $"/{folderName}";
+				_logger.LogInformation("[VirtualDisk] Copying directory to VHD path: {TargetPath}", targetPath);
+				
+				diskVfs.CopyDirectoryIn(sourceDir, targetPath);
+				
+				_logger.LogInformation("[VirtualDisk] Successfully installed game to virtual disk");
+			}
+
+			// Return the disk path and the VHD executable path
+			var vhdExecutablePath = $"C:\\{folderName}\\{executableName}";
+			return (diskPath, vhdExecutablePath);
+		});
+	}
+
+	/// <summary>
 	/// Delete the virtual disk for a game
 	/// </summary>
 	public void DeleteVirtualDisk(Game game)

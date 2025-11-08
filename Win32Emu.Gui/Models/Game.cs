@@ -13,4 +13,14 @@ public class Game
     /// Optional reference to game database entry ID
     /// </summary>
     public Guid? GameDbId { get; set; }
+    
+    /// <summary>
+    /// Path to the game's virtual disk (VHD/VHDX/VMDK)
+    /// </summary>
+    public string? VirtualDiskPath { get; set; }
+    
+    /// <summary>
+    /// Path to the executable within the VHD (e.g., "C:\ignition\ign_teas.exe")
+    /// </summary>
+    public string? VhdExecutablePath { get; set; }
 }

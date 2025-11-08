@@ -45,7 +45,8 @@ public class EmulatorService
     /// <param name="programArgs">An array of command-line arguments to pass to the emulator when launching the game. These arguments are parsed and provided to the emulated program as if they were passed on the command line.</param>
     public async Task LaunchGame(Game game, string[]? programArgs = null)
     {
-        if (!File.Exists(game.ExecutablePath))
+        // Check if the game has a VHD path, otherwise check if the original executable exists
+        if (string.IsNullOrEmpty(game.VirtualDiskPath) && !File.Exists(game.ExecutablePath))
         {
             throw new FileNotFoundException($"Game executable not found: {game.ExecutablePath}");
         }
@@ -75,9 +76,22 @@ public class EmulatorService
                 // Create and configure the emulator
                 _currentEmulator = new Emulator(_host, _logger, telemetryService);
                 
+                // Initialize virtual file system BEFORE loading the executable
+                // This ensures the VHD is mounted and the executable path can be resolved
+                InitializeVirtualFileSystem(game, gameSettings);
+                
+                // Determine which executable path to use
+                // If game has a VHD executable path, use that (e.g., "C:\ignition\ign_teas.exe")
+                // Otherwise, use the original host path (for backwards compatibility)
+                var executablePath = !string.IsNullOrEmpty(game.VhdExecutablePath) 
+                    ? game.VhdExecutablePath 
+                    : game.ExecutablePath;
+                
+                _logger.LogInformation("[EmulatorService] Loading executable: {ExecutablePath}", executablePath);
+                
                 // Load the executable with configured memory size and GDB server settings
                 _currentEmulator.LoadExecutable(
-                    game.ExecutablePath,
+                    executablePath,
                     programArgs,
                     _configuration.EnableDebugMode,
                     false, // Interactive debug mode not supported in GUI
@@ -88,9 +102,6 @@ public class EmulatorService
                     _configuration.EnableLegacyInstructionDecoding,
                     useJitCpu,
                     useUnicornCpu);
-                
-                // Initialize virtual file system
-                InitializeVirtualFileSystem(game, gameSettings);
                 
                 // Run the emulator
                 _currentEmulator.Run();
@@ -143,56 +154,37 @@ public class EmulatorService
             return;
         }
 
-        var useVirtualDisk = _virtualDiskService.ShouldUseVirtualDisk(game, gameSettings);
-
-        if (useVirtualDisk)
+        // Always use VHD - this is now mandatory
+        try
         {
-            // Use virtual disk (VHD/VMDK/VHDX) - always enabled, no fallback
-            try
-            {
-                var diskPath = _virtualDiskService.GetOrCreateVirtualDisk(game, gameSettings);
-                
-                _currentEmulator.Environment.InitializeVirtualFileSystemWithDisk(diskPath);
-                _logger.LogInformation("[EmulatorService] Using virtual disk for game: {Title}", game.Title);
-                
-                // Copy source directory into disk if specified and disk is writable
-                if (!string.IsNullOrEmpty(gameSettings?.VirtualDiskSourceDirectory) && 
-                    Directory.Exists(gameSettings.VirtualDiskSourceDirectory))
-                {
-                    try
-                    {
-                        var vfs = _currentEmulator.Environment.VirtualFileSystem;
-                        if (vfs is DiskVirtualFileSystem diskVfs && !diskVfs.IsReadOnly)
-                        {
-                            _logger.LogInformation("[EmulatorService] Copying source directory into virtual disk: {SourceDir}", 
-                                gameSettings.VirtualDiskSourceDirectory);
-                            diskVfs.CopyDirectoryIn(gameSettings.VirtualDiskSourceDirectory, "/");
-                        }
-                    }
-                    catch (IOException ex)
-                    {
-                        _logger.LogError(ex, "[EmulatorService] Failed to copy source directory into virtual disk");
-                    }
-                    catch (UnauthorizedAccessException ex)
-                    {
-                        _logger.LogError(ex, "[EmulatorService] Failed to copy source directory into virtual disk");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[EmulatorService] Failed to initialize virtual disk");
-                throw;
-            }
-        }
-        else
-        {
-            // Virtual disk disabled - this should not happen with the new system
-            _logger.LogWarning("[EmulatorService] Virtual disk is disabled for game: {Title}. This is not recommended.", game.Title);
+            string diskPath;
             
-            // Use game directory as base for minimal VFS support
-            var baseDir = Path.GetDirectoryName(game.ExecutablePath) ?? Directory.GetCurrentDirectory();
-            _currentEmulator.Environment.InitializeVirtualFileSystem(baseDir);
+            // Check if game already has a VHD path (was installed previously)
+            if (!string.IsNullOrEmpty(game.VirtualDiskPath) && File.Exists(game.VirtualDiskPath))
+            {
+                diskPath = game.VirtualDiskPath;
+                _logger.LogInformation("[EmulatorService] Using existing virtual disk: {DiskPath}", diskPath);
+            }
+            else
+            {
+                // Create a new VHD for this game (shouldn't happen if AddGame was used, but handle it as fallback)
+                _logger.LogWarning("[EmulatorService] Game does not have a VHD path, creating one now. This should have been done during AddGame.");
+                diskPath = _virtualDiskService.GetOrCreateVirtualDisk(game, gameSettings);
+                
+                // Update the game object with the new VHD path
+                game.VirtualDiskPath = diskPath;
+                
+                _logger.LogInformation("[EmulatorService] Created new virtual disk: {DiskPath}", diskPath);
+            }
+            
+            // Initialize VFS with the disk
+            _currentEmulator.Environment.InitializeVirtualFileSystemWithDisk(diskPath);
+            _logger.LogInformation("[EmulatorService] Virtual file system initialized with disk: {DiskPath}", diskPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[EmulatorService] Failed to initialize virtual disk");
+            throw;
         }
     }
 }
