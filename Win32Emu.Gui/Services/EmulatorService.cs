@@ -76,9 +76,24 @@ public class EmulatorService
                 // Create and configure the emulator
                 _currentEmulator = new Emulator(_host, _logger, telemetryService);
                 
-                // Initialize virtual file system BEFORE loading the executable
-                // This ensures the VHD is mounted and the executable path can be resolved
-                InitializeVirtualFileSystem(game, gameSettings);
+                // Determine the virtual disk path to use
+                string? virtualDiskPath = null;
+                if (!string.IsNullOrEmpty(game.VirtualDiskPath) && File.Exists(game.VirtualDiskPath))
+                {
+                    virtualDiskPath = game.VirtualDiskPath;
+                    _logger.LogInformation("[EmulatorService] Using existing virtual disk: {DiskPath}", virtualDiskPath);
+                }
+                else if (!string.IsNullOrEmpty(game.VirtualDiskPath))
+                {
+                    // Create a new VHD for this game (shouldn't happen if AddGame was used, but handle it as fallback)
+                    _logger.LogWarning("[EmulatorService] Game does not have a VHD path, creating one now. This should have been done during AddGame.");
+                    virtualDiskPath = _virtualDiskService.GetOrCreateVirtualDisk(game, gameSettings);
+                    
+                    // Update the game object with the new VHD path
+                    game.VirtualDiskPath = virtualDiskPath;
+                    
+                    _logger.LogInformation("[EmulatorService] Created new virtual disk: {DiskPath}", virtualDiskPath);
+                }
                 
                 // Determine which executable path to use
                 // If game has a VHD executable path, use that (e.g., "C:\ignition\ign_teas.exe")
@@ -90,6 +105,8 @@ public class EmulatorService
                 _logger.LogInformation("[EmulatorService] Loading executable: {ExecutablePath}", executablePath);
                 
                 // Load the executable with configured memory size and GDB server settings
+                // The virtual disk path is passed to LoadExecutable so the VFS can be initialized
+                // after the emulator environment is ready but before file access is needed
                 _currentEmulator.LoadExecutable(
                     executablePath,
                     programArgs,
@@ -101,7 +118,8 @@ public class EmulatorService
                     _configuration.EnableInstructionAnalyzer,
                     _configuration.EnableLegacyInstructionDecoding,
                     useJitCpu,
-                    useUnicornCpu);
+                    useUnicornCpu,
+                    virtualDiskPath); // Pass the virtual disk path
                 
                 // Run the emulator
                 _currentEmulator.Run();
@@ -144,47 +162,5 @@ public class EmulatorService
                 _currentEmulator = null;
             }
         });
-    }
-
-    private void InitializeVirtualFileSystem(Game game, GameSettings? gameSettings)
-    {
-        if (_currentEmulator?.Environment == null)
-        {
-            _logger.LogWarning("[EmulatorService] Cannot initialize VFS: emulator environment not ready");
-            return;
-        }
-
-        // Always use VHD - this is now mandatory
-        try
-        {
-            string diskPath;
-            
-            // Check if game already has a VHD path (was installed previously)
-            if (!string.IsNullOrEmpty(game.VirtualDiskPath) && File.Exists(game.VirtualDiskPath))
-            {
-                diskPath = game.VirtualDiskPath;
-                _logger.LogInformation("[EmulatorService] Using existing virtual disk: {DiskPath}", diskPath);
-            }
-            else
-            {
-                // Create a new VHD for this game (shouldn't happen if AddGame was used, but handle it as fallback)
-                _logger.LogWarning("[EmulatorService] Game does not have a VHD path, creating one now. This should have been done during AddGame.");
-                diskPath = _virtualDiskService.GetOrCreateVirtualDisk(game, gameSettings);
-                
-                // Update the game object with the new VHD path
-                game.VirtualDiskPath = diskPath;
-                
-                _logger.LogInformation("[EmulatorService] Created new virtual disk: {DiskPath}", diskPath);
-            }
-            
-            // Initialize VFS with the disk
-            _currentEmulator.Environment.InitializeVirtualFileSystemWithDisk(diskPath);
-            _logger.LogInformation("[EmulatorService] Virtual file system initialized with disk: {DiskPath}", diskPath);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[EmulatorService] Failed to initialize virtual disk");
-            throw;
-        }
     }
 }
