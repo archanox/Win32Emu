@@ -1,5 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Logging;
+using Microsoft.Extensions.Logging;
+using Win32Emu.Logging;
 
 namespace Win32Emu.Gui;
 
@@ -17,8 +19,40 @@ sealed class Program
             // Remove --nogui from args and pass the rest to the emulator launcher
             var emuArgs = args.Where(arg => arg != "--nogui").ToArray();
             
-            // Run the emulator directly on the main thread (no GUI)
-            return EmulatorLauncher.Launch(emuArgs);
+            // Create a logger factory for CLI mode
+            // This ensures consistent logging between GUI and CLI modes
+            var enableDebugMode = args.Contains("--debug");
+            var enableFileLogging = args.Contains("--log-file");
+            
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                    .AddConsole()
+                    .SetMinimumLevel(enableDebugMode ? LogLevel.Debug : LogLevel.Information);
+                
+                // Add file logging if requested
+                if (enableFileLogging)
+                {
+                    try
+                    {
+                        // Find the executable path from args
+                        var exePath = emuArgs.FirstOrDefault(arg => !arg.StartsWith("--"));
+                        if (!string.IsNullOrEmpty(exePath))
+                        {
+                            var logFilePath = FileLoggingHelper.GenerateLogFilePath(exePath);
+                            builder.AddFileLogging(logFilePath);
+                            Console.WriteLine($"Logging to: {logFilePath}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Warning: Could not enable file logging: {ex.Message}");
+                    }
+                }
+            });
+            
+            // Run the emulator directly on the main thread with the logger factory (no GUI)
+            return EmulatorLauncher.Launch(emuArgs, loggerFactory);
         }
         
         // Otherwise, start the Avalonia GUI application
