@@ -409,47 +409,49 @@ public partial class GameLibraryViewModel : ViewModelBase
             // Show the emulator window
             emulatorWindow.Show();
             
-            // Create logger factory with console and Avalonia providers
-            using var loggerFactory = LoggerFactory.Create(builder =>
+            // Create a logger for this game launch
+            // We need to combine the central logger with the Avalonia UI logger
+            ILogger logger;
+            if (App.LoggingService != null)
             {
-                builder
-                    .AddConsole()
-                    .AddProvider(new AvaloniaLoggerProvider(viewModel))
-                    .SetMinimumLevel(//_configuration.EnableDebugMode ? 
-	                    LogLevel.Debug //: 
-	                    //LogLevel.Information
-	                    );
+                // Use the centralized logging service and log to central location
+                logger = App.LoggingService.CreateLogger<Emulator>();
                 
-                // Add file logging if enabled
+                // Also set up Avalonia UI logging via the view model's OnDebugOutput
+                // This happens automatically through the emulator's IEmulatorHost interface
+                
+                // Log game-specific file if file logging is enabled
                 if (_configuration.EnableFileLogging)
                 {
-	                try
-	                {
-		                var logFilePath = FileLoggingHelper.GenerateLogFilePath(
-			                game.ExecutablePath, 
-			                _configuration.LogFileDirectory);
-		                builder.AddFileLogging(logFilePath);
-	                }
-	                catch (DirectoryNotFoundException ex)
-	                {
-		                _logger.LogWarning(ex, "Could not enable file logging (directory not found)");
-	                }
-	                catch (UnauthorizedAccessException ex)
-	                {
-		                _logger.LogWarning(ex, "Could not enable file logging (unauthorized access)");
-	                }
-	                catch (ArgumentException ex)
-	                {
-		                _logger.LogWarning(ex, "Could not enable file logging (invalid argument)");
-	                }
-	                catch (IOException ex)
-	                {
-		                _logger.LogWarning(ex, "Could not enable file logging (I/O error)");
-	                }
+                    try
+                    {
+                        var logFilePath = FileLoggingHelper.GenerateLogFilePath(
+                            game.ExecutablePath, 
+                            _configuration.LogFileDirectory);
+                        
+                        logger.LogInformation("Game-specific log file: {LogFilePath}", logFilePath);
+                    }
+                    catch (IOException ex)
+                    {
+                        logger.LogWarning(ex, "Could not generate game-specific log file path (IO error)");
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        logger.LogWarning(ex, "Could not generate game-specific log file path (unauthorized)");
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        logger.LogWarning(ex, "Could not generate game-specific log file path (invalid argument)");
+                    }
                 }
-            });
+            }
+            else
+            {
+                // Fallback: create a basic logger if central logging service is not available
+                _logger.LogWarning("Central logging service not available, using fallback logger");
+                logger = _logger;
+            }
             
-            var logger = loggerFactory.CreateLogger<Emulator>();
             logger.LogInformation("Launching game: {GameTitle} {Path}", game.Title, game.ExecutablePath);
             
             // Retrieve game settings to get program arguments
