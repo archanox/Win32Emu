@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -72,6 +73,7 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 
 	/// <summary>
 	/// Resolves a virtual path to the actual filesystem path, checking overlay first, then base.
+	/// On case-sensitive filesystems (Linux/macOS), performs case-insensitive lookup.
 	/// </summary>
 	private string? ResolvePath(string virtualPath, out bool isInOverlay)
 	{
@@ -89,8 +91,72 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 			return basePath;
 		}
 
+		// If not found, try case-insensitive lookup on Unix systems
+		// Windows is already case-insensitive, so this only helps on Linux/macOS
+		if (!OperatingSystem.IsWindows())
+		{
+			var caseInsensitivePath = FindCaseInsensitivePath(basePath);
+			if (caseInsensitivePath != null)
+			{
+				isInOverlay = false;
+				return caseInsensitivePath;
+			}
+		}
+
 		isInOverlay = false;
 		return null;
+	}
+
+	/// <summary>
+	/// Attempts to find a file/directory using case-insensitive search.
+	/// This is needed on case-sensitive filesystems (Linux/macOS) to emulate Windows behavior.
+	/// </summary>
+	private string? FindCaseInsensitivePath(string targetPath)
+	{
+		try
+		{
+			var directory = Path.GetDirectoryName(targetPath);
+			var fileName = Path.GetFileName(targetPath);
+
+			if (string.IsNullOrEmpty(directory) || string.IsNullOrEmpty(fileName))
+				return null;
+
+			// If directory doesn't exist, try to find it recursively
+			if (!Directory.Exists(directory))
+			{
+				var parentDir = Path.GetDirectoryName(directory);
+				var dirName = Path.GetFileName(directory);
+				
+				if (string.IsNullOrEmpty(parentDir) || string.IsNullOrEmpty(dirName))
+					return null;
+
+				// Recursively find the directory with case-insensitive search
+				var foundParent = Directory.Exists(parentDir) ? parentDir : FindCaseInsensitivePath(parentDir);
+				if (foundParent == null)
+					return null;
+
+				// Find the directory name case-insensitively
+				var dirs = Directory.GetDirectories(foundParent);
+				var foundDir = dirs.FirstOrDefault(d => 
+					string.Equals(Path.GetFileName(d), dirName, StringComparison.OrdinalIgnoreCase));
+				
+				if (foundDir == null)
+					return null;
+
+				directory = foundDir;
+			}
+
+			// Now search for the file in the directory
+			var files = Directory.GetFiles(directory);
+			var foundFile = files.FirstOrDefault(f => 
+				string.Equals(Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase));
+
+			return foundFile;
+		}
+		catch
+		{
+			return null;
+		}
 	}
 
 	/// <summary>

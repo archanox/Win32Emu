@@ -2685,6 +2685,51 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		};
 	}
 
+	/// <summary>
+	/// Checks if a path is rooted using Windows path rules.
+	/// On Unix systems, System.IO.Path.IsPathRooted doesn't recognize Windows drive letters.
+	/// </summary>
+	private static bool IsPathRootedWindows(string path)
+	{
+		if (string.IsNullOrEmpty(path))
+			return false;
+
+		// Check for Windows drive letter (C:, D:, etc.)
+		if (path.Length >= 2 && char.IsLetter(path[0]) && path[1] == ':')
+			return true;
+
+		// Check for UNC paths (\\server\share)
+		if (path.Length >= 2 && path[0] == '\\' && path[1] == '\\')
+			return true;
+
+		// Check for Unix-style absolute paths
+		if (path[0] == '/')
+			return true;
+
+		return false;
+	}
+
+	/// <summary>
+	/// Combines two paths using Windows path rules.
+	/// On Unix systems, System.IO.Path.Combine doesn't handle Windows paths correctly.
+	/// </summary>
+	private static string CombineWindowsPaths(string basePath, string relativePath)
+	{
+		// If relative path is actually rooted, return it as-is
+		if (IsPathRootedWindows(relativePath))
+			return relativePath;
+
+		// Normalize separators to backslash
+		basePath = basePath.Replace('/', '\\');
+		relativePath = relativePath.Replace('/', '\\');
+
+		// Remove trailing separator from base path
+		basePath = basePath.TrimEnd('\\');
+
+		// Combine with backslash
+		return basePath + '\\' + relativePath;
+	}
+
 	// Helper method to map Win32 creation disposition to .NET FileMode
 	private FileMode MapCreationDispositionToFileMode(uint dwCreationDisposition)
 	{
@@ -2747,10 +2792,18 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// This ensures paths like "data\IGN1.TEX" are resolved relative to the executable's directory.
 			// CurrentDirectory is always set, so we always resolve relative paths.
 			var resolvedPath = path;
-			if (!Path.IsPathRooted(path))
+			if (!IsPathRootedWindows(path))
 			{
 				// Path is relative, resolve it relative to current directory
-				resolvedPath = Path.Combine(_env.CurrentDirectory, path);
+				// When VFS is active, use Windows-style path combination
+				if (_env.VirtualFileSystem != null)
+				{
+					resolvedPath = CombineWindowsPaths(_env.CurrentDirectory, path);
+				}
+				else
+				{
+					resolvedPath = Path.Combine(_env.CurrentDirectory, path);
+				}
 				_logger.LogDebug("[Kernel32] CreateFileA: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
 					path, resolvedPath, _env.CurrentDirectory);
 			}
@@ -2808,10 +2861,18 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			// Resolve relative paths relative to the current directory
 			var resolvedPath = path;
-			if (!Path.IsPathRooted(path))
+			if (!IsPathRootedWindows(path))
 			{
 				// Path is relative, resolve it relative to current directory
-				resolvedPath = Path.Combine(_env.CurrentDirectory, path);
+				// When VFS is active, use Windows-style path combination
+				if (_env.VirtualFileSystem != null)
+				{
+					resolvedPath = CombineWindowsPaths(_env.CurrentDirectory, path);
+				}
+				else
+				{
+					resolvedPath = Path.Combine(_env.CurrentDirectory, path);
+				}
 				_logger.LogDebug("[Kernel32] CreateFileW: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
 					path, resolvedPath, _env.CurrentDirectory);
 			}

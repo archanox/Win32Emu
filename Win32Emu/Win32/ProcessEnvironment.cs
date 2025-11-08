@@ -430,7 +430,21 @@ public class ProcessEnvironment
 		
 		// Set current directory to the directory containing the executable
 		// This ensures relative paths are resolved relative to the executable's location
-		var directory = Path.GetDirectoryName(effectivePath);
+		// When VFS is active, effectivePath is a Windows-style path (e.g., C:\game\app.exe)
+		// We need to extract the directory using Windows path semantics, not host OS semantics
+		string? directory;
+		if (VirtualFileSystem != null && effectivePath.Contains('\\'))
+		{
+			// For virtualized Windows paths, manually extract directory using Windows path rules
+			var lastBackslash = effectivePath.LastIndexOf('\\');
+			directory = lastBackslash > 0 ? effectivePath.Substring(0, lastBackslash) : null;
+		}
+		else
+		{
+			// For non-virtualized paths, use host OS path rules
+			directory = Path.GetDirectoryName(effectivePath);
+		}
+		
 		if (!string.IsNullOrEmpty(directory))
 		{
 			CurrentDirectory = directory;
