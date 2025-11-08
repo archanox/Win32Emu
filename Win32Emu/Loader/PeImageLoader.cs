@@ -59,6 +59,19 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	public LoadedImage Load(string path)
 	{
 		var image = PEImage.FromFile(path);
+		var headerBytes = File.ReadAllBytes(path);
+		return LoadFromImage(image, path, headerBytes);
+	}
+
+	public LoadedImage LoadFromBytes(byte[] bytes)
+	{
+		var image = PEImage.FromBytes(bytes);
+		// For LoadFromBytes, we use a synthetic path since there's no real file
+		return LoadFromImage(image, "<memory>", bytes);
+	}
+
+	private LoadedImage LoadFromImage(PEImage image, string sourcePath, byte[] fileBytes)
+	{
 		var pe = image.PEFile ?? throw new InvalidOperationException("PEImage missing PEFile.");
 		var opt = pe.OptionalHeader ?? throw new InvalidOperationException("Missing optional header.");
 
@@ -115,17 +128,10 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				}
 				
 				// Read only the required header bytes from the file
-				// Note: While PEImage.FromFile has already read the file, AsmResolver doesn't provide
-				// direct access to the raw header bytes, so we must re-read this small portion
+				// Note: When loading from file, we re-read for headers. When loading from bytes,
+				// we already have them in memory from fileBytes parameter
 				var headerData = new byte[actualHeaderSize];
-				using (var fileStream = File.OpenRead(path))
-				{
-					var bytesRead = fileStream.Read(headerData, 0, actualHeaderSize);
-					if (bytesRead < actualHeaderSize)
-					{
-						logger?.LogWarning("[Loader] Only read 0x{BytesRead:X8} of 0x{Expected:X8} header bytes", bytesRead, actualHeaderSize);
-					}
-				}
+				Array.Copy(fileBytes, 0, headerData, 0, Math.Min(actualHeaderSize, fileBytes.Length));
 				
 				vm.WriteBytes(imageBase, headerData);
 				logger?.LogDebug("[Loader] Loaded 0x{Size:X8} bytes of PE headers", headerData.Length);
@@ -245,7 +251,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			entryPoint,
 			imageSize,
 			importMap,
-			path,
+			sourcePath,
 			exportsByName,
 			exportsByOrdinal,
 			forwardedByName,
