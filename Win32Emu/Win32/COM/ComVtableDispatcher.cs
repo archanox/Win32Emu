@@ -134,17 +134,15 @@ public class ComVtableDispatcher
 				_logger.LogWarning("[COM] {MethodName} corrupted EBP: before=0x{Before:X8}, after=0x{After:X8}", methodName, ebpBefore, ebpAfter);
 			}
 			
-			// Verify ESP alignment (should be aligned after stack cleanup)
-			var expectedEsp = espBefore; // For thiscall/stdcall, ESP should be managed by caller or callee
-			if (argBytes > 0)
+			// Verify ESP is unchanged by the handler
+			// NOTE: COM methods are invoked through INT3 traps, not regular CALL instructions.
+			// The handler itself should NOT modify ESP - all stack cleanup is handled by
+			// InvokeWithRegisterPreservation in the emulator after the handler returns.
+			// For normal stdcall functions, the callee cleans the stack, but INT3 handlers don't follow that convention.
+			if (espAfter != espBefore)
 			{
-				// For stdcall, callee cleans the stack
-				expectedEsp = espBefore + (uint)argBytes;
-			}
-			
-			if (espAfter != expectedEsp)
-			{
-				_logger.LogWarning("[COM] {MethodName} stack pointer mismatch: expected ESP=0x{Expected:X8}, actual ESP=0x{Actual:X8} (argBytes={ArgBytes})", methodName, expectedEsp, espAfter, argBytes);
+				_logger.LogWarning("[COM] {MethodName} unexpectedly modified ESP: before=0x{Before:X8}, after=0x{After:X8}, delta={Delta} bytes", 
+					methodName, espBefore, espAfter, (int)espAfter - (int)espBefore);
 			}
 			
 			return true;
