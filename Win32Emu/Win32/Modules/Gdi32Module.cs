@@ -88,6 +88,9 @@ namespace Win32Emu.Win32.Modules
 				case "BITBLT":
 					returnValue = BitBlt(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.UInt32(5), a.Int32(6), a.Int32(7), a.UInt32(8));
 					return true;
+				case "STRETCHBLT":
+					returnValue = StretchBlt(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.UInt32(5), a.Int32(6), a.Int32(7), a.Int32(8), a.Int32(9), a.UInt32(10));
+					return true;
 				case "CREATEBITMAP":
 					returnValue = CreateBitmap(a.Int32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 					return true;
@@ -575,6 +578,42 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] BitBlt(hdcDest=0x{HdcDest:X8}, dest=({X},{Y}), size=({Cx},{Cy}), hdcSrc=0x{HdcSrc:X8}, src=({X1},{Y1}), rop=0x{Rop:X})",
 				hdcDest, x, y, cx, cy, hdcSrc, x1, y1, rop);
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Copies a bitmap from a source rectangle into a destination rectangle, stretching or compressing the bitmap as necessary.
+		/// BOOL StretchBlt(
+		///   [in] HDC   hdcDest,
+		///   [in] int   xDest,
+		///   [in] int   yDest,
+		///   [in] int   wDest,
+		///   [in] int   hDest,
+		///   [in] HDC   hdcSrc,
+		///   [in] int   xSrc,
+		///   [in] int   ySrc,
+		///   [in] int   wSrc,
+		///   [in] int   hSrc,
+		///   [in] DWORD rop
+		/// );
+		/// </summary>
+		[DllModuleExport(44)]
+		private uint StretchBlt(uint hdcDest, int xDest, int yDest, int wDest, int hDest, uint hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, uint rop)
+		{
+			_logger.LogInformation("[Gdi32] StretchBlt(hdcDest=0x{HdcDest:X8}, dest=({XDest},{YDest}), destSize=({WDest}x{HDest}), hdcSrc=0x{HdcSrc:X8}, src=({XSrc},{YSrc}), srcSize=({WSrc}x{HSrc}), rop=0x{Rop:X})",
+				hdcDest, xDest, yDest, wDest, hDest, hdcSrc, xSrc, ySrc, wSrc, hSrc, rop);
+			
+			// StretchBlt stretches or compresses a bitmap to fit the destination rectangle
+			// Common raster operation codes (rop):
+			// SRCCOPY (0x00CC0020) - Copy source to destination
+			// SRCPAINT (0x00EE0086) - OR source and destination
+			// SRCAND (0x008800C6) - AND source and destination
+			// SRCINVERT (0x00660046) - XOR source and destination
+			// NOTSRCCOPY (0x00330008) - Copy inverted source to destination
+			// BLACKNESS (0x00000042) - Fill destination with black
+			// WHITENESS (0x00FF0062) - Fill destination with white
+			
+			// For stub implementation, we just log and return success
 			return 1; // TRUE
 		}
 

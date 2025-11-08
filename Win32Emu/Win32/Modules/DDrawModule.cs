@@ -180,8 +180,8 @@ namespace Win32Emu.Win32.Modules
 		}
 
 
-		[DllModuleExport(33, entryPoint: 0x0001DDF9, Version = "4.90.0.3000", IsStub = true)]
-		[DllModuleExport(11, entryPoint: 0x0000CCF6, Version = "5.1.2600.6532", IsStub = true)]
+		[DllModuleExport(33, entryPoint: 0x0001DDF9, Version = "4.90.0.3000")]
+		[DllModuleExport(11, entryPoint: 0x0000CCF6, Version = "5.1.2600.6532")]
 		private uint DirectDrawCreateEx(uint lpGuid, uint lplpDd, uint iid, uint pUnkOuter)
 		{
 			// Fixed: Parameter order now matches MSDN documentation
