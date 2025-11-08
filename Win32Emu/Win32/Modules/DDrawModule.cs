@@ -95,7 +95,7 @@ namespace Win32Emu.Win32.Modules
 		if (lplpDd == 0)
 		{
 			_logger.LogError("[DDraw] DirectDrawCreate: lplpDD is NULL");
-			return 0x80070057; // DDERR_INVALIDPARAMS
+			return (uint)DDResult.DDERR_INVALIDPARAMS;
 		}
 
 		// Detect if lplpDD looks like a stack pointer (potential parameter handling bug)
@@ -162,12 +162,12 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogError("[DDraw] Verification failed! Wrote 0x{Expected:X8} but read back 0x{Actual:X8} from address 0x{Addr:X8}", 
 					comObjectAddr, verification, lplpDd);
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 			_logger.LogInformation("[DDraw] Verification: Read back 0x{Value:X8} from 0x{Addr:X8} - SUCCESS", verification, lplpDd);
 
 			_logger.LogInformation("[DDraw] Created IDirectDraw COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 
@@ -183,7 +183,7 @@ namespace Win32Emu.Win32.Modules
 			if (lplpDd == 0)
 			{
 				_logger.LogError("[DDraw] DirectDrawCreateEx: lplpDD is NULL");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Detect if lplpDD looks like a stack pointer (potential parameter handling bug)
@@ -250,12 +250,12 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogError("[DDraw] Verification failed! Wrote 0x{Expected:X8} but read back 0x{Actual:X8} from address 0x{Addr:X8}", 
 					comObjectAddr, verification, lplpDd);
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 			_logger.LogInformation("[DDraw] Verification: Read back 0x{Value:X8} from 0x{Addr:X8} - SUCCESS", verification, lplpDd);
 
 			_logger.LogInformation("[DDraw] Created IDirectDraw COM object (Ex) at 0x{ComObjectAddr:X8}", comObjectAddr);
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private sealed class DirectDrawObject
@@ -316,16 +316,15 @@ namespace Win32Emu.Win32.Modules
 		public static int DeterminePaletteSizeFromFlags(uint dwFlags)
 		{
 			// Check from highest to lowest bit depth to handle multiple flags correctly
-			// When multiple bit depth flags are set (e.g., 0x4 | 0x8 = 0xC),
-			// the palette should be created with the highest bit depth (256 entries for 8-bit)
-			if ((dwFlags & 0x8) != 0)
-				return 256; // DDPCAPS_8BIT
-			if ((dwFlags & 0x4) != 0)
-				return 16; // DDPCAPS_4BIT
-			if ((dwFlags & 0x2) != 0)
-				return 4; // DDPCAPS_2BIT
-			if ((dwFlags & 0x1) != 0)
-				return 2; // DDPCAPS_1BIT
+			// When multiple bit depth flags are set, the palette should be created with the highest bit depth
+			if ((dwFlags & (uint)DDPCaps.DDPCAPS_8BIT) != 0)
+				return 256;
+			if ((dwFlags & (uint)DDPCaps.DDPCAPS_4BIT) != 0)
+				return 16;
+			if ((dwFlags & (uint)DDPCaps.DDPCAPS_2BIT) != 0)
+				return 4;
+			if ((dwFlags & (uint)DDPCaps.DDPCAPS_1BIT) != 0)
+				return 2;
 			return 256; // Default to 8-bit if no flags set
 		}
 
@@ -340,7 +339,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw COM] IUnknown::QueryInterface(this=0x{ThisPtr:X8}, riid=0x{Riid:X8}, ppvObject=0x{PpvObject:X8})", thisPtr, riid, ppvObject);
 
 			// E_NOINTERFACE = 0x80004002
-			return 0x80004002;
+			return (uint)DDResult.E_NOINTERFACE;
 		}
 
 		private uint ComAddRef(ICpu cpu, VirtualMemory memory)
@@ -383,24 +382,24 @@ namespace Win32Emu.Win32.Modules
 			if (palette == null)
 			{
 				_logger.LogError("[DDraw] GetCaps: could not find palette with COM address 0x{ThisPtr:X8}", thisPtr);
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
 			if (lpdwCaps != 0)
 			{
 				// Determine caps based on number of entries
 				uint caps = 0;
-				if (palette.Entries.Length == 2) caps = 0x1; // DDPCAPS_1BIT
-				else if (palette.Entries.Length == 4) caps = 0x2; // DDPCAPS_2BIT
-				else if (palette.Entries.Length == 16) caps = 0x4; // DDPCAPS_4BIT
-				else if (palette.Entries.Length == 256) caps = 0x8; // DDPCAPS_8BIT
+				if (palette.Entries.Length == 2) caps = (uint)DDPCaps.DDPCAPS_1BIT;
+				else if (palette.Entries.Length == 4) caps = (uint)DDPCaps.DDPCAPS_2BIT;
+				else if (palette.Entries.Length == 16) caps = (uint)DDPCaps.DDPCAPS_4BIT;
+				else if (palette.Entries.Length == 256) caps = (uint)DDPCaps.DDPCAPS_8BIT;
 				else caps = 0x8; // Default to 8-bit
 
 				_env.MemWrite32(lpdwCaps, caps);
 				_logger.LogInformation("[DDraw] Palette caps: 0x{Caps:X8} ({Count} entries)", caps, palette.Entries.Length);
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Palette_GetEntries(ICpu cpu, VirtualMemory memory, uint paletteHandle)
@@ -418,13 +417,13 @@ namespace Win32Emu.Win32.Modules
 			if (!_palettes.TryGetValue(paletteHandle, out var palette))
 			{
 				_logger.LogError("[DDraw] GetEntries: could not find palette with handle 0x{PaletteHandle:X8}", paletteHandle);
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
 			if (lpEntries == 0)
 			{
 				_logger.LogError("[DDraw] GetEntries: lpEntries is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Check bounds
@@ -432,7 +431,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogError("[DDraw] GetEntries: invalid range (base={Base}, count={Count}, max={Max})",
 					dwBase, dwNumEntries, palette.Entries.Length);
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Write palette entries (PALETTEENTRY is 4 bytes: r,g,b,flags)
@@ -443,7 +442,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DDraw] Retrieved {Count} palette entries starting at index {Base}", dwNumEntries, dwBase);
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Palette_Initialize(ICpu cpu, VirtualMemory memory)
@@ -467,13 +466,13 @@ namespace Win32Emu.Win32.Modules
 			if (!_palettes.TryGetValue(paletteHandle, out var palette))
 			{
 				_logger.LogError("[DDraw] SetEntries: could not find palette with handle 0x{PaletteHandle:X8}", paletteHandle);
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
 			if (lpEntries == 0)
 			{
 				_logger.LogError("[DDraw] SetEntries: lpEntries is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Check starting entry is valid
@@ -481,7 +480,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogError("[DDraw] SetEntries: starting entry {Start} is beyond palette size {Max}",
 					dwStartingEntry, palette.Entries.Length);
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Clamp count to available entries (for compatibility with games that try to set more entries than palette has)
@@ -501,13 +500,13 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DDraw] Updated {Count} palette entries starting at index {Start}", actualCount, dwStartingEntry);
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_Compact(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::Compact() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_CreateClipper(ICpu cpu, VirtualMemory memory)
@@ -525,7 +524,7 @@ namespace Win32Emu.Win32.Modules
 			if (lplpDDClipper == 0)
 			{
 				_logger.LogError("[DDraw] CreateClipper: lplpDDClipper is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Create a new clipper handle
@@ -561,7 +560,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw] Created clipper with handle 0x{Handle:X8}, COM object at 0x{ComAddr:X8}",
 				clipperHandle, clipperComAddr);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_CreatePalette(ICpu cpu, VirtualMemory memory)
@@ -616,7 +615,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw] Created IDirectDrawPalette COM object at 0x{ComObjectAddr:X8} for palette 0x{PaletteHandle:X8}",
 				comObjectAddr, paletteHandle);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_CreateSurface(ICpu cpu, VirtualMemory memory)
@@ -664,7 +663,7 @@ namespace Win32Emu.Win32.Modules
 			if (ddrawHandle == 0 || !_ddrawObjects.TryGetValue(ddrawHandle, out var ddrawObj))
 			{
 				_logger.LogError("[DDraw] Failed to find DirectDraw object for CreateSurface");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
 			// Create a new surface
@@ -675,7 +674,7 @@ namespace Win32Emu.Win32.Modules
 				Width = (int)dwWidth,
 				Height = (int)dwHeight,
 				DirectDrawHandle = ddrawHandle,
-				IsPrimary = (dwSurfaceCaps & 0x00000200) != 0, // DDSCAPS_PRIMARYSURFACE
+				IsPrimary = (dwSurfaceCaps & (uint)DDSCaps.DDSCAPS_PRIMARYSURFACE) != 0, // DDSCAPS_PRIMARYSURFACE
 				Pitch = (int)dwWidth * (ddrawObj.BitsPerPixel / 8)
 			};
 
@@ -732,7 +731,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Check if this is a flipping complex surface that needs backbuffers
 			// DDSCAPS_FLIP = 0x00000010, DDSCAPS_COMPLEX = 0x00000008
-			var isFlippingChain = (dwSurfaceCaps & 0x00000010) != 0 && (dwSurfaceCaps & 0x00000008) != 0;
+			var isFlippingChain = (dwSurfaceCaps & (uint)DDSCaps.DDSCAPS_FLIP) != 0 && (dwSurfaceCaps & (uint)DDSCaps.DDSCAPS_COMPLEX) != 0;
 
 			// If this is a primary surface with flipping capabilities but no explicit backbuffer count,
 			// default to creating 1 backbuffer (common DirectDraw pattern)
@@ -825,25 +824,25 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DDraw] Created IDirectDrawSurface COM object at 0x{ComObjectAddr:X8} for surface 0x{SurfaceHandle:X8}", comObjectAddr, surfaceHandle);
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_UpdateOverlayZOrder(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::UpdateOverlayZOrder() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_UpdateOverlayDisplay(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::UpdateOverlayDisplay() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_UpdateOverlay(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::UpdateOverlay() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_SetPalette(ICpu cpu, VirtualMemory mem, uint surfaceHandle)
@@ -858,14 +857,14 @@ namespace Win32Emu.Win32.Modules
 			if (!_surfaces.TryGetValue(surfaceHandle, out var surface))
 			{
 				_logger.LogError("[DDraw] SetPalette: could not find surface with handle 0x{SurfaceHandle:X8}", surfaceHandle);
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
 			if (lpDDPalette == 0)
 			{
 				surface.PaletteHandle = 0;
 				_logger.LogInformation("[DDraw] Detached palette from surface 0x{SurfaceHandle:X8}", surfaceHandle);
-				return 0; // DD_OK
+				return (uint)DDResult.DD_OK;
 			}
 
 			uint paletteHandle = 0;
@@ -881,19 +880,19 @@ namespace Win32Emu.Win32.Modules
 			if (paletteHandle == 0)
 			{
 				_logger.LogWarning("[DDraw] SetPalette: could not find palette object with address 0x{LpDDPalette:X8}", lpDDPalette);
-				return 0x887601E6; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			surface.PaletteHandle = paletteHandle;
 			_logger.LogInformation("[DDraw] Surface 0x{SurfaceHandle:X8} palette set to 0x{PaletteHandle:X8}", surfaceHandle, paletteHandle);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_SetOverlayPosition(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::SetOverlayPosition() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_SetColorKey(ICpu cpu, VirtualMemory mem)
@@ -919,7 +918,7 @@ namespace Win32Emu.Win32.Modules
 			if (surface == null)
 			{
 				_logger.LogError("[DDraw] SetColorKey: could not find surface");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
 			if (lpDDColorKey != 0)
@@ -941,7 +940,7 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogInformation("[DDraw] Cleared color key");
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_SetClipper(ICpu cpu, VirtualMemory mem)
@@ -967,7 +966,7 @@ namespace Win32Emu.Win32.Modules
 			if (surface == null)
 			{
 				_logger.LogError("[DDraw] SetClipper: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			// Find the clipper by COM object address
@@ -986,7 +985,7 @@ namespace Win32Emu.Win32.Modules
 				if (clipperHandle == 0)
 				{
 					_logger.LogError("[DDraw] SetClipper: could not find clipper with COM address 0x{LpDDClipper:X8}", lpDDClipper);
-					return 0x88760066; // DDERR_INVALIDOBJECT
+					return (uint)DDResult.DDERR_INVALIDOBJECT;
 				}
 			}
 
@@ -995,13 +994,13 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw] Surface 0x{SurfaceHandle:X8} clipper set to 0x{ClipperHandle:X8}",
 				surface.Handle, clipperHandle);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_Restore(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::Restore() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_ReleaseDC(ICpu cpu, VirtualMemory mem)
@@ -1022,16 +1021,16 @@ namespace Win32Emu.Win32.Modules
 				{
 					_logger.LogError("[DDraw] ReleaseDC: DC 0x{HDC:X8} belongs to surface 0x{SurfaceAddr:X8}, not 0x{ThisPtr:X8}",
 						hDC, surfaceAddr, thisPtr);
-					return 0x887601E6; // DDERR_INVALIDOBJECT
+					return (uint)DDResult.DDERR_INVALIDOBJECT;
 				}
 
 				_surfaceDCs.Remove(hDC);
 				_logger.LogInformation("[DDraw] Released DC 0x{HDC:X8} for surface 0x{ThisPtr:X8}", hDC, thisPtr);
-				return 0; // DD_OK
+				return (uint)DDResult.DD_OK;
 			}
 
 			_logger.LogWarning("[DDraw] ReleaseDC: DC 0x{HDC:X8} not found, returning DDERR_INVALIDOBJECT", hDC);
-			return 0x887601E6; // DDERR_INVALIDOBJECT
+			return (uint)DDResult.DDERR_INVALIDOBJECT;
 		}
 
 		private uint Surface_IsLost(ICpu cpu, VirtualMemory mem)
@@ -1040,13 +1039,13 @@ namespace Win32Emu.Win32.Modules
 			var thisPtr = args.UInt32(0);
 			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::IsLost(this=0x{ThisPtr:X8})", thisPtr);
 			// Our surfaces are never lost in the emulator
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_Initialize(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::Initialize() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_GetSurfaceDesc(ICpu cpu, VirtualMemory mem)
@@ -1072,13 +1071,13 @@ namespace Win32Emu.Win32.Modules
 			if (surface == null)
 			{
 				_logger.LogError("[DDraw] GetSurfaceDesc: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 			
 			if (lpDDSurfaceDesc == 0)
 			{
 				_logger.LogError("[DDraw] GetSurfaceDesc: lpDDSurfaceDesc is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			if (lpDDSurfaceDesc != 0)
@@ -1099,7 +1098,7 @@ namespace Win32Emu.Win32.Modules
 					if (dwSize >= 108)
 					{
 						_env.MemWrite32(lpDDSurfaceDesc + 76, 32); // dwSize of DDPIXELFORMAT
-						_env.MemWrite32(lpDDSurfaceDesc + 80, 0x00000040); // dwFlags: DDPF_RGB
+						_env.MemWrite32(lpDDSurfaceDesc + 80, (uint)DDPFFlags.DDPF_RGB);
 						_env.MemWrite32(lpDDSurfaceDesc + 84, 0); // dwFourCC
 						_env.MemWrite32(lpDDSurfaceDesc + 88, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
 
@@ -1124,15 +1123,15 @@ namespace Win32Emu.Win32.Modules
 					// For primary surfaces, set DDSCAPS_PRIMARYSURFACE; for others, set DDSCAPS_OFFSCREENPLAIN
 					if (dwSize >= 112)
 					{
-						const uint DDSCAPS_PRIMARYSURFACE = 0x00000200;
-						const uint DDSCAPS_OFFSCREENPLAIN = 0x00000040;
+						const uint DDSCAPS_PRIMARYSURFACE = (uint)DDSCaps.DDSCAPS_PRIMARYSURFACE;
+						const uint DDSCAPS_OFFSCREENPLAIN = (uint)DDSCaps.DDSCAPS_OFFSCREENPLAIN;
 						var caps = surface.IsPrimary ? DDSCAPS_PRIMARYSURFACE : DDSCAPS_OFFSCREENPLAIN;
 						_env.MemWrite32(lpDDSurfaceDesc + 108, caps); // ddsCaps.dwCaps
 					}
 				}
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_GetPixelFormat(ICpu cpu, VirtualMemory mem)
@@ -1158,13 +1157,13 @@ namespace Win32Emu.Win32.Modules
 			if (surface == null)
 			{
 				_logger.LogError("[DDraw] GetPixelFormat: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 			
 			if (lpDDPixelFormat == 0)
 			{
 				_logger.LogError("[DDraw] GetPixelFormat: lpDDPixelFormat is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			if (lpDDPixelFormat != 0)
@@ -1175,7 +1174,7 @@ namespace Win32Emu.Win32.Modules
 					// Fill DDPIXELFORMAT structure
 					var pf = new DDPixelFormatRef(_env.Memory, lpDDPixelFormat);
 					pf.dwSize = 32;
-					pf.dwFlags = 0x00000040; // DDPF_RGB
+					pf.dwFlags = (uint)DDPFFlags.DDPF_RGB;
 					pf.dwFourCC = 0;
 					pf.dwRGBBitCount = (uint)ddrawObj.BitsPerPixel;
 
@@ -1183,7 +1182,7 @@ namespace Win32Emu.Win32.Modules
 					if (ddrawObj.BitsPerPixel == 8)
 					{
 						// Palettized mode
-						pf.dwFlags = 0x00000020; // DDPF_PALETTEINDEXED8
+						pf.dwFlags = (uint)DDPFFlags.DDPF_PALETTEINDEXED8;
 						pf.dwRBitMask = 0;
 						pf.dwGBitMask = 0;
 						pf.dwBBitMask = 0;
@@ -1205,7 +1204,7 @@ namespace Win32Emu.Win32.Modules
 				}
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_GetPalette(ICpu cpu, VirtualMemory mem)
@@ -1231,13 +1230,13 @@ namespace Win32Emu.Win32.Modules
 			if (surface == null)
 			{
 				_logger.LogError("[DDraw] GetPalette: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			if (lplpDDPalette == 0)
 			{
 				_logger.LogError("[DDraw] GetPalette: lplpDDPalette is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Check if surface has a palette attached
@@ -1245,7 +1244,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_env.MemWrite32(lplpDDPalette, 0);
 				_logger.LogInformation("[DDraw] Surface has no palette attached");
-				return 0x88760165; // DDERR_NOPALETTEATTACHED
+				return (uint)DDResult.DDERR_NOPALETTEATTACHED;
 			}
 
 			// Find the palette and return its COM object address
@@ -1253,11 +1252,11 @@ namespace Win32Emu.Win32.Modules
 			{
 				_env.MemWrite32(lplpDDPalette, palette.ComObjectAddress);
 				_logger.LogInformation("[DDraw] Returning palette COM object at 0x{ComObjectAddr:X8}", palette.ComObjectAddress);
-				return 0; // DD_OK
+				return (uint)DDResult.DD_OK;
 			}
 
 			_logger.LogError("[DDraw] GetPalette: palette handle 0x{PaletteHandle:X8} not found", surface.PaletteHandle);
-			return 1; // DDERR_GENERIC
+			return (uint)DDResult.DDERR_GENERIC;
 		}
 
 		private uint Surface_GetOverlayPosition(ICpu cpu, VirtualMemory mem)
@@ -1272,7 +1271,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Overlays are not supported in this implementation
 			// Return error indicating this is not an overlay surface
-			return 0x88760177; // DDERR_NOTAOVERLAYSURFACE
+			return (uint)DDResult.DDERR_NOTAOVERLAYSURFACE;
 		}
 
 		private uint Surface_GetFlipStatus(ICpu cpu, VirtualMemory mem)
@@ -1286,7 +1285,7 @@ namespace Win32Emu.Win32.Modules
 
 			// In an emulator, flips complete instantly
 			// Always return DD_OK to indicate no flips are pending
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_GetDC(ICpu cpu, VirtualMemory mem)
@@ -1301,7 +1300,7 @@ namespace Win32Emu.Win32.Modules
 			if (lphDC == 0)
 			{
 				_logger.LogError("[DDraw] GetDC: lphDC is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Create a device context handle and track which surface it belongs to
@@ -1313,7 +1312,7 @@ namespace Win32Emu.Win32.Modules
 			_env.MemWrite32(lphDC, dcHandle);
 
 			_logger.LogInformation("[DDraw] Created DC handle 0x{DcHandle:X8} for surface COM object 0x{ThisPtr:X8}", dcHandle, thisPtr);
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_GetColorKey(ICpu cpu, VirtualMemory mem)
@@ -1340,20 +1339,20 @@ namespace Win32Emu.Win32.Modules
 			if (surface == null)
 			{
 				_logger.LogError("[DDraw] GetColorKey: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			if (lpDDColorKey == 0)
 			{
 				_logger.LogError("[DDraw] GetColorKey: lpDDColorKey is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Check if surface has a color key
 			if (!surface.HasColorKey)
 			{
 				_logger.LogInformation("[DDraw] Surface has no color key set");
-				return 0x88760168; // DDERR_NOCOLORKEY
+				return (uint)DDResult.DDERR_NOCOLORKEY;
 			}
 
 			// Write DDCOLORKEY structure (2 DWORDs: dwColorSpaceLowValue and dwColorSpaceHighValue)
@@ -1363,7 +1362,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw] Returning color key: low=0x{Low:X8}, high=0x{High:X8}",
 				surface.ColorKeyLow, surface.ColorKeyHigh);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_GetClipper(ICpu cpu, VirtualMemory mem)
@@ -1378,7 +1377,7 @@ namespace Win32Emu.Win32.Modules
 			if (lplpDDClipper == 0)
 			{
 				_logger.LogError("[DDraw] GetClipper: lplpDDClipper is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Find the surface by COM object address
@@ -1395,7 +1394,7 @@ namespace Win32Emu.Win32.Modules
 			if (surface == null)
 			{
 				_logger.LogError("[DDraw] GetClipper: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			// Check if a clipper is attached to the surface
@@ -1404,7 +1403,7 @@ namespace Win32Emu.Win32.Modules
 				// Return null to indicate no clipper is attached
 				_env.MemWrite32(lplpDDClipper, 0);
 				_logger.LogInformation("[DDraw] No clipper attached to surface 0x{SurfaceHandle:X8}", surface.Handle);
-				return 0x88760169; // DDERR_NOCLIPPERATTACHED
+				return (uint)DDResult.DDERR_NOCLIPPERATTACHED;
 			}
 
 			// Get the clipper and return its COM object address
@@ -1413,13 +1412,13 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lplpDDClipper, clipper.ComObjectAddress);
 				_logger.LogInformation("[DDraw] Returning clipper COM object 0x{ComAddr:X8} for surface 0x{SurfaceHandle:X8}",
 					clipper.ComObjectAddress, surface.Handle);
-				return 0; // DD_OK
+				return (uint)DDResult.DD_OK;
 			}
 
 			// Clipper handle is set but clipper not found
 			_logger.LogError("[DDraw] GetClipper: clipper handle 0x{ClipperHandle:X8} not found", surface.ClipperHandle);
 			_env.MemWrite32(lplpDDClipper, 0);
-			return 0x88760066; // DDERR_INVALIDOBJECT
+			return (uint)DDResult.DDERR_INVALIDOBJECT;
 		}
 
 		private uint Surface_GetCaps(ICpu cpu, VirtualMemory mem)
@@ -1445,13 +1444,13 @@ namespace Win32Emu.Win32.Modules
 			if (surface == null)
 			{
 				_logger.LogError("[DDraw] GetCaps: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			if (lpDDSCaps == 0)
 			{
 				_logger.LogError("[DDraw] GetCaps: lpDDSCaps is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Fill DDSCAPS structure
@@ -1460,32 +1459,32 @@ namespace Win32Emu.Win32.Modules
 			// Primary surface flag
 			if (surface.IsPrimary)
 			{
-				caps |= 0x00000200; // DDSCAPS_PRIMARYSURFACE
+				caps |= (uint)DDSCaps.DDSCAPS_PRIMARYSURFACE;
 			}
 			else
 			{
-				caps |= 0x00000040; // DDSCAPS_OFFSCREENPLAIN
+				caps |= (uint)DDSCaps.DDSCAPS_OFFSCREENPLAIN;
 			}
 
 			// Memory location (always system memory in emulator)
-			caps |= 0x00000800; // DDSCAPS_VIDEOMEMORY (emulated)
+			caps |= (uint)DDSCaps.DDSCAPS_VIDEOMEMORY; // Emulated
 			
 			// Complex surface (has attached surfaces)
 			if (surface.AttachedSurfaces.Count > 0)
 			{
-				caps |= 0x00000008; // DDSCAPS_COMPLEX
+				caps |= (uint)DDSCaps.DDSCAPS_COMPLEX;
 			}
 			
 			// Flipping capability
 			if (surface.IsPrimary && surface.AttachedSurfaces.Count > 0)
 			{
-				caps |= 0x00000010; // DDSCAPS_FLIP
+				caps |= (uint)DDSCaps.DDSCAPS_FLIP;
 			}
 
 			_env.MemWrite32(lpDDSCaps, caps);
 			_logger.LogInformation("[DDraw] Surface caps: 0x{Caps:X8}", caps);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_GetBltStatus(ICpu cpu, VirtualMemory mem)
@@ -1499,7 +1498,7 @@ namespace Win32Emu.Win32.Modules
 
 			// In an emulator, blits complete instantly
 			// Always return DD_OK to indicate no blits are pending
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_GetAttachedSurface(ICpu cpu, VirtualMemory mem)
@@ -1532,7 +1531,7 @@ namespace Win32Emu.Win32.Modules
 					_env.MemWrite32(lplpDDAttachedSurface, 0);
 				}
 
-				return 0x887601C2; // DDERR_NOTFOUND
+				return (uint)DDResult.DDERR_NOTFOUND;
 			}
 
 			// Read the requested capabilities
@@ -1546,7 +1545,7 @@ namespace Win32Emu.Win32.Modules
 
 				// If a backbuffer is requested, create one on-demand
 				// DDSCAPS_BACKBUFFER = 0x00000004
-				const uint DDSCAPS_BACKBUFFER = 0x00000004;
+				const uint DDSCAPS_BACKBUFFER = (uint)DDSCaps.DDSCAPS_BACKBUFFER;
 
 				// Log diagnostic information
 				_logger.LogInformation("[DDraw] Surface diagnostic: IsPrimary={IsPrimary}, dwCaps=0x{Caps:X8}, backbuffer requested={BackbufferRequested}",
@@ -1637,7 +1636,7 @@ namespace Win32Emu.Win32.Modules
 						}
 
 						_logger.LogInformation("[DDraw] Returning on-demand backbuffer COM object at 0x{ComAddr:X8}", backBuffer.ComObjectAddress);
-						return 0; // DD_OK
+						return (uint)DDResult.DD_OK;
 					}
 					else
 					{
@@ -1650,7 +1649,7 @@ namespace Win32Emu.Win32.Modules
 					_env.MemWrite32(lplpDDAttachedSurface, 0);
 				}
 
-				return 0x887601C2; // DDERR_NOTFOUND
+				return (uint)DDResult.DDERR_NOTFOUND;
 			}
 
 			// For now, return the first attached surface (typically the backbuffer)
@@ -1664,7 +1663,7 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				_logger.LogInformation("[DDraw] Returning attached surface COM object at 0x{ComAddr:X8}", attachedSurface.ComObjectAddress);
-				return 0; // DD_OK
+				return (uint)DDResult.DD_OK;
 			}
 
 			_logger.LogError("[DDraw] GetAttachedSurface: attached surface handle 0x{Handle:X8} not found", attachedSurfaceHandle);
@@ -1673,7 +1672,7 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lplpDDAttachedSurface, 0);
 			}
 
-			return 0x887601C2; // DDERR_NOTFOUND
+			return (uint)DDResult.DDERR_NOTFOUND;
 		}
 
 		private uint Surface_Flip(ICpu cpu, VirtualMemory mem)
@@ -1702,7 +1701,7 @@ namespace Win32Emu.Win32.Modules
 			if (surface == null)
 			{
 				_logger.LogError("[DDraw] Flip: could not find primary surface");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
 			// If this is a primary surface, present the frame to the rendering backend
@@ -1719,23 +1718,23 @@ namespace Win32Emu.Win32.Modules
 				catch (Exception ex)
 				{
 					_logger.LogError(ex, "[DDraw] Failed to flip surface");
-					return 1; // DDERR_GENERIC
+					return (uint)DDResult.DDERR_GENERIC;
 				}
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_EnumOverlayZOrders(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::EnumOverlayZOrders() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_EnumAttachedSurfaces(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::EnumAttachedSurfaces() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_DeleteAttachedSurface(ICpu cpu, VirtualMemory mem)
@@ -1751,7 +1750,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpDDSAttachedSurface == 0)
 			{
 				_logger.LogError("[DDraw] DeleteAttachedSurface: lpDDSAttachedSurface is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Find the destination surface by COM object address
@@ -1768,7 +1767,7 @@ namespace Win32Emu.Win32.Modules
 			if (destSurface == null)
 			{
 				_logger.LogError("[DDraw] DeleteAttachedSurface: could not find destination surface with COM address 0x{ThisPtr:X8}", thisPtr);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			// Find the surface to detach by COM object address
@@ -1785,7 +1784,7 @@ namespace Win32Emu.Win32.Modules
 			if (detachSurface == null)
 			{
 				_logger.LogError("[DDraw] DeleteAttachedSurface: could not find surface to detach with COM address 0x{LpDDSAttachedSurface:X8}", lpDDSAttachedSurface);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			// Check if it's attached
@@ -1793,7 +1792,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogWarning("[DDraw] Surface 0x{DetachHandle:X8} is not attached to surface 0x{DestHandle:X8}",
 					detachSurface.Handle, destSurface.Handle);
-				return 0x88760108; // DDERR_SURFACENOTATTACHED
+				return (uint)DDResult.DDERR_SURFACENOTATTACHED;
 			}
 
 			// Detach the surface
@@ -1801,7 +1800,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw] Detached surface 0x{DetachHandle:X8} from surface 0x{DestHandle:X8}",
 				detachSurface.Handle, destSurface.Handle);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_BltFast(ICpu cpu, VirtualMemory mem)
@@ -1823,7 +1822,7 @@ namespace Win32Emu.Win32.Modules
 			if (destSurface == null || destSurface.Bits == null)
 			{
 				_logger.LogError("[DDraw] BltFast: could not find destination surface");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 	
 			// Find source surface by COM object address
@@ -1836,7 +1835,7 @@ namespace Win32Emu.Win32.Modules
 			if (srcSurface == null || srcSurface.Bits == null)
 			{
 				_logger.LogError("[DDraw] BltFast: could not find source surface");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 	
 			// Read source rectangle if provided
@@ -1854,7 +1853,7 @@ namespace Win32Emu.Win32.Modules
 			if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
 			{
 				_logger.LogError("[DDraw] BltFast: could not find DirectDraw object");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 	
 			var bytesPerPixel = ddrawObj.BitsPerPixel / 8;
@@ -1889,14 +1888,14 @@ namespace Win32Emu.Win32.Modules
 			if (srcX < 0 || srcY < 0 || srcX + srcWidth > srcSurface.Width || srcY + srcHeight > srcSurface.Height)
 			{
 				_logger.LogError("[DDraw] BltFast: source rectangle out of bounds");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 	
 			// Check if width/height are valid after clipping
 			if (srcWidth <= 0 || srcHeight <= 0)
 			{
 				_logger.LogDebug("[DDraw] BltFast: nothing to blit after clipping");
-				return 0; // DD_OK - nothing to do
+				return (uint)DDResult.DD_OK;
 			}
 	
 			// Calculate offsets in the source and destination buffers
@@ -1939,14 +1938,14 @@ namespace Win32Emu.Win32.Modules
 			// Mark destination surface as dirty
 			destSurface.IsTextureDirty = true;
 	
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 	
 	
 		private uint Surface_BltBatch(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::BltBatch() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_Blt(ICpu cpu, VirtualMemory mem)
@@ -1968,7 +1967,7 @@ namespace Win32Emu.Win32.Modules
 			if (destSurface == null || destSurface.Bits == null)
 			{
 				_logger.LogError("[DDraw] Blt: could not find destination surface");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 	
 			// Read destination rectangle if provided
@@ -1983,7 +1982,7 @@ namespace Win32Emu.Win32.Modules
 			}
 	
 			// Check for color fill operation (DDBLT_COLORFILL = 0x00000400)
-			if ((dwFlags & 0x00000400) != 0 && lpDDBltFx != 0)
+			if ((dwFlags & (uint)DDBlt.DDBLT_COLORFILL) != 0 && lpDDBltFx != 0)
 			{
 				// Read fill color from DDBLTFX structure
 				var fillColor = _env.MemRead32(lpDDBltFx + 16); // dwFillColor offset
@@ -1992,7 +1991,7 @@ namespace Win32Emu.Win32.Modules
 				if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
 				{
 					_logger.LogError("[DDraw] Blt: could not find DirectDraw object for color fill");
-					return 1; // DDERR_GENERIC
+					return (uint)DDResult.DDERR_GENERIC;
 				}
 	
 				// Perform color fill
@@ -2033,7 +2032,7 @@ namespace Win32Emu.Win32.Modules
 				destSurface.IsTextureDirty = true;
 	
 				_logger.LogInformation("[DDraw] Performed color fill with color 0x{FillColor:X8}", fillColor);
-				return 0; // DD_OK
+				return (uint)DDResult.DD_OK;
 			}
 	
 			// Handle source surface blit
@@ -2059,7 +2058,7 @@ namespace Win32Emu.Win32.Modules
 					if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
 					{
 						_logger.LogError("[DDraw] Blt: could not find DirectDraw object");
-						return 1; // DDERR_GENERIC
+						return (uint)DDResult.DDERR_GENERIC;
 					}
 	
 					var bytesPerPixel = ddrawObj.BitsPerPixel / 8;
@@ -2090,14 +2089,14 @@ namespace Win32Emu.Win32.Modules
 					if (srcX < 0 || srcY < 0 || srcX + srcWidth > srcSurface.Width || srcY + srcHeight > srcSurface.Height)
 					{
 						_logger.LogError("[DDraw] Blt: source rectangle out of bounds");
-						return 1; // DDERR_GENERIC
+						return (uint)DDResult.DDERR_GENERIC;
 					}
 	
 					// Check if there's anything to blit
 					if (destWidth <= 0 || destHeight <= 0)
 					{
 						_logger.LogDebug("[DDraw] Blt: nothing to blit after clipping");
-						return 0; // DD_OK
+						return (uint)DDResult.DD_OK;
 					}
 	
 					// Calculate offsets
@@ -2109,7 +2108,7 @@ namespace Win32Emu.Win32.Modules
 					var destSpan = destSurface.Bits.AsSpan(destOffset);
 	
 					// DDBLT_KEYSRC = 0x00008000
-					var useSrcColorKey = (dwFlags & 0x00008000) != 0 && srcSurface.HasColorKey;
+					var useSrcColorKey = (dwFlags & (uint)DDBlt.DDBLT_KEYSRC) != 0 && srcSurface.HasColorKey;
 	
 					// Use OptimizedBlitter for high-performance blitting
 					if (useSrcColorKey)
@@ -2144,14 +2143,14 @@ namespace Win32Emu.Win32.Modules
 				}
 			}
 	
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 	
 	
 		private uint Surface_AddOverlayDirtyRect(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::AddOverlayDirtyRect() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_AddAttachedSurface(ICpu cpu, VirtualMemory mem)
@@ -2166,7 +2165,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpDDSAttachedSurface == 0)
 			{
 				_logger.LogError("[DDraw] AddAttachedSurface: lpDDSAttachedSurface is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Find the destination surface by COM object address
@@ -2183,7 +2182,7 @@ namespace Win32Emu.Win32.Modules
 			if (destSurface == null)
 			{
 				_logger.LogError("[DDraw] AddAttachedSurface: could not find destination surface with COM address 0x{ThisPtr:X8}", thisPtr);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			// Find the surface to attach by COM object address
@@ -2200,7 +2199,7 @@ namespace Win32Emu.Win32.Modules
 			if (attachSurface == null)
 			{
 				_logger.LogError("[DDraw] AddAttachedSurface: could not find surface to attach with COM address 0x{LpDDSAttachedSurface:X8}", lpDDSAttachedSurface);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			// Check if already attached
@@ -2208,7 +2207,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogWarning("[DDraw] Surface 0x{AttachHandle:X8} is already attached to surface 0x{DestHandle:X8}",
 					attachSurface.Handle, destSurface.Handle);
-				return 0x88760109; // DDERR_SURFACEALREADYATTACHED
+				return (uint)DDResult.DDERR_SURFACEALREADYATTACHED;
 			}
 
 			// Attach the surface
@@ -2216,13 +2215,13 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw] Attached surface 0x{AttachHandle:X8} to surface 0x{DestHandle:X8}",
 				attachSurface.Handle, destSurface.Handle);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_DuplicateSurface(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::DuplicateSurface() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_EnumDisplayModes(ICpu cpu, VirtualMemory memory)
@@ -2240,14 +2239,14 @@ namespace Win32Emu.Win32.Modules
 			if (lpEnumModesCallback == 0)
 			{
 				_logger.LogError("[DDraw] EnumDisplayModes: callback is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Note: Full callback implementation requires saving/restoring CPU state and properly calling stdcall functions
 			// For now, return success without enumerating modes
 			// Applications typically handle this gracefully and use SetDisplayMode directly
 			_logger.LogInformation("[DDraw] EnumDisplayModes: Callback enumeration not fully implemented, returning success");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_EnumSurfaces(ICpu cpu, VirtualMemory memory)
@@ -2265,20 +2264,20 @@ namespace Win32Emu.Win32.Modules
 			if (lpEnumSurfacesCallback == 0)
 			{
 				_logger.LogError("[DDraw] EnumSurfaces: callback is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Note: Full callback implementation requires saving/restoring CPU state and properly calling stdcall functions
 			// For now, return success without enumerating surfaces
 			// Most applications don't rely on this for critical functionality
 			_logger.LogInformation("[DDraw] EnumSurfaces: Callback enumeration not fully implemented, returning success");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_FlipToGDISurface(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::FlipToGDISurface() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_GetCaps(ICpu cpu, VirtualMemory memory)
@@ -2299,43 +2298,43 @@ namespace Win32Emu.Win32.Modules
 				// DDCAPS structure - comprehensive implementation
 				// dwCaps: General capabilities
 				uint caps = 0;
-				caps |= 0x00000001; // DDCAPS_BLT - Can blt
-				caps |= 0x00000002; // DDCAPS_BLTCOLORFILL - Can color fill
-				caps |= 0x00000004; // DDCAPS_BLTQUEUE - Can queue blts
-				caps |= 0x00000040; // DDCAPS_BLTSTRETCH - Can stretch blt
-				caps |= 0x00000100; // DDCAPS_COLORKEY - Supports color key
-				caps |= 0x00000800; // DDCAPS_GDI - Windows can draw to primary surface
-				caps |= 0x00002000; // DDCAPS_PALETTE - Supports palettized modes
-				caps |= 0x00010000; // DDCAPS_PALETTEVSYNC - Palette changes sync to vblank
+				caps |= (uint)DDCaps.DDCAPS_BLT;
+				caps |= (uint)DDCaps.DDCAPS_BLTCOLORFILL;
+				caps |= (uint)DDCaps.DDCAPS_BLTQUEUE;
+				caps |= (uint)DDCaps.DDCAPS_BLTSTRETCH;
+				caps |= (uint)DDCaps.DDCAPS_COLORKEY;
+				caps |= (uint)DDCaps.DDCAPS_GDI;
+				caps |= (uint)DDCaps.DDCAPS_PALETTE;
+				caps |= (uint)DDCaps.DDCAPS_PALETTEVSYNC;
 				_env.MemWrite32(lpDDDriverCaps + 4, caps);
 
 				// dwCaps2: Extended capabilities  
 				uint caps2 = 0;
-				caps2 |= 0x00000001; // DDCAPS2_CERTIFIED - Driver is certified by Microsoft
-				caps2 |= 0x00000040; // DDCAPS2_CANRENDERWINDOWED - Can render in windowed mode
-				caps2 |= 0x00000100; // DDCAPS2_WIDESURFACES - Supports surfaces wider than screen
-				caps2 |= 0x00001000; // DDCAPS2_CANBOBHARDWARE - Can hardware bob
+				caps2 |= (uint)DDCaps2.DDCAPS2_CERTIFIED;
+				caps2 |= (uint)DDCaps2.DDCAPS2_CANRENDERWINDOWED;
+				caps2 |= (uint)DDCaps2.DDCAPS2_WIDESURFACES;
+				caps2 |= (uint)DDCaps2.DDCAPS2_CANBOBHARDWARE;
 				_env.MemWrite32(lpDDDriverCaps + 8, caps2);
 
 				// dwCKeyCaps: Color key capabilities
 				uint ckeyCaps = 0;
-				ckeyCaps |= 0x00000001; // DDCKEYCAPS_DESTBLT - Supports dest color key for blt
-				ckeyCaps |= 0x00000002; // DDCKEYCAPS_DESTBLTCLRSPACE - Supports dest color space for blt
-				ckeyCaps |= 0x00000010; // DDCKEYCAPS_SRCBLT - Supports source color key for blt
-				ckeyCaps |= 0x00000020; // DDCKEYCAPS_SRCBLTCLRSPACE - Supports source color space for blt
+				ckeyCaps |= (uint)DDCKeyCaps.DDCKEYCAPS_DESTBLT;
+				ckeyCaps |= (uint)DDCKeyCaps.DDCKEYCAPS_DESTBLTCLRSPACE;
+				ckeyCaps |= (uint)DDCKeyCaps.DDCKEYCAPS_SRCBLT;
+				ckeyCaps |= (uint)DDCKeyCaps.DDCKEYCAPS_SRCBLTCLRSPACE;
 				_env.MemWrite32(lpDDDriverCaps + 12, ckeyCaps);
 
 				// dwFXCaps: Blt effects capabilities
 				uint fxCaps = 0;
-				fxCaps |= 0x00000001; // DDFXCAPS_BLTARITHSTRETCHY - Can do arithmetic stretch in Y
-				fxCaps |= 0x00000002; // DDFXCAPS_BLTARITHSTRETCHYN - Can do arithmetic stretch in Y, with interpolation
-				fxCaps |= 0x00000010; // DDFXCAPS_BLTMIRRORLEFTRIGHT - Can mirror left to right
-				fxCaps |= 0x00000020; // DDFXCAPS_BLTMIRRORUPDOWN - Can mirror up to down
-				fxCaps |= 0x00000040; // DDFXCAPS_BLTROTATION - Can rotate surfaces
-				fxCaps |= 0x00000100; // DDFXCAPS_BLTSHRINKX - Can shrink in X
-				fxCaps |= 0x00000400; // DDFXCAPS_BLTSHRINKY - Can shrink in Y
-				fxCaps |= 0x00001000; // DDFXCAPS_BLTSTRETCHX - Can stretch in X
-				fxCaps |= 0x00004000; // DDFXCAPS_BLTSTRETCHY - Can stretch in Y
+				fxCaps |= (uint)DDFXCaps.DDFXCAPS_BLTARITHSTRETCHY;
+				fxCaps |= (uint)DDFXCaps.DDFXCAPS_BLTARITHSTRETCHYN;
+				fxCaps |= (uint)DDFXCaps.DDFXCAPS_BLTMIRRORLEFTRIGHT;
+				fxCaps |= (uint)DDFXCaps.DDFXCAPS_BLTMIRRORUPDOWN;
+				fxCaps |= (uint)DDFXCaps.DDFXCAPS_BLTROTATION;
+				fxCaps |= (uint)DDFXCaps.DDFXCAPS_BLTSHRINKX;
+				fxCaps |= (uint)DDFXCaps.DDFXCAPS_BLTSHRINKY;
+				fxCaps |= (uint)DDFXCaps.DDFXCAPS_BLTSTRETCHX;
+				fxCaps |= (uint)DDFXCaps.DDFXCAPS_BLTSTRETCHY;
 				_env.MemWrite32(lpDDDriverCaps + 16, fxCaps);
 
 				// dwFXAlphaCaps: Alpha blt capabilities
@@ -2343,14 +2342,14 @@ namespace Win32Emu.Win32.Modules
 
 				// dwPalCaps: Palette capabilities
 				uint palCaps = 0;
-				palCaps |= 0x00000001; // DDPCAPS_8BIT - 8-bit palettized
-				palCaps |= 0x00000002; // DDPCAPS_PRIMARYSURFACE - Primary surface has a palette
-				palCaps |= 0x00000100; // DDPCAPS_ALLOW256 - All 256 entries available
+				palCaps |= (uint)DDPCaps.DDPCAPS_8BIT;
+				palCaps |= (uint)DDPCaps.DDPCAPS_PRIMARYSURFACE;
+				palCaps |= (uint)DDPCaps.DDPCAPS_ALLOW256;
 				_env.MemWrite32(lpDDDriverCaps + 24, palCaps);
 
 				// dwSVCaps: Surface capabilities (system memory)
 				uint svCaps = 0;
-				svCaps |= 0x00000001; // DDSVCAPS_RESERVED1
+				svCaps |= (uint)DDSVCaps.DDSVCAPS_RESERVED1;
 				_env.MemWrite32(lpDDDriverCaps + 28, svCaps);
 
 				// Remaining fields
@@ -2373,11 +2372,11 @@ namespace Win32Emu.Win32.Modules
 				var dwSize = _env.MemRead32(lpDDHELCaps);
 				
 				// Basic capabilities for HEL
-				_env.MemWrite32(lpDDHELCaps + 4, 0x00000001); // DDCAPS_BLT
-				_env.MemWrite32(lpDDHELCaps + 8, 0x00000040); // DDCAPS2_CANRENDERWINDOWED
+				_env.MemWrite32(lpDDHELCaps + 4, (uint)DDCaps.DDCAPS_BLT);
+				_env.MemWrite32(lpDDHELCaps + 8, (uint)DDCaps2.DDCAPS2_CANRENDERWINDOWED);
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_GetDisplayMode(ICpu cpu, VirtualMemory memory)
@@ -2400,7 +2399,7 @@ namespace Win32Emu.Win32.Modules
 			if (ddrawObj == null)
 			{
 				_logger.LogError("[DDraw] GetDisplayMode: could not find DirectDraw object");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
 			if (lpDDSurfaceDesc != 0)
@@ -2417,7 +2416,7 @@ namespace Win32Emu.Win32.Modules
 				if (dwSize >= 108)
 				{
 					_env.MemWrite32(lpDDSurfaceDesc + 76, 32); // dwSize of DDPIXELFORMAT
-					_env.MemWrite32(lpDDSurfaceDesc + 80, 0x00000040); // dwFlags: DDPF_RGB
+					_env.MemWrite32(lpDDSurfaceDesc + 80, (uint)DDPFFlags.DDPF_RGB);
 					_env.MemWrite32(lpDDSurfaceDesc + 84, 0); // dwFourCC
 					_env.MemWrite32(lpDDSurfaceDesc + 88, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
 
@@ -2442,12 +2441,12 @@ namespace Win32Emu.Win32.Modules
 				// For display mode, set DDSCAPS_PRIMARYSURFACE
 				if (dwSize >= 112)
 				{
-					const uint DDSCAPS_PRIMARYSURFACE = 0x00000200;
+					const uint DDSCAPS_PRIMARYSURFACE = (uint)DDSCaps.DDSCAPS_PRIMARYSURFACE;
 					_env.MemWrite32(lpDDSurfaceDesc + 108, DDSCAPS_PRIMARYSURFACE); // ddsCaps.dwCaps
 				}
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_GetFourCCCodes(ICpu cpu, VirtualMemory memory)
@@ -2463,7 +2462,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpNumCodes == 0)
 			{
 				_logger.LogError("[DDraw] GetFourCCCodes: lpNumCodes is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// For now, we don't support any hardware FourCC codes
@@ -2471,7 +2470,7 @@ namespace Win32Emu.Win32.Modules
 			_env.MemWrite32(lpNumCodes, 0);
 
 			_logger.LogInformation("[DDraw] Returning 0 FourCC codes (no additional formats supported)");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_GetGDISurface(ICpu cpu, VirtualMemory memory)
@@ -2486,7 +2485,7 @@ namespace Win32Emu.Win32.Modules
 			if (lplpGDIDDSSurface == 0)
 			{
 				_logger.LogError("[DDraw] GetGDISurface: lplpGDIDDSSurface is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Find the primary surface (which would be the GDI surface)
@@ -2506,7 +2505,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_env.MemWrite32(lplpGDIDDSSurface, 0);
 				_logger.LogInformation("[DDraw] No GDI surface found");
-				return 0x887601C2; // DDERR_NOTFOUND
+				return (uint)DDResult.DDERR_NOTFOUND;
 			}
 
 			// Return the COM object address of the primary surface
@@ -2514,7 +2513,7 @@ namespace Win32Emu.Win32.Modules
 			_env.MemWrite32(lplpGDIDDSSurface, primarySurface.ComObjectAddress);
 			_logger.LogInformation("[DDraw] Returning GDI surface COM object at 0x{ComObjectAddr:X8}", primarySurface.ComObjectAddress);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_GetMonitorFrequency(ICpu cpu, VirtualMemory memory)
@@ -2532,7 +2531,7 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lpdwFrequency, 60);
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_GetScanLine(ICpu cpu, VirtualMemory memory)
@@ -2547,7 +2546,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpdwScanLine == 0)
 			{
 				_logger.LogError("[DDraw] GetScanLine: lpdwScanLine is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Find the DirectDraw object to get display height
@@ -2561,7 +2560,7 @@ namespace Win32Emu.Win32.Modules
 			if (ddrawObj == null)
 			{
 				_logger.LogError("[DDraw] GetScanLine: could not find DirectDraw object");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
 			// Simulate scan line position based on current time
@@ -2573,7 +2572,7 @@ namespace Win32Emu.Win32.Modules
 			_env.MemWrite32(lpdwScanLine, scanLine);
 			_logger.LogInformation("[DDraw] Returning scan line: {ScanLine} (of {Total})", scanLine, totalScanLines);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_GetVerticalBlankStatus(ICpu cpu, VirtualMemory memory)
@@ -2592,19 +2591,19 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lpbIsInVB, isInVBlank ? 1u : 0u);
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_Initialize(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::Initialize() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_RestoreDisplayMode(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::RestoreDisplayMode() - stub");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_SetCooperativeLevel(ICpu cpu, VirtualMemory memory, uint ddrawHandle)
@@ -2663,10 +2662,10 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogError("[DDraw] SetCooperativeLevel: Could not find DirectDraw object with handle 0x{Handle:X8}", actualHandle);
 				_logger.LogError("[DDraw COM] SetCooperativeLevel failed, returning DDERR_GENERIC (1)");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 			private uint DDraw_SetDisplayMode(ICpu cpu, VirtualMemory memory, uint ddrawHandle)
@@ -2683,7 +2682,7 @@ namespace Win32Emu.Win32.Modules
 			if (dwWidth == 0 || dwHeight == 0)
 			{
 				_logger.LogError("[DDraw COM] SetDisplayMode: Invalid dimensions ({Width}x{Height})", dwWidth, dwHeight);
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 			if (dwBPP != 8 && dwBPP != 16 && dwBPP != 24 && dwBPP != 32)
 			{
@@ -2729,7 +2728,7 @@ namespace Win32Emu.Win32.Modules
 					{
 						_logger.LogError("[DDraw] Failed to initialize rendering backend");
 						_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
-						return 1; // DDERR_GENERIC
+						return (uint)DDResult.DDERR_GENERIC;
 					}
 					_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}", dwWidth, dwHeight);
 				}
@@ -2748,10 +2747,10 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogError("[DDraw] SetDisplayMode: Could not find DirectDraw object with handle 0x{Handle:X8}", actualHandle);
 				_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint DDraw_WaitForVerticalBlank(ICpu cpu, VirtualMemory memory)
@@ -2775,7 +2774,7 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogInformation("[DDraw] Simulated wait for vertical blank");
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_Lock(ICpu cpu, VirtualMemory memory, uint surfaceHandle)
@@ -2792,13 +2791,13 @@ namespace Win32Emu.Win32.Modules
 			if (!_surfaces.TryGetValue(surfaceHandle, out var surface))
 			{
 				_logger.LogError("[DDraw] Failed to find surface 0x{SurfaceHandle:X8} for Lock", surfaceHandle);
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
 			if (surface.IsLocked)
 			{
 				_logger.LogWarning("[DDraw] Surface 0x{SurfaceHandle:X8} is already locked", surfaceHandle);
-				return 0x8877000A; // DDERR_SURFACEBUSY
+				return (uint)DDResult.DDERR_SURFACEBUSY;
 			}
 
 			// Mark the surface as locked
@@ -2837,7 +2836,7 @@ namespace Win32Emu.Win32.Modules
 					if (!_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
 					{
 						_logger.LogError("[DDraw] Failed to find DirectDraw object for surface 0x{SurfaceHandle:X8}", surfaceHandle);
-						return 1; // DDERR_GENERIC
+						return (uint)DDResult.DDERR_GENERIC;
 					}
 
 					// Write pixel format structure
@@ -2865,7 +2864,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DDraw] Locked surface 0x{SurfaceHandle:X8}, memory at 0x{SurfaceMemPtr:X8}", surfaceHandle, surfaceMemPtr);
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Surface_Unlock(ICpu cpu, VirtualMemory memory, uint surfaceHandle)
@@ -2879,13 +2878,13 @@ namespace Win32Emu.Win32.Modules
 			if (!_surfaces.TryGetValue(surfaceHandle, out var surface))
 			{
 				_logger.LogError("[DDraw] Failed to find surface 0x{SurfaceHandle:X8} for Unlock", surfaceHandle);
-				return 1; // DDERR_GENERIC
+				return (uint)DDResult.DDERR_GENERIC;
 			}
 
 			if (!surface.IsLocked)
 			{
 				_logger.LogWarning("[DDraw] Surface 0x{SurfaceHandle:X8} is not locked", surfaceHandle);
-				return 0x88770010; // DDERR_NOTLOCKED
+				return (uint)DDResult.DDERR_NOTLOCKED;
 			}
 
 			// Copy memory from the locked pointer to our surface bits
@@ -2911,7 +2910,7 @@ namespace Win32Emu.Win32.Modules
 					if (surface.Bits == null)
 					{
 						_logger.LogWarning("[DDraw] Surface bits are null, skipping flip");
-						return 0; // DD_OK
+						return (uint)DDResult.DD_OK;
 					}
 
 					byte[] displayData;
@@ -2995,7 +2994,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DDraw] Unlocked surface 0x{SurfaceHandle:X8}", surfaceHandle);
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		// IDirectDrawClipper interface methods
@@ -3014,7 +3013,7 @@ namespace Win32Emu.Win32.Modules
 			// Return that no clip list is available
 			// Do not write to lpdwSize when returning DDERR_NOCLIPLIST, per DirectDraw documentation.
 
-			return 0x88760169; // DDERR_NOCLIPLIST
+			return (uint)DDResult.DDERR_NOCLIPLIST;
 		}
 
 		private uint Clipper_GetHWnd(ICpu cpu, VirtualMemory memory, uint clipperHandle)
@@ -3029,27 +3028,27 @@ namespace Win32Emu.Win32.Modules
 			if (lphWnd == 0)
 			{
 				_logger.LogError("[DDraw] GetHWnd: lphWnd is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			if (!_clippers.TryGetValue(clipperHandle, out var clipper))
 			{
 				_logger.LogError("[DDraw] GetHWnd: clipper not found");
 				_env.MemWrite32(lphWnd, 0);
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			_env.MemWrite32(lphWnd, clipper.WindowHandle);
 			_logger.LogInformation("[DDraw] Returning window handle 0x{WindowHandle:X8}", clipper.WindowHandle);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Clipper_Initialize(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDrawClipper::Initialize() - stub");
 			// Already initialized by CreateClipper
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Clipper_IsClipListChanged(ICpu cpu, VirtualMemory memory)
@@ -3066,7 +3065,7 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lpbChanged, 0); // FALSE - not changed
 			}
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Clipper_SetClipList(ICpu cpu, VirtualMemory memory)
@@ -3080,7 +3079,7 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, lpClipList, dwFlags);
 
 			// For now, we accept but don't process clip lists
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		private uint Clipper_SetHWnd(ICpu cpu, VirtualMemory memory, uint clipperHandle)
@@ -3096,13 +3095,13 @@ namespace Win32Emu.Win32.Modules
 			if (!_clippers.TryGetValue(clipperHandle, out var clipper))
 			{
 				_logger.LogError("[DDraw] SetHWnd: clipper not found");
-				return 0x88760066; // DDERR_INVALIDOBJECT
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			clipper.WindowHandle = hWnd;
 			_logger.LogInformation("[DDraw] Set clipper window handle to 0x{WindowHandle:X8}", hWnd);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 
@@ -3210,13 +3209,13 @@ namespace Win32Emu.Win32.Modules
 			if (lplpDDClipper == 0)
 			{
 				_logger.LogError("[DDraw] DirectDrawCreateClipper: lplpDDClipper is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			if (pUnkOuter != 0)
 			{
 				_logger.LogError("[DDraw] DirectDrawCreateClipper: pUnkOuter must be NULL");
-				return 0x80040110; // CLASS_E_NOAGGREGATION
+				return (uint)DDResult.CLASS_E_NOAGGREGATION;
 			}
 
 			// Create a new clipper handle
@@ -3252,7 +3251,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw] Created standalone clipper with handle 0x{Handle:X8}, COM object at 0x{ComAddr:X8}",
 				clipperHandle, clipperComAddr);
 
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		[DllModuleExport(10, entryPoint: 0x00025999, Version = "4.90.0.3000", IsStub = true)]
@@ -3281,7 +3280,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpCallback == 0)
 			{
 				_logger.LogError("[DDraw] DirectDrawEnumerateA: callback is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Enumerate the primary display driver
@@ -3299,7 +3298,7 @@ namespace Win32Emu.Win32.Modules
 			// Most applications handle this gracefully and don't strictly require enumeration.
 			
 			_logger.LogInformation("[DDraw] DirectDrawEnumerateA: Enumeration not fully implemented, returning success");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		[DllModuleExport(12, entryPoint: 0x00022626, Version = "4.90.0.3000", IsStub = true)]
@@ -3320,7 +3319,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpCallback == 0)
 			{
 				_logger.LogError("[DDraw] DirectDrawEnumerateExA: callback is null");
-				return 0x80070057; // DDERR_INVALIDPARAMS
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
 			// Extended enumeration with additional flags:
@@ -3334,7 +3333,7 @@ namespace Win32Emu.Win32.Modules
 			// Full callback implementation would be complex (see DirectDrawEnumerateA comments).
 			
 			_logger.LogInformation("[DDraw] DirectDrawEnumerateExA: Extended enumeration not fully implemented, returning success");
-			return 0; // DD_OK
+			return (uint)DDResult.DD_OK;
 		}
 
 		[DllModuleExport(13, entryPoint: 0x00022467, Version = "4.90.0.3000", IsStub = true)]
