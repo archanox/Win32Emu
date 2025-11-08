@@ -162,7 +162,9 @@ public sealed class Emulator : IDisposable
         _gdbServerMode = gdbServerMode;
         _gdbServerPort = gdbServerPort;
 
-        if (!File.Exists(path))
+        // Only check if file exists on host filesystem if not using a virtual disk
+        // When using a virtual disk, the file will be in the VFS which hasn't been initialized yet
+        if (string.IsNullOrEmpty(virtualDiskPath) && !File.Exists(path))
         {
             throw new FileNotFoundException($"File not found: {path}");
         }
