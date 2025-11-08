@@ -252,10 +252,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 
 		// Normalize target path
 		targetPath = NormalizePath(targetPath);
-		if (!targetPath.StartsWith('/'))
-		{
-			targetPath = "/" + targetPath;
-		}
+		// NormalizePath already ensures leading separator, no need to check again
 
 		// Ensure target directory exists
 		if (!_fileSystem.DirectoryExists(targetPath))
@@ -346,32 +343,34 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 
 	private string NormalizePath(string path)
 	{
-		// Convert Windows-style paths to Unix-style
-		var normalized = path.Replace('\\', '/');
+		// DiscUtils requires backslashes for all filesystem types (FAT, ISO9660, etc.)
+		// Convert any forward slashes to backslashes
+		var normalized = path.Replace('/', '\\');
 
-		// Remove drive letters
+		// Remove drive letters (e.g., "C:\path" becomes "\path")
 		if (normalized.Length >= 2 && normalized[1] == ':')
 		{
 			normalized = normalized.Substring(2);
 		}
 
-		// Ensure leading slash
-		if (!normalized.StartsWith('/'))
+		// Ensure leading backslash
+		if (!normalized.StartsWith('\\'))
 		{
-			normalized = "/" + normalized;
+			normalized = "\\" + normalized;
 		}
 
-		// Remove double slashes efficiently using regex
-		normalized = System.Text.RegularExpressions.Regex.Replace(normalized, "/+", "/");
+		// Remove double backslashes
+		normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\\+", "\\");
 
 		return normalized;
 	}
 
 	private string CombinePaths(string basePath, string childPath)
 	{
-		basePath = basePath.TrimEnd('/');
-		childPath = childPath.TrimStart('/');
-		var combined = basePath + "/" + childPath;
+		// DiscUtils uses backslashes for all filesystem types
+		basePath = basePath.TrimEnd('/', '\\');
+		childPath = childPath.TrimStart('/', '\\');
+		var combined = basePath + "\\" + childPath;
 		return NormalizePath(combined);
 	}
 

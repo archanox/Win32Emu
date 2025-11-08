@@ -205,4 +205,59 @@ public class DiskVirtualFileSystemTests : IDisposable
 		// Assert
 		Assert.Equal(expectedContent, actualContent);
 	}
+
+	[Fact]
+	public void CopyDirectoryIn_ToVhdDisk_SuccessfullyCopiesFiles()
+	{
+		// Arrange - Create a VHD disk
+		var diskPath = Path.Combine(_testDir, "test.vhd");
+		using var vfs = DiskVirtualFileSystem.Create(diskPath, DiskFormat.Vhd, 10 * 1024 * 1024, NullLogger.Instance);
+
+		// Create a source directory with files
+		var sourceDir = Path.Combine(_testDir, "source");
+		Directory.CreateDirectory(sourceDir);
+		File.WriteAllText(Path.Combine(sourceDir, "file1.txt"), "Content 1");
+		File.WriteAllText(Path.Combine(sourceDir, "file2.txt"), "Content 2");
+
+		var subDir = Path.Combine(sourceDir, "subdir");
+		Directory.CreateDirectory(subDir);
+		File.WriteAllText(Path.Combine(subDir, "file3.txt"), "Content 3");
+
+		// Act - Copy directory to VHD
+		vfs.CopyDirectoryIn(sourceDir, "/testgame");
+
+		// Assert - Verify files were copied
+		Assert.True(vfs.FileExists(@"\testgame\file1.txt"));
+		Assert.True(vfs.FileExists(@"\testgame\file2.txt"));
+		Assert.True(vfs.FileExists(@"\testgame\subdir\file3.txt"));
+
+		// Verify content
+		using (var handle = vfs.OpenFile(@"\testgame\file1.txt", VfsFileMode.Open, VfsFileAccess.Read))
+		{
+			Assert.NotNull(handle);
+			var buffer = new byte[100];
+			var bytesRead = handle.Read(buffer, 0, buffer.Length);
+			var content = System.Text.Encoding.UTF8.GetString(buffer, 0, bytesRead);
+			Assert.Equal("Content 1", content);
+		}
+	}
+
+	[Fact]
+	public void CopyDirectoryIn_ToVhdxDisk_SuccessfullyCopiesFiles()
+	{
+		// Arrange - Create a VHDX disk
+		var diskPath = Path.Combine(_testDir, "test.vhdx");
+		using var vfs = DiskVirtualFileSystem.Create(diskPath, DiskFormat.Vhdx, 10 * 1024 * 1024, NullLogger.Instance);
+
+		// Create a source directory with files
+		var sourceDir = Path.Combine(_testDir, "source");
+		Directory.CreateDirectory(sourceDir);
+		File.WriteAllText(Path.Combine(sourceDir, "game.exe"), "PE executable");
+		
+		// Act - Copy directory to VHDX
+		vfs.CopyDirectoryIn(sourceDir, "/mygame");
+
+		// Assert - Verify file was copied
+		Assert.True(vfs.FileExists(@"\mygame\game.exe"));
+	}
 }
