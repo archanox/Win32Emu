@@ -260,8 +260,9 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			_fileSystem.CreateDirectory(targetPath);
 		}
 
-		_logger.LogInformation("[DiskVFS] Copying directory {SourcePath} to {TargetPath}", sourcePath, targetPath);
+		_logger.LogInformation("[DiskVFS] Starting copy: {SourcePath} -> {TargetPath}", sourcePath, targetPath);
 		CopyDirectoryRecursive(sourcePath, targetPath);
+		_logger.LogInformation("[DiskVFS] Successfully completed copying directory to virtual disk: {TargetPath}", targetPath);
 	}
 
 	private void CopyDirectoryRecursive(string sourceDir, string targetDir)
@@ -274,16 +275,19 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			var targetPath = CombinePaths(targetDir, sanitizedFileName);
 
 			using var sourceStream = File.OpenRead(file);
+			var fileSize = sourceStream.Length;
 			using var targetStream = _fileSystem.OpenFile(targetPath, FileMode.Create, FileAccess.Write);
 			sourceStream.CopyTo(targetStream);
 
 			if (sanitizedFileName != fileName)
 			{
-				_logger.LogDebug("[DiskVFS] Copied file: {OriginalName} -> {TargetPath} (sanitized)", fileName, targetPath);
+				_logger.LogInformation("[DiskVFS] Copied file: {OriginalName} -> {TargetPath} (sanitized, {Size} bytes)", 
+					fileName, targetPath, fileSize);
 			}
 			else
 			{
-				_logger.LogDebug("[DiskVFS] Copied file: {TargetPath}", targetPath);
+				_logger.LogInformation("[DiskVFS] Copied file: {FileName} -> {TargetPath} ({Size} bytes)", 
+					fileName, targetPath, fileSize);
 			}
 		}
 
@@ -295,6 +299,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			var targetPath = CombinePaths(targetDir, sanitizedDirName);
 
 			_fileSystem.CreateDirectory(targetPath);
+			_logger.LogInformation("[DiskVFS] Created directory: {TargetPath}", targetPath);
 			CopyDirectoryRecursive(dir, targetPath);
 		}
 	}
