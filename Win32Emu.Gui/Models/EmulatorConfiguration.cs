@@ -34,9 +34,11 @@ public class EmulatorConfiguration
 	public bool UseVirtualDiskByDefault { get; set; } = true;
 	
 	/// <summary>
-	/// Default size for auto-created virtual disks in MB
+	/// Default size for auto-created virtual disks in MB.
+	/// Minimum 1024 MB (1 GB) recommended to ensure FAT32 instead of FAT16.
+	/// FAT32 provides better compatibility: 255-char paths, 4GB max file size.
 	/// </summary>
-	public int DefaultVirtualDiskSizeMb { get; set; } = 512;
+	public int DefaultVirtualDiskSizeMb { get; set; } = 1024;
 	
 	/// <summary>
 	/// Virtual disk format to use (VHD, VHDX, VMDK)
