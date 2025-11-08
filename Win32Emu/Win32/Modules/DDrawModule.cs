@@ -720,7 +720,7 @@ namespace Win32Emu.Win32.Modules
 				dwSurfaceCaps = _env.MemRead32(lpDDSurfaceDesc + 104);
 			}
 
-			_logger.LogInformation("[DDraw] Surface creation: flags=0x{Flags:X8}, caps=0x{Caps:X8}, width={Width}, height={Height}, backbufferCount={Count}",
+			_logger.LogInformation("[DDraw] Surface creation: flags=0x{Flags:X}, caps=0x{Caps:X8}, width={Width}, height={Height}, backbufferCount={Count}",
 				dwFlags, dwSurfaceCaps, dwWidth, dwHeight, dwBackBufferCount);
 
 			// Find the DirectDraw object from the COM object pointer
