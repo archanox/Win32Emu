@@ -465,7 +465,7 @@ namespace Win32Emu.Win32.Modules
 				else if (palette.Entries.Length == 4) caps = (uint)DDPCaps.DDPCAPS_2BIT;
 				else if (palette.Entries.Length == 16) caps = (uint)DDPCaps.DDPCAPS_4BIT;
 				else if (palette.Entries.Length == 256) caps = (uint)DDPCaps.DDPCAPS_8BIT;
-				else caps = 0x8; // Default to 8-bit
+				else caps = (uint)DDPCaps.DDPCAPS_8BIT; // Default to 8-bit
 
 				_env.MemWrite32(lpdwCaps, caps);
 				_logger.LogInformation("[DDraw] Palette caps: 0x{Caps:X8} ({Count} entries)", caps, palette.Entries.Length);
