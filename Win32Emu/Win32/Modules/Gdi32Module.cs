@@ -597,7 +597,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] DWORD rop
 		/// );
 		/// </summary>
-		[DllModuleExport(44)]
+		[DllModuleExport(44, IsStub = true)]
 		private uint StretchBlt(uint hdcDest, int xDest, int yDest, int wDest, int hDest, uint hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, uint rop)
 		{
 			_logger.LogInformation("[Gdi32] StretchBlt(hdcDest=0x{HdcDest:X8}, dest=({XDest},{YDest}), destSize=({WDest}x{HDest}), hdcSrc=0x{HdcSrc:X8}, src=({XSrc},{YSrc}), srcSize=({WSrc}x{HSrc}), rop=0x{Rop:X})",
