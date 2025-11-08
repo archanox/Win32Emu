@@ -409,69 +409,39 @@ public partial class GameLibraryViewModel : ViewModelBase
             // Show the emulator window
             emulatorWindow.Show();
             
-            // Get the centralized logging service and create a composite logger
-            // that logs to both the central logger and the Avalonia UI
+            // Create a logger for this game launch
+            // We need to combine the central logger with the Avalonia UI logger
             ILogger logger;
             if (App.LoggingService != null)
             {
-                // Create a logger factory that combines central logging with Avalonia logging
-                using var loggerFactory = LoggerFactory.Create(builder =>
-                {
-                    // Add the Avalonia provider for UI logging
-                    builder.AddProvider(new AvaloniaLoggerProvider(viewModel));
-                    
-                    // Add console logging
-                    builder.AddConsole()
-                        .SetMinimumLevel(_configuration.EnableDebugMode ? LogLevel.Debug : LogLevel.Information);
-                    
-                    // Add file logging if enabled
-                    if (_configuration.EnableFileLogging)
-                    {
-                        try
-                        {
-                            var logFilePath = FileLoggingHelper.GenerateLogFilePath(
-                                game.ExecutablePath, 
-                                _configuration.LogFileDirectory);
-                            builder.AddFileLogging(logFilePath);
-                            
-                            // Log to the central logger that we're creating a game-specific log
-                            var centralLogger = App.LoggingService.CreateLogger<GameLibraryViewModel>();
-                            centralLogger.LogInformation("Game-specific log file: {LogFilePath}", logFilePath);
-                        }
-                        catch (DirectoryNotFoundException ex)
-                        {
-                            _logger.LogWarning(ex, "Could not enable file logging (directory not found)");
-                        }
-                        catch (UnauthorizedAccessException ex)
-                        {
-                            _logger.LogWarning(ex, "Could not enable file logging (unauthorized access)");
-                        }
-                        catch (ArgumentException ex)
-                        {
-                            _logger.LogWarning(ex, "Could not enable file logging (invalid argument)");
-                        }
-                        catch (IOException ex)
-                        {
-                            _logger.LogWarning(ex, "Could not enable file logging (I/O error)");
-                        }
-                    }
-                });
+                // Use the centralized logging service and log to central location
+                logger = App.LoggingService.CreateLogger<Emulator>();
                 
-                logger = loggerFactory.CreateLogger<Emulator>();
+                // Also set up Avalonia UI logging via the view model's OnDebugOutput
+                // This happens automatically through the emulator's IEmulatorHost interface
+                
+                // Log game-specific file if file logging is enabled
+                if (_configuration.EnableFileLogging)
+                {
+                    try
+                    {
+                        var logFilePath = FileLoggingHelper.GenerateLogFilePath(
+                            game.ExecutablePath, 
+                            _configuration.LogFileDirectory);
+                        
+                        logger.LogInformation("Game-specific log file: {LogFilePath}", logFilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Could not generate game-specific log file path");
+                    }
+                }
             }
             else
             {
                 // Fallback: create a basic logger if central logging service is not available
-                _logger.LogWarning("Central logging service not available, creating fallback logger");
-                using var loggerFactory = LoggerFactory.Create(builder =>
-                {
-                    builder
-                        .AddConsole()
-                        .AddProvider(new AvaloniaLoggerProvider(viewModel))
-                        .SetMinimumLevel(_configuration.EnableDebugMode ? LogLevel.Debug : LogLevel.Information);
-                });
-                
-                logger = loggerFactory.CreateLogger<Emulator>();
+                _logger.LogWarning("Central logging service not available, using fallback logger");
+                logger = _logger;
             }
             
             logger.LogInformation("Launching game: {GameTitle} {Path}", game.Title, game.ExecutablePath);
