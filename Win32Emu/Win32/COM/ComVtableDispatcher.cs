@@ -87,8 +87,18 @@ public class ComVtableDispatcher
 			_logger.LogDebug("[COM] Register state before {MethodName}: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}, EBX=0x{Ebx:X8}, ESI=0x{Esi:X8}, EDI=0x{Edi:X8}", 
 				methodName, eipBefore, espBefore, ebpBefore, ebxBefore, esiBefore, ediBefore);
 			
-			// Invoke the method
-			returnValue = handler(cpu, memory);
+			// Invoke the method with exception handling
+			try
+			{
+				returnValue = handler(cpu, memory);
+				_logger.LogDebug("[COM] {MethodName} handler completed successfully", methodName);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[COM] Exception in {MethodName} handler", methodName);
+				returnValue = 0x80004005; // E_FAIL
+				// Continue with logging and cleanup
+			}
 			
 			// Capture register state after method invocation
 			var eipAfter = cpu.GetEip();
