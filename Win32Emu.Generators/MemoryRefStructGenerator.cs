@@ -71,8 +71,10 @@ public sealed class MemoryRefStructGenerator : IIncrementalGenerator
 				return offset;
 		}
 
-		// Default: sequential layout, 4 bytes per field (assumes 32-bit types)
-		return index * 4;
+		// Defaulting to sequential layout is error-prone.
+		// Throw an exception to enforce explicit [FieldOffset] attributes.
+		throw new InvalidOperationException(
+			$"Field '{field.Name}' in struct '{field.ContainingType.Name}' must have an explicit [FieldOffset] attribute. Automatic layout is not supported.");
 	}
 
 	private static void Execute(StructInfo structInfo, SourceProductionContext context)
