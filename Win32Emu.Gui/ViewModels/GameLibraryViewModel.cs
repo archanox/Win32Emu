@@ -431,9 +431,17 @@ public partial class GameLibraryViewModel : ViewModelBase
                         
                         logger.LogInformation("Game-specific log file: {LogFilePath}", logFilePath);
                     }
-                    catch (Exception ex)
+                    catch (IOException ex)
                     {
-                        logger.LogWarning(ex, "Could not generate game-specific log file path");
+                        logger.LogWarning(ex, "Could not generate game-specific log file path (IO error)");
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        logger.LogWarning(ex, "Could not generate game-specific log file path (unauthorized)");
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        logger.LogWarning(ex, "Could not generate game-specific log file path (invalid argument)");
                     }
                 }
             }
