@@ -2338,32 +2338,34 @@ namespace Win32Emu.Win32.Modules
 				{
 					// Allocate DDSURFACEDESC structure (108 bytes minimum)
 					var surfaceDescPtr = AllocateMemory(108);
+					var surfaceDesc = new DDSurfaceDescRef(_env.Memory, surfaceDescPtr);
 
-					// Fill in the structure
-					_env.MemWrite32(surfaceDescPtr, 108); // dwSize
-					_env.MemWrite32(surfaceDescPtr + 4, (uint)(DDSD.WIDTH | DDSD.HEIGHT | DDSD.PIXELFORMAT)); // dwFlags
-					_env.MemWrite32(surfaceDescPtr + 8, (uint)mode.Height); // dwHeight
-					_env.MemWrite32(surfaceDescPtr + 12, (uint)mode.Width); // dwWidth
-					_env.MemWrite32(surfaceDescPtr + 16, (uint)(mode.Width * (mode.Bpp / 8))); // lPitch
+					// Fill in the structure using ref struct
+					surfaceDesc.dwSize = 108;
+					surfaceDesc.dwFlags = DDSD.WIDTH | DDSD.HEIGHT | DDSD.PIXELFORMAT;
+					surfaceDesc.dwHeight = (uint)mode.Height;
+					surfaceDesc.dwWidth = (uint)mode.Width;
+					surfaceDesc.lPitch = (uint)(mode.Width * (mode.Bpp / 8));
 
-					// Pixel format at offset 76
-					_env.MemWrite32(surfaceDescPtr + 76, 32); // dwSize of DDPIXELFORMAT
-					_env.MemWrite32(surfaceDescPtr + 80, (uint)DDPFFlags.DDPF_RGB); // dwFlags
-					_env.MemWrite32(surfaceDescPtr + 84, 0); // dwFourCC
-					_env.MemWrite32(surfaceDescPtr + 88, (uint)mode.Bpp); // dwRGBBitCount
+					// Fill in pixel format using nested ref struct
+					var pixelFormat = surfaceDesc.ddpfPixelFormat;
+					pixelFormat.dwSize = 32;
+					pixelFormat.dwFlags = (uint)DDPFFlags.DDPF_RGB;
+					pixelFormat.dwFourCC = 0;
+					pixelFormat.dwRGBBitCount = (uint)mode.Bpp;
 
 					// Set RGB masks based on bit depth
 					if (mode.Bpp == 16)
 					{
-						_env.MemWrite32(surfaceDescPtr + 92, 0xF800); // Red mask
-						_env.MemWrite32(surfaceDescPtr + 96, 0x07E0); // Green mask
-						_env.MemWrite32(surfaceDescPtr + 100, 0x001F); // Blue mask
+						pixelFormat.dwRBitMask = 0xF800;
+						pixelFormat.dwGBitMask = 0x07E0;
+						pixelFormat.dwBBitMask = 0x001F;
 					}
 					else if (mode.Bpp == 24 || mode.Bpp == 32)
 					{
-						_env.MemWrite32(surfaceDescPtr + 92, 0x00FF0000); // Red mask
-						_env.MemWrite32(surfaceDescPtr + 96, 0x0000FF00); // Green mask
-						_env.MemWrite32(surfaceDescPtr + 100, 0x000000FF); // Blue mask
+						pixelFormat.dwRBitMask = 0x00FF0000;
+						pixelFormat.dwGBitMask = 0x0000FF00;
+						pixelFormat.dwBBitMask = 0x000000FF;
 					}
 
 					_logger.LogDebug("[DDraw] Enumerating mode: {Width}x{Height}x{Bpp}",
@@ -2429,48 +2431,50 @@ namespace Win32Emu.Win32.Modules
 				{
 					// Allocate DDSURFACEDESC structure (108 bytes minimum)
 					var surfaceDescPtr = AllocateMemory(108);
+					var surfaceDesc = new DDSurfaceDescRef(_env.Memory, surfaceDescPtr);
 
 					// Get DirectDraw object to determine BPP
 					DirectDrawObject? ddrawObj = null;
 					_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out ddrawObj);
 
-					// Fill in the structure
-					_env.MemWrite32(surfaceDescPtr, 108); // dwSize
-					_env.MemWrite32(surfaceDescPtr + 4, (uint)(DDSD.CAPS | DDSD.WIDTH | DDSD.HEIGHT | DDSD.PITCH | DDSD.PIXELFORMAT)); // dwFlags
-					_env.MemWrite32(surfaceDescPtr + 8, (uint)surface.Height); // dwHeight
-					_env.MemWrite32(surfaceDescPtr + 12, (uint)surface.Width); // dwWidth
-					_env.MemWrite32(surfaceDescPtr + 16, (uint)surface.Pitch); // lPitch
+					// Fill in the structure using ref struct
+					surfaceDesc.dwSize = 108;
+					surfaceDesc.dwFlags = DDSD.CAPS | DDSD.WIDTH | DDSD.HEIGHT | DDSD.PITCH | DDSD.PIXELFORMAT;
+					surfaceDesc.dwHeight = (uint)surface.Height;
+					surfaceDesc.dwWidth = (uint)surface.Width;
+					surfaceDesc.lPitch = (uint)surface.Pitch;
 
-					// Pixel format at offset 76
+					// Fill in pixel format using nested ref struct
 					if (ddrawObj != null)
 					{
-						_env.MemWrite32(surfaceDescPtr + 76, 32); // dwSize of DDPIXELFORMAT
-						_env.MemWrite32(surfaceDescPtr + 80, (uint)DDPFFlags.DDPF_RGB); // dwFlags
-						_env.MemWrite32(surfaceDescPtr + 84, 0); // dwFourCC
-						_env.MemWrite32(surfaceDescPtr + 88, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
+						var pixelFormat = surfaceDesc.ddpfPixelFormat;
+						pixelFormat.dwSize = 32;
+						pixelFormat.dwFlags = (uint)DDPFFlags.DDPF_RGB;
+						pixelFormat.dwFourCC = 0;
+						pixelFormat.dwRGBBitCount = (uint)ddrawObj.BitsPerPixel;
 
 						// Set RGB masks based on bit depth
 						if (ddrawObj.BitsPerPixel == 16)
 						{
-							_env.MemWrite32(surfaceDescPtr + 92, 0xF800); // Red mask
-							_env.MemWrite32(surfaceDescPtr + 96, 0x07E0); // Green mask
-							_env.MemWrite32(surfaceDescPtr + 100, 0x001F); // Blue mask
+							pixelFormat.dwRBitMask = 0xF800;
+							pixelFormat.dwGBitMask = 0x07E0;
+							pixelFormat.dwBBitMask = 0x001F;
 						}
 						else if (ddrawObj.BitsPerPixel == 24 || ddrawObj.BitsPerPixel == 32)
 						{
-							_env.MemWrite32(surfaceDescPtr + 92, 0x00FF0000); // Red mask
-							_env.MemWrite32(surfaceDescPtr + 96, 0x0000FF00); // Green mask
-							_env.MemWrite32(surfaceDescPtr + 100, 0x000000FF); // Blue mask
+							pixelFormat.dwRBitMask = 0x00FF0000;
+							pixelFormat.dwGBitMask = 0x0000FF00;
+							pixelFormat.dwBBitMask = 0x000000FF;
 						}
 					}
 
-					// Caps at offset 108
+					// Set surface caps
 					uint caps = 0;
 					if (surface.IsPrimary)
 						caps |= (uint)DDSCaps.DDSCAPS_PRIMARYSURFACE;
 					else
 						caps |= (uint)DDSCaps.DDSCAPS_OFFSCREENPLAIN;
-					_env.MemWrite32(surfaceDescPtr + 108, caps);
+					surfaceDesc.dwSurfaceCaps = caps;
 
 					_logger.LogDebug("[DDraw] Enumerating surface: 0x{Handle:X8} ({Width}x{Height})",
 						surface.Handle, surface.Width, surface.Height);
