@@ -155,7 +155,7 @@ public sealed class Emulator : IDisposable
         LogDebug("[Emulator] Subscribed to UI events from backends");
     }
 
-    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, bool useUnicornCpu = false)
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, bool useUnicornCpu = false, string? virtualDiskPath = null)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -203,6 +203,15 @@ public sealed class Emulator : IDisposable
         }
 
         _env = new ProcessEnvironment(_vm, CalculateHeapBase(), _host, _logger);
+        
+        // Initialize virtual file system with disk if provided
+        if (!string.IsNullOrEmpty(virtualDiskPath))
+        {
+            _logger.LogInformation("[Loader] Initializing virtual file system with disk: {DiskPath}", virtualDiskPath);
+            _env.InitializeVirtualFileSystemWithDisk(virtualDiskPath);
+            _logger.LogInformation("[Loader] Virtual file system initialized successfully");
+        }
+        
         // Register the main executable so GetModuleFileNameA can find it
         _env.RegisterMainExecutable(_image, path);
         // Convert path to Windows-style backslashes for proper parsing by C runtime
