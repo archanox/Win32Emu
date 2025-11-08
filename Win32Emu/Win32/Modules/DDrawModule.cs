@@ -1025,15 +1025,7 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, lpDDClipper);
 
 			// Find the surface by COM object address
-			DirectDrawSurface? surface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == thisPtr)
-				{
-					surface = s;
-					break;
-				}
-			}
+			var surface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (surface == null)
 			{
@@ -1130,15 +1122,7 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, lpDDSurfaceDesc);
 
 			// Find the surface by COM object address
-			DirectDrawSurface? surface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == thisPtr)
-				{
-					surface = s;
-					break;
-				}
-			}
+			var surface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (surface == null)
 			{
@@ -1216,15 +1200,7 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, lpDDPixelFormat);
 
 			// Find the surface by COM object address
-			DirectDrawSurface? surface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == thisPtr)
-				{
-					surface = s;
-					break;
-				}
-			}
+			var surface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (surface == null)
 			{
@@ -1289,15 +1265,7 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, lplpDDPalette);
 
 			// Find the surface by COM object address
-			DirectDrawSurface? surface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == thisPtr)
-				{
-					surface = s;
-					break;
-				}
-			}
+			var surface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (surface == null)
 			{
@@ -1398,15 +1366,7 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, dwFlags, lpDDColorKey);
 
 			// Find the surface by COM object address
-			DirectDrawSurface? surface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == thisPtr)
-				{
-					surface = s;
-					break;
-				}
-			}
+			var surface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (surface == null)
 			{
@@ -1453,15 +1413,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Find the surface by COM object address
-			DirectDrawSurface? surface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == thisPtr)
-				{
-					surface = s;
-					break;
-				}
-			}
+			var surface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (surface == null)
 			{
@@ -1503,15 +1455,7 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, lpDDSCaps);
 
 			// Find the surface by COM object address
-			DirectDrawSurface? surface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == thisPtr)
-				{
-					surface = s;
-					break;
-				}
-			}
+			var surface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (surface == null)
 			{
@@ -1585,15 +1529,7 @@ namespace Win32Emu.Win32.Modules
 				lpDDSCaps, lplpDDAttachedSurface);
 
 			// Find the surface by COM object address
-			DirectDrawSurface? surface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == thisPtr)
-				{
-					surface = s;
-					break;
-				}
-			}
+			var surface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (surface == null)
 			{
@@ -1758,17 +1694,7 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, lpDDSurfaceTargetOverride, dwFlags);
 
 			// Find the surface from the COM object
-			DirectDrawSurface? surface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				// We need to match surfaces by their COM object address
-				// For now, just use the first primary surface
-				if (s.IsPrimary)
-				{
-					surface = s;
-					break;
-				}
-			}
+			var surface = _surfaces.Values.FirstOrDefault(s => s.IsPrimary);
 
 			if (surface == null)
 			{
@@ -1826,15 +1752,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Find the destination surface by COM object address
-			DirectDrawSurface? destSurface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == thisPtr)
-				{
-					destSurface = s;
-					break;
-				}
-			}
+			var destSurface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (destSurface == null)
 			{
@@ -1843,15 +1761,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Find the surface to detach by COM object address
-			DirectDrawSurface? detachSurface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == lpDDSAttachedSurface)
-				{
-					detachSurface = s;
-					break;
-				}
-			}
+			var detachSurface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == lpDDSAttachedSurface);
 
 			if (detachSurface == null)
 			{
@@ -2241,15 +2151,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Find the destination surface by COM object address
-			DirectDrawSurface? destSurface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == thisPtr)
-				{
-					destSurface = s;
-					break;
-				}
-			}
+			var destSurface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (destSurface == null)
 			{
@@ -2258,15 +2160,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Find the surface to attach by COM object address
-			DirectDrawSurface? attachSurface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.ComObjectAddress == lpDDSAttachedSurface)
-				{
-					attachSurface = s;
-					break;
-				}
-			}
+			var attachSurface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == lpDDSAttachedSurface);
 
 			if (attachSurface == null)
 			{
@@ -2394,6 +2288,14 @@ namespace Win32Emu.Win32.Modules
 
 				return (uint)DDResult.DD_OK;
 			}
+			catch (OutOfMemoryException)
+			{
+				throw; // Rethrow critical exceptions
+			}
+			catch (StackOverflowException)
+			{
+				throw; // Rethrow critical exceptions
+			}
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[DDraw] EnumDisplayModes: exception during enumeration");
@@ -2501,6 +2403,14 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				return (uint)DDResult.DD_OK;
+			}
+			catch (OutOfMemoryException)
+			{
+				throw; // Rethrow critical exceptions
+			}
+			catch (StackOverflowException)
+			{
+				throw; // Rethrow critical exceptions
 			}
 			catch (Exception ex)
 			{
@@ -2726,15 +2636,7 @@ namespace Win32Emu.Win32.Modules
 			// Find the primary surface (which would be the GDI surface)
 			// Note: Linear search is acceptable here as there are typically only 1-3 surfaces
 			// (primary, backbuffer, and possibly one more) in a DirectDraw application
-			DirectDrawSurface? primarySurface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				if (s.IsPrimary)
-				{
-					primarySurface = s;
-					break;
-				}
-			}
+			var primarySurface = _surfaces.Values.FirstOrDefault(s => s.IsPrimary);
 
 			if (primarySurface == null)
 			{
