@@ -206,31 +206,26 @@ public sealed class Emulator : IDisposable
         }
 
         // Log system information
-            var osDescription = RuntimeInformation.OSDescription;
-            var processArchitecture = RuntimeInformation.ProcessArchitecture;
-            _logger.LogInformation("[Loader] Host OS: {OSDescription}", osDescription);
-            _logger.LogInformation("[Loader] Host Architecture: {ProcessArchitecture}", processArchitecture);
+        var osDescription = RuntimeInformation.OSDescription;
+        var processArchitecture = RuntimeInformation.ProcessArchitecture;
+        _logger.LogInformation("[Loader] Host OS: {OSDescription}", osDescription);
+        _logger.LogInformation("[Loader] Host Architecture: {ProcessArchitecture}", processArchitecture);
 
-            LogDebug($"[Loader] Loading PE: {path}");
-            // Convert MB to bytes for VirtualMemory constructor
-            var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
-            _vm = new VirtualMemory(memorySizeBytes);
-            
-            var configuredSizeMB = _vm.ConfiguredSize / (1024 * 1024);
-            var addressSpaceSizeMB = _vm.Size / (1024 * 1024);
-            _logger.LogInformation("[Memory] Configured size: {ConfiguredMB} MB, Address space: {AddressSpaceMB} MB (sparse, pages allocated on-demand)", 
-                configuredSizeMB, addressSpaceSizeMB);
-            var loader = new PeImageLoader(_vm, _logger);
-            
-            // Load PE from bytes or file
-            if (executableBytes != null)
-            {
-                _image = loader.LoadFromBytes(executableBytes);
-            }
-            else
-            {
-                _image = loader.Load(path);
-            }
+        LogDebug($"[Loader] Loading PE: {path}");
+        // Convert MB to bytes for VirtualMemory constructor
+        var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
+        _vm = new VirtualMemory(memorySizeBytes);
+        
+        var configuredSizeMB = _vm.ConfiguredSize / (1024 * 1024);
+        var addressSpaceSizeMB = _vm.Size / (1024 * 1024);
+        _logger.LogInformation("[Memory] Configured size: {ConfiguredMB} MB, Address space: {AddressSpaceMB} MB (sparse, pages allocated on-demand)", 
+            configuredSizeMB, addressSpaceSizeMB);
+        var loader = new PeImageLoader(_vm, _logger);
+        
+        // Load PE from bytes or file
+        _image = executableBytes != null
+            ? loader.LoadFromBytes(executableBytes)
+            : loader.Load(path);
         LogDebug($"[Loader] Image base=0x{_image.BaseAddress:X8} EntryPoint=0x{_image.EntryPointAddress:X8} Size=0x{_image.ImageSize:X}");
         LogDebug($"[Loader] Imports mapped: {_image.ImportAddressMap.Count}");
         LogDebug($"[Loader] Subsystem: {_image.Subsystem} (2=GUI, 3=CUI)");

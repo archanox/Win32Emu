@@ -281,12 +281,12 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 
 			if (sanitizedFileName != fileName)
 			{
-				_logger.LogInformation("[DiskVFS] Copied file: {OriginalName} -> {TargetPath} (sanitized, {Size} bytes)", 
+				_logger.LogDebug("[DiskVFS] Copied file: {OriginalName} -> {TargetPath} (sanitized, {Size} bytes)", 
 					fileName, targetPath, fileSize);
 			}
 			else
 			{
-				_logger.LogInformation("[DiskVFS] Copied file: {FileName} -> {TargetPath} ({Size} bytes)", 
+				_logger.LogDebug("[DiskVFS] Copied file: {FileName} -> {TargetPath} ({Size} bytes)", 
 					fileName, targetPath, fileSize);
 			}
 		}
@@ -407,12 +407,9 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			return fileName;
 		}
 
-		// Replace multiple consecutive dots with a single underscore
+		// Replace multiple consecutive dots with underscores
 		// This handles cases like "file.name.ext.backup" -> "file_name_ext.backup"
-		while (fileName.Contains(".."))
-		{
-			fileName = fileName.Replace("..", "._");
-		}
+		fileName = System.Text.RegularExpressions.Regex.Replace(fileName, @"\.{2,}", "_");
 
 		// Split into name and extension
 		var lastDotIndex = fileName.LastIndexOf('.');
@@ -440,13 +437,21 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			
 			fileName = baseName + "." + extension;
 		}
-		else if (lastDotIndex == -1)
+		else if (lastDotIndex == 0 && fileName.Length > 1)
+		{
+			// Filename starts with a dot (e.g., ".gitignore")
+			// Treat everything after the dot as extension, basename as "_"
+			var extension = fileName.Substring(1);
+			if (extension.Length > 3)
+			{
+				extension = extension.Substring(0, 3);
+			}
+			fileName = "_" + "." + extension;
+		}
+		else if (lastDotIndex == -1 && fileName.Length > 8)
 		{
 			// No extension - limit basename to 8 characters
-			if (fileName.Length > 8)
-			{
-				fileName = fileName.Substring(0, 8);
-			}
+			fileName = fileName.Substring(0, 8);
 		}
 
 		return fileName;
