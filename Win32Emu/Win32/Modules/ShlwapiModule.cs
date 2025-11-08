@@ -60,11 +60,12 @@ public partial class ShlwapiModule : IWin32ModuleUnsafe
 			return 0; // FALSE
 		}
 
-		// Read the path string
+		// Read the path string with MAX_PATH protection
 		var pathBytes = new System.Collections.Generic.List<byte>();
 		uint offset = 0;
+		const uint MAX_PATH = 260; // Standard Windows MAX_PATH
 		byte b;
-		while ((b = _env.MemRead8(pszPath + offset)) != 0)
+		while (offset < MAX_PATH && (b = _env.MemRead8(pszPath + offset)) != 0)
 		{
 			pathBytes.Add(b);
 			offset++;

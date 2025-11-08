@@ -90,6 +90,14 @@ public partial class UcrtbaseModule : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint Calloc(uint count, uint size)
 	{
+		// Check for integer overflow before multiplication
+		if (count != 0 && size > uint.MaxValue / count)
+		{
+			// Overflow would occur
+			LogCalloc(count, size, 0);
+			return 0;
+		}
+
 		var totalSize = count * size;
 		if (totalSize == 0)
 		{
@@ -101,11 +109,9 @@ public partial class UcrtbaseModule : IWin32ModuleUnsafe
 		var ptr = _env.HeapAlloc(0, totalSize);
 		if (ptr != 0)
 		{
-			// Zero-initialize the memory
-			for (uint i = 0; i < totalSize; i++)
-			{
-				_env.MemWrite8(ptr + i, 0);
-			}
+			// Zero-initialize the memory using bulk operation
+			var zeroBuffer = new byte[totalSize];
+			_env.Memory.WriteBytes(ptr, zeroBuffer);
 		}
 		LogCalloc(count, size, ptr);
 		return ptr;
@@ -140,10 +146,11 @@ public partial class UcrtbaseModule : IWin32ModuleUnsafe
 		}
 
 		var byteVal = (byte)(val & 0xFF);
-		for (uint i = 0; i < len; i++)
-		{
-			_env.MemWrite8(dst + i, byteVal);
-		}
+		
+		// Use bulk operation for better performance
+		var buffer = new byte[len];
+		Array.Fill(buffer, byteVal);
+		_env.Memory.WriteBytes(dst, buffer);
 
 		LogMemset(dst, val, len);
 		return dst;
@@ -161,9 +168,20 @@ public partial class UcrtbaseModule : IWin32ModuleUnsafe
 			return dest;
 		}
 
-		for (uint i = 0; i < count; i++)
+		// Handle overlapping regions: if dest > src and dest < src + count, copy backwards
+		if (dest > src && dest < src + count)
 		{
-			_env.MemWrite8(dest + i, _env.MemRead8(src + i));
+			// Overlap with destination ahead of source: copy backwards
+			for (uint i = count; i > 0; i--)
+			{
+				_env.MemWrite8(dest + i - 1, _env.MemRead8(src + i - 1));
+			}
+		}
+		else
+		{
+			// No overlap or safe to copy forwards - use bulk operation
+			var buffer = _env.Memory.GetSpan(src, (int)count);
+			_env.Memory.WriteBytes(dest, buffer);
 		}
 
 		LogMemcpy(dest, src, count);
@@ -183,7 +201,8 @@ public partial class UcrtbaseModule : IWin32ModuleUnsafe
 		}
 
 		uint len = 0;
-		while (_env.MemRead8(lpString + len) != 0)
+		const uint MAX_STRING_LENGTH = 0x7FFFFFFF; // 2GB, reasonable upper bound for emulated strings
+		while (len < MAX_STRING_LENGTH && _env.MemRead8(lpString + len) != 0)
 		{
 			len++;
 		}
