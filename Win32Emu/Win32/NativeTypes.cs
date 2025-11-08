@@ -604,4 +604,145 @@ public static class NativeTypes
 		public uint NumberParameters;    // Offset 16
 		// ExceptionInformation array follows...
 	}
+
+	#region DirectDraw Constants and Enums
+
+	/// <summary>
+	/// DirectDraw error codes
+	/// </summary>
+	public enum DDResult : uint
+	{
+		DD_OK = 0,
+		DDERR_GENERIC = 1,
+		DDERR_INVALIDPARAMS = 0x80070057,
+		DDERR_NOTFOUND = 0x887601C2,
+		DDERR_INVALIDOBJECT = 0x88760066,
+		DDERR_NOPALETTEATTACHED = 0x88760165,
+		DDERR_NOCOLORKEY = 0x88760168,
+		DDERR_NOCLIPPERATTACHED = 0x88760169,
+		DDERR_NOTAOVERLAYSURFACE = 0x88760177,
+		DDERR_SURFACEBUSY = 0x8877000A,
+		DDERR_NOTLOCKED = 0x88770010,
+		DDERR_SURFACEALREADYATTACHED = 0x88760109,
+		DDERR_SURFACENOTATTACHED = 0x88760108,
+		DDERR_NOCLIPLIST = 0x887601F6,
+		E_NOINTERFACE = 0x80004002,
+		CLASS_E_NOAGGREGATION = 0x80040110,
+	}
+
+	/// <summary>
+	/// DirectDraw surface capabilities flags
+	/// </summary>
+	[Flags]
+	public enum DDSCaps : uint
+	{
+		DDSCAPS_BACKBUFFER = 0x00000004,
+		DDSCAPS_COMPLEX = 0x00000008,
+		DDSCAPS_FLIP = 0x00000010,
+		DDSCAPS_OFFSCREENPLAIN = 0x00000040,
+		DDSCAPS_PRIMARYSURFACE = 0x00000200,
+		DDSCAPS_VIDEOMEMORY = 0x00000800,
+	}
+
+	/// <summary>
+	/// DirectDraw general capabilities flags
+	/// </summary>
+	[Flags]
+	public enum DDCaps : uint
+	{
+		DDCAPS_BLT = 0x00000001,
+		DDCAPS_BLTCOLORFILL = 0x00000002,
+		DDCAPS_BLTQUEUE = 0x00000004,
+		DDCAPS_BLTSTRETCH = 0x00000040,
+		DDCAPS_COLORKEY = 0x00000100,
+		DDCAPS_GDI = 0x00000800,
+		DDCAPS_PALETTE = 0x00002000,
+		DDCAPS_PALETTEVSYNC = 0x00010000,
+	}
+
+	/// <summary>
+	/// DirectDraw extended capabilities flags (caps2)
+	/// </summary>
+	[Flags]
+	public enum DDCaps2 : uint
+	{
+		DDCAPS2_CERTIFIED = 0x00000001,
+		DDCAPS2_CANRENDERWINDOWED = 0x00000040,
+		DDCAPS2_WIDESURFACES = 0x00000100,
+		DDCAPS2_CANBOBHARDWARE = 0x00001000,
+	}
+
+	/// <summary>
+	/// DirectDraw color key capabilities flags
+	/// </summary>
+	[Flags]
+	public enum DDCKeyCaps : uint
+	{
+		DDCKEYCAPS_DESTBLT = 0x00000001,
+		DDCKEYCAPS_DESTBLTCLRSPACE = 0x00000002,
+		DDCKEYCAPS_SRCBLT = 0x00000010,
+		DDCKEYCAPS_SRCBLTCLRSPACE = 0x00000020,
+	}
+
+	/// <summary>
+	/// DirectDraw FX capabilities flags
+	/// </summary>
+	[Flags]
+	public enum DDFXCaps : uint
+	{
+		DDFXCAPS_BLTARITHSTRETCHY = 0x00000001,
+		DDFXCAPS_BLTARITHSTRETCHYN = 0x00000002,
+		DDFXCAPS_BLTMIRRORLEFTRIGHT = 0x00000010,
+		DDFXCAPS_BLTMIRRORUPDOWN = 0x00000020,
+		DDFXCAPS_BLTROTATION = 0x00000040,
+		DDFXCAPS_BLTSHRINKX = 0x00000100,
+		DDFXCAPS_BLTSHRINKY = 0x00000400,
+		DDFXCAPS_BLTSTRETCHX = 0x00001000,
+		DDFXCAPS_BLTSTRETCHY = 0x00004000,
+	}
+
+	/// <summary>
+	/// DirectDraw palette capabilities flags
+	/// </summary>
+	[Flags]
+	public enum DDPCaps : uint
+	{
+		DDPCAPS_1BIT = 0x00000001,
+		DDPCAPS_2BIT = 0x00000002,
+		DDPCAPS_4BIT = 0x00000004,
+		DDPCAPS_8BIT = 0x00000008,
+		DDPCAPS_PRIMARYSURFACE = 0x00000002,
+		DDPCAPS_ALLOW256 = 0x00000100,
+	}
+
+	/// <summary>
+	/// DirectDraw pixel format flags
+	/// </summary>
+	[Flags]
+	public enum DDPFFlags : uint
+	{
+		DDPF_PALETTEINDEXED8 = 0x00000020,
+		DDPF_RGB = 0x00000040,
+	}
+
+	/// <summary>
+	/// DirectDraw blt flags
+	/// </summary>
+	[Flags]
+	public enum DDBlt : uint
+	{
+		DDBLT_COLORFILL = 0x00000400,
+		DDBLT_KEYSRC = 0x00008000,
+	}
+
+	/// <summary>
+	/// DirectDraw surface video capabilities
+	/// </summary>
+	[Flags]
+	public enum DDSVCaps : uint
+	{
+		DDSVCAPS_RESERVED1 = 0x00000001,
+	}
+
+	#endregion
 }
