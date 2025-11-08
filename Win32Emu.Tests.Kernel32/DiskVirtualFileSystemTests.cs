@@ -273,19 +273,19 @@ public class DiskVirtualFileSystemTests : IDisposable
 		Directory.CreateDirectory(sourceDir);
 		
 		// This file has multiple dots which causes issues with FAT
-		File.WriteAllText(Path.Combine(sourceDir, "IGN_TEAS.EXE.i64"), "IDA database");
-		File.WriteAllText(Path.Combine(sourceDir, "backup.file.txt"), "backup");
+		File.WriteAllText(Path.Combine(sourceDir, "TEST.EXE.i64"), "IDA database");
+		File.WriteAllText(Path.Combine(sourceDir, "file.db.bak"), "backup");
 		File.WriteAllText(Path.Combine(sourceDir, "normal.txt"), "normal file");
 		
 		// Act - Copy directory to VHD
 		vfs.CopyDirectoryIn(sourceDir, "/testgame");
 
 		// Assert - Files should be copied with sanitized names
-		// IGN_TEAS.EXE.i64 -> IGN_TEAS_EXE.i64
-		Assert.True(vfs.FileExists(@"\testgame\IGN_TEAS_EXE.i64"));
+		// TEST.EXE.i64 -> TEST_EXE.i64
+		Assert.True(vfs.FileExists(@"\testgame\TEST_EXE.i64"));
 		
-		// backup.file.txt -> backup_file.txt
-		Assert.True(vfs.FileExists(@"\testgame\backup_file.txt"));
+		// file.db.bak -> file_db.bak
+		Assert.True(vfs.FileExists(@"\testgame\file_db.bak"));
 		
 		// normal.txt stays the same
 		Assert.True(vfs.FileExists(@"\testgame\normal.txt"));
