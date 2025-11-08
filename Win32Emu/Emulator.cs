@@ -162,9 +162,8 @@ public sealed class Emulator : IDisposable
         _gdbServerMode = gdbServerMode;
         _gdbServerPort = gdbServerPort;
 
-        // When using a virtual disk, extract the executable from VFS to a temporary file first
-        string? tempExecutablePath = null;
-        string executablePathToLoad = path;
+        // When using a virtual disk, extract the executable from VFS to memory
+        byte[]? executableBytes = null;
         
         if (!string.IsNullOrEmpty(virtualDiskPath))
         {
@@ -194,15 +193,10 @@ public sealed class Emulator : IDisposable
                     var fileLength = fileHandle.Seek(0, SeekOrigin.End);
                     fileHandle.Seek(0, SeekOrigin.Begin); // Reset to beginning
                     
-                    var fileBytes = new byte[fileLength];
-                    fileHandle.Read(fileBytes, 0, (int)fileLength);
+                    executableBytes = new byte[fileLength];
+                    fileHandle.Read(executableBytes, 0, (int)fileLength);
                     
-                    // Write to a temporary file
-                    tempExecutablePath = Path.Combine(Path.GetTempPath(), $"win32emu_{Guid.NewGuid():N}.exe");
-                    File.WriteAllBytes(tempExecutablePath, fileBytes);
-                    executablePathToLoad = tempExecutablePath;
-                    
-                    _logger.LogInformation("[Loader] Extracted executable to temporary file: {TempPath}", tempExecutablePath);
+                    _logger.LogInformation("[Loader] Extracted {FileSize} bytes from virtual disk", fileLength);
                 }
             }
         }
@@ -211,15 +205,13 @@ public sealed class Emulator : IDisposable
             throw new FileNotFoundException($"File not found: {path}");
         }
 
-        try
-        {
-            // Log system information
+        // Log system information
             var osDescription = RuntimeInformation.OSDescription;
             var processArchitecture = RuntimeInformation.ProcessArchitecture;
             _logger.LogInformation("[Loader] Host OS: {OSDescription}", osDescription);
             _logger.LogInformation("[Loader] Host Architecture: {ProcessArchitecture}", processArchitecture);
 
-            LogDebug($"[Loader] Loading PE: {executablePathToLoad}");
+            LogDebug($"[Loader] Loading PE: {path}");
             // Convert MB to bytes for VirtualMemory constructor
             var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
             _vm = new VirtualMemory(memorySizeBytes);
@@ -229,7 +221,16 @@ public sealed class Emulator : IDisposable
             _logger.LogInformation("[Memory] Configured size: {ConfiguredMB} MB, Address space: {AddressSpaceMB} MB (sparse, pages allocated on-demand)", 
                 configuredSizeMB, addressSpaceSizeMB);
             var loader = new PeImageLoader(_vm, _logger);
-            _image = loader.Load(executablePathToLoad);
+            
+            // Load PE from bytes or file
+            if (executableBytes != null)
+            {
+                _image = loader.LoadFromBytes(executableBytes);
+            }
+            else
+            {
+                _image = loader.Load(path);
+            }
         LogDebug($"[Loader] Image base=0x{_image.BaseAddress:X8} EntryPoint=0x{_image.EntryPointAddress:X8} Size=0x{_image.ImageSize:X}");
         LogDebug($"[Loader] Imports mapped: {_image.ImportAddressMap.Count}");
         LogDebug($"[Loader] Subsystem: {_image.Subsystem} (2=GUI, 3=CUI)");
@@ -431,23 +432,6 @@ public sealed class Emulator : IDisposable
         // Execute TLS callbacks if present
         // TLS callbacks must be executed AFTER all modules are registered but BEFORE the main entry point
         ExecuteTlsCallbacks();
-        }
-        finally
-        {
-            // Clean up temporary executable file if we created one
-            if (!string.IsNullOrEmpty(tempExecutablePath) && File.Exists(tempExecutablePath))
-            {
-                try
-                {
-                    File.Delete(tempExecutablePath);
-                    _logger.LogDebug("[Loader] Cleaned up temporary executable: {TempPath}", tempExecutablePath);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "[Loader] Failed to delete temporary executable: {TempPath}", tempExecutablePath);
-                }
-            }
-        }
     }
 
     /// <summary>
