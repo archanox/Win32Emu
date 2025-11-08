@@ -33,6 +33,7 @@ public sealed class Emulator : IDisposable
     private CancellationTokenSource? _eventProcessingCts;
     private readonly HashSet<uint> _patchedImportStubs = new();
     private Exception? _lastException;
+    private byte[]? _executableBytes; // Store executable bytes for resource reading when loaded from VHD
     
     // Actual memory layout from PE headers
     private uint _stackBase;
@@ -226,6 +227,11 @@ public sealed class Emulator : IDisposable
         _image = executableBytes != null
             ? loader.LoadFromBytes(executableBytes)
             : loader.Load(path);
+        
+        // Store executable bytes for resource reading (needed for PEImage creation later)
+        // If we loaded from VHD, we already have the bytes. Otherwise, read from file.
+        _executableBytes = executableBytes ?? File.ReadAllBytes(path);
+        
         LogDebug($"[Loader] Image base=0x{_image.BaseAddress:X8} EntryPoint=0x{_image.EntryPointAddress:X8} Size=0x{_image.ImageSize:X}");
         LogDebug($"[Loader] Imports mapped: {_image.ImportAddressMap.Count}");
         LogDebug($"[Loader] Subsystem: {_image.Subsystem} (2=GUI, 3=CUI)");
@@ -373,7 +379,9 @@ public sealed class Emulator : IDisposable
         kernel32Module.SetDispatcher(_dispatcher);
         
         // Create resource reader for PE resources (dialogs, icons, etc.)
-        var peImage = AsmResolver.PE.PEImage.FromFile(path);
+        // Use stored bytes instead of path, as path may be a virtual path (e.g., C:\ign_teas\IGN_TEAS.EXE)
+        // when loading from VHD, which doesn't exist on the host file system
+        var peImage = AsmResolver.PE.PEImage.FromBytes(_executableBytes!);
         var resourceReader = new PeResourceReader(peImage, _image.BaseAddress, _vm);
         kernel32Module.SetResourceReader(resourceReader);
         
