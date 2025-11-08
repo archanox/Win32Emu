@@ -80,7 +80,7 @@ namespace Win32Emu.Win32.DirectDraw
 
 		#region 8-bit Blitting
 
-		private static void BltFast8Bpp(
+		private static unsafe void BltFast8Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destPitch,
@@ -88,12 +88,32 @@ namespace Win32Emu.Win32.DirectDraw
 			int width,
 			int height)
 		{
-			// For 8-bit, simple row-by-row copy is often fastest
-			for (var y = 0; y < height; y++)
+			// Check if we can use optimized full-surface copy
+			if (width == destPitch && destPitch == srcPitch)
 			{
-				var destRow = dest.Slice(y * destPitch, width);
-				var srcRow = src.Slice(y * srcPitch, width);
-				srcRow.CopyTo(destRow);
+				// Contiguous memory - use CopyAdaptive for best performance
+				fixed (byte* destPtr = dest)
+				fixed (byte* srcPtr = src)
+				{
+					CopyAdaptive(destPtr, srcPtr, destPitch * height);
+				}
+			}
+			else
+			{
+				// Row-by-row copy with CopyAdaptive for each row
+				fixed (byte* destPtr = dest)
+				fixed (byte* srcPtr = src)
+				{
+					byte* dstRow = destPtr;
+					byte* srcRow = srcPtr;
+					
+					for (var y = 0; y < height; y++)
+					{
+						CopyAdaptive(dstRow, srcRow, width);
+						dstRow += destPitch;
+						srcRow += srcPitch;
+					}
+				}
 			}
 		}
 
@@ -208,43 +228,32 @@ namespace Win32Emu.Win32.DirectDraw
 			int width,
 			int height)
 		{
-			fixed (byte* destPtr = dest)
-			fixed (byte* srcPtr = src)
+			var bytesPerRow = width * 2;
+			
+			// Check if we can use optimized full-surface copy
+			if (bytesPerRow == destPitch && destPitch == srcPitch)
 			{
-				byte* dstRow = destPtr;
-				byte* srcRow = srcPtr;
-
-				if (Sse2.IsSupported && width >= 8)
+				// Contiguous memory - use CopyAdaptive for best performance
+				fixed (byte* destPtr = dest)
+				fixed (byte* srcPtr = src)
 				{
+					CopyAdaptive(destPtr, srcPtr, destPitch * height);
+				}
+			}
+			else
+			{
+				// Row-by-row copy with CopyAdaptive for each row
+				fixed (byte* destPtr = dest)
+				fixed (byte* srcPtr = src)
+				{
+					byte* dstRow = destPtr;
+					byte* srcRow = srcPtr;
+					
 					for (var y = 0; y < height; y++)
 					{
-						var x = 0;
-
-						// Process 8 pixels (16 bytes) at a time
-						for (; x <= width - 8; x += 8)
-						{
-							var srcData = Sse2.LoadVector128(srcRow + x * 2);
-							Sse2.Store(dstRow + x * 2, srcData);
-						}
-
-						// Handle remaining pixels
-						for (; x < width; x++)
-						{
-							((ushort*)(dstRow + x * 2))[0] = ((ushort*)(srcRow + x * 2))[0];
-						}
-
+						CopyAdaptive(dstRow, srcRow, bytesPerRow);
 						dstRow += destPitch;
 						srcRow += srcPitch;
-					}
-				}
-				else
-				{
-					// Scalar fallback
-					for (var y = 0; y < height; y++)
-					{
-						var destRowSpan = dest.Slice(y * destPitch, width * 2);
-						var srcRowSpan = src.Slice(y * srcPitch, width * 2);
-						srcRowSpan.CopyTo(destRowSpan);
 					}
 				}
 			}
@@ -351,7 +360,7 @@ namespace Win32Emu.Win32.DirectDraw
 
 		#region 24-bit Blitting
 
-		private static void BltFast24Bpp(
+		private static unsafe void BltFast24Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destPitch,
@@ -359,12 +368,34 @@ namespace Win32Emu.Win32.DirectDraw
 			int width,
 			int height)
 		{
-			// 24-bit is awkward for SIMD, use simple row copy
-			for (var y = 0; y < height; y++)
+			var bytesPerRow = width * 3;
+			
+			// Check if we can use optimized full-surface copy
+			if (bytesPerRow == destPitch && destPitch == srcPitch)
 			{
-				var destRow = dest.Slice(y * destPitch, width * 3);
-				var srcRow = src.Slice(y * srcPitch, width * 3);
-				srcRow.CopyTo(destRow);
+				// Contiguous memory - use CopyAdaptive for best performance
+				fixed (byte* destPtr = dest)
+				fixed (byte* srcPtr = src)
+				{
+					CopyAdaptive(destPtr, srcPtr, destPitch * height);
+				}
+			}
+			else
+			{
+				// Row-by-row copy with CopyAdaptive for each row
+				fixed (byte* destPtr = dest)
+				fixed (byte* srcPtr = src)
+				{
+					byte* dstRow = destPtr;
+					byte* srcRow = srcPtr;
+					
+					for (var y = 0; y < height; y++)
+					{
+						CopyAdaptive(dstRow, srcRow, bytesPerRow);
+						dstRow += destPitch;
+						srcRow += srcPitch;
+					}
+				}
 			}
 		}
 
@@ -380,43 +411,32 @@ namespace Win32Emu.Win32.DirectDraw
 			int width,
 			int height)
 		{
-			fixed (byte* destPtr = dest)
-			fixed (byte* srcPtr = src)
+			var bytesPerRow = width * 4;
+			
+			// Check if we can use optimized full-surface copy
+			if (bytesPerRow == destPitch && destPitch == srcPitch)
 			{
-				byte* dstRow = destPtr;
-				byte* srcRow = srcPtr;
-
-				if (Sse2.IsSupported && width >= 4)
+				// Contiguous memory - use CopyAdaptive for best performance
+				fixed (byte* destPtr = dest)
+				fixed (byte* srcPtr = src)
 				{
+					CopyAdaptive(destPtr, srcPtr, destPitch * height);
+				}
+			}
+			else
+			{
+				// Row-by-row copy with CopyAdaptive for each row
+				fixed (byte* destPtr = dest)
+				fixed (byte* srcPtr = src)
+				{
+					byte* dstRow = destPtr;
+					byte* srcRow = srcPtr;
+					
 					for (var y = 0; y < height; y++)
 					{
-						var x = 0;
-
-						// Process 4 pixels (16 bytes) at a time
-						for (; x <= width - 4; x += 4)
-						{
-							var srcData = Sse2.LoadVector128(srcRow + x * 4);
-							Sse2.Store(dstRow + x * 4, srcData);
-						}
-
-						// Handle remaining pixels
-						for (; x < width; x++)
-						{
-							((uint*)(dstRow + x * 4))[0] = ((uint*)(srcRow + x * 4))[0];
-						}
-
+						CopyAdaptive(dstRow, srcRow, bytesPerRow);
 						dstRow += destPitch;
 						srcRow += srcPitch;
-					}
-				}
-				else
-				{
-					// Scalar fallback
-					for (var y = 0; y < height; y++)
-					{
-						var destRowSpan = dest.Slice(y * destPitch, width * 4);
-						var srcRowSpan = src.Slice(y * srcPitch, width * 4);
-						srcRowSpan.CopyTo(destRowSpan);
 					}
 				}
 			}
@@ -1016,6 +1036,7 @@ namespace Win32Emu.Win32.DirectDraw
 			if (isAligned64 && size >= LARGE_BUFFER_THRESHOLD && Avx512F.IsSupported)
 			{
 				// Large buffer with AVX-512 - process 512 bytes at a time
+				// Note: .NET doesn't expose non-temporal stores for AVX-512 yet, using regular stores
 				while (size >= 512)
 				{
 					// Prefetch ahead
@@ -1031,7 +1052,7 @@ namespace Win32Emu.Win32.DirectDraw
 					var v6 = Avx512F.LoadVector512(src + 384);
 					var v7 = Avx512F.LoadVector512(src + 448);
 					
-					// Non-temporal stores for cache bypass
+					// Regular stores (non-temporal stores not yet available in .NET for AVX-512)
 					Avx512F.Store(dest, v0);
 					Avx512F.Store(dest + 64, v1);
 					Avx512F.Store(dest + 128, v2);
@@ -1049,35 +1070,40 @@ namespace Win32Emu.Win32.DirectDraw
 			// AVX2: 256-bit vectors for large buffers
 			else if (isAligned64 && size >= LARGE_BUFFER_THRESHOLD && Avx2.IsSupported)
 			{
-				// Large buffer with good alignment - use AVX2 streaming stores to bypass cache
+				// Large buffer with good alignment - use AVX2 non-temporal stores to bypass cache
 				// This is optimal for very large transfers that would pollute the cache
+				var destLong = (long*)dest;
+				var srcLong = (long*)src;
+				
 				while (size >= 256)
 				{
 					// Prefetch next cache line
 					Sse.Prefetch0(src + 512);
 					
-					// Load 8x 256-bit vectors (256 bytes total)
-					var c0 = Avx.LoadVector256(src);
-					var c1 = Avx.LoadVector256(src + 32);
-					var c2 = Avx.LoadVector256(src + 64);
-					var c3 = Avx.LoadVector256(src + 96);
-					var c4 = Avx.LoadVector256(src + 128);
-					var c5 = Avx.LoadVector256(src + 160);
-					var c6 = Avx.LoadVector256(src + 192);
-					var c7 = Avx.LoadVector256(src + 224);
+					// Load 8x 256-bit vectors (256 bytes total = 32 longs)
+					var c0 = Avx.LoadVector256(srcLong);
+					var c1 = Avx.LoadVector256(srcLong + 4);
+					var c2 = Avx.LoadVector256(srcLong + 8);
+					var c3 = Avx.LoadVector256(srcLong + 12);
+					var c4 = Avx.LoadVector256(srcLong + 16);
+					var c5 = Avx.LoadVector256(srcLong + 20);
+					var c6 = Avx.LoadVector256(srcLong + 24);
+					var c7 = Avx.LoadVector256(srcLong + 28);
 					
 					// Non-temporal stores (bypass cache)
-					Avx.Store(dest, c0);
-					Avx.Store(dest + 32, c1);
-					Avx.Store(dest + 64, c2);
-					Avx.Store(dest + 96, c3);
-					Avx.Store(dest + 128, c4);
-					Avx.Store(dest + 160, c5);
-					Avx.Store(dest + 192, c6);
-					Avx.Store(dest + 224, c7);
+					Avx2.StoreAlignedNonTemporal(destLong, c0);
+					Avx2.StoreAlignedNonTemporal(destLong + 4, c1);
+					Avx2.StoreAlignedNonTemporal(destLong + 8, c2);
+					Avx2.StoreAlignedNonTemporal(destLong + 12, c3);
+					Avx2.StoreAlignedNonTemporal(destLong + 16, c4);
+					Avx2.StoreAlignedNonTemporal(destLong + 20, c5);
+					Avx2.StoreAlignedNonTemporal(destLong + 24, c6);
+					Avx2.StoreAlignedNonTemporal(destLong + 28, c7);
 					
 					src += 256;
 					dest += 256;
+					srcLong += 32;
+					destLong += 32;
 					size -= 256;
 				}
 			}

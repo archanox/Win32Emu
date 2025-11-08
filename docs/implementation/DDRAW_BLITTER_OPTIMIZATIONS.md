@@ -8,19 +8,21 @@ The `OptimizedBlitter` class in Win32Emu has been enhanced with techniques inspi
 
 ### 1. Adaptive Algorithm Selection
 
-The blitter now intelligently selects the optimal copy strategy based on buffer size, memory alignment, and available CPU features:
+The blitter intelligently selects the optimal copy strategy based on buffer size, memory alignment, and available CPU features. The adaptive selection is implemented in the internal `CopyAdaptive` method and automatically used by all `BltFast` operations:
 
 #### AVX-512 (≥4MB, 64-byte aligned)
-- **Strategy**: 512-bit vector streaming stores with prefetching
+- **Strategy**: 512-bit vector stores with prefetching
 - **Benefit**: Maximum throughput on modern CPUs (Ice Lake+, Zen 4+)
 - **Throughput**: Up to 512 bytes per iteration (8×64-byte vectors)
 - **Requirement**: AVX-512F support and 64-byte aligned buffers
+- **Note**: Uses regular stores (non-temporal stores not exposed in .NET for AVX-512 yet)
 
 #### AVX2 (≥4MB, 64-byte aligned)
-- **Strategy**: 256-bit vector streaming stores with prefetching
+- **Strategy**: 256-bit vector **non-temporal** stores with prefetching
 - **Benefit**: Bypasses CPU cache for very large transfers, preventing cache pollution
 - **Throughput**: 256 bytes per iteration (8×32-byte vectors)
 - **Requirement**: AVX2 support and 64-byte aligned buffers
+- **Implementation**: Uses `Avx2.StoreAlignedNonTemporal` for true cache bypass
 
 #### AVX2 Regular (<100KB, 32-byte aligned)
 - **Strategy**: 256-bit regular vector stores
@@ -45,9 +47,9 @@ The blitter now intelligently selects the optimal copy strategy based on buffer 
 // Example: Large surface copy (e.g., 1920x1080 32-bit)
 var largeBuffer = new byte[1920 * 1080 * 4]; // ~8MB
 OptimizedBlitter.BltFast(dest, source, pitch, pitch, width, height, 4);
-// Automatically selects:
+// Automatically uses CopyAdaptive which selects:
 // - AVX-512 on Ice Lake+ / Zen 4+ (if 64-byte aligned)
-// - AVX2 on Haswell+ / Zen (if 64-byte aligned)
+// - AVX2 non-temporal on Haswell+ / Zen (if 64-byte aligned, ≥4MB)
 // - NEON on ARM64 (if 16-byte aligned)
 // - System.Numerics.Vector as fallback
 ```
@@ -220,7 +222,7 @@ The following techniques were adapted from cnc-ddraw's `blt.c`:
 
 1. **Size-based thresholds** (4MB and 100KB) for algorithm selection
 2. **Prefetching** for large sequential copies
-3. **Non-temporal stores** for cache-bypass on large buffers
+3. **Non-temporal stores** for cache-bypass on large buffers (AVX2 only; .NET doesn't expose for AVX-512)
 4. **Reverse iteration** for safe overlapping copies
 5. **Separate color key paths** for 8/16/32-bit formats
 
@@ -228,19 +230,22 @@ The following techniques were adapted from cnc-ddraw's `blt.c`:
 
 Additional optimizations beyond cnc-ddraw:
 
-1. **AVX-512 support** - 2× wider vectors for modern CPUs (Ice Lake+, Zen 4+)
+1. **AVX-512 support** - 2× wider vectors for modern CPUs (Ice Lake+, Zen 4+); uses regular stores
 2. **ARM NEON optimization** - Native 128-bit vectors for ARM processors
 3. **System.Numerics.Vector<T>** - Cross-platform hardware-accelerated vectors
 4. **Adaptive alignment checks** - Supports 64-byte, 32-byte, and 16-byte alignment
 5. **Multi-tier fallback strategy** - Graceful degradation across instruction sets
+6. **Integrated into BltFast** - CopyAdaptive automatically used by all fast blit operations
 
 ### C# Adaptations
 
 While cnc-ddraw is written in C with direct intrinsics, our C# implementation:
 - Uses `System.Runtime.Intrinsics` for cross-platform SIMD
 - Leverages `Span<byte>` for safe memory access
+- Implements non-temporal stores via `Avx2.StoreAlignedNonTemporal` for cache bypass
 - Provides managed fallbacks for safety
 - Maintains compatibility with .NET 9 AOT compilation
+- **Note**: AVX-512 non-temporal stores not available in .NET yet; uses regular stores
 
 ## Testing
 
