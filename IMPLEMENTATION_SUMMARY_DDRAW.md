@@ -35,15 +35,17 @@ Studied the open-source [cnc-ddraw project](https://github.com/FunkyFr3sh/cnc-dd
 
 **New Features**:
 - `BltStretchWithColorKey` - Stretch blit with transparency and mirroring
-- `Clear` - Optimized buffer clear with AVX2/SSE2
+- `Clear` - Optimized buffer clear with AVX-512/AVX2/SSE2/NEON
 - `BltOverlapping` - Safe in-place blit operations
-- `CopyAdaptive` - Internal method for adaptive algorithm selection
+- `CopyAdaptive` - Internal method for adaptive algorithm selection (used by BltFast methods)
 
 **Improvements**:
 - Added size thresholds (LARGE_BUFFER_THRESHOLD = 4MB, SMALL_BUFFER_THRESHOLD = 100KB)
-- AVX2 streaming stores for cache-bypassing large transfers
+- AVX2 non-temporal stores (`Avx2.StoreAlignedNonTemporal`) for cache-bypassing large transfers
+- AVX-512 support with regular stores (non-temporal not exposed in .NET yet)
 - Prefetching for sequential access patterns
-- Better alignment handling (64-byte alignment check)
+- Better alignment handling (64-byte, 32-byte, 16-byte alignment checks)
+- **Integrated CopyAdaptive into all BltFast methods** for automatic SIMD selection
 
 #### 2. Comprehensive Testing (+260 lines)
 **File**: `Win32Emu.Tests.Emulator/OptimizedBlitterTests.cs`
@@ -109,7 +111,7 @@ Studied the open-source [cnc-ddraw project](https://github.com/FunkyFr3sh/cnc-dd
 
 ### What We Borrowed from cnc-ddraw
 1. **Size-based strategy selection** - Different algorithms for different buffer sizes
-2. **Non-temporal stores** - Cache bypass for very large transfers
+2. **Non-temporal stores** - Cache bypass for very large transfers (AVX2 only in .NET)
 3. **Prefetching** - Improved sequential access performance
 4. **Reverse iteration** - Safe overlapping blit operations
 5. **Separate format paths** - Optimized implementations per bit depth
@@ -119,12 +121,16 @@ Studied the open-source [cnc-ddraw project](https://github.com/FunkyFr3sh/cnc-dd
 2. **Span<byte>** - Safe memory access without pointers (where possible)
 3. **Managed fallbacks** - Graceful degradation on unsupported platforms
 4. **.NET 9 compatibility** - Works with AOT compilation
+5. **Avx2.StoreAlignedNonTemporal** - True non-temporal stores for AVX2 (cast to long*)
+6. **AVX-512 with regular stores** - Non-temporal stores not exposed in .NET yet for AVX-512
 
-### Not Implemented (Future Work)
-1. **AVX-512 support** - Requires newer CPUs
-2. **GPU acceleration** - Would require compute shader implementation
-3. **Multi-threading** - Parallel blit operations for very large surfaces
-4. **Advanced filtering** - Bilinear/trilinear for high-quality scaling
+### Implementation Status
+1. **AVX-512 support** - ✅ Implemented with regular stores (non-temporal not available in .NET)
+2. **AVX2 non-temporal stores** - ✅ Implemented using Avx2.StoreAlignedNonTemporal
+3. **CopyAdaptive integration** - ✅ Wired into all BltFast methods
+4. **GPU acceleration** - ❌ Future work - would require compute shader implementation
+5. **Multi-threading** - ❌ Future work - parallel blit operations for very large surfaces
+6. **Advanced filtering** - ❌ Future work - bilinear/trilinear for high-quality scaling
 
 ## Statistics
 
