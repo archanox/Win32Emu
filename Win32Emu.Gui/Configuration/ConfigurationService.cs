@@ -135,7 +135,12 @@ public class ConfigurationService
             EnableOpenTelemetry = _settings.EnableOpenTelemetry,
             UseConsoleExporter = _settings.UseConsoleExporter,
             UseOtlpExporter = _settings.UseOtlpExporter,
-            OtlpEndpoint = _settings.OtlpEndpoint
+            OtlpEndpoint = _settings.OtlpEndpoint,
+            UseVirtualDiskByDefault = _settings.UseVirtualDiskByDefault,
+            DefaultVirtualDiskSizeMb = _settings.DefaultVirtualDiskSizeMb,
+            VirtualDiskFormat = _settings.VirtualDiskFormat,
+            VirtualDisksDirectory = _settings.VirtualDisksDirectory,
+            PerGameSettings = _settings.PerGameSettings
         };
     }
 
@@ -186,6 +191,11 @@ public class ConfigurationService
         _settings.UseConsoleExporter = configuration.UseConsoleExporter;
         _settings.UseOtlpExporter = configuration.UseOtlpExporter;
         _settings.OtlpEndpoint = configuration.OtlpEndpoint;
+        _settings.UseVirtualDiskByDefault = configuration.UseVirtualDiskByDefault;
+        _settings.DefaultVirtualDiskSizeMb = configuration.DefaultVirtualDiskSizeMb;
+        _settings.VirtualDiskFormat = configuration.VirtualDiskFormat;
+        _settings.VirtualDisksDirectory = configuration.VirtualDisksDirectory;
+        _settings.PerGameSettings = configuration.PerGameSettings;
         SaveSettings();
     }
 
