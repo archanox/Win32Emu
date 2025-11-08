@@ -310,7 +310,7 @@ public class ProcessEnvironment
 	}
 
 	// Search path mode for SearchPath function
-	private uint _searchPathMode = 0; // Default: safe search mode disabled (0)
+	private uint _searchPathMode = 1; // Default: safe search mode enabled (1)
 	private bool _searchPathModePermanent = false;
 
 	public uint SearchPathMode
