@@ -2439,7 +2439,7 @@ namespace Win32Emu.Win32.Modules
 
 					// Fill in the structure using ref struct
 					surfaceDesc.dwSize = 108;
-					surfaceDesc.dwFlags = DDSD.CAPS | DDSD.WIDTH | DDSD.HEIGHT | DDSD.PITCH | DDSD.PIXELFORMAT;
+					surfaceDesc.dwFlags = (uint)(DDSD.CAPS | DDSD.WIDTH | DDSD.HEIGHT | DDSD.PITCH | DDSD.PIXELFORMAT);
 					surfaceDesc.dwHeight = (uint)surface.Height;
 					surfaceDesc.dwWidth = (uint)surface.Width;
 					surfaceDesc.lPitch = (uint)surface.Pitch;
