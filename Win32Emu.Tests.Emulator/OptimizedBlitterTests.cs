@@ -453,4 +453,264 @@ public class OptimizedBlitterTests
 		// Assert - Verify correctness
 		Assert.Equal(src, dest);
 	}
+
+	#region Tests for New cnc-ddraw Inspired Features
+
+	[Theory]
+	[InlineData(1)]  // 8-bit
+	[InlineData(2)]  // 16-bit
+	[InlineData(4)]  // 32-bit
+	public void BltStretchWithColorKey_ScalesAndFiltersByColorKey(int bytesPerPixel)
+	{
+		// Arrange
+		const int srcWidth = 4;
+		const int srcHeight = 4;
+		const int destWidth = 8;
+		const int destHeight = 8;
+		var srcPitch = srcWidth * bytesPerPixel;
+		var destPitch = destWidth * bytesPerPixel;
+
+		var src = new byte[srcPitch * srcHeight];
+		var dest = new byte[destPitch * destHeight];
+
+		// Fill dest with 0xFF (so we can detect unchanged pixels)
+		for (var i = 0; i < dest.Length; i++)
+		{
+			dest[i] = 0xFF;
+		}
+
+		// Create a simple pattern in source: alternating transparent and opaque
+		for (var y = 0; y < srcHeight; y++)
+		{
+			for (var x = 0; x < srcWidth; x++)
+			{
+				var offset = y * srcPitch + x * bytesPerPixel;
+				var isTransparent = (x + y) % 2 == 0;
+				
+				for (var b = 0; b < bytesPerPixel; b++)
+				{
+					src[offset + b] = isTransparent ? (byte)0 : (byte)(42 + b);
+				}
+			}
+		}
+
+		// Act
+		OptimizedBlitter.BltStretchWithColorKey(
+			dest.AsSpan(),
+			src.AsSpan(),
+			0, 0, destWidth, destHeight, destPitch,
+			0, 0, srcWidth, srcHeight, srcPitch,
+			bytesPerPixel,
+			0, 0); // Color key 0 = transparent
+
+		// Assert - Verify that some pixels were copied and some were not
+		var copiedPixels = 0;
+		var unchangedPixels = 0;
+		
+		for (var y = 0; y < destHeight; y++)
+		{
+			for (var x = 0; x < destWidth; x++)
+			{
+				var offset = y * destPitch + x * bytesPerPixel;
+				if (dest[offset] == 0xFF)
+					unchangedPixels++;
+				else if (dest[offset] == 42)
+					copiedPixels++;
+			}
+		}
+
+		// We should have both copied and unchanged pixels due to color keying
+		Assert.True(copiedPixels > 0, "Expected some pixels to be copied");
+		Assert.True(unchangedPixels > 0, "Expected some pixels to remain unchanged due to color key");
+	}
+
+	[Theory]
+	[InlineData(true, false)]   // Mirror up-down
+	[InlineData(false, true)]   // Mirror left-right
+	[InlineData(true, true)]    // Mirror both
+	public void BltStretchWithColorKey_SupportsMirroring(bool mirrorUpDown, bool mirrorLeftRight)
+	{
+		// Arrange
+		const int srcWidth = 4;
+		const int srcHeight = 4;
+		const int destWidth = 4;
+		const int destHeight = 4;
+		const int bytesPerPixel = 1;
+		var srcPitch = srcWidth * bytesPerPixel;
+		var destPitch = destWidth * bytesPerPixel;
+
+		var src = new byte[srcPitch * srcHeight];
+		var dest = new byte[destPitch * destHeight];
+
+		// Create a unique pattern in source (top-left = 1, increases to the right and down)
+		for (var y = 0; y < srcHeight; y++)
+		{
+			for (var x = 0; x < srcWidth; x++)
+			{
+				src[y * srcPitch + x] = (byte)(1 + x + y * srcWidth);
+			}
+		}
+
+		// Act
+		OptimizedBlitter.BltStretchWithColorKey(
+			dest.AsSpan(),
+			src.AsSpan(),
+			0, 0, destWidth, destHeight, destPitch,
+			0, 0, srcWidth, srcHeight, srcPitch,
+			bytesPerPixel,
+			255, 255, // No transparent pixels
+			mirrorUpDown,
+			mirrorLeftRight);
+
+		// Assert - Check that mirroring occurred correctly
+		for (var y = 0; y < destHeight; y++)
+		{
+			for (var x = 0; x < destWidth; x++)
+			{
+				var srcX = mirrorLeftRight ? (srcWidth - 1 - x) : x;
+				var srcY = mirrorUpDown ? (srcHeight - 1 - y) : y;
+				var expectedValue = (byte)(1 + srcX + srcY * srcWidth);
+				var actualValue = dest[y * destPitch + x];
+				
+				Assert.Equal(expectedValue, actualValue);
+			}
+		}
+	}
+
+	[Fact]
+	public void Clear_FillsBufferWithValue()
+	{
+		// Arrange
+		var buffer = new byte[1024];
+		for (var i = 0; i < buffer.Length; i++)
+		{
+			buffer[i] = 0xFF; // Fill with non-zero value
+		}
+
+		// Act
+		OptimizedBlitter.Clear(buffer.AsSpan(), 42);
+
+		// Assert
+		for (var i = 0; i < buffer.Length; i++)
+		{
+			Assert.Equal(42, buffer[i]);
+		}
+	}
+
+	[Theory]
+	[InlineData(0)]
+	[InlineData(16)]
+	[InlineData(64)]
+	[InlineData(256)]
+	[InlineData(1024)]
+	[InlineData(4096)]
+	public void Clear_HandlesVariousSizes(int size)
+	{
+		// Arrange
+		var buffer = new byte[size];
+
+		// Act
+		OptimizedBlitter.Clear(buffer.AsSpan(), 123);
+
+		// Assert
+		for (var i = 0; i < buffer.Length; i++)
+		{
+			Assert.Equal(123, buffer[i]);
+		}
+	}
+
+	[Fact]
+	public void BltOverlapping_CopiesCorrectly_WhenDestinationIsBelow()
+	{
+		// Arrange
+		const int width = 4;
+		const int height = 2;
+		const int bytesPerPixel = 1;
+		const int pitch = 16; // Wide enough for non-overlapping rows
+		var buffer = new byte[pitch * (height + 2)]; // Extra space below
+
+		// Fill source area with pattern
+		for (var y = 0; y < height; y++)
+		{
+			for (var x = 0; x < width; x++)
+			{
+				buffer[y * pitch + x] = (byte)(1 + x + y * width);
+			}
+		}
+
+		// Store expected values before overlap
+		var expected = new byte[width * height];
+		for (var y = 0; y < height; y++)
+		{
+			for (var x = 0; x < width; x++)
+			{
+				expected[y * width + x] = buffer[y * pitch + x];
+			}
+		}
+
+		// Act - Copy to destination 1 row below
+		OptimizedBlitter.BltOverlapping(
+			buffer.AsSpan(),
+			0, 1, // destX, destY (1 row down)
+			width, height, pitch,
+			0, 0, // srcX, srcY
+			pitch,
+			bytesPerPixel);
+
+		// Assert - Check destination area has correct values
+		for (var y = 0; y < height; y++)
+		{
+			for (var x = 0; x < width; x++)
+			{
+				var destValue = buffer[(y + 1) * pitch + x];
+				var expectedValue = expected[y * width + x];
+				Assert.Equal(expectedValue, destValue);
+			}
+		}
+	}
+
+	[Fact]
+	public void BltOverlapping_CopiesCorrectly_WhenNotOverlapping()
+	{
+		// Arrange
+		const int width = 4;
+		const int height = 2;
+		const int bytesPerPixel = 1;
+		const int pitch = 16;
+		var buffer = new byte[pitch * height * 2]; // Enough for source and dest
+
+		// Fill source area
+		for (var y = 0; y < height; y++)
+		{
+			for (var x = 0; x < width; x++)
+			{
+				buffer[y * pitch + x] = (byte)(1 + x + y * width);
+			}
+		}
+
+		// Act - Copy to non-overlapping destination (far to the right)
+		OptimizedBlitter.BltOverlapping(
+			buffer.AsSpan(),
+			8, 0, // destX, destY (to the right, no overlap)
+			width, height, pitch,
+			0, 0, // srcX, srcY
+			pitch,
+			bytesPerPixel);
+
+		// Assert - Check both source and destination
+		for (var y = 0; y < height; y++)
+		{
+			for (var x = 0; x < width; x++)
+			{
+				var expectedValue = (byte)(1 + x + y * width);
+				var srcValue = buffer[y * pitch + x];
+				var destValue = buffer[y * pitch + 8 + x];
+				
+				Assert.Equal(expectedValue, srcValue); // Source unchanged
+				Assert.Equal(expectedValue, destValue); // Destination correct
+			}
+		}
+	}
+
+	#endregion
 }
