@@ -578,12 +578,25 @@ namespace Win32Emu.Win32.DirectDraw
 		{
 			var caps = new System.Text.StringBuilder();
 			
-			if (Sse2.IsSupported)
-				caps.Append("SSE2 ");
+			// X86/X64 capabilities
+			if (Avx512F.IsSupported)
+				caps.Append("AVX-512F ");
+			if (Avx512BW.IsSupported)
+				caps.Append("AVX-512BW ");
 			if (Avx2.IsSupported)
 				caps.Append("AVX2 ");
-			if (AdvSimd.IsSupported)
+			if (Sse2.IsSupported)
+				caps.Append("SSE2 ");
+			
+			// ARM capabilities
+			if (AdvSimd.Arm64.IsSupported)
+				caps.Append("NEON-ARM64 ");
+			else if (AdvSimd.IsSupported)
 				caps.Append("NEON ");
+			
+			// Cross-platform vector support
+			if (System.Numerics.Vector.IsHardwareAccelerated)
+				caps.Append($"Vector<T>({System.Numerics.Vector<byte>.Count}B) ");
 			
 			return caps.Length > 0 ? caps.ToString().TrimEnd() : "Scalar (no SIMD)";
 		}
@@ -766,8 +779,8 @@ namespace Win32Emu.Win32.DirectDraw
 		#region Clear Operations
 
 		/// <summary>
-		/// Optimized clear operation using AVX2, SSE2, or scalar fallback.
-		/// Inspired by cnc-ddraw's blt_clear implementation.
+		/// Optimized clear operation using AVX-512, AVX2, SSE2, ARM NEON, or scalar fallback.
+		/// Inspired by cnc-ddraw's blt_clear implementation with extended SIMD support.
 		/// </summary>
 		public static unsafe void Clear(Span<byte> buffer, byte value)
 		{
@@ -785,8 +798,38 @@ namespace Win32Emu.Win32.DirectDraw
 					return;
 				}
 
-				// For small/medium buffers with good alignment, use SIMD
-				if (Avx2.IsSupported && (((nuint)ptr) % 32) == 0)
+				// Check alignment
+				var isAligned64 = (((nuint)ptr) % 64) == 0;
+				var isAligned32 = (((nuint)ptr) % 32) == 0;
+				var isAligned16 = (((nuint)ptr) % 16) == 0;
+
+				// AVX-512: 512-bit vectors for maximum throughput
+				if (isAligned64 && size >= 256 && Avx512F.IsSupported)
+				{
+					var vec = Vector512.Create(value);
+					var p = ptr;
+					
+					while (size >= 256)
+					{
+						Avx512F.Store(p, vec);
+						Avx512F.Store(p + 64, vec);
+						Avx512F.Store(p + 128, vec);
+						Avx512F.Store(p + 192, vec);
+						
+						p += 256;
+						size -= 256;
+					}
+					
+					// Handle remaining full vectors
+					while (size >= 64)
+					{
+						Avx512F.Store(p, vec);
+						p += 64;
+						size -= 64;
+					}
+				}
+				// AVX2: 256-bit vectors for small/medium buffers with good alignment
+				else if (isAligned32 && Avx2.IsSupported)
 				{
 					var vec = Vector256.Create(value);
 					var p = ptr;
@@ -810,7 +853,8 @@ namespace Win32Emu.Win32.DirectDraw
 						size -= 32;
 					}
 				}
-				else if (Sse2.IsSupported && (((nuint)ptr) % 16) == 0)
+				// SSE2: 128-bit vectors
+				else if (isAligned16 && Sse2.IsSupported)
 				{
 					var vec = Vector128.Create(value);
 					var p = ptr;
@@ -833,6 +877,47 @@ namespace Win32Emu.Win32.DirectDraw
 						p += 16;
 						size -= 16;
 					}
+				}
+				// ARM NEON: 128-bit vectors
+				else if (isAligned16 && AdvSimd.IsSupported)
+				{
+					var vec = Vector128.Create(value);
+					var p = ptr;
+					
+					while (size >= 64)
+					{
+						AdvSimd.Store(p, vec);
+						AdvSimd.Store(p + 16, vec);
+						AdvSimd.Store(p + 32, vec);
+						AdvSimd.Store(p + 48, vec);
+						
+						p += 64;
+						size -= 64;
+					}
+					
+					// Handle remaining full vectors
+					while (size >= 16)
+					{
+						AdvSimd.Store(p, vec);
+						p += 16;
+						size -= 16;
+					}
+				}
+				// System.Numerics.Vector: Cross-platform fallback
+				else if (System.Numerics.Vector.IsHardwareAccelerated)
+				{
+					var vectorSize = System.Numerics.Vector<byte>.Count;
+					var vec = new System.Numerics.Vector<byte>(value);
+					var bufferSpan = buffer;
+					var offset = 0;
+					
+					while (offset + vectorSize <= size)
+					{
+						vec.CopyTo(bufferSpan.Slice(offset));
+						offset += vectorSize;
+					}
+					
+					size -= offset;
 				}
 				
 				// Handle remainder with Fill
@@ -916,15 +1001,53 @@ namespace Win32Emu.Win32.DirectDraw
 
 		/// <summary>
 		/// Enhanced copy operation with adaptive algorithm selection based on buffer size and alignment.
-		/// Inspired by cnc-ddraw's blt_copy with AVX2 streaming stores for large buffers.
+		/// Supports AVX-512, AVX2, SSE2, ARM NEON, and System.Numerics.Vector fallbacks.
+		/// Inspired by cnc-ddraw's blt_copy with extended SIMD support.
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static unsafe void CopyAdaptive(byte* dest, byte* src, int size)
 		{
-			// Check for good alignment (64-byte for AVX2 streaming)
+			// Check for good alignment
 			var isAligned64 = (((nuint)dest) % 64) == 0 && (((nuint)src) % 64) == 0;
+			var isAligned32 = (((nuint)dest) % 32) == 0 && (((nuint)src) % 32) == 0;
+			var isAligned16 = (((nuint)dest) % 16) == 0 && (((nuint)src) % 16) == 0;
 			
-			if (isAligned64 && size >= LARGE_BUFFER_THRESHOLD && Avx2.IsSupported)
+			// AVX-512: 512-bit vectors for maximum throughput on modern CPUs
+			if (isAligned64 && size >= LARGE_BUFFER_THRESHOLD && Avx512F.IsSupported)
+			{
+				// Large buffer with AVX-512 - process 512 bytes at a time
+				while (size >= 512)
+				{
+					// Prefetch ahead
+					Sse.Prefetch0(src + 1024);
+					
+					// Load 8x 512-bit vectors (512 bytes total)
+					var v0 = Avx512F.LoadVector512(src);
+					var v1 = Avx512F.LoadVector512(src + 64);
+					var v2 = Avx512F.LoadVector512(src + 128);
+					var v3 = Avx512F.LoadVector512(src + 192);
+					var v4 = Avx512F.LoadVector512(src + 256);
+					var v5 = Avx512F.LoadVector512(src + 320);
+					var v6 = Avx512F.LoadVector512(src + 384);
+					var v7 = Avx512F.LoadVector512(src + 448);
+					
+					// Non-temporal stores for cache bypass
+					Avx512F.Store(dest, v0);
+					Avx512F.Store(dest + 64, v1);
+					Avx512F.Store(dest + 128, v2);
+					Avx512F.Store(dest + 192, v3);
+					Avx512F.Store(dest + 256, v4);
+					Avx512F.Store(dest + 320, v5);
+					Avx512F.Store(dest + 384, v6);
+					Avx512F.Store(dest + 448, v7);
+					
+					src += 512;
+					dest += 512;
+					size -= 512;
+				}
+			}
+			// AVX2: 256-bit vectors for large buffers
+			else if (isAligned64 && size >= LARGE_BUFFER_THRESHOLD && Avx2.IsSupported)
 			{
 				// Large buffer with good alignment - use AVX2 streaming stores to bypass cache
 				// This is optimal for very large transfers that would pollute the cache
@@ -957,11 +1080,9 @@ namespace Win32Emu.Win32.DirectDraw
 					dest += 256;
 					size -= 256;
 				}
-				
-				// Memory fence after non-temporal stores
-				// Note: In C# this is handled automatically, but keeping for documentation
 			}
-			else if (isAligned64 && size < SMALL_BUFFER_THRESHOLD && Avx2.IsSupported)
+			// AVX2: Regular stores for small/medium buffers
+			else if (isAligned32 && size < SMALL_BUFFER_THRESHOLD && Avx2.IsSupported)
 			{
 				// Small/medium buffer with good alignment - use regular AVX2 stores
 				while (size >= 128)
@@ -980,6 +1101,57 @@ namespace Win32Emu.Win32.DirectDraw
 					dest += 128;
 					size -= 128;
 				}
+			}
+			// ARM NEON: 128-bit vectors
+			else if (isAligned16 && AdvSimd.IsSupported && size >= 64)
+			{
+				// ARM NEON path - process 64 bytes at a time
+				while (size >= 64)
+				{
+					var v0 = AdvSimd.LoadVector128(src);
+					var v1 = AdvSimd.LoadVector128(src + 16);
+					var v2 = AdvSimd.LoadVector128(src + 32);
+					var v3 = AdvSimd.LoadVector128(src + 48);
+					
+					AdvSimd.Store(dest, v0);
+					AdvSimd.Store(dest + 16, v1);
+					AdvSimd.Store(dest + 32, v2);
+					AdvSimd.Store(dest + 48, v3);
+					
+					src += 64;
+					dest += 64;
+					size -= 64;
+				}
+			}
+			// System.Numerics.Vector: Cross-platform hardware-accelerated vectors
+			else if (System.Numerics.Vector.IsHardwareAccelerated && size >= System.Numerics.Vector<byte>.Count * 4)
+			{
+				var vectorSize = System.Numerics.Vector<byte>.Count;
+				var srcSpan = new Span<byte>(src, size);
+				var destSpan = new Span<byte>(dest, size);
+				
+				// Process 4 vectors at a time
+				var stride = vectorSize * 4;
+				var offset = 0;
+				
+				while (offset + stride <= size)
+				{
+					var v0 = new System.Numerics.Vector<byte>(srcSpan.Slice(offset));
+					var v1 = new System.Numerics.Vector<byte>(srcSpan.Slice(offset + vectorSize));
+					var v2 = new System.Numerics.Vector<byte>(srcSpan.Slice(offset + vectorSize * 2));
+					var v3 = new System.Numerics.Vector<byte>(srcSpan.Slice(offset + vectorSize * 3));
+					
+					v0.CopyTo(destSpan.Slice(offset));
+					v1.CopyTo(destSpan.Slice(offset + vectorSize));
+					v2.CopyTo(destSpan.Slice(offset + vectorSize * 2));
+					v3.CopyTo(destSpan.Slice(offset + vectorSize * 3));
+					
+					offset += stride;
+				}
+				
+				src += offset;
+				dest += offset;
+				size -= offset;
 			}
 			
 			// Handle remainder with standard copy
