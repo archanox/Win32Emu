@@ -1432,7 +1432,19 @@ namespace Win32Emu.Win32.Modules
 			var savedEbp = _cpu.GetRegister("EBP");
 
 			// Set up stack for stdcall convention (parameters pushed right-to-left)
-			var esp = savedEsp;
+			// IMPORTANT: When CallWindowProcedure is invoked from within a syscall handler,
+			// there may be syscall stack frames (return addresses, etc.) immediately above
+			// the current ESP. To prevent overwriting these frames, we must allocate extra
+			// space on the stack before pushing our parameters.
+			// 
+			// Safety margin: 32 bytes (8 dwords) to account for:
+			// - Return address to syscall dispatcher (4 bytes)
+			// - Return address to import stub (4 bytes)  
+			// - Saved registers or other syscall state (up to 24 bytes)
+			//
+			// This ensures our WndProc call frame doesn't corrupt the caller's stack.
+			const uint STACK_SAFETY_MARGIN = 32;
+			var esp = savedEsp - STACK_SAFETY_MARGIN;
 
 			// Push parameters (right-to-left for stdcall)
 			esp -= 4;
