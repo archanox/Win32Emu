@@ -7,7 +7,7 @@
         MinWidth="500"
         MinHeight="300"
         WindowStartupLocation="CenterOwner"
-        Icon="/Assets/icon.ico">
+        Icon="/Assets/avalonia-logo.ico">
     
     <Grid Margin="20">
         <Grid.RowDefinitions>
