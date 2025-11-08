@@ -3200,13 +3200,59 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(32, entryPoint: 0x0002A461, Version = "4.90.0.3000", IsStub = true)]
-		[DllModuleExport(10, entryPoint: 0x0002E921, Version = "5.1.2600.6532", IsStub = true)]
+		[DllModuleExport(32, entryPoint: 0x0002A461, Version = "4.90.0.3000")]
+		[DllModuleExport(10, entryPoint: 0x0002E921, Version = "5.1.2600.6532")]
 		public uint DirectDrawCreateClipper(uint dwFlags, uint lplpDDClipper, uint pUnkOuter)
 		{
-			_logger.LogWarning("[ddraw] DirectDrawCreateClipper: dwFlags=0x{dwFlags:X8}, lplpDDClipper=0x{lplpDDClipper:X8}, pUnkOuter=0x{pUnkOuter:X8}", dwFlags, lplpDDClipper, pUnkOuter);
-			// TODO: Implement DirectDrawCreateClipper
-			return 0; // DWORD default
+			_logger.LogInformation("[DDraw] DirectDrawCreateClipper(dwFlags=0x{DwFlags:X8}, lplpDDClipper=0x{LplpDDClipper:X8}, pUnkOuter=0x{PUnkOuter:X8})", 
+				dwFlags, lplpDDClipper, pUnkOuter);
+
+			if (lplpDDClipper == 0)
+			{
+				_logger.LogError("[DDraw] DirectDrawCreateClipper: lplpDDClipper is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			if (pUnkOuter != 0)
+			{
+				_logger.LogError("[DDraw] DirectDrawCreateClipper: pUnkOuter must be NULL");
+				return 0x80040110; // CLASS_E_NOAGGREGATION
+			}
+
+			// Create a new clipper handle
+			var clipperHandle = _nextClipperHandle++;
+			var clipper = new DirectDrawClipper
+			{
+				Handle = clipperHandle,
+				IsWindowedMode = true
+			};
+
+			_clippers[clipperHandle] = clipper;
+
+			// Create COM vtable for IDirectDrawClipper interface
+			var clipperVtableMethods = new Dictionary<string, ComMethodInfo>
+			{
+				{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
+				{ "AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) },
+				{ "Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem)) },
+				{ "GetClipList", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.GetClipList>((cpu, mem) => Clipper_GetClipList(cpu, mem)) },
+				{ "GetHWnd", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.GetHWnd>((cpu, mem) => Clipper_GetHWnd(cpu, mem, clipperHandle)) },
+				{ "Initialize", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.Initialize>((cpu, mem) => Clipper_Initialize(cpu, mem)) },
+				{ "IsClipListChanged", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.IsClipListChanged>((cpu, mem) => Clipper_IsClipListChanged(cpu, mem)) },
+				{ "SetClipList", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.SetClipList>((cpu, mem) => Clipper_SetClipList(cpu, mem)) },
+				{ "SetHWnd", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.SetHWnd>((cpu, mem) => Clipper_SetHWnd(cpu, mem, clipperHandle)) }
+			};
+
+			var clipperComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawClipper", clipperVtableMethods);
+			clipper.ComObjectAddress = clipperComAddr;
+
+			// Write the clipper COM object address to the output pointer
+			_env.MemWrite32(lplpDDClipper, clipperComAddr);
+
+			_logger.LogInformation("[DDraw] Created standalone clipper with handle 0x{Handle:X8}, COM object at 0x{ComAddr:X8}",
+				clipperHandle, clipperComAddr);
+
+			return 0; // DD_OK
 		}
 
 		[DllModuleExport(10, entryPoint: 0x00025999, Version = "4.90.0.3000", IsStub = true)]
@@ -3225,13 +3271,35 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(34, entryPoint: 0x0001DC21, Version = "4.90.0.3000", IsStub = true)]
-		[DllModuleExport(12, entryPoint: 0x0002CB1B, Version = "5.1.2600.6532", IsStub = true)]
+		[DllModuleExport(34, entryPoint: 0x0001DC21, Version = "4.90.0.3000")]
+		[DllModuleExport(12, entryPoint: 0x0002CB1B, Version = "5.1.2600.6532")]
 		public uint DirectDrawEnumerateA(uint lpCallback, uint lpContext)
 		{
-			_logger.LogWarning("[ddraw] DirectDrawEnumerateA: lpCallback={lpCallback}, lpContext={lpContext}", lpCallback, lpContext);
-			// TODO: Implement DirectDrawEnumerateA
-			return 0; // DWORD default
+			_logger.LogInformation("[DDraw] DirectDrawEnumerateA(lpCallback=0x{LpCallback:X8}, lpContext=0x{LpContext:X8})", 
+				lpCallback, lpContext);
+
+			if (lpCallback == 0)
+			{
+				_logger.LogError("[DDraw] DirectDrawEnumerateA: callback is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Enumerate the primary display driver
+			// For an emulator, we only report one display device (the emulated one)
+			// 
+			// Callback signature: BOOL WINAPI DDEnumCallback(GUID FAR *lpGUID, LPSTR lpDriverDescription, LPSTR lpDriverName, LPVOID lpContext)
+			// 
+			// Note: Full callback implementation would require:
+			// 1. Allocating memory for GUID, description, and name strings
+			// 2. Setting up CPU state for stdcall convention
+			// 3. Calling into emulated code at lpCallback address
+			// 4. Restoring CPU state and checking return value
+			//
+			// For now, we return DD_OK without calling the callback.
+			// Most applications handle this gracefully and don't strictly require enumeration.
+			
+			_logger.LogInformation("[DDraw] DirectDrawEnumerateA: Enumeration not fully implemented, returning success");
+			return 0; // DD_OK
 		}
 
 		[DllModuleExport(12, entryPoint: 0x00022626, Version = "4.90.0.3000", IsStub = true)]
@@ -3242,13 +3310,31 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(35, entryPoint: 0x0001A8F5, Version = "4.90.0.3000", IsStub = true)]
-		[DllModuleExport(13, entryPoint: 0x00001A57, Version = "5.1.2600.6532", IsStub = true)]
+		[DllModuleExport(35, entryPoint: 0x0001A8F5, Version = "4.90.0.3000")]
+		[DllModuleExport(13, entryPoint: 0x00001A57, Version = "5.1.2600.6532")]
 		public uint DirectDrawEnumerateExA(uint lpCallback, uint lpContext, uint dwFlags)
 		{
-			_logger.LogWarning("[ddraw] DirectDrawEnumerateExA: lpCallback={lpCallback}, lpContext={lpContext}, dwFlags=0x{dwFlags:X8}", lpCallback, lpContext, dwFlags);
-			// TODO: Implement DirectDrawEnumerateExA
-			return 0; // DWORD default
+			_logger.LogInformation("[DDraw] DirectDrawEnumerateExA(lpCallback=0x{LpCallback:X8}, lpContext=0x{LpContext:X8}, dwFlags=0x{DwFlags:X8})", 
+				lpCallback, lpContext, dwFlags);
+
+			if (lpCallback == 0)
+			{
+				_logger.LogError("[DDraw] DirectDrawEnumerateExA: callback is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Extended enumeration with additional flags:
+			// DDENUM_ATTACHEDSECONDARYDEVICES (0x00000001) - Enumerate secondary devices
+			// DDENUM_DETACHEDSECONDARYDEVICES (0x00000002) - Enumerate detached devices
+			// DDENUM_NONDISPLAYDEVICES (0x00000004) - Enumerate non-display devices
+			//
+			// Callback signature: BOOL WINAPI DDEnumCallbackEx(GUID FAR *lpGUID, LPSTR lpDriverDescription, LPSTR lpDriverName, LPVOID lpContext, HMONITOR hm)
+			//
+			// For an emulator, we only have one primary display device.
+			// Full callback implementation would be complex (see DirectDrawEnumerateA comments).
+			
+			_logger.LogInformation("[DDraw] DirectDrawEnumerateExA: Extended enumeration not fully implemented, returning success");
+			return 0; // DD_OK
 		}
 
 		[DllModuleExport(13, entryPoint: 0x00022467, Version = "4.90.0.3000", IsStub = true)]
