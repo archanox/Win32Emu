@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
@@ -1696,381 +1697,350 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DD_OK
 		}
 
-	private uint Surface_BltFast(ICpu cpu, VirtualMemory mem)
-	{
-		var args = new StackArgs(cpu, mem);
-		var thisPtr = args.UInt32(0);
-		var dwX = args.UInt32(1);
-		var dwY = args.UInt32(2);
-		var lpDDSrcSurface = args.UInt32(3);
-		var lpSrcRect = args.UInt32(4);
-		var dwTrans = args.UInt32(5);
-
-		_logger.LogInformation("[DDraw COM] IDirectDrawSurface::BltFast(this=0x{ThisPtr:X8}, x={X}, y={Y}, lpDDSrcSurface=0x{SrcSurface:X8}, lpSrcRect=0x{SrcRect:X8}, dwTrans=0x{Trans:X8})",
-			thisPtr, dwX, dwY, lpDDSrcSurface, lpSrcRect, dwTrans);
-
-		// Find destination surface by COM object address
-		DirectDrawSurface? destSurface = null;
-		foreach (var s in _surfaces.Values)
+		private uint Surface_BltFast(ICpu cpu, VirtualMemory mem)
 		{
-			if (s.ComObjectAddress == thisPtr)
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var dwX = args.UInt32(1);
+			var dwY = args.UInt32(2);
+			var lpDDSrcSurface = args.UInt32(3);
+			var lpSrcRect = args.UInt32(4);
+			var dwTrans = args.UInt32(5);
+	
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::BltFast(this=0x{ThisPtr:X8}, x={X}, y={Y}, lpDDSrcSurface=0x{SrcSurface:X8}, lpSrcRect=0x{SrcRect:X8}, dwTrans=0x{Trans:X8})",
+				thisPtr, dwX, dwY, lpDDSrcSurface, lpSrcRect, dwTrans);
+	
+			// Find destination surface by COM object address
+			var destSurface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
+	
+			if (destSurface == null || destSurface.Bits == null)
 			{
-				destSurface = s;
-				break;
+				_logger.LogError("[DDraw] BltFast: could not find destination surface");
+				return 1; // DDERR_GENERIC
 			}
-		}
-
-		if (destSurface == null || destSurface.Bits == null)
-		{
-			_logger.LogError("[DDraw] BltFast: could not find destination surface");
-			return 1; // DDERR_GENERIC
-		}
-
-		// Find source surface by COM object address
-		DirectDrawSurface? srcSurface = null;
-		if (lpDDSrcSurface != 0)
-		{
-			foreach (var s in _surfaces.Values)
+	
+			// Find source surface by COM object address
+			DirectDrawSurface? srcSurface = null;
+			if (lpDDSrcSurface != 0)
 			{
-				if (s.ComObjectAddress == lpDDSrcSurface)
-				{
-					srcSurface = s;
-					break;
-				}
+				srcSurface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == lpDDSrcSurface);
 			}
+	
+			if (srcSurface == null || srcSurface.Bits == null)
+			{
+				_logger.LogError("[DDraw] BltFast: could not find source surface");
+				return 1; // DDERR_GENERIC
+			}
+	
+			// Read source rectangle if provided
+			int srcX = 0, srcY = 0, srcWidth = srcSurface.Width, srcHeight = srcSurface.Height;
+			if (lpSrcRect != 0)
+			{
+				var srcRect = new RectRef(_env.Memory, lpSrcRect);
+				srcX = srcRect.left;
+				srcY = srcRect.top;
+				srcWidth = srcRect.right - srcX;
+				srcHeight = srcRect.bottom - srcY;
+			}
+	
+			// Get bits per pixel from DirectDraw object
+			if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
+			{
+				_logger.LogError("[DDraw] BltFast: could not find DirectDraw object");
+				return 1; // DDERR_GENERIC
+			}
+	
+			var bytesPerPixel = ddrawObj.BitsPerPixel / 8;
+	
+			// Calculate destination position and clipping
+			var destX = (int)dwX;
+			var destY = (int)dwY;
+	
+			// Clip the source rectangle if destination goes out of bounds
+			if (destX < 0)
+			{
+				srcX -= destX;
+				srcWidth += destX;
+				destX = 0;
+			}
+			if (destY < 0)
+			{
+				srcY -= destY;
+				srcHeight += destY;
+				destY = 0;
+			}
+			if (destX + srcWidth > destSurface.Width)
+			{
+				srcWidth = destSurface.Width - destX;
+			}
+			if (destY + srcHeight > destSurface.Height)
+			{
+				srcHeight = destSurface.Height - destY;
+			}
+	
+			// Validate source rectangle is within source surface bounds
+			if (srcX < 0 || srcY < 0 || srcX + srcWidth > srcSurface.Width || srcY + srcHeight > srcSurface.Height)
+			{
+				_logger.LogError("[DDraw] BltFast: source rectangle out of bounds");
+				return 1; // DDERR_GENERIC
+			}
+	
+			// Check if width/height are valid after clipping
+			if (srcWidth <= 0 || srcHeight <= 0)
+			{
+				_logger.LogDebug("[DDraw] BltFast: nothing to blit after clipping");
+				return 0; // DD_OK - nothing to do
+			}
+	
+			// Calculate offsets in the source and destination buffers
+			var srcOffset = srcY * srcSurface.Pitch + srcX * bytesPerPixel;
+			var destOffset = destY * destSurface.Pitch + destX * bytesPerPixel;
+	
+			// Get spans for the blitter
+			var srcSpan = srcSurface.Bits.AsSpan(srcOffset);
+			var destSpan = destSurface.Bits.AsSpan(destOffset);
+	
+			// DDBLTFAST_SRCCOLORKEY = 0x00000001
+			var useSrcColorKey = (dwTrans & 0x00000001) != 0 && srcSurface.HasColorKey;
+	
+			// Use OptimizedBlitter for high-performance blitting
+			if (useSrcColorKey)
+			{
+				OptimizedBlitter.BltWithSourceColorKey(
+					destSpan,
+					srcSpan,
+					destSurface.Pitch,
+					srcSurface.Pitch,
+					srcWidth,
+					srcHeight,
+					bytesPerPixel,
+					srcSurface.ColorKeyLow,
+					srcSurface.ColorKeyHigh);
+			}
+			else
+			{
+				OptimizedBlitter.BltFast(
+					destSpan,
+					srcSpan,
+					destSurface.Pitch,
+					srcSurface.Pitch,
+					srcWidth,
+					srcHeight,
+					bytesPerPixel);
+			}
+	
+			// Mark destination surface as dirty
+			destSurface.IsTextureDirty = true;
+	
+			return 0; // DD_OK
 		}
-
-		if (srcSurface == null || srcSurface.Bits == null)
-		{
-			_logger.LogError("[DDraw] BltFast: could not find source surface");
-			return 1; // DDERR_GENERIC
-		}
-
-		// Read source rectangle if provided
-		int srcX = 0, srcY = 0, srcWidth = srcSurface.Width, srcHeight = srcSurface.Height;
-		if (lpSrcRect != 0)
-		{
-			var srcRect = new RectRef(_env.Memory, lpSrcRect);
-			srcX = srcRect.left;
-			srcY = srcRect.top;
-			srcWidth = srcRect.right - srcX;
-			srcHeight = srcRect.bottom - srcY;
-		}
-
-		// Get bits per pixel from DirectDraw object
-		if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
-		{
-			_logger.LogError("[DDraw] BltFast: could not find DirectDraw object");
-			return 1; // DDERR_GENERIC
-		}
-
-		var bytesPerPixel = ddrawObj.BitsPerPixel / 8;
-
-		// Calculate destination position and clipping
-		var destX = (int)dwX;
-		var destY = (int)dwY;
-
-		// Clip the source rectangle if destination goes out of bounds
-		if (destX < 0)
-		{
-			srcX -= destX;
-			srcWidth += destX;
-			destX = 0;
-		}
-		if (destY < 0)
-		{
-			srcY -= destY;
-			srcHeight += destY;
-			destY = 0;
-		}
-		if (destX + srcWidth > destSurface.Width)
-		{
-			srcWidth = destSurface.Width - destX;
-		}
-		if (destY + srcHeight > destSurface.Height)
-		{
-			srcHeight = destSurface.Height - destY;
-		}
-
-		// Validate source rectangle is within source surface bounds
-		if (srcX < 0 || srcY < 0 || srcX + srcWidth > srcSurface.Width || srcY + srcHeight > srcSurface.Height)
-		{
-			_logger.LogError("[DDraw] BltFast: source rectangle out of bounds");
-			return 1; // DDERR_GENERIC
-		}
-
-		// Check if width/height are valid after clipping
-		if (srcWidth <= 0 || srcHeight <= 0)
-		{
-			_logger.LogDebug("[DDraw] BltFast: nothing to blit after clipping");
-			return 0; // DD_OK - nothing to do
-		}
-
-		// Calculate offsets in the source and destination buffers
-		var srcOffset = srcY * srcSurface.Pitch + srcX * bytesPerPixel;
-		var destOffset = destY * destSurface.Pitch + destX * bytesPerPixel;
-
-		// Get spans for the blitter
-		var srcSpan = srcSurface.Bits.AsSpan(srcOffset);
-		var destSpan = destSurface.Bits.AsSpan(destOffset);
-
-		// DDBLTFAST_SRCCOLORKEY = 0x00000001
-		var useSrcColorKey = (dwTrans & 0x00000001) != 0 && srcSurface.HasColorKey;
-
-		// Use OptimizedBlitter for high-performance blitting
-		if (useSrcColorKey)
-		{
-			OptimizedBlitter.BltWithSourceColorKey(
-				destSpan,
-				srcSpan,
-				destSurface.Pitch,
-				srcSurface.Pitch,
-				srcWidth,
-				srcHeight,
-				bytesPerPixel,
-				srcSurface.ColorKeyLow,
-				srcSurface.ColorKeyHigh);
-		}
-		else
-		{
-			OptimizedBlitter.BltFast(
-				destSpan,
-				srcSpan,
-				destSurface.Pitch,
-				srcSurface.Pitch,
-				srcWidth,
-				srcHeight,
-				bytesPerPixel);
-		}
-
-		// Mark destination surface as dirty
-		destSurface.IsTextureDirty = true;
-
-		return 0; // DD_OK
-	}
-
-
+	
+	
 		private uint Surface_BltBatch(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::BltBatch() - stub");
 			return 0; // DD_OK
 		}
 
-	private uint Surface_Blt(ICpu cpu, VirtualMemory mem)
-	{
-		var args = new StackArgs(cpu, mem);
-		var thisPtr = args.UInt32(0);
-		var lpDestRect = args.UInt32(1);
-		var lpDDSrcSurface = args.UInt32(2);
-		var lpSrcRect = args.UInt32(3);
-		var dwFlags = args.UInt32(4);
-		var lpDDBltFx = args.UInt32(5);
-
-		_logger.LogInformation("[DDraw COM] IDirectDrawSurface::Blt(this=0x{ThisPtr:X8}, lpDestRect=0x{DestRect:X8}, lpDDSrcSurface=0x{SrcSurface:X8}, lpSrcRect=0x{SrcRect:X8}, dwFlags=0x{DwFlags:X8}, lpDDBltFx=0x{BltFx:X8})",
-			thisPtr, lpDestRect, lpDDSrcSurface, lpSrcRect, dwFlags, lpDDBltFx);
-
-		// Find destination surface by COM object address
-		DirectDrawSurface? destSurface = null;
-		foreach (var s in _surfaces.Values)
+		private uint Surface_Blt(ICpu cpu, VirtualMemory mem)
 		{
-			if (s.ComObjectAddress == thisPtr)
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lpDestRect = args.UInt32(1);
+			var lpDDSrcSurface = args.UInt32(2);
+			var lpSrcRect = args.UInt32(3);
+			var dwFlags = args.UInt32(4);
+			var lpDDBltFx = args.UInt32(5);
+	
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::Blt(this=0x{ThisPtr:X8}, lpDestRect=0x{DestRect:X8}, lpDDSrcSurface=0x{SrcSurface:X8}, lpSrcRect=0x{SrcRect:X8}, dwFlags=0x{DwFlags:X8}, lpDDBltFx=0x{BltFx:X8})",
+				thisPtr, lpDestRect, lpDDSrcSurface, lpSrcRect, dwFlags, lpDDBltFx);
+	
+			// Find destination surface by COM object address
+			var destSurface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
+	
+			if (destSurface == null || destSurface.Bits == null)
 			{
-				destSurface = s;
-				break;
-			}
-		}
-
-		if (destSurface == null || destSurface.Bits == null)
-		{
-			_logger.LogError("[DDraw] Blt: could not find destination surface");
-			return 1; // DDERR_GENERIC
-		}
-
-		// Read destination rectangle if provided
-		int destX = 0, destY = 0, destWidth = destSurface.Width, destHeight = destSurface.Height;
-		if (lpDestRect != 0)
-		{
-			var destRect = new RectRef(_env.Memory, lpDestRect);
-			destX = destRect.left;
-			destY = destRect.top;
-			destWidth = destRect.right - destX;
-			destHeight = destRect.bottom - destY;
-		}
-
-		// Check for color fill operation (DDBLT_COLORFILL = 0x00000400)
-		if ((dwFlags & 0x00000400) != 0 && lpDDBltFx != 0)
-		{
-			// Read fill color from DDBLTFX structure
-			var fillColor = _env.MemRead32(lpDDBltFx + 16); // dwFillColor offset
-
-			// Get bits per pixel from DirectDraw object
-			if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
-			{
-				_logger.LogError("[DDraw] Blt: could not find DirectDraw object for color fill");
+				_logger.LogError("[DDraw] Blt: could not find destination surface");
 				return 1; // DDERR_GENERIC
 			}
-
-			// Perform color fill
-			var bytesPerPixel = ddrawObj.BitsPerPixel / 8;
-			for (var y = destY; y < destY + destHeight && y < destSurface.Height; y++)
+	
+			// Read destination rectangle if provided
+			int destX = 0, destY = 0, destWidth = destSurface.Width, destHeight = destSurface.Height;
+			if (lpDestRect != 0)
 			{
-				for (var x = destX; x < destX + destWidth && x < destSurface.Width; x++)
-				{
-					var offset = y * destSurface.Pitch + x * bytesPerPixel;
-					if (offset + bytesPerPixel - 1 < destSurface.Bits.Length)
-					{
-						switch (bytesPerPixel)
-						{
-							case 1: // 8-bit
-								destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
-								break;
-							case 2: // 16-bit
-								destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
-								destSurface.Bits[offset + 1] = (byte)((fillColor >> 8) & 0xFF);
-								break;
-							case 3: // 24-bit
-								destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
-								destSurface.Bits[offset + 1] = (byte)((fillColor >> 8) & 0xFF);
-								destSurface.Bits[offset + 2] = (byte)((fillColor >> 16) & 0xFF);
-								break;
-							case 4: // 32-bit
-								destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
-								destSurface.Bits[offset + 1] = (byte)((fillColor >> 8) & 0xFF);
-								destSurface.Bits[offset + 2] = (byte)((fillColor >> 16) & 0xFF);
-								destSurface.Bits[offset + 3] = (byte)((fillColor >> 24) & 0xFF);
-								break;
-						}
-					}
-				}
+				var destRect = new RectRef(_env.Memory, lpDestRect);
+				destX = destRect.left;
+				destY = destRect.top;
+				destWidth = destRect.right - destX;
+				destHeight = destRect.bottom - destY;
 			}
-
-			// Mark destination surface as dirty
-			destSurface.IsTextureDirty = true;
-
-			_logger.LogInformation("[DDraw] Performed color fill with color 0x{FillColor:X8}", fillColor);
-			return 0; // DD_OK
-		}
-
-		// Handle source surface blit
-		if (lpDDSrcSurface != 0)
-		{
-			// Find source surface by COM object address
-			DirectDrawSurface? srcSurface = null;
-			foreach (var s in _surfaces.Values)
+	
+			// Check for color fill operation (DDBLT_COLORFILL = 0x00000400)
+			if ((dwFlags & 0x00000400) != 0 && lpDDBltFx != 0)
 			{
-				if (s.ComObjectAddress == lpDDSrcSurface)
-				{
-					srcSurface = s;
-					break;
-				}
-			}
-
-			if (srcSurface != null && srcSurface.Bits != null)
-			{
-				// Read source rectangle if provided
-				int srcX = 0, srcY = 0, srcWidth = srcSurface.Width, srcHeight = srcSurface.Height;
-				if (lpSrcRect != 0)
-				{
-					var srcRect = new RectRef(_env.Memory, lpSrcRect);
-					srcX = srcRect.left;
-					srcY = srcRect.top;
-					srcWidth = srcRect.right - srcX;
-					srcHeight = srcRect.bottom - srcY;
-				}
-
+				// Read fill color from DDBLTFX structure
+				var fillColor = _env.MemRead32(lpDDBltFx + 16); // dwFillColor offset
+	
 				// Get bits per pixel from DirectDraw object
 				if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
 				{
-					_logger.LogError("[DDraw] Blt: could not find DirectDraw object");
+					_logger.LogError("[DDraw] Blt: could not find DirectDraw object for color fill");
 					return 1; // DDERR_GENERIC
 				}
-
+	
+				// Perform color fill
 				var bytesPerPixel = ddrawObj.BitsPerPixel / 8;
-
-				// Clip rectangles to surface bounds
-				if (destX < 0)
+				for (var y = destY; y < destY + destHeight && y < destSurface.Height; y++)
 				{
-					srcX -= destX;
-					destWidth += destX;
-					destX = 0;
+					for (var x = destX; x < destX + destWidth && x < destSurface.Width; x++)
+					{
+						var offset = y * destSurface.Pitch + x * bytesPerPixel;
+						if (offset + bytesPerPixel - 1 < destSurface.Bits.Length)
+						{
+							switch (bytesPerPixel)
+							{
+								case 1: // 8-bit
+									destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
+									break;
+								case 2: // 16-bit
+									destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
+									destSurface.Bits[offset + 1] = (byte)((fillColor >> 8) & 0xFF);
+									break;
+								case 3: // 24-bit
+									destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
+									destSurface.Bits[offset + 1] = (byte)((fillColor >> 8) & 0xFF);
+									destSurface.Bits[offset + 2] = (byte)((fillColor >> 16) & 0xFF);
+									break;
+								case 4: // 32-bit
+									destSurface.Bits[offset] = (byte)(fillColor & 0xFF);
+									destSurface.Bits[offset + 1] = (byte)((fillColor >> 8) & 0xFF);
+									destSurface.Bits[offset + 2] = (byte)((fillColor >> 16) & 0xFF);
+									destSurface.Bits[offset + 3] = (byte)((fillColor >> 24) & 0xFF);
+									break;
+							}
+						}
+					}
 				}
-				if (destY < 0)
-				{
-					srcY -= destY;
-					destHeight += destY;
-					destY = 0;
-				}
-				if (destX + destWidth > destSurface.Width)
-				{
-					destWidth = destSurface.Width - destX;
-				}
-				if (destY + destHeight > destSurface.Height)
-				{
-					destHeight = destSurface.Height - destY;
-				}
-
-				// Validate source rectangle
-				if (srcX < 0 || srcY < 0 || srcX + srcWidth > srcSurface.Width || srcY + srcHeight > srcSurface.Height)
-				{
-					_logger.LogError("[DDraw] Blt: source rectangle out of bounds");
-					return 1; // DDERR_GENERIC
-				}
-
-				// Check if there's anything to blit
-				if (destWidth <= 0 || destHeight <= 0)
-				{
-					_logger.LogDebug("[DDraw] Blt: nothing to blit after clipping");
-					return 0; // DD_OK
-				}
-
-				// Calculate offsets
-				var srcOffset = srcY * srcSurface.Pitch + srcX * bytesPerPixel;
-				var destOffset = destY * destSurface.Pitch + destX * bytesPerPixel;
-
-				// Get spans for blitter
-				var srcSpan = srcSurface.Bits.AsSpan(srcOffset);
-				var destSpan = destSurface.Bits.AsSpan(destOffset);
-
-				// DDBLT_KEYSRC = 0x00008000
-				var useSrcColorKey = (dwFlags & 0x00008000) != 0 && srcSurface.HasColorKey;
-
-				// Use OptimizedBlitter for high-performance blitting
-				if (useSrcColorKey)
-				{
-					OptimizedBlitter.BltWithSourceColorKey(
-						destSpan,
-						srcSpan,
-						destSurface.Pitch,
-						srcSurface.Pitch,
-						destWidth,
-						destHeight,
-						bytesPerPixel,
-						srcSurface.ColorKeyLow,
-						srcSurface.ColorKeyHigh);
-				}
-				else
-				{
-					OptimizedBlitter.BltFast(
-						destSpan,
-						srcSpan,
-						destSurface.Pitch,
-						srcSurface.Pitch,
-						destWidth,
-						destHeight,
-						bytesPerPixel);
-				}
-
+	
 				// Mark destination surface as dirty
 				destSurface.IsTextureDirty = true;
-
-				_logger.LogInformation("[DDraw] Performed blit from source surface");
+	
+				_logger.LogInformation("[DDraw] Performed color fill with color 0x{FillColor:X8}", fillColor);
+				return 0; // DD_OK
 			}
+	
+			// Handle source surface blit
+			if (lpDDSrcSurface != 0)
+			{
+				// Find source surface by COM object address
+				var srcSurface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == lpDDSrcSurface);
+	
+				if (srcSurface != null && srcSurface.Bits != null)
+				{
+					// Read source rectangle if provided
+					int srcX = 0, srcY = 0, srcWidth = srcSurface.Width, srcHeight = srcSurface.Height;
+					if (lpSrcRect != 0)
+					{
+						var srcRect = new RectRef(_env.Memory, lpSrcRect);
+						srcX = srcRect.left;
+						srcY = srcRect.top;
+						srcWidth = srcRect.right - srcX;
+						srcHeight = srcRect.bottom - srcY;
+					}
+	
+					// Get bits per pixel from DirectDraw object
+					if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
+					{
+						_logger.LogError("[DDraw] Blt: could not find DirectDraw object");
+						return 1; // DDERR_GENERIC
+					}
+	
+					var bytesPerPixel = ddrawObj.BitsPerPixel / 8;
+	
+					// Clip rectangles to surface bounds
+					if (destX < 0)
+					{
+						srcX -= destX;
+						destWidth += destX;
+						destX = 0;
+					}
+					if (destY < 0)
+					{
+						srcY -= destY;
+						destHeight += destY;
+						destY = 0;
+					}
+					if (destX + destWidth > destSurface.Width)
+					{
+						destWidth = destSurface.Width - destX;
+					}
+					if (destY + destHeight > destSurface.Height)
+					{
+						destHeight = destSurface.Height - destY;
+					}
+	
+					// Validate source rectangle
+					if (srcX < 0 || srcY < 0 || srcX + srcWidth > srcSurface.Width || srcY + srcHeight > srcSurface.Height)
+					{
+						_logger.LogError("[DDraw] Blt: source rectangle out of bounds");
+						return 1; // DDERR_GENERIC
+					}
+	
+					// Check if there's anything to blit
+					if (destWidth <= 0 || destHeight <= 0)
+					{
+						_logger.LogDebug("[DDraw] Blt: nothing to blit after clipping");
+						return 0; // DD_OK
+					}
+	
+					// Calculate offsets
+					var srcOffset = srcY * srcSurface.Pitch + srcX * bytesPerPixel;
+					var destOffset = destY * destSurface.Pitch + destX * bytesPerPixel;
+	
+					// Get spans for blitter
+					var srcSpan = srcSurface.Bits.AsSpan(srcOffset);
+					var destSpan = destSurface.Bits.AsSpan(destOffset);
+	
+					// DDBLT_KEYSRC = 0x00008000
+					var useSrcColorKey = (dwFlags & 0x00008000) != 0 && srcSurface.HasColorKey;
+	
+					// Use OptimizedBlitter for high-performance blitting
+					if (useSrcColorKey)
+					{
+						OptimizedBlitter.BltWithSourceColorKey(
+							destSpan,
+							srcSpan,
+							destSurface.Pitch,
+							srcSurface.Pitch,
+							destWidth,
+							destHeight,
+							bytesPerPixel,
+							srcSurface.ColorKeyLow,
+							srcSurface.ColorKeyHigh);
+					}
+					else
+					{
+						OptimizedBlitter.BltFast(
+							destSpan,
+							srcSpan,
+							destSurface.Pitch,
+							srcSurface.Pitch,
+							destWidth,
+							destHeight,
+							bytesPerPixel);
+					}
+	
+					// Mark destination surface as dirty
+					destSurface.IsTextureDirty = true;
+	
+					_logger.LogInformation("[DDraw] Performed blit from source surface");
+				}
+			}
+	
+			return 0; // DD_OK
 		}
-
-		return 0; // DD_OK
-	}
-
-
+	
+	
 		private uint Surface_AddOverlayDirtyRect(ICpu cpu, VirtualMemory mem)
 		{
 			_logger.LogInformation("[DDraw COM] IDirectDraw::AddOverlayDirtyRect() - stub");
