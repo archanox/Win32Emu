@@ -272,22 +272,27 @@ public class DiskVirtualFileSystemTests : IDisposable
 		var sourceDir = Path.Combine(_testDir, "source");
 		Directory.CreateDirectory(sourceDir);
 		
-		// This file has multiple dots which causes issues with FAT
+		// Files with multiple dots and long names that exceed FAT 8.3 limits
 		File.WriteAllText(Path.Combine(sourceDir, "TEST.EXE.i64"), "IDA database");
 		File.WriteAllText(Path.Combine(sourceDir, "file.db.bak"), "backup");
 		File.WriteAllText(Path.Combine(sourceDir, "normal.txt"), "normal file");
+		File.WriteAllText(Path.Combine(sourceDir, "VERYLONGNAME.txt"), "long name");
 		
 		// Act - Copy directory to VHD
 		vfs.CopyDirectoryIn(sourceDir, "/testgame");
 
 		// Assert - Files should be copied with sanitized names
-		// TEST.EXE.i64 -> TEST_EXE.i64
+		// FAT 8.3 format: max 8 chars for basename, 3 for extension
+		// TEST.EXE.i64 -> TEST_EXE.i64 (dots replaced with underscores, fits in 8 chars)
 		Assert.True(vfs.FileExists(@"\testgame\TEST_EXE.i64"));
 		
-		// file.db.bak -> file_db.bak
+		// file.db.bak -> file_db.bak (dots replaced with underscores, already fits 8.3)
 		Assert.True(vfs.FileExists(@"\testgame\file_db.bak"));
 		
-		// normal.txt stays the same
+		// normal.txt stays the same (already fits 8.3)
 		Assert.True(vfs.FileExists(@"\testgame\normal.txt"));
+		
+		// VERYLONGNAME.txt -> VERYLONG.txt (truncated to 8 chars)
+		Assert.True(vfs.FileExists(@"\testgame\VERYLONG.txt"));
 	}
 }

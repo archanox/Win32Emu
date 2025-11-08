@@ -386,13 +386,15 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 	/// <summary>
 	/// Sanitizes a filename to be compatible with FAT filesystems.
 	/// FAT has restrictions on filename length and characters.
+	/// Even FAT32 with Long Filename support enforces 8.3 format in DiscUtils.
 	/// </summary>
 	private string SanitizeFileName(string fileName)
 	{
 		// For FAT filesystems, we need to handle filenames carefully
-		// FAT supports Long File Names (LFN) but has limitations:
-		// - Multiple dots in filenames can cause issues
-		// - Very long names without extensions can fail
+		// DiscUtils FAT implementation enforces 8.3 format:
+		// - Maximum 8 characters for basename
+		// - Maximum 3 characters for extension
+		// - Multiple dots in filenames cause issues
 		
 		if (!(_fileSystem is FatFileSystem))
 		{
@@ -419,17 +421,26 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			{
 				// Replace dots in basename with underscores
 				baseName = baseName.Replace('.', '_');
-				fileName = baseName + "." + extension;
 			}
+			
+			// FAT 8.3 format: basename max 8 chars, extension max 3 chars
+			if (baseName.Length > 8)
+			{
+				baseName = baseName.Substring(0, 8);
+			}
+			if (extension.Length > 3)
+			{
+				extension = extension.Substring(0, 3);
+			}
+			
+			fileName = baseName + "." + extension;
 		}
 		else if (lastDotIndex == -1)
 		{
-			// No extension - check if name is too long
-			// FAT has issues with very long names without extensions
-			// Limit to a reasonable length to avoid issues
-			if (fileName.Length > 200)
+			// No extension - limit basename to 8 characters
+			if (fileName.Length > 8)
 			{
-				fileName = fileName.Substring(0, 200);
+				fileName = fileName.Substring(0, 8);
 			}
 		}
 
