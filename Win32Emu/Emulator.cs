@@ -349,11 +349,25 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new Glide2XModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DPlayXModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Ole32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Oleaut32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Shell32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DsetupModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new MsvcrtModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Wsock32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Wavmix32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Comctl32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new DInput8Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new VersionModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new WinspoolModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new OledlgModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Olepro32Module(_env, _image.BaseAddress, loader, _logger));
+        
+        // Additional system DLLs
+        _dispatcher.RegisterModule(new NtdllModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new ShlwapiModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new WininetModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new UcrtbaseModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Vcruntime140Module(_env, _image.BaseAddress, loader, _logger));
 
         // Initialize the main thread in the thread scheduler
         _env.InitializeMainThread(_cpu);
