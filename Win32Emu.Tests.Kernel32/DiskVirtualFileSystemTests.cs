@@ -260,4 +260,34 @@ public class DiskVirtualFileSystemTests : IDisposable
 		// Assert - Verify file was copied
 		Assert.True(vfs.FileExists(@"\mygame\game.exe"));
 	}
+
+	[Fact]
+	public void CopyDirectoryIn_WithMultipleDotFilenames_SanitizesAndCopiesFiles()
+	{
+		// Arrange - Create a VHD disk
+		var diskPath = Path.Combine(_testDir, "test.vhd");
+		using var vfs = DiskVirtualFileSystem.Create(diskPath, DiskFormat.Vhd, 10 * 1024 * 1024, NullLogger.Instance);
+
+		// Create a source directory with problematic filenames
+		var sourceDir = Path.Combine(_testDir, "source");
+		Directory.CreateDirectory(sourceDir);
+		
+		// This file has multiple dots which causes issues with FAT
+		File.WriteAllText(Path.Combine(sourceDir, "IGN_TEAS.EXE.i64"), "IDA database");
+		File.WriteAllText(Path.Combine(sourceDir, "backup.file.txt"), "backup");
+		File.WriteAllText(Path.Combine(sourceDir, "normal.txt"), "normal file");
+		
+		// Act - Copy directory to VHD
+		vfs.CopyDirectoryIn(sourceDir, "/testgame");
+
+		// Assert - Files should be copied with sanitized names
+		// IGN_TEAS.EXE.i64 -> IGN_TEAS_EXE.i64
+		Assert.True(vfs.FileExists(@"\testgame\IGN_TEAS_EXE.i64"));
+		
+		// backup.file.txt -> backup_file.txt
+		Assert.True(vfs.FileExists(@"\testgame\backup_file.txt"));
+		
+		// normal.txt stays the same
+		Assert.True(vfs.FileExists(@"\testgame\normal.txt"));
+	}
 }
