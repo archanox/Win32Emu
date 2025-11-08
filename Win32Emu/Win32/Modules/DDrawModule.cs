@@ -17,6 +17,11 @@ namespace Win32Emu.Win32.Modules
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
 
+		// Temporary storage for CPU and memory during callbacks
+		// These are set at the start of TryInvokeUnsafe and used by export functions
+		private ICpu? _currentCpu;
+		private VirtualMemory? _currentMemory;
+
 		public DDrawModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
 			_env = env;
@@ -43,6 +48,10 @@ namespace Win32Emu.Win32.Modules
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
+			
+			// Store CPU and memory for use by export functions
+			_currentCpu = cpu;
+			_currentMemory = memory;
 			var a = new StackArgs(cpu, memory);
 
 			switch (export.ToUpperInvariant())
@@ -305,6 +314,69 @@ namespace Win32Emu.Win32.Modules
 			public uint ComObjectAddress { get; set; }
 			public uint WindowHandle { get; set; }
 			public bool IsWindowedMode { get; set; }
+		}
+
+		/// <summary>
+		/// Allocates memory for a string and writes it to emulated memory.
+		/// Returns the address of the allocated string.
+		/// </summary>
+		private uint AllocateString(string str)
+		{
+			if (string.IsNullOrEmpty(str))
+			{
+				return 0;
+			}
+
+			var bytes = System.Text.Encoding.ASCII.GetBytes(str);
+			var size = (uint)(bytes.Length + 1); // +1 for null terminator
+			var addr = _env.HeapAlloc(0, size);
+
+			if (addr == 0)
+			{
+				_logger.LogError("[DDraw] Failed to allocate {Size} bytes for string", size);
+				return 0;
+			}
+
+			// Write string bytes
+			for (int i = 0; i < bytes.Length; i++)
+			{
+				_env.Memory.Write8(addr + (uint)i, bytes[i]);
+			}
+
+			// Write null terminator
+			_env.Memory.Write8(addr + (uint)bytes.Length, 0);
+
+			return addr;
+		}
+
+		/// <summary>
+		/// Frees a string that was previously allocated with AllocateString.
+		/// </summary>
+		private void FreeString(uint addr)
+		{
+			if (addr != 0)
+			{
+				_env.HeapFree(0, addr);
+			}
+		}
+
+		/// <summary>
+		/// Allocates a block of memory.
+		/// </summary>
+		private uint AllocateMemory(uint size)
+		{
+			return _env.HeapAlloc(0, size);
+		}
+
+		/// <summary>
+		/// Frees a block of memory.
+		/// </summary>
+		private void FreeMemory(uint addr)
+		{
+			if (addr != 0)
+			{
+				_env.HeapFree(0, addr);
+			}
 		}
 
 		/// <summary>
@@ -2242,11 +2314,89 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
-			// Note: Full callback implementation requires saving/restoring CPU state and properly calling stdcall functions
-			// For now, return success without enumerating modes
-			// Applications typically handle this gracefully and use SetDisplayMode directly
-			_logger.LogInformation("[DDraw] EnumDisplayModes: Callback enumeration not fully implemented, returning success");
-			return (uint)DDResult.DD_OK;
+			// Callback signature: HRESULT WINAPI EnumModesCallback(LPDDSURFACEDESC lpDDSurfaceDesc, LPVOID lpContext)
+			// Enumerate common display modes for emulation
+
+			try
+			{
+				// Common display modes to enumerate
+				var displayModes = new[]
+				{
+					new { Width = 640, Height = 480, Bpp = 8 },
+					new { Width = 640, Height = 480, Bpp = 16 },
+					new { Width = 640, Height = 480, Bpp = 32 },
+					new { Width = 800, Height = 600, Bpp = 8 },
+					new { Width = 800, Height = 600, Bpp = 16 },
+					new { Width = 800, Height = 600, Bpp = 32 },
+					new { Width = 1024, Height = 768, Bpp = 16 },
+					new { Width = 1024, Height = 768, Bpp = 32 },
+				};
+
+				var callbackHelper = new CallbackHelper(_currentCpu!, _currentMemory!, _logger);
+
+				foreach (var mode in displayModes)
+				{
+					// Allocate DDSURFACEDESC structure (108 bytes minimum)
+					var surfaceDescPtr = AllocateMemory(108);
+
+					// Fill in the structure
+					_env.MemWrite32(surfaceDescPtr, 108); // dwSize
+					_env.MemWrite32(surfaceDescPtr + 4, (uint)(DDSD.WIDTH | DDSD.HEIGHT | DDSD.PIXELFORMAT)); // dwFlags
+					_env.MemWrite32(surfaceDescPtr + 8, (uint)mode.Height); // dwHeight
+					_env.MemWrite32(surfaceDescPtr + 12, (uint)mode.Width); // dwWidth
+					_env.MemWrite32(surfaceDescPtr + 16, (uint)(mode.Width * (mode.Bpp / 8))); // lPitch
+
+					// Pixel format at offset 76
+					_env.MemWrite32(surfaceDescPtr + 76, 32); // dwSize of DDPIXELFORMAT
+					_env.MemWrite32(surfaceDescPtr + 80, (uint)DDPFFlags.DDPF_RGB); // dwFlags
+					_env.MemWrite32(surfaceDescPtr + 84, 0); // dwFourCC
+					_env.MemWrite32(surfaceDescPtr + 88, (uint)mode.Bpp); // dwRGBBitCount
+
+					// Set RGB masks based on bit depth
+					if (mode.Bpp == 16)
+					{
+						_env.MemWrite32(surfaceDescPtr + 92, 0xF800); // Red mask
+						_env.MemWrite32(surfaceDescPtr + 96, 0x07E0); // Green mask
+						_env.MemWrite32(surfaceDescPtr + 100, 0x001F); // Blue mask
+					}
+					else if (mode.Bpp == 24 || mode.Bpp == 32)
+					{
+						_env.MemWrite32(surfaceDescPtr + 92, 0x00FF0000); // Red mask
+						_env.MemWrite32(surfaceDescPtr + 96, 0x0000FF00); // Green mask
+						_env.MemWrite32(surfaceDescPtr + 100, 0x000000FF); // Blue mask
+					}
+
+					_logger.LogDebug("[DDraw] Enumerating mode: {Width}x{Height}x{Bpp}",
+						mode.Width, mode.Height, mode.Bpp);
+
+					// Invoke callback: EnumModesCallback(lpDDSurfaceDesc, lpContext)
+					var parameters = new uint[] { surfaceDescPtr, lpContext };
+					var result = callbackHelper.InvokeStdcallCallback(lpEnumModesCallback, parameters);
+
+					// Free allocated structure
+					FreeMemory(surfaceDescPtr);
+
+					if (result == null)
+					{
+						_logger.LogError("[DDraw] EnumDisplayModes: callback invocation failed");
+						return (uint)DDResult.DDERR_GENERIC;
+					}
+
+					// Callback returns DDENUMRET_OK (1) to continue, DDENUMRET_CANCEL (0) to stop
+					if (result.Value == 0)
+					{
+						_logger.LogInformation("[DDraw] EnumDisplayModes: callback requested cancellation");
+						break;
+					}
+				}
+
+				return (uint)DDResult.DD_OK;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DDraw] EnumDisplayModes: exception during enumeration");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
 		}
 
 		private uint DDraw_EnumSurfaces(ICpu cpu, VirtualMemory memory)
@@ -2267,11 +2417,92 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
-			// Note: Full callback implementation requires saving/restoring CPU state and properly calling stdcall functions
-			// For now, return success without enumerating surfaces
-			// Most applications don't rely on this for critical functionality
-			_logger.LogInformation("[DDraw] EnumSurfaces: Callback enumeration not fully implemented, returning success");
-			return (uint)DDResult.DD_OK;
+			// Callback signature: HRESULT WINAPI EnumSurfacesCallback(LPDIRECTDRAWSURFACE lpDDSurface, LPDDSURFACEDESC lpDDSurfaceDesc, LPVOID lpContext)
+			// Enumerate all surfaces that match the criteria
+
+			try
+			{
+				var callbackHelper = new CallbackHelper(_currentCpu!, _currentMemory!, _logger);
+
+				// Enumerate existing surfaces
+				foreach (var surface in _surfaces.Values)
+				{
+					// Allocate DDSURFACEDESC structure (108 bytes minimum)
+					var surfaceDescPtr = AllocateMemory(108);
+
+					// Get DirectDraw object to determine BPP
+					DirectDrawObject? ddrawObj = null;
+					_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out ddrawObj);
+
+					// Fill in the structure
+					_env.MemWrite32(surfaceDescPtr, 108); // dwSize
+					_env.MemWrite32(surfaceDescPtr + 4, (uint)(DDSD.CAPS | DDSD.WIDTH | DDSD.HEIGHT | DDSD.PITCH | DDSD.PIXELFORMAT)); // dwFlags
+					_env.MemWrite32(surfaceDescPtr + 8, (uint)surface.Height); // dwHeight
+					_env.MemWrite32(surfaceDescPtr + 12, (uint)surface.Width); // dwWidth
+					_env.MemWrite32(surfaceDescPtr + 16, (uint)surface.Pitch); // lPitch
+
+					// Pixel format at offset 76
+					if (ddrawObj != null)
+					{
+						_env.MemWrite32(surfaceDescPtr + 76, 32); // dwSize of DDPIXELFORMAT
+						_env.MemWrite32(surfaceDescPtr + 80, (uint)DDPFFlags.DDPF_RGB); // dwFlags
+						_env.MemWrite32(surfaceDescPtr + 84, 0); // dwFourCC
+						_env.MemWrite32(surfaceDescPtr + 88, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
+
+						// Set RGB masks based on bit depth
+						if (ddrawObj.BitsPerPixel == 16)
+						{
+							_env.MemWrite32(surfaceDescPtr + 92, 0xF800); // Red mask
+							_env.MemWrite32(surfaceDescPtr + 96, 0x07E0); // Green mask
+							_env.MemWrite32(surfaceDescPtr + 100, 0x001F); // Blue mask
+						}
+						else if (ddrawObj.BitsPerPixel == 24 || ddrawObj.BitsPerPixel == 32)
+						{
+							_env.MemWrite32(surfaceDescPtr + 92, 0x00FF0000); // Red mask
+							_env.MemWrite32(surfaceDescPtr + 96, 0x0000FF00); // Green mask
+							_env.MemWrite32(surfaceDescPtr + 100, 0x000000FF); // Blue mask
+						}
+					}
+
+					// Caps at offset 108
+					uint caps = 0;
+					if (surface.IsPrimary)
+						caps |= (uint)DDSCaps.DDSCAPS_PRIMARYSURFACE;
+					else
+						caps |= (uint)DDSCaps.DDSCAPS_OFFSCREENPLAIN;
+					_env.MemWrite32(surfaceDescPtr + 108, caps);
+
+					_logger.LogDebug("[DDraw] Enumerating surface: 0x{Handle:X8} ({Width}x{Height})",
+						surface.Handle, surface.Width, surface.Height);
+
+					// Invoke callback: EnumSurfacesCallback(lpDDSurface, lpDDSurfaceDesc, lpContext)
+					var parameters = new uint[] { surface.ComObjectAddress, surfaceDescPtr, lpContext };
+					var result = callbackHelper.InvokeStdcallCallback(lpEnumSurfacesCallback, parameters);
+
+					// Free allocated structure
+					FreeMemory(surfaceDescPtr);
+
+					if (result == null)
+					{
+						_logger.LogError("[DDraw] EnumSurfaces: callback invocation failed");
+						return (uint)DDResult.DDERR_GENERIC;
+					}
+
+					// Callback returns DDENUMRET_OK (1) to continue, DDENUMRET_CANCEL (0) to stop
+					if (result.Value == 0)
+					{
+						_logger.LogInformation("[DDraw] EnumSurfaces: callback requested cancellation");
+						break;
+					}
+				}
+
+				return (uint)DDResult.DD_OK;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DDraw] EnumSurfaces: exception during enumeration");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
 		}
 
 		private uint DDraw_FlipToGDISurface(ICpu cpu, VirtualMemory memory)
@@ -3283,22 +3514,53 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
-			// Enumerate the primary display driver
-			// For an emulator, we only report one display device (the emulated one)
-			// 
 			// Callback signature: BOOL WINAPI DDEnumCallback(GUID FAR *lpGUID, LPSTR lpDriverDescription, LPSTR lpDriverName, LPVOID lpContext)
-			// 
-			// Note: Full callback implementation would require:
-			// 1. Allocating memory for GUID, description, and name strings
-			// 2. Setting up CPU state for stdcall convention
-			// 3. Calling into emulated code at lpCallback address
-			// 4. Restoring CPU state and checking return value
-			//
-			// For now, we return DD_OK without calling the callback.
-			// Most applications handle this gracefully and don't strictly require enumeration.
-			
-			_logger.LogInformation("[DDraw] DirectDrawEnumerateA: Enumeration not fully implemented, returning success");
-			return (uint)DDResult.DD_OK;
+			// For an emulator, we enumerate one primary display driver (the emulated one)
+
+			try
+			{
+				// Allocate memory for GUID (NULL for primary display driver)
+				uint guidPtr = 0; // NULL indicates primary display driver
+
+				// Allocate and write driver description string
+				var driverDescription = "Primary Display Driver";
+				var descPtr = AllocateString(driverDescription);
+
+				// Allocate and write driver name string
+				var driverName = "display";
+				var namePtr = AllocateString(driverName);
+
+				_logger.LogDebug("[DDraw] Allocated strings: desc=0x{Desc:X8}, name=0x{Name:X8}",
+					descPtr, namePtr);
+
+				// Create callback helper
+				var callbackHelper = new CallbackHelper(_currentCpu!, _currentMemory!, _logger);
+
+				// Invoke callback: DDEnumCallback(lpGUID, lpDriverDescription, lpDriverName, lpContext)
+				var parameters = new uint[] { guidPtr, descPtr, namePtr, lpContext };
+				var result = callbackHelper.InvokeStdcallCallback(lpCallback, parameters);
+
+				// Free allocated strings
+				FreeString(descPtr);
+				FreeString(namePtr);
+
+				if (result == null)
+				{
+					_logger.LogError("[DDraw] DirectDrawEnumerateA: callback invocation failed");
+					return (uint)DDResult.DDERR_GENERIC;
+				}
+
+				_logger.LogInformation("[DDraw] DirectDrawEnumerateA: callback returned {Result}", result.Value);
+
+				// Callback returns FALSE (0) to stop enumeration, non-zero to continue
+				// Since we only have one device, we always return success
+				return (uint)DDResult.DD_OK;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DDraw] DirectDrawEnumerateA: exception during enumeration");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
 		}
 
 		[DllModuleExport(12, entryPoint: 0x00022626, Version = "4.90.0.3000", IsStub = true)]
@@ -3322,18 +3584,61 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
-			// Extended enumeration with additional flags:
+			// Extended enumeration flags:
 			// DDENUM_ATTACHEDSECONDARYDEVICES (0x00000001) - Enumerate secondary devices
 			// DDENUM_DETACHEDSECONDARYDEVICES (0x00000002) - Enumerate detached devices
 			// DDENUM_NONDISPLAYDEVICES (0x00000004) - Enumerate non-display devices
-			//
-			// Callback signature: BOOL WINAPI DDEnumCallbackEx(GUID FAR *lpGUID, LPSTR lpDriverDescription, LPSTR lpDriverName, LPVOID lpContext, HMONITOR hm)
-			//
-			// For an emulator, we only have one primary display device.
-			// Full callback implementation would be complex (see DirectDrawEnumerateA comments).
 			
-			_logger.LogInformation("[DDraw] DirectDrawEnumerateExA: Extended enumeration not fully implemented, returning success");
-			return (uint)DDResult.DD_OK;
+			// Callback signature: BOOL WINAPI DDEnumCallbackEx(GUID FAR *lpGUID, LPSTR lpDriverDescription, LPSTR lpDriverName, LPVOID lpContext, HMONITOR hm)
+			// For an emulator, we enumerate one primary display driver (the emulated one)
+
+			try
+			{
+				// Allocate memory for GUID (NULL for primary display driver)
+				uint guidPtr = 0; // NULL indicates primary display driver
+
+				// Allocate and write driver description string
+				var driverDescription = "Primary Display Driver";
+				var descPtr = AllocateString(driverDescription);
+
+				// Allocate and write driver name string
+				var driverName = "display";
+				var namePtr = AllocateString(driverName);
+
+				// Monitor handle (just use a dummy value for primary monitor)
+				uint hMonitor = 0x00010001;
+
+				_logger.LogDebug("[DDraw] Allocated strings: desc=0x{Desc:X8}, name=0x{Name:X8}, hMonitor=0x{HMonitor:X8}",
+					descPtr, namePtr, hMonitor);
+
+				// Create callback helper
+				var callbackHelper = new CallbackHelper(_currentCpu!, _currentMemory!, _logger);
+
+				// Invoke callback: DDEnumCallbackEx(lpGUID, lpDriverDescription, lpDriverName, lpContext, hMonitor)
+				var parameters = new uint[] { guidPtr, descPtr, namePtr, lpContext, hMonitor };
+				var result = callbackHelper.InvokeStdcallCallback(lpCallback, parameters);
+
+				// Free allocated strings
+				FreeString(descPtr);
+				FreeString(namePtr);
+
+				if (result == null)
+				{
+					_logger.LogError("[DDraw] DirectDrawEnumerateExA: callback invocation failed");
+					return (uint)DDResult.DDERR_GENERIC;
+				}
+
+				_logger.LogInformation("[DDraw] DirectDrawEnumerateExA: callback returned {Result}", result.Value);
+
+				// Callback returns FALSE (0) to stop enumeration, non-zero to continue
+				// Since we only have one device, we always return success
+				return (uint)DDResult.DD_OK;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DDraw] DirectDrawEnumerateExA: exception during enumeration");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
 		}
 
 		[DllModuleExport(13, entryPoint: 0x00022467, Version = "4.90.0.3000", IsStub = true)]
