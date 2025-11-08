@@ -162,30 +162,74 @@ public sealed class Emulator : IDisposable
         _gdbServerMode = gdbServerMode;
         _gdbServerPort = gdbServerPort;
 
-        // Only check if file exists on host filesystem if not using a virtual disk
-        // When using a virtual disk, the file will be in the VFS which hasn't been initialized yet
-        if (string.IsNullOrEmpty(virtualDiskPath) && !File.Exists(path))
+        // When using a virtual disk, extract the executable from VFS to a temporary file first
+        string? tempExecutablePath = null;
+        string executablePathToLoad = path;
+        
+        if (!string.IsNullOrEmpty(virtualDiskPath))
+        {
+            _logger.LogInformation("[Loader] Extracting executable from virtual disk: {VfsPath}", path);
+            
+            // Open the VFS temporarily to extract the executable
+            using (var diskVfs = new VirtualFileSystem.DiskVirtualFileSystem(virtualDiskPath, _logger))
+            {
+                // Convert Windows path to VFS path (e.g., C:\ign_teas\IGN_TEAS.EXE -> \ign_teas\IGN_TEAS.EXE)
+                var vfsPath = path;
+                if (vfsPath.Length >= 2 && vfsPath[1] == ':')
+                {
+                    // Remove drive letter (e.g., "C:\foo" -> "\foo")
+                    vfsPath = vfsPath.Substring(2);
+                }
+                
+                // Open and read the file from VFS
+                var fileHandle = diskVfs.OpenFile(vfsPath, VirtualFileSystem.VfsFileMode.Open, VirtualFileSystem.VfsFileAccess.Read);
+                if (fileHandle == null)
+                {
+                    throw new FileNotFoundException($"File not found in virtual disk: {vfsPath}");
+                }
+                
+                using (fileHandle)
+                {
+                    // Get file length by seeking to the end
+                    var fileLength = fileHandle.Seek(0, SeekOrigin.End);
+                    fileHandle.Seek(0, SeekOrigin.Begin); // Reset to beginning
+                    
+                    var fileBytes = new byte[fileLength];
+                    fileHandle.Read(fileBytes, 0, (int)fileLength);
+                    
+                    // Write to a temporary file
+                    tempExecutablePath = Path.Combine(Path.GetTempPath(), $"win32emu_{Guid.NewGuid():N}.exe");
+                    File.WriteAllBytes(tempExecutablePath, fileBytes);
+                    executablePathToLoad = tempExecutablePath;
+                    
+                    _logger.LogInformation("[Loader] Extracted executable to temporary file: {TempPath}", tempExecutablePath);
+                }
+            }
+        }
+        else if (!File.Exists(path))
         {
             throw new FileNotFoundException($"File not found: {path}");
         }
 
-        // Log system information
-        var osDescription = RuntimeInformation.OSDescription;
-        var processArchitecture = RuntimeInformation.ProcessArchitecture;
-        _logger.LogInformation("[Loader] Host OS: {OSDescription}", osDescription);
-        _logger.LogInformation("[Loader] Host Architecture: {ProcessArchitecture}", processArchitecture);
+        try
+        {
+            // Log system information
+            var osDescription = RuntimeInformation.OSDescription;
+            var processArchitecture = RuntimeInformation.ProcessArchitecture;
+            _logger.LogInformation("[Loader] Host OS: {OSDescription}", osDescription);
+            _logger.LogInformation("[Loader] Host Architecture: {ProcessArchitecture}", processArchitecture);
 
-        LogDebug($"[Loader] Loading PE: {path}");
-        // Convert MB to bytes for VirtualMemory constructor
-        var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
-        _vm = new VirtualMemory(memorySizeBytes);
-        
-        var configuredSizeMB = _vm.ConfiguredSize / (1024 * 1024);
-        var addressSpaceSizeMB = _vm.Size / (1024 * 1024);
-        _logger.LogInformation("[Memory] Configured size: {ConfiguredMB} MB, Address space: {AddressSpaceMB} MB (sparse, pages allocated on-demand)", 
-            configuredSizeMB, addressSpaceSizeMB);
-        var loader = new PeImageLoader(_vm, _logger);
-        _image = loader.Load(path);
+            LogDebug($"[Loader] Loading PE: {executablePathToLoad}");
+            // Convert MB to bytes for VirtualMemory constructor
+            var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
+            _vm = new VirtualMemory(memorySizeBytes);
+            
+            var configuredSizeMB = _vm.ConfiguredSize / (1024 * 1024);
+            var addressSpaceSizeMB = _vm.Size / (1024 * 1024);
+            _logger.LogInformation("[Memory] Configured size: {ConfiguredMB} MB, Address space: {AddressSpaceMB} MB (sparse, pages allocated on-demand)", 
+                configuredSizeMB, addressSpaceSizeMB);
+            var loader = new PeImageLoader(_vm, _logger);
+            _image = loader.Load(executablePathToLoad);
         LogDebug($"[Loader] Image base=0x{_image.BaseAddress:X8} EntryPoint=0x{_image.EntryPointAddress:X8} Size=0x{_image.ImageSize:X}");
         LogDebug($"[Loader] Imports mapped: {_image.ImportAddressMap.Count}");
         LogDebug($"[Loader] Subsystem: {_image.Subsystem} (2=GUI, 3=CUI)");
@@ -387,6 +431,23 @@ public sealed class Emulator : IDisposable
         // Execute TLS callbacks if present
         // TLS callbacks must be executed AFTER all modules are registered but BEFORE the main entry point
         ExecuteTlsCallbacks();
+        }
+        finally
+        {
+            // Clean up temporary executable file if we created one
+            if (!string.IsNullOrEmpty(tempExecutablePath) && File.Exists(tempExecutablePath))
+            {
+                try
+                {
+                    File.Delete(tempExecutablePath);
+                    _logger.LogDebug("[Loader] Cleaned up temporary executable: {TempPath}", tempExecutablePath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[Loader] Failed to delete temporary executable: {TempPath}", tempExecutablePath);
+                }
+            }
+        }
     }
 
     /// <summary>
