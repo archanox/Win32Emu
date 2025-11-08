@@ -8031,6 +8031,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 	/// <summary>
 	/// Sets the per-process mode that the SearchPath function uses when locating files.
+	/// This affects the order in which directories are searched when resolving file paths.
+	/// Safe search mode (enabled) searches system directories before the current directory,
+	/// while disabled mode searches the current directory first (less secure).
 	/// BOOL SetSearchPathMode(
 	///   [in] DWORD Flags
 	/// );
