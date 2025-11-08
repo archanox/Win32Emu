@@ -978,14 +978,7 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, dwFlags, lpDDColorKey);
 
 			// Find the surface
-			DirectDrawSurface? surface = null;
-			foreach (var s in _surfaces.Values)
-			{
-				// For now, find any surface
-				// In a complete implementation, we'd match by COM object address
-				surface = s;
-				break;
-			}
+			var surface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (surface == null)
 			{
@@ -1139,8 +1132,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpDDSurfaceDesc != 0)
 			{
 				// Find the DirectDraw object to get BPP
-				DirectDrawObject? ddrawObj = null;
-				if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out ddrawObj))
+				if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
 				{
 					var dwSize = _env.MemRead32(lpDDSurfaceDesc);
 
@@ -2236,7 +2228,7 @@ namespace Win32Emu.Win32.Modules
 
 					// Fill in the structure using ref struct
 					surfaceDesc.dwSize = 108;
-					surfaceDesc.dwFlags = (uint)(DDSD.WIDTH | DDSD.HEIGHT | DDSD.PIXELFORMAT);
+					surfaceDesc.dwFlags = DDSD.WIDTH | DDSD.HEIGHT | DDSD.PIXELFORMAT;
 					surfaceDesc.dwHeight = (uint)mode.Height;
 					surfaceDesc.dwWidth = (uint)mode.Width;
 					surfaceDesc.lPitch = (uint)(mode.Width * (mode.Bpp / 8));
@@ -2341,7 +2333,7 @@ namespace Win32Emu.Win32.Modules
 
 					// Fill in the structure using ref struct
 					surfaceDesc.dwSize = 108;
-					surfaceDesc.dwFlags = (uint)(DDSD.CAPS | DDSD.WIDTH | DDSD.HEIGHT | DDSD.PITCH | DDSD.PIXELFORMAT);
+					surfaceDesc.dwFlags = DDSD.CAPS | DDSD.WIDTH | DDSD.HEIGHT | DDSD.PITCH | DDSD.PIXELFORMAT;
 					surfaceDesc.dwHeight = (uint)surface.Height;
 					surfaceDesc.dwWidth = (uint)surface.Width;
 					surfaceDesc.lPitch = (uint)surface.Pitch;
@@ -2534,12 +2526,7 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, lpDDSurfaceDesc);
 
 			// Find the DirectDraw object
-			DirectDrawObject? ddrawObj = null;
-			foreach (var obj in _ddrawObjects.Values)
-			{
-				ddrawObj = obj;
-				break;
-			}
+			var ddrawObj = _ddrawObjects.Values.FirstOrDefault();
 
 			if (ddrawObj == null)
 			{
@@ -2687,12 +2674,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Find the DirectDraw object to get display height
-			DirectDrawObject? ddrawObj = null;
-			foreach (var obj in _ddrawObjects.Values)
-			{
-				ddrawObj = obj;
-				break;
-			}
+			var ddrawObj = _ddrawObjects.Values.FirstOrDefault();
 
 			if (ddrawObj == null)
 			{
