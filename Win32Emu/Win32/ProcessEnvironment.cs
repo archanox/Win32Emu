@@ -219,7 +219,21 @@ public class ProcessEnvironment
 		ModuleFileNameLength = (uint)virtualizedPath.Length;
 		
 		// Update current directory to match the virtualized executable directory
-		var directory = Path.GetDirectoryName(virtualizedPath);
+		// When VFS is active, virtualizedPath is a Windows-style path (e.g., C:\game\app.exe)
+		// We need to extract the directory using Windows path semantics, not host OS semantics
+		string? directory;
+		if (virtualizedPath.Contains('\\'))
+		{
+			// For Windows-style paths, manually extract directory using Windows path rules
+			var lastBackslash = virtualizedPath.LastIndexOf('\\');
+			directory = lastBackslash > 0 ? virtualizedPath.Substring(0, lastBackslash) : null;
+		}
+		else
+		{
+			// For non-Windows paths, use host OS path rules
+			directory = Path.GetDirectoryName(virtualizedPath);
+		}
+		
 		if (!string.IsNullOrEmpty(directory))
 		{
 			CurrentDirectory = directory;

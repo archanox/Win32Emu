@@ -518,10 +518,34 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 
 	public string ToWindowsPath(string realPath)
 	{
-		// For disk-based VFS, paths are already virtual
-		// Just ensure they have C: prefix
-		var normalized = NormalizePath(realPath);
-		return "C:" + normalized.Replace('/', '\\');
+		// For disk-based VFS, we need to handle two cases:
+		// 1. Virtual disk paths (e.g., "/test.txt", "/subdir/file.txt") - already relative to disk root
+		// 2. Host filesystem paths (e.g., "/Users/user/game/app.exe") - need to extract filename
+		
+		// If path looks like a simple virtual path (starts with / but doesn't have deep directory structure),
+		// treat it as already relative to the disk
+		if (realPath.StartsWith('/') && !realPath.Contains("/Users/") && !realPath.Contains("/home/") &&
+		    !realPath.Contains("/mnt/") && !realPath.Contains("/opt/"))
+		{
+			// This looks like a virtual disk path, normalize it
+			var normalized = NormalizePath(realPath);
+			return "C:" + normalized.Replace('/', '\\');
+		}
+		
+		// Otherwise, assume it's a host filesystem path and extract just the filename
+		var fileName = Path.GetFileName(realPath);
+		
+		// If no filename (path is directory), use the last directory name
+		if (string.IsNullOrEmpty(fileName))
+		{
+			// Get the last part of the path
+			realPath = realPath.TrimEnd('/', '\\');
+			var lastSeparator = Math.Max(realPath.LastIndexOf('/'), realPath.LastIndexOf('\\'));
+			fileName = lastSeparator >= 0 ? realPath.Substring(lastSeparator + 1) : realPath;
+		}
+		
+		// Return as C:\ root path
+		return $"C:\\{fileName}";
 	}
 
 	private static FileMode ConvertFileMode(VfsFileMode mode)
