@@ -1058,19 +1058,27 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetSurfaceDesc(this=0x{ThisPtr:X8}, lpDDSurfaceDesc=0x{SurfaceDesc:X8})",
 				thisPtr, lpDDSurfaceDesc);
 
-			// Find the surface
+			// Find the surface by COM object address
 			DirectDrawSurface? surface = null;
 			foreach (var s in _surfaces.Values)
 			{
-				// For now, use the first surface
-				surface = s;
-				break;
+				if (s.ComObjectAddress == thisPtr)
+				{
+					surface = s;
+					break;
+				}
 			}
 
 			if (surface == null)
 			{
-				_logger.LogError("[DDraw] GetSurfaceDesc: could not find surface");
-				return 1; // DDERR_GENERIC
+				_logger.LogError("[DDraw] GetSurfaceDesc: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				return 0x88760066; // DDERR_INVALIDOBJECT
+			}
+			
+			if (lpDDSurfaceDesc == 0)
+			{
+				_logger.LogError("[DDraw] GetSurfaceDesc: lpDDSurfaceDesc is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
 			}
 
 			if (lpDDSurfaceDesc != 0)
@@ -1136,18 +1144,27 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetPixelFormat(this=0x{ThisPtr:X8}, lpDDPixelFormat=0x{PixelFormat:X8})",
 				thisPtr, lpDDPixelFormat);
 
-			// Find the surface
+			// Find the surface by COM object address
 			DirectDrawSurface? surface = null;
 			foreach (var s in _surfaces.Values)
 			{
-				surface = s;
-				break;
+				if (s.ComObjectAddress == thisPtr)
+				{
+					surface = s;
+					break;
+				}
 			}
 
 			if (surface == null)
 			{
-				_logger.LogError("[DDraw] GetPixelFormat: could not find surface");
-				return 1; // DDERR_GENERIC
+				_logger.LogError("[DDraw] GetPixelFormat: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				return 0x88760066; // DDERR_INVALIDOBJECT
+			}
+			
+			if (lpDDPixelFormat == 0)
+			{
+				_logger.LogError("[DDraw] GetPixelFormat: lpDDPixelFormat is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
 			}
 
 			if (lpDDPixelFormat != 0)
@@ -1200,19 +1217,21 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetPalette(this=0x{ThisPtr:X8}, lplpDDPalette=0x{LplpDDPalette:X8})",
 				thisPtr, lplpDDPalette);
 
-			// Find the surface
+			// Find the surface by COM object address
 			DirectDrawSurface? surface = null;
 			foreach (var s in _surfaces.Values)
 			{
-				// For now, find any surface - in a complete implementation we'd match by COM object address
-				surface = s;
-				break;
+				if (s.ComObjectAddress == thisPtr)
+				{
+					surface = s;
+					break;
+				}
 			}
 
 			if (surface == null)
 			{
-				_logger.LogError("[DDraw] GetPalette: could not find surface");
-				return 1; // DDERR_GENERIC
+				_logger.LogError("[DDraw] GetPalette: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				return 0x88760066; // DDERR_INVALIDOBJECT
 			}
 
 			if (lplpDDPalette == 0)
@@ -1307,19 +1326,21 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetColorKey(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lpDDColorKey=0x{ColorKey:X8})",
 				thisPtr, dwFlags, lpDDColorKey);
 
-			// Find the surface
+			// Find the surface by COM object address
 			DirectDrawSurface? surface = null;
 			foreach (var s in _surfaces.Values)
 			{
-				// For now, find any surface - in a complete implementation we'd match by COM object address
-				surface = s;
-				break;
+				if (s.ComObjectAddress == thisPtr)
+				{
+					surface = s;
+					break;
+				}
 			}
 
 			if (surface == null)
 			{
-				_logger.LogError("[DDraw] GetColorKey: could not find surface");
-				return 1; // DDERR_GENERIC
+				_logger.LogError("[DDraw] GetColorKey: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				return 0x88760066; // DDERR_INVALIDOBJECT
 			}
 
 			if (lpDDColorKey == 0)
@@ -1410,33 +1431,59 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::GetCaps(this=0x{ThisPtr:X8}, lpDDSCaps=0x{Caps:X8})",
 				thisPtr, lpDDSCaps);
 
-			// Find the surface
+			// Find the surface by COM object address
 			DirectDrawSurface? surface = null;
 			foreach (var s in _surfaces.Values)
 			{
-				surface = s;
-				break;
+				if (s.ComObjectAddress == thisPtr)
+				{
+					surface = s;
+					break;
+				}
 			}
 
 			if (surface == null)
 			{
-				_logger.LogError("[DDraw] GetCaps: could not find surface");
-				return 1; // DDERR_GENERIC
+				_logger.LogError("[DDraw] GetCaps: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				return 0x88760066; // DDERR_INVALIDOBJECT
 			}
 
-			if (lpDDSCaps != 0)
+			if (lpDDSCaps == 0)
 			{
-				// Fill DDSCAPS structure
-				uint caps = 0;
-				if (surface.IsPrimary)
-				{
-					caps |= 0x00000200; // DDSCAPS_PRIMARYSURFACE
-				}
-
-				caps |= 0x00000800; // DDSCAPS_VIDEOMEMORY
-
-				_env.MemWrite32(lpDDSCaps, caps);
+				_logger.LogError("[DDraw] GetCaps: lpDDSCaps is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
 			}
+
+			// Fill DDSCAPS structure
+			uint caps = 0;
+			
+			// Primary surface flag
+			if (surface.IsPrimary)
+			{
+				caps |= 0x00000200; // DDSCAPS_PRIMARYSURFACE
+			}
+			else
+			{
+				caps |= 0x00000040; // DDSCAPS_OFFSCREENPLAIN
+			}
+
+			// Memory location (always system memory in emulator)
+			caps |= 0x00000800; // DDSCAPS_VIDEOMEMORY (emulated)
+			
+			// Complex surface (has attached surfaces)
+			if (surface.AttachedSurfaces.Count > 0)
+			{
+				caps |= 0x00000008; // DDSCAPS_COMPLEX
+			}
+			
+			// Flipping capability
+			if (surface.IsPrimary && surface.AttachedSurfaces.Count > 0)
+			{
+				caps |= 0x00000010; // DDSCAPS_FLIP
+			}
+
+			_env.MemWrite32(lpDDSCaps, caps);
+			_logger.LogInformation("[DDraw] Surface caps: 0x{Caps:X8}", caps);
 
 			return 0; // DD_OK
 		}
@@ -1693,7 +1740,67 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_DeleteAttachedSurface(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::DeleteAttachedSurface() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var dwFlags = args.UInt32(1);
+			var lpDDSAttachedSurface = args.UInt32(2);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::DeleteAttachedSurface(this=0x{ThisPtr:X8}, dwFlags=0x{DwFlags:X8}, lpDDSAttachedSurface=0x{LpDDSAttachedSurface:X8})",
+				thisPtr, dwFlags, lpDDSAttachedSurface);
+
+			if (lpDDSAttachedSurface == 0)
+			{
+				_logger.LogError("[DDraw] DeleteAttachedSurface: lpDDSAttachedSurface is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Find the destination surface by COM object address
+			DirectDrawSurface? destSurface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				if (s.ComObjectAddress == thisPtr)
+				{
+					destSurface = s;
+					break;
+				}
+			}
+
+			if (destSurface == null)
+			{
+				_logger.LogError("[DDraw] DeleteAttachedSurface: could not find destination surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				return 0x88760066; // DDERR_INVALIDOBJECT
+			}
+
+			// Find the surface to detach by COM object address
+			DirectDrawSurface? detachSurface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				if (s.ComObjectAddress == lpDDSAttachedSurface)
+				{
+					detachSurface = s;
+					break;
+				}
+			}
+
+			if (detachSurface == null)
+			{
+				_logger.LogError("[DDraw] DeleteAttachedSurface: could not find surface to detach with COM address 0x{LpDDSAttachedSurface:X8}", lpDDSAttachedSurface);
+				return 0x88760066; // DDERR_INVALIDOBJECT
+			}
+
+			// Check if it's attached
+			if (!destSurface.AttachedSurfaces.Contains(detachSurface.Handle))
+			{
+				_logger.LogWarning("[DDraw] Surface 0x{DetachHandle:X8} is not attached to surface 0x{DestHandle:X8}",
+					detachSurface.Handle, destSurface.Handle);
+				return 0x88760108; // DDERR_SURFACENOTATTACHED
+			}
+
+			// Detach the surface
+			destSurface.AttachedSurfaces.Remove(detachSurface.Handle);
+			_logger.LogInformation("[DDraw] Detached surface 0x{DetachHandle:X8} from surface 0x{DestHandle:X8}",
+				detachSurface.Handle, destSurface.Handle);
+
 			return 0; // DD_OK
 		}
 
@@ -2049,7 +2156,66 @@ namespace Win32Emu.Win32.Modules
 
 		private uint Surface_AddAttachedSurface(ICpu cpu, VirtualMemory mem)
 		{
-			_logger.LogInformation("[DDraw COM] IDirectDraw::AddAttachedSurface() - stub");
+			var args = new StackArgs(cpu, mem);
+			var thisPtr = args.UInt32(0);
+			var lpDDSAttachedSurface = args.UInt32(1);
+
+			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::AddAttachedSurface(this=0x{ThisPtr:X8}, lpDDSAttachedSurface=0x{LpDDSAttachedSurface:X8})",
+				thisPtr, lpDDSAttachedSurface);
+
+			if (lpDDSAttachedSurface == 0)
+			{
+				_logger.LogError("[DDraw] AddAttachedSurface: lpDDSAttachedSurface is null");
+				return 0x80070057; // DDERR_INVALIDPARAMS
+			}
+
+			// Find the destination surface by COM object address
+			DirectDrawSurface? destSurface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				if (s.ComObjectAddress == thisPtr)
+				{
+					destSurface = s;
+					break;
+				}
+			}
+
+			if (destSurface == null)
+			{
+				_logger.LogError("[DDraw] AddAttachedSurface: could not find destination surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				return 0x88760066; // DDERR_INVALIDOBJECT
+			}
+
+			// Find the surface to attach by COM object address
+			DirectDrawSurface? attachSurface = null;
+			foreach (var s in _surfaces.Values)
+			{
+				if (s.ComObjectAddress == lpDDSAttachedSurface)
+				{
+					attachSurface = s;
+					break;
+				}
+			}
+
+			if (attachSurface == null)
+			{
+				_logger.LogError("[DDraw] AddAttachedSurface: could not find surface to attach with COM address 0x{LpDDSAttachedSurface:X8}", lpDDSAttachedSurface);
+				return 0x88760066; // DDERR_INVALIDOBJECT
+			}
+
+			// Check if already attached
+			if (destSurface.AttachedSurfaces.Contains(attachSurface.Handle))
+			{
+				_logger.LogWarning("[DDraw] Surface 0x{AttachHandle:X8} is already attached to surface 0x{DestHandle:X8}",
+					attachSurface.Handle, destSurface.Handle);
+				return 0x88760109; // DDERR_SURFACEALREADYATTACHED
+			}
+
+			// Attach the surface
+			destSurface.AttachedSurfaces.Add(attachSurface.Handle);
+			_logger.LogInformation("[DDraw] Attached surface 0x{AttachHandle:X8} to surface 0x{DestHandle:X8}",
+				attachSurface.Handle, destSurface.Handle);
+
 			return 0; // DD_OK
 		}
 
@@ -2125,29 +2291,90 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw COM] IDirectDraw::GetCaps(this=0x{ThisPtr:X8}, lpDDDriverCaps=0x{DriverCaps:X8}, lpDDHELCaps=0x{HELCaps:X8})",
 				thisPtr, lpDDDriverCaps, lpDDHELCaps);
 
-			// Fill in basic capabilities
+			// Fill in driver capabilities
 			if (lpDDDriverCaps != 0)
 			{
 				var dwSize = _env.MemRead32(lpDDDriverCaps);
 
-				// DDCAPS structure - simplified
-				_env.MemWrite32(lpDDDriverCaps + 4, 0x00000001); // dwCaps: DDCAPS_BLT
-				_env.MemWrite32(lpDDDriverCaps + 8, 0x00000040); // dwCaps2: DDCAPS2_CANRENDERWINDOWED
-				_env.MemWrite32(lpDDDriverCaps + 12, 0); // dwCKeyCaps
-				_env.MemWrite32(lpDDDriverCaps + 16, 0); // dwFXCaps
-				_env.MemWrite32(lpDDDriverCaps + 20, 0); // dwFXAlphaCaps
-				_env.MemWrite32(lpDDDriverCaps + 24, 0); // dwPalCaps
-				_env.MemWrite32(lpDDDriverCaps + 28, 0x00000001); // dwSVCaps: DDSVCAPS_RESERVED1
+				// DDCAPS structure - comprehensive implementation
+				// dwCaps: General capabilities
+				uint caps = 0;
+				caps |= 0x00000001; // DDCAPS_BLT - Can blt
+				caps |= 0x00000002; // DDCAPS_BLTCOLORFILL - Can color fill
+				caps |= 0x00000004; // DDCAPS_BLTQUEUE - Can queue blts
+				caps |= 0x00000040; // DDCAPS_BLTSTRETCH - Can stretch blt
+				caps |= 0x00000100; // DDCAPS_COLORKEY - Supports color key
+				caps |= 0x00000800; // DDCAPS_GDI - Windows can draw to primary surface
+				caps |= 0x00002000; // DDCAPS_PALETTE - Supports palettized modes
+				caps |= 0x00010000; // DDCAPS_PALETTEVSYNC - Palette changes sync to vblank
+				_env.MemWrite32(lpDDDriverCaps + 4, caps);
+
+				// dwCaps2: Extended capabilities  
+				uint caps2 = 0;
+				caps2 |= 0x00000001; // DDCAPS2_CERTIFIED - Driver is certified by Microsoft
+				caps2 |= 0x00000040; // DDCAPS2_CANRENDERWINDOWED - Can render in windowed mode
+				caps2 |= 0x00000100; // DDCAPS2_WIDESURFACES - Supports surfaces wider than screen
+				caps2 |= 0x00001000; // DDCAPS2_CANBOBHARDWARE - Can hardware bob
+				_env.MemWrite32(lpDDDriverCaps + 8, caps2);
+
+				// dwCKeyCaps: Color key capabilities
+				uint ckeyCaps = 0;
+				ckeyCaps |= 0x00000001; // DDCKEYCAPS_DESTBLT - Supports dest color key for blt
+				ckeyCaps |= 0x00000002; // DDCKEYCAPS_DESTBLTCLRSPACE - Supports dest color space for blt
+				ckeyCaps |= 0x00000010; // DDCKEYCAPS_SRCBLT - Supports source color key for blt
+				ckeyCaps |= 0x00000020; // DDCKEYCAPS_SRCBLTCLRSPACE - Supports source color space for blt
+				_env.MemWrite32(lpDDDriverCaps + 12, ckeyCaps);
+
+				// dwFXCaps: Blt effects capabilities
+				uint fxCaps = 0;
+				fxCaps |= 0x00000001; // DDFXCAPS_BLTARITHSTRETCHY - Can do arithmetic stretch in Y
+				fxCaps |= 0x00000002; // DDFXCAPS_BLTARITHSTRETCHYN - Can do arithmetic stretch in Y, with interpolation
+				fxCaps |= 0x00000010; // DDFXCAPS_BLTMIRRORLEFTRIGHT - Can mirror left to right
+				fxCaps |= 0x00000020; // DDFXCAPS_BLTMIRRORUPDOWN - Can mirror up to down
+				fxCaps |= 0x00000040; // DDFXCAPS_BLTROTATION - Can rotate surfaces
+				fxCaps |= 0x00000100; // DDFXCAPS_BLTSHRINKX - Can shrink in X
+				fxCaps |= 0x00000400; // DDFXCAPS_BLTSHRINKY - Can shrink in Y
+				fxCaps |= 0x00001000; // DDFXCAPS_BLTSTRETCHX - Can stretch in X
+				fxCaps |= 0x00004000; // DDFXCAPS_BLTSTRETCHY - Can stretch in Y
+				_env.MemWrite32(lpDDDriverCaps + 16, fxCaps);
+
+				// dwFXAlphaCaps: Alpha blt capabilities
+				_env.MemWrite32(lpDDDriverCaps + 20, 0);
+
+				// dwPalCaps: Palette capabilities
+				uint palCaps = 0;
+				palCaps |= 0x00000001; // DDPCAPS_8BIT - 8-bit palettized
+				palCaps |= 0x00000002; // DDPCAPS_PRIMARYSURFACE - Primary surface has a palette
+				palCaps |= 0x00000100; // DDPCAPS_ALLOW256 - All 256 entries available
+				_env.MemWrite32(lpDDDriverCaps + 24, palCaps);
+
+				// dwSVCaps: Surface capabilities (system memory)
+				uint svCaps = 0;
+				svCaps |= 0x00000001; // DDSVCAPS_RESERVED1
+				_env.MemWrite32(lpDDDriverCaps + 28, svCaps);
+
+				// Remaining fields
 				_env.MemWrite32(lpDDDriverCaps + 32, 0); // dwAlphaBltConstBitDepths
 				_env.MemWrite32(lpDDDriverCaps + 36, 0); // dwAlphaBltPixelBitDepths
 				_env.MemWrite32(lpDDDriverCaps + 40, 0); // dwAlphaBltSurfaceBitDepths
+				
+				// Video memory information (if structure is large enough)
+				if (dwSize >= 128)
+				{
+					_env.MemWrite32(lpDDDriverCaps + 44, 0); // dwVidMemTotal (0 = unspecified)
+					_env.MemWrite32(lpDDDriverCaps + 48, 0); // dwVidMemFree (0 = unspecified)
+				}
 			}
 
 			if (lpDDHELCaps != 0)
 			{
-				// HEL (Hardware Emulation Layer) caps - can be left empty for now
+				// HEL (Hardware Emulation Layer) caps - report same capabilities
+				// Most emulators report the same caps for HEL as for HAL
 				var dwSize = _env.MemRead32(lpDDHELCaps);
-				_env.MemWrite32(lpDDHELCaps + 4, 0);
+				
+				// Basic capabilities for HEL
+				_env.MemWrite32(lpDDHELCaps + 4, 0x00000001); // DDCAPS_BLT
+				_env.MemWrite32(lpDDHELCaps + 8, 0x00000040); // DDCAPS2_CANRENDERWINDOWED
 			}
 
 			return 0; // DD_OK
