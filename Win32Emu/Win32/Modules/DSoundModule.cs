@@ -34,6 +34,12 @@ namespace Win32Emu.Win32.Modules
 		private ICpu? _cpu;
 		private VirtualMemory? _memory;
 
+		// Constants for async callback execution
+		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
+		private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
+		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
+		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB)
+
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			_cpu = cpu;
@@ -121,6 +127,15 @@ namespace Win32Emu.Win32.Modules
 				return 0; // DS_OK
 			}
 
+			// Use async implementation internally for better stack separation
+			return DirectSoundEnumerateAAsync(lpDsEnumCallback, lpContext).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async implementation of DirectSoundEnumerateA.
+		/// </summary>
+		private async Task<uint> DirectSoundEnumerateAAsync(uint lpDsEnumCallback, uint lpContext, CancellationToken cancellationToken = default)
+		{
 			// Enumerate audio devices and call the callback for each one
 			// For now, we'll enumerate at least one default device
 			// The callback signature is: BOOL Callback(LPGUID lpGuid, LPCSTR lpcstrDescription, LPCSTR lpcstrModule, LPVOID lpContext)
@@ -132,12 +147,12 @@ namespace Win32Emu.Win32.Modules
 			uint descriptionPtr = _env.WriteAnsiString(descriptionStr);
 			uint modulePtr = _env.WriteAnsiString(moduleStr);
 
-			// Call the callback with NULL GUID for the default device
-			bool continueEnum = CallEnumerationCallback(lpDsEnumCallback, 0, descriptionPtr, modulePtr, lpContext);
+			// Call the callback with NULL GUID for the default device using async version
+			bool continueEnum = await CallEnumerationCallbackAsync(lpDsEnumCallback, 0, descriptionPtr, modulePtr, lpContext, cancellationToken).ConfigureAwait(false);
 
 			if (!continueEnum)
 			{
-				_logger.LogInformation("[DSound] DirectSoundEnumerateA: Callback returned FALSE, stopping enumeration");
+				_logger.LogInformation("[DSound] DirectSoundEnumerateAAsync: Callback returned FALSE, stopping enumeration");
 			}
 
 			return 0; // DS_OK
@@ -227,6 +242,174 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DSound] CallEnumerationCallback: Completed with return value {ReturnValue}", returnValue);
+
+			// Return TRUE means continue enumeration, FALSE means stop
+			return returnValue != 0;
+		}
+
+		/// <summary>
+		/// Async version of CallEnumerationCallback that eliminates the need for STACK_SAFETY_MARGIN.
+		/// Uses async/await pattern for clean separation of host (C#) and guest (x86) execution stacks.
+		/// </summary>
+		/// <returns>True if enumeration should continue, false otherwise</returns>
+		private async Task<bool> CallEnumerationCallbackAsync(
+			uint callbackAddress, 
+			uint lpGuid, 
+			uint lpcstrDescription, 
+			uint lpcstrModule, 
+			uint lpContext,
+			CancellationToken cancellationToken = default)
+		{
+			if (_cpu == null || _memory == null)
+			{
+				_logger.LogWarning("[DSound] CallEnumerationCallbackAsync: CPU or Memory not available");
+				return false;
+			}
+
+			_logger.LogInformation("[DSound] CallEnumerationCallbackAsync: Calling 0x{CallbackAddress:X8}", callbackAddress);
+
+			// Validate callback address
+			if (callbackAddress == 0)
+			{
+				_logger.LogWarning("[DSound] CallEnumerationCallbackAsync: Callback address is NULL (0x00000000), aborting");
+				return false;
+			}
+
+			// Save current CPU state
+			var savedEip = _cpu.GetEip();
+			var savedEsp = _cpu.GetRegister("ESP");
+			var savedEbp = _cpu.GetRegister("EBP");
+
+			// Define return address marker
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+			// Set up stack for stdcall convention (parameters pushed right-to-left)
+			// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
+			var esp = savedEsp;
+
+			// Push return address first
+			esp -= 4;
+			_memory.Write32(esp, RETURN_ADDRESS);
+
+			// Push parameters (right-to-left for stdcall)
+			esp -= 4;
+			_memory.Write32(esp, lpContext);
+
+			esp -= 4;
+			_memory.Write32(esp, lpcstrModule);
+
+			esp -= 4;
+			_memory.Write32(esp, lpcstrDescription);
+
+			esp -= 4;
+			_memory.Write32(esp, lpGuid);
+
+			// Update CPU registers
+			_cpu.SetRegister("ESP", esp);
+			_cpu.SetEip(callbackAddress);
+
+			// Execute until we hit the return address with cancellation support
+			const int YIELD_INTERVAL = 10000;
+			var steps = 0;
+			var executionSuccessful = true;
+			var lastCheckEip = _cpu.GetEip();
+			var stuckCounter = 0;
+
+			try
+			{
+				// Execute in unbounded loop with safeguards:
+				// 1. Return detection: Break when EIP hits RETURN_ADDRESS marker
+				// 2. Cancellation: Regular checks for cancellation requests
+				// 3. Progress tracking: Detect stuck execution by monitoring EIP changes
+				// 4. Yielding: Periodic Task.Yield() allows other async operations to proceed
+				while (true)
+				{
+					// Check for cancellation at regular intervals
+					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+					{
+						if (cancellationToken.IsCancellationRequested)
+						{
+							_logger.LogInformation("[DSound] CallEnumerationCallbackAsync: Cancellation requested at step {Steps}", steps);
+							executionSuccessful = false;
+							break;
+						}
+
+						// Yield to allow other async operations to proceed
+						await Task.Yield();
+					}
+
+					var eip = _cpu.GetEip();
+
+					// Check if we've returned to our marker address
+					if (eip == RETURN_ADDRESS)
+					{
+						break;
+					}
+
+					// Check for invalid EIP (NULL pointer execution)
+					if (eip == 0x00000000)
+					{
+						_logger.LogWarning("[DSound] CallEnumerationCallbackAsync: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+						executionSuccessful = false;
+						break;
+					}
+
+					// Check for other invalid low addresses
+					if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
+					{
+						_logger.LogError("[DSound] CallEnumerationCallbackAsync: Execution jumped to invalid low address 0x{Eip:X8}", eip);
+						executionSuccessful = false;
+						break;
+					}
+
+					// Detect potential infinite loops
+					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+					{
+						var currentEip = _cpu.GetEip();
+						if (currentEip == lastCheckEip)
+						{
+							stuckCounter++;
+							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+							{
+								_logger.LogWarning("[DSound] CallEnumerationCallbackAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", 
+									currentEip, stuckCounter);
+								executionSuccessful = false;
+								break;
+							}
+						}
+						else
+						{
+							stuckCounter = 0;
+							lastCheckEip = currentEip;
+						}
+					}
+
+					// Execute one instruction
+					_cpu.SingleStep(_memory);
+					steps++;
+
+					// Periodically yield for cooperative multitasking
+					if (steps % YIELD_INTERVAL == 0)
+					{
+						await Task.Yield();
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DSound] CallEnumerationCallbackAsync: Exception during execution: {ExMessage}", ex.Message);
+				executionSuccessful = false;
+			}
+
+			// Get return value from EAX, but only if execution was successful
+			var returnValue = executionSuccessful ? _cpu.GetRegister("EAX") : 0u;
+
+			// Restore CPU state
+			_cpu.SetEip(savedEip);
+			_cpu.SetRegister("ESP", savedEsp);
+			_cpu.SetRegister("EBP", savedEbp);
+
+			_logger.LogInformation("[DSound] CallEnumerationCallbackAsync: Completed with return value 0x{ReturnValue:X8}", returnValue);
 
 			// Return TRUE means continue enumeration, FALSE means stop
 			return returnValue != 0;
