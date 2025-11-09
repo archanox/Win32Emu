@@ -2779,21 +2779,22 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var resolvedPath = path;
 			if (!IsWindowsRootedPath(path))
 			{
-				// If path starts with / or \, it's a root-relative path - prepend the drive letter
-				if (path.Length > 0 && (path[0] == '/' || path[0] == '\\'))
+				// If path starts with \ (backslash), it's a root-relative path - prepend the drive letter
+				// Forward slashes / are treated as regular path separators, not root indicators
+				if (path.Length > 0 && path[0] == '\\')
 				{
 					// Extract drive letter from CurrentDirectory (e.g., "C:" from "C:\ign_teas")
 					if (_env.CurrentDirectory.Length >= 2 && _env.CurrentDirectory[1] == ':')
 					{
 						var drive = _env.CurrentDirectory.Substring(0, 2); // e.g., "C:"
-						resolvedPath = drive + path; // e.g., "C:/data/file.txt"
+						resolvedPath = drive + path; // e.g., "C:\data\file.txt"
 						_logger.LogDebug("[Kernel32] CreateFileA: Resolved root-relative path '{Path}' to '{ResolvedPath}'",
 							path, resolvedPath);
 					}
 				}
 				else
 				{
-					// Path is relative, resolve it relative to current directory
+					// Path is relative (including paths starting with /), resolve it relative to current directory
 					resolvedPath = Path.Combine(_env.CurrentDirectory, path);
 					_logger.LogDebug("[Kernel32] CreateFileA: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
 						path, resolvedPath, _env.CurrentDirectory);
@@ -2853,25 +2854,27 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			// Resolve relative paths relative to the current directory
 			// On Unix systems, Path.IsPathRooted treats /path as rooted, but in Windows emulation,
-			// paths like /data or \data are relative to the current drive.
+			// paths starting with \ (backslash only) are relative to the current drive root.
+			// Paths starting with / (forward slash) are treated as regular relative paths.
 			var resolvedPath = path;
 			if (!IsWindowsRootedPath(path))
 			{
-				// If path starts with / or \, it's a root-relative path - prepend the drive letter
-				if (path.Length > 0 && (path[0] == '/' || path[0] == '\\'))
+				// If path starts with \ (backslash), it's a root-relative path - prepend the drive letter
+				// Forward slashes / are treated as regular path separators, not root indicators
+				if (path.Length > 0 && path[0] == '\\')
 				{
 					// Extract drive letter from CurrentDirectory (e.g., "C:" from "C:\ign_teas")
 					if (_env.CurrentDirectory.Length >= 2 && _env.CurrentDirectory[1] == ':')
 					{
 						var drive = _env.CurrentDirectory.Substring(0, 2); // e.g., "C:"
-						resolvedPath = drive + path; // e.g., "C:/data/file.txt"
+						resolvedPath = drive + path; // e.g., "C:\data\file.txt"
 						_logger.LogDebug("[Kernel32] CreateFileW: Resolved root-relative path '{Path}' to '{ResolvedPath}'",
 							path, resolvedPath);
 					}
 				}
 				else
 				{
-					// Path is relative, resolve it relative to current directory
+					// Path is relative (including paths starting with /), resolve it relative to current directory
 					resolvedPath = Path.Combine(_env.CurrentDirectory, path);
 					_logger.LogDebug("[Kernel32] CreateFileW: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
 						path, resolvedPath, _env.CurrentDirectory);
