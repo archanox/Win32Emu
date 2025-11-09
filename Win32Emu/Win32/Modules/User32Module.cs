@@ -1434,16 +1434,21 @@ namespace Win32Emu.Win32.Modules
 			// Set up stack for stdcall convention (parameters pushed right-to-left)
 			// IMPORTANT: When CallWindowProcedure is invoked from within a syscall handler,
 			// there may be syscall stack frames (return addresses, etc.) immediately above
-			// the current ESP. To prevent overwriting these frames, we must allocate extra
-			// space on the stack before pushing our parameters.
+			// the current ESP. To prevent the WndProc from overwriting these frames through
+			// its own stack usage (local variables, nested calls, etc.), we must allocate
+			// sufficient extra space on the stack before pushing our parameters.
 			// 
-			// Safety margin: 32 bytes (8 dwords) to account for:
-			// - Return address to syscall dispatcher (4 bytes)
-			// - Return address to import stub (4 bytes)  
-			// - Saved registers or other syscall state (up to 24 bytes)
+			// Safety margin: 256 bytes to account for:
+			// - Syscall handler stack frames (return addresses at [ESP-4] and [ESP-8] relative to savedEsp)
+			// - WndProc's own stack frame (local variables, saved registers, etc.)
+			// - Nested function calls from within the WndProc (each adds 4+ bytes)
+			// - Stack alignment and safety buffer
 			//
-			// This ensures our WndProc call frame doesn't corrupt the caller's stack.
-			const uint STACK_SAFETY_MARGIN = 32;
+			// Example: If savedEsp = originalEsp + 4, then [originalEsp] contains the critical
+			// return-to-import-stub address. With 32-byte margin, the WndProc could overwrite this
+			// by using just 28 bytes of stack. 256 bytes provides adequate protection for typical
+			// WndProc implementations including those with moderate stack usage and nested calls.
+			const uint STACK_SAFETY_MARGIN = 256;
 			var esp = savedEsp - STACK_SAFETY_MARGIN;
 
 			// Push parameters (right-to-left for stdcall)
