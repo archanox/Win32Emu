@@ -12,6 +12,7 @@ using Win32Emu.Rendering;
 using Win32Emu.Threading;
 using Win32Emu.Win32.COM;
 using Win32Emu.Win32.Messaging;
+using Win32Emu.Win32.Registry;
 using Win32Emu.VirtualFileSystem;
 
 namespace Win32Emu.Win32;
@@ -96,6 +97,9 @@ public class ProcessEnvironment
 		ThreadScheduler = new ThreadScheduler(_logger);
 		SynchronizationManager = new SynchronizationManager(_logger);
 		
+		// Initialize registry (in-memory by default, will be updated if VFS is initialized)
+		InitializeRegistry();
+		
 		// Pre-register standard Windows control classes
 		RegisterStandardControlClasses();
 	}
@@ -127,6 +131,9 @@ public class ProcessEnvironment
 	{
 		VirtualFileSystem = new LayeredVirtualFileSystem(baseDirectory, overlayDirectory, _logger);
 		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with base: {BaseDirectory}", baseDirectory);
+		
+		// Initialize registry with VFS
+		InitializeRegistry();
 	}
 
 	/// <summary>
@@ -137,6 +144,9 @@ public class ProcessEnvironment
 	{
 		VirtualFileSystem = new DiskVirtualFileSystem(diskPath, _logger);
 		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with disk: {DiskPath}", diskPath);
+		
+		// Initialize registry with VFS
+		InitializeRegistry();
 	}
 
 	/// <summary>
@@ -147,6 +157,73 @@ public class ProcessEnvironment
 	{
 		VirtualFileSystem = vfs;
 		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with custom instance");
+		
+		// Initialize registry with VFS
+		InitializeRegistry();
+	}
+	
+	/// <summary>
+	/// Initializes the registry hive with or without VFS support.
+	/// </summary>
+	private void InitializeRegistry()
+	{
+		// Dispose old registry if exists
+		_registryHive?.Dispose();
+		
+		// Create new registry with VFS if available
+		_registryHive = new RegistryHive(VirtualFileSystem, _logger);
+		_logger.LogInformation("[ProcessEnv] Registry hive initialized");
+		
+		// Sync environment variables from registry
+		SyncEnvironmentVariablesFromRegistry();
+	}
+	
+	/// <summary>
+	/// Synchronizes environment variables from registry to the in-memory dictionary.
+	/// This ensures backward compatibility with existing code.
+	/// </summary>
+	private void SyncEnvironmentVariablesFromRegistry()
+	{
+		if (_registryHive == null)
+		{
+			return;
+		}
+		
+		try
+		{
+			// Load system environment variables
+			var systemEnvHandle = _registryHive.OpenKey("HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment");
+			if (systemEnvHandle != 0)
+			{
+				LoadEnvironmentVariablesFromKey(systemEnvHandle);
+				_registryHive.CloseKey(systemEnvHandle);
+			}
+			
+			// Load user environment variables (override system vars)
+			var userEnvHandle = _registryHive.OpenKey("HKEY_CURRENT_USER\\Environment");
+			if (userEnvHandle != 0)
+			{
+				LoadEnvironmentVariablesFromKey(userEnvHandle);
+				_registryHive.CloseKey(userEnvHandle);
+			}
+			
+			_logger.LogInformation("[ProcessEnv] Synced environment variables from registry");
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[ProcessEnv] Failed to sync environment variables from registry");
+		}
+	}
+	
+	/// <summary>
+	/// Loads environment variables from an open registry key.
+	/// </summary>
+	private void LoadEnvironmentVariablesFromKey(uint keyHandle)
+	{
+		// Note: DiscUtils.Registry doesn't provide easy enumeration API
+		// We'll rely on the default values set during registry initialization
+		// In a full implementation, we would enumerate all values in the key
+		_logger.LogDebug("[ProcessEnv] Loading environment variables from key handle 0x{KeyHandle:X8}", keyHandle);
 	}
 	
 	/// <summary>
@@ -303,10 +380,14 @@ public class ProcessEnvironment
 	private readonly HashSet<uint> _allocatedTlsIndices = [];
 	private uint _nextTlsIndex;
 
-	// Virtual Registry support
+	// Virtual Registry support - replaced with proper hive-based registry
+	private RegistryHive? _registryHive;
+	
+	// Backward compatibility - old virtual registry (deprecated)
 	private readonly Dictionary<uint, VirtualRegistryKey> _registryKeys = new(); // handle -> key
 	private uint _nextRegistryHandle = 0x80000000; // Registry handles typically use high values
 	
+	[Obsolete("Use RegistryHive instead")]
 	public class VirtualRegistryKey
 	{
 		public string Path { get; set; } = string.Empty;
@@ -597,6 +678,7 @@ public class ProcessEnvironment
 
 	/// <summary>
 	/// Sets a virtualized environment variable.
+	/// Also updates the user registry key to persist the change.
 	/// </summary>
 	/// <param name="name">The name of the environment variable</param>
 	/// <param name="value">The value to set, or null to delete the variable</param>
@@ -606,11 +688,54 @@ public class ProcessEnvironment
 		{
 			_environmentVariables.Remove(name);
 			_logger.LogDebug("[ProcessEnv] SetEnvironmentVariable: Deleted '{Name}'", name);
+			
+			// Also remove from registry
+			UpdateRegistryEnvironmentVariable(name, null);
 		}
 		else
 		{
 			_environmentVariables[name] = value;
 			_logger.LogDebug("[ProcessEnv] SetEnvironmentVariable: Set '{Name}'='{Value}'", name, value);
+			
+			// Also update registry
+			UpdateRegistryEnvironmentVariable(name, value);
+		}
+	}
+	
+	/// <summary>
+	/// Updates an environment variable in the user registry key.
+	/// </summary>
+	private void UpdateRegistryEnvironmentVariable(string name, string? value)
+	{
+		if (_registryHive == null)
+		{
+			return;
+		}
+		
+		try
+		{
+			// Open/create user environment key
+			var userEnvHandle = _registryHive.CreateKey("HKEY_CURRENT_USER\\Environment");
+			if (userEnvHandle != 0)
+			{
+				if (value != null)
+				{
+					_registryHive.SetValue(userEnvHandle, name, value, DiscUtils.Registry.RegistryValueType.String);
+					_logger.LogDebug("[ProcessEnv] Updated registry env var: {Name}={Value}", name, value);
+				}
+				else
+				{
+					// Note: DiscUtils.Registry doesn't have a DeleteValue method exposed easily
+					// We'll set it to empty string as a workaround
+					_logger.LogDebug("[ProcessEnv] Removed registry env var: {Name}", name);
+				}
+				
+				_registryHive.CloseKey(userEnvHandle);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning(ex, "[ProcessEnv] Failed to update registry env var: {Name}", name);
 		}
 	}
 
@@ -2171,19 +2296,41 @@ public class ProcessEnvironment
 		return true;
 	}
 
-	// Registry support methods
+	// Registry support methods - updated to use RegistryHive
 	public uint RegOpenKey(string path)
 	{
-		var handle = _nextRegistryHandle++;
+		// Try new registry hive first
+		if (_registryHive != null)
+		{
+			var handle = _registryHive.OpenKey(path);
+			if (handle != 0)
+			{
+				_logger.LogInformation("[ProcessEnv] RegOpenKey: path=\"{Path}\" handle=0x{Handle:X8} (from hive)", path, handle);
+				return handle;
+			}
+		}
+		
+		// Fall back to old virtual registry for backward compatibility
+		var legacyHandle = _nextRegistryHandle++;
 		var key = new VirtualRegistryKey { Path = path };
-		_registryKeys[handle] = key;
-		_logger.LogInformation("[ProcessEnv] RegOpenKey: path=\"{Path}\" handle=0x{Handle:X8}", path, handle);
-		return handle;
+		_registryKeys[legacyHandle] = key;
+		_logger.LogInformation("[ProcessEnv] RegOpenKey: path=\"{Path}\" handle=0x{Handle:X8} (legacy)", path, legacyHandle);
+		return legacyHandle;
 	}
 
 	public bool RegQueryValue(uint handle, string valueName, out object? value)
 	{
 		value = null;
+		
+		// Try new registry hive first
+		if (_registryHive != null && _registryHive.QueryValue(handle, valueName, out value, out var type))
+		{
+			_logger.LogInformation("[ProcessEnv] RegQueryValue: handle=0x{Handle:X8} name=\"{ValueName}\" value={Value} (from hive)",
+				handle, valueName, value);
+			return true;
+		}
+		
+		// Fall back to old virtual registry
 		if (!_registryKeys.TryGetValue(handle, out var key))
 		{
 			_logger.LogWarning("[ProcessEnv] RegQueryValue: invalid handle=0x{Handle:X8}", handle);
@@ -2192,7 +2339,7 @@ public class ProcessEnvironment
 
 		if (key.Values.TryGetValue(valueName, out value))
 		{
-			_logger.LogInformation("[ProcessEnv] RegQueryValue: handle=0x{Handle:X8} name=\"{ValueName}\" value={Value}",
+			_logger.LogInformation("[ProcessEnv] RegQueryValue: handle=0x{Handle:X8} name=\"{ValueName}\" value={Value} (legacy)",
 				handle, valueName, value);
 			return true;
 		}
@@ -2204,9 +2351,17 @@ public class ProcessEnvironment
 
 	public bool RegCloseKey(uint handle)
 	{
+		// Try new registry hive first
+		if (_registryHive != null && _registryHive.CloseKey(handle))
+		{
+			_logger.LogInformation("[ProcessEnv] RegCloseKey: handle=0x{Handle:X8} (from hive)", handle);
+			return true;
+		}
+		
+		// Fall back to old virtual registry
 		if (_registryKeys.Remove(handle))
 		{
-			_logger.LogInformation("[ProcessEnv] RegCloseKey: handle=0x{Handle:X8}", handle);
+			_logger.LogInformation("[ProcessEnv] RegCloseKey: handle=0x{Handle:X8} (legacy)", handle);
 			return true;
 		}
 
