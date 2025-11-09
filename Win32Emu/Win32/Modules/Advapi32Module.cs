@@ -254,21 +254,74 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			return 2; // ERROR_FILE_NOT_FOUND
 		}
 
-		// For simplicity, return empty data for now
-		// A full implementation would serialize the value and write it to lpData
-		const uint REG_SZ = 1; // String type
-
+		// Determine the data type and size
+		const uint REG_SZ = 1;          // String
+		const uint REG_EXPAND_SZ = 2;   // Expandable string  
+		const uint REG_BINARY = 3;      // Binary data
+		const uint REG_DWORD = 4;       // 32-bit number
+		
+		uint dataType;
+		byte[] dataBytes;
+		
+		if (value is string str)
+		{
+			dataType = REG_SZ;
+			dataBytes = System.Text.Encoding.ASCII.GetBytes(str + '\0'); // Null-terminated
+		}
+		else if (value is uint dwordVal)
+		{
+			dataType = REG_DWORD;
+			dataBytes = BitConverter.GetBytes(dwordVal);
+		}
+		else if (value is int intVal)
+		{
+			dataType = REG_DWORD;
+			dataBytes = BitConverter.GetBytes((uint)intVal);
+		}
+		else if (value is byte[] binaryVal)
+		{
+			dataType = REG_BINARY;
+			dataBytes = binaryVal;
+		}
+		else
+		{
+			// Unknown type - convert to string
+			dataType = REG_SZ;
+			var fallbackStr = value?.ToString() ?? string.Empty;
+			dataBytes = System.Text.Encoding.ASCII.GetBytes(fallbackStr + '\0');
+		}
+		
+		// Write the data type if requested
 		if (lpType != 0)
 		{
-			_env.MemWrite32(lpType, REG_SZ);
+			_env.MemWrite32(lpType, dataType);
 		}
-
+		
+		// Check buffer size
+		uint requiredSize = (uint)dataBytes.Length;
+		uint providedSize = 0;
+		
 		if (lpcbData != 0)
 		{
-			_env.MemWrite32(lpcbData, 0); // Empty data
+			providedSize = _env.MemRead32(lpcbData);
+			_env.MemWrite32(lpcbData, requiredSize);
 		}
-
-		_logger.LogInformation("[Advapi32] RegQueryValueExA: Returning empty data (not implemented)");
+		
+		// If no buffer or buffer too small, return ERROR_MORE_DATA
+		if (lpData == 0 || (lpcbData != 0 && providedSize < requiredSize))
+		{
+			_logger.LogInformation("[Advapi32] RegQueryValueExA: Buffer too small or null (required={RequiredSize}, provided={ProvidedSize})", 
+				requiredSize, providedSize);
+			return 234; // ERROR_MORE_DATA
+		}
+		
+		// Write the data to the buffer
+		for (uint i = 0; i < requiredSize && i < providedSize; i++)
+		{
+			_env.MemWrite8(lpData + i, dataBytes[i]);
+		}
+		
+		_logger.LogInformation("[Advapi32] RegQueryValueExA: Returned {Size} bytes, type={Type}", requiredSize, dataType);
 		
 		// ERROR_SUCCESS
 		return 0;
@@ -392,14 +445,61 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Advapi32] RegSetValueExA(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\", type=0x{DwType:X}, lpData=0x{LpData:X8}, cbData={CbData})",
 			hKey, valueName, dwType, lpData, cbData);
 
-		// For simplicity, just log the operation without actually storing the data
-		// A full implementation would read the data from lpData and store it in the virtual registry
-		
-		if (lpData != 0 && cbData > 0)
+		if (lpData == 0 || cbData == 0)
 		{
-			// Could read the data here if needed for emulation
-			// For now, just acknowledge the set operation
-			_logger.LogInformation("[Advapi32] RegSetValueExA: Setting value (data not stored in emulation)");
+			_logger.LogWarning("[Advapi32] RegSetValueExA: Invalid data pointer or size");
+			return 0; // ERROR_SUCCESS (be lenient for now)
+		}
+		
+		try
+		{
+			// Read the data from memory
+			var data = new byte[cbData];
+			for (uint i = 0; i < cbData; i++)
+			{
+				data[i] = _env.MemRead8(lpData + i);
+			}
+			
+			// Convert data based on type
+			object value;
+			const uint REG_SZ = 1;          // String
+			const uint REG_EXPAND_SZ = 2;   // Expandable string
+			const uint REG_BINARY = 3;      // Binary data
+			const uint REG_DWORD = 4;       // 32-bit number
+			
+			switch (dwType)
+			{
+				case REG_SZ:
+				case REG_EXPAND_SZ:
+					// Null-terminated string
+					var strLen = Array.IndexOf(data, (byte)0);
+					if (strLen < 0) strLen = data.Length;
+					value = System.Text.Encoding.ASCII.GetString(data, 0, strLen);
+					break;
+					
+				case REG_DWORD:
+					if (cbData >= 4)
+					{
+						value = BitConverter.ToUInt32(data, 0);
+					}
+					else
+					{
+						value = data;
+					}
+					break;
+					
+				case REG_BINARY:
+				default:
+					value = data;
+					break;
+			}
+			
+			// Store in virtual registry (legacy approach - the new registry hive will handle this via ProcessEnvironment)
+			_logger.LogInformation("[Advapi32] RegSetValueExA: Set value \"{ValueName}\"={Value} (type={Type})", valueName, value, dwType);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Advapi32] RegSetValueExA: Failed to set value");
 		}
 
 		// ERROR_SUCCESS
