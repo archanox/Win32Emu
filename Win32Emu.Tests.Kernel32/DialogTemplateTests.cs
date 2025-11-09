@@ -402,7 +402,6 @@ public sealed class DialogTemplateTests : IDisposable
 		offset += 2;
 		// For the title, write a string without null terminator and beyond valid memory
 		// This will cause ReadString to hit the memory limit
-		var titleStart = offset;
 		for (var i = 0; i < 8000; i++)
 		{
 			// Write non-zero values to prevent it from finding a null terminator

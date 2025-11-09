@@ -229,33 +229,7 @@ public class DialogTemplateParser
 		item.Title = ReadNameOrOrdinal(templateAddress, ref offset);
 
 		// Creation data
-		try
-		{
-			var dataSize = _memory.Read16(templateAddress + offset);
-			offset += 2;
-			
-			// Sanity check on data size (dialog creation data shouldn't be huge)
-			const int MaxCreationDataSize = 65536; // 64KB should be more than enough
-			if (dataSize > 0 && dataSize <= MaxCreationDataSize)
-			{
-				item.CreationData = new byte[dataSize];
-				for (var i = 0; i < dataSize; i++)
-				{
-					item.CreationData[i] = _memory.Read8(templateAddress + offset);
-					offset++;
-				}
-			}
-			else if (dataSize > MaxCreationDataSize)
-			{
-				// Skip the corrupted data
-				item.CreationData = null;
-			}
-		}
-		catch (IndexOutOfRangeException)
-		{
-			// Failed to read creation data, but that's okay - not critical
-			item.CreationData = null;
-		}
+		item.CreationData = ReadCreationData(templateAddress, ref offset);
 
 		return item;
 	}
@@ -298,6 +272,13 @@ public class DialogTemplateParser
 		item.Title = ReadNameOrOrdinal(templateAddress, ref offset);
 
 		// Creation data
+		item.CreationData = ReadCreationData(templateAddress, ref offset);
+
+		return item;
+	}
+
+	private byte[]? ReadCreationData(uint templateAddress, ref uint offset)
+	{
 		try
 		{
 			var dataSize = _memory.Read16(templateAddress + offset);
@@ -305,28 +286,30 @@ public class DialogTemplateParser
 			
 			// Sanity check on data size (dialog creation data shouldn't be huge)
 			const int MaxCreationDataSize = 65536; // 64KB should be more than enough
-			if (dataSize > 0 && dataSize <= MaxCreationDataSize)
-			{
-				item.CreationData = new byte[dataSize];
-				for (var i = 0; i < dataSize; i++)
-				{
-					item.CreationData[i] = _memory.Read8(templateAddress + offset);
-					offset++;
-				}
-			}
-			else if (dataSize > MaxCreationDataSize)
+			if (dataSize > MaxCreationDataSize)
 			{
 				// Skip the corrupted data
-				item.CreationData = null;
+				return null;
 			}
+
+			if (dataSize > 0)
+			{
+				var creationData = new byte[dataSize];
+				for (var i = 0; i < dataSize; i++)
+				{
+					creationData[i] = _memory.Read8(templateAddress + offset);
+					offset++;
+				}
+				return creationData;
+			}
+
+			return null;
 		}
 		catch (IndexOutOfRangeException)
 		{
 			// Failed to read creation data, but that's okay - not critical
-			item.CreationData = null;
+			return null;
 		}
-
-		return item;
 	}
 
 	private string ReadNameOrOrdinal(uint templateAddress, ref uint offset)
@@ -383,7 +366,6 @@ public class DialogTemplateParser
 			catch (IndexOutOfRangeException)
 			{
 				// Hit end of memory without finding null terminator
-				// Return what we have and log a warning
 				if (sb.Length == 0)
 				{
 					return string.Empty;
