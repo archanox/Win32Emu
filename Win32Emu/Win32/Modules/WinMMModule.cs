@@ -952,6 +952,130 @@ namespace Win32Emu.Win32.Modules
 			return (false, 0);
 		}
 
+		#region Async Callback Execution Helper
+
+		/// <summary>
+		/// Executes emulated guest code asynchronously with comprehensive safeguards.
+		/// This helper method contains the common execution loop logic used by async callback methods,
+		/// eliminating code duplication while ensuring consistent behavior.
+		/// </summary>
+		/// <param name="returnAddress">Marker address (0xDEADBEEF) indicating callback return</param>
+		/// <param name="logContext">Context string for logging (e.g., "CallTimeProcAsync")</param>
+		/// <param name="cancellationToken">Cancellation token for cooperative cancellation</param>
+		/// <returns>True if execution completed successfully, false if aborted or failed</returns>
+		private async Task<bool> ExecuteCallbackAsync(
+			uint returnAddress,
+			string logContext,
+			CancellationToken cancellationToken = default)
+		{
+			const int YIELD_INTERVAL = 10000;
+			var steps = 0;
+			var executionSuccessful = true;
+			var lastCheckEip = _cpu!.GetEip();
+			var stuckCounter = 0;
+
+			try
+			{
+				while (true)
+				{
+					// Check for cancellation at regular intervals
+					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+					{
+						if (cancellationToken.IsCancellationRequested)
+						{
+							_logger.LogInformation("[WinMM] {LogContext}: Cancellation requested at step {Steps}", logContext, steps);
+							executionSuccessful = false;
+							break;
+						}
+
+						// Yield to allow other async operations to proceed
+						await Task.Yield();
+					}
+
+					var eip = _cpu.GetEip();
+
+					// Check if we've returned to our marker address
+					if (eip == returnAddress)
+					{
+						break;
+					}
+
+					// Check for invalid EIP (NULL pointer execution)
+					if (eip == 0x00000000)
+					{
+						_logger.LogWarning("[WinMM] {LogContext}: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting", logContext);
+						executionSuccessful = false;
+						break;
+					}
+
+					// Check for other invalid low addresses
+					if (eip < MINIMUM_VALID_EIP && eip != returnAddress)
+					{
+						_logger.LogError("[WinMM] {LogContext}: Execution jumped to invalid low address 0x{Eip:X8}", logContext, eip);
+						executionSuccessful = false;
+						break;
+					}
+
+					// Detect potential infinite loops
+					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+					{
+						var currentEip = _cpu.GetEip();
+						if (currentEip == lastCheckEip)
+						{
+							stuckCounter++;
+							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+							{
+								_logger.LogWarning("[WinMM] {LogContext}: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
+									logContext, currentEip, stuckCounter);
+								executionSuccessful = false;
+								break;
+							}
+						}
+						else
+						{
+							stuckCounter = 0;
+							lastCheckEip = currentEip;
+						}
+					}
+
+					// Execute one instruction
+					_cpu.SingleStep(_memory!);
+					steps++;
+
+					// Periodically check if we should yield to other threads
+					if (steps % YIELD_INTERVAL == 0)
+					{
+						var scheduler = _env.ThreadScheduler;
+						if (scheduler != null)
+						{
+							scheduler.ProcessWaitTimeouts();
+							if (scheduler.ShouldContextSwitch())
+							{
+								_logger.LogDebug("[WinMM] {LogContext}: Cooperative yield at {Steps} steps", logContext, steps);
+							}
+						}
+
+						await Task.Yield();
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				// Rethrow critical exceptions that should not be caught
+				if (ex is OutOfMemoryException || ex is StackOverflowException)
+				{
+					throw;
+				}
+
+				_logger.LogError(ex, "[WinMM] {LogContext}: Exception during execution: {ExMessage}", logContext, ex.Message);
+				executionSuccessful = false;
+			}
+
+			return executionSuccessful;
+		}
+
+		#endregion
+
 		#region Async Callback Methods
 
 		/// <summary>
@@ -1027,109 +1151,8 @@ namespace Win32Emu.Win32.Modules
 			_cpu.SetRegister("ESP", esp);
 			_cpu.SetEip(timeProc);
 
-			// Execute until we hit the return address with cancellation support
-			const int YIELD_INTERVAL = 10000;
-			var steps = 0;
-			var executionSuccessful = true;
-			var lastCheckEip = _cpu.GetEip();
-			var stuckCounter = 0;
-
-			try
-			{
-				while (true)
-				{
-					// Check for cancellation at regular intervals
-					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
-					{
-						if (cancellationToken.IsCancellationRequested)
-						{
-							_logger.LogInformation("[WinMM] CallTimeProcAsync: Cancellation requested at step {Steps}", steps);
-							executionSuccessful = false;
-							break;
-						}
-
-						// Yield to allow other async operations to proceed
-						await Task.Yield();
-					}
-
-					var eip = _cpu.GetEip();
-
-					// Check if we've returned to our marker address
-					if (eip == RETURN_ADDRESS)
-					{
-						break;
-					}
-
-					// Check for invalid EIP (NULL pointer execution)
-					if (eip == 0x00000000)
-					{
-						_logger.LogWarning("[WinMM] CallTimeProcAsync: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
-						executionSuccessful = false;
-						break;
-					}
-
-					// Check for other invalid low addresses
-					if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
-					{
-						_logger.LogError("[WinMM] CallTimeProcAsync: Execution jumped to invalid low address 0x{Eip:X8}", eip);
-						executionSuccessful = false;
-						break;
-					}
-
-					// Detect potential infinite loops
-					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
-					{
-						var currentEip = _cpu.GetEip();
-						if (currentEip == lastCheckEip)
-						{
-							stuckCounter++;
-							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
-							{
-								_logger.LogWarning("[WinMM] CallTimeProcAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
-									currentEip, stuckCounter);
-								executionSuccessful = false;
-								break;
-							}
-						}
-						else
-						{
-							stuckCounter = 0;
-							lastCheckEip = currentEip;
-						}
-					}
-
-					// Execute one instruction
-					_cpu.SingleStep(_memory);
-					steps++;
-
-					// Periodically check if we should yield to other threads
-					if (steps % YIELD_INTERVAL == 0)
-					{
-						var scheduler = _env.ThreadScheduler;
-						if (scheduler != null)
-						{
-							scheduler.ProcessWaitTimeouts();
-							if (scheduler.ShouldContextSwitch())
-							{
-								_logger.LogDebug("[WinMM] CallTimeProcAsync: Cooperative yield at {Steps} steps", steps);
-							}
-						}
-
-						await Task.Yield();
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				// Rethrow critical exceptions that should not be caught
-				if (ex is OutOfMemoryException || ex is StackOverflowException)
-				{
-					throw;
-				}
-
-				_logger.LogError(ex, "[WinMM] CallTimeProcAsync: Exception during execution: {ExMessage}", ex.Message);
-				executionSuccessful = false;
-			}
+			// Execute callback using the common helper method
+			var executionSuccessful = await ExecuteCallbackAsync(RETURN_ADDRESS, "CallTimeProcAsync", cancellationToken).ConfigureAwait(false);
 
 			// Restore CPU state
 			_cpu.SetEip(savedEip);
