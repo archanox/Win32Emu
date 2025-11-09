@@ -183,32 +183,36 @@ private async Task<uint> PublicApiAsync(
 ### Pending Migrations (Stubs - No Actual Callback Execution)
 
 #### User32Module
-These APIs currently return success without invoking callbacks:
+These APIs have async callback methods ready but currently return success without invoking callbacks:
 
-- **SetTimer** - Returns timer ID but doesn't invoke timer procedure
-  - Current status: Stub implementation
+- **SetTimer** ✅ - Async callback method prepared (CallTimerProcAsync)
+  - Current status: Stub implementation, returns timer ID
   - `lpTimerFunc` parameter is logged but not called
-  - Would need async pattern when implemented
+  - Ready for full implementation when timer callbacks are needed
+  - Async method: `CallTimerProcAsync(timerProc, hWnd, uMsg, idEvent, dwTime)`
 
-- **EnumWindows** - Returns success without enumerating
-  - Current status: Stub implementation  
+- **EnumWindows** ✅ - Async callback method prepared (CallEnumWindowsProcAsync)
+  - Current status: Stub implementation, returns success
   - `lpEnumFunc` callback is not invoked
-  - Comment: "We could call the callback with our main window handle if we tracked them"
-  - Would need async pattern when window enumeration is implemented
+  - Ready for full implementation when window enumeration is needed
+  - Async method: `CallEnumWindowsProcAsync(enumProc, hWnd, lParam)`
 
-- **SetWindowsHookExA** - Returns dummy hook handle
-  - Current status: Stub implementation
+- **SetWindowsHookExA** ✅ - Async callback method prepared (CallHookProcAsync)
+  - Current status: Stub implementation, returns dummy hook handle
   - Hook procedure stored but never called
-  - `CallNextHookEx` also stub
+  - Ready for full implementation when hooks are needed
+  - Async method: `CallHookProcAsync(hookProc, nCode, wParam, lParam)`
 
 - **Subclassing** - Not yet implemented
   - Would need async pattern when implemented
 
 #### WinMMModule
-- **timeSetEvent** - Returns timer ID but doesn't invoke callback
-  - Current status: Stub implementation
+- **timeSetEvent** ✅ - Async callback method prepared (CallTimeProcAsync)
+  - Current status: Stub implementation, returns timer ID
   - `lpTimeProc` parameter is logged but not called
-  - Would need async pattern when timer callbacks are implemented
+  - Module migrated to IWin32ModuleAsync
+  - Ready for full implementation when timer callbacks are needed
+  - Async method: `CallTimeProcAsync(timeProc, uTimerID, uMsg, dwUser, dw1, dw2)`
 
 #### Kernel32Module
 - **CreateThread** - Thread creation uses ThreadScheduler
@@ -310,14 +314,30 @@ As callback-using APIs are implemented from stub to full functionality:
 ## Summary
 
 The async callback pattern has been successfully implemented in:
-- ✅ User32Module (CallWindowProcedureAsync, CallDialogProcedureAsync)
+- ✅ User32Module (CallWindowProcedureAsync, CallDialogProcedureAsync, CallTimerProcAsync, CallEnumWindowsProcAsync, CallHookProcAsync)
 - ✅ DSoundModule (CallEnumerationCallbackAsync)
+- ✅ WinMMModule (CallTimeProcAsync, migrated to IWin32ModuleAsync)
 
 All implementations:
 - Eliminate the need for STACK_SAFETY_MARGIN
 - Provide clean host/guest stack separation
 - Support cancellation and cooperative multitasking
 - Maintain full backward compatibility
+- Pass all existing tests
+
+### Async Methods Ready for Future Implementation
+
+The following stub APIs now have async callback methods prepared and ready for full implementation:
+
+**User32Module:**
+- `SetTimer` → `CallTimerProcAsync` - Ready for timer procedure callbacks
+- `EnumWindows` → `CallEnumWindowsProcAsync` - Ready for window enumeration
+- `SetWindowsHookExA` → `CallHookProcAsync` - Ready for hook procedures
+
+**WinMMModule:**
+- `timeSetEvent` → `CallTimeProcAsync` - Ready for multimedia timer callbacks
+
+When these APIs are enhanced from stubs to full implementations, the async callback infrastructure is already in place following the proven pattern.
 - Pass all existing tests
 
 The pattern is ready to be applied to additional modules as their callback functionality is implemented from stub to full functionality.
