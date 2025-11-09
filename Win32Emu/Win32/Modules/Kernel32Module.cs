@@ -2779,24 +2779,25 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var resolvedPath = path;
 			if (!IsWindowsRootedPath(path))
 			{
-				// Path is relative (or Unix-style absolute like /data), resolve it relative to current directory
-				// For paths like /data or \data, we need to combine with the drive from CurrentDirectory
-				var pathToResolve = path;
-				
-				// If path starts with / or \, combine it with the drive letter from CurrentDirectory
+				// If path starts with / or \, it's a root-relative path - prepend the drive letter
 				if (path.Length > 0 && (path[0] == '/' || path[0] == '\\'))
 				{
 					// Extract drive letter from CurrentDirectory (e.g., "C:" from "C:\ign_teas")
 					if (_env.CurrentDirectory.Length >= 2 && _env.CurrentDirectory[1] == ':')
 					{
 						var drive = _env.CurrentDirectory.Substring(0, 2); // e.g., "C:"
-						pathToResolve = drive + path; // e.g., "C:/data/file.txt"
+						resolvedPath = drive + path; // e.g., "C:/data/file.txt"
+						_logger.LogDebug("[Kernel32] CreateFileA: Resolved root-relative path '{Path}' to '{ResolvedPath}'",
+							path, resolvedPath);
 					}
 				}
-				
-				resolvedPath = Path.Combine(_env.CurrentDirectory, pathToResolve);
-				_logger.LogDebug("[Kernel32] CreateFileA: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
-					path, resolvedPath, _env.CurrentDirectory);
+				else
+				{
+					// Path is relative, resolve it relative to current directory
+					resolvedPath = Path.Combine(_env.CurrentDirectory, path);
+					_logger.LogDebug("[Kernel32] CreateFileA: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
+						path, resolvedPath, _env.CurrentDirectory);
+				}
 			}
 
 			// If VFS is available, use it for file operations
@@ -2856,23 +2857,25 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var resolvedPath = path;
 			if (!IsWindowsRootedPath(path))
 			{
-				// Path is relative (or Unix-style absolute like /data), resolve it relative to current directory
-				var pathToResolve = path;
-				
-				// If path starts with / or \, combine it with the drive letter from CurrentDirectory
+				// If path starts with / or \, it's a root-relative path - prepend the drive letter
 				if (path.Length > 0 && (path[0] == '/' || path[0] == '\\'))
 				{
 					// Extract drive letter from CurrentDirectory (e.g., "C:" from "C:\ign_teas")
 					if (_env.CurrentDirectory.Length >= 2 && _env.CurrentDirectory[1] == ':')
 					{
 						var drive = _env.CurrentDirectory.Substring(0, 2); // e.g., "C:"
-						pathToResolve = drive + path; // e.g., "C:/data/file.txt"
+						resolvedPath = drive + path; // e.g., "C:/data/file.txt"
+						_logger.LogDebug("[Kernel32] CreateFileW: Resolved root-relative path '{Path}' to '{ResolvedPath}'",
+							path, resolvedPath);
 					}
 				}
-				
-				resolvedPath = Path.Combine(_env.CurrentDirectory, pathToResolve);
-				_logger.LogDebug("[Kernel32] CreateFileW: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
-					path, resolvedPath, _env.CurrentDirectory);
+				else
+				{
+					// Path is relative, resolve it relative to current directory
+					resolvedPath = Path.Combine(_env.CurrentDirectory, path);
+					_logger.LogDebug("[Kernel32] CreateFileW: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
+						path, resolvedPath, _env.CurrentDirectory);
+				}
 			}
 
 			// If VFS is available, use it for file operations
