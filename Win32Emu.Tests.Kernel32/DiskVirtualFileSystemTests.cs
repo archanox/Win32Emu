@@ -248,17 +248,17 @@ public class DiskVirtualFileSystemTests : IDisposable
 	}
 
 	[Fact]
-	public void CopyDirectoryIn_WithMultipleDotFilenames_SanitizesAndCopiesFiles()
+	public void CopyDirectoryIn_WithMultipleDotFilenames_PreservesOriginalNames()
 	{
 		// Arrange - Create a VHD disk
 		var diskPath = Path.Combine(_testDir, "test.vhd");
 		using var vfs = DiskVirtualFileSystem.Create(diskPath, DiskFormat.Vhd, 10 * 1024 * 1024, NullLogger.Instance);
 
-		// Create a source directory with problematic filenames
+		// Create a source directory with various filenames
 		var sourceDir = Path.Combine(_testDir, "source");
 		Directory.CreateDirectory(sourceDir);
 		
-		// Files with multiple dots and long names that exceed FAT 8.3 limits
+		// Files with multiple dots and long names - LTRData.DiscUtils supports these natively
 		File.WriteAllText(Path.Combine(sourceDir, "TEST.EXE.i64"), "IDA database");
 		File.WriteAllText(Path.Combine(sourceDir, "file.db.bak"), "backup");
 		File.WriteAllText(Path.Combine(sourceDir, "normal.txt"), "normal file");
@@ -267,18 +267,11 @@ public class DiskVirtualFileSystemTests : IDisposable
 		// Act - Copy directory to VHD
 		vfs.CopyDirectoryIn(sourceDir, "/testgame");
 
-		// Assert - Files should be copied with sanitized names
-		// FAT 8.3 format: max 8 chars for basename, 3 for extension
-		// TEST.EXE.i64 -> TEST_EXE.i64 (dots replaced with underscores, fits in 8 chars)
-		Assert.True(vfs.FileExists(@"\testgame\TEST_EXE.i64"));
-		
-		// file.db.bak -> file_db.bak (dots replaced with underscores, already fits 8.3)
-		Assert.True(vfs.FileExists(@"\testgame\file_db.bak"));
-		
-		// normal.txt stays the same (already fits 8.3)
+		// Assert - Files should be copied with original names preserved
+		// LTRData.DiscUtils FAT implementation supports long filenames and multiple dots
+		Assert.True(vfs.FileExists(@"\testgame\TEST.EXE.i64"));
+		Assert.True(vfs.FileExists(@"\testgame\file.db.bak"));
 		Assert.True(vfs.FileExists(@"\testgame\normal.txt"));
-		
-		// VERYLONGNAME.txt -> VERYLONG.txt (truncated to 8 chars)
-		Assert.True(vfs.FileExists(@"\testgame\VERYLONG.txt"));
+		Assert.True(vfs.FileExists(@"\testgame\VERYLONGNAME.txt"));
 	}
 }
