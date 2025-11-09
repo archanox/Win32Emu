@@ -96,10 +96,19 @@ public class DialogTemplateParser
 		template.Items = new List<DialogItem>();
 		for (var i = 0; i < template.ItemCount; i++)
 		{
-			var item = ParseStandardItem(templateAddress, ref offset);
-			template.Items.Add(item);
-			// Align to DWORD boundary before next item
-			offset = AlignToDword(offset);
+			try
+			{
+				var item = ParseStandardItem(templateAddress, ref offset);
+				template.Items.Add(item);
+				// Align to DWORD boundary before next item
+				offset = AlignToDword(offset);
+			}
+			catch (IndexOutOfRangeException)
+			{
+				// Failed to parse item, stop parsing remaining items
+				// This can happen if the dialog template is corrupted
+				break;
+			}
 		}
 
 		return template;
@@ -167,10 +176,19 @@ public class DialogTemplateParser
 		template.Items = new List<DialogItem>();
 		for (var i = 0; i < template.ItemCount; i++)
 		{
-			var item = ParseExtendedItem(templateAddress, ref offset);
-			template.Items.Add(item);
-			// Align to DWORD boundary before next item
-			offset = AlignToDword(offset);
+			try
+			{
+				var item = ParseExtendedItem(templateAddress, ref offset);
+				template.Items.Add(item);
+				// Align to DWORD boundary before next item
+				offset = AlignToDword(offset);
+			}
+			catch (IndexOutOfRangeException)
+			{
+				// Failed to parse item, stop parsing remaining items
+				// This can happen if the dialog template is corrupted
+				break;
+			}
 		}
 
 		return template;
@@ -211,16 +229,32 @@ public class DialogTemplateParser
 		item.Title = ReadNameOrOrdinal(templateAddress, ref offset);
 
 		// Creation data
-		var dataSize = _memory.Read16(templateAddress + offset);
-		offset += 2;
-		if (dataSize > 0)
+		try
 		{
-			item.CreationData = new byte[dataSize];
-			for (var i = 0; i < dataSize; i++)
+			var dataSize = _memory.Read16(templateAddress + offset);
+			offset += 2;
+			
+			// Sanity check on data size (dialog creation data shouldn't be huge)
+			const int MaxCreationDataSize = 65536; // 64KB should be more than enough
+			if (dataSize > 0 && dataSize <= MaxCreationDataSize)
 			{
-				item.CreationData[i] = _memory.Read8(templateAddress + offset);
-				offset++;
+				item.CreationData = new byte[dataSize];
+				for (var i = 0; i < dataSize; i++)
+				{
+					item.CreationData[i] = _memory.Read8(templateAddress + offset);
+					offset++;
+				}
 			}
+			else if (dataSize > MaxCreationDataSize)
+			{
+				// Skip the corrupted data
+				item.CreationData = null;
+			}
+		}
+		catch (IndexOutOfRangeException)
+		{
+			// Failed to read creation data, but that's okay - not critical
+			item.CreationData = null;
 		}
 
 		return item;
@@ -264,16 +298,32 @@ public class DialogTemplateParser
 		item.Title = ReadNameOrOrdinal(templateAddress, ref offset);
 
 		// Creation data
-		var dataSize = _memory.Read16(templateAddress + offset);
-		offset += 2;
-		if (dataSize > 0)
+		try
 		{
-			item.CreationData = new byte[dataSize];
-			for (var i = 0; i < dataSize; i++)
+			var dataSize = _memory.Read16(templateAddress + offset);
+			offset += 2;
+			
+			// Sanity check on data size (dialog creation data shouldn't be huge)
+			const int MaxCreationDataSize = 65536; // 64KB should be more than enough
+			if (dataSize > 0 && dataSize <= MaxCreationDataSize)
 			{
-				item.CreationData[i] = _memory.Read8(templateAddress + offset);
-				offset++;
+				item.CreationData = new byte[dataSize];
+				for (var i = 0; i < dataSize; i++)
+				{
+					item.CreationData[i] = _memory.Read8(templateAddress + offset);
+					offset++;
+				}
 			}
+			else if (dataSize > MaxCreationDataSize)
+			{
+				// Skip the corrupted data
+				item.CreationData = null;
+			}
+		}
+		catch (IndexOutOfRangeException)
+		{
+			// Failed to read creation data, but that's okay - not critical
+			item.CreationData = null;
 		}
 
 		return item;
@@ -281,41 +331,74 @@ public class DialogTemplateParser
 
 	private string ReadNameOrOrdinal(uint templateAddress, ref uint offset)
 	{
-		var firstWord = _memory.Read16(templateAddress + offset);
-
-		switch (firstWord)
+		try
 		{
-			case 0x0000:
-				// Empty string
-				offset += 2;
-				return string.Empty;
-			case 0xFFFF:
+			var firstWord = _memory.Read16(templateAddress + offset);
+
+			switch (firstWord)
 			{
-				// Ordinal value follows
-				offset += 2;
-				var ordinal = _memory.Read16(templateAddress + offset);
-				offset += 2;
-				return $"#{ordinal}";
+				case 0x0000:
+					// Empty string
+					offset += 2;
+					return string.Empty;
+				case 0xFFFF:
+				{
+					// Ordinal value follows
+					offset += 2;
+					var ordinal = _memory.Read16(templateAddress + offset);
+					offset += 2;
+					return $"#{ordinal}";
+				}
+				default:
+					// Unicode string (null-terminated)
+					return ReadString(templateAddress, ref offset);
 			}
-			default:
-				// Unicode string (null-terminated)
-				return ReadString(templateAddress, ref offset);
+		}
+		catch (IndexOutOfRangeException)
+		{
+			// Hit end of memory while reading name/ordinal
+			return string.Empty;
 		}
 	}
 
 	private string ReadString(uint templateAddress, ref uint offset)
 	{
 		var sb = new StringBuilder();
-		while (true)
+		const int MaxStringLength = 8192; // Reasonable maximum for dialog template strings
+		var charsRead = 0;
+		
+		while (charsRead < MaxStringLength)
 		{
-			var wchar = _memory.Read16(templateAddress + offset);
-			offset += 2;
-			if (wchar == 0)
+			try
 			{
-				break;
+				var wchar = _memory.Read16(templateAddress + offset);
+				offset += 2;
+				if (wchar == 0)
+				{
+					break;
+				}
+				sb.Append((char)wchar);
+				charsRead++;
 			}
-			sb.Append((char)wchar);
+			catch (IndexOutOfRangeException)
+			{
+				// Hit end of memory without finding null terminator
+				// Return what we have and log a warning
+				if (sb.Length == 0)
+				{
+					return string.Empty;
+				}
+				return sb.ToString();
+			}
 		}
+		
+		if (charsRead >= MaxStringLength)
+		{
+			// String exceeded maximum length without null terminator
+			// This indicates corrupted data, but return what we have
+			return sb.ToString();
+		}
+		
 		return sb.ToString();
 	}
 
