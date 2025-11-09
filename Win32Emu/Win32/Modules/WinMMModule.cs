@@ -941,9 +941,10 @@ namespace Win32Emu.Win32.Modules
 			_cpu = cpu;
 			_memory = memory;
 
-			// For now, most APIs use synchronous implementation
-			// TODO: When timer callbacks are fully implemented, use async version
-			if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
+		    // TODO: Route timer callback exports (timeSetEvent) to async execution
+		    // when callback functionality is fully implemented. For now, all APIs
+		    // use synchronous stubs that don't invoke callbacks.
+		    if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
 			{
 				return (true, syncReturnValue);
 			}
