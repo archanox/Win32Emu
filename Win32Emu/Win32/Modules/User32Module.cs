@@ -3670,11 +3670,12 @@ namespace Win32Emu.Win32.Modules
 		/// </summary>
 		/// <summary>
 		/// Validates that a return address points to valid executable code and not to stack or invalid memory.
+		/// Uses actual values from the PE header and process environment instead of hardcoded constants.
 		/// </summary>
 		/// <param name="address">The return address to validate</param>
 		/// <param name="image">The loaded PE image (optional)</param>
 		/// <returns>True if the address is valid for execution, false otherwise</returns>
-		private static bool IsValidReturnAddress(uint address, LoadedImage? image)
+		private bool IsValidReturnAddress(uint address, LoadedImage? image)
 		{
 			// Reject NULL addresses
 			if (address == 0)
@@ -3682,26 +3683,17 @@ namespace Win32Emu.Win32.Modules
 				return false;
 			}
 
-			// Check if address is in valid code regions
-			// Typical Win32 executables are loaded at 0x00400000 or higher
-			// DLLs are typically at 0x10000000 or higher
-			// Stack is usually in the 0x00100000 - 0x00300000 range
-			const uint MIN_CODE_ADDRESS = 0x00400000;
-			const uint MAX_STACK_ADDRESS = 0x00300000; // Conservative upper bound for stack
+			// Get actual stack boundaries from process environment
+			var stackLimit = _env.StackLimit;
+			var stackBase = _env.StackBase;
 
-			// Reject addresses that are too low (likely stack or invalid)
-			if (address < MIN_CODE_ADDRESS)
+			// Reject addresses within the stack region
+			if (address >= stackLimit && address <= stackBase)
 			{
-				// Allow some DLL code that might be below 0x00400000 but above stack
-				if (address >= MAX_STACK_ADDRESS)
-				{
-					// Might be valid DLL code, allow it
-					return true;
-				}
 				return false;
 			}
 
-			// If we have image info, verify the address is within the image
+			// If we have image info, use the actual image base address
 			if (image != null)
 			{
 				var imageBase = image.BaseAddress;
@@ -3709,8 +3701,9 @@ namespace Win32Emu.Win32.Modules
 				var isInImage = address >= imageBase && address < (imageBase + imageSize);
 
 				// Also check if it's in imported DLL space (though we don't have full info)
-				// For now, accept any address above MIN_CODE_ADDRESS if not in image
-				if (!isInImage && address >= MIN_CODE_ADDRESS)
+				// For now, accept any address above the image base if not in image
+				// This handles DLLs that are loaded at different addresses
+				if (!isInImage && address >= imageBase)
 				{
 					// Could be in a DLL, allow it
 					return true;
@@ -3719,8 +3712,10 @@ namespace Win32Emu.Win32.Modules
 				return isInImage;
 			}
 
-			// Without image info, accept any address above MIN_CODE_ADDRESS
-			return address >= MIN_CODE_ADDRESS;
+			// Without image info, use conservative default (typical Win32 image base)
+			// This is a fallback for cases where image info is not available
+			const uint DEFAULT_MIN_CODE_ADDRESS = 0x00400000;
+			return address >= DEFAULT_MIN_CODE_ADDRESS;
 		}
 
 		private static bool IsHandleReturningFunction(string functionName)
