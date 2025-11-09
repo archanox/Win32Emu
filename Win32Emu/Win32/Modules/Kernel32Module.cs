@@ -2005,6 +2005,34 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	/// <summary>
+	/// Checks if a path is rooted in the Windows sense.
+	/// In Windows, a path is rooted if it has a drive letter (C:\, D:/) or is a UNC path (\\server\share).
+	/// Paths like /data or \data are NOT rooted - they're relative to the current drive.
+	/// This is important on Unix systems where Path.IsPathRooted treats /path as rooted.
+	/// </summary>
+	private bool IsWindowsRootedPath(string path)
+	{
+		if (string.IsNullOrEmpty(path))
+		{
+			return false;
+		}
+
+		// Check for drive letter (C:\ or C:/)
+		if (path.Length >= 2 && path[1] == ':' && char.IsLetter(path[0]))
+		{
+			return true;
+		}
+
+		// Check for UNC path (\\server\share or //server/share)
+		if (path.Length >= 2 && (path[0] == '\\' || path[0] == '/') && (path[1] == '\\' || path[1] == '/'))
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
 	/// Fixes path escaping issues that can cause parsing problems
 	/// </summary>
 	private string FixPathEscaping(string path)
@@ -2746,11 +2774,27 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Resolve relative paths relative to the current directory.
 			// This ensures paths like "data\IGN1.TEX" are resolved relative to the executable's directory.
 			// CurrentDirectory is always set, so we always resolve relative paths.
+			// On Unix systems, Path.IsPathRooted treats /path as rooted, but in Windows emulation,
+			// paths like /data or \data are relative to the current drive.
 			var resolvedPath = path;
-			if (!Path.IsPathRooted(path))
+			if (!IsWindowsRootedPath(path))
 			{
-				// Path is relative, resolve it relative to current directory
-				resolvedPath = Path.Combine(_env.CurrentDirectory, path);
+				// Path is relative (or Unix-style absolute like /data), resolve it relative to current directory
+				// For paths like /data or \data, we need to combine with the drive from CurrentDirectory
+				var pathToResolve = path;
+				
+				// If path starts with / or \, combine it with the drive letter from CurrentDirectory
+				if (path.Length > 0 && (path[0] == '/' || path[0] == '\\'))
+				{
+					// Extract drive letter from CurrentDirectory (e.g., "C:" from "C:\ign_teas")
+					if (_env.CurrentDirectory.Length >= 2 && _env.CurrentDirectory[1] == ':')
+					{
+						var drive = _env.CurrentDirectory.Substring(0, 2); // e.g., "C:"
+						pathToResolve = drive + path; // e.g., "C:/data/file.txt"
+					}
+				}
+				
+				resolvedPath = Path.Combine(_env.CurrentDirectory, pathToResolve);
 				_logger.LogDebug("[Kernel32] CreateFileA: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
 					path, resolvedPath, _env.CurrentDirectory);
 			}
@@ -2807,11 +2851,26 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			}
 
 			// Resolve relative paths relative to the current directory
+			// On Unix systems, Path.IsPathRooted treats /path as rooted, but in Windows emulation,
+			// paths like /data or \data are relative to the current drive.
 			var resolvedPath = path;
-			if (!Path.IsPathRooted(path))
+			if (!IsWindowsRootedPath(path))
 			{
-				// Path is relative, resolve it relative to current directory
-				resolvedPath = Path.Combine(_env.CurrentDirectory, path);
+				// Path is relative (or Unix-style absolute like /data), resolve it relative to current directory
+				var pathToResolve = path;
+				
+				// If path starts with / or \, combine it with the drive letter from CurrentDirectory
+				if (path.Length > 0 && (path[0] == '/' || path[0] == '\\'))
+				{
+					// Extract drive letter from CurrentDirectory (e.g., "C:" from "C:\ign_teas")
+					if (_env.CurrentDirectory.Length >= 2 && _env.CurrentDirectory[1] == ':')
+					{
+						var drive = _env.CurrentDirectory.Substring(0, 2); // e.g., "C:"
+						pathToResolve = drive + path; // e.g., "C:/data/file.txt"
+					}
+				}
+				
+				resolvedPath = Path.Combine(_env.CurrentDirectory, pathToResolve);
 				_logger.LogDebug("[Kernel32] CreateFileW: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
 					path, resolvedPath, _env.CurrentDirectory);
 			}
