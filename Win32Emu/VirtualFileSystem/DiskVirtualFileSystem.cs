@@ -12,8 +12,8 @@ using VmdkDisk = DiscUtils.Vmdk.Disk;
 namespace Win32Emu.VirtualFileSystem;
 
 /// <summary>
-/// Virtual file system that uses DiscUtils to provide a virtual disk (VMDK/VHD/VHDX/ISO).
-/// This allows for a complete C: drive emulation with FAT filesystem support.
+/// Virtual file system that uses LTRData.DiscUtils to provide a virtual disk (VMDK/VHD/VHDX/ISO).
+/// This allows for a complete C: drive emulation with FAT filesystem support, including long filenames.
 /// </summary>
 public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 {
@@ -267,32 +267,22 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		foreach (var file in Directory.GetFiles(sourceDir))
 		{
 			var fileName = Path.GetFileName(file);
-			var sanitizedFileName = SanitizeFileName(fileName);
-			var targetPath = CombinePaths(targetDir, sanitizedFileName);
+			var targetPath = CombinePaths(targetDir, fileName);
 
 			using var sourceStream = File.OpenRead(file);
 			var fileSize = sourceStream.Length;
 			using var targetStream = _fileSystem.OpenFile(targetPath, FileMode.Create, FileAccess.Write);
 			sourceStream.CopyTo(targetStream);
 
-			if (sanitizedFileName != fileName)
-			{
-				_logger.LogDebug("[DiskVFS] Copied file: {OriginalName} -> {TargetPath} (sanitized, {Size} bytes)", 
-					fileName, targetPath, fileSize);
-			}
-			else
-			{
-				_logger.LogDebug("[DiskVFS] Copied file: {FileName} -> {TargetPath} ({Size} bytes)", 
-					fileName, targetPath, fileSize);
-			}
+			_logger.LogDebug("[DiskVFS] Copied file: {FileName} -> {TargetPath} ({Size} bytes)", 
+				fileName, targetPath, fileSize);
 		}
 
 		// Recursively copy subdirectories
 		foreach (var dir in Directory.GetDirectories(sourceDir))
 		{
 			var dirName = Path.GetFileName(dir);
-			var sanitizedDirName = SanitizeFileName(dirName);
-			var targetPath = CombinePaths(targetDir, sanitizedDirName);
+			var targetPath = CombinePaths(targetDir, dirName);
 
 			_fileSystem.CreateDirectory(targetPath);
 			_logger.LogInformation("[DiskVFS] Created directory: {TargetPath}", targetPath);
@@ -382,75 +372,6 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		childPath = childPath.TrimStart('/', '\\');
 		var combined = basePath + "\\" + childPath;
 		return NormalizePath(combined);
-	}
-
-	/// <summary>
-	/// Sanitizes a filename to be compatible with FAT filesystems.
-	/// FAT has restrictions on filename length and characters.
-	/// Even FAT32 with Long Filename support enforces 8.3 format in DiscUtils.
-	/// </summary>
-	private string SanitizeFileName(string fileName)
-	{
-		// For FAT filesystems, we need to handle filenames carefully
-		// DiscUtils FAT implementation enforces 8.3 format:
-		// - Maximum 8 characters for basename
-		// - Maximum 3 characters for extension
-		// - Multiple dots in filenames cause issues
-		
-		if (!(_fileSystem is FatFileSystem))
-		{
-			// Non-FAT filesystems may have different rules
-			return fileName;
-		}
-
-		// Replace multiple consecutive dots with underscores
-		// This handles cases like "file.name.ext.backup" -> "file_name_ext.backup"
-		fileName = System.Text.RegularExpressions.Regex.Replace(fileName, @"\.{2,}", "_");
-
-		// Split into name and extension
-		var lastDotIndex = fileName.LastIndexOf('.');
-		if (lastDotIndex > 0 && lastDotIndex < fileName.Length - 1)
-		{
-			var baseName = fileName.Substring(0, lastDotIndex);
-			var extension = fileName.Substring(lastDotIndex + 1);
-			
-			// Check if basename contains dots (multiple extensions)
-			if (baseName.Contains('.'))
-			{
-				// Replace dots in basename with underscores
-				baseName = baseName.Replace('.', '_');
-			}
-			
-			// FAT 8.3 format: basename max 8 chars, extension max 3 chars
-			if (baseName.Length > 8)
-			{
-				baseName = baseName.Substring(0, 8);
-			}
-			if (extension.Length > 3)
-			{
-				extension = extension.Substring(0, 3);
-			}
-			
-			fileName = baseName + "." + extension;
-		}
-		else if (lastDotIndex == 0 && fileName.Length > 1)
-		{
-			// Filename starts with a dot (e.g., ".gitignore")
-			// Treat everything after the dot as extension, basename as "_"
-			var extension = fileName.Substring(1);
-			if (extension.Length > 3)
-			{
-				extension = extension.Substring(0, 3);
-			}
-			fileName = "_" + "." + extension;
-		}
-		else if (lastDotIndex == -1 && fileName.Length > 8)
-		{
-			// No extension - limit basename to 8 characters
-			fileName = fileName.Substring(0, 8);
-		}
-
-		return fileName;
 	}
 
 	public IVirtualFileHandle? OpenFile(string path, VfsFileMode mode, VfsFileAccess access)
