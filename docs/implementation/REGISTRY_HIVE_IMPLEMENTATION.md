@@ -12,16 +12,24 @@ This implementation adds Windows registry hive emulation to Win32Emu using the D
    - Manages Windows registry hives (SYSTEM, SOFTWARE, NTUSER.DAT)
    - Provides APIs for opening, creating, querying, and setting registry keys/values
    - Supports in-memory storage with hooks for future VFS persistence
+   - Enumeration APIs for UI support (EnumerateSubKeyNames, EnumerateValueNames)
 
 2. **ProcessEnvironment Integration**
    - Initializes registry hive on construction
    - Synchronizes environment variables with registry storage
    - Maintains backward compatibility with legacy virtual registry
+   - Exposes RegistryHive property for UI access
 
 3. **Advapi32 Module Updates**
    - `RegQueryValueExA`: Properly serializes and returns registry data with correct types
    - `RegSetValueExA`: Properly deserializes and stores registry data
    - Full support for REG_SZ, REG_DWORD, REG_BINARY, and REG_EXPAND_SZ types
+
+4. **Registry Viewer UI** (`Win32Emu.Gui`)
+   - Interactive Avalonia-based registry editor
+   - Tree view for browsing registry hierarchy
+   - Data grid for viewing/editing values
+   - Accessible from EmulatorWindow via "Registry" button
 
 ## Registry Structure
 
@@ -46,6 +54,19 @@ Default values:
 - TEMP/TMP (user-specific)
 
 ## Usage
+
+### Using the Registry Viewer UI
+
+When the emulator is running, click the "Registry" button (📋) in the EmulatorWindow status bar to open the registry viewer. The viewer allows you to:
+
+1. **Browse Keys**: Navigate the registry hierarchy using the tree view on the left
+2. **View Values**: See all values in the selected key in the data grid on the right
+3. **Edit Values**: Double-click a value or use the "Edit Value" button (coming soon)
+4. **Add/Delete**: Use toolbar buttons to add or remove keys and values
+
+Environment variables can be viewed and edited at:
+- System: `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment`
+- User: `HKEY_CURRENT_USER\Environment`
 
 ### Reading Environment Variables
 
