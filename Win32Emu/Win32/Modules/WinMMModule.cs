@@ -1102,15 +1102,31 @@ namespace Win32Emu.Win32.Modules
 					_cpu.SingleStep(_memory);
 					steps++;
 
-					// Periodically yield for cooperative multitasking
+					// Periodically check if we should yield to other threads
 					if (steps % YIELD_INTERVAL == 0)
 					{
+						var scheduler = _env.ThreadScheduler;
+						if (scheduler != null)
+						{
+							scheduler.ProcessWaitTimeouts();
+							if (scheduler.ShouldContextSwitch())
+							{
+								_logger.LogDebug("[WinMM] CallTimeProcAsync: Cooperative yield at {Steps} steps", steps);
+							}
+						}
+
 						await Task.Yield();
 					}
 				}
 			}
 			catch (Exception ex)
 			{
+				// Rethrow critical exceptions that should not be caught
+				if (ex is OutOfMemoryException || ex is StackOverflowException)
+				{
+					throw;
+				}
+
 				_logger.LogError(ex, "[WinMM] CallTimeProcAsync: Exception during execution: {ExMessage}", ex.Message);
 				executionSuccessful = false;
 			}

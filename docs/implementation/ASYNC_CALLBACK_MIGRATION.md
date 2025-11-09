@@ -338,6 +338,5 @@ The following stub APIs now have async callback methods prepared and ready for f
 - `timeSetEvent` → `CallTimeProcAsync` - Ready for multimedia timer callbacks
 
 When these APIs are enhanced from stubs to full implementations, the async callback infrastructure is already in place following the proven pattern.
-- Pass all existing tests
 
 The pattern is ready to be applied to additional modules as their callback functionality is implemented from stub to full functionality.

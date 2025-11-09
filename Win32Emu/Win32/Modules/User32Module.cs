@@ -6014,18 +6014,42 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				// Execute one instruction
-				_cpu.SingleStep(_memory);
+				var step = _cpu.SingleStep(_memory);
+
+				// Handle COM vtable and import calls
+				if (HandleComAndImportCalls(step, _cpu, _memory, "CallTimerProcAsync", out var stepDesc, out var shouldBreak) && shouldBreak)
+				{
+					executionSuccessful = false;
+					break;
+				}
+
 				steps++;
 
-				// Periodically yield for cooperative multitasking
+				// Periodically check if we should yield to other threads
 				if (steps % YIELD_INTERVAL == 0)
 				{
+					var scheduler = _env.ThreadScheduler;
+					if (scheduler != null)
+					{
+						scheduler.ProcessWaitTimeouts();
+						if (scheduler.ShouldContextSwitch())
+						{
+							_logger.LogDebug("[User32] CallTimerProcAsync: Cooperative yield at {Steps} steps", steps);
+						}
+					}
+
 					await Task.Yield();
 				}
 			}
 		}
 		catch (Exception ex)
 		{
+			// Rethrow critical exceptions that should not be caught
+			if (ex is OutOfMemoryException || ex is StackOverflowException)
+			{
+				throw;
+			}
+
 			_logger.LogError(ex, "[User32] CallTimerProcAsync: Exception during execution: {ExMessage}", ex.Message);
 			executionSuccessful = false;
 		}
@@ -6168,18 +6192,42 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				// Execute one instruction
-				_cpu.SingleStep(_memory);
+				var step = _cpu.SingleStep(_memory);
+
+				// Handle COM vtable and import calls
+				if (HandleComAndImportCalls(step, _cpu, _memory, "CallEnumWindowsProcAsync", out var stepDesc, out var shouldBreak) && shouldBreak)
+				{
+					executionSuccessful = false;
+					break;
+				}
+
 				steps++;
 
-				// Periodically yield for cooperative multitasking
+				// Periodically check if we should yield to other threads
 				if (steps % YIELD_INTERVAL == 0)
 				{
+					var scheduler = _env.ThreadScheduler;
+					if (scheduler != null)
+					{
+						scheduler.ProcessWaitTimeouts();
+						if (scheduler.ShouldContextSwitch())
+						{
+							_logger.LogDebug("[User32] CallEnumWindowsProcAsync: Cooperative yield at {Steps} steps", steps);
+						}
+					}
+
 					await Task.Yield();
 				}
 			}
 		}
 		catch (Exception ex)
 		{
+			// Rethrow critical exceptions that should not be caught
+			if (ex is OutOfMemoryException || ex is StackOverflowException)
+			{
+				throw;
+			}
+
 			_logger.LogError(ex, "[User32] CallEnumWindowsProcAsync: Exception during execution: {ExMessage}", ex.Message);
 			executionSuccessful = false;
 		}
@@ -6332,18 +6380,42 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				// Execute one instruction
-				_cpu.SingleStep(_memory);
+				var step = _cpu.SingleStep(_memory);
+
+				// Handle COM vtable and import calls
+				if (HandleComAndImportCalls(step, _cpu, _memory, "CallHookProcAsync", out var stepDesc, out var shouldBreak) && shouldBreak)
+				{
+					executionSuccessful = false;
+					break;
+				}
+
 				steps++;
 
-				// Periodically yield for cooperative multitasking
+				// Periodically check if we should yield to other threads
 				if (steps % YIELD_INTERVAL == 0)
 				{
+					var scheduler = _env.ThreadScheduler;
+					if (scheduler != null)
+					{
+						scheduler.ProcessWaitTimeouts();
+						if (scheduler.ShouldContextSwitch())
+						{
+							_logger.LogDebug("[User32] CallHookProcAsync: Cooperative yield at {Steps} steps", steps);
+						}
+					}
+
 					await Task.Yield();
 				}
 			}
 		}
 		catch (Exception ex)
 		{
+			// Rethrow critical exceptions that should not be caught
+			if (ex is OutOfMemoryException || ex is StackOverflowException)
+			{
+				throw;
+			}
+
 			_logger.LogError(ex, "[User32] CallHookProcAsync: Exception during execution: {ExMessage}", ex.Message);
 			executionSuccessful = false;
 		}
