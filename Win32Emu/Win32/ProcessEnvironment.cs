@@ -220,10 +220,34 @@ public class ProcessEnvironment
 	/// </summary>
 	private void LoadEnvironmentVariablesFromKey(uint keyHandle)
 	{
-		// Note: DiscUtils.Registry doesn't provide easy enumeration API
-		// We'll rely on the default values set during registry initialization
-		// In a full implementation, we would enumerate all values in the key
 		_logger.LogDebug("[ProcessEnv] Loading environment variables from key handle 0x{KeyHandle:X8}", keyHandle);
+
+		if (RegistryHive == null)
+		{
+			_logger.LogWarning("[ProcessEnv] Cannot load environment variables: registry hive is null");
+			return;
+		}
+
+		try
+		{
+			var valueNames = RegistryHive.EnumerateValueNames(keyHandle);
+			foreach (var valueName in valueNames)
+			{
+				if (RegistryHive.QueryValue(keyHandle, valueName, out var value, out _))
+				{
+					var stringValue = value?.ToString() ?? string.Empty;
+					if (!string.IsNullOrEmpty(stringValue))
+					{
+						_environmentVariables[valueName] = stringValue;
+						_logger.LogDebug("[ProcessEnv] Loaded environment variable: {Name}={Value}", valueName, stringValue);
+					}
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[ProcessEnv] Failed to load environment variables from registry key");
+		}
 	}
 	
 	/// <summary>

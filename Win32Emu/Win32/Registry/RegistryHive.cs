@@ -470,34 +470,40 @@ public class RegistryHive : IDisposable
 		// Handle predefined keys
 		if (fullPath.StartsWith("HKEY_LOCAL_MACHINE\\SYSTEM", StringComparison.OrdinalIgnoreCase))
 		{
-			var subPath = fullPath.Substring("HKEY_LOCAL_MACHINE\\SYSTEM".Length).TrimStart('\\');
-			return ("HKEY_LOCAL_MACHINE\\SYSTEM", subPath);
+			const string prefix = "HKEY_LOCAL_MACHINE\\SYSTEM";
+			var subPath = fullPath[prefix.Length..].TrimStart('\\');
+			return (prefix, subPath);
 		}
 		else if (fullPath.StartsWith("HKEY_LOCAL_MACHINE\\SOFTWARE", StringComparison.OrdinalIgnoreCase))
 		{
-			var subPath = fullPath.Substring("HKEY_LOCAL_MACHINE\\SOFTWARE".Length).TrimStart('\\');
-			return ("HKEY_LOCAL_MACHINE\\SOFTWARE", subPath);
+			const string prefix = "HKEY_LOCAL_MACHINE\\SOFTWARE";
+			var subPath = fullPath[prefix.Length..].TrimStart('\\');
+			return (prefix, subPath);
 		}
 		else if (fullPath.StartsWith("HKEY_LOCAL_MACHINE", StringComparison.OrdinalIgnoreCase))
 		{
 			// Default to SYSTEM for other HKEY_LOCAL_MACHINE paths
-			var subPath = fullPath.Substring("HKEY_LOCAL_MACHINE".Length).TrimStart('\\');
+			const string prefix = "HKEY_LOCAL_MACHINE";
+			var subPath = fullPath[prefix.Length..].TrimStart('\\');
 			return ("HKEY_LOCAL_MACHINE\\SYSTEM", subPath);
 		}
 		else if (fullPath.StartsWith("HKEY_CURRENT_USER", StringComparison.OrdinalIgnoreCase))
 		{
-			var subPath = fullPath.Substring("HKEY_CURRENT_USER".Length).TrimStart('\\');
-			return ("HKEY_CURRENT_USER", subPath);
+			const string prefix = "HKEY_CURRENT_USER";
+			var subPath = fullPath[prefix.Length..].TrimStart('\\');
+			return (prefix, subPath);
 		}
 		else if (fullPath.StartsWith("HKEY_CLASSES_ROOT", StringComparison.OrdinalIgnoreCase))
 		{
 			// HKEY_CLASSES_ROOT is typically merged view of HKLM\Software\Classes and HKCU\Software\Classes
-			var subPath = fullPath.Substring("HKEY_CLASSES_ROOT".Length).TrimStart('\\');
+			const string prefix = "HKEY_CLASSES_ROOT";
+			var subPath = fullPath[prefix.Length..].TrimStart('\\');
 			return ("HKEY_LOCAL_MACHINE\\SOFTWARE", $"Classes\\{subPath}");
 		}
 		else if (fullPath.StartsWith("HKEY_USERS", StringComparison.OrdinalIgnoreCase))
 		{
-			var subPath = fullPath.Substring("HKEY_USERS".Length).TrimStart('\\');
+			const string prefix = "HKEY_USERS";
+			var subPath = fullPath[prefix.Length..].TrimStart('\\');
 			return ("HKEY_CURRENT_USER", subPath);
 		}
 		

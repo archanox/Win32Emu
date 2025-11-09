@@ -26,6 +26,12 @@ public class Advapi32Module : IWin32ModuleUnsafe
 
 	public string Name => "ADVAPI32.DLL";
 
+	// Registry data type constants
+	private const uint REG_SZ = 1;          // String
+	private const uint REG_EXPAND_SZ = 2;   // Expandable string  
+	private const uint REG_BINARY = 3;      // Binary data
+	private const uint REG_DWORD = 4;       // 32-bit number
+
 	private uint _nextServiceHandle = 0xB0000000;
 	private readonly Dictionary<uint, ServiceData> _services = new();
 	private uint _nextSidHandle = 0xB1000000;
@@ -255,11 +261,6 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		}
 
 		// Determine the data type and size
-		const uint REG_SZ = 1;          // String
-		const uint REG_EXPAND_SZ = 2;   // Expandable string  
-		const uint REG_BINARY = 3;      // Binary data
-		const uint REG_DWORD = 4;       // 32-bit number
-		
 		uint dataType;
 		byte[] dataBytes;
 		
@@ -462,10 +463,6 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			
 			// Convert data based on type
 			object value;
-			const uint REG_SZ = 1;          // String
-			const uint REG_EXPAND_SZ = 2;   // Expandable string
-			const uint REG_BINARY = 3;      // Binary data
-			const uint REG_DWORD = 4;       // 32-bit number
 			
 			switch (dwType)
 			{
