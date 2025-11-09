@@ -3,9 +3,34 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using System.Runtime.InteropServices;
 
 namespace Win32Emu.Win32.Modules
 {
+	/// <summary>
+	/// Glide vertex structure matching the Win32 GrVertex layout
+	/// </summary>
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct GrVertex
+	{
+		public float x, y, z;
+		public float r, g, b;
+		public float ooz;
+		public float a;
+		public float oow;
+		// Note: TMU vertex data would follow but we'll handle that separately
+	}
+	
+	/// <summary>
+	/// Triangle data for batch rendering
+	/// </summary>
+	public struct Triangle
+	{
+		public GrVertex v0, v1, v2;
+		public uint TextureId;
+		public bool HasTexture;
+	}
+	
 	public class Glide2XModule : IWin32ModuleUnsafe
 	{
 		private readonly ProcessEnvironment _env;
@@ -55,6 +80,30 @@ namespace Win32Emu.Win32.Modules
 		// Depth buffer state
 		private uint _depthBufferFunction;
 		private uint _depthBufferMode;
+		
+		// Triangle batch rendering
+		private readonly List<Triangle> _triangleBatch = new();
+		private const int MaxBatchSize = 1000;
+		
+		// Vertex reading helper
+		private GrVertex ReadVertex(VirtualMemory memory, uint address)
+		{
+			Span<byte> data = stackalloc byte[36]; // 9 floats * 4 bytes
+			memory.ReadBytes(address, data);
+			var vertex = new GrVertex
+			{
+				x = BitConverter.ToSingle(data.Slice(0, 4)),
+				y = BitConverter.ToSingle(data.Slice(4, 4)),
+				z = BitConverter.ToSingle(data.Slice(8, 4)),
+				r = BitConverter.ToSingle(data.Slice(12, 4)),
+				g = BitConverter.ToSingle(data.Slice(16, 4)),
+				b = BitConverter.ToSingle(data.Slice(20, 4)),
+				ooz = BitConverter.ToSingle(data.Slice(24, 4)),
+				a = BitConverter.ToSingle(data.Slice(28, 4)),
+				oow = BitConverter.ToSingle(data.Slice(32, 4))
+			};
+			return vertex;
+		}
 
 		public Glide2XModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -257,9 +306,24 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "_GUDRAWTRIANGLEWITHCLIP@12": // _guDrawTriangleWithClip@12
-					_logger.LogInformation("[Glide2x] guDrawTriangleWithClip(0x{UInt32:X8}, 0x{U:X8}, 0x{UInt33:X8})", a.UInt32(0), a.UInt32(1), a.UInt32(2));
-					returnValue = guDrawTriangleWithClip();
-					return true;
+					{
+						uint ptrA = a.UInt32(0);
+						uint ptrB = a.UInt32(1);
+						uint ptrC = a.UInt32(2);
+						_logger.LogInformation("[Glide2x] guDrawTriangleWithClip(0x{PtrA:X8}, 0x{PtrB:X8}, 0x{PtrC:X8})", ptrA, ptrB, ptrC);
+						returnValue = guDrawTriangleWithClip(memory, ptrA, ptrB, ptrC);
+						return true;
+					}
+				
+				case "_GRDRAWTRIANGLE@12":
+					{
+						uint ptrA = a.UInt32(0);
+						uint ptrB = a.UInt32(1);
+						uint ptrC = a.UInt32(2);
+						_logger.LogInformation("[Glide2x] grDrawTriangle(0x{PtrA:X8}, 0x{PtrB:X8}, 0x{PtrC:X8})", ptrA, ptrB, ptrC);
+						returnValue = grDrawTriangle(memory, ptrA, ptrB, ptrC);
+						return true;
+					}
 
 				default:
 					_logger.LogInformation("[Glide2x] Unimplemented export: {Export}", export);
@@ -414,6 +478,9 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogWarning("[GLIDE2x] grBufferSwap: Window not open or no frame buffer");
 				return 0;
 			}
+			
+			// Flush any pending triangles before swapping
+			FlushTriangleBatch();
 			
 			// Update the display with the frame buffer
 			_renderingBackend.UpdateFrameBuffer(_frameBuffer, _width * 4);
@@ -606,11 +673,46 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(36, entryPoint: 0x00002FF0, Version = "4.90.0.3000", ExportName = "_grDrawTriangle@12")]
-		public uint grDrawTriangle()
+		public uint grDrawTriangle(VirtualMemory memory, uint ptrA, uint ptrB, uint ptrC)
 		{
-			_logger.LogDebug("[GLIDE2x] grDrawTriangle called");
-			// Draw a triangle (non-antialiased)
-			// Parameters: pointers to 3 GrVertex structures
+			_logger.LogDebug("[GLIDE2x] grDrawTriangle: vertices at 0x{PtrA:X8}, 0x{PtrB:X8}, 0x{PtrC:X8}", ptrA, ptrB, ptrC);
+			
+			if (!_windowOpen || _frameBuffer == null)
+			{
+				_logger.LogWarning("[GLIDE2x] grDrawTriangle: Window not open");
+				return 0;
+			}
+			
+			try
+			{
+				// Read vertices from memory
+				var v0 = ReadVertex(memory, ptrA);
+				var v1 = ReadVertex(memory, ptrB);
+				var v2 = ReadVertex(memory, ptrC);
+				
+				// Add to batch
+				var triangle = new Triangle
+				{
+					v0 = v0,
+					v1 = v1,
+					v2 = v2,
+					TextureId = _currentTextureTMU0,
+					HasTexture = false // TODO: Implement texture mapping
+				};
+				
+				_triangleBatch.Add(triangle);
+				
+				// Flush if batch is full or rendering to front buffer
+				if (_triangleBatch.Count >= MaxBatchSize || _renderBuffer == 0)
+				{
+					FlushTriangleBatch();
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[GLIDE2x] Error in grDrawTriangle");
+			}
+			
 			return 0; // Success (void function)
 		}
 
@@ -1303,11 +1405,11 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(105, entryPoint: 0x00001500, Version = "4.90.0.3000", ExportName = "_guDrawTriangleWithClip@12")]
-		public uint guDrawTriangleWithClip()
+		public uint guDrawTriangleWithClip(VirtualMemory memory, uint ptrA, uint ptrB, uint ptrC)
 		{
-			_logger.LogDebug("[GLIDE2x] guDrawTriangleWithClip called");
-			// Draw a triangle with clipping (utility function)
-			return 0; // Success (void function)
+			_logger.LogDebug("[GLIDE2x] guDrawTriangleWithClip: vertices at 0x{PtrA:X8}, 0x{PtrB:X8}, 0x{PtrC:X8}", ptrA, ptrB, ptrC);
+			// For now, just forward to grDrawTriangle (clipping would be done in a full implementation)
+			return grDrawTriangle(memory, ptrA, ptrB, ptrC);
 		}
 
 		[DllModuleExport(106, entryPoint: 0x00006400, Version = "4.90.0.3000", ExportName = "_guEncodeRLE16@16", IsStub = true)]
@@ -1468,6 +1570,168 @@ namespace Win32Emu.Win32.Modules
 			// Assuming TMU0 for simplicity
 			_currentTextureTMU0 = mmid;
 			return 0; // Success (void function)
+		}
+		
+		/// <summary>
+		/// Flush all batched triangles to the rendering backend
+		/// </summary>
+		private void FlushTriangleBatch()
+		{
+			if (_triangleBatch.Count == 0 || _renderingBackend == null || !_renderingBackend.IsInitialized)
+			{
+				return;
+			}
+			
+			_logger.LogDebug("[GLIDE2x] Flushing {Count} triangles to rendering backend", _triangleBatch.Count);
+			
+			// Render each triangle to the frame buffer
+			foreach (var tri in _triangleBatch)
+			{
+				RenderTriangle(tri);
+			}
+			
+			// Update the display
+			if (_frameBuffer != null)
+			{
+				_renderingBackend.UpdateFrameBuffer(_frameBuffer, _width * 4);
+			}
+			
+			_triangleBatch.Clear();
+		}
+		
+		/// <summary>
+		/// Render a single triangle to the frame buffer using scan-line rasterization
+		/// </summary>
+		private void RenderTriangle(Triangle tri)
+		{
+			if (_frameBuffer == null)
+			{
+				return;
+			}
+			
+			// Sort vertices by Y coordinate (v0.y <= v1.y <= v2.y)
+			var v0 = tri.v0;
+			var v1 = tri.v1;
+			var v2 = tri.v2;
+			
+			if (v0.y > v1.y) { var tmp = v0; v0 = v1; v1 = tmp; }
+			if (v0.y > v2.y) { var tmp = v0; v0 = v2; v2 = tmp; }
+			if (v1.y > v2.y) { var tmp = v1; v1 = v2; v2 = tmp; }
+			
+			// Simple flat-bottom and flat-top triangle rasterization
+			RasterizeTriangle(v0, v1, v2);
+		}
+		
+		/// <summary>
+		/// Rasterize a triangle using scan-line conversion
+		/// </summary>
+		private void RasterizeTriangle(GrVertex v0, GrVertex v1, GrVertex v2)
+		{
+			if (_frameBuffer == null)
+			{
+				return;
+			}
+			
+			// Skip degenerate triangles
+			float totalHeight = v2.y - v0.y;
+			if (Math.Abs(totalHeight) < 0.5f)
+			{
+				return;
+			}
+			
+			// Render flat-bottom triangle (v0 to v1/v2)
+			float segmentHeight = v1.y - v0.y + 1;
+			if (segmentHeight > 0)
+			{
+				for (int y = (int)v0.y; y <= (int)v1.y && y < _height; y++)
+				{
+					if (y < 0) continue;
+					
+					float alpha = (y - v0.y) / totalHeight;
+					float beta = (y - v0.y) / segmentHeight;
+					
+					// Interpolate X coordinates for left and right edges
+					int xA = (int)(v0.x + (v2.x - v0.x) * alpha);
+					int xB = (int)(v0.x + (v1.x - v0.x) * beta);
+					
+					if (xA > xB) { var tmp = xA; xA = xB; xB = tmp; }
+					
+					// Interpolate colors
+					byte rA = (byte)Math.Clamp(v0.r + (v2.r - v0.r) * alpha, 0, 255);
+					byte gA = (byte)Math.Clamp(v0.g + (v2.g - v0.g) * alpha, 0, 255);
+					byte bA = (byte)Math.Clamp(v0.b + (v2.b - v0.b) * alpha, 0, 255);
+					byte aA = (byte)Math.Clamp(v0.a + (v2.a - v0.a) * alpha, 0, 255);
+					
+					// Draw horizontal span
+					DrawHorizontalSpan(y, xA, xB, rA, gA, bA, aA);
+				}
+			}
+			
+			// Render flat-top triangle (v1 to v2)
+			segmentHeight = v2.y - v1.y + 1;
+			if (segmentHeight > 0)
+			{
+				for (int y = (int)v1.y; y <= (int)v2.y && y < _height; y++)
+				{
+					if (y < 0) continue;
+					
+					float alpha = (y - v0.y) / totalHeight;
+					float beta = (y - v1.y) / segmentHeight;
+					
+					int xA = (int)(v0.x + (v2.x - v0.x) * alpha);
+					int xB = (int)(v1.x + (v2.x - v1.x) * beta);
+					
+					if (xA > xB) { var tmp = xA; xA = xB; xB = tmp; }
+					
+					byte rA = (byte)Math.Clamp(v0.r + (v2.r - v0.r) * alpha, 0, 255);
+					byte gA = (byte)Math.Clamp(v0.g + (v2.g - v0.g) * alpha, 0, 255);
+					byte bA = (byte)Math.Clamp(v0.b + (v2.b - v0.b) * alpha, 0, 255);
+					byte aA = (byte)Math.Clamp(v0.a + (v2.a - v0.a) * alpha, 0, 255);
+					
+					DrawHorizontalSpan(y, xA, xB, rA, gA, bA, aA);
+				}
+			}
+		}
+		
+		/// <summary>
+		/// Draw a horizontal span of pixels
+		/// </summary>
+		private void DrawHorizontalSpan(int y, int xStart, int xEnd, byte r, byte g, byte b, byte a)
+		{
+			if (_frameBuffer == null || y < 0 || y >= _height)
+			{
+				return;
+			}
+			
+			xStart = Math.Max(0, Math.Min(xStart, _width - 1));
+			xEnd = Math.Max(0, Math.Min(xEnd, _width - 1));
+			
+			for (int x = xStart; x <= xEnd; x++)
+			{
+				int offset = (y * _width + x) * 4;
+				
+				if (offset >= 0 && offset + 3 < _frameBuffer.Length)
+				{
+					// Simple alpha blending if alpha < 255
+					if (a < 255 && _frameBuffer[offset + 3] > 0)
+					{
+						float srcAlpha = a / 255.0f;
+						float dstAlpha = 1.0f - srcAlpha;
+						
+						_frameBuffer[offset + 0] = (byte)(r * srcAlpha + _frameBuffer[offset + 0] * dstAlpha);
+						_frameBuffer[offset + 1] = (byte)(g * srcAlpha + _frameBuffer[offset + 1] * dstAlpha);
+						_frameBuffer[offset + 2] = (byte)(b * srcAlpha + _frameBuffer[offset + 2] * dstAlpha);
+						_frameBuffer[offset + 3] = (byte)Math.Max(a, _frameBuffer[offset + 3]);
+					}
+					else
+					{
+						_frameBuffer[offset + 0] = r;
+						_frameBuffer[offset + 1] = g;
+						_frameBuffer[offset + 2] = b;
+						_frameBuffer[offset + 3] = a;
+					}
+				}
+			}
 		}
 	}
 }
