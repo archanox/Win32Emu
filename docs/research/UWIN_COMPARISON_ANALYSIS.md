@@ -467,6 +467,11 @@ public class AotCompiler
     private readonly ILogger _logger;
     private readonly StaticAnalyzer _analyzer;
     
+    public AotCompiler(ILogger logger, StaticAnalyzer analyzer)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _analyzer = analyzer ?? throw new ArgumentNullException(nameof(analyzer));
+    }
     public async Task<Assembly> CompileExecutableAsync(string exePath)
     {
         // 1. Load PE executable
