@@ -10,10 +10,11 @@ namespace Win32Emu.Gui.Services;
 /// Manages per-game registry hives that are stored within the virtual disk.
 /// Registry hives live at C:\Windows\System32\config\ inside the virtual disk.
 /// </summary>
-public class GameRegistryService
+public class GameRegistryService : IDisposable
 {
 	private readonly ILogger _logger;
 	private readonly Dictionary<string, (DiskVirtualFileSystem vfs, Win32EmuRegistryHive hive)> _loadedHives = new();
+	private bool _disposed;
 
 	public GameRegistryService(ILogger? logger = null)
 	{
@@ -51,9 +52,24 @@ public class GameRegistryService
 			
 			return hive;
 		}
+		catch (FileNotFoundException)
+		{
+			_logger.LogError("[GameRegistry] Virtual disk file not found: {Path}", virtualDiskPath);
+			throw;
+		}
+		catch (UnauthorizedAccessException ex)
+		{
+			_logger.LogError(ex, "[GameRegistry] Access denied to virtual disk: {Path}", virtualDiskPath);
+			throw;
+		}
+		catch (IOException ex)
+		{
+			_logger.LogError(ex, "[GameRegistry] I/O error accessing virtual disk: {Path}", virtualDiskPath);
+			throw;
+		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "[GameRegistry] Failed to load registry from virtual disk: {Path}", virtualDiskPath);
+			_logger.LogError(ex, "[GameRegistry] Unexpected error loading registry from virtual disk: {Path}", virtualDiskPath);
 			throw;
 		}
 	}
@@ -102,9 +118,17 @@ public class GameRegistryService
 				hive.CloseKey(systemEnvHandle);
 			}
 		}
+		catch (KeyNotFoundException ex)
+		{
+			_logger.LogWarning(ex, "[GameRegistry] Registry key not found while getting environment variables");
+		}
+		catch (InvalidOperationException ex)
+		{
+			_logger.LogError(ex, "[GameRegistry] Invalid operation while getting environment variables");
+		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "[GameRegistry] Failed to get environment variables");
+			_logger.LogError(ex, "[GameRegistry] Unexpected error getting environment variables");
 		}
 
 		return result;
@@ -139,9 +163,25 @@ public class GameRegistryService
 				_logger.LogInformation("[GameRegistry] Set {Count} environment variables in virtual disk", environmentVariables.Count);
 			}
 		}
+		catch (KeyNotFoundException ex)
+		{
+			_logger.LogWarning(ex, "[GameRegistry] Registry key not found while setting environment variables");
+			throw;
+		}
+		catch (InvalidOperationException ex)
+		{
+			_logger.LogError(ex, "[GameRegistry] Invalid operation while setting environment variables");
+			throw;
+		}
+		catch (UnauthorizedAccessException ex)
+		{
+			_logger.LogError(ex, "[GameRegistry] Access denied while setting environment variables");
+			throw;
+		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "[GameRegistry] Failed to set environment variables");
+			_logger.LogError(ex, "[GameRegistry] Unexpected error setting environment variables");
+			throw;
 		}
 	}
 
@@ -163,11 +203,40 @@ public class GameRegistryService
 	/// </summary>
 	public void Dispose()
 	{
-		foreach (var (vfs, hive) in _loadedHives.Values)
+		Dispose(true);
+		GC.SuppressFinalize(this);
+	}
+
+	protected virtual void Dispose(bool disposing)
+	{
+		if (_disposed)
+			return;
+
+		if (disposing)
 		{
-			hive.Dispose();
-			vfs.Dispose();
+			foreach (var (vfs, hive) in _loadedHives.Values)
+			{
+				try
+				{
+					hive.Dispose();
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[GameRegistry] Error disposing hive");
+				}
+
+				try
+				{
+					vfs.Dispose();
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[GameRegistry] Error disposing VFS");
+				}
+			}
+			_loadedHives.Clear();
 		}
-		_loadedHives.Clear();
+
+		_disposed = true;
 	}
 }

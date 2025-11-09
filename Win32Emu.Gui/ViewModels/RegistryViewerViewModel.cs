@@ -95,21 +95,21 @@ public partial class RegistryViewerViewModel : ViewModelBase
 		try
 		{
 			var handle = hive.OpenKey(node.FullPath);
-			if (handle != 0)
+			if (handle == 0)
+				return;
+
+			var subKeyNames = hive.EnumerateSubKeyNames(handle);
+			node.Children.Clear();
+			
+			foreach (var subKeyName in subKeyNames.OrderBy(s => s))
 			{
-				var subKeyNames = hive.EnumerateSubKeyNames(handle);
-				node.Children.Clear();
-				
-				foreach (var subKeyName in subKeyNames.OrderBy(s => s))
-				{
-					var childPath = $"{node.FullPath}\\{subKeyName}";
-					var childNode = new RegistryKeyNode(subKeyName, childPath, true);
-					node.Children.Add(childNode);
-				}
-				
-				hive.CloseKey(handle);
-				StatusText = $"Loaded {subKeyNames.Length} subkeys from {node.Name}";
+				var childPath = $"{node.FullPath}\\{subKeyName}";
+				var childNode = new RegistryKeyNode(subKeyName, childPath, true);
+				node.Children.Add(childNode);
 			}
+			
+			hive.CloseKey(handle);
+			StatusText = $"Loaded {subKeyNames.Length} subkeys from {node.Name}";
 		}
 		catch (Exception ex)
 		{
@@ -129,28 +129,28 @@ public partial class RegistryViewerViewModel : ViewModelBase
 		try
 		{
 			var handle = hive.OpenKey(node.FullPath);
-			if (handle != 0)
+			if (handle == 0)
+				return;
+
+			var valueNames = hive.EnumerateValueNames(handle);
+			
+			foreach (var valueName in valueNames.OrderBy(s => s))
 			{
-				var valueNames = hive.EnumerateValueNames(handle);
-				
-				foreach (var valueName in valueNames.OrderBy(s => s))
+				if (hive.QueryValue(handle, valueName, out var value, out var type))
 				{
-					if (hive.QueryValue(handle, valueName, out var value, out var type))
+					var displayValue = FormatValue(value, type);
+					Values.Add(new RegistryValueItem
 					{
-						var displayValue = FormatValue(value, type);
-						Values.Add(new RegistryValueItem
-						{
-							Name = string.IsNullOrEmpty(valueName) ? "(Default)" : valueName,
-							Type = type.ToString(),
-							Value = displayValue,
-							RawValue = value
-						});
-					}
+						Name = string.IsNullOrEmpty(valueName) ? "(Default)" : valueName,
+						Type = type.ToString(),
+						Value = displayValue,
+						RawValue = value
+					});
 				}
-				
-				hive.CloseKey(handle);
-				StatusText = $"Loaded {valueNames.Length} values from {node.FullPath}";
 			}
+			
+			hive.CloseKey(handle);
+			StatusText = $"Loaded {valueNames.Length} values from {node.FullPath}";
 		}
 		catch (Exception ex)
 		{
@@ -166,7 +166,8 @@ public partial class RegistryViewerViewModel : ViewModelBase
 
 		return type switch
 		{
-			RegistryValueType.Dword => $"0x{value:X8} ({value})",
+			RegistryValueType.Dword when value is uint uintVal => $"0x{uintVal:X8} ({uintVal})",
+			RegistryValueType.Dword when value is int intVal => $"0x{intVal:X8} ({intVal})",
 			RegistryValueType.Binary when value is byte[] bytes => 
 				BitConverter.ToString(bytes).Replace("-", " "),
 			_ => value.ToString() ?? "(empty)"

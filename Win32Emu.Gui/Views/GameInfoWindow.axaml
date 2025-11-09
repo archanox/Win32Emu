@@ -151,7 +151,7 @@
                                     Command="{Binding OpenRegistryEditorCommand}"
                                     ToolTip.Tip="Open advanced registry editor for this game"/>
                         </Grid>
-                        <TextBlock Text="Stored in per-game registry (replaces GameSettings.json)"
+                        <TextBlock Text="Stored in per-game registry (separate from GameSettings.json)"
                                  FontSize="11"
                                  Opacity="0.7"
                                  TextWrapping="Wrap"/>
