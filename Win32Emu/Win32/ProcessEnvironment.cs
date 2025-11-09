@@ -127,7 +127,6 @@ public class ProcessEnvironment
 	{
 		VirtualFileSystem = new LayeredVirtualFileSystem(baseDirectory, overlayDirectory, _logger);
 		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with base: {BaseDirectory}", baseDirectory);
-		VirtualizeExecutablePath();
 	}
 
 	/// <summary>
@@ -138,7 +137,6 @@ public class ProcessEnvironment
 	{
 		VirtualFileSystem = new DiskVirtualFileSystem(diskPath, _logger);
 		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with disk: {DiskPath}", diskPath);
-		VirtualizeExecutablePath();
 	}
 
 	/// <summary>
@@ -149,7 +147,6 @@ public class ProcessEnvironment
 	{
 		VirtualFileSystem = vfs;
 		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with custom instance");
-		VirtualizeExecutablePath();
 	}
 	
 	/// <summary>
@@ -196,100 +193,6 @@ public class ProcessEnvironment
 		return report;
 	}
 
-	private void VirtualizeExecutablePath()
-	{
-		// If executable path is already set, virtualize it to Windows-style path
-		if (string.IsNullOrEmpty(ExecutablePath))
-		{
-			return;
-		}
-
-		var virtualizedPath = VirtualFileSystem.ToWindowsPath(ExecutablePath);
-		if (virtualizedPath == ExecutablePath)
-		{
-			return;
-		}
-
-		_logger.LogInformation("[ProcessEnv] Virtualizing executable path: {Original} -> {Virtualized}", 
-			ExecutablePath, virtualizedPath);
-				
-		// Update the executable path and module file name
-		ExecutablePath = virtualizedPath;
-		ModuleFileNamePtr = WriteAnsiString(virtualizedPath + '\0');
-		ModuleFileNameLength = (uint)virtualizedPath.Length;
-		
-		// Update current directory to match the virtualized executable directory
-		var directory = Path.GetDirectoryName(virtualizedPath);
-		if (!string.IsNullOrEmpty(directory))
-		{
-			CurrentDirectory = directory;
-			_logger.LogInformation("[ProcessEnv] Updated current directory to: {CurrentDirectory}", CurrentDirectory);
-		}
-				
-		// Also update command line if it was already set
-		if (CommandLinePtr == 0)
-		{
-			return;
-		}
-
-		// Re-read the old command line to extract args
-		var oldCmdLine = ReadAnsiString(CommandLinePtr);
-		// Parse to extract args (skip the first quoted part which is the exe path)
-		var args = new List<string>();
-		var inQuote = false;
-		var current = new System.Text.StringBuilder();
-		var skipFirst = true;
-					
-		foreach (var ch in oldCmdLine)
-		{
-			switch (ch)
-			{
-				case '"':
-				{
-					inQuote = !inQuote;
-					if (inQuote || !skipFirst)
-					{
-						continue;
-					}
-
-					skipFirst = false;
-					current.Clear();
-					break;
-				}
-				case ' ' when !inQuote:
-				{
-					if (current.Length <= 0 || skipFirst)
-					{
-						continue;
-					}
-
-					args.Add(current.ToString());
-					current.Clear();
-					break;
-				}
-				default:
-				{
-					if (!skipFirst)
-					{
-						current.Append(ch);
-					}
-
-					break;
-				}
-			}
-		}
-					
-		if (current.Length > 0 && !skipFirst)
-		{
-			args.Add(current.ToString());
-		}
-					
-		// Rebuild command line with virtualized path
-		var newCmdLine = args.Count > 0 
-			? $"\"{virtualizedPath}\" {string.Join(" ", args)}"
-			: $"\"{virtualizedPath}\"";
-		CommandLinePtr = WriteAnsiString(newCmdLine + '\0');
-	}
 
 	// Backends for audio and input
 	public IAudioBackend? AudioBackend { get; set; }
@@ -414,19 +317,8 @@ public class ProcessEnvironment
 	{
 		Debug.Assert(exePath != null, nameof(exePath) + " != null");
 		
-		// If VFS is initialized, virtualize the executable path to Windows-style
-		var effectivePath = exePath;
-		if (VirtualFileSystem != null)
-		{
-			effectivePath = VirtualFileSystem.ToWindowsPath(exePath);
-			if (effectivePath != exePath)
-			{
-				_logger.LogInformation("[ProcessEnv] Virtualizing executable path: {Original} -> {Virtualized}", 
-					exePath, effectivePath);
-			}
-		}
 		
-		ExecutablePath = effectivePath;
+		ExecutablePath = exePath;
 		
 		// Set current directory to the directory containing the executable
 		// This ensures relative paths are resolved relative to the executable's location
@@ -435,23 +327,23 @@ public class ProcessEnvironment
 		string? directory = null;
 		
 		// Check if this is a Windows-style path (contains backslashes or forward slashes with drive letter)
-		if (effectivePath.Contains('\\') || effectivePath.Contains('/'))
+		if (exePath.Contains('\\') || exePath.Contains('/'))
 		{
 			// Find the last backslash or forward slash
-			var lastBackslash = effectivePath.LastIndexOf('\\');
-			var lastForwardSlash = effectivePath.LastIndexOf('/');
+			var lastBackslash = exePath.LastIndexOf('\\');
+			var lastForwardSlash = exePath.LastIndexOf('/');
 			var lastSeparator = Math.Max(lastBackslash, lastForwardSlash);
 			
 			if (lastSeparator > 0)
 			{
-				directory = effectivePath.Substring(0, lastSeparator);
+				directory = exePath.Substring(0, lastSeparator);
 			}
 		}
 		
 		// Fallback to Path.GetDirectoryName for native paths
 		if (string.IsNullOrEmpty(directory))
 		{
-			directory = Path.GetDirectoryName(effectivePath);
+			directory = Path.GetDirectoryName(exePath);
 		}
 		
 		if (!string.IsNullOrEmpty(directory))
@@ -461,16 +353,16 @@ public class ProcessEnvironment
 		}
 		else
 		{
-			_logger.LogWarning("[ProcessEnv] Could not determine directory from path: {Path}, using default C:\\", effectivePath);
+			_logger.LogWarning("[ProcessEnv] Could not determine directory from path: {Path}, using default C:\\", exePath);
 		}
 		
 		// Build command line: quoted exe path + space + args (if any)
 		var cmdLine = args.Length > 0 
-			? $"\"{effectivePath}\" {string.Join(" ", args)}"
-			: $"\"{effectivePath}\"";
+			? $"\"{exePath}\" {string.Join(" ", args)}"
+			: $"\"{exePath}\"";
 		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
-		ModuleFileNamePtr = WriteAnsiString(effectivePath + '\0');
-		ModuleFileNameLength = (uint)effectivePath.Length;
+		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
+		ModuleFileNameLength = (uint)exePath.Length;
 
 		// Initialize with some default environment variables
 		InitializeDefaultEnvironmentVariables();
