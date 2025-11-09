@@ -7,12 +7,20 @@ using Win32Emu.Memory;
 
 namespace Win32Emu.Win32.Modules
 {
-	internal class WinMmModule : IWin32ModuleUnsafe
+	internal class WinMmModule : IWin32ModuleAsync
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
+		private ICpu? _cpu;
+		private VirtualMemory? _memory;
+
+		// Constants for async callback execution
+		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
+		private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
+		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
+		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB)
 
 		public WinMmModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -29,6 +37,8 @@ namespace Win32Emu.Win32.Modules
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
+			_cpu = cpu;
+			_memory = memory;
 			returnValue = 0;
 			var a = new StackArgs(cpu, memory);
 
@@ -921,5 +931,198 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[WinMM] JoyConfigChanged(dwFlags=0x{DwFlags:X8})", dwFlags);
 			return 0; // JOYERR_NOERROR
 		}
+
+		public async Task<(bool success, uint returnValue)> TryInvokeAsync(
+			string export,
+			ICpu cpu,
+			VirtualMemory memory,
+			CancellationToken cancellationToken = default)
+		{
+			_cpu = cpu;
+			_memory = memory;
+
+			// For now, most APIs use synchronous implementation
+			// TODO: When timer callbacks are fully implemented, use async version
+			if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
+			{
+				return (true, syncReturnValue);
+			}
+
+			// No async work performed; return failure immediately
+			return (false, 0);
+		}
+
+		#region Async Callback Methods
+
+		/// <summary>
+		/// Async version of timer event callback execution that eliminates the need for STACK_SAFETY_MARGIN.
+		/// Uses async/await pattern for clean separation of host (C#) and guest (x86) execution stacks.
+		/// </summary>
+		/// <param name="timeProc">Address of the timer callback in emulated memory</param>
+		/// <param name="uTimerID">Timer identifier</param>
+		/// <param name="uMsg">Reserved (not used)</param>
+		/// <param name="dwUser">User-supplied data</param>
+		/// <param name="dw1">Reserved (not used)</param>
+		/// <param name="dw2">Reserved (not used)</param>
+		/// <param name="cancellationToken">Optional cancellation token</param>
+		/// <returns>Task that completes when callback execution finishes</returns>
+		private async Task CallTimeProcAsync(
+			uint timeProc,
+			uint uTimerID,
+			uint uMsg,
+			uint dwUser,
+			uint dw1,
+			uint dw2,
+			CancellationToken cancellationToken = default)
+		{
+			if (_cpu == null || _memory == null)
+			{
+				_logger.LogWarning("[WinMM] CallTimeProcAsync: CPU or Memory not available");
+				return;
+			}
+
+			_logger.LogInformation("[WinMM] CallTimeProcAsync: Calling 0x{TimeProc:X8} for timer {TimerID}", timeProc, uTimerID);
+
+			// Validate callback address
+			if (timeProc == 0)
+			{
+				_logger.LogWarning("[WinMM] CallTimeProcAsync: Timer callback address is NULL (0x00000000), aborting");
+				return;
+			}
+
+			// Save current CPU state
+			var savedEip = _cpu.GetEip();
+			var savedEsp = _cpu.GetRegister("ESP");
+			var savedEbp = _cpu.GetRegister("EBP");
+
+			// Define return address marker
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+			// Set up stack for stdcall convention (parameters pushed right-to-left)
+			// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
+			var esp = savedEsp;
+
+			// Push return address first
+			esp -= 4;
+			_memory.Write32(esp, RETURN_ADDRESS);
+
+			// Push parameters (right-to-left for stdcall)
+			// void CALLBACK TimeProc(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
+			esp -= 4;
+			_memory.Write32(esp, dw2);
+
+			esp -= 4;
+			_memory.Write32(esp, dw1);
+
+			esp -= 4;
+			_memory.Write32(esp, dwUser);
+
+			esp -= 4;
+			_memory.Write32(esp, uMsg);
+
+			esp -= 4;
+			_memory.Write32(esp, uTimerID);
+
+			// Update CPU registers
+			_cpu.SetRegister("ESP", esp);
+			_cpu.SetEip(timeProc);
+
+			// Execute until we hit the return address with cancellation support
+			const int YIELD_INTERVAL = 10000;
+			var steps = 0;
+			var executionSuccessful = true;
+			var lastCheckEip = _cpu.GetEip();
+			var stuckCounter = 0;
+
+			try
+			{
+				while (true)
+				{
+					// Check for cancellation at regular intervals
+					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+					{
+						if (cancellationToken.IsCancellationRequested)
+						{
+							_logger.LogInformation("[WinMM] CallTimeProcAsync: Cancellation requested at step {Steps}", steps);
+							executionSuccessful = false;
+							break;
+						}
+
+						// Yield to allow other async operations to proceed
+						await Task.Yield();
+					}
+
+					var eip = _cpu.GetEip();
+
+					// Check if we've returned to our marker address
+					if (eip == RETURN_ADDRESS)
+					{
+						break;
+					}
+
+					// Check for invalid EIP (NULL pointer execution)
+					if (eip == 0x00000000)
+					{
+						_logger.LogWarning("[WinMM] CallTimeProcAsync: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+						executionSuccessful = false;
+						break;
+					}
+
+					// Check for other invalid low addresses
+					if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
+					{
+						_logger.LogError("[WinMM] CallTimeProcAsync: Execution jumped to invalid low address 0x{Eip:X8}", eip);
+						executionSuccessful = false;
+						break;
+					}
+
+					// Detect potential infinite loops
+					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+					{
+						var currentEip = _cpu.GetEip();
+						if (currentEip == lastCheckEip)
+						{
+							stuckCounter++;
+							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+							{
+								_logger.LogWarning("[WinMM] CallTimeProcAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
+									currentEip, stuckCounter);
+								executionSuccessful = false;
+								break;
+							}
+						}
+						else
+						{
+							stuckCounter = 0;
+							lastCheckEip = currentEip;
+						}
+					}
+
+					// Execute one instruction
+					_cpu.SingleStep(_memory);
+					steps++;
+
+					// Periodically yield for cooperative multitasking
+					if (steps % YIELD_INTERVAL == 0)
+					{
+						await Task.Yield();
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[WinMM] CallTimeProcAsync: Exception during execution: {ExMessage}", ex.Message);
+				executionSuccessful = false;
+			}
+
+			// Restore CPU state
+			_cpu.SetEip(savedEip);
+			_cpu.SetRegister("ESP", savedEsp);
+			_cpu.SetRegister("EBP", savedEbp);
+
+			_logger.LogInformation("[WinMM] CallTimeProcAsync: Completed {Status}", executionSuccessful ? "successfully" : "with errors");
+		}
+
+		#endregion
 	}
 }
