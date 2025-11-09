@@ -5871,5 +5871,496 @@ namespace Win32Emu.Win32.Modules
 			// Return previous value (stub: return 0)
 			return 0;
 		}
+
+	#region Async Callback Methods
+
+	/// <summary>
+	/// Async version of timer callback execution that eliminates the need for STACK_SAFETY_MARGIN.
+	/// Uses async/await pattern for clean separation of host (C#) and guest (x86) execution stacks.
+	/// </summary>
+	/// <param name="timerProc">Address of the timer procedure in emulated memory</param>
+	/// <param name="hWnd">Window handle</param>
+	/// <param name="uMsg">Timer message (WM_TIMER)</param>
+	/// <param name="idEvent">Timer identifier</param>
+	/// <param name="dwTime">Current system time</param>
+	/// <param name="cancellationToken">Optional cancellation token</param>
+	/// <returns>Task that completes when callback execution finishes</returns>
+	private async Task CallTimerProcAsync(
+		uint timerProc,
+		uint hWnd,
+		uint uMsg,
+		uint idEvent,
+		uint dwTime,
+		CancellationToken cancellationToken = default)
+	{
+		if (_cpu == null || _memory == null)
+		{
+			_logger.LogWarning("[User32] CallTimerProcAsync: CPU or Memory not available");
+			return;
+		}
+
+		_logger.LogInformation("[User32] CallTimerProcAsync: Calling 0x{TimerProc:X8} for timer {IdEvent}", timerProc, idEvent);
+
+		// Validate callback address
+		if (timerProc == 0)
+		{
+			_logger.LogWarning("[User32] CallTimerProcAsync: Timer procedure address is NULL (0x00000000), aborting");
+			return;
+		}
+
+		// Save current CPU state
+		var savedEip = _cpu.GetEip();
+		var savedEsp = _cpu.GetRegister("ESP");
+		var savedEbp = _cpu.GetRegister("EBP");
+
+		// Define return address marker
+		const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+		// Set up stack for stdcall convention (parameters pushed right-to-left)
+		// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
+		var esp = savedEsp;
+
+		// Push return address first
+		esp -= 4;
+		_memory.Write32(esp, RETURN_ADDRESS);
+
+		// Push parameters (right-to-left for stdcall)
+		// VOID CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
+		esp -= 4;
+		_memory.Write32(esp, dwTime);
+
+		esp -= 4;
+		_memory.Write32(esp, idEvent);
+
+		esp -= 4;
+		_memory.Write32(esp, uMsg);
+
+		esp -= 4;
+		_memory.Write32(esp, hWnd);
+
+		// Update CPU registers
+		_cpu.SetRegister("ESP", esp);
+		_cpu.SetEip(timerProc);
+
+		// Execute until we hit the return address with cancellation support
+		const int YIELD_INTERVAL = 10000;
+		var steps = 0;
+		var executionSuccessful = true;
+		var lastCheckEip = _cpu.GetEip();
+		var stuckCounter = 0;
+
+		try
+		{
+			while (true)
+			{
+				// Check for cancellation at regular intervals
+				if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+				{
+					if (cancellationToken.IsCancellationRequested)
+					{
+						_logger.LogInformation("[User32] CallTimerProcAsync: Cancellation requested at step {Steps}", steps);
+						executionSuccessful = false;
+						break;
+					}
+
+					// Yield to allow other async operations to proceed
+					await Task.Yield();
+				}
+
+				var eip = _cpu.GetEip();
+
+				// Check if we've returned to our marker address
+				if (eip == RETURN_ADDRESS)
+				{
+					break;
+				}
+
+				// Check for invalid EIP (NULL pointer execution)
+				if (eip == 0x00000000)
+				{
+					_logger.LogWarning("[User32] CallTimerProcAsync: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+					executionSuccessful = false;
+					break;
+				}
+
+				// Check for other invalid low addresses
+				if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
+				{
+					_logger.LogError("[User32] CallTimerProcAsync: Execution jumped to invalid low address 0x{Eip:X8}", eip);
+					executionSuccessful = false;
+					break;
+				}
+
+				// Detect potential infinite loops
+				if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+				{
+					var currentEip = _cpu.GetEip();
+					if (currentEip == lastCheckEip)
+					{
+						stuckCounter++;
+						if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+						{
+							_logger.LogWarning("[User32] CallTimerProcAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
+								currentEip, stuckCounter);
+							executionSuccessful = false;
+							break;
+						}
+					}
+					else
+					{
+						stuckCounter = 0;
+						lastCheckEip = currentEip;
+					}
+				}
+
+				// Execute one instruction
+				_cpu.SingleStep(_memory);
+				steps++;
+
+				// Periodically yield for cooperative multitasking
+				if (steps % YIELD_INTERVAL == 0)
+				{
+					await Task.Yield();
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[User32] CallTimerProcAsync: Exception during execution: {ExMessage}", ex.Message);
+			executionSuccessful = false;
+		}
+
+		// Restore CPU state
+		_cpu.SetEip(savedEip);
+		_cpu.SetRegister("ESP", savedEsp);
+		_cpu.SetRegister("EBP", savedEbp);
+
+		_logger.LogInformation("[User32] CallTimerProcAsync: Completed {Status}", executionSuccessful ? "successfully" : "with errors");
 	}
+
+	/// <summary>
+	/// Async version of window enumeration callback execution that eliminates the need for STACK_SAFETY_MARGIN.
+	/// Uses async/await pattern for clean separation of host (C#) and guest (x86) execution stacks.
+	/// </summary>
+	/// <param name="enumProc">Address of the enumeration callback in emulated memory</param>
+	/// <param name="hWnd">Window handle to pass to callback</param>
+	/// <param name="lParam">Application-defined value</param>
+	/// <param name="cancellationToken">Optional cancellation token</param>
+	/// <returns>Return value from the callback (TRUE to continue, FALSE to stop)</returns>
+	private async Task<uint> CallEnumWindowsProcAsync(
+		uint enumProc,
+		uint hWnd,
+		uint lParam,
+		CancellationToken cancellationToken = default)
+	{
+		if (_cpu == null || _memory == null)
+		{
+			_logger.LogWarning("[User32] CallEnumWindowsProcAsync: CPU or Memory not available");
+			return 0;
+		}
+
+		_logger.LogInformation("[User32] CallEnumWindowsProcAsync: Calling 0x{EnumProc:X8} for window 0x{HWnd:X8}", enumProc, hWnd);
+
+		// Validate callback address
+		if (enumProc == 0)
+		{
+			_logger.LogWarning("[User32] CallEnumWindowsProcAsync: Enumeration callback address is NULL (0x00000000), aborting");
+			return 0;
+		}
+
+		// Save current CPU state
+		var savedEip = _cpu.GetEip();
+		var savedEsp = _cpu.GetRegister("ESP");
+		var savedEbp = _cpu.GetRegister("EBP");
+
+		// Define return address marker
+		const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+		// Set up stack for stdcall convention (parameters pushed right-to-left)
+		// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
+		var esp = savedEsp;
+
+		// Push return address first
+		esp -= 4;
+		_memory.Write32(esp, RETURN_ADDRESS);
+
+		// Push parameters (right-to-left for stdcall)
+		// BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
+		esp -= 4;
+		_memory.Write32(esp, lParam);
+
+		esp -= 4;
+		_memory.Write32(esp, hWnd);
+
+		// Update CPU registers
+		_cpu.SetRegister("ESP", esp);
+		_cpu.SetEip(enumProc);
+
+		// Execute until we hit the return address with cancellation support
+		const int YIELD_INTERVAL = 10000;
+		var steps = 0;
+		var executionSuccessful = true;
+		var lastCheckEip = _cpu.GetEip();
+		var stuckCounter = 0;
+
+		try
+		{
+			while (true)
+			{
+				// Check for cancellation at regular intervals
+				if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+				{
+					if (cancellationToken.IsCancellationRequested)
+					{
+						_logger.LogInformation("[User32] CallEnumWindowsProcAsync: Cancellation requested at step {Steps}", steps);
+						executionSuccessful = false;
+						break;
+					}
+
+					// Yield to allow other async operations to proceed
+					await Task.Yield();
+				}
+
+				var eip = _cpu.GetEip();
+
+				// Check if we've returned to our marker address
+				if (eip == RETURN_ADDRESS)
+				{
+					break;
+				}
+
+				// Check for invalid EIP (NULL pointer execution)
+				if (eip == 0x00000000)
+				{
+					_logger.LogWarning("[User32] CallEnumWindowsProcAsync: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+					executionSuccessful = false;
+					break;
+				}
+
+				// Check for other invalid low addresses
+				if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
+				{
+					_logger.LogError("[User32] CallEnumWindowsProcAsync: Execution jumped to invalid low address 0x{Eip:X8}", eip);
+					executionSuccessful = false;
+					break;
+				}
+
+				// Detect potential infinite loops
+				if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+				{
+					var currentEip = _cpu.GetEip();
+					if (currentEip == lastCheckEip)
+					{
+						stuckCounter++;
+						if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+						{
+							_logger.LogWarning("[User32] CallEnumWindowsProcAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
+								currentEip, stuckCounter);
+							executionSuccessful = false;
+							break;
+						}
+					}
+					else
+					{
+						stuckCounter = 0;
+						lastCheckEip = currentEip;
+					}
+				}
+
+				// Execute one instruction
+				_cpu.SingleStep(_memory);
+				steps++;
+
+				// Periodically yield for cooperative multitasking
+				if (steps % YIELD_INTERVAL == 0)
+				{
+					await Task.Yield();
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[User32] CallEnumWindowsProcAsync: Exception during execution: {ExMessage}", ex.Message);
+			executionSuccessful = false;
+		}
+
+		// Get return value from EAX, but only if execution was successful
+		var returnValue = executionSuccessful ? _cpu.GetRegister("EAX") : 0u;
+
+		// Restore CPU state
+		_cpu.SetEip(savedEip);
+		_cpu.SetRegister("ESP", savedEsp);
+		_cpu.SetRegister("EBP", savedEbp);
+
+		_logger.LogInformation("[User32] CallEnumWindowsProcAsync: Completed with return value 0x{ReturnValue:X8}", returnValue);
+
+		return returnValue;
+	}
+
+	/// <summary>
+	/// Async version of hook procedure execution that eliminates the need for STACK_SAFETY_MARGIN.
+	/// Uses async/await pattern for clean separation of host (C#) and guest (x86) execution stacks.
+	/// </summary>
+	/// <param name="hookProc">Address of the hook procedure in emulated memory</param>
+	/// <param name="nCode">Hook code</param>
+	/// <param name="wParam">Message parameter</param>
+	/// <param name="lParam">Message parameter</param>
+	/// <param name="cancellationToken">Optional cancellation token</param>
+	/// <returns>Return value from the hook procedure</returns>
+	private async Task<uint> CallHookProcAsync(
+		uint hookProc,
+		int nCode,
+		uint wParam,
+		uint lParam,
+		CancellationToken cancellationToken = default)
+	{
+		if (_cpu == null || _memory == null)
+		{
+			_logger.LogWarning("[User32] CallHookProcAsync: CPU or Memory not available");
+			return 0;
+		}
+
+		_logger.LogInformation("[User32] CallHookProcAsync: Calling 0x{HookProc:X8} with nCode={NCode}", hookProc, nCode);
+
+		// Validate callback address
+		if (hookProc == 0)
+		{
+			_logger.LogWarning("[User32] CallHookProcAsync: Hook procedure address is NULL (0x00000000), aborting");
+			return 0;
+		}
+
+		// Save current CPU state
+		var savedEip = _cpu.GetEip();
+		var savedEsp = _cpu.GetRegister("ESP");
+		var savedEbp = _cpu.GetRegister("EBP");
+
+		// Define return address marker
+		const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+		// Set up stack for stdcall convention (parameters pushed right-to-left)
+		// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
+		var esp = savedEsp;
+
+		// Push return address first
+		esp -= 4;
+		_memory.Write32(esp, RETURN_ADDRESS);
+
+		// Push parameters (right-to-left for stdcall)
+		// LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam)
+		esp -= 4;
+		_memory.Write32(esp, lParam);
+
+		esp -= 4;
+		_memory.Write32(esp, wParam);
+
+		esp -= 4;
+		_memory.Write32(esp, (uint)nCode);
+
+		// Update CPU registers
+		_cpu.SetRegister("ESP", esp);
+		_cpu.SetEip(hookProc);
+
+		// Execute until we hit the return address with cancellation support
+		const int YIELD_INTERVAL = 10000;
+		var steps = 0;
+		var executionSuccessful = true;
+		var lastCheckEip = _cpu.GetEip();
+		var stuckCounter = 0;
+
+		try
+		{
+			while (true)
+			{
+				// Check for cancellation at regular intervals
+				if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+				{
+					if (cancellationToken.IsCancellationRequested)
+					{
+						_logger.LogInformation("[User32] CallHookProcAsync: Cancellation requested at step {Steps}", steps);
+						executionSuccessful = false;
+						break;
+					}
+
+					// Yield to allow other async operations to proceed
+					await Task.Yield();
+				}
+
+				var eip = _cpu.GetEip();
+
+				// Check if we've returned to our marker address
+				if (eip == RETURN_ADDRESS)
+				{
+					break;
+				}
+
+				// Check for invalid EIP (NULL pointer execution)
+				if (eip == 0x00000000)
+				{
+					_logger.LogWarning("[User32] CallHookProcAsync: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+					executionSuccessful = false;
+					break;
+				}
+
+				// Check for other invalid low addresses
+				if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
+				{
+					_logger.LogError("[User32] CallHookProcAsync: Execution jumped to invalid low address 0x{Eip:X8}", eip);
+					executionSuccessful = false;
+					break;
+				}
+
+				// Detect potential infinite loops
+				if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+				{
+					var currentEip = _cpu.GetEip();
+					if (currentEip == lastCheckEip)
+					{
+						stuckCounter++;
+						if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+						{
+							_logger.LogWarning("[User32] CallHookProcAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
+								currentEip, stuckCounter);
+							executionSuccessful = false;
+							break;
+						}
+					}
+					else
+					{
+						stuckCounter = 0;
+						lastCheckEip = currentEip;
+					}
+				}
+
+				// Execute one instruction
+				_cpu.SingleStep(_memory);
+				steps++;
+
+				// Periodically yield for cooperative multitasking
+				if (steps % YIELD_INTERVAL == 0)
+				{
+					await Task.Yield();
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[User32] CallHookProcAsync: Exception during execution: {ExMessage}", ex.Message);
+			executionSuccessful = false;
+		}
+
+		// Get return value from EAX, but only if execution was successful
+		var returnValue = executionSuccessful ? _cpu.GetRegister("EAX") : 0u;
+
+		// Restore CPU state
+		_cpu.SetEip(savedEip);
+		_cpu.SetRegister("ESP", savedEsp);
+		_cpu.SetRegister("EBP", savedEbp);
+
+		_logger.LogInformation("[User32] CallHookProcAsync: Completed with return value 0x{ReturnValue:X8}", returnValue);
+
+		return returnValue;
+	}
+
+	#endregion
+}
 }
