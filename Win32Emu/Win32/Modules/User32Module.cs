@@ -3066,7 +3066,7 @@ namespace Win32Emu.Win32.Modules
 					{
 						_logger.LogInformation("[User32] CallDialogProcedureAsync: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
 
-						// Save callee-saved registers (EBX, ESI, EDI)
+						// Save callee-saved registers (EBX, ESI, EDI, EBP)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
 
 						if (_env.ComDispatcher.TryInvoke(step.CallTarget, cpu, memory, out var comRet, out var comArgBytes))
@@ -3074,15 +3074,22 @@ namespace Win32Emu.Win32.Modules
 							stepDesc = $"COM vtable call -> 0x{step.CallTarget:X8}";
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
+							
+							// Validate return address before jumping
+							if (!IsValidReturnAddress(retEip, _image))
+							{
+								_logger.LogError("[User32] CallDialogProcedureAsync: Invalid return address 0x{RetEip:X8} from COM call at step {Steps}", retEip, steps);
+								failed = true;
+								break;
+							}
+							
 							currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
 							cpu.SetRegister("ESP", currentEsp);
 							cpu.SetRegister("EAX", comRet);
 							cpu.SetEip(retEip);
 
-							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
-
-							RestoreEbpFromStack(currentEsp);
+							// Restore callee-saved registers, skipping invalid EBP values (e.g., import hooks)
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
 						}
 					}
 					// Check for import calls
@@ -3093,7 +3100,7 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogInformation("[User32] CallDialogProcedureAsync: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
 						stepDesc = $"Import call {dll}!{name}";
 
-						// Save callee-saved registers (EBX, ESI, EDI)
+						// Save callee-saved registers (EBX, ESI, EDI, EBP)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
 
 						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
@@ -3109,6 +3116,14 @@ namespace Win32Emu.Win32.Modules
 
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
+							
+							// Validate return address before jumping
+							if (!IsValidReturnAddress(retEip, _image))
+							{
+								_logger.LogError("[User32] CallDialogProcedureAsync: Invalid return address 0x{RetEip:X8} from import {Dll}!{Name} at step {Steps}", retEip, dll, name, steps);
+								failed = true;
+								break;
+							}
 
 							currentEsp += 4 + (uint)argBytes;
 
@@ -3116,10 +3131,8 @@ namespace Win32Emu.Win32.Modules
 							cpu.SetRegister("EAX", ret);
 							cpu.SetEip(retEip);
 
-							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
-
-							RestoreEbpFromStack(currentEsp);
+							// Restore callee-saved registers, skipping invalid EBP values (e.g., import hooks)
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
 						}
 						else
 						{
@@ -3137,6 +3150,14 @@ namespace Win32Emu.Win32.Modules
 
 							var currentEsp = cpu.GetRegister("ESP");
 							var retEip = memory.Read32(currentEsp);
+							
+							// Validate return address before jumping
+							if (!IsValidReturnAddress(retEip, _image))
+							{
+								_logger.LogError("[User32] CallDialogProcedureAsync: Invalid return address 0x{RetEip:X8} from unimplemented import {Dll}!{Name} at step {Steps}", retEip, dll, name, steps);
+								failed = true;
+								break;
+							}
 
 							// Pop return address + parameters (stdcall convention - callee cleans)
 							currentEsp += 4 + (uint)simulatedArgBytes;
@@ -3145,10 +3166,8 @@ namespace Win32Emu.Win32.Modules
 							cpu.SetRegister("EAX", 0); // Return 0 as default
 							cpu.SetEip(retEip);
 
-							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved);
-
-							RestoreEbpFromStack(currentEsp);
+							// Restore callee-saved registers, skipping invalid EBP values (e.g., import hooks)
+							CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
 						}
 					}
 
@@ -3633,6 +3652,61 @@ namespace Win32Emu.Win32.Modules
 		/// Check if a Win32 API function typically returns a handle or function pointer.
 		/// Helps identify potential NULL pointer issues when these functions return 0.
 		/// </summary>
+		/// <summary>
+		/// Validates that a return address points to valid executable code and not to stack or invalid memory.
+		/// </summary>
+		/// <param name="address">The return address to validate</param>
+		/// <param name="image">The loaded PE image (optional)</param>
+		/// <returns>True if the address is valid for execution, false otherwise</returns>
+		private static bool IsValidReturnAddress(uint address, LoadedImage? image)
+		{
+			// Reject NULL addresses
+			if (address == 0)
+			{
+				return false;
+			}
+
+			// Check if address is in valid code regions
+			// Typical Win32 executables are loaded at 0x00400000 or higher
+			// DLLs are typically at 0x10000000 or higher
+			// Stack is usually in the 0x00100000 - 0x00300000 range
+			const uint MIN_CODE_ADDRESS = 0x00400000;
+			const uint MAX_STACK_ADDRESS = 0x00300000; // Conservative upper bound for stack
+
+			// Reject addresses that are too low (likely stack or invalid)
+			if (address < MIN_CODE_ADDRESS)
+			{
+				// Allow some DLL code that might be below 0x00400000 but above stack
+				if (address >= MAX_STACK_ADDRESS)
+				{
+					// Might be valid DLL code, allow it
+					return true;
+				}
+				return false;
+			}
+
+			// If we have image info, verify the address is within the image
+			if (image != null)
+			{
+				var imageBase = image.BaseAddress;
+				var imageSize = image.ImageSize;
+				var isInImage = address >= imageBase && address < (imageBase + imageSize);
+
+				// Also check if it's in imported DLL space (though we don't have full info)
+				// For now, accept any address above MIN_CODE_ADDRESS if not in image
+				if (!isInImage && address >= MIN_CODE_ADDRESS)
+				{
+					// Could be in a DLL, allow it
+					return true;
+				}
+
+				return isInImage;
+			}
+
+			// Without image info, accept any address above MIN_CODE_ADDRESS
+			return address >= MIN_CODE_ADDRESS;
+		}
+
 		private static bool IsHandleReturningFunction(string functionName)
 		{
 			var upperName = functionName.ToUpperInvariant();
