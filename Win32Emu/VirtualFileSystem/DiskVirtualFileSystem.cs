@@ -187,9 +187,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		// Create and initialize the VHD file
 		using (Stream vhdStream = File.Create(diskPath))
 		{
-			// Default block size for dynamic VHDs is 2MB
-			long blockSize = 2 * 1024 * 1024;
-			VhdDisk.InitializeDynamic(vhdStream, Ownership.None, sizeBytes, blockSize);
+			VhdDisk.InitializeDynamic(vhdStream, Ownership.None, sizeBytes);
 		}
 		
 		// Re-open the disk to format it (must be done after stream is closed)
@@ -210,9 +208,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		// Create and initialize the VHDX file
 		using (Stream vhdxStream = File.Create(diskPath))
 		{
-			// VHDX uses 1MB block size by default
-			long blockSize = 1 * 1024 * 1024;
-			VhdxDisk.InitializeDynamic(vhdxStream, Ownership.None, sizeBytes, blockSize);
+			VhdxDisk.InitializeDynamic(vhdxStream, Ownership.None, sizeBytes);
 		}
 		
 		// Re-open the disk to format it (must be done after stream is closed)
