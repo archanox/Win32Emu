@@ -13,7 +13,9 @@ public class GameSettings
     
     /// <summary>
     /// Environment variables for this game (KEY=value pairs)
+    /// DEPRECATED: Use per-game registry instead (GameRegistryService)
     /// </summary>
+    [Obsolete("Use GameRegistryService to manage environment variables via per-game registry instead of GameSettings.json")]
     public Dictionary<string, string>? EnvironmentVariables { get; set; }
     
     /// <summary>
