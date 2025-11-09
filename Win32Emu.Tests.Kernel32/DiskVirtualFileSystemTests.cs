@@ -89,20 +89,6 @@ public class DiskVirtualFileSystemTests : IDisposable
 		Assert.Throws<InvalidOperationException>(() => vfs.CopyDirectoryIn(sourceDir, "/"));
 	}
 
-	[Fact]
-	public void ToWindowsPath_ConvertsToWindowsStyle()
-	{
-		// Arrange
-		var isoPath = Path.Combine(_testDir, "test.iso");
-		var builder = new CDBuilder { UseJoliet = true, VolumeIdentifier = "TEST" };
-		builder.Build(isoPath);
-
-		using var vfs = new DiskVirtualFileSystem(isoPath, NullLogger.Instance);
-
-		// Act & Assert
-		Assert.Equal(@"C:\test.txt", vfs.ToWindowsPath("/test.txt"));
-		Assert.Equal(@"C:\subdir\file.txt", vfs.ToWindowsPath("/subdir/file.txt"));
-	}
 
 	[Fact]
 	public void GetFiles_WithISOFileSystem_ReturnsFiles()

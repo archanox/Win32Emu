@@ -2004,33 +2004,6 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return returnLength;
 	}
 
-	/// <summary>
-	/// Checks if a path is rooted in the Windows sense.
-	/// In Windows, a path is rooted if it has a drive letter (C:\, D:/) or is a UNC path (\\server\share).
-	/// Paths like /data or \data are NOT rooted - they're relative to the current drive.
-	/// This is important on Unix systems where Path.IsPathRooted treats /path as rooted.
-	/// </summary>
-	private bool IsWindowsRootedPath(string path)
-	{
-		if (string.IsNullOrEmpty(path))
-		{
-			return false;
-		}
-
-		// Check for drive letter (C:\ or C:/)
-		if (path.Length >= 2 && path[1] == ':' && char.IsLetter(path[0]))
-		{
-			return true;
-		}
-
-		// Check for UNC path (\\server\share or //server/share)
-		if (path.Length >= 2 && (path[0] == '\\' || path[0] == '/') && (path[1] == '\\' || path[1] == '/'))
-		{
-			return true;
-		}
-
-		return false;
-	}
 
 	/// <summary>
 	/// Fixes path escaping issues that can cause parsing problems
@@ -2764,7 +2737,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var path = _env.ReadAnsiString(lpFileName);
 
 			// Log the raw path from the game before any resolution
-			_logger.LogInformation("[Kernel32] CreateFileA: Raw path from game: '{Path}'", path);
+			_logger.LogDebug("[Kernel32] CreateFileA: Raw path from game: '{Path}'", path);
 
 			// Handle invalid paths (empty, null, or invalid characters)
 			if (string.IsNullOrEmpty(path))
@@ -2774,34 +2747,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
-			// Resolve relative paths relative to the current directory.
-			// This ensures paths like "data\IGN1.TEX" are resolved relative to the executable's directory.
-			// CurrentDirectory is always set, so we always resolve relative paths.
-			// On Unix systems, Path.IsPathRooted treats /path as rooted, but in Windows emulation,
-			// paths like /data or \data are relative to the current drive.
-			var resolvedPath = path;
-			if (!IsWindowsRootedPath(path))
+			// Resolve relative paths using Windows path semantics
+			var resolvedPath = WindowsPathUtility.ResolvePath(path, _env.CurrentDirectory);
+			if (resolvedPath != path)
 			{
-				// If path starts with \ (backslash), it's a root-relative path - prepend the drive letter
-				// Forward slashes / are treated as regular path separators, not root indicators
-				if (path.Length > 0 && path[0] == '\\')
-				{
-					// Extract drive letter from CurrentDirectory (e.g., "C:" from "C:\ign_teas")
-					if (_env.CurrentDirectory.Length >= 2 && _env.CurrentDirectory[1] == ':')
-					{
-						var drive = _env.CurrentDirectory.Substring(0, 2); // e.g., "C:"
-						resolvedPath = drive + path; // e.g., "C:\data\file.txt"
-						_logger.LogDebug("[Kernel32] CreateFileA: Resolved root-relative path '{Path}' to '{ResolvedPath}'",
-							path, resolvedPath);
-					}
-				}
-				else
-				{
-					// Path is relative (including paths starting with /), resolve it relative to current directory
-					resolvedPath = Path.Combine(_env.CurrentDirectory, path);
-					_logger.LogDebug("[Kernel32] CreateFileA: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
-						path, resolvedPath, _env.CurrentDirectory);
-				}
+				_logger.LogDebug("[Kernel32] CreateFileA: Resolved path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
+					path, resolvedPath, _env.CurrentDirectory);
 			}
 
 			// If VFS is available, use it for file operations
@@ -2810,7 +2761,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
 				var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
 
-				_logger.LogInformation("[Kernel32] CreateFileA: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
+				_logger.LogDebug("[Kernel32] CreateFileA: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
 				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
 				if (handle != null)
 				{
@@ -2849,7 +2800,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var path = _env.ReadUnicodeString(lpFileName);
 
 			// Log the raw path from the game before any resolution
-			_logger.LogInformation("[Kernel32] CreateFileW: Raw path from game: '{Path}'", path);
+			_logger.LogDebug("[Kernel32] CreateFileW: Raw path from game: '{Path}'", path);
 
 			// Handle invalid paths (empty, null, or invalid characters)
 			if (string.IsNullOrEmpty(path))
@@ -2859,33 +2810,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
-			// Resolve relative paths relative to the current directory
-			// On Unix systems, Path.IsPathRooted treats /path as rooted, but in Windows emulation,
-			// paths starting with \ (backslash only) are relative to the current drive root.
-			// Paths starting with / (forward slash) are treated as regular relative paths.
-			var resolvedPath = path;
-			if (!IsWindowsRootedPath(path))
+			// Resolve relative paths using Windows path semantics
+			var resolvedPath = WindowsPathUtility.ResolvePath(path, _env.CurrentDirectory);
+			if (resolvedPath != path)
 			{
-				// If path starts with \ (backslash), it's a root-relative path - prepend the drive letter
-				// Forward slashes / are treated as regular path separators, not root indicators
-				if (path.Length > 0 && path[0] == '\\')
-				{
-					// Extract drive letter from CurrentDirectory (e.g., "C:" from "C:\ign_teas")
-					if (_env.CurrentDirectory.Length >= 2 && _env.CurrentDirectory[1] == ':')
-					{
-						var drive = _env.CurrentDirectory.Substring(0, 2); // e.g., "C:"
-						resolvedPath = drive + path; // e.g., "C:\data\file.txt"
-						_logger.LogDebug("[Kernel32] CreateFileW: Resolved root-relative path '{Path}' to '{ResolvedPath}'",
-							path, resolvedPath);
-					}
-				}
-				else
-				{
-					// Path is relative (including paths starting with /), resolve it relative to current directory
-					resolvedPath = Path.Combine(_env.CurrentDirectory, path);
-					_logger.LogDebug("[Kernel32] CreateFileW: Resolved relative path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
-						path, resolvedPath, _env.CurrentDirectory);
-				}
+				_logger.LogDebug("[Kernel32] CreateFileW: Resolved path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
+					path, resolvedPath, _env.CurrentDirectory);
 			}
 
 			// If VFS is available, use it for file operations
@@ -2894,7 +2824,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
 				var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
 
-				_logger.LogInformation("[Kernel32] CreateFileW: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
+				_logger.LogDebug("[Kernel32] CreateFileW: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
 				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
 				if (handle != null)
 				{
