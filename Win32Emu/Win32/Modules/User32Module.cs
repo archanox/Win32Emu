@@ -37,6 +37,7 @@ namespace Win32Emu.Win32.Modules
 		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
 		private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
 		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
+		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB) - addresses below this indicate memory corruption
 
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -879,8 +880,7 @@ namespace Win32Emu.Win32.Modules
 				return (true, syncReturnValue);
 			}
 
-			// Allow async operations to yield
-			await Task.Yield();
+			// No async work performed; return failure immediately
 			return (false, 0);
 		}
 
@@ -1704,6 +1704,11 @@ namespace Win32Emu.Win32.Modules
 			_cpu.SetEip(wndProcAddress);
 
 			// Execute until we hit the return address with cancellation support
+			// YIELD_INTERVAL: Check for context switches every 10K instructions
+			// Rationale: 10K provides good balance between:
+			// - Responsiveness: Allows context switches frequently enough for cooperative multitasking
+			// - Performance: Low overhead from scheduler checks
+			// - Granularity: Fine enough for cooperative multitasking without excessive yielding
 			const int YIELD_INTERVAL = 10000;
 			var steps = 0;
 			var executionSuccessful = true;
@@ -1712,6 +1717,13 @@ namespace Win32Emu.Win32.Modules
 
 			try
 			{
+				// Execute in unbounded loop - no artificial step limit
+				// Infinite loops are prevented by multiple safeguards:
+				//   1. Return detection: We break when EIP hits RETURN_ADDRESS marker
+				//   2. Cancellation: Regular checks for cancellation requests (every CANCELLATION_CHECK_INTERVAL steps)
+				//   3. Progress tracking: We detect stuck execution by monitoring EIP changes
+				//   4. Yielding: Periodic Task.Yield() allows other async operations to proceed
+				// These mechanisms ensure the loop terminates properly under normal circumstances
 				while (true)
 				{
 					// Check for cancellation at regular intervals
@@ -1745,7 +1757,7 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Check for other invalid low addresses
-					if (eip < 0x00001000 && eip != RETURN_ADDRESS)
+					if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
 					{
 						_logger.LogError("[User32] CallWindowProcedureAsync: Execution jumped to invalid low address 0x{Eip:X8}", eip);
 						executionSuccessful = false;
@@ -1778,13 +1790,10 @@ namespace Win32Emu.Win32.Modules
 					var step = _cpu.SingleStep(_memory);
 
 					// Handle COM vtable and import calls
-					if (HandleComAndImportCalls(step, _cpu, _memory, "CallWindowProcedureAsync", out var stepDesc, out var shouldBreak))
+					if (HandleComAndImportCalls(step, _cpu, _memory, "CallWindowProcedureAsync", out var stepDesc, out var shouldBreak) && shouldBreak)
 					{
-						if (shouldBreak)
-						{
-							executionSuccessful = false;
-							break;
-						}
+						executionSuccessful = false;
+						break;
 					}
 
 					steps++;
@@ -3166,7 +3175,7 @@ namespace Win32Emu.Win32.Modules
 					// Check for other invalid EIP values that might indicate corruption
 					// Image base is typically 0x00400000, and code/data is usually above 0x00001000
 					// Check for extremely low addresses that are clearly invalid
-					if (eip < 0x00001000 && eip != RETURN_ADDRESS)
+					if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
 					{
 						_logger.LogError("[User32] CallDialogProcedureAsync: Execution jumped to invalid low address 0x{Eip:X8} at step {Steps}", eip, steps);
 						_logger.LogError("[User32] CallDialogProcedureAsync: This may indicate memory corruption or an invalid function pointer");

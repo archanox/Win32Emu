@@ -141,8 +141,9 @@ public class Win32Dispatcher(ILogger logger)
 		{
 			stackSnippet = memory.GetSpan(esp, 16);
 		}
-		catch
+		catch (Exception ex)
 		{
+			logger.LogDebug(ex, "Failed to read stack snippet at ESP=0x{Esp:X8} in TryInvokeAsync", esp);
 		}
 
 		logger.LogInformation("Dispatching async {Dll}!{Export} at EIP=0x{GetEip:X8} ESP=0x{Esp:X8} stack={Unreadable}", 
