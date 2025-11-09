@@ -263,6 +263,167 @@ public sealed class DialogTemplateTests : IDisposable
 		Assert.Equal("Odd", template.Title);
 	}
 
+	[Fact]
+	public void DialogTemplateParser_CorruptedStringData_ShouldHandleGracefully()
+	{
+		// This test verifies that the parser can handle corrupted string data
+		// without crashing or hanging in an infinite loop
+		
+		// Arrange - Create a template with a string that's missing a null terminator
+		var address = 0x10000u;
+		var offset = 0u;
+
+		// Header
+		_memory.Write32(address + offset, 0x80C80000);
+		offset += 4;
+		_memory.Write32(address + offset, 0);
+		offset += 4;
+		_memory.Write16(address + offset, 0); // no items
+		offset += 2;
+		_memory.Write16(address + offset, 0);
+		offset += 2;
+		_memory.Write16(address + offset, 0);
+		offset += 2;
+		_memory.Write16(address + offset, 100);
+		offset += 2;
+		_memory.Write16(address + offset, 50);
+		offset += 2;
+
+		// Variable fields
+		_memory.Write16(address + offset, 0); // no menu
+		offset += 2;
+		_memory.Write16(address + offset, 0); // no custom class
+		offset += 2;
+
+		// Title with many characters but NO null terminator
+		// This simulates corrupted data that could cause infinite loop
+		for (var i = 0; i < 100; i++)
+		{
+			_memory.Write16(address + offset, (ushort)('A' + (i % 26)));
+			offset += 2;
+		}
+		// Intentionally NOT writing null terminator
+
+		var parser = new DialogTemplateParser(_memory);
+
+		// Act - Should not hang or crash
+		var template = parser.Parse(address);
+
+		// Assert - Should have parsed what it could
+		Assert.NotNull(template);
+		Assert.NotNull(template.Title);
+		// The title should have captured something (either truncated or partial)
+		Assert.True(template.Title.Length > 0);
+	}
+
+	[Fact]
+	public void DialogTemplateParser_CorruptedItemData_ShouldParseAvailableItems()
+	{
+		// This test verifies that the parser stops gracefully when it encounters
+		// corrupted item data instead of crashing
+		
+		// Arrange - Create a template claiming 3 items but only provide data for 2
+		// Then make the 3rd item location point to invalid memory
+		var address = 0x10000u;
+		var offset = 0u;
+
+		// Standard DLGTEMPLATE header
+		_memory.Write32(address + offset, 0x80C80000);
+		offset += 4;
+		_memory.Write32(address + offset, 0);
+		offset += 4;
+		_memory.Write16(address + offset, 3); // cdit = 3 items (but we'll make the 3rd one fail)
+		offset += 2;
+		_memory.Write16(address + offset, 0);
+		offset += 2;
+		_memory.Write16(address + offset, 0);
+		offset += 2;
+		_memory.Write16(address + offset, 100);
+		offset += 2;
+		_memory.Write16(address + offset, 50);
+		offset += 2;
+
+		// Variable fields
+		_memory.Write16(address + offset, 0);
+		offset += 2;
+		_memory.Write16(address + offset, 0);
+		offset += 2;
+		_memory.Write16(address + offset, 0); // no title
+		offset += 2;
+
+		// Align to DWORD
+		offset = (offset + 3) & ~3u;
+
+		// Create first item (valid)
+		_memory.Write32(address + offset, 0x50010000);
+		offset += 4;
+		_memory.Write32(address + offset, 0);
+		offset += 4;
+		_memory.Write16(address + offset, 10);
+		offset += 2;
+		_memory.Write16(address + offset, 10);
+		offset += 2;
+		_memory.Write16(address + offset, 50);
+		offset += 2;
+		_memory.Write16(address + offset, 14);
+		offset += 2;
+		_memory.Write16(address + offset, 1);
+		offset += 2;
+		_memory.Write16(address + offset, 0xFFFF);
+		offset += 2;
+		_memory.Write16(address + offset, 0x0080);
+		offset += 2;
+		_memory.Write16(address + offset, 0); // empty title
+		offset += 2;
+		_memory.Write16(address + offset, 0); // no creation data
+		offset += 2;
+
+		// Align to DWORD
+		offset = (offset + 3) & ~3u;
+
+		// Create second item (valid)
+		_memory.Write32(address + offset, 0x50010000);
+		offset += 4;
+		_memory.Write32(address + offset, 0);
+		offset += 4;
+		_memory.Write16(address + offset, 10);
+		offset += 2;
+		_memory.Write16(address + offset, 30);
+		offset += 2;
+		_memory.Write16(address + offset, 50);
+		offset += 2;
+		_memory.Write16(address + offset, 14);
+		offset += 2;
+		_memory.Write16(address + offset, 2);
+		offset += 2;
+		_memory.Write16(address + offset, 0xFFFF);
+		offset += 2;
+		_memory.Write16(address + offset, 0x0080);
+		offset += 2;
+		// For the title, write a string without null terminator and beyond valid memory
+		// This will cause ReadString to hit the memory limit
+		var titleStart = offset;
+		for (var i = 0; i < 8000; i++)
+		{
+			// Write non-zero values to prevent it from finding a null terminator
+			_memory.Write16(address + offset, (ushort)('X'));
+			offset += 2;
+		}
+
+		var parser = new DialogTemplateParser(_memory);
+
+		// Act - Should parse 2 items and handle the 3rd gracefully
+		var template = parser.Parse(address);
+
+		// Assert
+		Assert.NotNull(template);
+		// Should have parsed 2 items successfully
+		// The 3rd item should have been handled gracefully (either skipped or parsed partially)
+		Assert.True(template.Items.Count >= 2, $"Expected at least 2 items, got {template.Items.Count}");
+		Assert.Equal(1, template.Items[0].Id);
+		Assert.Equal(2, template.Items[1].Id);
+	}
+
 	public void Dispose()
 	{
 		// VirtualMemory doesn't implement IDisposable, no cleanup needed
