@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Win32;
 using DiscUtils.Registry;
+using Win32EmuRegistryHive = Win32Emu.Win32.Registry.RegistryHive;
 
 namespace Win32Emu.Gui.ViewModels;
 
@@ -31,6 +32,7 @@ public partial class RegistryViewerViewModel : ViewModelBase
 	private string _statusText = "Ready";
 
 	private readonly ProcessEnvironment? _processEnv;
+	private readonly Win32EmuRegistryHive? _standaloneHive;
 	private readonly ILogger _logger;
 
 	public RegistryViewerViewModel(ProcessEnvironment? processEnv = null, ILogger? logger = null)
@@ -39,6 +41,22 @@ public partial class RegistryViewerViewModel : ViewModelBase
 		_logger = logger ?? NullLogger.Instance;
 		
 		InitializeRootKeys();
+	}
+
+	/// <summary>
+	/// Constructor for standalone (pre-launch) registry viewer
+	/// </summary>
+	public RegistryViewerViewModel(Win32EmuRegistryHive standaloneHive, ILogger? logger = null)
+	{
+		_standaloneHive = standaloneHive;
+		_logger = logger ?? NullLogger.Instance;
+		
+		InitializeRootKeys();
+	}
+
+	private Win32EmuRegistryHive? GetRegistryHive()
+	{
+		return _standaloneHive ?? _processEnv?.RegistryHive;
 	}
 
 	partial void OnSelectedKeyChanged(RegistryKeyNode? value)
@@ -58,7 +76,8 @@ public partial class RegistryViewerViewModel : ViewModelBase
 		RootKeys.Add(new RegistryKeyNode("HKEY_USERS", "HKEY_USERS", true));
 		
 		// Load first level if registry is available
-		if (_processEnv?.RegistryHive != null)
+		var hive = GetRegistryHive();
+		if (hive != null)
 		{
 			foreach (var rootKey in RootKeys)
 			{
@@ -69,15 +88,16 @@ public partial class RegistryViewerViewModel : ViewModelBase
 
 	private void LoadSubKeys(RegistryKeyNode node)
 	{
-		if (_processEnv?.RegistryHive == null)
+		var hive = GetRegistryHive();
+		if (hive == null)
 			return;
 
 		try
 		{
-			var handle = _processEnv.RegistryHive.OpenKey(node.FullPath);
+			var handle = hive.OpenKey(node.FullPath);
 			if (handle != 0)
 			{
-				var subKeyNames = _processEnv.RegistryHive.EnumerateSubKeyNames(handle);
+				var subKeyNames = hive.EnumerateSubKeyNames(handle);
 				node.Children.Clear();
 				
 				foreach (var subKeyName in subKeyNames.OrderBy(s => s))
@@ -87,7 +107,7 @@ public partial class RegistryViewerViewModel : ViewModelBase
 					node.Children.Add(childNode);
 				}
 				
-				_processEnv.RegistryHive.CloseKey(handle);
+				hive.CloseKey(handle);
 				StatusText = $"Loaded {subKeyNames.Length} subkeys from {node.Name}";
 			}
 		}
@@ -102,19 +122,20 @@ public partial class RegistryViewerViewModel : ViewModelBase
 	{
 		Values.Clear();
 
-		if (_processEnv?.RegistryHive == null)
+		var hive = GetRegistryHive();
+		if (hive == null)
 			return;
 
 		try
 		{
-			var handle = _processEnv.RegistryHive.OpenKey(node.FullPath);
+			var handle = hive.OpenKey(node.FullPath);
 			if (handle != 0)
 			{
-				var valueNames = _processEnv.RegistryHive.EnumerateValueNames(handle);
+				var valueNames = hive.EnumerateValueNames(handle);
 				
 				foreach (var valueName in valueNames.OrderBy(s => s))
 				{
-					if (_processEnv.RegistryHive.QueryValue(handle, valueName, out var value, out var type))
+					if (hive.QueryValue(handle, valueName, out var value, out var type))
 					{
 						var displayValue = FormatValue(value, type);
 						Values.Add(new RegistryValueItem
@@ -127,7 +148,7 @@ public partial class RegistryViewerViewModel : ViewModelBase
 					}
 				}
 				
-				_processEnv.RegistryHive.CloseKey(handle);
+				hive.CloseKey(handle);
 				StatusText = $"Loaded {valueNames.Length} values from {node.FullPath}";
 			}
 		}
@@ -185,12 +206,13 @@ public partial class RegistryViewerViewModel : ViewModelBase
 			return;
 		}
 
-		if (_processEnv?.RegistryHive == null)
+		var hive = GetRegistryHive();
+		if (hive == null)
 			return;
 
 		try
 		{
-			if (_processEnv.RegistryHive.DeleteSubKey(SelectedKey.FullPath))
+			if (hive.DeleteSubKey(SelectedKey.FullPath))
 			{
 				StatusText = $"Deleted key: {SelectedKey.Name}";
 				// Reload parent
@@ -243,16 +265,17 @@ public partial class RegistryViewerViewModel : ViewModelBase
 			return;
 		}
 
-		if (_processEnv?.RegistryHive == null)
+		var hive = GetRegistryHive();
+		if (hive == null)
 			return;
 
 		try
 		{
-			var handle = _processEnv.RegistryHive.OpenKey(SelectedKey.FullPath);
+			var handle = hive.OpenKey(SelectedKey.FullPath);
 			if (handle != 0)
 			{
 				var valueName = SelectedValue.Name == "(Default)" ? "" : SelectedValue.Name;
-				if (_processEnv.RegistryHive.DeleteValue(handle, valueName))
+				if (hive.DeleteValue(handle, valueName))
 				{
 					StatusText = $"Deleted value: {SelectedValue.Name}";
 					LoadValues(SelectedKey);
@@ -261,7 +284,7 @@ public partial class RegistryViewerViewModel : ViewModelBase
 				{
 					StatusText = "Failed to delete value";
 				}
-				_processEnv.RegistryHive.CloseKey(handle);
+				hive.CloseKey(handle);
 			}
 		}
 		catch (Exception ex)

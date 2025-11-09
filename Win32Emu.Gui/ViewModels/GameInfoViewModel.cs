@@ -71,6 +71,7 @@ public partial class GameInfoViewModel : ViewModelBase
 
     private readonly IGameDbService? _gameDbService;
     private readonly ConfigurationService? _configService;
+    private readonly GameRegistryService _gameRegistryService;
     private readonly ILogger _logger;
     private Action<Game>? _onGameUpdated;
     private Func<string, Task>? _clipboardSetter;
@@ -80,6 +81,7 @@ public partial class GameInfoViewModel : ViewModelBase
         _game = game;
         _gameDbService = gameDbService;
         _configService = configService;
+        _gameRegistryService = new GameRegistryService(logger);
         _logger = logger ?? NullLogger.Instance;
         _editableTitle = game.Title;
 
@@ -132,20 +134,20 @@ public partial class GameInfoViewModel : ViewModelBase
             var hashes = HashUtility.ComputeAllHashes(Game.ExecutablePath);
             VirusTotalUrl = $"https://www.virustotal.com/gui/file/{hashes.Sha256}";
             
-            // Load game settings (environment variables and program arguments)
+            // Load environment variables from game registry
+            var envVars = _gameRegistryService.GetEnvironmentVariables(Game.ExecutablePath);
+            if (envVars.Count > 0)
+            {
+                EnvironmentVariables = string.Join(Environment.NewLine, 
+                    envVars.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+            }
+            
+            // Load program arguments from game settings (still using JSON for non-env settings)
             if (_configService != null)
             {
                 var gameSettings = _configService.GetGameSettings(Game.ExecutablePath);
                 if (gameSettings != null)
                 {
-                    // Load environment variables
-                    if (gameSettings.EnvironmentVariables != null && gameSettings.EnvironmentVariables.Count > 0)
-                    {
-                        EnvironmentVariables = string.Join(Environment.NewLine, 
-                            gameSettings.EnvironmentVariables.Select(kvp => $"{kvp.Key}={kvp.Value}"));
-                    }
-                    
-                    // Load program arguments
                     ProgramArguments = gameSettings.ProgramArguments ?? string.Empty;
                 }
             }
@@ -294,27 +296,32 @@ public partial class GameInfoViewModel : ViewModelBase
         // Update the game with edited values
         Game.Title = EditableTitle;
         
-        // Save environment variables and program arguments to GameSettings
+        // Parse and save environment variables to game registry
+        var envVars = new Dictionary<string, string>();
+        if (!string.IsNullOrWhiteSpace(EnvironmentVariables))
+        {
+            var lines = EnvironmentVariables.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (var line in lines)
+            {
+                var parts = line.Split('=', 2);
+                if (parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[0]))
+                {
+                    envVars[parts[0].Trim()] = parts[1].Trim();
+                }
+            }
+        }
+        
+        // Save environment variables to game registry instead of GameSettings
+        _gameRegistryService.SetEnvironmentVariables(Game.ExecutablePath, envVars);
+        
+        // Save program arguments to GameSettings (keeping other settings in JSON)
         if (_configService != null && !string.IsNullOrEmpty(Game.ExecutablePath))
         {
             var gameSettings = _configService.GetGameSettings(Game.ExecutablePath) ?? new GameSettings();
             
-            // Parse environment variables from the text box
-            var envVars = new Dictionary<string, string>();
-            if (!string.IsNullOrWhiteSpace(EnvironmentVariables))
-            {
-                var lines = EnvironmentVariables.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                foreach (var line in lines)
-                {
-                    var parts = line.Split('=', 2);
-                    if (parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[0]))
-                    {
-                        envVars[parts[0].Trim()] = parts[1].Trim();
-                    }
-                }
-            }
-            
-            gameSettings.EnvironmentVariables = envVars.Count > 0 ? envVars : null;
+            // Note: EnvironmentVariables is now deprecated and stored in registry
+            // Remove it from GameSettings to avoid confusion
+            gameSettings.EnvironmentVariables = null;
             gameSettings.ProgramArguments = string.IsNullOrWhiteSpace(ProgramArguments) ? null : ProgramArguments;
             
             _configService.SaveGameSettings(Game.ExecutablePath, gameSettings);
@@ -430,6 +437,18 @@ public partial class GameInfoViewModel : ViewModelBase
         {
             _logger.LogError(ex, "Error copying partially implemented list to clipboard");
         }
+    }
+
+    [RelayCommand]
+    private void OpenRegistryEditor()
+    {
+        // Open the registry editor for this game
+        var hive = _gameRegistryService.GetOrCreateGameRegistry(Game.ExecutablePath);
+        var registryWindow = new Views.RegistryViewerWindow
+        {
+            DataContext = new RegistryViewerViewModel(hive, _logger)
+        };
+        registryWindow.Show();
     }
 }
 

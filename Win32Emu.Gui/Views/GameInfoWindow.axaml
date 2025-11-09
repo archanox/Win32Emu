@@ -140,9 +140,21 @@
                         Padding="15"
                         CornerRadius="8">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="Environment Variables"
-                                 FontSize="14"
-                                 FontWeight="Bold"/>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0"
+                                     Text="Environment Variables"
+                                     FontSize="14"
+                                     FontWeight="Bold"
+                                     VerticalAlignment="Center"/>
+                            <Button Grid.Column="1"
+                                    Content="Open Registry Editor"
+                                    Command="{Binding OpenRegistryEditorCommand}"
+                                    ToolTip.Tip="Open advanced registry editor for this game"/>
+                        </Grid>
+                        <TextBlock Text="Stored in per-game registry (replaces GameSettings.json)"
+                                 FontSize="11"
+                                 Opacity="0.7"
+                                 TextWrapping="Wrap"/>
                         <TextBox Text="{Binding EnvironmentVariables}"
                                Watermark="KEY=value (one per line)"
                                AcceptsReturn="True"
