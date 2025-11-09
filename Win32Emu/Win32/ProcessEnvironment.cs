@@ -383,6 +383,11 @@ public class ProcessEnvironment
 	// Virtual Registry support - replaced with proper hive-based registry
 	private RegistryHive? _registryHive;
 	
+	/// <summary>
+	/// Gets the registry hive for this process environment.
+	/// </summary>
+	public RegistryHive? RegistryHive => _registryHive;
+	
 	// Backward compatibility - old virtual registry (deprecated)
 	private readonly Dictionary<uint, VirtualRegistryKey> _registryKeys = new(); // handle -> key
 	private uint _nextRegistryHandle = 0x80000000; // Registry handles typically use high values

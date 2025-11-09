@@ -321,6 +321,142 @@ public class RegistryHive : IDisposable
 	}
 
 	/// <summary>
+	/// Enumerates subkey names under an open registry key.
+	/// </summary>
+	public string[] EnumerateSubKeyNames(uint handle)
+	{
+		if (!_openKeys.TryGetValue(handle, out var keyHandle))
+		{
+			_logger.LogWarning("[RegistryHive] Invalid handle: 0x{Handle:X8}", handle);
+			return Array.Empty<string>();
+		}
+		
+		try
+		{
+			var subKeyNames = keyHandle.Key.GetSubKeyNames().ToArray();
+			_logger.LogDebug("[RegistryHive] Enumerated {Count} subkeys for handle 0x{Handle:X8}", subKeyNames.Length, handle);
+			return subKeyNames;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[RegistryHive] Failed to enumerate subkeys for handle 0x{Handle:X8}", handle);
+			return Array.Empty<string>();
+		}
+	}
+
+	/// <summary>
+	/// Enumerates value names in an open registry key.
+	/// </summary>
+	public string[] EnumerateValueNames(uint handle)
+	{
+		if (!_openKeys.TryGetValue(handle, out var keyHandle))
+		{
+			_logger.LogWarning("[RegistryHive] Invalid handle: 0x{Handle:X8}", handle);
+			return Array.Empty<string>();
+		}
+		
+		try
+		{
+			var valueNames = keyHandle.Key.GetValueNames().ToArray();
+			_logger.LogDebug("[RegistryHive] Enumerated {Count} values for handle 0x{Handle:X8}", valueNames.Length, handle);
+			return valueNames;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[RegistryHive] Failed to enumerate values for handle 0x{Handle:X8}", handle);
+			return Array.Empty<string>();
+		}
+	}
+
+	/// <summary>
+	/// Gets the path for an open registry key handle.
+	/// </summary>
+	public string? GetKeyPath(uint handle)
+	{
+		if (_openKeys.TryGetValue(handle, out var keyHandle))
+		{
+			return keyHandle.Path;
+		}
+		
+		return null;
+	}
+
+	/// <summary>
+	/// Deletes a value from an open registry key.
+	/// </summary>
+	public bool DeleteValue(uint handle, string valueName)
+	{
+		if (!_openKeys.TryGetValue(handle, out var keyHandle))
+		{
+			_logger.LogWarning("[RegistryHive] Invalid handle: 0x{Handle:X8}", handle);
+			return false;
+		}
+		
+		try
+		{
+			keyHandle.Key.DeleteValue(valueName);
+			_logger.LogDebug("[RegistryHive] Deleted value: {ValueName} from handle 0x{Handle:X8}", valueName, handle);
+			return true;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[RegistryHive] Failed to delete value: {ValueName} from handle 0x{Handle:X8}", valueName, handle);
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// Deletes a subkey from a registry path.
+	/// </summary>
+	public bool DeleteSubKey(string fullPath)
+	{
+		try
+		{
+			var (hiveName, subKeyPath) = ParseRegistryPath(fullPath);
+			if (hiveName == null || string.IsNullOrEmpty(subKeyPath))
+			{
+				_logger.LogWarning("[RegistryHive] Invalid registry path: {FullPath}", fullPath);
+				return false;
+			}
+			
+			if (!_hives.TryGetValue(hiveName, out var hive))
+			{
+				_logger.LogWarning("[RegistryHive] Unknown hive: {HiveName}", hiveName);
+				return false;
+			}
+			
+			// Navigate to parent key
+			var parts = subKeyPath.Split('\\', StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length == 0)
+			{
+				_logger.LogWarning("[RegistryHive] Cannot delete root key");
+				return false;
+			}
+			
+			var key = hive.Root;
+			for (int i = 0; i < parts.Length - 1; i++)
+			{
+				key = key.OpenSubKey(parts[i]);
+				if (key == null)
+				{
+					_logger.LogWarning("[RegistryHive] Parent key not found: {FullPath}", fullPath);
+					return false;
+				}
+			}
+			
+			// Delete the last key
+			key.DeleteSubKey(parts[^1]);
+			_logger.LogDebug("[RegistryHive] Deleted subkey: {FullPath}", fullPath);
+			return true;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[RegistryHive] Failed to delete subkey: {FullPath}", fullPath);
+			return false;
+		}
+	}
+
+	/// <summary>
 	/// Parses a full registry path into hive name and subkey path.
 	/// Example: "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet" -> ("HKEY_LOCAL_MACHINE\SYSTEM", "CurrentControlSet")
 	/// </summary>

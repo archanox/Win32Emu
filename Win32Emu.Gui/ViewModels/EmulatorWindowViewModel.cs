@@ -777,6 +777,31 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     {
         ShowDebugPanel = !ShowDebugPanel;
     }
+
+    [RelayCommand]
+    private void OpenRegistryViewer()
+    {
+        if (_emulatorService?.CurrentEmulator?.Environment != null)
+        {
+            var registryWindow = new Views.RegistryViewerWindow
+            {
+                DataContext = new RegistryViewerViewModel(_emulatorService.CurrentEmulator.Environment)
+            };
+            
+            if (_ownerWindow != null)
+            {
+                registryWindow.ShowDialog(_ownerWindow);
+            }
+            else
+            {
+                registryWindow.Show();
+            }
+        }
+        else
+        {
+            OnDebugOutput("Cannot open registry viewer: Emulator not running", DebugLevel.Warning);
+        }
+    }
 }
 
 public class DebugMessage
