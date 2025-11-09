@@ -8,6 +8,17 @@ using System.Runtime.InteropServices;
 namespace Win32Emu.Win32.Modules
 {
 	/// <summary>
+	/// TMU (Texture Mapping Unit) vertex data
+	/// </summary>
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct GrTmuVertex
+	{
+		public float sow;  // s texture coordinate (s over w)
+		public float tow;  // t texture coordinate (t over w)
+		public float oow;  // 1/w for mipmapping
+	}
+	
+	/// <summary>
 	/// Glide vertex structure matching the Win32 GrVertex layout
 	/// </summary>
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -18,7 +29,8 @@ namespace Win32Emu.Win32.Modules
 		public float ooz;
 		public float a;
 		public float oow;
-		// Note: TMU vertex data would follow but we'll handle that separately
+		public GrTmuVertex tmu0;  // TMU 0 texture coordinates
+		public GrTmuVertex tmu1;  // TMU 1 texture coordinates (if available)
 	}
 	
 	/// <summary>
@@ -85,10 +97,13 @@ namespace Win32Emu.Win32.Modules
 		private readonly List<Triangle> _triangleBatch = new();
 		private const int MaxBatchSize = 1000;
 		
+		// Memory reference for drawing operations (set during TryInvokeUnsafe)
+		private VirtualMemory? _currentMemory;
+		
 		// Vertex reading helper
 		private GrVertex ReadVertex(VirtualMemory memory, uint address)
 		{
-			Span<byte> data = stackalloc byte[36]; // 9 floats * 4 bytes
+			Span<byte> data = stackalloc byte[60]; // 9 floats + 2 TMUs * 3 floats = 15 floats * 4 bytes
 			memory.ReadBytes(address, data);
 			var vertex = new GrVertex
 			{
@@ -100,7 +115,19 @@ namespace Win32Emu.Win32.Modules
 				b = BitConverter.ToSingle(data.Slice(20, 4)),
 				ooz = BitConverter.ToSingle(data.Slice(24, 4)),
 				a = BitConverter.ToSingle(data.Slice(28, 4)),
-				oow = BitConverter.ToSingle(data.Slice(32, 4))
+				oow = BitConverter.ToSingle(data.Slice(32, 4)),
+				tmu0 = new GrTmuVertex
+				{
+					sow = BitConverter.ToSingle(data.Slice(36, 4)),
+					tow = BitConverter.ToSingle(data.Slice(40, 4)),
+					oow = BitConverter.ToSingle(data.Slice(44, 4))
+				},
+				tmu1 = new GrTmuVertex
+				{
+					sow = BitConverter.ToSingle(data.Slice(48, 4)),
+					tow = BitConverter.ToSingle(data.Slice(52, 4)),
+					oow = BitConverter.ToSingle(data.Slice(56, 4))
+				}
 			};
 			return vertex;
 		}
@@ -118,6 +145,7 @@ namespace Win32Emu.Win32.Modules
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
+			_currentMemory = memory; // Store for use in drawing functions
 			var a = new StackArgs(cpu, memory);
 
 			switch (export.ToUpperInvariant())
@@ -311,7 +339,7 @@ namespace Win32Emu.Win32.Modules
 						uint ptrB = a.UInt32(1);
 						uint ptrC = a.UInt32(2);
 						_logger.LogInformation("[Glide2x] guDrawTriangleWithClip(0x{PtrA:X8}, 0x{PtrB:X8}, 0x{PtrC:X8})", ptrA, ptrB, ptrC);
-						returnValue = guDrawTriangleWithClip(memory, ptrA, ptrB, ptrC);
+						returnValue = guDrawTriangleWithClip(ptrA, ptrB, ptrC);
 						return true;
 					}
 				
@@ -321,7 +349,7 @@ namespace Win32Emu.Win32.Modules
 						uint ptrB = a.UInt32(1);
 						uint ptrC = a.UInt32(2);
 						_logger.LogInformation("[Glide2x] grDrawTriangle(0x{PtrA:X8}, 0x{PtrB:X8}, 0x{PtrC:X8})", ptrA, ptrB, ptrC);
-						returnValue = grDrawTriangle(memory, ptrA, ptrB, ptrC);
+						returnValue = grDrawTriangle(ptrA, ptrB, ptrC);
 						return true;
 					}
 
@@ -340,12 +368,12 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(2, entryPoint: 0x00002E70, Version = "4.90.0.3000", ExportName = "_grAADrawLine@8")]
+		[DllModuleExport(2, entryPoint: 0x00002E70, Version = "4.90.0.3000", ExportName = "_grAADrawLine@8", IsStub = true)]
 		public uint grAADrawLine()
 		{
-			_logger.LogDebug("[GLIDE2x] grAADrawLine called");
+			_logger.LogWarning("[GLIDE2x] grAADrawLine called (stub)");
 			// Draw an anti-aliased line
-			// Parameters: pointer to two GrVertex structures
+			// TODO: Implement line rasterization
 			return 0; // Success (void function)
 		}
 
@@ -673,22 +701,22 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(36, entryPoint: 0x00002FF0, Version = "4.90.0.3000", ExportName = "_grDrawTriangle@12")]
-		public uint grDrawTriangle(VirtualMemory memory, uint ptrA, uint ptrB, uint ptrC)
+		public uint grDrawTriangle(uint ptrA, uint ptrB, uint ptrC)
 		{
 			_logger.LogDebug("[GLIDE2x] grDrawTriangle: vertices at 0x{PtrA:X8}, 0x{PtrB:X8}, 0x{PtrC:X8}", ptrA, ptrB, ptrC);
 			
-			if (!_windowOpen || _frameBuffer == null)
+			if (!_windowOpen || _frameBuffer == null || _currentMemory == null)
 			{
-				_logger.LogWarning("[GLIDE2x] grDrawTriangle: Window not open");
+				_logger.LogWarning("[GLIDE2x] grDrawTriangle: Window not open or memory not available");
 				return 0;
 			}
 			
 			try
 			{
 				// Read vertices from memory
-				var v0 = ReadVertex(memory, ptrA);
-				var v1 = ReadVertex(memory, ptrB);
-				var v2 = ReadVertex(memory, ptrC);
+				var v0 = ReadVertex(_currentMemory, ptrA);
+				var v1 = ReadVertex(_currentMemory, ptrB);
+				var v2 = ReadVertex(_currentMemory, ptrC);
 				
 				// Add to batch
 				var triangle = new Triangle
@@ -697,7 +725,7 @@ namespace Win32Emu.Win32.Modules
 					v1 = v1,
 					v2 = v2,
 					TextureId = _currentTextureTMU0,
-					HasTexture = false // TODO: Implement texture mapping
+					HasTexture = (_currentTextureTMU0 != 0)  // Has texture if a texture is bound
 				};
 				
 				_triangleBatch.Add(triangle);
@@ -1405,11 +1433,11 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(105, entryPoint: 0x00001500, Version = "4.90.0.3000", ExportName = "_guDrawTriangleWithClip@12")]
-		public uint guDrawTriangleWithClip(VirtualMemory memory, uint ptrA, uint ptrB, uint ptrC)
+		public uint guDrawTriangleWithClip(uint ptrA, uint ptrB, uint ptrC)
 		{
 			_logger.LogDebug("[GLIDE2x] guDrawTriangleWithClip: vertices at 0x{PtrA:X8}, 0x{PtrB:X8}, 0x{PtrC:X8}", ptrA, ptrB, ptrC);
 			// For now, just forward to grDrawTriangle (clipping would be done in a full implementation)
-			return grDrawTriangle(memory, ptrA, ptrB, ptrC);
+			return grDrawTriangle(ptrA, ptrB, ptrC);
 		}
 
 		[DllModuleExport(106, entryPoint: 0x00006400, Version = "4.90.0.3000", ExportName = "_guEncodeRLE16@16", IsStub = true)]
