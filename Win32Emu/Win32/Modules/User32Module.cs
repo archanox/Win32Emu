@@ -1540,22 +1540,28 @@ namespace Win32Emu.Win32.Modules
 					{
 						_logger.LogDebug("[User32] CallWindowProcedure: COM vtable call at 0x{CallTarget:X8}", step.CallTarget);
 
-						// Save callee-saved registers (EBX, ESI, EDI)
+						// Save callee-saved registers (EBX, ESI, EDI, EBP)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
 
 						if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _memory, out var comRet, out var comArgBytes))
 						{
 							var currentEsp = _cpu.GetRegister("ESP");
 							var retEip = _memory.Read32(currentEsp);
+							
+							// Validate return address before jumping
+							if (!IsValidReturnAddress(retEip, _image))
+							{
+								_logger.LogError("[User32] CallWindowProcedure: Invalid return address 0x{RetEip:X8} from COM call", retEip);
+								break;
+							}
+							
 							currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
 							_cpu.SetRegister("ESP", currentEsp);
 							_cpu.SetRegister("EAX", comRet);
 							_cpu.SetEip(retEip);
 
-							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-
-							RestoreEbpFromStack(currentEsp);
+							// Restore callee-saved registers, skipping invalid EBP values (e.g., import hooks)
+							CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _memory.Size);
 						}
 					}
 					// Check for import calls - these need to be dispatched to emulated Win32 functions
@@ -1565,7 +1571,7 @@ namespace Win32Emu.Win32.Modules
 						var name = imp.name;
 						_logger.LogDebug("[User32] CallWindowProcedure: Import call {Dll}!{Name} at 0x{CallTarget:X8}", dll, name, step.CallTarget);
 
-						// Save callee-saved registers (EBX, ESI, EDI)
+						// Save callee-saved registers (EBX, ESI, EDI, EBP)
 						var saved = CpuHelpers.SaveCalleeSavedRegisters(_cpu);
 
 						if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, _cpu, _memory, out var ret, out var argBytes))
@@ -1580,6 +1586,13 @@ namespace Win32Emu.Win32.Modules
 
 							var currentEsp = _cpu.GetRegister("ESP");
 							var retEip = _memory.Read32(currentEsp);
+							
+							// Validate return address before jumping
+							if (!IsValidReturnAddress(retEip, _image))
+							{
+								_logger.LogError("[User32] CallWindowProcedure: Invalid return address 0x{RetEip:X8} from import {Dll}!{Name}", retEip, dll, name);
+								break;
+							}
 
 							currentEsp += 4 + (uint)argBytes;
 
@@ -1587,10 +1600,8 @@ namespace Win32Emu.Win32.Modules
 							_cpu.SetRegister("EAX", ret);
 							_cpu.SetEip(retEip);
 
-							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-
-							RestoreEbpFromStack(currentEsp);
+							// Restore callee-saved registers, skipping invalid EBP values (e.g., import hooks)
+							CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _memory.Size);
 						}
 						else
 						{
@@ -1608,6 +1619,13 @@ namespace Win32Emu.Win32.Modules
 
 							var currentEsp = _cpu.GetRegister("ESP");
 							var retEip = _memory.Read32(currentEsp);
+							
+							// Validate return address before jumping
+							if (!IsValidReturnAddress(retEip, _image))
+							{
+								_logger.LogError("[User32] CallWindowProcedure: Invalid return address 0x{RetEip:X8} from unimplemented import {Dll}!{Name}", retEip, dll, name);
+								break;
+							}
 
 							currentEsp += 4 + (uint)simulatedArgBytes;
 
@@ -1615,10 +1633,8 @@ namespace Win32Emu.Win32.Modules
 							_cpu.SetRegister("EAX", 0);
 							_cpu.SetEip(retEip);
 
-							// Restore callee-saved registers
-							CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved);
-
-							RestoreEbpFromStack(currentEsp);
+							// Restore callee-saved registers, skipping invalid EBP values (e.g., import hooks)
+							CpuHelpers.RestoreCalleeSavedRegisters(_cpu, saved, skipInvalidEbp: true, memorySize: _memory.Size);
 						}
 					}
 
