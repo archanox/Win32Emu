@@ -1,0 +1,91 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Win32Emu.Gui.ViewModels"
+        x:Class="Win32Emu.Gui.Views.RegistryViewerWindow"
+        x:DataType="vm:RegistryViewerViewModel"
+        Title="Registry Editor"
+        Width="900"
+        Height="600"
+        WindowStartupLocation="CenterOwner">
+    
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Toolbar -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                Padding="10">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Content="Refresh" Command="{Binding RefreshCommand}"/>
+                <Separator/>
+                <Button Content="Add Key" Command="{Binding AddKeyCommand}"/>
+                <Button Content="Delete Key" Command="{Binding DeleteKeyCommand}"/>
+                <Separator/>
+                <Button Content="Add Value" Command="{Binding AddValueCommand}"/>
+                <Button Content="Edit Value" Command="{Binding EditValueCommand}"/>
+                <Button Content="Delete Value" Command="{Binding DeleteValueCommand}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" ColumnDefinitions="300,5,*" Margin="10">
+            <!-- Left: Registry Key Tree -->
+            <Border Grid.Column="0"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <TreeView ItemsSource="{Binding RootKeys}"
+                          SelectedItem="{Binding SelectedKey}">
+                    <TreeView.ItemTemplate>
+                        <TreeDataTemplate ItemsSource="{Binding Children}">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <PathIcon Data="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"
+                                          Width="16" Height="16"
+                                          Foreground="{DynamicResource SystemAccentColor}"/>
+                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </Border>
+
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="1"
+                          Background="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                          ResizeDirection="Columns"/>
+
+            <!-- Right: Values DataGrid -->
+            <Border Grid.Column="2"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <DataGrid ItemsSource="{Binding Values}"
+                          SelectedItem="{Binding SelectedValue}"
+                          IsReadOnly="True"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          SelectionMode="Single"
+                          CanUserResizeColumns="True"
+                          CanUserSortColumns="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Name" 
+                                          Binding="{Binding Name}" 
+                                          Width="150"/>
+                        <DataGridTextColumn Header="Type" 
+                                          Binding="{Binding Type}" 
+                                          Width="100"/>
+                        <DataGridTextColumn Header="Value" 
+                                          Binding="{Binding Value}" 
+                                          Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                Padding="10,5">
+            <TextBlock Text="{Binding StatusText}" 
+                      FontSize="12"/>
+        </Border>
+    </Grid>
+</Window>

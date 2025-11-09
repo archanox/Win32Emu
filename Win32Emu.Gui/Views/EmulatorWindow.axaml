@@ -135,7 +135,7 @@
                 BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                 BorderThickness="0,1,0,0"
                 Padding="10,5">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*">
                 <TextBlock Grid.Column="0"
                          Text="{Binding CurrentState, StringFormat='State: {0}'}"
                          VerticalAlignment="Center"
@@ -174,6 +174,18 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="🐛" FontSize="16" Margin="0,0,5,0"/>
                         <TextBlock Text="Debug Panel"/>
+                    </StackPanel>
+                </Button>
+                
+                <!-- Registry Viewer Button -->
+                <Button Grid.Column="4"
+                        Command="{Binding OpenRegistryViewerCommand}"
+                        ToolTip.Tip="Open Registry Viewer"
+                        Margin="0,0,5,0"
+                        Padding="10,5">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📋" FontSize="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Registry"/>
                     </StackPanel>
                 </Button>
             </Grid>
