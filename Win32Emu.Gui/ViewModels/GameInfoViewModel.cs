@@ -72,6 +72,7 @@ public partial class GameInfoViewModel : ViewModelBase
     private readonly IGameDbService? _gameDbService;
     private readonly ConfigurationService? _configService;
     private readonly GameRegistryService _gameRegistryService;
+    private readonly VirtualDiskService _virtualDiskService;
     private readonly ILogger _logger;
     private Action<Game>? _onGameUpdated;
     private Func<string, Task>? _clipboardSetter;
@@ -84,6 +85,10 @@ public partial class GameInfoViewModel : ViewModelBase
         _gameRegistryService = new GameRegistryService(logger);
         _logger = logger ?? NullLogger.Instance;
         _editableTitle = game.Title;
+
+        // Initialize VirtualDiskService to get or create virtual disk
+        var emulatorConfig = configService?.GetEmulatorConfiguration() ?? new EmulatorConfiguration();
+        _virtualDiskService = new VirtualDiskService(emulatorConfig, logger);
 
         LoadGameInfo();
     }
@@ -134,12 +139,23 @@ public partial class GameInfoViewModel : ViewModelBase
             var hashes = HashUtility.ComputeAllHashes(Game.ExecutablePath);
             VirusTotalUrl = $"https://www.virustotal.com/gui/file/{hashes.Sha256}";
             
-            // Load environment variables from game registry
-            var envVars = _gameRegistryService.GetEnvironmentVariables(Game.ExecutablePath);
-            if (envVars.Count > 0)
+            // Load environment variables from game registry (if virtual disk exists)
+            var virtualDiskPath = GetVirtualDiskPath();
+            if (!string.IsNullOrEmpty(virtualDiskPath) && File.Exists(virtualDiskPath))
             {
-                EnvironmentVariables = string.Join(Environment.NewLine, 
-                    envVars.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+                try
+                {
+                    var envVars = _gameRegistryService.GetEnvironmentVariables(virtualDiskPath);
+                    if (envVars.Count > 0)
+                    {
+                        EnvironmentVariables = string.Join(Environment.NewLine, 
+                            envVars.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load environment variables from virtual disk");
+                }
             }
             
             // Load program arguments from game settings (still using JSON for non-env settings)
@@ -296,7 +312,7 @@ public partial class GameInfoViewModel : ViewModelBase
         // Update the game with edited values
         Game.Title = EditableTitle;
         
-        // Parse and save environment variables to game registry
+        // Parse environment variables from the text box
         var envVars = new Dictionary<string, string>();
         if (!string.IsNullOrWhiteSpace(EnvironmentVariables))
         {
@@ -311,17 +327,25 @@ public partial class GameInfoViewModel : ViewModelBase
             }
         }
         
-        // Save environment variables to game registry instead of GameSettings
-        _gameRegistryService.SetEnvironmentVariables(Game.ExecutablePath, envVars);
+        // Save environment variables to virtual disk registry
+        var virtualDiskPath = GetVirtualDiskPath();
+        if (!string.IsNullOrEmpty(virtualDiskPath))
+        {
+            try
+            {
+                _gameRegistryService.SetEnvironmentVariables(virtualDiskPath, envVars);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to save environment variables to virtual disk");
+            }
+        }
         
         // Save program arguments to GameSettings (keeping other settings in JSON)
         if (_configService != null && !string.IsNullOrEmpty(Game.ExecutablePath))
         {
             var gameSettings = _configService.GetGameSettings(Game.ExecutablePath) ?? new GameSettings();
             
-            // Note: EnvironmentVariables is now deprecated and stored in registry
-            // Remove it from GameSettings to avoid confusion
-            gameSettings.EnvironmentVariables = null;
             gameSettings.ProgramArguments = string.IsNullOrWhiteSpace(ProgramArguments) ? null : ProgramArguments;
             
             _configService.SaveGameSettings(Game.ExecutablePath, gameSettings);
@@ -442,13 +466,62 @@ public partial class GameInfoViewModel : ViewModelBase
     [RelayCommand]
     private void OpenRegistryEditor()
     {
-        // Open the registry editor for this game
-        var hive = _gameRegistryService.GetOrCreateGameRegistry(Game.ExecutablePath);
-        var registryWindow = new Views.RegistryViewerWindow
+        var virtualDiskPath = GetVirtualDiskPath();
+        if (string.IsNullOrEmpty(virtualDiskPath))
         {
-            DataContext = new RegistryViewerViewModel(hive, _logger)
-        };
-        registryWindow.Show();
+            _logger.LogWarning("Cannot open registry editor: no virtual disk path available");
+            return;
+        }
+
+        try
+        {
+            // Open the registry editor for this game's virtual disk
+            var hive = _gameRegistryService.GetOrCreateGameRegistry(virtualDiskPath);
+            var registryWindow = new Views.RegistryViewerWindow
+            {
+                DataContext = new RegistryViewerViewModel(hive, _logger)
+            };
+            registryWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open registry editor");
+        }
+    }
+
+    /// <summary>
+    /// Gets the virtual disk path for the current game.
+    /// Returns the explicit path from Game.VirtualDiskPath, or gets/creates it from VirtualDiskService.
+    /// </summary>
+    private string? GetVirtualDiskPath()
+    {
+        // If game has explicit virtual disk path, use it
+        if (!string.IsNullOrEmpty(Game.VirtualDiskPath))
+        {
+            return Game.VirtualDiskPath;
+        }
+
+        // Otherwise, try to get or create via VirtualDiskService
+        if (_configService != null)
+        {
+            try
+            {
+                var gameSettings = _configService.GetGameSettings(Game.ExecutablePath);
+                var virtualDiskPath = _virtualDiskService.GetOrCreateVirtualDisk(Game, gameSettings);
+                
+                // Update the game model with the disk path
+                Game.VirtualDiskPath = virtualDiskPath;
+                
+                return virtualDiskPath;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get or create virtual disk for game");
+                return null;
+            }
+        }
+
+        return null;
     }
 }
 
