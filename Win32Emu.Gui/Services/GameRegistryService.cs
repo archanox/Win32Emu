@@ -1,18 +1,19 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using DiscUtils.Registry;
+using Win32Emu.VirtualFileSystem;
 using Win32EmuRegistryHive = Win32Emu.Win32.Registry.RegistryHive;
 
 namespace Win32Emu.Gui.Services;
 
 /// <summary>
-/// Manages per-game registry hives that persist between launches.
-/// Replaces the GameSettings.json approach for environment variables.
+/// Manages per-game registry hives that are stored within the virtual disk.
+/// Registry hives live at C:\Windows\System32\config\ inside the virtual disk.
 /// </summary>
 public class GameRegistryService
 {
 	private readonly ILogger _logger;
-	private readonly Dictionary<string, Win32EmuRegistryHive> _loadedHives = new();
+	private readonly Dictionary<string, (DiskVirtualFileSystem vfs, Win32EmuRegistryHive hive)> _loadedHives = new();
 
 	public GameRegistryService(ILogger? logger = null)
 	{
@@ -20,89 +21,50 @@ public class GameRegistryService
 	}
 
 	/// <summary>
-	/// Gets or creates a registry hive for a specific game.
+	/// Gets or creates a registry hive for a specific game by accessing the virtual disk.
 	/// </summary>
-	/// <param name="gameExecutablePath">Path to the game executable (used as unique identifier)</param>
+	/// <param name="virtualDiskPath">Path to the game's virtual disk file (VHD/VMDK/VHDX)</param>
 	/// <returns>A RegistryHive instance for this game</returns>
-	public Win32EmuRegistryHive GetOrCreateGameRegistry(string gameExecutablePath)
+	public Win32EmuRegistryHive GetOrCreateGameRegistry(string virtualDiskPath)
 	{
-		if (_loadedHives.TryGetValue(gameExecutablePath, out var existingHive))
+		if (_loadedHives.TryGetValue(virtualDiskPath, out var existing))
 		{
-			return existingHive;
+			return existing.hive;
 		}
 
-		// Create registry hive file path based on game executable
-		var registryPath = GetRegistryFilePath(gameExecutablePath);
-		
-		// Ensure directory exists
-		var directory = Path.GetDirectoryName(registryPath);
-		if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+		if (!File.Exists(virtualDiskPath))
 		{
-			Directory.CreateDirectory(directory);
+			throw new FileNotFoundException($"Virtual disk not found: {virtualDiskPath}");
 		}
 
-		Win32EmuRegistryHive hive;
-		if (File.Exists(registryPath))
-		{
-			// Load existing registry
-			try
-			{
-				using var fileStream = File.Open(registryPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-				var memoryStream = new MemoryStream();
-				fileStream.CopyTo(memoryStream);
-				memoryStream.Position = 0;
-				
-				hive = new Win32EmuRegistryHive(null, _logger);
-				_logger.LogInformation("[GameRegistry] Loaded existing registry for {Path}", gameExecutablePath);
-			}
-			catch (Exception ex)
-			{
-				_logger.LogWarning(ex, "[GameRegistry] Failed to load existing registry, creating new one");
-				hive = new Win32EmuRegistryHive(null, _logger);
-			}
-		}
-		else
-		{
-			// Create new registry
-			hive = new Win32EmuRegistryHive(null, _logger);
-			_logger.LogInformation("[GameRegistry] Created new registry for {Path}", gameExecutablePath);
-		}
-
-		_loadedHives[gameExecutablePath] = hive;
-		return hive;
-	}
-
-	/// <summary>
-	/// Saves the registry hive for a specific game to disk.
-	/// </summary>
-	public void SaveGameRegistry(string gameExecutablePath)
-	{
-		if (!_loadedHives.TryGetValue(gameExecutablePath, out var hive))
-		{
-			return;
-		}
-
-		var registryPath = GetRegistryFilePath(gameExecutablePath);
-		
 		try
 		{
-			// Save is handled by RegistryHive.SaveHives() if needed
-			// For now, just log
-			_logger.LogInformation("[GameRegistry] Saved registry for {Path}", gameExecutablePath);
+			// Open the virtual disk
+			var vfs = new DiskVirtualFileSystem(virtualDiskPath, _logger);
+			
+			// Create a registry hive that uses this VFS
+			// The registry will access files at paths like C:\Windows\System32\config\SYSTEM
+			var hive = new Win32EmuRegistryHive(vfs, _logger);
+			
+			_loadedHives[virtualDiskPath] = (vfs, hive);
+			_logger.LogInformation("[GameRegistry] Loaded registry from virtual disk: {Path}", virtualDiskPath);
+			
+			return hive;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "[GameRegistry] Failed to save registry for {Path}", gameExecutablePath);
+			_logger.LogError(ex, "[GameRegistry] Failed to load registry from virtual disk: {Path}", virtualDiskPath);
+			throw;
 		}
 	}
 
 	/// <summary>
 	/// Gets environment variables from a game's registry.
 	/// </summary>
-	public Dictionary<string, string> GetEnvironmentVariables(string gameExecutablePath)
+	public Dictionary<string, string> GetEnvironmentVariables(string virtualDiskPath)
 	{
 		var result = new Dictionary<string, string>();
-		var hive = GetOrCreateGameRegistry(gameExecutablePath);
+		var hive = GetOrCreateGameRegistry(virtualDiskPath);
 
 		try
 		{
@@ -151,9 +113,9 @@ public class GameRegistryService
 	/// <summary>
 	/// Sets environment variables in a game's registry (user hive).
 	/// </summary>
-	public void SetEnvironmentVariables(string gameExecutablePath, Dictionary<string, string> environmentVariables)
+	public void SetEnvironmentVariables(string virtualDiskPath, Dictionary<string, string> environmentVariables)
 	{
-		var hive = GetOrCreateGameRegistry(gameExecutablePath);
+		var hive = GetOrCreateGameRegistry(virtualDiskPath);
 
 		try
 		{
@@ -174,7 +136,7 @@ public class GameRegistryService
 				}
 
 				hive.CloseKey(userEnvHandle);
-				_logger.LogInformation("[GameRegistry] Set {Count} environment variables", environmentVariables.Count);
+				_logger.LogInformation("[GameRegistry] Set {Count} environment variables in virtual disk", environmentVariables.Count);
 			}
 		}
 		catch (Exception ex)
@@ -184,28 +146,28 @@ public class GameRegistryService
 	}
 
 	/// <summary>
-	/// Closes and disposes a game's registry hive.
+	/// Closes and disposes a game's registry hive and VFS.
 	/// </summary>
-	public void CloseGameRegistry(string gameExecutablePath)
+	public void CloseGameRegistry(string virtualDiskPath)
 	{
-		if (_loadedHives.Remove(gameExecutablePath, out var hive))
+		if (_loadedHives.Remove(virtualDiskPath, out var loaded))
 		{
-			hive.Dispose();
-			_logger.LogInformation("[GameRegistry] Closed registry for {Path}", gameExecutablePath);
+			loaded.hive.Dispose();
+			loaded.vfs.Dispose();
+			_logger.LogInformation("[GameRegistry] Closed registry for virtual disk: {Path}", virtualDiskPath);
 		}
 	}
 
-	private static string GetRegistryFilePath(string gameExecutablePath)
+	/// <summary>
+	/// Disposes all loaded registry hives and VFS instances.
+	/// </summary>
+	public void Dispose()
 	{
-		// Create a safe filename from the game path
-		var fileName = Path.GetFileNameWithoutExtension(gameExecutablePath);
-		var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-			System.Text.Encoding.UTF8.GetBytes(gameExecutablePath)
-		)).Substring(0, 8);
-
-		var appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-		var registryDir = Path.Combine(appDataDir, "Win32Emu", "GameRegistries");
-		
-		return Path.Combine(registryDir, $"{fileName}_{hash}.dat");
+		foreach (var (vfs, hive) in _loadedHives.Values)
+		{
+			hive.Dispose();
+			vfs.Dispose();
+		}
+		_loadedHives.Clear();
 	}
 }
