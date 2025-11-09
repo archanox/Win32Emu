@@ -736,7 +736,7 @@ namespace Win32Emu.Win32.Modules
 					FlushTriangleBatch();
 				}
 			}
-			catch (Exception ex)
+			catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
 			{
 				_logger.LogError(ex, "[GLIDE2x] Error in grDrawTriangle");
 			}
@@ -1642,9 +1642,9 @@ namespace Win32Emu.Win32.Modules
 			var v1 = tri.v1;
 			var v2 = tri.v2;
 			
-			if (v0.y > v1.y) { var tmp = v0; v0 = v1; v1 = tmp; }
-			if (v0.y > v2.y) { var tmp = v0; v0 = v2; v2 = tmp; }
-			if (v1.y > v2.y) { var tmp = v1; v1 = v2; v2 = tmp; }
+			if (v0.y > v1.y) { (v0, v1) = (v1, v0); }
+			if (v0.y > v2.y) { (v0, v2) = (v2, v0); }
+			if (v1.y > v2.y) { (v1, v2) = (v2, v1); }
 			
 			// Simple flat-bottom and flat-top triangle rasterization
 			RasterizeTriangle(v0, v1, v2);
@@ -1682,13 +1682,13 @@ namespace Win32Emu.Win32.Modules
 					int xA = (int)(v0.x + (v2.x - v0.x) * alpha);
 					int xB = (int)(v0.x + (v1.x - v0.x) * beta);
 					
-					if (xA > xB) { var tmp = xA; xA = xB; xB = tmp; }
+					if (xA > xB) { (xA, xB) = (xB, xA); }
 					
-					// Interpolate colors
-					byte rA = (byte)Math.Clamp(v0.r + (v2.r - v0.r) * alpha, 0, 255);
-					byte gA = (byte)Math.Clamp(v0.g + (v2.g - v0.g) * alpha, 0, 255);
-					byte bA = (byte)Math.Clamp(v0.b + (v2.b - v0.b) * alpha, 0, 255);
-					byte aA = (byte)Math.Clamp(v0.a + (v2.a - v0.a) * alpha, 0, 255);
+					// Interpolate colors for short edge (v0 to v1) using beta
+					byte rA = (byte)Math.Clamp(v0.r + (v1.r - v0.r) * beta, 0, 255);
+					byte gA = (byte)Math.Clamp(v0.g + (v1.g - v0.g) * beta, 0, 255);
+					byte bA = (byte)Math.Clamp(v0.b + (v1.b - v0.b) * beta, 0, 255);
+					byte aA = (byte)Math.Clamp(v0.a + (v1.a - v0.a) * beta, 0, 255);
 					
 					// Draw horizontal span
 					DrawHorizontalSpan(y, xA, xB, rA, gA, bA, aA);
@@ -1709,12 +1709,12 @@ namespace Win32Emu.Win32.Modules
 					int xA = (int)(v0.x + (v2.x - v0.x) * alpha);
 					int xB = (int)(v1.x + (v2.x - v1.x) * beta);
 					
-					if (xA > xB) { var tmp = xA; xA = xB; xB = tmp; }
+					if (xA > xB) { (xA, xB) = (xB, xA); }
 					
-					byte rA = (byte)Math.Clamp(v0.r + (v2.r - v0.r) * alpha, 0, 255);
-					byte gA = (byte)Math.Clamp(v0.g + (v2.g - v0.g) * alpha, 0, 255);
-					byte bA = (byte)Math.Clamp(v0.b + (v2.b - v0.b) * alpha, 0, 255);
-					byte aA = (byte)Math.Clamp(v0.a + (v2.a - v0.a) * alpha, 0, 255);
+					byte rA = (byte)Math.Clamp(v1.r + (v2.r - v1.r) * beta, 0, 255);
+					byte gA = (byte)Math.Clamp(v1.g + (v2.g - v1.g) * beta, 0, 255);
+					byte bA = (byte)Math.Clamp(v1.b + (v2.b - v1.b) * beta, 0, 255);
+					byte aA = (byte)Math.Clamp(v1.a + (v2.a - v1.a) * beta, 0, 255);
 					
 					DrawHorizontalSpan(y, xA, xB, rA, gA, bA, aA);
 				}
