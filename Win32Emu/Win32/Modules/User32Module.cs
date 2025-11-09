@@ -1370,7 +1370,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogInformation("[User32] DispatchMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, msg.hwnd);
 
-				var result = CallWindowProcedure(wndProc.Value, msg.hwnd, msg.message, msg.wParam, msg.lParam);
+				var result = CallWindowProcedureAsync(wndProc.Value, msg.hwnd, msg.message, msg.wParam, msg.lParam).GetAwaiter().GetResult();
 				_logger.LogInformation("[User32] DispatchMessageA: WndProc returned 0x{Result:X8}", result);
 				return result;
 			}
@@ -1867,7 +1867,7 @@ namespace Win32Emu.Win32.Modules
 			if (wndProc.HasValue && wndProc.Value != 0)
 			{
 				_logger.LogInformation("[User32] SendMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
-				var result = CallWindowProcedure(wndProc.Value, hwnd, msg, wParam, lParam);
+				var result = CallWindowProcedureAsync(wndProc.Value, hwnd, msg, wParam, lParam).GetAwaiter().GetResult();
 				_logger.LogInformation("[User32] SendMessageA: WndProc returned 0x{Result:X8}", result);
 				return result;
 			}
