@@ -7,7 +7,7 @@ using Win32Emu.Memory;
 
 namespace Win32Emu.Win32.Modules
 {
-	internal class User32Module : IWin32ModuleUnsafe
+	internal class User32Module : IWin32ModuleAsync
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
@@ -860,6 +860,31 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
+		/// Async implementation for Win32 APIs that may call back into emulated code.
+		/// Currently delegates to synchronous version - will be enhanced as more APIs are converted to async.
+		/// </summary>
+		public async Task<(bool success, uint returnValue)> TryInvokeAsync(
+			string export, 
+			ICpu cpu, 
+			VirtualMemory memory, 
+			CancellationToken cancellationToken = default)
+		{
+			_cpu = cpu;
+			_memory = memory;
+
+			// For now, most APIs use synchronous implementation
+			// TODO: Convert message handling APIs to use async paths
+			if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
+			{
+				return (true, syncReturnValue);
+			}
+
+			// Allow async operations to yield
+			await Task.Yield();
+			return (false, 0);
+		}
+
+		/// <summary>
 		/// Registers a window class for subsequent use in calls to the CreateWindow or CreateWindowEx function.
 		/// </summary>
 		/// <param name="lpWndClass">
@@ -1602,6 +1627,198 @@ namespace Win32Emu.Win32.Modules
 			_cpu.SetRegister("EBP", savedEbp);
 
 			_logger.LogInformation("[User32] CallWindowProcedure: Completed with return value 0x{ReturnValue:X8}", returnValue);
+
+			return returnValue;
+		}
+
+		/// <summary>
+		/// Async version of CallWindowProcedure that eliminates the need for STACK_SAFETY_MARGIN.
+		/// Uses proper async/await to cleanly separate host (C#) and guest (x86) execution stacks.
+		/// </summary>
+		private async Task<uint> CallWindowProcedureAsync(
+			uint wndProcAddress, 
+			uint hwnd, 
+			uint message, 
+			uint wParam, 
+			uint lParam, 
+			CancellationToken cancellationToken = default)
+		{
+			_logger.LogInformation("[User32] CallWindowProcedureAsync: Calling 0x{WndProcAddress:X8} with HWND=0x{Hwnd:X8} MSG=0x{Message:X4}", 
+				wndProcAddress, hwnd, message);
+
+			// Check if this is a standard control window procedure marker
+			if (ProcessEnvironment.IsStandardControlWndProc(wndProcAddress))
+			{
+				_logger.LogInformation("[User32] CallWindowProcedureAsync: Detected standard control WndProc marker at 0x{WndProcAddress:X8}, routing to StandardControlHandler", 
+					wndProcAddress);
+				var windowInfo = _env.GetWindow(hwnd);
+				if (windowInfo.HasValue && StandardControlHandler.IsStandardControl(windowInfo.Value.ClassName))
+				{
+					return _standardControlHandler.HandleMessage(hwnd, message, wParam, lParam, windowInfo.Value.ClassName);
+				}
+				else
+				{
+					_logger.LogWarning("[User32] CallWindowProcedureAsync: Window 0x{Hwnd:X8} has standard control WndProc but is not a standard control class", hwnd);
+					return 0;
+				}
+			}
+
+			// Validate window procedure address
+			if (wndProcAddress == 0)
+			{
+				_logger.LogWarning("[User32] CallWindowProcedureAsync: Window procedure address is NULL (0x00000000), aborting");
+				return 0;
+			}
+
+			// Save current CPU state
+			var savedEip = _cpu.GetEip();
+			var savedEsp = _cpu.GetRegister("ESP");
+			var savedEbp = _cpu.GetRegister("EBP");
+
+			// Define return address marker
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+			// Set up stack for stdcall convention (parameters pushed right-to-left)
+			// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
+			var esp = savedEsp;
+
+			// Push return address first
+			esp -= 4;
+			_memory.Write32(esp, RETURN_ADDRESS);
+
+			// Push parameters (right-to-left for stdcall)
+			esp -= 4;
+			_memory.Write32(esp, lParam);
+
+			esp -= 4;
+			_memory.Write32(esp, wParam);
+
+			esp -= 4;
+			_memory.Write32(esp, message);
+
+			esp -= 4;
+			_memory.Write32(esp, hwnd);
+
+			// Update CPU registers
+			_cpu.SetRegister("ESP", esp);
+			_cpu.SetEip(wndProcAddress);
+
+			// Execute until we hit the return address with cancellation support
+			const int YIELD_INTERVAL = 10000;
+			var steps = 0;
+			var executionSuccessful = true;
+			var lastCheckEip = _cpu.GetEip();
+			var stuckCounter = 0;
+
+			try
+			{
+				while (true)
+				{
+					// Check for cancellation at regular intervals
+					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+					{
+						if (cancellationToken.IsCancellationRequested)
+						{
+							_logger.LogInformation("[User32] CallWindowProcedureAsync: Cancellation requested at step {Steps}", steps);
+							executionSuccessful = false;
+							break;
+						}
+
+						// Yield to allow other async operations to proceed
+						await Task.Yield();
+					}
+
+					var eip = _cpu.GetEip();
+
+					// Check if we've returned to our marker address
+					if (eip == RETURN_ADDRESS)
+					{
+						break;
+					}
+
+					// Check for invalid EIP (NULL pointer execution)
+					if (eip == 0x00000000)
+					{
+						_logger.LogWarning("[User32] CallWindowProcedureAsync: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+						executionSuccessful = false;
+						break;
+					}
+
+					// Check for other invalid low addresses
+					if (eip < 0x00001000 && eip != RETURN_ADDRESS)
+					{
+						_logger.LogError("[User32] CallWindowProcedureAsync: Execution jumped to invalid low address 0x{Eip:X8}", eip);
+						executionSuccessful = false;
+						break;
+					}
+
+					// Detect potential infinite loops
+					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+					{
+						var currentEip = _cpu.GetEip();
+						if (currentEip == lastCheckEip)
+						{
+							stuckCounter++;
+							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+							{
+								_logger.LogWarning("[User32] CallWindowProcedureAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", 
+									currentEip, stuckCounter);
+								executionSuccessful = false;
+								break;
+							}
+						}
+						else
+						{
+							stuckCounter = 0;
+							lastCheckEip = currentEip;
+						}
+					}
+
+					// Execute one instruction
+					var step = _cpu.SingleStep(_memory);
+
+					// Handle COM vtable and import calls
+					if (HandleComAndImportCalls(step, _cpu, _memory, "CallWindowProcedureAsync", out var stepDesc, out var shouldBreak))
+					{
+						if (shouldBreak)
+						{
+							executionSuccessful = false;
+							break;
+						}
+					}
+
+					steps++;
+
+					// Periodically check if we should yield to other threads
+					if (steps % YIELD_INTERVAL == 0)
+					{
+						var scheduler = _env.ThreadScheduler;
+						if (scheduler != null)
+						{
+							scheduler.ProcessWaitTimeouts();
+							if (scheduler.ShouldContextSwitch())
+							{
+								_logger.LogDebug("[User32] CallWindowProcedureAsync: Cooperative yield at {Steps} steps", steps);
+							}
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[User32] CallWindowProcedureAsync: Exception during execution: {ExMessage}", ex.Message);
+				executionSuccessful = false;
+			}
+
+			// Get return value from EAX, but only if execution was successful
+			var returnValue = executionSuccessful ? _cpu.GetRegister("EAX") : 0u;
+
+			// Restore CPU state
+			_cpu.SetEip(savedEip);
+			_cpu.SetRegister("ESP", savedEsp);
+			_cpu.SetRegister("EBP", savedEbp);
+
+			_logger.LogInformation("[User32] CallWindowProcedureAsync: Completed with return value 0x{ReturnValue:X8}", returnValue);
 
 			return returnValue;
 		}

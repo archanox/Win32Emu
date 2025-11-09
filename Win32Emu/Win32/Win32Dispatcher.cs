@@ -124,14 +124,70 @@ public class Win32Dispatcher(ILogger logger)
 	}
 
 	/// <summary>
-	/// Async version of TryInvoke for async-aware CPU backends and Win32 modules
+	/// Async version of TryInvoke for async-aware CPU backends and Win32 modules.
+	/// This version supports modules that implement IWin32ModuleAsync for proper async execution.
 	/// </summary>
-	public Task<(bool success, uint returnValue, int stdcallArgBytes)> TryInvokeAsync(string dll, string export, ICpu cpu, VirtualMemory memory)
+	public async Task<(bool success, uint returnValue, int stdcallArgBytes)> TryInvokeAsync(
+		string dll, 
+		string export, 
+		ICpu cpu, 
+		VirtualMemory memory, 
+		CancellationToken cancellationToken = default)
 	{
-		// For now, wrap the synchronous version
-		// Future: implement IWin32ModuleAsync interface for modules that need async operations
-		var success = TryInvoke(dll, export, cpu, memory, out var returnValue, out var stdcallArgBytes);
-		return Task.FromResult((success, returnValue, stdcallArgBytes));
+		var eip = cpu.GetEip();
+		var esp = cpu.GetRegister("ESP");
+		byte[]? stackSnippet = null;
+		try
+		{
+			stackSnippet = memory.GetSpan(esp, 16);
+		}
+		catch
+		{
+		}
+
+		logger.LogInformation("Dispatching async {Dll}!{Export} at EIP=0x{GetEip:X8} ESP=0x{Esp:X8} stack={Unreadable}", 
+			dll, export, eip, esp, stackSnippet == null ? "<unreadable>" : BitConverter.ToString(stackSnippet).Replace('-', ' '));
+
+		// Try async-aware modules first
+		if (_modules.TryGetValue(dll, out var mod) && mod is IWin32ModuleAsync asyncMod)
+		{
+			var (success, returnValue) = await asyncMod.TryInvokeAsync(export, cpu, memory, cancellationToken).ConfigureAwait(false);
+			if (success)
+			{
+				// Set EAX with return value per x86 stdcall convention
+				cpu.SetRegister("EAX", returnValue);
+
+				// Try to get arg bytes from metadata
+				if (StdCallMeta.TryGetArgBytes(dll, export, out var stdcallArgBytes))
+				{
+					logger.LogInformation("[Dispatcher] Async {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes}", 
+						dll, export, returnValue, stdcallArgBytes);
+				}
+				else
+				{
+					// Function is missing [DllModuleExport] attribute
+					logger.LogError("[Dispatcher] Async {Dll}!{Export} is missing [DllModuleExport] attribute - cannot determine stack cleanup bytes", 
+						dll, export);
+					stdcallArgBytes = 0;
+					logger.LogInformation("[Dispatcher] Async {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes} (MISSING METADATA)", 
+						dll, export, returnValue, stdcallArgBytes);
+				}
+
+				// Log to API tracer if enabled
+				_apiCallTracer?.LogApiCall(
+					moduleName: dll,
+					functionName: export,
+					parameters: null,
+					returnValue: returnValue,
+					eip: eip);
+
+				return (true, returnValue, stdcallArgBytes);
+			}
+		}
+
+		// Fall back to synchronous version for non-async modules
+		var syncSuccess = TryInvoke(dll, export, cpu, memory, out var syncReturnValue, out var syncStdcallArgBytes);
+		return (syncSuccess, syncReturnValue, syncStdcallArgBytes);
 	}
 
 	private void LogUnknownFunctionCall(string dll, string export)
