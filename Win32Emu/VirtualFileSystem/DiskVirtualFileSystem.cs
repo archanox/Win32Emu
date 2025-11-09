@@ -598,13 +598,6 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		}
 	}
 
-	public string ToWindowsPath(string realPath)
-	{
-		// For disk-based VFS, paths are already virtual
-		// Just ensure they have C: prefix
-		var normalized = NormalizePath(realPath);
-		return "C:" + normalized.Replace('/', '\\');
-	}
 
 	private static FileMode ConvertFileMode(VfsFileMode mode)
 	{

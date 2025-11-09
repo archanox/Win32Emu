@@ -5633,12 +5633,6 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
-		// Convert to Windows path format if using VFS
-		if (_env.VirtualFileSystem != null)
-		{
-			path = _env.VirtualFileSystem.ToWindowsPath(path);
-		}
-
 		_logger.LogInformation("[Kernel32] SetCurrentDirectoryA(\"{Path}\")", path);
 		_env.CurrentDirectory = path;
 		return (uint)NativeTypes.Win32Bool.TRUE;
