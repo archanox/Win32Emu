@@ -430,11 +430,38 @@ public class ProcessEnvironment
 		
 		// Set current directory to the directory containing the executable
 		// This ensures relative paths are resolved relative to the executable's location
-		var directory = Path.GetDirectoryName(effectivePath);
+		// On Unix, Path.GetDirectoryName doesn't work with Windows paths (backslashes),
+		// so we need to manually extract the directory for Windows-style paths
+		string? directory = null;
+		
+		// Check if this is a Windows-style path (contains backslashes or forward slashes with drive letter)
+		if (effectivePath.Contains('\\') || effectivePath.Contains('/'))
+		{
+			// Find the last backslash or forward slash
+			var lastBackslash = effectivePath.LastIndexOf('\\');
+			var lastForwardSlash = effectivePath.LastIndexOf('/');
+			var lastSeparator = Math.Max(lastBackslash, lastForwardSlash);
+			
+			if (lastSeparator > 0)
+			{
+				directory = effectivePath.Substring(0, lastSeparator);
+			}
+		}
+		
+		// Fallback to Path.GetDirectoryName for native paths
+		if (string.IsNullOrEmpty(directory))
+		{
+			directory = Path.GetDirectoryName(effectivePath);
+		}
+		
 		if (!string.IsNullOrEmpty(directory))
 		{
 			CurrentDirectory = directory;
 			_logger.LogInformation("[ProcessEnv] Set current directory to: {CurrentDirectory}", CurrentDirectory);
+		}
+		else
+		{
+			_logger.LogWarning("[ProcessEnv] Could not determine directory from path: {Path}, using default C:\\", effectivePath);
 		}
 		
 		// Build command line: quoted exe path + space + args (if any)

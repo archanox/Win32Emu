@@ -2763,6 +2763,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			var path = _env.ReadAnsiString(lpFileName);
 
+			// Log the raw path from the game before any resolution
+			_logger.LogInformation("[Kernel32] CreateFileA: Raw path from game: '{Path}'", path);
+
 			// Handle invalid paths (empty, null, or invalid characters)
 			if (string.IsNullOrEmpty(path))
 			{
@@ -2807,6 +2810,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
 				var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
 
+				_logger.LogInformation("[Kernel32] CreateFileA: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
 				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
 				if (handle != null)
 				{
@@ -2843,6 +2847,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		try
 		{
 			var path = _env.ReadUnicodeString(lpFileName);
+
+			// Log the raw path from the game before any resolution
+			_logger.LogInformation("[Kernel32] CreateFileW: Raw path from game: '{Path}'", path);
 
 			// Handle invalid paths (empty, null, or invalid characters)
 			if (string.IsNullOrEmpty(path))
@@ -2887,6 +2894,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
 				var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
 
+				_logger.LogInformation("[Kernel32] CreateFileW: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
 				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
 				if (handle != null)
 				{
