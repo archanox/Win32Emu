@@ -379,8 +379,8 @@ public sealed class Emulator : IDisposable
         kernel32Module.SetDispatcher(_dispatcher);
         
         // Create resource reader for PE resources (dialogs, icons, etc.)
-        // Use stored bytes instead of path, as path may be a virtual path (e.g., C:\ign_teas\IGN_TEAS.EXE)
-        // when loading from VHD, which doesn't exist on the host file system
+        // Use stored bytes instead of path, as path is a Windows path inside the VHD (e.g., C:\ign_teas\IGN_TEAS.EXE)
+        // which doesn't exist on the host file system
         var peImage = AsmResolver.PE.PEImage.FromBytes(_executableBytes!);
         var resourceReader = new PeResourceReader(peImage, _image.BaseAddress, _vm);
         kernel32Module.SetResourceReader(resourceReader);
