@@ -6080,6 +6080,7 @@ namespace Win32Emu.Win32.Modules
 		_cpu.SetEip(timerProc);
 
 		// Execute callback using the common helper method
+		// Note: handleComAndImports=true is required for User32 callbacks that may invoke COM objects
 		var executionSuccessful = await ExecuteCallbackAsync(RETURN_ADDRESS, "CallTimerProcAsync", handleComAndImports: true, cancellationToken).ConfigureAwait(false);
 
 		// Restore CPU state
