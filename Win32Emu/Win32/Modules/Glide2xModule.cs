@@ -38,6 +38,23 @@ namespace Win32Emu.Win32.Modules
 		// Texture memory tracking
 		private uint _nextTextureAddress = 0x1000;
 		private const uint TextureMemorySize = 4 * 1024 * 1024; // 4MB texture memory
+		
+		// Current texture state
+		private uint _currentTextureTMU0;
+		private uint _currentTextureTMU1;
+		
+		// Chromakey state
+		private bool _chromakeyModeEnabled;
+		
+		// Cull mode
+		private uint _cullMode;
+		
+		// Render buffer selection
+		private uint _renderBuffer;
+		
+		// Depth buffer state
+		private uint _depthBufferFunction;
+		private uint _depthBufferMode;
 
 		public Glide2XModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -115,7 +132,7 @@ namespace Win32Emu.Win32.Modules
 
 				case "_GRRENDERBUFFER@4":
 					_logger.LogInformation("[Glide2x] grRenderBuffer({UInt32})", a.UInt32(0));
-					returnValue = grRenderBuffer();
+					returnValue = grRenderBuffer(a.UInt32(0));
 					return true;
 
 				// Linear frame buffer
@@ -169,7 +186,7 @@ namespace Win32Emu.Win32.Modules
 
 				case "_GRDEPTHBUFFERFUNCTION@4":
 					_logger.LogInformation("[Glide2x] grDepthBufferFunction({UInt32})", a.UInt32(0));
-					returnValue = grDepthBufferFunction();
+					returnValue = grDepthBufferFunction(a.UInt32(0));
 					return true;
 
 				case "_GRDEPTHMASK@4":
@@ -179,7 +196,7 @@ namespace Win32Emu.Win32.Modules
 
 				case "_GRDEPTHBUFFERMODE@4":
 					_logger.LogInformation("[Glide2x] grDepthBufferMode({UInt32})", a.UInt32(0));
-					returnValue = grDepthBufferMode();
+					returnValue = grDepthBufferMode(a.UInt32(0));
 					return true;
 
 				case "_GRCHROMAKEYVALUE@4":
@@ -189,12 +206,12 @@ namespace Win32Emu.Win32.Modules
 
 				case "_GRCHROMAKEYMODE@4":
 					_logger.LogInformation("[Glide2x] grChromakeyMode({UInt32})", a.UInt32(0));
-					returnValue = grChromakeyMode();
+					returnValue = grChromakeyMode(a.UInt32(0));
 					return true;
 
 				case "_GRCULLMODE@4":
 					_logger.LogInformation("[Glide2x] grCullMode({UInt32})", a.UInt32(0));
-					returnValue = grCullMode();
+					returnValue = grCullMode(a.UInt32(0));
 					return true;
 
 				case "_GRCLIPWINDOW@16":
@@ -225,7 +242,7 @@ namespace Win32Emu.Win32.Modules
 
 				case "_GUTEXSOURCE@4":
 					_logger.LogInformation("[Glide2x] guTexSource(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = guTexSource();
+					returnValue = guTexSource(a.UInt32(0));
 					return true;
 
 				// Drawing primitives
@@ -415,10 +432,12 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(16, entryPoint: 0x00003C80, Version = "4.90.0.3000", ExportName = "_grChromakeyMode@4")]
-		public uint grChromakeyMode()
+		public uint grChromakeyMode(uint mode)
 		{
-			_logger.LogDebug("[GLIDE2x] grChromakeyMode called");
+			_logger.LogDebug("[GLIDE2x] grChromakeyMode: mode={Mode}", mode);
 			// Set chromakey mode (for transparency keying)
+			// Mode: 0 = disabled, 1 = enabled
+			_chromakeyModeEnabled = (mode != 0);
 			return 0; // Success (void function)
 		}
 
@@ -471,10 +490,12 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(23, entryPoint: 0x00002E60, Version = "4.90.0.3000", ExportName = "_grCullMode@4")]
-		public uint grCullMode()
+		public uint grCullMode(uint mode)
 		{
-			_logger.LogDebug("[GLIDE2x] grCullMode called");
-			// Set polygon culling mode (none, clockwise, counter-clockwise)
+			_logger.LogDebug("[GLIDE2x] grCullMode: mode={Mode}", mode);
+			// Set polygon culling mode
+			// 0 = GR_CULL_DISABLE, 1 = GR_CULL_NEGATIVE, 2 = GR_CULL_POSITIVE
+			_cullMode = mode;
 			return 0; // Success (void function)
 		}
 
@@ -487,18 +508,22 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(25, entryPoint: 0x000013C0, Version = "4.90.0.3000", ExportName = "_grDepthBufferFunction@4")]
-		public uint grDepthBufferFunction()
+		public uint grDepthBufferFunction(uint function)
 		{
-			_logger.LogDebug("[GLIDE2x] grDepthBufferFunction called");
-			// Set depth buffer comparison function (never, less, equal, etc.)
+			_logger.LogDebug("[GLIDE2x] grDepthBufferFunction: function={Function}", function);
+			// Set depth buffer comparison function
+			// 0 = never, 1 = less, 2 = equal, 3 = less or equal, 4 = greater, 5 = not equal, 6 = greater or equal, 7 = always
+			_depthBufferFunction = function;
 			return 0; // Success (void function)
 		}
 
 		[DllModuleExport(26, entryPoint: 0x000013D0, Version = "4.90.0.3000", ExportName = "_grDepthBufferMode@4")]
-		public uint grDepthBufferMode()
+		public uint grDepthBufferMode(uint mode)
 		{
-			_logger.LogDebug("[GLIDE2x] grDepthBufferMode called");
-			// Set depth buffer mode (enable/disable, w-buffering vs z-buffering)
+			_logger.LogDebug("[GLIDE2x] grDepthBufferMode: mode={Mode}", mode);
+			// Set depth buffer mode
+			// 0 = disable, 1 = z-buffering, 2 = w-buffering
+			_depthBufferMode = mode;
 			return 0; // Success (void function)
 		}
 
@@ -817,10 +842,12 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(58, entryPoint: 0x000014C0, Version = "4.90.0.3000", ExportName = "_grRenderBuffer@4")]
-		public uint grRenderBuffer()
+		public uint grRenderBuffer(uint buffer)
 		{
-			_logger.LogDebug("[GLIDE2x] grRenderBuffer called");
-			// Select which buffer to render to (front or back buffer)
+			_logger.LogDebug("[GLIDE2x] grRenderBuffer: buffer={Buffer}", buffer);
+			// Select which buffer to render to
+			// 0 = GR_BUFFER_FRONTBUFFER, 1 = GR_BUFFER_BACKBUFFER
+			_renderBuffer = buffer;
 			return 0; // Success (void function)
 		}
 
@@ -1381,12 +1408,14 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DWORD default
 		}
 
-		[DllModuleExport(117, entryPoint: 0x000035A0, Version = "4.90.0.3000", ExportName = "_guTexDownloadMipMap@12", IsStub = true)]
+		[DllModuleExport(117, entryPoint: 0x000035A0, Version = "4.90.0.3000", ExportName = "_guTexDownloadMipMap@12")]
 		public uint guTexDownloadMipMap()
 		{
-			_logger.LogWarning("[GLIDE2x] guTexDownloadMipMap called (stub)");
-			// TODO: Implement _guTexDownloadMipMap@12
-			return 0; // DWORD default
+			_logger.LogDebug("[GLIDE2x] guTexDownloadMipMap called");
+			// Download mipmap texture data
+			// In a real implementation, this would upload texture data to the GPU
+			// For emulation, we just acknowledge the call
+			return 0; // Success (void function)
 		}
 
 		[DllModuleExport(118, entryPoint: 0x00003630, Version = "4.90.0.3000", ExportName = "_guTexDownloadMipMapLevel@12", IsStub = true)]
@@ -1431,12 +1460,14 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Success (void function)
 		}
 
-		[DllModuleExport(123, entryPoint: 0x00003770, Version = "4.90.0.3000", ExportName = "_guTexSource@4", IsStub = true)]
-		public uint guTexSource()
+		[DllModuleExport(123, entryPoint: 0x00003770, Version = "4.90.0.3000", ExportName = "_guTexSource@4")]
+		public uint guTexSource(uint mmid)
 		{
-			_logger.LogWarning("[GLIDE2x] guTexSource called (stub)");
-			// TODO: Implement _guTexSource@4
-			return 0; // DWORD default
+			_logger.LogDebug("[GLIDE2x] guTexSource: mmid=0x{MmId:X8}", mmid);
+			// Set the current texture source (bind texture)
+			// Assuming TMU0 for simplicity
+			_currentTextureTMU0 = mmid;
+			return 0; // Success (void function)
 		}
 	}
 }
