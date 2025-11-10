@@ -1488,7 +1488,7 @@ namespace Win32Emu.Win32.Modules
 			// Use consolidated helper to execute the procedure
 			// Parameters are pushed right-to-left: lParam, wParam, message, hwnd
 			var parameters = new[] { lParam, wParam, message, hwnd };
-			var (returnValue, timedOut, failed) = ExecuteStdCallProcedure(
+			var (returnValue, _, _) = ExecuteStdCallProcedure(
 				_cpu, _memory, wndProcAddress, parameters, "CallWindowProcedure");
 
 			return returnValue;
@@ -1781,10 +1781,13 @@ namespace Win32Emu.Win32.Modules
 					var step = await CpuHelpers.ExecuteAsync(cpu, memory);
 
 					// Handle COM vtable and import calls
-					if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak) && shouldBreak)
+					if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak))
 					{
-						failed = true;
-						break;
+						if (shouldBreak)
+						{
+							failed = true;
+							break;
+						}
 					}
 
 					steps++;
@@ -1825,8 +1828,9 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
-		/// Async version of CallWindowProcedure that eliminates the need for STACK_SAFETY_MARGIN.
+		/// Async version of CallWindowProcedure with cancellation support.
 		/// Uses proper async/await to cleanly separate host (C#) and guest (x86) execution stacks.
+		/// Includes STACK_SAFETY_MARGIN to prevent stack corruption from nested calls.
 		/// </summary>
 		private async Task<uint> CallWindowProcedureAsync(
 			uint wndProcAddress, 
@@ -1866,7 +1870,7 @@ namespace Win32Emu.Win32.Modules
 			// Use consolidated helper to execute the procedure
 			// Parameters are pushed right-to-left: lParam, wParam, message, hwnd
 			var parameters = new[] { lParam, wParam, message, hwnd };
-			var (returnValue, timedOut, cancelled, failed) = await ExecuteStdCallProcedureAsync(
+			var (returnValue, _, _, _) = await ExecuteStdCallProcedureAsync(
 				_cpu, _memory, wndProcAddress, parameters, "CallWindowProcedureAsync", cancellationToken);
 
 			return returnValue;
