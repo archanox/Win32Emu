@@ -4085,10 +4085,20 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] SetTimer(hWnd=0x{HWnd:X8}, nIDEvent={NIDEvent}, uElapse={UElapse}ms, lpTimerFunc=0x{LpTimerFunc:X8})",
 				hWnd, nIDEvent, uElapse, lpTimerFunc);
 
-			// Determine the timer ID
-			// If nIDEvent is non-zero, use it as the timer ID (application-defined timer)
-			// If nIDEvent is zero, allocate a new timer ID (system-allocated timer)
-			var timerId = nIDEvent != 0 ? nIDEvent : _nextTimerId++;
+		    // Determine the timer ID
+		    uint timerId;
+		    if (nIDEvent != 0)
+		    {
+		        timerId = nIDEvent;
+		    }
+		    else
+		    {
+		        // If nIDEvent is zero, allocate a new unique timer ID
+		        do
+		        {
+		            timerId = _nextTimerId++;
+		        } while (_timers.ContainsKey(timerId));
+		    }
 
 			// Create timer info and store it
 			var timerInfo = new TimerInfo(
