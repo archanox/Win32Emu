@@ -291,7 +291,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		var sectionAlignment = opt.SectionAlignment;
 		var fileAlignment = opt.FileAlignment;
 		
-		// Size fields - safe cast for PE32
+		// Base and size fields from optional header
 		var baseOfCode = opt.BaseOfCode;
 		var baseOfData = opt.BaseOfData; // PE32 only, will be 0 for PE32+
 		var sizeOfCode = opt.SizeOfCode;

@@ -6,7 +6,7 @@
 
 From issue #650: "Is there anything that can be found in the PE headers that we're not using, and could/should be using?"
 
-## Answer: Yes ✅ (Enhanced November 2025)
+## Answer: Yes ✅ November 2025
 
 All critical PE header values are properly respected by Win32Emu's PE loader. **As of November 2025, we now extract and store ALL significant PE header fields** from both the FileHeader and OptionalHeader structures. This has been verified through:
 

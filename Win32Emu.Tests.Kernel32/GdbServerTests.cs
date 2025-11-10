@@ -188,9 +188,27 @@ public class GdbServerTests
             [],         // Sections (empty array)
             new Dictionary<uint, uint>(), // IatEntryMap (empty)
             // FileHeader fields
-            0x014C, 0x00000000, 0x010E,
+            Machine: 0x014C,
+            TimeDateStamp: 0x00000000,
+            Characteristics: 0x010E,
             // OptionalHeader additional fields
-            14, 0, 4, 0, 0, 0, 4, 0, 0x0000, 0x00000000, 0x1000, 0x0200, 0x1000, 0x3000, 0x2000, 0x1500, 0x0000
+            MajorLinkerVersion: 14,
+            MinorLinkerVersion: 0,
+            MajorOperatingSystemVersion: 4,
+            MinorOperatingSystemVersion: 0,
+            MajorImageVersion: 0,
+            MinorImageVersion: 0,
+            MajorSubsystemVersion: 4,
+            MinorSubsystemVersion: 0,
+            DllCharacteristics: 0x0000,
+            CheckSum: 0x00000000,
+            SectionAlignment: 0x1000,
+            FileAlignment: 0x0200,
+            BaseOfCode: 0x1000,
+            BaseOfData: 0x3000,
+            SizeOfCode: 0x2000,
+            SizeOfInitializedData: 0x1500,
+            SizeOfUninitializedData: 0x0000
         );
         
         // Act
