@@ -410,8 +410,29 @@ public class ComVtableDispatcher
 	
 	/// <summary>
 	/// Create a COM object with a vtable using an ordered list to ensure correct method order.
-	/// This is the RECOMMENDED way to create COM objects to ensure vtable methods are in correct order.
+	/// This is the REQUIRED way to create COM objects to ensure vtable methods are in correct order.
 	/// </summary>
+	/// <remarks>
+	/// IMPORTANT: This method MUST be used when vtable method order matters, which is ALWAYS for COM interfaces.
+	/// COM interfaces require methods to be at specific offsets in the vtable. Incorrect ordering will cause
+	/// crashes when programs call methods at the wrong offsets.
+	/// 
+	/// The old CreateComObject(Dictionary) method should NOT be used for new code as Dictionary iteration
+	/// order cannot be relied upon for vtable construction.
+	/// 
+	/// Example:
+	/// <code>
+	/// var methods = new List&lt;KeyValuePair&lt;string, ComMethodInfo&gt;&gt;
+	/// {
+	///     new("QueryInterface", ...),  // Must be first (offset 0x00)
+	///     new("AddRef", ...),          // Must be second (offset 0x04)
+	///     new("Release", ...),         // Must be third (offset 0x08)
+	///     new("Flip", ...),           // At specific offset (e.g., 0x2C for IDirectDrawSurface)
+	///     // ... other methods in exact COM interface order
+	/// };
+	/// var comAddr = dispatcher.CreateComObjectOrdered("IDirectDrawSurface", methods);
+	/// </code>
+	/// </remarks>
 	/// <param name="interfaceName">Name of the COM interface</param>
 	/// <param name="methods">Ordered list of method name/info pairs in exact COM interface order</param>
 	public uint CreateComObjectOrdered(string interfaceName, List<KeyValuePair<string, ComMethodInfo>> methods)
