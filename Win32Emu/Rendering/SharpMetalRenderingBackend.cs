@@ -704,4 +704,48 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
     public bool IsInitialized => _initialized;
     public int Width => _width;
     public int Height => _height;
+
+    // Hardware-accelerated rendering methods (stub implementations for now)
+    
+    public void BeginFrame()
+    {
+        _logger.LogDebug("[Metal] BeginFrame called (not yet implemented)");
+        // TODO: Implement Metal frame begin
+    }
+
+    public void EndFrame()
+    {
+        _logger.LogDebug("[Metal] EndFrame called (not yet implemented)");
+        // TODO: Implement Metal frame end and present
+    }
+
+    public void DrawTriangles(Span<Vertex> vertices, Span<ushort> indices)
+    {
+        _logger.LogWarning("[Metal] DrawTriangles not yet implemented");
+        // TODO: Implement Metal triangle rendering
+    }
+
+    public void SetTexture(uint textureId, byte[] data, int width, int height, TextureFormat format)
+    {
+        _logger.LogWarning("[Metal] SetTexture not yet implemented");
+        // TODO: Implement Metal texture upload
+    }
+
+    public void BindTexture(uint textureId)
+    {
+        _logger.LogWarning("[Metal] BindTexture not yet implemented");
+        // TODO: Implement Metal texture binding
+    }
+
+    public void SetRenderState(BlendMode blend, DepthTest depth, CullMode cull)
+    {
+        _logger.LogWarning("[Metal] SetRenderState not yet implemented");
+        // TODO: Implement Metal render state management
+    }
+
+    public void DeleteTexture(uint textureId)
+    {
+        _logger.LogWarning("[Metal] DeleteTexture not yet implemented");
+        // TODO: Implement Metal texture deletion
+    }
 }
