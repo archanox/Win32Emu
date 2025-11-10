@@ -4,10 +4,49 @@ using Win32Emu.Memory;
 namespace Win32Emu.Cpu;
 
 /// <summary>
-/// Helper methods for CPU register management
+/// Helper methods for CPU register management and async execution
 /// </summary>
 public static class CpuHelpers
 {
+	/// <summary>
+	/// Execute CPU instruction(s) asynchronously, using ExecuteBlockAsync for JIT-enabled CPUs
+	/// or SingleStepAsync for interpreter CPUs. This provides optimal performance while maintaining
+	/// compatibility across all CPU backends.
+	/// </summary>
+	/// <param name="cpu">The CPU instance</param>
+	/// <param name="memory">Virtual memory instance</param>
+	/// <returns>Result of the CPU step/block execution</returns>
+	public static async Task<CpuStepResult> ExecuteAsync(ICpu cpu, VirtualMemory memory)
+	{
+		if (cpu is IAsyncCpu asyncCpu)
+		{
+			// For JIT-enabled CPUs, use ExecuteBlockAsync for better performance
+			if (asyncCpu.SupportsJit)
+			{
+				return await asyncCpu.ExecuteBlockAsync(memory);
+			}
+			
+			// For interpreter CPUs, use SingleStepAsync
+			return await asyncCpu.SingleStepAsync(memory);
+		}
+		
+		// Fallback to synchronous execution for non-async CPUs
+		// Wrap in Task.FromResult to maintain async signature
+		return await Task.FromResult(cpu.SingleStep(memory));
+	}
+	
+	/// <summary>
+	/// Execute CPU instruction(s) synchronously, with automatic backend selection
+	/// </summary>
+	/// <param name="cpu">The CPU instance</param>
+	/// <param name="memory">Virtual memory instance</param>
+	/// <returns>Result of the CPU step/block execution</returns>
+	public static CpuStepResult Execute(ICpu cpu, VirtualMemory memory)
+	{
+		// For now, always use SingleStep for synchronous execution
+		// In the future, we could add synchronous block execution if needed
+		return cpu.SingleStep(memory);
+	}
 	// Constants for EBP validation
 	private const uint MIN_VALID_EBP = 0x1000;
 	private const uint HEAP_BASE = 0x01000000;

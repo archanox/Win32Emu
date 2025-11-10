@@ -1121,8 +1121,8 @@ namespace Win32Emu.Win32.Modules
 						}
 					}
 
-					// Execute one instruction
-					_cpu.SingleStep(_memory!);
+					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
+					await CpuHelpers.ExecuteAsync(_cpu, _memory!);
 					steps++;
 
 					// Periodically check if we should yield to other threads
