@@ -84,8 +84,7 @@ public class PeHeaderFieldsTests
 		_output.WriteLine($"Subsystem Version: {loadedImage.MajorSubsystemVersion}.{loadedImage.MinorSubsystemVersion}");
 
 		// Version fields should be accessible (may be 0 for some PE files)
-		Assert.True(loadedImage.MajorOperatingSystemVersion >= 0);
-		Assert.True(loadedImage.MinorOperatingSystemVersion >= 0);
+		// No assertion needed: version fields are always >= 0 as ushort
 	}
 
 	[Fact]
@@ -115,7 +114,7 @@ public class PeHeaderFieldsTests
 		_output.WriteLine($"  Control Flow Guard: {hasGuardCF}");
 
 		// DllCharacteristics field should be accessible
-		Assert.True(loadedImage.DllCharacteristics >= 0);
+		// No assertion needed: DllCharacteristics is always >= 0 as ushort
 	}
 
 	[Fact]
@@ -134,8 +133,7 @@ public class PeHeaderFieldsTests
 		_output.WriteLine($"CheckSum: 0x{loadedImage.CheckSum:X8}");
 
 		// CheckSum may be 0 for many executables (only required for drivers and system DLLs)
-		// But the field should be accessible
-		Assert.True(loadedImage.CheckSum >= 0);
+		// No assertion needed: CheckSum is always >= 0 as uint
 	}
 
 	[Fact]
