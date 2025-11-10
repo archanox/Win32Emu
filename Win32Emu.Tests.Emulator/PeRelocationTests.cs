@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using AsmResolver.PE;
 using AsmResolver.PE.File;
 using AsmResolver.PE.Relocations;
+using System.Linq;
 
 namespace Win32Emu.Tests.Emulator;
 
@@ -198,5 +199,95 @@ public class PeRelocationTests
 		
 		// Verify it loaded at the custom base even without relocations
 		Assert.Equal(customBase, loadedImage.BaseAddress);
+	}
+
+	[Fact]
+	public void Load_WithRelocationVerification_ActualMemoryPatching()
+	{
+		// This is a comprehensive integration test that verifies relocations
+		// are actually applied to memory, not just that the API works
+		if (!File.Exists(TestPeFile))
+		{
+			return;
+		}
+
+		var image = PEImage.FromFile(TestPeFile);
+		var opt = image.PEFile?.OptionalHeader;
+		Assert.NotNull(opt);
+
+		var preferredBase = (uint)opt.ImageBase;
+		var relocations = image.Relocations;
+
+		// Skip if no relocations
+		if (relocations == null || relocations.Count == 0)
+		{
+			return;
+		}
+
+		// Find a HIGHLOW relocation to verify
+		BaseRelocation? highLowReloc = null;
+		foreach (var reloc in relocations)
+		{
+			if (reloc.Type == RelocationType.HighLow)
+			{
+				highLowReloc = reloc;
+				break;
+			}
+		}
+		
+		if (!highLowReloc.HasValue)
+		{
+			return;
+		}
+
+		// Get the RVA of this relocation
+		uint? relocRva = null;
+		if (highLowReloc.Value.Location is AsmResolver.SegmentReference segRef)
+		{
+			relocRva = segRef.Rva;
+		}
+		else if (highLowReloc.Value.Location is AsmResolver.RelativeReference relRef)
+		{
+			relocRva = relRef.Rva;
+		}
+		else if (highLowReloc.Value.Location is AsmResolver.VirtualAddress virtAddr)
+		{
+			relocRva = virtAddr.Rva;
+		}
+
+		// Skip if we can't get the RVA
+		if (relocRva == null)
+		{
+			return;
+		}
+
+		// Load at preferred base first
+		var memory1 = new VirtualMemory();
+		var loader1 = new PeImageLoader(memory1, NullLogger.Instance);
+		var image1 = loader1.Load(TestPeFile);
+
+		// Read the value at the relocation address (before relocation)
+		var va1 = preferredBase + relocRva.Value;
+		var value1 = memory1.Read32(va1);
+
+		// Load at a different base
+		var customBase = preferredBase + 0x10000;
+		var memory2 = new VirtualMemory();
+		var loader2 = new PeImageLoader(memory2, NullLogger.Instance);
+		var image2 = loader2.Load(TestPeFile, customBase);
+
+		// Read the value at the relocation address (after relocation)
+		var va2 = customBase + relocRva.Value;
+		var value2 = memory2.Read32(va2);
+
+		// The difference should be exactly the difference in base addresses
+		// (assuming the original value was an absolute address based on preferredBase)
+		var valueDelta = (long)value2 - (long)value1;
+		var baseDelta = (long)customBase - (long)preferredBase;
+
+		// Verify that the relocation was applied
+		// Note: The values might not be exactly equal if the original value
+		// wasn't based on the image base, but they should differ by the base delta
+		Assert.Equal(baseDelta, valueDelta);
 	}
 }
