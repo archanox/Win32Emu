@@ -70,6 +70,7 @@ var loadedImage = loader.Load("myapp.exe", customBase);
    - `Load_CorrectlyPatchesHighLowRelocations()` - Verifies HIGHLOW relocation correctness
    - `Load_HandlesRelocationsInCodeSection()` - Verifies code sections remain accessible
    - `Load_FailsGracefully_WhenRelocationsAreMissing()` - Verifies behavior without relocations
+   - `Load_WithRelocationVerification_ActualMemoryPatching()` - Comprehensive integration test that verifies relocations are actually applied to memory by reading and comparing values before and after relocation
 
 2. **PeHeaderRespectTests.cs**:
    - `BaseRelocations_AreAccessible()` - Verifies relocation data is accessible
