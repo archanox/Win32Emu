@@ -1705,13 +1705,13 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DDraw COM] IDirectDrawSurface::Flip(this=0x{ThisPtr:X8}, lpDDSurfaceTargetOverride=0x{Target:X8}, dwFlags=0x{DwFlags:X8})",
 				thisPtr, lpDDSurfaceTargetOverride, dwFlags);
 
-			// Find the surface from the COM object
-			var surface = _surfaces.Values.FirstOrDefault(s => s.IsPrimary);
+			// Find the surface by COM object address (thisPtr)
+			var surface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
 
 			if (surface == null)
 			{
-				_logger.LogError("[DDraw] Flip: could not find primary surface");
-				return (uint)DDResult.DDERR_GENERIC;
+				_logger.LogError("[DDraw] Flip: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
 			// If this is a primary surface, present the frame to the rendering backend
