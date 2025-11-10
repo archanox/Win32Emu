@@ -47,6 +47,36 @@ public static class CpuHelpers
 		// In the future, we could add synchronous block execution if needed
 		return cpu.SingleStep(memory);
 	}
+	
+	/// <summary>
+	/// Suspend CPU execution by saving complete state. Use this before async await points
+	/// to ensure CPU state is preserved across async boundaries.
+	/// </summary>
+	/// <param name="cpu">The CPU instance</param>
+	/// <returns>Saved CPU state that can be restored later, or null if CPU doesn't support state management</returns>
+	public static CpuState? SuspendExecution(ICpu cpu)
+	{
+		if (cpu is IAsyncCpu asyncCpu)
+		{
+			return asyncCpu.SaveState();
+		}
+		return null;
+	}
+	
+	/// <summary>
+	/// Resume CPU execution by restoring saved state. Use this after async await points
+	/// to restore CPU state that was saved before the async operation.
+	/// </summary>
+	/// <param name="cpu">The CPU instance</param>
+	/// <param name="state">Previously saved CPU state</param>
+	public static void ResumeExecution(ICpu cpu, CpuState? state)
+	{
+		if (state != null && cpu is IAsyncCpu asyncCpu)
+		{
+			asyncCpu.RestoreState(state);
+		}
+	}
+	
 	// Constants for EBP validation
 	private const uint MIN_VALID_EBP = 0x1000;
 	private const uint HEAP_BASE = 0x01000000;
