@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
@@ -34,11 +36,11 @@ namespace Win32Emu.Win32.Modules
 		private uint _nextBitmapHandle = 0;
 
 		// Timer tracking for SetTimer implementation
-		private readonly Dictionary<uint, TimerInfo> _timers = new();
+		private readonly ConcurrentDictionary<uint, TimerInfo> _timers = new();
 		private uint _nextTimerId = 1;
 
 		// Hook tracking for SetWindowsHookEx implementation
-		private readonly Dictionary<uint, HookInfo> _hooks = new();
+		private readonly ConcurrentDictionary<uint, HookInfo> _hooks = new();
 		private uint _nextHookHandle = 0x00010001;
 
 		// Timer information structure
@@ -4093,10 +4095,10 @@ namespace Win32Emu.Win32.Modules
 		    }
 		    else
 		    {
-		        // If nIDEvent is zero, allocate a new unique timer ID
+		        // If nIDEvent is zero, allocate a new unique timer ID using thread-safe increment
 		        do
 		        {
-		            timerId = _nextTimerId++;
+		            timerId = Interlocked.Increment(ref _nextTimerId) - 1;
 		        } while (_timers.ContainsKey(timerId));
 		    }
 
@@ -5025,8 +5027,8 @@ namespace Win32Emu.Win32.Modules
 				return 0; // NULL - failure
 			}
 
-			// Generate a unique hook handle
-			var hookHandle = _nextHookHandle++;
+			// Generate a unique hook handle using thread-safe increment
+			var hookHandle = Interlocked.Increment(ref _nextHookHandle) - 1;
 
 			// Create hook info and store it
 			var hookInfo = new HookInfo(
@@ -5076,7 +5078,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] UnhookWindowsHookEx(hhk=0x{Hhk:X8})", hhk);
 			
 			// Remove the hook from tracking if it exists
-			if (_hooks.Remove(hhk))
+			if (_hooks.TryRemove(hhk, out _))
 			{
 				_logger.LogInformation("[User32] UnhookWindowsHookEx: Removed hook 0x{HookHandle:X8}", hhk);
 			}
@@ -5120,7 +5122,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] KillTimer(hWnd=0x{HWnd:X8}, uIDEvent={UIDEvent})", hWnd, uIDEvent);
 			
 			// Remove the timer from tracking if it exists
-			if (_timers.Remove(uIDEvent))
+			if (_timers.TryRemove(uIDEvent, out _))
 			{
 				_logger.LogInformation("[User32] KillTimer: Removed timer {TimerId}", uIDEvent);
 			}
