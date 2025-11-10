@@ -165,19 +165,35 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "_GRSSTSELECT@4":
-					_logger.LogInformation("[Glide2x] grSstSelect({UInt32})", a.UInt32(0));
-					returnValue = grSstSelect();
-					return true;
+					{
+						uint which = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grSstSelect(which={Which})", which);
+						returnValue = grSstSelect(which);
+						return true;
+					}
 
 				case "_GRSSTQUERYHARDWARE@4":
-					_logger.LogInformation("[Glide2x] grSstQueryHardware(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = grSstQueryHardware(); // Return TRUE to indicate hardware is present
-					return true;
+					{
+						uint hwConfigPtr = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grSstQueryHardware(hwConfigPtr=0x{HwConfigPtr:X8})", hwConfigPtr);
+						returnValue = grSstQueryHardware(hwConfigPtr); // Return TRUE to indicate hardware is present
+						return true;
+					}
 
 				case "_GRSSTWINOPEN@28":
-					_logger.LogInformation("[Glide2x] grSstWinOpen(hwnd=0x{UInt32:X8}, res={U}, refresh={UInt33}, ...)", a.UInt32(0), a.UInt32(1), a.UInt32(2));
-					returnValue = grSstWinOpen(); // Return TRUE for success
-					return true;
+					{
+						uint hwnd = a.UInt32(0);
+						uint resolution = a.UInt32(1);
+						uint refresh = a.UInt32(2);
+						uint colorFormat = a.UInt32(3);
+						uint origin = a.UInt32(4);
+						uint nColBuffers = a.UInt32(5);
+						uint nAuxBuffers = a.UInt32(6);
+						_logger.LogInformation("[Glide2x] grSstWinOpen(hwnd=0x{Hwnd:X8}, resolution={Resolution}, refresh={Refresh}, colorFormat={ColorFormat}, origin={Origin}, nColBuffers={NColBuffers}, nAuxBuffers={NAuxBuffers})", 
+							hwnd, resolution, refresh, colorFormat, origin, nColBuffers, nAuxBuffers);
+						returnValue = grSstWinOpen(hwnd, resolution, refresh, colorFormat, origin, nColBuffers, nAuxBuffers); // Return TRUE for success
+						return true;
+					}
 
 				case "_GRSSTWINCLOSE@0":
 					_logger.LogInformation("[Glide2x] grSstWinClose()");
@@ -196,9 +212,12 @@ namespace Win32Emu.Win32.Modules
 
 				// Buffer management
 				case "_GRBUFFERSWAP@4":
-					_logger.LogInformation("[Glide2x] grBufferSwap({UInt32})", a.UInt32(0));
-					returnValue = grBufferSwap();
-					return true;
+					{
+						uint interval = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grBufferSwap(interval={Interval})", interval);
+						returnValue = grBufferSwap(interval);
+						return true;
+					}
 
 				case "_GRBUFFERCLEAR@12":
 					{
@@ -217,14 +236,27 @@ namespace Win32Emu.Win32.Modules
 
 				// Linear frame buffer
 				case "_GRLFBLOCK@24":
-					_logger.LogInformation("[Glide2x] grLfbLock({UInt32}, {U}, ...)", a.UInt32(0), a.UInt32(1));
-					returnValue = grLfbLock(); // Return TRUE for success
-					return true;
+					{
+						uint type = a.UInt32(0);
+						uint buffer = a.UInt32(1);
+						uint writeMode = a.UInt32(2);
+						uint origin = a.UInt32(3);
+						uint pixelPipeline = a.UInt32(4);
+						uint infoPtr = a.UInt32(5);
+						_logger.LogInformation("[Glide2x] grLfbLock(type={Type}, buffer={Buffer}, writeMode={WriteMode}, origin={Origin}, pixelPipeline={PixelPipeline}, infoPtr=0x{InfoPtr:X8})", 
+							type, buffer, writeMode, origin, pixelPipeline, infoPtr);
+						returnValue = grLfbLock(type, buffer, writeMode, origin, pixelPipeline, infoPtr); // Return TRUE for success
+						return true;
+					}
 
 				case "_GRLFBUNLOCK@8":
-					_logger.LogInformation("[Glide2x] grLfbUnlock({UInt32}, {U})", a.UInt32(0), a.UInt32(1));
-					returnValue = grLfbUnlock();
-					return true;
+					{
+						uint buffer = a.UInt32(0);
+						uint type = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grLfbUnlock(buffer={Buffer}, type={Type})", buffer, type);
+						returnValue = grLfbUnlock(buffer, type);
+						return true;
+					}
 
 				// Texture management
 				case "_GUTEXMEMRESET@0":
@@ -233,36 +265,77 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "_GUTEXALLOCATEMEMORY@60":
-					_logger.LogInformation("[Glide2x] guTexAllocateMemory(...)");
-					returnValue = guTexAllocateMemory(); // Return a dummy texture memory address
-					return true;
+					{
+						uint tmu = a.UInt32(0);
+						uint evenOdd = a.UInt32(1);
+						uint width = a.UInt32(2);
+						uint height = a.UInt32(3);
+						uint format = a.UInt32(4);
+						uint mipMapMode = a.UInt32(5);
+						uint lodMin = a.UInt32(6);
+						uint lodMax = a.UInt32(7);
+						uint aspect = a.UInt32(8);
+						uint smallLodLog2 = a.UInt32(9);
+						uint largeLodLog2 = a.UInt32(10);
+						uint oddEvenPtr = a.UInt32(11);
+						uint mipmapPtr = a.UInt32(12);
+						uint startPtr = a.UInt32(13);
+						uint endPtr = a.UInt32(14);
+						_logger.LogInformation("[Glide2x] guTexAllocateMemory(tmu={Tmu}, evenOdd={EvenOdd}, width={Width}, height={Height}, format={Format}, ...)", 
+							tmu, evenOdd, width, height, format);
+						returnValue = guTexAllocateMemory(tmu, evenOdd, width, height, format, mipMapMode, lodMin, lodMax, aspect, smallLodLog2, largeLodLog2, oddEvenPtr, mipmapPtr, startPtr, endPtr); // Return a dummy texture memory address
+						return true;
+					}
 
 				case "_GUTEXDOWNLOADMIPMAP@12":
-					_logger.LogInformation("[Glide2x] guTexDownloadMipMap(0x{UInt32:X8}, 0x{U:X8}, 0x{UInt33:X8})", a.UInt32(0), a.UInt32(1), a.UInt32(2));
-					returnValue = guTexDownloadMipMap();
-					return true;
+					{
+						uint mmid = a.UInt32(0);
+						uint srcPtr = a.UInt32(1);
+						uint nccPtr = a.UInt32(2);
+						_logger.LogInformation("[Glide2x] guTexDownloadMipMap(mmid=0x{Mmid:X8}, srcPtr=0x{SrcPtr:X8}, nccPtr=0x{NccPtr:X8})", mmid, srcPtr, nccPtr);
+						returnValue = guTexDownloadMipMap(mmid, srcPtr, nccPtr);
+						return true;
+					}
 
 				case "_GRTEXDOWNLOADTABLE@12":
-					_logger.LogInformation("[Glide2x] grTexDownloadTable({UInt32}, 0x{U:X8}, 0x{UInt33:X8})", a.UInt32(0), a.UInt32(1), a.UInt32(2));
-					returnValue = grTexDownloadTable();
-					return true;
+					{
+						uint tmu = a.UInt32(0);
+						uint type = a.UInt32(1);
+						uint dataPtr = a.UInt32(2);
+						_logger.LogInformation("[Glide2x] grTexDownloadTable(tmu={Tmu}, type={Type}, dataPtr=0x{DataPtr:X8})", tmu, type, dataPtr);
+						returnValue = grTexDownloadTable(tmu, type, dataPtr);
+						return true;
+					}
 
 				// State management
 				case "_GRGLIDEGETSTATE@4":
-					_logger.LogInformation("[Glide2x] grGlideGetState(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = grGlideGetState();
-					return true;
+					{
+						uint statePtr = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grGlideGetState(statePtr=0x{StatePtr:X8})", statePtr);
+						returnValue = grGlideGetState(statePtr);
+						return true;
+					}
 
 				case "_GRGLIDESETSTATE@4":
-					_logger.LogInformation("[Glide2x] grGlideSetState(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = grGlideSetState();
-					return true;
+					{
+						uint statePtr = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grGlideSetState(statePtr=0x{StatePtr:X8})", statePtr);
+						returnValue = grGlideSetState(statePtr);
+						return true;
+					}
 
 				// Rendering modes
 				case "_GRALPHABLENDFUNCTION@16": // _grAlphaBlendFunction@16
-					_logger.LogInformation("[Glide2x] grAlphaBlendFunction({UInt32}, {U}, {UInt33}, {U1})", a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-					returnValue = grAlphaBlendFunction();
-					return true;
+					{
+						uint rgbSourceFactor = a.UInt32(0);
+						uint rgbDestFactor = a.UInt32(1);
+						uint alphaSourceFactor = a.UInt32(2);
+						uint alphaDestFactor = a.UInt32(3);
+						_logger.LogInformation("[Glide2x] grAlphaBlendFunction(rgbSF={RgbSF}, rgbDF={RgbDF}, alphaSF={AlphaSF}, alphaDF={AlphaDF})", 
+							rgbSourceFactor, rgbDestFactor, alphaSourceFactor, alphaDestFactor);
+						returnValue = grAlphaBlendFunction(rgbSourceFactor, rgbDestFactor, alphaSourceFactor, alphaDestFactor);
+						return true;
+					}
 
 				case "_GRDEPTHBUFFERFUNCTION@4":
 					_logger.LogInformation("[Glide2x] grDepthBufferFunction({UInt32})", a.UInt32(0));
@@ -295,9 +368,15 @@ namespace Win32Emu.Win32.Modules
 					return true;
 
 				case "_GRCLIPWINDOW@16":
-					_logger.LogInformation("[Glide2x] grClipWindow({UInt32}, {U}, {UInt33}, {U1})", a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-					returnValue = grClipWindow();
-					return true;
+					{
+						uint minx = a.UInt32(0);
+						uint miny = a.UInt32(1);
+						uint maxx = a.UInt32(2);
+						uint maxy = a.UInt32(3);
+						_logger.LogInformation("[Glide2x] grClipWindow(minx={Minx}, miny={Miny}, maxx={Maxx}, maxy={Maxy})", minx, miny, maxx, maxy);
+						returnValue = grClipWindow(minx, miny, maxx, maxy);
+						return true;
+					}
 
 				case "_GRCONSTANTCOLORVALUE@4":
 					_logger.LogInformation("[Glide2x] grConstantColorValue(0x{UInt32:X8})", a.UInt32(0));
@@ -306,19 +385,29 @@ namespace Win32Emu.Win32.Modules
 
 				// GU helper functions
 				case "_GUALPHASOURCE@4":
-					_logger.LogInformation("[Glide2x] guAlphaSource({UInt32})", a.UInt32(0));
-					returnValue = guAlphaSource();
-					return true;
+					{
+						uint mode = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] guAlphaSource(mode={Mode})", mode);
+						returnValue = guAlphaSource(mode);
+						return true;
+					}
 
 				case "_GUCOLORCOMBINEFUNCTION@4":
-					_logger.LogInformation("[Glide2x] guColorCombineFunction({UInt32})", a.UInt32(0));
-					returnValue = guColorCombineFunction();
-					return true;
+					{
+						uint mode = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] guColorCombineFunction(mode={Mode})", mode);
+						returnValue = guColorCombineFunction(mode);
+						return true;
+					}
 
 				case "_GUTEXCOMBINEFUNCTION@8":
-					_logger.LogInformation("[Glide2x] guTexCombineFunction({UInt32}, {U})", a.UInt32(0), a.UInt32(1));
-					returnValue = guTexCombineFunction();
-					return true;
+					{
+						uint tmu = a.UInt32(0);
+						uint mode = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] guTexCombineFunction(tmu={Tmu}, mode={Mode})", tmu, mode);
+						returnValue = guTexCombineFunction(tmu, mode);
+						return true;
+					}
 
 				case "_GUTEXSOURCE@4":
 					_logger.LogInformation("[Glide2x] guTexSource(0x{UInt32:X8})", a.UInt32(0));
@@ -327,14 +416,21 @@ namespace Win32Emu.Win32.Modules
 
 				// Drawing primitives
 				case "_GRAADRAWLINE@8":
-					_logger.LogInformation("[Glide2x] grAADrawLine(0x{UInt32:X8}, 0x{U:X8})", a.UInt32(0), a.UInt32(1));
-					returnValue = grAADrawLine();
-					return true;
+					{
+						uint v1Ptr = a.UInt32(0);
+						uint v2Ptr = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grAADrawLine(v1Ptr=0x{V1Ptr:X8}, v2Ptr=0x{V2Ptr:X8})", v1Ptr, v2Ptr);
+						returnValue = grAADrawLine(v1Ptr, v2Ptr);
+						return true;
+					}
 
 				case "_GRAADRAWPOINT@4":
-					_logger.LogInformation("[Glide2x] grAADrawPoint(0x{UInt32:X8})", a.UInt32(0));
-					returnValue = grAADrawPoint();
-					return true;
+					{
+						uint vertexPtr = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grAADrawPoint(vertexPtr=0x{VertexPtr:X8})", vertexPtr);
+						returnValue = grAADrawPoint(vertexPtr);
+						return true;
+					}
 
 				case "_GUDRAWTRIANGLEWITHCLIP@12": // _guDrawTriangleWithClip@12
 					{
@@ -364,7 +460,7 @@ namespace Win32Emu.Win32.Modules
 
 
 		[DllModuleExport(1, entryPoint: 0x00005ED0, Version = "4.90.0.3000", ExportName = "_ConvertAndDownloadRle@64", IsStub = true)]
-		public uint ConvertAndDownloadRle()
+		public uint ConvertAndDownloadRle(uint p1, uint p2, uint p3, uint p4, uint p5, uint p6, uint p7, uint p8, uint p9, uint p10, uint p11, uint p12, uint p13, uint p14, uint p15, uint p16)
 		{
 			_logger.LogWarning("[GLIDE2x] ConvertAndDownloadRle called (stub)");
 			// TODO: Implement _ConvertAndDownloadRle@64
@@ -372,7 +468,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(2, entryPoint: 0x00002E70, Version = "4.90.0.3000", ExportName = "_grAADrawLine@8", IsStub = true)]
-		public uint grAADrawLine()
+		public uint grAADrawLine(uint v1Ptr, uint v2Ptr)
 		{
 			_logger.LogWarning("[GLIDE2x] grAADrawLine called (stub)");
 			// Draw an anti-aliased line
@@ -381,7 +477,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(3, entryPoint: 0x00002EA0, Version = "4.90.0.3000", ExportName = "_grAADrawPoint@4")]
-		public uint grAADrawPoint()
+		public uint grAADrawPoint(uint vertexPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grAADrawPoint called");
 			// Draw an anti-aliased point
@@ -390,7 +486,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(4, entryPoint: 0x00002ED0, Version = "4.90.0.3000", ExportName = "_grAADrawPolygon@12")]
-		public uint grAADrawPolygon()
+		public uint grAADrawPolygon(uint nverts, uint ilistPtr, uint vlistPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grAADrawPolygon called");
 			// Draw an anti-aliased polygon
@@ -399,7 +495,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(5, entryPoint: 0x00002F00, Version = "4.90.0.3000", ExportName = "_grAADrawPolygonVertexList@8")]
-		public uint grAADrawPolygonVertexList()
+		public uint grAADrawPolygonVertexList(uint nverts, uint vlistPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grAADrawPolygonVertexList called");
 			// Draw an anti-aliased polygon from vertex list
@@ -408,7 +504,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(6, entryPoint: 0x00002F30, Version = "4.90.0.3000", ExportName = "_grAADrawTriangle@24")]
-		public uint grAADrawTriangle()
+		public uint grAADrawTriangle(uint v1Ptr, uint v2Ptr, uint v3Ptr, uint aa01, uint aa12, uint aa20)
 		{
 			_logger.LogDebug("[GLIDE2x] grAADrawTriangle called");
 			// Draw an anti-aliased triangle
@@ -417,7 +513,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(7, entryPoint: 0x00002980, Version = "4.90.0.3000", ExportName = "_grAlphaBlendFunction@16")]
-		public uint grAlphaBlendFunction()
+		public uint grAlphaBlendFunction(uint rgbSourceFactor, uint rgbDestFactor, uint alphaSourceFactor, uint alphaDestFactor)
 		{
 			_logger.LogDebug("[GLIDE2x] grAlphaBlendFunction called");
 			// Set alpha blending function
@@ -427,7 +523,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(8, entryPoint: 0x00002990, Version = "4.90.0.3000", ExportName = "_grAlphaCombine@20")]
-		public uint grAlphaCombine()
+		public uint grAlphaCombine(uint function, uint factor, uint local, uint other, uint invert)
 		{
 			_logger.LogDebug("[GLIDE2x] grAlphaCombine called");
 			// Set alpha combine function
@@ -436,7 +532,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(9, entryPoint: 0x000029A0, Version = "4.90.0.3000", ExportName = "_grAlphaControlsITRGBLighting@4")]
-		public uint grAlphaControlsITRGBLighting()
+		public uint grAlphaControlsITRGBLighting(uint enable)
 		{
 			_logger.LogDebug("[GLIDE2x] grAlphaControlsITRGBLighting called");
 			// Enable or disable alpha controlling iterated RGB lighting
@@ -444,7 +540,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(10, entryPoint: 0x000029B0, Version = "4.90.0.3000", ExportName = "_grAlphaTestFunction@4")]
-		public uint grAlphaTestFunction()
+		public uint grAlphaTestFunction(uint function)
 		{
 			_logger.LogDebug("[GLIDE2x] grAlphaTestFunction called");
 			// Set alpha test comparison function
@@ -500,7 +596,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(14, entryPoint: 0x00001220, Version = "4.90.0.3000", ExportName = "_grBufferSwap@4")]
-		public uint grBufferSwap()
+		public uint grBufferSwap(uint interval)
 		{
 			_logger.LogDebug("[GLIDE2x] grBufferSwap called");
 			
@@ -540,7 +636,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(15, entryPoint: 0x00004090, Version = "4.90.0.3000", ExportName = "_grCheckForRoom@4", IsStub = true)]
-		public uint grCheckForRoom()
+		public uint grCheckForRoom(uint size)
 		{
 			_logger.LogWarning("[GLIDE2x] grCheckForRoom called (stub)");
 			// TODO: Implement _grCheckForRoom@4
@@ -566,7 +662,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(18, entryPoint: 0x00003CA0, Version = "4.90.0.3000", ExportName = "_grClipWindow@16")]
-		public uint grClipWindow()
+		public uint grClipWindow(uint minx, uint miny, uint maxx, uint maxy)
 		{
 			_logger.LogDebug("[GLIDE2x] grClipWindow called");
 			// Set clipping window rectangle (minx, miny, maxx, maxy)
@@ -574,7 +670,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(19, entryPoint: 0x000029D0, Version = "4.90.0.3000", ExportName = "_grColorCombine@20")]
-		public uint grColorCombine()
+		public uint grColorCombine(uint function, uint factor, uint local, uint other, uint invert)
 		{
 			_logger.LogDebug("[GLIDE2x] grColorCombine called");
 			// Set color combine function (how colors are blended)
@@ -582,7 +678,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(20, entryPoint: 0x000029E0, Version = "4.90.0.3000", ExportName = "_grColorMask@8")]
-		public uint grColorMask()
+		public uint grColorMask(uint rgb, uint alpha)
 		{
 			_logger.LogDebug("[GLIDE2x] grColorMask called");
 			// Set color write mask (enable/disable writing to RGB and alpha channels)
@@ -590,7 +686,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(21, entryPoint: 0x00002A00, Version = "4.90.0.3000", ExportName = "_grConstantColorValue4@16")]
-		public uint grConstantColorValue4()
+		public uint grConstantColorValue4(uint a, uint r, uint g, uint b)
 		{
 			_logger.LogDebug("[GLIDE2x] grConstantColorValue4 called");
 			// Set constant color value using 4 float components (a, r, g, b)
@@ -616,7 +712,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(24, entryPoint: 0x000013B0, Version = "4.90.0.3000", ExportName = "_grDepthBiasLevel@4")]
-		public uint grDepthBiasLevel()
+		public uint grDepthBiasLevel(uint level)
 		{
 			_logger.LogDebug("[GLIDE2x] grDepthBiasLevel called");
 			// Set depth bias level for polygon offset
@@ -660,7 +756,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(29, entryPoint: 0x00003D20, Version = "4.90.0.3000", ExportName = "_grDitherMode@4")]
-		public uint grDitherMode()
+		public uint grDitherMode(uint mode)
 		{
 			_logger.LogDebug("[GLIDE2x] grDitherMode called");
 			// Set dithering mode for color quantization
@@ -668,7 +764,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(30, entryPoint: 0x00002FE0, Version = "4.90.0.3000", ExportName = "_grDrawLine@8")]
-		public uint grDrawLine()
+		public uint grDrawLine(uint v1Ptr, uint v2Ptr)
 		{
 			_logger.LogDebug("[GLIDE2x] grDrawLine called");
 			// Draw a line (non-antialiased)
@@ -677,7 +773,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(31, entryPoint: 0x00002F40, Version = "4.90.0.3000", ExportName = "_grDrawPlanarPolygon@12")]
-		public uint grDrawPlanarPolygon()
+		public uint grDrawPlanarPolygon(uint nverts, uint ilistPtr, uint vlistPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grDrawPlanarPolygon called");
 			// Draw a planar polygon
@@ -686,7 +782,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(32, entryPoint: 0x00002F50, Version = "4.90.0.3000", ExportName = "_grDrawPlanarPolygonVertexList@8")]
-		public uint grDrawPlanarPolygonVertexList()
+		public uint grDrawPlanarPolygonVertexList(uint nverts, uint vlistPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grDrawPlanarPolygonVertexList called");
 			// Draw a planar polygon from vertex list
@@ -695,7 +791,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(33, entryPoint: 0x00002F70, Version = "4.90.0.3000", ExportName = "_grDrawPoint@4")]
-		public uint grDrawPoint()
+		public uint grDrawPoint(uint vertexPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grDrawPoint called");
 			// Draw a point (non-antialiased)
@@ -704,7 +800,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(34, entryPoint: 0x00002F80, Version = "4.90.0.3000", ExportName = "_grDrawPolygon@12")]
-		public uint grDrawPolygon()
+		public uint grDrawPolygon(uint nverts, uint ilistPtr, uint vlistPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grDrawPolygon called");
 			// Draw a polygon
@@ -713,7 +809,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(35, entryPoint: 0x00002F50, Version = "4.90.0.3000", ExportName = "_grDrawPolygonVertexList@8")]
-		public uint grDrawPolygonVertexList()
+		public uint grDrawPolygonVertexList(uint nverts, uint vlistPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grDrawPolygonVertexList called");
 			// Draw a polygon from vertex list
@@ -766,7 +862,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(37, entryPoint: 0x00003E70, Version = "4.90.0.3000", ExportName = "_grErrorSetCallback@4", IsStub = true)]
-		public uint grErrorSetCallback()
+		public uint grErrorSetCallback(uint callback)
 		{
 			_logger.LogWarning("[GLIDE2x] grErrorSetCallback called (stub)");
 			// TODO: Implement _grErrorSetCallback@4
@@ -782,7 +878,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(39, entryPoint: 0x00003110, Version = "4.90.0.3000", ExportName = "_grFogMode@4")]
-		public uint grFogMode()
+		public uint grFogMode(uint mode)
 		{
 			_logger.LogDebug("[GLIDE2x] grFogMode called");
 			// Set fog mode (disable, enable with or without alpha)
@@ -790,7 +886,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(40, entryPoint: 0x00003130, Version = "4.90.0.3000", ExportName = "_grFogTable@4")]
-		public uint grFogTable()
+		public uint grFogTable(uint tablePtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grFogTable called");
 			// Set fog lookup table (for distance-based fog calculations)
@@ -798,7 +894,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(41, entryPoint: 0x00003D30, Version = "4.90.0.3000", ExportName = "_grGammaCorrectionValue@4")]
-		public uint grGammaCorrectionValue()
+		public uint grGammaCorrectionValue(uint value)
 		{
 			_logger.LogDebug("[GLIDE2x] grGammaCorrectionValue called");
 			// Set gamma correction value for display output
@@ -806,7 +902,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(42, entryPoint: 0x00004290, Version = "4.90.0.3000", ExportName = "_grGetProcAddressExtXP@4", IsStub = true)]
-		public uint grGetProcAddressExtXP()
+		public uint grGetProcAddressExtXP(uint funcName)
 		{
 			_logger.LogWarning("[GLIDE2x] grGetProcAddressExtXP called (stub)");
 			// TODO: Implement _grGetProcAddressExtXP@4
@@ -814,7 +910,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(43, entryPoint: 0x000032D0, Version = "4.90.0.3000", ExportName = "_grGlideGetState@4", IsStub = true)]
-		public uint grGlideGetState()
+		public uint grGlideGetState(uint statePtr)
 		{
 			_logger.LogWarning("[GLIDE2x] grGlideGetState called (stub)");
 			// TODO: Implement _grGlideGetState@4
@@ -822,7 +918,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(44, entryPoint: 0x00003290, Version = "4.90.0.3000", ExportName = "_grGlideGetVersion@4")]
-		public uint grGlideGetVersion()
+		public uint grGlideGetVersion(uint versionPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grGlideGetVersion called");
 			// Return Glide version string pointer - we'll write a version string to memory
@@ -849,7 +945,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(46, entryPoint: 0x00003300, Version = "4.90.0.3000", ExportName = "_grGlideSetState@4", IsStub = true)]
-		public uint grGlideSetState()
+		public uint grGlideSetState(uint statePtr)
 		{
 			_logger.LogWarning("[GLIDE2x] grGlideSetState called (stub)");
 			// TODO: Implement _grGlideSetState@4
@@ -857,7 +953,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(47, entryPoint: 0x000032B0, Version = "4.90.0.3000", ExportName = "_grGlideShamelessPlug@4", IsStub = true)]
-		public uint grGlideShamelessPlug()
+		public uint grGlideShamelessPlug(uint mode)
 		{
 			_logger.LogWarning("[GLIDE2x] grGlideShamelessPlug called (stub)");
 			// TODO: Implement _grGlideShamelessPlug@4
@@ -887,7 +983,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(49, entryPoint: 0x00003D60, Version = "4.90.0.3000", ExportName = "_grHints@8", IsStub = true)]
-		public uint grHints()
+		public uint grHints(uint hintType, uint hintMask)
 		{
 			_logger.LogWarning("[GLIDE2x] grHints called (stub)");
 			// TODO: Implement _grHints@8
@@ -895,7 +991,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(50, entryPoint: 0x00001420, Version = "4.90.0.3000", ExportName = "_grLfbConstantAlpha@4")]
-		public uint grLfbConstantAlpha()
+		public uint grLfbConstantAlpha(uint alpha)
 		{
 			_logger.LogDebug("[GLIDE2x] grLfbConstantAlpha called");
 			// Set constant alpha value for LFB writes
@@ -903,7 +999,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(51, entryPoint: 0x00001430, Version = "4.90.0.3000", ExportName = "_grLfbConstantDepth@4")]
-		public uint grLfbConstantDepth()
+		public uint grLfbConstantDepth(uint depth)
 		{
 			_logger.LogDebug("[GLIDE2x] grLfbConstantDepth called");
 			// Set constant depth value for LFB writes
@@ -911,7 +1007,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(52, entryPoint: 0x00001450, Version = "4.90.0.3000", ExportName = "_grLfbLock@24")]
-		public uint grLfbLock()
+		public uint grLfbLock(uint type, uint buffer, uint writeMode, uint origin, uint pixelPipeline, uint infoPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grLfbLock called");
 			
@@ -943,7 +1039,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(53, entryPoint: 0x00001460, Version = "4.90.0.3000", ExportName = "_grLfbReadRegion@28")]
-		public uint grLfbReadRegion()
+		public uint grLfbReadRegion(uint buffer, uint dstX, uint dstY, uint srcX, uint srcY, uint width, uint height)
 		{
 			_logger.LogDebug("[GLIDE2x] grLfbReadRegion called");
 			// Read a region of the frame buffer to memory
@@ -952,7 +1048,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(54, entryPoint: 0x00001470, Version = "4.90.0.3000", ExportName = "_grLfbUnlock@8")]
-		public uint grLfbUnlock()
+		public uint grLfbUnlock(uint buffer, uint type)
 		{
 			_logger.LogDebug("[GLIDE2x] grLfbUnlock called");
 			
@@ -968,7 +1064,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(55, entryPoint: 0x00004090, Version = "4.90.0.3000", ExportName = "_grLfbWriteColorFormat@4")]
-		public uint grLfbWriteColorFormat()
+		public uint grLfbWriteColorFormat(uint format)
 		{
 			_logger.LogDebug("[GLIDE2x] grLfbWriteColorFormat called");
 			// Set color format for LFB writes
@@ -976,7 +1072,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(56, entryPoint: 0x000014F0, Version = "4.90.0.3000", ExportName = "_grLfbWriteColorSwizzle@8")]
-		public uint grLfbWriteColorSwizzle()
+		public uint grLfbWriteColorSwizzle(uint swizzleBytes, uint swapWords)
 		{
 			_logger.LogDebug("[GLIDE2x] grLfbWriteColorSwizzle called");
 			// Set color channel swizzling for LFB writes
@@ -984,7 +1080,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(57, entryPoint: 0x00001480, Version = "4.90.0.3000", ExportName = "_grLfbWriteRegion@32")]
-		public uint grLfbWriteRegion()
+		public uint grLfbWriteRegion(uint buffer, uint dstX, uint dstY, uint srcFormat, uint srcWidth, uint srcHeight, uint srcStride, uint srcPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grLfbWriteRegion called");
 			// Write a region from memory to the frame buffer
@@ -1011,7 +1107,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(60, entryPoint: 0x00003E80, Version = "4.90.0.3000", ExportName = "_grSplash@20", IsStub = true)]
-		public uint grSplash()
+		public uint grSplash(uint x, uint y, uint width, uint height, uint frame)
 		{
 			_logger.LogWarning("[GLIDE2x] grSplash called (stub)");
 			// TODO: Implement _grSplash@20
@@ -1019,7 +1115,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(61, entryPoint: 0x00005260, Version = "4.90.0.3000", ExportName = "_grSstControl@4", IsStub = true)]
-		public uint grSstControl()
+		public uint grSstControl(uint code)
 		{
 			_logger.LogWarning("[GLIDE2x] grSstControl called (stub)");
 			// TODO: Implement _grSstControl@4
@@ -1027,7 +1123,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(62, entryPoint: 0x00005290, Version = "4.90.0.3000", ExportName = "_grSstControlMode@4", IsStub = true)]
-		public uint grSstControlMode()
+		public uint grSstControlMode(uint mode)
 		{
 			_logger.LogWarning("[GLIDE2x] grSstControlMode called (stub)");
 			// TODO: Implement _grSstControlMode@4
@@ -1053,7 +1149,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(65, entryPoint: 0x00004E90, Version = "4.90.0.3000", ExportName = "_grSstOrigin@4", IsStub = true)]
-		public uint grSstOrigin()
+		public uint grSstOrigin(uint origin)
 		{
 			_logger.LogWarning("[GLIDE2x] grSstOrigin called (stub)");
 			// TODO: Implement _grSstOrigin@4
@@ -1061,7 +1157,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(66, entryPoint: 0x000052D0, Version = "4.90.0.3000", ExportName = "_grSstPerfStats@4", IsStub = true)]
-		public uint grSstPerfStats()
+		public uint grSstPerfStats(uint statsPtr)
 		{
 			_logger.LogWarning("[GLIDE2x] grSstPerfStats called (stub)");
 			// TODO: Implement _grSstPerfStats@4
@@ -1069,7 +1165,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(67, entryPoint: 0x00004EA0, Version = "4.90.0.3000", ExportName = "_grSstQueryBoards@4")]
-		public uint grSstQueryBoards()
+		public uint grSstQueryBoards(uint hwConfigPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grSstQueryBoards called");
 			// Return TRUE to indicate one 3Dfx board is present
@@ -1079,7 +1175,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(68, entryPoint: 0x00004EF0, Version = "4.90.0.3000", ExportName = "_grSstQueryHardware@4")]
-		public uint grSstQueryHardware()
+		public uint grSstQueryHardware(uint hwConfigPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grSstQueryHardware called");
 			// Return TRUE to indicate hardware is present
@@ -1110,7 +1206,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(72, entryPoint: 0x00005030, Version = "4.90.0.3000", ExportName = "_grSstSelect@4")]
-		public uint grSstSelect()
+		public uint grSstSelect(uint which)
 		{
 			_logger.LogDebug("[GLIDE2x] grSstSelect called");
 			// Select which SST (Scan-line Synchronizer/Transformer) to use
@@ -1177,7 +1273,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(77, entryPoint: 0x00005080, Version = "4.90.0.3000", ExportName = "_grSstWinOpen@28")]
-		public uint grSstWinOpen()
+		public uint grSstWinOpen(uint hwnd, uint resolution, uint refresh, uint colorFormat, uint origin, uint nColBuffers, uint nAuxBuffers)
 		{
 			_logger.LogInformation("[GLIDE2x] grSstWinOpen called");
 			
@@ -1238,7 +1334,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(78, entryPoint: 0x00005860, Version = "4.90.0.3000", ExportName = "_grTexCalcMemRequired@16")]
-		public uint grTexCalcMemRequired()
+		public uint grTexCalcMemRequired(uint lodMin, uint lodMax, uint aspect, uint format)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexCalcMemRequired called");
 			// Calculate texture memory required
@@ -1248,7 +1344,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(79, entryPoint: 0x000058A0, Version = "4.90.0.3000", ExportName = "_grTexClampMode@12")]
-		public uint grTexClampMode()
+		public uint grTexClampMode(uint tmu, uint sClamp, uint tClamp)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexClampMode called");
 			// Set texture clamping mode (wrap, clamp, mirror)
@@ -1256,7 +1352,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(80, entryPoint: 0x000058B0, Version = "4.90.0.3000", ExportName = "_grTexCombine@28")]
-		public uint grTexCombine()
+		public uint grTexCombine(uint tmu, uint rgbFunction, uint rgbFactor, uint alphaFunction, uint alphaFactor, uint rgbInvert, uint alphaInvert)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexCombine called");
 			// Set texture combine function
@@ -1273,7 +1369,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(82, entryPoint: 0x00005920, Version = "4.90.0.3000", ExportName = "_grTexDetailControl@16")]
-		public uint grTexDetailControl()
+		public uint grTexDetailControl(uint tmu, uint lodBias, uint detailScale, uint detailMax)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexDetailControl called");
 			// Set texture detail control (for detail texture blending)
@@ -1281,7 +1377,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(83, entryPoint: 0x00005930, Version = "4.90.0.3000", ExportName = "_grTexDownloadMipMap@16")]
-		public uint grTexDownloadMipMap()
+		public uint grTexDownloadMipMap(uint tmu, uint startAddress, uint evenOdd, uint infoPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexDownloadMipMap called");
 			// Download mipmap texture data to texture memory
@@ -1289,7 +1385,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(84, entryPoint: 0x00005A20, Version = "4.90.0.3000", ExportName = "_grTexDownloadMipMapLevel@32")]
-		public uint grTexDownloadMipMapLevel()
+		public uint grTexDownloadMipMapLevel(uint tmu, uint startAddress, uint lodLevel, uint lodLarge, uint aspectRatio, uint format, uint evenOdd, uint dataPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexDownloadMipMapLevel called");
 			// Download a single mipmap level to texture memory
@@ -1297,7 +1393,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(85, entryPoint: 0x000059A0, Version = "4.90.0.3000", ExportName = "_grTexDownloadMipMapLevelPartial@40")]
-		public uint grTexDownloadMipMapLevelPartial()
+		public uint grTexDownloadMipMapLevelPartial(uint tmu, uint startAddress, uint lodLevel, uint lodLarge, uint aspectRatio, uint format, uint evenOdd, uint dataPtr, uint start, uint end)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexDownloadMipMapLevelPartial called");
 			// Download a partial mipmap level to texture memory
@@ -1305,7 +1401,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(86, entryPoint: 0x00005A60, Version = "4.90.0.3000", ExportName = "_grTexDownloadTable@12")]
-		public uint grTexDownloadTable()
+		public uint grTexDownloadTable(uint tmu, uint type, uint dataPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexDownloadTable called");
 			// Download a texture table (palette or NCC table)
@@ -1313,7 +1409,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(87, entryPoint: 0x00005B10, Version = "4.90.0.3000", ExportName = "_grTexDownloadTablePartial@20")]
-		public uint grTexDownloadTablePartial()
+		public uint grTexDownloadTablePartial(uint tmu, uint type, uint dataPtr, uint start, uint end)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexDownloadTablePartial called");
 			// Download a partial texture table
@@ -1321,7 +1417,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(88, entryPoint: 0x00005BE0, Version = "4.90.0.3000", ExportName = "_grTexFilterMode@12")]
-		public uint grTexFilterMode()
+		public uint grTexFilterMode(uint tmu, uint minFilter, uint magFilter)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexFilterMode called");
 			// Set texture filtering mode (point, bilinear, trilinear)
@@ -1329,7 +1425,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(89, entryPoint: 0x00005BF0, Version = "4.90.0.3000", ExportName = "_grTexLodBiasValue@8")]
-		public uint grTexLodBiasValue()
+		public uint grTexLodBiasValue(uint tmu, uint bias)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexLodBiasValue called");
 			// Set Level of Detail (LOD) bias for texture mipmap selection
@@ -1337,7 +1433,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(90, entryPoint: 0x00005C00, Version = "4.90.0.3000", ExportName = "_grTexMaxAddress@4")]
-		public uint grTexMaxAddress()
+		public uint grTexMaxAddress(uint tmu)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexMaxAddress called");
 			// Return maximum texture memory address for a TMU
@@ -1346,7 +1442,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(91, entryPoint: 0x00005C20, Version = "4.90.0.3000", ExportName = "_grTexMinAddress@4")]
-		public uint grTexMinAddress()
+		public uint grTexMinAddress(uint tmu)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexMinAddress called");
 			// Return minimum texture memory address for a TMU
@@ -1355,7 +1451,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(92, entryPoint: 0x00005C30, Version = "4.90.0.3000", ExportName = "_grTexMipMapMode@12")]
-		public uint grTexMipMapMode()
+		public uint grTexMipMapMode(uint tmu, uint mode, uint lodBlend)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexMipMapMode called");
 			// Set mipmap mode (disable, nearest, or blend between levels)
@@ -1363,7 +1459,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(93, entryPoint: 0x00005C40, Version = "4.90.0.3000", ExportName = "_grTexMultibase@8")]
-		public uint grTexMultibase()
+		public uint grTexMultibase(uint tmu, uint enable)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexMultibase called");
 			// Enable or disable multibase texture addressing
@@ -1371,7 +1467,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(94, entryPoint: 0x00005C50, Version = "4.90.0.3000", ExportName = "_grTexMultibaseAddress@20")]
-		public uint grTexMultibaseAddress()
+		public uint grTexMultibaseAddress(uint tmu, uint range, uint startAddress, uint evenOdd, uint infoPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexMultibaseAddress called");
 			// Set multibase texture address
@@ -1379,7 +1475,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(95, entryPoint: 0x00005CC0, Version = "4.90.0.3000", ExportName = "_grTexNCCTable@8")]
-		public uint grTexNCCTable()
+		public uint grTexNCCTable(uint tmu, uint table)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexNCCTable called");
 			// Set NCC (YIQ color space) texture compression table
@@ -1387,7 +1483,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(96, entryPoint: 0x00005D50, Version = "4.90.0.3000", ExportName = "_grTexSource@16")]
-		public uint grTexSource()
+		public uint grTexSource(uint tmu, uint startAddress, uint evenOdd, uint infoPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexSource called");
 			// Set active texture source (bind texture)
@@ -1395,7 +1491,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(97, entryPoint: 0x00005E70, Version = "4.90.0.3000", ExportName = "_grTexTextureMemRequired@8")]
-		public uint grTexTextureMemRequired()
+		public uint grTexTextureMemRequired(uint evenOdd, uint infoPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] grTexTextureMemRequired called");
 			// Calculate texture memory required for a specific texture configuration
@@ -1404,7 +1500,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(98, entryPoint: 0x00003E90, Version = "4.90.0.3000", ExportName = "_grTriStats@8", IsStub = true)]
-		public uint grTriStats()
+		public uint grTriStats(uint statsPtr, uint reset)
 		{
 			_logger.LogWarning("[GLIDE2x] grTriStats called (stub)");
 			// TODO: Implement _grTriStats@8
@@ -1412,7 +1508,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(99, entryPoint: 0x00005F60, Version = "4.90.0.3000", ExportName = "_gu3dfGetInfo@8", IsStub = true)]
-		public uint gu3dfGetInfo()
+		public uint gu3dfGetInfo(uint filename, uint info)
 		{
 			_logger.LogWarning("[GLIDE2x] gu3dfGetInfo called (stub)");
 			// TODO: Implement _gu3dfGetInfo@8
@@ -1420,7 +1516,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(100, entryPoint: 0x00005FA0, Version = "4.90.0.3000", ExportName = "_gu3dfLoad@8", IsStub = true)]
-		public uint gu3dfLoad()
+		public uint gu3dfLoad(uint filename, uint data)
 		{
 			_logger.LogWarning("[GLIDE2x] gu3dfLoad called (stub)");
 			// TODO: Implement _gu3dfLoad@8
@@ -1428,7 +1524,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(101, entryPoint: 0x00001F30, Version = "4.90.0.3000", ExportName = "_guAADrawTriangleWithClip@12", IsStub = true)]
-		public uint guAADrawTriangleWithClip()
+		public uint guAADrawTriangleWithClip(uint v1Ptr, uint v2Ptr, uint v3Ptr)
 		{
 			_logger.LogWarning("[GLIDE2x] guAADrawTriangleWithClip called (stub)");
 			// TODO: Implement _guAADrawTriangleWithClip@12
@@ -1436,7 +1532,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(102, entryPoint: 0x00006010, Version = "4.90.0.3000", ExportName = "_guAlphaSource@4")]
-		public uint guAlphaSource()
+		public uint guAlphaSource(uint mode)
 		{
 			_logger.LogDebug("[GLIDE2x] guAlphaSource called");
 			// Set alpha source (utility function)
@@ -1444,7 +1540,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(103, entryPoint: 0x00006080, Version = "4.90.0.3000", ExportName = "_guColorCombineFunction@4")]
-		public uint guColorCombineFunction()
+		public uint guColorCombineFunction(uint mode)
 		{
 			_logger.LogDebug("[GLIDE2x] guColorCombineFunction called");
 			// Set color combine function (utility wrapper)
@@ -1452,7 +1548,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(104, entryPoint: 0x00002460, Version = "4.90.0.3000", ExportName = "_guDrawPolygonVertexListWithClip@8", IsStub = true)]
-		public uint guDrawPolygonVertexListWithClip()
+		public uint guDrawPolygonVertexListWithClip(uint nverts, uint vlistPtr)
 		{
 			_logger.LogWarning("[GLIDE2x] guDrawPolygonVertexListWithClip called (stub)");
 			// TODO: Implement _guDrawPolygonVertexListWithClip@8
@@ -1468,7 +1564,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(106, entryPoint: 0x00006400, Version = "4.90.0.3000", ExportName = "_guEncodeRLE16@16", IsStub = true)]
-		public uint guEncodeRLE16()
+		public uint guEncodeRLE16(uint dstPtr, uint srcPtr, uint width, uint height)
 		{
 			_logger.LogWarning("[GLIDE2x] guEncodeRLE16 called (stub)");
 			// TODO: Implement _guEncodeRLE16@16
@@ -1476,7 +1572,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(107, entryPoint: 0x00006500, Version = "4.90.0.3000", ExportName = "_guEndianSwapBytes@4", IsStub = true)]
-		public uint guEndianSwapBytes()
+		public uint guEndianSwapBytes(uint size)
 		{
 			_logger.LogWarning("[GLIDE2x] guEndianSwapBytes called (stub)");
 			// TODO: Implement _guEndianSwapBytes@4
@@ -1484,7 +1580,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(108, entryPoint: 0x000064E0, Version = "4.90.0.3000", ExportName = "_guEndianSwapWords@4", IsStub = true)]
-		public uint guEndianSwapWords()
+		public uint guEndianSwapWords(uint size)
 		{
 			_logger.LogWarning("[GLIDE2x] guEndianSwapWords called (stub)");
 			// TODO: Implement _guEndianSwapWords@4
@@ -1492,7 +1588,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(109, entryPoint: 0x00003160, Version = "4.90.0.3000", ExportName = "_guFogGenerateExp2@8", IsStub = true)]
-		public uint guFogGenerateExp2()
+		public uint guFogGenerateExp2(uint fogtablePtr, uint density)
 		{
 			_logger.LogWarning("[GLIDE2x] guFogGenerateExp2 called (stub)");
 			// TODO: Implement _guFogGenerateExp2@8
@@ -1500,7 +1596,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(110, entryPoint: 0x00003150, Version = "4.90.0.3000", ExportName = "_guFogGenerateExp@8", IsStub = true)]
-		public uint guFogGenerateExp()
+		public uint guFogGenerateExp(uint fogtablePtr, uint density)
 		{
 			_logger.LogWarning("[GLIDE2x] guFogGenerateExp called (stub)");
 			// TODO: Implement _guFogGenerateExp@8
@@ -1508,7 +1604,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(111, entryPoint: 0x00003170, Version = "4.90.0.3000", ExportName = "_guFogGenerateLinear@12", IsStub = true)]
-		public uint guFogGenerateLinear()
+		public uint guFogGenerateLinear(uint fogtablePtr, uint nearZ, uint farZ)
 		{
 			_logger.LogWarning("[GLIDE2x] guFogGenerateLinear called (stub)");
 			// TODO: Implement _guFogGenerateLinear@12
@@ -1516,7 +1612,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(112, entryPoint: 0x00003140, Version = "4.90.0.3000", ExportName = "_guFogTableIndexToW@4", IsStub = true)]
-		public uint guFogTableIndexToW()
+		public uint guFogTableIndexToW(uint index)
 		{
 			_logger.LogWarning("[GLIDE2x] guFogTableIndexToW called (stub)");
 			// TODO: Implement _guFogTableIndexToW@4
@@ -1524,7 +1620,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(113, entryPoint: 0x00003350, Version = "4.90.0.3000", ExportName = "_guTexAllocateMemory@60")]
-		public uint guTexAllocateMemory()
+		public uint guTexAllocateMemory(uint tmu, uint evenOdd, uint width, uint height, uint format, uint mipMapMode, uint lodMin, uint lodMax, uint aspect, uint smallLodLog2, uint largeLodLog2, uint oddEvenPtr, uint mipmapPtr, uint startPtr, uint endPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] guTexAllocateMemory called");
 			// Allocate texture memory and return mipmap ID
@@ -1542,7 +1638,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(114, entryPoint: 0x000034E0, Version = "4.90.0.3000", ExportName = "_guTexChangeAttributes@48", IsStub = true)]
-		public uint guTexChangeAttributes()
+		public uint guTexChangeAttributes(uint mmid, uint width, uint height, uint format, uint mipMapMode, uint lodMin, uint lodMax, uint aspect, uint smallLodLog2, uint largeLodLog2, uint evenOdd, uint dataPtr)
 		{
 			_logger.LogWarning("[GLIDE2x] guTexChangeAttributes called (stub)");
 			// TODO: Implement _guTexChangeAttributes@48
@@ -1550,7 +1646,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(115, entryPoint: 0x000061D0, Version = "4.90.0.3000", ExportName = "_guTexCombineFunction@8")]
-		public uint guTexCombineFunction()
+		public uint guTexCombineFunction(uint tmu, uint mode)
 		{
 			_logger.LogDebug("[GLIDE2x] guTexCombineFunction called");
 			// Set texture combine function (utility wrapper)
@@ -1566,7 +1662,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(117, entryPoint: 0x000035A0, Version = "4.90.0.3000", ExportName = "_guTexDownloadMipMap@12")]
-		public uint guTexDownloadMipMap()
+		public uint guTexDownloadMipMap(uint mmid, uint srcPtr, uint nccPtr)
 		{
 			_logger.LogDebug("[GLIDE2x] guTexDownloadMipMap called");
 			// Download mipmap texture data
@@ -1576,7 +1672,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(118, entryPoint: 0x00003630, Version = "4.90.0.3000", ExportName = "_guTexDownloadMipMapLevel@12", IsStub = true)]
-		public uint guTexDownloadMipMapLevel()
+		public uint guTexDownloadMipMapLevel(uint mmid, uint level, uint srcPtr)
 		{
 			_logger.LogWarning("[GLIDE2x] guTexDownloadMipMapLevel called (stub)");
 			// TODO: Implement _guTexDownloadMipMapLevel@12
@@ -1584,7 +1680,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(119, entryPoint: 0x000036A0, Version = "4.90.0.3000", ExportName = "_guTexGetCurrentMipMap@4", IsStub = true)]
-		public uint guTexGetCurrentMipMap()
+		public uint guTexGetCurrentMipMap(uint tmu)
 		{
 			_logger.LogWarning("[GLIDE2x] guTexGetCurrentMipMap called (stub)");
 			// TODO: Implement _guTexGetCurrentMipMap@4
@@ -1592,7 +1688,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(120, entryPoint: 0x000036B0, Version = "4.90.0.3000", ExportName = "_guTexGetMipMapInfo@4", IsStub = true)]
-		public uint guTexGetMipMapInfo()
+		public uint guTexGetMipMapInfo(uint mmidPtr)
 		{
 			_logger.LogWarning("[GLIDE2x] guTexGetMipMapInfo called (stub)");
 			// TODO: Implement _guTexGetMipMapInfo@4
@@ -1600,7 +1696,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(121, entryPoint: 0x000036D0, Version = "4.90.0.3000", ExportName = "_guTexMemQueryAvail@4", IsStub = true)]
-		public uint guTexMemQueryAvail()
+		public uint guTexMemQueryAvail(uint tmu)
 		{
 			_logger.LogWarning("[GLIDE2x] guTexMemQueryAvail called (stub)");
 			// TODO: Implement _guTexMemQueryAvail@4
