@@ -895,6 +895,19 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::SetCooperativeLevel returned 0x00000000 (argBytes=12)
 info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEB8: 0x0040134B (return addr)
+        [ESP+04] = 0x001FEEBC: 0x010032B0 (arg1)
+        [ESP+08] = 0x001FEEC0: 0x00010000 (arg2)
+        [ESP+12] = 0x001FEEC4: 0x00000011 (arg3)
+        [ESP+16] = 0x001FEEC8: 0xAFAEADAC
+        [ESP+20] = 0x001FEECC: 0xB3B2B1B0
+        [ESP+24] = 0x001FEED0: 0xB7B6B5B4
+        [ESP+28] = 0x001FEED4: 0xBBBAB9B8
+
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEB8, retEIP=0x0040134B, argBytes=12, new ESP=0x001FEEC8
+info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D001150
 info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDraw::SetDisplayMode at address 0x0D001150
@@ -915,6 +928,19 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::SetDisplayMode returned 0x00000000 (argBytes=16)
 info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEAC: 0x00401376 (return addr)
+        [ESP+04] = 0x001FEEB0: 0x010032B0 (arg1)
+        [ESP+08] = 0x001FEEB4: 0x00000280 (arg2)
+        [ESP+12] = 0x001FEEB8: 0x000001E0 (arg3)
+        [ESP+16] = 0x001FEEBC: 0x00000010 (arg4)
+        [ESP+20] = 0x001FEEC0: 0x00000000
+        [ESP+24] = 0x001FEEC4: 0x00000000
+        [ESP+28] = 0x001FEEC8: 0xAFAEADAC
+
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEAC, retEIP=0x00401376, argBytes=16, new ESP=0x001FEEC0
+info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D001060
 info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDraw::CreateSurface at address 0x0D001060
@@ -931,9 +957,24 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw] Created backbuffer 1 at surface handle 0x71000001, COM object at 0x010033C0
 info: Win32Emu.Emulator[0]
+      [DDraw] Attached backbuffer 0x71000001 to primary surface 0x71000000 (COM=0x01003320), AttachedSurfaces.Count=1
+info: Win32Emu.Emulator[0]
       [DDraw] Created IDirectDrawSurface COM object at 0x01003320 for surface 0x71000000
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::CreateSurface returned 0x00000000 (argBytes=16)
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEA8: 0x004013CE (return addr)
+        [ESP+04] = 0x001FEEAC: 0x010032B0 (arg1)
+        [ESP+08] = 0x001FEEB0: 0x001FEED0 (arg2)
+        [ESP+12] = 0x001FEEB4: 0x00409588 (arg3)
+        [ESP+16] = 0x001FEEB8: 0x00000000 (arg4)
+        [ESP+20] = 0x001FEEBC: 0x00000000
+        [ESP+24] = 0x001FEEC0: 0x00000000
+        [ESP+28] = 0x001FEEC4: 0x00000000
+
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEA8, retEIP=0x004013CE, argBytes=16, new ESP=0x001FEEBC
 info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D0020C0
 info: Win32Emu.Emulator[0]
@@ -941,11 +982,28 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDrawSurface::GetAttachedSurface(this=0x01003320, lpDDSCaps=0x001FEEC0, lplp=0x0040958C)
 info: Win32Emu.Emulator[0]
+      [DDraw] Found surface: Handle=0x71000000, ComAddr=0x01003320, IsPrimary=True, AttachedSurfaces.Count=1
+info: Win32Emu.Emulator[0]
+      [DDraw] Attached surfaces: 0x71000001
+info: Win32Emu.Emulator[0]
       [DDraw] Requested surface caps: 0x00000004
 info: Win32Emu.Emulator[0]
       [DDraw] Returning attached surface COM object at 0x010033C0
 info: Win32Emu.Emulator[0]
       [COM] IDirectDrawSurface::GetAttachedSurface returned 0x00000000 (argBytes=12)
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEB0: 0x0040140C (return addr)
+        [ESP+04] = 0x001FEEB4: 0x01003320 (arg1)
+        [ESP+08] = 0x001FEEB8: 0x001FEEC0 (arg2)
+        [ESP+12] = 0x001FEEBC: 0x0040958C (arg3)
+        [ESP+16] = 0x001FEEC0: 0x00000004
+        [ESP+20] = 0x001FEEC4: 0x00000000
+        [ESP+24] = 0x001FEEC8: 0x00000000
+        [ESP+28] = 0x001FEECC: 0x00000000
+
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEB0, retEIP=0x0040140C, argBytes=12, new ESP=0x001FEEC0
 fail: Win32Emu.Emulator[0]
       [IcedCpu] Unhandled mnemonic INVALID at 0x0040715A, ESP=0x001FEF70, EBP=0x0040187C, EAX=0x00000065. Likely executing data as code or invalid jump target.
 fail: Win32Emu.Emulator[0]
