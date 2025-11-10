@@ -508,6 +508,50 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
         _initialized = false;
     }
 
+    // Hardware-accelerated rendering methods (stub implementations for now)
+    
+    public void BeginFrame()
+    {
+        _logger.LogDebug("[SDL3] BeginFrame called (not yet implemented)");
+        // TODO: Implement SDL3 GPU command buffer begin
+    }
+
+    public void EndFrame()
+    {
+        _logger.LogDebug("[SDL3] EndFrame called (not yet implemented)");
+        // TODO: Implement SDL3 GPU command buffer submission
+    }
+
+    public void DrawTriangles(Span<Vertex> vertices, Span<ushort> indices)
+    {
+        _logger.LogWarning("[SDL3] DrawTriangles not yet implemented");
+        // TODO: Implement SDL3 GPU triangle rendering
+    }
+
+    public void SetTexture(uint textureId, byte[] data, int width, int height, TextureFormat format)
+    {
+        _logger.LogWarning("[SDL3] SetTexture not yet implemented");
+        // TODO: Implement SDL3 GPU texture upload
+    }
+
+    public void BindTexture(uint textureId)
+    {
+        _logger.LogWarning("[SDL3] BindTexture not yet implemented");
+        // TODO: Implement SDL3 GPU texture binding
+    }
+
+    public void SetRenderState(BlendMode blend, DepthTest depth, CullMode cull)
+    {
+        _logger.LogWarning("[SDL3] SetRenderState not yet implemented");
+        // TODO: Implement SDL3 GPU render state management
+    }
+
+    public void DeleteTexture(uint textureId)
+    {
+        _logger.LogWarning("[SDL3] DeleteTexture not yet implemented");
+        // TODO: Implement SDL3 GPU texture deletion
+    }
+
     public void Dispose()
     {
         if (_disposed)

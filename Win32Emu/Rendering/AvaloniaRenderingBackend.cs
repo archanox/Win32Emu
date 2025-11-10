@@ -287,6 +287,43 @@ public class AvaloniaRenderingBackend : IRenderingBackend
 
     public int Height => _height;
 
+    // Hardware-accelerated rendering methods (not supported in Avalonia backend)
+    
+    public void BeginFrame()
+    {
+        _logger.LogDebug("[Avalonia] BeginFrame called (no-op for Avalonia backend)");
+    }
+
+    public void EndFrame()
+    {
+        _logger.LogDebug("[Avalonia] EndFrame called (no-op for Avalonia backend)");
+    }
+
+    public void DrawTriangles(Span<Vertex> vertices, Span<ushort> indices)
+    {
+        _logger.LogWarning("[Avalonia] DrawTriangles not supported in Avalonia backend (use UpdateFrameBuffer)");
+    }
+
+    public void SetTexture(uint textureId, byte[] data, int width, int height, TextureFormat format)
+    {
+        _logger.LogWarning("[Avalonia] SetTexture not supported in Avalonia backend");
+    }
+
+    public void BindTexture(uint textureId)
+    {
+        _logger.LogWarning("[Avalonia] BindTexture not supported in Avalonia backend");
+    }
+
+    public void SetRenderState(BlendMode blend, DepthTest depth, CullMode cull)
+    {
+        _logger.LogWarning("[Avalonia] SetRenderState not supported in Avalonia backend");
+    }
+
+    public void DeleteTexture(uint textureId)
+    {
+        _logger.LogWarning("[Avalonia] DeleteTexture not supported in Avalonia backend");
+    }
+
     public void Dispose()
     {
         lock (_lock)
