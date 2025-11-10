@@ -639,9 +639,9 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [User32] GetSystemMetrics: nIndex=SM_CYSCREEN
 info: Win32Emu.Emulator[0]
-      [User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 1080
+      [User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 480
 info: Win32Emu.Emulator[0]
-      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000438, argBytes=4
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x000001E0, argBytes=4
 info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEE50 = 0x004052F5
 info: Win32Emu.Emulator[0]
@@ -649,13 +649,13 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Syscall] BEFORE API: Return address at 0x001FEE4C = 0x004052FA
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0E000002 ESP=0x001FEE4C stack=FA 52 40 00 00 00 00 00 38 04 00 00 00 00 00 00
+      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0E000002 ESP=0x001FEE4C stack=FA 52 40 00 00 00 00 00 E0 01 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [User32] GetSystemMetrics: nIndex=SM_CXSCREEN
 info: Win32Emu.Emulator[0]
-      [User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 1920
+      [User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 640
 info: Win32Emu.Emulator[0]
-      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000780, argBytes=4
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000280, argBytes=4
 info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEE4C = 0x004052FA
 warn: Win32Emu.Emulator[0]
@@ -781,6 +781,8 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDraw::SetDisplayMode(this=0x01463000, width=640, height=480, bpp=8)
 info: Win32Emu.Emulator[0]
+      [DDraw] Updated ProcessEnvironment display mode to 640x480x8
+info: Win32Emu.Emulator[0]
       [Avalonia] Initializing Avalonia rendering backend (640x480)...
 info: Win32Emu.Emulator[0]
       [Avalonia] Avalonia rendering backend initialized successfully
@@ -799,9 +801,15 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDraw::CreateSurface(this=0x01463000, lpDDSurfaceDesc=0x001FEEA0, lplpDDSurface=0x0043C914, pUnkOuter=0x00000000)
 info: Win32Emu.Emulator[0]
-      [DDraw] Surface creation: flags=0x00000021, caps=0x00000000, width=0, height=0, backbufferCount=1
+      [DDraw] Surface creation: dwSize=108, flags=0x00000021, caps=0x00000218, width=0, height=0, backbufferCount=1
 info: Win32Emu.Emulator[0]
       [COM] Created IDirectDrawSurface object at 0x01463070 (vtable at 0x01463080)
+info: Win32Emu.Emulator[0]
+      [DDraw] Creating 1 backbuffer(s) for primary surface
+info: Win32Emu.Emulator[0]
+      [COM] Created IDirectDrawSurface object at 0x01463110 (vtable at 0x01463120)
+info: Win32Emu.Emulator[0]
+      [DDraw] Created backbuffer 1 at surface handle 0x71000001, COM object at 0x01463110
 info: Win32Emu.Emulator[0]
       [DDraw] Created IDirectDrawSurface COM object at 0x01463070 for surface 0x71000000
 info: Win32Emu.Emulator[0]
@@ -815,17 +823,7 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw] Requested surface caps: 0x00000004
 info: Win32Emu.Emulator[0]
-      [DDraw] No attached surfaces found for surface 0x71000000
-info: Win32Emu.Emulator[0]
-      [DDraw] Surface diagnostic: IsPrimary=False, dwCaps=0x00000004, backbuffer requested=True
-info: Win32Emu.Emulator[0]
-      [DDraw] Backbuffer requested, creating on-demand for surface 0x71000000
-info: Win32Emu.Emulator[0]
-      [COM] Created IDirectDrawSurface object at 0x01463110 (vtable at 0x01463120)
-info: Win32Emu.Emulator[0]
-      [DDraw] Created on-demand backbuffer at surface handle 0x71000001, COM object at 0x01463110
-info: Win32Emu.Emulator[0]
-      [DDraw] Returning on-demand backbuffer COM object at 0x01463110
+      [DDraw] Returning attached surface COM object at 0x01463110
 info: Win32Emu.Emulator[0]
       [COM] IDirectDrawSurface::GetAttachedSurface returned 0x00000000 (argBytes=12)
 info: Win32Emu.Emulator[0]
@@ -1041,7 +1039,7 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       Dispatching USER32.DLL!TranslateMessage at EIP=0x0E000002 ESP=0x001FEF10 stack=79 32 40 00 28 EF 1F 00 FC EF 1F 00 00 00 00 00
 info: Win32Emu.Emulator[0]
-      [User32] TranslateMessage: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x04380780
+      [User32] TranslateMessage: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x01E00280
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!TranslateMessage returned 0x00000000, argBytes=4
 info: Win32Emu.Emulator[0]
@@ -1053,7 +1051,7 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       Dispatching USER32.DLL!DispatchMessageA at EIP=0x0E000002 ESP=0x001FEF10 stack=80 32 40 00 28 EF 1F 00 FC EF 1F 00 00 00 00 00
 info: Win32Emu.Emulator[0]
-      [User32] DispatchMessageA: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x04380780
+      [User32] DispatchMessageA: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x01E00280
 info: Win32Emu.Emulator[0]
       [User32] DispatchMessageA: Found WndProc=0x00403340 for HWND=0x00010000
 info: Win32Emu.Emulator[0]
@@ -1067,17 +1065,17 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [User32] GetSystemMetrics: nIndex=SM_CYSCREEN
 info: Win32Emu.Emulator[0]
-      [User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 1080
+      [User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 480
 info: Win32Emu.Emulator[0]
-      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000438, argBytes=4
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x000001E0, argBytes=4
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0F0000D0 ESP=0x001FEDE4 stack=BF 33 40 00 00 00 00 00 38 04 00 00 30 00 00 0F
+      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0F0000D0 ESP=0x001FEDE4 stack=BF 33 40 00 00 00 00 00 E0 01 00 00 30 00 00 0F
 info: Win32Emu.Emulator[0]
       [User32] GetSystemMetrics: nIndex=SM_CXSCREEN
 info: Win32Emu.Emulator[0]
-      [User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 1920
+      [User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 640
 info: Win32Emu.Emulator[0]
-      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000780, argBytes=4
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000280, argBytes=4
 warn: Win32Emu.Emulator[0]
       [IcedCpu] CalcMemAddress for IAT: EIP=0x004033CF, disp=0x004552E8, base=None, baseVal=0x00000000, index=None, indexVal=0x00000000, scale=1, finalAddr=0x004552E8
 warn: Win32Emu.Emulator[0]
@@ -1085,7 +1083,7 @@ warn: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       Dispatching USER32.DLL!SetRect at EIP=0x0F000020 ESP=0x001FEDD8 stack=CF 33 40 00 80 C7 43 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
-      [User32] SetRect: lpRect=0x0043C780 (0,0,1920,1080)
+      [User32] SetRect: lpRect=0x0043C780 (0,0,640,480)
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!SetRect returned 0x00000001, argBytes=20
 warn: Win32Emu.Emulator[0]
@@ -1095,7 +1093,7 @@ warn: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       Dispatching USER32.DLL!DefWindowProcA at EIP=0x0F000080 ESP=0x001FEDDC stack=B2 34 40 00 00 00 01 00 05 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
-      [User32] DefWindowProcA: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x04380780
+      [User32] DefWindowProcA: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x01E00280
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!DefWindowProcA returned 0x00000000, argBytes=16
 info: Win32Emu.Emulator[0]
@@ -1151,17 +1149,17 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [User32] GetSystemMetrics: nIndex=SM_CYSCREEN
 info: Win32Emu.Emulator[0]
-      [User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 1080
+      [User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 480
 info: Win32Emu.Emulator[0]
-      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000438, argBytes=4
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x000001E0, argBytes=4
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0F0000D0 ESP=0x001FEDE4 stack=BF 33 40 00 00 00 00 00 38 04 00 00 30 00 00 0F
+      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0F0000D0 ESP=0x001FEDE4 stack=BF 33 40 00 00 00 00 00 E0 01 00 00 30 00 00 0F
 info: Win32Emu.Emulator[0]
       [User32] GetSystemMetrics: nIndex=SM_CXSCREEN
 info: Win32Emu.Emulator[0]
-      [User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 1920
+      [User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 640
 info: Win32Emu.Emulator[0]
-      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000780, argBytes=4
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000280, argBytes=4
 warn: Win32Emu.Emulator[0]
       [IcedCpu] CalcMemAddress for IAT: EIP=0x004033CF, disp=0x004552E8, base=None, baseVal=0x00000000, index=None, indexVal=0x00000000, scale=1, finalAddr=0x004552E8
 warn: Win32Emu.Emulator[0]
@@ -1169,7 +1167,7 @@ warn: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       Dispatching USER32.DLL!SetRect at EIP=0x0F000020 ESP=0x001FEDD8 stack=CF 33 40 00 80 C7 43 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
-      [User32] SetRect: lpRect=0x0043C780 (0,0,1920,1080)
+      [User32] SetRect: lpRect=0x0043C780 (0,0,640,480)
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!SetRect returned 0x00000001, argBytes=20
 warn: Win32Emu.Emulator[0]
@@ -1267,7 +1265,7 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       Dispatching WINMM.DLL!timeGetTime at EIP=0x0E000002 ESP=0x001FEF0C stack=D6 34 40 00 C2 32 40 00 5C 32 40 00 FC EF 1F 00
 info: Win32Emu.Emulator[0]
-      [Dispatcher] WINMM.DLL!timeGetTime returned 0x000006B5, argBytes=0
+      [Dispatcher] WINMM.DLL!timeGetTime returned 0x00000428, argBytes=0
 info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEF0C = 0x004034D6
 info: Win32Emu.Emulator[0]
@@ -4239,6 +4237,8 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDraw::SetDisplayMode(this=0x01463000, width=640, height=480, bpp=8)
 info: Win32Emu.Emulator[0]
+      [DDraw] Updated ProcessEnvironment display mode to 640x480x8
+info: Win32Emu.Emulator[0]
       [DDraw] Display mode changed to 640x480x8
 info: Win32Emu.Emulator[0]
       [DDraw] Subscribed to UI events from rendering backend
@@ -4253,9 +4253,15 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDraw::CreateSurface(this=0x01463000, lpDDSurfaceDesc=0x001FEE94, lplpDDSurface=0x0043C914, pUnkOuter=0x00000000)
 info: Win32Emu.Emulator[0]
-      [DDraw] Surface creation: flags=0x00000021, caps=0x00000000, width=0, height=0, backbufferCount=1
+      [DDraw] Surface creation: dwSize=108, flags=0x00000021, caps=0x00000218, width=0, height=0, backbufferCount=1
 info: Win32Emu.Emulator[0]
       [COM] Created IDirectDrawSurface object at 0x01DE4000 (vtable at 0x01DE4010)
+info: Win32Emu.Emulator[0]
+      [DDraw] Creating 1 backbuffer(s) for primary surface
+info: Win32Emu.Emulator[0]
+      [COM] Created IDirectDrawSurface object at 0x01DE40A0 (vtable at 0x01DE40B0)
+info: Win32Emu.Emulator[0]
+      [DDraw] Created backbuffer 1 at surface handle 0x71000003, COM object at 0x01DE40A0
 info: Win32Emu.Emulator[0]
       [DDraw] Created IDirectDrawSurface COM object at 0x01DE4000 for surface 0x71000002
 info: Win32Emu.Emulator[0]
@@ -4269,17 +4275,7 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw] Requested surface caps: 0x00000004
 info: Win32Emu.Emulator[0]
-      [DDraw] No attached surfaces found for surface 0x71000002
-info: Win32Emu.Emulator[0]
-      [DDraw] Surface diagnostic: IsPrimary=False, dwCaps=0x00000004, backbuffer requested=True
-info: Win32Emu.Emulator[0]
-      [DDraw] Backbuffer requested, creating on-demand for surface 0x71000002
-info: Win32Emu.Emulator[0]
-      [COM] Created IDirectDrawSurface object at 0x01DE40A0 (vtable at 0x01DE40B0)
-info: Win32Emu.Emulator[0]
-      [DDraw] Created on-demand backbuffer at surface handle 0x71000003, COM object at 0x01DE40A0
-info: Win32Emu.Emulator[0]
-      [DDraw] Returning on-demand backbuffer COM object at 0x01DE40A0
+      [DDraw] Returning attached surface COM object at 0x01DE40A0
 info: Win32Emu.Emulator[0]
       [COM] IDirectDrawSurface::GetAttachedSurface returned 0x00000000 (argBytes=12)
 info: Win32Emu.Emulator[0]
