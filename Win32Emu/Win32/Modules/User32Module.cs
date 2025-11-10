@@ -33,6 +33,31 @@ namespace Win32Emu.Win32.Modules
 		// Counter for generating unique bitmap handles
 		private uint _nextBitmapHandle = 0;
 
+		// Timer tracking for SetTimer implementation
+		private readonly Dictionary<uint, TimerInfo> _timers = new();
+		private uint _nextTimerId = 1;
+
+		// Hook tracking for SetWindowsHookEx implementation
+		private readonly Dictionary<uint, HookInfo> _hooks = new();
+		private uint _nextHookHandle = 0x00010001;
+
+		// Timer information structure
+		private record struct TimerInfo(
+			uint TimerId,
+			uint HWnd,
+			uint Elapse,
+			uint TimerProc
+		);
+
+		// Hook information structure
+		private record struct HookInfo(
+			uint HookHandle,
+			int IdHook,
+			uint HookProc,
+			uint HMod,
+			uint ThreadId
+		);
+
 		// Constants for procedure execution monitoring
 		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
 		private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
@@ -4057,10 +4082,66 @@ namespace Win32Emu.Win32.Modules
 
 		private uint SetTimer(uint hWnd, uint nIDEvent, uint uElapse, uint lpTimerFunc)
 		{
-			_logger.LogInformation("[User32] SetTimer(hWnd=0x{HWnd:X8}, nIDEvent={NIDEvent}, uElapse={UElapse}ms)",
-				hWnd, nIDEvent, uElapse);
-			// Stub - return the timer ID
-			return nIDEvent != 0 ? nIDEvent : 1;
+			_logger.LogInformation("[User32] SetTimer(hWnd=0x{HWnd:X8}, nIDEvent={NIDEvent}, uElapse={UElapse}ms, lpTimerFunc=0x{LpTimerFunc:X8})",
+				hWnd, nIDEvent, uElapse, lpTimerFunc);
+
+			// Determine the timer ID
+			// If nIDEvent is non-zero, use it as the timer ID (application-defined timer)
+			// If nIDEvent is zero, allocate a new timer ID (system-allocated timer)
+			var timerId = nIDEvent != 0 ? nIDEvent : _nextTimerId++;
+
+			// Create timer info and store it
+			var timerInfo = new TimerInfo(
+				TimerId: timerId,
+				HWnd: hWnd,
+				Elapse: uElapse,
+				TimerProc: lpTimerFunc
+			);
+
+			_timers[timerId] = timerInfo;
+
+			_logger.LogInformation("[User32] SetTimer: Created timer ID={TimerId}, callback=0x{Callback:X8}",
+				timerId, lpTimerFunc);
+
+			// Note: The timer is now registered but won't fire automatically without a timer scheduler.
+			// Applications can query or manually trigger timers through other mechanisms.
+			// The CallTimerProcAsync method is ready to be invoked when the timer fires.
+
+			return timerId;
+		}
+
+		/// <summary>
+		/// Public method to manually trigger a timer callback.
+		/// This can be called by a timer scheduler or for testing purposes.
+		/// </summary>
+		public async Task FireTimerAsync(uint timerId, CancellationToken cancellationToken = default)
+		{
+			if (!_timers.TryGetValue(timerId, out var timerInfo))
+			{
+				_logger.LogWarning("[User32] FireTimerAsync: Timer {TimerId} not found", timerId);
+				return;
+			}
+
+			// If no callback is provided, generate a WM_TIMER message (0x0113) instead
+			if (timerInfo.TimerProc == 0)
+			{
+				_logger.LogDebug("[User32] FireTimerAsync: Timer {TimerId} has no callback, would post WM_TIMER message", timerId);
+				// In a full implementation, would call: PostMessageA(timerInfo.HWnd, 0x0113, timerId, 0);
+				return;
+			}
+
+			// Get current time (in milliseconds since system start)
+			var dwTime = (uint)Environment.TickCount;
+
+			// Call the timer callback using the async pattern
+			await CallTimerProcAsync(
+				timerInfo.TimerProc,
+				timerInfo.HWnd,
+				0x0113, // WM_TIMER
+				timerId,
+				dwTime,
+				cancellationToken
+			).ConfigureAwait(false);
 		}
 
 		private uint CharLowerBuffA(in LpStr lpsz, uint cchLength)
@@ -4208,13 +4289,49 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint EnumWindows(uint lpEnumFunc, uint lParam)
 		{
+			return EnumWindowsAsync(lpEnumFunc, lParam).GetAwaiter().GetResult();
+		}
+
+		private async Task<uint> EnumWindowsAsync(uint lpEnumFunc, uint lParam, CancellationToken cancellationToken = default)
+		{
 			_logger.LogInformation("[User32] EnumWindows(lpEnumFunc=0x{LpEnumFunc:X8}, lParam=0x{LParam:X8})",
 				lpEnumFunc, lParam);
 
-			// For emulation purposes, we don't have a real window hierarchy to enumerate
-			// We could call the callback with our main window handle if we tracked them
-			// For now, just return TRUE to indicate success without calling the callback
+			// Validate callback address
+			if (lpEnumFunc == 0)
+			{
+				_logger.LogWarning("[User32] EnumWindows: Callback address is NULL, returning success without enumeration");
+				return 1; // TRUE - success (per Windows behavior)
+			}
 
+			// Get all window handles from the environment
+			var windowHandles = _env.GetAllWindowHandles().ToList();
+			
+			if (windowHandles.Count == 0)
+			{
+				_logger.LogInformation("[User32] EnumWindows: No windows to enumerate, returning success");
+				return 1; // TRUE - success
+			}
+
+			_logger.LogInformation("[User32] EnumWindows: Enumerating {Count} windows", windowHandles.Count);
+
+			// Enumerate each window and call the callback
+			foreach (var hwnd in windowHandles)
+			{
+				_logger.LogDebug("[User32] EnumWindows: Calling callback for window 0x{HWnd:X8}", hwnd);
+				
+				// Call the enumeration callback using the async pattern
+				var result = await CallEnumWindowsProcAsync(lpEnumFunc, hwnd, lParam, cancellationToken).ConfigureAwait(false);
+				
+				// If callback returns FALSE (0), stop enumeration
+				if (result == 0)
+				{
+					_logger.LogInformation("[User32] EnumWindows: Callback returned FALSE, stopping enumeration");
+					return 1; // EnumWindows returns TRUE even if enumeration stopped early
+				}
+			}
+
+			_logger.LogInformation("[User32] EnumWindows: Enumeration completed successfully");
 			return 1; // TRUE - success
 		}
 
@@ -4888,15 +5005,78 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(16)]
 		private uint SetWindowsHookExA(int idHook, uint lpfn, uint hMod, uint dwThreadId)
 		{
-			_logger.LogInformation("[User32] SetWindowsHookExA(idHook={IdHook}, lpfn=0x{Lpfn:X8})", idHook, lpfn);
-			return 0x00010001; // Dummy hook handle
+			_logger.LogInformation("[User32] SetWindowsHookExA(idHook={IdHook}, lpfn=0x{Lpfn:X8}, hMod=0x{HMod:X8}, dwThreadId={DwThreadId})",
+				idHook, lpfn, hMod, dwThreadId);
+
+			// Validate hook procedure address
+			if (lpfn == 0)
+			{
+				_logger.LogWarning("[User32] SetWindowsHookExA: Hook procedure address is NULL");
+				return 0; // NULL - failure
+			}
+
+			// Generate a unique hook handle
+			var hookHandle = _nextHookHandle++;
+
+			// Create hook info and store it
+			var hookInfo = new HookInfo(
+				HookHandle: hookHandle,
+				IdHook: idHook,
+				HookProc: lpfn,
+				HMod: hMod,
+				ThreadId: dwThreadId
+			);
+
+			_hooks[hookHandle] = hookInfo;
+
+			_logger.LogInformation("[User32] SetWindowsHookExA: Installed hook handle=0x{HookHandle:X8}, type={IdHook}, proc=0x{Proc:X8}",
+				hookHandle, idHook, lpfn);
+
+			// Note: The hook is now registered but won't be called automatically without integration into message processing.
+			// The CallHookProcAsync method is ready to be invoked when the hook should fire.
+
+			return hookHandle;
+		}
+
+		/// <summary>
+		/// Public method to manually trigger a hook callback.
+		/// This can be called during message processing or for testing purposes.
+		/// </summary>
+		public async Task<uint> CallHookAsync(uint hookHandle, int nCode, uint wParam, uint lParam, CancellationToken cancellationToken = default)
+		{
+			if (!_hooks.TryGetValue(hookHandle, out var hookInfo))
+			{
+				_logger.LogWarning("[User32] CallHookAsync: Hook 0x{HookHandle:X8} not found", hookHandle);
+				return 0;
+			}
+
+			// Call the hook callback using the async pattern
+			return await CallHookProcAsync(
+				hookInfo.HookProc,
+				nCode,
+				wParam,
+				lParam,
+				cancellationToken
+			).ConfigureAwait(false);
 		}
 
 		[DllModuleExport(4)]
 		private uint UnhookWindowsHookEx(uint hhk)
 		{
 			_logger.LogInformation("[User32] UnhookWindowsHookEx(hhk=0x{Hhk:X8})", hhk);
-			return 1; // TRUE
+			
+			// Remove the hook from tracking if it exists
+			if (_hooks.Remove(hhk))
+			{
+				_logger.LogInformation("[User32] UnhookWindowsHookEx: Removed hook 0x{HookHandle:X8}", hhk);
+			}
+			else
+			{
+				_logger.LogDebug("[User32] UnhookWindowsHookEx: Hook 0x{HookHandle:X8} not found (may have already been removed)", hhk);
+			}
+			
+			// Always return success for simplicity (matching Windows behavior of being lenient)
+			return 1; // TRUE - success
 		}
 
 		[DllModuleExport(16)]
@@ -4928,7 +5108,19 @@ namespace Win32Emu.Win32.Modules
 		private uint KillTimer(uint hWnd, uint uIDEvent)
 		{
 			_logger.LogInformation("[User32] KillTimer(hWnd=0x{HWnd:X8}, uIDEvent={UIDEvent})", hWnd, uIDEvent);
-			return 1; // TRUE
+			
+			// Remove the timer from tracking if it exists
+			if (_timers.Remove(uIDEvent))
+			{
+				_logger.LogInformation("[User32] KillTimer: Removed timer {TimerId}", uIDEvent);
+			}
+			else
+			{
+				_logger.LogDebug("[User32] KillTimer: Timer {TimerId} not found (may have already been killed)", uIDEvent);
+			}
+			
+			// Always return success for simplicity (matching Windows behavior of being lenient)
+			return 1; // TRUE - success
 		}
 
 		// Window activity functions

@@ -35,6 +35,20 @@ namespace Win32Emu.Win32.Modules
 		private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 		private uint _timerPeriod;
 
+		// Timer tracking for timeSetEvent implementation
+		private readonly Dictionary<uint, MultimediaTimerInfo> _multimediaTimers = new();
+		private uint _nextMultimediaTimerId = 0x1000;
+
+		// Multimedia timer information structure
+		private record struct MultimediaTimerInfo(
+			uint TimerId,
+			uint Delay,
+			uint Resolution,
+			uint TimeProc,
+			uint DwUser,
+			uint FuEvent
+		);
+
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			_cpu = cpu;
@@ -231,6 +245,19 @@ namespace Win32Emu.Win32.Modules
 		private uint TimeKillEvent(uint uTimerId)
 		{
 			_logger.LogInformation("[WinMM] timeKillEvent({UTimerId})", uTimerId);
+			
+			// Remove the timer from tracking if it exists
+			if (_multimediaTimers.Remove(uTimerId))
+			{
+				_logger.LogInformation("[WinMM] timeKillEvent: Removed timer {TimerId}", uTimerId);
+			}
+			else
+			{
+				_logger.LogDebug("[WinMM] timeKillEvent: Timer {TimerId} not found (may have already been killed)", uTimerId);
+			}
+			
+			// Always return success for simplicity (matching original stub behavior)
+			// Real Windows API may return error codes, but for emulation we're lenient
 			return 0; // TIMERR_NOERROR
 		}
 
@@ -239,10 +266,66 @@ namespace Win32Emu.Win32.Modules
 		{
 			// TimeSetEvent sets a timer event
 			// Returns a timer identifier or 0 if it failed
-			_logger.LogInformation("[WinMM] timeSetEvent(delay={UDelay}, resolution={UResolution}, callback=0x{LpTimeProc:X8})", uDelay, uResolution, lpTimeProc);
+			_logger.LogInformation("[WinMM] timeSetEvent(delay={UDelay}, resolution={UResolution}, callback=0x{LpTimeProc:X8}, dwUser=0x{DwUser:X8}, fuEvent=0x{FuEvent:X})",
+				uDelay, uResolution, lpTimeProc, dwUser, fuEvent);
 
-			// Return a synthetic timer ID
-			return 0x1000 + uDelay; // Simple unique ID based on delay
+			// Validate parameters
+			if (lpTimeProc == 0)
+			{
+				_logger.LogWarning("[WinMM] timeSetEvent: Callback address is NULL");
+				return 0; // NULL - failure
+			}
+
+			// Generate a unique timer ID
+			var timerId = _nextMultimediaTimerId++;
+
+			// Create timer info and store it
+			var timerInfo = new MultimediaTimerInfo(
+				TimerId: timerId,
+				Delay: uDelay,
+				Resolution: uResolution,
+				TimeProc: lpTimeProc,
+				DwUser: dwUser,
+				FuEvent: fuEvent
+			);
+
+			_multimediaTimers[timerId] = timerInfo;
+
+			_logger.LogInformation("[WinMM] timeSetEvent: Created timer ID=0x{TimerId:X}, callback=0x{Callback:X8}",
+				timerId, lpTimeProc);
+
+			// Note: The timer is now registered but won't fire automatically without a timer scheduler.
+			// The CallTimeProcAsync method is ready to be invoked when the timer fires.
+
+			return timerId;
+		}
+
+		/// <summary>
+		/// Public method to manually trigger a multimedia timer callback.
+		/// This can be called by a timer scheduler or for testing purposes.
+		/// </summary>
+		public async Task FireMultimediaTimerAsync(uint timerId, CancellationToken cancellationToken = default)
+		{
+			if (!_multimediaTimers.TryGetValue(timerId, out var timerInfo))
+			{
+				_logger.LogWarning("[WinMM] FireMultimediaTimerAsync: Timer 0x{TimerId:X} not found", timerId);
+				return;
+			}
+
+			// Get current time (in milliseconds since system start)
+			var dwTime = (uint)Environment.TickCount;
+
+			// Call the timer callback using the async pattern
+			// void CALLBACK TimeProc(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
+			await CallTimeProcAsync(
+				timerInfo.TimeProc,
+				timerId,
+				0, // uMsg (not used for timeSetEvent callbacks)
+				timerInfo.DwUser,
+				0, // dw1 (reserved, not used)
+				0, // dw2 (reserved, not used)
+				cancellationToken
+			).ConfigureAwait(false);
 		}
 
 		[DllModuleExport(1)]
