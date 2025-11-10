@@ -428,6 +428,49 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
 
     public int Height => _height;
 
+    // Hardware-accelerated rendering methods (not supported in software backend)
+    
+    public void BeginFrame()
+    {
+        // Software backend doesn't need explicit frame begin
+        _logger.LogDebug("[Software] BeginFrame called (no-op for software backend)");
+    }
+
+    public void EndFrame()
+    {
+        // Software backend doesn't need explicit frame end
+        _logger.LogDebug("[Software] EndFrame called (no-op for software backend)");
+    }
+
+    public void DrawTriangles(Span<Vertex> vertices, Span<ushort> indices)
+    {
+        _logger.LogWarning("[Software] DrawTriangles not supported in software backend (use UpdateFrameBuffer)");
+        // Software backend uses CPU rasterization via UpdateFrameBuffer
+        // Hardware acceleration is not available
+    }
+
+    public void SetTexture(uint textureId, byte[] data, int width, int height, TextureFormat format)
+    {
+        _logger.LogWarning("[Software] SetTexture not supported in software backend");
+        // Textures are handled via frame buffer updates in software backend
+    }
+
+    public void BindTexture(uint textureId)
+    {
+        _logger.LogWarning("[Software] BindTexture not supported in software backend");
+    }
+
+    public void SetRenderState(BlendMode blend, DepthTest depth, CullMode cull)
+    {
+        _logger.LogWarning("[Software] SetRenderState not supported in software backend");
+        // Render state is handled by CPU rasterizer in calling code
+    }
+
+    public void DeleteTexture(uint textureId)
+    {
+        _logger.LogWarning("[Software] DeleteTexture not supported in software backend");
+    }
+
     public void Dispose()
     {
         lock (_lock)

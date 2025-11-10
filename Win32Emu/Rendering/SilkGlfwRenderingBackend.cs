@@ -556,4 +556,48 @@ void main()
     public bool IsInitialized => _initialized;
     public int Width => _width;
     public int Height => _height;
+
+    // Hardware-accelerated rendering methods (stub implementations for now)
+    
+    public void BeginFrame()
+    {
+        _logger.LogDebug("[SilkGLFW] BeginFrame called (not yet implemented)");
+        // TODO: Implement OpenGL frame begin
+    }
+
+    public void EndFrame()
+    {
+        _logger.LogDebug("[SilkGLFW] EndFrame called (not yet implemented)");
+        // TODO: Implement OpenGL frame end and buffer swap
+    }
+
+    public void DrawTriangles(Span<Vertex> vertices, Span<ushort> indices)
+    {
+        _logger.LogWarning("[SilkGLFW] DrawTriangles not yet implemented");
+        // TODO: Implement OpenGL triangle rendering
+    }
+
+    public void SetTexture(uint textureId, byte[] data, int width, int height, TextureFormat format)
+    {
+        _logger.LogWarning("[SilkGLFW] SetTexture not yet implemented");
+        // TODO: Implement OpenGL texture upload
+    }
+
+    public void BindTexture(uint textureId)
+    {
+        _logger.LogWarning("[SilkGLFW] BindTexture not yet implemented");
+        // TODO: Implement OpenGL texture binding
+    }
+
+    public void SetRenderState(BlendMode blend, DepthTest depth, CullMode cull)
+    {
+        _logger.LogWarning("[SilkGLFW] SetRenderState not yet implemented");
+        // TODO: Implement OpenGL render state management
+    }
+
+    public void DeleteTexture(uint textureId)
+    {
+        _logger.LogWarning("[SilkGLFW] DeleteTexture not yet implemented");
+        // TODO: Implement OpenGL texture deletion
+    }
 }
