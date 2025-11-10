@@ -1659,6 +1659,182 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
+		/// Core helper method for executing stdcall procedures (window procs, dialog procs, etc.) asynchronously.
+		/// Consolidates common stack setup, execution loop, and cleanup logic.
+		/// </summary>
+		/// <param name="cpu">CPU instance to use for execution</param>
+		/// <param name="memory">Memory instance to use for stack operations</param>
+		/// <param name="procedureAddress">Address of the procedure to call</param>
+		/// <param name="parameters">Parameters to push on stack (right-to-left order)</param>
+		/// <param name="contextName">Name for logging context (e.g., "CallWindowProcedureAsync")</param>
+		/// <param name="cancellationToken">Cancellation token for cooperative cancellation</param>
+		/// <returns>Tuple of (returnValue, timedOut, cancelled, failed)</returns>
+		private async Task<(uint returnValue, bool timedOut, bool cancelled, bool failed)> ExecuteStdCallProcedureAsync(
+			ICpu cpu,
+			VirtualMemory memory,
+			uint procedureAddress,
+			uint[] parameters,
+			string contextName,
+			CancellationToken cancellationToken = default)
+		{
+			// Save current CPU state
+			var savedEip = cpu.GetEip();
+			var savedEsp = cpu.GetRegister("ESP");
+			var savedEbp = cpu.GetRegister("EBP");
+
+			// Define return address marker
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+			// Set up stack for stdcall convention (parameters pushed right-to-left)
+			// Reserve STACK_SAFETY_MARGIN to prevent the called function from overwriting critical data
+			// on the stack (such as return addresses from previous calls). The called function may use
+			// stack space for local variables, nested calls, etc., which could overwrite data above
+			// the parameters we push if we don't leave adequate space.
+			const uint STACK_SAFETY_MARGIN = 256;
+			var esp = savedEsp - STACK_SAFETY_MARGIN;
+
+			// Push parameters (already in right-to-left order)
+			foreach (var param in parameters)
+			{
+				esp -= 4;
+				memory.Write32(esp, param);
+			}
+
+			// Push return address last (it must be pushed AFTER parameters so it's on top of the stack)
+			esp -= 4;
+			memory.Write32(esp, RETURN_ADDRESS);
+
+			// Update CPU registers
+			cpu.SetRegister("ESP", esp);
+			cpu.SetEip(procedureAddress);
+
+			// Execute until we hit the return address with cancellation support
+			const int YIELD_INTERVAL = 10000;
+			var steps = 0;
+			var timedOut = false;
+			var cancelled = false;
+			var failed = false;
+			var lastCheckEip = cpu.GetEip();
+			var stuckCounter = 0;
+
+			try
+			{
+				while (true)
+				{
+					// Check for cancellation at regular intervals
+					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+					{
+						if (cancellationToken.IsCancellationRequested)
+						{
+							_logger.LogInformation("[User32] {Context}: Cancellation requested at step {Steps}", contextName, steps);
+							cancelled = true;
+							break;
+						}
+
+						// Suspend execution to preserve CPU state across async boundary
+						var cpuState = CpuHelpers.SuspendExecution(cpu);
+						
+						// Yield to allow other async operations to proceed
+						await Task.Yield();
+						
+						// Resume execution with preserved state
+						CpuHelpers.ResumeExecution(cpu, cpuState);
+					}
+
+					var eip = cpu.GetEip();
+
+					// Check if we've returned to our marker address
+					if (eip == RETURN_ADDRESS)
+					{
+						break;
+					}
+
+					// Check for invalid EIP (NULL pointer execution)
+					if (eip == 0x00000000)
+					{
+						_logger.LogWarning("[User32] {Context}: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting", contextName);
+						failed = true;
+						break;
+					}
+
+					// Check for other invalid low addresses
+					if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
+					{
+						_logger.LogError("[User32] {Context}: Execution jumped to invalid low address 0x{Eip:X8}", contextName, eip);
+						failed = true;
+						break;
+					}
+
+					// Detect potential infinite loops
+					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+					{
+						var currentEip = cpu.GetEip();
+						if (currentEip == lastCheckEip)
+						{
+							stuckCounter++;
+							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+							{
+								_logger.LogWarning("[User32] {Context}: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", 
+									contextName, currentEip, stuckCounter);
+								timedOut = true;
+								break;
+							}
+						}
+						else
+						{
+							stuckCounter = 0;
+							lastCheckEip = currentEip;
+						}
+					}
+
+					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
+					var step = await CpuHelpers.ExecuteAsync(cpu, memory);
+
+					// Handle COM vtable and import calls
+					if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak) && shouldBreak)
+					{
+						failed = true;
+						break;
+					}
+
+					steps++;
+
+					// Periodically check if we should yield to other threads
+					if (steps % YIELD_INTERVAL == 0)
+					{
+						var scheduler = _env.ThreadScheduler;
+						if (scheduler != null)
+						{
+							scheduler.ProcessWaitTimeouts();
+							if (scheduler.ShouldContextSwitch())
+							{
+								_logger.LogDebug("[User32] {Context}: Cooperative yield at {Steps} steps", contextName, steps);
+							}
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[User32] {Context}: Exception during execution: {ExMessage}", contextName, ex.Message);
+				failed = true;
+			}
+
+			// Get return value from EAX, but only if execution was successful
+			var returnValue = (timedOut || cancelled || failed) ? 0u : cpu.GetRegister("EAX");
+
+			// Restore CPU state
+			cpu.SetEip(savedEip);
+			cpu.SetRegister("ESP", savedEsp);
+			cpu.SetRegister("EBP", savedEbp);
+
+			_logger.LogInformation("[User32] {Context}: Completed with return value 0x{ReturnValue:X8}, timedOut={TimedOut}, cancelled={Cancelled}, failed={Failed}",
+				contextName, returnValue, timedOut, cancelled, failed);
+
+			return (returnValue, timedOut, cancelled, failed);
+		}
+
+		/// <summary>
 		/// Async version of CallWindowProcedure that eliminates the need for STACK_SAFETY_MARGIN.
 		/// Uses proper async/await to cleanly separate host (C#) and guest (x86) execution stacks.
 		/// </summary>
@@ -1697,174 +1873,11 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			// Save current CPU state
-			var savedEip = _cpu.GetEip();
-			var savedEsp = _cpu.GetRegister("ESP");
-			var savedEbp = _cpu.GetRegister("EBP");
-
-			// Define return address marker
-			const uint RETURN_ADDRESS = 0xDEADBEEF;
-
-			// Set up stack for stdcall convention (parameters pushed right-to-left)
-			// Reserve STACK_SAFETY_MARGIN to prevent the called function from overwriting critical data
-			// on the stack (such as return addresses from previous calls). The called function may use
-			// stack space for local variables, nested calls, etc., which could overwrite data above
-			// the parameters we push if we don't leave adequate space.
-			const uint STACK_SAFETY_MARGIN = 256;
-			var esp = savedEsp - STACK_SAFETY_MARGIN;
-
-			// Push parameters (right-to-left for stdcall)
-			esp -= 4;
-			_memory.Write32(esp, lParam);
-
-			esp -= 4;
-			_memory.Write32(esp, wParam);
-
-			esp -= 4;
-			_memory.Write32(esp, message);
-
-			esp -= 4;
-			_memory.Write32(esp, hwnd);
-
-			// Push return address last (it must be pushed AFTER parameters so it's on top of the stack)
-			esp -= 4;
-			_memory.Write32(esp, RETURN_ADDRESS);
-
-			// Update CPU registers
-			_cpu.SetRegister("ESP", esp);
-			_cpu.SetEip(wndProcAddress);
-
-			// Execute until we hit the return address with cancellation support
-			// YIELD_INTERVAL: Check for context switches every 10K instructions
-			// Rationale: 10K provides good balance between:
-			// - Responsiveness: Allows context switches frequently enough for cooperative multitasking
-			// - Performance: Low overhead from scheduler checks
-			// - Granularity: Fine enough for cooperative multitasking without excessive yielding
-			const int YIELD_INTERVAL = 10000;
-			var steps = 0;
-			var executionSuccessful = true;
-			var lastCheckEip = _cpu.GetEip();
-			var stuckCounter = 0;
-
-			try
-			{
-				// Execute in unbounded loop - no artificial step limit
-				// Infinite loops are prevented by multiple safeguards:
-				//   1. Return detection: We break when EIP hits RETURN_ADDRESS marker
-				//   2. Cancellation: Regular checks for cancellation requests (every CANCELLATION_CHECK_INTERVAL steps)
-				//   3. Progress tracking: We detect stuck execution by monitoring EIP changes
-				//   4. Yielding: Periodic Task.Yield() allows other async operations to proceed
-				// These mechanisms ensure the loop terminates properly under normal circumstances
-				while (true)
-				{
-					// Check for cancellation at regular intervals
-					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
-					{
-						if (cancellationToken.IsCancellationRequested)
-						{
-							_logger.LogInformation("[User32] CallWindowProcedureAsync: Cancellation requested at step {Steps}", steps);
-							executionSuccessful = false;
-							break;
-						}
-
-						// Suspend execution to preserve CPU state across async boundary
-						var cpuState = CpuHelpers.SuspendExecution(_cpu);
-						
-						// Yield to allow other async operations to proceed
-						await Task.Yield();
-						
-						// Resume execution with preserved state
-						CpuHelpers.ResumeExecution(_cpu, cpuState);
-					}
-
-					var eip = _cpu.GetEip();
-
-					// Check if we've returned to our marker address
-					if (eip == RETURN_ADDRESS)
-					{
-						break;
-					}
-
-					// Check for invalid EIP (NULL pointer execution)
-					if (eip == 0x00000000)
-					{
-						_logger.LogWarning("[User32] CallWindowProcedureAsync: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
-						executionSuccessful = false;
-						break;
-					}
-
-					// Check for other invalid low addresses
-					if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
-					{
-						_logger.LogError("[User32] CallWindowProcedureAsync: Execution jumped to invalid low address 0x{Eip:X8}", eip);
-						executionSuccessful = false;
-						break;
-					}
-
-					// Detect potential infinite loops
-					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
-					{
-						var currentEip = _cpu.GetEip();
-						if (currentEip == lastCheckEip)
-						{
-							stuckCounter++;
-							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
-							{
-								_logger.LogWarning("[User32] CallWindowProcedureAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", 
-									currentEip, stuckCounter);
-								executionSuccessful = false;
-								break;
-							}
-						}
-						else
-						{
-							stuckCounter = 0;
-							lastCheckEip = currentEip;
-						}
-					}
-
-					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
-					var step = await CpuHelpers.ExecuteAsync(_cpu, _memory);
-
-					// Handle COM vtable and import calls
-					if (HandleComAndImportCalls(step, _cpu, _memory, "CallWindowProcedureAsync", out var stepDesc, out var shouldBreak) && shouldBreak)
-					{
-						executionSuccessful = false;
-						break;
-					}
-
-					steps++;
-
-					// Periodically check if we should yield to other threads
-					if (steps % YIELD_INTERVAL == 0)
-					{
-						var scheduler = _env.ThreadScheduler;
-						if (scheduler != null)
-						{
-							scheduler.ProcessWaitTimeouts();
-							if (scheduler.ShouldContextSwitch())
-							{
-								_logger.LogDebug("[User32] CallWindowProcedureAsync: Cooperative yield at {Steps} steps", steps);
-							}
-						}
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "[User32] CallWindowProcedureAsync: Exception during execution: {ExMessage}", ex.Message);
-				executionSuccessful = false;
-			}
-
-			// Get return value from EAX, but only if execution was successful
-			var returnValue = executionSuccessful ? _cpu.GetRegister("EAX") : 0u;
-
-			// Restore CPU state
-			_cpu.SetEip(savedEip);
-			_cpu.SetRegister("ESP", savedEsp);
-			_cpu.SetRegister("EBP", savedEbp);
-
-			_logger.LogInformation("[User32] CallWindowProcedureAsync: Completed with return value 0x{ReturnValue:X8}", returnValue);
+			// Use consolidated helper to execute the procedure
+			// Parameters are pushed right-to-left: lParam, wParam, message, hwnd
+			var parameters = new[] { lParam, wParam, message, hwnd };
+			var (returnValue, timedOut, cancelled, failed) = await ExecuteStdCallProcedureAsync(
+				_cpu, _memory, wndProcAddress, parameters, "CallWindowProcedureAsync", cancellationToken);
 
 			return returnValue;
 		}
@@ -3054,267 +3067,13 @@ namespace Win32Emu.Win32.Modules
 				return (0, true, false, true); // Mark as failed since the procedure address is invalid
 			}
 
-			// Save current CPU state
-			var savedEip = cpu.GetEip();
-			var savedEsp = cpu.GetRegister("ESP");
-			var savedEbp = cpu.GetRegister("EBP");
-
-			// Define return address marker early to ensure it's clearly in scope for all checks below
-			const uint RETURN_ADDRESS = 0xDEADBEEF;
-
-			// Set up stack for stdcall convention (parameters pushed right-to-left)
-			// Reserve STACK_SAFETY_MARGIN to prevent the called function from overwriting critical data
-			// on the stack (such as return addresses from previous calls). The called function may use
-			// stack space for local variables, nested calls, etc., which could overwrite data above
-			// the parameters we push if we don't leave adequate space.
-			const uint STACK_SAFETY_MARGIN = 256;
-			var esp = savedEsp - STACK_SAFETY_MARGIN;
-
-			// Push parameters (right-to-left for stdcall)
-			esp -= 4;
-			memory.Write32(esp, lParam);
-
-			esp -= 4;
-			memory.Write32(esp, wParam);
-
-			esp -= 4;
-			memory.Write32(esp, message);
-
-			esp -= 4;
-			memory.Write32(esp, hwndDlg);
-
-			// Push return address last (it must be pushed AFTER parameters so it's on top of the stack)
-			esp -= 4;
-			memory.Write32(esp, RETURN_ADDRESS);
-
-			// Update CPU registers
-			cpu.SetRegister("ESP", esp);
-			cpu.SetEip(dialogProcAddress);
-
-			// Execute until we hit the return address with cancellation support
-			const int YIELD_INTERVAL = 10000;
-			var steps = 0;
-			var timedOut = false;
-			var cancelled = false;
-			var failed = false;
-			var lastCheckEip = cpu.GetEip();
-			var stuckCounter = 0;
-
-			// Track last N instructions to help debug NULL jumps
-			const int HISTORY_SIZE = 30000;  // Large buffer to capture transition from code to stack
-			var instructionHistory = new Queue<(int step, uint eip, string? description)>(HISTORY_SIZE);
-
-			// Track stack execution
-			var wasExecutingFromStack = false;
-			var stackExecutionStartStep = -1;
-
-			try
-			{
-				while (true)
-				{
-					// Check for cancellation at regular intervals
-					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
-					{
-						if (cancellationToken.IsCancellationRequested)
-						{
-							_logger.LogInformation("[User32] CallDialogProcedureAsync: Cancellation requested at step {Steps}", steps);
-							cancelled = true;
-							break;
-						}
-
-						// Suspend execution to preserve CPU state across async boundary
-						var cpuState = CpuHelpers.SuspendExecution(cpu);
-						
-						// Yield to allow other async operations to proceed
-						await Task.Yield();
-						
-						// Resume execution with preserved state
-						CpuHelpers.ResumeExecution(cpu, cpuState);
-					}
-
-					var eip = cpu.GetEip();
-
-					// Log first 20 instructions to help debug if we jump to NULL
-					if (steps < 20)
-					{
-						_logger.LogInformation("[User32] CallDialogProcedureAsync: Step {Steps}: EIP=0x{Eip:X8}", steps, eip);
-					}
-
-					// Detect and track stack execution
-					// Stack grows downward from StackBase
-					// ESP is the current stack pointer. Check if EIP is in stack region.
-					// Stack region is typically ESP ± 64KB to account for stack growth
-					// Also check that EIP is significantly below typical code segment
-					var espForStackCheck = cpu.GetRegister("ESP");
-					var stackLower = espForStackCheck >= 0x10000 ? espForStackCheck - 0x10000 : _env.StackLimit;
-					var stackUpper = espForStackCheck + 0x10000;
-					// Consider executing from stack if EIP is in stack region and below the image base
-					var imgBase = _image?.BaseAddress ?? 0x00400000;
-					var isExecutingFromStack = eip >= stackLower && eip <= stackUpper && eip < imgBase;
-
-					// Log transitions into/out of stack execution
-					if (isExecutingFromStack && !wasExecutingFromStack)
-					{
-						stackExecutionStartStep = steps;
-						_logger.LogError("[User32] CallDialogProcedureAsync: ⚠️ ENTERED STACK EXECUTION at step {Steps}, EIP=0x{Eip:X8} (ESP=0x{Esp:X8})", steps, eip, espForStackCheck);
-						// Log previous 10 instructions from history to see what led here
-						var historyList = instructionHistory.ToList();
-						var startIdx = Math.Max(0, historyList.Count - 10);
-						_logger.LogError("[User32] CallDialogProcedureAsync: Previous 10 instructions before entering stack:");
-						for (int i = startIdx; i < historyList.Count; i++)
-						{
-							var (prevStep, prevEip, prevDesc) = historyList[i];
-							_logger.LogError("  Step {Step}: EIP=0x{Eip:X8} {Desc}", prevStep, prevEip, prevDesc ?? "");
-						}
-					}
-					else if (!isExecutingFromStack && wasExecutingFromStack)
-					{
-						_logger.LogWarning("[User32] CallDialogProcedureAsync: Exited stack execution at step {Steps} (ran for {Count} steps)", steps, steps - stackExecutionStartStep);
-					}
-
-					wasExecutingFromStack = isExecutingFromStack;
-
-					// Check if we've returned to our marker address
-					if (eip == RETURN_ADDRESS)
-					{
-						break;
-					}
-
-					// Check for invalid EIP (NULL pointer execution or other invalid addresses)
-					// NULL pointer (0x00000000) is always invalid
-					// Also check for other obviously invalid addresses (e.g., unaligned, too low, etc.)
-					if (eip == 0x00000000)
-					{
-						_logger.LogError("[User32] CallDialogProcedureAsync: Execution jumped to NULL address (0x00000000) at step {Steps}", steps);
-						_logger.LogError("[User32] CallDialogProcedureAsync: This typically means the code called a NULL function pointer");
-						_logger.LogError("[User32] CallDialogProcedureAsync: ESP=0x{Esp:X8} EBP=0x{Ebp:X8}",
-							cpu.GetRegister("ESP"), cpu.GetRegister("EBP"));
-
-						// Log stack execution context
-						if (stackExecutionStartStep >= 0)
-						{
-							_logger.LogError("[User32] CallDialogProcedureAsync: ⚠️ Was executing from STACK (started at step {StartStep}, ran for {Count} steps before NULL jump)",
-								stackExecutionStartStep, steps - stackExecutionStartStep);
-						}
-
-						// Log instruction history
-						_logger.LogError("[User32] CallDialogProcedureAsync: Last {Count} instructions before NULL jump:", instructionHistory.Count);
-						foreach (var (histStep, histEip, histDesc) in instructionHistory)
-						{
-							_logger.LogError("  Step {Step}: EIP=0x{Eip:X8} {Desc}", histStep, histEip, histDesc ?? "");
-						}
-
-						// Log stack contents to help identify what function returned NULL
-						try
-						{
-							var stackPtr = cpu.GetRegister("ESP");
-							_logger.LogError("[User32] CallDialogProcedureAsync: Stack: {Stack}",
-								string.Join(" ", Enumerable.Range(0, 8).Select(i => $"0x{memory.Read32(stackPtr + (uint)(i * 4)):X8}")));
-						}
-						catch
-						{
-							// Ignore errors reading stack
-						}
-
-						failed = true;
-						break;
-					}
-
-					// Check for other invalid EIP values that might indicate corruption
-					// Image base is typically 0x00400000, and code/data is usually above 0x00001000
-					// Check for extremely low addresses that are clearly invalid
-					if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
-					{
-						_logger.LogError("[User32] CallDialogProcedureAsync: Execution jumped to invalid low address 0x{Eip:X8} at step {Steps}", eip, steps);
-						_logger.LogError("[User32] CallDialogProcedureAsync: This may indicate memory corruption or an invalid function pointer");
-						failed = true;
-						break;
-					}
-
-					// Detect potential infinite loops by checking if we're making progress
-					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
-					{
-						var currentEip = cpu.GetEip();
-						if (currentEip == lastCheckEip)
-						{
-							stuckCounter++;
-							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
-							{
-								// We've been at the same instruction for multiple check intervals - likely an infinite loop
-								_logger.LogWarning("[User32] CallDialogProcedureAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", currentEip, stuckCounter);
-								timedOut = true;
-								break;
-							}
-						}
-						else
-						{
-							stuckCounter = 0;
-							lastCheckEip = currentEip;
-						}
-					}
-
-					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
-					string? stepDesc = null;
-					var step = await CpuHelpers.ExecuteAsync(cpu, memory);
-
-					// Handle COM vtable and import calls using the consolidated helper method
-					if (HandleComAndImportCalls(step, cpu, memory, "CallDialogProcedureAsync", out stepDesc, out var shouldBreak))
-					{
-						if (shouldBreak)
-						{
-							failed = true;
-							break;
-						}
-						// Call was handled, continue to next step
-					}
-
-					// Add to instruction history
-					if (instructionHistory.Count >= HISTORY_SIZE)
-					{
-						instructionHistory.Dequeue();
-					}
-					instructionHistory.Enqueue((steps, eip, stepDesc));
-
-					steps++;
-
-					// Periodically check if we should yield to other threads
-					if (steps % YIELD_INTERVAL == 0)
-					{
-						var scheduler = _env.ThreadScheduler;
-						if (scheduler != null)
-						{
-							// Process any waiting thread timeouts
-							scheduler.ProcessWaitTimeouts();
-
-							// Check if there are other threads that need CPU time
-							if (scheduler.ShouldContextSwitch())
-							{
-								_logger.LogInformation("[User32] CallDialogProcedureAsync: Cooperative yield at {Steps} steps", steps);
-							}
-						}
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "[User32] CallDialogProcedureAsync: Exception during execution: {ExMessage}", ex.Message);
-				failed = true;
-			}
-
-			// Get return value from EAX, but only if execution was successful
-			// Otherwise return 0 as a safe default value
-			var returnValue = (timedOut || cancelled || failed) ? 0u : cpu.GetRegister("EAX");
-
-			// Restore CPU state
-			cpu.SetEip(savedEip);
-			cpu.SetRegister("ESP", savedEsp);
-			cpu.SetRegister("EBP", savedEbp);
-
-			_logger.LogInformation("[User32] CallDialogProcedureAsync: Completed with return value 0x{ReturnValue:X8}, timedOut={TimedOut}, cancelled={Cancelled}, failed={Failed}",
-				returnValue, timedOut, cancelled, failed);
-
-			return (returnValue, timedOut, cancelled, failed);
+			// Use consolidated helper to execute the procedure
+			// Parameters are pushed right-to-left: lParam, wParam, message, hwndDlg
+			var parameters = new[] { lParam, wParam, message, hwndDlg };
+			return await ExecuteStdCallProcedureAsync(
+				cpu, memory, dialogProcAddress, parameters, "CallDialogProcedureAsync", cancellationToken);
 		}
+
 
 
 		[DllModuleExport(1)]
