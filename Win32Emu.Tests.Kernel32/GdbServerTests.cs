@@ -186,7 +186,11 @@ public class GdbServerTests
             0x00010000, // SizeOfHeapCommit (64KB)
             [],         // TlsCallbacks (empty array)
             [],         // Sections (empty array)
-            new Dictionary<uint, uint>() // IatEntryMap (empty)
+            new Dictionary<uint, uint>(), // IatEntryMap (empty)
+            // FileHeader fields
+            0x014C, 0x00000000, 0x010E,
+            // OptionalHeader additional fields
+            14, 0, 4, 0, 0, 0, 4, 0, 0x0000, 0x00000000, 0x1000, 0x0200, 0x1000, 0x3000, 0x2000, 0x1500, 0x0000
         );
         
         // Act
