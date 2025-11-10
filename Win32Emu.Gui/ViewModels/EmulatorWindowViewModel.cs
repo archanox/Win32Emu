@@ -59,6 +59,9 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     
     // Reference to the owner window for showing child windows
     private Window? _ownerWindow;
+    
+    // Track if we've resized the window to match the display
+    private bool _hasResizedForDisplay;
 
     public void SetOwnerWindow(Window owner)
     {
@@ -695,6 +698,13 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                     
                     HasDisplay = true;
                     OnDebugOutput($"Created display bitmap: {info.Width}x{info.Height}", DebugLevel.Info);
+                    
+                    // Resize the window to match the display size (first time only)
+                    if (!_hasResizedForDisplay && _ownerWindow != null)
+                    {
+                        ResizeWindowForDisplay(info.Width, info.Height);
+                        _hasResizedForDisplay = true;
+                    }
                 }
 
                 // Update the bitmap with the new frame buffer data
@@ -800,6 +810,56 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         else
         {
             OnDebugOutput("Cannot open registry viewer: Emulator not running", DebugLevel.Warning);
+        }
+    }
+    
+    /// <summary>
+    /// Resize the EmulatorWindow to match the game's display resolution
+    /// </summary>
+    private void ResizeWindowForDisplay(int displayWidth, int displayHeight)
+    {
+        if (_ownerWindow == null)
+        {
+            return;
+        }
+        
+        try
+        {
+            // Calculate window size accounting for UI chrome (borders, title bar, status bar, debug panel if visible)
+            // Status bar is approximately 40px, window chrome is approximately 40px
+            const int chromeHeight = 80;
+            
+            // If debug panel is shown, we keep the window width as is (debug panel is on the side)
+            // Otherwise, we resize to match the display width
+            int targetWidth = displayWidth;
+            int targetHeight = displayHeight + chromeHeight;
+            
+            // Add extra width if debug panel is visible (approximately 400px)
+            if (ShowDebugPanel)
+            {
+                targetWidth += 400;
+            }
+            
+            // Ensure minimum window size
+            targetWidth = Math.Max(targetWidth, 640);
+            targetHeight = Math.Max(targetHeight, 480);
+            
+            // Ensure window fits on screen (with some margin)
+            if (_ownerWindow.Screens?.Primary != null)
+            {
+                var screenBounds = _ownerWindow.Screens.Primary.WorkingArea;
+                targetWidth = Math.Min(targetWidth, (int)(screenBounds.Width * 0.9));
+                targetHeight = Math.Min(targetHeight, (int)(screenBounds.Height * 0.9));
+            }
+            
+            _ownerWindow.Width = targetWidth;
+            _ownerWindow.Height = targetHeight;
+            
+            OnDebugOutput($"Resized EmulatorWindow to {targetWidth}x{targetHeight} for display {displayWidth}x{displayHeight}", DebugLevel.Info);
+        }
+        catch (Exception ex)
+        {
+            OnDebugOutput($"Failed to resize window: {ex.Message}", DebugLevel.Warning);
         }
     }
 }

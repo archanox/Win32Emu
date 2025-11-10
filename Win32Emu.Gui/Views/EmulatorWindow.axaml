@@ -8,8 +8,10 @@
         x:Class="Win32Emu.Gui.Views.EmulatorWindow"
         x:DataType="vm:EmulatorWindowViewModel"
         Title="Win32Emu - Game Running"
-        Width="1024"
-        Height="768">
+        Width="800"
+        Height="600"
+        MinWidth="640"
+        MinHeight="480">
 
     <Design.DataContext>
         <vm:EmulatorWindowViewModel/>
