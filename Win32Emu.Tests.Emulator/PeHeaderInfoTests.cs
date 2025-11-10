@@ -56,9 +56,30 @@ public class PeHeaderInfoTests
 			0x100000,
 			0x10000,
 			[],
-			sections
-		,
-			new Dictionary<uint, uint>() // IatEntryMap (empty)
+			sections,
+			new Dictionary<uint, uint>(), // IatEntryMap (empty)
+			// FileHeader fields
+			0x014C, // Machine (Intel 386)
+			0x00000000, // TimeDateStamp
+			0x010E, // Characteristics (EXECUTABLE_IMAGE | 32BIT_MACHINE | LINE_NUMS_STRIPPED | LOCAL_SYMS_STRIPPED)
+			// OptionalHeader additional fields
+			14, // MajorLinkerVersion
+			0,  // MinorLinkerVersion
+			4,  // MajorOperatingSystemVersion
+			0,  // MinorOperatingSystemVersion
+			0,  // MajorImageVersion
+			0,  // MinorImageVersion
+			4,  // MajorSubsystemVersion
+			0,  // MinorSubsystemVersion
+			0x0000, // DllCharacteristics
+			0x00000000, // CheckSum
+			0x1000, // SectionAlignment
+			0x0200, // FileAlignment
+			0x1000, // BaseOfCode
+			0x3000, // BaseOfData
+			0x2000, // SizeOfCode
+			0x1500, // SizeOfInitializedData
+			0x0000  // SizeOfUninitializedData
 		);
 		
 		// Act
@@ -95,9 +116,14 @@ public class PeHeaderInfoTests
 			0x100000,
 			0x10000,
 			[],
-			sections
-		,
-			new Dictionary<uint, uint>() // IatEntryMap (empty)
+			sections,
+			new Dictionary<uint, uint>(), // IatEntryMap (empty)
+			// FileHeader fields
+			0x014C, // Machine (Intel 386)
+			0x00000000, // TimeDateStamp
+			0x010E, // Characteristics
+			// OptionalHeader additional fields
+			14, 0, 4, 0, 0, 0, 4, 0, 0x0000, 0x00000000, 0x1000, 0x0200, 0x1000, 0x3000, 0x2000, 0x1500, 0x0000
 		);
 		
 		// Act & Assert
@@ -129,7 +155,11 @@ public class PeHeaderInfoTests
 			0x8000,    // Heap commit
 			[],
 			[],
-			new Dictionary<uint, uint>() // IatEntryMap (empty)
+			new Dictionary<uint, uint>(), // IatEntryMap (empty)
+			// FileHeader fields
+			0x014C, 0x00000000, 0x010E,
+			// OptionalHeader additional fields
+			14, 0, 4, 0, 0, 0, 4, 0, 0x0000, 0x00000000, 0x1000, 0x0200, 0x1000, 0x3000, 0x2000, 0x1500, 0x0000
 		);
 		
 		// Assert

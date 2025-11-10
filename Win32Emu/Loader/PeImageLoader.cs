@@ -250,7 +250,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		var (exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal) = BuildExportMaps(image, imageBase);
 		var tlsCallbacks = ExtractTlsCallbacks(image, imageBase, vm, logger);
 
-		// Stack sizes from optional header (PE-provided)
+		// Stack and heap sizes from optional header (PE-provided)
 		uint sizeOfStackReserve;
 		uint sizeOfStackCommit;
 		uint sizeOfHeapReserve;
@@ -270,6 +270,33 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			sizeOfHeapReserve = (uint)Math.Min((ulong)uint.MaxValue, Convert.ToUInt64(opt.SizeOfHeapReserve));
 			sizeOfHeapCommit  = (uint)Math.Min((ulong)uint.MaxValue, Convert.ToUInt64(opt.SizeOfHeapCommit));
 		}
+
+		// Extract FileHeader fields
+		var fileHeader = pe.FileHeader;
+		var machine = (ushort)fileHeader.Machine;
+		var timeDateStamp = fileHeader.TimeDateStamp;
+		var characteristics = (ushort)fileHeader.Characteristics;
+		
+		// Extract additional OptionalHeader fields
+		var majorLinkerVersion = opt.MajorLinkerVersion;
+		var minorLinkerVersion = opt.MinorLinkerVersion;
+		var majorOperatingSystemVersion = opt.MajorOperatingSystemVersion;
+		var minorOperatingSystemVersion = opt.MinorOperatingSystemVersion;
+		var majorImageVersion = opt.MajorImageVersion;
+		var minorImageVersion = opt.MinorImageVersion;
+		var majorSubsystemVersion = opt.MajorSubsystemVersion;
+		var minorSubsystemVersion = opt.MinorSubsystemVersion;
+		var dllCharacteristics = (ushort)opt.DllCharacteristics;
+		var checkSum = opt.CheckSum;
+		var sectionAlignment = opt.SectionAlignment;
+		var fileAlignment = opt.FileAlignment;
+		
+		// Size fields - safe cast for PE32
+		var baseOfCode = opt.BaseOfCode;
+		var baseOfData = opt.BaseOfData; // PE32 only, will be 0 for PE32+
+		var sizeOfCode = opt.SizeOfCode;
+		var sizeOfInitializedData = opt.SizeOfInitializedData;
+		var sizeOfUninitializedData = opt.SizeOfUninitializedData;
 
 		// Extract section information for identifying code/data regions
 		var sections = ExtractSectionInfo(pe, logger);
@@ -292,7 +319,29 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			sizeOfHeapCommit,
 			tlsCallbacks,
 			sections,
-			iatEntryMap);
+			iatEntryMap,
+			// FileHeader fields
+			machine,
+			timeDateStamp,
+			characteristics,
+			// OptionalHeader additional fields
+			majorLinkerVersion,
+			minorLinkerVersion,
+			majorOperatingSystemVersion,
+			minorOperatingSystemVersion,
+			majorImageVersion,
+			minorImageVersion,
+			majorSubsystemVersion,
+			minorSubsystemVersion,
+			dllCharacteristics,
+			checkSum,
+			sectionAlignment,
+			fileAlignment,
+			baseOfCode,
+			baseOfData,
+			sizeOfCode,
+			sizeOfInitializedData,
+			sizeOfUninitializedData);
 	}
 	
 	private (Dictionary<uint, (string dll, string name)> importMap, Dictionary<uint, uint> iatEntryMap) BuildImportMap(PEImage image, uint imageBase)
