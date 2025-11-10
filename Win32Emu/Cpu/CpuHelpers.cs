@@ -393,6 +393,32 @@ public static class CpuHelpers
 			var esp = cpu.GetRegister("ESP");
 			var retEip = memory.Read32(esp);
 			
+			// Dump stack contents for debugging
+			if (logger != null && logger.IsEnabled(LogLevel.Information))
+			{
+				var stackDump = new System.Text.StringBuilder();
+				stackDump.AppendLine($"[{context}] Stack state before cleanup:");
+				try
+				{
+					for (int i = 0; i < 8; i++)
+					{
+						var addr = esp + (uint)(i * 4);
+						var val = memory.Read32(addr);
+						var label = i == 0 ? " (return addr)" : i <= (argBytes / 4) ? $" (arg{i})" : "";
+						stackDump.AppendLine($"  [ESP+{i * 4:D2}] = 0x{addr:X8}: 0x{val:X8}{label}");
+					}
+				}
+				catch
+				{
+					stackDump.AppendLine("  (error reading stack)");
+				}
+				logger.LogInformation(stackDump.ToString());
+			}
+			
+			// Log detailed stack cleanup information
+			logger?.LogInformation("[{Context}] Stack cleanup: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}, argBytes={ArgBytes}, new ESP=0x{NewEsp:X8}",
+				context, esp, retEip, argBytes, esp + 4 + (uint)argBytes);
+			
 			// Clean up stack: pop return address + arguments (stdcall convention)
 			esp += 4 + (uint)argBytes;
 			cpu.SetRegister("ESP", esp);
