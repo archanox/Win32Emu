@@ -109,153 +109,277 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Main thread initialized with ID=1
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetVersion from stub at 0x0F000140
+      [Import] Direct call to KERNEL32.DLL!GetVersion at 0x0F000140
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF84 = 0x004018EB
-info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetVersion at EIP=0x0E000002 ESP=0x001FEF84 stack=EB 18 40 00 00 00 00 00 00 00 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!GetVersion at EIP=0x0F000140 ESP=0x001FEF84 stack=EB 18 40 00 00 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetVersion returned 0x040003B6, argBytes=0
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF84 = 0x004018EB
+      [Import KERNEL32.DLL!GetVersion] Stack state before cleanup:
+        [ESP+00] = 0x001FEF84: 0x004018EB (return addr)
+        [ESP+04] = 0x001FEF88: 0x00000000
+        [ESP+08] = 0x001FEF8C: 0x00000000
+        [ESP+12] = 0x001FEF90: 0x00000000
+        [ESP+16] = 0x001FEF94: 0x00000000
+        [ESP+20] = 0x001FEF98: 0x00000000
+        [ESP+24] = 0x001FEF9C: 0x00000000
+        [ESP+28] = 0x001FEFA0: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapCreate from stub at 0x0F0001C0
+      [Import KERNEL32.DLL!GetVersion] Stack cleanup: ESP=0x001FEF84, retEIP=0x004018EB, argBytes=0, new ESP=0x001FEF88
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF70 = 0x00402867
+      [Import] Direct call to KERNEL32.DLL!HeapCreate at 0x0F0001C0
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapCreate at EIP=0x0E000002 ESP=0x001FEF70 stack=67 28 40 00 01 00 00 00 00 10 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!HeapCreate at EIP=0x0F0001C0 ESP=0x001FEF70 stack=67 28 40 00 01 00 00 00 00 10 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapCreate returned 0x01002040, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF70 = 0x00402867
+      [Import KERNEL32.DLL!HeapCreate] Stack state before cleanup:
+        [ESP+00] = 0x001FEF70: 0x00402867 (return addr)
+        [ESP+04] = 0x001FEF74: 0x00000001 (arg1)
+        [ESP+08] = 0x001FEF78: 0x00001000 (arg2)
+        [ESP+12] = 0x001FEF7C: 0x00000000 (arg3)
+        [ESP+16] = 0x001FEF80: 0x0040191E
+        [ESP+20] = 0x001FEF84: 0x00000000
+        [ESP+24] = 0x001FEF88: 0x00000000
+        [ESP+28] = 0x001FEF8C: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetVersionExA from stub at 0x0F000270
+      [Import KERNEL32.DLL!HeapCreate] Stack cleanup: ESP=0x001FEF70, retEIP=0x00402867, argBytes=12, new ESP=0x001FEF80
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FDD40 = 0x0040272D
+      [Import] Direct call to KERNEL32.DLL!GetVersionExA at 0x0F000270
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetVersionExA at EIP=0x0E000002 ESP=0x001FDD40 stack=2D 27 40 00 E0 EE 1F 00 00 00 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!GetVersionExA at EIP=0x0F000270 ESP=0x001FDD40 stack=2D 27 40 00 E0 EE 1F 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetVersionExA returned 0x00000001, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FDD40 = 0x0040272D
+      [Import KERNEL32.DLL!GetVersionExA] Stack state before cleanup:
+        [ESP+00] = 0x001FDD40: 0x0040272D (return addr)
+        [ESP+04] = 0x001FDD44: 0x001FEEE0 (arg1)
+        [ESP+08] = 0x001FDD48: 0x00000000
+        [ESP+12] = 0x001FDD4C: 0x00000000
+        [ESP+16] = 0x001FDD50: 0x00000000
+        [ESP+20] = 0x001FDD54: 0x00000000
+        [ESP+24] = 0x001FDD58: 0x00000000
+        [ESP+28] = 0x001FDD5C: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!GetVersionExA] Stack cleanup: ESP=0x001FDD40, retEIP=0x0040272D, argBytes=4, new ESP=0x001FDD48
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF00 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF00 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 00 01 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF00 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 00 01 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002040, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF00 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF00: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF04: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF08: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF0C: 0x00000100 (arg3)
+        [ESP+16] = 0x001FEF10: 0x00000000
+        [ESP+20] = 0x001FEF14: 0x00401E23
+        [ESP+24] = 0x001FEF18: 0x00000100
+        [ESP+28] = 0x001FEF1C: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetStartupInfoA from stub at 0x0F000120
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF00, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF10
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040258F
+      [Import] Direct call to KERNEL32.DLL!GetStartupInfoA at 0x0F000120
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStartupInfoA at EIP=0x0E000002 ESP=0x001FEF28 stack=8F 25 40 00 40 EF 1F 00 00 00 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!GetStartupInfoA at EIP=0x0F000120 ESP=0x001FEF28 stack=8F 25 40 00 40 EF 1F 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStartupInfoA returned 0x00000000, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040258F
+      [Import KERNEL32.DLL!GetStartupInfoA] Stack state before cleanup:
+        [ESP+00] = 0x001FEF28: 0x0040258F (return addr)
+        [ESP+04] = 0x001FEF2C: 0x001FEF40 (arg1)
+        [ESP+08] = 0x001FEF30: 0x00000000
+        [ESP+12] = 0x001FEF34: 0x00000000
+        [ESP+16] = 0x001FEF38: 0x001FEFFC
+        [ESP+20] = 0x001FEF3C: 0x00000000
+        [ESP+24] = 0x001FEF40: 0x00000044
+        [ESP+28] = 0x001FEF44: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F000240
+      [Import KERNEL32.DLL!GetStartupInfoA] Stack cleanup: ESP=0x001FEF28, retEIP=0x0040258F, argBytes=4, new ESP=0x001FEF30
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040268E
+      [Import] Direct call to KERNEL32.DLL!GetStdHandle at 0x0F000240
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF28 stack=8E 26 40 00 F6 FF FF FF 00 00 00 00 00 00 00 00
-info: Win32Emu.Emulator[0]
-      [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
-info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040268E
-info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000250
-info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040269C
-info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF28 stack=9C 26 40 00 00 00 00 00 00 00 00 00 00 00 00 00
-info: Win32Emu.Emulator[0]
-      [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
-info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040269C
-info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F000240
-info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040268E
-info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF28 stack=8E 26 40 00 F5 FF FF FF 00 00 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0F000240 ESP=0x001FEF28 stack=8E 26 40 00 F6 FF FF FF 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040268E
+      [Import KERNEL32.DLL!GetStdHandle] Stack state before cleanup:
+        [ESP+00] = 0x001FEF28: 0x0040268E (return addr)
+        [ESP+04] = 0x001FEF2C: 0xFFFFFFF6 (arg1)
+        [ESP+08] = 0x001FEF30: 0x00000000
+        [ESP+12] = 0x001FEF34: 0x00000000
+        [ESP+16] = 0x001FEF38: 0x001FEFFC
+        [ESP+20] = 0x001FEF3C: 0x00000000
+        [ESP+24] = 0x001FEF40: 0x00000044
+        [ESP+28] = 0x001FEF44: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000250
+      [Import KERNEL32.DLL!GetStdHandle] Stack cleanup: ESP=0x001FEF28, retEIP=0x0040268E, argBytes=4, new ESP=0x001FEF30
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040269C
+      [Import] Direct call to KERNEL32.DLL!GetFileType at 0x0F000250
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF28 stack=9C 26 40 00 00 00 00 00 00 00 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0F000250 ESP=0x001FEF28 stack=9C 26 40 00 00 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040269C
+      [Import KERNEL32.DLL!GetFileType] Stack state before cleanup:
+        [ESP+00] = 0x001FEF28: 0x0040269C (return addr)
+        [ESP+04] = 0x001FEF2C: 0x00000000 (arg1)
+        [ESP+08] = 0x001FEF30: 0x00000000
+        [ESP+12] = 0x001FEF34: 0x00000000
+        [ESP+16] = 0x001FEF38: 0x001FEFFC
+        [ESP+20] = 0x001FEF3C: 0x00000000
+        [ESP+24] = 0x001FEF40: 0x00000044
+        [ESP+28] = 0x001FEF44: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F000240
+      [Import KERNEL32.DLL!GetFileType] Stack cleanup: ESP=0x001FEF28, retEIP=0x0040269C, argBytes=4, new ESP=0x001FEF30
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040268E
+      [Import] Direct call to KERNEL32.DLL!GetStdHandle at 0x0F000240
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF28 stack=8E 26 40 00 F4 FF FF FF 00 00 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0F000240 ESP=0x001FEF28 stack=8E 26 40 00 F5 FF FF FF 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040268E
+      [Import KERNEL32.DLL!GetStdHandle] Stack state before cleanup:
+        [ESP+00] = 0x001FEF28: 0x0040268E (return addr)
+        [ESP+04] = 0x001FEF2C: 0xFFFFFFF5 (arg1)
+        [ESP+08] = 0x001FEF30: 0x00000000
+        [ESP+12] = 0x001FEF34: 0x00000000
+        [ESP+16] = 0x001FEF38: 0x001FEFFC
+        [ESP+20] = 0x001FEF3C: 0x00000000
+        [ESP+24] = 0x001FEF40: 0x00000044
+        [ESP+28] = 0x001FEF44: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000250
+      [Import KERNEL32.DLL!GetStdHandle] Stack cleanup: ESP=0x001FEF28, retEIP=0x0040268E, argBytes=4, new ESP=0x001FEF30
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040269C
+      [Import] Direct call to KERNEL32.DLL!GetFileType at 0x0F000250
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF28 stack=9C 26 40 00 00 00 00 00 00 00 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0F000250 ESP=0x001FEF28 stack=9C 26 40 00 00 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040269C
+      [Import KERNEL32.DLL!GetFileType] Stack state before cleanup:
+        [ESP+00] = 0x001FEF28: 0x0040269C (return addr)
+        [ESP+04] = 0x001FEF2C: 0x00000000 (arg1)
+        [ESP+08] = 0x001FEF30: 0x00000000
+        [ESP+12] = 0x001FEF34: 0x00000000
+        [ESP+16] = 0x001FEF38: 0x001FEFFC
+        [ESP+20] = 0x001FEF3C: 0x00000000
+        [ESP+24] = 0x001FEF40: 0x00000044
+        [ESP+28] = 0x001FEF44: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!SetHandleCount from stub at 0x0F000230
+      [Import KERNEL32.DLL!GetFileType] Stack cleanup: ESP=0x001FEF28, retEIP=0x0040269C, argBytes=4, new ESP=0x001FEF30
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x004026D3
+      [Import] Direct call to KERNEL32.DLL!GetStdHandle at 0x0F000240
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!SetHandleCount at EIP=0x0E000002 ESP=0x001FEF28 stack=D3 26 40 00 20 00 00 00 00 00 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0F000240 ESP=0x001FEF28 stack=8E 26 40 00 F4 FF FF FF 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Import KERNEL32.DLL!GetStdHandle] Stack state before cleanup:
+        [ESP+00] = 0x001FEF28: 0x0040268E (return addr)
+        [ESP+04] = 0x001FEF2C: 0xFFFFFFF4 (arg1)
+        [ESP+08] = 0x001FEF30: 0x00000000
+        [ESP+12] = 0x001FEF34: 0x00000000
+        [ESP+16] = 0x001FEF38: 0x001FEFFC
+        [ESP+20] = 0x001FEF3C: 0x00000000
+        [ESP+24] = 0x001FEF40: 0x00000044
+        [ESP+28] = 0x001FEF44: 0x00000000
+
+info: Win32Emu.Emulator[0]
+      [Import KERNEL32.DLL!GetStdHandle] Stack cleanup: ESP=0x001FEF28, retEIP=0x0040268E, argBytes=4, new ESP=0x001FEF30
+info: Win32Emu.Emulator[0]
+      [Import] Direct call to KERNEL32.DLL!GetFileType at 0x0F000250
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0F000250 ESP=0x001FEF28 stack=9C 26 40 00 00 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Import KERNEL32.DLL!GetFileType] Stack state before cleanup:
+        [ESP+00] = 0x001FEF28: 0x0040269C (return addr)
+        [ESP+04] = 0x001FEF2C: 0x00000000 (arg1)
+        [ESP+08] = 0x001FEF30: 0x00000000
+        [ESP+12] = 0x001FEF34: 0x00000000
+        [ESP+16] = 0x001FEF38: 0x001FEFFC
+        [ESP+20] = 0x001FEF3C: 0x00000000
+        [ESP+24] = 0x001FEF40: 0x00000044
+        [ESP+28] = 0x001FEF44: 0x00000000
+
+info: Win32Emu.Emulator[0]
+      [Import KERNEL32.DLL!GetFileType] Stack cleanup: ESP=0x001FEF28, retEIP=0x0040269C, argBytes=4, new ESP=0x001FEF30
+info: Win32Emu.Emulator[0]
+      [Import] Direct call to KERNEL32.DLL!SetHandleCount at 0x0F000230
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!SetHandleCount at EIP=0x0F000230 ESP=0x001FEF28 stack=D3 26 40 00 20 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!SetHandleCount returned 0x00000020, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x004026D3
+      [Import KERNEL32.DLL!SetHandleCount] Stack state before cleanup:
+        [ESP+00] = 0x001FEF28: 0x004026D3 (return addr)
+        [ESP+04] = 0x001FEF2C: 0x00000020 (arg1)
+        [ESP+08] = 0x001FEF30: 0x00000000
+        [ESP+12] = 0x001FEF34: 0x00000000
+        [ESP+16] = 0x001FEF38: 0x001FEFFC
+        [ESP+20] = 0x001FEF3C: 0x00000000
+        [ESP+24] = 0x001FEF40: 0x00000044
+        [ESP+28] = 0x001FEF44: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetCommandLineA from stub at 0x0F000130
+      [Import KERNEL32.DLL!SetHandleCount] Stack cleanup: ESP=0x001FEF28, retEIP=0x004026D3, argBytes=4, new ESP=0x001FEF30
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF84 = 0x00401939
+      [Import] Direct call to KERNEL32.DLL!GetCommandLineA at 0x0F000130
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetCommandLineA at EIP=0x0E000002 ESP=0x001FEF84 stack=39 19 40 00 00 00 00 00 00 00 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!GetCommandLineA at EIP=0x0F000130 ESP=0x001FEF84 stack=39 19 40 00 00 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Kernel32] GetCommandLineA returning 0x01000000: ""C:\EXEs\BasicDD.exe""
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetCommandLineA returned 0x01000000, argBytes=0
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF84 = 0x00401939
+      [Import KERNEL32.DLL!GetCommandLineA] Stack state before cleanup:
+        [ESP+00] = 0x001FEF84: 0x00401939 (return addr)
+        [ESP+04] = 0x001FEF88: 0x00000000
+        [ESP+08] = 0x001FEF8C: 0x00000000
+        [ESP+12] = 0x001FEF90: 0x00000000
+        [ESP+16] = 0x001FEF94: 0x00000000
+        [ESP+20] = 0x001FEF98: 0x00000000
+        [ESP+24] = 0x001FEF9C: 0x00000000
+        [ESP+28] = 0x001FEFA0: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetEnvironmentStringsW from stub at 0x0F000220
+      [Import KERNEL32.DLL!GetCommandLineA] Stack cleanup: ESP=0x001FEF84, retEIP=0x00401939, argBytes=0, new ESP=0x001FEF88
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF68 = 0x0040241B
+      [Import] Direct call to KERNEL32.DLL!GetEnvironmentStringsW at 0x0F000220
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF68 stack=1B 24 40 00 00 00 00 00 00 00 00 00 FC EF 1F 00
+      Dispatching KERNEL32.DLL!GetEnvironmentStringsW at EIP=0x0F000220 ESP=0x001FEF68 stack=1B 24 40 00 00 00 00 00 00 00 00 00 FC EF 1F 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetEnvironmentStringsW returned 0x01003040, argBytes=0
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF68 = 0x0040241B
+      [Import KERNEL32.DLL!GetEnvironmentStringsW] Stack state before cleanup:
+        [ESP+00] = 0x001FEF68: 0x0040241B (return addr)
+        [ESP+04] = 0x001FEF6C: 0x00000000
+        [ESP+08] = 0x001FEF70: 0x00000000
+        [ESP+12] = 0x001FEF74: 0x001FEFFC
+        [ESP+16] = 0x001FEF78: 0x00000000
+        [ESP+20] = 0x001FEF7C: 0x00000100
+        [ESP+24] = 0x001FEF80: 0x00000100
+        [ESP+28] = 0x001FEF84: 0x00401943
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000200
+      [Import KERNEL32.DLL!GetEnvironmentStringsW] Stack cleanup: ESP=0x001FEF68, retEIP=0x0040241B, argBytes=0, new ESP=0x001FEF6C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF48 = 0x00402493
+      [Import] Direct call to KERNEL32.DLL!WideCharToMultiByte at 0x0F000200
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF48 stack=93 24 40 00 00 00 00 00 00 00 00 00 40 30 00 01
+      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0F000200 ESP=0x001FEF48 stack=93 24 40 00 00 00 00 00 00 00 00 00 40 30 00 01
 info: Win32Emu.Emulator[0]
       [Kernel32] WideCharToMultiByte: CP=Acp cchWide=312 lpWide=0x01003040 cbMulti=0 lpMulti=0x00000000
 info: Win32Emu.Emulator[0]
@@ -265,23 +389,41 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000138, argBytes=32
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF48 = 0x00402493
+      [Import KERNEL32.DLL!WideCharToMultiByte] Stack state before cleanup:
+        [ESP+00] = 0x001FEF48: 0x00402493 (return addr)
+        [ESP+04] = 0x001FEF4C: 0x00000000 (arg1)
+        [ESP+08] = 0x001FEF50: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF54: 0x01003040 (arg3)
+        [ESP+16] = 0x001FEF58: 0x00000138 (arg4)
+        [ESP+20] = 0x001FEF5C: 0x00000000 (arg5)
+        [ESP+24] = 0x001FEF60: 0x00000000 (arg6)
+        [ESP+28] = 0x001FEF64: 0x00000000 (arg7)
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!WideCharToMultiByte] Stack cleanup: ESP=0x001FEF48, retEIP=0x00402493, argBytes=32, new ESP=0x001FEF6C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF3C = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF3C stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 01 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF3C stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 01 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002140, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF3C = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF3C: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF40: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF44: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF48: 0x00000140 (arg3)
+        [ESP+16] = 0x001FEF4C: 0x01003040
+        [ESP+20] = 0x001FEF50: 0x00401E23
+        [ESP+24] = 0x001FEF54: 0x00000138
+        [ESP+28] = 0x001FEF58: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000200
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF3C, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF4C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF48 = 0x004024B5
+      [Import] Direct call to KERNEL32.DLL!WideCharToMultiByte at 0x0F000200
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF48 stack=B5 24 40 00 00 00 00 00 00 00 00 00 40 30 00 01
+      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0F000200 ESP=0x001FEF48 stack=B5 24 40 00 00 00 00 00 00 00 00 00 40 30 00 01
 info: Win32Emu.Emulator[0]
       [Kernel32] WideCharToMultiByte: CP=Acp cchWide=312 lpWide=0x01003040 cbMulti=312 lpMulti=0x01002140
 info: Win32Emu.Emulator[0]
@@ -289,17 +431,37 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000138, argBytes=32
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF48 = 0x004024B5
+      [Import KERNEL32.DLL!WideCharToMultiByte] Stack state before cleanup:
+        [ESP+00] = 0x001FEF48: 0x004024B5 (return addr)
+        [ESP+04] = 0x001FEF4C: 0x00000000 (arg1)
+        [ESP+08] = 0x001FEF50: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF54: 0x01003040 (arg3)
+        [ESP+16] = 0x001FEF58: 0x00000138 (arg4)
+        [ESP+20] = 0x001FEF5C: 0x01002140 (arg5)
+        [ESP+24] = 0x001FEF60: 0x00000138 (arg6)
+        [ESP+28] = 0x001FEF64: 0x00000000 (arg7)
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!FreeEnvironmentStringsW from stub at 0x0F0001F0
+      [Import KERNEL32.DLL!WideCharToMultiByte] Stack cleanup: ESP=0x001FEF48, retEIP=0x004024B5, argBytes=32, new ESP=0x001FEF6C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF64 = 0x004024D2
+      [Import] Direct call to KERNEL32.DLL!FreeEnvironmentStringsW at 0x0F0001F0
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!FreeEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF64 stack=D2 24 40 00 40 30 00 01 00 00 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!FreeEnvironmentStringsW at EIP=0x0F0001F0 ESP=0x001FEF64 stack=D2 24 40 00 40 30 00 01 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!FreeEnvironmentStringsW returned 0x00000001, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF64 = 0x004024D2
+      [Import KERNEL32.DLL!FreeEnvironmentStringsW] Stack state before cleanup:
+        [ESP+00] = 0x001FEF64: 0x004024D2 (return addr)
+        [ESP+04] = 0x001FEF68: 0x01003040 (arg1)
+        [ESP+08] = 0x001FEF6C: 0x00000000
+        [ESP+12] = 0x001FEF70: 0x00000000
+        [ESP+16] = 0x001FEF74: 0x001FEFFC
+        [ESP+20] = 0x001FEF78: 0x00000000
+        [ESP+24] = 0x001FEF7C: 0x01002140
+        [ESP+28] = 0x001FEF80: 0x00000138
+
+info: Win32Emu.Emulator[0]
+      [Import KERNEL32.DLL!FreeEnvironmentStringsW] Stack cleanup: ESP=0x001FEF64, retEIP=0x004024D2, argBytes=4, new ESP=0x001FEF6C
 info: Win32Emu.Emulator[0]
       [Syscall] KERNEL32.DLL!GetACP from stub at 0x0F0000C0
 info: Win32Emu.Emulator[0]
@@ -311,11 +473,9 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEF30 = 0x004041C8
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetCPInfo from stub at 0x0F0000D0
+      [Import] Direct call to KERNEL32.DLL!GetCPInfo at 0x0F0000D0
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF2C = 0x00404205
-info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEF2C stack=05 42 40 00 E9 FD 00 00 44 EF 1F 00 00 00 00 00
+      Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0F0000D0 ESP=0x001FEF2C stack=05 42 40 00 E9 FD 00 00 44 EF 1F 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Kernel32] GetCPInfo called: codePage=Utf8 lpCpInfo=0x001FEF44
 info: Win32Emu.Emulator[0]
@@ -323,13 +483,22 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetCPInfo returned 0x00000001, argBytes=8
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF2C = 0x00404205
+      [Import KERNEL32.DLL!GetCPInfo] Stack state before cleanup:
+        [ESP+00] = 0x001FEF2C: 0x00404205 (return addr)
+        [ESP+04] = 0x001FEF30: 0x0000FDE9 (arg1)
+        [ESP+08] = 0x001FEF34: 0x001FEF44 (arg2)
+        [ESP+12] = 0x001FEF38: 0x00000000
+        [ESP+16] = 0x001FEF3C: 0x00000000
+        [ESP+20] = 0x001FEF40: 0x00000000
+        [ESP+24] = 0x001FEF44: 0x00000004
+        [ESP+28] = 0x001FEF48: 0x0000003F
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetCPInfo from stub at 0x0F0000D0
+      [Import KERNEL32.DLL!GetCPInfo] Stack cleanup: ESP=0x001FEF2C, retEIP=0x00404205, argBytes=8, new ESP=0x001FEF38
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEA0C = 0x00404410
+      [Import] Direct call to KERNEL32.DLL!GetCPInfo at 0x0F0000D0
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEA0C stack=10 44 40 00 E9 FD 00 00 1C EF 1F 00 E9 FD 00 00
+      Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0F0000D0 ESP=0x001FEA0C stack=10 44 40 00 E9 FD 00 00 1C EF 1F 00 E9 FD 00 00
 info: Win32Emu.Emulator[0]
       [Kernel32] GetCPInfo called: codePage=Utf8 lpCpInfo=0x001FEF1C
 info: Win32Emu.Emulator[0]
@@ -337,93 +506,174 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetCPInfo returned 0x00000001, argBytes=8
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEA0C = 0x00404410
+      [Import KERNEL32.DLL!GetCPInfo] Stack state before cleanup:
+        [ESP+00] = 0x001FEA0C: 0x00404410 (return addr)
+        [ESP+04] = 0x001FEA10: 0x0000FDE9 (arg1)
+        [ESP+08] = 0x001FEA14: 0x001FEF1C (arg2)
+        [ESP+12] = 0x001FEA18: 0x0000FDE9
+        [ESP+16] = 0x001FEA1C: 0x00000000
+        [ESP+20] = 0x001FEA20: 0x00000000
+        [ESP+24] = 0x001FEA24: 0x00000000
+        [ESP+28] = 0x001FEA28: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetStringTypeW from stub at 0x0F000040
+      [Import KERNEL32.DLL!GetCPInfo] Stack cleanup: ESP=0x001FEA0C, retEIP=0x00404410, argBytes=8, new ESP=0x001FEA18
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE9AC = 0x004052AC
+      [Import] Direct call to KERNEL32.DLL!GetStringTypeW at 0x0F000040
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStringTypeW at EIP=0x0E000002 ESP=0x001FE9AC stack=AC 52 40 00 01 00 00 00 94 64 40 00 01 00 00 00
+      Dispatching KERNEL32.DLL!GetStringTypeW at EIP=0x0F000040 ESP=0x001FE9AC stack=AC 52 40 00 01 00 00 00 94 64 40 00 01 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStringTypeW returned 0x00000000, argBytes=20
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE9AC = 0x004052AC
+      [Import KERNEL32.DLL!GetStringTypeW] Stack state before cleanup:
+        [ESP+00] = 0x001FE9AC: 0x004052AC (return addr)
+        [ESP+04] = 0x001FE9B0: 0x00000001 (arg1)
+        [ESP+08] = 0x001FE9B4: 0x00406494 (arg2)
+        [ESP+12] = 0x001FE9B8: 0x00000001 (arg3)
+        [ESP+16] = 0x001FE9BC: 0x001FE9D8 (arg4)
+        [ESP+20] = 0x001FE9C0: 0x0040975C (arg5)
+        [ESP+24] = 0x001FE9C4: 0x00000100
+        [ESP+28] = 0x001FE9C8: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetStringTypeA from stub at 0x0F000050
+      [Import KERNEL32.DLL!GetStringTypeW] Stack cleanup: ESP=0x001FE9AC, retEIP=0x004052AC, argBytes=20, new ESP=0x001FE9C4
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE9AC = 0x004052C6
+      [Import] Direct call to KERNEL32.DLL!GetStringTypeA at 0x0F000050
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStringTypeA at EIP=0x0E000002 ESP=0x001FE9AC stack=C6 52 40 00 00 00 00 00 01 00 00 00 90 64 40 00
+      Dispatching KERNEL32.DLL!GetStringTypeA at EIP=0x0F000050 ESP=0x001FE9AC stack=C6 52 40 00 00 00 00 00 01 00 00 00 90 64 40 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStringTypeA returned 0x00000001, argBytes=20
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE9AC = 0x004052C6
+      [Import KERNEL32.DLL!GetStringTypeA] Stack state before cleanup:
+        [ESP+00] = 0x001FE9AC: 0x004052C6 (return addr)
+        [ESP+04] = 0x001FE9B0: 0x00000000 (arg1)
+        [ESP+08] = 0x001FE9B4: 0x00000001 (arg2)
+        [ESP+12] = 0x001FE9B8: 0x00406490 (arg3)
+        [ESP+16] = 0x001FE9BC: 0x00000001 (arg4)
+        [ESP+20] = 0x001FE9C0: 0x001FE9D8 (arg5)
+        [ESP+24] = 0x001FE9C4: 0x00000100
+        [ESP+28] = 0x001FE9C8: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetStringTypeA from stub at 0x0F000050
+      [Import KERNEL32.DLL!GetStringTypeA] Stack cleanup: ESP=0x001FE9AC, retEIP=0x004052C6, argBytes=20, new ESP=0x001FE9C4
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE9AC = 0x004052FA
+      [Import] Direct call to KERNEL32.DLL!GetStringTypeA at 0x0F000050
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStringTypeA at EIP=0x0E000002 ESP=0x001FE9AC stack=FA 52 40 00 00 00 00 00 01 00 00 00 1C EE 1F 00
+      Dispatching KERNEL32.DLL!GetStringTypeA at EIP=0x0F000050 ESP=0x001FE9AC stack=FA 52 40 00 00 00 00 00 01 00 00 00 1C EE 1F 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStringTypeA returned 0x00000001, argBytes=20
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE9AC = 0x004052FA
+      [Import KERNEL32.DLL!GetStringTypeA] Stack state before cleanup:
+        [ESP+00] = 0x001FE9AC: 0x004052FA (return addr)
+        [ESP+04] = 0x001FE9B0: 0x00000000 (arg1)
+        [ESP+08] = 0x001FE9B4: 0x00000001 (arg2)
+        [ESP+12] = 0x001FE9B8: 0x001FEE1C (arg3)
+        [ESP+16] = 0x001FE9BC: 0x00000100 (arg4)
+        [ESP+20] = 0x001FE9C0: 0x001FEA1C (arg5)
+        [ESP+24] = 0x001FE9C4: 0x00000100
+        [ESP+28] = 0x001FE9C8: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!LCMapStringW from stub at 0x0F000060
+      [Import KERNEL32.DLL!GetStringTypeA] Stack cleanup: ESP=0x001FE9AC, retEIP=0x004052FA, argBytes=20, new ESP=0x001FE9C4
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE980 = 0x00405060
+      [Import] Direct call to KERNEL32.DLL!LCMapStringW at 0x0F000060
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0E000002 ESP=0x001FE980 stack=60 50 40 00 00 00 00 00 00 01 00 00 94 64 40 00
+      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0F000060 ESP=0x001FE980 stack=60 50 40 00 00 00 00 00 00 01 00 00 94 64 40 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!LCMapStringW returned 0x00000002, argBytes=24
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE980 = 0x00405060
+      [Import KERNEL32.DLL!LCMapStringW] Stack state before cleanup:
+        [ESP+00] = 0x001FE980: 0x00405060 (return addr)
+        [ESP+04] = 0x001FE984: 0x00000000 (arg1)
+        [ESP+08] = 0x001FE988: 0x00000100 (arg2)
+        [ESP+12] = 0x001FE98C: 0x00406494 (arg3)
+        [ESP+16] = 0x001FE990: 0x00000001 (arg4)
+        [ESP+20] = 0x001FE994: 0x00000000 (arg5)
+        [ESP+24] = 0x001FE998: 0x00000000 (arg6)
+        [ESP+28] = 0x001FE99C: 0x001FEA1C
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!MultiByteToWideChar from stub at 0x0F000080
+      [Import KERNEL32.DLL!LCMapStringW] Stack cleanup: ESP=0x001FE980, retEIP=0x00405060, argBytes=24, new ESP=0x001FE99C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE980 = 0x004050FD
+      [Import] Direct call to KERNEL32.DLL!MultiByteToWideChar at 0x0F000080
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0E000002 ESP=0x001FE980 stack=FD 50 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
+      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0F000080 ESP=0x001FE980 stack=FD 50 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!MultiByteToWideChar returned 0x00000100, argBytes=24
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE980 = 0x004050FD
+      [Import KERNEL32.DLL!MultiByteToWideChar] Stack state before cleanup:
+        [ESP+00] = 0x001FE980: 0x004050FD (return addr)
+        [ESP+04] = 0x001FE984: 0x0000FDE9 (arg1)
+        [ESP+08] = 0x001FE988: 0x00000001 (arg2)
+        [ESP+12] = 0x001FE98C: 0x001FEE1C (arg3)
+        [ESP+16] = 0x001FE990: 0x00000100 (arg4)
+        [ESP+20] = 0x001FE994: 0x00000000 (arg5)
+        [ESP+24] = 0x001FE998: 0x00000000 (arg6)
+        [ESP+28] = 0x001FE99C: 0x001FEA1C
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!MultiByteToWideChar from stub at 0x0F000080
+      [Import KERNEL32.DLL!MultiByteToWideChar] Stack cleanup: ESP=0x001FE980, retEIP=0x004050FD, argBytes=24, new ESP=0x001FE99C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE780 = 0x00405155
+      [Import] Direct call to KERNEL32.DLL!MultiByteToWideChar at 0x0F000080
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0E000002 ESP=0x001FE780 stack=55 51 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
+      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0F000080 ESP=0x001FE780 stack=55 51 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!MultiByteToWideChar returned 0x00000100, argBytes=24
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE780 = 0x00405155
+      [Import KERNEL32.DLL!MultiByteToWideChar] Stack state before cleanup:
+        [ESP+00] = 0x001FE780: 0x00405155 (return addr)
+        [ESP+04] = 0x001FE784: 0x0000FDE9 (arg1)
+        [ESP+08] = 0x001FE788: 0x00000001 (arg2)
+        [ESP+12] = 0x001FE78C: 0x001FEE1C (arg3)
+        [ESP+16] = 0x001FE790: 0x00000100 (arg4)
+        [ESP+20] = 0x001FE794: 0x001FE79C (arg5)
+        [ESP+24] = 0x001FE798: 0x00000100 (arg6)
+        [ESP+28] = 0x001FE79C: 0x00010020
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!LCMapStringW from stub at 0x0F000060
+      [Import KERNEL32.DLL!MultiByteToWideChar] Stack cleanup: ESP=0x001FE780, retEIP=0x00405155, argBytes=24, new ESP=0x001FE79C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE780 = 0x0040516B
+      [Import] Direct call to KERNEL32.DLL!LCMapStringW at 0x0F000060
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0E000002 ESP=0x001FE780 stack=6B 51 40 00 00 00 00 00 00 01 00 00 9C E7 1F 00
+      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0F000060 ESP=0x001FE780 stack=6B 51 40 00 00 00 00 00 00 01 00 00 9C E7 1F 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!LCMapStringW returned 0x00000101, argBytes=24
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE780 = 0x0040516B
+      [Import KERNEL32.DLL!LCMapStringW] Stack state before cleanup:
+        [ESP+00] = 0x001FE780: 0x0040516B (return addr)
+        [ESP+04] = 0x001FE784: 0x00000000 (arg1)
+        [ESP+08] = 0x001FE788: 0x00000100 (arg2)
+        [ESP+12] = 0x001FE78C: 0x001FE79C (arg3)
+        [ESP+16] = 0x001FE790: 0x00000100 (arg4)
+        [ESP+20] = 0x001FE794: 0x00000000 (arg5)
+        [ESP+24] = 0x001FE798: 0x00000000 (arg6)
+        [ESP+28] = 0x001FE79C: 0x00010020
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!LCMapStringW from stub at 0x0F000060
+      [Import KERNEL32.DLL!LCMapStringW] Stack cleanup: ESP=0x001FE780, retEIP=0x0040516B, argBytes=24, new ESP=0x001FE79C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE57C = 0x00405206
+      [Import] Direct call to KERNEL32.DLL!LCMapStringW at 0x0F000060
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0E000002 ESP=0x001FE57C stack=06 52 40 00 00 00 00 00 00 01 00 00 9C E7 1F 00
+      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0F000060 ESP=0x001FE57C stack=06 52 40 00 00 00 00 00 00 01 00 00 9C E7 1F 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!LCMapStringW returned 0x00000101, argBytes=24
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE57C = 0x00405206
+      [Import KERNEL32.DLL!LCMapStringW] Stack state before cleanup:
+        [ESP+00] = 0x001FE57C: 0x00405206 (return addr)
+        [ESP+04] = 0x001FE580: 0x00000000 (arg1)
+        [ESP+08] = 0x001FE584: 0x00000100 (arg2)
+        [ESP+12] = 0x001FE588: 0x001FE79C (arg3)
+        [ESP+16] = 0x001FE58C: 0x00000100 (arg4)
+        [ESP+20] = 0x001FE590: 0x001FE598 (arg5)
+        [ESP+24] = 0x001FE594: 0x00000101 (arg6)
+        [ESP+28] = 0x001FE598: 0x00010020
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000200
+      [Import KERNEL32.DLL!LCMapStringW] Stack cleanup: ESP=0x001FE57C, retEIP=0x00405206, argBytes=24, new ESP=0x001FE598
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE574 = 0x0040522B
+      [Import] Direct call to KERNEL32.DLL!WideCharToMultiByte at 0x0F000200
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FE574 stack=2B 52 40 00 E9 FD 00 00 20 02 00 00 98 E5 1F 00
+      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0F000200 ESP=0x001FE574 stack=2B 52 40 00 E9 FD 00 00 20 02 00 00 98 E5 1F 00
 info: Win32Emu.Emulator[0]
       [Kernel32] WideCharToMultiByte: CP=Utf8 cchWide=257 lpWide=0x001FE598 cbMulti=256 lpMulti=0x001FED1C
 info: Win32Emu.Emulator[0]
@@ -433,53 +683,98 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000000, argBytes=32
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE574 = 0x0040522B
+      [Import KERNEL32.DLL!WideCharToMultiByte] Stack state before cleanup:
+        [ESP+00] = 0x001FE574: 0x0040522B (return addr)
+        [ESP+04] = 0x001FE578: 0x0000FDE9 (arg1)
+        [ESP+08] = 0x001FE57C: 0x00000220 (arg2)
+        [ESP+12] = 0x001FE580: 0x001FE598 (arg3)
+        [ESP+16] = 0x001FE584: 0x00000101 (arg4)
+        [ESP+20] = 0x001FE588: 0x001FED1C (arg5)
+        [ESP+24] = 0x001FE58C: 0x00000100 (arg6)
+        [ESP+28] = 0x001FE590: 0x00000000 (arg7)
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!MultiByteToWideChar from stub at 0x0F000080
+      [Import KERNEL32.DLL!WideCharToMultiByte] Stack cleanup: ESP=0x001FE574, retEIP=0x0040522B, argBytes=32, new ESP=0x001FE598
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE960 = 0x004050FD
+      [Import] Direct call to KERNEL32.DLL!MultiByteToWideChar at 0x0F000080
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0E000002 ESP=0x001FE960 stack=FD 50 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
+      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0F000080 ESP=0x001FE960 stack=FD 50 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!MultiByteToWideChar returned 0x00000100, argBytes=24
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE960 = 0x004050FD
+      [Import KERNEL32.DLL!MultiByteToWideChar] Stack state before cleanup:
+        [ESP+00] = 0x001FE960: 0x004050FD (return addr)
+        [ESP+04] = 0x001FE964: 0x0000FDE9 (arg1)
+        [ESP+08] = 0x001FE968: 0x00000001 (arg2)
+        [ESP+12] = 0x001FE96C: 0x001FEE1C (arg3)
+        [ESP+16] = 0x001FE970: 0x00000100 (arg4)
+        [ESP+20] = 0x001FE974: 0x00000000 (arg5)
+        [ESP+24] = 0x001FE978: 0x00000000 (arg6)
+        [ESP+28] = 0x001FE97C: 0x001FEA1C
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!MultiByteToWideChar from stub at 0x0F000080
+      [Import KERNEL32.DLL!MultiByteToWideChar] Stack cleanup: ESP=0x001FE960, retEIP=0x004050FD, argBytes=24, new ESP=0x001FE97C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE760 = 0x00405155
+      [Import] Direct call to KERNEL32.DLL!MultiByteToWideChar at 0x0F000080
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0E000002 ESP=0x001FE760 stack=55 51 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
+      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0F000080 ESP=0x001FE760 stack=55 51 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!MultiByteToWideChar returned 0x00000100, argBytes=24
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE760 = 0x00405155
+      [Import KERNEL32.DLL!MultiByteToWideChar] Stack state before cleanup:
+        [ESP+00] = 0x001FE760: 0x00405155 (return addr)
+        [ESP+04] = 0x001FE764: 0x0000FDE9 (arg1)
+        [ESP+08] = 0x001FE768: 0x00000001 (arg2)
+        [ESP+12] = 0x001FE76C: 0x001FEE1C (arg3)
+        [ESP+16] = 0x001FE770: 0x00000100 (arg4)
+        [ESP+20] = 0x001FE774: 0x001FE77C (arg5)
+        [ESP+24] = 0x001FE778: 0x00000100 (arg6)
+        [ESP+28] = 0x001FE77C: 0x00010020
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!LCMapStringW from stub at 0x0F000060
+      [Import KERNEL32.DLL!MultiByteToWideChar] Stack cleanup: ESP=0x001FE760, retEIP=0x00405155, argBytes=24, new ESP=0x001FE77C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE760 = 0x0040516B
+      [Import] Direct call to KERNEL32.DLL!LCMapStringW at 0x0F000060
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0E000002 ESP=0x001FE760 stack=6B 51 40 00 00 00 00 00 00 02 00 00 7C E7 1F 00
+      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0F000060 ESP=0x001FE760 stack=6B 51 40 00 00 00 00 00 00 02 00 00 7C E7 1F 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!LCMapStringW returned 0x00000101, argBytes=24
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE760 = 0x0040516B
+      [Import KERNEL32.DLL!LCMapStringW] Stack state before cleanup:
+        [ESP+00] = 0x001FE760: 0x0040516B (return addr)
+        [ESP+04] = 0x001FE764: 0x00000000 (arg1)
+        [ESP+08] = 0x001FE768: 0x00000200 (arg2)
+        [ESP+12] = 0x001FE76C: 0x001FE77C (arg3)
+        [ESP+16] = 0x001FE770: 0x00000100 (arg4)
+        [ESP+20] = 0x001FE774: 0x00000000 (arg5)
+        [ESP+24] = 0x001FE778: 0x00000000 (arg6)
+        [ESP+28] = 0x001FE77C: 0x00010020
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!LCMapStringW from stub at 0x0F000060
+      [Import KERNEL32.DLL!LCMapStringW] Stack cleanup: ESP=0x001FE760, retEIP=0x0040516B, argBytes=24, new ESP=0x001FE77C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE55C = 0x00405206
+      [Import] Direct call to KERNEL32.DLL!LCMapStringW at 0x0F000060
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0E000002 ESP=0x001FE55C stack=06 52 40 00 00 00 00 00 00 02 00 00 7C E7 1F 00
+      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0F000060 ESP=0x001FE55C stack=06 52 40 00 00 00 00 00 00 02 00 00 7C E7 1F 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!LCMapStringW returned 0x00000101, argBytes=24
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE55C = 0x00405206
+      [Import KERNEL32.DLL!LCMapStringW] Stack state before cleanup:
+        [ESP+00] = 0x001FE55C: 0x00405206 (return addr)
+        [ESP+04] = 0x001FE560: 0x00000000 (arg1)
+        [ESP+08] = 0x001FE564: 0x00000200 (arg2)
+        [ESP+12] = 0x001FE568: 0x001FE77C (arg3)
+        [ESP+16] = 0x001FE56C: 0x00000100 (arg4)
+        [ESP+20] = 0x001FE570: 0x001FE578 (arg5)
+        [ESP+24] = 0x001FE574: 0x00000101 (arg6)
+        [ESP+28] = 0x001FE578: 0x00010020
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000200
+      [Import KERNEL32.DLL!LCMapStringW] Stack cleanup: ESP=0x001FE55C, retEIP=0x00405206, argBytes=24, new ESP=0x001FE578
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FE554 = 0x0040522B
+      [Import] Direct call to KERNEL32.DLL!WideCharToMultiByte at 0x0F000200
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FE554 stack=2B 52 40 00 E9 FD 00 00 20 02 00 00 78 E5 1F 00
+      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0F000200 ESP=0x001FE554 stack=2B 52 40 00 E9 FD 00 00 20 02 00 00 78 E5 1F 00
 info: Win32Emu.Emulator[0]
       [Kernel32] WideCharToMultiByte: CP=Utf8 cchWide=257 lpWide=0x001FE578 cbMulti=256 lpMulti=0x001FEC1C
 info: Win32Emu.Emulator[0]
@@ -489,13 +784,22 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000000, argBytes=32
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FE554 = 0x0040522B
+      [Import KERNEL32.DLL!WideCharToMultiByte] Stack state before cleanup:
+        [ESP+00] = 0x001FE554: 0x0040522B (return addr)
+        [ESP+04] = 0x001FE558: 0x0000FDE9 (arg1)
+        [ESP+08] = 0x001FE55C: 0x00000220 (arg2)
+        [ESP+12] = 0x001FE560: 0x001FE578 (arg3)
+        [ESP+16] = 0x001FE564: 0x00000101 (arg4)
+        [ESP+20] = 0x001FE568: 0x001FEC1C (arg5)
+        [ESP+24] = 0x001FE56C: 0x00000100 (arg6)
+        [ESP+28] = 0x001FE570: 0x00000000 (arg7)
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetModuleFileNameA from stub at 0x0F000020
+      [Import KERNEL32.DLL!WideCharToMultiByte] Stack cleanup: ESP=0x001FE554, retEIP=0x0040522B, argBytes=32, new ESP=0x001FE578
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF5C = 0x004021DA
+      [Import] Direct call to KERNEL32.DLL!GetModuleFileNameA at 0x0F000020
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetModuleFileNameA at EIP=0x0E000002 ESP=0x001FEF5C stack=DA 21 40 00 00 00 00 00 F8 95 40 00 04 01 00 00
+      Dispatching KERNEL32.DLL!GetModuleFileNameA at EIP=0x0F000020 ESP=0x001FEF5C stack=DA 21 40 00 00 00 00 00 F8 95 40 00 04 01 00 00
 info: Win32Emu.Emulator[0]
       [Kernel32] GetModuleFileNameA called: h=0x00000000 lp=0x004095F8 n=260
 info: Win32Emu.Emulator[0]
@@ -503,173 +807,326 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetModuleFileNameA returned 0x00000013, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF5C = 0x004021DA
+      [Import KERNEL32.DLL!GetModuleFileNameA] Stack state before cleanup:
+        [ESP+00] = 0x001FEF5C: 0x004021DA (return addr)
+        [ESP+04] = 0x001FEF60: 0x00000000 (arg1)
+        [ESP+08] = 0x001FEF64: 0x004095F8 (arg2)
+        [ESP+12] = 0x001FEF68: 0x00000104 (arg3)
+        [ESP+16] = 0x001FEF6C: 0x00000000
+        [ESP+20] = 0x001FEF70: 0x00000000
+        [ESP+24] = 0x001FEF74: 0x00000000
+        [ESP+28] = 0x001FEF78: 0x00000138
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!GetModuleFileNameA] Stack cleanup: ESP=0x001FEF5C, retEIP=0x004021DA, argBytes=12, new ESP=0x001FEF6C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF28 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF28 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002280, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF28: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF2C: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF30: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF34: 0x00000020 (arg3)
+        [ESP+16] = 0x001FEF38: 0x004095F8
+        [ESP+20] = 0x001FEF3C: 0x00401E23
+        [ESP+24] = 0x001FEF40: 0x0000001C
+        [ESP+28] = 0x001FEF44: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF28, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF38
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF48 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF48 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF48 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x010022A0, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF48 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF48: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF4C: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF50: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF54: 0x00000040 (arg3)
+        [ESP+16] = 0x001FEF58: 0x01002277
+        [ESP+20] = 0x001FEF5C: 0x00401E23
+        [ESP+24] = 0x001FEF60: 0x00000034
+        [ESP+28] = 0x001FEF64: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF48, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF58
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x010022E0, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000020 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022A0
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x00000016
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 30 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 30 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002300, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000030 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022A4
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x00000024
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002330, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000010 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022A8
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x0000000E
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002340, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000040 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022AC
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x0000003D
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002380, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000040 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022B0
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x00000039
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x010023C0, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000020 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022B4
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x00000016
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x010023E0, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000020 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022B8
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x00000016
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002400, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000010 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022BC
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x0000000D
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002410, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000010 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022C0
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x0000000C
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002420, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000020 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022C4
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x00000014
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002440, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000010 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022C8
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x0000000E
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002450, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF44: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF48: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF4C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF50: 0x00000020 (arg3)
+        [ESP+16] = 0x001FEF54: 0x010022CC
+        [ESP+20] = 0x001FEF58: 0x00401E23
+        [ESP+24] = 0x001FEF5C: 0x00000012
+        [ESP+28] = 0x001FEF60: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapFree from stub at 0x0F0001B0
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF44, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF54
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF54 = 0x00401F19
+      [Import] Direct call to KERNEL32.DLL!HeapFree at 0x0F0001B0
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapFree at EIP=0x0E000002 ESP=0x001FEF54 stack=19 1F 40 00 40 20 00 01 00 00 00 00 40 21 00 01
+      Dispatching KERNEL32.DLL!HeapFree at EIP=0x0F0001B0 ESP=0x001FEF54 stack=19 1F 40 00 40 20 00 01 00 00 00 00 40 21 00 01
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapFree returned 0x00000001, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF54 = 0x00401F19
+      [Import KERNEL32.DLL!HeapFree] Stack state before cleanup:
+        [ESP+00] = 0x001FEF54: 0x00401F19 (return addr)
+        [ESP+04] = 0x001FEF58: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF5C: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF60: 0x01002140 (arg3)
+        [ESP+16] = 0x001FEF64: 0x010022D0
+        [ESP+20] = 0x001FEF68: 0x01002265
+        [ESP+24] = 0x001FEF6C: 0x001FEFFC
+        [ESP+28] = 0x001FEF70: 0x0040219A
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+      [Import KERNEL32.DLL!HeapFree] Stack cleanup: ESP=0x001FEF54, retEIP=0x00401F19, argBytes=12, new ESP=0x001FEF64
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF40 = 0x00401EB1
+      [Import] Direct call to KERNEL32.DLL!HeapAlloc at 0x0F000010
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF40 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 80 00 00 00
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0F000010 ESP=0x001FEF40 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 80 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002470, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF40 = 0x00401EB1
+      [Import KERNEL32.DLL!HeapAlloc] Stack state before cleanup:
+        [ESP+00] = 0x001FEF40: 0x00401EB1 (return addr)
+        [ESP+04] = 0x001FEF44: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF48: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF4C: 0x00000080 (arg3)
+        [ESP+16] = 0x001FEF50: 0x00407010
+        [ESP+20] = 0x001FEF54: 0x00401E23
+        [ESP+24] = 0x001FEF58: 0x00000080
+        [ESP+28] = 0x001FEF5C: 0x00401E10
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!HeapSize from stub at 0x0F0001A0
+      [Import KERNEL32.DLL!HeapAlloc] Stack cleanup: ESP=0x001FEF40, retEIP=0x00401EB1, argBytes=12, new ESP=0x001FEF50
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF2C = 0x00401DFE
+      [Import] Direct call to KERNEL32.DLL!HeapSize at 0x0F0001A0
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapSize at EIP=0x0E000002 ESP=0x001FEF2C stack=FE 1D 40 00 40 20 00 01 00 00 00 00 70 24 00 01
+      Dispatching KERNEL32.DLL!HeapSize at EIP=0x0F0001A0 ESP=0x001FEF2C stack=FE 1D 40 00 40 20 00 01 00 00 00 00 70 24 00 01
 info: Win32Emu.Emulator[0]
       [Kernel32] HeapSize(hHeap=0x01002040, dwFlags=0x00000000, lpMem=0x01002470)
 info: Win32Emu.Emulator[0]
@@ -677,71 +1134,125 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapSize returned 0x00000080, argBytes=12
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF2C = 0x00401DFE
+      [Import KERNEL32.DLL!HeapSize] Stack state before cleanup:
+        [ESP+00] = 0x001FEF2C: 0x00401DFE (return addr)
+        [ESP+04] = 0x001FEF30: 0x01002040 (arg1)
+        [ESP+08] = 0x001FEF34: 0x00000000 (arg2)
+        [ESP+12] = 0x001FEF38: 0x01002470 (arg3)
+        [ESP+16] = 0x001FEF3C: 0x00407004
+        [ESP+20] = 0x001FEF40: 0x00409550
+        [ESP+24] = 0x001FEF44: 0x00409550
+        [ESP+28] = 0x001FEF48: 0x001FEFFC
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetStartupInfoA from stub at 0x0F000120
+      [Import KERNEL32.DLL!HeapSize] Stack cleanup: ESP=0x001FEF2C, retEIP=0x00401DFE, argBytes=12, new ESP=0x001FEF3C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF80 = 0x00401964
+      [Import] Direct call to KERNEL32.DLL!GetStartupInfoA at 0x0F000120
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStartupInfoA at EIP=0x0E000002 ESP=0x001FEF80 stack=64 19 40 00 A0 EF 1F 00 00 00 00 00 00 00 00 00
+      Dispatching KERNEL32.DLL!GetStartupInfoA at EIP=0x0F000120 ESP=0x001FEF80 stack=64 19 40 00 A0 EF 1F 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStartupInfoA returned 0x00000000, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF80 = 0x00401964
+      [Import KERNEL32.DLL!GetStartupInfoA] Stack state before cleanup:
+        [ESP+00] = 0x001FEF80: 0x00401964 (return addr)
+        [ESP+04] = 0x001FEF84: 0x001FEFA0 (arg1)
+        [ESP+08] = 0x001FEF88: 0x00000000
+        [ESP+12] = 0x001FEF8C: 0x00000000
+        [ESP+16] = 0x001FEF90: 0x00000000
+        [ESP+20] = 0x001FEF94: 0x00000000
+        [ESP+24] = 0x001FEF98: 0x00000000
+        [ESP+28] = 0x001FEF9C: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] KERNEL32.DLL!GetModuleHandleA from stub at 0x0F000110
+      [Import KERNEL32.DLL!GetStartupInfoA] Stack cleanup: ESP=0x001FEF80, retEIP=0x00401964, argBytes=4, new ESP=0x001FEF88
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF74 = 0x00401987
+      [Import] Direct call to KERNEL32.DLL!GetModuleHandleA at 0x0F000110
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetModuleHandleA at EIP=0x0E000002 ESP=0x001FEF74 stack=87 19 40 00 00 00 00 00 00 00 00 00 15 00 00 01
+      Dispatching KERNEL32.DLL!GetModuleHandleA at EIP=0x0F000110 ESP=0x001FEF74 stack=87 19 40 00 00 00 00 00 00 00 00 00 15 00 00 01
 info: Win32Emu.Emulator[0]
       [Kernel32] GetModuleHandleA called: module='NULL (current process)'
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetModuleHandleA returned 0x00400000, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF74 = 0x00401987
+      [Import KERNEL32.DLL!GetModuleHandleA] Stack state before cleanup:
+        [ESP+00] = 0x001FEF74: 0x00401987 (return addr)
+        [ESP+04] = 0x001FEF78: 0x00000000 (arg1)
+        [ESP+08] = 0x001FEF7C: 0x00000000
+        [ESP+12] = 0x001FEF80: 0x01000015
+        [ESP+16] = 0x001FEF84: 0x0000000A
+        [ESP+20] = 0x001FEF88: 0x00000000
+        [ESP+24] = 0x001FEF8C: 0x00000000
+        [ESP+28] = 0x001FEF90: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] USER32.DLL!LoadIconA from stub at 0x0F000350
+      [Import KERNEL32.DLL!GetModuleHandleA] Stack cleanup: ESP=0x001FEF74, retEIP=0x00401987, argBytes=4, new ESP=0x001FEF7C
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF18 = 0x00401239
+      [Import] Direct call to USER32.DLL!LoadIconA at 0x0F000350
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!LoadIconA at EIP=0x0E000002 ESP=0x001FEF18 stack=39 12 40 00 00 00 40 00 00 7F 00 00 00 00 00 00
+      Dispatching USER32.DLL!LoadIconA at EIP=0x0F000350 ESP=0x001FEF18 stack=39 12 40 00 00 00 40 00 00 7F 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [User32] LoadIconA: hInstance=0x00400000 lpIconName=0x00007F00
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!LoadIconA returned 0x00001000, argBytes=8
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF18 = 0x00401239
+      [Import USER32.DLL!LoadIconA] Stack state before cleanup:
+        [ESP+00] = 0x001FEF18: 0x00401239 (return addr)
+        [ESP+04] = 0x001FEF1C: 0x00400000 (arg1)
+        [ESP+08] = 0x001FEF20: 0x00007F00 (arg2)
+        [ESP+12] = 0x001FEF24: 0x00000000
+        [ESP+16] = 0x001FEF28: 0x00000003
+        [ESP+20] = 0x001FEF2C: 0x004012D0
+        [ESP+24] = 0x001FEF30: 0x00000000
+        [ESP+28] = 0x001FEF34: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] USER32.DLL!LoadCursorA from stub at 0x0F000360
+      [Import USER32.DLL!LoadIconA] Stack cleanup: ESP=0x001FEF18, retEIP=0x00401239, argBytes=8, new ESP=0x001FEF24
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF18 = 0x0040124A
+      [Import] Direct call to USER32.DLL!LoadCursorA at 0x0F000360
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!LoadCursorA at EIP=0x0E000002 ESP=0x001FEF18 stack=4A 12 40 00 00 00 00 00 00 7F 00 00 00 00 00 00
+      Dispatching USER32.DLL!LoadCursorA at EIP=0x0F000360 ESP=0x001FEF18 stack=4A 12 40 00 00 00 00 00 00 7F 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [User32] LoadCursorA: hInstance=0x00000000 lpCursorName=0x00007F00
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!LoadCursorA returned 0x00017F00, argBytes=8
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF18 = 0x0040124A
+      [Import USER32.DLL!LoadCursorA] Stack state before cleanup:
+        [ESP+00] = 0x001FEF18: 0x0040124A (return addr)
+        [ESP+04] = 0x001FEF1C: 0x00000000 (arg1)
+        [ESP+08] = 0x001FEF20: 0x00007F00 (arg2)
+        [ESP+12] = 0x001FEF24: 0x00000000
+        [ESP+16] = 0x001FEF28: 0x00000003
+        [ESP+20] = 0x001FEF2C: 0x004012D0
+        [ESP+24] = 0x001FEF30: 0x00000000
+        [ESP+28] = 0x001FEF34: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] GDI32.DLL!GetStockObject from stub at 0x0F0003E0
+      [Import USER32.DLL!LoadCursorA] Stack cleanup: ESP=0x001FEF18, retEIP=0x0040124A, argBytes=8, new ESP=0x001FEF24
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF1C = 0x00401256
+      [Import] Direct call to GDI32.DLL!GetStockObject at 0x0F0003E0
 info: Win32Emu.Emulator[0]
-      Dispatching GDI32.DLL!GetStockObject at EIP=0x0E000002 ESP=0x001FEF1C stack=56 12 40 00 04 00 00 00 00 00 00 00 03 00 00 00
+      Dispatching GDI32.DLL!GetStockObject at EIP=0x0F0003E0 ESP=0x001FEF1C stack=56 12 40 00 04 00 00 00 00 00 00 00 03 00 00 00
 info: Win32Emu.Emulator[0]
       [Gdi32] GetStockObject(4) -> 0x80000000
 info: Win32Emu.Emulator[0]
       [Dispatcher] GDI32.DLL!GetStockObject returned 0x80000000, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF1C = 0x00401256
+      [Import GDI32.DLL!GetStockObject] Stack state before cleanup:
+        [ESP+00] = 0x001FEF1C: 0x00401256 (return addr)
+        [ESP+04] = 0x001FEF20: 0x00000004 (arg1)
+        [ESP+08] = 0x001FEF24: 0x00000000
+        [ESP+12] = 0x001FEF28: 0x00000003
+        [ESP+16] = 0x001FEF2C: 0x004012D0
+        [ESP+20] = 0x001FEF30: 0x00000000
+        [ESP+24] = 0x001FEF34: 0x00000000
+        [ESP+28] = 0x001FEF38: 0x00400000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] USER32.DLL!RegisterClassA from stub at 0x0F000370
+      [Import GDI32.DLL!GetStockObject] Stack cleanup: ESP=0x001FEF1C, retEIP=0x00401256, argBytes=4, new ESP=0x001FEF24
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF1C = 0x00401275
+      [Import] Direct call to USER32.DLL!RegisterClassA at 0x0F000370
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!RegisterClassA at EIP=0x0E000002 ESP=0x001FEF1C stack=75 12 40 00 28 EF 1F 00 00 00 00 00 03 00 00 00
+      Dispatching USER32.DLL!RegisterClassA at EIP=0x0F000370 ESP=0x001FEF1C stack=75 12 40 00 28 EF 1F 00 00 00 00 00 03 00 00 00
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Registered window class: Basic DD
 info: Win32Emu.Emulator[0]
@@ -749,41 +1260,68 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!RegisterClassA returned 0x0000C000, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF1C = 0x00401275
+      [Import USER32.DLL!RegisterClassA] Stack state before cleanup:
+        [ESP+00] = 0x001FEF1C: 0x00401275 (return addr)
+        [ESP+04] = 0x001FEF20: 0x001FEF28 (arg1)
+        [ESP+08] = 0x001FEF24: 0x00000000
+        [ESP+12] = 0x001FEF28: 0x00000003
+        [ESP+16] = 0x001FEF2C: 0x004012D0
+        [ESP+20] = 0x001FEF30: 0x00000000
+        [ESP+24] = 0x001FEF34: 0x00000000
+        [ESP+28] = 0x001FEF38: 0x00400000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] USER32.DLL!GetSystemMetrics from stub at 0x0F000310
+      [Import USER32.DLL!RegisterClassA] Stack cleanup: ESP=0x001FEF1C, retEIP=0x00401275, argBytes=4, new ESP=0x001FEF24
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF0C = 0x0040128C
+      [Import] Direct call to USER32.DLL!GetSystemMetrics at 0x0F000310
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0E000002 ESP=0x001FEF0C stack=8C 12 40 00 01 00 00 00 00 00 00 00 00 00 00 00
+      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0F000310 ESP=0x001FEF0C stack=8C 12 40 00 01 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [User32] GetSystemMetrics: nIndex=SM_CYSCREEN
 info: Win32Emu.Emulator[0]
-      [User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 1080
+      [User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 480
 info: Win32Emu.Emulator[0]
-      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000438, argBytes=4
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x000001E0, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF0C = 0x0040128C
+      [Import USER32.DLL!GetSystemMetrics] Stack state before cleanup:
+        [ESP+00] = 0x001FEF0C: 0x0040128C (return addr)
+        [ESP+04] = 0x001FEF10: 0x00000001 (arg1)
+        [ESP+08] = 0x001FEF14: 0x00000000
+        [ESP+12] = 0x001FEF18: 0x00000000
+        [ESP+16] = 0x001FEF1C: 0x00400000
+        [ESP+20] = 0x001FEF20: 0x00000000
+        [ESP+24] = 0x001FEF24: 0x00000000
+        [ESP+28] = 0x001FEF28: 0x00000003
+
 info: Win32Emu.Emulator[0]
-      [Syscall] USER32.DLL!GetSystemMetrics from stub at 0x0F000310
+      [Import USER32.DLL!GetSystemMetrics] Stack cleanup: ESP=0x001FEF0C, retEIP=0x0040128C, argBytes=4, new ESP=0x001FEF14
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF08 = 0x00401291
+      [Import] Direct call to USER32.DLL!GetSystemMetrics at 0x0F000310
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0E000002 ESP=0x001FEF08 stack=91 12 40 00 00 00 00 00 38 04 00 00 00 00 00 00
+      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0F000310 ESP=0x001FEF08 stack=91 12 40 00 00 00 00 00 E0 01 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [User32] GetSystemMetrics: nIndex=SM_CXSCREEN
 info: Win32Emu.Emulator[0]
-      [User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 1920
+      [User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 640
 info: Win32Emu.Emulator[0]
-      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000780, argBytes=4
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000280, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF08 = 0x00401291
+      [Import USER32.DLL!GetSystemMetrics] Stack state before cleanup:
+        [ESP+00] = 0x001FEF08: 0x00401291 (return addr)
+        [ESP+04] = 0x001FEF0C: 0x00000000 (arg1)
+        [ESP+08] = 0x001FEF10: 0x000001E0
+        [ESP+12] = 0x001FEF14: 0x00000000
+        [ESP+16] = 0x001FEF18: 0x00000000
+        [ESP+20] = 0x001FEF1C: 0x00400000
+        [ESP+24] = 0x001FEF20: 0x00000000
+        [ESP+28] = 0x001FEF24: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] USER32.DLL!CreateWindowExA from stub at 0x0F000300
+      [Import USER32.DLL!GetSystemMetrics] Stack cleanup: ESP=0x001FEF08, retEIP=0x00401291, argBytes=4, new ESP=0x001FEF10
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEEF0 = 0x004012AD
+      [Import] Direct call to USER32.DLL!CreateWindowExA at 0x0F000300
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!CreateWindowExA at EIP=0x0E000002 ESP=0x001FEEF0 stack=AD 12 40 00 08 00 00 00 A4 70 40 00 A4 70 40 00
+      Dispatching USER32.DLL!CreateWindowExA at EIP=0x0F000300 ESP=0x001FEEF0 stack=AD 12 40 00 08 00 00 00 A4 70 40 00 A4 70 40 00
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Created window: HWND=0x00010000 Class='Basic DD' Title='Basic DD'
 info: Win32Emu.Emulator[0]
@@ -797,13 +1335,22 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!CreateWindowExA returned 0x00010000, argBytes=48
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEEF0 = 0x004012AD
+      [Import USER32.DLL!CreateWindowExA] Stack state before cleanup:
+        [ESP+00] = 0x001FEEF0: 0x004012AD (return addr)
+        [ESP+04] = 0x001FEEF4: 0x00000008 (arg1)
+        [ESP+08] = 0x001FEEF8: 0x004070A4 (arg2)
+        [ESP+12] = 0x001FEEFC: 0x004070A4 (arg3)
+        [ESP+16] = 0x001FEF00: 0x80000000 (arg4)
+        [ESP+20] = 0x001FEF04: 0x00000000 (arg5)
+        [ESP+24] = 0x001FEF08: 0x00000000 (arg6)
+        [ESP+28] = 0x001FEF0C: 0x00000280 (arg7)
+
 info: Win32Emu.Emulator[0]
-      [Syscall] USER32.DLL!ShowWindow from stub at 0x0F0002F0
+      [Import USER32.DLL!CreateWindowExA] Stack cleanup: ESP=0x001FEEF0, retEIP=0x004012AD, argBytes=48, new ESP=0x001FEF24
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF18 = 0x004012BB
+      [Import] Direct call to USER32.DLL!ShowWindow at 0x0F0002F0
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!ShowWindow at EIP=0x0E000002 ESP=0x001FEF18 stack=BB 12 40 00 00 00 01 00 0A 00 00 00 00 00 00 00
+      Dispatching USER32.DLL!ShowWindow at EIP=0x0F0002F0 ESP=0x001FEF18 stack=BB 12 40 00 00 00 01 00 0A 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [User32] ShowWindow: HWND=0x00010000 nCmdShow=10
 info: Win32Emu.Emulator[0]
@@ -813,13 +1360,22 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!ShowWindow returned 0x00000000, argBytes=8
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF18 = 0x004012BB
+      [Import USER32.DLL!ShowWindow] Stack state before cleanup:
+        [ESP+00] = 0x001FEF18: 0x004012BB (return addr)
+        [ESP+04] = 0x001FEF1C: 0x00010000 (arg1)
+        [ESP+08] = 0x001FEF20: 0x0000000A (arg2)
+        [ESP+12] = 0x001FEF24: 0x00000000
+        [ESP+16] = 0x001FEF28: 0x00000003
+        [ESP+20] = 0x001FEF2C: 0x004012D0
+        [ESP+24] = 0x001FEF30: 0x00000000
+        [ESP+28] = 0x001FEF34: 0x00000000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] USER32.DLL!UpdateWindow from stub at 0x0F0002E0
+      [Import USER32.DLL!ShowWindow] Stack cleanup: ESP=0x001FEF18, retEIP=0x004012BB, argBytes=8, new ESP=0x001FEF24
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF1C = 0x004012C2
+      [Import] Direct call to USER32.DLL!UpdateWindow at 0x0F0002E0
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!UpdateWindow at EIP=0x0E000002 ESP=0x001FEF1C stack=C2 12 40 00 00 00 01 00 00 00 00 00 03 00 00 00
+      Dispatching USER32.DLL!UpdateWindow at EIP=0x0F0002E0 ESP=0x001FEF1C stack=C2 12 40 00 00 00 01 00 00 00 00 00 03 00 00 00
 info: Win32Emu.Emulator[0]
       [User32] UpdateWindow: HWND=0x00010000
 info: Win32Emu.Emulator[0]
@@ -845,19 +1401,39 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!UpdateWindow returned 0x00000001, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF1C = 0x004012C2
+      [Import USER32.DLL!UpdateWindow] Stack state before cleanup:
+        [ESP+00] = 0x001FEF1C: 0x004012C2 (return addr)
+        [ESP+04] = 0x001FEF20: 0x00010000 (arg1)
+        [ESP+08] = 0x001FEF24: 0x00000000
+        [ESP+12] = 0x001FEF28: 0x00000003
+        [ESP+16] = 0x001FEF2C: 0x004012D0
+        [ESP+20] = 0x001FEF30: 0x00000000
+        [ESP+24] = 0x001FEF34: 0x00000000
+        [ESP+28] = 0x001FEF38: 0x00400000
+
 info: Win32Emu.Emulator[0]
-      [Syscall] USER32.DLL!SetFocus from stub at 0x0F0002D0
+      [Import USER32.DLL!UpdateWindow] Stack cleanup: ESP=0x001FEF1C, retEIP=0x004012C2, argBytes=4, new ESP=0x001FEF24
 info: Win32Emu.Emulator[0]
-      [Syscall] BEFORE API: Return address at 0x001FEF1C = 0x004012C9
+      [Import] Direct call to USER32.DLL!SetFocus at 0x0F0002D0
 info: Win32Emu.Emulator[0]
-      Dispatching USER32.DLL!SetFocus at EIP=0x0E000002 ESP=0x001FEF1C stack=C9 12 40 00 00 00 01 00 00 00 00 00 03 00 00 00
+      Dispatching USER32.DLL!SetFocus at EIP=0x0F0002D0 ESP=0x001FEF1C stack=C9 12 40 00 00 00 01 00 00 00 00 00 03 00 00 00
 info: Win32Emu.Emulator[0]
       [User32] SetFocus: HWND=0x00010000
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!SetFocus returned 0x00000000, argBytes=4
 info: Win32Emu.Emulator[0]
-      [Syscall] AFTER API: Return address at 0x001FEF1C = 0x004012C9
+      [Import USER32.DLL!SetFocus] Stack state before cleanup:
+        [ESP+00] = 0x001FEF1C: 0x004012C9 (return addr)
+        [ESP+04] = 0x001FEF20: 0x00010000 (arg1)
+        [ESP+08] = 0x001FEF24: 0x00000000
+        [ESP+12] = 0x001FEF28: 0x00000003
+        [ESP+16] = 0x001FEF2C: 0x004012D0
+        [ESP+20] = 0x001FEF30: 0x00000000
+        [ESP+24] = 0x001FEF34: 0x00000000
+        [ESP+28] = 0x001FEF38: 0x00400000
+
+info: Win32Emu.Emulator[0]
+      [Import USER32.DLL!SetFocus] Stack cleanup: ESP=0x001FEF1C, retEIP=0x004012C9, argBytes=4, new ESP=0x001FEF24
 info: Win32Emu.Emulator[0]
       [Syscall] DDRAW.DLL!DirectDrawCreateEx from stub at 0x0F000380
 info: Win32Emu.Emulator[0]
@@ -895,11 +1471,26 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::SetCooperativeLevel returned 0x00000000 (argBytes=12)
 info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEB8: 0x0040134B (return addr)
+        [ESP+04] = 0x001FEEBC: 0x010032B0 (arg1)
+        [ESP+08] = 0x001FEEC0: 0x00010000 (arg2)
+        [ESP+12] = 0x001FEEC4: 0x00000011 (arg3)
+        [ESP+16] = 0x001FEEC8: 0xAFAEADAC
+        [ESP+20] = 0x001FEECC: 0xB3B2B1B0
+        [ESP+24] = 0x001FEED0: 0xB7B6B5B4
+        [ESP+28] = 0x001FEED4: 0xBBBAB9B8
+
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEB8, retEIP=0x0040134B, argBytes=12, new ESP=0x001FEEC8
+info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D001150
 info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDraw::SetDisplayMode at address 0x0D001150
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDraw::SetDisplayMode(this=0x010032B0, width=640, height=480, bpp=16)
+info: Win32Emu.Emulator[0]
+      [DDraw] Updated ProcessEnvironment display mode to 640x480x16
 info: Win32Emu.Emulator[0]
       [Avalonia] Initializing Avalonia rendering backend (640x480)...
 info: Win32Emu.Emulator[0]
@@ -913,13 +1504,26 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::SetDisplayMode returned 0x00000000 (argBytes=16)
 info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEAC: 0x00401376 (return addr)
+        [ESP+04] = 0x001FEEB0: 0x010032B0 (arg1)
+        [ESP+08] = 0x001FEEB4: 0x00000280 (arg2)
+        [ESP+12] = 0x001FEEB8: 0x000001E0 (arg3)
+        [ESP+16] = 0x001FEEBC: 0x00000010 (arg4)
+        [ESP+20] = 0x001FEEC0: 0x00000000
+        [ESP+24] = 0x001FEEC4: 0x00000000
+        [ESP+28] = 0x001FEEC8: 0xAFAEADAC
+
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEAC, retEIP=0x00401376, argBytes=16, new ESP=0x001FEEC0
+info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D001060
 info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDraw::CreateSurface at address 0x0D001060
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDraw::CreateSurface(this=0x010032B0, lpDDSurfaceDesc=0x001FEED0, lplpDDSurface=0x00409588, pUnkOuter=0x00000000)
 info: Win32Emu.Emulator[0]
-      [DDraw] Surface creation: flags=0x00000021, caps=0x00000218, width=0, height=0, backbufferCount=1
+      [DDraw] Surface creation: dwSize=124, flags=0x00000021, caps=0x00000218, width=0, height=0, backbufferCount=1
 info: Win32Emu.Emulator[0]
       [COM] Created IDirectDrawSurface object at 0x01003320 (vtable at 0x01003330)
 info: Win32Emu.Emulator[0]
@@ -929,9 +1533,24 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw] Created backbuffer 1 at surface handle 0x71000001, COM object at 0x010033C0
 info: Win32Emu.Emulator[0]
+      [DDraw] Attached backbuffer 0x71000001 to primary surface 0x71000000 (COM=0x01003320), AttachedSurfaces.Count=1
+info: Win32Emu.Emulator[0]
       [DDraw] Created IDirectDrawSurface COM object at 0x01003320 for surface 0x71000000
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::CreateSurface returned 0x00000000 (argBytes=16)
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEA8: 0x004013CE (return addr)
+        [ESP+04] = 0x001FEEAC: 0x010032B0 (arg1)
+        [ESP+08] = 0x001FEEB0: 0x001FEED0 (arg2)
+        [ESP+12] = 0x001FEEB4: 0x00409588 (arg3)
+        [ESP+16] = 0x001FEEB8: 0x00000000 (arg4)
+        [ESP+20] = 0x001FEEBC: 0x00000000
+        [ESP+24] = 0x001FEEC0: 0x00000000
+        [ESP+28] = 0x001FEEC4: 0x00000000
+
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEA8, retEIP=0x004013CE, argBytes=16, new ESP=0x001FEEBC
 info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D0020C0
 info: Win32Emu.Emulator[0]
@@ -939,31 +1558,47 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDrawSurface::GetAttachedSurface(this=0x01003320, lpDDSCaps=0x001FEEC0, lplp=0x0040958C)
 info: Win32Emu.Emulator[0]
+      [DDraw] Found surface: Handle=0x71000000, ComAddr=0x01003320, IsPrimary=True, AttachedSurfaces.Count=1
+info: Win32Emu.Emulator[0]
+      [DDraw] Attached surfaces: 0x71000001
+info: Win32Emu.Emulator[0]
       [DDraw] Requested surface caps: 0x00000004
 info: Win32Emu.Emulator[0]
       [DDraw] Returning attached surface COM object at 0x010033C0
 info: Win32Emu.Emulator[0]
       [COM] IDirectDrawSurface::GetAttachedSurface returned 0x00000000 (argBytes=12)
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEB0: 0x0040140C (return addr)
+        [ESP+04] = 0x001FEEB4: 0x01003320 (arg1)
+        [ESP+08] = 0x001FEEB8: 0x001FEEC0 (arg2)
+        [ESP+12] = 0x001FEEBC: 0x0040958C (arg3)
+        [ESP+16] = 0x001FEEC0: 0x00000004
+        [ESP+20] = 0x001FEEC4: 0x00000000
+        [ESP+24] = 0x001FEEC8: 0x00000000
+        [ESP+28] = 0x001FEECC: 0x00000000
+
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEB0, retEIP=0x0040140C, argBytes=12, new ESP=0x001FEEC0
 fail: Win32Emu.Emulator[0]
       [IcedCpu] Unhandled mnemonic INVALID at 0x0040715A, ESP=0x001FEF70, EBP=0x0040187C, EAX=0x00000065. Likely executing data as code or invalid jump target.
 fail: Win32Emu.Emulator[0]
       [IcedCpu] INVALID instruction encountered - definitely not valid code. Check for corrupted return addresses or bad jumps.
 fail: Win32Emu.Emulator[0]
-      [Emulator] Exception during SingleStep at EIP=0x0040715A, ESP=0x001FEF70, EBP=0x0040187C: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
-      System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
-         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in \\mac\RiderProjects\Win32Emu\Win32Emu\Cpu\Iced\IcedCpu.cs:line 667
-         at Win32Emu.Emulator.RunNormalAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 862
-fail: Win32Emu.Emulator[0]
       [Emulator] Unhandled exception during emulation
       System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
          at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in \\mac\RiderProjects\Win32Emu\Win32Emu\Cpu\Iced\IcedCpu.cs:line 667
-         at Win32Emu.Emulator.RunNormalAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 862
-         at Win32Emu.Emulator.RunAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 583
+         at Win32Emu.Debugging.EnhancedCpuDebugger.SafeSingleStep() in \\mac\RiderProjects\Win32Emu\Win32Emu\Debugging\EnhancedCpuDebugger.cs:line 88
+         at Win32Emu.Emulator.RunWithEnhancedDebugging() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 1137
+         at Win32Emu.Emulator.RunWithEnhancedDebuggingAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 995
+         at Win32Emu.Emulator.RunAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 579
 info: Win32Emu.Emulator[0]
       No unimplemented functions found!
 fail: Win32Emu.Emulator[0]
       Unhandled exception during emulation
       System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
          at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in \\mac\RiderProjects\Win32Emu\Win32Emu\Cpu\Iced\IcedCpu.cs:line 667
-         at Win32Emu.Emulator.RunNormalAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 862
-         at Win32Emu.Emulator.RunAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 583
+         at Win32Emu.Debugging.EnhancedCpuDebugger.SafeSingleStep() in \\mac\RiderProjects\Win32Emu\Win32Emu\Debugging\EnhancedCpuDebugger.cs:line 88
+         at Win32Emu.Emulator.RunWithEnhancedDebugging() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 1137
+         at Win32Emu.Emulator.RunWithEnhancedDebuggingAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 995
+         at Win32Emu.Emulator.RunAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 579
