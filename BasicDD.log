@@ -1027,3 +1027,23 @@ fail: Win32Emu.Emulator[0]
          at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in \\mac\RiderProjects\Win32Emu\Win32Emu\Cpu\Iced\IcedCpu.cs:line 667
          at Win32Emu.Emulator.RunNormalAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 862
          at Win32Emu.Emulator.RunAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 583
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
