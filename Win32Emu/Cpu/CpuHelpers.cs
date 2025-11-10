@@ -393,14 +393,15 @@ public static class CpuHelpers
 			var esp = cpu.GetRegister("ESP");
 			var retEip = memory.Read32(esp);
 			
-			// Dump stack contents for debugging
-			if (logger != null && logger.IsEnabled(LogLevel.Information))
+			// Dump stack contents for debugging (at Debug level to reduce log volume)
+			if (logger != null && logger.IsEnabled(LogLevel.Debug))
 			{
 				var stackDump = new System.Text.StringBuilder();
 				stackDump.AppendLine($"[{context}] Stack state before cleanup:");
 				try
 				{
-					for (int i = 0; i < 8; i++)
+					// Reduced to 4 stack slots to minimize log volume
+					for (int i = 0; i < 4; i++)
 					{
 						var addr = esp + (uint)(i * 4);
 						var val = memory.Read32(addr);
@@ -408,15 +409,16 @@ public static class CpuHelpers
 						stackDump.AppendLine($"  [ESP+{i * 4:D2}] = 0x{addr:X8}: 0x{val:X8}{label}");
 					}
 				}
-				catch
+				catch (Exception ex)
 				{
 					stackDump.AppendLine("  (error reading stack)");
+					logger?.LogError(ex, "[{Context}] Error reading stack for dump", context);
 				}
-				logger.LogInformation(stackDump.ToString());
+				logger.LogDebug(stackDump.ToString());
 			}
 			
-			// Log detailed stack cleanup information
-			logger?.LogInformation("[{Context}] Stack cleanup: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}, argBytes={ArgBytes}, new ESP=0x{NewEsp:X8}",
+			// Log detailed stack cleanup information at Debug level
+			logger?.LogDebug("[{Context}] Stack cleanup: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}, argBytes={ArgBytes}, new ESP=0x{NewEsp:X8}",
 				context, esp, retEip, argBytes, esp + 4 + (uint)argBytes);
 			
 			// Clean up stack: pop return address + arguments (stdcall convention)

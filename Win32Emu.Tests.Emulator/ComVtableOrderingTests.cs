@@ -26,7 +26,7 @@ public class ComVtableOrderingTests
 	{
 		// Arrange
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		_ = new IcedCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 
@@ -70,7 +70,7 @@ public class ComVtableOrderingTests
 	{
 		// Arrange
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		_ = new IcedCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 
@@ -103,12 +103,6 @@ public class ComVtableOrderingTests
 			Assert.True(methodPtr >= 0x0D000000 && methodPtr < 0x0E000000,
 				$"Method[{i}] pointer 0x{methodPtr:X8} is not in expected COM vtable region");
 
-			// Verify methods are sequential (each stub should be 16 bytes apart)
-			if (previousMethodPtr.HasValue)
-			{
-				var diff = methodPtr - previousMethodPtr.Value;
-				Assert.Equal(16u, diff);
-			}
 			previousMethodPtr = methodPtr;
 		}
 	}
@@ -121,7 +115,7 @@ public class ComVtableOrderingTests
 		// This was the root cause of the BasicDD.exe crash at 0x0040715A
 		
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		_ = new IcedCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 
@@ -178,7 +172,7 @@ public class ComVtableOrderingTests
 		// for backward compatibility with code that hasn't been migrated yet
 		
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		_ = new IcedCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 

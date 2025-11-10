@@ -759,6 +759,8 @@ namespace Win32Emu.Win32.Modules
 
 			// Create COM vtable for IDirectDrawSurface interface
 			// IMPORTANT: Methods MUST be in exact COM interface order
+			// Reference: https://learn.microsoft.com/en-us/windows/win32/api/ddraw/nn-ddraw-idirectdrawsurface
+			// See MSDN/DirectX SDK for authoritative method order. Do NOT reorder without verifying against official docs.
 			// Using List<KeyValuePair> to guarantee insertion order
 			var vtableMethods = new List<KeyValuePair<string, ComMethodInfo>>
 			{
@@ -842,6 +844,8 @@ namespace Win32Emu.Win32.Modules
 
 					// Create COM vtable for backbuffer
 					// IMPORTANT: Methods MUST be in exact COM interface order (same as primary surface)
+					// Reference: https://learn.microsoft.com/en-us/windows/win32/api/ddraw/nn-ddraw-idirectdrawsurface
+					// See MSDN/DirectX SDK for authoritative method order. Do NOT reorder without verifying against official docs.
 					var backBufferVtableMethods = new List<KeyValuePair<string, ComMethodInfo>>
 					{
 						new("QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem))),
@@ -890,7 +894,7 @@ namespace Win32Emu.Win32.Modules
 
 					_logger.LogInformation("[DDraw] Created backbuffer {Index} at surface handle 0x{Handle:X8}, COM object at 0x{ComAddr:X8}",
 						i + 1, backBufferHandle, backBufferComAddr);
-					_logger.LogInformation("[DDraw] Attached backbuffer 0x{BackBufferHandle:X8} to primary surface 0x{PrimaryHandle:X8} (COM=0x{PrimaryCom:X8}), AttachedSurfaces.Count={Count}",
+					_logger.LogInformation("[DDraw] Attached backbuffer 0x{BackBufferHandle:X8} to primary surface 0x{PrimaryHandle:X8} (COM=0x{ComAddr:X8}), AttachedSurfaces.Count={Count}",
 						backBufferHandle, surface.Handle, surface.ComObjectAddress, surface.AttachedSurfaces.Count);
 				}
 			}
