@@ -1709,10 +1709,6 @@ namespace Win32Emu.Win32.Modules
 			// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
 			var esp = savedEsp;
 
-			// Push return address first
-			esp -= 4;
-			_memory.Write32(esp, RETURN_ADDRESS);
-
 			// Push parameters (right-to-left for stdcall)
 			esp -= 4;
 			_memory.Write32(esp, lParam);
@@ -1725,6 +1721,10 @@ namespace Win32Emu.Win32.Modules
 
 			esp -= 4;
 			_memory.Write32(esp, hwnd);
+
+			// Push return address last (it must be pushed AFTER parameters so it's on top of the stack)
+			esp -= 4;
+			_memory.Write32(esp, RETURN_ADDRESS);
 
 			// Update CPU registers
 			_cpu.SetRegister("ESP", esp);
@@ -3061,10 +3061,6 @@ namespace Win32Emu.Win32.Modules
 			// Set up stack for stdcall convention (parameters pushed right-to-left)
 			var esp = savedEsp;
 
-			// Push return address (we'll use a special marker address)
-			esp -= 4;
-			memory.Write32(esp, RETURN_ADDRESS);
-
 			// Push parameters (right-to-left for stdcall)
 			esp -= 4;
 			memory.Write32(esp, lParam);
@@ -3077,6 +3073,10 @@ namespace Win32Emu.Win32.Modules
 
 			esp -= 4;
 			memory.Write32(esp, hwndDlg);
+
+			// Push return address last (it must be pushed AFTER parameters so it's on top of the stack)
+			esp -= 4;
+			memory.Write32(esp, RETURN_ADDRESS);
 
 			// Update CPU registers
 			cpu.SetRegister("ESP", esp);
