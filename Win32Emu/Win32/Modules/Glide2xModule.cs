@@ -97,6 +97,9 @@ namespace Win32Emu.Win32.Modules
 		private readonly List<Triangle> _triangleBatch = new();
 		private const int MaxBatchSize = 1000;
 		
+		// Hardware acceleration mode (use GPU rendering instead of CPU rasterization)
+		private bool _useHardwareAcceleration = true;
+		
 		// Memory reference for drawing operations (set during TryInvokeUnsafe)
 		private VirtualMemory? _currentMemory;
 		
@@ -501,18 +504,36 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogDebug("[GLIDE2x] grBufferSwap called");
 			
-			if (!_windowOpen || _renderingBackend == null || _frameBuffer == null)
+			if (!_windowOpen || _renderingBackend == null)
 			{
-				_logger.LogWarning("[GLIDE2x] grBufferSwap: Window not open or no frame buffer");
+				_logger.LogWarning("[GLIDE2x] grBufferSwap: Window not open or no rendering backend");
 				return 0;
 			}
 			
 			// Flush any pending triangles before swapping
 			FlushTriangleBatch();
 			
-			// Update the display with the frame buffer
-			_renderingBackend.UpdateFrameBuffer(_frameBuffer, _width * 4);
+			// End frame and present to screen
+			if (_useHardwareAcceleration)
+			{
+				_renderingBackend.EndFrame();
+			}
+			else
+			{
+				// Software rasterization path - update frame buffer
+				if (_frameBuffer != null)
+				{
+					_renderingBackend.UpdateFrameBuffer(_frameBuffer, _width * 4);
+				}
+			}
+			
 			_renderingBackend.ProcessEvents();
+			
+			// Begin next frame
+			if (_useHardwareAcceleration)
+			{
+				_renderingBackend.BeginFrame();
+			}
 			
 			_logger.LogDebug("[GLIDE2x] Buffer swapped successfully");
 			return 0; // Success (void function)
@@ -1202,11 +1223,17 @@ namespace Win32Emu.Win32.Modules
 				_env.SubscribeToUIEvents(_renderingBackend, null);
 			}
 			
-			// Allocate frame buffer
+			// Allocate frame buffer (still needed for software rasterization fallback and LFB access)
 			_frameBuffer = new byte[_width * _height * 4]; // RGBA format
 			_windowOpen = true;
 			
-			_logger.LogInformation("[GLIDE2x] Window opened successfully");
+			// Begin first frame if using hardware acceleration
+			if (_useHardwareAcceleration)
+			{
+				_renderingBackend.BeginFrame();
+			}
+			
+			_logger.LogInformation("[GLIDE2x] Window opened successfully (HW Accel: {HwAccel})", _useHardwareAcceleration);
 			return 1; // TRUE - success
 		}
 
@@ -1610,21 +1637,126 @@ namespace Win32Emu.Win32.Modules
 				return;
 			}
 			
-			_logger.LogDebug("[GLIDE2x] Flushing {Count} triangles to rendering backend", _triangleBatch.Count);
+			_logger.LogDebug("[GLIDE2x] Flushing {Count} triangles to rendering backend (HW Accel: {HwAccel})", 
+				_triangleBatch.Count, _useHardwareAcceleration);
 			
-			// Render each triangle to the frame buffer
-			foreach (var tri in _triangleBatch)
+			if (_useHardwareAcceleration)
 			{
-				RenderTriangle(tri);
+				// Hardware-accelerated path: convert triangles to vertices and indices
+				var vertices = new List<Rendering.Vertex>();
+				var indices = new List<ushort>();
+				
+				foreach (var tri in _triangleBatch)
+				{
+					ushort baseIndex = (ushort)vertices.Count;
+					
+					// Add 3 vertices for this triangle
+					vertices.Add(ConvertGrVertexToVertex(tri.v0));
+					vertices.Add(ConvertGrVertexToVertex(tri.v1));
+					vertices.Add(ConvertGrVertexToVertex(tri.v2));
+					
+					// Add indices (simple: 0, 1, 2 for each triangle)
+					indices.Add(baseIndex);
+					indices.Add((ushort)(baseIndex + 1));
+					indices.Add((ushort)(baseIndex + 2));
+				}
+				
+				// Set render state from current Glide state
+				UpdateRenderState();
+				
+				// Bind texture if one is active
+				if (_currentTextureTMU0 != 0)
+				{
+					_renderingBackend.BindTexture(_currentTextureTMU0);
+				}
+				else
+				{
+					_renderingBackend.BindTexture(0); // No texture
+				}
+				
+				// Draw triangles using hardware acceleration
+				_renderingBackend.DrawTriangles(vertices.ToArray(), indices.ToArray());
 			}
-			
-			// Update the display
-			if (_frameBuffer != null)
+			else
 			{
-				_renderingBackend.UpdateFrameBuffer(_frameBuffer, _width * 4);
+				// Software rasterization path (fallback)
+				foreach (var tri in _triangleBatch)
+				{
+					RenderTriangle(tri);
+				}
+				
+				// Update the display
+				if (_frameBuffer != null)
+				{
+					_renderingBackend.UpdateFrameBuffer(_frameBuffer, _width * 4);
+				}
 			}
 			
 			_triangleBatch.Clear();
+		}
+		
+		/// <summary>
+		/// Convert a Glide vertex to a rendering backend vertex
+		/// </summary>
+		private Rendering.Vertex ConvertGrVertexToVertex(GrVertex v)
+		{
+			return new Rendering.Vertex
+			{
+				Position = new System.Numerics.Vector3(v.x, v.y, v.z),
+				Color = new System.Numerics.Vector4(
+					v.r / 255.0f,
+					v.g / 255.0f,
+					v.b / 255.0f,
+					v.a / 255.0f
+				),
+				TexCoord = new System.Numerics.Vector2(v.tmu0.sow, v.tmu0.tow),
+				Oow = v.oow
+			};
+		}
+		
+		/// <summary>
+		/// Update rendering backend state from Glide state
+		/// </summary>
+		private void UpdateRenderState()
+		{
+			if (_renderingBackend == null)
+			{
+				return;
+			}
+			
+			// Map Glide blend mode to rendering backend blend mode
+			// For simplicity, we'll use alpha blending if alpha is enabled
+			var blendMode = Rendering.BlendMode.Alpha; // Default to alpha blending for Glide
+			
+			// Map Glide depth test to rendering backend depth test
+			var depthTest = Rendering.DepthTest.Disabled;
+			if (_depthBufferMode != 0) // 0 = disabled
+			{
+				// Map Glide depth function to our depth test enum
+				depthTest = _depthBufferFunction switch
+				{
+					0 => Rendering.DepthTest.Disabled, // never
+					1 => Rendering.DepthTest.Less,      // less
+					2 => Rendering.DepthTest.Equal,     // equal
+					3 => Rendering.DepthTest.LessEqual, // less or equal
+					4 => Rendering.DepthTest.Greater,   // greater
+					5 => Rendering.DepthTest.NotEqual,  // not equal
+					6 => Rendering.DepthTest.GreaterEqual, // greater or equal
+					7 => Rendering.DepthTest.Always,    // always
+					_ => Rendering.DepthTest.LessEqual  // default
+				};
+			}
+			
+			// Map Glide cull mode to rendering backend cull mode
+			var cullMode = _cullMode switch
+			{
+				0 => Rendering.CullMode.None,   // GR_CULL_DISABLE
+				1 => Rendering.CullMode.Front,  // GR_CULL_NEGATIVE
+				2 => Rendering.CullMode.Back,   // GR_CULL_POSITIVE
+				_ => Rendering.CullMode.None
+			};
+			
+			_renderingBackend.SetRenderState(blendMode, depthTest, cullMode);
 		}
 		
 		/// <summary>
