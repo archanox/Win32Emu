@@ -2821,6 +2821,12 @@ namespace Win32Emu.Win32.Modules
 				obj.Width = (int)dwWidth;
 				obj.Height = (int)dwHeight;
 				obj.BitsPerPixel = (int)dwBPP;
+				
+				// Update ProcessEnvironment with display mode for GetSystemMetrics
+				_env.DisplayWidth = (int)dwWidth;
+				_env.DisplayHeight = (int)dwHeight;
+				_env.DisplayBitsPerPixel = (int)dwBPP;
+				_logger.LogInformation("[DDraw] Updated ProcessEnvironment display mode to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
 
 				// Initialize rendering backend with the specified dimensions
 				if (obj.RenderingBackend == null)
