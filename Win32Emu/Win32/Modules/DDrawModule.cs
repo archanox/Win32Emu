@@ -713,12 +713,12 @@ namespace Win32Emu.Win32.Modules
 				dwBackBufferCount = _env.MemRead32(lpDDSurfaceDesc + 20);
 			}
 
-			// Read surface capabilities from offset 108 (DDSURFACEDESC.ddsCaps)
-			// DDSURFACEDESC is 108 bytes, with ddsCaps.dwCaps at offset 108
+			// Read surface capabilities from offset 104 (DDSURFACEDESC.ddsCaps)
+			// DDSURFACEDESC is 108 bytes total (0-107), with ddsCaps.dwCaps at offset 104-107
 			var dwSurfaceCaps = 0u;
 			if (dwSize >= 108)
 			{
-				dwSurfaceCaps = _env.MemRead32(lpDDSurfaceDesc + 108);
+				dwSurfaceCaps = _env.MemRead32(lpDDSurfaceDesc + 104);
 			}
 
 			_logger.LogInformation("[DDraw] Surface creation: dwSize={Size}, flags=0x{Flags:X}, caps=0x{Caps:X8}, width={Width}, height={Height}, backbufferCount={Count}",
