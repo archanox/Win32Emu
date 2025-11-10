@@ -1772,6 +1772,10 @@ public sealed class Emulator : IDisposable
                 {
                     _logger.LogError("[Syscall] ESP=0x{Esp:X8} after syscall return is suspiciously low. This indicates possible stack corruption.", restoredEsp);
                 }
+                
+                // Log CPU state after syscall for debugging
+                var eax = _cpu.GetRegister("EAX");
+                _logger.LogDebug("[Syscall] CPU state after {Dll}!{Name}: EAX=0x{Eax:X8} ESP=0x{Esp:X8}", dll, name, eax, restoredEsp);
             }
             else
             {
