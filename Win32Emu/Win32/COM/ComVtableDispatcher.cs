@@ -282,13 +282,13 @@ public class ComVtableDispatcher
 	/// Internal helper to create a COM object with a vtable, using a generic handler registration action
 	/// </summary>
 	/// <remarks>
-	/// IMPORTANT: The methods dictionary MUST maintain insertion order to match the COM interface vtable layout.
-	/// In .NET 7+, Dictionary preserves insertion order. Methods must be added in the exact order defined
-	/// by the COM interface specification (e.g., QueryInterface, AddRef, Release must be first 3 methods).
+	/// IMPORTANT: The methods collection MUST maintain insertion order to match the COM interface vtable layout.
+	/// Methods must be provided in the exact order defined by the COM interface specification 
+	/// (e.g., QueryInterface, AddRef, Release must be first 3 methods).
 	/// </remarks>
 	private uint CreateComObjectInternal<TMethodInfo>(
 		string interfaceName,
-		Dictionary<string, TMethodInfo> methods,
+		IEnumerable<KeyValuePair<string, TMethodInfo>> methods,
 		Func<TMethodInfo, Func<ICpu, VirtualMemory, uint>?> getSyncHandler,
 		Func<TMethodInfo, Func<ICpu, VirtualMemory, Task<uint>>?> getAsyncHandler,
 		Func<TMethodInfo, int> getArgBytes,
@@ -300,20 +300,23 @@ public class ComVtableDispatcher
 		// COM object layout: [vtable pointer][object data...]
 		var objectAddr = _env.SimpleAlloc(8); // 4 bytes for vtable ptr + 4 bytes for object data
 		
+		// Convert to list to get count and allow indexed access
+		var methodsList = methods.ToList();
+		
 		// Allocate memory for the vtable
-		var vtableSize = (uint)(methods.Count * 4); // 4 bytes per method pointer
+		var vtableSize = (uint)(methodsList.Count * 4); // 4 bytes per method pointer
 		var vtableAddr = _env.SimpleAlloc(vtableSize);
 		
 		// Write vtable pointer to object
 		_env.MemWrite32(objectAddr, vtableAddr);
 		
 		// Create vtable stubs and write function pointers
-		// CRITICAL: Methods are iterated in insertion order (guaranteed in .NET 7+)
+		// CRITICAL: Methods are iterated in the exact order provided
 		// This ensures vtable methods are at the correct offsets as defined by the COM interface
 		var stubAddr = MemoryRegions.ComVtableBase + (objectId * 0x1000); // Each object gets 4KB of address space
 		uint methodIndex = 0;
 		
-		foreach (var kvp in methods)
+		foreach (var kvp in methodsList)
 		{
 			var methodName = kvp.Key;
 			var methodInfo = kvp.Value;
@@ -413,11 +416,10 @@ public class ComVtableDispatcher
 	/// <param name="methods">Ordered list of method name/info pairs in exact COM interface order</param>
 	public uint CreateComObjectOrdered(string interfaceName, List<KeyValuePair<string, ComMethodInfo>> methods)
 	{
-		// Convert list to dictionary - iteration will be in the exact order provided in the list
-		var methodDict = methods.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+		// Pass the list directly - no conversion to dictionary to preserve order
 		return CreateComObjectInternal(
 			interfaceName,
-			methodDict,
+			methods,
 			info => info.Handler,
 			info => null,
 			info => info.ArgBytes,
