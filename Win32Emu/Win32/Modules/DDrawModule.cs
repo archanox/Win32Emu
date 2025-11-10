@@ -758,6 +758,13 @@ namespace Win32Emu.Win32.Modules
 			_surfaces[surfaceHandle] = surface;
 
 			// Create COM vtable for IDirectDrawSurface interface
+			// IMPORTANT: Methods MUST be in exact COM interface order (insertion order preserved in .NET 7+)
+			// IDirectDrawSurface vtable order: QueryInterface, AddRef, Release, AddAttachedSurface, AddOverlayDirtyRect,
+			// Blt, BltBatch, BltFast, DeleteAttachedSurface, EnumAttachedSurfaces, EnumOverlayZOrders, Flip,
+			// GetAttachedSurface, GetBltStatus, GetCaps, GetClipper, GetColorKey, GetDC, GetFlipStatus,
+			// GetOverlayPosition, GetPalette, GetPixelFormat, GetSurfaceDesc, Initialize, IsLost, Lock,
+			// ReleaseDC, Restore, SetClipper, SetColorKey, SetOverlayPosition, SetPalette, Unlock,
+			// UpdateOverlay, UpdateOverlayDisplay, UpdateOverlayZOrder
 			var vtableMethods = new Dictionary<string, ComMethodInfo>
 			{
 				{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
@@ -839,6 +846,7 @@ namespace Win32Emu.Win32.Modules
 					_surfaces[backBufferHandle] = backBuffer;
 
 					// Create COM vtable for backbuffer
+					// IMPORTANT: Methods MUST be in exact COM interface order (same as primary surface)
 					var backBufferVtableMethods = new Dictionary<string, ComMethodInfo>
 					{
 						{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
