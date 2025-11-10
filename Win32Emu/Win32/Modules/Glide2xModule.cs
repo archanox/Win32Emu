@@ -167,7 +167,6 @@ namespace Win32Emu.Win32.Modules
 				case "_GRSSTSELECT@4":
 					{
 						uint which = a.UInt32(0);
-						_logger.LogInformation("[Glide2x] grSstSelect(which={Which})", which);
 						returnValue = grSstSelect(which);
 						return true;
 					}
@@ -175,7 +174,6 @@ namespace Win32Emu.Win32.Modules
 				case "_GRSSTQUERYHARDWARE@4":
 					{
 						uint hwConfigPtr = a.UInt32(0);
-						_logger.LogInformation("[Glide2x] grSstQueryHardware(hwConfigPtr=0x{HwConfigPtr:X8})", hwConfigPtr);
 						returnValue = grSstQueryHardware(hwConfigPtr); // Return TRUE to indicate hardware is present
 						return true;
 					}
@@ -189,24 +187,19 @@ namespace Win32Emu.Win32.Modules
 						uint origin = a.UInt32(4);
 						uint nColBuffers = a.UInt32(5);
 						uint nAuxBuffers = a.UInt32(6);
-						_logger.LogInformation("[Glide2x] grSstWinOpen(hwnd=0x{Hwnd:X8}, resolution={Resolution}, refresh={Refresh}, colorFormat={ColorFormat}, origin={Origin}, nColBuffers={NColBuffers}, nAuxBuffers={NAuxBuffers})", 
-							hwnd, resolution, refresh, colorFormat, origin, nColBuffers, nAuxBuffers);
 						returnValue = grSstWinOpen(hwnd, resolution, refresh, colorFormat, origin, nColBuffers, nAuxBuffers); // Return TRUE for success
 						return true;
 					}
 
 				case "_GRSSTWINCLOSE@0":
-					_logger.LogInformation("[Glide2x] grSstWinClose()");
 					returnValue = grSstWinClose();
 					return true;
 
 				case "_GRSSTIDLE@0":
-					_logger.LogInformation("[Glide2x] grSstIdle()");
 					returnValue = grSstIdle();
 					return true;
 
 				case "_GRSSTVRETRACEON@0":
-					_logger.LogInformation("[Glide2x] grSstVRetraceOn()");
 					returnValue = grSstVRetraceOn(); // Return TRUE
 					return true;
 
@@ -214,7 +207,6 @@ namespace Win32Emu.Win32.Modules
 				case "_GRBUFFERSWAP@4":
 					{
 						uint interval = a.UInt32(0);
-						_logger.LogInformation("[Glide2x] grBufferSwap(interval={Interval})", interval);
 						returnValue = grBufferSwap(interval);
 						return true;
 					}
@@ -460,9 +452,10 @@ namespace Win32Emu.Win32.Modules
 
 
 		[DllModuleExport(1, entryPoint: 0x00005ED0, Version = "4.90.0.3000", ExportName = "_ConvertAndDownloadRle@64", IsStub = true)]
-		public uint ConvertAndDownloadRle(uint p1, uint p2, uint p3, uint p4, uint p5, uint p6, uint p7, uint p8, uint p9, uint p10, uint p11, uint p12, uint p13, uint p14, uint p15, uint p16)
+		public uint ConvertAndDownloadRle(uint tmu, uint startAddress, uint thisLod, uint largeLod, uint aspectRatio, uint format, uint evenOdd, uint bmDataPtr, uint bmHeight, uint u0, uint v0, uint width, uint height, uint destWidth, uint destHeight, uint tlutPtr)
 		{
-			_logger.LogWarning("[GLIDE2x] ConvertAndDownloadRle called (stub)");
+			_logger.LogWarning("[GLIDE2x] ConvertAndDownloadRle(tmu={Tmu}, startAddress=0x{StartAddress:X8}, thisLod={ThisLod}, largeLod={LargeLod}, aspectRatio={AspectRatio}, format={Format}, evenOdd={EvenOdd}, bmDataPtr=0x{BmDataPtr:X8}, bmHeight={BmHeight}, u0={U0}, v0={V0}, width={Width}, height={Height}, destWidth={DestWidth}, destHeight={DestHeight}, tlutPtr=0x{TlutPtr:X8}) - stub", 
+				tmu, startAddress, thisLod, largeLod, aspectRatio, format, evenOdd, bmDataPtr, bmHeight, u0, v0, width, height, destWidth, destHeight, tlutPtr);
 			// TODO: Implement _ConvertAndDownloadRle@64
 			return 0; // DWORD default
 		}
@@ -598,7 +591,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(14, entryPoint: 0x00001220, Version = "4.90.0.3000", ExportName = "_grBufferSwap@4")]
 		public uint grBufferSwap(uint interval)
 		{
-			_logger.LogDebug("[GLIDE2x] grBufferSwap called");
+			_logger.LogDebug("[GLIDE2x] grBufferSwap(interval={Interval})", interval);
 			
 			if (!_windowOpen || _renderingBackend == null)
 			{
@@ -1177,7 +1170,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(68, entryPoint: 0x00004EF0, Version = "4.90.0.3000", ExportName = "_grSstQueryHardware@4")]
 		public uint grSstQueryHardware(uint hwConfigPtr)
 		{
-			_logger.LogDebug("[GLIDE2x] grSstQueryHardware called");
+			_logger.LogDebug("[GLIDE2x] grSstQueryHardware(hwConfigPtr=0x{HwConfigPtr:X8})", hwConfigPtr);
 			// Return TRUE to indicate hardware is present
 			// The actual implementation would fill a GrHwConfiguration structure
 			return 1; // TRUE - hardware available
@@ -1208,7 +1201,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(72, entryPoint: 0x00005030, Version = "4.90.0.3000", ExportName = "_grSstSelect@4")]
 		public uint grSstSelect(uint which)
 		{
-			_logger.LogDebug("[GLIDE2x] grSstSelect called");
+			_logger.LogDebug("[GLIDE2x] grSstSelect(which={Which})", which);
 			// Select which SST (Scan-line Synchronizer/Transformer) to use
 			// Since we're emulating, we only support one virtual SST
 			return 0; // Success (void function)
@@ -1275,7 +1268,8 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(77, entryPoint: 0x00005080, Version = "4.90.0.3000", ExportName = "_grSstWinOpen@28")]
 		public uint grSstWinOpen(uint hwnd, uint resolution, uint refresh, uint colorFormat, uint origin, uint nColBuffers, uint nAuxBuffers)
 		{
-			_logger.LogInformation("[GLIDE2x] grSstWinOpen called");
+			_logger.LogInformation("[GLIDE2x] grSstWinOpen(hwnd=0x{Hwnd:X8}, resolution={Resolution}, refresh={Refresh}, colorFormat={ColorFormat}, origin={Origin}, nColBuffers={NColBuffers}, nAuxBuffers={NAuxBuffers})", 
+				hwnd, resolution, refresh, colorFormat, origin, nColBuffers, nAuxBuffers);
 			
 			if (_windowOpen)
 			{
