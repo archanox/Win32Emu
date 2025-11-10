@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Silk.NET.GLFW;
 using Silk.NET.OpenGL;
 using System.Runtime.InteropServices;
+using System.Buffers;
 
 namespace Win32Emu.Rendering;
 
@@ -482,7 +483,9 @@ void main()
         _gl.VertexAttribPointer(3, 1, VertexAttribPointerType.Float, false, (uint)stride, (void*)(9 * sizeof(float)));
         _gl.EnableVertexAttribArray(3);
 
-        // Bind EBO (will be filled dynamically during rendering)
+        // Bind EBO to the VAO (will be filled dynamically during rendering)
+        // Note: Binding the EBO after the VAO is already bound will associate it with the VAO.
+        // This association is persistent - the VAO "remembers" which EBO is bound to it.
         _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, _hwAccelEbo);
 
         // Unbind
@@ -838,61 +841,67 @@ void main()
 
             // Convert vertices to float array
             // Format: position (3), color (4), texcoord (2), oow (1) = 10 floats per vertex
-            var vertexData = new float[vertices.Length * 10];
-            for (int i = 0; i < vertices.Length; i++)
+            // Use ArrayPool to avoid repeated allocations
+            var vertexDataLength = vertices.Length * 10;
+            var vertexData = ArrayPool<float>.Shared.Rent(vertexDataLength);
+            
+            try
             {
-                var v = vertices[i];
-                var offset = i * 10;
-                
-                // Position
-                vertexData[offset + 0] = v.Position.X;
-                vertexData[offset + 1] = v.Position.Y;
-                vertexData[offset + 2] = v.Position.Z;
-                
-                // Color
-                vertexData[offset + 3] = v.Color.X;
-                vertexData[offset + 4] = v.Color.Y;
-                vertexData[offset + 5] = v.Color.Z;
-                vertexData[offset + 6] = v.Color.W;
-                
-                // Texture coordinates
-                vertexData[offset + 7] = v.TexCoord.X;
-                vertexData[offset + 8] = v.TexCoord.Y;
-                
-                // Oow (1/w)
-                vertexData[offset + 9] = v.Oow;
-            }
+                for (int i = 0; i < vertices.Length; i++)
+                {
+                    var v = vertices[i];
+                    var offset = i * 10;
+                    
+                    // Position
+                    vertexData[offset + 0] = v.Position.X;
+                    vertexData[offset + 1] = v.Position.Y;
+                    vertexData[offset + 2] = v.Position.Z;
+                    
+                    // Color
+                    vertexData[offset + 3] = v.Color.X;
+                    vertexData[offset + 4] = v.Color.Y;
+                    vertexData[offset + 5] = v.Color.Z;
+                    vertexData[offset + 6] = v.Color.W;
+                    
+                    // Texture coordinates
+                    vertexData[offset + 7] = v.TexCoord.X;
+                    vertexData[offset + 8] = v.TexCoord.Y;
+                    
+                    // Oow (1/w)
+                    vertexData[offset + 9] = v.Oow;
+                }
 
-            // Upload vertex data
-            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _hwAccelVbo);
-            fixed (float* vData = vertexData)
+                // Upload vertex data
+                _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _hwAccelVbo);
+                fixed (float* vData = vertexData)
+                {
+                    _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertexDataLength * sizeof(float)), 
+                                  vData, BufferUsageARB.DynamicDraw);
+                }
+
+                // Upload index data
+                _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, _hwAccelEbo);
+                fixed (ushort* iData = indices)
+                {
+                    _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(indices.Length * sizeof(ushort)), 
+                                  iData, BufferUsageARB.DynamicDraw);
+                }
+
+                // Set texture usage uniform
+                var useTextureLoc = _gl.GetUniformLocation(_hwAccelShaderProgram, "useTexture");
+                if (useTextureLoc >= 0)
+                {
+                    _gl.Uniform1(useTextureLoc, _currentBoundTexture != 0 ? 1 : 0);
+                }
+
+                // Draw triangles
+                _gl.DrawElements(PrimitiveType.Triangles, (uint)indices.Length, DrawElementsType.UnsignedShort, null);
+            }
+            finally
             {
-                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertexData.Length * sizeof(float)), 
-                              vData, BufferUsageARB.DynamicDraw);
+                // Return the rented array to the pool
+                ArrayPool<float>.Shared.Return(vertexData);
             }
-
-            // Upload index data
-            _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, _hwAccelEbo);
-            fixed (ushort* iData = indices)
-            {
-                _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(indices.Length * sizeof(ushort)), 
-                              iData, BufferUsageARB.DynamicDraw);
-            }
-
-            // Set texture usage uniform
-            var useTextureLoc = _gl.GetUniformLocation(_hwAccelShaderProgram, "useTexture");
-            if (useTextureLoc >= 0)
-            {
-                _gl.Uniform1(useTextureLoc, _currentBoundTexture != 0 ? 1 : 0);
-            }
-
-            // Draw triangles
-            _gl.DrawElements(PrimitiveType.Triangles, (uint)indices.Length, DrawElementsType.UnsignedShort, null);
-
-            // Unbind
-            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
-            _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, 0);
-            _gl.BindVertexArray(0);
         }
     }
 

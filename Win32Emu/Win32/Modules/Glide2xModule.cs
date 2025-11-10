@@ -4,6 +4,7 @@ using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace Win32Emu.Win32.Modules
 {
@@ -98,7 +99,7 @@ namespace Win32Emu.Win32.Modules
 		private const int MaxBatchSize = 1000;
 		
 		// Hardware acceleration mode (use GPU rendering instead of CPU rasterization)
-		private bool _useHardwareAcceleration = true;
+		private readonly bool _useHardwareAcceleration = true;
 		
 		// Memory reference for drawing operations (set during TryInvokeUnsafe)
 		private VirtualMemory? _currentMemory;
@@ -1733,12 +1734,22 @@ namespace Win32Emu.Win32.Modules
 			if (_useHardwareAcceleration)
 			{
 				// Hardware-accelerated path: convert triangles to vertices and indices
-				var vertices = new List<Rendering.Vertex>();
-				var indices = new List<ushort>();
+				// Pre-allocate lists with capacity to avoid resizing
+				var vertices = new List<Rendering.Vertex>(MaxBatchSize * 3);
+				var indices = new List<ushort>(MaxBatchSize * 3);
 				
 				foreach (var tri in _triangleBatch)
 				{
 					ushort baseIndex = (ushort)vertices.Count;
+					
+					// Check for ushort overflow (ushort.MaxValue = 65535)
+					// With MaxBatchSize = 1000, we have max 3000 vertices, which is safe.
+					// If MaxBatchSize increases beyond 21845 triangles, we need to flush earlier.
+					if (vertices.Count + 3 > ushort.MaxValue)
+					{
+						_logger.LogWarning("[GLIDE2x] Vertex count would exceed ushort.MaxValue, flushing batch early");
+						break;
+					}
 					
 					// Add 3 vertices for this triangle
 					vertices.Add(ConvertGrVertexToVertex(tri.v0));
@@ -1765,7 +1776,10 @@ namespace Win32Emu.Win32.Modules
 				}
 				
 				// Draw triangles using hardware acceleration
-				_renderingBackend.DrawTriangles(vertices.ToArray(), indices.ToArray());
+				// Use CollectionsMarshal.AsSpan to avoid ToArray() allocations
+				_renderingBackend.DrawTriangles(
+					CollectionsMarshal.AsSpan(vertices), 
+					CollectionsMarshal.AsSpan(indices));
 			}
 			else
 			{
