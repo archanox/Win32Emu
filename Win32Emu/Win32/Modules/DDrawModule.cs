@@ -758,55 +758,50 @@ namespace Win32Emu.Win32.Modules
 			_surfaces[surfaceHandle] = surface;
 
 			// Create COM vtable for IDirectDrawSurface interface
-			// IMPORTANT: Methods MUST be in exact COM interface order (insertion order preserved in .NET 7+)
-			// IDirectDrawSurface vtable order: QueryInterface, AddRef, Release, AddAttachedSurface, AddOverlayDirtyRect,
-			// Blt, BltBatch, BltFast, DeleteAttachedSurface, EnumAttachedSurfaces, EnumOverlayZOrders, Flip,
-			// GetAttachedSurface, GetBltStatus, GetCaps, GetClipper, GetColorKey, GetDC, GetFlipStatus,
-			// GetOverlayPosition, GetPalette, GetPixelFormat, GetSurfaceDesc, Initialize, IsLost, Lock,
-			// ReleaseDC, Restore, SetClipper, SetColorKey, SetOverlayPosition, SetPalette, Unlock,
-			// UpdateOverlay, UpdateOverlayDisplay, UpdateOverlayZOrder
-			var vtableMethods = new Dictionary<string, ComMethodInfo>
+			// IMPORTANT: Methods MUST be in exact COM interface order
+			// Using List<KeyValuePair> to guarantee insertion order
+			var vtableMethods = new List<KeyValuePair<string, ComMethodInfo>>
 			{
-				{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
-				{ "AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) },
-				{ "Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem)) },
-				{ "AddAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.AddAttachedSurface>((cpu, mem) => Surface_AddAttachedSurface(cpu, mem)) },
-				{ "AddOverlayDirtyRect", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.AddOverlayDirtyRect>((cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem)) },
-				{ "Blt", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Blt>((cpu, mem) => Surface_Blt(cpu, mem)) },
-				{ "BltBatch", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.BltBatch>((cpu, mem) => Surface_BltBatch(cpu, mem)) },
-				{ "BltFast", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.BltFast>((cpu, mem) => Surface_BltFast(cpu, mem)) },
-				{ "DeleteAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.DeleteAttachedSurface>((cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem)) },
-				{ "EnumAttachedSurfaces", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.EnumAttachedSurfaces>((cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem)) },
-				{ "EnumOverlayZOrders", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.EnumOverlayZOrders>((cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem)) },
-				{ "Flip", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Flip>((cpu, mem) => Surface_Flip(cpu, mem)) },
-				{ "GetAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetAttachedSurface>((cpu, mem) => Surface_GetAttachedSurface(cpu, mem)) },
-				{ "GetBltStatus", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetBltStatus>((cpu, mem) => Surface_GetBltStatus(cpu, mem)) },
-				{ "GetCaps", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetCaps>((cpu, mem) => Surface_GetCaps(cpu, mem)) },
-				{ "GetClipper", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetClipper>((cpu, mem) => Surface_GetClipper(cpu, mem)) },
-				{ "GetColorKey", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetColorKey>((cpu, mem) => Surface_GetColorKey(cpu, mem)) },
-				{ "GetDC", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetDC>((cpu, mem) => Surface_GetDC(cpu, mem)) },
-				{ "GetFlipStatus", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetFlipStatus>((cpu, mem) => Surface_GetFlipStatus(cpu, mem)) },
-				{ "GetOverlayPosition", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetOverlayPosition>((cpu, mem) => Surface_GetOverlayPosition(cpu, mem)) },
-				{ "GetPalette", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetPalette>((cpu, mem) => Surface_GetPalette(cpu, mem)) },
-				{ "GetPixelFormat", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetPixelFormat>((cpu, mem) => Surface_GetPixelFormat(cpu, mem)) },
-				{ "GetSurfaceDesc", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetSurfaceDesc>((cpu, mem) => Surface_GetSurfaceDesc(cpu, mem)) },
-				{ "Initialize", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Initialize>((cpu, mem) => Surface_Initialize(cpu, mem)) },
-				{ "IsLost", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.IsLost>((cpu, mem) => Surface_IsLost(cpu, mem)) },
-				{ "Lock", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Lock>((cpu, mem) => Surface_Lock(cpu, mem, surfaceHandle)) },
-				{ "ReleaseDC", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.ReleaseDC>((cpu, mem) => Surface_ReleaseDC(cpu, mem)) },
-				{ "Restore", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Restore>((cpu, mem) => Surface_Restore(cpu, mem)) },
-				{ "SetClipper", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetClipper>((cpu, mem) => Surface_SetClipper(cpu, mem)) },
-				{ "SetColorKey", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetColorKey>((cpu, mem) => Surface_SetColorKey(cpu, mem)) },
-				{ "SetOverlayPosition", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetOverlayPosition>((cpu, mem) => Surface_SetOverlayPosition(cpu, mem)) },
-				{ "SetPalette", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetPalette>((cpu, mem) => Surface_SetPalette(cpu, mem, surfaceHandle)) },
-				{ "Unlock", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Unlock>((cpu, mem) => Surface_Unlock(cpu, mem, surfaceHandle)) },
-				{ "UpdateOverlay", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlay>((cpu, mem) => Surface_UpdateOverlay(cpu, mem)) },
-				{ "UpdateOverlayDisplay", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlayDisplay>((cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem)) },
-				{ "UpdateOverlayZOrder", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlayZOrder>((cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem)) }
+				new("QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem))),
+				new("AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem))),
+				new("Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem))),
+				new("AddAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.AddAttachedSurface>((cpu, mem) => Surface_AddAttachedSurface(cpu, mem))),
+				new("AddOverlayDirtyRect", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.AddOverlayDirtyRect>((cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem))),
+				new("Blt", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Blt>((cpu, mem) => Surface_Blt(cpu, mem))),
+				new("BltBatch", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.BltBatch>((cpu, mem) => Surface_BltBatch(cpu, mem))),
+				new("BltFast", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.BltFast>((cpu, mem) => Surface_BltFast(cpu, mem))),
+				new("DeleteAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.DeleteAttachedSurface>((cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem))),
+				new("EnumAttachedSurfaces", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.EnumAttachedSurfaces>((cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem))),
+				new("EnumOverlayZOrders", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.EnumOverlayZOrders>((cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem))),
+				new("Flip", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Flip>((cpu, mem) => Surface_Flip(cpu, mem))),
+				new("GetAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetAttachedSurface>((cpu, mem) => Surface_GetAttachedSurface(cpu, mem))),
+				new("GetBltStatus", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetBltStatus>((cpu, mem) => Surface_GetBltStatus(cpu, mem))),
+				new("GetCaps", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetCaps>((cpu, mem) => Surface_GetCaps(cpu, mem))),
+				new("GetClipper", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetClipper>((cpu, mem) => Surface_GetClipper(cpu, mem))),
+				new("GetColorKey", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetColorKey>((cpu, mem) => Surface_GetColorKey(cpu, mem))),
+				new("GetDC", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetDC>((cpu, mem) => Surface_GetDC(cpu, mem))),
+				new("GetFlipStatus", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetFlipStatus>((cpu, mem) => Surface_GetFlipStatus(cpu, mem))),
+				new("GetOverlayPosition", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetOverlayPosition>((cpu, mem) => Surface_GetOverlayPosition(cpu, mem))),
+				new("GetPalette", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetPalette>((cpu, mem) => Surface_GetPalette(cpu, mem))),
+				new("GetPixelFormat", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetPixelFormat>((cpu, mem) => Surface_GetPixelFormat(cpu, mem))),
+				new("GetSurfaceDesc", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetSurfaceDesc>((cpu, mem) => Surface_GetSurfaceDesc(cpu, mem))),
+				new("Initialize", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Initialize>((cpu, mem) => Surface_Initialize(cpu, mem))),
+				new("IsLost", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.IsLost>((cpu, mem) => Surface_IsLost(cpu, mem))),
+				new("Lock", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Lock>((cpu, mem) => Surface_Lock(cpu, mem, surfaceHandle))),
+				new("ReleaseDC", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.ReleaseDC>((cpu, mem) => Surface_ReleaseDC(cpu, mem))),
+				new("Restore", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Restore>((cpu, mem) => Surface_Restore(cpu, mem))),
+				new("SetClipper", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetClipper>((cpu, mem) => Surface_SetClipper(cpu, mem))),
+				new("SetColorKey", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetColorKey>((cpu, mem) => Surface_SetColorKey(cpu, mem))),
+				new("SetOverlayPosition", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetOverlayPosition>((cpu, mem) => Surface_SetOverlayPosition(cpu, mem))),
+				new("SetPalette", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetPalette>((cpu, mem) => Surface_SetPalette(cpu, mem, surfaceHandle))),
+				new("Unlock", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Unlock>((cpu, mem) => Surface_Unlock(cpu, mem, surfaceHandle))),
+				new("UpdateOverlay", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlay>((cpu, mem) => Surface_UpdateOverlay(cpu, mem))),
+				new("UpdateOverlayDisplay", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlayDisplay>((cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem))),
+				new("UpdateOverlayZOrder", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlayZOrder>((cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem)))
 			};
 
-			// Create the COM object with vtable
-			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDrawSurface", vtableMethods);
+			// Create the COM object with vtable using ordered method list
+			var comObjectAddr = _env.ComDispatcher.CreateComObjectOrdered("IDirectDrawSurface", vtableMethods);
 			surface.ComObjectAddress = comObjectAddr;
 
 			// Check if this is a flipping complex surface that needs backbuffers
@@ -847,47 +842,47 @@ namespace Win32Emu.Win32.Modules
 
 					// Create COM vtable for backbuffer
 					// IMPORTANT: Methods MUST be in exact COM interface order (same as primary surface)
-					var backBufferVtableMethods = new Dictionary<string, ComMethodInfo>
+					var backBufferVtableMethods = new List<KeyValuePair<string, ComMethodInfo>>
 					{
-						{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
-						{ "AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) },
-						{ "Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem)) },
-						{ "AddAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.AddAttachedSurface>((cpu, mem) => Surface_AddAttachedSurface(cpu, mem)) },
-						{ "AddOverlayDirtyRect", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.AddOverlayDirtyRect>((cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem)) },
-						{ "Blt", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Blt>((cpu, mem) => Surface_Blt(cpu, mem)) },
-						{ "BltBatch", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.BltBatch>((cpu, mem) => Surface_BltBatch(cpu, mem)) },
-						{ "BltFast", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.BltFast>((cpu, mem) => Surface_BltFast(cpu, mem)) },
-						{ "DeleteAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.DeleteAttachedSurface>((cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem)) },
-						{ "EnumAttachedSurfaces", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.EnumAttachedSurfaces>((cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem)) },
-						{ "EnumOverlayZOrders", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.EnumOverlayZOrders>((cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem)) },
-						{ "Flip", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Flip>((cpu, mem) => Surface_Flip(cpu, mem)) },
-						{ "GetAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetAttachedSurface>((cpu, mem) => Surface_GetAttachedSurface(cpu, mem)) },
-						{ "GetBltStatus", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetBltStatus>((cpu, mem) => Surface_GetBltStatus(cpu, mem)) },
-						{ "GetCaps", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetCaps>((cpu, mem) => Surface_GetCaps(cpu, mem)) },
-						{ "GetClipper", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetClipper>((cpu, mem) => Surface_GetClipper(cpu, mem)) },
-						{ "GetColorKey", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetColorKey>((cpu, mem) => Surface_GetColorKey(cpu, mem)) },
-						{ "GetDC", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetDC>((cpu, mem) => Surface_GetDC(cpu, mem)) },
-						{ "GetFlipStatus", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetFlipStatus>((cpu, mem) => Surface_GetFlipStatus(cpu, mem)) },
-						{ "GetOverlayPosition", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetOverlayPosition>((cpu, mem) => Surface_GetOverlayPosition(cpu, mem)) },
-						{ "GetPalette", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetPalette>((cpu, mem) => Surface_GetPalette(cpu, mem)) },
-						{ "GetPixelFormat", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetPixelFormat>((cpu, mem) => Surface_GetPixelFormat(cpu, mem)) },
-						{ "GetSurfaceDesc", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetSurfaceDesc>((cpu, mem) => Surface_GetSurfaceDesc(cpu, mem)) },
-						{ "Initialize", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Initialize>((cpu, mem) => Surface_Initialize(cpu, mem)) },
-						{ "IsLost", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.IsLost>((cpu, mem) => Surface_IsLost(cpu, mem)) },
-						{ "Lock", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Lock>((cpu, mem) => Surface_Lock(cpu, mem, backBufferHandle)) },
-						{ "ReleaseDC", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.ReleaseDC>((cpu, mem) => Surface_ReleaseDC(cpu, mem)) },
-						{ "Restore", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Restore>((cpu, mem) => Surface_Restore(cpu, mem)) },
-						{ "SetClipper", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetClipper>((cpu, mem) => Surface_SetClipper(cpu, mem)) },
-						{ "SetColorKey", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetColorKey>((cpu, mem) => Surface_SetColorKey(cpu, mem)) },
-						{ "SetOverlayPosition", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetOverlayPosition>((cpu, mem) => Surface_SetOverlayPosition(cpu, mem)) },
-						{ "SetPalette", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetPalette>((cpu, mem) => Surface_SetPalette(cpu, mem, backBufferHandle)) },
-						{ "Unlock", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Unlock>((cpu, mem) => Surface_Unlock(cpu, mem, backBufferHandle)) },
-						{ "UpdateOverlay", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlay>((cpu, mem) => Surface_UpdateOverlay(cpu, mem)) },
-						{ "UpdateOverlayDisplay", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlayDisplay>((cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem)) },
-						{ "UpdateOverlayZOrder", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlayZOrder>((cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem)) }
+						new("QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem))),
+						new("AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem))),
+						new("Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem))),
+						new("AddAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.AddAttachedSurface>((cpu, mem) => Surface_AddAttachedSurface(cpu, mem))),
+						new("AddOverlayDirtyRect", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.AddOverlayDirtyRect>((cpu, mem) => Surface_AddOverlayDirtyRect(cpu, mem))),
+						new("Blt", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Blt>((cpu, mem) => Surface_Blt(cpu, mem))),
+						new("BltBatch", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.BltBatch>((cpu, mem) => Surface_BltBatch(cpu, mem))),
+						new("BltFast", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.BltFast>((cpu, mem) => Surface_BltFast(cpu, mem))),
+						new("DeleteAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.DeleteAttachedSurface>((cpu, mem) => Surface_DeleteAttachedSurface(cpu, mem))),
+						new("EnumAttachedSurfaces", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.EnumAttachedSurfaces>((cpu, mem) => Surface_EnumAttachedSurfaces(cpu, mem))),
+						new("EnumOverlayZOrders", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.EnumOverlayZOrders>((cpu, mem) => Surface_EnumOverlayZOrders(cpu, mem))),
+						new("Flip", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Flip>((cpu, mem) => Surface_Flip(cpu, mem))),
+						new("GetAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetAttachedSurface>((cpu, mem) => Surface_GetAttachedSurface(cpu, mem))),
+						new("GetBltStatus", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetBltStatus>((cpu, mem) => Surface_GetBltStatus(cpu, mem))),
+						new("GetCaps", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetCaps>((cpu, mem) => Surface_GetCaps(cpu, mem))),
+						new("GetClipper", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetClipper>((cpu, mem) => Surface_GetClipper(cpu, mem))),
+						new("GetColorKey", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetColorKey>((cpu, mem) => Surface_GetColorKey(cpu, mem))),
+						new("GetDC", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetDC>((cpu, mem) => Surface_GetDC(cpu, mem))),
+						new("GetFlipStatus", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetFlipStatus>((cpu, mem) => Surface_GetFlipStatus(cpu, mem))),
+						new("GetOverlayPosition", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetOverlayPosition>((cpu, mem) => Surface_GetOverlayPosition(cpu, mem))),
+						new("GetPalette", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetPalette>((cpu, mem) => Surface_GetPalette(cpu, mem))),
+						new("GetPixelFormat", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetPixelFormat>((cpu, mem) => Surface_GetPixelFormat(cpu, mem))),
+						new("GetSurfaceDesc", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetSurfaceDesc>((cpu, mem) => Surface_GetSurfaceDesc(cpu, mem))),
+						new("Initialize", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Initialize>((cpu, mem) => Surface_Initialize(cpu, mem))),
+						new("IsLost", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.IsLost>((cpu, mem) => Surface_IsLost(cpu, mem))),
+						new("Lock", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Lock>((cpu, mem) => Surface_Lock(cpu, mem, backBufferHandle))),
+						new("ReleaseDC", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.ReleaseDC>((cpu, mem) => Surface_ReleaseDC(cpu, mem))),
+						new("Restore", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Restore>((cpu, mem) => Surface_Restore(cpu, mem))),
+						new("SetClipper", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetClipper>((cpu, mem) => Surface_SetClipper(cpu, mem))),
+						new("SetColorKey", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetColorKey>((cpu, mem) => Surface_SetColorKey(cpu, mem))),
+						new("SetOverlayPosition", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetOverlayPosition>((cpu, mem) => Surface_SetOverlayPosition(cpu, mem))),
+						new("SetPalette", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.SetPalette>((cpu, mem) => Surface_SetPalette(cpu, mem, backBufferHandle))),
+						new("Unlock", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Unlock>((cpu, mem) => Surface_Unlock(cpu, mem, backBufferHandle))),
+						new("UpdateOverlay", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlay>((cpu, mem) => Surface_UpdateOverlay(cpu, mem))),
+						new("UpdateOverlayDisplay", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlayDisplay>((cpu, mem) => Surface_UpdateOverlayDisplay(cpu, mem))),
+						new("UpdateOverlayZOrder", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.UpdateOverlayZOrder>((cpu, mem) => Surface_UpdateOverlayZOrder(cpu, mem)))
 					};
 
-					var backBufferComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawSurface", backBufferVtableMethods);
+					var backBufferComAddr = _env.ComDispatcher.CreateComObjectOrdered("IDirectDrawSurface", backBufferVtableMethods);
 					backBuffer.ComObjectAddress = backBufferComAddr;
 
 					// Attach the backbuffer to the primary surface
