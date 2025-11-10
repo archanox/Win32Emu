@@ -38,6 +38,45 @@ public class ComVtableDispatcher
 	private readonly Dictionary<uint, ComObjectInfo> _comObjects = new();
 	private uint _nextObjectId = 1;
 	
+	// Define COM interface method orders to ensure vtable methods are in correct sequence
+	// COM interfaces MUST have methods in exact order specified by the interface definition
+	private static readonly Dictionary<string, List<string>> InterfaceMethodOrders = new()
+	{
+		["IDirectDraw"] = new List<string>
+		{
+			"QueryInterface", "AddRef", "Release",
+			"Compact", "CreateClipper", "CreatePalette", "CreateSurface",
+			"DuplicateSurface", "EnumDisplayModes", "EnumSurfaces",
+			"FlipToGDISurface", "GetCaps", "GetDisplayMode",
+			"GetFourCCCodes", "GetGDISurface", "GetMonitorFrequency",
+			"GetScanLine", "GetVerticalBlankStatus", "Initialize",
+			"RestoreDisplayMode", "SetCooperativeLevel", "SetDisplayMode",
+			"WaitForVerticalBlank"
+		},
+		["IDirectDrawSurface"] = new List<string>
+		{
+			"QueryInterface", "AddRef", "Release",
+			"AddAttachedSurface", "AddOverlayDirtyRect", "Blt", "BltBatch", "BltFast",
+			"DeleteAttachedSurface", "EnumAttachedSurfaces", "EnumOverlayZOrders",
+			"Flip", "GetAttachedSurface", "GetBltStatus", "GetCaps", "GetClipper",
+			"GetColorKey", "GetDC", "GetFlipStatus", "GetOverlayPosition",
+			"GetPalette", "GetPixelFormat", "GetSurfaceDesc", "Initialize",
+			"IsLost", "Lock", "ReleaseDC", "Restore", "SetClipper", "SetColorKey",
+			"SetOverlayPosition", "SetPalette", "Unlock", "UpdateOverlay",
+			"UpdateOverlayDisplay", "UpdateOverlayZOrder"
+		},
+		["IDirectDrawPalette"] = new List<string>
+		{
+			"QueryInterface", "AddRef", "Release",
+			"GetCaps", "GetEntries", "Initialize", "SetEntries"
+		},
+		["IDirectDrawClipper"] = new List<string>
+		{
+			"QueryInterface", "AddRef", "Release",
+			"GetClipList", "GetHWnd", "Initialize", "IsClipListChanged", "SetClipList", "SetHWnd"
+		}
+	};
+	
 	public ComVtableDispatcher(ProcessEnvironment env, ILogger? logger = null)
 	{
 		_env = env;
@@ -306,7 +345,32 @@ public class ComVtableDispatcher
 		var stubAddr = MemoryRegions.ComVtableBase + (objectId * 0x1000); // Each object gets 4KB of address space
 		uint methodIndex = 0;
 		
-		foreach (var kvp in methods)
+		// Get the correct method order for this interface to ensure vtable is built correctly
+		// COM interfaces require methods to be in exact order as defined by the interface
+		IEnumerable<KeyValuePair<string, TMethodInfo>> orderedMethods;
+		if (InterfaceMethodOrders.TryGetValue(interfaceName, out var methodOrder))
+		{
+			// Sort methods according to the interface definition order
+			orderedMethods = methodOrder
+				.Where(methodName => methods.ContainsKey(methodName))
+				.Select(methodName => new KeyValuePair<string, TMethodInfo>(methodName, methods[methodName]));
+			
+			// Warn about any methods not in the defined order (they will be skipped)
+			var undefinedMethods = methods.Keys.Except(methodOrder).ToList();
+			if (undefinedMethods.Any())
+			{
+				_logger.LogWarning("[COM] Interface {InterfaceName} has methods not in defined order: {Methods}", 
+					interfaceName, string.Join(", ", undefinedMethods));
+			}
+		}
+		else
+		{
+			// No defined order for this interface, use dictionary order (may cause issues!)
+			_logger.LogWarning("[COM] No method order defined for interface {InterfaceName}, using dictionary order", interfaceName);
+			orderedMethods = methods;
+		}
+		
+		foreach (var kvp in orderedMethods)
 		{
 			var methodName = kvp.Key;
 			var methodInfo = kvp.Value;
