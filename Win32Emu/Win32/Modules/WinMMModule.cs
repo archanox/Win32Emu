@@ -1071,8 +1071,14 @@ namespace Win32Emu.Win32.Modules
 							break;
 						}
 
+						// Suspend execution to preserve CPU state across async boundary
+						var cpuState = CpuHelpers.SuspendExecution(_cpu);
+						
 						// Yield to allow other async operations to proceed
 						await Task.Yield();
+						
+						// Resume execution with preserved state
+						CpuHelpers.ResumeExecution(_cpu, cpuState);
 					}
 
 					var eip = _cpu.GetEip();
