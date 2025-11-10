@@ -1706,8 +1706,12 @@ namespace Win32Emu.Win32.Modules
 			const uint RETURN_ADDRESS = 0xDEADBEEF;
 
 			// Set up stack for stdcall convention (parameters pushed right-to-left)
-			// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
-			var esp = savedEsp;
+			// Reserve STACK_SAFETY_MARGIN to prevent the called function from overwriting critical data
+			// on the stack (such as return addresses from previous calls). The called function may use
+			// stack space for local variables, nested calls, etc., which could overwrite data above
+			// the parameters we push if we don't leave adequate space.
+			const uint STACK_SAFETY_MARGIN = 256;
+			var esp = savedEsp - STACK_SAFETY_MARGIN;
 
 			// Push parameters (right-to-left for stdcall)
 			esp -= 4;
@@ -3059,7 +3063,12 @@ namespace Win32Emu.Win32.Modules
 			const uint RETURN_ADDRESS = 0xDEADBEEF;
 
 			// Set up stack for stdcall convention (parameters pushed right-to-left)
-			var esp = savedEsp;
+			// Reserve STACK_SAFETY_MARGIN to prevent the called function from overwriting critical data
+			// on the stack (such as return addresses from previous calls). The called function may use
+			// stack space for local variables, nested calls, etc., which could overwrite data above
+			// the parameters we push if we don't leave adequate space.
+			const uint STACK_SAFETY_MARGIN = 256;
+			var esp = savedEsp - STACK_SAFETY_MARGIN;
 
 			// Push parameters (right-to-left for stdcall)
 			esp -= 4;
