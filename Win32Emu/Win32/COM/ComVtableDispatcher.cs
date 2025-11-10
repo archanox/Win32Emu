@@ -406,6 +406,25 @@ public class ComVtableDispatcher
 	}
 	
 	/// <summary>
+	/// Create a COM object with a vtable using an ordered list to ensure correct method order.
+	/// This is the RECOMMENDED way to create COM objects to ensure vtable methods are in correct order.
+	/// </summary>
+	/// <param name="interfaceName">Name of the COM interface</param>
+	/// <param name="methods">Ordered list of method name/info pairs in exact COM interface order</param>
+	public uint CreateComObjectOrdered(string interfaceName, List<KeyValuePair<string, ComMethodInfo>> methods)
+	{
+		// Convert list to dictionary - iteration will be in the exact order provided in the list
+		var methodDict = methods.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+		return CreateComObjectInternal(
+			interfaceName,
+			methodDict,
+			info => info.Handler,
+			info => null,
+			info => info.ArgBytes,
+			isAsync: false);
+	}
+	
+	/// <summary>
 	/// Helper to create ComMethodInfo from a delegate type.
 	/// Automatically calculates argBytes from the delegate signature.
 	/// </summary>
