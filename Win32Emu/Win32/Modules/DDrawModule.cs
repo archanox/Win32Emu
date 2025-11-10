@@ -887,6 +887,8 @@ namespace Win32Emu.Win32.Modules
 
 					_logger.LogInformation("[DDraw] Created backbuffer {Index} at surface handle 0x{Handle:X8}, COM object at 0x{ComAddr:X8}",
 						i + 1, backBufferHandle, backBufferComAddr);
+					_logger.LogInformation("[DDraw] Attached backbuffer 0x{BackBufferHandle:X8} to primary surface 0x{PrimaryHandle:X8} (COM=0x{PrimaryCom:X8}), AttachedSurfaces.Count={Count}",
+						backBufferHandle, surface.Handle, surface.ComObjectAddress, surface.AttachedSurfaces.Count);
 				}
 			}
 
@@ -1533,6 +1535,16 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				return (uint)DDResult.DDERR_NOTFOUND;
+			}
+
+			// Log diagnostic information about the found surface
+			_logger.LogInformation("[DDraw] Found surface: Handle=0x{Handle:X8}, ComAddr=0x{ComAddr:X8}, IsPrimary={IsPrimary}, AttachedSurfaces.Count={Count}",
+				surface.Handle, surface.ComObjectAddress, surface.IsPrimary, surface.AttachedSurfaces.Count);
+			
+			// Log all attached surface handles for debugging
+			if (surface.AttachedSurfaces.Count > 0)
+			{
+				_logger.LogInformation("[DDraw] Attached surfaces: {Handles}", string.Join(", ", surface.AttachedSurfaces.Select(h => $"0x{h:X8}")));
 			}
 
 			// Read the requested capabilities
