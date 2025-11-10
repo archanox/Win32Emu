@@ -2137,11 +2137,11 @@ namespace Win32Emu.Win32.Modules
 			switch (nIndex)
 			{
 				case SystemMetric.SM_CXSCREEN: //0:
-					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 1920");
-					return 1920; // SM_CXSCREEN - Screen width
+					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXSCREEN (0): {Width}", _env.DisplayWidth);
+					return _env.DisplayWidth; // SM_CXSCREEN - Screen width (use display mode width)
 				case SystemMetric.SM_CYSCREEN://1:
-					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 1080");
-					return 1080; // SM_CYSCREEN - Screen height
+					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CYSCREEN (1): {Height}", _env.DisplayHeight);
+					return _env.DisplayHeight; // SM_CYSCREEN - Screen height (use display mode height)
 				case SystemMetric.SM_CXMIN://4:
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXSCREEN (4): 640");
 					return 640; // SM_CXMIN - Minimum window width

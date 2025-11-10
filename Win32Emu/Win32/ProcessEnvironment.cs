@@ -84,6 +84,24 @@ public class ProcessEnvironment
 	/// Gets the heap base address (start of heap region).
 	/// </summary>
 	public uint HeapBase { get; private set; }
+	
+	/// <summary>
+	/// Gets or sets the current display mode width. Defaults to 640.
+	/// Updated by DirectDraw SetDisplayMode and used by GetSystemMetrics.
+	/// </summary>
+	public int DisplayWidth { get; set; } = 640;
+	
+	/// <summary>
+	/// Gets or sets the current display mode height. Defaults to 480.
+	/// Updated by DirectDraw SetDisplayMode and used by GetSystemMetrics.
+	/// </summary>
+	public int DisplayHeight { get; set; } = 480;
+	
+	/// <summary>
+	/// Gets or sets the current display mode bits per pixel. Defaults to 16.
+	/// Updated by DirectDraw SetDisplayMode.
+	/// </summary>
+	public int DisplayBitsPerPixel { get; set; } = 16;
 
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
 	{
