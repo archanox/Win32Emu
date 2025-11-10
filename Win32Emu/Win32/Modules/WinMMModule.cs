@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
@@ -36,7 +38,7 @@ namespace Win32Emu.Win32.Modules
 		private uint _timerPeriod;
 
 		// Timer tracking for timeSetEvent implementation
-		private readonly Dictionary<uint, MultimediaTimerInfo> _multimediaTimers = new();
+		private readonly ConcurrentDictionary<uint, MultimediaTimerInfo> _multimediaTimers = new();
 		private uint _nextMultimediaTimerId = 0x1000;
 
 		// Multimedia timer information structure
@@ -247,7 +249,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[WinMM] timeKillEvent({UTimerId})", uTimerId);
 			
 			// Remove the timer from tracking if it exists
-			if (_multimediaTimers.Remove(uTimerId))
+			if (_multimediaTimers.TryRemove(uTimerId, out _))
 			{
 				_logger.LogInformation("[WinMM] timeKillEvent: Removed timer {TimerId}", uTimerId);
 			}
@@ -276,8 +278,8 @@ namespace Win32Emu.Win32.Modules
 				return 0; // NULL - failure
 			}
 
-			// Generate a unique timer ID
-			var timerId = _nextMultimediaTimerId++;
+			// Generate a unique timer ID using thread-safe increment
+			var timerId = Interlocked.Increment(ref _nextMultimediaTimerId) - 1;
 
 			// Create timer info and store it
 			var timerInfo = new MultimediaTimerInfo(
@@ -311,9 +313,6 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogWarning("[WinMM] FireMultimediaTimerAsync: Timer 0x{TimerId:X} not found", timerId);
 				return;
 			}
-
-			// Get current time (in milliseconds since system start)
-			var dwTime = (uint)Environment.TickCount;
 
 			// Call the timer callback using the async pattern
 			// void CALLBACK TimeProc(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
