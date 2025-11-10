@@ -68,7 +68,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	/// If the base address differs from the preferred ImageBase, relocations will be applied.
 	/// </summary>
 	/// <param name="path">Path to the PE file</param>
-	/// <param name="baseAddress">Base address to load the image at. Must be page-aligned (0x1000)</param>
+	/// <param name="baseAddress">Base address to load the image at. Should be page-aligned (0x1000). Caller is responsible for ensuring alignment.</param>
 	/// <returns>Loaded image information</returns>
 	public LoadedImage Load(string path, uint baseAddress)
 	{
@@ -89,7 +89,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	/// If the base address differs from the preferred ImageBase, relocations will be applied.
 	/// </summary>
 	/// <param name="bytes">PE file contents</param>
-	/// <param name="baseAddress">Base address to load the image at. Must be page-aligned (0x1000)</param>
+	/// <param name="baseAddress">Base address to load the image at. Should be page-aligned (0x1000). Caller is responsible for ensuring alignment.</param>
 	/// <returns>Loaded image information</returns>
 	public LoadedImage LoadFromBytes(byte[] bytes, uint baseAddress)
 	{

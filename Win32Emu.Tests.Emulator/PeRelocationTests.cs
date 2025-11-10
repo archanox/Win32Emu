@@ -1,6 +1,7 @@
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
+using AsmResolver;
 using AsmResolver.PE;
 using AsmResolver.PE.File;
 using AsmResolver.PE.Relocations;
@@ -158,12 +159,11 @@ public class PeRelocationTests
 			
 			// Try to read first byte of code section
 			// This should not throw and should return valid data
-			var firstByte = memory.Read8(sectionVa);
-			
-			// Code sections typically start with valid x86 instructions
-			// We just verify we can read the memory without exceptions
-			Assert.True(true, "Code section is accessible after relocation");
+			_ = memory.Read8(sectionVa);
 		}
+		
+		// Ensure at least one code section was checked
+		Assert.True(loadedImage.CodeSections.Any(), "Expected at least one code section to verify");
 	}
 
 	[Fact]
@@ -225,32 +225,27 @@ public class PeRelocationTests
 		}
 
 		// Find a HIGHLOW relocation to verify
-		BaseRelocation? highLowReloc = null;
-		foreach (var reloc in relocations)
-		{
-			if (reloc.Type == RelocationType.HighLow)
-			{
-				highLowReloc = reloc;
-				break;
-			}
-		}
+		BaseRelocation? highLowReloc = relocations
+			.Where(reloc => reloc.Type == RelocationType.HighLow)
+			.Cast<BaseRelocation?>()
+			.FirstOrDefault();
 		
-		if (!highLowReloc.HasValue)
+		if (highLowReloc == null)
 		{
 			return;
 		}
 
 		// Get the RVA of this relocation
 		uint? relocRva = null;
-		if (highLowReloc.Value.Location is AsmResolver.SegmentReference segRef)
+		if (highLowReloc.Value.Location is SegmentReference segRef)
 		{
 			relocRva = segRef.Rva;
 		}
-		else if (highLowReloc.Value.Location is AsmResolver.RelativeReference relRef)
+		else if (highLowReloc.Value.Location is RelativeReference relRef)
 		{
 			relocRva = relRef.Rva;
 		}
-		else if (highLowReloc.Value.Location is AsmResolver.VirtualAddress virtAddr)
+		else if (highLowReloc.Value.Location is VirtualAddress virtAddr)
 		{
 			relocRva = virtAddr.Rva;
 		}
@@ -264,7 +259,7 @@ public class PeRelocationTests
 		// Load at preferred base first
 		var memory1 = new VirtualMemory();
 		var loader1 = new PeImageLoader(memory1, NullLogger.Instance);
-		var image1 = loader1.Load(TestPeFile);
+		loader1.Load(TestPeFile);
 
 		// Read the value at the relocation address (before relocation)
 		var va1 = preferredBase + relocRva.Value;
@@ -274,7 +269,7 @@ public class PeRelocationTests
 		var customBase = preferredBase + 0x10000;
 		var memory2 = new VirtualMemory();
 		var loader2 = new PeImageLoader(memory2, NullLogger.Instance);
-		var image2 = loader2.Load(TestPeFile, customBase);
+		loader2.Load(TestPeFile, customBase);
 
 		// Read the value at the relocation address (after relocation)
 		var va2 = customBase + relocRva.Value;
