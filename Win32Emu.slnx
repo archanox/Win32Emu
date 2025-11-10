@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
+    <File Path="logs/BasicDD.log" />
   </Folder>
   <Folder Name="/Solution Items/Decomp/" />
   <Folder Name="/Solution Items/Decomp/ign_teas/">
