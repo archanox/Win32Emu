@@ -22,8 +22,11 @@ public class ComVtableDispatcher
 	private readonly ProcessEnvironment _env;
 	private readonly ILogger _logger;
 	
-	// Map of vtable stub addresses to handler functions
+	// Map of vtable stub addresses to synchronous handler functions
 	private readonly Dictionary<uint, Func<ICpu, VirtualMemory, uint>> _vtableHandlers = new();
+	
+	// Map of vtable stub addresses to asynchronous handler functions
+	private readonly Dictionary<uint, Func<ICpu, VirtualMemory, Task<uint>>> _vtableAsyncHandlers = new();
 	
 	// Map of vtable stub addresses to method names for debugging
 	private readonly Dictionary<uint, string> _vtableMethodNames = new();
@@ -153,22 +156,138 @@ public class ComVtableDispatcher
 	}
 	
 	/// <summary>
-	/// Create a COM object with a vtable
+	/// Try to invoke a COM vtable method asynchronously
 	/// </summary>
-	public uint CreateComObject(string interfaceName, Dictionary<string, Func<ICpu, VirtualMemory, uint>> methods)
+	public async Task<(bool success, uint returnValue, int argBytes)> TryInvokeAsync(
+		uint address, 
+		ICpu cpu, 
+		VirtualMemory memory,
+		CancellationToken cancellationToken = default)
 	{
-		// Convert to ComMethodInfo with default argBytes of 0 (unknown)
-		var methodsWithInfo = methods.ToDictionary(
-			kvp => kvp.Key,
-			kvp => new ComMethodInfo(kvp.Value, ArgBytes: 0)
-		);
-		return CreateComObject(interfaceName, methodsWithInfo);
+		if (!IsComVtableAddress(address))
+		{
+			return (false, 0, 0);
+		}
+		
+		// Try to get the method name for better logging
+		var methodName = _vtableMethodNames.GetValueOrDefault(address, "Unknown");
+		
+		// Check for async handler first
+		if (_vtableAsyncHandlers.TryGetValue(address, out var asyncHandler))
+		{
+			// Capture register state before method invocation for debugging
+			var eipBefore = cpu.GetEip();
+			var espBefore = cpu.GetRegister("ESP");
+			var ebpBefore = cpu.GetRegister("EBP");
+			var ebxBefore = cpu.GetRegister("EBX");
+			var esiBefore = cpu.GetRegister("ESI");
+			var ediBefore = cpu.GetRegister("EDI");
+			
+			_logger.LogInformation("[COM] Invoking async vtable method: {MethodName} at address 0x{Address:X8}", methodName, address);
+			_logger.LogDebug("[COM] Register state before {MethodName}: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}, EBX=0x{Ebx:X8}, ESI=0x{Esi:X8}, EDI=0x{Edi:X8}", 
+				methodName, eipBefore, espBefore, ebpBefore, ebxBefore, esiBefore, ediBefore);
+			
+			uint returnValue;
+			try
+			{
+				// Save CPU state before async operation
+				var cpuState = CpuHelpers.SuspendExecution(cpu);
+				
+				// Check for cancellation before invoking handler
+				cancellationToken.ThrowIfCancellationRequested();
+				
+				// Invoke async handler
+				returnValue = await asyncHandler(cpu, memory);
+				
+				// Restore CPU state after async operation
+				CpuHelpers.ResumeExecution(cpu, cpuState);
+				
+				_logger.LogDebug("[COM] {MethodName} async handler completed successfully", methodName);
+			}
+			catch (Exception ex)
+			{
+				// Rethrow critical exceptions
+				if (ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException)
+					throw;
+				
+				_logger.LogError(ex, "[COM] Exception in {MethodName} async handler", methodName);
+				returnValue = 0x80004005; // E_FAIL
+			}
+			
+			// Capture register state after method invocation
+			var eipAfter = cpu.GetEip();
+			var espAfter = cpu.GetRegister("ESP");
+			var ebpAfter = cpu.GetRegister("EBP");
+			var ebxAfter = cpu.GetRegister("EBX");
+			var esiAfter = cpu.GetRegister("ESI");
+			var ediAfter = cpu.GetRegister("EDI");
+			
+			// Get argument byte count for stack cleanup
+			var argBytes = _vtableArgBytes.GetValueOrDefault(address, 0);
+			
+			// Log return value and register state after
+			_logger.LogInformation("[COM] {MethodName} returned 0x{ReturnValue:X8} (argBytes={ArgBytes})", methodName, returnValue, argBytes);
+			_logger.LogDebug("[COM] Register state after {MethodName}: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}, EBX=0x{Ebx:X8}, ESI=0x{Esi:X8}, EDI=0x{Edi:X8}", 
+				methodName, eipAfter, espAfter, ebpAfter, ebxAfter, esiAfter, ediAfter);
+			
+			// Verify callee-saved registers are preserved (EBX, ESI, EDI, EBP)
+			if (ebxBefore != ebxAfter)
+			{
+				_logger.LogWarning("[COM] {MethodName} corrupted EBX: before=0x{Before:X8}, after=0x{After:X8}", methodName, ebxBefore, ebxAfter);
+			}
+			if (esiBefore != esiAfter)
+			{
+				_logger.LogWarning("[COM] {MethodName} corrupted ESI: before=0x{Before:X8}, after=0x{After:X8}", methodName, esiBefore, esiAfter);
+			}
+			if (ediBefore != ediAfter)
+			{
+				_logger.LogWarning("[COM] {MethodName} corrupted EDI: before=0x{Before:X8}, after=0x{After:X8}", methodName, ediBefore, ediAfter);
+			}
+			if (ebpBefore != ebpAfter)
+			{
+				_logger.LogWarning("[COM] {MethodName} corrupted EBP: before=0x{Before:X8}, after=0x{After:X8}", methodName, ebpBefore, ebpAfter);
+			}
+			
+			// Verify ESP is unchanged by the handler
+			if (espAfter != espBefore)
+			{
+				_logger.LogWarning("[COM] {MethodName} unexpectedly modified ESP: before=0x{Before:X8}, after=0x{After:X8}, delta={Delta} bytes", 
+					methodName, espBefore, espAfter, (int)espAfter - (int)espBefore);
+			}
+			
+			return (true, returnValue, argBytes);
+		}
+		
+		// Fall back to synchronous handler if no async handler exists
+		if (_vtableHandlers.TryGetValue(address, out var syncHandler))
+		{
+			var cpuState = CpuHelpers.SuspendExecution(cpu);
+			try
+			{
+				var returnValue = syncHandler(cpu, memory);
+				var argBytes = _vtableArgBytes.GetValueOrDefault(address, 0);
+				return (true, returnValue, argBytes);
+			}
+			finally
+			{
+				CpuHelpers.ResumeExecution(cpu, cpuState);
+			}
+		}
+		
+		_logger.LogWarning("[COM] Unhandled COM vtable call at 0x{Address:X8} (method: {MethodName})", address, methodName);
+		return (false, 0, 0);
 	}
 	
 	/// <summary>
-	/// Create a COM object with a vtable, with argument byte metadata for proper stack cleanup
+	/// Internal helper to create a COM object with a vtable, using a generic handler registration action
 	/// </summary>
-	public uint CreateComObject(string interfaceName, Dictionary<string, ComMethodInfo> methods)
+	private uint CreateComObjectInternal<TMethodInfo>(
+		string interfaceName,
+		Dictionary<string, TMethodInfo> methods,
+		Func<TMethodInfo, Func<ICpu, VirtualMemory, uint>?> getSyncHandler,
+		Func<TMethodInfo, Func<ICpu, VirtualMemory, Task<uint>>?> getAsyncHandler,
+		Func<TMethodInfo, int> getArgBytes,
+		bool isAsync)
 	{
 		var objectId = _nextObjectId++;
 		
@@ -209,17 +328,28 @@ public class ComVtableDispatcher
 			};
 			_env.MemWriteBytes(methodStubAddr, stub);
 			
-			// Register the handler
-			_vtableHandlers[methodStubAddr] = methodInfo.Handler;
+			// Register the handler (sync or async)
+			var syncHandler = getSyncHandler(methodInfo);
+			if (syncHandler != null)
+			{
+				_vtableHandlers[methodStubAddr] = syncHandler;
+			}
+			
+			var asyncHandler = getAsyncHandler(methodInfo);
+			if (asyncHandler != null)
+			{
+				_vtableAsyncHandlers[methodStubAddr] = asyncHandler;
+			}
 			
 			// Register the method name for debugging
 			_vtableMethodNames[methodStubAddr] = $"{interfaceName}::{methodName}";
 			
 			// Register argument byte count for stack cleanup
-			_vtableArgBytes[methodStubAddr] = methodInfo.ArgBytes;
+			_vtableArgBytes[methodStubAddr] = getArgBytes(methodInfo);
 			
-			_logger.LogDebug("[COM] {InterfaceName}::{MethodName} -> 0x{MethodStubAddr:X8} (argBytes={ArgBytes})", 
-				interfaceName, methodName, methodStubAddr, methodInfo.ArgBytes);
+			var asyncLabel = isAsync ? "async, " : "";
+			_logger.LogDebug("[COM] {InterfaceName}::{MethodName} -> 0x{MethodStubAddr:X8} ({AsyncLabel}argBytes={ArgBytes})", 
+				interfaceName, methodName, methodStubAddr, asyncLabel, getArgBytes(methodInfo));
 			
 			methodIndex++;
 		}
@@ -234,9 +364,38 @@ public class ComVtableDispatcher
 		
 		_comObjects[objectAddr] = objInfo;
 		
-		_logger.LogInformation("[COM] Created {InterfaceName} object at 0x{ObjectAddr:X8} (vtable at 0x{VtableAddr:X8})", interfaceName, objectAddr, vtableAddr);
+		var asyncPrefix = isAsync ? "async " : "";
+		_logger.LogInformation("[COM] Created {AsyncPrefix}{InterfaceName} object at 0x{ObjectAddr:X8} (vtable at 0x{VtableAddr:X8})", 
+			asyncPrefix, interfaceName, objectAddr, vtableAddr);
 		
 		return objectAddr;
+	}
+	
+	/// <summary>
+	/// Create a COM object with a vtable
+	/// </summary>
+	public uint CreateComObject(string interfaceName, Dictionary<string, Func<ICpu, VirtualMemory, uint>> methods)
+	{
+		// Convert to ComMethodInfo with default argBytes of 0 (unknown)
+		var methodsWithInfo = methods.ToDictionary(
+			kvp => kvp.Key,
+			kvp => new ComMethodInfo(kvp.Value, ArgBytes: 0)
+		);
+		return CreateComObject(interfaceName, methodsWithInfo);
+	}
+	
+	/// <summary>
+	/// Create a COM object with a vtable, with argument byte metadata for proper stack cleanup
+	/// </summary>
+	public uint CreateComObject(string interfaceName, Dictionary<string, ComMethodInfo> methods)
+	{
+		return CreateComObjectInternal(
+			interfaceName,
+			methods,
+			info => info.Handler,
+			info => null,
+			info => info.ArgBytes,
+			isAsync: false);
 	}
 	
 	/// <summary>
@@ -260,6 +419,20 @@ public class ComVtableDispatcher
 		var argBytes = ComDelegateHelper.GetArgBytes(delegateType);
 		
 		return new ComMethodInfo(handler, argBytes);
+	}
+	
+	/// <summary>
+	/// Create a COM object with async vtable handlers
+	/// </summary>
+	public uint CreateComObjectAsync(string interfaceName, Dictionary<string, ComAsyncMethodInfo> methods)
+	{
+		return CreateComObjectInternal(
+			interfaceName,
+			methods,
+			info => null,
+			info => info.AsyncHandler,
+			info => info.ArgBytes,
+			isAsync: true);
 	}
 	
 	private sealed class ComObjectInfo

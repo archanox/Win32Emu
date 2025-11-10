@@ -1763,8 +1763,14 @@ namespace Win32Emu.Win32.Modules
 							break;
 						}
 
+						// Suspend execution to preserve CPU state across async boundary
+						var cpuState = CpuHelpers.SuspendExecution(_cpu);
+						
 						// Yield to allow other async operations to proceed
 						await Task.Yield();
+						
+						// Resume execution with preserved state
+						CpuHelpers.ResumeExecution(_cpu, cpuState);
 					}
 
 					var eip = _cpu.GetEip();
@@ -1813,8 +1819,8 @@ namespace Win32Emu.Win32.Modules
 						}
 					}
 
-					// Execute one instruction
-					var step = _cpu.SingleStep(_memory);
+					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
+					var step = await CpuHelpers.ExecuteAsync(_cpu, _memory);
 
 					// Handle COM vtable and import calls
 					if (HandleComAndImportCalls(step, _cpu, _memory, "CallWindowProcedureAsync", out var stepDesc, out var shouldBreak) && shouldBreak)
@@ -3107,8 +3113,14 @@ namespace Win32Emu.Win32.Modules
 							break;
 						}
 
+						// Suspend execution to preserve CPU state across async boundary
+						var cpuState = CpuHelpers.SuspendExecution(cpu);
+						
 						// Yield to allow other async operations to proceed
 						await Task.Yield();
+						
+						// Resume execution with preserved state
+						CpuHelpers.ResumeExecution(cpu, cpuState);
 					}
 
 					var eip = cpu.GetEip();
@@ -3232,9 +3244,9 @@ namespace Win32Emu.Win32.Modules
 						}
 					}
 
-					// Execute one instruction and check for import calls
+					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
 					string? stepDesc = null;
-					var step = cpu.SingleStep(memory);
+					var step = await CpuHelpers.ExecuteAsync(cpu, memory);
 
 					// Handle COM vtable and import calls using the consolidated helper method
 					if (HandleComAndImportCalls(step, cpu, memory, "CallDialogProcedureAsync", out stepDesc, out var shouldBreak))
