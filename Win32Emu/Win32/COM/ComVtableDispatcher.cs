@@ -254,9 +254,17 @@ public class ComVtableDispatcher
 		// Fall back to synchronous handler if no async handler exists
 		if (_vtableHandlers.TryGetValue(address, out var syncHandler))
 		{
-			var returnValue = syncHandler(cpu, memory);
-			var argBytes = _vtableArgBytes.GetValueOrDefault(address, 0);
-			return (true, returnValue, argBytes);
+			var cpuState = CpuHelpers.SuspendExecution(cpu);
+			try
+			{
+				var returnValue = syncHandler(cpu, memory);
+				var argBytes = _vtableArgBytes.GetValueOrDefault(address, 0);
+				return (true, returnValue, argBytes);
+			}
+			finally
+			{
+				CpuHelpers.ResumeExecution(cpu, cpuState);
+			}
 		}
 		
 		_logger.LogWarning("[COM] Unhandled COM vtable call at 0x{Address:X8} (method: {MethodName})", address, methodName);
