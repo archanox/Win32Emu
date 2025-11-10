@@ -5,7 +5,7 @@ namespace Win32Emu.Rendering;
 /// <summary>
 /// Vertex structure for hardware-accelerated rendering
 /// </summary>
-public struct Vertex
+public struct Vertex : IEquatable<Vertex>
 {
 	/// <summary>
 	/// Position in screen space (x, y, z)
@@ -26,6 +26,34 @@ public struct Vertex
 	/// 1/w for perspective-correct interpolation
 	/// </summary>
 	public float Oow;
+
+	public bool Equals(Vertex other)
+	{
+		return Position.Equals(other.Position) &&
+		       Color.Equals(other.Color) &&
+		       TexCoord.Equals(other.TexCoord) &&
+		       Oow.Equals(other.Oow);
+	}
+
+	public override bool Equals(object? obj)
+	{
+		return obj is Vertex other && Equals(other);
+	}
+
+	public override int GetHashCode()
+	{
+		return HashCode.Combine(Position, Color, TexCoord, Oow);
+	}
+
+	public static bool operator ==(Vertex left, Vertex right)
+	{
+		return left.Equals(right);
+	}
+
+	public static bool operator !=(Vertex left, Vertex right)
+	{
+		return !left.Equals(right);
+	}
 }
 
 /// <summary>
