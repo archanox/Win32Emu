@@ -60,17 +60,44 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	{
 		var image = PEImage.FromFile(path);
 		var headerBytes = File.ReadAllBytes(path);
-		return LoadFromImage(image, path, headerBytes);
+		return LoadFromImage(image, path, headerBytes, null);
+	}
+
+	/// <summary>
+	/// Loads a PE image from a file at a specified base address.
+	/// If the base address differs from the preferred ImageBase, relocations will be applied.
+	/// </summary>
+	/// <param name="path">Path to the PE file</param>
+	/// <param name="baseAddress">Base address to load the image at. Must be page-aligned (0x1000)</param>
+	/// <returns>Loaded image information</returns>
+	public LoadedImage Load(string path, uint baseAddress)
+	{
+		var image = PEImage.FromFile(path);
+		var headerBytes = File.ReadAllBytes(path);
+		return LoadFromImage(image, path, headerBytes, baseAddress);
 	}
 
 	public LoadedImage LoadFromBytes(byte[] bytes)
 	{
 		var image = PEImage.FromBytes(bytes);
 		// For LoadFromBytes, we use a synthetic path since there's no real file
-		return LoadFromImage(image, "<memory>", bytes);
+		return LoadFromImage(image, "<memory>", bytes, null);
 	}
 
-	private LoadedImage LoadFromImage(PEImage image, string sourcePath, byte[] fileBytes)
+	/// <summary>
+	/// Loads a PE image from bytes at a specified base address.
+	/// If the base address differs from the preferred ImageBase, relocations will be applied.
+	/// </summary>
+	/// <param name="bytes">PE file contents</param>
+	/// <param name="baseAddress">Base address to load the image at. Must be page-aligned (0x1000)</param>
+	/// <returns>Loaded image information</returns>
+	public LoadedImage LoadFromBytes(byte[] bytes, uint baseAddress)
+	{
+		var image = PEImage.FromBytes(bytes);
+		return LoadFromImage(image, "<memory>", bytes, baseAddress);
+	}
+
+	private LoadedImage LoadFromImage(PEImage image, string sourcePath, byte[] fileBytes, uint? customBaseAddress = null)
 	{
 		var pe = image.PEFile ?? throw new InvalidOperationException("PEImage missing PEFile.");
 		var opt = pe.OptionalHeader ?? throw new InvalidOperationException("Missing optional header.");
@@ -80,7 +107,8 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			throw new NotSupportedException("Only PE32 format is supported.");
 		}
 
-		var imageBase = (uint)opt.ImageBase;
+		// Use custom base address if provided, otherwise use preferred ImageBase
+		var imageBase = customBaseAddress ?? (uint)opt.ImageBase;
 		var entryPoint = imageBase + opt.AddressOfEntryPoint;
 		var imageSize = opt.SizeOfImage;
 		var subsystem = (ushort)opt.SubSystem;
