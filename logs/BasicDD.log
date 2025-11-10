@@ -1,0 +1,969 @@
+info: Win32Emu.Gui.App[0]
+      Win32Emu.Gui logging initialized
+info: Win32Emu.Emulator[0]
+      Launching game: BasicDD \\mac\RiderProjects\Win32Emu\EXEs\BasicDD.exe
+info: Win32Emu.Emulator[0]
+      Set rendering backend to: GLFW
+info: Win32Emu.Emulator[0]
+      [EmulatorService] Using existing virtual disk: C:\Users\pierce\AppData\Local\Win32Emu\VirtualDisks\BasicDD.vhd
+info: Win32Emu.Emulator[0]
+      [EmulatorService] Loading executable: C:\EXEs\BasicDD.exe
+info: Win32Emu.Emulator[0]
+      [Loader] Extracting executable from virtual disk: C:\EXEs\BasicDD.exe
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Mounted VHD: C:\Users\pierce\AppData\Local\Win32Emu\VirtualDisks\BasicDD.vhd (Read-Write)
+info: Win32Emu.Emulator[0]
+      [Loader] Extracted 462848 bytes from virtual disk
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Disposed
+info: Win32Emu.Emulator[0]
+      [Loader] Host OS: Microsoft Windows 10.0.28000
+info: Win32Emu.Emulator[0]
+      [Loader] Host Architecture: Arm64
+info: Win32Emu.Emulator[0]
+      [Memory] Configured size: 1024 MB, Address space: 4096 MB (sparse, pages allocated on-demand)
+info: Win32Emu.Emulator[0]
+      [Loader] Created syscall dispatcher at 0x0E000000
+info: Win32Emu.Emulator[0]
+      [Loader] Import mapping complete: 63 imports mapped to addresses 0x0F000000 - 0x0F0003E0
+info: Win32Emu.Emulator[0]
+      [Loader] IAT verification passed: all 63 entries are correct
+info: Win32Emu.Emulator[0]
+      [Loader] Registered 63 IAT entries for runtime protection
+info: Win32Emu.Emulator[0]
+      [Loader] Extracted 4 sections from PE file
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: SYSTEM
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: SOFTWARE
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: NTUSER.DAT
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized 3 registry hives
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized system environment variables
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized user environment variables
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Registry hive initialized
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Synced environment variables from registry
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: BUTTON with WndProc=0x0D000000
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: EDIT with WndProc=0x0D000001
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: STATIC with WndProc=0x0D000002
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: LISTBOX with WndProc=0x0D000003
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: COMBOBOX with WndProc=0x0D000004
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: SCROLLBAR with WndProc=0x0D000005
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: MDICLIENT with WndProc=0x0D000006
+info: Win32Emu.Emulator[0]
+      [Loader] Initializing virtual file system with disk: C:\Users\pierce\AppData\Local\Win32Emu\VirtualDisks\BasicDD.vhd
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Mounted VHD: C:\Users\pierce\AppData\Local\Win32Emu\VirtualDisks\BasicDD.vhd (Read-Write)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Virtual File System initialized with disk: C:\Users\pierce\AppData\Local\Win32Emu\VirtualDisks\BasicDD.vhd
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Disposed registry hive manager
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: SYSTEM
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: SOFTWARE
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: NTUSER.DAT
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized 3 registry hives
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized system environment variables
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized user environment variables
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Registry hive initialized
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Synced environment variables from registry
+info: Win32Emu.Emulator[0]
+      [Loader] Virtual file system initialized successfully
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Registered main executable: C:\EXEs\BasicDD.exe at 0x00400000
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Set current directory to: C:\EXEs
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] TEB allocated at 0x01000040
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] PEB allocated at 0x01001040
+info: Win32Emu.Emulator[0]
+      [ProcessEnvironment] Detected GUI subsystem, no console allocated
+info: Win32Emu.Emulator[0]
+      [Loader] Selected CPU Emulator: IcedCpu
+info: Win32Emu.Emulator[0]
+      [Loader] Stack initialized: Base=0x00200000 Limit=0x00100000 ESP=0x001FF000 Reserve=0x100000 Commit=0x1000
+info: Win32Emu.Emulator[0]
+      [Loader] Heap base: 0x01000000
+info: Win32Emu.Emulator[0]
+      [ThreadScheduler] Initialized main thread 1 (handle=0x00001000)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Main thread initialized with ID=1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetVersion from stub at 0x0F000140
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF84 = 0x004018EB
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetVersion at EIP=0x0E000002 ESP=0x001FEF84 stack=EB 18 40 00 00 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetVersion returned 0x040003B6, argBytes=0
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF84 = 0x004018EB
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapCreate from stub at 0x0F0001C0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF70 = 0x00402867
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapCreate at EIP=0x0E000002 ESP=0x001FEF70 stack=67 28 40 00 01 00 00 00 00 10 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapCreate returned 0x01002040, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF70 = 0x00402867
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetVersionExA from stub at 0x0F000270
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FDD40 = 0x0040272D
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetVersionExA at EIP=0x0E000002 ESP=0x001FDD40 stack=2D 27 40 00 E0 EE 1F 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetVersionExA returned 0x00000001, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FDD40 = 0x0040272D
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF00 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF00 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 00 01 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002040, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF00 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStartupInfoA from stub at 0x0F000120
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040258F
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStartupInfoA at EIP=0x0E000002 ESP=0x001FEF28 stack=8F 25 40 00 40 EF 1F 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStartupInfoA returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040258F
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F000240
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040268E
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF28 stack=8E 26 40 00 F6 FF FF FF 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040268E
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000250
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040269C
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF28 stack=9C 26 40 00 00 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040269C
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F000240
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040268E
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF28 stack=8E 26 40 00 F5 FF FF FF 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040268E
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000250
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040269C
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF28 stack=9C 26 40 00 00 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040269C
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F000240
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040268E
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF28 stack=8E 26 40 00 F4 FF FF FF 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040268E
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000250
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x0040269C
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF28 stack=9C 26 40 00 00 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x0040269C
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!SetHandleCount from stub at 0x0F000230
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x004026D3
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!SetHandleCount at EIP=0x0E000002 ESP=0x001FEF28 stack=D3 26 40 00 20 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!SetHandleCount returned 0x00000020, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x004026D3
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetCommandLineA from stub at 0x0F000130
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF84 = 0x00401939
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetCommandLineA at EIP=0x0E000002 ESP=0x001FEF84 stack=39 19 40 00 00 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetCommandLineA returning 0x01000000: ""C:\EXEs\BasicDD.exe""
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetCommandLineA returned 0x01000000, argBytes=0
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF84 = 0x00401939
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetEnvironmentStringsW from stub at 0x0F000220
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF68 = 0x0040241B
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF68 stack=1B 24 40 00 00 00 00 00 00 00 00 00 FC EF 1F 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetEnvironmentStringsW returned 0x01003040, argBytes=0
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF68 = 0x0040241B
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000200
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF48 = 0x00402493
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF48 stack=93 24 40 00 00 00 00 00 00 00 00 00 40 30 00 01
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: CP=Acp cchWide=312 lpWide=0x01003040 cbMulti=0 lpMulti=0x00000000
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Read 312 chars (specified count)
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Returning size 312
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000138, argBytes=32
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF48 = 0x00402493
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF3C = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF3C stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 01 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002140, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF3C = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000200
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF48 = 0x004024B5
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF48 stack=B5 24 40 00 00 00 00 00 00 00 00 00 40 30 00 01
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: CP=Acp cchWide=312 lpWide=0x01003040 cbMulti=312 lpMulti=0x01002140
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Read 312 chars (specified count)
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000138, argBytes=32
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF48 = 0x004024B5
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!FreeEnvironmentStringsW from stub at 0x0F0001F0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF64 = 0x004024D2
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!FreeEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF64 stack=D2 24 40 00 40 30 00 01 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!FreeEnvironmentStringsW returned 0x00000001, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF64 = 0x004024D2
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetACP from stub at 0x0F0000C0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF30 = 0x004041C8
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetACP at EIP=0x0E000002 ESP=0x001FEF30 stack=C8 41 40 00 FD FF FF FF 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetACP returned 0x0000FDE9, argBytes=0
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF30 = 0x004041C8
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetCPInfo from stub at 0x0F0000D0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF2C = 0x00404205
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEF2C stack=05 42 40 00 E9 FD 00 00 44 EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetCPInfo called: codePage=Utf8 lpCpInfo=0x001FEF44
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetCPInfo: actualCodePage=Utf8
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetCPInfo returned 0x00000001, argBytes=8
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF2C = 0x00404205
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetCPInfo from stub at 0x0F0000D0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEA0C = 0x00404410
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEA0C stack=10 44 40 00 E9 FD 00 00 1C EF 1F 00 E9 FD 00 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetCPInfo called: codePage=Utf8 lpCpInfo=0x001FEF1C
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetCPInfo: actualCodePage=Utf8
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetCPInfo returned 0x00000001, argBytes=8
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEA0C = 0x00404410
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStringTypeW from stub at 0x0F000040
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE9AC = 0x004052AC
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStringTypeW at EIP=0x0E000002 ESP=0x001FE9AC stack=AC 52 40 00 01 00 00 00 94 64 40 00 01 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStringTypeW returned 0x00000000, argBytes=20
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE9AC = 0x004052AC
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStringTypeA from stub at 0x0F000050
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE9AC = 0x004052C6
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStringTypeA at EIP=0x0E000002 ESP=0x001FE9AC stack=C6 52 40 00 00 00 00 00 01 00 00 00 90 64 40 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStringTypeA returned 0x00000001, argBytes=20
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE9AC = 0x004052C6
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStringTypeA from stub at 0x0F000050
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE9AC = 0x004052FA
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStringTypeA at EIP=0x0E000002 ESP=0x001FE9AC stack=FA 52 40 00 00 00 00 00 01 00 00 00 1C EE 1F 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStringTypeA returned 0x00000001, argBytes=20
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE9AC = 0x004052FA
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!LCMapStringW from stub at 0x0F000060
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE980 = 0x00405060
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0E000002 ESP=0x001FE980 stack=60 50 40 00 00 00 00 00 00 01 00 00 94 64 40 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!LCMapStringW returned 0x00000002, argBytes=24
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE980 = 0x00405060
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!MultiByteToWideChar from stub at 0x0F000080
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE980 = 0x004050FD
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0E000002 ESP=0x001FE980 stack=FD 50 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!MultiByteToWideChar returned 0x00000100, argBytes=24
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE980 = 0x004050FD
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!MultiByteToWideChar from stub at 0x0F000080
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE780 = 0x00405155
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0E000002 ESP=0x001FE780 stack=55 51 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!MultiByteToWideChar returned 0x00000100, argBytes=24
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE780 = 0x00405155
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!LCMapStringW from stub at 0x0F000060
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE780 = 0x0040516B
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0E000002 ESP=0x001FE780 stack=6B 51 40 00 00 00 00 00 00 01 00 00 9C E7 1F 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!LCMapStringW returned 0x00000101, argBytes=24
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE780 = 0x0040516B
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!LCMapStringW from stub at 0x0F000060
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE57C = 0x00405206
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0E000002 ESP=0x001FE57C stack=06 52 40 00 00 00 00 00 00 01 00 00 9C E7 1F 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!LCMapStringW returned 0x00000101, argBytes=24
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE57C = 0x00405206
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000200
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE574 = 0x0040522B
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FE574 stack=2B 52 40 00 E9 FD 00 00 20 02 00 00 98 E5 1F 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: CP=Utf8 cchWide=257 lpWide=0x001FE598 cbMulti=256 lpMulti=0x001FED1C
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Read 257 chars (specified count)
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Buffer too small - need 513 bytes but only have 256
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000000, argBytes=32
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE574 = 0x0040522B
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!MultiByteToWideChar from stub at 0x0F000080
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE960 = 0x004050FD
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0E000002 ESP=0x001FE960 stack=FD 50 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!MultiByteToWideChar returned 0x00000100, argBytes=24
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE960 = 0x004050FD
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!MultiByteToWideChar from stub at 0x0F000080
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE760 = 0x00405155
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!MultiByteToWideChar at EIP=0x0E000002 ESP=0x001FE760 stack=55 51 40 00 E9 FD 00 00 01 00 00 00 1C EE 1F 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!MultiByteToWideChar returned 0x00000100, argBytes=24
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE760 = 0x00405155
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!LCMapStringW from stub at 0x0F000060
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE760 = 0x0040516B
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0E000002 ESP=0x001FE760 stack=6B 51 40 00 00 00 00 00 00 02 00 00 7C E7 1F 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!LCMapStringW returned 0x00000101, argBytes=24
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE760 = 0x0040516B
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!LCMapStringW from stub at 0x0F000060
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE55C = 0x00405206
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!LCMapStringW at EIP=0x0E000002 ESP=0x001FE55C stack=06 52 40 00 00 00 00 00 00 02 00 00 7C E7 1F 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!LCMapStringW returned 0x00000101, argBytes=24
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE55C = 0x00405206
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000200
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE554 = 0x0040522B
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FE554 stack=2B 52 40 00 E9 FD 00 00 20 02 00 00 78 E5 1F 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: CP=Utf8 cchWide=257 lpWide=0x001FE578 cbMulti=256 lpMulti=0x001FEC1C
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Read 257 chars (specified count)
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Buffer too small - need 513 bytes but only have 256
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000000, argBytes=32
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FE554 = 0x0040522B
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetModuleFileNameA from stub at 0x0F000020
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF5C = 0x004021DA
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetModuleFileNameA at EIP=0x0E000002 ESP=0x001FEF5C stack=DA 21 40 00 00 00 00 00 F8 95 40 00 04 01 00 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetModuleFileNameA called: h=0x00000000 lp=0x004095F8 n=260
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetModuleFileNameA returning 19
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetModuleFileNameA returned 0x00000013, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF5C = 0x004021DA
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF28 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF28 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002280, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF28 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF48 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF48 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x010022A0, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF48 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x010022E0, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 30 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002300, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002330, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002340, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 40 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002380, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x010023C0, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x010023E0, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002400, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002410, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002420, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 10 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002440, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF44 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 20 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002450, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapFree from stub at 0x0F0001B0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF54 = 0x00401F19
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapFree at EIP=0x0E000002 ESP=0x001FEF54 stack=19 1F 40 00 40 20 00 01 00 00 00 00 40 21 00 01
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapFree returned 0x00000001, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF54 = 0x00401F19
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF40 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF40 stack=B1 1E 40 00 40 20 00 01 00 00 00 00 80 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01002470, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF40 = 0x00401EB1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapSize from stub at 0x0F0001A0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF2C = 0x00401DFE
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapSize at EIP=0x0E000002 ESP=0x001FEF2C stack=FE 1D 40 00 40 20 00 01 00 00 00 00 70 24 00 01
+info: Win32Emu.Emulator[0]
+      [Kernel32] HeapSize(hHeap=0x01002040, dwFlags=0x00000000, lpMem=0x01002470)
+info: Win32Emu.Emulator[0]
+      [Kernel32] HeapSize: Block at 0x01002470 has size 128 bytes
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapSize returned 0x00000080, argBytes=12
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF2C = 0x00401DFE
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStartupInfoA from stub at 0x0F000120
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF80 = 0x00401964
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStartupInfoA at EIP=0x0E000002 ESP=0x001FEF80 stack=64 19 40 00 A0 EF 1F 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStartupInfoA returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF80 = 0x00401964
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetModuleHandleA from stub at 0x0F000110
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF74 = 0x00401987
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetModuleHandleA at EIP=0x0E000002 ESP=0x001FEF74 stack=87 19 40 00 00 00 00 00 00 00 00 00 15 00 00 01
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetModuleHandleA called: module='NULL (current process)'
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetModuleHandleA returned 0x00400000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF74 = 0x00401987
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!LoadIconA from stub at 0x0F000350
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF18 = 0x00401239
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!LoadIconA at EIP=0x0E000002 ESP=0x001FEF18 stack=39 12 40 00 00 00 40 00 00 7F 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] LoadIconA: hInstance=0x00400000 lpIconName=0x00007F00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!LoadIconA returned 0x00001000, argBytes=8
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF18 = 0x00401239
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!LoadCursorA from stub at 0x0F000360
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF18 = 0x0040124A
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!LoadCursorA at EIP=0x0E000002 ESP=0x001FEF18 stack=4A 12 40 00 00 00 00 00 00 7F 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] LoadCursorA: hInstance=0x00000000 lpCursorName=0x00007F00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!LoadCursorA returned 0x00017F00, argBytes=8
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF18 = 0x0040124A
+info: Win32Emu.Emulator[0]
+      [Syscall] GDI32.DLL!GetStockObject from stub at 0x0F0003E0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF1C = 0x00401256
+info: Win32Emu.Emulator[0]
+      Dispatching GDI32.DLL!GetStockObject at EIP=0x0E000002 ESP=0x001FEF1C stack=56 12 40 00 04 00 00 00 00 00 00 00 03 00 00 00
+info: Win32Emu.Emulator[0]
+      [Gdi32] GetStockObject(4) -> 0x80000000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] GDI32.DLL!GetStockObject returned 0x80000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF1C = 0x00401256
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!RegisterClassA from stub at 0x0F000370
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF1C = 0x00401275
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!RegisterClassA at EIP=0x0E000002 ESP=0x001FEF1C stack=75 12 40 00 28 EF 1F 00 00 00 00 00 03 00 00 00
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Registered window class: Basic DD
+info: Win32Emu.Emulator[0]
+      [User32] RegisterClassA: 'Basic DD' -> atom 0xC000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!RegisterClassA returned 0x0000C000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF1C = 0x00401275
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!GetSystemMetrics from stub at 0x0F000310
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF0C = 0x0040128C
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0E000002 ESP=0x001FEF0C stack=8C 12 40 00 01 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: nIndex=SM_CYSCREEN
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 1080
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000438, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF0C = 0x0040128C
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!GetSystemMetrics from stub at 0x0F000310
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF08 = 0x00401291
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0E000002 ESP=0x001FEF08 stack=91 12 40 00 00 00 00 00 38 04 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: nIndex=SM_CXSCREEN
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 1920
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000780, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF08 = 0x00401291
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!CreateWindowExA from stub at 0x0F000300
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEEF0 = 0x004012AD
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!CreateWindowExA at EIP=0x0E000002 ESP=0x001FEEF0 stack=AD 12 40 00 08 00 00 00 A4 70 40 00 A4 70 40 00
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Created window: HWND=0x00010000 Class='Basic DD' Title='Basic DD'
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x0001 HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x0005 HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x0003 HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [User32] CreateWindowExA: Created HWND=0x00010000 Class='Basic DD' Title='Basic DD'
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!CreateWindowExA returned 0x00010000, argBytes=48
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEEF0 = 0x004012AD
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!ShowWindow from stub at 0x0F0002F0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF18 = 0x004012BB
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!ShowWindow at EIP=0x0E000002 ESP=0x001FEF18 stack=BB 12 40 00 00 00 01 00 0A 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] ShowWindow: HWND=0x00010000 nCmdShow=10
+info: Win32Emu.Emulator[0]
+      [User32] ShowWindow: Window 0x00010000 is now visible
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x001C HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!ShowWindow returned 0x00000000, argBytes=8
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF18 = 0x004012BB
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!UpdateWindow from stub at 0x0F0002E0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF1C = 0x004012C2
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!UpdateWindow at EIP=0x0E000002 ESP=0x001FEF1C stack=C2 12 40 00 00 00 01 00 00 00 00 00 03 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] UpdateWindow: HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [User32] UpdateWindow: Sending WM_PAINT to HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [User32] SendMessageA: HWND=0x00010000 MSG=0x000F wParam=0x00000000 lParam=0x00000000
+info: Win32Emu.Emulator[0]
+      [User32] SendMessageA: Found WndProc=0x004012D0 for HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [User32] CallWindowProcedureAsync: Calling 0x004012D0 with HWND=0x00010000 MSG=0x000F
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!DefWindowProcA at EIP=0x0F000330 ESP=0x001FEDF4 stack=FD 12 40 00 00 00 01 00 0F 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] DefWindowProcA: HWND=0x00010000 MSG=0x000F wParam=0x00000000 lParam=0x00000000
+info: Win32Emu.Emulator[0]
+      [User32] DefWindowProcA: WM_PAINT
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!DefWindowProcA returned 0x00000000, argBytes=16
+info: Win32Emu.Emulator[0]
+      [User32] CallWindowProcedureAsync: Completed with return value 0x00000000, timedOut=False, cancelled=False, failed=False
+info: Win32Emu.Emulator[0]
+      [User32] SendMessageA: WndProc returned 0x00000000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!UpdateWindow returned 0x00000001, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF1C = 0x004012C2
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!SetFocus from stub at 0x0F0002D0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF1C = 0x004012C9
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!SetFocus at EIP=0x0E000002 ESP=0x001FEF1C stack=C9 12 40 00 00 00 01 00 00 00 00 00 03 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] SetFocus: HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!SetFocus returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF1C = 0x004012C9
+info: Win32Emu.Emulator[0]
+      [Syscall] DDRAW.DLL!DirectDrawCreateEx from stub at 0x0F000380
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEEB4 = 0x00401329
+info: Win32Emu.Emulator[0]
+      Dispatching DDRAW.DLL!DirectDrawCreateEx at EIP=0x0E000002 ESP=0x001FEEB4 stack=29 13 40 00 00 00 00 00 84 95 40 00 14 61 40 00
+info: Win32Emu.Emulator[0]
+      [DDraw] DirectDrawCreateEx(lpGuid=0x00000000, lplpDD=0x00409584, iid=0x00406114, pUnkOuter=0x00000000)
+info: Win32Emu.Emulator[0]
+      [COM] Created IDirectDraw object at 0x010032B0 (vtable at 0x010032C0)
+info: Win32Emu.Emulator[0]
+      [DDraw] Writing COM object 0x010032B0 to address 0x00409584
+info: Win32Emu.Emulator[0]
+      [DDraw] Verification: Read back 0x010032B0 from 0x00409584 - SUCCESS
+info: Win32Emu.Emulator[0]
+      [DDraw] Created IDirectDraw COM object (Ex) at 0x010032B0
+info: Win32Emu.Emulator[0]
+      [Dispatcher] DDRAW.DLL!DirectDrawCreateEx returned 0x00000000, argBytes=16
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEEB4 = 0x00401329
+info: Win32Emu.Emulator[0]
+      [COM] Vtable method call at address 0x0D001140
+info: Win32Emu.Emulator[0]
+      [COM] Invoking vtable method: IDirectDraw::SetCooperativeLevel at address 0x0D001140
+info: Win32Emu.Emulator[0]
+      [DDraw COM] IDirectDraw::SetCooperativeLevel(this=0x010032B0, hWnd=0x00010000, flags=0x00000011)
+info: Win32Emu.Emulator[0]
+      [DDraw] Using Avalonia rendering backend for GUI integration
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Subscribed to rendering backend UI events
+info: Win32Emu.Emulator[0]
+      [DDraw] Subscribed to UI events from rendering backend
+info: Win32Emu.Emulator[0]
+      [DDraw COM] SetCooperativeLevel succeeded, returning DD_OK (0)
+info: Win32Emu.Emulator[0]
+      [COM] IDirectDraw::SetCooperativeLevel returned 0x00000000 (argBytes=12)
+info: Win32Emu.Emulator[0]
+      [COM] Vtable method call at address 0x0D001150
+info: Win32Emu.Emulator[0]
+      [COM] Invoking vtable method: IDirectDraw::SetDisplayMode at address 0x0D001150
+info: Win32Emu.Emulator[0]
+      [DDraw COM] IDirectDraw::SetDisplayMode(this=0x010032B0, width=640, height=480, bpp=16)
+info: Win32Emu.Emulator[0]
+      [Avalonia] Initializing Avalonia rendering backend (640x480)...
+info: Win32Emu.Emulator[0]
+      [Avalonia] Avalonia rendering backend initialized successfully
+info: Win32Emu.Emulator[0]
+      [DDraw] Rendering backend initialized successfully with 640x480
+info: Win32Emu.Emulator[0]
+      [DDraw] Subscribed to UI events from rendering backend
+info: Win32Emu.Emulator[0]
+      [DDraw COM] SetDisplayMode succeeded, returning DD_OK (0)
+info: Win32Emu.Emulator[0]
+      [COM] IDirectDraw::SetDisplayMode returned 0x00000000 (argBytes=16)
+info: Win32Emu.Emulator[0]
+      [COM] Vtable method call at address 0x0D001060
+info: Win32Emu.Emulator[0]
+      [COM] Invoking vtable method: IDirectDraw::CreateSurface at address 0x0D001060
+info: Win32Emu.Emulator[0]
+      [DDraw COM] IDirectDraw::CreateSurface(this=0x010032B0, lpDDSurfaceDesc=0x001FEED0, lplpDDSurface=0x00409588, pUnkOuter=0x00000000)
+info: Win32Emu.Emulator[0]
+      [DDraw] Surface creation: flags=0x00000021, caps=0x00000218, width=0, height=0, backbufferCount=1
+info: Win32Emu.Emulator[0]
+      [COM] Created IDirectDrawSurface object at 0x01003320 (vtable at 0x01003330)
+info: Win32Emu.Emulator[0]
+      [DDraw] Creating 1 backbuffer(s) for primary surface
+info: Win32Emu.Emulator[0]
+      [COM] Created IDirectDrawSurface object at 0x010033C0 (vtable at 0x010033D0)
+info: Win32Emu.Emulator[0]
+      [DDraw] Created backbuffer 1 at surface handle 0x71000001, COM object at 0x010033C0
+info: Win32Emu.Emulator[0]
+      [DDraw] Created IDirectDrawSurface COM object at 0x01003320 for surface 0x71000000
+info: Win32Emu.Emulator[0]
+      [COM] IDirectDraw::CreateSurface returned 0x00000000 (argBytes=16)
+info: Win32Emu.Emulator[0]
+      [COM] Vtable method call at address 0x0D0020C0
+info: Win32Emu.Emulator[0]
+      [COM] Invoking vtable method: IDirectDrawSurface::GetAttachedSurface at address 0x0D0020C0
+info: Win32Emu.Emulator[0]
+      [DDraw COM] IDirectDrawSurface::GetAttachedSurface(this=0x01003320, lpDDSCaps=0x001FEEC0, lplp=0x0040958C)
+info: Win32Emu.Emulator[0]
+      [DDraw] Requested surface caps: 0x00000004
+info: Win32Emu.Emulator[0]
+      [DDraw] Returning attached surface COM object at 0x010033C0
+info: Win32Emu.Emulator[0]
+      [COM] IDirectDrawSurface::GetAttachedSurface returned 0x00000000 (argBytes=12)
+fail: Win32Emu.Emulator[0]
+      [IcedCpu] Unhandled mnemonic INVALID at 0x0040715A, ESP=0x001FEF70, EBP=0x0040187C, EAX=0x00000065. Likely executing data as code or invalid jump target.
+fail: Win32Emu.Emulator[0]
+      [IcedCpu] INVALID instruction encountered - definitely not valid code. Check for corrupted return addresses or bad jumps.
+fail: Win32Emu.Emulator[0]
+      [Emulator] Exception during SingleStep at EIP=0x0040715A, ESP=0x001FEF70, EBP=0x0040187C: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
+      System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in \\mac\RiderProjects\Win32Emu\Win32Emu\Cpu\Iced\IcedCpu.cs:line 667
+         at Win32Emu.Emulator.RunNormalAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 862
+fail: Win32Emu.Emulator[0]
+      [Emulator] Unhandled exception during emulation
+      System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in \\mac\RiderProjects\Win32Emu\Win32Emu\Cpu\Iced\IcedCpu.cs:line 667
+         at Win32Emu.Emulator.RunNormalAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 862
+         at Win32Emu.Emulator.RunAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 583
+info: Win32Emu.Emulator[0]
+      No unimplemented functions found!
+fail: Win32Emu.Emulator[0]
+      Unhandled exception during emulation
+      System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in \\mac\RiderProjects\Win32Emu\Win32Emu\Cpu\Iced\IcedCpu.cs:line 667
+         at Win32Emu.Emulator.RunNormalAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 862
+         at Win32Emu.Emulator.RunAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 583
