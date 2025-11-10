@@ -193,6 +193,9 @@ public class ComVtableDispatcher
 				// Save CPU state before async operation
 				var cpuState = CpuHelpers.SuspendExecution(cpu);
 				
+				// Check for cancellation before invoking handler
+				cancellationToken.ThrowIfCancellationRequested();
+				
 				// Invoke async handler
 				returnValue = await asyncHandler(cpu, memory);
 				
@@ -203,6 +206,10 @@ public class ComVtableDispatcher
 			}
 			catch (Exception ex)
 			{
+				// Rethrow critical exceptions
+				if (ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException)
+					throw;
+				
 				_logger.LogError(ex, "[COM] Exception in {MethodName} async handler", methodName);
 				returnValue = 0x80004005; // E_FAIL
 			}
@@ -272,22 +279,15 @@ public class ComVtableDispatcher
 	}
 	
 	/// <summary>
-	/// Create a COM object with a vtable
+	/// Internal helper to create a COM object with a vtable, using a generic handler registration action
 	/// </summary>
-	public uint CreateComObject(string interfaceName, Dictionary<string, Func<ICpu, VirtualMemory, uint>> methods)
-	{
-		// Convert to ComMethodInfo with default argBytes of 0 (unknown)
-		var methodsWithInfo = methods.ToDictionary(
-			kvp => kvp.Key,
-			kvp => new ComMethodInfo(kvp.Value, ArgBytes: 0)
-		);
-		return CreateComObject(interfaceName, methodsWithInfo);
-	}
-	
-	/// <summary>
-	/// Create a COM object with a vtable, with argument byte metadata for proper stack cleanup
-	/// </summary>
-	public uint CreateComObject(string interfaceName, Dictionary<string, ComMethodInfo> methods)
+	private uint CreateComObjectInternal<TMethodInfo>(
+		string interfaceName,
+		Dictionary<string, TMethodInfo> methods,
+		Func<TMethodInfo, Func<ICpu, VirtualMemory, uint>?> getSyncHandler,
+		Func<TMethodInfo, Func<ICpu, VirtualMemory, Task<uint>>?> getAsyncHandler,
+		Func<TMethodInfo, int> getArgBytes,
+		bool isAsync)
 	{
 		var objectId = _nextObjectId++;
 		
@@ -328,17 +328,28 @@ public class ComVtableDispatcher
 			};
 			_env.MemWriteBytes(methodStubAddr, stub);
 			
-			// Register the handler
-			_vtableHandlers[methodStubAddr] = methodInfo.Handler;
+			// Register the handler (sync or async)
+			var syncHandler = getSyncHandler(methodInfo);
+			if (syncHandler != null)
+			{
+				_vtableHandlers[methodStubAddr] = syncHandler;
+			}
+			
+			var asyncHandler = getAsyncHandler(methodInfo);
+			if (asyncHandler != null)
+			{
+				_vtableAsyncHandlers[methodStubAddr] = asyncHandler;
+			}
 			
 			// Register the method name for debugging
 			_vtableMethodNames[methodStubAddr] = $"{interfaceName}::{methodName}";
 			
 			// Register argument byte count for stack cleanup
-			_vtableArgBytes[methodStubAddr] = methodInfo.ArgBytes;
+			_vtableArgBytes[methodStubAddr] = getArgBytes(methodInfo);
 			
-			_logger.LogDebug("[COM] {InterfaceName}::{MethodName} -> 0x{MethodStubAddr:X8} (argBytes={ArgBytes})", 
-				interfaceName, methodName, methodStubAddr, methodInfo.ArgBytes);
+			var asyncLabel = isAsync ? "async, " : "";
+			_logger.LogDebug("[COM] {InterfaceName}::{MethodName} -> 0x{MethodStubAddr:X8} ({AsyncLabel}argBytes={ArgBytes})", 
+				interfaceName, methodName, methodStubAddr, asyncLabel, getArgBytes(methodInfo));
 			
 			methodIndex++;
 		}
@@ -353,9 +364,38 @@ public class ComVtableDispatcher
 		
 		_comObjects[objectAddr] = objInfo;
 		
-		_logger.LogInformation("[COM] Created {InterfaceName} object at 0x{ObjectAddr:X8} (vtable at 0x{VtableAddr:X8})", interfaceName, objectAddr, vtableAddr);
+		var asyncPrefix = isAsync ? "async " : "";
+		_logger.LogInformation("[COM] Created {AsyncPrefix}{InterfaceName} object at 0x{ObjectAddr:X8} (vtable at 0x{VtableAddr:X8})", 
+			asyncPrefix, interfaceName, objectAddr, vtableAddr);
 		
 		return objectAddr;
+	}
+	
+	/// <summary>
+	/// Create a COM object with a vtable
+	/// </summary>
+	public uint CreateComObject(string interfaceName, Dictionary<string, Func<ICpu, VirtualMemory, uint>> methods)
+	{
+		// Convert to ComMethodInfo with default argBytes of 0 (unknown)
+		var methodsWithInfo = methods.ToDictionary(
+			kvp => kvp.Key,
+			kvp => new ComMethodInfo(kvp.Value, ArgBytes: 0)
+		);
+		return CreateComObject(interfaceName, methodsWithInfo);
+	}
+	
+	/// <summary>
+	/// Create a COM object with a vtable, with argument byte metadata for proper stack cleanup
+	/// </summary>
+	public uint CreateComObject(string interfaceName, Dictionary<string, ComMethodInfo> methods)
+	{
+		return CreateComObjectInternal(
+			interfaceName,
+			methods,
+			info => info.Handler,
+			info => null,
+			info => info.ArgBytes,
+			isAsync: false);
 	}
 	
 	/// <summary>
@@ -386,73 +426,13 @@ public class ComVtableDispatcher
 	/// </summary>
 	public uint CreateComObjectAsync(string interfaceName, Dictionary<string, ComAsyncMethodInfo> methods)
 	{
-		var objectId = _nextObjectId++;
-		
-		// Allocate memory for the COM object structure
-		// COM object layout: [vtable pointer][object data...]
-		var objectAddr = _env.SimpleAlloc(8); // 4 bytes for vtable ptr + 4 bytes for object data
-		
-		// Allocate memory for the vtable
-		var vtableSize = (uint)(methods.Count * 4); // 4 bytes per method pointer
-		var vtableAddr = _env.SimpleAlloc(vtableSize);
-		
-		// Write vtable pointer to object
-		_env.MemWrite32(objectAddr, vtableAddr);
-		
-		// Create vtable stubs and write function pointers
-		var stubAddr = MemoryRegions.ComVtableBase + (objectId * 0x1000); // Each object gets 4KB of address space
-		uint methodIndex = 0;
-		
-		foreach (var kvp in methods)
-		{
-			var methodName = kvp.Key;
-			var methodInfo = kvp.Value;
-			
-			// Calculate stub address for this method
-			var methodStubAddr = stubAddr + (methodIndex * 0x10); // 16 bytes per stub
-			
-			// Write function pointer to vtable
-			_env.MemWrite32(vtableAddr + (methodIndex * 4), methodStubAddr);
-			
-			// Create INT3 stub at the method address
-			var stub = new byte[] 
-			{ 
-				0xCC, // INT3 - breakpoint instruction
-				0x90, 0x90, 0x90, // NOP padding
-				0x90, 0x90, 0x90, 0x90,
-				0x90, 0x90, 0x90, 0x90,
-				0x90, 0x90, 0x90, 0x90
-			};
-			_env.MemWriteBytes(methodStubAddr, stub);
-			
-			// Register the async handler
-			_vtableAsyncHandlers[methodStubAddr] = methodInfo.AsyncHandler;
-			
-			// Register the method name for debugging
-			_vtableMethodNames[methodStubAddr] = $"{interfaceName}::{methodName}";
-			
-			// Register argument byte count for stack cleanup
-			_vtableArgBytes[methodStubAddr] = methodInfo.ArgBytes;
-			
-			_logger.LogDebug("[COM] {InterfaceName}::{MethodName} -> 0x{MethodStubAddr:X8} (async, argBytes={ArgBytes})", 
-				interfaceName, methodName, methodStubAddr, methodInfo.ArgBytes);
-			
-			methodIndex++;
-		}
-		
-		var objInfo = new ComObjectInfo
-		{
-			ObjectId = objectId,
-			ObjectAddress = objectAddr,
-			VtableAddress = vtableAddr,
-			InterfaceName = interfaceName
-		};
-		
-		_comObjects[objectAddr] = objInfo;
-		
-		_logger.LogInformation("[COM] Created async {InterfaceName} object at 0x{ObjectAddr:X8} (vtable at 0x{VtableAddr:X8})", interfaceName, objectAddr, vtableAddr);
-		
-		return objectAddr;
+		return CreateComObjectInternal(
+			interfaceName,
+			methods,
+			info => null,
+			info => info.AsyncHandler,
+			info => info.ArgBytes,
+			isAsync: true);
 	}
 	
 	private sealed class ComObjectInfo
