@@ -1856,6 +1856,11 @@ public class ProcessEnvironment
 		return _windows.TryGetValue(hwnd, out var windowInfo) ? windowInfo : null;
 	}
 
+	public IEnumerable<uint> GetAllWindowHandles()
+	{
+		return _windows.Keys;
+	}
+
 	public bool DestroyWindow(uint hwnd)
 	{
 		if (_windows.Remove(hwnd))
