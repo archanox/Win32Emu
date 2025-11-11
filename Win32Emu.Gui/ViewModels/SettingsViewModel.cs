@@ -116,8 +116,7 @@ public partial class SettingsViewModel : ViewModelBase
     public ObservableCollection<string> VirtualDiskFormats { get; } = new()
     {
         "VHD",
-        "VHDX",
-        "VMDK"
+        "VHDX"
     };
 
     public SettingsViewModel(EmulatorConfiguration configuration, ConfigurationService configService)

@@ -22,7 +22,7 @@ public class GameSettings
     public bool? UseVirtualDisk { get; set; }
     
     /// <summary>
-    /// Path to the virtual disk file (VHD/VMDK/VHDX). If null, one will be auto-created.
+    /// Path to the virtual disk file (VHD/VHDX). If null, one will be auto-created.
     /// </summary>
     public string? VirtualDiskPath { get; set; }
     

@@ -109,7 +109,6 @@ public class VirtualDiskService
 		{
 			".vhd" => DiskFormat.Vhd,
 			".vhdx" => DiskFormat.Vhdx,
-			".vmdk" => DiskFormat.Vmdk,
 			_ => DiskFormat.Vhd // Default to VHD
 		};
 	}
@@ -260,7 +259,7 @@ public class VirtualDiskService
 		}
 		
 		// Try all supported formats
-		var formats = new[] { "vhd", "vhdx", "vmdk" };
+		var formats = new[] { "vhd", "vhdx" };
 		foreach (var format in formats)
 		{
 			var diskPath = Path.Combine(diskDir, $"{sanitizedTitle}.{format}");

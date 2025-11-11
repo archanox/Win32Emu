@@ -15,7 +15,7 @@ public class Game
     public Guid? GameDbId { get; set; }
     
     /// <summary>
-    /// Path to the game's virtual disk (VHD/VHDX/VMDK)
+    /// Path to the game's virtual disk (VHD/VHDX)
     /// </summary>
     public string? VirtualDiskPath { get; set; }
     

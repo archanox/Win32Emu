@@ -155,7 +155,7 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
-	/// Initializes the virtual file system with a virtual disk file (VHD/VMDK/VHDX/ISO).
+	/// Initializes the virtual file system with a virtual disk file (VHD/VHDX/ISO).
 	/// </summary>
 	/// <param name="diskPath">Path to the virtual disk file</param>
 	public void InitializeVirtualFileSystemWithDisk(string diskPath)

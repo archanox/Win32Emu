@@ -24,7 +24,7 @@ public class GameRegistryService : IDisposable
 	/// <summary>
 	/// Gets or creates a registry hive for a specific game by accessing the virtual disk.
 	/// </summary>
-	/// <param name="virtualDiskPath">Path to the game's virtual disk file (VHD/VMDK/VHDX)</param>
+	/// <param name="virtualDiskPath">Path to the game's virtual disk file (VHD/VHDX)</param>
 	/// <returns>A RegistryHive instance for this game</returns>
 	public Win32EmuRegistryHive GetOrCreateGameRegistry(string virtualDiskPath)
 	{
