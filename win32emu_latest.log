@@ -21,6 +21,12 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Loader] Host Architecture: Arm64
 info: Win32Emu.Emulator[0]
+      [Loader] Host Framework: .NET 9.0.10
+info: Win32Emu.Emulator[0]
+      [Loader] Host OS Architecture: Arm64
+info: Win32Emu.Emulator[0]
+      [Loader] Host Runtime Identifier: win-arm64
+info: Win32Emu.Emulator[0]
       [Memory] Configured size: 1024 MB, Address space: 4096 MB (sparse, pages allocated on-demand)
 info: Win32Emu.Emulator[0]
       [Loader] Created syscall dispatcher at 0x0E000000
@@ -811,6 +817,8 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw] Created backbuffer 1 at surface handle 0x71000001, COM object at 0x01463110
 info: Win32Emu.Emulator[0]
+      [DDraw] Attached backbuffer 0x71000001 to primary surface 0x71000000 (COM=0x01463070), AttachedSurfaces.Count=1
+info: Win32Emu.Emulator[0]
       [DDraw] Created IDirectDrawSurface COM object at 0x01463070 for surface 0x71000000
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::CreateSurface returned 0x00000000 (argBytes=16)
@@ -820,6 +828,10 @@ info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDrawSurface::GetAttachedSurface at address 0x0D0020C0
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDrawSurface::GetAttachedSurface(this=0x01463070, lpDDSCaps=0x001FEE8C, lplp=0x001FEE78)
+info: Win32Emu.Emulator[0]
+      [DDraw] Found surface: Handle=0x71000000, ComAddr=0x01463070, IsPrimary=True, AttachedSurfaces.Count=1
+info: Win32Emu.Emulator[0]
+      [DDraw] Attached surfaces: 0x71000001
 info: Win32Emu.Emulator[0]
       [DDraw] Requested surface caps: 0x00000004
 info: Win32Emu.Emulator[0]
@@ -1265,7 +1277,7 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       Dispatching WINMM.DLL!timeGetTime at EIP=0x0E000002 ESP=0x001FEF0C stack=D6 34 40 00 C2 32 40 00 5C 32 40 00 FC EF 1F 00
 info: Win32Emu.Emulator[0]
-      [Dispatcher] WINMM.DLL!timeGetTime returned 0x00000428, argBytes=0
+      [Dispatcher] WINMM.DLL!timeGetTime returned 0x00000403, argBytes=0
 info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEF0C = 0x004034D6
 info: Win32Emu.Emulator[0]
@@ -4140,6 +4152,8 @@ info: Win32Emu.Emulator[0]
       [DDraw] Updated 16 palette entries starting at index 0
 info: Win32Emu.Emulator[0]
       [COM] IDirectDrawPalette::SetEntries returned 0x00000000 (argBytes=20)
+warn: Win32Emu.Emulator[0]
+      [Emulator] Possible infinite loop: 1000000 iterations at EIP=0x00402FCD, ESP=0x001FEF04
 info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D003180
 info: Win32Emu.Emulator[0]
@@ -4263,6 +4277,8 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw] Created backbuffer 1 at surface handle 0x71000003, COM object at 0x01DE40A0
 info: Win32Emu.Emulator[0]
+      [DDraw] Attached backbuffer 0x71000003 to primary surface 0x71000002 (COM=0x01DE4000), AttachedSurfaces.Count=1
+info: Win32Emu.Emulator[0]
       [DDraw] Created IDirectDrawSurface COM object at 0x01DE4000 for surface 0x71000002
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::CreateSurface returned 0x00000000 (argBytes=16)
@@ -4272,6 +4288,10 @@ info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDrawSurface::GetAttachedSurface at address 0x0D0070C0
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDrawSurface::GetAttachedSurface(this=0x01DE4000, lpDDSCaps=0x001FEE90, lplp=0x001FEE8C)
+info: Win32Emu.Emulator[0]
+      [DDraw] Found surface: Handle=0x71000002, ComAddr=0x01DE4000, IsPrimary=True, AttachedSurfaces.Count=1
+info: Win32Emu.Emulator[0]
+      [DDraw] Attached surfaces: 0x71000003
 info: Win32Emu.Emulator[0]
       [DDraw] Requested surface caps: 0x00000004
 info: Win32Emu.Emulator[0]
@@ -4364,3 +4384,25 @@ info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x01DE8000, argBytes=12
 info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEE7C = 0x00411244
+warn: Win32Emu.Emulator[0]
+      [Emulator] Possible infinite loop: 1000000 iterations at EIP=0x0040A50A, ESP=0x001FEEC8
+warn: Win32Emu.Emulator[0]
+      [Emulator] Possible infinite loop: 2000000 iterations at EIP=0x0040A50A, ESP=0x001FEEC8
+warn: Win32Emu.Emulator[0]
+      [Emulator] Possible infinite loop: 3000000 iterations at EIP=0x0040A50A, ESP=0x001FEEC8
+warn: Win32Emu.Emulator[0]
+      [Emulator] Possible infinite loop: 4000000 iterations at EIP=0x0040A50A, ESP=0x001FEEC8
+warn: Win32Emu.Emulator[0]
+      [Emulator] Possible infinite loop: 5000000 iterations at EIP=0x0040A50A, ESP=0x001FEEC8
+warn: Win32Emu.Emulator[0]
+      [Emulator] Possible infinite loop: 6000000 iterations at EIP=0x0040A50A, ESP=0x001FEEC8
+warn: Win32Emu.Emulator[0]
+      [Emulator] Possible infinite loop: 7000000 iterations at EIP=0x0040A50A, ESP=0x001FEEC8
+warn: Win32Emu.Emulator[0]
+      [Emulator] Possible infinite loop: 8000000 iterations at EIP=0x0040A50A, ESP=0x001FEEC8
+warn: Win32Emu.Emulator[0]
+      [Emulator] Possible infinite loop: 9000000 iterations at EIP=0x0040A50A, ESP=0x001FEEC8
+fail: Win32Emu.Emulator[0]
+      [Emulator] INFINITE LOOP DETECTED: 10000105 iterations without a syscall. EIP=0x0040A50A, ESP=0x001FEEC8. Stopping emulation.
+info: Win32Emu.Emulator[0]
+      No unimplemented functions found!

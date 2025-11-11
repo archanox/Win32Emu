@@ -207,12 +207,13 @@ public sealed class Emulator : IDisposable
         }
 
         // Log system information
-        var osDescription = RuntimeInformation.OSDescription;
-        var processArchitecture = RuntimeInformation.ProcessArchitecture;
-        _logger.LogInformation("[Loader] Host OS: {OSDescription}", osDescription);
-        _logger.LogInformation("[Loader] Host Architecture: {ProcessArchitecture}", processArchitecture);
+        _logger.LogInformation("[Loader] Host OS: {OSDescription}", RuntimeInformation.OSDescription);
+		_logger.LogInformation("[Loader] Host OS Architecture: {OSArchitecture}", RuntimeInformation.OSArchitecture);
+		_logger.LogInformation("[Loader] Host Process Architecture: {ProcessArchitecture}", RuntimeInformation.ProcessArchitecture);
+		_logger.LogInformation("[Loader] Host Framework: {FrameworkDescription}", RuntimeInformation.FrameworkDescription);
+		_logger.LogInformation("[Loader] Host Runtime Identifier: {RuntimeIdentifier}", RuntimeInformation.RuntimeIdentifier);
 
-        LogDebug($"[Loader] Loading PE: {path}");
+		LogDebug($"[Loader] Loading PE: {path}");
         // Convert MB to bytes for VirtualMemory constructor
         var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
         _vm = new VirtualMemory(memorySizeBytes);
