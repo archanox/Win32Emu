@@ -332,20 +332,10 @@ public class ProcessEnvironment
 	}
 
 	// Search path mode for SearchPath function
-	private uint _searchPathMode = 1; // Default: safe search mode enabled (1)
-	private bool _searchPathModePermanent = false;
 
-	public uint SearchPathMode
-	{
-		get => _searchPathMode;
-		set => _searchPathMode = value;
-	}
+	public uint SearchPathMode { get; set; } = 1;
 
-	public bool SearchPathModePermanent
-	{
-		get => _searchPathModePermanent;
-		set => _searchPathModePermanent = value;
-	}
+	public bool SearchPathModePermanent { get; set; } = false;
 
 	// Console state
 	public bool HasConsole { get; private set; }
@@ -431,15 +421,7 @@ public class ProcessEnvironment
 	public RegistryHive? RegistryHive => _registryHive;
 	
 	// Backward compatibility - old virtual registry (deprecated)
-	private readonly Dictionary<uint, VirtualRegistryKey> _registryKeys = new(); // handle -> key
 	private uint _nextRegistryHandle = 0x80000000; // Registry handles typically use high values
-	
-	[Obsolete("Use RegistryHive instead")]
-	public class VirtualRegistryKey
-	{
-		public string Path { get; set; } = string.Empty;
-		public Dictionary<string, object> Values { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-	}
 
 	public void InitializeStrings(string exePath, string[] args)
 	{
@@ -1698,13 +1680,38 @@ public class ProcessEnvironment
 		// See: https://learn.microsoft.com/en-us/windows/win32/winmsg/about-window-classes#system-classes
 		var standardClasses = new[]
 		{
+			// The class for a button.
 			"BUTTON",
+			// The class for an edit control.
 			"EDIT",
+			// The class for a static control.
 			"STATIC",
+			// The class for a list box.
 			"LISTBOX",
+			// The class for a combo box.
 			"COMBOBOX",
+			// The class for a scroll bar.
 			"SCROLLBAR",
-			"MDICLIENT"
+			// The class for an MDI client window.
+			"MDICLIENT",
+			
+			// SYSTEM ONLY
+			// The class for the list box contained in a combo box.
+			"COMBOLBOX",
+			// The class for Dynamic Data Exchange Management Library (DDEML) events.
+			"DDEMLEVENT",
+			// The class for a message-only window.
+			"MESSAGE",
+			// The class for a menu.
+			"#32768",
+			// The class for the desktop window.
+			"#32769",
+			// The class for a dialog box.
+			"#32770",
+			// The class for the task switch window.
+			"#32771",
+			// The class for icon titles.
+			"#32772"
 		};
 
 		uint index = 0;
@@ -2351,23 +2358,13 @@ public class ProcessEnvironment
 	// Registry support methods - updated to use RegistryHive
 	public uint RegOpenKey(string path)
 	{
-		// Try new registry hive first
-		if (_registryHive != null)
+		var handle = _registryHive?.OpenKey(path) ?? 0;
+		if (handle != 0)
 		{
-			var handle = _registryHive.OpenKey(path);
-			if (handle != 0)
-			{
-				_logger.LogInformation("[ProcessEnv] RegOpenKey: path=\"{Path}\" handle=0x{Handle:X8} (from hive)", path, handle);
-				return handle;
-			}
+			_logger.LogInformation("[ProcessEnv] RegOpenKey: path=\"{Path}\" handle=0x{Handle:X8} (from hive)", path, handle);
 		}
 		
-		// Fall back to old virtual registry for backward compatibility
-		var legacyHandle = _nextRegistryHandle++;
-		var key = new VirtualRegistryKey { Path = path };
-		_registryKeys[legacyHandle] = key;
-		_logger.LogInformation("[ProcessEnv] RegOpenKey: path=\"{Path}\" handle=0x{Handle:X8} (legacy)", path, legacyHandle);
-		return legacyHandle;
+		return handle;
 	}
 
 	public bool RegQueryValue(uint handle, string valueName, out object? value)
@@ -2382,19 +2379,6 @@ public class ProcessEnvironment
 			return true;
 		}
 		
-		// Fall back to old virtual registry
-		if (!_registryKeys.TryGetValue(handle, out var key))
-		{
-			_logger.LogWarning("[ProcessEnv] RegQueryValue: invalid handle=0x{Handle:X8}", handle);
-			return false;
-		}
-
-		if (key.Values.TryGetValue(valueName, out value))
-		{
-			_logger.LogInformation("[ProcessEnv] RegQueryValue: handle=0x{Handle:X8} name=\"{ValueName}\" value={Value} (legacy)",
-				handle, valueName, value);
-			return true;
-		}
 
 		_logger.LogInformation("[ProcessEnv] RegQueryValue: handle=0x{Handle:X8} name=\"{ValueName}\" not found",
 			handle, valueName);
@@ -2407,13 +2391,6 @@ public class ProcessEnvironment
 		if (_registryHive != null && _registryHive.CloseKey(handle))
 		{
 			_logger.LogInformation("[ProcessEnv] RegCloseKey: handle=0x{Handle:X8} (from hive)", handle);
-			return true;
-		}
-		
-		// Fall back to old virtual registry
-		if (_registryKeys.Remove(handle))
-		{
-			_logger.LogInformation("[ProcessEnv] RegCloseKey: handle=0x{Handle:X8} (legacy)", handle);
 			return true;
 		}
 
