@@ -7,12 +7,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using VhdDisk = DiscUtils.Vhd.Disk;
 using VhdxDisk = DiscUtils.Vhdx.Disk;
-using VmdkDisk = DiscUtils.Vmdk.Disk;
 
 namespace Win32Emu.VirtualFileSystem;
 
 /// <summary>
-/// Virtual file system that uses LTRData.DiscUtils to provide a virtual disk (VMDK/VHD/VHDX/ISO).
+/// Virtual file system that uses LTRData.DiscUtils to provide a virtual disk (VHD/VHDX/ISO).
 /// This allows for a complete C: drive emulation with FAT filesystem support, including long filenames.
 /// </summary>
 public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
@@ -31,7 +30,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 	/// <summary>
 	/// Opens an existing virtual disk or ISO file.
 	/// </summary>
-	/// <param name="diskPath">Path to the disk file (VMDK/VHD/VHDX/ISO/CHD)</param>
+	/// <param name="diskPath">Path to the disk file (VHD/VHDX/ISO/CHD)</param>
 	/// <param name="logger">Optional logger</param>
 	public DiskVirtualFileSystem(string diskPath, ILogger? logger = null)
 	{
@@ -77,20 +76,6 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 					IsReadOnly = true;
 					break;
 
-				case ".vmdk":
-					try
-					{
-						_disk = new VmdkDisk(diskPath, FileAccess.ReadWrite);
-					}
-					catch (UnauthorizedAccessException)
-					{
-						_disk = new VmdkDisk(diskPath, FileAccess.Read);
-						IsReadOnly = true;
-					}
-					_fileSystem = GetFileSystemFromDisk(_disk);
-					_logger.LogInformation("[DiskVFS] Mounted VMDK: {DiskPath} ({Mode})", diskPath, IsReadOnly ? "Read-Only" : "Read-Write");
-					break;
-
 				case ".vhd":
 					try
 					{
@@ -134,7 +119,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 	/// Creates a new virtual disk with the specified format and size, pre-formatted with FAT32.
 	/// </summary>
 	/// <param name="diskPath">Path where the disk file will be created</param>
-	/// <param name="format">Disk format (VMDK/VHD/VHDX)</param>
+	/// <param name="format">Disk format (VHD/VHDX)</param>
 	/// <param name="sizeBytes">Size of the disk in bytes</param>
 	/// <param name="logger">Optional logger</param>
 	public static DiskVirtualFileSystem Create(string diskPath, DiskFormat format, long sizeBytes, ILogger? logger = null)
@@ -159,10 +144,6 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 				
 				case DiskFormat.Vhdx:
 					CreateVhdxDisk(diskPath, sizeBytes, logger);
-					break;
-				
-				case DiskFormat.Vmdk:
-					CreateVmdkDisk(diskPath, sizeBytes, logger);
 					break;
 				
 				default:
@@ -222,11 +203,6 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 				logger.LogDebug("[DiskVFS] VHDX disk formatted with FAT32");
 			}
 		}
-	}
-
-	private static void CreateVmdkDisk(string diskPath, long sizeBytes, ILogger logger)
-	{
-		throw new NotSupportedException("VMDK disk creation is not supported.");
 	}
 
 	/// <summary>

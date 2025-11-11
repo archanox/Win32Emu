@@ -3,6 +3,11 @@
     "Win32Emu.Gui": {
       "commandName": "Project",
       "nativeDebugging": true
+    },
+    "Win32Emu.Gui (Debug Logs)": {
+      "commandName": "Project",
+      "commandLineArgs": "--debug",
+      "nativeDebugging": true
     }
   }
 }

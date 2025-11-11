@@ -5,7 +5,6 @@ namespace Win32Emu.VirtualFileSystem
 	/// </summary>
 	public enum DiskFormat
 	{
-		Vmdk,
 		Vhd,
 		Vhdx
 	}

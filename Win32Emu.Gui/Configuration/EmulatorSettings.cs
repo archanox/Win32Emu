@@ -40,7 +40,7 @@ public class EmulatorSettings
     public int DefaultVirtualDiskSizeMb { get; set; } = 512;
     
     /// <summary>
-    /// Virtual disk format to use (VHD, VHDX, VMDK)
+    /// Virtual disk format to use (VHD, VHDX)
     /// </summary>
     public string VirtualDiskFormat { get; set; } = "VHD";
     

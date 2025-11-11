@@ -21,6 +21,12 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Loader] Host Architecture: Arm64
 info: Win32Emu.Emulator[0]
+      [Loader] Host Framework: .NET 9.0.10
+info: Win32Emu.Emulator[0]
+      [Loader] Host OS Architecture: Arm64
+info: Win32Emu.Emulator[0]
+      [Loader] Host Runtime Identifier: win-arm64
+info: Win32Emu.Emulator[0]
       [Memory] Configured size: 1024 MB, Address space: 4096 MB (sparse, pages allocated on-demand)
 info: Win32Emu.Emulator[0]
       [Loader] Created syscall dispatcher at 0x0E000000
@@ -1271,7 +1277,7 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       Dispatching WINMM.DLL!timeGetTime at EIP=0x0E000002 ESP=0x001FEF0C stack=D6 34 40 00 C2 32 40 00 5C 32 40 00 FC EF 1F 00
 info: Win32Emu.Emulator[0]
-      [Dispatcher] WINMM.DLL!timeGetTime returned 0x000003CE, argBytes=0
+      [Dispatcher] WINMM.DLL!timeGetTime returned 0x00000403, argBytes=0
 info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEF0C = 0x004034D6
 info: Win32Emu.Emulator[0]
