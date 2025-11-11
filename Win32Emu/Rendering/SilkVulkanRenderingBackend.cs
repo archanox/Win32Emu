@@ -930,4 +930,48 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
     public bool IsInitialized => _initialized;
     public int Width => _width;
     public int Height => _height;
+
+    // Hardware-accelerated rendering methods (stub implementations for now)
+    
+    public void BeginFrame()
+    {
+        _logger.LogDebug("[Vulkan] BeginFrame called (not yet implemented)");
+        // TODO: Implement Vulkan frame begin
+    }
+
+    public void EndFrame()
+    {
+        _logger.LogDebug("[Vulkan] EndFrame called (not yet implemented)");
+        // TODO: Implement Vulkan frame end and present
+    }
+
+    public void DrawTriangles(Span<Vertex> vertices, Span<ushort> indices)
+    {
+        _logger.LogWarning("[Vulkan] DrawTriangles not yet implemented");
+        // TODO: Implement Vulkan triangle rendering
+    }
+
+    public void SetTexture(uint textureId, byte[] data, int width, int height, TextureFormat format)
+    {
+        _logger.LogWarning("[Vulkan] SetTexture not yet implemented");
+        // TODO: Implement Vulkan texture upload
+    }
+
+    public void BindTexture(uint textureId)
+    {
+        _logger.LogWarning("[Vulkan] BindTexture not yet implemented");
+        // TODO: Implement Vulkan texture binding
+    }
+
+    public void SetRenderState(BlendMode blend, DepthTest depth, CullMode cull)
+    {
+        _logger.LogWarning("[Vulkan] SetRenderState not yet implemented");
+        // TODO: Implement Vulkan render state management
+    }
+
+    public void DeleteTexture(uint textureId)
+    {
+        _logger.LogWarning("[Vulkan] DeleteTexture not yet implemented");
+        // TODO: Implement Vulkan texture deletion
+    }
 }

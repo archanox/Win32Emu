@@ -186,7 +186,29 @@ public class GdbServerTests
             0x00010000, // SizeOfHeapCommit (64KB)
             [],         // TlsCallbacks (empty array)
             [],         // Sections (empty array)
-            new Dictionary<uint, uint>() // IatEntryMap (empty)
+            new Dictionary<uint, uint>(), // IatEntryMap (empty)
+            // FileHeader fields
+            Machine: 0x014C,
+            TimeDateStamp: 0x00000000,
+            Characteristics: 0x010E,
+            // OptionalHeader additional fields
+            MajorLinkerVersion: 14,
+            MinorLinkerVersion: 0,
+            MajorOperatingSystemVersion: 4,
+            MinorOperatingSystemVersion: 0,
+            MajorImageVersion: 0,
+            MinorImageVersion: 0,
+            MajorSubsystemVersion: 4,
+            MinorSubsystemVersion: 0,
+            DllCharacteristics: 0x0000,
+            CheckSum: 0x00000000,
+            SectionAlignment: 0x1000,
+            FileAlignment: 0x0200,
+            BaseOfCode: 0x1000,
+            BaseOfData: 0x3000,
+            SizeOfCode: 0x2000,
+            SizeOfInitializedData: 0x1500,
+            SizeOfUninitializedData: 0x0000
         );
         
         // Act

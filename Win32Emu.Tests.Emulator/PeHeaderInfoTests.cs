@@ -56,9 +56,30 @@ public class PeHeaderInfoTests
 			0x100000,
 			0x10000,
 			[],
-			sections
-		,
-			new Dictionary<uint, uint>() // IatEntryMap (empty)
+			sections,
+			new Dictionary<uint, uint>(), // IatEntryMap (empty)
+			// FileHeader fields
+			Machine: 0x014C, // Intel 386
+			TimeDateStamp: 0x00000000,
+			Characteristics: 0x010E, // EXECUTABLE_IMAGE | 32BIT_MACHINE | LINE_NUMS_STRIPPED | LOCAL_SYMS_STRIPPED
+			// OptionalHeader additional fields
+			MajorLinkerVersion: 14,
+			MinorLinkerVersion: 0,
+			MajorOperatingSystemVersion: 4,
+			MinorOperatingSystemVersion: 0,
+			MajorImageVersion: 0,
+			MinorImageVersion: 0,
+			MajorSubsystemVersion: 4,
+			MinorSubsystemVersion: 0,
+			DllCharacteristics: 0x0000,
+			CheckSum: 0x00000000,
+			SectionAlignment: 0x1000,
+			FileAlignment: 0x0200,
+			BaseOfCode: 0x1000,
+			BaseOfData: 0x3000,
+			SizeOfCode: 0x2000,
+			SizeOfInitializedData: 0x1500,
+			SizeOfUninitializedData: 0x0000
 		);
 		
 		// Act
@@ -95,9 +116,30 @@ public class PeHeaderInfoTests
 			0x100000,
 			0x10000,
 			[],
-			sections
-		,
-			new Dictionary<uint, uint>() // IatEntryMap (empty)
+			sections,
+			new Dictionary<uint, uint>(), // IatEntryMap (empty)
+			// FileHeader fields
+			Machine: 0x014C, // Intel 386
+			TimeDateStamp: 0x00000000,
+			Characteristics: 0x010E,
+			// OptionalHeader additional fields
+			MajorLinkerVersion: 14,
+			MinorLinkerVersion: 0,
+			MajorOperatingSystemVersion: 4,
+			MinorOperatingSystemVersion: 0,
+			MajorImageVersion: 0,
+			MinorImageVersion: 0,
+			MajorSubsystemVersion: 4,
+			MinorSubsystemVersion: 0,
+			DllCharacteristics: 0x0000,
+			CheckSum: 0x00000000,
+			SectionAlignment: 0x1000,
+			FileAlignment: 0x0200,
+			BaseOfCode: 0x1000,
+			BaseOfData: 0x3000,
+			SizeOfCode: 0x2000,
+			SizeOfInitializedData: 0x1500,
+			SizeOfUninitializedData: 0x0000
 		);
 		
 		// Act & Assert
@@ -129,7 +171,29 @@ public class PeHeaderInfoTests
 			0x8000,    // Heap commit
 			[],
 			[],
-			new Dictionary<uint, uint>() // IatEntryMap (empty)
+			new Dictionary<uint, uint>(), // IatEntryMap (empty)
+			// FileHeader fields
+			Machine: 0x014C,
+			TimeDateStamp: 0x00000000,
+			Characteristics: 0x010E,
+			// OptionalHeader additional fields
+			MajorLinkerVersion: 14,
+			MinorLinkerVersion: 0,
+			MajorOperatingSystemVersion: 4,
+			MinorOperatingSystemVersion: 0,
+			MajorImageVersion: 0,
+			MinorImageVersion: 0,
+			MajorSubsystemVersion: 4,
+			MinorSubsystemVersion: 0,
+			DllCharacteristics: 0x0000,
+			CheckSum: 0x00000000,
+			SectionAlignment: 0x1000,
+			FileAlignment: 0x0200,
+			BaseOfCode: 0x1000,
+			BaseOfData: 0x3000,
+			SizeOfCode: 0x2000,
+			SizeOfInitializedData: 0x1500,
+			SizeOfUninitializedData: 0x0000
 		);
 		
 		// Assert
