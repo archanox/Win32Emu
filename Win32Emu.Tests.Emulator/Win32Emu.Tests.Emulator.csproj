@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="PeNet" Version="5.1.0" />
     <PackageReference Include="UnicornEngine.Unicorn" Version="2.1.4-a40db6c" />
     <PackageReference Include="xunit" Version="2.9.3" />
