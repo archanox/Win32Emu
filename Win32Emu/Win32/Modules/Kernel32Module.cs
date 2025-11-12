@@ -894,8 +894,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return CreateMutex(lpMutexAttributes, bInitialOwner, lpName);
 	}
 
-	[DllModuleExport(370, entryPoint: 0x0001B03D, Version = "4.90.0.3000", IsStub = true)]
-	[DllModuleExport(334, entryPoint: 0x0001C123, Version = "5.1.2600.6532", IsStub = true)]
+	[DllModuleExport(370, entryPoint: 0x0001B03D, Version = "4.90.0.3000")]
+	[DllModuleExport(334, entryPoint: 0x0001C123, Version = "5.1.2600.6532")]
 	private uint GetEnvironmentStrings() => GetEnvironmentStringsA();
 
 	/// <summary>
@@ -5553,6 +5553,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	// Directory functions
+	[DllModuleExport(1)]
 	private uint SetCurrentDirectoryA(in LpcStr lpPathName)
 	{
 		var path = lpPathName.ToString();
@@ -5568,6 +5569,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
+	[DllModuleExport(1)]
 	private uint GetCurrentDirectoryA(uint nBufferLength, in LpStr lpBuffer)
 	{
 		var currentDir = _env.CurrentDirectory;
@@ -5660,6 +5662,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	// String functions
+	[DllModuleExport(1)]
 	private uint LstrcatA(in LpStr lpString1, in LpcStr lpString2)
 	{
 		var str1 = lpString1.Read(_env.Memory);
@@ -5720,6 +5723,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	// Process execution
+	[DllModuleExport(1)]
 	private uint WinExec(in LpcStr lpCmdLine, uint uCmdShow)
 	{
 		var cmdLine = lpCmdLine.ToString();
@@ -6724,20 +6728,6 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	/// <summary>
-	/// Creates a new process and its primary thread.
-	/// </summary>
-	[DllModuleExport(72)]
-	private uint CreateProcessA(uint lpApplicationName, uint lpCommandLine, uint lpProcessAttributes, uint lpThreadAttributes,
-		uint bInheritHandles, uint dwCreationFlags, uint lpEnvironment, uint lpCurrentDirectory, uint lpStartupInfo, uint lpProcessInformation)
-	{
-		var appName = lpApplicationName != 0 ? _env.ReadAnsiString(lpApplicationName) : null;
-		var cmdLine = lpCommandLine != 0 ? _env.ReadAnsiString(lpCommandLine) : null;
-		_logger.LogInformation("[Kernel32] CreateProcessA(lpApplicationName=\"{AppName}\", lpCommandLine=\"{CmdLine}\")", appName, cmdLine);
-		_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
-		return 0; // FALSE
-	}
-
-	/// <summary>
 	/// Duplicates an object handle.
 	/// </summary>
 	[DllModuleExport(28)]
@@ -6780,6 +6770,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return PROCESS_HEAP_HANDLE;
 	}
 
+	[DllModuleExport(1)]
 	private uint GetFileAttributesA(in LpcStr lpFileName)
 	{
 		var fileName = lpFileName.ToString() ?? string.Empty;
@@ -7002,6 +6993,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
+	[DllModuleExport(1)]
 	private uint GetSystemDefaultLCID()
 	{
 		_logger.LogInformation("[Kernel32] GetSystemDefaultLCID()");
@@ -7099,6 +7091,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
+	[DllModuleExport(1)]
 	private uint GetDateFormatA(uint locale, uint dwFlags, uint lpDate, in LpcStr lpFormat, in LpStr lpDateStr, int cchDate)
 	{
 		var format = lpFormat.ToString();
@@ -7152,6 +7145,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
+	[DllModuleExport(1)]
 	private uint ExpandEnvironmentStringsA(in LpcStr lpSrc, in LpStr lpDst, uint nSize)
 	{
 		var src = lpSrc.ToString() ?? string.Empty;
@@ -7180,6 +7174,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return (uint)(result.Length + 1);
 	}
 
+	[DllModuleExport(1)]
 	private uint GetPrivateProfileStringA(in LpcStr lpAppName, in LpcStr lpKeyName, in LpcStr lpDefault, in LpStr lpReturnedString, uint nSize, in LpcStr lpFileName)
 	{
 		var appName = lpAppName.ToString() ?? string.Empty;
@@ -7213,6 +7208,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return 0;
 	}
 
+	/// <summary>
+	/// Creates a new process and its primary thread.
+	/// </summary>
+	[DllModuleExport(72)]
 	private uint CreateProcessA(in LpcStr lpApplicationName, in LpStr lpCommandLine, uint lpProcessAttributes,
 		uint lpThreadAttributes, uint bInheritHandles, uint dwCreationFlags, uint lpEnvironment,
 		in LpcStr lpCurrentDirectory, uint lpStartupInfo, uint lpProcessInformation)
@@ -7226,7 +7225,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		// Stub implementation - CreateProcess is complex and not fully supported
 		// Return failure for now
-		_lastError = 2; // ERROR_FILE_NOT_FOUND
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 		return 0; // FALSE
 	}
 
