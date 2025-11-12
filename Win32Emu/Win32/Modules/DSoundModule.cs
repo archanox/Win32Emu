@@ -707,11 +707,11 @@ namespace Win32Emu.Win32.Modules
 			// Use the generated DSBCAPS ref struct
 			var caps = new DSBCAPSRef(memory, pDSBufferCaps);
 			
-			// Validate structure size (should be at least 20 bytes)
-			if (caps.dwSize < 20)
+			// Validate structure size (must be exactly 20 bytes)
+			if (caps.dwSize != 20)
 			{
-				_logger.LogError("[DSound COM] IDirectSoundBuffer::GetCaps: Invalid structure size {DwSize}", caps.dwSize);
-				return 0x80070057; // E_INVALIDARG
+			    _logger.LogError("[DSound COM] IDirectSoundBuffer::GetCaps: Invalid structure size {DwSize}, expected 20", caps.dwSize);
+			    return 0x80070057; // E_INVALIDARG
 			}
 
 			// Set flags based on buffer properties
