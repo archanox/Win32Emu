@@ -545,9 +545,13 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 				_logger.LogDebug("[DiskVFS] Created directory: {Path}", normalizedPath);
 			}
 		}
-		catch (Exception ex)
+		catch (IOException ex)
 		{
-			_logger.LogWarning(ex, "[DiskVFS] Failed to create directory: {Path}", path);
+			_logger.LogWarning(ex, "[DiskVFS] Failed to create directory due to IO error: {Path}", path);
+		}
+		catch (UnauthorizedAccessException ex)
+		{
+			_logger.LogWarning(ex, "[DiskVFS] Failed to create directory due to access error: {Path}", path);
 		}
 	}
 

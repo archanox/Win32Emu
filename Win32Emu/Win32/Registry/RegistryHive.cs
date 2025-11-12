@@ -65,7 +65,7 @@ public class RegistryHive : IDisposable
 					_logger.LogInformation("[RegistryHive] Loading existing hive from VFS: {HiveName} at {HivePath}", hiveName, hivePath);
 					
 					// Open the file from VFS
-					var fileHandle = _vfs.OpenFile(hivePath, VfsFileMode.Open, VfsFileAccess.ReadWrite);
+					using var fileHandle = _vfs.OpenFile(hivePath, VfsFileMode.Open, VfsFileAccess.ReadWrite);
 					if (fileHandle != null)
 					{
 						// Read the entire file into memory
@@ -76,9 +76,9 @@ public class RegistryHive : IDisposable
 						{
 							memStream.Write(buffer, 0, bytesRead);
 						}
-						fileHandle.Dispose();
 						
 						// Reset stream position and open as registry hive
+						// Note: RegistryHive takes ownership of the stream and will dispose it
 						memStream.Position = 0;
 						hive = new DiscUtils.Registry.RegistryHive(memStream);
 						_logger.LogInformation("[RegistryHive] Loaded existing hive: {HiveName} ({Size} bytes)", hiveName, memStream.Length);
@@ -86,9 +86,17 @@ public class RegistryHive : IDisposable
 					}
 				}
 			}
-			catch (Exception ex)
+			catch (IOException ex)
 			{
-				_logger.LogWarning(ex, "[RegistryHive] Failed to load hive from VFS: {HiveName}, creating new one", hiveName);
+				_logger.LogWarning(ex, "[RegistryHive] IO error loading hive from VFS: {HiveName}, creating new one", hiveName);
+			}
+			catch (UnauthorizedAccessException ex)
+			{
+				_logger.LogWarning(ex, "[RegistryHive] Unauthorized access loading hive from VFS: {HiveName}, creating new one", hiveName);
+			}
+			catch (InvalidDataException ex)
+			{
+				_logger.LogWarning(ex, "[RegistryHive] Invalid data loading hive from VFS: {HiveName}, creating new one", hiveName);
 			}
 		}
 		
@@ -574,9 +582,17 @@ public class RegistryHive : IDisposable
 				var hivePath = GetHiveFilePath(GetHiveFileName(hiveName));
 				SaveHiveToVfs(hive, hivePath, GetHiveFileName(hiveName));
 			}
-			catch (Exception ex)
+			catch (IOException ex)
 			{
-				_logger.LogError(ex, "[RegistryHive] Failed to save hive: {HiveName}", hiveName);
+				_logger.LogError(ex, "[RegistryHive] IO error saving hive: {HiveName}", hiveName);
+			}
+			catch (UnauthorizedAccessException ex)
+			{
+				_logger.LogError(ex, "[RegistryHive] Unauthorized access saving hive: {HiveName}", hiveName);
+			}
+			catch (InvalidOperationException ex)
+			{
+				_logger.LogError(ex, "[RegistryHive] Invalid operation saving hive: {HiveName}", hiveName);
 			}
 		}
 		
@@ -625,7 +641,7 @@ public class RegistryHive : IDisposable
 		try
 		{
 			// Save hive to memory stream first
-			var memStream = new MemoryStream();
+			using var memStream = new MemoryStream();
 			hive.Save(memStream);
 			memStream.Position = 0;
 			
@@ -635,7 +651,7 @@ public class RegistryHive : IDisposable
 			EnsureDirectoryExists(Path.GetDirectoryName(path) ?? string.Empty);
 			
 			// Write to VFS
-			var fileHandle = _vfs.OpenFile(path, VfsFileMode.Create, VfsFileAccess.Write);
+			using var fileHandle = _vfs.OpenFile(path, VfsFileMode.Create, VfsFileAccess.Write);
 			if (fileHandle != null)
 			{
 				var buffer = new byte[4096];
@@ -644,7 +660,6 @@ public class RegistryHive : IDisposable
 				{
 					fileHandle.Write(buffer, 0, bytesRead);
 				}
-				fileHandle.Dispose();
 				
 				_logger.LogInformation("[RegistryHive] Saved hive {HiveName} to {Path} ({Size} bytes)", hiveName, path, memStream.Length);
 			}
@@ -655,6 +670,12 @@ public class RegistryHive : IDisposable
 		}
 		catch (Exception ex)
 		{
+			// Rethrow critical exceptions
+			if (ex is OutOfMemoryException || ex is StackOverflowException)
+			{
+				throw;
+			}
+			
 			_logger.LogError(ex, "[RegistryHive] Failed to save hive {HiveName} to {Path}", hiveName, path);
 		}
 	}
@@ -681,14 +702,9 @@ public class RegistryHive : IDisposable
 				foreach (var part in parts)
 				{
 					// Build path incrementally
-					if (string.IsNullOrEmpty(currentPath))
-					{
-						currentPath = part;
-					}
-					else
-					{
-						currentPath = $@"{currentPath}\{part}";
-					}
+					currentPath = string.IsNullOrEmpty(currentPath)
+						? part
+						: $@"{currentPath}\{part}";
 					
 					// Skip drive letters (e.g., "C:")
 					if (currentPath.EndsWith(':'))
@@ -702,9 +718,17 @@ public class RegistryHive : IDisposable
 				
 				_logger.LogDebug("[RegistryHive] Ensured directory exists: {Directory}", directory);
 			}
-			catch (Exception ex)
+			catch (IOException ex)
 			{
-				_logger.LogWarning(ex, "[RegistryHive] Failed to ensure directory exists: {Directory}", directory);
+				_logger.LogWarning(ex, "[RegistryHive] IOException while ensuring directory exists: {Directory}", directory);
+			}
+			catch (UnauthorizedAccessException ex)
+			{
+				_logger.LogWarning(ex, "[RegistryHive] UnauthorizedAccessException while ensuring directory exists: {Directory}", directory);
+			}
+			catch (InvalidOperationException ex)
+			{
+				_logger.LogWarning(ex, "[RegistryHive] InvalidOperationException while ensuring directory exists: {Directory}", directory);
 			}
 		}
 		else
