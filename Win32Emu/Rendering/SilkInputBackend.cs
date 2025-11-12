@@ -6,9 +6,9 @@ namespace Win32Emu.Rendering;
 /// <summary>
 /// Silk.NET-based input backend for DirectInput operations
 /// </summary>
-public class SilkInputBackend : IInputBackend
+public class SilkInputBackend(ILogger logger) : IInputBackend
 {
-    private readonly ILogger _logger;
+    private readonly ILogger _logger = logger;
     private bool _initialized;
     private readonly Lock _lock = new();
     private readonly Dictionary<uint, InputDevice> _devices = new();
@@ -20,7 +20,7 @@ public class SilkInputBackend : IInputBackend
     private static int _sharedMouseX = 0;
     private static int _sharedMouseY = 0;
     private static int _sharedMouseZ = 0;
-    private static readonly object _sharedStateLock = new();
+    private static readonly Lock _sharedStateLock = new();
 
     /// <summary>
     /// Event fired when a UI event occurs (mouse, keyboard, window)
@@ -35,10 +35,6 @@ public class SilkInputBackend : IInputBackend
         public IInputBackend.InputState State { get; set; } = new();
     }
 
-    public SilkInputBackend(ILogger logger)
-    {
-        _logger = logger;
-    }
 
     public bool Initialize()
     {

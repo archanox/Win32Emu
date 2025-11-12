@@ -7,9 +7,9 @@ namespace Win32Emu.Rendering;
 /// <summary>
 /// SDL3 input backend for DirectInput operations
 /// </summary>
-public class Sdl3InputBackend : IInputBackend
+public class Sdl3InputBackend(ILogger logger) : IInputBackend
 {
-    private readonly ILogger _logger;
+    private readonly ILogger _logger = logger;
     private readonly ConcurrentDictionary<int, DeviceInfo> _devices = new();
     private bool _initialized;
     private readonly Lock _lock = new();
@@ -63,10 +63,6 @@ public class Sdl3InputBackend : IInputBackend
         _sharedMouseZ += delta;
     }
 
-    public Sdl3InputBackend(ILogger logger)
-    {
-        _logger = logger;
-    }
 
     public bool Initialize()
     {
