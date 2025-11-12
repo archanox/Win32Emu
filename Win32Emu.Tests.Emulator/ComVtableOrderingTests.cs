@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Runtime.InteropServices;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
@@ -21,6 +22,28 @@ public class ComVtableOrderingTests
 		_output = output;
 	}
 
+	// Test delegate types for COM method testing
+	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+	private delegate int QueryInterfaceDelegate(IntPtr pThis, IntPtr riid, IntPtr ppvObject);
+
+	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+	private delegate uint AddRefDelegate(IntPtr pThis);
+
+	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+	private delegate uint ReleaseDelegate(IntPtr pThis);
+
+	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+	private delegate uint Method3Delegate(IntPtr pThis, IntPtr param1);
+
+	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+	private delegate uint Method4Delegate(IntPtr pThis, IntPtr param1);
+
+	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+	private delegate uint Method5Delegate(IntPtr pThis, IntPtr param1, IntPtr param2);
+
+	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+	private delegate uint GenericMethodDelegate(IntPtr pThis, IntPtr param1);
+
 	[Fact]
 	public void CreateComObjectOrdered_ShouldPreserveMethodOrder()
 	{
@@ -30,15 +53,15 @@ public class ComVtableOrderingTests
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 
-		// Create a list of methods in specific order
+		// Create a list of methods in specific order using FromDelegate<T>() for automatic argBytes
 		var methods = new List<KeyValuePair<string, ComMethodInfo>>
 		{
-			new("QueryInterface", new ComMethodInfo((cpu, mem) => 0, 12)),
-			new("AddRef", new ComMethodInfo((cpu, mem) => 1, 4)),
-			new("Release", new ComMethodInfo((cpu, mem) => 2, 4)),
-			new("Method3", new ComMethodInfo((cpu, mem) => 3, 8)),
-			new("Method4", new ComMethodInfo((cpu, mem) => 4, 8)),
-			new("Method5", new ComMethodInfo((cpu, mem) => 5, 12))
+			new("QueryInterface", ComVtableDispatcher.FromDelegate<QueryInterfaceDelegate>((cpu, mem) => 0)),
+			new("AddRef", ComVtableDispatcher.FromDelegate<AddRefDelegate>((cpu, mem) => 1)),
+			new("Release", ComVtableDispatcher.FromDelegate<ReleaseDelegate>((cpu, mem) => 2)),
+			new("Method3", ComVtableDispatcher.FromDelegate<Method3Delegate>((cpu, mem) => 3)),
+			new("Method4", ComVtableDispatcher.FromDelegate<Method4Delegate>((cpu, mem) => 4)),
+			new("Method5", ComVtableDispatcher.FromDelegate<Method5Delegate>((cpu, mem) => 5))
 		};
 
 		// Act
@@ -74,13 +97,14 @@ public class ComVtableOrderingTests
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 
-		// Create 20 methods to test ordering with a larger vtable
+		// Create 20 methods to test ordering with a larger vtable using FromDelegate<T>()
 		var methods = new List<KeyValuePair<string, ComMethodInfo>>();
 		for (int i = 0; i < 20; i++)
 		{
+			var methodIndex = i;
 			methods.Add(new KeyValuePair<string, ComMethodInfo>(
 				$"Method{i}",
-				new ComMethodInfo((cpu, mem) => (uint)i, 8)));
+				ComVtableDispatcher.FromDelegate<GenericMethodDelegate>((cpu, mem) => (uint)methodIndex)));
 		}
 
 		// Act
@@ -119,24 +143,24 @@ public class ComVtableOrderingTests
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 
-		// Create IDirectDrawSurface methods in correct COM interface order
+		// Create IDirectDrawSurface methods in correct COM interface order using FromDelegate<T>()
 		var methods = new List<KeyValuePair<string, ComMethodInfo>>
 		{
 			// IUnknown (0-2)
-			new("QueryInterface", new ComMethodInfo((cpu, mem) => 0, 12)),
-			new("AddRef", new ComMethodInfo((cpu, mem) => 0, 4)),
-			new("Release", new ComMethodInfo((cpu, mem) => 0, 4)),
+			new("QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.QueryInterface>((cpu, mem) => 0)),
+			new("AddRef", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.AddRef>((cpu, mem) => 0)),
+			new("Release", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Release>((cpu, mem) => 0)),
 			// IDirectDrawSurface (3-28)
-			new("AddAttachedSurface", new ComMethodInfo((cpu, mem) => 0, 8)),
-			new("AddOverlayDirtyRect", new ComMethodInfo((cpu, mem) => 0, 8)),
-			new("Blt", new ComMethodInfo((cpu, mem) => 0, 20)),
-			new("BltBatch", new ComMethodInfo((cpu, mem) => 0, 12)),
-			new("BltFast", new ComMethodInfo((cpu, mem) => 0, 24)),
-			new("DeleteAttachedSurface", new ComMethodInfo((cpu, mem) => 0, 12)),
-			new("EnumAttachedSurfaces", new ComMethodInfo((cpu, mem) => 0, 12)),
-			new("EnumOverlayZOrders", new ComMethodInfo((cpu, mem) => 0, 12)),
-			new("Flip", new ComMethodInfo((cpu, mem) => 0xF11F, 12)), // Index 11 = offset 0x2C
-			new("GetAttachedSurface", new ComMethodInfo((cpu, mem) => 0, 12)), // Index 12
+			new("AddAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.AddAttachedSurface>((cpu, mem) => 0)),
+			new("AddOverlayDirtyRect", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.AddOverlayDirtyRect>((cpu, mem) => 0)),
+			new("Blt", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Blt>((cpu, mem) => 0)),
+			new("BltBatch", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.BltBatch>((cpu, mem) => 0)),
+			new("BltFast", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.BltFast>((cpu, mem) => 0)),
+			new("DeleteAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.DeleteAttachedSurface>((cpu, mem) => 0)),
+			new("EnumAttachedSurfaces", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.EnumAttachedSurfaces>((cpu, mem) => 0)),
+			new("EnumOverlayZOrders", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.EnumOverlayZOrders>((cpu, mem) => 0)),
+			new("Flip", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.Flip>((cpu, mem) => 0xF11F)), // Index 11 = offset 0x2C
+			new("GetAttachedSurface", ComVtableDispatcher.FromDelegate<IDirectDrawSurface.GetAttachedSurface>((cpu, mem) => 0)), // Index 12
 			// ... more methods would follow
 		};
 
@@ -176,11 +200,12 @@ public class ComVtableOrderingTests
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 
+		// Even for backward compatibility test, use FromDelegate<T>() for proper argBytes calculation
 		var methods = new Dictionary<string, ComMethodInfo>
 		{
-			{ "QueryInterface", new ComMethodInfo((cpu, mem) => 0, 12) },
-			{ "AddRef", new ComMethodInfo((cpu, mem) => 1, 4) },
-			{ "Release", new ComMethodInfo((cpu, mem) => 2, 4) }
+			{ "QueryInterface", ComVtableDispatcher.FromDelegate<QueryInterfaceDelegate>((cpu, mem) => 0) },
+			{ "AddRef", ComVtableDispatcher.FromDelegate<AddRefDelegate>((cpu, mem) => 1) },
+			{ "Release", ComVtableDispatcher.FromDelegate<ReleaseDelegate>((cpu, mem) => 2) }
 		};
 
 		// Act

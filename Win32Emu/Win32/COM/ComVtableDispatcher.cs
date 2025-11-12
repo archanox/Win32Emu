@@ -382,19 +382,6 @@ public class ComVtableDispatcher
 	}
 	
 	/// <summary>
-	/// Create a COM object with a vtable
-	/// </summary>
-	public uint CreateComObject(string interfaceName, Dictionary<string, Func<ICpu, VirtualMemory, uint>> methods)
-	{
-		// Convert to ComMethodInfo with default argBytes of 0 (unknown)
-		var methodsWithInfo = methods.ToDictionary(
-			kvp => kvp.Key,
-			kvp => new ComMethodInfo(kvp.Value, ArgBytes: 0)
-		);
-		return CreateComObject(interfaceName, methodsWithInfo);
-	}
-	
-	/// <summary>
 	/// Create a COM object with a vtable, with argument byte metadata for proper stack cleanup
 	/// </summary>
 	public uint CreateComObject(string interfaceName, Dictionary<string, ComMethodInfo> methods)
