@@ -719,15 +719,18 @@ namespace Win32Emu.Win32.Modules
 			
 			if (buffer.IsPrimary)
 			{
-				dwFlags |= DSBCapsFlags.PRIMARYBUFFER;
+			    dwFlags |= DSBCapsFlags.PRIMARYBUFFER;
+			    dwFlags |= DSBCapsFlags.LOCSOFTWARE;
 			}
-			
-			// Set common flags for software buffers with full control
-			dwFlags |= DSBCapsFlags.LOCSOFTWARE;
-			dwFlags |= DSBCapsFlags.CTRLFREQUENCY;
-			dwFlags |= DSBCapsFlags.CTRLPAN;
-			dwFlags |= DSBCapsFlags.CTRLVOLUME;
-			dwFlags |= DSBCapsFlags.GETCURRENTPOSITION2;
+			else
+			{
+			    // Set common flags for software buffers with full control
+			    dwFlags |= DSBCapsFlags.LOCSOFTWARE;
+			    dwFlags |= DSBCapsFlags.CTRLFREQUENCY;
+			    dwFlags |= DSBCapsFlags.CTRLPAN;
+			    dwFlags |= DSBCapsFlags.CTRLVOLUME;
+			    dwFlags |= DSBCapsFlags.GETCURRENTPOSITION2;
+			}
 
 			// Write capabilities structure using ref struct properties
 			caps.dwFlags = (uint)dwFlags;
