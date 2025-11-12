@@ -1515,7 +1515,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Use consolidated helper to execute the procedure
 			// Parameters are pushed right-to-left: lParam, wParam, message, hwnd
-			var parameters = new[] { lParam, wParam, message, hwnd };
+			uint[] parameters = [lParam, wParam, message, hwnd];
 			var (returnValue, _, _) = ExecuteStdCallProcedure(
 				_cpu, _memory, wndProcAddress, parameters, "CallWindowProcedure");
 
@@ -1897,7 +1897,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Use consolidated helper to execute the procedure
 			// Parameters are pushed right-to-left: lParam, wParam, message, hwnd
-			var parameters = new[] { lParam, wParam, message, hwnd };
+			uint[] parameters = [lParam, wParam, message, hwnd];
 			var (returnValue, _, _, _) = await ExecuteStdCallProcedureAsync(
 				_cpu, _memory, wndProcAddress, parameters, "CallWindowProcedureAsync", cancellationToken);
 
@@ -2688,7 +2688,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Use consolidated helper to execute the procedure
 			// Parameters are pushed right-to-left: lParam, wParam, message, hwndDlg
-			var parameters = new[] { lParam, wParam, message, hwndDlg };
+			uint[] parameters = [lParam, wParam, message, hwndDlg];
 			return await ExecuteStdCallProcedureAsync(
 				cpu, memory, dialogProcAddress, parameters, "CallDialogProcedureAsync", cancellationToken);
 		}

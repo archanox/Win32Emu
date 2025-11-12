@@ -1678,8 +1678,8 @@ public class ProcessEnvironment
 		// Standard system window class names from Windows
 		// These are the predefined window classes available to all processes
 		// See: https://learn.microsoft.com/en-us/windows/win32/winmsg/about-window-classes#system-classes
-		var standardClasses = new[]
-		{
+		string[] standardClasses =
+		[
 			// The class for a button.
 			"BUTTON",
 			// The class for an edit control.
@@ -1712,7 +1712,7 @@ public class ProcessEnvironment
 			"#32771",
 			// The class for icon titles.
 			"#32772"
-		};
+		];
 
 		uint index = 0;
 		foreach (var className in standardClasses)
