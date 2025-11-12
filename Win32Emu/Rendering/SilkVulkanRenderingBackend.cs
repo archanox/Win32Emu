@@ -36,7 +36,7 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
     private bool _initialized;
     private int _width;
     private int _height;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private KhrSurface? _khrSurface;
     private KhrSwapchain? _khrSwapchain;
     private uint _graphicsQueueFamilyIndex;

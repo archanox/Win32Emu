@@ -19,7 +19,7 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
     private bool _initialized;
     private int _width;
     private int _height;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private GlfwCallbacks.ErrorCallback? _errorCallback;
     
     // OpenGL rendering pipeline components

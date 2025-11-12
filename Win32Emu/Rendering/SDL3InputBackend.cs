@@ -12,7 +12,7 @@ public class Sdl3InputBackend : IInputBackend
     private readonly ILogger _logger;
     private readonly ConcurrentDictionary<int, DeviceInfo> _devices = new();
     private bool _initialized;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private int _nextDeviceId = 1;
 
     // Shared state for keyboard and mouse (updated by SDL3RenderingBackend)

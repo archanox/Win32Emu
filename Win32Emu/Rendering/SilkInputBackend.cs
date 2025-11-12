@@ -10,7 +10,7 @@ public class SilkInputBackend : IInputBackend
 {
     private readonly ILogger _logger;
     private bool _initialized;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly Dictionary<uint, InputDevice> _devices = new();
     private uint _nextDeviceId = 1;
 

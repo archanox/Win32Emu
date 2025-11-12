@@ -18,7 +18,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
     private int _width;
     private int _height;
     private bool _initialized;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private bool _disposed;
 
     /// <summary>
