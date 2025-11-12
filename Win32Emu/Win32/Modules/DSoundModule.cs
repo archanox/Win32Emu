@@ -613,7 +613,20 @@ namespace Win32Emu.Win32.Modules
 			var hwnd = args.UInt32(1);
 			var dwLevel = args.UInt32(2);
 
-			_logger.LogInformation("[DSound COM] IDirectSound::SetCooperativeLevel(this=0x{ThisPtr:X8}, hwnd=0x{Hwnd:X8}, level=0x{DwLevel:X8}) - stub", thisPtr, hwnd, dwLevel);
+			_logger.LogInformation("[DSound COM] IDirectSound::SetCooperativeLevel(this=0x{ThisPtr:X8}, hwnd=0x{Hwnd:X8}, level=0x{DwLevel:X8})", thisPtr, hwnd, dwLevel);
+
+			// DirectSound cooperative level flags:
+			// DSSCL_NORMAL = 0x00000001 - Normal level
+			// DSSCL_PRIORITY = 0x00000002 - Priority level
+			// DSSCL_EXCLUSIVE = 0x00000003 - Exclusive level
+			// DSSCL_WRITEPRIMARY = 0x00000004 - Write primary buffer level
+			
+			// The cooperative level determines what operations the application can perform
+			// For emulation purposes, we accept all levels and return success
+			// The actual audio backend handles playback regardless of the cooperative level
+			
+			_logger.LogInformation("[DSound] Cooperative level set to 0x{DwLevel:X8} for window 0x{Hwnd:X8}", dwLevel, hwnd);
+			
 			return 0; // DS_OK
 		}
 
@@ -657,7 +670,77 @@ namespace Win32Emu.Win32.Modules
 		// IDirectSoundBuffer COM methods
 		private uint DSoundBuffer_GetCaps(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetCaps() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var pDSBufferCaps = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetCaps(this=0x{ThisPtr:X8}, pDSBufferCaps=0x{PDSBufferCaps:X8})", thisPtr, pDSBufferCaps);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetCaps: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			if (pDSBufferCaps == 0)
+			{
+				_logger.LogError("[DSound COM] IDirectSoundBuffer::GetCaps: pDSBufferCaps is NULL");
+				return 0x80070057; // E_INVALIDARG
+			}
+
+			// DSBCAPS structure:
+			// typedef struct {
+			//   DWORD dwSize;
+			//   DWORD dwFlags;
+			//   DWORD dwBufferBytes;
+			//   DWORD dwUnlockTransferRate;
+			//   DWORD dwPlayCpuOverhead;
+			// } DSBCAPS;
+
+			var dwSize = memory.Read32(pDSBufferCaps);
+			
+			// Validate structure size (should be at least 20 bytes)
+			if (dwSize < 20)
+			{
+				_logger.LogError("[DSound COM] IDirectSoundBuffer::GetCaps: Invalid structure size {DwSize}", dwSize);
+				return 0x80070057; // E_INVALIDARG
+			}
+
+			// Set flags based on buffer properties
+			uint dwFlags = 0;
+			
+			// DSBCAPS_PRIMARYBUFFER = 0x00000001
+			if (buffer.IsPrimary)
+			{
+				dwFlags |= 0x00000001;
+			}
+			
+			// DSBCAPS_STATIC = 0x00000002 - Buffer is in system memory
+			// DSBCAPS_LOCHARDWARE = 0x00000004 - Buffer is in hardware memory
+			// DSBCAPS_LOCSOFTWARE = 0x00000008 - Buffer is in software memory
+			// DSBCAPS_CTRLFREQUENCY = 0x00000020 - Frequency control
+			// DSBCAPS_CTRLPAN = 0x00000040 - Pan control
+			// DSBCAPS_CTRLVOLUME = 0x00000080 - Volume control
+			// DSBCAPS_CTRLPOSITIONNOTIFY = 0x00000100 - Position notify
+			// DSBCAPS_GETCURRENTPOSITION2 = 0x00010000 - More accurate position
+			
+			// Set common flags for software buffers with full control
+			dwFlags |= 0x00000008; // DSBCAPS_LOCSOFTWARE
+			dwFlags |= 0x00000020; // DSBCAPS_CTRLFREQUENCY
+			dwFlags |= 0x00000040; // DSBCAPS_CTRLPAN
+			dwFlags |= 0x00000080; // DSBCAPS_CTRLVOLUME
+			dwFlags |= 0x00010000; // DSBCAPS_GETCURRENTPOSITION2
+
+			// Write capabilities structure
+			memory.Write32(pDSBufferCaps + 4, dwFlags);
+			memory.Write32(pDSBufferCaps + 8, (uint)buffer.Size);
+			memory.Write32(pDSBufferCaps + 12, 0); // dwUnlockTransferRate (not used)
+			memory.Write32(pDSBufferCaps + 16, 0); // dwPlayCpuOverhead (not used)
+
+			_logger.LogInformation("[DSound] Buffer caps: flags=0x{DwFlags:X8}, size={Size}, isPrimary={IsPrimary}", 
+				dwFlags, buffer.Size, buffer.IsPrimary);
+
 			return 0; // DS_OK
 		}
 
