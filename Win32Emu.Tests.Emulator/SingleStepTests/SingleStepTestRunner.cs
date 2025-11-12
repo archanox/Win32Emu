@@ -80,7 +80,7 @@ public class SingleStepTestRunner
 		cpu.SetRegister("EBP", regs.Ebp);
 		cpu.SetRegister("ESP", regs.Esp);
 		cpu.SetEip(regs.Eip);
-		cpu.SetEflags(regs.Eflags);
+		cpu.SetRegister("EFLAGS", regs.Eflags);
 		
 		// Write initial memory state
 		foreach (var memEntry in initialState.Memory)
@@ -107,7 +107,7 @@ public class SingleStepTestRunner
 		isValid &= ValidateRegister(cpu, "EBP", regs.Ebp, result);
 		isValid &= ValidateRegister(cpu, "ESP", regs.Esp, result);
 		isValid &= ValidateRegister(cpu, "EIP", cpu.GetEip(), regs.Eip, result);
-		isValid &= ValidateRegister(cpu, "EFLAGS", cpu.GetEflags(), regs.Eflags, result);
+		isValid &= ValidateRegister(cpu, "EFLAGS", cpu.GetRegister("EFLAGS"), regs.Eflags, result);
 		
 		// Validate memory
 		foreach (var memEntry in expectedState.Memory)
