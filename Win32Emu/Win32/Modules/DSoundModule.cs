@@ -620,8 +620,8 @@ namespace Win32Emu.Win32.Modules
 			// Get the DirectSound object
 			if (!_dsoundObjects.TryGetValue(dsHandle, out var dsObj))
 			{
-				_logger.LogError("[DSound] SetCooperativeLevel: Invalid DirectSound handle 0x{DsHandle:X8}", dsHandle);
-				return 0x80004005; // E_FAIL
+			    _logger.LogError("[DSound] SetCooperativeLevel: Invalid DirectSound handle 0x{DsHandle:X8}", dsHandle);
+			    return 0x80070057; // DSERR_INVALIDPARAM
 			}
 
 			// Store the cooperative level and window handle
