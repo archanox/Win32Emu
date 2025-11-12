@@ -640,9 +640,17 @@ public class RegistryHive : IDisposable
 		
 		try
 		{
-			// Save hive to memory stream first
+			// The DiscUtils.Registry.RegistryHive automatically writes to its underlying stream
+			// We need to get the stream data from the hive's FileSystemSource
+			// Since we can't directly save, we'll recreate the hive with a writable stream
 			using var memStream = new MemoryStream();
-			hive.Save(memStream);
+			
+			// Create a new hive with our writable stream and copy the data
+			var tempHive = DiscUtils.Registry.RegistryHive.Create(memStream);
+			
+			// Copy all keys from the original hive to the temp hive
+			CopyRegistryKey(hive.Root, tempHive.Root);
+			
 			memStream.Position = 0;
 			
 			_logger.LogDebug("[RegistryHive] Saving hive {HiveName} to {Path} ({Size} bytes)", hiveName, path, memStream.Length);
@@ -677,6 +685,34 @@ public class RegistryHive : IDisposable
 			}
 			
 			_logger.LogError(ex, "[RegistryHive] Failed to save hive {HiveName} to {Path}", hiveName, path);
+		}
+	}
+	
+	/// <summary>
+	/// Recursively copies all keys and values from source to destination.
+	/// </summary>
+	private void CopyRegistryKey(DiscUtils.Registry.RegistryKey source, DiscUtils.Registry.RegistryKey dest)
+	{
+		// Copy all values
+		foreach (var valueName in source.GetValueNames())
+		{
+			var value = source.GetValue(valueName);
+			var valueType = source.GetValueType(valueName);
+			dest.SetValue(valueName, value, valueType);
+		}
+		
+		// Recursively copy all subkeys
+		foreach (var subKeyName in source.GetSubKeyNames())
+		{
+			var sourceSubKey = source.OpenSubKey(subKeyName);
+			if (sourceSubKey != null)
+			{
+				var destSubKey = dest.CreateSubKey(subKeyName);
+				if (destSubKey != null)
+				{
+					CopyRegistryKey(sourceSubKey, destSubKey);
+				}
+			}
 		}
 	}
 	
