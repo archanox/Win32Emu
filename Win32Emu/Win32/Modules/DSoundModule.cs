@@ -635,15 +635,26 @@ namespace Win32Emu.Win32.Modules
 			dsObj.WindowHandle = hwnd;
 
 			// Ensure audio backend is initialized
-			if (_env.AudioBackend == null)
+			if (!EnsureAudioBackendInitialized())
 			{
-				_logger.LogWarning("[DSound] SetCooperativeLevel: Audio backend not initialized, initializing now");
-				_env.AudioBackend = Rendering.BackendFactory.CreateAudioBackend(_logger);
-				if (!_env.AudioBackend.Initialize())
-				{
-					_logger.LogError("[DSound] SetCooperativeLevel: Failed to initialize audio backend");
-					return 0x80004005; // E_FAIL
-				}
+				return 0x80004005; // E_FAIL
+			}
+
+			// ... (at the end of the class, add the new helper method)
+			private bool EnsureAudioBackendInitialized()
+			{
+			    if (_env.AudioBackend == null)
+			    {
+			        _logger.LogInformation("[DSound] Initializing audio backend...");
+			        _env.AudioBackend = Rendering.BackendFactory.CreateAudioBackend(_logger);
+			        if (!_env.AudioBackend.Initialize())
+			        {
+			            _logger.LogError("[DSound] Failed to initialize audio backend");
+			            _env.AudioBackend = null; // Reset to allow for re-initialization attempt
+			            return false;
+			        }
+			    }
+			    return true;
 			}
 			
 			_logger.LogInformation("[DSound] Cooperative level set to 0x{DwLevel:X8} for window 0x{Hwnd:X8}", dwLevel, hwnd);
