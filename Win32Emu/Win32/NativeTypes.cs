@@ -460,6 +460,40 @@ public static class NativeTypes
 	}
 
 	/// <summary>
+	/// DirectSound cooperative level flags
+	/// </summary>
+	public enum DSSCL : uint
+	{
+		NORMAL = 0x00000001,       // Normal level - can play, but not change format
+		PRIORITY = 0x00000002,     // Priority level - can play and change format
+		EXCLUSIVE = 0x00000003,    // Exclusive level - exclusive control of device
+		WRITEPRIMARY = 0x00000004  // Write primary - can write directly to primary buffer
+	}
+
+	/// <summary>
+	/// DirectSound buffer capability flags
+	/// </summary>
+	[Flags]
+	public enum DSBCapsFlags : uint
+	{
+		PRIMARYBUFFER = 0x00000001,        // Buffer is a primary buffer
+		STATIC = 0x00000002,               // Buffer is in system memory
+		LOCHARDWARE = 0x00000004,          // Buffer is in hardware memory
+		LOCSOFTWARE = 0x00000008,          // Buffer is in software memory
+		CTRL3D = 0x00000010,               // Buffer has 3D control
+		CTRLFREQUENCY = 0x00000020,        // Buffer has frequency control
+		CTRLPAN = 0x00000040,              // Buffer has pan control
+		CTRLVOLUME = 0x00000080,           // Buffer has volume control
+		CTRLPOSITIONNOTIFY = 0x00000100,   // Buffer has position notify
+		CTRLFX = 0x00000200,               // Buffer has effects control
+		STICKYFOCUS = 0x00004000,          // Buffer has sticky focus
+		GLOBALFOCUS = 0x00008000,          // Buffer has global focus
+		GETCURRENTPOSITION2 = 0x00010000,  // More accurate position
+		MUTE3DATMAXDISTANCE = 0x00020000,  // Mute 3D at max distance
+		LOCDEFER = 0x00040000              // Defer location assignment
+	}
+
+	/// <summary>
 	/// DSBCAPS structure (20 bytes)
 	/// Describes the capabilities of a DirectSound buffer
 	/// </summary>

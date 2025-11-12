@@ -513,10 +513,9 @@ namespace Win32Emu.Win32.Modules
 
 				bufferSize = (int)dwBufferBytes;
 				
-				// DSBCAPS_PRIMARYBUFFER = 0x00000001
-				isPrimary = (dwFlags & 0x00000001) != 0;
+				isPrimary = (dwFlags & (uint)DSBCapsFlags.PRIMARYBUFFER) != 0;
 
-				_logger.LogInformation("[DSound COM] DSBUFFERDESC: size={DwSize}, flags=0x{DwFlags:X8}, bufferBytes={DwBufferBytes}, format=0x{LpwfxFormat:X8}", dwSize, dwFlags, dwBufferBytes, lpwfxFormat);
+				_logger.LogInformation("[DSound COM] DSBUFFERDESC: size={DwSize}, flags={DwFlags}, bufferBytes={DwBufferBytes}, format=0x{LpwfxFormat:X8}", dwSize, (DSBCapsFlags)dwFlags, dwBufferBytes, lpwfxFormat);
 
 				// Parse WAVEFORMATEX if provided and not primary buffer
 				if (lpwfxFormat != 0 && !isPrimary)
@@ -615,13 +614,8 @@ namespace Win32Emu.Win32.Modules
 			var hwnd = args.UInt32(1);
 			var dwLevel = args.UInt32(2);
 
-			_logger.LogInformation("[DSound COM] IDirectSound::SetCooperativeLevel(this=0x{ThisPtr:X8}, hwnd=0x{Hwnd:X8}, level=0x{DwLevel:X8})", thisPtr, hwnd, dwLevel);
-
-			// DirectSound cooperative level flags:
-			// DSSCL_NORMAL = 0x00000001 - Normal level
-			// DSSCL_PRIORITY = 0x00000002 - Priority level
-			// DSSCL_EXCLUSIVE = 0x00000003 - Exclusive level
-			// DSSCL_WRITEPRIMARY = 0x00000004 - Write primary buffer level
+			_logger.LogInformation("[DSound COM] IDirectSound::SetCooperativeLevel(this=0x{ThisPtr:X8}, hwnd=0x{Hwnd:X8}, level={Level})", 
+				thisPtr, hwnd, (DSSCL)dwLevel);
 			
 			// Get the DirectSound object
 			if (!_dsoundObjects.TryGetValue(dsHandle, out var dsObj))
@@ -635,29 +629,18 @@ namespace Win32Emu.Win32.Modules
 			dsObj.WindowHandle = hwnd;
 
 			// Ensure audio backend is initialized
-			if (!EnsureAudioBackendInitialized())
+			if (_env.AudioBackend == null)
 			{
-				return 0x80004005; // E_FAIL
-			}
-
-			// ... (at the end of the class, add the new helper method)
-			private bool EnsureAudioBackendInitialized()
-			{
-			    if (_env.AudioBackend == null)
-			    {
-			        _logger.LogInformation("[DSound] Initializing audio backend...");
-			        _env.AudioBackend = Rendering.BackendFactory.CreateAudioBackend(_logger);
-			        if (!_env.AudioBackend.Initialize())
-			        {
-			            _logger.LogError("[DSound] Failed to initialize audio backend");
-			            _env.AudioBackend = null; // Reset to allow for re-initialization attempt
-			            return false;
-			        }
-			    }
-			    return true;
+				_logger.LogWarning("[DSound] SetCooperativeLevel: Audio backend not initialized, initializing now");
+				_env.AudioBackend = Rendering.BackendFactory.CreateAudioBackend(_logger);
+				if (!_env.AudioBackend.Initialize())
+				{
+					_logger.LogError("[DSound] SetCooperativeLevel: Failed to initialize audio backend");
+					return 0x80004005; // E_FAIL
+				}
 			}
 			
-			_logger.LogInformation("[DSound] Cooperative level set to 0x{DwLevel:X8} for window 0x{Hwnd:X8}", dwLevel, hwnd);
+			_logger.LogInformation("[DSound] Cooperative level set to {Level} for window 0x{Hwnd:X8}", (DSSCL)dwLevel, hwnd);
 			
 			return 0; // DS_OK
 		}
@@ -732,37 +715,27 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Set flags based on buffer properties
-			uint dwFlags = 0;
+			DSBCapsFlags dwFlags = 0;
 			
-			// DSBCAPS_PRIMARYBUFFER = 0x00000001
 			if (buffer.IsPrimary)
 			{
-				dwFlags |= 0x00000001;
+				dwFlags |= DSBCapsFlags.PRIMARYBUFFER;
 			}
 			
-			// DSBCAPS_STATIC = 0x00000002 - Buffer is in system memory
-			// DSBCAPS_LOCHARDWARE = 0x00000004 - Buffer is in hardware memory
-			// DSBCAPS_LOCSOFTWARE = 0x00000008 - Buffer is in software memory
-			// DSBCAPS_CTRLFREQUENCY = 0x00000020 - Frequency control
-			// DSBCAPS_CTRLPAN = 0x00000040 - Pan control
-			// DSBCAPS_CTRLVOLUME = 0x00000080 - Volume control
-			// DSBCAPS_CTRLPOSITIONNOTIFY = 0x00000100 - Position notify
-			// DSBCAPS_GETCURRENTPOSITION2 = 0x00010000 - More accurate position
-			
 			// Set common flags for software buffers with full control
-			dwFlags |= 0x00000008; // DSBCAPS_LOCSOFTWARE
-			dwFlags |= 0x00000020; // DSBCAPS_CTRLFREQUENCY
-			dwFlags |= 0x00000040; // DSBCAPS_CTRLPAN
-			dwFlags |= 0x00000080; // DSBCAPS_CTRLVOLUME
-			dwFlags |= 0x00010000; // DSBCAPS_GETCURRENTPOSITION2
+			dwFlags |= DSBCapsFlags.LOCSOFTWARE;
+			dwFlags |= DSBCapsFlags.CTRLFREQUENCY;
+			dwFlags |= DSBCapsFlags.CTRLPAN;
+			dwFlags |= DSBCapsFlags.CTRLVOLUME;
+			dwFlags |= DSBCapsFlags.GETCURRENTPOSITION2;
 
 			// Write capabilities structure using ref struct properties
-			caps.dwFlags = dwFlags;
+			caps.dwFlags = (uint)dwFlags;
 			caps.dwBufferBytes = (uint)buffer.Size;
 			caps.dwUnlockTransferRate = 0; // Obsolete, not used
 			caps.dwPlayCpuOverhead = 0; // Obsolete, not used
 
-			_logger.LogInformation("[DSound] Buffer caps: flags=0x{DwFlags:X8}, size={Size}, isPrimary={IsPrimary}", 
+			_logger.LogInformation("[DSound] Buffer caps: flags={Flags}, size={Size}, isPrimary={IsPrimary}", 
 				dwFlags, buffer.Size, buffer.IsPrimary);
 
 			return 0; // DS_OK
