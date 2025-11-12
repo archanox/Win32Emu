@@ -28,7 +28,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: '9.0.x'
+        dotnet-version: '10.0.x'
         
     - name: Restore dependencies
       run: dotnet restore
@@ -108,7 +108,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: '9.0.x'
+        dotnet-version: '10.0.x'
         
     - name: Restore dependencies
       run: dotnet restore
@@ -137,7 +137,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: '9.0.x'
+        dotnet-version: '10.0.x'
         
     - name: Build Wikidata enricher tool
       run: |
@@ -210,7 +210,7 @@ jobs:
             WIKIDATA_KEY=$(jq -r '.WikidataKey // empty' /tmp/gamedb-processing/stub_temp.json)
             if [ -n "$WIKIDATA_KEY" ]; then
               echo "Enriching from Wikidata: $WIKIDATA_KEY"
-              dotnet Win32Emu.Tools.WikidataEnricher/bin/Release/net9.0/enrich-from-wikidata.dll /tmp/gamedb-processing/stub_temp.json /tmp/gamedb-processing/stub_enriched.json
+              dotnet Win32Emu.Tools.WikidataEnricher/bin/Release/net10.0/enrich-from-wikidata.dll /tmp/gamedb-processing/stub_temp.json /tmp/gamedb-processing/stub_enriched.json
               mv /tmp/gamedb-processing/stub_enriched.json /tmp/gamedb-processing/stub_temp.json
             fi
             

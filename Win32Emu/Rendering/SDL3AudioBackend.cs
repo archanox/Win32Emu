@@ -7,13 +7,13 @@ namespace Win32Emu.Rendering;
 /// <summary>
 /// SDL3 audio backend for DirectSound operations
 /// </summary>
-public class Sdl3AudioBackend : IAudioBackend
+public class Sdl3AudioBackend(ILogger logger) : IAudioBackend
 {
-    private readonly ILogger _logger;
+    private readonly ILogger _logger = logger;
     private readonly ConcurrentDictionary<uint, AudioStreamInfo> _audioStreams = new();
     private uint _nextStreamId = 1;
     private bool _initialized;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     private class AudioStreamInfo
     {
@@ -21,11 +21,6 @@ public class Sdl3AudioBackend : IAudioBackend
         public int SampleRate { get; set; }
         public int Channels { get; set; }
         public int BufferSize { get; set; }
-    }
-
-    public Sdl3AudioBackend(ILogger logger)
-    {
-        _logger = logger;
     }
 
     public bool Initialize()

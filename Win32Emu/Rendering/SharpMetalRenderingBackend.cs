@@ -36,7 +36,7 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
     private bool _initialized;
     private int _width;
     private int _height;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private GlfwCallbacks.ErrorCallback? _errorCallback;
 
     /// <summary>

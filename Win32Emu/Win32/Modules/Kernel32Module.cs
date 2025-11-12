@@ -6902,7 +6902,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_env.WriteAnsiStringAt(lpBuffer.Address, fullPath);
 		if (lpFilePart != 0)
 		{
-			var lastSlash = fullPath.LastIndexOfAny(new[] { '\\', '/' });
+			var lastSlash = fullPath.LastIndexOfAny(['\\', '/']);
 			if (lastSlash >= 0)
 			{
 				var filePartOffset = (uint)(lastSlash + 1);
@@ -7846,13 +7846,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Real implementation would call the callback for each locale
 		// Callback signature: BOOL CALLBACK EnumLocalesProc(LPSTR lpLocaleString)
 
-		string[] locales = new[]
-		{
+		string[] locales =
+		[
 			"00000409", // English (United States)
 			"00000809", // English (United Kingdom)
 			"0000040c", // French (France)
 			"00000407", // German (Germany)
-		};
+		];
 
 		foreach (var locale in locales)
 		{
@@ -8009,7 +8009,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Write the file part pointer if requested
 		if (lpFilePart != 0)
 		{
-			var lastSlash = resultPath.LastIndexOfAny(new[] { '\\', '/' });
+			var lastSlash = resultPath.LastIndexOfAny(['\\', '/']);
 			if (lastSlash >= 0)
 			{
 				var filePartOffset = (uint)(lastSlash + 1);

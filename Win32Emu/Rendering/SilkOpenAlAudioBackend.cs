@@ -15,7 +15,7 @@ public unsafe class SilkOpenAlAudioBackend : IAudioBackend
     private Device* _device;
     private Context* _context;
     private bool _initialized;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly Dictionary<uint, AudioStream> _audioStreams = new();
     private uint _nextStreamId = 1;
 

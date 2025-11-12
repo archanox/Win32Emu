@@ -78,7 +78,7 @@ internal sealed class FileLoggerProvider : ILoggerProvider
 {
 	private readonly string _logFilePath;
 	private readonly StreamWriter? _writer;
-	private readonly object _lock = new();
+	private readonly Lock _lock = new();
 
 	public FileLoggerProvider(string logFilePath)
 	{
@@ -119,9 +119,9 @@ internal sealed class FileLogger : ILogger
 {
 	private readonly string _categoryName;
 	private readonly StreamWriter? _writer;
-	private readonly object _lock;
+	private readonly Lock _lock;
 
-	public FileLogger(string categoryName, StreamWriter? writer, object lockObject)
+	public FileLogger(string categoryName, StreamWriter? writer, Lock lockObject)
 	{
 		_categoryName = categoryName;
 		_writer = writer;

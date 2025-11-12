@@ -15,7 +15,7 @@ public class ThreadScheduler
 	private EmulatedThread? _currentThread;
 	private uint _nextThreadId = 1;
 	private uint _nextHandle = 0x1000; // Start handles at 0x1000
-	private readonly object _lock = new();
+	private readonly Lock _lock = new();
 
 	// Thread quantum (instructions per context switch)
 	private const int DefaultQuantum = 1000;

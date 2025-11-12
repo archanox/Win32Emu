@@ -8,16 +8,11 @@ namespace Win32Emu.Diagnostics;
 /// Compares emulated API behavior against real Windows behavior captured by API Monitor.
 /// Helps identify where emulation diverges from expected behavior.
 /// </summary>
-public class ApiMonComparator
+public class ApiMonComparator(ILogger? logger = null)
 {
-	private readonly ILogger _logger;
+	private readonly ILogger _logger = logger ?? NullLogger.Instance;
 	private readonly List<ApiMonRecord> _expectedCalls = new();
 	private readonly List<ApiCallRecord> _actualCalls = new();
-
-	public ApiMonComparator(ILogger? logger = null)
-	{
-		_logger = logger ?? NullLogger.Instance;
-	}
 
 	/// <summary>
 	/// Load expected behavior from API Monitor CSV log file
