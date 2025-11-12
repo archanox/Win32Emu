@@ -97,9 +97,9 @@ public class StubGeneratorTests
         var code = StubGenerator.GenerateStubs("TEST.DLL", missingApis);
         
         // Assert
-        var aIndex = code.IndexOf("public uint AFunction()");
-        var mIndex = code.IndexOf("public uint MFunction()");
-        var zIndex = code.IndexOf("public uint ZFunction()");
+        var aIndex = code.IndexOf("public uint AFunction()", StringComparison.InvariantCulture);
+        var mIndex = code.IndexOf("public uint MFunction()", StringComparison.InvariantCulture);
+        var zIndex = code.IndexOf("public uint ZFunction()", StringComparison.InvariantCulture);
         
         Assert.True(zIndex < aIndex, $"ZFunction (ordinal 1) should come before AFunction (ordinal 2). zIndex={zIndex}, aIndex={aIndex}");
         Assert.True(aIndex < mIndex, $"AFunction (ordinal 2) should come before MFunction (ordinal 3). aIndex={aIndex}, mIndex={mIndex}");

@@ -153,7 +153,7 @@ public class ChdDiscReader : IDisposable
 				metaLength &= 0x00ffffff;
 				
 				byte[] metaData = new byte[metaLength];
-				_chdStream.Read(metaData, 0, metaData.Length);
+				_chdStream.ReadExactly(metaData, 0, metaData.Length);
 				
 				// Convert tag to string for easier comparison
 				string tagStr = $"{(char)((metaTag >> 24) & 0xFF)}{(char)((metaTag >> 16) & 0xFF)}{(char)((metaTag >> 8) & 0xFF)}{(char)(metaTag & 0xFF)}";
