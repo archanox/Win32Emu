@@ -36,14 +36,14 @@
   <ItemGroup>
     <PackageReference Include="AsmResolver.PE" Version="6.0.0-beta.4" />
     <PackageReference Include="AsmResolver.PE.Win32Resources" Version="6.0.0-beta.4" />
-    <PackageReference Include="LTRData.DiscUtils.Core" Version="1.0.69" />
-    <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.69" />
-    <PackageReference Include="LTRData.DiscUtils.Iso9660" Version="1.0.69" />
-    <PackageReference Include="LTRData.DiscUtils.Registry" Version="1.0.69" />
-    <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.69" />
-    <PackageReference Include="LTRData.DiscUtils.Vhdx" Version="1.0.69" />
+    <PackageReference Include="LTRData.DiscUtils.Core" Version="1.0.70" />
+    <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.70" />
+    <PackageReference Include="LTRData.DiscUtils.Iso9660" Version="1.0.70" />
+    <PackageReference Include="LTRData.DiscUtils.Registry" Version="1.0.70" />
+    <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.70" />
+    <PackageReference Include="LTRData.DiscUtils.Vhdx" Version="1.0.70" />
     <PackageReference Include="Iced" Version="1.21.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
     <PackageReference Include="OpenTelemetry" Version="1.13.1" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.13.1" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.13.1" />
@@ -59,7 +59,7 @@
     <PackageReference Include="Silk.NET.Vulkan.Extensions.KHR" Version="2.22.0" />
     <PackageReference Include="Silk.NET.Windowing" Version="2.22.0" />
     <PackageReference Include="Silk.NET.Maths" Version="2.22.0" />
-    <PackageReference Include="System.Threading.Channels" Version="9.0.10" />
+    <PackageReference Include="System.Threading.Channels" Version="10.0.0" />
     <PackageReference Include="UnicornEngine.Unicorn" Version="2.1.4-a40db6c" />
   </ItemGroup>
 
