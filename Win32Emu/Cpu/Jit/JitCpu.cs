@@ -1348,7 +1348,7 @@ public class JitCpu : IAsyncCpu
 				{
 					al = (byte)(al + 6);
 					// Combine operations: set AL and increment AH in single assignment
-					_eax = (uint)((_eax & 0xFFFF0000) | (((_eax + 0x106) & 0xFF00)) | (al & 0x0F));
+					_eax = ((_eax & 0xFFFF0000) | (((_eax + 0x106) & 0xFF00)) | (uint)(al & 0x0F));
 					SetFlag(Af);
 					SetFlag(Cf);
 				}
@@ -1356,7 +1356,7 @@ public class JitCpu : IAsyncCpu
 				{
 					ClearFlag(Af);
 					ClearFlag(Cf);
-					_eax = (uint)((_eax & 0xFFFFFF0F) | (al & 0x0F));
+					_eax = ((_eax & 0xFFFFFF0F) | (uint)(al & 0x0F));
 				}
 				break;
 			}

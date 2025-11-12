@@ -60,7 +60,7 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 								if (syntax.ToString().Contains("=>"))
 								{
 									var syntaxText = syntax.ToString();
-									var arrowIndex = syntaxText.IndexOf("=>");
+									var arrowIndex = syntaxText.IndexOf("=>", StringComparison.InvariantCulture);
 									if (arrowIndex >= 0)
 									{
 										var firstQuote = syntaxText.IndexOf('"', arrowIndex);
