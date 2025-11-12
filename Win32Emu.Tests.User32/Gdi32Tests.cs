@@ -299,6 +299,208 @@ public class Gdi32Tests : IDisposable
         Assert.Equal(1u, result); // TRUE
     }
 
+    [Fact]
+    public void StretchBlt_WithValidDCs_ShouldReturnTrue()
+    {
+        // Arrange - Create source and destination DCs
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var hdcSrc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        uint rop = 0x00CC0020; // SRCCOPY
+
+        // Act
+        var result = _testEnv.CallGdi32Api("STRETCHBLT", 
+            hdcDest, 0, 0, 100, 100,  // Destination: (0, 0), size 100x100
+            hdcSrc, 0, 0, 50, 50,     // Source: (0, 0), size 50x50
+            rop);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEDC", hdcDest);
+        _testEnv.CallGdi32Api("DELETEDC", hdcSrc);
+    }
+
+    [Fact]
+    public void StretchBlt_WithInvalidDestDC_ShouldReturnFalse()
+    {
+        // Arrange - Create only source DC
+        var hdcSrc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        uint invalidHdc = 0xDEADBEEF;
+        uint rop = 0x00CC0020; // SRCCOPY
+
+        // Act
+        var result = _testEnv.CallGdi32Api("STRETCHBLT",
+            invalidHdc, 0, 0, 100, 100,
+            hdcSrc, 0, 0, 50, 50,
+            rop);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEDC", hdcSrc);
+    }
+
+    [Fact]
+    public void StretchBlt_WithInvalidSrcDC_ShouldReturnFalse()
+    {
+        // Arrange - Create only destination DC
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        uint invalidHdc = 0xDEADBEEF;
+        uint rop = 0x00CC0020; // SRCCOPY
+
+        // Act
+        var result = _testEnv.CallGdi32Api("STRETCHBLT",
+            hdcDest, 0, 0, 100, 100,
+            invalidHdc, 0, 0, 50, 50,
+            rop);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEDC", hdcDest);
+    }
+
+    [Fact]
+    public void StretchBlt_WithBlackness_ShouldNotRequireSourceDC()
+    {
+        // Arrange - Create only destination DC
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        uint rop = 0x00000042; // BLACKNESS - doesn't require source
+
+        // Act
+        var result = _testEnv.CallGdi32Api("STRETCHBLT",
+            hdcDest, 0, 0, 100, 100,
+            0u, 0, 0, 0, 0,  // Source DC and dimensions are ignored for BLACKNESS
+            rop);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE - should succeed without valid source DC
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEDC", hdcDest);
+    }
+
+    [Fact]
+    public void StretchBlt_WithWhiteness_ShouldNotRequireSourceDC()
+    {
+        // Arrange - Create only destination DC
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        uint rop = 0x00FF0062; // WHITENESS - doesn't require source
+
+        // Act
+        var result = _testEnv.CallGdi32Api("STRETCHBLT",
+            hdcDest, 0, 0, 100, 100,
+            0u, 0, 0, 0, 0,  // Source DC and dimensions are ignored for WHITENESS
+            rop);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE - should succeed without valid source DC
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEDC", hdcDest);
+    }
+
+    [Fact]
+    public void StretchBlt_WithZeroDestWidth_ShouldReturnFalse()
+    {
+        // Arrange
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var hdcSrc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        uint rop = 0x00CC0020; // SRCCOPY
+
+        // Act
+        var result = _testEnv.CallGdi32Api("STRETCHBLT",
+            hdcDest, 0, 0, 0, 100,  // Invalid: width = 0
+            hdcSrc, 0, 0, 50, 50,
+            rop);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEDC", hdcDest);
+        _testEnv.CallGdi32Api("DELETEDC", hdcSrc);
+    }
+
+    [Fact]
+    public void StretchBlt_WithNegativeDestHeight_ShouldReturnFalse()
+    {
+        // Arrange
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var hdcSrc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        uint rop = 0x00CC0020; // SRCCOPY
+
+        // Act
+        var result = _testEnv.CallGdi32Api("STRETCHBLT",
+            hdcDest, 0, 0, 100, unchecked((uint)-50),  // Invalid: height < 0
+            hdcSrc, 0, 0, 50, 50,
+            rop);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEDC", hdcDest);
+        _testEnv.CallGdi32Api("DELETEDC", hdcSrc);
+    }
+
+    [Fact]
+    public void StretchBlt_WithZeroSourceDimensions_ShouldReturnFalse()
+    {
+        // Arrange
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var hdcSrc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        uint rop = 0x00CC0020; // SRCCOPY
+
+        // Act
+        var result = _testEnv.CallGdi32Api("STRETCHBLT",
+            hdcDest, 0, 0, 100, 100,
+            hdcSrc, 0, 0, 0, 0,  // Invalid: source dimensions = 0
+            rop);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEDC", hdcDest);
+        _testEnv.CallGdi32Api("DELETEDC", hdcSrc);
+    }
+
+    [Fact]
+    public void StretchBlt_WithDifferentRasterOps_ShouldReturnTrue()
+    {
+        // Arrange
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var hdcSrc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+
+        // Test various raster operations
+        uint[] rasterOps = {
+            0x00CC0020, // SRCCOPY
+            0x00EE0086, // SRCPAINT
+            0x008800C6, // SRCAND
+            0x00660046  // SRCINVERT
+        };
+
+        foreach (var rop in rasterOps)
+        {
+            // Act
+            var result = _testEnv.CallGdi32Api("STRETCHBLT",
+                hdcDest, 0, 0, 100, 100,
+                hdcSrc, 0, 0, 50, 50,
+                rop);
+
+            // Assert
+            Assert.Equal(1u, result); // TRUE for all valid raster ops
+        }
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEDC", hdcDest);
+        _testEnv.CallGdi32Api("DELETEDC", hdcSrc);
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
