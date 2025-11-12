@@ -2,6 +2,7 @@ using DiscUtils.Registry;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.VirtualFileSystem;
+using DiscUtils;
 
 namespace Win32Emu.Win32.Registry;
 
@@ -52,8 +53,46 @@ public class RegistryHive : IDisposable
 	{
 		DiscUtils.Registry.RegistryHive? hive = null;
 		
-		// For now, always create in-memory hives
-		// TODO: In the future, add VFS persistence support with proper stream wrappers
+		// Try to load from VFS if available
+		if (_vfs != null)
+		{
+			var hivePath = GetHiveFilePath(hiveName);
+			try
+			{
+				// Check if hive file exists in VFS
+				if (_vfs.FileExists(hivePath))
+				{
+					_logger.LogInformation("[RegistryHive] Loading existing hive from VFS: {HiveName} at {HivePath}", hiveName, hivePath);
+					
+					// Open the file from VFS
+					var fileHandle = _vfs.OpenFile(hivePath, VfsFileMode.Open, VfsFileAccess.ReadWrite);
+					if (fileHandle != null)
+					{
+						// Read the entire file into memory
+						var memStream = new MemoryStream();
+						var buffer = new byte[4096];
+						int bytesRead;
+						while ((bytesRead = fileHandle.Read(buffer, 0, buffer.Length)) > 0)
+						{
+							memStream.Write(buffer, 0, bytesRead);
+						}
+						fileHandle.Dispose();
+						
+						// Reset stream position and open as registry hive
+						memStream.Position = 0;
+						hive = new DiscUtils.Registry.RegistryHive(memStream);
+						_logger.LogInformation("[RegistryHive] Loaded existing hive: {HiveName} ({Size} bytes)", hiveName, memStream.Length);
+						return hive;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "[RegistryHive] Failed to load hive from VFS: {HiveName}, creating new one", hiveName);
+			}
+		}
+		
+		// Create new in-memory hive
 		hive = DiscUtils.Registry.RegistryHive.Create(new MemoryStream());
 		_logger.LogInformation("[RegistryHive] Created in-memory hive: {HiveName}", hiveName);
 		
@@ -513,13 +552,166 @@ public class RegistryHive : IDisposable
 
 	/// <summary>
 	/// Saves all hives to VFS if available.
-	/// TODO: Implement VFS persistence with proper stream wrappers
 	/// </summary>
 	public void SaveHives()
 	{
-		_logger.LogDebug("[RegistryHive] SaveHives called (not implemented - using in-memory only)");
-		// For now, hives are in-memory only and not persisted
-		// In the future, we could implement VFS persistence with custom stream wrappers
+		if (_vfs == null)
+		{
+			_logger.LogDebug("[RegistryHive] SaveHives called but VFS not available, skipping");
+			return;
+		}
+		
+		_logger.LogInformation("[RegistryHive] Saving registry hives to VFS");
+		
+		// Save each hive
+		foreach (var kvp in _hives)
+		{
+			var hiveName = kvp.Key;
+			var hive = kvp.Value;
+			
+			try
+			{
+				var hivePath = GetHiveFilePath(GetHiveFileName(hiveName));
+				SaveHiveToVfs(hive, hivePath, GetHiveFileName(hiveName));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[RegistryHive] Failed to save hive: {HiveName}", hiveName);
+			}
+		}
+		
+		_logger.LogInformation("[RegistryHive] Registry hives saved successfully");
+	}
+	
+	/// <summary>
+	/// Gets the file path for a registry hive in the VFS.
+	/// </summary>
+	private string GetHiveFilePath(string hiveName)
+	{
+		return hiveName switch
+		{
+			"SYSTEM" => @"C:\Windows\System32\Config\SYSTEM",
+			"SOFTWARE" => @"C:\Windows\System32\Config\SOFTWARE",
+			"NTUSER.DAT" => @"C:\Users\User\NTUSER.DAT",
+			_ => $@"C:\Windows\System32\Config\{hiveName}"
+		};
+	}
+	
+	/// <summary>
+	/// Gets the hive file name from a hive key path.
+	/// </summary>
+	private string GetHiveFileName(string hiveKey)
+	{
+		return hiveKey switch
+		{
+			"HKEY_LOCAL_MACHINE\\SYSTEM" => "SYSTEM",
+			"HKEY_LOCAL_MACHINE\\SOFTWARE" => "SOFTWARE",
+			"HKEY_CURRENT_USER" => "NTUSER.DAT",
+			_ => hiveKey
+		};
+	}
+	
+	/// <summary>
+	/// Saves a registry hive to the VFS.
+	/// </summary>
+	private void SaveHiveToVfs(DiscUtils.Registry.RegistryHive hive, string path, string hiveName)
+	{
+		if (_vfs == null)
+		{
+			_logger.LogWarning("[RegistryHive] Cannot save hive {HiveName} - VFS not available", hiveName);
+			return;
+		}
+		
+		try
+		{
+			// Save hive to memory stream first
+			var memStream = new MemoryStream();
+			hive.Save(memStream);
+			memStream.Position = 0;
+			
+			_logger.LogDebug("[RegistryHive] Saving hive {HiveName} to {Path} ({Size} bytes)", hiveName, path, memStream.Length);
+			
+			// Ensure directory exists
+			EnsureDirectoryExists(Path.GetDirectoryName(path) ?? string.Empty);
+			
+			// Write to VFS
+			var fileHandle = _vfs.OpenFile(path, VfsFileMode.Create, VfsFileAccess.Write);
+			if (fileHandle != null)
+			{
+				var buffer = new byte[4096];
+				int bytesRead;
+				while ((bytesRead = memStream.Read(buffer, 0, buffer.Length)) > 0)
+				{
+					fileHandle.Write(buffer, 0, bytesRead);
+				}
+				fileHandle.Dispose();
+				
+				_logger.LogInformation("[RegistryHive] Saved hive {HiveName} to {Path} ({Size} bytes)", hiveName, path, memStream.Length);
+			}
+			else
+			{
+				_logger.LogError("[RegistryHive] Failed to open file for writing: {Path}", path);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[RegistryHive] Failed to save hive {HiveName} to {Path}", hiveName, path);
+		}
+	}
+	
+	/// <summary>
+	/// Ensures that a directory exists in the VFS.
+	/// </summary>
+	private void EnsureDirectoryExists(string directory)
+	{
+		if (_vfs == null || string.IsNullOrEmpty(directory))
+		{
+			return;
+		}
+		
+		// Check if VFS is a DiskVirtualFileSystem which supports CreateDirectory
+		if (_vfs is DiskVirtualFileSystem diskVfs)
+		{
+			try
+			{
+				// Create all parent directories up to this point
+				var parts = directory.Replace('/', '\\').Split('\\', StringSplitOptions.RemoveEmptyEntries);
+				var currentPath = string.Empty;
+				
+				foreach (var part in parts)
+				{
+					// Build path incrementally
+					if (string.IsNullOrEmpty(currentPath))
+					{
+						currentPath = part;
+					}
+					else
+					{
+						currentPath = $@"{currentPath}\{part}";
+					}
+					
+					// Skip drive letters (e.g., "C:")
+					if (currentPath.EndsWith(':'))
+					{
+						continue;
+					}
+					
+					// Create this directory level
+					diskVfs.CreateDirectory(currentPath);
+				}
+				
+				_logger.LogDebug("[RegistryHive] Ensured directory exists: {Directory}", directory);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "[RegistryHive] Failed to ensure directory exists: {Directory}", directory);
+			}
+		}
+		else
+		{
+			// For other VFS implementations, assume directories are auto-created
+			_logger.LogDebug("[RegistryHive] VFS is not DiskVirtualFileSystem, assuming directories are auto-created");
+		}
 	}
 
 	public void Dispose()

@@ -2837,4 +2837,23 @@ public class ProcessEnvironment
 			}
 		}
 	}
+	
+	/// <summary>
+	/// Performs cleanup when the process environment is being disposed.
+	/// This ensures registry hives are saved to VFS before shutdown.
+	/// </summary>
+	public void Cleanup()
+	{
+		_logger.LogInformation("[ProcessEnv] Performing cleanup");
+		
+		// Save and dispose registry hives
+		_registryHive?.Dispose();
+		_registryHive = null;
+		
+		// Dispose API call tracer if active
+		_apiCallTracer?.Dispose();
+		_apiCallTracer = null;
+		
+		_logger.LogInformation("[ProcessEnv] Cleanup completed");
+	}
 }

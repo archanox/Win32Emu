@@ -2091,5 +2091,8 @@ public sealed class Emulator : IDisposable
         // Stop event processing if running
         StopEventProcessing();
         _pauseEvent.Dispose();
+        
+        // Cleanup process environment (saves registry, etc.)
+        _env?.Cleanup();
     }
 }

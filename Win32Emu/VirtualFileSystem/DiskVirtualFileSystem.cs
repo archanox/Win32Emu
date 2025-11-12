@@ -520,6 +520,36 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 	{
 		_openFiles.Remove(normalizedPath);
 	}
+	
+	/// <summary>
+	/// Creates a directory in the virtual filesystem.
+	/// This is an internal helper method for components that need to create directory structures.
+	/// </summary>
+	/// <param name="path">The path of the directory to create</param>
+	public void CreateDirectory(string path)
+	{
+		if (IsReadOnly)
+		{
+			_logger.LogWarning("[DiskVFS] Cannot create directory on read-only disk: {Path}", path);
+			return;
+		}
+		
+		try
+		{
+			var normalizedPath = NormalizePath(path);
+			
+			// Create directory if it doesn't exist
+			if (!_fileSystem.DirectoryExists(normalizedPath))
+			{
+				_fileSystem.CreateDirectory(normalizedPath);
+				_logger.LogDebug("[DiskVFS] Created directory: {Path}", normalizedPath);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning(ex, "[DiskVFS] Failed to create directory: {Path}", path);
+		}
+	}
 
 	public void Dispose()
 	{
