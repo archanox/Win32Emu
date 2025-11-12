@@ -43,6 +43,9 @@ public class ProcessEnvironment
 	// API call tracer for diagnostics
 	private ApiCallTracer? _apiCallTracer;
 	
+	// Track cleanup state
+	private bool _cleanupCalled;
+	
 	// Track subscribed backends to prevent duplicate event subscriptions
 	private readonly HashSet<IRenderingBackend> _subscribedRenderingBackends = new();
 	private readonly HashSet<IInputBackend> _subscribedInputBackends = new();
@@ -2836,5 +2839,31 @@ public class ProcessEnvironment
 				return end > uint.MaxValue ? uint.MaxValue : (uint)end;
 			}
 		}
+	}
+	
+	/// <summary>
+	/// Performs cleanup when the process environment is being disposed.
+	/// This ensures registry hives are saved to VFS before shutdown.
+	/// </summary>
+	public void Cleanup()
+	{
+		if (_cleanupCalled)
+		{
+			_logger.LogDebug("[ProcessEnv] Cleanup already called, skipping");
+			return;
+		}
+		
+		_cleanupCalled = true;
+		_logger.LogInformation("[ProcessEnv] Performing cleanup");
+		
+		// Save and dispose registry hives
+		_registryHive?.Dispose();
+		_registryHive = null;
+		
+		// Dispose API call tracer if active
+		_apiCallTracer?.Dispose();
+		_apiCallTracer = null;
+		
+		_logger.LogInformation("[ProcessEnv] Cleanup completed");
 	}
 }
