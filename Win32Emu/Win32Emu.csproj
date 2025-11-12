@@ -38,7 +38,7 @@
     <PackageReference Include="AsmResolver.PE.Win32Resources" Version="6.0.0-beta.4" />
     <PackageReference Include="LTRData.DiscUtils.Core" Version="1.0.69" />
     <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.69" />
-    <PackageReference Include="LTRData.DiscUtils.Iso9660" Version="1.0.69" />
+    <PackageReference Include="LTRData.DiscUtils.Iso9660" Version="1.0.70" />
     <PackageReference Include="LTRData.DiscUtils.Registry" Version="1.0.69" />
     <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.69" />
     <PackageReference Include="LTRData.DiscUtils.Vhdx" Version="1.0.69" />
