@@ -94,7 +94,7 @@ namespace Win32Emu.Win32.Modules
 				{ "CreateSoundBuffer", ComVtableDispatcher.FromDelegate<IDirectSound.CreateSoundBuffer>((cpu, mem) => DSound_CreateSoundBuffer(cpu, mem, dsHandle)) }, // this + pcDSBufferDesc + ppDSBuffer + pUnkOuter
 				{ "GetCaps", ComVtableDispatcher.FromDelegate<IDirectSound.GetCaps>((cpu, mem) => DSound_GetCaps(cpu, mem)) }, // this + pDSCaps
 				{ "DuplicateSoundBuffer", ComVtableDispatcher.FromDelegate<IDirectSound.DuplicateSoundBuffer>((cpu, mem) => DSound_DuplicateSoundBuffer(cpu, mem)) }, // this + pDSBufferOriginal + ppDSBufferDuplicate
-				{ "SetCooperativeLevel", ComVtableDispatcher.FromDelegate<IDirectSound.SetCooperativeLevel>((cpu, mem) => DSound_SetCooperativeLevel(cpu, mem)) }, // this + hwnd + dwLevel
+				{ "SetCooperativeLevel", ComVtableDispatcher.FromDelegate<IDirectSound.SetCooperativeLevel>((cpu, mem) => DSound_SetCooperativeLevel(cpu, mem, dsHandle)) }, // this + hwnd + dwLevel
 				{ "Compact", ComVtableDispatcher.FromDelegate<IDirectSound.Compact>((cpu, mem) => DSound_Compact(cpu, mem)) }, // this only
 				{ "GetSpeakerConfig", ComVtableDispatcher.FromDelegate<IDirectSound.GetSpeakerConfig>((cpu, mem) => DSound_GetSpeakerConfig(cpu, mem)) }, // this + pdwSpeakerConfig
 				{ "SetSpeakerConfig", ComVtableDispatcher.FromDelegate<IDirectSound.SetSpeakerConfig>((cpu, mem) => DSound_SetSpeakerConfig(cpu, mem)) }, // this + dwSpeakerConfig
@@ -427,6 +427,8 @@ namespace Win32Emu.Win32.Modules
 			public int Frequency { get; set; } = 44100;
 			public int BitsPerSample { get; set; } = 16;
 			public int Channels { get; set; } = 2;
+			public uint CooperativeLevel { get; set; }
+			public uint WindowHandle { get; set; }
 		}
 
 		private sealed class DirectSoundBuffer
@@ -511,10 +513,9 @@ namespace Win32Emu.Win32.Modules
 
 				bufferSize = (int)dwBufferBytes;
 				
-				// DSBCAPS_PRIMARYBUFFER = 0x00000001
-				isPrimary = (dwFlags & 0x00000001) != 0;
+				isPrimary = (dwFlags & (uint)DSBCapsFlags.PRIMARYBUFFER) != 0;
 
-				_logger.LogInformation("[DSound COM] DSBUFFERDESC: size={DwSize}, flags=0x{DwFlags:X8}, bufferBytes={DwBufferBytes}, format=0x{LpwfxFormat:X8}", dwSize, dwFlags, dwBufferBytes, lpwfxFormat);
+				_logger.LogInformation("[DSound COM] DSBUFFERDESC: size={DwSize}, flags={DwFlags}, bufferBytes={DwBufferBytes}, format=0x{LpwfxFormat:X8}", dwSize, (DSBCapsFlags)dwFlags, dwBufferBytes, lpwfxFormat);
 
 				// Parse WAVEFORMATEX if provided and not primary buffer
 				if (lpwfxFormat != 0 && !isPrimary)
@@ -606,14 +607,41 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DS_OK
 		}
 
-		private uint DSound_SetCooperativeLevel(ICpu cpu, VirtualMemory memory)
+		private uint DSound_SetCooperativeLevel(ICpu cpu, VirtualMemory memory, uint dsHandle)
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
 			var hwnd = args.UInt32(1);
 			var dwLevel = args.UInt32(2);
 
-			_logger.LogInformation("[DSound COM] IDirectSound::SetCooperativeLevel(this=0x{ThisPtr:X8}, hwnd=0x{Hwnd:X8}, level=0x{DwLevel:X8}) - stub", thisPtr, hwnd, dwLevel);
+			_logger.LogInformation("[DSound COM] IDirectSound::SetCooperativeLevel(this=0x{ThisPtr:X8}, hwnd=0x{Hwnd:X8}, level={Level})", 
+				thisPtr, hwnd, (DSSCL)dwLevel);
+			
+			// Get the DirectSound object
+			if (!_dsoundObjects.TryGetValue(dsHandle, out var dsObj))
+			{
+			    _logger.LogError("[DSound] SetCooperativeLevel: Invalid DirectSound handle 0x{DsHandle:X8}", dsHandle);
+			    return 0x80070057; // DSERR_INVALIDPARAM
+			}
+
+			// Store the cooperative level and window handle
+			dsObj.CooperativeLevel = dwLevel;
+			dsObj.WindowHandle = hwnd;
+
+			// Ensure audio backend is initialized
+			if (_env.AudioBackend == null)
+			{
+				_logger.LogWarning("[DSound] SetCooperativeLevel: Audio backend not initialized, initializing now");
+				_env.AudioBackend = Rendering.BackendFactory.CreateAudioBackend(_logger);
+				if (!_env.AudioBackend.Initialize())
+				{
+					_logger.LogError("[DSound] SetCooperativeLevel: Failed to initialize audio backend");
+					return 0x80004005; // E_FAIL
+				}
+			}
+			
+			_logger.LogInformation("[DSound] Cooperative level set to {Level} for window 0x{Hwnd:X8}", (DSSCL)dwLevel, hwnd);
+			
 			return 0; // DS_OK
 		}
 
@@ -657,7 +685,62 @@ namespace Win32Emu.Win32.Modules
 		// IDirectSoundBuffer COM methods
 		private uint DSoundBuffer_GetCaps(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetCaps() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var pDSBufferCaps = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::GetCaps(this=0x{ThisPtr:X8}, pDSBufferCaps=0x{PDSBufferCaps:X8})", thisPtr, pDSBufferCaps);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetCaps: Invalid buffer");
+				return 0x80004005; // E_FAIL
+			}
+
+			if (pDSBufferCaps == 0)
+			{
+				_logger.LogError("[DSound COM] IDirectSoundBuffer::GetCaps: pDSBufferCaps is NULL");
+				return 0x80070057; // E_INVALIDARG
+			}
+
+			// Use the generated DSBCAPS ref struct
+			var caps = new DSBCAPSRef(memory, pDSBufferCaps);
+			
+			// Validate structure size (must be exactly 20 bytes)
+			if (caps.dwSize != 20)
+			{
+			    _logger.LogError("[DSound COM] IDirectSoundBuffer::GetCaps: Invalid structure size {DwSize}, expected 20", caps.dwSize);
+			    return 0x80070057; // E_INVALIDARG
+			}
+
+			// Set flags based on buffer properties
+			DSBCapsFlags dwFlags = 0;
+			
+			if (buffer.IsPrimary)
+			{
+			    dwFlags |= DSBCapsFlags.PRIMARYBUFFER;
+			    dwFlags |= DSBCapsFlags.LOCSOFTWARE;
+			}
+			else
+			{
+			    // Set common flags for software buffers with full control
+			    dwFlags |= DSBCapsFlags.LOCSOFTWARE;
+			    dwFlags |= DSBCapsFlags.CTRLFREQUENCY;
+			    dwFlags |= DSBCapsFlags.CTRLPAN;
+			    dwFlags |= DSBCapsFlags.CTRLVOLUME;
+			    dwFlags |= DSBCapsFlags.GETCURRENTPOSITION2;
+			}
+
+			// Write capabilities structure using ref struct properties
+			caps.dwFlags = (uint)dwFlags;
+			caps.dwBufferBytes = (uint)buffer.Size;
+			caps.dwUnlockTransferRate = 0; // Obsolete, not used
+			caps.dwPlayCpuOverhead = 0; // Obsolete, not used
+
+			_logger.LogInformation("[DSound] Buffer caps: flags={Flags}, size={Size}, isPrimary={IsPrimary}", 
+				dwFlags, buffer.Size, buffer.IsPrimary);
+
 			return 0; // DS_OK
 		}
 

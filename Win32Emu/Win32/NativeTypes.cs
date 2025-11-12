@@ -459,6 +459,64 @@ public static class NativeTypes
 		public ushort cbSize;          // Offset 16 - Size of extra format information
 	}
 
+	/// <summary>
+	/// DirectSound cooperative level flags
+	/// </summary>
+	public enum DSSCL : uint
+	{
+		NORMAL = 0x00000001,       // Normal level - can play, but not change format
+		PRIORITY = 0x00000002,     // Priority level - can play and change format
+		EXCLUSIVE = 0x00000003,    // Exclusive level - exclusive control of device
+		WRITEPRIMARY = 0x00000004  // Write primary - can write directly to primary buffer
+	}
+
+	/// <summary>
+	/// DirectSound buffer capability flags
+	/// </summary>
+	[Flags]
+	public enum DSBCapsFlags : uint
+	{
+		PRIMARYBUFFER = 0x00000001,        // Buffer is a primary buffer
+		STATIC = 0x00000002,               // Buffer is in system memory
+		LOCHARDWARE = 0x00000004,          // Buffer is in hardware memory
+		LOCSOFTWARE = 0x00000008,          // Buffer is in software memory
+		CTRL3D = 0x00000010,               // Buffer has 3D control
+		CTRLFREQUENCY = 0x00000020,        // Buffer has frequency control
+		CTRLPAN = 0x00000040,              // Buffer has pan control
+		CTRLVOLUME = 0x00000080,           // Buffer has volume control
+		CTRLPOSITIONNOTIFY = 0x00000100,   // Buffer has position notify
+		CTRLFX = 0x00000200,               // Buffer has effects control
+		STICKYFOCUS = 0x00004000,          // Buffer has sticky focus
+		GLOBALFOCUS = 0x00008000,          // Buffer has global focus
+		GETCURRENTPOSITION2 = 0x00010000,  // More accurate position
+		MUTE3DATMAXDISTANCE = 0x00020000,  // Mute 3D at max distance
+		LOCDEFER = 0x00040000              // Defer location assignment
+	}
+
+	/// <summary>
+	/// DSBCAPS structure (20 bytes)
+	/// Describes the capabilities of a DirectSound buffer
+	/// </summary>
+	[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit, Size = 20)]
+	[GenerateMemoryRef]
+	public struct DSBCAPS
+	{
+		[System.Runtime.InteropServices.FieldOffset(0)]
+		public uint dwSize;                    // Offset 0 - Size of structure (20)
+		
+		[System.Runtime.InteropServices.FieldOffset(4)]
+		public uint dwFlags;                   // Offset 4 - Capability flags
+		
+		[System.Runtime.InteropServices.FieldOffset(8)]
+		public uint dwBufferBytes;             // Offset 8 - Size of buffer in bytes
+		
+		[System.Runtime.InteropServices.FieldOffset(12)]
+		public uint dwUnlockTransferRate;      // Offset 12 - Unlock transfer rate (obsolete)
+		
+		[System.Runtime.InteropServices.FieldOffset(16)]
+		public uint dwPlayCpuOverhead;         // Offset 16 - Play CPU overhead (obsolete)
+	}
+
 	// DDCOLORKEY structure (8 bytes)
 	// Specifies a color key for DirectDraw surfaces
 	public struct DDCOLORKEY
