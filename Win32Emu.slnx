@@ -48,11 +48,8 @@
     <File Path="DLLs\WinXP\ddraw.dll" />
   </Folder>
   <Folder Name="/Solution Items/logs/">
-    <File Path="BasicDD.log" />
-    <File Path="win32emu_2025-11-05_2211.log" />
-    <File Path="win32emu_2025-11-06_0006.log" />
-    <File Path="win32emu_latest.log" />
-    <File Path="win32emu_2025-11-06_2307.log" />
+    <File Path="logs/BasicDD.log" />
+    <File Path="logs/IGN_TEAS.log" />
   </Folder>
   <Project Path="Win32Emu.CallingConvention\Win32Emu.CallingConvention.csproj">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />

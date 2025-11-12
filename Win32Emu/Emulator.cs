@@ -44,7 +44,8 @@ public sealed class Emulator : IDisposable
     private const ulong PROGRESS_LOG_INTERVAL = 10000;
     
     // Logging throttle interval when stuck at same EIP (reduce spam)
-    private const ulong STUCK_EIP_LOG_INTERVAL = 100000;
+    // Log a warning every 1M iterations to avoid excessive log spam during legitimate tight loops
+    private const ulong STUCK_EIP_LOG_INTERVAL = 1000000;
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -640,10 +641,17 @@ public sealed class Emulator : IDisposable
         // Infinite loop detection - track EIP to detect stuck loops
         var lastProgressEip = 0u;
         var sameEipCount = 0ul;
-        // Stop emulation after 1M iterations at same EIP
-        // This threshold allows legitimate tight loops (spinlocks, busy waits) to run
-        // but catches applications stuck in true infinite loops (e.g., message pump with no messages)
-        const ulong MAX_SAME_EIP_ITERATIONS = 1000000;
+        // Stop emulation after 50M iterations at same EIP
+        // This threshold allows legitimate tight loops (memory initialization, large data processing) to run
+        // while still catching applications stuck in true infinite loops (e.g., message pump with no messages)
+        // Note: 307K iterations are needed for typical screen buffer initialization (640x480)
+        const ulong MAX_SAME_EIP_ITERATIONS = 50000000;
+        
+        // Secondary infinite loop detection - track iterations since last syscall
+        // This catches loops that cycle through multiple instructions but never call Win32 APIs
+        // Increased to 100M to allow complex initialization routines (lookup tables, data structures)
+        var iterationsSinceLastSyscall = 0ul;
+        const ulong MAX_ITERATIONS_WITHOUT_SYSCALL = 100000000; // 100M instructions without a syscall
         
         // Throttle noisy warning logs to reduce spam
         var lastSuspiciousEipWarning = 0u;
@@ -653,9 +661,11 @@ public sealed class Emulator : IDisposable
         while (!_stopRequested && !_env!.ExitRequested)
         {
             iterationCount++;
+            iterationsSinceLastSyscall++;
             
             // Infinite loop detection - check every PROGRESS_LOG_INTERVAL iterations
-            if (_logger.IsEnabled(LogLevel.Debug) && iterationCount % PROGRESS_LOG_INTERVAL == 0)
+            // This check runs regardless of log level since it affects emulation behavior
+            if (iterationCount % PROGRESS_LOG_INTERVAL == 0)
             {
                 var now = DateTime.UtcNow;
                 var elapsed = (now - lastLogTime).TotalMilliseconds;
@@ -686,8 +696,20 @@ public sealed class Emulator : IDisposable
                 {
                     // EIP changed - reset counter and log progress
                     sameEipCount = 0;
-                    _logger.LogDebug("[Emulator] Progress: {Iterations} iterations ({Elapsed:F2}ms), EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
-                        iterationCount, elapsed, progressEip, progressEsp);
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("[Emulator] Progress: {Iterations} iterations ({Elapsed:F2}ms), EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
+                            iterationCount, elapsed, progressEip, progressEsp);
+                    }
+                }
+                
+                // Check if we've been running too long without making a Win32 API call
+                // This catches infinite loops that cycle through multiple instructions
+                if (iterationsSinceLastSyscall >= MAX_ITERATIONS_WITHOUT_SYSCALL)
+                {
+                    _logger.LogError("[Emulator] INFINITE LOOP DETECTED: {Iterations} iterations without a syscall. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}. Stopping emulation.", 
+                        iterationsSinceLastSyscall, progressEip, progressEsp);
+                    break;
                 }
                 
                 lastProgressEip = progressEip;
@@ -892,6 +914,7 @@ public sealed class Emulator : IDisposable
             if (step.IsSyscall)
             {
                 HandleSyscall();
+                iterationsSinceLastSyscall = 0; // Reset counter on syscall
                 continue; // Continue to next iteration, let CPU execute RET
             }
             
@@ -1753,6 +1776,10 @@ public sealed class Emulator : IDisposable
                 {
                     _logger.LogError("[Syscall] ESP=0x{Esp:X8} after syscall return is suspiciously low. This indicates possible stack corruption.", restoredEsp);
                 }
+                
+                // Log CPU state after syscall for debugging
+                var eax = _cpu.GetRegister("EAX");
+                _logger.LogDebug("[Syscall] CPU state after {Dll}!{Name}: EAX=0x{Eax:X8} ESP=0x{Esp:X8}", dll, name, eax, restoredEsp);
             }
             else
             {
