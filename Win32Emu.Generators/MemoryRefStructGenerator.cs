@@ -69,10 +69,11 @@ public sealed class MemoryRefStructGenerator : IIncrementalGenerator
 		
 		while (current is not null)
 		{
-			parts.Insert(0, current.Name);
+			parts.Add(current.Name);
 			current = current.ContainingType;
 		}
 		
+		parts.Reverse();
 		return string.Join(".", parts);
 	}
 

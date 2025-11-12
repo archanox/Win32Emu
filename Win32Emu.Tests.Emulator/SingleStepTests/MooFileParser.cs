@@ -173,6 +173,7 @@ public class MooFileParser
 	private static RegisterState ReadRegisterState(byte[] data, ref int pos, int length)
 	{
 		var regs = new RegisterState();
+		var startPos = pos;
 		
 		// The RG32 section contains register values in a specific order
 		// Based on analysis: appears to be EFLAGS, then general purpose registers
@@ -210,7 +211,8 @@ public class MooFileParser
 		}
 		
 		// Skip any remaining register data
-		var remaining = length - (pos - (pos - length));
+		var bytesRead = pos - startPos;
+		var remaining = length - bytesRead;
 		if (remaining > 0)
 		{
 			pos += remaining;
