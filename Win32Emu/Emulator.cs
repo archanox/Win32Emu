@@ -649,8 +649,9 @@ public sealed class Emulator : IDisposable
         
         // Secondary infinite loop detection - track iterations since last syscall
         // This catches loops that cycle through multiple instructions but never call Win32 APIs
+        // Increased to 100M to allow complex initialization routines (lookup tables, data structures)
         var iterationsSinceLastSyscall = 0ul;
-        const ulong MAX_ITERATIONS_WITHOUT_SYSCALL = 10000000; // 10M instructions without a syscall
+        const ulong MAX_ITERATIONS_WITHOUT_SYSCALL = 100000000; // 100M instructions without a syscall
         
         // Throttle noisy warning logs to reduce spam
         var lastSuspiciousEipWarning = 0u;
