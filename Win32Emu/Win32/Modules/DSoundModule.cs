@@ -94,7 +94,7 @@ namespace Win32Emu.Win32.Modules
 				{ "CreateSoundBuffer", ComVtableDispatcher.FromDelegate<IDirectSound.CreateSoundBuffer>((cpu, mem) => DSound_CreateSoundBuffer(cpu, mem, dsHandle)) }, // this + pcDSBufferDesc + ppDSBuffer + pUnkOuter
 				{ "GetCaps", ComVtableDispatcher.FromDelegate<IDirectSound.GetCaps>((cpu, mem) => DSound_GetCaps(cpu, mem)) }, // this + pDSCaps
 				{ "DuplicateSoundBuffer", ComVtableDispatcher.FromDelegate<IDirectSound.DuplicateSoundBuffer>((cpu, mem) => DSound_DuplicateSoundBuffer(cpu, mem)) }, // this + pDSBufferOriginal + ppDSBufferDuplicate
-				{ "SetCooperativeLevel", ComVtableDispatcher.FromDelegate<IDirectSound.SetCooperativeLevel>((cpu, mem) => DSound_SetCooperativeLevel(cpu, mem)) }, // this + hwnd + dwLevel
+				{ "SetCooperativeLevel", ComVtableDispatcher.FromDelegate<IDirectSound.SetCooperativeLevel>((cpu, mem) => DSound_SetCooperativeLevel(cpu, mem, dsHandle)) }, // this + hwnd + dwLevel
 				{ "Compact", ComVtableDispatcher.FromDelegate<IDirectSound.Compact>((cpu, mem) => DSound_Compact(cpu, mem)) }, // this only
 				{ "GetSpeakerConfig", ComVtableDispatcher.FromDelegate<IDirectSound.GetSpeakerConfig>((cpu, mem) => DSound_GetSpeakerConfig(cpu, mem)) }, // this + pdwSpeakerConfig
 				{ "SetSpeakerConfig", ComVtableDispatcher.FromDelegate<IDirectSound.SetSpeakerConfig>((cpu, mem) => DSound_SetSpeakerConfig(cpu, mem)) }, // this + dwSpeakerConfig
@@ -427,6 +427,8 @@ namespace Win32Emu.Win32.Modules
 			public int Frequency { get; set; } = 44100;
 			public int BitsPerSample { get; set; } = 16;
 			public int Channels { get; set; } = 2;
+			public uint CooperativeLevel { get; set; }
+			public uint WindowHandle { get; set; }
 		}
 
 		private sealed class DirectSoundBuffer
@@ -606,7 +608,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // DS_OK
 		}
 
-		private uint DSound_SetCooperativeLevel(ICpu cpu, VirtualMemory memory)
+		private uint DSound_SetCooperativeLevel(ICpu cpu, VirtualMemory memory, uint dsHandle)
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
@@ -621,9 +623,28 @@ namespace Win32Emu.Win32.Modules
 			// DSSCL_EXCLUSIVE = 0x00000003 - Exclusive level
 			// DSSCL_WRITEPRIMARY = 0x00000004 - Write primary buffer level
 			
-			// The cooperative level determines what operations the application can perform
-			// For emulation purposes, we accept all levels and return success
-			// The actual audio backend handles playback regardless of the cooperative level
+			// Get the DirectSound object
+			if (!_dsoundObjects.TryGetValue(dsHandle, out var dsObj))
+			{
+				_logger.LogError("[DSound] SetCooperativeLevel: Invalid DirectSound handle 0x{DsHandle:X8}", dsHandle);
+				return 0x80004005; // E_FAIL
+			}
+
+			// Store the cooperative level and window handle
+			dsObj.CooperativeLevel = dwLevel;
+			dsObj.WindowHandle = hwnd;
+
+			// Ensure audio backend is initialized
+			if (_env.AudioBackend == null)
+			{
+				_logger.LogWarning("[DSound] SetCooperativeLevel: Audio backend not initialized, initializing now");
+				_env.AudioBackend = Rendering.BackendFactory.CreateAudioBackend(_logger);
+				if (!_env.AudioBackend.Initialize())
+				{
+					_logger.LogError("[DSound] SetCooperativeLevel: Failed to initialize audio backend");
+					return 0x80004005; // E_FAIL
+				}
+			}
 			
 			_logger.LogInformation("[DSound] Cooperative level set to 0x{DwLevel:X8} for window 0x{Hwnd:X8}", dwLevel, hwnd);
 			
@@ -689,21 +710,13 @@ namespace Win32Emu.Win32.Modules
 				return 0x80070057; // E_INVALIDARG
 			}
 
-			// DSBCAPS structure:
-			// typedef struct {
-			//   DWORD dwSize;
-			//   DWORD dwFlags;
-			//   DWORD dwBufferBytes;
-			//   DWORD dwUnlockTransferRate;
-			//   DWORD dwPlayCpuOverhead;
-			// } DSBCAPS;
-
-			var dwSize = memory.Read32(pDSBufferCaps);
+			// Use the generated DSBCAPS ref struct
+			var caps = new DSBCAPSRef(memory, pDSBufferCaps);
 			
 			// Validate structure size (should be at least 20 bytes)
-			if (dwSize < 20)
+			if (caps.dwSize < 20)
 			{
-				_logger.LogError("[DSound COM] IDirectSoundBuffer::GetCaps: Invalid structure size {DwSize}", dwSize);
+				_logger.LogError("[DSound COM] IDirectSoundBuffer::GetCaps: Invalid structure size {DwSize}", caps.dwSize);
 				return 0x80070057; // E_INVALIDARG
 			}
 
@@ -732,11 +745,11 @@ namespace Win32Emu.Win32.Modules
 			dwFlags |= 0x00000080; // DSBCAPS_CTRLVOLUME
 			dwFlags |= 0x00010000; // DSBCAPS_GETCURRENTPOSITION2
 
-			// Write capabilities structure
-			memory.Write32(pDSBufferCaps + 4, dwFlags);
-			memory.Write32(pDSBufferCaps + 8, (uint)buffer.Size);
-			memory.Write32(pDSBufferCaps + 12, 0); // dwUnlockTransferRate (not used)
-			memory.Write32(pDSBufferCaps + 16, 0); // dwPlayCpuOverhead (not used)
+			// Write capabilities structure using ref struct properties
+			caps.dwFlags = dwFlags;
+			caps.dwBufferBytes = (uint)buffer.Size;
+			caps.dwUnlockTransferRate = 0; // Obsolete, not used
+			caps.dwPlayCpuOverhead = 0; // Obsolete, not used
 
 			_logger.LogInformation("[DSound] Buffer caps: flags=0x{DwFlags:X8}, size={Size}, isPrimary={IsPrimary}", 
 				dwFlags, buffer.Size, buffer.IsPrimary);

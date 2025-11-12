@@ -459,6 +459,30 @@ public static class NativeTypes
 		public ushort cbSize;          // Offset 16 - Size of extra format information
 	}
 
+	/// <summary>
+	/// DSBCAPS structure (20 bytes)
+	/// Describes the capabilities of a DirectSound buffer
+	/// </summary>
+	[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit, Size = 20)]
+	[GenerateMemoryRef]
+	public struct DSBCAPS
+	{
+		[System.Runtime.InteropServices.FieldOffset(0)]
+		public uint dwSize;                    // Offset 0 - Size of structure (20)
+		
+		[System.Runtime.InteropServices.FieldOffset(4)]
+		public uint dwFlags;                   // Offset 4 - Capability flags
+		
+		[System.Runtime.InteropServices.FieldOffset(8)]
+		public uint dwBufferBytes;             // Offset 8 - Size of buffer in bytes
+		
+		[System.Runtime.InteropServices.FieldOffset(12)]
+		public uint dwUnlockTransferRate;      // Offset 12 - Unlock transfer rate (obsolete)
+		
+		[System.Runtime.InteropServices.FieldOffset(16)]
+		public uint dwPlayCpuOverhead;         // Offset 16 - Play CPU overhead (obsolete)
+	}
+
 	// DDCOLORKEY structure (8 bytes)
 	// Specifies a color key for DirectDraw surfaces
 	public struct DDCOLORKEY
