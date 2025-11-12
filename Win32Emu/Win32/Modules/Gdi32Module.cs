@@ -614,23 +614,31 @@ namespace Win32Emu.Win32.Modules
 			// WHITENESS (0x00FF0062) - Fill destination with white
 			
 			// Validate destination device context
-			if (!_deviceContexts.ContainsKey(hdcDest))
+			if (!_deviceContexts.TryGetValue(hdcDest, out var destDc))
 			{
 				_logger.LogWarning("[Gdi32] StretchBlt: Invalid destination DC 0x{HdcDest:X8}", hdcDest);
 				return 0; // FALSE
 			}
 			
 			// For operations that don't require source DC (BLACKNESS, WHITENESS, etc.)
-			// we can proceed without validating the source DC
 			if (rop == 0x00000042 || rop == 0x00FF0062)
 			{
 				// BLACKNESS or WHITENESS - no source required
 				_logger.LogInformation("[Gdi32] StretchBlt: Raster operation doesn't require source DC");
+				
+				// Get destination bitmap if selected
+				if (destDc.SelectedBitmap != 0 && _gdiObjects.TryGetValue(destDc.SelectedBitmap, out var destBitmapObj) && destBitmapObj.Bitmap != null)
+				{
+					// Fill destination rectangle with color
+					var fillColor = (byte)(rop == 0x00000042 ? 0x00 : 0xFF);
+					FillBitmapRect(destBitmapObj.Bitmap, xDest, yDest, wDest, hDest, fillColor);
+				}
+				
 				return 1; // TRUE
 			}
 			
 			// Validate source device context for operations that require it
-			if (!_deviceContexts.ContainsKey(hdcSrc))
+			if (!_deviceContexts.TryGetValue(hdcSrc, out var srcDc))
 			{
 				_logger.LogWarning("[Gdi32] StretchBlt: Invalid source DC 0x{HdcSrc:X8}", hdcSrc);
 				return 0; // FALSE
@@ -644,15 +652,202 @@ namespace Win32Emu.Win32.Modules
 				return 0; // FALSE
 			}
 			
-			// In a full implementation, we would:
+			// Full implementation:
 			// 1. Get the bitmap selected into the source DC
-			// 2. Scale the bitmap from source to destination size
-			// 3. Apply the raster operation (rop)
-			// 4. Copy the result to the destination DC
+			if (srcDc.SelectedBitmap == 0 || !_gdiObjects.TryGetValue(srcDc.SelectedBitmap, out var srcObj) || srcObj.Bitmap == null)
+			{
+				_logger.LogInformation("[Gdi32] StretchBlt: No bitmap selected in source DC, operation is a no-op");
+				return 1; // TRUE - operation succeeded but had no visible effect
+			}
 			
-			// For emulation purposes, we acknowledge the operation succeeded
+			// 2. Get the bitmap selected into the destination DC (if any)
+			BitmapData? destBitmap = null;
+			if (destDc.SelectedBitmap != 0 && _gdiObjects.TryGetValue(destDc.SelectedBitmap, out var destObj))
+			{
+				destBitmap = destObj.Bitmap;
+			}
+			
+			if (destBitmap == null)
+			{
+				_logger.LogInformation("[Gdi32] StretchBlt: No destination bitmap selected, operation is a no-op");
+				return 1; // TRUE - operation succeeded but had no visible effect
+			}
+			
+			// 3. Scale the bitmap from source to destination size
+			var srcBitmap = srcObj.Bitmap;
+			
+			// Perform the stretch blit operation
+			PerformStretchBlt(srcBitmap, xSrc, ySrc, wSrc, hSrc, destBitmap, xDest, yDest, wDest, hDest, rop);
+			
 			_logger.LogInformation("[Gdi32] StretchBlt: Operation completed successfully");
 			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Performs the actual stretch blit operation with scaling and ROP application
+		/// </summary>
+		private void PerformStretchBlt(BitmapData src, int xSrc, int ySrc, int wSrc, int hSrc,
+			BitmapData dest, int xDest, int yDest, int wDest, int hDest, uint rop)
+		{
+			if (src.Bits == null || dest.Bits == null)
+				return;
+			
+			var srcBytesPerPixel = (int)(src.BitCount / 8);
+			if (srcBytesPerPixel == 0) srcBytesPerPixel = 1;
+			var srcStride = ((src.Width * srcBytesPerPixel + 3) / 4) * 4;
+			
+			var destBytesPerPixel = (int)(dest.BitCount / 8);
+			if (destBytesPerPixel == 0) destBytesPerPixel = 1;
+			var destStride = ((dest.Width * destBytesPerPixel + 3) / 4) * 4;
+			
+			// Use bilinear interpolation for scaling
+			for (var dy = 0; dy < hDest; dy++)
+			{
+				for (var dx = 0; dx < wDest; dx++)
+				{
+					// Calculate destination pixel position
+					var destX = xDest + dx;
+					var destY = yDest + dy;
+					
+					// Skip if out of bounds
+					if (destX < 0 || destX >= dest.Width || destY < 0 || destY >= dest.Height)
+						continue;
+					
+					// Calculate source pixel position using nearest neighbor
+					var sx = xSrc + (dx * wSrc) / wDest;
+					var sy = ySrc + (dy * hSrc) / hDest;
+					
+					// Skip if source is out of bounds
+					if (sx < 0 || sx >= src.Width || sy < 0 || sy >= src.Height)
+						continue;
+					
+					// Get source pixel
+					var srcOffset = sy * srcStride + sx * srcBytesPerPixel;
+					var destOffset = destY * destStride + destX * destBytesPerPixel;
+					
+					// Apply raster operation
+					switch (rop)
+					{
+						case 0x00CC0020: // SRCCOPY - Copy source to destination
+							CopyPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
+							break;
+							
+						case 0x00EE0086: // SRCPAINT - OR source and destination
+							OrPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
+							break;
+							
+						case 0x008800C6: // SRCAND - AND source and destination
+							AndPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
+							break;
+							
+						case 0x00660046: // SRCINVERT - XOR source and destination
+							XorPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
+							break;
+							
+						case 0x00330008: // NOTSRCCOPY - Copy inverted source to destination
+							NotCopyPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
+							break;
+							
+						default:
+							// Default to SRCCOPY for unknown operations
+							CopyPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
+							break;
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Fills a rectangle in a bitmap with a solid color
+		/// </summary>
+		private void FillBitmapRect(BitmapData bitmap, int x, int y, int w, int h, byte fillValue)
+		{
+			if (bitmap.Bits == null)
+				return;
+			
+			var bytesPerPixel = (int)(bitmap.BitCount / 8);
+			if (bytesPerPixel == 0) bytesPerPixel = 1;
+			var stride = ((bitmap.Width * bytesPerPixel + 3) / 4) * 4;
+			
+			for (var dy = 0; dy < h; dy++)
+			{
+				var py = y + dy;
+				if (py < 0 || py >= bitmap.Height)
+					continue;
+				
+				for (var dx = 0; dx < w; dx++)
+				{
+					var px = x + dx;
+					if (px < 0 || px >= bitmap.Width)
+						continue;
+					
+					var offset = py * stride + px * bytesPerPixel;
+					for (var b = 0; b < bytesPerPixel && offset + b < bitmap.Bits.Length; b++)
+					{
+						bitmap.Bits[offset + b] = fillValue;
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Copy pixel from source to destination
+		/// </summary>
+		private void CopyPixel(byte[] src, int srcOffset, int srcBpp, byte[] dest, int destOffset, int destBpp)
+		{
+			var bytesToCopy = Math.Min(srcBpp, destBpp);
+			for (var i = 0; i < bytesToCopy && srcOffset + i < src.Length && destOffset + i < dest.Length; i++)
+			{
+				dest[destOffset + i] = src[srcOffset + i];
+			}
+		}
+
+		/// <summary>
+		/// OR pixel from source with destination
+		/// </summary>
+		private void OrPixel(byte[] src, int srcOffset, int srcBpp, byte[] dest, int destOffset, int destBpp)
+		{
+			var bytesToProcess = Math.Min(srcBpp, destBpp);
+			for (var i = 0; i < bytesToProcess && srcOffset + i < src.Length && destOffset + i < dest.Length; i++)
+			{
+				dest[destOffset + i] |= src[srcOffset + i];
+			}
+		}
+
+		/// <summary>
+		/// AND pixel from source with destination
+		/// </summary>
+		private void AndPixel(byte[] src, int srcOffset, int srcBpp, byte[] dest, int destOffset, int destBpp)
+		{
+			var bytesToProcess = Math.Min(srcBpp, destBpp);
+			for (var i = 0; i < bytesToProcess && srcOffset + i < src.Length && destOffset + i < dest.Length; i++)
+			{
+				dest[destOffset + i] &= src[srcOffset + i];
+			}
+		}
+
+		/// <summary>
+		/// XOR pixel from source with destination
+		/// </summary>
+		private void XorPixel(byte[] src, int srcOffset, int srcBpp, byte[] dest, int destOffset, int destBpp)
+		{
+			var bytesToProcess = Math.Min(srcBpp, destBpp);
+			for (var i = 0; i < bytesToProcess && srcOffset + i < src.Length && destOffset + i < dest.Length; i++)
+			{
+				dest[destOffset + i] ^= src[srcOffset + i];
+			}
+		}
+
+		/// <summary>
+		/// Copy inverted pixel from source to destination
+		/// </summary>
+		private void NotCopyPixel(byte[] src, int srcOffset, int srcBpp, byte[] dest, int destOffset, int destBpp)
+		{
+			var bytesToCopy = Math.Min(srcBpp, destBpp);
+			for (var i = 0; i < bytesToCopy && srcOffset + i < src.Length && destOffset + i < dest.Length; i++)
+			{
+				dest[destOffset + i] = (byte)~src[srcOffset + i];
+			}
 		}
 
 		[DllModuleExport(20)]
@@ -660,8 +855,41 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] CreateBitmap(width={NWidth}, height={NHeight}, planes={NPlanes}, bitCount={NBitCount}, lpBits=0x{LpBits:X8})",
 				nWidth, nHeight, nPlanes, nBitCount, lpBits);
+			
 			var handle = _nextGdiObjectHandle++;
-			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Bitmap };
+			var bitmapData = new BitmapData
+			{
+				Width = nWidth,
+				Height = nHeight,
+				Planes = nPlanes,
+				BitCount = nBitCount
+			};
+			
+			// If bits are provided, copy them
+			if (lpBits != 0 && nWidth > 0 && nHeight > 0)
+			{
+				var bytesPerPixel = (int)(nBitCount / 8);
+				if (bytesPerPixel == 0) bytesPerPixel = 1; // At least 1 byte per pixel
+				var stride = ((nWidth * bytesPerPixel + 3) / 4) * 4; // Align to 4 bytes
+				var size = stride * nHeight;
+				bitmapData.Bits = new byte[size];
+				
+				for (var i = 0; i < size; i++)
+				{
+					bitmapData.Bits[i] = _env.MemRead8(lpBits + (uint)i);
+				}
+			}
+			else
+			{
+				// Create empty bitmap
+				var bytesPerPixel = (int)(nBitCount / 8);
+				if (bytesPerPixel == 0) bytesPerPixel = 1;
+				var stride = ((nWidth * bytesPerPixel + 3) / 4) * 4;
+				var size = stride * Math.Max(nHeight, 1);
+				bitmapData.Bits = new byte[size];
+			}
+			
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Bitmap, Bitmap = bitmapData };
 			return handle;
 		}
 
@@ -669,8 +897,23 @@ namespace Win32Emu.Win32.Modules
 		private uint CreateCompatibleBitmap(uint hdc, int cx, int cy)
 		{
 			_logger.LogInformation("[Gdi32] CreateCompatibleBitmap(hdc=0x{Hdc:X8}, cx={Cx}, cy={Cy})", hdc, cx, cy);
+			
 			var handle = _nextGdiObjectHandle++;
-			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Bitmap };
+			var bitmapData = new BitmapData
+			{
+				Width = cx,
+				Height = cy,
+				Planes = 1,
+				BitCount = 32 // Default to 32-bit RGBA
+			};
+			
+			// Create empty bitmap buffer
+			var bytesPerPixel = 4; // 32-bit
+			var stride = ((cx * bytesPerPixel + 3) / 4) * 4; // Align to 4 bytes
+			var size = stride * Math.Max(cy, 1);
+			bitmapData.Bits = new byte[size];
+			
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Bitmap, Bitmap = bitmapData };
 			return handle;
 		}
 
@@ -741,7 +984,20 @@ namespace Win32Emu.Win32.Modules
 		private uint SelectObject(uint hdc, uint hObject)
 		{
 			_logger.LogInformation("[Gdi32] SelectObject(hdc=0x{Hdc:X8}, hObject=0x{HObject:X8})", hdc, hObject);
-			return hObject; // Return previous object (stub)
+			
+			// Track bitmap selection in DC
+			if (_deviceContexts.TryGetValue(hdc, out var dc) && _gdiObjects.TryGetValue(hObject, out var obj))
+			{
+				if (obj.Type == GdiObjectType.Bitmap)
+				{
+					var previousBitmap = dc.SelectedBitmap;
+					dc.SelectedBitmap = hObject;
+					_logger.LogInformation("[Gdi32] SelectObject: Selected bitmap 0x{HObject:X8} into DC 0x{Hdc:X8}", hObject, hdc);
+					return previousBitmap; // Return previous bitmap
+				}
+			}
+			
+			return hObject; // Return previous object (stub for non-bitmap objects)
 		}
 
 		[DllModuleExport(8)]
@@ -1712,6 +1968,16 @@ namespace Win32Emu.Win32.Modules
 		private class GdiObject
 		{
 			public GdiObjectType Type { get; set; }
+			public BitmapData? Bitmap { get; set; }
+		}
+
+		private class BitmapData
+		{
+			public int Width { get; set; }
+			public int Height { get; set; }
+			public uint Planes { get; set; }
+			public uint BitCount { get; set; }
+			public byte[]? Bits { get; set; }
 		}
 
 		private class DeviceContext
@@ -1720,6 +1986,7 @@ namespace Win32Emu.Win32.Modules
 			public uint WindowHandle { get; set; }
 			public int BkMode { get; set; } = 2; // OPAQUE
 			public uint TextColor { get; set; } = 0x00000000; // Black
+			public uint SelectedBitmap { get; set; } = 0; // Currently selected bitmap
 		}
 	}
 }

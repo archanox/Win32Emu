@@ -501,6 +501,105 @@ public class Gdi32Tests : IDisposable
         _testEnv.CallGdi32Api("DELETEDC", hdcSrc);
     }
 
+    [Fact]
+    public void StretchBlt_WithActualBitmaps_ShouldScaleAndCopy()
+    {
+        // Arrange - Create DCs
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var hdcSrc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+
+        // Create source bitmap (10x10)
+        var srcBitmap = _testEnv.CallGdi32Api("CREATECOMPATIBLEBITMAP", hdcSrc, 10, 10);
+        
+        // Create destination bitmap (20x20)
+        var destBitmap = _testEnv.CallGdi32Api("CREATECOMPATIBLEBITMAP", hdcDest, 20, 20);
+
+        // Select bitmaps into DCs
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdcSrc, srcBitmap);
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdcDest, destBitmap);
+
+        // Act - Stretch from 10x10 to 20x20
+        var result = _testEnv.CallGdi32Api("STRETCHBLT",
+            hdcDest, 0, 0, 20, 20,  // Destination: (0, 0), size 20x20
+            hdcSrc, 0, 0, 10, 10,   // Source: (0, 0), size 10x10
+            0x00CC0020);            // SRCCOPY
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEOBJECT", srcBitmap);
+        _testEnv.CallGdi32Api("DELETEOBJECT", destBitmap);
+        _testEnv.CallGdi32Api("DELETEDC", hdcDest);
+        _testEnv.CallGdi32Api("DELETEDC", hdcSrc);
+    }
+
+    [Fact]
+    public void StretchBlt_WithScalingDown_ShouldWork()
+    {
+        // Arrange - Create DCs
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var hdcSrc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+
+        // Create source bitmap (100x100)
+        var srcBitmap = _testEnv.CallGdi32Api("CREATECOMPATIBLEBITMAP", hdcSrc, 100, 100);
+        
+        // Create destination bitmap (50x50)
+        var destBitmap = _testEnv.CallGdi32Api("CREATECOMPATIBLEBITMAP", hdcDest, 50, 50);
+
+        // Select bitmaps into DCs
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdcSrc, srcBitmap);
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdcDest, destBitmap);
+
+        // Act - Scale down from 100x100 to 50x50
+        var result = _testEnv.CallGdi32Api("STRETCHBLT",
+            hdcDest, 0, 0, 50, 50,   // Destination: (0, 0), size 50x50
+            hdcSrc, 0, 0, 100, 100,  // Source: (0, 0), size 100x100
+            0x00CC0020);             // SRCCOPY
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEOBJECT", srcBitmap);
+        _testEnv.CallGdi32Api("DELETEOBJECT", destBitmap);
+        _testEnv.CallGdi32Api("DELETEDC", hdcDest);
+        _testEnv.CallGdi32Api("DELETEDC", hdcSrc);
+    }
+
+    [Fact]
+    public void StretchBlt_WithPartialSourceRect_ShouldWork()
+    {
+        // Arrange - Create DCs
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var hdcSrc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+
+        // Create source bitmap (100x100)
+        var srcBitmap = _testEnv.CallGdi32Api("CREATECOMPATIBLEBITMAP", hdcSrc, 100, 100);
+        
+        // Create destination bitmap (50x50)
+        var destBitmap = _testEnv.CallGdi32Api("CREATECOMPATIBLEBITMAP", hdcDest, 50, 50);
+
+        // Select bitmaps into DCs
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdcSrc, srcBitmap);
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdcDest, destBitmap);
+
+        // Act - Copy partial source rect (25,25)-(75,75) to full dest (0,0)-(50,50)
+        var result = _testEnv.CallGdi32Api("STRETCHBLT",
+            hdcDest, 0, 0, 50, 50,   // Destination: (0, 0), size 50x50
+            hdcSrc, 25, 25, 50, 50,  // Source: (25, 25), size 50x50
+            0x00CC0020);             // SRCCOPY
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+
+        // Cleanup
+        _testEnv.CallGdi32Api("DELETEOBJECT", srcBitmap);
+        _testEnv.CallGdi32Api("DELETEOBJECT", destBitmap);
+        _testEnv.CallGdi32Api("DELETEDC", hdcDest);
+        _testEnv.CallGdi32Api("DELETEDC", hdcSrc);
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
