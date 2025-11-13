@@ -5,6 +5,7 @@ using Win32Emu.Rendering;
 using Win32Emu.Win32.COM;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using static Win32Emu.Win32.NativeTypes;
 
 namespace Win32Emu.Win32.Modules
 {

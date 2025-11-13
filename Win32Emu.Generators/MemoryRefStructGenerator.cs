@@ -52,10 +52,29 @@ public sealed class MemoryRefStructGenerator : IIncrementalGenerator
 				GetFieldOffset(f, index)))
 			.ToImmutableArray();
 
+		// Get the full type name including containing types
+		var fullTypeName = GetFullTypeName(symbol);
+
 		return new StructInfo(
 			symbol.ContainingNamespace.ToDisplayString(),
 			symbol.Name,
+			fullTypeName,
 			fields);
+	}
+
+	private static string GetFullTypeName(INamedTypeSymbol symbol)
+	{
+		var parts = new List<string>();
+		var current = symbol;
+		
+		while (current is not null)
+		{
+			parts.Add(current.Name);
+			current = current.ContainingType;
+		}
+		
+		parts.Reverse();
+		return string.Join(".", parts);
 	}
 
 	private static int GetFieldOffset(IFieldSymbol field, int index)
@@ -114,9 +133,9 @@ public sealed class MemoryRefStructGenerator : IIncrementalGenerator
 		sb.AppendLine("\t\t/// <summary>");
 		sb.AppendLine("\t\t/// Converts this ref struct to a value struct snapshot.");
 		sb.AppendLine("\t\t/// </summary>");
-		sb.AppendLine($"\t\tpublic {structInfo.Namespace}.{structInfo.Name} ToStruct()");
+		sb.AppendLine($"\t\tpublic {structInfo.FullTypeName} ToStruct()");
 		sb.AppendLine("\t\t{");
-		sb.AppendLine($"\t\t\treturn new {structInfo.Namespace}.{structInfo.Name}");
+		sb.AppendLine($"\t\t\treturn new {structInfo.FullTypeName}");
 		sb.AppendLine("\t\t\t{");
 		foreach (var field in structInfo.Fields)
 		{
@@ -130,7 +149,7 @@ public sealed class MemoryRefStructGenerator : IIncrementalGenerator
 		sb.AppendLine("\t\t/// <summary>");
 		sb.AppendLine("\t\t/// Implicit conversion to the underlying value struct.");
 		sb.AppendLine("\t\t/// </summary>");
-		sb.AppendLine($"\t\tpublic static implicit operator {structInfo.Namespace}.{structInfo.Name}({structInfo.Name}Ref refStruct) => refStruct.ToStruct();");
+		sb.AppendLine($"\t\tpublic static implicit operator {structInfo.FullTypeName}({structInfo.Name}Ref refStruct) => refStruct.ToStruct();");
 
 		sb.AppendLine("\t}");
 		sb.AppendLine("}");
@@ -198,12 +217,14 @@ public sealed class MemoryRefStructGenerator : IIncrementalGenerator
 	{
 		public string Namespace { get; }
 		public string Name { get; }
+		public string FullTypeName { get; }
 		public ImmutableArray<FieldInfo> Fields { get; }
 
-		public StructInfo(string nameSpace, string name, ImmutableArray<FieldInfo> fields)
+		public StructInfo(string nameSpace, string name, string fullTypeName, ImmutableArray<FieldInfo> fields)
 		{
 			Namespace = nameSpace;
 			Name = name;
+			FullTypeName = fullTypeName;
 			Fields = fields;
 		}
 	}
