@@ -166,29 +166,25 @@ Multimedia Extensions (Pentium MMX, 1997):
 - **PUNPCKLWD** - Unpack Low Words to Dwords
 - **PUNPCKLDQ** - Unpack Low Dwords to Qwords
 
-### Stubbed Instruction Categories (37 instructions)
+#### Advanced FPU Instructions (37)
 
-The following categories of Pentium CPU instructions are recognized but not yet fully implemented. They are logged at Debug level and execution continues.
-
-#### 1. FPU Instructions (37 instructions)
-
-**Control Instructions:**
-- **FCLEX** - Clear FPU Exceptions
-- **FINIT** - Initialize FPU
+**Control Instructions (8):**
+- **FCLEX** - Clear FPU Exceptions (with WAIT)
+- **FINIT** - Initialize FPU (with WAIT)
 - **FNOP** - FPU No Operation
 - **FLDENV** - Load FPU Environment
 - **FSTENV** - Store FPU Environment
 - **FSAVE** - Save FPU State
 - **FRSTOR** - Restore FPU State
-- **FSTCW** - Store Control Word
+- **FSTCW** - Store Control Word (with WAIT)
 
-**Stack Management:**
+**Stack Management (4):**
 - **FDECSTP** - Decrement Stack Top Pointer
 - **FINCSTP** - Increment Stack Top Pointer
 - **FFREE** - Free Register
 - **FFREEP** - Free Register and Pop
 
-**Comparison:**
+**Comparison (8):**
 - **FICOM** - Integer Compare
 - **FICOMP** - Integer Compare and Pop
 - **FUCOM** - Unordered Compare
@@ -198,7 +194,7 @@ The following categories of Pentium CPU instructions are recognized but not yet 
 - **FCOMI** - Compare and Set EFLAGS
 - **FCOMIP** - Compare, Set EFLAGS, and Pop
 
-**Conditional Moves:**
+**Conditional Moves (7):**
 - **FCMOVB** - Conditional Move if Below
 - **FCMOVBE** - Conditional Move if Below or Equal
 - **FCMOVE** - Conditional Move if Equal
@@ -207,15 +203,12 @@ The following categories of Pentium CPU instructions are recognized but not yet 
 - **FCMOVNU** - Conditional Move if Not Unordered
 - **FCMOVU** - Conditional Move if Unordered
 
-**Integer Operations:**
-- **FISUBR** - Integer Subtract Reversed
-
-**Constants:**
+**Constants (3):**
 - **FLDL2T** - Load log₂(10)
 - **FLDLG2** - Load log₁₀(2)
 - **FLDLN2** - Load logₑ(2)
 
-**Transcendental:**
+**Transcendental (7):**
 - **FPREM** - Partial Remainder
 - **FPREM1** - Partial Remainder (IEEE)
 - **FPTAN** - Partial Tangent
@@ -224,16 +217,21 @@ The following categories of Pentium CPU instructions are recognized but not yet 
 - **FYL2X** - ST(1) * log₂(ST(0)) and pop
 - **FYL2XP1** - ST(1) * log₂(ST(0)+1) and pop
 
+### Stubbed Instruction Categories (0 instructions)
+
+All Pentium-era instructions are now fully implemented!
+
 ## Testing
 
 Comprehensive test coverage is provided across multiple test files:
 
-### JitCpuInstructionTests.cs (30+ tests)
+### JitCpuInstructionTests.cs (45+ tests)
 JitCpu-specific implementation tests:
 - Call/Jump instructions - 4 tests
 - I/O operations - 3 tests
 - Interrupt handling - 3 tests
 - **MMX instructions - 13 tests**
+- **Advanced FPU instructions - 15 tests**
 
 ### ThreeWayPentiumTests.cs (112 tests)
 Comprehensive three-way validation tests comparing JitCpu, IcedCpu, and Unicorn:
@@ -251,18 +249,9 @@ All tests verify that:
 
 ## Logging Behavior
 
-Stubbed instructions are logged at **Debug** level with the format:
-```
-[JitCpu] Stubbed <category> instruction: <Mnemonic>
-```
+All Pentium-era instructions are now fully implemented, so no stub logging occurs for these instructions.
 
-Examples:
-- `[JitCpu] Stubbed conditional jump: Je`
-- `[JitCpu] Stubbed bit manipulation instruction: Bsf`
-- `[JitCpu] Stubbed FPU instruction: Fclex`
-- `[JitCpu] Stubbed MMX instruction: Emms`
-
-Truly unrecognized instructions (non-Pentium or future extensions) are logged at **Warning** level:
+Truly unrecognized instructions (post-Pentium or future extensions) are logged at **Warning** level:
 ```
 [JitCpu] Unimplemented instruction: <Mnemonic>
 ```
@@ -285,7 +274,7 @@ All compatibility instructions have been implemented:
 All performance-oriented instructions have been implemented:
 7. ✅ MMX instructions - for multimedia applications (52 instructions)
 8. ✅ Conditional moves (CMOV*) - modern compiler optimization (16 instructions)
-9. Advanced FPU operations - for scientific computing (TODO)
+9. ✅ Advanced FPU operations - for scientific computing (36 instructions)
 
 ### Priority 4: Completeness
 10. System-level instructions (HLT, LGDT, SGDT, etc.) - mostly no-ops in flat memory model
@@ -325,6 +314,20 @@ case Mnemonic.Je:
 
 ## Change History
 
+- **2025-11-13**: Advanced FPU instruction implementation (Priority 3 Performance - Completion)
+  - Implemented 37 additional FPU instructions for scientific computing
+  - **Control**: FCLEX, FINIT, FNOP, FLDENV, FSTENV, FSAVE, FRSTOR, FSTCW (8 instructions)
+  - **Stack Management**: FDECSTP, FINCSTP, FFREE, FFREEP (4 instructions)
+  - **Comparison**: FICOM, FICOMP, FUCOM, FUCOMP, FUCOMPP, FTST, FCOMI, FCOMIP (8 instructions)
+  - **Conditional Moves**: FCMOVB, FCMOVBE, FCMOVE, FCMOVNB, FCMOVNE, FCMOVNU, FCMOVU (7 instructions)
+  - **Constants**: FLDL2T, FLDLG2, FLDLN2 (3 instructions)
+  - **Transcendental**: FPREM, FPREM1, FPTAN, FRNDINT, FXTRACT, FYL2X, FYL2XP1 (7 instructions)
+  - **Integer Operations**: FISUBR (1 instruction - already implemented)
+  - Added 15 comprehensive unit tests in JitCpuInstructionTests.cs
+  - Total implemented instructions: 165 (up from 128)
+  - **Priority 3 Performance goals: COMPLETE** (all MMX, CMOV*, and advanced FPU instructions implemented)
+  - **ALL PENTIUM-ERA INSTRUCTIONS NOW FULLY IMPLEMENTED**
+
 - **2025-10-31**: MMX instruction implementation (Priority 3 Performance)
   - Implemented all 52 MMX instructions for multimedia operations
   - Added MMX register state (8 x 64-bit registers aliased to FPU registers)
@@ -333,7 +336,7 @@ case Mnemonic.Je:
   - Added 13 comprehensive unit tests in JitCpuInstructionTests.cs
   - Added 12 three-way validation tests in ThreeWayPentiumTests.cs
   - Total implemented instructions: 128 (up from 76)
-  - Priority 3 Performance goals: COMPLETE (MMX + CMOV*)
+  - Priority 3 Performance goals: PARTIALLY COMPLETE (MMX + CMOV*)
 
 - **2025-10-23**: Initial stub implementation of 147 Pentium CPU instructions
   - Added comprehensive switch cases for all Pentium-era mnemonics

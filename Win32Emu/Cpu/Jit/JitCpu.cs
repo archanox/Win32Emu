@@ -931,43 +931,116 @@ public class JitCpu : IAsyncCpu
 				break;
 			
 			case Mnemonic.Fclex:
-			case Mnemonic.Fcmovb:
-			case Mnemonic.Fcmovbe:
-			case Mnemonic.Fcmove:
-			case Mnemonic.Fcmovnb:
-			case Mnemonic.Fcmovne:
-			case Mnemonic.Fcmovnu:
-			case Mnemonic.Fcmovu:
-			case Mnemonic.Fcomi:
-			case Mnemonic.Fcomip:
-			case Mnemonic.Fdecstp:
-			case Mnemonic.Ffree:
-			case Mnemonic.Ffreep:
-			case Mnemonic.Ficom:
-			case Mnemonic.Ficomp:
-			case Mnemonic.Fincstp:
+				ExecFclex();
+				break;
 			case Mnemonic.Finit:
-			case Mnemonic.Fldenv:
-			case Mnemonic.Fldl2t:
-			case Mnemonic.Fldlg2:
-			case Mnemonic.Fldln2:
+				ExecFinit();
+				break;
 			case Mnemonic.Fnop:
-			case Mnemonic.Fprem:
-			case Mnemonic.Fprem1:
-			case Mnemonic.Fptan:
-			case Mnemonic.Frndint:
-			case Mnemonic.Frstor:
-			case Mnemonic.Fsave:
-			case Mnemonic.Fstcw:
+				ExecFnop();
+				break;
+			case Mnemonic.Fldenv:
+				ExecFldenv(insn, mem);
+				break;
 			case Mnemonic.Fstenv:
-			case Mnemonic.Ftst:
+				ExecFstenv(insn, mem);
+				break;
+			case Mnemonic.Fsave:
+				ExecFsave(insn, mem);
+				break;
+			case Mnemonic.Frstor:
+				ExecFrstor(insn, mem);
+				break;
+			case Mnemonic.Fstcw:
+				ExecFstcw(insn, mem);
+				break;
+			case Mnemonic.Fdecstp:
+				ExecFdecstp();
+				break;
+			case Mnemonic.Fincstp:
+				ExecFincstp();
+				break;
+			case Mnemonic.Ffree:
+				ExecFfree(insn);
+				break;
+			case Mnemonic.Ffreep:
+				ExecFfreep(insn);
+				break;
+			case Mnemonic.Ficom:
+				ExecFicom(insn, mem);
+				break;
+			case Mnemonic.Ficomp:
+				ExecFicomp(insn, mem);
+				break;
 			case Mnemonic.Fucom:
+				ExecFucom(insn);
+				break;
 			case Mnemonic.Fucomp:
+				ExecFucomp(insn);
+				break;
 			case Mnemonic.Fucompp:
+				ExecFucompp();
+				break;
+			case Mnemonic.Ftst:
+				ExecFtst();
+				break;
+			case Mnemonic.Fcomi:
+				ExecFcomi(insn);
+				break;
+			case Mnemonic.Fcomip:
+				ExecFcomip(insn);
+				break;
+			case Mnemonic.Fcmovb:
+				ExecFcmovb(insn);
+				break;
+			case Mnemonic.Fcmovbe:
+				ExecFcmovbe(insn);
+				break;
+			case Mnemonic.Fcmove:
+				ExecFcmove(insn);
+				break;
+			case Mnemonic.Fcmovnb:
+				ExecFcmovnb(insn);
+				break;
+			case Mnemonic.Fcmovne:
+				ExecFcmovne(insn);
+				break;
+			case Mnemonic.Fcmovnu:
+				ExecFcmovnu(insn);
+				break;
+			case Mnemonic.Fcmovu:
+				ExecFcmovu(insn);
+				break;
+			case Mnemonic.Fldl2t:
+				ExecFldl2t();
+				break;
+			case Mnemonic.Fldlg2:
+				ExecFldlg2();
+				break;
+			case Mnemonic.Fldln2:
+				ExecFldln2();
+				break;
+			case Mnemonic.Fprem:
+				ExecFprem();
+				break;
+			case Mnemonic.Fprem1:
+				ExecFprem1();
+				break;
+			case Mnemonic.Fptan:
+				ExecFptan();
+				break;
+			case Mnemonic.Frndint:
+				ExecFrndint();
+				break;
 			case Mnemonic.Fxtract:
+				ExecFxtract();
+				break;
 			case Mnemonic.Fyl2x:
+				ExecFyl2x();
+				break;
 			case Mnemonic.Fyl2xp1:
-				throw new NotImplementedException($"[JitCpu] Stubbed FPU instruction: {insn.Mnemonic}");
+				ExecFyl2xp1();
+				break;
 			
 			case Mnemonic.Fninit:
 				ExecFninit();
@@ -4102,6 +4175,636 @@ public class JitCpu : IAsyncCpu
 		{
 			throw new NotImplementedException($"[JitCpu] FSTSW with unsupported operand type: {insn.Op0Kind}");
 		}
+	}
+
+	// === Advanced FPU Instructions (Priority 3) ===
+
+	private void ExecFclex()
+	{
+		// FCLEX - Clear FPU Exceptions (with WAIT)
+		// Same as FNCLEX but waits for pending FPU exceptions
+		// In emulation, we don't have async FPU operations, so this is identical to FNCLEX
+		ExecFnclex();
+	}
+
+	private void ExecFinit()
+	{
+		// FINIT - Initialize FPU (with WAIT)
+		// Same as FNINIT but waits for pending FPU exceptions
+		// In emulation, we don't have async FPU operations, so this is identical to FNINIT
+		ExecFninit();
+	}
+
+	private void ExecFnop()
+	{
+		// FNOP - FPU No Operation
+		// Does nothing, just advances EIP
+	}
+
+	private void ExecFldenv(Instruction insn, VirtualMemory mem)
+	{
+		// FLDENV - Load FPU Environment
+		// Loads the FPU environment from memory (14 bytes in 16-bit mode, 28 bytes in 32-bit mode)
+		// Environment includes: control word, status word, tag word, instruction pointer, data pointer, opcode
+		uint addr = CalcMemAddress(insn, 0);
+		
+		// Load 32-bit mode environment (28 bytes)
+		_fpuControlWord = mem.Read16(addr);
+		_fpuStatusWord = (ushort)mem.Read32(addr + 4);
+		_fpuTagWord = mem.Read16(addr + 8);
+		// Instruction pointer (offset 12), data pointer (offset 20), and opcode (offset 24) are ignored in emulation
+	}
+
+	private void ExecFstenv(Instruction insn, VirtualMemory mem)
+	{
+		// FSTENV - Store FPU Environment
+		// Stores the FPU environment to memory (28 bytes in 32-bit mode)
+		uint addr = CalcMemAddress(insn, 0);
+		
+		// Store 32-bit mode environment (28 bytes)
+		mem.Write16(addr, _fpuControlWord);
+		mem.Write16(addr + 4, _fpuStatusWord);
+		mem.Write16(addr + 8, _fpuTagWord);
+		// Instruction pointer, data pointer, and opcode would be written here in a full implementation
+		// For now, write zeros for these fields
+		mem.Write32(addr + 12, 0); // FPU instruction pointer
+		mem.Write32(addr + 16, 0); // FPU instruction selector
+		mem.Write32(addr + 20, 0); // FPU data pointer
+		mem.Write32(addr + 24, 0); // FPU data selector
+	}
+
+	private void ExecFsave(Instruction insn, VirtualMemory mem)
+	{
+		// FSAVE - Save FPU State
+		// Saves the complete FPU state to memory (108 bytes in 32-bit mode)
+		uint addr = CalcMemAddress(insn, 0);
+		
+		// Save environment (28 bytes)
+		mem.Write16(addr, _fpuControlWord);
+		mem.Write32(addr + 4, _fpuStatusWord);
+		mem.Write16(addr + 8, _fpuTagWord);
+		mem.Write32(addr + 12, 0); // FPU instruction pointer
+		mem.Write32(addr + 16, 0); // FPU instruction selector
+		mem.Write32(addr + 20, 0); // FPU data pointer
+		mem.Write32(addr + 24, 0); // FPU data selector
+		
+		// Save FPU registers (80 bytes = 8 registers * 10 bytes each)
+		for (int i = 0; i < 8; i++)
+		{
+			// Each FPU register is 80 bits (10 bytes) in extended precision format
+			// For simplicity, we store as double (8 bytes) and pad with zeros
+			ulong bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(_fpu[i]));
+			mem.Write64(addr + 28 + (uint)(i * 10), bits);
+			mem.Write16(addr + 28 + (uint)(i * 10) + 8, 0); // Pad to 10 bytes
+		}
+		
+		// After FSAVE, initialize FPU to default state
+		ExecFninit();
+	}
+
+	private void ExecFrstor(Instruction insn, VirtualMemory mem)
+	{
+		// FRSTOR - Restore FPU State
+		// Restores the complete FPU state from memory (108 bytes in 32-bit mode)
+		uint addr = CalcMemAddress(insn, 0);
+		
+		// Restore environment (28 bytes)
+		_fpuControlWord = mem.Read16(addr);
+		_fpuStatusWord = (ushort)mem.Read32(addr + 4);
+		_fpuTagWord = mem.Read16(addr + 8);
+		// Instruction pointer and data pointer are restored but not used in emulation
+		
+		// Restore FPU registers (80 bytes)
+		for (int i = 0; i < 8; i++)
+		{
+			// Read 8 bytes as double (ignore the 2-byte padding)
+			ulong bits = mem.Read64(addr + 28 + (uint)(i * 10));
+			_fpu[i] = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+		}
+	}
+
+	private void ExecFstcw(Instruction insn, VirtualMemory mem)
+	{
+		// FSTCW - Store Control Word (with WAIT)
+		// Same as FNSTCW but waits for pending FPU exceptions
+		ExecFnstcw(insn, mem);
+	}
+
+	private void ExecFdecstp()
+	{
+		// FDECSTP - Decrement Stack Top Pointer
+		// Decrements the TOP field in the FPU status word (bits 11-13)
+		_fpuTop = (_fpuTop - 1) & 7;
+		// Update TOP bits in status word (bits 11-13)
+		_fpuStatusWord = (ushort)((_fpuStatusWord & 0xC7FF) | ((_fpuTop & 7) << 11));
+	}
+
+	private void ExecFincstp()
+	{
+		// FINCSTP - Increment Stack Top Pointer
+		// Increments the TOP field in the FPU status word (bits 11-13)
+		_fpuTop = (_fpuTop + 1) & 7;
+		// Update TOP bits in status word (bits 11-13)
+		_fpuStatusWord = (ushort)((_fpuStatusWord & 0xC7FF) | ((_fpuTop & 7) << 11));
+	}
+
+	private void ExecFfree(Instruction insn)
+	{
+		// FFREE - Free Register
+		// Marks the specified FPU register as empty in the tag word
+		int i = 0;
+		if (insn.OpCount > 0 && insn.Op0Kind == OpKind.Register)
+		{
+			var reg = insn.Op0Register;
+			i = reg - Register.ST0;
+		}
+		
+		// Set the tag for ST(i) to 11b (empty)
+		int idx = (_fpuTop + i) & 7;
+		int tagBits = idx * 2;
+		_fpuTagWord |= (ushort)(3 << tagBits); // Set bits to 11b
+	}
+
+	private void ExecFfreep(Instruction insn)
+	{
+		// FFREEP - Free Register and Pop
+		// Marks the specified FPU register as empty and pops the stack
+		ExecFfree(insn);
+		FpuPop();
+	}
+
+	private void ExecFicom(Instruction insn, VirtualMemory mem)
+	{
+		// FICOM - Integer Compare
+		// Compares ST(0) with an integer source from memory and sets condition codes in FPU status word
+		double st0 = FpuGetSt(0);
+		double source;
+		
+		if (insn.Op0Kind == OpKind.Memory)
+		{
+			uint addr = CalcMemAddress(insn, 0);
+			if (insn.MemorySize == MemorySize.Int16)
+			{
+				source = (short)mem.Read16(addr);
+			}
+			else if (insn.MemorySize == MemorySize.Int32)
+			{
+				source = (int)mem.Read32(addr);
+			}
+			else
+			{
+				throw new NotImplementedException($"[JitCpu] FICOM with unsupported memory size: {insn.MemorySize}");
+			}
+		}
+		else
+		{
+			throw new NotImplementedException($"[JitCpu] FICOM with unsupported operand type: {insn.Op0Kind}");
+		}
+		
+		// Set condition codes in FPU status word (C0, C2, C3 = bits 8, 10, 14)
+		// FICOM does NOT modify EFLAGS (only FCOMI/FCOMIP do that)
+		if (double.IsNaN(st0) || double.IsNaN(source))
+		{
+			// Unordered: C0=1, C2=1, C3=1
+			_fpuStatusWord |= 0x4500;
+		}
+		else if (st0 > source)
+		{
+			// Greater than: C0=0, C2=0, C3=0
+			_fpuStatusWord &= 0xBAFF;
+		}
+		else if (st0 < source)
+		{
+			// Less than: C0=1, C2=0, C3=0
+			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xFAFF) | 0x0100);
+		}
+		else // st0 == source
+		{
+			// Equal: C0=0, C2=0, C3=1
+			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xBAFF) | 0x4000);
+		}
+	}
+
+	private void ExecFicomp(Instruction insn, VirtualMemory mem)
+	{
+		// FICOMP - Integer Compare and Pop
+		ExecFicom(insn, mem);
+		FpuPop();
+	}
+
+	private void ExecFucom(Instruction insn)
+	{
+		// FUCOM - Unordered Compare
+		// Compares ST(0) with ST(i) and sets condition codes in FPU status word
+		// FUCOM does NOT modify EFLAGS (only FCOMI/FCOMIP do that)
+		int i = 1; // Default to ST(1)
+		if (insn.OpCount > 0 && insn.Op0Kind == OpKind.Register)
+		{
+			var reg = insn.Op0Register;
+			i = reg - Register.ST0;
+		}
+		
+		double st0 = FpuGetSt(0);
+		double sti = FpuGetSt(i);
+		
+		// Set condition codes in FPU status word only
+		if (double.IsNaN(st0) || double.IsNaN(sti))
+		{
+			// Unordered
+			_fpuStatusWord |= 0x4500;
+		}
+		else if (st0 > sti)
+		{
+			// Greater than
+			_fpuStatusWord &= 0xBAFF;
+		}
+		else if (st0 < sti)
+		{
+			// Less than
+			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xFAFF) | 0x0100);
+		}
+		else // st0 == sti
+		{
+			// Equal
+			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xBAFF) | 0x4000);
+		}
+	}
+
+	private void ExecFucomp(Instruction insn)
+	{
+		// FUCOMP - Unordered Compare and Pop
+		ExecFucom(insn);
+		FpuPop();
+	}
+
+	private void ExecFucompp()
+	{
+		// FUCOMPP - Unordered Compare and Pop Twice
+		// Compare ST(0) with ST(1), set FPU condition codes, and pop twice
+		// FUCOMPP does NOT modify EFLAGS (only FCOMI/FCOMIP do that)
+		double st0 = FpuGetSt(0);
+		double st1 = FpuGetSt(1);
+		
+		// Set FPU condition codes only (C0, C2, C3)
+		if (double.IsNaN(st0) || double.IsNaN(st1))
+		{
+			_fpuStatusWord |= 0x4500;
+		}
+		else if (st0 > st1)
+		{
+			_fpuStatusWord &= 0xBAFF;
+		}
+		else if (st0 < st1)
+		{
+			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xFAFF) | 0x0100);
+		}
+		else
+		{
+			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xBAFF) | 0x4000);
+		}
+		
+		// Pop twice
+		FpuPop();
+		FpuPop();
+	}
+
+	private void ExecFtst()
+	{
+		// FTST - Test ST(0)
+		// Compares ST(0) with 0.0 and sets condition codes
+		double st0 = FpuGetSt(0);
+		
+		if (double.IsNaN(st0))
+		{
+			// Unordered
+			_fpuStatusWord |= 0x4500;
+		}
+		else if (st0 > 0.0)
+		{
+			// Greater than zero
+			_fpuStatusWord &= 0xBAFF;
+		}
+		else if (st0 < 0.0)
+		{
+			// Less than zero
+			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xFAFF) | 0x0100);
+		}
+		else // st0 == 0.0
+		{
+			// Equal to zero
+			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xBAFF) | 0x4000);
+		}
+	}
+
+	private void ExecFcomi(Instruction insn)
+	{
+		// FCOMI - Compare and Set EFLAGS
+		// Compares ST(0) with ST(i) and sets EFLAGS (ZF, PF, CF)
+		int i = 1; // Default to ST(1)
+		if (insn.OpCount > 0 && insn.Op0Kind == OpKind.Register)
+		{
+			var reg = insn.Op0Register;
+			i = reg - Register.ST0;
+		}
+		
+		double st0 = FpuGetSt(0);
+		double sti = FpuGetSt(i);
+		
+		// Set EFLAGS based on comparison
+		if (double.IsNaN(st0) || double.IsNaN(sti))
+		{
+			SetFlag(Zf);
+			SetFlag(Pf);
+			SetFlag(Cf);
+		}
+		else if (st0 > sti)
+		{
+			ClearFlag(Zf);
+			ClearFlag(Pf);
+			ClearFlag(Cf);
+		}
+		else if (st0 < sti)
+		{
+			ClearFlag(Zf);
+			ClearFlag(Pf);
+			SetFlag(Cf);
+		}
+		else // st0 == sti
+		{
+			SetFlag(Zf);
+			ClearFlag(Pf);
+			ClearFlag(Cf);
+		}
+	}
+
+	private void ExecFcomip(Instruction insn)
+	{
+		// FCOMIP - Compare, Set EFLAGS, and Pop
+		ExecFcomi(insn);
+		FpuPop();
+	}
+
+	private void ExecFcmovb(Instruction insn)
+	{
+		// FCMOVB - Conditional Move if Below (CF=1)
+		if (GetFlag(Cf))
+		{
+			int i = 1;
+			if (insn.OpCount > 1 && insn.Op1Kind == OpKind.Register)
+			{
+				var reg = insn.Op1Register;
+				i = reg - Register.ST0;
+			}
+			FpuSetSt(0, FpuGetSt(i));
+		}
+	}
+
+	private void ExecFcmovbe(Instruction insn)
+	{
+		// FCMOVBE - Conditional Move if Below or Equal (CF=1 or ZF=1)
+		if (GetFlag(Cf) || GetFlag(Zf))
+		{
+			int i = 1;
+			if (insn.OpCount > 1 && insn.Op1Kind == OpKind.Register)
+			{
+				var reg = insn.Op1Register;
+				i = reg - Register.ST0;
+			}
+			FpuSetSt(0, FpuGetSt(i));
+		}
+	}
+
+	private void ExecFcmove(Instruction insn)
+	{
+		// FCMOVE - Conditional Move if Equal (ZF=1)
+		if (GetFlag(Zf))
+		{
+			int i = 1;
+			if (insn.OpCount > 1 && insn.Op1Kind == OpKind.Register)
+			{
+				var reg = insn.Op1Register;
+				i = reg - Register.ST0;
+			}
+			FpuSetSt(0, FpuGetSt(i));
+		}
+	}
+
+	private void ExecFcmovnb(Instruction insn)
+	{
+		// FCMOVNB - Conditional Move if Not Below (CF=0)
+		if (!GetFlag(Cf))
+		{
+			int i = 1;
+			if (insn.OpCount > 1 && insn.Op1Kind == OpKind.Register)
+			{
+				var reg = insn.Op1Register;
+				i = reg - Register.ST0;
+			}
+			FpuSetSt(0, FpuGetSt(i));
+		}
+	}
+
+	private void ExecFcmovne(Instruction insn)
+	{
+		// FCMOVNE - Conditional Move if Not Equal (ZF=0)
+		if (!GetFlag(Zf))
+		{
+			int i = 1;
+			if (insn.OpCount > 1 && insn.Op1Kind == OpKind.Register)
+			{
+				var reg = insn.Op1Register;
+				i = reg - Register.ST0;
+			}
+			FpuSetSt(0, FpuGetSt(i));
+		}
+	}
+
+	private void ExecFcmovnu(Instruction insn)
+	{
+		// FCMOVNU - Conditional Move if Not Unordered (PF=0)
+		if (!GetFlag(Pf))
+		{
+			int i = 1;
+			if (insn.OpCount > 1 && insn.Op1Kind == OpKind.Register)
+			{
+				var reg = insn.Op1Register;
+				i = reg - Register.ST0;
+			}
+			FpuSetSt(0, FpuGetSt(i));
+		}
+	}
+
+	private void ExecFcmovu(Instruction insn)
+	{
+		// FCMOVU - Conditional Move if Unordered (PF=1)
+		if (GetFlag(Pf))
+		{
+			int i = 1;
+			if (insn.OpCount > 1 && insn.Op1Kind == OpKind.Register)
+			{
+				var reg = insn.Op1Register;
+				i = reg - Register.ST0;
+			}
+			FpuSetSt(0, FpuGetSt(i));
+		}
+	}
+
+	private void ExecFldl2t()
+	{
+		// FLDL2T - Load log2(10)
+		// Push log2(10) ≈ 3.32192809... onto the FPU stack
+		FpuPush(Math.Log(10) / Math.Log(2));
+	}
+
+	private void ExecFldlg2()
+	{
+		// FLDLG2 - Load log10(2)
+		// Push log10(2) ≈ 0.301029995... onto the FPU stack
+		FpuPush(Math.Log10(2));
+	}
+
+	private void ExecFldln2()
+	{
+		// FLDLN2 - Load loge(2)
+		// Push loge(2) ≈ 0.693147180... onto the FPU stack
+		FpuPush(Math.Log(2));
+	}
+
+	private void ExecFprem()
+	{
+		// FPREM - Partial Remainder
+		// ST(0) = ST(0) - (Q * ST(1)) where Q is the truncated integer quotient
+		double st0 = FpuGetSt(0);
+		double st1 = FpuGetSt(1);
+		
+		// Use epsilon comparison for floating-point zero check
+		const double epsilon = 1e-12;
+		if (Math.Abs(st1) < epsilon)
+		{
+			// Division by zero - set C2 (incomplete) flag
+			_fpuStatusWord |= 0x0400;
+			return;
+		}
+		
+		// Calculate partial remainder using modulo operator
+		double remainder = st0 % st1;
+		FpuSetSt(0, remainder);
+		
+		// Clear C2 to indicate operation is complete
+		_fpuStatusWord &= 0xFBFF;
+	}
+
+	private void ExecFprem1()
+	{
+		// FPREM1 - Partial Remainder (IEEE)
+		// IEEE-compliant version of FPREM
+		double st0 = FpuGetSt(0);
+		double st1 = FpuGetSt(1);
+		
+		// Use epsilon comparison for floating-point zero check
+		const double epsilon = 1e-12;
+		if (Math.Abs(st1) < epsilon)
+		{
+			_fpuStatusWord |= 0x0400;
+			return;
+		}
+		
+		// Use IEEE remainder function
+		double remainder = Math.IEEERemainder(st0, st1);
+		FpuSetSt(0, remainder);
+		
+		_fpuStatusWord &= 0xFBFF;
+	}
+
+	private void ExecFptan()
+	{
+		// FPTAN - Partial Tangent
+		// Computes ST(0) = tan(ST(0)) and pushes 1.0
+		// The result is: ST(1) = tan(original ST(0)), ST(0) = 1.0
+		double st0 = FpuGetSt(0);
+		double tanValue = Math.Tan(st0);
+		FpuSetSt(0, tanValue);
+		FpuPush(1.0); // Push 1.0 to maintain stack compatibility
+	}
+
+	private void ExecFrndint()
+	{
+		// FRNDINT - Round to Integer
+		// Rounds ST(0) to an integer according to the current rounding mode
+		// For simplicity, use default rounding (round to nearest even)
+		double st0 = FpuGetSt(0);
+		double rounded = Math.Round(st0, MidpointRounding.ToEven);
+		FpuSetSt(0, rounded);
+	}
+
+	private void ExecFxtract()
+	{
+		// FXTRACT - Extract Exponent and Significand
+		// Separates ST(0) into exponent and significand
+		// Result: ST(1) = exponent, ST(0) = significand
+		double st0 = FpuGetSt(0);
+		
+		// Use epsilon comparison for floating-point zero check
+		const double epsilon = 1e-12;
+		if (Math.Abs(st0) < epsilon)
+		{
+			// Special case: zero
+			FpuSetSt(0, 0.0);
+			FpuPush(double.NegativeInfinity); // Exponent is -∞
+		}
+		else
+		{
+			// Extract exponent and significand using bit manipulation
+			long bits = BitConverter.DoubleToInt64Bits(st0);
+			int exponent = (int)((bits >> 52) & 0x7FF) - 1023; // Unbiased exponent
+			
+			// Create significand by setting exponent to 0 (biased exponent = 1023)
+			long significandBits = (bits & unchecked((long)0x800FFFFFFFFFFFFF)) | (1023L << 52);
+			double significand = BitConverter.Int64BitsToDouble(significandBits);
+			
+			FpuSetSt(0, significand);
+			FpuPush(exponent);
+		}
+	}
+
+	private void ExecFyl2x()
+	{
+		// FYL2X - ST(1) * log2(ST(0)) and pop
+		// Computes ST(1) = ST(1) * log2(ST(0)), then pops the stack
+		double st0 = FpuGetSt(0);
+		double st1 = FpuGetSt(1);
+		
+		if (st0 <= 0.0)
+		{
+			// Invalid operation for log of non-positive number
+			FpuPop();
+			FpuSetSt(0, double.NaN);
+			return;
+		}
+		
+		double result = st1 * (Math.Log(st0) / Math.Log(2));
+		FpuPop();
+		FpuSetSt(0, result);
+	}
+
+	private void ExecFyl2xp1()
+	{
+		// FYL2XP1 - ST(1) * log2(ST(0) + 1) and pop
+		// Computes ST(1) = ST(1) * log2(ST(0) + 1), then pops the stack
+		// More accurate for ST(0) close to 0
+		double st0 = FpuGetSt(0);
+		double st1 = FpuGetSt(1);
+		
+		if (st0 + 1.0 <= 0.0)
+		{
+			FpuPop();
+			FpuSetSt(0, double.NaN);
+			return;
+		}
+		
+		double result = st1 * (Math.Log(st0 + 1.0) / Math.Log(2));
+		FpuPop();
+		FpuSetSt(0, result);
 	}
 
 	private void ExecEmms()

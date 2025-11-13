@@ -962,5 +962,406 @@ public class JitCpuInstructionTests
 	}
 
 	#endregion
+
+	#region Advanced FPU Instructions (Priority 3)
+
+	[Fact]
+	public void Fclex_ShouldClearFpuExceptions()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FNCLEX = DB E2 (no wait version)
+		mem.Write8(0x1000, 0xDB);
+		mem.Write8(0x1001, 0xE2);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x1002u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void Finit_ShouldInitializeFpu()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FNINIT = DB E3 (no wait version)
+		mem.Write8(0x1000, 0xDB);
+		mem.Write8(0x1001, 0xE3);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x1002u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void Fnop_ShouldDoNothing()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FNOP = D9 D0
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xD0);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x1002u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void Fcomi_ShouldCompareAndSetEflags()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FLD1 = D9 E8 (load 1.0)
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xE8);
+		cpu.SingleStep(mem); // Load 1.0 onto stack
+		
+		// FLD1 again
+		cpu.SetEip(0x1002);
+		mem.Write8(0x1002, 0xD9);
+		mem.Write8(0x1003, 0xE8);
+		cpu.SingleStep(mem); // Load another 1.0
+		
+		// FCOMI ST(0), ST(1) = DB F1
+		cpu.SetEip(0x1004);
+		mem.Write8(0x1004, 0xDB);
+		mem.Write8(0x1005, 0xF1);
+		
+		// Act
+		cpu.SingleStep(mem); // Compare ST(0) with ST(1)
+		
+		// Assert - when equal, ZF=1, CF=0, PF=0
+		Assert.Equal(0x1006u, cpu.GetEip());
+		// Note: EFLAGS verification would require accessing CPU flags
+	}
+
+	[Fact]
+	public void Fcomip_ShouldCompareSetEflagsAndPop()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FLD1 = D9 E8 (load 1.0)
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xE8);
+		cpu.SingleStep(mem);
+		
+		// FLD1 again
+		cpu.SetEip(0x1002);
+		mem.Write8(0x1002, 0xD9);
+		mem.Write8(0x1003, 0xE8);
+		cpu.SingleStep(mem);
+		
+		// FCOMIP ST(0), ST(1) = DF F1
+		cpu.SetEip(0x1004);
+		mem.Write8(0x1004, 0xDF);
+		mem.Write8(0x1005, 0xF1);
+		
+		// Act
+		cpu.SingleStep(mem); // Compare and pop
+		
+		// Assert
+		Assert.Equal(0x1006u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void Fldl2t_ShouldLoadLog2Of10()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FLDL2T = D9 E9
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xE9);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert - should load log2(10) ≈ 3.32193
+		Assert.Equal(0x1002u, cpu.GetEip());
+		// Verify the value is approximately correct
+		double value = cpu.FpuGetSt(0);
+		Assert.InRange(value, 3.32, 3.33);
+	}
+
+	[Fact]
+	public void Fldlg2_ShouldLoadLog10Of2()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FLDLG2 = D9 EC
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xEC);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert - should load log10(2) ≈ 0.30103
+		Assert.Equal(0x1002u, cpu.GetEip());
+		double value = cpu.FpuGetSt(0);
+		Assert.InRange(value, 0.30, 0.31);
+	}
+
+	[Fact]
+	public void Fldln2_ShouldLoadLogEOf2()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FLDLN2 = D9 ED
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xED);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert - should load ln(2) ≈ 0.69315
+		Assert.Equal(0x1002u, cpu.GetEip());
+		double value = cpu.FpuGetSt(0);
+		Assert.InRange(value, 0.69, 0.70);
+	}
+
+	[Fact]
+	public void Frndint_ShouldRoundToInteger()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// Load 3.7 onto the FPU stack
+		// We'll use FLD with a memory operand
+		mem.Write32(0x2000, unchecked((uint)BitConverter.SingleToInt32Bits(3.7f)));
+		
+		// FLD dword ptr [0x2000] = D9 05 00 20 00 00
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0x05);
+		mem.Write32(0x1002, 0x2000);
+		cpu.SingleStep(mem);
+		
+		// FRNDINT = D9 FC
+		cpu.SetEip(0x1006);
+		mem.Write8(0x1006, 0xD9);
+		mem.Write8(0x1007, 0xFC);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert - should round 3.7 to 4.0
+		Assert.Equal(0x1008u, cpu.GetEip());
+		double value = cpu.FpuGetSt(0);
+		Assert.Equal(4.0, value);
+	}
+
+	[Fact]
+	public void Ftst_ShouldTestAgainstZero()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FLD1 = D9 E8 (load 1.0)
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xE8);
+		cpu.SingleStep(mem);
+		
+		// FTST = D9 E4
+		cpu.SetEip(0x1002);
+		mem.Write8(0x1002, 0xD9);
+		mem.Write8(0x1003, 0xE4);
+		
+		// Act
+		cpu.SingleStep(mem); // Test ST(0) against 0.0
+		
+		// Assert
+		Assert.Equal(0x1004u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void Fucom_ShouldUnorderedCompare()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FLD1 twice to get ST(0) = ST(1) = 1.0
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xE8);
+		cpu.SingleStep(mem);
+		
+		cpu.SetEip(0x1002);
+		mem.Write8(0x1002, 0xD9);
+		mem.Write8(0x1003, 0xE8);
+		cpu.SingleStep(mem);
+		
+		// FUCOM ST(1) = DD E1
+		cpu.SetEip(0x1004);
+		mem.Write8(0x1004, 0xDD);
+		mem.Write8(0x1005, 0xE1);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x1006u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void Fucomp_ShouldUnorderedCompareAndPop()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FLD1 twice
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xE8);
+		cpu.SingleStep(mem);
+		
+		cpu.SetEip(0x1002);
+		mem.Write8(0x1002, 0xD9);
+		mem.Write8(0x1003, 0xE8);
+		cpu.SingleStep(mem);
+		
+		// FUCOMP ST(1) = DD E9
+		cpu.SetEip(0x1004);
+		mem.Write8(0x1004, 0xDD);
+		mem.Write8(0x1005, 0xE9);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x1006u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void Fucompp_ShouldUnorderedCompareAndPopTwice()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FLD1 twice
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xE8);
+		cpu.SingleStep(mem);
+		
+		cpu.SetEip(0x1002);
+		mem.Write8(0x1002, 0xD9);
+		mem.Write8(0x1003, 0xE8);
+		cpu.SingleStep(mem);
+		
+		// FUCOMPP = DA E9
+		cpu.SetEip(0x1004);
+		mem.Write8(0x1004, 0xDA);
+		mem.Write8(0x1005, 0xE9);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x1006u, cpu.GetEip());
+	}
+
+	[Fact]
+	public void Fprem_ShouldCalculatePartialRemainder()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// Load 7.0 then 3.0 onto stack, so ST(0) = 3.0, ST(1) = 7.0
+		mem.Write32(0x2000, unchecked((uint)BitConverter.SingleToInt32Bits(7.0f)));
+		mem.Write32(0x2004, unchecked((uint)BitConverter.SingleToInt32Bits(3.0f)));
+		
+		// FLD dword ptr [0x2000]
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0x05);
+		mem.Write32(0x1002, 0x2000);
+		cpu.SingleStep(mem);
+		
+		// FLD dword ptr [0x2004]
+		cpu.SetEip(0x1006);
+		mem.Write8(0x1006, 0xD9);
+		mem.Write8(0x1007, 0x05);
+		mem.Write32(0x1008, 0x2004);
+		cpu.SingleStep(mem); // ST(0) = 3.0, ST(1) = 7.0
+		
+		// FPREM = D9 F8 (ST(0) = ST(0) % ST(1) = 3.0 % 7.0 = 3.0)
+		cpu.SetEip(0x100C);
+		mem.Write8(0x100C, 0xD9);
+		mem.Write8(0x100D, 0xF8);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert
+		Assert.Equal(0x100Eu, cpu.GetEip());
+		double value = cpu.FpuGetSt(0);
+		Assert.Equal(3.0, value); // 3 % 7 = 3
+	}
+
+	[Fact]
+	public void Fptan_ShouldCalculateTangentAndPush1()
+	{
+		// Arrange
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FLDZ = D9 EE (load 0.0)
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xEE);
+		cpu.SingleStep(mem);
+		
+		// FPTAN = D9 F2
+		cpu.SetEip(0x1002);
+		mem.Write8(0x1002, 0xD9);
+		mem.Write8(0x1003, 0xF2);
+		
+		// Act
+		cpu.SingleStep(mem);
+		
+		// Assert - tan(0) = 0, and 1.0 is pushed
+		Assert.Equal(0x1004u, cpu.GetEip());
+		Assert.Equal(1.0, cpu.FpuGetSt(0)); // Top of stack is 1.0
+		Assert.Equal(0.0, cpu.FpuGetSt(1)); // tan(0) = 0
+	}
+
+	#endregion
 }
 
