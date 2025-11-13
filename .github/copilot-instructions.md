@@ -2,12 +2,12 @@
 
 ## Project Overview
 
-Win32Emu is a Windows 32-bit PE executable emulator written in C# (.NET 9) for running classic Windows games and applications on modern systems (Windows, Linux, macOS on x86 and ARM). It provides full x86 CPU emulation with JIT compilation, Windows API emulation (Kernel32, User32, DirectDraw, DirectInput, DirectSound, etc.), and cross-platform multimedia support through pluggable backends (SDL3, GLFW, Vulkan, Metal).
+Win32Emu is a Windows 32-bit PE executable emulator written in C# 14 (.NET 10) for running classic Windows games and applications on modern systems (Windows, Linux, macOS on x86 and ARM). It provides full x86 CPU emulation with JIT compilation, Windows API emulation (Kernel32, User32, DirectDraw, DirectInput, DirectSound, etc.), and cross-platform multimedia support through pluggable backends (SDL3, GLFW, Vulkan, Metal).
 
 ## Coding Standards
 
 ### Language and Framework
-- Use C# with .NET 9 features
+- Use C# 14 with .NET 10 features
 - Follow .editorconfig settings (tabs for indentation, tab width = 4)
 - Use `var` for local variables when type is apparent or for built-in types
 - Prefer block-scoped namespaces over file-scoped
@@ -85,7 +85,7 @@ dotnet build --configuration Release
 
 ### Solution Structure
 - Solution file: `Win32Emu.slnx` (XML-based solution format)
-- All projects use .NET 9
+- All projects use .NET 10 (Source Generators use netstandard2.0)
 - Projects include emulator core, DLL modules, tools, tests, and GUI
 
 ### CI Requirements
