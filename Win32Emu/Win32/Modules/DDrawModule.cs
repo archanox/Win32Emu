@@ -3815,14 +3815,31 @@ namespace Win32Emu.Win32.Modules
 				var parameters = new uint[] { guidPtr, descPtr, namePtr, lpContext, hMonitor };
 				var result = callbackHelper.InvokeStdcallCallback(lpCallback, parameters);
 
-				// Free allocated strings
-				FreeString(descPtr);
-				FreeString(namePtr);
+				var descPtr = AllocateUnicodeString(driverDescription);
+				var namePtr = AllocateUnicodeString(driverName);
 
-				if (result == null)
+				try
 				{
-					_logger.LogError("[DDraw] DirectDrawEnumerateExW: callback invocation failed");
-					return (uint)DDResult.DDERR_GENERIC;
+				    _logger.LogDebug("[DDraw] Allocated Unicode strings: desc=0x{Desc:X8}, name=0x{Name:X8}, hMonitor=0x{HMonitor:X8}",
+				        descPtr, namePtr, hMonitor);
+
+				    var callbackHelper = new CallbackHelper(_currentCpu!, _currentMemory!, _logger);
+				    var parameters = new uint[] { guidPtr, descPtr, namePtr, lpContext, hMonitor };
+				    var result = callbackHelper.InvokeStdcallCallback(lpCallback, parameters);
+
+				    if (result == null)
+				    {
+				        _logger.LogError("[DDraw] DirectDrawEnumerateExW: callback invocation failed");
+				        return (uint)DDResult.DDERR_GENERIC;
+				    }
+
+				    _logger.LogInformation("[DDraw] DirectDrawEnumerateExW: callback returned {Result}", result.Value);
+				    return (uint)DDResult.DD_OK;
+				}
+				finally
+				{
+				    FreeString(descPtr);
+				    FreeString(namePtr);
 				}
 
 				_logger.LogInformation("[DDraw] DirectDrawEnumerateExW: callback returned {Result}", result.Value);
