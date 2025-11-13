@@ -48,6 +48,20 @@ public class IcedCpu : IAsyncCpu
 	private static readonly bool RdtscIsHighResolution = Stopwatch.IsHighResolution;
 	private static readonly long RdtscFrequency = Stopwatch.Frequency;
 
+	/// <summary>
+	/// Initializes a new instance of the <see cref="IcedCpu"/> class.
+	/// </summary>
+	/// <param name="mem">The virtual memory instance used by the CPU.</param>
+	/// <param name="logger">Optional logger for CPU events and diagnostics.</param>
+	/// <param name="decoderOptions">Options for the instruction decoder.</param>
+	/// <param name="enableInstructionAnalyzer">Whether to enable instruction analysis for debugging.</param>
+	/// <param name="imageBase">The image base address for the emulated executable.</param>
+	/// <param name="stackLimit">The lower bound of the stack region.</param>
+	/// <param name="stackBase">The upper bound of the stack region.</param>
+	/// <param name="bitness">
+	/// The CPU bitness mode (16 for real mode, 32 for protected mode). Defaults to 32-bit.
+	/// Use 16 for legacy DOS/real mode code, and 32 for Win32 protected mode applications.
+	/// </param>
 	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32)
 	{
 		_mem = mem;
@@ -774,6 +788,7 @@ public class IcedCpu : IAsyncCpu
 		if (!isControlFlowInstruction)
 		{
 			// Use decoder IP directly as it's authoritative for instruction length
+			// TODO: Known issue - EIP can be off by 1 byte in some 16-bit mode instructions (see PR description)
 			_eip = (uint)_decoder.IP;
 		}
 
@@ -1336,7 +1351,7 @@ public class IcedCpu : IAsyncCpu
 					_mem.Write8(CalcMemAddress(insn), r);
 				}
 				
-				SetFlagsSbb(a, (byte)(b + cf), r, 0x80); // 8-bit sign bit
+				SetFlagsSbb(a, b, r, 0x80, cf != 0); // 8-bit sign bit; pass cf separately to avoid overflow
 				break;
 			}
 			case 16:
@@ -1381,7 +1396,7 @@ public class IcedCpu : IAsyncCpu
 					_mem.Write16(CalcMemAddress(insn), r);
 				}
 				
-				SetFlagsSbb(a, (ushort)(b + cf), r, 0x8000); // 16-bit sign bit
+				SetFlagsSbb(a, b, r, 0x8000, cf != 0); // 16-bit sign bit; pass cf separately to avoid overflow
 				break;
 			}
 			default:
@@ -1400,6 +1415,14 @@ public class IcedCpu : IAsyncCpu
 	private void SetFlagsSbb(uint a, uint b, uint r)
 	{
 		SetFlagsSbb(a, b, r, 0x80000000);
+	}
+	
+	private void SetFlagsSbb(uint a, uint b, uint r, uint signBitMask)
+	{
+		SetFlagVal(Cf, a < b);
+		SetFlagVal(Of, ((a ^ b) & (a ^ r) & signBitMask) != 0);
+		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
+		UpdateLogicResultFlags(r, signBitMask);
 	}
 	
 	private void SetFlagsSbb(uint a, uint b, uint r, uint signBitMask, bool cfIn)
@@ -1839,6 +1862,7 @@ public class IcedCpu : IAsyncCpu
 				else if (insn.GetOpKind(0) == OpKind.Memory)
 					_mem.Write8(CalcMemAddress(insn), r);
 					
+				// Overflow only occurs when incrementing max positive (0x7F) to min negative (0x80)
 				SetFlagVal(Of, a == 0x7F); // Overflow from 0x7F to 0x80
 				SetFlagVal(Af, ((a ^ 1 ^ r) & 0x10) != 0);
 				UpdateLogicResultFlags(r, 0x80);
@@ -1887,6 +1911,7 @@ public class IcedCpu : IAsyncCpu
 				else if (insn.GetOpKind(0) == OpKind.Memory)
 					_mem.Write8(CalcMemAddress(insn), r);
 					
+				// Overflow only occurs when decrementing min negative (0x80) to max positive (0x7F)
 				SetFlagVal(Of, a == 0x80); // Overflow from 0x80 to 0x7F
 				SetFlagVal(Af, ((a ^ 1 ^ r) & 0x10) != 0);
 				UpdateLogicResultFlags(r, 0x80);
@@ -4445,7 +4470,7 @@ public class IcedCpu : IAsyncCpu
 		{
 			var baseReg = insn.MemoryBase;
 			// Use appropriate register size - 16-bit registers should only use lower 16 bits
-			if (baseReg is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP or Register.BP)
+			if (Is16BitRegister(baseReg))
 			{
 				addr += GetReg16(baseReg);
 			}
@@ -4460,7 +4485,7 @@ public class IcedCpu : IAsyncCpu
 			var indexReg = insn.MemoryIndex;
 			var scale = insn.MemoryIndexScale;
 			// Use appropriate register size - 16-bit registers should only use lower 16 bits
-			if (indexReg is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP or Register.BP)
+			if (Is16BitRegister(indexReg))
 			{
 				addr += (uint)(GetReg16(indexReg) * scale);
 			}
@@ -4521,6 +4546,10 @@ public class IcedCpu : IAsyncCpu
 
 		return addr;
 	}
+
+	private bool Is16BitRegister(Register reg) => 
+		reg is Register.AX or Register.CX or Register.DX or Register.BX or 
+		      Register.SI or Register.DI or Register.SP or Register.BP;
 
 	private uint GetReg32(Register reg) => reg switch
 	{
