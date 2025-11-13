@@ -146,10 +146,13 @@ public class EflagsTests
 	{
 		// This is the EXACT test case from conformance test 00.MOO.gz, test 4
 		// Test: add ch,dl
+		// Instruction bytes: 3E 00 D5 F4 (DS segment override + ADD CH,DL + HLT)
 		var memory = new VirtualMemory();
-		// ADD CH, DL (00 D5)
-		memory.Write8(0x1000, 0x00);
-		memory.Write8(0x1001, 0xD5);
+		// Write exact bytes from conformance test
+		memory.Write8(0x1000, 0x3E); // DS segment override
+		memory.Write8(0x1001, 0x00); // ADD opcode
+		memory.Write8(0x1002, 0xD5); // ModR/M byte (CH, DL)
+		memory.Write8(0x1003, 0xF4); // HLT (next instruction?)
 		
 		var cpu = new IcedCpu(memory);
 		cpu.SetEip(0x1000);
@@ -163,9 +166,12 @@ public class EflagsTests
 		
 		// Assert
 		var ecx = cpu.GetRegister("ECX");
+		var eip = cpu.GetEip();
 		var ch = (ecx >> 8) & 0xFF;
 		_output.WriteLine($"ECX: 0x{ecx:X8}, CH: 0x{ch:X2}");
 		_output.WriteLine($"Expected ECX: 0x0BA31040");
+		_output.WriteLine($"EIP: 0x{eip:X8}");
+		_output.WriteLine($"Expected EIP: 0x{0x1000 + 4:X8} (conformance expects 4 bytes)");
 		_output.WriteLine($"0x4F + 0xC1 = 0x{0x4F + 0xC1:X3} (expected CH: 0x10)");
 		
 		Assert.Equal(0x10u, ch);
@@ -176,20 +182,14 @@ public class EflagsTests
 		_output.WriteLine($"EFLAGS:          0x{eflags:X8}");
 		_output.WriteLine($"Expected EFLAGS: 0xFFFC0413");
 		
-		// Decode flags
-		var cf = (eflags & (1 << 0)) != 0;
-		var pf = (eflags & (1 << 2)) != 0;
-		var af = (eflags & (1 << 4)) != 0;
-		var zf = (eflags & (1 << 6)) != 0;
-		var sf = (eflags & (1 << 7)) != 0;
-		var df = (eflags & (1 << 10)) != 0;
-		var of = (eflags & (1 << 11)) != 0;
-		
-		_output.WriteLine($"CF={cf}, PF={pf}, AF={af}, ZF={zf}, SF={sf}, DF={df}, OF={of}");
-		_output.WriteLine($"Expected: CF=1, PF=0, AF=1, ZF=0, SF=0, DF=1, OF=0");
-		
 		// Exact match with expected EFLAGS from conformance test
 		Assert.Equal(0xFFFC0413u, eflags);
+		
+		// The conformance test expects 4 bytes advancement
+		// But Iced decoder might only see 3 bytes (3E 00 D5)
+		// Let's see what we get
+		_output.WriteLine($"Instruction advanced by: {eip - 0x1000} bytes");
+		_output.WriteLine($"Conformance test expects: 4 bytes");
 	}
 	
 	[Fact]
@@ -271,7 +271,10 @@ public class EflagsTests
 		_output.WriteLine($"Expected ECX: 0x{test.FinalState.Registers.Ecx:X8}");
 		_output.WriteLine($"Expected EFLAGS: 0x{test.FinalState.Registers.Eflags:X8}");
 		
-		_output.WriteLine($"\nInstruction bytes:");
+		_output.WriteLine($"\nInstruction bytes ({test.InstructionBytes.Length}):");
+		_output.WriteLine($"  {BitConverter.ToString(test.InstructionBytes)}");
+		
+		_output.WriteLine($"\nMemory entries:");
 		foreach (var mem in test.InitialState.Memory.OrderBy(m => m.Address))
 		{
 			_output.WriteLine($"  [{mem.Address:X8}] = 0x{mem.Value:X2}");
@@ -285,5 +288,8 @@ public class EflagsTests
 		_output.WriteLine($"DL (initial): 0x{dl_init:X2}");
 		_output.WriteLine($"CH + DL = 0x{ch_init + dl_init:X3}");
 		_output.WriteLine($"CH (expected): 0x{ch_final:X2}");
+		
+		var expectedInstrLen = test.FinalState.Registers.Eip - test.InitialState.Registers.Eip;
+		_output.WriteLine($"\nExpected instruction length: {expectedInstrLen} bytes");
 	}
 }
