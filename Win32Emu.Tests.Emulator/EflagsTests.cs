@@ -140,4 +140,150 @@ public class EflagsTests
 		var highBits = eflags & 0xFFFF0000;
 		Assert.Equal(0xFFFC0000u, highBits);
 	}
+	
+	[Fact]
+	public void ADD_8Bit_ShouldCalculateFlagsCorrectly_ConformanceTest4()
+	{
+		// This is the EXACT test case from conformance test 00.MOO.gz, test 4
+		// Test: add ch,dl
+		var memory = new VirtualMemory();
+		// ADD CH, DL (00 D5)
+		memory.Write8(0x1000, 0x00);
+		memory.Write8(0x1001, 0xD5);
+		
+		var cpu = new IcedCpu(memory);
+		cpu.SetEip(0x1000);
+		// Use exact values from conformance test
+		cpu.SetRegister("ECX", 0x0BA34F40); // CH = 0x4F, CL = 0x40
+		cpu.SetRegister("EDX", 0x7EEA40C1); // DL = 0xC1
+		cpu.SetRegister("EFLAGS", 0xFFFC0443); // Initial flags from conformance test
+		
+		// Act
+		cpu.SingleStep(memory);
+		
+		// Assert
+		var ecx = cpu.GetRegister("ECX");
+		var ch = (ecx >> 8) & 0xFF;
+		_output.WriteLine($"ECX: 0x{ecx:X8}, CH: 0x{ch:X2}");
+		_output.WriteLine($"Expected ECX: 0x0BA31040");
+		_output.WriteLine($"0x4F + 0xC1 = 0x{0x4F + 0xC1:X3} (expected CH: 0x10)");
+		
+		Assert.Equal(0x10u, ch);
+		Assert.Equal(0x0BA31040u, ecx); // Exact expected value from conformance test
+		
+		// Check flags
+		var eflags = cpu.GetRegister("EFLAGS");
+		_output.WriteLine($"EFLAGS:          0x{eflags:X8}");
+		_output.WriteLine($"Expected EFLAGS: 0xFFFC0413");
+		
+		// Decode flags
+		var cf = (eflags & (1 << 0)) != 0;
+		var pf = (eflags & (1 << 2)) != 0;
+		var af = (eflags & (1 << 4)) != 0;
+		var zf = (eflags & (1 << 6)) != 0;
+		var sf = (eflags & (1 << 7)) != 0;
+		var df = (eflags & (1 << 10)) != 0;
+		var of = (eflags & (1 << 11)) != 0;
+		
+		_output.WriteLine($"CF={cf}, PF={pf}, AF={af}, ZF={zf}, SF={sf}, DF={df}, OF={of}");
+		_output.WriteLine($"Expected: CF=1, PF=0, AF=1, ZF=0, SF=0, DF=1, OF=0");
+		
+		// Exact match with expected EFLAGS from conformance test
+		Assert.Equal(0xFFFC0413u, eflags);
+	}
+	
+	[Fact]
+	public void ADD_8Bit_ShouldCalculateFlagsCorrectly()
+	{
+		// Test case based on conformance test failure
+		// ADD CH, DL - This is test 4 from 00.MOO.gz
+		var memory = new VirtualMemory();
+		// ADD CH, DL (00 D5)
+		memory.Write8(0x1000, 0x00);
+		memory.Write8(0x1001, 0xD5);
+		
+		var cpu = new IcedCpu(memory);
+		cpu.SetEip(0x1000);
+		// Setup registers - using a scenario that should produce specific flags
+		cpu.SetRegister("ECX", 0x0BA34F00); // CH = 0x4F
+		cpu.SetRegister("EDX", 0x000000C1); // DL = 0xC1
+		cpu.SetRegister("EFLAGS", 0xFFFC0000);
+		
+		// Act
+		cpu.SingleStep(memory);
+		
+		// Assert
+		// 0x4F + 0xC1 = 0x110 (overflow, result = 0x10)
+		var ecx = cpu.GetRegister("ECX");
+		var ch = (ecx >> 8) & 0xFF;
+		_output.WriteLine($"ECX: 0x{ecx:X8}, CH: 0x{ch:X2}");
+		_output.WriteLine($"0x4F + 0xC1 = 0x{0x4F + 0xC1:X3} (expected result: 0x10)");
+		
+		Assert.Equal(0x10u, ch);
+		
+		// Check flags
+		var eflags = cpu.GetRegister("EFLAGS");
+		var cf = (eflags & (1 << 0)) != 0;
+		var pf = (eflags & (1 << 2)) != 0;
+		var af = (eflags & (1 << 4)) != 0;
+		var zf = (eflags & (1 << 6)) != 0;
+		var sf = (eflags & (1 << 7)) != 0;
+		var of = (eflags & (1 << 11)) != 0;
+		
+		_output.WriteLine($"EFLAGS: 0x{eflags:X8}");
+		_output.WriteLine($"CF={cf}, PF={pf}, AF={af}, ZF={zf}, SF={sf}, OF={of}");
+		
+		// For 0x4F + 0xC1 = 0x110:
+		// CF should be 1 (overflow from bit 7)
+		// PF should be 0 (result 0x10 has odd parity: 1 bit set)
+		// AF should be 1 (carry from bit 3: 0xF + 0x1 = 0x10)
+		// ZF should be 0 (result is not zero)
+		// SF should be 0 (bit 7 of result is 0)
+		// OF should be 0 (no signed overflow: positive + negative = positive)
+		
+		Assert.True(cf, "Carry flag should be set (unsigned overflow)");
+		Assert.False(pf, "Parity flag should be clear (odd parity)");
+		Assert.True(af, "Auxiliary flag should be set (carry from bit 3)");
+		Assert.False(zf, "Zero flag should be clear (result is not zero)");
+		Assert.False(sf, "Sign flag should be clear (bit 7 is 0)");
+		Assert.False(of, "Overflow flag should be clear (no signed overflow)");
+	}
+	
+	[Fact]
+	public void DumpConformanceTestCase()
+	{
+		var testFile = System.IO.Path.Combine("TestData", "SingleStepTests", "00.MOO.gz");
+		if (!System.IO.File.Exists(testFile))
+		{
+			_output.WriteLine("Test file not found, skipping");
+			return;
+		}
+		
+		var mooFile = SingleStepTests.MooFileParser.Parse(testFile);
+		var test = mooFile.Tests[4]; // Test 4
+
+		_output.WriteLine($"Test: {test.Name}");
+		_output.WriteLine($"Initial EIP: 0x{test.InitialState.Registers.Eip:X8}");
+		_output.WriteLine($"Initial ECX: 0x{test.InitialState.Registers.Ecx:X8}");
+		_output.WriteLine($"Initial EDX: 0x{test.InitialState.Registers.Edx:X8}");
+		_output.WriteLine($"Initial EFLAGS: 0x{test.InitialState.Registers.Eflags:X8}");
+		_output.WriteLine($"Expected EIP: 0x{test.FinalState.Registers.Eip:X8}");
+		_output.WriteLine($"Expected ECX: 0x{test.FinalState.Registers.Ecx:X8}");
+		_output.WriteLine($"Expected EFLAGS: 0x{test.FinalState.Registers.Eflags:X8}");
+		
+		_output.WriteLine($"\nInstruction bytes:");
+		foreach (var mem in test.InitialState.Memory.OrderBy(m => m.Address))
+		{
+			_output.WriteLine($"  [{mem.Address:X8}] = 0x{mem.Value:X2}");
+		}
+
+		var ch_init = (test.InitialState.Registers.Ecx >> 8) & 0xFF;
+		var dl_init = test.InitialState.Registers.Edx & 0xFF;
+		var ch_final = (test.FinalState.Registers.Ecx >> 8) & 0xFF;
+
+		_output.WriteLine($"\nCH (initial): 0x{ch_init:X2}");
+		_output.WriteLine($"DL (initial): 0x{dl_init:X2}");
+		_output.WriteLine($"CH + DL = 0x{ch_init + dl_init:X3}");
+		_output.WriteLine($"CH (expected): 0x{ch_final:X2}");
+	}
 }
