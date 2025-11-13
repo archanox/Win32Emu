@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Win32Emu API Implementation Status</title>
+    <style>
+        :root {
+            --primary-color: #0366d6;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --bg-color: #f6f8fa;
+            --border-color: #e1e4e8;
+            --text-color: #24292e;
+            --stub-color: #ffc107;
+            --implemented-color: #28a745;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background: var(--bg-color);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+            padding: 30px;
+        }
+
+        header {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #586069;
+            font-size: 16px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: var(--bg-color);
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .stat-card.success {
+            border-left-color: var(--success-color);
+        }
+
+        .stat-card.warning {
+            border-left-color: var(--warning-color);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #586069;
+            margin-top: 5px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #586069;
+            font-size: 16px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--text-color);
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .search-bar {
+            margin: 20px 0;
+            padding: 12px;
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.1);
+        }
+
+        .module-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .module-card {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+
+        .module-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .module-header {
+            background: var(--bg-color);
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .module-header:hover {
+            background: #e1e4e8;
+        }
+
+        .module-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .module-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge.implemented {
+            background: #dcffe4;
+            color: #22863a;
+        }
+
+        .badge.stub {
+            background: #fff5b1;
+            color: #735c0f;
+        }
+
+        .module-functions {
+            display: none;
+            padding: 20px;
+            background: white;
+        }
+
+        .module-functions.expanded {
+            display: block;
+        }
+
+        .function-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .function-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: var(--bg-color);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .function-item.stub {
+            background: #fff5b1;
+        }
+
+        .function-name {
+            flex: 1;
+        }
+
+        .function-meta {
+            display: flex;
+            gap: 10px;
+            font-size: 12px;
+            color: #586069;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 20px 0;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background: var(--bg-color);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary-color);
+            background: rgba(3, 102, 214, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #586069;
+            margin-bottom: 15px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .analysis-results {
+            margin-top: 30px;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0256c7;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .progress-bar {
+            height: 30px;
+            background: var(--bg-color);
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-color), var(--primary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            transition: width 0.3s;
+        }
+
+        .dependency-list {
+            display: grid;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .dependency-item {
+            padding: 15px;
+            background: var(--bg-color);
+            border-radius: 6px;
+            border-left: 4px solid var(--border-color);
+        }
+
+        .dependency-item.partial {
+            border-left-color: var(--warning-color);
+        }
+
+        .dependency-item.missing {
+            border-left-color: var(--danger-color);
+        }
+
+        .dependency-item.complete {
+            border-left-color: var(--success-color);
+        }
+
+        .dependency-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .dependency-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            color: #586069;
+            font-size: 14px;
+        }
+
+        footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖥️ Win32Emu API Implementation Status</h1>
+            <p class="subtitle">Comprehensive Win32 API coverage tracking for Win32Emu emulator</p>
+            <div class="stats" id="globalStats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalModules">-</div>
+                    <div class="stat-label">Total Modules</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value" id="totalFunctions">-</div>
+                    <div class="stat-label">Total Functions</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value" id="totalStubs">-</div>
+                    <div class="stat-label">Stub Functions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="coverage">-</div>
+                    <div class="stat-label">Implementation Rate</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="browse">📚 Browse Modules</button>
+            <button class="tab" data-tab="analyze">🔍 Analyze PE File</button>
+        </div>
+
+        <!-- Browse Tab -->
+        <div id="browseTab" class="tab-content active">
+            <input type="text" class="search-bar" id="searchBar" placeholder="Search modules or functions...">
+            <div class="module-list" id="moduleList"></div>
+        </div>
+
+        <!-- Analyze Tab -->
+        <div id="analyzeTab" class="tab-content">
+            <div class="alert alert-info">
+                <strong>📋 PE File Analysis</strong><br>
+                Upload a Windows PE executable (.exe or .dll) to check its compatibility with Win32Emu. 
+                This feature analyzes the imported DLLs and functions to show which APIs are implemented, stubbed, or missing.
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <h3>Drop PE file here or click to browse</h3>
+                <p>Supports .exe and .dll files</p>
+                <input type="file" id="fileInput" accept=".exe,.dll">
+            </div>
+
+            <div id="analysisResults" class="analysis-results hidden">
+                <div class="results-header">
+                    <h2>Analysis Results</h2>
+                    <button class="btn btn-success" id="copyButton">📋 Copy Unimplemented to Clipboard</button>
+                </div>
+
+                <div id="analysisContent"></div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Generated from <a href="https://github.com/archanox/Win32Emu" target="_blank">Win32Emu</a> source code | 
+            Last updated: <span id="lastUpdate">-</span></p>
+        </footer>
+    </div>
+
+    <script>
+        let apiData = null;
+        let peAnalysisResult = null;
+
+        // Load API data
+        async function loadApiData() {
+            try {
+                const response = await fetch('api-status.json');
+                apiData = await response.json();
+                updateGlobalStats();
+                renderModuleList();
+                document.getElementById('lastUpdate').textContent = new Date(apiData.generatedAt).toLocaleString();
+            } catch (error) {
+                console.error('Failed to load API data:', error);
+                alert('Failed to load API data. Please try again later.');
+            }
+        }
+
+        function updateGlobalStats() {
+            const totalModules = apiData.modules.length;
+            const totalFunctions = apiData.modules.reduce((sum, m) => sum + m.functions.length, 0);
+            const totalStubs = apiData.modules.reduce((sum, m) => 
+                sum + m.functions.filter(f => f.isStub).length, 0);
+            const implementedCount = totalFunctions - totalStubs;
+            const coverage = ((implementedCount / totalFunctions) * 100).toFixed(1);
+
+            document.getElementById('totalModules').textContent = totalModules;
+            document.getElementById('totalFunctions').textContent = totalFunctions;
+            document.getElementById('totalStubs').textContent = totalStubs;
+            document.getElementById('coverage').textContent = coverage + '%';
+        }
+
+        function renderModuleList(filter = '') {
+            const container = document.getElementById('moduleList');
+            container.innerHTML = '';
+
+            const filteredModules = apiData.modules.filter(module => {
+                if (!filter) return true;
+                const lowerFilter = filter.toLowerCase();
+                return module.name.toLowerCase().includes(lowerFilter) ||
+                       module.functions.some(f => f.name.toLowerCase().includes(lowerFilter));
+            });
+
+            filteredModules.forEach(module => {
+                const implemented = module.functions.filter(f => !f.isStub).length;
+                const stub = module.functions.filter(f => f.isStub).length;
+                const total = module.functions.length;
+                const percentage = total > 0 ? ((implemented / total) * 100).toFixed(1) : 0;
+
+                const moduleCard = document.createElement('div');
+                moduleCard.className = 'module-card';
+                moduleCard.innerHTML = `
+                    <div class="module-header" onclick="toggleModule('${module.name}')">
+                        <div>
+                            <div class="module-name">${module.name}</div>
+                            <div style="font-size: 12px; color: #586069; margin-top: 4px;">
+                                ${module.className}
+                            </div>
+                        </div>
+                        <div class="module-stats">
+                            <span class="badge implemented">${implemented} implemented</span>
+                            ${stub > 0 ? `<span class="badge stub">${stub} stubs</span>` : ''}
+                            <span style="color: #586069;">${percentage}%</span>
+                        </div>
+                    </div>
+                    <div class="module-functions" id="functions-${module.name}">
+                        ${renderFunctionList(module.functions, filter)}
+                    </div>
+                `;
+                container.appendChild(moduleCard);
+            });
+        }
+
+        function renderFunctionList(functions, filter = '') {
+            const filteredFunctions = functions.filter(f => {
+                if (!filter) return true;
+                return f.name.toLowerCase().includes(filter.toLowerCase());
+            });
+
+            return `
+                <div class="function-list">
+                    ${filteredFunctions.map(func => `
+                        <div class="function-item ${func.isStub ? 'stub' : ''}">
+                            <span class="function-name">${func.name}</span>
+                            <div class="function-meta">
+                                ${func.ordinal ? `<span>Ordinal: ${func.ordinal}</span>` : ''}
+                                ${func.version ? `<span>Version: ${func.version}</span>` : ''}
+                                ${func.exportName ? `<span>Export: ${func.exportName}</span>` : ''}
+                                ${func.forwardedTo ? `<span>→ ${func.forwardedTo}</span>` : ''}
+                                <span class="badge ${func.isStub ? 'stub' : 'implemented'}">
+                                    ${func.isStub ? 'STUB' : 'IMPLEMENTED'}
+                                </span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function toggleModule(moduleName) {
+            const element = document.getElementById(`functions-${moduleName}`);
+            element.classList.toggle('expanded');
+        }
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                const tabName = tab.dataset.tab;
+                document.getElementById(tabName + 'Tab').classList.add('active');
+            });
+        });
+
+        // Search functionality
+        document.getElementById('searchBar').addEventListener('input', (e) => {
+            renderModuleList(e.target.value);
+        });
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFileUpload(file);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleFileUpload(file);
+        });
+
+        async function handleFileUpload(file) {
+            const resultsDiv = document.getElementById('analysisResults');
+            const contentDiv = document.getElementById('analysisContent');
+            
+            resultsDiv.classList.remove('hidden');
+            contentDiv.innerHTML = '<div class="loading" style="margin: 40px auto;"></div>';
+
+            // Note: In a real implementation, this would parse the PE file
+            // For now, we'll show a message about browser limitations
+            setTimeout(() => {
+                contentDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Browser Limitation</strong><br>
+                        Full PE file parsing in the browser requires a JavaScript PE parser library (like pe-library).
+                        This feature analyzes PE executables to extract imported DLLs and functions.
+                        <br><br>
+                        <strong>Uploaded file:</strong> ${file.name} (${(file.size / 1024).toFixed(2)} KB)
+                        <br><br>
+                        To enable this feature, you would need to:
+                        <ol style="margin-top: 10px; margin-left: 20px;">
+                            <li>Integrate a PE parser library (like PeNet.js port or pe-library)</li>
+                            <li>Parse the PE import table to extract imported DLLs and functions</li>
+                            <li>Cross-reference with the API status data</li>
+                            <li>Display compatibility report</li>
+                        </ol>
+                        <br>
+                        <strong>Alternative approach:</strong> Create a server-side tool using PeNet NuGet package
+                        that accepts PE file uploads and returns analysis results.
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <h3>Mock Analysis Result (for demonstration)</h3>
+                        <p>Here's an example of what the analysis would show:</p>
+                        ${renderMockAnalysis()}
+                    </div>
+                `;
+            }, 1000);
+        }
+
+        function renderMockAnalysis() {
+            const mockDependencies = [
+                { dll: 'KERNEL32.DLL', functions: ['GetVersion', 'CreateFileA', 'ReadFile', 'WriteFile', 'CloseHandle'], status: 'complete' },
+                { dll: 'USER32.DLL', functions: ['CreateWindowExA', 'ShowWindow', 'GetMessageA', 'DispatchMessageA'], status: 'complete' },
+                { dll: 'GDI32.DLL', functions: ['CreateCompatibleDC', 'CreateDIBSection', 'BitBlt'], status: 'partial' },
+                { dll: 'DDRAW.DLL', functions: ['DirectDrawCreate', 'CreateSurface', 'Flip'], status: 'partial' },
+                { dll: 'DINPUT.DLL', functions: ['DirectInputCreateA', 'CreateDevice'], status: 'missing' }
+            ];
+
+            const totalFunctions = mockDependencies.reduce((sum, d) => sum + d.functions.length, 0);
+            const implemented = 12; // Mock value
+            const stubbed = 4; // Mock value
+            const missing = totalFunctions - implemented - stubbed;
+            const percentage = ((implemented / totalFunctions) * 100).toFixed(1);
+
+            peAnalysisResult = { mockDependencies, totalFunctions, implemented, stubbed, missing };
+
+            return `
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${percentage}%">
+                        ${percentage}% Implemented
+                    </div>
+                </div>
+                <div class="stats" style="margin: 20px 0;">
+                    <div class="stat-card success">
+                        <div class="stat-value">${implemented}</div>
+                        <div class="stat-label">Implemented Functions</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-value">${stubbed}</div>
+                        <div class="stat-label">Stubbed Functions</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--danger-color);">
+                        <div class="stat-value">${missing}</div>
+                        <div class="stat-label">Missing Functions</div>
+                    </div>
+                </div>
+                <div class="dependency-list">
+                    ${mockDependencies.map(dep => `
+                        <div class="dependency-item ${dep.status}">
+                            <div class="dependency-header">
+                                <span class="dependency-name">${dep.dll}</span>
+                                <span class="badge ${dep.status === 'complete' ? 'implemented' : dep.status === 'partial' ? 'stub' : ''}" 
+                                      style="${dep.status === 'missing' ? 'background: #f8d7da; color: #721c24;' : ''}">
+                                    ${dep.status.toUpperCase()}
+                                </span>
+                            </div>
+                            <div style="font-size: 13px; color: #586069;">
+                                Functions: ${dep.functions.join(', ')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        document.getElementById('copyButton').addEventListener('click', () => {
+            if (!peAnalysisResult) {
+                alert('No analysis results available');
+                return;
+            }
+
+            const unimplemented = [];
+            peAnalysisResult.mockDependencies.forEach(dep => {
+                if (dep.status !== 'complete') {
+                    unimplemented.push(`${dep.dll}:`);
+                    dep.functions.forEach(func => {
+                        unimplemented.push(`  - ${func}`);
+                    });
+                }
+            });
+
+            const text = unimplemented.join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                const button = document.getElementById('copyButton');
+                const originalText = button.textContent;
+                button.textContent = '✅ Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 2000);
+            });
+        });
+
+        // Initialize
+        loadApiData();
+    </script>
+</body>
+</html>

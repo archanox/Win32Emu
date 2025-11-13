@@ -1,0 +1,6183 @@
+{
+  "generatedAt": "2025-11-13T23:37:40.7718089Z",
+  "modules": [
+    {
+      "name": "ADVAPI32.DLL",
+      "className": "Advapi32Module",
+      "functions": [
+        {
+          "name": "Accesscheck",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Addaccessallowedace",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Adjusttokenprivileges",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Allocateandinitializesid",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Closeservicehandle",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Controlservice",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreateserviceW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Deleteservice",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Freesid",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetfilesecurityA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getlengthsid",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetusernameA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Impersonateself",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Initializeacl",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Initializesecuritydescriptor",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Isvalidsecuritydescriptor",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "LookupprivilegevalueA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Openprocesstoken",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "OpenscmanagerA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "OpenserviceA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Openthreadtoken",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Regclosekey",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegcreatekeyA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegcreatekeyexA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegdeletekeyA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegdeletevalueA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegenumkeyA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegenumkeyexA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegenumvalueA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Regflushkey",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegopenkeyA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegopenkeyexA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegqueryinfokeyA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegqueryvalueA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegqueryvalueexA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegsetvalueA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegsetvalueexA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Reverttoself",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SetfilesecurityA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setsecuritydescriptordacl",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setsecuritydescriptorgroup",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setsecuritydescriptorowner",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "StartserviceA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "COMCTL32.DLL",
+      "className": "Comctl32Module",
+      "functions": [
+        {
+          "name": "CreatepropertysheetpageA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Destroypropertysheetpage",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ImagelistAddmasked",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ImagelistCreate",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ImagelistDestroy",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ImagelistReplaceicon",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal17",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "PropertysheetA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "COMDLG32.DLL",
+      "className": "Comdlg32Module",
+      "functions": [
+        {
+          "name": "GetfiletitleA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetopenfilenameA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetsavefilenameA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "PagesetupdlgA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "DDRAW.DLL",
+      "className": "DDrawModule",
+      "functions": [
+        {
+          "name": "AcquireDDThreadLock",
+          "isStub": true,
+          "ordinal": 1,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CheckFullscreen",
+          "isStub": true,
+          "ordinal": 2,
+          "version": "5.1.2600.6532",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CompleteCreateSysmemSurface",
+          "isStub": true,
+          "ordinal": 3,
+          "version": "5.1.2600.6532",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "D3DParseUnknownCommand",
+          "isStub": true,
+          "ordinal": 2,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry1",
+          "isStub": true,
+          "ordinal": 17,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry10",
+          "isStub": true,
+          "ordinal": 9,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry11",
+          "isStub": true,
+          "ordinal": 10,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry12",
+          "isStub": true,
+          "ordinal": 11,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry13",
+          "isStub": true,
+          "ordinal": 12,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry16",
+          "isStub": true,
+          "ordinal": 13,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry17",
+          "isStub": true,
+          "ordinal": 14,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry18",
+          "isStub": true,
+          "ordinal": 15,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry19",
+          "isStub": true,
+          "ordinal": 16,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry2",
+          "isStub": true,
+          "ordinal": 23,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry20",
+          "isStub": true,
+          "ordinal": 18,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry21",
+          "isStub": true,
+          "ordinal": 19,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry22",
+          "isStub": true,
+          "ordinal": 20,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry23",
+          "isStub": true,
+          "ordinal": 21,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry24",
+          "isStub": true,
+          "ordinal": 22,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry3",
+          "isStub": true,
+          "ordinal": 24,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry4",
+          "isStub": true,
+          "ordinal": 25,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry5",
+          "isStub": true,
+          "ordinal": 26,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry6",
+          "isStub": true,
+          "ordinal": 27,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry7",
+          "isStub": true,
+          "ordinal": 28,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry8",
+          "isStub": true,
+          "ordinal": 29,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdEntry9",
+          "isStub": true,
+          "ordinal": 30,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DDGetAttachedSurfaceLcl",
+          "isStub": true,
+          "ordinal": 3,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DDHAL32_VidMemAlloc",
+          "isStub": true,
+          "ordinal": 4,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DDHAL32_VidMemFree",
+          "isStub": true,
+          "ordinal": 5,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DDInternalLock",
+          "isStub": true,
+          "ordinal": 6,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DDInternalUnlock",
+          "isStub": true,
+          "ordinal": 7,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectDrawCreateClipper",
+          "isStub": false,
+          "ordinal": 32,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectDrawEnumerateA",
+          "isStub": false,
+          "ordinal": 34,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectDrawEnumerateExA",
+          "isStub": false,
+          "ordinal": 35,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectDrawEnumerateExW",
+          "isStub": false,
+          "ordinal": 36,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectDrawEnumerateW",
+          "isStub": false,
+          "ordinal": 37,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllCanUnloadNow",
+          "isStub": true,
+          "ordinal": 38,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllGetClassObject",
+          "isStub": true,
+          "ordinal": 39,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DSoundHelp",
+          "isStub": true,
+          "ordinal": 8,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetAliasedVidMem",
+          "isStub": true,
+          "ordinal": 40,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetDDSurfaceLocal",
+          "isStub": true,
+          "ordinal": 41,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetNextMipMap",
+          "isStub": true,
+          "ordinal": 42,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetOLEThunkData",
+          "isStub": true,
+          "ordinal": 43,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetSurfaceFromDC",
+          "isStub": true,
+          "ordinal": 44,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "HeapVidMemAllocAligned",
+          "isStub": true,
+          "ordinal": 45,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "InternalLock",
+          "isStub": true,
+          "ordinal": 46,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "InternalUnlock",
+          "isStub": true,
+          "ordinal": 47,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "LateAllocateSurfaceMem",
+          "isStub": true,
+          "ordinal": 48,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "LockCB",
+          "isStub": true,
+          "ordinal": 49,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegisterSpecialCase",
+          "isStub": true,
+          "ordinal": 50,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ReleaseDDThreadLock",
+          "isStub": true,
+          "ordinal": 51,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "thk1632_ThunkData32",
+          "isStub": true,
+          "ordinal": 59,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "thk3216_ThunkData32",
+          "isStub": true,
+          "ordinal": 60,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "UnlockCB",
+          "isStub": true,
+          "ordinal": 52,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "VidMemAlloc",
+          "isStub": true,
+          "ordinal": 53,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "VidMemAmountFree",
+          "isStub": true,
+          "ordinal": 54,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "VidMemFini",
+          "isStub": true,
+          "ordinal": 55,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "VidMemFree",
+          "isStub": true,
+          "ordinal": 56,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "VidMemInit",
+          "isStub": true,
+          "ordinal": 57,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "VidMemLargestFree",
+          "isStub": true,
+          "ordinal": 58,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "DINPUT8.DLL",
+      "className": "DInput8Module",
+      "functions": [
+        {
+          "name": "DirectInput8Create",
+          "isStub": true,
+          "ordinal": 1,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllCanUnloadNow",
+          "isStub": true,
+          "ordinal": 2,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllGetClassObject",
+          "isStub": true,
+          "ordinal": 3,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllRegisterServer",
+          "isStub": true,
+          "ordinal": 4,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllUnregisterServer",
+          "isStub": true,
+          "ordinal": 5,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "DINPUT.DLL",
+      "className": "DInputModule",
+      "functions": [
+        {
+          "name": "DirectInputCreateW",
+          "isStub": true,
+          "ordinal": 3,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllCanUnloadNow",
+          "isStub": true,
+          "ordinal": 4,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllGetClassObject",
+          "isStub": true,
+          "ordinal": 5,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllRegisterServer",
+          "isStub": true,
+          "ordinal": 6,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllUnregisterServer",
+          "isStub": true,
+          "ordinal": 7,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "DPLAYX.DLL",
+      "className": "DPlayXModule",
+      "functions": [
+        {
+          "name": "DirectPlayEnumerate",
+          "isStub": true,
+          "ordinal": 9,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectPlayEnumerateW",
+          "isStub": true,
+          "ordinal": 3,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectPlayLobbyCreateA",
+          "isStub": true,
+          "ordinal": 4,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectPlayLobbyCreateW",
+          "isStub": true,
+          "ordinal": 5,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllCanUnloadNow",
+          "isStub": true,
+          "ordinal": 6,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllGetClassObject",
+          "isStub": true,
+          "ordinal": 7,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllRegisterServer",
+          "isStub": true,
+          "ordinal": 8,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllUnregisterServer",
+          "isStub": true,
+          "ordinal": 10,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "gdwDPlaySPRefCount",
+          "isStub": true,
+          "ordinal": 11,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "DSETUP.DLL",
+      "className": "DsetupModule",
+      "functions": [
+        {
+          "name": "DirectxsetupA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "DSOUND.DLL",
+      "className": "DSoundModule",
+      "functions": [
+        {
+          "name": "DirectSoundCaptureCreate",
+          "isStub": true,
+          "ordinal": 6,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectSoundCaptureCreate8",
+          "isStub": true,
+          "ordinal": 12,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectSoundCaptureEnumerateA",
+          "isStub": true,
+          "ordinal": 7,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectSoundCaptureEnumerateW",
+          "isStub": true,
+          "ordinal": 8,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectSoundCreate8",
+          "isStub": true,
+          "ordinal": 11,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectSoundEnumerateW",
+          "isStub": true,
+          "ordinal": 3,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DirectSoundFullDuplexCreate",
+          "isStub": true,
+          "ordinal": 10,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllCanUnloadNow",
+          "isStub": true,
+          "ordinal": 4,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DllGetClassObject",
+          "isStub": true,
+          "ordinal": 5,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetDeviceID",
+          "isStub": true,
+          "ordinal": 9,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "GDI32.DLL",
+      "className": "Gdi32Module",
+      "functions": [
+        {
+          "name": "Animatepalette",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Arc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Beginpaint",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Bitblt",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Chord",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Createbitmap",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Createcompatiblebitmap",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Createcompatibledc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreatedcA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Createdibitmap",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Createdibsection",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreatefontA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreatefontindirectA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Createhalftonepalette",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Createpalette",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Createpen",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Createrectrgn",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Createsolidbrush",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Deletedc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Deleteobject",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Dptolp",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Drawtext",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DrawtextA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ellipse",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Enddoc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Endpage",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Endpaint",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Escape",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ExttextoutA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Fillrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Framerect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Gdiflush",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getbitmapbits",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getbkcolor",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getclipbox",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getcurrentobject",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getdevicecaps",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getdibits",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getmapmode",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getnearestpaletteindex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetobjectA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getpaletteentries",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getpixel",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetregiondatA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getstockobject",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getsystempaletteentries",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getsystempaletteuse",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Gettextcolor",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Gettextextentpoint32A",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GettextextentpointA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GettextmetricsA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getviewportextex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getwindowextex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Intersectcliprect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Invertrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Lineto",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Lptodp",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Movetoex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Offsetviewportorgex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Patblt",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Pie",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Polygon",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Polyline",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ptvisible",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Realizepalette",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Rectangle",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Rectvisible",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Restoredc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Roundrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Savedc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Scaleviewportextex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Scalewindowextex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Selectobject",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Selectpalette",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setbitmapbits",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setbkcolor",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setbkmode",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setdibcolortable",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setdibitstodevice",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setmapmode",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setpaletteentries",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setpixel",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Settextalign",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Settextcolor",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setviewportextex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setviewportorgex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setwindowextex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "StartdocA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Startpage",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Stretchblt",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Textout",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "TextoutA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Unrealizeobject",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "GLIDE2X.DLL",
+      "className": "Glide2xModule",
+      "functions": [
+        {
+          "name": "grAADrawPoint",
+          "isStub": false,
+          "ordinal": 3,
+          "version": "2.61.00.0613",
+          "exportName": "_grAADrawPoint@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grAADrawPolygon",
+          "isStub": false,
+          "ordinal": 4,
+          "version": "2.61.00.0613",
+          "exportName": "_grAADrawPolygon@12",
+          "forwardedTo": null
+        },
+        {
+          "name": "grAADrawPolygonVertexList",
+          "isStub": false,
+          "ordinal": 5,
+          "version": "2.61.00.0613",
+          "exportName": "_grAADrawPolygonVertexList@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "grAADrawTriangle",
+          "isStub": false,
+          "ordinal": 6,
+          "version": "2.61.00.0613",
+          "exportName": "_grAADrawTriangle@24",
+          "forwardedTo": null
+        },
+        {
+          "name": "grAlphaBlendFunction",
+          "isStub": false,
+          "ordinal": 7,
+          "version": "2.61.00.0613",
+          "exportName": "_grAlphaBlendFunction@16",
+          "forwardedTo": null
+        },
+        {
+          "name": "grAlphaCombine",
+          "isStub": false,
+          "ordinal": 8,
+          "version": "2.61.00.0613",
+          "exportName": "_grAlphaCombine@20",
+          "forwardedTo": null
+        },
+        {
+          "name": "grAlphaControlsITRGBLighting",
+          "isStub": false,
+          "ordinal": 9,
+          "version": "2.61.00.0613",
+          "exportName": "_grAlphaControlsITRGBLighting@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grAlphaTestFunction",
+          "isStub": false,
+          "ordinal": 10,
+          "version": "2.61.00.0613",
+          "exportName": "_grAlphaTestFunction@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grAlphaTestReferenceValue",
+          "isStub": false,
+          "ordinal": 11,
+          "version": "2.61.00.0613",
+          "exportName": "_grAlphaTestReferenceValue@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grBufferClear",
+          "isStub": false,
+          "ordinal": 12,
+          "version": "2.61.00.0613",
+          "exportName": "_grBufferClear@12",
+          "forwardedTo": null
+        },
+        {
+          "name": "grBufferNumPending",
+          "isStub": false,
+          "ordinal": 13,
+          "version": "2.61.00.0613",
+          "exportName": "_grBufferNumPending@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grBufferSwap",
+          "isStub": false,
+          "ordinal": 14,
+          "version": "2.61.00.0613",
+          "exportName": "_grBufferSwap@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grChromakeyMode",
+          "isStub": false,
+          "ordinal": 16,
+          "version": "2.61.00.0613",
+          "exportName": "_grChromakeyMode@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grChromakeyValue",
+          "isStub": false,
+          "ordinal": 17,
+          "version": "2.61.00.0613",
+          "exportName": "_grChromakeyValue@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grClipWindow",
+          "isStub": false,
+          "ordinal": 18,
+          "version": "2.61.00.0613",
+          "exportName": "_grClipWindow@16",
+          "forwardedTo": null
+        },
+        {
+          "name": "grColorCombine",
+          "isStub": false,
+          "ordinal": 19,
+          "version": "2.61.00.0613",
+          "exportName": "_grColorCombine@20",
+          "forwardedTo": null
+        },
+        {
+          "name": "grColorMask",
+          "isStub": false,
+          "ordinal": 20,
+          "version": "2.61.00.0613",
+          "exportName": "_grColorMask@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "grConstantColorValue",
+          "isStub": false,
+          "ordinal": 22,
+          "version": "2.61.00.0613",
+          "exportName": "_grConstantColorValue@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grConstantColorValue4",
+          "isStub": false,
+          "ordinal": 21,
+          "version": "2.61.00.0613",
+          "exportName": "_grConstantColorValue4@16",
+          "forwardedTo": null
+        },
+        {
+          "name": "grCullMode",
+          "isStub": false,
+          "ordinal": 23,
+          "version": "2.61.00.0613",
+          "exportName": "_grCullMode@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDepthBiasLevel",
+          "isStub": false,
+          "ordinal": 24,
+          "version": "2.61.00.0613",
+          "exportName": "_grDepthBiasLevel@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDepthBufferFunction",
+          "isStub": false,
+          "ordinal": 25,
+          "version": "2.61.00.0613",
+          "exportName": "_grDepthBufferFunction@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDepthBufferMode",
+          "isStub": false,
+          "ordinal": 26,
+          "version": "2.61.00.0613",
+          "exportName": "_grDepthBufferMode@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDepthMask",
+          "isStub": false,
+          "ordinal": 27,
+          "version": "2.61.00.0613",
+          "exportName": "_grDepthMask@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDisableAllEffects",
+          "isStub": false,
+          "ordinal": 28,
+          "version": "2.61.00.0613",
+          "exportName": "_grDisableAllEffects@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDitherMode",
+          "isStub": false,
+          "ordinal": 29,
+          "version": "2.61.00.0613",
+          "exportName": "_grDitherMode@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDrawLine",
+          "isStub": false,
+          "ordinal": 30,
+          "version": "2.61.00.0613",
+          "exportName": "_grDrawLine@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDrawPlanarPolygon",
+          "isStub": false,
+          "ordinal": 31,
+          "version": "2.61.00.0613",
+          "exportName": "_grDrawPlanarPolygon@12",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDrawPlanarPolygonVertexList",
+          "isStub": false,
+          "ordinal": 32,
+          "version": "2.61.00.0613",
+          "exportName": "_grDrawPlanarPolygonVertexList@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDrawPoint",
+          "isStub": false,
+          "ordinal": 33,
+          "version": "2.61.00.0613",
+          "exportName": "_grDrawPoint@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDrawPolygon",
+          "isStub": false,
+          "ordinal": 34,
+          "version": "2.61.00.0613",
+          "exportName": "_grDrawPolygon@12",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDrawPolygonVertexList",
+          "isStub": false,
+          "ordinal": 35,
+          "version": "2.61.00.0613",
+          "exportName": "_grDrawPolygonVertexList@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "grDrawTriangle",
+          "isStub": false,
+          "ordinal": 36,
+          "version": "2.61.00.0613",
+          "exportName": "_grDrawTriangle@12",
+          "forwardedTo": null
+        },
+        {
+          "name": "grFogColorValue",
+          "isStub": false,
+          "ordinal": 38,
+          "version": "2.61.00.0613",
+          "exportName": "_grFogColorValue@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grFogMode",
+          "isStub": false,
+          "ordinal": 39,
+          "version": "2.61.00.0613",
+          "exportName": "_grFogMode@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grFogTable",
+          "isStub": false,
+          "ordinal": 40,
+          "version": "2.61.00.0613",
+          "exportName": "_grFogTable@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grGammaCorrectionValue",
+          "isStub": false,
+          "ordinal": 41,
+          "version": "2.61.00.0613",
+          "exportName": "_grGammaCorrectionValue@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grGlideGetVersion",
+          "isStub": false,
+          "ordinal": 44,
+          "version": "2.61.00.0613",
+          "exportName": "_grGlideGetVersion@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grGlideInit",
+          "isStub": false,
+          "ordinal": 45,
+          "version": "2.61.00.0613",
+          "exportName": "_grGlideInit@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grGlideShutdown",
+          "isStub": false,
+          "ordinal": 48,
+          "version": "2.61.00.0613",
+          "exportName": "_grGlideShutdown@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grLfbConstantAlpha",
+          "isStub": false,
+          "ordinal": 50,
+          "version": "2.61.00.0613",
+          "exportName": "_grLfbConstantAlpha@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grLfbConstantDepth",
+          "isStub": false,
+          "ordinal": 51,
+          "version": "2.61.00.0613",
+          "exportName": "_grLfbConstantDepth@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grLfbLock",
+          "isStub": false,
+          "ordinal": 52,
+          "version": "2.61.00.0613",
+          "exportName": "_grLfbLock@24",
+          "forwardedTo": null
+        },
+        {
+          "name": "grLfbReadRegion",
+          "isStub": false,
+          "ordinal": 53,
+          "version": "2.61.00.0613",
+          "exportName": "_grLfbReadRegion@28",
+          "forwardedTo": null
+        },
+        {
+          "name": "grLfbUnlock",
+          "isStub": false,
+          "ordinal": 54,
+          "version": "2.61.00.0613",
+          "exportName": "_grLfbUnlock@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "grLfbWriteColorFormat",
+          "isStub": false,
+          "ordinal": 55,
+          "version": "2.61.00.0613",
+          "exportName": "_grLfbWriteColorFormat@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grLfbWriteColorSwizzle",
+          "isStub": false,
+          "ordinal": 56,
+          "version": "2.61.00.0613",
+          "exportName": "_grLfbWriteColorSwizzle@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "grLfbWriteRegion",
+          "isStub": false,
+          "ordinal": 57,
+          "version": "2.61.00.0613",
+          "exportName": "_grLfbWriteRegion@32",
+          "forwardedTo": null
+        },
+        {
+          "name": "grRenderBuffer",
+          "isStub": false,
+          "ordinal": 58,
+          "version": "2.61.00.0613",
+          "exportName": "_grRenderBuffer@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstIdle",
+          "isStub": false,
+          "ordinal": 63,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstIdle@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstIsBusy",
+          "isStub": false,
+          "ordinal": 64,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstIsBusy@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstQueryBoards",
+          "isStub": false,
+          "ordinal": 67,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstQueryBoards@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstQueryHardware",
+          "isStub": false,
+          "ordinal": 68,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstQueryHardware@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstScreenHeight",
+          "isStub": false,
+          "ordinal": 70,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstScreenHeight@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstScreenWidth",
+          "isStub": false,
+          "ordinal": 71,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstScreenWidth@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstSelect",
+          "isStub": false,
+          "ordinal": 72,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstSelect@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstStatus",
+          "isStub": false,
+          "ordinal": 73,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstStatus@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstVideoLine",
+          "isStub": false,
+          "ordinal": 75,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstVideoLine@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstVRetraceOn",
+          "isStub": false,
+          "ordinal": 74,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstVRetraceOn@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstWinClose",
+          "isStub": false,
+          "ordinal": 76,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstWinClose@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "grSstWinOpen",
+          "isStub": false,
+          "ordinal": 77,
+          "version": "2.61.00.0613",
+          "exportName": "_grSstWinOpen@28",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexCalcMemRequired",
+          "isStub": false,
+          "ordinal": 78,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexCalcMemRequired@16",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexClampMode",
+          "isStub": false,
+          "ordinal": 79,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexClampMode@12",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexCombine",
+          "isStub": false,
+          "ordinal": 80,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexCombine@28",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexCombineFunction",
+          "isStub": false,
+          "ordinal": 81,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexCombineFunction@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexDetailControl",
+          "isStub": false,
+          "ordinal": 82,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexDetailControl@16",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexDownloadMipMap",
+          "isStub": false,
+          "ordinal": 83,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexDownloadMipMap@16",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexDownloadMipMapLevel",
+          "isStub": false,
+          "ordinal": 84,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexDownloadMipMapLevel@32",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexDownloadMipMapLevelPartial",
+          "isStub": false,
+          "ordinal": 85,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexDownloadMipMapLevelPartial@40",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexDownloadTable",
+          "isStub": false,
+          "ordinal": 86,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexDownloadTable@12",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexDownloadTablePartial",
+          "isStub": false,
+          "ordinal": 87,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexDownloadTablePartial@20",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexFilterMode",
+          "isStub": false,
+          "ordinal": 88,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexFilterMode@12",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexLodBiasValue",
+          "isStub": false,
+          "ordinal": 89,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexLodBiasValue@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexMaxAddress",
+          "isStub": false,
+          "ordinal": 90,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexMaxAddress@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexMinAddress",
+          "isStub": false,
+          "ordinal": 91,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexMinAddress@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexMipMapMode",
+          "isStub": false,
+          "ordinal": 92,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexMipMapMode@12",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexMultibase",
+          "isStub": false,
+          "ordinal": 93,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexMultibase@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexMultibaseAddress",
+          "isStub": false,
+          "ordinal": 94,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexMultibaseAddress@20",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexNCCTable",
+          "isStub": false,
+          "ordinal": 95,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexNCCTable@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexSource",
+          "isStub": false,
+          "ordinal": 96,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexSource@16",
+          "forwardedTo": null
+        },
+        {
+          "name": "grTexTextureMemRequired",
+          "isStub": false,
+          "ordinal": 97,
+          "version": "2.61.00.0613",
+          "exportName": "_grTexTextureMemRequired@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "guAlphaSource",
+          "isStub": false,
+          "ordinal": 102,
+          "version": "2.61.00.0613",
+          "exportName": "_guAlphaSource@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "guColorCombineFunction",
+          "isStub": false,
+          "ordinal": 103,
+          "version": "2.61.00.0613",
+          "exportName": "_guColorCombineFunction@4",
+          "forwardedTo": null
+        },
+        {
+          "name": "guDrawTriangleWithClip",
+          "isStub": false,
+          "ordinal": 105,
+          "version": "2.61.00.0613",
+          "exportName": "_guDrawTriangleWithClip@12",
+          "forwardedTo": null
+        },
+        {
+          "name": "guTexAllocateMemory",
+          "isStub": false,
+          "ordinal": 113,
+          "version": "2.61.00.0613",
+          "exportName": "_guTexAllocateMemory@60",
+          "forwardedTo": null
+        },
+        {
+          "name": "guTexCombineFunction",
+          "isStub": false,
+          "ordinal": 115,
+          "version": "2.61.00.0613",
+          "exportName": "_guTexCombineFunction@8",
+          "forwardedTo": null
+        },
+        {
+          "name": "guTexDownloadMipMap",
+          "isStub": false,
+          "ordinal": 117,
+          "version": "2.61.00.0613",
+          "exportName": "_guTexDownloadMipMap@12",
+          "forwardedTo": null
+        },
+        {
+          "name": "guTexMemReset",
+          "isStub": false,
+          "ordinal": 122,
+          "version": "2.61.00.0613",
+          "exportName": "_guTexMemReset@0",
+          "forwardedTo": null
+        },
+        {
+          "name": "guTexSource",
+          "isStub": false,
+          "ordinal": 123,
+          "version": "2.61.00.0613",
+          "exportName": "_guTexSource@4",
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "KERNEL32.DLL",
+      "className": "Kernel32Module",
+      "functions": [
+        {
+          "name": "CreateEventA",
+          "isStub": true,
+          "ordinal": 183,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreateEventW",
+          "isStub": false,
+          "ordinal": 184,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreateMutexW",
+          "isStub": true,
+          "ordinal": 195,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreateSemaphoreA",
+          "isStub": false,
+          "ordinal": 202,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreateSemaphoreW",
+          "isStub": false,
+          "ordinal": 203,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetAcp",
+          "isStub": false,
+          "ordinal": 7,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetCommandLineA",
+          "isStub": false,
+          "ordinal": 8,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetCommandLineW",
+          "isStub": false,
+          "ordinal": 0,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetEnvironmentStringsW",
+          "isStub": false,
+          "ordinal": 12,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetVersionExA",
+          "isStub": false,
+          "ordinal": 490,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetVersionExW",
+          "isStub": false,
+          "ordinal": 491,
+          "version": "4.90.0.3000",
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "OpenSemaphoreA",
+          "isStub": false,
+          "ordinal": 12,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SetHandleCount",
+          "isStub": false,
+          "ordinal": 40,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "KERNELBASE.DLL",
+      "className": "KernelBaseModule",
+      "functions": [
+        {
+          "name": "Getversionex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "MSACM32.DLL",
+      "className": "Msacm32Module",
+      "functions": [
+        {
+          "name": "AcmformatchooseA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "AcmformatdetailsA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "AcmformatenumA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "AcmformattagdetailsA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Acmmetrics",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Acmstreamclose",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Acmstreamconvert",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Acmstreamopen",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Acmstreamreset",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Acmstreamsize",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "MSVCRT.DLL",
+      "className": "MsvcrtModule",
+      "functions": [
+        {
+          "name": "Abort",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Acmdln",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "AdjustFdiv",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "AmsgExit",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Atexit",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Calloc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Cexit",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Controlfp",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Cxxframehandler",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Cxxthrowexception",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "EhProlog",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ExceptHandler3",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Exit",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Fclose",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Fgets",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Fopen",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Fprintf",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Fputs",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Free",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ftol",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ftol2",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ftol2Sse",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getenv",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getmainargs",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Initterm",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ItoA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Malloc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Memcmp",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Memcpy",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Memmove",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Memset",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "PAcmdln",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "PCommode",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "PFmode",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "PInitenv",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "PIob",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Printf",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Realloc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SetAppType",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setusermatherr",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Signal",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Spawnv",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Sprintf",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Strchr",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Stricmp",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Strlen",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Strncmp",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Strrchr",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Strrev",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Toupper",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Vfprintf",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Xcptfilter",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "NTDLL.DLL",
+      "className": "NtdllModule",
+      "functions": [
+        {
+          "name": "Ntcurrentteb",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Rtlexituserprocess",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "OLE32.DLL",
+      "className": "Ole32Module",
+      "functions": [
+        {
+          "name": "Clsidfromprogram",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Clsidfromstring",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Cocreateinstance",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Codisconnectobject",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Cofreeunusedlibraries",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Cogetclassobject",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Coinitialize",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Coregisterclassobject",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Coregistermessagefilter",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Corevokeclassobject",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Cotaskmemalloc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Cotaskmemfree",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Couninitialize",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Createilockbytesonhglobal",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Oleflushclipboard",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Oleinitialize",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Oleiscurrentclipboard",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Oleuninitialize",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Stgcreatedocfileonilockbytes",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Stgopenstorageonilockbytes",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Stringfromclsid",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Stringfromguid2",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "OLEAUT32.DLL",
+      "className": "Oleaut32Module",
+      "functions": [
+        {
+          "name": "Ordinal10",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal12",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal149",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal150",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal161",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal185",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal2",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal4",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal6",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal7",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal8",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ordinal9",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "OLEDLG.DLL",
+      "className": "OledlgModule",
+      "functions": [
+        {
+          "name": "Ordinal8",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "OLEPRO32.DLL",
+      "className": "Olepro32Module",
+      "functions": [
+        {
+          "name": "Ordinal253",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "SHELL32.DLL",
+      "className": "Shell32Module",
+      "functions": [
+        {
+          "name": "Dragfinish",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DragqueryfileA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ExtracticonA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ShbrowseforfolderA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Shchangenotify",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ShellaboutA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ShellexecuteA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ShellexecuteexA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ShfileoperationA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ShgetfileinfoA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Shgetmalloc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ShgetpathfromidlistA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Shgetspecialfolderlocation",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "SHLWAPI.DLL",
+      "className": "ShlwapiModule",
+      "functions": [
+        {
+          "name": "PathremovefilespecA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "UCRTBASE.DLL",
+      "className": "UcrtbaseModule",
+      "functions": [
+        {
+          "name": "Calloc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Free",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Malloc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Memcpy",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Memset",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Strlen",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "USER32.DLL",
+      "className": "User32Module",
+      "functions": [
+        {
+          "name": "Adjustwindowrectex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Begindeferwindowpos",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Beginpaint",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Bringwindowtotop",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Callnexthookex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CallwindowprocA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CharlowerbuffA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CharnextA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ChartooemA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CharupperA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Checkdlgbutton",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Checkmenuitem",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Checkmenuradioitem",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Checkradiobutton",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Childwindowfrompoint",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Clienttoscreen",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Closeclipboard",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CopyacceleratortableA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Copyrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreateacceleratortableA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreatedialogindirectparamA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreatedialogparamA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "CreatewindowexA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ddeclienttransaction",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ddeconnect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdecreatestringhandleA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ddedisconnect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ddefreestringhandle",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdegetdatA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DdeinitializeA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DefdlgprocA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Deferwindowpos",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DefwindowprocA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Destroyacceleratortable",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Destroyicon",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Destroymenu",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DestroywindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DialogboxindirectparamA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DialogboxparamA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DispatchmessageA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Drawcaption",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Drawedge",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Drawfocusrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Drawframecontrol",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Drawicon",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Drawmenubar",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DrawtextA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Enablemenuitem",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "EnablewindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Enddeferwindowpos",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Enddialog",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Endpaint",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "EnumdisplaysettingsA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Enumwindows",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Equalrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Excludeupdatergn",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Exitwindowsex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Fillrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "FindwindowA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetactivewindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getasynckeystate",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getcapture",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetclassinfoA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetclasslongA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetclassnameA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getclientrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetclipboarddatA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getcursorpos",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getdc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetdesktopwindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getdlgctrlid",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getdlgitem",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getdlgitemint",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetdlgitemtextA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getfocus",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetforegroundwindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getkeyboardstate",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getkeyboardtype",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getkeystate",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getlastactivepopup",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getmenu",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getmenucheckmarkdimensions",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getmenuitemcount",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getmenuitemid",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getmenustate",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetmessageA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getmessagepos",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getmessagetime",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getnextdlggroupitem",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getnextdlgtabitem",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getparent",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetpropA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getscrollinfo",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getscrollpos",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getscrollrange",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getsubmenu",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getsyscolor",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getsyscolorbrush",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getsystemmetrics",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GettopwindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getupdaterect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getupdatergn",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetwindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getwindowdc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetwindowlongA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getwindowplacement",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getwindowrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetwindowtextA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetwindowtextlengthA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GraystringA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Hidecaret",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Inflaterect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Intersectrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Invalidaterect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Invalidatergn",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "IscharalphaA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ischild",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Isclipboardformatavailable",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "IsdialogmessageA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Isdlgbuttonchecked",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Isiconic",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "IswindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Iswindowenabled",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Iswindowunicode",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Iswindowvisible",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Iszoomed",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Killtimer",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "LoadacceleratorsA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "LoadbitmapA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "LoadcursorA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "LoadcursorfromfileA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "LoadiconA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "LoadimageA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "LoadmenuA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "LoadstringA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mapdialogrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "MapvirtualkeyA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mapwindowpoints",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Messagebeep",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "MessageboxA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ModifymenuA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "MovewindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Msgwaitformultipleobjects",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Offsetrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Openclipboard",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "PeekmessageA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "PostmessageA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Postquitmessage",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "PostthreadmessageA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ptinrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RedrawwindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegisterclassA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegisterclassexA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegisterclipboardformatA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Registerhotkey",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RegisterwindowmessageA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Releasecapture",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Releasedc",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Removemenu",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "RemovepropA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Reuseddelparam",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Screentoclient",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ScrollwindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SenddlgitemmessageA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SendmessageA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SetactivewindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setcapture",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SetclasslongA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setcursor",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setcursorpos",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setdlgitemint",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SetdlgitemtextA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setfocus",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SetforegroundwindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setmenu",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setmenuitembitmaps",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SetpropA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setrect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setrectempty",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setscrollinfo",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setscrollpos",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setscrollrange",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Settimer",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setwindowcontexthelpid",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SetwindowlongA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setwindowpos",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SetwindowshookexA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SetwindowtextA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Showcaret",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Showcursor",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Showownedpopups",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Showscrollbar",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "ShowwindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SystemparametersinfoA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "TabbedtextoutA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Toascii",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Tounicode",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Trackpopupmenuex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "TranslateacceleratorA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Translatemessage",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Unhookwindowshookex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Unpackddelparam",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "UnregisterclassA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "UpdatewindoW",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Validaterect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Validatergn",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Waitmessage",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Windowfrompoint",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "WinhelpA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "WsprintfA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "WvsprintfA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "VCRUNTIME140.DLL",
+      "className": "Vcruntime140Module",
+      "functions": [
+        {
+          "name": "Cxxthrowexception",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Memcmp",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Memcpy",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Memset",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "VERSION.DLL",
+      "className": "VersionModule",
+      "functions": [
+        {
+          "name": "GetfileversioninfoA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "GetfileversioninfosizeA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "VerqueryvalueA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "WAVMIX32.DLL",
+      "className": "Wavmix32Module",
+      "functions": [
+        {
+          "name": "Wavemixactivate",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Wavemixclosechannel",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Wavemixclosesession",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Wavemixflushchannel",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Wavemixfreewave",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Wavemixinit",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Wavemixopenchannel",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Wavemixopenwave",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Wavemixplay",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Wavemixpump",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "WININET.DLL",
+      "className": "WininetModule",
+      "functions": [
+        {
+          "name": "InternetopenA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "WINMM.DLL",
+      "className": "WinMMModule",
+      "functions": [
+        {
+          "name": "AuxgetdevcapsA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Auxgetnumdevs",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Auxgetvolume",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Auxsetvolume",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Joyconfigchanged",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "JoygetdevcapsA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Joygetposex",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "McisendcommandA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "McisendstringA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Midioutgetnumdevs",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mixerclose",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mixergetcontroldetails",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "MixergetcontroldetailsA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mixeropen",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mixersetcontroldetails",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mmioadvance",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mmioascend",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mmioclose",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mmiodescend",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mmiogetinfo",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "MmioopenA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mmioread",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mmioseek",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Mmiosetinfo",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Playsound",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "PlaysoundA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Sndplaysound",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "SndplaysoundA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Timebeginperiod",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Timeendperiod",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Timegettime",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Timekillevent",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Timesetevent",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "WaveoutgetdevcapsA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Waveoutgetnumdevs",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Waveoutgetvolume",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Waveoutmessage",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Waveoutsetvolume",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "WINSPOOL.DRV",
+      "className": "WinspoolModule",
+      "functions": [
+        {
+          "name": "Closeprinter",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "DocumentpropertiesA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "OpenprinterA",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    },
+    {
+      "name": "WSOCK32.DLL",
+      "className": "Wsock32Module",
+      "functions": [
+        {
+          "name": "Accept",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Bind",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Closesocket",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Connect",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getpeername",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Getsockname",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Ioctlsocket",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Listen",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Recv",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Recvfrom",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Select",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Send",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Sendto",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Setsockopt",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Shutdown",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Socket",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Wsagetlasterror",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        },
+        {
+          "name": "Wsastartup",
+          "isStub": false,
+          "ordinal": null,
+          "version": null,
+          "exportName": null,
+          "forwardedTo": null
+        }
+      ]
+    }
+  ]
+}
