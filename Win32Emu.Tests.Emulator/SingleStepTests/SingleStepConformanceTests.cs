@@ -65,10 +65,10 @@ public class SingleStepConformanceTests
 				
 				if (testFiles.Any())
 				{
-					// Return each test file with maxTests = 10
+					// Return each test file with maxTests = 100 (increased from 10)
 					foreach (var fileName in testFiles)
 					{
-						yield return new object[] { fileName, 10 };
+						yield return new object[] { fileName, 100 };
 					}
 					yield break;
 				}
@@ -98,6 +98,9 @@ public class SingleStepConformanceTests
 		var failCount = 0;
 		var testCount = Math.Min(maxTests, mooFile.Tests.Count);
 		
+		// Track failure reasons for better diagnostics
+		var failuresByReason = new Dictionary<string, int>();
+		
 		for (var i = 0; i < testCount; i++)
 		{
 			var test = mooFile.Tests[i];
@@ -110,18 +113,92 @@ public class SingleStepConformanceTests
 			else
 			{
 				failCount++;
-				_output.WriteLine($"Test {i}: {result}");
+				
+				// Categorize the failure
+				var failureReason = CategorizeFailure(result);
+				if (!failuresByReason.ContainsKey(failureReason))
+					failuresByReason[failureReason] = 0;
+				failuresByReason[failureReason]++;
+				
+				// Only output first 5 failures to avoid overwhelming output
+				if (failCount <= 5)
+				{
+					_output.WriteLine($"Test {i}: {result}");
+				}
 			}
 		}
 		
-		_output.WriteLine($"\nResults for {fileName}: {passCount}/{testCount} passed, {failCount} failed");
+		_output.WriteLine($"\n========================================");
+		_output.WriteLine($"Results for {fileName}:");
+		_output.WriteLine($"  Total tests: {testCount} (out of {mooFile.Tests.Count} available)");
+		_output.WriteLine($"  Passed: {passCount} ({100.0 * passCount / testCount:F1}%)");
+		_output.WriteLine($"  Failed: {failCount} ({100.0 * failCount / testCount:F1}%)");
+		
+		if (failuresByReason.Any())
+		{
+			_output.WriteLine($"\nFailure breakdown:");
+			foreach (var kvp in failuresByReason.OrderByDescending(x => x.Value))
+			{
+				_output.WriteLine($"  {kvp.Key}: {kvp.Value}");
+			}
+		}
+		
+		_output.WriteLine($"========================================\n");
 		
 		// For now, we'll just warn about failures but not fail the test
 		// This allows us to see how many tests pass without blocking CI
-		if (failCount > 0)
+		if (failCount > 0 && failCount < testCount)
 		{
-			_output.WriteLine($"WARNING: {failCount} tests failed. This is expected during initial integration.");
+			_output.WriteLine($"INFO: {passCount} tests passed, {failCount} failed. Emulator is partially working.");
 		}
+		else if (failCount == testCount)
+		{
+			_output.WriteLine($"WARNING: All {failCount} tests failed. This indicates systematic emulation issues.");
+		}
+	}
+	
+	/// <summary>
+	/// Categorize test failure for better diagnostics
+	/// </summary>
+	private string CategorizeFailure(TestResult result)
+	{
+		if (!string.IsNullOrEmpty(result.ExecutionError))
+		{
+			return "Execution Error";
+		}
+		
+		// Check what's wrong
+		var hasEipMismatch = result.RegisterMismatches.Any(r => r.RegisterName == "EIP");
+		var hasFlagsMismatch = result.RegisterMismatches.Any(r => r.RegisterName == "EFLAGS");
+		var hasOtherRegMismatch = result.RegisterMismatches.Any(r => r.RegisterName != "EIP" && r.RegisterName != "EFLAGS");
+		var hasMemoryMismatch = result.MemoryMismatches.Any();
+		
+		if (hasEipMismatch && !hasFlagsMismatch && !hasOtherRegMismatch && !hasMemoryMismatch)
+		{
+			return "EIP only (instruction length issue)";
+		}
+		
+		if (hasFlagsMismatch && !hasEipMismatch && !hasOtherRegMismatch && !hasMemoryMismatch)
+		{
+			return "EFLAGS only (flag calculation issue)";
+		}
+		
+		if (hasEipMismatch && hasFlagsMismatch && !hasOtherRegMismatch && !hasMemoryMismatch)
+		{
+			return "EIP + EFLAGS";
+		}
+		
+		if (hasOtherRegMismatch)
+		{
+			return "Register value error";
+		}
+		
+		if (hasMemoryMismatch)
+		{
+			return "Memory error";
+		}
+		
+		return "Multiple issues";
 	}
 	
 	/// <summary>
