@@ -585,12 +585,60 @@ public class IcedCpu : IAsyncCpu
 					}
 
 					break;
+				case Mnemonic.Into:
+					// INTO - Interrupt if overflow flag is set
+					if (GetFlag(Of))
+					{
+						// Overflow interrupt - for now, log and continue
+						_logger.LogWarning("[IcedCpu] INTO overflow interrupt at 0x{OldEip:X8}", oldEip);
+						// In a real implementation, this would trigger interrupt 4
+						// For now, just advance EIP
+						_eip = oldEip + (uint)insn.Length;
+					}
+					else
+					{
+						// No overflow, just advance
+						_eip = oldEip + (uint)insn.Length;
+					}
+					break;
+				case Mnemonic.Int1:
+					// INT1 (0xF1) - Single-step interrupt / ICEBP
+					_logger.LogWarning("[IcedCpu] INT1 single-step interrupt at 0x{OldEip:X8}", oldEip);
+					// For now, just advance EIP
+					_eip = oldEip + (uint)insn.Length;
+					break;
+				case Mnemonic.Jecxz:
+					// JECXZ - Jump if ECX is zero
+					if (_ecx == 0)
+					{
+						_eip = (uint)insn.NearBranchTarget;
+					}
+					else
+					{
+						_eip = oldEip + (uint)insn.Length;
+					}
+					break;
+				case Mnemonic.Jcxz:
+					// JCXZ - Jump if CX is zero
+					if ((_ecx & 0xFFFF) == 0)
+					{
+						_eip = (uint)insn.NearBranchTarget;
+					}
+					else
+					{
+						_eip = oldEip + (uint)insn.Length;
+					}
+					break;
 				case Mnemonic.Loop:
 					// LOOP - Decrement ECX and jump if ECX != 0
 					_ecx--;
 					if (_ecx != 0)
 					{
 						_eip = (uint)insn.NearBranchTarget;
+					}
+					else
+					{
+						_eip = oldEip + (uint)insn.Length;
 					}
 					break;
 				case Mnemonic.Loope:
@@ -600,6 +648,10 @@ public class IcedCpu : IAsyncCpu
 					{
 						_eip = (uint)insn.NearBranchTarget;
 					}
+					else
+					{
+						_eip = oldEip + (uint)insn.Length;
+					}
 					break;
 				case Mnemonic.Loopne:
 					// LOOPNE/LOOPNZ - Decrement ECX and jump if ECX != 0 and ZF = 0
@@ -608,6 +660,10 @@ public class IcedCpu : IAsyncCpu
 					{
 						_eip = (uint)insn.NearBranchTarget;
 					}
+					else
+					{
+						_eip = oldEip + (uint)insn.Length;
+					}
 					break;
 				default:
 					if (insn.Mnemonic.ToString().StartsWith('J'))
@@ -615,6 +671,10 @@ public class IcedCpu : IAsyncCpu
 						if (IsBranchTaken(insn.ConditionCode))
 						{
 							_eip = (uint)insn.NearBranchTarget;
+						}
+						else
+						{
+							_eip = oldEip + (uint)insn.Length;
 						}
 					}
 					else
@@ -675,11 +735,16 @@ public class IcedCpu : IAsyncCpu
 			Mnemonic.Jmp => true,
 			Mnemonic.Call => true,
 			Mnemonic.Ret => true,
+			Mnemonic.Retf => true,
 			Mnemonic.Iret => true,
 			Mnemonic.Iretd => true,
+			Mnemonic.Iretq => true,
 			Mnemonic.Loop => true,
 			Mnemonic.Loope => true,
 			Mnemonic.Loopne => true,
+			// Jump if ECX/CX is zero
+			Mnemonic.Jecxz => true,
+			Mnemonic.Jcxz => true,
 			// All conditional jumps
 			Mnemonic.Ja => true,
 			Mnemonic.Jae => true,
@@ -700,22 +765,15 @@ public class IcedCpu : IAsyncCpu
 			// INT and INT3 can transfer control in some cases
 			Mnemonic.Int => true,
 			Mnemonic.Int3 => true,
+			Mnemonic.Int1 => true,
+			Mnemonic.Into => true,
 			_ => false
 		};
 
 		// For non-control-flow instructions, advance EIP by instruction length
 		if (!isControlFlowInstruction)
 		{
-			var newEip = oldEip + (uint)insn.Length;
-			
-			// Debug logging for conformance tests - log ALL EIP advancements
-			if (oldEip < 0x00100000)  // Typical test case addresses are low
-			{
-				_logger.LogDebug("[IcedCpu] EIP advancement: oldEip=0x{OldEip:X8}, length={Length}, newEip=0x{NewEip:X8}, insn='{Insn}'",
-					oldEip, insn.Length, newEip, insn.ToString());
-			}
-			
-			_eip = newEip;
+			_eip = oldEip + (uint)insn.Length;
 		}
 
 		// Sanity check: For non-control-flow instructions, verify EIP matches the decoder's expectation
