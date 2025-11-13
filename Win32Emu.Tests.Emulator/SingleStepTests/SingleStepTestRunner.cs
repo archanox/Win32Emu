@@ -88,7 +88,13 @@ public class SingleStepTestRunner
 		// This is critical - the CPU needs to read the instruction from memory!
 		for (var i = 0; i < testCase.InstructionBytes.Length; i++)
 		{
-			memory.Write8(regs.Eip + (uint)i, testCase.InstructionBytes[i]);
+			var address = regs.Eip + (uint)i;
+			if (address < regs.Eip)
+			{
+				_logger.LogWarning("Instruction bytes extend beyond 32-bit address space at EIP={EIP:X8} in test {TestName}", regs.Eip, testCase.Name);
+				break;
+			}
+			memory.Write8(address, testCase.InstructionBytes[i]);
 		}
 		
 		// Write initial memory state

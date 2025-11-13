@@ -141,88 +141,57 @@ public class EflagsTests
 		Assert.Equal(0xFFFC0000u, highBits);
 	}
 	
-	[Fact]
-	public void ADD_8Bit_ShouldCalculateFlagsCorrectly_ConformanceTest4()
+	[Theory]
+	[InlineData(0x1000, 0x0BA34F40, 0x7EEA40C1, 0xFFFC0443, 0x0BA31040u, 0xFFFC0413u, true, "conformance test")]
+	[InlineData(0x1000, 0x0BA34F00, 0x000000C1, 0xFFFC0000, 0x0BA31000u, 0xFFFC0011u, false, "manual test")]
+	public void ADD_8Bit_ShouldCalculateFlagsCorrectly(uint eip, uint initialEcx, uint initialEdx, uint initialEflags, 
+		uint expectedEcx, uint expectedEflags, bool includeSegmentOverride, string testName)
 	{
-		// This is the EXACT test case from conformance test 00.MOO.gz, test 4
 		// Test: add ch,dl
-		// Instruction bytes: 3E 00 D5 F4 (DS segment override + ADD CH,DL + HLT)
+		// This validates both conformance test case (test 4 from 00.MOO.gz) and manual test case
 		var memory = new VirtualMemory();
-		// Write exact bytes from conformance test
-		memory.Write8(0x1000, 0x3E); // DS segment override
-		memory.Write8(0x1001, 0x00); // ADD opcode
-		memory.Write8(0x1002, 0xD5); // ModR/M byte (CH, DL)
-		memory.Write8(0x1003, 0xF4); // HLT (next instruction?)
+		
+		if (includeSegmentOverride)
+		{
+			// Instruction bytes: 3E 00 D5 F4 (DS segment override + ADD CH,DL + HLT)
+			memory.Write8(eip, 0x3E); // DS segment override
+			memory.Write8(eip + 1, 0x00); // ADD opcode
+			memory.Write8(eip + 2, 0xD5); // ModR/M byte (CH, DL)
+			memory.Write8(eip + 3, 0xF4); // HLT (next instruction?)
+		}
+		else
+		{
+			// Instruction bytes: 00 D5 (ADD CH,DL)
+			memory.Write8(eip, 0x00); // ADD opcode
+			memory.Write8(eip + 1, 0xD5); // ModR/M byte (CH, DL)
+		}
 		
 		var cpu = new IcedCpu(memory);
-		cpu.SetEip(0x1000);
-		// Use exact values from conformance test
-		cpu.SetRegister("ECX", 0x0BA34F40); // CH = 0x4F, CL = 0x40
-		cpu.SetRegister("EDX", 0x7EEA40C1); // DL = 0xC1
-		cpu.SetRegister("EFLAGS", 0xFFFC0443); // Initial flags from conformance test
+		cpu.SetEip(eip);
+		cpu.SetRegister("ECX", initialEcx);
+		cpu.SetRegister("EDX", initialEdx);
+		cpu.SetRegister("EFLAGS", initialEflags);
 		
 		// Act
 		cpu.SingleStep(memory);
 		
 		// Assert
 		var ecx = cpu.GetRegister("ECX");
-		var eip = cpu.GetEip();
 		var ch = (ecx >> 8) & 0xFF;
-		_output.WriteLine($"ECX: 0x{ecx:X8}, CH: 0x{ch:X2}");
-		_output.WriteLine($"Expected ECX: 0x0BA31040");
-		_output.WriteLine($"EIP: 0x{eip:X8}");
-		_output.WriteLine($"Expected EIP: 0x{0x1000 + 4:X8} (conformance expects 4 bytes)");
-		_output.WriteLine($"0x4F + 0xC1 = 0x{0x4F + 0xC1:X3} (expected CH: 0x10)");
-		
-		Assert.Equal(0x10u, ch);
-		Assert.Equal(0x0BA31040u, ecx); // Exact expected value from conformance test
-		
-		// Check flags
 		var eflags = cpu.GetRegister("EFLAGS");
-		_output.WriteLine($"EFLAGS:          0x{eflags:X8}");
-		_output.WriteLine($"Expected EFLAGS: 0xFFFC0413");
 		
-		// Exact match with expected EFLAGS from conformance test
-		Assert.Equal(0xFFFC0413u, eflags);
-		
-		// The conformance test expects 4 bytes advancement
-		// But Iced decoder might only see 3 bytes (3E 00 D5)
-		// Let's see what we get
-		_output.WriteLine($"Instruction advanced by: {eip - 0x1000} bytes");
-		_output.WriteLine($"Conformance test expects: 4 bytes");
-	}
-	
-	[Fact]
-	public void ADD_8Bit_ShouldCalculateFlagsCorrectly()
-	{
-		// Test case based on conformance test failure
-		// ADD CH, DL - This is test 4 from 00.MOO.gz
-		var memory = new VirtualMemory();
-		// ADD CH, DL (00 D5)
-		memory.Write8(0x1000, 0x00);
-		memory.Write8(0x1001, 0xD5);
-		
-		var cpu = new IcedCpu(memory);
-		cpu.SetEip(0x1000);
-		// Setup registers - using a scenario that should produce specific flags
-		cpu.SetRegister("ECX", 0x0BA34F00); // CH = 0x4F
-		cpu.SetRegister("EDX", 0x000000C1); // DL = 0xC1
-		cpu.SetRegister("EFLAGS", 0xFFFC0000);
-		
-		// Act
-		cpu.SingleStep(memory);
-		
-		// Assert
-		// 0x4F + 0xC1 = 0x110 (overflow, result = 0x10)
-		var ecx = cpu.GetRegister("ECX");
-		var ch = (ecx >> 8) & 0xFF;
+		_output.WriteLine($"Test: {testName}");
 		_output.WriteLine($"ECX: 0x{ecx:X8}, CH: 0x{ch:X2}");
-		_output.WriteLine($"0x4F + 0xC1 = 0x{0x4F + 0xC1:X3} (expected result: 0x10)");
+		_output.WriteLine($"Expected ECX: 0x{expectedEcx:X8}");
+		_output.WriteLine($"EFLAGS: 0x{eflags:X8}");
+		_output.WriteLine($"Expected EFLAGS: 0x{expectedEflags:X8}");
 		
+		// CH should be 0x10 (0x4F + 0xC1 = 0x110, truncated to 0x10)
 		Assert.Equal(0x10u, ch);
+		Assert.Equal(expectedEcx, ecx);
+		Assert.Equal(expectedEflags, eflags);
 		
-		// Check flags
-		var eflags = cpu.GetRegister("EFLAGS");
+		// Verify individual flags for documentation
 		var cf = (eflags & (1 << 0)) != 0;
 		var pf = (eflags & (1 << 2)) != 0;
 		var af = (eflags & (1 << 4)) != 0;
@@ -230,13 +199,12 @@ public class EflagsTests
 		var sf = (eflags & (1 << 7)) != 0;
 		var of = (eflags & (1 << 11)) != 0;
 		
-		_output.WriteLine($"EFLAGS: 0x{eflags:X8}");
 		_output.WriteLine($"CF={cf}, PF={pf}, AF={af}, ZF={zf}, SF={sf}, OF={of}");
 		
 		// For 0x4F + 0xC1 = 0x110:
 		// CF should be 1 (overflow from bit 7)
 		// PF should be 0 (result 0x10 has odd parity: 1 bit set)
-		// AF should be 1 (carry from bit 3: 0xF + 0x1 = 0x10)
+		// AF should be 1 (carry from bit 3: low nibbles 0xF (CH) + 0x1 (DL) = 0x10)
 		// ZF should be 0 (result is not zero)
 		// SF should be 0 (bit 7 of result is 0)
 		// OF should be 0 (no signed overflow: positive + negative = positive)
