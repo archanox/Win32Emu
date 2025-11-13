@@ -1168,22 +1168,116 @@ public class IcedCpu : IAsyncCpu
 
 	private void ExecAdc(Instruction insn)
 	{
-		uint a = ReadOp(insn, 0), b = ReadOp(insn, 1);
-		var cf = GetFlag(Cf) ? 1u : 0u;
-		var sum = (ulong)a + b + cf;
-		var r = (uint)sum;
-		WriteOp(insn, 0, r);
-		SetFlagVal(Cf, (sum >> 32) != 0);
-		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
-		SetFlagVal(Af, (((a ^ b ^ r) & 0x10) != 0));
-		UpdateLogicResultFlags(r);
+		var opSize = GetOpSizeBits(insn, 0);
+		
+		switch (opSize)
+		{
+			case 8:
+			{
+				byte a = (insn.GetOpKind(0) == OpKind.Register) ? GetReg8(insn.GetOpRegister(0)) :
+				         (insn.GetOpKind(0) == OpKind.Memory) ? _mem.Read8(CalcMemAddress(insn)) : (byte)ReadOp(insn, 0);
+				byte b = (insn.GetOpKind(1) == OpKind.Register) ? GetReg8(insn.GetOpRegister(1)) :
+				         (insn.GetOpKind(1) == OpKind.Memory) ? _mem.Read8(CalcMemAddress(insn)) :
+				         (insn.GetOpKind(1) == OpKind.Immediate8) ? insn.Immediate8 : (byte)ReadOp(insn, 1);
+				var cf = GetFlag(Cf) ? (byte)1 : (byte)0;
+				var sum = (ushort)(a + b + cf);
+				byte r = (byte)sum;
+				
+				if (insn.GetOpKind(0) == OpKind.Register)
+					SetReg8(insn.GetOpRegister(0), r);
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+					_mem.Write8(CalcMemAddress(insn), r);
+					
+				SetFlagVal(Cf, (sum >> 8) != 0);
+				SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80) != 0);
+				SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
+				UpdateLogicResultFlags(r, 0x80);
+				break;
+			}
+			case 16:
+			{
+				ushort a = (insn.GetOpKind(0) == OpKind.Register) ? GetReg16(insn.GetOpRegister(0)) :
+				           (insn.GetOpKind(0) == OpKind.Memory) ? _mem.Read16(CalcMemAddress(insn)) : (ushort)ReadOp(insn, 0);
+				ushort b = (insn.GetOpKind(1) == OpKind.Register) ? GetReg16(insn.GetOpRegister(1)) :
+				           (insn.GetOpKind(1) == OpKind.Memory) ? _mem.Read16(CalcMemAddress(insn)) : (ushort)ReadOp(insn, 1);
+				var cf = GetFlag(Cf) ? (ushort)1 : (ushort)0;
+				var sum = (uint)(a + b + cf);
+				ushort r = (ushort)sum;
+				
+				if (insn.GetOpKind(0) == OpKind.Register)
+					SetReg16(insn.GetOpRegister(0), r);
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+					_mem.Write16(CalcMemAddress(insn), r);
+					
+				SetFlagVal(Cf, (sum >> 16) != 0);
+				SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x8000) != 0);
+				SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
+				UpdateLogicResultFlags(r, 0x8000);
+				break;
+			}
+			default:
+			{
+				uint a = ReadOp(insn, 0), b = ReadOp(insn, 1);
+				var cf = GetFlag(Cf) ? 1u : 0u;
+				var sum = (ulong)a + b + cf;
+				var r = (uint)sum;
+				WriteOp(insn, 0, r);
+				SetFlagVal(Cf, (sum >> 32) != 0);
+				SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80000000) != 0);
+				SetFlagVal(Af, (((a ^ b ^ r) & 0x10) != 0));
+				UpdateLogicResultFlags(r);
+				break;
+			}
+		}
 	}
 
 	private void ExecSub(Instruction insn)
 	{
-		uint a = ReadOp(insn, 0), b = ReadOp(insn, 1), r = a - b;
-		WriteOp(insn, 0, r);
-		SetFlagsSub(a, b, r);
+		var opSize = GetOpSizeBits(insn, 0);
+		
+		switch (opSize)
+		{
+			case 8:
+			{
+				byte a = (insn.GetOpKind(0) == OpKind.Register) ? GetReg8(insn.GetOpRegister(0)) :
+				         (insn.GetOpKind(0) == OpKind.Memory) ? _mem.Read8(CalcMemAddress(insn)) : (byte)ReadOp(insn, 0);
+				byte b = (insn.GetOpKind(1) == OpKind.Register) ? GetReg8(insn.GetOpRegister(1)) :
+				         (insn.GetOpKind(1) == OpKind.Memory) ? _mem.Read8(CalcMemAddress(insn)) :
+				         (insn.GetOpKind(1) == OpKind.Immediate8) ? insn.Immediate8 : (byte)ReadOp(insn, 1);
+				byte r = (byte)(a - b);
+				
+				if (insn.GetOpKind(0) == OpKind.Register)
+					SetReg8(insn.GetOpRegister(0), r);
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+					_mem.Write8(CalcMemAddress(insn), r);
+					
+				SetFlagsSub(a, b, r, 0x80);
+				break;
+			}
+			case 16:
+			{
+				ushort a = (insn.GetOpKind(0) == OpKind.Register) ? GetReg16(insn.GetOpRegister(0)) :
+				           (insn.GetOpKind(0) == OpKind.Memory) ? _mem.Read16(CalcMemAddress(insn)) : (ushort)ReadOp(insn, 0);
+				ushort b = (insn.GetOpKind(1) == OpKind.Register) ? GetReg16(insn.GetOpRegister(1)) :
+				           (insn.GetOpKind(1) == OpKind.Memory) ? _mem.Read16(CalcMemAddress(insn)) : (ushort)ReadOp(insn, 1);
+				ushort r = (ushort)(a - b);
+				
+				if (insn.GetOpKind(0) == OpKind.Register)
+					SetReg16(insn.GetOpRegister(0), r);
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+					_mem.Write16(CalcMemAddress(insn), r);
+					
+				SetFlagsSub(a, b, r, 0x8000);
+				break;
+			}
+			default:
+			{
+				uint a = ReadOp(insn, 0), b = ReadOp(insn, 1), r = a - b;
+				WriteOp(insn, 0, r);
+				SetFlagsSub(a, b, r);
+				break;
+			}
+		}
 	}
 
 	private void ExecSbb(Instruction insn)
