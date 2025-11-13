@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Win32Emu.Tests.Emulator.SingleStepTests;
@@ -15,7 +16,15 @@ class Program
 	{
 		var testDataPath = args.Length > 0 ? args[0] : "Win32Emu.Tests.Emulator/TestData/SingleStepTests";
 		var outputPath = args.Length > 1 ? args[1] : "test-results";
-		var maxTestsPerFile = args.Length > 2 ? int.Parse(args[2]) : 100;
+		var maxTestsPerFile = 100;
+		if (args.Length > 2)
+		{
+			if (!int.TryParse(args[2], out maxTestsPerFile) || maxTestsPerFile <= 0)
+			{
+				Console.Error.WriteLine($"Error: Invalid value for maxTestsPerFile: '{args[2]}'. Please provide a positive integer.");
+				return 1;
+			}
+		}
 
 		Console.WriteLine($"SingleStep CPU Test Reporter");
 		Console.WriteLine($"============================");
@@ -104,6 +113,10 @@ class Program
 			}
 			catch (Exception ex)
 			{
+				// Rethrow fatal exceptions
+				if (ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException)
+					throw;
+				
 				Console.Error.WriteLine($"  Error processing {fileName}: {ex.Message}");
 			}
 		}
@@ -118,8 +131,8 @@ class Program
 		Console.WriteLine("Summary:");
 		Console.WriteLine($"  Files: {report.TotalFiles}");
 		Console.WriteLine($"  Tests Run: {report.TotalTestsRun}");
-		Console.WriteLine($"  Passed: {report.TotalPassed} ({100.0 * report.TotalPassed / report.TotalTestsRun:F1}%)");
-		Console.WriteLine($"  Failed: {report.TotalFailed} ({100.0 * report.TotalFailed / report.TotalTestsRun:F1}%)");
+		Console.WriteLine($"  Passed: {report.TotalPassed} ({(report.TotalTestsRun > 0 ? (100.0 * report.TotalPassed / report.TotalTestsRun).ToString("F1") : "0.0")}%)");
+		Console.WriteLine($"  Failed: {report.TotalFailed} ({(report.TotalTestsRun > 0 ? (100.0 * report.TotalFailed / report.TotalTestsRun).ToString("F1") : "0.0")}%)");
 		Console.WriteLine();
 
 		// Save JSON report
@@ -145,7 +158,8 @@ class Program
 	{
 		var passRate = report.TotalTestsRun > 0 ? 100.0 * report.TotalPassed / report.TotalTestsRun : 0;
 		
-		var html = $@"<!DOCTYPE html>
+		var html = new StringBuilder();
+		html.Append($@"<!DOCTYPE html>
 <html lang=""en"">
 <head>
     <meta charset=""UTF-8"">
@@ -340,15 +354,14 @@ class Program
             </tr>
         </thead>
         <tbody>
-";
+");
 
 		foreach (var file in report.FileResults.OrderBy(f => f.FileName))
 		{
 			var filePassRate = file.TestsRun > 0 ? 100.0 * file.PassedCount / file.TestsRun : 0;
 			var statusBadge = file.PassedCount == file.TestsRun ? "pass-badge" : "fail-badge";
-			var statusText = file.PassedCount == file.TestsRun ? "✓ All Passed" : $"✗ {file.FailedCount} Failed";
 
-			html += $@"
+			html.Append($@"
             <tr>
                 <td><span class=""file-name"">{file.FileName}</span></td>
                 <td>{file.TestsRun} / {file.TotalTestsAvailable}</td>
@@ -361,10 +374,10 @@ class Program
                     </div>
                 </td>
             </tr>
-";
+");
 		}
 
-		html += @"
+		html.Append(@"
         </tbody>
     </table>
 
@@ -397,9 +410,9 @@ class Program
         }
     </script>
 </body>
-</html>";
+</html>");
 
-		File.WriteAllText(outputPath, html);
+		File.WriteAllText(outputPath, html.ToString());
 	}
 }
 
