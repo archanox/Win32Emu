@@ -34,8 +34,8 @@ public class SingleStepTestRunner
 			// Create a fresh memory instance for this test
 			var memory = new VirtualMemory();
 			
-			// Create CPU instance
-			var cpu = new IcedCpu(memory);
+			// Create CPU instance for 16-bit real mode (SingleStepTests are from real 80386 hardware in real mode)
+			var cpu = new IcedCpu(memory, bitness: 16);
 			
 			// Apply initial state
 			ApplyInitialState(cpu, memory, testCase);

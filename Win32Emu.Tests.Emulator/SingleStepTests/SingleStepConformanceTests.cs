@@ -145,15 +145,10 @@ public class SingleStepConformanceTests
 		
 		_output.WriteLine($"========================================\n");
 		
-		// For now, we'll just warn about failures but not fail the test
-		// This allows us to see how many tests pass without blocking CI
-		if (failCount > 0 && failCount < testCount)
+		// Fail the test if there are any failures
+		if (failCount > 0)
 		{
-			_output.WriteLine($"INFO: {passCount} tests passed, {failCount} failed. Emulator is partially working.");
-		}
-		else if (failCount == testCount)
-		{
-			_output.WriteLine($"WARNING: All {failCount} tests failed. This indicates systematic emulation issues.");
+			Assert.Fail($"{failCount} out of {testCount} tests failed for {fileName}. See detailed output above for failure reasons.");
 		}
 	}
 	
