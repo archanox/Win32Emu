@@ -465,9 +465,33 @@
         <div id="analyzeTab" class="tab-content">
             <div class="alert alert-info">
                 <strong>📋 PE File Analysis</strong><br>
-                Upload a Windows PE executable (.exe or .dll) to check its compatibility with Win32Emu. 
-                This feature analyzes the imported DLLs and functions to show which APIs are implemented, stubbed, or missing.
+                Check compatibility of Windows PE executables with Win32Emu by analyzing their imported DLLs and functions.
+                <br><br>
+                <strong>Two options available:</strong>
+                <ul style="margin: 10px 0 0 20px;">
+                    <li><strong>Command-line Tool (Recommended)</strong> - Download and run <code>Win32Emu.Tools.PeAnalyzer</code></li>
+                    <li><strong>Browser Upload (Demo)</strong> - Upload files below for a mock demonstration</li>
+                </ul>
             </div>
+
+            <div style="margin: 20px 0;">
+                <h3>Option 1: Command-line Tool 🔧</h3>
+                <div style="background: #f6f8fa; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 13px;">
+                    <div># Clone the repository</div>
+                    <div>git clone https://github.com/archanox/Win32Emu.git</div>
+                    <div style="margin-top: 10px;"># Analyze your PE file</div>
+                    <div>cd Win32Emu</div>
+                    <div>dotnet run --project Win32Emu.Tools.PeAnalyzer \\</div>
+                    <div>&nbsp;&nbsp;your-game.exe \\</div>
+                    <div>&nbsp;&nbsp;docs/pages/api-status.json</div>
+                </div>
+                <p style="margin-top: 10px; font-size: 14px; color: #586069;">
+                    This uses the <a href="https://github.com/secana/PeNet" target="_blank">PeNet</a> library to parse your PE file's import table 
+                    and cross-references it with Win32Emu's implementation status.
+                </p>
+            </div>
+
+            <h3 style="margin-top: 30px;">Option 2: Browser Demo 🌐</h3>
 
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
@@ -647,32 +671,57 @@
             resultsDiv.classList.remove('hidden');
             contentDiv.innerHTML = '<div class="loading" style="margin: 40px auto;"></div>';
 
-            // Note: In a real implementation, this would parse the PE file
-            // For now, we'll show a message about browser limitations
             setTimeout(() => {
                 contentDiv.innerHTML = `
                     <div class="alert alert-warning">
-                        <strong>⚠️ Browser Limitation</strong><br>
-                        Full PE file parsing in the browser requires a JavaScript PE parser library (like pe-library).
-                        This feature analyzes PE executables to extract imported DLLs and functions.
+                        <strong>⚠️ Browser Demonstration Only</strong><br>
+                        This is a mock demonstration. For real PE analysis, use the command-line tool.
                         <br><br>
                         <strong>Uploaded file:</strong> ${file.name} (${(file.size / 1024).toFixed(2)} KB)
-                        <br><br>
-                        To enable this feature, you would need to:
-                        <ol style="margin-top: 10px; margin-left: 20px;">
-                            <li>Integrate a PE parser library (like PeNet.js port or pe-library)</li>
-                            <li>Parse the PE import table to extract imported DLLs and functions</li>
-                            <li>Cross-reference with the API status data</li>
-                            <li>Display compatibility report</li>
-                        </ol>
-                        <br>
-                        <strong>Alternative approach:</strong> Create a server-side tool using PeNet NuGet package
-                        that accepts PE file uploads and returns analysis results.
                     </div>
+                    
+                    <div style="margin: 20px 0; padding: 20px; background: #f6f8fa; border-radius: 6px;">
+                        <h3>To analyze this file with Win32Emu.Tools.PeAnalyzer:</h3>
+                        <div style="font-family: monospace; font-size: 14px; background: white; padding: 15px; border-radius: 4px; margin-top: 10px;">
+                            <div style="color: #22863a;"># Download Win32Emu repository</div>
+                            <div>git clone https://github.com/archanox/Win32Emu.git</div>
+                            <div>cd Win32Emu</div>
+                            <br>
+                            <div style="color: #22863a;"># Analyze your PE file</div>
+                            <div>dotnet run --project Win32Emu.Tools.PeAnalyzer/Win32Emu.Tools.PeAnalyzer.csproj \\</div>
+                            <div>&nbsp;&nbsp;/path/to/${file.name} \\</div>
+                            <div>&nbsp;&nbsp;docs/pages/api-status.json</div>
+                            <br>
+                            <div style="color: #22863a;"># Output will be JSON with detailed compatibility report</div>
+                        </div>
+                        
+                        <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 4px;">
+                            <strong>📊 What you'll get:</strong>
+                            <ul style="margin: 10px 0 0 20px;">
+                                <li>Overall compatibility percentage</li>
+                                <li>Per-DLL implementation status</li>
+                                <li>Function-level details (implemented/stub/missing)</li>
+                                <li>Compatibility verdict</li>
+                                <li>JSON output for further processing</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
                     <div style="margin-top: 20px;">
                         <h3>Mock Analysis Result (for demonstration)</h3>
-                        <p>Here's an example of what the analysis would show:</p>
+                        <p style="color: #586069;">Here's an example of what the real analysis would show:</p>
                         ${renderMockAnalysis()}
+                    </div>
+                    
+                    <div class="alert alert-info" style="margin-top: 20px;">
+                        <strong>💡 Why command-line only?</strong><br>
+                        PE file parsing requires native libraries and is resource-intensive. 
+                        The command-line tool uses <a href="https://github.com/secana/PeNet" target="_blank">PeNet</a> 
+                        for accurate PE parsing. Browser-based parsing would require large JavaScript libraries 
+                        and may have security/performance limitations.
+                        <br><br>
+                        <strong>Future Enhancement:</strong> We may add a web API backend (Azure Function/AWS Lambda) 
+                        to enable browser uploads while maintaining security and performance.
                     </div>
                 `;
             }, 1000);
