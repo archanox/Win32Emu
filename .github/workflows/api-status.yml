@@ -1,0 +1,70 @@
+name: Generate API Status for GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Win32Emu/Win32/Modules/**'
+      - 'Win32Emu.Tools.ApiStatusGenerator/**'
+      - '.github/workflows/api-status.yml'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write # Need write permission to commit generated files
+
+jobs:
+  generate-api-status:
+    name: Generate API Status Data
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '9.0.x' # Use .NET 9 for the generator tool
+        
+    - name: Build API Status Generator
+      run: |
+        cd Win32Emu.Tools.ApiStatusGenerator
+        dotnet build --configuration Release
+        
+    - name: Generate API Status JSON
+      run: |
+        dotnet run --project Win32Emu.Tools.ApiStatusGenerator/Win32Emu.Tools.ApiStatusGenerator.csproj \
+          Win32Emu/Win32/Modules \
+          docs/pages/api-status.json
+        
+    - name: Check for changes
+      id: check-changes
+      run: |
+        if git diff --quiet docs/pages/api-status.json; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Commit and push if changed
+      if: steps.check-changes.outputs.changed == 'true'
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add docs/pages/api-status.json
+        git commit -m "chore: update API status data [skip ci]"
+        git push
+        
+    - name: Deploy to GitHub Pages
+      if: steps.check-changes.outputs.changed == 'true'
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/pages
+        publish_branch: gh-pages
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
+        commit_message: 'Deploy API status page'
