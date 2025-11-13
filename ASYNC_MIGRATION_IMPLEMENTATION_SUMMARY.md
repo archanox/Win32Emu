@@ -204,7 +204,7 @@ This implementation successfully:
 
 The async architecture is now well-established across multiple modules:
 - **7 APIs fully migrated** to async callback pattern
-- **4 modules** (User32, WinMM, DSound) using consistent async implementation
+- **3 modules** (User32, WinMM, DSound) using consistent async implementation
 - **14+ test cases** validating async callback functionality
 - **Zero breaking changes** to existing APIs
 
