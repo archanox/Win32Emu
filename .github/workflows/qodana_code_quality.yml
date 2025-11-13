@@ -21,6 +21,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}  # to check out the actual pull request commit, not the merge commit
           # fetch-depth: 0  # a full history is required for pull request analysis
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
       - name: 'Pull Qodana Docker Image'
         run: docker pull jetbrains/qodana-cdnet:latest
       - name: 'Qodana Scan'
