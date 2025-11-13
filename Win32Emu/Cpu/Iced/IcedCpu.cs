@@ -773,16 +773,8 @@ public class IcedCpu : IAsyncCpu
 		// For non-control-flow instructions, advance EIP by instruction length
 		if (!isControlFlowInstruction)
 		{
-			_eip = oldEip + (uint)insn.Length;
-		}
-
-		// Sanity check: For non-control-flow instructions, verify EIP matches the decoder's expectation
-		// This ensures instruction.Length is correct and no bugs in EIP calculation
-		if (!isControlFlowInstruction && _eip != (uint)_decoder.IP)
-		{
-			_logger.LogError("[IcedCpu] EIP advancement error! At 0x{OldEip:X8}, instruction '{Insn}' (length={Length}): " +
-				"computed EIP=0x{ComputedEip:X8} but decoder IP=0x{DecoderIP:X8}",
-				oldEip, insn.ToString(), insn.Length, _eip, _decoder.IP);
+			// Use decoder IP directly as it's authoritative for instruction length
+			_eip = (uint)_decoder.IP;
 		}
 
 		return new CpuStepResult(isCall, callTarget, isSyscall);
@@ -1196,15 +1188,132 @@ public class IcedCpu : IAsyncCpu
 
 	private void ExecSbb(Instruction insn)
 	{
-		uint a = ReadOp(insn, 0), b = ReadOp(insn, 1);
-		var cf = GetFlag(Cf) ? 1u : 0u;
-		var diff = (ulong)a - (b + cf);
-		var r = (uint)diff;
-		WriteOp(insn, 0, r);
-		SetFlagVal(Cf, a < b + cf);
-		SetFlagVal(Of, ((a ^ b) & (a ^ r) & 0x80000000) != 0);
-		SetFlagVal(Af, (((a ^ b ^ r) & 0x10) != 0));
-		UpdateLogicResultFlags(r);
+		var opSize = GetOpSizeBits(insn, 0);
+		
+		switch (opSize)
+		{
+			case 8:
+			{
+				// 8-bit SBB
+				byte a, b;
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg8(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read8(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (byte)ReadOp(insn, 0);
+				}
+				
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg8(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read8(CalcMemAddress(insn));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Immediate8)
+				{
+					b = insn.Immediate8;
+				}
+				else if (insn.GetOpKind(1) == OpKind.Immediate16)
+				{
+					b = (byte)insn.Immediate16;
+				}
+				else
+				{
+					b = (byte)ReadOp(insn, 1);
+				}
+				
+				var cf = GetFlag(Cf) ? (byte)1 : (byte)0;
+				var r = (byte)(a - b - cf);
+				
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					SetReg8(insn.GetOpRegister(0), r);
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					_mem.Write8(CalcMemAddress(insn), r);
+				}
+				
+				SetFlagsSbb(a, (byte)(b + cf), r, 0x80); // 8-bit sign bit
+				break;
+			}
+			case 16:
+			{
+				// 16-bit SBB
+				ushort a, b;
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					a = GetReg16(insn.GetOpRegister(0));
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					a = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					a = (ushort)ReadOp(insn, 0);
+				}
+				
+				if (insn.GetOpKind(1) == OpKind.Register)
+				{
+					b = GetReg16(insn.GetOpRegister(1));
+				}
+				else if (insn.GetOpKind(1) == OpKind.Memory)
+				{
+					b = _mem.Read16(CalcMemAddress(insn));
+				}
+				else
+				{
+					b = (ushort)ReadOp(insn, 1);
+				}
+				
+				var cf = GetFlag(Cf) ? (ushort)1 : (ushort)0;
+				var r = (ushort)(a - b - cf);
+				
+				if (insn.GetOpKind(0) == OpKind.Register)
+				{
+					SetReg16(insn.GetOpRegister(0), r);
+				}
+				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
+					_mem.Write16(CalcMemAddress(insn), r);
+				}
+				
+				SetFlagsSbb(a, (ushort)(b + cf), r, 0x8000); // 16-bit sign bit
+				break;
+			}
+			default:
+			{
+				// 32-bit SBB (default behavior)
+				uint a = ReadOp(insn, 0), b = ReadOp(insn, 1);
+				var cf = GetFlag(Cf) ? 1u : 0u;
+				var r = a - b - cf;
+				WriteOp(insn, 0, r);
+				SetFlagsSbb(a, b + cf, r);
+				break;
+			}
+		}
+	}
+	
+	private void SetFlagsSbb(uint a, uint b, uint r)
+	{
+		SetFlagsSbb(a, b, r, 0x80000000);
+	}
+	
+	private void SetFlagsSbb(uint a, uint b, uint r, uint signBitMask)
+	{
+		SetFlagVal(Cf, a < b);
+		SetFlagVal(Of, ((a ^ b) & (a ^ r) & signBitMask) != 0);
+		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
+		UpdateLogicResultFlags(r, signBitMask);
 	}
 
 	private void ExecXor(Instruction insn)
@@ -4079,13 +4188,31 @@ public class IcedCpu : IAsyncCpu
 		var addr = insn.MemoryDisplacement32;
 		if (insn.MemoryBase != Register.None)
 		{
-			addr += GetReg32(insn.MemoryBase);
+			var baseReg = insn.MemoryBase;
+			// Use appropriate register size - 16-bit registers should only use lower 16 bits
+			if (baseReg is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP or Register.BP)
+			{
+				addr += GetReg16(baseReg);
+			}
+			else
+			{
+				addr += GetReg32(baseReg);
+			}
 		}
 
 		if (insn.MemoryIndex != Register.None)
 		{
+			var indexReg = insn.MemoryIndex;
 			var scale = insn.MemoryIndexScale;
-			addr += (uint)(GetReg32(insn.MemoryIndex) * scale);
+			// Use appropriate register size - 16-bit registers should only use lower 16 bits
+			if (indexReg is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP or Register.BP)
+			{
+				addr += (uint)(GetReg16(indexReg) * scale);
+			}
+			else
+			{
+				addr += (uint)(GetReg32(indexReg) * scale);
+			}
 		}
 
 		// Debug logging for IAT address calculations (displacement in IAT range 0x004552E0-0x00455360)
