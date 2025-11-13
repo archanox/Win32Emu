@@ -4223,7 +4223,7 @@ public class JitCpu : IAsyncCpu
 		
 		// Store 32-bit mode environment (28 bytes)
 		mem.Write16(addr, _fpuControlWord);
-		mem.Write32(addr + 4, _fpuStatusWord);
+		mem.Write16(addr + 4, _fpuStatusWord);
 		mem.Write16(addr + 8, _fpuTagWord);
 		// Instruction pointer, data pointer, and opcode would be written here in a full implementation
 		// For now, write zeros for these fields
