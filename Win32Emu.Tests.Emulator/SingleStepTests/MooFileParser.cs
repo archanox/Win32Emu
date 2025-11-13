@@ -226,7 +226,8 @@ public class MooFileParser
 		var memory = new List<MemoryEntry>();
 		var endPos = pos + length;
 		
-		while (pos < endPos - 4 && pos < data.Length)
+		// Each memory entry is 5 bytes: 4-byte address + 1-byte value
+		while (pos < endPos - 5 + 1 && pos < data.Length - 5 + 1)
 		{
 			var address = ReadUInt32(data, ref pos);
 			var value = data[pos++];
@@ -237,6 +238,9 @@ public class MooFileParser
 				Value = value
 			});
 		}
+		
+		// Advance to end of section to prevent subsequent parsing errors
+		pos = endPos;
 		
 		return memory;
 	}

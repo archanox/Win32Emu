@@ -640,16 +640,17 @@ public class RegistryHive : IDisposable
 		
 		try
 		{
-			// The DiscUtils.Registry.RegistryHive automatically writes to its underlying stream
-			// We need to get the stream data from the hive's FileSystemSource
-			// Since we can't directly save, we'll recreate the hive with a writable stream
-			using var memStream = new MemoryStream();
+			// Create a MemoryStream to hold the serialized hive data
+			var memStream = new MemoryStream();
 			
 			// Create a new hive with our writable stream and copy the data
 			var tempHive = DiscUtils.Registry.RegistryHive.Create(memStream);
 			
 			// Copy all keys from the original hive to the temp hive
 			CopyRegistryKey(hive.Root, tempHive.Root);
+			
+			// Flush any pending writes (tempHive writes to memStream)
+			tempHive.Dispose();
 			
 			memStream.Position = 0;
 			
@@ -675,6 +676,8 @@ public class RegistryHive : IDisposable
 			{
 				_logger.LogError("[RegistryHive] Failed to open file for writing: {Path}", path);
 			}
+			
+			memStream.Dispose();
 		}
 		catch (Exception ex)
 		{
