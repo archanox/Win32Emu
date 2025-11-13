@@ -38,7 +38,7 @@ public class SingleStepTestRunner
 			var cpu = new IcedCpu(memory);
 			
 			// Apply initial state
-			ApplyInitialState(cpu, memory, testCase.InitialState);
+			ApplyInitialState(cpu, memory, testCase);
 			
 			// Execute the instruction
 			try
@@ -67,8 +67,10 @@ public class SingleStepTestRunner
 	/// <summary>
 	/// Apply initial CPU and memory state from test case
 	/// </summary>
-	private void ApplyInitialState(IcedCpu cpu, VirtualMemory memory, CpuTestState initialState)
+	private void ApplyInitialState(IcedCpu cpu, VirtualMemory memory, MooTestCase testCase)
 	{
+		var initialState = testCase.InitialState;
+		
 		// Set registers
 		var regs = initialState.Registers;
 		cpu.SetRegister("EAX", regs.Eax);
@@ -81,6 +83,19 @@ public class SingleStepTestRunner
 		cpu.SetRegister("ESP", regs.Esp);
 		cpu.SetEip(regs.Eip);
 		cpu.SetRegister("EFLAGS", regs.Eflags);
+		
+		// Write instruction bytes to memory at EIP
+		// This is critical - the CPU needs to read the instruction from memory!
+		for (var i = 0; i < testCase.InstructionBytes.Length; i++)
+		{
+			var address = regs.Eip + (uint)i;
+			if (address < regs.Eip)
+			{
+				_logger.LogWarning("Instruction bytes extend beyond 32-bit address space at EIP={EIP:X8} in test {TestName}", regs.Eip, testCase.Name);
+				break;
+			}
+			memory.Write8(address, testCase.InstructionBytes[i]);
+		}
 		
 		// Write initial memory state
 		foreach (var memEntry in initialState.Memory)
