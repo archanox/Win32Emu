@@ -164,15 +164,6 @@ public class IcedCpu : IAsyncCpu
 			_logger.LogInformation("[IcedCpu] Executing at 0x{Eip:X8}: {Insn} (Bytes: {Bytes})", oldEip, insn.ToString(), byteString);
 		}
 		
-		_eip = (uint)_decoder.IP;
-		
-		// Detect if decoder advanced EIP incorrectly (sanity check)
-		if (_eip < oldEip || _eip > oldEip + 15)
-		{
-			_logger.LogWarning("[IcedCpu] Decoder set suspicious EIP: oldEip=0x{OldEip:X8}, new EIP=0x{NewEip:X8}, instruction={Insn}", 
-				oldEip, _eip, insn.ToString());
-		}
-		
 		var isCall = false;
 		var isSyscall = false;
 		uint callTarget = 0;
@@ -369,7 +360,7 @@ public class IcedCpu : IAsyncCpu
 					break;
 				case Mnemonic.Call:
 					_esp -= 4;
-					Write32(_esp, _eip);
+					Write32(_esp, oldEip + (uint)insn.Length);  // Push return address (address after CALL)
 					if (insn.GetOpKind(0) == OpKind.Register)
 					{
 						var targetReg = insn.GetOpRegister(0);
@@ -676,46 +667,64 @@ public class IcedCpu : IAsyncCpu
 			Diagnostics.Diagnostics.ClearCpuContext();
 		}
 
-		// Sanity check: verify EIP is still reasonable after instruction execution
-		// For non-control-flow instructions, EIP should be the value set by the decoder
-		// For control-flow instructions (JMP, CALL, RET), EIP will be different
-		var eipChanged = (_eip != (uint)_decoder.IP);
-		if (eipChanged)
+		// Advance EIP for non-control-flow instructions
+		// Control-flow instructions (JMP, CALL, RET, Jcc, etc.) set _eip explicitly during execution
+		// For all other instructions, advance EIP by the instruction length
+		var isControlFlowInstruction = insn.Mnemonic switch
 		{
-			// EIP was modified by the instruction - this is expected for JMP, CALL, RET, conditional jumps
-			var isControlFlow = insn.Mnemonic switch
-			{
-				Mnemonic.Jmp => true,
-				Mnemonic.Call => true,
-				Mnemonic.Ret => true,
-				Mnemonic.Iretd => true,
-				Mnemonic.Ja => true,
-				Mnemonic.Jae => true,
-				Mnemonic.Jb => true,
-				Mnemonic.Jbe => true,
-				Mnemonic.Je => true,
-				Mnemonic.Jg => true,
-				Mnemonic.Jge => true,
-				Mnemonic.Jl => true,
-				Mnemonic.Jle => true,
-				Mnemonic.Jne => true,
-				Mnemonic.Jno => true,
-				Mnemonic.Jnp => true,
-				Mnemonic.Jns => true,
-				Mnemonic.Jo => true,
-				Mnemonic.Jp => true,
-				Mnemonic.Js => true,
-				Mnemonic.Loop => true,
-				Mnemonic.Loope => true,
-				Mnemonic.Loopne => true,
-				_ => false
-			};
+			Mnemonic.Jmp => true,
+			Mnemonic.Call => true,
+			Mnemonic.Ret => true,
+			Mnemonic.Iret => true,
+			Mnemonic.Iretd => true,
+			Mnemonic.Loop => true,
+			Mnemonic.Loope => true,
+			Mnemonic.Loopne => true,
+			// All conditional jumps
+			Mnemonic.Ja => true,
+			Mnemonic.Jae => true,
+			Mnemonic.Jb => true,
+			Mnemonic.Jbe => true,
+			Mnemonic.Je => true,
+			Mnemonic.Jg => true,
+			Mnemonic.Jge => true,
+			Mnemonic.Jl => true,
+			Mnemonic.Jle => true,
+			Mnemonic.Jne => true,
+			Mnemonic.Jno => true,
+			Mnemonic.Jnp => true,
+			Mnemonic.Jns => true,
+			Mnemonic.Jo => true,
+			Mnemonic.Jp => true,
+			Mnemonic.Js => true,
+			// INT and INT3 can transfer control in some cases
+			Mnemonic.Int => true,
+			Mnemonic.Int3 => true,
+			_ => false
+		};
+
+		// For non-control-flow instructions, advance EIP by instruction length
+		if (!isControlFlowInstruction)
+		{
+			var newEip = oldEip + (uint)insn.Length;
 			
-			if (!isControlFlow)
+			// Debug logging for conformance tests - log ALL EIP advancements
+			if (oldEip < 0x00100000)  // Typical test case addresses are low
 			{
-				_logger.LogError("[IcedCpu] EIP corrupted! At 0x{OldEip:X8}, instruction '{Insn}' changed EIP to 0x{NewEip:X8} (decoder expected 0x{DecoderIP:X8})",
-					oldEip, insn.ToString(), _eip, _decoder.IP);
+				_logger.LogDebug("[IcedCpu] EIP advancement: oldEip=0x{OldEip:X8}, length={Length}, newEip=0x{NewEip:X8}, insn='{Insn}'",
+					oldEip, insn.Length, newEip, insn.ToString());
 			}
+			
+			_eip = newEip;
+		}
+
+		// Sanity check: For non-control-flow instructions, verify EIP matches the decoder's expectation
+		// This ensures instruction.Length is correct and no bugs in EIP calculation
+		if (!isControlFlowInstruction && _eip != (uint)_decoder.IP)
+		{
+			_logger.LogError("[IcedCpu] EIP advancement error! At 0x{OldEip:X8}, instruction '{Insn}' (length={Length}): " +
+				"computed EIP=0x{ComputedEip:X8} but decoder IP=0x{DecoderIP:X8}",
+				oldEip, insn.ToString(), insn.Length, _eip, _decoder.IP);
 		}
 
 		return new CpuStepResult(isCall, callTarget, isSyscall);
