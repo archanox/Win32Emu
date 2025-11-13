@@ -134,7 +134,81 @@ public class MooFileParser
 			}
 		}
 		
+		// FINA section only contains changed registers/memory from INIT
+		// We need to merge FINA with INIT to get the complete final state
+		MergeFinalStateWithInitial(test);
+		
 		return test;
+	}
+	
+	/// <summary>
+	/// Merge final state with initial state to handle sparse FINA format.
+	/// According to SingleStepTests/80386 format, FINA only contains changed values.
+	/// Registers not present in FINA should use values from INIT.
+	/// </summary>
+	private static void MergeFinalStateWithInitial(MooTestCase test)
+	{
+		// Start with a copy of the initial register state
+		var mergedRegs = new RegisterState
+		{
+			Eax = test.InitialState.Registers.Eax,
+			Ebx = test.InitialState.Registers.Ebx,
+			Ecx = test.InitialState.Registers.Ecx,
+			Edx = test.InitialState.Registers.Edx,
+			Esi = test.InitialState.Registers.Esi,
+			Edi = test.InitialState.Registers.Edi,
+			Ebp = test.InitialState.Registers.Ebp,
+			Esp = test.InitialState.Registers.Esp,
+			Eip = test.InitialState.Registers.Eip,
+			Eflags = test.InitialState.Registers.Eflags,
+			Cs = test.InitialState.Registers.Cs,
+			Ds = test.InitialState.Registers.Ds,
+			Es = test.InitialState.Registers.Es,
+			Fs = test.InitialState.Registers.Fs,
+			Gs = test.InitialState.Registers.Gs,
+			Ss = test.InitialState.Registers.Ss
+		};
+		
+		// Apply changes from final state - only for registers that were present in FINA
+		if (test.FinalState.Registers.HasRegister(2)) mergedRegs.Eax = test.FinalState.Registers.Eax;
+		if (test.FinalState.Registers.HasRegister(3)) mergedRegs.Ebx = test.FinalState.Registers.Ebx;
+		if (test.FinalState.Registers.HasRegister(4)) mergedRegs.Ecx = test.FinalState.Registers.Ecx;
+		if (test.FinalState.Registers.HasRegister(5)) mergedRegs.Edx = test.FinalState.Registers.Edx;
+		if (test.FinalState.Registers.HasRegister(6)) mergedRegs.Esi = test.FinalState.Registers.Esi;
+		if (test.FinalState.Registers.HasRegister(7)) mergedRegs.Edi = test.FinalState.Registers.Edi;
+		if (test.FinalState.Registers.HasRegister(8)) mergedRegs.Ebp = test.FinalState.Registers.Ebp;
+		if (test.FinalState.Registers.HasRegister(9)) mergedRegs.Esp = test.FinalState.Registers.Esp;
+		if (test.FinalState.Registers.HasRegister(10)) mergedRegs.Cs = test.FinalState.Registers.Cs;
+		if (test.FinalState.Registers.HasRegister(11)) mergedRegs.Ds = test.FinalState.Registers.Ds;
+		if (test.FinalState.Registers.HasRegister(12)) mergedRegs.Es = test.FinalState.Registers.Es;
+		if (test.FinalState.Registers.HasRegister(13)) mergedRegs.Fs = test.FinalState.Registers.Fs;
+		if (test.FinalState.Registers.HasRegister(14)) mergedRegs.Gs = test.FinalState.Registers.Gs;
+		if (test.FinalState.Registers.HasRegister(15)) mergedRegs.Ss = test.FinalState.Registers.Ss;
+		if (test.FinalState.Registers.HasRegister(16)) mergedRegs.Eip = test.FinalState.Registers.Eip;
+		if (test.FinalState.Registers.HasRegister(17)) mergedRegs.Eflags = test.FinalState.Registers.Eflags;
+		
+		test.FinalState.Registers = mergedRegs;
+		
+		// For memory, we need to merge too
+		// Start with initial memory as baseline
+		var mergedMemory = new Dictionary<uint, byte>();
+		foreach (var entry in test.InitialState.Memory)
+		{
+			mergedMemory[entry.Address] = entry.Value;
+		}
+		
+		// Apply changes from final memory
+		foreach (var entry in test.FinalState.Memory)
+		{
+			mergedMemory[entry.Address] = entry.Value;
+		}
+		
+		// Convert back to list
+		test.FinalState.Memory = mergedMemory.Select(kvp => new MemoryEntry
+		{
+			Address = kvp.Key,
+			Value = kvp.Value
+		}).ToList();
 	}
 	
 	private static CpuTestState ReadStateSection(byte[] data, ref int pos)
@@ -175,42 +249,42 @@ public class MooFileParser
 		var regs = new RegisterState();
 		var startPos = pos;
 		
-		// The RG32 section contains register values in a specific order
-		// Based on analysis: appears to be EFLAGS, then general purpose registers
-		// We need at least 11 uint32 values for the basic registers
-		if (length < 44)
+		// The RG32 section format:
+		// - First 4 bytes: bitmask indicating which registers are present
+		// - Following bytes: register values for each bit set in the bitmask (in order)
+		
+		if (length < 4)
 		{
-			// Not enough data, return empty state
+			// Not enough data for bitmask
+			pos += length;
 			return regs;
 		}
 		
-		// Register order appears to be:
-		// EFLAGS (with high word), EIP, then general purpose registers
-		// This is based on reverse engineering the format
-		regs.Eflags = ReadUInt32(data, ref pos);
-		var flagsHigh = ReadUInt32(data, ref pos); // High word of flags (ignored for now)
-		regs.Eip = ReadUInt32(data, ref pos);
-		regs.Eax = ReadUInt32(data, ref pos);
-		regs.Ebx = ReadUInt32(data, ref pos);
-		regs.Ecx = ReadUInt32(data, ref pos);
-		regs.Edx = ReadUInt32(data, ref pos);
-		regs.Esi = ReadUInt32(data, ref pos);
-		regs.Edi = ReadUInt32(data, ref pos);
-		regs.Ebp = ReadUInt32(data, ref pos);
-		regs.Esp = ReadUInt32(data, ref pos);
+		// Read the bitmask
+		var bitmask = ReadUInt32(data, ref pos);
 		
-		// Read segment registers if available
-		if (length >= 68)
+		// Register order based on the reference implementation:
+		// 0: CR0, 1: CR3, 2: EAX, 3: EBX, 4: ECX, 5: EDX,
+		// 6: ESI, 7: EDI, 8: EBP, 9: ESP,
+		// 10: CS, 11: DS, 12: ES, 13: FS, 14: GS, 15: SS,
+		// 16: EIP, 17: EFLAGS, 18: DR6, 19: DR7
+		
+		// Read register values for each bit set in the bitmask
+		for (int i = 0; i < 32; i++)
 		{
-			regs.Cs = ReadUInt32(data, ref pos);
-			regs.Ds = ReadUInt32(data, ref pos);
-			regs.Es = ReadUInt32(data, ref pos);
-			regs.Fs = ReadUInt32(data, ref pos);
-			regs.Gs = ReadUInt32(data, ref pos);
-			regs.Ss = ReadUInt32(data, ref pos);
+			if ((bitmask & (1u << i)) != 0)
+			{
+				if (pos + 4 > startPos + length)
+					break; // Prevent reading past the chunk
+					
+				var value = ReadUInt32(data, ref pos);
+				
+				// Store the register value and mark it as present
+				regs.SetRegister(i, value);
+			}
 		}
 		
-		// Skip any remaining register data
+		// Skip any remaining data in the chunk
 		var bytesRead = pos - startPos;
 		var remaining = length - bytesRead;
 		if (remaining > 0)
@@ -319,6 +393,40 @@ public class RegisterState
 	public uint Fs { get; set; }
 	public uint Gs { get; set; }
 	public uint Ss { get; set; }
+	
+	// Track which registers were explicitly set (for sparse FINA format)
+	// Bit 0 = Eax, Bit 1 = Ebx, etc.
+	internal uint PresenceMask { get; set; }
+	
+	internal void SetRegister(int bitIndex, uint value)
+	{
+		PresenceMask |= (1u << bitIndex);
+		
+		switch (bitIndex)
+		{
+			case 2: Eax = value; break;
+			case 3: Ebx = value; break;
+			case 4: Ecx = value; break;
+			case 5: Edx = value; break;
+			case 6: Esi = value; break;
+			case 7: Edi = value; break;
+			case 8: Ebp = value; break;
+			case 9: Esp = value; break;
+			case 10: Cs = value; break;
+			case 11: Ds = value; break;
+			case 12: Es = value; break;
+			case 13: Fs = value; break;
+			case 14: Gs = value; break;
+			case 15: Ss = value; break;
+			case 16: Eip = value; break;
+			case 17: Eflags = value; break;
+		}
+	}
+	
+	internal bool HasRegister(int bitIndex)
+	{
+		return (PresenceMask & (1u << bitIndex)) != 0;
+	}
 }
 
 /// <summary>
