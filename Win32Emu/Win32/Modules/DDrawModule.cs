@@ -360,8 +360,7 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			var bytes = System.Text.Encoding.Unicode.GetBytes(str);
-			var size = (uint)(bytes.Length + 2); // +2 for null terminator (2 bytes for UTF-16)
+			var size = (uint)((str.Length + 1) * 2); // +1 for null terminator, *2 for UTF-16
 			var addr = _env.HeapAlloc(0, size);
 
 			if (addr == 0)
@@ -370,15 +369,14 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 
-			// Write string bytes
-			for (int i = 0; i < bytes.Length; i++)
+			// Write wide characters to output buffer
+			for (int i = 0; i < str.Length; i++)
 			{
-				_env.Memory.Write8(addr + (uint)i, bytes[i]);
+				_env.Memory.Write16(addr + (uint)(i * 2), str[i]);
 			}
 
-			// Write null terminator (2 bytes)
-			_env.Memory.Write8(addr + (uint)bytes.Length, 0);
-			_env.Memory.Write8(addr + (uint)bytes.Length + 1, 0);
+			// Write null terminator
+			_env.Memory.Write16(addr + (uint)(str.Length * 2), 0);
 
 			return addr;
 		}
@@ -1876,7 +1874,15 @@ namespace Win32Emu.Win32.Modules
 						pixelFormat.dwRGBBitCount = (uint)ddrawObj.BitsPerPixel;
 
 						// Set RGB masks based on bit depth
-						if (ddrawObj.BitsPerPixel == 16)
+						if (ddrawObj.BitsPerPixel == 8)
+						{
+							// Palettized mode
+							pixelFormat.dwFlags = (uint)DDPFFlags.DDPF_PALETTEINDEXED8;
+							pixelFormat.dwRBitMask = 0;
+							pixelFormat.dwGBitMask = 0;
+							pixelFormat.dwBBitMask = 0;
+						}
+						else if (ddrawObj.BitsPerPixel == 16)
 						{
 							pixelFormat.dwRBitMask = 0xF800;
 							pixelFormat.dwGBitMask = 0x07E0;
@@ -1888,6 +1894,8 @@ namespace Win32Emu.Win32.Modules
 							pixelFormat.dwGBitMask = 0x0000FF00;
 							pixelFormat.dwBBitMask = 0x000000FF;
 						}
+
+						pixelFormat.dwRGBAlphaBitMask = 0;
 					}
 
 					// Set surface caps
@@ -1942,6 +1950,14 @@ namespace Win32Emu.Win32.Modules
 				throw; // Rethrow critical exceptions
 			}
 			catch (StackOverflowException)
+			{
+				throw; // Rethrow critical exceptions
+			}
+			catch (AccessViolationException)
+			{
+				throw; // Rethrow critical exceptions
+			}
+			catch (System.Threading.ThreadAbortException)
 			{
 				throw; // Rethrow critical exceptions
 			}
@@ -3815,31 +3831,14 @@ namespace Win32Emu.Win32.Modules
 				var parameters = new uint[] { guidPtr, descPtr, namePtr, lpContext, hMonitor };
 				var result = callbackHelper.InvokeStdcallCallback(lpCallback, parameters);
 
-				var descPtr = AllocateUnicodeString(driverDescription);
-				var namePtr = AllocateUnicodeString(driverName);
+				// Free allocated strings
+				FreeString(descPtr);
+				FreeString(namePtr);
 
-				try
+				if (result == null)
 				{
-				    _logger.LogDebug("[DDraw] Allocated Unicode strings: desc=0x{Desc:X8}, name=0x{Name:X8}, hMonitor=0x{HMonitor:X8}",
-				        descPtr, namePtr, hMonitor);
-
-				    var callbackHelper = new CallbackHelper(_currentCpu!, _currentMemory!, _logger);
-				    var parameters = new uint[] { guidPtr, descPtr, namePtr, lpContext, hMonitor };
-				    var result = callbackHelper.InvokeStdcallCallback(lpCallback, parameters);
-
-				    if (result == null)
-				    {
-				        _logger.LogError("[DDraw] DirectDrawEnumerateExW: callback invocation failed");
-				        return (uint)DDResult.DDERR_GENERIC;
-				    }
-
-				    _logger.LogInformation("[DDraw] DirectDrawEnumerateExW: callback returned {Result}", result.Value);
-				    return (uint)DDResult.DD_OK;
-				}
-				finally
-				{
-				    FreeString(descPtr);
-				    FreeString(namePtr);
+					_logger.LogError("[DDraw] DirectDrawEnumerateExW: callback invocation failed");
+					return (uint)DDResult.DDERR_GENERIC;
 				}
 
 				_logger.LogInformation("[DDraw] DirectDrawEnumerateExW: callback returned {Result}", result.Value);
@@ -3848,10 +3847,20 @@ namespace Win32Emu.Win32.Modules
 				// Since we only have one device, we always return success
 				return (uint)DDResult.DD_OK;
 			}
+			catch (System.Runtime.InteropServices.ExternalException ex)
+			{
+				_logger.LogError(ex, "[DDraw] DirectDrawEnumerateExW: COM/Interop exception during enumeration");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
+			catch (SystemException ex)
+			{
+				_logger.LogError(ex, "[DDraw] DirectDrawEnumerateExW: system exception during enumeration");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "[DDraw] DirectDrawEnumerateExW: exception during enumeration");
-				return (uint)DDResult.DDERR_GENERIC;
+				_logger.LogCritical(ex, "[DDraw] DirectDrawEnumerateExW: unexpected exception during enumeration");
+				throw;
 			}
 		}
 
@@ -3917,6 +3926,18 @@ namespace Win32Emu.Win32.Modules
 				// Callback returns FALSE (0) to stop enumeration, non-zero to continue
 				// Since we only have one device, we always return success
 				return (uint)DDResult.DD_OK;
+			}
+			catch (OutOfMemoryException)
+			{
+				throw; // Rethrow non-recoverable exceptions
+			}
+			catch (StackOverflowException)
+			{
+				throw; // Rethrow non-recoverable exceptions
+			}
+			catch (System.Threading.ThreadAbortException)
+			{
+				throw; // Rethrow non-recoverable exceptions
 			}
 			catch (Exception ex)
 			{
