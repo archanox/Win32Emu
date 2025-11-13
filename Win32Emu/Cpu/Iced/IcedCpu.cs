@@ -48,7 +48,7 @@ public class IcedCpu : IAsyncCpu
 	private static readonly bool RdtscIsHighResolution = Stopwatch.IsHighResolution;
 	private static readonly long RdtscFrequency = Stopwatch.Frequency;
 
-	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE)
+	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
@@ -56,7 +56,7 @@ public class IcedCpu : IAsyncCpu
 		_stackLimit = stackLimit;
 		_stackBase = stackBase;
 		_reader = new SimpleMemoryCodeReader(this);
-		_decoder = Decoder.Create(32, _reader, decoderOptions);
+		_decoder = Decoder.Create(bitness, _reader, decoderOptions);
 		
 		if (enableInstructionAnalyzer)
 		{
