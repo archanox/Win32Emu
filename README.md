@@ -200,3 +200,17 @@ dotnet build Win32Emu.sln
 ```bash
 dotnet test Win32Emu.sln
 ```
+
+### CPU Conformance Test Results
+
+Win32Emu includes comprehensive CPU conformance tests based on the [SingleStepTests/80386](https://github.com/SingleStepTests/80386) test suite - hardware-generated tests that validate CPU implementation against real 386 behavior.
+
+**📊 View live test results:** [CPU Test Results Dashboard](https://archanox.github.io/Win32Emu/)
+
+The dashboard shows:
+- Pass/fail status for 941 test files
+- Success rate per instruction type
+- Detailed failure analysis
+- Weekly updates via GitHub Actions
+
+For more information about the test reporter tool, see [Win32Emu.Tools.TestReporter/README.md](Win32Emu.Tools.TestReporter/README.md).
