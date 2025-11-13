@@ -166,7 +166,7 @@ Multimedia Extensions (Pentium MMX, 1997):
 - **PUNPCKLWD** - Unpack Low Words to Dwords
 - **PUNPCKLDQ** - Unpack Low Dwords to Qwords
 
-#### Advanced FPU Instructions (36)
+#### Advanced FPU Instructions (37)
 
 **Control Instructions (8):**
 - **FCLEX** - Clear FPU Exceptions (with WAIT)
@@ -315,15 +315,16 @@ case Mnemonic.Je:
 ## Change History
 
 - **2025-11-13**: Advanced FPU instruction implementation (Priority 3 Performance - Completion)
-  - Implemented 36 additional FPU instructions for scientific computing
+  - Implemented 37 additional FPU instructions for scientific computing
   - **Control**: FCLEX, FINIT, FNOP, FLDENV, FSTENV, FSAVE, FRSTOR, FSTCW (8 instructions)
   - **Stack Management**: FDECSTP, FINCSTP, FFREE, FFREEP (4 instructions)
   - **Comparison**: FICOM, FICOMP, FUCOM, FUCOMP, FUCOMPP, FTST, FCOMI, FCOMIP (8 instructions)
   - **Conditional Moves**: FCMOVB, FCMOVBE, FCMOVE, FCMOVNB, FCMOVNE, FCMOVNU, FCMOVU (7 instructions)
   - **Constants**: FLDL2T, FLDLG2, FLDLN2 (3 instructions)
   - **Transcendental**: FPREM, FPREM1, FPTAN, FRNDINT, FXTRACT, FYL2X, FYL2XP1 (7 instructions)
+  - **Integer Operations**: FISUBR (1 instruction - already implemented)
   - Added 15 comprehensive unit tests in JitCpuInstructionTests.cs
-  - Total implemented instructions: 164 (up from 128)
+  - Total implemented instructions: 165 (up from 128)
   - **Priority 3 Performance goals: COMPLETE** (all MMX, CMOV*, and advanced FPU instructions implemented)
   - **ALL PENTIUM-ERA INSTRUCTIONS NOW FULLY IMPLEMENTED**
 

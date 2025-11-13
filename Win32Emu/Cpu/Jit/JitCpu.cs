@@ -4210,7 +4210,7 @@ public class JitCpu : IAsyncCpu
 		
 		// Load 32-bit mode environment (28 bytes)
 		_fpuControlWord = mem.Read16(addr);
-		_fpuStatusWord = mem.Read16(addr + 4);
+		_fpuStatusWord = (ushort)mem.Read32(addr + 4);
 		_fpuTagWord = mem.Read16(addr + 8);
 		// Instruction pointer (offset 12), data pointer (offset 20), and opcode (offset 24) are ignored in emulation
 	}
@@ -4362,38 +4362,26 @@ public class JitCpu : IAsyncCpu
 		}
 		
 		// Set condition codes in FPU status word (C0, C2, C3 = bits 8, 10, 14)
-		// Also update EFLAGS for compatibility with FUCOMI-style comparisons
+		// FICOM does NOT modify EFLAGS (only FCOMI/FCOMIP do that)
 		if (double.IsNaN(st0) || double.IsNaN(source))
 		{
 			// Unordered: C0=1, C2=1, C3=1
 			_fpuStatusWord |= 0x4500;
-			SetFlag(Zf);
-			SetFlag(Pf);
-			SetFlag(Cf);
 		}
 		else if (st0 > source)
 		{
 			// Greater than: C0=0, C2=0, C3=0
 			_fpuStatusWord &= 0xBAFF;
-			ClearFlag(Zf);
-			ClearFlag(Pf);
-			ClearFlag(Cf);
 		}
 		else if (st0 < source)
 		{
 			// Less than: C0=1, C2=0, C3=0
 			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xFAFF) | 0x0100);
-			ClearFlag(Zf);
-			ClearFlag(Pf);
-			SetFlag(Cf);
 		}
 		else // st0 == source
 		{
 			// Equal: C0=0, C2=0, C3=1
 			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xBAFF) | 0x4000);
-			SetFlag(Zf);
-			ClearFlag(Pf);
-			ClearFlag(Cf);
 		}
 	}
 
@@ -4407,7 +4395,8 @@ public class JitCpu : IAsyncCpu
 	private void ExecFucom(Instruction insn)
 	{
 		// FUCOM - Unordered Compare
-		// Compares ST(0) with ST(i) and sets condition codes
+		// Compares ST(0) with ST(i) and sets condition codes in FPU status word
+		// FUCOM does NOT modify EFLAGS (only FCOMI/FCOMIP do that)
 		int i = 1; // Default to ST(1)
 		if (insn.OpCount > 0 && insn.Op0Kind == OpKind.Register)
 		{
@@ -4418,38 +4407,26 @@ public class JitCpu : IAsyncCpu
 		double st0 = FpuGetSt(0);
 		double sti = FpuGetSt(i);
 		
-		// Set condition codes in FPU status word and EFLAGS
+		// Set condition codes in FPU status word only
 		if (double.IsNaN(st0) || double.IsNaN(sti))
 		{
 			// Unordered
 			_fpuStatusWord |= 0x4500;
-			SetFlag(Zf);
-			SetFlag(Pf);
-			SetFlag(Cf);
 		}
 		else if (st0 > sti)
 		{
 			// Greater than
 			_fpuStatusWord &= 0xBAFF;
-			ClearFlag(Zf);
-			ClearFlag(Pf);
-			ClearFlag(Cf);
 		}
 		else if (st0 < sti)
 		{
 			// Less than
 			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xFAFF) | 0x0100);
-			ClearFlag(Zf);
-			ClearFlag(Pf);
-			SetFlag(Cf);
 		}
 		else // st0 == sti
 		{
 			// Equal
 			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xBAFF) | 0x4000);
-			SetFlag(Zf);
-			ClearFlag(Pf);
-			ClearFlag(Cf);
 		}
 	}
 
@@ -4463,38 +4440,27 @@ public class JitCpu : IAsyncCpu
 	private void ExecFucompp()
 	{
 		// FUCOMPP - Unordered Compare and Pop Twice
-		// Compare ST(0) with ST(1) and pop twice
+		// Compare ST(0) with ST(1), set FPU condition codes, and pop twice
+		// FUCOMPP does NOT modify EFLAGS (only FCOMI/FCOMIP do that)
 		double st0 = FpuGetSt(0);
 		double st1 = FpuGetSt(1);
 		
-		// Set condition codes
+		// Set FPU condition codes only (C0, C2, C3)
 		if (double.IsNaN(st0) || double.IsNaN(st1))
 		{
 			_fpuStatusWord |= 0x4500;
-			SetFlag(Zf);
-			SetFlag(Pf);
-			SetFlag(Cf);
 		}
 		else if (st0 > st1)
 		{
 			_fpuStatusWord &= 0xBAFF;
-			ClearFlag(Zf);
-			ClearFlag(Pf);
-			ClearFlag(Cf);
 		}
 		else if (st0 < st1)
 		{
 			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xFAFF) | 0x0100);
-			ClearFlag(Zf);
-			ClearFlag(Pf);
-			SetFlag(Cf);
 		}
 		else
 		{
 			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xBAFF) | 0x4000);
-			SetFlag(Zf);
-			ClearFlag(Pf);
-			ClearFlag(Cf);
 		}
 		
 		// Pop twice
@@ -4711,14 +4677,16 @@ public class JitCpu : IAsyncCpu
 		double st0 = FpuGetSt(0);
 		double st1 = FpuGetSt(1);
 		
-		if (st1 == 0.0)
+		// Use epsilon comparison for floating-point zero check
+		const double epsilon = 1e-12;
+		if (Math.Abs(st1) < epsilon)
 		{
 			// Division by zero - set C2 (incomplete) flag
 			_fpuStatusWord |= 0x0400;
 			return;
 		}
 		
-		// Calculate partial remainder (use IEEERemainder for consistency)
+		// Calculate partial remainder using modulo operator
 		double remainder = st0 % st1;
 		FpuSetSt(0, remainder);
 		
@@ -4733,7 +4701,9 @@ public class JitCpu : IAsyncCpu
 		double st0 = FpuGetSt(0);
 		double st1 = FpuGetSt(1);
 		
-		if (st1 == 0.0)
+		// Use epsilon comparison for floating-point zero check
+		const double epsilon = 1e-12;
+		if (Math.Abs(st1) < epsilon)
 		{
 			_fpuStatusWord |= 0x0400;
 			return;
@@ -4774,7 +4744,9 @@ public class JitCpu : IAsyncCpu
 		// Result: ST(1) = exponent, ST(0) = significand
 		double st0 = FpuGetSt(0);
 		
-		if (st0 == 0.0)
+		// Use epsilon comparison for floating-point zero check
+		const double epsilon = 1e-12;
+		if (Math.Abs(st0) < epsilon)
 		{
 			// Special case: zero
 			FpuSetSt(0, 0.0);
