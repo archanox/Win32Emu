@@ -28,6 +28,7 @@ jobs:
         with:
           pr-mode: true
           args: --solution,"Win32Emu.slnx"
+          upload-result: true
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_1746115559 }}
           QODANA_ENDPOINT: 'https://qodana.cloud'
