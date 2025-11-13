@@ -1402,9 +1402,9 @@ public class IcedCpu : IAsyncCpu
 		SetFlagsSbb(a, b, r, 0x80000000);
 	}
 	
-	private void SetFlagsSbb(uint a, uint b, uint r, uint signBitMask)
+	private void SetFlagsSbb(uint a, uint b, uint r, uint signBitMask, bool cfIn)
 	{
-		SetFlagVal(Cf, a < b);
+		SetFlagVal(Cf, cfIn ? a <= b : a < b);
 		SetFlagVal(Of, ((a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
 		UpdateLogicResultFlags(r, signBitMask);
