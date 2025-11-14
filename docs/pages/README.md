@@ -25,7 +25,7 @@ Once deployed, the site will be available at: `https://archanox.github.io/Win32E
 - Check compatibility with Win32Emu
 - See which imported functions are implemented, stubbed, or missing
 - Copy unimplemented functions to clipboard
-- **Note**: Currently shows a mock analysis. Full implementation requires PE parser integration.
+- **Note**: The browser upload shows a mock demo for illustration. For actual PE analysis, use the command-line Win32Emu.Tools.PeAnalyzer tool which has full PeNet integration.
 
 ## Setup GitHub Pages
 
@@ -44,12 +44,14 @@ The GitHub Actions workflow will automatically:
 To test locally:
 
 ```bash
-# Generate the API status data
-cd Win32Emu.Tools.ApiStatusGenerator
-dotnet run -- ../Win32Emu/Win32/Modules ../../docs/pages/api-status.json
+# First, build Win32Emu to generate the metadata via source generator
+dotnet build Win32Emu/Win32Emu.csproj --configuration Release
+
+# Generate the API status JSON
+dotnet run --project Win32Emu.Tools.ApiStatusGenerator docs/pages/api-status.json
 
 # Serve the page
-cd ../../docs/pages
+cd docs/pages
 python3 -m http.server 8080
 
 # Open http://localhost:8080 in your browser
@@ -64,9 +66,11 @@ The API status data is automatically regenerated when:
 
 Or manually run:
 ```bash
-dotnet run --project Win32Emu.Tools.ApiStatusGenerator \
-  Win32Emu/Win32/Modules \
-  docs/pages/api-status.json
+# Build Win32Emu first to generate metadata
+dotnet build Win32Emu/Win32Emu.csproj --configuration Release
+
+# Export the metadata to JSON
+dotnet run --project Win32Emu.Tools.ApiStatusGenerator docs/pages/api-status.json
 ```
 
 ## Future Enhancements
@@ -125,8 +129,8 @@ The `api-status.json` file has this structure:
 ### Generator Tool
 - **Location**: `Win32Emu.Tools.ApiStatusGenerator/`
 - **Language**: C# (.NET 9)
-- **Method**: Regex parsing of C# source files
-- **Targets**: `[DllModuleExport]` attributes and switch-case statements
+- **Method**: Compile-time source generator using Roslyn's semantic model
+- **Targets**: Methods with `[DllModuleExport]` attributes analyzed during compilation
 
 ### Web Interface
 - **Framework**: Vanilla HTML/CSS/JavaScript (no build step)

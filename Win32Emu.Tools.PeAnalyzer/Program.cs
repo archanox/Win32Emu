@@ -56,7 +56,10 @@ class Program
 			Console.WriteLine(json);
 			return 0;
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (
+			ex is not OutOfMemoryException &&
+			ex is not StackOverflowException &&
+			ex is not System.Threading.ThreadAbortException)
 		{
 			Console.WriteLine($"Error: {ex.Message}");
 			return 1;

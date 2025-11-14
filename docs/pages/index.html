@@ -520,6 +520,13 @@
         let apiData = null;
         let peAnalysisResult = null;
 
+        // Helper function to escape HTML entities to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // Load API data
         async function loadApiData() {
             try {
@@ -568,11 +575,11 @@
                 const moduleCard = document.createElement('div');
                 moduleCard.className = 'module-card';
                 moduleCard.innerHTML = `
-                    <div class="module-header" onclick="toggleModule('${module.name}')">
+                    <div class="module-header" onclick="toggleModule('${escapeHtml(module.name)}')">
                         <div>
-                            <div class="module-name">${module.name}</div>
+                            <div class="module-name">${escapeHtml(module.name)}</div>
                             <div style="font-size: 12px; color: #586069; margin-top: 4px;">
-                                ${module.className}
+                                ${escapeHtml(module.className)}
                             </div>
                         </div>
                         <div class="module-stats">
@@ -581,7 +588,7 @@
                             <span style="color: #586069;">${percentage}%</span>
                         </div>
                     </div>
-                    <div class="module-functions" id="functions-${module.name}">
+                    <div class="module-functions" id="functions-${escapeHtml(module.name)}">
                         ${renderFunctionList(module.functions, filter)}
                     </div>
                 `;
@@ -599,12 +606,12 @@
                 <div class="function-list">
                     ${filteredFunctions.map(func => `
                         <div class="function-item ${func.isStub ? 'stub' : ''}">
-                            <span class="function-name">${func.name}</span>
+                            <span class="function-name">${escapeHtml(func.name)}</span>
                             <div class="function-meta">
                                 ${func.ordinal ? `<span>Ordinal: ${func.ordinal}</span>` : ''}
-                                ${func.version ? `<span>Version: ${func.version}</span>` : ''}
-                                ${func.exportName ? `<span>Export: ${func.exportName}</span>` : ''}
-                                ${func.forwardedTo ? `<span>→ ${func.forwardedTo}</span>` : ''}
+                                ${func.version ? `<span>Version: ${escapeHtml(func.version)}</span>` : ''}
+                                ${func.exportName ? `<span>Export: ${escapeHtml(func.exportName)}</span>` : ''}
+                                ${func.forwardedTo ? `<span>→ ${escapeHtml(func.forwardedTo)}</span>` : ''}
                                 <span class="badge ${func.isStub ? 'stub' : 'implemented'}">
                                     ${func.isStub ? 'STUB' : 'IMPLEMENTED'}
                                 </span>
@@ -677,7 +684,7 @@
                         <strong>⚠️ Browser Demonstration Only</strong><br>
                         This is a mock demonstration. For real PE analysis, use the command-line tool.
                         <br><br>
-                        <strong>Uploaded file:</strong> ${file.name} (${(file.size / 1024).toFixed(2)} KB)
+                        <strong>Uploaded file:</strong> ${escapeHtml(file.name)} (${(file.size / 1024).toFixed(2)} KB)
                     </div>
                     
                     <div style="margin: 20px 0; padding: 20px; background: #f6f8fa; border-radius: 6px;">
@@ -689,7 +696,7 @@
                             <br>
                             <div style="color: #22863a;"># Analyze your PE file</div>
                             <div>dotnet run --project Win32Emu.Tools.PeAnalyzer/Win32Emu.Tools.PeAnalyzer.csproj \\</div>
-                            <div>&nbsp;&nbsp;/path/to/${file.name} \\</div>
+                            <div>&nbsp;&nbsp;/path/to/${escapeHtml(file.name)} \\</div>
                             <div>&nbsp;&nbsp;docs/pages/api-status.json</div>
                             <br>
                             <div style="color: #22863a;"># Output will be JSON with detailed compatibility report</div>

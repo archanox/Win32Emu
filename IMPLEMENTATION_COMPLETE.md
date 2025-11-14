@@ -95,10 +95,11 @@ dotnet run --project Win32Emu.Tools.PeAnalyzer \
 
 ### For Maintainers (Update Status)
 ```bash
-# Regenerate API status after code changes
-dotnet run --project Win32Emu.Tools.ApiStatusGenerator \
-  Win32Emu/Win32/Modules \
-  docs/pages/api-status.json
+# Build Win32Emu first to generate metadata via source generator
+dotnet build Win32Emu/Win32Emu.csproj --configuration Release
+
+# Export the metadata to JSON
+dotnet run --project Win32Emu.Tools.ApiStatusGenerator docs/pages/api-status.json
 
 # Or: Let GitHub Actions do it automatically on push to main
 ```
@@ -130,7 +131,7 @@ dotnet run --project Win32Emu.Tools.ApiStatusGenerator \
 ### Data Flow
 1. **Source Code** (`Win32Emu/Win32/Modules/*.cs`)
    ↓
-2. **API Status Generator** (regex parsing)
+2. **API Status Generator** (Roslyn source generator - compile-time)
    ↓
 3. **api-status.json** (structured data)
    ↓

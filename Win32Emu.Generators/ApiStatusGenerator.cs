@@ -215,9 +215,6 @@ public sealed class ApiStatusGenerator : IIncrementalGenerator
 			WriteIndented = true,
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 		});
-
-		// Escape the JSON string for C#
-		var escapedJson = json.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "");
 		
 		sb.AppendLine($"\tpublic const string Json = @\"{json.Replace("\"", "\"\"")}\";");
 		sb.AppendLine();

@@ -50,12 +50,8 @@ class Program
 		{
 			var functions = module.GetProperty("functions");
 			totalFunctions += functions.GetArrayLength();
-			
-			foreach (var function in functions.EnumerateArray())
-			{
-				if (function.GetProperty("isStub").GetBoolean())
-					stubFunctions++;
-			}
+			stubFunctions += functions.EnumerateArray()
+				.Count(function => function.GetProperty("isStub").GetBoolean());
 		}
 		
 		File.WriteAllText(outputPath, json);

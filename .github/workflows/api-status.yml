@@ -7,6 +7,7 @@ on:
     paths:
       - 'Win32Emu/Win32/Modules/**'
       - 'Win32Emu.Tools.ApiStatusGenerator/**'
+      - 'Win32Emu.Generators/**'
       - '.github/workflows/api-status.yml'
   workflow_dispatch: # Allow manual trigger
 
