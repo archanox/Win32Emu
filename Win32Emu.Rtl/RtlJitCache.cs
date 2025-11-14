@@ -25,6 +25,7 @@ public class RtlJitCache
     private readonly RtlOptimizer _optimizer;
     private readonly RtlToCSharpGenerator _codeGenerator;
     private readonly Dictionary<uint, RtlCompiledBlock> _compiledBlocks = new();
+    private readonly string _instanceId; // Unique ID for this cache instance to avoid assembly name conflicts
     
     public static string DefaultCacheDirectory => Path.Combine(
         Path.GetTempPath(),
@@ -44,6 +45,9 @@ public class RtlJitCache
         _logger = logger ?? NullLogger.Instance;
         _cacheDirectory = cacheDirectory ?? DefaultCacheDirectory;
         _sourceDirectory = Path.Combine(_cacheDirectory, "Source");
+        
+        // Generate unique instance ID to avoid assembly name conflicts when multiple tests run
+        _instanceId = Guid.NewGuid().ToString("N")[..8];
         
         Directory.CreateDirectory(_cacheDirectory);
         Directory.CreateDirectory(_sourceDirectory);
@@ -79,7 +83,7 @@ public class RtlJitCache
         _logger.LogDebug("[RtlJitCache] Optimized RTL");
         
         // Step 3: RTL → C# Code
-        var className = $"JitBlock_{startAddress:X8}";
+        var className = $"JitBlock_{_instanceId}_{startAddress:X8}";
         var methodName = "Execute";
         var csharpCode = _codeGenerator.GenerateCSharpCode(rtlBlock, className, methodName);
         

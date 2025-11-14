@@ -176,10 +176,11 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task<int> PrecompileFromCacheAsync(VirtualMemory mem)
 	{
-		_logger.LogInformation("[JitCpu] RTL-based precompilation - blocks are loaded on demand");
-		// With RTL cache, blocks are already compiled and saved as assemblies
-		// They will be loaded from disk when needed
-		return await Task.FromResult(0);
+		// With RTL cache, blocks are already compiled and loaded from disk by LoadCacheAsync
+		// Return the count of blocks that are already loaded and ready to use
+		var stats = _rtlJitCache.GetStatistics();
+		_logger.LogInformation("[JitCpu] RTL-based cache has {Count} blocks preloaded", stats.TotalBlocks);
+		return await Task.FromResult(stats.TotalBlocks);
 	}
 	
 	/// <summary>
