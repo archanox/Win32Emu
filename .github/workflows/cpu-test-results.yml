@@ -65,7 +65,7 @@ jobs:
         run: >
           dotnet build
           Win32Emu.Tools.ApiStatusGenerator/Win32Emu.Tools.ApiStatusGenerator.csproj
-          --configuration Release --no-restore
+          --configuration Release
 
       - name: Generate CPU Test Results
         run: |
