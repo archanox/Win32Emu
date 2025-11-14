@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using Iced.Intel;
 using Microsoft.Extensions.Logging;
@@ -3908,7 +3909,9 @@ public class IcedCpu : IAsyncCpu
 		// BT - Bit test
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
+		uint mask = opSize == 16 ? 0xFu : 0x1Fu;
+		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
 	}
@@ -3918,7 +3921,9 @@ public class IcedCpu : IAsyncCpu
 		// BTS - Bit test and set
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
+		uint mask = opSize == 16 ? 0xFu : 0x1Fu;
+		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
 		// Set the bit
@@ -3931,7 +3936,9 @@ public class IcedCpu : IAsyncCpu
 		// BTR - Bit test and reset
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
+		uint mask = opSize == 16 ? 0xFu : 0x1Fu;
+		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
 		// Reset (clear) the bit
@@ -3944,7 +3951,9 @@ public class IcedCpu : IAsyncCpu
 		// BTC - Bit test and complement
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
+		uint mask = opSize == 16 ? 0xFu : 0x1Fu;
+		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
 		// Complement (toggle) the bit
@@ -3959,6 +3968,13 @@ public class IcedCpu : IAsyncCpu
 		// If found, stores bit index in destination and clears ZF
 		// If not found (source is 0), sets ZF and destination is undefined
 		var src = ReadOp(insn, 1);
+		int opSize = GetSourceSizeBits(insn);
+		
+		// Mask source to operand size
+		if (opSize == 16)
+			src &= 0xFFFF;
+		else if (opSize == 8)
+			src &= 0xFF;
 		
 		if (src == 0)
 		{
@@ -3967,12 +3983,8 @@ public class IcedCpu : IAsyncCpu
 		}
 		else
 		{
-			// Find first set bit
-			uint bitIndex = 0;
-			while ((src & (1u << (int)bitIndex)) == 0)
-			{
-				bitIndex++;
-			}
+			// Find first set bit using hardware intrinsic
+			uint bitIndex = (uint)BitOperations.TrailingZeroCount(src);
 			WriteOp(insn, 0, bitIndex);
 			SetFlagVal(Zf, false);
 		}
@@ -3981,10 +3993,17 @@ public class IcedCpu : IAsyncCpu
 	private void ExecBsr(Instruction insn)
 	{
 		// BSR - Bit Scan Reverse
-		// Scans source operand for last set bit (starting from bit 31 down to 0)
+		// Scans source operand for last set bit (starting from MSB down to bit 0)
 		// If found, stores bit index in destination and clears ZF
 		// If not found (source is 0), sets ZF and destination is undefined
 		var src = ReadOp(insn, 1);
+		int opSize = GetSourceSizeBits(insn);
+		
+		// Mask source to operand size
+		if (opSize == 16)
+			src &= 0xFFFF;
+		else if (opSize == 8)
+			src &= 0xFF;
 		
 		if (src == 0)
 		{
@@ -3993,12 +4012,25 @@ public class IcedCpu : IAsyncCpu
 		}
 		else
 		{
-			// Find last set bit (scan from high to low)
-			uint bitIndex = 31;
-			while ((src & (1u << (int)bitIndex)) == 0)
+			// Find last set bit using hardware intrinsic
+			// LeadingZeroCount returns count from MSB, we need position from LSB
+			uint bitIndex;
+			if (opSize == 16)
 			{
-				bitIndex--;
+				// For 16-bit: count leading zeros in a 16-bit value
+				bitIndex = (uint)(15 - (BitOperations.LeadingZeroCount(src) - 16));
 			}
+			else if (opSize == 8)
+			{
+				// For 8-bit: count leading zeros in an 8-bit value
+				bitIndex = (uint)(7 - (BitOperations.LeadingZeroCount(src) - 24));
+			}
+			else
+			{
+				// For 32-bit
+				bitIndex = (uint)(31 - BitOperations.LeadingZeroCount(src));
+			}
+			
 			WriteOp(insn, 0, bitIndex);
 			SetFlagVal(Zf, false);
 		}
@@ -4377,21 +4409,96 @@ public class IcedCpu : IAsyncCpu
 
 	#endregion
 
-	private uint ReadOp(Instruction insn, int index) => insn.GetOpKind(index) switch
+	private uint ReadOp(Instruction insn, int index)
 	{
-		OpKind.Register => GetReg32(insn.GetOpRegister(index)), OpKind.Memory => Read32(CalcMemAddress(insn)),
-		OpKind.Immediate8 => insn.Immediate8, OpKind.Immediate8to32 => (uint)(sbyte)insn.Immediate8,
-		OpKind.Immediate32 => insn.Immediate32, _ => 0u
-	};
+		return insn.GetOpKind(index) switch
+		{
+			OpKind.Register => ReadRegister(insn.GetOpRegister(index)),
+			OpKind.Memory => insn.MemorySize switch
+			{
+				MemorySize.UInt8 or MemorySize.Int8 => _mem.Read8(CalcMemAddress(insn)),
+				MemorySize.UInt16 or MemorySize.Int16 => Read16(CalcMemAddress(insn)),
+				_ => Read32(CalcMemAddress(insn))
+			},
+			OpKind.Immediate8 => insn.Immediate8,
+			OpKind.Immediate8to32 => (uint)(sbyte)insn.Immediate8,
+			OpKind.Immediate32 => insn.Immediate32,
+			_ => 0u
+		};
+	}
+	
+	private uint ReadRegister(Register reg)
+	{
+		// Try 8-bit registers first
+		if (reg is Register.AL or Register.CL or Register.DL or Register.BL or 
+		    Register.AH or Register.CH or Register.DH or Register.BH)
+		{
+			return GetReg8(reg);
+		}
+		
+		// Try 16-bit registers
+		if (reg is Register.AX or Register.CX or Register.DX or Register.BX or
+		    Register.SI or Register.DI or Register.SP or Register.BP)
+		{
+			return GetReg16(reg);
+		}
+		
+		// Default to 32-bit
+		return GetReg32(reg);
+	}
 
 	private void WriteOp(Instruction insn, int index, uint value)
 	{
 		switch (insn.GetOpKind(index))
 		{
-			case OpKind.Register: SetReg32(insn.GetOpRegister(index), value); break;
-			case OpKind.Memory: Write32(CalcMemAddress(insn), value); break;
-			default: _logger.LogWarning("[IcedCpu] WriteOp unsupported {GetOpKind}", insn.GetOpKind(index)); break;
+			case OpKind.Register:
+				WriteRegister(insn.GetOpRegister(index), value);
+				break;
+			case OpKind.Memory:
+				{
+					var addr = CalcMemAddress(insn);
+					switch (insn.MemorySize)
+					{
+						case MemorySize.UInt8:
+						case MemorySize.Int8:
+							_mem.Write8(addr, (byte)value);
+							break;
+						case MemorySize.UInt16:
+						case MemorySize.Int16:
+							Write16(addr, (ushort)value);
+							break;
+						default:
+							Write32(addr, value);
+							break;
+					}
+					break;
+				}
+			default:
+				_logger.LogWarning("[IcedCpu] WriteOp unsupported {GetOpKind}", insn.GetOpKind(index));
+				break;
 		}
+	}
+	
+	private void WriteRegister(Register reg, uint value)
+	{
+		// Try 8-bit registers first
+		if (reg is Register.AL or Register.CL or Register.DL or Register.BL or 
+		    Register.AH or Register.CH or Register.DH or Register.BH)
+		{
+			SetReg8(reg, (byte)value);
+			return;
+		}
+		
+		// Try 16-bit registers
+		if (reg is Register.AX or Register.CX or Register.DX or Register.BX or
+		    Register.SI or Register.DI or Register.SP or Register.BP)
+		{
+			SetReg16(reg, (ushort)value);
+			return;
+		}
+		
+		// Default to 32-bit
+		SetReg32(reg, value);
 	}
 
 	private int GetShiftCount(Instruction insn)
