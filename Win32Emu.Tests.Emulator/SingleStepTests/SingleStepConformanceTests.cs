@@ -65,10 +65,10 @@ public class SingleStepConformanceTests
 				
 				if (testFiles.Any())
 				{
-					// Return each test file with maxTests = 100 (increased from 10)
+					// Return each test file with maxTests = int.MaxValue (no limit, run all available tests)
 					foreach (var fileName in testFiles)
 					{
-						yield return new object[] { fileName, 100 };
+						yield return new object[] { fileName, int.MaxValue };
 					}
 					yield break;
 				}

@@ -324,7 +324,7 @@ class Program
         <div class=""stat-card"">
             <h3>Tests Run</h3>
             <div class=""value"">{report.TotalTestsRun:N0}</div>
-            <div class=""subtitle"">{report.MaxTestsPerFile} per file</div>
+            <div class=""subtitle"">{(report.MaxTestsPerFile == int.MaxValue ? "All available tests" : $"{report.MaxTestsPerFile} per file")}</div>
         </div>
         <div class=""stat-card"">
             <h3>Passed</h3>
