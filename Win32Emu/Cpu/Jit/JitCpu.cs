@@ -1363,7 +1363,12 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Bt: // Bit Test
 			{
 				uint baseVal = GetOperandValue(insn, 0);
-				uint bitIndex = GetOperandValue(insn, 1) & 31;
+				uint bitIndex = GetOperandValue(insn, 1);
+				int opSize = GetOpSizeBits(insn, 0);
+				
+				// Mask bit index based on operand size
+				uint indexMask = opSize == 16 ? 15u : 31u;
+				bitIndex &= indexMask;
 				uint mask = 1u << (int)bitIndex;
 				
 				// Set CF to the value of the tested bit
@@ -1374,11 +1379,14 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Btr: // Bit Test and Reset
 			case Mnemonic.Bts: // Bit Test and Set
 			{
+				int opSize = GetOpSizeBits(insn, 0);
+				uint indexMask = opSize == 16 ? 15u : 31u;
+				
 				// For register-to-register, we need special handling
 				if (insn.Op0Kind == OpKind.Register && insn.Op1Kind == OpKind.Register)
 				{
 					uint baseVal = GetRegisterValue(insn, 0);
-					uint bitIndex = GetRegisterValue(insn, 1) & 31;
+					uint bitIndex = GetRegisterValue(insn, 1) & indexMask;
 					uint mask = 1u << (int)bitIndex;
 					
 					// Set CF to the value of the tested bit
@@ -1397,7 +1405,7 @@ public class JitCpu : IAsyncCpu
 				else
 				{
 					uint baseVal = GetOperandValue(insn, 0);
-					uint bitIndex = GetOperandValue(insn, 1) & 31;
+					uint bitIndex = GetOperandValue(insn, 1) & indexMask;
 					uint mask = 1u << (int)bitIndex;
 					
 					// Set CF to the value of the tested bit

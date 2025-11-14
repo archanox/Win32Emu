@@ -3909,7 +3909,9 @@ public class IcedCpu : IAsyncCpu
 		// BT - Bit test
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		int opSize = GetSourceSizeBits(insn);
+		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
+		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
 	}
@@ -3919,7 +3921,9 @@ public class IcedCpu : IAsyncCpu
 		// BTS - Bit test and set
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		int opSize = GetSourceSizeBits(insn);
+		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
+		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
 		// Set the bit
@@ -3932,7 +3936,9 @@ public class IcedCpu : IAsyncCpu
 		// BTR - Bit test and reset
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		int opSize = GetSourceSizeBits(insn);
+		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
+		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
 		// Reset (clear) the bit
@@ -3945,7 +3951,9 @@ public class IcedCpu : IAsyncCpu
 		// BTC - Bit test and complement
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		var bitPos = (int)(bitOffset & 0x1F); // Modulo 32 for 32-bit operands
+		int opSize = GetSourceSizeBits(insn);
+		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
+		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
 		// Complement (toggle) the bit
