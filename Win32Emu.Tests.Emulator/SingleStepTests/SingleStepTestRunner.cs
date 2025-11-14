@@ -40,10 +40,37 @@ public class SingleStepTestRunner
 			// Apply initial state
 			ApplyInitialState(cpu, memory, testCase);
 			
-			// Execute the instruction
+			// Execute instructions until HLT is reached
+			// According to SingleStepTests/80386 documentation:
+			// "Each test is actually a sequence of two instructions, the instruction under test,
+			//  and a HALT opcode 0xF4. [...] End execution at the HALT instruction."
 			try
 			{
-				cpu.SingleStep(memory);
+				const int maxInstructions = 10;  // Safety limit to prevent infinite loops
+				int instructionCount = 0;
+				
+				while (instructionCount < maxInstructions)
+				{
+					var eip = cpu.GetEip();
+					var opcode = memory.Read8(eip);
+					
+					// Execute one instruction
+					cpu.SingleStep(memory);
+					instructionCount++;
+					
+					// Check if we just executed a HLT instruction (opcode 0xF4)
+					if (opcode == 0xF4)
+					{
+						break;
+					}
+				}
+				
+				if (instructionCount >= maxInstructions)
+				{
+					result.ExecutionError = $"Executed {maxInstructions} instructions without reaching HLT";
+					_logger.LogWarning("Test {TestName} exceeded instruction limit without reaching HLT", testCase.Name);
+					return result;
+				}
 			}
 			catch (Exception ex)
 			{
