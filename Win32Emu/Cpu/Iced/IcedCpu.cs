@@ -3909,7 +3909,7 @@ public class IcedCpu : IAsyncCpu
 		// BT - Bit test
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		int opSize = GetSourceSizeBits(insn);
+		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
 		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
@@ -3921,7 +3921,7 @@ public class IcedCpu : IAsyncCpu
 		// BTS - Bit test and set
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		int opSize = GetSourceSizeBits(insn);
+		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
 		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
@@ -3936,7 +3936,7 @@ public class IcedCpu : IAsyncCpu
 		// BTR - Bit test and reset
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		int opSize = GetSourceSizeBits(insn);
+		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
 		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
@@ -3951,7 +3951,7 @@ public class IcedCpu : IAsyncCpu
 		// BTC - Bit test and complement
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
-		int opSize = GetSourceSizeBits(insn);
+		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
 		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
@@ -4409,21 +4409,75 @@ public class IcedCpu : IAsyncCpu
 
 	#endregion
 
-	private uint ReadOp(Instruction insn, int index) => insn.GetOpKind(index) switch
+	private uint ReadOp(Instruction insn, int index)
 	{
-		OpKind.Register => GetReg32(insn.GetOpRegister(index)), OpKind.Memory => Read32(CalcMemAddress(insn)),
-		OpKind.Immediate8 => insn.Immediate8, OpKind.Immediate8to32 => (uint)(sbyte)insn.Immediate8,
-		OpKind.Immediate32 => insn.Immediate32, _ => 0u
-	};
+		return insn.GetOpKind(index) switch
+		{
+			OpKind.Register => ReadRegister(insn.GetOpRegister(index)),
+			OpKind.Memory => Read32(CalcMemAddress(insn)),
+			OpKind.Immediate8 => insn.Immediate8,
+			OpKind.Immediate8to32 => (uint)(sbyte)insn.Immediate8,
+			OpKind.Immediate32 => insn.Immediate32,
+			_ => 0u
+		};
+	}
+	
+	private uint ReadRegister(Register reg)
+	{
+		// Try 8-bit registers first
+		if (reg is Register.AL or Register.CL or Register.DL or Register.BL or 
+		    Register.AH or Register.CH or Register.DH or Register.BH)
+		{
+			return GetReg8(reg);
+		}
+		
+		// Try 16-bit registers
+		if (reg is Register.AX or Register.CX or Register.DX or Register.BX or
+		    Register.SI or Register.DI or Register.SP or Register.BP)
+		{
+			return GetReg16(reg);
+		}
+		
+		// Default to 32-bit
+		return GetReg32(reg);
+	}
 
 	private void WriteOp(Instruction insn, int index, uint value)
 	{
 		switch (insn.GetOpKind(index))
 		{
-			case OpKind.Register: SetReg32(insn.GetOpRegister(index), value); break;
-			case OpKind.Memory: Write32(CalcMemAddress(insn), value); break;
-			default: _logger.LogWarning("[IcedCpu] WriteOp unsupported {GetOpKind}", insn.GetOpKind(index)); break;
+			case OpKind.Register:
+				WriteRegister(insn.GetOpRegister(index), value);
+				break;
+			case OpKind.Memory:
+				Write32(CalcMemAddress(insn), value);
+				break;
+			default:
+				_logger.LogWarning("[IcedCpu] WriteOp unsupported {GetOpKind}", insn.GetOpKind(index));
+				break;
 		}
+	}
+	
+	private void WriteRegister(Register reg, uint value)
+	{
+		// Try 8-bit registers first
+		if (reg is Register.AL or Register.CL or Register.DL or Register.BL or 
+		    Register.AH or Register.CH or Register.DH or Register.BH)
+		{
+			SetReg8(reg, (byte)value);
+			return;
+		}
+		
+		// Try 16-bit registers
+		if (reg is Register.AX or Register.CX or Register.DX or Register.BX or
+		    Register.SI or Register.DI or Register.SP or Register.BP)
+		{
+			SetReg16(reg, (ushort)value);
+			return;
+		}
+		
+		// Default to 32-bit
+		SetReg32(reg, value);
 	}
 
 	private int GetShiftCount(Instruction insn)
