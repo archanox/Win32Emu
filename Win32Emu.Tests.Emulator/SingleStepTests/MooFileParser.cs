@@ -42,36 +42,72 @@ public class MooFileParser
 		var result = new MooTestFile();
 		var pos = 0;
 		
-		// Read header
+		// Read MOO chunk header
 		if (!ReadMagic(data, ref pos, "MOO "))
 		{
 			throw new InvalidDataException("Invalid MOO file: missing MOO header");
 		}
 		
-		// Skip version/size info (12 bytes)
-		pos += 12;
+		var mooChunkLength = ReadUInt32(data, ref pos);
+		var mooChunkEnd = pos + (int)mooChunkLength;
 		
-		// Read metadata section
-		if (ReadMagic(data, ref pos, "386E"))
+		// Read MOO header data
+		result.VersionMajor = data[pos++];
+		result.VersionMinor = data[pos++];
+		pos += 2; // Reserved bytes
+		result.TestCount = ReadUInt32(data, ref pos);
+		
+		// Read CPU name - the remaining bytes in the MOO chunk
+		var cpuNameLength = mooChunkEnd - pos;
+		if (cpuNameLength > 0 && cpuNameLength <= 8)
 		{
-			ReadMagic(data, ref pos, "META");
-			var metaLength = ReadUInt32(data, ref pos);
-			// Skip metadata for now
-			pos += (int)metaLength;
+			result.CpuName = Encoding.ASCII.GetString(data, pos, cpuNameLength);
+			pos += cpuNameLength;
 		}
+		else if (cpuNameLength > 8)
+		{
+			// Shouldn't happen, but handle gracefully
+			result.CpuName = Encoding.ASCII.GetString(data, pos, 8);
+			pos += 8;
+		}
+		
+		// Skip to end of MOO chunk
+		pos = mooChunkEnd;
 		
 		// Read all test cases
 		while (pos < data.Length)
 		{
-			if (ReadMagic(data, ref pos, "TEST"))
+			// Peek at chunk type
+			if (pos + 8 > data.Length)
+				break;
+				
+			var chunkType = Encoding.ASCII.GetString(data, pos, 4);
+			
+			if (chunkType == "TEST")
 			{
 				var test = ReadTestCase(data, ref pos);
 				result.Tests.Add(test);
 			}
+			else if (chunkType == "META")
+			{
+				// Skip META chunk
+				pos += 4; // Skip type
+				var metaLength = ReadUInt32(data, ref pos);
+				pos += (int)metaLength;
+			}
 			else
 			{
-				// Skip unknown sections
-				pos++;
+				// Skip unknown chunk
+				pos += 4; // Skip type
+				if (pos + 4 <= data.Length)
+				{
+					var unknownLength = ReadUInt32(data, ref pos);
+					pos += (int)unknownLength;
+				}
+				else
+				{
+					break;
+				}
 			}
 		}
 		
@@ -81,56 +117,76 @@ public class MooFileParser
 	private static MooTestCase ReadTestCase(byte[] data, ref int pos)
 	{
 		var test = new MooTestCase();
+		
+		// Skip "TEST" magic (already verified by caller)
+		pos += 4;
+		
 		var testLength = ReadUInt32(data, ref pos);
 		var testEndPos = pos + (int)testLength;
 		
+		// Read test index
+		test.Index = ReadUInt32(data, ref pos);
+		
 		while (pos < testEndPos && pos < data.Length)
 		{
-			if (ReadMagic(data, ref pos, "GMET"))
+			// Peek at chunk type
+			if (pos + 8 > data.Length)
+				break;
+				
+			var chunkType = Encoding.ASCII.GetString(data, pos, 4);
+			pos += 4;
+			var chunkLength = ReadUInt32(data, ref pos);
+			var chunkEndPos = pos + (int)chunkLength;
+			
+			if (chunkType == "GMET")
 			{
-				var gmetLength = ReadUInt32(data, ref pos);
-				pos += (int)gmetLength; // Skip GMET data
+				// Skip GMET data
+				pos = chunkEndPos;
 			}
-			else if (ReadMagic(data, ref pos, "NAME"))
+			else if (chunkType == "NAME")
 			{
 				var nameLength = ReadUInt32(data, ref pos);
-				var skipBytes = ReadUInt32(data, ref pos);
-				var nameBytes = new byte[nameLength - 4];
+				var nameBytes = new byte[nameLength];
 				Array.Copy(data, pos, nameBytes, 0, nameBytes.Length);
 				test.Name = Encoding.ASCII.GetString(nameBytes).TrimEnd('\0');
-				pos += nameBytes.Length;
+				pos = chunkEndPos;
 			}
-			else if (ReadMagic(data, ref pos, "BYTS"))
+			else if (chunkType == "BYTS")
 			{
-				var bytsLength = ReadUInt32(data, ref pos);
 				var instrLength = ReadUInt32(data, ref pos);
 				test.InstructionBytes = new byte[instrLength];
 				Array.Copy(data, pos, test.InstructionBytes, 0, (int)instrLength);
-				pos += (int)(bytsLength - 4);
+				pos = chunkEndPos;
 			}
-			else if (ReadMagic(data, ref pos, "INIT"))
+			else if (chunkType == "INIT")
 			{
-				test.InitialState = ReadStateSection(data, ref pos);
+				test.InitialState = ReadStateSection(data, ref pos, chunkEndPos);
 			}
-			else if (ReadMagic(data, ref pos, "FINA"))
+			else if (chunkType == "FINA")
 			{
-				test.FinalState = ReadStateSection(data, ref pos);
+				test.FinalState = ReadStateSection(data, ref pos, chunkEndPos);
 			}
-			else if (ReadMagic(data, ref pos, "CYCL"))
+			else if (chunkType == "CYCL")
 			{
-				var cyclLength = ReadUInt32(data, ref pos);
-				pos += (int)cyclLength; // Skip cycle data for now
+				// Skip cycle data for now
+				pos = chunkEndPos;
 			}
-			else if (ReadMagic(data, ref pos, "HASH"))
+			else if (chunkType == "HASH")
 			{
-				var hashLength = ReadUInt32(data, ref pos);
-				test.Hash = new byte[hashLength];
-				Array.Copy(data, pos, test.Hash, 0, (int)hashLength);
-				pos += (int)hashLength;
+				test.Hash = new byte[chunkLength];
+				Array.Copy(data, pos, test.Hash, 0, (int)chunkLength);
+				pos = chunkEndPos;
 			}
 			else
 			{
-				pos++;
+				// Skip unknown chunk
+				pos = chunkEndPos;
+			}
+			
+			// Ensure we're at chunk boundary
+			if (pos != chunkEndPos)
+			{
+				pos = chunkEndPos;
 			}
 		}
 		
@@ -211,33 +267,44 @@ public class MooFileParser
 		}).ToList();
 	}
 	
-	private static CpuTestState ReadStateSection(byte[] data, ref int pos)
+	private static CpuTestState ReadStateSection(byte[] data, ref int pos, int endPos)
 	{
 		var state = new CpuTestState();
-		var initLength = ReadUInt32(data, ref pos);
-		var initEndPos = pos + (int)initLength;
 		
-		while (pos < initEndPos && pos < data.Length)
+		while (pos < endPos && pos < data.Length)
 		{
-			if (ReadMagic(data, ref pos, "RG32"))
+			// Peek at chunk type
+			if (pos + 8 > data.Length || pos + 8 > endPos)
+				break;
+				
+			var chunkType = Encoding.ASCII.GetString(data, pos, 4);
+			pos += 4;
+			var chunkLength = ReadUInt32(data, ref pos);
+			var chunkEndPos = pos + (int)chunkLength;
+			
+			if (chunkType == "RG32")
 			{
-				var regLength = ReadUInt32(data, ref pos);
-				state.Registers = ReadRegisterState(data, ref pos, (int)regLength);
+				state.Registers = ReadRegisterState(data, ref pos, (int)chunkLength);
 			}
-			else if (ReadMagic(data, ref pos, "EA32"))
+			else if (chunkType == "EA32")
 			{
-				var eaLength = ReadUInt32(data, ref pos);
 				// EA32 contains effective address info, skip for now
-				pos += (int)eaLength;
+				pos = chunkEndPos;
 			}
-			else if (ReadMagic(data, ref pos, "RAM "))
+			else if (chunkType == "RAM ")
 			{
-				var ramLength = ReadUInt32(data, ref pos);
-				state.Memory = ReadMemoryState(data, ref pos, (int)ramLength);
+				state.Memory = ReadMemoryState(data, ref pos, (int)chunkLength);
 			}
 			else
 			{
-				pos++;
+				// Skip unknown chunk
+				pos = chunkEndPos;
+			}
+			
+			// Ensure we're at chunk boundary
+			if (pos != chunkEndPos)
+			{
+				pos = chunkEndPos;
 			}
 		}
 		
@@ -350,6 +417,10 @@ public class MooFileParser
 /// </summary>
 public class MooTestFile
 {
+	public byte VersionMajor { get; set; }
+	public byte VersionMinor { get; set; }
+	public uint TestCount { get; set; }
+	public string CpuName { get; set; } = string.Empty;
 	public List<MooTestCase> Tests { get; set; } = new();
 }
 
@@ -358,6 +429,7 @@ public class MooTestFile
 /// </summary>
 public class MooTestCase
 {
+	public uint Index { get; set; }
 	public string Name { get; set; } = string.Empty;
 	public byte[] InstructionBytes { get; set; } = Array.Empty<byte>();
 	public CpuTestState InitialState { get; set; } = new();
