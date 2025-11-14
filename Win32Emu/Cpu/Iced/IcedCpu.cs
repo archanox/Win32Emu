@@ -1039,13 +1039,45 @@ public class IcedCpu : IAsyncCpu
 
 	private void ExecPush(Instruction insn)
 	{
+		// Determine operand size - in 16-bit mode, default is 16-bit
+		// with o32 prefix making it 32-bit. In 32-bit mode, vice versa.
+		// Note: PUSH never operates on 8-bit values (even PUSH imm8 sign-extends to 16/32 bits)
+		var opSize = GetOpSizeBits(insn, 0);
 		var val = ReadOp(insn, 0);
-		Push32(val);
+		
+		switch (opSize)
+		{
+			case 16:
+				_esp -= 2;
+				Write16(_esp, (ushort)val);
+				break;
+			case 32:
+				Push32(val);
+				break;
+			default:
+				throw new InvalidOperationException($"PUSH instruction does not support {opSize}-bit operand size at EIP=0x{_eip:X8}");
+		}
 	}
 
 	private void ExecPop(Instruction insn)
 	{
-		var v = Pop32();
+		// Note: POP never operates on 8-bit values
+		var opSize = GetOpSizeBits(insn, 0);
+		uint v;
+		
+		switch (opSize)
+		{
+			case 16:
+				v = _mem.Read16(_esp);
+				_esp += 2;
+				break;
+			case 32:
+				v = Pop32();
+				break;
+			default:
+				throw new InvalidOperationException($"POP instruction does not support {opSize}-bit operand size at EIP=0x{_eip:X8}");
+		}
+		
 		WriteOp(insn, 0, v);
 	}
 
@@ -1900,7 +1932,10 @@ public class IcedCpu : IAsyncCpu
 			{
 				uint a = ReadOp(insn, 0), r = a + 1;
 				WriteOp(insn, 0, r);
-				SetFlagsIncDecAdd(a, r);
+				// Overflow only occurs when incrementing max positive (0x7FFFFFFF) to min negative (0x80000000)
+				SetFlagVal(Of, a == 0x7FFFFFFF);
+				SetFlagVal(Af, ((a ^ 1u ^ r) & 0x10) != 0);
+				UpdateLogicResultFlags(r);
 				break;
 			}
 		}
@@ -1949,7 +1984,10 @@ public class IcedCpu : IAsyncCpu
 			{
 				uint a = ReadOp(insn, 0), r = a - 1;
 				WriteOp(insn, 0, r);
-				SetFlagsIncDecSub(a, r);
+				// Overflow only occurs when decrementing min negative (0x80000000) to max positive (0x7FFFFFFF)
+				SetFlagVal(Of, a == 0x80000000);
+				SetFlagVal(Af, ((a ^ 1u ^ r) & 0x10) != 0);
+				UpdateLogicResultFlags(r);
 				break;
 			}
 		}
@@ -2725,29 +2763,113 @@ public class IcedCpu : IAsyncCpu
 
 	private void ExecMul(Instruction insn)
 	{
-		// Only 32-bit form: EDX:EAX = EAX * r/m32 (unsigned)
-		var src = ReadOp(insn, 0);
-		var prod = _eax * (ulong)src;
-		_eax = (uint)prod;
-		_edx = (uint)(prod >> 32);
-		var carry = _edx != 0;
-		SetFlagVal(Cf, carry);
-		SetFlagVal(Of, carry);
-		// Other flags undefined; leave as-is except clear AF.
-		ClearFlag(Af);
+		// MUL performs unsigned multiplication
+		// 8-bit form: AX = AL * r/m8
+		// 16-bit form: DX:AX = AX * r/m16
+		// 32-bit form: EDX:EAX = EAX * r/m32
+		
+		var opSize = GetOpSizeBits(insn, 0);
+		
+		switch (opSize)
+		{
+			case 8:
+			{
+				// 8-bit: AX = AL * r/m8
+				var src = (byte)ReadOp(insn, 0);
+				var prod = (uint)((byte)(_eax & 0xFF) * src);
+				_eax = (_eax & 0xFFFF0000) | (prod & 0xFFFF);
+				var carry = (prod & 0xFF00) != 0;
+				SetFlagVal(Cf, carry);
+				SetFlagVal(Of, carry);
+				ClearFlag(Af);
+				break;
+			}
+			case 16:
+			{
+				// 16-bit: DX:AX = AX * r/m16
+				var src = (ushort)ReadOp(insn, 0);
+				var prod = (ushort)(_eax & 0xFFFF) * (uint)src;
+				_eax = (_eax & 0xFFFF0000) | (prod & 0xFFFF);
+				_edx = (_edx & 0xFFFF0000) | ((prod >> 16) & 0xFFFF);
+				var carry = (prod & 0xFFFF0000) != 0;
+				SetFlagVal(Cf, carry);
+				SetFlagVal(Of, carry);
+				ClearFlag(Af);
+				break;
+			}
+			default:
+			{
+				// 32-bit: EDX:EAX = EAX * r/m32
+				var src = ReadOp(insn, 0);
+				var prod = _eax * (ulong)src;
+				_eax = (uint)prod;
+				_edx = (uint)(prod >> 32);
+				var carry = _edx != 0;
+				SetFlagVal(Cf, carry);
+				SetFlagVal(Of, carry);
+				ClearFlag(Af);
+				break;
+			}
+		}
 	}
 
 	private void ExecImul(Instruction insn)
 	{
 		if (insn.OpCount == 1)
 		{
-			var prod = (int)_eax * (long)(int)ReadOp(insn, 0);
-			_eax = (uint)prod;
-			_edx = (uint)(prod >> 32);
-			var overflow = (_edx != 0 && _edx != 0xFFFFFFFFu) || (((prod >> 31) & 1) != ((prod >> 32) & 1));
-			SetFlagVal(Cf, overflow);
-			SetFlagVal(Of, overflow);
-			ClearFlag(Af);
+			// IMUL performs signed multiplication
+			// 8-bit form: AX = AL * r/m8
+			// 16-bit form: DX:AX = AX * r/m16
+			// 32-bit form: EDX:EAX = EAX * r/m32
+			
+			var opSize = GetOpSizeBits(insn, 0);
+			
+			switch (opSize)
+			{
+				case 8:
+				{
+					// 8-bit: AX = AL * r/m8 (signed)
+					var src = (sbyte)(byte)ReadOp(insn, 0);
+					var al = (sbyte)(byte)(_eax & 0xFF);
+					var prod = (short)(al * src);
+					_eax = (_eax & 0xFFFF0000) | (ushort)prod;
+					// Overflow if result doesn't fit in 8 bits (sign-extended)
+					var overflow = prod != (sbyte)prod;
+					SetFlagVal(Cf, overflow);
+					SetFlagVal(Of, overflow);
+					ClearFlag(Af);
+					break;
+				}
+				case 16:
+				{
+					// 16-bit: DX:AX = AX * r/m16 (signed)
+					var src = (short)(ushort)ReadOp(insn, 0);
+					var ax = (short)(ushort)(_eax & 0xFFFF);
+					var prod = (int)(ax * src);
+					_eax = (_eax & 0xFFFF0000) | ((uint)prod & 0xFFFF);
+				    _edx = (_edx & 0xFFFF0000) | (((uint)prod >> 16) & 0xFFFF);
+				    // Overflow if upper 16 bits are not sign extension of lower 16 bits
+				    var upper = (prod >> 16) & 0xFFFF;
+				    var overflow = upper != 0 && upper != 0xFFFF;
+				    SetFlagVal(Cf, overflow);
+					SetFlagVal(Of, overflow);
+					ClearFlag(Af);
+					break;
+				}
+				default:
+				{
+					// 32-bit: EDX:EAX = EAX * r/m32 (signed)
+					var prod = (int)_eax * (long)(int)ReadOp(insn, 0);
+					_eax = (uint)prod;
+					_edx = (uint)(prod >> 32);
+					// Overflow if result doesn't fit in 32 bits (sign-extended)
+					var overflow = prod != (int)prod;
+					SetFlagVal(Cf, overflow);
+					SetFlagVal(Of, overflow);
+					ClearFlag(Af);
+					break;
+				}
+			}
 		}
 		else
 		{
@@ -2764,46 +2886,166 @@ public class IcedCpu : IAsyncCpu
 
 	private void ExecDiv(Instruction insn)
 	{
-		var divisor = ReadOp(insn, 0);
-		if (divisor == 0)
+		// DIV performs unsigned division
+		// 8-bit form: AL = AX / r/m8, AH = AX % r/m8
+		// 16-bit form: AX = DX:AX / r/m16, DX = DX:AX % r/m16
+		// 32-bit form: EAX = EDX:EAX / r/m32, EDX = EDX:EAX % r/m32
+		
+		var opSize = GetOpSizeBits(insn, 0);
+		
+		switch (opSize)
 		{
-			_logger.LogWarning("[IcedCpu] Division by zero at EIP=0x{Eip:X8}", _eip);
-			return;
-		}
+			case 8:
+			{
+				// 8-bit: AL = AX / r/m8, AH = AX % r/m8
+				var divisor = (byte)ReadOp(insn, 0);
+				if (divisor == 0)
+				{
+					_logger.LogWarning("[IcedCpu] Division by zero at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
+				
+				var dividend = (ushort)(_eax & 0xFFFF);
+				var q = dividend / divisor;
+				if (q > 0xFF)
+				{
+					_logger.LogWarning("[IcedCpu] DIV overflow at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
+				
+				var r = dividend % divisor;
+				_eax = (_eax & 0xFFFF0000) | ((uint)r << 8) | (uint)q;
+				break;
+			}
+			case 16:
+			{
+				// 16-bit: AX = DX:AX / r/m16, DX = DX:AX % r/m16
+				var divisor = (ushort)ReadOp(insn, 0);
+				if (divisor == 0)
+				{
+					_logger.LogWarning("[IcedCpu] Division by zero at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
+				
+				var dividend = ((uint)(_edx & 0xFFFF) << 16) | (_eax & 0xFFFF);
+				var q = dividend / divisor;
+				if (q > 0xFFFF)
+				{
+					_logger.LogWarning("[IcedCpu] DIV overflow at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
+				
+				var r = dividend % divisor;
+				_eax = (_eax & 0xFFFF0000) | q;
+				_edx = (_edx & 0xFFFF0000) | r;
+				break;
+			}
+			default:
+			{
+				// 32-bit: EAX = EDX:EAX / r/m32, EDX = EDX:EAX % r/m32
+				var divisor = ReadOp(insn, 0);
+				if (divisor == 0)
+				{
+					_logger.LogWarning("[IcedCpu] Division by zero at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
 
-		var dividend = ((ulong)_edx << 32) | _eax;
-		var q = dividend / divisor;
-		if (q > 0xFFFFFFFFu)
-		{
-			_logger.LogWarning("[IcedCpu] DIV overflow at EIP=0x{Eip:X8}", _eip);
-			return;
-		}
+				var dividend = ((ulong)_edx << 32) | _eax;
+				var q = dividend / divisor;
+				if (q > 0xFFFFFFFFu)
+				{
+					_logger.LogWarning("[IcedCpu] DIV overflow at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
 
-		var r = (uint)(dividend % divisor);
-		_eax = (uint)q;
-		_edx = r;
+				var r = (uint)(dividend % divisor);
+				_eax = (uint)q;
+				_edx = r;
+				break;
+			}
+		}
 	}
 
 	private void ExecIdiv(Instruction insn)
 	{
-		var divisor = (int)ReadOp(insn, 0);
-		if (divisor == 0)
+		// IDIV performs signed division
+		// 8-bit form: AL = AX / r/m8, AH = AX % r/m8
+		// 16-bit form: AX = DX:AX / r/m16, DX = DX:AX % r/m16
+		// 32-bit form: EAX = EDX:EAX / r/m32, EDX = EDX:EAX % r/m32
+		
+		var opSize = GetOpSizeBits(insn, 0);
+		
+		switch (opSize)
 		{
-			_logger.LogWarning("[IcedCpu] Division by zero at EIP=0x{Eip:X8}", _eip);
-			return;
-		}
+			case 8:
+			{
+				// 8-bit: AL = AX / r/m8, AH = AX % r/m8 (signed)
+				var divisor = (sbyte)(byte)ReadOp(insn, 0);
+				if (divisor == 0)
+				{
+					_logger.LogWarning("[IcedCpu] Division by zero at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
+				
+				var dividend = (short)(ushort)(_eax & 0xFFFF);
+				var q = dividend / divisor;
+				if (q is > sbyte.MaxValue or < sbyte.MinValue)
+				{
+					_logger.LogWarning("[IcedCpu] IDIV overflow at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
+				
+				var r = dividend % divisor;
+				_eax = (_eax & 0xFFFF0000) | ((uint)(byte)r << 8) | (uint)(byte)q;
+				break;
+			}
+			case 16:
+			{
+				// 16-bit: AX = DX:AX / r/m16, DX = DX:AX % r/m16 (signed)
+				var divisor = (short)(ushort)ReadOp(insn, 0);
+				if (divisor == 0)
+				{
+					_logger.LogWarning("[IcedCpu] Division by zero at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
+				
+				var dividend = ((int)(short)(_edx & 0xFFFF) << 16) | (int)(_eax & 0xFFFF);
+				var q = dividend / divisor;
+				if (q is > short.MaxValue or < short.MinValue)
+				{
+					_logger.LogWarning("[IcedCpu] IDIV overflow at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
+				
+				var r = dividend % divisor;
+				_eax = (_eax & 0xFFFF0000) | (ushort)q;
+				_edx = (_edx & 0xFFFF0000) | (ushort)r;
+				break;
+			}
+			default:
+			{
+				// 32-bit: EAX = EDX:EAX / r/m32, EDX = EDX:EAX % r/m32 (signed)
+				var divisor = (int)ReadOp(insn, 0);
+				if (divisor == 0)
+				{
+					_logger.LogWarning("[IcedCpu] Division by zero at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
 
-		var dividend = ((long)_edx << 32) | _eax;
-		var q = dividend / divisor;
-		if (q is > int.MaxValue or < int.MinValue)
-		{
-			_logger.LogWarning("[IcedCpu] IDIV overflow at EIP=0x{Eip:X8}", _eip);
-			return;
-		}
+				var dividend = ((long)_edx << 32) | _eax;
+				var q = dividend / divisor;
+				if (q is > int.MaxValue or < int.MinValue)
+				{
+					_logger.LogWarning("[IcedCpu] IDIV overflow at EIP=0x{Eip:X8}", _eip);
+					return;
+				}
 
-		var r = (int)(dividend % divisor);
-		_eax = (uint)(int)q;
-		_edx = (uint)r;
+				var r = (int)(dividend % divisor);
+				_eax = (uint)(int)q;
+				_edx = (uint)r;
+				break;
+			}
+		}
 	}
 
 	private void ExecLeave()
@@ -4436,9 +4678,10 @@ public class IcedCpu : IAsyncCpu
 			return GetReg8(reg);
 		}
 		
-		// Try 16-bit registers
+		// Try 16-bit registers (including segment registers)
 		if (reg is Register.AX or Register.CX or Register.DX or Register.BX or
-		    Register.SI or Register.DI or Register.SP or Register.BP)
+		    Register.SI or Register.DI or Register.SP or Register.BP or
+		    Register.CS or Register.DS or Register.ES or Register.FS or Register.GS or Register.SS)
 		{
 			return GetReg16(reg);
 		}
@@ -4489,9 +4732,10 @@ public class IcedCpu : IAsyncCpu
 			return;
 		}
 		
-		// Try 16-bit registers
+		// Try 16-bit registers (including segment registers)
 		if (reg is Register.AX or Register.CX or Register.DX or Register.BX or
-		    Register.SI or Register.DI or Register.SP or Register.BP)
+		    Register.SI or Register.DI or Register.SP or Register.BP or
+		    Register.CS or Register.DS or Register.ES or Register.FS or Register.GS or Register.SS)
 		{
 			SetReg16(reg, (ushort)value);
 			return;
@@ -4568,7 +4812,8 @@ public class IcedCpu : IAsyncCpu
 				return 8;
 			}
 
-			if (r is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP or Register.BP)
+			if (r is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP or Register.BP or
+			    Register.CS or Register.DS or Register.ES or Register.FS or Register.GS or Register.SS)
 			{
 				return 16;
 			}
@@ -4728,14 +4973,22 @@ public class IcedCpu : IAsyncCpu
 	private uint GetReg32(Register reg) => reg switch
 	{
 		Register.EAX => _eax, Register.EBX => _ebx, Register.ECX => _ecx, Register.EDX => _edx,
-		Register.ESI => _esi, Register.EDI => _edi, Register.EBP => _ebp, Register.ESP => _esp, _ => 0
+		Register.ESI => _esi, Register.EDI => _edi, Register.EBP => _ebp, Register.ESP => _esp,
+		// Segment registers are 16-bit but zero-extended to 32-bit
+		Register.CS => _cs, Register.DS => _ds, Register.ES => _es,
+		Register.FS => _fs, Register.GS => _gs, Register.SS => _ss,
+		_ => 0
 	};
 
 	private ushort GetReg16(Register reg) => reg switch
 	{
 		Register.AX => (ushort)_eax, Register.BX => (ushort)_ebx, Register.CX => (ushort)_ecx,
 		Register.DX => (ushort)_edx, Register.SI => (ushort)_esi, Register.DI => (ushort)_edi,
-		Register.BP => (ushort)_ebp, Register.SP => (ushort)_esp, _ => 0
+		Register.BP => (ushort)_ebp, Register.SP => (ushort)_esp,
+		// Segment registers
+		Register.CS => _cs, Register.DS => _ds, Register.ES => _es,
+		Register.FS => _fs, Register.GS => _gs, Register.SS => _ss,
+		_ => 0
 	};
 
 	private byte GetReg8(Register reg) => reg switch
@@ -4780,6 +5033,13 @@ public class IcedCpu : IAsyncCpu
 				_ebp = (_ebp & 0xFFFF0000) | v;
 				break;
 			case Register.SP: _esp = (_esp & 0xFFFF0000) | v; break;
+			// Segment registers
+			case Register.CS: _cs = v; break;
+			case Register.DS: _ds = v; break;
+			case Register.ES: _es = v; break;
+			case Register.FS: _fs = v; break;
+			case Register.GS: _gs = v; break;
+			case Register.SS: _ss = v; break;
 			default:
 				throw new ArgumentOutOfRangeException(nameof(reg), reg, "Invalid 16-bit register specified in SetReg16.");
 		}
@@ -4804,6 +5064,13 @@ public class IcedCpu : IAsyncCpu
 			case Register.EDI: _edi = v; break;
 			case Register.EBP: _ebp = v; break;
 			case Register.ESP: _esp = v; break;
+			// Segment registers - truncate to 16-bit
+			case Register.CS: _cs = (ushort)v; break;
+			case Register.DS: _ds = (ushort)v; break;
+			case Register.ES: _es = (ushort)v; break;
+			case Register.FS: _fs = (ushort)v; break;
+			case Register.GS: _gs = (ushort)v; break;
+			case Register.SS: _ss = (ushort)v; break;
 		}
 	}
 
