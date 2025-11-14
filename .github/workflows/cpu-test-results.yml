@@ -74,7 +74,7 @@ jobs:
             --configuration Release --no-build -- \
             Win32Emu.Tests.Emulator/TestData/SingleStepTests \
             pages/cpu-tests \
-            100
+            2147483647
 
       - name: Generate API Status
         run: |

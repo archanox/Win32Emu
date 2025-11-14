@@ -86,25 +86,26 @@ Test 2: add [cs:bp+di+4Eh],cl
 
 ### Test Coverage
 
-- **2,500 test cases per opcode file**
+- **2,500 test cases per opcode file** (all tests run by default)
 - **Covers**: Real mode x86 instructions (8086-386)
 - **Includes**: Edge cases, flag interactions, addressing modes
 - **Quality**: Hardware-generated from real 80386 CPU
 
-### Adding More Tests
+### Test Configuration
 
-Edit `SingleStepConformanceTests.cs`:
+The tests automatically run all available test cases in each MOO file. The test runner uses dynamic test data generation to discover and execute all tests:
 
 ```csharp
-[Theory]
-[InlineData("00.MOO.gz", 100)]  // ADD r/m8, r8
-[InlineData("08.MOO.gz", 100)]  // OR r/m8, r8
-[InlineData("20.MOO.gz", 50)]   // AND r/m8, r8
-public void CPU_ShouldPassHardwareTests(string fileName, int maxTests)
+// Tests are automatically discovered and run with all available test cases
+// Each MOO file contains ~2,500 tests that are all executed
+public static IEnumerable<object[]> GetTestFiles()
 {
-    // Test implementation...
+    // Automatically discovers all .MOO.gz files and runs all tests
+    yield return new object[] { fileName, int.MaxValue };
 }
 ```
+
+To manually limit tests for debugging, you can modify the `GetTestFiles()` method in `SingleStepConformanceTests.cs` and specify a lower limit.
 
 ### Troubleshooting
 
