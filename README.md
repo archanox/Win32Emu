@@ -214,3 +214,53 @@ The dashboard shows:
 - Weekly updates via GitHub Actions
 
 For more information about the test reporter tool, see [Win32Emu.Tools.TestReporter/README.md](Win32Emu.Tools.TestReporter/README.md).
+
+## API Implementation Status
+
+Win32Emu provides comprehensive Win32 API emulation with transparency about implementation status:
+
+**📊 View API Status:** [API Implementation Dashboard](https://archanox.github.io/Win32Emu/)
+
+The dashboard shows:
+- All 31 Win32 DLL modules (Kernel32, User32, GDI32, DirectDraw, etc.)
+- 749 total functions with implementation status
+- 88.5% implementation rate (663 implemented, 86 stubs)
+- Search and filter by module or function
+- Detailed function metadata (ordinal, version, export name)
+
+### Check Compatibility of Your PE Files
+
+Use the **PeAnalyzer** tool to check if your executable is compatible with Win32Emu:
+
+```bash
+# Analyze a PE executable
+dotnet run --project Win32Emu.Tools.PeAnalyzer \
+  your-game.exe \
+  docs/pages/api-status.json
+```
+
+**Output:**
+```json
+{
+  "verdict": "PARTIALLY COMPATIBLE - 2 missing function(s)",
+  "implementationPercentage": 86.67,
+  "dependencies": [
+    {
+      "dllName": "USER32.DLL",
+      "implementedCount": 12,
+      "stubCount": 0,
+      "missingCount": 0
+    }
+  ]
+}
+```
+
+**Features:**
+- Uses [PeNet](https://github.com/secana/PeNet) to parse PE import tables
+- Cross-references with Win32Emu implementation status
+- Shows per-DLL and per-function compatibility
+- Identifies missing, stubbed, and implemented functions
+- Calculates overall compatibility percentage
+
+For more information, see [Win32Emu.Tools.PeAnalyzer/README.md](Win32Emu.Tools.PeAnalyzer/README.md).
+
