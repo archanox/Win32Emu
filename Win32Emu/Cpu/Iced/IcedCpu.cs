@@ -2776,7 +2776,7 @@ public class IcedCpu : IAsyncCpu
 			{
 				// 8-bit: AX = AL * r/m8
 				var src = (byte)ReadOp(insn, 0);
-				var prod = (byte)(_eax & 0xFF) * (uint)src;
+				var prod = (uint)((byte)(_eax & 0xFF) * src);
 				_eax = (_eax & 0xFFFF0000) | (prod & 0xFFFF);
 				var carry = (prod & 0xFF00) != 0;
 				SetFlagVal(Cf, carry);
@@ -3008,7 +3008,7 @@ public class IcedCpu : IAsyncCpu
 					return;
 				}
 				
-				var dividend = ((int)(short)(ushort)(_edx & 0xFFFF) << 16) | (int)(ushort)(_eax & 0xFFFF);
+				var dividend = ((int)(short)(_edx & 0xFFFF) << 16) | (int)(_eax & 0xFFFF);
 				var q = dividend / divisor;
 				if (q is > short.MaxValue or < short.MinValue)
 				{
@@ -3031,7 +3031,7 @@ public class IcedCpu : IAsyncCpu
 					return;
 				}
 
-				var dividend = ((long)(int)_edx << 32) | _eax;
+				var dividend = ((long)_edx << 32) | _eax;
 				var q = dividend / divisor;
 				if (q is > int.MaxValue or < int.MinValue)
 				{
