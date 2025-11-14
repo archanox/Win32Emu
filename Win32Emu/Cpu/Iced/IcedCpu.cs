@@ -1041,33 +1041,41 @@ public class IcedCpu : IAsyncCpu
 	{
 		// Determine operand size - in 16-bit mode, default is 16-bit
 		// with o32 prefix making it 32-bit. In 32-bit mode, vice versa.
+		// Note: PUSH never operates on 8-bit values (even PUSH imm8 sign-extends to 16/32 bits)
 		var opSize = GetOpSizeBits(insn, 0);
 		var val = ReadOp(insn, 0);
 		
-		if (opSize == 16)
+		switch (opSize)
 		{
-			_esp -= 2;
-			Write16(_esp, (ushort)val);
-		}
-		else
-		{
-			Push32(val);
+			case 16:
+				_esp -= 2;
+				Write16(_esp, (ushort)val);
+				break;
+			case 32:
+				Push32(val);
+				break;
+			default:
+				throw new InvalidOperationException($"PUSH instruction does not support {opSize}-bit operand size at EIP=0x{_eip:X8}");
 		}
 	}
 
 	private void ExecPop(Instruction insn)
 	{
+		// Note: POP never operates on 8-bit values
 		var opSize = GetOpSizeBits(insn, 0);
 		uint v;
 		
-		if (opSize == 16)
+		switch (opSize)
 		{
-			v = _mem.Read16(_esp);
-			_esp += 2;
-		}
-		else
-		{
-			v = Pop32();
+			case 16:
+				v = _mem.Read16(_esp);
+				_esp += 2;
+				break;
+			case 32:
+				v = Pop32();
+				break;
+			default:
+				throw new InvalidOperationException($"POP instruction does not support {opSize}-bit operand size at EIP=0x{_eip:X8}");
 		}
 		
 		WriteOp(insn, 0, v);
