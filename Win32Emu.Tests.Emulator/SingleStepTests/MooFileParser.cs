@@ -62,13 +62,11 @@ public class MooFileParser
 		if (cpuNameLength > 0 && cpuNameLength <= 8)
 		{
 			result.CpuName = Encoding.ASCII.GetString(data, pos, cpuNameLength);
-			pos += cpuNameLength;
 		}
 		else if (cpuNameLength > 8)
 		{
-			// Shouldn't happen, but handle gracefully
+			// Shouldn't happen, but handle gracefully - read only first 8 bytes
 			result.CpuName = Encoding.ASCII.GetString(data, pos, 8);
-			pos += 8;
 		}
 		
 		// Skip to end of MOO chunk
@@ -146,16 +144,20 @@ public class MooFileParser
 			else if (chunkType == "NAME")
 			{
 				var nameLength = ReadUInt32(data, ref pos);
-				var nameBytes = new byte[nameLength];
-				Array.Copy(data, pos, nameBytes, 0, nameBytes.Length);
+				var availableBytes = chunkEndPos - pos;
+				var nameBytesToRead = (int)Math.Min(nameLength, availableBytes);
+				var nameBytes = new byte[nameBytesToRead];
+				Array.Copy(data, pos, nameBytes, 0, nameBytesToRead);
 				test.Name = Encoding.ASCII.GetString(nameBytes).TrimEnd('\0');
 				pos = chunkEndPos;
 			}
 			else if (chunkType == "BYTS")
 			{
 				var instrLength = ReadUInt32(data, ref pos);
-				test.InstructionBytes = new byte[instrLength];
-				Array.Copy(data, pos, test.InstructionBytes, 0, (int)instrLength);
+				var bytesAvailable = chunkEndPos - pos;
+				var bytesToRead = Math.Min((int)instrLength, bytesAvailable);
+				test.InstructionBytes = new byte[bytesToRead];
+				Array.Copy(data, pos, test.InstructionBytes, 0, bytesToRead);
 				pos = chunkEndPos;
 			}
 			else if (chunkType == "INIT")
