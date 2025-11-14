@@ -61,6 +61,12 @@ jobs:
           Win32Emu.Tools.TestReporter/Win32Emu.Tools.TestReporter.csproj
           --configuration Release --no-restore
 
+      - name: Build API Status Generator
+        run: >
+          dotnet build
+          Win32Emu.Tools.ApiStatusGenerator/Win32Emu.Tools.ApiStatusGenerator.csproj
+          --configuration Release --no-restore
+
       - name: Generate CPU Test Results
         run: |
           mkdir -p pages/cpu-tests
@@ -190,7 +196,7 @@ jobs:
                       <a href="api-status.html" class="nav-card">
                           <div class="icon">📚</div>
                           <h2>API Status</h2>
-                          <p>Win32 API implementation status. Browse 31 modules with 749 functions and check compatibility.</p>
+                          <p>Win32 API implementation status. Browse modules and functions and check compatibility.</p>
                       </a>
                   </div>
                   
