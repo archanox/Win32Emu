@@ -4894,17 +4894,16 @@ public class IcedCpu : IAsyncCpu
 		// In 16-bit real mode, physical address = (segment << 4) + offset
 		// For 32-bit protected mode, segment registers are selectors (not used for address calculation)
 		// We'll check if we're dealing with 16-bit registers to determine mode
-		// 
-		// NOTE: The SingleStepTests/80386 tests appear to use flat/linear addressing
-		// even in 16-bit mode, where segment registers don't affect the address calculation.
-		// This might be because the 386EX tests are set up with all segments at base 0,
-		// or the test framework uses a flat memory model for simplicity.
 		uint addr;
 		if (Is16BitRegister(insn.MemoryBase) || insn.MemoryBase == Register.None && Is16BitRegister(insn.MemoryIndex))
 		{
-			// 16-bit addressing: use only the 16-bit offset (flat model)
-			// Don't use segment << 4 calculation - tests appear to use flat addressing
-			addr = offset & 0xFFFF;
+			// 16-bit real mode addressing: Calculate linear address from segment:offset
+			// First, mask offset to 16 bits (wrap at 64KB boundary)
+			var offset16 = offset & 0xFFFF;
+			
+			// Then convert to linear address: (segment << 4) + offset
+			// This is the proper 8086/80286/80386 real mode addressing formula
+			addr = (uint)((segmentValue << 4) + offset16);
 		}
 		else
 		{

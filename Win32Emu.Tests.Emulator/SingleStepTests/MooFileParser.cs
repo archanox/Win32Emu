@@ -298,11 +298,18 @@ public class MooFileParser
 	private static List<MemoryEntry> ReadMemoryState(byte[] data, ref int pos, int length)
 	{
 		var memory = new List<MemoryEntry>();
-		var endPos = pos + length;
 		
-		// Each memory entry is 5 bytes: 4-byte address + 1-byte value
-		while (pos < endPos - 5 + 1 && pos < data.Length - 5 + 1)
+		// According to MOO format v1, RAM section starts with entry count
+		// Format: Entry Count (4 bytes) + Entries (5 bytes each: uint32 address + uint8 value)
+		var entryCount = ReadUInt32(data, ref pos);
+		
+		// Read the specified number of entries
+		for (uint i = 0; i < entryCount; i++)
 		{
+			// Ensure there are at least 5 bytes left for address (4) + value (1)
+			if (pos + 5 > data.Length)
+				break;
+				
 			var address = ReadUInt32(data, ref pos);
 			var value = data[pos++];
 			
@@ -312,9 +319,6 @@ public class MooFileParser
 				Value = value
 			});
 		}
-		
-		// Advance to end of section to prevent subsequent parsing errors
-		pos = endPos;
 		
 		return memory;
 	}
