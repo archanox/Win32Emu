@@ -111,6 +111,14 @@ public class SingleStepTestRunner
 		cpu.SetEip(regs.Eip);
 		cpu.SetRegister("EFLAGS", regs.Eflags);
 		
+		// Set segment registers
+		cpu.SetRegister("CS", regs.Cs);
+		cpu.SetRegister("DS", regs.Ds);
+		cpu.SetRegister("ES", regs.Es);
+		cpu.SetRegister("FS", regs.Fs);
+		cpu.SetRegister("GS", regs.Gs);
+		cpu.SetRegister("SS", regs.Ss);
+		
 		// Write instruction bytes to memory at EIP
 		// This is critical - the CPU needs to read the instruction from memory!
 		for (var i = 0; i < testCase.InstructionBytes.Length; i++)
