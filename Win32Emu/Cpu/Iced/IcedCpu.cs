@@ -1924,7 +1924,10 @@ public class IcedCpu : IAsyncCpu
 			{
 				uint a = ReadOp(insn, 0), r = a + 1;
 				WriteOp(insn, 0, r);
-				SetFlagsIncDecAdd(a, r);
+				// Overflow only occurs when incrementing max positive (0x7FFFFFFF) to min negative (0x80000000)
+				SetFlagVal(Of, a == 0x7FFFFFFF);
+				SetFlagVal(Af, ((a ^ 1u ^ r) & 0x10) != 0);
+				UpdateLogicResultFlags(r);
 				break;
 			}
 		}
@@ -1973,7 +1976,10 @@ public class IcedCpu : IAsyncCpu
 			{
 				uint a = ReadOp(insn, 0), r = a - 1;
 				WriteOp(insn, 0, r);
-				SetFlagsIncDecSub(a, r);
+				// Overflow only occurs when decrementing min negative (0x80000000) to max positive (0x7FFFFFFF)
+				SetFlagVal(Of, a == 0x80000000);
+				SetFlagVal(Af, ((a ^ 1u ^ r) & 0x10) != 0);
+				UpdateLogicResultFlags(r);
 				break;
 			}
 		}
