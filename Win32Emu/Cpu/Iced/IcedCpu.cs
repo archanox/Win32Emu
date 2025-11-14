@@ -39,6 +39,9 @@ public class IcedCpu : IAsyncCpu
 	// Stack grows downward from _stackBase to _stackLimit
 	private readonly uint _stackLimit;
 	private readonly uint _stackBase;
+	
+	// CPU bitness mode (16 for real mode, 32 for protected mode)
+	private readonly int _bitness;
 
 	// x87 FPU state (8 registers in a stack, ST(0) to ST(7))
 	private readonly double[] _fpu = new double[8];
@@ -73,6 +76,7 @@ public class IcedCpu : IAsyncCpu
 		_imageBase = imageBase;
 		_stackLimit = stackLimit;
 		_stackBase = stackBase;
+		_bitness = bitness;
 		_reader = new SimpleMemoryCodeReader(this);
 		_decoder = Decoder.Create(bitness, _reader, decoderOptions);
 		
@@ -691,6 +695,11 @@ public class IcedCpu : IAsyncCpu
 						_eip = oldEip + (uint)insn.Length;
 					}
 					break;
+				case Mnemonic.Hlt:
+					// HLT - Halt instruction
+					// Used in SingleStepTests to mark end of test sequence
+					// EIP advancement is handled by the general logic below
+					break;
 				default:
 					if (insn.Mnemonic.ToString().StartsWith('J'))
 					{
@@ -800,8 +809,8 @@ public class IcedCpu : IAsyncCpu
 		if (!isControlFlowInstruction)
 		{
 			// Use decoder IP directly as it's authoritative for instruction length
-			// TODO: Known issue - EIP can be off by 1 byte in some 16-bit mode instructions (see PR description)
-			_eip = (uint)_decoder.IP;
+			// In 16-bit mode, wrap IP to 16 bits (real mode addressing)
+			_eip = _bitness == 16 ? (uint)_decoder.IP & 0xFFFF : (uint)_decoder.IP;
 		}
 
 		return new CpuStepResult(isCall, callTarget, isSyscall);
@@ -4893,9 +4902,8 @@ public class IcedCpu : IAsyncCpu
 		
 		// In 16-bit real mode, physical address = (segment << 4) + offset
 		// For 32-bit protected mode, segment registers are selectors (not used for address calculation)
-		// We'll check if we're dealing with 16-bit registers to determine mode
 		uint addr;
-		if (Is16BitRegister(insn.MemoryBase) || insn.MemoryBase == Register.None && Is16BitRegister(insn.MemoryIndex))
+		if (_bitness == 16)
 		{
 			// 16-bit real mode addressing: Calculate linear address from segment:offset
 			// First, mask offset to 16 bits (wrap at 64KB boundary)
@@ -5240,9 +5248,40 @@ public class IcedCpu : IAsyncCpu
 
 	private sealed class SimpleMemoryCodeReader(IcedCpu cpu) : CodeReader
 	{
-		private uint _ptr;
-		public void Reset(uint ip) => _ptr = ip;
-		public override int ReadByte() => cpu._mem.Read8(_ptr++);
+		private uint _ip;
+		
+		public void Reset(uint ip) => _ip = ip;
+		
+		public override int ReadByte()
+		{
+			uint physicalAddress;
+			
+			// In 16-bit real mode, convert IP to physical address using CS:IP
+			if (cpu._bitness == 16)
+			{
+				// Calculate physical address: CS * 16 + IP
+				// IP should be masked to 16 bits
+				var ip16 = _ip & 0xFFFF;
+				physicalAddress = (uint)((cpu._cs << 4) + ip16);
+			}
+			else
+			{
+				// In 32-bit protected mode, use IP directly
+				physicalAddress = _ip;
+			}
+			
+			// Increment IP (wrap to 16 bits in real mode)
+			if (cpu._bitness == 16)
+			{
+				_ip = (_ip + 1) & 0xFFFF;
+			}
+			else
+			{
+				_ip++;
+			}
+			
+			return cpu._mem.Read8(physicalAddress);
+		}
 	}
 
 	private enum LogicOp

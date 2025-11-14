@@ -121,15 +121,21 @@ public class SingleStepTestRunner
 		
 		// Write instruction bytes to memory at EIP
 		// This is critical - the CPU needs to read the instruction from memory!
+		// In 16-bit mode, we need to write to the physical address (CS * 16 + IP)
 		for (var i = 0; i < testCase.InstructionBytes.Length; i++)
 		{
-			var address = regs.Eip + (uint)i;
-			if (address < regs.Eip)
+			// Calculate physical address based on CPU mode
+			// In real mode: CS * 16 + IP
+			// In protected mode: flat IP
+			var physicalAddress = (uint)((regs.Cs << 4) + regs.Eip + i);
+			
+			// Check for address overflow
+			if (physicalAddress < (uint)((regs.Cs << 4) + regs.Eip))
 			{
-				_logger.LogWarning("Instruction bytes extend beyond 32-bit address space at EIP={EIP:X8} in test {TestName}", regs.Eip, testCase.Name);
+				_logger.LogWarning("Instruction bytes extend beyond address space at CS:EIP={CS:X4}:{EIP:X4} in test {TestName}", regs.Cs, regs.Eip, testCase.Name);
 				break;
 			}
-			memory.Write8(address, testCase.InstructionBytes[i]);
+			memory.Write8(physicalAddress, testCase.InstructionBytes[i]);
 		}
 		
 		// Write initial memory state
