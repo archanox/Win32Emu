@@ -178,6 +178,63 @@ public class StringInstructionTests : IDisposable
         Assert.Equal(0x00000000u, _helper.GetReg("ECX")); // ECX should be 0 after REP
     }
 
+    [Fact]
+    public void REPNZ_SCASB_ShouldFindNullTerminator()
+    {
+        // Arrange: REPNZ SCASB (F2 AE) - This is the instruction that was causing the infinite loop
+        // Write a string "Hello\0" to memory
+        _helper.Memory.Write8(0x00001000, (byte)'H');
+        _helper.Memory.Write8(0x00001001, (byte)'e');
+        _helper.Memory.Write8(0x00001002, (byte)'l');
+        _helper.Memory.Write8(0x00001003, (byte)'l');
+        _helper.Memory.Write8(0x00001004, (byte)'o');
+        _helper.Memory.Write8(0x00001005, 0x00); // Null terminator
+        
+        _helper.SetReg("EDI", 0x00001000);
+        _helper.SetReg("ECX", 0xFFFFFFFF); // Maximum value - this was causing the hang
+        _helper.SetReg("EAX", 0x00); // Search for null terminator (AL = 0)
+        _helper.WriteCode(0xF2, 0xAE); // REPNZ SCASB
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        // Should find null at position 5 (after 'o')
+        // EDI should point to byte after the match (0x00001006)
+        Assert.Equal(0x00001006u, _helper.GetReg("EDI"));
+        // ECX should be decremented by number of comparisons (6 comparisons)
+        // 0xFFFFFFFF - 6 = 0xFFFFFFF9
+        Assert.Equal(0xFFFFFFF9u, _helper.GetReg("ECX"));
+        // ZF should be set (match found)
+        Assert.True(_helper.IsFlagSet(CpuFlag.Zf));
+    }
+
+    [Fact]
+    public void REPNZ_SCASB_WithNoMatch_ShouldExhaustECX()
+    {
+        // Arrange: REPNZ SCASB with no null terminator
+        // Write non-zero bytes
+        for (uint i = 0; i < 10; i++)
+        {
+            _helper.Memory.Write8(0x00001000 + i, 0xFF);
+        }
+        
+        _helper.SetReg("EDI", 0x00001000);
+        _helper.SetReg("ECX", 0x0000000A); // Scan 10 bytes
+        _helper.SetReg("EAX", 0x00); // Search for null terminator
+        _helper.WriteCode(0xF2, 0xAE); // REPNZ SCASB
+
+        // Act
+        _helper.ExecuteInstruction();
+
+        // Assert
+        // Should scan all 10 bytes without finding a match
+        Assert.Equal(0x0000100Au, _helper.GetReg("EDI")); // EDI += 10
+        Assert.Equal(0x00000000u, _helper.GetReg("ECX")); // ECX exhausted
+        // ZF should be clear (no match found)
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf));
+    }
+
     public void Dispose()
     {
         _helper?.Dispose();
