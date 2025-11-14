@@ -1,14 +1,19 @@
-# Win32Emu API Implementation Status Page
+# Win32Emu GitHub Pages
 
-This directory contains the GitHub Pages site that displays Win32 API implementation status for Win32Emu.
+This directory contains source files for the GitHub Pages site that displays Win32 API implementation status and CPU test results for Win32Emu.
 
 ## Live Site
 
 Once deployed, the site will be available at: `https://archanox.github.io/Win32Emu/`
 
+The site includes:
+- **Main landing page** - Navigation to CPU tests and API status
+- **CPU Test Results** - SingleStep x86 conformance test results (at `/cpu-tests/`)
+- **API Status** - Win32 API implementation dashboard (at `/api-status.html`)
+
 ## Files
 
-- **index.html** - Main web interface with interactive features
+- **index.html** - API status web interface with interactive features (source for api-status.html)
 - **api-status.json** - Generated data about all Win32 modules and functions (auto-updated)
 
 ## Features
@@ -30,13 +35,13 @@ Once deployed, the site will be available at: `https://archanox.github.io/Win32E
 ## Setup GitHub Pages
 
 1. Go to repository **Settings** → **Pages**
-2. Set **Source** to "Deploy from a branch"
-3. Select **Branch**: `gh-pages` and **Folder**: `/ (root)`
-4. Click **Save**
+2. Set **Source** to "GitHub Actions"
 
-The GitHub Actions workflow will automatically:
+The consolidated GitHub Actions workflow (`.github/workflows/cpu-test-results.yml`) will automatically:
+- Generate CPU test results from SingleStep tests
 - Generate `api-status.json` from source code
-- Deploy to the `gh-pages` branch
+- Create a unified landing page
+- Deploy everything to GitHub Pages
 - Update the live site
 
 ## Local Development
@@ -59,10 +64,12 @@ python3 -m http.server 8080
 
 ## Updating the Data
 
-The API status data is automatically regenerated when:
-- Changes are pushed to `Win32Emu/Win32/Modules/**`
-- The generator tool is updated
-- Manually triggered via GitHub Actions
+The GitHub Pages content is automatically regenerated when:
+- Changes are pushed to `Win32Emu/Win32/Modules/**` (API status)
+- Changes are pushed to `Win32Emu/Cpu/**` or `Win32Emu.Tests.Emulator/**` (CPU tests)
+- The generator tools are updated
+- Weekly on Mondays at 00:00 UTC (scheduled)
+- Manually triggered via GitHub Actions workflow_dispatch
 
 Or manually run:
 ```bash
@@ -138,9 +145,9 @@ The `api-status.json` file has this structure:
 - **Browser Support**: Modern browsers with ES6+ support
 
 ### Automation
-- **Workflow**: `.github/workflows/api-status.yml`
-- **Trigger**: Push to main branch (module changes)
-- **Deployment**: GitHub Actions → gh-pages branch
+- **Workflow**: `.github/workflows/cpu-test-results.yml` (consolidated GitHub Pages workflow)
+- **Trigger**: Push to main branch (module/CPU changes), weekly schedule, or manual dispatch
+- **Deployment**: GitHub Actions using actions/deploy-pages@v4
 
 ## Contributing
 
