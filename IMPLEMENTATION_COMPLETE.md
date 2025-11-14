@@ -51,22 +51,22 @@ This implementation fully satisfies all requirements from the problem statement:
 }
 ```
 
-### 4. GitHub Actions Workflow (.github/workflows/api-status.yml)
-- Auto-generates API status on code changes
-- Deploys to gh-pages branch
+### 4. GitHub Actions Workflow (.github/workflows/cpu-test-results.yml)
+- Consolidated workflow for both CPU test results and API status
+- Auto-generates API status and CPU test reports on code changes
+- Deploys to GitHub Pages using modern actions/deploy-pages@v4
 - Keeps documentation in sync with code
 
 ## How to Deploy
 
 ### Step 1: Enable GitHub Pages
 1. Go to repository Settings → Pages
-2. Source: Deploy from a branch
-3. Branch: `gh-pages`, Folder: `/ (root)`
-4. Save
+2. Source: GitHub Actions
 
 ### Step 2: Trigger Deployment
-- Merge this PR to main, or
-- Run workflow manually: Actions → "Generate API Status for GitHub Pages" → Run workflow
+- Push changes to main (CPU, modules, or workflows), or
+- Run workflow manually: Actions → "GitHub Pages" → Run workflow
+- Scheduled weekly on Mondays at 00:00 UTC
 
 ### Step 3: Access
 - Visit: `https://archanox.github.io/Win32Emu/`

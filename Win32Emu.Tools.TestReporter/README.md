@@ -61,9 +61,11 @@ The report is automatically generated and deployed to GitHub Pages:
 
 ### Viewing the Report
 
-Once deployed, the report is available at:
+Once deployed, the reports are available at:
 ```
-https://archanox.github.io/Win32Emu/
+https://archanox.github.io/Win32Emu/         # Main landing page
+https://archanox.github.io/Win32Emu/cpu-tests/   # CPU test results
+https://archanox.github.io/Win32Emu/api-status.html  # API status
 ```
 
 ## Test Files

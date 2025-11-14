@@ -1,5 +1,5 @@
 ---
-name: CPU Test Results
+name: GitHub Pages
 
 on:
   # Run on schedule (weekly, every Monday at 00:00 UTC)
@@ -9,13 +9,16 @@ on:
   # Allow manual trigger
   workflow_dispatch:
 
-  # Run on pushes to main that modify CPU emulator or test code
+  # Run on pushes to main that modify CPU emulator, test code, or Win32 modules
   push:
     branches:
       - main
     paths:
       - 'Win32Emu/Cpu/**'
       - 'Win32Emu.Tests.Emulator/**'
+      - 'Win32Emu/Win32/Modules/**'
+      - 'Win32Emu.Tools.ApiStatusGenerator/**'
+      - 'Win32Emu.Generators/**'
       - '.github/workflows/cpu-test-results.yml'
 
 # Sets permissions for GitHub Pages deployment
@@ -31,7 +34,7 @@ concurrency:
 
 jobs:
   generate-report:
-    name: Generate CPU Test Report
+    name: Generate GitHub Pages Content
     runs-on: ubuntu-latest
 
     steps:
@@ -48,25 +51,161 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
+      - name: Build Win32Emu (to generate API metadata)
+        run: |
+          dotnet build Win32Emu/Win32Emu.csproj --configuration Release --no-restore
+
       - name: Build Test Reporter
         run: >
           dotnet build
           Win32Emu.Tools.TestReporter/Win32Emu.Tools.TestReporter.csproj
           --configuration Release --no-restore
 
-      - name: Run Test Reporter
+      - name: Generate CPU Test Results
         run: |
-          mkdir -p test-results
+          mkdir -p pages/cpu-tests
           dotnet run --project Win32Emu.Tools.TestReporter \
             --configuration Release --no-build -- \
             Win32Emu.Tests.Emulator/TestData/SingleStepTests \
-            test-results \
+            pages/cpu-tests \
             100
+
+      - name: Generate API Status
+        run: |
+          dotnet run --project Win32Emu.Tools.ApiStatusGenerator/Win32Emu.Tools.ApiStatusGenerator.csproj \
+            --configuration Release --no-build -- \
+            pages/api-status.json
+
+      - name: Copy API Status HTML
+        run: |
+          cp docs/pages/index.html pages/api-status.html
+
+      - name: Create main index page
+        run: |
+          cat > pages/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Win32Emu Documentation</title>
+              <style>
+                  :root {
+                      --primary-color: #0366d6;
+                      --bg-color: #f6f8fa;
+                      --border-color: #e1e4e8;
+                      --text-color: #24292e;
+                  }
+                  * {
+                      box-sizing: border-box;
+                      margin: 0;
+                      padding: 0;
+                  }
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+                      line-height: 1.6;
+                      color: var(--text-color);
+                      background: var(--bg-color);
+                      padding: 40px 20px;
+                  }
+                  .container {
+                      max-width: 900px;
+                      margin: 0 auto;
+                      background: white;
+                      border-radius: 8px;
+                      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+                      padding: 40px;
+                  }
+                  h1 {
+                      color: var(--primary-color);
+                      margin-bottom: 10px;
+                      font-size: 2.5em;
+                  }
+                  .subtitle {
+                      color: #586069;
+                      font-size: 1.2em;
+                      margin-bottom: 40px;
+                  }
+                  .nav-grid {
+                      display: grid;
+                      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                      gap: 20px;
+                      margin-top: 30px;
+                  }
+                  .nav-card {
+                      border: 2px solid var(--border-color);
+                      border-radius: 8px;
+                      padding: 30px;
+                      text-decoration: none;
+                      color: inherit;
+                      transition: all 0.2s;
+                      display: block;
+                  }
+                  .nav-card:hover {
+                      border-color: var(--primary-color);
+                      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                      transform: translateY(-2px);
+                  }
+                  .nav-card h2 {
+                      color: var(--primary-color);
+                      margin-bottom: 10px;
+                      font-size: 1.5em;
+                  }
+                  .nav-card p {
+                      color: #586069;
+                      line-height: 1.6;
+                  }
+                  .icon {
+                      font-size: 3em;
+                      margin-bottom: 15px;
+                  }
+                  footer {
+                      margin-top: 40px;
+                      padding-top: 20px;
+                      border-top: 1px solid var(--border-color);
+                      text-align: center;
+                      color: #586069;
+                  }
+                  footer a {
+                      color: var(--primary-color);
+                      text-decoration: none;
+                  }
+                  footer a:hover {
+                      text-decoration: underline;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>🖥️ Win32Emu Documentation</h1>
+                  <p class="subtitle">Windows 32-bit PE executable emulator for classic games and applications</p>
+                  
+                  <div class="nav-grid">
+                      <a href="cpu-tests/" class="nav-card">
+                          <div class="icon">🧪</div>
+                          <h2>CPU Test Results</h2>
+                          <p>Hardware conformance tests from SingleStepTests/80386. View pass/fail status for x86 CPU emulation accuracy.</p>
+                      </a>
+                      
+                      <a href="api-status.html" class="nav-card">
+                          <div class="icon">📚</div>
+                          <h2>API Status</h2>
+                          <p>Win32 API implementation status. Browse 31 modules with 749 functions and check compatibility.</p>
+                      </a>
+                  </div>
+                  
+                  <footer>
+                      <p>Win32Emu is a cross-platform Windows emulator • <a href="https://github.com/archanox/Win32Emu">View on GitHub</a></p>
+                  </footer>
+              </div>
+          </body>
+          </html>
+          EOF
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: test-results
+          path: pages
 
   # Deployment job
   deploy:
