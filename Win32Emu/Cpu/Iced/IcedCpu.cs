@@ -2847,10 +2847,11 @@ public class IcedCpu : IAsyncCpu
 					var ax = (short)(ushort)(_eax & 0xFFFF);
 					var prod = (int)(ax * src);
 					_eax = (_eax & 0xFFFF0000) | ((uint)prod & 0xFFFF);
-					_edx = (_edx & 0xFFFF0000) | (((uint)prod >> 16) & 0xFFFF);
-					// Overflow if result doesn't fit in 16 bits (sign-extended)
-					var overflow = prod != (short)prod;
-					SetFlagVal(Cf, overflow);
+				    _edx = (_edx & 0xFFFF0000) | (((uint)prod >> 16) & 0xFFFF);
+				    // Overflow if upper 16 bits are not sign extension of lower 16 bits
+				    var upper = (prod >> 16) & 0xFFFF;
+				    var overflow = upper != 0 && upper != 0xFFFF;
+				    SetFlagVal(Cf, overflow);
 					SetFlagVal(Of, overflow);
 					ClearFlag(Af);
 					break;
