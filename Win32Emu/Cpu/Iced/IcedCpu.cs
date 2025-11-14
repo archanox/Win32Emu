@@ -4436,9 +4436,10 @@ public class IcedCpu : IAsyncCpu
 			return GetReg8(reg);
 		}
 		
-		// Try 16-bit registers
+		// Try 16-bit registers (including segment registers)
 		if (reg is Register.AX or Register.CX or Register.DX or Register.BX or
-		    Register.SI or Register.DI or Register.SP or Register.BP)
+		    Register.SI or Register.DI or Register.SP or Register.BP or
+		    Register.CS or Register.DS or Register.ES or Register.FS or Register.GS or Register.SS)
 		{
 			return GetReg16(reg);
 		}
@@ -4489,9 +4490,10 @@ public class IcedCpu : IAsyncCpu
 			return;
 		}
 		
-		// Try 16-bit registers
+		// Try 16-bit registers (including segment registers)
 		if (reg is Register.AX or Register.CX or Register.DX or Register.BX or
-		    Register.SI or Register.DI or Register.SP or Register.BP)
+		    Register.SI or Register.DI or Register.SP or Register.BP or
+		    Register.CS or Register.DS or Register.ES or Register.FS or Register.GS or Register.SS)
 		{
 			SetReg16(reg, (ushort)value);
 			return;
@@ -4568,7 +4570,8 @@ public class IcedCpu : IAsyncCpu
 				return 8;
 			}
 
-			if (r is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP or Register.BP)
+			if (r is Register.AX or Register.CX or Register.DX or Register.BX or Register.SI or Register.DI or Register.SP or Register.BP or
+			    Register.CS or Register.DS or Register.ES or Register.FS or Register.GS or Register.SS)
 			{
 				return 16;
 			}
@@ -4728,14 +4731,22 @@ public class IcedCpu : IAsyncCpu
 	private uint GetReg32(Register reg) => reg switch
 	{
 		Register.EAX => _eax, Register.EBX => _ebx, Register.ECX => _ecx, Register.EDX => _edx,
-		Register.ESI => _esi, Register.EDI => _edi, Register.EBP => _ebp, Register.ESP => _esp, _ => 0
+		Register.ESI => _esi, Register.EDI => _edi, Register.EBP => _ebp, Register.ESP => _esp,
+		// Segment registers are 16-bit but zero-extended to 32-bit
+		Register.CS => _cs, Register.DS => _ds, Register.ES => _es,
+		Register.FS => _fs, Register.GS => _gs, Register.SS => _ss,
+		_ => 0
 	};
 
 	private ushort GetReg16(Register reg) => reg switch
 	{
 		Register.AX => (ushort)_eax, Register.BX => (ushort)_ebx, Register.CX => (ushort)_ecx,
 		Register.DX => (ushort)_edx, Register.SI => (ushort)_esi, Register.DI => (ushort)_edi,
-		Register.BP => (ushort)_ebp, Register.SP => (ushort)_esp, _ => 0
+		Register.BP => (ushort)_ebp, Register.SP => (ushort)_esp,
+		// Segment registers
+		Register.CS => _cs, Register.DS => _ds, Register.ES => _es,
+		Register.FS => _fs, Register.GS => _gs, Register.SS => _ss,
+		_ => 0
 	};
 
 	private byte GetReg8(Register reg) => reg switch
@@ -4780,6 +4791,13 @@ public class IcedCpu : IAsyncCpu
 				_ebp = (_ebp & 0xFFFF0000) | v;
 				break;
 			case Register.SP: _esp = (_esp & 0xFFFF0000) | v; break;
+			// Segment registers
+			case Register.CS: _cs = v; break;
+			case Register.DS: _ds = v; break;
+			case Register.ES: _es = v; break;
+			case Register.FS: _fs = v; break;
+			case Register.GS: _gs = v; break;
+			case Register.SS: _ss = v; break;
 			default:
 				throw new ArgumentOutOfRangeException(nameof(reg), reg, "Invalid 16-bit register specified in SetReg16.");
 		}
@@ -4804,6 +4822,13 @@ public class IcedCpu : IAsyncCpu
 			case Register.EDI: _edi = v; break;
 			case Register.EBP: _ebp = v; break;
 			case Register.ESP: _esp = v; break;
+			// Segment registers - truncate to 16-bit
+			case Register.CS: _cs = (ushort)v; break;
+			case Register.DS: _ds = (ushort)v; break;
+			case Register.ES: _es = (ushort)v; break;
+			case Register.FS: _fs = (ushort)v; break;
+			case Register.GS: _gs = (ushort)v; break;
+			case Register.SS: _ss = (ushort)v; break;
 		}
 	}
 
