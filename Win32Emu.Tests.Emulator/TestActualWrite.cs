@@ -85,7 +85,7 @@ public class TestActualWrite
         for (uint addr = 0; addr < Math.Min(0x100000, memory.Size); addr++)
         {
             var valAfter = memory.Read8(addr);
-            var valBefore = memBefore.ContainsKey(addr) ? memBefore[addr] : (byte)0;
+            memBefore.TryGetValue(addr, out var valBefore);
             
             if (valAfter != valBefore)
             {
@@ -107,14 +107,6 @@ public class TestActualWrite
             fileName
         };
         
-        foreach (var path in searchPaths)
-        {
-            if (File.Exists(path))
-            {
-                return path;
-            }
-        }
-        
-        return null;
+        return searchPaths.FirstOrDefault(File.Exists);
     }
 }

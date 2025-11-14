@@ -72,14 +72,6 @@ public class TestSegmentValues
             fileName
         };
         
-        foreach (var path in searchPaths)
-        {
-            if (File.Exists(path))
-            {
-                return path;
-            }
-        }
-        
-        return null;
+        return searchPaths.FirstOrDefault(File.Exists);
     }
 }

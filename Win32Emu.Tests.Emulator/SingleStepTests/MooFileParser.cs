@@ -306,6 +306,10 @@ public class MooFileParser
 		// Read the specified number of entries
 		for (uint i = 0; i < entryCount; i++)
 		{
+			// Ensure there are at least 5 bytes left for address (4) + value (1)
+			if (pos + 5 > data.Length)
+				break;
+				
 			var address = ReadUInt32(data, ref pos);
 			var value = data[pos++];
 			
