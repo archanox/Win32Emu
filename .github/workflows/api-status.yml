@@ -29,15 +29,13 @@ jobs:
       with:
         dotnet-version: '9.0.x' # Use .NET 9 for the generator tool
         
-    - name: Build API Status Generator
+    - name: Build Win32Emu (to generate API metadata)
       run: |
-        cd Win32Emu.Tools.ApiStatusGenerator
-        dotnet build --configuration Release
+        dotnet build Win32Emu/Win32Emu.csproj --configuration Release
         
-    - name: Generate API Status JSON
+    - name: Export API Status JSON
       run: |
         dotnet run --project Win32Emu.Tools.ApiStatusGenerator/Win32Emu.Tools.ApiStatusGenerator.csproj \
-          Win32Emu/Win32/Modules \
           docs/pages/api-status.json
         
     - name: Check for changes
