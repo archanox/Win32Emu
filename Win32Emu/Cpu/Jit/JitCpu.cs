@@ -1343,17 +1343,9 @@ public class JitCpu : IAsyncCpu
 					{
 						// Find first set bit from MSB using hardware intrinsic
 						// LeadingZeroCount returns count from MSB, we need position from LSB
-						if (opSize == 16)
-						{
-							// For 16-bit: count leading zeros in a 16-bit value
-							// Need to adjust since LeadingZeroCount works on 32-bit
-							bitPos = 15 - (BitOperations.LeadingZeroCount(src) - 16);
-						}
-						else
-						{
-							// For 32-bit
-							bitPos = 31 - BitOperations.LeadingZeroCount(src);
-						}
+						bitPos = opSize == 16 
+							? 15 - (BitOperations.LeadingZeroCount(src) - 16)  // For 16-bit
+							: 31 - BitOperations.LeadingZeroCount(src);         // For 32-bit
 					}
 					
 					SetOperandValue(insn, 0, (uint)bitPos);

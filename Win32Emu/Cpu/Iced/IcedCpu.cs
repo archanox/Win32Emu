@@ -3910,7 +3910,7 @@ public class IcedCpu : IAsyncCpu
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
-		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
+		uint mask = opSize == 16 ? 0xFu : 0x1Fu;
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
@@ -3922,7 +3922,7 @@ public class IcedCpu : IAsyncCpu
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
-		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
+		uint mask = opSize == 16 ? 0xFu : 0x1Fu;
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
@@ -3937,7 +3937,7 @@ public class IcedCpu : IAsyncCpu
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
-		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
+		uint mask = opSize == 16 ? 0xFu : 0x1Fu;
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
@@ -3952,7 +3952,7 @@ public class IcedCpu : IAsyncCpu
 		var bitBase = ReadOp(insn, 0);
 		var bitOffset = ReadOp(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0); // Get destination operand size
-		uint mask = opSize == 16 ? 0x0Fu : 0x1Fu;
+		uint mask = opSize == 16 ? 0xFu : 0x1Fu;
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
@@ -4414,7 +4414,12 @@ public class IcedCpu : IAsyncCpu
 		return insn.GetOpKind(index) switch
 		{
 			OpKind.Register => ReadRegister(insn.GetOpRegister(index)),
-			OpKind.Memory => Read32(CalcMemAddress(insn)),
+			OpKind.Memory => insn.MemorySize switch
+			{
+				MemorySize.UInt8 or MemorySize.Int8 => _mem.Read8(CalcMemAddress(insn)),
+				MemorySize.UInt16 or MemorySize.Int16 => Read16(CalcMemAddress(insn)),
+				_ => Read32(CalcMemAddress(insn))
+			},
 			OpKind.Immediate8 => insn.Immediate8,
 			OpKind.Immediate8to32 => (uint)(sbyte)insn.Immediate8,
 			OpKind.Immediate32 => insn.Immediate32,
@@ -4450,8 +4455,24 @@ public class IcedCpu : IAsyncCpu
 				WriteRegister(insn.GetOpRegister(index), value);
 				break;
 			case OpKind.Memory:
-				Write32(CalcMemAddress(insn), value);
-				break;
+				{
+					var addr = CalcMemAddress(insn);
+					switch (insn.MemorySize)
+					{
+						case MemorySize.UInt8:
+						case MemorySize.Int8:
+							_mem.Write8(addr, (byte)value);
+							break;
+						case MemorySize.UInt16:
+						case MemorySize.Int16:
+							Write16(addr, (ushort)value);
+							break;
+						default:
+							Write32(addr, value);
+							break;
+					}
+					break;
+				}
 			default:
 				_logger.LogWarning("[IcedCpu] WriteOp unsupported {GetOpKind}", insn.GetOpKind(index));
 				break;
