@@ -698,16 +698,7 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Hlt:
 					// HLT - Halt instruction
 					// Used in SingleStepTests to mark end of test sequence
-					// Just advance EIP to mark the instruction as executed
-					// In 16-bit mode, wrap IP to 16 bits
-					if (_bitness == 16)
-					{
-						_eip = (oldEip + (uint)insn.Length) & 0xFFFF;
-					}
-					else
-					{
-						_eip = oldEip + (uint)insn.Length;
-					}
+					// EIP advancement is handled by the general logic below
 					break;
 				default:
 					if (insn.Mnemonic.ToString().StartsWith('J'))
@@ -811,8 +802,6 @@ public class IcedCpu : IAsyncCpu
 			Mnemonic.Int3 => true,
 			Mnemonic.Int1 => true,
 			Mnemonic.Into => true,
-			// HLT manually advances EIP
-			Mnemonic.Hlt => true,
 			_ => false
 		};
 
@@ -821,14 +810,7 @@ public class IcedCpu : IAsyncCpu
 		{
 			// Use decoder IP directly as it's authoritative for instruction length
 			// In 16-bit mode, wrap IP to 16 bits (real mode addressing)
-			if (_bitness == 16)
-			{
-				_eip = (uint)_decoder.IP & 0xFFFF;
-			}
-			else
-			{
-				_eip = (uint)_decoder.IP;
-			}
+			_eip = _bitness == 16 ? (uint)_decoder.IP & 0xFFFF : (uint)_decoder.IP;
 		}
 
 		return new CpuStepResult(isCall, callTarget, isSyscall);
