@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
@@ -1316,38 +1317,45 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Bsr: // Bit Scan Reverse
 			{
 				uint src = GetOperandValue(insn, 1);
+				int opSize = GetOpSizeBits(insn, 0);
+				
+				// Mask source to operand size
+				if (opSize == 16)
+					src &= 0xFFFF;
+				
 				if (src == 0)
 				{
+					// If source is 0, ZF is set and destination is undefined
 					SetFlag(Zf);
+					// Note: Destination register is undefined when ZF=1, but we leave it unchanged
 				}
 				else
 				{
 					ClearFlag(Zf);
-					int bitPos = 0;
+					int bitPos;
+					
 					if (insn.Mnemonic == Mnemonic.Bsf)
 					{
-						// Find first set bit from LSB
-						for (int i = 0; i < 32; i++)
-						{
-							if ((src & (1u << i)) != 0)
-							{
-								bitPos = i;
-								break;
-							}
-						}
+						// Find first set bit from LSB using hardware intrinsic
+						bitPos = BitOperations.TrailingZeroCount(src);
 					}
 					else // BSR
 					{
-						// Find first set bit from MSB
-						for (int i = 31; i >= 0; i--)
+						// Find first set bit from MSB using hardware intrinsic
+						// LeadingZeroCount returns count from MSB, we need position from LSB
+						if (opSize == 16)
 						{
-							if ((src & (1u << i)) != 0)
-							{
-								bitPos = i;
-								break;
-							}
+							// For 16-bit: count leading zeros in a 16-bit value
+							// Need to adjust since LeadingZeroCount works on 32-bit
+							bitPos = 15 - (BitOperations.LeadingZeroCount(src) - 16);
+						}
+						else
+						{
+							// For 32-bit
+							bitPos = 31 - BitOperations.LeadingZeroCount(src);
 						}
 					}
+					
 					SetOperandValue(insn, 0, (uint)bitPos);
 				}
 				break;
