@@ -2,6 +2,7 @@ using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Iced.Intel;
 
 namespace Win32Emu.Tests.Emulator.SingleStepTests;
 
@@ -35,7 +36,9 @@ public class SingleStepTestRunner
 			var memory = new VirtualMemory();
 			
 			// Create CPU instance for 16-bit real mode (SingleStepTests are from real 80386 hardware in real mode)
-			var cpu = new IcedCpu(memory, bitness: 16);
+			// Use NoInvalidCheck to allow LOCK prefix on instructions where it's semantically invalid but was
+			// accepted by real 80386 hardware (e.g., LOCK on register-to-register operations)
+			var cpu = new IcedCpu(memory, decoderOptions: DecoderOptions.NoInvalidCheck, bitness: 16);
 			
 			// Apply initial state
 			ApplyInitialState(cpu, memory, testCase);
