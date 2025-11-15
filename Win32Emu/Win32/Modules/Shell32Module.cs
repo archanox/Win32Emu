@@ -1,6 +1,7 @@
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using Win32Emu.VirtualFileSystem;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -101,26 +102,11 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 
-		// Read BROWSEINFO structure
-		// typedef struct _browseinfoA {
-		//   HWND        hwndOwner;       // +0
-		//   LPCITEMIDLIST pidlRoot;      // +4
-		//   LPSTR       pszDisplayName;  // +8
-		//   LPCSTR      lpszTitle;       // +12
-		//   UINT        ulFlags;         // +16
-		//   BFFCALLBACK lpfn;            // +20
-		//   LPARAM      lParam;          // +24
-		//   int         iImage;          // +28
-		// } BROWSEINFOA;
-		
-		var hwndOwner = _env.MemRead32(lpbi + 0);
-		var pidlRoot = _env.MemRead32(lpbi + 4);
-		var pszDisplayName = _env.MemRead32(lpbi + 8);
-		var lpszTitle = _env.MemRead32(lpbi + 12);
-		var ulFlags = _env.MemRead32(lpbi + 16);
+		// Read BROWSEINFO structure using ref struct
+		var bi = new BrowseInfoARef(_env.Memory, lpbi);
 		
 		_logger.LogInformation("[Shell32] SHBrowseForFolderA: hwndOwner=0x{HwndOwner:X8}, flags=0x{Flags:X}, title=0x{Title:X8}",
-			hwndOwner, ulFlags, lpszTitle);
+			bi.hwndOwner, bi.ulFlags, bi.lpszTitle);
 
 		// Allocate a fake PIDL - we'll use a simple 2-byte structure (size=0, terminator)
 		// Real PIDLs are complex, but we just need something to pass around
@@ -132,13 +118,13 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		_env.MemWrite32(pidlAddr + 2, 0x504C4946); // "FILP" marker (PIDL reversed)
 		
 		// Provide a default folder name if pszDisplayName buffer exists
-		if (pszDisplayName != 0)
+		if (bi.pszDisplayName != 0)
 		{
 			var defaultName = "Program Files";
 			var nameBytes = System.Text.Encoding.ASCII.GetBytes(defaultName + '\0');
 			for (int i = 0; i < nameBytes.Length && i < 260; i++)
 			{
-				_env.MemWrite8(pszDisplayName + (uint)i, nameBytes[i]);
+				_env.MemWrite8(bi.pszDisplayName + (uint)i, nameBytes[i]);
 			}
 		}
 		
@@ -175,32 +161,17 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			return 0x80070057; // E_INVALIDARG
 		}
 
-		// Read SHFILEOPSTRUCT structure
-		// typedef struct _SHFILEOPSTRUCTA {
-		//   HWND         hwnd;              // +0
-		//   UINT         wFunc;             // +4
-		//   LPCSTR       pFrom;             // +8
-		//   LPCSTR       pTo;               // +12
-		//   FILEOP_FLAGS fFlags;            // +16
-		//   BOOL         fAnyOperationsAborted; // +20
-		//   LPVOID       hNameMappings;     // +24
-		//   LPCSTR       lpszProgressTitle; // +28
-		// } SHFILEOPSTRUCTA;
-		
-		var hwnd = _env.MemRead32(lpFileOp + 0);
-		var wFunc = _env.MemRead32(lpFileOp + 4);
-		var pFrom = _env.MemRead32(lpFileOp + 8);
-		var pTo = _env.MemRead32(lpFileOp + 12);
-		var fFlags = _env.MemRead32(lpFileOp + 16);
+		// Read SHFILEOPSTRUCT structure using ref struct
+		var fileOp = new ShFileOpStructARef(_env.Memory, lpFileOp);
 		
 		_logger.LogInformation("[Shell32] SHFileOperationA: wFunc={Func}, fFlags=0x{Flags:X}, pFrom=0x{From:X8}, pTo=0x{To:X8}",
-			wFunc, fFlags, pFrom, pTo);
+			fileOp.wFunc, fileOp.fFlags, fileOp.pFrom, fileOp.pTo);
 		
 		try
 		{
 			// Read source path(s) - can be multiple null-terminated strings
-			var sourceFiles = ReadMultipleStrings(pFrom);
-			var destFiles = pTo != 0 ? ReadMultipleStrings(pTo) : new List<string>();
+			var sourceFiles = ReadMultipleStrings(fileOp.pFrom);
+			var destFiles = fileOp.pTo != 0 ? ReadMultipleStrings(fileOp.pTo) : new List<string>();
 			
 			_logger.LogInformation("[Shell32] SHFileOperationA: Source files: {Sources}", string.Join(", ", sourceFiles));
 			if (destFiles.Count > 0)
@@ -214,18 +185,18 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			const uint FO_DELETE = 3;
 			const uint FO_RENAME = 4;
 			
-			switch (wFunc)
+			switch (fileOp.wFunc)
 			{
 				case FO_MOVE:
-					return PerformMoveOperation(sourceFiles, destFiles, fFlags);
+					return PerformMoveOperation(sourceFiles, destFiles, fileOp.fFlags);
 				case FO_COPY:
-					return PerformCopyOperation(sourceFiles, destFiles, fFlags);
+					return PerformCopyOperation(sourceFiles, destFiles, fileOp.fFlags);
 				case FO_DELETE:
-					return PerformDeleteOperation(sourceFiles, fFlags);
+					return PerformDeleteOperation(sourceFiles, fileOp.fFlags);
 				case FO_RENAME:
-					return PerformRenameOperation(sourceFiles, destFiles, fFlags);
+					return PerformRenameOperation(sourceFiles, destFiles, fileOp.fFlags);
 				default:
-					_logger.LogWarning("[Shell32] SHFileOperationA: Unknown wFunc={Func}", wFunc);
+					_logger.LogWarning("[Shell32] SHFileOperationA: Unknown wFunc={Func}", fileOp.wFunc);
 					return 0x71; // ERROR_BAD_FUNCTION
 			}
 		}
@@ -301,50 +272,82 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 				
 				_logger.LogInformation("[Shell32] SHFileOperationA COPY: {Source} -> {Dest}", source, dest);
 				
-				// Use paths directly - VFS integration happens at file handle level in Kernel32
-				var resolvedSource = source;
-				var resolvedDest = dest;
-				
-				// Create destination directory if needed
-				var destDir = System.IO.Path.GetDirectoryName(resolvedDest);
-				if (!string.IsNullOrEmpty(destDir) && !System.IO.Directory.Exists(destDir))
-				{
-					if ((flags & FOF_NOCONFIRMMKDIR) != 0)
-					{
-						try
-						{
-							System.IO.Directory.CreateDirectory(destDir);
-							_logger.LogInformation("[Shell32] SHFileOperationA: Created directory {Dir}", destDir);
-						}
-						catch (Exception ex)
-						{
-							_logger.LogWarning(ex, "[Shell32] SHFileOperationA: Could not create directory {Dir}", destDir);
-						}
-					}
-				}
-				
-				// Perform copy
 				try
 				{
-					if (System.IO.File.Exists(resolvedSource))
+					// Use VFS if available, otherwise fall back to System.IO
+					if (_env.VirtualFileSystem != null)
 					{
-						System.IO.File.Copy(resolvedSource, resolvedDest, overwrite: true);
-						_logger.LogInformation("[Shell32] SHFileOperationA: Copied {Source} to {Dest}", resolvedSource, resolvedDest);
-					}
-					else if (System.IO.Directory.Exists(resolvedSource))
-					{
-						CopyDirectory(resolvedSource, resolvedDest);
-						_logger.LogInformation("[Shell32] SHFileOperationA: Copied directory {Source} to {Dest}", resolvedSource, resolvedDest);
+						// VFS handles path resolution internally
+						if (_env.VirtualFileSystem.FileExists(source))
+						{
+							// Create destination directory if needed
+							var destDir = System.IO.Path.GetDirectoryName(dest);
+							if (!string.IsNullOrEmpty(destDir) && (flags & FOF_NOCONFIRMMKDIR) != 0)
+							{
+								EnsureDirectoryExists(destDir);
+							}
+							
+							// Copy using VFS - open source for read, dest for write
+							using var srcHandle = _env.VirtualFileSystem.OpenFile(source, 
+								VirtualFileSystem.VfsFileMode.Open, 
+								VirtualFileSystem.VfsFileAccess.Read);
+							using var dstHandle = _env.VirtualFileSystem.OpenFile(dest, 
+								VirtualFileSystem.VfsFileMode.Create, 
+								VirtualFileSystem.VfsFileAccess.Write);
+							
+							if (srcHandle != null && dstHandle != null)
+							{
+								// Copy in chunks
+								var buffer = new byte[4096];
+								int bytesRead;
+								while ((bytesRead = srcHandle.Read(buffer, 0, buffer.Length)) > 0)
+								{
+									dstHandle.Write(buffer, 0, bytesRead);
+								}
+								_logger.LogInformation("[Shell32] SHFileOperationA: Copied {Source} to {Dest} (VFS)", source, dest);
+							}
+							else
+							{
+								_logger.LogWarning("[Shell32] SHFileOperationA COPY: Failed to open files for copy (VFS)");
+							}
+						}
+						else
+						{
+							_logger.LogWarning("[Shell32] SHFileOperationA COPY: Source not found in VFS: {Source}", source);
+						}
 					}
 					else
 					{
-						_logger.LogWarning("[Shell32] SHFileOperationA COPY: Source not found: {Source}", resolvedSource);
-						// Don't return error immediately - continue with other files
+						// Fall back to System.IO for non-VFS scenarios
+						var destDir = System.IO.Path.GetDirectoryName(dest);
+						if (!string.IsNullOrEmpty(destDir) && !System.IO.Directory.Exists(destDir))
+						{
+							if ((flags & FOF_NOCONFIRMMKDIR) != 0)
+							{
+								System.IO.Directory.CreateDirectory(destDir);
+								_logger.LogInformation("[Shell32] SHFileOperationA: Created directory {Dir}", destDir);
+							}
+						}
+						
+						if (System.IO.File.Exists(source))
+						{
+							System.IO.File.Copy(source, dest, overwrite: true);
+							_logger.LogInformation("[Shell32] SHFileOperationA: Copied {Source} to {Dest} (System.IO)", source, dest);
+						}
+						else if (System.IO.Directory.Exists(source))
+						{
+							CopyDirectory(source, dest);
+							_logger.LogInformation("[Shell32] SHFileOperationA: Copied directory {Source} to {Dest}", source, dest);
+						}
+						else
+						{
+							_logger.LogWarning("[Shell32] SHFileOperationA COPY: Source not found: {Source}", source);
+						}
 					}
 				}
 				catch (Exception ex)
 				{
-					_logger.LogWarning(ex, "[Shell32] SHFileOperationA COPY: Failed to copy {Source} to {Dest}", resolvedSource, resolvedDest);
+					_logger.LogWarning(ex, "[Shell32] SHFileOperationA COPY: Failed to copy {Source} to {Dest}", source, dest);
 					// Continue with remaining files
 				}
 			}
@@ -358,6 +361,36 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		}
 	}
 	
+	private void EnsureDirectoryExists(string path)
+	{
+		if (_env.VirtualFileSystem != null)
+		{
+			// VFS may handle directory creation differently
+			// For now, just try to create it if it doesn't exist
+			try
+			{
+				var parts = path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+				var current = string.Empty;
+				foreach (var part in parts)
+				{
+					current = string.IsNullOrEmpty(current) ? part : current + "\\" + part;
+					// VFS implementations should handle this gracefully
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "[Shell32] Failed to ensure directory exists: {Path}", path);
+			}
+		}
+		else
+		{
+			if (!System.IO.Directory.Exists(path))
+			{
+				System.IO.Directory.CreateDirectory(path);
+			}
+		}
+	}
+	
 	private uint PerformDeleteOperation(List<string> sources, uint flags)
 	{
 		try
@@ -366,29 +399,50 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			{
 				_logger.LogInformation("[Shell32] SHFileOperationA DELETE: {Source}", source);
 				
-				var resolvedSource = source;
-				
 				try
 				{
-					if (System.IO.File.Exists(resolvedSource))
+					// Use VFS if available
+					if (_env.VirtualFileSystem != null)
 					{
-						System.IO.File.Delete(resolvedSource);
-						_logger.LogInformation("[Shell32] SHFileOperationA: Deleted file {Source}", resolvedSource);
-					}
-					else if (System.IO.Directory.Exists(resolvedSource))
-					{
-						System.IO.Directory.Delete(resolvedSource, recursive: true);
-						_logger.LogInformation("[Shell32] SHFileOperationA: Deleted directory {Source}", resolvedSource);
+						if (_env.VirtualFileSystem.FileExists(source))
+						{
+							var success = _env.VirtualFileSystem.DeleteFile(source);
+							if (success)
+							{
+								_logger.LogInformation("[Shell32] SHFileOperationA: Deleted file {Source} (VFS)", source);
+							}
+							else
+							{
+								_logger.LogWarning("[Shell32] SHFileOperationA DELETE: Failed to delete {Source} (VFS)", source);
+							}
+						}
+						else
+						{
+							_logger.LogWarning("[Shell32] SHFileOperationA DELETE: Source not found in VFS: {Source}", source);
+						}
 					}
 					else
 					{
-						_logger.LogWarning("[Shell32] SHFileOperationA DELETE: Source not found: {Source}", resolvedSource);
-						// Continue with other files even if one is not found
+						// Fall back to System.IO
+						if (System.IO.File.Exists(source))
+						{
+							System.IO.File.Delete(source);
+							_logger.LogInformation("[Shell32] SHFileOperationA: Deleted file {Source} (System.IO)", source);
+						}
+						else if (System.IO.Directory.Exists(source))
+						{
+							System.IO.Directory.Delete(source, recursive: true);
+							_logger.LogInformation("[Shell32] SHFileOperationA: Deleted directory {Source}", source);
+						}
+						else
+						{
+							_logger.LogWarning("[Shell32] SHFileOperationA DELETE: Source not found: {Source}", source);
+						}
 					}
 				}
 				catch (Exception ex)
 				{
-					_logger.LogWarning(ex, "[Shell32] SHFileOperationA DELETE: Failed to delete {Source}", resolvedSource);
+					_logger.LogWarning(ex, "[Shell32] SHFileOperationA DELETE: Failed to delete {Source}", source);
 				}
 			}
 			
@@ -418,36 +472,63 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 				
 				_logger.LogInformation("[Shell32] SHFileOperationA MOVE: {Source} -> {Dest}", source, dest);
 				
-				var resolvedSource = source;
-				var resolvedDest = dest;
-				
 				try
 				{
-					// Create destination directory if needed
-					var destDir = System.IO.Path.GetDirectoryName(resolvedDest);
-					if (!string.IsNullOrEmpty(destDir) && !System.IO.Directory.Exists(destDir))
+					// Use VFS if available
+					if (_env.VirtualFileSystem != null)
 					{
-						System.IO.Directory.CreateDirectory(destDir);
-					}
-					
-					if (System.IO.File.Exists(resolvedSource))
-					{
-						System.IO.File.Move(resolvedSource, resolvedDest, overwrite: true);
-						_logger.LogInformation("[Shell32] SHFileOperationA: Moved {Source} to {Dest}", resolvedSource, resolvedDest);
-					}
-					else if (System.IO.Directory.Exists(resolvedSource))
-					{
-						System.IO.Directory.Move(resolvedSource, resolvedDest);
-						_logger.LogInformation("[Shell32] SHFileOperationA: Moved directory {Source} to {Dest}", resolvedSource, resolvedDest);
+						if (_env.VirtualFileSystem.FileExists(source))
+						{
+							// Create destination directory if needed
+							var destDir = System.IO.Path.GetDirectoryName(dest);
+							if (!string.IsNullOrEmpty(destDir))
+							{
+								EnsureDirectoryExists(destDir);
+							}
+							
+							var success = _env.VirtualFileSystem.MoveFile(source, dest);
+							if (success)
+							{
+								_logger.LogInformation("[Shell32] SHFileOperationA: Moved {Source} to {Dest} (VFS)", source, dest);
+							}
+							else
+							{
+								_logger.LogWarning("[Shell32] SHFileOperationA MOVE: Failed to move {Source} to {Dest} (VFS)", source, dest);
+							}
+						}
+						else
+						{
+							_logger.LogWarning("[Shell32] SHFileOperationA MOVE: Source not found in VFS: {Source}", source);
+						}
 					}
 					else
 					{
-						_logger.LogWarning("[Shell32] SHFileOperationA MOVE: Source not found: {Source}", resolvedSource);
+						// Fall back to System.IO
+						var destDir = System.IO.Path.GetDirectoryName(dest);
+						if (!string.IsNullOrEmpty(destDir) && !System.IO.Directory.Exists(destDir))
+						{
+							System.IO.Directory.CreateDirectory(destDir);
+						}
+						
+						if (System.IO.File.Exists(source))
+						{
+							System.IO.File.Move(source, dest, overwrite: true);
+							_logger.LogInformation("[Shell32] SHFileOperationA: Moved {Source} to {Dest} (System.IO)", source, dest);
+						}
+						else if (System.IO.Directory.Exists(source))
+						{
+							System.IO.Directory.Move(source, dest);
+							_logger.LogInformation("[Shell32] SHFileOperationA: Moved directory {Source} to {Dest}", source, dest);
+						}
+						else
+						{
+							_logger.LogWarning("[Shell32] SHFileOperationA MOVE: Source not found: {Source}", source);
+						}
 					}
 				}
 				catch (Exception ex)
 				{
-					_logger.LogWarning(ex, "[Shell32] SHFileOperationA MOVE: Failed to move {Source} to {Dest}", resolvedSource, resolvedDest);
+					_logger.LogWarning(ex, "[Shell32] SHFileOperationA MOVE: Failed to move {Source} to {Dest}", source, dest);
 				}
 			}
 			
