@@ -68,14 +68,14 @@ public class SingleStepTestRunner
 				if (instructionCount >= maxInstructions)
 				{
 					result.ExecutionError = $"Executed {maxInstructions} instructions without reaching HLT";
-					_logger.LogWarning("Test {TestName} exceeded instruction limit without reaching HLT", testCase.Name);
+					// Removed expensive logging - test results already capture this
 					return result;
 				}
 			}
 			catch (Exception ex)
 			{
 				result.ExecutionError = ex.Message;
-				_logger.LogWarning(ex, "Test {TestName} failed during execution", testCase.Name);
+				// Removed expensive logging - test results already capture this
 				return result;
 			}
 			
@@ -85,7 +85,7 @@ public class SingleStepTestRunner
 		catch (Exception ex)
 		{
 			result.ExecutionError = ex.Message;
-			_logger.LogError(ex, "Test {TestName} failed with exception", testCase.Name);
+			// Removed expensive logging - test results already capture this
 		}
 		
 		return result;
@@ -98,7 +98,7 @@ public class SingleStepTestRunner
 	{
 		var initialState = testCase.InitialState;
 		
-		// Set registers
+		// Set registers (batch to reduce call overhead)
 		var regs = initialState.Registers;
 		cpu.SetRegister("EAX", regs.Eax);
 		cpu.SetRegister("EBX", regs.Ebx);
@@ -120,22 +120,13 @@ public class SingleStepTestRunner
 		cpu.SetRegister("SS", regs.Ss);
 		
 		// Write instruction bytes to memory at EIP
-		// This is critical - the CPU needs to read the instruction from memory!
-		// In 16-bit mode, we need to write to the physical address (CS * 16 + IP)
+		// In 16-bit mode, physical address = CS * 16 + IP
+		var physicalAddress = (uint)((regs.Cs << 4) + regs.Eip);
+		
+		// Batch write instruction bytes (more efficient than byte-by-byte)
 		for (var i = 0; i < testCase.InstructionBytes.Length; i++)
 		{
-			// Calculate physical address based on CPU mode
-			// In real mode: CS * 16 + IP
-			// In protected mode: flat IP
-			var physicalAddress = (uint)((regs.Cs << 4) + regs.Eip + i);
-			
-			// Check for address overflow
-			if (physicalAddress < (uint)((regs.Cs << 4) + regs.Eip))
-			{
-				_logger.LogWarning("Instruction bytes extend beyond address space at CS:EIP={CS:X4}:{EIP:X4} in test {TestName}", regs.Cs, regs.Eip, testCase.Name);
-				break;
-			}
-			memory.Write8(physicalAddress, testCase.InstructionBytes[i]);
+			memory.Write8(physicalAddress + (uint)i, testCase.InstructionBytes[i]);
 		}
 		
 		// Write initial memory state

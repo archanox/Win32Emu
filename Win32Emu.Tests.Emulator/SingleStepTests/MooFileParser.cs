@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Buffers;
 using System.IO.Compression;
 using System.Text;
 
@@ -22,9 +23,24 @@ public class MooFileParser
 		{
 			using var fileStream = File.OpenRead(filePath);
 			using var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress);
-			using var memoryStream = new MemoryStream();
-			gzipStream.CopyTo(memoryStream);
-			data = memoryStream.ToArray();
+			
+			// Use ArrayPool to reduce GC pressure from large temporary allocations
+			var bufferSize = 64 * 1024; // 64KB chunks
+			var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+			try
+			{
+				using var memoryStream = new MemoryStream();
+				int bytesRead;
+				while ((bytesRead = gzipStream.Read(buffer, 0, bufferSize)) > 0)
+				{
+					memoryStream.Write(buffer, 0, bytesRead);
+				}
+				data = memoryStream.ToArray();
+			}
+			finally
+			{
+				ArrayPool<byte>.Shared.Return(buffer);
+			}
 		}
 		else
 		{
