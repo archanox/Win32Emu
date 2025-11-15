@@ -1590,7 +1590,7 @@ public class IcedCpu : IAsyncCpu
 				ClearFlag(Cf);
 				ClearFlag(Of);
 				ClearFlag(Af);
-				UpdateLogicResultFlags(r);
+				UpdateLogicResultFlags(r, 0x80);
 				break;
 			}
 			case 16:
@@ -1641,7 +1641,7 @@ public class IcedCpu : IAsyncCpu
 				ClearFlag(Cf);
 				ClearFlag(Of);
 				ClearFlag(Af);
-				UpdateLogicResultFlags(r);
+				UpdateLogicResultFlags(r, 0x8000);
 				break;
 			}
 			default:
