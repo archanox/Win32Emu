@@ -394,7 +394,15 @@ public partial class DialogWindow : Window
 			var controlHandle = _controlHandles.TryGetValue(id, out var handle) ? handle : 0u;
 			System.Diagnostics.Debug.WriteLine($"[DialogWindow] Sending WM_COMMAND: wParam=0x{wParam:X8}, controlHandle=0x{controlHandle:X8}");
 			
-			_messageCallback?.Invoke(_dialogHandle, WM_COMMAND, wParam, controlHandle);
+			if (_messageCallback != null)
+			{
+				_messageCallback.Invoke(_dialogHandle, WM_COMMAND, wParam, controlHandle);
+				System.Diagnostics.Debug.WriteLine($"[DialogWindow] Message callback invoked successfully");
+			}
+			else
+			{
+				System.Diagnostics.Debug.WriteLine($"[DialogWindow] WARNING: Message callback is null! Button click will not be processed.");
+			}
 
 			// Note: We no longer automatically close the dialog for IDOK/IDCANCEL
 			// The dialog procedure should call EndDialog when appropriate
