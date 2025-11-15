@@ -2490,6 +2490,32 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
+	/// Finds the dialog and control ID for a given control handle.
+	/// Returns a tuple of (dialogHandle, controlId) or null if not found.
+	/// </summary>
+	public (uint DialogHandle, int ControlId)? FindDialogControlByHandle(uint controlHandle)
+	{
+		foreach (var kvp in _dialogStates)
+		{
+			var dialogHandle = kvp.Key;
+			var state = kvp.Value;
+			
+			foreach (var controlKvp in state.ControlHandles)
+			{
+				if (controlKvp.Value == controlHandle)
+				{
+					_logger.LogDebug("[ProcessEnv] FindDialogControlByHandle: handle=0x{Handle:X8} -> dialog=0x{DialogHandle:X8} controlId={ControlId}", 
+						controlHandle, dialogHandle, controlKvp.Key);
+					return (dialogHandle, controlKvp.Key);
+				}
+			}
+		}
+		
+		_logger.LogDebug("[ProcessEnv] FindDialogControlByHandle: handle=0x{Handle:X8} -> NOT FOUND", controlHandle);
+		return null;
+	}
+
+	/// <summary>
 	/// Sets a window property value for SetWindowLongA.
 	/// </summary>
 	public void SetWindowProperty(uint hwnd, int index, uint value)

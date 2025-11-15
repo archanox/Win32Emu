@@ -521,6 +521,21 @@ public partial class DialogWindow : Window
 	}
 
 	/// <summary>
+	/// Enables or disables a control by its ID.
+	/// </summary>
+	public void SetControlEnabled(ushort id, bool enabled)
+	{
+		Dispatcher.UIThread.Post(() =>
+		{
+			var control = GetControlById(id);
+			if (control != null)
+			{
+				control.IsEnabled = enabled;
+			}
+		});
+	}
+
+	/// <summary>
 	/// Converts a DIB (Device Independent Bitmap) to an Avalonia Bitmap.
 	/// </summary>
 	private Avalonia.Media.Imaging.Bitmap? ConvertDibToBitmap(byte[] dibData)

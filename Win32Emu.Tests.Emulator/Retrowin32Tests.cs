@@ -370,6 +370,7 @@ public class Retrowin32Tests
 
         public void OnDialogControlTextChanged(uint dialogHandle, int controlId, string text) { }
         public void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData) { }
+        public void OnDialogControlEnabledChanged(uint dialogHandle, int controlId, bool enabled) { }
         public void OnDisplayUpdate(DisplayUpdateInfo info) { }
     }
 

@@ -2829,7 +2829,18 @@ namespace Win32Emu.Win32.Modules
 			var wasEnabled = _windowEnabledState.GetValueOrDefault(hwnd, true);
 
 			// Update the state
-			_windowEnabledState[hwnd] = bEnable != 0;
+			var isEnabled = bEnable != 0;
+			_windowEnabledState[hwnd] = isEnabled;
+
+			// Try to notify the host (GUI) if this is a dialog control
+			// Check if this window is a control in any dialog
+			var controlInfo = _env.FindDialogControlByHandle(hwnd);
+			if (controlInfo.HasValue)
+			{
+				_logger.LogInformation("[User32] EnableWindow: Notifying GUI to {Action} control {ControlId} in dialog 0x{DialogHandle:X8}",
+					isEnabled ? "enable" : "disable", controlInfo.Value.ControlId, controlInfo.Value.DialogHandle);
+				_host?.OnDialogControlEnabledChanged(controlInfo.Value.DialogHandle, controlInfo.Value.ControlId, isEnabled);
+			}
 
 			// Return previous state: return 0 if was enabled, non-zero if was disabled
 			return wasEnabled ? 0u : 1u;
