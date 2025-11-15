@@ -2608,7 +2608,8 @@ namespace Win32Emu.Win32.Modules
 					if (queuedMsg.HasValue)
 					{
 						var msg = queuedMsg.Value;
-						_logger.LogDebug("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", msg.Message, msg.Hwnd);
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", 
+							msg.Message, msg.Hwnd, msg.WParam, msg.LParam);
 
 						// Dispatch the message to the dialog procedure if it's for our dialog
 						if (msg.Hwnd == hDlg || msg.Hwnd == 0)
@@ -2616,7 +2617,7 @@ namespace Win32Emu.Win32.Modules
 							if (lpDialogFunc != 0)
 							{
 								var (result, timedOut, cancelled, failed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam, cancellationToken).ConfigureAwait(false);
-								_logger.LogDebug("[User32] DialogBoxParamAsync: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
+								_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
 
 								// If dialog procedure times out, is cancelled, or fails, force end the dialog
 								if (timedOut || cancelled || failed)
@@ -2630,6 +2631,7 @@ namespace Win32Emu.Win32.Modules
 						else
 						{
 							// Message for a different window - requeue it
+							_logger.LogInformation("[User32] DialogBoxParamAsync: Message for different window 0x{OtherHwnd:X8}, requeuing", msg.Hwnd);
 							_env.PostMessage(msg.Hwnd, msg.Message, msg.WParam, msg.LParam);
 						}
 					}
@@ -4365,7 +4367,15 @@ namespace Win32Emu.Win32.Modules
 		{
 			var bitmapName = lpBitmapName.ToString() ?? string.Empty;
 			_logger.LogInformation("[User32] LoadBitmapA(hInstance=0x{HInstance:X8}, lpBitmapName=\"{BitmapName}\")", hInstance, bitmapName);
-			return 0; // NULL
+			
+			// LoadBitmapA is a legacy function that's essentially LoadImageA with IMAGE_BITMAP
+			// and default flags (LR_DEFAULTCOLOR)
+			const uint IMAGE_BITMAP = 0;
+			const uint LR_DEFAULTCOLOR = 0x0000;
+			
+			// Convert LpcStr to LpStr for LoadImageA
+			var namePtr = new LpStr(lpBitmapName.Address);
+			return LoadImageA(hInstance, namePtr, IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR);
 		}
 
 		[DllModuleExport(16)]
