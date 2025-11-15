@@ -3832,6 +3832,17 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				_logger.LogInformation("[Kernel32] WideCharToMultiByte: Read {Count} chars (specified count)", cchWideChar);
 			}
 
+			// Workaround for C runtime issue: if the wide string ends with a null terminator and was passed
+			// with an explicit count (from LCMapStringW return value), the caller might not account for
+			// multi-byte expansion. Try stripping trailing nulls to see if conversion fits.
+			bool hasTrailingNull = false;
+			string originalWideString = wideString;
+			if (cchWideChar != 0xFFFFFFFF && wideString.Length > 0 && wideString[wideString.Length - 1] == '\0')
+			{
+				hasTrailingNull = true;
+				_logger.LogDebug("[Kernel32] WideCharToMultiByte: Detected trailing null in wide string");
+			}
+
 			// Convert to multi-byte string based on code page
 			byte[] multiByteBytes;
 			_logger.LogDebug("[Kernel32] WideCharToMultiByte: Converting with code page {ActualCodePage}", actualCodePage);
@@ -3893,6 +3904,73 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Check if output buffer is large enough
 			if (multiByteBytes.Length > cbMultiByte)
 			{
+				// Workaround: If the wide string had a trailing null and the buffer is too small,
+				// try converting without the trailing null to work around C runtime buffer size miscalculation
+				if (hasTrailingNull && wideString.Length > 1)
+				{
+					_logger.LogInformation("[Kernel32] WideCharToMultiByte: Buffer too small with trailing null - trying without null terminator");
+					
+					// Remove trailing null and try again
+					var trimmedWideString = wideString.Substring(0, wideString.Length - 1);
+					byte[] trimmedBytes;
+					
+					switch (actualCodePage)
+					{
+						case CodePage.WestEurope:
+						case CodePage.Iso88591LatinI:
+							trimmedBytes = Encoding.Latin1.GetBytes(trimmedWideString);
+							break;
+						case CodePage.Oem437:
+						case CodePage.OemMultilingualLatinI:
+						case CodePage.EastEurope:
+						case CodePage.Russian:
+						case CodePage.Utf8:
+							trimmedBytes = Encoding.UTF8.GetBytes(trimmedWideString);
+							break;
+						default:
+							try
+							{
+								var encoding = Encoding.GetEncoding((int)actualCodePage);
+								trimmedBytes = encoding.GetBytes(trimmedWideString);
+							}
+							catch
+							{
+								// If we can't get the encoding, fall back to the original error
+								_logger.LogInformation("[Kernel32] WideCharToMultiByte: Buffer too small - need {NeedSize} bytes but only have {CbMultiByte}", multiByteBytes.Length, cbMultiByte);
+								_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+								return 0;
+							}
+							break;
+					}
+					
+					// Check if trimmed version fits (with space for null terminator if needed)
+					if (trimmedBytes.Length < cbMultiByte)
+					{
+						_logger.LogInformation("[Kernel32] WideCharToMultiByte: Trimmed version fits - {TrimmedSize} bytes + null < {CbMultiByte} buffer",
+							trimmedBytes.Length, cbMultiByte);
+						
+						// Write trimmed bytes
+						if (lpMultiByteStr != 0)
+						{
+							_env.MemWriteBytes(lpMultiByteStr, trimmedBytes);
+							// Add null terminator if there's space
+							if (trimmedBytes.Length < cbMultiByte)
+							{
+								_env.MemWrite8(lpMultiByteStr + (uint)trimmedBytes.Length, 0);
+							}
+						}
+						
+						// Clear the "used default char" flag if provided
+						if (lpUsedDefaultChar != 0)
+						{
+							_env.MemWrite32(lpUsedDefaultChar, 0);
+						}
+						
+						_logger.LogInformation("[Kernel32] WideCharToMultiByte: Success with workaround, returning {BytesLength} bytes", (uint)trimmedBytes.Length);
+						return (uint)trimmedBytes.Length;
+					}
+				}
+				
 				_logger.LogInformation("[Kernel32] WideCharToMultiByte: Buffer too small - need {NeedSize} bytes but only have {CbMultiByte}", multiByteBytes.Length, cbMultiByte);
 				_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 				return 0;
