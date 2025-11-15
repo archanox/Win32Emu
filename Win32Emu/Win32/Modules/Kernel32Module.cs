@@ -3836,7 +3836,6 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// with an explicit count (from LCMapStringW return value), the caller might not account for
 			// multi-byte expansion. Try stripping trailing nulls to see if conversion fits.
 			bool hasTrailingNull = false;
-			string originalWideString = wideString;
 			if (cchWideChar != 0xFFFFFFFF && wideString.Length > 0 && wideString[wideString.Length - 1] == '\0')
 			{
 				hasTrailingNull = true;
@@ -3933,10 +3932,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 								var encoding = Encoding.GetEncoding((int)actualCodePage);
 								trimmedBytes = encoding.GetBytes(trimmedWideString);
 							}
-							catch
+							catch (ArgumentException ex)
 							{
-								// If we can't get the encoding, fall back to the original error
-								_logger.LogInformation("[Kernel32] WideCharToMultiByte: Buffer too small - need {NeedSize} bytes but only have {CbMultiByte}", multiByteBytes.Length, cbMultiByte);
+								_logger.LogError(ex, "[Kernel32] WideCharToMultiByte: Invalid code page {CodePage} - buffer too small (need {NeedSize} bytes, have {CbMultiByte})", actualCodePage, multiByteBytes.Length, cbMultiByte);
+								_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+								return 0;
+							}
+							catch (NotSupportedException ex)
+							{
+								_logger.LogError(ex, "[Kernel32] WideCharToMultiByte: Unsupported code page {CodePage} - buffer too small (need {NeedSize} bytes, have {CbMultiByte})", actualCodePage, multiByteBytes.Length, cbMultiByte);
 								_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 								return 0;
 							}
@@ -3953,11 +3957,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 						if (lpMultiByteStr != 0)
 						{
 							_env.MemWriteBytes(lpMultiByteStr, trimmedBytes);
-							// Add null terminator if there's space
-							if (trimmedBytes.Length < cbMultiByte)
-							{
-								_env.MemWrite8(lpMultiByteStr + (uint)trimmedBytes.Length, 0);
-							}
+							// Add null terminator
+							_env.MemWrite8(lpMultiByteStr + (uint)trimmedBytes.Length, 0);
 						}
 						
 						// Clear the "used default char" flag if provided
