@@ -409,8 +409,7 @@ public partial class DialogWindow : Window
 		}
 		else
 		{
-		    var control = sender as Control;
-		    System.Diagnostics.Debug.WriteLine($"[DialogWindow] OnControlClick: Pattern match failed. Sender type: {sender?.GetType().Name}, Control.Tag type: {control?.Tag?.GetType().Name ?? "null"}");
+		    System.Diagnostics.Debug.WriteLine($"[DialogWindow] OnControlClick: Pattern match failed. Sender type: {sender?.GetType().Name}, Control.Tag type: {(sender as Control)?.Tag?.GetType().Name ?? "null"}");
 		}
 	}
 

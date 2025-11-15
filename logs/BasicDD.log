@@ -1,27 +1,33 @@
 info: Win32Emu.Gui.App[0]
       Win32Emu.Gui logging initialized
 info: Win32Emu.Emulator[0]
-      Launching game: BasicDD \\mac\RiderProjects\Win32Emu\EXEs\BasicDD.exe
+      Launching game: BasicDD /Users/pierce/RiderProjects/Win32Emu/EXEs/BasicDD.exe
 info: Win32Emu.Emulator[0]
       Set rendering backend to: GLFW
 info: Win32Emu.Emulator[0]
-      [EmulatorService] Using existing virtual disk: C:\Users\pierce\AppData\Local\Win32Emu\VirtualDisks\BasicDD.vhd
+      [EmulatorService] Using existing virtual disk: /Users/pierce/Library/Application Support/Win32Emu/VirtualDisks/BasicDD.vhd
 info: Win32Emu.Emulator[0]
       [EmulatorService] Loading executable: C:\EXEs\BasicDD.exe
 info: Win32Emu.Emulator[0]
       [Loader] Extracting executable from virtual disk: C:\EXEs\BasicDD.exe
 info: Win32Emu.Emulator[0]
-      [DiskVFS] Mounted VHD: C:\Users\pierce\AppData\Local\Win32Emu\VirtualDisks\BasicDD.vhd (Read-Write)
+      [DiskVFS] Mounted VHD: /Users/pierce/Library/Application Support/Win32Emu/VirtualDisks/BasicDD.vhd (Read-Write)
 info: Win32Emu.Emulator[0]
       [Loader] Extracted 462848 bytes from virtual disk
 info: Win32Emu.Emulator[0]
       [DiskVFS] Disposed
 info: Win32Emu.Emulator[0]
-      [Loader] Host OS: Microsoft Windows 10.0.28000
+      [Loader] Host OS: Darwin 25.0.0 Darwin Kernel Version 25.0.0: Wed Sep 17 21:35:32 PDT 2025; root:xnu-12377.1.9~141/RELEASE_ARM64_T6020
 info: Win32Emu.Emulator[0]
-      [Loader] Host Architecture: Arm64
+      [Loader] Host OS Architecture: Arm64
 info: Win32Emu.Emulator[0]
-      [Memory] Configured size: 1024 MB, Address space: 4096 MB (sparse, pages allocated on-demand)
+      [Loader] Host Process Architecture: Arm64
+info: Win32Emu.Emulator[0]
+      [Loader] Host Framework: .NET 9.0.10
+info: Win32Emu.Emulator[0]
+      [Loader] Host Runtime Identifier: osx-arm64
+info: Win32Emu.Emulator[0]
+      [Memory] Configured size: 256 MB, Address space: 4096 MB (sparse, pages allocated on-demand)
 info: Win32Emu.Emulator[0]
       [Loader] Created syscall dispatcher at 0x0E000000
 info: Win32Emu.Emulator[0]
@@ -63,11 +69,27 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Pre-registered standard control class: MDICLIENT with WndProc=0x0D000006
 info: Win32Emu.Emulator[0]
-      [Loader] Initializing virtual file system with disk: C:\Users\pierce\AppData\Local\Win32Emu\VirtualDisks\BasicDD.vhd
+      [ProcessEnv] Pre-registered standard control class: COMBOLBOX with WndProc=0x0D000007
 info: Win32Emu.Emulator[0]
-      [DiskVFS] Mounted VHD: C:\Users\pierce\AppData\Local\Win32Emu\VirtualDisks\BasicDD.vhd (Read-Write)
+      [ProcessEnv] Pre-registered standard control class: DDEMLEVENT with WndProc=0x0D000008
 info: Win32Emu.Emulator[0]
-      [ProcessEnv] Virtual File System initialized with disk: C:\Users\pierce\AppData\Local\Win32Emu\VirtualDisks\BasicDD.vhd
+      [ProcessEnv] Pre-registered standard control class: MESSAGE with WndProc=0x0D000009
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32768 with WndProc=0x0D00000A
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32769 with WndProc=0x0D00000B
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32770 with WndProc=0x0D00000C
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32771 with WndProc=0x0D00000D
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32772 with WndProc=0x0D00000E
+info: Win32Emu.Emulator[0]
+      [Loader] Initializing virtual file system with disk: /Users/pierce/Library/Application Support/Win32Emu/VirtualDisks/BasicDD.vhd
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Mounted VHD: /Users/pierce/Library/Application Support/Win32Emu/VirtualDisks/BasicDD.vhd (Read-Write)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Virtual File System initialized with disk: /Users/pierce/Library/Application Support/Win32Emu/VirtualDisks/BasicDD.vhd
 info: Win32Emu.Emulator[0]
       [RegistryHive] Disposed registry hive manager
 info: Win32Emu.Emulator[0]
@@ -429,6 +451,8 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Kernel32] WideCharToMultiByte: Read 257 chars (specified count)
 info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Buffer too small with trailing null - trying without null terminator
+info: Win32Emu.Emulator[0]
       [Kernel32] WideCharToMultiByte: Buffer too small - need 513 bytes but only have 256
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000000, argBytes=32
@@ -484,6 +508,8 @@ info: Win32Emu.Emulator[0]
       [Kernel32] WideCharToMultiByte: CP=Utf8 cchWide=257 lpWide=0x001FE578 cbMulti=256 lpMulti=0x001FEC1C
 info: Win32Emu.Emulator[0]
       [Kernel32] WideCharToMultiByte: Read 257 chars (specified count)
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Buffer too small with trailing null - trying without null terminator
 info: Win32Emu.Emulator[0]
       [Kernel32] WideCharToMultiByte: Buffer too small - need 513 bytes but only have 256
 info: Win32Emu.Emulator[0]
@@ -895,19 +921,6 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::SetCooperativeLevel returned 0x00000000 (argBytes=12)
 info: Win32Emu.Emulator[0]
-      [COM vtable] Stack state before cleanup:
-        [ESP+00] = 0x001FEEB8: 0x0040134B (return addr)
-        [ESP+04] = 0x001FEEBC: 0x010032B0 (arg1)
-        [ESP+08] = 0x001FEEC0: 0x00010000 (arg2)
-        [ESP+12] = 0x001FEEC4: 0x00000011 (arg3)
-        [ESP+16] = 0x001FEEC8: 0xAFAEADAC
-        [ESP+20] = 0x001FEECC: 0xB3B2B1B0
-        [ESP+24] = 0x001FEED0: 0xB7B6B5B4
-        [ESP+28] = 0x001FEED4: 0xBBBAB9B8
-
-info: Win32Emu.Emulator[0]
-      [COM vtable] Stack cleanup: ESP=0x001FEEB8, retEIP=0x0040134B, argBytes=12, new ESP=0x001FEEC8
-info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D001150
 info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDraw::SetDisplayMode at address 0x0D001150
@@ -927,19 +940,6 @@ info: Win32Emu.Emulator[0]
       [DDraw COM] SetDisplayMode succeeded, returning DD_OK (0)
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::SetDisplayMode returned 0x00000000 (argBytes=16)
-info: Win32Emu.Emulator[0]
-      [COM vtable] Stack state before cleanup:
-        [ESP+00] = 0x001FEEAC: 0x00401376 (return addr)
-        [ESP+04] = 0x001FEEB0: 0x010032B0 (arg1)
-        [ESP+08] = 0x001FEEB4: 0x00000280 (arg2)
-        [ESP+12] = 0x001FEEB8: 0x000001E0 (arg3)
-        [ESP+16] = 0x001FEEBC: 0x00000010 (arg4)
-        [ESP+20] = 0x001FEEC0: 0x00000000
-        [ESP+24] = 0x001FEEC4: 0x00000000
-        [ESP+28] = 0x001FEEC8: 0xAFAEADAC
-
-info: Win32Emu.Emulator[0]
-      [COM vtable] Stack cleanup: ESP=0x001FEEAC, retEIP=0x00401376, argBytes=16, new ESP=0x001FEEC0
 info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D001060
 info: Win32Emu.Emulator[0]
@@ -963,19 +963,6 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::CreateSurface returned 0x00000000 (argBytes=16)
 info: Win32Emu.Emulator[0]
-      [COM vtable] Stack state before cleanup:
-        [ESP+00] = 0x001FEEA8: 0x004013CE (return addr)
-        [ESP+04] = 0x001FEEAC: 0x010032B0 (arg1)
-        [ESP+08] = 0x001FEEB0: 0x001FEED0 (arg2)
-        [ESP+12] = 0x001FEEB4: 0x00409588 (arg3)
-        [ESP+16] = 0x001FEEB8: 0x00000000 (arg4)
-        [ESP+20] = 0x001FEEBC: 0x00000000
-        [ESP+24] = 0x001FEEC0: 0x00000000
-        [ESP+28] = 0x001FEEC4: 0x00000000
-
-info: Win32Emu.Emulator[0]
-      [COM vtable] Stack cleanup: ESP=0x001FEEA8, retEIP=0x004013CE, argBytes=16, new ESP=0x001FEEBC
-info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D0020C0
 info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDrawSurface::GetAttachedSurface at address 0x0D0020C0
@@ -991,19 +978,6 @@ info: Win32Emu.Emulator[0]
       [DDraw] Returning attached surface COM object at 0x010033C0
 info: Win32Emu.Emulator[0]
       [COM] IDirectDrawSurface::GetAttachedSurface returned 0x00000000 (argBytes=12)
-info: Win32Emu.Emulator[0]
-      [COM vtable] Stack state before cleanup:
-        [ESP+00] = 0x001FEEB0: 0x0040140C (return addr)
-        [ESP+04] = 0x001FEEB4: 0x01003320 (arg1)
-        [ESP+08] = 0x001FEEB8: 0x001FEEC0 (arg2)
-        [ESP+12] = 0x001FEEBC: 0x0040958C (arg3)
-        [ESP+16] = 0x001FEEC0: 0x00000004
-        [ESP+20] = 0x001FEEC4: 0x00000000
-        [ESP+24] = 0x001FEEC8: 0x00000000
-        [ESP+28] = 0x001FEECC: 0x00000000
-
-info: Win32Emu.Emulator[0]
-      [COM vtable] Stack cleanup: ESP=0x001FEEB0, retEIP=0x0040140C, argBytes=12, new ESP=0x001FEEC0
 fail: Win32Emu.Emulator[0]
       [IcedCpu] Unhandled mnemonic INVALID at 0x0040715A, ESP=0x001FEF70, EBP=0x0040187C, EAX=0x00000065. Likely executing data as code or invalid jump target.
 fail: Win32Emu.Emulator[0]
@@ -1011,19 +985,21 @@ fail: Win32Emu.Emulator[0]
 fail: Win32Emu.Emulator[0]
       [Emulator] Exception during SingleStep at EIP=0x0040715A, ESP=0x001FEF70, EBP=0x0040187C: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
       System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
-         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in \\mac\RiderProjects\Win32Emu\Win32Emu\Cpu\Iced\IcedCpu.cs:line 667
-         at Win32Emu.Emulator.RunNormalAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 862
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 746
+         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 885
 fail: Win32Emu.Emulator[0]
       [Emulator] Unhandled exception during emulation
       System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
-         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in \\mac\RiderProjects\Win32Emu\Win32Emu\Cpu\Iced\IcedCpu.cs:line 667
-         at Win32Emu.Emulator.RunNormalAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 862
-         at Win32Emu.Emulator.RunAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 583
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 746
+         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 885
+         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 585
 info: Win32Emu.Emulator[0]
       No unimplemented functions found!
 fail: Win32Emu.Emulator[0]
       Unhandled exception during emulation
       System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
-         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in \\mac\RiderProjects\Win32Emu\Win32Emu\Cpu\Iced\IcedCpu.cs:line 667
-         at Win32Emu.Emulator.RunNormalAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 862
-         at Win32Emu.Emulator.RunAsync() in \\mac\RiderProjects\Win32Emu\Win32Emu\Emulator.cs:line 583
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 746
+         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 885
+         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 585
+
+
