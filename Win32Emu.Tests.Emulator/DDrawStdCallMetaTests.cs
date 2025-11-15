@@ -60,6 +60,10 @@ public class DDrawStdCallMetaTests
 	[InlineData(0xFu, 256)]  // All flags set → should use 8BIT (256 entries)
 	[InlineData(0x6u, 16)]   // Both 2BIT and 4BIT set → should use 4BIT (16 entries)
 	[InlineData(0x0u, 256)]  // No flags set → default to 256 entries
+	[InlineData(0x40u, 256)] // DDPCAPS_ALLOW256 alone → 256 entries
+	[InlineData(0x44u, 256)] // DDPCAPS_4BIT | DDPCAPS_ALLOW256 → 256 entries (ALLOW256 overrides)
+	[InlineData(0x48u, 256)] // DDPCAPS_8BIT | DDPCAPS_ALLOW256 → 256 entries
+	[InlineData(0x41u, 256)] // DDPCAPS_1BIT | DDPCAPS_ALLOW256 → 256 entries (ALLOW256 overrides)
 	public void CreatePalette_WithVariousFlags_ShouldSelectCorrectPaletteSize(uint dwFlags, int expectedEntries)
 	{
 		// This test verifies the fix for the palette size determination issue.
@@ -67,11 +71,18 @@ public class DDrawStdCallMetaTests
 		// the palette should be created with the highest bit depth (256 entries for 8-bit)
 		// not a lower bit depth (16 entries for 4-bit).
 		//
+		// DDPCAPS_ALLOW256 (0x40) is a special flag that indicates all 256 palette entries
+		// should be available for use. When this flag is set, it overrides any bit depth
+		// flags and always creates a 256-entry palette. This is used by applications that
+		// need full control over all 256 palette entries, even when combined with lower
+		// bit depth flags like DDPCAPS_4BIT.
+		//
 		// This prevents the error: "SetEntries: invalid range (start=0, count=256, max=16)"
 		// when applications set 256 palette entries on what they expect to be a 256-entry palette.
 		//
-		// The implementation checks flags from highest to lowest bit depth:
-		// - 8-bit (0x8) → 256 entries (checked first)
+		// The implementation checks flags in this order:
+		// - ALLOW256 (0x40) → 256 entries (checked first, overrides all other flags)
+		// - 8-bit (0x8) → 256 entries
 		// - 4-bit (0x4) → 16 entries
 		// - 2-bit (0x2) → 4 entries
 		// - 1-bit (0x1) → 2 entries
