@@ -2524,12 +2524,64 @@ public class IcedCpu : IAsyncCpu
 		}
 	}
 
+	#region REP Prefix Handlers
+
+	/// <summary>
+	/// Executes a string instruction with REP prefix (unconditional repeat).
+	/// Repeats the operation while ECX != 0, decrementing ECX after each iteration.
+	/// </summary>
+	/// <param name="operation">The string operation to execute each iteration</param>
+	private void Rep(Action operation)
+	{
+		while (_ecx != 0)
+		{
+			operation();
+			_ecx--;
+		}
+	}
+
+	/// <summary>
+	/// Executes a string instruction with REPE/REPZ prefix (repeat while equal/zero).
+	/// Repeats while ECX != 0 AND ZF = 1, decrementing ECX after each iteration.
+	/// Stops early if ZF becomes 0 (values not equal).
+	/// </summary>
+	/// <param name="operation">The string operation to execute each iteration</param>
+	private void Repe(Action operation)
+	{
+		while (_ecx != 0)
+		{
+			operation();
+			_ecx--;
+			if (!GetFlag(Zf))
+				break; // Stop when not equal
+		}
+	}
+
+	/// <summary>
+	/// Executes a string instruction with REPNE/REPNZ prefix (repeat while not equal/not zero).
+	/// Repeats while ECX != 0 AND ZF = 0, decrementing ECX after each iteration.
+	/// Stops early if ZF becomes 1 (values equal).
+	/// </summary>
+	/// <param name="operation">The string operation to execute each iteration</param>
+	private void Repne(Action operation)
+	{
+		while (_ecx != 0)
+		{
+			operation();
+			_ecx--;
+			if (GetFlag(Zf))
+				break; // Stop when equal
+		}
+	}
+
+	#endregion
+
 	private void ExecMovs(int size, bool rep)
 	{
 		var delta = GetFlag(Df) ? -size : size;
 		
-		// Handle non-repeated MOVS
-		if (!rep)
+		// Define the single-iteration operation
+		void MovsOperation()
 		{
 			var v = size switch
 			{
@@ -2551,34 +2603,16 @@ public class IcedCpu : IAsyncCpu
 			}
 			_esi = (uint)(_esi + delta);
 			_edi = (uint)(_edi + delta);
-			return;
 		}
 		
-		// Handle REP - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with or without REP prefix
+		if (rep)
 		{
-			var v = size switch
-			{
-				1 => _mem.Read8(_esi),
-				2 => _mem.Read16(_esi),
-				_ => _mem.Read32(_esi)
-			};
-			if (size == 1)
-			{
-				_mem.Write8(_edi, (byte)v);
-			}
-			else if (size == 2)
-			{
-				_mem.Write16(_edi, (ushort)v);
-			}
-			else
-			{
-				_mem.Write32(_edi, v);
-			}
-
-			_esi = (uint)(_esi + delta);
-			_edi = (uint)(_edi + delta);
-			_ecx--;
+			Rep(MovsOperation);
+		}
+		else
+		{
+			MovsOperation();
 		}
 	}
 
@@ -2592,8 +2626,8 @@ public class IcedCpu : IAsyncCpu
 			_ => _eax
 		};
 		
-		// Handle non-repeated STOS
-		if (!rep)
+		// Define the single-iteration operation
+		void StosOperation()
 		{
 			if (size == 1)
 			{
@@ -2608,27 +2642,16 @@ public class IcedCpu : IAsyncCpu
 				_mem.Write32(_edi, src);
 			}
 			_edi = (uint)(_edi + delta);
-			return;
 		}
 		
-		// Handle REP - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with or without REP prefix
+		if (rep)
 		{
-			if (size == 1)
-			{
-				_mem.Write8(_edi, (byte)src);
-			}
-			else if (size == 2)
-			{
-				_mem.Write16(_edi, (ushort)src);
-			}
-			else
-			{
-				_mem.Write32(_edi, src);
-			}
-
-			_edi = (uint)(_edi + delta);
-			_ecx--;
+			Rep(StosOperation);
+		}
+		else
+		{
+			StosOperation();
 		}
 	}
 
@@ -2636,8 +2659,8 @@ public class IcedCpu : IAsyncCpu
 	{
 		var delta = GetFlag(Df) ? -size : size;
 		
-		// Handle non-repeated LODS
-		if (!rep)
+		// Define the single-iteration operation
+		void LodsOperation()
 		{
 			var v = size switch
 			{
@@ -2658,33 +2681,16 @@ public class IcedCpu : IAsyncCpu
 				_eax = v;
 			}
 			_esi = (uint)(_esi + delta);
-			return;
 		}
 		
-		// Handle REP - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with or without REP prefix
+		if (rep)
 		{
-			var v = size switch
-			{
-				1 => _mem.Read8(_esi),
-				2 => _mem.Read16(_esi),
-				_ => _mem.Read32(_esi)
-			};
-			if (size == 1)
-			{
-				_eax = (_eax & 0xFFFFFF00) | (v & 0xFF);
-			}
-			else if (size == 2)
-			{
-				_eax = (_eax & 0xFFFF0000) | (v & 0xFFFF);
-			}
-			else
-			{
-				_eax = v;
-			}
-
-			_esi = (uint)(_esi + delta);
-			_ecx--;
+			Rep(LodsOperation);
+		}
+		else
+		{
+			LodsOperation();
 		}
 	}
 
@@ -2694,8 +2700,8 @@ public class IcedCpu : IAsyncCpu
 		// Since I/O ports are not fully emulated, we write 0 (similar to IN instruction handling)
 		var delta = GetFlag(Df) ? -size : size;
 		
-		// Handle non-repeated INS
-		if (!rep)
+		// Define the single-iteration operation
+		void InsOperation()
 		{
 			// I/O port read would go here, but we stub it to return 0
 			uint value = 0;
@@ -2713,30 +2719,16 @@ public class IcedCpu : IAsyncCpu
 				_mem.Write32(_edi, value);
 			}
 			_edi = (uint)(_edi + delta);
-			return;
 		}
 		
-		// Handle REP - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with or without REP prefix
+		if (rep)
 		{
-			// I/O port read would go here, but we stub it to return 0
-			uint value = 0;
-			
-			if (size == 1)
-			{
-				_mem.Write8(_edi, (byte)value);
-			}
-			else if (size == 2)
-			{
-				_mem.Write16(_edi, (ushort)value);
-			}
-			else
-			{
-				_mem.Write32(_edi, value);
-			}
-
-			_edi = (uint)(_edi + delta);
-			_ecx--;
+			Rep(InsOperation);
+		}
+		else
+		{
+			InsOperation();
 		}
 	}
 
@@ -2746,8 +2738,8 @@ public class IcedCpu : IAsyncCpu
 		// Since I/O ports are not fully emulated, we just read and discard (similar to OUT instruction handling)
 		var delta = GetFlag(Df) ? -size : size;
 		
-		// Handle non-repeated OUTS
-		if (!rep)
+		// Define the single-iteration operation
+		void OutsOperation()
 		{
 			// Read from memory (required for proper ESI advancement)
 			if (size == 1)
@@ -2764,29 +2756,16 @@ public class IcedCpu : IAsyncCpu
 			}
 			// I/O port write would go here, but we stub it as a no-op
 			_esi = (uint)(_esi + delta);
-			return;
 		}
 		
-		// Handle REP - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with or without REP prefix
+		if (rep)
 		{
-			// Read from memory (required for proper ESI advancement)
-			if (size == 1)
-			{
-				_ = _mem.Read8(_esi);
-			}
-			else if (size == 2)
-			{
-				_ = _mem.Read16(_esi);
-			}
-			else
-			{
-				_ = _mem.Read32(_esi);
-			}
-			// I/O port write would go here, but we stub it as a no-op
-
-			_esi = (uint)(_esi + delta);
-			_ecx--;
+			Rep(OutsOperation);
+		}
+		else
+		{
+			OutsOperation();
 		}
 	}
 
@@ -2794,8 +2773,8 @@ public class IcedCpu : IAsyncCpu
 	{
 		var delta = GetFlag(Df) ? -size : size;
 		
-		// Handle non-repeated CMPS
-		if (!repe && !repne)
+		// Define the single-iteration operation
+		void CmpsOperation()
 		{
 			var a = size switch
 			{
@@ -2813,39 +2792,20 @@ public class IcedCpu : IAsyncCpu
 			SetFlagsSub(a, b, r);
 			_esi = (uint)(_esi + delta);
 			_edi = (uint)(_edi + delta);
-			return;
 		}
 		
-		// Handle REP/REPNZ - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with appropriate REP prefix
+		if (repe)
 		{
-			var a = size switch
-			{
-				1 => _mem.Read8(_esi),
-				2 => _mem.Read16(_esi),
-				_ => _mem.Read32(_esi)
-			};
-			var b = size switch
-			{
-				1 => _mem.Read8(_edi),
-				2 => _mem.Read16(_edi),
-				_ => _mem.Read32(_edi)
-			};
-			var r = a - b;
-			SetFlagsSub(a, b, r);
-			_esi = (uint)(_esi + delta);
-			_edi = (uint)(_edi + delta);
-			_ecx--;
-			
-			if (repe && !GetFlag(Zf))
-			{
-				break; // stop when not equal
-			}
-
-			if (repne && GetFlag(Zf))
-			{
-				break; // stop when equal
-			}
+			Repe(CmpsOperation);
+		}
+		else if (repne)
+		{
+			Repne(CmpsOperation);
+		}
+		else
+		{
+			CmpsOperation();
 		}
 	}
 
@@ -2859,8 +2819,8 @@ public class IcedCpu : IAsyncCpu
 			_ => _eax
 		};
 		
-		// Handle non-repeated SCAS
-		if (!repe && !repne)
+		// Define the single-iteration operation
+		void ScasOperation()
 		{
 			var b = size switch
 			{
@@ -2871,32 +2831,20 @@ public class IcedCpu : IAsyncCpu
 			var r = a - b;
 			SetFlagsSub(a, b, r);
 			_edi = (uint)(_edi + delta);
-			return;
 		}
 		
-		// Handle REP/REPNZ - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with appropriate REP prefix
+		if (repe)
 		{
-			var b = size switch
-			{
-				1 => _mem.Read8(_edi),
-				2 => _mem.Read16(_edi),
-				_ => _mem.Read32(_edi)
-			};
-			var r = a - b;
-			SetFlagsSub(a, b, r);
-			_edi = (uint)(_edi + delta);
-			_ecx--;
-			
-			if (repe && !GetFlag(Zf))
-			{
-				break;
-			}
-
-			if (repne && GetFlag(Zf))
-			{
-				break;
-			}
+			Repe(ScasOperation);
+		}
+		else if (repne)
+		{
+			Repne(ScasOperation);
+		}
+		else
+		{
+			ScasOperation();
 		}
 	}
 
@@ -4672,11 +4620,33 @@ public class IcedCpu : IAsyncCpu
 
 	#region Flags
 
+	/// <summary>
+	/// Sets CPU flags after an ADD operation (32-bit operands).
+	/// </summary>
+	/// <param name="a">First operand</param>
+	/// <param name="b">Second operand</param>
+	/// <param name="r">Result of a + b</param>
 	private void SetFlagsAdd(uint a, uint b, uint r)
 	{
 		SetFlagsAdd(a, b, r, 0x80000000);
 	}
 
+	/// <summary>
+	/// Sets CPU flags after an ADD operation with custom sign bit mask for different operand sizes.
+	/// 
+	/// Flag calculations:
+	/// - CF (Carry): Set if unsigned overflow occurred (result wrapped around)
+	/// - OF (Overflow): Set if signed overflow occurred using XOR-based detection:
+	///   (~(a ^ b) & (a ^ r)) checks if operands had same sign but result has different sign
+	/// - AF (Auxiliary): Set if carry occurred from bit 3 to bit 4 (BCD arithmetic)
+	/// - ZF, SF, PF: Set by UpdateLogicResultFlags based on result value
+	/// 
+	/// Reference: Intel SDM Vol 1, Section 3.4.3.1 (Status Flags)
+	/// </summary>
+	/// <param name="a">First operand</param>
+	/// <param name="b">Second operand</param>
+	/// <param name="r">Result of a + b</param>
+	/// <param name="signBitMask">Mask for sign bit (0x80 for 8-bit, 0x8000 for 16-bit, 0x80000000 for 32-bit)</param>
 	private void SetFlagsAdd(uint a, uint b, uint r, uint signBitMask)
 	{
 		SetFlagVal(Cf, r < a);
@@ -4685,11 +4655,34 @@ public class IcedCpu : IAsyncCpu
 		UpdateLogicResultFlags(r, signBitMask);
 	}
 
+	/// <summary>
+	/// Sets CPU flags after a SUB operation (32-bit operands).
+	/// </summary>
+	/// <param name="a">Minuend (value being subtracted from)</param>
+	/// <param name="b">Subtrahend (value being subtracted)</param>
+	/// <param name="r">Result of a - b</param>
 	private void SetFlagsSub(uint a, uint b, uint r)
 	{
 		SetFlagsSub(a, b, r, 0x80000000);
 	}
 
+	/// <summary>
+	/// Sets CPU flags after a SUB operation with custom sign bit mask for different operand sizes.
+	/// 
+	/// Flag calculations:
+	/// - CF (Carry/Borrow): Set if unsigned underflow occurred (a &lt; b)
+	/// - OF (Overflow): Set if signed overflow occurred using XOR-based detection:
+	///   ((a ^ b) & (a ^ r)) checks if operands had different signs and result sign differs from minuend
+	/// - AF (Auxiliary): Set if borrow occurred from bit 4 to bit 3 (BCD arithmetic)
+	/// - ZF, SF, PF: Set by UpdateLogicResultFlags based on result value
+	/// 
+	/// Note: SUB is implemented as a + (~b + 1), hence the different XOR pattern for OF
+	/// Reference: Intel SDM Vol 1, Section 3.4.3.1 (Status Flags)
+	/// </summary>
+	/// <param name="a">Minuend (value being subtracted from)</param>
+	/// <param name="b">Subtrahend (value being subtracted)</param>
+	/// <param name="r">Result of a - b</param>
+	/// <param name="signBitMask">Mask for sign bit (0x80 for 8-bit, 0x8000 for 16-bit, 0x80000000 for 32-bit)</param>
 	private void SetFlagsSub(uint a, uint b, uint r, uint signBitMask)
 	{
 		SetFlagVal(Cf, a < b);
@@ -4698,6 +4691,12 @@ public class IcedCpu : IAsyncCpu
 		UpdateLogicResultFlags(r, signBitMask);
 	}
 
+	/// <summary>
+	/// Sets CPU flags after an INC operation.
+	/// Note: INC does not affect the Carry Flag (CF), unlike ADD.
+	/// </summary>
+	/// <param name="a">Original value</param>
+	/// <param name="r">Result after incrementing (a + 1)</param>
 	private void SetFlagsIncDecAdd(uint a, uint r)
 	{
 		SetFlagVal(Of, ((~(a ^ 1u) & (a ^ r) & 0x80000000) != 0));
@@ -4705,6 +4704,12 @@ public class IcedCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 
+	/// <summary>
+	/// Sets CPU flags after a DEC operation.
+	/// Note: DEC does not affect the Carry Flag (CF), unlike SUB.
+	/// </summary>
+	/// <param name="a">Original value</param>
+	/// <param name="r">Result after decrementing (a - 1)</param>
 	private void SetFlagsIncDecSub(uint a, uint r)
 	{
 		SetFlagVal(Of, (((a ^ 0xFFFFFFFFu) & (a ^ r) & 0x80000000) != 0));
@@ -4712,11 +4717,32 @@ public class IcedCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 
+	/// <summary>
+	/// Updates ZF, SF, and PF flags based on operation result (32-bit).
+	/// </summary>
+	/// <param name="r">Result value</param>
 	private void UpdateLogicResultFlags(uint r)
 	{
 		UpdateLogicResultFlags(r, 0x80000000);
 	}
 
+	/// <summary>
+	/// Updates Zero Flag (ZF), Sign Flag (SF), and Parity Flag (PF) based on operation result.
+	/// 
+	/// Flag calculations:
+	/// - ZF: Set if result is zero
+	/// - SF: Set if sign bit (MSB) of result is set
+	/// - PF: Set if low byte of result has even parity (even number of 1 bits)
+	/// 
+	/// Parity calculation uses a lookup table approach with magic constant 0x6996:
+	/// This 16-bit constant encodes parity for all 4-bit values (0-15).
+	/// The algorithm XORs high and low nibbles to reduce 8 bits to 4 bits,
+	/// then uses bit position in 0x6996 to determine parity.
+	/// 
+	/// Reference: Intel SDM Vol 1, Section 3.4.3.1 (Status Flags)
+	/// </summary>
+	/// <param name="r">Result value</param>
+	/// <param name="signBitMask">Mask for sign bit (0x80 for 8-bit, 0x8000 for 16-bit, 0x80000000 for 32-bit)</param>
 	private void UpdateLogicResultFlags(uint r, uint signBitMask)
 	{
 		SetFlagVal(Zf, r == 0);
