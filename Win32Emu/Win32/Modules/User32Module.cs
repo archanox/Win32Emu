@@ -2812,7 +2812,42 @@ namespace Win32Emu.Win32.Modules
 		private uint SendDlgItemMessageA(uint hDlg, int nIDDlgItem, uint msg, uint wParam, uint lParam)
 		{
 			// SendDlgItemMessageA sends a message to a control in a dialog box
-			_logger.LogInformation("[User32] SendDlgItemMessageA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem} msg=0x{Msg:X4}", hDlg, nIDDlgItem, msg);
+			_logger.LogInformation("[User32] SendDlgItemMessageA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem} msg=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", 
+				hDlg, nIDDlgItem, msg, wParam, lParam);
+
+			// Handle STM_SETIMAGE (0x0172) for static controls
+			const uint STM_SETIMAGE = 0x0172;
+			const uint IMAGE_BITMAP = 0;
+			const uint IMAGE_ICON = 1;
+			
+			if (msg == STM_SETIMAGE)
+			{
+				var imageType = wParam;
+				var imageHandle = lParam;
+				
+				_logger.LogInformation("[User32] SendDlgItemMessageA: STM_SETIMAGE imageType={ImageType} imageHandle=0x{ImageHandle:X8}", 
+					imageType, imageHandle);
+				
+				if (imageType == IMAGE_BITMAP && imageHandle != 0)
+				{
+					// Look up the bitmap data from LoadImageA
+					if (_loadedBitmaps.TryGetValue(imageHandle, out var bitmap))
+					{
+						_logger.LogInformation("[User32] SendDlgItemMessageA: Found bitmap data ({Size} bytes), notifying host", 
+							bitmap.Data.Length);
+						
+						// Notify the host (GUI) to display the bitmap
+						_host?.OnDialogControlBitmapChanged(hDlg, nIDDlgItem, bitmap.Data);
+						
+						return 0; // Return 0 to indicate success (previous image handle would be returned normally)
+					}
+					else
+					{
+						_logger.LogWarning("[User32] SendDlgItemMessageA: Bitmap handle 0x{ImageHandle:X8} not found in loaded bitmaps", 
+							imageHandle);
+					}
+				}
+			}
 
 			// Return 0 (default message handling result)
 			return 0;
