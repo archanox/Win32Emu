@@ -16,6 +16,16 @@ Comprehensive analysis comparing Win32Emu's IcedCpu implementation with Reko's X
 
 **Key Takeaway:** Win32Emu's emulator is already well-designed and more sophisticated than Reko's implementation.
 
+#### [REKO_PROTECTED32_ANALYSIS.md](REKO_PROTECTED32_ANALYSIS.md)
+Analysis of Reko's X86Protected32Emulator (32-bit protected mode extension). Covers:
+- Platform call interception patterns
+- 32-bit stack operations
+- Segment override handling (FS/GS)
+- String instruction completeness comparison
+- Call/return with platform emulation
+
+**Key Takeaway:** Win32Emu is more complete than Reko's Protected32Emulator. Win32Emu has full string instruction support, segment overrides, and RETF implementation where Reko has placeholders.
+
 #### [REKO_REVIEW_SUMMARY.md](REKO_REVIEW_SUMMARY.md)
 Executive summary of the Reko X86Emulator review. Provides:
 - TL;DR verdict and outcome
@@ -41,7 +51,11 @@ Quick reference for x86 CPU flag calculations. Includes:
 
 ## Background
 
-This documentation was created as part of a review of the [Reko X86Emulator](https://github.com/uxmal/reko/blob/master/src/Arch/X86/Emulator/X86Emulator.cs) to identify potential improvements for Win32Emu. The review validated that Win32Emu's implementation is correct and follows industry best practices.
+This documentation was created as part of a review of Reko's x86 emulators to identify potential improvements for Win32Emu:
+- [Reko X86Emulator](https://github.com/uxmal/reko/blob/master/src/Arch/X86/Emulator/X86Emulator.cs) - Base emulator (generic x86)
+- [Reko X86Protected32Emulator](https://github.com/uxmal/reko/blob/master/src/Arch/X86/Emulator/X86Protected32Emulator.cs) - 32-bit protected mode specialization
+
+The review validated that Win32Emu's implementation is correct, more complete, and follows industry best practices.
 
 ## Related Files
 
@@ -118,5 +132,6 @@ When modifying CPU emulation code:
 
 For questions about:
 - **Flag calculations:** See [CPU_FLAG_CALCULATIONS.md](../guides/CPU_FLAG_CALCULATIONS.md)
-- **Architecture decisions:** See [REKO_X86EMULATOR_ANALYSIS.md](REKO_X86EMULATOR_ANALYSIS.md)
-- **Review findings:** See [REKO_REVIEW_SUMMARY.md](REKO_REVIEW_SUMMARY.md)
+- **Base emulator comparison:** See [REKO_X86EMULATOR_ANALYSIS.md](REKO_X86EMULATOR_ANALYSIS.md)
+- **Protected mode comparison:** See [REKO_PROTECTED32_ANALYSIS.md](REKO_PROTECTED32_ANALYSIS.md)
+- **Review findings summary:** See [REKO_REVIEW_SUMMARY.md](REKO_REVIEW_SUMMARY.md)
