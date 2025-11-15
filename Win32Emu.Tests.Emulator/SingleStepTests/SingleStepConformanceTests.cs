@@ -79,6 +79,9 @@ public class SingleStepConformanceTests
 		yield break;
 	}
 	
+	// Cache parsed MOO files to avoid re-parsing for each test run
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, MooTestFile> _mooFileCache = new();
+	
 	[Theory]
 	[MemberData(nameof(GetTestFiles))]
 	public void CPU_ShouldPassHardwareTests(string fileName, int maxTests)
@@ -91,7 +94,8 @@ public class SingleStepConformanceTests
 			return;
 		}
 		
-		var mooFile = MooFileParser.Parse(testFile);
+		// Use cached parsed data to avoid re-parsing
+		var mooFile = _mooFileCache.GetOrAdd(testFile, MooFileParser.Parse);
 		var runner = new SingleStepTestRunner(_logger);
 		
 		var passCount = 0;
@@ -162,11 +166,14 @@ public class SingleStepConformanceTests
 			return "Execution Error";
 		}
 		
-		// Check what's wrong
-		var hasEipMismatch = result.RegisterMismatches.Any(r => r.RegisterName == "EIP");
-		var hasFlagsMismatch = result.RegisterMismatches.Any(r => r.RegisterName == "EFLAGS");
-		var hasOtherRegMismatch = result.RegisterMismatches.Any(r => r.RegisterName != "EIP" && r.RegisterName != "EFLAGS");
-		var hasMemoryMismatch = result.MemoryMismatches.Any();
+		// Check what's wrong (handle lazy-initialized lists)
+		var registerMismatches = result.RegisterMismatches;
+		var memoryMismatches = result.MemoryMismatches;
+		
+		var hasEipMismatch = registerMismatches.Any(r => r.RegisterName == "EIP");
+		var hasFlagsMismatch = registerMismatches.Any(r => r.RegisterName == "EFLAGS");
+		var hasOtherRegMismatch = registerMismatches.Any(r => r.RegisterName != "EIP" && r.RegisterName != "EFLAGS");
+		var hasMemoryMismatch = memoryMismatches.Any();
 		
 		if (hasEipMismatch && !hasFlagsMismatch && !hasOtherRegMismatch && !hasMemoryMismatch)
 		{
