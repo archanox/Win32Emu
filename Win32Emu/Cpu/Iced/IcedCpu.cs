@@ -2524,12 +2524,64 @@ public class IcedCpu : IAsyncCpu
 		}
 	}
 
+	#region REP Prefix Handlers
+
+	/// <summary>
+	/// Executes a string instruction with REP prefix (unconditional repeat).
+	/// Repeats the operation while ECX != 0, decrementing ECX after each iteration.
+	/// </summary>
+	/// <param name="operation">The string operation to execute each iteration</param>
+	private void Rep(Action operation)
+	{
+		while (_ecx != 0)
+		{
+			operation();
+			_ecx--;
+		}
+	}
+
+	/// <summary>
+	/// Executes a string instruction with REPE/REPZ prefix (repeat while equal/zero).
+	/// Repeats while ECX != 0 AND ZF = 1, decrementing ECX after each iteration.
+	/// Stops early if ZF becomes 0 (values not equal).
+	/// </summary>
+	/// <param name="operation">The string operation to execute each iteration</param>
+	private void Repe(Action operation)
+	{
+		while (_ecx != 0)
+		{
+			operation();
+			_ecx--;
+			if (!GetFlag(Zf))
+				break; // Stop when not equal
+		}
+	}
+
+	/// <summary>
+	/// Executes a string instruction with REPNE/REPNZ prefix (repeat while not equal/not zero).
+	/// Repeats while ECX != 0 AND ZF = 0, decrementing ECX after each iteration.
+	/// Stops early if ZF becomes 1 (values equal).
+	/// </summary>
+	/// <param name="operation">The string operation to execute each iteration</param>
+	private void Repne(Action operation)
+	{
+		while (_ecx != 0)
+		{
+			operation();
+			_ecx--;
+			if (GetFlag(Zf))
+				break; // Stop when equal
+		}
+	}
+
+	#endregion
+
 	private void ExecMovs(int size, bool rep)
 	{
 		var delta = GetFlag(Df) ? -size : size;
 		
-		// Handle non-repeated MOVS
-		if (!rep)
+		// Define the single-iteration operation
+		void MovsOperation()
 		{
 			var v = size switch
 			{
@@ -2551,34 +2603,16 @@ public class IcedCpu : IAsyncCpu
 			}
 			_esi = (uint)(_esi + delta);
 			_edi = (uint)(_edi + delta);
-			return;
 		}
 		
-		// Handle REP - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with or without REP prefix
+		if (rep)
 		{
-			var v = size switch
-			{
-				1 => _mem.Read8(_esi),
-				2 => _mem.Read16(_esi),
-				_ => _mem.Read32(_esi)
-			};
-			if (size == 1)
-			{
-				_mem.Write8(_edi, (byte)v);
-			}
-			else if (size == 2)
-			{
-				_mem.Write16(_edi, (ushort)v);
-			}
-			else
-			{
-				_mem.Write32(_edi, v);
-			}
-
-			_esi = (uint)(_esi + delta);
-			_edi = (uint)(_edi + delta);
-			_ecx--;
+			Rep(MovsOperation);
+		}
+		else
+		{
+			MovsOperation();
 		}
 	}
 
@@ -2592,8 +2626,8 @@ public class IcedCpu : IAsyncCpu
 			_ => _eax
 		};
 		
-		// Handle non-repeated STOS
-		if (!rep)
+		// Define the single-iteration operation
+		void StosOperation()
 		{
 			if (size == 1)
 			{
@@ -2608,27 +2642,16 @@ public class IcedCpu : IAsyncCpu
 				_mem.Write32(_edi, src);
 			}
 			_edi = (uint)(_edi + delta);
-			return;
 		}
 		
-		// Handle REP - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with or without REP prefix
+		if (rep)
 		{
-			if (size == 1)
-			{
-				_mem.Write8(_edi, (byte)src);
-			}
-			else if (size == 2)
-			{
-				_mem.Write16(_edi, (ushort)src);
-			}
-			else
-			{
-				_mem.Write32(_edi, src);
-			}
-
-			_edi = (uint)(_edi + delta);
-			_ecx--;
+			Rep(StosOperation);
+		}
+		else
+		{
+			StosOperation();
 		}
 	}
 
@@ -2636,8 +2659,8 @@ public class IcedCpu : IAsyncCpu
 	{
 		var delta = GetFlag(Df) ? -size : size;
 		
-		// Handle non-repeated LODS
-		if (!rep)
+		// Define the single-iteration operation
+		void LodsOperation()
 		{
 			var v = size switch
 			{
@@ -2658,33 +2681,16 @@ public class IcedCpu : IAsyncCpu
 				_eax = v;
 			}
 			_esi = (uint)(_esi + delta);
-			return;
 		}
 		
-		// Handle REP - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with or without REP prefix
+		if (rep)
 		{
-			var v = size switch
-			{
-				1 => _mem.Read8(_esi),
-				2 => _mem.Read16(_esi),
-				_ => _mem.Read32(_esi)
-			};
-			if (size == 1)
-			{
-				_eax = (_eax & 0xFFFFFF00) | (v & 0xFF);
-			}
-			else if (size == 2)
-			{
-				_eax = (_eax & 0xFFFF0000) | (v & 0xFFFF);
-			}
-			else
-			{
-				_eax = v;
-			}
-
-			_esi = (uint)(_esi + delta);
-			_ecx--;
+			Rep(LodsOperation);
+		}
+		else
+		{
+			LodsOperation();
 		}
 	}
 
@@ -2694,8 +2700,8 @@ public class IcedCpu : IAsyncCpu
 		// Since I/O ports are not fully emulated, we write 0 (similar to IN instruction handling)
 		var delta = GetFlag(Df) ? -size : size;
 		
-		// Handle non-repeated INS
-		if (!rep)
+		// Define the single-iteration operation
+		void InsOperation()
 		{
 			// I/O port read would go here, but we stub it to return 0
 			uint value = 0;
@@ -2713,30 +2719,16 @@ public class IcedCpu : IAsyncCpu
 				_mem.Write32(_edi, value);
 			}
 			_edi = (uint)(_edi + delta);
-			return;
 		}
 		
-		// Handle REP - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with or without REP prefix
+		if (rep)
 		{
-			// I/O port read would go here, but we stub it to return 0
-			uint value = 0;
-			
-			if (size == 1)
-			{
-				_mem.Write8(_edi, (byte)value);
-			}
-			else if (size == 2)
-			{
-				_mem.Write16(_edi, (ushort)value);
-			}
-			else
-			{
-				_mem.Write32(_edi, value);
-			}
-
-			_edi = (uint)(_edi + delta);
-			_ecx--;
+			Rep(InsOperation);
+		}
+		else
+		{
+			InsOperation();
 		}
 	}
 
@@ -2746,8 +2738,8 @@ public class IcedCpu : IAsyncCpu
 		// Since I/O ports are not fully emulated, we just read and discard (similar to OUT instruction handling)
 		var delta = GetFlag(Df) ? -size : size;
 		
-		// Handle non-repeated OUTS
-		if (!rep)
+		// Define the single-iteration operation
+		void OutsOperation()
 		{
 			// Read from memory (required for proper ESI advancement)
 			if (size == 1)
@@ -2764,29 +2756,16 @@ public class IcedCpu : IAsyncCpu
 			}
 			// I/O port write would go here, but we stub it as a no-op
 			_esi = (uint)(_esi + delta);
-			return;
 		}
 		
-		// Handle REP - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with or without REP prefix
+		if (rep)
 		{
-			// Read from memory (required for proper ESI advancement)
-			if (size == 1)
-			{
-				_ = _mem.Read8(_esi);
-			}
-			else if (size == 2)
-			{
-				_ = _mem.Read16(_esi);
-			}
-			else
-			{
-				_ = _mem.Read32(_esi);
-			}
-			// I/O port write would go here, but we stub it as a no-op
-
-			_esi = (uint)(_esi + delta);
-			_ecx--;
+			Rep(OutsOperation);
+		}
+		else
+		{
+			OutsOperation();
 		}
 	}
 
@@ -2794,8 +2773,8 @@ public class IcedCpu : IAsyncCpu
 	{
 		var delta = GetFlag(Df) ? -size : size;
 		
-		// Handle non-repeated CMPS
-		if (!repe && !repne)
+		// Define the single-iteration operation
+		void CmpsOperation()
 		{
 			var a = size switch
 			{
@@ -2813,39 +2792,20 @@ public class IcedCpu : IAsyncCpu
 			SetFlagsSub(a, b, r);
 			_esi = (uint)(_esi + delta);
 			_edi = (uint)(_edi + delta);
-			return;
 		}
 		
-		// Handle REP/REPNZ - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with appropriate REP prefix
+		if (repe)
 		{
-			var a = size switch
-			{
-				1 => _mem.Read8(_esi),
-				2 => _mem.Read16(_esi),
-				_ => _mem.Read32(_esi)
-			};
-			var b = size switch
-			{
-				1 => _mem.Read8(_edi),
-				2 => _mem.Read16(_edi),
-				_ => _mem.Read32(_edi)
-			};
-			var r = a - b;
-			SetFlagsSub(a, b, r);
-			_esi = (uint)(_esi + delta);
-			_edi = (uint)(_edi + delta);
-			_ecx--;
-			
-			if (repe && !GetFlag(Zf))
-			{
-				break; // stop when not equal
-			}
-
-			if (repne && GetFlag(Zf))
-			{
-				break; // stop when equal
-			}
+			Repe(CmpsOperation);
+		}
+		else if (repne)
+		{
+			Repne(CmpsOperation);
+		}
+		else
+		{
+			CmpsOperation();
 		}
 	}
 
@@ -2859,8 +2819,8 @@ public class IcedCpu : IAsyncCpu
 			_ => _eax
 		};
 		
-		// Handle non-repeated SCAS
-		if (!repe && !repne)
+		// Define the single-iteration operation
+		void ScasOperation()
 		{
 			var b = size switch
 			{
@@ -2871,32 +2831,20 @@ public class IcedCpu : IAsyncCpu
 			var r = a - b;
 			SetFlagsSub(a, b, r);
 			_edi = (uint)(_edi + delta);
-			return;
 		}
 		
-		// Handle REP/REPNZ - check ECX before each iteration
-		while (_ecx != 0)
+		// Execute with appropriate REP prefix
+		if (repe)
 		{
-			var b = size switch
-			{
-				1 => _mem.Read8(_edi),
-				2 => _mem.Read16(_edi),
-				_ => _mem.Read32(_edi)
-			};
-			var r = a - b;
-			SetFlagsSub(a, b, r);
-			_edi = (uint)(_edi + delta);
-			_ecx--;
-			
-			if (repe && !GetFlag(Zf))
-			{
-				break;
-			}
-
-			if (repne && GetFlag(Zf))
-			{
-				break;
-			}
+			Repe(ScasOperation);
+		}
+		else if (repne)
+		{
+			Repne(ScasOperation);
+		}
+		else
+		{
+			ScasOperation();
 		}
 	}
 
