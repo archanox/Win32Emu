@@ -15,10 +15,10 @@
                 Padding="10">
             <StackPanel Orientation="Horizontal" Spacing="10">
                 <Button Content="Refresh" Command="{Binding RefreshCommand}"/>
-                <Separator/>
+                <Border Width="1" Height="24" Background="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" Margin="5,0"/>
                 <Button Content="Add Key" Command="{Binding AddKeyCommand}"/>
                 <Button Content="Delete Key" Command="{Binding DeleteKeyCommand}"/>
-                <Separator/>
+                <Border Width="1" Height="24" Background="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" Margin="5,0"/>
                 <Button Content="Add Value" Command="{Binding AddValueCommand}"/>
                 <Button Content="Edit Value" Command="{Binding EditValueCommand}"/>
                 <Button Content="Delete Value" Command="{Binding DeleteValueCommand}"/>

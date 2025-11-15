@@ -789,7 +789,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     }
 
     [RelayCommand]
-    private void OpenRegistryViewer()
+    private async Task OpenRegistryViewer()
     {
         if (_emulatorService?.CurrentEmulator?.Environment != null)
         {
@@ -800,7 +800,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             
             if (_ownerWindow != null)
             {
-                registryWindow.ShowDialog(_ownerWindow);
+                await registryWindow.ShowDialog(_ownerWindow);
             }
             else
             {
