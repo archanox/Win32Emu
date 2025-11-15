@@ -4,13 +4,13 @@ namespace Compress.Support.Compression.LZ
 {
     internal class OutWindow
     {
-        byte[] _buffer = null;
+        byte[]? _buffer = null;
         int _windowSize = 0;
         int _pos;
         int _streamPos;
         int _pendingLen;
         int _pendingDist;
-        System.IO.Stream _stream;
+        System.IO.Stream _stream = null!;
 
         public long Total;
         public long Limit;

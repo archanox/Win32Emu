@@ -44,7 +44,7 @@ namespace CHDReaderTest.Flac.FlacDeps
 
         public static IAudioSource Open(this IAudioDecoderSettings settings, string path, Stream IO = null)
         {
-            return Activator.CreateInstance(settings.DecoderType, settings, path, IO) as IAudioSource;
+            return (Activator.CreateInstance(settings.DecoderType, settings, path, IO) as IAudioSource)!;
         }
     }
 }

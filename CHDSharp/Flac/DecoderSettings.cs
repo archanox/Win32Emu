@@ -25,7 +25,7 @@ namespace CUETools.Codecs.Flake
 
         public IAudioDecoderSettings Clone()
         {
-            return MemberwiseClone() as IAudioDecoderSettings;
+            return (MemberwiseClone() as IAudioDecoderSettings)!;
         }
         #endregion
 

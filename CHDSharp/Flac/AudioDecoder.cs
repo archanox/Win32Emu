@@ -29,19 +29,19 @@ namespace CUETools.Codecs.Flake
 {
     public class AudioDecoder: IAudioSource
 	{
-		int[] samplesBuffer;
-		int[] residualBuffer;
+		int[] samplesBuffer = null!;
+		int[] residualBuffer = null!;
 
-		byte[] _framesBuffer;
+		byte[] _framesBuffer = null!;
 		int _framesBufferLength = 0, _framesBufferOffset = 0;
 		long first_frame_offset;
 
-		SeekPoint[] seek_table;
+		SeekPoint[]? seek_table;
 
-		Crc8 crc8;
-		FlacFrame frame;
-		BitReader framereader;
-		AudioPCMConfig pcm;
+		Crc8 crc8 = null!;
+		FlacFrame frame = null!;
+		BitReader framereader = null!;
+		AudioPCMConfig pcm = null!;
 
 		uint min_block_size = 0;
 		uint max_block_size = 0;
@@ -53,8 +53,8 @@ namespace CUETools.Codecs.Flake
 
 		bool do_crc = true;
 
-		string _path;
-		Stream _IO;
+		string _path = null!;
+		Stream _IO = null!;
 
 		public bool DoCRC
 		{
@@ -125,7 +125,7 @@ namespace CUETools.Codecs.Flake
 			framereader = new BitReader();
 		}
 
-        private DecoderSettings m_settings;
+        private DecoderSettings m_settings = null!;
         public IAudioDecoderSettings Settings => m_settings;
 
         public void Close()

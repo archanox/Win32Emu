@@ -6,14 +6,14 @@ namespace Compress.Support.Compression.LZMA
 {
     public class LzmaStream : Stream
     {
-        private Stream inputStream;
+        private Stream inputStream = null!;
         private long inputSize;
         private long outputSize;
 
         private int dictionarySize;
         private OutWindow outWindow = new OutWindow();
         private RangeCoder.Decoder rangeDecoder = new RangeCoder.Decoder();
-        private Decoder decoder;
+        private Decoder decoder = null!;
 
         private long position = 0;
         private bool endReached = false;
@@ -28,7 +28,7 @@ namespace Compress.Support.Compression.LZMA
         private bool needProps = true;
         private byte[] props = new byte[5];
 
-        private Encoder encoder;
+        private Encoder encoder = null!;
 
         public LzmaStream(byte[] properties, Stream inputStream)
             : this(properties, inputStream, -1, -1, null, properties.Length < 5)

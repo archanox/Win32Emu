@@ -15,7 +15,7 @@ namespace CUETools.Codecs.Flake
         public float* window_buffer;
         public int nSeg = 0;
 
-        public BitWriter writer = null;
+        public BitWriter? writer = null;
         public int writer_offset = 0;
 
         public FlacFrame(int subframes_count)

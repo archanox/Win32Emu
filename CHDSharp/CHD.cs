@@ -12,21 +12,21 @@ namespace CHDSharpLib;
 
 public class CHDHeader
 {
-    public chd_codec[] compression;
-    public CHDReader[] chdReader;
+    public chd_codec[] compression = null!;
+    public CHDReader[] chdReader = null!;
 
     public ulong totalbytes;
     public uint blocksize;
     public uint totalblocks;
 
-    public mapentry[] map;
+    public mapentry[] map = null!;
 
-    public byte[] md5; // just compressed data
-    public byte[] rawsha1; // just compressed data
-    public byte[] sha1; // includes the meta data
+    public byte[] md5 = null!; // just compressed data
+    public byte[] rawsha1 = null!; // just compressed data
+    public byte[] sha1 = null!; // includes the meta data
 
-    public byte[] parentmd5;
-    public byte[] parentsha1;
+    public byte[] parentmd5 = null!;
+    public byte[] parentsha1 = null!;
 
     public ulong metaoffset;
 }

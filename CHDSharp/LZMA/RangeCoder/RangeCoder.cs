@@ -6,7 +6,7 @@ namespace Compress.Support.Compression.RangeCoder
     {
         public const uint kTopValue = (1 << 24);
 
-        System.IO.Stream Stream;
+        System.IO.Stream Stream = null!;
 
         public UInt64 Low;
         public uint Range;
@@ -22,7 +22,7 @@ namespace Compress.Support.Compression.RangeCoder
 
         public void ReleaseStream()
         {
-            Stream = null;
+            Stream = null!;
         }
 
         public void Init()
@@ -125,7 +125,7 @@ namespace Compress.Support.Compression.RangeCoder
         public uint Range;
         public uint Code = 0;
         // public Buffer.InBuffer Stream = new Buffer.InBuffer(1 << 16);
-        public System.IO.Stream Stream;
+        public System.IO.Stream Stream = null!;
         public long Total;
 
         public void Init(System.IO.Stream stream)
@@ -143,7 +143,7 @@ namespace Compress.Support.Compression.RangeCoder
         public void ReleaseStream()
         {
             // Stream.ReleaseStream();
-            Stream = null;
+            Stream = null!;
         }
 
         public void CloseStream()
