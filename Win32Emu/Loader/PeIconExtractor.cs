@@ -16,16 +16,19 @@ public static class PeIconExtractor
 	/// <summary>
 	/// Represents an ICONDIR header structure
 	/// </summary>
+#pragma warning disable CS0649 // Field is never assigned
 	private struct IconDir
 	{
 		public ushort Reserved;   // Reserved (must be 0)
 		public ushort Type;       // Resource type (1 for icons)
 		public ushort Count;      // Number of images
 	}
+#pragma warning restore CS0649
 
 	/// <summary>
 	/// Represents an ICONDIRENTRY structure
 	/// </summary>
+#pragma warning disable CS0649 // Field is never assigned
 	private struct IconDirEntry
 	{
 		public byte Width;          // Width in pixels
@@ -37,6 +40,7 @@ public static class PeIconExtractor
 		public uint BytesInRes;     // Size of image data
 		public uint ImageOffset;    // Offset to image data in file
 	}
+#pragma warning restore CS0649
 
 	/// <summary>
 	/// Represents an GRPICONDIRENTRY structure (resource version)

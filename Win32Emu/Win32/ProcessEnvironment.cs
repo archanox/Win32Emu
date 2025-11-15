@@ -423,8 +423,7 @@ public class ProcessEnvironment
 	/// </summary>
 	public RegistryHive? RegistryHive => _registryHive;
 	
-	// Backward compatibility - old virtual registry (deprecated)
-	private uint _nextRegistryHandle = 0x80000000; // Registry handles typically use high values
+	// Backward compatibility note: Old virtual registry handle system removed (was deprecated)
 
 	public void InitializeStrings(string exePath, string[] args)
 	{

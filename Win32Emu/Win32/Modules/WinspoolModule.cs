@@ -122,9 +122,9 @@ public class WinspoolModule : IWin32ModuleUnsafe
 		_logger.LogInformation("[Winspool] DocumentPropertiesA(hwnd=0x{Hwnd:X8}, hPrinter=0x{HPrinter:X8}, pDeviceName=\"{DeviceName}\", pDevModeOutput=0x{PDevModeOutput:X8}, pDevModeInput=0x{PDevModeInput:X8}, fMode=0x{FMode:X})",
 			hwnd, hPrinter, deviceName, pDevModeOutput, pDevModeInput, fMode);
 
-		// Constants for fMode
-		const uint DM_IN_BUFFER = 8;
-		const uint DM_OUT_BUFFER = 2;
+		// Constants for fMode (reserved for future use)
+		// const uint DM_IN_BUFFER = 8;
+		// const uint DM_OUT_BUFFER = 2;
 
 		// If fMode is 0, return size of DEVMODE structure
 		if (fMode == 0)

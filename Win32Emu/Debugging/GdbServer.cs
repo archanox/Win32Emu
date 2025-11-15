@@ -31,7 +31,6 @@ public class GdbServer : IDisposable
     private TcpListener? _listener;
     private TcpClient? _client;
     private NetworkStream? _stream;
-    private bool _isRunning;
     private bool _shouldStop;
     private bool _noAckMode;
     
@@ -108,7 +107,6 @@ public class GdbServer : IDisposable
     {
         _listener = new TcpListener(IPAddress.Loopback, _port);
         _listener.Start();
-        _isRunning = true;
         
         _logger.LogInformation("GDB server listening on port {Port}", _port);
         _logger.LogInformation("Connect with: target remote localhost:{Port}", _port);

@@ -69,8 +69,7 @@ namespace Win32Emu.Win32.Modules
 		private uint _fogColorValue;
 		private uint _chromakeyValue;
 		private bool _depthMaskEnabled = true;
-		private bool _ditherEnabled;
-		private bool _alphaTestEnabled;
+		// Dither and alpha test state removed - not currently implemented
 		private byte _alphaTestReference;
 		
 		// Texture memory tracking
@@ -79,7 +78,7 @@ namespace Win32Emu.Win32.Modules
 		
 		// Current texture state
 		private uint _currentTextureTMU0;
-		private uint _currentTextureTMU1;
+		// TMU1 texture state removed - not currently implemented
 		
 		// Chromakey state
 		private bool _chromakeyModeEnabled;

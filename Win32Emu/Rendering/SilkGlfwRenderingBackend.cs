@@ -26,7 +26,7 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
     private uint _shaderProgram;
     private uint _vao;
     private uint _vbo;
-    private uint _ebo; // Element buffer object for indices
+    // Element buffer object removed - not currently used
     
     // Hardware acceleration state
     private uint _hwAccelShaderProgram;

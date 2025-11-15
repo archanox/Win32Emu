@@ -1115,9 +1115,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] FormatMessageA(dwFlags=0x{DwFlags:X}, lpSource=0x{LpSource:X8}, dwMessageId=0x{DwMessageId:X}, dwLanguageId=0x{DwLanguageId:X}, lpBuffer=0x{LpBuffer:X8}, nSize={NSize})",
 			dwFlags, lpSource, dwMessageId, dwLanguageId, lpBuffer, nSize);
 
-		const uint FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000;
-		const uint FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200;
-		const uint FORMAT_MESSAGE_FROM_STRING = 0x00000400;
+		// Reserved for future implementation
+		// const uint FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000;
+		// const uint FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200;
+		// const uint FORMAT_MESSAGE_FROM_STRING = 0x00000400;
 		const uint FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x00000100;
 
 		// For now, provide a simple stub implementation
@@ -6278,10 +6279,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] DeviceIoControl(hDevice=0x{HDevice:X8}, dwIoControlCode=0x{DwIoControlCode:X})", hDevice, dwIoControlCode);
 		
-		// Common CD-ROM IOCTL codes (from winioctl.h)
-		const uint IOCTL_CDROM_BASE = 0x00000002;
-		const uint METHOD_BUFFERED = 0;
-		const uint FILE_READ_ACCESS = 0x0001;
+		// Common CD-ROM IOCTL codes (from winioctl.h) - reserved for future use
+		// const uint IOCTL_CDROM_BASE = 0x00000002;
+		// const uint METHOD_BUFFERED = 0;
+		// const uint FILE_READ_ACCESS = 0x0001;
 		
 		// IOCTL_CDROM_READ_TOC = (IOCTL_CDROM_BASE << 16) | (FILE_READ_ACCESS << 14) | (0x0000 << 2) | METHOD_BUFFERED
 		const uint IOCTL_CDROM_READ_TOC = 0x00024000;
@@ -6842,7 +6843,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private uint GetFileSize(uint hFile, uint lpFileSizeHigh)
 	{
 		_logger.LogInformation("[Kernel32] GetFileSize(hFile=0x{HFile:X8})", hFile);
-		const uint INVALID_FILE_SIZE = 0xFFFFFFFF;
+		// const uint INVALID_FILE_SIZE = 0xFFFFFFFF; // Reserved for error handling
 		// Stub - return 0 size
 		if (lpFileSizeHigh != 0)
 		{

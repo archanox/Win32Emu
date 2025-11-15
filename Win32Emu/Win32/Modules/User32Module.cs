@@ -5017,7 +5017,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpsi != 0)
 			{
 				// SCROLLINFO structure offsets
-				const uint SCROLLINFO_CBSIZE_OFFSET = 0;
+				// const uint SCROLLINFO_CBSIZE_OFFSET = 0; // Reserved for future use
 				const uint SCROLLINFO_FMASK_OFFSET = 4;
 				const uint SCROLLINFO_NMIN_OFFSET = 8;
 				const uint SCROLLINFO_NMAX_OFFSET = 12;

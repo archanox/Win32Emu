@@ -24,9 +24,7 @@ namespace Win32Emu.Win32.Modules
 
 		public string Name => "DINPUT8.DLL";
 
-		// DirectInput object handles
-		private uint _nextDInputHandle = 0x90000000;
-		private uint _nextDeviceHandle = 0x91000000;
+		// DirectInput handle counters removed - not currently used
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
