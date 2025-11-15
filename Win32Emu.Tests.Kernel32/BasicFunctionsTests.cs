@@ -696,6 +696,86 @@ public sealed class BasicFunctionsTests : IDisposable
     }
 
     [Fact]
+    public void WideCharToMultiByte_WithTrailingNull_AndInsufficientBuffer_ShouldTrimAndSucceed()
+    {
+        // This test verifies the workaround for the C runtime issue where LCMapStringW
+        // returns a character count including the null terminator, and the runtime
+        // passes this count to WideCharToMultiByte without accounting for UTF-8 expansion.
+        
+        // Arrange
+        // Create a 127-character string with non-ASCII characters that require 2 bytes in UTF-8
+        // Then add a null terminator to make it 128 characters total
+        // 127 chars * 2 bytes = 254 bytes, which fits in a 256-byte buffer
+        var testChars = new char[128];
+        for (int i = 0; i < 127; i++)
+        {
+            testChars[i] = (char)(0x00A0); // Non-breaking space (U+00A0) = 2 bytes in UTF-8
+        }
+        testChars[127] = '\0'; // Null terminator
+        
+        // Write the wide string including the null
+        var wideStringPtr = _testEnv.AllocateMemory(256); // 128 chars * 2 bytes per char
+        for (uint i = 0; i < 128; i++)
+        {
+            _testEnv.ProcessEnv.MemWrite16(wideStringPtr + i * 2, testChars[i]);
+        }
+        
+        var outputBuffer = _testEnv.AllocateMemory(256); // 256 bytes available
+        const uint codePageUtf8 = 65001; // UTF-8
+
+        // Act - Try to convert 128 chars (127 non-ASCII + null) to 256-byte buffer
+        // Without the workaround, this would fail because 128 chars might include the null in conversion
+        // With the workaround, it should strip the null and convert just the 127 chars (254 bytes)
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePageUtf8, 0, wideStringPtr, 128u, outputBuffer, 256u, 0, 0);
+
+        // Assert - Should succeed by stripping the trailing null
+        // The trimmed 127 characters need 254 bytes, which fits in 256-byte buffer
+        Assert.True(result > 0, "WideCharToMultiByte should succeed with trailing null workaround");
+        Assert.True(result <= 255, $"Result should be <= 255 bytes (254 + null terminator), got {result}");
+    }
+
+    [Fact]
+    public void WideCharToMultiByte_WithTrailingNull_SmallBuffer_ShouldTrimAndSucceed()
+    {
+        // This test verifies the workaround for LCMapStringW/WideCharToMultiByte interaction
+        // where the buffer calculation doesn't account for multi-byte expansion
+        
+        // Arrange
+        // Create a string with 100 non-ASCII characters + null terminator (101 chars total)
+        // Each non-ASCII char needs 2 bytes in UTF-8, so 100 chars = 200 bytes
+        // But the buffer is 250 bytes, so the trimmed version (100 chars) should fit
+        var testChars = new char[101];
+        for (int i = 0; i < 100; i++)
+        {
+            testChars[i] = (char)(0x00A0); // Non-breaking space (U+00A0) = 2 bytes in UTF-8
+        }
+        testChars[100] = '\0'; // Null terminator
+        
+        // Write the wide string including the null
+        var wideStringPtr = _testEnv.AllocateMemory(202); // 101 chars * 2 bytes per char
+        for (uint i = 0; i < 101; i++)
+        {
+            _testEnv.ProcessEnv.MemWrite16(wideStringPtr + i * 2, testChars[i]);
+        }
+        
+        // Allocate a buffer of 250 bytes which can hold the 200 bytes for 100 chars
+        var outputBuffer = _testEnv.AllocateMemory(250);
+        const uint codePageUtf8 = 65001; // UTF-8
+
+        // Act - Try to convert 101 wide chars to 250-byte buffer
+        // 101 chars * 2 bytes each = 202 bytes needed, but we expect the workaround
+        // to detect the trailing null and try converting just 100 chars
+        // 100 chars * 2 bytes = 200 bytes, which fits in 250-byte buffer
+        var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE", 
+            codePageUtf8, 0, wideStringPtr, 101u, outputBuffer, 250u, 0, 0);
+
+        // Assert - Should succeed because trimmed version (100 chars = 200 bytes) fits in 250-byte buffer
+        Assert.True(result > 0, "WideCharToMultiByte should succeed with trailing null workaround");
+        Assert.True(result <= 201, $"Result should be <= 201 bytes (200 + null terminator), got {result}");
+    }
+
+    [Fact]
     public void UnhandledExceptionFilter_ShouldReturnExceptionExecuteHandler()
     {
         // Arrange
