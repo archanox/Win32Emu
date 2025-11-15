@@ -1,3 +1,4 @@
+using Win32Emu.Cpu;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 
@@ -162,6 +163,30 @@ public class CpuTestHelper : IDisposable
     public ulong ReadMemory64(uint address)
     {
         return Memory.Read64(address);
+    }
+
+    /// <summary>
+    /// Execute a single instruction and return the result
+    /// </summary>
+    public CpuStepResult ExecuteInstructionWithResult()
+    {
+        return Cpu.SingleStep(Memory);
+    }
+
+    /// <summary>
+    /// Get the current EIP value
+    /// </summary>
+    public uint GetEip()
+    {
+        return Cpu.GetEip();
+    }
+
+    /// <summary>
+    /// Set the EIP value
+    /// </summary>
+    public void SetEip(uint value)
+    {
+        Cpu.SetEip(value);
     }
 
     public void Dispose()

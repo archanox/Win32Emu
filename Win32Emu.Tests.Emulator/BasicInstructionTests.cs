@@ -594,6 +594,21 @@ public class BasicInstructionTests : IDisposable
         Assert.Equal(0x00000060u, _helper.GetReg("EDX"));
     }
 
+    [Fact]
+    public void INT_80_ShouldSignalSyscallAndAdvanceEip()
+    {
+        // Arrange: INT 0x80 (CD 80) - syscall dispatcher
+        _helper.SetEip(0x1000);
+        _helper.WriteCode(0xCD, 0x80); // INT 0x80
+        
+        // Act
+        var result = _helper.ExecuteInstructionWithResult();
+        
+        // Assert
+        Assert.True(result.IsSyscall, "Should signal syscall for INT 0x80");
+        Assert.Equal(0x1002u, _helper.GetEip()); // Should advance EIP past the 2-byte instruction
+    }
+
     public void Dispose()
     {
         _helper?.Dispose();

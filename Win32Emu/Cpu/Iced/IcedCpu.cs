@@ -578,7 +578,9 @@ public class IcedCpu : IAsyncCpu
 						// We signal this as a syscall and let the emulator handle it
 						isSyscall = true;
 						_logger.LogDebug("[IcedCpu] INT 0x80 syscall at 0x{OldEip:X8}", oldEip);
-						// Signal syscall to emulator; no actual interrupt handling will occur
+						// Advance EIP past the INT instruction so the next instruction (RET) can execute
+						// INT 0x80 is 2 bytes (CD 80), so advance by instruction length
+						_eip = oldEip + (uint)insn.Length;
 					}
 					else
 					{
