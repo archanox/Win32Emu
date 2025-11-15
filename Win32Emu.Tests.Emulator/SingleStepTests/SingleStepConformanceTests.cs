@@ -79,6 +79,9 @@ public class SingleStepConformanceTests
 		yield break;
 	}
 	
+	// Cache parsed MOO files to avoid re-parsing for each test run
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, MooTestFile> _mooFileCache = new();
+	
 	[Theory]
 	[MemberData(nameof(GetTestFiles))]
 	public void CPU_ShouldPassHardwareTests(string fileName, int maxTests)
@@ -91,7 +94,8 @@ public class SingleStepConformanceTests
 			return;
 		}
 		
-		var mooFile = MooFileParser.Parse(testFile);
+		// Use cached parsed data to avoid re-parsing
+		var mooFile = _mooFileCache.GetOrAdd(testFile, MooFileParser.Parse);
 		var runner = new SingleStepTestRunner(_logger);
 		
 		var passCount = 0;
