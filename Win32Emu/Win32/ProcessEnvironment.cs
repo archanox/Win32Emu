@@ -384,6 +384,10 @@ public class ProcessEnvironment
 
 	// Dialog state management
 	private readonly Dictionary<uint, DialogState> _dialogStates = new();
+	
+	// Reverse lookup for control handles - maps control handle to (dialog handle, control ID)
+	// This avoids O(n*m) nested loops in FindDialogControlByHandle
+	private readonly Dictionary<uint, (uint DialogHandle, int ControlId)> _controlHandleLookup = new();
 
 	// Message queue with Channels
 	private readonly Channel<QueuedMessage> _messageQueue = Channel.CreateUnbounded<QueuedMessage>();
@@ -2456,8 +2460,17 @@ public class ProcessEnvironment
 	/// </summary>
 	public void CleanupDialogState(uint hDlg)
 	{
-		if (_dialogStates.Remove(hDlg))
+		if (_dialogStates.TryGetValue(hDlg, out var state))
 		{
+			// Remove all control handles from reverse lookup
+			foreach (var controlHandle in state.ControlHandles.Values)
+			{
+				_controlHandleLookup.Remove(controlHandle);
+			}
+			
+			// Remove the dialog state
+			_dialogStates.Remove(hDlg);
+			
 			_logger.LogDebug("[ProcessEnv] CleanupDialogState: hDlg=0x{HDlg:X8}", hDlg);
 		}
 	}
@@ -2471,6 +2484,10 @@ public class ProcessEnvironment
 		{
 			state.ControlHandles[controlId] = controlHandle;
 			state.ControlInfo[controlId] = controlInfo;
+			
+			// Add to reverse lookup for O(1) access in FindDialogControlByHandle
+			_controlHandleLookup[controlHandle] = (hDlg, controlId);
+			
 			_logger.LogDebug("[ProcessEnv] StoreControlInfo: hDlg=0x{HDlg:X8} controlId={ControlId} handle=0x{ControlHandle:X8}", hDlg, controlId, controlHandle);
 		}
 	}
@@ -2495,20 +2512,12 @@ public class ProcessEnvironment
 	/// </summary>
 	public (uint DialogHandle, int ControlId)? FindDialogControlByHandle(uint controlHandle)
 	{
-		foreach (var kvp in _dialogStates)
+		// Use reverse lookup dictionary for O(1) performance
+		if (_controlHandleLookup.TryGetValue(controlHandle, out var result))
 		{
-			var dialogHandle = kvp.Key;
-			var state = kvp.Value;
-			
-			foreach (var controlKvp in state.ControlHandles)
-			{
-				if (controlKvp.Value == controlHandle)
-				{
-					_logger.LogDebug("[ProcessEnv] FindDialogControlByHandle: handle=0x{Handle:X8} -> dialog=0x{DialogHandle:X8} controlId={ControlId}", 
-						controlHandle, dialogHandle, controlKvp.Key);
-					return (dialogHandle, controlKvp.Key);
-				}
-			}
+			_logger.LogDebug("[ProcessEnv] FindDialogControlByHandle: handle=0x{Handle:X8} -> dialog=0x{DialogHandle:X8} controlId={ControlId}", 
+				controlHandle, result.DialogHandle, result.ControlId);
+			return result;
 		}
 		
 		_logger.LogDebug("[ProcessEnv] FindDialogControlByHandle: handle=0x{Handle:X8} -> NOT FOUND", controlHandle);
