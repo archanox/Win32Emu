@@ -44,17 +44,17 @@ Both implementations use identical XOR-based overflow detection algorithms:
 
 This validates that Win32Emu's implementation follows industry best practices.
 
-### 2. REP Prefix Handling - Different but Both Work ✅
+### 2. REP Prefix Handling - Now Unified ✅
 
 **Reko Approach:** Extract REP/REPE/REPNE into wrapper methods
 - Pros: Less duplication, cleaner architecture
 - Cons: More indirection
 
-**Win32Emu Approach:** Handle REP within each string instruction
-- Pros: Direct, tested in production, good performance
-- Cons: Some code duplication
+**Win32Emu Approach (after refactor):** Adopted REP/REPE/REPNE wrapper pattern from Reko
+- Pros: Reduced code duplication (~200 lines saved), improved maintainability, matches industry best practice, easier to add interrupt checking
+- Cons: Slightly more indirection, but negligible impact on performance
 
-**Decision:** Keep Win32Emu's approach. Refactoring would provide marginal benefit.
+**Decision:** Win32Emu now uses the REP prefix wrapper pattern, matching Reko's design. This refactoring reduces duplication and improves code clarity.
 
 ### 3. Register Access - Win32Emu's Approach Better for Performance ✅
 
@@ -81,12 +81,15 @@ This is necessary for full system emulation, whereas Reko only needs basic read/
 3. **Mask tables** - Size-agnostic operations using lookup tables
 4. **Validation** - Our core algorithms match Reko's (both correct)
 
+### What We Adopted
+
+1. ✅ **REP prefix pattern** - Wrapper methods for REP/REPE/REPNE implemented in IcedCpu.cs for all string instructions, following Reko's elegant approach
+
 ### What We Won't Adopt
 
 1. ❌ Array-based register storage (performance penalty)
 2. ❌ Simple memory model (need advanced features)
 3. ❌ Limited instruction set (need full x86 support)
-4. ❌ REP refactoring (current code works, risk not worth reward)
 
 ## Changes Made in This PR
 

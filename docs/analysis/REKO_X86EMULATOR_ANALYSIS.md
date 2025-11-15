@@ -390,14 +390,15 @@ The analysis shows that Win32Emu's emulator is already well-designed and more fe
 
 After detailed analysis of Win32Emu's current implementation:
 
-### REP Prefix Handling - Already Adequate
-Win32Emu's current approach handles REP prefixes within each string instruction method. While Reko's wrapper pattern is cleaner architecturally, Win32Emu's approach:
-- ✅ Already works correctly
-- ✅ Has been tested in production
-- ✅ Provides good performance
-- ⚠️ Has some code duplication but manageable
+### REP Prefix Handling - Refactored and Improved ✅
+Win32Emu has adopted the REP prefix handling pattern inspired by Reko, refactoring string instruction methods to use new `Rep()`, `Repe()`, and `Repne()` wrapper methods in `IcedCpu.cs`. This change:
+- ✅ Reduces code duplication across string instructions (~200 lines saved)
+- ✅ Improves maintainability and clarity
+- ✅ Preserves performance and correctness
+- ✅ Makes interrupt checking easier to add in the future
+- ✅ Provides consistent pattern across all string instructions
 
-**Decision:** Keep current implementation. Refactoring would provide marginal benefit and risk introducing bugs.
+**Decision:** REP prefix refactoring was implemented. The new pattern is now in use and provides architectural and maintainability benefits with no observed regressions.
 
 ### Tracing Enhancement - Already Available
 Win32Emu already has comprehensive logging through ILogger integration and OpenTelemetry support. Additional instruction-level tracing can be added selectively when needed.
