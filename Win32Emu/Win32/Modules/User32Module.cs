@@ -2518,7 +2518,7 @@ namespace Win32Emu.Win32.Modules
 					_env.StoreControlInfo(hDlg, item.Id, controlHandle, item);
 				}
 
-				// If we have a host, show the dialog through Avalonia (non-blocking)
+				// If we have a host, show the dialog through Avalonia
 				if (_host != null)
 				{
 					_logger.LogInformation("[User32] DialogBoxParamAsync: Showing dialog through Avalonia UI with message loop");
@@ -2535,12 +2535,12 @@ namespace Win32Emu.Win32.Modules
 							ControlHandles = controlHandles
 						};
 
-						// Show the dialog non-blocking
-						// OnDialogCreate will create and show the window, then return immediately
-						// The window will stay open while we process messages below
-						_ = _host.OnDialogCreate(dialogInfo);
+						// Show the dialog and WAIT for it to be created
+						// This ensures the Avalonia window is fully created before WM_INITDIALOG is sent
+						// so that SetDlgItemTextA and other initialization calls will update the GUI
+						await _host.OnDialogCreate(dialogInfo).ConfigureAwait(false);
 
-						_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog window shown, proceeding to message loop");
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog window created, proceeding to WM_INITDIALOG");
 					}
 					catch (Exception ex)
 					{
