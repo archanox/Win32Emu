@@ -2608,7 +2608,8 @@ namespace Win32Emu.Win32.Modules
 					if (queuedMsg.HasValue)
 					{
 						var msg = queuedMsg.Value;
-						_logger.LogDebug("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", msg.Message, msg.Hwnd);
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", 
+							msg.Message, msg.Hwnd, msg.WParam, msg.LParam);
 
 						// Dispatch the message to the dialog procedure if it's for our dialog
 						if (msg.Hwnd == hDlg || msg.Hwnd == 0)
@@ -2616,7 +2617,7 @@ namespace Win32Emu.Win32.Modules
 							if (lpDialogFunc != 0)
 							{
 								var (result, timedOut, cancelled, failed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, msg.Message, msg.WParam, msg.LParam, cancellationToken).ConfigureAwait(false);
-								_logger.LogDebug("[User32] DialogBoxParamAsync: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
+								_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog procedure returned {Result} for MSG=0x{Message:X4}", result, msg.Message);
 
 								// If dialog procedure times out, is cancelled, or fails, force end the dialog
 								if (timedOut || cancelled || failed)
@@ -2630,6 +2631,7 @@ namespace Win32Emu.Win32.Modules
 						else
 						{
 							// Message for a different window - requeue it
+							_logger.LogInformation("[User32] DialogBoxParamAsync: Message for different window 0x{OtherHwnd:X8}, requeuing", msg.Hwnd);
 							_env.PostMessage(msg.Hwnd, msg.Message, msg.WParam, msg.LParam);
 						}
 					}
@@ -2869,6 +2871,27 @@ namespace Win32Emu.Win32.Modules
 			IMAGE_ICON = 1,
 			IMAGE_CURSOR = 2,
 			IMAGE_ENHMETAFILE = 3
+		}
+		
+		/// <summary>
+		/// Flags for LoadImage function
+		/// </summary>
+		[Flags]
+		private enum LoadImageFlags : uint
+		{
+			LR_DEFAULTCOLOR = 0x0000,      // Default behavior (no special flags)
+			LR_MONOCHROME = 0x0001,        // Load monochrome image
+			LR_COLOR = 0x0002,             // Default (ignored)
+			LR_COPYRETURNORG = 0x0004,     // Return original handle
+			LR_COPYDELETEORG = 0x0008,     // Delete original after copy
+			LR_LOADFROMFILE = 0x0010,      // Load from file
+			LR_LOADTRANSPARENT = 0x0020,   // Load with transparency
+			LR_DEFAULTSIZE = 0x0040,       // Use default size
+			LR_VGACOLOR = 0x0080,          // Use VGA colors
+			LR_LOADMAP3DCOLORS = 0x1000,   // Map 3D colors
+			LR_CREATEDIBSECTION = 0x2000,  // Create DIB section
+			LR_COPYFROMRESOURCE = 0x4000,  // Copy from resource
+			LR_SHARED = 0x8000             // Share image handle
 		}
 
 		[DllModuleExport(1)]
@@ -4365,7 +4388,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			var bitmapName = lpBitmapName.ToString() ?? string.Empty;
 			_logger.LogInformation("[User32] LoadBitmapA(hInstance=0x{HInstance:X8}, lpBitmapName=\"{BitmapName}\")", hInstance, bitmapName);
-			return 0; // NULL
+			
+			// LoadBitmapA is a legacy function that's essentially LoadImageA with IMAGE_BITMAP
+			// and no special flags (default behavior)
+			
+			// Convert LpcStr to LpStr for LoadImageA
+			var namePtr = new LpStr(lpBitmapName.Address);
+			return LoadImageA(hInstance, namePtr, (uint)ImageType.IMAGE_BITMAP, 0, 0, (uint)LoadImageFlags.LR_DEFAULTCOLOR);
 		}
 
 		[DllModuleExport(16)]

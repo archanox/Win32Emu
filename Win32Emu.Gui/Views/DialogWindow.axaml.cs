@@ -378,8 +378,12 @@ public partial class DialogWindow : Window
 
 	private void OnControlClick(object? sender, RoutedEventArgs e)
 	{
+		System.Diagnostics.Debug.WriteLine($"[DialogWindow] OnControlClick triggered, sender type: {sender?.GetType().Name}");
+		
 		if (sender is Control control && control.Tag is ushort id)
 		{
+			System.Diagnostics.Debug.WriteLine($"[DialogWindow] Button clicked: ID={id}, DialogHandle=0x{_dialogHandle:X8}");
+			
 			// Send WM_COMMAND message to the dialog procedure for all button clicks
 			// The dialog procedure will decide whether to close the dialog via EndDialog
 			const uint WM_COMMAND = 0x0111;
@@ -388,11 +392,25 @@ public partial class DialogWindow : Window
 			
 			// Get the control's window handle if available
 			var controlHandle = _controlHandles.TryGetValue(id, out var handle) ? handle : 0u;
+			System.Diagnostics.Debug.WriteLine($"[DialogWindow] Sending WM_COMMAND: wParam=0x{wParam:X8}, controlHandle=0x{controlHandle:X8}");
 			
-			_messageCallback?.Invoke(_dialogHandle, WM_COMMAND, wParam, controlHandle);
+			if (_messageCallback != null)
+			{
+				_messageCallback.Invoke(_dialogHandle, WM_COMMAND, wParam, controlHandle);
+				System.Diagnostics.Debug.WriteLine($"[DialogWindow] Message callback invoked successfully");
+			}
+			else
+			{
+				System.Diagnostics.Debug.WriteLine($"[DialogWindow] WARNING: Message callback is null! Button click will not be processed.");
+			}
 
 			// Note: We no longer automatically close the dialog for IDOK/IDCANCEL
 			// The dialog procedure should call EndDialog when appropriate
+		}
+		else
+		{
+		    var control = sender as Control;
+		    System.Diagnostics.Debug.WriteLine($"[DialogWindow] OnControlClick: Pattern match failed. Sender type: {sender?.GetType().Name}, Control.Tag type: {control?.Tag?.GetType().Name ?? "null"}");
 		}
 	}
 

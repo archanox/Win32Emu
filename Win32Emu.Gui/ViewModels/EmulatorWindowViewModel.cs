@@ -182,9 +182,14 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 {
                     messageCallback = (hwnd, msg, wParam, lParam) =>
                     {
-                        OnDebugOutput($"Dialog HWND=0x{hwnd:X8} posting message MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}", DebugLevel.Debug);
+                        OnDebugOutput($"Dialog HWND=0x{hwnd:X8} posting message MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}", DebugLevel.Info);
                         _emulatorService.CurrentEmulator.PostMessage(hwnd, msg, wParam, lParam);
                     };
+                    OnDebugOutput($"Dialog message callback created successfully for dialog HWND=0x{info.Handle:X8}", DebugLevel.Info);
+                }
+                else
+                {
+                    OnDebugOutput($"WARNING: Cannot create message callback - emulator service or current emulator is null", DebugLevel.Error);
                 }
                 
                 // Create DialogWindow from the template with dialog handle, control handles, and message callback
