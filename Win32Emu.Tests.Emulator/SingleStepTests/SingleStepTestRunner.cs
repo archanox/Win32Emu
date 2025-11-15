@@ -205,8 +205,13 @@ public class TestResult
 	public string TestName { get; set; } = string.Empty;
 	public bool Success { get; set; }
 	public string? ExecutionError { get; set; }
-	public List<RegisterMismatch> RegisterMismatches { get; set; } = new();
-	public List<MemoryMismatch> MemoryMismatches { get; set; } = new();
+	
+	// Lazy-initialize lists to avoid allocation for passing tests
+	private List<RegisterMismatch>? _registerMismatches;
+	private List<MemoryMismatch>? _memoryMismatches;
+	
+	public List<RegisterMismatch> RegisterMismatches => _registerMismatches ??= new List<RegisterMismatch>();
+	public List<MemoryMismatch> MemoryMismatches => _memoryMismatches ??= new List<MemoryMismatch>();
 	
 	public override string ToString()
 	{
@@ -222,14 +227,14 @@ public class TestResult
 			details.Add($"Execution error: {ExecutionError}");
 		}
 		
-		if (RegisterMismatches.Any())
+		if (_registerMismatches != null && _registerMismatches.Any())
 		{
-			details.Add($"Register mismatches: {string.Join(", ", RegisterMismatches.Select(r => r.ToString()))}");
+			details.Add($"Register mismatches: {string.Join(", ", _registerMismatches.Select(r => r.ToString()))}");
 		}
 		
-		if (MemoryMismatches.Any())
+		if (_memoryMismatches != null && _memoryMismatches.Any())
 		{
-			details.Add($"Memory mismatches: {MemoryMismatches.Count} locations");
+			details.Add($"Memory mismatches: {_memoryMismatches.Count} locations");
 		}
 		
 		return $"FAIL: {TestName} - {string.Join("; ", details)}";

@@ -166,11 +166,14 @@ public class SingleStepConformanceTests
 			return "Execution Error";
 		}
 		
-		// Check what's wrong
-		var hasEipMismatch = result.RegisterMismatches.Any(r => r.RegisterName == "EIP");
-		var hasFlagsMismatch = result.RegisterMismatches.Any(r => r.RegisterName == "EFLAGS");
-		var hasOtherRegMismatch = result.RegisterMismatches.Any(r => r.RegisterName != "EIP" && r.RegisterName != "EFLAGS");
-		var hasMemoryMismatch = result.MemoryMismatches.Any();
+		// Check what's wrong (handle lazy-initialized lists)
+		var registerMismatches = result.RegisterMismatches;
+		var memoryMismatches = result.MemoryMismatches;
+		
+		var hasEipMismatch = registerMismatches.Any(r => r.RegisterName == "EIP");
+		var hasFlagsMismatch = registerMismatches.Any(r => r.RegisterName == "EFLAGS");
+		var hasOtherRegMismatch = registerMismatches.Any(r => r.RegisterName != "EIP" && r.RegisterName != "EFLAGS");
+		var hasMemoryMismatch = memoryMismatches.Any();
 		
 		if (hasEipMismatch && !hasFlagsMismatch && !hasOtherRegMismatch && !hasMemoryMismatch)
 		{
