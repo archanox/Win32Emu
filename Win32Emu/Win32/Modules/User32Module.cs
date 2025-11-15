@@ -2816,19 +2816,15 @@ namespace Win32Emu.Win32.Modules
 				hDlg, nIDDlgItem, msg, wParam, lParam);
 
 			// Handle STM_SETIMAGE (0x0172) for static controls
-			const uint STM_SETIMAGE = 0x0172;
-			const uint IMAGE_BITMAP = 0;
-			const uint IMAGE_ICON = 1;
-			
-			if (msg == STM_SETIMAGE)
+			if (msg == (uint)StaticControlMessage.STM_SETIMAGE)
 			{
-				var imageType = wParam;
+				var imageType = (ImageType)wParam;
 				var imageHandle = lParam;
 				
 				_logger.LogInformation("[User32] SendDlgItemMessageA: STM_SETIMAGE imageType={ImageType} imageHandle=0x{ImageHandle:X8}", 
 					imageType, imageHandle);
 				
-				if (imageType == IMAGE_BITMAP && imageHandle != 0)
+				if (imageType == ImageType.IMAGE_BITMAP && imageHandle != 0)
 				{
 					// Look up the bitmap data from LoadImageA
 					if (_loadedBitmaps.TryGetValue(imageHandle, out var bitmap))
@@ -2851,6 +2847,28 @@ namespace Win32Emu.Win32.Modules
 
 			// Return 0 (default message handling result)
 			return 0;
+		}
+		
+		/// <summary>
+		/// Static control messages (STM_*)
+		/// </summary>
+		private enum StaticControlMessage : uint
+		{
+			STM_SETICON = 0x0170,
+			STM_GETICON = 0x0171,
+			STM_SETIMAGE = 0x0172,
+			STM_GETIMAGE = 0x0173
+		}
+		
+		/// <summary>
+		/// Image types for LoadImage and STM_SETIMAGE
+		/// </summary>
+		private enum ImageType : uint
+		{
+			IMAGE_BITMAP = 0,
+			IMAGE_ICON = 1,
+			IMAGE_CURSOR = 2,
+			IMAGE_ENHMETAFILE = 3
 		}
 
 		[DllModuleExport(1)]
@@ -3028,11 +3046,8 @@ namespace Win32Emu.Win32.Modules
 			var imageName = name.Read(_env.Memory);
 			_logger.LogInformation("[User32] LoadImageA(hInst=0x{HInst:X8}, name=\"{ImageName}\", type={Type}, cx={Cx}, cy={Cy}, fuLoad=0x{FuLoad:X})",
 				hInst, imageName, type, cx, cy, fuLoad);
-
-			// Type: 0=IMAGE_BITMAP, 1=IMAGE_ICON, 2=IMAGE_CURSOR
-			const uint IMAGE_BITMAP = 0;
 			
-			if (type == IMAGE_BITMAP && _resourceReader != null)
+			if (type == (uint)ImageType.IMAGE_BITMAP && _resourceReader != null)
 			{
 				// Try to load bitmap resource
 				byte[]? bitmapData = null;
