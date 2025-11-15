@@ -297,6 +297,16 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         }
     }
 
+    public void OnDialogControlEnabledChanged(uint dialogHandle, int controlId, bool enabled)
+    {
+        // Find the dialog window and enable/disable the control
+        if (_createdDialogs.TryGetValue(dialogHandle, out var dialog))
+        {
+            dialog.SetControlEnabled((ushort)controlId, enabled);
+            OnDebugOutput($"Dialog 0x{dialogHandle:X8} control {controlId} {(enabled ? "enabled" : "disabled")}", DebugLevel.Debug);
+        }
+    }
+
     private void CreateTopLevelWindow(WindowCreateInfo info)
     {
         var window = new Window

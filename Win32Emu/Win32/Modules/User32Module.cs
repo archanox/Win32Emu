@@ -2518,7 +2518,7 @@ namespace Win32Emu.Win32.Modules
 					_env.StoreControlInfo(hDlg, item.Id, controlHandle, item);
 				}
 
-				// If we have a host, show the dialog through Avalonia (non-blocking)
+				// If we have a host, show the dialog through Avalonia
 				if (_host != null)
 				{
 					_logger.LogInformation("[User32] DialogBoxParamAsync: Showing dialog through Avalonia UI with message loop");
@@ -2535,12 +2535,12 @@ namespace Win32Emu.Win32.Modules
 							ControlHandles = controlHandles
 						};
 
-						// Show the dialog non-blocking
-						// OnDialogCreate will create and show the window, then return immediately
-						// The window will stay open while we process messages below
-						_ = _host.OnDialogCreate(dialogInfo);
+						// Show the dialog and WAIT for it to be created
+						// This ensures the Avalonia window is fully created before WM_INITDIALOG is sent
+						// so that SetDlgItemTextA and other initialization calls will update the GUI
+						await _host.OnDialogCreate(dialogInfo).ConfigureAwait(false);
 
-						_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog window shown, proceeding to message loop");
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog window created, proceeding to WM_INITDIALOG");
 					}
 					catch (Exception ex)
 					{
@@ -2812,10 +2812,63 @@ namespace Win32Emu.Win32.Modules
 		private uint SendDlgItemMessageA(uint hDlg, int nIDDlgItem, uint msg, uint wParam, uint lParam)
 		{
 			// SendDlgItemMessageA sends a message to a control in a dialog box
-			_logger.LogInformation("[User32] SendDlgItemMessageA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem} msg=0x{Msg:X4}", hDlg, nIDDlgItem, msg);
+			_logger.LogInformation("[User32] SendDlgItemMessageA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem} msg=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", 
+				hDlg, nIDDlgItem, msg, wParam, lParam);
+
+			// Handle STM_SETIMAGE (0x0172) for static controls
+			if (msg == (uint)StaticControlMessage.STM_SETIMAGE)
+			{
+				var imageType = (ImageType)wParam;
+				var imageHandle = lParam;
+				
+				_logger.LogInformation("[User32] SendDlgItemMessageA: STM_SETIMAGE imageType={ImageType} imageHandle=0x{ImageHandle:X8}", 
+					imageType, imageHandle);
+				
+				if (imageType == ImageType.IMAGE_BITMAP && imageHandle != 0)
+				{
+					// Look up the bitmap data from LoadImageA
+					if (_loadedBitmaps.TryGetValue(imageHandle, out var bitmap))
+					{
+						_logger.LogInformation("[User32] SendDlgItemMessageA: Found bitmap data ({Size} bytes), notifying host", 
+							bitmap.Data.Length);
+						
+						// Notify the host (GUI) to display the bitmap
+						_host?.OnDialogControlBitmapChanged(hDlg, nIDDlgItem, bitmap.Data);
+						
+						return 0; // Return 0 to indicate success (previous image handle would be returned normally)
+					}
+					else
+					{
+						_logger.LogWarning("[User32] SendDlgItemMessageA: Bitmap handle 0x{ImageHandle:X8} not found in loaded bitmaps", 
+							imageHandle);
+					}
+				}
+			}
 
 			// Return 0 (default message handling result)
 			return 0;
+		}
+		
+		/// <summary>
+		/// Static control messages (STM_*)
+		/// </summary>
+		private enum StaticControlMessage : uint
+		{
+			STM_SETICON = 0x0170,
+			STM_GETICON = 0x0171,
+			STM_SETIMAGE = 0x0172,
+			STM_GETIMAGE = 0x0173
+		}
+		
+		/// <summary>
+		/// Image types for LoadImage and STM_SETIMAGE
+		/// </summary>
+		private enum ImageType : uint
+		{
+			IMAGE_BITMAP = 0,
+			IMAGE_ICON = 1,
+			IMAGE_CURSOR = 2,
+			IMAGE_ENHMETAFILE = 3
 		}
 
 		[DllModuleExport(1)]
@@ -2829,7 +2882,18 @@ namespace Win32Emu.Win32.Modules
 			var wasEnabled = _windowEnabledState.GetValueOrDefault(hwnd, true);
 
 			// Update the state
-			_windowEnabledState[hwnd] = bEnable != 0;
+			var isEnabled = bEnable != 0;
+			_windowEnabledState[hwnd] = isEnabled;
+
+			// Try to notify the host (GUI) if this is a dialog control
+			// Check if this window is a control in any dialog
+			var controlInfo = _env.FindDialogControlByHandle(hwnd);
+			if (controlInfo.HasValue)
+			{
+				_logger.LogInformation("[User32] EnableWindow: Notifying GUI to {Action} control {ControlId} in dialog 0x{DialogHandle:X8}",
+					isEnabled ? "enable" : "disable", controlInfo.Value.ControlId, controlInfo.Value.DialogHandle);
+				_host?.OnDialogControlEnabledChanged(controlInfo.Value.DialogHandle, controlInfo.Value.ControlId, isEnabled);
+			}
 
 			// Return previous state: return 0 if was enabled, non-zero if was disabled
 			return wasEnabled ? 0u : 1u;
@@ -2982,11 +3046,8 @@ namespace Win32Emu.Win32.Modules
 			var imageName = name.Read(_env.Memory);
 			_logger.LogInformation("[User32] LoadImageA(hInst=0x{HInst:X8}, name=\"{ImageName}\", type={Type}, cx={Cx}, cy={Cy}, fuLoad=0x{FuLoad:X})",
 				hInst, imageName, type, cx, cy, fuLoad);
-
-			// Type: 0=IMAGE_BITMAP, 1=IMAGE_ICON, 2=IMAGE_CURSOR
-			const uint IMAGE_BITMAP = 0;
 			
-			if (type == IMAGE_BITMAP && _resourceReader != null)
+			if (type == (uint)ImageType.IMAGE_BITMAP && _resourceReader != null)
 			{
 				// Try to load bitmap resource
 				byte[]? bitmapData = null;

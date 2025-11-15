@@ -10,6 +10,7 @@ namespace Win32Emu
 		int OnMessageBox(MessageBoxInfo info);
 		void OnDialogControlTextChanged(uint dialogHandle, int controlId, string text);
 		void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData);
+		void OnDialogControlEnabledChanged(uint dialogHandle, int controlId, bool enabled);
 		void OnDisplayUpdate(DisplayUpdateInfo info);
 	}
 }
