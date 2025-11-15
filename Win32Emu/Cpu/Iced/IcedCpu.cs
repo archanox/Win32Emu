@@ -167,18 +167,9 @@ public class IcedCpu : IAsyncCpu
 
 	public CpuStepResult SingleStep(VirtualMemory mem)
 	{
-		// Set diagnostics context for memory errors
-		var instrBytes = new byte[8];
-		try
-		{
-			instrBytes = mem.GetSpan(_eip, 8);
-		}
-		catch
-		{
-			instrBytes = null;
-		}
-
-		Diagnostics.Diagnostics.SetCpuContext(new Diagnostics.Diagnostics.CpuContext(_eip, _esp, _ebp, _eax, _ecx, _edx, instrBytes));
+		// Set diagnostics context for memory errors (without fetching instruction bytes for performance)
+		// Instruction bytes will be fetched lazily only when an error actually occurs
+		Diagnostics.Diagnostics.SetCpuContext(new Diagnostics.Diagnostics.CpuContext(_eip, _esp, _ebp, _eax, _ecx, _edx, null));
 
 		var oldEip = _eip; // Capture instruction address BEFORE any decoder operations
 		_reader.Reset(_eip);
