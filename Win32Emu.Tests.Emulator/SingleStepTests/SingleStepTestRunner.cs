@@ -52,7 +52,12 @@ public class SingleStepTestRunner
 				while (instructionCount < maxInstructions)
 				{
 					var eip = cpu.GetEip();
-					var opcode = memory.Read8(eip);
+					
+					// In 16-bit real mode, calculate physical address using CS:IP
+					// Physical address = CS * 16 + IP (IP masked to 16 bits)
+					var cs = cpu.GetRegister("CS");
+					var physicalAddress = (uint)((cs << 4) + (eip & 0xFFFF));
+					var opcode = memory.Read8(physicalAddress);
 					
 					// Execute one instruction
 					cpu.SingleStep(memory);
