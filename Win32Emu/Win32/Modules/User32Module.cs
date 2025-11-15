@@ -2872,6 +2872,27 @@ namespace Win32Emu.Win32.Modules
 			IMAGE_CURSOR = 2,
 			IMAGE_ENHMETAFILE = 3
 		}
+		
+		/// <summary>
+		/// Flags for LoadImage function
+		/// </summary>
+		[Flags]
+		private enum LoadImageFlags : uint
+		{
+			LR_DEFAULTCOLOR = 0x0000,      // Default behavior (no special flags)
+			LR_MONOCHROME = 0x0001,        // Load monochrome image
+			LR_COLOR = 0x0002,             // Default (ignored)
+			LR_COPYRETURNORG = 0x0004,     // Return original handle
+			LR_COPYDELETEORG = 0x0008,     // Delete original after copy
+			LR_LOADFROMFILE = 0x0010,      // Load from file
+			LR_LOADTRANSPARENT = 0x0020,   // Load with transparency
+			LR_DEFAULTSIZE = 0x0040,       // Use default size
+			LR_VGACOLOR = 0x0080,          // Use VGA colors
+			LR_LOADMAP3DCOLORS = 0x1000,   // Map 3D colors
+			LR_CREATEDIBSECTION = 0x2000,  // Create DIB section
+			LR_COPYFROMRESOURCE = 0x4000,  // Copy from resource
+			LR_SHARED = 0x8000             // Share image handle
+		}
 
 		[DllModuleExport(1)]
 		private uint EnableWindow(uint hwnd, uint bEnable)
@@ -4369,13 +4390,11 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] LoadBitmapA(hInstance=0x{HInstance:X8}, lpBitmapName=\"{BitmapName}\")", hInstance, bitmapName);
 			
 			// LoadBitmapA is a legacy function that's essentially LoadImageA with IMAGE_BITMAP
-			// and default flags (LR_DEFAULTCOLOR)
-			const uint IMAGE_BITMAP = 0;
-			const uint LR_DEFAULTCOLOR = 0x0000;
+			// and no special flags (default behavior)
 			
 			// Convert LpcStr to LpStr for LoadImageA
 			var namePtr = new LpStr(lpBitmapName.Address);
-			return LoadImageA(hInstance, namePtr, IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR);
+			return LoadImageA(hInstance, namePtr, (uint)ImageType.IMAGE_BITMAP, 0, 0, (uint)LoadImageFlags.LR_DEFAULTCOLOR);
 		}
 
 		[DllModuleExport(16)]
