@@ -45,6 +45,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private const uint BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE = 0x00010000;
 	private const uint BASE_SEARCH_PATH_PERMANENT = 0x00008000;
 
+	// File copy buffer size
+	private const int FILE_COPY_BUFFER_SIZE = 8192;
+
 	private Win32Dispatcher? _dispatcher;
 	private uint _lastError;
 	private ICpu? _cpu;
@@ -3305,16 +3308,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// Check if destination exists when bFailIfExists is true
-			if (failIfExists && _env.VirtualFileSystem.FileExists(newPath))
-			{
-				_logger.LogInformation("[Kernel32] CopyFileA: Destination '{NewPath}' already exists", newPath);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_EXISTS;
-				return (uint)NativeTypes.Win32Bool.FALSE;
-			}
-
 			// Perform the copy using VFS - open source, create destination, copy data
-			var sourceHandle = _env.VirtualFileSystem.OpenFile(existingPath, VfsFileMode.Open, VfsFileAccess.Read);
+			using var sourceHandle = _env.VirtualFileSystem.OpenFile(existingPath, VfsFileMode.Open, VfsFileAccess.Read);
 			if (sourceHandle == null)
 			{
 				_logger.LogError("[Kernel32] CopyFileA: Failed to open source file '{ExistingPath}'", existingPath);
@@ -3322,38 +3317,34 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			try
+			// Open destination file - VfsFileMode.CreateNew will fail if file exists
+			using var destHandle = _env.VirtualFileSystem.OpenFile(newPath, failIfExists ? VfsFileMode.CreateNew : VfsFileMode.Create, VfsFileAccess.Write);
+			if (destHandle == null)
 			{
-				var destHandle = _env.VirtualFileSystem.OpenFile(newPath, failIfExists ? VfsFileMode.CreateNew : VfsFileMode.Create, VfsFileAccess.Write);
-				if (destHandle == null)
+				// If failIfExists is true and file exists, CreateNew would have failed
+				if (failIfExists)
+				{
+					_logger.LogInformation("[Kernel32] CopyFileA: Destination '{NewPath}' already exists", newPath);
+					_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_EXISTS;
+				}
+				else
 				{
 					_logger.LogError("[Kernel32] CopyFileA: Failed to create destination file '{NewPath}'", newPath);
 					_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
-					return (uint)NativeTypes.Win32Bool.FALSE;
 				}
-
-				try
-				{
-					// Copy data in chunks
-					var buffer = new byte[8192];
-					int bytesRead;
-					while ((bytesRead = sourceHandle.Read(buffer, 0, buffer.Length)) > 0)
-					{
-						destHandle.Write(buffer, 0, bytesRead);
-					}
-
-					_logger.LogInformation("[Kernel32] CopyFileA: Copied '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
-					return (uint)NativeTypes.Win32Bool.TRUE;
-				}
-				finally
-				{
-					destHandle.Dispose();
-				}
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
-			finally
+
+			// Copy data in chunks
+			var buffer = new byte[FILE_COPY_BUFFER_SIZE];
+			int bytesRead;
+			while ((bytesRead = sourceHandle.Read(buffer, 0, buffer.Length)) > 0)
 			{
-				sourceHandle.Dispose();
+				destHandle.Write(buffer, 0, bytesRead);
 			}
+
+			_logger.LogInformation("[Kernel32] CopyFileA: Copied '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (FileNotFoundException ex)
 		{
