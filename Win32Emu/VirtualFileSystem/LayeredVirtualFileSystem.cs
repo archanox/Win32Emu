@@ -257,19 +257,14 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 			var baseDir = GetBasePath(path);
 			return Directory.Exists(baseDir);
 		}
-		catch (IOException ex)
-		{
-			_logger.LogDebug(ex, "[VFS] IOException while checking if directory exists: {Path}", path);
-			return false;
-		}
 		catch (UnauthorizedAccessException ex)
 		{
 			_logger.LogDebug(ex, "[VFS] UnauthorizedAccessException while checking if directory exists: {Path}", path);
 			return false;
 		}
-		catch (DirectoryNotFoundException ex)
+		catch (IOException ex)
 		{
-			_logger.LogDebug(ex, "[VFS] DirectoryNotFoundException while checking if directory exists: {Path}", path);
+			_logger.LogDebug(ex, "[VFS] IOException (including DirectoryNotFoundException) while checking if directory exists: {Path}", path);
 			return false;
 		}
 	}
