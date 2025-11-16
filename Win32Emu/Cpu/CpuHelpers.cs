@@ -396,6 +396,39 @@ public static class CpuHelpers
 			// Log the return address for diagnostics
 			logger?.LogInformation("[{Context}] Return address from stack: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}", context, esp, retEip);
 			
+			// Validate return address before using it
+			// Check if return address is in a valid code region
+			// Typical PE files have code in the .text section starting at 0x00401000
+			if (retEip < 0x00400000)
+			{
+				logger?.LogError("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is below typical image base (0x00400000). Possible stack corruption!", context, retEip);
+			}
+			else if (retEip >= 0x00407000 && retEip < 0x00410000)
+			{
+				// This range is typically .data or .rdata sections in BasicDD.exe
+				logger?.LogWarning("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} appears to be in data section (.data/.rdata typically at 0x00406000-0x00410000). Possible stack corruption or unusual calling convention!", context, retEip);
+				
+				// Dump additional stack context for debugging
+				var stackDump = new System.Text.StringBuilder();
+				stackDump.AppendLine($"[{context}] Extended stack dump for suspicious return address:");
+				try
+				{
+					for (int i = -4; i <= 16; i++)
+					{
+						var addr = esp + (uint)(i * 4);
+						var val = memory.Read32(addr);
+						var label = i == 0 ? " (return addr - SUSPICIOUS!)" : i > 0 && i <= (argBytes / 4) ? $" (arg{i})" : "";
+						stackDump.AppendLine($"  [ESP{i:+0;-0}] = 0x{addr:X8}: 0x{val:X8}{label}");
+					}
+				}
+				catch (Exception ex)
+				{
+					stackDump.AppendLine("  (error reading extended stack)");
+					logger?.LogError(ex, "[{Context}] Error reading extended stack for dump", context);
+				}
+				logger.LogWarning(stackDump.ToString());
+			}
+			
 			// Dump stack contents for debugging (at Information level for diagnostics)
 			if (logger != null)
 			{
