@@ -380,8 +380,19 @@ public class IcedCpu : IAsyncCpu
 
 					break;
 				case Mnemonic.Call:
-					_esp -= 4;
-					Write32(_esp, oldEip + (uint)insn.Length);  // Push return address (address after CALL)
+					// Push return address onto stack
+					if (_bitness == 16)
+					{
+						_esp -= 2;
+						Write16(_esp, (ushort)((oldEip + (uint)insn.Length) & 0xFFFF));
+					}
+					else
+					{
+						_esp -= 4;
+						Write32(_esp, oldEip + (uint)insn.Length);
+					}
+					
+					// Determine call target
 					if (insn.GetOpKind(0) == OpKind.Register)
 					{
 						var targetReg = insn.GetOpRegister(0);
@@ -416,10 +427,27 @@ public class IcedCpu : IAsyncCpu
 
 					break;
 				case Mnemonic.Ret:
-					var ret = Read32(_esp);
-					var oldEsp = _esp;
-					_esp += 4;
-					_eip = ret;
+					uint ret;
+					uint oldEsp;
+					
+					if (_bitness == 16)
+					{
+						// 16-bit mode: pop 2 bytes and update only lower 16 bits of EIP
+						ret = Read16(_esp);
+						oldEsp = _esp;
+						_esp += 2;
+						_eip = (_eip & 0xFFFF0000) | ret;
+					}
+					else
+					{
+						// 32-bit mode: pop 4 bytes
+						ret = Read32(_esp);
+						oldEsp = _esp;
+						_esp += 4;
+						_eip = ret;
+					}
+					
+					// Handle immediate (cleanup bytes)
 					if (insn.Immediate16 != 0)
 					{
 						_esp += insn.Immediate16;
