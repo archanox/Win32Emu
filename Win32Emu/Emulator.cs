@@ -217,7 +217,7 @@ public sealed class Emulator : IDisposable
 		LogDebug($"[Loader] Loading PE: {path}");
         // Convert MB to bytes for VirtualMemory constructor
         var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
-        _vm = new VirtualMemory(memorySizeBytes);
+        _vm = new VirtualMemory(memorySizeBytes, _logger);
         
         var configuredSizeMB = _vm.ConfiguredSize / (1024 * 1024);
         var addressSpaceSizeMB = _vm.Size / (1024 * 1024);
