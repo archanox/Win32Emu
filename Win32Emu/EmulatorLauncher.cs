@@ -406,38 +406,26 @@ public static class EmulatorLauncher
 				
 				try
 				{
-					// Ensure directory exists in VFS
+					// Ensure all parent directories exist in VFS
 					var vfsDir = Path.GetDirectoryName(vfsPath);
 					if (!string.IsNullOrEmpty(vfsDir))
 					{
-						try
-						{
-							vfs.CreateDirectory(vfsDir);
-						}
-						catch (Exception dirEx)
-						{
-							logger.LogDebug(dirEx, "CreateDirectory failed for {VfsDir} (may already exist)", vfsDir);
-						}
+						// Create all parent directories recursively
+						EnsureDirectoryExists(vfs, vfsDir, logger);
 					}
 					
 					// Copy file to VFS
 					logger.LogDebug("Copying {File} to {VfsPath}", file, vfsPath);
-					logger.LogDebug("Copying {File} to {VfsPath}", file, vfsPath);
+					var fileBytes = File.ReadAllBytes(file);
 					var handle = vfs.OpenFile(vfsPath, VirtualFileSystem.VfsFileMode.Create, VirtualFileSystem.VfsFileAccess.Write);
 					if (handle != null)
 					{
-					    using (handle)
-					    using (var sourceStream = File.OpenRead(file))
-					    {
-					        const int bufferSize = 81920; // 80 KB buffer
-					        var buffer = new byte[bufferSize];
-					        int bytesRead;
-					        while ((bytesRead = sourceStream.Read(buffer, 0, buffer.Length)) > 0)
-					        {
-					            handle.Write(buffer, 0, bytesRead);
-					        }
-					    }
-					    logger.LogDebug("Successfully copied {VfsPath} ({Size} bytes)", vfsPath, new FileInfo(file).Length);
+						using (handle)
+						{
+							handle.Write(fileBytes, 0, fileBytes.Length);
+						}
+						logger.LogDebug("Successfully copied {VfsPath} ({Size} bytes)", vfsPath, fileBytes.Length);
+						successCount++;
 					}
 					else
 					{
@@ -465,5 +453,33 @@ public static class EmulatorLauncher
 
 		logger.LogInformation("Virtual disk created successfully: {VhdPath} ({SuccessCount}/{TotalCount} files copied)", vhdPath, successCount, totalFiles);
 		return (vhdPath, vfsExecutablePath);
+	}
+
+	/// <summary>
+	/// Ensures all parent directories exist for the given path
+	/// </summary>
+	private static void EnsureDirectoryExists(VirtualFileSystem.DiskVirtualFileSystem vfs, string directoryPath, ILogger logger)
+	{
+		if (string.IsNullOrEmpty(directoryPath) || directoryPath == "\\" || directoryPath == "/")
+			return;
+		
+		// Split path into components
+		var parts = directoryPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+		var currentPath = "";
+		
+		foreach (var part in parts)
+		{
+			currentPath += "\\" + part;
+			
+			try
+			{
+				vfs.CreateDirectory(currentPath);
+				logger.LogDebug("Created directory: {Directory}", currentPath);
+			}
+			catch (Exception ex)
+			{
+				logger.LogDebug(ex, "CreateDirectory failed for {Directory} (may already exist)", currentPath);
+			}
+		}
 	}
 }
