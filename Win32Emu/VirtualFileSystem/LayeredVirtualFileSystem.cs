@@ -244,6 +244,26 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 		return resolvedPath != null;
 	}
 
+	public bool DirectoryExists(string path)
+	{
+		try
+		{
+			var overlayDir = GetOverlayPath(path);
+			if (Directory.Exists(overlayDir))
+			{
+				return true;
+			}
+
+			var baseDir = GetBasePath(path);
+			return Directory.Exists(baseDir);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogDebug(ex, "[VFS] Failed to check if directory exists: {Path}", path);
+			return false;
+		}
+	}
+
 	public string[] GetFiles(string directory, string pattern)
 	{
 		try
