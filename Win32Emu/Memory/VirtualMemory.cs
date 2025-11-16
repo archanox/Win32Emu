@@ -113,6 +113,12 @@ public class VirtualMemory
         EnsureRange(addr, 4);
         var value = (uint)(Read16(addr) | (Read16(addr + 2) << 16));
         
+        // Debug: Log reads from CPUID signature location
+        if (addr == 0x4101F1)
+        {
+            _logger?.LogDebug("[MemTrace] Read32 from CPUID signature addr 0x{Addr:X8} = 0x{Value:X8}", addr, value);
+        }
+        
         // IAT protection: verify and fix corrupted entries
         if (_iatEntryMap != null && _iatEntryMap.TryGetValue((uint)addr, out var expectedValue))
         {
@@ -132,6 +138,14 @@ public class VirtualMemory
     public void Write8(ulong addr, byte value)
     {
         EnsureRange(addr);
+        
+        // Debug: Log writes to output buffer area
+        if (addr >= 0x410C1C && addr <= 0x410C30)
+        {
+            _logger?.LogDebug("[MemTrace] Write8 to output buffer 0x{Addr:X8} = 0x{Value:X2} ('{Char}')", 
+                addr, value, value >= 32 && value < 127 ? (char)value : '.');
+        }
+        
         WriteByteInternal(addr, value);
     }
 
@@ -145,6 +159,13 @@ public class VirtualMemory
     public void Write32(ulong addr, uint value)
     {
         EnsureRange(addr, 4);
+        
+        // Debug: Log writes to CPUID signature location
+        if (addr == 0x4101F1)
+        {
+            _logger?.LogDebug("[MemTrace] Write32 to CPUID signature addr 0x{Addr:X8} = 0x{Value:X8}", addr, value);
+        }
+        
         Write16(addr, (ushort)(value & 0xFFFF));
         Write16(addr + 2, (ushort)(value >> 16));
     }

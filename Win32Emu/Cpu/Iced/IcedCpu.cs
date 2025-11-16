@@ -2416,12 +2416,22 @@ public class IcedCpu : IAsyncCpu
 				break;
 
 			case 1: // Get feature flags
-				// Family 6, Model 0, Stepping 0 - Pentium Pro baseline
-				// CHKCPU32 specifically checks for this signature value
-				_eax = 0x00000600; // Family 6, Model 0, Stepping 0
+				// Pentium III (Family 6, Model 7, Stepping 3)
+				// A very common CPU that CHKCPU32 should recognize well
+				_eax = 0x00000673; // Family 6, Model 7, Stepping 3
 				_ebx = 0x00000001; // Brand index = 1 (Intel Celeron processor)
 				_ecx = CpuIntrinsics.GetCpuidEcxFeatures(); // Feature flags based on host CPU
 				_edx = CpuIntrinsics.GetCpuidEdxFeatures(); // Feature flags based on host CPU
+				break;
+
+			case 2: // Cache and TLB Descriptor (old style)
+				// Returns cache descriptors in EAX, EBX, ECX, EDX
+				// Each descriptor is a byte value identifying cache type/size
+				// AL[7:0] = number of times CPUID must be executed to get all descriptors
+				_eax = 0x00000001; // Query once (bits 7-0), descriptor 0x00 (no cache) in bytes 3-1
+				_ebx = 0x00000000; // No descriptors
+				_ecx = 0x00000000; // No descriptors
+				_edx = 0x00000000; // No descriptors
 				break;
 
 			case 4: // Deterministic Cache Parameters (sub-function in ECX)
@@ -2496,7 +2506,7 @@ public class IcedCpu : IAsyncCpu
 				break;
 
 			case 0x80000001: // Extended processor info and feature bits
-				_eax = 0x00000600; // Extended processor signature (same as function 1)
+				_eax = 0x00000673; // Extended processor signature (same as function 1)
 				_ebx = 0;
 				_ecx = CpuIntrinsics.GetCpuid80000001EcxFeatures(); // Extended feature flags (includes LZCNT)
 				_edx = 0; // Extended feature flags in EDX
