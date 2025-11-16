@@ -2404,8 +2404,6 @@ public class IcedCpu : IAsyncCpu
 		// CPUID - CPU Identification
 		// Input: EAX = function number, ECX = sub-function (for some functions)
 		// Output: EAX, EBX, ECX, EDX contain CPU info
-		var inputEax = _eax;
-		var inputEcx = _ecx;
 		switch (_eax)
 		{
 			case 0: // Get vendor string and max function
@@ -2520,9 +2518,6 @@ public class IcedCpu : IAsyncCpu
 				_edx = 0;
 				break;
 		}
-		
-		_logger.LogDebug("[CPUID] Function {Input:X8} (ECX={InputEcx:X8}) returned EAX={Eax:X8}, EBX={Ebx:X8}, ECX={Ecx:X8}, EDX={Edx:X8}", 
-			inputEax, inputEcx, _eax, _ebx, _ecx, _edx);
 	}
 
 	private void ExecRdmsr()
