@@ -2728,57 +2728,6 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return FileAccess.ReadWrite;
 	}
 
-	// Helper method to resolve file paths with case-insensitive matching on Unix systems
-	// Windows file systems are case-insensitive, but Unix file systems are case-sensitive
-	private string? ResolvePathCaseInsensitive(string path)
-	{
-		// If the file exists as-is, return it immediately
-		if (File.Exists(path))
-		{
-			return path;
-		}
-
-		try
-		{
-			// Normalize path separators (Windows uses backslash, Unix uses forward slash)
-			path = path.Replace('\\', Path.DirectorySeparatorChar);
-
-			// Split path into components
-			var isRooted = Path.IsPathRooted(path);
-			var pathComponents = path.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
-			
-			// Start from root or current directory
-			var currentPath = isRooted ? Path.GetPathRoot(path)! : ".";
-			
-			// Resolve each component with case-insensitive matching
-			foreach (var component in pathComponents)
-			{
-				// Try to find matching directory or file (case-insensitive)
-				var entries = Directory.Exists(currentPath) 
-					? Directory.EnumerateFileSystemEntries(currentPath)
-					: Array.Empty<string>();
-				
-				var matchingEntry = entries.FirstOrDefault(e => 
-					string.Equals(Path.GetFileName(e), component, StringComparison.OrdinalIgnoreCase));
-				
-				if (matchingEntry == null)
-				{
-					// Component not found
-					return null;
-				}
-				
-				currentPath = matchingEntry;
-			}
-			
-			// Return the resolved path only if it's a file
-			return File.Exists(currentPath) ? currentPath : null;
-		}
-		catch
-		{
-			return null;
-		}
-	}
-
 	[DllModuleExport(2)]
 	private uint CreateFileA(uint lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecAttr,
 		uint dwCreationDisposition, uint dwFlagsAndAttributes, uint hTemplateFile)
@@ -2806,70 +2755,27 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 					path, resolvedPath, _env.CurrentDirectory);
 			}
 
-			// If VFS is available, use it for file operations
-			if (_env.VirtualFileSystem != null)
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
 			{
-				var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
-				var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
-
-				_logger.LogDebug("[Kernel32] CreateFileA: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
-				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
-				if (handle != null)
-				{
-					return _env.RegisterHandle(handle);
-				}
-
-				_logger.LogInformation("[Kernel32] CreateFileA (VFS) failed: {Path}", resolvedPath);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				_logger.LogError("[Kernel32] CreateFileA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
-			// Fallback to direct filesystem access if VFS not available. Use resolvedPath to ensure relative paths are resolved against emulated CurrentDirectory.
-			var fileMode = MapCreationDispositionToFileMode(dwCreationDisposition);
-			var fileAccess = MapDesiredAccessToFileAccess(dwDesiredAccess);
+			var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
+			var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
 
-			// Determine the actual path to use
-			string actualPath = resolvedPath;
-			
-			// For modes that only open existing files, try case-insensitive file resolution
-			// For creation modes (CREATE_NEW, CREATE_ALWAYS, OPEN_ALWAYS), use the original path
-			if (dwCreationDisposition == OPEN_EXISTING || dwCreationDisposition == TRUNCATE_EXISTING)
+			_logger.LogDebug("[Kernel32] CreateFileA: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
+			var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
+			if (handle != null)
 			{
-				// Try case-insensitive file resolution for Unix systems (Windows is already case-insensitive)
-				var resolvedCaseInsensitive = ResolvePathCaseInsensitive(resolvedPath);
-				if (resolvedCaseInsensitive == null)
-				{
-					// File doesn't exist with any case variation
-					_logger.LogWarning("[Kernel32] CreateFileA: Could not find file (case-insensitive search): '{Path}'", resolvedPath);
-					_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-					return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
-				}
-
-				actualPath = resolvedCaseInsensitive;
-				
-				if (actualPath != resolvedPath)
-				{
-					_logger.LogDebug("[Kernel32] CreateFileA: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
-				}
+				return _env.RegisterHandle(handle);
 			}
-			else if (dwCreationDisposition == OPEN_ALWAYS)
-			{
-				// OPEN_ALWAYS: Open if exists, create if not - try case-insensitive first
-				var resolvedCaseInsensitive = ResolvePathCaseInsensitive(resolvedPath);
-				if (resolvedCaseInsensitive != null)
-				{
-					actualPath = resolvedCaseInsensitive;
-					if (actualPath != resolvedPath)
-					{
-						_logger.LogDebug("[Kernel32] CreateFileA: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
-					}
-				}
-				// If not found, use original path for creation
-			}
-			// For CREATE_NEW and CREATE_ALWAYS, always use the original path
 
-			var fs = new FileStream(actualPath, fileMode, fileAccess, FileShare.ReadWrite);
-			return _env.RegisterHandle(fs);
+			_logger.LogInformation("[Kernel32] CreateFileA (VFS) failed: {Path}", resolvedPath);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
 		catch (Exception ex)
 		{
@@ -2909,69 +2815,27 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 					path, resolvedPath, _env.CurrentDirectory);
 			}
 
-			// If VFS is available, use it for file operations
-			if (_env.VirtualFileSystem != null)
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
 			{
-				var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
-				var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
-
-				_logger.LogDebug("[Kernel32] CreateFileW: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
-				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
-				if (handle != null)
-				{
-					return _env.RegisterHandle(handle);
-				}
-
-				_logger.LogInformation("[Kernel32] CreateFileW (VFS) failed: {Path}", resolvedPath);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				_logger.LogError("[Kernel32] CreateFileW: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
-			var fileMode = MapCreationDispositionToFileMode(dwCreationDisposition);
-			var fileAccess = MapDesiredAccessToFileAccess(dwDesiredAccess);
+			var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
+			var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
 
-			// Determine the actual path to use
-			string actualPath = resolvedPath;
-			
-			// For modes that only open existing files, try case-insensitive file resolution
-			// For creation modes (CREATE_NEW, CREATE_ALWAYS, OPEN_ALWAYS), use the original path
-			if (dwCreationDisposition == OPEN_EXISTING || dwCreationDisposition == TRUNCATE_EXISTING)
+			_logger.LogDebug("[Kernel32] CreateFileW: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
+			var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
+			if (handle != null)
 			{
-				// Try case-insensitive file resolution for Unix systems (Windows is already case-insensitive)
-				var resolvedCaseInsensitive = ResolvePathCaseInsensitive(resolvedPath);
-				if (resolvedCaseInsensitive == null)
-				{
-					// File doesn't exist with any case variation
-					_logger.LogWarning("[Kernel32] CreateFileW: Could not find file (case-insensitive search): '{Path}'", resolvedPath);
-					_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-					return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
-				}
-
-				actualPath = resolvedCaseInsensitive;
-				
-				if (actualPath != resolvedPath)
-				{
-					_logger.LogDebug("[Kernel32] CreateFileW: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
-				}
+				return _env.RegisterHandle(handle);
 			}
-			else if (dwCreationDisposition == OPEN_ALWAYS)
-			{
-				// OPEN_ALWAYS: Open if exists, create if not - try case-insensitive first
-				var resolvedCaseInsensitive = ResolvePathCaseInsensitive(resolvedPath);
-				if (resolvedCaseInsensitive != null)
-				{
-					actualPath = resolvedCaseInsensitive;
-					if (actualPath != resolvedPath)
-					{
-						_logger.LogDebug("[Kernel32] CreateFileW: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
-					}
-				}
-				// If not found, use original path for creation
-			}
-			// For CREATE_NEW and CREATE_ALWAYS, always use the original path
 
-			var fs = new FileStream(actualPath, fileMode, fileAccess, FileShare.ReadWrite);
-			return _env.RegisterHandle(fs);
+			_logger.LogInformation("[Kernel32] CreateFileW (VFS) failed: {Path}", resolvedPath);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
 		catch (Exception ex)
 		{
@@ -3348,25 +3212,24 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// If VFS is available, use it
-			if (_env.VirtualFileSystem != null)
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
 			{
-				var success = _env.VirtualFileSystem.DeleteFile(path);
-				if (success)
-				{
-					_logger.LogInformation("[Kernel32] DeleteFileA (VFS): Deleted '{Path}'", path);
-					return (uint)NativeTypes.Win32Bool.TRUE;
-				}
-
-				_logger.LogInformation("[Kernel32] DeleteFileA (VFS) failed: '{Path}'", path);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				_logger.LogError("[Kernel32] DeleteFileA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// Fallback to direct filesystem
-			File.Delete(path);
-			_logger.LogInformation("[Kernel32] DeleteFileA: Deleted '{Path}'", path);
-			return (uint)NativeTypes.Win32Bool.TRUE;
+			var success = _env.VirtualFileSystem.DeleteFile(path);
+			if (success)
+			{
+				_logger.LogInformation("[Kernel32] DeleteFileA (VFS): Deleted '{Path}'", path);
+				return (uint)NativeTypes.Win32Bool.TRUE;
+			}
+
+			_logger.LogInformation("[Kernel32] DeleteFileA (VFS) failed: '{Path}'", path);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 		catch (Exception ex)
 		{
@@ -3390,27 +3253,26 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// If VFS is available, use it
-			if (_env.VirtualFileSystem != null)
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
 			{
-				var success = _env.VirtualFileSystem.MoveFile(existingPath, newPath);
-				if (success)
-				{
-					_logger.LogInformation("[Kernel32] MoveFileA (VFS): Moved '{ExistingPath}' to '{NewPath}'",
-						existingPath, newPath);
-					return (uint)NativeTypes.Win32Bool.TRUE;
-				}
-
-				_logger.LogInformation("[Kernel32] MoveFileA (VFS) failed: '{ExistingPath}' to '{NewPath}'",
-					existingPath, newPath);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				_logger.LogError("[Kernel32] MoveFileA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// Fallback to direct filesystem
-			File.Move(existingPath, newPath);
-			_logger.LogInformation("[Kernel32] MoveFileA: Moved '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
-			return (uint)NativeTypes.Win32Bool.TRUE;
+			var success = _env.VirtualFileSystem.MoveFile(existingPath, newPath);
+			if (success)
+			{
+				_logger.LogInformation("[Kernel32] MoveFileA (VFS): Moved '{ExistingPath}' to '{NewPath}'",
+					existingPath, newPath);
+				return (uint)NativeTypes.Win32Bool.TRUE;
+			}
+
+			_logger.LogInformation("[Kernel32] MoveFileA (VFS) failed: '{ExistingPath}' to '{NewPath}'",
+				existingPath, newPath);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 		catch (Exception ex)
 		{
@@ -3435,18 +3297,63 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
+			{
+				_logger.LogError("[Kernel32] CopyFileA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
+
 			// Check if destination exists when bFailIfExists is true
-			if (failIfExists && File.Exists(newPath))
+			if (failIfExists && _env.VirtualFileSystem.FileExists(newPath))
 			{
 				_logger.LogInformation("[Kernel32] CopyFileA: Destination '{NewPath}' already exists", newPath);
 				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_EXISTS;
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// Perform the copy
-			File.Copy(existingPath, newPath, !failIfExists);
-			_logger.LogInformation("[Kernel32] CopyFileA: Copied '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
-			return (uint)NativeTypes.Win32Bool.TRUE;
+			// Perform the copy using VFS - open source, create destination, copy data
+			var sourceHandle = _env.VirtualFileSystem.OpenFile(existingPath, VfsFileMode.Open, VfsFileAccess.Read);
+			if (sourceHandle == null)
+			{
+				_logger.LogError("[Kernel32] CopyFileA: Failed to open source file '{ExistingPath}'", existingPath);
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
+
+			try
+			{
+				var destHandle = _env.VirtualFileSystem.OpenFile(newPath, failIfExists ? VfsFileMode.CreateNew : VfsFileMode.Create, VfsFileAccess.Write);
+				if (destHandle == null)
+				{
+					_logger.LogError("[Kernel32] CopyFileA: Failed to create destination file '{NewPath}'", newPath);
+					_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+					return (uint)NativeTypes.Win32Bool.FALSE;
+				}
+
+				try
+				{
+					// Copy data in chunks
+					var buffer = new byte[8192];
+					int bytesRead;
+					while ((bytesRead = sourceHandle.Read(buffer, 0, buffer.Length)) > 0)
+					{
+						destHandle.Write(buffer, 0, bytesRead);
+					}
+
+					_logger.LogInformation("[Kernel32] CopyFileA: Copied '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
+					return (uint)NativeTypes.Win32Bool.TRUE;
+				}
+				finally
+				{
+					destHandle.Dispose();
+				}
+			}
+			finally
+			{
+				sourceHandle.Dispose();
+			}
 		}
 		catch (FileNotFoundException ex)
 		{
@@ -3523,18 +3430,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				pattern = "*";
 			}
 
-			string[] files;
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
+			{
+				_logger.LogError("[Kernel32] FindFirstFileA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
 
-			// If VFS is available, use it
-			if (_env.VirtualFileSystem != null)
-			{
-				files = _env.VirtualFileSystem.GetFiles(dir, pattern);
-			}
-			else
-			{
-				// Fallback to direct filesystem
-				files = Directory.GetFiles(dir, pattern);
-			}
+			string[] files = _env.VirtualFileSystem.GetFiles(dir, pattern);
 
 			if (files.Length == 0)
 			{
@@ -7002,36 +6906,20 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Try to get file attributes
 		try
 		{
-			// If VFS is available, use it
-			if (_env.VirtualFileSystem != null)
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
 			{
-				if (_env.VirtualFileSystem.FileExists(resolvedPath))
-				{
-					// For now, return FILE_ATTRIBUTE_NORMAL for all files
-					// A full implementation would check actual file attributes
-					_logger.LogInformation("[Kernel32] GetFileAttributesA: file exists, returning FILE_ATTRIBUTE_NORMAL");
-					return 0x80; // FILE_ATTRIBUTE_NORMAL
-				}
+				_logger.LogError("[Kernel32] GetFileAttributesA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return 0xFFFFFFFF; // INVALID_FILE_ATTRIBUTES
 			}
-			else
+
+			if (_env.VirtualFileSystem.FileExists(resolvedPath))
 			{
-				// Fallback to direct file access
-				if (File.Exists(resolvedPath))
-				{
-					var fileInfo = new FileInfo(resolvedPath);
-					uint attributes = 0x80; // FILE_ATTRIBUTE_NORMAL
-
-					if ((fileInfo.Attributes & System.IO.FileAttributes.ReadOnly) != 0)
-					{
-						attributes = 0x01; // FILE_ATTRIBUTE_READONLY
-					}
-
-					return attributes;
-				}
-				else if (Directory.Exists(resolvedPath))
-				{
-					return 0x10; // FILE_ATTRIBUTE_DIRECTORY
-				}
+				// For now, return FILE_ATTRIBUTE_NORMAL for all files
+				// A full implementation would check actual file attributes
+				_logger.LogInformation("[Kernel32] GetFileAttributesA: file exists, returning FILE_ATTRIBUTE_NORMAL");
+				return 0x80; // FILE_ATTRIBUTE_NORMAL
 			}
 		}
 		catch (Exception ex)
