@@ -2828,20 +2828,45 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var fileMode = MapCreationDispositionToFileMode(dwCreationDisposition);
 			var fileAccess = MapDesiredAccessToFileAccess(dwDesiredAccess);
 
-			// Try case-insensitive file resolution for Unix systems (Windows is already case-insensitive)
-			var actualPath = ResolvePathCaseInsensitive(resolvedPath);
-			if (actualPath == null)
+			// Determine the actual path to use
+			string actualPath = resolvedPath;
+			
+			// For modes that only open existing files, try case-insensitive file resolution
+			// For creation modes (CREATE_NEW, CREATE_ALWAYS, OPEN_ALWAYS), use the original path
+			if (dwCreationDisposition == OPEN_EXISTING || dwCreationDisposition == TRUNCATE_EXISTING)
 			{
-				// File doesn't exist with any case variation
-				_logger.LogWarning("[Kernel32] CreateFileA: Could not find file (case-insensitive search): '{Path}'", resolvedPath);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
-			}
+				// Try case-insensitive file resolution for Unix systems (Windows is already case-insensitive)
+				var resolvedCaseInsensitive = ResolvePathCaseInsensitive(resolvedPath);
+				if (resolvedCaseInsensitive == null)
+				{
+					// File doesn't exist with any case variation
+					_logger.LogWarning("[Kernel32] CreateFileA: Could not find file (case-insensitive search): '{Path}'", resolvedPath);
+					_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+					return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+				}
 
-			if (actualPath != resolvedPath)
-			{
-				_logger.LogDebug("[Kernel32] CreateFileA: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
+				actualPath = resolvedCaseInsensitive;
+				
+				if (actualPath != resolvedPath)
+				{
+					_logger.LogDebug("[Kernel32] CreateFileA: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
+				}
 			}
+			else if (dwCreationDisposition == OPEN_ALWAYS)
+			{
+				// OPEN_ALWAYS: Open if exists, create if not - try case-insensitive first
+				var resolvedCaseInsensitive = ResolvePathCaseInsensitive(resolvedPath);
+				if (resolvedCaseInsensitive != null)
+				{
+					actualPath = resolvedCaseInsensitive;
+					if (actualPath != resolvedPath)
+					{
+						_logger.LogDebug("[Kernel32] CreateFileA: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
+					}
+				}
+				// If not found, use original path for creation
+			}
+			// For CREATE_NEW and CREATE_ALWAYS, always use the original path
 
 			var fs = new FileStream(actualPath, fileMode, fileAccess, FileShare.ReadWrite);
 			return _env.RegisterHandle(fs);
@@ -2905,20 +2930,45 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var fileMode = MapCreationDispositionToFileMode(dwCreationDisposition);
 			var fileAccess = MapDesiredAccessToFileAccess(dwDesiredAccess);
 
-			// Try case-insensitive file resolution for Unix systems (Windows is already case-insensitive)
-			var actualPath = ResolvePathCaseInsensitive(resolvedPath);
-			if (actualPath == null)
+			// Determine the actual path to use
+			string actualPath = resolvedPath;
+			
+			// For modes that only open existing files, try case-insensitive file resolution
+			// For creation modes (CREATE_NEW, CREATE_ALWAYS, OPEN_ALWAYS), use the original path
+			if (dwCreationDisposition == OPEN_EXISTING || dwCreationDisposition == TRUNCATE_EXISTING)
 			{
-				// File doesn't exist with any case variation
-				_logger.LogWarning("[Kernel32] CreateFileW: Could not find file (case-insensitive search): '{Path}'", resolvedPath);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
-			}
+				// Try case-insensitive file resolution for Unix systems (Windows is already case-insensitive)
+				var resolvedCaseInsensitive = ResolvePathCaseInsensitive(resolvedPath);
+				if (resolvedCaseInsensitive == null)
+				{
+					// File doesn't exist with any case variation
+					_logger.LogWarning("[Kernel32] CreateFileW: Could not find file (case-insensitive search): '{Path}'", resolvedPath);
+					_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+					return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+				}
 
-			if (actualPath != resolvedPath)
-			{
-				_logger.LogDebug("[Kernel32] CreateFileW: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
+				actualPath = resolvedCaseInsensitive;
+				
+				if (actualPath != resolvedPath)
+				{
+					_logger.LogDebug("[Kernel32] CreateFileW: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
+				}
 			}
+			else if (dwCreationDisposition == OPEN_ALWAYS)
+			{
+				// OPEN_ALWAYS: Open if exists, create if not - try case-insensitive first
+				var resolvedCaseInsensitive = ResolvePathCaseInsensitive(resolvedPath);
+				if (resolvedCaseInsensitive != null)
+				{
+					actualPath = resolvedCaseInsensitive;
+					if (actualPath != resolvedPath)
+					{
+						_logger.LogDebug("[Kernel32] CreateFileW: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
+					}
+				}
+				// If not found, use original path for creation
+			}
+			// For CREATE_NEW and CREATE_ALWAYS, always use the original path
 
 			var fs = new FileStream(actualPath, fileMode, fileAccess, FileShare.ReadWrite);
 			return _env.RegisterHandle(fs);
