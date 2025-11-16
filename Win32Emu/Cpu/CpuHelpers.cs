@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Win32Emu.Loader;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Cpu;
@@ -369,6 +370,7 @@ public static class CpuHelpers
 	/// <param name="memorySize">Total memory size for EBP validation</param>
 	/// <param name="logger">Optional logger for diagnostics</param>
 	/// <param name="context">Context string for logging (e.g., "COM call", "Import")</param>
+	/// <param name="loadedImage">Optional PE image information for validating return addresses against section types</param>
 	/// <returns>True if invocation succeeded, false otherwise</returns>
 	public static bool InvokeWithRegisterPreservation(
 		ICpu cpu,
@@ -376,7 +378,8 @@ public static class CpuHelpers
 		Func<(bool success, uint returnValue, int argBytes)> invokeFunc,
 		ulong memorySize,
 		ILogger? logger = null,
-		string context = "API call")
+		string context = "API call",
+		LoadedImage? loadedImage = null)
 	{
 		// Save callee-saved registers
 		var saved = SaveCalleeSavedRegisters(cpu);
@@ -397,36 +400,55 @@ public static class CpuHelpers
 			logger?.LogInformation("[{Context}] Return address from stack: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}", context, esp, retEip);
 			
 			// Validate return address before using it
-			// Check if return address is in a valid code region
-			// Typical PE files have code in the .text section starting at 0x00401000
-			if (retEip < 0x00400000)
+			// Check if return address is in a valid code region using PE section information if available
+			if (loadedImage != null)
 			{
-				logger?.LogError("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is below typical image base (0x00400000). Possible stack corruption!", context, retEip);
-			}
-			else if (retEip >= 0x00407000 && retEip < 0x00410000)
-			{
-				// This range is typically .data or .rdata sections in BasicDD.exe
-				logger?.LogWarning("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} appears to be in data section (.data/.rdata typically at 0x00406000-0x00410000). Possible stack corruption or unusual calling convention!", context, retEip);
+				// Use PE section information to validate return address
+				var imageBase = loadedImage.BaseAddress;
 				
-				// Dump additional stack context for debugging
-				var stackDump = new System.Text.StringBuilder();
-				stackDump.AppendLine($"[{context}] Extended stack dump for suspicious return address:");
-				try
+				if (retEip < imageBase)
 				{
-					for (int i = -4; i <= 16; i++)
+					logger?.LogError("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is below image base (0x{ImageBase:X8}). Possible stack corruption!", context, retEip, imageBase);
+				}
+				else if (loadedImage.IsAddressInDataSection(retEip))
+				{
+					// Return address is in a data section (.data, .rdata, etc.)
+					logger?.LogWarning("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} appears to be in data section (not executable code). Possible stack corruption or unusual calling convention!", context, retEip);
+					
+					// Dump additional stack context for debugging
+					var stackDump = new System.Text.StringBuilder();
+					stackDump.AppendLine($"[{context}] Extended stack dump for suspicious return address:");
+					try
 					{
-						var addr = esp + (uint)(i * 4);
-						var val = memory.Read32(addr);
-						var label = i == 0 ? " (return addr - SUSPICIOUS!)" : i > 0 && i <= (argBytes / 4) ? $" (arg{i})" : "";
-						stackDump.AppendLine($"  [ESP{i:+0;-0}] = 0x{addr:X8}: 0x{val:X8}{label}");
+						for (int i = -4; i <= 16; i++)
+						{
+							var addr = esp + (uint)(i * 4);
+							var val = memory.Read32(addr);
+							var label = i == 0 ? " (return addr - SUSPICIOUS!)" : i > 0 && i <= (argBytes / 4) ? $" (arg{i})" : "";
+							stackDump.AppendLine($"  [ESP{i:+0;-0}] = 0x{addr:X8}: 0x{val:X8}{label}");
+						}
 					}
+					catch (Exception ex)
+					{
+						stackDump.AppendLine("  (error reading extended stack)");
+						logger?.LogError(ex, "[{Context}] Error reading extended stack for dump", context);
+					}
+					logger.LogWarning(stackDump.ToString());
 				}
-				catch (Exception ex)
+				else if (!loadedImage.IsAddressInCodeSection(retEip))
 				{
-					stackDump.AppendLine("  (error reading extended stack)");
-					logger?.LogError(ex, "[{Context}] Error reading extended stack for dump", context);
+					// Return address is not in code section and not in data section - likely outside loaded image
+					logger?.LogWarning("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is not in any known executable section. May be in unloaded DLL or corrupted.", context, retEip);
 				}
-				logger.LogWarning(stackDump.ToString());
+			}
+			else
+			{
+				// Fallback to basic validation when PE image information is not available
+				// Use typical PE image base as a sanity check
+				if (retEip < 0x00400000)
+				{
+					logger?.LogError("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is below typical image base (0x00400000). Possible stack corruption!", context, retEip);
+				}
 			}
 			
 			// Dump stack contents for debugging (at Information level for diagnostics)

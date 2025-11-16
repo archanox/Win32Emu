@@ -953,7 +953,8 @@ public sealed class Emulator : IDisposable
                     },
                     _vm!.Size,
                     _logger,
-                    "COM vtable");
+                    "COM vtable",
+                    _image);
                 
                 var espAfter = _cpu.GetRegister("ESP");
                 var eipAfter = _cpu.GetEip();
@@ -1210,7 +1211,8 @@ public sealed class Emulator : IDisposable
                         },
                         _vm!.Size,
                         _logger,
-                        "COM vtable");
+                        "COM vtable",
+                        _image);
                 }
                 else if (step.IsCall && !IsImportStubAddress(step.CallTarget))
                 {
@@ -1241,7 +1243,8 @@ public sealed class Emulator : IDisposable
                             },
                             _vm!.Size,
                             _logger,
-                            $"Import {dll}!{name}");
+                            $"Import {dll}!{name}",
+                            _image);
                         
                         if (!success)
                         {
@@ -1481,7 +1484,8 @@ public sealed class Emulator : IDisposable
                         },
                         _vm!.Size,
                         _logger,
-                        "COM vtable (GDB)");
+                        "COM vtable (GDB)",
+                        _image);
                 }
                 else if (step.IsCall && !IsImportStubAddress(step.CallTarget))
                 {
@@ -1508,7 +1512,8 @@ public sealed class Emulator : IDisposable
                             },
                             _vm!.Size,
                             _logger,
-                            $"Import {dll}!{name} (GDB)");
+                            $"Import {dll}!{name} (GDB)",
+                            _image);
                         
                         if (!success)
                         {
@@ -1601,7 +1606,8 @@ public sealed class Emulator : IDisposable
                 },
                 _vm!.Size,
                 _logger,
-                $"Import {dll}!{name}");
+                $"Import {dll}!{name}",
+                _image);
             
             if (!success)
             {
