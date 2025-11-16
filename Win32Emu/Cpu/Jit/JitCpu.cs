@@ -5999,19 +5999,29 @@ public class JitCpu : IAsyncCpu
 		if (count == 0)
 			return;
 		
+		count &= 0x1F; // Modulo 32
+		
+		// Save original MSB for OF calculation
+		var originalMsb = (dest & 0x80000000) != 0;
+		
 		var carryOut = ((dest >> (32 - count)) & 1) != 0;
 		
 		ulong combined = ((ulong)dest << 32) | src;
 		combined <<= count;
 		dest = (uint)(combined >> 32);
 		
+		// Set flags
 		SetFlagVal(Cf, carryOut);
-		SetFlagVal(Sf, (dest & 0x80000000) != 0);
-		SetFlagVal(Zf, dest == 0);
+		// OF is set only if count == 1 - set if sign changed
 		if (count == 1)
-			SetFlagVal(Of, ((dest >> 31) ^ ((dest >> 30) & 1)) != 0);
+		{
+			var newMsb = (dest & 0x80000000) != 0;
+			SetFlagVal(Of, originalMsb != newMsb);
+		}
 		
 		SetOperandValue(insn, 0, dest);
+		// Update SF, ZF, and PF based on result
+		UpdateLogicResultFlags(dest);
 	}
 	
 	private void ExecShrd(Instruction insn, VirtualMemory mem)
@@ -6023,18 +6033,28 @@ public class JitCpu : IAsyncCpu
 		if (count == 0)
 			return;
 		
+		count &= 0x1F; // Modulo 32
+		
+		// Save original MSB for OF calculation
+		var originalMsb = (dest & 0x80000000) != 0;
+		
 		ulong combined = ((ulong)src << 32) | dest;
 		var carryOut = ((combined >> (count - 1)) & 1) != 0;
 		combined >>= count;
 		dest = (uint)combined;
 		
+		// Set flags
 		SetFlagVal(Cf, carryOut);
-		SetFlagVal(Sf, (dest & 0x80000000) != 0);
-		SetFlagVal(Zf, dest == 0);
+		// OF is set only if count == 1 - set if sign changed
 		if (count == 1)
-			SetFlagVal(Of, ((dest >> 31) ^ ((dest >> 30) & 1)) != 0);
+		{
+			var newMsb = (dest & 0x80000000) != 0;
+			SetFlagVal(Of, originalMsb != newMsb);
+		}
 		
 		SetOperandValue(insn, 0, dest);
+		// Update SF, ZF, and PF based on result
+		UpdateLogicResultFlags(dest);
 	}
 	
 	private void ExecBt(Instruction insn, VirtualMemory mem)

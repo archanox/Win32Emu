@@ -380,18 +380,21 @@ public class IcedCpu : IAsyncCpu
 
 					break;
 				case Mnemonic.Call:
+					// Determine operand size based on instruction Code enum
+					// The decoder selects the appropriate Code based on bitness and operand-size prefix (66h)
+					bool use32BitCall = insn.Code == Code.Call_rel32_32 || insn.Code == Code.Call_rel32_64 ||
+					                    insn.Code == Code.Call_rm32 || insn.Code == Code.Call_rm64;
+					
 					// Push return address onto stack
-					// Note: This doesn't handle operand-size override prefix (66h) correctly
-					// TODO: Use insn.Code enum to properly detect CALL vs CALLD variants
-					if (_bitness == 16)
-					{
-						_esp -= 2;
-						Write16(_esp, (ushort)((oldEip + (uint)insn.Length) & 0xFFFF));
-					}
-					else
+					if (use32BitCall)
 					{
 						_esp -= 4;
 						Write32(_esp, oldEip + (uint)insn.Length);
+					}
+					else
+					{
+						_esp -= 2;
+						Write16(_esp, (ushort)((oldEip + (uint)insn.Length) & 0xFFFF));
 					}
 					
 					// Determine call target
@@ -432,24 +435,27 @@ public class IcedCpu : IAsyncCpu
 					uint ret;
 					uint oldEsp;
 					
-					// Determine operand size based on CPU bitness
-					// Note: This doesn't handle operand-size override prefix (66h) correctly
-					// TODO: Use insn.Code enum to properly detect RET vs RETD variants
-					if (_bitness == 16)
-					{
-						// 16-bit mode: pop 2 bytes and update only lower 16 bits of EIP
-						ret = Read16(_esp);
-						oldEsp = _esp;
-						_esp += 2;
-						_eip = (_eip & 0xFFFF0000) | ret;
-					}
-					else
+					// Determine operand size based on instruction Code enum
+					// The decoder selects the appropriate Code based on bitness and operand-size prefix (66h)
+					// In 16-bit mode: Retnw (default), Retnd (with 66h prefix)
+					// In 32-bit mode: Retnd (default), Retnw (with 66h prefix)
+					bool use32BitOperand = insn.Code == Code.Retnd || insn.Code == Code.Retnd_imm16;
+					
+					if (use32BitOperand)
 					{
 						// 32-bit mode: pop 4 bytes
 						ret = Read32(_esp);
 						oldEsp = _esp;
 						_esp += 4;
 						_eip = ret;
+					}
+					else
+					{
+						// 16-bit mode: pop 2 bytes, EIP is effectively 16-bit (IP)
+						ret = Read16(_esp);
+						oldEsp = _esp;
+						_esp += 2;
+						_eip = ret & 0xFFFF;
 					}
 					
 					// Handle immediate (cleanup bytes)
