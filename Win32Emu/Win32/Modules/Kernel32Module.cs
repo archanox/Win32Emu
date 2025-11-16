@@ -2728,6 +2728,57 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return FileAccess.ReadWrite;
 	}
 
+	// Helper method to resolve file paths with case-insensitive matching on Unix systems
+	// Windows file systems are case-insensitive, but Unix file systems are case-sensitive
+	private string? ResolvePathCaseInsensitive(string path)
+	{
+		// If the file exists as-is, return it immediately
+		if (File.Exists(path))
+		{
+			return path;
+		}
+
+		try
+		{
+			// Normalize path separators (Windows uses backslash, Unix uses forward slash)
+			path = path.Replace('\\', Path.DirectorySeparatorChar);
+
+			// Split path into components
+			var isRooted = Path.IsPathRooted(path);
+			var pathComponents = path.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+			
+			// Start from root or current directory
+			var currentPath = isRooted ? Path.GetPathRoot(path)! : ".";
+			
+			// Resolve each component with case-insensitive matching
+			foreach (var component in pathComponents)
+			{
+				// Try to find matching directory or file (case-insensitive)
+				var entries = Directory.Exists(currentPath) 
+					? Directory.EnumerateFileSystemEntries(currentPath)
+					: Array.Empty<string>();
+				
+				var matchingEntry = entries.FirstOrDefault(e => 
+					string.Equals(Path.GetFileName(e), component, StringComparison.OrdinalIgnoreCase));
+				
+				if (matchingEntry == null)
+				{
+					// Component not found
+					return null;
+				}
+				
+				currentPath = matchingEntry;
+			}
+			
+			// Return the resolved path only if it's a file
+			return File.Exists(currentPath) ? currentPath : null;
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
 	[DllModuleExport(2)]
 	private uint CreateFileA(uint lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecAttr,
 		uint dwCreationDisposition, uint dwFlagsAndAttributes, uint hTemplateFile)
@@ -2777,7 +2828,22 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var fileMode = MapCreationDispositionToFileMode(dwCreationDisposition);
 			var fileAccess = MapDesiredAccessToFileAccess(dwDesiredAccess);
 
-			var fs = new FileStream(resolvedPath, fileMode, fileAccess, FileShare.ReadWrite);
+			// Try case-insensitive file resolution for Unix systems (Windows is already case-insensitive)
+			var actualPath = ResolvePathCaseInsensitive(resolvedPath);
+			if (actualPath == null)
+			{
+				// File doesn't exist with any case variation
+				_logger.LogWarning("[Kernel32] CreateFileA: Could not find file (case-insensitive search): '{Path}'", resolvedPath);
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
+
+			if (actualPath != resolvedPath)
+			{
+				_logger.LogDebug("[Kernel32] CreateFileA: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
+			}
+
+			var fs = new FileStream(actualPath, fileMode, fileAccess, FileShare.ReadWrite);
 			return _env.RegisterHandle(fs);
 		}
 		catch (Exception ex)
@@ -2839,7 +2905,22 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var fileMode = MapCreationDispositionToFileMode(dwCreationDisposition);
 			var fileAccess = MapDesiredAccessToFileAccess(dwDesiredAccess);
 
-			var fs = new FileStream(resolvedPath, fileMode, fileAccess, FileShare.ReadWrite);
+			// Try case-insensitive file resolution for Unix systems (Windows is already case-insensitive)
+			var actualPath = ResolvePathCaseInsensitive(resolvedPath);
+			if (actualPath == null)
+			{
+				// File doesn't exist with any case variation
+				_logger.LogWarning("[Kernel32] CreateFileW: Could not find file (case-insensitive search): '{Path}'", resolvedPath);
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
+
+			if (actualPath != resolvedPath)
+			{
+				_logger.LogDebug("[Kernel32] CreateFileW: Resolved case-insensitive path '{ResolvedPath}' to '{ActualPath}'", resolvedPath, actualPath);
+			}
+
+			var fs = new FileStream(actualPath, fileMode, fileAccess, FileShare.ReadWrite);
 			return _env.RegisterHandle(fs);
 		}
 		catch (Exception ex)
