@@ -6912,6 +6912,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				_logger.LogInformation("[Kernel32] GetFileAttributesA: file exists, returning FILE_ATTRIBUTE_NORMAL");
 				return 0x80; // FILE_ATTRIBUTE_NORMAL
 			}
+			if (_env.VirtualFileSystem.DirectoryExists(resolvedPath))
+			{
+				_logger.LogInformation("[Kernel32] GetFileAttributesA: path is a directory, returning FILE_ATTRIBUTE_DIRECTORY");
+				return 0x10; // FILE_ATTRIBUTE_DIRECTORY
+			}
 		}
 		catch (Exception ex)
 		{
