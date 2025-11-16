@@ -380,8 +380,24 @@ public class IcedCpu : IAsyncCpu
 
 					break;
 				case Mnemonic.Call:
-					_esp -= 4;
-					Write32(_esp, oldEip + (uint)insn.Length);  // Push return address (address after CALL)
+					// Determine operand size based on instruction Code enum
+					// The decoder selects the appropriate Code based on bitness and operand-size prefix (66h)
+					bool use32BitCall = insn.Code == Code.Call_rel32_32 || insn.Code == Code.Call_rel32_64 ||
+					                    insn.Code == Code.Call_rm32 || insn.Code == Code.Call_rm64;
+					
+					// Push return address onto stack
+					if (use32BitCall)
+					{
+						_esp -= 4;
+						Write32(_esp, oldEip + (uint)insn.Length);
+					}
+					else
+					{
+						_esp -= 2;
+						Write16(_esp, (ushort)((oldEip + (uint)insn.Length) & 0xFFFF));
+					}
+					
+					// Determine call target
 					if (insn.GetOpKind(0) == OpKind.Register)
 					{
 						var targetReg = insn.GetOpRegister(0);
@@ -416,10 +432,33 @@ public class IcedCpu : IAsyncCpu
 
 					break;
 				case Mnemonic.Ret:
-					var ret = Read32(_esp);
-					var oldEsp = _esp;
-					_esp += 4;
-					_eip = ret;
+					uint ret;
+					uint oldEsp;
+					
+					// Determine operand size based on instruction Code enum
+					// The decoder selects the appropriate Code based on bitness and operand-size prefix (66h)
+					// In 16-bit mode: Retnw (default), Retnd (with 66h prefix)
+					// In 32-bit mode: Retnd (default), Retnw (with 66h prefix)
+					bool use32BitOperand = insn.Code == Code.Retnd || insn.Code == Code.Retnd_imm16;
+					
+					if (use32BitOperand)
+					{
+						// 32-bit mode: pop 4 bytes
+						ret = Read32(_esp);
+						oldEsp = _esp;
+						_esp += 4;
+						_eip = ret;
+					}
+					else
+					{
+						// 16-bit mode: pop 2 bytes, EIP is effectively 16-bit (IP)
+						ret = Read16(_esp);
+						oldEsp = _esp;
+						_esp += 2;
+						_eip = ret & 0xFFFF;
+					}
+					
+					// Handle immediate (cleanup bytes)
 					if (insn.Immediate16 != 0)
 					{
 						_esp += insn.Immediate16;
@@ -4379,6 +4418,9 @@ public class IcedCpu : IAsyncCpu
 		
 		count &= 0x1F; // Modulo 32
 		
+		// Save original MSB for OF calculation
+		var originalMsb = (dest & 0x80000000) != 0;
+		
 		// Shift dest left by count, filling with high bits of src
 		// CF is set to the last bit shifted out
 		var carryOut = ((dest >> (32 - count)) & 1) != 0;
@@ -4389,13 +4431,16 @@ public class IcedCpu : IAsyncCpu
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
-		SetFlagVal(Sf, (dest & 0x80000000) != 0);
-		SetFlagVal(Zf, dest == 0);
-		// OF is set only if count == 1 - check if sign bit changed (top two bits differ)
+		// OF is set only if count == 1 - set if sign changed
 		if (count == 1)
-			SetFlagVal(Of, ((dest >> 31) ^ ((dest >> 30) & 1)) != 0);
+		{
+			var newMsb = (dest & 0x80000000) != 0;
+			SetFlagVal(Of, originalMsb != newMsb);
+		}
 		
 		WriteOp(insn, 0, dest);
+		// Update SF, ZF, and PF based on result
+		UpdateLogicResultFlags(dest);
 	}
 
 	private void ExecShrd(Instruction insn)
@@ -4410,6 +4455,9 @@ public class IcedCpu : IAsyncCpu
 		
 		count &= 0x1F; // Modulo 32
 		
+		// Save original MSB for OF calculation
+		var originalMsb = (dest & 0x80000000) != 0;
+		
 		// Shift dest right by count, filling with low bits of src
 		// CF is set to the last bit shifted out
 		ulong combined = ((ulong)src << 32) | dest;
@@ -4419,13 +4467,16 @@ public class IcedCpu : IAsyncCpu
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
-		SetFlagVal(Sf, (dest & 0x80000000) != 0);
-		SetFlagVal(Zf, dest == 0);
-		// OF is set only if count == 1
+		// OF is set only if count == 1 - set if sign changed
 		if (count == 1)
-			SetFlagVal(Of, (((dest >> 31) ^ ((dest >> 30) & 1)) != 0));
+		{
+			var newMsb = (dest & 0x80000000) != 0;
+			SetFlagVal(Of, originalMsb != newMsb);
+		}
 		
 		WriteOp(insn, 0, dest);
+		// Update SF, ZF, and PF based on result
+		UpdateLogicResultFlags(dest);
 	}
 
 	private void ExecAad(Instruction insn)
