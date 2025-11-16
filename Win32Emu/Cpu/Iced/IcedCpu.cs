@@ -381,6 +381,8 @@ public class IcedCpu : IAsyncCpu
 					break;
 				case Mnemonic.Call:
 					// Push return address onto stack
+					// Note: This doesn't handle operand-size override prefix (66h) correctly
+					// TODO: Use insn.Code enum to properly detect CALL vs CALLD variants
 					if (_bitness == 16)
 					{
 						_esp -= 2;
@@ -430,6 +432,9 @@ public class IcedCpu : IAsyncCpu
 					uint ret;
 					uint oldEsp;
 					
+					// Determine operand size based on CPU bitness
+					// Note: This doesn't handle operand-size override prefix (66h) correctly
+					// TODO: Use insn.Code enum to properly detect RET vs RETD variants
 					if (_bitness == 16)
 					{
 						// 16-bit mode: pop 2 bytes and update only lower 16 bits of EIP
