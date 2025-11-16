@@ -189,8 +189,39 @@ public static class EmulatorLauncher
 
 			try
 			{
+				// Create or get virtual disk for the executable
+				string virtualDiskPath;
+				string vfsExecutablePath;
+				
+				try
+				{
+					(virtualDiskPath, vfsExecutablePath) = CreateOrGetVirtualDisk(path, logger);
+					logger.LogInformation("Using virtual disk: {VirtualDiskPath}", virtualDiskPath);
+					logger.LogInformation("Executable VFS path: {VfsPath}", vfsExecutablePath);
+				}
+				catch (System.IO.IOException ex)
+				{
+					logger.LogError(ex, "IO error while creating or accessing virtual disk for {Path}", path);
+					return 1;
+				}
+				catch (System.UnauthorizedAccessException ex)
+				{
+					logger.LogError(ex, "Access denied while creating or accessing virtual disk for {Path}", path);
+					return 1;
+				}
+				catch (Exception ex) when (
+					ex.GetType() != typeof(System.StackOverflowException) &&
+					ex.GetType() != typeof(System.OutOfMemoryException) &&
+					ex.GetType() != typeof(System.Threading.ThreadAbortException)
+				)
+				{
+					logger.LogError(ex, "Unexpected error while creating or accessing virtual disk for {Path}", path);
+					return 1;
+				}
+				// Let critical exceptions propagate
+				
 				using var emulator = new Emulator(null, logger, telemetryService);
-				emulator.LoadExecutable(path, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort);
+				emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, false, false, virtualDiskPath);
 				
 				// Enable API tracing if requested
 				if (enableApiTrace && emulator.Environment != null)
@@ -295,5 +326,160 @@ public static class EmulatorLauncher
 		Console.WriteLine("  Win32Emu game.exe --interactive-debug");
 		Console.WriteLine("  Win32Emu game.exe --gdb-server");
 		Console.WriteLine("  Win32Emu game.exe --gdb-server 5678");
+	}
+
+	/// <summary>
+	/// Creates or gets a virtual disk for the specified executable.
+	/// The virtual disk contains the executable and all files from its directory.
+	/// </summary>
+	/// <param name="executablePath">Path to the executable</param>
+	/// <param name="logger">Logger instance</param>
+	/// <returns>Tuple of (virtualDiskPath, vfsExecutablePath)</returns>
+	private static (string virtualDiskPath, string vfsExecutablePath) CreateOrGetVirtualDisk(string executablePath, ILogger logger)
+	{
+		// Get the directory and filename
+		var fullPath = Path.GetFullPath(executablePath);
+		var directory = Path.GetDirectoryName(fullPath);
+		var filename = Path.GetFileName(fullPath);
+		
+		if (string.IsNullOrEmpty(directory) || string.IsNullOrEmpty(filename))
+		{
+			throw new ArgumentException($"Invalid executable path: {executablePath}");
+		}
+
+		// Create a virtual disk path based on the executable name
+		var vhdDirectory = Path.Combine(Path.GetTempPath(), "Win32Emu_VHDs");
+		Directory.CreateDirectory(vhdDirectory);
+		
+		// Use a hash of the directory path to create a unique VHD name
+		var directoryHash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(directory));
+		var hashString = Convert.ToHexString(directoryHash)[..16].ToLowerInvariant();
+		var vhdPath = Path.Combine(vhdDirectory, $"{Path.GetFileNameWithoutExtension(filename)}_{hashString}.vhd");
+
+		// Determine the virtual directory name (use last component of the directory path)
+		var virtualDirName = Path.GetFileName(directory);
+		if (string.IsNullOrEmpty(virtualDirName))
+		{
+			// Fallback to using the filename without extension as the directory name
+			virtualDirName = Path.GetFileNameWithoutExtension(filename);
+		}
+		var vfsExecutablePath = $"C:\\{virtualDirName}\\{filename}";
+
+		// Check if VHD already exists
+		if (File.Exists(vhdPath))
+		{
+			logger.LogInformation("Using existing virtual disk: {VhdPath}", vhdPath);
+			return (vhdPath, vfsExecutablePath);
+		}
+
+		// Create new VHD and populate it with files from the directory
+		logger.LogInformation("Creating virtual disk: {VhdPath}", vhdPath);
+		
+		const long vhdSizeBytes = 512L * 1024 * 1024; // 512 MB
+		
+		int successCount = 0;
+		int failureCount = 0;
+		int totalFiles = 0;
+		
+		using (var vfs = VirtualFileSystem.DiskVirtualFileSystem.Create(vhdPath, VirtualFileSystem.DiskFormat.Vhd, vhdSizeBytes, logger))
+		{
+			// Create the root directory for the virtual disk
+			try
+			{
+				vfs.CreateDirectory($"\\{virtualDirName}");
+				logger.LogInformation("Created root directory: \\{VirtualDirName}", virtualDirName);
+			}
+			catch (Exception ex)
+			{
+				logger.LogWarning(ex, "Failed to create root directory (may already exist): \\{VirtualDirName}", virtualDirName);
+			}
+			
+			// Copy all files from the directory to the VHD
+			var files = Directory.GetFiles(directory, "*", SearchOption.AllDirectories);
+			totalFiles = files.Length;
+			logger.LogInformation("Copying {FileCount} files to virtual disk", totalFiles);
+			
+			foreach (var file in files)
+			{
+				var relativePath = Path.GetRelativePath(directory, file);
+				var vfsPath = $"\\{virtualDirName}\\{relativePath.Replace('/', '\\')}";
+				
+				try
+				{
+					// Ensure all parent directories exist in VFS
+					var vfsDir = Path.GetDirectoryName(vfsPath);
+					if (!string.IsNullOrEmpty(vfsDir))
+					{
+						// Create all parent directories recursively
+						EnsureDirectoryExists(vfs, vfsDir, logger);
+					}
+					
+					// Copy file to VFS
+					logger.LogDebug("Copying {File} to {VfsPath}", file, vfsPath);
+					var fileBytes = File.ReadAllBytes(file);
+					var handle = vfs.OpenFile(vfsPath, VirtualFileSystem.VfsFileMode.Create, VirtualFileSystem.VfsFileAccess.Write);
+					if (handle != null)
+					{
+						using (handle)
+						{
+							handle.Write(fileBytes, 0, fileBytes.Length);
+						}
+						logger.LogDebug("Successfully copied {VfsPath} ({Size} bytes)", vfsPath, fileBytes.Length);
+						successCount++;
+					}
+					else
+					{
+						logger.LogWarning("Failed to open file for writing: {VfsPath}", vfsPath);
+						failureCount++;
+					}
+				}
+				catch (Exception ex)
+				{
+					logger.LogWarning(ex, "Failed to copy file to VHD: {File} -> {VfsPath}", file, vfsPath);
+					failureCount++;
+				}
+			}
+			
+			if (failureCount > 0)
+			{
+				logger.LogWarning("Virtual disk created with {FailureCount} file copy failures out of {TotalCount} files", failureCount, totalFiles);
+			}
+		}
+
+		if (failureCount == totalFiles && totalFiles > 0)
+		{
+			throw new InvalidOperationException($"Failed to copy any files to virtual disk. All {totalFiles} file operations failed.");
+		}
+
+		logger.LogInformation("Virtual disk created successfully: {VhdPath} ({SuccessCount}/{TotalCount} files copied)", vhdPath, successCount, totalFiles);
+		return (vhdPath, vfsExecutablePath);
+	}
+
+	/// <summary>
+	/// Ensures all parent directories exist for the given path
+	/// </summary>
+	private static void EnsureDirectoryExists(VirtualFileSystem.DiskVirtualFileSystem vfs, string directoryPath, ILogger logger)
+	{
+		if (string.IsNullOrEmpty(directoryPath) || directoryPath == "\\" || directoryPath == "/")
+			return;
+		
+		// Split path into components
+		var parts = directoryPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+		var currentPath = "";
+		
+		foreach (var part in parts)
+		{
+			currentPath += "\\" + part;
+			
+			try
+			{
+				vfs.CreateDirectory(currentPath);
+				logger.LogDebug("Created directory: {Directory}", currentPath);
+			}
+			catch (Exception ex)
+			{
+				logger.LogDebug(ex, "CreateDirectory failed for {Directory} (may already exist)", currentPath);
+			}
+		}
 	}
 }

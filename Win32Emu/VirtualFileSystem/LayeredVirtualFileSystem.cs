@@ -71,22 +71,79 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 	}
 
 	/// <summary>
+	/// Attempts to find a file in a case-insensitive manner on case-sensitive filesystems.
+	/// On Windows, this returns the path as-is. On Linux/macOS, it performs a directory scan.
+	/// </summary>
+	private string? FindFileCaseInsensitive(string path)
+	{
+		// If file exists as-is, return it
+		if (File.Exists(path))
+		{
+			return path;
+		}
+
+		// On case-insensitive filesystems (Windows), the above check is sufficient
+		// On case-sensitive filesystems (Linux/macOS), we need to search
+		try
+		{
+			var directory = Path.GetDirectoryName(path);
+			var fileName = Path.GetFileName(path);
+			
+			if (string.IsNullOrEmpty(directory) || string.IsNullOrEmpty(fileName))
+			{
+				_logger.LogInformation("[VFS] FindFileCaseInsensitive: Invalid path components for {Path}", path);
+				return null;
+			}
+
+			if (!Directory.Exists(directory))
+			{
+				_logger.LogInformation("[VFS] FindFileCaseInsensitive: Directory does not exist: {Directory}", directory);
+				return null;
+			}
+
+			// Search for matching file with case-insensitive comparison
+			var files = Directory.GetFiles(directory);
+			_logger.LogInformation("[VFS] FindFileCaseInsensitive: Searching for {FileName} in {Directory} ({FileCount} files)", fileName, directory, files.Length);
+			foreach (var file in files)
+			{
+				var currentFileName = Path.GetFileName(file);
+				if (string.Equals(currentFileName, fileName, StringComparison.OrdinalIgnoreCase))
+				{
+					_logger.LogInformation("[VFS] FindFileCaseInsensitive: Found {FileName} as {ActualFile}", fileName, currentFileName);
+					return file;
+				}
+			}
+			
+			_logger.LogInformation("[VFS] FindFileCaseInsensitive: No case-insensitive match found for {FileName} in {Directory}", fileName, directory);
+		}
+		catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+		{
+			_logger.LogInformation(ex, "[VFS] Exception while searching for file case-insensitively: {Path}", path);
+		}
+
+		return null;
+	}
+
+	/// <summary>
 	/// Resolves a virtual path to the actual filesystem path, checking overlay first, then base.
+	/// Uses case-insensitive matching to emulate Windows filesystem behavior.
 	/// </summary>
 	private string? ResolvePath(string virtualPath, out bool isInOverlay)
 	{
 		var overlayPath = GetOverlayPath(virtualPath);
-		if (File.Exists(overlayPath))
+		var resolvedOverlayPath = FindFileCaseInsensitive(overlayPath);
+		if (resolvedOverlayPath != null)
 		{
 			isInOverlay = true;
-			return overlayPath;
+			return resolvedOverlayPath;
 		}
 
 		var basePath = GetBasePath(virtualPath);
-		if (File.Exists(basePath))
+		var resolvedBasePath = FindFileCaseInsensitive(basePath);
+		if (resolvedBasePath != null)
 		{
 			isInOverlay = false;
-			return basePath;
+			return resolvedBasePath;
 		}
 
 		isInOverlay = false;
@@ -106,7 +163,8 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 		}
 
 		var basePath = GetBasePath(virtualPath);
-		if (!File.Exists(basePath))
+		var resolvedBasePath = FindFileCaseInsensitive(basePath);
+		if (resolvedBasePath == null)
 		{
 			return; // File doesn't exist anywhere
 		}
@@ -118,7 +176,7 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 			Directory.CreateDirectory(overlayDir);
 		}
 
-		File.Copy(basePath, overlayPath, true);
+		File.Copy(resolvedBasePath, overlayPath, true);
 		_logger.LogDebug("[VFS] Copied {VirtualPath} from base to overlay", virtualPath);
 	}
 
@@ -257,9 +315,9 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 			var baseDir = GetBasePath(path);
 			return Directory.Exists(baseDir);
 		}
-		catch (IOException ex)
+		catch (DirectoryNotFoundException ex)
 		{
-			_logger.LogDebug(ex, "[VFS] IOException while checking if directory exists: {Path}", path);
+			_logger.LogDebug(ex, "[VFS] DirectoryNotFoundException while checking if directory exists: {Path}", path);
 			return false;
 		}
 		catch (UnauthorizedAccessException ex)
@@ -267,9 +325,9 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 			_logger.LogDebug(ex, "[VFS] UnauthorizedAccessException while checking if directory exists: {Path}", path);
 			return false;
 		}
-		catch (DirectoryNotFoundException ex)
+		catch (IOException ex)
 		{
-			_logger.LogDebug(ex, "[VFS] DirectoryNotFoundException while checking if directory exists: {Path}", path);
+			_logger.LogDebug(ex, "[VFS] IOException while checking if directory exists: {Path}", path);
 			return false;
 		}
 	}
