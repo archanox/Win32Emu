@@ -4379,6 +4379,9 @@ public class IcedCpu : IAsyncCpu
 		
 		count &= 0x1F; // Modulo 32
 		
+		// Save original MSB for OF calculation
+		var originalMsb = (dest & 0x80000000) != 0;
+		
 		// Shift dest left by count, filling with high bits of src
 		// CF is set to the last bit shifted out
 		var carryOut = ((dest >> (32 - count)) & 1) != 0;
@@ -4389,13 +4392,16 @@ public class IcedCpu : IAsyncCpu
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
-		SetFlagVal(Sf, (dest & 0x80000000) != 0);
-		SetFlagVal(Zf, dest == 0);
-		// OF is set only if count == 1 - check if sign bit changed (top two bits differ)
+		// OF is set only if count == 1 - set if sign changed
 		if (count == 1)
-			SetFlagVal(Of, ((dest >> 31) ^ ((dest >> 30) & 1)) != 0);
+		{
+			var newMsb = (dest & 0x80000000) != 0;
+			SetFlagVal(Of, originalMsb != newMsb);
+		}
 		
 		WriteOp(insn, 0, dest);
+		// Update SF, ZF, and PF based on result
+		UpdateLogicResultFlags(dest);
 	}
 
 	private void ExecShrd(Instruction insn)
@@ -4410,6 +4416,9 @@ public class IcedCpu : IAsyncCpu
 		
 		count &= 0x1F; // Modulo 32
 		
+		// Save original MSB for OF calculation
+		var originalMsb = (dest & 0x80000000) != 0;
+		
 		// Shift dest right by count, filling with low bits of src
 		// CF is set to the last bit shifted out
 		ulong combined = ((ulong)src << 32) | dest;
@@ -4419,13 +4428,16 @@ public class IcedCpu : IAsyncCpu
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
-		SetFlagVal(Sf, (dest & 0x80000000) != 0);
-		SetFlagVal(Zf, dest == 0);
-		// OF is set only if count == 1
+		// OF is set only if count == 1 - set if sign changed
 		if (count == 1)
-			SetFlagVal(Of, (((dest >> 31) ^ ((dest >> 30) & 1)) != 0));
+		{
+			var newMsb = (dest & 0x80000000) != 0;
+			SetFlagVal(Of, originalMsb != newMsb);
+		}
 		
 		WriteOp(insn, 0, dest);
+		// Update SF, ZF, and PF based on result
+		UpdateLogicResultFlags(dest);
 	}
 
 	private void ExecAad(Instruction insn)
