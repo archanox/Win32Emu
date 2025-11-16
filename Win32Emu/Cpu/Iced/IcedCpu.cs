@@ -2416,10 +2416,57 @@ public class IcedCpu : IAsyncCpu
 				break;
 
 			case 1: // Get feature flags
+				// Family 6, Model 0, Stepping 0 - Pentium Pro baseline
+				// CHKCPU32 specifically checks for this signature value
 				_eax = 0x00000600; // Family 6, Model 0, Stepping 0
-				_ebx = 0x00000000; // Brand index, CLFLUSH line size, etc.
+				_ebx = 0x00000001; // Brand index = 1 (Intel Celeron processor)
 				_ecx = CpuIntrinsics.GetCpuidEcxFeatures(); // Feature flags based on host CPU
 				_edx = CpuIntrinsics.GetCpuidEdxFeatures(); // Feature flags based on host CPU
+				break;
+
+			case 4: // Deterministic Cache Parameters (sub-function in ECX)
+				// This function reports cache hierarchy information
+				// Input: ECX = cache level (0, 1, 2, ...)
+				// Output: EAX, EBX, ECX, EDX contain cache information
+				// When EAX[4:0] = 0, there are no more caches
+				switch (_ecx)
+				{
+					case 0: // L1 Data Cache
+						// EAX bits:
+						//   [4:0] = Cache Type (1 = Data Cache)
+						//   [7:5] = Cache Level (1 = L1)
+						//   [8] = Self Initializing
+						//   [9] = Fully Associative (0 = not fully associative)
+						//   [14:10] = Reserved (0)
+						//   [25:14] = Max logical processors sharing cache - 1 (0 = 1 processor)
+						//   [31:26] = Max cores in package - 1 (0 = 1 core)
+						_eax = 0x00000121; // Data cache (1), L1 (1 << 5), Self-init (1 << 8)
+						_ebx = 0x0100003F; // Line size, partitions, associativity (64-byte lines, 8-way)
+						_ecx = 0x0000003F; // Number of sets - 1 (64 sets = 32KB cache)
+						_edx = 0x00000000; // Write-back invalidate, not inclusive, no complex indexing
+						break;
+
+					case 1: // L1 Instruction Cache
+						_eax = 0x00000122; // Instruction cache (2), L1 (1 << 5), Self-init (1 << 8)
+						_ebx = 0x0100003F; // Line size, partitions, associativity
+						_ecx = 0x0000003F; // Number of sets - 1
+						_edx = 0x00000000;
+						break;
+
+					case 2: // L2 Unified Cache
+						_eax = 0x00000143; // Unified cache (3), L2 (2 << 5), Self-init (1 << 8)
+						_ebx = 0x01C0003F; // Line size, partitions, associativity (64-byte lines, 8-way)
+						_ecx = 0x000003FF; // Number of sets - 1 (1024 sets = 256KB cache)
+						_edx = 0x00000000;
+						break;
+
+					default: // No more caches
+						_eax = 0x00000000; // Cache type = 0 (no more caches)
+						_ebx = 0x00000000;
+						_ecx = 0x00000000;
+						_edx = 0x00000000;
+						break;
+				}
 				break;
 
 			case 7: // Extended features (sub-function in ECX)
