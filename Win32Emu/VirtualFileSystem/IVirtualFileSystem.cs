@@ -28,6 +28,11 @@ public interface IVirtualFileSystem
 	bool FileExists(string path);
 
 	/// <summary>
+	/// Checks if a directory exists in the virtual filesystem.
+	/// </summary>
+	bool DirectoryExists(string path);
+
+	/// <summary>
 	/// Gets files matching a search pattern.
 	/// </summary>
 	string[] GetFiles(string directory, string pattern);

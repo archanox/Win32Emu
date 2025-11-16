@@ -467,6 +467,20 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		}
 	}
 
+	public bool DirectoryExists(string path)
+	{
+		try
+		{
+			var normalizedPath = NormalizePath(path);
+			return _fileSystem.DirectoryExists(normalizedPath);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogDebug(ex, "[DiskVFS] Failed to check if directory exists: {Path}", path);
+			return false;
+		}
+	}
+
 	public string[] GetFiles(string directory, string pattern)
 	{
 		try

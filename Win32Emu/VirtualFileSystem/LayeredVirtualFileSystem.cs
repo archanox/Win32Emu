@@ -244,6 +244,36 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 		return resolvedPath != null;
 	}
 
+	public bool DirectoryExists(string path)
+	{
+		try
+		{
+			var overlayDir = GetOverlayPath(path);
+			if (Directory.Exists(overlayDir))
+			{
+				return true;
+			}
+
+			var baseDir = GetBasePath(path);
+			return Directory.Exists(baseDir);
+		}
+		catch (IOException ex)
+		{
+			_logger.LogDebug(ex, "[VFS] IOException while checking if directory exists: {Path}", path);
+			return false;
+		}
+		catch (UnauthorizedAccessException ex)
+		{
+			_logger.LogDebug(ex, "[VFS] UnauthorizedAccessException while checking if directory exists: {Path}", path);
+			return false;
+		}
+		catch (DirectoryNotFoundException ex)
+		{
+			_logger.LogDebug(ex, "[VFS] DirectoryNotFoundException while checking if directory exists: {Path}", path);
+			return false;
+		}
+	}
+
 	public string[] GetFiles(string directory, string pattern)
 	{
 		try
