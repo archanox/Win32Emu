@@ -144,20 +144,6 @@ public class ProcessEnvironment
 	public IVirtualFileSystem? VirtualFileSystem { get; private set; }
 
 	/// <summary>
-	/// Initializes the virtual file system with the specified base directory.
-	/// </summary>
-	/// <param name="baseDirectory">Base directory containing game files (read-only)</param>
-	/// <param name="overlayDirectory">Optional overlay directory for writable files. If null, a temporary directory is used.</param>
-	public void InitializeVirtualFileSystem(string baseDirectory, string? overlayDirectory = null)
-	{
-		VirtualFileSystem = new LayeredVirtualFileSystem(baseDirectory, overlayDirectory, _logger);
-		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with base: {BaseDirectory}", baseDirectory);
-		
-		// Initialize registry with VFS
-		InitializeRegistry();
-	}
-
-	/// <summary>
 	/// Initializes the virtual file system with a virtual disk file (VHD/VHDX/ISO).
 	/// </summary>
 	/// <param name="diskPath">Path to the virtual disk file</param>

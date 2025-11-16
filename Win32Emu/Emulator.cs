@@ -254,12 +254,16 @@ public sealed class Emulator : IDisposable
 
         _env = new ProcessEnvironment(_vm, CalculateHeapBase(), _host, _logger);
         
-        // Initialize virtual file system with disk if provided
+        // Initialize virtual file system with disk (required)
         if (!string.IsNullOrEmpty(virtualDiskPath))
         {
             _logger.LogInformation("[Loader] Initializing virtual file system with disk: {DiskPath}", virtualDiskPath);
             _env.InitializeVirtualFileSystemWithDisk(virtualDiskPath);
             _logger.LogInformation("[Loader] Virtual file system initialized successfully");
+        }
+        else
+        {
+            _logger.LogWarning("[Loader] No virtual disk provided - VFS not initialized. File operations will fail.");
         }
         
         // Register the main executable so GetModuleFileNameA can find it
