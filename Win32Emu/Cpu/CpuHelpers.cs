@@ -423,17 +423,29 @@ public static class CpuHelpers
 						for (int i = -4; i <= 16; i++)
 						{
 							var addr = esp + (uint)(i * 4);
+							// Check if address is valid before reading
+							if (addr < 0x10000)
+							{
+								stackDump.AppendLine($"  [ESP{i:+0;-0}] = 0x{addr:X8}: (address too low)");
+								continue;
+							}
 							var val = memory.Read32(addr);
-							var label = i == 0 ? " (return addr - SUSPICIOUS!)" : i > 0 && i <= (argBytes / 4) ? $" (arg{i})" : "";
+							var label = i == 0
+								? " (return addr - SUSPICIOUS!)"
+								: i < 0
+									? $" (ESP{(i * 4):+0;-0})"
+									: i > 0 && i <= (argBytes / 4)
+										? $" (arg{i})"
+										: "";
 							stackDump.AppendLine($"  [ESP{i:+0;-0}] = 0x{addr:X8}: 0x{val:X8}{label}");
 						}
 					}
-					catch (Exception ex)
+					catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
 					{
 						stackDump.AppendLine("  (error reading extended stack)");
 						logger?.LogError(ex, "[{Context}] Error reading extended stack for dump", context);
 					}
-					logger.LogWarning(stackDump.ToString());
+					logger?.LogWarning(stackDump.ToString());
 				}
 				else if (!loadedImage.IsAddressInCodeSection(retEip))
 				{

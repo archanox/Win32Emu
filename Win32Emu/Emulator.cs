@@ -958,7 +958,7 @@ public sealed class Emulator : IDisposable
                 
                 var espAfter = _cpu.GetRegister("ESP");
                 var eipAfter = _cpu.GetEip();
-                _logger.LogInformation("[COM] After vtable call: ESP changed from 0x{EspBefore:X8} to 0x{EspAfter:X8} (delta={Delta}), EIP changed from 0x{EipBefore:X8} to 0x{EipAfter:X8}", 
+                _logger.LogInformation("[COM] After vtable call: ESP changed from 0x{EspBefore:X8} to 0x{EspAfter:X8} (delta={Delta}), Call site EIP=0x{EipBefore:X8}, Return EIP=0x{EipAfter:X8}", 
                     espBefore, espAfter, (int)espAfter - (int)espBefore, eipBefore, eipAfter);
             }
             // OLD IMPORT HANDLING CODE - DISABLED
