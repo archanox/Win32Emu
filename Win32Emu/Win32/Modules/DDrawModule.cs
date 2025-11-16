@@ -419,6 +419,11 @@ namespace Win32Emu.Win32.Modules
 		/// <returns>Number of entries for the palette (2, 4, 16, or 256)</returns>
 		public static int DeterminePaletteSizeFromFlags(uint dwFlags)
 		{
+			// DDPCAPS_ALLOW256 indicates the palette can have all 256 entries defined
+			// This overrides the bit depth flags to allow full 256-color palette
+			if ((dwFlags & (uint)DDPCaps.DDPCAPS_ALLOW256) != 0)
+				return 256;
+
 			// Check from highest to lowest bit depth to handle multiple flags correctly
 			// When multiple bit depth flags are set, the palette should be created with the highest bit depth
 			if ((dwFlags & (uint)DDPCaps.DDPCAPS_8BIT) != 0)

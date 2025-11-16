@@ -52,29 +52,47 @@ public class DDrawStdCallMetaTests
 	}
 
 	[Theory]
-	[InlineData(0x1u, 2)]    // DDPCAPS_1BIT → 2 entries
-	[InlineData(0x2u, 4)]    // DDPCAPS_2BIT → 4 entries
-	[InlineData(0x4u, 16)]   // DDPCAPS_4BIT → 16 entries
-	[InlineData(0x8u, 256)]  // DDPCAPS_8BIT → 256 entries
-	[InlineData(0xCu, 256)]  // Both 4BIT and 8BIT set → should use 8BIT (256 entries)
-	[InlineData(0xFu, 256)]  // All flags set → should use 8BIT (256 entries)
-	[InlineData(0x6u, 16)]   // Both 2BIT and 4BIT set → should use 4BIT (16 entries)
-	[InlineData(0x0u, 256)]  // No flags set → default to 256 entries
+	[InlineData(0x00000001u, 16)]   // DDPCAPS_4BIT → 16 entries
+	[InlineData(0x00000004u, 256)]  // DDPCAPS_8BIT → 256 entries
+	[InlineData(0x00000005u, 256)]  // DDPCAPS_4BIT | DDPCAPS_8BIT → should use 8BIT (256 entries)
+	[InlineData(0x00000100u, 2)]    // DDPCAPS_1BIT → 2 entries
+	[InlineData(0x00000200u, 4)]    // DDPCAPS_2BIT → 4 entries
+	[InlineData(0x00000300u, 4)]    // DDPCAPS_1BIT | DDPCAPS_2BIT → should use 2BIT (4 entries)
+	[InlineData(0x0u, 256)]         // No flags set → default to 256 entries
+	[InlineData(0x00000040u, 256)]  // DDPCAPS_ALLOW256 alone → 256 entries
+	[InlineData(0x00000044u, 256)]  // DDPCAPS_8BIT | DDPCAPS_ALLOW256 → 256 entries (ALLOW256 overrides)
+	[InlineData(0x00000041u, 256)]  // DDPCAPS_4BIT | DDPCAPS_ALLOW256 → 256 entries (ALLOW256 overrides)
+	[InlineData(0x00000140u, 256)]  // DDPCAPS_1BIT | DDPCAPS_ALLOW256 → 256 entries (ALLOW256 overrides)
 	public void CreatePalette_WithVariousFlags_ShouldSelectCorrectPaletteSize(uint dwFlags, int expectedEntries)
 	{
 		// This test verifies the fix for the palette size determination issue.
-		// When multiple bit depth flags are set (e.g., 0x4 | 0x8 = 0xC),
-		// the palette should be created with the highest bit depth (256 entries for 8-bit)
-		// not a lower bit depth (16 entries for 4-bit).
+		// When multiple bit depth flags are set, the palette should be created with
+		// the highest bit depth.
+		//
+		// DDPCAPS values from Win32 DirectDraw specification (ReactOS/Wine headers):
+		// - DDPCAPS_4BIT = 0x00000001 → 16 entries
+		// - DDPCAPS_8BITENTRIES = 0x00000002 (not a size flag)
+		// - DDPCAPS_8BIT = 0x00000004 → 256 entries
+		// - DDPCAPS_INITIALIZE = 0x00000008 (not a size flag)
+		// - DDPCAPS_ALLOW256 = 0x00000040 → 256 entries (overrides other flags)
+		// - DDPCAPS_1BIT = 0x00000100 → 2 entries
+		// - DDPCAPS_2BIT = 0x00000200 → 4 entries
+		//
+		// DDPCAPS_ALLOW256 (0x40) is a special flag that indicates all 256 palette entries
+		// should be available for use. When this flag is set, it overrides any bit depth
+		// flags and always creates a 256-entry palette. This is used by applications that
+		// need full control over all 256 palette entries, even when combined with lower
+		// bit depth flags like DDPCAPS_4BIT.
 		//
 		// This prevents the error: "SetEntries: invalid range (start=0, count=256, max=16)"
 		// when applications set 256 palette entries on what they expect to be a 256-entry palette.
 		//
-		// The implementation checks flags from highest to lowest bit depth:
-		// - 8-bit (0x8) → 256 entries (checked first)
-		// - 4-bit (0x4) → 16 entries
-		// - 2-bit (0x2) → 4 entries
-		// - 1-bit (0x1) → 2 entries
+		// The implementation checks flags in this order:
+		// - ALLOW256 (0x40) → 256 entries (checked first, overrides all other flags)
+		// - 8BIT (0x04) → 256 entries
+		// - 4BIT (0x01) → 16 entries
+		// - 2BIT (0x200) → 4 entries
+		// - 1BIT (0x100) → 2 entries
 		// - No flags (0x0) → 256 entries (default)
 
 		// Test the actual production code method

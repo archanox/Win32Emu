@@ -761,16 +761,22 @@ public static class NativeTypes
 
 	/// <summary>
 	/// DirectDraw palette capabilities flags
+	/// Reference: https://doxygen.reactos.org/d7/de9/sdk_2include_2psdk_2ddraw_8h_source.html
 	/// </summary>
 	[Flags]
 	public enum DDPCaps : uint
 	{
-		DDPCAPS_1BIT = 0x00000001,
-		DDPCAPS_2BIT = 0x00000002,
-		DDPCAPS_4BIT = 0x00000004,
-		DDPCAPS_8BIT = 0x00000008,
-		DDPCAPS_PRIMARYSURFACE = 0x00000002,
-		DDPCAPS_ALLOW256 = 0x00000100,
+		DDPCAPS_4BIT = 0x00000001,
+		DDPCAPS_8BITENTRIES = 0x00000002,
+		DDPCAPS_8BIT = 0x00000004,
+		DDPCAPS_INITIALIZE = 0x00000008,
+		DDPCAPS_PRIMARYSURFACE = 0x00000010,
+		DDPCAPS_PRIMARYSURFACELEFT = 0x00000020,
+		DDPCAPS_ALLOW256 = 0x00000040,
+		DDPCAPS_VSYNC = 0x00000080,
+		DDPCAPS_1BIT = 0x00000100,
+		DDPCAPS_2BIT = 0x00000200,
+		DDPCAPS_ALPHA = 0x00000400,
 	}
 
 	/// <summary>
