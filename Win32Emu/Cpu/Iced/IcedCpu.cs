@@ -2434,7 +2434,7 @@ public class IcedCpu : IAsyncCpu
 
 			case 4: // Deterministic Cache Parameters (sub-function in ECX)
 				// This function reports cache hierarchy information
-				// Input: ECX = cache level (0, 1, 2, ...)
+				// Input: ECX = sub-function index (0 = L1D, 1 = L1I, 2 = L2, ...)
 				// Output: EAX, EBX, ECX, EDX contain cache information
 				// When EAX[4:0] = 0, there are no more caches
 				switch (_ecx)
@@ -2449,22 +2449,22 @@ public class IcedCpu : IAsyncCpu
 						//   [25:14] = Max logical processors sharing cache - 1 (0 = 1 processor)
 						//   [31:26] = Max cores in package - 1 (0 = 1 core)
 						_eax = 0x00000121; // Data cache (1), L1 (1 << 5), Self-init (1 << 8)
-						_ebx = 0x0100003F; // Line size, partitions, associativity (64-byte lines, 8-way)
+						_ebx = 0x0700003F; // Line size, partitions, associativity (64-byte lines, 8-way)
 						_ecx = 0x0000003F; // Number of sets - 1 (64 sets = 32KB cache)
 						_edx = 0x00000000; // Write-back invalidate, not inclusive, no complex indexing
 						break;
 
 					case 1: // L1 Instruction Cache
 						_eax = 0x00000122; // Instruction cache (2), L1 (1 << 5), Self-init (1 << 8)
-						_ebx = 0x0100003F; // Line size, partitions, associativity
-						_ecx = 0x0000003F; // Number of sets - 1
+						_ebx = 0x0700003F; // Line size, partitions, associativity (64-byte lines, 8-way)
+						_ecx = 0x0000003F; // Number of sets - 1 (64 sets = 32KB cache)
 						_edx = 0x00000000;
 						break;
 
 					case 2: // L2 Unified Cache
 						_eax = 0x00000143; // Unified cache (3), L2 (2 << 5), Self-init (1 << 8)
 						_ebx = 0x01C0003F; // Line size, partitions, associativity (64-byte lines, 8-way)
-						_ecx = 0x000003FF; // Number of sets - 1 (1024 sets = 256KB cache)
+						_ecx = 0x000001FF; // Number of sets - 1 (512 sets = 256KB cache)
 						_edx = 0x00000000;
 						break;
 
