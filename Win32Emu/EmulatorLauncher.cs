@@ -422,16 +422,22 @@ public static class EmulatorLauncher
 					
 					// Copy file to VFS
 					logger.LogDebug("Copying {File} to {VfsPath}", file, vfsPath);
-					var fileBytes = File.ReadAllBytes(file);
+					logger.LogDebug("Copying {File} to {VfsPath}", file, vfsPath);
 					var handle = vfs.OpenFile(vfsPath, VirtualFileSystem.VfsFileMode.Create, VirtualFileSystem.VfsFileAccess.Write);
 					if (handle != null)
 					{
-						using (handle)
-						{
-							handle.Write(fileBytes, 0, fileBytes.Length);
-						}
-						logger.LogDebug("Successfully copied {VfsPath} ({Size} bytes)", vfsPath, fileBytes.Length);
-						successCount++;
+					    using (handle)
+					    using (var sourceStream = File.OpenRead(file))
+					    {
+					        const int bufferSize = 81920; // 80 KB buffer
+					        var buffer = new byte[bufferSize];
+					        int bytesRead;
+					        while ((bytesRead = sourceStream.Read(buffer, 0, buffer.Length)) > 0)
+					        {
+					            handle.Write(buffer, 0, bytesRead);
+					        }
+					    }
+					    logger.LogDebug("Successfully copied {VfsPath} ({Size} bytes)", vfsPath, new FileInfo(file).Length);
 					}
 					else
 					{
