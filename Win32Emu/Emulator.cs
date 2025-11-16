@@ -940,6 +940,9 @@ public sealed class Emulator : IDisposable
             {
                 _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
                 
+                var espBefore = _cpu.GetRegister("ESP");
+                var eipBefore = _cpu.GetEip();
+                
                 // Use consolidated helper for register preservation and stdcall convention
                 CpuHelpers.InvokeWithRegisterPreservation(
                     _cpu,
@@ -951,6 +954,11 @@ public sealed class Emulator : IDisposable
                     _vm!.Size,
                     _logger,
                     "COM vtable");
+                
+                var espAfter = _cpu.GetRegister("ESP");
+                var eipAfter = _cpu.GetEip();
+                _logger.LogInformation("[COM] After vtable call: ESP changed from 0x{EspBefore:X8} to 0x{EspAfter:X8} (delta={Delta}), EIP changed from 0x{EipBefore:X8} to 0x{EipAfter:X8}", 
+                    espBefore, espAfter, (int)espAfter - (int)espBefore, eipBefore, eipAfter);
             }
             // OLD IMPORT HANDLING CODE - DISABLED
             // Import stubs now use CALL/RET and syscall mechanism (INT 0x80)

@@ -393,6 +393,9 @@ public static class CpuHelpers
 			var esp = cpu.GetRegister("ESP");
 			var retEip = memory.Read32(esp);
 			
+			// Log the return address for diagnostics
+			logger?.LogInformation("[{Context}] Return address from stack: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}", context, esp, retEip);
+			
 			// Dump stack contents for debugging (at Information level for diagnostics)
 			if (logger != null)
 			{
