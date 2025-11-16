@@ -144,25 +144,6 @@ public class ProcessEnvironment
 	public IVirtualFileSystem? VirtualFileSystem { get; private set; }
 
 	/// <summary>
-	/// [DEPRECATED] Initializes the virtual file system with a base directory and optional overlay directory.
-	/// </summary>
-	/// <param name="baseDirectory">Base directory for the virtual file system</param>
-	/// <param name="overlayDirectory">Optional overlay directory</param>
-	/// <remarks>
-	/// This method is deprecated for security reasons. Use <see cref="InitializeVirtualFileSystemWithDisk"/> instead.
-	/// </remarks>
-	[Obsolete("InitializeVirtualFileSystem(string baseDirectory, string? overlayDirectory) is deprecated for security reasons. Use InitializeVirtualFileSystemWithDisk(string diskPath) instead. This method will be removed in a future release.")]
-	public void InitializeVirtualFileSystem(string baseDirectory, string? overlayDirectory = null)
-	{
-		_logger.LogWarning("[ProcessEnv] InitializeVirtualFileSystem(baseDirectory, overlayDirectory) is deprecated and will be removed. Use virtual disk-based VFS for improved security.");
-		VirtualFileSystem = new LayeredVirtualFileSystem(baseDirectory, overlayDirectory, _logger);
-		_logger.LogInformation("[ProcessEnv] Virtual File System initialized with base directory: {BaseDirectory}, overlay: {OverlayDirectory}", baseDirectory, overlayDirectory);
-		
-		// Initialize registry with VFS
-		InitializeRegistry();
-	}
-
-	/// <summary>
 	/// Initializes the virtual file system with a virtual disk file (VHD/VHDX/ISO).
 	/// </summary>
 	/// <param name="diskPath">Path to the virtual disk file</param>
