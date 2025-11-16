@@ -45,6 +45,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private const uint BASE_SEARCH_PATH_DISABLE_SAFE_SEARCHMODE = 0x00010000;
 	private const uint BASE_SEARCH_PATH_PERMANENT = 0x00008000;
 
+	// File copy buffer size
+	private const int FILE_COPY_BUFFER_SIZE = 8192;
+
 	private Win32Dispatcher? _dispatcher;
 	private uint _lastError;
 	private ICpu? _cpu;
@@ -2755,30 +2758,27 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 					path, resolvedPath, _env.CurrentDirectory);
 			}
 
-			// If VFS is available, use it for file operations
-			if (_env.VirtualFileSystem != null)
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
 			{
-				var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
-				var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
-
-				_logger.LogDebug("[Kernel32] CreateFileA: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
-				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
-				if (handle != null)
-				{
-					return _env.RegisterHandle(handle);
-				}
-
-				_logger.LogInformation("[Kernel32] CreateFileA (VFS) failed: {Path}", resolvedPath);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				_logger.LogError("[Kernel32] CreateFileA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
-			// Fallback to direct filesystem access if VFS not available. Use resolvedPath to ensure relative paths are resolved against emulated CurrentDirectory.
-			var fileMode = MapCreationDispositionToFileMode(dwCreationDisposition);
-			var fileAccess = MapDesiredAccessToFileAccess(dwDesiredAccess);
+			var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
+			var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
 
-			var fs = new FileStream(resolvedPath, fileMode, fileAccess, FileShare.ReadWrite);
-			return _env.RegisterHandle(fs);
+			_logger.LogDebug("[Kernel32] CreateFileA: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
+			var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
+			if (handle != null)
+			{
+				return _env.RegisterHandle(handle);
+			}
+
+			_logger.LogInformation("[Kernel32] CreateFileA (VFS) failed: {Path}", resolvedPath);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
 		catch (Exception ex)
 		{
@@ -2818,29 +2818,27 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 					path, resolvedPath, _env.CurrentDirectory);
 			}
 
-			// If VFS is available, use it for file operations
-			if (_env.VirtualFileSystem != null)
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
 			{
-				var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
-				var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
-
-				_logger.LogDebug("[Kernel32] CreateFileW: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
-				var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
-				if (handle != null)
-				{
-					return _env.RegisterHandle(handle);
-				}
-
-				_logger.LogInformation("[Kernel32] CreateFileW (VFS) failed: {Path}", resolvedPath);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				_logger.LogError("[Kernel32] CreateFileW: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 			}
 
-			var fileMode = MapCreationDispositionToFileMode(dwCreationDisposition);
-			var fileAccess = MapDesiredAccessToFileAccess(dwDesiredAccess);
+			var mode = MapCreationDispositionToVfsMode(dwCreationDisposition);
+			var access = MapDesiredAccessToVfsAccess(dwDesiredAccess);
 
-			var fs = new FileStream(resolvedPath, fileMode, fileAccess, FileShare.ReadWrite);
-			return _env.RegisterHandle(fs);
+			_logger.LogDebug("[Kernel32] CreateFileW: Attempting VFS open with resolved path: '{ResolvedPath}'", resolvedPath);
+			var handle = _env.VirtualFileSystem.OpenFile(resolvedPath, mode, access);
+			if (handle != null)
+			{
+				return _env.RegisterHandle(handle);
+			}
+
+			_logger.LogInformation("[Kernel32] CreateFileW (VFS) failed: {Path}", resolvedPath);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 		}
 		catch (Exception ex)
 		{
@@ -3217,25 +3215,24 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// If VFS is available, use it
-			if (_env.VirtualFileSystem != null)
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
 			{
-				var success = _env.VirtualFileSystem.DeleteFile(path);
-				if (success)
-				{
-					_logger.LogInformation("[Kernel32] DeleteFileA (VFS): Deleted '{Path}'", path);
-					return (uint)NativeTypes.Win32Bool.TRUE;
-				}
-
-				_logger.LogInformation("[Kernel32] DeleteFileA (VFS) failed: '{Path}'", path);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				_logger.LogError("[Kernel32] DeleteFileA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// Fallback to direct filesystem
-			File.Delete(path);
-			_logger.LogInformation("[Kernel32] DeleteFileA: Deleted '{Path}'", path);
-			return (uint)NativeTypes.Win32Bool.TRUE;
+			var success = _env.VirtualFileSystem.DeleteFile(path);
+			if (success)
+			{
+				_logger.LogInformation("[Kernel32] DeleteFileA (VFS): Deleted '{Path}'", path);
+				return (uint)NativeTypes.Win32Bool.TRUE;
+			}
+
+			_logger.LogInformation("[Kernel32] DeleteFileA (VFS) failed: '{Path}'", path);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 		catch (Exception ex)
 		{
@@ -3259,27 +3256,26 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// If VFS is available, use it
-			if (_env.VirtualFileSystem != null)
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
 			{
-				var success = _env.VirtualFileSystem.MoveFile(existingPath, newPath);
-				if (success)
-				{
-					_logger.LogInformation("[Kernel32] MoveFileA (VFS): Moved '{ExistingPath}' to '{NewPath}'",
-						existingPath, newPath);
-					return (uint)NativeTypes.Win32Bool.TRUE;
-				}
-
-				_logger.LogInformation("[Kernel32] MoveFileA (VFS) failed: '{ExistingPath}' to '{NewPath}'",
-					existingPath, newPath);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				_logger.LogError("[Kernel32] MoveFileA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// Fallback to direct filesystem
-			File.Move(existingPath, newPath);
-			_logger.LogInformation("[Kernel32] MoveFileA: Moved '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
-			return (uint)NativeTypes.Win32Bool.TRUE;
+			var success = _env.VirtualFileSystem.MoveFile(existingPath, newPath);
+			if (success)
+			{
+				_logger.LogInformation("[Kernel32] MoveFileA (VFS): Moved '{ExistingPath}' to '{NewPath}'",
+					existingPath, newPath);
+				return (uint)NativeTypes.Win32Bool.TRUE;
+			}
+
+			_logger.LogInformation("[Kernel32] MoveFileA (VFS) failed: '{ExistingPath}' to '{NewPath}'",
+				existingPath, newPath);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 		catch (Exception ex)
 		{
@@ -3304,16 +3300,49 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// Check if destination exists when bFailIfExists is true
-			if (failIfExists && File.Exists(newPath))
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
 			{
-				_logger.LogInformation("[Kernel32] CopyFileA: Destination '{NewPath}' already exists", newPath);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_EXISTS;
+				_logger.LogError("[Kernel32] CopyFileA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// Perform the copy
-			File.Copy(existingPath, newPath, !failIfExists);
+			// Perform the copy using VFS - open source, create destination, copy data
+			using var sourceHandle = _env.VirtualFileSystem.OpenFile(existingPath, VfsFileMode.Open, VfsFileAccess.Read);
+			if (sourceHandle == null)
+			{
+				_logger.LogError("[Kernel32] CopyFileA: Failed to open source file '{ExistingPath}'", existingPath);
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
+
+			// Open destination file - VfsFileMode.CreateNew will fail if file exists
+			using var destHandle = _env.VirtualFileSystem.OpenFile(newPath, failIfExists ? VfsFileMode.CreateNew : VfsFileMode.Create, VfsFileAccess.Write);
+			if (destHandle == null)
+			{
+				// If failIfExists is true and file exists, CreateNew would have failed
+				if (failIfExists)
+				{
+					_logger.LogInformation("[Kernel32] CopyFileA: Destination '{NewPath}' already exists", newPath);
+					_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_EXISTS;
+				}
+				else
+				{
+					_logger.LogError("[Kernel32] CopyFileA: Failed to create destination file '{NewPath}'", newPath);
+					_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+				}
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
+
+			// Copy data in chunks
+			var buffer = new byte[FILE_COPY_BUFFER_SIZE];
+			int bytesRead;
+			while ((bytesRead = sourceHandle.Read(buffer, 0, buffer.Length)) > 0)
+			{
+				destHandle.Write(buffer, 0, bytesRead);
+			}
+
 			_logger.LogInformation("[Kernel32] CopyFileA: Copied '{ExistingPath}' to '{NewPath}'", existingPath, newPath);
 			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
@@ -3392,18 +3421,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				pattern = "*";
 			}
 
-			string[] files;
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
+			{
+				_logger.LogError("[Kernel32] FindFirstFileA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
 
-			// If VFS is available, use it
-			if (_env.VirtualFileSystem != null)
-			{
-				files = _env.VirtualFileSystem.GetFiles(dir, pattern);
-			}
-			else
-			{
-				// Fallback to direct filesystem
-				files = Directory.GetFiles(dir, pattern);
-			}
+			string[] files = _env.VirtualFileSystem.GetFiles(dir, pattern);
 
 			if (files.Length == 0)
 			{
@@ -6871,36 +6897,25 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Try to get file attributes
 		try
 		{
-			// If VFS is available, use it
-			if (_env.VirtualFileSystem != null)
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
 			{
-				if (_env.VirtualFileSystem.FileExists(resolvedPath))
-				{
-					// For now, return FILE_ATTRIBUTE_NORMAL for all files
-					// A full implementation would check actual file attributes
-					_logger.LogInformation("[Kernel32] GetFileAttributesA: file exists, returning FILE_ATTRIBUTE_NORMAL");
-					return 0x80; // FILE_ATTRIBUTE_NORMAL
-				}
+				_logger.LogError("[Kernel32] GetFileAttributesA: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return 0xFFFFFFFF; // INVALID_FILE_ATTRIBUTES
 			}
-			else
+
+			if (_env.VirtualFileSystem.FileExists(resolvedPath))
 			{
-				// Fallback to direct file access
-				if (File.Exists(resolvedPath))
-				{
-					var fileInfo = new FileInfo(resolvedPath);
-					uint attributes = 0x80; // FILE_ATTRIBUTE_NORMAL
-
-					if ((fileInfo.Attributes & System.IO.FileAttributes.ReadOnly) != 0)
-					{
-						attributes = 0x01; // FILE_ATTRIBUTE_READONLY
-					}
-
-					return attributes;
-				}
-				else if (Directory.Exists(resolvedPath))
-				{
-					return 0x10; // FILE_ATTRIBUTE_DIRECTORY
-				}
+				// For now, return FILE_ATTRIBUTE_NORMAL for all files
+				// A full implementation would check actual file attributes
+				_logger.LogInformation("[Kernel32] GetFileAttributesA: file exists, returning FILE_ATTRIBUTE_NORMAL");
+				return 0x80; // FILE_ATTRIBUTE_NORMAL
+			}
+			if (_env.VirtualFileSystem.DirectoryExists(resolvedPath))
+			{
+				_logger.LogInformation("[Kernel32] GetFileAttributesA: path is a directory, returning FILE_ATTRIBUTE_DIRECTORY");
+				return 0x10; // FILE_ATTRIBUTE_DIRECTORY
 			}
 		}
 		catch (Exception ex)
