@@ -199,11 +199,26 @@ public static class EmulatorLauncher
 					logger.LogInformation("Using virtual disk: {VirtualDiskPath}", virtualDiskPath);
 					logger.LogInformation("Executable VFS path: {VfsPath}", vfsExecutablePath);
 				}
-				catch (Exception ex)
+				catch (System.IO.IOException ex)
 				{
-					logger.LogError(ex, "Failed to create or access virtual disk for {Path}", path);
+					logger.LogError(ex, "IO error while creating or accessing virtual disk for {Path}", path);
 					return 1;
 				}
+				catch (System.UnauthorizedAccessException ex)
+				{
+					logger.LogError(ex, "Access denied while creating or accessing virtual disk for {Path}", path);
+					return 1;
+				}
+				catch (Exception ex) when (
+					ex.GetType() != typeof(System.StackOverflowException) &&
+					ex.GetType() != typeof(System.OutOfMemoryException) &&
+					ex.GetType() != typeof(System.Threading.ThreadAbortException)
+				)
+				{
+					logger.LogError(ex, "Unexpected error while creating or accessing virtual disk for {Path}", path);
+					return 1;
+				}
+				// Let critical exceptions propagate
 				
 				using var emulator = new Emulator(null, logger, telemetryService);
 				emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, false, false, virtualDiskPath);
@@ -338,11 +353,16 @@ public static class EmulatorLauncher
 		
 		// Use a hash of the directory path to create a unique VHD name
 		var directoryHash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(directory));
-		var hashString = Convert.ToHexString(directoryHash).Substring(0, 16).ToLowerInvariant();
+		var hashString = Convert.ToHexString(directoryHash)[..16].ToLowerInvariant();
 		var vhdPath = Path.Combine(vhdDirectory, $"{Path.GetFileNameWithoutExtension(filename)}_{hashString}.vhd");
 
 		// Determine the virtual directory name (use last component of the directory path)
 		var virtualDirName = Path.GetFileName(directory);
+		if (string.IsNullOrEmpty(virtualDirName))
+		{
+			// Fallback to using the filename without extension as the directory name
+			virtualDirName = Path.GetFileNameWithoutExtension(filename);
+		}
 		var vfsExecutablePath = $"C:\\{virtualDirName}\\{filename}";
 
 		// Check if VHD already exists
@@ -356,6 +376,11 @@ public static class EmulatorLauncher
 		logger.LogInformation("Creating virtual disk: {VhdPath}", vhdPath);
 		
 		const long vhdSizeBytes = 512L * 1024 * 1024; // 512 MB
+		
+		int successCount = 0;
+		int failureCount = 0;
+		int totalFiles = 0;
+		
 		using (var vfs = VirtualFileSystem.DiskVirtualFileSystem.Create(vhdPath, VirtualFileSystem.DiskFormat.Vhd, vhdSizeBytes, logger))
 		{
 			// Create the root directory for the virtual disk
@@ -371,7 +396,8 @@ public static class EmulatorLauncher
 			
 			// Copy all files from the directory to the VHD
 			var files = Directory.GetFiles(directory, "*", SearchOption.AllDirectories);
-			logger.LogInformation("Copying {FileCount} files to virtual disk", files.Length);
+			totalFiles = files.Length;
+			logger.LogInformation("Copying {FileCount} files to virtual disk", totalFiles);
 			
 			foreach (var file in files)
 			{
@@ -405,20 +431,33 @@ public static class EmulatorLauncher
 							handle.Write(fileBytes, 0, fileBytes.Length);
 						}
 						logger.LogDebug("Successfully copied {VfsPath} ({Size} bytes)", vfsPath, fileBytes.Length);
+						successCount++;
 					}
 					else
 					{
 						logger.LogWarning("Failed to open file for writing: {VfsPath}", vfsPath);
+						failureCount++;
 					}
 				}
 				catch (Exception ex)
 				{
 					logger.LogWarning(ex, "Failed to copy file to VHD: {File} -> {VfsPath}", file, vfsPath);
+					failureCount++;
 				}
+			}
+			
+			if (failureCount > 0)
+			{
+				logger.LogWarning("Virtual disk created with {FailureCount} file copy failures out of {TotalCount} files", failureCount, totalFiles);
 			}
 		}
 
-		logger.LogInformation("Virtual disk created successfully: {VhdPath}", vhdPath);
+		if (failureCount == totalFiles && totalFiles > 0)
+		{
+			throw new InvalidOperationException($"Failed to copy any files to virtual disk. All {totalFiles} file operations failed.");
+		}
+
+		logger.LogInformation("Virtual disk created successfully: {VhdPath} ({SuccessCount}/{TotalCount} files copied)", vhdPath, successCount, totalFiles);
 		return (vhdPath, vfsExecutablePath);
 	}
 }

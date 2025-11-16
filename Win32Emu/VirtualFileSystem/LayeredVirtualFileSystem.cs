@@ -128,10 +128,6 @@ public class LayeredVirtualFileSystem : IVirtualFileSystem
 	/// Resolves a virtual path to the actual filesystem path, checking overlay first, then base.
 	/// Uses case-insensitive matching to emulate Windows filesystem behavior.
 	/// </summary>
-	/// <summary>
-	/// Resolves a virtual path to the actual filesystem path, checking overlay first, then base.
-	/// Uses case-insensitive matching to emulate Windows filesystem behavior.
-	/// </summary>
 	private string? ResolvePath(string virtualPath, out bool isInOverlay)
 	{
 		var overlayPath = GetOverlayPath(virtualPath);
