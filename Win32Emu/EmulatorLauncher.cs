@@ -110,13 +110,22 @@ public static class EmulatorLauncher
 			if (args[i].StartsWith("--"))
 			{
 				flagIndices.Add(i);
-				// Add the next index if this flag takes a value
+				// Add the next index if this flag takes a value, but only if the value is valid for the flag
 				if (i + 1 < args.Length && !args[i + 1].StartsWith("--"))
 				{
-					// Check if this is a flag that takes a value
-					if (args[i] == "--backend" || args[i] == "--trace-api" || args[i] == "--compare-apimon" ||
-					    args[i] == "--log-file" || args[i] == "--telemetry-otlp" || args[i] == "--gdb-server")
+					if (args[i] == "--backend")
 					{
+						// For --backend, only exclude the next arg if it's a valid backend type
+						if (Enum.TryParse<Rendering.BackendType>(args[i + 1], ignoreCase: true, out var _))
+						{
+							flagIndices.Add(i + 1);
+						}
+					}
+					else if (args[i] == "--trace-api" || args[i] == "--compare-apimon" ||
+					         args[i] == "--log-file" || args[i] == "--telemetry-otlp" || args[i] == "--gdb-server")
+					{
+						// For these flags, the value is optional and can be any string except another flag.
+						// We assume that if the next argument is not another flag, it is intended as the value.
 						flagIndices.Add(i + 1);
 					}
 				}
