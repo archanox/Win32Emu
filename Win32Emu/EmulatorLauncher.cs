@@ -103,8 +103,28 @@ public static class EmulatorLauncher
 			Rendering.BackendFactory.CurrentBackendType = backendType;
 		}
 		
+		// Build list of flag argument indices (those that start with -- and their values)
+		var flagIndices = new HashSet<int>();
+		for (var i = 0; i < args.Length; i++)
+		{
+			if (args[i].StartsWith("--"))
+			{
+				flagIndices.Add(i);
+				// Add the next index if this flag takes a value
+				if (i + 1 < args.Length && !args[i + 1].StartsWith("--"))
+				{
+					// Check if this is a flag that takes a value
+					if (args[i] == "--backend" || args[i] == "--trace-api" || args[i] == "--compare-apimon" ||
+					    args[i] == "--log-file" || args[i] == "--telemetry-otlp" || args[i] == "--gdb-server")
+					{
+						flagIndices.Add(i + 1);
+					}
+				}
+			}
+		}
+		
 		// Find the first non-flag argument as the path
-		var path = args.FirstOrDefault(arg => !arg.StartsWith("--"));
+		var path = args.Where((arg, index) => !flagIndices.Contains(index)).FirstOrDefault();
 		if (string.IsNullOrEmpty(path))
 		{
 			PrintUsage();
