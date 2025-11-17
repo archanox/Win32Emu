@@ -48,20 +48,8 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
             {
                 _logger.LogInformation("[Software] Initializing SDL3 software rendering backend ({Width}x{Height})...", width, height);
 
-                // Check if we're in a headless environment (no DISPLAY variable on Linux)
-                // Use SDL's dummy video driver for headless mode
-                // MUST set this BEFORE any SDL initialization (including SetAppMetadata)
-                var isHeadless = string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")) &&
-                                 !OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS();
-                
-                if (isHeadless)
-                {
-                    _logger.LogInformation("[Software] Headless environment detected, using SDL dummy video driver");
-                    // Set as environment variable (more reliable than hint for video driver selection)
-                    Environment.SetEnvironmentVariable("SDL_VIDEODRIVER", "dummy");
-                }
-
                 // Critical: Set app metadata before any SDL initialization
+                // This also handles headless mode detection and configuration
                 Sdl3Initializer.EnsureAppMetadataSet();
 
                 // Initialize SDL video subsystem
