@@ -246,38 +246,64 @@ public partial class GameLibraryViewModel : ViewModelBase
                 TimesPlayed = 0
             };
             
+            // Add game to the list immediately so UI can show it
+            Games.Add(game);
+            
             // Enrich with GameDB metadata if available
             EnrichGameFromDb(game);
             
-            // Install the game to VHD
-            try
+            // Install the game to VHD asynchronously with progress reporting
+            _ = Task.Run(async () =>
             {
-                _logger.LogInformation("Installing game {Title} to VHD from {FilePath}", game.Title, filePath);
-                
-                var virtualDiskService = new VirtualDiskService(_configuration, _logger);
-                var (diskPath, vhdExecutablePath) = await virtualDiskService.InstallGameToVirtualDiskAsync(
-                    game, 
-                    filePath, 
-                    _configService.GetGameSettings(filePath));
-                
-                // Update game with VHD information
-                game.VirtualDiskPath = diskPath;
-                game.VhdExecutablePath = vhdExecutablePath;
-                
-                _logger.LogInformation("Successfully installed game {Title} to VHD. Disk: {DiskPath}, Executable: {VhdPath}", 
-                    game.Title, diskPath, vhdExecutablePath);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to install game {Title} to VHD", game.Title);
-                // Continue to add the game even if VHD installation fails
-                // The game will try to create VHD on first launch
-            }
-            
-            Games.Add(game);
+                try
+                {
+                    game.IsInstalling = true;
+                    game.InstallStatusMessage = "Starting installation...";
+                    _logger.LogInformation("Installing game {Title} to VHD from {FilePath}", game.Title, filePath);
+                    
+                    var virtualDiskService = new VirtualDiskService(_configuration, _logger);
+                    
+                    // Create progress reporter
+                    var progress = new Progress<(string fileName, int filesCopied, int totalFiles, long bytesCopied, long totalBytes)>(progressInfo =>
+                    {
+                        var (fileName, filesCopied, totalFiles, bytesCopied, totalBytes) = progressInfo;
+                        game.InstallProgress = totalFiles > 0 ? (filesCopied * 100.0 / totalFiles) : 0;
+                        game.InstallStatusMessage = $"Copying {fileName} ({filesCopied}/{totalFiles})";
+                        
+                        _logger.LogInformation("[VHD Install] {GameTitle}: {FilesCopied}/{TotalFiles} files ({Percent:F1}%) - {FileName}", 
+                            game.Title, filesCopied, totalFiles, game.InstallProgress, fileName);
+                    });
+                    
+                    var (diskPath, vhdExecutablePath) = await virtualDiskService.InstallGameToVirtualDiskAsync(
+                        game, 
+                        filePath, 
+                        _configService.GetGameSettings(filePath),
+                        progress);
+                    
+                    // Update game with VHD information
+                    game.VirtualDiskPath = diskPath;
+                    game.VhdExecutablePath = vhdExecutablePath;
+                    game.IsInstalling = false;
+                    game.InstallProgress = 100;
+                    game.InstallStatusMessage = "Installation complete";
+                    
+                    _logger.LogInformation("Successfully installed game {Title} to VHD. Disk: {DiskPath}, Executable: {VhdPath}", 
+                        game.Title, diskPath, vhdExecutablePath);
+                    
+                    // Save the updated games list after successful installation
+                    SaveToConfiguration();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to install game {Title} to VHD", game.Title);
+                    game.IsInstalling = false;
+                    game.InstallStatusMessage = $"Installation failed: {ex.Message}";
+                    // The game is already in the list, but will try to create VHD on first launch
+                }
+            });
         }
 
-        // Save the updated games list
+        // Save the updated games list (with games that haven't finished installing yet)
         SaveToConfiguration();
     }
 
@@ -316,7 +342,7 @@ public partial class GameLibraryViewModel : ViewModelBase
 
     private async Task ScanFolderForGames(string folderPath)
     {
-        await Task.Run(async () =>
+        await Task.Run(() =>
         {
             try
             {
@@ -344,33 +370,59 @@ public partial class GameLibraryViewModel : ViewModelBase
                             TimesPlayed = 0
                         };
                         
+                        // Add game to the list immediately so UI can show it
+                        Games.Add(game);
+                        
                         // Enrich with GameDB metadata if available
                         EnrichGameFromDb(game);
                         
-                        // Install the game to VHD
-                        try
+                        // Install the game to VHD asynchronously with progress reporting
+                        _ = Task.Run(async () =>
                         {
-                            _logger.LogInformation("Installing game {Title} to VHD from {FilePath}", game.Title, exeFile);
-                            
-                            var (diskPath, vhdExecutablePath) = await virtualDiskService.InstallGameToVirtualDiskAsync(
-                                game, 
-                                exeFile, 
-                                _configService.GetGameSettings(exeFile));
-                            
-                            // Update game with VHD information
-                            game.VirtualDiskPath = diskPath;
-                            game.VhdExecutablePath = vhdExecutablePath;
-                            
-                            _logger.LogInformation("Successfully installed game {Title} to VHD. Disk: {DiskPath}, Executable: {VhdPath}", 
-                                game.Title, diskPath, vhdExecutablePath);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Failed to install game {Title} to VHD", game.Title);
-                            // Continue to add the game even if VHD installation fails
-                        }
-                        
-                        Games.Add(game);
+                            try
+                            {
+                                game.IsInstalling = true;
+                                game.InstallStatusMessage = "Starting installation...";
+                                _logger.LogInformation("Installing game {Title} to VHD from {FilePath}", game.Title, exeFile);
+                                
+                                // Create progress reporter
+                                var progress = new Progress<(string fileName, int filesCopied, int totalFiles, long bytesCopied, long totalBytes)>(progressInfo =>
+                                {
+                                    var (fileName, filesCopied, totalFiles, bytesCopied, totalBytes) = progressInfo;
+                                    game.InstallProgress = totalFiles > 0 ? (filesCopied * 100.0 / totalFiles) : 0;
+                                    game.InstallStatusMessage = $"Copying {fileName} ({filesCopied}/{totalFiles})";
+                                    
+                                    _logger.LogInformation("[VHD Install] {GameTitle}: {FilesCopied}/{TotalFiles} files ({Percent:F1}%) - {FileName}", 
+                                        game.Title, filesCopied, totalFiles, game.InstallProgress, fileName);
+                                });
+                                
+                                var (diskPath, vhdExecutablePath) = await virtualDiskService.InstallGameToVirtualDiskAsync(
+                                    game, 
+                                    exeFile, 
+                                    _configService.GetGameSettings(exeFile),
+                                    progress);
+                                
+                                // Update game with VHD information
+                                game.VirtualDiskPath = diskPath;
+                                game.VhdExecutablePath = vhdExecutablePath;
+                                game.IsInstalling = false;
+                                game.InstallProgress = 100;
+                                game.InstallStatusMessage = "Installation complete";
+                                
+                                _logger.LogInformation("Successfully installed game {Title} to VHD. Disk: {DiskPath}, Executable: {VhdPath}", 
+                                    game.Title, diskPath, vhdExecutablePath);
+                                
+                                // Save the updated games list after successful installation
+                                SaveToConfiguration();
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Failed to install game {Title} to VHD", game.Title);
+                                game.IsInstalling = false;
+                                game.InstallStatusMessage = $"Installation failed: {ex.Message}";
+                                // The game is already in the list, but will try to create VHD on first launch
+                            }
+                        });
                     }
                 }
             }

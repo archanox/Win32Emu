@@ -426,7 +426,7 @@ public static class EmulatorLauncher
 			// Copy all files from the directory to the VHD
 			var files = Directory.GetFiles(directory, "*", SearchOption.AllDirectories);
 			totalFiles = files.Length;
-			logger.LogInformation("Copying {FileCount} files to virtual disk", totalFiles);
+			logger.LogInformation("[VHD Creation] Starting copy of {FileCount} files to virtual disk", totalFiles);
 			
 			foreach (var file in files)
 			{
@@ -444,7 +444,8 @@ public static class EmulatorLauncher
 					}
 					
 					// Copy file to VFS
-					logger.LogDebug("Copying {File} to {VfsPath}", file, vfsPath);
+					var fileName = Path.GetFileName(file);
+					logger.LogInformation("[VHD Creation] Copying file {FilesCopied}/{TotalFiles}: {FileName}", successCount + 1, totalFiles, fileName);
 					var fileBytes = File.ReadAllBytes(file);
 					var handle = vfs.OpenFile(vfsPath, VirtualFileSystem.VfsFileMode.Create, VirtualFileSystem.VfsFileAccess.Write);
 					if (handle != null)
@@ -453,25 +454,26 @@ public static class EmulatorLauncher
 						{
 							handle.Write(fileBytes, 0, fileBytes.Length);
 						}
-						logger.LogDebug("Successfully copied {VfsPath} ({Size} bytes)", vfsPath, fileBytes.Length);
+						logger.LogInformation("[VHD Creation] Successfully copied {FileName} ({Size} bytes) [{FilesCopied}/{TotalFiles}]", 
+							fileName, fileBytes.Length, successCount + 1, totalFiles);
 						successCount++;
 					}
 					else
 					{
-						logger.LogWarning("Failed to open file for writing: {VfsPath}", vfsPath);
+						logger.LogWarning("[VHD Creation] Failed to open file for writing: {VfsPath}", vfsPath);
 						failureCount++;
 					}
 				}
 				catch (Exception ex)
 				{
-					logger.LogWarning(ex, "Failed to copy file to VHD: {File} -> {VfsPath}", file, vfsPath);
+					logger.LogWarning(ex, "[VHD Creation] Failed to copy file to VHD: {File} -> {VfsPath}", file, vfsPath);
 					failureCount++;
 				}
 			}
 			
 			if (failureCount > 0)
 			{
-				logger.LogWarning("Virtual disk created with {FailureCount} file copy failures out of {TotalCount} files", failureCount, totalFiles);
+				logger.LogWarning("[VHD Creation] Virtual disk created with {FailureCount} file copy failures out of {TotalCount} files", failureCount, totalFiles);
 			}
 		}
 
@@ -480,7 +482,7 @@ public static class EmulatorLauncher
 			throw new InvalidOperationException($"Failed to copy any files to virtual disk. All {totalFiles} file operations failed.");
 		}
 
-		logger.LogInformation("Virtual disk created successfully: {VhdPath} ({SuccessCount}/{TotalCount} files copied)", vhdPath, successCount, totalFiles);
+		logger.LogInformation("[VHD Creation] Virtual disk created successfully: {VhdPath} ({SuccessCount}/{TotalCount} files copied)", vhdPath, successCount, totalFiles);
 		return (vhdPath, vfsExecutablePath);
 	}
 
