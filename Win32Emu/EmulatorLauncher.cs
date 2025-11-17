@@ -103,8 +103,37 @@ public static class EmulatorLauncher
 			Rendering.BackendFactory.CurrentBackendType = backendType;
 		}
 		
+		// Build list of flag argument indices (those that start with -- and their values)
+		var flagIndices = new HashSet<int>();
+		for (var i = 0; i < args.Length; i++)
+		{
+			if (args[i].StartsWith("--"))
+			{
+				flagIndices.Add(i);
+				// Add the next index if this flag takes a value, but only if the value is valid for the flag
+				if (i + 1 < args.Length && !args[i + 1].StartsWith("--"))
+				{
+					if (args[i] == "--backend")
+					{
+						// For --backend, only exclude the next arg if it's a valid backend type
+						if (Enum.TryParse<Rendering.BackendType>(args[i + 1], ignoreCase: true, out var _))
+						{
+							flagIndices.Add(i + 1);
+						}
+					}
+					else if (args[i] == "--trace-api" || args[i] == "--compare-apimon" ||
+					         args[i] == "--log-file" || args[i] == "--telemetry-otlp" || args[i] == "--gdb-server")
+					{
+						// For these flags, the value is optional and can be any string except another flag.
+						// We assume that if the next argument is not another flag, it is intended as the value.
+						flagIndices.Add(i + 1);
+					}
+				}
+			}
+		}
+		
 		// Find the first non-flag argument as the path
-		var path = args.FirstOrDefault(arg => !arg.StartsWith("--"));
+		var path = args.Where((arg, index) => !flagIndices.Contains(index)).FirstOrDefault();
 		if (string.IsNullOrEmpty(path))
 		{
 			PrintUsage();
