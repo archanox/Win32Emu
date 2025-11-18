@@ -4962,21 +4962,21 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] IsWow64Process(hProcess=0x{HProcess:X8}, lpWow64Process=0x{LpWow64Process:X8})",
 			hProcess, lpWow64Process);
 
-		// Validate the output pointer
-		if (lpWow64Process == 0)
-		{
-			_logger.LogWarning("[Kernel32] IsWow64Process: Invalid parameter - lpWow64Process is NULL");
-			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return (uint)NativeTypes.Win32Bool.FALSE;
-		}
-
 		// Validate the process handle
 		// Accept pseudo-handle for current process (0xFFFFFFFF) and any valid handle
 		if (hProcess == 0)
 		{
-			_logger.LogWarning("[Kernel32] IsWow64Process: Invalid parameter - hProcess is NULL");
-			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
-			return (uint)NativeTypes.Win32Bool.FALSE;
+		    _logger.LogWarning("[Kernel32] IsWow64Process: Invalid parameter - hProcess is NULL");
+		    _lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		    return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Validate the output pointer
+		if (lpWow64Process == 0)
+		{
+		    _logger.LogWarning("[Kernel32] IsWow64Process: Invalid parameter - lpWow64Process is NULL");
+		    _lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+		    return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// Since this emulator always runs in 32-bit mode and emulates x86 architecture,
