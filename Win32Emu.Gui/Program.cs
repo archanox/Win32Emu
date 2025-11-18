@@ -11,12 +11,15 @@ sealed class Program
     /// <summary>
     /// Module initializer that runs before any other code in the assembly.
     /// Used to configure headless mode BEFORE SDL native library is loaded.
+    /// NOTE: This is a best-effort approach. SDL may still load its native library before this runs.
+    /// For reliable headless operation, use the run-headless.sh launcher script or set SDL_VIDEODRIVER
+    /// before starting the process.
     /// </summary>
     [ModuleInitializer]
     internal static void ModuleInit()
     {
         // Configure headless mode at module load time
-        // This ensures SDL_VIDEODRIVER is set before the SDL native library reads it
+        // This is a defensive measure that may not always work due to SDL native library load timing
         ConfigureHeadlessMode();
     }
 
@@ -75,7 +78,9 @@ sealed class Program
 
     /// <summary>
     /// Configures headless mode by detecting headless environment and setting SDL_VIDEODRIVER=dummy.
-    /// This must be called before any SDL initialization to ensure proper operation in headless environments.
+    /// This is a defense-in-depth measure that may not always work due to SDL native library load timing.
+    /// For reliable headless operation, users should use run-headless.sh or set the environment variable
+    /// before starting the process.
     /// </summary>
     private static void ConfigureHeadlessMode()
     {
@@ -90,9 +95,11 @@ sealed class Program
         
         if (isHeadless)
         {
-            // Set dummy video driver for headless operation
-            // This must be set before any SDL initialization
+            // Set dummy video driver for headless operation (best-effort)
             Environment.SetEnvironmentVariable("SDL_VIDEODRIVER", "dummy");
+            // NOTE: Console.WriteLine is used here because this runs in a ModuleInitializer,
+            // before any ILogger instances are available. This is an acceptable exception to
+            // the project's logging guidelines for early diagnostic output.
             Console.WriteLine("[Win32Emu] Headless environment detected - configured SDL dummy video driver");
         }
     }

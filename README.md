@@ -134,6 +134,7 @@ Win32Emu.Gui --nogui game.exe --backend Software
 See [Win32Emu.Gui/README.md](Win32Emu.Gui/README.md) for more details about the GUI features.
 
 **See Also:**
+- [HEADLESS_MODE.md](HEADLESS_MODE.md) - Comprehensive guide for running in headless environments
 - [docs/implementation/SILK_NET_MIGRATION.md](docs/implementation/SILK_NET_MIGRATION.md) - Backend system and configuration
 - [docs/guides/GHIDRA_DEBUGGING_FAQ.md](docs/guides/GHIDRA_DEBUGGING_FAQ.md) - Troubleshooting "no debugging symbols" and debugging tips
 - [docs/guides/DEBUGGING_GUIDE.md](docs/guides/DEBUGGING_GUIDE.md) - Enhanced debugging mode

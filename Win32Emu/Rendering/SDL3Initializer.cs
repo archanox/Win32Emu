@@ -36,7 +36,9 @@ internal static class Sdl3Initializer
 
     /// <summary>
     /// Detects headless environment and sets SDL_VIDEODRIVER=dummy if needed.
-    /// This must be called before any SDL function, including SetAppMetadata.
+    /// This is a defensive/best-effort measure. SDL may read the environment variable during
+    /// native library load, which can happen before this code runs. For reliable headless
+    /// operation, users should use run-headless.sh or set SDL_VIDEODRIVER before process start.
     /// </summary>
     private static void EnsureHeadlessModeConfigured()
     {
@@ -58,7 +60,10 @@ internal static class Sdl3Initializer
 
         if (isHeadless)
         {
-            // Set dummy video driver for headless operation
+            // Set dummy video driver for headless operation (best-effort)
+            // NOTE: Headless mode configuration happens silently here.
+            // Logging is not performed because this static class does not have access to an ILogger instance.
+            // The Program.cs ModuleInitializer provides console output for diagnostic purposes.
             Environment.SetEnvironmentVariable("SDL_VIDEODRIVER", "dummy");
         }
 

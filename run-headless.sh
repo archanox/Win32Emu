@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Launcher script for running Win32Emu in headless mode
 # This script automatically configures SDL for headless operation
 
