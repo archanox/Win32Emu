@@ -262,6 +262,11 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		_logger.LogInformation("[DiskVFS] Successfully completed copying directory to virtual disk: {TargetPath}", targetPath);
 	}
 
+	/// <summary>
+	/// Internal state class for tracking copy progress across recursive calls.
+	/// Note: This class is not thread-safe. Instances should only be used within a single copy operation
+	/// and should not be shared across threads.
+	/// </summary>
 	private class CopyProgressState
 	{
 		public int FilesCopied { get; set; }
