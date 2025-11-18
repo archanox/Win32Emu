@@ -942,7 +942,7 @@ public sealed class Emulator : IDisposable
             // Check for COM vtable method calls
             if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
             {
-                _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
+                // Logging now handled by ComVtableDispatcher.TryInvoke
                 
                 var espBefore = _cpu.GetRegister("ESP");
                 var eipBefore = _cpu.GetEip();
@@ -1199,7 +1199,7 @@ public sealed class Emulator : IDisposable
                 // Check for COM vtable method calls
                 if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
                 {
-                    _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
+                    // Logging now handled by ComVtableDispatcher.TryInvoke
                     
                     // Use consolidated helper for register preservation and stdcall convention
                     CpuHelpers.InvokeWithRegisterPreservation(
@@ -1207,10 +1207,7 @@ public sealed class Emulator : IDisposable
                         _vm!,
                         () => {
                             var success = _env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var returnValue, out var argBytes);
-                            if (success)
-                            {
-                                LogDebug($"[COM] Method returned 0x{returnValue:X8}");
-                            }
+                            // Return logging now handled by ComVtableDispatcher.TryInvoke
                             return (success, returnValue, argBytes);
                         },
                         _vm!.Size,
@@ -1368,7 +1365,7 @@ public sealed class Emulator : IDisposable
             // Check for COM vtable method calls
             if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
             {
-                _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
+                // Logging now handled by ComVtableDispatcher.TryInvoke
                 
                 // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
                 var savedEbx = _cpu.GetRegister("EBX");
@@ -1378,7 +1375,7 @@ public sealed class Emulator : IDisposable
                 
                 if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
                 {
-                    LogDebug($"[COM] Method returned 0x{ret:X8}");
+                    // Return logging now handled by ComVtableDispatcher.TryInvoke
                     var esp = _cpu.GetRegister("ESP");
                     var retEip = _vm!.Read32(esp);
                     // COM methods use stdcall convention - callee cleans up the stack
@@ -1472,7 +1469,7 @@ public sealed class Emulator : IDisposable
                 // Check for COM vtable method calls
                 if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
                 {
-                    _logger.LogInformation("[COM] Vtable method call at address 0x{CallTarget:X8}", step.CallTarget);
+                    // Logging now handled by ComVtableDispatcher.TryInvoke
                     
                     // Use consolidated helper for register preservation and stdcall convention
                     CpuHelpers.InvokeWithRegisterPreservation(
@@ -1480,10 +1477,7 @@ public sealed class Emulator : IDisposable
                         _vm!,
                         () => {
                             var success = _env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var returnValue, out var argBytes);
-                            if (success)
-                            {
-                                LogDebug($"[COM] Method returned 0x{returnValue:X8}");
-                            }
+                            // Return logging now handled by ComVtableDispatcher.TryInvoke
                             return (success, returnValue, argBytes);
                         },
                         _vm!.Size,
