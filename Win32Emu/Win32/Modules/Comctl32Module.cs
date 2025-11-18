@@ -75,6 +75,35 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				returnValue = PropertySheetA(a.UInt32(0));
 				return true;
 
+			case "IMAGELIST_SETBKCOLOR":
+				returnValue = ImageList_SetBkColor(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "ORDINAL_2":
+				returnValue = Ordinal_2(a.UInt32(0));
+				return true;
+
+			case "ORDINAL_4":
+				returnValue = Ordinal_4(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "ORDINAL_6":
+				returnValue = Ordinal_6(a.UInt32(0));
+				return true;
+
+			case "ORDINAL_234":
+			case "ORDINAL_329":
+			case "ORDINAL_334":
+			case "ORDINAL_337":
+			case "ORDINAL_338":
+			case "ORDINAL_340":
+			case "ORDINAL_350":
+			case "ORDINAL_351":
+			case "ORDINAL_355":
+				_logger.LogInformation("[Comctl32] {Export}(...)", export);
+				returnValue = 1; // Generic stub for ordinals
+				return true;
+
 			default:
 				_logger.LogInformation("[Comctl32] Unimplemented export: {Export}", export);
 				return false;
@@ -188,7 +217,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Comctl32] Ordinal_17(param1=0x{Param1:X8}, param2=0x{Param2:X8}, param3=0x{Param3:X8})",
 			param1, param2, param3);
-		
+
 		// InitCommonControls typically doesn't return a value, but we return success
 		return 1;
 	}
@@ -201,7 +230,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	private uint CreatePropertySheetPageA(uint lppsp)
 	{
 		_logger.LogInformation("[Comctl32] CreatePropertySheetPageA(lppsp=0x{Lppsp:X8})", lppsp);
-		
+
 		// Stub: Return a fake handle for the property sheet page
 		// A real implementation would parse the PROPSHEETPAGE structure and create a page
 		return lppsp != 0 ? 0x90010000 : 0;
@@ -215,7 +244,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	private uint DestroyPropertySheetPage(uint hPSPage)
 	{
 		_logger.LogInformation("[Comctl32] DestroyPropertySheetPage(hPSPage=0x{HPSPage:X8})", hPSPage);
-		
+
 		// Stub: Always return TRUE (success)
 		return 1;
 	}
@@ -228,7 +257,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	private uint PropertySheetA(uint lppsh)
 	{
 		_logger.LogInformation("[Comctl32] PropertySheetA(lppsh=0x{Lppsh:X8})", lppsh);
-		
+
 		// Stub: Return 0 (user cancelled or closed the property sheet)
 		// A real implementation would parse PROPSHEETHEADER and display the property sheet dialog
 		return 0;
@@ -256,10 +285,10 @@ public class Comctl32Module : IWin32ModuleUnsafe
 
 		// Create an image list with estimated dimensions
 		var handle = _nextImageListHandle++;
-		
+
 		// Estimate height based on type - icons are typically square
 		int cy = uType == (uint)NativeTypes.ImageType.IMAGE_ICON ? cx : 16; // Default height for bitmaps
-		
+
 		_imageLists[handle] = new ImageListData
 		{
 			Width = cx,
@@ -270,7 +299,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 		};
 
 		_logger.LogInformation("[Comctl32] ImageList_LoadImageA: Created image list handle 0x{Handle:X8}", handle);
-		
+
 		return handle;
 	}
 
@@ -312,6 +341,37 @@ public class Comctl32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
+
+	/// <summary>
+	/// Sets the background color in an image list.
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint ImageList_SetBkColor(uint himl, uint clrBk)
+	{
+		_logger.LogInformation("[Comctl32] ImageList_SetBkColor(himl=0x{Himl:X8}, clrBk=0x{ClrBk:X8})", himl, clrBk);
+		return 0xFFFFFFFF; // CLR_NONE - transparent background
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint Ordinal_2(uint param1)
+	{
+		_logger.LogInformation("[Comctl32] Ordinal_2(param1=0x{Param1:X8})", param1);
+		return 1;
+	}
+
+	[DllModuleExport(8, IsStub = true)]
+	private uint Ordinal_4(uint param1, uint param2)
+	{
+		_logger.LogInformation("[Comctl32] Ordinal_4(param1=0x{Param1:X8}, param2=0x{Param2:X8})", param1, param2);
+		return 1;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint Ordinal_6(uint param1)
+	{
+		_logger.LogInformation("[Comctl32] Ordinal_6(param1=0x{Param1:X8})", param1);
+		return 1;
+	}
 
 	private class ImageListData
 	{

@@ -47,6 +47,11 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 				returnValue = PageSetupDlgA(a.UInt32(0));
 				return true;
 
+
+			case "PRINTDLGA":
+				returnValue = PrintDlgA(a.UInt32(0));
+				return true;
+
 			default:
 				_logger.LogInformation("[Comdlg32] Unimplemented export: {Export}", export);
 				return false;
@@ -118,17 +123,17 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 	{
 		var file = lpszFile.ToString() ?? string.Empty;
 		_logger.LogInformation("[Comdlg32] GetFileTitleA(lpszFile=\"{File}\", cchSize={CchSize})", file, cchSize);
-		
+
 		// Extract just the file name without path
 		var fileName = Path.GetFileNameWithoutExtension(file);
-		
+
 		if (lpszTitle.Address != 0 && cchSize > 0)
 		{
 			var toCopy = fileName.Length < cchSize ? fileName : fileName.Substring(0, (int)cchSize - 1);
 			_env.WriteAnsiStringAt(lpszTitle.Address, toCopy);
 			return 0; // Success
 		}
-		
+
 		return 1; // Error
 	}
 
@@ -164,4 +169,15 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Comdlg32] PageSetupDlgA: Dialog cancelled (stub)");
 		return 0; // FALSE
 	}
+
+	/// <summary>
+	/// Displays a Print dialog box.
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint PrintDlgA(uint lppd)
+	{
+		_logger.LogInformation("[Comdlg32] PrintDlgA(lppd=0x{Lppd:X8})", lppd);
+		return 0; // User cancelled
+	}
+
 }

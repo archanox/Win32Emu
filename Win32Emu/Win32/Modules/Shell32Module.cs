@@ -95,6 +95,16 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 				returnValue = Ordinal_653(a.UInt32(0));
 				return true;
 
+			case "48":
+			case "ORDINAL_48":
+				returnValue = Ordinal_48(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "195":
+			case "ORDINAL_195":
+				returnValue = Ordinal_195(a.UInt32(0));
+				return true;
+
 			default:
 				LogUnimplementedExport(export);
 				return false;
@@ -118,7 +128,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 
 		// Read BROWSEINFO structure using ref struct
 		var bi = new BrowseInfoARef(_env.Memory, lpbi);
-		
+
 		_logger.LogInformation("[Shell32] SHBrowseForFolderA: hwndOwner=0x{HwndOwner:X8}, flags=0x{Flags:X}, title=0x{Title:X8}",
 			bi.hwndOwner, bi.ulFlags, bi.lpszTitle);
 
@@ -126,11 +136,11 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		// Real PIDLs are complex, but we just need something to pass around
 		var pidlAddr = _env.SimpleAlloc(16); // Small allocation for fake PIDL
 		_env.MemWrite16(pidlAddr, 0); // cb = 0 (size of this item)
-		
+
 		// Store a default installation path in the PIDL metadata area (for our use)
 		// We'll use a magic marker so SHGetPathFromIDListA knows it's our fake PIDL
 		_env.MemWrite32(pidlAddr + 2, 0x504C4946); // "FILP" marker (PIDL reversed)
-		
+
 		// Provide a default folder name if pszDisplayName buffer exists
 		if (bi.pszDisplayName != 0)
 		{
@@ -141,9 +151,9 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 				_env.MemWrite8(bi.pszDisplayName + (uint)i, nameBytes[i]);
 			}
 		}
-		
+
 		_logger.LogInformation("[Shell32] SHBrowseForFolderA: Returning fake PIDL at 0x{Pidl:X8}", pidlAddr);
-		
+
 		return pidlAddr;
 	}
 
@@ -177,28 +187,28 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 
 		// Read SHFILEOPSTRUCT structure using ref struct
 		var fileOp = new ShFileOpStructARef(_env.Memory, lpFileOp);
-		
+
 		_logger.LogInformation("[Shell32] SHFileOperationA: wFunc={Func}, fFlags=0x{Flags:X}, pFrom=0x{From:X8}, pTo=0x{To:X8}",
 			fileOp.wFunc, fileOp.fFlags, fileOp.pFrom, fileOp.pTo);
-		
+
 		try
 		{
 			// Read source path(s) - can be multiple null-terminated strings
 			var sourceFiles = ReadMultipleStrings(fileOp.pFrom);
 			var destFiles = fileOp.pTo != 0 ? ReadMultipleStrings(fileOp.pTo) : new List<string>();
-			
+
 			_logger.LogInformation("[Shell32] SHFileOperationA: Source files: {Sources}", string.Join(", ", sourceFiles));
 			if (destFiles.Count > 0)
 			{
 				_logger.LogInformation("[Shell32] SHFileOperationA: Dest files: {Dests}", string.Join(", ", destFiles));
 			}
-			
+
 			// Perform the operation
 			const uint FO_MOVE = 1;
 			const uint FO_COPY = 2;
 			const uint FO_DELETE = 3;
 			const uint FO_RENAME = 4;
-			
+
 			switch (fileOp.wFunc)
 			{
 				case FO_MOVE:
@@ -209,6 +219,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 					return PerformDeleteOperation(sourceFiles, fileOp.fFlags);
 				case FO_RENAME:
 					return PerformRenameOperation(sourceFiles, destFiles, fileOp.fFlags);
+
 				default:
 					_logger.LogWarning("[Shell32] SHFileOperationA: Unknown wFunc={Func}", fileOp.wFunc);
 					return 0x71; // ERROR_BAD_FUNCTION
@@ -220,7 +231,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			return 0x02; // ERROR_FILE_NOT_FOUND (generic error)
 		}
 	}
-	
+
 	/// <summary>
 	/// Reads multiple null-terminated strings from memory (double-null terminated list).
 	/// </summary>
@@ -229,21 +240,21 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		var result = new List<string>();
 		if (address == 0)
 			return result;
-		
+
 		uint offset = 0;
 		while (true)
 		{
 			var str = ReadNullTerminatedString(address + offset);
 			if (string.IsNullOrEmpty(str))
 				break;
-			
+
 			result.Add(str);
 			offset += (uint)(str.Length + 1); // +1 for null terminator
 		}
-		
+
 		return result;
 	}
-	
+
 	/// <summary>
 	/// Reads a single null-terminated string from memory.
 	/// </summary>
@@ -251,7 +262,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 	{
 		var bytes = new List<byte>();
 		uint offset = 0;
-		
+
 		while (true)
 		{
 			var b = _env.MemRead8(address + offset);
@@ -259,33 +270,33 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 				break;
 			bytes.Add(b);
 			offset++;
-			
+
 			if (offset > 4096) // Safety limit
 				break;
 		}
-		
+
 		return System.Text.Encoding.ASCII.GetString(bytes.ToArray());
 	}
-	
+
 	private uint PerformCopyOperation(List<string> sources, List<string> dests, uint flags)
 	{
 		const uint FOF_NOCONFIRMMKDIR = 0x0200;
-		
+
 		try
 		{
 			for (int i = 0; i < sources.Count; i++)
 			{
 				var source = sources[i];
 				var dest = i < dests.Count ? dests[i] : dests.LastOrDefault() ?? string.Empty;
-				
+
 				if (string.IsNullOrEmpty(dest))
 				{
 					_logger.LogWarning("[Shell32] SHFileOperationA COPY: No destination for {Source}", source);
 					continue;
 				}
-				
+
 				_logger.LogInformation("[Shell32] SHFileOperationA COPY: {Source} -> {Dest}", source, dest);
-				
+
 				try
 				{
 					// Use VFS if available, otherwise fall back to System.IO
@@ -300,15 +311,15 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 							{
 								EnsureDirectoryExists(destDir);
 							}
-							
+
 							// Copy using VFS - open source for read, dest for write
-							using var srcHandle = _env.VirtualFileSystem.OpenFile(source, 
-								VirtualFileSystem.VfsFileMode.Open, 
+							using var srcHandle = _env.VirtualFileSystem.OpenFile(source,
+								VirtualFileSystem.VfsFileMode.Open,
 								VirtualFileSystem.VfsFileAccess.Read);
-							using var dstHandle = _env.VirtualFileSystem.OpenFile(dest, 
-								VirtualFileSystem.VfsFileMode.Create, 
+							using var dstHandle = _env.VirtualFileSystem.OpenFile(dest,
+								VirtualFileSystem.VfsFileMode.Create,
 								VirtualFileSystem.VfsFileAccess.Write);
-							
+
 							if (srcHandle != null && dstHandle != null)
 							{
 								// Copy in chunks
@@ -342,7 +353,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 								_logger.LogInformation("[Shell32] SHFileOperationA: Created directory {Dir}", destDir);
 							}
 						}
-						
+
 						if (System.IO.File.Exists(source))
 						{
 							System.IO.File.Copy(source, dest, overwrite: true);
@@ -365,7 +376,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 					// Continue with remaining files
 				}
 			}
-			
+
 			return 0; // Success (best effort)
 		}
 		catch (Exception ex)
@@ -374,7 +385,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			return 0x02; // ERROR_FILE_NOT_FOUND
 		}
 	}
-	
+
 	private void EnsureDirectoryExists(string path)
 	{
 		if (_env.VirtualFileSystem != null)
@@ -404,7 +415,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			}
 		}
 	}
-	
+
 	private uint PerformDeleteOperation(List<string> sources, uint flags)
 	{
 		try
@@ -412,7 +423,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			foreach (var source in sources)
 			{
 				_logger.LogInformation("[Shell32] SHFileOperationA DELETE: {Source}", source);
-				
+
 				try
 				{
 					// Use VFS if available
@@ -459,7 +470,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 					_logger.LogWarning(ex, "[Shell32] SHFileOperationA DELETE: Failed to delete {Source}", source);
 				}
 			}
-			
+
 			return 0; // Success
 		}
 		catch (Exception ex)
@@ -468,7 +479,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			return 0x02; // ERROR_FILE_NOT_FOUND
 		}
 	}
-	
+
 	private uint PerformMoveOperation(List<string> sources, List<string> dests, uint flags)
 	{
 		try
@@ -477,15 +488,15 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			{
 				var source = sources[i];
 				var dest = i < dests.Count ? dests[i] : dests.LastOrDefault() ?? string.Empty;
-				
+
 				if (string.IsNullOrEmpty(dest))
 				{
 					_logger.LogWarning("[Shell32] SHFileOperationA MOVE: No destination for {Source}", source);
 					continue;
 				}
-				
+
 				_logger.LogInformation("[Shell32] SHFileOperationA MOVE: {Source} -> {Dest}", source, dest);
-				
+
 				try
 				{
 					// Use VFS if available
@@ -499,7 +510,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 							{
 								EnsureDirectoryExists(destDir);
 							}
-							
+
 							var success = _env.VirtualFileSystem.MoveFile(source, dest);
 							if (success)
 							{
@@ -523,7 +534,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 						{
 							System.IO.Directory.CreateDirectory(destDir);
 						}
-						
+
 						if (System.IO.File.Exists(source))
 						{
 							System.IO.File.Move(source, dest, overwrite: true);
@@ -545,7 +556,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 					_logger.LogWarning(ex, "[Shell32] SHFileOperationA MOVE: Failed to move {Source} to {Dest}", source, dest);
 				}
 			}
-			
+
 			return 0; // Success
 		}
 		catch (Exception ex)
@@ -554,18 +565,18 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			return 0x02;
 		}
 	}
-	
+
 	private uint PerformRenameOperation(List<string> sources, List<string> dests, uint flags)
 	{
 		// Rename is similar to move
 		return PerformMoveOperation(sources, dests, flags);
 	}
-	
+
 	private void CopyDirectory(string sourceDir, string destDir)
 	{
 		// Create destination directory
 		System.IO.Directory.CreateDirectory(destDir);
-		
+
 		// Copy files
 		foreach (var file in System.IO.Directory.GetFiles(sourceDir))
 		{
@@ -573,7 +584,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			var destFile = System.IO.Path.Combine(destDir, fileName);
 			System.IO.File.Copy(file, destFile, overwrite: true);
 		}
-		
+
 		// Copy subdirectories recursively
 		foreach (var dir in System.IO.Directory.GetDirectories(sourceDir))
 		{
@@ -597,7 +608,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		{
 			_env.MemWrite32(ppMalloc, 0);
 		}
-		
+
 		return 0x80004001; // E_NOTIMPL
 	}
 
@@ -623,15 +634,15 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			// This is our fake PIDL from SHBrowseForFolderA
 			// Return a default installation path
 			var defaultPath = @"C:\Program Files\Ignition";
-			
+
 			_logger.LogInformation("[Shell32] SHGetPathFromIDListA: Converting fake PIDL to path: {Path}", defaultPath);
-			
+
 			var pathBytes = System.Text.Encoding.ASCII.GetBytes(defaultPath + '\0');
 			for (int i = 0; i < pathBytes.Length && i < 260; i++)
 			{
 				_env.MemWrite8(pszPath.Address + (uint)i, pathBytes[i]);
 			}
-			
+
 			return 1; // TRUE - success
 		}
 
@@ -642,19 +653,19 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		{
 			var csidl = specialMarker & 0xFFFF;
 			var specialPath = GetSpecialFolderPath((int)csidl);
-			
-			_logger.LogInformation("[Shell32] SHGetPathFromIDListA: Converting special folder PIDL (CSIDL={Csidl}) to path: {Path}", 
+
+			_logger.LogInformation("[Shell32] SHGetPathFromIDListA: Converting special folder PIDL (CSIDL={Csidl}) to path: {Path}",
 				csidl, specialPath);
-			
+
 			var pathBytes = System.Text.Encoding.ASCII.GetBytes(specialPath + '\0');
 			for (int i = 0; i < pathBytes.Length && i < 260; i++)
 			{
 				_env.MemWrite8(pszPath.Address + (uint)i, pathBytes[i]);
 			}
-			
+
 			return 1; // TRUE - success
 		}
-		
+
 		_logger.LogWarning("[Shell32] SHGetPathFromIDListA: Unknown PIDL format");
 		return 0; // FALSE - conversion failed
 	}
@@ -677,14 +688,14 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		// Allocate a fake PIDL for the special folder
 		var pidlAddr = _env.SimpleAlloc(16);
 		_env.MemWrite16(pidlAddr, 0); // cb = 0
-		
+
 		// Store a marker indicating this is a special folder PIDL
 		// Format: 0x43530000 | csidl  (CS = CSIDL marker)
 		_env.MemWrite32(pidlAddr + 2, (uint)(0x43530000 | (csidl & 0xFFFF)));
-		
+
 		// Write the PIDL address to the output pointer
 		_env.MemWrite32(ppidl, pidlAddr);
-		
+
 		_logger.LogInformation("[Shell32] SHGetSpecialFolderLocation: Allocated PIDL at 0x{Pidl:X8} for CSIDL {Csidl}",
 			pidlAddr, csidl);
 
@@ -703,7 +714,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		// CSIDL_APPDATA = 0x001a
 		// CSIDL_PROGRAM_FILES = 0x0026
 		// CSIDL_COMMON_APPDATA = 0x0023
-		
+
 		return csidl switch
 		{
 			0x0000 => @"C:\Users\Public\Desktop",
@@ -734,7 +745,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		var file = lpFile.ToString() ?? string.Empty;
 		var parameters = lpParameters.ToString() ?? string.Empty;
 		var directory = lpDirectory.ToString() ?? string.Empty;
-		
+
 		LogShellExecuteA(hwnd, operation, file, parameters, directory, nShowCmd);
 
 		// Stub - return value > 32 indicates success
@@ -769,7 +780,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 	private uint ShellExecuteExA(uint lpExecInfo)
 	{
 		LogShellExecuteExA(lpExecInfo);
-		
+
 		// SHELLEXECUTEINFO structure
 		// Read fields from the structure if needed
 		// For now, just return success
@@ -785,7 +796,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 	{
 		var fileName = pszExeFileName.ToString() ?? string.Empty;
 		LogExtractIconA(hInst, fileName, nIconIndex);
-		
+
 		// Stub - return NULL (no icon)
 		return 0;
 	}
@@ -799,7 +810,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 	{
 		var path = pszPath.ToString() ?? string.Empty;
 		LogSHGetFileInfoA(path, dwFileAttributes, uFlags);
-		
+
 		// Stub - return 0 (failure)
 		return 0;
 	}
@@ -814,7 +825,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		var app = szApp.ToString() ?? string.Empty;
 		var otherStuff = szOtherStuff.ToString() ?? string.Empty;
 		LogShellAboutA(hWnd, app, otherStuff, hIcon);
-		
+
 		// Stub - return TRUE (success)
 		return 1;
 	}
@@ -916,4 +927,19 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		// The actual behavior is undocumented
 		return 1; // Assume success
 	}
+
+	[DllModuleExport(8, IsStub = true)]
+	private uint Ordinal_48(uint param1, uint param2)
+	{
+		_logger.LogInformation("[Shell32] Ordinal_48(param1=0x{Param1:X8}, param2=0x{Param2:X8})", param1, param2);
+		return 1;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint Ordinal_195(uint param1)
+	{
+		_logger.LogInformation("[Shell32] Ordinal_195(param1=0x{Param1:X8})", param1);
+		return 1;
+	}
+
 }

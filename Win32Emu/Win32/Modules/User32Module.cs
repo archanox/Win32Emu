@@ -31,7 +31,7 @@ namespace Win32Emu.Win32.Modules
 		private uint _currentCursor;
 		private uint _focusWindow;
 		private int _cursorDisplayCount = 1; // Tracks cursor visibility counter (starts visible in Windows)
-		
+
 		// Counter for generating unique bitmap handles
 		private uint _nextBitmapHandle = 0;
 
@@ -899,31 +899,99 @@ namespace Win32Emu.Win32.Modules
 				case "CHILDWINDOWFROMPOINT":
 					returnValue = ChildWindowFromPoint(a.UInt32(0), a.Int32(1), a.Int32(2));
 					return true;
-				
+
 				case "CLOSECLIPBOARD":
 					returnValue = CloseClipboard();
 					return true;
-				
+
 				case "DRAWEDGE":
 					returnValue = DrawEdge(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
-				
+
 				case "GETCLIPBOARDDATA":
 					returnValue = GetClipboardData(a.UInt32(0));
 					return true;
-				
+
 				case "ISCLIPBOARDFORMATAVAILABLE":
 					returnValue = IsClipboardFormatAvailable(a.UInt32(0));
 					return true;
-				
+
 				case "OPENCLIPBOARD":
 					returnValue = OpenClipboard(a.UInt32(0));
 					return true;
-				
+
 				case "TRACKPOPUPMENUEX":
-					returnValue = TrackPopupMenuEx(a.UInt32(0), a.UInt32(1),a.Int32(2),a.Int32(3),a.UInt32(4),a.UInt32(5));
+					returnValue = TrackPopupMenuEx(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.UInt32(4), a.UInt32(5));
 					return true;
-				
+
+				case "CHARLOWERA":
+					returnValue = CharLowerA(a.LpStr(0));
+					return true;
+
+				case "CHARUPPERBUFFA":
+					returnValue = CharUpperBuffA(a.LpStr(0), a.UInt32(1));
+					return true;
+
+				case "CREATECARET":
+					returnValue = CreateCaret(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3));
+					return true;
+
+				case "DESTROYCARET":
+					returnValue = DestroyCaret();
+					return true;
+
+				case "SETCARETPOS":
+					returnValue = SetCaretPos(a.Int32(0), a.Int32(1));
+					return true;
+
+				case "GETDOUBLECLICKTIME":
+					returnValue = GetDoubleClickTime();
+					return true;
+
+				case "DELETEMENU":
+					returnValue = DeleteMenu(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "INSERTMENUA":
+					returnValue = InsertMenuA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.LpcStr(4));
+					return true;
+
+				case "INSERTMENUITEMA":
+					returnValue = InsertMenuItemA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "GETMENUITEMINFOA":
+					returnValue = GetMenuItemInfoA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "SETMENUITEMINFOA":
+					returnValue = SetMenuItemInfoA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "SETMENUDEFAULTITEM":
+					returnValue = SetMenuDefaultItem(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "SCROLLWINDOWEX":
+					returnValue = ScrollWindowEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+					return true;
+
+				case "SETWINDOWPLACEMENT":
+					returnValue = SetWindowPlacement(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "DRAWANIMATEDRECTS":
+					returnValue = DrawAnimatedRects(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "EMPTYCLIPBOARD":
+					returnValue = EmptyClipboard();
+					return true;
+
+				case "SETCLIPBOARDDATA":
+					returnValue = SetClipboardData(a.UInt32(0), a.UInt32(1));
+					return true;
+
 				default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
@@ -935,9 +1003,9 @@ namespace Win32Emu.Win32.Modules
 		/// Currently delegates to synchronous version - will be enhanced as more APIs are converted to async.
 		/// </summary>
 		public async Task<(bool success, uint returnValue)> TryInvokeAsync(
-			string export, 
-			ICpu cpu, 
-			VirtualMemory memory, 
+			string export,
+			ICpu cpu,
+			VirtualMemory memory,
 			CancellationToken cancellationToken = default)
 		{
 			_cpu = cpu;
@@ -1253,7 +1321,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Use ref struct wrapper - writes happen automatically on property assignment
 			var msg = new MsgRef(_env.Memory, lpMsg);
-			
+
 			// Check if there's a quit message
 			if (_env.HasQuitMessage())
 			{
@@ -1274,7 +1342,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Try to get a message from the queue without blocking first
 			var queuedMsg = _env.TryGetMessageNonBlocking(hWnd, wMsgFilterMin, wMsgFilterMax);
-			
+
 			if (queuedMsg.HasValue)
 			{
 				// Message available immediately
@@ -1288,7 +1356,7 @@ namespace Win32Emu.Win32.Modules
 					msg.time = queuedMsg.Value.Time;
 					msg.ptX = (int)queuedMsg.Value.PtX;
 					msg.ptY = (int)queuedMsg.Value.PtY;
-					
+
 					return 0; // GetMessage returns 0 for WM_QUIT
 				}
 
@@ -1305,7 +1373,7 @@ namespace Win32Emu.Win32.Modules
 
 				return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 			}
-			
+
 			// No message available - block the thread until a message arrives
 			// This integrates with the thread scheduler to properly suspend the thread
 			// instead of busy-waiting in a loop
@@ -1316,13 +1384,13 @@ namespace Win32Emu.Win32.Modules
 			{
 				var currentThreadId = _env.GetCurrentThreadId();
 				var messageQueueToken = _env.GetMessageQueueWaitToken();
-				
+
 				_logger.LogDebug("[User32] GetMessageA: No messages available, blocking thread {ThreadId}", currentThreadId);
-				
+
 				// Set thread to waiting state with INFINITE timeout (0xFFFFFFFF)
 				// The thread will be woken when a message is posted via PostMessage
 				scheduler.SetThreadWaiting(currentThreadId, messageQueueToken, 0xFFFFFFFF);
-				
+
 				// IMPORTANT: Thread is now suspended - execution does not continue past this point
 				// The emulator will context switch to another thread. When PostMessage wakes this
 				// thread, execution resumes at the BEGINNING of GetMessageA (not here), so this
@@ -1337,7 +1405,7 @@ namespace Win32Emu.Win32.Modules
 				// This maintains compatibility with tests and scenarios without threading
 				_logger.LogTrace("[User32] GetMessageA: No thread scheduler, using timeout fallback");
 				queuedMsg = _env.GetMessageBlocking(hWnd, wMsgFilterMin, wMsgFilterMax, timeoutMs: 100);
-				
+
 				if (queuedMsg.HasValue)
 				{
 					if (queuedMsg.Value.Message == 0x0012)
@@ -1349,7 +1417,7 @@ namespace Win32Emu.Win32.Modules
 						msg.time = queuedMsg.Value.Time;
 						msg.ptX = (int)queuedMsg.Value.PtX;
 						msg.ptY = (int)queuedMsg.Value.PtY;
-						
+
 						return 0; // GetMessage returns 0 for WM_QUIT
 					}
 
@@ -1365,7 +1433,7 @@ namespace Win32Emu.Win32.Modules
 
 					return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 				}
-				
+
 				// Timeout - return WM_NULL for compatibility
 				_logger.LogTrace("[User32] GetMessageA: Timeout, returning WM_NULL");
 				msg.hwnd = 0;
@@ -1375,7 +1443,7 @@ namespace Win32Emu.Win32.Modules
 				msg.time = (uint)Environment.TickCount;
 				msg.ptX = 0;
 				msg.ptY = 0;
-				
+
 				return 1; // GetMessage returns non-zero for WM_NULL (only 0 for WM_QUIT)
 			}
 		}
@@ -1412,7 +1480,7 @@ namespace Win32Emu.Win32.Modules
 			// Read MSG structure
 			var msg = new MsgRef(_env.Memory, lpMsg);
 
-			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", 
+			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}",
 				msg.hwnd, msg.message, msg.wParam, msg.lParam);
 
 			// First, try dispatching through MessageDispatcher asynchronously
@@ -1631,7 +1699,7 @@ namespace Win32Emu.Win32.Modules
 							stuckCounter++;
 							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
 							{
-								_logger.LogWarning("[User32] {Context}: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", 
+								_logger.LogWarning("[User32] {Context}: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
 									contextName, currentEip, stuckCounter);
 								timedOut = true;
 								break;
@@ -1766,10 +1834,10 @@ namespace Win32Emu.Win32.Modules
 
 						// Suspend execution to preserve CPU state across async boundary
 						var cpuState = CpuHelpers.SuspendExecution(cpu);
-						
+
 						// Yield to allow other async operations to proceed
 						await Task.Yield();
-						
+
 						// Resume execution with preserved state
 						CpuHelpers.ResumeExecution(cpu, cpuState);
 					}
@@ -1807,7 +1875,7 @@ namespace Win32Emu.Win32.Modules
 							stuckCounter++;
 							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
 							{
-								_logger.LogWarning("[User32] {Context}: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", 
+								_logger.LogWarning("[User32] {Context}: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
 									contextName, currentEip, stuckCounter);
 								timedOut = true;
 								break;
@@ -1821,7 +1889,7 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
-					var step = await CpuHelpers.ExecuteAsync(cpu, memory);
+					var step = await CpuHelpers.ExecuteAsync(cpu, memory).ConfigureAwait(false);
 
 					// Handle COM vtable and import calls
 					if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak))
@@ -1876,20 +1944,20 @@ namespace Win32Emu.Win32.Modules
 		/// Includes STACK_SAFETY_MARGIN to prevent stack corruption from nested calls.
 		/// </summary>
 		private async Task<uint> CallWindowProcedureAsync(
-			uint wndProcAddress, 
-			uint hwnd, 
-			uint message, 
-			uint wParam, 
-			uint lParam, 
+			uint wndProcAddress,
+			uint hwnd,
+			uint message,
+			uint wParam,
+			uint lParam,
 			CancellationToken cancellationToken = default)
 		{
-			_logger.LogInformation("[User32] CallWindowProcedureAsync: Calling 0x{WndProcAddress:X8} with HWND=0x{Hwnd:X8} MSG=0x{Message:X4}", 
+			_logger.LogInformation("[User32] CallWindowProcedureAsync: Calling 0x{WndProcAddress:X8} with HWND=0x{Hwnd:X8} MSG=0x{Message:X4}",
 				wndProcAddress, hwnd, message);
 
 			// Check if this is a standard control window procedure marker
 			if (ProcessEnvironment.IsStandardControlWndProc(wndProcAddress))
 			{
-				_logger.LogInformation("[User32] CallWindowProcedureAsync: Detected standard control WndProc marker at 0x{WndProcAddress:X8}, routing to StandardControlHandler", 
+				_logger.LogInformation("[User32] CallWindowProcedureAsync: Detected standard control WndProc marker at 0x{WndProcAddress:X8}, routing to StandardControlHandler",
 					wndProcAddress);
 				var windowInfo = _env.GetWindow(hwnd);
 				if (windowInfo.HasValue && StandardControlHandler.IsStandardControl(windowInfo.Value.ClassName))
@@ -1914,7 +1982,7 @@ namespace Win32Emu.Win32.Modules
 			// Parameters are pushed right-to-left: lParam, wParam, message, hwnd
 			uint[] parameters = [lParam, wParam, message, hwnd];
 			var (returnValue, _, _, _) = await ExecuteStdCallProcedureAsync(
-				_cpu, _memory, wndProcAddress, parameters, "CallWindowProcedureAsync", cancellationToken);
+				_cpu, _memory, wndProcAddress, parameters, "CallWindowProcedureAsync", cancellationToken).ConfigureAwait(false);
 
 			return returnValue;
 		}
@@ -2063,7 +2131,7 @@ namespace Win32Emu.Win32.Modules
 
 			var rect = new RectRef(_env.Memory, lpRect);
 
-			_logger.LogInformation("[User32] AdjustWindowRectEx: rect=({Left},{Top},{Right},{Bottom}) style=0x{DwStyle:X8}", 
+			_logger.LogInformation("[User32] AdjustWindowRectEx: rect=({Left},{Top},{Right},{Bottom}) style=0x{DwStyle:X8}",
 				rect.left, rect.top, rect.right, rect.bottom, dwStyle);
 
 			// Add window frame size (typical values)
@@ -2623,7 +2691,7 @@ namespace Win32Emu.Win32.Modules
 					if (queuedMsg.HasValue)
 					{
 						var msg = queuedMsg.Value;
-						_logger.LogInformation("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", 
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Processing message MSG=0x{Message:X4} HWND=0x{Hwnd:X8} wParam=0x{WParam:X8} lParam=0x{LParam:X8}",
 							msg.Message, msg.Hwnd, msg.WParam, msg.LParam);
 
 						// Dispatch the message to the dialog procedure if it's for our dialog
@@ -2707,7 +2775,7 @@ namespace Win32Emu.Win32.Modules
 			// Parameters are pushed right-to-left: lParam, wParam, message, hwndDlg
 			uint[] parameters = [lParam, wParam, message, hwndDlg];
 			return await ExecuteStdCallProcedureAsync(
-				cpu, memory, dialogProcAddress, parameters, "CallDialogProcedureAsync", cancellationToken);
+				cpu, memory, dialogProcAddress, parameters, "CallDialogProcedureAsync", cancellationToken).ConfigureAwait(false);
 		}
 
 
@@ -2816,7 +2884,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Store the text in the dialog control
 			_env.SetDialogControlText(hDlg, nIDDlgItem, text);
-			
+
 			// Notify the host (GUI) to update the control
 			_host?.OnDialogControlTextChanged(hDlg, nIDDlgItem, text);
 
@@ -2829,7 +2897,7 @@ namespace Win32Emu.Win32.Modules
 		private uint SendDlgItemMessageA(uint hDlg, int nIDDlgItem, uint msg, uint wParam, uint lParam)
 		{
 			// SendDlgItemMessageA sends a message to a control in a dialog box
-			_logger.LogInformation("[User32] SendDlgItemMessageA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem} msg=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", 
+			_logger.LogInformation("[User32] SendDlgItemMessageA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem} msg=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}",
 				hDlg, nIDDlgItem, msg, wParam, lParam);
 
 			// Handle STM_SETIMAGE (0x0172) for static controls
@@ -2837,26 +2905,26 @@ namespace Win32Emu.Win32.Modules
 			{
 				var imageType = (ImageType)wParam;
 				var imageHandle = lParam;
-				
-				_logger.LogInformation("[User32] SendDlgItemMessageA: STM_SETIMAGE imageType={ImageType} imageHandle=0x{ImageHandle:X8}", 
+
+				_logger.LogInformation("[User32] SendDlgItemMessageA: STM_SETIMAGE imageType={ImageType} imageHandle=0x{ImageHandle:X8}",
 					imageType, imageHandle);
-				
+
 				if (imageType == ImageType.IMAGE_BITMAP && imageHandle != 0)
 				{
 					// Look up the bitmap data from LoadImageA
 					if (_loadedBitmaps.TryGetValue(imageHandle, out var bitmap))
 					{
-						_logger.LogInformation("[User32] SendDlgItemMessageA: Found bitmap data ({Size} bytes), notifying host", 
+						_logger.LogInformation("[User32] SendDlgItemMessageA: Found bitmap data ({Size} bytes), notifying host",
 							bitmap.Data.Length);
-						
+
 						// Notify the host (GUI) to display the bitmap
 						_host?.OnDialogControlBitmapChanged(hDlg, nIDDlgItem, bitmap.Data);
-						
+
 						return 0; // Return 0 to indicate success (previous image handle would be returned normally)
 					}
 					else
 					{
-						_logger.LogWarning("[User32] SendDlgItemMessageA: Bitmap handle 0x{ImageHandle:X8} not found in loaded bitmaps", 
+						_logger.LogWarning("[User32] SendDlgItemMessageA: Bitmap handle 0x{ImageHandle:X8} not found in loaded bitmaps",
 							imageHandle);
 					}
 				}
@@ -2865,7 +2933,7 @@ namespace Win32Emu.Win32.Modules
 			// Return 0 (default message handling result)
 			return 0;
 		}
-		
+
 		/// <summary>
 		/// Static control messages (STM_*)
 		/// </summary>
@@ -2876,7 +2944,7 @@ namespace Win32Emu.Win32.Modules
 			STM_SETIMAGE = 0x0172,
 			STM_GETIMAGE = 0x0173
 		}
-		
+
 		/// <summary>
 		/// Image types for LoadImage and STM_SETIMAGE
 		/// </summary>
@@ -2887,7 +2955,7 @@ namespace Win32Emu.Win32.Modules
 			IMAGE_CURSOR = 2,
 			IMAGE_ENHMETAFILE = 3
 		}
-		
+
 		/// <summary>
 		/// Flags for LoadImage function
 		/// </summary>
@@ -2996,7 +3064,7 @@ namespace Win32Emu.Win32.Modules
 			if (lprc != 0)
 			{
 				var rect = new RectRef(_env.Memory, lprc);
-				_logger.LogInformation("[User32] FillRect: rect=({Left},{Top},{Right},{Bottom})", 
+				_logger.LogInformation("[User32] FillRect: rect=({Left},{Top},{Right},{Bottom})",
 					rect.left, rect.top, rect.right, rect.bottom);
 			}
 
@@ -3084,12 +3152,12 @@ namespace Win32Emu.Win32.Modules
 			var imageName = name.Read(_env.Memory);
 			_logger.LogInformation("[User32] LoadImageA(hInst=0x{HInst:X8}, name=\"{ImageName}\", type={Type}, cx={Cx}, cy={Cy}, fuLoad=0x{FuLoad:X})",
 				hInst, imageName, type, cx, cy, fuLoad);
-			
+
 			if (type == (uint)ImageType.IMAGE_BITMAP && _resourceReader != null)
 			{
 				// Try to load bitmap resource
 				byte[]? bitmapData = null;
-				
+
 				// Check if name is an integer resource ID or string name
 				if (name.Address < 0x10000)
 				{
@@ -3102,7 +3170,7 @@ namespace Win32Emu.Win32.Modules
 					// It's a string name
 					bitmapData = _resourceReader.LoadBitmapByName(imageName);
 				}
-				
+
 				if (bitmapData != null && bitmapData.Length > 0)
 				{
 					// Store the bitmap data for later retrieval by the UI
@@ -3115,12 +3183,12 @@ namespace Win32Emu.Win32.Modules
 						Width = cx > 0 ? cx : 0,
 						Height = cy > 0 ? cy : 0
 					};
-					
-					_logger.LogInformation("[User32] LoadImageA: Successfully loaded bitmap \"{ImageName}\" with {Size} bytes, handle 0x{Handle:X8}", 
+
+					_logger.LogInformation("[User32] LoadImageA: Successfully loaded bitmap \"{ImageName}\" with {Size} bytes, handle 0x{Handle:X8}",
 						imageName, bitmapData.Length, handle);
 					return handle;
 				}
-				
+
 				_logger.LogWarning("[User32] LoadImageA: Bitmap resource \"{ImageName}\" not found", imageName);
 				// Error 1814 = ERROR_RESOURCE_NAME_NOT_FOUND
 				return 0;
@@ -3131,9 +3199,9 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] LoadImageA: Returning stub handle 0x{Handle:X8} for type {Type}", stubHandle, type);
 			return stubHandle;
 		}
-		
+
 		private readonly Dictionary<uint, LoadedBitmap> _loadedBitmaps = new();
-		
+
 		private class LoadedBitmap
 		{
 			public byte[] Data { get; set; } = Array.Empty<byte>();
@@ -3141,7 +3209,7 @@ namespace Win32Emu.Win32.Modules
 			public int Width { get; set; }
 			public int Height { get; set; }
 		}
-		
+
 		/// <summary>
 		/// Gets a loaded bitmap by handle. Used by the UI to display bitmaps.
 		/// </summary>
@@ -3175,18 +3243,18 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					_logger.LogInformation("[User32] LoadStringA: Loaded string \"{String}\" (length {Length})", str, str.Length);
-					
+
 					if (cchBufferMax > 0)
 					{
 						lpBuffer.Write(_env.Memory, str, true);
 					}
-					
+
 					return (uint)writeLen;
 				}
 			}
 
 			_logger.LogWarning("[User32] LoadStringA: String resource {UID} not found", uID);
-			
+
 			// String not found - return empty
 			if (cchBufferMax > 0)
 			{
@@ -3226,7 +3294,7 @@ namespace Win32Emu.Win32.Modules
 		/// Check if a Win32 API function typically returns a handle or function pointer.
 		/// Helps identify potential NULL pointer issues when these functions return 0.
 		/// </summary>
-		
+
 		/// <summary>
 		/// Handles COM vtable calls and import function calls during CPU emulation.
 		/// This consolidates the duplicated logic from CallWindowProcedure and CallDialogProcedureAsync.
@@ -3256,7 +3324,7 @@ namespace Win32Emu.Win32.Modules
 					stepDesc = $"COM vtable call -> 0x{step.CallTarget:X8}";
 					var currentEsp = cpu.GetRegister("ESP");
 					var retEip = memory.Read32(currentEsp);
-					
+
 					// Validate return address before jumping
 					if (!IsValidReturnAddress(retEip, _image))
 					{
@@ -3264,7 +3332,7 @@ namespace Win32Emu.Win32.Modules
 						shouldBreak = true;
 						return true;
 					}
-					
+
 					currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
 					cpu.SetRegister("ESP", currentEsp);
 					cpu.SetRegister("EAX", comRet);
@@ -3299,7 +3367,7 @@ namespace Win32Emu.Win32.Modules
 
 					var currentEsp = cpu.GetRegister("ESP");
 					var retEip = memory.Read32(currentEsp);
-					
+
 					// Validate return address before jumping
 					if (!IsValidReturnAddress(retEip, _image))
 					{
@@ -3333,7 +3401,7 @@ namespace Win32Emu.Win32.Modules
 
 					var currentEsp = cpu.GetRegister("ESP");
 					var retEip = memory.Read32(currentEsp);
-					
+
 					// Validate return address before jumping
 					if (!IsValidReturnAddress(retEip, _image))
 					{
@@ -3490,7 +3558,7 @@ namespace Win32Emu.Win32.Modules
 				nCount, dwMilliseconds);
 			return 0; // WAIT_OBJECT_0
 		}
-		
+
 		[DllModuleExport(0)]
 		private uint GetFocus()
 		{
@@ -3554,7 +3622,7 @@ namespace Win32Emu.Win32.Modules
 				rect.right += dx;
 				rect.bottom += dy;
 
-	
+
 			}
 
 			return 1; // TRUE
@@ -3594,20 +3662,20 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] SetTimer(hWnd=0x{HWnd:X8}, nIDEvent={NIDEvent}, uElapse={UElapse}ms, lpTimerFunc=0x{LpTimerFunc:X8})",
 				hWnd, nIDEvent, uElapse, lpTimerFunc);
 
-		    // Determine the timer ID
-		    uint timerId;
-		    if (nIDEvent != 0)
-		    {
-		        timerId = nIDEvent;
-		    }
-		    else
-		    {
-		        // If nIDEvent is zero, allocate a new unique timer ID using thread-safe increment
-		        do
-		        {
-		            timerId = Interlocked.Increment(ref _nextTimerId) - 1;
-		        } while (_timers.ContainsKey(timerId));
-		    }
+			// Determine the timer ID
+			uint timerId;
+			if (nIDEvent != 0)
+			{
+				timerId = nIDEvent;
+			}
+			else
+			{
+				// If nIDEvent is zero, allocate a new unique timer ID using thread-safe increment
+				do
+				{
+					timerId = Interlocked.Increment(ref _nextTimerId) - 1;
+				} while (_timers.ContainsKey(timerId));
+			}
 
 			// Create timer info and store it
 			var timerInfo = new TimerInfo(
@@ -3828,7 +3896,7 @@ namespace Win32Emu.Win32.Modules
 
 			// Get all window handles from the environment
 			var windowHandles = _env.GetAllWindowHandles().ToList();
-			
+
 			if (windowHandles.Count == 0)
 			{
 				_logger.LogInformation("[User32] EnumWindows: No windows to enumerate, returning success");
@@ -3841,10 +3909,10 @@ namespace Win32Emu.Win32.Modules
 			foreach (var hwnd in windowHandles)
 			{
 				_logger.LogDebug("[User32] EnumWindows: Calling callback for window 0x{HWnd:X8}", hwnd);
-				
+
 				// Call the enumeration callback using the async pattern
 				var result = await CallEnumWindowsProcAsync(lpEnumFunc, hwnd, lParam, cancellationToken).ConfigureAwait(false);
-				
+
 				// If callback returns FALSE (0), stop enumeration
 				if (result == 0)
 				{
@@ -4403,10 +4471,10 @@ namespace Win32Emu.Win32.Modules
 		{
 			var bitmapName = lpBitmapName.ToString() ?? string.Empty;
 			_logger.LogInformation("[User32] LoadBitmapA(hInstance=0x{HInstance:X8}, lpBitmapName=\"{BitmapName}\")", hInstance, bitmapName);
-			
+
 			// LoadBitmapA is a legacy function that's essentially LoadImageA with IMAGE_BITMAP
 			// and no special flags (default behavior)
-			
+
 			// Convert LpcStr to LpStr for LoadImageA
 			var namePtr = new LpStr(lpBitmapName.Address);
 			return LoadImageA(hInstance, namePtr, (uint)ImageType.IMAGE_BITMAP, 0, 0, (uint)LoadImageFlags.LR_DEFAULTCOLOR);
@@ -4592,7 +4660,7 @@ namespace Win32Emu.Win32.Modules
 		private uint UnhookWindowsHookEx(uint hhk)
 		{
 			_logger.LogInformation("[User32] UnhookWindowsHookEx(hhk=0x{Hhk:X8})", hhk);
-			
+
 			// Remove the hook from tracking if it exists
 			if (_hooks.TryRemove(hhk, out _))
 			{
@@ -4602,7 +4670,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogDebug("[User32] UnhookWindowsHookEx: Hook 0x{HookHandle:X8} not found (may have already been removed)", hhk);
 			}
-			
+
 			// Always return success for simplicity (matching Windows behavior of being lenient)
 			return 1; // TRUE - success
 		}
@@ -4636,7 +4704,7 @@ namespace Win32Emu.Win32.Modules
 		private uint KillTimer(uint hWnd, uint uIDEvent)
 		{
 			_logger.LogInformation("[User32] KillTimer(hWnd=0x{HWnd:X8}, uIDEvent={UIDEvent})", hWnd, uIDEvent);
-			
+
 			// Remove the timer from tracking if it exists
 			if (_timers.TryRemove(uIDEvent, out _))
 			{
@@ -4646,7 +4714,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogDebug("[User32] KillTimer: Timer {TimerId} not found (may have already been killed)", uIDEvent);
 			}
-			
+
 			// Always return success for simplicity (matching Windows behavior of being lenient)
 			return 1; // TRUE - success
 		}
@@ -5592,453 +5660,637 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-	#region Async Callback Execution Helper
+		#region Async Callback Execution Helper
 
-	/// <summary>
-	/// Executes emulated guest code asynchronously with comprehensive safeguards.
-	/// This helper method contains the common execution loop logic used by all async callback methods,
-	/// eliminating code duplication while ensuring consistent behavior.
-	/// </summary>
-	/// <param name="returnAddress">Marker address (0xDEADBEEF) indicating callback return</param>
-	/// <param name="logContext">Context string for logging (e.g., "CallTimerProcAsync")</param>
-	/// <param name="handleComAndImports">Whether to handle COM vtable and import calls</param>
-	/// <param name="cancellationToken">Cancellation token for cooperative cancellation</param>
-	/// <returns>True if execution completed successfully, false if aborted or failed</returns>
-	private async Task<bool> ExecuteCallbackAsync(
-		uint returnAddress,
-		string logContext,
-		bool handleComAndImports,
-		CancellationToken cancellationToken = default)
-	{
-		const int YIELD_INTERVAL = 10000;
-		var steps = 0;
-		var executionSuccessful = true;
-		var lastCheckEip = _cpu!.GetEip();
-		var stuckCounter = 0;
-
-		try
+		/// <summary>
+		/// Executes emulated guest code asynchronously with comprehensive safeguards.
+		/// This helper method contains the common execution loop logic used by all async callback methods,
+		/// eliminating code duplication while ensuring consistent behavior.
+		/// </summary>
+		/// <param name="returnAddress">Marker address (0xDEADBEEF) indicating callback return</param>
+		/// <param name="logContext">Context string for logging (e.g., "CallTimerProcAsync")</param>
+		/// <param name="handleComAndImports">Whether to handle COM vtable and import calls</param>
+		/// <param name="cancellationToken">Cancellation token for cooperative cancellation</param>
+		/// <returns>True if execution completed successfully, false if aborted or failed</returns>
+		private async Task<bool> ExecuteCallbackAsync(
+			uint returnAddress,
+			string logContext,
+			bool handleComAndImports,
+			CancellationToken cancellationToken = default)
 		{
-			while (true)
+			const int YIELD_INTERVAL = 10000;
+			var steps = 0;
+			var executionSuccessful = true;
+			var lastCheckEip = _cpu!.GetEip();
+			var stuckCounter = 0;
+
+			try
 			{
-				// Check for cancellation at regular intervals
-				if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+				while (true)
 				{
-					if (cancellationToken.IsCancellationRequested)
+					// Check for cancellation at regular intervals
+					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
 					{
-						_logger.LogInformation("[User32] {LogContext}: Cancellation requested at step {Steps}", logContext, steps);
-						executionSuccessful = false;
-						break;
-					}
-
-					// Yield to allow other async operations to proceed
-					await Task.Yield();
-				}
-
-				var eip = _cpu.GetEip();
-
-				// Check if we've returned to our marker address
-				if (eip == returnAddress)
-				{
-					break;
-				}
-
-				// Check for invalid EIP (NULL pointer execution)
-				if (eip == 0x00000000)
-				{
-					_logger.LogWarning("[User32] {LogContext}: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting", logContext);
-					executionSuccessful = false;
-					break;
-				}
-
-				// Check for other invalid low addresses
-				if (eip < MINIMUM_VALID_EIP && eip != returnAddress)
-				{
-					_logger.LogError("[User32] {LogContext}: Execution jumped to invalid low address 0x{Eip:X8}", logContext, eip);
-					executionSuccessful = false;
-					break;
-				}
-
-				// Detect potential infinite loops
-				if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
-				{
-					var currentEip = _cpu.GetEip();
-					if (currentEip == lastCheckEip)
-					{
-						stuckCounter++;
-						if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+						if (cancellationToken.IsCancellationRequested)
 						{
-							_logger.LogWarning("[User32] {LogContext}: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
-								logContext, currentEip, stuckCounter);
+							_logger.LogInformation("[User32] {LogContext}: Cancellation requested at step {Steps}", logContext, steps);
 							executionSuccessful = false;
 							break;
 						}
+
+						// Yield to allow other async operations to proceed
+						await Task.Yield();
 					}
-					else
+
+					var eip = _cpu.GetEip();
+
+					// Check if we've returned to our marker address
+					if (eip == returnAddress)
 					{
-						stuckCounter = 0;
-						lastCheckEip = currentEip;
+						break;
 					}
-				}
 
-				// Execute one instruction
-				var step = _cpu.SingleStep(_memory!);
+					// Check for invalid EIP (NULL pointer execution)
+					if (eip == 0x00000000)
+					{
+						_logger.LogWarning("[User32] {LogContext}: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting", logContext);
+						executionSuccessful = false;
+						break;
+					}
 
-				// Handle COM vtable and import calls (if requested)
-				if (handleComAndImports)
-				{
-					if (HandleComAndImportCalls(step, _cpu, _memory!, logContext, out var stepDesc, out var shouldBreak) && shouldBreak)
+					// Check for other invalid low addresses
+					if (eip < MINIMUM_VALID_EIP && eip != returnAddress)
+					{
+						_logger.LogError("[User32] {LogContext}: Execution jumped to invalid low address 0x{Eip:X8}", logContext, eip);
+						executionSuccessful = false;
+						break;
+					}
+
+					// Detect potential infinite loops
+					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+					{
+						var currentEip = _cpu.GetEip();
+						if (currentEip == lastCheckEip)
+						{
+							stuckCounter++;
+							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+							{
+								_logger.LogWarning("[User32] {LogContext}: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
+									logContext, currentEip, stuckCounter);
+								executionSuccessful = false;
+								break;
+							}
+						}
+						else
+						{
+							stuckCounter = 0;
+							lastCheckEip = currentEip;
+						}
+					}
+
+					// Execute one instruction
+					var step = _cpu.SingleStep(_memory!);
+
+					// Handle COM vtable and import calls (if requested)
+					if (handleComAndImports && HandleComAndImportCalls(step, _cpu, _memory!, logContext, out var stepDesc, out var shouldBreak) && shouldBreak)
 					{
 						executionSuccessful = false;
 						break;
 					}
-				}
 
-				steps++;
+					steps++;
 
-				// Periodically check if we should yield to other threads
-				if (steps % YIELD_INTERVAL == 0)
-				{
-					var scheduler = _env.ThreadScheduler;
-					if (scheduler != null)
+					// Periodically check if we should yield to other threads
+					if (steps % YIELD_INTERVAL == 0)
 					{
-						scheduler.ProcessWaitTimeouts();
-						if (scheduler.ShouldContextSwitch())
+						var scheduler = _env.ThreadScheduler;
+						if (scheduler != null)
 						{
-							_logger.LogDebug("[User32] {LogContext}: Cooperative yield at {Steps} steps", logContext, steps);
+							scheduler.ProcessWaitTimeouts();
+							if (scheduler.ShouldContextSwitch())
+							{
+								_logger.LogDebug("[User32] {LogContext}: Cooperative yield at {Steps} steps", logContext, steps);
+							}
 						}
-					}
 
-					await Task.Yield();
+						await Task.Yield();
+					}
 				}
 			}
-		}
-		catch (Exception ex)
-		{
-			// Rethrow critical exceptions that should not be caught
-			if (ex is OutOfMemoryException || ex is StackOverflowException)
+			catch (Exception ex)
 			{
-				throw;
+				// Rethrow critical exceptions that should not be caught
+				if (ex is OutOfMemoryException || ex is StackOverflowException)
+				{
+					throw;
+				}
+
+				_logger.LogError(ex, "[User32] {LogContext}: Exception during execution: {ExMessage}", logContext, ex.Message);
+				executionSuccessful = false;
 			}
 
-			_logger.LogError(ex, "[User32] {LogContext}: Exception during execution: {ExMessage}", logContext, ex.Message);
-			executionSuccessful = false;
+			return executionSuccessful;
 		}
 
-		return executionSuccessful;
-	}
+		#endregion
 
-	#endregion
+		#region Async Callback Methods
 
-	#region Async Callback Methods
-
-	/// <summary>
-	/// Async version of timer callback execution that eliminates the need for STACK_SAFETY_MARGIN.
-	/// Uses async/await pattern for clean separation of host (C#) and guest (x86) execution stacks.
-	/// </summary>
-	/// <param name="timerProc">Address of the timer procedure in emulated memory</param>
-	/// <param name="hWnd">Window handle</param>
-	/// <param name="uMsg">Timer message (WM_TIMER)</param>
-	/// <param name="idEvent">Timer identifier</param>
-	/// <param name="dwTime">Current system time</param>
-	/// <param name="cancellationToken">Optional cancellation token</param>
-	/// <returns>Task that completes when callback execution finishes</returns>
-	private async Task CallTimerProcAsync(
-		uint timerProc,
-		uint hWnd,
-		uint uMsg,
-		uint idEvent,
-		uint dwTime,
-		CancellationToken cancellationToken = default)
-	{
-		if (_cpu == null || _memory == null)
+		/// <summary>
+		/// Async version of timer callback execution that eliminates the need for STACK_SAFETY_MARGIN.
+		/// Uses async/await pattern for clean separation of host (C#) and guest (x86) execution stacks.
+		/// </summary>
+		/// <param name="timerProc">Address of the timer procedure in emulated memory</param>
+		/// <param name="hWnd">Window handle</param>
+		/// <param name="uMsg">Timer message (WM_TIMER)</param>
+		/// <param name="idEvent">Timer identifier</param>
+		/// <param name="dwTime">Current system time</param>
+		/// <param name="cancellationToken">Optional cancellation token</param>
+		/// <returns>Task that completes when callback execution finishes</returns>
+		private async Task CallTimerProcAsync(
+			uint timerProc,
+			uint hWnd,
+			uint uMsg,
+			uint idEvent,
+			uint dwTime,
+			CancellationToken cancellationToken = default)
 		{
-			_logger.LogWarning("[User32] CallTimerProcAsync: CPU or Memory not available");
-			return;
+			if (_cpu == null || _memory == null)
+			{
+				_logger.LogWarning("[User32] CallTimerProcAsync: CPU or Memory not available");
+				return;
+			}
+
+			_logger.LogInformation("[User32] CallTimerProcAsync: Calling 0x{TimerProc:X8} for timer {IdEvent}", timerProc, idEvent);
+
+			// Validate callback address
+			if (timerProc == 0)
+			{
+				_logger.LogWarning("[User32] CallTimerProcAsync: Timer procedure address is NULL (0x00000000), aborting");
+				return;
+			}
+
+			// Save current CPU state
+			var savedEip = _cpu.GetEip();
+			var savedEsp = _cpu.GetRegister("ESP");
+			var savedEbp = _cpu.GetRegister("EBP");
+
+			// Define return address marker
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+			// Set up stack for stdcall convention (parameters pushed right-to-left)
+			// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
+			var esp = savedEsp;
+
+			// Push return address first
+			esp -= 4;
+			_memory.Write32(esp, RETURN_ADDRESS);
+
+			// Push parameters (right-to-left for stdcall)
+			// VOID CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
+			esp -= 4;
+			_memory.Write32(esp, dwTime);
+
+			esp -= 4;
+			_memory.Write32(esp, idEvent);
+
+			esp -= 4;
+			_memory.Write32(esp, uMsg);
+
+			esp -= 4;
+			_memory.Write32(esp, hWnd);
+
+			// Update CPU registers
+			_cpu.SetRegister("ESP", esp);
+			_cpu.SetEip(timerProc);
+
+			// Execute callback using the common helper method
+			// Note: handleComAndImports=true is required for User32 callbacks that may invoke COM objects
+			var executionSuccessful = await ExecuteCallbackAsync(RETURN_ADDRESS, "CallTimerProcAsync", handleComAndImports: true, cancellationToken).ConfigureAwait(false);
+
+			// Restore CPU state
+			_cpu.SetEip(savedEip);
+			_cpu.SetRegister("ESP", savedEsp);
+			_cpu.SetRegister("EBP", savedEbp);
+
+			_logger.LogInformation("[User32] CallTimerProcAsync: Completed {Status}", executionSuccessful ? "successfully" : "with errors");
 		}
 
-		_logger.LogInformation("[User32] CallTimerProcAsync: Calling 0x{TimerProc:X8} for timer {IdEvent}", timerProc, idEvent);
-
-		// Validate callback address
-		if (timerProc == 0)
+		/// <summary>
+		/// Async version of window enumeration callback execution that eliminates the need for STACK_SAFETY_MARGIN.
+		/// Uses async/await pattern for clean separation of host (C#) and guest (x86) execution stacks.
+		/// </summary>
+		/// <param name="enumProc">Address of the enumeration callback in emulated memory</param>
+		/// <param name="hWnd">Window handle to pass to callback</param>
+		/// <param name="lParam">Application-defined value</param>
+		/// <param name="cancellationToken">Optional cancellation token</param>
+		/// <returns>Return value from the callback (TRUE to continue, FALSE to stop)</returns>
+		private async Task<uint> CallEnumWindowsProcAsync(
+			uint enumProc,
+			uint hWnd,
+			uint lParam,
+			CancellationToken cancellationToken = default)
 		{
-			_logger.LogWarning("[User32] CallTimerProcAsync: Timer procedure address is NULL (0x00000000), aborting");
-			return;
+			if (_cpu == null || _memory == null)
+			{
+				_logger.LogWarning("[User32] CallEnumWindowsProcAsync: CPU or Memory not available");
+				return 0;
+			}
+
+			_logger.LogInformation("[User32] CallEnumWindowsProcAsync: Calling 0x{EnumProc:X8} for window 0x{HWnd:X8}", enumProc, hWnd);
+
+			// Validate callback address
+			if (enumProc == 0)
+			{
+				_logger.LogWarning("[User32] CallEnumWindowsProcAsync: Enumeration callback address is NULL (0x00000000), aborting");
+				return 0;
+			}
+
+			// Save current CPU state
+			var savedEip = _cpu.GetEip();
+			var savedEsp = _cpu.GetRegister("ESP");
+			var savedEbp = _cpu.GetRegister("EBP");
+
+			// Define return address marker
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+			// Set up stack for stdcall convention (parameters pushed right-to-left)
+			// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
+			var esp = savedEsp;
+
+			// Push return address first
+			esp -= 4;
+			_memory.Write32(esp, RETURN_ADDRESS);
+
+			// Push parameters (right-to-left for stdcall)
+			// BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
+			esp -= 4;
+			_memory.Write32(esp, lParam);
+
+			esp -= 4;
+			_memory.Write32(esp, hWnd);
+
+			// Update CPU registers
+			_cpu.SetRegister("ESP", esp);
+			_cpu.SetEip(enumProc);
+
+			// Execute callback using the common helper method
+			var executionSuccessful = await ExecuteCallbackAsync(RETURN_ADDRESS, "CallEnumWindowsProcAsync", handleComAndImports: true, cancellationToken).ConfigureAwait(false);
+
+			// Get return value from EAX, but only if execution was successful
+			var returnValue = executionSuccessful ? _cpu.GetRegister("EAX") : 0u;
+
+			// Restore CPU state
+			_cpu.SetEip(savedEip);
+			_cpu.SetRegister("ESP", savedEsp);
+			_cpu.SetRegister("EBP", savedEbp);
+
+			_logger.LogInformation("[User32] CallEnumWindowsProcAsync: Completed with return value 0x{ReturnValue:X8}", returnValue);
+
+			return returnValue;
 		}
 
-		// Save current CPU state
-		var savedEip = _cpu.GetEip();
-		var savedEsp = _cpu.GetRegister("ESP");
-		var savedEbp = _cpu.GetRegister("EBP");
-
-		// Define return address marker
-		const uint RETURN_ADDRESS = 0xDEADBEEF;
-
-		// Set up stack for stdcall convention (parameters pushed right-to-left)
-		// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
-		var esp = savedEsp;
-
-		// Push return address first
-		esp -= 4;
-		_memory.Write32(esp, RETURN_ADDRESS);
-
-		// Push parameters (right-to-left for stdcall)
-		// VOID CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
-		esp -= 4;
-		_memory.Write32(esp, dwTime);
-
-		esp -= 4;
-		_memory.Write32(esp, idEvent);
-
-		esp -= 4;
-		_memory.Write32(esp, uMsg);
-
-		esp -= 4;
-		_memory.Write32(esp, hWnd);
-
-		// Update CPU registers
-		_cpu.SetRegister("ESP", esp);
-		_cpu.SetEip(timerProc);
-
-		// Execute callback using the common helper method
-		// Note: handleComAndImports=true is required for User32 callbacks that may invoke COM objects
-		var executionSuccessful = await ExecuteCallbackAsync(RETURN_ADDRESS, "CallTimerProcAsync", handleComAndImports: true, cancellationToken).ConfigureAwait(false);
-
-		// Restore CPU state
-		_cpu.SetEip(savedEip);
-		_cpu.SetRegister("ESP", savedEsp);
-		_cpu.SetRegister("EBP", savedEbp);
-
-		_logger.LogInformation("[User32] CallTimerProcAsync: Completed {Status}", executionSuccessful ? "successfully" : "with errors");
-	}
-
-	/// <summary>
-	/// Async version of window enumeration callback execution that eliminates the need for STACK_SAFETY_MARGIN.
-	/// Uses async/await pattern for clean separation of host (C#) and guest (x86) execution stacks.
-	/// </summary>
-	/// <param name="enumProc">Address of the enumeration callback in emulated memory</param>
-	/// <param name="hWnd">Window handle to pass to callback</param>
-	/// <param name="lParam">Application-defined value</param>
-	/// <param name="cancellationToken">Optional cancellation token</param>
-	/// <returns>Return value from the callback (TRUE to continue, FALSE to stop)</returns>
-	private async Task<uint> CallEnumWindowsProcAsync(
-		uint enumProc,
-		uint hWnd,
-		uint lParam,
-		CancellationToken cancellationToken = default)
-	{
-		if (_cpu == null || _memory == null)
+		/// <summary>
+		/// Async version of hook procedure execution that eliminates the need for STACK_SAFETY_MARGIN.
+		/// Uses async/await pattern for clean separation of host (C#) and guest (x86) execution stacks.
+		/// </summary>
+		/// <param name="hookProc">Address of the hook procedure in emulated memory</param>
+		/// <param name="nCode">Hook code</param>
+		/// <param name="wParam">Message parameter</param>
+		/// <param name="lParam">Message parameter</param>
+		/// <param name="cancellationToken">Optional cancellation token</param>
+		/// <returns>Return value from the hook procedure</returns>
+		private async Task<uint> CallHookProcAsync(
+			uint hookProc,
+			int nCode,
+			uint wParam,
+			uint lParam,
+			CancellationToken cancellationToken = default)
 		{
-			_logger.LogWarning("[User32] CallEnumWindowsProcAsync: CPU or Memory not available");
+			if (_cpu == null || _memory == null)
+			{
+				_logger.LogWarning("[User32] CallHookProcAsync: CPU or Memory not available");
+				return 0;
+			}
+
+			_logger.LogInformation("[User32] CallHookProcAsync: Calling 0x{HookProc:X8} with nCode={NCode}", hookProc, nCode);
+
+			// Validate callback address
+			if (hookProc == 0)
+			{
+				_logger.LogWarning("[User32] CallHookProcAsync: Hook procedure address is NULL (0x00000000), aborting");
+				return 0;
+			}
+
+			// Save current CPU state
+			var savedEip = _cpu.GetEip();
+			var savedEsp = _cpu.GetRegister("ESP");
+			var savedEbp = _cpu.GetRegister("EBP");
+
+			// Define return address marker
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+			// Set up stack for stdcall convention (parameters pushed right-to-left)
+			// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
+			var esp = savedEsp;
+
+			// Push return address first
+			esp -= 4;
+			_memory.Write32(esp, RETURN_ADDRESS);
+
+			// Push parameters (right-to-left for stdcall)
+			// LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam)
+			esp -= 4;
+			_memory.Write32(esp, lParam);
+
+			esp -= 4;
+			_memory.Write32(esp, wParam);
+
+			esp -= 4;
+			_memory.Write32(esp, (uint)nCode);
+
+			// Update CPU registers
+			_cpu.SetRegister("ESP", esp);
+			_cpu.SetEip(hookProc);
+
+			// Execute callback using the common helper method
+			var executionSuccessful = await ExecuteCallbackAsync(RETURN_ADDRESS, "CallHookProcAsync", handleComAndImports: true, cancellationToken).ConfigureAwait(false);
+
+			// Get return value from EAX, but only if execution was successful
+			var returnValue = executionSuccessful ? _cpu.GetRegister("EAX") : 0u;
+
+			// Restore CPU state
+			_cpu.SetEip(savedEip);
+			_cpu.SetRegister("ESP", savedEsp);
+			_cpu.SetRegister("EBP", savedEbp);
+
+			_logger.LogInformation("[User32] CallHookProcAsync: Completed with return value 0x{ReturnValue:X8}", returnValue);
+
+			return returnValue;
+		}
+
+		#endregion
+
+		#region Menu Functions
+
+		/// <summary>
+		/// Creates a popup menu.
+		/// HMENU CreatePopupMenu();
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint CreatePopupMenu()
+		{
+			_logger.LogInformation("[User32] CreatePopupMenu()");
+
+			// Generate a new unique menu handle (using distinct handle range)
+			var menuHandle = 0xABCD0000u + _nextMenuHandle++;
+
+			_logger.LogInformation("[User32] CreatePopupMenu: Created menu handle 0x{MenuHandle:X8}", menuHandle);
+
+			return menuHandle;
+		}
+
+		/// <summary>
+		/// Appends a new item to the end of the specified menu bar, drop-down menu, submenu, or shortcut menu.
+		/// BOOL AppendMenuA(
+		///   [in] HMENU   hMenu,
+		///   [in] UINT    uFlags,
+		///   [in] UINT_PTR uIDNewItem,
+		///   [in] LPCSTR  lpNewItem
+		/// );
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint AppendMenuA(uint hMenu, uint uFlags, uint uIDNewItem, uint lpNewItem)
+		{
+			string itemText = "";
+			if (lpNewItem != 0)
+			{
+				itemText = _env.ReadAnsiString(lpNewItem);
+			}
+
+			_logger.LogInformation("[User32] AppendMenuA(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X8}, uIDNewItem=0x{UIDNewItem:X8}, lpNewItem=\"{ItemText}\")",
+				hMenu, uFlags, uIDNewItem, itemText);
+
+			// For now, just return success
+			// A full implementation would need to track menu items and structure
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Displays a shortcut menu at the specified location and tracks the selection of items.
+		/// BOOL TrackPopupMenu(
+		///   [in] HMENU  hMenu,
+		///   [in] UINT   uFlags,
+		///   [in] int    x,
+		///   [in] int    y,
+		///   [in] int    nReserved,
+		///   [in] HWND   hWnd,
+		///   [in] const RECT *prcRect
+		/// );
+		/// </summary>
+		[DllModuleExport(28)]
+		private uint TrackPopupMenu(uint hMenu, uint uFlags, int x, int y, int nReserved, uint hWnd, uint prcRect)
+		{
+			_logger.LogInformation("[User32] TrackPopupMenu(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X8}, x={X}, y={Y}, nReserved={NReserved}, hWnd=0x{HWnd:X8}, prcRect=0x{PrcRect:X8})",
+				hMenu, uFlags, x, y, nReserved, hWnd, prcRect);
+
+			// For stub implementation, return 0 (no item selected or menu cancelled)
+			// A full implementation would need to:
+			// 1. Display the popup menu at (x, y)
+			// 2. Track mouse/keyboard input
+			// 3. Return the selected menu item ID or 0 if cancelled
+
+			_logger.LogInformation("[User32] TrackPopupMenu: Stub - returning 0 (no selection)");
 			return 0;
 		}
 
-		_logger.LogInformation("[User32] CallEnumWindowsProcAsync: Calling 0x{EnumProc:X8} for window 0x{HWnd:X8}", enumProc, hWnd);
-
-		// Validate callback address
-		if (enumProc == 0)
+		/// <summary>
+		/// Converts a character string or a single character to lowercase.
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint CharLowerA(in LpStr lpsz)
 		{
-			_logger.LogWarning("[User32] CallEnumWindowsProcAsync: Enumeration callback address is NULL (0x00000000), aborting");
-			return 0;
+			var str = _env.ReadAnsiString(lpsz.Address) ?? "";
+			_logger.LogInformation("[User32] CharLowerA(lpsz='{Lpsz}')", str);
+			var lower = str.ToLowerInvariant();
+			_env.WriteAnsiStringAt(lpsz.Address, lower);
+			return lpsz.Address;
 		}
 
-		// Save current CPU state
-		var savedEip = _cpu.GetEip();
-		var savedEsp = _cpu.GetRegister("ESP");
-		var savedEbp = _cpu.GetRegister("EBP");
-
-		// Define return address marker
-		const uint RETURN_ADDRESS = 0xDEADBEEF;
-
-		// Set up stack for stdcall convention (parameters pushed right-to-left)
-		// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
-		var esp = savedEsp;
-
-		// Push return address first
-		esp -= 4;
-		_memory.Write32(esp, RETURN_ADDRESS);
-
-		// Push parameters (right-to-left for stdcall)
-		// BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
-		esp -= 4;
-		_memory.Write32(esp, lParam);
-
-		esp -= 4;
-		_memory.Write32(esp, hWnd);
-
-		// Update CPU registers
-		_cpu.SetRegister("ESP", esp);
-		_cpu.SetEip(enumProc);
-
-		// Execute callback using the common helper method
-		var executionSuccessful = await ExecuteCallbackAsync(RETURN_ADDRESS, "CallEnumWindowsProcAsync", handleComAndImports: true, cancellationToken).ConfigureAwait(false);
-
-		// Get return value from EAX, but only if execution was successful
-		var returnValue = executionSuccessful ? _cpu.GetRegister("EAX") : 0u;
-
-		// Restore CPU state
-		_cpu.SetEip(savedEip);
-		_cpu.SetRegister("ESP", savedEsp);
-		_cpu.SetRegister("EBP", savedEbp);
-
-		_logger.LogInformation("[User32] CallEnumWindowsProcAsync: Completed with return value 0x{ReturnValue:X8}", returnValue);
-
-		return returnValue;
-	}
-
-	/// <summary>
-	/// Async version of hook procedure execution that eliminates the need for STACK_SAFETY_MARGIN.
-	/// Uses async/await pattern for clean separation of host (C#) and guest (x86) execution stacks.
-	/// </summary>
-	/// <param name="hookProc">Address of the hook procedure in emulated memory</param>
-	/// <param name="nCode">Hook code</param>
-	/// <param name="wParam">Message parameter</param>
-	/// <param name="lParam">Message parameter</param>
-	/// <param name="cancellationToken">Optional cancellation token</param>
-	/// <returns>Return value from the hook procedure</returns>
-	private async Task<uint> CallHookProcAsync(
-		uint hookProc,
-		int nCode,
-		uint wParam,
-		uint lParam,
-		CancellationToken cancellationToken = default)
-	{
-		if (_cpu == null || _memory == null)
+		/// <summary>
+		/// Converts a specified number of characters in a buffer to uppercase.
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint CharUpperBuffA(in LpStr lpsz, uint cchLength)
 		{
-			_logger.LogWarning("[User32] CallHookProcAsync: CPU or Memory not available");
-			return 0;
+			var str = _env.ReadAnsiString(lpsz.Address, (int)cchLength) ?? "";
+			_logger.LogInformation("[User32] CharUpperBuffA(lpsz='{Lpsz}', cchLength={CchLength})", str, cchLength);
+			var upper = str.ToUpperInvariant();
+			_env.WriteAnsiStringAt(lpsz.Address, upper);
+			return cchLength;
 		}
 
-		_logger.LogInformation("[User32] CallHookProcAsync: Calling 0x{HookProc:X8} with nCode={NCode}", hookProc, nCode);
-
-		// Validate callback address
-		if (hookProc == 0)
+		/// <summary>
+		/// Creates a new shape for the system caret and assigns ownership of the caret to the specified window.
+		/// </summary>
+		[DllModuleExport(16, IsStub = true)]
+		private uint CreateCaret(uint hWnd, uint hBitmap, int nWidth, int nHeight)
 		{
-			_logger.LogWarning("[User32] CallHookProcAsync: Hook procedure address is NULL (0x00000000), aborting");
-			return 0;
+			_logger.LogInformation("[User32] CreateCaret(hWnd=0x{HWnd:X8}, hBitmap=0x{HBitmap:X8}, nWidth={NWidth}, nHeight={NHeight})",
+				hWnd, hBitmap, nWidth, nHeight);
+			return 1;
 		}
 
-		// Save current CPU state
-		var savedEip = _cpu.GetEip();
-		var savedEsp = _cpu.GetRegister("ESP");
-		var savedEbp = _cpu.GetRegister("EBP");
-
-		// Define return address marker
-		const uint RETURN_ADDRESS = 0xDEADBEEF;
-
-		// Set up stack for stdcall convention (parameters pushed right-to-left)
-		// NOTE: No STACK_SAFETY_MARGIN needed! The async architecture provides clean stack separation.
-		var esp = savedEsp;
-
-		// Push return address first
-		esp -= 4;
-		_memory.Write32(esp, RETURN_ADDRESS);
-
-		// Push parameters (right-to-left for stdcall)
-		// LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam)
-		esp -= 4;
-		_memory.Write32(esp, lParam);
-
-		esp -= 4;
-		_memory.Write32(esp, wParam);
-
-		esp -= 4;
-		_memory.Write32(esp, (uint)nCode);
-
-		// Update CPU registers
-		_cpu.SetRegister("ESP", esp);
-		_cpu.SetEip(hookProc);
-
-		// Execute callback using the common helper method
-		var executionSuccessful = await ExecuteCallbackAsync(RETURN_ADDRESS, "CallHookProcAsync", handleComAndImports: true, cancellationToken).ConfigureAwait(false);
-
-		// Get return value from EAX, but only if execution was successful
-		var returnValue = executionSuccessful ? _cpu.GetRegister("EAX") : 0u;
-
-		// Restore CPU state
-		_cpu.SetEip(savedEip);
-		_cpu.SetRegister("ESP", savedEsp);
-		_cpu.SetRegister("EBP", savedEbp);
-
-		_logger.LogInformation("[User32] CallHookProcAsync: Completed with return value 0x{ReturnValue:X8}", returnValue);
-
-		return returnValue;
-	}
-
-	#endregion
-
-	#region Menu Functions
-
-	/// <summary>
-	/// Creates a popup menu.
-	/// HMENU CreatePopupMenu();
-	/// </summary>
-	[DllModuleExport(0)]
-	private uint CreatePopupMenu()
-	{
-		_logger.LogInformation("[User32] CreatePopupMenu()");
-
-		// Generate a new unique menu handle (using distinct handle range)
-		var menuHandle = 0xABCD0000u + _nextMenuHandle++;
-		
-		_logger.LogInformation("[User32] CreatePopupMenu: Created menu handle 0x{MenuHandle:X8}", menuHandle);
-		
-		return menuHandle;
-	}
-
-	/// <summary>
-	/// Appends a new item to the end of the specified menu bar, drop-down menu, submenu, or shortcut menu.
-	/// BOOL AppendMenuA(
-	///   [in] HMENU   hMenu,
-	///   [in] UINT    uFlags,
-	///   [in] UINT_PTR uIDNewItem,
-	///   [in] LPCSTR  lpNewItem
-	/// );
-	/// </summary>
-	[DllModuleExport(16)]
-	private uint AppendMenuA(uint hMenu, uint uFlags, uint uIDNewItem, uint lpNewItem)
-	{
-		string itemText = "";
-		if (lpNewItem != 0)
+		/// <summary>
+		/// Destroys the caret's current shape, frees the caret from the window, and removes the caret from the screen.
+		/// </summary>
+		[DllModuleExport(0, IsStub = true)]
+		private uint DestroyCaret()
 		{
-			itemText = _env.ReadAnsiString(lpNewItem);
+			_logger.LogInformation("[User32] DestroyCaret()");
+			return 1;
 		}
 
-		_logger.LogInformation("[User32] AppendMenuA(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X8}, uIDNewItem=0x{UIDNewItem:X8}, lpNewItem=\"{ItemText}\")",
-			hMenu, uFlags, uIDNewItem, itemText);
+		/// <summary>
+		/// Moves the caret to the specified coordinates in the client area of a window.
+		/// </summary>
+		[DllModuleExport(8, IsStub = true)]
+		private uint SetCaretPos(int x, int y)
+		{
+			_logger.LogInformation("[User32] SetCaretPos(x={X}, y={Y})", x, y);
+			return 1;
+		}
 
-		// For now, just return success
-		// A full implementation would need to track menu items and structure
-		return 1; // TRUE
+		/// <summary>
+		/// Retrieves the current double-click time for the mouse.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint GetDoubleClickTime()
+		{
+			_logger.LogInformation("[User32] GetDoubleClickTime()");
+			return 500; // 500ms default
+		}
+
+		/// <summary>
+		/// Deletes a menu item or detaches a submenu from the specified menu.
+		/// </summary>
+		[DllModuleExport(12, IsStub = true)]
+		private uint DeleteMenu(uint hMenu, uint uPosition, uint uFlags)
+		{
+			_logger.LogInformation("[User32] DeleteMenu(hMenu=0x{HMenu:X8}, uPosition={UPosition}, uFlags=0x{UFlags:X8})",
+				hMenu, uPosition, uFlags);
+			return 1;
+		}
+
+		/// <summary>
+		/// Inserts a new menu item into a menu, moving other items down the menu.
+		/// </summary>
+		[DllModuleExport(20, IsStub = true)]
+		private uint InsertMenuA(uint hMenu, uint uPosition, uint uFlags, uint uIDNewItem, in LpcStr lpNewItem)
+		{
+			var itemName = lpNewItem.Read(_env.Memory) ?? "";
+			_logger.LogInformation("[User32] InsertMenuA(hMenu=0x{HMenu:X8}, uPosition={UPosition}, uFlags=0x{UFlags:X8}, uIDNewItem={UIDNewItem}, lpNewItem='{LpNewItem}')",
+				hMenu, uPosition, uFlags, uIDNewItem, itemName);
+			return 1;
+		}
+
+		/// <summary>
+		/// Inserts a new menu item at the specified position in a menu.
+		/// </summary>
+		[DllModuleExport(16, IsStub = true)]
+		private uint InsertMenuItemA(uint hMenu, uint uItem, uint fByPosition, uint lpmii)
+		{
+			_logger.LogInformation("[User32] InsertMenuItemA(hMenu=0x{HMenu:X8}, uItem={UItem}, fByPosition={FByPosition}, lpmii=0x{Lpmii:X8})",
+				hMenu, uItem, fByPosition, lpmii);
+			return 1;
+		}
+
+		/// <summary>
+		/// Retrieves information about a menu item.
+		/// </summary>
+		[DllModuleExport(16, IsStub = true)]
+		private uint GetMenuItemInfoA(uint hMenu, uint uItem, uint fByPosition, uint lpmii)
+		{
+			_logger.LogInformation("[User32] GetMenuItemInfoA(hMenu=0x{HMenu:X8}, uItem={UItem}, fByPosition={FByPosition}, lpmii=0x{Lpmii:X8})",
+				hMenu, uItem, fByPosition, lpmii);
+			return 0; // Not found
+		}
+
+		/// <summary>
+		/// Changes information about a menu item.
+		/// </summary>
+		[DllModuleExport(16, IsStub = true)]
+		private uint SetMenuItemInfoA(uint hMenu, uint uItem, uint fByPosition, uint lpmii)
+		{
+			_logger.LogInformation("[User32] SetMenuItemInfoA(hMenu=0x{HMenu:X8}, uItem={UItem}, fByPosition={FByPosition}, lpmii=0x{Lpmii:X8})",
+				hMenu, uItem, fByPosition, lpmii);
+			return 1;
+		}
+
+		/// <summary>
+		/// Sets the default menu item for the specified menu.
+		/// </summary>
+		[DllModuleExport(12, IsStub = true)]
+		private uint SetMenuDefaultItem(uint hMenu, uint uItem, uint fByPos)
+		{
+			_logger.LogInformation("[User32] SetMenuDefaultItem(hMenu=0x{HMenu:X8}, uItem={UItem}, fByPos={FByPos})",
+				hMenu, uItem, fByPos);
+			return 1;
+		}
+
+		/// <summary>
+		/// Scrolls the contents of the specified window's client area.
+		/// </summary>
+		[DllModuleExport(32, IsStub = true)]
+		private uint ScrollWindowEx(uint hWnd, int dx, int dy, uint prcScroll, uint prcClip, uint hrgnUpdate, uint prcUpdate, uint flags)
+		{
+			_logger.LogInformation("[User32] ScrollWindowEx(hWnd=0x{HWnd:X8}, dx={Dx}, dy={Dy}, flags=0x{Flags:X8})",
+				hWnd, dx, dy, flags);
+			return 1;
+		}
+
+		/// <summary>
+		/// Sets the show state and the restored, minimized, and maximized positions of the specified window.
+		/// </summary>
+		[DllModuleExport(8, IsStub = true)]
+		private uint SetWindowPlacement(uint hWnd, uint lpwndpl)
+		{
+			_logger.LogInformation("[User32] SetWindowPlacement(hWnd=0x{HWnd:X8}, lpwndpl=0x{Lpwndpl:X8})",
+				hWnd, lpwndpl);
+			return 1;
+		}
+
+		/// <summary>
+		/// Animates the caption of a window to indicate the opening of an icon or the minimizing or maximizing of a window.
+		/// </summary>
+		[DllModuleExport(16, IsStub = true)]
+		private uint DrawAnimatedRects(uint hWnd, int idAni, uint lprcFrom, uint lprcTo)
+		{
+			_logger.LogInformation("[User32] DrawAnimatedRects(hWnd=0x{HWnd:X8}, idAni={IdAni})",
+				hWnd, idAni);
+			return 1;
+		}
+
+		/// <summary>
+		/// Empties the clipboard and frees handles to data in the clipboard.
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint EmptyClipboard()
+		{
+			_logger.LogInformation("[User32] EmptyClipboard()");
+			return 1;
+		}
+
+		/// <summary>
+		/// Places data on the clipboard in a specified clipboard format.
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint SetClipboardData(uint uFormat, uint hMem)
+		{
+			_logger.LogInformation("[User32] SetClipboardData(uFormat={UFormat}, hMem=0x{HMem:X8})", uFormat, hMem);
+			return hMem;
+		}
+
+		#endregion
 	}
-
-	/// <summary>
-	/// Displays a shortcut menu at the specified location and tracks the selection of items.
-	/// BOOL TrackPopupMenu(
-	///   [in] HMENU  hMenu,
-	///   [in] UINT   uFlags,
-	///   [in] int    x,
-	///   [in] int    y,
-	///   [in] int    nReserved,
-	///   [in] HWND   hWnd,
-	///   [in] const RECT *prcRect
-	/// );
-	/// </summary>
-	[DllModuleExport(28)]
-	private uint TrackPopupMenu(uint hMenu, uint uFlags, int x, int y, int nReserved, uint hWnd, uint prcRect)
-	{
-		_logger.LogInformation("[User32] TrackPopupMenu(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X8}, x={X}, y={Y}, nReserved={NReserved}, hWnd=0x{HWnd:X8}, prcRect=0x{PrcRect:X8})",
-			hMenu, uFlags, x, y, nReserved, hWnd, prcRect);
-
-		// For stub implementation, return 0 (no item selected or menu cancelled)
-		// A full implementation would need to:
-		// 1. Display the popup menu at (x, y)
-		// 2. Track mouse/keyboard input
-		// 3. Return the selected menu item ID or 0 if cancelled
-		
-		_logger.LogInformation("[User32] TrackPopupMenu: Stub - returning 0 (no selection)");
-		return 0;
-	}
-
-	#endregion
-}
 }
