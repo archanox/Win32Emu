@@ -5752,13 +5752,10 @@ namespace Win32Emu.Win32.Modules
 					var step = _cpu.SingleStep(_memory!);
 
 					// Handle COM vtable and import calls (if requested)
-					if (handleComAndImports)
+					if (handleComAndImports && HandleComAndImportCalls(step, _cpu, _memory!, logContext, out var stepDesc, out var shouldBreak) && shouldBreak)
 					{
-						if (HandleComAndImportCalls(step, _cpu, _memory!, logContext, out var stepDesc, out var shouldBreak) && shouldBreak)
-						{
-							executionSuccessful = false;
-							break;
-						}
+						executionSuccessful = false;
+						break;
 					}
 
 					steps++;

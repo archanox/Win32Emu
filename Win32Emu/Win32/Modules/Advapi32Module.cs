@@ -1000,10 +1000,4 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		// Remote registry not supported
 		return 53; // ERROR_BAD_NETPATH
 	}
-
-	private class ServiceData
-	{
-		public string Name { get; set; } = string.Empty;
-		public uint Handle { get; set; }
-	}
 }

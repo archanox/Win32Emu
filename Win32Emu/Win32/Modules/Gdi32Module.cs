@@ -2047,7 +2047,7 @@ namespace Win32Emu.Win32.Modules
 		private uint SelectClipRgn(uint hdc, uint hrgn)
 		{
 			_logger.LogInformation("[Gdi32] SelectClipRgn(hdc=0x{Hdc:X8}, hrgn=0x{Hrgn:X8})", hdc, hrgn);
-			return hrgn == 0 ? 1u : 2u; // SIMPLEREGION if non-null, else NULLREGION
+			return hrgn == 0 ? 1u : 2u; // NULLREGION (1) if null, SIMPLEREGION (2) if non-null
 		}
 
 		/// <summary>
