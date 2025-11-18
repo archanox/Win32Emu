@@ -127,35 +127,35 @@ namespace Win32Emu.Win32.Modules
 			_ddrawObjects[ddrawHandle] = ddrawObj;
 
 // Create COM vtable for IDirectDraw interface
-			var vtableMethods = new Dictionary<string, ComMethodInfo>
+			var vtableMethods = new List<KeyValuePair<string, ComMethodInfo>>
 			{
-				{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
-				{ "AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) },
-				{ "Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem)) },
-				{ "Compact", ComVtableDispatcher.FromDelegate<IDirectDraw.Compact>((cpu, mem) => DDraw_Compact(cpu, mem)) },
-				{ "CreateClipper", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateClipper>((cpu, mem) => DDraw_CreateClipper(cpu, mem)) },
-				{ "CreatePalette", ComVtableDispatcher.FromDelegate<IDirectDraw.CreatePalette>((cpu, mem) => DDraw_CreatePalette(cpu, mem)) },
-				{ "CreateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateSurface>((cpu, mem) => DDraw_CreateSurface(cpu, mem)) },
-				{ "DuplicateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.DuplicateSurface>((cpu, mem) => DDraw_DuplicateSurface(cpu, mem)) },
-				{ "EnumDisplayModes", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumDisplayModes>((cpu, mem) => DDraw_EnumDisplayModes(cpu, mem)) },
-				{ "EnumSurfaces", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumSurfaces>((cpu, mem) => DDraw_EnumSurfaces(cpu, mem)) },
-				{ "FlipToGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.FlipToGDISurface>((cpu, mem) => DDraw_FlipToGDISurface(cpu, mem)) },
-				{ "GetCaps", ComVtableDispatcher.FromDelegate<IDirectDraw.GetCaps>((cpu, mem) => DDraw_GetCaps(cpu, mem)) },
-				{ "GetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.GetDisplayMode>((cpu, mem) => DDraw_GetDisplayMode(cpu, mem)) },
-				{ "GetFourCCCodes", ComVtableDispatcher.FromDelegate<IDirectDraw.GetFourCCCodes>((cpu, mem) => DDraw_GetFourCCCodes(cpu, mem)) },
-				{ "GetGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.GetGDISurface>((cpu, mem) => DDraw_GetGDISurface(cpu, mem)) },
-				{ "GetMonitorFrequency", ComVtableDispatcher.FromDelegate<IDirectDraw.GetMonitorFrequency>((cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem)) },
-				{ "GetScanLine", ComVtableDispatcher.FromDelegate<IDirectDraw.GetScanLine>((cpu, mem) => DDraw_GetScanLine(cpu, mem)) },
-				{ "GetVerticalBlankStatus", ComVtableDispatcher.FromDelegate<IDirectDraw.GetVerticalBlankStatus>((cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem)) },
-				{ "Initialize", ComVtableDispatcher.FromDelegate<IDirectDraw.Initialize>((cpu, mem) => DDraw_Initialize(cpu, mem)) },
-				{ "RestoreDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.RestoreDisplayMode>((cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem)) },
-				{ "SetCooperativeLevel", ComVtableDispatcher.FromDelegate<IDirectDraw.SetCooperativeLevel>((cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle)) },
-				{ "SetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.SetDisplayMode>((cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle)) },
-				{ "WaitForVerticalBlank", ComVtableDispatcher.FromDelegate<IDirectDraw.WaitForVerticalBlank>((cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem)) }
+				new("QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem))),
+				new("AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem))),
+				new("Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem))),
+				new("Compact", ComVtableDispatcher.FromDelegate<IDirectDraw.Compact>((cpu, mem) => DDraw_Compact(cpu, mem))),
+				new("CreateClipper", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateClipper>((cpu, mem) => DDraw_CreateClipper(cpu, mem))),
+				new("CreatePalette", ComVtableDispatcher.FromDelegate<IDirectDraw.CreatePalette>((cpu, mem) => DDraw_CreatePalette(cpu, mem))),
+				new("CreateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateSurface>((cpu, mem) => DDraw_CreateSurface(cpu, mem))),
+				new("DuplicateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.DuplicateSurface>((cpu, mem) => DDraw_DuplicateSurface(cpu, mem))),
+				new("EnumDisplayModes", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumDisplayModes>((cpu, mem) => DDraw_EnumDisplayModes(cpu, mem))),
+				new("EnumSurfaces", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumSurfaces>((cpu, mem) => DDraw_EnumSurfaces(cpu, mem))),
+				new("FlipToGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.FlipToGDISurface>((cpu, mem) => DDraw_FlipToGDISurface(cpu, mem))),
+				new("GetCaps", ComVtableDispatcher.FromDelegate<IDirectDraw.GetCaps>((cpu, mem) => DDraw_GetCaps(cpu, mem))),
+				new("GetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.GetDisplayMode>((cpu, mem) => DDraw_GetDisplayMode(cpu, mem))),
+				new("GetFourCCCodes", ComVtableDispatcher.FromDelegate<IDirectDraw.GetFourCCCodes>((cpu, mem) => DDraw_GetFourCCCodes(cpu, mem))),
+				new("GetGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.GetGDISurface>((cpu, mem) => DDraw_GetGDISurface(cpu, mem))),
+				new("GetMonitorFrequency", ComVtableDispatcher.FromDelegate<IDirectDraw.GetMonitorFrequency>((cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem))),
+				new("GetScanLine", ComVtableDispatcher.FromDelegate<IDirectDraw.GetScanLine>((cpu, mem) => DDraw_GetScanLine(cpu, mem))),
+				new("GetVerticalBlankStatus", ComVtableDispatcher.FromDelegate<IDirectDraw.GetVerticalBlankStatus>((cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem))),
+				new("Initialize", ComVtableDispatcher.FromDelegate<IDirectDraw.Initialize>((cpu, mem) => DDraw_Initialize(cpu, mem))),
+				new("RestoreDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.RestoreDisplayMode>((cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem))),
+				new("SetCooperativeLevel", ComVtableDispatcher.FromDelegate<IDirectDraw.SetCooperativeLevel>((cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle))),
+				new("SetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.SetDisplayMode>((cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle))),
+				new("WaitForVerticalBlank", ComVtableDispatcher.FromDelegate<IDirectDraw.WaitForVerticalBlank>((cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem)))
 			};
 
 // Create the COM object with vtable
-			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDraw", vtableMethods);
+			var comObjectAddr = _env.ComDispatcher.CreateComObjectOrdered("IDirectDraw", vtableMethods);
 
 			// Store the COM object address in the DirectDraw object for reverse lookup
 			ddrawObj.ComObjectAddress = comObjectAddr;
@@ -215,35 +215,37 @@ namespace Win32Emu.Win32.Modules
 			_ddrawObjects[ddrawHandle] = ddrawObj;
 
 			// Create COM vtable for IDirectDraw interface
-			var vtableMethods = new Dictionary<string, ComMethodInfo>
+			// IMPORTANT: Methods MUST be in exact COM interface order
+			// Using List<KeyValuePair> to guarantee insertion order
+			var vtableMethods = new List<KeyValuePair<string, ComMethodInfo>>
 			{
-				{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
-				{ "AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) },
-				{ "Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem)) },
-				{ "Compact", ComVtableDispatcher.FromDelegate<IDirectDraw.Compact>((cpu, mem) => DDraw_Compact(cpu, mem)) },
-				{ "CreateClipper", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateClipper>((cpu, mem) => DDraw_CreateClipper(cpu, mem)) },
-				{ "CreatePalette", ComVtableDispatcher.FromDelegate<IDirectDraw.CreatePalette>((cpu, mem) => DDraw_CreatePalette(cpu, mem)) },
-				{ "CreateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateSurface>((cpu, mem) => DDraw_CreateSurface(cpu, mem)) },
-				{ "DuplicateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.DuplicateSurface>((cpu, mem) => DDraw_DuplicateSurface(cpu, mem)) },
-				{ "EnumDisplayModes", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumDisplayModes>((cpu, mem) => DDraw_EnumDisplayModes(cpu, mem)) },
-				{ "EnumSurfaces", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumSurfaces>((cpu, mem) => DDraw_EnumSurfaces(cpu, mem)) },
-				{ "FlipToGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.FlipToGDISurface>((cpu, mem) => DDraw_FlipToGDISurface(cpu, mem)) },
-				{ "GetCaps", ComVtableDispatcher.FromDelegate<IDirectDraw.GetCaps>((cpu, mem) => DDraw_GetCaps(cpu, mem)) },
-				{ "GetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.GetDisplayMode>((cpu, mem) => DDraw_GetDisplayMode(cpu, mem)) },
-				{ "GetFourCCCodes", ComVtableDispatcher.FromDelegate<IDirectDraw.GetFourCCCodes>((cpu, mem) => DDraw_GetFourCCCodes(cpu, mem)) },
-				{ "GetGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.GetGDISurface>((cpu, mem) => DDraw_GetGDISurface(cpu, mem)) },
-				{ "GetMonitorFrequency", ComVtableDispatcher.FromDelegate<IDirectDraw.GetMonitorFrequency>((cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem)) },
-				{ "GetScanLine", ComVtableDispatcher.FromDelegate<IDirectDraw.GetScanLine>((cpu, mem) => DDraw_GetScanLine(cpu, mem)) },
-				{ "GetVerticalBlankStatus", ComVtableDispatcher.FromDelegate<IDirectDraw.GetVerticalBlankStatus>((cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem)) },
-				{ "Initialize", ComVtableDispatcher.FromDelegate<IDirectDraw.Initialize>((cpu, mem) => DDraw_Initialize(cpu, mem)) },
-				{ "RestoreDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.RestoreDisplayMode>((cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem)) },
-				{ "SetCooperativeLevel", ComVtableDispatcher.FromDelegate<IDirectDraw.SetCooperativeLevel>((cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle)) },
-				{ "SetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.SetDisplayMode>((cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle)) },
-				{ "WaitForVerticalBlank", ComVtableDispatcher.FromDelegate<IDirectDraw.WaitForVerticalBlank>((cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem)) }
+				new("QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem))),
+				new("AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem))),
+				new("Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem))),
+				new("Compact", ComVtableDispatcher.FromDelegate<IDirectDraw.Compact>((cpu, mem) => DDraw_Compact(cpu, mem))),
+				new("CreateClipper", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateClipper>((cpu, mem) => DDraw_CreateClipper(cpu, mem))),
+				new("CreatePalette", ComVtableDispatcher.FromDelegate<IDirectDraw.CreatePalette>((cpu, mem) => DDraw_CreatePalette(cpu, mem))),
+				new("CreateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateSurface>((cpu, mem) => DDraw_CreateSurface(cpu, mem))),
+				new("DuplicateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.DuplicateSurface>((cpu, mem) => DDraw_DuplicateSurface(cpu, mem))),
+				new("EnumDisplayModes", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumDisplayModes>((cpu, mem) => DDraw_EnumDisplayModes(cpu, mem))),
+				new("EnumSurfaces", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumSurfaces>((cpu, mem) => DDraw_EnumSurfaces(cpu, mem))),
+				new("FlipToGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.FlipToGDISurface>((cpu, mem) => DDraw_FlipToGDISurface(cpu, mem))),
+				new("GetCaps", ComVtableDispatcher.FromDelegate<IDirectDraw.GetCaps>((cpu, mem) => DDraw_GetCaps(cpu, mem))),
+				new("GetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.GetDisplayMode>((cpu, mem) => DDraw_GetDisplayMode(cpu, mem))),
+				new("GetFourCCCodes", ComVtableDispatcher.FromDelegate<IDirectDraw.GetFourCCCodes>((cpu, mem) => DDraw_GetFourCCCodes(cpu, mem))),
+				new("GetGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.GetGDISurface>((cpu, mem) => DDraw_GetGDISurface(cpu, mem))),
+				new("GetMonitorFrequency", ComVtableDispatcher.FromDelegate<IDirectDraw.GetMonitorFrequency>((cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem))),
+				new("GetScanLine", ComVtableDispatcher.FromDelegate<IDirectDraw.GetScanLine>((cpu, mem) => DDraw_GetScanLine(cpu, mem))),
+				new("GetVerticalBlankStatus", ComVtableDispatcher.FromDelegate<IDirectDraw.GetVerticalBlankStatus>((cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem))),
+				new("Initialize", ComVtableDispatcher.FromDelegate<IDirectDraw.Initialize>((cpu, mem) => DDraw_Initialize(cpu, mem))),
+				new("RestoreDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.RestoreDisplayMode>((cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem))),
+				new("SetCooperativeLevel", ComVtableDispatcher.FromDelegate<IDirectDraw.SetCooperativeLevel>((cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle))),
+				new("SetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.SetDisplayMode>((cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle))),
+				new("WaitForVerticalBlank", ComVtableDispatcher.FromDelegate<IDirectDraw.WaitForVerticalBlank>((cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem)))
 			};
 
 			// Create the COM object with vtable
-			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDraw", vtableMethods);
+			var comObjectAddr = _env.ComDispatcher.CreateComObjectOrdered("IDirectDraw", vtableMethods);
 
 			// Store the COM object address in the DirectDraw object for reverse lookup
 			ddrawObj.ComObjectAddress = comObjectAddr;
@@ -647,20 +649,20 @@ namespace Win32Emu.Win32.Modules
 			_clippers[clipperHandle] = clipper;
 
 			// Create COM vtable for IDirectDrawClipper interface
-			var clipperVtableMethods = new Dictionary<string, ComMethodInfo>
+			var clipperVtableMethods = new List<KeyValuePair<string, ComMethodInfo>>
 			{
-				{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
-				{ "AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) },
-				{ "Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem)) },
-				{ "GetClipList", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.GetClipList>((cpu, mem) => Clipper_GetClipList(cpu, mem)) },
-				{ "GetHWnd", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.GetHWnd>((cpu, mem) => Clipper_GetHWnd(cpu, mem, clipperHandle)) },
-				{ "Initialize", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.Initialize>((cpu, mem) => Clipper_Initialize(cpu, mem)) },
-				{ "IsClipListChanged", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.IsClipListChanged>((cpu, mem) => Clipper_IsClipListChanged(cpu, mem)) },
-				{ "SetClipList", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.SetClipList>((cpu, mem) => Clipper_SetClipList(cpu, mem)) },
-				{ "SetHWnd", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.SetHWnd>((cpu, mem) => Clipper_SetHWnd(cpu, mem, clipperHandle)) }
+				new("QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem))),
+				new("AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem))),
+				new("Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem))),
+				new("GetClipList", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.GetClipList>((cpu, mem) => Clipper_GetClipList(cpu, mem))),
+				new("GetHWnd", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.GetHWnd>((cpu, mem) => Clipper_GetHWnd(cpu, mem, clipperHandle))),
+				new("Initialize", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.Initialize>((cpu, mem) => Clipper_Initialize(cpu, mem))),
+				new("IsClipListChanged", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.IsClipListChanged>((cpu, mem) => Clipper_IsClipListChanged(cpu, mem))),
+				new("SetClipList", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.SetClipList>((cpu, mem) => Clipper_SetClipList(cpu, mem))),
+				new("SetHWnd", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.SetHWnd>((cpu, mem) => Clipper_SetHWnd(cpu, mem, clipperHandle)))
 			};
 
-			var clipperComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawClipper", clipperVtableMethods);
+			var clipperComAddr = _env.ComDispatcher.CreateComObjectOrdered("IDirectDrawClipper", clipperVtableMethods);
 			clipper.ComObjectAddress = clipperComAddr;
 
 			// Write the clipper COM object address to the output pointer
@@ -702,18 +704,18 @@ namespace Win32Emu.Win32.Modules
 			var palette = new DirectDrawPalette { Handle = paletteHandle, Entries = paletteEntries };
 			_palettes[paletteHandle] = palette;
 
-			var vtableMethods = new Dictionary<string, ComMethodInfo>
+			var vtableMethods = new List<KeyValuePair<string, ComMethodInfo>>
 			{
-				{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.QueryInterface>((c, m) => ComQueryInterface(c, m)) },
-				{ "AddRef", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.AddRef>((c, m) => ComAddRef(c, m)) },
-				{ "Release", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.Release>((c, m) => ComRelease(c, m)) },
-				{ "GetCaps", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.GetCaps>((c, m) => Palette_GetCaps(c, m)) },
-				{ "GetEntries", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.GetEntries>((c, m) => Palette_GetEntries(c, m, paletteHandle)) },
-				{ "Initialize", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.Initialize>((c, m) => Palette_Initialize(c, m)) },
-				{ "SetEntries", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.SetEntries>((c, m) => Palette_SetEntries(c, m, paletteHandle)) }
+				new("QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.QueryInterface>((c, m) => ComQueryInterface(c, m))),
+				new("AddRef", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.AddRef>((c, m) => ComAddRef(c, m))),
+				new("Release", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.Release>((c, m) => ComRelease(c, m))),
+				new("GetCaps", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.GetCaps>((c, m) => Palette_GetCaps(c, m))),
+				new("GetEntries", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.GetEntries>((c, m) => Palette_GetEntries(c, m, paletteHandle))),
+				new("Initialize", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.Initialize>((c, m) => Palette_Initialize(c, m))),
+				new("SetEntries", ComVtableDispatcher.FromDelegate<IDirectDrawPalette.SetEntries>((c, m) => Palette_SetEntries(c, m, paletteHandle)))
 			};
 
-			var comObjectAddr = _env.ComDispatcher.CreateComObject("IDirectDrawPalette", vtableMethods);
+			var comObjectAddr = _env.ComDispatcher.CreateComObjectOrdered("IDirectDrawPalette", vtableMethods);
 			palette.ComObjectAddress = comObjectAddr;
 
 			if (lplpDDPalette != 0)
@@ -3602,20 +3604,20 @@ namespace Win32Emu.Win32.Modules
 			_clippers[clipperHandle] = clipper;
 
 			// Create COM vtable for IDirectDrawClipper interface
-			var clipperVtableMethods = new Dictionary<string, ComMethodInfo>
+			var clipperVtableMethods = new List<KeyValuePair<string, ComMethodInfo>>
 			{
-				{ "QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem)) },
-				{ "AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem)) },
-				{ "Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem)) },
-				{ "GetClipList", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.GetClipList>((cpu, mem) => Clipper_GetClipList(cpu, mem)) },
-				{ "GetHWnd", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.GetHWnd>((cpu, mem) => Clipper_GetHWnd(cpu, mem, clipperHandle)) },
-				{ "Initialize", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.Initialize>((cpu, mem) => Clipper_Initialize(cpu, mem)) },
-				{ "IsClipListChanged", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.IsClipListChanged>((cpu, mem) => Clipper_IsClipListChanged(cpu, mem)) },
-				{ "SetClipList", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.SetClipList>((cpu, mem) => Clipper_SetClipList(cpu, mem)) },
-				{ "SetHWnd", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.SetHWnd>((cpu, mem) => Clipper_SetHWnd(cpu, mem, clipperHandle)) }
+				new("QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem))),
+				new("AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem))),
+				new("Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem))),
+				new("GetClipList", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.GetClipList>((cpu, mem) => Clipper_GetClipList(cpu, mem))),
+				new("GetHWnd", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.GetHWnd>((cpu, mem) => Clipper_GetHWnd(cpu, mem, clipperHandle))),
+				new("Initialize", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.Initialize>((cpu, mem) => Clipper_Initialize(cpu, mem))),
+				new("IsClipListChanged", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.IsClipListChanged>((cpu, mem) => Clipper_IsClipListChanged(cpu, mem))),
+				new("SetClipList", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.SetClipList>((cpu, mem) => Clipper_SetClipList(cpu, mem))),
+				new("SetHWnd", ComVtableDispatcher.FromDelegate<IDirectDrawClipper.SetHWnd>((cpu, mem) => Clipper_SetHWnd(cpu, mem, clipperHandle)))
 			};
 
-			var clipperComAddr = _env.ComDispatcher.CreateComObject("IDirectDrawClipper", clipperVtableMethods);
+			var clipperComAddr = _env.ComDispatcher.CreateComObjectOrdered("IDirectDrawClipper", clipperVtableMethods);
 			clipper.ComObjectAddress = clipperComAddr;
 
 			// Write the clipper COM object address to the output pointer
