@@ -8540,8 +8540,19 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// Create DateTime
-			var dateTime = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Local);
+			// Create DateTime, handle invalid date combinations
+			DateTime dateTime;
+			try
+			{
+				dateTime = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Local);
+			}
+			catch (ArgumentOutOfRangeException ex)
+			{
+				_logger.LogWarning(ex, "[Kernel32] DosDateTimeToFileTime: Invalid date combination (year={Year}, month={Month}, day={Day}, hour={Hour}, minute={Minute}, second={Second})",
+					year, month, day, hour, minute, second);
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
 			
 			// Convert to FILETIME (100-nanosecond intervals since January 1, 1601)
 			long fileTime = dateTime.ToFileTimeUtc();
@@ -8552,9 +8563,21 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
-		catch (Exception ex)
+		catch (ArgumentOutOfRangeException ex)
 		{
-			_logger.LogError(ex, "[Kernel32] DosDateTimeToFileTime exception");
+			_logger.LogError(ex, "[Kernel32] DosDateTimeToFileTime ArgumentOutOfRangeException");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+		catch (ArgumentException ex)
+		{
+			_logger.LogError(ex, "[Kernel32] DosDateTimeToFileTime ArgumentException");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+		catch (OverflowException ex)
+		{
+			_logger.LogError(ex, "[Kernel32] DosDateTimeToFileTime OverflowException");
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
@@ -8580,30 +8603,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			byte b = (byte)(testChar & 0xFF);
 			
-			// Shift-JIS lead bytes: 0x81-0x9F, 0xE0-0xFC
-			if (codePage == CodePage.Japan)
-			{
-				if ((b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC))
-					return (uint)NativeTypes.Win32Bool.TRUE;
-			}
-			// Chinese Simplified (GBK) lead bytes: 0x81-0xFE
-			else if (codePage == CodePage.China)
-			{
-				if (b >= 0x81 && b <= 0xFE)
-					return (uint)NativeTypes.Win32Bool.TRUE;
-			}
-			// Korean (Unified Hangul Code) lead bytes: 0x81-0xFE
-			else if (codePage == CodePage.Korea)
-			{
-				if (b >= 0x81 && b <= 0xFE)
-					return (uint)NativeTypes.Win32Bool.TRUE;
-			}
-			// Chinese Traditional (Big5) lead bytes: 0x81-0xFE
-			else if (codePage == CodePage.Taiwan)
-			{
-				if (b >= 0x81 && b <= 0xFE)
-					return (uint)NativeTypes.Win32Bool.TRUE;
-			}
+			// Japanese Shift-JIS (932): lead bytes 0x81-0x9F, 0xE0-0xFC
+			if (codePage == CodePage.Japan && ((b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC)))
+				return (uint)NativeTypes.Win32Bool.TRUE;
+			// Chinese Simplified (GBK, 936), Korean (949), Chinese Traditional (Big5, 950): lead bytes 0x81-0xFE
+			if ((codePage == CodePage.China || codePage == CodePage.Korea || codePage == CodePage.Taiwan) && (b >= 0x81 && b <= 0xFE))
+				return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 
 		// Not a DBCS lead byte or not a DBCS code page

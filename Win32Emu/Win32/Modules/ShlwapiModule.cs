@@ -277,18 +277,12 @@ public partial class ShlwapiModule : IWin32ModuleUnsafe
 		// If dot is after last backslash (or no backslash), it's an extension
 		if (lastDot > lastBackslash)
 		{
-			// Calculate address of the dot in memory
-			// We need to find where the string is in memory
-			// For simplicity, we'll return a pointer to an empty string if we can't determine the address
-			// In a real implementation, we'd need to know the memory address of pszPath
-			_logger.LogWarning("[Shlwapi] PathFindExtensionA: Cannot determine memory address, returning stub");
-			
-			// Return 0 to indicate no extension (stub behavior)
-			return 0;
+			// Return pointer to the dot character in the input string
+			return pszPathPtr.Address + (uint)lastDot;
 		}
 
-		// No extension found
-		return 0;
+		// No extension found - return pointer to empty string at null terminator
+		return pszPathPtr.Address + (uint)pszPath.Length;
 	}
 
 	/// <summary>
@@ -313,10 +307,15 @@ public partial class ShlwapiModule : IWin32ModuleUnsafe
 		// Find last backslash
 		int lastBackslash = pszPath.LastIndexOf('\\');
 
-		// Similar issue as PathFindExtensionA - we'd need to know the memory address
-		_logger.LogWarning("[Shlwapi] PathFindFileNameA: Cannot determine memory address, returning stub");
-		
-		return 0;
+		// Return pointer to filename within input string
+		if (lastBackslash >= 0)
+		{
+			return pszPathPtr.Address + (uint)(lastBackslash + 1);
+		}
+		else
+		{
+			return pszPathPtr.Address;
+		}
 	}
 
 	/// <summary>
@@ -346,10 +345,8 @@ public partial class ShlwapiModule : IWin32ModuleUnsafe
 
 		if (index >= 0)
 		{
-			// Found - but we'd need to calculate the memory address
-			// This is a limitation of our current implementation
-			_logger.LogWarning("[Shlwapi] StrStrIA: Cannot determine memory address, returning stub");
-			return 0;
+			// Found - return pointer to first occurrence in memory
+			return pszFirstPtr.Address + (uint)index;
 		}
 
 		return 0; // NULL - not found

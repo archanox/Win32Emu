@@ -35,6 +35,9 @@ namespace Win32Emu.Win32.Modules
 		// Counter for generating unique bitmap handles
 		private uint _nextBitmapHandle = 0;
 
+		// Counter for generating unique menu handles
+		private uint _nextMenuHandle = 0;
+
 		// Timer tracking for SetTimer implementation
 		private readonly ConcurrentDictionary<uint, TimerInfo> _timers = new();
 		private uint _nextTimerId = 1;
@@ -5974,8 +5977,8 @@ namespace Win32Emu.Win32.Modules
 	{
 		_logger.LogInformation("[User32] CreatePopupMenu()");
 
-		// Generate a new unique menu handle
-		var menuHandle = _nextBitmapHandle++; // Reuse the handle counter
+		// Generate a new unique menu handle (using distinct handle range)
+		var menuHandle = 0xABCD0000u + _nextMenuHandle++;
 		
 		_logger.LogInformation("[User32] CreatePopupMenu: Created menu handle 0x{MenuHandle:X8}", menuHandle);
 		
