@@ -76,8 +76,11 @@ public partial class DialogWindow : Window
 		Title = _template.Title;
 
 		// Convert dialog units to pixels (approximate: 1 DLU ≈ 2 pixels for width, 1.5 for height)
-		Width = Math.Max(200, _template.Width * 2);
-		Height = Math.Max(150, _template.Height * 1.5);
+		// Add some padding for the window chrome and margins
+		var contentWidth = _template.Width * 2;
+		var contentHeight = _template.Height * 1.5;
+		Width = Math.Max(200, contentWidth + 20);  // Add 20px for window padding
+		Height = Math.Max(150, contentHeight + 20);  // Add 20px for window padding
 
 		// Get the content panel
 		var contentPanel = this.FindControl<Panel>("DialogContentPanel");
@@ -86,11 +89,12 @@ public partial class DialogWindow : Window
 			return;
 		}
 
-		// Create a canvas for absolute positioning of controls
+		// Create a canvas for absolute positioning of controls with margins
 		var canvas = new Canvas
 		{
-			Width = _template.Width * 2,
-			Height = _template.Height * 1.5
+			Width = contentWidth,
+			Height = contentHeight,
+			Margin = new Thickness(10)  // Add 10px margin around the canvas
 		};
 
 		// Create controls from template items
@@ -502,26 +506,38 @@ public partial class DialogWindow : Window
 	/// </summary>
 	public void SetControlBitmap(ushort id, byte[] bitmapData)
 	{
+		Console.WriteLine($"[DialogWindow] SetControlBitmap called for control ID={id}, data length={bitmapData.Length}");
+		
 		Dispatcher.UIThread.Post(() =>
 		{
 			var control = GetControlById(id);
+			Console.WriteLine($"[DialogWindow] SetControlBitmap: control found = {control != null}, type = {control?.GetType().Name}");
+			
 			if (control is Border border)
 			{
 				try
 				{
+					Console.WriteLine($"[DialogWindow] SetControlBitmap: Converting DIB to bitmap...");
 					// Convert DIB bitmap data to Avalonia-compatible image
 					var bitmap = ConvertDibToBitmap(bitmapData);
 					if (bitmap != null)
 					{
+						Console.WriteLine($"[DialogWindow] SetControlBitmap: Bitmap converted successfully, size={bitmap.PixelSize}");
 						border.Child = new Avalonia.Controls.Image
 						{
 							Source = bitmap,
 							Stretch = Avalonia.Media.Stretch.Uniform
 						};
+						Console.WriteLine($"[DialogWindow] SetControlBitmap: Image control created and set");
+					}
+					else
+					{
+						Console.WriteLine($"[DialogWindow] SetControlBitmap: ConvertDibToBitmap returned null");
 					}
 				}
 				catch (ArgumentException ex)
 				{
+					Console.WriteLine($"[DialogWindow] SetControlBitmap: ArgumentException - {ex.Message}");
 					// If bitmap conversion fails, show error in the border
 					border.Child = new TextBlock
 					{
@@ -532,6 +548,7 @@ public partial class DialogWindow : Window
 				}
 				catch (System.IO.IOException ex)
 				{
+					Console.WriteLine($"[DialogWindow] SetControlBitmap: IOException - {ex.Message}");
 					// If bitmap I/O fails, show error in the border
 					border.Child = new TextBlock
 					{
@@ -540,6 +557,10 @@ public partial class DialogWindow : Window
 						Foreground = Brushes.Red
 					};
 				}
+			}
+			else
+			{
+				Console.WriteLine($"[DialogWindow] SetControlBitmap: Control is not a Border, cannot set bitmap");
 			}
 		});
 	}

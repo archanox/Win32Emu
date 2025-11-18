@@ -295,10 +295,17 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 
     public void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData)
     {
+        OnDebugOutput($"Dialog 0x{dialogHandle:X8} control {controlId} bitmap changed ({bitmapData.Length} bytes)", DebugLevel.Info);
+        
         // Find the dialog window and update the control with bitmap
         if (_createdDialogs.TryGetValue(dialogHandle, out var dialog))
         {
             dialog.SetControlBitmap((ushort)controlId, bitmapData);
+            OnDebugOutput($"Dialog 0x{dialogHandle:X8} control {controlId} bitmap updated successfully", DebugLevel.Debug);
+        }
+        else
+        {
+            OnDebugOutput($"Dialog 0x{dialogHandle:X8} not found in _createdDialogs", DebugLevel.Warning);
         }
     }
 
