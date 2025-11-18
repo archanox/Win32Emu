@@ -198,6 +198,82 @@ public class ModuleProcessTests : IDisposable
 
     #endregion
 
+    #region IsWow64Process Tests
+
+    [Fact]
+    public void IsWow64Process_WithValidHandle_ShouldReturnFalse()
+    {
+        // Arrange - Get the current process pseudo-handle
+        var currentProcess = _testEnv.CallKernel32Api("GETCURRENTPROCESS");
+        var pWow64Process = _testEnv.AllocateMemory(4); // Allocate space for BOOL
+
+        // Act
+        var result = _testEnv.CallKernel32Api("ISWOW64PROCESS", currentProcess, pWow64Process);
+
+        // Assert
+        Assert.Equal(1u, result); // Function should succeed (return TRUE)
+        
+        // Read the output value
+        var isWow64 = _testEnv.Memory.Read32(pWow64Process);
+        Assert.Equal(0u, isWow64); // Should return FALSE - not running under WOW64
+    }
+
+    [Fact]
+    public void IsWow64Process_WithPseudoHandle_ShouldReturnFalse()
+    {
+        // Arrange - Use the pseudo-handle for current process (0xFFFFFFFF)
+        const uint pseudoHandle = 0xFFFFFFFF;
+        var pWow64Process = _testEnv.AllocateMemory(4); // Allocate space for BOOL
+
+        // Act
+        var result = _testEnv.CallKernel32Api("ISWOW64PROCESS", pseudoHandle, pWow64Process);
+
+        // Assert
+        Assert.Equal(1u, result); // Function should succeed (return TRUE)
+        
+        // Read the output value
+        var isWow64 = _testEnv.Memory.Read32(pWow64Process);
+        Assert.Equal(0u, isWow64); // Should return FALSE - not running under WOW64
+    }
+
+    [Fact]
+    public void IsWow64Process_WithNullOutputPointer_ShouldFail()
+    {
+        // Arrange - Get the current process handle
+        var currentProcess = _testEnv.CallKernel32Api("GETCURRENTPROCESS");
+        const uint nullPointer = 0;
+
+        // Act
+        var result = _testEnv.CallKernel32Api("ISWOW64PROCESS", currentProcess, nullPointer);
+
+        // Assert
+        Assert.Equal(0u, result); // Function should fail (return FALSE)
+        
+        // Check that last error was set to ERROR_INVALID_PARAMETER
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal((uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, lastError);
+    }
+
+    [Fact]
+    public void IsWow64Process_WithNullProcessHandle_ShouldFail()
+    {
+        // Arrange - Use NULL as process handle
+        const uint nullHandle = 0;
+        var pWow64Process = _testEnv.AllocateMemory(4); // Allocate space for BOOL
+
+        // Act
+        var result = _testEnv.CallKernel32Api("ISWOW64PROCESS", nullHandle, pWow64Process);
+
+        // Assert
+        Assert.Equal(0u, result); // Function should fail (return FALSE)
+        
+        // Check that last error was set to ERROR_INVALID_HANDLE
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        Assert.Equal((uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE, lastError);
+    }
+
+    #endregion
+
     // Note: GetModuleFileNameA tests removed due to AccessViolationException
     // The unsafe pointer operations in this function are not compatible with
     // our test environment's memory simulation.

@@ -455,6 +455,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GETCURRENTTHREAD":
 				returnValue = GetCurrentThread();
 				return true;
+			case "ISWOW64PROCESS":
+				returnValue = IsWow64Process(a.UInt32(0), a.UInt32(1));
+				return true;
 			case "GETPROCESSAFFINITYMASK":
 				returnValue = GetProcessAffinityMask(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
@@ -4927,6 +4930,62 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		_logger.LogInformation("[Kernel32] GetCurrentThread() = 0xFFFFFFFE (pseudo-handle)");
 		return CURRENT_THREAD_PSEUDO_HANDLE;
+	}
+
+	/// <summary>
+	/// Determines whether the specified process is running under WOW64 (Windows 32-bit on Windows 64-bit).
+	/// BOOL IsWow64Process(
+	///   [in]  HANDLE hProcess,
+	///   [out] PBOOL  Wow64Process
+	/// );
+	/// </summary>
+	/// <param name="hProcess">
+	/// A handle to the process. The handle must have the PROCESS_QUERY_INFORMATION or PROCESS_QUERY_LIMITED_INFORMATION access right.
+	/// </param>
+	/// <param name="lpWow64Process">
+	/// A pointer to a value that is set to TRUE if the process is running under WOW64. 
+	/// If the process is running under 32-bit Windows, the value is set to FALSE.
+	/// If the process is a 64-bit application running under 64-bit Windows, the value is also set to FALSE.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is nonzero (TRUE).
+	/// If the function fails, the return value is zero (FALSE). To get extended error information, call GetLastError.
+	/// </returns>
+	/// <remarks>
+	/// WOW64 is the x86 emulator that allows 32-bit Windows-based applications to run seamlessly on 64-bit Windows.
+	/// Since this emulator is always running in 32-bit mode (emulating x86 architecture), processes are never running under WOW64.
+	/// Therefore, this function always sets Wow64Process to FALSE.
+	/// </remarks>
+	[DllModuleExport(0)]
+	private uint IsWow64Process(uint hProcess, uint lpWow64Process)
+	{
+		_logger.LogInformation("[Kernel32] IsWow64Process(hProcess=0x{HProcess:X8}, lpWow64Process=0x{LpWow64Process:X8})",
+			hProcess, lpWow64Process);
+
+		// Validate the output pointer
+		if (lpWow64Process == 0)
+		{
+			_logger.LogWarning("[Kernel32] IsWow64Process: Invalid parameter - lpWow64Process is NULL");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Validate the process handle
+		// Accept pseudo-handle for current process (0xFFFFFFFF) and any valid handle
+		if (hProcess == 0)
+		{
+			_logger.LogWarning("[Kernel32] IsWow64Process: Invalid parameter - hProcess is NULL");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Since this emulator always runs in 32-bit mode and emulates x86 architecture,
+		// the emulated process is never running under WOW64 (which is 32-bit on 64-bit Windows).
+		// From the perspective of the emulated process, it's running on a native 32-bit system.
+		_env.MemWrite32(lpWow64Process, (uint)NativeTypes.Win32Bool.FALSE);
+
+		_logger.LogInformation("[Kernel32] IsWow64Process: Returning FALSE (not running under WOW64)");
+		return (uint)NativeTypes.Win32Bool.TRUE; // Function succeeded
 	}
 
 	/// <summary>
