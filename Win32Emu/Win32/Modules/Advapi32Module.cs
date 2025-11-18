@@ -92,6 +92,12 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			case "REGFLUSHKEY":
 				returnValue = RegFlushKey(a.UInt32(0));
 				return true;
+			case "REGLOADKEYA":
+				returnValue = RegLoadKeyA(a.UInt32(0), a.LpcStr(1), a.LpcStr(2));
+				return true;
+			case "REGUNLOADKEYA":
+				returnValue = RegUnLoadKeyA(a.UInt32(0), a.LpcStr(1));
+				return true;
 
 			// Security functions
 			case "ACCESSCHECK":
@@ -918,6 +924,54 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		}
 		
 		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Loads a registry hive from a file into the registry.
+	/// LSTATUS RegLoadKeyA(
+	///   [in] HKEY   hKey,
+	///   [in] LPCSTR lpSubKey,
+	///   [in] LPCSTR lpFile
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint RegLoadKeyA(uint hKey, in LpcStr lpSubKey, in LpcStr lpFile)
+	{
+		var subKey = lpSubKey.ToString() ?? string.Empty;
+		var file = lpFile.ToString() ?? string.Empty;
+
+		_logger.LogInformation("[Advapi32] RegLoadKeyA(hKey=0x{HKey:X8}, lpSubKey=\"{LpSubKey}\", lpFile=\"{LpFile}\")",
+			hKey, subKey, file);
+
+		// RegLoadKey requires SE_RESTORE_NAME privilege
+		// This is a privileged operation typically used by system utilities
+		// For emulation purposes, we'll return ERROR_ACCESS_DENIED
+		
+		_logger.LogWarning("[Advapi32] RegLoadKeyA: Privileged operation not supported in emulator");
+		return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+	}
+
+	/// <summary>
+	/// Unloads a registry hive from the registry.
+	/// LSTATUS RegUnLoadKeyA(
+	///   [in] HKEY   hKey,
+	///   [in] LPCSTR lpSubKey
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint RegUnLoadKeyA(uint hKey, in LpcStr lpSubKey)
+	{
+		var subKey = lpSubKey.ToString() ?? string.Empty;
+
+		_logger.LogInformation("[Advapi32] RegUnLoadKeyA(hKey=0x{HKey:X8}, lpSubKey=\"{LpSubKey}\")",
+			hKey, subKey);
+
+		// RegUnLoadKey requires SE_RESTORE_NAME privilege
+		// This is a privileged operation typically used by system utilities
+		// For emulation purposes, we'll return ERROR_ACCESS_DENIED
+		
+		_logger.LogWarning("[Advapi32] RegUnLoadKeyA: Privileged operation not supported in emulator");
+		return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 	}
 
 	private class ServiceData

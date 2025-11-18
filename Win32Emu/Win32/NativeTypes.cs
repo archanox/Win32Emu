@@ -809,4 +809,76 @@ public static class NativeTypes
 	}
 
 	#endregion
+
+	#region File System
+
+	/// <summary>
+	/// MoveFileEx flags
+	/// </summary>
+	[Flags]
+	public enum MoveFileFlags : uint
+	{
+		MOVEFILE_REPLACE_EXISTING = 0x00000001,
+		MOVEFILE_COPY_ALLOWED = 0x00000002,
+		MOVEFILE_DELAY_UNTIL_REBOOT = 0x00000004,
+		MOVEFILE_WRITE_THROUGH = 0x00000008,
+	}
+
+	#endregion
+
+	#region Common Controls
+
+	/// <summary>
+	/// Image types for LoadImage
+	/// </summary>
+	public enum ImageType : uint
+	{
+		IMAGE_BITMAP = 0,
+		IMAGE_ICON = 1,
+		IMAGE_CURSOR = 2,
+	}
+
+	/// <summary>
+	/// LoadImage flags
+	/// </summary>
+	[Flags]
+	public enum LoadImageFlags : uint
+	{
+		LR_DEFAULTCOLOR = 0x00000000,
+		LR_MONOCHROME = 0x00000001,
+		LR_COLOR = 0x00000002,
+		LR_SHARED = 0x00008000,
+	}
+
+	#endregion
+
+	#region Menu
+
+	/// <summary>
+	/// Menu item flags
+	/// </summary>
+	[Flags]
+	public enum MenuFlags : uint
+	{
+		MF_STRING = 0x00000000,
+		MF_BITMAP = 0x00000004,
+		MF_POPUP = 0x00000010,
+		MF_SEPARATOR = 0x00000800,
+	}
+
+	/// <summary>
+	/// TrackPopupMenu flags
+	/// </summary>
+	[Flags]
+	public enum TrackPopupMenuFlags : uint
+	{
+		TPM_LEFTBUTTON = 0x0000,
+		TPM_RIGHTBUTTON = 0x0002,
+		TPM_LEFTALIGN = 0x0000,
+		TPM_CENTERALIGN = 0x0004,
+		TPM_RIGHTALIGN = 0x0008,
+		TPM_RETURNCMD = 0x0100,
+	}
+
+	#endregion
 }

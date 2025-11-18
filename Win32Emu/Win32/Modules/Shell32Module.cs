@@ -81,6 +81,20 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 				returnValue = ShellAboutA(a.UInt32(0), a.LpcStr(1), a.LpcStr(2), a.UInt32(3));
 				return true;
 
+			case "SHGETDESKTOPFOLDER":
+				returnValue = SHGetDesktopFolder(a.UInt32(0));
+				return true;
+
+			case "59":
+			case "ORDINAL_59":
+				returnValue = Ordinal_59(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+
+			case "653":
+			case "ORDINAL_653":
+				returnValue = Ordinal_653(a.UInt32(0));
+				return true;
+
 			default:
 				LogUnimplementedExport(export);
 				return false;
@@ -847,4 +861,59 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 
 	[LoggerMessage(Level = LogLevel.Information, Message = "[Shell32] ShellAboutA(hWnd=0x{HWnd:X8}, szApp=\"{App}\", szOtherStuff=\"{OtherStuff}\", hIcon=0x{HIcon:X8})")]
 	partial void LogShellAboutA(uint hWnd, string app, string otherStuff, uint hIcon);
+
+	/// <summary>
+	/// Retrieves the IShellFolder interface for the desktop folder.
+	/// HRESULT SHGetDesktopFolder(
+	///   [out] IShellFolder **ppshf
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint SHGetDesktopFolder(uint ppshf)
+	{
+		_logger.LogInformation("[Shell32] SHGetDesktopFolder(ppshf=0x{Ppshf:X8})", ppshf);
+
+		if (ppshf == 0)
+		{
+			return 0x80070057; // E_INVALIDARG
+		}
+
+		// For stub implementation, create a fake IShellFolder interface pointer
+		// A real implementation would need to create a COM object
+		uint fakeInterface = 0x90000000;
+		_env.MemWrite32(ppshf, fakeInterface);
+
+		_logger.LogInformation("[Shell32] SHGetDesktopFolder: Stub - returning fake interface 0x{FakeInterface:X8}", fakeInterface);
+
+		return 0; // S_OK
+	}
+
+	/// <summary>
+	/// Shell32 ordinal 59 - believed to be an internal function related to shell paths.
+	/// The exact purpose is undocumented.
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint Ordinal_59(uint param1, uint param2, uint param3)
+	{
+		_logger.LogInformation("[Shell32] Ordinal_59(param1=0x{Param1:X8}, param2=0x{Param2:X8}, param3=0x{Param3:X8})",
+			param1, param2, param3);
+
+		// Stub implementation - return success
+		// The actual behavior is undocumented
+		return 1; // Assume success
+	}
+
+	/// <summary>
+	/// Shell32 ordinal 653 - believed to be an internal function.
+	/// The exact purpose is undocumented.
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint Ordinal_653(uint param1)
+	{
+		_logger.LogInformation("[Shell32] Ordinal_653(param1=0x{Param1:X8})", param1);
+
+		// Stub implementation - return success
+		// The actual behavior is undocumented
+		return 1; // Assume success
+	}
 }
