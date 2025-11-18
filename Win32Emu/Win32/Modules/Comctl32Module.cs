@@ -217,7 +217,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Comctl32] Ordinal_17(param1=0x{Param1:X8}, param2=0x{Param2:X8}, param3=0x{Param3:X8})",
 			param1, param2, param3);
-		
+
 		// InitCommonControls typically doesn't return a value, but we return success
 		return 1;
 	}
@@ -230,7 +230,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	private uint CreatePropertySheetPageA(uint lppsp)
 	{
 		_logger.LogInformation("[Comctl32] CreatePropertySheetPageA(lppsp=0x{Lppsp:X8})", lppsp);
-		
+
 		// Stub: Return a fake handle for the property sheet page
 		// A real implementation would parse the PROPSHEETPAGE structure and create a page
 		return lppsp != 0 ? 0x90010000 : 0;
@@ -244,7 +244,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	private uint DestroyPropertySheetPage(uint hPSPage)
 	{
 		_logger.LogInformation("[Comctl32] DestroyPropertySheetPage(hPSPage=0x{HPSPage:X8})", hPSPage);
-		
+
 		// Stub: Always return TRUE (success)
 		return 1;
 	}
@@ -257,7 +257,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	private uint PropertySheetA(uint lppsh)
 	{
 		_logger.LogInformation("[Comctl32] PropertySheetA(lppsh=0x{Lppsh:X8})", lppsh);
-		
+
 		// Stub: Return 0 (user cancelled or closed the property sheet)
 		// A real implementation would parse PROPSHEETHEADER and display the property sheet dialog
 		return 0;
@@ -285,10 +285,10 @@ public class Comctl32Module : IWin32ModuleUnsafe
 
 		// Create an image list with estimated dimensions
 		var handle = _nextImageListHandle++;
-		
+
 		// Estimate height based on type - icons are typically square
 		int cy = uType == (uint)NativeTypes.ImageType.IMAGE_ICON ? cx : 16; // Default height for bitmaps
-		
+
 		_imageLists[handle] = new ImageListData
 		{
 			Width = cx,
@@ -299,7 +299,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 		};
 
 		_logger.LogInformation("[Comctl32] ImageList_LoadImageA: Created image list handle 0x{Handle:X8}", handle);
-		
+
 		return handle;
 	}
 

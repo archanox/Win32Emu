@@ -1846,14 +1846,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (exportName == null)
 		{
 			_logger.LogInformation("[Kernel32] GetProcAddress: Export not found in emulated module '{ModuleName}'", moduleName);
-			
+
 			// Track this as an unknown function call
 			if (_dispatcher != null)
 			{
 				var lookupName = byOrdinal ? $"#{ordinal}" : procName ?? "(null)";
 				_dispatcher.TrackUnknownFunction(moduleName, lookupName);
 			}
-			
+
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
 			return 0;
 		}
@@ -2645,7 +2645,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		// Call the ProcessEnvironment's VirtualFree implementation
 		bool success = _env.VirtualFree(lpAddress, dwSize, dwFreeType);
-		
+
 		if (!success)
 		{
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
@@ -3953,11 +3953,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				if (hasTrailingNull && wideString.Length > 1)
 				{
 					_logger.LogInformation("[Kernel32] WideCharToMultiByte: Buffer too small with trailing null - trying without null terminator");
-					
+
 					// Remove trailing null and try again
 					var trimmedWideString = wideString.Substring(0, wideString.Length - 1);
 					byte[] trimmedBytes;
-					
+
 					switch (actualCodePage)
 					{
 						case CodePage.WestEurope:
@@ -3991,13 +3991,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 							}
 							break;
 					}
-					
+
 					// Check if trimmed version fits (with space for null terminator if needed)
 					if (trimmedBytes.Length < cbMultiByte)
 					{
 						_logger.LogInformation("[Kernel32] WideCharToMultiByte: Trimmed version fits - {TrimmedSize} bytes + null < {CbMultiByte} buffer",
 							trimmedBytes.Length, cbMultiByte);
-						
+
 						// Write trimmed bytes
 						if (lpMultiByteStr != 0)
 						{
@@ -4005,18 +4005,18 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 							// Add null terminator
 							_env.MemWrite8(lpMultiByteStr + (uint)trimmedBytes.Length, 0);
 						}
-						
+
 						// Clear the "used default char" flag if provided
 						if (lpUsedDefaultChar != 0)
 						{
 							_env.MemWrite32(lpUsedDefaultChar, 0);
 						}
-						
+
 						_logger.LogInformation("[Kernel32] WideCharToMultiByte: Success with workaround, returning {BytesLength} bytes", (uint)trimmedBytes.Length);
 						return (uint)trimmedBytes.Length;
 					}
 				}
-				
+
 				_logger.LogInformation("[Kernel32] WideCharToMultiByte: Buffer too small - need {NeedSize} bytes but only have {CbMultiByte}", multiByteBytes.Length, cbMultiByte);
 				_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
 				return 0;
@@ -5590,7 +5590,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				{
 					var handle = handles[i];
 					var objectType = _env.SynchronizationManager.GetObjectType(handle);
-					
+
 					var signaled = objectType switch
 					{
 						"Mutex" => _env.SynchronizationManager.CanAcquireMutex(handle, currentThreadId),
@@ -5600,7 +5600,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 					};
 
 					tempStates.Add((handle, objectType ?? "Unknown", signaled));
-					
+
 					if (!signaled)
 					{
 						allSignaled = false;
@@ -5634,7 +5634,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				{
 					var handle = handles[i];
 					var objectType = _env.SynchronizationManager.GetObjectType(handle);
-					
+
 					var signaled = objectType switch
 					{
 						"Mutex" => _env.SynchronizationManager.AcquireMutex(handle, currentThreadId),
@@ -6401,19 +6401,19 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private uint DeviceIoControl(uint hDevice, uint dwIoControlCode, uint lpInBuffer, uint nInBufferSize, uint lpOutBuffer, uint nOutBufferSize, uint lpBytesReturned, uint lpOverlapped)
 	{
 		_logger.LogInformation("[Kernel32] DeviceIoControl(hDevice=0x{HDevice:X8}, dwIoControlCode=0x{DwIoControlCode:X})", hDevice, dwIoControlCode);
-		
+
 		// Common CD-ROM IOCTL codes (from winioctl.h)
 		const uint IOCTL_CDROM_BASE = 0x00000002;
 		const uint METHOD_BUFFERED = 0;
 		const uint FILE_READ_ACCESS = 0x0001;
-		
+
 		// IOCTL_CDROM_READ_TOC = (IOCTL_CDROM_BASE << 16) | (FILE_READ_ACCESS << 14) | (0x0000 << 2) | METHOD_BUFFERED
 		const uint IOCTL_CDROM_READ_TOC = 0x00024000;
 		// IOCTL_CDROM_GET_LAST_SESSION = (IOCTL_CDROM_BASE << 16) | (FILE_READ_ACCESS << 14) | (0x000E << 2) | METHOD_BUFFERED
 		const uint IOCTL_CDROM_GET_LAST_SESSION = 0x00024038;
 		// IOCTL_CDROM_RAW_READ = (IOCTL_CDROM_BASE << 16) | (FILE_READ_ACCESS << 14) | (0x000F << 2) | METHOD_BUFFERED
 		const uint IOCTL_CDROM_RAW_READ = 0x0002403C;
-		
+
 		// Handle CD-ROM specific IOCTLs
 		switch (dwIoControlCode)
 		{
@@ -6423,17 +6423,17 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				// For now, return failure
 				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
 				return 0; // FALSE
-				
+
 			case IOCTL_CDROM_GET_LAST_SESSION:
 				_logger.LogInformation("[Kernel32] DeviceIoControl: IOCTL_CDROM_GET_LAST_SESSION - not fully implemented");
 				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
 				return 0; // FALSE
-				
+
 			case IOCTL_CDROM_RAW_READ:
 				_logger.LogInformation("[Kernel32] DeviceIoControl: IOCTL_CDROM_RAW_READ - not fully implemented");
 				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
 				return 0; // FALSE
-				
+
 			default:
 				_logger.LogDebug("[Kernel32] DeviceIoControl: Unsupported IOCTL code 0x{DwIoControlCode:X}", dwIoControlCode);
 				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
@@ -6538,7 +6538,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private int GetThreadPriority(uint hThread)
 	{
 		_logger.LogInformation("[Kernel32] GetThreadPriority(hThread=0x{HThread:X8})", hThread);
-		
+
 		// Handle pseudo-handle for current thread
 		const uint CURRENT_THREAD_PSEUDO_HANDLE = 0xFFFFFFFE;
 		EmulatedThread? thread;
@@ -8465,7 +8465,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			if (_env.VirtualFileSystem != null)
 			{
 				var replaceExisting = (dwFlags & (uint)NativeTypes.MoveFileFlags.MOVEFILE_REPLACE_EXISTING) != 0;
-				
+
 				// Check if destination exists
 				if (_env.VirtualFileSystem.FileExists(newPath))
 				{
@@ -8557,7 +8557,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
-			
+
 			// Convert to FILETIME (100-nanosecond intervals since January 1, 1601)
 			long fileTime = dateTime.ToFileTimeUtc();
 
@@ -8606,7 +8606,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (codePage == CodePage.Japan || codePage == CodePage.China || codePage == CodePage.Korea || codePage == CodePage.Taiwan)
 		{
 			byte b = (byte)(testChar & 0xFF);
-			
+
 			// Japanese Shift-JIS (932): lead bytes 0x81-0x9F, 0xE0-0xFC
 			if (codePage == CodePage.Japan && ((b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC)))
 				return (uint)NativeTypes.Win32Bool.TRUE;
@@ -8723,11 +8723,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Map uStyle flags: OF_READ (0x0), OF_WRITE (0x1), OF_READWRITE (0x2), OF_CREATE (0x1000), OF_EXIST (0x4000)
 		uint desiredAccess = GENERIC_READ;
 		uint creationDisposition = OPEN_EXISTING;
-		
+
 		if ((uStyle & 0x0001) != 0) desiredAccess = GENERIC_WRITE;
 		else if ((uStyle & 0x0002) != 0) desiredAccess = GENERIC_READ | GENERIC_WRITE;
 		if ((uStyle & 0x1000) != 0) creationDisposition = CREATE_ALWAYS;
-		
+
 		// For OF_EXIST, just check file exists
 		if ((uStyle & 0x4000) != 0)
 		{
@@ -8736,7 +8736,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
 				return 0xFFFFFFFF;
 			}
-			
+
 			var resolved = WindowsPathUtility.ResolvePath(fileName, _env.CurrentDirectory);
 			return _env.VirtualFileSystem.FileExists(resolved) ? 0u : 0xFFFFFFFF;
 		}
@@ -8746,7 +8746,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_env.WriteAnsiStringAt(tempAddr, fileName);
 		var handle = CreateFileA(tempAddr, desiredAccess, 0, 0, creationDisposition, 0, 0);
 		// No need to free - memory is managed
-		
+
 		return handle == (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE ? 0xFFFFFFFF : handle;
 	}
 

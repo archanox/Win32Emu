@@ -33,7 +33,6 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	private const uint REG_DWORD = 4;       // 32-bit number
 
 	private uint _nextServiceHandle = 0xB0000000;
-	private readonly Dictionary<uint, ServiceData> _services = new();
 	private uint _nextSidHandle = 0xB1000000;
 
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
@@ -207,7 +206,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	private uint RegOpenKeyExA(uint hKey, in LpcStr lpSubKey, uint ulOptions, uint samDesired, uint phkResult)
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
-		
+
 		// Predefined registry key values
 		const uint HKEY_CLASSES_ROOT = 0x80000000;
 		const uint HKEY_CURRENT_USER = 0x80000001;
@@ -225,7 +224,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		};
 
 		var fullPath = string.IsNullOrEmpty(subKey) ? hKeyName : $"{hKeyName}\\{subKey}";
-		
+
 		_logger.LogInformation("[Advapi32] RegOpenKeyExA(hKey={HKeyName}, lpSubKey=\"{SubKey}\", options=0x{UlOptions:X}, access=0x{SamDesired:X}, phkResult=0x{PhkResult:X8})",
 			hKeyName, subKey, ulOptions, samDesired, phkResult);
 
@@ -257,7 +256,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	private uint RegQueryValueExA(uint hKey, in LpcStr lpValueName, uint lpReserved, uint lpType, uint lpData, uint lpcbData)
 	{
 		var valueName = lpValueName.ToString() ?? string.Empty;
-		
+
 		_logger.LogInformation("[Advapi32] RegQueryValueExA(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\", lpType=0x{LpType:X8}, lpData=0x{LpData:X8}, lpcbData=0x{LpcbData:X8})",
 			hKey, valueName, lpType, lpData, lpcbData);
 
@@ -272,7 +271,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		// Determine the data type and size
 		uint dataType;
 		byte[] dataBytes;
-		
+
 		if (value is string str)
 		{
 			dataType = REG_SZ;
@@ -300,39 +299,39 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			var fallbackStr = value?.ToString() ?? string.Empty;
 			dataBytes = System.Text.Encoding.ASCII.GetBytes(fallbackStr + '\0');
 		}
-		
+
 		// Write the data type if requested
 		if (lpType != 0)
 		{
 			_env.MemWrite32(lpType, dataType);
 		}
-		
+
 		// Check buffer size
 		uint requiredSize = (uint)dataBytes.Length;
 		uint providedSize = 0;
-		
+
 		if (lpcbData != 0)
 		{
 			providedSize = _env.MemRead32(lpcbData);
 			_env.MemWrite32(lpcbData, requiredSize);
 		}
-		
+
 		// If no buffer or buffer too small, return ERROR_MORE_DATA
 		if (lpData == 0 || (lpcbData != 0 && providedSize < requiredSize))
 		{
-			_logger.LogInformation("[Advapi32] RegQueryValueExA: Buffer too small or null (required={RequiredSize}, provided={ProvidedSize})", 
+			_logger.LogInformation("[Advapi32] RegQueryValueExA: Buffer too small or null (required={RequiredSize}, provided={ProvidedSize})",
 				requiredSize, providedSize);
 			return 234; // ERROR_MORE_DATA
 		}
-		
+
 		// Write the data to the buffer
 		for (uint i = 0; i < requiredSize && i < providedSize; i++)
 		{
 			_env.MemWrite8(lpData + i, dataBytes[i]);
 		}
-		
+
 		_logger.LogInformation("[Advapi32] RegQueryValueExA: Returned {Size} bytes, type={Type}", requiredSize, dataType);
-		
+
 		// ERROR_SUCCESS
 		return 0;
 	}
@@ -365,10 +364,10 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	private uint RegFlushKey(uint hKey)
 	{
 		_logger.LogInformation("[Advapi32] RegFlushKey(hKey=0x{HKey:X8})", hKey);
-		
+
 		// In a real system, this would flush the key to disk
 		// For emulation purposes, we just acknowledge the call
-		
+
 		// ERROR_SUCCESS
 		return 0;
 	}
@@ -392,7 +391,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
 		var className = lpClass.ToString() ?? string.Empty;
-		
+
 		// Predefined registry key values
 		const uint HKEY_CLASSES_ROOT = 0x80000000;
 		const uint HKEY_CURRENT_USER = 0x80000001;
@@ -410,7 +409,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		};
 
 		var fullPath = string.IsNullOrEmpty(subKey) ? hKeyName : $"{hKeyName}\\{subKey}";
-		
+
 		_logger.LogInformation("[Advapi32] RegCreateKeyExA(hKey={HKeyName}, lpSubKey=\"{SubKey}\", class=\"{ClassName}\", options=0x{DwOptions:X}, access=0x{SamDesired:X}, phkResult=0x{PhkResult:X8})",
 			hKeyName, subKey, className, dwOptions, samDesired, phkResult);
 
@@ -451,7 +450,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	private uint RegSetValueExA(uint hKey, in LpcStr lpValueName, uint reserved, uint dwType, uint lpData, uint cbData)
 	{
 		var valueName = lpValueName.ToString() ?? string.Empty;
-		
+
 		_logger.LogInformation("[Advapi32] RegSetValueExA(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\", type=0x{DwType:X}, lpData=0x{LpData:X8}, cbData={CbData})",
 			hKey, valueName, dwType, lpData, cbData);
 
@@ -460,7 +459,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			_logger.LogWarning("[Advapi32] RegSetValueExA: Invalid data pointer or size");
 			return 0; // ERROR_SUCCESS (be lenient for now)
 		}
-		
+
 		try
 		{
 			// Read the data from memory
@@ -469,10 +468,10 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			{
 				data[i] = _env.MemRead8(lpData + i);
 			}
-			
+
 			// Convert data based on type
 			object value;
-			
+
 			switch (dwType)
 			{
 				case REG_SZ:
@@ -482,7 +481,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 					if (strLen < 0) strLen = data.Length;
 					value = System.Text.Encoding.ASCII.GetString(data, 0, strLen);
 					break;
-					
+
 				case REG_DWORD:
 					if (cbData >= 4)
 					{
@@ -493,13 +492,13 @@ public class Advapi32Module : IWin32ModuleUnsafe
 						value = data;
 					}
 					break;
-					
+
 				case REG_BINARY:
 				default:
 					value = data;
 					break;
 			}
-			
+
 			// Store in virtual registry (legacy approach - the new registry hive will handle this via ProcessEnvironment)
 			_logger.LogInformation("[Advapi32] RegSetValueExA: Set value \"{ValueName}\"={Value} (type={Type})", valueName, value, dwType);
 		}
@@ -619,7 +618,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		var name = lpName.ToString() ?? string.Empty;
 		_logger.LogInformation("[Advapi32] LookupPrivilegeValueA(lpSystemName=\"{SystemName}\", lpName=\"{Name}\", lpLuid=0x{LpLuid:X8})",
 			systemName, name, lpLuid);
-		
+
 		if (lpLuid != 0)
 		{
 			_env.MemWrite32(lpLuid, 1); // LUID low part
@@ -633,7 +632,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Advapi32] OpenProcessToken(ProcessHandle=0x{ProcessHandle:X8}, DesiredAccess=0x{DesiredAccess:X}, TokenHandle=0x{TokenHandle:X8})",
 			ProcessHandle, DesiredAccess, TokenHandle);
-		
+
 		if (TokenHandle != 0)
 		{
 			_env.MemWrite32(TokenHandle, 0xC0000000); // Pseudo-handle for token
@@ -688,7 +687,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		var databaseName = lpDatabaseName.ToString() ?? string.Empty;
 		_logger.LogInformation("[Advapi32] OpenSCManagerA(lpMachineName=\"{MachineName}\", lpDatabaseName=\"{DatabaseName}\", dwDesiredAccess=0x{DwDesiredAccess:X})",
 			machineName, databaseName, dwDesiredAccess);
-		
+
 		return _nextServiceHandle++; // Return pseudo-handle
 	}
 
@@ -698,7 +697,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		var serviceName = lpServiceName.ToString() ?? string.Empty;
 		_logger.LogInformation("[Advapi32] OpenServiceA(hSCManager=0x{HSCManager:X8}, lpServiceName=\"{ServiceName}\", dwDesiredAccess=0x{DwDesiredAccess:X})",
 			hSCManager, serviceName, dwDesiredAccess);
-		
+
 		return _nextServiceHandle++; // Return pseudo-handle
 	}
 
@@ -752,7 +751,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		uint lpcchMaxValueNameLen, uint lpcbMaxValueLen, uint lpcbSecurityDescriptor, uint lpftLastWriteTime)
 	{
 		_logger.LogInformation("[Advapi32] RegQueryInfoKeyA(hKey=0x{HKey:X8})", hKey);
-		
+
 		// Stub implementation - return zeros for all counts
 		if (lpcSubKeys != 0)
 			_env.MemWrite32(lpcSubKeys, 0);
@@ -764,7 +763,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			_env.MemWrite32(lpcchMaxValueNameLen, 0);
 		if (lpcbMaxValueLen != 0)
 			_env.MemWrite32(lpcbMaxValueLen, 0);
-		
+
 		return 0; // ERROR_SUCCESS
 	}
 
@@ -772,7 +771,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	private uint RegEnumKeyA(uint hKey, uint dwIndex, in LpStr lpName, uint cchName)
 	{
 		_logger.LogInformation("[Advapi32] RegEnumKeyA(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
-		
+
 		// Stub implementation - no keys to enumerate
 		return 259; // ERROR_NO_MORE_ITEMS
 	}
@@ -782,7 +781,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		in LpStr lpClass, uint lpcchClass, uint lpftLastWriteTime)
 	{
 		_logger.LogInformation("[Advapi32] RegEnumKeyExA(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
-		
+
 		// Stub implementation - no keys to enumerate
 		return 259; // ERROR_NO_MORE_ITEMS
 	}
@@ -792,7 +791,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		uint lpReserved, uint lpType, uint lpData, uint lpcbData)
 	{
 		_logger.LogInformation("[Advapi32] RegEnumValueA(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
-		
+
 		// Stub implementation - no values to enumerate
 		return 259; // ERROR_NO_MORE_ITEMS
 	}
@@ -802,7 +801,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
 		_logger.LogInformation("[Advapi32] RegDeleteKeyA(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\")", hKey, subKey);
-		
+
 		// Stub implementation - report success
 		return 0; // ERROR_SUCCESS
 	}
@@ -812,7 +811,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	{
 		var valueName = lpValueName.ToString() ?? string.Empty;
 		_logger.LogInformation("[Advapi32] RegDeleteValueA(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\")", hKey, valueName);
-		
+
 		// Stub implementation - report success
 		return 0; // ERROR_SUCCESS
 	}
@@ -822,14 +821,14 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
 		_logger.LogInformation("[Advapi32] RegCreateKeyA(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\", phkResult=0x{PhkResult:X8})", hKey, subKey, phkResult);
-		
+
 		// Create a dummy handle
 		uint handle = 0xABCD0000 | (uint)(subKey.GetHashCode() & 0xFFFF);
 		if (phkResult != 0)
 		{
 			_env.MemWrite32(phkResult, handle);
 		}
-		
+
 		return 0; // ERROR_SUCCESS
 	}
 
@@ -839,7 +838,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		var subKey = lpSubKey.ToString() ?? string.Empty;
 		_logger.LogInformation("[Advapi32] RegSetValueA(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\", dwType={DwType}, lpData=0x{LpData:X8}, cbData={CbData})",
 			hKey, subKey, dwType, lpData, cbData);
-		
+
 		// Stub implementation - report success
 		return 0; // ERROR_SUCCESS
 	}
@@ -850,13 +849,13 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		var fileName = lpFileName.ToString() ?? string.Empty;
 		_logger.LogInformation("[Advapi32] GetFileSecurityA(lpFileName=\"{FileName}\", RequestedInformation=0x{RequestedInformation:X}, nLength={NLength})",
 			fileName, RequestedInformation, nLength);
-		
+
 		// Stub implementation - report insufficient buffer
 		if (lpnLengthNeeded != 0)
 		{
 			_env.MemWrite32(lpnLengthNeeded, 20); // Minimal security descriptor size
 		}
-		
+
 		return 0; // FALSE (insufficient buffer)
 	}
 
@@ -866,7 +865,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		var fileName = lpFileName.ToString() ?? string.Empty;
 		_logger.LogInformation("[Advapi32] SetFileSecurityA(lpFileName=\"{FileName}\", SecurityInformation=0x{SecurityInformation:X}, pSecurityDescriptor=0x{PSecurityDescriptor:X8})",
 			fileName, SecurityInformation, pSecurityDescriptor);
-		
+
 		// Stub implementation - report success
 		return 1; // TRUE
 	}
@@ -883,19 +882,19 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Advapi32] GetUserNameA(lpBuffer=0x{LpBuffer:X8}, pcbBuffer=0x{PcbBuffer:X8})",
 			lpBuffer, pcbBuffer);
-		
+
 		// Default username for emulation
 		const string username = "Player";
 		var usernameBytes = System.Text.Encoding.ASCII.GetBytes(username);
 		var requiredSize = (uint)(usernameBytes.Length + 1); // +1 for null terminator
-		
+
 		// Read the buffer size
 		uint bufferSize = 0;
 		if (pcbBuffer != 0)
 		{
 			bufferSize = _env.MemRead32(pcbBuffer);
 		}
-		
+
 		// Check if buffer is large enough
 		if (bufferSize < requiredSize)
 		{
@@ -908,7 +907,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			// but Advapi32Module doesn't have direct access to that
 			return 0; // FALSE
 		}
-		
+
 		// Write username to buffer
 		if (lpBuffer != 0)
 		{
@@ -919,13 +918,13 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			// Write null terminator
 			_env.MemWrite8(lpBuffer + (uint)usernameBytes.Length, 0);
 		}
-		
+
 		// Write actual size (including null terminator)
 		if (pcbBuffer != 0)
 		{
 			_env.MemWrite32(pcbBuffer, requiredSize);
 		}
-		
+
 		return 1; // TRUE
 	}
 
@@ -949,7 +948,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		// RegLoadKey requires SE_RESTORE_NAME privilege
 		// This is a privileged operation typically used by system utilities
 		// For emulation purposes, we'll return ERROR_ACCESS_DENIED
-		
+
 		_logger.LogWarning("[Advapi32] RegLoadKeyA: Privileged operation not supported in emulator");
 		return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 	}
@@ -972,7 +971,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		// RegUnLoadKey requires SE_RESTORE_NAME privilege
 		// This is a privileged operation typically used by system utilities
 		// For emulation purposes, we'll return ERROR_ACCESS_DENIED
-		
+
 		_logger.LogWarning("[Advapi32] RegUnLoadKeyA: Privileged operation not supported in emulator");
 		return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 	}
@@ -987,7 +986,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		var machineName = lpMachineName.Read(_env.Memory) ?? "";
 		_logger.LogInformation("[Advapi32] RegConnectRegistryA(lpMachineName='{LpMachineName}', hKey=0x{HKey:X8}, phkResult=0x{PhkResult:X8})",
 			machineName, hKey, phkResult);
-		
+
 		// For local machine or null, just duplicate the key handle
 		if (string.IsNullOrEmpty(machineName) || machineName == "." || machineName.StartsWith("\\\\."))
 		{
@@ -997,7 +996,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			}
 			return 0; // ERROR_SUCCESS
 		}
-		
+
 		// Remote registry not supported
 		return 53; // ERROR_BAD_NETPATH
 	}
