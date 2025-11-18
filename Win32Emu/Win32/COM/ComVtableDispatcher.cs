@@ -268,6 +268,13 @@ public class ComVtableDispatcher
 			try
 			{
 				returnValue = syncHandler(cpu, memory);
+				_logger.LogDebug("[COM] {MethodName} handler completed successfully", methodName);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[COM] Exception in {MethodName} handler (async fallback)", methodName);
+				returnValue = 0x80004005; // E_FAIL
+				// Continue with logging and cleanup
 			}
 			finally
 			{
