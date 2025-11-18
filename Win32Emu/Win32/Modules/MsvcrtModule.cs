@@ -215,6 +215,17 @@ namespace Win32Emu.Win32.Modules
 				case "TOUPPER":
 					returnValue = (uint)toupper(a.Int32(0));
 					return true;
+				case "??1TYPE_INFO@@UAE@XZ":
+					// type_info destructor (C++ mangled name)
+					// This is typically a no-op for type_info objects in our emulation
+					type_info_destructor(a.UInt32(0));
+					returnValue = 0;
+					return true;
+				case "??3@YAXPAX@Z":
+					// operator delete (C++ mangled name)
+					operator_delete(a.UInt32(0));
+					returnValue = 0;
+					return true;
 
 				default:
 					_logger.LogInformation("[msvcrt] Unimplemented export: {Export}", export);
@@ -908,6 +919,33 @@ namespace Win32Emu.Win32.Modules
 		_logger.LogDebug("[msvcrt] __ftol: ST(0)={St0} -> {Result:X16}", st0, result);
 		
 		return result;
+	}
+
+	/// <summary>
+	/// C++ type_info destructor (mangled name: ??1type_info@@UAE@XZ)
+	/// Destructor for the std::type_info class
+	/// </summary>
+	[DllModuleExport(0)]
+	private void type_info_destructor(uint thisPtr)
+	{
+		_logger.LogInformation("[msvcrt] type_info::~type_info(this=0x{This:X8})", thisPtr);
+		// type_info destructor is typically a no-op in the MSVC runtime
+		// The object is usually statically allocated and doesn't need explicit cleanup
+	}
+
+	/// <summary>
+	/// C++ operator delete (mangled name: ??3@YAXPAX@Z)
+	/// Global operator delete(void*)
+	/// </summary>
+	[DllModuleExport(0)]
+	private void operator_delete(uint ptr)
+	{
+		_logger.LogInformation("[msvcrt] operator delete(ptr=0x{Ptr:X8})", ptr);
+		// operator delete calls free internally
+		if (ptr != 0)
+		{
+			_env.HeapFree(0, ptr);
+		}
 	}
 }
 }

@@ -3596,7 +3596,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Retrieves a handle to the desktop window.
 		/// </summary>
-		[DllModuleExport(0, IsStub = true)]
+		[DllModuleExport(0)]
 		private uint GetDesktopWindow()
 		{
 			_logger.LogInformation("[User32] GetDesktopWindow()");
@@ -3606,7 +3606,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Changes the check state of a button control.
 		/// </summary>
-		[DllModuleExport(12, IsStub = true)]
+		[DllModuleExport(12)]
 		private uint CheckDlgButton(uint hDlg, int nIDButton, uint uCheck)
 		{
 			_logger.LogInformation("[User32] CheckDlgButton(hDlg=0x{HDlg:X8}, nIDButton={NIDButton}, uCheck={UCheck})",
@@ -3617,7 +3617,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Adds a check mark to a specified radio button in a group.
 		/// </summary>
-		[DllModuleExport(16, IsStub = true)]
+		[DllModuleExport(16)]
 		private uint CheckRadioButton(uint hDlg, int nIDFirstButton, int nIDLastButton, int nIDCheckButton)
 		{
 			_logger.LogInformation("[User32] CheckRadioButton(hDlg=0x{HDlg:X8}, nIDFirstButton={NIDFirstButton}, nIDLastButton={NIDLastButton}, nIDCheckButton={NIDCheckButton})",

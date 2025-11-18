@@ -894,8 +894,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return CreateEvent(lpEventAttributes, bManualReset, bInitialState, lpName);
 	}
 
-	[DllModuleExport(183, entryPoint: 0x00007568, Version = "4.90.0.3000", IsStub = true)]
-	[DllModuleExport(76, entryPoint: 0x00030922, Version = "5.1.2600.6532", IsStub = true)]
+	[DllModuleExport(183, entryPoint: 0x00007568, Version = "4.90.0.3000")]
+	[DllModuleExport(76, entryPoint: 0x00030922, Version = "5.1.2600.6532")]
 	public uint CreateEventA(uint lpEventAttributes, uint bManualReset, uint bInitialState, LpcStr lpName)
 	{
 		_logger.LogWarning("[kernel32] CreateEventA: lpEventAttributes={lpEventAttributes}, bManualReset={bManualReset}, bInitialState={bInitialState}, lpName={lpName}", lpEventAttributes, bManualReset, bInitialState, lpName);
