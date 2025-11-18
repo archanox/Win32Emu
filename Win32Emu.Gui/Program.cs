@@ -1,12 +1,28 @@
 ﻿using Avalonia;
 using Avalonia.Logging;
 using Microsoft.Extensions.Logging;
+using System.Runtime.CompilerServices;
 using Win32Emu.Logging;
 
 namespace Win32Emu.Gui;
 
 sealed class Program
 {
+    /// <summary>
+    /// Module initializer that runs before any other code in the assembly.
+    /// Used to configure headless mode BEFORE SDL native library is loaded.
+    /// NOTE: This is a best-effort approach. SDL may still load its native library before this runs.
+    /// For reliable headless operation, use the run-headless.sh launcher script or set SDL_VIDEODRIVER
+    /// before starting the process.
+    /// </summary>
+    [ModuleInitializer]
+    internal static void ModuleInit()
+    {
+        // Configure headless mode at module load time
+        // This is a defensive measure that may not always work due to SDL native library load timing
+        ConfigureHeadlessMode();
+    }
+
     // Initialization code. Don't use any Avalonia, third-party APIs or any
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
@@ -58,6 +74,34 @@ sealed class Program
         // Otherwise, start the Avalonia GUI application
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         return 0;
+    }
+
+    /// <summary>
+    /// Configures headless mode by detecting headless environment and setting SDL_VIDEODRIVER=dummy.
+    /// This is a defense-in-depth measure that may not always work due to SDL native library load timing.
+    /// For reliable headless operation, users should use run-headless.sh or set the environment variable
+    /// before starting the process.
+    /// </summary>
+    private static void ConfigureHeadlessMode()
+    {
+        // Check if we're in a headless environment (no DISPLAY variable on Linux/Unix)
+        // Also respect user-set SDL_VIDEODRIVER (don't override if already set)
+        var display = Environment.GetEnvironmentVariable("DISPLAY");
+        var sdlDriver = Environment.GetEnvironmentVariable("SDL_VIDEODRIVER");
+        
+        var isHeadless = string.IsNullOrEmpty(display) &&
+                         string.IsNullOrEmpty(sdlDriver) &&
+                         !OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS();
+        
+        if (isHeadless)
+        {
+            // Set dummy video driver for headless operation (best-effort)
+            Environment.SetEnvironmentVariable("SDL_VIDEODRIVER", "dummy");
+            // NOTE: Console.WriteLine is used here because this runs in a ModuleInitializer,
+            // before any ILogger instances are available. This is an acceptable exception to
+            // the project's logging guidelines for early diagnostic output.
+            Console.WriteLine("[Win32Emu] Headless environment detected - configured SDL dummy video driver");
+        }
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

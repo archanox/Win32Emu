@@ -79,6 +79,13 @@ Win32Emu.Gui --nogui game.exe --backend Metal
 # Run with Software backend (CPU-based, no GPU required)
 Win32Emu.Gui --nogui game.exe --backend Software
 
+# Run in headless mode (no display, CI/CD environments)
+# Use the provided launcher script that sets SDL_VIDEODRIVER=dummy
+./run-headless.sh --nogui game.exe --backend Software
+
+# Or set the environment variable manually
+SDL_VIDEODRIVER=dummy Win32Emu.Gui --nogui game.exe --backend Software
+
 # Run with enhanced debugging
 Win32Emu.Gui --nogui game.exe --debug
 
@@ -107,9 +114,27 @@ Win32Emu.Gui --nogui game.exe --telemetry-otlp http://localhost:4317
 **Important Note for macOS Users:**
 Running with `--nogui` ensures that rendering backends run on the main thread, which is required for proper operation of Metal, SDL, and other graphics APIs on macOS.
 
+**Running in Headless Environments (CI/CD, Docker, SSH):**
+For environments without a display (e.g., GitHub Actions, Docker, SSH sessions), use the Software backend with SDL's dummy video driver:
+
+```bash
+# Option 1: Use the provided launcher script (recommended)
+./run-headless.sh --nogui game.exe --backend Software
+
+# Option 2: Set environment variable manually
+SDL_VIDEODRIVER=dummy Win32Emu.Gui --nogui game.exe --backend Software
+
+# Option 3: Export for the entire session
+export SDL_VIDEODRIVER=dummy
+Win32Emu.Gui --nogui game.exe --backend Software
+```
+
+**Note:** The `SDL_VIDEODRIVER` environment variable must be set **before** starting the Win32Emu process. Setting it from within the application is too late because SDL reads it during native library initialization.
+
 See [Win32Emu.Gui/README.md](Win32Emu.Gui/README.md) for more details about the GUI features.
 
 **See Also:**
+- [HEADLESS_MODE.md](HEADLESS_MODE.md) - Comprehensive guide for running in headless environments
 - [docs/implementation/SILK_NET_MIGRATION.md](docs/implementation/SILK_NET_MIGRATION.md) - Backend system and configuration
 - [docs/guides/GHIDRA_DEBUGGING_FAQ.md](docs/guides/GHIDRA_DEBUGGING_FAQ.md) - Troubleshooting "no debugging symbols" and debugging tips
 - [docs/guides/DEBUGGING_GUIDE.md](docs/guides/DEBUGGING_GUIDE.md) - Enhanced debugging mode
