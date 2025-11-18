@@ -32,6 +32,10 @@ public partial class DialogWindow : Window
 		_dialogHandle = dialogHandle;
 		_controlHandles = controlHandles ?? new Dictionary<int, uint>();
 		_messageCallback = messageCallback;
+		
+		// Log initialization for debugging
+		Console.WriteLine($"[DialogWindow] Constructor: dialogHandle=0x{dialogHandle:X8}, controlHandles count={_controlHandles.Count}, messageCallback={(messageCallback != null ? "set" : "NULL")}");
+		
 		InitializeComponent();
 		BuildDialogContent();
 	}
@@ -386,40 +390,51 @@ public partial class DialogWindow : Window
 		Console.WriteLine($"[DialogWindow] OnControlClick triggered, sender type: {sender?.GetType().Name}");
 		System.Diagnostics.Debug.WriteLine($"[DialogWindow] OnControlClick triggered, sender type: {sender?.GetType().Name}");
 		
-		if (sender is Control control && control.Tag is ushort id)
+		if (sender is Control control)
 		{
-			Console.WriteLine($"[DialogWindow] Button clicked: ID={id}, DialogHandle=0x{_dialogHandle:X8}");
-			System.Diagnostics.Debug.WriteLine($"[DialogWindow] Button clicked: ID={id}, DialogHandle=0x{_dialogHandle:X8}");
+			Console.WriteLine($"[DialogWindow] Sender is Control, Tag type: {control.Tag?.GetType().Name ?? "null"}");
+			Console.WriteLine($"[DialogWindow] Tag value: {control.Tag}");
 			
-			// Send WM_COMMAND message to the dialog procedure for all button clicks
-			// The dialog procedure will decide whether to close the dialog via EndDialog
-			const uint WM_COMMAND = 0x0111;
-			const uint BN_CLICKED = 0;
-			var wParam = (uint)(BN_CLICKED << 16) | id;
-			
-			// Get the control's window handle if available
-			var controlHandle = _controlHandles.TryGetValue(id, out var handle) ? handle : 0u;
-			Console.WriteLine($"[DialogWindow] Sending WM_COMMAND: wParam=0x{wParam:X8}, controlHandle=0x{controlHandle:X8}");
-			System.Diagnostics.Debug.WriteLine($"[DialogWindow] Sending WM_COMMAND: wParam=0x{wParam:X8}, controlHandle=0x{controlHandle:X8}");
-			
-			if (_messageCallback != null)
+			// Try to get the ID from the Tag
+			if (control.Tag != null && control.Tag is ushort id)
 			{
-				_messageCallback.Invoke(_dialogHandle, WM_COMMAND, wParam, controlHandle);
-				Console.WriteLine($"[DialogWindow] Message callback invoked successfully");
-				System.Diagnostics.Debug.WriteLine($"[DialogWindow] Message callback invoked successfully");
+				Console.WriteLine($"[DialogWindow] Button clicked: ID={id}, DialogHandle=0x{_dialogHandle:X8}");
+				System.Diagnostics.Debug.WriteLine($"[DialogWindow] Button clicked: ID={id}, DialogHandle=0x{_dialogHandle:X8}");
+				
+				// Send WM_COMMAND message to the dialog procedure for all button clicks
+				// The dialog procedure will decide whether to close the dialog via EndDialog
+				const uint WM_COMMAND = 0x0111;
+				const uint BN_CLICKED = 0;
+				var wParam = (uint)(BN_CLICKED << 16) | id;
+				
+				// Get the control's window handle if available
+				var controlHandle = _controlHandles.TryGetValue(id, out var handle) ? handle : 0u;
+				Console.WriteLine($"[DialogWindow] Sending WM_COMMAND: wParam=0x{wParam:X8}, controlHandle=0x{controlHandle:X8}");
+				System.Diagnostics.Debug.WriteLine($"[DialogWindow] Sending WM_COMMAND: wParam=0x{wParam:X8}, controlHandle=0x{controlHandle:X8}");
+				
+				if (_messageCallback != null)
+				{
+					_messageCallback.Invoke(_dialogHandle, WM_COMMAND, wParam, controlHandle);
+					Console.WriteLine($"[DialogWindow] Message callback invoked successfully");
+					System.Diagnostics.Debug.WriteLine($"[DialogWindow] Message callback invoked successfully");
+				}
+				else
+				{
+					Console.WriteLine($"[DialogWindow] WARNING: Message callback is null! Button click will not be processed.");
+					System.Diagnostics.Debug.WriteLine($"[DialogWindow] WARNING: Message callback is null! Button click will not be processed.");
+				}
+
+				// Note: We no longer automatically close the dialog for IDOK/IDCANCEL
+				// The dialog procedure should call EndDialog when appropriate
 			}
 			else
 			{
-				Console.WriteLine($"[DialogWindow] WARNING: Message callback is null! Button click will not be processed.");
-				System.Diagnostics.Debug.WriteLine($"[DialogWindow] WARNING: Message callback is null! Button click will not be processed.");
+				Console.WriteLine($"[DialogWindow] Tag is null or not ushort");
 			}
-
-			// Note: We no longer automatically close the dialog for IDOK/IDCANCEL
-			// The dialog procedure should call EndDialog when appropriate
 		}
 		else
 		{
-			Console.WriteLine($"[DialogWindow] OnControlClick: Pattern match failed. Sender type: {sender?.GetType().Name}, Control.Tag type: {(sender as Control)?.Tag?.GetType().Name ?? "null"}");
+			Console.WriteLine($"[DialogWindow] Sender is not a Control");
 		    System.Diagnostics.Debug.WriteLine($"[DialogWindow] OnControlClick: Pattern match failed. Sender type: {sender?.GetType().Name}, Control.Tag type: {(sender as Control)?.Tag?.GetType().Name ?? "null"}");
 		}
 	}
