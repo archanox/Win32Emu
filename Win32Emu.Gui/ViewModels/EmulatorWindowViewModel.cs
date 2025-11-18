@@ -179,8 +179,9 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             try
             {
                 // Create message callback that posts messages to the emulator
-                // Always create the callback even if emulator is not available yet,
-                // in case it becomes available later
+                // Always create the callback even if emulator is not available yet.
+                // The runtime check handles race conditions where the emulator might be 
+                // stopped or replaced between callback creation and execution.
                 Action<uint, uint, uint, uint> messageCallback = (hwnd, msg, wParam, lParam) =>
                 {
                     if (_emulatorService?.CurrentEmulator != null)

@@ -3195,20 +3195,21 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				// If resource loading failed or LR_LOADFROMFILE was set, try loading from file
-				if (bitmapData == null && !string.IsNullOrEmpty(imageName) && name.Address >= MAX_INTRESOURCE)
+				if (bitmapData == null && !string.IsNullOrEmpty(imageName))
 				{
 					_logger.LogInformation("[User32] LoadImageA: Attempting to load bitmap from file \"{ImageName}\"", imageName);
 					try
 					{
-						// Try common bitmap file extensions
-						var extensions = new[] { ".bmp", ".dib", "" }; // Empty string for files already with extension
-						foreach (var ext in extensions)
+						// Determine which filenames to try based on whether imageName already has an extension
+						var hasExtension = imageName.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase) || 
+						                   imageName.EndsWith(".dib", StringComparison.OrdinalIgnoreCase);
+						
+						var filenamesToTry = hasExtension 
+							? new[] { imageName }
+							: new[] { imageName + ".bmp", imageName + ".dib", imageName };
+						
+						foreach (var filename in filenamesToTry)
 						{
-							var filename = imageName.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase) || 
-							               imageName.EndsWith(".dib", StringComparison.OrdinalIgnoreCase) 
-								? imageName 
-								: imageName + ext;
-							
 							// Try to read the file through VFS
 							if (_env.VirtualFileSystem != null && _env.VirtualFileSystem.FileExists(filename))
 							{
@@ -3223,21 +3224,38 @@ namespace Win32Emu.Win32.Modules
 									{
 										bitmapData = new byte[(int)fileSize];
 										var bytesRead = fileHandle.Read(bitmapData, 0, (int)fileSize);
-										if (bytesRead > 0)
+										if (bytesRead == fileSize)
 										{
 											_logger.LogInformation("[User32] LoadImageA: Loaded bitmap from file \"{FileName}\" ({Size} bytes)", 
 												filename, bytesRead);
 											loadedFromFile = true;
 											break;
 										}
+										else
+										{
+											_logger.LogWarning("[User32] LoadImageA: Incomplete read of bitmap file \"{FileName}\". Expected {ExpectedBytes} bytes, got {ActualBytes} bytes.", 
+												filename, fileSize, bytesRead);
+										}
 									}
 								}
 							}
 						}
 					}
+					catch (System.IO.FileNotFoundException ex)
+					{
+						_logger.LogWarning(ex, "[User32] LoadImageA: File not found \"{ImageName}\"", imageName);
+					}
+					catch (System.UnauthorizedAccessException ex)
+					{
+						_logger.LogWarning(ex, "[User32] LoadImageA: Access denied loading bitmap from file \"{ImageName}\"", imageName);
+					}
+					catch (System.IO.IOException ex)
+					{
+						_logger.LogWarning(ex, "[User32] LoadImageA: IO error loading bitmap from file \"{ImageName}\"", imageName);
+					}
 					catch (Exception ex)
 					{
-						_logger.LogWarning(ex, "[User32] LoadImageA: Failed to load bitmap from file \"{ImageName}\"", imageName);
+						_logger.LogWarning(ex, "[User32] LoadImageA: Unexpected error loading bitmap from file \"{ImageName}\"", imageName);
 					}
 				}
 
