@@ -921,6 +921,21 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::SetCooperativeLevel returned 0x00000000 (argBytes=12)
 info: Win32Emu.Emulator[0]
+      [COM vtable] Return address from stack: ESP=0x001FEEB8, retEIP=0x0040134B
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEB8: 0x0040134B (return addr)
+        [ESP+04] = 0x001FEEBC: 0x010032B0 (arg1)
+        [ESP+08] = 0x001FEEC0: 0x00010000 (arg2)
+        [ESP+12] = 0x001FEEC4: 0x00000011 (arg3)
+        [ESP+16] = 0x001FEEC8: 0xAFAEADAC
+        [ESP+20] = 0x001FEECC: 0xB3B2B1B0
+      
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEB8, retEIP=0x0040134B, argBytes=12, new ESP=0x001FEEC8
+info: Win32Emu.Emulator[0]
+      [COM] After vtable call: ESP changed from 0x001FEEB8 to 0x001FEEC8 (delta=16), Call site EIP=0x0D001140, Return EIP=0x0040134B
+info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D001150
 info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDraw::SetDisplayMode at address 0x0D001150
@@ -940,6 +955,21 @@ info: Win32Emu.Emulator[0]
       [DDraw COM] SetDisplayMode succeeded, returning DD_OK (0)
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::SetDisplayMode returned 0x00000000 (argBytes=16)
+info: Win32Emu.Emulator[0]
+      [COM vtable] Return address from stack: ESP=0x001FEEAC, retEIP=0x00401376
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEAC: 0x00401376 (return addr)
+        [ESP+04] = 0x001FEEB0: 0x010032B0 (arg1)
+        [ESP+08] = 0x001FEEB4: 0x00000280 (arg2)
+        [ESP+12] = 0x001FEEB8: 0x000001E0 (arg3)
+        [ESP+16] = 0x001FEEBC: 0x00000010 (arg4)
+        [ESP+20] = 0x001FEEC0: 0x00000000
+      
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEAC, retEIP=0x00401376, argBytes=16, new ESP=0x001FEEC0
+info: Win32Emu.Emulator[0]
+      [COM] After vtable call: ESP changed from 0x001FEEAC to 0x001FEEC0 (delta=20), Call site EIP=0x0D001150, Return EIP=0x00401376
 info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D001060
 info: Win32Emu.Emulator[0]
@@ -963,6 +993,21 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::CreateSurface returned 0x00000000 (argBytes=16)
 info: Win32Emu.Emulator[0]
+      [COM vtable] Return address from stack: ESP=0x001FEEA8, retEIP=0x004013CE
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEA8: 0x004013CE (return addr)
+        [ESP+04] = 0x001FEEAC: 0x010032B0 (arg1)
+        [ESP+08] = 0x001FEEB0: 0x001FEED0 (arg2)
+        [ESP+12] = 0x001FEEB4: 0x00409588 (arg3)
+        [ESP+16] = 0x001FEEB8: 0x00000000 (arg4)
+        [ESP+20] = 0x001FEEBC: 0x00000000
+      
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEA8, retEIP=0x004013CE, argBytes=16, new ESP=0x001FEEBC
+info: Win32Emu.Emulator[0]
+      [COM] After vtable call: ESP changed from 0x001FEEA8 to 0x001FEEBC (delta=20), Call site EIP=0x0D001060, Return EIP=0x004013CE
+info: Win32Emu.Emulator[0]
       [COM] Vtable method call at address 0x0D0020C0
 info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDrawSurface::GetAttachedSurface at address 0x0D0020C0
@@ -978,6 +1023,21 @@ info: Win32Emu.Emulator[0]
       [DDraw] Returning attached surface COM object at 0x010033C0
 info: Win32Emu.Emulator[0]
       [COM] IDirectDrawSurface::GetAttachedSurface returned 0x00000000 (argBytes=12)
+info: Win32Emu.Emulator[0]
+      [COM vtable] Return address from stack: ESP=0x001FEEB0, retEIP=0x0040140C
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack state before cleanup:
+        [ESP+00] = 0x001FEEB0: 0x0040140C (return addr)
+        [ESP+04] = 0x001FEEB4: 0x01003320 (arg1)
+        [ESP+08] = 0x001FEEB8: 0x001FEEC0 (arg2)
+        [ESP+12] = 0x001FEEBC: 0x0040958C (arg3)
+        [ESP+16] = 0x001FEEC0: 0x00000004
+        [ESP+20] = 0x001FEEC4: 0x00000000
+      
+info: Win32Emu.Emulator[0]
+      [COM vtable] Stack cleanup: ESP=0x001FEEB0, retEIP=0x0040140C, argBytes=12, new ESP=0x001FEEC0
+info: Win32Emu.Emulator[0]
+      [COM] After vtable call: ESP changed from 0x001FEEB0 to 0x001FEEC0 (delta=16), Call site EIP=0x0D0020C0, Return EIP=0x0040140C
 fail: Win32Emu.Emulator[0]
       [IcedCpu] Unhandled mnemonic INVALID at 0x0040715A, ESP=0x001FEF70, EBP=0x0040187C, EAX=0x00000065. Likely executing data as code or invalid jump target.
 fail: Win32Emu.Emulator[0]
@@ -985,21 +1045,21 @@ fail: Win32Emu.Emulator[0]
 fail: Win32Emu.Emulator[0]
       [Emulator] Exception during SingleStep at EIP=0x0040715A, ESP=0x001FEF70, EBP=0x0040187C: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
       System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
-         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 746
-         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 885
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 785
+         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 889
 fail: Win32Emu.Emulator[0]
       [Emulator] Unhandled exception during emulation
       System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
-         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 746
-         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 885
-         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 585
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 785
+         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 889
+         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 589
 info: Win32Emu.Emulator[0]
       No unimplemented functions found!
 fail: Win32Emu.Emulator[0]
       Unhandled exception during emulation
       System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
-         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 746
-         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 885
-         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 585
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 785
+         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 889
+         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 589
 
 
