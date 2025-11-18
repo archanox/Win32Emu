@@ -378,10 +378,13 @@ public partial class DialogWindow : Window
 
 	private void OnControlClick(object? sender, RoutedEventArgs e)
 	{
+		// Use Console.WriteLine for logging since it will appear in stdout
+		Console.WriteLine($"[DialogWindow] OnControlClick triggered, sender type: {sender?.GetType().Name}");
 		System.Diagnostics.Debug.WriteLine($"[DialogWindow] OnControlClick triggered, sender type: {sender?.GetType().Name}");
 		
 		if (sender is Control control && control.Tag is ushort id)
 		{
+			Console.WriteLine($"[DialogWindow] Button clicked: ID={id}, DialogHandle=0x{_dialogHandle:X8}");
 			System.Diagnostics.Debug.WriteLine($"[DialogWindow] Button clicked: ID={id}, DialogHandle=0x{_dialogHandle:X8}");
 			
 			// Send WM_COMMAND message to the dialog procedure for all button clicks
@@ -392,15 +395,18 @@ public partial class DialogWindow : Window
 			
 			// Get the control's window handle if available
 			var controlHandle = _controlHandles.TryGetValue(id, out var handle) ? handle : 0u;
+			Console.WriteLine($"[DialogWindow] Sending WM_COMMAND: wParam=0x{wParam:X8}, controlHandle=0x{controlHandle:X8}");
 			System.Diagnostics.Debug.WriteLine($"[DialogWindow] Sending WM_COMMAND: wParam=0x{wParam:X8}, controlHandle=0x{controlHandle:X8}");
 			
 			if (_messageCallback != null)
 			{
 				_messageCallback.Invoke(_dialogHandle, WM_COMMAND, wParam, controlHandle);
+				Console.WriteLine($"[DialogWindow] Message callback invoked successfully");
 				System.Diagnostics.Debug.WriteLine($"[DialogWindow] Message callback invoked successfully");
 			}
 			else
 			{
+				Console.WriteLine($"[DialogWindow] WARNING: Message callback is null! Button click will not be processed.");
 				System.Diagnostics.Debug.WriteLine($"[DialogWindow] WARNING: Message callback is null! Button click will not be processed.");
 			}
 
@@ -409,6 +415,7 @@ public partial class DialogWindow : Window
 		}
 		else
 		{
+			Console.WriteLine($"[DialogWindow] OnControlClick: Pattern match failed. Sender type: {sender?.GetType().Name}, Control.Tag type: {(sender as Control)?.Tag?.GetType().Name ?? "null"}");
 		    System.Diagnostics.Debug.WriteLine($"[DialogWindow] OnControlClick: Pattern match failed. Sender type: {sender?.GetType().Name}, Control.Tag type: {(sender as Control)?.Tag?.GetType().Name ?? "null"}");
 		}
 	}
