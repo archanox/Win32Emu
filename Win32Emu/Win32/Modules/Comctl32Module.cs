@@ -75,6 +75,35 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				returnValue = PropertySheetA(a.UInt32(0));
 				return true;
 
+			case "IMAGELIST_SETBKCOLOR":
+				returnValue = ImageList_SetBkColor(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "ORDINAL_2":
+				returnValue = Ordinal_2(a.UInt32(0));
+				return true;
+
+			case "ORDINAL_4":
+				returnValue = Ordinal_4(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "ORDINAL_6":
+				returnValue = Ordinal_6(a.UInt32(0));
+				return true;
+
+			case "ORDINAL_234":
+			case "ORDINAL_329":
+			case "ORDINAL_334":
+			case "ORDINAL_337":
+			case "ORDINAL_338":
+			case "ORDINAL_340":
+			case "ORDINAL_350":
+			case "ORDINAL_351":
+			case "ORDINAL_355":
+				_logger.LogInformation("[Comctl32] {Export}(...)", export);
+				returnValue = 1; // Generic stub for ordinals
+				return true;
+
 			default:
 				_logger.LogInformation("[Comctl32] Unimplemented export: {Export}", export);
 				return false;
@@ -312,6 +341,37 @@ public class Comctl32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
+
+	/// <summary>
+	/// Sets the background color in an image list.
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint ImageList_SetBkColor(uint himl, uint clrBk)
+	{
+		_logger.LogInformation("[Comctl32] ImageList_SetBkColor(himl=0x{Himl:X8}, clrBk=0x{ClrBk:X8})", himl, clrBk);
+		return 0xFFFFFFFF; // CLR_NONE - transparent background
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint Ordinal_2(uint param1)
+	{
+		_logger.LogInformation("[Comctl32] Ordinal_2(param1=0x{Param1:X8})", param1);
+		return 1;
+	}
+
+	[DllModuleExport(8, IsStub = true)]
+	private uint Ordinal_4(uint param1, uint param2)
+	{
+		_logger.LogInformation("[Comctl32] Ordinal_4(param1=0x{Param1:X8}, param2=0x{Param2:X8})", param1, param2);
+		return 1;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint Ordinal_6(uint param1)
+	{
+		_logger.LogInformation("[Comctl32] Ordinal_6(param1=0x{Param1:X8})", param1);
+		return 1;
+	}
 
 	private class ImageListData
 	{

@@ -47,6 +47,11 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 				returnValue = PageSetupDlgA(a.UInt32(0));
 				return true;
 
+
+case "PRINTDLGA":
+returnValue = PrintDlgA(a.UInt32(0));
+return true;
+
 			default:
 				_logger.LogInformation("[Comdlg32] Unimplemented export: {Export}", export);
 				return false;
@@ -164,4 +169,15 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Comdlg32] PageSetupDlgA: Dialog cancelled (stub)");
 		return 0; // FALSE
 	}
+
+/// <summary>
+/// Displays a Print dialog box.
+/// </summary>
+[DllModuleExport(4, IsStub = true)]
+private uint PrintDlgA(uint lppd)
+{
+_logger.LogInformation("[Comdlg32] PrintDlgA(lppd=0x{Lppd:X8})", lppd);
+return 0; // User cancelled
+}
+
 }

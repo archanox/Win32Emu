@@ -328,6 +328,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GETFILEATTRIBUTESA":
 				returnValue = GetFileAttributesA(a.LpcStr(0));
 				return true;
+			case "OPENFILE":
+				returnValue = OpenFile(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
+				return true;
 			case "GETDISKFREESPACEA":
 				returnValue = GetDiskFreeSpaceA(a.LpcStr(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
@@ -1922,7 +1925,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Write the export name to a temporary location in memory
-		var exportNamePtr = _env.WriteAnsiString(targetExport);
+		var exportNamePtr = _env.SimpleAlloc((uint)(targetExport.Length + 1));
+		_env.WriteAnsiStringAt(exportNamePtr, targetExport);
 
 		// Recursively call GetProcAddress to resolve the forwarded export
 		var result = GetProcAddress(targetModuleHandle, exportNamePtr);
@@ -8692,6 +8696,58 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_logger.LogError(ex, "[Kernel32] RtlZeroMemory exception");
 			return 0;
 		}
+	}
+
+	/// <summary>
+	/// Opens a file using the original OpenFile API (legacy).
+	/// HFILE OpenFile(LPCSTR lpFileName, LPOFSTRUCT lpReOpenBuff, UINT uStyle);
+	/// </summary>
+	[DllModuleExport(28)]
+	private uint OpenFile(in LpcStr lpFileName, uint lpReOpenBuff, uint uStyle)
+	{
+		var fileName = lpFileName.Read(_env.Memory) ?? "";
+		_logger.LogInformation("[Kernel32] OpenFile(lpFileName='{FileName}', lpReOpenBuff=0x{LpReOpenBuff:X8}, uStyle=0x{UStyle:X8})",
+			fileName, lpReOpenBuff, uStyle);
+
+		// OFSTRUCT is 136 bytes, fill with basic info
+		if (lpReOpenBuff != 0)
+		{
+			_env.MemWrite8(lpReOpenBuff, 136); // cBytes
+			_env.MemWrite8(lpReOpenBuff + 1, 1); // fFixedDisk
+			_env.MemWrite16(lpReOpenBuff + 2, 0); // nErrCode
+			_env.MemWrite16(lpReOpenBuff + 4, 0); // Reserved1
+			_env.MemWrite16(lpReOpenBuff + 6, 0); // Reserved2
+			_env.WriteAnsiStringAt(lpReOpenBuff + 8, fileName.Length > 127 ? fileName.Substring(0, 127) : fileName);
+		}
+
+		// Map uStyle flags: OF_READ (0x0), OF_WRITE (0x1), OF_READWRITE (0x2), OF_CREATE (0x1000), OF_EXIST (0x4000)
+		uint desiredAccess = GENERIC_READ;
+		uint creationDisposition = OPEN_EXISTING;
+		
+		if ((uStyle & 0x0001) != 0) desiredAccess = GENERIC_WRITE;
+		else if ((uStyle & 0x0002) != 0) desiredAccess = GENERIC_READ | GENERIC_WRITE;
+		if ((uStyle & 0x1000) != 0) creationDisposition = CREATE_ALWAYS;
+		
+		// For OF_EXIST, just check file exists
+		if ((uStyle & 0x4000) != 0)
+		{
+			if (_env.VirtualFileSystem == null)
+			{
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return 0xFFFFFFFF;
+			}
+			
+			var resolved = WindowsPathUtility.ResolvePath(fileName, _env.CurrentDirectory);
+			return _env.VirtualFileSystem.FileExists(resolved) ? 0u : 0xFFFFFFFF;
+		}
+
+		// Use CreateFileA to actually open - need to create a string pointer
+		var tempAddr = _env.SimpleAlloc((uint)(fileName.Length + 1));
+		_env.WriteAnsiStringAt(tempAddr, fileName);
+		var handle = CreateFileA(tempAddr, desiredAccess, 0, 0, creationDisposition, 0, 0);
+		// No need to free - memory is managed
+		
+		return handle == (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE ? 0xFFFFFFFF : handle;
 	}
 
 }

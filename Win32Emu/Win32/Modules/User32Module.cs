@@ -924,6 +924,74 @@ namespace Win32Emu.Win32.Modules
 					returnValue = TrackPopupMenuEx(a.UInt32(0), a.UInt32(1),a.Int32(2),a.Int32(3),a.UInt32(4),a.UInt32(5));
 					return true;
 				
+				case "CHARLOWERA":
+					returnValue = CharLowerA(a.LpStr(0));
+					return true;
+				
+				case "CHARUPPERBUFFA":
+					returnValue = CharUpperBuffA(a.LpStr(0), a.UInt32(1));
+					return true;
+				
+				case "CREATECARET":
+					returnValue = CreateCaret(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3));
+					return true;
+				
+				case "DESTROYCARET":
+					returnValue = DestroyCaret();
+					return true;
+				
+				case "SETCARETPOS":
+					returnValue = SetCaretPos(a.Int32(0), a.Int32(1));
+					return true;
+				
+				case "GETDOUBLECLICKTIME":
+					returnValue = GetDoubleClickTime();
+					return true;
+				
+				case "DELETEMENU":
+					returnValue = DeleteMenu(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				
+				case "INSERTMENUA":
+					returnValue = InsertMenuA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.LpcStr(4));
+					return true;
+				
+				case "INSERTMENUITEMA":
+					returnValue = InsertMenuItemA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				
+				case "GETMENUITEMINFOA":
+					returnValue = GetMenuItemInfoA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				
+				case "SETMENUITEMINFOA":
+					returnValue = SetMenuItemInfoA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				
+				case "SETMENUDEFAULTITEM":
+					returnValue = SetMenuDefaultItem(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				
+				case "SCROLLWINDOWEX":
+					returnValue = ScrollWindowEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+					return true;
+				
+				case "SETWINDOWPLACEMENT":
+					returnValue = SetWindowPlacement(a.UInt32(0), a.UInt32(1));
+					return true;
+				
+				case "DRAWANIMATEDRECTS":
+					returnValue = DrawAnimatedRects(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				
+				case "EMPTYCLIPBOARD":
+					returnValue = EmptyClipboard();
+					return true;
+				
+				case "SETCLIPBOARDDATA":
+					returnValue = SetClipboardData(a.UInt32(0), a.UInt32(1));
+					return true;
+				
 				default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
@@ -6037,6 +6105,193 @@ namespace Win32Emu.Win32.Modules
 		
 		_logger.LogInformation("[User32] TrackPopupMenu: Stub - returning 0 (no selection)");
 		return 0;
+	}
+
+	/// <summary>
+	/// Converts a character string or a single character to lowercase.
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint CharLowerA(in LpStr lpsz)
+	{
+		var str = _env.ReadAnsiString(lpsz.Address) ?? "";
+		_logger.LogInformation("[User32] CharLowerA(lpsz='{Lpsz}')", str);
+		var lower = str.ToLowerInvariant();
+		_env.WriteAnsiStringAt(lpsz.Address, lower);
+		return lpsz.Address;
+	}
+
+	/// <summary>
+	/// Converts a specified number of characters in a buffer to uppercase.
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint CharUpperBuffA(in LpStr lpsz, uint cchLength)
+	{
+		var str = _env.ReadAnsiString(lpsz.Address, (int)cchLength) ?? "";
+		_logger.LogInformation("[User32] CharUpperBuffA(lpsz='{Lpsz}', cchLength={CchLength})", str, cchLength);
+		var upper = str.ToUpperInvariant();
+		_env.WriteAnsiStringAt(lpsz.Address, upper);
+		return cchLength;
+	}
+
+	/// <summary>
+	/// Creates a new shape for the system caret and assigns ownership of the caret to the specified window.
+	/// </summary>
+	[DllModuleExport(16, IsStub = true)]
+	private uint CreateCaret(uint hWnd, uint hBitmap, int nWidth, int nHeight)
+	{
+		_logger.LogInformation("[User32] CreateCaret(hWnd=0x{HWnd:X8}, hBitmap=0x{HBitmap:X8}, nWidth={NWidth}, nHeight={NHeight})",
+			hWnd, hBitmap, nWidth, nHeight);
+		return 1;
+	}
+
+	/// <summary>
+	/// Destroys the caret's current shape, frees the caret from the window, and removes the caret from the screen.
+	/// </summary>
+	[DllModuleExport(0, IsStub = true)]
+	private uint DestroyCaret()
+	{
+		_logger.LogInformation("[User32] DestroyCaret()");
+		return 1;
+	}
+
+	/// <summary>
+	/// Moves the caret to the specified coordinates in the client area of a window.
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint SetCaretPos(int x, int y)
+	{
+		_logger.LogInformation("[User32] SetCaretPos(x={X}, y={Y})", x, y);
+		return 1;
+	}
+
+	/// <summary>
+	/// Retrieves the current double-click time for the mouse.
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint GetDoubleClickTime()
+	{
+		_logger.LogInformation("[User32] GetDoubleClickTime()");
+		return 500; // 500ms default
+	}
+
+	/// <summary>
+	/// Deletes a menu item or detaches a submenu from the specified menu.
+	/// </summary>
+	[DllModuleExport(12, IsStub = true)]
+	private uint DeleteMenu(uint hMenu, uint uPosition, uint uFlags)
+	{
+		_logger.LogInformation("[User32] DeleteMenu(hMenu=0x{HMenu:X8}, uPosition={UPosition}, uFlags=0x{UFlags:X8})",
+			hMenu, uPosition, uFlags);
+		return 1;
+	}
+
+	/// <summary>
+	/// Inserts a new menu item into a menu, moving other items down the menu.
+	/// </summary>
+	[DllModuleExport(20, IsStub = true)]
+	private uint InsertMenuA(uint hMenu, uint uPosition, uint uFlags, uint uIDNewItem, in LpcStr lpNewItem)
+	{
+		var itemName = lpNewItem.Read(_env.Memory) ?? "";
+		_logger.LogInformation("[User32] InsertMenuA(hMenu=0x{HMenu:X8}, uPosition={UPosition}, uFlags=0x{UFlags:X8}, uIDNewItem={UIDNewItem}, lpNewItem='{LpNewItem}')",
+			hMenu, uPosition, uFlags, uIDNewItem, itemName);
+		return 1;
+	}
+
+	/// <summary>
+	/// Inserts a new menu item at the specified position in a menu.
+	/// </summary>
+	[DllModuleExport(16, IsStub = true)]
+	private uint InsertMenuItemA(uint hMenu, uint uItem, uint fByPosition, uint lpmii)
+	{
+		_logger.LogInformation("[User32] InsertMenuItemA(hMenu=0x{HMenu:X8}, uItem={UItem}, fByPosition={FByPosition}, lpmii=0x{Lpmii:X8})",
+			hMenu, uItem, fByPosition, lpmii);
+		return 1;
+	}
+
+	/// <summary>
+	/// Retrieves information about a menu item.
+	/// </summary>
+	[DllModuleExport(16, IsStub = true)]
+	private uint GetMenuItemInfoA(uint hMenu, uint uItem, uint fByPosition, uint lpmii)
+	{
+		_logger.LogInformation("[User32] GetMenuItemInfoA(hMenu=0x{HMenu:X8}, uItem={UItem}, fByPosition={FByPosition}, lpmii=0x{Lpmii:X8})",
+			hMenu, uItem, fByPosition, lpmii);
+		return 0; // Not found
+	}
+
+	/// <summary>
+	/// Changes information about a menu item.
+	/// </summary>
+	[DllModuleExport(16, IsStub = true)]
+	private uint SetMenuItemInfoA(uint hMenu, uint uItem, uint fByPosition, uint lpmii)
+	{
+		_logger.LogInformation("[User32] SetMenuItemInfoA(hMenu=0x{HMenu:X8}, uItem={UItem}, fByPosition={FByPosition}, lpmii=0x{Lpmii:X8})",
+			hMenu, uItem, fByPosition, lpmii);
+		return 1;
+	}
+
+	/// <summary>
+	/// Sets the default menu item for the specified menu.
+	/// </summary>
+	[DllModuleExport(12, IsStub = true)]
+	private uint SetMenuDefaultItem(uint hMenu, uint uItem, uint fByPos)
+	{
+		_logger.LogInformation("[User32] SetMenuDefaultItem(hMenu=0x{HMenu:X8}, uItem={UItem}, fByPos={FByPos})",
+			hMenu, uItem, fByPos);
+		return 1;
+	}
+
+	/// <summary>
+	/// Scrolls the contents of the specified window's client area.
+	/// </summary>
+	[DllModuleExport(32, IsStub = true)]
+	private uint ScrollWindowEx(uint hWnd, int dx, int dy, uint prcScroll, uint prcClip, uint hrgnUpdate, uint prcUpdate, uint flags)
+	{
+		_logger.LogInformation("[User32] ScrollWindowEx(hWnd=0x{HWnd:X8}, dx={Dx}, dy={Dy}, flags=0x{Flags:X8})",
+			hWnd, dx, dy, flags);
+		return 1;
+	}
+
+	/// <summary>
+	/// Sets the show state and the restored, minimized, and maximized positions of the specified window.
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint SetWindowPlacement(uint hWnd, uint lpwndpl)
+	{
+		_logger.LogInformation("[User32] SetWindowPlacement(hWnd=0x{HWnd:X8}, lpwndpl=0x{Lpwndpl:X8})",
+			hWnd, lpwndpl);
+		return 1;
+	}
+
+	/// <summary>
+	/// Animates the caption of a window to indicate the opening of an icon or the minimizing or maximizing of a window.
+	/// </summary>
+	[DllModuleExport(16, IsStub = true)]
+	private uint DrawAnimatedRects(uint hWnd, int idAni, uint lprcFrom, uint lprcTo)
+	{
+		_logger.LogInformation("[User32] DrawAnimatedRects(hWnd=0x{HWnd:X8}, idAni={IdAni})",
+			hWnd, idAni);
+		return 1;
+	}
+
+	/// <summary>
+	/// Empties the clipboard and frees handles to data in the clipboard.
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint EmptyClipboard()
+	{
+		_logger.LogInformation("[User32] EmptyClipboard()");
+		return 1;
+	}
+
+	/// <summary>
+	/// Places data on the clipboard in a specified clipboard format.
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint SetClipboardData(uint uFormat, uint hMem)
+	{
+		_logger.LogInformation("[User32] SetClipboardData(uFormat={UFormat}, hMem=0x{HMem:X8})", uFormat, hMem);
+		return hMem;
 	}
 
 	#endregion

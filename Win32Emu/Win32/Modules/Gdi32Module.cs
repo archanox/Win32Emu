@@ -360,6 +360,26 @@ namespace Win32Emu.Win32.Modules
 					returnValue = InvertRect(a.UInt32(0), a.UInt32(1));
 					return true;
 
+				case "ABORTDOC":
+					returnValue = AbortDoc(a.UInt32(0));
+					return true;
+
+				case "CREATEPATTERNBRUSH":
+					returnValue = CreatePatternBrush(a.UInt32(0));
+					return true;
+
+				case "EXCLUDECLIPRECT":
+					returnValue = ExcludeClipRect(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4));
+					return true;
+
+				case "SELECTCLIPRGN":
+					returnValue = SelectClipRgn(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "SETABORTPROC":
+					returnValue = SetAbortProc(a.UInt32(0), a.UInt32(1));
+					return true;
+
 				default:
 					_logger.LogInformation("[Gdi32] Unimplemented export: {Export}", export);
 					return false;
@@ -1988,5 +2008,56 @@ namespace Win32Emu.Win32.Modules
 			public uint TextColor { get; set; } = 0x00000000; // Black
 			public uint SelectedBitmap { get; set; } = 0; // Currently selected bitmap
 		}
+
+/// <summary>
+/// Stops the current print job and erases everything drawn since the last call to StartDoc.
+/// </summary>
+[DllModuleExport(4, IsStub = true)]
+private uint AbortDoc(uint hdc)
+{
+_logger.LogInformation("[Gdi32] AbortDoc(hdc=0x{Hdc:X8})", hdc);
+return 1; // Success
+}
+
+/// <summary>
+/// Creates a logical brush with the specified bitmap pattern.
+/// </summary>
+[DllModuleExport(4, IsStub = true)]
+private uint CreatePatternBrush(uint hbmp)
+{
+_logger.LogInformation("[Gdi32] CreatePatternBrush(hbmp=0x{Hbmp:X8})", hbmp);
+return _nextGdiObjectHandle++; // Return unique brush handle
+}
+
+/// <summary>
+/// Creates a new clipping region by excluding the specified rectangle.
+/// </summary>
+[DllModuleExport(20)]
+private uint ExcludeClipRect(uint hdc, int left, int top, int right, int bottom)
+{
+_logger.LogInformation("[Gdi32] ExcludeClipRect(hdc=0x{Hdc:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom})",
+hdc, left, top, right, bottom);
+return 1; // SIMPLEREGION
+}
+
+/// <summary>
+/// Selects a region as the current clipping region for the specified device context.
+/// </summary>
+[DllModuleExport(8)]
+private uint SelectClipRgn(uint hdc, uint hrgn)
+{
+_logger.LogInformation("[Gdi32] SelectClipRgn(hdc=0x{Hdc:X8}, hrgn=0x{Hrgn:X8})", hdc, hrgn);
+return hrgn == 0 ? 1u : 2u; // SIMPLEREGION if non-null, else NULLREGION
+}
+
+/// <summary>
+/// Sets the application-defined abort function that allows a print job to be cancelled during printing.
+/// </summary>
+[DllModuleExport(8, IsStub = true)]
+private uint SetAbortProc(uint hdc, uint lpAbortProc)
+{
+_logger.LogInformation("[Gdi32] SetAbortProc(hdc=0x{Hdc:X8}, lpAbortProc=0x{LpAbortProc:X8})", hdc, lpAbortProc);
+return 1; // Success
+}
 	}
 }

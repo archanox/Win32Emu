@@ -95,6 +95,16 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 				returnValue = Ordinal_653(a.UInt32(0));
 				return true;
 
+			case "48":
+			case "ORDINAL_48":
+				returnValue = Ordinal_48(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			case "195":
+			case "ORDINAL_195":
+				returnValue = Ordinal_195(a.UInt32(0));
+				return true;
+
 			default:
 				LogUnimplementedExport(export);
 				return false;
@@ -209,7 +219,8 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 					return PerformDeleteOperation(sourceFiles, fileOp.fFlags);
 				case FO_RENAME:
 					return PerformRenameOperation(sourceFiles, destFiles, fileOp.fFlags);
-				default:
+	
+			default:
 					_logger.LogWarning("[Shell32] SHFileOperationA: Unknown wFunc={Func}", fileOp.wFunc);
 					return 0x71; // ERROR_BAD_FUNCTION
 			}
@@ -916,4 +927,19 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		// The actual behavior is undocumented
 		return 1; // Assume success
 	}
+
+[DllModuleExport(8, IsStub = true)]
+private uint Ordinal_48(uint param1, uint param2)
+{
+_logger.LogInformation("[Shell32] Ordinal_48(param1=0x{Param1:X8}, param2=0x{Param2:X8})", param1, param2);
+return 1;
+}
+
+[DllModuleExport(4, IsStub = true)]
+private uint Ordinal_195(uint param1)
+{
+_logger.LogInformation("[Shell32] Ordinal_195(param1=0x{Param1:X8})", param1);
+return 1;
+}
+
 }

@@ -86,6 +86,9 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			case "REGDELETEVALUEA":
 				returnValue = RegDeleteValueA(a.UInt32(0), a.LpcStr(1));
 				return true;
+			case "REGCONNECTREGISTRYA":
+				returnValue = RegConnectRegistryA(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
+				return true;
 			case "REGCLOSEKEY":
 				returnValue = RegCloseKey(a.UInt32(0));
 				return true;
@@ -972,6 +975,31 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		
 		_logger.LogWarning("[Advapi32] RegUnLoadKeyA: Privileged operation not supported in emulator");
 		return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+	}
+
+	/// <summary>
+	/// Establishes a connection to a predefined registry key on another computer.
+	/// LONG RegConnectRegistryA(LPCSTR lpMachineName, HKEY hKey, PHKEY phkResult);
+	/// </summary>
+	[DllModuleExport(12, IsStub = true)]
+	private uint RegConnectRegistryA(in LpcStr lpMachineName, uint hKey, uint phkResult)
+	{
+		var machineName = lpMachineName.Read(_env.Memory) ?? "";
+		_logger.LogInformation("[Advapi32] RegConnectRegistryA(lpMachineName='{LpMachineName}', hKey=0x{HKey:X8}, phkResult=0x{PhkResult:X8})",
+			machineName, hKey, phkResult);
+		
+		// For local machine or null, just duplicate the key handle
+		if (string.IsNullOrEmpty(machineName) || machineName == "." || machineName.StartsWith("\\\\."))
+		{
+			if (phkResult != 0)
+			{
+				_env.MemWrite32(phkResult, hKey);
+			}
+			return 0; // ERROR_SUCCESS
+		}
+		
+		// Remote registry not supported
+		return 53; // ERROR_BAD_NETPATH
 	}
 
 	private class ServiceData
