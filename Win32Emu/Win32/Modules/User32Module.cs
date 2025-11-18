@@ -68,6 +68,12 @@ namespace Win32Emu.Win32.Modules
 		private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
 		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
 		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB) - addresses below this indicate memory corruption
+		
+		// Resource ID constants
+		// In Win32 API, resource IDs can be either integers or string pointers.
+		// Integer resource IDs are stored as values < 0x10000 (65536), while string pointers are >= 0x10000.
+		// This follows the Windows IS_INTRESOURCE macro convention.
+		private const uint MAX_INTRESOURCE = 0x10000; // Maximum value for integer resource IDs (65536)
 
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -3166,7 +3172,8 @@ namespace Win32Emu.Win32.Modules
 				{
 					// Try to load from resources first
 					// Check if name is an integer resource ID or string name
-					if (name.Address < 0x10000)
+					// Win32 convention: integer resource IDs are < MAX_INTRESOURCE (0x10000)
+					if (name.Address < MAX_INTRESOURCE)
 					{
 						// It's an integer resource ID
 						var resourceId = name.Address;
@@ -3188,7 +3195,7 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				// If resource loading failed or LR_LOADFROMFILE was set, try loading from file
-				if (bitmapData == null && !string.IsNullOrEmpty(imageName) && name.Address >= 0x10000)
+				if (bitmapData == null && !string.IsNullOrEmpty(imageName) && name.Address >= MAX_INTRESOURCE)
 				{
 					_logger.LogInformation("[User32] LoadImageA: Attempting to load bitmap from file \"{ImageName}\"", imageName);
 					try
