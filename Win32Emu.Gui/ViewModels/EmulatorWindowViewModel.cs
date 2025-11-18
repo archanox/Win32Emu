@@ -170,6 +170,8 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     public async Task<int> OnDialogCreate(DialogCreateInfo info)
     {
         OnDebugOutput($"Creating Avalonia dialog for HWND=0x{info.Handle:X8}: {info.Template.Title} ({info.Template.Width}x{info.Template.Height})", DebugLevel.Info);
+        OnDebugOutput($"EmulatorService is {(_emulatorService != null ? "NOT NULL" : "NULL")}", DebugLevel.Info);
+        OnDebugOutput($"CurrentEmulator is {(_emulatorService?.CurrentEmulator != null ? "NOT NULL" : "NULL")}", DebugLevel.Info);
         
         // Show the dialog on the UI thread (non-blocking)
         await Dispatcher.UIThread.InvokeAsync(() =>
@@ -189,7 +191,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 }
                 else
                 {
-                    OnDebugOutput($"WARNING: Cannot create message callback - emulator service or current emulator is null", DebugLevel.Error);
+                    OnDebugOutput($"WARNING: Cannot create message callback - emulator service={(_emulatorService != null ? "NOT NULL" : "NULL")}, current emulator={(_emulatorService?.CurrentEmulator != null ? "NOT NULL" : "NULL")}", DebugLevel.Error);
                 }
                 
                 // Create debug callback that uses OnDebugOutput
@@ -197,6 +199,8 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 {
                     OnDebugOutput(message, level);
                 };
+                
+                OnDebugOutput($"About to create DialogWindow with messageCallback={(messageCallback != null ? "NOT NULL" : "NULL")}, debugCallback={(debugCallback != null ? "NOT NULL" : "NULL")}", DebugLevel.Info);
                 
                 // Create DialogWindow from the template with dialog handle, control handles, message callback, and debug callback
                 var dialogWindow = new Views.DialogWindow(info.Template, info.Handle, info.ControlHandles, messageCallback, debugCallback);

@@ -36,7 +36,7 @@ public partial class DialogWindow : Window
 		_debugCallback = debugCallback;
 		
 		// Log initialization for debugging
-		_debugCallback?.Invoke($"[DialogWindow] Constructor: dialogHandle=0x{dialogHandle:X8}, controlHandles count={_controlHandles.Count}, messageCallback={(messageCallback != null ? "set" : "NULL")}", DebugLevel.Debug);
+		_debugCallback?.Invoke($"[DialogWindow] Constructor: dialogHandle=0x{dialogHandle:X8}, controlHandles count={_controlHandles.Count}, messageCallback={(messageCallback != null ? "set" : "NULL")}, debugCallback={(debugCallback != null ? "set" : "NULL")}", DebugLevel.Info);
 		
 		InitializeComponent();
 		BuildDialogContent();
