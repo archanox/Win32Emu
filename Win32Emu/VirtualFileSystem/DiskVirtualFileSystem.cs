@@ -212,6 +212,17 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 	/// <param name="targetPath">Target path in the virtual disk (e.g., "/" or "/games")</param>
 	public void CopyDirectoryIn(string sourcePath, string targetPath = "/")
 	{
+		CopyDirectoryIn(sourcePath, targetPath, null);
+	}
+
+	/// <summary>
+	/// Copy a directory from the host filesystem into the virtual disk with progress reporting
+	/// </summary>
+	/// <param name="sourcePath">Source directory on host filesystem</param>
+	/// <param name="targetPath">Target path in virtual filesystem</param>
+	/// <param name="progress">Optional progress reporter for file copy operations</param>
+	public void CopyDirectoryIn(string sourcePath, string targetPath, IProgress<(string fileName, int filesCopied, int totalFiles, long bytesCopied, long totalBytes)>? progress)
+	{
 		if (IsReadOnly)
 		{
 			throw new InvalidOperationException("Cannot copy files into a read-only disk (ISO)");
@@ -233,11 +244,43 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		}
 
 		_logger.LogInformation("[DiskVFS] Starting copy: {SourcePath} -> {TargetPath}", sourcePath, targetPath);
-		CopyDirectoryRecursive(sourcePath, targetPath);
+		
+		// Count files and calculate total size if progress reporting is enabled
+		var fileCount = 0;
+		var totalBytes = 0L;
+		if (progress != null)
+		{
+			var allFiles = Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories);
+			fileCount = allFiles.Length;
+			totalBytes = allFiles.Sum(f => new FileInfo(f).Length);
+			_logger.LogInformation("[DiskVFS] Found {FileCount} files ({TotalBytes} bytes) to copy", fileCount, totalBytes);
+		}
+		
+		var state = new CopyProgressState { TotalFiles = fileCount, TotalBytes = totalBytes };
+		CopyDirectoryRecursive(sourcePath, targetPath, progress, state);
+		
 		_logger.LogInformation("[DiskVFS] Successfully completed copying directory to virtual disk: {TargetPath}", targetPath);
 	}
 
+	/// <summary>
+	/// Internal state class for tracking copy progress across recursive calls.
+	/// Note: This class is not thread-safe. Instances should only be used within a single copy operation
+	/// and should not be shared across threads.
+	/// </summary>
+	private class CopyProgressState
+	{
+		public int FilesCopied { get; set; }
+		public long BytesCopied { get; set; }
+		public int TotalFiles { get; set; }
+		public long TotalBytes { get; set; }
+	}
+
 	private void CopyDirectoryRecursive(string sourceDir, string targetDir)
+	{
+		CopyDirectoryRecursive(sourceDir, targetDir, null, new CopyProgressState());
+	}
+
+	private void CopyDirectoryRecursive(string sourceDir, string targetDir, IProgress<(string fileName, int filesCopied, int totalFiles, long bytesCopied, long totalBytes)>? progress, CopyProgressState state)
 	{
 		// Copy all files in current directory
 		foreach (var file in Directory.GetFiles(sourceDir))
@@ -250,8 +293,14 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			using var targetStream = _fileSystem.OpenFile(targetPath, FileMode.Create, FileAccess.Write);
 			sourceStream.CopyTo(targetStream);
 
-			_logger.LogDebug("[DiskVFS] Copied file: {FileName} -> {TargetPath} ({Size} bytes)", 
-				fileName, targetPath, fileSize);
+			state.FilesCopied++;
+			state.BytesCopied += fileSize;
+			
+			_logger.LogDebug("[DiskVFS] Copied file: {FileName} -> {TargetPath} ({Size} bytes) [{FilesCopied}/{TotalFiles}]", 
+				fileName, targetPath, fileSize, state.FilesCopied, state.TotalFiles);
+			
+			// Report progress
+			progress?.Report((fileName, state.FilesCopied, state.TotalFiles, state.BytesCopied, state.TotalBytes));
 		}
 
 		// Recursively copy subdirectories
@@ -262,7 +311,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 
 			_fileSystem.CreateDirectory(targetPath);
 			_logger.LogInformation("[DiskVFS] Created directory: {TargetPath}", targetPath);
-			CopyDirectoryRecursive(dir, targetPath);
+			CopyDirectoryRecursive(dir, targetPath, progress, state);
 		}
 	}
 

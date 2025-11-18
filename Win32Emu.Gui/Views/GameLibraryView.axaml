@@ -89,6 +89,28 @@
                                             <!-- Show image on top if ThumbnailPath is available -->
                                             <Image Source="{Binding ThumbnailPath, Converter={StaticResource ThumbnailPathConverter}}"
                                                    Stretch="Uniform"/>
+                                            
+                                            <!-- Installation overlay -->
+                                            <Border IsVisible="{Binding IsInstalling}"
+                                                   Background="#CC000000"
+                                                   CornerRadius="4">
+                                                <StackPanel HorizontalAlignment="Center" 
+                                                          VerticalAlignment="Center"
+                                                          Spacing="10">
+                                                    <TextBlock Text="⏳"
+                                                             FontSize="32"
+                                                             HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="Installing..."
+                                                             FontSize="14"
+                                                             FontWeight="Bold"
+                                                             Foreground="White"
+                                                             HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding InstallProgress, StringFormat='{}{0:F0}%'}"
+                                                             FontSize="12"
+                                                             Foreground="White"
+                                                             HorizontalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
                                         </Panel>
                                     </Border>
 
@@ -102,6 +124,24 @@
 
                                     <!-- Game Info -->
                                     <StackPanel Grid.Row="2" Spacing="4">
+                                        <!-- Installation Progress Bar and Status -->
+                                        <Border IsVisible="{Binding IsInstalling}"
+                                               Background="{DynamicResource SystemControlBackgroundBaseMediumBrush}"
+                                               CornerRadius="4"
+                                               Padding="5"
+                                               Margin="0,0,0,5">
+                                            <StackPanel Spacing="5">
+                                                <ProgressBar Value="{Binding InstallProgress}"
+                                                           Maximum="100"
+                                                           IsIndeterminate="False"
+                                                           Height="4"/>
+                                                <TextBlock Text="{Binding InstallStatusMessage}"
+                                                         FontSize="11"
+                                                         Opacity="0.8"
+                                                         TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                        
                                         <TextBlock Text="{Binding Description}"
                                                  TextWrapping="Wrap"
                                                  FontSize="12"
@@ -119,6 +159,7 @@
                                         <Button Content="Launch"
                                                Command="{Binding $parent[ItemsControl].((vm:GameLibraryViewModel)DataContext).LaunchGameCommand}"
                                                CommandParameter="{Binding}"
+                                               IsEnabled="{Binding !IsInstalling}"
                                                HorizontalAlignment="Stretch"/>
                                         <Button Content="Remove"
                                                Command="{Binding $parent[ItemsControl].((vm:GameLibraryViewModel)DataContext).RemoveGameCommand}"

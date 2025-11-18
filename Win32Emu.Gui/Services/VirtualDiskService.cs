@@ -181,11 +181,13 @@ public class VirtualDiskService
 	/// <param name="game">The game being installed</param>
 	/// <param name="sourceExecutablePath">Path to the executable on the host filesystem</param>
 	/// <param name="gameSettings">Optional per-game settings</param>
+	/// <param name="progress">Optional progress reporter for the installation</param>
 	/// <returns>Tuple of (VHD file path, path to executable within VHD)</returns>
 	public async Task<(string DiskPath, string VhdExecutablePath)> InstallGameToVirtualDiskAsync(
 		Game game, 
 		string sourceExecutablePath,
-		GameSettings? gameSettings = null)
+		GameSettings? gameSettings = null,
+		IProgress<(string fileName, int filesCopied, int totalFiles, long bytesCopied, long totalBytes)>? progress = null)
 	{
 		return await Task.Run(() =>
 		{
@@ -229,7 +231,7 @@ public class VirtualDiskService
 				var targetPath = $"/{folderName}";
 				_logger.LogInformation("[VirtualDisk] Copying directory to VHD path: {TargetPath}", targetPath);
 				
-				diskVfs.CopyDirectoryIn(sourceDir, targetPath);
+				diskVfs.CopyDirectoryIn(sourceDir, targetPath, progress);
 				
 				_logger.LogInformation("[VirtualDisk] Successfully installed game to virtual disk");
 			}
