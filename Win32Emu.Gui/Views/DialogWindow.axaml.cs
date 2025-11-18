@@ -22,16 +22,22 @@ public partial class DialogWindow : Window
 	private readonly Dictionary<int, uint> _controlHandles;
 	private readonly TaskCompletionSource<int> _resultTcs = new();
 	private readonly Action<uint, uint, uint, uint>? _messageCallback;
+	private readonly Action<string, DebugLevel>? _debugCallback;
 	private readonly uint _dialogHandle;
 
 	public int DialogResult { get; private set; }
 
-	public DialogWindow(DialogTemplate template, uint dialogHandle = 0, Dictionary<int, uint>? controlHandles = null, Action<uint, uint, uint, uint>? messageCallback = null)
+	public DialogWindow(DialogTemplate template, uint dialogHandle = 0, Dictionary<int, uint>? controlHandles = null, Action<uint, uint, uint, uint>? messageCallback = null, Action<string, DebugLevel>? debugCallback = null)
 	{
 		_template = template ?? throw new ArgumentNullException(nameof(template));
 		_dialogHandle = dialogHandle;
 		_controlHandles = controlHandles ?? new Dictionary<int, uint>();
 		_messageCallback = messageCallback;
+		_debugCallback = debugCallback;
+		
+		// Log initialization for debugging
+		_debugCallback?.Invoke($"[DialogWindow] Constructor: dialogHandle=0x{dialogHandle:X8}, controlHandles count={_controlHandles.Count}, messageCallback={(messageCallback != null ? "set" : "NULL")}", DebugLevel.Debug);
+		
 		InitializeComponent();
 		BuildDialogContent();
 	}
@@ -76,8 +82,11 @@ public partial class DialogWindow : Window
 		Title = _template.Title;
 
 		// Convert dialog units to pixels (approximate: 1 DLU ≈ 2 pixels for width, 1.5 for height)
-		Width = Math.Max(200, _template.Width * 2);
-		Height = Math.Max(150, _template.Height * 1.5);
+		// Add some padding for the window chrome and margins
+		var contentWidth = _template.Width * 2;
+		var contentHeight = _template.Height * 1.5;
+		Width = Math.Max(200, contentWidth + 20);  // Add 20px for window padding
+		Height = Math.Max(150, contentHeight + 20);  // Add 20px for window padding
 
 		// Get the content panel
 		var contentPanel = this.FindControl<Panel>("DialogContentPanel");
@@ -86,11 +95,12 @@ public partial class DialogWindow : Window
 			return;
 		}
 
-		// Create a canvas for absolute positioning of controls
+		// Create a canvas for absolute positioning of controls with margins
 		var canvas = new Canvas
 		{
-			Width = _template.Width * 2,
-			Height = _template.Height * 1.5
+			Width = contentWidth,
+			Height = contentHeight,
+			Margin = new Thickness(10)  // Add 10px margin around the canvas
 		};
 
 		// Create controls from template items
@@ -378,37 +388,54 @@ public partial class DialogWindow : Window
 
 	private void OnControlClick(object? sender, RoutedEventArgs e)
 	{
+		_debugCallback?.Invoke($"[DialogWindow] OnControlClick triggered, sender type: {sender?.GetType().Name}", DebugLevel.Debug);
 		System.Diagnostics.Debug.WriteLine($"[DialogWindow] OnControlClick triggered, sender type: {sender?.GetType().Name}");
 		
-		if (sender is Control control && control.Tag is ushort id)
+		if (sender is Control control)
 		{
-			System.Diagnostics.Debug.WriteLine($"[DialogWindow] Button clicked: ID={id}, DialogHandle=0x{_dialogHandle:X8}");
+			_debugCallback?.Invoke($"[DialogWindow] Sender is Control, Tag type: {control.Tag?.GetType().Name ?? "null"}", DebugLevel.Debug);
+			_debugCallback?.Invoke($"[DialogWindow] Tag value: {control.Tag}", DebugLevel.Debug);
 			
-			// Send WM_COMMAND message to the dialog procedure for all button clicks
-			// The dialog procedure will decide whether to close the dialog via EndDialog
-			const uint WM_COMMAND = 0x0111;
-			const uint BN_CLICKED = 0;
-			var wParam = (uint)(BN_CLICKED << 16) | id;
-			
-			// Get the control's window handle if available
-			var controlHandle = _controlHandles.TryGetValue(id, out var handle) ? handle : 0u;
-			System.Diagnostics.Debug.WriteLine($"[DialogWindow] Sending WM_COMMAND: wParam=0x{wParam:X8}, controlHandle=0x{controlHandle:X8}");
-			
-			if (_messageCallback != null)
+			// Try to get the ID from the Tag
+			if (control.Tag != null && control.Tag is ushort id)
 			{
-				_messageCallback.Invoke(_dialogHandle, WM_COMMAND, wParam, controlHandle);
-				System.Diagnostics.Debug.WriteLine($"[DialogWindow] Message callback invoked successfully");
+				_debugCallback?.Invoke($"[DialogWindow] Button clicked: ID={id}, DialogHandle=0x{_dialogHandle:X8}", DebugLevel.Info);
+				System.Diagnostics.Debug.WriteLine($"[DialogWindow] Button clicked: ID={id}, DialogHandle=0x{_dialogHandle:X8}");
+				
+				// Send WM_COMMAND message to the dialog procedure for all button clicks
+				// The dialog procedure will decide whether to close the dialog via EndDialog
+				const uint WM_COMMAND = 0x0111;
+				const uint BN_CLICKED = 0;
+				var wParam = (uint)(BN_CLICKED << 16) | id;
+				
+				// Get the control's window handle if available
+				var controlHandle = _controlHandles.TryGetValue(id, out var handle) ? handle : 0u;
+				_debugCallback?.Invoke($"[DialogWindow] Sending WM_COMMAND: wParam=0x{wParam:X8}, controlHandle=0x{controlHandle:X8}", DebugLevel.Info);
+				System.Diagnostics.Debug.WriteLine($"[DialogWindow] Sending WM_COMMAND: wParam=0x{wParam:X8}, controlHandle=0x{controlHandle:X8}");
+				
+				if (_messageCallback != null)
+				{
+					_messageCallback.Invoke(_dialogHandle, WM_COMMAND, wParam, controlHandle);
+					_debugCallback?.Invoke($"[DialogWindow] Message callback invoked successfully", DebugLevel.Debug);
+					System.Diagnostics.Debug.WriteLine($"[DialogWindow] Message callback invoked successfully");
+				}
+				else
+				{
+					_debugCallback?.Invoke($"[DialogWindow] WARNING: Message callback is null! Button click will not be processed.", DebugLevel.Warning);
+					System.Diagnostics.Debug.WriteLine($"[DialogWindow] WARNING: Message callback is null! Button click will not be processed.");
+				}
+
+				// Note: We no longer automatically close the dialog for IDOK/IDCANCEL
+				// The dialog procedure should call EndDialog when appropriate
 			}
 			else
 			{
-				System.Diagnostics.Debug.WriteLine($"[DialogWindow] WARNING: Message callback is null! Button click will not be processed.");
+				_debugCallback?.Invoke($"[DialogWindow] Tag is null or not ushort", DebugLevel.Debug);
 			}
-
-			// Note: We no longer automatically close the dialog for IDOK/IDCANCEL
-			// The dialog procedure should call EndDialog when appropriate
 		}
 		else
 		{
+			_debugCallback?.Invoke($"[DialogWindow] Sender is not a Control", DebugLevel.Debug);
 		    System.Diagnostics.Debug.WriteLine($"[DialogWindow] OnControlClick: Pattern match failed. Sender type: {sender?.GetType().Name}, Control.Tag type: {(sender as Control)?.Tag?.GetType().Name ?? "null"}");
 		}
 	}
@@ -495,26 +522,38 @@ public partial class DialogWindow : Window
 	/// </summary>
 	public void SetControlBitmap(ushort id, byte[] bitmapData)
 	{
+		_debugCallback?.Invoke($"[DialogWindow] SetControlBitmap called for control ID={id}, data length={bitmapData.Length}", DebugLevel.Debug);
+		
 		Dispatcher.UIThread.Post(() =>
 		{
 			var control = GetControlById(id);
+			_debugCallback?.Invoke($"[DialogWindow] SetControlBitmap: control found = {control != null}, type = {control?.GetType().Name}", DebugLevel.Debug);
+			
 			if (control is Border border)
 			{
 				try
 				{
+					_debugCallback?.Invoke($"[DialogWindow] SetControlBitmap: Converting DIB to bitmap...", DebugLevel.Debug);
 					// Convert DIB bitmap data to Avalonia-compatible image
 					var bitmap = ConvertDibToBitmap(bitmapData);
 					if (bitmap != null)
 					{
+						_debugCallback?.Invoke($"[DialogWindow] SetControlBitmap: Bitmap converted successfully, size={bitmap.PixelSize}", DebugLevel.Info);
 						border.Child = new Avalonia.Controls.Image
 						{
 							Source = bitmap,
 							Stretch = Avalonia.Media.Stretch.Uniform
 						};
+						_debugCallback?.Invoke($"[DialogWindow] SetControlBitmap: Image control created and set", DebugLevel.Debug);
+					}
+					else
+					{
+						_debugCallback?.Invoke($"[DialogWindow] SetControlBitmap: ConvertDibToBitmap returned null", DebugLevel.Warning);
 					}
 				}
 				catch (ArgumentException ex)
 				{
+					_debugCallback?.Invoke($"[DialogWindow] SetControlBitmap: ArgumentException - {ex.Message}", DebugLevel.Error);
 					// If bitmap conversion fails, show error in the border
 					border.Child = new TextBlock
 					{
@@ -525,6 +564,7 @@ public partial class DialogWindow : Window
 				}
 				catch (System.IO.IOException ex)
 				{
+					_debugCallback?.Invoke($"[DialogWindow] SetControlBitmap: IOException - {ex.Message}", DebugLevel.Error);
 					// If bitmap I/O fails, show error in the border
 					border.Child = new TextBlock
 					{
@@ -533,6 +573,10 @@ public partial class DialogWindow : Window
 						Foreground = Brushes.Red
 					};
 				}
+			}
+			else
+			{
+				_debugCallback?.Invoke($"[DialogWindow] SetControlBitmap: Control is not a Border, cannot set bitmap", DebugLevel.Warning);
 			}
 		});
 	}

@@ -192,8 +192,14 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                     OnDebugOutput($"WARNING: Cannot create message callback - emulator service or current emulator is null", DebugLevel.Error);
                 }
                 
-                // Create DialogWindow from the template with dialog handle, control handles, and message callback
-                var dialogWindow = new Views.DialogWindow(info.Template, info.Handle, info.ControlHandles, messageCallback);
+                // Create debug callback that uses OnDebugOutput
+                Action<string, DebugLevel>? debugCallback = (message, level) =>
+                {
+                    OnDebugOutput(message, level);
+                };
+                
+                // Create DialogWindow from the template with dialog handle, control handles, message callback, and debug callback
+                var dialogWindow = new Views.DialogWindow(info.Template, info.Handle, info.ControlHandles, messageCallback, debugCallback);
                 
                 // Track the dialog so we can close it later via EndDialog
                 _createdDialogs[info.Handle] = dialogWindow;
@@ -295,10 +301,17 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 
     public void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData)
     {
+        OnDebugOutput($"Dialog 0x{dialogHandle:X8} control {controlId} bitmap changed ({bitmapData.Length} bytes)", DebugLevel.Info);
+        
         // Find the dialog window and update the control with bitmap
         if (_createdDialogs.TryGetValue(dialogHandle, out var dialog))
         {
             dialog.SetControlBitmap((ushort)controlId, bitmapData);
+            OnDebugOutput($"Dialog 0x{dialogHandle:X8} control {controlId} bitmap updated successfully", DebugLevel.Debug);
+        }
+        else
+        {
+            OnDebugOutput($"Dialog 0x{dialogHandle:X8} not found in _createdDialogs", DebugLevel.Warning);
         }
     }
 

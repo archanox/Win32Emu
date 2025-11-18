@@ -7,7 +7,7 @@
         CanResize="False"
         ShowInTaskbar="False">
     
-    <Grid Margin="10">
+    <Grid>
         <!-- Dialog content will be dynamically created in code-behind -->
         <Panel Name="DialogContentPanel" />
     </Grid>
