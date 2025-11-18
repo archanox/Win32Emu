@@ -179,28 +179,37 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             try
             {
                 // Create message callback that posts messages to the emulator
-                Action<uint, uint, uint, uint>? messageCallback = null;
-                if (_emulatorService?.CurrentEmulator != null)
+                // Always create the callback even if emulator is not available yet,
+                // in case it becomes available later
+                Action<uint, uint, uint, uint> messageCallback = (hwnd, msg, wParam, lParam) =>
                 {
-                    messageCallback = (hwnd, msg, wParam, lParam) =>
+                    if (_emulatorService?.CurrentEmulator != null)
                     {
                         OnDebugOutput($"Dialog HWND=0x{hwnd:X8} posting message MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}", DebugLevel.Info);
                         _emulatorService.CurrentEmulator.PostMessage(hwnd, msg, wParam, lParam);
-                    };
+                    }
+                    else
+                    {
+                        OnDebugOutput($"ERROR: Cannot post message from dialog - emulator service or current emulator is null at execution time", DebugLevel.Error);
+                    }
+                };
+                
+                if (_emulatorService?.CurrentEmulator != null)
+                {
                     OnDebugOutput($"Dialog message callback created successfully for dialog HWND=0x{info.Handle:X8}", DebugLevel.Info);
                 }
                 else
                 {
-                    OnDebugOutput($"WARNING: Cannot create message callback - emulator service={(_emulatorService != null ? "NOT NULL" : "NULL")}, current emulator={(_emulatorService?.CurrentEmulator != null ? "NOT NULL" : "NULL")}", DebugLevel.Error);
+                    OnDebugOutput($"WARNING: Created message callback but emulator service={(_emulatorService != null ? "NOT NULL" : "NULL")}, current emulator={(_emulatorService?.CurrentEmulator != null ? "NOT NULL" : "NULL")}", DebugLevel.Warning);
                 }
                 
                 // Create debug callback that uses OnDebugOutput
-                Action<string, DebugLevel>? debugCallback = (message, level) =>
+                Action<string, DebugLevel> debugCallback = (message, level) =>
                 {
                     OnDebugOutput(message, level);
                 };
                 
-                OnDebugOutput($"About to create DialogWindow with messageCallback={(messageCallback != null ? "NOT NULL" : "NULL")}, debugCallback={(debugCallback != null ? "NOT NULL" : "NULL")}", DebugLevel.Info);
+                OnDebugOutput($"About to create DialogWindow with messageCallback=NOT NULL, debugCallback=NOT NULL", DebugLevel.Info);
                 
                 // Create DialogWindow from the template with dialog handle, control handles, message callback, and debug callback
                 var dialogWindow = new Views.DialogWindow(info.Template, info.Handle, info.ControlHandles, messageCallback, debugCallback);

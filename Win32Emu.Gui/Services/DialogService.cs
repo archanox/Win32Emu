@@ -32,7 +32,8 @@ public class DialogService
 		// Create dialog on UI thread
 		await Dispatcher.UIThread.InvokeAsync(() =>
 		{
-			dialog = new DialogWindow(template, dialogHandle, controlHandles, (hwnd, msg, wParam, lParam) =>
+			// Create message callback that queues messages for processing by emulator
+			Action<uint, uint, uint, uint> messageCallback = (hwnd, msg, wParam, lParam) =>
 			{
 				// Queue message for processing by emulator
 				EnqueueMessage(dialogHandle, new DialogMessage
@@ -42,7 +43,15 @@ public class DialogService
 					WParam = wParam,
 					LParam = lParam
 				});
-			});
+			};
+			
+			// Create debug callback that logs to System.Diagnostics
+			Action<string, DebugLevel> debugCallback = (message, level) =>
+			{
+				System.Diagnostics.Debug.WriteLine(message);
+			};
+			
+			dialog = new DialogWindow(template, dialogHandle, controlHandles, messageCallback, debugCallback);
 
 			lock (_lock)
 			{
