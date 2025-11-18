@@ -170,6 +170,8 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     public async Task<int> OnDialogCreate(DialogCreateInfo info)
     {
         OnDebugOutput($"Creating Avalonia dialog for HWND=0x{info.Handle:X8}: {info.Template.Title} ({info.Template.Width}x{info.Template.Height})", DebugLevel.Info);
+        OnDebugOutput($"EmulatorService is {(_emulatorService != null ? "NOT NULL" : "NULL")}", DebugLevel.Info);
+        OnDebugOutput($"CurrentEmulator is {(_emulatorService?.CurrentEmulator != null ? "NOT NULL" : "NULL")}", DebugLevel.Info);
         
         // Show the dialog on the UI thread (non-blocking)
         await Dispatcher.UIThread.InvokeAsync(() =>
@@ -177,26 +179,38 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             try
             {
                 // Create message callback that posts messages to the emulator
-                Action<uint, uint, uint, uint>? messageCallback = null;
-                if (_emulatorService?.CurrentEmulator != null)
+                // Always create the callback even if emulator is not available yet.
+                // The runtime check handles race conditions where the emulator might be 
+                // stopped or replaced between callback creation and execution.
+                Action<uint, uint, uint, uint> messageCallback = (hwnd, msg, wParam, lParam) =>
                 {
-                    messageCallback = (hwnd, msg, wParam, lParam) =>
+                    if (_emulatorService?.CurrentEmulator != null)
                     {
                         OnDebugOutput($"Dialog HWND=0x{hwnd:X8} posting message MSG=0x{msg:X4} wParam=0x{wParam:X8} lParam=0x{lParam:X8}", DebugLevel.Info);
                         _emulatorService.CurrentEmulator.PostMessage(hwnd, msg, wParam, lParam);
-                    };
+                    }
+                    else
+                    {
+                        OnDebugOutput($"ERROR: Cannot post message from dialog - emulator service or current emulator is null at execution time", DebugLevel.Error);
+                    }
+                };
+                
+                if (_emulatorService?.CurrentEmulator != null)
+                {
                     OnDebugOutput($"Dialog message callback created successfully for dialog HWND=0x{info.Handle:X8}", DebugLevel.Info);
                 }
                 else
                 {
-                    OnDebugOutput($"WARNING: Cannot create message callback - emulator service or current emulator is null", DebugLevel.Error);
+                    OnDebugOutput($"WARNING: Created message callback but emulator service={(_emulatorService != null ? "NOT NULL" : "NULL")}, current emulator={(_emulatorService?.CurrentEmulator != null ? "NOT NULL" : "NULL")}", DebugLevel.Warning);
                 }
                 
                 // Create debug callback that uses OnDebugOutput
-                Action<string, DebugLevel>? debugCallback = (message, level) =>
+                Action<string, DebugLevel> debugCallback = (message, level) =>
                 {
                     OnDebugOutput(message, level);
                 };
+                
+                OnDebugOutput($"About to create DialogWindow with messageCallback=NOT NULL, debugCallback=NOT NULL", DebugLevel.Info);
                 
                 // Create DialogWindow from the template with dialog handle, control handles, message callback, and debug callback
                 var dialogWindow = new Views.DialogWindow(info.Template, info.Handle, info.ControlHandles, messageCallback, debugCallback);

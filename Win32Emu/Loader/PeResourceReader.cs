@@ -401,7 +401,15 @@ public class PeResourceReader
 		var typeEntry = resources.Entries.Where(e => e.Id == (uint)ResourceType.RT_BITMAP).FirstOrDefault();
 		if (typeEntry is ResourceDirectory typeDir)
 		{
+			// Try case-sensitive match first, then case-insensitive
+			// Note: If multiple resources exist with names differing only in case,
+			// the case-insensitive search will return the first match found
 			var nameEntry = typeDir.Entries.Where(e => e.Name == bitmapName).FirstOrDefault();
+			if (nameEntry == null)
+			{
+				nameEntry = typeDir.Entries.Where(e => string.Equals(e.Name, bitmapName, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+			}
+			
 			if (nameEntry is ResourceDirectory nameDir)
 			{
 				// Get first language version

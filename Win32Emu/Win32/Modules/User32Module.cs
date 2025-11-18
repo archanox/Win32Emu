@@ -68,6 +68,12 @@ namespace Win32Emu.Win32.Modules
 		private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
 		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
 		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB) - addresses below this indicate memory corruption
+		
+		// Resource ID constants
+		// In Win32 API, resource IDs can be either integers or string pointers.
+		// Integer resource IDs are stored as values < 0x10000 (65536), while string pointers are >= 0x10000.
+		// This follows the Windows IS_INTRESOURCE macro convention.
+		private const uint MAX_INTRESOURCE = 0x10000; // Maximum value for integer resource IDs (65536)
 
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -3153,22 +3159,104 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] LoadImageA(hInst=0x{HInst:X8}, name=\"{ImageName}\", type={Type}, cx={Cx}, cy={Cy}, fuLoad=0x{FuLoad:X})",
 				hInst, imageName, type, cx, cy, fuLoad);
 
-			if (type == (uint)ImageType.IMAGE_BITMAP && _resourceReader != null)
+			if (type == (uint)ImageType.IMAGE_BITMAP)
 			{
-				// Try to load bitmap resource
+				// Try to load bitmap resource or file
 				byte[]? bitmapData = null;
+				var loadedFromFile = false;
 
-				// Check if name is an integer resource ID or string name
-				if (name.Address < 0x10000)
+				// Check if LR_LOADFROMFILE flag is set
+				var loadFromFile = (fuLoad & (uint)LoadImageFlags.LR_LOADFROMFILE) != 0;
+
+				if (!loadFromFile && _resourceReader != null)
 				{
-					// It's an integer resource ID
-					var resourceId = name.Address;
-					bitmapData = _resourceReader.LoadBitmap(resourceId);
+					// Try to load from resources first
+					// Check if name is an integer resource ID or string name
+					// Win32 convention: integer resource IDs are < MAX_INTRESOURCE (0x10000)
+					if (name.Address < MAX_INTRESOURCE)
+					{
+						// It's an integer resource ID
+						var resourceId = name.Address;
+						bitmapData = _resourceReader.LoadBitmap(resourceId);
+						if (bitmapData != null)
+						{
+							_logger.LogInformation("[User32] LoadImageA: Loaded bitmap from resource ID {ResourceId}", resourceId);
+						}
+					}
+					else
+					{
+						// It's a string name
+						bitmapData = _resourceReader.LoadBitmapByName(imageName);
+						if (bitmapData != null)
+						{
+							_logger.LogInformation("[User32] LoadImageA: Loaded bitmap from resource name \"{ImageName}\"", imageName);
+						}
+					}
 				}
-				else
+
+				// If resource loading failed or LR_LOADFROMFILE was set, try loading from file
+				if (bitmapData == null && !string.IsNullOrEmpty(imageName))
 				{
-					// It's a string name
-					bitmapData = _resourceReader.LoadBitmapByName(imageName);
+					_logger.LogInformation("[User32] LoadImageA: Attempting to load bitmap from file \"{ImageName}\"", imageName);
+					try
+					{
+						// Determine which filenames to try based on whether imageName already has an extension
+						var hasExtension = imageName.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase) || 
+						                   imageName.EndsWith(".dib", StringComparison.OrdinalIgnoreCase);
+						
+						var filenamesToTry = hasExtension 
+							? new[] { imageName }
+							: new[] { imageName + ".bmp", imageName + ".dib", imageName };
+						
+						foreach (var filename in filenamesToTry)
+						{
+							// Try to read the file through VFS
+							if (_env.VirtualFileSystem != null && _env.VirtualFileSystem.FileExists(filename))
+							{
+								using var fileHandle = _env.VirtualFileSystem.OpenFile(filename, VirtualFileSystem.VfsFileMode.Open, VirtualFileSystem.VfsFileAccess.Read);
+								if (fileHandle != null)
+								{
+									// Get file size by seeking to end
+									var fileSize = fileHandle.Seek(0, SeekOrigin.End);
+									fileHandle.Seek(0, SeekOrigin.Begin); // Reset to beginning
+									
+									if (fileSize > 0 && fileSize < int.MaxValue)
+									{
+										bitmapData = new byte[(int)fileSize];
+										var bytesRead = fileHandle.Read(bitmapData, 0, (int)fileSize);
+										if (bytesRead == fileSize)
+										{
+											_logger.LogInformation("[User32] LoadImageA: Loaded bitmap from file \"{FileName}\" ({Size} bytes)", 
+												filename, bytesRead);
+											loadedFromFile = true;
+											break;
+										}
+										else
+										{
+											_logger.LogWarning("[User32] LoadImageA: Incomplete read of bitmap file \"{FileName}\". Expected {ExpectedBytes} bytes, got {ActualBytes} bytes.", 
+												filename, fileSize, bytesRead);
+										}
+									}
+								}
+							}
+						}
+					}
+					catch (System.IO.FileNotFoundException ex)
+					{
+						_logger.LogWarning(ex, "[User32] LoadImageA: File not found \"{ImageName}\"", imageName);
+					}
+					catch (System.UnauthorizedAccessException ex)
+					{
+						_logger.LogWarning(ex, "[User32] LoadImageA: Access denied loading bitmap from file \"{ImageName}\"", imageName);
+					}
+					catch (System.IO.IOException ex)
+					{
+						_logger.LogWarning(ex, "[User32] LoadImageA: IO error loading bitmap from file \"{ImageName}\"", imageName);
+					}
+					catch (Exception ex)
+					{
+						_logger.LogWarning(ex, "[User32] LoadImageA: Unexpected error loading bitmap from file \"{ImageName}\"", imageName);
+					}
 				}
 
 				if (bitmapData != null && bitmapData.Length > 0)
@@ -3184,12 +3272,12 @@ namespace Win32Emu.Win32.Modules
 						Height = cy > 0 ? cy : 0
 					};
 
-					_logger.LogInformation("[User32] LoadImageA: Successfully loaded bitmap \"{ImageName}\" with {Size} bytes, handle 0x{Handle:X8}",
-						imageName, bitmapData.Length, handle);
+					_logger.LogInformation("[User32] LoadImageA: Successfully loaded bitmap \"{ImageName}\" with {Size} bytes from {Source}, handle 0x{Handle:X8}",
+						imageName, bitmapData.Length, loadedFromFile ? "file" : "resource", handle);
 					return handle;
 				}
 
-				_logger.LogWarning("[User32] LoadImageA: Bitmap resource \"{ImageName}\" not found", imageName);
+				_logger.LogWarning("[User32] LoadImageA: Bitmap \"{ImageName}\" not found in resources or files", imageName);
 				// Error 1814 = ERROR_RESOURCE_NAME_NOT_FOUND
 				return 0;
 			}
