@@ -273,6 +273,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "ISBADWRITEPTR":
 				returnValue = IsBadWritePtr(a.UInt32(0), a.UInt32(1));
 				return true;
+			case "RTLMOVEMEMORY":
+				returnValue = RtlMoveMemory(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "RTLZEROMEMORY":
+				returnValue = RtlZeroMemory(a.UInt32(0), a.UInt32(1));
+				return true;
 
 			// File I/O
 			case "CREATEFILEA":
@@ -309,6 +315,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "MOVEFILEA":
 				returnValue = MoveFileA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "MOVEFILEEXA":
+				returnValue = MoveFileExA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 			case "COPYFILEA":
 				returnValue = CopyFileA(a.LpcStr(0), a.LpcStr(1), a.UInt32(2));
@@ -407,6 +416,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "GETSYSTEMTIMEASFILETIME":
 				returnValue = GetSystemTimeAsFileTime(a.UInt32(0));
+				return true;
+			case "DOSDATETIMETOFILETIME":
+				returnValue = DosDateTimeToFileTime(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 			case "GETTICKCOUNT":
 				returnValue = GetTickCount();
@@ -535,6 +547,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "LSTRLENW":
 				returnValue = LstrlenW(a.UInt32(0));
+				return true;
+			case "ISDBCSLEADBYTE":
+				returnValue = IsDBCSLeadByte(a.UInt32(0));
 				return true;
 
 			// Process execution
@@ -8408,6 +8423,301 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// For stub implementation, there are no more modules
 		_lastError = (uint)NativeTypes.Win32Error.ERROR_NO_MORE_FILES;
 		return 0; // FALSE
+	}
+
+	/// <summary>
+	/// Moves a file or directory with extended options.
+	/// BOOL MoveFileExA(
+	///   [in] LPCSTR lpExistingFileName,
+	///   [in] LPCSTR lpNewFileName,
+	///   [in] DWORD  dwFlags
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint MoveFileExA(uint lpExistingFileName, uint lpNewFileName, uint dwFlags)
+	{
+		try
+		{
+			var existingPath = _env.ReadAnsiString(lpExistingFileName);
+			var newPath = _env.ReadAnsiString(lpNewFileName);
+
+			_logger.LogInformation("[Kernel32] MoveFileExA(lpExistingFileName=\"{ExistingPath}\", lpNewFileName=\"{NewPath}\", dwFlags=0x{DwFlags:X8})",
+				existingPath, newPath, dwFlags);
+
+			if (string.IsNullOrEmpty(existingPath) || string.IsNullOrEmpty(newPath))
+			{
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
+
+			// dwFlags constants
+			const uint MOVEFILE_REPLACE_EXISTING = 0x00000001;
+			const uint MOVEFILE_COPY_ALLOWED = 0x00000002;
+			const uint MOVEFILE_DELAY_UNTIL_REBOOT = 0x00000004;
+			const uint MOVEFILE_WRITE_THROUGH = 0x00000008;
+
+			// Check for delay until reboot flag (not supported in emulator)
+			if ((dwFlags & MOVEFILE_DELAY_UNTIL_REBOOT) != 0)
+			{
+				_logger.LogWarning("[Kernel32] MoveFileExA: MOVEFILE_DELAY_UNTIL_REBOOT not supported");
+				return (uint)NativeTypes.Win32Bool.TRUE; // Pretend success
+			}
+
+			// Try using VFS if available
+			if (_env.VirtualFileSystem != null)
+			{
+				var replaceExisting = (dwFlags & MOVEFILE_REPLACE_EXISTING) != 0;
+				
+				// Check if destination exists
+				if (_env.VirtualFileSystem.FileExists(newPath))
+				{
+					if (!replaceExisting)
+					{
+						_lastError = (uint)NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
+						return (uint)NativeTypes.Win32Bool.FALSE;
+					}
+					// Delete existing file
+					_env.VirtualFileSystem.DeleteFile(newPath);
+				}
+
+				// Use VFS MoveFile method
+				if (_env.VirtualFileSystem.MoveFile(existingPath, newPath))
+				{
+					return (uint)NativeTypes.Win32Bool.TRUE;
+				}
+				else
+				{
+					_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+					return (uint)NativeTypes.Win32Bool.FALSE;
+				}
+			}
+
+			// Fallback to host filesystem
+			try
+			{
+				var replaceExisting = (dwFlags & MOVEFILE_REPLACE_EXISTING) != 0;
+				
+				if (File.Exists(newPath) && !replaceExisting)
+				{
+					_lastError = (uint)NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
+					return (uint)NativeTypes.Win32Bool.FALSE;
+				}
+
+				if (File.Exists(newPath))
+				{
+					File.Delete(newPath);
+				}
+
+				File.Move(existingPath, newPath);
+				return (uint)NativeTypes.Win32Bool.TRUE;
+			}
+			catch (FileNotFoundException)
+			{
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[Kernel32] MoveFileExA failed");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] MoveFileExA exception");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	/// <summary>
+	/// Converts MS-DOS date and time values to a file time.
+	/// BOOL DosDateTimeToFileTime(
+	///   [in]  WORD     wFatDate,
+	///   [in]  WORD     wFatTime,
+	///   [out] LPFILETIME lpFileTime
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint DosDateTimeToFileTime(uint wFatDate, uint wFatTime, uint lpFileTime)
+	{
+		_logger.LogInformation("[Kernel32] DosDateTimeToFileTime(wFatDate=0x{WFatDate:X4}, wFatTime=0x{WFatTime:X4}, lpFileTime=0x{LpFileTime:X8})",
+			wFatDate, wFatTime, lpFileTime);
+
+		if (lpFileTime == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+
+		try
+		{
+			// Extract date components from FAT date (bits: YYYYYYYMMMMDDDDD)
+			int year = ((int)wFatDate >> 9) + 1980;
+			int month = ((int)wFatDate >> 5) & 0xF;
+			int day = (int)wFatDate & 0x1F;
+
+			// Extract time components from FAT time (bits: HHHHHMMMMMMSSSS)
+			int hour = (int)wFatTime >> 11;
+			int minute = ((int)wFatTime >> 5) & 0x3F;
+			int second = ((int)wFatTime & 0x1F) * 2; // Seconds are stored in 2-second increments
+
+			// Validate components
+			if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59 || second > 59)
+			{
+				_logger.LogWarning("[Kernel32] DosDateTimeToFileTime: Invalid date/time components");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
+
+			// Create DateTime
+			var dateTime = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Local);
+			
+			// Convert to FILETIME (100-nanosecond intervals since January 1, 1601)
+			long fileTime = dateTime.ToFileTimeUtc();
+
+			// Write FILETIME structure (8 bytes: dwLowDateTime, dwHighDateTime)
+			_env.MemWrite32(lpFileTime, (uint)(fileTime & 0xFFFFFFFF));
+			_env.MemWrite32(lpFileTime + 4, (uint)(fileTime >> 32));
+
+			return (uint)NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] DosDateTimeToFileTime exception");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	/// <summary>
+	/// Determines whether a character is a lead byte in a double-byte character set (DBCS).
+	/// BOOL IsDBCSLeadByte(
+	///   [in] BYTE TestChar
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint IsDBCSLeadByte(uint testChar)
+	{
+		_logger.LogDebug("[Kernel32] IsDBCSLeadByte(testChar=0x{TestChar:X2})", testChar & 0xFF);
+
+		// Get the current code page
+		var codePage = (uint)GetAcp();
+
+		// For simplicity, we'll check common DBCS code pages
+		// Japanese Shift-JIS (932), Korean (949), Chinese Simplified (936), Chinese Traditional (950)
+		if (codePage == 932 || codePage == 936 || codePage == 949 || codePage == 950)
+		{
+			byte b = (byte)(testChar & 0xFF);
+			
+			// Shift-JIS lead bytes: 0x81-0x9F, 0xE0-0xFC
+			if (codePage == 932)
+			{
+				if ((b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC))
+					return (uint)NativeTypes.Win32Bool.TRUE;
+			}
+			// Chinese Simplified (GBK) lead bytes: 0x81-0xFE
+			else if (codePage == 936)
+			{
+				if (b >= 0x81 && b <= 0xFE)
+					return (uint)NativeTypes.Win32Bool.TRUE;
+			}
+			// Korean (Unified Hangul Code) lead bytes: 0x81-0xFE
+			else if (codePage == 949)
+			{
+				if (b >= 0x81 && b <= 0xFE)
+					return (uint)NativeTypes.Win32Bool.TRUE;
+			}
+			// Chinese Traditional (Big5) lead bytes: 0x81-0xFE
+			else if (codePage == 950)
+			{
+				if (b >= 0x81 && b <= 0xFE)
+					return (uint)NativeTypes.Win32Bool.TRUE;
+			}
+		}
+
+		// Not a DBCS lead byte or not a DBCS code page
+		return (uint)NativeTypes.Win32Bool.FALSE;
+	}
+
+	/// <summary>
+	/// Moves a block of memory from one location to another (handles overlapping regions).
+	/// void RtlMoveMemory(
+	///   [out] VOID UNALIGNED *Destination,
+	///   [in]  const VOID UNALIGNED *Source,
+	///   [in]  SIZE_T Length
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint RtlMoveMemory(uint destination, uint source, uint length)
+	{
+		_logger.LogDebug("[Kernel32] RtlMoveMemory(destination=0x{Destination:X8}, source=0x{Source:X8}, length={Length})",
+			destination, source, length);
+
+		if (length == 0)
+			return 0;
+
+		try
+		{
+			// Handle overlapping memory regions correctly
+			if (destination < source)
+			{
+				// Copy forward
+				for (uint i = 0; i < length; i++)
+				{
+					_env.MemWrite8(destination + i, _env.MemRead8(source + i));
+				}
+			}
+			else if (destination > source)
+			{
+				// Copy backward to handle overlap
+				for (int i = (int)length - 1; i >= 0; i--)
+				{
+					_env.MemWrite8(destination + (uint)i, _env.MemRead8(source + (uint)i));
+				}
+			}
+			// If destination == source, no action needed
+
+			return 0; // RtlMoveMemory returns void
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] RtlMoveMemory exception");
+			return 0;
+		}
+	}
+
+	/// <summary>
+	/// Fills a block of memory with zeros.
+	/// void RtlZeroMemory(
+	///   [out] VOID UNALIGNED *Destination,
+	///   [in]  SIZE_T Length
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint RtlZeroMemory(uint destination, uint length)
+	{
+		_logger.LogDebug("[Kernel32] RtlZeroMemory(destination=0x{Destination:X8}, length={Length})",
+			destination, length);
+
+		if (length == 0)
+			return 0;
+
+		try
+		{
+			for (uint i = 0; i < length; i++)
+			{
+				_env.MemWrite8(destination + i, 0);
+			}
+
+			return 0; // RtlZeroMemory returns void
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] RtlZeroMemory exception");
+			return 0;
+		}
 	}
 
 }

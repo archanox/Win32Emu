@@ -270,6 +270,18 @@ namespace Win32Emu.Win32.Modules
 					returnValue = GetMenu(a.UInt32(0));
 					return true;
 
+				case "CREATEPOPUPMENU":
+					returnValue = CreatePopupMenu();
+					return true;
+
+				case "APPENDMENUA":
+					returnValue = AppendMenuA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "TRACKPOPUPMENU":
+					returnValue = TrackPopupMenu(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.UInt32(5), a.UInt32(6));
+					return true;
+
 				case "SETWINDOWLONGA":
 					returnValue = SetWindowLongA(a.UInt32(0), a.Int32(1), a.UInt32(2));
 					return true;
@@ -5947,6 +5959,95 @@ namespace Win32Emu.Win32.Modules
 		_logger.LogInformation("[User32] CallHookProcAsync: Completed with return value 0x{ReturnValue:X8}", returnValue);
 
 		return returnValue;
+	}
+
+	#endregion
+
+	#region Menu Functions
+
+	/// <summary>
+	/// Creates a popup menu.
+	/// HMENU CreatePopupMenu();
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint CreatePopupMenu()
+	{
+		_logger.LogInformation("[User32] CreatePopupMenu()");
+
+		// Generate a new unique menu handle
+		var menuHandle = _nextBitmapHandle++; // Reuse the handle counter
+		
+		_logger.LogInformation("[User32] CreatePopupMenu: Created menu handle 0x{MenuHandle:X8}", menuHandle);
+		
+		return menuHandle;
+	}
+
+	/// <summary>
+	/// Appends a new item to the end of the specified menu bar, drop-down menu, submenu, or shortcut menu.
+	/// BOOL AppendMenuA(
+	///   [in] HMENU   hMenu,
+	///   [in] UINT    uFlags,
+	///   [in] UINT_PTR uIDNewItem,
+	///   [in] LPCSTR  lpNewItem
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint AppendMenuA(uint hMenu, uint uFlags, uint uIDNewItem, uint lpNewItem)
+	{
+		string itemText = "";
+		if (lpNewItem != 0)
+		{
+			itemText = _env.ReadAnsiString(lpNewItem);
+		}
+
+		_logger.LogInformation("[User32] AppendMenuA(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X8}, uIDNewItem=0x{UIDNewItem:X8}, lpNewItem=\"{ItemText}\")",
+			hMenu, uFlags, uIDNewItem, itemText);
+
+		// Menu item flags
+		const uint MF_STRING = 0x00000000;
+		const uint MF_BITMAP = 0x00000004;
+		const uint MF_SEPARATOR = 0x00000800;
+		const uint MF_POPUP = 0x00000010;
+
+		// For now, just return success
+		// A full implementation would need to track menu items and structure
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Displays a shortcut menu at the specified location and tracks the selection of items.
+	/// BOOL TrackPopupMenu(
+	///   [in] HMENU  hMenu,
+	///   [in] UINT   uFlags,
+	///   [in] int    x,
+	///   [in] int    y,
+	///   [in] int    nReserved,
+	///   [in] HWND   hWnd,
+	///   [in] const RECT *prcRect
+	/// );
+	/// </summary>
+	[DllModuleExport(28)]
+	private uint TrackPopupMenu(uint hMenu, uint uFlags, int x, int y, int nReserved, uint hWnd, uint prcRect)
+	{
+		_logger.LogInformation("[User32] TrackPopupMenu(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X8}, x={X}, y={Y}, nReserved={NReserved}, hWnd=0x{HWnd:X8}, prcRect=0x{PrcRect:X8})",
+			hMenu, uFlags, x, y, nReserved, hWnd, prcRect);
+
+		// Flags
+		const uint TPM_LEFTBUTTON = 0x0000;
+		const uint TPM_RIGHTBUTTON = 0x0002;
+		const uint TPM_LEFTALIGN = 0x0000;
+		const uint TPM_CENTERALIGN = 0x0004;
+		const uint TPM_RIGHTALIGN = 0x0008;
+		const uint TPM_RETURNCMD = 0x0100;
+
+		// For stub implementation, return 0 (no item selected or menu cancelled)
+		// A full implementation would need to:
+		// 1. Display the popup menu at (x, y)
+		// 2. Track mouse/keyboard input
+		// 3. Return the selected menu item ID or 0 if cancelled
+		
+		_logger.LogInformation("[User32] TrackPopupMenu: Stub - returning 0 (no selection)");
+		return 0;
 	}
 
 	#endregion

@@ -51,6 +51,14 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				returnValue = ImageList_Destroy(a.UInt32(0));
 				return true;
 
+			case "IMAGELIST_LOADIMAGEA":
+				returnValue = ImageList_LoadImageA(a.UInt32(0), a.LpcStr(1), a.Int32(2), a.Int32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+				return true;
+
+			case "IMAGELIST_SETOVERLAYIMAGE":
+				returnValue = ImageList_SetOverlayImage(a.UInt32(0), a.Int32(1), a.Int32(2));
+				return true;
+
 			case "ORDINAL_17":
 				returnValue = Ordinal_17(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
@@ -224,6 +232,95 @@ public class Comctl32Module : IWin32ModuleUnsafe
 		// Stub: Return 0 (user cancelled or closed the property sheet)
 		// A real implementation would parse PROPSHEETHEADER and display the property sheet dialog
 		return 0;
+	}
+
+	/// <summary>
+	/// Loads an image list from a bitmap, cursor, or icon resource.
+	/// HIMAGELIST ImageList_LoadImageA(
+	///   [in] HINSTANCE hi,
+	///   [in] LPCSTR    lpbmp,
+	///   [in] int       cx,
+	///   [in] int       cGrow,
+	///   [in] COLORREF  crMask,
+	///   [in] UINT      uType,
+	///   [in] UINT      uFlags
+	/// );
+	/// </summary>
+	[DllModuleExport(28)]
+	private uint ImageList_LoadImageA(uint hi, in LpcStr lpbmpPtr, int cx, int cGrow, uint crMask, uint uType, uint uFlags)
+	{
+		var lpbmp = lpbmpPtr.ToString() ?? string.Empty;
+
+		_logger.LogInformation("[Comctl32] ImageList_LoadImageA(hi=0x{Hi:X8}, lpbmp=\"{Lpbmp}\", cx={Cx}, cGrow={CGrow}, crMask=0x{CrMask:X8}, uType={UType}, uFlags=0x{UFlags:X8})",
+			hi, lpbmp, cx, cGrow, crMask, uType, uFlags);
+
+		// Image types
+		const uint IMAGE_BITMAP = 0;
+		const uint IMAGE_ICON = 1;
+		const uint IMAGE_CURSOR = 2;
+
+		// Flags
+		const uint LR_DEFAULTCOLOR = 0x00000000;
+		const uint LR_MONOCHROME = 0x00000001;
+		const uint LR_COLOR = 0x00000002;
+		const uint LR_SHARED = 0x00008000;
+
+		// Create an image list with estimated dimensions
+		var handle = _nextImageListHandle++;
+		
+		// Estimate height based on type - icons are typically square
+		int cy = uType == IMAGE_ICON ? cx : 16; // Default height for bitmaps
+		
+		_imageLists[handle] = new ImageListData
+		{
+			Width = cx,
+			Height = cy,
+			Flags = uFlags,
+			InitialCount = 1,
+			GrowBy = cGrow
+		};
+
+		_logger.LogInformation("[Comctl32] ImageList_LoadImageA: Created image list handle 0x{Handle:X8}", handle);
+		
+		return handle;
+	}
+
+	/// <summary>
+	/// Adds an image to the list of images used as overlay masks.
+	/// BOOL ImageList_SetOverlayImage(
+	///   [in] HIMAGELIST himl,
+	///   [in] int        iImage,
+	///   [in] int        iOverlay
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint ImageList_SetOverlayImage(uint himl, int iImage, int iOverlay)
+	{
+		_logger.LogInformation("[Comctl32] ImageList_SetOverlayImage(himl=0x{Himl:X8}, iImage={IImage}, iOverlay={IOverlay})",
+			himl, iImage, iOverlay);
+
+		// Overlay image indices are 1-based and limited to 1-15 (4 bits)
+		if (iOverlay < 1 || iOverlay > 15)
+		{
+			_logger.LogWarning("[Comctl32] ImageList_SetOverlayImage: Invalid overlay index {IOverlay}", iOverlay);
+			return 0; // FALSE
+		}
+
+		if (!_imageLists.TryGetValue(himl, out var imageList))
+		{
+			_logger.LogWarning("[Comctl32] ImageList_SetOverlayImage: Invalid image list handle 0x{Himl:X8}", himl);
+			return 0; // FALSE
+		}
+
+		if (iImage < 0 || iImage >= imageList.Images.Count)
+		{
+			_logger.LogWarning("[Comctl32] ImageList_SetOverlayImage: Invalid image index {IImage}", iImage);
+			return 0; // FALSE
+		}
+
+		// For stub implementation, just return success
+		// A real implementation would store the overlay image mapping
+		return 1; // TRUE
 	}
 
 
