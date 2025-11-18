@@ -254,22 +254,11 @@ public class Comctl32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Comctl32] ImageList_LoadImageA(hi=0x{Hi:X8}, lpbmp=\"{Lpbmp}\", cx={Cx}, cGrow={CGrow}, crMask=0x{CrMask:X8}, uType={UType}, uFlags=0x{UFlags:X8})",
 			hi, lpbmp, cx, cGrow, crMask, uType, uFlags);
 
-		// Image types
-		const uint IMAGE_BITMAP = 0;
-		const uint IMAGE_ICON = 1;
-		const uint IMAGE_CURSOR = 2;
-
-		// Flags
-		const uint LR_DEFAULTCOLOR = 0x00000000;
-		const uint LR_MONOCHROME = 0x00000001;
-		const uint LR_COLOR = 0x00000002;
-		const uint LR_SHARED = 0x00008000;
-
 		// Create an image list with estimated dimensions
 		var handle = _nextImageListHandle++;
 		
 		// Estimate height based on type - icons are typically square
-		int cy = uType == IMAGE_ICON ? cx : 16; // Default height for bitmaps
+		int cy = uType == (uint)NativeTypes.ImageType.IMAGE_ICON ? cx : 16; // Default height for bitmaps
 		
 		_imageLists[handle] = new ImageListData
 		{

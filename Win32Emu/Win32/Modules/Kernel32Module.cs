@@ -8450,14 +8450,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			// dwFlags constants
-			const uint MOVEFILE_REPLACE_EXISTING = 0x00000001;
-			const uint MOVEFILE_COPY_ALLOWED = 0x00000002;
-			const uint MOVEFILE_DELAY_UNTIL_REBOOT = 0x00000004;
-			const uint MOVEFILE_WRITE_THROUGH = 0x00000008;
-
 			// Check for delay until reboot flag (not supported in emulator)
-			if ((dwFlags & MOVEFILE_DELAY_UNTIL_REBOOT) != 0)
+			if ((dwFlags & (uint)NativeTypes.MoveFileFlags.MOVEFILE_DELAY_UNTIL_REBOOT) != 0)
 			{
 				_logger.LogWarning("[Kernel32] MoveFileExA: MOVEFILE_DELAY_UNTIL_REBOOT not supported");
 				return (uint)NativeTypes.Win32Bool.TRUE; // Pretend success
@@ -8466,7 +8460,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Try using VFS if available
 			if (_env.VirtualFileSystem != null)
 			{
-				var replaceExisting = (dwFlags & MOVEFILE_REPLACE_EXISTING) != 0;
+				var replaceExisting = (dwFlags & (uint)NativeTypes.MoveFileFlags.MOVEFILE_REPLACE_EXISTING) != 0;
 				
 				// Check if destination exists
 				if (_env.VirtualFileSystem.FileExists(newPath))
@@ -8492,36 +8486,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				}
 			}
 
-			// Fallback to host filesystem
-			try
-			{
-				var replaceExisting = (dwFlags & MOVEFILE_REPLACE_EXISTING) != 0;
-				
-				if (File.Exists(newPath) && !replaceExisting)
-				{
-					_lastError = (uint)NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
-					return (uint)NativeTypes.Win32Bool.FALSE;
-				}
-
-				if (File.Exists(newPath))
-				{
-					File.Delete(newPath);
-				}
-
-				File.Move(existingPath, newPath);
-				return (uint)NativeTypes.Win32Bool.TRUE;
-			}
-			catch (FileNotFoundException)
-			{
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-				return (uint)NativeTypes.Win32Bool.FALSE;
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "[Kernel32] MoveFileExA failed");
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
-				return (uint)NativeTypes.Win32Bool.FALSE;
-			}
+			// VFS not available - return error
+			_logger.LogError("[Kernel32] MoveFileExA: VFS not available");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 		catch (Exception ex)
 		{
@@ -8566,7 +8534,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Validate components
 			if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59 || second > 59)
 			{
-				_logger.LogWarning("[Kernel32] DosDateTimeToFileTime: Invalid date/time components");
+				_logger.LogWarning("[Kernel32] DosDateTimeToFileTime: Invalid date/time components (year={Year}, month={Month}, day={Day}, hour={Hour}, minute={Minute}, second={Second})",
+					year, month, day, hour, minute, second);
 				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
@@ -8603,34 +8572,34 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogDebug("[Kernel32] IsDBCSLeadByte(testChar=0x{TestChar:X2})", testChar & 0xFF);
 
 		// Get the current code page
-		var codePage = (uint)GetAcp();
+		var codePage = GetAcp();
 
 		// For simplicity, we'll check common DBCS code pages
 		// Japanese Shift-JIS (932), Korean (949), Chinese Simplified (936), Chinese Traditional (950)
-		if (codePage == 932 || codePage == 936 || codePage == 949 || codePage == 950)
+		if (codePage == CodePage.Japan || codePage == CodePage.China || codePage == CodePage.Korea || codePage == CodePage.Taiwan)
 		{
 			byte b = (byte)(testChar & 0xFF);
 			
 			// Shift-JIS lead bytes: 0x81-0x9F, 0xE0-0xFC
-			if (codePage == 932)
+			if (codePage == CodePage.Japan)
 			{
 				if ((b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC))
 					return (uint)NativeTypes.Win32Bool.TRUE;
 			}
 			// Chinese Simplified (GBK) lead bytes: 0x81-0xFE
-			else if (codePage == 936)
+			else if (codePage == CodePage.China)
 			{
 				if (b >= 0x81 && b <= 0xFE)
 					return (uint)NativeTypes.Win32Bool.TRUE;
 			}
 			// Korean (Unified Hangul Code) lead bytes: 0x81-0xFE
-			else if (codePage == 949)
+			else if (codePage == CodePage.Korea)
 			{
 				if (b >= 0x81 && b <= 0xFE)
 					return (uint)NativeTypes.Win32Bool.TRUE;
 			}
 			// Chinese Traditional (Big5) lead bytes: 0x81-0xFE
-			else if (codePage == 950)
+			else if (codePage == CodePage.Taiwan)
 			{
 				if (b >= 0x81 && b <= 0xFE)
 					return (uint)NativeTypes.Win32Bool.TRUE;

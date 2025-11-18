@@ -6003,12 +6003,6 @@ namespace Win32Emu.Win32.Modules
 		_logger.LogInformation("[User32] AppendMenuA(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X8}, uIDNewItem=0x{UIDNewItem:X8}, lpNewItem=\"{ItemText}\")",
 			hMenu, uFlags, uIDNewItem, itemText);
 
-		// Menu item flags
-		const uint MF_STRING = 0x00000000;
-		const uint MF_BITMAP = 0x00000004;
-		const uint MF_SEPARATOR = 0x00000800;
-		const uint MF_POPUP = 0x00000010;
-
 		// For now, just return success
 		// A full implementation would need to track menu items and structure
 		return 1; // TRUE
@@ -6031,14 +6025,6 @@ namespace Win32Emu.Win32.Modules
 	{
 		_logger.LogInformation("[User32] TrackPopupMenu(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X8}, x={X}, y={Y}, nReserved={NReserved}, hWnd=0x{HWnd:X8}, prcRect=0x{PrcRect:X8})",
 			hMenu, uFlags, x, y, nReserved, hWnd, prcRect);
-
-		// Flags
-		const uint TPM_LEFTBUTTON = 0x0000;
-		const uint TPM_RIGHTBUTTON = 0x0002;
-		const uint TPM_LEFTALIGN = 0x0000;
-		const uint TPM_CENTERALIGN = 0x0004;
-		const uint TPM_RIGHTALIGN = 0x0008;
-		const uint TPM_RETURNCMD = 0x0100;
 
 		// For stub implementation, return 0 (no item selected or menu cancelled)
 		// A full implementation would need to:
