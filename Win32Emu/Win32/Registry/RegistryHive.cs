@@ -656,8 +656,12 @@ public class RegistryHive : IDisposable
 			
 			_logger.LogDebug("[RegistryHive] Saving hive {HiveName} to {Path} ({Size} bytes)", hiveName, path, memStream.Length);
 			
-			// Ensure directory exists
-			EnsureDirectoryExists(Path.GetDirectoryName(path) ?? string.Empty);
+			// Normalize path separators (Path.GetDirectoryName doesn't work with backslashes on Linux)
+			var normalizedPath = path.Replace('/', '\\');
+			var lastBackslash = normalizedPath.LastIndexOf('\\');
+			var directory = lastBackslash >= 0 ? normalizedPath.Substring(0, lastBackslash) : string.Empty;
+			
+			EnsureDirectoryExists(directory);
 			
 			// Write to VFS
 			using var fileHandle = _vfs.OpenFile(path, VfsFileMode.Create, VfsFileAccess.Write);
@@ -669,6 +673,9 @@ public class RegistryHive : IDisposable
 				{
 					fileHandle.Write(buffer, 0, bytesRead);
 				}
+				
+				// Flush to ensure data is written to disk
+				fileHandle.Flush();
 				
 				_logger.LogInformation("[RegistryHive] Saved hive {HiveName} to {Path} ({Size} bytes)", hiveName, path, memStream.Length);
 			}
