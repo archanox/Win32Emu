@@ -14,13 +14,13 @@ _output = output;
 }
 
 [Fact]
-public void Analyze_82_0_MOO() // XOR instruction - 100% pass rate now
+public void Analyze_82_0_MOO() // XOR instruction - 100% pass rate
 {
 AnalyzeFailures("82.0.MOO.gz");
 }
 
 [Fact]
-public void Analyze_22_MOO() // 100% pass rate now
+public void Analyze_22_MOO() // AND instruction - 100% pass rate
 {
 AnalyzeFailures("22.MOO.gz");
 }
