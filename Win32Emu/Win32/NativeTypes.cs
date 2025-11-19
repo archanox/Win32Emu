@@ -690,16 +690,40 @@ public static class NativeTypes
 
 	/// <summary>
 	/// DirectDraw surface capabilities flags
+	/// Based on Microsoft DirectX SDK and Olde-Skuul DirectDraw headers
+	/// Reference: https://learn.microsoft.com/en-us/windows/win32/api/ddraw/ns-ddraw-ddscaps
 	/// </summary>
 	[Flags]
 	public enum DDSCaps : uint
 	{
-		DDSCAPS_BACKBUFFER = 0x00000004,
-		DDSCAPS_COMPLEX = 0x00000008,
-		DDSCAPS_FLIP = 0x00000010,
-		DDSCAPS_OFFSCREENPLAIN = 0x00000040,
-		DDSCAPS_PRIMARYSURFACE = 0x00000200,
-		DDSCAPS_VIDEOMEMORY = 0x00000800,
+		DDSCAPS_3DDEVICE = 0x00000001,           // Surface can be used for 3D rendering
+		DDSCAPS_ALLOCONLOAD = 0x04000000,        // Memory allocated on texture load
+		DDSCAPS_ALPHA = 0x00000002,              // Surface contains alpha information only
+		DDSCAPS_BACKBUFFER = 0x00000004,         // Back buffer of a surface flipping structure
+		DDSCAPS_COMPLEX = 0x00000008,            // Complex surface (more than one surface)
+		DDSCAPS_FLIP = 0x00000010,               // Part of a surface flipping structure
+		DDSCAPS_FRONTBUFFER = 0x00000020,        // Front buffer of a surface flipping structure
+		DDSCAPS_HWCODEC = 0x01000000,            // Can have stream decompressed to it by hardware
+		DDSCAPS_LIVEVIDEO = 0x00400000,          // Can receive live video
+		DDSCAPS_LOCALVIDMEM = 0x10000000,        // Surface exists in true local display memory
+		DDSCAPS_MIPMAP = 0x00400000,             // One level of a mipmap
+		DDSCAPS_MODEX = 0x00080000,              // 320x200 or 320x240 Mode X surface
+		DDSCAPS_NONLOCALVIDMEM = 0x20000000,     // Surface exists in non-local display memory
+		DDSCAPS_OFFSCREENPLAIN = 0x00000040,     // Offscreen plain surface
+		DDSCAPS_OVERLAY = 0x00000080,            // Surface is an overlay
+		DDSCAPS_OPTIMIZED = 0x80000000,          // Surface is optimized (not currently implemented)
+		DDSCAPS_OWNDC = 0x00040000,              // Surface will have a DC association for a long period
+		DDSCAPS_PALETTE = 0x00000100,            // Allows unique DirectDrawPalette objects
+		DDSCAPS_PRIMARYSURFACE = 0x00000200,     // Primary surface (what user sees)
+		DDSCAPS_PRIMARYSURFACELEFT = 0x00000400, // Primary surface for left eye (stereo)
+		DDSCAPS_STANDARDVGAMODE = 0x00001000,    // Standard VGA mode surface
+		DDSCAPS_SYSTEMMEMORY = 0x00000800,       // Surface memory allocated from system memory
+		DDSCAPS_TEXTURE = 0x00001000,            // Can be used as a 3D texture
+		DDSCAPS_VIDEOMEMORY = 0x00004000,        // Surface exists in display memory
+		DDSCAPS_VIDEOPORT = 0x00008000,          // Can receive data from a video port
+		DDSCAPS_VISIBLE = 0x00008000,            // Changes are immediately visible
+		DDSCAPS_WRITEONLY = 0x00010000,          // Only write access permitted
+		DDSCAPS_ZBUFFER = 0x00020000,            // Z-buffer with depth information
 	}
 
 	/// <summary>
@@ -880,6 +904,90 @@ public static class NativeTypes
 		/// Obsolete - replaced by DDLOCK_DISCARDCONTENTS
 		/// </summary>
 		DDLOCK_OKTOSWAP = 0x00002000, // Same value as DISCARDCONTENTS
+	}
+
+	/// <summary>
+	/// DirectDraw extended surface capabilities flags (dwCaps2 in DDSCAPS2)
+	/// Based on Microsoft DirectX SDK and Olde-Skuul DirectDraw headers
+	/// Reference: https://learn.microsoft.com/en-us/windows/win32/api/ddraw/ns-ddraw-ddscaps2
+	/// </summary>
+	[Flags]
+	public enum DDSCaps2Flags : uint
+	{
+		DDSCAPS2_HARDWAREDEINTERLACE = 0x00000000,      // Reserved
+		DDSCAPS2_HINTDYNAMIC = 0x00000004,              // Surface updated frequently
+		DDSCAPS2_HINTSTATIC = 0x00000008,               // Surface updated infrequently
+		DDSCAPS2_TEXTUREMANAGE = 0x00000010,            // Managed by driver/D3D
+		DDSCAPS2_RESERVED1 = 0x00000020,                // Reserved
+		DDSCAPS2_RESERVED2 = 0x00000040,                // Reserved
+		DDSCAPS2_OPAQUE = 0x00000080,                   // Never locked/blitted/updated
+		DDSCAPS2_HINTANTIALIASING = 0x00000100,         // Surface uses antialiasing
+		DDSCAPS2_CUBEMAP = 0x00000200,                  // Cubic environment map
+		DDSCAPS2_CUBEMAP_POSITIVEX = 0x00000400,        // +X face of cube map
+		DDSCAPS2_CUBEMAP_NEGATIVEX = 0x00000800,        // -X face of cube map
+		DDSCAPS2_CUBEMAP_POSITIVEY = 0x00001000,        // +Y face of cube map
+		DDSCAPS2_CUBEMAP_NEGATIVEY = 0x00002000,        // -Y face of cube map
+		DDSCAPS2_CUBEMAP_POSITIVEZ = 0x00004000,        // +Z face of cube map
+		DDSCAPS2_CUBEMAP_NEGATIVEZ = 0x00008000,        // -Z face of cube map
+		DDSCAPS2_CUBEMAP_ALLFACES = 0x0000FC00,         // All 6 faces of cube map
+		DDSCAPS2_MIPMAPSUBLEVEL = 0x00010000,           // Mipmap sublevel
+		DDSCAPS2_D3DTEXTUREMANAGE = 0x00020000,         // Managed by Direct3D
+		DDSCAPS2_DONOTPERSIST = 0x00040000,             // Can be safely lost
+		DDSCAPS2_STEREOSURFACELEFT = 0x00080000,        // Left stereo surface
+		DDSCAPS2_VOLUME = 0x00200000,                   // Volume texture
+		DDSCAPS2_NOTUSERLOCKABLE = 0x00400000,          // Surface cannot be locked
+		DDSCAPS2_POINTS = 0x00800000,                   // Can render points/point sprites
+		DDSCAPS2_RTPATCHES = 0x01000000,                // Can render RT patches
+		DDSCAPS2_NPATCHES = 0x02000000,                 // Can render N patches
+		DDSCAPS2_RESERVED3 = 0x04000000,                // Reserved
+		DDSCAPS2_DISCARDBACKBUFFER = 0x10000000,        // Back buffer preservation not required
+		DDSCAPS2_ENABLEALPHACHANNEL = 0x20000000,       // Enable alpha channel
+		DDSCAPS2_EXTENDEDFORMATPRIMARY = 0x40000000,    // Non-standard display mode
+		DDSCAPS2_ADDITIONALPRIMARY = 0x80000000,        // Additional primary surface
+	}
+
+	/// <summary>
+	/// DirectDraw additional surface capabilities flags (dwCaps3 in DDSCAPS2)
+	/// Reference: https://learn.microsoft.com/en-us/windows/win32/api/ddraw/ns-ddraw-ddscaps2
+	/// </summary>
+	[Flags]
+	public enum DDSCaps3Flags : uint
+	{
+		DDSCAPS3_MULTISAMPLE_MASK = 0x0000001F,         // Bits 0-4: multisample type
+		DDSCAPS3_MULTISAMPLE_QUALITY_MASK = 0x000000E0, // Bits 5-7: multisample quality
+		DDSCAPS3_RESERVED1 = 0x00000100,                // Reserved
+		DDSCAPS3_VIDEO = 0x00000200,                    // Contains video data
+		DDSCAPS3_LIGHTWEIGHTMIPMAP = 0x00000400,        // Has lightweight mip levels
+		DDSCAPS3_AUTOGENMIPMAP = 0x00000800,            // Mip sublevels auto-generated
+		DDSCAPS3_DMAP = 0x00001000,                     // Displacement map texture
+	}
+
+	#endregion
+
+	#region DirectDraw Structures
+
+	/// <summary>
+	/// DDSCAPS structure (4 bytes)
+	/// Defines the capabilities of a DirectDraw surface object
+	/// Reference: https://learn.microsoft.com/en-us/windows/win32/api/ddraw/ns-ddraw-ddscaps
+	/// </summary>
+	public struct DDSCAPS
+	{
+		public DDSCaps dwCaps;  // Surface capability flags
+	}
+
+	/// <summary>
+	/// DDSCAPS2 structure (16 bytes)
+	/// Defines additional capabilities of a DirectDraw surface object
+	/// Reference: https://learn.microsoft.com/en-us/windows/win32/api/ddraw/ns-ddraw-ddscaps2
+	/// </summary>
+	[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+	public struct DDSCAPS2
+	{
+		public DDSCaps dwCaps;           // Base surface capability flags
+		public DDSCaps2Flags dwCaps2;    // Extended surface capability flags
+		public DDSCaps3Flags dwCaps3;    // Additional surface capability flags
+		public uint dwCaps4;             // Volume depth or additional flags
 	}
 
 	#endregion
