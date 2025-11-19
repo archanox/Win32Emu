@@ -4804,17 +4804,42 @@ public class IcedCpu : IAsyncCpu
 	{
 		// DAS - Decimal Adjust AL After Subtraction
 		// Adjusts AL after packed BCD subtraction
-		var al = (byte)(_eax & 0xFF);
-		var oldAl = al;
-		var oldCf = GetFlag(Cf);
+		// Reference: Intel® 64 and IA-32 Architectures Software Developer's Manual
+		//
+		// Pseudocode from Intel manual:
+		// OLD_AL ← AL;
+		// OLD_CF ← CF;
+		// CF ← 0;
+		// IF (AL AND 0FH) > 9 OR AF = 1 THEN
+		//     AL ← AL - 6;
+		//     CF ← OLD_CF OR (Borrow from AL ← AL - 6);
+		//     AF ← 1;
+		// ELSE
+		//     AF ← 0;
+		// FI;
+		// IF OLD_AL > 99H OR OLD_CF = 1 THEN
+		//     AL ← AL - 60H;
+		//     CF ← 1;
+		// FI;
 		
+		var oldAl = (byte)(_eax & 0xFF);
+		var oldCf = GetFlag(Cf);
+		var oldAf = GetFlag(Af);
+		var al = oldAl;
+		
+		// CF is initially cleared per Intel spec
 		ClearFlag(Cf);
 		
 		// Step 1: Check low nibble
-		if (((al & 0x0F) > 9) || GetFlag(Af))
+		if (((al & 0x0F) > 9) || oldAf)
 		{
-			al -= 6;
-			SetFlagVal(Cf, oldCf || (al < oldAl)); // Set CF if borrow occurred
+			// Perform subtraction and check for borrow (underflow)
+			var newAl = (byte)(al - 6);
+			var borrow = (newAl > al);  // Underflow: result wrapped around
+			al = newAl;
+			
+			// CF = OLD_CF OR Borrow
+			SetFlagVal(Cf, oldCf || borrow);
 			SetFlag(Af);
 		}
 		else
@@ -4832,24 +4857,51 @@ public class IcedCpu : IAsyncCpu
 		_eax = (_eax & 0xFFFFFF00) | al;
 		
 		// Update flags: SF, ZF, PF
-		UpdateLogicResultFlags(al);
+		// OF is undefined - clear it for hardware compatibility
+		ClearFlag(Of);
+		UpdateLogicResultFlags(al, 0x80);  // Use 0x80 sign bit mask for byte operations
 	}
 
 	private void ExecDaa()
 	{
 		// DAA - Decimal Adjust AL After Addition
 		// Adjusts AL after packed BCD addition
-		var al = (byte)(_eax & 0xFF);
-		var oldAl = al;
-		var oldCf = GetFlag(Cf);
+		// Reference: Intel® 64 and IA-32 Architectures Software Developer's Manual
+		//
+		// Pseudocode from Intel manual:
+		// OLD_AL ← AL;
+		// OLD_CF ← CF;
+		// CF ← 0;
+		// IF (AL AND 0FH) > 9 OR AF = 1 THEN
+		//     AL ← AL + 6;
+		//     CF ← OLD_CF OR (Carry from AL ← AL + 6);
+		//     AF ← 1;
+		// ELSE
+		//     AF ← 0;
+		// FI;
+		// IF OLD_AL > 99H OR OLD_CF = 1 THEN
+		//     AL ← AL + 60H;
+		//     CF ← 1;
+		// FI;
 		
+		var oldAl = (byte)(_eax & 0xFF);
+		var oldCf = GetFlag(Cf);
+		var oldAf = GetFlag(Af);
+		var al = oldAl;
+		
+		// CF is initially cleared per Intel spec
 		ClearFlag(Cf);
 		
 		// Step 1: Check low nibble
-		if (((al & 0x0F) > 9) || GetFlag(Af))
+		if (((al & 0x0F) > 9) || oldAf)
 		{
-			al += 6;
-			SetFlagVal(Cf, oldCf || (al < oldAl)); // Set CF if carry occurred
+			// Perform addition and check for carry (overflow)
+			var newAl = (byte)(al + 6);
+			var carry = (newAl < al);  // Overflow: result wrapped around
+			al = newAl;
+			
+			// CF = OLD_CF OR Carry
+			SetFlagVal(Cf, oldCf || carry);
 			SetFlag(Af);
 		}
 		else
@@ -4867,7 +4919,9 @@ public class IcedCpu : IAsyncCpu
 		_eax = (_eax & 0xFFFFFF00) | al;
 		
 		// Update flags: SF, ZF, PF
-		UpdateLogicResultFlags(al);
+		// OF is undefined - clear it for hardware compatibility
+		ClearFlag(Of);
+		UpdateLogicResultFlags(al, 0x80);  // Use 0x80 sign bit mask for byte operations
 	}
 
 	private void ExecSldt(Instruction insn)
