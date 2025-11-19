@@ -112,6 +112,9 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				    {
 				        public static int GetArgBytes(string dll, string export)
 				        {
+				            // Resolve ordinal-based export names (e.g., "ORDINAL_4") to actual method names
+				            export = DllModuleExportInfo.ResolveOrdinalExport(dll, export);
+				            
 				            switch ((dll.ToUpperInvariant(), export.ToUpperInvariant()))
 				            {
 				""");
@@ -137,6 +140,9 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 
 				        public static bool TryGetArgBytes(string dll, string export, out int argBytes)
 				        {
+				            // Resolve ordinal-based export names (e.g., "ORDINAL_4") to actual method names
+				            export = DllModuleExportInfo.ResolveOrdinalExport(dll, export);
+				            
 				            switch ((dll.ToUpperInvariant(), export.ToUpperInvariant()))
 				            {
 				""");
@@ -289,11 +295,14 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				        /// Checks if a given export function is implemented in a DLL module.
 				        /// </summary>
 				        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL", "DPLAYX.DLL")</param>
-				        /// <param name="exportName">The export function name to check</param>
+				        /// <param name="exportName">The export function name to check (can be ordinal-based like "ORDINAL_4")</param>
 				        /// <param name="version">Optional version string to match. If null, checks if any version is implemented.</param>
 				        /// <returns>True if the export is implemented, false otherwise</returns>
 				        public static bool IsExportImplemented(string dllName, string exportName, string? version = null)
 				        {
+				            // Resolve ordinal-based export names (e.g., "ORDINAL_4") to actual method names
+				            exportName = ResolveOrdinalExport(dllName, exportName, version);
+				            
 				            switch ((dllName.ToUpperInvariant(), exportName.ToUpperInvariant()))
 				            {
 				""");
@@ -383,11 +392,14 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				        /// Gets the forwarding target for an export, if it's a forwarded export.
 				        /// </summary>
 				        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL")</param>
-				        /// <param name="exportName">The export function name to check</param>
+				        /// <param name="exportName">The export function name to check (can be ordinal-based like "ORDINAL_4")</param>
 				        /// <param name="version">Optional version string to match. If null, checks first matching export.</param>
 				        /// <returns>The forwarding target string (e.g., "KERNELBASE.GetVersion") or null if not forwarded</returns>
 				        public static string? GetForwardedExport(string dllName, string exportName, string? version = null)
 				        {
+				            // Resolve ordinal-based export names (e.g., "ORDINAL_4") to actual method names
+				            exportName = ResolveOrdinalExport(dllName, exportName, version);
+				            
 				            switch ((dllName.ToUpperInvariant(), exportName.ToUpperInvariant()))
 				            {
 				""");
@@ -445,11 +457,14 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				        /// Checks if a given export function is marked as a stub (partial implementation).
 				        /// </summary>
 				        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL", "USER32.DLL")</param>
-				        /// <param name="exportName">The export function name to check</param>
+				        /// <param name="exportName">The export function name to check (can be ordinal-based like "ORDINAL_4")</param>
 				        /// <param name="version">Optional version string to match. If null, checks first matching export.</param>
 				        /// <returns>True if the export is marked as a stub, false otherwise</returns>
 				        public static bool IsExportStub(string dllName, string exportName, string? version = null)
 				        {
+				            // Resolve ordinal-based export names (e.g., "ORDINAL_4") to actual method names
+				            exportName = ResolveOrdinalExport(dllName, exportName, version);
+				            
 				            switch ((dllName.ToUpperInvariant(), exportName.ToUpperInvariant()))
 				            {
 				""");
@@ -499,6 +514,69 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 				"""
 				                default: return false;
 				            }
+				        }
+
+				        /// <summary>
+				        /// Resolves an ordinal-based export name (e.g., "ORDINAL_4") to the actual method name.
+				        /// This is used when PE files import functions by ordinal instead of by name.
+				        /// </summary>
+				        /// <param name="dllName">The name of the DLL (e.g., "KERNEL32.DLL", "DPLAYX.DLL")</param>
+				        /// <param name="exportName">The export name, which may be ordinal-based (e.g., "ORDINAL_4")</param>
+				        /// <param name="version">Optional version string to match. If null, uses first matching export.</param>
+				        /// <returns>The resolved method name if found, otherwise returns the original exportName</returns>
+				        public static string ResolveOrdinalExport(string dllName, string exportName, string? version = null)
+				        {
+				            // Check if this is an ordinal-based export name (format: "ORDINAL_N" or "Ordinal_N")
+				            if (!exportName.StartsWith("ORDINAL_", System.StringComparison.OrdinalIgnoreCase))
+				            {
+				                return exportName; // Not an ordinal export, return as-is
+				            }
+				            
+				            // Extract the ordinal number
+				            var ordinalStr = exportName.Substring(8); // Skip "ORDINAL_" prefix
+				            if (!uint.TryParse(ordinalStr, out var ordinal))
+				            {
+				                return exportName; // Invalid ordinal format, return as-is
+				            }
+				            
+				            // Look up the method name by DLL and ordinal
+				            switch (dllName.ToUpperInvariant())
+				            {
+				""");
+
+			// Generate ordinal-to-method-name mappings for each DLL
+			foreach (var dllGroup in byDll)
+			{
+				sb.AppendLine($"                case \"{dllGroup.Key.ToUpperInvariant()}\":");
+				sb.AppendLine("                    switch (ordinal)");
+				sb.AppendLine("                    {");
+				
+				// Group exports by ordinal to handle multiple attributes with same ordinal
+				// Since multiple versions of the same function have the same ordinal and method name,
+				// we just need one case per ordinal pointing to the method name
+				var ordinalGroups = dllGroup
+					.SelectMany(export => export.Attributes.Select(attr => new { export.MethodName, attr.Ordinal }))
+					.GroupBy(x => x.Ordinal)
+					.OrderBy(g => g.Key);
+				
+				foreach (var ordinalGroup in ordinalGroups)
+				{
+					var ordinalValue = ordinalGroup.Key;
+					// All items in this group should have the same method name (same ordinal = same function)
+					var methodName = ordinalGroup.First().MethodName;
+					sb.AppendLine($"                        case {ordinalValue}: return \"{methodName}\";");
+				}
+				
+				sb.AppendLine("                    }");
+				sb.AppendLine("                    break;");
+			}
+
+			sb.AppendLine(
+				"""
+				            }
+				            
+				            // Ordinal not found, return original export name
+				            return exportName;
 				        }
 				    }
 				}
