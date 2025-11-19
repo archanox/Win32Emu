@@ -1400,7 +1400,7 @@ public class IcedCpu : IAsyncCpu
 				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
 				{
-					a = _mem.Read16(CalcMemAddress(insn));
+					a = SafeRead16(insn, CalcMemAddress(insn));
 				}
 				else
 				{
@@ -1413,7 +1413,7 @@ public class IcedCpu : IAsyncCpu
 				}
 				else if (insn.GetOpKind(1) == OpKind.Memory)
 				{
-					b = _mem.Read16(CalcMemAddress(insn));
+					b = SafeRead16(insn, CalcMemAddress(insn));
 				}
 				else
 				{
@@ -1428,7 +1428,7 @@ public class IcedCpu : IAsyncCpu
 				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
 				{
-					_mem.Write16(CalcMemAddress(insn), r);
+					SafeWrite16(insn, CalcMemAddress(insn), r);
 				}
 				
 				SetFlagsAdd(a, b, r, 0x8000); // 16-bit sign bit
@@ -5354,6 +5354,9 @@ public class IcedCpu : IAsyncCpu
 			// First, mask offset to 16 bits (wrap at 64KB boundary)
 			var offset16 = offset & 0xFFFF;
 			
+			// NOTE: Segment limit checking is handled separately by CheckSegmentLimitViolation
+			// which is called before memory reads/writes with the appropriate access size
+			
 			// Then convert to linear address: (segment << 4) + offset
 			// This is the proper 8086/80286/80386 real mode addressing formula
 			addr = (uint)((segmentValue << 4) + offset16);
@@ -5397,6 +5400,205 @@ public class IcedCpu : IAsyncCpu
 		}
 
 		return addr;
+	}
+
+	/// <summary>
+	/// Checks if a memory access would violate segment limits in 16-bit real mode.
+	/// In real mode, segments are limited to 64KB (offsets 0x0000-0xFFFF).
+	/// Accessing beyond this limit triggers a General Protection Fault (INT 0x0D).
+	/// </summary>
+	/// <param name="insn">The instruction being executed</param>
+	/// <param name="accessSize">Size of the memory access in bytes (1, 2, or 4)</param>
+	/// <param name="offset">The calculated offset within the segment (before masking to 16 bits)</param>
+	/// <returns>True if the access is valid, false if it would cross the 64KB segment boundary</returns>
+	private bool CheckSegmentLimitViolation(Instruction insn, int accessSize, uint offset)
+	{
+		// Only check segment limits in 16-bit real mode
+		if (_bitness != 16)
+		{
+			return false; // No violation in 32-bit mode
+		}
+
+		// In 16-bit real mode, offsets are masked to 16 bits (0x0000-0xFFFF)
+		// An access violates the segment limit if (offset + accessSize - 1) > 0xFFFF
+		// For example: 16-bit read from offset 0xFFFF would access 0xFFFF and 0x10000 (out of bounds)
+		var offset16 = offset & 0xFFFF;
+		var lastByte = offset16 + (uint)accessSize - 1;
+		
+		if (lastByte > 0xFFFF)
+		{
+			// Segment limit violation detected
+			_logger.LogDebug("[IcedCpu] Segment limit violation: offset=0x{Offset:X4}, size={Size}, lastByte=0x{LastByte:X} at EIP=0x{Eip:X8}",
+				offset16, accessSize, lastByte, _eip);
+			return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Safe memory read that checks segment limits in real mode before accessing memory.
+	/// Generates INT 0x0D (General Protection Fault) if segment limit is violated.
+	/// </summary>
+	private ushort SafeRead16(Instruction insn, uint addr)
+	{
+		// In 16-bit real mode, check if the 16-bit read would cross segment boundary
+		if (_bitness == 16)
+		{
+			// Extract offset from the calculation done in CalcMemAddress
+			// We need to recalculate the offset to check segment limits
+			var offset = insn.MemoryDisplacement32;
+			if (insn.MemoryBase != Register.None)
+			{
+				var baseReg = insn.MemoryBase;
+				if (Is16BitRegister(baseReg))
+					offset += GetReg16(baseReg);
+				else
+					offset += GetReg32(baseReg);
+			}
+			if (insn.MemoryIndex != Register.None)
+			{
+				var indexReg = insn.MemoryIndex;
+				var scale = insn.MemoryIndexScale;
+				if (Is16BitRegister(indexReg))
+					offset += (uint)(GetReg16(indexReg) * scale);
+				else
+					offset += (uint)(GetReg32(indexReg) * scale);
+			}
+
+			// Check if 16-bit access would violate segment limit
+			if (CheckSegmentLimitViolation(insn, 2, offset))
+			{
+				// Generate General Protection Fault (INT 0x0D)
+				GenerateException(0x0D, _eip, _mem);
+				return 0; // Return dummy value (won't be used as exception changes control flow)
+			}
+		}
+
+		return _mem.Read16(addr);
+	}
+
+	/// <summary>
+	/// Safe memory read that checks segment limits in real mode before accessing memory.
+	/// Generates INT 0x0D (General Protection Fault) if segment limit is violated.
+	/// </summary>
+	private uint SafeRead32(Instruction insn, uint addr)
+	{
+		// In 16-bit real mode, check if the 32-bit read would cross segment boundary
+		if (_bitness == 16)
+		{
+			// Recalculate offset for segment limit checking
+			var offset = insn.MemoryDisplacement32;
+			if (insn.MemoryBase != Register.None)
+			{
+				var baseReg = insn.MemoryBase;
+				if (Is16BitRegister(baseReg))
+					offset += GetReg16(baseReg);
+				else
+					offset += GetReg32(baseReg);
+			}
+			if (insn.MemoryIndex != Register.None)
+			{
+				var indexReg = insn.MemoryIndex;
+				var scale = insn.MemoryIndexScale;
+				if (Is16BitRegister(indexReg))
+					offset += (uint)(GetReg16(indexReg) * scale);
+				else
+					offset += (uint)(GetReg32(indexReg) * scale);
+			}
+
+			// Check if 32-bit access would violate segment limit
+			if (CheckSegmentLimitViolation(insn, 4, offset))
+			{
+				// Generate General Protection Fault (INT 0x0D)
+				GenerateException(0x0D, _eip, _mem);
+				return 0; // Return dummy value (won't be used as exception changes control flow)
+			}
+		}
+
+		return _mem.Read32(addr);
+	}
+
+	/// <summary>
+	/// Safe memory write that checks segment limits in real mode before accessing memory.
+	/// Generates INT 0x0D (General Protection Fault) if segment limit is violated.
+	/// </summary>
+	private void SafeWrite16(Instruction insn, uint addr, ushort value)
+	{
+		// In 16-bit real mode, check if the 16-bit write would cross segment boundary
+		if (_bitness == 16)
+		{
+			// Recalculate offset for segment limit checking
+			var offset = insn.MemoryDisplacement32;
+			if (insn.MemoryBase != Register.None)
+			{
+				var baseReg = insn.MemoryBase;
+				if (Is16BitRegister(baseReg))
+					offset += GetReg16(baseReg);
+				else
+					offset += GetReg32(baseReg);
+			}
+			if (insn.MemoryIndex != Register.None)
+			{
+				var indexReg = insn.MemoryIndex;
+				var scale = insn.MemoryIndexScale;
+				if (Is16BitRegister(indexReg))
+					offset += (uint)(GetReg16(indexReg) * scale);
+				else
+					offset += (uint)(GetReg32(indexReg) * scale);
+			}
+
+			// Check if 16-bit access would violate segment limit
+			if (CheckSegmentLimitViolation(insn, 2, offset))
+			{
+				// Generate General Protection Fault (INT 0x0D)
+				GenerateException(0x0D, _eip, _mem);
+				return; // Don't perform the write
+			}
+		}
+
+		_mem.Write16(addr, value);
+	}
+
+	/// <summary>
+	/// Safe memory write that checks segment limits in real mode before accessing memory.
+	/// Generates INT 0x0D (General Protection Fault) if segment limit is violated.
+	/// </summary>
+	private void SafeWrite32(Instruction insn, uint addr, uint value)
+	{
+		// In 16-bit real mode, check if the 32-bit write would cross segment boundary
+		if (_bitness == 16)
+		{
+			// Recalculate offset for segment limit checking
+			var offset = insn.MemoryDisplacement32;
+			if (insn.MemoryBase != Register.None)
+			{
+				var baseReg = insn.MemoryBase;
+				if (Is16BitRegister(baseReg))
+					offset += GetReg16(baseReg);
+				else
+					offset += GetReg32(baseReg);
+			}
+			if (insn.MemoryIndex != Register.None)
+			{
+				var indexReg = insn.MemoryIndex;
+				var scale = insn.MemoryIndexScale;
+				if (Is16BitRegister(indexReg))
+					offset += (uint)(GetReg16(indexReg) * scale);
+				else
+					offset += (uint)(GetReg32(indexReg) * scale);
+			}
+
+			// Check if 32-bit access would violate segment limit
+			if (CheckSegmentLimitViolation(insn, 4, offset))
+			{
+				// Generate General Protection Fault (INT 0x0D)
+				GenerateException(0x0D, _eip, _mem);
+				return; // Don't perform the write
+			}
+		}
+
+		_mem.Write32(addr, value);
 	}
 
 	// CalcLeaAddress calculates an effective address without validating memory bounds
