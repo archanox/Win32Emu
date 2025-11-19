@@ -209,6 +209,15 @@ You can create scripts to automate common registry modifications:
 import subprocess
 import sys
 
+def get_hive_file_path(hive):
+    """Map registry hive paths to their file system locations."""
+    hive_map = {
+        'HKEY_LOCAL_MACHINE\\SYSTEM': '/mnt/game/Windows/System32/Config/SYSTEM',
+        'HKEY_LOCAL_MACHINE\\SOFTWARE': '/mnt/game/Windows/System32/Config/SOFTWARE',
+        'HKEY_CURRENT_USER': '/mnt/game/Users/User/NTUSER.DAT',
+    }
+    return hive_map.get(hive)
+
 def set_registry_value(vhd_path, hive, key_path, value_name, value):
     # Mount VHD
     subprocess.run(['sudo', 'guestmount', '-a', vhd_path, '-i', '--rw', '/mnt/game'])
@@ -223,8 +232,9 @@ def set_registry_value(vhd_path, hive, key_path, value_name, value):
         f.write(reg_content)
     
     # Apply changes
-    hive_file = f'/mnt/game/Windows/System32/Config/{hive.split("\\")[-1]}'
-    subprocess.run(['hivexregedit', '--merge', hive_file, '/tmp/edit.reg'])
+    hive_file = get_hive_file_path(hive)
+    if hive_file:
+        subprocess.run(['hivexregedit', '--merge', hive_file, '/tmp/edit.reg'])
     
     # Unmount
     subprocess.run(['sudo', 'guestunmount', '/mnt/game'])
@@ -239,7 +249,7 @@ if __name__ == '__main__':
 
 ## Further Reading
 
-- [Windows Registry Structure](https://docs.microsoft.com/en-us/windows/win32/sysinfo/registry)
+- [Windows Registry Structure](https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry)
 - [DiscUtils Documentation](https://github.com/DiscUtils/DiscUtils)
 - [Hivex Tools Documentation](http://libguestfs.org/hivex.1.html)
 - [VHD File Format Specification](https://www.microsoft.com/en-us/download/details.aspx?id=23850)
