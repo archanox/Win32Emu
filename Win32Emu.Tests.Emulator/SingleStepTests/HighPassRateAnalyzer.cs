@@ -14,15 +14,69 @@ _output = output;
 }
 
 [Fact]
-public void Analyze_82_0_MOO() // XOR instruction - 99.6% pass rate
+public void Analyze_82_0_MOO() // XOR instruction - 100% pass rate now
 {
 AnalyzeFailures("82.0.MOO.gz");
 }
 
 [Fact]
-public void Analyze_22_MOO() // 97.3% pass rate
+public void Analyze_22_MOO() // 100% pass rate now
 {
 AnalyzeFailures("22.MOO.gz");
+}
+
+[Fact]
+public void Analyze_A3_MOO() // MOVS - 99.9% pass rate (1 failure)
+{
+AnalyzeFailures("A3.MOO.gz");
+}
+
+[Fact]
+public void Analyze_6766A3_MOO() // MOVS with prefix - 99.9% pass rate (3 failures)
+{
+AnalyzeFailures("6766A3.MOO.gz");
+}
+
+[Fact]
+public void Analyze_13_MOO() // ADC - 99.7% pass rate (7 failures)
+{
+AnalyzeFailures("13.MOO.gz");
+}
+
+[Fact]
+public void Analyze_1B_MOO() // SBB - 99.7% pass rate (8 failures)
+{
+AnalyzeFailures("1B.MOO.gz");
+}
+
+[Fact]
+public void Analyze_09_MOO() // OR - 99.6% pass rate (9 failures)
+{
+AnalyzeFailures("09.MOO.gz");
+}
+
+[Fact]
+public void Analyze_2B_MOO() // SUB - 99.6% pass rate (9 failures)
+{
+AnalyzeFailures("2B.MOO.gz");
+}
+
+[Fact]
+public void Analyze_29_MOO() // SUB - 99.6% pass rate (9 failures)
+{
+AnalyzeFailures("29.MOO.gz");
+}
+
+[Fact]
+public void Analyze_33_MOO() // XOR - 99.6% pass rate (9 failures)
+{
+AnalyzeFailures("33.MOO.gz");
+}
+
+[Fact]
+public void Analyze_03_MOO() // ADD - 99.6% pass rate (9 failures)
+{
+AnalyzeFailures("03.MOO.gz");
 }
 
 private void AnalyzeFailures(string fileName)
