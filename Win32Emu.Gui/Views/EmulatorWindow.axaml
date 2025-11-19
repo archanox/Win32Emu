@@ -118,8 +118,8 @@
                             IsHitTestVisible="True"
                             IsVisible="{Binding ShowStdOutputPanel}">
                         <ScrollViewer Padding="5" >
-                                        <TextBlock Text="{Binding StdOutput}"
-                                                 FontFamily="Monospace"
+                                        <SelectableTextBlock Text="{Binding StdOutput}"
+                                                 FontFamily="Consolas,Courier New,monospace"
                                                  FontSize="12"
                                                  Foreground="LightGray"
                                                  />
