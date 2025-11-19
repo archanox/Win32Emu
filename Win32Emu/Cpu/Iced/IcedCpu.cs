@@ -5403,6 +5403,65 @@ public class IcedCpu : IAsyncCpu
 	}
 
 	/// <summary>
+	/// Calculates the offset within a segment for a given memory instruction.
+	/// </summary>
+	private uint CalculateSegmentOffset(Instruction insn)
+	{
+		var offset = insn.MemoryDisplacement32;
+		if (insn.MemoryBase != Register.None)
+		{
+			var baseReg = insn.MemoryBase;
+			if (Is16BitRegister(baseReg))
+				offset += GetReg16(baseReg);
+			else
+				offset += GetReg32(baseReg);
+		}
+		if (insn.MemoryIndex != Register.None)
+		{
+			var indexReg = insn.MemoryIndex;
+			var scale = insn.MemoryIndexScale;
+			if (Is16BitRegister(indexReg))
+				offset += (uint)(GetReg16(indexReg) * scale);
+			else
+				offset += (uint)(GetReg32(indexReg) * scale);
+		}
+		return offset;
+	}
+
+	/// <summary>
+	/// Determines which segment register to use for a memory instruction.
+	/// </summary>
+	private Register GetSegmentRegister(Instruction insn)
+	{
+		Register segmentReg = insn.SegmentPrefix;
+		if (segmentReg == Register.None)
+		{
+			// Default segment rules for x86: BP/EBP defaults to SS, all other registers default to DS
+			segmentReg = (insn.MemoryBase == Register.BP || insn.MemoryBase == Register.EBP) 
+				? Register.SS 
+				: Register.DS;
+		}
+		return segmentReg;
+	}
+
+	/// <summary>
+	/// Retrieves the value of a segment register.
+	/// </summary>
+	private ushort GetSegmentValue(Register segmentReg)
+	{
+		return segmentReg switch
+		{
+			Register.CS => _cs,
+			Register.DS => _ds,
+			Register.ES => _es,
+			Register.FS => _fs,
+			Register.GS => _gs,
+			Register.SS => _ss,
+			_ => 0
+		};
+	}
+
+	/// <summary>
 	/// Safe memory read that handles segment wrapping in 16-bit real mode.
 	/// In real mode, when a 16-bit access starts at offset 0xFFFF, it wraps to offset 0x0000.
 	/// </summary>
@@ -5412,51 +5471,14 @@ public class IcedCpu : IAsyncCpu
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
-			var offset = insn.MemoryDisplacement32;
-			if (insn.MemoryBase != Register.None)
-			{
-				var baseReg = insn.MemoryBase;
-				if (Is16BitRegister(baseReg))
-					offset += GetReg16(baseReg);
-				else
-					offset += GetReg32(baseReg);
-			}
-			if (insn.MemoryIndex != Register.None)
-			{
-				var indexReg = insn.MemoryIndex;
-				var scale = insn.MemoryIndexScale;
-				if (Is16BitRegister(indexReg))
-					offset += (uint)(GetReg16(indexReg) * scale);
-				else
-					offset += (uint)(GetReg32(indexReg) * scale);
-			}
-
-			var offset16 = offset & 0xFFFF;
+			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
 			
 			// Check if the 16-bit read would wrap at the segment boundary
 			if (offset16 == 0xFFFF)
 			{
 				// Read crosses segment boundary: read byte at 0xFFFF and byte at 0x0000 (wrapped)
-				// Get segment value to recalculate physical addresses
-				Register segmentReg = insn.SegmentPrefix;
-				if (segmentReg == Register.None)
-				{
-					if (insn.MemoryBase == Register.BP || insn.MemoryBase == Register.EBP)
-						segmentReg = Register.SS;
-					else
-						segmentReg = Register.DS;
-				}
-				
-				ushort segmentValue = segmentReg switch
-				{
-					Register.CS => _cs,
-					Register.DS => _ds,
-					Register.ES => _es,
-					Register.FS => _fs,
-					Register.GS => _gs,
-					Register.SS => _ss,
-					_ => 0
-				};
+				var segmentReg = GetSegmentRegister(insn);
+				var segmentValue = GetSegmentValue(segmentReg);
 
 				// Read low byte from offset 0xFFFF
 				var addrHigh = (uint)((segmentValue << 4) + 0xFFFF);
@@ -5485,50 +5507,14 @@ public class IcedCpu : IAsyncCpu
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
-			var offset = insn.MemoryDisplacement32;
-			if (insn.MemoryBase != Register.None)
-			{
-				var baseReg = insn.MemoryBase;
-				if (Is16BitRegister(baseReg))
-					offset += GetReg16(baseReg);
-				else
-					offset += GetReg32(baseReg);
-			}
-			if (insn.MemoryIndex != Register.None)
-			{
-				var indexReg = insn.MemoryIndex;
-				var scale = insn.MemoryIndexScale;
-				if (Is16BitRegister(indexReg))
-					offset += (uint)(GetReg16(indexReg) * scale);
-				else
-					offset += (uint)(GetReg32(indexReg) * scale);
-			}
-
-			var offset16 = offset & 0xFFFF;
+			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
 			
 			// Check if the 32-bit read would wrap at the segment boundary
 			if (offset16 >= 0xFFFD) // 0xFFFD, 0xFFFE, or 0xFFFF would cause wrap
 			{
 				// Read crosses segment boundary - read byte by byte with wrapping
-				Register segmentReg = insn.SegmentPrefix;
-				if (segmentReg == Register.None)
-				{
-					if (insn.MemoryBase == Register.BP || insn.MemoryBase == Register.EBP)
-						segmentReg = Register.SS;
-					else
-						segmentReg = Register.DS;
-				}
-				
-				ushort segmentValue = segmentReg switch
-				{
-					Register.CS => _cs,
-					Register.DS => _ds,
-					Register.ES => _es,
-					Register.FS => _fs,
-					Register.GS => _gs,
-					Register.SS => _ss,
-					_ => 0
-				};
+				var segmentReg = GetSegmentRegister(insn);
+				var segmentValue = GetSegmentValue(segmentReg);
 
 				uint result = 0;
 				for (int i = 0; i < 4; i++)
@@ -5556,50 +5542,14 @@ public class IcedCpu : IAsyncCpu
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
-			var offset = insn.MemoryDisplacement32;
-			if (insn.MemoryBase != Register.None)
-			{
-				var baseReg = insn.MemoryBase;
-				if (Is16BitRegister(baseReg))
-					offset += GetReg16(baseReg);
-				else
-					offset += GetReg32(baseReg);
-			}
-			if (insn.MemoryIndex != Register.None)
-			{
-				var indexReg = insn.MemoryIndex;
-				var scale = insn.MemoryIndexScale;
-				if (Is16BitRegister(indexReg))
-					offset += (uint)(GetReg16(indexReg) * scale);
-				else
-					offset += (uint)(GetReg32(indexReg) * scale);
-			}
-
-			var offset16 = offset & 0xFFFF;
+			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
 			
 			// Check if the 16-bit write would wrap at the segment boundary
 			if (offset16 == 0xFFFF)
 			{
 				// Write crosses segment boundary: write byte at 0xFFFF and byte at 0x0000 (wrapped)
-				Register segmentReg = insn.SegmentPrefix;
-				if (segmentReg == Register.None)
-				{
-					if (insn.MemoryBase == Register.BP || insn.MemoryBase == Register.EBP)
-						segmentReg = Register.SS;
-					else
-						segmentReg = Register.DS;
-				}
-				
-				ushort segmentValue = segmentReg switch
-				{
-					Register.CS => _cs,
-					Register.DS => _ds,
-					Register.ES => _es,
-					Register.FS => _fs,
-					Register.GS => _gs,
-					Register.SS => _ss,
-					_ => 0
-				};
+				var segmentReg = GetSegmentRegister(insn);
+				var segmentValue = GetSegmentValue(segmentReg);
 
 				// Write low byte to offset 0xFFFF
 				var addrHigh = (uint)((segmentValue << 4) + 0xFFFF);
@@ -5627,50 +5577,14 @@ public class IcedCpu : IAsyncCpu
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
-			var offset = insn.MemoryDisplacement32;
-			if (insn.MemoryBase != Register.None)
-			{
-				var baseReg = insn.MemoryBase;
-				if (Is16BitRegister(baseReg))
-					offset += GetReg16(baseReg);
-				else
-					offset += GetReg32(baseReg);
-			}
-			if (insn.MemoryIndex != Register.None)
-			{
-				var indexReg = insn.MemoryIndex;
-				var scale = insn.MemoryIndexScale;
-				if (Is16BitRegister(indexReg))
-					offset += (uint)(GetReg16(indexReg) * scale);
-				else
-					offset += (uint)(GetReg32(indexReg) * scale);
-			}
-
-			var offset16 = offset & 0xFFFF;
+			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
 			
 			// Check if the 32-bit write would wrap at the segment boundary
 			if (offset16 >= 0xFFFD) // 0xFFFD, 0xFFFE, or 0xFFFF would cause wrap
 			{
 				// Write crosses segment boundary - write byte by byte with wrapping
-				Register segmentReg = insn.SegmentPrefix;
-				if (segmentReg == Register.None)
-				{
-					if (insn.MemoryBase == Register.BP || insn.MemoryBase == Register.EBP)
-						segmentReg = Register.SS;
-					else
-						segmentReg = Register.DS;
-				}
-				
-				ushort segmentValue = segmentReg switch
-				{
-					Register.CS => _cs,
-					Register.DS => _ds,
-					Register.ES => _es,
-					Register.FS => _fs,
-					Register.GS => _gs,
-					Register.SS => _ss,
-					_ => 0
-				};
+				var segmentReg = GetSegmentRegister(insn);
+				var segmentValue = GetSegmentValue(segmentReg);
 
 				for (int i = 0; i < 4; i++)
 				{
