@@ -12,16 +12,16 @@ Detects duplicate DLL export ordinals within Win32 module classes.
 
 **Purpose**: Ensures that each DLL export ordinal is unique within a given DLL version.
 
-**Severity**: Error
+**Severity**: Warning
 
 **Example**:
 ```csharp
 public class Kernel32Module
 {
-    [DllModuleExport(37)]  // ❌ Error: duplicate ordinal
+    [DllModuleExport(37)]  // ⚠️ Warning: duplicate ordinal
     private uint RtlUnwind(...) => ...;
 
-    [DllModuleExport(37)]  // ❌ Error: duplicate ordinal
+    [DllModuleExport(37)]  // ⚠️ Warning: duplicate ordinal
     private uint GetCurrentThreadId() => ...;
 }
 ```
