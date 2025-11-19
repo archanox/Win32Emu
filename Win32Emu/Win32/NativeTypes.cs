@@ -720,14 +720,21 @@ public static class NativeTypes
 
 	/// <summary>
 	/// DirectDraw extended capabilities flags (caps2)
+	/// Based on DirectX 7 SDK and Olde-Skuul DirectDraw headers
 	/// </summary>
 	[Flags]
 	public enum DDCaps2 : uint
 	{
-		DDCAPS2_CERTIFIED = 0x00000001,
-		DDCAPS2_CANRENDERWINDOWED = 0x00000040,
-		DDCAPS2_WIDESURFACES = 0x00000100,
-		DDCAPS2_CANBOBHARDWARE = 0x00001000,
+		DDCAPS2_CERTIFIED = 0x00000001,              // Driver is certified by Microsoft
+		DDCAPS2_CANRENDERWINDOWED = 0x00000040,      // Can render in windowed mode
+		DDCAPS2_WIDESURFACES = 0x00000100,           // Supports surfaces wider than primary
+		DDCAPS2_CANBOBHARDWARE = 0x00001000,         // Hardware can bob in overlay
+		DDCAPS2_FLIPINTERVAL = 0x00200000,           // Supports DDFLIP_INTERVAL flags
+		DDCAPS2_FLIPNOVSYNC = 0x00400000,            // Supports DDFLIP_NOVSYNC
+		DDCAPS2_CANMANAGETEXTURE = 0x00800000,       // Device can manage textures
+		DDCAPS2_TEXMANINNONLOCALVIDMEM = 0x01000000, // Texture manager uses non-local video memory
+		DDCAPS2_STEREO = 0x02000000,                 // Stereo driver
+		DDCAPS2_SYSTONONLOCAL_AS_SYSTOLOCAL = 0x04000000, // Systolocal blt uses same path as systononlocal
 	}
 
 	/// <summary>
@@ -806,6 +813,73 @@ public static class NativeTypes
 	public enum DDSVCaps : uint
 	{
 		DDSVCAPS_RESERVED1 = 0x00000001,
+	}
+
+	/// <summary>
+	/// DirectDraw surface lock flags
+	/// Based on IDirectDrawSurface7::Lock documentation
+	/// Reference: https://learn.microsoft.com/en-us/windows/win32/api/ddraw/nf-ddraw-idirectdrawsurface7-lock
+	/// </summary>
+	[Flags]
+	public enum DDLock : uint
+	{
+		/// <summary>
+		/// Default behavior - return a valid memory pointer to the top of the surface
+		/// </summary>
+		DDLOCK_SURFACEMEMORYPTR = 0x00000000,
+		
+		/// <summary>
+		/// Not currently implemented
+		/// </summary>
+		DDLOCK_EVENT = 0x00000002,
+		
+		/// <summary>
+		/// Indicates that the surface being locked can only be read
+		/// </summary>
+		DDLOCK_READONLY = 0x00000010,
+		
+		/// <summary>
+		/// Indicates that the surface being locked is write-enabled
+		/// </summary>
+		DDLOCK_WRITEONLY = 0x00000020,
+		
+		/// <summary>
+		/// Do not take the Win16Mutex (also known as Win16Lock)
+		/// This flag is ignored when locking the primary surface
+		/// </summary>
+		DDLOCK_NOSYSLOCK = 0x00000800,
+		
+		/// <summary>
+		/// If a lock cannot be obtained because a blit operation is in progress,
+		/// Lock retries until a lock is obtained or another error occurs
+		/// </summary>
+		DDLOCK_WAIT = 0x00001000,
+		
+		/// <summary>
+		/// DirectX 7.0+ - Used only with Direct3D vertex-buffer locks
+		/// Indicates that no vertices referred to in a draw operation since the start
+		/// of the frame are modified during the lock
+		/// </summary>
+		DDLOCK_NOOVERWRITE = 0x00001000, // Same value as WAIT - context-dependent
+		
+		/// <summary>
+		/// DirectX 7.0+ - Used only with Direct3D vertex-buffer locks
+		/// Indicates that no assumptions are made about the contents of the vertex buffer
+		/// This enables Direct3D or the driver to provide an alternative memory area
+		/// </summary>
+		DDLOCK_DISCARDCONTENTS = 0x00002000,
+		
+		/// <summary>
+		/// Override default DDLOCK_WAIT behavior
+		/// If you want to use time when the accelerator is busy (DDERR_WASSTILLDRAWING),
+		/// use DDLOCK_DONOTWAIT
+		/// </summary>
+		DDLOCK_DONOTWAIT = 0x00004000,
+		
+		/// <summary>
+		/// Obsolete - replaced by DDLOCK_DISCARDCONTENTS
+		/// </summary>
+		DDLOCK_OKTOSWAP = 0x00002000, // Same value as DISCARDCONTENTS
 	}
 
 	#endregion
