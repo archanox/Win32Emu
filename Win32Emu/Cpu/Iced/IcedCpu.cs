@@ -4742,7 +4742,7 @@ public class IcedCpu : IAsyncCpu
 		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
 		
 		// Update flags: SF, ZF, PF (OF, AF, CF are undefined)
-		UpdateLogicResultFlags(al);
+		UpdateLogicResultFlags(al, 0x80);  // Use 0x80 sign bit mask for byte operations
 	}
 
 	private void ExecAam(Instruction insn)
@@ -4765,7 +4765,7 @@ public class IcedCpu : IAsyncCpu
 		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
 		
 		// Update flags: SF, ZF, PF (OF, AF, CF are undefined)
-		UpdateLogicResultFlags(al);
+		UpdateLogicResultFlags(al, 0x80);  // Use 0x80 sign bit mask for byte operations
 	}
 
 	private void ExecAas()
@@ -4797,7 +4797,7 @@ public class IcedCpu : IAsyncCpu
 		
 		// Update flags: SF, ZF, PF (technically undefined per Intel spec, but set for consistency)
 		// This matches the behavior of other BCD instructions (AAD, AAM, DAS, DAA) in this emulator
-		UpdateLogicResultFlags(al);
+		UpdateLogicResultFlags(al, 0x80);  // Use 0x80 sign bit mask for byte operations
 	}
 
 	private void ExecDas()
