@@ -4,28 +4,22 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Win32Emu.Tests.Emulator.SingleStepTests;
 
-public class HighPassRateAnalyzer
+public class HighPassRateAnalyzer2
 {
 private readonly ITestOutputHelper _output;
 
-public HighPassRateAnalyzer(ITestOutputHelper output)
+public HighPassRateAnalyzer2(ITestOutputHelper output)
 {
 _output = output;
 }
 
 [Fact]
-public void Analyze_82_0_MOO() // XOR instruction - 99.6% pass rate
+public void Analyze_22_MOO() // AND - 97.3% pass
 {
-AnalyzeFailures("82.0.MOO.gz");
+AnalyzeFailures("22.MOO.gz", maxToAnalyze: 10);
 }
 
-[Fact]
-public void Analyze_22_MOO() // 97.3% pass rate
-{
-AnalyzeFailures("22.MOO.gz");
-}
-
-private void AnalyzeFailures(string fileName)
+private void AnalyzeFailures(string fileName, int maxToAnalyze = int.MaxValue)
 {
 var testFile = FindTestFile(fileName);
 if (testFile == null)
@@ -50,11 +44,13 @@ var result = runner.ExecuteTest(test);
 if (!result.Success)
 {
 failedTests.Add((i, test, result));
+if (failedTests.Count >= maxToAnalyze)
+break;
 }
 }
 
 _output.WriteLine($"Failed tests: {failedTests.Count}");
-_output.WriteLine($"\nDetailed analysis of all failures:");
+_output.WriteLine($"\nDetailed analysis:");
 
 foreach (var (index, test, result) in failedTests)
 {
@@ -72,23 +68,7 @@ _output.WriteLine("Register mismatches:");
 foreach (var m in result.RegisterMismatches)
 {
 _output.WriteLine($"  {m}");
-if (m.RegisterName == "EFLAGS")
-{
-var diff = m.Expected ^ m.Actual;
-_output.WriteLine($"    Diff: 0x{diff:X8}");
-if ((diff & 0x0001) != 0) _output.WriteLine($"      CF");
-if ((diff & 0x0004) != 0) _output.WriteLine($"      PF");
-if ((diff & 0x0010) != 0) _output.WriteLine($"      AF");
-if ((diff & 0x0040) != 0) _output.WriteLine($"      ZF");
-if ((diff & 0x0080) != 0) _output.WriteLine($"      SF");
-if ((diff & 0x0800) != 0) _output.WriteLine($"      OF");
 }
-}
-}
-
-if (result.MemoryMismatches.Any())
-{
-_output.WriteLine($"Memory mismatches: {result.MemoryMismatches.Count}");
 }
 }
 }
@@ -112,12 +92,5 @@ return path;
 }
 
 return null;
-}
-}
-
-[Fact]
-public void Analyze_22_MOO_Detailed() // AND instruction - 97.3% pass rate
-{
-AnalyzeFailures("22.MOO.gz");
 }
 }
