@@ -12,6 +12,9 @@ public class StandardControlHandler
 	private readonly ProcessEnvironment _env;
 	private readonly IEmulatorHost? _host;
 	private readonly ILogger _logger;
+	
+	// Track button check states: hwnd -> check state
+	private readonly Dictionary<uint, uint> _buttonStates = new();
 
 	public StandardControlHandler(ProcessEnvironment env, IEmulatorHost? host = null, ILogger? logger = null)
 	{
@@ -117,8 +120,18 @@ public class StandardControlHandler
 		WM_XBUTTONUP = 0x020C,
 
 		// Button control messages
-		BM_CLICK = 0x00F1
+		BM_GETCHECK = 0x00F0,
+		BM_SETCHECK = 0x00F1,
+		BM_GETSTATE = 0x00F2,
+		BM_SETSTATE = 0x00F3,
+		BM_SETSTYLE = 0x00F4,
+		BM_CLICK = 0x00F5
 	}
+	
+	// Button check state constants
+	private const uint BST_UNCHECKED = 0x0000;
+	private const uint BST_CHECKED = 0x0001;
+	private const uint BST_INDETERMINATE = 0x0002;
 
 	private uint HandleButtonMessage(uint hwnd, WindowNotifications msg, uint wParam, uint lParam)
 	{
@@ -154,6 +167,19 @@ public class StandardControlHandler
 				_logger.LogDebug("[Button] BM_CLICK - simulating button click");
 				// BM_CLICK simulates a button click by sending the notification directly
 				SendButtonNotification(hwnd, NotificationCode.BN_CLICKED);
+				return 0;
+			
+			case WindowNotifications.BM_GETCHECK:
+				// BM_GETCHECK returns the check state of a radio button or check box
+				var checkState = _buttonStates.GetValueOrDefault(hwnd, BST_UNCHECKED);
+				_logger.LogDebug("[Button] BM_GETCHECK - hwnd=0x{Hwnd:X8}, returning state={State}", hwnd, checkState);
+				return checkState;
+			
+			case WindowNotifications.BM_SETCHECK:
+				// BM_SETCHECK sets the check state of a radio button or check box
+				// wParam: BST_UNCHECKED (0), BST_CHECKED (1), or BST_INDETERMINATE (2)
+				_buttonStates[hwnd] = wParam;
+				_logger.LogDebug("[Button] BM_SETCHECK - hwnd=0x{Hwnd:X8}, state={State}", hwnd, wParam);
 				return 0;
 
 			default:
