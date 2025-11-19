@@ -6413,8 +6413,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		// OutputDebugStringA returns void (0) in the real API
 		// It sends the string to the debugger if one is attached
-		// For our emulator, we just log it
-		Console.WriteLine($"[DEBUG] {message}");
+		// For our emulator, we log it via the standard logger which routes to the debug window
 
 		return 0;
 	}
