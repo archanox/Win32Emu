@@ -31,15 +31,12 @@ namespace Win32Emu.Win32.Modules
 			switch (export.ToUpperInvariant())
 			{
 				case "DIRECTPLAYCREATE":
-				case "ORDINAL_1":
 					returnValue = DirectPlayCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 				case "DIRECTPLAYENUMERATEA":
-				case "ORDINAL_2":
 					returnValue = DirectPlayEnumerateA(a.UInt32(0), a.UInt32(1));
 					return true;
 				case "DIRECTPLAYLOBBYCREATEA":
-				case "ORDINAL_4":
 					returnValue = DirectPlayLobbyCreateA();
 					return true;
 				default:

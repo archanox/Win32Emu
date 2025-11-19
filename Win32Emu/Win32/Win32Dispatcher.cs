@@ -51,6 +51,15 @@ public class Win32Dispatcher(ILogger logger)
 
 		logger.LogInformation("Dispatching {Dll}!{Export} at EIP=0x{GetEip:X8} ESP=0x{Esp:X8} stack={Unreadable}", dll, export, eip, esp, stackSnippet == null ? "<unreadable>" : BitConverter.ToString(stackSnippet).Replace('-', ' '));
 
+		// Resolve ordinal-based export names (e.g., "ORDINAL_4") to actual method names
+		// This allows modules to implement functions by their actual names without handling ordinals
+		var originalExport = export;
+		export = DllModuleExportInfo.ResolveOrdinalExport(dll, export);
+		if (originalExport != export)
+		{
+			logger.LogDebug("[Dispatcher] Resolved ordinal export {OriginalExport} to {Export} for {Dll}", originalExport, export, dll);
+		}
+
 		// Try to invoke with known modules first
 		if (_modules.TryGetValue(dll, out var mod))
 		{
@@ -64,26 +73,26 @@ public class Win32Dispatcher(ILogger logger)
 				// but keeping it here ensures all callers get consistent behavior.
 				cpu.SetRegister("EAX", retUnsafe);
 
-				// Try to get arg bytes from metadata
+				// Try to get arg bytes from metadata (use resolved export name)
 				if (StdCallMeta.TryGetArgBytes(dll, export, out stdcallArgBytes))
 				{
-					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes}", dll, export, returnValue, stdcallArgBytes);
+					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes}", dll, originalExport, returnValue, stdcallArgBytes);
 				}
 				else
 				{
 					// Function is missing [DllModuleExport] attribute
 					logger.LogError("[Dispatcher] {Dll}!{Export} is missing [DllModuleExport] attribute - cannot determine stack cleanup bytes", dll, export);
 					stdcallArgBytes = 0; // Default to 0, but this may cause stack corruption
-					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes} (MISSING METADATA)", dll, export, returnValue, stdcallArgBytes);
+					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes} (MISSING METADATA)", dll, originalExport, returnValue, stdcallArgBytes);
 				}
 
-				// Log to API tracer if enabled
+				// Log to API tracer if enabled (use original export for logging)
 				// TODO(enhancement): Parse parameters from stack using metadata from [DllModuleExport]
 				// This would provide detailed parameter values in the trace for better diagnostics.
 				// See issue: (create issue to track this enhancement)
 				_apiCallTracer?.LogApiCall(
 					moduleName: dll,
-					functionName: export,
+					functionName: originalExport,
 					parameters: null, // Parameters not yet parsed - would require stack walking
 					returnValue: returnValue,
 					eip: eip);
@@ -91,9 +100,9 @@ public class Win32Dispatcher(ILogger logger)
 				return true;
 			}
 
-			// Known module but unknown export - log this
-			logger.LogError("Unimplemented function in known module: {Dll}!{Export}", dll, export);
-			LogUnknownFunctionCall(dll, export);
+			// Known module but unknown export - log this (use original export name for logging)
+			logger.LogError("Unimplemented function in known module: {Dll}!{Export}", dll, originalExport);
+			LogUnknownFunctionCall(dll, originalExport);
 
 			// Return success with default behavior
 			returnValue = 0;
@@ -103,9 +112,9 @@ public class Win32Dispatcher(ILogger logger)
 			return true;
 		}
 
-		// Handle unknown DLLs - this is the main enhancement
-		logger.LogError("Unknown DLL function call: {Dll}!{Export}", dll, export);
-		LogUnknownFunctionCall(dll, export);
+		// Handle unknown DLLs - this is the main enhancement (use original export name for logging)
+		logger.LogError("Unknown DLL function call: {Dll}!{Export}", dll, originalExport);
+		LogUnknownFunctionCall(dll, originalExport);
 
 		// Check if this DLL was dynamically loaded
 		var isDynamicallyLoaded = _dynamicallyLoadedDlls.Contains(dll);
@@ -149,6 +158,14 @@ public class Win32Dispatcher(ILogger logger)
 		logger.LogInformation("Dispatching async {Dll}!{Export} at EIP=0x{GetEip:X8} ESP=0x{Esp:X8} stack={Unreadable}", 
 			dll, export, eip, esp, stackSnippet == null ? "<unreadable>" : BitConverter.ToString(stackSnippet).Replace('-', ' '));
 
+		// Resolve ordinal-based export names (e.g., "ORDINAL_4") to actual method names
+		var originalExport = export;
+		export = DllModuleExportInfo.ResolveOrdinalExport(dll, export);
+		if (originalExport != export)
+		{
+			logger.LogDebug("[Dispatcher] Resolved ordinal export {OriginalExport} to {Export} for {Dll}", originalExport, export, dll);
+		}
+
 		// Try async-aware modules first
 		if (_modules.TryGetValue(dll, out var mod) && mod is IWin32ModuleAsync asyncMod)
 		{
@@ -158,11 +175,11 @@ public class Win32Dispatcher(ILogger logger)
 				// Set EAX with return value per x86 stdcall convention
 				cpu.SetRegister("EAX", returnValue);
 
-				// Try to get arg bytes from metadata
+				// Try to get arg bytes from metadata (use resolved export name)
 				if (StdCallMeta.TryGetArgBytes(dll, export, out var stdcallArgBytes))
 				{
 					logger.LogInformation("[Dispatcher] Async {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes}", 
-						dll, export, returnValue, stdcallArgBytes);
+						dll, originalExport, returnValue, stdcallArgBytes);
 				}
 				else
 				{
@@ -171,13 +188,13 @@ public class Win32Dispatcher(ILogger logger)
 						dll, export);
 					stdcallArgBytes = 0;
 					logger.LogInformation("[Dispatcher] Async {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes} (MISSING METADATA)", 
-						dll, export, returnValue, stdcallArgBytes);
+						dll, originalExport, returnValue, stdcallArgBytes);
 				}
 
-				// Log to API tracer if enabled
+				// Log to API tracer if enabled (use original export for logging)
 				_apiCallTracer?.LogApiCall(
 					moduleName: dll,
-					functionName: export,
+					functionName: originalExport,
 					parameters: null,
 					returnValue: returnValue,
 					eip: eip);
