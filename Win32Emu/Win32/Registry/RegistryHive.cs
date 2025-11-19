@@ -659,7 +659,10 @@ public class RegistryHive : IDisposable
 			// Normalize path separators (Path.GetDirectoryName doesn't work with backslashes on Linux)
 			var normalizedPath = path.Replace('/', '\\');
 			var lastBackslash = normalizedPath.LastIndexOf('\\');
-			var directory = lastBackslash >= 0 ? normalizedPath.Substring(0, lastBackslash) : string.Empty;
+			var lastColon = normalizedPath.LastIndexOf(':');
+			var index = Math.Max(lastBackslash, lastColon);
+
+			var directory = index >= 0 ? normalizedPath.Substring(0, index + (lastBackslash > -1 ? 0 : 1)) : string.Empty;
 			
 			EnsureDirectoryExists(directory);
 			
