@@ -7,6 +7,7 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using Win32Emu.Gui.Services;
 using Win32Emu.Gui.Utilities;
 using Win32Emu.Win32.Messaging;
@@ -16,6 +17,7 @@ namespace Win32Emu.Gui.ViewModels;
 public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 {
     private readonly EmulatorService? _emulatorService;
+    private readonly ILogger? _logger;
     private GuiMessageDispatcherIntegration? _messageDispatcherIntegration;
 
     [ObservableProperty]
@@ -73,9 +75,21 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         // Default constructor for design-time
     }
 
-    public EmulatorWindowViewModel(EmulatorService emulatorService)
+    public EmulatorWindowViewModel(ILogger? logger = null)
     {
-        _emulatorService = emulatorService;
+        _logger = logger;
+    }
+    
+    /// <summary>
+    /// Set the emulator service reference. This is called after construction
+    /// when the service is created.
+    /// </summary>
+    public void SetEmulatorService(EmulatorService service)
+    {
+        // Use reflection to set the private field _emulatorService
+        var field = typeof(EmulatorWindowViewModel).GetField("_emulatorService", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        field?.SetValue(this, service);
     }
 
     /// <summary>
@@ -112,6 +126,30 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 
     public void OnDebugOutput(string message, DebugLevel level)
     {
+        // Log to ILogger if available
+        if (_logger != null)
+        {
+            switch (level)
+            {
+                case DebugLevel.Trace:
+                    _logger.LogTrace("{Message}", message);
+                    break;
+                case DebugLevel.Debug:
+                    _logger.LogDebug("{Message}", message);
+                    break;
+                case DebugLevel.Info:
+                    _logger.LogInformation("{Message}", message);
+                    break;
+                case DebugLevel.Warning:
+                    _logger.LogWarning("{Message}", message);
+                    break;
+                case DebugLevel.Error:
+                    _logger.LogError("{Message}", message);
+                    break;
+            }
+        }
+
+        // Also log to UI debug panel
         if (level >= MinimumDebugLevel)
         {
             Dispatcher.UIThread.Post(() =>
