@@ -2,6 +2,7 @@ using Win32Emu.Cpu;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
 using Win32Emu.Win32.Modules;
+using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -23,7 +24,7 @@ public class OrdinalImportIntegrationTests
 		
 		// Create a test environment and module
 		var memory = new VirtualMemory();
-		var cpu = new MockCpu(memory);
+		var cpu = new MockCpu();
 		var processEnv = new ProcessEnvironment(memory, 0x00400000);
 		
 		// Register DPlayX module
@@ -55,7 +56,7 @@ public class OrdinalImportIntegrationTests
 		var dispatcher = new Win32Dispatcher(logger);
 		
 		var memory = new VirtualMemory();
-		var cpu = new MockCpu(memory);
+		var cpu = new MockCpu();
 		var processEnv = new ProcessEnvironment(memory, 0x00400000);
 		
 		var dplayxModule = new DPlayXModule(processEnv, 0x10000000, null, loggerFactory.CreateLogger<DPlayXModule>());
@@ -78,7 +79,7 @@ public class OrdinalImportIntegrationTests
 		var dispatcher = new Win32Dispatcher(logger);
 		
 		var memory = new VirtualMemory();
-		var cpu = new MockCpu(memory);
+		var cpu = new MockCpu();
 		
 		// Use a custom test module to verify what export name it receives
 		var testModule = new TestOrdinalModule();
@@ -141,42 +142,5 @@ public class OrdinalImportIntegrationTests
 		{
 			_logAction(_categoryName, logLevel, formatter(state, exception));
 		}
-	}
-
-	// Simple mock CPU for testing
-	private class MockCpu : ICpu
-	{
-		private readonly VirtualMemory _memory;
-		private readonly Dictionary<string, uint> _registers = new(StringComparer.OrdinalIgnoreCase);
-
-		public MockCpu(VirtualMemory memory)
-		{
-			_memory = memory;
-			// Initialize common registers
-			_registers["EIP"] = 0x00401000;
-			_registers["ESP"] = 0x0012FF00;
-			_registers["EAX"] = 0;
-		}
-
-		public uint GetRegister(string name) => _registers.TryGetValue(name, out var value) ? value : 0;
-		public void SetRegister(string name, uint value, [System.Runtime.CompilerServices.CallerMemberName] string callerName = "") 
-			=> _registers[name] = value;
-		public uint GetEip() => _registers["EIP"];
-		public void SetEip(uint value) => _registers["EIP"] = value;
-
-		// Other ICpu methods with stub implementations
-		public VirtualMemory GetMemory() => _memory;
-		public uint Pop() => throw new NotImplementedException();
-		public void Push(uint value) => throw new NotImplementedException();
-		public void Execute() => throw new NotImplementedException();
-		public Task ExecuteAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
-		public void Step() => throw new NotImplementedException();
-		public CpuStepResult SingleStep(VirtualMemory mem) => throw new NotImplementedException();
-		public void AddBreakpoint(uint address) => throw new NotImplementedException();
-		public void RemoveBreakpoint(uint address) => throw new NotImplementedException();
-		public bool IsBreakpointSet(uint address) => throw new NotImplementedException();
-		public void ClearBreakpoints() => throw new NotImplementedException();
-		public void RegisterSyscallHandler(Action<ICpu, VirtualMemory> handler) => throw new NotImplementedException();
-		public ulong GetCycleCount() => throw new NotImplementedException();
 	}
 }
