@@ -221,13 +221,13 @@ public class Win32Dispatcher(ILogger logger)
 			return;
 		}
 
-		Console.WriteLine($"Summary of unknown function calls ({_unknownFunctionCalls.Count} DLLs):");
+		logger.LogWarning("Summary of unknown function calls ({Count} DLLs):", _unknownFunctionCalls.Count);
 		foreach (var (dll, functions) in _unknownFunctionCalls.OrderBy(kvp => kvp.Key))
 		{
-			Console.WriteLine($"  {dll}: {functions.Count} functions");
+			logger.LogWarning("  {Dll}: {Count} functions", dll, functions.Count);
 			foreach (var func in functions.OrderBy(f => f))
 			{
-				Console.WriteLine($"    - {func}");
+				logger.LogWarning("    - {Function}", func);
 			}
 		}
 	}
