@@ -52,75 +52,60 @@ public sealed class DuplicateOrdinalAnalyzer : DiagnosticAnalyzer
 		var ordinalMap = new Dictionary<(uint ordinal, string version), List<(IMethodSymbol method, AttributeData attribute)>>();
 
 		// Collect all methods with DllModuleExport attributes
-		foreach (var member in namedTypeSymbol.GetMembers())
+		foreach (var methodSymbol in namedTypeSymbol.GetMembers().OfType<IMethodSymbol>())
 		{
-			if (member is not IMethodSymbol methodSymbol)
-				continue;
-
 			// Get all DllModuleExport attributes on this method
 			var exportAttributes = methodSymbol.GetAttributes()
 				.Where(attr => attr.AttributeClass?.Name is "DllModuleExportAttribute" or "DllModuleExport")
 				.ToList();
 
-			foreach (var attribute in exportAttributes)
+			foreach (var attribute in exportAttributes.Where(attr => attr.ConstructorArguments.Length > 0 && attr.ConstructorArguments[0].Value is uint))
 			{
 				// Extract ordinal from constructor arguments
-				if (attribute.ConstructorArguments.Length == 0)
-					continue;
-
-				var firstArg = attribute.ConstructorArguments[0];
-				if (firstArg.Value is not uint ordinal)
-					continue;
+				var ordinal = (uint)attribute.ConstructorArguments[0].Value!;
 
 				// Extract version from named arguments (default to empty string if not specified)
-				string version = string.Empty;
-				foreach (var namedArg in attribute.NamedArguments)
-				{
-					if (namedArg.Key == "Version" && namedArg.Value.Value is string versionValue)
-					{
-						version = versionValue;
-						break;
-					}
-				}
+				string version = attribute.NamedArguments
+					.Where(na => na.Key == "Version" && na.Value.Value is string)
+					.Select(na => (string)na.Value.Value!)
+					.FirstOrDefault() ?? string.Empty;
 
 				// Track this ordinal-version combination
 				var key = (ordinal, version);
-				if (!ordinalMap.ContainsKey(key))
+				if (!ordinalMap.TryGetValue(key, out var list))
 				{
-					ordinalMap[key] = new List<(IMethodSymbol, AttributeData)>();
+					list = new List<(IMethodSymbol, AttributeData)>();
+					ordinalMap[key] = list;
 				}
-				ordinalMap[key].Add((methodSymbol, attribute));
+				list.Add((methodSymbol, attribute));
 			}
 		}
 
 		// Check for duplicates
-		foreach (var kvp in ordinalMap)
+		foreach (var kvp in ordinalMap.Where(kvp => kvp.Value.Count > 1))
 		{
 			var (ordinal, version) = kvp.Key;
 			var methods = kvp.Value;
 
-			if (methods.Count > 1)
+			// We have duplicate ordinals for the same version
+			var versionDisplay = string.IsNullOrEmpty(version) ? "(no version specified)" : version;
+
+			// Report diagnostic for each duplicate
+			foreach (var (method, attribute) in methods)
 			{
-				// We have duplicate ordinals for the same version
-				var versionDisplay = string.IsNullOrEmpty(version) ? "(no version specified)" : version;
+				// Get the location of the attribute
+				var location = attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation() 
+					?? method.Locations.FirstOrDefault() 
+					?? Location.None;
 
-				// Report diagnostic for each duplicate
-				foreach (var (method, attribute) in methods)
-				{
-					// Get the location of the attribute
-					var location = attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation() 
-						?? method.Locations.FirstOrDefault() 
-						?? Location.None;
+				var diagnostic = Diagnostic.Create(
+					Rule,
+					location,
+					ordinal,
+					namedTypeSymbol.Name,
+					versionDisplay);
 
-					var diagnostic = Diagnostic.Create(
-						Rule,
-						location,
-						ordinal,
-						namedTypeSymbol.Name,
-						versionDisplay);
-
-					context.ReportDiagnostic(diagnostic);
-				}
+				context.ReportDiagnostic(diagnostic);
 			}
 		}
 	}
