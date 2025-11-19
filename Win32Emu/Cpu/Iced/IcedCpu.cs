@@ -5403,50 +5403,15 @@ public class IcedCpu : IAsyncCpu
 	}
 
 	/// <summary>
-	/// Checks if a memory access would violate segment limits in 16-bit real mode.
-	/// In real mode, segments are limited to 64KB (offsets 0x0000-0xFFFF).
-	/// Accessing beyond this limit triggers a General Protection Fault (INT 0x0D).
-	/// </summary>
-	/// <param name="insn">The instruction being executed</param>
-	/// <param name="accessSize">Size of the memory access in bytes (1, 2, or 4)</param>
-	/// <param name="offset">The calculated offset within the segment (before masking to 16 bits)</param>
-	/// <returns>True if the access is valid, false if it would cross the 64KB segment boundary</returns>
-	private bool CheckSegmentLimitViolation(Instruction insn, int accessSize, uint offset)
-	{
-		// Only check segment limits in 16-bit real mode
-		if (_bitness != 16)
-		{
-			return false; // No violation in 32-bit mode
-		}
-
-		// In 16-bit real mode, offsets are masked to 16 bits (0x0000-0xFFFF)
-		// An access violates the segment limit if (offset + accessSize - 1) > 0xFFFF
-		// For example: 16-bit read from offset 0xFFFF would access 0xFFFF and 0x10000 (out of bounds)
-		var offset16 = offset & 0xFFFF;
-		var lastByte = offset16 + (uint)accessSize - 1;
-		
-		if (lastByte > 0xFFFF)
-		{
-			// Segment limit violation detected
-			_logger.LogDebug("[IcedCpu] Segment limit violation: offset=0x{Offset:X4}, size={Size}, lastByte=0x{LastByte:X} at EIP=0x{Eip:X8}",
-				offset16, accessSize, lastByte, _eip);
-			return true;
-		}
-
-		return false;
-	}
-
-	/// <summary>
-	/// Safe memory read that checks segment limits in real mode before accessing memory.
-	/// Generates INT 0x0D (General Protection Fault) if segment limit is violated.
+	/// Safe memory read that handles segment wrapping in 16-bit real mode.
+	/// In real mode, when a 16-bit access starts at offset 0xFFFF, it wraps to offset 0x0000.
 	/// </summary>
 	private ushort SafeRead16(Instruction insn, uint addr)
 	{
-		// In 16-bit real mode, check if the 16-bit read would cross segment boundary
+		// In 16-bit real mode, handle segment wrapping
 		if (_bitness == 16)
 		{
-			// Extract offset from the calculation done in CalcMemAddress
-			// We need to recalculate the offset to check segment limits
+			// Calculate the offset within the segment
 			var offset = insn.MemoryDisplacement32;
 			if (insn.MemoryBase != Register.None)
 			{
@@ -5466,28 +5431,60 @@ public class IcedCpu : IAsyncCpu
 					offset += (uint)(GetReg32(indexReg) * scale);
 			}
 
-			// Check if 16-bit access would violate segment limit
-			if (CheckSegmentLimitViolation(insn, 2, offset))
+			var offset16 = offset & 0xFFFF;
+			
+			// Check if the 16-bit read would wrap at the segment boundary
+			if (offset16 == 0xFFFF)
 			{
-				// Generate General Protection Fault (INT 0x0D)
-				GenerateException(0x0D, _eip, _mem);
-				return 0; // Return dummy value (won't be used as exception changes control flow)
+				// Read crosses segment boundary: read byte at 0xFFFF and byte at 0x0000 (wrapped)
+				// Get segment value to recalculate physical addresses
+				Register segmentReg = insn.SegmentPrefix;
+				if (segmentReg == Register.None)
+				{
+					if (insn.MemoryBase == Register.BP || insn.MemoryBase == Register.EBP)
+						segmentReg = Register.SS;
+					else
+						segmentReg = Register.DS;
+				}
+				
+				ushort segmentValue = segmentReg switch
+				{
+					Register.CS => _cs,
+					Register.DS => _ds,
+					Register.ES => _es,
+					Register.FS => _fs,
+					Register.GS => _gs,
+					Register.SS => _ss,
+					_ => 0
+				};
+
+				// Read low byte from offset 0xFFFF
+				var addrHigh = (uint)((segmentValue << 4) + 0xFFFF);
+				var lowByte = _mem.Read8(addrHigh);
+				
+				// Read high byte from offset 0x0000 (wrapped)
+				var addrLow = (uint)((segmentValue << 4) + 0x0000);
+				var highByte = _mem.Read8(addrLow);
+				
+				// Combine bytes (little-endian)
+				return (ushort)(lowByte | (highByte << 8));
 			}
 		}
 
+		// Normal read (no segment wrap)
 		return _mem.Read16(addr);
 	}
 
 	/// <summary>
-	/// Safe memory read that checks segment limits in real mode before accessing memory.
-	/// Generates INT 0x0D (General Protection Fault) if segment limit is violated.
+	/// Safe memory read that handles segment wrapping in 16-bit real mode.
+	/// In real mode, 32-bit accesses that cross segment boundaries wrap around.
 	/// </summary>
 	private uint SafeRead32(Instruction insn, uint addr)
 	{
-		// In 16-bit real mode, check if the 32-bit read would cross segment boundary
+		// In 16-bit real mode, handle segment wrapping for 32-bit reads
 		if (_bitness == 16)
 		{
-			// Recalculate offset for segment limit checking
+			// Calculate the offset within the segment
 			var offset = insn.MemoryDisplacement32;
 			if (insn.MemoryBase != Register.None)
 			{
@@ -5507,28 +5504,58 @@ public class IcedCpu : IAsyncCpu
 					offset += (uint)(GetReg32(indexReg) * scale);
 			}
 
-			// Check if 32-bit access would violate segment limit
-			if (CheckSegmentLimitViolation(insn, 4, offset))
+			var offset16 = offset & 0xFFFF;
+			
+			// Check if the 32-bit read would wrap at the segment boundary
+			if (offset16 >= 0xFFFD) // 0xFFFD, 0xFFFE, or 0xFFFF would cause wrap
 			{
-				// Generate General Protection Fault (INT 0x0D)
-				GenerateException(0x0D, _eip, _mem);
-				return 0; // Return dummy value (won't be used as exception changes control flow)
+				// Read crosses segment boundary - read byte by byte with wrapping
+				Register segmentReg = insn.SegmentPrefix;
+				if (segmentReg == Register.None)
+				{
+					if (insn.MemoryBase == Register.BP || insn.MemoryBase == Register.EBP)
+						segmentReg = Register.SS;
+					else
+						segmentReg = Register.DS;
+				}
+				
+				ushort segmentValue = segmentReg switch
+				{
+					Register.CS => _cs,
+					Register.DS => _ds,
+					Register.ES => _es,
+					Register.FS => _fs,
+					Register.GS => _gs,
+					Register.SS => _ss,
+					_ => 0
+				};
+
+				uint result = 0;
+				for (int i = 0; i < 4; i++)
+				{
+					var byteOffset = (ushort)((offset16 + i) & 0xFFFF); // Wrap at 64KB
+					var physAddr = (uint)((segmentValue << 4) + byteOffset);
+					var b = _mem.Read8(physAddr);
+					result |= ((uint)b << (i * 8));
+				}
+				return result;
 			}
 		}
 
+		// Normal read (no segment wrap)
 		return _mem.Read32(addr);
 	}
 
 	/// <summary>
-	/// Safe memory write that checks segment limits in real mode before accessing memory.
-	/// Generates INT 0x0D (General Protection Fault) if segment limit is violated.
+	/// Safe memory write that handles segment wrapping in 16-bit real mode.
+	/// In real mode, when a 16-bit write starts at offset 0xFFFF, it wraps to offset 0x0000.
 	/// </summary>
 	private void SafeWrite16(Instruction insn, uint addr, ushort value)
 	{
-		// In 16-bit real mode, check if the 16-bit write would cross segment boundary
+		// In 16-bit real mode, handle segment wrapping
 		if (_bitness == 16)
 		{
-			// Recalculate offset for segment limit checking
+			// Calculate the offset within the segment
 			var offset = insn.MemoryDisplacement32;
 			if (insn.MemoryBase != Register.None)
 			{
@@ -5548,28 +5575,58 @@ public class IcedCpu : IAsyncCpu
 					offset += (uint)(GetReg32(indexReg) * scale);
 			}
 
-			// Check if 16-bit access would violate segment limit
-			if (CheckSegmentLimitViolation(insn, 2, offset))
+			var offset16 = offset & 0xFFFF;
+			
+			// Check if the 16-bit write would wrap at the segment boundary
+			if (offset16 == 0xFFFF)
 			{
-				// Generate General Protection Fault (INT 0x0D)
-				GenerateException(0x0D, _eip, _mem);
-				return; // Don't perform the write
+				// Write crosses segment boundary: write byte at 0xFFFF and byte at 0x0000 (wrapped)
+				Register segmentReg = insn.SegmentPrefix;
+				if (segmentReg == Register.None)
+				{
+					if (insn.MemoryBase == Register.BP || insn.MemoryBase == Register.EBP)
+						segmentReg = Register.SS;
+					else
+						segmentReg = Register.DS;
+				}
+				
+				ushort segmentValue = segmentReg switch
+				{
+					Register.CS => _cs,
+					Register.DS => _ds,
+					Register.ES => _es,
+					Register.FS => _fs,
+					Register.GS => _gs,
+					Register.SS => _ss,
+					_ => 0
+				};
+
+				// Write low byte to offset 0xFFFF
+				var addrHigh = (uint)((segmentValue << 4) + 0xFFFF);
+				_mem.Write8(addrHigh, (byte)(value & 0xFF));
+				
+				// Write high byte to offset 0x0000 (wrapped)
+				var addrLow = (uint)((segmentValue << 4) + 0x0000);
+				_mem.Write8(addrLow, (byte)((value >> 8) & 0xFF));
+				
+				return;
 			}
 		}
 
+		// Normal write (no segment wrap)
 		_mem.Write16(addr, value);
 	}
 
 	/// <summary>
-	/// Safe memory write that checks segment limits in real mode before accessing memory.
-	/// Generates INT 0x0D (General Protection Fault) if segment limit is violated.
+	/// Safe memory write that handles segment wrapping in 16-bit real mode.
+	/// In real mode, 32-bit writes that cross segment boundaries wrap around.
 	/// </summary>
 	private void SafeWrite32(Instruction insn, uint addr, uint value)
 	{
-		// In 16-bit real mode, check if the 32-bit write would cross segment boundary
+		// In 16-bit real mode, handle segment wrapping for 32-bit writes
 		if (_bitness == 16)
 		{
-			// Recalculate offset for segment limit checking
+			// Calculate the offset within the segment
 			var offset = insn.MemoryDisplacement32;
 			if (insn.MemoryBase != Register.None)
 			{
@@ -5589,15 +5646,44 @@ public class IcedCpu : IAsyncCpu
 					offset += (uint)(GetReg32(indexReg) * scale);
 			}
 
-			// Check if 32-bit access would violate segment limit
-			if (CheckSegmentLimitViolation(insn, 4, offset))
+			var offset16 = offset & 0xFFFF;
+			
+			// Check if the 32-bit write would wrap at the segment boundary
+			if (offset16 >= 0xFFFD) // 0xFFFD, 0xFFFE, or 0xFFFF would cause wrap
 			{
-				// Generate General Protection Fault (INT 0x0D)
-				GenerateException(0x0D, _eip, _mem);
-				return; // Don't perform the write
+				// Write crosses segment boundary - write byte by byte with wrapping
+				Register segmentReg = insn.SegmentPrefix;
+				if (segmentReg == Register.None)
+				{
+					if (insn.MemoryBase == Register.BP || insn.MemoryBase == Register.EBP)
+						segmentReg = Register.SS;
+					else
+						segmentReg = Register.DS;
+				}
+				
+				ushort segmentValue = segmentReg switch
+				{
+					Register.CS => _cs,
+					Register.DS => _ds,
+					Register.ES => _es,
+					Register.FS => _fs,
+					Register.GS => _gs,
+					Register.SS => _ss,
+					_ => 0
+				};
+
+				for (int i = 0; i < 4; i++)
+				{
+					var byteOffset = (ushort)((offset16 + i) & 0xFFFF); // Wrap at 64KB
+					var physAddr = (uint)((segmentValue << 4) + byteOffset);
+					var b = (byte)((value >> (i * 8)) & 0xFF);
+					_mem.Write8(physAddr, b);
+				}
+				return;
 			}
 		}
 
+		// Normal write (no segment wrap)
 		_mem.Write32(addr, value);
 	}
 
