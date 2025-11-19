@@ -13,6 +13,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit" Version="1.1.2" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" Version="1.1.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Win32Emu.CodeGen\Win32Emu.CodeGen.csproj" />
     <ProjectReference Include="..\Win32Emu.CallingConvention\Win32Emu.CallingConvention.csproj" />
+    <ProjectReference Include="..\Win32Emu.Generators\Win32Emu.Generators.csproj" />
   </ItemGroup>
 
 </Project>
