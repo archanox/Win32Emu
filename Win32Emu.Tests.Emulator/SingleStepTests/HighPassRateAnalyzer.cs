@@ -27,7 +27,7 @@ AnalyzeFailures("22.MOO.gz");
 
 private void AnalyzeFailures(string fileName)
 {
-var testFile = FindTestFile(fileName);
+var testFile = TestFileHelper.FindTestFile(fileName);
 if (testFile == null)
 {
 _output.WriteLine($"Skipping: {fileName} not found");
@@ -92,31 +92,4 @@ _output.WriteLine($"Memory mismatches: {result.MemoryMismatches.Count}");
 }
 }
 }
-
-private string? FindTestFile(string fileName)
-{
-var searchPaths = new[]
-{
-Path.Combine("TestData", "SingleStepTests", fileName),
-Path.Combine("SingleStepTests", fileName),
-Path.Combine("..", "TestData", "SingleStepTests", fileName),
-fileName
-};
-
-foreach (var path in searchPaths)
-{
-if (File.Exists(path))
-{
-			return path;
-		}
-	}
-	
-	return null;
-}
-
-	[Fact]
-	public void Analyze_22_MOO_Detailed() // AND instruction - 97.3% pass rate
-	{
-		AnalyzeFailures("22.MOO.gz");
-	}
 }
