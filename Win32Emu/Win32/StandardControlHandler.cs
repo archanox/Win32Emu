@@ -128,10 +128,12 @@ public class StandardControlHandler
 		BM_CLICK = 0x00F5
 	}
 	
-	// Button check state constants
-	private const uint BST_UNCHECKED = 0x0000;
-	private const uint BST_CHECKED = 0x0001;
-	private const uint BST_INDETERMINATE = 0x0002;
+	enum ButtonState : uint
+	{
+		BST_UNCHECKED = 0x0000,
+		BST_CHECKED = 0x0001,
+		BST_INDETERMINATE = 0x0002
+	}
 
 	private uint HandleButtonMessage(uint hwnd, WindowNotifications msg, uint wParam, uint lParam)
 	{
@@ -171,7 +173,7 @@ public class StandardControlHandler
 			
 			case WindowNotifications.BM_GETCHECK:
 				// BM_GETCHECK returns the check state of a radio button or check box
-				var checkState = _buttonStates.GetValueOrDefault(hwnd, BST_UNCHECKED);
+				var checkState = _buttonStates.GetValueOrDefault(hwnd, (uint)ButtonState.BST_UNCHECKED);
 				_logger.LogDebug("[Button] BM_GETCHECK - hwnd=0x{Hwnd:X8}, returning state={State}", hwnd, checkState);
 				return checkState;
 			

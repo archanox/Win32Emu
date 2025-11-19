@@ -2973,6 +2973,29 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
+		/// Button control messages
+		/// </summary>
+		private enum ButtonMessage : uint
+		{
+			BM_GETCHECK = 0x00F0,
+			BM_SETCHECK = 0x00F1,
+			BM_GETSTATE = 0x00F2,
+			BM_SETSTATE = 0x00F3,
+			BM_SETSTYLE = 0x00F4,
+			BM_CLICK = 0x00F5
+		}
+
+		/// <summary>
+		/// Button state constants
+		/// </summary>
+		private enum ButtonState : uint
+		{
+			BST_UNCHECKED = 0x0000,
+			BST_CHECKED = 0x0001,
+			BST_INDETERMINATE = 0x0002
+		}
+
+		/// <summary>
 		/// Image types for LoadImage and STM_SETIMAGE
 		/// </summary>
 		private enum ImageType : uint
@@ -3650,17 +3673,13 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] CheckRadioButton(hDlg=0x{HDlg:X8}, nIDFirstButton={NIDFirstButton}, nIDLastButton={NIDLastButton}, nIDCheckButton={NIDCheckButton})",
 				hDlg, nIDFirstButton, nIDLastButton, nIDCheckButton);
 
-			const uint BM_SETCHECK = 0x00F1;
-			const uint BST_UNCHECKED = 0x0000;
-			const uint BST_CHECKED = 0x0001;
-
 			// Uncheck all radio buttons in the range
 			for (int id = nIDFirstButton; id <= nIDLastButton; id++)
 			{
 				var hwndButton = GetDlgItem(hDlg, id);
 				if (hwndButton != 0)
 				{
-					SendDlgItemMessageA(hDlg, id, BM_SETCHECK, BST_UNCHECKED, 0);
+					SendDlgItemMessageA(hDlg, id, (uint)ButtonMessage.BM_SETCHECK, (uint)ButtonState.BST_UNCHECKED, 0);
 				}
 			}
 
@@ -3670,7 +3689,7 @@ namespace Win32Emu.Win32.Modules
 				var hwndCheck = GetDlgItem(hDlg, nIDCheckButton);
 				if (hwndCheck != 0)
 				{
-					SendDlgItemMessageA(hDlg, nIDCheckButton, BM_SETCHECK, BST_CHECKED, 0);
+					SendDlgItemMessageA(hDlg, nIDCheckButton, (uint)ButtonMessage.BM_SETCHECK, (uint)ButtonState.BST_CHECKED, 0);
 					return 1; // TRUE - success
 				}
 			}
@@ -3693,18 +3712,16 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] IsDlgButtonChecked(hDlg=0x{HDlg:X8}, nIDButton={NIDButton})",
 				hDlg, nIDButton);
 
-			const uint BM_GETCHECK = 0x00F0;
-
 			// Get the control handle
 			var hwndButton = GetDlgItem(hDlg, nIDButton);
 			if (hwndButton == 0)
 			{
 				_logger.LogWarning("[User32] IsDlgButtonChecked: Button not found for ID {NIDButton}", nIDButton);
-				return 0; // BST_UNCHECKED
+				return (uint)ButtonState.BST_UNCHECKED;
 			}
 
 			// Send BM_GETCHECK message to get the check state
-			var checkState = SendDlgItemMessageA(hDlg, nIDButton, BM_GETCHECK, 0, 0);
+			var checkState = SendDlgItemMessageA(hDlg, nIDButton, (uint)ButtonMessage.BM_GETCHECK, 0, 0);
 			_logger.LogInformation("[User32] IsDlgButtonChecked: Button {NIDButton} has state {CheckState}", nIDButton, checkState);
 			return checkState;
 		}
