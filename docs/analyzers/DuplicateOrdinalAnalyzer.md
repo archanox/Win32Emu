@@ -35,11 +35,11 @@ public class Kernel32Module
 
 **WIN32EMU001**: Duplicate DLL export ordinal
 
-**Severity**: Error
+**Severity**: Warning (currently set as a warning until all existing duplicates are resolved)
 
 ## When is a Diagnostic Reported?
 
-The analyzer reports an error when:
+The analyzer reports a warning when:
 1. Two or more methods in the same module class have `DllModuleExportAttribute` with the same ordinal
 2. The attributes have the same version (or both have no version specified)
 

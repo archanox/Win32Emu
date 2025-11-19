@@ -113,10 +113,10 @@ namespace Win32Emu.Win32.Modules
 }";
 
 		await VerifyAnalyzerAsync(testCode,
-			DiagnosticResult.CompilerError(DuplicateOrdinalAnalyzer.DiagnosticId)
+			DiagnosticResult.CompilerWarning(DuplicateOrdinalAnalyzer.DiagnosticId)
 				.WithSpan(21, 4, 21, 47)
 				.WithArguments("1", "TestModule", "4.90.0.3000"),
-			DiagnosticResult.CompilerError(DuplicateOrdinalAnalyzer.DiagnosticId)
+			DiagnosticResult.CompilerWarning(DuplicateOrdinalAnalyzer.DiagnosticId)
 				.WithSpan(24, 4, 24, 47)
 				.WithArguments("1", "TestModule", "4.90.0.3000"));
 	}
@@ -153,10 +153,10 @@ namespace Win32Emu.Win32.Modules
 }";
 
 		await VerifyAnalyzerAsync(testCode,
-			DiagnosticResult.CompilerError(DuplicateOrdinalAnalyzer.DiagnosticId)
+			DiagnosticResult.CompilerWarning(DuplicateOrdinalAnalyzer.DiagnosticId)
 				.WithSpan(21, 4, 21, 23)
 				.WithArguments("37", "TestModule", "(no version specified)"),
-			DiagnosticResult.CompilerError(DuplicateOrdinalAnalyzer.DiagnosticId)
+			DiagnosticResult.CompilerWarning(DuplicateOrdinalAnalyzer.DiagnosticId)
 				.WithSpan(24, 4, 24, 23)
 				.WithArguments("37", "TestModule", "(no version specified)"));
 	}
@@ -202,19 +202,19 @@ namespace Win32Emu.Win32.Modules
 }";
 
 		await VerifyAnalyzerAsync(testCode,
-			DiagnosticResult.CompilerError(DuplicateOrdinalAnalyzer.DiagnosticId)
+			DiagnosticResult.CompilerWarning(DuplicateOrdinalAnalyzer.DiagnosticId)
 				.WithSpan(21, 4, 21, 22)
 				.WithArguments("4", "TestModule", "(no version specified)"),
-			DiagnosticResult.CompilerError(DuplicateOrdinalAnalyzer.DiagnosticId)
+			DiagnosticResult.CompilerWarning(DuplicateOrdinalAnalyzer.DiagnosticId)
 				.WithSpan(24, 4, 24, 22)
 				.WithArguments("4", "TestModule", "(no version specified)"),
-			DiagnosticResult.CompilerError(DuplicateOrdinalAnalyzer.DiagnosticId)
+			DiagnosticResult.CompilerWarning(DuplicateOrdinalAnalyzer.DiagnosticId)
 				.WithSpan(27, 4, 27, 22)
 				.WithArguments("4", "TestModule", "(no version specified)"),
-			DiagnosticResult.CompilerError(DuplicateOrdinalAnalyzer.DiagnosticId)
+			DiagnosticResult.CompilerWarning(DuplicateOrdinalAnalyzer.DiagnosticId)
 				.WithSpan(30, 4, 30, 23)
 				.WithArguments("16", "TestModule", "(no version specified)"),
-			DiagnosticResult.CompilerError(DuplicateOrdinalAnalyzer.DiagnosticId)
+			DiagnosticResult.CompilerWarning(DuplicateOrdinalAnalyzer.DiagnosticId)
 				.WithSpan(33, 4, 33, 23)
 				.WithArguments("16", "TestModule", "(no version specified)"));
 	}
