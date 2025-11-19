@@ -463,14 +463,6 @@ public partial class GameLibraryViewModel : ViewModelBase
             
             // Create the EmulatorWindow with its ViewModel that implements IGuiEmulatorHost
             var emulatorWindow = new EmulatorWindow();
-            var viewModel = new EmulatorWindowViewModel();
-            emulatorWindow.DataContext = viewModel;
-            
-            // Set the owner window reference so created windows can use it as parent
-            viewModel.SetOwnerWindow(emulatorWindow);
-            
-            // Show the emulator window
-            emulatorWindow.Show();
             
             // Create a logger for this game launch
             // We need to combine the central logger with the Avalonia UI logger
@@ -517,6 +509,16 @@ public partial class GameLibraryViewModel : ViewModelBase
             
             logger.LogInformation("Launching game: {GameTitle} {Path}", game.Title, game.ExecutablePath);
             
+            // Create the view model with the logger
+            var viewModel = new EmulatorWindowViewModel(logger: logger);
+            emulatorWindow.DataContext = viewModel;
+            
+            // Set the owner window reference so created windows can use it as parent
+            viewModel.SetOwnerWindow(emulatorWindow);
+            
+            // Show the emulator window
+            emulatorWindow.Show();
+            
             // Retrieve game settings to get program arguments
             var gameSettings = _configService.GetGameSettings(game.ExecutablePath);
             string[]? programArgs = null;
@@ -536,6 +538,10 @@ public partial class GameLibraryViewModel : ViewModelBase
             
             // Launch the game with the view model as the host
             var service = new EmulatorService(_configuration, viewModel, logger);
+            
+            // Set the emulator service reference in the view model so dialog callbacks can access CurrentEmulator
+            viewModel.SetEmulatorService(service);
+            
             await service.LaunchGame(game, programArgs);
         }
         catch (Exception ex)
