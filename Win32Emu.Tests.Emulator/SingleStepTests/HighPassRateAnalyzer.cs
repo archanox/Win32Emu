@@ -107,17 +107,16 @@ foreach (var path in searchPaths)
 {
 if (File.Exists(path))
 {
-return path;
-}
+			return path;
+		}
+	}
+	
+	return null;
 }
 
-return null;
-}
-}
-
-[Fact]
-public void Analyze_22_MOO_Detailed() // AND instruction - 97.3% pass rate
-{
-AnalyzeFailures("22.MOO.gz");
-}
+	[Fact]
+	public void Analyze_22_MOO_Detailed() // AND instruction - 97.3% pass rate
+	{
+		AnalyzeFailures("22.MOO.gz");
+	}
 }
