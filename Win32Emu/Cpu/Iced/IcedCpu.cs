@@ -177,6 +177,39 @@ public class IcedCpu : IAsyncCpu
 		var insn = _decoder.Decode();
 		//_logger.LogInformation("Instruction: {Insn}", insn.ToString());
 		
+		// Validate LOCK prefix usage according to x86 specification
+		// LOCK can only be used with specific instructions and only when destination is memory
+		if (insn.HasLockPrefix)
+		{
+			// Check if instruction is in the allowed list
+			var isLockAllowed = insn.Mnemonic switch
+			{
+				Mnemonic.Add or Mnemonic.Adc or Mnemonic.And or
+				Mnemonic.Btc or Mnemonic.Btr or Mnemonic.Bts or
+				Mnemonic.Cmpxchg or Mnemonic.Cmpxchg8b or Mnemonic.Cmpxchg16b or
+				Mnemonic.Dec or Mnemonic.Inc or
+				Mnemonic.Neg or Mnemonic.Not or
+				Mnemonic.Or or Mnemonic.Sbb or Mnemonic.Sub or
+				Mnemonic.Xor or Mnemonic.Xadd or Mnemonic.Xchg => true,
+				_ => false
+			};
+			
+			// Check if destination operand is memory (LOCK requires memory destination)
+			var hasMemoryDestination = insn.Op0Kind == OpKind.Memory;
+			
+			// Generate #UD (Invalid Opcode) exception if LOCK is invalid
+			if (!isLockAllowed || !hasMemoryDestination)
+			{
+				// Invalid LOCK prefix - generate #UD exception (vector 6)
+				// This matches real 80386 hardware behavior
+				GenerateException(6, oldEip, mem);
+				
+				// Clear diagnostics and return
+				Diagnostics.Diagnostics.ClearCpuContext();
+				return new CpuStepResult(false, 0, false);
+			}
+		}
+		
 		// Log instructions in the problematic range (after LoadCursorA returns)
 		if (oldEip >= 0x00403160 && oldEip <= 0x004031A0)
 		{
@@ -846,6 +879,73 @@ public class IcedCpu : IAsyncCpu
 		}
 
 		return new CpuStepResult(isCall, callTarget, isSyscall);
+	}
+
+	/// <summary>
+	/// Generates a CPU exception by simulating hardware exception behavior.
+	/// This pushes FLAGS, CS, and IP onto the stack, clears certain flags,
+	/// and jumps to the appropriate interrupt vector.
+	/// </summary>
+	/// <param name="vector">Interrupt vector number (0-255)</param>
+	/// <param name="faultingEip">The EIP of the instruction that caused the exception</param>
+	/// <param name="mem">Memory interface for stack operations</param>
+	private void GenerateException(int vector, uint faultingEip, VirtualMemory mem)
+	{
+		// Exception handling in real mode (16-bit):
+		// 1. Push FLAGS (2 bytes)
+		// 2. Push CS (2 bytes)
+		// 3. Push IP (2 bytes)
+		// 4. Clear IF and TF flags
+		// 5. Load CS:IP from interrupt vector table at address (vector * 4)
+		
+		if (_bitness == 16)
+		{
+			// Real mode exception handling
+			// Push FLAGS (16-bit)
+			_esp = (_esp & 0xFFFF0000) | (ushort)((_esp & 0xFFFF) - 2);
+			var flagsAddr = (uint)((_ss << 4) + (_esp & 0xFFFF));
+			mem.Write16(flagsAddr, (ushort)_eflags);
+			
+			// Push CS (16-bit)
+			_esp = (_esp & 0xFFFF0000) | (ushort)((_esp & 0xFFFF) - 2);
+			var csAddr = (uint)((_ss << 4) + (_esp & 0xFFFF));
+			mem.Write16(csAddr, _cs);
+			
+			// Push IP (16-bit) - the address of the faulting instruction
+			_esp = (_esp & 0xFFFF0000) | (ushort)((_esp & 0xFFFF) - 2);
+			var ipAddr = (uint)((_ss << 4) + (_esp & 0xFFFF));
+			mem.Write16(ipAddr, (ushort)(faultingEip & 0xFFFF));
+			
+			// Clear IF (bit 9) and TF (bit 8) in EFLAGS
+			_eflags &= ~(1u << 9); // Clear IF
+			_eflags &= ~(1u << 8); // Clear TF
+			
+			// Load new CS:IP from interrupt vector table
+			// IVT entry is at address (vector * 4): [IP:2bytes][CS:2bytes]
+			var ivtAddr = (uint)(vector * 4);
+			var newIp = mem.Read16(ivtAddr);
+			var newCs = mem.Read16(ivtAddr + 2);
+			
+			_eip = newIp;
+			_cs = newCs;
+		}
+		else
+		{
+			// 32-bit protected mode exception handling
+			// This is more complex and involves descriptor tables
+			// For now, just push 32-bit values
+			_esp -= 4;
+			mem.Write32(_esp, _eflags);
+			_esp -= 4;
+			mem.Write32(_esp, _cs);
+			_esp -= 4;
+			mem.Write32(_esp, faultingEip);
+			
+			// Load from IDT (Interrupt Descriptor Table)
+			// For simplicity, use same IVT approach
+			var ivtAddr = (uint)(vector * 4);
+			_eip = mem.Read32(ivtAddr);
+		}
 	}
 
 	/// <summary>
