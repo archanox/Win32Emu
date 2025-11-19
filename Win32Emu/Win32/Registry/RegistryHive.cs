@@ -656,13 +656,10 @@ public class RegistryHive : IDisposable
 			
 			_logger.LogDebug("[RegistryHive] Saving hive {HiveName} to {Path} ({Size} bytes)", hiveName, path, memStream.Length);
 			
-			// Normalize path separators (Path.GetDirectoryName doesn't work with backslashes on Linux)
-			var normalizedPath = path.Replace('/', '\\');
-			var lastBackslash = normalizedPath.LastIndexOf('\\');
-			var lastColon = normalizedPath.LastIndexOf(':');
-			var index = Math.Max(lastBackslash, lastColon);
-
-			var directory = index >= 0 ? normalizedPath.Substring(0, index + (lastBackslash > -1 ? 0 : 1)) : string.Empty;
+			// On Linux, Path.GetDirectoryName treats backslashes as filename characters, not separators,
+			// so we manually parse the directory path using LastIndexOf('\\')
+			var lastBackslash = path.LastIndexOf('\\');
+			var directory = lastBackslash >= 0 ? path.Substring(0, lastBackslash) : string.Empty;
 			
 			EnsureDirectoryExists(directory);
 			
