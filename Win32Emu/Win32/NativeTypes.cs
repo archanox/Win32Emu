@@ -692,38 +692,39 @@ public static class NativeTypes
 	/// DirectDraw surface capabilities flags
 	/// Based on Microsoft DirectX SDK and Olde-Skuul DirectDraw headers
 	/// Reference: https://learn.microsoft.com/en-us/windows/win32/api/ddraw/ns-ddraw-ddscaps
+	/// Reference: https://github.com/apitrace/dxsdk/blob/master/Include/ddraw.h
 	/// </summary>
 	[Flags]
 	public enum DDSCaps : uint
 	{
-		DDSCAPS_3DDEVICE = 0x00000001,           // Surface can be used for 3D rendering
-		DDSCAPS_ALLOCONLOAD = 0x04000000,        // Memory allocated on texture load
+		DDSCAPS_RESERVED1 = 0x00000001,          // Reserved (was DDSCAPS_3DDEVICE in some docs)
 		DDSCAPS_ALPHA = 0x00000002,              // Surface contains alpha information only
 		DDSCAPS_BACKBUFFER = 0x00000004,         // Back buffer of a surface flipping structure
 		DDSCAPS_COMPLEX = 0x00000008,            // Complex surface (more than one surface)
 		DDSCAPS_FLIP = 0x00000010,               // Part of a surface flipping structure
 		DDSCAPS_FRONTBUFFER = 0x00000020,        // Front buffer of a surface flipping structure
-		DDSCAPS_HWCODEC = 0x01000000,            // Can have stream decompressed to it by hardware
-		DDSCAPS_LIVEVIDEO = 0x00400000,          // Can receive live video
-		DDSCAPS_LOCALVIDMEM = 0x10000000,        // Surface exists in true local display memory
-		DDSCAPS_MIPMAP = 0x00400000,             // One level of a mipmap
-		DDSCAPS_MODEX = 0x00080000,              // 320x200 or 320x240 Mode X surface
-		DDSCAPS_NONLOCALVIDMEM = 0x20000000,     // Surface exists in non-local display memory
 		DDSCAPS_OFFSCREENPLAIN = 0x00000040,     // Offscreen plain surface
 		DDSCAPS_OVERLAY = 0x00000080,            // Surface is an overlay
-		DDSCAPS_OPTIMIZED = 0x80000000,          // Surface is optimized (not currently implemented)
-		DDSCAPS_OWNDC = 0x00040000,              // Surface will have a DC association for a long period
 		DDSCAPS_PALETTE = 0x00000100,            // Allows unique DirectDrawPalette objects
 		DDSCAPS_PRIMARYSURFACE = 0x00000200,     // Primary surface (what user sees)
-		DDSCAPS_PRIMARYSURFACELEFT = 0x00000400, // Primary surface for left eye (stereo)
-		DDSCAPS_STANDARDVGAMODE = 0x00001000,    // Standard VGA mode surface
 		DDSCAPS_SYSTEMMEMORY = 0x00000800,       // Surface memory allocated from system memory
 		DDSCAPS_TEXTURE = 0x00001000,            // Can be used as a 3D texture
+		DDSCAPS_3DDEVICE = 0x00002000,           // Surface can be used for 3D rendering
 		DDSCAPS_VIDEOMEMORY = 0x00004000,        // Surface exists in display memory
-		DDSCAPS_VIDEOPORT = 0x00008000,          // Can receive data from a video port
 		DDSCAPS_VISIBLE = 0x00008000,            // Changes are immediately visible
 		DDSCAPS_WRITEONLY = 0x00010000,          // Only write access permitted
 		DDSCAPS_ZBUFFER = 0x00020000,            // Z-buffer with depth information
+		DDSCAPS_OWNDC = 0x00040000,              // Surface will have a DC association for a long period
+		DDSCAPS_LIVEVIDEO = 0x00080000,          // Can receive live video
+		DDSCAPS_HWCODEC = 0x00100000,            // Can have stream decompressed to it by hardware
+		DDSCAPS_MODEX = 0x00200000,              // 320x200 or 320x240 Mode X surface
+		DDSCAPS_MIPMAP = 0x00400000,             // One level of a mipmap
+		DDSCAPS_ALLOCONLOAD = 0x04000000,        // Memory allocated on texture load
+		DDSCAPS_VIDEOPORT = 0x08000000,          // Can receive data from a video port
+		DDSCAPS_LOCALVIDMEM = 0x10000000,        // Surface exists in true local display memory
+		DDSCAPS_NONLOCALVIDMEM = 0x20000000,     // Surface exists in non-local display memory
+		DDSCAPS_STANDARDVGAMODE = 0x40000000,    // Standard VGA mode surface
+		DDSCAPS_OPTIMIZED = 0x80000000,          // Surface is optimized (not currently implemented)
 	}
 
 	/// <summary>
