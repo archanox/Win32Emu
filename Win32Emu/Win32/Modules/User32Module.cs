@@ -2311,8 +2311,8 @@ namespace Win32Emu.Win32.Modules
 			return previousCursor;
 		}
 
-		[DllModuleExport(732, entryPoint: 0x000139D0, Version = "5.1.2600.6532", IsStub = true)]
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(732, entryPoint: 0x000139D0, Version = "5.1.2600.6532")]
+		[DllModuleExport(1)]
 		private int ShowCursor(int bShow)
 		{
 			_logger.LogInformation("[User32] ShowCursor: bShow={BShow}", bShow);
@@ -2819,12 +2819,25 @@ namespace Win32Emu.Win32.Modules
 			// GetDlgItem retrieves a handle to a control in a dialog box
 			_logger.LogInformation("[User32] GetDlgItem: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem}", hDlg, nIDDlgItem);
 
-			// Try to get the actual control handle from the dialog state
+			// Try to get the actual control handle from the dialog state first
 			var controlHandle = _env.GetDialogControlHandle(hDlg, nIDDlgItem);
 			if (controlHandle != 0)
 			{
 				_logger.LogInformation("[User32] GetDlgItem: Returning actual control handle 0x{ControlHandle:X8}", controlHandle);
 				return controlHandle;
+			}
+
+			// Search for a child window with the matching control ID
+			// For child windows, the control ID is stored in the Menu field
+			var windowHandles = _env.GetAllWindowHandles();
+			foreach (var hwnd in windowHandles)
+			{
+				var window = _env.GetWindow(hwnd);
+				if (window.HasValue && window.Value.Parent == hDlg && window.Value.Menu == (uint)nIDDlgItem)
+				{
+					_logger.LogInformation("[User32] GetDlgItem: Found child window 0x{ChildHwnd:X8} with control ID {NIdDlgItem}", hwnd, nIDDlgItem);
+					return hwnd;
+				}
 			}
 
 			// Fallback: Return a synthetic handle (dialog handle + control ID) for compatibility
@@ -2906,6 +2919,14 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] SendDlgItemMessageA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem} msg=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}",
 				hDlg, nIDDlgItem, msg, wParam, lParam);
 
+			// Get the control handle using GetDlgItem
+			var hwndControl = GetDlgItem(hDlg, nIDDlgItem);
+			if (hwndControl == 0)
+			{
+				_logger.LogWarning("[User32] SendDlgItemMessageA: Control not found for ID {NIdDlgItem}", nIDDlgItem);
+				return 0;
+			}
+
 			// Handle STM_SETIMAGE (0x0172) for static controls
 			if (msg == (uint)StaticControlMessage.STM_SETIMAGE)
 			{
@@ -2936,8 +2957,8 @@ namespace Win32Emu.Win32.Modules
 				}
 			}
 
-			// Return 0 (default message handling result)
-			return 0;
+			// Forward the message to the control using SendMessageA
+			return SendMessageA(hwndControl, msg, wParam, lParam);
 		}
 
 		/// <summary>
@@ -3616,24 +3637,76 @@ namespace Win32Emu.Win32.Modules
 
 		/// <summary>
 		/// Adds a check mark to a specified radio button in a group.
+		/// BOOL CheckRadioButton(
+		///   [in] HWND hDlg,
+		///   [in] int  nIDFirstButton,
+		///   [in] int  nIDLastButton,
+		///   [in] int  nIDCheckButton
+		/// );
 		/// </summary>
 		[DllModuleExport(16)]
 		private uint CheckRadioButton(uint hDlg, int nIDFirstButton, int nIDLastButton, int nIDCheckButton)
 		{
 			_logger.LogInformation("[User32] CheckRadioButton(hDlg=0x{HDlg:X8}, nIDFirstButton={NIDFirstButton}, nIDLastButton={NIDLastButton}, nIDCheckButton={NIDCheckButton})",
 				hDlg, nIDFirstButton, nIDLastButton, nIDCheckButton);
-			return 1; // TRUE
+
+			const uint BM_SETCHECK = 0x00F1;
+			const uint BST_UNCHECKED = 0x0000;
+			const uint BST_CHECKED = 0x0001;
+
+			// Uncheck all radio buttons in the range
+			for (int id = nIDFirstButton; id <= nIDLastButton; id++)
+			{
+				var hwndButton = GetDlgItem(hDlg, id);
+				if (hwndButton != 0)
+				{
+					SendDlgItemMessageA(hDlg, id, BM_SETCHECK, BST_UNCHECKED, 0);
+				}
+			}
+
+			// Check the specified button
+			if (nIDCheckButton >= nIDFirstButton && nIDCheckButton <= nIDLastButton)
+			{
+				var hwndCheck = GetDlgItem(hDlg, nIDCheckButton);
+				if (hwndCheck != 0)
+				{
+					SendDlgItemMessageA(hDlg, nIDCheckButton, BM_SETCHECK, BST_CHECKED, 0);
+					return 1; // TRUE - success
+				}
+			}
+
+			// Return FALSE if the check button wasn't in range or doesn't exist
+			return 0;
 		}
 
 		/// <summary>
 		/// Determines whether a button control has a check mark.
+		/// UINT IsDlgButtonChecked(
+		///   [in] HWND hDlg,
+		///   [in] int  nIDButton
+		/// );
+		/// Returns: BST_UNCHECKED (0), BST_CHECKED (1), or BST_INDETERMINATE (2)
 		/// </summary>
-		[DllModuleExport(8, IsStub = true)]
+		[DllModuleExport(8)]
 		private uint IsDlgButtonChecked(uint hDlg, int nIDButton)
 		{
 			_logger.LogInformation("[User32] IsDlgButtonChecked(hDlg=0x{HDlg:X8}, nIDButton={NIDButton})",
 				hDlg, nIDButton);
-			return 0; // BST_UNCHECKED
+
+			const uint BM_GETCHECK = 0x00F0;
+
+			// Get the control handle
+			var hwndButton = GetDlgItem(hDlg, nIDButton);
+			if (hwndButton == 0)
+			{
+				_logger.LogWarning("[User32] IsDlgButtonChecked: Button not found for ID {NIDButton}", nIDButton);
+				return 0; // BST_UNCHECKED
+			}
+
+			// Send BM_GETCHECK message to get the check state
+			var checkState = SendDlgItemMessageA(hDlg, nIDButton, BM_GETCHECK, 0, 0);
+			_logger.LogInformation("[User32] IsDlgButtonChecked: Button {NIDButton} has state {CheckState}", nIDButton, checkState);
+			return checkState;
 		}
 
 		/// <summary>
