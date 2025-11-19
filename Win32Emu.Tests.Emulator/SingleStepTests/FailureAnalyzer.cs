@@ -33,7 +33,7 @@ public class FailureAnalyzer
 	
 	private void AnalyzeTestFile(string fileName, int maxTests)
 	{
-		var testFile = FindTestFile(fileName);
+		var testFile = TestFileHelper.FindTestFile(fileName);
 		if (testFile == null)
 		{
 			_output.WriteLine($"Skipping: Test file {fileName} not found");
@@ -110,27 +110,6 @@ public class FailureAnalyzer
 				}
 			}
 		}
-	}
-	
-	private string? FindTestFile(string fileName)
-	{
-		var searchPaths = new[]
-		{
-			Path.Combine("TestData", "SingleStepTests", fileName),
-			Path.Combine("SingleStepTests", fileName),
-			Path.Combine("..", "TestData", "SingleStepTests", fileName),
-			fileName
-		};
-		
-		foreach (var path in searchPaths)
-		{
-			if (File.Exists(path))
-			{
-				return path;
-			}
-		}
-		
-		return null;
 	}
 	
 	private class XUnitLogger : ILogger

@@ -883,12 +883,17 @@ public class IcedCpu : IAsyncCpu
 
 	/// <summary>
 	/// Generates a CPU exception by simulating hardware exception behavior.
-	/// This pushes FLAGS, CS, and IP onto the stack, clears certain flags,
-	/// and jumps to the appropriate interrupt vector.
+	/// Supports real mode (16-bit) exception handling with proper IVT lookup.
+	/// Protected mode implementation is simplified for testing purposes.
 	/// </summary>
-	/// <param name="vector">Interrupt vector number (0-255)</param>
+	/// <param name="vector">Interrupt vector number (0-255). Currently supports #UD (vector 6) and other basic exceptions.</param>
 	/// <param name="faultingEip">The EIP of the instruction that caused the exception</param>
 	/// <param name="mem">Memory interface for stack operations</param>
+	/// <remarks>
+	/// Real mode: Pushes FLAGS, CS, IP to stack, clears IF/TF, jumps to IVT entry.
+	/// Protected mode: Simplified implementation - does not fully parse IDT descriptors.
+	/// Error codes are not pushed (correct for #UD, but may need adjustment for other exceptions).
+	/// </remarks>
 	private void GenerateException(int vector, uint faultingEip, VirtualMemory mem)
 	{
 		// Exception handling in real mode (16-bit):
@@ -900,20 +905,49 @@ public class IcedCpu : IAsyncCpu
 		
 		if (_bitness == 16)
 		{
-			// Real mode exception handling
+			// Validate vector is in valid range
+			if (vector < 0 || vector > 255)
+			{
+				_logger.LogError("Invalid exception vector {Vector}", vector);
+				return;
+			}
+			
+			// Real mode exception handling with bounds checking
 			// Push FLAGS (16-bit)
-			_esp = (_esp & 0xFFFF0000) | (ushort)((_esp & 0xFFFF) - 2);
-			var flagsAddr = (uint)((_ss << 4) + (_esp & 0xFFFF));
+			var newSp = (ushort)((_esp & 0xFFFF) - 2);
+			_esp = (_esp & 0xFFFF0000) | newSp;
+			var flagsAddr = (uint)((_ss << 4) + newSp);
+			
+			// Validate stack address is within memory bounds
+			if (flagsAddr >= mem.Size || flagsAddr + 1 >= mem.Size)
+			{
+				_logger.LogError("Stack overflow during exception handling at FLAGS push: addr=0x{Address:X8}", flagsAddr);
+				return;
+			}
 			mem.Write16(flagsAddr, (ushort)_eflags);
 			
 			// Push CS (16-bit)
-			_esp = (_esp & 0xFFFF0000) | (ushort)((_esp & 0xFFFF) - 2);
-			var csAddr = (uint)((_ss << 4) + (_esp & 0xFFFF));
+			newSp = (ushort)(newSp - 2);
+			_esp = (_esp & 0xFFFF0000) | newSp;
+			var csAddr = (uint)((_ss << 4) + newSp);
+			
+			if (csAddr >= mem.Size || csAddr + 1 >= mem.Size)
+			{
+				_logger.LogError("Stack overflow during exception handling at CS push: addr=0x{Address:X8}", csAddr);
+				return;
+			}
 			mem.Write16(csAddr, _cs);
 			
 			// Push IP (16-bit) - the address of the faulting instruction
-			_esp = (_esp & 0xFFFF0000) | (ushort)((_esp & 0xFFFF) - 2);
-			var ipAddr = (uint)((_ss << 4) + (_esp & 0xFFFF));
+			newSp = (ushort)(newSp - 2);
+			_esp = (_esp & 0xFFFF0000) | newSp;
+			var ipAddr = (uint)((_ss << 4) + newSp);
+			
+			if (ipAddr >= mem.Size || ipAddr + 1 >= mem.Size)
+			{
+				_logger.LogError("Stack overflow during exception handling at IP push: addr=0x{Address:X8}", ipAddr);
+				return;
+			}
 			mem.Write16(ipAddr, (ushort)(faultingEip & 0xFFFF));
 			
 			// Clear IF (bit 9) and TF (bit 8) in EFLAGS
@@ -922,7 +956,16 @@ public class IcedCpu : IAsyncCpu
 			
 			// Load new CS:IP from interrupt vector table
 			// IVT entry is at address (vector * 4): [IP:2bytes][CS:2bytes]
+			// IVT is in the first 1KB of memory (vectors 0-255, 4 bytes each)
 			var ivtAddr = (uint)(vector * 4);
+			
+			// Validate IVT address is within bounds (should be 0-1023)
+			if (ivtAddr + 3 >= mem.Size)
+			{
+				_logger.LogError("IVT address out of bounds: vector={Vector}, addr=0x{Address:X8}", vector, ivtAddr);
+				return;
+			}
+			
 			var newIp = mem.Read16(ivtAddr);
 			var newCs = mem.Read16(ivtAddr + 2);
 			
@@ -932,18 +975,54 @@ public class IcedCpu : IAsyncCpu
 		else
 		{
 			// 32-bit protected mode exception handling
-			// This is more complex and involves descriptor tables
-			// For now, just push 32-bit values
+			// NOTE: This is a SIMPLIFIED implementation for testing purposes.
+			// Real protected mode uses IDT (Interrupt Descriptor Table) with 8-byte descriptors
+			// containing segment selectors, offsets, and access rights that must be properly parsed.
+			// This implementation does not handle:
+			// - IDT descriptor parsing
+			// - Task gates
+			// - Privilege level transitions
+			// - Error code pushing for some exceptions (though #UD doesn't push error codes)
+			
+			// Push EFLAGS (32-bit)
 			_esp -= 4;
+			if (_esp >= mem.Size || _esp + 3 >= mem.Size)
+			{
+				_logger.LogError("Stack overflow during protected mode exception at EFLAGS push");
+				return;
+			}
 			mem.Write32(_esp, _eflags);
+			
+			// Push CS (32-bit)
 			_esp -= 4;
+			if (_esp >= mem.Size || _esp + 3 >= mem.Size)
+			{
+				_logger.LogError("Stack overflow during protected mode exception at CS push");
+				return;
+			}
 			mem.Write32(_esp, _cs);
+			
+			// Push EIP (32-bit) - the address of the faulting instruction
 			_esp -= 4;
+			if (_esp >= mem.Size || _esp + 3 >= mem.Size)
+			{
+				_logger.LogError("Stack overflow during protected mode exception at EIP push");
+				return;
+			}
 			mem.Write32(_esp, faultingEip);
 			
-			// Load from IDT (Interrupt Descriptor Table)
-			// For simplicity, use same IVT approach
+			// Clear IF (bit 9) and TF (bit 8) in EFLAGS
+			_eflags &= ~(1u << 9); // Clear IF
+			_eflags &= ~(1u << 8); // Clear TF
+			
+			// Simplified: Load from IVT-style table (not real IDT parsing)
+			// In a full implementation, this would parse the IDT descriptor
 			var ivtAddr = (uint)(vector * 4);
+			if (ivtAddr + 3 >= mem.Size)
+			{
+				_logger.LogError("Exception vector address out of bounds in protected mode");
+				return;
+			}
 			_eip = mem.Read32(ivtAddr);
 		}
 	}

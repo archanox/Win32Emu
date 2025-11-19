@@ -17,7 +17,7 @@ _output = output;
 public void TestAdd_FromSingleStepTest39()
 {
 // Reproduce test 39 from 03.MOO.gz
-var testFile = FindTestFile("03.MOO.gz");
+var testFile = TestFileHelper.FindTestFile("03.MOO.gz");
 if (testFile == null)
 {
 _output.WriteLine("Skipping: Test file not found");
@@ -64,26 +64,5 @@ foreach (var mismatch in result.MemoryMismatches.Take(10))
 _output.WriteLine($"  {mismatch}");
 }
 }
-}
-
-private string? FindTestFile(string fileName)
-{
-var searchPaths = new[]
-{
-Path.Combine("TestData", "SingleStepTests", fileName),
-Path.Combine("SingleStepTests", fileName),
-Path.Combine("..", "TestData", "SingleStepTests", fileName),
-fileName
-};
-
-foreach (var path in searchPaths)
-{
-if (File.Exists(path))
-{
-return path;
-}
-}
-
-return null;
 }
 }
