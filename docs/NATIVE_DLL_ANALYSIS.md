@@ -40,7 +40,36 @@ dotnet run --project Win32Emu.Tools.NativeDllAnalyzer DLLs/WinME docs/pages/api-
 
 **See:** [Win32Emu.Tools.NativeDllAnalyzer/README.md](../Win32Emu.Tools.NativeDllAnalyzer/README.md)
 
-### 2. Missing Functions Web Page
+### 2. Win32Emu.Tools.TestGenerator
+
+A command-line tool that generates A-B test scaffolding from native DLL analysis reports.
+
+**Location:** `Win32Emu.Tools.TestGenerator/`
+
+**Usage:**
+```bash
+dotnet run --project Win32Emu.Tools.TestGenerator <missing-functions-json> <output-directory> [dll-filter]
+```
+
+**Example:**
+```bash
+# Generate tests for all DLLs
+dotnet run --project Win32Emu.Tools.TestGenerator docs/pages/missing-functions.json Win32Emu.Tests.Generated
+
+# Generate tests for specific DLL
+dotnet run --project Win32Emu.Tools.TestGenerator docs/pages/missing-functions.json Win32Emu.Tests.Generated KERNEL32.DLL
+```
+
+**Features:**
+- Generates xUnit test scaffolding for missing and stub functions
+- Creates A-B testing infrastructure (base classes, native DLL loader)
+- Platform-aware: Works on Windows (with native DLLs) and Linux/macOS (Win32Emu only)
+- Generates README and documentation for tests
+- Limits generation to first 10 functions per DLL to avoid overwhelming
+
+**See:** [Win32Emu.Tools.TestGenerator/README.md](../Win32Emu.Tools.TestGenerator/README.md)
+
+### 3. Missing Functions Web Page
 
 An interactive HTML page that displays the analysis results.
 
@@ -56,7 +85,7 @@ An interactive HTML page that displays the analysis results.
 
 **Live Demo:** Once deployed, available at: `https://archanox.github.io/Win32Emu/missing-functions.html`
 
-### 3. GitHub Actions Integration
+### 4. GitHub Actions Integration
 
 The GitHub Pages workflow automatically generates the missing functions report.
 
@@ -209,15 +238,46 @@ Top DLLs with missing functions:
 3. Track specific DLLs (e.g., KERNEL32, USER32)
 4. Create charts showing progress
 
-### 3. Test-Driven Development
+### 3. Test-Driven Development with A-B Testing
 
 **Problem:** "I want to ensure my implementation matches Windows behavior"
 
 **Solution:**
 1. Use native DLL exports as specification
-2. Write tests for each exported function
+2. **Generate test scaffolding** using Win32Emu.Tools.TestGenerator
 3. Implement functions to pass tests
-4. Re-run analyzer to verify coverage
+4. **A-B test** against native DLL behavior (on Windows)
+5. Re-run analyzer to verify coverage
+
+**Implementation:**
+
+```bash
+# Step 1: Generate missing functions report
+dotnet run --project Win32Emu.Tools.ApiStatusGenerator docs/pages/api-status.json
+dotnet run --project Win32Emu.Tools.NativeDllAnalyzer DLLs/WinME docs/pages/api-status.json docs/pages/missing-functions.json
+
+# Step 2: Generate test scaffolding for a specific DLL
+dotnet run --project Win32Emu.Tools.TestGenerator docs/pages/missing-functions.json Win32Emu.Tests.Generated KERNEL32.DLL
+
+# Step 3: Implement function in Win32Emu (e.g., Win32Emu.Kernel32)
+
+# Step 4: Update generated test with proper test data and assertions
+
+# Step 5: Run A-B test
+dotnet test --filter "Function=YourFunction"
+
+# Step 6: Verify coverage improvement
+dotnet run --project Win32Emu.Tools.NativeDllAnalyzer DLLs/WinME docs/pages/api-status.json
+```
+
+**A-B Testing:**
+- **A**: Win32Emu's implementation
+- **B**: Native Windows DLL behavior
+- Tests run both implementations with identical inputs
+- Compare results to ensure Win32Emu matches native behavior
+- Works on Windows (with native DLLs); gracefully degrades on Linux/macOS
+
+See: [Win32Emu.Tools.TestGenerator README](../Win32Emu.Tools.TestGenerator/README.md)
 
 ### 4. Prioritization
 
