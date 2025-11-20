@@ -18,10 +18,13 @@ on:
       - 'Win32Emu.Tests.Emulator/**'
       - 'Win32Emu/Win32/Modules/**'
       - 'Win32Emu.Tools.ApiStatusGenerator/**'
+      - 'Win32Emu.Tools.NativeDllAnalyzer/**'
       - 'Win32Emu.Generators/**'
       - 'Win32Emu.Tools.PeAnalyzer.Wasm/**'
       - 'docs/pages/pe-analyzer/**'
       - 'docs/pages/index.html'
+      - 'docs/pages/missing-functions.html'
+      - 'DLLs/WinME/**'
       - '.github/workflows/cpu-test-results.yml'
 
 # Sets permissions for GitHub Pages deployment
@@ -70,6 +73,12 @@ jobs:
           Win32Emu.Tools.ApiStatusGenerator/Win32Emu.Tools.ApiStatusGenerator.csproj
           --configuration Release
 
+      - name: Build Native DLL Analyzer
+        run: >
+          dotnet build
+          Win32Emu.Tools.NativeDllAnalyzer/Win32Emu.Tools.NativeDllAnalyzer.csproj
+          --configuration Release
+
       - name: Generate CPU Test Results
         run: |
           mkdir -p pages/cpu-tests
@@ -85,9 +94,21 @@ jobs:
             --configuration Release --no-build -- \
             pages/api-status.json
 
+      - name: Generate Missing Functions Report
+        run: |
+          dotnet run --project Win32Emu.Tools.NativeDllAnalyzer/Win32Emu.Tools.NativeDllAnalyzer.csproj \
+            --configuration Release --no-build -- \
+            DLLs/WinME \
+            pages/api-status.json \
+            pages/missing-functions.json
+
       - name: Copy API Status HTML
         run: |
           cp docs/pages/index.html pages/api-status.html
+
+      - name: Copy Missing Functions HTML
+        run: |
+          cp docs/pages/missing-functions.html pages/missing-functions.html
 
       - name: Copy PE Analyzer
         run: |
@@ -206,8 +227,14 @@ jobs:
                           <p>Win32 API implementation status. Browse modules and functions and check compatibility.</p>
                       </a>
                       
-                      <a href="pe-analyzer/" class="nav-card">
+                      <a href="missing-functions.html" class="nav-card">
                           <div class="icon">🔍</div>
+                          <h2>Missing Functions</h2>
+                          <p>Compare native Windows ME DLL exports with Win32Emu implementations. See which functions need to be implemented.</p>
+                      </a>
+                      
+                      <a href="pe-analyzer/" class="nav-card">
+                          <div class="icon">🔬</div>
                           <h2>PE Analyzer</h2>
                           <p>Upload Windows PE files (.exe or .dll) to check compatibility with Win32Emu. Client-side analysis powered by Blazor WebAssembly.</p>
                       </a>
