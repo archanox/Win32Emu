@@ -1,0 +1,483 @@
+@page "/"
+@using PeNet
+@using System.Text.Json
+@using Microsoft.JSInterop
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Win32Emu PE Analyzer</PageTitle>
+
+<div class="container">
+	<h1>🔍 Win32Emu PE Compatibility Analyzer</h1>
+	<p class="subtitle">Upload a Windows PE file (.exe or .dll) to check compatibility with Win32Emu</p>
+
+	<div class="upload-section">
+		<InputFile OnChange="HandleFileSelected" accept=".exe,.dll" class="file-input" />
+		
+		@if (isProcessing)
+		{
+			<div class="loading">
+				<div class="spinner"></div>
+				<p>Analyzing PE file...</p>
+			</div>
+		}
+	</div>
+
+	@if (!string.IsNullOrEmpty(errorMessage))
+	{
+		<div class="alert alert-error">
+			<strong>❌ Error:</strong> @errorMessage
+		</div>
+	}
+
+	@if (analysisResult != null)
+	{
+		<div class="results">
+			<h2>Analysis Results</h2>
+			
+			<div class="file-info">
+				<h3>📄 File Information</h3>
+				<table>
+					<tr>
+						<td><strong>File Name:</strong></td>
+						<td>@analysisResult.FileName</td>
+					</tr>
+					<tr>
+						<td><strong>File Size:</strong></td>
+						<td>@FormatBytes(analysisResult.FileSize)</td>
+					</tr>
+					<tr>
+						<td><strong>Architecture:</strong></td>
+						<td>@(analysisResult.Is32Bit ? "32-bit (x86)" : "64-bit (x64)")</td>
+					</tr>
+				</table>
+			</div>
+
+			<div class="compatibility-verdict @GetVerdictClass()">
+				<h3>🎯 Compatibility Verdict</h3>
+				<p>@analysisResult.Status.Verdict</p>
+			</div>
+
+			<div class="stats-grid">
+				<div class="stat-card">
+					<div class="stat-value">@analysisResult.Status.TotalDlls</div>
+					<div class="stat-label">Total DLLs</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-value">@analysisResult.Status.TotalFunctions</div>
+					<div class="stat-label">Total Functions</div>
+				</div>
+				<div class="stat-card success">
+					<div class="stat-value">@analysisResult.Status.ImplementedFunctions</div>
+					<div class="stat-label">Implemented</div>
+				</div>
+				<div class="stat-card warning">
+					<div class="stat-value">@analysisResult.Status.StubFunctions</div>
+					<div class="stat-label">Stubs</div>
+				</div>
+				<div class="stat-card error">
+					<div class="stat-value">@analysisResult.Status.MissingFunctions</div>
+					<div class="stat-label">Missing</div>
+				</div>
+			</div>
+
+			<div class="progress-bar">
+				<div class="progress-fill" style="width: @(analysisResult.Status.ImplementationPercentage)%">
+					@analysisResult.Status.ImplementationPercentage.ToString("F1")% Compatible
+				</div>
+			</div>
+
+			<h3>📚 DLL Dependencies</h3>
+			@foreach (var dll in analysisResult.Dependencies)
+			{
+				<div class="dll-card @GetDllClass(dll)">
+					<div class="dll-header">
+						<h4>@dll.DllName</h4>
+						<span class="badge @GetDllBadgeClass(dll)">
+							@GetDllStatus(dll)
+						</span>
+					</div>
+					<div class="dll-stats">
+						<span>✅ @dll.ImplementedCount implemented</span>
+						@if (dll.StubCount > 0)
+						{
+							<span>⚠️ @dll.StubCount stubs</span>
+						}
+						@if (dll.MissingCount > 0)
+						{
+							<span>❌ @dll.MissingCount missing</span>
+						}
+						<span>(@dll.ImplementationPercentage.ToString("F1")%)</span>
+					</div>
+					
+					@if (showDetails)
+					{
+						<div class="function-list">
+							@foreach (var func in dll.Functions.OrderBy(f => f.Status))
+							{
+								<div class="function-item @func.Status">
+									<span class="function-name">@func.Name</span>
+									<span class="function-status @func.Status">
+										@func.Status.ToUpper()
+									</span>
+									@if (func.Ordinal.HasValue)
+									{
+										<span class="ordinal">Ordinal: @func.Ordinal</span>
+									}
+								</div>
+							}
+						</div>
+					}
+				</div>
+			}
+
+			<div class="actions">
+				<button class="btn btn-primary" @onclick="ToggleDetails">
+					@(showDetails ? "Hide" : "Show") Function Details
+				</button>
+				<button class="btn btn-secondary" @onclick="CopyUnimplemented">
+					📋 Copy Unimplemented Functions
+				</button>
+			</div>
+		</div>
+	}
+</div>
+
+@code {
+	private CompatibilityReport? analysisResult;
+	private ApiStatusData? apiStatus;
+	private bool isProcessing;
+	private bool showDetails;
+	private string? errorMessage;
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			// Load api-status.json
+			var json = await Http.GetStringAsync("api-status.json");
+			apiStatus = JsonSerializer.Deserialize<ApiStatusData>(json, new JsonSerializerOptions
+			{
+				PropertyNameCaseInsensitive = true
+			});
+		}
+		catch (Exception ex)
+		{
+			errorMessage = $"Failed to load API status data: {ex.Message}";
+		}
+	}
+
+	private async Task HandleFileSelected(InputFileChangeEventArgs e)
+	{
+		errorMessage = null;
+		analysisResult = null;
+		isProcessing = true;
+
+		try
+		{
+			var file = e.File;
+			
+			if (file.Size > 100 * 1024 * 1024) // 100MB limit
+			{
+				errorMessage = "File is too large. Maximum size is 100MB.";
+				return;
+			}
+
+			// Read file into memory
+			using var memoryStream = new MemoryStream();
+			await file.OpenReadStream(100 * 1024 * 1024).CopyToAsync(memoryStream);
+			var fileBytes = memoryStream.ToArray();
+
+			// Parse PE file
+			await Task.Run(() => AnalyzePeFile(file.Name, fileBytes));
+		}
+		catch (Exception ex)
+		{
+			errorMessage = $"Error analyzing file: {ex.Message}";
+		}
+		finally
+		{
+			isProcessing = false;
+		}
+	}
+
+	private void AnalyzePeFile(string fileName, byte[] fileBytes)
+	{
+		if (apiStatus == null)
+		{
+			errorMessage = "API status data not loaded";
+			return;
+		}
+
+		var peFile = new PeFile(fileBytes);
+		
+		analysisResult = new CompatibilityReport
+		{
+			FileName = fileName,
+			FileSize = fileBytes.Length,
+			Is32Bit = !peFile.Is64Bit,
+			Is64Bit = peFile.Is64Bit
+		};
+
+		if (peFile.Is64Bit)
+		{
+			analysisResult.Status.Verdict = "INCOMPATIBLE - 64-bit PE files are not supported by Win32Emu";
+			return;
+		}
+
+		var imports = peFile.ImportedFunctions;
+		if (imports == null || !imports.Any())
+		{
+			analysisResult.Status.Verdict = "No imports found - may be statically linked or packed";
+			return;
+		}
+
+		// Group imports by DLL
+		var importsByDll = imports
+			.Where(i => !string.IsNullOrEmpty(i.DLL) && !string.IsNullOrEmpty(i.Name))
+			.GroupBy(i => i.DLL.ToUpperInvariant())
+			.OrderBy(g => g.Key)
+			.ToList();
+
+		foreach (var dllGroup in importsByDll)
+		{
+			var dllName = dllGroup.Key;
+			var functions = dllGroup.ToList();
+
+			// Find matching module in API status
+			var module = apiStatus.Modules
+				.FirstOrDefault(m => m.Name.Equals(dllName, StringComparison.OrdinalIgnoreCase));
+
+			var dependency = new DllDependency
+			{
+				DllName = dllName,
+				IsSupported = module != null
+			};
+
+			foreach (var import in functions)
+			{
+				var functionName = import.Name ?? "";
+				var ordinal = import.Hint;
+
+				FunctionStatus status;
+				
+				if (module == null)
+				{
+					status = new FunctionStatus
+					{
+						Name = functionName,
+						Status = "missing",
+						Ordinal = ordinal
+					};
+					dependency.MissingCount++;
+				}
+				else
+				{
+					var function = module.Functions.FirstOrDefault(f => 
+						f.Name.Equals(functionName, StringComparison.OrdinalIgnoreCase));
+
+					if (function == null)
+					{
+						status = new FunctionStatus
+						{
+							Name = functionName,
+							Status = "missing",
+							Ordinal = ordinal
+						};
+						dependency.MissingCount++;
+					}
+					else if (function.IsStub)
+					{
+						status = new FunctionStatus
+						{
+							Name = functionName,
+							Status = "stub",
+							Ordinal = ordinal
+						};
+						dependency.StubCount++;
+					}
+					else
+					{
+						status = new FunctionStatus
+						{
+							Name = functionName,
+							Status = "implemented",
+							Ordinal = ordinal
+						};
+						dependency.ImplementedCount++;
+					}
+				}
+
+				dependency.Functions.Add(status);
+			}
+
+			var totalFunctions = dependency.Functions.Count;
+			dependency.ImplementationPercentage = totalFunctions > 0
+				? (dependency.ImplementedCount * 100.0 / totalFunctions)
+				: 0;
+
+			analysisResult.Dependencies.Add(dependency);
+		}
+
+		// Calculate overall statistics
+		analysisResult.Status.TotalDlls = analysisResult.Dependencies.Count;
+		analysisResult.Status.TotalFunctions = analysisResult.Dependencies.Sum(d => d.Functions.Count);
+		analysisResult.Status.ImplementedFunctions = analysisResult.Dependencies.Sum(d => d.ImplementedCount);
+		analysisResult.Status.StubFunctions = analysisResult.Dependencies.Sum(d => d.StubCount);
+		analysisResult.Status.MissingFunctions = analysisResult.Dependencies.Sum(d => d.MissingCount);
+		
+		if (analysisResult.Status.TotalFunctions > 0)
+		{
+			analysisResult.Status.ImplementationPercentage = 
+				(analysisResult.Status.ImplementedFunctions * 100.0 / analysisResult.Status.TotalFunctions);
+		}
+
+		// Determine verdict
+		if (analysisResult.Status.MissingFunctions == 0 && analysisResult.Status.StubFunctions == 0)
+		{
+			analysisResult.Status.Verdict = "FULLY COMPATIBLE - All required APIs are implemented";
+		}
+		else if (analysisResult.Status.MissingFunctions == 0 && analysisResult.Status.StubFunctions > 0)
+		{
+			analysisResult.Status.Verdict = $"MOSTLY COMPATIBLE - {analysisResult.Status.StubFunctions} stub(s) may affect functionality";
+		}
+		else if (analysisResult.Status.ImplementationPercentage >= 80)
+		{
+			analysisResult.Status.Verdict = $"PARTIALLY COMPATIBLE - {analysisResult.Status.MissingFunctions} missing function(s)";
+		}
+		else
+		{
+			analysisResult.Status.Verdict = $"LIMITED COMPATIBILITY - {analysisResult.Status.MissingFunctions} missing function(s)";
+		}
+	}
+
+	private void ToggleDetails()
+	{
+		showDetails = !showDetails;
+	}
+
+	private async Task CopyUnimplemented()
+	{
+		if (analysisResult == null) return;
+
+		var unimplemented = new List<string>();
+		foreach (var dep in analysisResult.Dependencies)
+		{
+			var missing = dep.Functions.Where(f => f.Status != "implemented").ToList();
+			if (missing.Any())
+			{
+				unimplemented.Add($"{dep.DllName}:");
+				foreach (var func in missing)
+				{
+					unimplemented.Add($"  - {func.Name} ({func.Status})");
+				}
+				unimplemented.Add("");
+			}
+		}
+
+		var text = string.Join("\n", unimplemented);
+		// Note: Clipboard API requires user interaction and HTTPS in browser
+		// This is a simplified version
+		await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+	}
+
+	private string GetVerdictClass()
+	{
+		if (analysisResult == null) return "";
+		if (analysisResult.Status.Verdict.Contains("FULLY")) return "verdict-success";
+		if (analysisResult.Status.Verdict.Contains("MOSTLY")) return "verdict-warning";
+		if (analysisResult.Status.Verdict.Contains("PARTIALLY")) return "verdict-warning";
+		return "verdict-error";
+	}
+
+	private string GetDllClass(DllDependency dll)
+	{
+		if (dll.MissingCount == 0 && dll.StubCount == 0) return "dll-complete";
+		if (dll.MissingCount == 0) return "dll-partial";
+		return "dll-missing";
+	}
+
+	private string GetDllBadgeClass(DllDependency dll)
+	{
+		if (dll.MissingCount == 0 && dll.StubCount == 0) return "badge-success";
+		if (dll.MissingCount == 0) return "badge-warning";
+		return "badge-error";
+	}
+
+	private string GetDllStatus(DllDependency dll)
+	{
+		if (dll.MissingCount == 0 && dll.StubCount == 0) return "COMPLETE";
+		if (dll.MissingCount == 0) return "PARTIAL";
+		return "INCOMPLETE";
+	}
+
+	private string FormatBytes(long bytes)
+	{
+		string[] sizes = { "B", "KB", "MB", "GB" };
+		double len = bytes;
+		int order = 0;
+		while (len >= 1024 && order < sizes.Length - 1)
+		{
+			order++;
+			len = len / 1024;
+		}
+		return $"{len:0.##} {sizes[order]}";
+	}
+
+	// Data models
+	public class CompatibilityReport
+	{
+		public string FileName { get; set; } = "";
+		public long FileSize { get; set; }
+		public bool Is32Bit { get; set; }
+		public bool Is64Bit { get; set; }
+		public OverallStatus Status { get; set; } = new();
+		public List<DllDependency> Dependencies { get; set; } = new();
+	}
+
+	public class OverallStatus
+	{
+		public int TotalDlls { get; set; }
+		public int TotalFunctions { get; set; }
+		public int ImplementedFunctions { get; set; }
+		public int StubFunctions { get; set; }
+		public int MissingFunctions { get; set; }
+		public double ImplementationPercentage { get; set; }
+		public string Verdict { get; set; } = "";
+	}
+
+	public class DllDependency
+	{
+		public string DllName { get; set; } = "";
+		public bool IsSupported { get; set; }
+		public List<FunctionStatus> Functions { get; set; } = new();
+		public int ImplementedCount { get; set; }
+		public int StubCount { get; set; }
+		public int MissingCount { get; set; }
+		public double ImplementationPercentage { get; set; }
+	}
+
+	public class FunctionStatus
+	{
+		public string Name { get; set; } = "";
+		public string Status { get; set; } = "";
+		public uint? Ordinal { get; set; }
+	}
+
+	public class ApiStatusData
+	{
+		public List<ModuleInfo> Modules { get; set; } = new();
+	}
+
+	public class ModuleInfo
+	{
+		public string Name { get; set; } = "";
+		public List<FunctionInfo> Functions { get; set; } = new();
+	}
+
+	public class FunctionInfo
+	{
+		public string Name { get; set; } = "";
+		public bool IsStub { get; set; }
+	}
+}
