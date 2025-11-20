@@ -1260,6 +1260,37 @@ namespace Win32Emu.Win32.Modules
 			var window = _env.GetWindow(hwnd);
 			if (window == null)
 			{
+				// Check if this is a dialog control handle
+				var controlInfo = _env.FindDialogControlByHandle(hwnd);
+				if (controlInfo.HasValue)
+				{
+					// Handle control visibility - store in window properties
+					var currentStyle = _env.GetWindowProperty(hwnd, (int)NativeTypes.WindowLong.GWL_STYLE);
+					bool wasPreviouslyVisible = (currentStyle & (uint)NativeTypes.WindowStyle.WS_VISIBLE) != 0;
+					
+					bool shouldBeVisible = nCmdShow != 0; // SW_HIDE = 0, all others show the window
+					
+					if (shouldBeVisible)
+					{
+						currentStyle |= (uint)NativeTypes.WindowStyle.WS_VISIBLE;
+						_logger.LogInformation("[User32] ShowWindow: Control 0x{Hwnd:X8} (ID={ControlId}) is now visible", hwnd, controlInfo.Value.ControlId);
+						
+						// Notify GUI to show the control
+						_host?.UpdateControlVisibility(controlInfo.Value.DialogHandle, controlInfo.Value.ControlId, true);
+					}
+					else
+					{
+						currentStyle &= ~(uint)NativeTypes.WindowStyle.WS_VISIBLE;
+						_logger.LogInformation("[User32] ShowWindow: Control 0x{Hwnd:X8} (ID={ControlId}) is now hidden", hwnd, controlInfo.Value.ControlId);
+						
+						// Notify GUI to hide the control
+						_host?.UpdateControlVisibility(controlInfo.Value.DialogHandle, controlInfo.Value.ControlId, false);
+					}
+					
+					_env.SetWindowProperty(hwnd, (int)NativeTypes.WindowLong.GWL_STYLE, currentStyle);
+					return wasPreviouslyVisible ? 1u : 0u;
+				}
+				
 				_logger.LogWarning("[User32] ShowWindow: Invalid HWND=0x{Hwnd:X8}", hwnd);
 				return 0; // Window was not previously visible
 			}
@@ -3401,11 +3432,11 @@ namespace Win32Emu.Win32.Modules
 			var formatStr = format.ToString() ?? string.Empty;
 			_logger.LogInformation("[User32] WsprintfA(output=0x{Output:X8}, format=\"{FormatStr}\")", output.Address, formatStr);
 
-			// Simple sprintf implementation - just copy format string for now
-			// A full implementation would parse format string and substitute arguments
-			output.Write(_env.Memory, formatStr, true);
+			// Format the string using stack arguments
+			var result = FormatString(formatStr, args, 0);
+			output.Write(_env.Memory, result, true);
 
-			return (uint)formatStr.Length;
+			return (uint)result.Length;
 		}
 
 		[DllModuleExport(12)]
@@ -3415,11 +3446,182 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] WvsprintfA(output=0x{Output:X8}, format=\"{FormatStr}\", arglist=0x{Arglist:X8})",
 				output.Address, formatStr, arglist);
 
-			// Simple vsprintf implementation - just copy format string for now
-			// A full implementation would parse format string and substitute arguments from va_list
-			output.Write(_env.Memory, formatStr, true);
+			// Format the string using va_list (arglist is a pointer to variadic arguments)
+			var result = FormatStringFromVaList(formatStr, arglist);
+			output.Write(_env.Memory, result, true);
 
-			return (uint)formatStr.Length;
+			return (uint)result.Length;
+		}
+
+		/// <summary>
+		/// Formats a printf-style format string with arguments from the stack.
+		/// Supports common format specifiers: %s (string), %d/%i (int), %u (uint), %x/%X (hex), %c (char), %% (literal %).
+		/// </summary>
+		private string FormatString(string format, StackArgs args, int startArgIndex)
+		{
+			var result = new System.Text.StringBuilder();
+			int argIndex = startArgIndex;
+			
+			for (int i = 0; i < format.Length; i++)
+			{
+				if (format[i] == '%' && i + 1 < format.Length)
+				{
+					i++; // Skip the %
+					
+					// Handle %% (literal %)
+					if (format[i] == '%')
+					{
+						result.Append('%');
+						continue;
+					}
+					
+					// Parse format specifier (simplified - doesn't handle width, precision, etc.)
+					char specifier = format[i];
+					
+					switch (specifier)
+					{
+						case 's': // String pointer
+							var strAddr = args.UInt32(argIndex++);
+							if (strAddr != 0)
+							{
+								var str = _env.Memory.ReadAnsiString(strAddr);
+								result.Append(str);
+							}
+							else
+							{
+								result.Append("(null)");
+							}
+							break;
+						
+						case 'd': // Signed decimal integer
+						case 'i':
+							var intVal = args.Int32(argIndex++);
+							result.Append(intVal);
+							break;
+						
+						case 'u': // Unsigned decimal integer
+							var uintVal = args.UInt32(argIndex++);
+							result.Append(uintVal);
+							break;
+						
+						case 'x': // Unsigned hexadecimal (lowercase)
+							var hexVal = args.UInt32(argIndex++);
+							result.Append(hexVal.ToString("x"));
+							break;
+						
+						case 'X': // Unsigned hexadecimal (uppercase)
+							var hexValUpper = args.UInt32(argIndex++);
+							result.Append(hexValUpper.ToString("X"));
+							break;
+						
+						case 'c': // Character
+							var charVal = (char)args.UInt32(argIndex++);
+							result.Append(charVal);
+							break;
+						
+						default:
+							// Unknown specifier - just append it as-is
+							result.Append('%');
+							result.Append(specifier);
+							argIndex++; // Still consume an argument
+							break;
+					}
+				}
+				else
+				{
+					result.Append(format[i]);
+				}
+			}
+			
+			return result.ToString();
+		}
+
+		/// <summary>
+		/// Formats a printf-style format string with arguments from a va_list pointer.
+		/// </summary>
+		private string FormatStringFromVaList(string format, uint vaListPtr)
+		{
+			var result = new System.Text.StringBuilder();
+			uint currentArgPtr = vaListPtr;
+			
+			for (int i = 0; i < format.Length; i++)
+			{
+				if (format[i] == '%' && i + 1 < format.Length)
+				{
+					i++; // Skip the %
+					
+					// Handle %% (literal %)
+					if (format[i] == '%')
+					{
+						result.Append('%');
+						continue;
+					}
+					
+					// Parse format specifier
+					char specifier = format[i];
+					
+					switch (specifier)
+					{
+						case 's': // String pointer
+							var strAddr = _env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							if (strAddr != 0)
+							{
+								var str = _env.Memory.ReadAnsiString(strAddr);
+								result.Append(str);
+							}
+							else
+							{
+								result.Append("(null)");
+							}
+							break;
+						
+						case 'd': // Signed decimal integer
+						case 'i':
+							var intVal = (int)_env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							result.Append(intVal);
+							break;
+						
+						case 'u': // Unsigned decimal integer
+							var uintVal = _env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							result.Append(uintVal);
+							break;
+						
+						case 'x': // Unsigned hexadecimal (lowercase)
+							var hexVal = _env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							result.Append(hexVal.ToString("x"));
+							break;
+						
+						case 'X': // Unsigned hexadecimal (uppercase)
+							var hexValUpper = _env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							result.Append(hexValUpper.ToString("X"));
+							break;
+						
+						case 'c': // Character
+							var charVal = (char)_env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							result.Append(charVal);
+							break;
+						
+						default:
+							// Unknown specifier - just append it as-is
+							result.Append('%');
+							result.Append(specifier);
+							currentArgPtr += 4; // Still consume an argument
+							break;
+					}
+				}
+				else
+				{
+					result.Append(format[i]);
+				}
+			}
+			
+			return result.ToString();
 		}
 
 		/// <summary>
