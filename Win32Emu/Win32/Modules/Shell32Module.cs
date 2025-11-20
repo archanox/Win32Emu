@@ -161,9 +161,13 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 				task.Wait(); // Wait for dialog to complete
 				selectedPath = task.Result;
 			}
-			catch (Exception ex)
+			catch (AggregateException ex)
 			{
-				_logger.LogError(ex, "[Shell32] SHBrowseForFolderA: Error showing folder browser dialog");
+				_logger.LogError(ex, "[Shell32] SHBrowseForFolderA: AggregateException showing folder browser dialog");
+			}
+			catch (InvalidOperationException ex)
+			{
+				_logger.LogError(ex, "[Shell32] SHBrowseForFolderA: InvalidOperationException showing folder browser dialog");
 			}
 		}
 
