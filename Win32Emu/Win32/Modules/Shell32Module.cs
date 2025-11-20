@@ -18,7 +18,11 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 	private readonly ILogger _logger;
 	
 	// Map fake PIDL addresses to actual file system paths
+	// Note: This dictionary can grow over time. In a real implementation, we would
+	// track PIDL lifetimes and clean up when PIDLs are freed via IMalloc::Free.
+	// For now, we limit the size to prevent unbounded memory growth.
 	private readonly Dictionary<uint, string> _pidlToPathMap = new();
+	private const int MaxPidlMappings = 1000; // Limit to prevent memory leaks
 
 	public Shell32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 	{
@@ -157,9 +161,8 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			try
 			{
 				// Call host's folder browser (this will show the Avalonia dialog)
-				var task = _env.Host.OnBrowseForFolder(title, null);
-				task.Wait(); // Wait for dialog to complete
-				selectedPath = task.Result;
+				// Using GetAwaiter().GetResult() to avoid potential deadlocks from task.Wait()
+				selectedPath = _env.Host.OnBrowseForFolder(title, null).GetAwaiter().GetResult();
 			}
 			catch (AggregateException ex)
 			{
@@ -186,7 +189,14 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		_env.MemWrite32(pidlAddr + 2, 0x504C4946); // "FILP" marker (PIDL reversed)
 		
 		// Store the selected path in our internal PIDL to path mapping
-		// We'll use the PIDL address as a key to store the actual path
+		// Limit the size of the dictionary to prevent unbounded growth
+		if (_pidlToPathMap.Count >= MaxPidlMappings)
+		{
+			// Remove oldest entry (first key) when limit is reached
+			var oldestKey = _pidlToPathMap.Keys.First();
+			_pidlToPathMap.Remove(oldestKey);
+			_logger.LogWarning("[Shell32] PIDL mapping cache full, removed oldest entry");
+		}
 		_pidlToPathMap[pidlAddr] = selectedPath;
 
 		// Provide folder name in pszDisplayName buffer if it exists
