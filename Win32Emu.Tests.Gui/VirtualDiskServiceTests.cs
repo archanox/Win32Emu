@@ -135,4 +135,37 @@ public class VirtualDiskServiceTests : IDisposable
 		// Assert
 		Assert.False(File.Exists(diskPath));
 	}
+
+	[Fact]
+	public void VirtualDisk_CanBeAccessedMultipleTimes_AfterCreation()
+	{
+		// This test verifies that the VHD file is properly closed after creation
+		// and can be opened again for subsequent operations (like game launch).
+		
+		// Arrange
+		var game = new Game
+		{
+			Title = "TestGameMultipleAccess",
+			ExecutablePath = "/tmp/test.exe"
+		};
+
+		// Act - Create the disk for the first time
+		var diskPath = _service.GetOrCreateVirtualDisk(game);
+		Assert.True(File.Exists(diskPath));
+
+		// Try to open the VHD file in ReadWrite mode to simulate game launch
+		// This should succeed if the VHD was properly closed after creation
+		using (var vfs = new Win32Emu.VirtualFileSystem.DiskVirtualFileSystem(diskPath, NullLogger.Instance))
+		{
+			// Verify we can access the VFS
+			Assert.NotNull(vfs);
+			Assert.False(vfs.IsReadOnly, "VHD should be writable");
+		}
+
+		// Act - Try to access the disk again
+		var diskPath2 = _service.GetOrCreateVirtualDisk(game);
+		
+		// Assert - Should be able to get the same path without errors
+		Assert.Equal(diskPath, diskPath2);
+	}
 }
