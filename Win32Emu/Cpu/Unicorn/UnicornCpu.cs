@@ -55,8 +55,10 @@ public class UnicornCpu : IAsyncCpu
 	{
 		var regId = GetUnicornRegister(name);
 		if (regId == -1)
+		{
 			return 0;
-		
+		}
+
 		return (uint)_unicorn.RegRead(regId);
 	}
 
@@ -64,8 +66,10 @@ public class UnicornCpu : IAsyncCpu
 	{
 		var regId = GetUnicornRegister(name);
 		if (regId == -1)
+		{
 			return;
-		
+		}
+
 		_unicorn.RegWrite(regId, (int)value);
 	}
 

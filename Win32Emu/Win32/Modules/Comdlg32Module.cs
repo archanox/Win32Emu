@@ -64,7 +64,7 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 	///   LPOPENFILENAMEA lpofn
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(110, Version = "5.50.4134.100", IsStub = true)]
 	private uint GetOpenFileNameA(uint lpofn)
 	{
 		_logger.LogInformation("[Comdlg32] GetOpenFileNameA(lpofn=0x{Lpofn:X8})", lpofn);
@@ -98,7 +98,7 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 	///   LPOPENFILENAMEA lpofn
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(112, Version = "5.50.4134.100", IsStub = true)]
 	private uint GetSaveFileNameA(uint lpofn)
 	{
 		_logger.LogInformation("[Comdlg32] GetSaveFileNameA(lpofn=0x{Lpofn:X8})", lpofn);
@@ -118,7 +118,7 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 	/// Retrieves the name of the specified file.
 	/// short GetFileTitleA(LPCSTR lpszFile, LPSTR lpszTitle, WORD cchSize);
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(108, Version = "5.50.4134.100")]
 	private uint GetFileTitleA(in LpcStr lpszFile, in LpStr lpszTitle, uint cchSize)
 	{
 		var file = lpszFile.ToString() ?? string.Empty;
@@ -143,7 +143,7 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 	///   [in, out] LPPAGESETUPDLGA lppsd
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(115, Version = "5.50.4134.100", IsStub = true)]
 	private uint PageSetupDlgA(uint lppsd)
 	{
 		_logger.LogInformation("[Comdlg32] PageSetupDlgA(lppsd=0x{Lppsd:X8})", lppsd);
@@ -173,7 +173,7 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Displays a Print dialog box.
 	/// </summary>
-	[DllModuleExport(4, IsStub = true)]
+	[DllModuleExport(117, Version = "5.50.4134.100", IsStub = true)]
 	private uint PrintDlgA(uint lppd)
 	{
 		_logger.LogInformation("[Comdlg32] PrintDlgA(lppd=0x{Lppd:X8})", lppd);

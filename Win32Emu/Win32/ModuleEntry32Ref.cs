@@ -77,7 +77,11 @@ namespace Win32Emu.Win32
 				for (uint i = 0; i < 256; i++)
 				{
 					var b = _memory.Read8(_address + 32 + i);
-					if (b == 0) break;
+					if (b == 0)
+					{
+						break;
+					}
+
 					buf.Add(b);
 				}
 				return Encoding.ASCII.GetString(buf.ToArray());
@@ -102,7 +106,11 @@ namespace Win32Emu.Win32
 				for (uint i = 0; i < 260; i++)
 				{
 					var b = _memory.Read8(_address + 288 + i);
-					if (b == 0) break;
+					if (b == 0)
+					{
+						break;
+					}
+
 					buf.Add(b);
 				}
 				return Encoding.ASCII.GetString(buf.ToArray());

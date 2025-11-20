@@ -752,11 +752,30 @@ namespace Win32Emu.Win32.Modules
 			// DISCL_NOWINKEY     = 0x00000010  // Disable Windows key
 
 			var flagNames = new List<string>();
-			if ((dwFlags & 0x01) != 0) flagNames.Add("DISCL_EXCLUSIVE");
-			if ((dwFlags & 0x02) != 0) flagNames.Add("DISCL_NONEXCLUSIVE");
-			if ((dwFlags & 0x04) != 0) flagNames.Add("DISCL_FOREGROUND");
-			if ((dwFlags & 0x08) != 0) flagNames.Add("DISCL_BACKGROUND");
-			if ((dwFlags & 0x10) != 0) flagNames.Add("DISCL_NOWINKEY");
+			if ((dwFlags & 0x01) != 0)
+			{
+				flagNames.Add("DISCL_EXCLUSIVE");
+			}
+
+			if ((dwFlags & 0x02) != 0)
+			{
+				flagNames.Add("DISCL_NONEXCLUSIVE");
+			}
+
+			if ((dwFlags & 0x04) != 0)
+			{
+				flagNames.Add("DISCL_FOREGROUND");
+			}
+
+			if ((dwFlags & 0x08) != 0)
+			{
+				flagNames.Add("DISCL_BACKGROUND");
+			}
+
+			if ((dwFlags & 0x10) != 0)
+			{
+				flagNames.Add("DISCL_NOWINKEY");
+			}
 
 			if (flagNames.Count > 0)
 			{

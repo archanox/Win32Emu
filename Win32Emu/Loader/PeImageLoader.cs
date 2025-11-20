@@ -809,7 +809,9 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		rva = 0;
 		
 		if (location == null)
+		{
 			return false;
+		}
 
 		if (location is SegmentReference segRef)
 		{

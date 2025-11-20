@@ -3923,9 +3923,13 @@ namespace Win32Emu.Win32.Modules
 
 				// Ensure the output is exactly cchLength characters
 				if (lower.Length > cchLength)
+				{
 					lower = lower.Substring(0, (int)cchLength);
+				}
 				else if (lower.Length < cchLength)
+				{
 					lower = lower.PadRight((int)cchLength, '\0');
+				}
 
 				// Write back
 				lpsz.Write(_env.Memory, lower, false);
@@ -4415,8 +4419,16 @@ namespace Win32Emu.Win32.Modules
 		private uint GetScrollRange(uint hWnd, int nBar, uint lpMinPos, uint lpMaxPos)
 		{
 			_logger.LogInformation("[User32] GetScrollRange(hWnd=0x{HWnd:X8}, nBar={NBar})", hWnd, nBar);
-			if (lpMinPos != 0) _env.MemWrite32(lpMinPos, 0);
-			if (lpMaxPos != 0) _env.MemWrite32(lpMaxPos, 0);
+			if (lpMinPos != 0)
+			{
+				_env.MemWrite32(lpMinPos, 0);
+			}
+
+			if (lpMaxPos != 0)
+			{
+				_env.MemWrite32(lpMaxPos, 0);
+			}
+
 			return 1; // TRUE
 		}
 
@@ -4872,8 +4884,16 @@ namespace Win32Emu.Win32.Modules
 		private uint UnpackDDElParam(uint msg, uint lParam, uint puiLo, uint puiHi)
 		{
 			_logger.LogInformation("[User32] UnpackDDElParam(msg=0x{Msg:X}, lParam=0x{LParam:X8})", msg, lParam);
-			if (puiLo != 0) _env.MemWrite32(puiLo, 0);
-			if (puiHi != 0) _env.MemWrite32(puiHi, 0);
+			if (puiLo != 0)
+			{
+				_env.MemWrite32(puiLo, 0);
+			}
+
+			if (puiHi != 0)
+			{
+				_env.MemWrite32(puiHi, 0);
+			}
+
 			return 1; // TRUE
 		}
 

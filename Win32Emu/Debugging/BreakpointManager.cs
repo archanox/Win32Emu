@@ -160,8 +160,10 @@ public class BreakpointManager
         foreach (var wp in _watchpoints.Values)
         {
             if (!wp.Enabled)
-                continue;
-                
+            {
+	            continue;
+            }
+
             // Check if address is within watchpoint range (avoid overflow)
             if (address >= wp.Address && wp.Length > 0 && address - wp.Address < wp.Length)
             {

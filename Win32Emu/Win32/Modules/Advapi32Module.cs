@@ -478,7 +478,11 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				case REG_SZ:
 					// Null-terminated string
 					var strLen = Array.IndexOf(data, (byte)0);
-					if (strLen < 0) strLen = data.Length;
+					if (strLen < 0)
+					{
+						strLen = data.Length;
+					}
+
 					value = System.Text.Encoding.ASCII.GetString(data, 0, strLen);
 					regType = DiscUtils.Registry.RegistryValueType.String;
 					break;
@@ -486,7 +490,11 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				case REG_EXPAND_SZ:
 					// Expandable string
 					strLen = Array.IndexOf(data, (byte)0);
-					if (strLen < 0) strLen = data.Length;
+					if (strLen < 0)
+					{
+						strLen = data.Length;
+					}
+
 					value = System.Text.Encoding.ASCII.GetString(data, 0, strLen);
 					regType = DiscUtils.Registry.RegistryValueType.ExpandString;
 					break;
@@ -656,8 +664,16 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	private uint AccessCheck(uint pSecurityDescriptor, uint ClientToken, uint DesiredAccess, uint GenericMapping, uint PrivilegeSet, uint PrivilegeSetLength, uint GrantedAccess, uint AccessStatus)
 	{
 		_logger.LogInformation("[Advapi32] AccessCheck(stub)");
-		if (AccessStatus != 0) _env.MemWrite32(AccessStatus, 1); // TRUE - access granted
-		if (GrantedAccess != 0) _env.MemWrite32(GrantedAccess, DesiredAccess);
+		if (AccessStatus != 0)
+		{
+			_env.MemWrite32(AccessStatus, 1); // TRUE - access granted
+		}
+
+		if (GrantedAccess != 0)
+		{
+			_env.MemWrite32(GrantedAccess, DesiredAccess);
+		}
+
 		return 1; // TRUE
 	}
 
@@ -680,7 +696,11 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Advapi32] AllocateAndInitializeSid(stub)");
 		var sidHandle = _nextSidHandle++;
-		if (pSid != 0) _env.MemWrite32(pSid, sidHandle);
+		if (pSid != 0)
+		{
+			_env.MemWrite32(pSid, sidHandle);
+		}
+
 		return 1; // TRUE
 	}
 
@@ -1334,7 +1354,11 @@ public class Advapi32Module : IWin32ModuleUnsafe
 
 			// RegSetValueA always sets a REG_SZ value
 			var strLen = Array.IndexOf(data, (byte)0);
-			if (strLen < 0) strLen = data.Length;
+			if (strLen < 0)
+			{
+				strLen = data.Length;
+			}
+
 			var value = System.Text.Encoding.ASCII.GetString(data, 0, strLen);
 
 			// Set the default (unnamed) value

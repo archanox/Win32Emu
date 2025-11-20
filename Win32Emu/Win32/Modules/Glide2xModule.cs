@@ -1909,8 +1909,11 @@ namespace Win32Emu.Win32.Modules
 			{
 				for (int y = (int)v0.y; y <= (int)v1.y && y < _height; y++)
 				{
-					if (y < 0) continue;
-					
+					if (y < 0)
+					{
+						continue;
+					}
+
 					float alpha = (y - v0.y) / totalHeight;
 					float beta = (y - v0.y) / segmentHeight;
 					
@@ -1937,8 +1940,11 @@ namespace Win32Emu.Win32.Modules
 			{
 				for (int y = (int)v1.y; y <= (int)v2.y && y < _height; y++)
 				{
-					if (y < 0) continue;
-					
+					if (y < 0)
+					{
+						continue;
+					}
+
 					float alpha = (y - v0.y) / totalHeight;
 					float beta = (y - v1.y) / segmentHeight;
 					

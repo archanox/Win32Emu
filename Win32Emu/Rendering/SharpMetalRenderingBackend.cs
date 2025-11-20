@@ -137,7 +137,10 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
                 {
                     _logger.LogError("[SharpMetal] Failed to create frame texture");
                     if ((IntPtr)_metalLayer != IntPtr.Zero)
-                        _metalLayer.Dispose();
+                    {
+	                    _metalLayer.Dispose();
+                    }
+
                     _commandQueue.Dispose();
                     _device.Dispose();
                     _glfw.DestroyWindow(_window);
@@ -150,9 +153,15 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
                 {
                     _logger.LogError("[SharpMetal] Failed to set up rendering pipeline");
                     if ((IntPtr)_frameTexture != IntPtr.Zero)
-                        _frameTexture.Dispose();
+                    {
+	                    _frameTexture.Dispose();
+                    }
+
                     if ((IntPtr)_metalLayer != IntPtr.Zero)
-                        _metalLayer.Dispose();
+                    {
+	                    _metalLayer.Dispose();
+                    }
+
                     _commandQueue.Dispose();
                     _device.Dispose();
                     _glfw.DestroyWindow(_window);
@@ -678,17 +687,34 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
             }
 
             if ((IntPtr)_vertexBuffer != IntPtr.Zero)
-                _vertexBuffer.Dispose();
+            {
+	            _vertexBuffer.Dispose();
+            }
+
             if ((IntPtr)_pipelineState != IntPtr.Zero)
-                _pipelineState.Dispose();
+            {
+	            _pipelineState.Dispose();
+            }
+
             if ((IntPtr)_frameTexture != IntPtr.Zero)
-                _frameTexture.Dispose();
+            {
+	            _frameTexture.Dispose();
+            }
+
             if ((IntPtr)_metalLayer != IntPtr.Zero)
-                _metalLayer.Dispose();
+            {
+	            _metalLayer.Dispose();
+            }
+
             if ((IntPtr)_commandQueue != IntPtr.Zero)
-                _commandQueue.Dispose();
+            {
+	            _commandQueue.Dispose();
+            }
+
             if ((IntPtr)_device != IntPtr.Zero)
-                _device.Dispose();
+            {
+	            _device.Dispose();
+            }
 
             if (_window != null)
             {

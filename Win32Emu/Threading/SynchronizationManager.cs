@@ -449,9 +449,21 @@ public class SynchronizationManager(ILogger? logger = null)
 	{
 		lock (_lock)
 		{
-			if (_mutexes.ContainsKey(handle)) return "Mutex";
-			if (_events.ContainsKey(handle)) return "Event";
-			if (_semaphores.ContainsKey(handle)) return "Semaphore";
+			if (_mutexes.ContainsKey(handle))
+			{
+				return "Mutex";
+			}
+
+			if (_events.ContainsKey(handle))
+			{
+				return "Event";
+			}
+
+			if (_semaphores.ContainsKey(handle))
+			{
+				return "Semaphore";
+			}
+
 			return null;
 		}
 	}

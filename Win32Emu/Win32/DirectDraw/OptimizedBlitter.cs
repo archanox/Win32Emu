@@ -163,7 +163,9 @@ namespace Win32Emu.Win32.DirectDraw
 							
 							// If all bytes are transparent (mask == 0, all pixels in color key range), skip
 							if (mask == 0)
+							{
 								continue;
+							}
 
 							// If all bytes are NOT transparent (mask == 0xFFFF, no pixels in range), copy entire vector
 							if (mask == 0xFFFF)
@@ -303,7 +305,9 @@ namespace Win32Emu.Win32.DirectDraw
 							
 							// If all pixels are transparent (mask == 0), skip
 							if (mask == 0)
+							{
 								continue;
+							}
 
 							// If no pixels are transparent (mask == 0xFFFF), copy entire vector
 							if (mask == 0xFFFF)
@@ -486,7 +490,9 @@ namespace Win32Emu.Win32.DirectDraw
 							
 							// If all pixels are transparent (mask == 0), skip
 							if (mask == 0)
+							{
 								continue;
+							}
 
 							// If no pixels are transparent (mask == 0xFFFF), copy entire vector
 							if (mask == 0xFFFF)
@@ -541,7 +547,9 @@ namespace Win32Emu.Win32.DirectDraw
 							// Check if any pixels are non-transparent
 							var anyOpaque = AdvSimd.Arm64.MaxAcross(isNotTransparent);
 							if (anyOpaque.ToScalar() == 0)
+							{
 								continue;
+							}
 
 							// Mixed case: copy non-transparent pixels individually
 							for (var i = 0; i < 4; i++)
@@ -600,24 +608,41 @@ namespace Win32Emu.Win32.DirectDraw
 			
 			// X86/X64 capabilities
 			if (Avx512F.IsSupported)
+			{
 				caps.Append("AVX-512F ");
+			}
+
 			if (Avx512BW.IsSupported)
+			{
 				caps.Append("AVX-512BW ");
+			}
+
 			if (Avx2.IsSupported)
+			{
 				caps.Append("AVX2 ");
+			}
+
 			if (Sse2.IsSupported)
+			{
 				caps.Append("SSE2 ");
-			
+			}
+
 			// ARM capabilities
 			if (AdvSimd.Arm64.IsSupported)
+			{
 				caps.Append("NEON-ARM64 ");
+			}
 			else if (AdvSimd.IsSupported)
+			{
 				caps.Append("NEON ");
-			
+			}
+
 			// Cross-platform vector support
 			if (System.Numerics.Vector.IsHardwareAccelerated)
+			{
 				caps.Append($"Vector<T>({System.Numerics.Vector<byte>.Count}B) ");
-			
+			}
+
 			return caps.Length > 0 ? caps.ToString().TrimEnd() : "Scalar (no SIMD)";
 		}
 
@@ -690,7 +715,9 @@ namespace Win32Emu.Win32.DirectDraw
 				{
 					var scaledY = (int)(y * scaleHeight);
 					if (mirrorUpDown)
+					{
 						scaledY = srcHeight - 1 - scaledY;
+					}
 
 					var srcRow = srcX + srcSurfaceWidth * (scaledY + srcY);
 					var destRow = destX + destSurfaceWidth * (y + destY);
@@ -699,7 +726,9 @@ namespace Win32Emu.Win32.DirectDraw
 					{
 						var scaledX = (int)(x * scaleWidth);
 						if (mirrorLeftRight)
+						{
 							scaledX = srcWidth - 1 - scaledX;
+						}
 
 						var pixel = srcPtr[scaledX + srcRow];
 						if (pixel < colorKeyLow || pixel > colorKeyHigh)
@@ -730,7 +759,9 @@ namespace Win32Emu.Win32.DirectDraw
 				{
 					var scaledY = (int)(y * scaleHeight);
 					if (mirrorUpDown)
+					{
 						scaledY = srcHeight - 1 - scaledY;
+					}
 
 					var srcRow = srcX + srcSurfaceWidth * (scaledY + srcY);
 					var destRow = destX + destSurfaceWidth * (y + destY);
@@ -739,7 +770,9 @@ namespace Win32Emu.Win32.DirectDraw
 					{
 						var scaledX = (int)(x * scaleWidth);
 						if (mirrorLeftRight)
+						{
 							scaledX = srcWidth - 1 - scaledX;
+						}
 
 						var pixel = src16[scaledX + srcRow];
 						if (pixel < colorKeyLow || pixel > colorKeyHigh)
@@ -772,7 +805,9 @@ namespace Win32Emu.Win32.DirectDraw
 				{
 					var scaledY = (int)(y * scaleHeight);
 					if (mirrorUpDown)
+					{
 						scaledY = srcHeight - 1 - scaledY;
+					}
 
 					var srcRow = srcX + srcSurfaceWidth * (scaledY + srcY);
 					var destRow = destX + destSurfaceWidth * (y + destY);
@@ -781,7 +816,9 @@ namespace Win32Emu.Win32.DirectDraw
 					{
 						var scaledX = (int)(x * scaleWidth);
 						if (mirrorLeftRight)
+						{
 							scaledX = srcWidth - 1 - scaledX;
+						}
 
 						var pixel = src32[scaledX + srcRow];
 						var pixelColor = pixel & 0xFFFFFF;
@@ -807,7 +844,9 @@ namespace Win32Emu.Win32.DirectDraw
 			var size = buffer.Length;
 			
 			if (size == 0)
+			{
 				return;
+			}
 
 			fixed (byte* ptr = buffer)
 			{

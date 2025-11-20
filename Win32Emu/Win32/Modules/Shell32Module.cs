@@ -304,14 +304,18 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 	{
 		var result = new List<string>();
 		if (address == 0)
+		{
 			return result;
+		}
 
 		uint offset = 0;
 		while (true)
 		{
 			var str = ReadNullTerminatedString(address + offset);
 			if (string.IsNullOrEmpty(str))
+			{
 				break;
+			}
 
 			result.Add(str);
 			offset += (uint)(str.Length + 1); // +1 for null terminator
@@ -332,12 +336,17 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		{
 			var b = _env.MemRead8(address + offset);
 			if (b == 0)
+			{
 				break;
+			}
+
 			bytes.Add(b);
 			offset++;
 
 			if (offset > 4096) // Safety limit
+			{
 				break;
+			}
 		}
 
 		return System.Text.Encoding.ASCII.GetString(bytes.ToArray());

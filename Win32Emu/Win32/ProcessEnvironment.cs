@@ -1350,7 +1350,11 @@ public class ProcessEnvironment
 		// Helper to validate a candidate range and avoid reserved internal ranges
 		bool IsCandidateValid(uint baseAddr, uint span)
 		{
-			if (!RangeFits(baseAddr, span, Memory.Size)) return false;
+			if (!RangeFits(baseAddr, span, Memory.Size))
+			{
+				return false;
+			}
+
 			// reject if overlaps [avoidStart, avoidEnd)
 			ulong start = baseAddr;
 			ulong end = start + span;
@@ -1368,15 +1372,30 @@ public class ProcessEnvironment
 					// choose the highest aligned start within this block where [addr, addr+size) fits
 					uint blockStart = block.Address;
 					uint blockEnd = block.EndAddress;
-					if (block.Size < size) continue;
+					if (block.Size < size)
+					{
+						continue;
+					}
+
 					uint maxStart = blockEnd - size;
 					uint cand = AlignDown(maxStart, align);
-					if (cand < blockStart) cand = blockStart; // clamp
+					if (cand < blockStart)
+					{
+						cand = blockStart; // clamp
+					}
+
 					// Also ensure alignment
 					cand = AlignUp(cand, align);
-					if (cand < blockStart || cand + size > blockEnd) continue;
-					if (!IsCandidateValid(cand, size)) continue;
-					
+					if (cand < blockStart || cand + size > blockEnd)
+					{
+						continue;
+					}
+
+					if (!IsCandidateValid(cand, size))
+					{
+						continue;
+					}
+
 					// Carve this allocation from the end of the block
 					uint usedStart = cand;
 					uint usedEnd = cand + size;
@@ -1411,19 +1430,37 @@ public class ProcessEnvironment
 				for (int i = 0; i < _freeList.Count; i++)
 				{
 					var block = _freeList[i];
-					if (block.Size < size) continue;
+					if (block.Size < size)
+					{
+						continue;
+					}
+
 					uint cand = AlignUp(block.Address, align);
-					if (cand + size > block.EndAddress) continue;
+					if (cand + size > block.EndAddress)
+					{
+						continue;
+					}
+
 					if (!IsCandidateValid(cand, size))
 					{
 						// Try to move to after avoidEnd if it splits inside this block
 						if (block.Address < avoidStart && block.EndAddress > avoidStart)
 						{
 							cand = AlignUp(avoidEnd, align);
-							if (cand + size > block.EndAddress) continue;
-							if (!IsCandidateValid(cand, size)) continue;
+							if (cand + size > block.EndAddress)
+							{
+								continue;
+							}
+
+							if (!IsCandidateValid(cand, size))
+							{
+								continue;
+							}
 						}
-						else continue;
+						else
+						{
+							continue;
+						}
 					}
 					// Carve from start
 					uint usedStart = cand;
@@ -1936,8 +1973,10 @@ public class ProcessEnvironment
 	private void WakeThreadsWaitingForMessages()
 	{
 		if (ThreadScheduler == null)
+		{
 			return;
-			
+		}
+
 		// Find all threads waiting on the message queue and wake them
 		var allThreads = ThreadScheduler.GetAllThreads();
 		foreach (var thread in allThreads.Where(t => t.State == Threading.ThreadState.Waiting && ReferenceEquals(t.WaitingOn, _messageQueueWaitToken)))

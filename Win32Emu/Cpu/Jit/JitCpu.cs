@@ -1236,9 +1236,13 @@ public class JitCpu : IAsyncCpu
 	private void SetFlagVal(int bit, bool val)
 	{
 		if (val)
+		{
 			SetFlag(bit);
+		}
 		else
+		{
 			ClearFlag(bit);
+		}
 	}
 
 	// Conditional jump implementation
@@ -1321,8 +1325,10 @@ public class JitCpu : IAsyncCpu
 				
 				// Mask source to operand size
 				if (opSize == 16)
+				{
 					src &= 0xFFFF;
-				
+				}
+
 				if (src == 0)
 				{
 					// If source is 0, ZF is set and destination is undefined
@@ -1386,12 +1392,18 @@ public class JitCpu : IAsyncCpu
 					
 					// Modify the bit based on instruction
 					if (insn.Mnemonic == Mnemonic.Btc)
+					{
 						baseVal ^= mask; // Complement
+					}
 					else if (insn.Mnemonic == Mnemonic.Btr)
+					{
 						baseVal &= ~mask; // Reset
+					}
 					else // BTS
+					{
 						baseVal |= mask; // Set
-					
+					}
+
 					SetRegisterValue(insn, 0, baseVal);
 				}
 				else
@@ -1405,12 +1417,18 @@ public class JitCpu : IAsyncCpu
 					
 					// Modify the bit based on instruction
 					if (insn.Mnemonic == Mnemonic.Btc)
+					{
 						baseVal ^= mask; // Complement
+					}
 					else if (insn.Mnemonic == Mnemonic.Btr)
+					{
 						baseVal &= ~mask; // Reset
+					}
 					else // BTS
+					{
 						baseVal |= mask; // Set
-					
+					}
+
 					SetOperandValue(insn, 0, baseVal);
 				}
 				break;
@@ -1462,13 +1480,19 @@ public class JitCpu : IAsyncCpu
 		byte count;
 		
 		if (insn.Op2Kind == OpKind.Immediate8)
+		{
 			count = (byte)(insn.Immediate8 & 0x1F);
+		}
 		else
+		{
 			count = (byte)(_ecx & 0x1F);
-		
+		}
+
 		if (count == 0)
+		{
 			return;
-		
+		}
+
 		if (insn.Mnemonic == Mnemonic.Shld) // Shift Left Double
 		{
 			// Shift dest left by count, filling with high bits of src
@@ -1485,7 +1509,9 @@ public class JitCpu : IAsyncCpu
 			SetFlagVal(Zf, dest == 0);
 			// OF is set only if count == 1
 			if (count == 1)
+			{
 				SetFlagVal(Of, ((dest ^ (dest << 1)) & 0x80000000) != 0);
+			}
 		}
 		else // SHRD - Shift Right Double
 		{
@@ -1502,7 +1528,9 @@ public class JitCpu : IAsyncCpu
 			SetFlagVal(Zf, dest == 0);
 			// OF is set only if count == 1
 			if (count == 1)
+			{
 				SetFlagVal(Of, ((dest ^ (dest >> 1)) & 0x80000000) != 0);
+			}
 		}
 		
 		SetOperandValue(insn, 0, dest);
@@ -1686,9 +1714,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update ESI based on direction flag
 		if (GetFlag(Df))
+		{
 			_esi -= 1; // Decrement for backward
+		}
 		else
+		{
 			_esi += 1; // Increment for forward
+		}
 	}
 	
 	private void ExecLodsw()
@@ -1699,9 +1731,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update ESI based on direction flag
 		if (GetFlag(Df))
+		{
 			_esi -= 2; // Decrement for backward
+		}
 		else
+		{
 			_esi += 2; // Increment for forward
+		}
 	}
 	
 	private void ExecLodsd()
@@ -1711,9 +1747,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update ESI based on direction flag
 		if (GetFlag(Df))
+		{
 			_esi -= 4; // Decrement for backward
+		}
 		else
+		{
 			_esi += 4; // Increment for forward
+		}
 	}
 	
 	private void ExecMovsb()
@@ -1780,9 +1820,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update EDI based on direction flag
 		if (GetFlag(Df))
+		{
 			_edi -= 1; // Decrement for backward
+		}
 		else
+		{
 			_edi += 1; // Increment for forward
+		}
 	}
 	
 	private void ExecStosw()
@@ -1792,9 +1836,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update EDI based on direction flag
 		if (GetFlag(Df))
+		{
 			_edi -= 2; // Decrement for backward
+		}
 		else
+		{
 			_edi += 2; // Increment for forward
+		}
 	}
 	
 	private void ExecStosd()
@@ -1804,9 +1852,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update EDI based on direction flag
 		if (GetFlag(Df))
+		{
 			_edi -= 4; // Decrement for backward (4 bytes for doubleword)
+		}
 		else
+		{
 			_edi += 4; // Increment for forward
+		}
 	}
 	
 	private void ExecScasb()
@@ -1832,9 +1884,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update EDI based on direction flag
 		if (GetFlag(Df))
+		{
 			_edi -= 1;
+		}
 		else
+		{
 			_edi += 1;
+		}
 	}
 	
 	private void ExecScasw()
@@ -1860,9 +1916,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update EDI based on direction flag
 		if (GetFlag(Df))
+		{
 			_edi -= 2;
+		}
 		else
+		{
 			_edi += 2;
+		}
 	}
 	
 	private void ExecScasd()
@@ -1888,9 +1948,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update EDI based on direction flag
 		if (GetFlag(Df))
+		{
 			_edi -= 4;
+		}
 		else
+		{
 			_edi += 4;
+		}
 	}
 	
 	private void ExecCmpsb()
@@ -2003,9 +2067,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update EDI based on direction flag
 		if (GetFlag(Df))
+		{
 			_edi -= 1;
+		}
 		else
+		{
 			_edi += 1;
+		}
 	}
 	
 	private void ExecInsw()
@@ -2016,9 +2084,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update EDI based on direction flag
 		if (GetFlag(Df))
+		{
 			_edi -= 2;
+		}
 		else
+		{
 			_edi += 2;
+		}
 	}
 	
 	private void ExecInsd()
@@ -2029,9 +2101,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update EDI based on direction flag
 		if (GetFlag(Df))
+		{
 			_edi -= 4;
+		}
 		else
+		{
 			_edi += 4;
+		}
 	}
 	
 	private void ExecOutsb()
@@ -2043,9 +2119,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update ESI based on direction flag
 		if (GetFlag(Df))
+		{
 			_esi -= 1;
+		}
 		else
+		{
 			_esi += 1;
+		}
 	}
 	
 	private void ExecOutsw()
@@ -2057,9 +2137,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update ESI based on direction flag
 		if (GetFlag(Df))
+		{
 			_esi -= 2;
+		}
 		else
+		{
 			_esi += 2;
+		}
 	}
 	
 	private void ExecOutsd()
@@ -2071,9 +2155,13 @@ public class JitCpu : IAsyncCpu
 		
 		// Update ESI based on direction flag
 		if (GetFlag(Df))
+		{
 			_esi -= 4;
+		}
 		else
+		{
 			_esi += 4;
+		}
 	}
 
 	// I/O operations
@@ -2120,11 +2208,17 @@ public class JitCpu : IAsyncCpu
 		{
 			var reg = insn.Op1Register;
 			if (reg == Register.AL)
+			{
 				value = _eax & 0xFF;
+			}
 			else if (reg == Register.AX)
+			{
 				value = _eax & 0xFFFF;
+			}
 			else
+			{
 				value = _eax;
+			}
 		}
 		else
 		{
@@ -2482,8 +2576,11 @@ public class JitCpu : IAsyncCpu
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
-		if (count == 0) return;
-		
+		if (count == 0)
+		{
+			return;
+		}
+
 		uint r = a << (int)count;
 		SetOperandValue(insn, 0, r);
 		
@@ -2491,15 +2588,20 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 		
 		if (count == 1)
+		{
 			SetFlagVal(Of, ((r ^ a) & 0x80000000) != 0);
+		}
 	}
 	
 	private void ExecShr(Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
-		if (count == 0) return;
-		
+		if (count == 0)
+		{
+			return;
+		}
+
 		uint r = a >> (int)count;
 		SetOperandValue(insn, 0, r);
 		
@@ -2507,15 +2609,20 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 		
 		if (count == 1)
+		{
 			SetFlagVal(Of, (a & 0x80000000) != 0);
+		}
 	}
 	
 	private void ExecSar(Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
-		if (count == 0) return;
-		
+		if (count == 0)
+		{
+			return;
+		}
+
 		int signedA = (int)a;
 		int r = signedA >> (int)count;
 		SetOperandValue(insn, 0, (uint)r);
@@ -2524,45 +2631,60 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags((uint)r);
 		
 		if (count == 1)
+		{
 			ClearFlag(Of);
+		}
 	}
 	
 	private void ExecRol(Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
-		if (count == 0) return;
-		
+		if (count == 0)
+		{
+			return;
+		}
+
 		uint r = (a << (int)count) | (a >> (32 - (int)count));
 		SetOperandValue(insn, 0, r);
 		
 		SetFlagVal(Cf, (r & 1) != 0);
 		
 		if (count == 1)
+		{
 			SetFlagVal(Of, ((r ^ (r >> 31)) & 1) != 0);
+		}
 	}
 	
 	private void ExecRor(Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
-		if (count == 0) return;
-		
+		if (count == 0)
+		{
+			return;
+		}
+
 		uint r = (a >> (int)count) | (a << (32 - (int)count));
 		SetOperandValue(insn, 0, r);
 		
 		SetFlagVal(Cf, (r & 0x80000000) != 0);
 		
 		if (count == 1)
+		{
 			SetFlagVal(Of, ((r ^ (r << 1)) & 0x80000000) != 0);
+		}
 	}
 	
 	private void ExecRcl(Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
-		if (count == 0) return;
-		
+		if (count == 0)
+		{
+			return;
+		}
+
 		for (int i = 0; i < count; i++)
 		{
 			bool oldCf = GetFlag(Cf);
@@ -2572,15 +2694,20 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 0, a);
 		
 		if (count == 1)
+		{
 			SetFlagVal(Of, ((a ^ (a >> 31)) & 0x80000000) != 0);
+		}
 	}
 	
 	private void ExecRcr(Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
-		if (count == 0) return;
-		
+		if (count == 0)
+		{
+			return;
+		}
+
 		for (int i = 0; i < count; i++)
 		{
 			bool oldCf = GetFlag(Cf);
@@ -2590,7 +2717,9 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 0, a);
 		
 		if (count == 1)
+		{
 			SetFlagVal(Of, ((a ^ (a << 1)) & 0x80000000) != 0);
+		}
 	}
 	
 	// === Data Movement Implementations ===
@@ -2747,13 +2876,32 @@ public class JitCpu : IAsyncCpu
 	{
 		// LAHF - Load AH from flags
 		byte ah = 0;
-		if (GetFlag(Sf)) ah |= 0x80;
-		if (GetFlag(Zf)) ah |= 0x40;
-		if (GetFlag(Af)) ah |= 0x10;
-		if (GetFlag(Pf)) ah |= 0x04;
+		if (GetFlag(Sf))
+		{
+			ah |= 0x80;
+		}
+
+		if (GetFlag(Zf))
+		{
+			ah |= 0x40;
+		}
+
+		if (GetFlag(Af))
+		{
+			ah |= 0x10;
+		}
+
+		if (GetFlag(Pf))
+		{
+			ah |= 0x04;
+		}
+
 		ah |= 0x02; // Bit 1 is always set
-		if (GetFlag(Cf)) ah |= 0x01;
-		
+		if (GetFlag(Cf))
+		{
+			ah |= 0x01;
+		}
+
 		_eax = (_eax & 0xFFFF00FF) | (uint)(ah << 8);
 	}
 	
@@ -2849,8 +2997,11 @@ public class JitCpu : IAsyncCpu
 	{
 		// AAM - ASCII Adjust AX After Multiply
 		byte base_ = insn.OpCount > 0 ? insn.Immediate8 : (byte)10;
-		if (base_ == 0) base_ = 10;
-		
+		if (base_ == 0)
+		{
+			base_ = 10;
+		}
+
 		byte al = (byte)(_eax & 0xFF);
 		byte ah = (byte)(al / base_);
 		al = (byte)(al % base_);
@@ -2863,8 +3014,11 @@ public class JitCpu : IAsyncCpu
 	{
 		// AAD - ASCII Adjust AX Before Division
 		byte base_ = insn.OpCount > 0 ? insn.Immediate8 : (byte)10;
-		if (base_ == 0) base_ = 10;
-		
+		if (base_ == 0)
+		{
+			base_ = 10;
+		}
+
 		byte al = (byte)(_eax & 0xFF);
 		byte ah = (byte)((_eax >> 8) & 0xFF);
 		
@@ -5185,8 +5339,16 @@ public class JitCpu : IAsyncCpu
 			sbyte va = (sbyte)((a >> (i * 8)) & 0xFF);
 			sbyte vb = (sbyte)((b >> (i * 8)) & 0xFF);
 			int sum = va + vb;
-			if (sum > 127) sum = 127;
-			if (sum < -128) sum = -128;
+			if (sum > 127)
+			{
+				sum = 127;
+			}
+
+			if (sum < -128)
+			{
+				sum = -128;
+			}
+
 			result |= (ulong)((byte)sum) << (i * 8);
 		}
 		return result;
@@ -5200,8 +5362,16 @@ public class JitCpu : IAsyncCpu
 			short va = (short)((a >> (i * 16)) & 0xFFFF);
 			short vb = (short)((b >> (i * 16)) & 0xFFFF);
 			int sum = va + vb;
-			if (sum > 32767) sum = 32767;
-			if (sum < -32768) sum = -32768;
+			if (sum > 32767)
+			{
+				sum = 32767;
+			}
+
+			if (sum < -32768)
+			{
+				sum = -32768;
+			}
+
 			result |= (ulong)((ushort)sum) << (i * 16);
 		}
 		return result;
@@ -5215,7 +5385,11 @@ public class JitCpu : IAsyncCpu
 			byte va = (byte)((a >> (i * 8)) & 0xFF);
 			byte vb = (byte)((b >> (i * 8)) & 0xFF);
 			int sum = va + vb;
-			if (sum > 255) sum = 255;
+			if (sum > 255)
+			{
+				sum = 255;
+			}
+
 			result |= (ulong)((byte)sum) << (i * 8);
 		}
 		return result;
@@ -5229,7 +5403,11 @@ public class JitCpu : IAsyncCpu
 			ushort va = (ushort)((a >> (i * 16)) & 0xFFFF);
 			ushort vb = (ushort)((b >> (i * 16)) & 0xFFFF);
 			int sum = va + vb;
-			if (sum > 65535) sum = 65535;
+			if (sum > 65535)
+			{
+				sum = 65535;
+			}
+
 			result |= (ulong)((ushort)sum) << (i * 16);
 		}
 		return result;
@@ -5276,8 +5454,16 @@ public class JitCpu : IAsyncCpu
 			sbyte va = (sbyte)((a >> (i * 8)) & 0xFF);
 			sbyte vb = (sbyte)((b >> (i * 8)) & 0xFF);
 			int diff = va - vb;
-			if (diff > 127) diff = 127;
-			if (diff < -128) diff = -128;
+			if (diff > 127)
+			{
+				diff = 127;
+			}
+
+			if (diff < -128)
+			{
+				diff = -128;
+			}
+
 			result |= (ulong)((byte)diff) << (i * 8);
 		}
 		return result;
@@ -5291,8 +5477,16 @@ public class JitCpu : IAsyncCpu
 			short va = (short)((a >> (i * 16)) & 0xFFFF);
 			short vb = (short)((b >> (i * 16)) & 0xFFFF);
 			int diff = va - vb;
-			if (diff > 32767) diff = 32767;
-			if (diff < -32768) diff = -32768;
+			if (diff > 32767)
+			{
+				diff = 32767;
+			}
+
+			if (diff < -32768)
+			{
+				diff = -32768;
+			}
+
 			result |= (ulong)((ushort)diff) << (i * 16);
 		}
 		return result;
@@ -5306,7 +5500,11 @@ public class JitCpu : IAsyncCpu
 			byte va = (byte)((a >> (i * 8)) & 0xFF);
 			byte vb = (byte)((b >> (i * 8)) & 0xFF);
 			int diff = va - vb;
-			if (diff < 0) diff = 0;
+			if (diff < 0)
+			{
+				diff = 0;
+			}
+
 			result |= (ulong)((byte)diff) << (i * 8);
 		}
 		return result;
@@ -5320,7 +5518,11 @@ public class JitCpu : IAsyncCpu
 			ushort va = (ushort)((a >> (i * 16)) & 0xFFFF);
 			ushort vb = (ushort)((b >> (i * 16)) & 0xFFFF);
 			int diff = va - vb;
-			if (diff < 0) diff = 0;
+			if (diff < 0)
+			{
+				diff = 0;
+			}
+
 			result |= (ulong)((ushort)diff) << (i * 16);
 		}
 		return result;
@@ -5437,7 +5639,11 @@ public class JitCpu : IAsyncCpu
 
 	private ulong MmxPsllW(ulong value, int count)
 	{
-		if (count > 15) return 0;
+		if (count > 15)
+		{
+			return 0;
+		}
+
 		ulong result = 0;
 		for (int i = 0; i < 4; i++)
 		{
@@ -5449,7 +5655,11 @@ public class JitCpu : IAsyncCpu
 
 	private ulong MmxPsllD(ulong value, int count)
 	{
-		if (count > 31) return 0;
+		if (count > 31)
+		{
+			return 0;
+		}
+
 		uint lo = (uint)(value & 0xFFFFFFFF);
 		uint hi = (uint)((value >> 32) & 0xFFFFFFFF);
 		return ((ulong)(hi << count) << 32) | (lo << count);
@@ -5457,13 +5667,21 @@ public class JitCpu : IAsyncCpu
 
 	private ulong MmxPsllQ(ulong value, int count)
 	{
-		if (count > 63) return 0;
+		if (count > 63)
+		{
+			return 0;
+		}
+
 		return value << count;
 	}
 
 	private ulong MmxPsrlW(ulong value, int count)
 	{
-		if (count > 15) return 0;
+		if (count > 15)
+		{
+			return 0;
+		}
+
 		ulong result = 0;
 		for (int i = 0; i < 4; i++)
 		{
@@ -5475,7 +5693,11 @@ public class JitCpu : IAsyncCpu
 
 	private ulong MmxPsrlD(ulong value, int count)
 	{
-		if (count > 31) return 0;
+		if (count > 31)
+		{
+			return 0;
+		}
+
 		uint lo = (uint)(value & 0xFFFFFFFF);
 		uint hi = (uint)((value >> 32) & 0xFFFFFFFF);
 		return ((ulong)(hi >> count) << 32) | (lo >> count);
@@ -5483,13 +5705,21 @@ public class JitCpu : IAsyncCpu
 
 	private ulong MmxPsrlQ(ulong value, int count)
 	{
-		if (count > 63) return 0;
+		if (count > 63)
+		{
+			return 0;
+		}
+
 		return value >> count;
 	}
 
 	private ulong MmxPsraW(ulong value, int count)
 	{
-		if (count > 15) count = 15;
+		if (count > 15)
+		{
+			count = 15;
+		}
+
 		ulong result = 0;
 		for (int i = 0; i < 4; i++)
 		{
@@ -5501,7 +5731,11 @@ public class JitCpu : IAsyncCpu
 
 	private ulong MmxPsraD(ulong value, int count)
 	{
-		if (count > 31) count = 31;
+		if (count > 31)
+		{
+			count = 31;
+		}
+
 		int lo = (int)(value & 0xFFFFFFFF);
 		int hi = (int)((value >> 32) & 0xFFFFFFFF);
 		return ((ulong)(uint)(hi >> count) << 32) | (uint)(lo >> count);
@@ -5513,15 +5747,31 @@ public class JitCpu : IAsyncCpu
 		for (int i = 0; i < 4; i++)
 		{
 			short v = (short)((a >> (i * 16)) & 0xFFFF);
-			if (v > 127) v = 127;
-			if (v < -128) v = -128;
+			if (v > 127)
+			{
+				v = 127;
+			}
+
+			if (v < -128)
+			{
+				v = -128;
+			}
+
 			result |= (ulong)((byte)v) << (i * 8);
 		}
 		for (int i = 0; i < 4; i++)
 		{
 			short v = (short)((b >> (i * 16)) & 0xFFFF);
-			if (v > 127) v = 127;
-			if (v < -128) v = -128;
+			if (v > 127)
+			{
+				v = 127;
+			}
+
+			if (v < -128)
+			{
+				v = -128;
+			}
+
 			result |= (ulong)((byte)v) << ((i + 4) * 8);
 		}
 		return result;
@@ -5533,15 +5783,31 @@ public class JitCpu : IAsyncCpu
 		for (int i = 0; i < 2; i++)
 		{
 			int v = (int)((a >> (i * 32)) & 0xFFFFFFFF);
-			if (v > 32767) v = 32767;
-			if (v < -32768) v = -32768;
+			if (v > 32767)
+			{
+				v = 32767;
+			}
+
+			if (v < -32768)
+			{
+				v = -32768;
+			}
+
 			result |= (ulong)((ushort)v) << (i * 16);
 		}
 		for (int i = 0; i < 2; i++)
 		{
 			int v = (int)((b >> (i * 32)) & 0xFFFFFFFF);
-			if (v > 32767) v = 32767;
-			if (v < -32768) v = -32768;
+			if (v > 32767)
+			{
+				v = 32767;
+			}
+
+			if (v < -32768)
+			{
+				v = -32768;
+			}
+
 			result |= (ulong)((ushort)v) << ((i + 2) * 16);
 		}
 		return result;
@@ -5553,15 +5819,31 @@ public class JitCpu : IAsyncCpu
 		for (int i = 0; i < 4; i++)
 		{
 			short v = (short)((a >> (i * 16)) & 0xFFFF);
-			if (v > 255) v = 255;
-			if (v < 0) v = 0;
+			if (v > 255)
+			{
+				v = 255;
+			}
+
+			if (v < 0)
+			{
+				v = 0;
+			}
+
 			result |= (ulong)((byte)v) << (i * 8);
 		}
 		for (int i = 0; i < 4; i++)
 		{
 			short v = (short)((b >> (i * 16)) & 0xFFFF);
-			if (v > 255) v = 255;
-			if (v < 0) v = 0;
+			if (v > 255)
+			{
+				v = 255;
+			}
+
+			if (v < 0)
+			{
+				v = 0;
+			}
+
 			result |= (ulong)((byte)v) << ((i + 4) * 8);
 		}
 		return result;
@@ -5997,8 +6279,10 @@ public class JitCpu : IAsyncCpu
 		var count = (byte)(insn.Op2Kind == OpKind.Immediate8 ? insn.Immediate8 : (_ecx & 0x1F));
 		
 		if (count == 0)
+		{
 			return;
-		
+		}
+
 		count &= 0x1F; // Modulo 32
 		
 		// Save original MSB for OF calculation
@@ -6031,8 +6315,10 @@ public class JitCpu : IAsyncCpu
 		var count = (byte)((insn.Op2Kind == OpKind.Immediate8 ? insn.Immediate8 : _ecx) & 0x1F);
 		
 		if (count == 0)
+		{
 			return;
-		
+		}
+
 		count &= 0x1F; // Modulo 32
 		
 		// Save original MSB for OF calculation

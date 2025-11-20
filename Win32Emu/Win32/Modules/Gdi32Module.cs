@@ -710,14 +710,24 @@ namespace Win32Emu.Win32.Modules
 			BitmapData dest, int xDest, int yDest, int wDest, int hDest, uint rop)
 		{
 			if (src.Bits == null || dest.Bits == null)
+			{
 				return;
+			}
 
 			var srcBytesPerPixel = (int)(src.BitCount / 8);
-			if (srcBytesPerPixel == 0) srcBytesPerPixel = 1;
+			if (srcBytesPerPixel == 0)
+			{
+				srcBytesPerPixel = 1;
+			}
+
 			var srcStride = ((src.Width * srcBytesPerPixel + 3) / 4) * 4;
 
 			var destBytesPerPixel = (int)(dest.BitCount / 8);
-			if (destBytesPerPixel == 0) destBytesPerPixel = 1;
+			if (destBytesPerPixel == 0)
+			{
+				destBytesPerPixel = 1;
+			}
+
 			var destStride = ((dest.Width * destBytesPerPixel + 3) / 4) * 4;
 
 			// Use bilinear interpolation for scaling
@@ -731,7 +741,9 @@ namespace Win32Emu.Win32.Modules
 
 					// Skip if out of bounds
 					if (destX < 0 || destX >= dest.Width || destY < 0 || destY >= dest.Height)
+					{
 						continue;
+					}
 
 					// Calculate source pixel position using nearest neighbor
 					var sx = xSrc + (dx * wSrc) / wDest;
@@ -739,7 +751,9 @@ namespace Win32Emu.Win32.Modules
 
 					// Skip if source is out of bounds
 					if (sx < 0 || sx >= src.Width || sy < 0 || sy >= src.Height)
+					{
 						continue;
+					}
 
 					// Get source pixel
 					var srcOffset = sy * srcStride + sx * srcBytesPerPixel;
@@ -783,23 +797,33 @@ namespace Win32Emu.Win32.Modules
 		private void FillBitmapRect(BitmapData bitmap, int x, int y, int w, int h, byte fillValue)
 		{
 			if (bitmap.Bits == null)
+			{
 				return;
+			}
 
 			var bytesPerPixel = (int)(bitmap.BitCount / 8);
-			if (bytesPerPixel == 0) bytesPerPixel = 1;
+			if (bytesPerPixel == 0)
+			{
+				bytesPerPixel = 1;
+			}
+
 			var stride = ((bitmap.Width * bytesPerPixel + 3) / 4) * 4;
 
 			for (var dy = 0; dy < h; dy++)
 			{
 				var py = y + dy;
 				if (py < 0 || py >= bitmap.Height)
+				{
 					continue;
+				}
 
 				for (var dx = 0; dx < w; dx++)
 				{
 					var px = x + dx;
 					if (px < 0 || px >= bitmap.Width)
+					{
 						continue;
+					}
 
 					var offset = py * stride + px * bytesPerPixel;
 					for (var b = 0; b < bytesPerPixel && offset + b < bitmap.Bits.Length; b++)
@@ -889,7 +913,11 @@ namespace Win32Emu.Win32.Modules
 			if (lpBits != 0 && nWidth > 0 && nHeight > 0)
 			{
 				var bytesPerPixel = (int)(nBitCount / 8);
-				if (bytesPerPixel == 0) bytesPerPixel = 1; // At least 1 byte per pixel
+				if (bytesPerPixel == 0)
+				{
+					bytesPerPixel = 1; // At least 1 byte per pixel
+				}
+
 				var stride = ((nWidth * bytesPerPixel + 3) / 4) * 4; // Align to 4 bytes
 				var size = stride * nHeight;
 				bitmapData.Bits = new byte[size];
@@ -903,7 +931,11 @@ namespace Win32Emu.Win32.Modules
 			{
 				// Create empty bitmap
 				var bytesPerPixel = (int)(nBitCount / 8);
-				if (bytesPerPixel == 0) bytesPerPixel = 1;
+				if (bytesPerPixel == 0)
+				{
+					bytesPerPixel = 1;
+				}
+
 				var stride = ((nWidth * bytesPerPixel + 3) / 4) * 4;
 				var size = stride * Math.Max(nHeight, 1);
 				bitmapData.Bits = new byte[size];

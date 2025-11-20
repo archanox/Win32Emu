@@ -119,9 +119,14 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
     public byte[] ConvertPalettizedToRGBA(byte[] indexedData, uint[] palette, int width, int height, int pitch)
     {
         if (indexedData == null)
-            throw new ArgumentNullException(nameof(indexedData));
+        {
+	        throw new ArgumentNullException(nameof(indexedData));
+        }
+
         if (palette == null)
-            throw new ArgumentNullException(nameof(palette));
+        {
+	        throw new ArgumentNullException(nameof(palette));
+        }
 
         _logger.LogDebug("[Software] Converting palettized data to RGBA: {Width}x{Height}, pitch={Pitch}", width, height, pitch);
 
@@ -144,7 +149,9 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
 
                 // If alpha is 0, assume fully opaque
                 if (a == 0)
-                    a = 0xFF;
+                {
+	                a = 0xFF;
+                }
 
                 rgbaData[rgbaIndex++] = r;
                 rgbaData[rgbaIndex++] = g;
@@ -159,7 +166,9 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
     public byte[] Convert16BitToRGBA(byte[] rgb565Data, int width, int height, int pitch)
     {
         if (rgb565Data == null)
-            throw new ArgumentNullException(nameof(rgb565Data));
+        {
+	        throw new ArgumentNullException(nameof(rgb565Data));
+        }
 
         _logger.LogDebug("[Software] Converting 16-bit RGB565 to RGBA: {Width}x{Height}, pitch={Pitch}", width, height, pitch);
 
@@ -197,7 +206,9 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
     public byte[] Convert24BitToRGBA(byte[] rgb24Data, int width, int height, int pitch)
     {
         if (rgb24Data == null)
-            throw new ArgumentNullException(nameof(rgb24Data));
+        {
+	        throw new ArgumentNullException(nameof(rgb24Data));
+        }
 
         _logger.LogDebug("[Software] Converting 24-bit RGB to RGBA: {Width}x{Height}, pitch={Pitch}", width, height, pitch);
 

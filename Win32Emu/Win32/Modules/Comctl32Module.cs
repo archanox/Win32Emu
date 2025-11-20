@@ -132,7 +132,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// Failure: -1
 	/// </returns>
 	/// <exception cref="NotImplementedException"></exception>
-	[DllModuleExport(333, Version = "5.81.4916.400")]
+	[DllModuleExport(333, Version = "5.81.4916.400", IsStub = true)]
 	private unsafe uint DPA_GetPtrIndex(in void* hdpa, void* p)
 	{
 		throw new NotImplementedException();
@@ -148,7 +148,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// </returns>
 	/// <remarks>The DPA_ functions can be used to create and manipulate arrays of pointers.</remarks>
 	/// <exception cref="NotImplementedException"></exception>
-	[DllModuleExport(328, Version = "5.81.4916.400")]
+	[DllModuleExport(328, Version = "5.81.4916.400", IsStub = true)]
 	private uint DPA_Create(in uint nGrow)
 	{
 		throw new NotImplementedException();
@@ -162,7 +162,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// <param name="nMaxLen">Size of buffer in characters</param>
 	/// <returns>The number of characters copied.</returns>
 	/// <exception cref="NotImplementedException"></exception>
-	[DllModuleExport(233, Version = "5.81.4916.400")]
+	[DllModuleExport(233, Version = "5.81.4916.400", IsStub = true)]
 	private uint Str_GetPtrA(in LpcStr lpcSrc, LpStr lpDest, in int nMaxLen)
 	{
 		throw new NotImplementedException();
@@ -270,7 +270,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// Ordinal 17 - InitCommonControls or similar initialization function.
 	/// void InitCommonControls();
 	/// </summary>
-	[DllModuleExport(17, Version = "5.81.4916.400")]
+	[DllModuleExport(17, Version = "5.81.4916.400", IsStub = true)]
 	private uint InitCommonControls(uint param1, uint param2, uint param3)
 	{
 		_logger.LogInformation("[Comctl32] Ordinal_17(param1=0x{Param1:X8}, param2=0x{Param2:X8}, param3=0x{Param3:X8})",
@@ -284,7 +284,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// Creates a property sheet page.
 	/// HPROPSHEETPAGE CreatePropertySheetPageA(LPCPROPSHEETPAGEA lppsp);
 	/// </summary>
-	[DllModuleExport(19, Version = "5.81.4916.400")]
+	[DllModuleExport(19, Version = "5.81.4916.400", IsStub = true)]
 	private uint CreatePropertySheetPageA(uint lppsp)
 	{
 		_logger.LogInformation("[Comctl32] CreatePropertySheetPageA(lppsp=0x{Lppsp:X8})", lppsp);
@@ -298,7 +298,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// Destroys a property sheet page.
 	/// BOOL DestroyPropertySheetPage(HPROPSHEETPAGE hPSPage);
 	/// </summary>
-	[DllModuleExport(24, Version = "5.81.4916.400")]
+	[DllModuleExport(24, Version = "5.81.4916.400", IsStub = true)]
 	private uint DestroyPropertySheetPage(uint hPSPage)
 	{
 		_logger.LogInformation("[Comctl32] DestroyPropertySheetPage(hPSPage=0x{HPSPage:X8})", hPSPage);
@@ -311,7 +311,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// Creates and displays a property sheet.
 	/// INT_PTR PropertySheetA(LPCPROPSHEETHEADERA lppsh);
 	/// </summary>
-	[DllModuleExport(88, Version = "5.81.4916.400")]
+	[DllModuleExport(88, Version = "5.81.4916.400", IsStub = true)]
 	private uint PropertySheetA(uint lppsh)
 	{
 		_logger.LogInformation("[Comctl32] PropertySheetA(lppsh=0x{Lppsh:X8})", lppsh);
@@ -369,7 +369,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	///   [in] int        iOverlay
 	/// );
 	/// </summary>
-	[DllModuleExport(82, Version = "5.81.4916.400")]
+	[DllModuleExport(82, Version = "5.81.4916.400", IsStub = true)]
 	private uint ImageList_SetOverlayImage(uint himl, int iImage, int iOverlay)
 	{
 		_logger.LogInformation("[Comctl32] ImageList_SetOverlayImage(himl=0x{Himl:X8}, iImage={IImage}, iOverlay={IOverlay})",
@@ -403,7 +403,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Sets the background color in an image list.
 	/// </summary>
-	[DllModuleExport(76, Version = "5.81.4916.400")]
+	[DllModuleExport(76, Version = "5.81.4916.400", IsStub = true)]
 	private uint ImageList_SetBkColor(uint himl, uint clrBk)
 	{
 		_logger.LogInformation("[Comctl32] ImageList_SetBkColor(himl=0x{Himl:X8}, clrBk=0x{ClrBk:X8})", himl, clrBk);

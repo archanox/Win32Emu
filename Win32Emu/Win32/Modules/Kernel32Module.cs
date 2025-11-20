@@ -1009,7 +1009,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(479, entryPoint: 0x00010830, Version = "5.1.2600.6532")]
 	public uint GetVersionExA(uint lpVersionInformation)
 	{
-		if (lpVersionInformation == 0) return (uint)NativeTypes.Win32Bool.FALSE;
+		if (lpVersionInformation == 0)
+		{
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
 
 		var size = _env.MemRead32(lpVersionInformation);
 		if (size != 156 && size != 148) // sizeof(OSVERSIONINFOEXA) and sizeof(OSVERSIONINFOA)
@@ -1056,7 +1059,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(480, entryPoint: 0x0000AF05, Version = "5.1.2600.6532")]
 	public uint GetVersionExW(uint lpVersionInformation)
 	{
-		if (lpVersionInformation == 0) return (uint)NativeTypes.Win32Bool.FALSE;
+		if (lpVersionInformation == 0)
+		{
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
 
 		var size = _env.MemRead32(lpVersionInformation);
 		if (size != 284 && size != 276) // sizeof(OSVERSIONINFOEXW) and sizeof(OSVERSIONINFOW)
@@ -4380,8 +4386,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			_logger.LogInformation("[Kernel32] CompareStringA: '{Str1}' vs '{Str2}' = {Result}", str1, str2, result);
 
-			if (result < 0) return cstrLessThan;
-			if (result > 0) return cstrGreaterThan;
+			if (result < 0)
+			{
+				return cstrLessThan;
+			}
+
+			if (result > 0)
+			{
+				return cstrGreaterThan;
+			}
+
 			return cstrEqual;
 		}
 		catch (Exception ex)
@@ -4419,7 +4433,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				while (true)
 				{
 					var ch = (char)_env.MemRead16(lpString1 + offset);
-					if (ch == 0) break;
+					if (ch == 0)
+					{
+						break;
+					}
+
 					sb.Append(ch);
 					offset += 2;
 				}
@@ -4447,7 +4465,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				while (true)
 				{
 					var ch = (char)_env.MemRead16(lpString2 + offset);
-					if (ch == 0) break;
+					if (ch == 0)
+					{
+						break;
+					}
+
 					sb.Append(ch);
 					offset += 2;
 				}
@@ -4471,8 +4493,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			_logger.LogInformation("[Kernel32] CompareStringW: '{Str1}' vs '{Str2}' = {Result}", str1, str2, result);
 
-			if (result < 0) return cstrLessThan;
-			if (result > 0) return cstrGreaterThan;
+			if (result < 0)
+			{
+				return cstrLessThan;
+			}
+
+			if (result > 0)
+			{
+				return cstrGreaterThan;
+			}
+
 			return cstrEqual;
 		}
 		catch (Exception ex)
@@ -6258,10 +6288,25 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Map Win32 attributes to .NET FileAttributes
 			FileAttributes attributes = FileAttributes.Normal;
 
-			if ((dwFileAttributes & 0x01) != 0) attributes |= FileAttributes.ReadOnly;    // FILE_ATTRIBUTE_READONLY
-			if ((dwFileAttributes & 0x02) != 0) attributes |= FileAttributes.Hidden;      // FILE_ATTRIBUTE_HIDDEN
-			if ((dwFileAttributes & 0x04) != 0) attributes |= FileAttributes.System;      // FILE_ATTRIBUTE_SYSTEM
-			if ((dwFileAttributes & 0x20) != 0) attributes |= FileAttributes.Archive;     // FILE_ATTRIBUTE_ARCHIVE
+			if ((dwFileAttributes & 0x01) != 0)
+			{
+				attributes |= FileAttributes.ReadOnly;    // FILE_ATTRIBUTE_READONLY
+			}
+
+			if ((dwFileAttributes & 0x02) != 0)
+			{
+				attributes |= FileAttributes.Hidden;      // FILE_ATTRIBUTE_HIDDEN
+			}
+
+			if ((dwFileAttributes & 0x04) != 0)
+			{
+				attributes |= FileAttributes.System;      // FILE_ATTRIBUTE_SYSTEM
+			}
+
+			if ((dwFileAttributes & 0x20) != 0)
+			{
+				attributes |= FileAttributes.Archive;     // FILE_ATTRIBUTE_ARCHIVE
+			}
 
 			fileInfo.Attributes = attributes;
 			_logger.LogInformation("[Kernel32] SetFileAttributesA: Set attributes for \"{RealPath}\"", realPath);
@@ -6293,16 +6338,24 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			const uint totalNumberOfClusters = 2000000; // ~64GB total space
 
 			if (lpSectorsPerCluster != 0)
+			{
 				_env.MemWrite32(lpSectorsPerCluster, sectorsPerCluster);
+			}
 
 			if (lpBytesPerSector != 0)
+			{
 				_env.MemWrite32(lpBytesPerSector, bytesPerSector);
+			}
 
 			if (lpNumberOfFreeClusters != 0)
+			{
 				_env.MemWrite32(lpNumberOfFreeClusters, numberOfFreeClusters);
+			}
 
 			if (lpTotalNumberOfClusters != 0)
+			{
 				_env.MemWrite32(lpTotalNumberOfClusters, totalNumberOfClusters);
+			}
 
 			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
@@ -6479,22 +6532,38 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				_logger.LogInformation("[Kernel32] DeviceIoControl: IOCTL_CDROM_READ_TOC - not fully implemented");
 				// This would require reading CD track information from CHD metadata
 				// For now, return failure
-				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
+				if (lpBytesReturned != 0)
+				{
+					_env.MemWrite32(lpBytesReturned, 0);
+				}
+
 				return 0; // FALSE
 
 			case IOCTL_CDROM_GET_LAST_SESSION:
 				_logger.LogInformation("[Kernel32] DeviceIoControl: IOCTL_CDROM_GET_LAST_SESSION - not fully implemented");
-				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
+				if (lpBytesReturned != 0)
+				{
+					_env.MemWrite32(lpBytesReturned, 0);
+				}
+
 				return 0; // FALSE
 
 			case IOCTL_CDROM_RAW_READ:
 				_logger.LogInformation("[Kernel32] DeviceIoControl: IOCTL_CDROM_RAW_READ - not fully implemented");
-				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
+				if (lpBytesReturned != 0)
+				{
+					_env.MemWrite32(lpBytesReturned, 0);
+				}
+
 				return 0; // FALSE
 
 			default:
 				_logger.LogDebug("[Kernel32] DeviceIoControl: Unsupported IOCTL code 0x{DwIoControlCode:X}", dwIoControlCode);
-				if (lpBytesReturned != 0) _env.MemWrite32(lpBytesReturned, 0);
+				if (lpBytesReturned != 0)
+				{
+					_env.MemWrite32(lpBytesReturned, 0);
+				}
+
 				return 0; // FALSE - not supported
 		}
 	}
@@ -6822,7 +6891,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] MulDiv(nNumber={NNumber}, nNumerator={NNumerator}, nDenominator={NDenominator})",
 			nNumber, nNumerator, nDenominator);
-		if (nDenominator == 0) return -1;
+		if (nDenominator == 0)
+		{
+			return -1;
+		}
+
 		return (int)((long)nNumber * nNumerator / nDenominator);
 	}
 
@@ -8667,10 +8740,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			// Japanese Shift-JIS (932): lead bytes 0x81-0x9F, 0xE0-0xFC
 			if (codePage == CodePage.Japan && ((b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC)))
+			{
 				return (uint)NativeTypes.Win32Bool.TRUE;
+			}
+
 			// Chinese Simplified (GBK, 936), Korean (949), Chinese Traditional (Big5, 950): lead bytes 0x81-0xFE
 			if ((codePage == CodePage.China || codePage == CodePage.Korea || codePage == CodePage.Taiwan) && (b >= 0x81 && b <= 0xFE))
+			{
 				return (uint)NativeTypes.Win32Bool.TRUE;
+			}
 		}
 
 		// Not a DBCS lead byte or not a DBCS code page
@@ -8692,7 +8770,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			destination, source, length);
 
 		if (length == 0)
+		{
 			return 0;
+		}
 
 		try
 		{
@@ -8738,7 +8818,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			destination, length);
 
 		if (length == 0)
+		{
 			return 0;
+		}
 
 		try
 		{
@@ -8782,9 +8864,19 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		uint desiredAccess = GENERIC_READ;
 		uint creationDisposition = OPEN_EXISTING;
 
-		if ((uStyle & 0x0001) != 0) desiredAccess = GENERIC_WRITE;
-		else if ((uStyle & 0x0002) != 0) desiredAccess = GENERIC_READ | GENERIC_WRITE;
-		if ((uStyle & 0x1000) != 0) creationDisposition = CREATE_ALWAYS;
+		if ((uStyle & 0x0001) != 0)
+		{
+			desiredAccess = GENERIC_WRITE;
+		}
+		else if ((uStyle & 0x0002) != 0)
+		{
+			desiredAccess = GENERIC_READ | GENERIC_WRITE;
+		}
+
+		if ((uStyle & 0x1000) != 0)
+		{
+			creationDisposition = CREATE_ALWAYS;
+		}
 
 		// For OF_EXIST, just check file exists
 		if ((uStyle & 0x4000) != 0)

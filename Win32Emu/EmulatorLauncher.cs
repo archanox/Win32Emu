@@ -492,8 +492,10 @@ public static class EmulatorLauncher
 	private static void EnsureDirectoryExists(VirtualFileSystem.DiskVirtualFileSystem vfs, string directoryPath, ILogger logger)
 	{
 		if (string.IsNullOrEmpty(directoryPath) || directoryPath == "\\" || directoryPath == "/")
+		{
 			return;
-		
+		}
+
 		// Split path into components
 		var parts = directoryPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
 		var currentPath = "";

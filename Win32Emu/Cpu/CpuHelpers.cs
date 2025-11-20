@@ -106,11 +106,26 @@ public static class CpuHelpers
 	public static bool IsEbpValid(uint ebp, ulong memorySize)
 	{
 		// Check for obviously invalid values
-		if (ebp == 0) return false;
-		if (ebp < MIN_VALID_EBP) return false;
-		if (MemoryRegions.IsInImportHookRange(ebp)) return false;
-		if (ebp >= memorySize) return false;
-		
+		if (ebp == 0)
+		{
+			return false;
+		}
+
+		if (ebp < MIN_VALID_EBP)
+		{
+			return false;
+		}
+
+		if (MemoryRegions.IsInImportHookRange(ebp))
+		{
+			return false;
+		}
+
+		if (ebp >= memorySize)
+		{
+			return false;
+		}
+
 		return true;
 	}
 
@@ -273,7 +288,10 @@ public static class CpuHelpers
 		{
 			// Do not catch critical exceptions that should not be handled
 			if (ex is StackOverflowException || ex is OutOfMemoryException || ex is ThreadAbortException)
+			{
 				throw;
+			}
+
 			logger?.LogTrace(ex, "[{LogPrefix}] Failed to restore EBP from stack", logPrefix);
 		}
 	}
@@ -297,7 +315,9 @@ public static class CpuHelpers
 		LogLevel logLevel = LogLevel.Debug)
 	{
 		if (logger == null || !logger.IsEnabled(logLevel))
+		{
 			return;
+		}
 
 		var currentEbx = cpu.GetRegister("EBX");
 		var currentEsi = cpu.GetRegister("ESI");

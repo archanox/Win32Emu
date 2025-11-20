@@ -577,8 +577,15 @@ namespace Win32Emu.Win32.Modules
 			{
 				var b1 = _env.MemRead8(ptr1 + i);
 				var b2 = _env.MemRead8(ptr2 + i);
-				if (b1 < b2) return -1;
-				if (b1 > b2) return 1;
+				if (b1 < b2)
+				{
+					return -1;
+				}
+
+				if (b1 > b2)
+				{
+					return 1;
+				}
 			}
 			return 0;
 		}

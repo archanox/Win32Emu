@@ -570,13 +570,22 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
         };
 
         var result = _vk!.CreateSemaphore(_device, &semaphoreInfo, null, out _imageAvailableSemaphore);
-        if (result != Result.Success) return false;
+        if (result != Result.Success)
+        {
+	        return false;
+        }
 
         result = _vk.CreateSemaphore(_device, &semaphoreInfo, null, out _renderFinishedSemaphore);
-        if (result != Result.Success) return false;
+        if (result != Result.Success)
+        {
+	        return false;
+        }
 
         result = _vk.CreateFence(_device, &fenceInfo, null, out _inFlightFence);
-        if (result != Result.Success) return false;
+        if (result != Result.Success)
+        {
+	        return false;
+        }
 
         return true;
     }

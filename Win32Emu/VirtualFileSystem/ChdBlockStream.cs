@@ -49,13 +49,35 @@ internal class ChdBlockStream : Stream
 
 	public override int Read(byte[] buffer, int offset, int count)
 	{
-		if (_disposed) throw new ObjectDisposedException(nameof(ChdBlockStream));
-		if (buffer == null) throw new ArgumentNullException(nameof(buffer));
-		if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
-		if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
-		if (offset + count > buffer.Length) throw new ArgumentException("Buffer too small");
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(ChdBlockStream));
+		}
 
-		if (_position >= Length) return 0;
+		if (buffer == null)
+		{
+			throw new ArgumentNullException(nameof(buffer));
+		}
+
+		if (offset < 0)
+		{
+			throw new ArgumentOutOfRangeException(nameof(offset));
+		}
+
+		if (count < 0)
+		{
+			throw new ArgumentOutOfRangeException(nameof(count));
+		}
+
+		if (offset + count > buffer.Length)
+		{
+			throw new ArgumentException("Buffer too small");
+		}
+
+		if (_position >= Length)
+		{
+			return 0;
+		}
 
 		int totalRead = 0;
 		while (count > 0 && _position < Length)
@@ -119,7 +141,10 @@ internal class ChdBlockStream : Stream
 
 	public override long Seek(long offset, SeekOrigin origin)
 	{
-		if (_disposed) throw new ObjectDisposedException(nameof(ChdBlockStream));
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(ChdBlockStream));
+		}
 
 		long newPosition = origin switch
 		{
@@ -129,8 +154,15 @@ internal class ChdBlockStream : Stream
 			_ => throw new ArgumentException("Invalid seek origin", nameof(origin))
 		};
 
-		if (newPosition < 0) throw new IOException("Seek before beginning of stream");
-		if (newPosition > Length) newPosition = Length;
+		if (newPosition < 0)
+		{
+			throw new IOException("Seek before beginning of stream");
+		}
+
+		if (newPosition > Length)
+		{
+			newPosition = Length;
+		}
 
 		_position = newPosition;
 		return _position;

@@ -310,7 +310,11 @@ public class ApiCallTracer : IDisposable
 			var first = true;
 			foreach (var (name, value) in record.Parameters)
 			{
-				if (!first) sb.Append(", ");
+				if (!first)
+				{
+					sb.Append(", ");
+				}
+
 				sb.Append($"{name}={FormatValue(value)}");
 				first = false;
 			}

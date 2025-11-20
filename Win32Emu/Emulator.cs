@@ -245,10 +245,26 @@ public sealed class Emulator : IDisposable
         foreach (var section in _image.Sections)
         {
             var flags = new List<string>();
-            if (section.IsExecutable) flags.Add("EXEC");
-            if (section.IsData) flags.Add("DATA");
-            if (section.IsReadable) flags.Add("READ");
-            if (section.IsWritable) flags.Add("WRITE");
+            if (section.IsExecutable)
+            {
+	            flags.Add("EXEC");
+            }
+
+            if (section.IsData)
+            {
+	            flags.Add("DATA");
+            }
+
+            if (section.IsReadable)
+            {
+	            flags.Add("READ");
+            }
+
+            if (section.IsWritable)
+            {
+	            flags.Add("WRITE");
+            }
+
             LogDebug($"[Loader]   Section '{section.Name}': RVA=0x{section.VirtualAddress:X8} Size=0x{section.VirtualSize:X8} Flags=[{string.Join(",", flags)}]");
         }
 

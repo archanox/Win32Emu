@@ -208,8 +208,10 @@ public class ComVtableDispatcher
 			{
 				// Rethrow critical exceptions
 				if (ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException)
+				{
 					throw;
-				
+				}
+
 				_logger.LogError(ex, "[COM] Exception in {MethodName} async handler", methodName);
 				returnValue = 0x80004005; // E_FAIL
 			}

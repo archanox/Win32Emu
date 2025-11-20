@@ -198,8 +198,11 @@ public class ChdDiscReader : IDisposable
 			foreach (var part in parts)
 			{
 				var kv = part.Split(':', 2);
-				if (kv.Length != 2) continue;
-				
+				if (kv.Length != 2)
+				{
+					continue;
+				}
+
 				switch (kv[0])
 				{
 					case "TRACK":

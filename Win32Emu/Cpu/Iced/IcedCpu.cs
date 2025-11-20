@@ -1463,10 +1463,14 @@ public class IcedCpu : IAsyncCpu
 				byte r = (byte)sum;
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg8(insn.GetOpRegister(0), r);
+				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
 					_mem.Write8(CalcMemAddress(insn), r);
-					
+				}
+
 				SetFlagVal(Cf, (sum >> 8) != 0);
 				SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x80) != 0);
 				SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
@@ -1484,10 +1488,14 @@ public class IcedCpu : IAsyncCpu
 				ushort r = (ushort)sum;
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg16(insn.GetOpRegister(0), r);
+				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
 					_mem.Write16(CalcMemAddress(insn), r);
-					
+				}
+
 				SetFlagVal(Cf, (sum >> 16) != 0);
 				SetFlagVal(Of, (~(a ^ b) & (a ^ r) & 0x8000) != 0);
 				SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
@@ -1526,10 +1534,14 @@ public class IcedCpu : IAsyncCpu
 				byte r = (byte)(a - b);
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg8(insn.GetOpRegister(0), r);
+				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
 					_mem.Write8(CalcMemAddress(insn), r);
-					
+				}
+
 				SetFlagsSub(a, b, r, 0x80);
 				break;
 			}
@@ -1542,10 +1554,14 @@ public class IcedCpu : IAsyncCpu
 				ushort r = (ushort)(a - b);
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg16(insn.GetOpRegister(0), r);
+				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
 					_mem.Write16(CalcMemAddress(insn), r);
-					
+				}
+
 				SetFlagsSub(a, b, r, 0x8000);
 				break;
 			}
@@ -1713,10 +1729,14 @@ public class IcedCpu : IAsyncCpu
 				byte r = (byte)(a ^ b);
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg8(insn.GetOpRegister(0), r);
+				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
 					_mem.Write8(CalcMemAddress(insn), r);
-					
+				}
+
 				ClearFlag(Cf);
 				ClearFlag(Of);
 				ClearFlag(Af);
@@ -1732,10 +1752,14 @@ public class IcedCpu : IAsyncCpu
 				ushort r = (ushort)(a ^ b);
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg16(insn.GetOpRegister(0), r);
+				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
 					_mem.Write16(CalcMemAddress(insn), r);
-					
+				}
+
 				ClearFlag(Cf);
 				ClearFlag(Of);
 				ClearFlag(Af);
@@ -2122,10 +2146,14 @@ public class IcedCpu : IAsyncCpu
 				byte r = (byte)(a + 1);
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg8(insn.GetOpRegister(0), r);
+				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
 					_mem.Write8(CalcMemAddress(insn), r);
-					
+				}
+
 				// Overflow only occurs when incrementing max positive (0x7F) to min negative (0x80)
 				SetFlagVal(Of, a == 0x7F); // Overflow from 0x7F to 0x80
 				SetFlagVal(Af, ((a ^ 1 ^ r) & 0x10) != 0);
@@ -2139,10 +2167,14 @@ public class IcedCpu : IAsyncCpu
 				ushort r = (ushort)(a + 1);
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg16(insn.GetOpRegister(0), r);
+				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
 					_mem.Write16(CalcMemAddress(insn), r);
-					
+				}
+
 				SetFlagVal(Of, a == 0x7FFF); // Overflow from 0x7FFF to 0x8000
 				SetFlagVal(Af, ((a ^ 1 ^ r) & 0x10) != 0);
 				UpdateLogicResultFlags(r, 0x8000);
@@ -2174,10 +2206,14 @@ public class IcedCpu : IAsyncCpu
 				byte r = (byte)(a - 1);
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg8(insn.GetOpRegister(0), r);
+				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
 					_mem.Write8(CalcMemAddress(insn), r);
-					
+				}
+
 				// Overflow only occurs when decrementing min negative (0x80) to max positive (0x7F)
 				SetFlagVal(Of, a == 0x80); // Overflow from 0x80 to 0x7F
 				SetFlagVal(Af, ((a ^ 1 ^ r) & 0x10) != 0);
@@ -2191,10 +2227,14 @@ public class IcedCpu : IAsyncCpu
 				ushort r = (ushort)(a - 1);
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg16(insn.GetOpRegister(0), r);
+				}
 				else if (insn.GetOpKind(0) == OpKind.Memory)
+				{
 					_mem.Write16(CalcMemAddress(insn), r);
-					
+				}
+
 				SetFlagVal(Of, a == 0x8000); // Overflow from 0x8000 to 0x7FFF
 				SetFlagVal(Af, ((a ^ 1 ^ r) & 0x10) != 0);
 				UpdateLogicResultFlags(r, 0x8000);
@@ -2402,9 +2442,14 @@ public class IcedCpu : IAsyncCpu
 				byte r = (byte)~a;
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg8(insn.GetOpRegister(0), r);
+				}
 				else
+				{
 					_mem.Write8(CalcMemAddress(insn), r);
+				}
+
 				break;
 			}
 			case 16:
@@ -2413,9 +2458,14 @@ public class IcedCpu : IAsyncCpu
 				ushort r = (ushort)~a;
 				
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg16(insn.GetOpRegister(0), r);
+				}
 				else
+				{
 					_mem.Write16(CalcMemAddress(insn), r);
+				}
+
 				break;
 			}
 			default:
@@ -2439,9 +2489,14 @@ public class IcedCpu : IAsyncCpu
 				byte a = insn.GetOpKind(0) == OpKind.Register ? GetReg8(insn.GetOpRegister(0)) : _mem.Read8(CalcMemAddress(insn));
 				byte r = (byte)(0 - a);
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg8(insn.GetOpRegister(0), r);
+				}
 				else
+				{
 					_mem.Write8(CalcMemAddress(insn), r);
+				}
+
 				SetFlagsSub(0, a, r, 0x80);
 				break;
 			}
@@ -2450,9 +2505,14 @@ public class IcedCpu : IAsyncCpu
 				ushort a = insn.GetOpKind(0) == OpKind.Register ? GetReg16(insn.GetOpRegister(0)) : _mem.Read16(CalcMemAddress(insn));
 				ushort r = (ushort)(0 - a);
 				if (insn.GetOpKind(0) == OpKind.Register)
+				{
 					SetReg16(insn.GetOpRegister(0), r);
+				}
 				else
+				{
 					_mem.Write16(CalcMemAddress(insn), r);
+				}
+
 				SetFlagsSub(0, a, r, 0x8000);
 				break;
 			}
@@ -2830,7 +2890,9 @@ public class IcedCpu : IAsyncCpu
 			operation();
 			_ecx--;
 			if (!GetFlag(Zf))
+			{
 				break; // Stop when not equal
+			}
 		}
 	}
 
@@ -2847,7 +2909,9 @@ public class IcedCpu : IAsyncCpu
 			operation();
 			_ecx--;
 			if (GetFlag(Zf))
+			{
 				break; // Stop when equal
+			}
 		}
 	}
 
@@ -4578,10 +4642,14 @@ public class IcedCpu : IAsyncCpu
 		
 		// Mask source to operand size
 		if (opSize == 16)
+		{
 			src &= 0xFFFF;
+		}
 		else if (opSize == 8)
+		{
 			src &= 0xFF;
-		
+		}
+
 		if (src == 0)
 		{
 			// No bits set - set ZF, destination is undefined (we'll leave it unchanged)
@@ -4607,10 +4675,14 @@ public class IcedCpu : IAsyncCpu
 		
 		// Mask source to operand size
 		if (opSize == 16)
+		{
 			src &= 0xFFFF;
+		}
 		else if (opSize == 8)
+		{
 			src &= 0xFF;
-		
+		}
+
 		if (src == 0)
 		{
 			// No bits set - set ZF, destination is undefined (we'll leave it unchanged)
@@ -4650,8 +4722,10 @@ public class IcedCpu : IAsyncCpu
 		var count = (byte)(insn.Op2Kind == OpKind.Immediate8 ? insn.Immediate8 : (_ecx & 0x1F));
 		
 		if (count == 0)
+		{
 			return;
-		
+		}
+
 		count &= 0x1F; // Modulo 32
 		
 		// Save original MSB for OF calculation
@@ -4687,8 +4761,10 @@ public class IcedCpu : IAsyncCpu
 		var count = (byte)(insn.Op2Kind == OpKind.Immediate8 ? insn.Immediate8 : (_ecx & 0x1F));
 		
 		if (count == 0)
+		{
 			return;
-		
+		}
+
 		count &= 0x1F; // Modulo 32
 		
 		// Save original MSB for OF calculation
@@ -5466,18 +5542,26 @@ public class IcedCpu : IAsyncCpu
 		{
 			var baseReg = insn.MemoryBase;
 			if (Is16BitRegister(baseReg))
+			{
 				offset += GetReg16(baseReg);
+			}
 			else
+			{
 				offset += GetReg32(baseReg);
+			}
 		}
 		if (insn.MemoryIndex != Register.None)
 		{
 			var indexReg = insn.MemoryIndex;
 			var scale = insn.MemoryIndexScale;
 			if (Is16BitRegister(indexReg))
+			{
 				offset += (uint)(GetReg16(indexReg) * scale);
+			}
 			else
+			{
 				offset += (uint)(GetReg32(indexReg) * scale);
+			}
 		}
 		return offset;
 	}
