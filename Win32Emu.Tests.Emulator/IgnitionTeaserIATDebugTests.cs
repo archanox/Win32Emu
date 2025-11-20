@@ -253,6 +253,7 @@ public class IgnitionTeaserIATDebugTests
 		public void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData) { }
         public void OnDialogControlEnabledChanged(uint dialogHandle, int controlId, bool enabled) { }
 		public void OnDisplayUpdate(DisplayUpdateInfo info) { }
+		public Task<string?> OnBrowseForFolder(string? title, string? rootPath) => Task.FromResult<string?>(null);
 	}
 
 	private class XunitLogger : ILogger

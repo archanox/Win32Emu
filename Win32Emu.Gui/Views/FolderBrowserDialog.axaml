@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:Win32Emu.Gui.Views"
         x:Class="Win32Emu.Gui.Views.FolderBrowserDialog"
         Title="Browse For Folder"
         Width="500"
@@ -33,7 +34,7 @@
             <TreeView Name="FolderTreeView"
                       SelectionMode="Single">
                 <TreeView.ItemTemplate>
-                    <TreeDataTemplate ItemsSource="{Binding Children}">
+                    <TreeDataTemplate DataType="views:FolderTreeItem" ItemsSource="{Binding Children}">
                         <TextBlock Text="{Binding DisplayName}" />
                     </TreeDataTemplate>
                 </TreeView.ItemTemplate>
