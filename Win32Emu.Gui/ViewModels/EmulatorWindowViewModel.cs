@@ -16,7 +16,7 @@ namespace Win32Emu.Gui.ViewModels;
 
 public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 {
-    private EmulatorService? _emulatorService;
+    private volatile EmulatorService? _emulatorService;
     private readonly ILogger? _logger;
     private GuiMessageDispatcherIntegration? _messageDispatcherIntegration;
 
@@ -86,6 +86,9 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     /// </summary>
     public void SetEmulatorService(EmulatorService service)
     {
+        if (_emulatorService != null)
+            throw new InvalidOperationException("EmulatorService already set");
+        
         _emulatorService = service;
     }
 
