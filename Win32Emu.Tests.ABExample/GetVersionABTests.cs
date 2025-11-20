@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using EasyHook;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Xunit;
 
@@ -9,6 +10,7 @@ namespace Win32Emu.Tests.ABExample;
 /// <summary>
 /// Base class for A-B tests that compare Win32Emu behavior against native Windows DLLs.
 /// This demonstrates the pattern for implementing A-B tests.
+/// Uses EasyHook for managed DLL loading instead of direct P/Invoke where possible.
 /// </summary>
 public abstract class ABTestBase : IDisposable
 {
@@ -22,7 +24,8 @@ public abstract class ABTestBase : IDisposable
 		{
 			try
 			{
-				_nativeModule = LoadLibrary(dllName);
+				// Use EasyHook's NativeAPI for managed DLL loading
+				_nativeModule = NativeAPI.LoadLibrary(dllName);
 				_nativeAvailable = _nativeModule != IntPtr.Zero;
 			}
 			catch
@@ -36,6 +39,7 @@ public abstract class ABTestBase : IDisposable
 	{
 		if (_nativeModule != IntPtr.Zero && OperatingSystem.IsWindows())
 		{
+			// EasyHook doesn't provide FreeLibrary, use P/Invoke
 			FreeLibrary(_nativeModule);
 		}
 		GC.SuppressFinalize(this);
@@ -50,11 +54,25 @@ public abstract class ABTestBase : IDisposable
 		// If native not available, test passes (documents Win32Emu behavior)
 	}
 
-	[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
-	private static extern IntPtr LoadLibrary(string lpFileName);
+	/// <summary>
+	/// Gets the address of an exported function.
+	/// </summary>
+	protected IntPtr GetProcAddress(string functionName)
+	{
+		if (_nativeModule == IntPtr.Zero)
+		{
+			return IntPtr.Zero;
+		}
+		// Use P/Invoke GetProcAddress since EasyHook's LocalHook.GetProcAddress 
+		// takes a module name string, not a handle
+		return GetProcAddressInternal(_nativeModule, functionName);
+	}
 
 	[DllImport("kernel32.dll", SetLastError = true)]
 	private static extern bool FreeLibrary(IntPtr hModule);
+
+	[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi, EntryPoint = "GetProcAddress")]
+	private static extern IntPtr GetProcAddressInternal(IntPtr hModule, string lpProcName);
 }
 
 /// <summary>

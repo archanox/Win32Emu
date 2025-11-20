@@ -43,14 +43,19 @@ dotnet run --project Win32Emu.Tools.TestGenerator \
 
 **ABTestBase Class:**
 - Handles platform detection (Windows vs Linux/macOS)
-- Loads native DLLs on Windows via P/Invoke
+- Loads native DLLs on Windows via EasyHook's `NativeAPI.LoadLibrary()`
 - Gracefully degrades on non-Windows platforms
 - Provides comparison helpers
 
 **NativeDllLoader Class:**
-- Uses Windows LoadLibrary/GetProcAddress APIs
+- Uses EasyHook for managed DLL loading instead of direct P/Invoke
 - Only available on Windows
 - Throws PlatformNotSupportedException on other platforms
+
+**EasyHook Integration:**
+- Leverages [EasyHook](https://github.com/EasyHook/EasyHook) for managed native DLL loading
+- Uses `NativeAPI.LoadLibrary()` for cleaner API than raw P/Invoke
+- Provides foundation for future hooking-based testing scenarios
 
 **Platform Behavior:**
 - **Windows**: Full A-B comparison against native DLLs
