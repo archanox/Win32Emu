@@ -504,15 +504,33 @@
                 <strong>📋 PE File Analysis</strong><br>
                 Check compatibility of Windows PE executables with Win32Emu by analyzing their imported DLLs and functions.
                 <br><br>
-                <strong>Two options available:</strong>
+                <strong>Three options available:</strong>
                 <ul style="margin: 10px 0 0 20px;">
-                    <li><strong>Command-line Tool (Recommended)</strong> - Download and run <code>Win32Emu.Tools.PeAnalyzer</code></li>
+                    <li><strong>Blazor WebAssembly Analyzer (Recommended)</strong> - <a href="pe-analyzer/" target="_blank">Launch in new tab</a> - Full-featured client-side PE analysis</li>
+                    <li><strong>Command-line Tool</strong> - Download and run <code>Win32Emu.Tools.PeAnalyzer</code></li>
                     <li><strong>Browser Upload (Demo)</strong> - Upload files below for a mock demonstration</li>
                 </ul>
             </div>
 
+            <div style="margin: 20px 0; padding: 20px; background: #e7f3ff; border-radius: 6px; border-left: 4px solid var(--primary-color);">
+                <h3>🌐 Option 1: Blazor WebAssembly Analyzer (NEW!)</h3>
+                <p>A fully client-side PE file analyzer running in your browser using WebAssembly.</p>
+                <a href="pe-analyzer/" target="_blank" class="btn btn-primary" style="display: inline-block; padding: 12px 24px; background: var(--primary-color); color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                    🚀 Launch PE Analyzer
+                </a>
+                <div style="margin-top: 15px; font-size: 14px; color: #586069;">
+                    <strong>Features:</strong>
+                    <ul style="margin: 5px 0 0 20px;">
+                        <li>100% client-side - no server uploads</li>
+                        <li>Powered by PeNet + Blazor WebAssembly</li>
+                        <li>Detailed compatibility reports</li>
+                        <li>Per-function analysis</li>
+                    </ul>
+                </div>
+            </div>
+
             <div style="margin: 20px 0;">
-                <h3>Option 1: Command-line Tool 🔧</h3>
+                <h3>Option 2: Command-line Tool 🔧</h3>
                 <div style="background: #f6f8fa; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 13px;">
                     <div># Clone the repository</div>
                     <div>git clone https://github.com/archanox/Win32Emu.git</div>
@@ -528,7 +546,7 @@
                 </p>
             </div>
 
-            <h3 style="margin-top: 30px;">Option 2: Browser Demo 🌐</h3>
+            <h3 style="margin-top: 30px;">Option 3: Browser Demo 🌐</h3>
 
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
