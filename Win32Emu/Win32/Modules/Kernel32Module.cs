@@ -146,11 +146,17 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GETMODULEHANDLEA":
 				returnValue = GetModuleHandleA(a.LpcStr(0));
 				return true;
+			case "GETMODULEHANDLEW":
+				returnValue = GetModuleHandleW(a.UInt32(0));
+				return true;
 			case "GETMODULEFILENAMEA":
 				returnValue = GetModuleFileNameA(a.Ptr(0), a.Lpstr(1), a.UInt32(2));
 				return true;
 			case "LOADLIBRARYA":
 				returnValue = LoadLibraryA(a.LpcStr(0));
+				return true;
+			case "LOADLIBRARYW":
+				returnValue = LoadLibraryW(a.UInt32(0));
 				return true;
 			case "GETPROCADDRESS":
 				returnValue = GetProcAddress(a.UInt32(0), a.LpcStr(1));
@@ -205,8 +211,29 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "SETCONSOLEOUTPUTCP":
 				returnValue = SetConsoleOutputCP(a.UInt32(0));
 				return true;
+			case "SETCONSOLECP":
+				returnValue = SetConsoleCP(a.UInt32(0));
+				return true;
 			case "SETCONSOLECTRLHANDLER":
 				returnValue = SetConsoleCtrlHandler(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "GETCONSOLEMODE":
+				returnValue = GetConsoleMode(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "SETCONSOLEMODE":
+				returnValue = SetConsoleMode(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "GETNUMBEROFCONSOLEINPUTEVENTS":
+				returnValue = GetNumberOfConsoleInputEvents(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "READCONSOLEINPUTA":
+				returnValue = ReadConsoleInputA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+			case "READCONSOLEINPUTW":
+				returnValue = ReadConsoleInputW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+			case "PEEKCONSOLEINPUTW":
+				returnValue = PeekConsoleInputW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
 
 			// Memory/heap
@@ -791,6 +818,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "UNMAPVIEWOFFILE":
 				returnValue = UnmapViewOfFile(a.UInt32(0));
 				return true;
+			case "MAPVIEWOFFILEEX":
+				returnValue = MapViewOfFileEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+				return true;
+			case "FLUSHVIEWOFFILE":
+				returnValue = FlushViewOfFile(a.UInt32(0), a.UInt32(1));
+				return true;
 
 			// Memory protection functions
 			case "VIRTUALPROTECT":
@@ -798,6 +831,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "VIRTUALQUERY":
 				returnValue = VirtualQuery(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "VIRTUALUNLOCK":
+				returnValue = VirtualUnlock(a.UInt32(0), a.UInt32(1));
 				return true;
 			case "READPROCESSMEMORY":
 				returnValue = ReadProcessMemory(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
@@ -8898,6 +8934,376 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// No need to free - memory is managed
 
 		return handle == (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE ? 0xFFFFFFFF : handle;
+	}
+
+	/// <summary>
+	/// Maps a view of a file mapping into the address space of a calling process at a specific address.
+	/// LPVOID MapViewOfFileEx(
+	///   [in] HANDLE hFileMappingObject,
+	///   [in] DWORD  dwDesiredAccess,
+	///   [in] DWORD  dwFileOffsetHigh,
+	///   [in] DWORD  dwFileOffsetLow,
+	///   [in] SIZE_T dwNumberOfBytesToMap,
+	///   [in] LPVOID lpBaseAddress
+	/// );
+	/// </summary>
+	[DllModuleExport(24)]
+	private uint MapViewOfFileEx(uint hFileMappingObject, uint dwDesiredAccess,
+		uint dwFileOffsetHigh, uint dwFileOffsetLow, uint dwNumberOfBytesToMap, uint lpBaseAddress)
+	{
+		_logger.LogInformation("[Kernel32] MapViewOfFileEx(hFileMappingObject=0x{HFileMappingObject:X8}, dwDesiredAccess=0x{DwDesiredAccess:X}, dwFileOffsetHigh={DwFileOffsetHigh}, dwFileOffsetLow={DwFileOffsetLow}, dwNumberOfBytesToMap={DwNumberOfBytesToMap}, lpBaseAddress=0x{LpBaseAddress:X8})",
+			hFileMappingObject, dwDesiredAccess, dwFileOffsetHigh, dwFileOffsetLow, dwNumberOfBytesToMap, lpBaseAddress);
+
+		// MapViewOfFileEx is like MapViewOfFile but allows specifying a base address
+		// For simplicity in emulation, we ignore the requested base address and allocate memory
+		// A full implementation would try to honor the lpBaseAddress parameter
+
+		if (dwNumberOfBytesToMap == 0)
+		{
+			dwNumberOfBytesToMap = 0x10000; // 64KB default
+		}
+
+		// Allocate memory for the view (ignoring lpBaseAddress for now)
+		var baseAddress = VirtualAlloc(0, dwNumberOfBytesToMap, 0x1000 | 0x2000, 0x04); // MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
+
+		_logger.LogInformation("[Kernel32] MapViewOfFileEx: Allocated view at 0x{BaseAddress:X8} (requested 0x{LpBaseAddress:X8})",
+			baseAddress, lpBaseAddress);
+
+		return baseAddress;
+	}
+
+	/// <summary>
+	/// Writes to the disk a byte range within a mapped view of a file.
+	/// BOOL FlushViewOfFile(
+	///   [in] LPCVOID lpBaseAddress,
+	///   [in] SIZE_T  dwNumberOfBytesToFlush
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint FlushViewOfFile(uint lpBaseAddress, uint dwNumberOfBytesToFlush)
+	{
+		_logger.LogInformation("[Kernel32] FlushViewOfFile(lpBaseAddress=0x{LpBaseAddress:X8}, dwNumberOfBytesToFlush={DwNumberOfBytesToFlush})",
+			lpBaseAddress, dwNumberOfBytesToFlush);
+
+		// FlushViewOfFile writes changes in a memory-mapped file to disk
+		// For emulation, we just log it and return success
+		// A full implementation would:
+		// 1. Track which memory-mapped files are dirty
+		// 2. Write the dirty ranges back to the VFS
+		// 3. Ensure data integrity
+
+		return 1; // TRUE (success)
+	}
+
+	/// <summary>
+	/// Unlocks a region of pages in the virtual address space of the calling process.
+	/// BOOL VirtualUnlock(
+	///   [in] LPVOID lpAddress,
+	///   [in] SIZE_T dwSize
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint VirtualUnlock(uint lpAddress, uint dwSize)
+	{
+		_logger.LogInformation("[Kernel32] VirtualUnlock(lpAddress=0x{LpAddress:X8}, dwSize={DwSize})",
+			lpAddress, dwSize);
+
+		// VirtualUnlock unlocks pages that were locked by VirtualLock
+		// For emulation, we don't enforce page locking, so we just return success
+		// A full implementation would:
+		// 1. Track which pages are locked
+		// 2. Decrement the lock count for the specified range
+		// 3. Return error if pages weren't locked
+
+		return 1; // TRUE (success)
+	}
+
+	/// <summary>
+	/// Retrieves the module handle for the specified module (Unicode version).
+	/// HMODULE GetModuleHandleW(
+	///   [in, optional] LPCWSTR lpModuleName
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint GetModuleHandleW(uint lpModuleName)
+	{
+		string? moduleName;
+		if (lpModuleName == 0)
+		{
+			// NULL means get handle to the main executable
+			_logger.LogInformation("[Kernel32] GetModuleHandleW(NULL) -> main executable");
+			return _imageBase;
+		}
+
+		moduleName = _env.ReadUnicodeString(lpModuleName);
+		_logger.LogInformation("[Kernel32] GetModuleHandleW called: module='{ModuleName}'", moduleName ?? "NULL");
+
+		if (string.IsNullOrEmpty(moduleName))
+		{
+			return _imageBase;
+		}
+
+		// Normalize the module name (remove path, make uppercase, ensure .DLL extension)
+		var normalizedName = Path.GetFileName(moduleName).ToUpperInvariant();
+		if (!normalizedName.EndsWith(".DLL", StringComparison.OrdinalIgnoreCase))
+		{
+			normalizedName += ".DLL";
+		}
+
+		// Check if this is a system DLL that we emulate
+		var exports = DllModuleExportInfo.GetAllExports(normalizedName);
+		var isSystemDll = exports.Count > 0;
+
+		if (isSystemDll || _env.IsModuleLoaded(normalizedName))
+		{
+			// Load/register the module and get its handle
+			var handle = _env.LoadModule(normalizedName);
+			_logger.LogDebug("[Kernel32] GetModuleHandleW returning handle for {NormalizedName}: 0x{Handle:X8}", normalizedName, handle);
+			return handle;
+		}
+
+		// Module not found
+		_logger.LogWarning("[Kernel32] GetModuleHandleW: module '{ModuleName}' not found", moduleName);
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
+		return 0;
+	}
+
+	/// <summary>
+	/// Loads the specified module into the address space of the calling process (Unicode version).
+	/// HMODULE LoadLibraryW(
+	///   [in] LPCWSTR lpLibFileName
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint LoadLibraryW(uint lpLibFileName)
+	{
+		if (lpLibFileName == 0)
+		{
+			_logger.LogWarning("[Kernel32] LoadLibraryW: NULL library name");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		// Read the library name from memory
+		var libraryName = _env.ReadUnicodeString(lpLibFileName);
+		if (string.IsNullOrEmpty(libraryName))
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		_logger.LogInformation("[Kernel32] LoadLibraryW(lpLibFileName=\"{LibFileName}\")", libraryName);
+
+		// Get the directory of the current executable
+		var executablePath = _env.ExecutablePath;
+		var executableDir = Path.GetDirectoryName(executablePath) ?? string.Empty;
+
+		// Check if the library is local to the executable path
+		var localLibraryPath = Path.Combine(executableDir, libraryName);
+		var isLocalDll = File.Exists(localLibraryPath);
+
+		if (isLocalDll)
+		{
+			// DLL is local to executable path - load it using PeImageLoader for proper emulation
+			_logger.LogInformation("[Kernel32] Loading local DLL for emulation: {LibraryName}", libraryName);
+
+			// Register with dispatcher for function call tracking
+			_dispatcher?.RegisterDynamicallyLoadedDll(libraryName);
+
+			if (_peLoader != null)
+			{
+				return _env.LoadPeImage(localLibraryPath, _peLoader);
+			}
+
+			_logger.LogInformation("[Kernel32] Warning: PeImageLoader not available, falling back to module tracking for {LibraryName}", libraryName);
+			return _env.LoadModule(libraryName);
+		}
+
+		// DLL is not local - thunk to emulator's win32 syscall implementation
+		_logger.LogInformation("[Kernel32] Loading system DLL via thunking: {LibraryName}", libraryName);
+
+		// Register with dispatcher for function call tracking
+		_dispatcher?.RegisterDynamicallyLoadedDll(libraryName);
+
+		// For system libraries, we still need to track them but mark them as system modules
+		return _env.LoadModule(libraryName);
+	}
+
+	/// <summary>
+	/// Retrieves the current input mode of a console's input buffer or the current output mode of a console screen buffer.
+	/// BOOL GetConsoleMode(
+	///   [in]  HANDLE  hConsoleHandle,
+	///   [out] LPDWORD lpMode
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint GetConsoleMode(uint hConsoleHandle, uint lpMode)
+	{
+		_logger.LogInformation("[Kernel32] GetConsoleMode(hConsoleHandle=0x{HConsoleHandle:X8}, lpMode=0x{LpMode:X8})",
+			hConsoleHandle, lpMode);
+
+		if (lpMode == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// Return default console mode flags
+		// ENABLE_ECHO_INPUT (0x0004) | ENABLE_LINE_INPUT (0x0002) | ENABLE_PROCESSED_INPUT (0x0001)
+		const uint defaultInputMode = 0x0007;
+		// ENABLE_PROCESSED_OUTPUT (0x0001) | ENABLE_WRAP_AT_EOL_OUTPUT (0x0002)
+		const uint defaultOutputMode = 0x0003;
+
+		// Determine if this is input or output handle (simplified check)
+		// STD_INPUT_HANDLE = -10, STD_OUTPUT_HANDLE = -11, STD_ERROR_HANDLE = -12
+		var mode = hConsoleHandle == unchecked((uint)-10) ? defaultInputMode : defaultOutputMode;
+
+		_env.MemWrite32(lpMode, mode);
+		_logger.LogInformation("[Kernel32] GetConsoleMode: Returning mode 0x{Mode:X8}", mode);
+
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Sets the input mode of a console's input buffer or the output mode of a console screen buffer.
+	/// BOOL SetConsoleMode(
+	///   [in] HANDLE hConsoleHandle,
+	///   [in] DWORD  dwMode
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint SetConsoleMode(uint hConsoleHandle, uint dwMode)
+	{
+		_logger.LogInformation("[Kernel32] SetConsoleMode(hConsoleHandle=0x{HConsoleHandle:X8}, dwMode=0x{DwMode:X8})",
+			hConsoleHandle, dwMode);
+
+		// For emulation, we just log the request and return success
+		// A full implementation would track console modes and apply them
+
+		return 1; // TRUE (success)
+	}
+
+	/// <summary>
+	/// Sets the input code page used by the console associated with the calling process.
+	/// BOOL SetConsoleCP(
+	///   [in] UINT wCodePageID
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint SetConsoleCP(uint wCodePageID)
+	{
+		_logger.LogInformation("[Kernel32] SetConsoleCP(wCodePageID={WCodePageID})", wCodePageID);
+
+		// For emulation, we just log the request and return success
+		// A full implementation would set the console input code page
+
+		return 1; // TRUE (success)
+	}
+
+	/// <summary>
+	/// Retrieves the number of unread input records in the console's input buffer.
+	/// BOOL GetNumberOfConsoleInputEvents(
+	///   [in]  HANDLE  hConsoleInput,
+	///   [out] LPDWORD lpcNumberOfEvents
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint GetNumberOfConsoleInputEvents(uint hConsoleInput, uint lpcNumberOfEvents)
+	{
+		_logger.LogInformation("[Kernel32] GetNumberOfConsoleInputEvents(hConsoleInput=0x{HConsoleInput:X8}, lpcNumberOfEvents=0x{LpcNumberOfEvents:X8})",
+			hConsoleInput, lpcNumberOfEvents);
+
+		if (lpcNumberOfEvents == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// For stub, return 0 events
+		_env.MemWrite32(lpcNumberOfEvents, 0);
+
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Reads data from a console input buffer and removes it from the buffer (ANSI version).
+	/// BOOL ReadConsoleInputA(
+	///   [in]  HANDLE        hConsoleInput,
+	///   [out] PINPUT_RECORD lpBuffer,
+	///   [in]  DWORD         nLength,
+	///   [out] LPDWORD       lpNumberOfEventsRead
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint ReadConsoleInputA(uint hConsoleInput, uint lpBuffer, uint nLength, uint lpNumberOfEventsRead)
+	{
+		_logger.LogInformation("[Kernel32] ReadConsoleInputA(hConsoleInput=0x{HConsoleInput:X8}, lpBuffer=0x{LpBuffer:X8}, nLength={NLength}, lpNumberOfEventsRead=0x{LpNumberOfEventsRead:X8})",
+			hConsoleInput, lpBuffer, nLength, lpNumberOfEventsRead);
+
+		if (lpBuffer == 0 || lpNumberOfEventsRead == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// For stub, return 0 events read
+		_env.MemWrite32(lpNumberOfEventsRead, 0);
+
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Reads data from a console input buffer and removes it from the buffer (Unicode version).
+	/// BOOL ReadConsoleInputW(
+	///   [in]  HANDLE        hConsoleInput,
+	///   [out] PINPUT_RECORD lpBuffer,
+	///   [in]  DWORD         nLength,
+	///   [out] LPDWORD       lpNumberOfEventsRead
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint ReadConsoleInputW(uint hConsoleInput, uint lpBuffer, uint nLength, uint lpNumberOfEventsRead)
+	{
+		_logger.LogInformation("[Kernel32] ReadConsoleInputW(hConsoleInput=0x{HConsoleInput:X8}, lpBuffer=0x{LpBuffer:X8}, nLength={NLength}, lpNumberOfEventsRead=0x{LpNumberOfEventsRead:X8})",
+			hConsoleInput, lpBuffer, nLength, lpNumberOfEventsRead);
+
+		if (lpBuffer == 0 || lpNumberOfEventsRead == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// For stub, return 0 events read
+		_env.MemWrite32(lpNumberOfEventsRead, 0);
+
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Reads data from the console input buffer without removing it from the buffer (Unicode version).
+	/// BOOL PeekConsoleInputW(
+	///   [in]  HANDLE        hConsoleInput,
+	///   [out] PINPUT_RECORD lpBuffer,
+	///   [in]  DWORD         nLength,
+	///   [out] LPDWORD       lpNumberOfEventsRead
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint PeekConsoleInputW(uint hConsoleInput, uint lpBuffer, uint nLength, uint lpNumberOfEventsRead)
+	{
+		_logger.LogInformation("[Kernel32] PeekConsoleInputW(hConsoleInput=0x{HConsoleInput:X8}, lpBuffer=0x{LpBuffer:X8}, nLength={NLength}, lpNumberOfEventsRead=0x{LpNumberOfEventsRead:X8})",
+			hConsoleInput, lpBuffer, nLength, lpNumberOfEventsRead);
+
+		if (lpBuffer == 0 || lpNumberOfEventsRead == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// For stub, return 0 events read (buffer is empty)
+		_env.MemWrite32(lpNumberOfEventsRead, 0);
+
+		return 1; // TRUE
 	}
 
 }

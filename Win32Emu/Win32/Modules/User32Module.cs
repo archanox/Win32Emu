@@ -263,6 +263,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = SetCursorPos(a.Int32(0), a.Int32(1));
 					return true;
 
+				case "CLIPCURSOR":
+					returnValue = ClipCursor(a.UInt32(0));
+					return true;
+
 				case "SETTIMER":
 					returnValue = SetTimer(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
@@ -2355,6 +2359,48 @@ namespace Win32Emu.Win32.Modules
 			// A full implementation would update the cursor position in the rendering backend
 
 			return 1; // TRUE - success
+		}
+
+		/// <summary>
+		/// Confines the cursor to a rectangular area on the screen.
+		/// BOOL ClipCursor(
+		///   [in] const RECT *lpRect
+		/// );
+		/// </summary>
+		/// <param name="lpRect">
+		/// A pointer to the structure that contains the screen coordinates of the upper-left and lower-right corners
+		/// of the confining rectangle. If this parameter is NULL, the cursor is free to move anywhere on the screen.
+		/// </param>
+		/// <returns>
+		/// If the function succeeds, the return value is nonzero.
+		/// If the function fails, the return value is zero.
+		/// </returns>
+		[DllModuleExport(4)]
+		private uint ClipCursor(uint lpRect)
+		{
+			if (lpRect == 0)
+			{
+				_logger.LogInformation("[User32] ClipCursor: NULL (releasing cursor clip)");
+			}
+			else
+			{
+				// Read RECT structure (left, top, right, bottom)
+				var left = (int)_env.MemRead32(lpRect + 0);
+				var top = (int)_env.MemRead32(lpRect + 4);
+				var right = (int)_env.MemRead32(lpRect + 8);
+				var bottom = (int)_env.MemRead32(lpRect + 12);
+
+				_logger.LogInformation("[User32] ClipCursor: Clipping to rect ({Left}, {Top}, {Right}, {Bottom})",
+					left, top, right, bottom);
+			}
+
+			// For emulation, we just log the request and return success
+			// A full implementation would:
+			// 1. Store the clipping rectangle
+			// 2. Constrain cursor movement to within the rectangle
+			// 3. Update the rendering backend to enforce the clip
+
+			return 1; // TRUE (success)
 		}
 
 		[DllModuleExport(1)]
