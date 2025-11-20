@@ -59,7 +59,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				returnValue = ImageList_SetOverlayImage(a.UInt32(0), a.Int32(1), a.Int32(2));
 				return true;
 
-			case "ORDINAL_17":
+			case "INITCOMMONCONTROLS":
 				returnValue = InitCommonControls(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 
@@ -91,15 +91,27 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				returnValue = CreateStatusWindowA(a.UInt32(0));
 				return true;
 
-			case "ORDINAL_234":
-			case "ORDINAL_329":
-			case "ORDINAL_334":
-			case "ORDINAL_337":
-			case "ORDINAL_338":
-			case "ORDINAL_340":
-			case "ORDINAL_350":
-			case "ORDINAL_351":
-			case "ORDINAL_355":
+			case "Str_GetPtrA":
+				returnValue = Str_GetPtrA(a.LpcStr(0), a.LpStr(1), a.Int32(2));
+				return true;
+			
+			case "DPA_Create":
+				returnValue = DPA_Create(a.UInt32(0));
+				return true;
+			
+			case "DPA_GetPtrIndex":
+				unsafe
+				{
+					returnValue = DPA_GetPtrIndex(a.Ptr(0), a.Ptr(1));
+					return true;
+				}
+
+			case "ORDINAL_337": //DPA_DeleteAllPtrs
+			case "ORDINAL_338": //DPA_Sort
+			case "ORDINAL_340": //DPA_CreateEx
+			case "ORDINAL_350": //StrChrA
+			case "ORDINAL_351": //StrRChrA
+			case "ORDINAL_355": //StrStrIA
 				_logger.LogInformation("[Comctl32] {Export}(...)", export);
 				returnValue = 1; // Generic stub for ordinals
 				return true;
@@ -108,6 +120,52 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				_logger.LogInformation("[Comctl32] Unimplemented export: {Export}", export);
 				return false;
 		}
+	}
+
+	/// <summary>
+	/// Retrieves the index of the specified pointer
+	/// </summary>
+	/// <param name="hdpa">handle (pointer) to the pointer array</param>
+	/// <param name="p">pointer</param>
+	/// <returns>
+	/// Success: index of the specified pointer
+	/// Failure: -1
+	/// </returns>
+	/// <exception cref="NotImplementedException"></exception>
+	[DllModuleExport(333, Version = "5.81.4916.400")]
+	private unsafe uint DPA_GetPtrIndex(in void* hdpa, void* p)
+	{
+		throw new NotImplementedException();
+	}
+
+	/// <summary>
+	/// Creates a dynamic pointer array.
+	/// </summary>
+	/// <param name="nGrow">number of items by which the array grows when it is filled</param>
+	/// <returns>
+	/// Success: handle (pointer) to the pointer array.
+	/// Failure: NULL
+	/// </returns>
+	/// <remarks>The DPA_ functions can be used to create and manipulate arrays of pointers.</remarks>
+	/// <exception cref="NotImplementedException"></exception>
+	[DllModuleExport(328, Version = "5.81.4916.400")]
+	private uint DPA_Create(in uint nGrow)
+	{
+		throw new NotImplementedException();
+	}
+
+	/// <summary>
+	/// Copies a string into a destination buffer.
+	/// </summary>
+	/// <param name="lpcSrc">Source string</param>
+	/// <param name="lpDest">Destination buffer</param>
+	/// <param name="nMaxLen">Size of buffer in characters</param>
+	/// <returns>The number of characters copied.</returns>
+	/// <exception cref="NotImplementedException"></exception>
+	[DllModuleExport(233, Version = "5.81.4916.400")]
+	private uint Str_GetPtrA(in LpcStr lpcSrc, LpStr lpDest, in int nMaxLen)
+	{
+		throw new NotImplementedException();
 	}
 
 	/// <summary>
