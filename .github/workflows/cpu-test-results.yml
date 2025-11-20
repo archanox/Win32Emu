@@ -19,6 +19,9 @@ on:
       - 'Win32Emu/Win32/Modules/**'
       - 'Win32Emu.Tools.ApiStatusGenerator/**'
       - 'Win32Emu.Generators/**'
+      - 'Win32Emu.Tools.PeAnalyzer.Wasm/**'
+      - 'docs/pages/pe-analyzer/**'
+      - 'docs/pages/index.html'
       - '.github/workflows/cpu-test-results.yml'
 
 # Sets permissions for GitHub Pages deployment
@@ -85,6 +88,10 @@ jobs:
       - name: Copy API Status HTML
         run: |
           cp docs/pages/index.html pages/api-status.html
+
+      - name: Copy PE Analyzer
+        run: |
+          cp -r docs/pages/pe-analyzer pages/
 
       - name: Create main index page
         run: |
@@ -197,6 +204,12 @@ jobs:
                           <div class="icon">📚</div>
                           <h2>API Status</h2>
                           <p>Win32 API implementation status. Browse modules and functions and check compatibility.</p>
+                      </a>
+                      
+                      <a href="pe-analyzer/" class="nav-card">
+                          <div class="icon">🔍</div>
+                          <h2>PE Analyzer</h2>
+                          <p>Upload Windows PE files (.exe or .dll) to check compatibility with Win32Emu. Client-side analysis powered by Blazor WebAssembly.</p>
                       </a>
                   </div>
                   
