@@ -482,7 +482,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			{
 				// Build the resolved path: currentDir + pathWithoutDrive
 				// For example: "C:\ign_install" + "\Ign_win.exe" = "C:\ign_install\Ign_win.exe"
-				var resolvedPath = System.IO.Path.Combine(currentDir.TrimEnd('\\', '/'), pathWithoutDrive.TrimStart('\\', '/'));
+				var resolvedPath = currentDir.TrimEnd('\\', '/') + "\\" + pathWithoutDrive.TrimStart('\\', '/');
 				
 				_logger.LogDebug("[Shell32] Trying to resolve {OriginalPath} as {ResolvedPath}", path, resolvedPath);
 				
