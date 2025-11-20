@@ -8975,6 +8975,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] MapViewOfFileEx(hFileMappingObject=0x{HFileMappingObject:X8}, dwDesiredAccess=0x{DwDesiredAccess:X}, dwFileOffsetHigh={DwFileOffsetHigh}, dwFileOffsetLow={DwFileOffsetLow}, dwNumberOfBytesToMap={DwNumberOfBytesToMap}, lpBaseAddress=0x{LpBaseAddress:X8})",
 			hFileMappingObject, dwDesiredAccess, dwFileOffsetHigh, dwFileOffsetLow, dwNumberOfBytesToMap, lpBaseAddress);
 
+		// Validate file mapping handle
+		if (hFileMappingObject == 0 || hFileMappingObject == 0xFFFFFFFF)
+		{
+			_logger.LogWarning("[Kernel32] MapViewOfFileEx: Invalid file mapping handle");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+			return 0;
+		}
+
 		// MapViewOfFileEx is like MapViewOfFile but allows specifying a base address
 		// For simplicity in emulation, we ignore the requested base address and allocate memory
 		// A full implementation would try to honor the lpBaseAddress parameter
@@ -8986,6 +8994,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		// Allocate memory for the view (ignoring lpBaseAddress for now)
 		var baseAddress = VirtualAlloc(0, dwNumberOfBytesToMap, 0x1000 | 0x2000, 0x04); // MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
+
+		if (baseAddress == 0)
+		{
+			_logger.LogWarning("[Kernel32] MapViewOfFileEx: Failed to allocate memory");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+			return 0;
+		}
 
 		_logger.LogInformation("[Kernel32] MapViewOfFileEx: Allocated view at 0x{BaseAddress:X8} (requested 0x{LpBaseAddress:X8})",
 			baseAddress, lpBaseAddress);

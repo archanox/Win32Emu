@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Avalonia;
 using Avalonia.Controls;
@@ -27,9 +28,9 @@ public partial class TerminalControl : UserControl
 	
 	private int _cursorX;
 	private int _cursorY;
-	private int _columns;
-	private int _rows;
-	private bool _cursorVisible = true;
+	private readonly int _columns;
+	private readonly int _rows;
+	private readonly bool _cursorVisible = true;
 	private TextBlock? _cursorBlock;
 
 	public TerminalControl()
@@ -224,9 +225,10 @@ public partial class TerminalControl : UserControl
 		_canvas.Children.Clear();
 		_textBlocks.Clear();
 
+		var sb = new StringBuilder();
 		for (int row = 0; row < _rows; row++)
 		{
-			var sb = new StringBuilder();
+			sb.Clear();
 			var lastAttr = _attributes[row, 0];
 			int startCol = 0;
 
@@ -237,7 +239,7 @@ public partial class TerminalControl : UserControl
 				// If attributes changed, render the accumulated text
 				if (!currentAttr.Equals(lastAttr) || col == _columns - 1)
 				{
-					if (col == _columns - 1)
+					if (col == _columns - 1 && currentAttr.Equals(lastAttr))
 					{
 						sb.Append(_buffer[row, col]);
 					}
@@ -255,7 +257,10 @@ public partial class TerminalControl : UserControl
 					lastAttr = currentAttr;
 				}
 
-				sb.Append(_buffer[row, col]);
+				if (col != _columns - 1 || !currentAttr.Equals(lastAttr))
+				{
+					sb.Append(_buffer[row, col]);
+				}
 			}
 		}
 
@@ -268,18 +273,11 @@ public partial class TerminalControl : UserControl
 		int row = _cursorY;
 		
 		// Remove existing text blocks for this row
-		var toRemove = new List<Control>();
-		foreach (var child in _canvas.Children)
-		{
-			if (child is TextBlock tb)
-			{
-				double top = Canvas.GetTop(tb);
-				if (Math.Abs(top - row * CharHeight) < 0.1)
-				{
-					toRemove.Add(tb);
-				}
-			}
-		}
+		var toRemove = _canvas.Children
+			.OfType<TextBlock>()
+			.Where(tb => Math.Abs(Canvas.GetTop(tb) - row * CharHeight) < 0.1)
+			.ToList();
+		
 		foreach (var item in toRemove)
 		{
 			_canvas.Children.Remove(item);
@@ -373,6 +371,16 @@ public struct TerminalCharAttributes
 		       Background == other.Background &&
 		       Bold == other.Bold &&
 		       Underline == other.Underline;
+	}
+
+	public override bool Equals(object? obj)
+	{
+		return obj is TerminalCharAttributes other && Equals(other);
+	}
+
+	public override int GetHashCode()
+	{
+		return HashCode.Combine(Foreground, Background, Bold, Underline);
 	}
 }
 
