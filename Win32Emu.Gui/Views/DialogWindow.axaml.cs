@@ -300,7 +300,8 @@ public partial class DialogWindow : Window
 			{
 				Text = ProcessAccessKeys(item.Title),
 				TextAlignment = alignment,
-				VerticalAlignment = VerticalAlignment.Center
+				VerticalAlignment = VerticalAlignment.Center,
+				TextWrapping = TextWrapping.Wrap  // Enable text wrapping and newline handling
 			};
 		}
 	}
@@ -513,6 +514,8 @@ public partial class DialogWindow : Window
 			else if (control is TextBlock textBlock)
 			{
 				textBlock.Text = text;
+				// Ensure text wrapping is enabled to handle multi-line text
+				textBlock.TextWrapping = TextWrapping.Wrap;
 			}
 		});
 	}
