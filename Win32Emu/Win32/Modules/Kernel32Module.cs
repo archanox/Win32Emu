@@ -6999,10 +6999,31 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogInformation("[Kernel32] WriteConsoleA(hConsoleOutput=0x{HConsoleOutput:X8}, nNumberOfCharsToWrite={NNumberOfCharsToWrite})",
 			hConsoleOutput, nNumberOfCharsToWrite);
+
+		if (lpBuffer == 0 || nNumberOfCharsToWrite == 0)
+		{
+			if (lpNumberOfCharsWritten != 0)
+			{
+				_env.MemWrite32(lpNumberOfCharsWritten, 0);
+			}
+			return 1; // TRUE
+		}
+
+		// Read the buffer content from emulated memory
+		var text = _env.ReadAnsiString(lpBuffer, (int)nNumberOfCharsToWrite);
+		
+		// Send to host for display in terminal
+		if (_env.Host != null && !string.IsNullOrEmpty(text))
+		{
+			_env.Host.OnStdOutput(text);
+		}
+
+		// Write the number of characters written
 		if (lpNumberOfCharsWritten != 0)
 		{
 			_env.MemWrite32(lpNumberOfCharsWritten, nNumberOfCharsToWrite);
 		}
+
 		return 1; // TRUE
 	}
 
