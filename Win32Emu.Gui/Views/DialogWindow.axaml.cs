@@ -596,6 +596,18 @@ public partial class DialogWindow : Window
 		});
 	}
 
+	public void SetControlVisible(ushort id, bool visible)
+	{
+		Dispatcher.UIThread.Post(() =>
+		{
+			var control = GetControlById(id);
+			if (control != null)
+			{
+				control.IsVisible = visible;
+			}
+		});
+	}
+
 	/// <summary>
 	/// Converts a DIB (Device Independent Bitmap) to an Avalonia Bitmap.
 	/// </summary>

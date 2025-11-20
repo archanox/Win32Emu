@@ -1275,16 +1275,16 @@ namespace Win32Emu.Win32.Modules
 						controlStyle |= (uint)NativeTypes.WindowStyle.WS_VISIBLE;
 						_logger.LogInformation("[User32] ShowWindow: Control 0x{Hwnd:X8} (ID={ControlId}) is now visible", hwnd, controlInfo.Value.ControlId);
 						
-						// TODO: Notify GUI to show the control when IEmulatorHost is extended
-						// Future: Add OnControlVisibilityChanged to IEmulatorHost
+						// Notify GUI to show the control
+						_host?.OnControlVisibilityChanged(controlInfo.Value.DialogHandle, controlInfo.Value.ControlId, true);
 					}
 					else
 					{
 						controlStyle &= ~(uint)NativeTypes.WindowStyle.WS_VISIBLE;
 						_logger.LogInformation("[User32] ShowWindow: Control 0x{Hwnd:X8} (ID={ControlId}) is now hidden", hwnd, controlInfo.Value.ControlId);
 						
-						// TODO: Notify GUI to hide the control when IEmulatorHost is extended
-						// Future: Add OnControlVisibilityChanged to IEmulatorHost
+						// Notify GUI to hide the control
+						_host?.OnControlVisibilityChanged(controlInfo.Value.DialogHandle, controlInfo.Value.ControlId, false);
 					}
 					
 					_env.SetWindowProperty(hwnd, (int)NativeTypes.WindowLong.GWL_STYLE, controlStyle);
