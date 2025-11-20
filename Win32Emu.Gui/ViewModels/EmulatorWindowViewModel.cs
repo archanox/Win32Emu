@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using Win32Emu.Gui.Controls;
 using Win32Emu.Gui.Services;
 using Win32Emu.Gui.Utilities;
 using Win32Emu.Win32.Messaging;
@@ -19,6 +20,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     private volatile EmulatorService? _emulatorService;
     private readonly ILogger? _logger;
     private GuiMessageDispatcherIntegration? _messageDispatcherIntegration;
+    private TerminalControl? _terminalControl;
 
     [ObservableProperty]
     private ObservableCollection<DebugMessage> _debugMessages = [];
@@ -68,6 +70,12 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     public void SetOwnerWindow(Window owner)
     {
         _ownerWindow = owner;
+        
+        // Get reference to terminal control
+        if (owner is Views.EmulatorWindow emulatorWindow)
+        {
+            _terminalControl = emulatorWindow.GetTerminalControl();
+        }
     }
 
     public EmulatorWindowViewModel()
@@ -174,7 +182,16 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     {
         Dispatcher.UIThread.Post(() =>
         {
-            StdOutput += output;
+            // Write to terminal control if available
+            if (_terminalControl != null)
+            {
+                _terminalControl.Write(output);
+            }
+            else
+            {
+                // Fallback to string append for backward compatibility
+                StdOutput += output;
+            }
             
             // Also show stdout in the debug window for complete visibility
             // This ensures developers can see all output in one place

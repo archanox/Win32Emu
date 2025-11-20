@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Win32Emu.Gui.ViewModels"
         xmlns:services="using:Win32Emu.Gui.Services"
+        xmlns:controls="using:Win32Emu.Gui.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
@@ -103,27 +104,21 @@
                         </ItemsControl>
                     </ScrollViewer>
 
-                    <!-- Stdout Header -->
+                    <!-- Terminal Header -->
                     <Border Grid.Row="2"
                             Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                             Padding="10"
                             IsVisible="{Binding ShowStdOutputPanel}">
-                        <TextBlock Text="Standard Output (DOS-like)"
+                        <TextBlock Text="Terminal (80x25)"
                                  FontWeight="Bold"/>
                     </Border>
 
-                    <!-- Stdout Console -->
+                    <!-- Terminal Console -->
                     <Border Grid.Row="3"
                             Background="Black"
                             IsHitTestVisible="True"
                             IsVisible="{Binding ShowStdOutputPanel}">
-                        <ScrollViewer Padding="5" >
-                                        <SelectableTextBlock Text="{Binding StdOutput}"
-                                                 FontFamily="Consolas,Courier New,monospace"
-                                                 FontSize="12"
-                                                 Foreground="LightGray"
-                                                 />
-                        </ScrollViewer>
+                        <controls:TerminalControl x:Name="TerminalControl" />
                     </Border>
 
                 </Grid>
