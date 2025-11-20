@@ -367,8 +367,10 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 					// Use VFS if available, otherwise fall back to System.IO
 					if (_env.VirtualFileSystem != null)
 					{
-						// VFS handles path resolution internally
-						if (_env.VirtualFileSystem.FileExists(source))
+						// Try to resolve the source path - first as-is, then relative to current directory
+						var resolvedSource = ResolvePathInVfs(source);
+						
+						if (resolvedSource != null && _env.VirtualFileSystem.FileExists(resolvedSource))
 						{
 							// Create destination directory if needed
 							var destDir = System.IO.Path.GetDirectoryName(dest);
@@ -378,7 +380,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 							}
 
 							// Copy using VFS - open source for read, dest for write
-							using var srcHandle = _env.VirtualFileSystem.OpenFile(source,
+							using var srcHandle = _env.VirtualFileSystem.OpenFile(resolvedSource,
 								VirtualFileSystem.VfsFileMode.Open,
 								VirtualFileSystem.VfsFileAccess.Read);
 							using var dstHandle = _env.VirtualFileSystem.OpenFile(dest,
@@ -394,7 +396,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 								{
 									dstHandle.Write(buffer, 0, bytesRead);
 								}
-								_logger.LogInformation("[Shell32] SHFileOperationA: Copied {Source} to {Dest} (VFS)", source, dest);
+								_logger.LogInformation("[Shell32] SHFileOperationA: Copied {Source} to {Dest} (VFS)", resolvedSource, dest);
 							}
 							else
 							{
@@ -451,6 +453,51 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		}
 	}
 
+	/// <summary>
+	/// Resolves a file path in the VFS, trying multiple strategies:
+	/// 1. As-is (absolute path)
+	/// 2. Relative to current directory (for paths that appear absolute but are actually relative to installation source)
+	/// </summary>
+	private string? ResolvePathInVfs(string path)
+	{
+		if (_env.VirtualFileSystem == null || string.IsNullOrEmpty(path))
+			return null;
+
+		// Try the path as-is first
+		if (_env.VirtualFileSystem.FileExists(path))
+		{
+			return path;
+		}
+
+		// If the path looks like an absolute path (starts with drive letter), 
+		// try resolving it relative to the current directory
+		if (path.Length >= 3 && path[1] == ':' && (path[2] == '\\' || path[2] == '/'))
+		{
+			// Extract the path after the drive root (e.g., "C:\file.txt" -> "\file.txt")
+			var pathWithoutDrive = path.Substring(2);
+			
+			// Combine with current directory
+			var currentDir = _env.CurrentDirectory;
+			if (!string.IsNullOrEmpty(currentDir))
+			{
+				// Build the resolved path: currentDir + pathWithoutDrive
+				// For example: "C:\ign_install" + "\Ign_win.exe" = "C:\ign_install\Ign_win.exe"
+				var resolvedPath = System.IO.Path.Combine(currentDir.TrimEnd('\\', '/'), pathWithoutDrive.TrimStart('\\', '/'));
+				
+				_logger.LogDebug("[Shell32] Trying to resolve {OriginalPath} as {ResolvedPath}", path, resolvedPath);
+				
+				if (_env.VirtualFileSystem.FileExists(resolvedPath))
+				{
+					_logger.LogInformation("[Shell32] Resolved path {OriginalPath} to {ResolvedPath} (relative to current directory)", path, resolvedPath);
+					return resolvedPath;
+				}
+			}
+		}
+
+		// Path not found with any strategy
+		return null;
+	}
+
 	private void EnsureDirectoryExists(string path)
 	{
 		if (_env.VirtualFileSystem != null)
@@ -494,16 +541,19 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 					// Use VFS if available
 					if (_env.VirtualFileSystem != null)
 					{
-						if (_env.VirtualFileSystem.FileExists(source))
+						// Try to resolve the source path
+						var resolvedSource = ResolvePathInVfs(source);
+						
+						if (resolvedSource != null && _env.VirtualFileSystem.FileExists(resolvedSource))
 						{
-							var success = _env.VirtualFileSystem.DeleteFile(source);
+							var success = _env.VirtualFileSystem.DeleteFile(resolvedSource);
 							if (success)
 							{
-								_logger.LogInformation("[Shell32] SHFileOperationA: Deleted file {Source} (VFS)", source);
+								_logger.LogInformation("[Shell32] SHFileOperationA: Deleted file {Source} (VFS)", resolvedSource);
 							}
 							else
 							{
-								_logger.LogWarning("[Shell32] SHFileOperationA DELETE: Failed to delete {Source} (VFS)", source);
+								_logger.LogWarning("[Shell32] SHFileOperationA DELETE: Failed to delete {Source} (VFS)", resolvedSource);
 							}
 						}
 						else
@@ -567,7 +617,10 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 					// Use VFS if available
 					if (_env.VirtualFileSystem != null)
 					{
-						if (_env.VirtualFileSystem.FileExists(source))
+						// Try to resolve the source path
+						var resolvedSource = ResolvePathInVfs(source);
+						
+						if (resolvedSource != null && _env.VirtualFileSystem.FileExists(resolvedSource))
 						{
 							// Create destination directory if needed
 							var destDir = System.IO.Path.GetDirectoryName(dest);
@@ -576,14 +629,14 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 								EnsureDirectoryExists(destDir);
 							}
 
-							var success = _env.VirtualFileSystem.MoveFile(source, dest);
+							var success = _env.VirtualFileSystem.MoveFile(resolvedSource, dest);
 							if (success)
 							{
-								_logger.LogInformation("[Shell32] SHFileOperationA: Moved {Source} to {Dest} (VFS)", source, dest);
+								_logger.LogInformation("[Shell32] SHFileOperationA: Moved {Source} to {Dest} (VFS)", resolvedSource, dest);
 							}
 							else
 							{
-								_logger.LogWarning("[Shell32] SHFileOperationA MOVE: Failed to move {Source} to {Dest} (VFS)", source, dest);
+								_logger.LogWarning("[Shell32] SHFileOperationA MOVE: Failed to move {Source} to {Dest} (VFS)", resolvedSource, dest);
 							}
 						}
 						else
