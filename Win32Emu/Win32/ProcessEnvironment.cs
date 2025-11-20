@@ -1934,6 +1934,7 @@ public class ProcessEnvironment
 	/// <returns>True if the window was found and updated, false otherwise</returns>
 	public bool SetWindowText(uint hwnd, string text)
 	{
+		// First check if it's a regular window
 		if (_windows.TryGetValue(hwnd, out var windowInfo))
 		{
 			// Create a new WindowInfo with the updated window name (WindowInfo is a record struct)
@@ -1942,6 +1943,15 @@ public class ProcessEnvironment
 			_logger.LogDebug("[ProcessEnv] Updated window text: HWND=0x{Hwnd:X8} -> \"{Text}\"", hwnd, text);
 			return true;
 		}
+		
+		// Check if it's a dialog window
+		if (_dialogStates.TryGetValue(hwnd, out var dialogState))
+		{
+			dialogState.Title = text;
+			_logger.LogDebug("[ProcessEnv] Updated dialog text: HWND=0x{Hwnd:X8} -> \"{Text}\"", hwnd, text);
+			return true;
+		}
+		
 		return false;
 	}
 
@@ -2936,6 +2946,7 @@ public class ProcessEnvironment
 	{
 		public bool IsEnded { get; set; }
 		public uint Result { get; set; }
+		public string Title { get; set; } = string.Empty;
 		// Storage for dialog control text: Key = control ID, Value = text
 		public Dictionary<int, string> ControlText { get; } = new();
 		// Storage for dialog control handles: Key = control ID, Value = handle
