@@ -116,6 +116,106 @@ public class StringTests : IDisposable
         Assert.Equal(currentPtr, finalPtr);
     }
 
+    [Fact]
+    public void WsprintfA_WithStringFormat_SubstitutesArguments()
+    {
+        // Arrange: Create format string "%s\%s" and argument strings
+        var formatPtr = _testEnv.WriteString("%s\\%s");
+        var arg1Ptr = _testEnv.WriteString("C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs");
+        var arg2Ptr = _testEnv.WriteString("UDS");
+        var outputPtr = _testEnv.AllocateMemory(512);
+
+        // Act: Call wsprintfA
+        var length = _testEnv.CallUser32Api("WSPRINTFA", outputPtr, formatPtr, arg1Ptr, arg2Ptr);
+
+        // Assert: Check the formatted result
+        var result = _testEnv.ReadString(outputPtr);
+        Assert.Equal(@"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\UDS", result);
+        Assert.Equal((uint)result.Length, length);
+    }
+
+    [Fact]
+    public void WsprintfA_WithIntegerFormats_FormatsCorrectly()
+    {
+        // Arrange: Create format string with various integer formats
+        var formatPtr = _testEnv.WriteString("dec=%d, uint=%u, hex=%x, HEX=%X");
+        var outputPtr = _testEnv.AllocateMemory(256);
+
+        // Act: Call wsprintfA with integer arguments
+        var length = _testEnv.CallUser32Api("WSPRINTFA", outputPtr, formatPtr, unchecked((uint)-42), 100u, 0xABu, 0xCDu);
+
+        // Assert: Check the formatted result
+        var result = _testEnv.ReadString(outputPtr);
+        Assert.Equal("dec=-42, uint=100, hex=ab, HEX=CD", result);
+        Assert.Equal((uint)result.Length, length);
+    }
+
+    [Fact]
+    public void WsprintfA_WithCharFormat_FormatsCharacter()
+    {
+        // Arrange: Create format string with character format
+        var formatPtr = _testEnv.WriteString("char=%c");
+        var outputPtr = _testEnv.AllocateMemory(256);
+
+        // Act: Call wsprintfA with character argument
+        var length = _testEnv.CallUser32Api("WSPRINTFA", outputPtr, formatPtr, (uint)'A');
+
+        // Assert: Check the formatted result
+        var result = _testEnv.ReadString(outputPtr);
+        Assert.Equal("char=A", result);
+        Assert.Equal((uint)result.Length, length);
+    }
+
+    [Fact]
+    public void WsprintfA_WithLiteralPercent_EscapesPercent()
+    {
+        // Arrange: Create format string with %% for literal %
+        var formatPtr = _testEnv.WriteString("Progress: 50%%");
+        var outputPtr = _testEnv.AllocateMemory(256);
+
+        // Act: Call wsprintfA
+        var length = _testEnv.CallUser32Api("WSPRINTFA", outputPtr, formatPtr);
+
+        // Assert: Check the formatted result
+        var result = _testEnv.ReadString(outputPtr);
+        Assert.Equal("Progress: 50%", result);
+        Assert.Equal((uint)result.Length, length);
+    }
+
+    [Fact]
+    public void WsprintfA_WithNullStringPointer_PrintsNull()
+    {
+        // Arrange: Create format string with %s and null pointer
+        var formatPtr = _testEnv.WriteString("value=%s");
+        var outputPtr = _testEnv.AllocateMemory(256);
+
+        // Act: Call wsprintfA with null string pointer
+        var length = _testEnv.CallUser32Api("WSPRINTFA", outputPtr, formatPtr, 0u);
+
+        // Assert: Check that (null) is printed
+        var result = _testEnv.ReadString(outputPtr);
+        Assert.Equal("value=(null)", result);
+        Assert.Equal((uint)result.Length, length);
+    }
+
+    [Fact]
+    public void WsprintfA_WithMixedFormats_FormatsAllCorrectly()
+    {
+        // Arrange: Create format string with mixed formats (mimics the actual setup.exe usage)
+        var formatPtr = _testEnv.WriteString("%s\\%s.lnk");
+        var path1Ptr = _testEnv.WriteString(@"C:\ProgramData\Microsoft\Windows\Start Menu\Programs");
+        var path2Ptr = _testEnv.WriteString("Ignition");
+        var outputPtr = _testEnv.AllocateMemory(512);
+
+        // Act: Call wsprintfA
+        var length = _testEnv.CallUser32Api("WSPRINTFA", outputPtr, formatPtr, path1Ptr, path2Ptr);
+
+        // Assert: Check the formatted result
+        var result = _testEnv.ReadString(outputPtr);
+        Assert.Equal(@"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Ignition.lnk", result);
+        Assert.Equal((uint)result.Length, length);
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
