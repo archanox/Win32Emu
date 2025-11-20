@@ -3266,16 +3266,29 @@ namespace Win32Emu.Win32.Modules
 						{
 							_logger.LogInformation("[User32] LoadImageA: Loaded bitmap from resource ID {ResourceId}", resourceId);
 						}
+						else
+						{
+							_logger.LogDebug("[User32] LoadImageA: Bitmap resource ID {ResourceId} not found", resourceId);
+						}
 					}
 					else
 					{
 						// It's a string name
+						_logger.LogDebug("[User32] LoadImageA: Attempting to load bitmap by name \"{ImageName}\"", imageName);
 						bitmapData = _resourceReader.LoadBitmapByName(imageName);
 						if (bitmapData != null)
 						{
 							_logger.LogInformation("[User32] LoadImageA: Loaded bitmap from resource name \"{ImageName}\"", imageName);
 						}
+						else
+						{
+							_logger.LogDebug("[User32] LoadImageA: Bitmap resource name \"{ImageName}\" not found in resources", imageName);
+						}
 					}
+				}
+				else if (!loadFromFile)
+				{
+					_logger.LogDebug("[User32] LoadImageA: Resource reader is null, cannot load from resources");
 				}
 
 				// If resource loading failed or LR_LOADFROMFILE was set, try loading from file
