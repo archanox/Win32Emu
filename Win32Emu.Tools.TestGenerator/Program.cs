@@ -72,8 +72,7 @@ class Program
 		}
 		catch (Exception ex) when (
 			ex is not OutOfMemoryException &&
-			ex is not StackOverflowException &&
-			ex is not System.Threading.ThreadAbortException)
+			ex is not StackOverflowException)
 		{
 			Console.WriteLine($"Error: {ex.Message}");
 			return 1;

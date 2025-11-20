@@ -63,6 +63,10 @@ public abstract class ABTestBase : IDisposable
 /// </summary>
 public class GetVersionABTests : ABTestBase
 {
+	// Win32Emu returns Windows 95 version (4.0.950)
+	// Due to implementation bug, it's encoded as 0x040003B6
+	private const uint EXPECTED_WIN95_VERSION = 0x040003B6u;
+
 	public GetVersionABTests() : base("KERNEL32.DLL")
 	{
 	}
@@ -98,9 +102,8 @@ public class GetVersionABTests : ABTestBase
 			Assert.NotEqual(0u, nativeResult);
 		}
 
-		// Win32Emu returns Windows 95 version (4.0.950)
-		// Due to implementation bug, it's encoded as 0x040003B6
-		Assert.Equal(0x040003B6u, win32EmuResult);
+		// Verify Win32Emu returns the expected Windows 95 version
+		Assert.Equal(EXPECTED_WIN95_VERSION, win32EmuResult);
 	}
 
 	[Fact]
