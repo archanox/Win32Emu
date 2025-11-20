@@ -880,14 +880,14 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 
                 return result;
             }
-            catch (OperationCanceledException ocex)
-            {
-                OnDebugOutput($"Folder browser operation was canceled: {ocex.Message}", DebugLevel.Info);
-                return null;
-            }
             catch (TaskCanceledException tcex)
             {
                 OnDebugOutput($"Folder browser task was canceled: {tcex.Message}", DebugLevel.Info);
+                return null;
+            }
+            catch (OperationCanceledException ocex)
+            {
+                OnDebugOutput($"Folder browser operation was canceled: {ocex.Message}", DebugLevel.Info);
                 return null;
             }
             catch (Exception ex)
@@ -895,6 +895,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 OnDebugOutput($"Error showing folder browser: {ex.Message}", DebugLevel.Error);
                 return null;
             }
+        });
     }
 
     public void OnStateChanged(EmulatorState state)

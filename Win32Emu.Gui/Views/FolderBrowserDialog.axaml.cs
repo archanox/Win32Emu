@@ -96,7 +96,6 @@ public partial class FolderBrowserDialog : Window
 		try
 		{
 			// Get all files/directories in this path
-			var pattern = parent.Path.TrimEnd('\\') + "\\*";
 			var entries = _vfs.GetFiles(parent.Path, "*");
 
 			// Group entries to find directories
@@ -140,7 +139,7 @@ public partial class FolderBrowserDialog : Window
 				};
 
 				// Add placeholder to show expand arrow
-				childNode.Children.Add(new FolderTreeItem { DisplayName = "Loading..." });
+				childNode.Children.Add(new FolderTreeItem { Path = "", DisplayName = "Loading..." });
 
 				parent.Children.Add(childNode);
 			}
@@ -215,8 +214,8 @@ public partial class FolderBrowserDialog : Window
 /// </summary>
 public class FolderTreeItem
 {
-	public string Path { get; set; } = "";
-	public string DisplayName { get; set; } = "";
+	public required string Path { get; set; }
+	public required string DisplayName { get; set; }
 	public bool IsExpanded { get; set; }
 	public ObservableCollection<FolderTreeItem> Children { get; set; } = new();
 }
