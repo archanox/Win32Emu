@@ -1,5 +1,3 @@
-info: Win32Emu.Gui.App[0]
-      Win32Emu.Gui logging initialized
 info: Win32Emu.Emulator[0]
       Launching game: ign_3dfx /Users/pierce/RiderProjects/Win32Emu/EXEs/ign_win/ign_3dfx.exe
 info: Win32Emu.Emulator[0]
@@ -12,8 +10,6 @@ info: Win32Emu.Emulator[0]
       [Loader] Extracting executable from virtual disk: C:\ign_win\ign_3dfx.exe
 info: Win32Emu.Emulator[0]
       [DiskVFS] Mounted VHD: /Users/pierce/Library/Application Support/Win32Emu/VirtualDisks/ign_3dfx.vhd (Read-Write)
-dbug: Win32Emu.Emulator[0]
-      [DiskVFS] Opened file: \ign_win\ign_3dfx.exe
 info: Win32Emu.Emulator[0]
       [Loader] Extracted 642560 bytes from virtual disk
 info: Win32Emu.Emulator[0]
@@ -28,364 +24,18 @@ info: Win32Emu.Emulator[0]
       [Loader] Host Framework: .NET 9.0.10
 info: Win32Emu.Emulator[0]
       [Loader] Host Runtime Identifier: osx-arm64
-dbug: Win32Emu.Emulator[0]
-      [Loader] Loading PE: C:\ign_win\ign_3dfx.exe
 info: Win32Emu.Emulator[0]
       [Memory] Configured size: 256 MB, Address space: 4096 MB (sparse, pages allocated on-demand)
-dbug: Win32Emu.Emulator[0]
-      [Loader] Loading PE headers: Size=0x00000400 at ImageBase=0x00400000
-dbug: Win32Emu.Emulator[0]
-      [Loader] Loaded 0x00000400 bytes of PE headers
-dbug: Win32Emu.Emulator[0]
-      [Loader] Loading section ., t, e, x, t: RVA=0x00001000, VirtualSize=0x0006B9DC, RawDataSize=0x0006BA00, Flags=0x60000020
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section ., t, e, x, t has RawDataSize (0x0006BA00) > VirtualSize (0x0006B9DC), truncating to VirtualSize to avoid writing beyond section bounds
-dbug: Win32Emu.Emulator[0]
-      [Loader] Loading section ., r, d, a, t, a: RVA=0x0006D000, VirtualSize=0x000013A8, RawDataSize=0x00001400, Flags=0x40000040
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section ., r, d, a, t, a has RawDataSize (0x00001400) > VirtualSize (0x000013A8), truncating to VirtualSize to avoid writing beyond section bounds
-dbug: Win32Emu.Emulator[0]
-      [Loader] Loading section ., d, a, t, a: RVA=0x0006F000, VirtualSize=0x001C4050, RawDataSize=0x00024600, Flags=0xC0000040
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section ., d, a, t, a has VirtualSize (0x001C4050) > RawDataSize (0x00024600), extra 0x0019FA50 bytes remain zero-filled
-dbug: Win32Emu.Emulator[0]
-      [Loader] Loading section ., i, d, a, t, a: RVA=0x00234000, VirtualSize=0x00000F2E, RawDataSize=0x00001000, Flags=0xC0000040
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section ., i, d, a, t, a has RawDataSize (0x00001000) > VirtualSize (0x00000F2E), truncating to VirtualSize to avoid writing beyond section bounds
-dbug: Win32Emu.Emulator[0]
-      [Loader] Loading section : RVA=0x00235000, VirtualSize=0x00002ADE, RawDataSize=0x00002C00, Flags=0xC0000040
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section  has RawDataSize (0x00002C00) > VirtualSize (0x00002ADE), truncating to VirtualSize to avoid writing beyond section bounds
-dbug: Win32Emu.Emulator[0]
-      [Loader] Loading section c, o, d, e: RVA=0x00238000, VirtualSize=0x00000B17, RawDataSize=0x00000C00, Flags=0xC0000040
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section c, o, d, e has RawDataSize (0x00000C00) > VirtualSize (0x00000B17), truncating to VirtualSize to avoid writing beyond section bounds
-dbug: Win32Emu.Emulator[0]
-      [Loader] Loading section ., r, s, r, c: RVA=0x00239000, VirtualSize=0x00006DAC, RawDataSize=0x00006E00, Flags=0x40000040
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section ., r, s, r, c has RawDataSize (0x00006E00) > VirtualSize (0x00006DAC), truncating to VirtualSize to avoid writing beyond section bounds
-dbug: Win32Emu.Emulator[0]
-      [Loader] Image loaded at preferred base 0x00400000, no relocations needed
 info: Win32Emu.Emulator[0]
       [Loader] Created syscall dispatcher at 0x0E000000
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634318 contains unusual value 0x0023454E before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063431C contains unusual value 0x00234A02 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634320 contains unusual value 0x00234A5C before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634324 contains unusual value 0x00234A6A before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634328 contains unusual value 0x00234850 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063432C contains unusual value 0x0023485E before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634330 contains unusual value 0x00234AA8 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634334 contains unusual value 0x00234A94 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634338 contains unusual value 0x0023483E before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063433C contains unusual value 0x00234A82 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634340 contains unusual value 0x00234A4C before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634344 contains unusual value 0x00234A3A before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634348 contains unusual value 0x00234A2E before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063434C contains unusual value 0x00234B82 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634350 contains unusual value 0x00234B68 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634354 contains unusual value 0x00234B56 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634358 contains unusual value 0x00234B44 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063435C contains unusual value 0x00234B34 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634360 contains unusual value 0x00234B1A before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634364 contains unusual value 0x00234B0A before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634368 contains unusual value 0x00234AF8 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063436C contains unusual value 0x00234AE6 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634370 contains unusual value 0x00234AD6 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634374 contains unusual value 0x00234AC6 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634378 contains unusual value 0x00234AB8 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063437C contains unusual value 0x00234780 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634380 contains unusual value 0x0023478E before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634384 contains unusual value 0x0023479E before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634388 contains unusual value 0x002347AE before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063438C contains unusual value 0x002347BC before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634390 contains unusual value 0x002347CA before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634394 contains unusual value 0x002347D6 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634398 contains unusual value 0x002347E2 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063439C contains unusual value 0x002347F0 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343A0 contains unusual value 0x00234804 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343A4 contains unusual value 0x00234818 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343A8 contains unusual value 0x0023482C before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343AC contains unusual value 0x00234A18 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343B0 contains unusual value 0x00234A24 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343B4 contains unusual value 0x00234A76 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343B8 contains unusual value 0x0023486E before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343BC contains unusual value 0x0023487C before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343C0 contains unusual value 0x0023488E before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343C4 contains unusual value 0x0023489E before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343C8 contains unusual value 0x002348AA before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343CC contains unusual value 0x002348C2 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343D0 contains unusual value 0x002348DC before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343D4 contains unusual value 0x002348EE before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343D8 contains unusual value 0x00234900 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343DC contains unusual value 0x0023490E before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343E0 contains unusual value 0x0023491C before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343E4 contains unusual value 0x0023492A before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343E8 contains unusual value 0x0023493A before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343EC contains unusual value 0x00234948 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343F0 contains unusual value 0x00234954 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343F4 contains unusual value 0x00234970 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343F8 contains unusual value 0x00234986 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006343FC contains unusual value 0x002349A0 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634400 contains unusual value 0x002349B6 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634404 contains unusual value 0x002349D0 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634408 contains unusual value 0x002349E8 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063440C contains unusual value 0x00234534 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634414 contains unusual value 0x002345EE before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634418 contains unusual value 0x002345FA before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063441C contains unusual value 0x00234678 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634420 contains unusual value 0x00234664 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634424 contains unusual value 0x00234608 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634428 contains unusual value 0x00234626 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063442C contains unusual value 0x0023465A before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634430 contains unusual value 0x00234648 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634434 contains unusual value 0x00234638 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634438 contains unusual value 0x00234614 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063443C contains unusual value 0x00234586 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634440 contains unusual value 0x00234596 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634444 contains unusual value 0x00234578 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634448 contains unusual value 0x002345BA before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063444C contains unusual value 0x002345CE before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634450 contains unusual value 0x002345A6 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634454 contains unusual value 0x00234BF4 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634458 contains unusual value 0x002345DC before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063445C contains unusual value 0x00234C00 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634460 contains unusual value 0x00234BA2 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634464 contains unusual value 0x00234BD4 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634468 contains unusual value 0x00234B90 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063446C contains unusual value 0x00234C10 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634470 contains unusual value 0x00234BB8 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634474 contains unusual value 0x00234BC4 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634478 contains unusual value 0x00234BE2 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634310 contains unusual value 0x00234694 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634480 contains unusual value 0x002346B0 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634484 contains unusual value 0x002346C2 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634488 contains unusual value 0x002346D2 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063448C contains unusual value 0x00234C66 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634490 contains unusual value 0x00234C22 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634494 contains unusual value 0x00234C32 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634498 contains unusual value 0x00234C42 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063449C contains unusual value 0x00234C54 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344A4 contains unusual value 0x00234C74 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344A8 contains unusual value 0x00234C88 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344AC contains unusual value 0x00234CA2 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344B0 contains unusual value 0x00234720 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344B4 contains unusual value 0x002346EA before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344B8 contains unusual value 0x002346FE before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344BC contains unusual value 0x00234CE4 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344C0 contains unusual value 0x00234CFE before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344C4 contains unusual value 0x00234D1A before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344C8 contains unusual value 0x00234D36 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344CC contains unusual value 0x00234D4A before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344D0 contains unusual value 0x00234D5C before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344D4 contains unusual value 0x00234D7A before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344D8 contains unusual value 0x00234D94 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344DC contains unusual value 0x00234DA6 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344E0 contains unusual value 0x00234DBC before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344E4 contains unusual value 0x00234DD2 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344E8 contains unusual value 0x00234DE2 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344EC contains unusual value 0x00234DFE before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344F0 contains unusual value 0x00234E10 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344F4 contains unusual value 0x00234E28 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344F8 contains unusual value 0x00234E3C before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006344FC contains unusual value 0x00234E52 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634500 contains unusual value 0x00234E66 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634504 contains unusual value 0x00234E78 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634508 contains unusual value 0x00234E90 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063450C contains unusual value 0x00234EA2 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634510 contains unusual value 0x00234EB6 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634514 contains unusual value 0x00234EC6 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634518 contains unusual value 0x00234710 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063451C contains unusual value 0x00234762 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634520 contains unusual value 0x00234736 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634524 contains unusual value 0x0023474C before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634528 contains unusual value 0x00234CBC before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x0063452C contains unusual value 0x00234CD0 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x00634308 contains unusual value 0x00234EE0 before writing synthetic address.
-dbug: Win32Emu.Emulator[0]
-      [Loader] IAT entry at VA 0x006342F4 contains unusual value 0x00234F00 before writing synthetic address.
 info: Win32Emu.Emulator[0]
       [Loader] Import mapping complete: 136 imports mapped to addresses 0x0F000000 - 0x0F000870
 info: Win32Emu.Emulator[0]
       [Loader] IAT verification passed: all 136 entries are correct
 info: Win32Emu.Emulator[0]
       [Loader] Registered 136 IAT entries for runtime protection
-dbug: Win32Emu.Emulator[0]
-      [Loader] No TLS directory found in PE image
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section ., t, e, x, t: RVA=0x00001000, VirtualSize=0x0006B9DC, RawSize=0x0006BA00, Characteristics=0x60000020
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section ., r, d, a, t, a: RVA=0x0006D000, VirtualSize=0x000013A8, RawSize=0x00001400, Characteristics=0x40000040
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section ., d, a, t, a: RVA=0x0006F000, VirtualSize=0x001C4050, RawSize=0x00024600, Characteristics=0xC0000040
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section ., i, d, a, t, a: RVA=0x00234000, VirtualSize=0x00000F2E, RawSize=0x00001000, Characteristics=0xC0000040
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section : RVA=0x00235000, VirtualSize=0x00002ADE, RawSize=0x00002C00, Characteristics=0xC0000040
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section c, o, d, e: RVA=0x00238000, VirtualSize=0x00000B17, RawSize=0x00000C00, Characteristics=0xC0000040
-dbug: Win32Emu.Emulator[0]
-      [Loader] Section ., r, s, r, c: RVA=0x00239000, VirtualSize=0x00006DAC, RawSize=0x00006E00, Characteristics=0x40000040
 info: Win32Emu.Emulator[0]
       [Loader] Extracted 7 sections from PE file
-dbug: Win32Emu.Emulator[0]
-      [Loader] Image base=0x00400000 EntryPoint=0x00460420 Size=0x240000
-dbug: Win32Emu.Emulator[0]
-      [Loader] Imports mapped: 136
-dbug: Win32Emu.Emulator[0]
-      [Loader] Subsystem: 2 (2=GUI, 3=CUI)
-dbug: Win32Emu.Emulator[0]
-      [Loader] PE Header Stack: Reserve=0x100000 Commit=0x1000
-dbug: Win32Emu.Emulator[0]
-      [Loader] PE Header Heap: Reserve=0x100000 Commit=0x1000
-dbug: Win32Emu.Emulator[0]
-      [Loader] Sections loaded: 7
-dbug: Win32Emu.Emulator[0]
-      [Loader]   Section '.text': RVA=0x00001000 Size=0x0006B9DC Flags=[EXEC,READ]
-dbug: Win32Emu.Emulator[0]
-      [Loader]   Section '.rdata': RVA=0x0006D000 Size=0x000013A8 Flags=[DATA,READ]
-dbug: Win32Emu.Emulator[0]
-      [Loader]   Section '.data': RVA=0x0006F000 Size=0x001C4050 Flags=[DATA,READ,WRITE]
-dbug: Win32Emu.Emulator[0]
-      [Loader]   Section '.idata': RVA=0x00234000 Size=0x00000F2E Flags=[DATA,READ,WRITE]
-dbug: Win32Emu.Emulator[0]
-      [Loader]   Section '': RVA=0x00235000 Size=0x00002ADE Flags=[DATA,READ,WRITE]
-dbug: Win32Emu.Emulator[0]
-      [Loader]   Section 'code': RVA=0x00238000 Size=0x00000B17 Flags=[DATA,READ,WRITE]
-dbug: Win32Emu.Emulator[0]
-      [Loader]   Section '.rsrc': RVA=0x00239000 Size=0x00006DAC Flags=[DATA,READ]
 info: Win32Emu.Emulator[0]
       [RegistryHive] Created in-memory hive: SYSTEM
 info: Win32Emu.Emulator[0]
@@ -394,88 +44,12 @@ info: Win32Emu.Emulator[0]
       [RegistryHive] Created in-memory hive: NTUSER.DAT
 info: Win32Emu.Emulator[0]
       [RegistryHive] Initialized 3 registry hives
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: TEMP=C:\TEMP
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: TMP=C:\TEMP
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: WINDIR=C:\WINDOWS
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: SystemRoot=C:\WINDOWS
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: ComSpec=C:\WINDOWS\system32\cmd.exe
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: OS=Windows_NT
 info: Win32Emu.Emulator[0]
       [RegistryHive] Initialized system environment variables
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: TEMP=C:\Users\User\AppData\Local\Temp
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: TMP=C:\Users\User\AppData\Local\Temp
 info: Win32Emu.Emulator[0]
       [RegistryHive] Initialized user environment variables
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Registry hive initialized
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Opened key: HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment -> handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loading environment variables from key handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Enumerated 8 values for handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: ComSpec=C:\WINDOWS\system32\cmd.exe (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: ComSpec=C:\WINDOWS\system32\cmd.exe
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: OS=Windows_NT (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: OS=Windows_NT
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: SystemRoot=C:\WINDOWS (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: SystemRoot=C:\WINDOWS
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: TEMP=C:\TEMP (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: TEMP=C:\TEMP
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: TMP=C:\TEMP (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: TMP=C:\TEMP
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: WINDIR=C:\WINDOWS (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: WINDIR=C:\WINDOWS
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Closed key handle: 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Opened key: HKEY_CURRENT_USER\Environment -> handle 0x80000001
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loading environment variables from key handle 0x80000001
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Enumerated 2 values for handle 0x80000001
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: TEMP=C:\Users\User\AppData\Local\Temp (type=String) from handle 0x80000001
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: TEMP=C:\Users\User\AppData\Local\Temp
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: TMP=C:\Users\User\AppData\Local\Temp (type=String) from handle 0x80000001
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: TMP=C:\Users\User\AppData\Local\Temp
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Closed key handle: 0x80000001
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Synced environment variables from registry
 info: Win32Emu.Emulator[0]
@@ -493,13 +67,27 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Pre-registered standard control class: MDICLIENT with WndProc=0x0D000006
 info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: COMBOLBOX with WndProc=0x0D000007
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: DDEMLEVENT with WndProc=0x0D000008
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: MESSAGE with WndProc=0x0D000009
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32768 with WndProc=0x0D00000A
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32769 with WndProc=0x0D00000B
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32770 with WndProc=0x0D00000C
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32771 with WndProc=0x0D00000D
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32772 with WndProc=0x0D00000E
+info: Win32Emu.Emulator[0]
       [Loader] Initializing virtual file system with disk: /Users/pierce/Library/Application Support/Win32Emu/VirtualDisks/ign_3dfx.vhd
 info: Win32Emu.Emulator[0]
       [DiskVFS] Mounted VHD: /Users/pierce/Library/Application Support/Win32Emu/VirtualDisks/ign_3dfx.vhd (Read-Write)
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Virtual File System initialized with disk: /Users/pierce/Library/Application Support/Win32Emu/VirtualDisks/ign_3dfx.vhd
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] SaveHives called (not implemented - using in-memory only)
 info: Win32Emu.Emulator[0]
       [RegistryHive] Disposed registry hive manager
 info: Win32Emu.Emulator[0]
@@ -510,88 +98,12 @@ info: Win32Emu.Emulator[0]
       [RegistryHive] Created in-memory hive: NTUSER.DAT
 info: Win32Emu.Emulator[0]
       [RegistryHive] Initialized 3 registry hives
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: TEMP=C:\TEMP
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: TMP=C:\TEMP
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: WINDIR=C:\WINDOWS
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: SystemRoot=C:\WINDOWS
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: ComSpec=C:\WINDOWS\system32\cmd.exe
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: OS=Windows_NT
 info: Win32Emu.Emulator[0]
       [RegistryHive] Initialized system environment variables
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: TEMP=C:\Users\User\AppData\Local\Temp
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Set default value: TMP=C:\Users\User\AppData\Local\Temp
 info: Win32Emu.Emulator[0]
       [RegistryHive] Initialized user environment variables
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Registry hive initialized
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Opened key: HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment -> handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loading environment variables from key handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Enumerated 8 values for handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: ComSpec=C:\WINDOWS\system32\cmd.exe (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: ComSpec=C:\WINDOWS\system32\cmd.exe
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: OS=Windows_NT (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: OS=Windows_NT
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: SystemRoot=C:\WINDOWS (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: SystemRoot=C:\WINDOWS
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: TEMP=C:\TEMP (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: TEMP=C:\TEMP
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: TMP=C:\TEMP (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: TMP=C:\TEMP
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: WINDIR=C:\WINDOWS (type=String) from handle 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: WINDIR=C:\WINDOWS
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Closed key handle: 0x80000000
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Opened key: HKEY_CURRENT_USER\Environment -> handle 0x80000001
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loading environment variables from key handle 0x80000001
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Enumerated 2 values for handle 0x80000001
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: TEMP=C:\Users\User\AppData\Local\Temp (type=String) from handle 0x80000001
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: TEMP=C:\Users\User\AppData\Local\Temp
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Query value: TMP=C:\Users\User\AppData\Local\Temp (type=String) from handle 0x80000001
-dbug: Win32Emu.Emulator[0]
-      [ProcessEnv] Loaded environment variable: TMP=C:\Users\User\AppData\Local\Temp
-dbug: Win32Emu.Emulator[0]
-      [RegistryHive] Closed key handle: 0x80000001
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Synced environment variables from registry
 info: Win32Emu.Emulator[0]
@@ -600,10 +112,6 @@ info: Win32Emu.Emulator[0]
       [ProcessEnv] Registered main executable: C:\ign_win\ign_3dfx.exe at 0x00400000
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Set current directory to: C:\ign_win
-dbug: Win32Emu.Emulator[0]
-      MemWrite addr=0x01000000 len=26 data=22 43 3A 5C 69 67 6E 5F 77 69 6E 5C 69 67 6E 5F 33 64 66 78 2E 65 78 65 22 00
-dbug: Win32Emu.Emulator[0]
-      MemWrite addr=0x01000020 len=24 data=43 3A 5C 69 67 6E 5F 77 69 6E 5C 69 67 6E 5F 33 64 66 78 2E 65 78 65 00
 info: Win32Emu.Emulator[0]
       [ProcessEnv] TEB allocated at 0x01000040
 info: Win32Emu.Emulator[0]
@@ -620,58 +128,32 @@ info: Win32Emu.Emulator[0]
       [ThreadScheduler] Initialized main thread 1 (handle=0x00001000)
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Main thread initialized with ID=1
-dbug: Win32Emu.Emulator[0]
-      [Loader] Main thread initialized
-dbug: Win32Emu.Emulator[0]
-      [Emulator] No TLS callbacks to execute
-dbug: Win32Emu.Emulator[0]
-      [EventProcessing] Starting UI event processing loop
-dbug: Win32Emu.Emulator[0]
-      [Debug] Enhanced debugging enabled - will catch 0xFFFFFFFD errors
-dbug: Win32Emu.Emulator[0]
-      [Debug] Monitoring for suspicious register values
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetVersion at 0x0F000040
+      [Syscall] KERNEL32.DLL!GetVersion from stub at 0x0F000040
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetVersion at EIP=0x0F000040 ESP=0x001FEF84 stack=4C 04 46 00 00 00 00 00 00 00 00 00 00 00 00 00
+      [Syscall] BEFORE API: Return address at 0x001FEF84 = 0x0046044C
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetVersion at EIP=0x0E000002 ESP=0x001FEF84 stack=4C 04 46 00 00 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetVersion returned 0x040003B6, argBytes=0
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetVersion] Stack state before cleanup:
-        [ESP+00] = 0x001FEF84: 0x0046044C (return addr)
-        [ESP+04] = 0x001FEF88: 0x00000000
-        [ESP+08] = 0x001FEF8C: 0x00000000
-        [ESP+12] = 0x001FEF90: 0x00000000
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetVersion] Stack cleanup: ESP=0x001FEF84, retEIP=0x0046044C, argBytes=0, new ESP=0x001FEF88
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetVersion: EBX=00000000 (saved=00000000, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF88
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetVersion
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!HeapCreate at 0x0F000310
+      [Syscall] AFTER API: Return address at 0x001FEF84 = 0x0046044C
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!HeapCreate at EIP=0x0F000310 ESP=0x001FEF74 stack=1F 36 46 00 01 00 00 00 00 10 00 00 00 00 00 00
+      [Syscall] KERNEL32.DLL!HeapCreate from stub at 0x0F000310
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF74 = 0x0046361F
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapCreate at EIP=0x0E000002 ESP=0x001FEF74 stack=1F 36 46 00 01 00 00 00 00 10 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!HeapCreate returned 0x01002040, argBytes=12
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!HeapCreate] Stack state before cleanup:
-        [ESP+00] = 0x001FEF74: 0x0046361F (return addr)
-        [ESP+04] = 0x001FEF78: 0x00000001 (arg1)
-        [ESP+08] = 0x001FEF7C: 0x00001000 (arg2)
-        [ESP+12] = 0x001FEF80: 0x00000000 (arg3)
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!HeapCreate] Stack cleanup: ESP=0x001FEF74, retEIP=0x0046361F, argBytes=12, new ESP=0x001FEF84
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!HeapCreate: EBX=00000000 (saved=00000000, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF84
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!HeapCreate
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!VirtualAlloc at 0x0F000330
+      [Syscall] AFTER API: Return address at 0x001FEF74 = 0x0046361F
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!VirtualAlloc at EIP=0x0F000330 ESP=0x001FEF60 stack=97 36 46 00 00 00 00 00 00 00 40 00 00 20 00 00
+      [Syscall] KERNEL32.DLL!VirtualAlloc from stub at 0x0F000330
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF60 = 0x00463697
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!VirtualAlloc at EIP=0x0E000002 ESP=0x001FEF60 stack=97 36 46 00 00 00 00 00 00 00 40 00 00 20 00 00
 info: Win32Emu.Emulator[0]
       [Kernel32] VirtualAlloc(lpAddress=0x00000000, dwSize=0x00400000, alloc=0x00002000, protect=0x00000004)
 info: Win32Emu.Emulator[0]
@@ -682,23 +164,14 @@ info: Win32Emu.Emulator[0]
       [Kernel32] VirtualAlloc -> 0x01010000
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!VirtualAlloc returned 0x01010000, argBytes=16
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!VirtualAlloc] Stack state before cleanup:
-        [ESP+00] = 0x001FEF60: 0x00463697 (return addr)
-        [ESP+04] = 0x001FEF64: 0x00000000 (arg1)
-        [ESP+08] = 0x001FEF68: 0x00400000 (arg2)
-        [ESP+12] = 0x001FEF6C: 0x00002000 (arg3)
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!VirtualAlloc] Stack cleanup: ESP=0x001FEF60, retEIP=0x00463697, argBytes=16, new ESP=0x001FEF74
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!VirtualAlloc: EBX=00000000 (saved=00000000, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=0F000330 (saved=0F000330, preserved=True), EBP=00490918 (saved=00490918, preserved=True, valid=True, savedValid=True), ESP=001FEF74
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!VirtualAlloc
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!VirtualAlloc at 0x0F000330
+      [Syscall] AFTER API: Return address at 0x001FEF60 = 0x00463697
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!VirtualAlloc at EIP=0x0F000330 ESP=0x001FEF60 stack=B0 36 46 00 00 00 01 01 00 00 01 00 00 10 00 00
+      [Syscall] KERNEL32.DLL!VirtualAlloc from stub at 0x0F000330
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF60 = 0x004636B0
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!VirtualAlloc at EIP=0x0E000002 ESP=0x001FEF60 stack=B0 36 46 00 00 00 01 01 00 00 01 00 00 10 00 00
 info: Win32Emu.Emulator[0]
       [Kernel32] VirtualAlloc(lpAddress=0x01010000, dwSize=0x00010000, alloc=0x00001000, protect=0x00000004)
 info: Win32Emu.Emulator[0]
@@ -711,184 +184,88 @@ info: Win32Emu.Emulator[0]
       [Kernel32] VirtualAlloc -> 0x01010000
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!VirtualAlloc returned 0x01010000, argBytes=16
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!VirtualAlloc] Stack state before cleanup:
-        [ESP+00] = 0x001FEF60: 0x004636B0 (return addr)
-        [ESP+04] = 0x001FEF64: 0x01010000 (arg1)
-        [ESP+08] = 0x001FEF68: 0x00010000 (arg2)
-        [ESP+12] = 0x001FEF6C: 0x00001000 (arg3)
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!VirtualAlloc] Stack cleanup: ESP=0x001FEF60, retEIP=0x004636B0, argBytes=16, new ESP=0x001FEF74
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!VirtualAlloc: EBX=00000000 (saved=00000000, preserved=True), ESI=01010000 (saved=01010000, preserved=True), EDI=0F000330 (saved=0F000330, preserved=True), EBP=00490918 (saved=00490918, preserved=True, valid=True, savedValid=True), ESP=001FEF74
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!VirtualAlloc
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 10000: EIP=0x00463727
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetStartupInfoA at 0x0F000240
+      [Syscall] AFTER API: Return address at 0x001FEF60 = 0x004636B0
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStartupInfoA at EIP=0x0F000240 ESP=0x001FEF24 stack=DB 64 46 00 40 EF 1F 00 00 00 00 00 00 00 00 00
+      [Syscall] KERNEL32.DLL!GetStartupInfoA from stub at 0x0F000240
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF24 = 0x004664DB
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStartupInfoA at EIP=0x0E000002 ESP=0x001FEF24 stack=DB 64 46 00 40 EF 1F 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStartupInfoA returned 0x00000000, argBytes=4
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStartupInfoA] Stack state before cleanup:
-        [ESP+00] = 0x001FEF24: 0x004664DB (return addr)
-        [ESP+04] = 0x001FEF28: 0x001FEF40 (arg1)
-        [ESP+08] = 0x001FEF2C: 0x00000000
-        [ESP+12] = 0x001FEF30: 0x00000000
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStartupInfoA] Stack cleanup: ESP=0x001FEF24, retEIP=0x004664DB, argBytes=4, new ESP=0x001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetStartupInfoA: EBX=0000000A (saved=0000000A, preserved=True), ESI=01010200 (saved=01010200, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetStartupInfoA
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetStdHandle at 0x0F0000A0
+      [Syscall] AFTER API: Return address at 0x001FEF24 = 0x004664DB
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0F0000A0 ESP=0x001FEF24 stack=0E 66 46 00 F6 FF FF FF 00 00 00 00 00 00 00 00
+      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F0000A0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF24 = 0x0046660E
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF24 stack=0E 66 46 00 F6 FF FF FF 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStdHandle] Stack state before cleanup:
-        [ESP+00] = 0x001FEF24: 0x0046660E (return addr)
-        [ESP+04] = 0x001FEF28: 0xFFFFFFF6 (arg1)
-        [ESP+08] = 0x001FEF2C: 0x00000000
-        [ESP+12] = 0x001FEF30: 0x00000000
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStdHandle] Stack cleanup: ESP=0x001FEF24, retEIP=0x0046660E, argBytes=4, new ESP=0x001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetStdHandle: EBX=00000000 (saved=00000000, preserved=True), ESI=01010100 (saved=01010100, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0F0000A0 (saved=0F0000A0, preserved=True, valid=False, savedValid=False), ESP=001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetStdHandle
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetFileType at 0x0F000020
+      [Syscall] AFTER API: Return address at 0x001FEF24 = 0x0046660E
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0F000020 ESP=0x001FEF24 stack=1C 66 46 00 00 00 00 00 00 00 00 00 00 00 00 00
+      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000020
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF24 = 0x0046661C
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF24 stack=1C 66 46 00 00 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetFileType] Stack state before cleanup:
-        [ESP+00] = 0x001FEF24: 0x0046661C (return addr)
-        [ESP+04] = 0x001FEF28: 0x00000000 (arg1)
-        [ESP+08] = 0x001FEF2C: 0x00000000
-        [ESP+12] = 0x001FEF30: 0x00000000
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetFileType] Stack cleanup: ESP=0x001FEF24, retEIP=0x0046661C, argBytes=4, new ESP=0x001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetFileType: EBX=00000000 (saved=00000000, preserved=True), ESI=01010100 (saved=01010100, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0F0000A0 (saved=0F0000A0, preserved=True, valid=False, savedValid=False), ESP=001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetFileType
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetStdHandle at 0x0F0000A0
+      [Syscall] AFTER API: Return address at 0x001FEF24 = 0x0046661C
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0F0000A0 ESP=0x001FEF24 stack=0E 66 46 00 F5 FF FF FF 00 00 00 00 00 00 00 00
+      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F0000A0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF24 = 0x0046660E
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF24 stack=0E 66 46 00 F5 FF FF FF 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStdHandle] Stack state before cleanup:
-        [ESP+00] = 0x001FEF24: 0x0046660E (return addr)
-        [ESP+04] = 0x001FEF28: 0xFFFFFFF5 (arg1)
-        [ESP+08] = 0x001FEF2C: 0x00000000
-        [ESP+12] = 0x001FEF30: 0x00000000
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStdHandle] Stack cleanup: ESP=0x001FEF24, retEIP=0x0046660E, argBytes=4, new ESP=0x001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetStdHandle: EBX=00000001 (saved=00000001, preserved=True), ESI=01010108 (saved=01010108, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0F0000A0 (saved=0F0000A0, preserved=True, valid=False, savedValid=False), ESP=001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetStdHandle
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetFileType at 0x0F000020
+      [Syscall] AFTER API: Return address at 0x001FEF24 = 0x0046660E
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0F000020 ESP=0x001FEF24 stack=1C 66 46 00 00 00 00 00 00 00 00 00 00 00 00 00
+      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000020
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF24 = 0x0046661C
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF24 stack=1C 66 46 00 00 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetFileType] Stack state before cleanup:
-        [ESP+00] = 0x001FEF24: 0x0046661C (return addr)
-        [ESP+04] = 0x001FEF28: 0x00000000 (arg1)
-        [ESP+08] = 0x001FEF2C: 0x00000000
-        [ESP+12] = 0x001FEF30: 0x00000000
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetFileType] Stack cleanup: ESP=0x001FEF24, retEIP=0x0046661C, argBytes=4, new ESP=0x001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetFileType: EBX=00000001 (saved=00000001, preserved=True), ESI=01010108 (saved=01010108, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0F0000A0 (saved=0F0000A0, preserved=True, valid=False, savedValid=False), ESP=001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetFileType
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetStdHandle at 0x0F0000A0
+      [Syscall] AFTER API: Return address at 0x001FEF24 = 0x0046661C
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0F0000A0 ESP=0x001FEF24 stack=0E 66 46 00 F4 FF FF FF 00 00 00 00 00 00 00 00
+      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F0000A0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF24 = 0x0046660E
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF24 stack=0E 66 46 00 F4 FF FF FF 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStdHandle] Stack state before cleanup:
-        [ESP+00] = 0x001FEF24: 0x0046660E (return addr)
-        [ESP+04] = 0x001FEF28: 0xFFFFFFF4 (arg1)
-        [ESP+08] = 0x001FEF2C: 0x00000000
-        [ESP+12] = 0x001FEF30: 0x00000000
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStdHandle] Stack cleanup: ESP=0x001FEF24, retEIP=0x0046660E, argBytes=4, new ESP=0x001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetStdHandle: EBX=00000002 (saved=00000002, preserved=True), ESI=01010110 (saved=01010110, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0F0000A0 (saved=0F0000A0, preserved=True, valid=False, savedValid=False), ESP=001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetStdHandle
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetFileType at 0x0F000020
+      [Syscall] AFTER API: Return address at 0x001FEF24 = 0x0046660E
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0F000020 ESP=0x001FEF24 stack=1C 66 46 00 00 00 00 00 00 00 00 00 00 00 00 00
+      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000020
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF24 = 0x0046661C
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF24 stack=1C 66 46 00 00 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetFileType] Stack state before cleanup:
-        [ESP+00] = 0x001FEF24: 0x0046661C (return addr)
-        [ESP+04] = 0x001FEF28: 0x00000000 (arg1)
-        [ESP+08] = 0x001FEF2C: 0x00000000
-        [ESP+12] = 0x001FEF30: 0x00000000
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetFileType] Stack cleanup: ESP=0x001FEF24, retEIP=0x0046661C, argBytes=4, new ESP=0x001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetFileType: EBX=00000002 (saved=00000002, preserved=True), ESI=01010110 (saved=01010110, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0F0000A0 (saved=0F0000A0, preserved=True, valid=False, savedValid=False), ESP=001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetFileType
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!SetHandleCount at 0x0F0000B0
+      [Syscall] AFTER API: Return address at 0x001FEF24 = 0x0046661C
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!SetHandleCount at EIP=0x0F0000B0 ESP=0x001FEF24 stack=60 66 46 00 20 00 00 00 00 00 00 00 00 00 00 00
+      [Syscall] KERNEL32.DLL!SetHandleCount from stub at 0x0F0000B0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF24 = 0x00466660
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!SetHandleCount at EIP=0x0E000002 ESP=0x001FEF24 stack=60 66 46 00 20 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!SetHandleCount returned 0x00000020, argBytes=4
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!SetHandleCount] Stack state before cleanup:
-        [ESP+00] = 0x001FEF24: 0x00466660 (return addr)
-        [ESP+04] = 0x001FEF28: 0x00000020 (arg1)
-        [ESP+08] = 0x001FEF2C: 0x00000000
-        [ESP+12] = 0x001FEF30: 0x00000000
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!SetHandleCount] Stack cleanup: ESP=0x001FEF24, retEIP=0x00466660, argBytes=4, new ESP=0x001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!SetHandleCount: EBX=00000003 (saved=00000003, preserved=True), ESI=01010110 (saved=01010110, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0F0000A0 (saved=0F0000A0, preserved=True, valid=False, savedValid=False), ESP=001FEF2C
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!SetHandleCount
-dbug: Win32Emu.Emulator[0]
-      
-      [Debug] *** CPU TRYING TO EXECUTE SYNTHETIC IMPORT ADDRESS! ***
-dbug: Win32Emu.Emulator[0]
-      [Debug] EIP=0x0F000260 at instruction 13044
-dbug: Win32Emu.Emulator[0]
-      [Debug] This is import: KERNEL32.DLL!GetACP
-dbug: Win32Emu.Emulator[0]
-      [Debug] This should now execute an INT3 stub that will be handled as an import call
-dbug: Win32Emu.Emulator[0]
-      [IcedCpu] INT 0x80 syscall at 0x0E000000
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF24 = 0x00466660
 info: Win32Emu.Emulator[0]
       [Syscall] KERNEL32.DLL!GetACP from stub at 0x0F000260
 info: Win32Emu.Emulator[0]
@@ -899,188 +276,65 @@ info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetACP returned 0x0000FDE9, argBytes=0
 info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEF50 = 0x00465FB1
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Syscall KERNEL32.DLL!GetACP: EBX=00000000 (saved=00000000, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF4C
-dbug: Win32Emu.Emulator[0]
-      [Syscall] Returned 0x0000FDE9, argBytes=0, CPU will execute RET naturally
-dbug: Win32Emu.Emulator[0]
-      [Syscall] Patched RET at 0x0F000265 with argBytes=0
-dbug: Win32Emu.Emulator[0]
-      [Syscall] CPU state after KERNEL32.DLL!GetACP: EAX=0x0000FDE9 ESP=0x001FEF4C
-dbug: Win32Emu.Emulator[0]
-      [IcedCpu] RET at 0x0E000002: popped 0x0F000265 from ESP=0x001FEF4C, cleanup=0 bytes, new ESP=0x001FEF50
-dbug: Win32Emu.Emulator[0]
-      [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000265
-dbug: Win32Emu.Emulator[0]
-      
-      [Debug] *** CPU TRYING TO EXECUTE SYNTHETIC IMPORT ADDRESS! ***
-dbug: Win32Emu.Emulator[0]
-      [Debug] EIP=0x0F000265 at instruction 13047
-dbug: Win32Emu.Emulator[0]
-      [Debug] This is import: KERNEL32.DLL!GetACP
-dbug: Win32Emu.Emulator[0]
-      [Debug] This should now execute an INT3 stub that will be handled as an import call
-dbug: Win32Emu.Emulator[0]
-      [IcedCpu] RET at 0x0F000265: popped 0x00465FB1 from ESP=0x001FEF50, cleanup=0 bytes, new ESP=0x001FEF54
-dbug: Win32Emu.Emulator[0]
-      [IcedCpu] RET: After setting _eip, current _eip value is 0x00465FB1
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetCPInfo at 0x0F000250
+      [Syscall] KERNEL32.DLL!GetCPInfo from stub at 0x0F000250
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0F000250 ESP=0x001FEF4C stack=0B 60 46 00 E9 FD 00 00 68 EF 1F 00 00 00 00 00
+      [Syscall] BEFORE API: Return address at 0x001FEF4C = 0x0046600B
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEF4C stack=0B 60 46 00 E9 FD 00 00 68 EF 1F 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Kernel32] GetCPInfo called: codePage=Utf8 lpCpInfo=0x001FEF68
 info: Win32Emu.Emulator[0]
       [Kernel32] GetCPInfo: actualCodePage=Utf8
-dbug: Win32Emu.Emulator[0]
-      MemWrite addr=0x001FEF68 len=20 data=04 00 00 00 3F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetCPInfo returned 0x00000001, argBytes=8
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetCPInfo] Stack state before cleanup:
-        [ESP+00] = 0x001FEF4C: 0x0046600B (return addr)
-        [ESP+04] = 0x001FEF50: 0x0000FDE9 (arg1)
-        [ESP+08] = 0x001FEF54: 0x001FEF68 (arg2)
-        [ESP+12] = 0x001FEF58: 0x00000000
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetCPInfo] Stack cleanup: ESP=0x001FEF4C, retEIP=0x0046600B, argBytes=8, new ESP=0x001FEF58
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetCPInfo: EBX=00000000 (saved=00000000, preserved=True), ESI=0000FDE9 (saved=0000FDE9, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF58
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetCPInfo
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetCPInfo at 0x0F000250
+      [Syscall] AFTER API: Return address at 0x001FEF4C = 0x0046600B
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0F000250 ESP=0x001FEA30 stack=99 62 46 00 E9 FD 00 00 40 EA 1F 00 08 00 00 00
+      [Syscall] KERNEL32.DLL!GetCPInfo from stub at 0x0F000250
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEA30 = 0x00466299
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEA30 stack=99 62 46 00 E9 FD 00 00 40 EA 1F 00 08 00 00 00
 info: Win32Emu.Emulator[0]
       [Kernel32] GetCPInfo called: codePage=Utf8 lpCpInfo=0x001FEA40
 info: Win32Emu.Emulator[0]
       [Kernel32] GetCPInfo: actualCodePage=Utf8
-dbug: Win32Emu.Emulator[0]
-      MemWrite addr=0x001FEA40 len=20 data=04 00 00 00 3F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetCPInfo returned 0x00000001, argBytes=8
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetCPInfo] Stack state before cleanup:
-        [ESP+00] = 0x001FEA30: 0x00466299 (return addr)
-        [ESP+04] = 0x001FEA34: 0x0000FDE9 (arg1)
-        [ESP+08] = 0x001FEA38: 0x001FEA40 (arg2)
-        [ESP+12] = 0x001FEA3C: 0x00000008
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetCPInfo] Stack cleanup: ESP=0x001FEA30, retEIP=0x00466299, argBytes=8, new ESP=0x001FEA3C
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetCPInfo: EBX=00000008 (saved=00000008, preserved=True), ESI=0000FDE9 (saved=0000FDE9, preserved=True), EDI=0050CC79 (saved=0050CC79, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEA3C
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetCPInfo
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetStringTypeW at 0x0F000140
+      [Syscall] AFTER API: Return address at 0x001FEA30 = 0x00466299
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStringTypeW at EIP=0x0F000140 ESP=0x001FE9EC stack=4A 8B 46 00 01 00 00 00 DC E2 46 00 01 00 00 00
+      [Syscall] KERNEL32.DLL!GetStringTypeW from stub at 0x0F000140
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE9EC = 0x00468B4A
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStringTypeW at EIP=0x0E000002 ESP=0x001FE9EC stack=4A 8B 46 00 01 00 00 00 DC E2 46 00 01 00 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStringTypeW returned 0x00000000, argBytes=20
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStringTypeW] Stack state before cleanup:
-        [ESP+00] = 0x001FE9EC: 0x00468B4A (return addr)
-        [ESP+04] = 0x001FE9F0: 0x00000001 (arg1)
-        [ESP+08] = 0x001FE9F4: 0x0046E2DC (arg2)
-        [ESP+12] = 0x001FE9F8: 0x00000001 (arg3)
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStringTypeW] Stack cleanup: ESP=0x001FE9EC, retEIP=0x00468B4A, argBytes=20, new ESP=0x001FEA04
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetStringTypeW: EBX=00000008 (saved=00000008, preserved=True), ESI=0F000150 (saved=0F000150, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEA04
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetStringTypeW
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetStringTypeA at 0x0F000150
+      [Syscall] AFTER API: Return address at 0x001FE9EC = 0x00468B4A
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStringTypeA at EIP=0x0F000150 ESP=0x001FE9EC stack=3D 8C 46 00 00 00 00 00 01 00 00 00 D8 E2 46 00
+      [Syscall] KERNEL32.DLL!GetStringTypeA from stub at 0x0F000150
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE9EC = 0x00468C3D
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStringTypeA at EIP=0x0E000002 ESP=0x001FE9EC stack=3D 8C 46 00 00 00 00 00 01 00 00 00 D8 E2 46 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStringTypeA returned 0x00000001, argBytes=20
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStringTypeA] Stack state before cleanup:
-        [ESP+00] = 0x001FE9EC: 0x00468C3D (return addr)
-        [ESP+04] = 0x001FE9F0: 0x00000000 (arg1)
-        [ESP+08] = 0x001FE9F4: 0x00000001 (arg2)
-        [ESP+12] = 0x001FE9F8: 0x0046E2D8 (arg3)
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStringTypeA] Stack cleanup: ESP=0x001FE9EC, retEIP=0x00468C3D, argBytes=20, new ESP=0x001FEA04
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetStringTypeA: EBX=00000008 (saved=00000008, preserved=True), ESI=0F000150 (saved=0F000150, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEA04
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetStringTypeA
 info: Win32Emu.Emulator[0]
-      [Import] Direct call to KERNEL32.DLL!GetStringTypeA at 0x0F000150
+      [Syscall] AFTER API: Return address at 0x001FE9EC = 0x00468C3D
 info: Win32Emu.Emulator[0]
-      Dispatching KERNEL32.DLL!GetStringTypeA at EIP=0x0F000150 ESP=0x001FE9EC stack=85 8B 46 00 00 00 00 00 54 EA 1F 00 00 01 00 00
+      [Syscall] KERNEL32.DLL!GetStringTypeA from stub at 0x0F000150
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FE9EC = 0x00468B85
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStringTypeA at EIP=0x0E000002 ESP=0x001FE9EC stack=85 8B 46 00 00 00 00 00 54 EA 1F 00 00 01 00 00
 info: Win32Emu.Emulator[0]
       [Dispatcher] KERNEL32.DLL!GetStringTypeA returned 0x00000000, argBytes=20
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStringTypeA] Stack state before cleanup:
-        [ESP+00] = 0x001FE9EC: 0x00468B85 (return addr)
-        [ESP+04] = 0x001FE9F0: 0x00000000 (arg1)
-        [ESP+08] = 0x001FE9F4: 0x001FEA54 (arg2)
-        [ESP+12] = 0x001FE9F8: 0x00000100 (arg3)
-      
-dbug: Win32Emu.Emulator[0]
-      [Import KERNEL32.DLL!GetStringTypeA] Stack cleanup: ESP=0x001FE9EC, retEIP=0x00468B85, argBytes=20, new ESP=0x001FEA04
-dbug: Win32Emu.Emulator[0]
-      [RegisterValidation] After Import KERNEL32.DLL!GetStringTypeA: EBX=00000008 (saved=00000008, preserved=True), ESI=0F000150 (saved=0F000150, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEA04
-dbug: Win32Emu.Emulator[0]
-      [Import] Successfully invoked KERNEL32.DLL!GetStringTypeA
-warn: Win32Emu.Emulator[0]
-      [Emulator] EIP=0x00000001 is suspiciously low (< 0x00400000) at instruction 15751. This likely indicates a corrupted function pointer, bad jump, or API returning invalid address.
-warn: Win32Emu.Emulator[0]
-      [Emulator] Low EIP recovery at 0x00000001: Return address 0x001FEA54 is outside typical code ranges but attempting recovery anyway
-dbug: Win32Emu.Emulator[0]
-      [Emulator] Low EIP recovery at 0x00000001: Simulated return to 0x001FEA54 with EAX=0
-warn: Win32Emu.Emulator[0]
-      [Emulator] EIP=0x001FEA54 is suspiciously low (< 0x00400000) at instruction 15752. This likely indicates a corrupted function pointer, bad jump, or API returning invalid address.
-warn: Win32Emu.Emulator[0]
-      [Emulator] Low EIP recovery at 0x001FEA54: Return address 0x00000100 is outside typical code ranges but attempting recovery anyway
-dbug: Win32Emu.Emulator[0]
-      [Emulator] Low EIP recovery at 0x001FEA54: Simulated return to 0x00000100 with EAX=0
-warn: Win32Emu.Emulator[0]
-      [Emulator] EIP=0x00000100 is suspiciously low (< 0x00400000) at instruction 15753. This likely indicates a corrupted function pointer, bad jump, or API returning invalid address.
-warn: Win32Emu.Emulator[0]
-      [Emulator] Low EIP recovery at 0x00000100: Return address 0x001FED54 is outside typical code ranges but attempting recovery anyway
-dbug: Win32Emu.Emulator[0]
-      [Emulator] Low EIP recovery at 0x00000100: Simulated return to 0x001FED54 with EAX=0
-warn: Win32Emu.Emulator[0]
-      [Emulator] EIP=0x001FED54 is suspiciously low (< 0x00400000) at instruction 15754. This likely indicates a corrupted function pointer, bad jump, or API returning invalid address.
-warn: Win32Emu.Emulator[0]
-      [Emulator] Low EIP recovery at 0x001FED54: Return address 0x0000FDE9 is outside typical code ranges but attempting recovery anyway
-dbug: Win32Emu.Emulator[0]
-      [Emulator] Low EIP recovery at 0x001FED54: Simulated return to 0x0000FDE9 with EAX=0
-warn: Win32Emu.Emulator[0]
-      [Emulator] EIP=0x0000FDE9 is suspiciously low (< 0x00400000) at instruction 15755. This likely indicates a corrupted function pointer, bad jump, or API returning invalid address.
-warn: Win32Emu.Emulator[0]
-      [Emulator] Low EIP recovery at 0x0000FDE9: Return address 0x00000000 from stack is invalid (NULL or kernel space), recovery aborted
-fail: Win32Emu.Emulator[0]
-      [Emulator] Unhandled exception during emulation
-      System.InvalidOperationException: Failed to recover from corrupted EIP=0x0000FDE9
-         at Win32Emu.Emulator.RunWithEnhancedDebugging() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 1071
-         at Win32Emu.Emulator.RunWithEnhancedDebuggingAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 1018
-         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 581
-dbug: Win32Emu.Emulator[0]
-      [EventProcessing] UI event processing cancelled
-dbug: Win32Emu.Emulator[0]
-      [EventProcessing] UI event processing loop stopped
-dbug: Win32Emu.Emulator[0]
-      [Exit] Emulation terminated due to unhandled exception: InvalidOperationException
-dbug: Win32Emu.Emulator[0]
-      === Unknown Function Summary ===
 info: Win32Emu.Emulator[0]
-      No unimplemented functions found!
+      [Syscall] AFTER API: Return address at 0x001FE9EC = 0x00468B85
 fail: Win32Emu.Emulator[0]
-      Unhandled exception during emulation
-      System.InvalidOperationException: Failed to recover from corrupted EIP=0x0000FDE9
-         at Win32Emu.Emulator.RunWithEnhancedDebugging() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 1071
-         at Win32Emu.Emulator.RunWithEnhancedDebuggingAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 1018
-         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 581
-
-
-
+      [Emulator] EIP=0x00000001 is in suspicious low memory range. Previous EIP=0x00468B8A, ESP=0x001FEA1C, EBP=0x00000008. Likely corrupted return address or indirect jump.
+fail: Win32Emu.Emulator[0]
+      [Emulator] EIP=0x00000002 is in suspicious low memory range. Previous EIP=0x00000001, ESP=0x001FEA1C, EBP=0x00000008. Likely corrupted return address or indirect jump.

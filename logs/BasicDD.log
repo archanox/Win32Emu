@@ -813,6 +813,8 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Created window: HWND=0x00010000 Class='Basic DD' Title='Basic DD'
 info: Win32Emu.Emulator[0]
+      Creating Avalonia window for HWND=0x00010000: Basic DD (640x480), Class='Basic DD', Parent=0x00000000
+info: Win32Emu.Emulator[0]
       [ProcessEnv] PostMessage: queued MSG=0x0001 HWND=0x00010000
 info: Win32Emu.Emulator[0]
       [ProcessEnv] PostMessage: queued MSG=0x0005 HWND=0x00010000
@@ -893,6 +895,8 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw] DirectDrawCreateEx(lpGuid=0x00000000, lplpDD=0x00409584, iid=0x00406114, pUnkOuter=0x00000000)
 info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x0005 HWND=0x00010000
+info: Win32Emu.Emulator[0]
       [COM] Created IDirectDraw object at 0x010032B0 (vtable at 0x010032C0)
 info: Win32Emu.Emulator[0]
       [DDraw] Writing COM object 0x010032B0 to address 0x00409584
@@ -907,6 +911,8 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDraw::SetCooperativeLevel at address 0x0D001140
 info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x0005 HWND=0x00010000
+info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDraw::SetCooperativeLevel(this=0x010032B0, hWnd=0x00010000, flags=0x00000011)
 info: Win32Emu.Emulator[0]
       [DDraw] Using Avalonia rendering backend for GUI integration
@@ -920,6 +926,8 @@ info: Win32Emu.Emulator[0]
       [COM] IDirectDraw::SetCooperativeLevel returned 0x00000000 (argBytes=12)
 info: Win32Emu.Emulator[0]
       [COM vtable] Return address from stack: ESP=0x001FEEB8, retEIP=0x0040134B
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x001C HWND=0x00010000
 info: Win32Emu.Emulator[0]
       [COM vtable] Stack state before cleanup:
         [ESP+00] = 0x001FEEB8: 0x0040134B (return addr)
@@ -968,6 +976,10 @@ info: Win32Emu.Emulator[0]
       [COM] After vtable call: ESP changed from 0x001FEEAC to 0x001FEEC0 (delta=20), Call site EIP=0x0D001150, Return EIP=0x00401376
 info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDraw::CreateSurface at address 0x0D001060
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x0018 HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      Avalonia window shown for HWND=0x00010000 with keyboard and mouse input routing enabled
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDraw::CreateSurface(this=0x010032B0, lpDDSurfaceDesc=0x001FEED0, lplpDDSurface=0x00409588, pUnkOuter=0x00000000)
 info: Win32Emu.Emulator[0]
@@ -1053,5 +1065,9 @@ fail: Win32Emu.Emulator[0]
          at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 818
          at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 889
          at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 589
-
-
+fail: Win32Emu.Emulator[0]
+      Unhandled exception: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x001C HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      Avalonia window closed for HWND=0x00010000

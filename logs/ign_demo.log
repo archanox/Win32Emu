@@ -647,6 +647,8 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [ProcessEnv] Created window: HWND=0x00010000 Class='Ignition' Title='Ignition'
 info: Win32Emu.Emulator[0]
+      Creating Avalonia window for HWND=0x00010000: Ignition (640x480), Class='Ignition', Parent=0x00000000
+info: Win32Emu.Emulator[0]
       [ProcessEnv] PostMessage: queued MSG=0x0001 HWND=0x00010000
 info: Win32Emu.Emulator[0]
       [ProcessEnv] PostMessage: queued MSG=0x0005 HWND=0x00010000
@@ -711,6 +713,8 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DDraw] DirectDrawCreate(lpGuid=0x00000000, lplpDD=0x0050D658, pUnkOuter=0x00000000)
 info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x0005 HWND=0x00010000
+info: Win32Emu.Emulator[0]
       [COM] Created IDirectDraw object at 0x01463000 (vtable at 0x01463010)
 info: Win32Emu.Emulator[0]
       [DDraw] Writing COM object 0x01463000 to address 0x0050D658
@@ -723,7 +727,11 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEE58 = 0x004598EB
 info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x0005 HWND=0x00010000
+info: Win32Emu.Emulator[0]
       [COM] Invoking vtable method: IDirectDraw::SetCooperativeLevel at address 0x0D001140
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x001C HWND=0x00010000
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDraw::SetCooperativeLevel(this=0x01463000, hWnd=0x00010000, flags=0x00000053)
 info: Win32Emu.Emulator[0]
@@ -757,6 +765,10 @@ info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDraw::SetDisplayMode(this=0x01463000, width=640, height=480, bpp=8)
 info: Win32Emu.Emulator[0]
       [DDraw] Updated ProcessEnvironment display mode to 640x480x8
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] PostMessage: queued MSG=0x0018 HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      Avalonia window shown for HWND=0x00010000 with keyboard and mouse input routing enabled
 info: Win32Emu.Emulator[0]
       [Avalonia] Initializing Avalonia rendering backend (640x480)...
 info: Win32Emu.Emulator[0]
@@ -1290,6 +1302,150 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       Dispatching USER32.DLL!GetMessageA at EIP=0x0E000002 ESP=0x001FEF04 stack=76 13 41 00 28 EF 1F 00 00 00 00 00 00 00 00 00
 info: Win32Emu.Emulator[0]
+      [User32] GetMessageA: retrieved MSG=0x0005 HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!GetMessageA returned 0x00000001, argBytes=16
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF04 = 0x00411376
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!TranslateMessage from stub at 0x0F000470
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF10 = 0x00411381
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!TranslateMessage at EIP=0x0E000002 ESP=0x001FEF10 stack=81 13 41 00 28 EF 1F 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] TranslateMessage: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x01E00280
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!TranslateMessage returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF10 = 0x00411381
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!DispatchMessageA from stub at 0x0F000480
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF10 = 0x00411388
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!DispatchMessageA at EIP=0x0E000002 ESP=0x001FEF10 stack=88 13 41 00 28 EF 1F 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x01E00280
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: Found WndProc=0x00411450 for HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [User32] CallWindowProcedureAsync: Calling 0x00411450 with HWND=0x00010000 MSG=0x0005
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0F000440 ESP=0x001FEDE8 stack=CA 14 41 00 01 00 00 00 00 06 00 0F F0 05 00 0F
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: nIndex=SM_CYSCREEN
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 480
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x000001E0, argBytes=4
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0F000440 ESP=0x001FEDE4 stack=CF 14 41 00 00 00 00 00 E0 01 00 00 00 06 00 0F
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: nIndex=SM_CXSCREEN
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 640
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000280, argBytes=4
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!SetRect at EIP=0x0F000400 ESP=0x001FEDD8 stack=DF 14 41 00 58 FD 4B 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] SetRect: lpRect=0x004BFD58 (0,0,640,480)
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!SetRect returned 0x00000001, argBytes=20
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!DefWindowProcA at EIP=0x0F0005E0 ESP=0x001FEDDC stack=C5 15 41 00 00 00 01 00 05 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] DefWindowProcA: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x01E00280
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!DefWindowProcA returned 0x00000000, argBytes=16
+info: Win32Emu.Emulator[0]
+      [User32] CallWindowProcedureAsync: Completed with return value 0x00000000, timedOut=False, cancelled=False, failed=False
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: WndProc returned 0x00000000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!DispatchMessageA returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF10 = 0x00411388
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!GetMessageA from stub at 0x0F000600
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF04 = 0x00411376
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!GetMessageA at EIP=0x0E000002 ESP=0x001FEF04 stack=76 13 41 00 28 EF 1F 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] GetMessageA: retrieved MSG=0x0005 HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!GetMessageA returned 0x00000001, argBytes=16
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF04 = 0x00411376
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!TranslateMessage from stub at 0x0F000470
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF10 = 0x00411381
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!TranslateMessage at EIP=0x0E000002 ESP=0x001FEF10 stack=81 13 41 00 28 EF 1F 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] TranslateMessage: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x01E00280
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!TranslateMessage returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF10 = 0x00411381
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!DispatchMessageA from stub at 0x0F000480
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF10 = 0x00411388
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!DispatchMessageA at EIP=0x0E000002 ESP=0x001FEF10 stack=88 13 41 00 28 EF 1F 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x01E00280
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: Found WndProc=0x00411450 for HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [User32] CallWindowProcedureAsync: Calling 0x00411450 with HWND=0x00010000 MSG=0x0005
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0F000440 ESP=0x001FEDE8 stack=CA 14 41 00 01 00 00 00 00 06 00 0F F0 05 00 0F
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: nIndex=SM_CYSCREEN
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: Returning SM_CYSCREEN (1): 480
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x000001E0, argBytes=4
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!GetSystemMetrics at EIP=0x0F000440 ESP=0x001FEDE4 stack=CF 14 41 00 00 00 00 00 E0 01 00 00 00 06 00 0F
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: nIndex=SM_CXSCREEN
+info: Win32Emu.Emulator[0]
+      [User32] GetSystemMetrics: Returning SM_CXSCREEN (0): 640
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!GetSystemMetrics returned 0x00000280, argBytes=4
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!SetRect at EIP=0x0F000400 ESP=0x001FEDD8 stack=DF 14 41 00 58 FD 4B 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] SetRect: lpRect=0x004BFD58 (0,0,640,480)
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!SetRect returned 0x00000001, argBytes=20
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!DefWindowProcA at EIP=0x0F0005E0 ESP=0x001FEDDC stack=C5 15 41 00 00 00 01 00 05 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] DefWindowProcA: HWND=0x00010000 MSG=0x0005 wParam=0x00000000 lParam=0x01E00280
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!DefWindowProcA returned 0x00000000, argBytes=16
+info: Win32Emu.Emulator[0]
+      [User32] CallWindowProcedureAsync: Completed with return value 0x00000000, timedOut=False, cancelled=False, failed=False
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: WndProc returned 0x00000000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!DispatchMessageA returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF10 = 0x00411388
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!GetMessageA from stub at 0x0F000600
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF04 = 0x00411376
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!GetMessageA at EIP=0x0E000002 ESP=0x001FEF04 stack=76 13 41 00 28 EF 1F 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
       [User32] GetMessageA: retrieved MSG=0x001C HWND=0x00010000
 info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!GetMessageA returned 0x00000001, argBytes=16
@@ -1333,6 +1489,134 @@ info: Win32Emu.Emulator[0]
       [Dispatcher] USER32.DLL!DispatchMessageA returned 0x00000000, argBytes=4
 info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEF10 = 0x00411388
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!PeekMessageA from stub at 0x0F0005F0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF00 = 0x0041133A
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!PeekMessageA at EIP=0x0E000002 ESP=0x001FEF00 stack=3A 13 41 00 28 EF 1F 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] PeekMessageA: lpMsg=0x001FEF28 HWND=0x00000000
+info: Win32Emu.Emulator[0]
+      [User32] PeekMessageA: found MSG=0x0018
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!PeekMessageA returned 0x00000001, argBytes=20
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF00 = 0x0041133A
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!GetMessageA from stub at 0x0F000600
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF04 = 0x0041134B
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!GetMessageA at EIP=0x0E000002 ESP=0x001FEF04 stack=4B 13 41 00 28 EF 1F 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] GetMessageA: retrieved MSG=0x001C HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!GetMessageA returned 0x00000001, argBytes=16
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF04 = 0x0041134B
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!TranslateMessage from stub at 0x0F000470
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF10 = 0x00411356
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!TranslateMessage at EIP=0x0E000002 ESP=0x001FEF10 stack=56 13 41 00 28 EF 1F 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] TranslateMessage: HWND=0x00010000 MSG=0x001C wParam=0x00000001 lParam=0x00000000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!TranslateMessage returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF10 = 0x00411356
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!DispatchMessageA from stub at 0x0F000480
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF10 = 0x0041135D
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!DispatchMessageA at EIP=0x0E000002 ESP=0x001FEF10 stack=5D 13 41 00 28 EF 1F 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: HWND=0x00010000 MSG=0x001C wParam=0x00000001 lParam=0x00000000
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: Found WndProc=0x00411450 for HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [User32] CallWindowProcedureAsync: Calling 0x00411450 with HWND=0x00010000 MSG=0x001C
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!DefWindowProcA at EIP=0x0F0005E0 ESP=0x001FEDDC stack=C5 15 41 00 00 00 01 00 1C 00 00 00 01 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] DefWindowProcA: HWND=0x00010000 MSG=0x001C wParam=0x00000001 lParam=0x00000000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!DefWindowProcA returned 0x00000000, argBytes=16
+info: Win32Emu.Emulator[0]
+      [User32] CallWindowProcedureAsync: Completed with return value 0x00000000, timedOut=False, cancelled=False, failed=False
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: WndProc returned 0x00000000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!DispatchMessageA returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF10 = 0x0041135D
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!PeekMessageA from stub at 0x0F0005F0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF00 = 0x0041133A
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!PeekMessageA at EIP=0x0E000002 ESP=0x001FEF00 stack=3A 13 41 00 28 EF 1F 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] PeekMessageA: lpMsg=0x001FEF28 HWND=0x00000000
+info: Win32Emu.Emulator[0]
+      [User32] PeekMessageA: found MSG=0x0018
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!PeekMessageA returned 0x00000001, argBytes=20
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF00 = 0x0041133A
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!GetMessageA from stub at 0x0F000600
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF04 = 0x0041134B
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!GetMessageA at EIP=0x0E000002 ESP=0x001FEF04 stack=4B 13 41 00 28 EF 1F 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] GetMessageA: retrieved MSG=0x0018 HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!GetMessageA returned 0x00000001, argBytes=16
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF04 = 0x0041134B
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!TranslateMessage from stub at 0x0F000470
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF10 = 0x00411356
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!TranslateMessage at EIP=0x0E000002 ESP=0x001FEF10 stack=56 13 41 00 28 EF 1F 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] TranslateMessage: HWND=0x00010000 MSG=0x0018 wParam=0x00000001 lParam=0x00000000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!TranslateMessage returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF10 = 0x00411356
+info: Win32Emu.Emulator[0]
+      [Syscall] USER32.DLL!DispatchMessageA from stub at 0x0F000480
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF10 = 0x0041135D
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!DispatchMessageA at EIP=0x0E000002 ESP=0x001FEF10 stack=5D 13 41 00 28 EF 1F 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: HWND=0x00010000 MSG=0x0018 wParam=0x00000001 lParam=0x00000000
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: Found WndProc=0x00411450 for HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [User32] CallWindowProcedureAsync: Calling 0x00411450 with HWND=0x00010000 MSG=0x0018
+info: Win32Emu.Emulator[0]
+      Dispatching USER32.DLL!DefWindowProcA at EIP=0x0F0005E0 ESP=0x001FEDDC stack=C5 15 41 00 00 00 01 00 18 00 00 00 01 00 00 00
+info: Win32Emu.Emulator[0]
+      [User32] DefWindowProcA: HWND=0x00010000 MSG=0x0018 wParam=0x00000001 lParam=0x00000000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!DefWindowProcA returned 0x00000000, argBytes=16
+info: Win32Emu.Emulator[0]
+      [User32] CallWindowProcedureAsync: Completed with return value 0x00000000, timedOut=False, cancelled=False, failed=False
+info: Win32Emu.Emulator[0]
+      [User32] DispatchMessageA: WndProc returned 0x00000000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] USER32.DLL!DispatchMessageA returned 0x00000000, argBytes=4
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF10 = 0x0041135D
 info: Win32Emu.Emulator[0]
       [Syscall] USER32.DLL!PeekMessageA from stub at 0x0F0005F0
 info: Win32Emu.Emulator[0]
@@ -4070,5 +4354,5 @@ info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEE70 = 0x004679FF
 info: Win32Emu.Emulator[0]
       No unimplemented functions found!
-
-
+info: Win32Emu.Emulator[0]
+      Avalonia window closed for HWND=0x00010000
