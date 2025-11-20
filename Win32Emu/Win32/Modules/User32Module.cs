@@ -2618,30 +2618,12 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogInformation("[User32] DialogBoxParamAsync: Dialog template loaded successfully but Avalonia UI integration not yet implemented");
 				_logger.LogInformation("[User32] DialogBoxParamAsync: Would create dialog window with title '{Title}' and {ItemCount} controls", template.Title, template.ItemCount);
 
-				// Create a dialog window using the standard dialog window class (#32770)
-				// This ensures the dialog is registered in the window collection so SetWindowText and other window functions work
-				var hDlg = _env.CreateWindow(
-					"#32770", // Standard dialog window class
-					template.Title ?? string.Empty,
-					template.Style,
-					template.ExtendedStyle,
-					template.X,
-					template.Y,
-					template.Width,
-					template.Height,
-					hWndParent,
-					0, // No menu for dialogs
-					hInstance,
-					0 // No creation params
-				);
-				
-				if (hDlg == 0)
-				{
-					_logger.LogError("[User32] DialogBoxParamAsync: Failed to create dialog window");
-					return 0;
-				}
-				
-				_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog window handle=0x{HDlg:X8}", hDlg);
+				// Create a dialog window handle
+				// Note: We use RegisterHandle() instead of CreateWindow() to avoid creating duplicate GUI windows.
+				// The actual GUI window is created later via OnDialogCreate(), which adds it to _createdDialogs.
+				// SetWindowText will work because we've extended it to check _dialogStates in ProcessEnvironment.
+				var hDlg = _env.RegisterHandle(new object()); // Dialog handle
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Created dialog handle=0x{HDlg:X8}", hDlg);
 
 				// Initialize dialog state for proper message loop handling
 				_env.InitializeDialogState(hDlg);
