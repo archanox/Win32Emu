@@ -81,6 +81,7 @@
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
+  <Project Path="Win32Emu.Tests.ABExample/Win32Emu.Tests.ABExample.csproj" />
   <Project Path="Win32Emu.Tests.CodeGen\Win32Emu.Tests.CodeGen.csproj">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
