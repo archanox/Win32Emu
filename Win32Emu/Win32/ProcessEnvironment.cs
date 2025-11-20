@@ -2881,6 +2881,14 @@ public class ProcessEnvironment
 		_registryHive?.Dispose();
 		_registryHive = null;
 		
+		// Dispose virtual file system to release VHD files
+		if (VirtualFileSystem is IDisposable disposableVfs)
+		{
+			disposableVfs.Dispose();
+			_logger.LogInformation("[ProcessEnv] Virtual file system disposed");
+		}
+		VirtualFileSystem = null;
+		
 		// Dispose API call tracer if active
 		_apiCallTracer?.Dispose();
 		_apiCallTracer = null;

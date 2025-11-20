@@ -274,4 +274,45 @@ public class DiskVirtualFileSystemTests : IDisposable
 		Assert.True(vfs.FileExists(@"\testgame\normal.txt"));
 		Assert.True(vfs.FileExists(@"\testgame\VERYLONGNAME.txt"));
 	}
+
+	[Fact]
+	public void Dispose_ProperlySavesChangesAndReleasesFile()
+	{
+		// This test verifies that disposing the VFS properly saves changes
+		// and releases the file handle, allowing subsequent access.
+		
+		// Arrange - Create a VHD disk
+		var diskPath = Path.Combine(_testDir, "dispose_test.vhd");
+		
+		// Act - Write a file and dispose
+		using (var vfs = DiskVirtualFileSystem.Create(diskPath, DiskFormat.Vhd, 10 * 1024 * 1024, NullLogger.Instance))
+		{
+			// Create a test file in the VHD
+			var testContent = "Test content for disposal verification";
+			using (var handle = vfs.OpenFile(@"\test.txt", VfsFileMode.Create, VfsFileAccess.Write))
+			{
+				Assert.NotNull(handle);
+				var bytes = System.Text.Encoding.UTF8.GetBytes(testContent);
+				handle.Write(bytes, 0, bytes.Length);
+			}
+			
+			// VFS is disposed here
+		}
+		
+		// Assert - Reopen the VHD and verify the file is still there
+		using (var vfs2 = new DiskVirtualFileSystem(diskPath, NullLogger.Instance))
+		{
+			Assert.True(vfs2.FileExists(@"\test.txt"));
+			
+			// Read back the content to verify it was properly saved
+			using (var handle = vfs2.OpenFile(@"\test.txt", VfsFileMode.Open, VfsFileAccess.Read))
+			{
+				Assert.NotNull(handle);
+				var buffer = new byte[100];
+				var bytesRead = handle.Read(buffer, 0, buffer.Length);
+				var content = System.Text.Encoding.UTF8.GetString(buffer, 0, bytesRead);
+				Assert.Equal("Test content for disposal verification", content);
+			}
+		}
+	}
 }
