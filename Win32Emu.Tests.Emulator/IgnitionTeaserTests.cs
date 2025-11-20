@@ -534,6 +534,7 @@ public class IgnitionTeaserTests
             _output.WriteLine($"[DISPLAY] Frame buffer updated: {info.Width}x{info.Height}");
         }
         public Task<string?> OnBrowseForFolder(string? title, string? rootPath) => Task.FromResult<string?>(null);
+public void OnWindowTitleChanged(uint windowHandle, string title) { }
     }
 
     /// <summary>

@@ -139,6 +139,7 @@ public class IgnitionTeaserDiagnosticTests
         public void OnDialogControlEnabledChanged(uint dialogHandle, int controlId, bool enabled) { }
         public void OnDisplayUpdate(DisplayUpdateInfo info) { }
         public Task<string?> OnBrowseForFolder(string? title, string? rootPath) => Task.FromResult<string?>(null);
+public void OnWindowTitleChanged(uint windowHandle, string title) { }
         
         public void TrackInstruction(uint eip)
         {
