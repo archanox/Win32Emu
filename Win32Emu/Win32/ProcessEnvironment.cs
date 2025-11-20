@@ -2391,6 +2391,63 @@ public class ProcessEnvironment
 		return false;
 	}
 
+	public uint RegCreateKey(string path)
+	{
+		var handle = _registryHive?.CreateKey(path) ?? 0;
+		if (handle != 0)
+		{
+			_logger.LogInformation("[ProcessEnv] RegCreateKey: path=\"{Path}\" handle=0x{Handle:X8} (from hive)", path, handle);
+		}
+		return handle;
+	}
+
+	public bool RegSetValue(uint handle, string valueName, object value, DiscUtils.Registry.RegistryValueType type = DiscUtils.Registry.RegistryValueType.String)
+	{
+		if (_registryHive != null && _registryHive.SetValue(handle, valueName, value, type))
+		{
+			_logger.LogInformation("[ProcessEnv] RegSetValue: handle=0x{Handle:X8} name=\"{ValueName}\" value={Value} type={Type} (from hive)",
+				handle, valueName, value, type);
+			return true;
+		}
+
+		_logger.LogWarning("[ProcessEnv] RegSetValue: failed handle=0x{Handle:X8} name=\"{ValueName}\"", handle, valueName);
+		return false;
+	}
+
+	public string[] RegEnumerateSubKeys(uint handle)
+	{
+		return _registryHive?.EnumerateSubKeyNames(handle) ?? Array.Empty<string>();
+	}
+
+	public string[] RegEnumerateValues(uint handle)
+	{
+		return _registryHive?.EnumerateValueNames(handle) ?? Array.Empty<string>();
+	}
+
+	public bool RegDeleteValue(uint handle, string valueName)
+	{
+		if (_registryHive != null && _registryHive.DeleteValue(handle, valueName))
+		{
+			_logger.LogInformation("[ProcessEnv] RegDeleteValue: handle=0x{Handle:X8} name=\"{ValueName}\" (from hive)", handle, valueName);
+			return true;
+		}
+
+		_logger.LogWarning("[ProcessEnv] RegDeleteValue: failed handle=0x{Handle:X8} name=\"{ValueName}\"", handle, valueName);
+		return false;
+	}
+
+	public bool RegDeleteKey(string path)
+	{
+		if (_registryHive != null && _registryHive.DeleteSubKey(path))
+		{
+			_logger.LogInformation("[ProcessEnv] RegDeleteKey: path=\"{Path}\" (from hive)", path);
+			return true;
+		}
+
+		_logger.LogWarning("[ProcessEnv] RegDeleteKey: failed path=\"{Path}\"", path);
+		return false;
+	}
+
 	// Dialog state management methods
 
 	/// <summary>

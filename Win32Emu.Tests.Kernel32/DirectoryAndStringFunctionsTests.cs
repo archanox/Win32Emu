@@ -146,6 +146,10 @@ public sealed class DirectoryAndStringFunctionsTests : IDisposable
         // Arrange
         const uint HKEY_LOCAL_MACHINE = 0x80000002;
         var subKey = @"SOFTWARE\Microsoft\Windows";
+        
+        // First create the key so it exists
+        _testEnv.ProcessEnv.RegCreateKey($"HKEY_LOCAL_MACHINE\\{subKey}");
+        
         var subKeyAddr = _testEnv.WriteString(subKey);
         var handlePtr = _testEnv.ProcessEnv.SimpleAlloc(4);
 
