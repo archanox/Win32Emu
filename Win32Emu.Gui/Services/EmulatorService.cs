@@ -159,6 +159,8 @@ public class EmulatorService
             }
             finally
             {
+                // Dispose the emulator to properly cleanup resources including VFS
+                _currentEmulator?.Dispose();
                 _currentEmulator = null;
             }
         });
