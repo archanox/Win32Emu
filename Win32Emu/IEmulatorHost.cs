@@ -18,5 +18,12 @@ namespace Win32Emu
 		/// Returns the selected folder path, or null if cancelled.
 		/// </summary>
 		Task<string?> OnBrowseForFolder(string? title, string? rootPath);
+		
+		/// <summary>
+		/// Notifies the host that a window's title/text has changed.
+		/// </summary>
+		/// <param name="windowHandle">The window handle</param>
+		/// <param name="title">The new window title</param>
+		void OnWindowTitleChanged(uint windowHandle, string title);
 	}
 }

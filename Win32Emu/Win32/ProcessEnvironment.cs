@@ -1926,6 +1926,25 @@ public class ProcessEnvironment
 		return false;
 	}
 
+	/// <summary>
+	/// Updates the window title/text for a given window handle.
+	/// </summary>
+	/// <param name="hwnd">The window handle</param>
+	/// <param name="text">The new window text/title</param>
+	/// <returns>True if the window was found and updated, false otherwise</returns>
+	public bool SetWindowText(uint hwnd, string text)
+	{
+		if (_windows.TryGetValue(hwnd, out var windowInfo))
+		{
+			// Create a new WindowInfo with the updated window name (WindowInfo is a record struct)
+			var updatedWindowInfo = windowInfo with { WindowName = text };
+			_windows[hwnd] = updatedWindowInfo;
+			_logger.LogDebug("[ProcessEnv] Updated window text: HWND=0x{Hwnd:X8} -> \"{Text}\"", hwnd, text);
+			return true;
+		}
+		return false;
+	}
+
 	// Message queue management
 	public void PostQuitMessage(int exitCode)
 	{

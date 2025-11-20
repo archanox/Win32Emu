@@ -3223,8 +3223,17 @@ namespace Win32Emu.Win32.Modules
 			var text = lpString.ToString() ?? string.Empty;
 			_logger.LogInformation("[User32] SetWindowTextA(hWnd=0x{HWnd:X8}, lpString=\"{Text}\")", hWnd, text);
 
-			// Stub - just log the operation
-			return 1; // TRUE
+			// Update the window title in ProcessEnvironment
+			if (_env.SetWindowText(hWnd, text))
+			{
+				// Notify the GUI if a host is available
+				_host?.OnWindowTitleChanged(hWnd, text);
+				return 1; // TRUE - success
+			}
+
+			// Window not found
+			_logger.LogWarning("[User32] SetWindowTextA: Window not found: HWND=0x{HWnd:X8}", hWnd);
+			return 0; // FALSE - failure
 		}
 
 		[DllModuleExport(20)]
