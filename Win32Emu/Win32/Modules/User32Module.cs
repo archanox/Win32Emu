@@ -1265,30 +1265,30 @@ namespace Win32Emu.Win32.Modules
 				if (controlInfo.HasValue)
 				{
 					// Handle control visibility - store in window properties
-					var currentStyle = _env.GetWindowProperty(hwnd, (int)NativeTypes.WindowLong.GWL_STYLE);
-					bool wasPreviouslyVisible = (currentStyle & (uint)NativeTypes.WindowStyle.WS_VISIBLE) != 0;
+					var controlStyle = _env.GetWindowProperty(hwnd, (int)NativeTypes.WindowLong.GWL_STYLE);
+					bool wasControlVisible = (controlStyle & (uint)NativeTypes.WindowStyle.WS_VISIBLE) != 0;
 					
-					bool shouldBeVisible = nCmdShow != 0; // SW_HIDE = 0, all others show the window
+					bool controlShouldBeVisible = nCmdShow != 0; // SW_HIDE = 0, all others show the window
 					
-					if (shouldBeVisible)
+					if (controlShouldBeVisible)
 					{
-						currentStyle |= (uint)NativeTypes.WindowStyle.WS_VISIBLE;
+						controlStyle |= (uint)NativeTypes.WindowStyle.WS_VISIBLE;
 						_logger.LogInformation("[User32] ShowWindow: Control 0x{Hwnd:X8} (ID={ControlId}) is now visible", hwnd, controlInfo.Value.ControlId);
 						
-						// Notify GUI to show the control
-						_host?.UpdateControlVisibility(controlInfo.Value.DialogHandle, controlInfo.Value.ControlId, true);
+						// TODO: Notify GUI to show the control when IEmulatorHost is extended
+						// Future: Add OnControlVisibilityChanged to IEmulatorHost
 					}
 					else
 					{
-						currentStyle &= ~(uint)NativeTypes.WindowStyle.WS_VISIBLE;
+						controlStyle &= ~(uint)NativeTypes.WindowStyle.WS_VISIBLE;
 						_logger.LogInformation("[User32] ShowWindow: Control 0x{Hwnd:X8} (ID={ControlId}) is now hidden", hwnd, controlInfo.Value.ControlId);
 						
-						// Notify GUI to hide the control
-						_host?.UpdateControlVisibility(controlInfo.Value.DialogHandle, controlInfo.Value.ControlId, false);
+						// TODO: Notify GUI to hide the control when IEmulatorHost is extended
+						// Future: Add OnControlVisibilityChanged to IEmulatorHost
 					}
 					
-					_env.SetWindowProperty(hwnd, (int)NativeTypes.WindowLong.GWL_STYLE, currentStyle);
-					return wasPreviouslyVisible ? 1u : 0u;
+					_env.SetWindowProperty(hwnd, (int)NativeTypes.WindowLong.GWL_STYLE, controlStyle);
+					return wasControlVisible ? 1u : 0u;
 				}
 				
 				_logger.LogWarning("[User32] ShowWindow: Invalid HWND=0x{Hwnd:X8}", hwnd);
@@ -3455,7 +3455,8 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] WsprintfA(output=0x{Output:X8}, format=\"{FormatStr}\")", output.Address, formatStr);
 
 			// Format the string using stack arguments
-			var result = FormatString(formatStr, args, 0);
+			// Args 0 and 1 are output and format, so variadic args start at index 2
+			var result = FormatString(formatStr, args, 2);
 			output.Write(_env.Memory, result, true);
 
 			return (uint)result.Length;
@@ -3506,7 +3507,7 @@ namespace Win32Emu.Win32.Modules
 							var strAddr = args.UInt32(argIndex++);
 							if (strAddr != 0)
 							{
-								var str = _env.Memory.ReadAnsiString(strAddr);
+								var str = new LpcStr(strAddr, _env.Memory).ToString() ?? string.Empty;
 								result.Append(str);
 							}
 							else
@@ -3589,7 +3590,7 @@ namespace Win32Emu.Win32.Modules
 							currentArgPtr += 4;
 							if (strAddr != 0)
 							{
-								var str = _env.Memory.ReadAnsiString(strAddr);
+								var str = new LpcStr(strAddr, _env.Memory).ToString() ?? string.Empty;
 								result.Append(str);
 							}
 							else
