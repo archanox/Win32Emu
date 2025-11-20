@@ -274,12 +274,14 @@ public class TestGenerator
 	private string GenerateNativeDllLoader()
 	{
 		var sb = new StringBuilder();
+		sb.AppendLine("using System;");
 		sb.AppendLine("using System.Runtime.InteropServices;");
+		sb.AppendLine("using EasyHook;");
 		sb.AppendLine();
 		sb.AppendLine("namespace Win32Emu.Tests.Generated;");
 		sb.AppendLine();
 		sb.AppendLine("/// <summary>");
-		sb.AppendLine("/// Loads native Windows DLLs for A-B testing.");
+		sb.AppendLine("/// Loads native Windows DLLs for A-B testing using EasyHook.");
 		sb.AppendLine("/// Only works on Windows; gracefully degrades on other platforms.");
 		sb.AppendLine("/// </summary>");
 		sb.AppendLine("public class NativeDllLoader : IDisposable");
@@ -296,8 +298,8 @@ public class TestGenerator
 		sb.AppendLine("\t\t\tthrow new PlatformNotSupportedException(\"Native DLL loading only supported on Windows\");");
 		sb.AppendLine("\t\t}");
 		sb.AppendLine();
-		sb.AppendLine("\t\t// Load the native DLL");
-		sb.AppendLine("\t\t_handle = LoadLibrary(dllName);");
+		sb.AppendLine("\t\t// Load the native DLL using EasyHook's NativeAPI");
+		sb.AppendLine("\t\t_handle = NativeAPI.LoadLibrary(dllName);");
 		sb.AppendLine("\t\tif (_handle == IntPtr.Zero)");
 		sb.AppendLine("\t\t{");
 		sb.AppendLine("\t\t\tthrow new DllNotFoundException($\"Could not load native DLL: {dllName}\");");
@@ -306,6 +308,8 @@ public class TestGenerator
 		sb.AppendLine();
 		sb.AppendLine("\tpublic IntPtr GetProcAddress(string functionName)");
 		sb.AppendLine("\t{");
+		sb.AppendLine("\t\t// Use P/Invoke GetProcAddress since EasyHook's LocalHook.GetProcAddress");
+		sb.AppendLine("\t\t// takes a module name string, not a handle");
 		sb.AppendLine("\t\tvar address = GetProcAddressInternal(_handle, functionName);");
 		sb.AppendLine("\t\tif (address == IntPtr.Zero)");
 		sb.AppendLine("\t\t{");
@@ -318,19 +322,17 @@ public class TestGenerator
 		sb.AppendLine("\t{");
 		sb.AppendLine("\t\tif (_handle != IntPtr.Zero)");
 		sb.AppendLine("\t\t{");
+		sb.AppendLine("\t\t\t// EasyHook doesn't provide FreeLibrary, use P/Invoke");
 		sb.AppendLine("\t\t\tFreeLibrary(_handle);");
 		sb.AppendLine("\t\t}");
 		sb.AppendLine("\t\tGC.SuppressFinalize(this);");
 		sb.AppendLine("\t}");
 		sb.AppendLine();
-		sb.AppendLine("\t[DllImport(\"kernel32.dll\", SetLastError = true, CharSet = CharSet.Ansi, EntryPoint = \"LoadLibraryA\")]");
-		sb.AppendLine("\tprivate static extern IntPtr LoadLibrary(string lpFileName);");
+		sb.AppendLine("\t[DllImport(\"kernel32.dll\", SetLastError = true)]");
+		sb.AppendLine("\tprivate static extern bool FreeLibrary(IntPtr hModule);");
 		sb.AppendLine();
 		sb.AppendLine("\t[DllImport(\"kernel32.dll\", SetLastError = true, CharSet = CharSet.Ansi, EntryPoint = \"GetProcAddress\")]");
 		sb.AppendLine("\tprivate static extern IntPtr GetProcAddressInternal(IntPtr hModule, string lpProcName);");
-		sb.AppendLine();
-		sb.AppendLine("\t[DllImport(\"kernel32.dll\", SetLastError = true)]");
-		sb.AppendLine("\tprivate static extern bool FreeLibrary(IntPtr hModule);");
 		sb.AppendLine("}");
 
 		return sb.ToString();

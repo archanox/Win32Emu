@@ -18,8 +18,16 @@ The generated tests call both implementations with the same inputs and compare t
 
 1. **Reads native DLL analysis** - Parses the JSON report from NativeDllAnalyzer
 2. **Generates test scaffolding** - Creates xUnit test files for missing/stub functions
-3. **Creates infrastructure** - Provides base classes for A-B comparison
+3. **Creates infrastructure** - Provides base classes for A-B comparison using EasyHook
 4. **Platform-aware** - Tests work on Windows (with native DLLs) and Linux/macOS (Win32Emu only)
+
+## EasyHook Integration
+
+The generated tests use [EasyHook](https://github.com/EasyHook/EasyHook) for managed DLL loading instead of direct P/Invoke:
+
+- **`NativeAPI.LoadLibrary()`** - Loads native DLLs through EasyHook's managed wrapper
+- **Simplified API** - EasyHook provides a cleaner interface for native interop
+- **Future-ready** - EasyHook's hooking capabilities can be leveraged for advanced testing scenarios
 
 ## Usage
 
