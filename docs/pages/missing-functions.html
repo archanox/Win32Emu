@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Win32Emu - Missing Functions Report</title>
+    <style>
+        :root {
+            --primary-color: #0366d6;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --bg-color: #f6f8fa;
+            --border-color: #e1e4e8;
+            --text-color: #24292e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background: var(--bg-color);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+            padding: 30px;
+        }
+
+        header {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #586069;
+            font-size: 16px;
+        }
+
+        .nav-links {
+            margin: 20px 0;
+            padding: 15px;
+            background: var(--bg-color);
+            border-radius: 6px;
+        }
+
+        .nav-links a {
+            color: var(--primary-color);
+            text-decoration: none;
+            margin-right: 20px;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: var(--bg-color);
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .stat-card.success {
+            border-left-color: var(--success-color);
+        }
+
+        .stat-card.danger {
+            border-left-color: var(--danger-color);
+        }
+
+        .stat-card.warning {
+            border-left-color: var(--warning-color);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #586069;
+            margin-top: 5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .filter-select {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .dll-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .dll-card {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .dll-header {
+            background: var(--bg-color);
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dll-header:hover {
+            background: #e8eaed;
+        }
+
+        .dll-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: var(--primary-color);
+        }
+
+        .dll-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+        }
+
+        .dll-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge.success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .badge.danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .badge.warning {
+            background: var(--warning-color);
+            color: #333;
+        }
+
+        .dll-content {
+            display: none;
+            padding: 15px;
+            background: white;
+        }
+
+        .dll-card.expanded .dll-content {
+            display: block;
+        }
+
+        .dll-card.expanded .dll-header {
+            background: #e8eaed;
+        }
+
+        .function-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .function-item {
+            padding: 8px 12px;
+            background: var(--bg-color);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .function-item.missing {
+            background: #ffeef0;
+            color: var(--danger-color);
+        }
+
+        .section {
+            margin: 20px 0;
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--text-color);
+        }
+
+        .progress-bar {
+            height: 20px;
+            background: var(--bg-color);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--success-color);
+            transition: width 0.3s ease;
+        }
+
+        .timestamp {
+            color: #586069;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #586069;
+        }
+
+        .error {
+            background: #ffeef0;
+            border: 1px solid var(--danger-color);
+            border-radius: 6px;
+            padding: 15px;
+            color: var(--danger-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Win32Emu - Missing Functions Report</h1>
+            <p class="subtitle">
+                Comparison of native Windows ME DLL exports with Win32Emu implementations
+            </p>
+        </header>
+
+        <div class="nav-links">
+            <a href="index.html">← Back to API Status</a>
+            <a href="https://github.com/archanox/Win32Emu" target="_blank">View on GitHub</a>
+        </div>
+
+        <div id="loading" class="loading">
+            Loading missing functions data...
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="content" style="display: none;">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalDlls">0</div>
+                    <div class="stat-label">DLLs Analyzed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalExports">0</div>
+                    <div class="stat-label">Total Native Exports</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value" id="totalImplemented">0</div>
+                    <div class="stat-label">Implemented Functions</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value" id="totalStubs">0</div>
+                    <div class="stat-label">Stub Functions</div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="stat-value" id="totalMissing">0</div>
+                    <div class="stat-label">Missing Functions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="coveragePercent">0%</div>
+                    <div class="stat-label">Implementation Rate</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <input type="text" class="search-box" id="searchBox" placeholder="Search DLL or function name...">
+                <select class="filter-select" id="filterSelect">
+                    <option value="all">All DLLs</option>
+                    <option value="missing">With Missing Functions</option>
+                    <option value="complete">Fully Implemented</option>
+                </select>
+                <select class="filter-select" id="sortSelect">
+                    <option value="name">Sort by Name</option>
+                    <option value="missing">Sort by Missing Count</option>
+                    <option value="coverage">Sort by Coverage</option>
+                </select>
+            </div>
+
+            <div class="dll-list" id="dllList"></div>
+
+            <div class="timestamp" id="timestamp"></div>
+        </div>
+    </div>
+
+    <script>
+        let analysisData = null;
+        let filteredDlls = [];
+
+        async function loadData() {
+            try {
+                const response = await fetch('missing-functions.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                analysisData = await response.json();
+                displayData();
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loading').style.display = 'none';
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = 'Failed to load missing functions data: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function displayData() {
+            const summary = analysisData.summary;
+            
+            // Update summary stats
+            document.getElementById('totalDlls').textContent = summary.totalDllsAnalyzed;
+            document.getElementById('totalExports').textContent = summary.totalNativeExports.toLocaleString();
+            document.getElementById('totalImplemented').textContent = summary.totalImplemented.toLocaleString();
+            document.getElementById('totalStubs').textContent = summary.totalStubs.toLocaleString();
+            document.getElementById('totalMissing').textContent = summary.totalMissing.toLocaleString();
+            document.getElementById('coveragePercent').textContent = summary.implementationPercentage.toFixed(1) + '%';
+
+            // Set timestamp
+            const date = new Date(analysisData.analyzedAt);
+            document.getElementById('timestamp').textContent = 'Report generated: ' + date.toLocaleString();
+
+            // Initial display
+            filteredDlls = [...analysisData.dlls];
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const filterType = document.getElementById('filterSelect').value;
+            const sortType = document.getElementById('sortSelect').value;
+
+            // Filter
+            filteredDlls = analysisData.dlls.filter(dll => {
+                // Search filter
+                if (searchTerm && !dll.dllName.toLowerCase().includes(searchTerm)) {
+                    return false;
+                }
+
+                // Type filter
+                if (filterType === 'missing' && dll.missingFunctions.length === 0) {
+                    return false;
+                }
+                if (filterType === 'complete' && dll.missingFunctions.length > 0) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            // Sort
+            filteredDlls.sort((a, b) => {
+                if (sortType === 'name') {
+                    return a.dllName.localeCompare(b.dllName);
+                } else if (sortType === 'missing') {
+                    return b.missingFunctions.length - a.missingFunctions.length;
+                } else if (sortType === 'coverage') {
+                    return b.coveragePercentage - a.coveragePercentage;
+                }
+                return 0;
+            });
+
+            renderDlls();
+        }
+
+        function renderDlls() {
+            const dllList = document.getElementById('dllList');
+            dllList.innerHTML = '';
+
+            filteredDlls.forEach(dll => {
+                const card = createDllCard(dll);
+                dllList.appendChild(card);
+            });
+        }
+
+        function createDllCard(dll) {
+            const card = document.createElement('div');
+            card.className = 'dll-card';
+
+            const header = document.createElement('div');
+            header.className = 'dll-header';
+            header.onclick = () => card.classList.toggle('expanded');
+
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'dll-name';
+            nameDiv.textContent = dll.dllName;
+
+            const statsDiv = document.createElement('div');
+            statsDiv.className = 'dll-stats';
+
+            const implementedStat = document.createElement('div');
+            implementedStat.className = 'dll-stat';
+            implementedStat.innerHTML = `<span class="badge success">${dll.implementedFunctions.length}</span> Implemented`;
+
+            const stubsStat = document.createElement('div');
+            stubsStat.className = 'dll-stat';
+            stubsStat.innerHTML = `<span class="badge warning">${dll.stubFunctions.length}</span> Stubs`;
+
+            const missingStat = document.createElement('div');
+            missingStat.className = 'dll-stat';
+            missingStat.innerHTML = `<span class="badge danger">${dll.missingFunctions.length}</span> Missing`;
+
+            const coverageStat = document.createElement('div');
+            coverageStat.className = 'dll-stat';
+            coverageStat.textContent = `${dll.coveragePercentage.toFixed(1)}% coverage`;
+
+            statsDiv.appendChild(implementedStat);
+            statsDiv.appendChild(stubsStat);
+            statsDiv.appendChild(missingStat);
+            statsDiv.appendChild(coverageStat);
+
+            header.appendChild(nameDiv);
+            header.appendChild(statsDiv);
+
+            const content = document.createElement('div');
+            content.className = 'dll-content';
+
+            // Progress bar
+            const progressBar = document.createElement('div');
+            progressBar.className = 'progress-bar';
+            const progressFill = document.createElement('div');
+            progressFill.className = 'progress-fill';
+            progressFill.style.width = dll.coveragePercentage + '%';
+            progressBar.appendChild(progressFill);
+            content.appendChild(progressBar);
+
+            // Missing functions
+            if (dll.missingFunctions.length > 0) {
+                const missingSection = document.createElement('div');
+                missingSection.className = 'section';
+                const missingTitle = document.createElement('div');
+                missingTitle.className = 'section-title';
+                missingTitle.textContent = `Missing Functions (${dll.missingFunctions.length}):`;
+                missingSection.appendChild(missingTitle);
+
+                const missingList = document.createElement('div');
+                missingList.className = 'function-list';
+                dll.missingFunctions.forEach(func => {
+                    const item = document.createElement('div');
+                    item.className = 'function-item missing';
+                    item.textContent = func;
+                    missingList.appendChild(item);
+                });
+                missingSection.appendChild(missingList);
+                content.appendChild(missingSection);
+            }
+
+            // Stub functions
+            if (dll.stubFunctions.length > 0) {
+                const stubSection = document.createElement('div');
+                stubSection.className = 'section';
+                const stubTitle = document.createElement('div');
+                stubTitle.className = 'section-title';
+                stubTitle.textContent = `Stub Functions (${dll.stubFunctions.length}):`;
+                stubSection.appendChild(stubTitle);
+
+                const stubList = document.createElement('div');
+                stubList.className = 'function-list';
+                dll.stubFunctions.forEach(func => {
+                    const item = document.createElement('div');
+                    item.className = 'function-item';
+                    item.textContent = func;
+                    stubList.appendChild(item);
+                });
+                stubSection.appendChild(stubList);
+                content.appendChild(stubSection);
+            }
+
+            card.appendChild(header);
+            card.appendChild(content);
+
+            return card;
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+
+            document.getElementById('searchBox').addEventListener('input', applyFilters);
+            document.getElementById('filterSelect').addEventListener('change', applyFilters);
+            document.getElementById('sortSelect').addEventListener('change', applyFilters);
+        });
+    </script>
+</body>
+</html>
