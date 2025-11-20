@@ -32,6 +32,11 @@
                 Padding="5">
             <TreeView Name="FolderTreeView"
                       SelectionMode="Single">
+                <TreeView.ItemTemplate>
+                    <TreeDataTemplate ItemsSource="{Binding Children}">
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </TreeDataTemplate>
+                </TreeView.ItemTemplate>
             </TreeView>
         </Border>
         
