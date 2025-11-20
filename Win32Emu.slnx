@@ -129,6 +129,7 @@
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
+  <Project Path="Win32Emu.Tools.NativeDllAnalyzer/Win32Emu.Tools.NativeDllAnalyzer.csproj" />
   <Project Path="Win32Emu.Tools.TestReporter/Win32Emu.Tools.TestReporter.csproj" />
   <Project Path="Win32Emu.Tools.WikidataEnricher\Win32Emu.Tools.WikidataEnricher.csproj">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
