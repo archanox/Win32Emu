@@ -183,10 +183,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		
 		// Store the selected path in our internal PIDL to path mapping
 		// We'll use the PIDL address as a key to store the actual path
-		if (!_pidlToPathMap.ContainsKey(pidlAddr))
-		{
-			_pidlToPathMap[pidlAddr] = selectedPath;
-		}
+		_pidlToPathMap[pidlAddr] = selectedPath;
 
 		// Provide folder name in pszDisplayName buffer if it exists
 		if (bi.pszDisplayName != 0)
