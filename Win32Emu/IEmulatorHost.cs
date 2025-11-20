@@ -25,5 +25,13 @@ namespace Win32Emu
 		/// <param name="windowHandle">The window handle</param>
 		/// <param name="title">The new window title</param>
 		void OnWindowTitleChanged(uint windowHandle, string title);
+		
+		/// <summary>
+		/// Notifies the host that a dialog control's visibility has changed.
+		/// </summary>
+		/// <param name="dialogHandle">The parent dialog handle</param>
+		/// <param name="controlId">The control ID</param>
+		/// <param name="visible">True if visible, false if hidden</param>
+		void OnControlVisibilityChanged(uint dialogHandle, int controlId, bool visible);
 	}
 }

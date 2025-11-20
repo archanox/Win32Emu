@@ -374,6 +374,7 @@ public class Retrowin32Tests
         public void OnDisplayUpdate(DisplayUpdateInfo info) { }
         public Task<string?> OnBrowseForFolder(string? title, string? rootPath) => Task.FromResult<string?>(null);
 public void OnWindowTitleChanged(uint windowHandle, string title) { }
+public void OnControlVisibilityChanged(uint dialogHandle, int controlId, bool visible) { }
     }
 
     /// <summary>

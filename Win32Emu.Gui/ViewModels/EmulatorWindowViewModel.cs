@@ -395,6 +395,20 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         }
     }
 
+    public void OnControlVisibilityChanged(uint dialogHandle, int controlId, bool visible)
+    {
+        // Find the dialog window and show/hide the control
+        if (_createdDialogs.TryGetValue(dialogHandle, out var dialog))
+        {
+            dialog.SetControlVisible((ushort)controlId, visible);
+            OnDebugOutput($"Dialog 0x{dialogHandle:X8} control {controlId} {(visible ? "shown" : "hidden")}", DebugLevel.Debug);
+        }
+        else
+        {
+            OnDebugOutput($"Dialog 0x{dialogHandle:X8} not found when trying to change control {controlId} visibility", DebugLevel.Warning);
+        }
+    }
+
     public void OnWindowTitleChanged(uint windowHandle, string title)
     {
         // Try to find the window in created dialogs first

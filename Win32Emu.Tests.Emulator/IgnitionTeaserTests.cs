@@ -535,6 +535,7 @@ public class IgnitionTeaserTests
         }
         public Task<string?> OnBrowseForFolder(string? title, string? rootPath) => Task.FromResult<string?>(null);
 public void OnWindowTitleChanged(uint windowHandle, string title) { }
+public void OnControlVisibilityChanged(uint dialogHandle, int controlId, bool visible) { }
     }
 
     /// <summary>
