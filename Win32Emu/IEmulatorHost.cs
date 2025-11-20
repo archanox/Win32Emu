@@ -12,5 +12,11 @@ namespace Win32Emu
 		void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData);
 		void OnDialogControlEnabledChanged(uint dialogHandle, int controlId, bool enabled);
 		void OnDisplayUpdate(DisplayUpdateInfo info);
+		
+		/// <summary>
+		/// Shows a folder browser dialog for VFS navigation.
+		/// Returns the selected folder path, or null if cancelled.
+		/// </summary>
+		Task<string?> OnBrowseForFolder(string? title, string? rootPath);
 	}
 }

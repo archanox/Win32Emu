@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using Win32Emu.Gui.Views;
 using Win32Emu.Win32;
+using Win32Emu.VirtualFileSystem;
 
 namespace Win32Emu.Gui.Services;
 
@@ -210,6 +211,33 @@ public class DialogService
 				queue.Enqueue(message);
 			}
 		}
+	}
+
+	/// <summary>
+	/// Shows a folder browser dialog for VFS navigation.
+	/// </summary>
+	/// <param name="vfs">Virtual file system to browse</param>
+	/// <param name="title">Optional title for the dialog</param>
+	/// <param name="rootPath">Optional root path to start browsing from</param>
+	/// <param name="parentWindow">Parent window for modal display</param>
+	/// <returns>Selected folder path, or null if cancelled</returns>
+	public async Task<string?> ShowFolderBrowserAsync(IVirtualFileSystem? vfs, string? title = null, string? rootPath = null, Avalonia.Controls.Window? parentWindow = null)
+	{
+		FolderBrowserDialog? dialog = null;
+
+		// Create dialog on UI thread
+		await Dispatcher.UIThread.InvokeAsync(() =>
+		{
+			dialog = new FolderBrowserDialog(vfs, title, rootPath);
+		});
+
+		if (dialog == null)
+		{
+			return null;
+		}
+
+		// Show dialog and wait for result
+		return await dialog.ShowDialogAsync(parentWindow);
 	}
 }
 
