@@ -227,6 +227,10 @@
             background: #fff5b1;
         }
 
+        .function-item.has-issues {
+            border-left: 3px solid var(--danger-color);
+        }
+
         .function-name {
             flex: 1;
         }
@@ -236,6 +240,39 @@
             gap: 10px;
             font-size: 12px;
             color: #586069;
+        }
+
+        .function-exports {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 8px;
+            padding-left: 20px;
+        }
+
+        .export-entry {
+            font-size: 12px;
+            padding: 4px 8px;
+            background: white;
+            border-radius: 3px;
+            border-left: 2px solid #e1e4e8;
+        }
+
+        .export-entry.ordinal-clash {
+            border-left-color: var(--danger-color);
+            background: #fff5f5;
+        }
+
+        .validation-error {
+            color: var(--danger-color);
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .export-details {
+            display: flex;
+            gap: 15px;
+            align-items: center;
         }
 
         .upload-area {
@@ -572,6 +609,10 @@
                 const total = module.functions.length;
                 const percentage = total > 0 ? ((implemented / total) * 100).toFixed(1) : 0;
 
+                // Detect validation issues
+                const validationIssues = detectModuleIssues(module);
+                const hasIssues = validationIssues.ordinalClashes.length > 0 || validationIssues.missingData.length > 0;
+
                 const moduleCard = document.createElement('div');
                 moduleCard.className = 'module-card';
                 moduleCard.innerHTML = `
@@ -580,6 +621,7 @@
                             <div class="module-name">${escapeHtml(module.name)}</div>
                             <div style="font-size: 12px; color: #586069; margin-top: 4px;">
                                 ${escapeHtml(module.className)}
+                                ${hasIssues ? '<span style="color: var(--danger-color); margin-left: 10px;">⚠️ Validation Issues</span>' : ''}
                             </div>
                         </div>
                         <div class="module-stats">
@@ -589,35 +631,157 @@
                         </div>
                     </div>
                     <div class="module-functions" id="functions-${escapeHtml(module.name)}">
-                        ${renderFunctionList(module.functions, filter)}
+                        ${renderFunctionList(module.functions, filter, validationIssues)}
                     </div>
                 `;
                 container.appendChild(moduleCard);
             });
         }
 
-        function renderFunctionList(functions, filter = '') {
+        function detectModuleIssues(module) {
+            const issues = {
+                ordinalClashes: [],
+                missingData: []
+            };
+
+            // Group functions by ordinal and version to detect clashes
+            const ordinalMap = new Map();
+            module.functions.forEach(func => {
+                if (func.ordinal) {
+                    const version = func.version || '(no version)';
+                    const key = `${func.ordinal}-${version}`;
+                    if (!ordinalMap.has(key)) {
+                        ordinalMap.set(key, []);
+                    }
+                    ordinalMap.get(key).push(func);
+                }
+            });
+
+            // Find ordinal clashes (multiple functions with same ordinal in same version)
+            ordinalMap.forEach((funcs, key) => {
+                if (funcs.length > 1) {
+                    const [ordinal, version] = key.split('-');
+                    issues.ordinalClashes.push({
+                        ordinal: parseInt(ordinal),
+                        version,
+                        functions: funcs.map(f => f.name)
+                    });
+                }
+            });
+
+            // Find functions with missing data
+            module.functions.forEach(func => {
+                const missing = [];
+                if (!func.ordinal) missing.push('ordinal');
+                if (!func.version) missing.push('version');
+                if (missing.length > 0) {
+                    issues.missingData.push({
+                        function: func.name,
+                        missing
+                    });
+                }
+            });
+
+            return issues;
+        }
+
+        function renderFunctionList(functions, filter = '', validationIssues = null) {
             const filteredFunctions = functions.filter(f => {
                 if (!filter) return true;
                 return f.name.toLowerCase().includes(filter.toLowerCase());
             });
 
+            // Group functions by name to show multiple exports
+            const functionGroups = new Map();
+            filteredFunctions.forEach(func => {
+                if (!functionGroups.has(func.name)) {
+                    functionGroups.set(func.name, []);
+                }
+                functionGroups.get(func.name).push(func);
+            });
+
+            // Helper to check if function has issues
+            const getFunctionIssues = (funcName) => {
+                if (!validationIssues) return null;
+                
+                const issues = [];
+                
+                // Check ordinal clashes
+                validationIssues.ordinalClashes.forEach(clash => {
+                    if (clash.functions.includes(funcName)) {
+                        issues.push(`Ordinal ${clash.ordinal} clash in version ${clash.version}`);
+                    }
+                });
+                
+                // Check missing data
+                const missingDataIssue = validationIssues.missingData.find(m => m.function === funcName);
+                if (missingDataIssue) {
+                    issues.push(`Missing: ${missingDataIssue.missing.join(', ')}`);
+                }
+                
+                return issues.length > 0 ? issues : null;
+            };
+
+            const functionHtml = [];
+            
+            functionGroups.forEach((exports, funcName) => {
+                const hasMultipleExports = exports.length > 1;
+                const anyStub = exports.some(e => e.isStub);
+                const issues = getFunctionIssues(funcName);
+                const hasIssues = issues && issues.length > 0;
+                
+                functionHtml.push(`
+                    <div class="function-item ${anyStub ? 'stub' : ''} ${hasIssues ? 'has-issues' : ''}">
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="function-name">${escapeHtml(funcName)}</span>
+                                <div class="function-meta">
+                                    ${exports[0].exportName ? `<span>Export: ${escapeHtml(exports[0].exportName)}</span>` : ''}
+                                    ${exports[0].forwardedTo ? `<span>→ ${escapeHtml(exports[0].forwardedTo)}</span>` : ''}
+                                    <span class="badge ${anyStub ? 'stub' : 'implemented'}">
+                                        ${anyStub ? 'STUB' : 'IMPLEMENTED'}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            ${hasIssues ? `
+                                <div style="margin-top: 6px;">
+                                    ${issues.map(issue => `<div class="validation-error">⚠️ ${escapeHtml(issue)}</div>`).join('')}
+                                </div>
+                            ` : ''}
+                            
+                            ${hasMultipleExports ? `
+                                <div class="function-exports">
+                                    <div style="font-size: 11px; color: #586069; margin-bottom: 4px;">Multiple exports:</div>
+                                    ${exports.map((exp, idx) => {
+                                        const isClash = validationIssues && validationIssues.ordinalClashes.some(clash => 
+                                            clash.functions.includes(funcName) && clash.ordinal === exp.ordinal
+                                        );
+                                        return `
+                                            <div class="export-entry ${isClash ? 'ordinal-clash' : ''}">
+                                                <div class="export-details">
+                                                    ${exp.ordinal ? `<span><strong>Ordinal:</strong> ${exp.ordinal}</span>` : '<span class="validation-error">No ordinal</span>'}
+                                                    ${exp.version ? `<span><strong>Version:</strong> ${escapeHtml(exp.version)}</span>` : '<span class="validation-error">No version</span>'}
+                                                    ${exp.isStub ? '<span class="badge stub">STUB</span>' : '<span class="badge implemented">IMPLEMENTED</span>'}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            ` : `
+                                <div style="margin-top: 4px; font-size: 11px; color: #586069;">
+                                    ${exports[0].ordinal ? `Ordinal: ${exports[0].ordinal}` : '<span class="validation-error">No ordinal</span>'}
+                                    ${exports[0].version ? ` | Version: ${escapeHtml(exports[0].version)}` : ' | <span class="validation-error">No version</span>'}
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `);
+            });
+
             return `
                 <div class="function-list">
-                    ${filteredFunctions.map(func => `
-                        <div class="function-item ${func.isStub ? 'stub' : ''}">
-                            <span class="function-name">${escapeHtml(func.name)}</span>
-                            <div class="function-meta">
-                                ${func.ordinal ? `<span>Ordinal: ${func.ordinal}</span>` : ''}
-                                ${func.version ? `<span>Version: ${escapeHtml(func.version)}</span>` : ''}
-                                ${func.exportName ? `<span>Export: ${escapeHtml(func.exportName)}</span>` : ''}
-                                ${func.forwardedTo ? `<span>→ ${escapeHtml(func.forwardedTo)}</span>` : ''}
-                                <span class="badge ${func.isStub ? 'stub' : 'implemented'}">
-                                    ${func.isStub ? 'STUB' : 'IMPLEMENTED'}
-                                </span>
-                            </div>
-                        </div>
-                    `).join('')}
+                    ${functionHtml.join('')}
                 </div>
             `;
         }
