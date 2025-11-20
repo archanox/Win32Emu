@@ -93,7 +93,7 @@ class Program
 	static void PrintReport(NativeDllAnalysisReport report)
 	{
 		Console.WriteLine();
-		Console.WriteLine("=" .PadRight(70, '='));
+		Console.WriteLine("=".PadRight(70, '='));
 		Console.WriteLine("ANALYSIS SUMMARY");
 		Console.WriteLine("=".PadRight(70, '='));
 		Console.WriteLine();
