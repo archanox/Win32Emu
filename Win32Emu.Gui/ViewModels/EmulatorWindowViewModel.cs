@@ -849,6 +849,55 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         });
     }
 
+    public async Task<string?> OnBrowseForFolder(string? title, string? rootPath)
+    {
+        OnDebugOutput($"Browse for folder requested: title='{title}', rootPath='{rootPath}'", DebugLevel.Info);
+        
+        // Get VFS from emulator environment
+        var vfs = _emulatorService?.CurrentEmulator?.Environment?.VirtualFileSystem;
+        if (vfs == null)
+        {
+            OnDebugOutput("No VFS available for folder browsing", DebugLevel.Warning);
+            return null;
+        }
+        
+        // Show the folder browser dialog on UI thread
+        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            try
+            {
+                var dialog = new Views.FolderBrowserDialog(vfs, title, rootPath);
+                var result = await dialog.ShowDialogAsync(_ownerWindow);
+                
+                if (result != null)
+                {
+                    OnDebugOutput($"User selected folder: {result}", DebugLevel.Info);
+                }
+                else
+                {
+                    OnDebugOutput("User cancelled folder browser", DebugLevel.Info);
+                }
+                
+                return result;
+            }
+            catch (TaskCanceledException tcex)
+            {
+                OnDebugOutput($"Folder browser task was canceled: {tcex.Message}", DebugLevel.Info);
+                return null;
+            }
+            catch (OperationCanceledException ocex)
+            {
+                OnDebugOutput($"Folder browser operation was canceled: {ocex.Message}", DebugLevel.Info);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                OnDebugOutput($"Error showing folder browser: {ex.Message}", DebugLevel.Error);
+                return null;
+            }
+        });
+    }
+
     public void OnStateChanged(EmulatorState state)
     {
         CurrentState = state;

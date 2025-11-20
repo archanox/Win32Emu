@@ -60,7 +60,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				return true;
 
 			case "ORDINAL_17":
-				returnValue = Ordinal_17(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				returnValue = InitCommonControls(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 
 			case "CREATEPROPERTYSHEETPAGEA":
@@ -79,16 +79,16 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				returnValue = ImageList_SetBkColor(a.UInt32(0), a.UInt32(1));
 				return true;
 
-			case "ORDINAL_2":
-				returnValue = Ordinal_2(a.UInt32(0));
+			case "MENUHELP":
+				returnValue = MenuHelp(a.UInt32(0));
 				return true;
 
-			case "ORDINAL_4":
-				returnValue = Ordinal_4(a.UInt32(0), a.UInt32(1));
+			case "GETEFFECTIVECLIENTRECT":
+				returnValue = GetEffectiveClientRect(a.UInt32(0), a.UInt32(1));
 				return true;
 
-			case "ORDINAL_6":
-				returnValue = Ordinal_6(a.UInt32(0));
+			case "CREATESTATUSWINDOWA":
+				returnValue = CreateStatusWindowA(a.UInt32(0));
 				return true;
 
 			case "ORDINAL_234":
@@ -120,7 +120,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	///   int cGrow
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(45, Version = "5.81.4916.400")]
 	private uint ImageList_Create(int cx, int cy, uint flags, int cInitial, int cGrow)
 	{
 		_logger.LogInformation("[Comctl32] ImageList_Create(cx={Cx}, cy={Cy}, flags=0x{Flags:X}, cInitial={CInitial}, cGrow={CGrow})",
@@ -147,7 +147,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	///   COLORREF   crMask
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(42, Version = "5.81.4916.400")]
 	private uint ImageList_AddMasked(uint himl, uint hbmImage, uint crMask)
 	{
 		_logger.LogInformation("[Comctl32] ImageList_AddMasked(himl=0x{Himl:X8}, hbmImage=0x{HbmImage:X8}, crMask=0x{CrMask:X8})",
@@ -163,7 +163,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 		return 0xFFFFFFFF; // -1 on error
 	}
 
-	[DllModuleExport(1)]
+	[DllModuleExport(75, Version = "5.81.4916.400")]
 	private uint ImageList_ReplaceIcon(uint himl, int i, uint hicon)
 	{
 		_logger.LogInformation("[Comctl32] ImageList_ReplaceIcon(himl=0x{Himl:X8}, i={I}, hicon=0x{Hicon:X8})",
@@ -195,7 +195,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	///   HIMAGELIST himl
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(46, Version = "5.81.4916.400")]
 	private uint ImageList_Destroy(uint himl)
 	{
 		_logger.LogInformation("[Comctl32] ImageList_Destroy(himl=0x{Himl:X8})", himl);
@@ -212,8 +212,8 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// Ordinal 17 - InitCommonControls or similar initialization function.
 	/// void InitCommonControls();
 	/// </summary>
-	[DllModuleExport(0)]
-	private uint Ordinal_17(uint param1, uint param2, uint param3)
+	[DllModuleExport(17, Version = "5.81.4916.400")]
+	private uint InitCommonControls(uint param1, uint param2, uint param3)
 	{
 		_logger.LogInformation("[Comctl32] Ordinal_17(param1=0x{Param1:X8}, param2=0x{Param2:X8}, param3=0x{Param3:X8})",
 			param1, param2, param3);
@@ -226,7 +226,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// Creates a property sheet page.
 	/// HPROPSHEETPAGE CreatePropertySheetPageA(LPCPROPSHEETPAGEA lppsp);
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(19, Version = "5.81.4916.400")]
 	private uint CreatePropertySheetPageA(uint lppsp)
 	{
 		_logger.LogInformation("[Comctl32] CreatePropertySheetPageA(lppsp=0x{Lppsp:X8})", lppsp);
@@ -240,7 +240,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// Destroys a property sheet page.
 	/// BOOL DestroyPropertySheetPage(HPROPSHEETPAGE hPSPage);
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(24, Version = "5.81.4916.400")]
 	private uint DestroyPropertySheetPage(uint hPSPage)
 	{
 		_logger.LogInformation("[Comctl32] DestroyPropertySheetPage(hPSPage=0x{HPSPage:X8})", hPSPage);
@@ -253,7 +253,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// Creates and displays a property sheet.
 	/// INT_PTR PropertySheetA(LPCPROPSHEETHEADERA lppsh);
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(88, Version = "5.81.4916.400")]
 	private uint PropertySheetA(uint lppsh)
 	{
 		_logger.LogInformation("[Comctl32] PropertySheetA(lppsh=0x{Lppsh:X8})", lppsh);
@@ -275,7 +275,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	///   [in] UINT      uFlags
 	/// );
 	/// </summary>
-	[DllModuleExport(28)]
+	[DllModuleExport(65, Version = "5.81.4916.400")]
 	private uint ImageList_LoadImageA(uint hi, in LpcStr lpbmpPtr, int cx, int cGrow, uint crMask, uint uType, uint uFlags)
 	{
 		var lpbmp = lpbmpPtr.ToString() ?? string.Empty;
@@ -311,7 +311,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	///   [in] int        iOverlay
 	/// );
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(82, Version = "5.81.4916.400")]
 	private uint ImageList_SetOverlayImage(uint himl, int iImage, int iOverlay)
 	{
 		_logger.LogInformation("[Comctl32] ImageList_SetOverlayImage(himl=0x{Himl:X8}, iImage={IImage}, iOverlay={IOverlay})",
@@ -345,31 +345,31 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Sets the background color in an image list.
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(76, Version = "5.81.4916.400")]
 	private uint ImageList_SetBkColor(uint himl, uint clrBk)
 	{
 		_logger.LogInformation("[Comctl32] ImageList_SetBkColor(himl=0x{Himl:X8}, clrBk=0x{ClrBk:X8})", himl, clrBk);
 		return 0xFFFFFFFF; // CLR_NONE - transparent background
 	}
 
-	[DllModuleExport(4, IsStub = true)]
-	private uint Ordinal_2(uint param1)
+	[DllModuleExport(1, Version = "5.81.4916.400", IsStub = true)]
+	private uint MenuHelp(uint param1)
 	{
-		_logger.LogInformation("[Comctl32] Ordinal_2(param1=0x{Param1:X8})", param1);
+		_logger.LogInformation("[Comctl32] MenuHelp(param1=0x{Param1:X8})", param1);
 		return 1;
 	}
 
-	[DllModuleExport(8, IsStub = true)]
-	private uint Ordinal_4(uint param1, uint param2)
+	[DllModuleExport(8, Version = "5.81.4916.400", IsStub = true)]
+	private uint GetEffectiveClientRect(uint param1, uint param2)
 	{
-		_logger.LogInformation("[Comctl32] Ordinal_4(param1=0x{Param1:X8}, param2=0x{Param2:X8})", param1, param2);
+		_logger.LogInformation("[Comctl32] GetEffectiveClientRect(param1=0x{Param1:X8}, param2=0x{Param2:X8})", param1, param2);
 		return 1;
 	}
 
-	[DllModuleExport(4, IsStub = true)]
-	private uint Ordinal_6(uint param1)
+	[DllModuleExport(6, Version = "5.81.4916.400", IsStub = true)]
+	private uint CreateStatusWindowA(uint param1)
 	{
-		_logger.LogInformation("[Comctl32] Ordinal_6(param1=0x{Param1:X8})", param1);
+		_logger.LogInformation("[Comctl32] CreateStatusWindowA(param1=0x{Param1:X8})", param1);
 		return 1;
 	}
 

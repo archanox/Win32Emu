@@ -16,6 +16,13 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 	private readonly uint _imageBase;
 	private readonly PeImageLoader? _peLoader;
 	private readonly ILogger _logger;
+	
+	// Map fake PIDL addresses to actual file system paths
+	// Note: This dictionary can grow over time. In a real implementation, we would
+	// track PIDL lifetimes and clean up when PIDLs are freed via IMalloc::Free.
+	// For now, we limit the size to prevent unbounded memory growth.
+	private readonly Dictionary<uint, string> _pidlToPathMap = new();
+	private const int MaxPidlMappings = 1000; // Limit to prevent memory leaks
 
 	public Shell32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 	{
@@ -132,27 +139,85 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Shell32] SHBrowseForFolderA: hwndOwner=0x{HwndOwner:X8}, flags=0x{Flags:X}, title=0x{Title:X8}",
 			bi.hwndOwner, bi.ulFlags, bi.lpszTitle);
 
-		// Allocate a fake PIDL - we'll use a simple 2-byte structure (size=0, terminator)
-		// Real PIDLs are complex, but we just need something to pass around
+		// Read title string if provided
+		string? title = null;
+		if (bi.lpszTitle != 0)
+		{
+			title = ReadNullTerminatedString(bi.lpszTitle);
+			if (string.IsNullOrEmpty(title))
+			{
+				title = "Browse For Folder";
+			}
+		}
+		else
+		{
+			title = "Browse For Folder";
+		}
+
+		// Show folder browser dialog if host is available
+		string? selectedPath = null;
+		if (_env.Host != null)
+		{
+			try
+			{
+				// Call host's folder browser (this will show the Avalonia dialog)
+				// Using GetAwaiter().GetResult() to avoid potential deadlocks from task.Wait()
+				selectedPath = _env.Host.OnBrowseForFolder(title, null).GetAwaiter().GetResult();
+			}
+			catch (AggregateException ex)
+			{
+				_logger.LogError(ex, "[Shell32] SHBrowseForFolderA: AggregateException showing folder browser dialog");
+			}
+			catch (InvalidOperationException ex)
+			{
+				_logger.LogError(ex, "[Shell32] SHBrowseForFolderA: InvalidOperationException showing folder browser dialog");
+			}
+		}
+
+		// If no path was selected (cancelled or error), return 0 (NULL PIDL)
+		if (string.IsNullOrEmpty(selectedPath))
+		{
+			_logger.LogInformation("[Shell32] SHBrowseForFolderA: User cancelled or no selection");
+			return 0;
+		}
+
+		// Allocate a fake PIDL - we'll use a simple structure to store the path
 		var pidlAddr = _env.SimpleAlloc(16); // Small allocation for fake PIDL
 		_env.MemWrite16(pidlAddr, 0); // cb = 0 (size of this item)
 
-		// Store a default installation path in the PIDL metadata area (for our use)
-		// We'll use a magic marker so SHGetPathFromIDListA knows it's our fake PIDL
+		// Store a magic marker so SHGetPathFromIDListA knows it's our fake PIDL
 		_env.MemWrite32(pidlAddr + 2, 0x504C4946); // "FILP" marker (PIDL reversed)
+		
+		// Store the selected path in our internal PIDL to path mapping
+		// Limit the size of the dictionary to prevent unbounded growth
+		if (_pidlToPathMap.Count >= MaxPidlMappings)
+		{
+			// Remove oldest entry (first key) when limit is reached
+			var oldestKey = _pidlToPathMap.Keys.First();
+			_pidlToPathMap.Remove(oldestKey);
+			_logger.LogWarning("[Shell32] PIDL mapping cache full, removed oldest entry");
+		}
+		_pidlToPathMap[pidlAddr] = selectedPath;
 
-		// Provide a default folder name if pszDisplayName buffer exists
+		// Provide folder name in pszDisplayName buffer if it exists
 		if (bi.pszDisplayName != 0)
 		{
-			var defaultName = "Program Files";
-			var nameBytes = System.Text.Encoding.ASCII.GetBytes(defaultName + '\0');
+			// Extract just the folder name from the full path
+			var folderName = System.IO.Path.GetFileName(selectedPath.TrimEnd('\\'));
+			if (string.IsNullOrEmpty(folderName))
+			{
+				// If it's a drive root like "C:\", use that
+				folderName = selectedPath;
+			}
+			
+			var nameBytes = System.Text.Encoding.ASCII.GetBytes(folderName + '\0');
 			for (int i = 0; i < nameBytes.Length && i < 260; i++)
 			{
 				_env.MemWrite8(bi.pszDisplayName + (uint)i, nameBytes[i]);
 			}
 		}
 
-		_logger.LogInformation("[Shell32] SHBrowseForFolderA: Returning fake PIDL at 0x{Pidl:X8}", pidlAddr);
+		_logger.LogInformation("[Shell32] SHBrowseForFolderA: Returning PIDL at 0x{Pidl:X8} for path '{Path}'", pidlAddr, selectedPath);
 
 		return pidlAddr;
 	}
@@ -631,16 +696,28 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		var marker = _env.MemRead32(pidl + 2);
 		if (marker == 0x504C4946) // "FILP" marker
 		{
-			// This is our fake PIDL from SHBrowseForFolderA
-			// Return a default installation path
-			var defaultPath = @"C:\Program Files\Ignition";
-
-			_logger.LogInformation("[Shell32] SHGetPathFromIDListA: Converting fake PIDL to path: {Path}", defaultPath);
-
-			var pathBytes = System.Text.Encoding.ASCII.GetBytes(defaultPath + '\0');
-			for (int i = 0; i < pathBytes.Length && i < 260; i++)
+			// Check if we have a mapped path for this PIDL
+			if (_pidlToPathMap.TryGetValue(pidl, out var mappedPath))
 			{
-				_env.MemWrite8(pszPath.Address + (uint)i, pathBytes[i]);
+				_logger.LogInformation("[Shell32] SHGetPathFromIDListA: Converting PIDL to mapped path: {Path}", mappedPath);
+
+				var pathBytes = System.Text.Encoding.ASCII.GetBytes(mappedPath + '\0');
+				for (int i = 0; i < pathBytes.Length && i < 260; i++)
+				{
+					_env.MemWrite8(pszPath.Address + (uint)i, pathBytes[i]);
+				}
+
+				return 1; // TRUE - success
+			}
+			
+			// Fallback to default path if no mapping exists (backward compatibility)
+			var defaultPath = @"C:\Program Files\Ignition";
+			_logger.LogInformation("[Shell32] SHGetPathFromIDListA: Converting fake PIDL to default path: {Path}", defaultPath);
+
+			var defaultPathBytes = System.Text.Encoding.ASCII.GetBytes(defaultPath + '\0');
+			for (int i = 0; i < defaultPathBytes.Length && i < 260; i++)
+			{
+				_env.MemWrite8(pszPath.Address + (uint)i, defaultPathBytes[i]);
 			}
 
 			return 1; // TRUE - success
