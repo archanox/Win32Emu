@@ -454,9 +454,18 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 	}
 
 	/// <summary>
-	/// Resolves a file path in the VFS, trying multiple strategies:
-	/// 1. As-is (absolute path)
-	/// 2. Relative to current directory (for paths that appear absolute but are actually relative to installation source)
+	/// Resolves file paths for Win95/98 installers that specify root-relative paths (e.g., <c>C:\Ign_win.exe</c>)
+	/// for files that actually exist in installation subdirectories (e.g., <c>C:\ign_install\Ign_win.exe</c>).
+	/// 
+	/// Strategies:
+	/// 1. Try the path as-is (absolute path).
+	/// 2. If the path looks like an absolute path (starts with drive letter), strip the drive and combine with the current directory.
+	/// 
+	/// Example:
+	///   - Installer requests: <c>C:\Ign_win.exe</c>
+	///   - Actual file location: <c>C:\ign_install\Ign_win.exe</c>
+	///   - Current directory: <c>C:\ign_install</c>
+	///   - This method will attempt both <c>C:\Ign_win.exe</c> and <c>C:\ign_install\Ign_win.exe</c>.
 	/// </summary>
 	private string? ResolvePathInVfs(string path)
 	{
