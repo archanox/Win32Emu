@@ -395,6 +395,33 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         }
     }
 
+    public void OnWindowTitleChanged(uint windowHandle, string title)
+    {
+        // Try to find the window in created dialogs first
+        if (_createdDialogs.TryGetValue(windowHandle, out var dialog))
+        {
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                dialog.Title = title;
+                OnDebugOutput($"Updated dialog title: HWND=0x{windowHandle:X8} -> \"{title}\"", DebugLevel.Debug);
+            });
+            return;
+        }
+
+        // Try to find in regular windows
+        if (_createdWindows.TryGetValue(windowHandle, out var window))
+        {
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                window.Title = title;
+                OnDebugOutput($"Updated window title: HWND=0x{windowHandle:X8} -> \"{title}\"", DebugLevel.Debug);
+            });
+            return;
+        }
+
+        OnDebugOutput($"Window not found for title update: HWND=0x{windowHandle:X8}", DebugLevel.Warning);
+    }
+
     private void CreateTopLevelWindow(WindowCreateInfo info)
     {
         var window = new Window
