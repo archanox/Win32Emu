@@ -248,10 +248,33 @@ Win32Emu provides comprehensive Win32 API emulation with transparency about impl
 
 The dashboard shows:
 - All 31 Win32 DLL modules (Kernel32, User32, GDI32, DirectDraw, etc.)
-- 749 total functions with implementation status
-- 88.5% implementation rate (663 implemented, 86 stubs)
+- 1,090 total functions with implementation status
+- 84.2% implementation rate (918 implemented, 172 stubs)
 - Search and filter by module or function
 - Detailed function metadata (ordinal, version, export name)
+
+### Missing Functions Report
+
+**🔍 View Missing Functions:** [Missing Functions Report](https://archanox.github.io/Win32Emu/missing-functions.html)
+
+Compare native Windows ME DLL exports with Win32Emu implementations:
+- 27 native DLLs analyzed (KERNEL32, USER32, GDI32, etc.)
+- 4,962 total native exports
+- 764 implemented (15.4%), 129 stubs (2.6%), 4,069 missing (82.0%)
+- Interactive search and filtering
+- Detailed per-DLL coverage statistics
+
+**Generate report locally:**
+```bash
+# Quick generation script
+./generate-missing-functions-report.sh
+
+# Or manually
+dotnet run --project Win32Emu.Tools.ApiStatusGenerator docs/pages/api-status.json
+dotnet run --project Win32Emu.Tools.NativeDllAnalyzer DLLs/WinME docs/pages/api-status.json docs/pages/missing-functions.json
+```
+
+See [docs/NATIVE_DLL_ANALYSIS.md](docs/NATIVE_DLL_ANALYSIS.md) for detailed documentation.
 
 ### Check Compatibility of Your PE Files
 
