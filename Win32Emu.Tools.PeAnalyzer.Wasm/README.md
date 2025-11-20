@@ -18,8 +18,15 @@ dotnet build
 
 ## Publishing for GitHub Pages
 
+**Important**: The `wwwroot/index.html` file must have `<base href="/Win32Emu/pe-analyzer/" />` for GitHub Pages deployment. This ensures all resources load from the correct subpath.
+
 ```bash
+# Build and publish
 dotnet publish -c Release
+
+# Copy to docs/pages/pe-analyzer/
+rm -rf docs/pages/pe-analyzer/*
+cp -r bin/Release/net10.0/publish/wwwroot/* docs/pages/pe-analyzer/
 ```
 
 The output will be in `bin/Release/net10.0/publish/wwwroot/`.
@@ -30,9 +37,12 @@ This Blazor WASM app is integrated into the Win32Emu GitHub Pages site at `https
 
 To deploy updates:
 
-1. Build the project in Release mode
-2. Copy the `wwwroot` contents to `docs/pages/pe-analyzer/`
-3. Commit and push to trigger GitHub Pages deployment
+1. Ensure `wwwroot/index.html` has the correct base href: `<base href="/Win32Emu/pe-analyzer/" />`
+2. Build the project in Release mode: `dotnet publish -c Release`
+3. Copy the `wwwroot` contents to `docs/pages/pe-analyzer/`: `cp -r bin/Release/net10.0/publish/wwwroot/* docs/pages/pe-analyzer/`
+4. Commit and push to trigger GitHub Pages deployment
+
+**Note**: The base href is critical for GitHub Pages deployment. Without the correct path, all resources will try to load from the root domain and fail.
 
 ## Technology
 
