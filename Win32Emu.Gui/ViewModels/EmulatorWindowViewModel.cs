@@ -16,7 +16,7 @@ namespace Win32Emu.Gui.ViewModels;
 
 public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
 {
-    private readonly EmulatorService? _emulatorService;
+    private EmulatorService? _emulatorService;
     private readonly ILogger? _logger;
     private GuiMessageDispatcherIntegration? _messageDispatcherIntegration;
 
@@ -86,10 +86,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     /// </summary>
     public void SetEmulatorService(EmulatorService service)
     {
-        // Use reflection to set the private field _emulatorService
-        var field = typeof(EmulatorWindowViewModel).GetField("_emulatorService", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        field?.SetValue(this, service);
+        _emulatorService = service;
     }
 
     /// <summary>
