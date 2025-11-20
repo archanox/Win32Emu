@@ -515,18 +515,18 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			if (_env.RegSetValue(hKey, valueName, value, regType))
 			{
 				_logger.LogInformation("[Advapi32] RegSetValueExA: Set value \"{ValueName}\"={Value} (type={Type})", valueName, value, regType);
-				return 0; // ERROR_SUCCESS
+				return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 			}
 			else
 			{
 				_logger.LogError("[Advapi32] RegSetValueExA: Failed to set value \"{ValueName}\"", valueName);
-				return 5; // ERROR_ACCESS_DENIED
+				return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 			}
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Advapi32] RegSetValueExA: Failed to set value");
-			return 5; // ERROR_ACCESS_DENIED
+			return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 		}
 	}
 
@@ -582,23 +582,26 @@ public class Advapi32Module : IWin32ModuleUnsafe
 					if (targetHandle == 0)
 					{
 						_logger.LogInformation("[Advapi32] RegQueryValueA: Subkey not found");
-						return 2; // ERROR_FILE_NOT_FOUND
+						return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 					}
 					closeHandle = true;
 				}
 				else
 				{
 					_logger.LogWarning("[Advapi32] RegQueryValueA: Invalid key handle");
-					return 2; // ERROR_FILE_NOT_FOUND
+					return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 				}
 			}
 
 			// Query the default (unnamed) value
 			if (!_env.RegQueryValue(targetHandle, "", out var value))
 			{
-				if (closeHandle) _env.RegCloseKey(targetHandle);
+				if (closeHandle)
+				{
+					_env.RegCloseKey(targetHandle);
+				}
 				_logger.LogInformation("[Advapi32] RegQueryValueA: Value not found");
-				return 2; // ERROR_FILE_NOT_FOUND
+				return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			}
 
 			// Convert value to string (RegQueryValueA only returns REG_SZ)
@@ -618,10 +621,13 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			// If no buffer or buffer too small, return ERROR_MORE_DATA
 			if (lpData == 0 || (lpcbData != 0 && providedSize < requiredSize))
 			{
-				if (closeHandle) _env.RegCloseKey(targetHandle);
+				if (closeHandle)
+				{
+					_env.RegCloseKey(targetHandle);
+				}
 				_logger.LogInformation("[Advapi32] RegQueryValueA: Buffer too small (required={RequiredSize}, provided={ProvidedSize})",
 					requiredSize, providedSize);
-				return 234; // ERROR_MORE_DATA
+				return (uint)NativeTypes.Win32Error.ERROR_MORE_DATA;
 			}
 
 			// Write the data to the buffer
@@ -630,15 +636,18 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				_env.MemWrite8(lpData + i, valueBytes[i]);
 			}
 
-			if (closeHandle) _env.RegCloseKey(targetHandle);
+			if (closeHandle)
+			{
+				_env.RegCloseKey(targetHandle);
+			}
 
 			_logger.LogInformation("[Advapi32] RegQueryValueA: Returned {Size} bytes", requiredSize);
-			return 0; // ERROR_SUCCESS
+			return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Advapi32] RegQueryValueA: Failed to query value");
-			return 2; // ERROR_FILE_NOT_FOUND
+			return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 		}
 	}
 
@@ -869,7 +878,9 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			foreach (var name in subKeyNames)
 			{
 				if (name.Length > maxSubKeyLen)
+				{
 					maxSubKeyLen = (uint)name.Length;
+				}
 			}
 			
 			uint maxValueNameLen = 0;
@@ -877,7 +888,9 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			foreach (var name in valueNames)
 			{
 				if (name.Length > maxValueNameLen)
+				{
 					maxValueNameLen = (uint)name.Length;
+				}
 				
 				// Try to get value to determine max data length
 				if (_env.RegQueryValue(hKey, name, out var value))
@@ -897,28 +910,40 @@ public class Advapi32Module : IWin32ModuleUnsafe
 					}
 					
 					if (valueLen > maxValueLen)
+					{
 						maxValueLen = valueLen;
+					}
 				}
 			}
 			
 			// Write results
 			if (lpcSubKeys != 0)
+			{
 				_env.MemWrite32(lpcSubKeys, (uint)subKeyNames.Length);
+			}
 			if (lpcValues != 0)
+			{
 				_env.MemWrite32(lpcValues, (uint)valueNames.Length);
+			}
 			if (lpcchMaxSubKeyLen != 0)
+			{
 				_env.MemWrite32(lpcchMaxSubKeyLen, maxSubKeyLen);
+			}
 			if (lpcchMaxValueNameLen != 0)
+			{
 				_env.MemWrite32(lpcchMaxValueNameLen, maxValueNameLen);
+			}
 			if (lpcbMaxValueLen != 0)
+			{
 				_env.MemWrite32(lpcbMaxValueLen, maxValueLen);
+			}
 
-			return 0; // ERROR_SUCCESS
+			return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Advapi32] RegQueryInfoKeyA: Failed to query info");
-			return 2; // ERROR_FILE_NOT_FOUND
+			return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 		}
 	}
 
@@ -933,7 +958,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			
 			if (dwIndex >= subKeyNames.Length)
 			{
-				return 259; // ERROR_NO_MORE_ITEMS
+				return (uint)NativeTypes.Win32Error.ERROR_NO_MORE_ITEMS;
 			}
 			
 			var keyName = subKeyNames[dwIndex];
@@ -952,12 +977,12 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				_env.MemWrite8(namePtr + (uint)Math.Min(nameBytes.Length, cchName - 1), 0); // Null terminator
 			}
 			
-			return 0; // ERROR_SUCCESS
+			return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Advapi32] RegEnumKeyA: Failed to enumerate key");
-			return 259; // ERROR_NO_MORE_ITEMS
+			return (uint)NativeTypes.Win32Error.ERROR_NO_MORE_ITEMS;
 		}
 	}
 
@@ -973,7 +998,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			
 			if (dwIndex >= subKeyNames.Length)
 			{
-				return 259; // ERROR_NO_MORE_ITEMS
+				return (uint)NativeTypes.Win32Error.ERROR_NO_MORE_ITEMS;
 			}
 			
 			var keyName = subKeyNames[dwIndex];
@@ -1012,12 +1037,12 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				_env.MemWrite32(lpcchClass, 0);
 			}
 			
-			return 0; // ERROR_SUCCESS
+			return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Advapi32] RegEnumKeyExA: Failed to enumerate key");
-			return 259; // ERROR_NO_MORE_ITEMS
+			return (uint)NativeTypes.Win32Error.ERROR_NO_MORE_ITEMS;
 		}
 	}
 
@@ -1033,7 +1058,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			
 			if (dwIndex >= valueNames.Length)
 			{
-				return 259; // ERROR_NO_MORE_ITEMS
+				return (uint)NativeTypes.Win32Error.ERROR_NO_MORE_ITEMS;
 			}
 			
 			var valueName = valueNames[dwIndex];
@@ -1128,12 +1153,12 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				}
 			}
 			
-			return 0; // ERROR_SUCCESS
+			return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Advapi32] RegEnumValueA: Failed to enumerate value");
-			return 259; // ERROR_NO_MORE_ITEMS
+			return (uint)NativeTypes.Win32Error.ERROR_NO_MORE_ITEMS;
 		}
 	}
 
@@ -1150,7 +1175,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			if (string.IsNullOrEmpty(keyPath))
 			{
 				_logger.LogWarning("[Advapi32] RegDeleteKeyA: Invalid key handle");
-				return 2; // ERROR_FILE_NOT_FOUND
+				return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			}
 			
 			// Build the full path to the subkey
@@ -1159,17 +1184,17 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			// Delete the subkey
 			if (_env.RegDeleteKey(fullPath))
 			{
-				return 0; // ERROR_SUCCESS
+				return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 			}
 			else
 			{
-				return 2; // ERROR_FILE_NOT_FOUND
+				return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			}
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Advapi32] RegDeleteKeyA: Failed to delete key");
-			return 5; // ERROR_ACCESS_DENIED
+			return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 		}
 	}
 
@@ -1183,17 +1208,17 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		{
 			if (_env.RegDeleteValue(hKey, valueName))
 			{
-				return 0; // ERROR_SUCCESS
+				return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 			}
 			else
 			{
-				return 2; // ERROR_FILE_NOT_FOUND
+				return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			}
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Advapi32] RegDeleteValueA: Failed to delete value");
-			return 5; // ERROR_ACCESS_DENIED
+			return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 		}
 	}
 
@@ -1232,12 +1257,12 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				_env.MemWrite32(phkResult, handle);
 			}
 
-			return 0; // ERROR_SUCCESS
+			return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Advapi32] RegCreateKeyA: Failed to create key");
-			return 5; // ERROR_ACCESS_DENIED
+			return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 		}
 	}
 
@@ -1286,7 +1311,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				else
 				{
 					_logger.LogWarning("[Advapi32] RegSetValueA: Invalid key handle");
-					return 2; // ERROR_FILE_NOT_FOUND
+					return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 				}
 			}
 
@@ -1294,8 +1319,11 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			if (lpData == 0 || cbData == 0)
 			{
 				_logger.LogWarning("[Advapi32] RegSetValueA: Invalid data pointer or size");
-				if (closeHandle) _env.RegCloseKey(targetHandle);
-				return 87; // ERROR_INVALID_PARAMETER
+				if (closeHandle)
+				{
+					_env.RegCloseKey(targetHandle);
+				}
+				return (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			}
 
 			var data = new byte[cbData];
@@ -1312,14 +1340,17 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			// Set the default (unnamed) value
 			var success = _env.RegSetValue(targetHandle, "", value, DiscUtils.Registry.RegistryValueType.String);
 
-			if (closeHandle) _env.RegCloseKey(targetHandle);
+			if (closeHandle)
+			{
+				_env.RegCloseKey(targetHandle);
+			}
 
-			return success ? 0u : 5u; // ERROR_SUCCESS or ERROR_ACCESS_DENIED
+			return success ? (uint)NativeTypes.Win32Error.ERROR_SUCCESS : (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Advapi32] RegSetValueA: Failed to set value");
-			return 5; // ERROR_ACCESS_DENIED
+			return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 		}
 	}
 
