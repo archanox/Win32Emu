@@ -764,6 +764,12 @@ public class RegistryHive : IDisposable
 				
 				_logger.LogDebug("[RegistryHive] Ensured directory exists: {Directory}", directory);
 			}
+			catch (ArgumentException ex) when (ex.Message.Contains("An item with the same key has already been added"))
+			{
+				// This is a known issue with DiscUtils.Fat when there are duplicate directory entries
+				// Just log and continue - the directory likely exists in some form
+				_logger.LogWarning(ex, "[RegistryHive] FAT filesystem has duplicate entries for directory: {Directory}. Continuing anyway.", directory);
+			}
 			catch (IOException ex)
 			{
 				_logger.LogWarning(ex, "[RegistryHive] IOException while ensuring directory exists: {Directory}", directory);

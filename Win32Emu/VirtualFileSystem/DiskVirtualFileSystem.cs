@@ -602,11 +602,29 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			var normalizedPath = NormalizePath(path);
 			
 			// Create directory if it doesn't exist
-			if (!_fileSystem.DirectoryExists(normalizedPath))
+			// Check existence with error handling for FAT filesystem corruption
+			bool directoryExists = false;
+			try
+			{
+				directoryExists = _fileSystem.DirectoryExists(normalizedPath);
+			}
+			catch (ArgumentException ex) when (ex.Message.Contains("An item with the same key has already been added"))
+			{
+				// FAT filesystem has duplicate entries - assume directory exists to avoid corruption
+				_logger.LogWarning(ex, "[DiskVFS] FAT filesystem corruption detected for path: {Path}. Assuming directory exists.", normalizedPath);
+				directoryExists = true;
+			}
+			
+			if (!directoryExists)
 			{
 				_fileSystem.CreateDirectory(normalizedPath);
 				_logger.LogDebug("[DiskVFS] Created directory: {Path}", normalizedPath);
 			}
+		}
+		catch (ArgumentException ex) when (ex.Message.Contains("An item with the same key has already been added"))
+		{
+			// FAT filesystem corruption - log and continue
+			_logger.LogWarning(ex, "[DiskVFS] FAT filesystem corruption while creating directory: {Path}. Continuing anyway.", path);
 		}
 		catch (IOException ex)
 		{
