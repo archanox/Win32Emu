@@ -202,7 +202,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [out]          PHKEY  phkResult
 	/// );
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(240, Version = "4.90.0.3000")]
 	private uint RegOpenKeyExA(uint hKey, in LpcStr lpSubKey, uint ulOptions, uint samDesired, uint phkResult)
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
@@ -252,7 +252,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [in, out, optional] LPDWORD lpcbData
 	/// );
 	/// </summary>
-	[DllModuleExport(32)]
+	[DllModuleExport(248, Version = "4.90.0.3000")]
 	private uint RegQueryValueExA(uint hKey, in LpcStr lpValueName, uint lpReserved, uint lpType, uint lpData, uint lpcbData)
 	{
 		var valueName = lpValueName.ToString() ?? string.Empty;
@@ -342,7 +342,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [in] HKEY hKey
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(217, Version = "4.90.0.3000")]
 	private uint RegCloseKey(uint hKey)
 	{
 		_logger.LogInformation("[Advapi32] RegCloseKey(hKey=0x{HKey:X8})", hKey);
@@ -360,7 +360,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [in] HKEY hKey
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(234, Version = "4.90.0.3000")]
 	private uint RegFlushKey(uint hKey)
 	{
 		_logger.LogInformation("[Advapi32] RegFlushKey(hKey=0x{HKey:X8})", hKey);
@@ -386,7 +386,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [out, optional] LPDWORD                     lpdwDisposition
 	/// );
 	/// </summary>
-	[DllModuleExport(36)]
+	[DllModuleExport(221, Version = "4.90.0.3000")]
 	private uint RegCreateKeyExA(uint hKey, in LpcStr lpSubKey, uint reserved, in LpcStr lpClass, uint dwOptions, uint samDesired, uint lpSecurityAttributes, uint phkResult, uint lpdwDisposition)
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
@@ -446,7 +446,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [in]           DWORD      cbData
 	/// );
 	/// </summary>
-	[DllModuleExport(24)]
+	[DllModuleExport(260, Version = "4.90.0.3000")]
 	private uint RegSetValueExA(uint hKey, in LpcStr lpValueName, uint reserved, uint dwType, uint lpData, uint cbData)
 	{
 		var valueName = lpValueName.ToString() ?? string.Empty;
@@ -520,7 +520,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   PLONG  lpcbData
 	/// );
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(247, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegQueryValueA(uint hKey, in LpcStr lpSubKey, uint lpData, uint lpcbData)
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
@@ -537,7 +537,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	}
 
 	// Security functions
-	[DllModuleExport(32)]
+	[DllModuleExport(3, Version = "4.90.0.3000", IsStub = true)]
 	private uint AccessCheck(uint pSecurityDescriptor, uint ClientToken, uint DesiredAccess, uint GenericMapping, uint PrivilegeSet, uint PrivilegeSetLength, uint GrantedAccess, uint AccessStatus)
 	{
 		_logger.LogInformation("[Advapi32] AccessCheck(stub)");
@@ -546,21 +546,21 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(16)]
+	[DllModuleExport(6, Version = "4.90.0.3000", IsStub = true)]
 	private uint AddAccessAllowedAce(uint pAcl, uint dwAceRevision, uint AccessMask, uint pSid)
 	{
 		_logger.LogInformation("[Advapi32] AddAccessAllowedAce(stub)");
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(24)]
+	[DllModuleExport(11, Version = "4.90.0.3000", IsStub = true)]
 	private uint AdjustTokenPrivileges(uint TokenHandle, uint DisableAllPrivileges, uint NewState, uint BufferLength, uint PreviousState, uint ReturnLength)
 	{
 		_logger.LogInformation("[Advapi32] AdjustTokenPrivileges(stub)");
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(44)]
+	[DllModuleExport(12, Version = "4.90.0.3000", IsStub = true)]
 	private uint AllocateAndInitializeSid(uint pIdentifierAuthority, uint nSubAuthorityCount, uint nSubAuthority0, uint nSubAuthority1, uint nSubAuthority2, uint nSubAuthority3, uint nSubAuthority4, uint nSubAuthority5, uint nSubAuthority6, uint nSubAuthority7, uint pSid)
 	{
 		_logger.LogInformation("[Advapi32] AllocateAndInitializeSid(stub)");
@@ -569,49 +569,49 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(101, Version = "4.90.0.3000")]
 	private uint FreeSid(uint pSid)
 	{
 		_logger.LogInformation("[Advapi32] FreeSid(pSid=0x{PSid:X8})", pSid);
 		return 0; // NULL (void function returns NULL)
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(119, Version = "4.90.0.3000")]
 	private uint GetLengthSid(uint pSid)
 	{
 		_logger.LogInformation("[Advapi32] GetLengthSid(pSid=0x{PSid:X8})", pSid);
 		return 12; // Minimum SID size
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(158, Version = "4.90.0.3000")]
 	private uint ImpersonateSelf(uint ImpersonationLevel)
 	{
 		_logger.LogInformation("[Advapi32] ImpersonateSelf(ImpersonationLevel={ImpersonationLevel})", ImpersonationLevel);
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(159, Version = "4.90.0.3000", IsStub = true)]
 	private uint InitializeAcl(uint pAcl, uint nAclLength, uint dwAclRevision)
 	{
 		_logger.LogInformation("[Advapi32] InitializeAcl(stub)");
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(8)]
+	[DllModuleExport(160, Version = "4.90.0.3000", IsStub = true)]
 	private uint InitializeSecurityDescriptor(uint pSecurityDescriptor, uint dwRevision)
 	{
 		_logger.LogInformation("[Advapi32] InitializeSecurityDescriptor(stub)");
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(166, Version = "4.90.0.3000", IsStub = true)]
 	private uint IsValidSecurityDescriptor(uint pSecurityDescriptor)
 	{
 		_logger.LogInformation("[Advapi32] IsValidSecurityDescriptor(stub)");
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(179, Version = "4.90.0.3000")]
 	private uint LookupPrivilegeValueA(in LpcStr lpSystemName, in LpcStr lpName, uint lpLuid)
 	{
 		var systemName = lpSystemName.ToString() ?? string.Empty;
@@ -627,7 +627,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(200, Version = "4.90.0.3000")]
 	private uint OpenProcessToken(uint ProcessHandle, uint DesiredAccess, uint TokenHandle)
 	{
 		_logger.LogInformation("[Advapi32] OpenProcessToken(ProcessHandle=0x{ProcessHandle:X8}, DesiredAccess=0x{DesiredAccess:X}, TokenHandle=0x{TokenHandle:X8})",
@@ -640,7 +640,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(16)]
+	[DllModuleExport(205, Version = "4.90.0.3000", IsStub = true)]
 	private uint OpenThreadToken(uint ThreadHandle, uint DesiredAccess, uint OpenAsSelf, uint TokenHandle)
 	{
 		_logger.LogInformation("[Advapi32] OpenThreadToken(stub)");
@@ -651,28 +651,28 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(0)]
+	[DllModuleExport(271, Version = "4.90.0.3000")]
 	private uint RevertToSelf()
 	{
 		_logger.LogInformation("[Advapi32] RevertToSelf()");
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(16)]
+	[DllModuleExport(281, Version = "4.90.0.3000", IsStub = true)]
 	private uint SetSecurityDescriptorDacl(uint pSecurityDescriptor, uint bDaclPresent, uint pDacl, uint bDaclDefaulted)
 	{
 		_logger.LogInformation("[Advapi32] SetSecurityDescriptorDacl(stub)");
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(288, Version = "4.90.0.3000", IsStub = true)]
 	private uint SetSecurityDescriptorGroup(uint pSecurityDescriptor, uint pGroup, uint bGroupDefaulted)
 	{
 		_logger.LogInformation("[Advapi32] SetSecurityDescriptorGroup(stub)");
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(289, Version = "4.90.0.3000", IsStub = true)]
 	private uint SetSecurityDescriptorOwner(uint pSecurityDescriptor, uint pOwner, uint bOwnerDefaulted)
 	{
 		_logger.LogInformation("[Advapi32] SetSecurityDescriptorOwner(stub)");
@@ -680,7 +680,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	}
 
 	// Service functions
-	[DllModuleExport(12)]
+	[DllModuleExport(201, Version = "4.90.0.3000")]
 	private uint OpenSCManagerA(in LpcStr lpMachineName, in LpcStr lpDatabaseName, uint dwDesiredAccess)
 	{
 		var machineName = lpMachineName.ToString() ?? string.Empty;
@@ -691,7 +691,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return _nextServiceHandle++; // Return pseudo-handle
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(203, Version = "4.90.0.3000")]
 	private uint OpenServiceA(uint hSCManager, in LpcStr lpServiceName, uint dwDesiredAccess)
 	{
 		var serviceName = lpServiceName.ToString() ?? string.Empty;
@@ -701,28 +701,28 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return _nextServiceHandle++; // Return pseudo-handle
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(36, Version = "4.90.0.3000")]
 	private uint CloseServiceHandle(uint hSCObject)
 	{
 		_logger.LogInformation("[Advapi32] CloseServiceHandle(hSCObject=0x{HSCObject:X8})", hSCObject);
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(52)]
+	[DllModuleExport(49, Version = "4.90.0.3000")]
 	private uint CreateServiceW(uint hSCManager, uint lpServiceName, uint lpDisplayName, uint dwDesiredAccess, uint dwServiceType, uint dwStartType, uint dwErrorControl, uint lpBinaryPathName, uint lpLoadOrderGroup, uint lpdwTagId, uint lpDependencies, uint lpServiceStartName, uint lpPassword)
 	{
 		_logger.LogInformation("[Advapi32] CreateServiceW(stub)");
 		return _nextServiceHandle++; // Return pseudo-handle
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(91, Version = "4.90.0.3000")]
 	private uint DeleteService(uint hService)
 	{
 		_logger.LogInformation("[Advapi32] DeleteService(hService=0x{HService:X8})", hService);
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(299, Version = "4.90.0.3000")]
 	private uint StartServiceA(uint hService, uint dwNumServiceArgs, uint lpServiceArgVectors)
 	{
 		_logger.LogInformation("[Advapi32] StartServiceA(hService=0x{HService:X8}, dwNumServiceArgs={DwNumServiceArgs})",
@@ -730,7 +730,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(37, Version = "4.90.0.3000")]
 	private uint ControlService(uint hService, uint dwControl, uint lpServiceStatus)
 	{
 		_logger.LogInformation("[Advapi32] ControlService(hService=0x{HService:X8}, dwControl={DwControl}, lpServiceStatus=0x{LpServiceStatus:X8})",
@@ -738,14 +738,14 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 1; // TRUE
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(239, Version = "4.90.0.3000")]
 	private uint RegOpenKeyA(uint hKey, in LpcStr lpSubKey, uint phkResult)
 	{
 		// RegOpenKeyA is equivalent to RegOpenKeyExA with samDesired = KEY_ALL_ACCESS
 		return RegOpenKeyExA(hKey, lpSubKey, 0, 0xF003F, phkResult);
 	}
 
-	[DllModuleExport(1)]
+	[DllModuleExport(243, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegQueryInfoKeyA(uint hKey, in LpStr lpClass, uint lpcchClass, uint lpReserved,
 		uint lpcSubKeys, uint lpcchMaxSubKeyLen, uint lpcchMaxClassLen, uint lpcValues,
 		uint lpcchMaxValueNameLen, uint lpcbMaxValueLen, uint lpcbSecurityDescriptor, uint lpftLastWriteTime)
@@ -767,7 +767,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 0; // ERROR_SUCCESS
 	}
 
-	[DllModuleExport(1)]
+	[DllModuleExport(228, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegEnumKeyA(uint hKey, uint dwIndex, in LpStr lpName, uint cchName)
 	{
 		_logger.LogInformation("[Advapi32] RegEnumKeyA(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
@@ -776,7 +776,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 259; // ERROR_NO_MORE_ITEMS
 	}
 
-	[DllModuleExport(1)]
+	[DllModuleExport(229, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegEnumKeyExA(uint hKey, uint dwIndex, in LpStr lpName, uint lpcchName, uint lpReserved,
 		in LpStr lpClass, uint lpcchClass, uint lpftLastWriteTime)
 	{
@@ -786,7 +786,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 259; // ERROR_NO_MORE_ITEMS
 	}
 
-	[DllModuleExport(1)]
+	[DllModuleExport(232, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegEnumValueA(uint hKey, uint dwIndex, in LpStr lpValueName, uint lpcchValueName,
 		uint lpReserved, uint lpType, uint lpData, uint lpcbData)
 	{
@@ -796,7 +796,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 259; // ERROR_NO_MORE_ITEMS
 	}
 
-	[DllModuleExport(1)]
+	[DllModuleExport(224, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegDeleteKeyA(uint hKey, in LpcStr lpSubKey)
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
@@ -806,7 +806,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 0; // ERROR_SUCCESS
 	}
 
-	[DllModuleExport(1)]
+	[DllModuleExport(226, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegDeleteValueA(uint hKey, in LpcStr lpValueName)
 	{
 		var valueName = lpValueName.ToString() ?? string.Empty;
@@ -816,7 +816,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 0; // ERROR_SUCCESS
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(220, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegCreateKeyA(uint hKey, in LpcStr lpSubKey, uint phkResult)
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
@@ -832,7 +832,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 0; // ERROR_SUCCESS
 	}
 
-	[DllModuleExport(16)]
+	[DllModuleExport(259, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegSetValueA(uint hKey, in LpcStr lpSubKey, uint dwType, uint lpData, uint cbData)
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
@@ -843,7 +843,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 0; // ERROR_SUCCESS
 	}
 
-	[DllModuleExport(20)]
+	[DllModuleExport(116, Version = "4.90.0.3000", IsStub = true)]
 	private uint GetFileSecurityA(in LpcStr lpFileName, uint RequestedInformation, uint pSecurityDescriptor, uint nLength, uint lpnLengthNeeded)
 	{
 		var fileName = lpFileName.ToString() ?? string.Empty;
@@ -859,7 +859,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		return 0; // FALSE (insufficient buffer)
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(279, Version = "4.90.0.3000", IsStub = true)]
 	private uint SetFileSecurityA(in LpcStr lpFileName, uint SecurityInformation, uint pSecurityDescriptor)
 	{
 		var fileName = lpFileName.ToString() ?? string.Empty;
@@ -877,7 +877,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [in, out] LPDWORD pcbBuffer
 	/// );
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(154, Version = "4.90.0.3000")]
 	private uint GetUserNameA(uint lpBuffer, uint pcbBuffer)
 	{
 		_logger.LogInformation("[Advapi32] GetUserNameA(lpBuffer=0x{LpBuffer:X8}, pcbBuffer=0x{PcbBuffer:X8})",
@@ -936,7 +936,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [in] LPCSTR lpFile
 	/// );
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(236, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegLoadKeyA(uint hKey, in LpcStr lpSubKey, in LpcStr lpFile)
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
@@ -960,7 +960,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [in] LPCSTR lpSubKey
 	/// );
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(263, Version = "4.90.0.3000")]
 	private uint RegUnLoadKeyA(uint hKey, in LpcStr lpSubKey)
 	{
 		var subKey = lpSubKey.ToString() ?? string.Empty;
@@ -980,7 +980,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	/// Establishes a connection to a predefined registry key on another computer.
 	/// LONG RegConnectRegistryA(LPCSTR lpMachineName, HKEY hKey, PHKEY phkResult);
 	/// </summary>
-	[DllModuleExport(12, IsStub = true)]
+	[DllModuleExport(218, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegConnectRegistryA(in LpcStr lpMachineName, uint hKey, uint phkResult)
 	{
 		var machineName = lpMachineName.Read(_env.Memory) ?? "";
