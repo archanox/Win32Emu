@@ -113,7 +113,17 @@ public partial class DialogWindow : Window
 				Canvas.SetLeft(control, item.X * 2);
 				Canvas.SetTop(control, item.Y * 1.5);
 				control.Width = item.Width * 2;
-				control.Height = item.Height * 1.5;
+				
+				// For TextBlock controls with text wrapping, use MinHeight instead of fixed Height
+				// to allow the control to expand for multi-line text
+				if (control is TextBlock textBlock && textBlock.TextWrapping == TextWrapping.Wrap)
+				{
+					control.MinHeight = item.Height * 1.5;
+				}
+				else
+				{
+					control.Height = item.Height * 1.5;
+				}
 
 				canvas.Children.Add(control);
 				_controlsById[item.Id] = control;
