@@ -2285,10 +2285,7 @@ public class IcedCpu : IAsyncCpu
 			bool before = (a & 0x80000000) != 0, after = (r & 0x80000000) != 0;
 			SetFlagVal(Of, before ^ after);
 		}
-		else
-		{
-			ClearFlag(Of);
-		}
+		// OF is undefined when count > 1, so don't modify it
 
 		ClearFlag(Af);
 		WriteOp(insn, 0, r);
@@ -2315,7 +2312,11 @@ public class IcedCpu : IAsyncCpu
 		{
 			var s = (int)a;
 			r = (uint)(s >> c);
-			SetFlagVal(Of, false);
+			if (c == 1)
+			{
+				SetFlagVal(Of, false);
+			}
+			// OF is undefined when count > 1, so don't modify it
 		}
 		else
 		{
@@ -2324,10 +2325,7 @@ public class IcedCpu : IAsyncCpu
 			{
 				SetFlagVal(Of, (a & 0x80000000) != 0);
 			}
-			else
-			{
-				ClearFlag(Of);
-			}
+			// OF is undefined when count > 1, so don't modify it
 		}
 
 		var lastOut = (a >> (c - 1)) & 1u;
@@ -2346,13 +2344,31 @@ public class IcedCpu : IAsyncCpu
 			return;
 		}
 
+		// Get operand size to determine bit width and mask
+		var opSize = GetOpSizeBits(insn, 0);
+		var bitWidth = (uint)opSize; // 8, 16, or 32
+		var mask = opSize switch
+		{
+			8 => 0xFFu,
+			16 => 0xFFFFu,
+			_ => 0xFFFFFFFFu
+		};
+		var msbMask = 1u << ((int)bitWidth - 1); // Bit 7 for 8-bit, bit 15 for 16-bit, bit 31 for 32-bit
+		var msb1Mask = 1u << ((int)bitWidth - 2); // Bit 6 for 8-bit, bit 14 for 16-bit, bit 30 for 32-bit
+
 		if (kind is RotateKind.Rol or RotateKind.Ror)
 		{
 			c &= 0x1F;
+			// For 8/16-bit operands, further mask count to operand size
+			if (opSize < 32)
+			{
+				c = (int)(c % bitWidth);
+			}
 		}
 		else
 		{
-			c %= 33;
+			// RCL/RCR: count is masked to operand size + 1 (for carry bit)
+			c = (int)(c % (bitWidth + 1));
 		}
 
 		if (c == 0)
@@ -2364,73 +2380,71 @@ public class IcedCpu : IAsyncCpu
 		switch (kind)
 		{
 			case RotateKind.Rol:
-				r = (a << c) | (a >> (32 - c));
+				// Rotate left: shift left by c, fill with bits shifted out from top
+				r = ((a << (int)c) | (a >> ((int)bitWidth - (int)c))) & mask;
 				SetFlagVal(Cf, (r & 1) != 0);
 				if (c == 1)
 				{
-					var msb = (r & 0x80000000) != 0;
+					var msb = (r & msbMask) != 0;
 					var cf = GetFlag(Cf);
 					SetFlagVal(Of, msb ^ cf);
 				}
-				else
-				{
-					ClearFlag(Of);
-				}
+				// OF is undefined when count > 1, so don't modify it
 
 				break;
 			case RotateKind.Ror:
-				r = (a >> c) | (a << (32 - c));
-				SetFlagVal(Cf, ((r >> 31) & 1) != 0);
+				// Rotate right: shift right by c, fill with bits shifted out from bottom
+				r = ((a >> (int)c) | (a << ((int)bitWidth - (int)c))) & mask;
+				SetFlagVal(Cf, ((r >> ((int)bitWidth - 1)) & 1) != 0);
 				if (c == 1)
 				{
-					var bit31 = (r & 0x80000000) != 0;
-					var bit30 = (r & 0x40000000) != 0;
-					SetFlagVal(Of, bit31 ^ bit30);
+					var bitN1 = (r & msbMask) != 0;   // MSB
+					var bitN2 = (r & msb1Mask) != 0;  // MSB-1
+					SetFlagVal(Of, bitN1 ^ bitN2);
 				}
-				else
-				{
-					ClearFlag(Of);
-				}
+				// OF is undefined when count > 1, so don't modify it
 
 				break;
 			case RotateKind.Rcl:
+				// Rotate left through carry
 				for (var i = 0; i < c; i++)
 				{
 					var carry = GetFlag(Cf) ? 1u : 0u;
-					var newCarry = (a >> 31) & 1u;
-					r = (a << 1) | carry;
+					var newCarry = (a >> ((int)bitWidth - 1)) & 1u;
+					r = ((a << 1) | carry) & mask;
 					SetFlagVal(Cf, newCarry != 0);
 					a = r;
 				}
 
 				if (c == 1)
 				{
-					SetFlagVal(Of, ((a ^ r) & 0x80000000) != 0);
+					// OF = MSB XOR CF after rotation
+					var msb = (r & msbMask) != 0;
+					var cf = GetFlag(Cf);
+					SetFlagVal(Of, msb ^ cf);
 				}
-				else
-				{
-					ClearFlag(Of);
-				}
+				// OF is undefined when count > 1, so don't modify it
 
 				break;
 			case RotateKind.Rcr:
+				// Rotate right through carry
 				for (var i = 0; i < c; i++)
 				{
 					var carry = GetFlag(Cf) ? 1u : 0u;
 					var newCarry = a & 1u;
-					r = (a >> 1) | (carry << 31);
+					r = ((a >> 1) | (carry << ((int)bitWidth - 1))) & mask;
 					SetFlagVal(Cf, newCarry != 0);
 					a = r;
 				}
 
 				if (c == 1)
 				{
-					SetFlagVal(Of, ((a ^ r) & 0x80000000) != 0);
+					// OF = MSB XOR (MSB-1) after rotation
+					var bitN1 = (r & msbMask) != 0;
+					var bitN2 = (r & msb1Mask) != 0;
+					SetFlagVal(Of, bitN1 ^ bitN2);
 				}
-				else
-				{
-					ClearFlag(Of);
-				}
+				// OF is undefined when count > 1, so don't modify it
 
 				break;
 		}
@@ -3204,6 +3218,8 @@ public class IcedCpu : IAsyncCpu
 		// 8-bit form: AX = AL * r/m8
 		// 16-bit form: DX:AX = AX * r/m16
 		// 32-bit form: EDX:EAX = EAX * r/m32
+		// Flags: CF and OF are set if high-order bits contain significant digits; otherwise cleared
+		// AF, PF, SF, ZF are undefined (not modified)
 		
 		var opSize = GetOpSizeBits(insn, 0);
 		
@@ -3218,7 +3234,7 @@ public class IcedCpu : IAsyncCpu
 				var carry = (prod & 0xFF00) != 0;
 				SetFlagVal(Cf, carry);
 				SetFlagVal(Of, carry);
-				ClearFlag(Af);
+				// AF, PF, SF, ZF are undefined, don't modify them
 				break;
 			}
 			case 16:
@@ -3231,7 +3247,7 @@ public class IcedCpu : IAsyncCpu
 				var carry = (prod & 0xFFFF0000) != 0;
 				SetFlagVal(Cf, carry);
 				SetFlagVal(Of, carry);
-				ClearFlag(Af);
+				// AF, PF, SF, ZF are undefined, don't modify them
 				break;
 			}
 			default:
@@ -3244,7 +3260,7 @@ public class IcedCpu : IAsyncCpu
 				var carry = _edx != 0;
 				SetFlagVal(Cf, carry);
 				SetFlagVal(Of, carry);
-				ClearFlag(Af);
+				// AF, PF, SF, ZF are undefined, don't modify them
 				break;
 			}
 		}
@@ -3252,9 +3268,12 @@ public class IcedCpu : IAsyncCpu
 
 	private void ExecImul(Instruction insn)
 	{
+		// IMUL performs signed multiplication
+		// Flags: CF and OF are set if result doesn't fit in destination size; otherwise cleared
+		// AF, PF, SF, ZF are undefined (not modified)
+		
 		if (insn.OpCount == 1)
 		{
-			// IMUL performs signed multiplication
 			// 8-bit form: AX = AL * r/m8
 			// 16-bit form: DX:AX = AX * r/m16
 			// 32-bit form: EDX:EAX = EAX * r/m32
@@ -3274,7 +3293,7 @@ public class IcedCpu : IAsyncCpu
 					var overflow = prod != (sbyte)prod;
 					SetFlagVal(Cf, overflow);
 					SetFlagVal(Of, overflow);
-					ClearFlag(Af);
+					// AF, PF, SF, ZF are undefined, don't modify them
 					break;
 				}
 				case 16:
@@ -3290,7 +3309,7 @@ public class IcedCpu : IAsyncCpu
 				    var overflow = upper != 0 && upper != 0xFFFF;
 				    SetFlagVal(Cf, overflow);
 					SetFlagVal(Of, overflow);
-					ClearFlag(Af);
+					// AF, PF, SF, ZF are undefined, don't modify them
 					break;
 				}
 				default:
@@ -3303,13 +3322,14 @@ public class IcedCpu : IAsyncCpu
 					var overflow = prod != (int)prod;
 					SetFlagVal(Cf, overflow);
 					SetFlagVal(Of, overflow);
-					ClearFlag(Af);
+					// AF, PF, SF, ZF are undefined, don't modify them
 					break;
 				}
 			}
 		}
 		else
 		{
+			// Two or three operand form: dest = src1 * src2
 			var prod = (int)ReadOp(insn, 1) *
 			           (long)(insn.OpCount >= 3 ? (int)ReadOp(insn, 2) : (int)ReadOp(insn, 1));
 			var r = (uint)prod;
@@ -3317,7 +3337,7 @@ public class IcedCpu : IAsyncCpu
 			var overflow = prod is > int.MaxValue or < int.MinValue;
 			SetFlagVal(Cf, overflow);
 			SetFlagVal(Of, overflow);
-			ClearFlag(Af);
+			// AF, PF, SF, ZF are undefined, don't modify them
 		}
 	}
 
