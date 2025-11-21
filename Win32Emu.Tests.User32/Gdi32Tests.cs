@@ -600,6 +600,126 @@ public class Gdi32Tests : IDisposable
         _testEnv.CallGdi32Api("DELETEDC", hdcSrc);
     }
 
+    [Fact]
+    public void GetWinMetaFileBits_ShouldReturnZero_WhenNotSupported()
+    {
+        // Arrange
+        uint hemf = 0x12345678;
+        uint cbData16 = 256;
+        var pData16 = _testEnv.AllocateMemory(cbData16);
+        uint iMapMode = 1; // MM_TEXT
+
+        // Act
+        var result = _testEnv.CallGdi32Api("GETWINMETAFILEBITS", hemf, cbData16, pData16, iMapMode);
+
+        // Assert
+        Assert.Equal(0u, result); // Metafiles not supported, should return 0
+    }
+
+    [Fact]
+    public void SetMetaFileBitsEx_ShouldReturnNull_WhenNotSupported()
+    {
+        // Arrange
+        uint cbBuffer = 128;
+        var lpData = _testEnv.AllocateMemory(cbBuffer);
+
+        // Act
+        var result = _testEnv.CallGdi32Api("SETMETAFILEBITSEX", cbBuffer, lpData);
+
+        // Assert
+        Assert.Equal(0u, result); // Metafiles not supported, should return NULL handle
+    }
+
+    [Fact]
+    public void SetWinMetaFileBits_ShouldReturnNull_WhenNotSupported()
+    {
+        // Arrange
+        uint nSize = 256;
+        var lpMeta16Data = _testEnv.AllocateMemory(nSize);
+        uint hdcRef = 0;
+        uint lpMFP = 0;
+
+        // Act
+        var result = _testEnv.CallGdi32Api("SETWINMETAFILEBITS", nSize, lpMeta16Data, hdcRef, lpMFP);
+
+        // Assert
+        Assert.Equal(0u, result); // Metafiles not supported, should return NULL handle
+    }
+
+    [Fact]
+    public void PlayEnhMetaFile_ShouldReturnFalse_WhenNotSupported()
+    {
+        // Arrange
+        uint hdc = 0x81000000;
+        uint hemf = 0x12345678;
+        var lprect = _testEnv.AllocateMemory(16);
+        _testEnv.Memory.Write32(lprect, 0);      // left
+        _testEnv.Memory.Write32(lprect + 4, 0);  // top
+        _testEnv.Memory.Write32(lprect + 8, 100); // right
+        _testEnv.Memory.Write32(lprect + 12, 100); // bottom
+
+        // Act
+        var result = _testEnv.CallGdi32Api("PLAYENHMETAFILE", hdc, hemf, lprect);
+
+        // Assert
+        Assert.Equal(0u, result); // Metafiles not supported, should return FALSE
+    }
+
+    [Fact]
+    public void TranslateCharsetInfo_ShouldReturnTrue_ForAnsiCharset()
+    {
+        // Arrange
+        const uint TCI_SRCCHARSET = 1;
+        var lpSrc = _testEnv.AllocateMemory(4);
+        _testEnv.Memory.Write32(lpSrc, 0); // ANSI_CHARSET
+        var lpCs = _testEnv.AllocateMemory(32); // CHARSETINFO structure
+
+        // Act
+        var result = _testEnv.CallGdi32Api("TRANSLATECHARSETINFO", lpSrc, lpCs, TCI_SRCCHARSET);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+        var charset = _testEnv.Memory.Read32(lpCs);
+        var codepage = _testEnv.Memory.Read32(lpCs + 4);
+        Assert.Equal(0u, charset);   // ANSI_CHARSET
+        Assert.Equal(1252u, codepage); // ANSI codepage
+    }
+
+    [Fact]
+    public void TranslateCharsetInfo_ShouldReturnTrue_ForShiftJis()
+    {
+        // Arrange
+        const uint TCI_SRCCODEPAGE = 2;
+        var lpSrc = _testEnv.AllocateMemory(4);
+        _testEnv.Memory.Write32(lpSrc, 932); // Shift-JIS codepage
+        var lpCs = _testEnv.AllocateMemory(32); // CHARSETINFO structure
+
+        // Act
+        var result = _testEnv.CallGdi32Api("TRANSLATECHARSETINFO", lpSrc, lpCs, TCI_SRCCODEPAGE);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+        var charset = _testEnv.Memory.Read32(lpCs);
+        var codepage = _testEnv.Memory.Read32(lpCs + 4);
+        Assert.Equal(128u, charset); // SHIFTJIS_CHARSET
+        Assert.Equal(932u, codepage);
+    }
+
+    [Fact]
+    public void TranslateCharsetInfo_ShouldReturnFalse_WhenNullPointer()
+    {
+        // Arrange
+        const uint TCI_SRCCHARSET = 1;
+        var lpSrc = _testEnv.AllocateMemory(4);
+        _testEnv.Memory.Write32(lpSrc, 0);
+
+        // Act
+        var result = _testEnv.CallGdi32Api("TRANSLATECHARSETINFO", lpSrc, 0u, TCI_SRCCHARSET);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE - null lpCs pointer
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
