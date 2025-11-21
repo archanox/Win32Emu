@@ -38,17 +38,20 @@ namespace Win32Emu.Win32.Modules
 		private const int DefaultFontHeight = 16;
 
 		// GDI object type constants (from GetObjectType)
-		private const uint OBJ_PEN = 1;
-		private const uint OBJ_BRUSH = 2;
-		private const uint OBJ_DC = 3;
-		private const uint OBJ_METADC = 4;
-		private const uint OBJ_PAL = 5;
-		private const uint OBJ_FONT = 6;
-		private const uint OBJ_BITMAP = 7;
-		private const uint OBJ_REGION = 8;
-		private const uint OBJ_METAFILE = 9;
-		private const uint OBJ_MEMDC = 10;
-		private const uint OBJ_EXTPEN = 11;
+		private enum GdiObjectTypeId : uint
+		{
+			OBJ_PEN = 1,
+			OBJ_BRUSH = 2,
+			OBJ_DC = 3,
+			OBJ_METADC = 4,
+			OBJ_PAL = 5,
+			OBJ_FONT = 6,
+			OBJ_BITMAP = 7,
+			OBJ_REGION = 8,
+			OBJ_METAFILE = 9,
+			OBJ_MEMDC = 10,
+			OBJ_EXTPEN = 11
+		}
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
@@ -2328,8 +2331,6 @@ namespace Win32Emu.Win32.Modules
 			return 1; // TRUE
 		}
 
-		// ========== Missing GDI32 Functions ==========
-
 		/// <summary>
 		/// Sets the bitmap stretching mode in the specified device context.
 		/// </summary>
@@ -2378,12 +2379,12 @@ namespace Win32Emu.Win32.Modules
 				// Return appropriate type based on object
 				return obj.Type switch
 				{
-					GdiObjectType.Pen => OBJ_PEN,
-					GdiObjectType.Brush => OBJ_BRUSH,
-					GdiObjectType.Font => OBJ_FONT,
-					GdiObjectType.Bitmap => OBJ_BITMAP,
-					GdiObjectType.Palette => OBJ_PAL,
-					GdiObjectType.Region => OBJ_REGION,
+					GdiObjectType.Pen => (uint)GdiObjectTypeId.OBJ_PEN,
+					GdiObjectType.Brush => (uint)GdiObjectTypeId.OBJ_BRUSH,
+					GdiObjectType.Font => (uint)GdiObjectTypeId.OBJ_FONT,
+					GdiObjectType.Bitmap => (uint)GdiObjectTypeId.OBJ_BITMAP,
+					GdiObjectType.Palette => (uint)GdiObjectTypeId.OBJ_PAL,
+					GdiObjectType.Region => (uint)GdiObjectTypeId.OBJ_REGION,
 					_ => 0
 				};
 			}
@@ -2391,7 +2392,7 @@ namespace Win32Emu.Win32.Modules
 			// Check if it's a DC
 			if (_deviceContexts.ContainsKey(h))
 			{
-				return OBJ_DC;
+				return (uint)GdiObjectTypeId.OBJ_DC;
 			}
 			
 			// Unknown object
