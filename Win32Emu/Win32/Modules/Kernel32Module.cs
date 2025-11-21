@@ -48,6 +48,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	// File copy buffer size
 	private const int FILE_COPY_BUFFER_SIZE = 8192;
 
+	// IsBadStringPtr constants
+	private const uint BAD_POINTER_TRUE = 1;  // Return value indicating bad pointer
+	private const uint BAD_POINTER_FALSE = 0; // Return value indicating good pointer
+	private const int MAX_STRING_CHECK_LENGTH_ANSI = 65536;   // Max chars to check for ANSI strings (64KB)
+	private const int MAX_STRING_CHECK_LENGTH_UNICODE = 32768; // Max chars to check for Unicode strings (64KB footprint)
+
+	// SleepEx and WaitForSingleObjectEx return values
+	private const uint WAIT_IO_COMPLETION = 0; // Returned when APC completes (not implemented, always return this)
+
 	private Win32Dispatcher? _dispatcher;
 	private uint _lastError;
 	private ICpu? _cpu;
@@ -4919,8 +4928,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// In a full implementation, alertable would allow APCs (Asynchronous Procedure Calls) to interrupt
 		Sleep(dwMilliseconds);
 
-		// Return 0 indicating it completed without being interrupted by an APC
-		return 0;
+		// Return WAIT_IO_COMPLETION (0) indicating it completed without being interrupted by an APC
+		return WAIT_IO_COMPLETION;
 	}
 
 	[DllModuleExport(1)]
@@ -9807,7 +9816,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogDebug("[Kernel32] UnMapLS(dwAddress=0x{DwAddress:X8})", dwAddress);
 		// No-op in flat 32-bit mode
-		return 0;
+		return BAD_POINTER_FALSE;
 	}
 
 	/// <summary>
@@ -9938,7 +9947,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// NULL pointer is always bad
 		if (lpsz == 0)
 		{
-			return 1; // TRUE - bad pointer
+			return BAD_POINTER_TRUE;
 		}
 
 		// Check if we can read from this address
@@ -9946,7 +9955,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			// Try to read the string up to ucchMax characters
 			// Use a reasonable upper bound when ucchMax is 0 to avoid excessive memory reads
-			var maxLength = ucchMax == 0 ? 65536 : (int)ucchMax;
+			var maxLength = ucchMax == 0 ? MAX_STRING_CHECK_LENGTH_ANSI : (int)ucchMax;
 			var offset = 0;
 
 			while (offset < maxLength)
@@ -9954,17 +9963,17 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				var b = _env.MemRead8(lpsz + (uint)offset);
 				if (b == 0) // Found null terminator
 				{
-					return 0; // FALSE - good pointer
+					return BAD_POINTER_FALSE;
 				}
 				offset++;
 			}
 
-			return 0; // FALSE - good pointer (reached max length)
+			return BAD_POINTER_FALSE; // Good pointer (reached max length)
 		}
 		catch
 		{
 			// Memory access failed
-			return 1; // TRUE - bad pointer
+			return BAD_POINTER_TRUE;
 		}
 	}
 
@@ -9983,7 +9992,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// NULL pointer is always bad
 		if (lpsz == 0)
 		{
-			return 1; // TRUE - bad pointer
+			return BAD_POINTER_TRUE;
 		}
 
 		// Check if we can read from this address
@@ -9991,8 +10000,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			// Try to read the string up to ucchMax characters
 			// Use a reasonable upper bound when ucchMax is 0 to avoid excessive memory reads
-			// Use 32768 for wide strings (same memory footprint as 65536 single-byte chars)
-			var maxLength = ucchMax == 0 ? 32768 : (int)ucchMax;
+			// Use 32768 characters for wide strings (64KB footprint, matching IsBadStringPtrA's 65536 single-byte limit)
+			var maxLength = ucchMax == 0 ? MAX_STRING_CHECK_LENGTH_UNICODE : (int)ucchMax;
 			var offset = 0;
 
 			while (offset < maxLength)
@@ -10001,17 +10010,17 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				var w = _env.MemRead16(lpsz + (uint)(offset * 2));
 				if (w == 0) // Found null terminator
 				{
-					return 0; // FALSE - good pointer
+					return BAD_POINTER_FALSE;
 				}
 				offset++;
 			}
 
-			return 0; // FALSE - good pointer (reached max length)
+			return BAD_POINTER_FALSE; // Good pointer (reached max length)
 		}
 		catch
 		{
 			// Memory access failed
-			return 1; // TRUE - bad pointer
+			return BAD_POINTER_TRUE;
 		}
 	}
 

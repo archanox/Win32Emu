@@ -3235,7 +3235,6 @@ namespace Win32Emu.Win32.Modules
 			return 1;
 		}
 
-		[DllModuleExport(4)]
 		/// <summary>
 		/// Retrieves the previous character in a string.
 		/// LPSTR CharPrevA(
@@ -3258,10 +3257,7 @@ namespace Win32Emu.Win32.Modules
 			// For single-byte character sets (ASCII), just go back by 1 byte
 			// A full implementation would need to check for multi-byte character sequences
 			// in DBCS encodings and potentially scan backwards to find the character boundary
-			var prevPtr = lpszCurrent - 1;
-
-			_logger.LogDebug("[User32] CharPrevA: returning 0x{PrevPtr:X8}", prevPtr);
-			return prevPtr;
+			return lpszCurrent - 1;
 		}
 
 		private uint CharNextA(uint lpsz)
