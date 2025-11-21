@@ -24,6 +24,8 @@ public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem, uint baseOffse
 	
 	public LpWStr LpWStr(int index) => new LpWStr(UInt32(index));
 	
+	public LpcWStr LpcWStr(int index) => new LpcWStr(UInt32(index), mem);
+	
 	public unsafe NativeTypes.Lpcpinfo Lpcpinfo(int index) => (NativeTypes.Cpinfo*)UInt32(index);
 	
 	// Ref struct wrappers for Win32 structures with automatic memory read/write
