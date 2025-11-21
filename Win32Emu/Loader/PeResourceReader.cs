@@ -6,6 +6,8 @@ using AsmResolver;
 using AsmResolver.PE;
 using AsmResolver.PE.File;
 using AsmResolver.PE.Win32Resources;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Loader;
@@ -19,6 +21,7 @@ public class PeResourceReader
 	private readonly PEImage _image;
 	private readonly uint _imageBase;
 	private readonly VirtualMemory _memory;
+	private readonly ILogger _logger;
 
 	// Resource type constants
 	public enum ResourceType : uint
@@ -46,11 +49,12 @@ public class PeResourceReader
 		RT_MANIFEST = 24
 	}
 
-	public PeResourceReader(PEImage image, uint imageBase, VirtualMemory memory)
+	public PeResourceReader(PEImage image, uint imageBase, VirtualMemory memory, ILogger? logger = null)
 	{
 		_image = image ?? throw new ArgumentNullException(nameof(image));
 		_imageBase = imageBase;
 		_memory = memory ?? throw new ArgumentNullException(nameof(memory));
+		_logger = logger ?? NullLogger.Instance;
 	}
 
 	/// <summary>
@@ -474,7 +478,7 @@ public class PeResourceReader
 				// String-named resource
 				// For complete implementation, we would need to allocate memory for the string
 				// and pass a pointer to the callback. For now, just skip.
-				// This is a limitation - string-named resources are not enumerated
+				_logger.LogWarning("[PeResourceReader] Skipping string-named resource '{Name}' (enumeration not yet supported)", nameEntry.Name);
 			}
 		}
 

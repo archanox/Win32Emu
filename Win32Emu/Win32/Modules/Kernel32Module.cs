@@ -9931,7 +9931,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (_env.SynchronizationManager == null)
 		{
 			_logger.LogWarning("[Kernel32] OpenEventA: SynchronizationManager not available");
-			_lastError = 2; // ERROR_FILE_NOT_FOUND
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			return 0; // NULL
 		}
 
@@ -9940,14 +9940,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var handle = _env.SynchronizationManager.OpenEvent(name, dwDesiredAccess);
 			if (handle == 0)
 			{
-				_lastError = 2; // ERROR_FILE_NOT_FOUND - event doesn't exist
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			}
 			return handle;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] OpenEventA exception");
-			_lastError = 2; // ERROR_FILE_NOT_FOUND
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 			return 0; // NULL
 		}
 	}
@@ -9964,11 +9964,6 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogDebug("[Kernel32] GetProcessFlags(dwProcessId={DwProcessId})", dwProcessId);
 
-		// Constants from Win95/98 PDB (Process Database) structure
-		const uint PDB32_CONSOLE_PROC = 0x01;  // Process has console
-		const uint PDB32_FILE_APIS_OEM = 0x02; // File APIs use OEM character set
-		const uint PDB32_DEBUGGED = 0x04;      // Process is being debugged
-
 		// If querying different process, return 0
 		var currentProcessId = GetCurrentProcessId();
 		if (dwProcessId != 0 && dwProcessId != currentProcessId)
@@ -9977,7 +9972,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 
-		uint flags = 0;
+		NativeTypes.ProcessFlags flags = NativeTypes.ProcessFlags.None;
 
 		// Check if this is a console application
 		// Note: We don't currently store subsystem information in ProcessEnvironment
@@ -9991,8 +9986,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// We don't currently support debugger detection
 		// For now, assume not being debugged
 
-		_logger.LogDebug("[Kernel32] GetProcessFlags returning flags=0x{Flags:X8}", flags);
-		return flags;
+		_logger.LogDebug("[Kernel32] GetProcessFlags returning flags=0x{Flags:X8}", (uint)flags);
+		return (uint)flags;
 	}
 
 	/// <summary>
@@ -10029,8 +10024,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (_resourceReader == null)
 		{
 			_logger.LogWarning("[Kernel32] EnumResourceNamesA: Resource reader not initialized");
-			_lastError = 1813; // ERROR_RESOURCE_TYPE_NOT_FOUND
-			return 0; // FALSE
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_RESOURCE_TYPE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		try
@@ -10041,8 +10036,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			if (resources == null || !resources.Any())
 			{
 				_logger.LogDebug("[Kernel32] EnumResourceNamesA: No resources found for type 0x{LpType:X8}", lpType);
-				_lastError = 1813; // ERROR_RESOURCE_TYPE_NOT_FOUND
-				return 0; // FALSE
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_RESOURCE_TYPE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
 			// Log the resources that would be enumerated
@@ -10063,13 +10058,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// 4. Checking return value
 			// 5. Restoring CPU state
 			
-			return 1; // TRUE - resources found (even though callbacks weren't called)
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] EnumResourceNamesA exception");
-			_lastError = 1813; // ERROR_RESOURCE_TYPE_NOT_FOUND
-			return 0; // FALSE
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_RESOURCE_TYPE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 	}
 
