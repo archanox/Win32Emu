@@ -12,11 +12,7 @@ namespace Win32Emu.Tests.ABExample;
 /// </summary>
 public class MemoryAllocationHookingTests : HookingABTestBase
 {
-	// Constants from Windows API
-	private const uint MEM_COMMIT = 0x1000;
-	private const uint MEM_RESERVE = 0x2000;
-	private const uint MEM_RELEASE = 0x8000;
-	private const uint PAGE_READWRITE = 0x04;
+	// Use shared constants instead of local definitions
 
 	// VirtualAlloc delegate
 	[UnmanagedFunctionPointer(CallingConvention.Winapi, SetLastError = true)]
@@ -160,8 +156,8 @@ public class MemoryAllocationHookingTests : HookingABTestBase
 			"VIRTUALALLOC",
 			0u, // lpAddress (NULL for system choice)
 			allocSize,
-			MEM_COMMIT | MEM_RESERVE,
-			PAGE_READWRITE
+			Win32Constants.MEM_COMMIT | Win32Constants.MEM_RESERVE,
+			Win32Constants.PAGE_READWRITE
 		);
 
 		// Act - Native implementation (triggers hook)
@@ -171,8 +167,8 @@ public class MemoryAllocationHookingTests : HookingABTestBase
 			nativeResult = _originalVirtualAlloc.Invoke(
 				IntPtr.Zero,
 				new UIntPtr(allocSize),
-				MEM_COMMIT | MEM_RESERVE,
-				PAGE_READWRITE
+				Win32Constants.MEM_COMMIT | Win32Constants.MEM_RESERVE,
+				Win32Constants.PAGE_READWRITE
 			);
 
 			// Verify hook was called
@@ -192,7 +188,7 @@ public class MemoryAllocationHookingTests : HookingABTestBase
 			Assert.True(capturedSuccess);
 
 			// Clean up native allocation
-			_originalVirtualFree?.Invoke(nativeResult.Value, UIntPtr.Zero, MEM_RELEASE);
+			_originalVirtualFree?.Invoke(nativeResult.Value, UIntPtr.Zero, Win32Constants.MEM_RELEASE);
 		}
 
 		// Clean up Win32Emu allocation
@@ -200,7 +196,7 @@ public class MemoryAllocationHookingTests : HookingABTestBase
 			"VIRTUALFREE",
 			win32EmuResult,
 			0u,
-			MEM_RELEASE
+			Win32Constants.MEM_RELEASE
 		);
 	}
 
@@ -224,8 +220,8 @@ public class MemoryAllocationHookingTests : HookingABTestBase
 			"VIRTUALALLOC",
 			0u,
 			0u, // Zero size - invalid
-			MEM_COMMIT | MEM_RESERVE,
-			PAGE_READWRITE
+			Win32Constants.MEM_COMMIT | Win32Constants.MEM_RESERVE,
+			Win32Constants.PAGE_READWRITE
 		);
 
 		// Act - Native implementation
@@ -235,8 +231,8 @@ public class MemoryAllocationHookingTests : HookingABTestBase
 			nativeResult = _originalVirtualAlloc.Invoke(
 				IntPtr.Zero,
 				UIntPtr.Zero, // Zero size
-				MEM_COMMIT | MEM_RESERVE,
-				PAGE_READWRITE
+				Win32Constants.MEM_COMMIT | Win32Constants.MEM_RESERVE,
+				Win32Constants.PAGE_READWRITE
 			);
 		}
 
@@ -327,9 +323,9 @@ public class MemoryAllocationHookingTests : HookingABTestBase
 		using var testEnv = new TestEnvironment();
 
 		// Allocate 3 blocks
-		var block1 = testEnv.CallKernel32Api("VIRTUALALLOC", 0u, 1024u, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-		var block2 = testEnv.CallKernel32Api("VIRTUALALLOC", 0u, 2048u, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-		var block3 = testEnv.CallKernel32Api("VIRTUALALLOC", 0u, 4096u, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+		var block1 = testEnv.CallKernel32Api("VIRTUALALLOC", 0u, 1024u, Win32Constants.MEM_COMMIT | Win32Constants.MEM_RESERVE, Win32Constants.PAGE_READWRITE);
+		var block2 = testEnv.CallKernel32Api("VIRTUALALLOC", 0u, 2048u, Win32Constants.MEM_COMMIT | Win32Constants.MEM_RESERVE, Win32Constants.PAGE_READWRITE);
+		var block3 = testEnv.CallKernel32Api("VIRTUALALLOC", 0u, 4096u, Win32Constants.MEM_COMMIT | Win32Constants.MEM_RESERVE, Win32Constants.PAGE_READWRITE);
 
 		// All allocations should succeed
 		Assert.NotEqual(0u, block1);
@@ -337,9 +333,9 @@ public class MemoryAllocationHookingTests : HookingABTestBase
 		Assert.NotEqual(0u, block3);
 
 		// Free them
-		var free1 = testEnv.CallKernel32Api("VIRTUALFREE", block1, 0u, MEM_RELEASE);
-		var free2 = testEnv.CallKernel32Api("VIRTUALFREE", block2, 0u, MEM_RELEASE);
-		var free3 = testEnv.CallKernel32Api("VIRTUALFREE", block3, 0u, MEM_RELEASE);
+		var free1 = testEnv.CallKernel32Api("VIRTUALFREE", block1, 0u, Win32Constants.MEM_RELEASE);
+		var free2 = testEnv.CallKernel32Api("VIRTUALFREE", block2, 0u, Win32Constants.MEM_RELEASE);
+		var free3 = testEnv.CallKernel32Api("VIRTUALFREE", block3, 0u, Win32Constants.MEM_RELEASE);
 
 		// All frees should succeed (return non-zero)
 		Assert.NotEqual(0u, free1);
@@ -382,17 +378,14 @@ public class MemoryAccessHookingTests : HookingABTestBase
 	{
 		using var testEnv = new TestEnvironment();
 		const uint allocSize = 4096;
-		const uint MEM_COMMIT = 0x1000;
-		const uint MEM_RESERVE = 0x2000;
-		const uint PAGE_READWRITE = 0x04;
 
 		// Act - Win32Emu: allocate and write
 		var win32EmuAddr = testEnv.CallKernel32Api(
 			"VIRTUALALLOC",
 			0u,
 			allocSize,
-			MEM_COMMIT | MEM_RESERVE,
-			PAGE_READWRITE
+			Win32Constants.MEM_COMMIT | Win32Constants.MEM_RESERVE,
+			Win32Constants.PAGE_READWRITE
 		);
 
 		Assert.NotEqual(0u, win32EmuAddr);

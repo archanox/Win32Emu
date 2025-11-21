@@ -48,7 +48,7 @@ public abstract class HookingABTestBase : IDisposable
 			// Create the hook
 			var hook = LocalHook.Create(targetAddress, hookHandler, null);
 			
-			// Enable the hook for all threads (0 = current thread)
+			// Enable the hook for current thread only (0 = current thread ID)
 			hook.ThreadACL.SetInclusiveACL(new int[] { 0 });
 			
 			_activeHooks.Add(hook);
