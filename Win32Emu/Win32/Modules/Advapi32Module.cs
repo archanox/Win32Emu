@@ -42,7 +42,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 
 		switch (export.ToUpperInvariant())
 		{
-			// Registry functions
+			// Registry functions (ANSI)
 			case "REGOPENKEYEXA":
 				returnValue = RegOpenKeyExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
@@ -84,6 +84,35 @@ public class Advapi32Module : IWin32ModuleUnsafe
 				return true;
 			case "REGDELETEVALUEA":
 				returnValue = RegDeleteValueA(a.UInt32(0), a.LpcStr(1));
+				return true;
+
+			// Registry functions (Unicode)
+			case "REGOPENKEYEXW":
+				returnValue = RegOpenKeyExW(a.UInt32(0), a.LpcWStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+			case "REGCREATEKEYEXW":
+				returnValue = RegCreateKeyExW(a.UInt32(0), a.LpcWStr(1), a.UInt32(2), a.LpcWStr(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8));
+				return true;
+			case "REGSETVALUEEXW":
+				returnValue = RegSetValueExW(a.UInt32(0), a.LpcWStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+				return true;
+			case "REGQUERYVALUEEXW":
+				returnValue = RegQueryValueExW(a.UInt32(0), a.LpcWStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+				return true;
+			case "REGQUERYINFOKEYW":
+				returnValue = RegQueryInfoKeyW(a.UInt32(0), a.LpWStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), a.UInt32(11));
+				return true;
+			case "REGENUMKEYEXW":
+				returnValue = RegEnumKeyExW(a.UInt32(0), a.UInt32(1), a.LpWStr(2), a.UInt32(3), a.UInt32(4), a.LpWStr(5), a.UInt32(6), a.UInt32(7));
+				return true;
+			case "REGENUMVALUEW":
+				returnValue = RegEnumValueW(a.UInt32(0), a.UInt32(1), a.LpWStr(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+				return true;
+			case "REGDELETEKEYW":
+				returnValue = RegDeleteKeyW(a.UInt32(0), a.LpcWStr(1));
+				return true;
+			case "REGDELETEVALUEW":
+				returnValue = RegDeleteValueW(a.UInt32(0), a.LpcWStr(1));
 				return true;
 			case "REGCONNECTREGISTRYA":
 				returnValue = RegConnectRegistryA(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
@@ -1238,6 +1267,640 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Advapi32] RegDeleteValueA: Failed to delete value");
+			return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+		}
+	}
+
+	// Unicode registry functions
+	/// <summary>
+	/// Opens the specified registry key (Unicode version).
+	/// </summary>
+	private uint RegOpenKeyExW(uint hKey, in LpcWStr lpSubKey, uint ulOptions, uint samDesired, uint phkResult)
+	{
+		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
+
+		// Predefined registry key values
+		const uint HKEY_CLASSES_ROOT = 0x80000000;
+		const uint HKEY_CURRENT_USER = 0x80000001;
+		const uint HKEY_LOCAL_MACHINE = 0x80000002;
+		const uint HKEY_USERS = 0x80000003;
+
+		// Map predefined keys to readable names
+		var hKeyName = hKey switch
+		{
+			HKEY_CLASSES_ROOT => "HKEY_CLASSES_ROOT",
+			HKEY_CURRENT_USER => "HKEY_CURRENT_USER",
+			HKEY_LOCAL_MACHINE => "HKEY_LOCAL_MACHINE",
+			HKEY_USERS => "HKEY_USERS",
+			_ => $"0x{hKey:X8}"
+		};
+
+		var fullPath = string.IsNullOrEmpty(subKey) ? hKeyName : $"{hKeyName}\\{subKey}";
+
+		_logger.LogInformation("[Advapi32] RegOpenKeyExW(hKey={HKeyName}, lpSubKey=\"{SubKey}\", options=0x{UlOptions:X}, access=0x{SamDesired:X}, phkResult=0x{PhkResult:X8})",
+			hKeyName, subKey, ulOptions, samDesired, phkResult);
+
+		// Open the virtual registry key
+		var handle = _env.RegOpenKey(fullPath);
+
+		// Write the handle to the output parameter
+		if (phkResult != 0)
+		{
+			_env.MemWrite32(phkResult, handle);
+		}
+
+		// ERROR_SUCCESS
+		return 0;
+	}
+
+	/// <summary>
+	/// Creates the specified registry key (Unicode version).
+	/// </summary>
+	private uint RegCreateKeyExW(uint hKey, in LpcWStr lpSubKey, uint reserved, in LpcWStr lpClass, uint dwOptions, uint samDesired, uint lpSecurityAttributes, uint phkResult, uint lpdwDisposition)
+	{
+		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
+		var className = lpClass.Read(_env.Memory) ?? string.Empty;
+
+		// Predefined registry key values
+		const uint HKEY_CLASSES_ROOT = 0x80000000;
+		const uint HKEY_CURRENT_USER = 0x80000001;
+		const uint HKEY_LOCAL_MACHINE = 0x80000002;
+		const uint HKEY_USERS = 0x80000003;
+
+		// Map predefined keys to readable names
+		var hKeyName = hKey switch
+		{
+			HKEY_CLASSES_ROOT => "HKEY_CLASSES_ROOT",
+			HKEY_CURRENT_USER => "HKEY_CURRENT_USER",
+			HKEY_LOCAL_MACHINE => "HKEY_LOCAL_MACHINE",
+			HKEY_USERS => "HKEY_USERS",
+			_ => $"0x{hKey:X8}"
+		};
+
+		var fullPath = string.IsNullOrEmpty(subKey) ? hKeyName : $"{hKeyName}\\{subKey}";
+
+		_logger.LogInformation("[Advapi32] RegCreateKeyExW(hKey={HKeyName}, lpSubKey=\"{SubKey}\", class=\"{ClassName}\", options=0x{DwOptions:X}, access=0x{SamDesired:X}, phkResult=0x{PhkResult:X8})",
+			hKeyName, subKey, className, dwOptions, samDesired, phkResult);
+
+		// Create or open the virtual registry key
+		var handle = _env.RegOpenKey(fullPath);
+		var wasCreated = true; // For simplicity, always report as created
+
+		// Write the handle to the output parameter
+		if (phkResult != 0)
+		{
+			_env.MemWrite32(phkResult, handle);
+		}
+
+		// Write disposition (created or opened)
+		if (lpdwDisposition != 0)
+		{
+			const uint REG_CREATED_NEW_KEY = 0x00000001;
+			const uint REG_OPENED_EXISTING_KEY = 0x00000002;
+			_env.MemWrite32(lpdwDisposition, wasCreated ? REG_CREATED_NEW_KEY : REG_OPENED_EXISTING_KEY);
+		}
+
+		// ERROR_SUCCESS
+		return 0;
+	}
+
+	/// <summary>
+	/// Sets the data and type of a specified value under a registry key (Unicode version).
+	/// </summary>
+	private uint RegSetValueExW(uint hKey, in LpcWStr lpValueName, uint reserved, uint dwType, uint lpData, uint cbData)
+	{
+		var valueName = lpValueName.Read(_env.Memory) ?? string.Empty;
+
+		_logger.LogInformation("[Advapi32] RegSetValueExW(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\", type=0x{DwType:X}, lpData=0x{LpData:X8}, cbData={CbData})",
+			hKey, valueName, dwType, lpData, cbData);
+
+		if (lpData == 0 || cbData == 0)
+		{
+			_logger.LogWarning("[Advapi32] RegSetValueExW: Invalid data pointer or size");
+			return 0; // ERROR_SUCCESS (be lenient for now)
+		}
+
+		try
+		{
+			// Read the data from memory
+			var data = new byte[cbData];
+			for (uint i = 0; i < cbData; i++)
+			{
+				data[i] = _env.MemRead8(lpData + i);
+			}
+
+			// Convert data based on type
+			object value;
+			DiscUtils.Registry.RegistryValueType regType;
+
+			switch (dwType)
+			{
+				case REG_SZ:
+				case REG_EXPAND_SZ:
+					// Unicode null-terminated string
+					var strLen = 0;
+					for (var i = 0; i + 1 < data.Length; i += 2)
+					{
+						if (data[i] == 0 && data[i + 1] == 0)
+						{
+							strLen = i;
+							break;
+						}
+					}
+					if (strLen == 0)
+					{
+						strLen = data.Length;
+					}
+
+					value = System.Text.Encoding.Unicode.GetString(data, 0, strLen);
+					regType = dwType == REG_SZ ? DiscUtils.Registry.RegistryValueType.String : DiscUtils.Registry.RegistryValueType.ExpandString;
+					break;
+
+				case REG_DWORD:
+					if (cbData >= 4)
+					{
+						value = BitConverter.ToUInt32(data, 0);
+						regType = DiscUtils.Registry.RegistryValueType.Dword;
+					}
+					else
+					{
+						value = data;
+						regType = DiscUtils.Registry.RegistryValueType.Binary;
+					}
+					break;
+
+				case REG_BINARY:
+				default:
+					value = data;
+					regType = DiscUtils.Registry.RegistryValueType.Binary;
+					break;
+			}
+
+			// Store in virtual registry
+			if (_env.RegSetValue(hKey, valueName, value, regType))
+			{
+				_logger.LogInformation("[Advapi32] RegSetValueExW: Set value \"{ValueName}\"={Value} (type={Type})", valueName, value, regType);
+				return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
+			}
+			else
+			{
+				_logger.LogError("[Advapi32] RegSetValueExW: Failed to set value \"{ValueName}\"", valueName);
+				return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Advapi32] RegSetValueExW: Failed to set value");
+			return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+		}
+	}
+
+	/// <summary>
+	/// Retrieves the type and data for the specified value name (Unicode version).
+	/// </summary>
+	private uint RegQueryValueExW(uint hKey, in LpcWStr lpValueName, uint lpReserved, uint lpType, uint lpData, uint lpcbData)
+	{
+		var valueName = lpValueName.Read(_env.Memory) ?? string.Empty;
+
+		_logger.LogInformation("[Advapi32] RegQueryValueExW(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\", lpType=0x{LpType:X8}, lpData=0x{LpData:X8}, lpcbData=0x{LpcbData:X8})",
+			hKey, valueName, lpType, lpData, lpcbData);
+
+		// Try to query the value from virtual registry
+		if (!_env.RegQueryValue(hKey, valueName, out var value))
+		{
+			// Value not found - return ERROR_FILE_NOT_FOUND
+			_logger.LogInformation("[Advapi32] RegQueryValueExW: Value not found");
+			return 2; // ERROR_FILE_NOT_FOUND
+		}
+
+		// Determine the data type and size
+		uint dataType;
+		byte[] dataBytes;
+
+		if (value is string str)
+		{
+			dataType = REG_SZ;
+			dataBytes = System.Text.Encoding.Unicode.GetBytes(str + '\0'); // Null-terminated Unicode
+		}
+		else if (value is uint dwordVal)
+		{
+			dataType = REG_DWORD;
+			dataBytes = BitConverter.GetBytes(dwordVal);
+		}
+		else if (value is int intVal)
+		{
+			dataType = REG_DWORD;
+			dataBytes = BitConverter.GetBytes((uint)intVal);
+		}
+		else if (value is byte[] binaryVal)
+		{
+			dataType = REG_BINARY;
+			dataBytes = binaryVal;
+		}
+		else
+		{
+			// Unknown type - convert to string
+			dataType = REG_SZ;
+			var fallbackStr = value?.ToString() ?? string.Empty;
+			dataBytes = System.Text.Encoding.Unicode.GetBytes(fallbackStr + '\0');
+		}
+
+		// Write the data type if requested
+		if (lpType != 0)
+		{
+			_env.MemWrite32(lpType, dataType);
+		}
+
+		// Check buffer size
+		uint requiredSize = (uint)dataBytes.Length;
+		uint providedSize = 0;
+
+		if (lpcbData != 0)
+		{
+			providedSize = _env.MemRead32(lpcbData);
+			_env.MemWrite32(lpcbData, requiredSize);
+		}
+
+		// If no buffer or buffer too small, return ERROR_MORE_DATA
+		if (lpData == 0 || (lpcbData != 0 && providedSize < requiredSize))
+		{
+			_logger.LogInformation("[Advapi32] RegQueryValueExW: Buffer too small or null (required={RequiredSize}, provided={ProvidedSize})",
+				requiredSize, providedSize);
+			return 234; // ERROR_MORE_DATA
+		}
+
+		// Write the data to the buffer
+		for (uint i = 0; i < requiredSize && i < providedSize; i++)
+		{
+			_env.MemWrite8(lpData + i, dataBytes[i]);
+		}
+
+		_logger.LogInformation("[Advapi32] RegQueryValueExW: Returned {Size} bytes, type={Type}", requiredSize, dataType);
+
+		// ERROR_SUCCESS
+		return 0;
+	}
+
+	/// <summary>
+	/// Retrieves information about the specified registry key (Unicode version).
+	/// </summary>
+	private uint RegQueryInfoKeyW(uint hKey, in LpWStr lpClass, uint lpcClass, uint lpReserved, uint lpcSubKeys, uint lpcMaxSubKeyLen, uint lpcMaxClassLen, uint lpcValues, uint lpcMaxValueNameLen, uint lpcMaxValueLen, uint lpcbSecurityDescriptor, uint lpftLastWriteTime)
+	{
+		_logger.LogInformation("[Advapi32] RegQueryInfoKeyW(hKey=0x{HKey:X8})", hKey);
+
+		try
+		{
+			var subKeyNames = _env.RegEnumerateSubKeys(hKey);
+			var valueNames = _env.RegEnumerateValues(hKey);
+
+			// Write output parameters
+			if (lpcSubKeys != 0)
+			{
+				_env.MemWrite32(lpcSubKeys, (uint)subKeyNames.Length);
+			}
+
+			if (lpcValues != 0)
+			{
+				_env.MemWrite32(lpcValues, (uint)valueNames.Length);
+			}
+
+			// Calculate max lengths
+			uint maxSubKeyLen = 0;
+			foreach (var name in subKeyNames)
+			{
+				if (name.Length > maxSubKeyLen)
+				{
+					maxSubKeyLen = (uint)name.Length;
+				}
+			}
+
+			uint maxValueNameLen = 0;
+			uint maxValueLen = 0;
+			foreach (var valueName in valueNames)
+			{
+				if (valueName.Length > maxValueNameLen)
+				{
+					maxValueNameLen = (uint)valueName.Length;
+				}
+
+				// Try to get value size
+				if (_env.RegQueryValue(hKey, valueName, out var value))
+				{
+					uint valueSize = 0;
+					if (value is string str)
+					{
+						valueSize = (uint)(System.Text.Encoding.Unicode.GetByteCount(str) + 2); // +2 for null terminator
+					}
+					else if (value is uint || value is int)
+					{
+						valueSize = 4;
+					}
+					else if (value is byte[] bytes)
+					{
+						valueSize = (uint)bytes.Length;
+					}
+
+					if (valueSize > maxValueLen)
+					{
+						maxValueLen = valueSize;
+					}
+				}
+			}
+
+			if (lpcMaxSubKeyLen != 0)
+			{
+				_env.MemWrite32(lpcMaxSubKeyLen, maxSubKeyLen);
+			}
+
+			if (lpcMaxValueNameLen != 0)
+			{
+				_env.MemWrite32(lpcMaxValueNameLen, maxValueNameLen);
+			}
+
+			if (lpcMaxValueLen != 0)
+			{
+				_env.MemWrite32(lpcMaxValueLen, maxValueLen);
+			}
+
+			// Class name is typically not used, leave it empty
+			if (lpcClass != 0)
+			{
+				_env.MemWrite32(lpcClass, 0);
+			}
+
+			return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Advapi32] RegQueryInfoKeyW: Failed to query info");
+			return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+		}
+	}
+
+	/// <summary>
+	/// Enumerates the subkeys of the specified open registry key (Unicode version).
+	/// </summary>
+	private uint RegEnumKeyExW(uint hKey, uint dwIndex, in LpWStr lpName, uint lpcName, uint lpReserved, in LpWStr lpClass, uint lpcClass, uint lpftLastWriteTime)
+	{
+		_logger.LogInformation("[Advapi32] RegEnumKeyExW(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
+
+		try
+		{
+			var subKeyNames = _env.RegEnumerateSubKeys(hKey);
+
+			if (dwIndex >= subKeyNames.Length)
+			{
+				return (uint)NativeTypes.Win32Error.ERROR_NO_MORE_ITEMS;
+			}
+
+			var keyName = subKeyNames[dwIndex];
+
+			// Read the buffer size
+			uint bufferSize = 0;
+			if (lpcName != 0)
+			{
+				bufferSize = _env.MemRead32(lpcName);
+			}
+
+			// Write the key name to the buffer (Unicode)
+			var namePtr = lpName.Address;
+
+			if (namePtr != 0 && bufferSize > 0)
+			{
+				// Copy name to buffer with null terminator (Unicode is 2 bytes per char)
+				uint maxChars = bufferSize - 1; // Reserve space for null terminator
+				uint copyLen = Math.Min((uint)keyName.Length, maxChars);
+				
+				for (uint i = 0; i < copyLen; i++)
+				{
+					_env.MemWrite16(namePtr + (i * 2), keyName[(int)i]);
+				}
+				_env.MemWrite16(namePtr + (copyLen * 2), 0); // Null terminator
+			}
+
+			// Update the size (excluding null terminator)
+			if (lpcName != 0)
+			{
+				_env.MemWrite32(lpcName, (uint)keyName.Length);
+			}
+
+			// Class name is typically not used, leave it empty
+			if (lpcClass != 0)
+			{
+				_env.MemWrite32(lpcClass, 0);
+			}
+
+			return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Advapi32] RegEnumKeyExW: Failed to enumerate key");
+			return (uint)NativeTypes.Win32Error.ERROR_NO_MORE_ITEMS;
+		}
+	}
+
+	/// <summary>
+	/// Enumerates the values for the specified open registry key (Unicode version).
+	/// </summary>
+	private uint RegEnumValueW(uint hKey, uint dwIndex, in LpWStr lpValueName, uint lpcchValueName, uint lpReserved, uint lpType, uint lpData, uint lpcbData)
+	{
+		_logger.LogInformation("[Advapi32] RegEnumValueW(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
+
+		try
+		{
+			var valueNames = _env.RegEnumerateValues(hKey);
+
+			if (dwIndex >= valueNames.Length)
+			{
+				return (uint)NativeTypes.Win32Error.ERROR_NO_MORE_ITEMS;
+			}
+
+			var valueName = valueNames[dwIndex];
+
+			// Read the buffer sizes
+			uint nameBufferSize = 0;
+			uint dataBufferSize = 0;
+			if (lpcchValueName != 0)
+			{
+				nameBufferSize = _env.MemRead32(lpcchValueName);
+			}
+			if (lpcbData != 0)
+			{
+				dataBufferSize = _env.MemRead32(lpcbData);
+			}
+
+			// Write the value name to the buffer (Unicode)
+			var namePtr = lpValueName.Address;
+
+			if (namePtr != 0 && nameBufferSize > 0)
+			{
+				// Copy name to buffer with null terminator (Unicode is 2 bytes per char)
+				uint maxChars = nameBufferSize - 1; // Reserve space for null terminator
+				uint copyLen = Math.Min((uint)valueName.Length, maxChars);
+				
+				for (uint i = 0; i < copyLen; i++)
+				{
+					_env.MemWrite16(namePtr + (i * 2), valueName[(int)i]);
+				}
+				_env.MemWrite16(namePtr + (copyLen * 2), 0); // Null terminator
+			}
+
+			// Update the name size (excluding null terminator)
+			if (lpcchValueName != 0)
+			{
+				_env.MemWrite32(lpcchValueName, (uint)valueName.Length);
+			}
+
+			// Get the value data
+			if (_env.RegQueryValue(hKey, valueName, out var value))
+			{
+				// Determine the data type and size
+				uint dataType;
+				byte[] dataBytes;
+
+				if (value is string str)
+				{
+					dataType = REG_SZ;
+					dataBytes = System.Text.Encoding.Unicode.GetBytes(str + '\0'); // Null-terminated Unicode
+				}
+				else if (value is uint dwordVal)
+				{
+					dataType = REG_DWORD;
+					dataBytes = BitConverter.GetBytes(dwordVal);
+				}
+				else if (value is int intVal)
+				{
+					dataType = REG_DWORD;
+					dataBytes = BitConverter.GetBytes((uint)intVal);
+				}
+				else if (value is byte[] binaryVal)
+				{
+					dataType = REG_BINARY;
+					dataBytes = binaryVal;
+				}
+				else
+				{
+					// Unknown type - convert to string
+					dataType = REG_SZ;
+					var fallbackStr = value?.ToString() ?? string.Empty;
+					dataBytes = System.Text.Encoding.Unicode.GetBytes(fallbackStr + '\0');
+				}
+
+				// Write the data type if requested
+				if (lpType != 0)
+				{
+					_env.MemWrite32(lpType, dataType);
+				}
+
+				// Write the data if buffer provided
+				if (lpData != 0 && dataBufferSize > 0)
+				{
+					uint copyLen = Math.Min((uint)dataBytes.Length, dataBufferSize);
+					for (uint i = 0; i < copyLen; i++)
+					{
+						_env.MemWrite8(lpData + i, dataBytes[i]);
+					}
+				}
+
+				// Update the data size
+				if (lpcbData != 0)
+				{
+					_env.MemWrite32(lpcbData, (uint)dataBytes.Length);
+				}
+			}
+			else
+			{
+				// Value not found, set size to 0
+				if (lpcbData != 0)
+				{
+					_env.MemWrite32(lpcbData, 0);
+				}
+			}
+
+			return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Advapi32] RegEnumValueW: Failed to enumerate value");
+			return (uint)NativeTypes.Win32Error.ERROR_NO_MORE_ITEMS;
+		}
+	}
+
+	/// <summary>
+	/// Deletes a subkey and its values from the specified platform-specific view of the registry (Unicode version).
+	/// </summary>
+	private uint RegDeleteKeyW(uint hKey, in LpcWStr lpSubKey)
+	{
+		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
+		_logger.LogInformation("[Advapi32] RegDeleteKeyW(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\")", hKey, subKey);
+
+		try
+		{
+			// Get the parent key path
+			var keyPath = _env.RegistryHive?.GetKeyPath(hKey);
+			if (string.IsNullOrEmpty(keyPath))
+			{
+				const uint HKEY_CLASSES_ROOT = 0x80000000;
+				const uint HKEY_CURRENT_USER = 0x80000001;
+				const uint HKEY_LOCAL_MACHINE = 0x80000002;
+				const uint HKEY_USERS = 0x80000003;
+
+				keyPath = hKey switch
+				{
+					HKEY_CLASSES_ROOT => "HKEY_CLASSES_ROOT",
+					HKEY_CURRENT_USER => "HKEY_CURRENT_USER",
+					HKEY_LOCAL_MACHINE => "HKEY_LOCAL_MACHINE",
+					HKEY_USERS => "HKEY_USERS",
+					_ => null
+				};
+			}
+
+			if (!string.IsNullOrEmpty(keyPath) && !string.IsNullOrEmpty(subKey))
+			{
+				var fullPath = $"{keyPath}\\{subKey}";
+				if (_env.RegDeleteKey(fullPath))
+				{
+					return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
+				}
+				else
+				{
+					return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				}
+			}
+			else
+			{
+				return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Advapi32] RegDeleteKeyW: Failed to delete key");
+			return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+		}
+	}
+
+	/// <summary>
+	/// Removes a named value from the specified registry key (Unicode version).
+	/// </summary>
+	private uint RegDeleteValueW(uint hKey, in LpcWStr lpValueName)
+	{
+		var valueName = lpValueName.Read(_env.Memory) ?? string.Empty;
+		_logger.LogInformation("[Advapi32] RegDeleteValueW(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\")", hKey, valueName);
+
+		try
+		{
+			if (_env.RegDeleteValue(hKey, valueName))
+			{
+				return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
+			}
+			else
+			{
+				return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Advapi32] RegDeleteValueW: Failed to delete value");
 			return (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
 		}
 	}
