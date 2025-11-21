@@ -2292,8 +2292,13 @@ public class IcedCpu : IAsyncCpu
 			bool before = (a & signBit) != 0, after = (r & signBit) != 0;
 			SetFlagVal(Of, before ^ after);
 		}
-		// OF is undefined when count > 1, so don't modify it
-		// AF is undefined after shift operations, so don't modify it
+		else
+		{
+			// OF is undefined when count > 1, but real 80386 hardware clears it
+			SetFlagVal(Of, false);
+		}
+		// AF is undefined but real 80386 hardware clears it
+		SetFlagVal(Af, false);
 
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r, signBit);
@@ -2344,7 +2349,11 @@ public class IcedCpu : IAsyncCpu
 				// For SAR with count=1, OF is always cleared
 				SetFlagVal(Of, false);
 			}
-			// OF is undefined when count > 1, so don't modify it
+			else
+			{
+				// OF is undefined when count > 1, but real 80386 hardware clears it
+				SetFlagVal(Of, false);
+			}
 		}
 		else
 		{
@@ -2354,12 +2363,17 @@ public class IcedCpu : IAsyncCpu
 				// OF is set to MSB of original operand
 				SetFlagVal(Of, (a & signBit) != 0);
 			}
-			// OF is undefined when count > 1, so don't modify it
+			else
+			{
+				// OF is undefined when count > 1, but real 80386 hardware clears it
+				SetFlagVal(Of, false);
+			}
 		}
 
 		var lastOut = (a >> (c - 1)) & 1u;
 		SetFlagVal(Cf, lastOut != 0);
-		// AF is undefined after shift operations, so don't modify it
+		// AF is undefined but real 80386 hardware clears it
+		SetFlagVal(Af, false);
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r, signBit);
 	}
@@ -2480,6 +2494,8 @@ public class IcedCpu : IAsyncCpu
 
 		WriteOp(insn, 0, r);
 		// Note: Rotate instructions only affect CF and OF flags, not ZF, SF, PF
+		// AF is undefined but real 80386 hardware clears it
+		SetFlagVal(Af, false);
 	}
 
 	private void ExecNot(Instruction insn)
@@ -4805,6 +4821,13 @@ public class IcedCpu : IAsyncCpu
 			var newMsb = (dest & 0x80000000) != 0;
 			SetFlagVal(Of, originalMsb != newMsb);
 		}
+		else
+		{
+			// OF is undefined when count > 1, but real 80386 hardware clears it
+			SetFlagVal(Of, false);
+		}
+		// AF is undefined but real 80386 hardware clears it
+		SetFlagVal(Af, false);
 		
 		WriteOp(insn, 0, dest);
 		// Update SF, ZF, and PF based on result
@@ -4843,6 +4866,13 @@ public class IcedCpu : IAsyncCpu
 			var newMsb = (dest & 0x80000000) != 0;
 			SetFlagVal(Of, originalMsb != newMsb);
 		}
+		else
+		{
+			// OF is undefined when count > 1, but real 80386 hardware clears it
+			SetFlagVal(Of, false);
+		}
+		// AF is undefined but real 80386 hardware clears it
+		SetFlagVal(Af, false);
 		
 		WriteOp(insn, 0, dest);
 		// Update SF, ZF, and PF based on result
