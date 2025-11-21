@@ -9991,12 +9991,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			// Try to read the string up to ucchMax characters
 			// Use a reasonable upper bound when ucchMax is 0 to avoid excessive memory reads
-			var maxLength = ucchMax == 0 ? 32768 : (int)ucchMax; // Wide chars take 2 bytes each
+			// Use 32768 for wide strings (same memory footprint as 65536 single-byte chars)
+			var maxLength = ucchMax == 0 ? 32768 : (int)ucchMax;
 			var offset = 0;
 
 			while (offset < maxLength)
 			{
-				// Read 16-bit wide character
+				// Read 16-bit wide character (wide chars take 2 bytes each)
 				var w = _env.MemRead16(lpsz + (uint)(offset * 2));
 				if (w == 0) // Found null terminator
 				{
