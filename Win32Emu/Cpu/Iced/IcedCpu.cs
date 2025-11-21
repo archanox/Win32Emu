@@ -879,8 +879,10 @@ public class IcedCpu : IAsyncCpu
 		if (!isControlFlowInstruction)
 		{
 			// Use decoder IP directly as it's authoritative for instruction length
-			// In 16-bit mode, wrap IP to 16 bits (real mode addressing)
-			_eip = _bitness == 16 ? (uint)_decoder.IP & 0xFFFF : (uint)_decoder.IP;
+			// Store the full 32-bit value of EIP even in 16-bit mode
+			// The wrapping to 16-bit happens during instruction fetch (via segment:offset addressing),
+			// not when storing EIP. This matches real 386 hardware behavior in real mode.
+			_eip = (uint)_decoder.IP;
 		}
 
 		return new CpuStepResult(isCall, callTarget, isSyscall);
