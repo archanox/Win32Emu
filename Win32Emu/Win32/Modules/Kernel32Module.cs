@@ -110,6 +110,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "CREATEPROCESSA":
 				returnValue = CreateProcessA(a.LpcStr(0), a.LpStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.LpcStr(7), a.UInt32(8), a.UInt32(9));
 				return true;
+			case "CREATEPROCESSW":
+				returnValue = CreateProcessW(a.LpcWStr(0), a.LpWStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.LpcWStr(7), a.UInt32(8), a.UInt32(9));
+				return true;
+			case "OPENPROCESS":
+				returnValue = OpenProcess(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
 			case "GETCURRENTPROCESS":
 				returnValue = GetCurrentProcess();
 				return true;
@@ -579,6 +585,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GETCURRENTDIRECTORYA":
 				returnValue = GetCurrentDirectoryA(a.UInt32(0), a.LpStr(1));
 				return true;
+			case "GETCURRENTDIRECTORYW":
+				returnValue = GetCurrentDirectoryW(a.UInt32(0), a.LpWStr(1));
+				return true;
 			case "CREATEDIRECTORYA":
 				returnValue = CreateDirectoryA(a.LpcStr(0), a.UInt32(1));
 				return true;
@@ -841,6 +850,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Memory mapping functions
 			case "CREATEFILEMAPPINGA":
 				returnValue = CreateFileMappingA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.LpcStr(5));
+				return true;
+			case "CREATEFILEMAPPINGW":
+				returnValue = CreateFileMappingW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.LpcWStr(5));
+				return true;
+			case "OPENFILEMAPPINGA":
+				returnValue = OpenFileMappingA(a.UInt32(0), a.UInt32(1), a.LpcStr(2));
+				return true;
+			case "OPENFILEMAPPINGW":
+				returnValue = OpenFileMappingW(a.UInt32(0), a.UInt32(1), a.LpcWStr(2));
 				return true;
 			case "MAPVIEWOFFILE":
 				returnValue = MapViewOfFile(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
@@ -6063,6 +6081,34 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return (uint)currentDir.Length; // Return length without null terminator
 	}
 
+	/// <summary>
+	/// Retrieves the current directory (Unicode version).
+	/// </summary>
+	private uint GetCurrentDirectoryW(uint nBufferLength, in LpWStr lpBuffer)
+	{
+		var currentDir = _env.CurrentDirectory;
+		var requiredLength = (uint)currentDir.Length + 1; // +1 for null terminator
+
+		_logger.LogInformation("[Kernel32] GetCurrentDirectoryW({NBufferLength}, 0x{LpBuffer:X8}) -> \"{CurrentDir}\"", nBufferLength, lpBuffer.Address, currentDir);
+
+		if (nBufferLength == 0)
+		{
+			// Return required buffer size
+			return requiredLength;
+		}
+
+		if (nBufferLength < requiredLength)
+		{
+			// Buffer too small, return required size
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return requiredLength;
+		}
+
+		// Write the current directory to the buffer (Unicode)
+		lpBuffer.Write(_env.Memory, currentDir, true);
+		return (uint)currentDir.Length; // Return length without null terminator
+	}
+
 	[DllModuleExport(8)]
 	private uint CreateDirectoryA(in LpcStr lpPathName, uint lpSecurityAttributes)
 	{
@@ -7763,6 +7809,46 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return 0; // FALSE
 	}
 
+	/// <summary>
+	/// Creates a new process and its primary thread (Unicode version).
+	/// </summary>
+	private uint CreateProcessW(in LpcWStr lpApplicationName, in LpWStr lpCommandLine, uint lpProcessAttributes,
+		uint lpThreadAttributes, uint bInheritHandles, uint dwCreationFlags, uint lpEnvironment,
+		in LpcWStr lpCurrentDirectory, uint lpStartupInfo, uint lpProcessInformation)
+	{
+		var appName = lpApplicationName.Read(_env.Memory) ?? string.Empty;
+		var cmdLine = lpCommandLine.Read(_env.Memory) ?? string.Empty;
+		var currentDir = lpCurrentDirectory.Read(_env.Memory) ?? string.Empty;
+
+		_logger.LogInformation("[Kernel32] CreateProcessW(lpApplicationName=\"{AppName}\", lpCommandLine=\"{CmdLine}\", dwCreationFlags=0x{Flags:X8}, lpCurrentDirectory=\"{CurrentDir}\")",
+			appName, cmdLine, dwCreationFlags, currentDir);
+
+		// Stub implementation - CreateProcess is complex and not fully supported
+		// Return failure for now
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
+		return 0; // FALSE
+	}
+
+	/// <summary>
+	/// Opens an existing local process object.
+	/// </summary>
+	private uint OpenProcess(uint dwDesiredAccess, uint bInheritHandle, uint dwProcessId)
+	{
+		_logger.LogInformation("[Kernel32] OpenProcess(dwDesiredAccess=0x{Access:X8}, bInheritHandle={Inherit}, dwProcessId={Pid})",
+			dwDesiredAccess, bInheritHandle, dwProcessId);
+
+		// Stub implementation - for emulation, return a dummy process handle
+		// A full implementation would track actual processes
+		if (dwProcessId == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		// Return a pseudo-handle (non-zero indicates success)
+		return 0x80000000 + dwProcessId;
+	}
+
 	[DllModuleExport(8)]
 	private uint FatalAppExitA(uint uAction, in LpcStr lpMessageText)
 	{
@@ -8217,6 +8303,60 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// 1. Track the mapping in memory management
 		// 2. Associate it with the file handle
 		// 3. Support both file-backed and page file-backed mappings
+
+		// Return a dummy file mapping handle (non-zero for success)
+		return 0x50000000 + ((uint)name.GetHashCode() & 0x7FFFFFFF);
+	}
+
+	/// <summary>
+	/// Creates or opens a named or unnamed file mapping object for a specified file (Unicode version).
+	/// </summary>
+	private uint CreateFileMappingW(uint hFile, uint lpFileMappingAttributes, uint flProtect,
+		uint dwMaximumSizeHigh, uint dwMaximumSizeLow, in LpcWStr lpName)
+	{
+		var name = lpName.Read(_env.Memory) ?? string.Empty;
+		_logger.LogInformation("[Kernel32] CreateFileMappingW(hFile=0x{HFile:X8}, flProtect=0x{FlProtect:X}, dwMaximumSizeHigh={DwMaximumSizeHigh}, dwMaximumSizeLow={DwMaximumSizeLow}, lpName=\"{Name}\")",
+			hFile, flProtect, dwMaximumSizeHigh, dwMaximumSizeLow, name);
+
+		// Return a dummy file mapping handle (non-zero for success)
+		return 0x50000000 + ((uint)name.GetHashCode() & 0x7FFFFFFF);
+	}
+
+	/// <summary>
+	/// Opens a named file mapping object (ANSI version).
+	/// </summary>
+	private uint OpenFileMappingA(uint dwDesiredAccess, uint bInheritHandle, in LpcStr lpName)
+	{
+		var name = lpName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] OpenFileMappingA(dwDesiredAccess=0x{Access:X8}, bInheritHandle={Inherit}, lpName=\"{Name}\")",
+			dwDesiredAccess, bInheritHandle, name);
+
+		// Stub implementation - return a dummy handle if name is not empty
+		if (string.IsNullOrEmpty(name))
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		// Return a dummy file mapping handle (non-zero for success)
+		return 0x50000000 + ((uint)name.GetHashCode() & 0x7FFFFFFF);
+	}
+
+	/// <summary>
+	/// Opens a named file mapping object (Unicode version).
+	/// </summary>
+	private uint OpenFileMappingW(uint dwDesiredAccess, uint bInheritHandle, in LpcWStr lpName)
+	{
+		var name = lpName.Read(_env.Memory) ?? string.Empty;
+		_logger.LogInformation("[Kernel32] OpenFileMappingW(dwDesiredAccess=0x{Access:X8}, bInheritHandle={Inherit}, lpName=\"{Name}\")",
+			dwDesiredAccess, bInheritHandle, name);
+
+		// Stub implementation - return a dummy handle if name is not empty
+		if (string.IsNullOrEmpty(name))
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
 
 		// Return a dummy file mapping handle (non-zero for success)
 		return 0x50000000 + ((uint)name.GetHashCode() & 0x7FFFFFFF);
