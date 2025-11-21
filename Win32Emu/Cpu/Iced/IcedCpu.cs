@@ -265,6 +265,7 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Neg: ExecNeg(insn); break;
 				case Mnemonic.Bswap: ExecBswap(insn); break;
 				case Mnemonic.Cbw: ExecCbw(); break;
+				case Mnemonic.Cwd: ExecCwd(); break;
 				case Mnemonic.Cwde: ExecCwde(); break;
 				case Mnemonic.Cdq: ExecCdq(); break;
 				case Mnemonic.Xchg: ExecXchg(insn); break;
@@ -2613,6 +2614,19 @@ public class IcedCpu : IAsyncCpu
 		var sign = (al & 0x80) != 0;
 		var ah = sign ? (byte)0xFF : (byte)0x00;
 		_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+	}
+
+	private void ExecCwd()
+	{
+		// CWD: Convert Word to Doubleword (16-bit mode)
+		// Sign-extend AX into DX:AX
+		// If bit 15 of AX is 0 (positive), DX = 0x0000
+		// If bit 15 of AX is 1 (negative), DX = 0xFFFF
+		// Preserves the high 16 bits of EDX
+		var ax = (ushort)(_eax & 0xFFFF);
+		var sign = (ax & 0x8000) != 0;
+		var dx = sign ? (ushort)0xFFFF : (ushort)0x0000;
+		_edx = (_edx & 0xFFFF0000) | dx;
 	}
 
 	private void ExecCwde()
