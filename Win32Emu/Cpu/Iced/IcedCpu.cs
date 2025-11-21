@@ -2297,8 +2297,7 @@ public class IcedCpu : IAsyncCpu
 			// OF is undefined when count > 1, but real 80386 hardware clears it
 			SetFlagVal(Of, false);
 		}
-		// AF is undefined but real 80386 hardware clears it
-		SetFlagVal(Af, false);
+		// AF is undefined for shift operations
 
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r, signBit);
@@ -2372,8 +2371,7 @@ public class IcedCpu : IAsyncCpu
 
 		var lastOut = (a >> (c - 1)) & 1u;
 		SetFlagVal(Cf, lastOut != 0);
-		// AF is undefined but real 80386 hardware clears it
-		SetFlagVal(Af, false);
+		// AF is undefined for shift operations
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r, signBit);
 	}
@@ -2494,8 +2492,7 @@ public class IcedCpu : IAsyncCpu
 
 		WriteOp(insn, 0, r);
 		// Note: Rotate instructions only affect CF and OF flags, not ZF, SF, PF
-		// AF is undefined but real 80386 hardware clears it
-		SetFlagVal(Af, false);
+		// AF is undefined for rotate operations
 	}
 
 	private void ExecNot(Instruction insn)
@@ -4826,8 +4823,7 @@ public class IcedCpu : IAsyncCpu
 			// OF is undefined when count > 1, but real 80386 hardware clears it
 			SetFlagVal(Of, false);
 		}
-		// AF is undefined but real 80386 hardware clears it
-		SetFlagVal(Af, false);
+		// AF is undefined for SHLD
 		
 		WriteOp(insn, 0, dest);
 		// Update SF, ZF, and PF based on result
@@ -4871,8 +4867,7 @@ public class IcedCpu : IAsyncCpu
 			// OF is undefined when count > 1, but real 80386 hardware clears it
 			SetFlagVal(Of, false);
 		}
-		// AF is undefined but real 80386 hardware clears it
-		SetFlagVal(Af, false);
+		// AF is undefined for SHRD
 		
 		WriteOp(insn, 0, dest);
 		// Update SF, ZF, and PF based on result
