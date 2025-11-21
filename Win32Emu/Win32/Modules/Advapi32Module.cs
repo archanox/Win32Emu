@@ -1275,6 +1275,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Opens the specified registry key (Unicode version).
 	/// </summary>
+	[DllModuleExport(241, Version = "4.90.0.3000")]
 	private uint RegOpenKeyExW(uint hKey, in LpcWStr lpSubKey, uint ulOptions, uint samDesired, uint phkResult)
 	{
 		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
@@ -1316,6 +1317,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Creates the specified registry key (Unicode version).
 	/// </summary>
+	[DllModuleExport(222, Version = "4.90.0.3000")]
 	private uint RegCreateKeyExW(uint hKey, in LpcWStr lpSubKey, uint reserved, in LpcWStr lpClass, uint dwOptions, uint samDesired, uint lpSecurityAttributes, uint phkResult, uint lpdwDisposition)
 	{
 		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
@@ -1367,6 +1369,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Sets the data and type of a specified value under a registry key (Unicode version).
 	/// </summary>
+	[DllModuleExport(261, Version = "4.90.0.3000")]
 	private uint RegSetValueExW(uint hKey, in LpcWStr lpValueName, uint reserved, uint dwType, uint lpData, uint cbData)
 	{
 		var valueName = lpValueName.Read(_env.Memory) ?? string.Empty;
@@ -1458,6 +1461,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Retrieves the type and data for the specified value name (Unicode version).
 	/// </summary>
+	[DllModuleExport(249, Version = "4.90.0.3000")]
 	private uint RegQueryValueExW(uint hKey, in LpcWStr lpValueName, uint lpReserved, uint lpType, uint lpData, uint lpcbData)
 	{
 		var valueName = lpValueName.Read(_env.Memory) ?? string.Empty;
@@ -1526,7 +1530,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		{
 			_logger.LogInformation("[Advapi32] RegQueryValueExW: Buffer too small or null (required={RequiredSize}, provided={ProvidedSize})",
 				requiredSize, providedSize);
-			return 234; // ERROR_MORE_DATA
+			return (uint)NativeTypes.Win32Error.ERROR_MORE_DATA;
 		}
 
 		// Write the data to the buffer
@@ -1544,6 +1548,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Retrieves information about the specified registry key (Unicode version).
 	/// </summary>
+	[DllModuleExport(244, Version = "4.90.0.3000")]
 	private uint RegQueryInfoKeyW(uint hKey, in LpWStr lpClass, uint lpcClass, uint lpReserved, uint lpcSubKeys, uint lpcMaxSubKeyLen, uint lpcMaxClassLen, uint lpcValues, uint lpcMaxValueNameLen, uint lpcMaxValueLen, uint lpcbSecurityDescriptor, uint lpftLastWriteTime)
 	{
 		_logger.LogInformation("[Advapi32] RegQueryInfoKeyW(hKey=0x{HKey:X8})", hKey);
@@ -1640,6 +1645,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Enumerates the subkeys of the specified open registry key (Unicode version).
 	/// </summary>
+	[DllModuleExport(233, Version = "4.90.0.3000")]
 	private uint RegEnumKeyExW(uint hKey, uint dwIndex, in LpWStr lpName, uint lpcName, uint lpReserved, in LpWStr lpClass, uint lpcClass, uint lpftLastWriteTime)
 	{
 		_logger.LogInformation("[Advapi32] RegEnumKeyExW(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
@@ -1702,6 +1708,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Enumerates the values for the specified open registry key (Unicode version).
 	/// </summary>
+	[DllModuleExport(231, Version = "4.90.0.3000")]
 	private uint RegEnumValueW(uint hKey, uint dwIndex, in LpWStr lpValueName, uint lpcchValueName, uint lpReserved, uint lpType, uint lpData, uint lpcbData)
 	{
 		_logger.LogInformation("[Advapi32] RegEnumValueW(hKey=0x{HKey:X8}, dwIndex={DwIndex})", hKey, dwIndex);
@@ -1829,6 +1836,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Deletes a subkey and its values from the specified platform-specific view of the registry (Unicode version).
 	/// </summary>
+	[DllModuleExport(225, Version = "4.90.0.3000")]
 	private uint RegDeleteKeyW(uint hKey, in LpcWStr lpSubKey)
 	{
 		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
@@ -1882,6 +1890,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Removes a named value from the specified registry key (Unicode version).
 	/// </summary>
+	[DllModuleExport(227, Version = "4.90.0.3000")]
 	private uint RegDeleteValueW(uint hKey, in LpcWStr lpValueName)
 	{
 		var valueName = lpValueName.Read(_env.Memory) ?? string.Empty;
