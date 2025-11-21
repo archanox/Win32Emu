@@ -99,21 +99,21 @@ public class VirtualMemory
         page[offset] = value;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public byte Read8(ulong addr)
     {
         EnsureRange(addr);
         return ReadByteInternal(addr);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public ushort Read16(ulong addr)
     {
         EnsureRange(addr, 2);
         return (ushort)(Read8(addr) | (Read8(addr + 1) << 8));
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public uint Read32(ulong addr)
     {
         EnsureRange(addr, 4);
@@ -135,14 +135,14 @@ public class VirtualMemory
         return value;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public void Write8(ulong addr, byte value)
     {
         EnsureRange(addr);
         WriteByteInternal(addr, value);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public void Write16(ulong addr, ushort value)
     {
         EnsureRange(addr, 2);
@@ -150,7 +150,7 @@ public class VirtualMemory
         Write8(addr + 1, (byte)(value >> 8));
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public void Write32(ulong addr, uint value)
     {
         EnsureRange(addr, 4);
@@ -158,14 +158,14 @@ public class VirtualMemory
         Write16(addr + 2, (ushort)(value >> 16));
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public ulong Read64(ulong addr)
     {
         EnsureRange(addr, 8);
         return Read32(addr) | ((ulong)Read32(addr + 4) << 32);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public void Write64(ulong addr, ulong value)
     {
         EnsureRange(addr, 8);
