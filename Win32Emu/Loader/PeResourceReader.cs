@@ -423,4 +423,58 @@ public class PeResourceReader
 
 		return null;
 	}
+
+	/// <summary>
+	/// Enumerates all resource names for a specified type
+	/// </summary>
+	/// <param name="lpType">Resource type (can be integer ID or string name)</param>
+	/// <returns>List of resource IDs/names, or null if type not found</returns>
+	public IEnumerable<uint>? EnumerateResourceNames(uint lpType)
+	{
+		var resources = _image.Resources;
+		if (resources == null)
+		{
+			return null;
+		}
+
+		// Determine if lpType is an ID or a string
+		var typeId = IsIntResource(lpType) ? (uint?)GetIntResource(lpType) : null;
+		var typeName = typeId == null ? ReadResourceString(lpType) : null;
+
+		// Find the type directory
+		IResourceEntry? typeEntry = null;
+		if (typeId.HasValue)
+		{
+			typeEntry = resources.Entries.Where(e => e.Id == typeId.Value).FirstOrDefault();
+		}
+		else if (typeName != null)
+		{
+			typeEntry = resources.Entries.Where(e => e.Name == typeName).FirstOrDefault();
+		}
+
+		if (typeEntry is not ResourceDirectory typeDir)
+		{
+			return null;
+		}
+
+		// Collect all resource names/IDs
+		var resourceNames = new List<uint>();
+		foreach (var nameEntry in typeDir.Entries)
+		{
+			// Return the ID if it's a numeric ID
+			// Check if it has an ID (non-zero means it's an ID resource)
+			if (nameEntry.Id != 0)
+			{
+				resourceNames.Add(nameEntry.Id);
+			}
+			else if (nameEntry.Name != null)
+			{
+				// For string names, we'd need to allocate memory for the string
+				// For now, just skip string names or use a hash as a pseudo-ID
+				// This is a limitation of the simple stub implementation
+			}
+		}
+
+		return resourceNames;
+	}
 }
