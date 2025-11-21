@@ -608,9 +608,10 @@ public class Gdi32Tests : IDisposable
         uint cbData16 = 256;
         var pData16 = _testEnv.AllocateMemory(cbData16);
         uint iMapMode = 1; // MM_TEXT
+        uint hdcRef = 0;  // NULL reference DC
 
         // Act
-        var result = _testEnv.CallGdi32Api("GETWINMETAFILEBITS", hemf, cbData16, pData16, iMapMode);
+        var result = _testEnv.CallGdi32Api("GETWINMETAFILEBITS", hemf, cbData16, pData16, iMapMode, hdcRef);
 
         // Assert
         Assert.Equal(0u, result); // Metafiles not supported, should return 0

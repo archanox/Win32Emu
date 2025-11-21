@@ -382,7 +382,7 @@ namespace Win32Emu.Win32.Modules
 
 				// Metafile functions
 				case "GETWINMETAFILEBITS":
-					returnValue = GetWinMetaFileBits(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					returnValue = GetWinMetaFileBits(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
 					return true;
 				case "SETMETAFILEBITSEX":
 					returnValue = SetMetaFileBitsEx(a.UInt32(0), a.UInt32(1));
@@ -2119,11 +2119,11 @@ namespace Win32Emu.Win32.Modules
 		///   [in]  HDC          hdcRef
 		/// );
 		/// </summary>
-		[DllModuleExport(16, IsStub = true)]
-		private uint GetWinMetaFileBits(uint hemf, uint cbData16, uint pData16, uint iMapMode)
+		[DllModuleExport(20, IsStub = true)]
+		private uint GetWinMetaFileBits(uint hemf, uint cbData16, uint pData16, int iMapMode, uint hdcRef)
 		{
-			_logger.LogInformation("[Gdi32] GetWinMetaFileBits(hemf=0x{Hemf:X8}, cbData16={CbData16}, pData16=0x{PData16:X8}, iMapMode={IMapMode})",
-				hemf, cbData16, pData16, iMapMode);
+			_logger.LogInformation("[Gdi32] GetWinMetaFileBits(hemf=0x{Hemf:X8}, cbData16={CbData16}, pData16=0x{PData16:X8}, iMapMode={IMapMode}, hdcRef=0x{HdcRef:X8})",
+				hemf, cbData16, pData16, iMapMode, hdcRef);
 			// Stub: Return 0 to indicate failure (metafiles not supported)
 			return 0;
 		}

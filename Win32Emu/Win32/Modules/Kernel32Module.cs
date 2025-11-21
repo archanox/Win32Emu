@@ -881,17 +881,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 
 			// 16-bit thunking functions
-			case "FT_EXIT20":
-				returnValue = FT_Exit20();
-				return true;
-			case "FT_EXIT16":
-				returnValue = FT_Exit16();
-				return true;
-			case "FT_EXIT24":
-				returnValue = FT_Exit24();
-				return true;
-			case "FT_EXIT32":
-				returnValue = FT_Exit32();
+			case "FT_EXIT4":
+				returnValue = FT_Exit4();
 				return true;
 			case "FT_EXIT8":
 				returnValue = FT_Exit8();
@@ -899,11 +890,20 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "FT_EXIT12":
 				returnValue = FT_Exit12();
 				return true;
-			case "FT_EXIT4":
-				returnValue = FT_Exit4();
+			case "FT_EXIT16":
+				returnValue = FT_Exit16();
+				return true;
+			case "FT_EXIT20":
+				returnValue = FT_Exit20();
+				return true;
+			case "FT_EXIT24":
+				returnValue = FT_Exit24();
 				return true;
 			case "FT_EXIT28":
 				returnValue = FT_Exit28();
+				return true;
+			case "FT_EXIT32":
+				returnValue = FT_Exit32();
 				return true;
 			case "FT_EXIT48":
 				returnValue = FT_Exit48();
@@ -9834,7 +9834,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		try
 		{
 			// Try to read the string up to ucchMax characters
-			var maxLength = ucchMax == 0 ? int.MaxValue : (int)ucchMax;
+			// Use a reasonable upper bound when ucchMax is 0 to avoid excessive memory reads
+			var maxLength = ucchMax == 0 ? 65536 : (int)ucchMax;
 			var offset = 0;
 
 			while (offset < maxLength)
