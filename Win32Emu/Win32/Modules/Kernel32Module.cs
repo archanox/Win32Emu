@@ -10088,8 +10088,6 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 	#endregion
 
-	// ========== Missing KERNEL32 Functions ==========
-
 	/// <summary>
 	/// Makes a critical section global (16-bit compatibility function).
 	/// </summary>
@@ -10136,7 +10134,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Establishes a thunk connection between 16-bit and 32-bit code.
 	/// </summary>
-	[DllModuleExport(4, IsStub = true)]
+	[DllModuleExport(20, IsStub = true)]
 	private uint ThunkConnect32(uint lpDll16, uint lpDll32, uint hInst, uint lpfnThunk, uint dwReason)
 	{
 		_logger.LogInformation("[Kernel32] ThunkConnect32(lpDll16=0x{LpDll16:X8}, lpDll32=0x{LpDll32:X8}, hInst=0x{HInst:X8}, lpfnThunk=0x{LpfnThunk:X8}, dwReason={DwReason}) - 16-bit thunk not supported",

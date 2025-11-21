@@ -6806,7 +6806,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Creates the union of two rectangles.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(12, IsStub = true)]
 		private uint UnionRect(uint lprcDst, uint lprcSrc1, uint lprcSrc2)
 		{
 			_logger.LogInformation("[User32] UnionRect(lprcDst=0x{LprcDst:X8}, lprcSrc1=0x{LprcSrc1:X8}, lprcSrc2=0x{LprcSrc2:X8})",
@@ -6837,7 +6837,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Retrieves a device context with extended options.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(12, IsStub = true)]
 		private uint GetDCEx(uint hWnd, uint hrgnClip, uint flags)
 		{
 			_logger.LogInformation("[User32] GetDCEx(hWnd=0x{HWnd:X8}, hrgnClip=0x{HrgnClip:X8}, flags=0x{Flags:X8})",
@@ -6849,7 +6849,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Retrieves the identifier of the thread that created the specified window.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(8, IsStub = true)]
 		private uint GetWindowThreadProcessId(uint hWnd, uint lpdwProcessId)
 		{
 			_logger.LogInformation("[User32] GetWindowThreadProcessId(hWnd=0x{HWnd:X8}, lpdwProcessId=0x{LpdwProcessId:X8})",
@@ -6870,7 +6870,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Synthesizes a keystroke.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(16, IsStub = true)]
 		private void keybd_event(uint bVk, uint bScan, uint dwFlags, uint dwExtraInfo)
 		{
 			_logger.LogInformation("[User32] keybd_event(bVk={BVk}, bScan={BScan}, dwFlags=0x{DwFlags:X8}, dwExtraInfo=0x{DwExtraInfo:X8})",
@@ -6921,7 +6921,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Synthesizes mouse motion and button clicks.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(20, IsStub = true)]
 		private void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, uint dwExtraInfo)
 		{
 			_logger.LogInformation("[User32] mouse_event(dwFlags=0x{DwFlags:X8}, dx={Dx}, dy={Dy}, dwData={DwData}, dwExtraInfo=0x{DwExtraInfo:X8})",
