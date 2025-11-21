@@ -403,6 +403,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = WsprintfA(a.LpStr(0), a.LpcStr(1), a);
 					return true;
 
+				case "WSPRINTFW":
+					returnValue = WsprintfW(a.LpWStr(0), a.LpcWStr(1), a);
+					return true;
+
 				case "WVSPRINTFA":
 					returnValue = WvsprintfA(a.LpStr(0), a.LpcStr(1), a.UInt32(2));
 					return true;
@@ -3567,6 +3571,22 @@ namespace Win32Emu.Win32.Modules
 			return (uint)result.Length;
 		}
 
+		/// <summary>
+		/// Writes formatted data to the specified buffer (Unicode version).
+		/// </summary>
+		private uint WsprintfW(in LpWStr output, in LpcWStr format, StackArgs args)
+		{
+			var formatStr = format.Read(_env.Memory) ?? string.Empty;
+			_logger.LogInformation("[User32] WsprintfW(output=0x{Output:X8}, format=\"{FormatStr}\")", output.Address, formatStr);
+
+			// Format the string using stack arguments
+			// Args 0 and 1 are output and format, so variadic args start at index 2
+			var result = FormatStringW(formatStr, args, 2);
+			output.Write(_env.Memory, result, true);
+
+			return (uint)result.Length;
+		}
+
 		[DllModuleExport(12)]
 		private uint WvsprintfA(in LpStr output, in LpcStr format, uint arglist)
 		{
@@ -3740,6 +3760,89 @@ namespace Win32Emu.Win32.Modules
 							result.Append('%');
 							result.Append(specifier);
 							currentArgPtr += 4; // Still consume an argument
+							break;
+					}
+				}
+				else
+				{
+					result.Append(format[i]);
+				}
+			}
+			
+			return result.ToString();
+		}
+
+		/// <summary>
+		/// Formats a printf-style format string with arguments from the stack (Unicode version).
+		/// Supports common format specifiers: %s (string), %d/%i (int), %u (uint), %x/%X (hex), %c (char), %% (literal %).
+		/// </summary>
+		private string FormatStringW(string format, StackArgs args, int startArgIndex)
+		{
+			var result = new System.Text.StringBuilder();
+			int argIndex = startArgIndex;
+			
+			for (int i = 0; i < format.Length; i++)
+			{
+				if (format[i] == '%' && i + 1 < format.Length)
+				{
+					i++; // Skip the %
+					
+					// Handle %% (literal %)
+					if (format[i] == '%')
+					{
+						result.Append('%');
+						continue;
+					}
+					
+					// Parse format specifier (simplified - doesn't handle width, precision, etc.)
+					char specifier = format[i];
+					
+					switch (specifier)
+					{
+						case 's': // Unicode string pointer
+							var strAddr = args.UInt32(argIndex++);
+							if (strAddr != 0)
+							{
+								var str = new LpcWStr(strAddr, _env.Memory).Read() ?? string.Empty;
+								result.Append(str);
+							}
+							else
+							{
+								result.Append("(null)");
+							}
+							break;
+						
+						case 'd': // Signed decimal integer
+						case 'i':
+							var intVal = args.Int32(argIndex++);
+							result.Append(intVal);
+							break;
+						
+						case 'u': // Unsigned decimal integer
+							var uintVal = args.UInt32(argIndex++);
+							result.Append(uintVal);
+							break;
+						
+						case 'x': // Unsigned hexadecimal (lowercase)
+							var hexVal = args.UInt32(argIndex++);
+							result.Append(hexVal.ToString("x"));
+							break;
+						
+						case 'X': // Unsigned hexadecimal (uppercase)
+							var hexValUpper = args.UInt32(argIndex++);
+							result.Append(hexValUpper.ToString("X"));
+							break;
+						
+						case 'c': // Character (Unicode)
+							var charVal = (char)args.UInt32(argIndex++);
+							result.Append(charVal);
+							break;
+						
+						default:
+							// Unknown specifier - just append it as-is
+							result.Append('%');
+							result.Append(specifier);
+							argIndex++; // Still consume an argument
 							break;
 					}
 				}

@@ -64,6 +64,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = TimeGetTime();
 					return true;
 
+				case "TIMEGETDEVCAPS":
+					returnValue = TimeGetDevCaps(a.UInt32(0), a.UInt32(1));
+					return true;
+
 				case "TIMEBEGINPERIOD":
 					returnValue = TimeBeginPeriod(a.UInt32(0));
 					return true;
@@ -225,6 +229,41 @@ namespace Win32Emu.Win32.Modules
 			// Return time in milliseconds since start
 			var time = (uint)_stopwatch.ElapsedMilliseconds;
 			return time;
+		}
+
+		/// <summary>
+		/// Queries the timer device capabilities.
+		/// MMRESULT timeGetDevCaps(
+		///   [out] LPTIMECAPS ptc,
+		///   [in]  UINT       cbtc
+		/// );
+		/// </summary>
+		private uint TimeGetDevCaps(uint lpTimeCaps, uint cbTimeCaps)
+		{
+			_logger.LogInformation("[WinMM] timeGetDevCaps(lpTimeCaps=0x{LpTimeCaps:X8}, cbTimeCaps={CbTimeCaps})",
+				lpTimeCaps, cbTimeCaps);
+
+			// TIMECAPS structure:
+			// typedef struct timecaps_tag {
+			//   UINT wPeriodMin;  // minimum period supported
+			//   UINT wPeriodMax;  // maximum period supported
+			// } TIMECAPS, *PTIMECAPS;
+			
+			// Size check
+			const uint TIMECAPS_SIZE = 8; // 2 UINT fields
+			if (cbTimeCaps < TIMECAPS_SIZE)
+			{
+				_logger.LogWarning("[WinMM] timeGetDevCaps: Buffer too small");
+				return 96; // TIMERR_STRUCT - Invalid structure size
+			}
+
+			// Write TIMECAPS structure
+			// wPeriodMin = 1 ms (minimum timer resolution)
+			// wPeriodMax = 1000000 ms (maximum timer resolution)
+			_env.MemWrite32(lpTimeCaps, 1);       // wPeriodMin
+			_env.MemWrite32(lpTimeCaps + 4, 1000000); // wPeriodMax
+
+			return 0; // TIMERR_NOERROR
 		}
 
 		[DllModuleExport(1)]
