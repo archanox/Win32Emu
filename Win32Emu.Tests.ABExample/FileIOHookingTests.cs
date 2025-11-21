@@ -32,8 +32,8 @@ public class FileIOHookingTests : HookingABTestBase
 	private delegate bool CloseHandleDelegate(IntPtr hObject);
 
 	// Store original functions
-	private CreateFileADelegate? _originalCreateFileA;
-	private CloseHandleDelegate? _originalCloseHandle;
+	private readonly CreateFileADelegate? _originalCreateFileA;
+	private readonly CloseHandleDelegate? _originalCloseHandle;
 
 	// Track hook calls
 	private int _createFileCallCount;
@@ -243,7 +243,7 @@ public class TempPathHookingTests : HookingABTestBase
 	[UnmanagedFunctionPointer(CallingConvention.Winapi, SetLastError = true, CharSet = CharSet.Ansi)]
 	private delegate uint GetTempPathADelegate(uint nBufferLength, byte[] lpBuffer);
 
-	private GetTempPathADelegate? _originalGetTempPathA;
+	private readonly GetTempPathADelegate? _originalGetTempPathA;
 
 	public TempPathHookingTests()
 	{

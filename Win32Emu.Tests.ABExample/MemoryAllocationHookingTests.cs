@@ -44,10 +44,10 @@ public class MemoryAllocationHookingTests : HookingABTestBase
 	private delegate IntPtr GetProcessHeapDelegate();
 
 	// Store original functions
-	private VirtualAllocDelegate? _originalVirtualAlloc;
-	private VirtualFreeDelegate? _originalVirtualFree;
-	private HeapAllocDelegate? _originalHeapAlloc;
-	private GetProcessHeapDelegate? _originalGetProcessHeap;
+	private readonly VirtualAllocDelegate? _originalVirtualAlloc;
+	private readonly VirtualFreeDelegate? _originalVirtualFree;
+	private readonly HeapAllocDelegate? _originalHeapAlloc;
+	private readonly GetProcessHeapDelegate? _originalGetProcessHeap;
 
 	// Track allocations
 	private int _virtualAllocCallCount;
@@ -360,7 +360,7 @@ public class MemoryAccessHookingTests : HookingABTestBase
 		uint flProtect
 	);
 
-	private VirtualAllocDelegate? _originalVirtualAlloc;
+	private readonly VirtualAllocDelegate? _originalVirtualAlloc;
 
 	public MemoryAccessHookingTests()
 	{
