@@ -37,6 +37,19 @@ namespace Win32Emu.Win32.Modules
 		private const int DefaultCharWidth = 8;
 		private const int DefaultFontHeight = 16;
 
+		// GDI object type constants (from GetObjectType)
+		private const uint OBJ_PEN = 1;
+		private const uint OBJ_BRUSH = 2;
+		private const uint OBJ_DC = 3;
+		private const uint OBJ_METADC = 4;
+		private const uint OBJ_PAL = 5;
+		private const uint OBJ_FONT = 6;
+		private const uint OBJ_BITMAP = 7;
+		private const uint OBJ_REGION = 8;
+		private const uint OBJ_METAFILE = 9;
+		private const uint OBJ_MEMDC = 10;
+		private const uint OBJ_EXTPEN = 11;
+
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
@@ -2363,15 +2376,13 @@ namespace Win32Emu.Win32.Modules
 			if (_gdiObjects.TryGetValue(h, out var obj))
 			{
 				// Return appropriate type based on object
-				// OBJ_PEN = 1, OBJ_BRUSH = 2, OBJ_DC = 3, OBJ_METADC = 4, OBJ_PAL = 5,
-				// OBJ_FONT = 6, OBJ_BITMAP = 7, OBJ_REGION = 8, OBJ_METAFILE = 9, OBJ_MEMDC = 10, OBJ_EXTPEN = 11
 				return obj.Type switch
 				{
-					GdiObjectType.Pen => 1,      // OBJ_PEN
-					GdiObjectType.Brush => 2,    // OBJ_BRUSH
-					GdiObjectType.Font => 6,     // OBJ_FONT
-					GdiObjectType.Bitmap => 7,   // OBJ_BITMAP
-					GdiObjectType.Palette => 5,  // OBJ_PAL
+					GdiObjectType.Pen => OBJ_PEN,
+					GdiObjectType.Brush => OBJ_BRUSH,
+					GdiObjectType.Font => OBJ_FONT,
+					GdiObjectType.Bitmap => OBJ_BITMAP,
+					GdiObjectType.Palette => OBJ_PAL,
 					_ => 0
 				};
 			}
@@ -2379,7 +2390,7 @@ namespace Win32Emu.Win32.Modules
 			// Check if it's a DC
 			if (_deviceContexts.ContainsKey(h))
 			{
-				return 3; // OBJ_DC
+				return OBJ_DC;
 			}
 			
 			// Unknown object
@@ -2435,7 +2446,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				for (uint i = 0; i < 256; i++)
 				{
-					var value = (ushort)(i * 256 + i); // Linear ramp
+					var value = (ushort)(i * 257); // Linear ramp: 0->0, 255->65535
 					// Red ramp
 					_env.MemWrite16(lpRamp + i * 2, value);
 					// Green ramp
