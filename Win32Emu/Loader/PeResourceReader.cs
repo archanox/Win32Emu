@@ -461,17 +461,20 @@ public class PeResourceReader
 		var resourceNames = new List<uint>();
 		foreach (var nameEntry in typeDir.Entries)
 		{
-			// Return the ID if it's a numeric ID
-			// Check if it has an ID (non-zero means it's an ID resource)
-			if (nameEntry.Id != 0)
+			// Resources can have either numeric IDs or string names
+			// If the entry has a Name property set, it's a string resource
+			// Otherwise, it's a numeric ID resource
+			if (nameEntry.Name == null)
 			{
+				// Numeric ID resource
 				resourceNames.Add(nameEntry.Id);
 			}
-			else if (nameEntry.Name != null)
+			else
 			{
-				// For string names, we'd need to allocate memory for the string
-				// For now, just skip string names or use a hash as a pseudo-ID
-				// This is a limitation of the simple stub implementation
+				// String-named resource
+				// For complete implementation, we would need to allocate memory for the string
+				// and pass a pointer to the callback. For now, just skip.
+				// This is a limitation - string-named resources are not enumerated
 			}
 		}
 
