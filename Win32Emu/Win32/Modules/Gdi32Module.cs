@@ -2383,6 +2383,7 @@ namespace Win32Emu.Win32.Modules
 					GdiObjectType.Font => OBJ_FONT,
 					GdiObjectType.Bitmap => OBJ_BITMAP,
 					GdiObjectType.Palette => OBJ_PAL,
+					GdiObjectType.Region => OBJ_REGION,
 					_ => 0
 				};
 			}
@@ -2446,7 +2447,9 @@ namespace Win32Emu.Win32.Modules
 			{
 				for (uint i = 0; i < 256; i++)
 				{
-					var value = (ushort)(i * 257); // Linear ramp: 0->0, 255->65535
+					// Linear ramp: 0->0, 255->65535
+					// Using Math.Min to prevent overflow (though 255 * 257 = 65535 fits in ushort)
+					var value = (ushort)Math.Min(65535, i * 257);
 					// Red ramp
 					_env.MemWrite16(lpRamp + i * 2, value);
 					// Green ramp
