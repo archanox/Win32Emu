@@ -161,6 +161,7 @@ public static class NativeTypes
 	// Windows handle values
 	public enum Win32Handle : uint
 	{
+		NULL = 0,
 		INVALID_HANDLE_VALUE = 0xFFFFFFFF
 	}
 

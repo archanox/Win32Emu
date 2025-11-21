@@ -404,7 +404,7 @@ public sealed class Emulator : IDisposable
         // Use stored bytes instead of path, as path is a Windows path inside the VHD (e.g., C:\ign_teas\IGN_TEAS.EXE)
         // which doesn't exist on the host file system
         var peImage = AsmResolver.PE.PEImage.FromBytes(_executableBytes!);
-        var resourceReader = new PeResourceReader(peImage, _image.BaseAddress, _vm);
+        var resourceReader = new PeResourceReader(peImage, _image.BaseAddress, _vm, _logger);
         kernel32Module.SetResourceReader(resourceReader);
         
         _dispatcher.RegisterModule(kernel32Module);
