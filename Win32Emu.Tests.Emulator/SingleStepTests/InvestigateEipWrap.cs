@@ -57,8 +57,9 @@ public class InvestigateEipWrap
 		if (initialRegs.Eip + test.InstructionBytes.Length > 0xFFFF)
 		{
 			_output.WriteLine($"  EIP will exceed 0xFFFF after instruction!");
-			_output.WriteLine($"  In 16-bit mode, should wrap to: 0x{(initialRegs.Eip + test.InstructionBytes.Length) & 0xFFFF:X4}");
-			_output.WriteLine($"  Test expects (unwrapped): 0x{finalRegs.Eip:X8}");
+			_output.WriteLine($"  CPU stores full 32-bit value: 0x{initialRegs.Eip + test.InstructionBytes.Length:X8}");
+			_output.WriteLine($"  Test expects: 0x{finalRegs.Eip:X8}");
+			_output.WriteLine($"  This matches real 386 hardware behavior (no wrapping when storing EIP)");
 		}
 
 		// Now execute the test
