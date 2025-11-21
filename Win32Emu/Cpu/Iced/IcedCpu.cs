@@ -2450,7 +2450,7 @@ public class IcedCpu : IAsyncCpu
 					// OF = MSB XOR CF after rotation
 					var msb = (r & msbMask) != 0;
 					var cf = GetFlag(Cf);
-					SetFlagVal(Of, msb ^ cf);
+					SetFlagVal(Of, msb != cf);
 				}
 				// OF is undefined when count > 1, so don't modify it
 
