@@ -17,8 +17,11 @@ public partial class Rpcrt4Module : IWin32ModuleUnsafe
 	private readonly ILogger _logger;
 
 	// RPC status codes
-	private const uint RPC_S_OK = 0;
-	private const uint RPC_S_INVALID_ARG = 1;
+	private enum RpcStatus : uint
+	{
+		RPC_S_OK = 0,
+		RPC_S_INVALID_ARG = 1,
+	}
 
 	// UUID/GUID size
 	private const int UUID_SIZE = 16; // 16 bytes for a GUID/UUID
@@ -72,7 +75,7 @@ public partial class Rpcrt4Module : IWin32ModuleUnsafe
 		if (uuid == 0)
 		{
 			_logger.LogWarning("[Rpcrt4] UuidCreate: NULL pointer");
-			return RPC_S_INVALID_ARG;
+			return (uint)RpcStatus.RPC_S_INVALID_ARG;
 		}
 
 		// Generate a random UUID (version 4 - random)
@@ -87,7 +90,7 @@ public partial class Rpcrt4Module : IWin32ModuleUnsafe
 
 		_logger.LogDebug("[Rpcrt4] UuidCreate: Created UUID {Guid}", guid);
 
-		return RPC_S_OK;
+		return (uint)RpcStatus.RPC_S_OK;
 	}
 
 	// High-performance logging using source generators

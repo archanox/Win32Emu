@@ -1474,7 +1474,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		{
 			// Value not found - return ERROR_FILE_NOT_FOUND
 			_logger.LogInformation("[Advapi32] RegQueryValueExW: Value not found");
-			return 2; // ERROR_FILE_NOT_FOUND
+			return (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
 		}
 
 		// Determine the data type and size
@@ -1542,7 +1542,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Advapi32] RegQueryValueExW: Returned {Size} bytes, type={Type}", requiredSize, dataType);
 
 		// ERROR_SUCCESS
-		return 0;
+		return (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 	}
 
 	/// <summary>

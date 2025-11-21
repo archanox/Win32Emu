@@ -7832,7 +7832,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Stub implementation - CreateProcess is complex and not fully supported
 		// Return failure for now
 		_lastError = (uint)NativeTypes.Win32Error.ERROR_ACCESS_DENIED;
-		return 0; // FALSE
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 	/// <summary>
@@ -8333,7 +8333,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Opens a named file mapping object (ANSI version).
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(20, IsStub = true)]
 	private uint OpenFileMappingA(uint dwDesiredAccess, uint bInheritHandle, in LpcStr lpName)
 	{
 		var name = lpName.ToString() ?? string.Empty;
@@ -8354,7 +8354,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Opens a named file mapping object (Unicode version).
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(20, IsStub = true)]
 	private uint OpenFileMappingW(uint dwDesiredAccess, uint bInheritHandle, in LpcWStr lpName)
 	{
 		var name = lpName.Read(_env.Memory) ?? string.Empty;

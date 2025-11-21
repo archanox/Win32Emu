@@ -8,16 +8,10 @@ namespace Win32Emu.Win32;
 /// This type wraps a memory address and provides Unicode string reading capabilities.
 /// Corresponds to: typedef const wchar_t* LPCWSTR;
 /// </summary>
-public readonly struct LpcWStr
+public readonly struct LpcWStr(uint address, VirtualMemory? memory = null)
 {
-	public readonly uint Address;
-	private readonly VirtualMemory? _memory;
-
-	public LpcWStr(uint address, VirtualMemory? memory = null)
-	{
-		Address = address;
-		_memory = memory;
-	}
+	public readonly uint Address = address;
+	private readonly VirtualMemory? _memory = memory;
 
 	/// <summary>
 	/// Checks if this pointer is null (address is 0).

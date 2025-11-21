@@ -38,6 +38,7 @@ Win32Emu is a Windows 32-bit PE executable emulator written in C# 14 (.NET 10) f
   - This attribute is **mandatory** for all public and private functions that are Win32 API exports
   - Include the export ordinal number: `[DllModuleExport(1)]`
   - For versioned exports, include version: `[DllModuleExport(241, Version = "4.90.0.3000")]`
+  - **For stub implementations, add `IsStub = true`**: `[DllModuleExport(20, IsStub = true)]`
   - Example: `[DllModuleExport(20)] private uint WsprintfW(...)`
 
 ### Win32 Data Structures
