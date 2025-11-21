@@ -4161,14 +4161,145 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
-		/// Waits until objects are signaled or time-out interval elapses.
+		/// Waits until one or all of the specified objects are in the signaled state,
+		/// an I/O completion routine or asynchronous procedure call (APC) is queued to the thread,
+		/// or the time-out interval elapses.
 		/// </summary>
-		[DllModuleExport(20, IsStub = true)]
+		/// <param name="nCount">Number of object handles in the array pointed to by pHandles</param>
+		/// <param name="pHandles">Pointer to an array of object handles</param>
+		/// <param name="fWaitAll">If TRUE, wait for all objects; if FALSE, wait for any one object</param>
+		/// <param name="dwMilliseconds">Time-out interval in milliseconds (0xFFFFFFFF = INFINITE)</param>
+		/// <param name="dwWakeMask">Type of input events for which an input event object handle will be added to the array of object handles (QS_* flags)</param>
+		/// <returns>
+		/// WAIT_OBJECT_0 to WAIT_OBJECT_0 + nCount - 1 if an object was signaled,
+		/// WAIT_OBJECT_0 + nCount if input of the type specified is available,
+		/// WAIT_TIMEOUT if the time-out interval elapsed,
+		/// or WAIT_FAILED if the function failed.
+		/// </returns>
+		[DllModuleExport(20)]
 		private uint MsgWaitForMultipleObjects(uint nCount, uint pHandles, uint fWaitAll, uint dwMilliseconds, uint dwWakeMask)
 		{
-			_logger.LogInformation("[User32] MsgWaitForMultipleObjects(nCount={NCount}, dwMilliseconds={DwMilliseconds})",
-				nCount, dwMilliseconds);
-			return 0; // WAIT_OBJECT_0
+			const uint WAIT_OBJECT_0 = 0x00000000;
+			const uint WAIT_TIMEOUT = 0x00000102;
+			const uint WAIT_FAILED = 0xFFFFFFFF;
+			const uint MAXIMUM_WAIT_OBJECTS = 64;
+
+			_logger.LogInformation("[User32] MsgWaitForMultipleObjects(nCount={NCount}, pHandles=0x{PHandles:X8}, fWaitAll={FWaitAll}, dwMilliseconds={DwMilliseconds}, dwWakeMask=0x{DwWakeMask:X8})",
+				nCount, pHandles, fWaitAll, dwMilliseconds, dwWakeMask);
+
+			// Validate parameters
+			if (nCount > MAXIMUM_WAIT_OBJECTS)
+			{
+				_logger.LogWarning("[User32] MsgWaitForMultipleObjects: invalid count {NCount} (max {Max})", nCount, MAXIMUM_WAIT_OBJECTS);
+				return WAIT_FAILED;
+			}
+
+			// If nCount is 0, we only wait for messages
+			// For simplicity, always indicate a message is available when waiting only for messages
+			if (nCount == 0)
+			{
+				if (dwMilliseconds == 0)
+				{
+					_logger.LogDebug("[User32] MsgWaitForMultipleObjects: No handles, no wait (timeout=0)");
+					return WAIT_TIMEOUT;
+				}
+
+				_logger.LogDebug("[User32] MsgWaitForMultipleObjects: No handles, returning message available (simplified)");
+				return WAIT_OBJECT_0; // Indicate message available
+			}
+
+			// Read handle array from memory
+			if (pHandles == 0 && nCount > 0)
+			{
+				_logger.LogWarning("[User32] MsgWaitForMultipleObjects: null handle array with nCount={NCount}", nCount);
+				return WAIT_FAILED;
+			}
+
+			var handles = new uint[nCount];
+			if (nCount > 0)
+			{
+				for (uint i = 0; i < nCount; i++)
+				{
+					handles[i] = _env.MemRead32(pHandles + (i * 4));
+				}
+			}
+
+			// Delegate to synchronization manager for handle checking
+			// In a real implementation, we would need to interleave checking for messages
+			// with waiting on the handles
+			if (_env.SynchronizationManager != null && nCount > 0)
+			{
+				// Check if handles are immediately available
+				for (uint i = 0; i < nCount; i++)
+				{
+					var handle = handles[i];
+					var objectType = _env.SynchronizationManager.GetObjectType(handle);
+
+					if (objectType == null)
+					{
+						_logger.LogWarning("[User32] MsgWaitForMultipleObjects: invalid handle 0x{Handle:X8} at index {Index}", handle, i);
+						return WAIT_FAILED;
+					}
+
+					// Check if object is signaled
+					var signaled = objectType switch
+					{
+						"Event" => _env.SynchronizationManager.IsEventSignaled(handle),
+						"Semaphore" => _env.SynchronizationManager.IsSemaphoreSignaled(handle),
+						"Mutex" => _env.SynchronizationManager.CanAcquireMutex(handle, _env.GetCurrentThreadId()),
+						_ => false
+					};
+
+					if (signaled)
+					{
+						if (fWaitAll == 0) // Wait for any
+						{
+							_logger.LogDebug("[User32] MsgWaitForMultipleObjects: Object at index {Index} (type={Type}) is signaled", i, objectType);
+							return WAIT_OBJECT_0 + i;
+						}
+					}
+					else if (fWaitAll != 0) // Wait for all
+					{
+						// At least one object is not signaled
+						_logger.LogDebug("[User32] MsgWaitForMultipleObjects: Object at index {Index} (type={Type}) is not signaled, wait all failed", i, objectType);
+						
+						// Check timeout
+						if (dwMilliseconds == 0)
+						{
+							return WAIT_TIMEOUT;
+						}
+						
+						// Simplified: return timeout
+						return WAIT_TIMEOUT;
+					}
+				}
+
+				// If we get here with fWaitAll, all objects were signaled
+				if (fWaitAll != 0)
+				{
+					_logger.LogDebug("[User32] MsgWaitForMultipleObjects: All objects signaled");
+					return WAIT_OBJECT_0;
+				}
+			}
+
+			// No signaled objects found
+			if (dwMilliseconds == 0)
+			{
+				_logger.LogDebug("[User32] MsgWaitForMultipleObjects: Timeout (no signaled objects)");
+				return WAIT_TIMEOUT;
+			}
+
+			// If dwWakeMask is set, indicate a message is available
+			// This is a simplified implementation - real implementation would check message queue
+			if (dwWakeMask != 0)
+			{
+				_logger.LogDebug("[User32] MsgWaitForMultipleObjects: Returning message available index (simplified)");
+				return WAIT_OBJECT_0 + nCount; // Special return value indicating message is available
+			}
+
+			// Otherwise, return timeout after "waiting"
+			_logger.LogDebug("[User32] MsgWaitForMultipleObjects: Returning timeout (simplified wait)");
+			return WAIT_TIMEOUT;
 		}
 
 		[DllModuleExport(0)]
