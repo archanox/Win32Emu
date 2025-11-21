@@ -129,7 +129,8 @@ public static class NativeTypes
 		ERROR_ALREADY_EXISTS = 183,
 		ERROR_MORE_DATA = 234,
 		ERROR_NO_MORE_ITEMS = 259,
-		ERROR_NOT_OWNER = 288
+		ERROR_NOT_OWNER = 288,
+		ERROR_RESOURCE_TYPE_NOT_FOUND = 1813
 	}
 
 	// Windows BOOL values
@@ -137,6 +138,16 @@ public static class NativeTypes
 	{
 		FALSE = 0,
 		TRUE = 1
+	}
+
+	// Win95/98 PDB (Process Database) flags
+	[Flags]
+	public enum ProcessFlags : uint
+	{
+		None = 0,
+		PDB32_CONSOLE_PROC = 0x01,   // Process has console
+		PDB32_FILE_APIS_OEM = 0x02,  // File APIs use OEM character set
+		PDB32_DEBUGGED = 0x04        // Process is being debugged
 	}
 
 	// Exception handling return values for UnhandledExceptionFilter
