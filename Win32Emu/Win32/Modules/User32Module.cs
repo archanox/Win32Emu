@@ -6791,8 +6791,6 @@ namespace Win32Emu.Win32.Modules
 			return hMem;
 		}
 
-		// ========== Missing USER32 Functions ==========
-
 		/// <summary>
 		/// Changes the settings of the default display device.
 		/// </summary>
@@ -6817,28 +6815,21 @@ namespace Win32Emu.Win32.Modules
 			if (lprcDst == 0 || lprcSrc1 == 0 || lprcSrc2 == 0)
 				return 0;
 
-			// Read rectangles: RECT { left, top, right, bottom }
-			var left1 = _env.MemRead32(lprcSrc1);
-			var top1 = _env.MemRead32(lprcSrc1 + 4);
-			var right1 = _env.MemRead32(lprcSrc1 + 8);
-			var bottom1 = _env.MemRead32(lprcSrc1 + 12);
-
-			var left2 = _env.MemRead32(lprcSrc2);
-			var top2 = _env.MemRead32(lprcSrc2 + 4);
-			var right2 = _env.MemRead32(lprcSrc2 + 8);
-			var bottom2 = _env.MemRead32(lprcSrc2 + 12);
+			// Read RECT structures
+			var rect1 = _env.MemReadStruct<NativeTypes.RECT>(lprcSrc1);
+			var rect2 = _env.MemReadStruct<NativeTypes.RECT>(lprcSrc2);
 
 			// Compute union
-			var unionLeft = Math.Min((int)left1, (int)left2);
-			var unionTop = Math.Min((int)top1, (int)top2);
-			var unionRight = Math.Max((int)right1, (int)right2);
-			var unionBottom = Math.Max((int)bottom1, (int)bottom2);
+			var result = new NativeTypes.RECT
+			{
+				left = Math.Min(rect1.left, rect2.left),
+				top = Math.Min(rect1.top, rect2.top),
+				right = Math.Max(rect1.right, rect2.right),
+				bottom = Math.Max(rect1.bottom, rect2.bottom)
+			};
 
 			// Write result
-			_env.MemWrite32(lprcDst, (uint)unionLeft);
-			_env.MemWrite32(lprcDst + 4, (uint)unionTop);
-			_env.MemWrite32(lprcDst + 8, (uint)unionRight);
-			_env.MemWrite32(lprcDst + 12, (uint)unionBottom);
+			_env.MemWriteStruct(lprcDst, ref result);
 
 			return 1; // TRUE
 		}
@@ -6898,27 +6889,13 @@ namespace Win32Emu.Win32.Modules
 			if (lpMsgBoxParams == 0)
 				return 0;
 
-			// MSGBOXPARAMS structure:
-			// UINT      cbSize;           // +0
-			// HWND      hwndOwner;        // +4
-			// HINSTANCE hInstance;        // +8
-			// LPCSTR    lpszText;         // +12
-			// LPCSTR    lpszCaption;      // +16
-			// DWORD     dwStyle;          // +20
-			// LPCSTR    lpszIcon;         // +24
-			// DWORD_PTR dwContextHelpId;  // +28
-			// MSGBOXCALLBACK lpfnMsgBoxCallback; // +32
-			// DWORD     dwLanguageId;     // +36
+			var msgBoxParams = _env.MemReadStruct<NativeTypes.MSGBOXPARAMS>(lpMsgBoxParams);
 
-			var lpszText = _env.MemRead32(lpMsgBoxParams + 12);
-			var lpszCaption = _env.MemRead32(lpMsgBoxParams + 16);
-			var dwStyle = _env.MemRead32(lpMsgBoxParams + 20);
-
-			var text = lpszText != 0 ? _env.ReadAnsiString(lpszText) : "";
-			var caption = lpszCaption != 0 ? _env.ReadAnsiString(lpszCaption) : "";
+			var text = msgBoxParams.lpszText != 0 ? _env.ReadAnsiString(msgBoxParams.lpszText) : "";
+			var caption = msgBoxParams.lpszCaption != 0 ? _env.ReadAnsiString(msgBoxParams.lpszCaption) : "";
 
 			_logger.LogInformation("[User32] MessageBoxIndirectA: '{Caption}' - '{Text}' (style=0x{Style:X8})",
-				caption, text, dwStyle);
+				caption, text, msgBoxParams.dwStyle);
 
 			// Return IDOK (1)
 			return 1;
@@ -6935,14 +6912,10 @@ namespace Win32Emu.Win32.Modules
 			if (lprc == 0)
 				return 1; // TRUE - null pointer considered empty
 
-			// RECT { left, top, right, bottom }
-			var left = (int)_env.MemRead32(lprc);
-			var top = (int)_env.MemRead32(lprc + 4);
-			var right = (int)_env.MemRead32(lprc + 8);
-			var bottom = (int)_env.MemRead32(lprc + 12);
+			var rect = _env.MemReadStruct<NativeTypes.RECT>(lprc);
 
 			// Rectangle is empty if width or height is <= 0
-			return (right <= left || bottom <= top) ? 1u : 0u;
+			return (rect.right <= rect.left || rect.bottom <= rect.top) ? 1u : 0u;
 		}
 
 		/// <summary>

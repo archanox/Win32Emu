@@ -335,6 +335,21 @@ public static class NativeTypes
 		public int bottom;  // Offset 12
 	}
 
+	// MSGBOXPARAMS structure
+	public struct MSGBOXPARAMS
+	{
+		public uint cbSize;           // Offset 0
+		public uint hwndOwner;        // Offset 4
+		public uint hInstance;        // Offset 8
+		public uint lpszText;         // Offset 12 (pointer to string)
+		public uint lpszCaption;      // Offset 16 (pointer to string)
+		public uint dwStyle;          // Offset 20
+		public uint lpszIcon;         // Offset 24 (pointer to string)
+		public uint dwContextHelpId;  // Offset 28
+		public uint lpfnMsgBoxCallback; // Offset 32 (pointer to function)
+		public uint dwLanguageId;     // Offset 36
+	}
+
 	// PAINTSTRUCT structure (64 bytes)
 	public struct PAINTSTRUCT
 	{

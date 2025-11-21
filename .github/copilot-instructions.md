@@ -25,6 +25,11 @@ Win32Emu is a Windows 32-bit PE executable emulator written in C# 14 (.NET 10) f
 - Use descriptive names that clearly indicate purpose
 - For Win32 API emulation, match the original Win32 API naming (e.g., `CreateFileA`, `GetModuleHandleA`)
 
+### Constants and Enums
+- **Use enums instead of const for related constants** - Groups related values and provides type safety
+- Example: Use `enum GdiObjectTypeId : uint { OBJ_PEN = 1, OBJ_BRUSH = 2 }` instead of separate const declarations
+- For Win32 constants, prefer enums that match the underlying type (uint, int, etc.)
+
 ### Code Organization
 - Keep related functionality together in logical namespaces
 - Use source generators for code generation tasks (see Win32Emu.Generators)
