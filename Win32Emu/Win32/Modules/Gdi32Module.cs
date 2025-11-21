@@ -2214,6 +2214,25 @@ namespace Win32Emu.Win32.Modules
 			{
 				// lpSrc is a charset value
 				charset = _env.MemRead32(lpSrc);
+				// Map common charsets to codepages
+				codepage = charset switch
+				{
+					0 => 1252,    // ANSI_CHARSET
+					128 => 932,   // SHIFTJIS_CHARSET
+					129 => 949,   // HANGUL_CHARSET
+					130 => 1361,  // JOHAB_CHARSET
+					134 => 936,   // GB2312_CHARSET
+					136 => 950,   // CHINESEBIG5_CHARSET
+					161 => 1253,  // GREEK_CHARSET
+					162 => 1254,  // TURKISH_CHARSET
+					163 => 1258,  // VIETNAMESE_CHARSET
+					177 => 1255,  // HEBREW_CHARSET
+					178 => 1256,  // ARABIC_CHARSET
+					186 => 1257,  // BALTIC_CHARSET
+					204 => 1251,  // RUSSIAN_CHARSET
+					238 => 1250,  // EASTEUROPE_CHARSET
+					_ => 1252     // Default to ANSI_CODEPAGE
+				};
 			}
 			else if (dwFlags == TCI_SRCCODEPAGE)
 			{
@@ -2224,6 +2243,7 @@ namespace Win32Emu.Win32.Modules
 				{
 					1252 => 0,   // ANSI_CHARSET
 					932 => 128,  // SHIFTJIS_CHARSET
+					936 => 134,  // GB2312_CHARSET
 					949 => 129,  // HANGUL_CHARSET
 					950 => 136,  // CHINESEBIG5_CHARSET
 					1361 => 130, // JOHAB_CHARSET

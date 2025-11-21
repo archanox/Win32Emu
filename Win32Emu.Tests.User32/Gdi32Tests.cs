@@ -721,6 +721,46 @@ public class Gdi32Tests : IDisposable
         Assert.Equal(0u, result); // FALSE - null lpCs pointer
     }
 
+    [Fact]
+    public void TranslateCharsetInfo_ShouldMapCharsetToCodepage_ForShiftJisCharset()
+    {
+        // Arrange
+        const uint TCI_SRCCHARSET = 1;
+        var lpSrc = _testEnv.AllocateMemory(4);
+        _testEnv.Memory.Write32(lpSrc, 128); // SHIFTJIS_CHARSET
+        var lpCs = _testEnv.AllocateMemory(32); // CHARSETINFO structure
+
+        // Act
+        var result = _testEnv.CallGdi32Api("TRANSLATECHARSETINFO", lpSrc, lpCs, TCI_SRCCHARSET);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+        var charset = _testEnv.Memory.Read32(lpCs);
+        var codepage = _testEnv.Memory.Read32(lpCs + 4);
+        Assert.Equal(128u, charset); // SHIFTJIS_CHARSET
+        Assert.Equal(932u, codepage); // Shift-JIS codepage
+    }
+
+    [Fact]
+    public void TranslateCharsetInfo_ShouldMapCharsetToCodepage_ForGB2312Charset()
+    {
+        // Arrange
+        const uint TCI_SRCCHARSET = 1;
+        var lpSrc = _testEnv.AllocateMemory(4);
+        _testEnv.Memory.Write32(lpSrc, 134); // GB2312_CHARSET
+        var lpCs = _testEnv.AllocateMemory(32); // CHARSETINFO structure
+
+        // Act
+        var result = _testEnv.CallGdi32Api("TRANSLATECHARSETINFO", lpSrc, lpCs, TCI_SRCCHARSET);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE
+        var charset = _testEnv.Memory.Read32(lpCs);
+        var codepage = _testEnv.Memory.Read32(lpCs + 4);
+        Assert.Equal(134u, charset); // GB2312_CHARSET
+        Assert.Equal(936u, codepage); // GBK/Simplified Chinese codepage
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();
