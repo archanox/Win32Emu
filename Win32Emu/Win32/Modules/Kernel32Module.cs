@@ -9932,7 +9932,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			_logger.LogWarning("[Kernel32] OpenEventA: SynchronizationManager not available");
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return 0; // NULL
+			return (uint)NativeTypes.Win32Handle.NULL;
 		}
 
 		try
@@ -9948,7 +9948,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			_logger.LogError(ex, "[Kernel32] OpenEventA exception");
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return 0; // NULL
+			return (uint)NativeTypes.Win32Handle.NULL;
 		}
 	}
 
@@ -9969,7 +9969,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (dwProcessId != 0 && dwProcessId != currentProcessId)
 		{
 			_logger.LogDebug("[Kernel32] GetProcessFlags: Query for different process, returning 0");
-			return 0;
+			return (uint)NativeTypes.ProcessFlags.None;
 		}
 
 		NativeTypes.ProcessFlags flags = NativeTypes.ProcessFlags.None;
