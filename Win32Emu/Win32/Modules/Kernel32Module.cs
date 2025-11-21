@@ -57,6 +57,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	// SleepEx and WaitForSingleObjectEx return values
 	private const uint WAIT_IO_COMPLETION = 0; // Returned when APC completes (not implemented, always return this)
 
+	// File mapping and process handle base values for stub implementations
+	private const uint FILE_MAPPING_HANDLE_BASE = 0x50000000; // Base value for file mapping handles
+	private const uint PROCESS_HANDLE_BASE = 0x80000000;      // Base value for process handles
+
 	private Win32Dispatcher? _dispatcher;
 	private uint _lastError;
 	private ICpu? _cpu;
@@ -7846,7 +7850,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Return a pseudo-handle (non-zero indicates success)
-		return 0x80000000 + dwProcessId;
+		return PROCESS_HANDLE_BASE + dwProcessId;
 	}
 
 	[DllModuleExport(8)]
@@ -8305,7 +8309,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// 3. Support both file-backed and page file-backed mappings
 
 		// Return a dummy file mapping handle (non-zero for success)
-		return 0x50000000 + ((uint)name.GetHashCode() & 0x7FFFFFFF);
+		return FILE_MAPPING_HANDLE_BASE + ((uint)name.GetHashCode() & 0x7FFFFFFF);
 	}
 
 	/// <summary>
@@ -8319,7 +8323,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			hFile, flProtect, dwMaximumSizeHigh, dwMaximumSizeLow, name);
 
 		// Return a dummy file mapping handle (non-zero for success)
-		return 0x50000000 + ((uint)name.GetHashCode() & 0x7FFFFFFF);
+		return FILE_MAPPING_HANDLE_BASE + ((uint)name.GetHashCode() & 0x7FFFFFFF);
 	}
 
 	/// <summary>
@@ -8339,7 +8343,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Return a dummy file mapping handle (non-zero for success)
-		return 0x50000000 + ((uint)name.GetHashCode() & 0x7FFFFFFF);
+		return FILE_MAPPING_HANDLE_BASE + ((uint)name.GetHashCode() & 0x7FFFFFFF);
 	}
 
 	/// <summary>
@@ -8359,7 +8363,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Return a dummy file mapping handle (non-zero for success)
-		return 0x50000000 + ((uint)name.GetHashCode() & 0x7FFFFFFF);
+		return FILE_MAPPING_HANDLE_BASE + ((uint)name.GetHashCode() & 0x7FFFFFFF);
 	}
 
 	/// <summary>

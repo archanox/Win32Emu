@@ -24,6 +24,10 @@ namespace Win32Emu.Win32.Modules
 		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
 		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB)
 
+		// Timer API result codes
+		private const uint TIMERR_NOERROR = 0;   // No error
+		private const uint TIMERR_STRUCT = 96;   // Invalid structure size
+
 		public WinMmModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
 			_env = env;
@@ -254,7 +258,7 @@ namespace Win32Emu.Win32.Modules
 			if (cbTimeCaps < TIMECAPS_SIZE)
 			{
 				_logger.LogWarning("[WinMM] timeGetDevCaps: Buffer too small");
-				return 96; // TIMERR_STRUCT - Invalid structure size
+				return TIMERR_STRUCT;
 			}
 
 			// Write TIMECAPS structure
@@ -263,7 +267,7 @@ namespace Win32Emu.Win32.Modules
 			_env.MemWrite32(lpTimeCaps, 1);       // wPeriodMin
 			_env.MemWrite32(lpTimeCaps + 4, 1000000); // wPeriodMax
 
-			return 0; // TIMERR_NOERROR
+			return TIMERR_NOERROR;
 		}
 
 		[DllModuleExport(1)]
