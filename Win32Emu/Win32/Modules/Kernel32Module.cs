@@ -6088,6 +6088,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Retrieves the current directory (Unicode version).
 	/// </summary>
+	[DllModuleExport(1)]
 	private uint GetCurrentDirectoryW(uint nBufferLength, in LpWStr lpBuffer)
 	{
 		var currentDir = _env.CurrentDirectory;
@@ -7816,6 +7817,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Creates a new process and its primary thread (Unicode version).
 	/// </summary>
+	[DllModuleExport(72)]
 	private uint CreateProcessW(in LpcWStr lpApplicationName, in LpWStr lpCommandLine, uint lpProcessAttributes,
 		uint lpThreadAttributes, uint bInheritHandles, uint dwCreationFlags, uint lpEnvironment,
 		in LpcWStr lpCurrentDirectory, uint lpStartupInfo, uint lpProcessInformation)
@@ -7836,6 +7838,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Opens an existing local process object.
 	/// </summary>
+	[DllModuleExport(8)]
 	private uint OpenProcess(uint dwDesiredAccess, uint bInheritHandle, uint dwProcessId)
 	{
 		_logger.LogInformation("[Kernel32] OpenProcess(dwDesiredAccess=0x{Access:X8}, bInheritHandle={Inherit}, dwProcessId={Pid})",
@@ -8315,6 +8318,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Creates or opens a named or unnamed file mapping object for a specified file (Unicode version).
 	/// </summary>
+	[DllModuleExport(24)]
 	private uint CreateFileMappingW(uint hFile, uint lpFileMappingAttributes, uint flProtect,
 		uint dwMaximumSizeHigh, uint dwMaximumSizeLow, in LpcWStr lpName)
 	{
@@ -8329,6 +8333,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Opens a named file mapping object (ANSI version).
 	/// </summary>
+	[DllModuleExport(20)]
 	private uint OpenFileMappingA(uint dwDesiredAccess, uint bInheritHandle, in LpcStr lpName)
 	{
 		var name = lpName.ToString() ?? string.Empty;
@@ -8349,6 +8354,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <summary>
 	/// Opens a named file mapping object (Unicode version).
 	/// </summary>
+	[DllModuleExport(20)]
 	private uint OpenFileMappingW(uint dwDesiredAccess, uint bInheritHandle, in LpcWStr lpName)
 	{
 		var name = lpName.Read(_env.Memory) ?? string.Empty;

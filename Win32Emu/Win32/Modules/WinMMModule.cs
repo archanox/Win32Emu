@@ -25,8 +25,11 @@ namespace Win32Emu.Win32.Modules
 		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB)
 
 		// Timer API result codes
-		private const uint TIMERR_NOERROR = 0;   // No error
-		private const uint TIMERR_STRUCT = 96;   // Invalid structure size
+		private enum TimerResult : uint
+		{
+			TIMERR_NOERROR = 0,   // No error
+			TIMERR_STRUCT = 96,   // Invalid structure size
+		}
 
 		public WinMmModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -242,32 +245,31 @@ namespace Win32Emu.Win32.Modules
 		///   [in]  UINT       cbtc
 		/// );
 		/// </summary>
+		[DllModuleExport(1)]
 		private uint TimeGetDevCaps(uint lpTimeCaps, uint cbTimeCaps)
 		{
 			_logger.LogInformation("[WinMM] timeGetDevCaps(lpTimeCaps=0x{LpTimeCaps:X8}, cbTimeCaps={CbTimeCaps})",
 				lpTimeCaps, cbTimeCaps);
 
-			// TIMECAPS structure:
-			// typedef struct timecaps_tag {
-			//   UINT wPeriodMin;  // minimum period supported
-			//   UINT wPeriodMax;  // maximum period supported
-			// } TIMECAPS, *PTIMECAPS;
-			
 			// Size check
-			const uint TIMECAPS_SIZE = 8; // 2 UINT fields
-			if (cbTimeCaps < TIMECAPS_SIZE)
+			uint timecapsSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<NativeTypes.TIMECAPS>();
+			if (cbTimeCaps < timecapsSize)
 			{
 				_logger.LogWarning("[WinMM] timeGetDevCaps: Buffer too small");
-				return TIMERR_STRUCT;
+				return (uint)TimerResult.TIMERR_STRUCT;
 			}
 
-			// Write TIMECAPS structure
-			// wPeriodMin = 1 ms (minimum timer resolution)
-			// wPeriodMax = 1000000 ms (maximum timer resolution)
-			_env.MemWrite32(lpTimeCaps, 1);       // wPeriodMin
-			_env.MemWrite32(lpTimeCaps + 4, 1000000); // wPeriodMax
+			// Create and write TIMECAPS structure
+			var timecaps = new NativeTypes.TIMECAPS
+			{
+				wPeriodMin = 1,       // Minimum timer resolution: 1 ms
+				wPeriodMax = 1000000  // Maximum timer resolution: 1000000 ms
+			};
 
-			return TIMERR_NOERROR;
+			_env.MemWrite32(lpTimeCaps, timecaps.wPeriodMin);
+			_env.MemWrite32(lpTimeCaps + 4, timecaps.wPeriodMax);
+
+			return (uint)TimerResult.TIMERR_NOERROR;
 		}
 
 		[DllModuleExport(1)]

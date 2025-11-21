@@ -29,6 +29,30 @@ Win32Emu is a Windows 32-bit PE executable emulator written in C# 14 (.NET 10) f
 - **Use enums instead of const for related constants** - Groups related values and provides type safety
 - Example: Use `enum GdiObjectTypeId : uint { OBJ_PEN = 1, OBJ_BRUSH = 2 }` instead of separate const declarations
 - For Win32 constants, prefer enums that match the underlying type (uint, int, etc.)
+- **NEVER use magic numbers** - Always use named constants or enum values
+  - Example: Use `(uint)NativeTypes.Win32Error.ERROR_MORE_DATA` instead of `234`
+  - Example: Use `RPC_S_OK` constant instead of `0` in return statements
+
+### Win32 API Module Functions
+- **ALWAYS add `[DllModuleExport]` attribute** to all Win32 API function implementations
+  - This attribute is **mandatory** for all public and private functions that are Win32 API exports
+  - Include the export ordinal number: `[DllModuleExport(1)]`
+  - For versioned exports, include version: `[DllModuleExport(241, Version = "4.90.0.3000")]`
+  - Example: `[DllModuleExport(20)] private uint WsprintfW(...)`
+
+### Win32 Data Structures
+- **Define Win32 structures as C# structs in NativeTypes.cs**
+  - Do NOT use inline comments or typedef-style comments for structures used in implementation
+  - Define the struct with proper field layout and offsets
+  - Example:
+    ```csharp
+    public struct TIMECAPS
+    {
+        public uint wPeriodMin;  // Offset 0
+        public uint wPeriodMax;  // Offset 4
+    }
+    ```
+  - Use `System.Runtime.InteropServices.Marshal.SizeOf<T>()` to get structure size instead of hardcoding
 
 ### Code Organization
 - Keep related functionality together in logical namespaces

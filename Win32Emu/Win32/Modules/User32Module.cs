@@ -3574,6 +3574,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Writes formatted data to the specified buffer (Unicode version).
 		/// </summary>
+		[DllModuleExport(20)]
 		private uint WsprintfW(in LpWStr output, in LpcWStr format, StackArgs args)
 		{
 			var formatStr = format.Read(_env.Memory) ?? string.Empty;

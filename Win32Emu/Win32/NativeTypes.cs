@@ -475,6 +475,14 @@ public static class NativeTypes
 		public ushort wMilliseconds; // Offset 14
 	}
 
+	// TIMECAPS structure (8 bytes)
+	// Defines the minimum and maximum period values for timer resolution
+	public struct TIMECAPS
+	{
+		public uint wPeriodMin;  // Offset 0 - Minimum period supported (milliseconds)
+		public uint wPeriodMax;  // Offset 4 - Maximum period supported (milliseconds)
+	}
+
 	// WAVEFORMATEX structure (18 bytes minimum)
 	// Defines the format of waveform-audio data
 	public struct WAVEFORMATEX

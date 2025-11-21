@@ -16,6 +16,13 @@ public partial class Rpcrt4Module : IWin32ModuleUnsafe
 	private readonly PeImageLoader? _peLoader;
 	private readonly ILogger _logger;
 
+	// RPC status codes
+	private const uint RPC_S_OK = 0;
+	private const uint RPC_S_INVALID_ARG = 1;
+
+	// UUID/GUID size
+	private const int UUID_SIZE = 16; // 16 bytes for a GUID/UUID
+
 	public Rpcrt4Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 	{
 		_env = env;
@@ -65,7 +72,7 @@ public partial class Rpcrt4Module : IWin32ModuleUnsafe
 		if (uuid == 0)
 		{
 			_logger.LogWarning("[Rpcrt4] UuidCreate: NULL pointer");
-			return 1; // RPC_S_INVALID_ARG
+			return RPC_S_INVALID_ARG;
 		}
 
 		// Generate a random UUID (version 4 - random)
@@ -73,14 +80,14 @@ public partial class Rpcrt4Module : IWin32ModuleUnsafe
 		var guidBytes = guid.ToByteArray();
 
 		// Write the UUID to memory
-		for (uint i = 0; i < 16; i++)
+		for (uint i = 0; i < UUID_SIZE; i++)
 		{
 			_env.MemWrite8(uuid + i, guidBytes[i]);
 		}
 
 		_logger.LogDebug("[Rpcrt4] UuidCreate: Created UUID {Guid}", guid);
 
-		return 0; // RPC_S_OK
+		return RPC_S_OK;
 	}
 
 	// High-performance logging using source generators
