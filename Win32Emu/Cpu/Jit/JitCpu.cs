@@ -2959,6 +2959,12 @@ public class JitCpu : IAsyncCpu
 		
 		_eax = (_eax & 0xFFFFFF00) | al;
 		UpdateLogicResultFlags(al);
+		
+		// OF is officially "undefined" per Intel docs, but real 80386 hardware sets it
+		// when the adjustment causes a transition from positive to negative (signed overflow).
+		// This matches the behavior observed in hardware-generated SingleStepTests.
+		// For DAA (addition), OF = 1 when: old AL was positive AND new AL is negative
+		SetFlagVal(Of, ((oldAl & 0x80) == 0) && ((al & 0x80) != 0));
 	}
 	
 	private void ExecDas()
@@ -2991,6 +2997,12 @@ public class JitCpu : IAsyncCpu
 		
 		_eax = (_eax & 0xFFFFFF00) | al;
 		UpdateLogicResultFlags(al);
+		
+		// OF is officially "undefined" per Intel docs, but real 80386 hardware sets it
+		// when the adjustment causes a transition from negative to positive (signed overflow).
+		// This matches the behavior observed in hardware-generated SingleStepTests.
+		// For DAS (subtraction), OF = 1 when: old AL was negative AND new AL is positive
+		SetFlagVal(Of, ((oldAl & 0x80) != 0) && ((al & 0x80) == 0));
 	}
 	
 	private void ExecAam(Instruction insn)
