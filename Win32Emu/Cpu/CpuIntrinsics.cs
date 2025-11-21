@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
@@ -56,6 +57,7 @@ public static class CpuIntrinsics
 	/// <summary>
 	/// Gets CPUID feature flags for ECX register (function 1)
 	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static uint GetCpuidEcxFeatures()
 	{
 		uint ecx = 0;
@@ -111,6 +113,7 @@ public static class CpuIntrinsics
 	/// <summary>
 	/// Gets CPUID feature flags for EDX register (function 1)
 	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static uint GetCpuidEdxFeatures()
 	{
 		uint edx = 0;
@@ -136,6 +139,7 @@ public static class CpuIntrinsics
 	/// <summary>
 	/// Gets extended CPUID feature flags for EBX register (function 7, sub-function 0)
 	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static uint GetCpuidExtendedEbxFeatures()
 	{
 		uint ebx = 0;
@@ -162,6 +166,7 @@ public static class CpuIntrinsics
 	/// Gets extended CPUID feature flags for ECX register (function 0x80000001)
 	/// LZCNT is bit 5 (per Intel/AMD documentation).
 	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static uint GetCpuid80000001EcxFeatures()
 	{
 		uint ecx = 0;
