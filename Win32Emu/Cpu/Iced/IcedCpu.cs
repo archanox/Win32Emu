@@ -489,11 +489,13 @@ public class IcedCpu : IAsyncCpu
 					}
 					else
 					{
-						// 16-bit mode: pop 2 bytes, EIP is effectively 16-bit (IP)
+						// 16-bit mode: pop 2 bytes as IP
+						// Store the full value without wrapping - consistent with non-control-flow EIP handling
+						// The 16-bit value popped from stack is zero-extended to 32 bits
 						ret = Read16(_esp);
 						oldEsp = _esp;
 						_esp += 2;
-						_eip = ret & 0xFFFF;
+						_eip = ret;  // Store as-is (16-bit value zero-extended to 32-bit)
 					}
 					
 					// Handle immediate (cleanup bytes)
