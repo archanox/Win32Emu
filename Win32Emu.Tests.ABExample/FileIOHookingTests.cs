@@ -13,13 +13,8 @@ namespace Win32Emu.Tests.ABExample;
 /// </summary>
 public class FileIOHookingTests : HookingABTestBase
 {
-	// Constants from Windows API
-	private const uint GENERIC_READ = 0x80000000;
-	private const uint GENERIC_WRITE = 0x40000000;
-	private const uint CREATE_ALWAYS = 2;
-	private const uint OPEN_EXISTING = 3;
-	private const uint FILE_ATTRIBUTE_NORMAL = 0x80;
-	private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
+	// Use shared constants
+	private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(Win32Constants.INVALID_HANDLE_VALUE);
 
 	// Delegate matching CreateFileA signature
 	[UnmanagedFunctionPointer(CallingConvention.Winapi, SetLastError = true, CharSet = CharSet.Ansi)]
@@ -123,11 +118,11 @@ public class FileIOHookingTests : HookingABTestBase
 		var win32EmuHandle = testEnv.CallKernel32Api(
 			"CREATEFILEA",
 			fileNamePtr,
-			GENERIC_WRITE,
+			Win32Constants.GENERIC_WRITE,
 			0u, // dwShareMode
 			0u, // lpSecurityAttributes (NULL)
-			CREATE_ALWAYS,
-			FILE_ATTRIBUTE_NORMAL,
+			Win32Constants.CREATE_ALWAYS,
+			Win32Constants.FILE_ATTRIBUTE_NORMAL,
 			0u // hTemplateFile (NULL)
 		);
 
@@ -140,11 +135,11 @@ public class FileIOHookingTests : HookingABTestBase
 		{
 			nativeHandle = _originalCreateFileA.Invoke(
 				nativeTestFile,
-				GENERIC_WRITE,
+				Win32Constants.GENERIC_WRITE,
 				0,
 				IntPtr.Zero,
-				CREATE_ALWAYS,
-				FILE_ATTRIBUTE_NORMAL,
+				Win32Constants.CREATE_ALWAYS,
+				Win32Constants.FILE_ATTRIBUTE_NORMAL,
 				IntPtr.Zero
 			);
 
@@ -201,11 +196,11 @@ public class FileIOHookingTests : HookingABTestBase
 		var win32EmuHandle = testEnv.CallKernel32Api(
 			"CREATEFILEA",
 			fileNamePtr,
-			GENERIC_READ,
+			Win32Constants.GENERIC_READ,
 			0u,
 			0u, // lpSecurityAttributes (NULL)
-			OPEN_EXISTING,
-			FILE_ATTRIBUTE_NORMAL,
+			Win32Constants.OPEN_EXISTING,
+			Win32Constants.FILE_ATTRIBUTE_NORMAL,
 			0u // hTemplateFile (NULL)
 		);
 
@@ -215,11 +210,11 @@ public class FileIOHookingTests : HookingABTestBase
 		{
 			nativeHandle = _originalCreateFileA.Invoke(
 				invalidFileName,
-				GENERIC_READ,
+				Win32Constants.GENERIC_READ,
 				0,
 				IntPtr.Zero,
-				OPEN_EXISTING,
-				FILE_ATTRIBUTE_NORMAL,
+				Win32Constants.OPEN_EXISTING,
+				Win32Constants.FILE_ATTRIBUTE_NORMAL,
 				IntPtr.Zero
 			);
 		}
