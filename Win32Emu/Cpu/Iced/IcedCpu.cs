@@ -1278,8 +1278,20 @@ public class IcedCpu : IAsyncCpu
 		switch (opSize)
 		{
 			case 16:
-				_esp -= 2;
-				Write16(_esp, (ushort)val);
+				// In 16-bit mode, calculate stack address using SS:SP
+				if (_bitness == 16)
+				{
+					var sp = (ushort)(_esp & 0xFFFF);
+					sp = (ushort)((sp - 2) & 0xFFFF);
+					var stackAddr = (uint)((_ss << 4) + sp);
+					_mem.Write16(stackAddr, (ushort)val);
+					_esp = (_esp & 0xFFFF0000) | sp;
+				}
+				else
+				{
+					_esp -= 2;
+					Write16(_esp, (ushort)val);
+				}
 				break;
 			case 32:
 				Push32(val);
@@ -1298,8 +1310,19 @@ public class IcedCpu : IAsyncCpu
 		switch (opSize)
 		{
 			case 16:
-				v = _mem.Read16(_esp);
-				_esp += 2;
+				// In 16-bit mode, calculate stack address using SS:SP
+				if (_bitness == 16)
+				{
+					var sp = (ushort)(_esp & 0xFFFF);
+					var stackAddr = (uint)((_ss << 4) + sp);
+					v = _mem.Read16(stackAddr);
+					_esp = (_esp & 0xFFFF0000) | (uint)((sp + 2) & 0xFFFF);
+				}
+				else
+				{
+					v = _mem.Read16(_esp);
+					_esp += 2;
+				}
 				break;
 			case 32:
 				v = Pop32();
@@ -6011,16 +6034,40 @@ public class IcedCpu : IAsyncCpu
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void Push32(uint v)
 	{
-		_esp -= 4;
-		Write32(_esp, v);
+		if (_bitness == 16)
+		{
+			// In 16-bit mode, calculate stack address using SS:SP
+			var sp = (ushort)(_esp & 0xFFFF);
+			sp = (ushort)((sp - 4) & 0xFFFF);
+			var stackAddr = (uint)((_ss << 4) + sp);
+			_mem.Write32(stackAddr, v);
+			_esp = (_esp & 0xFFFF0000) | sp;
+		}
+		else
+		{
+			_esp -= 4;
+			Write32(_esp, v);
+		}
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private uint Pop32()
 	{
-		var v = Read32(_esp);
-		_esp += 4;
-		return v;
+		if (_bitness == 16)
+		{
+			// In 16-bit mode, calculate stack address using SS:SP
+			var sp = (ushort)(_esp & 0xFFFF);
+			var stackAddr = (uint)((_ss << 4) + sp);
+			var v = _mem.Read32(stackAddr);
+			_esp = (_esp & 0xFFFF0000) | (uint)((sp + 4) & 0xFFFF);
+			return v;
+		}
+		else
+		{
+			var v = Read32(_esp);
+			_esp += 4;
+			return v;
+		}
 	}
 
 	#region FPU Helpers
