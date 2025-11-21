@@ -1002,6 +1002,34 @@ namespace Win32Emu.Win32.Modules
 					returnValue = SetClipboardData(a.UInt32(0), a.UInt32(1));
 					return true;
 
+				// Missing functions from issue
+				case "CHANGEDISPLAYSETTINGSA":
+					returnValue = (uint)ChangeDisplaySettingsA(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "UNIONRECT":
+					returnValue = UnionRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "GETDCEX":
+					returnValue = GetDCEx(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "GETWINDOWTHREADPROCESSID":
+					returnValue = GetWindowThreadProcessId(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "KEYBD_EVENT":
+					keybd_event(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					returnValue = 0;
+					return true;
+				case "MESSAGEBOXINDIRECTA":
+					returnValue = MessageBoxIndirectA(a.UInt32(0));
+					return true;
+				case "ISRECTEMPTY":
+					returnValue = IsRectEmpty(a.UInt32(0));
+					return true;
+				case "MOUSE_EVENT":
+					mouse_event(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					returnValue = 0;
+					return true;
+
 				default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
@@ -6761,6 +6789,171 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] SetClipboardData(uFormat={UFormat}, hMem=0x{HMem:X8})", uFormat, hMem);
 			return hMem;
+		}
+
+		// ========== Missing USER32 Functions ==========
+
+		/// <summary>
+		/// Changes the settings of the default display device.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private int ChangeDisplaySettingsA(uint lpDevMode, uint dwFlags)
+		{
+			_logger.LogInformation("[User32] ChangeDisplaySettingsA(lpDevMode=0x{LpDevMode:X8}, dwFlags=0x{DwFlags:X8})", lpDevMode, dwFlags);
+			// DISP_CHANGE_SUCCESSFUL = 0, DISP_CHANGE_RESTART = 1, DISP_CHANGE_FAILED = -1
+			// Stub: return success (no restart needed)
+			return 0; // DISP_CHANGE_SUCCESSFUL
+		}
+
+		/// <summary>
+		/// Creates the union of two rectangles.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint UnionRect(uint lprcDst, uint lprcSrc1, uint lprcSrc2)
+		{
+			_logger.LogInformation("[User32] UnionRect(lprcDst=0x{LprcDst:X8}, lprcSrc1=0x{LprcSrc1:X8}, lprcSrc2=0x{LprcSrc2:X8})",
+				lprcDst, lprcSrc1, lprcSrc2);
+
+			if (lprcDst == 0 || lprcSrc1 == 0 || lprcSrc2 == 0)
+				return 0;
+
+			// Read rectangles: RECT { left, top, right, bottom }
+			var left1 = _env.MemRead32(lprcSrc1);
+			var top1 = _env.MemRead32(lprcSrc1 + 4);
+			var right1 = _env.MemRead32(lprcSrc1 + 8);
+			var bottom1 = _env.MemRead32(lprcSrc1 + 12);
+
+			var left2 = _env.MemRead32(lprcSrc2);
+			var top2 = _env.MemRead32(lprcSrc2 + 4);
+			var right2 = _env.MemRead32(lprcSrc2 + 8);
+			var bottom2 = _env.MemRead32(lprcSrc2 + 12);
+
+			// Compute union
+			var unionLeft = Math.Min((int)left1, (int)left2);
+			var unionTop = Math.Min((int)top1, (int)top2);
+			var unionRight = Math.Max((int)right1, (int)right2);
+			var unionBottom = Math.Max((int)bottom1, (int)bottom2);
+
+			// Write result
+			_env.MemWrite32(lprcDst, (uint)unionLeft);
+			_env.MemWrite32(lprcDst + 4, (uint)unionTop);
+			_env.MemWrite32(lprcDst + 8, (uint)unionRight);
+			_env.MemWrite32(lprcDst + 12, (uint)unionBottom);
+
+			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Retrieves a device context with extended options.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetDCEx(uint hWnd, uint hrgnClip, uint flags)
+		{
+			_logger.LogInformation("[User32] GetDCEx(hWnd=0x{HWnd:X8}, hrgnClip=0x{HrgnClip:X8}, flags=0x{Flags:X8})",
+				hWnd, hrgnClip, flags);
+			// Stub: return a fake DC handle
+			return 0x12340000;
+		}
+
+		/// <summary>
+		/// Retrieves the identifier of the thread that created the specified window.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetWindowThreadProcessId(uint hWnd, uint lpdwProcessId)
+		{
+			_logger.LogInformation("[User32] GetWindowThreadProcessId(hWnd=0x{HWnd:X8}, lpdwProcessId=0x{LpdwProcessId:X8})",
+				hWnd, lpdwProcessId);
+
+			// Return fake thread ID
+			var threadId = 1u;
+			var processId = 1000u;
+
+			if (lpdwProcessId != 0)
+			{
+				_env.MemWrite32(lpdwProcessId, processId);
+			}
+
+			return threadId;
+		}
+
+		/// <summary>
+		/// Synthesizes a keystroke.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private void keybd_event(uint bVk, uint bScan, uint dwFlags, uint dwExtraInfo)
+		{
+			_logger.LogInformation("[User32] keybd_event(bVk={BVk}, bScan={BScan}, dwFlags=0x{DwFlags:X8}, dwExtraInfo=0x{DwExtraInfo:X8})",
+				bVk, bScan, dwFlags, dwExtraInfo);
+			// Stub: no-op (keyboard input not simulated)
+		}
+
+		/// <summary>
+		/// Creates, displays, and operates a message box from a MSGBOXPARAMS structure.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint MessageBoxIndirectA(uint lpMsgBoxParams)
+		{
+			_logger.LogInformation("[User32] MessageBoxIndirectA(lpMsgBoxParams=0x{LpMsgBoxParams:X8})", lpMsgBoxParams);
+
+			if (lpMsgBoxParams == 0)
+				return 0;
+
+			// MSGBOXPARAMS structure:
+			// UINT      cbSize;           // +0
+			// HWND      hwndOwner;        // +4
+			// HINSTANCE hInstance;        // +8
+			// LPCSTR    lpszText;         // +12
+			// LPCSTR    lpszCaption;      // +16
+			// DWORD     dwStyle;          // +20
+			// LPCSTR    lpszIcon;         // +24
+			// DWORD_PTR dwContextHelpId;  // +28
+			// MSGBOXCALLBACK lpfnMsgBoxCallback; // +32
+			// DWORD     dwLanguageId;     // +36
+
+			var lpszText = _env.MemRead32(lpMsgBoxParams + 12);
+			var lpszCaption = _env.MemRead32(lpMsgBoxParams + 16);
+			var dwStyle = _env.MemRead32(lpMsgBoxParams + 20);
+
+			var text = lpszText != 0 ? _env.ReadAnsiString(lpszText) : "";
+			var caption = lpszCaption != 0 ? _env.ReadAnsiString(lpszCaption) : "";
+
+			_logger.LogInformation("[User32] MessageBoxIndirectA: '{Caption}' - '{Text}' (style=0x{Style:X8})",
+				caption, text, dwStyle);
+
+			// Return IDOK (1)
+			return 1;
+		}
+
+		/// <summary>
+		/// Determines whether the specified rectangle is empty.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint IsRectEmpty(uint lprc)
+		{
+			_logger.LogInformation("[User32] IsRectEmpty(lprc=0x{Lprc:X8})", lprc);
+
+			if (lprc == 0)
+				return 1; // TRUE - null pointer considered empty
+
+			// RECT { left, top, right, bottom }
+			var left = (int)_env.MemRead32(lprc);
+			var top = (int)_env.MemRead32(lprc + 4);
+			var right = (int)_env.MemRead32(lprc + 8);
+			var bottom = (int)_env.MemRead32(lprc + 12);
+
+			// Rectangle is empty if width or height is <= 0
+			return (right <= left || bottom <= top) ? 1u : 0u;
+		}
+
+		/// <summary>
+		/// Synthesizes mouse motion and button clicks.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, uint dwExtraInfo)
+		{
+			_logger.LogInformation("[User32] mouse_event(dwFlags=0x{DwFlags:X8}, dx={Dx}, dy={Dy}, dwData={DwData}, dwExtraInfo=0x{DwExtraInfo:X8})",
+				dwFlags, dx, dy, dwData, dwExtraInfo);
+			// Stub: no-op (mouse input not simulated)
 		}
 
 		#endregion

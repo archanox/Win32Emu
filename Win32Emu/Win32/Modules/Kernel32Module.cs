@@ -1017,6 +1017,24 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = IsDBCSLeadByteEx(a.UInt32(0), a.UInt32(1));
 				return true;
 
+			// Missing functions from issue
+			case "MAKECRITICALSECTIONGLOBAL":
+				returnValue = MakeCriticalSectionGlobal(a.UInt32(0));
+				return true;
+			case "REINITIALIZECRITICALSECTION":
+				ReinitializeCriticalSection(a.UInt32(0));
+				returnValue = 1; // Assume success
+				return true;
+			case "DISABLETHREADLIBRARYCALLS":
+				returnValue = DisableThreadLibraryCalls(a.UInt32(0));
+				return true;
+			case "OPENVXDHANDLE":
+				returnValue = OpenVxDHandle(a.UInt32(0));
+				return true;
+			case "THUNKCONNECT32":
+				returnValue = ThunkConnect32(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3), a.UInt32(4));
+				return true;
+
 			default:
 				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
 				return false;
@@ -10069,5 +10087,62 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	#endregion
+
+	// ========== Missing KERNEL32 Functions ==========
+
+	/// <summary>
+	/// Makes a critical section global (16-bit compatibility function).
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint MakeCriticalSectionGlobal(uint lpCriticalSection)
+	{
+		_logger.LogInformation("[Kernel32] MakeCriticalSectionGlobal(lpCriticalSection=0x{LpCriticalSection:X8}) - 16-bit compatibility, no-op", lpCriticalSection);
+		// This is a Win16 compatibility function that's typically a no-op in Win32
+		return lpCriticalSection;
+	}
+
+	/// <summary>
+	/// Reinitializes a critical section (16-bit compatibility function).
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private void ReinitializeCriticalSection(uint lpCriticalSection)
+	{
+		_logger.LogInformation("[Kernel32] ReinitializeCriticalSection(lpCriticalSection=0x{LpCriticalSection:X8}) - 16-bit compatibility, no-op", lpCriticalSection);
+		// This is a Win16 compatibility function that's typically a no-op in Win32
+	}
+
+	/// <summary>
+	/// Disables thread library calls for the specified DLL module.
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint DisableThreadLibraryCalls(uint hModule)
+	{
+		_logger.LogInformation("[Kernel32] DisableThreadLibraryCalls(hModule=0x{HModule:X8})", hModule);
+		// Stub: return success (TRUE)
+		return 1;
+	}
+
+	/// <summary>
+	/// Opens a VxD handle (Windows 95/98 compatibility).
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint OpenVxDHandle(uint hHandle)
+	{
+		_logger.LogInformation("[Kernel32] OpenVxDHandle(hHandle=0x{HHandle:X8}) - VxD not supported", hHandle);
+		// VxD (Virtual Device Driver) is not supported - return invalid handle
+		return 0xFFFFFFFF;
+	}
+
+	/// <summary>
+	/// Establishes a thunk connection between 16-bit and 32-bit code.
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint ThunkConnect32(uint lpDll16, uint lpDll32, uint hInst, uint lpfnThunk, uint dwReason)
+	{
+		_logger.LogInformation("[Kernel32] ThunkConnect32(lpDll16=0x{LpDll16:X8}, lpDll32=0x{LpDll32:X8}, hInst=0x{HInst:X8}, lpfnThunk=0x{LpfnThunk:X8}, dwReason={DwReason}) - 16-bit thunk not supported",
+			lpDll16, lpDll32, hInst, lpfnThunk, dwReason);
+		// Return FALSE - 16-bit thunking not supported
+		return 0;
+	}
 
 }
