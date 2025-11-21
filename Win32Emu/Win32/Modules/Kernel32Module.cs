@@ -9954,6 +9954,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 	/// <summary>
 	/// Retrieves the process flags.
+	/// Based on reference: https://github.com/otya128/winevdm/blob/master/krnl386/stub.c
 	/// DWORD GetProcessFlags(
 	///   [in] DWORD dwProcessId
 	/// );
@@ -9963,9 +9964,35 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	{
 		_logger.LogDebug("[Kernel32] GetProcessFlags(dwProcessId={DwProcessId})", dwProcessId);
 
-		// This is an undocumented function from Win95/98 era
-		// Return 0 to indicate no special flags
-		return 0;
+		// Constants from Win95/98 PDB (Process Database) structure
+		const uint PDB32_CONSOLE_PROC = 0x01;  // Process has console
+		const uint PDB32_FILE_APIS_OEM = 0x02; // File APIs use OEM character set
+		const uint PDB32_DEBUGGED = 0x04;      // Process is being debugged
+
+		// If querying different process, return 0
+		var currentProcessId = GetCurrentProcessId();
+		if (dwProcessId != 0 && dwProcessId != currentProcessId)
+		{
+			_logger.LogDebug("[Kernel32] GetProcessFlags: Query for different process, returning 0");
+			return 0;
+		}
+
+		uint flags = 0;
+
+		// Check if this is a console application
+		// Note: We don't currently store subsystem information in ProcessEnvironment
+		// For now, assume GUI application (no console flag set)
+		// TODO: Store subsystem type in ProcessEnvironment and check it here
+		
+		// Check if file APIs use OEM character set (AreFileApisANSI returns false)
+		// For now, assume ANSI (don't set OEM flag)
+		
+		// Check if debugger is attached
+		// We don't currently support debugger detection
+		// For now, assume not being debugged
+
+		_logger.LogDebug("[Kernel32] GetProcessFlags returning flags=0x{Flags:X8}", flags);
+		return flags;
 	}
 
 	/// <summary>
