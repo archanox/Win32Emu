@@ -4918,7 +4918,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in] BOOL  bAlertable
 	/// );
 	/// </summary>
-	// [DllModuleExport(0, IsStub = true)]
+	[DllModuleExport(692, IsStub = true)]
 	private uint SleepEx(uint dwMilliseconds, uint bAlertable)
 	{
 		_logger.LogInformation("[Kernel32] SleepEx(dwMilliseconds={DwMilliseconds}, bAlertable={BAlertable})",
@@ -5840,7 +5840,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in] BOOL   bAlertable
 	/// );
 	/// </summary>
-	// [DllModuleExport(0, IsStub = true)]
+	[DllModuleExport(693, IsStub = true)]
 	private uint WaitForSingleObjectEx(uint hHandle, uint dwMilliseconds, uint bAlertable)
 	{
 		_logger.LogInformation("[Kernel32] WaitForSingleObjectEx(handle=0x{Handle:X8}, timeout={Timeout}ms, alertable={Alertable})",
@@ -7115,7 +7115,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in] LPCVOID pMem
 	/// );
 	/// </summary>
-	// [DllModuleExport(0, IsStub = true)]
+	[DllModuleExport(694, IsStub = true)]
 	private uint LocalHandle(uint pMem)
 	{
 		_logger.LogDebug("[Kernel32] LocalHandle(pMem=0x{PMem:X8})", pMem);
@@ -9811,7 +9811,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// Unmaps a 16-bit segment:offset pair.
 	/// VOID UnMapLS(DWORD dwAddress);
 	/// </summary>
-	// [DllModuleExport(0, IsStub = true)]
+	[DllModuleExport(695, IsStub = true)]
 	private uint UnMapLS(uint dwAddress)
 	{
 		_logger.LogDebug("[Kernel32] UnMapLS(dwAddress=0x{DwAddress:X8})", dwAddress);
@@ -9984,7 +9984,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in] UINT_PTR ucchMax
 	/// );
 	/// </summary>
-	// [DllModuleExport(0)]
+	[DllModuleExport(696)]
 	private uint IsBadStringPtrW(uint lpsz, uint ucchMax)
 	{
 		_logger.LogDebug("[Kernel32] IsBadStringPtrW(lpsz=0x{Lpsz:X8}, ucchMax={UcchMax})", lpsz, ucchMax);

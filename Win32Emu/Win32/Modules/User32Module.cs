@@ -3242,7 +3242,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] LPCSTR lpszCurrent
 		/// );
 		/// </summary>
-		// [DllModuleExport(0)]
+		[DllModuleExport(739)]
 		private uint CharPrevA(uint lpszStart, uint lpszCurrent)
 		{
 			_logger.LogDebug("[User32] CharPrevA(lpszStart=0x{LpszStart:X8}, lpszCurrent=0x{LpszCurrent:X8})",
