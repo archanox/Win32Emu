@@ -47,7 +47,6 @@ public class VirtualMemory
     /// </summary>
     public ulong ConfiguredSize => _configuredSize;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void EnsureRange(ulong addr, ulong length = 1)
     {
         if (length == 0)
@@ -70,7 +69,6 @@ public class VirtualMemory
         }
     }
     
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private byte[] GetOrCreatePage(uint pageIndex)
     {
         return _pages.GetOrAdd(pageIndex, _ => new byte[PageSize]);
