@@ -2277,19 +2277,26 @@ public class IcedCpu : IAsyncCpu
 			return;
 		}
 
+		// Get operand size to determine bit width
+		var opSize = GetOpSizeBits(insn, 0);
+		var bitWidth = opSize; // 8, 16, or 32
+		var signBit = 1u << (bitWidth - 1); // Bit 7 for 8-bit, bit 15 for 16-bit, bit 31 for 32-bit
+
 		var r = a << c;
-		var lastOut = (a >> (32 - c)) & 1u;
+		// Last bit shifted out depends on operand size
+		var lastOut = (a >> (bitWidth - c)) & 1u;
 		SetFlagVal(Cf, lastOut != 0);
 		if (c == 1)
 		{
-			bool before = (a & 0x80000000) != 0, after = (r & 0x80000000) != 0;
+			// OF is set if sign bit changed (XOR of MSB before and after)
+			bool before = (a & signBit) != 0, after = (r & signBit) != 0;
 			SetFlagVal(Of, before ^ after);
 		}
 		// OF is undefined when count > 1, so don't modify it
+		// AF is undefined after shift operations, so don't modify it
 
-		ClearFlag(Af);
 		WriteOp(insn, 0, r);
-		UpdateLogicResultFlags(r);
+		UpdateLogicResultFlags(r, signBit);
 	}
 
 	private void ExecShiftRight(Instruction insn, bool arithmetic)
@@ -2307,13 +2314,34 @@ public class IcedCpu : IAsyncCpu
 			return;
 		}
 
+		// Get operand size to determine bit width
+		var opSize = GetOpSizeBits(insn, 0);
+		var bitWidth = opSize; // 8, 16, or 32
+		var signBit = 1u << (bitWidth - 1); // Bit 7 for 8-bit, bit 15 for 16-bit, bit 31 for 32-bit
+
 		uint r;
 		if (arithmetic)
 		{
-			var s = (int)a;
-			r = (uint)(s >> c);
+			// For SAR, need to sign-extend based on operand size
+			if (opSize == 8)
+			{
+				var s = (sbyte)(byte)a;
+				r = (uint)(byte)(s >> c);
+			}
+			else if (opSize == 16)
+			{
+				var s = (short)(ushort)a;
+				r = (uint)(ushort)(s >> c);
+			}
+			else
+			{
+				var s = (int)a;
+				r = (uint)(s >> c);
+			}
+			
 			if (c == 1)
 			{
+				// For SAR with count=1, OF is always cleared
 				SetFlagVal(Of, false);
 			}
 			// OF is undefined when count > 1, so don't modify it
@@ -2323,16 +2351,17 @@ public class IcedCpu : IAsyncCpu
 			r = a >> c;
 			if (c == 1)
 			{
-				SetFlagVal(Of, (a & 0x80000000) != 0);
+				// OF is set to MSB of original operand
+				SetFlagVal(Of, (a & signBit) != 0);
 			}
 			// OF is undefined when count > 1, so don't modify it
 		}
 
 		var lastOut = (a >> (c - 1)) & 1u;
 		SetFlagVal(Cf, lastOut != 0);
-		ClearFlag(Af);
+		// AF is undefined after shift operations, so don't modify it
 		WriteOp(insn, 0, r);
-		UpdateLogicResultFlags(r);
+		UpdateLogicResultFlags(r, signBit);
 	}
 
 	private void ExecRotate(Instruction insn, RotateKind kind)
