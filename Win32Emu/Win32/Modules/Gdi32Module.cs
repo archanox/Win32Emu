@@ -397,6 +397,39 @@ namespace Win32Emu.Win32.Modules
 					returnValue = TranslateCharsetInfo(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				// Missing functions from issue
+				case "SETSTRETCHBLTMODE":
+					returnValue = (uint)SetStretchBltMode(a.UInt32(0), a.Int32(1));
+					return true;
+				case "STRETCHDIBITS":
+					returnValue = (uint)StretchDIBits(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.Int32(8), a.UInt32(9), a.UInt32(10), a.UInt32(11));
+					return true;
+				case "SETOBJECTOWNER":
+					SetObjectOwner(a.UInt32(0), a.UInt32(1));
+					returnValue = 1; // Assume success
+					return true;
+				case "GETOBJECTTYPE":
+					returnValue = GetObjectType(a.UInt32(0));
+					return true;
+				case "GETNEARESTCOLOR":
+					returnValue = GetNearestColor(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "RESIZEPALETTE":
+					returnValue = ResizePalette(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "EXTESCAPE":
+					returnValue = (uint)ExtEscape(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.Int32(4), a.UInt32(5));
+					return true;
+				case "GETDEVICEGAMMARAMP":
+					returnValue = GetDeviceGammaRamp(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "SETDEVICEGAMMARAMP":
+					returnValue = SetDeviceGammaRamp(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "SETSYSTEMPALETTEUSE":
+					returnValue = SetSystemPaletteUse(a.UInt32(0), a.UInt32(1));
+					return true;
+
 				default:
 					_logger.LogInformation("[Gdi32] Unimplemented export: {Export}", export);
 					return false;
@@ -2280,6 +2313,162 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			return 1; // TRUE
+		}
+
+		// ========== Missing GDI32 Functions ==========
+
+		/// <summary>
+		/// Sets the bitmap stretching mode in the specified device context.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private int SetStretchBltMode(uint hdc, int stretchMode)
+		{
+			_logger.LogInformation("[Gdi32] SetStretchBltMode(hdc=0x{Hdc:X8}, stretchMode={StretchMode})", hdc, stretchMode);
+			// Return previous mode (stub: assume COLORONCOLOR = 3)
+			return 3;
+		}
+
+		/// <summary>
+		/// Copies DIB color data from a source rectangle to a destination rectangle, stretching or compressing as needed.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private int StretchDIBits(uint hdc, int xDest, int yDest, int destWidth, int destHeight,
+			int xSrc, int ySrc, int srcWidth, int srcHeight, uint lpBits, uint lpbmi, uint usage)
+		{
+			_logger.LogInformation("[Gdi32] StretchDIBits(hdc=0x{Hdc:X8}, xDest={XDest}, yDest={YDest}, destWidth={DestWidth}, destHeight={DestHeight}, xSrc={XSrc}, ySrc={YSrc}, srcWidth={SrcWidth}, srcHeight={SrcHeight}, lpBits=0x{LpBits:X8}, lpbmi=0x{Lpbmi:X8}, usage={Usage})",
+				hdc, xDest, yDest, destWidth, destHeight, xSrc, ySrc, srcWidth, srcHeight, lpBits, lpbmi, usage);
+			// Stub: return success
+			return srcHeight;
+		}
+
+		/// <summary>
+		/// Associates an owner process with a GDI object (16-bit compatibility function).
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private void SetObjectOwner(uint hGdiObj, uint hOwner)
+		{
+			_logger.LogInformation("[Gdi32] SetObjectOwner(hGdiObj=0x{HGdiObj:X8}, hOwner=0x{HOwner:X8}) - 16-bit compatibility, no-op", hGdiObj, hOwner);
+			// This function exists for 16-bit compatibility and is typically a no-op in Win32
+		}
+
+		/// <summary>
+		/// Retrieves the type of the specified object.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetObjectType(uint h)
+		{
+			_logger.LogInformation("[Gdi32] GetObjectType(h=0x{H:X8})", h);
+			
+			// Check if it's a known GDI object
+			if (_gdiObjects.TryGetValue(h, out var obj))
+			{
+				// Return appropriate type based on object
+				// OBJ_PEN = 1, OBJ_BRUSH = 2, OBJ_DC = 3, OBJ_METADC = 4, OBJ_PAL = 5,
+				// OBJ_FONT = 6, OBJ_BITMAP = 7, OBJ_REGION = 8, OBJ_METAFILE = 9, OBJ_MEMDC = 10, OBJ_EXTPEN = 11
+				return obj.Type switch
+				{
+					GdiObjectType.Pen => 1,      // OBJ_PEN
+					GdiObjectType.Brush => 2,    // OBJ_BRUSH
+					GdiObjectType.Font => 6,     // OBJ_FONT
+					GdiObjectType.Bitmap => 7,   // OBJ_BITMAP
+					GdiObjectType.Palette => 5,  // OBJ_PAL
+					_ => 0
+				};
+			}
+			
+			// Check if it's a DC
+			if (_deviceContexts.ContainsKey(h))
+			{
+				return 3; // OBJ_DC
+			}
+			
+			// Unknown object
+			return 0;
+		}
+
+		/// <summary>
+		/// Retrieves the color value of the color that is closest to the specified color value.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetNearestColor(uint hdc, uint color)
+		{
+			_logger.LogInformation("[Gdi32] GetNearestColor(hdc=0x{Hdc:X8}, color=0x{Color:X8})", hdc, color);
+			// Stub: return the same color (assumes true color display)
+			return color;
+		}
+
+		/// <summary>
+		/// Increases or decreases the size of a logical palette.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint ResizePalette(uint hPalette, uint nEntries)
+		{
+			_logger.LogInformation("[Gdi32] ResizePalette(hPalette=0x{HPalette:X8}, nEntries={NEntries})", hPalette, nEntries);
+			// Stub: return success
+			return 1;
+		}
+
+		/// <summary>
+		/// Allows applications to access device capabilities that are not available through GDI.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private int ExtEscape(uint hdc, int escape, int cbInput, uint lpInData, int cbOutput, uint lpOutData)
+		{
+			_logger.LogInformation("[Gdi32] ExtEscape(hdc=0x{Hdc:X8}, escape={Escape}, cbInput={CbInput}, lpInData=0x{LpInData:X8}, cbOutput={CbOutput}, lpOutData=0x{LpOutData:X8})",
+				hdc, escape, cbInput, lpInData, cbOutput, lpOutData);
+			// Stub: return error (escape not supported)
+			return 0;
+		}
+
+		/// <summary>
+		/// Gets the gamma ramp for the display device context.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetDeviceGammaRamp(uint hdc, uint lpRamp)
+		{
+			_logger.LogInformation("[Gdi32] GetDeviceGammaRamp(hdc=0x{Hdc:X8}, lpRamp=0x{LpRamp:X8})", hdc, lpRamp);
+			
+			// Gamma ramp is an array of 3 * 256 WORD values (R, G, B ramps)
+			// Each ramp is 256 WORDs (512 bytes), total = 1536 bytes
+			// Stub: Set linear gamma ramp (identity mapping)
+			if (lpRamp != 0)
+			{
+				for (uint i = 0; i < 256; i++)
+				{
+					var value = (ushort)(i * 256 + i); // Linear ramp
+					// Red ramp
+					_env.MemWrite16(lpRamp + i * 2, value);
+					// Green ramp
+					_env.MemWrite16(lpRamp + 512 + i * 2, value);
+					// Blue ramp
+					_env.MemWrite16(lpRamp + 1024 + i * 2, value);
+				}
+			}
+			
+			return 1; // Success
+		}
+
+		/// <summary>
+		/// Sets the gamma ramp for the display device context.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint SetDeviceGammaRamp(uint hdc, uint lpRamp)
+		{
+			_logger.LogInformation("[Gdi32] SetDeviceGammaRamp(hdc=0x{Hdc:X8}, lpRamp=0x{LpRamp:X8})", hdc, lpRamp);
+			// Stub: return success (don't actually apply gamma)
+			return 1;
+		}
+
+		/// <summary>
+		/// Sets the system palette use for the specified device context.
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint SetSystemPaletteUse(uint hdc, uint use)
+		{
+			_logger.LogInformation("[Gdi32] SetSystemPaletteUse(hdc=0x{Hdc:X8}, use={Use})", hdc, use);
+			// SYSPAL_NOSTATIC = 2, SYSPAL_STATIC = 1, SYSPAL_ERROR = 0
+			// Stub: return previous value (assume SYSPAL_STATIC)
+			return 1;
 		}
 	}
 }

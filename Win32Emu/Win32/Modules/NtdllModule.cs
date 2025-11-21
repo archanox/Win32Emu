@@ -42,6 +42,11 @@ public partial class NtdllModule : IWin32ModuleUnsafe
 				RtlExitUserProcess(a.UInt32(0));
 				return true;
 
+			case "RTLUNWIND":
+				RtlUnwind(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				returnValue = 0;
+				return true;
+
 			default:
 				LogUnimplementedExport(export);
 				return false;
@@ -71,6 +76,21 @@ public partial class NtdllModule : IWin32ModuleUnsafe
 		_env.RequestExit();
 	}
 
+	/// <summary>
+	/// Initiates an unwind of the stack (exception handling).
+	/// </summary>
+	[DllModuleExport(16, IsStub = true)]
+	private void RtlUnwind(uint targetFrame, uint targetIp, uint exceptionRecord, uint returnValue)
+	{
+		LogRtlUnwind(targetFrame, targetIp, exceptionRecord, returnValue);
+		// Stub: exception unwinding not fully implemented
+		// In a real implementation, this would:
+		// 1. Walk the exception handler chain
+		// 2. Call each handler with EXCEPTION_UNWINDING flag
+		// 3. Restore stack frame and registers
+		// 4. Jump to target IP
+	}
+
 	// High-performance logging using source generators
 	[LoggerMessage(Level = LogLevel.Information, Message = "[Ntdll] Unimplemented export: {Export}")]
 	partial void LogUnimplementedExport(string export);
@@ -80,4 +100,7 @@ public partial class NtdllModule : IWin32ModuleUnsafe
 
 	[LoggerMessage(Level = LogLevel.Information, Message = "[Ntdll] RtlExitUserProcess(exitCode={ExitCode})")]
 	partial void LogRtlExitUserProcess(uint exitCode);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Ntdll] RtlUnwind(targetFrame=0x{TargetFrame:X8}, targetIp=0x{TargetIp:X8}, exceptionRecord=0x{ExceptionRecord:X8}, returnValue=0x{ReturnValue:X8})")]
+	partial void LogRtlUnwind(uint targetFrame, uint targetIp, uint exceptionRecord, uint returnValue);
 }
