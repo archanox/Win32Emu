@@ -1032,7 +1032,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = OpenVxDHandle(a.UInt32(0));
 				return true;
 			case "THUNKCONNECT32":
-				returnValue = ThunkConnect32(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.LpcStr(3), a.UInt32(4));
+				returnValue = ThunkConnect32(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
 
 			default:
