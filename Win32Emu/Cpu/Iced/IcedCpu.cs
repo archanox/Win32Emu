@@ -2307,6 +2307,7 @@ public class IcedCpu : IAsyncCpu
 		var signBit = 1u << (bitWidth - 1); // Bit 7 for 8-bit, bit 15 for 16-bit, bit 31 for 32-bit
 
 		var r = a << c;
+		
 		// Last bit shifted out depends on operand size
 		var lastOut = (a >> (bitWidth - c)) & 1u;
 		SetFlagVal(Cf, lastOut != 0);
@@ -2321,7 +2322,9 @@ public class IcedCpu : IAsyncCpu
 			// OF is undefined when count > 1, but real 80386 hardware clears it
 			SetFlagVal(Of, false);
 		}
-		// AF is undefined for shift operations
+		// AF is undefined for shift operations, but on real 80386 hardware it gets set
+		// Based on empirical evidence from SingleStepTests, AF is set when count > 0
+		SetFlagVal(Af, true);
 
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r, signBit);
@@ -2395,7 +2398,9 @@ public class IcedCpu : IAsyncCpu
 
 		var lastOut = (a >> (c - 1)) & 1u;
 		SetFlagVal(Cf, lastOut != 0);
-		// AF is undefined for shift operations
+		// AF is undefined for shift operations, but on real 80386 hardware it gets set
+		// Based on empirical evidence from SingleStepTests, AF is set when count > 0
+		SetFlagVal(Af, true);
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r, signBit);
 	}
