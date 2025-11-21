@@ -248,6 +248,32 @@ public class SynchronizationManager(ILogger? logger = null)
 	}
 
 	/// <summary>
+	/// Opens an existing named event object
+	/// </summary>
+	public uint OpenEvent(string name, uint dwDesiredAccess)
+	{
+		lock (_lock)
+		{
+			// Check if named event exists
+			if (string.IsNullOrEmpty(name) || !_namedObjects.TryGetValue(name, out var existingHandle))
+			{
+				_logger.LogWarning("[SyncMgr] OpenEvent: event '{Name}' not found", name);
+				return 0; // NULL - event doesn't exist
+			}
+
+			// Verify it's actually an event (not a mutex or semaphore)
+			if (!_events.ContainsKey(existingHandle))
+			{
+				_logger.LogWarning("[SyncMgr] OpenEvent: handle 0x{Handle:X8} is not an event", existingHandle);
+				return 0; // NULL
+			}
+
+			_logger.LogInformation("[SyncMgr] Opened existing event '{Name}' (handle=0x{Handle:X8})", name, existingHandle);
+			return existingHandle;
+		}
+	}
+
+	/// <summary>
 	/// Check if an event is signaled
 	/// </summary>
 	public bool IsEventSignaled(uint handle)

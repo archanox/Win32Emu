@@ -276,6 +276,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GETPROCESSHEAP":
 				returnValue = GetProcessHeap();
 				return true;
+			case "GETPROCESSFLAGS":
+				returnValue = GetProcessFlags(a.UInt32(0));
+				return true;
 			case "GETPROFILEINTA":
 				returnValue = GetProfileIntA(a.LpcStr(0), a.LpcStr(1), a.Int32(2));
 				return true;
@@ -324,6 +327,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "CLOSEHANDLE":
 				returnValue = CloseHandle((void*)a.UInt32(0));
+				return true;
+			case "CONVERTTOGLOBALHANDLE":
+				returnValue = ConvertToGlobalHandle(a.UInt32(0));
 				return true;
 			case "GETFILETYPE":
 				returnValue = GetFileType((void*)a.UInt32(0));
@@ -620,6 +626,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "FREERESOURCE":
 				returnValue = FreeResource(a.UInt32(0));
 				return true;
+			case "ENUMRESOURCENAMESA":
+				returnValue = EnumResourceNamesA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
 
 			// Additional missing functions
 			case "DEVICEIOCONTROL":
@@ -708,6 +717,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "MULDIV":
 				returnValue = (uint)MulDiv(a.Int32(0), a.Int32(1), a.Int32(2));
+				return true;
+			case "OPENEVENTA":
+				returnValue = OpenEventA(a.UInt32(0), a.UInt32(1), a.LpcStr(2));
 				return true;
 			case "OPENMUTEXA":
 				returnValue = OpenMutexA(a.UInt32(0), a.UInt32(1), a.LpcStr(2));
@@ -9898,6 +9910,139 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			default:
 				// Not a DBCS code page
 				return 0; // FALSE
+		}
+	}
+
+	/// <summary>
+	/// Opens an existing named event object.
+	/// HANDLE OpenEventA(
+	///   [in] DWORD  dwDesiredAccess,
+	///   [in] BOOL   bInheritHandle,
+	///   [in] LPCSTR lpName
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint OpenEventA(uint dwDesiredAccess, uint bInheritHandle, in LpcStr lpName)
+	{
+		var name = lpName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] OpenEventA(dwDesiredAccess=0x{DwDesiredAccess:X}, bInheritHandle={BInheritHandle}, lpName=\"{Name}\")",
+			dwDesiredAccess, bInheritHandle, name);
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] OpenEventA: SynchronizationManager not available");
+			_lastError = 2; // ERROR_FILE_NOT_FOUND
+			return 0; // NULL
+		}
+
+		try
+		{
+			var handle = _env.SynchronizationManager.OpenEvent(name, dwDesiredAccess);
+			if (handle == 0)
+			{
+				_lastError = 2; // ERROR_FILE_NOT_FOUND - event doesn't exist
+			}
+			return handle;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] OpenEventA exception");
+			_lastError = 2; // ERROR_FILE_NOT_FOUND
+			return 0; // NULL
+		}
+	}
+
+	/// <summary>
+	/// Retrieves the process flags.
+	/// DWORD GetProcessFlags(
+	///   [in] DWORD dwProcessId
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint GetProcessFlags(uint dwProcessId)
+	{
+		_logger.LogDebug("[Kernel32] GetProcessFlags(dwProcessId={DwProcessId})", dwProcessId);
+
+		// This is an undocumented function from Win95/98 era
+		// Return 0 to indicate no special flags
+		return 0;
+	}
+
+	/// <summary>
+	/// Converts a local memory handle to a global memory handle.
+	/// HGLOBAL ConvertToGlobalHandle(
+	///   [in] HANDLE hMem
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint ConvertToGlobalHandle(uint hMem)
+	{
+		_logger.LogDebug("[Kernel32] ConvertToGlobalHandle(hMem=0x{HMem:X8})", hMem);
+
+		// This is an obsolete Win16 compatibility function
+		// In Win32, local and global heaps are the same, so just return the same handle
+		return hMem;
+	}
+
+	/// <summary>
+	/// Enumerates resources of a specified type within a binary module.
+	/// BOOL EnumResourceNamesA(
+	///   [in, optional] HMODULE          hModule,
+	///   [in]           LPCSTR           lpType,
+	///   [in]           ENUMRESNAMEPROCA lpEnumFunc,
+	///   [in]           LONG_PTR         lParam
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint EnumResourceNamesA(uint hModule, uint lpType, uint lpEnumFunc, uint lParam)
+	{
+		_logger.LogInformation("[Kernel32] EnumResourceNamesA(hModule=0x{HModule:X8}, lpType=0x{LpType:X8}, lpEnumFunc=0x{LpEnumFunc:X8}, lParam=0x{LParam:X8})",
+			hModule, lpType, lpEnumFunc, lParam);
+
+		if (_resourceReader == null)
+		{
+			_logger.LogWarning("[Kernel32] EnumResourceNamesA: Resource reader not initialized");
+			_lastError = 1813; // ERROR_RESOURCE_TYPE_NOT_FOUND
+			return 0; // FALSE
+		}
+
+		try
+		{
+			// Get all resources of the specified type
+			var resources = _resourceReader.EnumerateResourceNames(lpType);
+			
+			if (resources == null || !resources.Any())
+			{
+				_logger.LogDebug("[Kernel32] EnumResourceNamesA: No resources found for type 0x{LpType:X8}", lpType);
+				_lastError = 1813; // ERROR_RESOURCE_TYPE_NOT_FOUND
+				return 0; // FALSE
+			}
+
+			// Log the resources that would be enumerated
+			_logger.LogInformation("[Kernel32] EnumResourceNamesA: Found {Count} resources of type 0x{LpType:X8}",
+				resources.Count(), lpType);
+			
+			foreach (var resourceId in resources)
+			{
+				_logger.LogDebug("[Kernel32] EnumResourceNamesA: Resource ID 0x{ResourceId:X8}", resourceId);
+			}
+
+			// TODO: Implement proper callback invocation
+			// For now, return TRUE to indicate resources exist, but callbacks aren't actually invoked
+			// This is a stub implementation - full callback support would require:
+			// 1. Saving CPU state
+			// 2. Pushing parameters on stack
+			// 3. Calling callback function
+			// 4. Checking return value
+			// 5. Restoring CPU state
+			
+			return 1; // TRUE - resources found (even though callbacks weren't called)
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] EnumResourceNamesA exception");
+			_lastError = 1813; // ERROR_RESOURCE_TYPE_NOT_FOUND
+			return 0; // FALSE
 		}
 	}
 
