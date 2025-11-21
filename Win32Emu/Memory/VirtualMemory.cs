@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 
 namespace Win32Emu.Memory;
@@ -46,6 +47,7 @@ public class VirtualMemory
     /// </summary>
     public ulong ConfiguredSize => _configuredSize;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void EnsureRange(ulong addr, ulong length = 1)
     {
         if (length == 0)
@@ -68,11 +70,13 @@ public class VirtualMemory
         }
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private byte[] GetOrCreatePage(uint pageIndex)
     {
         return _pages.GetOrAdd(pageIndex, _ => new byte[PageSize]);
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private byte ReadByteInternal(ulong addr)
     {
         uint pageIndex = (uint)(addr >> PageSizeBits);
@@ -87,6 +91,7 @@ public class VirtualMemory
         return 0;
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void WriteByteInternal(ulong addr, byte value)
     {
         uint pageIndex = (uint)(addr >> PageSizeBits);
@@ -96,18 +101,21 @@ public class VirtualMemory
         page[offset] = value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public byte Read8(ulong addr)
     {
         EnsureRange(addr);
         return ReadByteInternal(addr);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort Read16(ulong addr)
     {
         EnsureRange(addr, 2);
         return (ushort)(Read8(addr) | (Read8(addr + 1) << 8));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public uint Read32(ulong addr)
     {
         EnsureRange(addr, 4);
@@ -129,12 +137,14 @@ public class VirtualMemory
         return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Write8(ulong addr, byte value)
     {
         EnsureRange(addr);
         WriteByteInternal(addr, value);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Write16(ulong addr, ushort value)
     {
         EnsureRange(addr, 2);
@@ -142,6 +152,7 @@ public class VirtualMemory
         Write8(addr + 1, (byte)(value >> 8));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Write32(ulong addr, uint value)
     {
         EnsureRange(addr, 4);
@@ -149,12 +160,14 @@ public class VirtualMemory
         Write16(addr + 2, (ushort)(value >> 16));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ulong Read64(ulong addr)
     {
         EnsureRange(addr, 8);
         return Read32(addr) | ((ulong)Read32(addr + 4) << 32);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Write64(ulong addr, ulong value)
     {
         EnsureRange(addr, 8);

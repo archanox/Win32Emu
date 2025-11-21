@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace Win32Emu.Memory;
 
 /// <summary>
@@ -58,6 +60,7 @@ public static class MemoryRegions
 	/// </summary>
 	/// <param name="address">The address to check</param>
 	/// <returns>True if the address is in a special range, false otherwise</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsInSpecialRange(uint address)
 	{
 		return address >= ComVtableBase && address < SpecialRangeLimit;
@@ -68,6 +71,7 @@ public static class MemoryRegions
 	/// </summary>
 	/// <param name="address">The address to check</param>
 	/// <returns>True if the address is in the COM vtable range, false otherwise</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsInComVtableRange(uint address)
 	{
 		return address >= ComVtableBase && address < ComVtableLimit;
@@ -78,6 +82,7 @@ public static class MemoryRegions
 	/// </summary>
 	/// <param name="address">The address to check</param>
 	/// <returns>True if the address is in the syscall dispatcher range, false otherwise</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsInSyscallRange(uint address)
 	{
 		return address >= SyscallDispatcherBase && address < SyscallDispatcherLimit;
@@ -88,6 +93,7 @@ public static class MemoryRegions
 	/// </summary>
 	/// <param name="address">The address to check</param>
 	/// <returns>True if the address is in the import hook range, false otherwise</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsInImportHookRange(uint address)
 	{
 		return address >= ImportHookBase && address < ImportHookLimit;

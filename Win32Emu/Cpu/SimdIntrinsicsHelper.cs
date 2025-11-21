@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
@@ -17,6 +18,7 @@ public static class SimdIntrinsicsHelper
 	/// <param name="a">First operand as 16 bytes</param>
 	/// <param name="b">Second operand as 16 bytes</param>
 	/// <returns>Result as 16 bytes</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static byte[] AddPackedSingle(byte[] a, byte[] b)
 	{
 		if (CpuIntrinsics.HasSse)
@@ -91,6 +93,7 @@ public static class SimdIntrinsicsHelper
 	/// <param name="a">First operand as 16 bytes</param>
 	/// <param name="b">Second operand as 16 bytes</param>
 	/// <returns>Result as 16 bytes</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static byte[] MultiplyPackedSingle(byte[] a, byte[] b)
 	{
 		if (CpuIntrinsics.HasSse)
@@ -163,6 +166,7 @@ public static class SimdIntrinsicsHelper
 	/// <param name="a">First operand as 16 bytes</param>
 	/// <param name="b">Second operand as 16 bytes</param>
 	/// <returns>Result as 16 bytes</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static byte[] AddPackedDouble(byte[] a, byte[] b)
 	{
 		if (CpuIntrinsics.HasSse2)
@@ -223,6 +227,7 @@ public static class SimdIntrinsicsHelper
 	/// <param name="a">First operand as 16 bytes</param>
 	/// <param name="b">Second operand as 16 bytes</param>
 	/// <returns>Result as 16 bytes</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static byte[] AddPackedBytes(byte[] a, byte[] b)
 	{
 		if (CpuIntrinsics.HasSse2)
@@ -272,6 +277,7 @@ public static class SimdIntrinsicsHelper
 	/// </summary>
 	/// <param name="value">Value to count bits in</param>
 	/// <returns>Number of set bits</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static uint PopCount(uint value)
 	{
 		if (CpuIntrinsics.HasPopcnt)
@@ -306,6 +312,7 @@ public static class SimdIntrinsicsHelper
 	/// </summary>
 	/// <param name="value">Value to count leading zeros in</param>
 	/// <returns>Number of leading zero bits</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static uint LeadingZeroCount(uint value)
 	{
 		if (CpuIntrinsics.HasLzcnt)
@@ -340,6 +347,7 @@ public static class SimdIntrinsicsHelper
 	/// <param name="crc">Previous CRC value</param>
 	/// <param name="data">Data byte to process</param>
 	/// <returns>Updated CRC value</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static uint Crc32C(uint crc, byte data)
 	{
 		if (CpuIntrinsics.HasSse42)
