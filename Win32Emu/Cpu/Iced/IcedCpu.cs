@@ -86,9 +86,13 @@ public class IcedCpu : IAsyncCpu
 		}
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public void SetEip(uint eip) => _eip = eip;
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public uint GetEip() => _eip;
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public uint GetRegister(string name) => name.ToUpperInvariant() switch
 	{
 		"EAX" => _eax, "EBX" => _ebx, "ECX" => _ecx, "EDX" => _edx, "ESI" => _esi, "EDI" => _edi, "EBP" => _ebp,
@@ -140,6 +144,7 @@ public class IcedCpu : IAsyncCpu
 		return _decoder.Decode();
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public void SetRegister(string name, uint value, [CallerMemberName] string callerName = "")
 	{
 		switch (name.ToUpperInvariant())
@@ -5225,10 +5230,16 @@ public class IcedCpu : IAsyncCpu
 		_ => false
 	};
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private bool GetFlag(int bit) => (_eflags & (1u << bit)) != 0;
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void SetFlag(int bit) => _eflags |= (1u << bit);
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void ClearFlag(int bit) => _eflags &= ~(1u << bit);
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void SetFlagVal(int bit, bool val)
 	{
 		if (val)
@@ -5770,6 +5781,7 @@ public class IcedCpu : IAsyncCpu
 		reg is Register.AX or Register.CX or Register.DX or Register.BX or 
 		      Register.SI or Register.DI or Register.SP or Register.BP;
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private uint GetReg32(Register reg) => reg switch
 	{
 		Register.EAX => _eax, Register.EBX => _ebx, Register.ECX => _ecx, Register.EDX => _edx,
@@ -5780,6 +5792,7 @@ public class IcedCpu : IAsyncCpu
 		_ => 0
 	};
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private ushort GetReg16(Register reg) => reg switch
 	{
 		Register.AX => (ushort)_eax, Register.BX => (ushort)_ebx, Register.CX => (ushort)_ecx,
@@ -5791,6 +5804,7 @@ public class IcedCpu : IAsyncCpu
 		_ => 0
 	};
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private byte GetReg8(Register reg) => reg switch
 	{
 		Register.AL => (byte)(_eax & 0xFF), Register.CL => (byte)(_ecx & 0xFF), Register.DL => (byte)(_edx & 0xFF),
@@ -5799,6 +5813,7 @@ public class IcedCpu : IAsyncCpu
 		Register.BH => (byte)((_ebx >> 8) & 0xFF), _ => 0
 	};
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void SetReg8(Register reg, byte v)
 	{
 		switch (reg)
@@ -5814,6 +5829,7 @@ public class IcedCpu : IAsyncCpu
 		}
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void SetReg16(Register reg, ushort v)
 	{
 		switch (reg)
@@ -5845,6 +5861,7 @@ public class IcedCpu : IAsyncCpu
 		}
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void SetReg32(Register reg, uint v)
 	{
 		// Debug logging for EBP changes around the problematic instruction
@@ -5887,19 +5904,25 @@ public class IcedCpu : IAsyncCpu
 		
 		return value;
 	}
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void Write32(uint addr, uint v)
 	{
 		_mem.Write32(addr, v);
 	}
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private ushort Read16(uint addr) => _mem.Read16(addr);
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void Write16(uint addr, ushort v) => _mem.Write16(addr, v);
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void Push32(uint v)
 	{
 		_esp -= 4;
 		Write32(_esp, v);
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private uint Pop32()
 	{
 		var v = Read32(_esp);

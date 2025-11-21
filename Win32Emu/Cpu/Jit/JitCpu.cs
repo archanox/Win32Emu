@@ -70,9 +70,13 @@ public class JitCpu : IAsyncCpu
 		_rtlJitCache = new RtlJitCache(cacheDirectory, logger);
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public void SetEip(uint eip) => _eip = eip;
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public uint GetEip() => _eip;
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public uint GetRegister(string name) => name.ToUpperInvariant() switch
 	{
 		"EAX" => _eax, "EBX" => _ebx, "ECX" => _ecx, "EDX" => _edx, 
@@ -81,6 +85,7 @@ public class JitCpu : IAsyncCpu
 		_ => 0
 	};
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public void SetRegister(string name, uint value, [CallerMemberName] string callerName = "")
 	{
 		switch (name.ToUpperInvariant())
