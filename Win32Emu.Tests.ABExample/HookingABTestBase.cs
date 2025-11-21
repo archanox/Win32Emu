@@ -138,7 +138,7 @@ public class GetVersionHookingABTests : HookingABTestBase
 	private delegate uint GetVersionDelegate();
 
 	// Store the original function pointer
-	private GetVersionDelegate? _originalGetVersion;
+	private readonly GetVersionDelegate? _originalGetVersion;
 
 	public GetVersionHookingABTests()
 	{
@@ -183,7 +183,7 @@ public class GetVersionHookingABTests : HookingABTestBase
 		if (_hookingAvailable && _originalGetVersion != null)
 		{
 			// This call will be intercepted by our hook
-			nativeResult = _originalGetVersion.Invoke();
+			_originalGetVersion.Invoke();
 			
 			// Retrieve the captured native result
 			nativeResult = GetCapturedData<uint>("GetVersion.Native");
@@ -224,8 +224,8 @@ public class LastErrorHookingABTests : HookingABTestBase
 	private delegate void SetLastErrorDelegate(uint dwErrCode);
 
 	// Store the original functions
-	private GetLastErrorDelegate? _originalGetLastError;
-	private SetLastErrorDelegate? _originalSetLastError;
+	private readonly GetLastErrorDelegate? _originalGetLastError;
+	private readonly SetLastErrorDelegate? _originalSetLastError;
 
 	public LastErrorHookingABTests()
 	{
