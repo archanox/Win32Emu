@@ -465,6 +465,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "SLEEP":
 				returnValue = Sleep(a.UInt32(0));
 				return true;
+			case "SLEEPEX":
+				returnValue = SleepEx(a.UInt32(0), a.UInt32(1));
+				return true;
 
 			// Thread management and TLS functions
 			case "CREATETHREAD":
@@ -552,6 +555,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "WAITFORSINGLEOBJECT":
 				returnValue = WaitForSingleObject(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "WAITFORSINGLEOBJECTEX":
+				returnValue = WaitForSingleObjectEx(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 			case "WAITFORMULTIPLEOBJECTS":
 				returnValue = WaitForMultipleObjects(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
@@ -705,6 +711,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "LOCALREALLOC":
 				returnValue = LocalReAlloc(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "LOCALHANDLE":
+				returnValue = LocalHandle(a.UInt32(0));
 				return true;
 			case "LSTRCMPA":
 				returnValue = (uint)lstrcmpA(a.LpcStr(0), a.LpcStr(1));
@@ -979,6 +988,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "MAPLS":
 				returnValue = MapLS(a.UInt32(0));
 				return true;
+			case "UNMAPLS":
+				returnValue = UnMapLS(a.UInt32(0));
+				return true;
 			case "MAPSL":
 				returnValue = MapSL(a.UInt32(0));
 				return true;
@@ -1012,6 +1024,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// String and character set functions
 			case "ISBADSTRINGPTRA":
 				returnValue = IsBadStringPtrA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "ISBADSTRINGPTRW":
+				returnValue = IsBadStringPtrW(a.UInt32(0), a.UInt32(1));
 				return true;
 			case "ISDBCSLEADBYTEEX":
 				returnValue = IsDBCSLeadByteEx(a.UInt32(0), a.UInt32(1));
@@ -4887,6 +4902,27 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return 0; // Sleep doesn't return a value (void function)
 	}
 
+	/// <summary>
+	/// Suspends the current thread until the specified condition is met.
+	/// DWORD SleepEx(
+	///   [in] DWORD dwMilliseconds,
+	///   [in] BOOL  bAlertable
+	/// );
+	/// </summary>
+	// [DllModuleExport(0, IsStub = true)]
+	private uint SleepEx(uint dwMilliseconds, uint bAlertable)
+	{
+		_logger.LogInformation("[Kernel32] SleepEx(dwMilliseconds={DwMilliseconds}, bAlertable={BAlertable})",
+			dwMilliseconds, bAlertable);
+
+		// For now, just call Sleep and ignore alertable parameter
+		// In a full implementation, alertable would allow APCs (Asynchronous Procedure Calls) to interrupt
+		Sleep(dwMilliseconds);
+
+		// Return 0 indicating it completed without being interrupted by an APC
+		return 0;
+	}
+
 	[DllModuleExport(1)]
 	private string ReadCurrentModulePath()
 	{
@@ -5785,6 +5821,25 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Yield to thread scheduler if available
 			_env.ThreadScheduler?.ProcessWaitTimeouts();
 		}
+	}
+
+	/// <summary>
+	/// Waits until the specified object is in the signaled state, an I/O completion routine or APC is queued, or the time-out interval elapses.
+	/// DWORD WaitForSingleObjectEx(
+	///   [in] HANDLE hHandle,
+	///   [in] DWORD  dwMilliseconds,
+	///   [in] BOOL   bAlertable
+	/// );
+	/// </summary>
+	// [DllModuleExport(0, IsStub = true)]
+	private uint WaitForSingleObjectEx(uint hHandle, uint dwMilliseconds, uint bAlertable)
+	{
+		_logger.LogInformation("[Kernel32] WaitForSingleObjectEx(handle=0x{Handle:X8}, timeout={Timeout}ms, alertable={Alertable})",
+			hHandle, dwMilliseconds, bAlertable);
+
+		// For now, just call WaitForSingleObject and ignore alertable parameter
+		// In a full implementation, alertable would allow APCs (Asynchronous Procedure Calls) to interrupt
+		return WaitForSingleObject(hHandle, dwMilliseconds);
 	}
 
 	/// <summary>
@@ -7043,6 +7098,20 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] LocalReAlloc(hMem=0x{HMem:X8}, uBytes={UBytes}, uFlags=0x{UFlags:X})",
 			hMem, uBytes, uFlags);
 		return hMem; // Return same handle (stub)
+	}
+
+	/// <summary>
+	/// Retrieves the handle of a local memory object.
+	/// HLOCAL LocalHandle(
+	///   [in] LPCVOID pMem
+	/// );
+	/// </summary>
+	// [DllModuleExport(0, IsStub = true)]
+	private uint LocalHandle(uint pMem)
+	{
+		_logger.LogDebug("[Kernel32] LocalHandle(pMem=0x{PMem:X8})", pMem);
+		// In flat 32-bit mode, the memory pointer is the handle
+		return pMem;
 	}
 
 	[DllModuleExport(8)]
@@ -9730,6 +9799,18 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	/// <summary>
+	/// Unmaps a 16-bit segment:offset pair.
+	/// VOID UnMapLS(DWORD dwAddress);
+	/// </summary>
+	// [DllModuleExport(0, IsStub = true)]
+	private uint UnMapLS(uint dwAddress)
+	{
+		_logger.LogDebug("[Kernel32] UnMapLS(dwAddress=0x{DwAddress:X8})", dwAddress);
+		// No-op in flat 32-bit mode
+		return 0;
+	}
+
+	/// <summary>
 	/// Converts a 16-bit segment:offset pair to a 32-bit linear address.
 	/// LPVOID MapSL(DWORD dwAddress);
 	/// </summary>
@@ -9872,6 +9953,52 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			{
 				var b = _env.MemRead8(lpsz + (uint)offset);
 				if (b == 0) // Found null terminator
+				{
+					return 0; // FALSE - good pointer
+				}
+				offset++;
+			}
+
+			return 0; // FALSE - good pointer (reached max length)
+		}
+		catch
+		{
+			// Memory access failed
+			return 1; // TRUE - bad pointer
+		}
+	}
+
+	/// <summary>
+	/// Verifies that a pointer to a Unicode string is a valid memory pointer.
+	/// BOOL IsBadStringPtrW(
+	///   [in] LPCWSTR lpsz,
+	///   [in] UINT_PTR ucchMax
+	/// );
+	/// </summary>
+	// [DllModuleExport(0)]
+	private uint IsBadStringPtrW(uint lpsz, uint ucchMax)
+	{
+		_logger.LogDebug("[Kernel32] IsBadStringPtrW(lpsz=0x{Lpsz:X8}, ucchMax={UcchMax})", lpsz, ucchMax);
+
+		// NULL pointer is always bad
+		if (lpsz == 0)
+		{
+			return 1; // TRUE - bad pointer
+		}
+
+		// Check if we can read from this address
+		try
+		{
+			// Try to read the string up to ucchMax characters
+			// Use a reasonable upper bound when ucchMax is 0 to avoid excessive memory reads
+			var maxLength = ucchMax == 0 ? 32768 : (int)ucchMax; // Wide chars take 2 bytes each
+			var offset = 0;
+
+			while (offset < maxLength)
+			{
+				// Read 16-bit wide character
+				var w = _env.MemRead16(lpsz + (uint)(offset * 2));
+				if (w == 0) // Found null terminator
 				{
 					return 0; // FALSE - good pointer
 				}
