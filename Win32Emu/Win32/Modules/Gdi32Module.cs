@@ -2334,7 +2334,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Sets the bitmap stretching mode in the specified device context.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(8, IsStub = true)]
 		private int SetStretchBltMode(uint hdc, int stretchMode)
 		{
 			_logger.LogInformation("[Gdi32] SetStretchBltMode(hdc=0x{Hdc:X8}, stretchMode={StretchMode})", hdc, stretchMode);
@@ -2345,7 +2345,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Copies DIB color data from a source rectangle to a destination rectangle, stretching or compressing as needed.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(48, IsStub = true)]
 		private int StretchDIBits(uint hdc, int xDest, int yDest, int destWidth, int destHeight,
 			int xSrc, int ySrc, int srcWidth, int srcHeight, uint lpBits, uint lpbmi, uint usage)
 		{
@@ -2358,7 +2358,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Associates an owner process with a GDI object (16-bit compatibility function).
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(8, IsStub = true)]
 		private void SetObjectOwner(uint hGdiObj, uint hOwner)
 		{
 			_logger.LogInformation("[Gdi32] SetObjectOwner(hGdiObj=0x{HGdiObj:X8}, hOwner=0x{HOwner:X8}) - 16-bit compatibility, no-op", hGdiObj, hOwner);
@@ -2402,7 +2402,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Retrieves the color value of the color that is closest to the specified color value.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(8, IsStub = true)]
 		private uint GetNearestColor(uint hdc, uint color)
 		{
 			_logger.LogInformation("[Gdi32] GetNearestColor(hdc=0x{Hdc:X8}, color=0x{Color:X8})", hdc, color);
@@ -2413,7 +2413,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Increases or decreases the size of a logical palette.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(8, IsStub = true)]
 		private uint ResizePalette(uint hPalette, uint nEntries)
 		{
 			_logger.LogInformation("[Gdi32] ResizePalette(hPalette=0x{HPalette:X8}, nEntries={NEntries})", hPalette, nEntries);
@@ -2424,7 +2424,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Allows applications to access device capabilities that are not available through GDI.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(24, IsStub = true)]
 		private int ExtEscape(uint hdc, int escape, int cbInput, uint lpInData, int cbOutput, uint lpOutData)
 		{
 			_logger.LogInformation("[Gdi32] ExtEscape(hdc=0x{Hdc:X8}, escape={Escape}, cbInput={CbInput}, lpInData=0x{LpInData:X8}, cbOutput={CbOutput}, lpOutData=0x{LpOutData:X8})",
@@ -2436,7 +2436,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Gets the gamma ramp for the display device context.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(8, IsStub = true)]
 		private uint GetDeviceGammaRamp(uint hdc, uint lpRamp)
 		{
 			_logger.LogInformation("[Gdi32] GetDeviceGammaRamp(hdc=0x{Hdc:X8}, lpRamp=0x{LpRamp:X8})", hdc, lpRamp);
@@ -2448,9 +2448,8 @@ namespace Win32Emu.Win32.Modules
 			{
 				for (uint i = 0; i < 256; i++)
 				{
-					// Linear ramp: 0->0, 255->65535
-					// Using Math.Min to prevent overflow (though 255 * 257 = 65535 fits in ushort)
-					var value = (ushort)Math.Min(65535, i * 257);
+					// Linear ramp: 0->0, 255->65535 (255 * 257 = 65535 fits in ushort)
+					var value = (ushort)(i * 257);
 					// Red ramp
 					_env.MemWrite16(lpRamp + i * 2, value);
 					// Green ramp
@@ -2466,7 +2465,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Sets the gamma ramp for the display device context.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(8, IsStub = true)]
 		private uint SetDeviceGammaRamp(uint hdc, uint lpRamp)
 		{
 			_logger.LogInformation("[Gdi32] SetDeviceGammaRamp(hdc=0x{Hdc:X8}, lpRamp=0x{LpRamp:X8})", hdc, lpRamp);
@@ -2477,7 +2476,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Sets the system palette use for the specified device context.
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(8, IsStub = true)]
 		private uint SetSystemPaletteUse(uint hdc, uint use)
 		{
 			_logger.LogInformation("[Gdi32] SetSystemPaletteUse(hdc=0x{Hdc:X8}, use={Use})", hdc, use);
