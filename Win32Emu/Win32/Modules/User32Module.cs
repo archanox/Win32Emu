@@ -371,6 +371,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = FillRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				case "CHARPREVA":
+					returnValue = CharPrevA(a.UInt32(0), a.UInt32(1));
+					return true;
+
 				case "CHARNEXTA":
 					returnValue = CharNextA(a.UInt32(0));
 					return true;
@@ -3232,6 +3236,34 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(4)]
+		/// <summary>
+		/// Retrieves the previous character in a string.
+		/// LPSTR CharPrevA(
+		///   [in] LPCSTR lpszStart,
+		///   [in] LPCSTR lpszCurrent
+		/// );
+		/// </summary>
+		// [DllModuleExport(0)]
+		private uint CharPrevA(uint lpszStart, uint lpszCurrent)
+		{
+			_logger.LogDebug("[User32] CharPrevA(lpszStart=0x{LpszStart:X8}, lpszCurrent=0x{LpszCurrent:X8})",
+				lpszStart, lpszCurrent);
+
+			// If at or before the start, return start pointer
+			if (lpszCurrent <= lpszStart)
+			{
+				return lpszStart;
+			}
+
+			// For single-byte character sets (ASCII), just go back by 1 byte
+			// A full implementation would need to check for multi-byte character sequences
+			// in DBCS encodings and potentially scan backwards to find the character boundary
+			var prevPtr = lpszCurrent - 1;
+
+			_logger.LogDebug("[User32] CharPrevA: returning 0x{PrevPtr:X8}", prevPtr);
+			return prevPtr;
+		}
+
 		private uint CharNextA(uint lpsz)
 		{
 			if (lpsz == 0)
