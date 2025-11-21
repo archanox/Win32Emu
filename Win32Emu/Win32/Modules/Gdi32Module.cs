@@ -380,6 +380,23 @@ namespace Win32Emu.Win32.Modules
 					returnValue = SetAbortProc(a.UInt32(0), a.UInt32(1));
 					return true;
 
+				// Metafile functions
+				case "GETWINMETAFILEBITS":
+					returnValue = GetWinMetaFileBits(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "SETMETAFILEBITSEX":
+					returnValue = SetMetaFileBitsEx(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "SETWINMETAFILEBITS":
+					returnValue = SetWinMetaFileBits(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "PLAYENHMETAFILE":
+					returnValue = PlayEnhMetaFile(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "TRANSLATECHARSETINFO":
+					returnValue = TranslateCharsetInfo(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
 				default:
 					_logger.LogInformation("[Gdi32] Unimplemented export: {Export}", export);
 					return false;
@@ -2090,6 +2107,159 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] SetAbortProc(hdc=0x{Hdc:X8}, lpAbortProc=0x{LpAbortProc:X8})", hdc, lpAbortProc);
 			return 1; // Success
+		}
+
+		/// <summary>
+		/// Converts an enhanced metafile into a Windows-format metafile.
+		/// UINT GetWinMetaFileBits(
+		///   [in]  HENHMETAFILE hemf,
+		///   [in]  UINT         cbData16,
+		///   [out] LPBYTE       pData16,
+		///   [in]  INT          iMapMode,
+		///   [in]  HDC          hdcRef
+		/// );
+		/// </summary>
+		[DllModuleExport(16, IsStub = true)]
+		private uint GetWinMetaFileBits(uint hemf, uint cbData16, uint pData16, uint iMapMode)
+		{
+			_logger.LogInformation("[Gdi32] GetWinMetaFileBits(hemf=0x{Hemf:X8}, cbData16={CbData16}, pData16=0x{PData16:X8}, iMapMode={IMapMode})",
+				hemf, cbData16, pData16, iMapMode);
+			// Stub: Return 0 to indicate failure (metafiles not supported)
+			return 0;
+		}
+
+		/// <summary>
+		/// Creates a memory-based metafile from metafile data.
+		/// HMETAFILE SetMetaFileBitsEx(
+		///   [in] UINT    cbBuffer,
+		///   [in] const BYTE *lpData
+		/// );
+		/// </summary>
+		[DllModuleExport(8, IsStub = true)]
+		private uint SetMetaFileBitsEx(uint cbBuffer, uint lpData)
+		{
+			_logger.LogInformation("[Gdi32] SetMetaFileBitsEx(cbBuffer={CbBuffer}, lpData=0x{LpData:X8})",
+				cbBuffer, lpData);
+			// Stub: Return NULL handle (metafiles not supported)
+			return 0;
+		}
+
+		/// <summary>
+		/// Converts a metafile from the older Windows format to the enhanced format.
+		/// HENHMETAFILE SetWinMetaFileBits(
+		///   [in] UINT         nSize,
+		///   [in] const BYTE   *lpMeta16Data,
+		///   [in] HDC          hdcRef,
+		///   [in] const METAFILEPICT *lpMFP
+		/// );
+		/// </summary>
+		[DllModuleExport(16, IsStub = true)]
+		private uint SetWinMetaFileBits(uint nSize, uint lpMeta16Data, uint hdcRef, uint lpMFP)
+		{
+			_logger.LogInformation("[Gdi32] SetWinMetaFileBits(nSize={NSize}, lpMeta16Data=0x{LpMeta16Data:X8}, hdcRef=0x{HdcRef:X8}, lpMFP=0x{LpMFP:X8})",
+				nSize, lpMeta16Data, hdcRef, lpMFP);
+			// Stub: Return NULL handle (metafiles not supported)
+			return 0;
+		}
+
+		/// <summary>
+		/// Displays an enhanced metafile by playing its records.
+		/// BOOL PlayEnhMetaFile(
+		///   [in] HDC          hdc,
+		///   [in] HENHMETAFILE hemf,
+		///   [in] const RECT   *lprect
+		/// );
+		/// </summary>
+		[DllModuleExport(12, IsStub = true)]
+		private uint PlayEnhMetaFile(uint hdc, uint hemf, uint lprect)
+		{
+			_logger.LogInformation("[Gdi32] PlayEnhMetaFile(hdc=0x{Hdc:X8}, hemf=0x{Hemf:X8}, lprect=0x{Lprect:X8})",
+				hdc, hemf, lprect);
+			// Stub: Return FALSE (metafiles not supported)
+			return 0;
+		}
+
+		/// <summary>
+		/// Translates character set information and sets it in a CHARSETINFO structure.
+		/// BOOL TranslateCharsetInfo(
+		///   [in, out] DWORD       *lpSrc,
+		///   [out]     LPCHARSETINFO lpCs,
+		///   [in]      DWORD       dwFlags
+		/// );
+		/// </summary>
+		[DllModuleExport(12)]
+		private uint TranslateCharsetInfo(uint lpSrc, uint lpCs, uint dwFlags)
+		{
+			_logger.LogInformation("[Gdi32] TranslateCharsetInfo(lpSrc=0x{LpSrc:X8}, lpCs=0x{LpCs:X8}, dwFlags=0x{DwFlags:X8})",
+				lpSrc, lpCs, dwFlags);
+
+			const uint TCI_SRCCHARSET = 1;
+			const uint TCI_SRCCODEPAGE = 2;
+			const uint TCI_SRCFONTSIG = 3;
+
+			// Default ANSI charset information
+			const uint ANSI_CHARSET = 0;
+			const uint ANSI_CODEPAGE = 1252;
+
+			if (lpCs == 0)
+			{
+				return 0; // FALSE
+			}
+
+			uint charset = ANSI_CHARSET;
+			uint codepage = ANSI_CODEPAGE;
+
+			// Determine charset based on flags
+			if (dwFlags == TCI_SRCCHARSET)
+			{
+				// lpSrc is a charset value
+				charset = _env.MemRead32(lpSrc);
+			}
+			else if (dwFlags == TCI_SRCCODEPAGE)
+			{
+				// lpSrc is a codepage value
+				codepage = _env.MemRead32(lpSrc);
+				// Map common codepages to charsets
+				charset = codepage switch
+				{
+					1252 => 0,   // ANSI_CHARSET
+					932 => 128,  // SHIFTJIS_CHARSET
+					949 => 129,  // HANGUL_CHARSET
+					950 => 136,  // CHINESEBIG5_CHARSET
+					1361 => 130, // JOHAB_CHARSET
+					1250 => 238, // EASTEUROPE_CHARSET
+					1251 => 204, // RUSSIAN_CHARSET
+					1253 => 161, // GREEK_CHARSET
+					1254 => 162, // TURKISH_CHARSET
+					1255 => 177, // HEBREW_CHARSET
+					1256 => 178, // ARABIC_CHARSET
+					1257 => 186, // BALTIC_CHARSET
+					1258 => 163, // VIETNAMESE_CHARSET
+					_ => 0       // Default to ANSI_CHARSET
+				};
+			}
+			else if (dwFlags == TCI_SRCFONTSIG)
+			{
+				// lpSrc points to a FONTSIGNATURE structure - not implemented
+				_logger.LogWarning("[Gdi32] TranslateCharsetInfo: TCI_SRCFONTSIG not fully implemented");
+				charset = ANSI_CHARSET;
+			}
+
+			// Fill CHARSETINFO structure
+			// typedef struct tagCHARSETINFO {
+			//   UINT      ciCharset;   // +0
+			//   UINT      ciACP;       // +4
+			//   FONTSIGNATURE fs;      // +8 (24 bytes)
+			// } CHARSETINFO;
+			_env.MemWrite32(lpCs, charset);     // ciCharset
+			_env.MemWrite32(lpCs + 4, codepage); // ciACP
+			// fs (FONTSIGNATURE) - stub: zero out
+			for (var i = 0; i < 24; i += 4)
+			{
+				_env.MemWrite32(lpCs + 8 + (uint)i, 0);
+			}
+
+			return 1; // TRUE
 		}
 	}
 }

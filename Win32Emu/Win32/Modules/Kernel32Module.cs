@@ -880,6 +880,131 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = Module32Next(a.UInt32(0), a.UInt32(1));
 				return true;
 
+			// 16-bit thunking functions
+			case "FT_EXIT20":
+				returnValue = FT_Exit20();
+				return true;
+			case "FT_EXIT16":
+				returnValue = FT_Exit16();
+				return true;
+			case "FT_EXIT24":
+				returnValue = FT_Exit24();
+				return true;
+			case "FT_EXIT32":
+				returnValue = FT_Exit32();
+				return true;
+			case "FT_EXIT8":
+				returnValue = FT_Exit8();
+				return true;
+			case "FT_EXIT12":
+				returnValue = FT_Exit12();
+				return true;
+			case "FT_EXIT4":
+				returnValue = FT_Exit4();
+				return true;
+			case "FT_EXIT28":
+				returnValue = FT_Exit28();
+				return true;
+			case "FT_EXIT48":
+				returnValue = FT_Exit48();
+				return true;
+			case "FT_PROLOG":
+				returnValue = FT_Prolog();
+				return true;
+			case "FT_THUNK":
+				returnValue = FT_Thunk();
+				return true;
+
+			// Memory mapping functions (16-bit compatibility)
+			case "SMAPLS_IP_EBP_8":
+				returnValue = SMapLS_IP_EBP_8();
+				return true;
+			case "SMAPLS_IP_EBP_12":
+				returnValue = SMapLS_IP_EBP_12();
+				return true;
+			case "SMAPLS_IP_EBP_16":
+				returnValue = SMapLS_IP_EBP_16();
+				return true;
+			case "SMAPLS_IP_EBP_20":
+				returnValue = SMapLS_IP_EBP_20();
+				return true;
+			case "SMAPLS_IP_EBP_24":
+				returnValue = SMapLS_IP_EBP_24();
+				return true;
+			case "SMAPLS_IP_EBP_28":
+				returnValue = SMapLS_IP_EBP_28();
+				return true;
+			case "SMAPLS_IP_EBP_32":
+				returnValue = SMapLS_IP_EBP_32();
+				return true;
+			case "SUNMAPLS_IP_EBP_8":
+				returnValue = SUnMapLS_IP_EBP_8();
+				return true;
+			case "SUNMAPLS_IP_EBP_12":
+				returnValue = SUnMapLS_IP_EBP_12();
+				return true;
+			case "SUNMAPLS_IP_EBP_16":
+				returnValue = SUnMapLS_IP_EBP_16();
+				return true;
+			case "SUNMAPLS_IP_EBP_20":
+				returnValue = SUnMapLS_IP_EBP_20();
+				return true;
+			case "SUNMAPLS_IP_EBP_24":
+				returnValue = SUnMapLS_IP_EBP_24();
+				return true;
+			case "SUNMAPLS_IP_EBP_28":
+				returnValue = SUnMapLS_IP_EBP_28();
+				return true;
+			case "SUNMAPLS_IP_EBP_32":
+				returnValue = SUnMapLS_IP_EBP_32();
+				return true;
+			case "SMAPLS":
+				returnValue = SMapLS(a.UInt32(0));
+				return true;
+			case "SUNMAPLS":
+				returnValue = SUnMapLS(a.UInt32(0));
+				return true;
+			case "MAPLS":
+				returnValue = MapLS(a.UInt32(0));
+				return true;
+			case "MAPSL":
+				returnValue = MapSL(a.UInt32(0));
+				return true;
+			case "MAPHINSTLS":
+				returnValue = MapHInstLS(a.UInt32(0));
+				return true;
+			case "MAPHINSTLS_PN":
+				returnValue = MapHInstLS_PN(a.UInt32(0));
+				return true;
+			case "MAPSLFIX":
+				returnValue = MapSLFix(a.UInt32(0));
+				return true;
+			case "UNMAPSLFIXARRAY":
+				returnValue = UnMapSLFixArray(a.UInt32(0), a.UInt32(1));
+				return true;
+
+			// Thunk callback functions
+			case "K32THK1632PROLOG":
+				returnValue = K32Thk1632Prolog();
+				return true;
+			case "K32THK1632EPILOG":
+				returnValue = K32Thk1632Epilog();
+				return true;
+			case "CALLBACK16":
+				returnValue = Callback16();
+				return true;
+			case "CALLBACK20":
+				returnValue = Callback20();
+				return true;
+
+			// String and character set functions
+			case "ISBADSTRINGPTRA":
+				returnValue = IsBadStringPtrA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "ISDBCSLEADBYTEEX":
+				returnValue = IsDBCSLeadByteEx(a.UInt32(0), a.UInt32(1));
+				return true;
+
 			default:
 				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
 				return false;
@@ -9341,5 +9466,440 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		return 1; // TRUE
 	}
+
+	#region 16-bit Thunking Functions
+
+	/// <summary>
+	/// FT_Exit* functions - Thunk exit stubs for 16-bit to 32-bit transitions.
+	/// These are legacy functions for 16-bit compatibility and are no-ops in pure 32-bit emulation.
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint FT_Exit4()
+	{
+		_logger.LogDebug("[Kernel32] FT_Exit4 (16-bit thunk stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint FT_Exit8()
+	{
+		_logger.LogDebug("[Kernel32] FT_Exit8 (16-bit thunk stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint FT_Exit12()
+	{
+		_logger.LogDebug("[Kernel32] FT_Exit12 (16-bit thunk stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint FT_Exit16()
+	{
+		_logger.LogDebug("[Kernel32] FT_Exit16 (16-bit thunk stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint FT_Exit20()
+	{
+		_logger.LogDebug("[Kernel32] FT_Exit20 (16-bit thunk stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint FT_Exit24()
+	{
+		_logger.LogDebug("[Kernel32] FT_Exit24 (16-bit thunk stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint FT_Exit28()
+	{
+		_logger.LogDebug("[Kernel32] FT_Exit28 (16-bit thunk stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint FT_Exit32()
+	{
+		_logger.LogDebug("[Kernel32] FT_Exit32 (16-bit thunk stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint FT_Exit48()
+	{
+		_logger.LogDebug("[Kernel32] FT_Exit48 (16-bit thunk stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint FT_Prolog()
+	{
+		_logger.LogDebug("[Kernel32] FT_Prolog (16-bit thunk stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint FT_Thunk()
+	{
+		_logger.LogDebug("[Kernel32] FT_Thunk (16-bit thunk stub)");
+		return 0;
+	}
+
+	#endregion
+
+	#region Memory Mapping Functions (16-bit compatibility)
+
+	/// <summary>
+	/// SMapLS_IP_EBP_* functions - Map 32-bit linear address to 16-bit segment:offset.
+	/// These are legacy functions for 16-bit compatibility and return the input address unchanged.
+	/// The number suffix indicates the EBP offset to read the parameter from.
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint SMapLS_IP_EBP_8()
+	{
+		_logger.LogDebug("[Kernel32] SMapLS_IP_EBP_8 (16-bit memory mapping stub)");
+		// In a true implementation, would read address from [EBP+8] and return mapped value
+		// For stub, return 0
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SMapLS_IP_EBP_12()
+	{
+		_logger.LogDebug("[Kernel32] SMapLS_IP_EBP_12 (16-bit memory mapping stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SMapLS_IP_EBP_16()
+	{
+		_logger.LogDebug("[Kernel32] SMapLS_IP_EBP_16 (16-bit memory mapping stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SMapLS_IP_EBP_20()
+	{
+		_logger.LogDebug("[Kernel32] SMapLS_IP_EBP_20 (16-bit memory mapping stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SMapLS_IP_EBP_24()
+	{
+		_logger.LogDebug("[Kernel32] SMapLS_IP_EBP_24 (16-bit memory mapping stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SMapLS_IP_EBP_28()
+	{
+		_logger.LogDebug("[Kernel32] SMapLS_IP_EBP_28 (16-bit memory mapping stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SMapLS_IP_EBP_32()
+	{
+		_logger.LogDebug("[Kernel32] SMapLS_IP_EBP_32 (16-bit memory mapping stub)");
+		return 0;
+	}
+
+	/// <summary>
+	/// SUnMapLS_IP_EBP_* functions - Unmap 16-bit segment:offset to 32-bit linear address.
+	/// These are legacy functions for 16-bit compatibility and are no-ops.
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint SUnMapLS_IP_EBP_8()
+	{
+		_logger.LogDebug("[Kernel32] SUnMapLS_IP_EBP_8 (16-bit memory unmapping stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SUnMapLS_IP_EBP_12()
+	{
+		_logger.LogDebug("[Kernel32] SUnMapLS_IP_EBP_12 (16-bit memory unmapping stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SUnMapLS_IP_EBP_16()
+	{
+		_logger.LogDebug("[Kernel32] SUnMapLS_IP_EBP_16 (16-bit memory unmapping stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SUnMapLS_IP_EBP_20()
+	{
+		_logger.LogDebug("[Kernel32] SUnMapLS_IP_EBP_20 (16-bit memory unmapping stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SUnMapLS_IP_EBP_24()
+	{
+		_logger.LogDebug("[Kernel32] SUnMapLS_IP_EBP_24 (16-bit memory unmapping stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SUnMapLS_IP_EBP_28()
+	{
+		_logger.LogDebug("[Kernel32] SUnMapLS_IP_EBP_28 (16-bit memory unmapping stub)");
+		return 0;
+	}
+
+	[DllModuleExport(4, IsStub = true)]
+	private uint SUnMapLS_IP_EBP_32()
+	{
+		_logger.LogDebug("[Kernel32] SUnMapLS_IP_EBP_32 (16-bit memory unmapping stub)");
+		return 0;
+	}
+
+	/// <summary>
+	/// Maps a 32-bit linear address to a 16-bit segment:offset pair.
+	/// DWORD SMapLS(LPVOID lpvAddress);
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint SMapLS(uint lpvAddress)
+	{
+		_logger.LogDebug("[Kernel32] SMapLS(lpvAddress=0x{LpvAddress:X8})", lpvAddress);
+		// In flat 32-bit mode, just return the address unchanged
+		return lpvAddress;
+	}
+
+	/// <summary>
+	/// Unmaps a 16-bit segment:offset pair.
+	/// VOID SUnMapLS(DWORD dwAddress);
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint SUnMapLS(uint dwAddress)
+	{
+		_logger.LogDebug("[Kernel32] SUnMapLS(dwAddress=0x{DwAddress:X8})", dwAddress);
+		// No-op in flat 32-bit mode
+		return 0;
+	}
+
+	/// <summary>
+	/// Maps a 32-bit linear address to a 16-bit segment:offset pair.
+	/// DWORD MapLS(LPVOID lpvAddress);
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint MapLS(uint lpvAddress)
+	{
+		_logger.LogDebug("[Kernel32] MapLS(lpvAddress=0x{LpvAddress:X8})", lpvAddress);
+		// In flat 32-bit mode, just return the address unchanged
+		return lpvAddress;
+	}
+
+	/// <summary>
+	/// Converts a 16-bit segment:offset pair to a 32-bit linear address.
+	/// LPVOID MapSL(DWORD dwAddress);
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint MapSL(uint dwAddress)
+	{
+		_logger.LogDebug("[Kernel32] MapSL(dwAddress=0x{DwAddress:X8})", dwAddress);
+		// In flat 32-bit mode, just return the address unchanged
+		return dwAddress;
+	}
+
+	/// <summary>
+	/// Maps a 32-bit instance handle to a 16-bit instance handle.
+	/// HINSTANCE16 MapHInstLS(HINSTANCE hInst);
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint MapHInstLS(uint hInst)
+	{
+		_logger.LogDebug("[Kernel32] MapHInstLS(hInst=0x{HInst:X8})", hInst);
+		// Return the handle unchanged
+		return hInst;
+	}
+
+	/// <summary>
+	/// Maps a 32-bit instance handle to a 16-bit instance handle (pointer version).
+	/// HINSTANCE16 MapHInstLS_PN(HINSTANCE *phInst);
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint MapHInstLS_PN(uint phInst)
+	{
+		_logger.LogDebug("[Kernel32] MapHInstLS_PN(phInst=0x{PhInst:X8})", phInst);
+		if (phInst == 0)
+		{
+			return 0;
+		}
+		var hInst = _env.MemRead32(phInst);
+		return hInst; // Return the handle unchanged
+	}
+
+	/// <summary>
+	/// Fixes a 16-bit segment:offset selector.
+	/// LPVOID MapSLFix(DWORD dwAddress);
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint MapSLFix(uint dwAddress)
+	{
+		_logger.LogDebug("[Kernel32] MapSLFix(dwAddress=0x{DwAddress:X8})", dwAddress);
+		// In flat 32-bit mode, just return the address unchanged
+		return dwAddress;
+	}
+
+	/// <summary>
+	/// Unmaps an array of fixed 16-bit segment:offset selectors.
+	/// VOID UnMapSLFixArray(DWORD cSelectors, DWORD *lpSelectors);
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint UnMapSLFixArray(uint cSelectors, uint lpSelectors)
+	{
+		_logger.LogDebug("[Kernel32] UnMapSLFixArray(cSelectors={CSelectors}, lpSelectors=0x{LpSelectors:X8})",
+			cSelectors, lpSelectors);
+		// No-op in flat 32-bit mode
+		return 0;
+	}
+
+	#endregion
+
+	#region Thunk Callback Functions
+
+	/// <summary>
+	/// Prolog for 16-bit to 32-bit thunk transition.
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint K32Thk1632Prolog()
+	{
+		_logger.LogDebug("[Kernel32] K32Thk1632Prolog (16-bit to 32-bit thunk prolog stub)");
+		return 0;
+	}
+
+	/// <summary>
+	/// Epilog for 16-bit to 32-bit thunk transition.
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint K32Thk1632Epilog()
+	{
+		_logger.LogDebug("[Kernel32] K32Thk1632Epilog (16-bit to 32-bit thunk epilog stub)");
+		return 0;
+	}
+
+	/// <summary>
+	/// Callback function for 16-bit code (16 bytes of parameters).
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint Callback16()
+	{
+		_logger.LogDebug("[Kernel32] Callback16 (16-bit callback stub)");
+		return 0;
+	}
+
+	/// <summary>
+	/// Callback function for 16-bit code (20 bytes of parameters).
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint Callback20()
+	{
+		_logger.LogDebug("[Kernel32] Callback20 (16-bit callback stub)");
+		return 0;
+	}
+
+	#endregion
+
+	#region String and Character Set Functions
+
+	/// <summary>
+	/// Verifies that the calling process has read access to the specified range of memory.
+	/// BOOL IsBadStringPtrA(
+	///   [in] LPCSTR lpsz,
+	///   [in] UINT_PTR ucchMax
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint IsBadStringPtrA(uint lpsz, uint ucchMax)
+	{
+		_logger.LogDebug("[Kernel32] IsBadStringPtrA(lpsz=0x{Lpsz:X8}, ucchMax={UcchMax})", lpsz, ucchMax);
+
+		// NULL pointer is always bad
+		if (lpsz == 0)
+		{
+			return 1; // TRUE - bad pointer
+		}
+
+		// Check if we can read from this address
+		try
+		{
+			// Try to read the string up to ucchMax characters
+			var maxLength = ucchMax == 0 ? int.MaxValue : (int)ucchMax;
+			var offset = 0;
+
+			while (offset < maxLength)
+			{
+				var b = _env.MemRead8(lpsz + (uint)offset);
+				if (b == 0) // Found null terminator
+				{
+					return 0; // FALSE - good pointer
+				}
+				offset++;
+			}
+
+			return 0; // FALSE - good pointer (reached max length)
+		}
+		catch
+		{
+			// Memory access failed
+			return 1; // TRUE - bad pointer
+		}
+	}
+
+	/// <summary>
+	/// Determines whether a character is a lead byte in the specified code page.
+	/// BOOL IsDBCSLeadByteEx(
+	///   [in] UINT  CodePage,
+	///   [in] BYTE  TestChar
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint IsDBCSLeadByteEx(uint codePage, uint testChar)
+	{
+		_logger.LogDebug("[Kernel32] IsDBCSLeadByteEx(codePage={CodePage}, testChar=0x{TestChar:X2})",
+			codePage, testChar);
+
+		var b = (byte)(testChar & 0xFF);
+
+		// Check for DBCS code pages
+		switch (codePage)
+		{
+			case 932:  // Japanese Shift-JIS
+				// Lead byte ranges: 0x81-0x9F, 0xE0-0xFC
+				return (b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC) ? 1u : 0u;
+
+			case 936:  // Simplified Chinese GBK
+				// Lead byte range: 0x81-0xFE
+				return (b >= 0x81 && b <= 0xFE) ? 1u : 0u;
+
+			case 949:  // Korean
+				// Lead byte range: 0x81-0xFE
+				return (b >= 0x81 && b <= 0xFE) ? 1u : 0u;
+
+			case 950:  // Traditional Chinese Big5
+				// Lead byte ranges: 0x81-0xFE
+				return (b >= 0x81 && b <= 0xFE) ? 1u : 0u;
+
+			case 1361: // Korean Johab
+				// Lead byte range: 0x84-0xD3, 0xD8-0xDE, 0xE0-0xF9
+				return ((b >= 0x84 && b <= 0xD3) || (b >= 0xD8 && b <= 0xDE) || (b >= 0xE0 && b <= 0xF9)) ? 1u : 0u;
+
+			default:
+				// Not a DBCS code page
+				return 0; // FALSE
+		}
+	}
+
+	#endregion
 
 }
