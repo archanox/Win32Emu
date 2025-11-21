@@ -5321,6 +5321,7 @@ public class IcedCpu : IAsyncCpu
 			OpKind.Immediate8 => insn.Immediate8,
 			OpKind.Immediate8to32 => (uint)(sbyte)insn.Immediate8,
 			OpKind.Immediate16 => insn.Immediate16,
+			OpKind.Immediate16to32 => (uint)(short)insn.Immediate16,
 			OpKind.Immediate32 => insn.Immediate32,
 			_ => 0u
 		};
