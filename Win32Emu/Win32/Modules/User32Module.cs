@@ -4208,16 +4208,16 @@ namespace Win32Emu.Win32.Modules
 				return WAIT_OBJECT_0; // Indicate message available
 			}
 
-			// Read handle array from memory
-			if (pHandles == 0 && nCount > 0)
-			{
-				_logger.LogWarning("[User32] MsgWaitForMultipleObjects: null handle array with nCount={NCount}", nCount);
-				return WAIT_FAILED;
-			}
-
+			// Read handle array from memory (only if we have handles to read)
 			var handles = new uint[nCount];
 			if (nCount > 0)
 			{
+				if (pHandles == 0)
+				{
+					_logger.LogWarning("[User32] MsgWaitForMultipleObjects: null handle array with nCount={NCount}", nCount);
+					return WAIT_FAILED;
+				}
+
 				for (uint i = 0; i < nCount; i++)
 				{
 					handles[i] = _env.MemRead32(pHandles + (i * 4));
@@ -4260,16 +4260,10 @@ namespace Win32Emu.Win32.Modules
 					}
 					else if (fWaitAll != 0) // Wait for all
 					{
-						// At least one object is not signaled
+						// At least one object is not signaled - in wait-all mode, we need all to be signaled
 						_logger.LogDebug("[User32] MsgWaitForMultipleObjects: Object at index {Index} (type={Type}) is not signaled, wait all failed", i, objectType);
 						
-						// Check timeout
-						if (dwMilliseconds == 0)
-						{
-							return WAIT_TIMEOUT;
-						}
-						
-						// Simplified: return timeout
+						// Simplified implementation: always return timeout when waiting for all and not all are signaled
 						return WAIT_TIMEOUT;
 					}
 				}
