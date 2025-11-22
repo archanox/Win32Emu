@@ -4208,71 +4208,114 @@ namespace Win32Emu.Win32.Modules
 				return WAIT_OBJECT_0; // Indicate message available
 			}
 
-			// Read handle array from memory (only if we have handles to read)
-			var handles = new uint[nCount];
-			if (nCount > 0)
+			// Early null check for SynchronizationManager (match Kernel32 pattern)
+			if (_env.SynchronizationManager == null)
 			{
-				if (pHandles == 0)
-				{
-					_logger.LogWarning("[User32] MsgWaitForMultipleObjects: null handle array with nCount={NCount}", nCount);
-					return WAIT_FAILED;
-				}
+				_logger.LogWarning("[User32] MsgWaitForMultipleObjects: SynchronizationManager not available");
+				return WAIT_FAILED;
+			}
 
-				for (uint i = 0; i < nCount; i++)
-				{
-					handles[i] = _env.MemRead32(pHandles + (i * 4));
-				}
+			// Read handle array from memory
+			var handles = new uint[nCount];
+			if (pHandles == 0)
+			{
+				_logger.LogWarning("[User32] MsgWaitForMultipleObjects: null handle array with nCount={NCount}", nCount);
+				return WAIT_FAILED;
+			}
+
+			for (uint i = 0; i < nCount; i++)
+			{
+				handles[i] = _env.MemRead32(pHandles + (i * 4));
 			}
 
 			// Delegate to synchronization manager for handle checking
 			// In a real implementation, we would need to interleave checking for messages
 			// with waiting on the handles
-			if (_env.SynchronizationManager != null && nCount > 0)
+			if (nCount > 0)
 			{
-				// Check if handles are immediately available
+				// Validate all handles first
 				for (uint i = 0; i < nCount; i++)
 				{
-					var handle = handles[i];
-					var objectType = _env.SynchronizationManager.GetObjectType(handle);
-
+					var objectType = _env.SynchronizationManager.GetObjectType(handles[i]);
 					if (objectType == null)
 					{
-						_logger.LogWarning("[User32] MsgWaitForMultipleObjects: invalid handle 0x{Handle:X8} at index {Index}", handle, i);
+						_logger.LogWarning("[User32] MsgWaitForMultipleObjects: invalid handle 0x{Handle:X8} at index {Index}", handles[i], i);
 						return WAIT_FAILED;
-					}
-
-					// Check if object is signaled
-					var signaled = objectType switch
-					{
-						"Event" => _env.SynchronizationManager.IsEventSignaled(handle),
-						"Semaphore" => _env.SynchronizationManager.IsSemaphoreSignaled(handle),
-						"Mutex" => _env.SynchronizationManager.CanAcquireMutex(handle, _env.GetCurrentThreadId()),
-						_ => false
-					};
-
-					if (signaled)
-					{
-						if (fWaitAll == 0) // Wait for any
-						{
-							_logger.LogDebug("[User32] MsgWaitForMultipleObjects: Object at index {Index} (type={Type}) is signaled", i, objectType);
-							return WAIT_OBJECT_0 + i;
-						}
-					}
-					else if (fWaitAll != 0) // Wait for all
-					{
-						// At least one object is not signaled - in wait-all mode, we need all to be signaled
-						_logger.LogDebug("[User32] MsgWaitForMultipleObjects: Object at index {Index} (type={Type}) is not signaled, wait all failed", i, objectType);
-						
-						// Simplified implementation: always return timeout when waiting for all and not all are signaled
-						return WAIT_TIMEOUT;
 					}
 				}
 
-				// If we get here with fWaitAll, all objects were signaled
-				if (fWaitAll != 0)
+				var currentThreadId = _env.GetCurrentThreadId();
+
+				if (fWaitAll == 0) // Wait for any
 				{
-					_logger.LogDebug("[User32] MsgWaitForMultipleObjects: All objects signaled");
-					return WAIT_OBJECT_0;
+					// Check each object and acquire the first signaled one
+					for (uint i = 0; i < nCount; i++)
+					{
+						var handle = handles[i];
+						var objectType = _env.SynchronizationManager.GetObjectType(handle);
+
+						// Try to acquire the object
+						var acquired = objectType switch
+						{
+							"Mutex" => _env.SynchronizationManager.AcquireMutex(handle, currentThreadId),
+							"Event" => _env.SynchronizationManager.WaitOnEvent(handle, currentThreadId),
+							"Semaphore" => _env.SynchronizationManager.WaitOnSemaphore(handle, currentThreadId),
+							_ => false
+						};
+
+						if (acquired)
+						{
+							_logger.LogDebug("[User32] MsgWaitForMultipleObjects: Object at index {Index} (type={Type}) acquired", i, objectType);
+							return WAIT_OBJECT_0 + i;
+						}
+					}
+				}
+				else // Wait for all
+				{
+					// Check if all objects are signaled first
+					bool allSignaled = true;
+					var tempStates = new List<(uint handle, string type, bool signaled)>();
+
+					for (uint i = 0; i < nCount; i++)
+					{
+						var handle = handles[i];
+						var objectType = _env.SynchronizationManager.GetObjectType(handle);
+
+						var signaled = objectType switch
+						{
+							"Mutex" => _env.SynchronizationManager.CanAcquireMutex(handle, currentThreadId),
+							"Event" => _env.SynchronizationManager.IsEventSignaled(handle),
+							"Semaphore" => _env.SynchronizationManager.IsSemaphoreSignaled(handle),
+							_ => false
+						};
+
+						tempStates.Add((handle, objectType ?? "Unknown", signaled));
+
+						if (!signaled)
+						{
+							allSignaled = false;
+							_logger.LogDebug("[User32] MsgWaitForMultipleObjects: Object at index {Index} (type={Type}) is not signaled, wait all failed", i, objectType);
+							return WAIT_TIMEOUT;
+						}
+					}
+
+					if (allSignaled)
+					{
+						// Acquire all objects
+						foreach (var (handle, type, _) in tempStates)
+						{
+							_ = type switch
+							{
+								"Mutex" => _env.SynchronizationManager.AcquireMutex(handle, currentThreadId),
+								"Event" => _env.SynchronizationManager.WaitOnEvent(handle, currentThreadId),
+								"Semaphore" => _env.SynchronizationManager.WaitOnSemaphore(handle, currentThreadId),
+								_ => false
+							};
+						}
+
+						_logger.LogDebug("[User32] MsgWaitForMultipleObjects: All objects acquired");
+						return WAIT_OBJECT_0;
+					}
 				}
 			}
 
