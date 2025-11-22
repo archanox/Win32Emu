@@ -366,6 +366,65 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		throw new InvalidOperationException("No supported filesystem found on disk. Use Create() to format a new disk.");
 	}
 
+	/// <summary>
+	/// Attempts to find a file case-insensitively by searching the directory.
+	/// Windows filesystems are case-insensitive, but DiscUtils may be case-sensitive.
+	/// </summary>
+	/// <param name="normalizedPath">The normalized path to search for</param>
+	/// <returns>The actual path with correct casing, or the original path if not found</returns>
+	private string FindCaseInsensitivePath(string normalizedPath)
+	{
+		try
+		{
+			// Quick check: if the file exists as-is, return it
+			if (_fileSystem.FileExists(normalizedPath))
+			{
+				return normalizedPath;
+			}
+
+			// Split the path into directory and filename
+			var lastSeparator = normalizedPath.LastIndexOf('\\');
+			if (lastSeparator < 0)
+			{
+				return normalizedPath; // Root level or invalid path
+			}
+
+			var directory = normalizedPath.Substring(0, lastSeparator);
+			var filename = normalizedPath.Substring(lastSeparator + 1);
+
+			// If directory doesn't exist, recursively check parent directories
+			if (!_fileSystem.DirectoryExists(directory))
+			{
+				directory = FindCaseInsensitivePath(directory);
+				if (!_fileSystem.DirectoryExists(directory))
+				{
+					return normalizedPath; // Directory still doesn't exist
+				}
+			}
+
+			// Search for the file case-insensitively in the directory
+			var files = _fileSystem.GetFiles(directory, "*", SearchOption.TopDirectoryOnly);
+			foreach (var file in files)
+			{
+				var actualFilename = file.Substring(file.LastIndexOf('\\') + 1);
+				if (string.Equals(actualFilename, filename, StringComparison.OrdinalIgnoreCase))
+				{
+					_logger.LogDebug("[DiskVFS] Case-insensitive match: '{Original}' -> '{Actual}'", 
+						normalizedPath, file);
+					return file;
+				}
+			}
+
+			// No match found, return original
+			return normalizedPath;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogDebug(ex, "[DiskVFS] Failed to find case-insensitive path for: {Path}", normalizedPath);
+			return normalizedPath;
+		}
+	}
+
 	private string NormalizePath(string path)
 	{
 		// DiscUtils requires backslashes for all filesystem types (FAT, ISO9660, etc.)
@@ -410,6 +469,10 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		try
 		{
 			var normalizedPath = NormalizePath(path);
+			
+			// Attempt case-insensitive file lookup for Windows compatibility
+			normalizedPath = FindCaseInsensitivePath(normalizedPath);
+			
 			var fileMode = ConvertFileMode(mode);
 			var fileAccess = ConvertFileAccess(access);
 
@@ -507,6 +570,8 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 		try
 		{
 			var normalizedPath = NormalizePath(path);
+			// Try case-insensitive lookup for Windows compatibility
+			normalizedPath = FindCaseInsensitivePath(normalizedPath);
 			return _fileSystem.FileExists(normalizedPath);
 		}
 		catch (Exception ex)

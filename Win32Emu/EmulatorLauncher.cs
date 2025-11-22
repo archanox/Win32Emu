@@ -436,7 +436,14 @@ public static class EmulatorLauncher
 				try
 				{
 					// Ensure all parent directories exist in VFS
-					var vfsDir = Path.GetDirectoryName(vfsPath);
+					// On Linux, Path.GetDirectoryName doesn't recognize backslashes, so we need to extract manually
+					var lastBackslash = vfsPath.LastIndexOf('\\');
+					string? vfsDir = null;
+					if (lastBackslash > 0)
+					{
+						vfsDir = vfsPath.Substring(0, lastBackslash);
+					}
+					
 					if (!string.IsNullOrEmpty(vfsDir))
 					{
 						// Create all parent directories recursively

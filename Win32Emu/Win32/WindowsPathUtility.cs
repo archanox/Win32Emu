@@ -104,7 +104,10 @@ public static class WindowsPathUtility
 		}
 
 		// Path is relative (including paths starting with /), resolve it relative to current directory
-		return Path.Combine(currentDirectory, path);
+		// Use custom Windows-style path combining to avoid platform-specific path separators
+		var baseDir = currentDirectory.TrimEnd('\\', '/');
+		var relativePath = path.TrimStart('\\', '/');
+		return baseDir + "\\" + relativePath;
 	}
 
 	/// <summary>
