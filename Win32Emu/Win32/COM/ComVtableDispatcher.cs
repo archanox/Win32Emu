@@ -400,13 +400,13 @@ public class ComVtableDispatcher
 			asyncPrefix, interfaceName, objectAddr, vtableAddr);
 		
 		// Verify vtable contents immediately after creation
-		_logger.LogDebug("[COM] Verifying vtable at 0x{VtableAddr:X8} with {Count} methods:", vtableAddr, methodsList.Count);
+		_logger.LogInformation("[COM] Verifying vtable at 0x{VtableAddr:X8} with {Count} methods:", vtableAddr, methodsList.Count);
 		for (uint i = 0; i < methodsList.Count && i < 15; i++) // Log first 15 methods
 		{
 			var entryAddr = vtableAddr + (i * 4);
 			var methodStubAddr = _env.MemRead32(entryAddr);
 			var methodName = i < methodsList.Count ? methodsList[(int)i].Key : "unknown";
-			_logger.LogDebug("[COM]   [{Index:D2}] vtable[0x{EntryAddr:X8}] = 0x{StubAddr:X8} ({MethodName})", 
+			_logger.LogInformation("[COM]   [{Index:D2}] vtable[0x{EntryAddr:X8}] = 0x{StubAddr:X8} ({MethodName})", 
 				i, entryAddr, methodStubAddr, methodName);
 		}
 		
