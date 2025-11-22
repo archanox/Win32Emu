@@ -385,9 +385,15 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 				return normalizedPath;
 			}
 
+			// Handle root directory case explicitly
+			if (normalizedPath == "\\")
+			{
+				return normalizedPath; // Root directory, nothing to split
+			}
+
 			// Split the path into directory and filename
 			var lastSeparator = normalizedPath.LastIndexOf('\\');
-			if (lastSeparator < 0)
+			if (lastSeparator <= 0)
 			{
 				return normalizedPath; // Root level or invalid path
 			}
@@ -412,9 +418,22 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 				var actualFilename = file.Substring(file.LastIndexOf('\\') + 1);
 				if (string.Equals(actualFilename, filename, StringComparison.OrdinalIgnoreCase))
 				{
-					_logger.LogDebug("[DiskVFS] Case-insensitive match: '{Original}' -> '{Actual}'", 
+					_logger.LogDebug("[DiskVFS] Case-insensitive file match: '{Original}' -> '{Actual}'", 
 						normalizedPath, file);
 					return file;
+				}
+			}
+
+			// Also search for directories case-insensitively
+			var directories = _fileSystem.GetDirectories(directory, "*", SearchOption.TopDirectoryOnly);
+			foreach (var dir in directories)
+			{
+				var actualDirName = dir.Substring(dir.LastIndexOf('\\') + 1);
+				if (string.Equals(actualDirName, filename, StringComparison.OrdinalIgnoreCase))
+				{
+					_logger.LogDebug("[DiskVFS] Case-insensitive directory match: '{Original}' -> '{Actual}'",
+						normalizedPath, dir);
+					return dir;
 				}
 			}
 
