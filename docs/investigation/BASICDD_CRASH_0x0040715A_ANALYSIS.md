@@ -159,21 +159,45 @@ The vtable ordering issue has been fixed:
 
 ### Root Cause Re-analysis
 
-Initial hypothesis (vtable ordering) was **incorrect**. The crash persists despite correct vtable layout, indicating:
+Initial hypothesis (vtable ordering) was **incorrect**. Verified against retrowin32 source code - vtable layout is correct.
 
-**Possible actual causes:**
-1. **Return address corruption** - EIP reaches 0x0040715A through corrupted return address on stack
-2. **Bad indirect call** - Code pointer loaded from memory points to data section
-3. **Missing Win32 API** - Unimplemented function returns invalid address
-4. **Stack corruption** - Buffer overflow or incorrect stack cleanup elsewhere
+### Verification Against retrowin32
 
-**Evidence from debug run:**
-- GetAttachedSurface returns successfully at 0x0040140C
-- All registers preserved correctly (EBP=0x001FEFFC before crash)
-- Crash occurs later at 0x0040715A with EBP=0x0040187C (different!)
-- Stack at ESP shows import stub 0x0F000115
+From `retrowin32/win32/dll/ddraw/src/ddraw1.rs`, the IDirectDrawSurface vtable uses identical ordering:
+- Flip at index 11 (offset 0x2C) ✓
+- GetAttachedSurface at index 12 (offset 0x30) ✓
+- Restore at index 27 (offset 0x6C) ✓
 
-This suggests the crash occurs during subsequent execution in BasicDD.exe code, not during COM vtable calls.
+### Actual Root Cause: Severe Stack Corruption
+
+**Crash characteristics:**
+```
+EIP = 0x0040715A    (data section - contains: FF FF FF FF - invalid opcodes)
+EBP = 0x0040187C    (inside FUN_00401873 - invalid frame pointer)
+ESP = 0x001FEF70 -> points to 0x0F000115 (GetModuleHandleA import stub + 5 bytes!)
+```
+
+**Analysis:**
+1. GetAttachedSurface returns successfully to 0x0040140C ✓
+2. Registers preserved correctly (EBP=0x001FEFFC) ✓
+3. Execution continues in FUN_00401310, returns to FUN_00401040 (WinMain)
+4. Main loop calls FUN_00401130 which calls Flip (offset 0x2C)
+5. **Stack becomes corrupted** - ESP points to middle of import stub
+6. Execution jumps/falls through to data section at 0x0040715A
+
+**Key evidence:**
+- ESP=0x001FEF70 contains 0x0F000115 (5 bytes into GetModuleHandleA stub at 0x0F000110)
+- Import stubs are 16 bytes: 6-byte CALL + 2-3 byte RET
+- 5 bytes in = middle of CALL instruction encoding
+- This is impossible as a valid return address
+- Indicates stack was corrupted **before** this value was popped
+
+**Possible causes:**
+1. **CPU emulation bug** in instruction execution corrupting stack
+2. **Incorrect stdcall cleanup** for some Win32 API (wrong argBytes)
+3. **Missing Win32 API implementation** that BasicDD calls
+4. **Unhandled calling convention** (e.g., fastcall vs stdcall confusion)
+5. **Buffer overflow** in application code due to incorrect API behavior
 
 ## Related Documentation
 
@@ -199,12 +223,52 @@ This indicates the root cause is **not** vtable ordering but likely:
 - Missing or incorrect Win32 API implementation
 - Indirect call through corrupted function pointer
 
-## Next Steps for Further Investigation
+## Debugging Strategy
 
-1. **Disassemble BasicDD.exe around 0x0040140C** - Understand what code executes after GetAttachedSurface returns
-2. **Trace execution path** - Use GDB server (`--gdb-server`) to step through and find where EIP diverges
-3. **Analyze EBP corruption** - Determine why/how EBP changes from 0x001FEFFC to 0x0040187C
-4. **Examine import stub 0x0F000115** - Identify which API it represents and why it's on stack at crash
-5. **Review unimplemented APIs** - Check if BasicDD.exe calls functions that aren't properly implemented
+### Immediate Steps
 
-The vtable ordering fix was necessary and correct, but insufficient to resolve the actual crash.
+1. **Enable GDB server mode** (`--gdb-server`)
+   - Attach Ghidra/IDA to trace execution
+   - Set breakpoint at 0x0040140C (after GetAttachedSurface returns)
+   - Single-step to identify exact point of stack corruption
+
+2. **Monitor stack pointer**
+   - Watch ESP changes during function calls
+   - Verify stdcall cleanup (ESP += 4 + argBytes)
+   - Check for unexpected ESP modifications
+
+3. **Trace function calls**
+   - Log all function entries/exits with ESP values
+   - Identify which call corrupts stack
+   - Check argBytes calculation for that function
+
+### Investigation Areas
+
+1. **GetModuleHandleA analysis**
+   - Why is 0x0F000115 (middle of stub) on stack?
+   - Check if GetModuleHandleA is called with wrong arguments
+   - Verify import stub implementation
+
+2. **FUN_00401130 execution flow**
+   - This calls Flip and potentially Restore
+   - May call additional Win32 APIs
+   - Could be where corruption occurs
+
+3. **CPU instruction emulation**
+   - Check CALL/RET handling
+   - Verify PUSH/POP operations
+   - Ensure stack frame management
+
+4. **Unimplemented APIs**
+   - BasicDD may call APIs we haven't implemented
+   - Could return incorrect values or corrupt state
+   - Need comprehensive API trace
+
+### Long-term Solutions
+
+1. Add stack integrity validation
+2. Implement stack canaries for debugging
+3. Enhanced logging for all stack operations
+4. Automated detection of invalid return addresses
+
+The vtable ordering fix was necessary and correct, but the actual crash stems from stack corruption elsewhere in the execution flow.
