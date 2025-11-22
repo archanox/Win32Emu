@@ -133,20 +133,47 @@ The emulator uses distinct memory ranges for different purposes:
 
 ## Resolution
 
-### Status: ✅ FIXED
+### Status: ⚠️ PARTIALLY ADDRESSED
 
-The issue has been completely resolved:
-- `CreateComObjectOrdered()` ensures correct method ordering
-- All DirectDraw surface creation uses ordered lists
-- Comprehensive tests prevent regression
-- BasicDD.exe should no longer crash at 0x0040715A
+The vtable ordering issue has been fixed:
+- `CreateComObjectOrdered()` ensures correct method ordering ✅
+- All DirectDraw surface creation uses ordered lists ✅
+- Comprehensive tests verify vtable layout ✅
+- Flip method correctly at offset 0x2C (0x0D0010B0) ✅
+
+**However, BasicDD.exe still crashes at 0x0040715A** ❌
 
 ### Verification Steps
 
-To verify the fix works:
-1. Run `dotnet test Win32Emu.Tests.Emulator --filter "IDirectDrawSurface_Flip_ShouldBeAtOffset0x2C"`
-2. Verify test passes
-3. Check test output shows Flip at 0x0D0010B0 (COM region), not 0x0040715A (data section)
+1. **Vtable layout test passes:**
+   ```bash
+   $ dotnet test Win32Emu.Tests.Emulator --filter "IDirectDrawSurface_Flip_ShouldBeAtOffset0x2C"
+   ✅ PASSED - Flip at 0x0D0010B0 (COM region), NOT 0x0040715A (data section)
+   ```
+
+2. **But runtime crash still occurs:**
+   ```bash
+   $ dotnet run --project Win32Emu.Gui/Win32Emu.Gui.csproj --no-build -- --nogui EXEs/BasicDD.exe
+   ❌ CRASH - [IcedCpu] Unhandled mnemonic INVALID at 0x0040715A, ESP=0x001FEF70, EBP=0x0040187C
+   ```
+
+### Root Cause Re-analysis
+
+Initial hypothesis (vtable ordering) was **incorrect**. The crash persists despite correct vtable layout, indicating:
+
+**Possible actual causes:**
+1. **Return address corruption** - EIP reaches 0x0040715A through corrupted return address on stack
+2. **Bad indirect call** - Code pointer loaded from memory points to data section
+3. **Missing Win32 API** - Unimplemented function returns invalid address
+4. **Stack corruption** - Buffer overflow or incorrect stack cleanup elsewhere
+
+**Evidence from debug run:**
+- GetAttachedSurface returns successfully at 0x0040140C
+- All registers preserved correctly (EBP=0x001FEFFC before crash)
+- Crash occurs later at 0x0040715A with EBP=0x0040187C (different!)
+- Stack at ESP shows import stub 0x0F000115
+
+This suggests the crash occurs during subsequent execution in BasicDD.exe code, not during COM vtable calls.
 
 ## Related Documentation
 
@@ -165,4 +192,19 @@ To verify the fix works:
 
 ## Conclusion
 
-The BasicDD.exe crash at 0x0040715A was caused by incorrect COM vtable method ordering. The fix ensures all vtable methods are populated in the exact order specified by the COM interface, preventing vtable entries from pointing to data section addresses. Comprehensive tests verify the fix and prevent regression.
+The investigation initially hypothesized that the BasicDD.exe crash at 0x0040715A was caused by incorrect COM vtable method ordering. While `CreateComObjectOrdered()` was implemented and tests confirm correct vtable layout, **the crash still occurs at runtime**.
+
+This indicates the root cause is **not** vtable ordering but likely:
+- Stack corruption or return address manipulation in BasicDD.exe code
+- Missing or incorrect Win32 API implementation
+- Indirect call through corrupted function pointer
+
+## Next Steps for Further Investigation
+
+1. **Disassemble BasicDD.exe around 0x0040140C** - Understand what code executes after GetAttachedSurface returns
+2. **Trace execution path** - Use GDB server (`--gdb-server`) to step through and find where EIP diverges
+3. **Analyze EBP corruption** - Determine why/how EBP changes from 0x001FEFFC to 0x0040187C
+4. **Examine import stub 0x0F000115** - Identify which API it represents and why it's on stack at crash
+5. **Review unimplemented APIs** - Check if BasicDD.exe calls functions that aren't properly implemented
+
+The vtable ordering fix was necessary and correct, but insufficient to resolve the actual crash.
