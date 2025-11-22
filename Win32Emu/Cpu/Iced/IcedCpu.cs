@@ -835,11 +835,17 @@ public class IcedCpu : IAsyncCpu
 										var label = i == 0 ? " (ESP)" : i < 0 ? $" (ESP{i * 4:+0;-0})" : $" (ESP+{i * 4})";
 										stackDump.AppendLine($"  [0x{addr:X8}] = 0x{val:X8}{label}");
 									}
-									catch { }
+									catch (Exception ex)
+									{
+										_logger.LogDebug(ex, "[IcedCpu] Failed to read stack value at 0x{Addr:X8} during stack dump", addr);
+									}
 								}
 								_logger.LogError(stackDump.ToString());
 							}
-							catch { }
+							catch (Exception ex)
+							{
+								_logger.LogError(ex, "[IcedCpu] Exception occurred while dumping stack for INVALID instruction at 0x{OldEip:X8}", oldEip);
+							}
 							
 							// Throw exception to halt execution and prevent further corruption
 							// This prevents the CPU from continuing to execute random data as code,

@@ -405,7 +405,7 @@ public class ComVtableDispatcher
 		{
 			var entryAddr = vtableAddr + (i * 4);
 			var methodStubAddr = _env.MemRead32(entryAddr);
-			var methodName = i < methodsList.Count ? methodsList[(int)i].Key : "unknown";
+			var methodName = methodsList[(int)i].Key;
 			_logger.LogInformation("[COM]   [{Index:D2}] vtable[0x{EntryAddr:X8}] = 0x{StubAddr:X8} ({MethodName})", 
 				i, entryAddr, methodStubAddr, methodName);
 		}
