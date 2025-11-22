@@ -4820,23 +4820,43 @@ public class IcedCpu : IAsyncCpu
 
 		count &= 0x1F; // Modulo 32
 		
+		// Get operand size - SHLD can be 16-bit or 32-bit
+		var opSize = GetOpSizeBits(insn, 0);
+		var signBit = 1u << (opSize - 1);
+		
 		// Save original MSB for OF calculation
-		var originalMsb = (dest & 0x80000000) != 0;
+		var originalMsb = (dest & signBit) != 0;
 		
-		// Shift dest left by count, filling with high bits of src
-		// CF is set to the last bit shifted out
-		var carryOut = ((dest >> (32 - count)) & 1) != 0;
+		// CF is set to the last bit shifted out of dest
+		var carryOut = ((dest >> (opSize - count)) & 1) != 0;
 		
-		ulong combined = ((ulong)dest << 32) | src;
-		combined <<= count;
-		dest = (uint)(combined >> 32);
+		// For SHLD, shift dest left and bring in bits from src
+		// Per https://github.com/SingleStepTests/80386/issues/4:
+		// When count >= opSize, the "inBits" are rotated (ROL style) from src
+		var mask = (1u << opSize) - 1;
+		uint inBits;
+		if (count >= opSize)
+		{
+			// Rotate src left by (count mod opSize) to get the bits that flow in
+			var rotateAmount = count % opSize;
+			var rotatedSrc = ((src << rotateAmount) | (src >> (opSize - rotateAmount))) & mask;
+			// Take bottom 'count' bits from rotated src (but since count >= opSize, take all)
+			inBits = rotatedSrc >> (opSize - (count % opSize));
+		}
+		else
+		{
+			// Normal case: take high 'count' bits from src and shift right
+			inBits = src >> (opSize - count);
+		}
+		
+		dest = ((dest << count) | inBits) & mask;
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
 		// OF is set only if count == 1 - set if sign changed
 		if (count == 1)
 		{
-			var newMsb = (dest & 0x80000000) != 0;
+			var newMsb = (dest & signBit) != 0;
 			SetFlagVal(Of, originalMsb != newMsb);
 		}
 		else
@@ -4848,7 +4868,7 @@ public class IcedCpu : IAsyncCpu
 		
 		WriteOp(insn, 0, dest);
 		// Update SF, ZF, and PF based on result
-		UpdateLogicResultFlags(dest);
+		UpdateLogicResultFlags(dest, signBit);
 	}
 
 	private void ExecShrd(Instruction insn)
@@ -4865,22 +4885,43 @@ public class IcedCpu : IAsyncCpu
 
 		count &= 0x1F; // Modulo 32
 		
-		// Save original MSB for OF calculation
-		var originalMsb = (dest & 0x80000000) != 0;
+		// Get operand size - SHRD can be 16-bit or 32-bit
+		var opSize = GetOpSizeBits(insn, 0);
+		var signBit = 1u << (opSize - 1);
 		
-		// Shift dest right by count, filling with low bits of src
-		// CF is set to the last bit shifted out
-		ulong combined = ((ulong)src << 32) | dest;
-		var carryOut = ((combined >> (count - 1)) & 1) != 0;
-		combined >>= count;
-		dest = (uint)combined;
+		// Save original MSB for OF calculation
+		var originalMsb = (dest & signBit) != 0;
+		
+		// CF is set to the last bit shifted out of dest
+		var carryOut = ((dest >> (count - 1)) & 1) != 0;
+		
+		// For SHRD, shift dest right and bring in bits from src
+		// Per https://github.com/SingleStepTests/80386/issues/4:
+		// When count >= opSize, the "inBits" are rotated (ROR style) from src
+		var mask = (1u << opSize) - 1;
+		uint inBits;
+		if (count >= opSize)
+		{
+			// Rotate src right by (count mod opSize) to get the bits that flow in
+			var rotateAmount = count % opSize;
+			var rotatedSrc = ((src >> rotateAmount) | (src << (opSize - rotateAmount))) & mask;
+			// Take top 'count' bits from rotated src (but since count >= opSize, take all)
+			inBits = rotatedSrc << (opSize - (count % opSize));
+		}
+		else
+		{
+			// Normal case: take low 'count' bits from src and shift left
+			inBits = src << (opSize - count);
+		}
+		
+		dest = ((dest >> count) | inBits) & mask;
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
 		// OF is set only if count == 1 - set if sign changed
 		if (count == 1)
 		{
-			var newMsb = (dest & 0x80000000) != 0;
+			var newMsb = (dest & signBit) != 0;
 			SetFlagVal(Of, originalMsb != newMsb);
 		}
 		else
@@ -4892,7 +4933,7 @@ public class IcedCpu : IAsyncCpu
 		
 		WriteOp(insn, 0, dest);
 		// Update SF, ZF, and PF based on result
-		UpdateLogicResultFlags(dest);
+		UpdateLogicResultFlags(dest, signBit);
 	}
 
 	private void ExecAad(Instruction insn)
