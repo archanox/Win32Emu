@@ -2308,20 +2308,40 @@ public class IcedCpu : IAsyncCpu
 
 		var r = a << c;
 		
-		// Last bit shifted out depends on operand size
-		var lastOut = (a >> (bitWidth - c)) & 1u;
-		SetFlagVal(Cf, lastOut != 0);
-		if (c == 1)
+		// Per https://github.com/SingleStepTests/80386/issues/4:
+		// For 8-bit SHL when count > 8:
+		// OF and CF set to 1 if ((count == 16 OR count == 24) AND (src & 1)) else 0
+		if (opSize == 8 && c > 8)
 		{
-			// OF is set if sign bit changed (XOR of MSB before and after)
-			bool before = (a & signBit) != 0, after = (r & signBit) != 0;
-			SetFlagVal(Of, before ^ after);
+			bool specialCase = (c == 16 || c == 24) && ((a & 1) != 0);
+			SetFlagVal(Of, specialCase);
+			SetFlagVal(Cf, specialCase);
+		}
+		else if (c > bitWidth)
+		{
+			// For counts greater than bit width (16-bit/32-bit), all bits shift out
+			// CF and OF are undefined, but real 80386 hardware clears them
+			SetFlagVal(Cf, false);
+			SetFlagVal(Of, false);
 		}
 		else
 		{
-			// OF is undefined when count > 1, but real 80386 hardware clears it
-			SetFlagVal(Of, false);
+			// Normal case
+			var lastOut = (a >> (bitWidth - c)) & 1u;
+			SetFlagVal(Cf, lastOut != 0);
+			if (c == 1)
+			{
+				// OF is set if sign bit changed (XOR of MSB before and after)
+				bool before = (a & signBit) != 0, after = (r & signBit) != 0;
+				SetFlagVal(Of, before ^ after);
+			}
+			else
+			{
+				// OF is undefined when count > 1, but real 80386 hardware clears it
+				SetFlagVal(Of, false);
+			}
 		}
+		
 		// AF is undefined for shift operations, but on real 80386 hardware it gets set
 		// Based on empirical evidence from SingleStepTests, AF is set when count > 0
 		SetFlagVal(Af, true);
@@ -2380,24 +2400,49 @@ public class IcedCpu : IAsyncCpu
 				// OF is undefined when count > 1, but real 80386 hardware clears it
 				SetFlagVal(Of, false);
 			}
+			
+			var lastOut = (a >> (c - 1)) & 1u;
+			SetFlagVal(Cf, lastOut != 0);
 		}
 		else
 		{
 			r = a >> c;
-			if (c == 1)
+			
+			// Per https://github.com/SingleStepTests/80386/issues/4:
+			// For 8-bit SHR when count > 8:
+			// OF set to 0, CF set if ((count == 16 OR count == 24) AND (src & 0x80)) else 0
+			if (opSize == 8 && c > 8)
 			{
-				// OF is set to MSB of original operand
-				SetFlagVal(Of, (a & signBit) != 0);
+				SetFlagVal(Of, false);
+				bool specialCase = (c == 16 || c == 24) && ((a & 0x80) != 0);
+				SetFlagVal(Cf, specialCase);
+			}
+			else if (c > bitWidth)
+			{
+				// For counts greater than bit width (16-bit/32-bit), all bits shift out
+				// The result is 0 for logical shift
+				// CF and OF behavior: CF would be 0 (no bits left), OF is cleared
+				SetFlagVal(Cf, false);
+				SetFlagVal(Of, false);
 			}
 			else
 			{
-				// OF is undefined when count > 1, but real 80386 hardware clears it
-				SetFlagVal(Of, false);
+				if (c == 1)
+				{
+					// OF is set to MSB of original operand
+					SetFlagVal(Of, (a & signBit) != 0);
+				}
+				else
+				{
+					// OF is undefined when count > 1, but real 80386 hardware clears it
+					SetFlagVal(Of, false);
+				}
+				
+				var lastOut = (a >> (c - 1)) & 1u;
+				SetFlagVal(Cf, lastOut != 0);
 			}
 		}
 
-		var lastOut = (a >> (c - 1)) & 1u;
-		SetFlagVal(Cf, lastOut != 0);
 		// AF is undefined for shift operations, but on real 80386 hardware it gets set
 		// Based on empirical evidence from SingleStepTests, AF is set when count > 0
 		SetFlagVal(Af, true);
@@ -4687,6 +4732,19 @@ public class IcedCpu : IAsyncCpu
 		}
 	}
 
+	/// <summary>
+	/// Sets OF flag for BT family instructions based on hardware behavior.
+	/// Per https://github.com/SingleStepTests/80386/issues/4:
+	/// Rotate the source value right by bit index, then set OF to XOR of top two bits.
+	/// </summary>
+	private void SetBtFamilyOfFlag(uint bitBase, int bitPos, int opSize)
+	{
+		var rotated = ((bitBase >> bitPos) | (bitBase << (opSize - bitPos))) & ((1u << opSize) - 1);
+		var topBit = (rotated >> (opSize - 1)) & 1;
+		var secondBit = (rotated >> (opSize - 2)) & 1;
+		SetFlagVal(Of, (topBit ^ secondBit) != 0);
+	}
+
 	private void ExecBt(Instruction insn)
 	{
 		// BT - Bit test
@@ -4697,6 +4755,7 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
+		SetBtFamilyOfFlag(bitBase, bitPos, opSize);
 	}
 
 	private void ExecBts(Instruction insn)
@@ -4709,6 +4768,8 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
+		SetBtFamilyOfFlag(bitBase, bitPos, opSize);
+		
 		// Set the bit
 		bitBase |= (1u << bitPos);
 		WriteOp(insn, 0, bitBase);
@@ -4724,6 +4785,8 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
+		SetBtFamilyOfFlag(bitBase, bitPos, opSize);
+		
 		// Reset (clear) the bit
 		bitBase &= ~(1u << bitPos);
 		WriteOp(insn, 0, bitBase);
@@ -4739,6 +4802,8 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
+		SetBtFamilyOfFlag(bitBase, bitPos, opSize);
+		
 		// Complement (toggle) the bit
 		bitBase ^= (1u << bitPos);
 		WriteOp(insn, 0, bitBase);
@@ -4841,23 +4906,70 @@ public class IcedCpu : IAsyncCpu
 
 		count &= 0x1F; // Modulo 32
 		
+		// Get operand size - SHLD can be 16-bit or 32-bit
+		var opSize = GetOpSizeBits(insn, 0);
+		var signBit = 1u << (opSize - 1);
+		
 		// Save original MSB for OF calculation
-		var originalMsb = (dest & 0x80000000) != 0;
+		var originalMsb = (dest & signBit) != 0;
 		
-		// Shift dest left by count, filling with high bits of src
-		// CF is set to the last bit shifted out
-		var carryOut = ((dest >> (32 - count)) & 1) != 0;
+		var mask = (1u << opSize) - 1;
 		
-		ulong combined = ((ulong)dest << 32) | src;
-		combined <<= count;
-		dest = (uint)(combined >> 32);
+		// CF is set to the last bit shifted out of dest
+		bool carryOut;
+		if (count < opSize)
+		{
+			// Normal case: last bit shifted out from dest
+			carryOut = ((dest >> (opSize - count)) & 1) != 0;
+		}
+		else
+		{
+			// When count >= opSize, the last bit shifted out wraps around
+			var rotateAmount = count % opSize;
+			if (rotateAmount == 0)
+			{
+				// Full rotation, CF comes from MSB of dest
+				carryOut = ((dest >> (opSize - 1)) & 1) != 0;
+			}
+			else
+			{
+				var rotatedDest = ((dest << rotateAmount) | (dest >> (opSize - rotateAmount))) & mask;
+				carryOut = ((rotatedDest >> (opSize - rotateAmount)) & 1) != 0;
+			}
+		}
+		
+		// For SHLD, shift dest left and bring in bits from src
+		// Per https://github.com/SingleStepTests/80386/issues/4:
+		// When count >= opSize, the "inBits" are rotated (ROL style) from src
+		uint inBits;
+		if (count >= opSize)
+		{
+			// Rotate src left by (count mod opSize) to get the bits that flow in
+			var rotateAmount = count % opSize;
+			var rotatedSrc = ((src << rotateAmount) | (src >> (opSize - rotateAmount))) & mask;
+			// When count >= opSize, dest is replaced by inBits
+			if (rotateAmount == 0)
+			{
+				dest = rotatedSrc;
+			}
+			else
+			{
+				dest = rotatedSrc;
+			}
+		}
+		else
+		{
+			// Normal case: take high 'count' bits from src and shift right
+			inBits = src >> (opSize - count);
+			dest = ((dest << count) | inBits) & mask;
+		}
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
 		// OF is set only if count == 1 - set if sign changed
 		if (count == 1)
 		{
-			var newMsb = (dest & 0x80000000) != 0;
+			var newMsb = (dest & signBit) != 0;
 			SetFlagVal(Of, originalMsb != newMsb);
 		}
 		else
@@ -4869,7 +4981,7 @@ public class IcedCpu : IAsyncCpu
 		
 		WriteOp(insn, 0, dest);
 		// Update SF, ZF, and PF based on result
-		UpdateLogicResultFlags(dest);
+		UpdateLogicResultFlags(dest, signBit);
 	}
 
 	private void ExecShrd(Instruction insn)
@@ -4886,22 +4998,70 @@ public class IcedCpu : IAsyncCpu
 
 		count &= 0x1F; // Modulo 32
 		
-		// Save original MSB for OF calculation
-		var originalMsb = (dest & 0x80000000) != 0;
+		// Get operand size - SHRD can be 16-bit or 32-bit
+		var opSize = GetOpSizeBits(insn, 0);
+		var signBit = 1u << (opSize - 1);
 		
-		// Shift dest right by count, filling with low bits of src
-		// CF is set to the last bit shifted out
-		ulong combined = ((ulong)src << 32) | dest;
-		var carryOut = ((combined >> (count - 1)) & 1) != 0;
-		combined >>= count;
-		dest = (uint)combined;
+		// Save original MSB for OF calculation
+		var originalMsb = (dest & signBit) != 0;
+		
+		var mask = (1u << opSize) - 1;
+		
+		// CF is set to the last bit shifted out of dest
+		bool carryOut;
+		if (count <= opSize)
+		{
+			// Normal case: last bit shifted out from dest
+			carryOut = ((dest >> (count - 1)) & 1) != 0;
+		}
+		else
+		{
+			// When count > opSize, need to account for wrap-around
+			var rotateAmount = count % opSize;
+			if (rotateAmount == 0)
+			{
+				// Full rotation, CF comes from LSB of dest
+				carryOut = (dest & 1) != 0;
+			}
+			else
+			{
+				var rotatedDest = ((dest >> rotateAmount) | (dest << (opSize - rotateAmount))) & mask;
+				carryOut = ((rotatedDest >> (rotateAmount - 1)) & 1) != 0;
+			}
+		}
+		
+		// For SHRD, shift dest right and bring in bits from src
+		// Per https://github.com/SingleStepTests/80386/issues/4:
+		// When count >= opSize, the "inBits" are rotated (ROR style) from src
+		uint inBits;
+		if (count >= opSize)
+		{
+			// Rotate src right by (count mod opSize) to get the bits that flow in
+			var rotateAmount = count % opSize;
+			var rotatedSrc = ((src >> rotateAmount) | (src << (opSize - rotateAmount))) & mask;
+			// When count >= opSize, dest is replaced by inBits (rotated src)
+			if (rotateAmount == 0)
+			{
+				dest = rotatedSrc;
+			}
+			else
+			{
+				dest = rotatedSrc;
+			}
+		}
+		else
+		{
+			// Normal case: take low 'count' bits from src and shift left
+			inBits = src << (opSize - count);
+			dest = ((dest >> count) | inBits) & mask;
+		}
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
 		// OF is set only if count == 1 - set if sign changed
 		if (count == 1)
 		{
-			var newMsb = (dest & 0x80000000) != 0;
+			var newMsb = (dest & signBit) != 0;
 			SetFlagVal(Of, originalMsb != newMsb);
 		}
 		else
@@ -4913,7 +5073,7 @@ public class IcedCpu : IAsyncCpu
 		
 		WriteOp(insn, 0, dest);
 		// Update SF, ZF, and PF based on result
-		UpdateLogicResultFlags(dest);
+		UpdateLogicResultFlags(dest, signBit);
 	}
 
 	private void ExecAad(Instruction insn)
