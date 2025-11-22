@@ -79,12 +79,26 @@ public static class BackendFactory
     /// </summary>
     public static IAudioBackend CreateAudioBackend(ILogger logger)
     {
-        // Use SDL3 audio when SDL backend is selected, otherwise use OpenAL
-        return CurrentBackendType switch
+        // Software backend uses null audio (no audio output)
+        if (CurrentBackendType == BackendType.Software)
         {
-            BackendType.SDL => new Sdl3AudioBackend(logger),
-            _ => new SilkOpenAlAudioBackend(logger)
-        };
+            return new NullAudioBackend(logger);
+        }
+
+        // Try to create appropriate audio backend, fall back to null audio on failure
+        try
+        {
+            return CurrentBackendType switch
+            {
+                BackendType.SDL => new Sdl3AudioBackend(logger),
+                _ => new SilkOpenAlAudioBackend(logger)
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[BackendFactory] Failed to create audio backend, falling back to null audio");
+            return new NullAudioBackend(logger);
+        }
     }
 
     /// <summary>
