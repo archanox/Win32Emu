@@ -31,6 +31,64 @@ public class FailureAnalyzer
 		AnalyzeTestFile("6766A1.MOO.gz", maxTests: 100);
 	}
 	
+	[Fact]
+	public void AnalyzeFailingTests_D5MOO()
+	{
+		// D5.MOO.gz contains AAD instruction tests
+		// According to investigation, this has 15.3% pass rate with pure EFLAGS issues
+		AnalyzeTestFile("D5.MOO.gz", maxTests: 20);
+	}
+	
+	[Fact]
+	public void AnalyzeAADFlagPattern()
+	{
+		// Detailed analysis of AAD flag behavior
+		var testFile = TestFileHelper.FindTestFile("D5.MOO.gz");
+		if (testFile == null)
+		{
+			_output.WriteLine("D5.MOO.gz not found");
+			return;
+		}
+		
+		var mooFile = MooFileParser.Parse(testFile);
+		_output.WriteLine($"Analyzing AAD flag patterns from {mooFile.Tests.Count} tests\n");
+		
+		for (int i = 0; i < Math.Min(20, mooFile.Tests.Count); i++)
+		{
+			var test = mooFile.Tests[i];
+			var initial = test.InitialState.Registers;
+			var final = test.FinalState.Registers;
+			
+			var al_init = (byte)(initial.Eax & 0xFF);
+			var ah_init = (byte)((initial.Eax >> 8) & 0xFF);
+			var al_final = (byte)(final.Eax & 0xFF);
+			var ah_final = (byte)((final.Eax >> 8) & 0xFF);
+			
+			// Get the base from instruction
+			var base_ = test.InstructionBytes.Length > 1 ? test.InstructionBytes[1] : (byte)10;
+			
+			// Calculate what the result should be
+			var temp = ah_init * base_ + al_init;
+			var expected_al = (byte)(temp & 0xFF);
+			
+			// Extract flags
+			var finalFlags = final.Eflags;
+			var cf = (finalFlags & 0x1) != 0;
+			var pf = (finalFlags & 0x4) != 0;
+			var af = (finalFlags & 0x10) != 0;
+			var zf = (finalFlags & 0x40) != 0;
+			var sf = (finalFlags & 0x80) != 0;
+			var of = (finalFlags & 0x800) != 0;
+			
+			_output.WriteLine($"Test {i}: base=0x{base_:X2}");
+			_output.WriteLine($"  Calculation: AH=0x{ah_init:X2} * 0x{base_:X2} + AL=0x{al_init:X2} = {temp} (0x{temp:X4})");
+			_output.WriteLine($"  Result: AL=0x{al_final:X2} (expected 0x{expected_al:X2}), AH=0x{ah_final:X2}");
+			_output.WriteLine($"  Overflow: temp > 255? {temp > 255}");
+			_output.WriteLine($"  Flags: CF={cf}, OF={of}, SF={sf}, ZF={zf}, PF={pf}, AF={af}");
+			_output.WriteLine("");
+		}
+	}
+	
 	private void AnalyzeTestFile(string fileName, int maxTests)
 	{
 		var testFile = TestFileHelper.FindTestFile(fileName);
