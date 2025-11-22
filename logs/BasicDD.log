@@ -13,6 +13,10 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [DiskVFS] Mounted VHD: /Users/pierce/Library/Application Support/Win32Emu/VirtualDisks/BasicDD.vhd (Read-Write)
 info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\EXEs\BasicDD.exe'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\EXEs\BasicDD.exe'
+info: Win32Emu.Emulator[0]
       [Loader] Extracted 462848 bytes from virtual disk
 info: Win32Emu.Emulator[0]
       [DiskVFS] Disposed
@@ -93,11 +97,41 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [RegistryHive] Disposed registry hive manager
 info: Win32Emu.Emulator[0]
-      [RegistryHive] Created in-memory hive: SYSTEM
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config\SYSTEM'
 info: Win32Emu.Emulator[0]
-      [RegistryHive] Created in-memory hive: SOFTWARE
+      [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\Windows\System32\Config\SYSTEM'
 info: Win32Emu.Emulator[0]
-      [RegistryHive] Created in-memory hive: NTUSER.DAT
+      [RegistryHive] Loading existing hive from VFS: SYSTEM at C:\Windows\System32\Config\SYSTEM
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config\SYSTEM'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\Windows\System32\Config\SYSTEM'
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Loaded existing hive: SYSTEM (8192 bytes)
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config\SOFTWARE'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\Windows\System32\Config\SOFTWARE'
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Loading existing hive from VFS: SOFTWARE at C:\Windows\System32\Config\SOFTWARE
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config\SOFTWARE'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\Windows\System32\Config\SOFTWARE'
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Loaded existing hive: SOFTWARE (8192 bytes)
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Users\User\NTUSER.DAT'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\Users\User\NTUSER.DAT'
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Loading existing hive from VFS: NTUSER.DAT at C:\Users\User\NTUSER.DAT
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Users\User\NTUSER.DAT'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\Users\User\NTUSER.DAT'
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Loaded existing hive: NTUSER.DAT (8192 bytes)
 info: Win32Emu.Emulator[0]
       [RegistryHive] Initialized 3 registry hives
 info: Win32Emu.Emulator[0]
@@ -909,9 +943,9 @@ info: Win32Emu.Emulator[0]
 info: Win32Emu.Emulator[0]
       [Syscall] AFTER API: Return address at 0x001FEEB4 = 0x00401329
 info: Win32Emu.Emulator[0]
-      [COM] Invoking vtable method: IDirectDraw::SetCooperativeLevel at address 0x0D001140
-info: Win32Emu.Emulator[0]
       [ProcessEnv] PostMessage: queued MSG=0x0005 HWND=0x00010000
+info: Win32Emu.Emulator[0]
+      [COM] Invoking vtable method: IDirectDraw::SetCooperativeLevel at address 0x0D001140
 info: Win32Emu.Emulator[0]
       [DDraw COM] IDirectDraw::SetCooperativeLevel(this=0x010032B0, hWnd=0x00010000, flags=0x00000011)
 info: Win32Emu.Emulator[0]
@@ -1049,25 +1083,55 @@ fail: Win32Emu.Emulator[0]
 fail: Win32Emu.Emulator[0]
       [Emulator] Exception during SingleStep at EIP=0x0040715A, ESP=0x001FEF70, EBP=0x0040187C: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
       System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
-         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 818
-         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 889
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 826
+         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 905
 fail: Win32Emu.Emulator[0]
       [Emulator] Unhandled exception during emulation
       System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
-         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 818
-         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 889
-         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 589
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 826
+         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 905
+         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 605
 info: Win32Emu.Emulator[0]
       No unimplemented functions found!
 fail: Win32Emu.Emulator[0]
       Unhandled exception during emulation
       System.InvalidOperationException: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
-         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 818
-         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 889
-         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 589
+         at Win32Emu.Cpu.Iced.IcedCpu.SingleStep(VirtualMemory mem) in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Cpu/Iced/IcedCpu.cs:line 826
+         at Win32Emu.Emulator.RunNormalAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 905
+         at Win32Emu.Emulator.RunAsync() in /Users/pierce/RiderProjects/Win32Emu/Win32Emu/Emulator.cs:line 605
 fail: Win32Emu.Emulator[0]
       Unhandled exception: INVALID instruction at 0x0040715A (unknown region - could be data section, uninitialized memory, or beyond loaded code). This indicates execution has jumped to invalid memory. Common causes: (1) corrupted return address on stack (check for stack overflow/underflow), (2) uninitialized or corrupted function pointer, (3) bad indirect jump/call, (4) buffer overflow corrupting code pointers. ESP=0x001FEF70, EBP=0x0040187C
 info: Win32Emu.Emulator[0]
       [ProcessEnv] PostMessage: queued MSG=0x001C HWND=0x00010000
 info: Win32Emu.Emulator[0]
-      Avalonia window closed for HWND=0x00010000
+      [ProcessEnv] Performing cleanup
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Saving registry hives to VFS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config\SYSTEM'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\Windows\System32\Config\SYSTEM'
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Saved hive SYSTEM to C:\Windows\System32\Config\SYSTEM (8192 bytes)
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config\SOFTWARE'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\Windows\System32\Config\SOFTWARE'
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Saved hive SOFTWARE to C:\Windows\System32\Config\SOFTWARE (8192 bytes)
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Users\User\NTUSER.DAT'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\Users\User\NTUSER.DAT'
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Saved hive NTUSER.DAT to C:\Users\User\NTUSER.DAT (8192 bytes)
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Registry hives saved successfully
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Disposed registry hive manager
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Disposed
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Virtual file system disposed
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Cleanup completed
