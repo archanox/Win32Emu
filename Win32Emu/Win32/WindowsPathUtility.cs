@@ -107,6 +107,10 @@ public static class WindowsPathUtility
 		// Use custom Windows-style path combining to avoid platform-specific path separators
 		var baseDir = currentDirectory.TrimEnd('\\', '/');
 		var relativePath = path.TrimStart('\\', '/');
+		if (string.IsNullOrEmpty(relativePath))
+		{
+			return baseDir;
+		}
 		return baseDir + "\\" + relativePath;
 	}
 
