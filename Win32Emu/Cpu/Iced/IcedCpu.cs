@@ -820,6 +820,27 @@ public class IcedCpu : IAsyncCpu
 								addressInfo = "unknown region - could be data section, uninitialized memory, or beyond loaded code";
 							}
 							
+							// Dump stack for debugging before throwing exception
+							try
+							{
+								var stackDump = new System.Text.StringBuilder();
+								stackDump.AppendLine($"[IcedCpu] Stack dump at INVALID instruction (ESP=0x{_esp:X8}):");
+								for (int i = -2; i <= 10; i++)
+								{
+									var addr = _esp + (uint)(i * 4);
+									if (addr < 0x10000 || addr >= mem.Size) continue;
+									try
+									{
+										var val = mem.Read32(addr);
+										var label = i == 0 ? " (ESP)" : i < 0 ? $" (ESP{i * 4:+0;-0})" : $" (ESP+{i * 4})";
+										stackDump.AppendLine($"  [0x{addr:X8}] = 0x{val:X8}{label}");
+									}
+									catch { }
+								}
+								_logger.LogError(stackDump.ToString());
+							}
+							catch { }
+							
 							// Throw exception to halt execution and prevent further corruption
 							// This prevents the CPU from continuing to execute random data as code,
 							// which would lead to cascading errors and stack corruption

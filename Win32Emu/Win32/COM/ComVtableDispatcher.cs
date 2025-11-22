@@ -314,12 +314,19 @@ public class ComVtableDispatcher
 		// COM object layout: [vtable pointer][object data...]
 		var objectAddr = _env.SimpleAlloc(8); // 4 bytes for vtable ptr + 4 bytes for object data
 		
+		// Zero the COM object memory to ensure clean state
+		_env.MemZero(objectAddr, 8);
+		
 		// Convert to list to get count and allow indexed access
 		var methodsList = methods.ToList();
 		
 		// Allocate memory for the vtable
 		var vtableSize = (uint)(methodsList.Count * 4); // 4 bytes per method pointer
 		var vtableAddr = _env.SimpleAlloc(vtableSize);
+		
+		// CRITICAL: Zero the vtable memory to prevent garbage data in unused slots
+		// SimpleAlloc doesn't zero memory, so we must do it explicitly
+		_env.MemZero(vtableAddr, vtableSize);
 		
 		// Write vtable pointer to object
 		_env.MemWrite32(objectAddr, vtableAddr);
@@ -391,6 +398,17 @@ public class ComVtableDispatcher
 		var asyncPrefix = isAsync ? "async " : "";
 		_logger.LogInformation("[COM] Created {AsyncPrefix}{InterfaceName} object at 0x{ObjectAddr:X8} (vtable at 0x{VtableAddr:X8})", 
 			asyncPrefix, interfaceName, objectAddr, vtableAddr);
+		
+		// Verify vtable contents immediately after creation
+		_logger.LogDebug("[COM] Verifying vtable at 0x{VtableAddr:X8} with {Count} methods:", vtableAddr, methodsList.Count);
+		for (uint i = 0; i < methodsList.Count && i < 15; i++) // Log first 15 methods
+		{
+			var entryAddr = vtableAddr + (i * 4);
+			var methodStubAddr = _env.MemRead32(entryAddr);
+			var methodName = i < methodsList.Count ? methodsList[(int)i].Key : "unknown";
+			_logger.LogDebug("[COM]   [{Index:D2}] vtable[0x{EntryAddr:X8}] = 0x{StubAddr:X8} ({MethodName})", 
+				i, entryAddr, methodStubAddr, methodName);
+		}
 		
 		return objectAddr;
 	}
