@@ -3005,7 +3005,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var path = _env.ReadAnsiString(lpFileName);
 
 			// Log the raw path from the game before any resolution
-			_logger.LogDebug("[Kernel32] CreateFileA: Raw path from game: '{Path}'", path);
+			_logger.LogInformation("[Kernel32] CreateFileA: Raw path from game: '{Path}'", path);
 
 			// Handle invalid paths (empty, null, or invalid characters)
 			if (string.IsNullOrEmpty(path))
@@ -3019,7 +3019,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			var resolvedPath = WindowsPathUtility.ResolvePath(path, _env.CurrentDirectory);
 			if (resolvedPath != path)
 			{
-				_logger.LogDebug("[Kernel32] CreateFileA: Resolved path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
+				_logger.LogInformation("[Kernel32] CreateFileA: Resolved path '{Path}' to '{ResolvedPath}' (CurrentDirectory: '{CurrentDirectory}')",
 					path, resolvedPath, _env.CurrentDirectory);
 			}
 
