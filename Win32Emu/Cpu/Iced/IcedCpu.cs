@@ -5528,6 +5528,38 @@ public class IcedCpu : IAsyncCpu
 		return 32;
 	}
 
+	/// <summary>
+	/// Returns the size in bytes of a memory access based on MemorySize enum
+	/// </summary>
+	private static uint GetMemoryAccessSize(MemorySize memSize)
+	{
+		return memSize switch
+		{
+			MemorySize.UInt8 or MemorySize.Int8 => 1,
+			MemorySize.UInt16 or MemorySize.Int16 => 2,
+			MemorySize.UInt32 or MemorySize.Int32 => 4,
+			MemorySize.UInt64 or MemorySize.Int64 => 8,
+			MemorySize.Float32 => 4,
+			MemorySize.Float64 => 8,
+			MemorySize.Float80 => 10,
+			MemorySize.UInt128 => 16,
+			MemorySize.UInt256 => 32,
+			MemorySize.Packed128_Float32 or MemorySize.Packed128_Float64 or 
+			MemorySize.Packed128_Int8 or MemorySize.Packed128_Int16 or 
+			MemorySize.Packed128_Int32 or MemorySize.Packed128_Int64 or
+			MemorySize.Packed128_UInt8 or MemorySize.Packed128_UInt16 or
+			MemorySize.Packed128_UInt32 or MemorySize.Packed128_UInt64 => 16,
+			MemorySize.Packed256_Float32 or MemorySize.Packed256_Float64 or 
+			MemorySize.Packed256_Int8 or MemorySize.Packed256_Int16 or 
+			MemorySize.Packed256_Int32 or MemorySize.Packed256_Int64 or
+			MemorySize.Packed256_UInt8 or MemorySize.Packed256_UInt16 or
+			MemorySize.Packed256_UInt32 or MemorySize.Packed256_UInt64 => 32,
+			MemorySize.Fword6 => 6,
+			MemorySize.Fword10 => 10,
+			_ => 1 // Default to 1 byte for unknown sizes
+		};
+	}
+
 	// replace CalcMemAddress to report via Diagnostics on failure
 	private uint CalcMemAddress(Instruction insn)
 	{
@@ -5603,8 +5635,24 @@ public class IcedCpu : IAsyncCpu
 			// First, mask offset to 16 bits (wrap at 64KB boundary)
 			var offset16 = offset & 0xFFFF;
 			
-			// NOTE: Segment limit checking is handled separately by CheckSegmentLimitViolation
-			// which is called before memory reads/writes with the appropriate access size
+			// Segment limit checking for real mode (80386 enforces 64KB segment limits)
+			// Determine access size from instruction's memory operand size
+			var accessSize = GetMemoryAccessSize(insn.MemorySize);
+			
+			// Check if the memory access would cross the 64KB segment boundary
+			// In real mode, segments are limited to 64KB (0xFFFF bytes, with offsets 0x0000-0xFFFF)
+			// An access at offset 0xFFFF with size 2+ bytes would extend beyond the segment limit
+			if (offset16 + accessSize > 0x10000)
+			{
+				// Segment limit violation - generate General Protection Fault (#GP, vector 13)
+				// Save the current EIP before generating the exception (it should point to the faulting instruction)
+				var faultingEip = _eip;
+				GenerateException(13, faultingEip, _mem);
+				
+				// After exception, execution should have jumped to the exception handler
+				// Return 0 as a dummy address (execution won't use it as we've already jumped to handler)
+				return 0;
+			}
 			
 			// Then convert to linear address: (segment << 4) + offset
 			// This is the proper 8086/80286/80386 real mode addressing formula
