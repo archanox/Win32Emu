@@ -89,6 +89,14 @@ public class FailureAnalyzer
 		}
 	}
 	
+	[Fact]
+	public void AnalyzeFailingTests_SHRD()
+	{
+		// 660FAC.MOO.gz contains SHRD instruction tests
+		// According to investigation, this has 30.7% pass rate with EFLAGS issues
+		AnalyzeTestFile("660FAC.MOO.gz", maxTests: 20);
+	}
+	
 	private void AnalyzeTestFile(string fileName, int maxTests)
 	{
 		var testFile = TestFileHelper.FindTestFile(fileName);
