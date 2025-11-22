@@ -1278,20 +1278,9 @@ public class IcedCpu : IAsyncCpu
 		switch (opSize)
 		{
 			case 16:
-				// In 16-bit mode, calculate stack address using SS:SP
-				if (_bitness == 16)
-				{
-					var sp = (ushort)(_esp & 0xFFFF);
-					sp = (ushort)((sp - 2) & 0xFFFF);
-					var stackAddr = (uint)((_ss << 4) + sp);
-					_mem.Write16(stackAddr, (ushort)val);
-					_esp = (_esp & 0xFFFF0000) | sp;
-				}
-				else
-				{
-					_esp -= 2;
-					Write16(_esp, (ushort)val);
-				}
+				AdjustStackPointer(-2);
+				var stackAddr16 = GetStackAddress();
+				_mem.Write16(stackAddr16, (ushort)val);
 				break;
 			case 32:
 				Push32(val);
@@ -1310,19 +1299,9 @@ public class IcedCpu : IAsyncCpu
 		switch (opSize)
 		{
 			case 16:
-				// In 16-bit mode, calculate stack address using SS:SP
-				if (_bitness == 16)
-				{
-					var sp = (ushort)(_esp & 0xFFFF);
-					var stackAddr = (uint)((_ss << 4) + sp);
-					v = _mem.Read16(stackAddr);
-					_esp = (_esp & 0xFFFF0000) | (uint)((sp + 2) & 0xFFFF);
-				}
-				else
-				{
-					v = _mem.Read16(_esp);
-					_esp += 2;
-				}
+				var stackAddr16 = GetStackAddress();
+				v = _mem.Read16(stackAddr16);
+				AdjustStackPointer(2);
 				break;
 			case 32:
 				v = Pop32();
@@ -6036,43 +6015,56 @@ public class IcedCpu : IAsyncCpu
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void Write16(uint addr, ushort v) => _mem.Write16(addr, v);
 
+	/// <summary>
+	/// Calculate physical stack address from current stack pointer.
+	/// In 16-bit mode, uses SS:SP segment:offset addressing.
+	/// In 32-bit mode, returns ESP directly.
+	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-	private void Push32(uint v)
+	private uint GetStackAddress()
 	{
 		if (_bitness == 16)
 		{
-			// In 16-bit mode, calculate stack address using SS:SP
 			var sp = (ushort)(_esp & 0xFFFF);
-			sp = (ushort)((sp - 4) & 0xFFFF);
-			var stackAddr = (uint)((_ss << 4) + sp);
-			_mem.Write32(stackAddr, v);
+			return (uint)((_ss << 4) + sp);
+		}
+		return _esp;
+	}
+
+	/// <summary>
+	/// Adjust stack pointer by the specified number of bytes.
+	/// In 16-bit mode, only modifies SP (low 16 bits of ESP).
+	/// In 32-bit mode, modifies full ESP.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+	private void AdjustStackPointer(int bytes)
+	{
+		if (_bitness == 16)
+		{
+			var sp = (ushort)((_esp & 0xFFFF) + bytes);
 			_esp = (_esp & 0xFFFF0000) | sp;
 		}
 		else
 		{
-			_esp -= 4;
-			Write32(_esp, v);
+			_esp = (uint)((int)_esp + bytes);
 		}
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+	private void Push32(uint v)
+	{
+		AdjustStackPointer(-4);
+		var stackAddr = GetStackAddress();
+		_mem.Write32(stackAddr, v);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private uint Pop32()
 	{
-		if (_bitness == 16)
-		{
-			// In 16-bit mode, calculate stack address using SS:SP
-			var sp = (ushort)(_esp & 0xFFFF);
-			var stackAddr = (uint)((_ss << 4) + sp);
-			var v = _mem.Read32(stackAddr);
-			_esp = (_esp & 0xFFFF0000) | (uint)((sp + 4) & 0xFFFF);
-			return v;
-		}
-		else
-		{
-			var v = Read32(_esp);
-			_esp += 4;
-			return v;
-		}
+		var stackAddr = GetStackAddress();
+		var v = _mem.Read32(stackAddr);
+		AdjustStackPointer(4);
+		return v;
 	}
 
 	#region FPU Helpers
