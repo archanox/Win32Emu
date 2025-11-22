@@ -2296,6 +2296,13 @@ public class IcedCpu : IAsyncCpu
 			SetFlagVal(Of, specialCase);
 			SetFlagVal(Cf, specialCase);
 		}
+		else if (c > bitWidth)
+		{
+			// For counts greater than bit width (16-bit/32-bit), all bits shift out
+			// CF and OF are undefined, but real 80386 hardware clears them
+			SetFlagVal(Cf, false);
+			SetFlagVal(Of, false);
+		}
 		else
 		{
 			// Normal case
@@ -2388,6 +2395,14 @@ public class IcedCpu : IAsyncCpu
 				SetFlagVal(Of, false);
 				bool specialCase = (c == 16 || c == 24) && ((a & 0x80) != 0);
 				SetFlagVal(Cf, specialCase);
+			}
+			else if (c > bitWidth)
+			{
+				// For counts greater than bit width (16-bit/32-bit), all bits shift out
+				// The result is 0 for logical shift
+				// CF and OF behavior: CF would be 0 (no bits left), OF is cleared
+				SetFlagVal(Cf, false);
+				SetFlagVal(Of, false);
 			}
 			else
 			{
@@ -4696,6 +4711,19 @@ public class IcedCpu : IAsyncCpu
 		}
 	}
 
+	/// <summary>
+	/// Sets OF flag for BT family instructions based on hardware behavior.
+	/// Per https://github.com/SingleStepTests/80386/issues/4:
+	/// Rotate the source value right by bit index, then set OF to XOR of top two bits.
+	/// </summary>
+	private void SetBtFamilyOfFlag(uint bitBase, int bitPos, int opSize)
+	{
+		var rotated = ((bitBase >> bitPos) | (bitBase << (opSize - bitPos))) & ((1u << opSize) - 1);
+		var topBit = (rotated >> (opSize - 1)) & 1;
+		var secondBit = (rotated >> (opSize - 2)) & 1;
+		SetFlagVal(Of, (topBit ^ secondBit) != 0);
+	}
+
 	private void ExecBt(Instruction insn)
 	{
 		// BT - Bit test
@@ -4706,14 +4734,7 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
-		
-		// Per https://github.com/SingleStepTests/80386/issues/4:
-		// Rotate the source value right by bit index
-		// Set OF to XOR of top two bits of rotated value
-		var rotated = ((bitBase >> bitPos) | (bitBase << (opSize - bitPos))) & ((1u << opSize) - 1);
-		var topBit = (rotated >> (opSize - 1)) & 1;
-		var secondBit = (rotated >> (opSize - 2)) & 1;
-		SetFlagVal(Of, (topBit ^ secondBit) != 0);
+		SetBtFamilyOfFlag(bitBase, bitPos, opSize);
 	}
 
 	private void ExecBts(Instruction insn)
@@ -4726,14 +4747,7 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
-		
-		// Per https://github.com/SingleStepTests/80386/issues/4:
-		// Rotate the source value right by bit index
-		// Set OF to XOR of top two bits of rotated value
-		var rotated = ((bitBase >> bitPos) | (bitBase << (opSize - bitPos))) & ((1u << opSize) - 1);
-		var topBit = (rotated >> (opSize - 1)) & 1;
-		var secondBit = (rotated >> (opSize - 2)) & 1;
-		SetFlagVal(Of, (topBit ^ secondBit) != 0);
+		SetBtFamilyOfFlag(bitBase, bitPos, opSize);
 		
 		// Set the bit
 		bitBase |= (1u << bitPos);
@@ -4750,14 +4764,7 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
-		
-		// Per https://github.com/SingleStepTests/80386/issues/4:
-		// Rotate the source value right by bit index
-		// Set OF to XOR of top two bits of rotated value
-		var rotated = ((bitBase >> bitPos) | (bitBase << (opSize - bitPos))) & ((1u << opSize) - 1);
-		var topBit = (rotated >> (opSize - 1)) & 1;
-		var secondBit = (rotated >> (opSize - 2)) & 1;
-		SetFlagVal(Of, (topBit ^ secondBit) != 0);
+		SetBtFamilyOfFlag(bitBase, bitPos, opSize);
 		
 		// Reset (clear) the bit
 		bitBase &= ~(1u << bitPos);
@@ -4774,14 +4781,7 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
-		
-		// Per https://github.com/SingleStepTests/80386/issues/4:
-		// Rotate the source value right by bit index
-		// Set OF to XOR of top two bits of rotated value
-		var rotated = ((bitBase >> bitPos) | (bitBase << (opSize - bitPos))) & ((1u << opSize) - 1);
-		var topBit = (rotated >> (opSize - 1)) & 1;
-		var secondBit = (rotated >> (opSize - 2)) & 1;
-		SetFlagVal(Of, (topBit ^ secondBit) != 0);
+		SetBtFamilyOfFlag(bitBase, bitPos, opSize);
 		
 		// Complement (toggle) the bit
 		bitBase ^= (1u << bitPos);
@@ -4892,29 +4892,56 @@ public class IcedCpu : IAsyncCpu
 		// Save original MSB for OF calculation
 		var originalMsb = (dest & signBit) != 0;
 		
+		var mask = (1u << opSize) - 1;
+		
 		// CF is set to the last bit shifted out of dest
-		var carryOut = ((dest >> (opSize - count)) & 1) != 0;
+		bool carryOut;
+		if (count < opSize)
+		{
+			// Normal case: last bit shifted out from dest
+			carryOut = ((dest >> (opSize - count)) & 1) != 0;
+		}
+		else
+		{
+			// When count >= opSize, the last bit shifted out wraps around
+			var rotateAmount = count % opSize;
+			if (rotateAmount == 0)
+			{
+				// Full rotation, CF comes from MSB of dest
+				carryOut = ((dest >> (opSize - 1)) & 1) != 0;
+			}
+			else
+			{
+				var rotatedDest = ((dest << rotateAmount) | (dest >> (opSize - rotateAmount))) & mask;
+				carryOut = ((rotatedDest >> (opSize - rotateAmount)) & 1) != 0;
+			}
+		}
 		
 		// For SHLD, shift dest left and bring in bits from src
 		// Per https://github.com/SingleStepTests/80386/issues/4:
 		// When count >= opSize, the "inBits" are rotated (ROL style) from src
-		var mask = (1u << opSize) - 1;
 		uint inBits;
 		if (count >= opSize)
 		{
 			// Rotate src left by (count mod opSize) to get the bits that flow in
 			var rotateAmount = count % opSize;
 			var rotatedSrc = ((src << rotateAmount) | (src >> (opSize - rotateAmount))) & mask;
-			// Take bottom 'count' bits from rotated src (but since count >= opSize, take all)
-			inBits = rotatedSrc >> (opSize - (count % opSize));
+			// When count >= opSize, dest is replaced by inBits
+			if (rotateAmount == 0)
+			{
+				dest = rotatedSrc;
+			}
+			else
+			{
+				dest = rotatedSrc;
+			}
 		}
 		else
 		{
 			// Normal case: take high 'count' bits from src and shift right
 			inBits = src >> (opSize - count);
+			dest = ((dest << count) | inBits) & mask;
 		}
-		
-		dest = ((dest << count) | inBits) & mask;
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
@@ -4957,29 +4984,56 @@ public class IcedCpu : IAsyncCpu
 		// Save original MSB for OF calculation
 		var originalMsb = (dest & signBit) != 0;
 		
+		var mask = (1u << opSize) - 1;
+		
 		// CF is set to the last bit shifted out of dest
-		var carryOut = ((dest >> (count - 1)) & 1) != 0;
+		bool carryOut;
+		if (count <= opSize)
+		{
+			// Normal case: last bit shifted out from dest
+			carryOut = ((dest >> (count - 1)) & 1) != 0;
+		}
+		else
+		{
+			// When count > opSize, need to account for wrap-around
+			var rotateAmount = count % opSize;
+			if (rotateAmount == 0)
+			{
+				// Full rotation, CF comes from LSB of dest
+				carryOut = (dest & 1) != 0;
+			}
+			else
+			{
+				var rotatedDest = ((dest >> rotateAmount) | (dest << (opSize - rotateAmount))) & mask;
+				carryOut = ((rotatedDest >> (rotateAmount - 1)) & 1) != 0;
+			}
+		}
 		
 		// For SHRD, shift dest right and bring in bits from src
 		// Per https://github.com/SingleStepTests/80386/issues/4:
 		// When count >= opSize, the "inBits" are rotated (ROR style) from src
-		var mask = (1u << opSize) - 1;
 		uint inBits;
 		if (count >= opSize)
 		{
 			// Rotate src right by (count mod opSize) to get the bits that flow in
 			var rotateAmount = count % opSize;
 			var rotatedSrc = ((src >> rotateAmount) | (src << (opSize - rotateAmount))) & mask;
-			// Take top 'count' bits from rotated src (but since count >= opSize, take all)
-			inBits = rotatedSrc << (opSize - (count % opSize));
+			// When count >= opSize, dest is replaced by inBits (rotated src)
+			if (rotateAmount == 0)
+			{
+				dest = rotatedSrc;
+			}
+			else
+			{
+				dest = rotatedSrc;
+			}
 		}
 		else
 		{
 			// Normal case: take low 'count' bits from src and shift left
 			inBits = src << (opSize - count);
+			dest = ((dest >> count) | inBits) & mask;
 		}
-		
-		dest = ((dest >> count) | inBits) & mask;
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
