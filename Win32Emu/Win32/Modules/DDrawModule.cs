@@ -3097,12 +3097,26 @@ namespace Win32Emu.Win32.Modules
 					var success = obj.RenderingBackend.Initialize((int)dwWidth, (int)dwHeight, title);
 					if (!success)
 					{
-						_logger.LogError("[DDraw] Failed to initialize rendering backend");
-						_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
-						return (uint)DDResult.DDERR_GENERIC;
+						// In headless/nogui mode (Host == null), rendering backend initialization may fail
+						// due to lack of video device. This is expected and should not cause the application to crash.
+						// We log the failure but still return success to allow headless testing.
+						if (_env.Host == null)
+						{
+							_logger.LogWarning("[DDraw] Failed to initialize rendering backend in headless mode (expected - no video device)");
+							_logger.LogInformation("[DDraw] SetDisplayMode succeeded in headless mode (rendering disabled)");
+						}
+						else
+						{
+							// In GUI mode, initialization failure is an actual error
+							_logger.LogError("[DDraw] Failed to initialize rendering backend");
+							_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
+							return (uint)DDResult.DDERR_GENERIC;
+						}
 					}
-
-					_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}", dwWidth, dwHeight);
+					else
+					{
+						_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}", dwWidth, dwHeight);
+					}
 				}
 
 				// Subscribe to UI events from the rendering backend
