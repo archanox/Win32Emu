@@ -2287,20 +2287,33 @@ public class IcedCpu : IAsyncCpu
 
 		var r = a << c;
 		
-		// Last bit shifted out depends on operand size
-		var lastOut = (a >> (bitWidth - c)) & 1u;
-		SetFlagVal(Cf, lastOut != 0);
-		if (c == 1)
+		// Per https://github.com/SingleStepTests/80386/issues/4:
+		// For 8-bit SHL when count > 8:
+		// OF and CF set to 1 if ((count == 16 OR count == 24) AND (src & 1)) else 0
+		if (opSize == 8 && c > 8)
 		{
-			// OF is set if sign bit changed (XOR of MSB before and after)
-			bool before = (a & signBit) != 0, after = (r & signBit) != 0;
-			SetFlagVal(Of, before ^ after);
+			bool specialCase = (c == 16 || c == 24) && ((a & 1) != 0);
+			SetFlagVal(Of, specialCase);
+			SetFlagVal(Cf, specialCase);
 		}
 		else
 		{
-			// OF is undefined when count > 1, but real 80386 hardware clears it
-			SetFlagVal(Of, false);
+			// Normal case
+			var lastOut = (a >> (bitWidth - c)) & 1u;
+			SetFlagVal(Cf, lastOut != 0);
+			if (c == 1)
+			{
+				// OF is set if sign bit changed (XOR of MSB before and after)
+				bool before = (a & signBit) != 0, after = (r & signBit) != 0;
+				SetFlagVal(Of, before ^ after);
+			}
+			else
+			{
+				// OF is undefined when count > 1, but real 80386 hardware clears it
+				SetFlagVal(Of, false);
+			}
 		}
+		
 		// AF is undefined for shift operations, but on real 80386 hardware it gets set
 		// Based on empirical evidence from SingleStepTests, AF is set when count > 0
 		SetFlagVal(Af, true);
@@ -2359,24 +2372,41 @@ public class IcedCpu : IAsyncCpu
 				// OF is undefined when count > 1, but real 80386 hardware clears it
 				SetFlagVal(Of, false);
 			}
+			
+			var lastOut = (a >> (c - 1)) & 1u;
+			SetFlagVal(Cf, lastOut != 0);
 		}
 		else
 		{
 			r = a >> c;
-			if (c == 1)
+			
+			// Per https://github.com/SingleStepTests/80386/issues/4:
+			// For 8-bit SHR when count > 8:
+			// OF set to 0, CF set if ((count == 16 OR count == 24) AND (src & 0x80)) else 0
+			if (opSize == 8 && c > 8)
 			{
-				// OF is set to MSB of original operand
-				SetFlagVal(Of, (a & signBit) != 0);
+				SetFlagVal(Of, false);
+				bool specialCase = (c == 16 || c == 24) && ((a & 0x80) != 0);
+				SetFlagVal(Cf, specialCase);
 			}
 			else
 			{
-				// OF is undefined when count > 1, but real 80386 hardware clears it
-				SetFlagVal(Of, false);
+				if (c == 1)
+				{
+					// OF is set to MSB of original operand
+					SetFlagVal(Of, (a & signBit) != 0);
+				}
+				else
+				{
+					// OF is undefined when count > 1, but real 80386 hardware clears it
+					SetFlagVal(Of, false);
+				}
+				
+				var lastOut = (a >> (c - 1)) & 1u;
+				SetFlagVal(Cf, lastOut != 0);
 			}
 		}
 
-		var lastOut = (a >> (c - 1)) & 1u;
-		SetFlagVal(Cf, lastOut != 0);
 		// AF is undefined for shift operations, but on real 80386 hardware it gets set
 		// Based on empirical evidence from SingleStepTests, AF is set when count > 0
 		SetFlagVal(Af, true);
@@ -4676,6 +4706,14 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
+		
+		// Per https://github.com/SingleStepTests/80386/issues/4:
+		// Rotate the source value right by bit index
+		// Set OF to XOR of top two bits of rotated value
+		var rotated = ((bitBase >> bitPos) | (bitBase << (opSize - bitPos))) & ((1u << opSize) - 1);
+		var topBit = (rotated >> (opSize - 1)) & 1;
+		var secondBit = (rotated >> (opSize - 2)) & 1;
+		SetFlagVal(Of, (topBit ^ secondBit) != 0);
 	}
 
 	private void ExecBts(Instruction insn)
@@ -4688,6 +4726,15 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
+		
+		// Per https://github.com/SingleStepTests/80386/issues/4:
+		// Rotate the source value right by bit index
+		// Set OF to XOR of top two bits of rotated value
+		var rotated = ((bitBase >> bitPos) | (bitBase << (opSize - bitPos))) & ((1u << opSize) - 1);
+		var topBit = (rotated >> (opSize - 1)) & 1;
+		var secondBit = (rotated >> (opSize - 2)) & 1;
+		SetFlagVal(Of, (topBit ^ secondBit) != 0);
+		
 		// Set the bit
 		bitBase |= (1u << bitPos);
 		WriteOp(insn, 0, bitBase);
@@ -4703,6 +4750,15 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
+		
+		// Per https://github.com/SingleStepTests/80386/issues/4:
+		// Rotate the source value right by bit index
+		// Set OF to XOR of top two bits of rotated value
+		var rotated = ((bitBase >> bitPos) | (bitBase << (opSize - bitPos))) & ((1u << opSize) - 1);
+		var topBit = (rotated >> (opSize - 1)) & 1;
+		var secondBit = (rotated >> (opSize - 2)) & 1;
+		SetFlagVal(Of, (topBit ^ secondBit) != 0);
+		
 		// Reset (clear) the bit
 		bitBase &= ~(1u << bitPos);
 		WriteOp(insn, 0, bitBase);
@@ -4718,6 +4774,15 @@ public class IcedCpu : IAsyncCpu
 		var bitPos = (int)(bitOffset & mask);
 		var bitValue = (bitBase >> bitPos) & 1;
 		SetFlagVal(Cf, bitValue != 0);
+		
+		// Per https://github.com/SingleStepTests/80386/issues/4:
+		// Rotate the source value right by bit index
+		// Set OF to XOR of top two bits of rotated value
+		var rotated = ((bitBase >> bitPos) | (bitBase << (opSize - bitPos))) & ((1u << opSize) - 1);
+		var topBit = (rotated >> (opSize - 1)) & 1;
+		var secondBit = (rotated >> (opSize - 2)) & 1;
+		SetFlagVal(Of, (topBit ^ secondBit) != 0);
+		
 		// Complement (toggle) the bit
 		bitBase ^= (1u << bitPos);
 		WriteOp(insn, 0, bitBase);
