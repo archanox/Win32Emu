@@ -3268,7 +3268,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 		else
 		{
-			_logger.LogWarning("[Kernel32] WriteFile not StdOutput, StdError or StdInput, called on non-standard handle 0x{Handle:X8}", handle);
+			_logger.LogDebug("[Kernel32] WriteFile on file handle 0x{Handle:X8}", handle);
 		}
 
 		// Handle regular file handles
