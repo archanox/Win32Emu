@@ -379,9 +379,12 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 	{
 		try
 		{
+			_logger.LogInformation("[DiskVFS] FindCaseInsensitivePath: Searching for '{Path}'", normalizedPath);
+			
 			// Quick check: if the file exists as-is, return it
 			if (_fileSystem.FileExists(normalizedPath))
 			{
+				_logger.LogInformation("[DiskVFS] FindCaseInsensitivePath: File exists as-is: '{Path}'", normalizedPath);
 				return normalizedPath;
 			}
 
@@ -395,18 +398,23 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			var lastSeparator = normalizedPath.LastIndexOf('\\');
 			if (lastSeparator <= 0)
 			{
+				_logger.LogInformation("[DiskVFS] FindCaseInsensitivePath: Invalid path (no separator): '{Path}'", normalizedPath);
 				return normalizedPath; // Root level or invalid path
 			}
 
 			var directory = normalizedPath.Substring(0, lastSeparator);
 			var filename = normalizedPath.Substring(lastSeparator + 1);
+			
+			_logger.LogInformation("[DiskVFS] FindCaseInsensitivePath: Checking directory='{Directory}', filename='{Filename}'", directory, filename);
 
 			// If directory doesn't exist, recursively check parent directories
 			if (!_fileSystem.DirectoryExists(directory))
 			{
+				_logger.LogInformation("[DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '{Directory}'", directory);
 				directory = FindCaseInsensitivePath(directory);
 				if (!_fileSystem.DirectoryExists(directory))
 				{
+					_logger.LogInformation("[DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '{Directory}'", directory);
 					return normalizedPath; // Directory still doesn't exist
 				}
 			}
@@ -418,7 +426,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 				var actualFilename = file.Substring(file.LastIndexOf('\\') + 1);
 				if (string.Equals(actualFilename, filename, StringComparison.OrdinalIgnoreCase))
 				{
-					_logger.LogDebug("[DiskVFS] Case-insensitive file match: '{Original}' -> '{Actual}'", 
+					_logger.LogInformation("[DiskVFS] Case-insensitive file match: '{Original}' -> '{Actual}'", 
 						normalizedPath, file);
 					return file;
 				}
@@ -431,7 +439,7 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 				var actualDirName = dir.Substring(dir.LastIndexOf('\\') + 1);
 				if (string.Equals(actualDirName, filename, StringComparison.OrdinalIgnoreCase))
 				{
-					_logger.LogDebug("[DiskVFS] Case-insensitive directory match: '{Original}' -> '{Actual}'",
+					_logger.LogInformation("[DiskVFS] Case-insensitive directory match: '{Original}' -> '{Actual}'",
 						normalizedPath, dir);
 					return dir;
 				}
