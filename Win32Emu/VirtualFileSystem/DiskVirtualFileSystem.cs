@@ -369,6 +369,9 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 	/// <summary>
 	/// Attempts to find a file case-insensitively by searching the directory.
 	/// Windows filesystems are case-insensitive, but DiscUtils may be case-sensitive.
+	/// Note: This method recursively searches parent directories when needed. For deeply
+	/// nested paths, this could be slow. However, in practice most paths are shallow and
+	/// the fast path (file exists as-is) handles the majority of cases efficiently.
 	/// </summary>
 	/// <param name="normalizedPath">The normalized path to search for</param>
 	/// <returns>The actual path with correct casing, or the original path if not found</returns>
