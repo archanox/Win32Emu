@@ -49,7 +49,8 @@ public sealed class Emulator : IDisposable
     
     // Instruction tracing for debugging BasicDD crash
     private int _instructionTraceCount = 0;
-    private const int MAX_TRACE_INSTRUCTIONS = 500; // Trace 500 instructions after trigger
+    private const int MAX_TRACE_INSTRUCTIONS = 1000; // Trace 1000 instructions to find stack corruption
+    private bool _traceEnabled = false;
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -1029,13 +1030,13 @@ public sealed class Emulator : IDisposable
                 _logger.LogInformation("[COM] After vtable call: ESP changed from 0x{EspBefore:X8} to 0x{EspAfter:X8} (delta={Delta}), Call site EIP=0x{EipBefore:X8}, Return EIP=0x{EipAfter:X8}", 
                     espBefore, espAfter, (int)espAfter - (int)espBefore, eipBefore, eipAfter);
                 
-                // Enable instruction tracing after DirectDrawCreateEx for debugging BasicDD crash
-                // DirectDrawCreateEx is called at the start of FUN_00401310
-                // We want to trace the entire function to see where stack corruption happens
-                if (eipAfter >= 0x00401310 && eipAfter < 0x00401420 && _instructionTraceCount == 0)
+                // Enable instruction tracing for BasicDD crash investigation
+                // Trace from window creation (FUN_00401200) which contains string "Basic DD"
+                if (!_traceEnabled && eipAfter >= 0x00401200 && eipAfter < 0x00401250)
                 {
-                    _logger.LogWarning("[TRACE] DirectDraw function at 0x{EipAfter:X8}, enabling instruction tracing for next {Count} instructions", eipAfter, MAX_TRACE_INSTRUCTIONS);
+                    _logger.LogWarning("[TRACE] Window creation function at 0x{EipAfter:X8}, enabling instruction tracing for next {Count} instructions", eipAfter, MAX_TRACE_INSTRUCTIONS);
                     _instructionTraceCount = MAX_TRACE_INSTRUCTIONS;
+                    _traceEnabled = true;
                 }
             }
             // OLD IMPORT HANDLING CODE - DISABLED
