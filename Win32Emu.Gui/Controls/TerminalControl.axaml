@@ -6,5 +6,7 @@
              x:Class="Win32Emu.Gui.Controls.TerminalControl"
              Background="Black"
              Focusable="True">
-    <Canvas Name="TerminalCanvas" />
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <Canvas Name="TerminalCanvas" />
+    </ScrollViewer>
 </UserControl>

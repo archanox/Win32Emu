@@ -225,6 +225,10 @@ public partial class TerminalControl : UserControl
 		_canvas.Children.Clear();
 		_textBlocks.Clear();
 
+		// Update canvas size to match terminal buffer dimensions
+		_canvas.Width = _columns * CharWidth;
+		_canvas.Height = _rows * CharHeight;
+
 		var sb = new StringBuilder();
 		for (int row = 0; row < _rows; row++)
 		{

@@ -193,23 +193,8 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 StdOutput += output;
             }
             
-            // Also show stdout in the debug window for complete visibility
-            // This ensures developers can see all output in one place
-            if (MinimumDebugLevel <= DebugLevel.Info)
-            {
-                DebugMessages.Add(new DebugMessage
-                {
-                    Timestamp = DateTime.Now,
-                    Level = DebugLevel.Info,
-                    Message = $"[STDOUT] {output.TrimEnd()}"
-                });
-
-                // Keep only last 1000 messages
-                while (DebugMessages.Count > 1000)
-                {
-                    DebugMessages.RemoveAt(0);
-                }
-            }
+            // Note: Stdout is no longer duplicated to debug messages panel
+            // to avoid cluttering debug output. Use the terminal panel to view stdout.
         });
     }
 
