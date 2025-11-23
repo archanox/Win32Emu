@@ -5018,7 +5018,9 @@ public class IcedCpu : IAsyncCpu
 		var msb = (dest >> (opSize - 1)) & 1;
 		var nextMsb = (dest >> (opSize - 2)) & 1;
 		SetFlagVal(Of, msb != nextMsb);
-		// AF is undefined for SHLD
+		// AF is undefined for SHLD per Intel docs, but hardware appears to set it
+		// Based on hardware test data (MOO files), AF is consistently set to 1
+		SetFlagVal(Af, true);
 		
 		WriteOp(insn, 0, dest);
 		// Update SF, ZF, and PF based on result
@@ -5114,7 +5116,9 @@ public class IcedCpu : IAsyncCpu
 		var msb = (dest >> (opSize - 1)) & 1;
 		var nextMsb = (dest >> (opSize - 2)) & 1;
 		SetFlagVal(Of, msb != nextMsb);
-		// AF is undefined for SHRD
+		// AF is undefined for SHRD per Intel docs, but hardware appears to set it
+		// Based on hardware test data (MOO files), AF is consistently set to 1
+		SetFlagVal(Af, true);
 		
 		WriteOp(insn, 0, dest);
 		// Update SF, ZF, and PF based on result
