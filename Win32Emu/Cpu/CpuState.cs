@@ -22,5 +22,19 @@ namespace Win32Emu.Cpu
 		public ushort FpuControlWord { get; set; }
 		public ushort FpuStatusWord { get; set; }
 		public ushort FpuTagWord { get; set; }
+
+		// Control Registers (CR0-CR4)
+		public uint Cr0 { get; set; }
+		public uint Cr2 { get; set; }
+		public uint Cr3 { get; set; }
+		public uint Cr4 { get; set; }
+
+		// Debug Registers (DR0-DR7)
+		public uint Dr0 { get; set; }
+		public uint Dr1 { get; set; }
+		public uint Dr2 { get; set; }
+		public uint Dr3 { get; set; }
+		public uint Dr6 { get; set; }
+		public uint Dr7 { get; set; }
 	}
 }
