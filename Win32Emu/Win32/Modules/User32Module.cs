@@ -6423,7 +6423,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				lpszDst.Write(_memory!, src, true);
 			}
-			return 1; // TRUE
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 
 		/// <summary>
@@ -6440,7 +6440,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				lpszDst.Write(_memory!, src, true);
 			}
-			return 1; // TRUE
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 
 		/// <summary>
@@ -6454,7 +6454,7 @@ namespace Win32Emu.Win32.Modules
 			// Stub: copy up to cchDstLength characters (treating OEM as ANSI)
 			if (cchDstLength == 0)
 			{
-				return 1; // TRUE - nothing to copy
+				return (uint)NativeTypes.Win32Bool.TRUE; // Nothing to copy
 			}
 
 			// Read the full source string (or up to cchDstLength+1 to check if we need to truncate)
@@ -6473,7 +6473,7 @@ namespace Win32Emu.Win32.Modules
 					lpszDst.Write(_memory!, src, true);
 				}
 			}
-			return 1; // TRUE
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 
 		/// <summary>
