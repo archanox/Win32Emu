@@ -225,44 +225,62 @@ This indicates the root cause is **not** vtable ordering but likely:
 
 ## Debugging Strategy
 
+### Tools Assessment
+
+The **interactive debugger** (`--interactive-debug`) is sufficient for diagnosis. Provides:
+- Breakpoint capabilities at specific addresses
+- Single-step execution through instructions  
+- Register and memory inspection
+- Call stack examination
+
 ### Immediate Steps
 
-1. **Enable GDB server mode** (`--gdb-server`)
-   - Attach Ghidra/IDA to trace execution
-   - Set breakpoint at 0x0040140C (after GetAttachedSurface returns)
-   - Single-step to identify exact point of stack corruption
+1. **Set strategic breakpoints:**
+   ```
+   break 0x0040140C  // After GetAttachedSurface returns
+   break 0x00401640  // FUN_00401640 (calls SetColorKey)
+   break 0x004014d0  // FUN_004014d0 (calls LoadImageA, Restore)
+   break 0x00401130  // FUN_00401130 (main loop, calls Flip)
+   continue
+   ```
 
-2. **Monitor stack pointer**
-   - Watch ESP changes during function calls
+2. **At each breakpoint:**
+   - Examine ESP and EBP values
+   - Single-step through function
+   - Monitor stack changes after each CALL/RET
    - Verify stdcall cleanup (ESP += 4 + argBytes)
-   - Check for unexpected ESP modifications
 
-3. **Trace function calls**
-   - Log all function entries/exits with ESP values
-   - Identify which call corrupts stack
+3. **Trace function calls:**
+   - Log ESP at function entry/exit
+   - Identify which call causes ESP/EBP corruption
    - Check argBytes calculation for that function
 
 ### Investigation Areas
 
-1. **GetModuleHandleA analysis**
-   - Why is 0x0F000115 (middle of stub) on stack?
-   - Check if GetModuleHandleA is called with wrong arguments
-   - Verify import stub implementation
+1. **FUN_004014d0 analysis (HIGH PRIORITY)**
+   - Calls LoadImageA(param_1, 0x65, 0, 0x5dc, 0x118, 0)
+   - Line 272: Calls Restore at offset 0x6C (suspicious decompilation)
+   - Calls GetSurfaceDesc, GetDC, ReleaseDC
+   - Check if argBytes correct for all COM methods
+   - **Note:** EAX=0x65 at crash (same as LoadImageA resource ID param)
 
 2. **FUN_00401130 execution flow**
-   - This calls Flip and potentially Restore
-   - May call additional Win32 APIs
-   - Could be where corruption occurs
+   - Main loop calls Flip (offset 0x2C) repeatedly
+   - Checks for DDERR_SURFACELOST (-0x7789fe3e)
+   - May call Restore (offset 0x6C) if surface lost
+   - Monitor ESP through loop iterations
 
-3. **CPU instruction emulation**
-   - Check CALL/RET handling
-   - Verify PUSH/POP operations
-   - Ensure stack frame management
+3. **Execution timeline:**
+   - GetAttachedSurface returns: ESP=0x001FEEC0, EBP=0x001FEFFC ✓
+   - Crash at 0x0040715A: ESP=0x001FEF70, EBP=0x0040187C ❌
+   - Delta: ESP moved 176 bytes (0xB0) - multiple calls occurred
+   - Need to trace execution between these points
 
-4. **Unimplemented APIs**
-   - BasicDD may call APIs we haven't implemented
-   - Could return incorrect values or corrupt state
-   - Need comprehensive API trace
+4. **Import stub 0x0F000115**
+   - GetModuleHandleA stub starts at 0x0F000110
+   - 0x0F000115 is 5 bytes in (middle of CALL instruction)
+   - Impossible as valid return address
+   - Indicates stack was corrupted before crash
 
 ### Long-term Solutions
 
