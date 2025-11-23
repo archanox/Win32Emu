@@ -544,6 +544,61 @@ public static class NativeTypes
 		public uint padding;   // Offset 8 - Padding for union size
 	}
 
+	/// <summary>
+	/// Multimedia system error codes
+	/// </summary>
+	public enum MMSysError : uint
+	{
+		MMSYSERR_NOERROR = 0,         // No error
+		MMSYSERR_ERROR = 1,           // Unspecified error
+		MMSYSERR_BADDEVICEID = 2,     // Device ID out of range
+		MMSYSERR_NOTENABLED = 3,      // Driver failed enable
+		MMSYSERR_ALLOCATED = 4,       // Device already allocated
+		MMSYSERR_INVALHANDLE = 5,     // Device handle is invalid
+		MMSYSERR_NODRIVER = 6,        // No device driver present
+		MMSYSERR_NOMEM = 7,           // Memory allocation error
+		MMSYSERR_NOTSUPPORTED = 8,    // Function isn't supported
+		MMSYSERR_BADERRNUM = 9,       // Error value out of range
+		MMSYSERR_INVALFLAG = 10,      // Invalid flag passed
+		MMSYSERR_INVALPARAM = 11,     // Invalid parameter passed
+		MMSYSERR_HANDLEBUSY = 12,     // Handle being used simultaneously
+		MMSYSERR_INVALIDALIAS = 13,   // Specified alias not found
+		MMSYSERR_BADDB = 14,          // Bad registry database
+		MMSYSERR_KEYNOTFOUND = 15,    // Registry key not found
+		MMSYSERR_READERROR = 16,      // Registry read error
+		MMSYSERR_WRITEERROR = 17,     // Registry write error
+		MMSYSERR_DELETEERROR = 18,    // Registry delete error
+		MMSYSERR_VALNOTFOUND = 19,    // Registry value not found
+		MMSYSERR_NODRIVERCB = 20,     // Driver does not call DriverCallback
+		MMSYSERR_MOREDATA = 21        // More data to be returned
+	}
+
+	/// <summary>
+	/// Wave header flags
+	/// </summary>
+	[Flags]
+	public enum WaveHdrFlags : uint
+	{
+		WHDR_DONE = 0x00000001,       // Done bit
+		WHDR_PREPARED = 0x00000002,   // Set if this header has been prepared
+		WHDR_BEGINLOOP = 0x00000004,  // Loop start block
+		WHDR_ENDLOOP = 0x00000008,    // Loop end block
+		WHDR_INQUEUE = 0x00000010     // Reserved for driver
+	}
+
+	/// <summary>
+	/// MMTIME time format types
+	/// </summary>
+	public enum MMTimeType : uint
+	{
+		TIME_MS = 0x0001,         // Time in milliseconds
+		TIME_SAMPLES = 0x0002,    // Number of wave samples
+		TIME_BYTES = 0x0004,      // Current byte offset
+		TIME_SMPTE = 0x0008,      // SMPTE time
+		TIME_MIDI = 0x0010,       // MIDI time
+		TIME_TICKS = 0x0020       // Ticks within MIDI stream
+	}
+
 	// MIXERLINE structure (168 bytes for ANSI version)
 	public struct MIXERLINEA
 	{

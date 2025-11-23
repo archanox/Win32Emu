@@ -1,11 +1,13 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using static Win32Emu.Win32.NativeTypes;
 
 namespace Win32Emu.Win32.Modules
 {
@@ -926,7 +928,7 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(phwo, handle);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -939,10 +941,10 @@ namespace Win32Emu.Win32.Modules
 
 			if (_waveOutDevices.Remove(hwo))
 			{
-				return 0; // MMSYSERR_NOERROR
+				return (uint)MMSysError.MMSYSERR_NOERROR;
 			}
 
-			return 4; // MMSYSERR_INVALHANDLE
+			return (uint)MMSysError.MMSYSERR_INVALHANDLE;
 		}
 
 		/// <summary>
@@ -956,12 +958,13 @@ namespace Win32Emu.Win32.Modules
 
 			if (pwh != 0)
 			{
-				// Set WHDR_PREPARED flag (bit 1) in dwFlags field (offset 16)
-				var flags = _env.MemRead32(pwh + 16);
-				_env.MemWrite32(pwh + 16, flags | 0x00000002); // WHDR_PREPARED
+				// Set WHDR_PREPARED flag in dwFlags field
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, flags | (uint)WaveHdrFlags.WHDR_PREPARED);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -975,12 +978,13 @@ namespace Win32Emu.Win32.Modules
 
 			if (pwh != 0)
 			{
-				// Clear WHDR_PREPARED flag (bit 1) and set WHDR_DONE flag (bit 0) in dwFlags field (offset 16)
-				var flags = _env.MemRead32(pwh + 16);
-				_env.MemWrite32(pwh + 16, (flags & ~0x00000002u) | 0x00000001); // Clear PREPARED, set DONE
+				// Clear WHDR_PREPARED flag and set WHDR_DONE flag in dwFlags field
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, (flags & ~(uint)WaveHdrFlags.WHDR_PREPARED) | (uint)WaveHdrFlags.WHDR_DONE);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -995,11 +999,12 @@ namespace Win32Emu.Win32.Modules
 			if (pwh != 0)
 			{
 				// Mark buffer as done (set WHDR_DONE flag)
-				var flags = _env.MemRead32(pwh + 16);
-				_env.MemWrite32(pwh + 16, flags | 0x00000001); // WHDR_DONE
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, flags | (uint)WaveHdrFlags.WHDR_DONE);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1009,7 +1014,7 @@ namespace Win32Emu.Win32.Modules
 		private uint WaveOutPause(uint hwo)
 		{
 			_logger.LogInformation("[WinMM] waveOutPause(hwo=0x{Hwo:X8})", hwo);
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1019,7 +1024,7 @@ namespace Win32Emu.Win32.Modules
 		private uint WaveOutRestart(uint hwo)
 		{
 			_logger.LogInformation("[WinMM] waveOutRestart(hwo=0x{Hwo:X8})", hwo);
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1029,7 +1034,7 @@ namespace Win32Emu.Win32.Modules
 		private uint WaveOutReset(uint hwo)
 		{
 			_logger.LogInformation("[WinMM] waveOutReset(hwo=0x{Hwo:X8})", hwo);
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1041,15 +1046,20 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[WinMM] waveOutGetPosition(hwo=0x{Hwo:X8}, pmmt=0x{Pmmt:X8}, cbmmt={Cbmmt})",
 				hwo, pmmt, cbmmt);
 
-			if (pmmt != 0 && cbmmt >= 12) // sizeof(MMTIME)
+			var mmtimeSize = (uint)Marshal.SizeOf<MMTIME>();
+			if (pmmt != 0 && cbmmt >= mmtimeSize)
 			{
-				// Return time in samples (TIME_SAMPLES = 2)
-				_env.MemWrite32(pmmt, 2); // wType = TIME_SAMPLES
-				_env.MemWrite32(pmmt + 4, 0); // sample = 0
-				_env.MemWrite32(pmmt + 8, 0); // padding
+				// Return time in samples
+				var wTypeOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.wType));
+				var uOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.u));
+				var paddingOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.padding));
+				
+				_env.MemWrite32(pmmt + wTypeOffset, (uint)MMTimeType.TIME_SAMPLES);
+				_env.MemWrite32(pmmt + uOffset, 0); // sample = 0
+				_env.MemWrite32(pmmt + paddingOffset, 0); // padding
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1081,7 +1091,7 @@ namespace Win32Emu.Win32.Modules
 				}
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1092,7 +1102,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[WinMM] waveInMessage(hwi=0x{Hwi:X8}, uMsg={UMsg}, dw1=0x{Dw1:X8}, dw2=0x{Dw2:X8})",
 				hwi, uMsg, dw1, dw2);
-			return 0; // Success
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1120,7 +1130,7 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(phwi, handle);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1133,10 +1143,10 @@ namespace Win32Emu.Win32.Modules
 
 			if (_waveInDevices.Remove(hwi))
 			{
-				return 0; // MMSYSERR_NOERROR
+				return (uint)MMSysError.MMSYSERR_NOERROR;
 			}
 
-			return 4; // MMSYSERR_INVALHANDLE
+			return (uint)MMSysError.MMSYSERR_INVALHANDLE;
 		}
 
 		/// <summary>
@@ -1150,12 +1160,13 @@ namespace Win32Emu.Win32.Modules
 
 			if (pwh != 0)
 			{
-				// Set WHDR_PREPARED flag (bit 1) in dwFlags field (offset 16)
-				var flags = _env.MemRead32(pwh + 16);
-				_env.MemWrite32(pwh + 16, flags | 0x00000002); // WHDR_PREPARED
+				// Set WHDR_PREPARED flag in dwFlags field
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, flags | (uint)WaveHdrFlags.WHDR_PREPARED);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1169,12 +1180,13 @@ namespace Win32Emu.Win32.Modules
 
 			if (pwh != 0)
 			{
-				// Clear WHDR_PREPARED flag (bit 1) and set WHDR_DONE flag (bit 0)
-				var flags = _env.MemRead32(pwh + 16);
-				_env.MemWrite32(pwh + 16, (flags & ~0x00000002u) | 0x00000001); // Clear PREPARED, set DONE
+				// Clear WHDR_PREPARED flag and set WHDR_DONE flag
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, (flags & ~(uint)WaveHdrFlags.WHDR_PREPARED) | (uint)WaveHdrFlags.WHDR_DONE);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1189,13 +1201,16 @@ namespace Win32Emu.Win32.Modules
 			if (pwh != 0)
 			{
 				// Mark buffer as done immediately (for stub implementation)
-				var flags = _env.MemRead32(pwh + 16);
-				_env.MemWrite32(pwh + 16, flags | 0x00000001); // WHDR_DONE
-				// Set dwBytesRecorded to 0 (offset 8)
-				_env.MemWrite32(pwh + 8, 0);
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, flags | (uint)WaveHdrFlags.WHDR_DONE);
+				
+				// Set dwBytesRecorded to 0
+				var bytesRecordedOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwBytesRecorded));
+				_env.MemWrite32(pwh + bytesRecordedOffset, 0);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1205,7 +1220,7 @@ namespace Win32Emu.Win32.Modules
 		private uint WaveInStart(uint hwi)
 		{
 			_logger.LogInformation("[WinMM] waveInStart(hwi=0x{Hwi:X8})", hwi);
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1215,7 +1230,7 @@ namespace Win32Emu.Win32.Modules
 		private uint WaveInStop(uint hwi)
 		{
 			_logger.LogInformation("[WinMM] waveInStop(hwi=0x{Hwi:X8})", hwi);
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1225,7 +1240,7 @@ namespace Win32Emu.Win32.Modules
 		private uint WaveInReset(uint hwi)
 		{
 			_logger.LogInformation("[WinMM] waveInReset(hwi=0x{Hwi:X8})", hwi);
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1237,15 +1252,20 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[WinMM] waveInGetPosition(hwi=0x{Hwi:X8}, pmmt=0x{Pmmt:X8}, cbmmt={Cbmmt})",
 				hwi, pmmt, cbmmt);
 
-			if (pmmt != 0 && cbmmt >= 12) // sizeof(MMTIME)
+			var mmtimeSize = (uint)Marshal.SizeOf<MMTIME>();
+			if (pmmt != 0 && cbmmt >= mmtimeSize)
 			{
-				// Return time in samples (TIME_SAMPLES = 2)
-				_env.MemWrite32(pmmt, 2); // wType = TIME_SAMPLES
-				_env.MemWrite32(pmmt + 4, 0); // sample = 0
-				_env.MemWrite32(pmmt + 8, 0); // padding
+				// Return time in samples
+				var wTypeOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.wType));
+				var uOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.u));
+				var paddingOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.padding));
+				
+				_env.MemWrite32(pmmt + wTypeOffset, (uint)MMTimeType.TIME_SAMPLES);
+				_env.MemWrite32(pmmt + uOffset, 0); // sample = 0
+				_env.MemWrite32(pmmt + paddingOffset, 0); // padding
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1260,19 +1280,20 @@ namespace Win32Emu.Win32.Modules
 			// Stub implementation - just zero out the structure
 			if (pmxl != 0)
 			{
-				// Read cbStruct field (offset 0) to determine structure size
-				var cbStruct = _env.MemRead32(pmxl);
+				// Read cbStruct field to determine structure size
+				var cbStructOffset = (uint)Marshal.OffsetOf<MIXERLINEA>(nameof(MIXERLINEA.cbStruct));
+				var cbStruct = _env.MemRead32(pmxl + cbStructOffset);
 				if (cbStruct > 0)
 				{
 					// Zero out the entire structure except cbStruct
-					for (uint i = 4; i < cbStruct; i++)
+					for (uint i = cbStructOffset + sizeof(uint); i < cbStruct; i++)
 					{
 						_env.MemWrite8(pmxl + i, 0);
 					}
 				}
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1287,11 +1308,12 @@ namespace Win32Emu.Win32.Modules
 			// Stub implementation - indicate no controls
 			if (pmxlc != 0)
 			{
-				// Set cControls (offset 12) to 0
-				_env.MemWrite32(pmxlc + 12, 0);
+				// Set cControls to 0
+				var cControlsOffset = (uint)Marshal.OffsetOf<MIXERLINECONTROLSA>(nameof(MIXERLINECONTROLSA.cControls));
+				_env.MemWrite32(pmxlc + cControlsOffset, 0);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
