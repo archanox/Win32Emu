@@ -1,4 +1,5 @@
 using Xunit;
 
-// Mark all tests in this assembly as DLL module tests (optional, non-blocking in CI)
-[assembly: Trait("Category", "DllModuleTests")]
+// NOTE: Assembly-level Trait attribute is not supported in xUnit
+// Tests are marked as DLL module tests at the class level instead
+
