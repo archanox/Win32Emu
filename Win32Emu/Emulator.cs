@@ -1068,11 +1068,11 @@ public sealed class Emulator : IDisposable
                     espBefore, espAfter, (int)espAfter - (int)espBefore, eipBefore, eipAfter);
                 
                 // Enable instruction tracing for BasicDD crash investigation
-                // Trace after GetAttachedSurface returns to 0x0040140C
-                // This is where the crash investigation documents indicate the problem starts
-                if (!_traceEnabled && eipAfter == 0x0040140C)
+                // Trace from DirectDrawCreateEx return to catch stack corruption
+                // DirectDrawCreateEx is the first API call in FUN_00401310
+                if (!_traceEnabled && eipAfter >= 0x00401329 && eipAfter <= 0x0040132B)
                 {
-                    _logger.LogWarning("[TRACE] GetAttachedSurface returned to 0x{EipAfter:X8}, enabling instruction tracing for next {Count} instructions", eipAfter, MAX_TRACE_INSTRUCTIONS);
+                    _logger.LogWarning("[TRACE] DirectDrawCreateEx returned to 0x{EipAfter:X8}, enabling instruction tracing for next {Count} instructions", eipAfter, MAX_TRACE_INSTRUCTIONS);
                     _instructionTraceCount = MAX_TRACE_INSTRUCTIONS;
                     _traceEnabled = true;
                 }
@@ -1814,6 +1814,12 @@ public sealed class Emulator : IDisposable
             var returnToCaller = _vm!.Read32(returnToCallerAddr);
             _logger.LogInformation("[Syscall] BEFORE API: Return address at 0x{Addr:X8} = 0x{RetAddr:X8}", returnToCallerAddr, returnToCaller);
             
+            // Enable tracing for BasicDD investigation - start from DirectDrawCreateEx
+            if (!_traceEnabled && dll == "DDRAW.DLL" && name == "DirectDrawCreateEx")
+            {
+                _logger.LogWarning("[TRACE] DirectDrawCreateEx about to be called, will enable tracing after it returns");
+            }
+            
             _cpu.SetRegister("ESP", esp + 4);
             
             if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
@@ -1821,6 +1827,14 @@ public sealed class Emulator : IDisposable
                 // DEBUG: Log stack contents after API call
                 var returnToCallerAfter = _vm!.Read32(returnToCallerAddr);
                 _logger.LogInformation("[Syscall] AFTER API: Return address at 0x{Addr:X8} = 0x{RetAddr:X8}", returnToCallerAddr, returnToCallerAfter);
+                
+                // Enable tracing after DirectDrawCreateEx returns for BasicDD investigation
+                if (!_traceEnabled && dll == "DDRAW.DLL" && name == "DirectDrawCreateEx")
+                {
+                    _logger.LogWarning("[TRACE] DirectDrawCreateEx returned, enabling instruction tracing for next {Count} instructions", MAX_TRACE_INSTRUCTIONS);
+                    _instructionTraceCount = MAX_TRACE_INSTRUCTIONS;
+                    _traceEnabled = true;
+                }
                 
                 // VALIDATION: Detect stack corruption by checking if return address changed during API call
                 if (returnToCaller != returnToCallerAfter)
