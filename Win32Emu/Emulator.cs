@@ -46,6 +46,10 @@ public sealed class Emulator : IDisposable
     // Logging throttle interval when stuck at same EIP (reduce spam)
     // Log a warning every 1M iterations to avoid excessive log spam during legitimate tight loops
     private const ulong STUCK_EIP_LOG_INTERVAL = 1000000;
+    
+    // Instruction tracing for debugging BasicDD crash
+    private int _instructionTraceCount = 0;
+    private const int MAX_TRACE_INSTRUCTIONS = 100; // Trace 100 instructions after trigger
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -913,6 +917,37 @@ public sealed class Emulator : IDisposable
                 throw; // Re-throw to stop emulation
             }
             
+            // Instruction-level tracing for debugging
+            if (_instructionTraceCount > 0)
+            {
+                _instructionTraceCount--;
+                var eipAfter = _cpu.GetEip();
+                var esp = _cpu.GetRegister("ESP");
+                var ebp = _cpu.GetRegister("EBP");
+                var eax = _cpu.GetRegister("EAX");
+                var ebx = _cpu.GetRegister("EBX");
+                var ecx = _cpu.GetRegister("ECX");
+                var edx = _cpu.GetRegister("EDX");
+                var esi = _cpu.GetRegister("ESI");
+                var edi = _cpu.GetRegister("EDI");
+                
+                // Try to read stack values
+                var stackVals = new List<string>();
+                try
+                {
+                    for (int i = 0; i < 8; i++)
+                    {
+                        var addr = esp + (uint)(i * 4);
+                        var val = _vm!.Read32(addr);
+                        stackVals.Add($"[ESP+{i*4:X2}]=0x{val:X8}");
+                    }
+                }
+                catch { }
+                
+                _logger.LogWarning("[TRACE] EIP: 0x{EipBefore:X8} -> 0x{EipAfter:X8} | ESP=0x{Esp:X8} EBP=0x{Ebp:X8} | EAX=0x{Eax:X8} EBX=0x{Ebx:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8} | Stack: {Stack} | Remaining: {Count}",
+                    eipBeforeStep, eipAfter, esp, ebp, eax, ebx, ecx, edx, esi, edi, string.Join(" ", stackVals), _instructionTraceCount);
+            }
+            
             // Record instruction execution
             _metrics?.RecordInstructionsExecuted();
             
@@ -980,6 +1015,14 @@ public sealed class Emulator : IDisposable
                 var eipAfter = _cpu.GetEip();
                 _logger.LogInformation("[COM] After vtable call: ESP changed from 0x{EspBefore:X8} to 0x{EspAfter:X8} (delta={Delta}), Call site EIP=0x{EipBefore:X8}, Return EIP=0x{EipAfter:X8}", 
                     espBefore, espAfter, (int)espAfter - (int)espBefore, eipBefore, eipAfter);
+                
+                // Enable instruction tracing after GetAttachedSurface for debugging BasicDD crash
+                // GetAttachedSurface returns to 0x0040140C, then crash happens at 0x0040715A
+                if (eipAfter == 0x0040140C)
+                {
+                    _logger.LogWarning("[TRACE] GetAttachedSurface returned to 0x{EipAfter:X8}, enabling instruction tracing for next {Count} instructions", eipAfter, MAX_TRACE_INSTRUCTIONS);
+                    _instructionTraceCount = MAX_TRACE_INSTRUCTIONS;
+                }
             }
             // OLD IMPORT HANDLING CODE - DISABLED
             // Import stubs now use CALL/RET and syscall mechanism (INT 0x80)
