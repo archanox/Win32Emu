@@ -944,11 +944,11 @@ public sealed class Emulator : IDisposable
                 var esi = _cpu.GetRegister("ESI");
                 var edi = _cpu.GetRegister("EDI");
                 
-                // Try to read stack values
+                // Try to read stack values (expanded to 36 DWORDs = 144 bytes to catch corruption at ESP+0x8C)
                 var stackVals = new List<string>();
                 try
                 {
-                    for (int i = 0; i < 8; i++)
+                    for (int i = 0; i < 36; i++)
                     {
                         var addr = esp + (uint)(i * 4);
                         var val = _vm!.Read32(addr);
