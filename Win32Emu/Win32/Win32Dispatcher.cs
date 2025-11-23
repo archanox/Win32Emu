@@ -43,7 +43,12 @@ public class Win32Dispatcher(ILogger logger)
 		return _modules.TryGetValue(dllName, out module);
 	}
 
-	public bool TryInvoke(string dll, string export, ICpu cpu, VirtualMemory memory, out uint returnValue, out int stdcallArgBytes, out CallingConvention? callingConvention)
+	public bool TryInvoke(string dll, string export, ICpu cpu, VirtualMemory memory, out uint returnValue, out int stdcallArgBytes)
+	{
+		return TryInvoke(dll, export, cpu, memory, out returnValue, out stdcallArgBytes, out _);
+	}
+
+	public bool TryInvoke(string dll, string export, ICpu cpu, VirtualMemory memory, out uint returnValue, out int stdcallArgBytes, out Loader.CallingConvention? callingConvention)
 	{
 		returnValue = 0;
 		stdcallArgBytes = 0;
@@ -87,6 +92,8 @@ public class Win32Dispatcher(ILogger logger)
 				// Try to get arg bytes from metadata (use resolved export name)
 				if (StdCallMeta.TryGetArgBytes(dll, export, out stdcallArgBytes))
 				{
+					// For Win32 API modules, always use stdcall convention
+					callingConvention = Loader.CallingConvention.Stdcall;
 					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes}", dll, originalExport, returnValue, stdcallArgBytes);
 				}
 				else
@@ -94,6 +101,7 @@ public class Win32Dispatcher(ILogger logger)
 					// Function is missing [DllModuleExport] attribute
 					logger.LogError("[Dispatcher] {Dll}!{Export} is missing [DllModuleExport] attribute - cannot determine stack cleanup bytes", dll, export);
 					stdcallArgBytes = 0; // Default to 0, but this may cause stack corruption
+					callingConvention = Loader.CallingConvention.Stdcall; // Assume stdcall
 					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes} (MISSING METADATA)", dll, originalExport, returnValue, stdcallArgBytes);
 				}
 
@@ -127,8 +135,39 @@ public class Win32Dispatcher(ILogger logger)
 		logger.LogError("Unknown DLL function call: {Dll}!{Export}", dll, originalExport);
 		LogUnknownFunctionCall(dll, originalExport);
 
-		// Check if this DLL was dynamically loaded
+		// Check if this DLL was dynamically loaded as a PE image
 		var isDynamicallyLoaded = _dynamicallyLoadedDlls.Contains(dll);
+		if (isDynamicallyLoaded && _env != null)
+		{
+			// Try to find the loaded PE image for this DLL
+			var loadedImages = _env.GetAllLoadedImages();
+			foreach (var (moduleName, image) in loadedImages)
+			{
+				// Match by DLL name (case-insensitive)
+				var imageName = Path.GetFileName(image.FilePath);
+				if (string.Equals(imageName, dll, StringComparison.OrdinalIgnoreCase))
+				{
+					// Check if the export has metadata
+					if (image.ExportMetadata.TryGetValue(export, out var exportMeta))
+					{
+						logger.LogInformation("[Dispatcher] Found PE export metadata for {Dll}!{Export}: Convention={Convention}, StackArgBytes={StackArgBytes}",
+							dll, export, exportMeta.Convention, exportMeta.StackArgBytes);
+						
+						stdcallArgBytes = exportMeta.StackArgBytes;
+						callingConvention = exportMeta.Convention;
+						
+						// For cdecl, the caller cleans the stack, so return 0 for argBytes
+						// The caller will handle stack cleanup
+						if (exportMeta.Convention == Loader.CallingConvention.Cdecl)
+						{
+							stdcallArgBytes = 0; // Caller cleans, not callee
+						}
+						
+						break;
+					}
+				}
+			}
+		}
 		if (isDynamicallyLoaded)
 		{
 			logger.LogInformation("Note: {Dll} was dynamically loaded via LoadLibrary", dll);
@@ -215,7 +254,7 @@ public class Win32Dispatcher(ILogger logger)
 		}
 
 		// Fall back to synchronous version for non-async modules
-		var syncSuccess = TryInvoke(dll, export, cpu, memory, out var syncReturnValue, out var syncStdcallArgBytes);
+		var syncSuccess = TryInvoke(dll, export, cpu, memory, out var syncReturnValue, out var syncStdcallArgBytes, out var syncCallingConvention);
 		return (syncSuccess, syncReturnValue, syncStdcallArgBytes);
 	}
 

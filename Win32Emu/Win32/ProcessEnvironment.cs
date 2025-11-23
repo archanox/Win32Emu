@@ -984,6 +984,15 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
+	/// Gets all loaded PE images (DLLs and EXEs) in the process environment.
+	/// </summary>
+	/// <returns>Dictionary of module names to their loaded image info</returns>
+	public IReadOnlyDictionary<string, LoadedImage> GetAllLoadedImages()
+	{
+		return _loadedImages;
+	}
+
+	/// <summary>
 	/// Register a synthetic export for an emulated module.
 	/// Returns a synthetic address that can be used to call this export.
 	/// Uses the syscall mechanism (CALL/RET stub) for unified handling with import stubs.
