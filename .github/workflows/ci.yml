@@ -44,8 +44,22 @@ jobs:
       id: check-tests
       run: |
         # Load Win32 DLL modules from JSON config file
-        DLL_MODULES=$(cat .github/workflows/dll-modules.json | jq -r '.modules | join(" ")')
-        echo "Loaded DLL modules: $DLL_MODULES"
+        # Note: jq is pre-installed on GitHub-hosted Ubuntu runners
+        if [ ! -f .github/workflows/dll-modules.json ]; then
+          echo "ERROR: .github/workflows/dll-modules.json not found"
+          exit 1
+        fi
+        
+        DLL_MODULES=$(cat .github/workflows/dll-modules.json | jq -r '.modules | join(" ")') || {
+          echo "ERROR: Failed to parse .github/workflows/dll-modules.json"
+          exit 1
+        }
+        
+        if [ -z "$DLL_MODULES" ]; then
+          echo "WARNING: No DLL modules loaded from config file"
+        else
+          echo "Loaded DLL modules: $DLL_MODULES"
+        fi
         
         # Check for any tests in the solution
         if dotnet test --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
