@@ -66,15 +66,10 @@ jobs:
         
         # Build test filter for core tests (exclude DLL modules)
         # This dynamically creates: FullyQualifiedName!~Win32Emu.Tests.Kernel32&FullyQualifiedName!~Win32Emu.Tests.User32&...
-        test_filter=""
+        test_filter="Category!=ConformanceTests"
         for dll in $DLL_MODULES; do
-          if [ -n "$test_filter" ]; then
-            test_filter="${test_filter}&"
-          fi
-          test_filter="${test_filter}FullyQualifiedName!~Win32Emu.Tests.${dll}"
+          test_filter="${test_filter}&FullyQualifiedName!~Win32Emu.Tests.${dll}"
         done
-        # Add conformance tests exclusion
-        test_filter="${test_filter}&Category!=ConformanceTests"
         echo "core-test-filter=$test_filter" >> $GITHUB_OUTPUT
         
         # Check for core emulator tests (required) - anything that's not a Win32 DLL module
