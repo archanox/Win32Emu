@@ -4919,7 +4919,12 @@ public class IcedCpu : IAsyncCpu
 		// Save original MSB for OF calculation
 		var originalMsb = (dest & signBit) != 0;
 		
-		var mask = (1u << opSize) - 1;
+		// Calculate mask - avoid overflow for 32-bit case
+		var mask = opSize == 32 ? 0xFFFFFFFFu : (1u << opSize) - 1;
+		
+		// Mask operands to size
+		dest &= mask;
+		src &= mask;
 		
 		// CF is set to the last bit shifted out of dest
 		bool carryOut;
@@ -4934,40 +4939,41 @@ public class IcedCpu : IAsyncCpu
 			var rotateAmount = count % opSize;
 			if (rotateAmount == 0)
 			{
-				// Full rotation, CF comes from MSB of dest
-				carryOut = ((dest >> (opSize - 1)) & 1) != 0;
+				// Full rotation, CF comes from LSB of src
+				carryOut = (src & 1) != 0;
 			}
 			else
 			{
-				var rotatedDest = ((dest << rotateAmount) | (dest >> (opSize - rotateAmount))) & mask;
-				carryOut = ((rotatedDest >> (opSize - rotateAmount)) & 1) != 0;
+				// Use rotation to find the carry bit
+				var rotatedSrc = RotateLeft(src, rotateAmount, opSize);
+				carryOut = (rotatedSrc & 1) != 0;
 			}
 		}
 		
 		// For SHLD, shift dest left and bring in bits from src
 		// Per https://github.com/SingleStepTests/80386/issues/4:
 		// When count >= opSize, the "inBits" are rotated (ROL style) from src
-		uint inBits;
 		if (count >= opSize)
 		{
-			// Rotate src left by (count mod opSize) to get the bits that flow in
+			// When count >= opSize, rotate src left by (count mod opSize)
 			var rotateAmount = count % opSize;
-			var rotatedSrc = ((src << rotateAmount) | (src >> (opSize - rotateAmount))) & mask;
-			// When count >= opSize, dest is replaced by inBits
 			if (rotateAmount == 0)
 			{
-				dest = rotatedSrc;
+				// Full rotation by opSize returns src unchanged
+				dest = src;
 			}
 			else
 			{
-				dest = rotatedSrc;
+				dest = RotateLeft(src, rotateAmount, opSize);
 			}
 		}
 		else
 		{
-			// Normal case: take high 'count' bits from src and shift right
-			inBits = src >> (opSize - count);
-			dest = ((dest << count) | inBits) & mask;
+			// Normal case: shift dest left by count and bring in high bits from src
+			// Take high 'count' bits from src and place them in low positions of result
+			uint inBits = src >> (opSize - count);
+			dest = (dest << count) | inBits;
+			dest &= mask;
 		}
 		
 		// Set flags
@@ -5746,6 +5752,33 @@ public class IcedCpu : IAsyncCpu
 		var rightPart = value >> count;
 		var leftPart = (value << (opSize - count)) & mask;
 		return (rightPart | leftPart) & mask;
+	}
+
+	/// <summary>
+	/// Rotate a value left by the specified number of bits, respecting the operand size.
+	/// Handles the shift overflow issue for 32-bit operands.
+	/// </summary>
+	private uint RotateLeft(uint value, int count, int opSize)
+	{
+		// Normalize count to operand size
+		count %= opSize;
+		if (count == 0)
+			return value;
+		
+		// Get mask for operand size
+		var mask = opSize == 32 ? 0xFFFFFFFFu : (1u << opSize) - 1;
+		value &= mask;
+		
+		// Perform rotation: (value << count) | (value >> (opSize - count))
+		// For 32-bit, we need to avoid overflow when shifting
+		if (opSize == 32 && count == 0)
+		{
+			return value;
+		}
+		
+		var leftPart = (value << count) & mask;
+		var rightPart = value >> (opSize - count);
+		return (leftPart | rightPart) & mask;
 	}
 
 	// replace CalcMemAddress to report via Diagnostics on failure
