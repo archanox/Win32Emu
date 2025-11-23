@@ -30,13 +30,13 @@ This document outlines the comprehensive testing strategy for Win32Emu, organize
 **Purpose**: Tests the x86 CPU emulator conformance  
 **Status**: Core tests passing, extensive conformance tests available  
 **Coverage**:
+- **CPU Emulation**: Instruction execution, register management, flag handling (CF, ZF, SF, OF, PF, AF)
 - **Basic Instructions** (8086/286/386): ADD, SUB, XOR, AND, OR, TEST, CMP, INC, DEC, SHL, SHR
 - **486 Instructions**: BSWAP, CMPXCHG, XADD, INVD, WBINVD, INVLPG
-- **Pentium Instructions**: RDTSC, CPUID, CMPXCHG8B, RDMSR, WRMSR, RSM
-- CPU instruction execution accuracy
-- Register state management
-- Flag handling (CF, ZF, SF, OF, PF, AF)
-- Arithmetic and logic operations
+- **Pentium Instructions**: RDTSC, CPUID, CMPXCHG8B, RDMSR, WRMSR, RSM, MMX
+- **Advanced Features**: JIT compilation, async CPU operations, state suspend/resume
+- **Memory & Addressing**: Virtual memory, segment handling, boundary conditions
+- **Backend Integration**: SDL3, Software rendering, DirectDraw, DirectInput
 - **SingleStepTests Conformance Suite**: 941 hardware-generated CPU tests (optional, not blocking CI)
   - Tests validate CPU implementation against real 386 hardware behavior
   - Run with: `dotnet test --filter "Category=ConformanceTests"`
