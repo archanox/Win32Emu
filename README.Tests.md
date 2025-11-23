@@ -144,12 +144,20 @@ Tests are categorized to support different CI/CD requirements:
 ## CI Test Behavior
 
 ### Test Execution Policy
-- **Core Emulator Tests**: Required - failures will block PRs (CPU, memory, instruction execution tests)
-- **Win32 DLL Module Tests**: Optional - failures won't block PRs (allows test-driven development)
-  - Kernel32, User32, Gdi32, DDraw, DInput, WinMM, DSound, DPlayX tests
-- **Conformance Tests**: Optional - failures won't block PRs (extensive CPU instruction validation)
-  - 941 hardware-generated tests from SingleStepTests/80386 suite
-  - Validate CPU implementation against real 386 hardware behavior
+Tests are categorized using xUnit traits to control CI behavior:
+
+- **Core Tests**: Required - failures will block PRs
+  - CPU emulator, memory management, GUI, code generation, etc.
+  - Any tests NOT marked with DllModuleTests or ConformanceTests traits
+  
+- **DLL Module Tests** (`[assembly: Trait("Category", "DllModuleTests")]`): Optional - won't block PRs
+  - Win32 DLL API tests: Kernel32, User32, Gdi32, DDraw, DInput, WinMM, DSound, DPlayX
+  - Allows test-driven development for Win32 API implementation
+  - Run locally with: `dotnet test --filter "Category=DllModuleTests"`
+  
+- **Conformance Tests** (`[Trait("Category", "ConformanceTests")]`): Optional - informational only
+  - 941 hardware-generated CPU instruction tests from SingleStepTests/80386 suite
+  - Validates CPU implementation against real 386 hardware behavior
   - Run locally with: `dotnet test --filter "Category=ConformanceTests"`
 
 ### Purpose
@@ -162,10 +170,11 @@ This policy allows developers to:
 
 ### Adding Tests for New Modules
 When creating tests for Win32 DLL modules:
-1. Tests will automatically be treated as optional (non-blocking)
-2. Implement the functionality to make tests pass
-3. Tests provide documentation of expected API behavior
-4. CI will show test status without blocking development
+1. Create test project: `Win32Emu.Tests.{ModuleName}`
+2. Add `AssemblyInfo.cs` with: `[assembly: Trait("Category", "DllModuleTests")]`
+3. Tests will automatically be treated as optional (non-blocking) in CI
+4. Implement the functionality to make tests pass
+5. Tests provide documentation of expected API behavior
 
 When creating tests for core emulator features (CPU, memory, etc.):
 1. Tests will be required and block PRs if they fail

@@ -15,13 +15,17 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     
-    # Note: Win32 DLL module tests (Kernel32, User32, etc.) are optional and won't block PRs
-    # This allows adding tests for unimplemented functionality without breaking CI
-    # DLL module list is defined in .github/workflows/dll-modules.json
-    # Core emulator tests (CPU, memory, etc.) are required and will block PRs
-    # Conformance tests (SingleStepTests) are optional and won't block PRs
-    # - These are extensive CPU instruction conformance tests (941 tests)
-    # - They can be run locally with: dotnet test --filter "Category=ConformanceTests"
+    # Test categorization using xUnit traits:
+    # - DllModuleTests: Win32 DLL module tests (Kernel32, User32, etc.) - optional, won't block PRs
+    #   Marked with [assembly: Trait("Category", "DllModuleTests")] in each DLL test project
+    # - ConformanceTests: CPU instruction conformance tests (941 SingleStepTests) - optional, informational
+    #   Marked with [Trait("Category", "ConformanceTests")] on test methods
+    # - Core tests: Everything else (CPU emulator, memory, GUI, etc.) - required, will block PRs
+    # 
+    # Run locally:
+    #   dotnet test --filter "Category=ConformanceTests"     # Run only conformance tests
+    #   dotnet test --filter "Category=DllModuleTests"       # Run only DLL module tests
+    #   dotnet test --filter "Category!=ConformanceTests&Category!=DllModuleTests"  # Run only core tests
     
     steps:
     - name: Checkout code
@@ -43,24 +47,6 @@ jobs:
     - name: Check for tests
       id: check-tests
       run: |
-        # Load Win32 DLL modules from JSON config file
-        # Note: jq is pre-installed on GitHub-hosted Ubuntu runners
-        if [ ! -f .github/workflows/dll-modules.json ]; then
-          echo "ERROR: .github/workflows/dll-modules.json not found"
-          exit 1
-        fi
-        
-        DLL_MODULES=$(cat .github/workflows/dll-modules.json | jq -r '.modules | join(" ")') || {
-          echo "ERROR: Failed to parse .github/workflows/dll-modules.json"
-          exit 1
-        }
-        
-        if [ -z "$DLL_MODULES" ]; then
-          echo "WARNING: No DLL modules loaded from config file"
-        else
-          echo "Loaded DLL modules: $DLL_MODULES"
-        fi
-        
         # Check for any tests in the solution
         if dotnet test --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
           echo "has-tests=true" >> $GITHUB_OUTPUT
@@ -68,29 +54,13 @@ jobs:
           echo "has-tests=false" >> $GITHUB_OUTPUT
         fi
         
-        # Check for Win32 DLL module tests (optional)
-        dll_tests=""
-        for dll in $DLL_MODULES; do
-          if dotnet test "Win32Emu.Tests.$dll" --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null 2>&1; then
-            dll_tests="$dll_tests Win32Emu.Tests.$dll"
-            echo "has-$(echo $dll | tr '[:upper:]' '[:lower:]')-tests=true" >> $GITHUB_OUTPUT
-          else
-            echo "has-$(echo $dll | tr '[:upper:]' '[:lower:]')-tests=false" >> $GITHUB_OUTPUT
-          fi
-        done
-        echo "dll-test-projects=$dll_tests" >> $GITHUB_OUTPUT
-        
-        # Build test filter for core tests (exclude DLL modules)
-        # This dynamically creates: FullyQualifiedName!~Win32Emu.Tests.Kernel32&FullyQualifiedName!~Win32Emu.Tests.User32&...
-        test_filter="Category!=ConformanceTests"
-        for dll in $DLL_MODULES; do
-          test_filter="${test_filter}&FullyQualifiedName!~Win32Emu.Tests.${dll}"
-        done
+        # Build test filter for core tests
+        # Exclude: ConformanceTests (CPU conformance suite) and DllModuleTests (Win32 DLL module tests)
+        test_filter="Category!=ConformanceTests&Category!=DllModuleTests"
         echo "core-test-filter=$test_filter" >> $GITHUB_OUTPUT
         
-        # Check for core emulator tests (required) - anything that's not a Win32 DLL module
-        dll_pattern=$(echo "$DLL_MODULES" | sed 's/ /|/g')
-        if dotnet test --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" | grep -v -E "Win32Emu\.Tests\.($dll_pattern)" > /dev/null; then
+        # Check for core tests (anything not marked with ConformanceTests or DllModuleTests traits)
+        if dotnet test --list-tests --verbosity quiet --filter "$test_filter" 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
           echo "has-core-tests=true" >> $GITHUB_OUTPUT
         else
           echo "has-core-tests=false" >> $GITHUB_OUTPUT
@@ -101,12 +71,9 @@ jobs:
       run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "${{ steps.check-tests.outputs.core-test-filter }}"
       
     - name: Run Win32 DLL module tests (optional)
-      if: steps.check-tests.outputs.dll-test-projects != ''
       run: |
-        for project in ${{ steps.check-tests.outputs.dll-test-projects }}; do
-          echo "Running tests for $project"
-          dotnet test "$project" --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" || true
-        done
+        echo "Running Win32 DLL module tests (optional, non-blocking)..."
+        dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "Category=DllModuleTests" || true
       continue-on-error: true
       
     - name: Run CPU conformance tests (optional - informational only)
