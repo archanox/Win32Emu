@@ -5069,8 +5069,9 @@ public class IcedCpu : IAsyncCpu
 		{
 			// Normal case: shift dest right by count and bring in high bits from src
 			// Take low 'count' bits from src and place them in high positions of result
-			// Create mask for low 'count' bits, avoiding overflow for count >= 32
-			var lowBitsMask = count >= 32 ? 0xFFFFFFFFu : (1u << count) - 1;
+			// Create mask for low 'count' bits
+			// count is already masked to 0x1F and > 0, so (1u << count) - 1 is safe
+			var lowBitsMask = (1u << count) - 1;
 			uint inBits = (src & lowBitsMask) << (opSize - count);
 			dest = (dest >> count) | inBits;
 			dest &= mask;
