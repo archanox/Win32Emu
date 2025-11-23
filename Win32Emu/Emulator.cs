@@ -51,6 +51,18 @@ public sealed class Emulator : IDisposable
     private int _instructionTraceCount = 0;
     private const int MAX_TRACE_INSTRUCTIONS = 1000; // Trace 1000 instructions to find stack corruption
     private bool _traceEnabled = false;
+    
+    /// <summary>
+    /// Enable instruction-level tracing for the next N instructions.
+    /// Used for debugging crashes and understanding execution flow.
+    /// </summary>
+    /// <param name="instructionCount">Number of instructions to trace (default: MAX_TRACE_INSTRUCTIONS)</param>
+    public void EnableInstructionTracing(int instructionCount = MAX_TRACE_INSTRUCTIONS)
+    {
+        _instructionTraceCount = instructionCount;
+        _traceEnabled = true;
+        _logger.LogWarning("[TRACE] Instruction tracing enabled for next {Count} instructions", instructionCount);
+    }
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -958,6 +970,31 @@ public sealed class Emulator : IDisposable
                 }
                 catch { }
                 
+                // Check for EBP corruption - EBP should point to stack, not code/data
+                // Stack is typically 0x00100000 - 0x00200000 range
+                if (ebp >= _image!.BaseAddress && ebp < _image.BaseAddress + _image.ImageSize)
+                {
+                    _logger.LogError("[TRACE] ⚠️ EBP CORRUPTION DETECTED! EBP=0x{Ebp:X8} points to code/data section (should be stack). EIP: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", 
+                        ebp, eipBeforeStep, eipAfter);
+                }
+                
+                // Check for suspicious stack values (import stub addresses with wrong offsets)
+                try
+                {
+                    var topOfStack = _vm!.Read32(esp);
+                    if (topOfStack >= 0x0F000000 && topOfStack < 0x10000000)
+                    {
+                        // This is in the import stub range
+                        var offset = topOfStack & 0xF; // Lower 4 bits
+                        if (offset != 0 && offset != 0x10) // Valid import stub entry points are at 0x0 or after full stub (0x10)
+                        {
+                            _logger.LogError("[TRACE] ⚠️ STACK CORRUPTION! Top of stack [ESP]=0x{Val:X8} points into middle of import stub (offset {Offset}). EIP: 0x{EipBefore:X8}", 
+                                topOfStack, offset, eipBeforeStep);
+                        }
+                    }
+                }
+                catch { }
+                
                 _logger.LogWarning("[TRACE] EIP: 0x{EipBefore:X8} -> 0x{EipAfter:X8} | ESP=0x{Esp:X8} EBP=0x{Ebp:X8} | EAX=0x{Eax:X8} EBX=0x{Ebx:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8} | Stack: {Stack} {InstrBytes} | Remaining: {Count}",
                     eipBeforeStep, eipAfter, esp, ebp, eax, ebx, ecx, edx, esi, edi, string.Join(" ", stackVals), instrBytes, _instructionTraceCount);
             }
@@ -1031,10 +1068,11 @@ public sealed class Emulator : IDisposable
                     espBefore, espAfter, (int)espAfter - (int)espBefore, eipBefore, eipAfter);
                 
                 // Enable instruction tracing for BasicDD crash investigation
-                // Trace from window creation (FUN_00401200) which contains string "Basic DD"
-                if (!_traceEnabled && eipAfter >= 0x00401200 && eipAfter < 0x00401250)
+                // Trace after GetAttachedSurface returns to 0x0040140C
+                // This is where the crash investigation documents indicate the problem starts
+                if (!_traceEnabled && eipAfter == 0x0040140C)
                 {
-                    _logger.LogWarning("[TRACE] Window creation function at 0x{EipAfter:X8}, enabling instruction tracing for next {Count} instructions", eipAfter, MAX_TRACE_INSTRUCTIONS);
+                    _logger.LogWarning("[TRACE] GetAttachedSurface returned to 0x{EipAfter:X8}, enabling instruction tracing for next {Count} instructions", eipAfter, MAX_TRACE_INSTRUCTIONS);
                     _instructionTraceCount = MAX_TRACE_INSTRUCTIONS;
                     _traceEnabled = true;
                 }
