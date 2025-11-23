@@ -583,11 +583,12 @@ public static class NativeTypes
 	}
 
 	// MIXERLINECONTROLS structure (24 bytes for ANSI version)
+	// Note: dwControlID at offset 8 is in a union with dwControlType - only one is used
 	public struct MIXERLINECONTROLSA
 	{
 		public uint cbStruct;           // Offset 0 - Size of structure
 		public uint dwLineID;           // Offset 4 - Line identifier
-		public uint dwControlID;        // Offset 8 - Control identifier (input, union with dwControlType)
+		public uint dwControlID;        // Offset 8 - Control identifier (union with dwControlType, depending on query flags)
 		public uint cControls;          // Offset 12 - Number of controls
 		public uint cbmxctrl;           // Offset 16 - Size of MIXERCONTROL structure
 		public uint pamxctrl;           // Offset 20 - Pointer to MIXERCONTROL array

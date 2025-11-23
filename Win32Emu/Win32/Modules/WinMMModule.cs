@@ -1287,8 +1287,8 @@ namespace Win32Emu.Win32.Modules
 			// Stub implementation - indicate no controls
 			if (pmxlc != 0)
 			{
-				// Set cControls (offset 16) to 0
-				_env.MemWrite32(pmxlc + 16, 0);
+				// Set cControls (offset 12) to 0
+				_env.MemWrite32(pmxlc + 12, 0);
 			}
 
 			return 0; // MMSYSERR_NOERROR
