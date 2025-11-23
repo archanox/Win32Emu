@@ -1,0 +1,15 @@
+{
+  "description": "Configuration for Win32 DLL module test categorization in CI",
+  "purpose": "Lists DLL modules that have separate test projects and should be treated as optional (non-blocking) tests in CI",
+  "usage": "Add module names (without 'Win32Emu.Tests.' prefix) for any DLL modules that should not block CI builds",
+  "modules": [
+    "Kernel32",
+    "User32",
+    "Gdi32",
+    "DDraw",
+    "DInput",
+    "WinMM",
+    "DSound",
+    "DPlayX"
+  ]
+}

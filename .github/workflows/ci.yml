@@ -17,6 +17,7 @@ jobs:
     
     # Note: Win32 DLL module tests (Kernel32, User32, etc.) are optional and won't block PRs
     # This allows adding tests for unimplemented functionality without breaking CI
+    # DLL module list is defined in .github/workflows/dll-modules.json
     # Core emulator tests (CPU, memory, etc.) are required and will block PRs
     # Conformance tests (SingleStepTests) are optional and won't block PRs
     # - These are extensive CPU instruction conformance tests (941 tests)
@@ -42,8 +43,9 @@ jobs:
     - name: Check for tests
       id: check-tests
       run: |
-        # Define Win32 DLL modules that should be tested separately (optional tests)
-        DLL_MODULES="Kernel32 User32 Gdi32 DDraw DInput WinMM DSound DPlayX"
+        # Load Win32 DLL modules from JSON config file
+        DLL_MODULES=$(cat .github/workflows/dll-modules.json | jq -r '.modules | join(" ")')
+        echo "Loaded DLL modules: $DLL_MODULES"
         
         # Check for any tests in the solution
         if dotnet test --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
