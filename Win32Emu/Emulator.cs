@@ -49,7 +49,7 @@ public sealed class Emulator : IDisposable
     
     // Instruction tracing for debugging BasicDD crash
     private int _instructionTraceCount = 0;
-    private const int MAX_TRACE_INSTRUCTIONS = 100; // Trace 100 instructions after trigger
+    private const int MAX_TRACE_INSTRUCTIONS = 500; // Trace 500 instructions after trigger
 
     public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
     {
@@ -944,8 +944,21 @@ public sealed class Emulator : IDisposable
                 }
                 catch { }
                 
-                _logger.LogWarning("[TRACE] EIP: 0x{EipBefore:X8} -> 0x{EipAfter:X8} | ESP=0x{Esp:X8} EBP=0x{Ebp:X8} | EAX=0x{Eax:X8} EBX=0x{Ebx:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8} | Stack: {Stack} | Remaining: {Count}",
-                    eipBeforeStep, eipAfter, esp, ebp, eax, ebx, ecx, edx, esi, edi, string.Join(" ", stackVals), _instructionTraceCount);
+                // Try to read instruction bytes at EIP before execution
+                var instrBytes = "";
+                try
+                {
+                    var bytes = new List<byte>();
+                    for (int i = 0; i < 8; i++)
+                    {
+                        bytes.Add(_vm!.Read8(eipBeforeStep + (uint)i));
+                    }
+                    instrBytes = $"| Bytes: {BitConverter.ToString(bytes.ToArray()).Replace("-", " ")}";
+                }
+                catch { }
+                
+                _logger.LogWarning("[TRACE] EIP: 0x{EipBefore:X8} -> 0x{EipAfter:X8} | ESP=0x{Esp:X8} EBP=0x{Ebp:X8} | EAX=0x{Eax:X8} EBX=0x{Ebx:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8} | Stack: {Stack} {InstrBytes} | Remaining: {Count}",
+                    eipBeforeStep, eipAfter, esp, ebp, eax, ebx, ecx, edx, esi, edi, string.Join(" ", stackVals), instrBytes, _instructionTraceCount);
             }
             
             // Record instruction execution
@@ -1016,11 +1029,12 @@ public sealed class Emulator : IDisposable
                 _logger.LogInformation("[COM] After vtable call: ESP changed from 0x{EspBefore:X8} to 0x{EspAfter:X8} (delta={Delta}), Call site EIP=0x{EipBefore:X8}, Return EIP=0x{EipAfter:X8}", 
                     espBefore, espAfter, (int)espAfter - (int)espBefore, eipBefore, eipAfter);
                 
-                // Enable instruction tracing after GetAttachedSurface for debugging BasicDD crash
-                // GetAttachedSurface returns to 0x0040140C, then crash happens at 0x0040715A
-                if (eipAfter == 0x0040140C)
+                // Enable instruction tracing after DirectDrawCreateEx for debugging BasicDD crash
+                // DirectDrawCreateEx is called at the start of FUN_00401310
+                // We want to trace the entire function to see where stack corruption happens
+                if (eipAfter >= 0x00401310 && eipAfter < 0x00401420 && _instructionTraceCount == 0)
                 {
-                    _logger.LogWarning("[TRACE] GetAttachedSurface returned to 0x{EipAfter:X8}, enabling instruction tracing for next {Count} instructions", eipAfter, MAX_TRACE_INSTRUCTIONS);
+                    _logger.LogWarning("[TRACE] DirectDraw function at 0x{EipAfter:X8}, enabling instruction tracing for next {Count} instructions", eipAfter, MAX_TRACE_INSTRUCTIONS);
                     _instructionTraceCount = MAX_TRACE_INSTRUCTIONS;
                 }
             }
