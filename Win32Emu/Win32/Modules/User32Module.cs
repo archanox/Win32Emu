@@ -6418,7 +6418,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] CharToOemA(lpszSrc=0x{LpszSrc:X8}, lpszDst=0x{LpszDst:X8})", lpszSrc.Address, lpszDst.Address);
 			// Stub: just copy the string as-is
-			var src = lpszSrc.ToString();
+			var src = lpszSrc.Read(_memory!);
 			if (!string.IsNullOrEmpty(src))
 			{
 				lpszDst.Write(_memory!, src, true);
