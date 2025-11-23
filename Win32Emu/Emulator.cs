@@ -52,9 +52,20 @@ public sealed class Emulator : IDisposable
     private const int MAX_TRACE_INSTRUCTIONS = 1000; // Trace 1000 instructions to find stack corruption
     private bool _traceEnabled = false;
     
+    // BasicDD.exe workaround configuration
+    private const uint BASICDD_EPILOGUE_PATCH_ADDRESS = 0x00401412u;
+    private const byte BASICDD_ORIGINAL_STACK_ADJUSTMENT = 0x8C;  // 140 bytes
+    private const byte BASICDD_CORRECTED_STACK_ADJUSTMENT = 0x94; // 148 bytes (adds 8 bytes)
+    private uint? _traceTriggerStartAddress = null;
+    private uint? _traceTriggerEndAddress = null;
+    private string? _traceTriggerDll = null;
+    private string? _traceTriggerFunction = null;
+    
     /// <summary>
     /// Enable instruction-level tracing for the next N instructions.
     /// Used for debugging crashes and understanding execution flow.
+    /// This method is intended for use by interactive debuggers or diagnostic tools
+    /// to manually trigger instruction tracing at specific points in execution.
     /// </summary>
     /// <param name="instructionCount">Number of instructions to trace (default: MAX_TRACE_INSTRUCTIONS)</param>
     public void EnableInstructionTracing(int instructionCount = MAX_TRACE_INSTRUCTIONS)
@@ -608,21 +619,37 @@ public sealed class Emulator : IDisposable
         if (exeNameFromImage == "BASICDD.EXE" || exeNameFromEnv == "BASICDD.EXE" || 
             exeNameFromImage.Contains("BASICDD") || exeNameFromEnv.Contains("BASICDD"))
         {
+            // Validate patch address is within image bounds
+            if (BASICDD_EPILOGUE_PATCH_ADDRESS < _image.BaseAddress || 
+                BASICDD_EPILOGUE_PATCH_ADDRESS >= _image.BaseAddress + _image.ImageSize)
+            {
+                _logger.LogWarning("[Emulator] BasicDD.exe detected but patch address 0x{Address:X8} is outside image bounds (0x{Base:X8}-0x{Limit:X8})", 
+                    BASICDD_EPILOGUE_PATCH_ADDRESS, _image.BaseAddress, _image.BaseAddress + _image.ImageSize);
+                return;
+            }
+            
             // Patch the epilogue at 0x00401412 to change ADD ESP,0x8C to ADD ESP,0x94
             // Original bytes: 81 C4 8C 00 00 00 (ADD ESP, 0x8C)
             // Patched bytes:  81 C4 94 00 00 00 (ADD ESP, 0x94)
-            var patchAddress = 0x00401412u;
-            var originalByte = _vm.Read8(patchAddress);
+            var originalByte = _vm.Read8(BASICDD_EPILOGUE_PATCH_ADDRESS);
             
-            if (originalByte == 0x8C)
+            if (originalByte == BASICDD_ORIGINAL_STACK_ADJUSTMENT)
             {
-                _vm.Write8(patchAddress, 0x94);
-                _logger.LogWarning("[Emulator] Applied BasicDD.exe workaround: Patched function epilogue at 0x{Address:X8} (0x8C -> 0x94)", patchAddress);
+                _vm.Write8(BASICDD_EPILOGUE_PATCH_ADDRESS, BASICDD_CORRECTED_STACK_ADJUSTMENT);
+                _logger.LogWarning("[Emulator] Applied BasicDD.exe workaround: Patched function epilogue at 0x{Address:X8} (0x{Original:X2} -> 0x{Corrected:X2})", 
+                    BASICDD_EPILOGUE_PATCH_ADDRESS, BASICDD_ORIGINAL_STACK_ADJUSTMENT, BASICDD_CORRECTED_STACK_ADJUSTMENT);
                 _logger.LogWarning("[Emulator] This fixes an 8-byte stack misalignment caused by CRT startup bug");
+                
+                // Configure tracing trigger points for this executable
+                _traceTriggerStartAddress = 0x00401329u;  // Return from DirectDrawCreateEx
+                _traceTriggerEndAddress = 0x0040132Bu;
+                _traceTriggerDll = "DDRAW.DLL";
+                _traceTriggerFunction = "DirectDrawCreateEx";
             }
             else
             {
-                _logger.LogWarning("[Emulator] BasicDD.exe detected but patch not applied - byte at 0x{Address:X8} is 0x{Byte:X2} (expected 0x8C)", patchAddress, originalByte);
+                _logger.LogWarning("[Emulator] BasicDD.exe detected but patch not applied - byte at 0x{Address:X8} is 0x{Byte:X2} (expected 0x{Expected:X2})", 
+                    BASICDD_EPILOGUE_PATCH_ADDRESS, originalByte, BASICDD_ORIGINAL_STACK_ADJUSTMENT);
             }
         }
     }
@@ -994,7 +1021,9 @@ public sealed class Emulator : IDisposable
                 var esi = _cpu.GetRegister("ESI");
                 var edi = _cpu.GetRegister("EDI");
                 
-                // Try to read stack values (expanded to 36 DWORDs = 144 bytes to catch corruption at ESP+0x8C)
+                // Try to read stack values (expanded to 36 DWORDs = 144 bytes)
+                // This covers ESP+0x8C (140 bytes) where BasicDD.exe stack corruption occurs,
+                // plus additional space to see the correct return address at ESP+0x94 (148 bytes)
                 var stackVals = new List<string>();
                 try
                 {
@@ -1021,29 +1050,33 @@ public sealed class Emulator : IDisposable
                 catch { }
                 
                 // Check for EBP corruption - EBP should point to stack, not code/data
-                // Stack is typically 0x00100000 - 0x00200000 range
-                if (ebp >= _image!.BaseAddress && ebp < _image.BaseAddress + _image.ImageSize)
+                // Use actual stack bounds for detection
+                if (ebp < _stackLimit || ebp >= _stackBase)
                 {
-                    _logger.LogError("[TRACE] ⚠️ EBP CORRUPTION DETECTED! EBP=0x{Ebp:X8} points to code/data section (should be stack). EIP: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", 
-                        ebp, eipBeforeStep, eipAfter);
+                    _logger.LogError("[TRACE] ⚠️ EBP CORRUPTION DETECTED! EBP=0x{Ebp:X8} is outside stack bounds (stack 0x{StackLimit:X8}-0x{StackBase:X8}). EIP: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", 
+                        ebp, _stackLimit, _stackBase, eipBeforeStep, eipAfter);
                 }
                 
                 // Check for suspicious stack values (import stub addresses with wrong offsets)
                 try
                 {
                     var topOfStack = _vm!.Read32(esp);
-                    if (topOfStack >= 0x0F000000 && topOfStack < 0x10000000)
+                    if (topOfStack >= MemoryRegions.ImportHookBase && topOfStack < MemoryRegions.ImportHookLimit)
                     {
                         // This is in the import stub range
-                        var offset = topOfStack & 0xF; // Lower 4 bits
-                        if (offset != 0 && offset != 0x10) // Valid import stub entry points are at 0x0 or after full stub (0x10)
+                        var alignedAddr = topOfStack & MemoryRegions.ImportStubAlignmentMask;
+                        var offset = topOfStack - alignedAddr;
+                        if (offset != 0 && offset != MemoryRegions.ImportStubSize) // Valid import stub entry points are at 0x0 or after full stub (0x10)
                         {
-                            _logger.LogError("[TRACE] ⚠️ STACK CORRUPTION! Top of stack [ESP]=0x{Val:X8} points into middle of import stub (offset {Offset}). EIP: 0x{EipBefore:X8}", 
+                            _logger.LogError("[TRACE] ⚠️ STACK CORRUPTION! Top of stack [ESP]=0x{Val:X8} points into middle of import stub (offset 0x{Offset:X2}). EIP: 0x{EipBefore:X8}", 
                                 topOfStack, offset, eipBeforeStep);
                         }
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "[TRACE] Exception during stack diagnostic check at EIP=0x{EipBefore:X8}", eipBeforeStep);
+                }
                 
                 _logger.LogWarning("[TRACE] EIP: 0x{EipBefore:X8} -> 0x{EipAfter:X8} | ESP=0x{Esp:X8} EBP=0x{Ebp:X8} | EAX=0x{Eax:X8} EBX=0x{Ebx:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8} | Stack: {Stack} {InstrBytes} | Remaining: {Count}",
                     eipBeforeStep, eipAfter, esp, ebp, eax, ebx, ecx, edx, esi, edi, string.Join(" ", stackVals), instrBytes, _instructionTraceCount);
@@ -1117,12 +1150,11 @@ public sealed class Emulator : IDisposable
                 _logger.LogInformation("[COM] After vtable call: ESP changed from 0x{EspBefore:X8} to 0x{EspAfter:X8} (delta={Delta}), Call site EIP=0x{EipBefore:X8}, Return EIP=0x{EipAfter:X8}", 
                     espBefore, espAfter, (int)espAfter - (int)espBefore, eipBefore, eipAfter);
                 
-                // Enable instruction tracing for BasicDD crash investigation
-                // Trace from DirectDrawCreateEx return to catch stack corruption
-                // DirectDrawCreateEx is the first API call in FUN_00401310
-                if (!_traceEnabled && eipAfter >= 0x00401329 && eipAfter <= 0x0040132B)
+                // Enable instruction tracing based on configured trigger points
+                if (!_traceEnabled && _traceTriggerStartAddress.HasValue && _traceTriggerEndAddress.HasValue &&
+                    eipAfter >= _traceTriggerStartAddress.Value && eipAfter <= _traceTriggerEndAddress.Value)
                 {
-                    _logger.LogWarning("[TRACE] DirectDrawCreateEx returned to 0x{EipAfter:X8}, enabling instruction tracing for next {Count} instructions", eipAfter, MAX_TRACE_INSTRUCTIONS);
+                    _logger.LogWarning("[TRACE] Trigger address 0x{EipAfter:X8} reached, enabling instruction tracing for next {Count} instructions", eipAfter, MAX_TRACE_INSTRUCTIONS);
                     _instructionTraceCount = MAX_TRACE_INSTRUCTIONS;
                     _traceEnabled = true;
                 }
@@ -1864,12 +1896,6 @@ public sealed class Emulator : IDisposable
             var returnToCaller = _vm!.Read32(returnToCallerAddr);
             _logger.LogInformation("[Syscall] BEFORE API: Return address at 0x{Addr:X8} = 0x{RetAddr:X8}", returnToCallerAddr, returnToCaller);
             
-            // Enable tracing for BasicDD investigation - start from DirectDrawCreateEx
-            if (!_traceEnabled && dll == "DDRAW.DLL" && name == "DirectDrawCreateEx")
-            {
-                _logger.LogWarning("[TRACE] DirectDrawCreateEx about to be called, will enable tracing after it returns");
-            }
-            
             _cpu.SetRegister("ESP", esp + 4);
             
             if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
@@ -1878,10 +1904,11 @@ public sealed class Emulator : IDisposable
                 var returnToCallerAfter = _vm!.Read32(returnToCallerAddr);
                 _logger.LogInformation("[Syscall] AFTER API: Return address at 0x{Addr:X8} = 0x{RetAddr:X8}", returnToCallerAddr, returnToCallerAfter);
                 
-                // Enable tracing after DirectDrawCreateEx returns for BasicDD investigation
-                if (!_traceEnabled && dll == "DDRAW.DLL" && name == "DirectDrawCreateEx")
+                // Enable tracing based on configured trigger points
+                if (!_traceEnabled && _traceTriggerDll != null && 
+                    dll == _traceTriggerDll && name == _traceTriggerFunction)
                 {
-                    _logger.LogWarning("[TRACE] DirectDrawCreateEx returned, enabling instruction tracing for next {Count} instructions", MAX_TRACE_INSTRUCTIONS);
+                    _logger.LogWarning("[TRACE] {Dll}!{Function} returned, enabling instruction tracing for next {Count} instructions", dll, name, MAX_TRACE_INSTRUCTIONS);
                     _instructionTraceCount = MAX_TRACE_INSTRUCTIONS;
                     _traceEnabled = true;
                 }
