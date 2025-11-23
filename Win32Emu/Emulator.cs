@@ -474,6 +474,9 @@ public sealed class Emulator : IDisposable
         // Execute TLS callbacks if present
         // TLS callbacks must be executed AFTER all modules are registered but BEFORE the main entry point
         ExecuteTlsCallbacks();
+        
+        // Apply executable-specific workarounds after TLS but before main entry point
+        ApplyExecutableWorkarounds();
     }
 
     /// <summary>
@@ -575,6 +578,53 @@ public sealed class Emulator : IDisposable
         _cpu.SetRegister("ESP", originalEsp);
         
         _logger.LogInformation("[Emulator] TLS callbacks execution complete");
+    }
+
+    /// <summary>
+    /// Applies executable-specific workarounds for known bugs in legacy applications.
+    /// These patches address issues like stack misalignment, incorrect function epilogues,
+    /// or other compatibility problems that prevent the application from running correctly.
+    /// </summary>
+    private void ApplyExecutableWorkarounds()
+    {
+        if (_image == null || _vm == null || _env == null)
+        {
+            return;
+        }
+
+        // Try to get executable name from multiple sources
+        var exeNameFromImage = Path.GetFileName(_image.FilePath ?? "").ToUpperInvariant();
+        var exeNameFromEnv = Path.GetFileName(_env.ExecutablePath ?? "").ToUpperInvariant();
+        
+        _logger.LogInformation("[Emulator] Checking for executable-specific workarounds");
+        _logger.LogDebug("[Emulator] Image FilePath: {ImagePath}", _image.FilePath);
+        _logger.LogDebug("[Emulator] Env ExecutablePath: {EnvPath}", _env.ExecutablePath);
+        _logger.LogDebug("[Emulator] Extracted names: {ImageName} / {EnvName}", exeNameFromImage, exeNameFromEnv);
+        
+        // BasicDD.exe: Fix stack misalignment in FUN_00401310
+        // The function's epilogue does ADD ESP,0x8C but should do ADD ESP,0x94 due to
+        // CRT stack management bug where 5 parameters are pushed to WinMain but only
+        // 4 are cleaned up, accumulating an 8-byte offset.
+        if (exeNameFromImage == "BASICDD.EXE" || exeNameFromEnv == "BASICDD.EXE" || 
+            exeNameFromImage.Contains("BASICDD") || exeNameFromEnv.Contains("BASICDD"))
+        {
+            // Patch the epilogue at 0x00401412 to change ADD ESP,0x8C to ADD ESP,0x94
+            // Original bytes: 81 C4 8C 00 00 00 (ADD ESP, 0x8C)
+            // Patched bytes:  81 C4 94 00 00 00 (ADD ESP, 0x94)
+            var patchAddress = 0x00401412u;
+            var originalByte = _vm.Read8(patchAddress);
+            
+            if (originalByte == 0x8C)
+            {
+                _vm.Write8(patchAddress, 0x94);
+                _logger.LogWarning("[Emulator] Applied BasicDD.exe workaround: Patched function epilogue at 0x{Address:X8} (0x8C -> 0x94)", patchAddress);
+                _logger.LogWarning("[Emulator] This fixes an 8-byte stack misalignment caused by CRT startup bug");
+            }
+            else
+            {
+                _logger.LogWarning("[Emulator] BasicDD.exe detected but patch not applied - byte at 0x{Address:X8} is 0x{Byte:X2} (expected 0x8C)", patchAddress, originalByte);
+            }
+        }
     }
 
     public async Task RunAsync()
