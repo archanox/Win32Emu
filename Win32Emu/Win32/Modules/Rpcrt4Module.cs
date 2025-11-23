@@ -47,6 +47,10 @@ public partial class Rpcrt4Module : IWin32ModuleUnsafe
 				returnValue = UuidCreate(a.UInt32(0));
 				return true;
 
+			case "UUIDFROMSTRINGA":
+				returnValue = UuidFromStringA(a.UInt32(0), a.UInt32(1));
+				return true;
+
 			default:
 				LogUnimplementedExport(export);
 				return false;
@@ -89,6 +93,48 @@ public partial class Rpcrt4Module : IWin32ModuleUnsafe
 		}
 
 		_logger.LogDebug("[Rpcrt4] UuidCreate: Created UUID {Guid}", guid);
+
+		return (uint)RpcStatus.RPC_S_OK;
+	}
+
+	/// <summary>
+	/// Converts a string UUID to a binary UUID.
+	/// RPC_STATUS UuidFromStringA(
+	///   [in]  RPC_CSTR StringUuid,
+	///   [out] UUID     *Uuid
+	/// );
+	/// </summary>
+	[DllModuleExport(2)]
+	private uint UuidFromStringA(uint stringUuid, uint uuid)
+	{
+		// Read the string UUID from memory
+		if (stringUuid == 0 || uuid == 0)
+		{
+			_logger.LogWarning("[Rpcrt4] UuidFromStringA: NULL pointer");
+			return (uint)RpcStatus.RPC_S_INVALID_ARG;
+		}
+
+		// Read the ANSI string from memory
+		var uuidString = _env.ReadAnsiString(stringUuid);
+		
+		_logger.LogInformation("[Rpcrt4] UuidFromStringA(stringUuid=\"{UuidString}\", uuid=0x{Uuid:X8})",
+			uuidString, uuid);
+
+		// Try to parse the UUID string
+		if (string.IsNullOrEmpty(uuidString) || !System.Guid.TryParse(uuidString, out var guid))
+		{
+			_logger.LogWarning("[Rpcrt4] UuidFromStringA: Invalid UUID string format");
+			return (uint)RpcStatus.RPC_S_INVALID_ARG;
+		}
+
+		// Write the UUID to memory
+		var guidBytes = guid.ToByteArray();
+		for (uint i = 0; i < UUID_SIZE; i++)
+		{
+			_env.MemWrite8(uuid + i, guidBytes[i]);
+		}
+
+		_logger.LogDebug("[Rpcrt4] UuidFromStringA: Parsed UUID {Guid}", guid);
 
 		return (uint)RpcStatus.RPC_S_OK;
 	}

@@ -130,6 +130,8 @@ public static class NativeTypes
 		ERROR_MORE_DATA = 234,
 		ERROR_NO_MORE_ITEMS = 259,
 		ERROR_NOT_OWNER = 288,
+		ERROR_IO_INCOMPLETE = 996,
+		ERROR_IO_PENDING = 997,
 		ERROR_RESOURCE_TYPE_NOT_FOUND = 1813
 	}
 
@@ -494,6 +496,102 @@ public static class NativeTypes
 		public ushort nBlockAlign;     // Offset 12 - Block alignment
 		public ushort wBitsPerSample;  // Offset 14 - Bits per sample
 		public ushort cbSize;          // Offset 16 - Size of extra format information
+	}
+
+	// WAVEHDR structure for wave audio buffers (32 bytes)
+	public struct WAVEHDR
+	{
+		public uint lpData;           // Offset 0 - Pointer to the waveform buffer
+		public uint dwBufferLength;   // Offset 4 - Length of the buffer in bytes
+		public uint dwBytesRecorded;  // Offset 8 - Bytes recorded (for input)
+		public uint dwUser;           // Offset 12 - User data
+		public uint dwFlags;          // Offset 16 - Flags
+		public uint dwLoops;          // Offset 20 - Number of times to play (for output)
+		public uint lpNext;           // Offset 24 - Reserved
+		public uint reserved;         // Offset 28 - Reserved
+	}
+
+	// WAVEINCAPS structure for wave input device capabilities (52 bytes for ANSI)
+	public struct WAVEINCAPSA
+	{
+		public ushort wMid;                  // Offset 0 - Manufacturer ID
+		public ushort wPid;                  // Offset 2 - Product ID
+		public uint vDriverVersion;          // Offset 4 - Driver version
+		public unsafe fixed byte szPname[32]; // Offset 8 - Product name (32 chars)
+		public uint dwFormats;               // Offset 40 - Supported formats
+		public ushort wChannels;             // Offset 44 - Number of channels supported
+		public ushort wReserved1;            // Offset 46 - Reserved
+	}
+
+	// WAVEOUTCAPS structure for wave output device capabilities (52 bytes for ANSI)
+	public struct WAVEOUTCAPSA
+	{
+		public ushort wMid;                  // Offset 0 - Manufacturer ID
+		public ushort wPid;                  // Offset 2 - Product ID
+		public uint vDriverVersion;          // Offset 4 - Driver version
+		public unsafe fixed byte szPname[32]; // Offset 8 - Product name (32 chars)
+		public uint dwFormats;               // Offset 40 - Supported formats
+		public ushort wChannels;             // Offset 44 - Number of channels supported
+		public ushort wReserved1;            // Offset 46 - Padding
+		public uint dwSupport;               // Offset 48 - Optional functionality
+	}
+
+	// MMTIME structure for multimedia time (12 bytes)
+	public struct MMTIME
+	{
+		public uint wType;     // Offset 0 - Time format type
+		public uint u;         // Offset 4 - Time value (union - we use simple uint)
+		public uint padding;   // Offset 8 - Padding for union size
+	}
+
+	// MIXERLINE structure (168 bytes for ANSI version)
+	public struct MIXERLINEA
+	{
+		public uint cbStruct;                // Offset 0 - Size of structure
+		public uint dwDestination;           // Offset 4 - Destination index
+		public uint dwSource;                // Offset 8 - Source index
+		public uint dwLineID;                // Offset 12 - Line identifier
+		public uint fdwLine;                 // Offset 16 - Line flags
+		public uint dwUser;                  // Offset 20 - User data
+		public uint dwComponentType;         // Offset 24 - Component type
+		public uint cChannels;               // Offset 28 - Number of channels
+		public uint cConnections;            // Offset 32 - Number of connections
+		public uint cControls;               // Offset 36 - Number of controls
+		public unsafe fixed byte szShortName[16]; // Offset 40 - Short name
+		public unsafe fixed byte szName[64];      // Offset 56 - Full name
+		public uint dwType;                  // Offset 120 - Target type
+		public uint dwDeviceID;              // Offset 124 - Device ID
+		public ushort wMid;                  // Offset 128 - Manufacturer ID
+		public ushort wPid;                  // Offset 130 - Product ID
+		public uint vDriverVersion;          // Offset 132 - Driver version
+		public unsafe fixed byte szPname[32]; // Offset 136 - Product name
+	}
+
+	// MIXERCONTROL structure (148 bytes for ANSI version)
+	public struct MIXERCONTROLA
+	{
+		public uint cbStruct;                // Offset 0 - Size of structure
+		public uint dwControlID;             // Offset 4 - Control identifier
+		public uint dwControlType;           // Offset 8 - Control type
+		public uint fdwControl;              // Offset 12 - Control flags
+		public uint cMultipleItems;          // Offset 16 - Multiple items count
+		public unsafe fixed byte szShortName[16]; // Offset 20 - Short name
+		public unsafe fixed byte szName[64];      // Offset 36 - Full name
+		public uint lMinimum;                // Offset 100 - Minimum value (signed as uint)
+		public uint lMaximum;                // Offset 104 - Maximum value (signed as uint)
+		public unsafe fixed uint reserved[10];    // Offset 108 - Reserved (40 bytes)
+	}
+
+	// MIXERLINECONTROLS structure (24 bytes for ANSI version)
+	public struct MIXERLINECONTROLSA
+	{
+		public uint cbStruct;           // Offset 0 - Size of structure
+		public uint dwLineID;           // Offset 4 - Line identifier
+		public uint dwControlID;        // Offset 8 - Control identifier (input)
+		public uint dwControlType;      // Offset 12 - Control type (input)
+		public uint cControls;          // Offset 16 - Number of controls
+		public uint cbmxctrl;           // Offset 20 - Size of MIXERCONTROL structure
+		public uint pamxctrl;           // Offset 24 - Pointer to MIXERCONTROL array (should be offset 20, error in comment)
 	}
 
 	/// <summary>
