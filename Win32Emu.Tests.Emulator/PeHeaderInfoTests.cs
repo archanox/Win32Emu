@@ -119,6 +119,7 @@ public class PeHeaderInfoTests
 			[],
 			sections,
 			new Dictionary<uint, uint>(), // IatEntryMap (empty)
+			new Dictionary<string, Win32Emu.Loader.ExportMetadata>(), // ExportMetadata (empty)
 			// FileHeader fields
 			Machine: 0x014C, // Intel 386
 			TimeDateStamp: 0x00000000,
@@ -173,6 +174,7 @@ public class PeHeaderInfoTests
 			[],
 			[],
 			new Dictionary<uint, uint>(), // IatEntryMap (empty)
+			new Dictionary<string, Win32Emu.Loader.ExportMetadata>(), // ExportMetadata (empty)
 			// FileHeader fields
 			Machine: 0x014C,
 			TimeDateStamp: 0x00000000,

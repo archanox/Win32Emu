@@ -187,6 +187,7 @@ public class GdbServerTests
             [],         // TlsCallbacks (empty array)
             [],         // Sections (empty array)
             new Dictionary<uint, uint>(), // IatEntryMap (empty)
+            new Dictionary<string, Win32Emu.Loader.ExportMetadata>(), // ExportMetadata (empty)
             // FileHeader fields
             Machine: 0x014C,
             TimeDateStamp: 0x00000000,

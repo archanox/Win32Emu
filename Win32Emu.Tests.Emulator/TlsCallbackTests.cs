@@ -40,6 +40,7 @@ public class TlsCallbackTests
             [], // No TLS callbacks
             [],  // No sections
             new Dictionary<uint, uint>(), // IatEntryMap (empty)
+            new Dictionary<string, Win32Emu.Loader.ExportMetadata>(), // ExportMetadata (empty)
             // FileHeader fields
             Machine: 0x014C,
             TimeDateStamp: 0x00000000,
@@ -100,6 +101,7 @@ public class TlsCallbackTests
             tlsCallbacks,
             [],  // No sections
             new Dictionary<uint, uint>(), // IatEntryMap (empty)
+            new Dictionary<string, Win32Emu.Loader.ExportMetadata>(), // ExportMetadata (empty)
             // FileHeader fields
             Machine: 0x014C,
             TimeDateStamp: 0x00000000,
