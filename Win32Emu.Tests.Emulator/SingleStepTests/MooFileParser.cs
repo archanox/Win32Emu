@@ -488,8 +488,16 @@ public class RegisterState
 	public uint Gs { get; set; }
 	public uint Ss { get; set; }
 	
+	// Control registers (included in MOO file format)
+	public uint Cr0 { get; set; }
+	public uint Cr3 { get; set; }
+	
+	// Debug registers (included in MOO file format)
+	public uint Dr6 { get; set; }
+	public uint Dr7 { get; set; }
+	
 	// Track which registers were explicitly set (for sparse FINA format)
-	// Bit 0 = Eax, Bit 1 = Ebx, etc.
+	// Bit 0 = CR0, Bit 1 = CR3, Bit 2 = Eax, etc.
 	internal uint PresenceMask { get; set; }
 	
 	internal void SetRegister(int bitIndex, uint value)
@@ -498,6 +506,8 @@ public class RegisterState
 		
 		switch (bitIndex)
 		{
+			case 0: Cr0 = value; break;
+			case 1: Cr3 = value; break;
 			case 2: Eax = value; break;
 			case 3: Ebx = value; break;
 			case 4: Ecx = value; break;
@@ -514,6 +524,8 @@ public class RegisterState
 			case 15: Ss = value; break;
 			case 16: Eip = value; break;
 			case 17: Eflags = value; break;
+			case 18: Dr6 = value; break;
+			case 19: Dr7 = value; break;
 		}
 	}
 	

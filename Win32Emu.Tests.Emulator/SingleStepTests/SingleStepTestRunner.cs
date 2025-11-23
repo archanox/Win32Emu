@@ -127,6 +127,13 @@ public class SingleStepTestRunner
 		cpu.SetRegister("GS", regs.Gs);
 		cpu.SetRegister("SS", regs.Ss);
 		
+		// Set control and debug registers (if present in test data)
+		// These are included in the MOO file format as bits 0, 1, 18, 19
+		cpu.SetRegister("CR0", regs.Cr0);
+		cpu.SetRegister("CR3", regs.Cr3);
+		cpu.SetRegister("DR6", regs.Dr6);
+		cpu.SetRegister("DR7", regs.Dr7);
+		
 		// Write instruction bytes to memory at EIP
 		// In 16-bit mode, physical address = CS * 16 + IP
 		var physicalAddress = (uint)((regs.Cs << 4) + regs.Eip);
@@ -163,6 +170,17 @@ public class SingleStepTestRunner
 		isValid &= ValidateRegister(cpu, "ESP", regs.Esp, result);
 		isValid &= ValidateRegister(cpu, "EIP", cpu.GetEip(), regs.Eip, result);
 		isValid &= ValidateRegister(cpu, "EFLAGS", cpu.GetRegister("EFLAGS"), regs.Eflags, result);
+		
+		// Validate control and debug registers if present in test data
+		// CR0 = bit 0, CR3 = bit 1, DR6 = bit 18, DR7 = bit 19
+		if (regs.HasRegister(0))
+			isValid &= ValidateRegister(cpu, "CR0", regs.Cr0, result);
+		if (regs.HasRegister(1))
+			isValid &= ValidateRegister(cpu, "CR3", regs.Cr3, result);
+		if (regs.HasRegister(18))
+			isValid &= ValidateRegister(cpu, "DR6", regs.Dr6, result);
+		if (regs.HasRegister(19))
+			isValid &= ValidateRegister(cpu, "DR7", regs.Dr7, result);
 		
 		// Validate memory
 		foreach (var memEntry in expectedState.Memory)
