@@ -42,6 +42,9 @@ jobs:
     - name: Check for tests
       id: check-tests
       run: |
+        # Define Win32 DLL modules that should be tested separately (optional tests)
+        DLL_MODULES="Kernel32 User32 Gdi32 DDraw DInput WinMM DSound DPlayX"
+        
         # Check for any tests in the solution
         if dotnet test --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
           echo "has-tests=true" >> $GITHUB_OUTPUT
@@ -51,7 +54,7 @@ jobs:
         
         # Check for Win32 DLL module tests (optional)
         dll_tests=""
-        for dll in Kernel32 User32 Gdi32 DDraw DInput WinMM DSound DPlayX; do
+        for dll in $DLL_MODULES; do
           if dotnet test "Win32Emu.Tests.$dll" --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null 2>&1; then
             dll_tests="$dll_tests Win32Emu.Tests.$dll"
             echo "has-$(echo $dll | tr '[:upper:]' '[:lower:]')-tests=true" >> $GITHUB_OUTPUT
@@ -61,8 +64,22 @@ jobs:
         done
         echo "dll-test-projects=$dll_tests" >> $GITHUB_OUTPUT
         
+        # Build test filter for core tests (exclude DLL modules)
+        # This dynamically creates: FullyQualifiedName!~Win32Emu.Tests.Kernel32&FullyQualifiedName!~Win32Emu.Tests.User32&...
+        test_filter=""
+        for dll in $DLL_MODULES; do
+          if [ -n "$test_filter" ]; then
+            test_filter="${test_filter}&"
+          fi
+          test_filter="${test_filter}FullyQualifiedName!~Win32Emu.Tests.${dll}"
+        done
+        # Add conformance tests exclusion
+        test_filter="${test_filter}&Category!=ConformanceTests"
+        echo "core-test-filter=$test_filter" >> $GITHUB_OUTPUT
+        
         # Check for core emulator tests (required) - anything that's not a Win32 DLL module
-        if dotnet test --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" | grep -v -E "Win32Emu\.Tests\.(Kernel32|User32|Gdi32|DDraw|DInput|WinMM|DSound|DPlayX)" > /dev/null; then
+        dll_pattern=$(echo "$DLL_MODULES" | sed 's/ /|/g')
+        if dotnet test --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" | grep -v -E "Win32Emu\.Tests\.($dll_pattern)" > /dev/null; then
           echo "has-core-tests=true" >> $GITHUB_OUTPUT
         else
           echo "has-core-tests=false" >> $GITHUB_OUTPUT
@@ -70,7 +87,7 @@ jobs:
       
     - name: Run core emulator tests (required)
       if: steps.check-tests.outputs.has-core-tests == 'true'
-      run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "FullyQualifiedName!~Win32Emu.Tests.Kernel32&FullyQualifiedName!~Win32Emu.Tests.User32&FullyQualifiedName!~Win32Emu.Tests.Gdi32&FullyQualifiedName!~Win32Emu.Tests.DDraw&FullyQualifiedName!~Win32Emu.Tests.DInput&FullyQualifiedName!~Win32Emu.Tests.WinMM&FullyQualifiedName!~Win32Emu.Tests.DSound&FullyQualifiedName!~Win32Emu.Tests.DPlayX&Category!=ConformanceTests"
+      run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "${{ steps.check-tests.outputs.core-test-filter }}"
       
     - name: Run Win32 DLL module tests (optional)
       if: steps.check-tests.outputs.dll-test-projects != ''
