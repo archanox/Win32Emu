@@ -28,7 +28,7 @@ This document outlines the comprehensive testing strategy for Win32Emu, organize
 
 ### 3. Win32Emu.Tests.Emulator ✅ COMPLETED
 **Purpose**: Tests the x86 CPU emulator conformance  
-**Status**: 34 tests passing (100% success rate)  
+**Status**: Core tests passing, extensive conformance tests available  
 **Coverage**:
 - **Basic Instructions** (8086/286/386): ADD, SUB, XOR, AND, OR, TEST, CMP, INC, DEC, SHL, SHR
 - **486 Instructions**: BSWAP, CMPXCHG, XADD, INVD, WBINVD, INVLPG
@@ -37,6 +37,10 @@ This document outlines the comprehensive testing strategy for Win32Emu, organize
 - Register state management
 - Flag handling (CF, ZF, SF, OF, PF, AF)
 - Arithmetic and logic operations
+- **SingleStepTests Conformance Suite**: 941 hardware-generated CPU tests (optional, not blocking CI)
+  - Tests validate CPU implementation against real 386 hardware behavior
+  - Run with: `dotnet test --filter "Category=ConformanceTests"`
+  - See: https://github.com/SingleStepTests/80386
 
 ### 4. Win32Emu.Tests.Integration 🔄 PLANNED
 **Purpose**: End-to-end testing with real Win32 executables  
@@ -62,9 +66,19 @@ This document outlines the comprehensive testing strategy for Win32Emu, organize
 
 ## Usage
 
-### Run All Tests
+### Run All Tests (excluding conformance tests)
+```bash
+dotnet test --filter "Category!=ConformanceTests"
+```
+
+### Run All Tests Including Conformance Tests
 ```bash
 dotnet test
+```
+
+### Run Only Conformance Tests
+```bash
+dotnet test --filter "Category=ConformanceTests"
 ```
 
 ### Run Specific Test Project
@@ -119,10 +133,11 @@ Tests are categorized to support different CI/CD requirements:
 
 ## Current Status
 
-**Total Tests**: 135 (all passing)  
+**Total Tests**: 1076+ (135 core + 941 conformance)  
 **Test Coverage**: 
 - Kernel32 functionality complete (101 tests)
-- CPU Emulator basic/486/Pentium instructions (34 tests)  
+- CPU Emulator basic/486/Pentium instructions (34 tests)
+- CPU Conformance tests (941 SingleStepTests - optional)  
 **Infrastructure**: Fully functional and extensible  
 **Ready for**: User32 testing, integration testing, additional instruction coverage
 
@@ -132,6 +147,10 @@ Tests are categorized to support different CI/CD requirements:
 - **Core Emulator Tests**: Required - failures will block PRs (CPU, memory, instruction execution tests)
 - **Win32 DLL Module Tests**: Optional - failures won't block PRs (allows test-driven development)
   - Kernel32, User32, Gdi32, DDraw, DInput, WinMM, DSound, DPlayX tests
+- **Conformance Tests**: Optional - failures won't block PRs (extensive CPU instruction validation)
+  - 941 hardware-generated tests from SingleStepTests/80386 suite
+  - Validate CPU implementation against real 386 hardware behavior
+  - Run locally with: `dotnet test --filter "Category=ConformanceTests"`
 
 ### Purpose
 This policy allows developers to:
@@ -139,6 +158,7 @@ This policy allows developers to:
 2. Use test-driven development approach for new Win32 modules
 3. Still see test results and regressions in CI output
 4. Keep core emulator functionality (CPU, memory) stable and tested
+5. Track CPU instruction conformance without blocking development
 
 ### Adding Tests for New Modules
 When creating tests for Win32 DLL modules:

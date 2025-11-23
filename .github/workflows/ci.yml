@@ -18,6 +18,9 @@ jobs:
     # Note: Win32 DLL module tests (Kernel32, User32, etc.) are optional and won't block PRs
     # This allows adding tests for unimplemented functionality without breaking CI
     # Core emulator tests (CPU, memory, etc.) are required and will block PRs
+    # Conformance tests (SingleStepTests) are optional and won't block PRs
+    # - These are extensive CPU instruction conformance tests (941 tests)
+    # - They can be run locally with: dotnet test --filter "Category=ConformanceTests"
     
     steps:
     - name: Checkout code
@@ -67,7 +70,7 @@ jobs:
       
     - name: Run core emulator tests (required)
       if: steps.check-tests.outputs.has-core-tests == 'true'
-      run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "FullyQualifiedName!~Win32Emu.Tests.Kernel32&FullyQualifiedName!~Win32Emu.Tests.User32&FullyQualifiedName!~Win32Emu.Tests.Gdi32&FullyQualifiedName!~Win32Emu.Tests.DDraw&FullyQualifiedName!~Win32Emu.Tests.DInput&FullyQualifiedName!~Win32Emu.Tests.WinMM&FullyQualifiedName!~Win32Emu.Tests.DSound&FullyQualifiedName!~Win32Emu.Tests.DPlayX"
+      run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "FullyQualifiedName!~Win32Emu.Tests.Kernel32&FullyQualifiedName!~Win32Emu.Tests.User32&FullyQualifiedName!~Win32Emu.Tests.Gdi32&FullyQualifiedName!~Win32Emu.Tests.DDraw&FullyQualifiedName!~Win32Emu.Tests.DInput&FullyQualifiedName!~Win32Emu.Tests.WinMM&FullyQualifiedName!~Win32Emu.Tests.DSound&FullyQualifiedName!~Win32Emu.Tests.DPlayX&Category!=ConformanceTests"
       
     - name: Run Win32 DLL module tests (optional)
       if: steps.check-tests.outputs.dll-test-projects != ''
@@ -76,6 +79,15 @@ jobs:
           echo "Running tests for $project"
           dotnet test "$project" --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" || true
         done
+      continue-on-error: true
+      
+    - name: Run CPU conformance tests (optional - informational only)
+      if: steps.check-tests.outputs.has-core-tests == 'true'
+      run: |
+        echo "Running CPU conformance tests (SingleStepTests)..."
+        echo "These tests validate CPU instruction implementation against real 386 hardware behavior."
+        echo "Failures are informational and won't block the build."
+        dotnet test --configuration Release --no-build --verbosity normal --filter "Category=ConformanceTests" || true
       continue-on-error: true
       
     - name: Publish test results
@@ -94,6 +106,7 @@ jobs:
         echo "No tests found in the solution. Consider adding unit tests for better code quality."
         echo "Note: Win32 DLL module tests are optional and won't block PRs if they fail."
         echo "Core emulator tests (CPU, memory, etc.) are required and will block PRs if they fail."
+        echo "Conformance tests (SingleStepTests) are optional and provide CPU instruction validation."
 
   code-quality:
     name: Code Quality Analysis

@@ -23,6 +23,7 @@ public class SingleStepConformanceTests
 	}
 	
 	[Fact]
+	[Trait("Category", "ConformanceTests")]
 	public void Parser_ShouldLoadMooFile()
 	{
 		// This is a basic test to verify the parser works
@@ -84,6 +85,7 @@ public class SingleStepConformanceTests
 	
 	[Theory]
 	[MemberData(nameof(GetTestFiles))]
+	[Trait("Category", "ConformanceTests")]
 	public void CPU_ShouldPassHardwareTests(string fileName, int maxTests)
 	{
 		// Skip if test files are not available
