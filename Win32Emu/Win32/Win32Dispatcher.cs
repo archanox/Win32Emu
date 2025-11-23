@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Win32Emu.Cpu;
 using Win32Emu.Diagnostics;
 using Win32Emu.Memory;
+using Win32Emu.Loader;
 
 namespace Win32Emu.Win32;
 
@@ -11,6 +12,15 @@ public class Win32Dispatcher(ILogger logger)
 	private readonly HashSet<string> _dynamicallyLoadedDlls = new(StringComparer.OrdinalIgnoreCase);
 	private readonly Dictionary<string, HashSet<string>> _unknownFunctionCalls = new(StringComparer.OrdinalIgnoreCase);
 	private ApiCallTracer? _apiCallTracer;
+	private ProcessEnvironment? _env;
+	
+	/// <summary>
+	/// Sets the process environment for querying loaded images
+	/// </summary>
+	public void SetProcessEnvironment(ProcessEnvironment? env)
+	{
+		_env = env;
+	}
 	
 	/// <summary>
 	/// Sets the API call tracer for this dispatcher
@@ -33,10 +43,11 @@ public class Win32Dispatcher(ILogger logger)
 		return _modules.TryGetValue(dllName, out module);
 	}
 
-	public bool TryInvoke(string dll, string export, ICpu cpu, VirtualMemory memory, out uint returnValue, out int stdcallArgBytes)
+	public bool TryInvoke(string dll, string export, ICpu cpu, VirtualMemory memory, out uint returnValue, out int stdcallArgBytes, out CallingConvention? callingConvention)
 	{
 		returnValue = 0;
 		stdcallArgBytes = 0;
+		callingConvention = null;
 
 		var eip = cpu.GetEip();
 		var esp = cpu.GetRegister("ESP");

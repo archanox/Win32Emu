@@ -248,6 +248,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		logger?.LogInformation("[Loader] Registered {Count} IAT entries for runtime protection", iatEntryMap.Count);
 		
 		var (exportsByName, exportsByOrdinal, forwardedByName, forwardedByOrdinal) = BuildExportMaps(image, imageBase);
+		var exportMetadata = BuildExportMetadata(image, logger);
 		var tlsCallbacks = ExtractTlsCallbacks(image, imageBase, vm, logger);
 
 		// Stack and heap sizes from optional header (PE-provided)
@@ -320,6 +321,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			tlsCallbacks,
 			sections,
 			iatEntryMap,
+			exportMetadata,
 			// FileHeader fields
 			machine,
 			timeDateStamp,
@@ -600,6 +602,57 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		}
 
 		return (byName, byOrdinal, forwardedByName, forwardedByOrdinal);
+	}
+
+	/// <summary>
+	/// Builds export metadata (calling convention, arg bytes) from PE exports.
+	/// Attempts to infer calling convention from export name decoration.
+	/// </summary>
+	private Dictionary<string, ExportMetadata> BuildExportMetadata(PEImage image, ILogger? logger)
+	{
+		var metadata = new Dictionary<string, ExportMetadata>(StringComparer.OrdinalIgnoreCase);
+
+		if (image.Exports == null)
+		{
+			return metadata;
+		}
+
+		foreach (var export in image.Exports.Entries)
+		{
+			// Skip forwarded exports - they don't need metadata
+			if (export.IsForwarder)
+			{
+				continue;
+			}
+
+			// Only process exports with names
+			if (string.IsNullOrEmpty(export.Name))
+			{
+				continue;
+			}
+
+			// Try to parse calling convention from decorated name
+			var exportMeta = ExportMetadata.FromDecoratedName(export.Name);
+			
+			if (exportMeta != null)
+			{
+				// Successfully inferred from decoration
+				metadata[export.Name] = exportMeta;
+				logger?.LogDebug("[Loader] Export '{Name}' inferred as {Convention} with {ArgBytes} stack bytes", 
+					export.Name, exportMeta.Convention, exportMeta.StackArgBytes);
+			}
+			else
+			{
+				// No decoration found - use default (stdcall with 0 args)
+				// This is a safe default but may be incorrect for cdecl functions
+				metadata[export.Name] = ExportMetadata.Default;
+				logger?.LogDebug("[Loader] Export '{Name}' has no decoration, using default {Convention}", 
+					export.Name, ExportMetadata.Default.Convention);
+			}
+		}
+
+		logger?.LogInformation("[Loader] Built metadata for {Count} exports", metadata.Count);
+		return metadata;
 	}
 
 	/// <summary>
