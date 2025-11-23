@@ -30,7 +30,7 @@ public class AsyncJitIntegrationTests
 		
 		// Act - Execute using async dispatcher
 		var result = await cpu.SingleStepAsync(mem);
-		var (success, retVal, argBytes) = await dispatcher.TryInvokeAsync(
+		var (success, retVal, argBytes, callingConvention) = await dispatcher.TryInvokeAsync(
 			"KERNEL32.DLL", 
 			"GetCurrentThreadId", 
 			cpu, 

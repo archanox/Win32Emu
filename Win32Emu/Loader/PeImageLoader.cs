@@ -644,10 +644,11 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			else
 			{
 				// No decoration found - use default (stdcall with 0 args)
-				// This is a safe default but may be incorrect for cdecl functions
+				// WARNING: This default may be incorrect. Undecorated exports often use cdecl
+				// (e.g., C runtime functions like malloc, printf). Manual configuration may be needed.
 				metadata[export.Name] = ExportMetadata.Default;
-				logger?.LogDebug("[Loader] Export '{Name}' has no decoration, using default {Convention}", 
-					export.Name, ExportMetadata.Default.Convention);
+				logger?.LogWarning("[Loader] Export '{Name}' has no decoration, using default {Convention} with {ArgBytes} bytes. This may be incorrect for cdecl functions.",
+					export.Name, ExportMetadata.Default.Convention, ExportMetadata.Default.StackArgBytes);
 			}
 		}
 
