@@ -3,6 +3,7 @@ using Win32Emu.Cpu;
 using Win32Emu.Diagnostics;
 using Win32Emu.Memory;
 using Win32Emu.Loader;
+using System.IO;
 
 namespace Win32Emu.Win32;
 
@@ -148,7 +149,9 @@ public class Win32Dispatcher(ILogger logger)
 				if (string.Equals(imageName, dll, StringComparison.OrdinalIgnoreCase))
 				{
 					// Check if the export has metadata
-					if (image.ExportMetadata.TryGetValue(export, out var exportMeta))
+					// Try resolved export name first, then original export name
+					if (image.ExportMetadata.TryGetValue(export, out var exportMeta) ||
+					    image.ExportMetadata.TryGetValue(originalExport, out exportMeta))
 					{
 						logger.LogInformation("[Dispatcher] Found PE export metadata for {Dll}!{Export}: Convention={Convention}, StackArgBytes={StackArgBytes}",
 							dll, export, exportMeta.Convention, exportMeta.StackArgBytes);
@@ -156,8 +159,8 @@ public class Win32Dispatcher(ILogger logger)
 						stdcallArgBytes = exportMeta.StackArgBytes;
 						callingConvention = exportMeta.Convention;
 						
-						// For cdecl, the caller cleans the stack, so return 0 for argBytes
-						// The caller will handle stack cleanup
+						// For cdecl, stdcallArgBytes is 0, but downstream code MUST check callingConvention
+						// to emit plain RET (0xC3) instead of RET imm16 (0xC2). Do not rely solely on argBytes.
 						if (exportMeta.Convention == Loader.CallingConvention.Cdecl)
 						{
 							stdcallArgBytes = 0; // Caller cleans, not callee
@@ -168,6 +171,7 @@ public class Win32Dispatcher(ILogger logger)
 				}
 			}
 		}
+		
 		if (isDynamicallyLoaded)
 		{
 			logger.LogInformation("Note: {Dll} was dynamically loaded via LoadLibrary", dll);
@@ -186,7 +190,7 @@ public class Win32Dispatcher(ILogger logger)
 	/// Async version of TryInvoke for async-aware CPU backends and Win32 modules.
 	/// This version supports modules that implement IWin32ModuleAsync for proper async execution.
 	/// </summary>
-	public async Task<(bool success, uint returnValue, int stdcallArgBytes)> TryInvokeAsync(
+	public async Task<(bool success, uint returnValue, int stdcallArgBytes, Loader.CallingConvention? callingConvention)> TryInvokeAsync(
 		string dll, 
 		string export, 
 		ICpu cpu, 
@@ -249,13 +253,13 @@ public class Win32Dispatcher(ILogger logger)
 					returnValue: returnValue,
 					eip: eip);
 
-				return (true, returnValue, stdcallArgBytes);
+				return (true, returnValue, stdcallArgBytes, Loader.CallingConvention.Stdcall);
 			}
 		}
 
 		// Fall back to synchronous version for non-async modules
 		var syncSuccess = TryInvoke(dll, export, cpu, memory, out var syncReturnValue, out var syncStdcallArgBytes, out var syncCallingConvention);
-		return (syncSuccess, syncReturnValue, syncStdcallArgBytes);
+		return (syncSuccess, syncReturnValue, syncStdcallArgBytes, syncCallingConvention);
 	}
 
 	private void LogUnknownFunctionCall(string dll, string export)

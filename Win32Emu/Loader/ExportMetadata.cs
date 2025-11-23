@@ -3,6 +3,10 @@ namespace Win32Emu.Loader;
 /// <summary>
 /// Represents the calling convention used by a function.
 /// Matches Win32CallingConvention from Win32Emu.CallingConvention project.
+/// 
+/// Note: Current implementation only handles stack cleanup detection.
+/// Register-based argument passing for fastcall (ECX/EDX) and thiscall (ECX) is not yet implemented.
+/// This is a known limitation tracked in the PR description.
 /// </summary>
 public enum CallingConvention
 {
@@ -24,6 +28,7 @@ public enum CallingConvention
 	/// Fast call convention - first two arguments in ECX/EDX, rest on stack, callee cleans stack.
 	/// Used for performance-critical APIs. Return value in EAX.
 	/// Stack cleanup: RET N (where N = stack argument bytes only)
+	/// Note: Register setup not yet implemented.
 	/// </summary>
 	Fastcall,
 
@@ -31,6 +36,7 @@ public enum CallingConvention
 	/// This call convention - first argument (this pointer) in ECX, rest on stack, callee cleans stack.
 	/// Used by C++ member functions. Return value in EAX.
 	/// Stack cleanup: RET N (where N = stack argument bytes only, excluding ECX)
+	/// Note: Register setup not yet implemented.
 	/// </summary>
 	Thiscall
 }
@@ -76,7 +82,10 @@ public record ExportMetadata
 
 	/// <summary>
 	/// Parses calling convention and argument bytes from a decorated export name.
-	/// Supports stdcall decoration (FunctionName@N where N = stack bytes).
+	/// Supports:
+	/// - stdcall: FunctionName@N (where N = stack bytes)
+	/// - fastcall: @FunctionName@N (where N = stack bytes excluding ECX/EDX)
+	/// - thiscall: ?...@@ (C++ member functions, heuristic detection)
 	/// </summary>
 	/// <param name="exportName">The export name, potentially decorated</param>
 	/// <returns>ExportMetadata parsed from decoration, or null if no decoration found</returns>
@@ -108,7 +117,7 @@ public record ExportMetadata
 		if (exportName.StartsWith("@"))
 		{
 			atIndex = exportName.IndexOf('@', 1);
-			if (atIndex > 1 && atIndex < exportName.Length - 1)
+			if (atIndex >= 1 && atIndex < exportName.Length - 1)
 			{
 				var bytesStr = exportName.Substring(atIndex + 1);
 				if (int.TryParse(bytesStr, out var stackBytes) && stackBytes >= 0)
@@ -125,14 +134,17 @@ public record ExportMetadata
 		}
 
 		// C++ thiscall decoration: ?FunctionName@@... (more complex, often has ? prefix)
+		// Note: This is a heuristic and may produce false positives. Not all C++ mangled names
+		// use thiscall (e.g., static member functions may use cdecl/stdcall).
 		// For now, we don't parse full C++ mangling, but detect the pattern
 		if (exportName.StartsWith("?") && exportName.Contains("@@"))
 		{
-			// Assume thiscall for C++ member functions
+			// Assume thiscall for C++ member functions (heuristic)
+			// TODO: Implement proper C++ name demangling for accurate detection
 			return new ExportMetadata
 			{
 				Convention = CallingConvention.Thiscall,
-				StackArgBytes = 0, // Cannot determine from mangling alone
+				StackArgBytes = 0, // Cannot determine from mangling alone - likely incorrect for functions with parameters
 				OriginalName = exportName,
 				IsInferred = true
 			};
