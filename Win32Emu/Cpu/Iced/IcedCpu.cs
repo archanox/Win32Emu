@@ -50,6 +50,29 @@ public class IcedCpu : IAsyncCpu
 	private ushort _fpuStatusWord = 0x0000; // FPU status word
 	private ushort _fpuTagWord = 0xFFFF; // FPU tag word (all tags set to 11b = empty)
 
+	// Control Registers (CR0-CR4) for protected mode and system control
+	// CR0: System control flags (PE, MP, EM, TS, ET, NE, WP, AM, NW, CD, PG)
+	// CR1: Reserved
+	// CR2: Page fault linear address
+	// CR3: Page directory base register (PDBR)
+	// CR4: Extended system control flags (VME, PVI, TSD, DE, PSE, PAE, MCE, PGE, PCE, etc.)
+	private uint _cr0 = 0x00000010; // ET flag set by default (387 present)
+	private uint _cr2 = 0;
+	private uint _cr3 = 0;
+	private uint _cr4 = 0;
+
+	// Debug Registers (DR0-DR7) for hardware breakpoints
+	// DR0-DR3: Linear addresses of breakpoints
+	// DR4-DR5: Reserved (aliased to DR6-DR7 on older CPUs)
+	// DR6: Debug status register
+	// DR7: Debug control register
+	private uint _dr0 = 0;
+	private uint _dr1 = 0;
+	private uint _dr2 = 0;
+	private uint _dr3 = 0;
+	private uint _dr6 = 0xFFFF0FF0; // Initial value per Intel specification
+	private uint _dr7 = 0x00000400; // Initial value per Intel specification
+
 	// RDTSC support - use Stopwatch for high-resolution timing
 	private static readonly Stopwatch RdtscStopwatch = Stopwatch.StartNew();
 	private static readonly bool RdtscIsHighResolution = Stopwatch.IsHighResolution;
@@ -98,6 +121,8 @@ public class IcedCpu : IAsyncCpu
 		"EAX" => _eax, "EBX" => _ebx, "ECX" => _ecx, "EDX" => _edx, "ESI" => _esi, "EDI" => _edi, "EBP" => _ebp,
 		"ESP" => _esp, "EIP" => _eip, "EFLAGS" => _eflags,
 		"CS" => _cs, "DS" => _ds, "ES" => _es, "FS" => _fs, "GS" => _gs, "SS" => _ss,
+		"CR0" => _cr0, "CR2" => _cr2, "CR3" => _cr3, "CR4" => _cr4,
+		"DR0" => _dr0, "DR1" => _dr1, "DR2" => _dr2, "DR3" => _dr3, "DR6" => _dr6, "DR7" => _dr7,
 		_ => 0
 	};
 
@@ -167,6 +192,16 @@ public class IcedCpu : IAsyncCpu
 			case "FS": _fs = (ushort)value; break;
 			case "GS": _gs = (ushort)value; break;
 			case "SS": _ss = (ushort)value; break;
+			case "CR0": _cr0 = value; break;
+			case "CR2": _cr2 = value; break;
+			case "CR3": _cr3 = value; break;
+			case "CR4": _cr4 = value; break;
+			case "DR0": _dr0 = value; break;
+			case "DR1": _dr1 = value; break;
+			case "DR2": _dr2 = value; break;
+			case "DR3": _dr3 = value; break;
+			case "DR6": _dr6 = value; break;
+			case "DR7": _dr7 = value; break;
 		}
 	}
 
@@ -4978,17 +5013,11 @@ public class IcedCpu : IAsyncCpu
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
-		// OF is set only if count == 1 - set if sign changed
-		if (count == 1)
-		{
-			var newMsb = (dest & signBit) != 0;
-			SetFlagVal(Of, originalMsb != newMsb);
-		}
-		else
-		{
-			// OF is undefined when count > 1, but real 80386 hardware clears it
-			SetFlagVal(Of, false);
-		}
+		// OF is calculated based on whether the two MSB bits differ after the shift
+		// This matches MAME's implementation for consistency
+		var msb = (dest >> (opSize - 1)) & 1;
+		var nextMsb = (dest >> (opSize - 2)) & 1;
+		SetFlagVal(Of, msb != nextMsb);
 		// AF is undefined for SHLD
 		
 		WriteOp(insn, 0, dest);
@@ -5079,17 +5108,12 @@ public class IcedCpu : IAsyncCpu
 		
 		// Set flags
 		SetFlagVal(Cf, carryOut);
-		// OF is set only if count == 1 - set if sign changed
-		if (count == 1)
-		{
-			var newMsb = (dest & signBit) != 0;
-			SetFlagVal(Of, originalMsb != newMsb);
-		}
-		else
-		{
-			// OF is undefined when count > 1, but real 80386 hardware clears it
-			SetFlagVal(Of, false);
-		}
+		// OF is calculated based on whether the two MSB bits differ after the shift
+		// This matches MAME's implementation: m_OF = ((dst >> 31) ^ (dst >> 30)) & 1;
+		// For 16-bit operations, use bits 15 and 14
+		var msb = (dest >> (opSize - 1)) & 1;
+		var nextMsb = (dest >> (opSize - 2)) & 1;
+		SetFlagVal(Of, msb != nextMsb);
 		// AF is undefined for SHRD
 		
 		WriteOp(insn, 0, dest);
@@ -6130,6 +6154,11 @@ public class IcedCpu : IAsyncCpu
 		// Segment registers are 16-bit but zero-extended to 32-bit
 		Register.CS => _cs, Register.DS => _ds, Register.ES => _es,
 		Register.FS => _fs, Register.GS => _gs, Register.SS => _ss,
+		// Control registers (CR0-CR4)
+		Register.CR0 => _cr0, Register.CR2 => _cr2, Register.CR3 => _cr3, Register.CR4 => _cr4,
+		// Debug registers (DR0-DR7)
+		Register.DR0 => _dr0, Register.DR1 => _dr1, Register.DR2 => _dr2, Register.DR3 => _dr3,
+		Register.DR6 => _dr6, Register.DR7 => _dr7,
 		_ => 0
 	};
 
@@ -6229,6 +6258,20 @@ public class IcedCpu : IAsyncCpu
 			case Register.FS: _fs = (ushort)v; break;
 			case Register.GS: _gs = (ushort)v; break;
 			case Register.SS: _ss = (ushort)v; break;
+			// Control registers (CR0-CR4)
+			// Note: In real hardware, writing to CR0/CR3/CR4 would have side effects
+			// For user-mode emulation, we just store the values
+			case Register.CR0: _cr0 = v; break;
+			case Register.CR2: _cr2 = v; break;
+			case Register.CR3: _cr3 = v; break;
+			case Register.CR4: _cr4 = v; break;
+			// Debug registers (DR0-DR7)
+			case Register.DR0: _dr0 = v; break;
+			case Register.DR1: _dr1 = v; break;
+			case Register.DR2: _dr2 = v; break;
+			case Register.DR3: _dr3 = v; break;
+			case Register.DR6: _dr6 = v; break;
+			case Register.DR7: _dr7 = v; break;
 		}
 	}
 
@@ -6403,7 +6446,17 @@ public class IcedCpu : IAsyncCpu
 			FpuTop = _fpuTop,
 			FpuControlWord = _fpuControlWord,
 			FpuStatusWord = _fpuStatusWord,
-			FpuTagWord = _fpuTagWord
+			FpuTagWord = _fpuTagWord,
+			Cr0 = _cr0,
+			Cr2 = _cr2,
+			Cr3 = _cr3,
+			Cr4 = _cr4,
+			Dr0 = _dr0,
+			Dr1 = _dr1,
+			Dr2 = _dr2,
+			Dr3 = _dr3,
+			Dr6 = _dr6,
+			Dr7 = _dr7
 		};
 	}
 
@@ -6436,6 +6489,18 @@ public class IcedCpu : IAsyncCpu
 			_fpuStatusWord = state.FpuStatusWord;
 			_fpuTagWord = state.FpuTagWord;
 		}
+
+		// Restore control and debug registers
+		_cr0 = state.Cr0;
+		_cr2 = state.Cr2;
+		_cr3 = state.Cr3;
+		_cr4 = state.Cr4;
+		_dr0 = state.Dr0;
+		_dr1 = state.Dr1;
+		_dr2 = state.Dr2;
+		_dr3 = state.Dr3;
+		_dr6 = state.Dr6;
+		_dr7 = state.Dr7;
 	}
 
 	#endregion
