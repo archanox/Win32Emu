@@ -103,7 +103,7 @@ public partial class RegistryViewerViewModel : ViewModelBase
 	private void OnNodeExpanded(RegistryKeyNode node)
 	{
 		// Only load if the node is being expanded (not collapsed) and has the dummy "Loading..." child
-		if (node.IsExpanded && node.Children.Count == 1 && node.Children[0].Name == "Loading...")
+		if (node.IsExpanded && node.Children.FirstOrDefault()?.Name == "Loading...")
 		{
 			LoadSubKeys(node);
 		}
