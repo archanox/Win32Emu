@@ -79,11 +79,23 @@ public partial class TerminalControl : UserControl
 	{
 		Dispatcher.UIThread.Post(() =>
 		{
+			int startRow = _cursorY;
 			foreach (char c in text)
 			{
 				WriteChar(c);
 			}
-			RenderFromCursor();
+			
+			// If cursor moved to a different row, we need to re-render all affected rows
+			// For simplicity, just re-render everything for now
+			// TODO: Optimize to only render affected rows
+			if (_cursorY != startRow)
+			{
+				RenderAll();
+			}
+			else
+			{
+				RenderFromCursor();
+			}
 		});
 	}
 
