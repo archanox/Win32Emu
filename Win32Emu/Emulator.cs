@@ -424,6 +424,7 @@ public sealed class Emulator : IDisposable
         _logger.LogInformation("[Loader] Heap base: 0x{HeapBase:X8}", _heapBase);
 
         _dispatcher = new Win32Dispatcher(_logger);
+        _dispatcher.SetProcessEnvironment(_env);
 
         var kernel32Module = new Kernel32Module(_env, _image.BaseAddress, loader, _logger);
         kernel32Module.SetDispatcher(_dispatcher);
