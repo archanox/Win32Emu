@@ -5069,7 +5069,9 @@ public class IcedCpu : IAsyncCpu
 		{
 			// Normal case: shift dest right by count and bring in high bits from src
 			// Take low 'count' bits from src and place them in high positions of result
-			uint inBits = (src & ((1u << count) - 1)) << (opSize - count);
+			// Create mask for low 'count' bits, avoiding overflow for count >= 32
+			var lowBitsMask = count >= 32 ? 0xFFFFFFFFu : (1u << count) - 1;
+			uint inBits = (src & lowBitsMask) << (opSize - count);
 			dest = (dest >> count) | inBits;
 			dest &= mask;
 		}
@@ -5743,12 +5745,6 @@ public class IcedCpu : IAsyncCpu
 		value &= mask;
 		
 		// Perform rotation: (value >> count) | (value << (opSize - count))
-		// For 32-bit, we need to avoid overflow when shifting
-		if (opSize == 32 && count == 0)
-		{
-			return value;
-		}
-		
 		var rightPart = value >> count;
 		var leftPart = (value << (opSize - count)) & mask;
 		return (rightPart | leftPart) & mask;
@@ -5770,12 +5766,6 @@ public class IcedCpu : IAsyncCpu
 		value &= mask;
 		
 		// Perform rotation: (value << count) | (value >> (opSize - count))
-		// For 32-bit, we need to avoid overflow when shifting
-		if (opSize == 32 && count == 0)
-		{
-			return value;
-		}
-		
 		var leftPart = (value << count) & mask;
 		var rightPart = value >> (opSize - count);
 		return (leftPart | rightPart) & mask;
