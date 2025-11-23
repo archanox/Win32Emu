@@ -131,7 +131,16 @@ public partial class RegistryViewerViewModel : ViewModelBase
 			foreach (var subKeyName in subKeyNames.OrderBy(s => s))
 			{
 				var childPath = $"{node.FullPath}\\{subKeyName}";
-				var childNode = CreateRegistryKeyNode(subKeyName, childPath, true);
+				
+				// Check if the child actually has subkeys before adding "Loading..." placeholder
+				var childHandle = hive.OpenKey(childPath);
+				var hasChildren = childHandle != 0 && hive.EnumerateSubKeyNames(childHandle).Length > 0;
+				if (childHandle != 0)
+				{
+					hive.CloseKey(childHandle);
+				}
+				
+				var childNode = CreateRegistryKeyNode(subKeyName, childPath, hasChildren);
 				node.Children.Add(childNode);
 			}
 			
