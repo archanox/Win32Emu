@@ -19,6 +19,7 @@ public record LoadedImage(
 	uint[] TlsCallbacks,         // TLS callback function addresses (VA)
 	PeSection[] Sections,        // PE sections with characteristics (for identifying code/data regions)
 	Dictionary<uint, uint> IatEntryMap,  // IAT VA -> expected synthetic address mapping for runtime verification
+	Dictionary<string, ExportMetadata> ExportMetadata,  // Export function metadata (calling convention, arg bytes)
 	// FileHeader fields
 	ushort Machine,              // Architecture type (IMAGE_FILE_MACHINE_I386 = 0x014C)
 	uint TimeDateStamp,          // File creation timestamp (seconds since 1970-01-01 UTC)
