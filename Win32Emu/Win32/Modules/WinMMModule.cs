@@ -1025,7 +1025,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Stops playback on the given waveform-audio output device and resets the current position to zero.
 		/// </summary>
-		[DllModuleExport(11)]
+		[DllModuleExport(100)]
 		private uint WaveOutReset(uint hwo)
 		{
 			_logger.LogInformation("[WinMM] waveOutReset(hwo=0x{Hwo:X8})", hwo);
@@ -1035,7 +1035,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Retrieves the current playback position of the given waveform-audio output device.
 		/// </summary>
-		[DllModuleExport(12)]
+		[DllModuleExport(101)]
 		private uint WaveOutGetPosition(uint hwo, uint pmmt, uint cbmmt)
 		{
 			_logger.LogInformation("[WinMM] waveOutGetPosition(hwo=0x{Hwo:X8}, pmmt=0x{Pmmt:X8}, cbmmt={Cbmmt})",

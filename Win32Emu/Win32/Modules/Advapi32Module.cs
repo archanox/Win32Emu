@@ -1377,7 +1377,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	///   [out]          PHKEY  phkResult
 	/// );
 	/// </summary>
-	[DllModuleExport(219)]
+	[DllModuleExport(219, Version = "4.90.0.3000")]
 	private uint RegCreateKeyW(uint hKey, in LpcWStr lpSubKey, uint phkResult)
 	{
 		// RegCreateKeyW is a simplified version of RegCreateKeyExW

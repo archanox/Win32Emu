@@ -587,11 +587,10 @@ public static class NativeTypes
 	{
 		public uint cbStruct;           // Offset 0 - Size of structure
 		public uint dwLineID;           // Offset 4 - Line identifier
-		public uint dwControlID;        // Offset 8 - Control identifier (input)
-		public uint dwControlType;      // Offset 12 - Control type (input)
-		public uint cControls;          // Offset 16 - Number of controls
-		public uint cbmxctrl;           // Offset 20 - Size of MIXERCONTROL structure
-		public uint pamxctrl;           // Offset 24 - Pointer to MIXERCONTROL array (should be offset 20, error in comment)
+		public uint dwControlID;        // Offset 8 - Control identifier (input, union with dwControlType)
+		public uint cControls;          // Offset 12 - Number of controls
+		public uint cbmxctrl;           // Offset 16 - Size of MIXERCONTROL structure
+		public uint pamxctrl;           // Offset 20 - Pointer to MIXERCONTROL array
 	}
 
 	/// <summary>
