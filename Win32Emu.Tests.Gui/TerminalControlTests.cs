@@ -72,6 +72,16 @@ public class TerminalControlTests
 	}
 
 	[AvaloniaFact]
+	public void Write_WithMultipleLinesWindowsNewlines_DoesNotThrow()
+	{
+		// Arrange
+		var terminal = new TerminalControl();
+
+		// Act & Assert
+		terminal.Write("Line 1\r\nLine 2\r\nLine 3\r\n");
+	}
+
+	[AvaloniaFact]
 	public void Clear_AfterWrite_DoesNotThrow()
 	{
 		// Arrange
