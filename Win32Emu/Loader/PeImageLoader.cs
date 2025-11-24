@@ -101,7 +101,8 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		}
 		catch
 		{
-			// Fall through to Unknown
+			// Not a PE32 format - will return Unknown
+			// Note: Logging not available in static method context
 		}
 		
 		return ExecutableFormat.Unknown;

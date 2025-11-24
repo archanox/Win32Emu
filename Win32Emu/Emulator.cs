@@ -262,6 +262,8 @@ public sealed class Emulator : IDisposable
         _logger.LogInformation("[Loader] Detected format: {Format}", format);
         
         // Load executable based on format
+        // Note: peLoader is null for NE format. Modules accept nullable PeImageLoader
+        // since not all modules require PE-specific functionality (e.g., resource reading).
         PeImageLoader? peLoader = null; // For PE format only
         switch (format)
         {
@@ -279,6 +281,7 @@ public sealed class Emulator : IDisposable
                 var neLoader = new NeImageLoader(_vm, _logger);
                 _image = neLoader.LoadFromBytes(_executableBytes, path);
                 _logger.LogWarning("[Loader] Win16 NE format support is experimental. Some features may not work correctly.");
+                // peLoader remains null for NE format - modules will use LoadedImage data instead
                 break;
             }
             

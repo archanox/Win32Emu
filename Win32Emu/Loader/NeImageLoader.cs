@@ -19,6 +19,19 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	// MZ DOS header signature "MZ" (0x5A4D in little-endian)
 	private const ushort MZ_SIGNATURE = 0x5A4D;
 	
+	// Base address for NE executables (64KB to avoid NULL pointer conflicts)
+	private const uint NE_BASE_ADDRESS = 0x00010000;
+	
+	// Full segment size for NE executables (64KB)
+	private const uint FULL_SEGMENT_SIZE = 0x10000;
+	
+	// Paragraph alignment (16 bytes)
+	private const uint PARAGRAPH_MASK = 0xF;
+	private const uint PARAGRAPH_ALIGN = 0xFFFFFFF0;
+	
+	// NE segment flags
+	private const ushort NE_SEGMENT_READONLY = 0x0008;
+	
 	/// <summary>
 	/// Validates if a file is a valid NE (Win16) executable by checking the NE signature.
 	/// </summary>
@@ -57,6 +70,8 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	/// <summary>
 	/// Validates if a byte array contains a valid NE executable.
 	/// </summary>
+	/// <param name="bytes">The byte array to validate</param>
+	/// <returns>True if the byte array contains a valid NE executable, false otherwise</returns>
 	public static bool IsNE(byte[] bytes)
 	{
 		try
@@ -86,6 +101,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		}
 		catch
 		{
+			// Return false on any parsing errors (out of bounds, etc.)
 			return false;
 		}
 	}
@@ -128,8 +144,8 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		
 		// Calculate base address for 16-bit segments
 		// NE executables typically use a separate 16-bit address space
-		// We'll map them starting at 0x10000 (64KB) to avoid conflicts with NULL pointers
-		uint baseAddress = 0x00010000;
+		// We'll map them starting at 64KB to avoid conflicts with NULL pointers
+		uint baseAddress = NE_BASE_ADDRESS;
 		
 		// Load segments into memory
 		uint currentAddress = baseAddress;
@@ -140,7 +156,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			if (segment.Length > 0)
 			{
 				// Align to paragraph boundary (16 bytes)
-				currentAddress = (currentAddress + 0xF) & 0xFFFFFFF0;
+				currentAddress = (currentAddress + PARAGRAPH_MASK) & PARAGRAPH_ALIGN;
 				
 				segmentMap[segment.SegmentNumber] = (currentAddress, segment.Length);
 				
@@ -277,7 +293,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			uint length = lengthRaw;
 			if (length == 0 && minAllocation > 0)
 			{
-				length = 0x10000; // 64KB full segment
+				length = FULL_SEGMENT_SIZE; // 64KB full segment
 			}
 			
 			var segment = new NeSegment
@@ -572,7 +588,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				// Bit 2: Loaded (not used for characteristics)
 				
 				// Writable check - most NE segments are writable unless marked as read-only
-				if ((segment.Flags & 0x0008) == 0) // If not read-only
+				if ((segment.Flags & NE_SEGMENT_READONLY) == 0) // If not read-only
 				{
 					characteristics |= PeSectionCharacteristics.MemWrite;
 				}
