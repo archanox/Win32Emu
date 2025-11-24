@@ -366,7 +366,7 @@ namespace Win32Emu.Win32.Modules
 						return true;
 					}
 
-				case "_GRALPHATESTREF ERENCEVALUE@4":
+				case "_GRALPHATESTREFERENCEVALUE@4":
 					{
 						uint value = a.UInt32(0);
 						_logger.LogInformation("[Glide2x] grAlphaTestReferenceValue(value=0x{Value:X2})", value);
