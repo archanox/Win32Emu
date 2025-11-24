@@ -3,6 +3,7 @@ using Win32Emu.Memory;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace Win32Emu.Loader;
@@ -19,6 +20,13 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	// MZ DOS header signature "MZ" (0x5A4D in little-endian)
 	private const ushort MZ_SIGNATURE = 0x5A4D;
 	
+	// DOS header constants
+	private const int DOS_HEADER_MIN_SIZE = 0x40;
+	private const int DOS_HEADER_NE_PE_OFFSET = 0x3C;
+	
+	// NE header size (minimum required to read all header fields)
+	private const int NE_HEADER_MIN_SIZE = 64;
+	
 	// Base address for NE executables (64KB to avoid NULL pointer conflicts)
 	private const uint NE_BASE_ADDRESS = 0x00010000;
 	
@@ -30,7 +38,43 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	private const uint PARAGRAPH_ALIGN = 0xFFFFFFF0;
 	
 	// NE segment flags
+	private const ushort NE_SEGMENT_DATA = 0x0001;
 	private const ushort NE_SEGMENT_READONLY = 0x0008;
+	
+	// NE entry table constants
+	private const byte NE_ENTRY_UNUSED = 0x00;
+	private const byte NE_ENTRY_MOVABLE = 0xFF;
+	private const int NE_ENTRY_MOVABLE_SIZE = 6;
+	private const int NE_ENTRY_FIXED_SIZE = 3;
+	
+	// NE segment table entry size
+	private const int NE_SEGMENT_ENTRY_SIZE = 8;
+	
+	// NE sector shift (sectors are 16 bytes each)
+	private const int NE_SECTOR_SHIFT = 4;
+	
+	// NE name table entry suffix size (name length byte + 2-byte ordinal)
+	private const int NE_NAME_ENTRY_SUFFIX_SIZE = 3;
+	
+	// NE module reference entry size
+	private const int NE_MODULE_REF_ENTRY_SIZE = 2;
+	
+	// PE subsystem values
+	private const ushort PE_SUBSYSTEM_CUI = 2;
+	private const ushort PE_SUBSYSTEM_GUI = 3;
+	
+	// PE default sizes
+	private const uint DEFAULT_HEADER_END_RVA = 0x1000;
+	private const uint DEFAULT_STACK_RESERVE = 0x10000;
+	private const uint DEFAULT_STACK_COMMIT = 0x1000;
+	private const uint DEFAULT_HEAP_RESERVE = 0x10000;
+	private const uint DEFAULT_HEAP_COMMIT = 0x1000;
+	private const uint DEFAULT_SECTION_ALIGNMENT = 0x1000;
+	private const uint DEFAULT_FILE_ALIGNMENT = 0x200;
+	
+	// PE machine type and characteristics
+	private const ushort IMAGE_FILE_MACHINE_I386 = 0x014C;
+	private const ushort IMAGE_FILE_EXECUTABLE_IMAGE = 0x0002;
 	
 	/// <summary>
 	/// Validates if a file is a valid NE (Win16) executable by checking the NE signature.
@@ -51,8 +95,8 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				return false;
 			}
 			
-			// Seek to offset 0x3C which contains the offset to the NE/PE header
-			stream.Seek(0x3C, SeekOrigin.Begin);
+			// Seek to offset which contains the offset to the NE/PE header
+			stream.Seek(DOS_HEADER_NE_PE_OFFSET, SeekOrigin.Begin);
 			var neOffset = reader.ReadUInt32();
 			
 			// Seek to NE header
@@ -76,7 +120,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	{
 		try
 		{
-			if (bytes.Length < 0x40)
+			if (bytes.Length < DOS_HEADER_MIN_SIZE)
 			{
 				return false;
 			}
@@ -89,7 +133,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			}
 			
 			// Get offset to NE header
-			var neOffset = BitConverter.ToUInt32(bytes, 0x3C);
+			var neOffset = BitConverter.ToUInt32(bytes, DOS_HEADER_NE_PE_OFFSET);
 			if (neOffset + 2 > bytes.Length)
 			{
 				return false;
@@ -151,41 +195,36 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		uint currentAddress = baseAddress;
 		var segmentMap = new Dictionary<int, (uint address, uint size)>();
 		
-		foreach (var segment in segments)
+		foreach (var segment in segments.Where(s => s.Length > 0))
 		{
-			if (segment.Length > 0)
+			// Align to paragraph boundary (16 bytes)
+			currentAddress = (currentAddress + PARAGRAPH_MASK) & PARAGRAPH_ALIGN;
+			
+			segmentMap[segment.SegmentNumber] = (currentAddress, segment.Length);
+			
+			// Load segment data
+			if (segment.FileOffset > 0 && segment.FileOffset + segment.Length <= bytes.Length)
 			{
-				// Align to paragraph boundary (16 bytes)
-				currentAddress = (currentAddress + PARAGRAPH_MASK) & PARAGRAPH_ALIGN;
+				var segmentData = new byte[segment.Length];
+				Array.Copy(bytes, segment.FileOffset, segmentData, 0, segment.Length);
+				vm.WriteBytes(currentAddress, segmentData);
 				
-				segmentMap[segment.SegmentNumber] = (currentAddress, segment.Length);
-				
-				// Load segment data
-				if (segment.FileOffset > 0 && segment.FileOffset + segment.Length <= bytes.Length)
-				{
-					var segmentData = new byte[segment.Length];
-					Array.Copy(bytes, segment.FileOffset, segmentData, 0, segment.Length);
-					vm.WriteBytes(currentAddress, segmentData);
-					
-					logger?.LogDebug("[NE Loader] Loaded segment {Num}: Address=0x{Addr:X8}, Size=0x{Size:X4}, Flags=0x{Flags:X4}",
-						segment.SegmentNumber, currentAddress, segment.Length, segment.Flags);
-				}
-				
-				currentAddress += segment.Length;
+				logger?.LogDebug("[NE Loader] Loaded segment {Num}: Address=0x{Addr:X8}, Size=0x{Size:X4}, Flags=0x{Flags:X4}",
+					segment.SegmentNumber, currentAddress, segment.Length, segment.Flags);
 			}
+			
+			currentAddress += segment.Length;
 		}
 		
 		// Calculate entry point address
 		// Entry point is specified as segment:offset in NE format
 		uint entryPointAddress = 0;
-		if (neHeader.EntryPointSegment > 0 && neHeader.EntryPointSegment <= segments.Length)
+		if (neHeader.EntryPointSegment > 0 && neHeader.EntryPointSegment <= segments.Length &&
+			segmentMap.TryGetValue(neHeader.EntryPointSegment, out var entrySegment))
 		{
-			if (segmentMap.TryGetValue(neHeader.EntryPointSegment, out var entrySegment))
-			{
-				entryPointAddress = entrySegment.address + neHeader.EntryPointOffset;
-				logger?.LogInformation("[NE Loader] Entry point: Segment {Seg}, Offset 0x{Off:X4} -> VA 0x{VA:X8}",
-					neHeader.EntryPointSegment, neHeader.EntryPointOffset, entryPointAddress);
-			}
+			entryPointAddress = entrySegment.address + neHeader.EntryPointOffset;
+			logger?.LogInformation("[NE Loader] Entry point: Segment {Seg}, Offset 0x{Off:X4} -> VA 0x{VA:X8}",
+				neHeader.EntryPointSegment, neHeader.EntryPointOffset, entryPointAddress);
 		}
 		
 		// Create import map for Win16 API calls
@@ -211,45 +250,51 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			exportsByOrdinal,
 			new Dictionary<string, string>(), // No forwarded exports in NE
 			new Dictionary<uint, string>(),   // No forwarded exports by ordinal
-			(ushort)(neHeader.ApplicationType == 2 ? 3 : 2), // Map to PE subsystem (GUI vs CUI)
-			0x1000,                          // HeaderEndRva - use default
-			0x10000,                         // SizeOfStackReserve - 64KB default for 16-bit
-			0x1000,                          // SizeOfStackCommit - 4KB default
-			0x10000,                         // SizeOfHeapReserve - 64KB default
-			0x1000,                          // SizeOfHeapCommit - 4KB default
-			Array.Empty<uint>(),             // No TLS callbacks in NE
+			(ushort)(neHeader.ApplicationType == PE_SUBSYSTEM_CUI ? PE_SUBSYSTEM_GUI : PE_SUBSYSTEM_CUI), // Map to PE subsystem (GUI vs CUI)
+			DEFAULT_HEADER_END_RVA,           // HeaderEndRva - use default
+			DEFAULT_STACK_RESERVE,            // SizeOfStackReserve - 64KB default for 16-bit
+			DEFAULT_STACK_COMMIT,             // SizeOfStackCommit - 4KB default
+			DEFAULT_HEAP_RESERVE,             // SizeOfHeapReserve - 64KB default
+			DEFAULT_HEAP_COMMIT,              // SizeOfHeapCommit - 4KB default
+			Array.Empty<uint>(),              // No TLS callbacks in NE
 			sections,
-			new Dictionary<uint, uint>(),    // IAT entry map - handled differently for NE
+			new Dictionary<uint, uint>(),     // IAT entry map - handled differently for NE
 			new Dictionary<string, ExportMetadata>(), // Export metadata - TODO: infer from calling conventions
 			// FileHeader fields
-			0x014C,                          // Machine - IMAGE_FILE_MACHINE_I386
-			0,                               // TimeDateStamp
-			0x0002,                          // Characteristics - IMAGE_FILE_EXECUTABLE_IMAGE
+			IMAGE_FILE_MACHINE_I386,          // Machine
+			0,                                // TimeDateStamp
+			IMAGE_FILE_EXECUTABLE_IMAGE,      // Characteristics
 			// OptionalHeader additional fields
 			neHeader.MajorLinkerVersion,
 			neHeader.MinorLinkerVersion,
 			(ushort)(neHeader.ExpectedWindowsVersion >> 8),      // Major OS version
 			(ushort)(neHeader.ExpectedWindowsVersion & 0xFF),    // Minor OS version
-			0,                               // MajorImageVersion
-			0,                               // MinorImageVersion
+			0,                                // MajorImageVersion
+			0,                                // MinorImageVersion
 			(ushort)(neHeader.ExpectedWindowsVersion >> 8),      // MajorSubsystemVersion
 			(ushort)(neHeader.ExpectedWindowsVersion & 0xFF),    // MinorSubsystemVersion
-			0,                               // DllCharacteristics
-			0,                               // CheckSum
-			0x1000,                          // SectionAlignment - 4KB
-			0x200,                           // FileAlignment - 512 bytes
-			baseAddress,                     // BaseOfCode
-			baseAddress,                     // BaseOfData
-			imageSize,                       // SizeOfCode
-			0,                               // SizeOfInitializedData
-			0                                // SizeOfUninitializedData
+			0,                                // DllCharacteristics
+			0,                                // CheckSum
+			DEFAULT_SECTION_ALIGNMENT,        // SectionAlignment - 4KB
+			DEFAULT_FILE_ALIGNMENT,           // FileAlignment - 512 bytes
+			baseAddress,                      // BaseOfCode
+			baseAddress,                      // BaseOfData
+			imageSize,                        // SizeOfCode
+			0,                                // SizeOfInitializedData
+			0                                 // SizeOfUninitializedData
 		);
 	}
 	
 	private NeHeader ParseNeHeader(byte[] bytes)
 	{
 		// Get offset to NE header from DOS stub
-		var neOffset = (int)BitConverter.ToUInt32(bytes, 0x3C);
+		var neOffset = (int)BitConverter.ToUInt32(bytes, DOS_HEADER_NE_PE_OFFSET);
+		
+		// Validate NE header can be fully read
+		if (neOffset < 0 || neOffset + NE_HEADER_MIN_SIZE > bytes.Length)
+		{
+			throw new InvalidDataException($"Invalid NE header offset: {neOffset}");
+		}
 		
 		return new NeHeader
 		{
@@ -282,9 +327,17 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		var segments = new List<NeSegment>();
 		var offset = header.BaseOffset + header.SegmentTableOffset;
 		
+		// Validate segment table bounds
+		var requiredSize = offset + (header.SegmentCount * NE_SEGMENT_ENTRY_SIZE);
+		if (requiredSize > bytes.Length)
+		{
+			throw new InvalidDataException($"Segment table extends beyond file bounds");
+		}
+		
 		for (var i = 0; i < header.SegmentCount; i++)
 		{
-			var fileOffset = (uint)(BitConverter.ToUInt16(bytes, offset) << 4); // Convert sectors to bytes
+			// Safe: max sector (0xFFFF) << 4 = 0xFFFF0, well within uint range for NE format
+			var fileOffset = (uint)(BitConverter.ToUInt16(bytes, offset) << NE_SECTOR_SHIFT);
 			var lengthRaw = BitConverter.ToUInt16(bytes, offset + 2);
 			var flags = BitConverter.ToUInt16(bytes, offset + 4);
 			var minAllocation = BitConverter.ToUInt16(bytes, offset + 6);
@@ -306,7 +359,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			};
 			
 			segments.Add(segment);
-			offset += 8; // Each segment table entry is 8 bytes
+			offset += NE_SEGMENT_ENTRY_SIZE;
 		}
 		
 		return segments.ToArray();
@@ -322,6 +375,12 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		
 		while (offset < endOffset)
 		{
+			// Validate bounds before reading
+			if (offset + 2 > endOffset || offset + 2 > bytes.Length)
+			{
+				break;
+			}
+			
 			var bundleCount = bytes[offset];
 			if (bundleCount == 0)
 			{
@@ -333,18 +392,24 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			
 			for (var i = 0; i < bundleCount; i++)
 			{
-				if (segmentIndicator == 0x00)
+				if (segmentIndicator == NE_ENTRY_UNUSED)
 				{
 					// Unused entry
 					ordinal++;
 					continue;
 				}
 				
-				if (segmentIndicator == 0xFF)
+				if (segmentIndicator == NE_ENTRY_MOVABLE)
 				{
+					// Validate bounds for movable entry
+					if (offset + NE_ENTRY_MOVABLE_SIZE > bytes.Length)
+					{
+						break;
+					}
+					
 					// Movable segment
 					var flags = bytes[offset];
-					var int3F = BitConverter.ToUInt16(bytes, offset + 1);
+					// Skip int3F field (bytes[offset + 1..2]) - not used
 					var segment = bytes[offset + 3];
 					var segmentOffset = BitConverter.ToUInt16(bytes, offset + 4);
 					
@@ -356,10 +421,16 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 						Flags = flags
 					};
 					
-					offset += 6;
+					offset += NE_ENTRY_MOVABLE_SIZE;
 				}
 				else
 				{
+					// Validate bounds for fixed entry
+					if (offset + NE_ENTRY_FIXED_SIZE > bytes.Length)
+					{
+						break;
+					}
+					
 					// Fixed segment
 					var flags = bytes[offset];
 					var segmentOffset = BitConverter.ToUInt16(bytes, offset + 1);
@@ -372,7 +443,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 						Flags = flags
 					};
 					
-					offset += 3;
+					offset += NE_ENTRY_FIXED_SIZE;
 				}
 				
 				ordinal++;
@@ -387,14 +458,36 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		var names = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
 		var offset = header.BaseOffset + header.ResidentNameTableOffset;
 		
+		// Validate initial bounds
+		if (offset + 1 > bytes.Length)
+		{
+			return names;
+		}
+		
 		// First entry is module name, skip it
 		var nameLength = bytes[offset];
-		offset += nameLength + 3; // name length + ordinal (2 bytes)
+		if (offset + nameLength + NE_NAME_ENTRY_SUFFIX_SIZE > bytes.Length)
+		{
+			return names;
+		}
+		offset += nameLength + NE_NAME_ENTRY_SUFFIX_SIZE;
 		
 		while (offset < bytes.Length)
 		{
+			// Validate bounds before reading name length
+			if (offset + 1 > bytes.Length)
+			{
+				break;
+			}
+			
 			nameLength = bytes[offset];
 			if (nameLength == 0)
+			{
+				break;
+			}
+			
+			// Validate bounds for complete entry
+			if (offset + nameLength + NE_NAME_ENTRY_SUFFIX_SIZE > bytes.Length)
 			{
 				break;
 			}
@@ -403,7 +496,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			var ordinal = BitConverter.ToUInt16(bytes, offset + nameLength + 1);
 			
 			names[name] = ordinal;
-			offset += nameLength + 3;
+			offset += nameLength + NE_NAME_ENTRY_SUFFIX_SIZE;
 		}
 		
 		return names;
@@ -419,14 +512,36 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			return names;
 		}
 		
+		// Validate initial bounds
+		if (offset + 1 > bytes.Length)
+		{
+			return names;
+		}
+		
 		// First entry is module description, skip it
 		var nameLength = bytes[offset];
-		offset += nameLength + 3;
+		if (offset + nameLength + NE_NAME_ENTRY_SUFFIX_SIZE > bytes.Length)
+		{
+			return names;
+		}
+		offset += nameLength + NE_NAME_ENTRY_SUFFIX_SIZE;
 		
 		while (offset < bytes.Length)
 		{
+			// Validate bounds before reading name length
+			if (offset + 1 > bytes.Length)
+			{
+				break;
+			}
+			
 			nameLength = bytes[offset];
 			if (nameLength == 0)
+			{
+				break;
+			}
+			
+			// Validate bounds for complete entry
+			if (offset + nameLength + NE_NAME_ENTRY_SUFFIX_SIZE > bytes.Length)
 			{
 				break;
 			}
@@ -435,7 +550,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			var ordinal = BitConverter.ToUInt16(bytes, offset + nameLength + 1);
 			
 			names[name] = ordinal;
-			offset += nameLength + 3;
+			offset += nameLength + NE_NAME_ENTRY_SUFFIX_SIZE;
 		}
 		
 		return names;
@@ -453,6 +568,12 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		
 		while (offset < importNamesOffset)
 		{
+			// Validate bounds for reading module reference entry
+			if (offset + NE_MODULE_REF_ENTRY_SIZE > bytes.Length || offset + NE_MODULE_REF_ENTRY_SIZE > importNamesOffset)
+			{
+				break;
+			}
+			
 			var nameOffset = BitConverter.ToUInt16(bytes, offset);
 			if (nameOffset == 0)
 			{
@@ -460,16 +581,21 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			}
 			
 			var actualOffset = header.BaseOffset + header.ImportedNamesTableOffset + nameOffset;
-			if (actualOffset >= bytes.Length)
+			if (actualOffset >= bytes.Length || actualOffset + 1 > bytes.Length)
 			{
 				break;
 			}
 			
 			var nameLength = bytes[actualOffset];
+			if (actualOffset + nameLength + 1 > bytes.Length)
+			{
+				break;
+			}
+			
 			var moduleName = Encoding.ASCII.GetString(bytes, actualOffset + 1, nameLength);
 			modules.Add(moduleName);
 			
-			offset += 2;
+			offset += NE_MODULE_REF_ENTRY_SIZE;
 		}
 		
 		return modules;
@@ -484,7 +610,6 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		// For NE executables, imports are handled differently than PE
 		// We'll create synthetic addresses for imported functions similar to PE loader
 		var map = new Dictionary<uint, (string dll, string name)>();
-		var synth = 0;
 		
 		// Create syscall dispatcher stub at fixed address
 		var syscallStub = new byte[]
@@ -497,10 +622,8 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		
 		// Map Win16 imports to Win32 equivalents
 		// For now, we'll create entries for common Win16 DLLs
-		foreach (var module in importModules)
+		foreach (var normalizedModule in importModules.Select(m => m.ToUpperInvariant()))
 		{
-			var normalizedModule = module.ToUpperInvariant();
-			
 			// Map Win16 module names to Win32 equivalents
 			var win32Module = normalizedModule switch
 			{
@@ -562,12 +685,11 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		Dictionary<int, (uint address, uint size)> segmentMap,
 		uint baseAddress)
 	{
-		var sections = new List<PeSection>();
-		
-		foreach (var segment in segments)
-		{
-			if (segmentMap.TryGetValue(segment.SegmentNumber, out var mappedSegment))
+		return segments
+			.Where(segment => segmentMap.ContainsKey(segment.SegmentNumber))
+			.Select(segment =>
 			{
+				var mappedSegment = segmentMap[segment.SegmentNumber];
 				var rva = mappedSegment.address - baseAddress;
 				var name = $"SEG{segment.SegmentNumber}";
 				
@@ -575,7 +697,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				var characteristics = PeSectionCharacteristics.MemRead;
 				
 				// Bit 0: Data segment (vs code segment)
-				if ((segment.Flags & 0x0001) != 0)
+				if ((segment.Flags & NE_SEGMENT_DATA) != 0)
 				{
 					characteristics |= PeSectionCharacteristics.ContainsInitializedData;
 				}
@@ -593,11 +715,9 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 					characteristics |= PeSectionCharacteristics.MemWrite;
 				}
 				
-				sections.Add(new PeSection(name, rva, mappedSegment.size, mappedSegment.size, characteristics));
-			}
-		}
-		
-		return sections.ToArray();
+				return new PeSection(name, rva, mappedSegment.size, mappedSegment.size, characteristics);
+			})
+			.ToArray();
 	}
 }
 

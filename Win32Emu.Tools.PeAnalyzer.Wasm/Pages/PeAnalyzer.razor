@@ -450,28 +450,35 @@
 
 	private string DetectExecutableFormat(byte[] bytes)
 	{
+		// Magic numbers for format detection
+		const int MinimumDosHeaderSize = 0x40;
+		const int DosHeaderOffsetToNewHeader = 0x3C;
+		const ushort MzSignature = 0x5A4D; // "MZ" in little-endian
+		const ushort NeSignature = 0x454E; // "NE" in little-endian
+		const ushort PeSignature = 0x4550; // "PE" in little-endian
+		
 		try
 		{
-			if (bytes.Length < 0x40)
+			if (bytes.Length < MinimumDosHeaderSize)
 				return "Unknown";
 
 			// Check DOS MZ signature
 			var mzSignature = BitConverter.ToUInt16(bytes, 0);
-			if (mzSignature != 0x5A4D) // "MZ" in little-endian
+			if (mzSignature != MzSignature)
 				return "Unknown";
 
 			// Get offset to NE/PE header
-			var headerOffset = BitConverter.ToUInt32(bytes, 0x3C);
+			var headerOffset = BitConverter.ToUInt32(bytes, DosHeaderOffsetToNewHeader);
 			if (headerOffset + 2 > bytes.Length)
 				return "Unknown";
 
 			// Check signature at header offset
 			var signature = BitConverter.ToUInt16(bytes, (int)headerOffset);
 			
-			if (signature == 0x454E) // "NE" in little-endian
+			if (signature == NeSignature)
 				return "NE (Win16)";
 			
-			if (signature == 0x4550) // "PE" in little-endian
+			if (signature == PeSignature)
 				return "PE32 (Win32)";
 
 			return "Unknown";
