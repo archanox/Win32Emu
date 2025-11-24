@@ -601,6 +601,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GETPRIVATEPROFILESTRINGA":
 				returnValue = GetPrivateProfileStringA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.LpStr(3), a.UInt32(4), a.LpcStr(5));
 				return true;
+			case "GETPRIVATEPROFILESECTIONA":
+				returnValue = GetPrivateProfileSectionA(a.LpcStr(0), a.LpStr(1), a.UInt32(2), a.LpcStr(3));
+				return true;
 
 			// String functions
 			case "LSTRCATA":
@@ -772,6 +775,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "WRITEPRIVATEPROFILESTRINGA":
 				returnValue = WritePrivateProfileStringA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.LpcStr(3));
+				return true;
+			case "WRITEPRIVATEPROFILESECTIONA":
+				returnValue = WritePrivateProfileSectionA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2));
 				return true;
 			case "WRITEPROFILESTRINGA":
 				returnValue = WriteProfileStringA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2));
@@ -7324,6 +7330,26 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	/// <summary>
+	/// Replaces the keys and values for the specified section in an initialization file.
+	/// BOOL WritePrivateProfileSectionA(
+	///   [in] LPCSTR lpAppName,
+	///   [in] LPCSTR lpString,
+	///   [in] LPCSTR lpFileName
+	/// );
+	/// lpString is a buffer containing one or more null-terminated strings, terminated by a final null character.
+	/// Each string has the form key=value.
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint WritePrivateProfileSectionA(in LpcStr lpAppName, in LpcStr lpString, in LpcStr lpFileName)
+	{
+		var appName = lpAppName.ToString() ?? string.Empty;
+		var fileName = lpFileName.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] WritePrivateProfileSectionA(lpAppName=\"{AppName}\", lpFileName=\"{FileName}\")",
+			appName, fileName);
+		return 1; // TRUE (stub)
+	}
+
+	/// <summary>
 	/// Duplicates an object handle.
 	/// </summary>
 	[DllModuleExport(28)]
@@ -7788,6 +7814,44 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				lpReturnedString.Write(_env.Memory, "", true);
 			}
 			return (uint)writeSize;
+		}
+
+		return 0;
+	}
+
+	/// <summary>
+	/// Retrieves all the keys and values for the specified section of an initialization file.
+	/// DWORD GetPrivateProfileSectionA(
+	///   [in]  LPCSTR lpAppName,
+	///   [out] LPSTR  lpReturnedString,
+	///   [in]  DWORD  nSize,
+	///   [in]  LPCSTR lpFileName
+	/// );
+	/// Returns: The number of characters copied to the buffer, not including the terminating null character.
+	/// If the buffer is not large enough to contain all the key name and value pairs associated with the named section,
+	/// the return value is equal to nSize minus two.
+	/// Format: The buffer contains one or more null-terminated strings, terminated by a final null character.
+	/// Each string has the form key=value.
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint GetPrivateProfileSectionA(in LpcStr lpAppName, in LpStr lpReturnedString, uint nSize, in LpcStr lpFileName)
+	{
+		var appName = lpAppName.ToString() ?? string.Empty;
+		var fileName = lpFileName.ToString() ?? string.Empty;
+
+		_logger.LogInformation("[Kernel32] GetPrivateProfileSectionA(lpAppName=\"{AppName}\", nSize={NSize}, lpFileName=\"{FileName}\")",
+			appName, nSize, fileName);
+
+		// Stub implementation: return empty section (just double null terminator)
+		if (nSize >= 2)
+		{
+			// Write double null terminator for empty section
+			lpReturnedString.Write(_env.Memory, "", true);
+			if (nSize > 1)
+			{
+				_env.MemWrite8(lpReturnedString.Address + 1, 0);
+			}
+			return 0; // No characters copied (excluding terminators)
 		}
 
 		return 0;
