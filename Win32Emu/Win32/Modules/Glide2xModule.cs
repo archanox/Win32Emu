@@ -416,9 +416,13 @@ namespace Win32Emu.Win32.Modules
 					}
 
 				case "_GRTEXCOMBINEFUNCTION@8":
-					_logger.LogInformation("[Glide2x] grTexCombineFunction()");
-					returnValue = grTexCombineFunction();
-					return true;
+					{
+						uint tmu = a.UInt32(0);
+						uint function = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grTexCombineFunction(tmu={Tmu}, function={Function})", tmu, function);
+						returnValue = grTexCombineFunction(tmu, function);
+						return true;
+					}
 
 				case "_GRTEXDOWNLOADMIPMAP@16":
 					{
@@ -442,6 +446,7 @@ namespace Win32Emu.Win32.Modules
 						return true;
 					}
 
+				// Multiple case labels for texture LOD bias - handles naming variations
 				case "_GRTEXLODBIAS@8":
 				case "_GRTEXLODBIAS_VALUE@8":
 				case "_GRTEXLODBIASVALUE@8":
@@ -1471,9 +1476,9 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(81, entryPoint: 0x00006330, Version = "2.61.00.0613", ExportName = "_grTexCombineFunction@8")]
-		public uint grTexCombineFunction()
+		public uint grTexCombineFunction(uint tmu, uint function)
 		{
-			_logger.LogDebug("[GLIDE2x] grTexCombineFunction called");
+			_logger.LogDebug("[GLIDE2x] grTexCombineFunction: tmu={Tmu}, function={Function}", tmu, function);
 			// Set simplified texture combine function
 			return 0; // Success (void function)
 		}
