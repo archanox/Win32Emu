@@ -90,6 +90,9 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			case "REGOPENKEYEXW":
 				returnValue = RegOpenKeyExW(a.UInt32(0), a.LpcWStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
+			case "REGCREATEKEYW":
+				returnValue = RegCreateKeyW(a.UInt32(0), a.LpcWStr(1), a.UInt32(2));
+				return true;
 			case "REGCREATEKEYEXW":
 				returnValue = RegCreateKeyExW(a.UInt32(0), a.LpcWStr(1), a.UInt32(2), a.LpcWStr(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8));
 				return true;
@@ -1364,6 +1367,36 @@ public class Advapi32Module : IWin32ModuleUnsafe
 
 		// ERROR_SUCCESS
 		return 0;
+	}
+
+	/// <summary>
+	/// Creates the specified registry key (Unicode version - simplified version of RegCreateKeyExW).
+	/// LSTATUS RegCreateKeyW(
+	///   [in]           HKEY   hKey,
+	///   [in, optional] LPCWSTR lpSubKey,
+	///   [out]          PHKEY  phkResult
+	/// );
+	/// </summary>
+	[DllModuleExport(219, Version = "4.90.0.3000")]
+	private uint RegCreateKeyW(uint hKey, in LpcWStr lpSubKey, uint phkResult)
+	{
+		// RegCreateKeyW is a simplified version of RegCreateKeyExW
+		// It creates a non-volatile key with default parameters
+		var emptyClass = new LpcWStr(0);
+		const uint REG_OPTION_NON_VOLATILE = 0x00000000;
+		const uint KEY_ALL_ACCESS = 0xF003F;
+		
+		return RegCreateKeyExW(
+			hKey,
+			lpSubKey,
+			0,           // reserved
+			emptyClass,  // lpClass
+			REG_OPTION_NON_VOLATILE,
+			KEY_ALL_ACCESS,
+			0,           // lpSecurityAttributes
+			phkResult,
+			0            // lpdwDisposition (not used)
+		);
 	}
 
 	/// <summary>

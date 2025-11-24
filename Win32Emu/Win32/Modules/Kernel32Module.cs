@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
@@ -343,6 +344,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "WRITEFILE":
 				returnValue = WriteFile(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+			case "GETOVERLAPPEDRESULT":
+				returnValue = GetOverlappedResult(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
 			case "CLOSEHANDLE":
 				returnValue = CloseHandle((void*)a.UInt32(0));
@@ -3323,6 +3327,53 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
+	}
+
+	/// <summary>
+	/// Retrieves the results of an overlapped operation on the specified file, named pipe, or communications device.
+	/// BOOL GetOverlappedResult(
+	///   [in]  HANDLE       hFile,
+	///   [in]  LPOVERLAPPED lpOverlapped,
+	///   [out] LPDWORD      lpNumberOfBytesTransferred,
+	///   [in]  BOOL         bWait
+	/// );
+	/// </summary>
+	[DllModuleExport(155)]
+	private uint GetOverlappedResult(uint hFile, uint lpOverlapped, uint lpNumberOfBytesTransferred, uint bWait)
+	{
+		_logger.LogInformation("[Kernel32] GetOverlappedResult(hFile=0x{HFile:X8}, lpOverlapped=0x{LpOverlapped:X8}, lpNumberOfBytesTransferred=0x{LpNumberOfBytesTransferred:X8}, bWait={BWait})",
+			hFile, lpOverlapped, lpNumberOfBytesTransferred, bWait);
+
+		// In this emulator, we don't actually support asynchronous I/O
+		// We perform all I/O synchronously, so we simulate success
+		// The OVERLAPPED structure contains the result at Internal and InternalHigh fields
+		
+		if (lpOverlapped == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+
+		// Read the number of bytes transferred from OVERLAPPED.InternalHigh
+		var internalHighOffset = (uint)Marshal.OffsetOf<NativeTypes.OVERLAPPED>(nameof(NativeTypes.OVERLAPPED.InternalHigh));
+		var bytesTransferred = _env.MemRead32(lpOverlapped + internalHighOffset);
+		
+		if (lpNumberOfBytesTransferred != 0)
+		{
+			_env.MemWrite32(lpNumberOfBytesTransferred, bytesTransferred);
+		}
+
+		// Check if the operation succeeded (Internal field contains status)
+		var internalOffset = (uint)Marshal.OffsetOf<NativeTypes.OVERLAPPED>(nameof(NativeTypes.OVERLAPPED.Internal));
+		var status = _env.MemRead32(lpOverlapped + internalOffset);
+		if (status == 0) // STATUS_SUCCESS
+		{
+			return (uint)NativeTypes.Win32Bool.TRUE;
+		}
+
+		// Operation failed or is pending
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_IO_INCOMPLETE;
 		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 

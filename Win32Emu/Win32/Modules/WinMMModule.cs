@@ -1,11 +1,13 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using static Win32Emu.Win32.NativeTypes;
 
 namespace Win32Emu.Win32.Modules
 {
@@ -181,6 +183,98 @@ namespace Win32Emu.Win32.Modules
 
 				case "WAVEOUTSETVOLUME":
 					returnValue = WaveOutSetVolume(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "WAVEOUTOPEN":
+					returnValue = WaveOutOpen(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+
+				case "WAVEOUTCLOSE":
+					returnValue = WaveOutClose(a.UInt32(0));
+					return true;
+
+				case "WAVEOUTPREPAREHEADER":
+					returnValue = WaveOutPrepareHeader(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEOUTUNPREPAREHEADER":
+					returnValue = WaveOutUnprepareHeader(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEOUTWRITE":
+					returnValue = WaveOutWrite(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEOUTPAUSE":
+					returnValue = WaveOutPause(a.UInt32(0));
+					return true;
+
+				case "WAVEOUTRESTART":
+					returnValue = WaveOutRestart(a.UInt32(0));
+					return true;
+
+				case "WAVEOUTRESET":
+					returnValue = WaveOutReset(a.UInt32(0));
+					return true;
+
+				case "WAVEOUTGETPOSITION":
+					returnValue = WaveOutGetPosition(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEINGETNUMDEVS":
+					returnValue = WaveInGetNumDevs();
+					return true;
+
+				case "WAVEINGETDEVCAPSA":
+					returnValue = WaveInGetDevCapsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEINMESSAGE":
+					returnValue = WaveInMessage(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "WAVEINOPEN":
+					returnValue = WaveInOpen(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+
+				case "WAVEINCLOSE":
+					returnValue = WaveInClose(a.UInt32(0));
+					return true;
+
+				case "WAVEINPREPAREHEADER":
+					returnValue = WaveInPrepareHeader(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEINUNPREPAREHEADER":
+					returnValue = WaveInUnprepareHeader(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEINADDBUFFER":
+					returnValue = WaveInAddBuffer(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEINSTART":
+					returnValue = WaveInStart(a.UInt32(0));
+					return true;
+
+				case "WAVEINSTOP":
+					returnValue = WaveInStop(a.UInt32(0));
+					return true;
+
+				case "WAVEINRESET":
+					returnValue = WaveInReset(a.UInt32(0));
+					return true;
+
+				case "WAVEINGETPOSITION":
+					returnValue = WaveInGetPosition(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIXERGETLINEINFOA":
+					returnValue = MixerGetLineInfoA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIXERGETLINECONTROLSA":
+					returnValue = MixerGetLineControlsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
 				case "AUXGETNUMDEVS":
@@ -793,6 +887,433 @@ namespace Win32Emu.Win32.Modules
 
 			// Accept the volume setting (but don't actually change anything)
 			return 0; // MMSYSERR_NOERROR
+		}
+
+		// Wave handle tracking
+		private readonly Dictionary<uint, WaveDeviceInfo> _waveOutDevices = new();
+		private readonly Dictionary<uint, WaveDeviceInfo> _waveInDevices = new();
+		private uint _nextWaveOutHandle = 0x1000;
+		private uint _nextWaveInHandle = 0x2000;
+
+		private class WaveDeviceInfo
+		{
+			public uint Handle { get; set; }
+			public uint Callback { get; set; }
+			public uint CallbackInstance { get; set; }
+			public uint Flags { get; set; }
+		}
+
+		/// <summary>
+		/// Opens the specified waveform-audio output device for playback.
+		/// </summary>
+		[DllModuleExport(3)]
+		private uint WaveOutOpen(uint phwo, uint uDeviceID, uint pwfx, uint dwCallback, uint dwInstance, uint fdwOpen)
+		{
+			_logger.LogInformation("[WinMM] waveOutOpen(phwo=0x{Phwo:X8}, uDeviceID={UDeviceID}, pwfx=0x{Pwfx:X8}, dwCallback=0x{DwCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwOpen=0x{FdwOpen:X8})",
+				phwo, uDeviceID, pwfx, dwCallback, dwInstance, fdwOpen);
+
+			// Create a wave output device handle
+			var handle = _nextWaveOutHandle++;
+			_waveOutDevices[handle] = new WaveDeviceInfo
+			{
+				Handle = handle,
+				Callback = dwCallback,
+				CallbackInstance = dwInstance,
+				Flags = fdwOpen
+			};
+
+			// Write the handle to the output parameter
+			if (phwo != 0)
+			{
+				_env.MemWrite32(phwo, handle);
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Closes the given waveform-audio output device.
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint WaveOutClose(uint hwo)
+		{
+			_logger.LogInformation("[WinMM] waveOutClose(hwo=0x{Hwo:X8})", hwo);
+
+			if (_waveOutDevices.Remove(hwo))
+			{
+				return (uint)MMSysError.MMSYSERR_NOERROR;
+			}
+
+			return (uint)MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		/// <summary>
+		/// Prepares a waveform-audio data block for playback.
+		/// </summary>
+		[DllModuleExport(5)]
+		private uint WaveOutPrepareHeader(uint hwo, uint pwh, uint cbwh)
+		{
+			_logger.LogInformation("[WinMM] waveOutPrepareHeader(hwo=0x{Hwo:X8}, pwh=0x{Pwh:X8}, cbwh={Cbwh})",
+				hwo, pwh, cbwh);
+
+			if (pwh != 0)
+			{
+				// Set WHDR_PREPARED flag in dwFlags field
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, flags | (uint)WaveHdrFlags.WHDR_PREPARED);
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Cleans up the preparation performed by waveOutPrepareHeader.
+		/// </summary>
+		[DllModuleExport(6)]
+		private uint WaveOutUnprepareHeader(uint hwo, uint pwh, uint cbwh)
+		{
+			_logger.LogInformation("[WinMM] waveOutUnprepareHeader(hwo=0x{Hwo:X8}, pwh=0x{Pwh:X8}, cbwh={Cbwh})",
+				hwo, pwh, cbwh);
+
+			if (pwh != 0)
+			{
+				// Clear WHDR_PREPARED flag and set WHDR_DONE flag in dwFlags field
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, (flags & ~(uint)WaveHdrFlags.WHDR_PREPARED) | (uint)WaveHdrFlags.WHDR_DONE);
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Sends a data block to the given waveform-audio output device.
+		/// </summary>
+		[DllModuleExport(7)]
+		private uint WaveOutWrite(uint hwo, uint pwh, uint cbwh)
+		{
+			_logger.LogInformation("[WinMM] waveOutWrite(hwo=0x{Hwo:X8}, pwh=0x{Pwh:X8}, cbwh={Cbwh})",
+				hwo, pwh, cbwh);
+
+			if (pwh != 0)
+			{
+				// Mark buffer as done (set WHDR_DONE flag)
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, flags | (uint)WaveHdrFlags.WHDR_DONE);
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Pauses playback on the given waveform-audio output device.
+		/// </summary>
+		[DllModuleExport(9)]
+		private uint WaveOutPause(uint hwo)
+		{
+			_logger.LogInformation("[WinMM] waveOutPause(hwo=0x{Hwo:X8})", hwo);
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Restarts a paused waveform-audio output device.
+		/// </summary>
+		[DllModuleExport(10)]
+		private uint WaveOutRestart(uint hwo)
+		{
+			_logger.LogInformation("[WinMM] waveOutRestart(hwo=0x{Hwo:X8})", hwo);
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Stops playback on the given waveform-audio output device and resets the current position to zero.
+		/// </summary>
+		[DllModuleExport(100)]
+		private uint WaveOutReset(uint hwo)
+		{
+			_logger.LogInformation("[WinMM] waveOutReset(hwo=0x{Hwo:X8})", hwo);
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Retrieves the current playback position of the given waveform-audio output device.
+		/// </summary>
+		[DllModuleExport(101)]
+		private uint WaveOutGetPosition(uint hwo, uint pmmt, uint cbmmt)
+		{
+			_logger.LogInformation("[WinMM] waveOutGetPosition(hwo=0x{Hwo:X8}, pmmt=0x{Pmmt:X8}, cbmmt={Cbmmt})",
+				hwo, pmmt, cbmmt);
+
+			var mmtimeSize = (uint)Marshal.SizeOf<MMTIME>();
+			if (pmmt != 0 && cbmmt >= mmtimeSize)
+			{
+				// Return time in samples
+				var wTypeOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.wType));
+				var uOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.u));
+				var paddingOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.padding));
+				
+				_env.MemWrite32(pmmt + wTypeOffset, (uint)MMTimeType.TIME_SAMPLES);
+				_env.MemWrite32(pmmt + uOffset, 0); // sample = 0
+				_env.MemWrite32(pmmt + paddingOffset, 0); // padding
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Retrieves the number of waveform-audio input devices present in the system.
+		/// </summary>
+		[DllModuleExport(13)]
+		private uint WaveInGetNumDevs()
+		{
+			_logger.LogInformation("[WinMM] waveInGetNumDevs()");
+			return 1; // Return 1 device available
+		}
+
+		/// <summary>
+		/// Retrieves the capabilities of a given waveform-audio input device.
+		/// </summary>
+		[DllModuleExport(14)]
+		private uint WaveInGetDevCapsA(uint uDeviceID, uint pwic, uint cbwic)
+		{
+			_logger.LogInformation("[WinMM] waveInGetDevCapsA(uDeviceID={UDeviceID}, pwic=0x{Pwic:X8}, cbwic={Cbwic})",
+				uDeviceID, pwic, cbwic);
+
+			// Fill in WAVEINCAPS structure if pwic is valid
+			if (pwic != 0 && cbwic > 0)
+			{
+				// Zero out the structure
+				for (uint i = 0; i < cbwic; i++)
+				{
+					_env.MemWrite8(pwic + i, 0);
+				}
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Sends messages to the waveform-audio input device drivers.
+		/// </summary>
+		[DllModuleExport(15)]
+		private uint WaveInMessage(uint hwi, uint uMsg, uint dw1, uint dw2)
+		{
+			_logger.LogInformation("[WinMM] waveInMessage(hwi=0x{Hwi:X8}, uMsg={UMsg}, dw1=0x{Dw1:X8}, dw2=0x{Dw2:X8})",
+				hwi, uMsg, dw1, dw2);
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Opens the given waveform-audio input device for recording.
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint WaveInOpen(uint phwi, uint uDeviceID, uint pwfx, uint dwCallback, uint dwInstance, uint fdwOpen)
+		{
+			_logger.LogInformation("[WinMM] waveInOpen(phwi=0x{Phwi:X8}, uDeviceID={UDeviceID}, pwfx=0x{Pwfx:X8}, dwCallback=0x{DwCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwOpen=0x{FdwOpen:X8})",
+				phwi, uDeviceID, pwfx, dwCallback, dwInstance, fdwOpen);
+
+			// Create a wave input device handle
+			var handle = _nextWaveInHandle++;
+			_waveInDevices[handle] = new WaveDeviceInfo
+			{
+				Handle = handle,
+				Callback = dwCallback,
+				CallbackInstance = dwInstance,
+				Flags = fdwOpen
+			};
+
+			// Write the handle to the output parameter
+			if (phwi != 0)
+			{
+				_env.MemWrite32(phwi, handle);
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Closes the given waveform-audio input device.
+		/// </summary>
+		[DllModuleExport(17)]
+		private uint WaveInClose(uint hwi)
+		{
+			_logger.LogInformation("[WinMM] waveInClose(hwi=0x{Hwi:X8})", hwi);
+
+			if (_waveInDevices.Remove(hwi))
+			{
+				return (uint)MMSysError.MMSYSERR_NOERROR;
+			}
+
+			return (uint)MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		/// <summary>
+		/// Prepares a buffer for waveform-audio input.
+		/// </summary>
+		[DllModuleExport(18)]
+		private uint WaveInPrepareHeader(uint hwi, uint pwh, uint cbwh)
+		{
+			_logger.LogInformation("[WinMM] waveInPrepareHeader(hwi=0x{Hwi:X8}, pwh=0x{Pwh:X8}, cbwh={Cbwh})",
+				hwi, pwh, cbwh);
+
+			if (pwh != 0)
+			{
+				// Set WHDR_PREPARED flag in dwFlags field
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, flags | (uint)WaveHdrFlags.WHDR_PREPARED);
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Cleans up the preparation performed by waveInPrepareHeader.
+		/// </summary>
+		[DllModuleExport(19)]
+		private uint WaveInUnprepareHeader(uint hwi, uint pwh, uint cbwh)
+		{
+			_logger.LogInformation("[WinMM] waveInUnprepareHeader(hwi=0x{Hwi:X8}, pwh=0x{Pwh:X8}, cbwh={Cbwh})",
+				hwi, pwh, cbwh);
+
+			if (pwh != 0)
+			{
+				// Clear WHDR_PREPARED flag and set WHDR_DONE flag
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, (flags & ~(uint)WaveHdrFlags.WHDR_PREPARED) | (uint)WaveHdrFlags.WHDR_DONE);
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Sends an input buffer to the given waveform-audio input device.
+		/// </summary>
+		[DllModuleExport(20)]
+		private uint WaveInAddBuffer(uint hwi, uint pwh, uint cbwh)
+		{
+			_logger.LogInformation("[WinMM] waveInAddBuffer(hwi=0x{Hwi:X8}, pwh=0x{Pwh:X8}, cbwh={Cbwh})",
+				hwi, pwh, cbwh);
+
+			if (pwh != 0)
+			{
+				// Mark buffer as done immediately (for stub implementation)
+				var flagsOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwFlags));
+				var flags = _env.MemRead32(pwh + flagsOffset);
+				_env.MemWrite32(pwh + flagsOffset, flags | (uint)WaveHdrFlags.WHDR_DONE);
+				
+				// Set dwBytesRecorded to 0
+				var bytesRecordedOffset = (uint)Marshal.OffsetOf<WAVEHDR>(nameof(WAVEHDR.dwBytesRecorded));
+				_env.MemWrite32(pwh + bytesRecordedOffset, 0);
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Starts input on the given waveform-audio input device.
+		/// </summary>
+		[DllModuleExport(21)]
+		private uint WaveInStart(uint hwi)
+		{
+			_logger.LogInformation("[WinMM] waveInStart(hwi=0x{Hwi:X8})", hwi);
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Stops waveform-audio input.
+		/// </summary>
+		[DllModuleExport(22)]
+		private uint WaveInStop(uint hwi)
+		{
+			_logger.LogInformation("[WinMM] waveInStop(hwi=0x{Hwi:X8})", hwi);
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Stops input on the given waveform-audio input device and resets the current position to zero.
+		/// </summary>
+		[DllModuleExport(23)]
+		private uint WaveInReset(uint hwi)
+		{
+			_logger.LogInformation("[WinMM] waveInReset(hwi=0x{Hwi:X8})", hwi);
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Retrieves the current input position of the given waveform-audio input device.
+		/// </summary>
+		[DllModuleExport(24)]
+		private uint WaveInGetPosition(uint hwi, uint pmmt, uint cbmmt)
+		{
+			_logger.LogInformation("[WinMM] waveInGetPosition(hwi=0x{Hwi:X8}, pmmt=0x{Pmmt:X8}, cbmmt={Cbmmt})",
+				hwi, pmmt, cbmmt);
+
+			var mmtimeSize = (uint)Marshal.SizeOf<MMTIME>();
+			if (pmmt != 0 && cbmmt >= mmtimeSize)
+			{
+				// Return time in samples
+				var wTypeOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.wType));
+				var uOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.u));
+				var paddingOffset = (uint)Marshal.OffsetOf<MMTIME>(nameof(MMTIME.padding));
+				
+				_env.MemWrite32(pmmt + wTypeOffset, (uint)MMTimeType.TIME_SAMPLES);
+				_env.MemWrite32(pmmt + uOffset, 0); // sample = 0
+				_env.MemWrite32(pmmt + paddingOffset, 0); // padding
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Retrieves information about a specific line of a mixer device.
+		/// </summary>
+		[DllModuleExport(25)]
+		private uint MixerGetLineInfoA(uint hmxobj, uint pmxl, uint fdwInfo)
+		{
+			_logger.LogInformation("[WinMM] mixerGetLineInfoA(hmxobj=0x{Hmxobj:X8}, pmxl=0x{Pmxl:X8}, fdwInfo=0x{FdwInfo:X8})",
+				hmxobj, pmxl, fdwInfo);
+
+			// Stub implementation - just zero out the structure
+			if (pmxl != 0)
+			{
+				// Read cbStruct field to determine structure size
+				var cbStructOffset = (uint)Marshal.OffsetOf<MIXERLINEA>(nameof(MIXERLINEA.cbStruct));
+				var cbStruct = _env.MemRead32(pmxl + cbStructOffset);
+				if (cbStruct > 0)
+				{
+					// Zero out the entire structure except cbStruct
+					for (uint i = cbStructOffset + sizeof(uint); i < cbStruct; i++)
+					{
+						_env.MemWrite8(pmxl + i, 0);
+					}
+				}
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Retrieves one or more controls associated with an audio line.
+		/// </summary>
+		[DllModuleExport(26)]
+		private uint MixerGetLineControlsA(uint hmxobj, uint pmxlc, uint fdwControls)
+		{
+			_logger.LogInformation("[WinMM] mixerGetLineControlsA(hmxobj=0x{Hmxobj:X8}, pmxlc=0x{Pmxlc:X8}, fdwControls=0x{FdwControls:X8})",
+				hmxobj, pmxlc, fdwControls);
+
+			// Stub implementation - indicate no controls
+			if (pmxlc != 0)
+			{
+				// Set cControls to 0
+				var cControlsOffset = (uint)Marshal.OffsetOf<MIXERLINECONTROLSA>(nameof(MIXERLINECONTROLSA.cControls));
+				_env.MemWrite32(pmxlc + cControlsOffset, 0);
+			}
+
+			return (uint)MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
