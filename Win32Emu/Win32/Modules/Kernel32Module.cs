@@ -10567,7 +10567,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in] DWORD   dwExitCode
 	/// );
 	/// </summary>
-	[DllModuleExport(1, IsStub = true)]
+	[DllModuleExport(10001, IsStub = true)]
 	private void FreeLibraryAndExitThread(uint hLibModule, uint dwExitCode)
 	{
 		_logger.LogInformation("[Kernel32] FreeLibraryAndExitThread(hLibModule=0x{HLibModule:X8}, dwExitCode={DwExitCode})",
@@ -10595,7 +10595,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in]      LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
 	/// );
 	/// </summary>
-	[DllModuleExport(1, IsStub = true)]
+	[DllModuleExport(10002, IsStub = true)]
 	private unsafe uint ReadFileEx(uint hFile, uint lpBuffer, uint nNumberOfBytesToRead, uint lpOverlapped, uint lpCompletionRoutine)
 	{
 		_logger.LogInformation("[Kernel32] ReadFileEx(hFile=0x{HFile:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToRead={NNumberOfBytesToRead}, lpOverlapped=0x{LpOverlapped:X8}, lpCompletionRoutine=0x{LpCompletionRoutine:X8})",
@@ -10614,11 +10614,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// 2. Return immediately
 		// 3. Call the completion routine when the read completes
 		
-		// Use the OVERLAPPED structure's offset field to store bytes read temporarily
-		// OVERLAPPED structure: Internal (offset 0), InternalHigh (offset 4), Offset (offset 8), ...
-		// We can use offset 8 as a temporary location for the bytes read pointer
-		var bytesReadPtr = lpOverlapped + 8; // Use Offset field temporarily
-		_env.MemWrite32(bytesReadPtr, 0); // Initialize to 0
+		// Allocate temporary space for bytes read count
+		var bytesReadPtr = _env.SimpleAlloc(4);
+		_env.MemWrite32(bytesReadPtr, 0);
 		
 		var result = ReadFile((void*)hFile, lpBuffer, nNumberOfBytesToRead, bytesReadPtr, lpOverlapped);
 		
@@ -10642,7 +10640,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in]      LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
 	/// );
 	/// </summary>
-	[DllModuleExport(1, IsStub = true)]
+	[DllModuleExport(10003, IsStub = true)]
 	private uint WriteFileEx(uint hFile, uint lpBuffer, uint nNumberOfBytesToWrite, uint lpOverlapped, uint lpCompletionRoutine)
 	{
 		_logger.LogInformation("[Kernel32] WriteFileEx(hFile=0x{HFile:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToWrite={NNumberOfBytesToWrite}, lpOverlapped=0x{LpOverlapped:X8}, lpCompletionRoutine=0x{LpCompletionRoutine:X8})",
@@ -10661,11 +10659,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// 2. Return immediately
 		// 3. Call the completion routine when the write completes
 		
-		// Use the OVERLAPPED structure's offset field to store bytes written temporarily
-		// OVERLAPPED structure: Internal (offset 0), InternalHigh (offset 4), Offset (offset 8), ...
-		// We can use offset 8 as a temporary location for the bytes written pointer
-		var bytesWrittenPtr = lpOverlapped + 8; // Use Offset field temporarily
-		_env.MemWrite32(bytesWrittenPtr, 0); // Initialize to 0
+		// Allocate temporary space for bytes written count
+		var bytesWrittenPtr = _env.SimpleAlloc(4);
+		_env.MemWrite32(bytesWrittenPtr, 0);
 		
 		var result = WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, bytesWrittenPtr, lpOverlapped);
 		

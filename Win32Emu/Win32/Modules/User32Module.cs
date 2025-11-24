@@ -75,6 +75,17 @@ namespace Win32Emu.Win32.Modules
 		// This follows the Windows IS_INTRESOURCE macro convention.
 		private const uint MAX_INTRESOURCE = 0x10000; // Maximum value for integer resource IDs (65536)
 
+		// Virtual key code constants for keyboard input
+		private const uint VK_A = 0x41;  // 'A' key
+		private const uint VK_Z = 0x5A;  // 'Z' key
+		private const uint VK_0 = 0x30;  // '0' key
+		private const uint VK_9 = 0x39;  // '9' key
+		private const uint VK_SPACE = 0x20;  // Space key
+		private const uint UPPERCASE_TO_LOWERCASE_OFFSET = 0x20;  // Offset to convert uppercase to lowercase
+
+		// Key scan code constants
+		private const int EXTENDED_KEY_FLAG = 0x01000000;  // Bit 24 in lParam indicates extended key
+
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
 			_env = env;
@@ -7393,7 +7404,7 @@ namespace Win32Emu.Win32.Modules
 		/// Determines whether there are mouse-button or keyboard messages in the calling thread's message queue.
 		/// BOOL GetInputState();
 		/// </summary>
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(10001, IsStub = true)]
 		private uint GetInputState()
 		{
 			_logger.LogInformation("[User32] GetInputState()");
@@ -7414,15 +7425,15 @@ namespace Win32Emu.Win32.Modules
 		///   [in] LPARAM lParam
 		/// );
 		/// </summary>
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(10002, IsStub = true)]
 		private uint SendNotifyMessageA(uint hWnd, uint Msg, uint wParam, uint lParam)
 		{
 			_logger.LogInformation("[User32] SendNotifyMessageA(hWnd=0x{HWnd:X8}, Msg=0x{Msg:X}, wParam=0x{WParam:X8}, lParam=0x{LParam:X8})",
 				hWnd, Msg, wParam, lParam);
 			
-			// SendNotifyMessage is like PostMessage but doesn't return until the message is processed
-			// For inter-process messages, it returns immediately
-			// For simplicity, we'll use PostMessage behavior
+			// SendNotifyMessage calls the window procedure directly for same-process windows,
+			// but posts the message for inter-process windows and always returns immediately.
+			// For simplicity, we'll use PostMessage behavior for all cases.
 			return PostMessageA(hWnd, Msg, wParam, lParam);
 		}
 
@@ -7441,7 +7452,7 @@ namespace Win32Emu.Win32.Modules
 		/// A full implementation would need to handle all intersection cases and potentially
 		/// return multiple rectangles.
 		/// </remarks>
-		[DllModuleExport(1)]
+		[DllModuleExport(10003)]
 		private uint SubtractRect(uint lprcDst, uint lprcSrc1, uint lprcSrc2)
 		{
 			_logger.LogInformation("[User32] SubtractRect(lprcDst=0x{LprcDst:X8}, lprcSrc1=0x{LprcSrc1:X8}, lprcSrc2=0x{LprcSrc2:X8})",
@@ -7521,7 +7532,7 @@ namespace Win32Emu.Win32.Modules
 		/// - Handle dead keys (return -1 to indicate dead key state)
 		/// - Support multi-byte character sets
 		/// </remarks>
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(10004, IsStub = true)]
 		private int ToAsciiEx(uint uVirtKey, uint uScanCode, uint lpKeyState, uint lpChar, uint uFlags, uint dwhkl)
 		{
 			_logger.LogInformation("[User32] ToAsciiEx(uVirtKey=0x{UVirtKey:X}, uScanCode=0x{UScanCode:X}, lpKeyState=0x{LpKeyState:X8}, lpChar=0x{LpChar:X8}, uFlags=0x{UFlags:X}, dwhkl=0x{Dwhkl:X8})",
@@ -7539,18 +7550,18 @@ namespace Win32Emu.Win32.Modules
 			
 			// Simple mapping for common keys
 			var ascii = (ushort)0;
-			if (uVirtKey >= 0x41 && uVirtKey <= 0x5A) // A-Z
+			if (uVirtKey >= VK_A && uVirtKey <= VK_Z) // A-Z
 			{
 				// Check if shift is pressed (simplified - should read lpKeyState)
-				ascii = (ushort)(uVirtKey + 0x20); // Convert to lowercase
+				ascii = (ushort)(uVirtKey + UPPERCASE_TO_LOWERCASE_OFFSET); // Convert to lowercase
 			}
-			else if (uVirtKey >= 0x30 && uVirtKey <= 0x39) // 0-9
+			else if (uVirtKey >= VK_0 && uVirtKey <= VK_9) // 0-9
 			{
 				ascii = (ushort)uVirtKey;
 			}
-			else if (uVirtKey == 0x20) // Space
+			else if (uVirtKey == VK_SPACE) // Space
 			{
-				ascii = 0x20;
+				ascii = (ushort)VK_SPACE;
 			}
 			
 			if (ascii != 0)
@@ -7570,7 +7581,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in, optional] HKL  dwhkl
 		/// );
 		/// </summary>
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(10005, IsStub = true)]
 		private uint MapVirtualKeyExA(uint uCode, uint uMapType, uint dwhkl)
 		{
 			_logger.LogInformation("[User32] MapVirtualKeyExA(uCode=0x{UCode:X}, uMapType={UMapType}, dwhkl=0x{Dwhkl:X8})",
@@ -7593,8 +7604,8 @@ namespace Win32Emu.Win32.Modules
 				case 3: // Scan code to VK (extended)
 					return uCode; // Simplified: return same value
 				case 2: // VK to unshifted char
-					if (uCode >= 0x41 && uCode <= 0x5A) // A-Z
-						return uCode + 0x20; // Return lowercase
+					if (uCode >= VK_A && uCode <= VK_Z) // A-Z
+						return uCode + UPPERCASE_TO_LOWERCASE_OFFSET; // Return lowercase
 					return uCode;
 				default:
 					return 0;
@@ -7607,7 +7618,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] DWORD idThread
 		/// );
 		/// </summary>
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(10006, IsStub = true)]
 		private uint GetKeyboardLayout(uint idThread)
 		{
 			_logger.LogInformation("[User32] GetKeyboardLayout(idThread={IdThread})", idThread);
@@ -7625,7 +7636,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in]  int   cchSize
 		/// );
 		/// </summary>
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(10007, IsStub = true)]
 		private int GetKeyNameTextA(int lParam, uint lpString, int cchSize)
 		{
 			_logger.LogInformation("[User32] GetKeyNameTextA(lParam=0x{LParam:X8}, lpString=0x{LpString:X8}, cchSize={CchSize})",
@@ -7636,7 +7647,7 @@ namespace Win32Emu.Win32.Modules
 			
 			// Extract scan code from lParam (bits 16-23)
 			var scanCode = (lParam >> 16) & 0xFF;
-			var extended = (lParam & 0x01000000) != 0;
+			var extended = (lParam & EXTENDED_KEY_FLAG) != 0;
 			
 			// Stub: Return generic key name based on scan code
 			var keyName = $"Key{scanCode:X2}";
@@ -7659,7 +7670,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in]  int    cchSize
 		/// );
 		/// </summary>
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(10008, IsStub = true)]
 		private int GetKeyNameTextW(int lParam, uint lpString, int cchSize)
 		{
 			_logger.LogInformation("[User32] GetKeyNameTextW(lParam=0x{LParam:X8}, lpString=0x{LpString:X8}, cchSize={CchSize})",
@@ -7670,7 +7681,7 @@ namespace Win32Emu.Win32.Modules
 			
 			// Extract scan code from lParam (bits 16-23)
 			var scanCode = (lParam >> 16) & 0xFF;
-			var extended = (lParam & 0x01000000) != 0;
+			var extended = (lParam & EXTENDED_KEY_FLAG) != 0;
 			
 			// Stub: Return generic key name based on scan code
 			var keyName = $"Key{scanCode:X2}";
