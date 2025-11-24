@@ -218,7 +218,7 @@ namespace Win32Emu.Win32.Modules
 					returnValue = grSstScreenWidth();
 					return true;
 
-				case "_GRSSTSTCREENHEIGHT@0":
+				case "_GRSSTSCREENHEIGHT@0":
 					_logger.LogInformation("[Glide2x] grSstScreenHeight()");
 					returnValue = grSstScreenHeight();
 					return true;
