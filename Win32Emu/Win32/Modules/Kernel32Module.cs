@@ -1084,6 +1084,25 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "DISABLETHREADLIBRARYCALLS":
 				returnValue = DisableThreadLibraryCalls(a.UInt32(0));
 				return true;
+			case "FREELIBRARYANDEXITTHREAD":
+				FreeLibraryAndExitThread(a.UInt32(0), a.UInt32(1));
+				returnValue = 0;
+				return true;
+			case "READFILEEX":
+				returnValue = ReadFileEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+			case "WRITEFILEEX":
+				returnValue = WriteFileEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+			case "COMPAREFILETIME":
+				returnValue = (uint)CompareFileTime(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "LSTRCPYW":
+				returnValue = LstrcpyW(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "LSTRCMPW":
+				returnValue = (uint)LstrcmpW(a.UInt32(0), a.UInt32(1));
+				return true;
 			case "OPENVXDHANDLE":
 				returnValue = OpenVxDHandle(a.UInt32(0));
 				return true;
@@ -10539,6 +10558,217 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			lpDll16, lpDll32, hInst, lpfnThunk, dwReason);
 		// Return FALSE - 16-bit thunking not supported
 		return 0;
+	}
+
+	/// <summary>
+	/// Decrements the reference count of a loaded DLL module and terminates the calling thread.
+	/// VOID FreeLibraryAndExitThread(
+	///   [in] HMODULE hLibModule,
+	///   [in] DWORD   dwExitCode
+	/// );
+	/// </summary>
+	[DllModuleExport(10001, IsStub = true)]
+	private void FreeLibraryAndExitThread(uint hLibModule, uint dwExitCode)
+	{
+		_logger.LogInformation("[Kernel32] FreeLibraryAndExitThread(hLibModule=0x{HLibModule:X8}, dwExitCode={DwExitCode})",
+			hLibModule, dwExitCode);
+		
+		// Free the library (stub implementation)
+		if (hLibModule != 0)
+		{
+			// In a full implementation, we would decrement the module reference count
+			_logger.LogDebug("[Kernel32] FreeLibraryAndExitThread: Freeing module 0x{HLibModule:X8}", hLibModule);
+		}
+		
+		// Terminate the thread with the specified exit code
+		// Note: This never returns, so we don't need a return statement
+		TerminateThread(GetCurrentThread(), dwExitCode);
+	}
+
+	/// <summary>
+	/// Reads data from a file asynchronously.
+	/// BOOL ReadFileEx(
+	///   [in]      HANDLE                          hFile,
+	///   [out]     LPVOID                          lpBuffer,
+	///   [in]      DWORD                           nNumberOfBytesToRead,
+	///   [in, out] LPOVERLAPPED                    lpOverlapped,
+	///   [in]      LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
+	/// );
+	/// </summary>
+	[DllModuleExport(10002, IsStub = true)]
+	private unsafe uint ReadFileEx(uint hFile, uint lpBuffer, uint nNumberOfBytesToRead, uint lpOverlapped, uint lpCompletionRoutine)
+	{
+		_logger.LogInformation("[Kernel32] ReadFileEx(hFile=0x{HFile:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToRead={NNumberOfBytesToRead}, lpOverlapped=0x{LpOverlapped:X8}, lpCompletionRoutine=0x{LpCompletionRoutine:X8})",
+			hFile, lpBuffer, nNumberOfBytesToRead, lpOverlapped, lpCompletionRoutine);
+		
+		// If lpOverlapped is NULL, set error - ReadFileEx requires overlapped I/O
+		if (lpOverlapped == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+		
+		// For now, use synchronous ReadFile and ignore the completion routine
+		// In a full implementation, we would:
+		// 1. Queue the read operation
+		// 2. Return immediately
+		// 3. Call the completion routine when the read completes
+		
+		// Allocate temporary space for bytes read count
+		var bytesReadPtr = _env.SimpleAlloc(4);
+		_env.MemWrite32(bytesReadPtr, 0);
+		
+		var result = ReadFile((void*)hFile, lpBuffer, nNumberOfBytesToRead, bytesReadPtr, lpOverlapped);
+		
+		// Store the bytes read in the overlapped structure's InternalHigh field (offset 4)
+		if (result != 0)
+		{
+			var bytesRead = _env.MemRead32(bytesReadPtr);
+			_env.MemWrite32(lpOverlapped + 4, bytesRead);
+		}
+		
+		return result;
+	}
+
+	/// <summary>
+	/// Writes data to a file asynchronously.
+	/// BOOL WriteFileEx(
+	///   [in]      HANDLE                          hFile,
+	///   [in]      LPCVOID                         lpBuffer,
+	///   [in]      DWORD                           nNumberOfBytesToWrite,
+	///   [in, out] LPOVERLAPPED                    lpOverlapped,
+	///   [in]      LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
+	/// );
+	/// </summary>
+	[DllModuleExport(10003, IsStub = true)]
+	private uint WriteFileEx(uint hFile, uint lpBuffer, uint nNumberOfBytesToWrite, uint lpOverlapped, uint lpCompletionRoutine)
+	{
+		_logger.LogInformation("[Kernel32] WriteFileEx(hFile=0x{HFile:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToWrite={NNumberOfBytesToWrite}, lpOverlapped=0x{LpOverlapped:X8}, lpCompletionRoutine=0x{LpCompletionRoutine:X8})",
+			hFile, lpBuffer, nNumberOfBytesToWrite, lpOverlapped, lpCompletionRoutine);
+		
+		// If lpOverlapped is NULL, set error - WriteFileEx requires overlapped I/O
+		if (lpOverlapped == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+		
+		// For now, use synchronous WriteFile and ignore the completion routine
+		// In a full implementation, we would:
+		// 1. Queue the write operation
+		// 2. Return immediately
+		// 3. Call the completion routine when the write completes
+		
+		// Allocate temporary space for bytes written count
+		var bytesWrittenPtr = _env.SimpleAlloc(4);
+		_env.MemWrite32(bytesWrittenPtr, 0);
+		
+		var result = WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, bytesWrittenPtr, lpOverlapped);
+		
+		// Store the bytes written in the overlapped structure's InternalHigh field (offset 4)
+		if (result != 0)
+		{
+			var bytesWritten = _env.MemRead32(bytesWrittenPtr);
+			_env.MemWrite32(lpOverlapped + 4, bytesWritten);
+		}
+		
+		return result;
+	}
+
+	/// <summary>
+	/// Compares two file times.
+	/// LONG CompareFileTime(
+	///   [in] const FILETIME *lpFileTime1,
+	///   [in] const FILETIME *lpFileTime2
+	/// );
+	/// </summary>
+	/// <returns>
+	/// -1 if lpFileTime1 is earlier than lpFileTime2
+	///  0 if lpFileTime1 is equal to lpFileTime2
+	///  1 if lpFileTime1 is later than lpFileTime2
+	/// </returns>
+	[DllModuleExport(1)]
+	private int CompareFileTime(uint lpFileTime1, uint lpFileTime2)
+	{
+		_logger.LogInformation("[Kernel32] CompareFileTime(lpFileTime1=0x{LpFileTime1:X8}, lpFileTime2=0x{LpFileTime2:X8})",
+			lpFileTime1, lpFileTime2);
+		
+		if (lpFileTime1 == 0 || lpFileTime2 == 0)
+		{
+			_logger.LogWarning("[Kernel32] CompareFileTime: NULL pointer");
+			return 0;
+		}
+		
+		// Read FILETIME structures
+		var ft1 = _env.MemReadStruct<NativeTypes.FILETIME>(lpFileTime1);
+		var ft2 = _env.MemReadStruct<NativeTypes.FILETIME>(lpFileTime2);
+		
+		// Combine into 64-bit values
+		var time1 = ((ulong)ft1.dwHighDateTime << 32) | ft1.dwLowDateTime;
+		var time2 = ((ulong)ft2.dwHighDateTime << 32) | ft2.dwLowDateTime;
+		
+		// Compare
+		if (time1 < time2)
+			return -1;
+		if (time1 > time2)
+			return 1;
+		return 0;
+	}
+
+	/// <summary>
+	/// Copies a Unicode string to a buffer.
+	/// LPWSTR lstrcpyW(
+	///   [out] LPWSTR lpString1,
+	///   [in]  LPCWSTR lpString2
+	/// );
+	/// </summary>
+	[DllModuleExport(1)]
+	private uint LstrcpyW(uint lpString1, uint lpString2)
+	{
+		if (lpString2 == 0)
+		{
+			_logger.LogInformation("[Kernel32] LstrcpyW(dest=0x{LpString1:X8}, src=NULL)", lpString1);
+			if (lpString1 != 0)
+			{
+				// Write empty string
+				_env.MemWrite16(lpString1, 0);
+			}
+			return lpString1;
+		}
+		
+		var wstr2 = new LpWStr(lpString2);
+		var str2 = wstr2.Read(_env.Memory);
+		_logger.LogInformation("[Kernel32] LstrcpyW(dest=0x{LpString1:X8}, src=\"{Str2}\")", lpString1, str2);
+		
+		if (lpString1 == 0)
+		{
+			_logger.LogWarning("[Kernel32] LstrcpyW: NULL destination pointer");
+			return 0;
+		}
+		
+		// Write the Unicode string to destination
+		var wstr1 = new LpWStr(lpString1);
+		wstr1.Write(_env.Memory, str2);
+		
+		return lpString1;
+	}
+
+	/// <summary>
+	/// Compares two Unicode strings.
+	/// int lstrcmpW(
+	///   [in] LPCWSTR lpString1,
+	///   [in] LPCWSTR lpString2
+	/// );
+	/// </summary>
+	[DllModuleExport(1)]
+	private int LstrcmpW(uint lpString1, uint lpString2)
+	{
+		var wstr1 = new LpWStr(lpString1);
+		var wstr2 = new LpWStr(lpString2);
+		var str1 = wstr1.Read(_env.Memory);
+		var str2 = wstr2.Read(_env.Memory);
+		_logger.LogInformation("[Kernel32] LstrcmpW(lpString1=\"{Str1}\", lpString2=\"{Str2}\")", str1, str2);
+		return string.Compare(str1, str2, StringComparison.Ordinal);
 	}
 
 }

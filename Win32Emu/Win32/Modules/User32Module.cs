@@ -75,6 +75,17 @@ namespace Win32Emu.Win32.Modules
 		// This follows the Windows IS_INTRESOURCE macro convention.
 		private const uint MAX_INTRESOURCE = 0x10000; // Maximum value for integer resource IDs (65536)
 
+		// Virtual key code constants for keyboard input
+		private const uint VK_A = 0x41;  // 'A' key
+		private const uint VK_Z = 0x5A;  // 'Z' key
+		private const uint VK_0 = 0x30;  // '0' key
+		private const uint VK_9 = 0x39;  // '9' key
+		private const uint VK_SPACE = 0x20;  // Space key
+		private const uint UPPERCASE_TO_LOWERCASE_OFFSET = 0x20;  // Offset to convert uppercase to lowercase
+
+		// Key scan code constants
+		private const int EXTENDED_KEY_FLAG = 0x01000000;  // Bit 24 in lParam indicates extended key
+
 		public User32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
 			_env = env;
@@ -1059,6 +1070,30 @@ namespace Win32Emu.Win32.Modules
 				case "MOUSE_EVENT":
 					mouse_event(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 					returnValue = 0;
+					return true;
+				case "GETINPUTSTATE":
+					returnValue = GetInputState();
+					return true;
+				case "SENDNOTIFYMESSAGEA":
+					returnValue = SendNotifyMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "SUBTRACTRECT":
+					returnValue = SubtractRect(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "TOASCIIEX":
+					returnValue = (uint)ToAsciiEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+				case "MAPVIRTUALKEYEXA":
+					returnValue = MapVirtualKeyExA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "GETKEYBOARDLAYOUT":
+					returnValue = GetKeyboardLayout(a.UInt32(0));
+					return true;
+				case "GETKEYNAMETEXTA":
+					returnValue = (uint)GetKeyNameTextA(a.Int32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "GETKEYNAMETEXTW":
+					returnValue = (uint)GetKeyNameTextW(a.Int32(0), a.UInt32(1), a.Int32(2));
 					return true;
 
 				default:
@@ -7363,6 +7398,304 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] mouse_event(dwFlags=0x{DwFlags:X8}, dx={Dx}, dy={Dy}, dwData={DwData}, dwExtraInfo=0x{DwExtraInfo:X8})",
 				dwFlags, dx, dy, dwData, dwExtraInfo);
 			// Stub: no-op (mouse input not simulated)
+		}
+
+		/// <summary>
+		/// Determines whether there are mouse-button or keyboard messages in the calling thread's message queue.
+		/// BOOL GetInputState();
+		/// </summary>
+		[DllModuleExport(10001, IsStub = true)]
+		private uint GetInputState()
+		{
+			_logger.LogInformation("[User32] GetInputState()");
+			
+			// Check if there are any input messages in the queue
+			// For now, return FALSE (no input messages)
+			// A full implementation would check the message queue for WM_KEYDOWN, WM_KEYUP, 
+			// WM_MOUSEMOVE, WM_LBUTTONDOWN, etc.
+			return 0;
+		}
+
+		/// <summary>
+		/// Sends a message to the specified window and returns immediately.
+		/// BOOL SendNotifyMessageA(
+		///   [in] HWND   hWnd,
+		///   [in] UINT   Msg,
+		///   [in] WPARAM wParam,
+		///   [in] LPARAM lParam
+		/// );
+		/// </summary>
+		[DllModuleExport(10002, IsStub = true)]
+		private uint SendNotifyMessageA(uint hWnd, uint Msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] SendNotifyMessageA(hWnd=0x{HWnd:X8}, Msg=0x{Msg:X}, wParam=0x{WParam:X8}, lParam=0x{LParam:X8})",
+				hWnd, Msg, wParam, lParam);
+			
+			// SendNotifyMessage calls the window procedure directly for same-process windows,
+			// but posts the message for inter-process windows and always returns immediately.
+			// For simplicity, we'll use PostMessage behavior for all cases.
+			return PostMessageA(hWnd, Msg, wParam, lParam);
+		}
+
+		/// <summary>
+		/// Subtracts one rectangle from another.
+		/// BOOL SubtractRect(
+		///   [out] LPRECT     lprcDst,
+		///   [in]  const RECT *lprcSrc1,
+		///   [in]  const RECT *lprcSrc2
+		/// );
+		/// </summary>
+		/// <remarks>
+		/// This is a simplified implementation that handles the most common cases.
+		/// Complex intersections where the subtraction would result in multiple rectangles
+		/// are handled by returning a single adjusted rectangle.
+		/// A full implementation would need to handle all intersection cases and potentially
+		/// return multiple rectangles.
+		/// </remarks>
+		[DllModuleExport(10003)]
+		private uint SubtractRect(uint lprcDst, uint lprcSrc1, uint lprcSrc2)
+		{
+			_logger.LogInformation("[User32] SubtractRect(lprcDst=0x{LprcDst:X8}, lprcSrc1=0x{LprcSrc1:X8}, lprcSrc2=0x{LprcSrc2:X8})",
+				lprcDst, lprcSrc1, lprcSrc2);
+			
+			if (lprcDst == 0 || lprcSrc1 == 0 || lprcSrc2 == 0)
+			{
+				_logger.LogWarning("[User32] SubtractRect: NULL pointer");
+				return 0;
+			}
+			
+			var rect1 = _env.MemReadStruct<NativeTypes.RECT>(lprcSrc1);
+			var rect2 = _env.MemReadStruct<NativeTypes.RECT>(lprcSrc2);
+			
+			// Calculate intersection
+			var left = Math.Max(rect1.left, rect2.left);
+			var top = Math.Max(rect1.top, rect2.top);
+			var right = Math.Min(rect1.right, rect2.right);
+			var bottom = Math.Min(rect1.bottom, rect2.bottom);
+			
+			// If rectangles don't intersect, return the first rectangle unchanged
+			if (left >= right || top >= bottom)
+			{
+				_env.MemWriteStruct(lprcDst, ref rect1);
+				return 1;
+			}
+			
+			// If rect2 completely contains rect1, result is empty
+			if (left == rect1.left && top == rect1.top && right == rect1.right && bottom == rect1.bottom)
+			{
+				var emptyRect = new NativeTypes.RECT { left = 0, top = 0, right = 0, bottom = 0 };
+				_env.MemWriteStruct(lprcDst, ref emptyRect);
+				return 0;
+			}
+			
+			// For simplicity, handle the most common case: subtract from bottom or right
+			// A full implementation would handle all intersection cases
+			var result = rect1;
+			if (rect2.top <= rect1.top && rect2.bottom >= rect1.bottom)
+			{
+				// Vertical split - adjust left or right
+				if (rect2.left <= rect1.left && rect2.right < rect1.right)
+					result.left = rect2.right;
+				else if (rect2.right >= rect1.right && rect2.left > rect1.left)
+					result.right = rect2.left;
+			}
+			else if (rect2.left <= rect1.left && rect2.right >= rect1.right)
+			{
+				// Horizontal split - adjust top or bottom
+				if (rect2.top <= rect1.top && rect2.bottom < rect1.bottom)
+					result.top = rect2.bottom;
+				else if (rect2.bottom >= rect1.bottom && rect2.top > rect1.top)
+					result.bottom = rect2.top;
+			}
+			
+			_env.MemWriteStruct(lprcDst, ref result);
+			return 1;
+		}
+
+		/// <summary>
+		/// Translates a virtual-key code and keyboard state to a character value.
+		/// int ToAsciiEx(
+		///   [in]           UINT       uVirtKey,
+		///   [in]           UINT       uScanCode,
+		///   [in, optional] const BYTE *lpKeyState,
+		///   [out]          LPWORD     lpChar,
+		///   [in]           UINT       uFlags,
+		///   [in, optional] HKL        dwhkl
+		/// );
+		/// </summary>
+		/// <remarks>
+		/// This is a simplified stub implementation that provides basic key translation.
+		/// A full implementation would:
+		/// - Read the 256-byte keyboard state array from lpKeyState
+		/// - Check modifier key states (Shift, Ctrl, Alt, CapsLock)
+		/// - Apply the keyboard layout specified by dwhkl
+		/// - Handle dead keys (return -1 to indicate dead key state)
+		/// - Support multi-byte character sets
+		/// </remarks>
+		[DllModuleExport(10004, IsStub = true)]
+		private int ToAsciiEx(uint uVirtKey, uint uScanCode, uint lpKeyState, uint lpChar, uint uFlags, uint dwhkl)
+		{
+			_logger.LogInformation("[User32] ToAsciiEx(uVirtKey=0x{UVirtKey:X}, uScanCode=0x{UScanCode:X}, lpKeyState=0x{LpKeyState:X8}, lpChar=0x{LpChar:X8}, uFlags=0x{UFlags:X}, dwhkl=0x{Dwhkl:X8})",
+				uVirtKey, uScanCode, lpKeyState, lpChar, uFlags, dwhkl);
+			
+			// Stub: For basic keys, return the ASCII code
+			// A full implementation would:
+			// 1. Read the keyboard state from lpKeyState (256 byte array)
+			// 2. Consider Shift, Ctrl, Alt states
+			// 3. Apply the keyboard layout
+			// 4. Handle dead keys (return -1)
+			
+			if (lpChar == 0)
+				return 0;
+			
+			// Simple mapping for common keys
+			var ascii = (ushort)0;
+			if (uVirtKey >= VK_A && uVirtKey <= VK_Z) // A-Z
+			{
+				// Check if shift is pressed (simplified - should read lpKeyState)
+				ascii = (ushort)(uVirtKey + UPPERCASE_TO_LOWERCASE_OFFSET); // Convert to lowercase
+			}
+			else if (uVirtKey >= VK_0 && uVirtKey <= VK_9) // 0-9
+			{
+				ascii = (ushort)uVirtKey;
+			}
+			else if (uVirtKey == VK_SPACE) // Space
+			{
+				ascii = (ushort)VK_SPACE;
+			}
+			
+			if (ascii != 0)
+			{
+				_env.MemWrite16(lpChar, ascii);
+				return 1; // 1 character translated
+			}
+			
+			return 0; // No translation
+		}
+
+		/// <summary>
+		/// Translates a virtual-key code to a scan code or character value, or translates a scan code to a virtual-key code.
+		/// UINT MapVirtualKeyExA(
+		///   [in]           UINT uCode,
+		///   [in]           UINT uMapType,
+		///   [in, optional] HKL  dwhkl
+		/// );
+		/// </summary>
+		[DllModuleExport(10005, IsStub = true)]
+		private uint MapVirtualKeyExA(uint uCode, uint uMapType, uint dwhkl)
+		{
+			_logger.LogInformation("[User32] MapVirtualKeyExA(uCode=0x{UCode:X}, uMapType={UMapType}, dwhkl=0x{Dwhkl:X8})",
+				uCode, uMapType, dwhkl);
+			
+			// uMapType values:
+			// 0 = virtual-key code to scan code
+			// 1 = scan code to virtual-key code
+			// 2 = virtual-key code to unshifted character value
+			// 3 = scan code to virtual-key code (distinguishes left/right keys)
+			// 4 = virtual-key code to scan code (used for IME)
+			
+			// Stub: Return simple 1:1 mapping
+			switch (uMapType)
+			{
+				case 0: // VK to scan code
+				case 4: // VK to scan code for IME
+					return uCode; // Simplified: return same value
+				case 1: // Scan code to VK
+				case 3: // Scan code to VK (extended)
+					return uCode; // Simplified: return same value
+				case 2: // VK to unshifted char
+					if (uCode >= VK_A && uCode <= VK_Z) // A-Z
+						return uCode + UPPERCASE_TO_LOWERCASE_OFFSET; // Return lowercase
+					return uCode;
+				default:
+					return 0;
+			}
+		}
+
+		/// <summary>
+		/// Retrieves the active keyboard layout for the specified thread.
+		/// HKL GetKeyboardLayout(
+		///   [in] DWORD idThread
+		/// );
+		/// </summary>
+		[DllModuleExport(10006, IsStub = true)]
+		private uint GetKeyboardLayout(uint idThread)
+		{
+			_logger.LogInformation("[User32] GetKeyboardLayout(idThread={IdThread})", idThread);
+			
+			// Return US English keyboard layout
+			// This is a stub - a full implementation would maintain per-thread keyboard layouts
+			return (uint)NativeTypes.KeyboardLayout.US_ENGLISH;
+		}
+
+		/// <summary>
+		/// Retrieves a string that represents the name of a key (ANSI version).
+		/// int GetKeyNameTextA(
+		///   [in]  LONG  lParam,
+		///   [out] LPSTR lpString,
+		///   [in]  int   cchSize
+		/// );
+		/// </summary>
+		[DllModuleExport(10007, IsStub = true)]
+		private int GetKeyNameTextA(int lParam, uint lpString, int cchSize)
+		{
+			_logger.LogInformation("[User32] GetKeyNameTextA(lParam=0x{LParam:X8}, lpString=0x{LpString:X8}, cchSize={CchSize})",
+				lParam, lpString, cchSize);
+			
+			if (lpString == 0 || cchSize <= 1)
+				return 0;
+			
+			// Extract scan code from lParam (bits 16-23)
+			var scanCode = (lParam >> 16) & 0xFF;
+			var extended = (lParam & EXTENDED_KEY_FLAG) != 0;
+			
+			// Stub: Return generic key name based on scan code
+			var keyName = $"Key{scanCode:X2}";
+			if (extended)
+				keyName = $"Ext{keyName}";
+			
+			// Truncate to fit in buffer (leaving room for null terminator)
+			if (keyName.Length >= cchSize)
+				keyName = keyName.Substring(0, cchSize - 1);
+			
+			_env.WriteAnsiStringAt(lpString, keyName);
+			return keyName.Length;
+		}
+
+		/// <summary>
+		/// Retrieves a string that represents the name of a key (Unicode version).
+		/// int GetKeyNameTextW(
+		///   [in]  LONG   lParam,
+		///   [out] LPWSTR lpString,
+		///   [in]  int    cchSize
+		/// );
+		/// </summary>
+		[DllModuleExport(10008, IsStub = true)]
+		private int GetKeyNameTextW(int lParam, uint lpString, int cchSize)
+		{
+			_logger.LogInformation("[User32] GetKeyNameTextW(lParam=0x{LParam:X8}, lpString=0x{LpString:X8}, cchSize={CchSize})",
+				lParam, lpString, cchSize);
+			
+			if (lpString == 0 || cchSize <= 1)
+				return 0;
+			
+			// Extract scan code from lParam (bits 16-23)
+			var scanCode = (lParam >> 16) & 0xFF;
+			var extended = (lParam & EXTENDED_KEY_FLAG) != 0;
+			
+			// Stub: Return generic key name based on scan code
+			var keyName = $"Key{scanCode:X2}";
+			if (extended)
+				keyName = $"Ext{keyName}";
+			
+			// Truncate to fit in buffer (leaving room for null terminator)
+			if (keyName.Length >= cchSize)
+				keyName = keyName.Substring(0, cchSize - 1);
+			
+			// Write Unicode string
+			var wstr = new LpWStr(lpString);
+			wstr.Write(_env.Memory, keyName);
+			return keyName.Length;
 		}
 
 		#endregion
