@@ -103,6 +103,17 @@ public static class NativeTypes
 		public ushort ProcessorRevision;      // WORD - offset 34, 2 bytes
 	}
 
+	// OVERLAPPED structure for asynchronous I/O
+	// Total size: 20 bytes
+	public struct OVERLAPPED
+	{
+		public uint Internal;          // ULONG_PTR - offset 0, 4 bytes - Status code
+		public uint InternalHigh;      // ULONG_PTR - offset 4, 4 bytes - Number of bytes transferred
+		public uint Offset;            // DWORD - offset 8, 4 bytes - File position (low part)
+		public uint OffsetHigh;        // DWORD - offset 12, 4 bytes - File position (high part)
+		public uint hEvent;            // HANDLE - offset 16, 4 bytes - Event handle
+	}
+
 	// Pointer to CPINFO structure
 	public readonly unsafe struct Lpcpinfo(Cpinfo* v)
 	{

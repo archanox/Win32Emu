@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
@@ -3340,7 +3341,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		// In this emulator, we don't actually support asynchronous I/O
 		// We perform all I/O synchronously, so we simulate success
-		// The OVERLAPPED structure contains the result at offset 0 (Internal) and offset 4 (InternalHigh)
+		// The OVERLAPPED structure contains the result at Internal and InternalHigh fields
 		
 		if (lpOverlapped == 0)
 		{
@@ -3348,16 +3349,18 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
-		// Read the number of bytes transferred from OVERLAPPED.InternalHigh (offset 4)
-		var bytesTransferred = _env.MemRead32(lpOverlapped + 4);
+		// Read the number of bytes transferred from OVERLAPPED.InternalHigh
+		var internalHighOffset = (uint)Marshal.OffsetOf<NativeTypes.OVERLAPPED>(nameof(NativeTypes.OVERLAPPED.InternalHigh));
+		var bytesTransferred = _env.MemRead32(lpOverlapped + internalHighOffset);
 		
 		if (lpNumberOfBytesTransferred != 0)
 		{
 			_env.MemWrite32(lpNumberOfBytesTransferred, bytesTransferred);
 		}
 
-		// Check if the operation succeeded (Internal field at offset 0 contains status)
-		var status = _env.MemRead32(lpOverlapped);
+		// Check if the operation succeeded (Internal field contains status)
+		var internalOffset = (uint)Marshal.OffsetOf<NativeTypes.OVERLAPPED>(nameof(NativeTypes.OVERLAPPED.Internal));
+		var status = _env.MemRead32(lpOverlapped + internalOffset);
 		if (status == 0) // STATUS_SUCCESS
 		{
 			return (uint)NativeTypes.Win32Bool.TRUE;
