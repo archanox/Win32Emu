@@ -468,6 +468,7 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new Comctl32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new DInput8Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new VersionModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Lz32Module(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new WinspoolModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new OledlgModule(_env, _image.BaseAddress, loader, _logger));
         _dispatcher.RegisterModule(new Olepro32Module(_env, _image.BaseAddress, loader, _logger));
