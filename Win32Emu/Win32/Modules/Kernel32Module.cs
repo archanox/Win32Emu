@@ -7847,14 +7847,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			// Write double null terminator for empty section
 			lpReturnedString.Write(_env.Memory, "", true);
-			if (nSize > 1)
-			{
-				_env.MemWrite8(lpReturnedString.Address + 1, 0);
-			}
-			return 0; // No characters copied (excluding terminators)
+			_env.MemWrite8(lpReturnedString.Address + 1, 0);
 		}
-
-		return 0;
+		
+		return 0; // No characters copied (excluding terminators)
 	}
 
 	/// <summary>
