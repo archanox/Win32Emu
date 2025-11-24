@@ -474,6 +474,9 @@ namespace Win32Emu.Win32.Modules
 				case "GETPARENT":
 					returnValue = GetParent(a.UInt32(0));
 					return true;
+				case "SETPARENT":
+					returnValue = SetParent(a.UInt32(0), a.UInt32(1));
+					return true;
 				case "GETTOPWINDOW":
 					returnValue = GetTopWindow(a.UInt32(0));
 					return true;
@@ -4766,6 +4769,23 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] GetParent(hWnd=0x{HWnd:X8})", hWnd);
 			return 0; // NULL
+		}
+
+		/// <summary>
+		/// Changes the parent window of the specified child window.
+		/// HWND SetParent(
+		///   [in] HWND hWndChild,
+		///   [in] HWND hWndNewParent
+		/// );
+		/// Returns: handle to the previous parent window if successful, NULL otherwise.
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint SetParent(uint hWndChild, uint hWndNewParent)
+		{
+			_logger.LogInformation("[User32] SetParent(hWndChild=0x{HWndChild:X8}, hWndNewParent=0x{HWndNewParent:X8})", 
+				hWndChild, hWndNewParent);
+			// Return a dummy handle to the previous parent (stub implementation)
+			return 0x00010002; // Fake previous parent handle
 		}
 
 		[DllModuleExport(4)]

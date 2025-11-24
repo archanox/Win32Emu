@@ -427,6 +427,9 @@ namespace Win32Emu.Win32.Modules
 				case "GETOBJECTTYPE":
 					returnValue = GetObjectType(a.UInt32(0));
 					return true;
+				case "ENUMFONTFAMILIESEXA":
+					returnValue = EnumFontFamiliesExA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
 				case "GETNEARESTCOLOR":
 					returnValue = GetNearestColor(a.UInt32(0), a.UInt32(1));
 					return true;
@@ -2482,6 +2485,26 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[Gdi32] SetSystemPaletteUse(hdc=0x{Hdc:X8}, use={Use})", hdc, use);
 			// SYSPAL_NOSTATIC = 2, SYSPAL_STATIC = 1, SYSPAL_ERROR = 0
 			// Stub: return previous value (assume SYSPAL_STATIC)
+			return 1;
+		}
+
+		/// <summary>
+		/// Enumerates all uniquely-named fonts in the system that match the font characteristics specified.
+		/// int EnumFontFamiliesExA(
+		///   [in] HDC           hdc,
+		///   [in] LPLOGFONTA    lpLogfont,
+		///   [in] FONTENUMPROCA lpProc,
+		///   [in] LPARAM        lParam,
+		///   [in] DWORD         dwFlags
+		/// );
+		/// Returns: The last value returned by the callback function. If no fonts match, returns 1.
+		/// </summary>
+		[DllModuleExport(20)]
+		private uint EnumFontFamiliesExA(uint hdc, uint lpLogfont, uint lpProc, uint lParam, uint dwFlags)
+		{
+			_logger.LogInformation("[Gdi32] EnumFontFamiliesExA(hdc=0x{Hdc:X8}, lpLogfont=0x{LpLogfont:X8}, lpProc=0x{LpProc:X8}, lParam=0x{LParam:X8}, dwFlags=0x{DwFlags:X8})",
+				hdc, lpLogfont, lpProc, lParam, dwFlags);
+			// Stub implementation: return 1 (no fonts enumerated)
 			return 1;
 		}
 	}
