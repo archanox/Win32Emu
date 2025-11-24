@@ -136,6 +136,13 @@ padding: 30px;
 .subtitle {
 color: #586069;
 font-size: 16px;
+margin-bottom: 10px;
+}
+
+.format-info {
+color: #6a737d;
+font-size: 14px;
+font-style: italic;
 margin-bottom: 30px;
 }
 

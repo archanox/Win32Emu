@@ -5,11 +5,12 @@
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 
-<PageTitle>Win32Emu PE Analyzer</PageTitle>
+<PageTitle>Win32Emu Executable Analyzer</PageTitle>
 
 <div class="container">
-	<h1>🔍 Win32Emu PE Compatibility Analyzer</h1>
-	<p class="subtitle">Upload a Windows PE file (.exe or .dll) to check compatibility with Win32Emu</p>
+	<h1>🔍 Win32Emu Compatibility Analyzer</h1>
+	<p class="subtitle">Upload a Windows executable (.exe or .dll) to check compatibility with Win32Emu</p>
+	<p class="format-info">Supports both PE32 (Win32 32-bit) and NE (Win16) formats</p>
 
 	<div class="upload-section">
 		<InputFile OnChange="HandleFileSelected" accept=".exe,.dll" class="file-input" />
@@ -18,7 +19,7 @@
 		{
 			<div class="loading">
 				<div class="spinner"></div>
-				<p>Analyzing PE file...</p>
+				<p>Analyzing executable...</p>
 			</div>
 		}
 	</div>
@@ -47,8 +48,12 @@
 						<td>@FormatBytes(analysisResult.FileSize)</td>
 					</tr>
 					<tr>
+						<td><strong>Format:</strong></td>
+						<td>@analysisResult.Format</td>
+					</tr>
+					<tr>
 						<td><strong>Architecture:</strong></td>
-						<td>@(analysisResult.Is32Bit ? "32-bit (x86)" : "64-bit (x64)")</td>
+						<td>@(analysisResult.Is32Bit ? "32-bit (x86)" : analysisResult.Is16Bit ? "16-bit (x86)" : "64-bit (x64)")</td>
 					</tr>
 				</table>
 			</div>
@@ -209,15 +214,34 @@
 			return;
 		}
 
-		var peFile = new PeFile(fileBytes);
+		// Detect file format (PE or NE)
+		var format = DetectExecutableFormat(fileBytes);
 		
+		if (format == "Unknown")
+		{
+			errorMessage = "Unable to identify file format. Not a valid PE or NE executable.";
+			return;
+		}
+
 		analysisResult = new CompatibilityReport
 		{
 			FileName = fileName,
 			FileSize = fileBytes.Length,
-			Is32Bit = !peFile.Is64Bit,
-			Is64Bit = peFile.Is64Bit
+			Format = format
 		};
+
+		if (format == "NE")
+		{
+			AnalyzeNeFile(fileBytes);
+			return;
+		}
+
+		// PE file analysis
+		var peFile = new PeFile(fileBytes);
+		
+		analysisResult.Is32Bit = !peFile.Is64Bit;
+		analysisResult.Is64Bit = peFile.Is64Bit;
+		analysisResult.Is16Bit = false;
 
 		if (peFile.Is64Bit)
 		{
@@ -424,11 +448,66 @@
 		return $"{len:0.##} {sizes[order]}";
 	}
 
+	private string DetectExecutableFormat(byte[] bytes)
+	{
+		try
+		{
+			if (bytes.Length < 0x40)
+				return "Unknown";
+
+			// Check DOS MZ signature
+			var mzSignature = BitConverter.ToUInt16(bytes, 0);
+			if (mzSignature != 0x5A4D) // "MZ" in little-endian
+				return "Unknown";
+
+			// Get offset to NE/PE header
+			var headerOffset = BitConverter.ToUInt32(bytes, 0x3C);
+			if (headerOffset + 2 > bytes.Length)
+				return "Unknown";
+
+			// Check signature at header offset
+			var signature = BitConverter.ToUInt16(bytes, (int)headerOffset);
+			
+			if (signature == 0x454E) // "NE" in little-endian
+				return "NE (Win16)";
+			
+			if (signature == 0x4550) // "PE" in little-endian
+				return "PE32 (Win32)";
+
+			return "Unknown";
+		}
+		catch
+		{
+			return "Unknown";
+		}
+	}
+
+	private void AnalyzeNeFile(byte[] fileBytes)
+	{
+		analysisResult!.Is32Bit = false;
+		analysisResult.Is64Bit = false;
+		analysisResult.Is16Bit = true;
+
+		// NE format support is experimental
+		analysisResult.Status.Verdict = "EXPERIMENTAL - Win16 NE format detected. Loading and parsing supported, but Win16 API emulation is not yet implemented.";
+		
+		// TODO: Parse NE imports when we have NE parsing library
+		// For now, provide basic information
+		analysisResult.Status.TotalDlls = 0;
+		analysisResult.Status.TotalFunctions = 0;
+		analysisResult.Status.ImplementedFunctions = 0;
+		analysisResult.Status.StubFunctions = 0;
+		analysisResult.Status.MissingFunctions = 0;
+		analysisResult.Status.ImplementationPercentage = 0;
+	}
+
 	// Data models
 	public class CompatibilityReport
 	{
 		public string FileName { get; set; } = "";
 		public long FileSize { get; set; }
+		public string Format { get; set; } = "";
+		public bool Is16Bit { get; set; }
 		public bool Is32Bit { get; set; }
 		public bool Is64Bit { get; set; }
 		public OverallStatus Status { get; set; } = new();
