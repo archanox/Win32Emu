@@ -7339,7 +7339,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// lpString is a buffer containing one or more null-terminated strings, terminated by a final null character.
 	/// Each string has the form key=value.
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, IsStub = true)]
 	private uint WritePrivateProfileSectionA(in LpcStr lpAppName, in LpcStr lpString, in LpcStr lpFileName)
 	{
 		var appName = lpAppName.ToString() ?? string.Empty;
@@ -7833,7 +7833,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// Format: The buffer contains one or more null-terminated strings, terminated by a final null character.
 	/// Each string has the form key=value.
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, IsStub = true)]
 	private uint GetPrivateProfileSectionA(in LpcStr lpAppName, in LpStr lpReturnedString, uint nSize, in LpcStr lpFileName)
 	{
 		var appName = lpAppName.ToString() ?? string.Empty;
