@@ -227,6 +227,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = ReleaseDc(a.UInt32(0), a.UInt32(1));
 					return true;
 
+				case "WINDOWFROMDC":
+					returnValue = WindowFromDc(a.UInt32(0));
+					return true;
+
 				case "UPDATEWINDOW":
 					returnValue = UpdateWindow(a.UInt32(0));
 					return true;
@@ -2264,6 +2268,16 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] ReleaseDC: HWND=0x{Hwnd:X8} HDC=0x{Hdc:X8}", hwnd, hdc);
 			_env.CloseHandle(hdc);
 			return 1; // Success
+		}
+
+		[DllModuleExport(1)]
+		private uint WindowFromDc(uint hdc)
+		{
+			_logger.LogInformation("[User32] WindowFromDC: HDC=0x{Hdc:X8}", hdc);
+			// In a real implementation, we would maintain a mapping between DCs and windows
+			// For now, return a dummy window handle
+			// TODO: Maintain DC-to-window mapping
+			return 0x1; // Return a dummy window handle
 		}
 
 		[DllModuleExport(1)]

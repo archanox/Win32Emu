@@ -200,6 +200,29 @@ namespace Win32Emu.Win32.Modules
 					returnValue = grSstIdle();
 					return true;
 
+				case "_GRSSTCONTROL@4":
+					{
+						uint code = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grSstControl(code={Code})", code);
+						returnValue = grSstControl(code);
+						return true;
+					}
+
+				case "_GRSSTSTATUS@0":
+					_logger.LogInformation("[Glide2x] grSstStatus()");
+					returnValue = grSstStatus();
+					return true;
+
+				case "_GRSSTSTCREENWIDTH@0":
+					_logger.LogInformation("[Glide2x] grSstScreenWidth()");
+					returnValue = grSstScreenWidth();
+					return true;
+
+				case "_GRSSTSTCREENHEIGHT@0":
+					_logger.LogInformation("[Glide2x] grSstScreenHeight()");
+					returnValue = grSstScreenHeight();
+					return true;
+
 				case "_GRSSTVRETRACEON@0":
 					returnValue = grSstVRetraceOn(); // Return TRUE
 					return true;
@@ -221,6 +244,11 @@ namespace Win32Emu.Win32.Modules
 						returnValue = grBufferClear(color, alpha, depth);
 						return true;
 					}
+
+				case "_GRBUFFERNUMPENDING@0":
+					_logger.LogInformation("[Glide2x] grBufferNumPending()");
+					returnValue = grBufferNumPending();
+					return true;
 
 				case "_GRRENDERBUFFER@4":
 					_logger.LogInformation("[Glide2x] grRenderBuffer({UInt32})", a.UInt32(0));
@@ -330,6 +358,22 @@ namespace Win32Emu.Win32.Modules
 						return true;
 					}
 
+				case "_GRALPHATESTFUNCTION@4":
+					{
+						uint function = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grAlphaTestFunction(function={Function})", function);
+						returnValue = grAlphaTestFunction(function);
+						return true;
+					}
+
+				case "_GRALPHATESTREF ERENCEVALUE@4":
+					{
+						uint value = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grAlphaTestReferenceValue(value=0x{Value:X2})", value);
+						returnValue = grAlphaTestReferenceValue(value);
+						return true;
+					}
+
 				case "_GRDEPTHBUFFERFUNCTION@4":
 					_logger.LogInformation("[Glide2x] grDepthBufferFunction({UInt32})", a.UInt32(0));
 					returnValue = grDepthBufferFunction(a.UInt32(0));
@@ -371,10 +415,27 @@ namespace Win32Emu.Win32.Modules
 						return true;
 					}
 
+				case "_GRCOLORMASK@8":
+					{
+						uint rgb = a.UInt32(0);
+						uint alpha = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grColorMask(rgb={Rgb}, alpha={Alpha})", rgb, alpha);
+						returnValue = grColorMask(rgb, alpha);
+						return true;
+					}
+
 				case "_GRCONSTANTCOLORVALUE@4":
 					_logger.LogInformation("[Glide2x] grConstantColorValue(0x{UInt32:X8})", a.UInt32(0));
 					returnValue = grConstantColorValue(a.UInt32(0));
 					return true;
+
+				case "_GRFOGTABLE@4":
+					{
+						uint tablePtr = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grFogTable(tablePtr=0x{TablePtr:X8})", tablePtr);
+						returnValue = grFogTable(tablePtr);
+						return true;
+					}
 
 				case "_GRDITHERMODE@4":
 					_logger.LogInformation("[Glide2x] grDitherMode({UInt32})", a.UInt32(0));
@@ -496,6 +557,18 @@ namespace Win32Emu.Win32.Modules
 						return true;
 					}
 
+				case "_GRTEXCALCMEMREQUIRED@16":
+					{
+						uint lodMin = a.UInt32(0);
+						uint lodMax = a.UInt32(1);
+						uint aspect = a.UInt32(2);
+						uint format = a.UInt32(3);
+						_logger.LogInformation("[Glide2x] grTexCalcMemRequired(lodMin={LodMin}, lodMax={LodMax}, aspect={Aspect}, format={Format})", 
+							lodMin, lodMax, aspect, format);
+						returnValue = grTexCalcMemRequired(lodMin, lodMax, aspect, format);
+						return true;
+					}
+
 				// GU helper functions
 				case "_GUALPHASOURCE@4":
 					{
@@ -527,6 +600,14 @@ namespace Win32Emu.Win32.Modules
 					returnValue = guTexSource(a.UInt32(0));
 					return true;
 
+				case "_GUFOGTABLEINDEXTOW@4":
+					{
+						uint index = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] guFogTableIndexToW(index={Index})", index);
+						returnValue = guFogTableIndexToW(index);
+						return true;
+					}
+
 				// Drawing primitives
 				case "_GRAADRAWLINE@8":
 					{
@@ -542,6 +623,23 @@ namespace Win32Emu.Win32.Modules
 						uint vertexPtr = a.UInt32(0);
 						_logger.LogInformation("[Glide2x] grAADrawPoint(vertexPtr=0x{VertexPtr:X8})", vertexPtr);
 						returnValue = grAADrawPoint(vertexPtr);
+						return true;
+					}
+
+				case "_GRDRAWLINE@8":
+					{
+						uint v1Ptr = a.UInt32(0);
+						uint v2Ptr = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grDrawLine(v1Ptr=0x{V1Ptr:X8}, v2Ptr=0x{V2Ptr:X8})", v1Ptr, v2Ptr);
+						returnValue = grDrawLine(v1Ptr, v2Ptr);
+						return true;
+					}
+
+				case "_GRDRAWPOINT@4":
+					{
+						uint vertexPtr = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grDrawPoint(vertexPtr=0x{VertexPtr:X8})", vertexPtr);
+						returnValue = grDrawPoint(vertexPtr);
 						return true;
 					}
 
