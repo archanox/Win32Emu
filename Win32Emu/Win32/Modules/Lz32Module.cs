@@ -64,15 +64,14 @@ public partial class Lz32Module : IWin32ModuleUnsafe
 	/// LZERROR_WRITE (-4), LZERROR_GLOBALLOC (-5), LZERROR_GLOBLOCK (-6), LZERROR_BADVALUE (-7),
 	/// LZERROR_UNKNOWNALG (-8)
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(12, IsStub = true)]
 	private int LZOpenFileA(in LpcStr lpFileName, uint lpReOpenBuf, uint wStyle)
 	{
 		var fileName = lpFileName.ToString() ?? string.Empty;
 		LogLZOpenFileA(fileName, lpReOpenBuf, wStyle);
 
 		// Stub implementation: return error (file not found)
-		const int LZERROR_BADINHANDLE = -1;
-		return LZERROR_BADINHANDLE;
+		return (int)NativeTypes.LzError.LZERROR_BADINHANDLE;
 	}
 
 	/// <summary>
@@ -83,14 +82,13 @@ public partial class Lz32Module : IWin32ModuleUnsafe
 	/// );
 	/// Returns: The size of the destination file if successful, or an error value less than zero otherwise.
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, IsStub = true)]
 	private int LZCopy(int hfSource, int hfDest)
 	{
 		LogLZCopy(hfSource, hfDest);
 
 		// Stub implementation: return error
-		const int LZERROR_READ = -3;
-		return LZERROR_READ;
+		return (int)NativeTypes.LzError.LZERROR_READ;
 	}
 
 	/// <summary>
@@ -99,7 +97,7 @@ public partial class Lz32Module : IWin32ModuleUnsafe
 	///   [in] INT hFile
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, IsStub = true)]
 	private void LZClose(int hFile)
 	{
 		LogLZClose(hFile);

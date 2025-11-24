@@ -2499,7 +2499,7 @@ namespace Win32Emu.Win32.Modules
 		/// );
 		/// Returns: The last value returned by the callback function. If no fonts match, returns 1.
 		/// </summary>
-		[DllModuleExport(20)]
+		[DllModuleExport(20, IsStub = true)]
 		private uint EnumFontFamiliesExA(uint hdc, uint lpLogfont, uint lpProc, uint lParam, uint dwFlags)
 		{
 			_logger.LogInformation("[Gdi32] EnumFontFamiliesExA(hdc=0x{Hdc:X8}, lpLogfont=0x{LpLogfont:X8}, lpProc=0x{LpProc:X8}, lParam=0x{LParam:X8}, dwFlags=0x{DwFlags:X8})",

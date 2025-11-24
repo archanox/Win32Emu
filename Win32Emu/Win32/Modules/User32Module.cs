@@ -4779,7 +4779,7 @@ namespace Win32Emu.Win32.Modules
 		/// );
 		/// Returns: handle to the previous parent window if successful, NULL otherwise.
 		/// </summary>
-		[DllModuleExport(8)]
+		[DllModuleExport(8, IsStub = true)]
 		private uint SetParent(uint hWndChild, uint hWndNewParent)
 		{
 			_logger.LogInformation("[User32] SetParent(hWndChild=0x{HWndChild:X8}, hWndNewParent=0x{HWndNewParent:X8})", 
