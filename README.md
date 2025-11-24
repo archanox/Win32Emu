@@ -7,11 +7,12 @@
 ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/archanox/Win32Emu?utm_source=oss&utm_medium=github&utm_campaign=archanox%2FWin32Emu&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 [![Qodana](https://github.com/archanox/Win32Emu/actions/workflows/qodana_code_quality.yml/badge.svg)](https://github.com/archanox/Win32Emu/actions/workflows/qodana_code_quality.yml)
 
-A Windows 32-bit PE executable emulator for running classic Windows games and applications on modern systems.
+A Windows executable emulator for running classic Windows games and applications on modern systems. Supports both 32-bit PE (Win32) and 16-bit NE (Win16) executables.
 
 ## Features
 
 - **Cross-Platform**: Runs on Windows, Linux, and macOS (both x86 and ARM)
+- **Win32 & Win16 Support**: Runs both 32-bit PE and 16-bit NE executables (Win16 support is experimental)
 - **Hardware-Accelerated**: Uses .NET intrinsics for CPU instruction acceleration
 - **Modern CPU Support**: Automatically detects and uses SSE, AVX, and NEON instructions
 - **Accurate Emulation**: Full x86 CPU and Windows API emulation
@@ -147,9 +148,44 @@ See [Win32Emu.Gui/README.md](Win32Emu.Gui/README.md) for more details about the 
 - [docs/implementation/JIT_CACHE_IMPLEMENTATION.md](docs/implementation/JIT_CACHE_IMPLEMENTATION.md) - JIT caching to disk for faster emulation
 - [docs/examples/JIT_CACHE_EXAMPLES.md](docs/examples/JIT_CACHE_EXAMPLES.md) - JIT cache usage examples and best practices
 - [docs/features/CHD_DISC_IMAGE_SUPPORT.md](docs/features/CHD_DISC_IMAGE_SUPPORT.md) - CHD disc image format support
+- [docs/implementation/NE_LOADER_IMPLEMENTATION.md](docs/implementation/NE_LOADER_IMPLEMENTATION.md) - Win16 NE format support (experimental)
 
 ### Win32Emu (Library)
 The core emulation library that powers Win32Emu.Gui. This library provides the `Emulator` class and `EmulatorLauncher` API for embedding Win32 emulation into .NET applications.
+
+## Win16 NE Format Support (Experimental)
+
+Win32Emu now includes experimental support for Win16 NE (New Executable) format applications. This enables running 16-bit Windows installers and games common for Windows 9x.
+
+**Status**: 🚧 Experimental - Format detection and loading implemented, API emulation in progress
+
+**Supported**:
+- ✓ NE format detection and validation
+- ✓ Segment table parsing and loading
+- ✓ Entry point resolution
+- ✓ Resident/non-resident name table parsing
+- ✓ Import module identification
+
+**Not Yet Implemented**:
+- ⚠️ Win16 API emulation (KERNEL, USER, GDI)
+- ⚠️ 16-bit to 32-bit thunking layer
+- ⚠️ Segment:offset address translation
+- ⚠️ 16-bit calling convention support
+- ⚠️ NE resource loading
+
+**Example Usage**:
+```bash
+# Win32Emu automatically detects the format
+Win32Emu.Gui --nogui installer16.exe
+
+# The emulator will log:
+# [Loader] Detected format: NE
+# [Loader] Win16 NE format support is experimental
+```
+
+**For More Information**:
+- [NE Loader Implementation Guide](docs/implementation/NE_LOADER_IMPLEMENTATION.md)
+- [Issue #XX: Win16 (NE) application support](https://github.com/archanox/Win32Emu/issues/XX)
 
 ## Backend System
 

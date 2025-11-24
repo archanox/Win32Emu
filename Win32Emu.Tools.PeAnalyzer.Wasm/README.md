@@ -1,14 +1,15 @@
 # Win32Emu.Tools.PeAnalyzer.Wasm
 
-A Blazor WebAssembly application for analyzing Windows PE files (`.exe` and `.dll`) directly in the browser to check compatibility with Win32Emu.
+A Blazor WebAssembly application for analyzing Windows executable files (`.exe` and `.dll`) directly in the browser to check compatibility with Win32Emu.
 
 ## Features
 
-- **Client-Side PE Parsing**: Uses PeNet library compiled to WebAssembly for in-browser PE file analysis
+- **Client-Side Executable Parsing**: Supports both PE32 (Win32) and NE (Win16) formats
 - **Compatibility Analysis**: Cross-references imported functions against Win32Emu's API implementation status
 - **Visual Results**: Color-coded compatibility indicators showing implemented, stub, and missing functions
 - **No Server Required**: Runs entirely in the browser - all analysis happens client-side
 - **Detailed Reports**: Per-DLL and per-function compatibility breakdown
+- **Format Detection**: Automatically detects PE32 (Win32 32-bit) and NE (Win16) executable formats
 
 ## Building
 
@@ -53,16 +54,24 @@ To deploy updates:
 ## Usage
 
 1. Visit the page in a modern browser (Chrome, Edge, Firefox, Safari)
-2. Click "Choose File" and select a Windows PE file (.exe or .dll)
+2. Click "Choose File" and select a Windows executable (.exe or .dll)
 3. The analysis runs entirely in your browser
-4. Results show which Win32 APIs are implemented, stubbed, or missing
+4. For PE32 files: Results show which Win32 APIs are implemented, stubbed, or missing
+5. For NE files: Format is detected and basic information is displayed (full API analysis pending Win16 API implementation)
+
+## Supported Formats
+
+- **PE32 (Win32)**: Full compatibility analysis with API import checking
+- **NE (Win16)**: Format detection and basic analysis (Win16 API emulation in development)
+- **PE64**: Detection only - not supported by Win32Emu
 
 ## Limitations
 
-- **32-bit only**: Win32Emu only supports 32-bit PE files
+- **32-bit PE and 16-bit NE**: Win32Emu supports 32-bit PE and 16-bit NE files only
 - **File size**: Limited to 100MB due to browser memory constraints
 - **Packed executables**: May not work with heavily packed or obfuscated executables
 - **Browser compatibility**: Requires modern browser with WebAssembly support
+- **NE API Analysis**: Win16 API compatibility checking pending Win16 API emulation implementation
 
 ## Security
 

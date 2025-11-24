@@ -55,6 +55,58 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			return false;
 		}
 	}
+	
+	/// <summary>
+	/// Detects the executable format of a file (PE32 or NE).
+	/// </summary>
+	/// <param name="path">Path to the executable file</param>
+	/// <returns>ExecutableFormat enum value indicating the format</returns>
+	public static ExecutableFormat DetectFormat(string path)
+	{
+		// Check for NE format first (Win16)
+		if (NeImageLoader.IsNE(path))
+		{
+			return ExecutableFormat.NE;
+		}
+		
+		// Check for PE32 format (Win32)
+		if (IsPE32(path))
+		{
+			return ExecutableFormat.PE32;
+		}
+		
+		return ExecutableFormat.Unknown;
+	}
+	
+	/// <summary>
+	/// Detects the executable format from a byte array.
+	/// </summary>
+	public static ExecutableFormat DetectFormat(byte[] bytes)
+	{
+		// Check for NE format first (Win16)
+		if (NeImageLoader.IsNE(bytes))
+		{
+			return ExecutableFormat.NE;
+		}
+		
+		// Check for PE32 format (Win32)
+		try
+		{
+			var image = PEImage.FromBytes(bytes);
+			var pe = image.PEFile;
+			if (pe?.OptionalHeader?.Magic == OptionalHeaderMagic.PE32)
+			{
+				return ExecutableFormat.PE32;
+			}
+		}
+		catch
+		{
+			// Not a PE32 format - will return Unknown
+			// Note: Logging not available in static method context
+		}
+		
+		return ExecutableFormat.Unknown;
+	}
 
 	public LoadedImage Load(string path)
 	{

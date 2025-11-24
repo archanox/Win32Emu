@@ -242,7 +242,8 @@ public sealed class Emulator : IDisposable
 		_logger.LogInformation("[Loader] Host Framework: {FrameworkDescription}", RuntimeInformation.FrameworkDescription);
 		_logger.LogInformation("[Loader] Host Runtime Identifier: {RuntimeIdentifier}", RuntimeInformation.RuntimeIdentifier);
 
-		LogDebug($"[Loader] Loading PE: {path}");
+		LogDebug($"[Loader] Loading executable: {path}");
+        
         // Convert MB to bytes for VirtualMemory constructor
         var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
         _vm = new VirtualMemory(memorySizeBytes, _logger);
@@ -251,22 +252,48 @@ public sealed class Emulator : IDisposable
         var addressSpaceSizeMB = _vm.Size / (1024 * 1024);
         _logger.LogInformation("[Memory] Configured size: {ConfiguredMB} MB, Address space: {AddressSpaceMB} MB (sparse, pages allocated on-demand)", 
             configuredSizeMB, addressSpaceSizeMB);
-        var loader = new PeImageLoader(_vm, _logger);
         
-        // Load PE from bytes or file
-        _image = executableBytes != null
-            ? loader.LoadFromBytes(executableBytes)
-            : loader.Load(path);
-        
-        // Store executable bytes for resource reading (needed for PEImage creation later)
+        // Store executable bytes for resource reading
         // If we loaded from VHD, we already have the bytes. Otherwise, read from file.
         _executableBytes = executableBytes ?? File.ReadAllBytes(path);
+        
+        // Detect executable format
+        var format = PeImageLoader.DetectFormat(_executableBytes);
+        _logger.LogInformation("[Loader] Detected format: {Format}", format);
+        
+        // Load executable based on format
+        // Note: peLoader is null for NE format. Modules accept nullable PeImageLoader
+        // since not all modules require PE-specific functionality (e.g., resource reading).
+        PeImageLoader? peLoader = null; // For PE format only
+        switch (format)
+        {
+            case ExecutableFormat.PE32:
+            {
+                peLoader = new PeImageLoader(_vm, _logger);
+                _image = executableBytes != null
+                    ? peLoader.LoadFromBytes(executableBytes)
+                    : peLoader.Load(path);
+                break;
+            }
+            
+            case ExecutableFormat.NE:
+            {
+                var neLoader = new NeImageLoader(_vm, _logger);
+                _image = neLoader.LoadFromBytes(_executableBytes, path);
+                _logger.LogWarning("[Loader] Win16 NE format support is experimental. Some features may not work correctly.");
+                // peLoader remains null for NE format - modules will use LoadedImage data instead
+                break;
+            }
+            
+            default:
+                throw new NotSupportedException($"Unsupported executable format: {format}. Only PE32 (Win32) and NE (Win16) formats are supported.");
+        }
         
         LogDebug($"[Loader] Image base=0x{_image.BaseAddress:X8} EntryPoint=0x{_image.EntryPointAddress:X8} Size=0x{_image.ImageSize:X}");
         LogDebug($"[Loader] Imports mapped: {_image.ImportAddressMap.Count}");
         LogDebug($"[Loader] Subsystem: {_image.Subsystem} (2=GUI, 3=CUI)");
-        LogDebug($"[Loader] PE Header Stack: Reserve=0x{_image.SizeOfStackReserve:X} Commit=0x{_image.SizeOfStackCommit:X}");
-        LogDebug($"[Loader] PE Header Heap: Reserve=0x{_image.SizeOfHeapReserve:X} Commit=0x{_image.SizeOfHeapCommit:X}");
+        LogDebug($"[Loader] Stack: Reserve=0x{_image.SizeOfStackReserve:X} Commit=0x{_image.SizeOfStackCommit:X}");
+        LogDebug($"[Loader] Heap: Reserve=0x{_image.SizeOfHeapReserve:X} Commit=0x{_image.SizeOfHeapCommit:X}");
         LogDebug($"[Loader] Sections loaded: {_image.Sections.Length}");
         
         // Log section information for debugging data/instruction ranges
@@ -426,7 +453,7 @@ public sealed class Emulator : IDisposable
         _dispatcher = new Win32Dispatcher(_logger);
         _dispatcher.SetProcessEnvironment(_env);
 
-        var kernel32Module = new Kernel32Module(_env, _image.BaseAddress, loader, _logger);
+        var kernel32Module = new Kernel32Module(_env, _image.BaseAddress, peLoader, _logger);
         kernel32Module.SetDispatcher(_dispatcher);
         
         // Create resource reader for PE resources (dialogs, icons, etc.)
@@ -438,47 +465,47 @@ public sealed class Emulator : IDisposable
         
         _dispatcher.RegisterModule(kernel32Module);
         // Register KERNELBASE for forwarded exports from KERNEL32
-        _dispatcher.RegisterModule(new KernelBaseModule(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new KernelBaseModule(_env, _image.BaseAddress, peLoader, _logger));
 
-        _dispatcher.RegisterModule(new Advapi32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Advapi32Module(_env, _image.BaseAddress, peLoader, _logger));
         
-        var user32Module = new User32Module(_env, _image.BaseAddress, loader, _logger);
+        var user32Module = new User32Module(_env, _image.BaseAddress, peLoader, _logger);
         user32Module.SetDispatcher(_dispatcher);
         user32Module.SetLoadedImage(_image);
         user32Module.SetResourceReader(resourceReader); // Set resource reader for dialog loading
         user32Module.SetHost(_host); // Set host for dialog UI callbacks
         _dispatcher.RegisterModule(user32Module);
         
-        _dispatcher.RegisterModule(new Gdi32Module(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Comdlg32Module(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new DDrawModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new DSoundModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new DInputModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new WinMmModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Msacm32Module(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Glide2XModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new DPlayXModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Ole32Module(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Oleaut32Module(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Shell32Module(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new DsetupModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new MsvcrtModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Wsock32Module(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Wavmix32Module(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Comctl32Module(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new DInput8Module(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new VersionModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Lz32Module(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new WinspoolModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new OledlgModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Olepro32Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new Gdi32Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Comdlg32Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new DDrawModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new DSoundModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new DInputModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new WinMmModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Msacm32Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Glide2XModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new DPlayXModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Ole32Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Oleaut32Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Shell32Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new DsetupModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new MsvcrtModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Wsock32Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Wavmix32Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Comctl32Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new DInput8Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new VersionModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Lz32Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new WinspoolModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new OledlgModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Olepro32Module(_env, _image.BaseAddress, peLoader, _logger));
         
         // Additional system DLLs
-        _dispatcher.RegisterModule(new NtdllModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new ShlwapiModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new WininetModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new UcrtbaseModule(_env, _image.BaseAddress, loader, _logger));
-        _dispatcher.RegisterModule(new Vcruntime140Module(_env, _image.BaseAddress, loader, _logger));
+        _dispatcher.RegisterModule(new NtdllModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new ShlwapiModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new WininetModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new UcrtbaseModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Vcruntime140Module(_env, _image.BaseAddress, peLoader, _logger));
 
         // Initialize the main thread in the thread scheduler
         _env.InitializeMainThread(_cpu);
