@@ -1277,5 +1277,16 @@ public static class NativeTypes
 		TPM_RETURNCMD = 0x0100,
 	}
 
+	/// <summary>
+	/// Keyboard layout identifiers (HKL values)
+	/// </summary>
+	public enum KeyboardLayout : uint
+	{
+		/// <summary>
+		/// US English keyboard layout
+		/// </summary>
+		US_ENGLISH = 0x04090409,
+	}
+
 	#endregion
 }

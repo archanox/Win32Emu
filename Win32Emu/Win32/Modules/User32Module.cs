@@ -7612,9 +7612,9 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] GetKeyboardLayout(idThread={IdThread})", idThread);
 			
-			// Return US English keyboard layout (0x04090409)
+			// Return US English keyboard layout
 			// This is a stub - a full implementation would maintain per-thread keyboard layouts
-			return 0x04090409;
+			return (uint)NativeTypes.KeyboardLayout.US_ENGLISH;
 		}
 
 		/// <summary>

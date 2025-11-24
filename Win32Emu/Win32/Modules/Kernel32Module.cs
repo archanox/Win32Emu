@@ -10704,14 +10704,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 		
 		// Read FILETIME structures
-		var ft1Low = _env.MemRead32(lpFileTime1);
-		var ft1High = _env.MemRead32(lpFileTime1 + 4);
-		var ft2Low = _env.MemRead32(lpFileTime2);
-		var ft2High = _env.MemRead32(lpFileTime2 + 4);
+		var ft1 = _env.MemReadStruct<NativeTypes.FILETIME>(lpFileTime1);
+		var ft2 = _env.MemReadStruct<NativeTypes.FILETIME>(lpFileTime2);
 		
 		// Combine into 64-bit values
-		var time1 = ((ulong)ft1High << 32) | ft1Low;
-		var time2 = ((ulong)ft2High << 32) | ft2Low;
+		var time1 = ((ulong)ft1.dwHighDateTime << 32) | ft1.dwLowDateTime;
+		var time2 = ((ulong)ft2.dwHighDateTime << 32) | ft2.dwLowDateTime;
 		
 		// Compare
 		if (time1 < time2)
