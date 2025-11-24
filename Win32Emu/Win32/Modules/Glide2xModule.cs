@@ -376,6 +376,121 @@ namespace Win32Emu.Win32.Modules
 					returnValue = grConstantColorValue(a.UInt32(0));
 					return true;
 
+				case "_GRDITHERMODE@4":
+					_logger.LogInformation("[Glide2x] grDitherMode({UInt32})", a.UInt32(0));
+					returnValue = grDitherMode(a.UInt32(0));
+					return true;
+
+				case "_GRHINTS@8":
+					{
+						uint hintType = a.UInt32(0);
+						uint hintMask = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grHints(hintType={HintType}, hintMask={HintMask})", hintType, hintMask);
+						returnValue = grHints(hintType, hintMask);
+						return true;
+					}
+
+				case "_GRTEXCLAMPMODE@12":
+					{
+						uint tmu = a.UInt32(0);
+						uint sClamp = a.UInt32(1);
+						uint tClamp = a.UInt32(2);
+						_logger.LogInformation("[Glide2x] grTexClampMode(tmu={Tmu}, sClamp={SClamp}, tClamp={TClamp})", tmu, sClamp, tClamp);
+						returnValue = grTexClampMode(tmu, sClamp, tClamp);
+						return true;
+					}
+
+				case "_GRTEXCOMBINE@28":
+					{
+						uint tmu = a.UInt32(0);
+						uint rgbFunction = a.UInt32(1);
+						uint rgbFactor = a.UInt32(2);
+						uint alphaFunction = a.UInt32(3);
+						uint alphaFactor = a.UInt32(4);
+						uint rgbInvert = a.UInt32(5);
+						uint alphaInvert = a.UInt32(6);
+						_logger.LogInformation("[Glide2x] grTexCombine(tmu={Tmu}, rgbFunc={RgbFunc}, rgbFact={RgbFact}, alphaFunc={AlphaFunc}, alphaFact={AlphaFact}, rgbInv={RgbInv}, alphaInv={AlphaInv})", 
+							tmu, rgbFunction, rgbFactor, alphaFunction, alphaFactor, rgbInvert, alphaInvert);
+						returnValue = grTexCombine(tmu, rgbFunction, rgbFactor, alphaFunction, alphaFactor, rgbInvert, alphaInvert);
+						return true;
+					}
+
+				case "_GRTEXCOMBINEFUNCTION@8":
+					_logger.LogInformation("[Glide2x] grTexCombineFunction()");
+					returnValue = grTexCombineFunction();
+					return true;
+
+				case "_GRTEXDOWNLOADMIPMAP@16":
+					{
+						uint tmu = a.UInt32(0);
+						uint startAddress = a.UInt32(1);
+						uint evenOdd = a.UInt32(2);
+						uint infoPtr = a.UInt32(3);
+						_logger.LogInformation("[Glide2x] grTexDownloadMipMap(tmu={Tmu}, startAddress=0x{StartAddress:X8}, evenOdd={EvenOdd}, infoPtr=0x{InfoPtr:X8})", 
+							tmu, startAddress, evenOdd, infoPtr);
+						returnValue = grTexDownloadMipMap(tmu, startAddress, evenOdd, infoPtr);
+						return true;
+					}
+
+				case "_GRTEXFILTERMODE@12":
+					{
+						uint tmu = a.UInt32(0);
+						uint minFilter = a.UInt32(1);
+						uint magFilter = a.UInt32(2);
+						_logger.LogInformation("[Glide2x] grTexFilterMode(tmu={Tmu}, minFilter={MinFilter}, magFilter={MagFilter})", tmu, minFilter, magFilter);
+						returnValue = grTexFilterMode(tmu, minFilter, magFilter);
+						return true;
+					}
+
+				case "_GRTEXLODBIAS@8":
+				case "_GRTEXLODBIAS_VALUE@8":
+				case "_GRTEXLODBIASVALUE@8":
+					{
+						uint tmu = a.UInt32(0);
+						uint bias = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grTexLodBiasValue(tmu={Tmu}, bias={Bias})", tmu, bias);
+						returnValue = grTexLodBiasValue(tmu, bias);
+						return true;
+					}
+
+				case "_GRTEXMAXADDRESS@4":
+					{
+						uint tmu = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grTexMaxAddress(tmu={Tmu})", tmu);
+						returnValue = grTexMaxAddress(tmu);
+						return true;
+					}
+
+				case "_GRTEXMINADDRESS@4":
+					{
+						uint tmu = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grTexMinAddress(tmu={Tmu})", tmu);
+						returnValue = grTexMinAddress(tmu);
+						return true;
+					}
+
+				case "_GRTEXMIPMAPMODE@12":
+					{
+						uint tmu = a.UInt32(0);
+						uint mode = a.UInt32(1);
+						uint lodBlend = a.UInt32(2);
+						_logger.LogInformation("[Glide2x] grTexMipMapMode(tmu={Tmu}, mode={Mode}, lodBlend={LodBlend})", tmu, mode, lodBlend);
+						returnValue = grTexMipMapMode(tmu, mode, lodBlend);
+						return true;
+					}
+
+				case "_GRTEXSOURCE@16":
+					{
+						uint tmu = a.UInt32(0);
+						uint startAddress = a.UInt32(1);
+						uint evenOdd = a.UInt32(2);
+						uint infoPtr = a.UInt32(3);
+						_logger.LogInformation("[Glide2x] grTexSource(tmu={Tmu}, startAddress=0x{StartAddress:X8}, evenOdd={EvenOdd}, infoPtr=0x{InfoPtr:X8})", 
+							tmu, startAddress, evenOdd, infoPtr);
+						returnValue = grTexSource(tmu, startAddress, evenOdd, infoPtr);
+						return true;
+					}
+
 				// GU helper functions
 				case "_GUALPHASOURCE@4":
 					{
