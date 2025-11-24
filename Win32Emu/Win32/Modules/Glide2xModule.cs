@@ -200,6 +200,29 @@ namespace Win32Emu.Win32.Modules
 					returnValue = grSstIdle();
 					return true;
 
+				case "_GRSSTCONTROL@4":
+					{
+						uint code = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grSstControl(code={Code})", code);
+						returnValue = grSstControl(code);
+						return true;
+					}
+
+				case "_GRSSTSTATUS@0":
+					_logger.LogInformation("[Glide2x] grSstStatus()");
+					returnValue = grSstStatus();
+					return true;
+
+				case "_GRSSTSCREENWIDTH@0":
+					_logger.LogInformation("[Glide2x] grSstScreenWidth()");
+					returnValue = grSstScreenWidth();
+					return true;
+
+				case "_GRSSTSCREENHEIGHT@0":
+					_logger.LogInformation("[Glide2x] grSstScreenHeight()");
+					returnValue = grSstScreenHeight();
+					return true;
+
 				case "_GRSSTVRETRACEON@0":
 					returnValue = grSstVRetraceOn(); // Return TRUE
 					return true;
@@ -221,6 +244,11 @@ namespace Win32Emu.Win32.Modules
 						returnValue = grBufferClear(color, alpha, depth);
 						return true;
 					}
+
+				case "_GRBUFFERNUMPENDING@0":
+					_logger.LogInformation("[Glide2x] grBufferNumPending()");
+					returnValue = grBufferNumPending();
+					return true;
 
 				case "_GRRENDERBUFFER@4":
 					_logger.LogInformation("[Glide2x] grRenderBuffer({UInt32})", a.UInt32(0));
@@ -330,6 +358,22 @@ namespace Win32Emu.Win32.Modules
 						return true;
 					}
 
+				case "_GRALPHATESTFUNCTION@4":
+					{
+						uint function = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grAlphaTestFunction(function={Function})", function);
+						returnValue = grAlphaTestFunction(function);
+						return true;
+					}
+
+				case "_GRALPHATESTREFERENCEVALUE@4":
+					{
+						uint value = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grAlphaTestReferenceValue(value=0x{Value:X2})", value);
+						returnValue = grAlphaTestReferenceValue(value);
+						return true;
+					}
+
 				case "_GRDEPTHBUFFERFUNCTION@4":
 					_logger.LogInformation("[Glide2x] grDepthBufferFunction({UInt32})", a.UInt32(0));
 					returnValue = grDepthBufferFunction(a.UInt32(0));
@@ -371,10 +415,159 @@ namespace Win32Emu.Win32.Modules
 						return true;
 					}
 
+				case "_GRCOLORMASK@8":
+					{
+						uint rgb = a.UInt32(0);
+						uint alpha = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grColorMask(rgb={Rgb}, alpha={Alpha})", rgb, alpha);
+						returnValue = grColorMask(rgb, alpha);
+						return true;
+					}
+
 				case "_GRCONSTANTCOLORVALUE@4":
 					_logger.LogInformation("[Glide2x] grConstantColorValue(0x{UInt32:X8})", a.UInt32(0));
 					returnValue = grConstantColorValue(a.UInt32(0));
 					return true;
+
+				case "_GRFOGTABLE@4":
+					{
+						uint tablePtr = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grFogTable(tablePtr=0x{TablePtr:X8})", tablePtr);
+						returnValue = grFogTable(tablePtr);
+						return true;
+					}
+
+				case "_GRDITHERMODE@4":
+					_logger.LogInformation("[Glide2x] grDitherMode({UInt32})", a.UInt32(0));
+					returnValue = grDitherMode(a.UInt32(0));
+					return true;
+
+				case "_GRHINTS@8":
+					{
+						uint hintType = a.UInt32(0);
+						uint hintMask = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grHints(hintType={HintType}, hintMask={HintMask})", hintType, hintMask);
+						returnValue = grHints(hintType, hintMask);
+						return true;
+					}
+
+				case "_GRTEXCLAMPMODE@12":
+					{
+						uint tmu = a.UInt32(0);
+						uint sClamp = a.UInt32(1);
+						uint tClamp = a.UInt32(2);
+						_logger.LogInformation("[Glide2x] grTexClampMode(tmu={Tmu}, sClamp={SClamp}, tClamp={TClamp})", tmu, sClamp, tClamp);
+						returnValue = grTexClampMode(tmu, sClamp, tClamp);
+						return true;
+					}
+
+				case "_GRTEXCOMBINE@28":
+					{
+						uint tmu = a.UInt32(0);
+						uint rgbFunction = a.UInt32(1);
+						uint rgbFactor = a.UInt32(2);
+						uint alphaFunction = a.UInt32(3);
+						uint alphaFactor = a.UInt32(4);
+						uint rgbInvert = a.UInt32(5);
+						uint alphaInvert = a.UInt32(6);
+						_logger.LogInformation("[Glide2x] grTexCombine(tmu={Tmu}, rgbFunc={RgbFunc}, rgbFact={RgbFact}, alphaFunc={AlphaFunc}, alphaFact={AlphaFact}, rgbInv={RgbInv}, alphaInv={AlphaInv})", 
+							tmu, rgbFunction, rgbFactor, alphaFunction, alphaFactor, rgbInvert, alphaInvert);
+						returnValue = grTexCombine(tmu, rgbFunction, rgbFactor, alphaFunction, alphaFactor, rgbInvert, alphaInvert);
+						return true;
+					}
+
+				case "_GRTEXCOMBINEFUNCTION@8":
+					{
+						uint tmu = a.UInt32(0);
+						uint function = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grTexCombineFunction(tmu={Tmu}, function={Function})", tmu, function);
+						returnValue = grTexCombineFunction(tmu, function);
+						return true;
+					}
+
+				case "_GRTEXDOWNLOADMIPMAP@16":
+					{
+						uint tmu = a.UInt32(0);
+						uint startAddress = a.UInt32(1);
+						uint evenOdd = a.UInt32(2);
+						uint infoPtr = a.UInt32(3);
+						_logger.LogInformation("[Glide2x] grTexDownloadMipMap(tmu={Tmu}, startAddress=0x{StartAddress:X8}, evenOdd={EvenOdd}, infoPtr=0x{InfoPtr:X8})", 
+							tmu, startAddress, evenOdd, infoPtr);
+						returnValue = grTexDownloadMipMap(tmu, startAddress, evenOdd, infoPtr);
+						return true;
+					}
+
+				case "_GRTEXFILTERMODE@12":
+					{
+						uint tmu = a.UInt32(0);
+						uint minFilter = a.UInt32(1);
+						uint magFilter = a.UInt32(2);
+						_logger.LogInformation("[Glide2x] grTexFilterMode(tmu={Tmu}, minFilter={MinFilter}, magFilter={MagFilter})", tmu, minFilter, magFilter);
+						returnValue = grTexFilterMode(tmu, minFilter, magFilter);
+						return true;
+					}
+
+				// Multiple case labels for texture LOD bias - handles naming variations
+				case "_GRTEXLODBIAS@8":
+				case "_GRTEXLODBIAS_VALUE@8":
+				case "_GRTEXLODBIASVALUE@8":
+					{
+						uint tmu = a.UInt32(0);
+						uint bias = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grTexLodBiasValue(tmu={Tmu}, bias={Bias})", tmu, bias);
+						returnValue = grTexLodBiasValue(tmu, bias);
+						return true;
+					}
+
+				case "_GRTEXMAXADDRESS@4":
+					{
+						uint tmu = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grTexMaxAddress(tmu={Tmu})", tmu);
+						returnValue = grTexMaxAddress(tmu);
+						return true;
+					}
+
+				case "_GRTEXMINADDRESS@4":
+					{
+						uint tmu = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grTexMinAddress(tmu={Tmu})", tmu);
+						returnValue = grTexMinAddress(tmu);
+						return true;
+					}
+
+				case "_GRTEXMIPMAPMODE@12":
+					{
+						uint tmu = a.UInt32(0);
+						uint mode = a.UInt32(1);
+						uint lodBlend = a.UInt32(2);
+						_logger.LogInformation("[Glide2x] grTexMipMapMode(tmu={Tmu}, mode={Mode}, lodBlend={LodBlend})", tmu, mode, lodBlend);
+						returnValue = grTexMipMapMode(tmu, mode, lodBlend);
+						return true;
+					}
+
+				case "_GRTEXSOURCE@16":
+					{
+						uint tmu = a.UInt32(0);
+						uint startAddress = a.UInt32(1);
+						uint evenOdd = a.UInt32(2);
+						uint infoPtr = a.UInt32(3);
+						_logger.LogInformation("[Glide2x] grTexSource(tmu={Tmu}, startAddress=0x{StartAddress:X8}, evenOdd={EvenOdd}, infoPtr=0x{InfoPtr:X8})", 
+							tmu, startAddress, evenOdd, infoPtr);
+						returnValue = grTexSource(tmu, startAddress, evenOdd, infoPtr);
+						return true;
+					}
+
+				case "_GRTEXCALCMEMREQUIRED@16":
+					{
+						uint lodMin = a.UInt32(0);
+						uint lodMax = a.UInt32(1);
+						uint aspect = a.UInt32(2);
+						uint format = a.UInt32(3);
+						_logger.LogInformation("[Glide2x] grTexCalcMemRequired(lodMin={LodMin}, lodMax={LodMax}, aspect={Aspect}, format={Format})", 
+							lodMin, lodMax, aspect, format);
+						returnValue = grTexCalcMemRequired(lodMin, lodMax, aspect, format);
+						return true;
+					}
 
 				// GU helper functions
 				case "_GUALPHASOURCE@4":
@@ -407,6 +600,14 @@ namespace Win32Emu.Win32.Modules
 					returnValue = guTexSource(a.UInt32(0));
 					return true;
 
+				case "_GUFOGTABLEINDEXTOW@4":
+					{
+						uint index = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] guFogTableIndexToW(index={Index})", index);
+						returnValue = guFogTableIndexToW(index);
+						return true;
+					}
+
 				// Drawing primitives
 				case "_GRAADRAWLINE@8":
 					{
@@ -422,6 +623,23 @@ namespace Win32Emu.Win32.Modules
 						uint vertexPtr = a.UInt32(0);
 						_logger.LogInformation("[Glide2x] grAADrawPoint(vertexPtr=0x{VertexPtr:X8})", vertexPtr);
 						returnValue = grAADrawPoint(vertexPtr);
+						return true;
+					}
+
+				case "_GRDRAWLINE@8":
+					{
+						uint v1Ptr = a.UInt32(0);
+						uint v2Ptr = a.UInt32(1);
+						_logger.LogInformation("[Glide2x] grDrawLine(v1Ptr=0x{V1Ptr:X8}, v2Ptr=0x{V2Ptr:X8})", v1Ptr, v2Ptr);
+						returnValue = grDrawLine(v1Ptr, v2Ptr);
+						return true;
+					}
+
+				case "_GRDRAWPOINT@4":
+					{
+						uint vertexPtr = a.UInt32(0);
+						_logger.LogInformation("[Glide2x] grDrawPoint(vertexPtr=0x{VertexPtr:X8})", vertexPtr);
+						returnValue = grDrawPoint(vertexPtr);
 						return true;
 					}
 
@@ -1356,9 +1574,9 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(81, entryPoint: 0x00006330, Version = "2.61.00.0613", ExportName = "_grTexCombineFunction@8")]
-		public uint grTexCombineFunction()
+		public uint grTexCombineFunction(uint tmu, uint function)
 		{
-			_logger.LogDebug("[GLIDE2x] grTexCombineFunction called");
+			_logger.LogDebug("[GLIDE2x] grTexCombineFunction: tmu={Tmu}, function={Function}", tmu, function);
 			// Set simplified texture combine function
 			return 0; // Success (void function)
 		}

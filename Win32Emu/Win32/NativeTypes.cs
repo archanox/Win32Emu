@@ -178,6 +178,19 @@ public static class NativeTypes
 		INVALID_HANDLE_VALUE = 0xFFFFFFFF
 	}
 
+	// LZ32 error codes
+	public enum LzError : int
+	{
+		LZERROR_BADINHANDLE = -1,
+		LZERROR_BADOUTHANDLE = -2,
+		LZERROR_READ = -3,
+		LZERROR_WRITE = -4,
+		LZERROR_GLOBALLOC = -5,
+		LZERROR_GLOBLOCK = -6,
+		LZERROR_BADVALUE = -7,
+		LZERROR_UNKNOWNALG = -8
+	}
+
 	// GDI32 stock objects
 	public enum StockObject
 	{
