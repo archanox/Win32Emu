@@ -13,11 +13,11 @@ namespace Win32Emu.Loader;
 /// </summary>
 public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 {
-	// NE header signature "NE" (0x4E45)
+	// NE header signature "NE" (0x454E)
 	private const ushort NE_SIGNATURE = 0x454E;
 	
-	// MZ DOS header signature "MZ" (0x5A4D)
-	private const ushort MZ_SIGNATURE = 0x4D5A;
+	// MZ DOS header signature "MZ" (0x5A4D in little-endian)
+	private const ushort MZ_SIGNATURE = 0x5A4D;
 	
 	/// <summary>
 	/// Validates if a file is a valid NE (Win16) executable by checking the NE signature.
