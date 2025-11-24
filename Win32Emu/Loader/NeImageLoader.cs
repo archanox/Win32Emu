@@ -250,7 +250,10 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			exportsByOrdinal,
 			new Dictionary<string, string>(), // No forwarded exports in NE
 			new Dictionary<uint, string>(),   // No forwarded exports by ordinal
-			(ushort)(neHeader.ApplicationType == PE_SUBSYSTEM_CUI ? PE_SUBSYSTEM_GUI : PE_SUBSYSTEM_CUI), // Map to PE subsystem (GUI vs CUI)
+			// Map NE application type to PE subsystem
+			// NE: 2=Windows GUI compatible, 3=Uses PM (GUI) API
+			// PE: 2=WINDOWS_GUI, 3=WINDOWS_CUI (console)
+			(ushort)((neHeader.ApplicationType & 0x03) >= 2 ? PE_SUBSYSTEM_GUI : PE_SUBSYSTEM_CUI),
 			DEFAULT_HEADER_END_RVA,           // HeaderEndRva - use default
 			DEFAULT_STACK_RESERVE,            // SizeOfStackReserve - 64KB default for 16-bit
 			DEFAULT_STACK_COMMIT,             // SizeOfStackCommit - 4KB default
