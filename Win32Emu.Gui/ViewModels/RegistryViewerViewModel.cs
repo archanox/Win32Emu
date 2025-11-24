@@ -70,10 +70,10 @@ public partial class RegistryViewerViewModel : ViewModelBase
 	private void InitializeRootKeys()
 	{
 		// Create root keys
-		RootKeys.Add(new RegistryKeyNode("HKEY_LOCAL_MACHINE", "HKEY_LOCAL_MACHINE", true));
-		RootKeys.Add(new RegistryKeyNode("HKEY_CURRENT_USER", "HKEY_CURRENT_USER", true));
-		RootKeys.Add(new RegistryKeyNode("HKEY_CLASSES_ROOT", "HKEY_CLASSES_ROOT", true));
-		RootKeys.Add(new RegistryKeyNode("HKEY_USERS", "HKEY_USERS", true));
+		RootKeys.Add(CreateRegistryKeyNode("HKEY_LOCAL_MACHINE", "HKEY_LOCAL_MACHINE", true));
+		RootKeys.Add(CreateRegistryKeyNode("HKEY_CURRENT_USER", "HKEY_CURRENT_USER", true));
+		RootKeys.Add(CreateRegistryKeyNode("HKEY_CLASSES_ROOT", "HKEY_CLASSES_ROOT", true));
+		RootKeys.Add(CreateRegistryKeyNode("HKEY_USERS", "HKEY_USERS", true));
 		
 		// Load first level if registry is available
 		var hive = GetRegistryHive();
@@ -83,6 +83,29 @@ public partial class RegistryViewerViewModel : ViewModelBase
 			{
 				LoadSubKeys(rootKey);
 			}
+		}
+	}
+	
+	private RegistryKeyNode CreateRegistryKeyNode(string name, string fullPath, bool hasChildren)
+	{
+		var node = new RegistryKeyNode(name, fullPath, hasChildren);
+		// Subscribe to property changes to detect expansion
+		node.PropertyChanged += (sender, e) =>
+		{
+			if (e.PropertyName == nameof(RegistryKeyNode.IsExpanded) && sender is RegistryKeyNode expandedNode)
+			{
+				OnNodeExpanded(expandedNode);
+			}
+		};
+		return node;
+	}
+	
+	private void OnNodeExpanded(RegistryKeyNode node)
+	{
+		// Only load if the node is being expanded (not collapsed) and has the dummy "Loading..." child
+		if (node.IsExpanded && node.Children.FirstOrDefault()?.Name == "Loading...")
+		{
+			LoadSubKeys(node);
 		}
 	}
 
@@ -96,7 +119,11 @@ public partial class RegistryViewerViewModel : ViewModelBase
 		{
 			var handle = hive.OpenKey(node.FullPath);
 			if (handle == 0)
+			{
+				// Key doesn't exist or can't be opened, remove the loading placeholder
+				node.Children.Clear();
 				return;
+			}
 
 			var subKeyNames = hive.EnumerateSubKeyNames(handle);
 			node.Children.Clear();
@@ -104,7 +131,16 @@ public partial class RegistryViewerViewModel : ViewModelBase
 			foreach (var subKeyName in subKeyNames.OrderBy(s => s))
 			{
 				var childPath = $"{node.FullPath}\\{subKeyName}";
-				var childNode = new RegistryKeyNode(subKeyName, childPath, true);
+				
+				// Check if the child actually has subkeys before adding "Loading..." placeholder
+				var childHandle = hive.OpenKey(childPath);
+				var hasChildren = childHandle != 0 && hive.EnumerateSubKeyNames(childHandle).Length > 0;
+				if (childHandle != 0)
+				{
+					hive.CloseKey(childHandle);
+				}
+				
+				var childNode = CreateRegistryKeyNode(subKeyName, childPath, hasChildren);
 				node.Children.Add(childNode);
 			}
 			
@@ -115,6 +151,8 @@ public partial class RegistryViewerViewModel : ViewModelBase
 		{
 			_logger.LogError(ex, "[RegistryViewer] Failed to load subkeys for {Path}", node.FullPath);
 			StatusText = $"Error loading subkeys: {ex.Message}";
+			// Clear the loading placeholder even on error
+			node.Children.Clear();
 		}
 	}
 

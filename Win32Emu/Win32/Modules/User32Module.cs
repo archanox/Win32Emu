@@ -303,6 +303,14 @@ namespace Win32Emu.Win32.Modules
 					returnValue = GetWindowLongA(a.UInt32(0), a.Int32(1));
 					return true;
 
+				case "SETWINDOWWORD":
+					returnValue = SetWindowWord(a.UInt32(0), a.Int32(1), a.UInt32(2));
+					return true;
+
+				case "GETWINDOWWORD":
+					returnValue = GetWindowWord(a.UInt32(0), a.Int32(1));
+					return true;
+
 				case "MESSAGEBOXA":
 					returnValue = MessageBoxA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
@@ -880,6 +888,14 @@ namespace Win32Emu.Win32.Modules
 				// Character conversion functions
 				case "CHARTOOEMA":
 					returnValue = CharToOemA(a.LpStr(0), a.LpStr(1));
+					return true;
+
+				case "OEMTOCHARA":
+					returnValue = OemToCharA(a.LpStr(0), a.LpStr(1));
+					return true;
+
+				case "OEMTOCHARBUFFA":
+					returnValue = OemToCharBuffA(a.LpStr(0), a.LpStr(1), a.UInt32(2));
 					return true;
 
 				// Accelerator functions
@@ -2510,6 +2526,42 @@ namespace Win32Emu.Win32.Modules
 
 			// Get the window property value
 			var value = _env.GetWindowProperty(hwnd, nIndex);
+
+			return value;
+		}
+
+		/// <summary>
+		/// Sets a 16-bit (WORD) value at the specified offset into the extra window memory.
+		/// WORD SetWindowWord(HWND hWnd, int nIndex, WORD wNewWord);
+		/// </summary>
+		[DllModuleExport(1)]
+		private uint SetWindowWord(uint hwnd, int nIndex, uint wNewWord)
+		{
+			_logger.LogInformation("[User32] SetWindowWord: HWND=0x{Hwnd:X8} nIndex={NIndex} wNewWord=0x{WNewWord:X4}", hwnd, nIndex, wNewWord);
+
+			// Get the previous value before setting (only lower 16 bits)
+			var previousValue = _env.GetWindowProperty(hwnd, nIndex) & 0xFFFF;
+
+			// Set the new value (only lower 16 bits, preserve upper bits)
+			var currentValue = _env.GetWindowProperty(hwnd, nIndex);
+			var newValue = (currentValue & 0xFFFF0000) | (wNewWord & 0xFFFF);
+			_env.SetWindowProperty(hwnd, nIndex, newValue);
+
+			// Return the previous value (16-bit)
+			return previousValue;
+		}
+
+		/// <summary>
+		/// Retrieves a 16-bit (WORD) value at the specified offset into the extra window memory.
+		/// WORD GetWindowWord(HWND hWnd, int nIndex);
+		/// </summary>
+		[DllModuleExport(1)]
+		private uint GetWindowWord(uint hwnd, int nIndex)
+		{
+			_logger.LogInformation("[User32] GetWindowWord: HWND=0x{Hwnd:X8} nIndex={NIndex}", hwnd, nIndex);
+
+			// Get the window property value and return only lower 16 bits
+			var value = _env.GetWindowProperty(hwnd, nIndex) & 0xFFFF;
 
 			return value;
 		}
@@ -6366,12 +6418,62 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] CharToOemA(lpszSrc=0x{LpszSrc:X8}, lpszDst=0x{LpszDst:X8})", lpszSrc.Address, lpszDst.Address);
 			// Stub: just copy the string as-is
-			var src = lpszSrc.ToString();
+			var src = lpszSrc.Read(_memory!);
 			if (!string.IsNullOrEmpty(src))
 			{
 				lpszDst.Write(_memory!, src, true);
 			}
-			return 1; // TRUE
+			return (uint)NativeTypes.Win32Bool.TRUE;
+		}
+
+		/// <summary>
+		/// Converts a string from OEM character set to ANSI.
+		/// BOOL OemToCharA(LPCSTR lpszSrc, LPSTR lpszDst);
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint OemToCharA(in LpStr lpszSrc, in LpStr lpszDst)
+		{
+			_logger.LogInformation("[User32] OemToCharA(lpszSrc=0x{LpszSrc:X8}, lpszDst=0x{LpszDst:X8})", lpszSrc.Address, lpszDst.Address);
+			// Stub: just copy the string as-is (treating OEM as ANSI)
+			var src = lpszSrc.Read(_memory!);
+			if (!string.IsNullOrEmpty(src))
+			{
+				lpszDst.Write(_memory!, src, true);
+			}
+			return (uint)NativeTypes.Win32Bool.TRUE;
+		}
+
+		/// <summary>
+		/// Converts a buffer from OEM character set to ANSI with specified count.
+		/// BOOL OemToCharBuffA(LPCSTR lpszSrc, LPSTR lpszDst, DWORD cchDstLength);
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint OemToCharBuffA(in LpStr lpszSrc, in LpStr lpszDst, uint cchDstLength)
+		{
+			_logger.LogInformation("[User32] OemToCharBuffA(lpszSrc=0x{LpszSrc:X8}, lpszDst=0x{LpszDst:X8}, cchDstLength={CchDstLength})", lpszSrc.Address, lpszDst.Address, cchDstLength);
+			// Stub: copy up to cchDstLength characters (treating OEM as ANSI)
+			if (cchDstLength == 0)
+			{
+				return (uint)NativeTypes.Win32Bool.TRUE; // Nothing to copy
+			}
+
+			// Read the full source string (or up to cchDstLength+1 to check if we need to truncate)
+			var src = lpszSrc.Read(_memory!, (int)cchDstLength + 1);
+			if (!string.IsNullOrEmpty(src))
+			{
+				// If string is longer than or equal to buffer, truncate without null terminator
+				if (src.Length >= cchDstLength)
+				{
+					src = src.Substring(0, (int)cchDstLength);
+					lpszDst.Write(_memory!, src, false);
+				}
+				else
+				{
+					// String fits with room for null terminator
+					lpszDst.Write(_memory!, src, true);
+				}
+			}
+			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 
 		/// <summary>
