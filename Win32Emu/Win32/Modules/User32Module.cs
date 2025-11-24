@@ -7434,6 +7434,13 @@ namespace Win32Emu.Win32.Modules
 		///   [in]  const RECT *lprcSrc2
 		/// );
 		/// </summary>
+		/// <remarks>
+		/// This is a simplified implementation that handles the most common cases.
+		/// Complex intersections where the subtraction would result in multiple rectangles
+		/// are handled by returning a single adjusted rectangle.
+		/// A full implementation would need to handle all intersection cases and potentially
+		/// return multiple rectangles.
+		/// </remarks>
 		[DllModuleExport(1)]
 		private uint SubtractRect(uint lprcDst, uint lprcSrc1, uint lprcSrc2)
 		{
@@ -7505,6 +7512,15 @@ namespace Win32Emu.Win32.Modules
 		///   [in, optional] HKL        dwhkl
 		/// );
 		/// </summary>
+		/// <remarks>
+		/// This is a simplified stub implementation that provides basic key translation.
+		/// A full implementation would:
+		/// - Read the 256-byte keyboard state array from lpKeyState
+		/// - Check modifier key states (Shift, Ctrl, Alt, CapsLock)
+		/// - Apply the keyboard layout specified by dwhkl
+		/// - Handle dead keys (return -1 to indicate dead key state)
+		/// - Support multi-byte character sets
+		/// </remarks>
 		[DllModuleExport(1, IsStub = true)]
 		private int ToAsciiEx(uint uVirtKey, uint uScanCode, uint lpKeyState, uint lpChar, uint uFlags, uint dwhkl)
 		{
@@ -7615,7 +7631,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] GetKeyNameTextA(lParam=0x{LParam:X8}, lpString=0x{LpString:X8}, cchSize={CchSize})",
 				lParam, lpString, cchSize);
 			
-			if (lpString == 0 || cchSize <= 0)
+			if (lpString == 0 || cchSize <= 1)
 				return 0;
 			
 			// Extract scan code from lParam (bits 16-23)
@@ -7627,7 +7643,7 @@ namespace Win32Emu.Win32.Modules
 			if (extended)
 				keyName = $"Ext{keyName}";
 			
-			// Truncate to fit in buffer
+			// Truncate to fit in buffer (leaving room for null terminator)
 			if (keyName.Length >= cchSize)
 				keyName = keyName.Substring(0, cchSize - 1);
 			
@@ -7649,7 +7665,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] GetKeyNameTextW(lParam=0x{LParam:X8}, lpString=0x{LpString:X8}, cchSize={CchSize})",
 				lParam, lpString, cchSize);
 			
-			if (lpString == 0 || cchSize <= 0)
+			if (lpString == 0 || cchSize <= 1)
 				return 0;
 			
 			// Extract scan code from lParam (bits 16-23)
@@ -7661,7 +7677,7 @@ namespace Win32Emu.Win32.Modules
 			if (extended)
 				keyName = $"Ext{keyName}";
 			
-			// Truncate to fit in buffer
+			// Truncate to fit in buffer (leaving room for null terminator)
 			if (keyName.Length >= cchSize)
 				keyName = keyName.Substring(0, cchSize - 1);
 			

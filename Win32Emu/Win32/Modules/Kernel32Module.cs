@@ -10601,18 +10601,32 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] ReadFileEx(hFile=0x{HFile:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToRead={NNumberOfBytesToRead}, lpOverlapped=0x{LpOverlapped:X8}, lpCompletionRoutine=0x{LpCompletionRoutine:X8})",
 			hFile, lpBuffer, nNumberOfBytesToRead, lpOverlapped, lpCompletionRoutine);
 		
+		// If lpOverlapped is NULL, set error - ReadFileEx requires overlapped I/O
+		if (lpOverlapped == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+		
 		// For now, use synchronous ReadFile and ignore the completion routine
 		// In a full implementation, we would:
 		// 1. Queue the read operation
 		// 2. Return immediately
 		// 3. Call the completion routine when the read completes
-		var result = ReadFile((void*)hFile, lpBuffer, nNumberOfBytesToRead, 0, lpOverlapped);
 		
-		// If lpOverlapped is NULL, set error
-		if (lpOverlapped == 0)
+		// Use the OVERLAPPED structure's offset field to store bytes read temporarily
+		// OVERLAPPED structure: Internal (offset 0), InternalHigh (offset 4), Offset (offset 8), ...
+		// We can use offset 8 as a temporary location for the bytes read pointer
+		var bytesReadPtr = lpOverlapped + 8; // Use Offset field temporarily
+		_env.MemWrite32(bytesReadPtr, 0); // Initialize to 0
+		
+		var result = ReadFile((void*)hFile, lpBuffer, nNumberOfBytesToRead, bytesReadPtr, lpOverlapped);
+		
+		// Store the bytes read in the overlapped structure's InternalHigh field (offset 4)
+		if (result != 0)
 		{
-			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return (uint)NativeTypes.Win32Bool.FALSE;
+			var bytesRead = _env.MemRead32(bytesReadPtr);
+			_env.MemWrite32(lpOverlapped + 4, bytesRead);
 		}
 		
 		return result;
@@ -10634,18 +10648,32 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] WriteFileEx(hFile=0x{HFile:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToWrite={NNumberOfBytesToWrite}, lpOverlapped=0x{LpOverlapped:X8}, lpCompletionRoutine=0x{LpCompletionRoutine:X8})",
 			hFile, lpBuffer, nNumberOfBytesToWrite, lpOverlapped, lpCompletionRoutine);
 		
+		// If lpOverlapped is NULL, set error - WriteFileEx requires overlapped I/O
+		if (lpOverlapped == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+		
 		// For now, use synchronous WriteFile and ignore the completion routine
 		// In a full implementation, we would:
 		// 1. Queue the write operation
 		// 2. Return immediately
 		// 3. Call the completion routine when the write completes
-		var result = WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, 0, lpOverlapped);
 		
-		// If lpOverlapped is NULL, set error
-		if (lpOverlapped == 0)
+		// Use the OVERLAPPED structure's offset field to store bytes written temporarily
+		// OVERLAPPED structure: Internal (offset 0), InternalHigh (offset 4), Offset (offset 8), ...
+		// We can use offset 8 as a temporary location for the bytes written pointer
+		var bytesWrittenPtr = lpOverlapped + 8; // Use Offset field temporarily
+		_env.MemWrite32(bytesWrittenPtr, 0); // Initialize to 0
+		
+		var result = WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, bytesWrittenPtr, lpOverlapped);
+		
+		// Store the bytes written in the overlapped structure's InternalHigh field (offset 4)
+		if (result != 0)
 		{
-			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return (uint)NativeTypes.Win32Bool.FALSE;
+			var bytesWritten = _env.MemRead32(bytesWrittenPtr);
+			_env.MemWrite32(lpOverlapped + 4, bytesWritten);
 		}
 		
 		return result;
