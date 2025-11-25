@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
@@ -12,6 +13,9 @@ namespace Win32Emu.Win32.Modules
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
+
+		// fd_set maximum size (FD_SETSIZE in winsock)
+		private const uint FD_SETSIZE = 64;
 
 		public Wsock32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -83,6 +87,30 @@ namespace Win32Emu.Win32.Modules
 					return true;
 				case "WSASTARTUP":
 					returnValue = (uint)WSAStartup((ushort)(a.UInt32(0) & 0xFFFF), a.UInt32(1));
+					return true;
+
+				// Named exports (ordinals are handled via DllModuleExport attribute)
+				case "HTONL":
+					returnValue = htonl(a.UInt32(0));
+					return true;
+				case "HTONS":
+					returnValue = htons(a.UInt32(0));
+					return true;
+				case "NTOHL":
+					returnValue = ntohl(a.UInt32(0));
+					return true;
+				case "NTOHS":
+					returnValue = ntohs(a.UInt32(0));
+					return true;
+				case "GETSOCKOPT":
+					returnValue = getsockopt(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "WSASETLASTERROR":
+					WSASetLastError(a.Int32(0));
+					returnValue = 0;
+					return true;
+				case "__WSAFDISSET":
+					returnValue = __WSAFDIsSet(a.UInt32(0), a.UInt32(1));
 					return true;
 
 				default:
@@ -216,12 +244,114 @@ namespace Win32Emu.Win32.Modules
 			return 0xBEEF0000 + (uint)Random.Shared.Next(0x1000);
 		}
 
+		// Track WSA last error
+		private int _wsaLastError = 0;
+
 		[DllModuleExport(0)]
 		private uint WSAGetLastError()
 		{
-			_logger.LogInformation("[WSOCK32] WSAGetLastError()");
-			// Return no error
-			return 0;
+			_logger.LogInformation("[WSOCK32] WSAGetLastError() -> {WsaLastError}", _wsaLastError);
+			return (uint)_wsaLastError;
+		}
+
+		/// <summary>
+		/// Sets the error code that can be retrieved through WSAGetLastError.
+		/// </summary>
+		[DllModuleExport(109)]
+		private void WSASetLastError(int iError)
+		{
+			_logger.LogInformation("[WSOCK32] WSASetLastError(iError={IError})", iError);
+			_wsaLastError = iError;
+		}
+
+		/// <summary>
+		/// Gets a socket option.
+		/// </summary>
+		[DllModuleExport(9)]
+		private uint getsockopt(uint s, int level, int optname, uint optval, uint optlen)
+		{
+			_logger.LogInformation("[WSOCK32] getsockopt(s=0x{S:X8}, level={Level}, optname={Optname}, optval=0x{Optval:X8}, optlen=0x{Optlen:X8})",
+				s, level, optname, optval, optlen);
+			// Return SOCKET_ERROR
+			_wsaLastError = (int)NativeTypes.WsaError.WSAEFAULT;
+			return 0xFFFFFFFF;
+		}
+
+		/// <summary>
+		/// Converts a u_long from host to network byte order (big-endian).
+		/// </summary>
+		[DllModuleExport(10)]
+		private uint htonl(uint hostlong)
+		{
+			_logger.LogInformation("[WSOCK32] htonl(hostlong=0x{Hostlong:X8})", hostlong);
+			return BinaryPrimitives.ReverseEndianness(hostlong);
+		}
+
+		/// <summary>
+		/// Converts a u_short from host to network byte order (big-endian).
+		/// </summary>
+		[DllModuleExport(11)]
+		private uint htons(uint hostshort)
+		{
+			_logger.LogInformation("[WSOCK32] htons(hostshort=0x{Hostshort:X4})", hostshort);
+			return BinaryPrimitives.ReverseEndianness((ushort)hostshort);
+		}
+
+		/// <summary>
+		/// Converts a u_long from network to host byte order.
+		/// </summary>
+		[DllModuleExport(15)]
+		private uint ntohl(uint netlong)
+		{
+			_logger.LogInformation("[WSOCK32] ntohl(netlong=0x{Netlong:X8})", netlong);
+			return BinaryPrimitives.ReverseEndianness(netlong);
+		}
+
+		/// <summary>
+		/// Converts a u_short from network to host byte order.
+		/// </summary>
+		[DllModuleExport(16)]
+		private uint ntohs(uint netshort)
+		{
+			_logger.LogInformation("[WSOCK32] ntohs(netshort=0x{Netshort:X4})", netshort);
+			return BinaryPrimitives.ReverseEndianness((ushort)netshort);
+		}
+
+		/// <summary>
+		/// Determines whether a socket is a member of a fd_set structure.
+		/// </summary>
+		[DllModuleExport(113)]
+		private uint __WSAFDIsSet(uint fd, uint set)
+		{
+			_logger.LogInformation("[WSOCK32] __WSAFDIsSet(fd=0x{Fd:X8}, set=0x{Set:X8})", fd, set);
+
+			if (set == 0)
+			{
+				return 0; // Not in set (set is null)
+			}
+
+			// fd_set structure:
+			// u_int fd_count (4 bytes)
+			// SOCKET fd_array[FD_SETSIZE] (variable)
+			var fd_count = _env.MemRead32(set);
+
+			// Bounds check to prevent excessive memory reads
+			if (fd_count > FD_SETSIZE)
+			{
+				_wsaLastError = (int)NativeTypes.WsaError.WSAEFAULT;
+				return 0;
+			}
+
+			for (uint i = 0; i < fd_count; i++)
+			{
+				var socket = _env.MemRead32(set + 4 + (i * 4));
+				if (socket == fd)
+				{
+					return 1; // Found in set
+				}
+			}
+
+			return 0; // Not found in set
 		}
 
 		[DllModuleExport(8)]

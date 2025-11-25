@@ -26,6 +26,12 @@ namespace Win32Emu.Win32.Modules
 		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
 		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB)
 
+		// MIDI header structure constants
+		private const uint MIDIHDR_FLAGS_OFFSET = 16; // Offset of dwFlags in MIDIHDR structure
+
+		// MIDI stream handle allocation base (chosen to avoid conflicts with other handle types)
+		private const uint MIDI_STREAM_HANDLE_BASE = 0x70000000;
+
 		// Timer API result codes
 		private enum TimerResult : uint
 		{
@@ -316,6 +322,64 @@ namespace Win32Emu.Win32.Modules
 				// Joystick functions
 				case "JOYCONFIGCHANGED":
 					returnValue = JoyConfigChanged(a.UInt32(0));
+					return true;
+
+				case "JOYGETNUMDEVS":
+					returnValue = JoyGetNumDevs();
+					return true;
+
+				// MIDI Output functions
+				case "MIDIOUTGETERRORTEXTA":
+					returnValue = MidiOutGetErrorTextA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIDIOUTPREPAREHEADER":
+					returnValue = MidiOutPrepareHeader(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIDIOUTRESET":
+					returnValue = MidiOutReset(a.UInt32(0));
+					return true;
+
+				case "MIDIOUTSETVOLUME":
+					returnValue = MidiOutSetVolume(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "MIDIOUTSHORTMSG":
+					returnValue = MidiOutShortMsg(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "MIDIOUTUNPREPAREHEADER":
+					returnValue = MidiOutUnprepareHeader(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				// MIDI Stream functions
+				case "MIDISTREAMCLOSE":
+					returnValue = MidiStreamClose(a.UInt32(0));
+					return true;
+
+				case "MIDISTREAMOPEN":
+					returnValue = MidiStreamOpen(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+
+				case "MIDISTREAMOUT":
+					returnValue = MidiStreamOut(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIDISTREAMPAUSE":
+					returnValue = MidiStreamPause(a.UInt32(0));
+					return true;
+
+				case "MIDISTREAMPROPERTY":
+					returnValue = MidiStreamProperty(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIDISTREAMRESTART":
+					returnValue = MidiStreamRestart(a.UInt32(0));
+					return true;
+
+				case "MIDISTREAMSTOP":
+					returnValue = MidiStreamStop(a.UInt32(0));
 					return true;
 
 				default:
@@ -1407,6 +1471,323 @@ namespace Win32Emu.Win32.Modules
 			// Return 1 device for compatibility
 			// A full implementation would enumerate actual MIDI devices
 			return 1;
+		}
+
+		/// <summary>
+		/// Retrieves the number of joystick devices supported by the current driver.
+		/// UINT joyGetNumDevs();
+		/// </summary>
+		[DllModuleExport(0)]
+		private uint JoyGetNumDevs()
+		{
+			_logger.LogInformation("[WinMM] joyGetNumDevs()");
+
+			// Return 0 joysticks for now (no joystick support)
+			return 0;
+		}
+
+		/// <summary>
+		/// Retrieves a textual description of an error identified by the specified error code.
+		/// MMRESULT midiOutGetErrorTextA(
+		///   [in]  MMRESULT wError,
+		///   [out] LPSTR    lpText,
+		///   [in]  UINT     cchText
+		/// );
+		/// </summary>
+		[DllModuleExport(12, IsStub = true)]
+		private uint MidiOutGetErrorTextA(uint wError, uint lpText, uint cchText)
+		{
+			_logger.LogInformation("[WinMM] midiOutGetErrorTextA(wError={WError}, lpText=0x{LpText:X8}, cchText={CchText})",
+				wError, lpText, cchText);
+
+			if (lpText != 0 && cchText > 0)
+			{
+				// Write a generic error message
+				var errorMsg = "MIDI error";
+				var len = Math.Min(errorMsg.Length, (int)cchText - 1);
+				for (int i = 0; i < len; i++)
+				{
+					_env.MemWrite8(lpText + (uint)i, (byte)errorMsg[i]);
+				}
+				_env.MemWrite8(lpText + (uint)len, 0); // Null terminator
+			}
+
+			return 0; // MMSYSERR_NOERROR
+		}
+
+		/// <summary>
+		/// Prepares a MIDI system-exclusive or stream buffer for output.
+		/// MMRESULT midiOutPrepareHeader(
+		///   [in] HMIDIOUT  hmo,
+		///   [in] LPMIDIHDR pmh,
+		///   [in] UINT      cbmh
+		/// );
+		/// </summary>
+		[DllModuleExport(12, IsStub = true)]
+		private uint MidiOutPrepareHeader(uint hmo, uint pmh, uint cbmh)
+		{
+			_logger.LogInformation("[WinMM] midiOutPrepareHeader(hmo=0x{Hmo:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
+				hmo, pmh, cbmh);
+
+			// Set MHDR_PREPARED flag in MIDIHDR.dwFlags
+			if (pmh != 0)
+			{
+				var flags = _env.MemRead32(pmh + MIDIHDR_FLAGS_OFFSET);
+				_env.MemWrite32(pmh + MIDIHDR_FLAGS_OFFSET, flags | (uint)NativeTypes.MidiHdrFlags.MHDR_PREPARED);
+			}
+
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Turns off all notes on all MIDI channels for the specified MIDI output device.
+		/// MMRESULT midiOutReset(
+		///   [in] HMIDIOUT hmo
+		/// );
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint MidiOutReset(uint hmo)
+		{
+			_logger.LogInformation("[WinMM] midiOutReset(hmo=0x{Hmo:X8})", hmo);
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Sets the volume of a MIDI output device.
+		/// MMRESULT midiOutSetVolume(
+		///   [in] HMIDIOUT hmo,
+		///   [in] DWORD    dwVolume
+		/// );
+		/// </summary>
+		[DllModuleExport(8, IsStub = true)]
+		private uint MidiOutSetVolume(uint hmo, uint dwVolume)
+		{
+			_logger.LogInformation("[WinMM] midiOutSetVolume(hmo=0x{Hmo:X8}, dwVolume=0x{DwVolume:X8})",
+				hmo, dwVolume);
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Sends a short MIDI message to the specified MIDI output device.
+		/// MMRESULT midiOutShortMsg(
+		///   [in] HMIDIOUT hmo,
+		///   [in] DWORD    dwMsg
+		/// );
+		/// </summary>
+		[DllModuleExport(8, IsStub = true)]
+		private uint MidiOutShortMsg(uint hmo, uint dwMsg)
+		{
+			_logger.LogInformation("[WinMM] midiOutShortMsg(hmo=0x{Hmo:X8}, dwMsg=0x{DwMsg:X8})",
+				hmo, dwMsg);
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Cleans up the preparation performed by midiOutPrepareHeader.
+		/// MMRESULT midiOutUnprepareHeader(
+		///   [in] HMIDIOUT  hmo,
+		///   [in] LPMIDIHDR pmh,
+		///   [in] UINT      cbmh
+		/// );
+		/// </summary>
+		[DllModuleExport(12, IsStub = true)]
+		private uint MidiOutUnprepareHeader(uint hmo, uint pmh, uint cbmh)
+		{
+			_logger.LogInformation("[WinMM] midiOutUnprepareHeader(hmo=0x{Hmo:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
+				hmo, pmh, cbmh);
+
+			// Clear MHDR_PREPARED flag and set MHDR_DONE in MIDIHDR.dwFlags
+			if (pmh != 0)
+			{
+				var flags = _env.MemRead32(pmh + MIDIHDR_FLAGS_OFFSET);
+				_env.MemWrite32(pmh + MIDIHDR_FLAGS_OFFSET, (flags & ~(uint)NativeTypes.MidiHdrFlags.MHDR_PREPARED) | (uint)NativeTypes.MidiHdrFlags.MHDR_DONE);
+			}
+
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		// MIDI stream handles
+		private readonly Dictionary<uint, MidiStreamInfo> _midiStreams = new();
+		private uint _nextMidiStreamHandle = MIDI_STREAM_HANDLE_BASE;
+
+		private class MidiStreamInfo
+		{
+			public uint Handle { get; set; }
+			public uint DeviceID { get; set; }
+			public uint Callback { get; set; }
+			public uint Instance { get; set; }
+			public uint Flags { get; set; }
+			public bool IsPaused { get; set; }
+		}
+
+		/// <summary>
+		/// Closes an open MIDI stream.
+		/// MMRESULT midiStreamClose(
+		///   [in] HMIDISTRM hms
+		/// );
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint MidiStreamClose(uint hms)
+		{
+			_logger.LogInformation("[WinMM] midiStreamClose(hms=0x{Hms:X8})", hms);
+
+			if (_midiStreams.Remove(hms))
+			{
+				return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+			}
+
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		/// <summary>
+		/// Opens a MIDI stream for output.
+		/// MMRESULT midiStreamOpen(
+		///   [out] LPHMIDISTRM phms,
+		///   [in]  LPUINT      puDeviceID,
+		///   [in]  DWORD       cMidi,
+		///   [in]  DWORD_PTR   dwCallback,
+		///   [in]  DWORD_PTR   dwInstance,
+		///   [in]  DWORD       fdwOpen
+		/// );
+		/// </summary>
+		[DllModuleExport(24, IsStub = true)]
+		private uint MidiStreamOpen(uint phms, uint puDeviceID, uint cMidi, uint dwCallback, uint dwInstance, uint fdwOpen)
+		{
+			_logger.LogInformation("[WinMM] midiStreamOpen(phms=0x{Phms:X8}, puDeviceID=0x{PuDeviceID:X8}, cMidi={CMidi}, dwCallback=0x{DwCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwOpen=0x{FdwOpen:X8})",
+				phms, puDeviceID, cMidi, dwCallback, dwInstance, fdwOpen);
+
+			if (phms == 0 || puDeviceID == 0)
+			{
+				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALPARAM;
+			}
+
+			var deviceId = _env.MemRead32(puDeviceID);
+			var handle = _nextMidiStreamHandle++;
+
+			_midiStreams[handle] = new MidiStreamInfo
+			{
+				Handle = handle,
+				DeviceID = deviceId,
+				Callback = dwCallback,
+				Instance = dwInstance,
+				Flags = fdwOpen,
+				IsPaused = false
+			};
+
+			_env.MemWrite32(phms, handle);
+
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Plays or queues a stream of MIDI data.
+		/// MMRESULT midiStreamOut(
+		///   [in] HMIDISTRM hms,
+		///   [in] LPMIDIHDR pmh,
+		///   [in] UINT      cbmh
+		/// );
+		/// </summary>
+		[DllModuleExport(12, IsStub = true)]
+		private uint MidiStreamOut(uint hms, uint pmh, uint cbmh)
+		{
+			_logger.LogInformation("[WinMM] midiStreamOut(hms=0x{Hms:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
+				hms, pmh, cbmh);
+
+			if (!_midiStreams.ContainsKey(hms))
+			{
+				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+			}
+
+			// Mark buffer as done immediately (stub behavior)
+			if (pmh != 0)
+			{
+				var flags = _env.MemRead32(pmh + MIDIHDR_FLAGS_OFFSET);
+				_env.MemWrite32(pmh + MIDIHDR_FLAGS_OFFSET, flags | (uint)NativeTypes.MidiHdrFlags.MHDR_DONE);
+			}
+
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Pauses playback of a specified MIDI stream.
+		/// MMRESULT midiStreamPause(
+		///   [in] HMIDISTRM hms
+		/// );
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint MidiStreamPause(uint hms)
+		{
+			_logger.LogInformation("[WinMM] midiStreamPause(hms=0x{Hms:X8})", hms);
+
+			if (_midiStreams.TryGetValue(hms, out var stream))
+			{
+				stream.IsPaused = true;
+				return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+			}
+
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		/// <summary>
+		/// Sets or retrieves properties of a MIDI data stream.
+		/// MMRESULT midiStreamProperty(
+		///   [in]      HMIDISTRM hms,
+		///   [in, out] LPBYTE    lppropdata,
+		///   [in]      DWORD     dwProperty
+		/// );
+		/// </summary>
+		[DllModuleExport(12, IsStub = true)]
+		private uint MidiStreamProperty(uint hms, uint lppropdata, uint dwProperty)
+		{
+			_logger.LogInformation("[WinMM] midiStreamProperty(hms=0x{Hms:X8}, lppropdata=0x{Lppropdata:X8}, dwProperty=0x{DwProperty:X8})",
+				hms, lppropdata, dwProperty);
+
+			if (!_midiStreams.ContainsKey(hms))
+			{
+				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+			}
+
+			// For stub, just return success
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Restarts a paused MIDI stream.
+		/// MMRESULT midiStreamRestart(
+		///   [in] HMIDISTRM hms
+		/// );
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint MidiStreamRestart(uint hms)
+		{
+			_logger.LogInformation("[WinMM] midiStreamRestart(hms=0x{Hms:X8})", hms);
+
+			if (_midiStreams.TryGetValue(hms, out var stream))
+			{
+				stream.IsPaused = false;
+				return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+			}
+
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		/// <summary>
+		/// Stops playback of a specified MIDI stream.
+		/// MMRESULT midiStreamStop(
+		///   [in] HMIDISTRM hms
+		/// );
+		/// </summary>
+		[DllModuleExport(4, IsStub = true)]
+		private uint MidiStreamStop(uint hms)
+		{
+			_logger.LogInformation("[WinMM] midiStreamStop(hms=0x{Hms:X8})", hms);
+
+			if (!_midiStreams.ContainsKey(hms))
+			{
+				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+			}
+
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
