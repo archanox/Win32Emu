@@ -11010,7 +11010,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in]           DWORD   nSize
 	/// );
 	/// </summary>
-	[DllModuleExport(12, IsStub = true)]
+	[DllModuleExport(12)]
 	private uint GetModuleFileNameW(uint hModule, uint lpFilename, uint nSize)
 	{
 		_logger.LogInformation("[Kernel32] GetModuleFileNameW called: hModule=0x{HModule:X8} lpFilename=0x{LpFilename:X8} nSize={NSize}", hModule, lpFilename, nSize);
@@ -11080,7 +11080,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in, optional] LPCWSTR lpValue
 	/// );
 	/// </summary>
-	[DllModuleExport(8, IsStub = true)]
+	[DllModuleExport(8)]
 	private uint SetEnvironmentVariableW(uint lpName, uint lpValue)
 	{
 		try
@@ -11306,8 +11306,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] WriteProcessMemory(hProcess=0x{HProcess:X8}, lpBaseAddress=0x{LpBaseAddress:X8}, lpBuffer=0x{LpBuffer:X8}, nSize={NSize}, lpNumberOfBytesWritten=0x{LpNumberOfBytesWritten:X8})",
 			hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesWritten);
 
-		// For self-process (pseudo-handle or current process), just copy memory
-		if (hProcess == 0xFFFFFFFF || hProcess == GetCurrentProcess())
+		// For self-process (pseudo-handle), just copy memory
+		if (hProcess == GetCurrentProcess())
 		{
 			try
 			{
@@ -11324,7 +11324,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 					_env.MemWrite32(lpNumberOfBytesWritten, nSize);
 				}
 
-				return 1; // TRUE
+				return (uint)NativeTypes.Win32Bool.TRUE;
 			}
 			catch (Exception ex)
 			{
@@ -11334,7 +11334,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				{
 					_env.MemWrite32(lpNumberOfBytesWritten, 0);
 				}
-				return 0; // FALSE
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 		}
 
@@ -11345,7 +11345,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			_env.MemWrite32(lpNumberOfBytesWritten, 0);
 		}
-		return 0; // FALSE
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 }

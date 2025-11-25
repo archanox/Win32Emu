@@ -796,7 +796,7 @@ namespace Win32Emu.Win32.Modules
 			if (!_mmioFiles.ContainsKey(hmmio))
 			{
 				_logger.LogWarning("[WinMM] mmioCreateChunk: Invalid handle 0x{Hmmio:X8}", hmmio);
-				return 256; // MMIOERR_INVALIDHANDLE
+				return (uint)NativeTypes.MMIOError.MMIOERR_BASE;
 			}
 
 			// fuCreate flags:
@@ -807,7 +807,7 @@ namespace Win32Emu.Win32.Modules
 			// A full implementation would:
 			// 1. Write the chunk header to the file
 			// 2. Update the MMCKINFO structure with chunk offset info
-			return 0; // MMSYSERR_NOERROR
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
