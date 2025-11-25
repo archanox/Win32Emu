@@ -151,6 +151,14 @@ namespace Win32Emu.Win32.Modules
 					returnValue = MmioAdvance(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				case "MMIOCREATECHUNK":
+					returnValue = MmioCreateChunk(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MMIOWRITE":
+					returnValue = MmioWrite(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
 				case "MIXEROPEN":
 					returnValue = MixerOpen(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 					return true;
@@ -769,6 +777,62 @@ namespace Win32Emu.Win32.Modules
 
 			// For stub implementation, just return success
 			return 0; // MMSYSERR_NOERROR
+		}
+
+		/// <summary>
+		/// Creates a chunk in a RIFF file opened with mmioOpen.
+		/// MMRESULT mmioCreateChunk(
+		///   [in]      HMMIO    hmmio,
+		///   [in, out] LPMMCKINFO pmmcki,
+		///   [in]      UINT     fuCreate
+		/// );
+		/// </summary>
+		[DllModuleExport(1, IsStub = true)]
+		private uint MmioCreateChunk(uint hmmio, uint pmmcki, uint fuCreate)
+		{
+			_logger.LogInformation("[WinMM] mmioCreateChunk(hmmio=0x{Hmmio:X8}, pmmcki=0x{Pmmcki:X8}, fuCreate=0x{FuCreate:X8})",
+				hmmio, pmmcki, fuCreate);
+
+			if (!_mmioFiles.ContainsKey(hmmio))
+			{
+				_logger.LogWarning("[WinMM] mmioCreateChunk: Invalid handle 0x{Hmmio:X8}", hmmio);
+				return 256; // MMIOERR_INVALIDHANDLE
+			}
+
+			// fuCreate flags:
+			// MMIO_CREATELIST (0x0040) - Creates a LIST chunk
+			// MMIO_CREATERIFF (0x0020) - Creates a RIFF chunk
+
+			// For stub implementation, just return success
+			// A full implementation would:
+			// 1. Write the chunk header to the file
+			// 2. Update the MMCKINFO structure with chunk offset info
+			return 0; // MMSYSERR_NOERROR
+		}
+
+		/// <summary>
+		/// Writes data to a file opened with mmioOpen.
+		/// LONG mmioWrite(
+		///   [in] HMMIO  hmmio,
+		///   [in] const char *pch,
+		///   [in] LONG   cch
+		/// );
+		/// </summary>
+		[DllModuleExport(1, IsStub = true)]
+		private uint MmioWrite(uint hmmio, uint pch, uint cch)
+		{
+			_logger.LogInformation("[WinMM] mmioWrite(hmmio=0x{Hmmio:X8}, pch=0x{Pch:X8}, cch={Cch})",
+				hmmio, pch, cch);
+
+			if (!_mmioFiles.ContainsKey(hmmio))
+			{
+				_logger.LogWarning("[WinMM] mmioWrite: Invalid handle 0x{Hmmio:X8}", hmmio);
+				return 0xFFFFFFFF; // -1 indicates error
+			}
+
+			// For stub implementation, return the number of bytes "written"
+			// A full implementation would actually write the data to the file
+			return cch;
 		}
 
 		// Mixer handle tracking
