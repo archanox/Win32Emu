@@ -12,6 +12,14 @@ namespace Win32Emu.Win32.Modules
 	/// </summary>
 	public class VeriteModule : IWin32ModuleUnsafe
 	{
+		// Constants for memory address simulation
+		private const uint LockedMemBaseAddress = 0x20000000;
+		private const uint LockedMemAddressStride = 0x100000;
+		private const uint BufferGroupBaseAddress = 0x30000000;
+		private const uint BufferGroupAddressStride = 0x1000000;
+		private const uint BytesPerPixel32Bit = 4;
+		private const uint DefaultWidth = 640;
+
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
@@ -252,11 +260,12 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Verite] V_AllocLockedMem(vHandle=0x{VHandle:X8}, sizeBytes={SizeBytes})", vHandle, sizeBytes);
 
+			var memIndex = _nextLockedMemHandle - 0x92000000;
 			var mem = new VeLockedMem
 			{
 				Handle = _nextLockedMemHandle++,
 				Size = sizeBytes,
-				Address = 0x20000000 + (_nextLockedMemHandle - 0x92000001) * 0x100000 // Simulate memory addresses
+				Address = LockedMemBaseAddress + memIndex * LockedMemAddressStride
 			};
 			_lockedMemory[mem.Handle] = mem;
 
@@ -310,6 +319,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[Verite] V_CreateBufferGroup(vHandle=0x{VHandle:X8}, pBufferGroup=0x{PBufferGroup:X8}, pBufferGrpSize=0x{PBufferGrpSize:X8}, bufferMask=0x{BufferMask:X8}, numBuffers={NumBuffers}, fmt=0x{Fmt:X8}, width={Width}, height={Height})",
 				vHandle, pBufferGroup, pBufferGrpSize, bufferMask, numBuffers, fmt, width, height);
 
+			var bufferGroupIndex = _nextBufferGroupHandle - 0x91000000;
 			var bufferGroup = new VeBufferGroup
 			{
 				Handle = _nextBufferGroupHandle++,
@@ -318,9 +328,9 @@ namespace Win32Emu.Win32.Modules
 				Format = fmt,
 				BufferMask = bufferMask,
 				NumBuffers = numBuffers,
-				Size = width * height * 4 * numBuffers, // Assume 32-bit for size calculation
-				BaseAddress = 0x30000000 + (_nextBufferGroupHandle - 0x91000001) * 0x1000000,
-				LineBytes = width * 4
+				Size = width * height * BytesPerPixel32Bit * numBuffers,
+				BaseAddress = BufferGroupBaseAddress + bufferGroupIndex * BufferGroupAddressStride,
+				LineBytes = width * BytesPerPixel32Bit
 			};
 			_bufferGroups[bufferGroup.Handle] = bufferGroup;
 
@@ -544,7 +554,7 @@ namespace Win32Emu.Win32.Modules
 			if (_bufferGroups.TryGetValue(bufferGroup, out var bg))
 			{
 				// Return simulated buffer address
-				return bg.BaseAddress + (bufferNum * bg.Width * bg.Height * 4);
+				return bg.BaseAddress + (bufferNum * bg.Width * bg.Height * BytesPerPixel32Bit);
 			}
 
 			return 0;
@@ -563,7 +573,7 @@ namespace Win32Emu.Win32.Modules
 				return bg.LineBytes;
 			}
 
-			return 640 * 4; // Default stride
+			return DefaultWidth * BytesPerPixel32Bit; // Default stride
 		}
 
 		/// <summary>
@@ -602,7 +612,7 @@ namespace Win32Emu.Win32.Modules
 			if (_bufferGroups.TryGetValue(bufferGroup, out var bg))
 			{
 				// Return pointer to buffer (simulated)
-				return bg.BaseAddress + (lockBuffer * bg.Width * bg.Height * 4);
+				return bg.BaseAddress + (lockBuffer * bg.Width * bg.Height * BytesPerPixel32Bit);
 			}
 
 			return 0;

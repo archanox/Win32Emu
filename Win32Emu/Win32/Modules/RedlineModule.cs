@@ -12,6 +12,9 @@ namespace Win32Emu.Win32.Modules
 	/// </summary>
 	public class RedlineModule : IWin32ModuleUnsafe
 	{
+		// Constants for handle values
+		private const uint DefaultVeriteHandle = 0x12340000;
+		
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
@@ -292,7 +295,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_veriteInitialized = true;
-			_veriteHandle = 0x12340000;
+			_veriteHandle = DefaultVeriteHandle;
 
 			// Write handle to output pointer if valid
 			if (pVHandle != 0 && _env.Memory != null)
