@@ -297,8 +297,10 @@
 				}
 				else
 				{
+					// Match by function name OR export name (for decorated names like _grAADrawLine@8)
 					var function = module.Functions.FirstOrDefault(f => 
-						f.Name.Equals(functionName, StringComparison.OrdinalIgnoreCase));
+						f.Name.Equals(functionName, StringComparison.OrdinalIgnoreCase) ||
+						(!string.IsNullOrEmpty(f.ExportName) && f.ExportName.Equals(functionName, StringComparison.OrdinalIgnoreCase)));
 
 					if (function == null)
 					{
@@ -690,5 +692,6 @@
 	{
 		public string Name { get; set; } = "";
 		public bool IsStub { get; set; }
+		public string? ExportName { get; set; }
 	}
 }
