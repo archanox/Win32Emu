@@ -575,6 +575,7 @@
 		var imports = new List<string>();
 
 		// Get offset to NE header from DOS header
+		// Need at least 0x3C + 4 bytes to read the NE header offset
 		if (fileBytes.Length < 0x40)
 			return imports;
 
@@ -587,12 +588,12 @@
 			return imports;
 
 		// NE Header structure (key offsets from NE header start):
-		// Offset 0x1E (2 bytes): Offset to Module Reference Table (from start of NE header)
-		// Offset 0x20 (2 bytes): Number of entries in Module Reference Table
-		// Offset 0x24 (2 bytes): Offset to Imported Names Table (from start of NE header)
+		// Offset 0x1E (2 bytes): Number of entries in Module Reference Table
+		// Offset 0x28 (2 bytes): Offset to Module Reference Table (from start of NE header)
+		// Offset 0x2A (2 bytes): Offset to Imported Names Table (from start of NE header)
 
-		var moduleRefTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x28);
 		var moduleRefCount = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x1E);
+		var moduleRefTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x28);
 		var importedNamesTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x2A);
 
 		// Calculate absolute offsets
