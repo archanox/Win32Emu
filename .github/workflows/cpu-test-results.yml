@@ -110,9 +110,18 @@ jobs:
         run: |
           cp docs/pages/missing-functions.html pages/missing-functions.html
 
+      - name: Build PE Analyzer WASM
+        run: >
+          dotnet publish
+          Win32Emu.Tools.PeAnalyzer.Wasm/Win32Emu.Tools.PeAnalyzer.Wasm.csproj
+          --configuration Release
+
       - name: Copy PE Analyzer
         run: |
-          cp -r docs/pages/pe-analyzer pages/
+          mkdir -p pages/pe-analyzer
+          cp -r Win32Emu.Tools.PeAnalyzer.Wasm/bin/Release/net10.0/publish/wwwroot/* pages/pe-analyzer/
+          # Copy the generated api-status.json for the PE Analyzer to use
+          cp pages/api-status.json pages/pe-analyzer/
 
       - name: Create main index page
         run: |
