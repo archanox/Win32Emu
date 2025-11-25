@@ -572,6 +572,10 @@
 	/// <returns>List of imported module names</returns>
 	private List<string> ParseNeImports(byte[] fileBytes)
 	{
+		// NE format constants
+		const int MinimumNeHeaderSize = 64;    // Minimum size of NE header required for parsing
+		const int ModuleRefEntrySize = 2;      // Size of each entry in Module Reference Table (2 bytes)
+
 		var imports = new List<string>();
 
 		// Get offset to NE header from DOS header
@@ -580,7 +584,7 @@
 			return imports;
 
 		var neHeaderOffset = BitConverter.ToUInt32(fileBytes, 0x3C);
-		if (neHeaderOffset + 64 > fileBytes.Length)
+		if (neHeaderOffset + MinimumNeHeaderSize > fileBytes.Length)
 			return imports;
 
 		// Verify NE signature
@@ -601,14 +605,14 @@
 		var absImportedNamesTableOffset = neHeaderOffset + importedNamesTableOffset;
 
 		// Validate offsets
-		if (absModuleRefTableOffset + (moduleRefCount * 2) > fileBytes.Length)
+		if (absModuleRefTableOffset + (moduleRefCount * ModuleRefEntrySize) > fileBytes.Length)
 			return imports;
 
 		// Read Module Reference Table
 		// Each entry is a 2-byte offset into the Imported Names Table
 		for (int i = 0; i < moduleRefCount; i++)
 		{
-			var nameOffset = BitConverter.ToUInt16(fileBytes, (int)absModuleRefTableOffset + (i * 2));
+			var nameOffset = BitConverter.ToUInt16(fileBytes, (int)absModuleRefTableOffset + (i * ModuleRefEntrySize));
 			var absNameOffset = absImportedNamesTableOffset + nameOffset;
 
 			if (absNameOffset >= fileBytes.Length)
