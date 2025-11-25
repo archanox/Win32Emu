@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
@@ -12,6 +13,9 @@ namespace Win32Emu.Win32.Modules
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
+
+		// fd_set maximum size (FD_SETSIZE in winsock)
+		private const uint FD_SETSIZE = 64;
 
 		public Wsock32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -280,11 +284,7 @@ namespace Win32Emu.Win32.Modules
 		private uint htonl(uint hostlong)
 		{
 			_logger.LogInformation("[WSOCK32] htonl(hostlong=0x{Hostlong:X8})", hostlong);
-			// Convert from host to network byte order (big-endian)
-			return ((hostlong & 0x000000FF) << 24) |
-			       ((hostlong & 0x0000FF00) << 8) |
-			       ((hostlong & 0x00FF0000) >> 8) |
-			       ((hostlong & 0xFF000000) >> 24);
+			return BinaryPrimitives.ReverseEndianness(hostlong);
 		}
 
 		/// <summary>
@@ -294,9 +294,7 @@ namespace Win32Emu.Win32.Modules
 		private uint htons(uint hostshort)
 		{
 			_logger.LogInformation("[WSOCK32] htons(hostshort=0x{Hostshort:X4})", hostshort);
-			// Convert from host to network byte order (big-endian)
-			var s = (ushort)hostshort;
-			return (uint)(((s & 0x00FF) << 8) | ((s & 0xFF00) >> 8));
+			return BinaryPrimitives.ReverseEndianness((ushort)hostshort);
 		}
 
 		/// <summary>
@@ -306,11 +304,7 @@ namespace Win32Emu.Win32.Modules
 		private uint ntohl(uint netlong)
 		{
 			_logger.LogInformation("[WSOCK32] ntohl(netlong=0x{Netlong:X8})", netlong);
-			// Convert from network to host byte order (same as htonl on little-endian)
-			return ((netlong & 0x000000FF) << 24) |
-			       ((netlong & 0x0000FF00) << 8) |
-			       ((netlong & 0x00FF0000) >> 8) |
-			       ((netlong & 0xFF000000) >> 24);
+			return BinaryPrimitives.ReverseEndianness(netlong);
 		}
 
 		/// <summary>
@@ -320,9 +314,7 @@ namespace Win32Emu.Win32.Modules
 		private uint ntohs(uint netshort)
 		{
 			_logger.LogInformation("[WSOCK32] ntohs(netshort=0x{Netshort:X4})", netshort);
-			// Convert from network to host byte order (same as htons on little-endian)
-			var s = (ushort)netshort;
-			return (uint)(((s & 0x00FF) << 8) | ((s & 0xFF00) >> 8));
+			return BinaryPrimitives.ReverseEndianness((ushort)netshort);
 		}
 
 		/// <summary>
@@ -342,6 +334,14 @@ namespace Win32Emu.Win32.Modules
 			// u_int fd_count (4 bytes)
 			// SOCKET fd_array[FD_SETSIZE] (variable)
 			var fd_count = _env.MemRead32(set);
+
+			// Bounds check to prevent excessive memory reads
+			if (fd_count > FD_SETSIZE)
+			{
+				_wsaLastError = (int)NativeTypes.WsaError.WSAEFAULT;
+				return 0;
+			}
+
 			for (uint i = 0; i < fd_count; i++)
 			{
 				var socket = _env.MemRead32(set + 4 + (i * 4));

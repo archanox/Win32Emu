@@ -26,6 +26,12 @@ namespace Win32Emu.Win32.Modules
 		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
 		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB)
 
+		// MIDI header structure constants
+		private const uint MIDIHDR_FLAGS_OFFSET = 16; // Offset of dwFlags in MIDIHDR structure
+
+		// MIDI stream handle allocation base (chosen to avoid conflicts with other handle types)
+		private const uint MIDI_STREAM_HANDLE_BASE = 0x70000000;
+
 		// Timer API result codes
 		private enum TimerResult : uint
 		{
@@ -1523,14 +1529,14 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[WinMM] midiOutPrepareHeader(hmo=0x{Hmo:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
 				hmo, pmh, cbmh);
 
-			// Set MHDR_PREPARED flag (offset 16 in MIDIHDR is dwFlags)
+			// Set MHDR_PREPARED flag in MIDIHDR.dwFlags
 			if (pmh != 0)
 			{
-				var flags = _env.MemRead32(pmh + 16);
-				_env.MemWrite32(pmh + 16, flags | (uint)NativeTypes.MidiHdrFlags.MHDR_PREPARED);
+				var flags = _env.MemRead32(pmh + MIDIHDR_FLAGS_OFFSET);
+				_env.MemWrite32(pmh + MIDIHDR_FLAGS_OFFSET, flags | (uint)NativeTypes.MidiHdrFlags.MHDR_PREPARED);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1590,19 +1596,19 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[WinMM] midiOutUnprepareHeader(hmo=0x{Hmo:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
 				hmo, pmh, cbmh);
 
-			// Clear MHDR_PREPARED flag and set MHDR_DONE (offset 16 in MIDIHDR is dwFlags)
+			// Clear MHDR_PREPARED flag and set MHDR_DONE in MIDIHDR.dwFlags
 			if (pmh != 0)
 			{
-				var flags = _env.MemRead32(pmh + 16);
-				_env.MemWrite32(pmh + 16, (flags & ~(uint)NativeTypes.MidiHdrFlags.MHDR_PREPARED) | (uint)NativeTypes.MidiHdrFlags.MHDR_DONE);
+				var flags = _env.MemRead32(pmh + MIDIHDR_FLAGS_OFFSET);
+				_env.MemWrite32(pmh + MIDIHDR_FLAGS_OFFSET, (flags & ~(uint)NativeTypes.MidiHdrFlags.MHDR_PREPARED) | (uint)NativeTypes.MidiHdrFlags.MHDR_DONE);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 		}
 
 		// MIDI stream handles
 		private readonly Dictionary<uint, MidiStreamInfo> _midiStreams = new();
-		private uint _nextMidiStreamHandle = 0x70000000;
+		private uint _nextMidiStreamHandle = MIDI_STREAM_HANDLE_BASE;
 
 		private class MidiStreamInfo
 		{
@@ -1652,7 +1658,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (phms == 0 || puDeviceID == 0)
 			{
-				return 11; // MMSYSERR_INVALPARAM
+				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALPARAM;
 			}
 
 			var deviceId = _env.MemRead32(puDeviceID);
@@ -1670,7 +1676,7 @@ namespace Win32Emu.Win32.Modules
 
 			_env.MemWrite32(phms, handle);
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1695,11 +1701,11 @@ namespace Win32Emu.Win32.Modules
 			// Mark buffer as done immediately (stub behavior)
 			if (pmh != 0)
 			{
-				var flags = _env.MemRead32(pmh + 16);
-				_env.MemWrite32(pmh + 16, flags | (uint)NativeTypes.MidiHdrFlags.MHDR_DONE);
+				var flags = _env.MemRead32(pmh + MIDIHDR_FLAGS_OFFSET);
+				_env.MemWrite32(pmh + MIDIHDR_FLAGS_OFFSET, flags | (uint)NativeTypes.MidiHdrFlags.MHDR_DONE);
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
