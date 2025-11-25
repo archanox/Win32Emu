@@ -1549,7 +1549,7 @@ namespace Win32Emu.Win32.Modules
 		private uint MidiOutReset(uint hmo)
 		{
 			_logger.LogInformation("[WinMM] midiOutReset(hmo=0x{Hmo:X8})", hmo);
-			return 0; // MMSYSERR_NOERROR
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1564,7 +1564,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[WinMM] midiOutSetVolume(hmo=0x{Hmo:X8}, dwVolume=0x{DwVolume:X8})",
 				hmo, dwVolume);
-			return 0; // MMSYSERR_NOERROR
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1579,7 +1579,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[WinMM] midiOutShortMsg(hmo=0x{Hmo:X8}, dwMsg=0x{DwMsg:X8})",
 				hmo, dwMsg);
-			return 0; // MMSYSERR_NOERROR
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1633,7 +1633,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (_midiStreams.Remove(hms))
 			{
-				return 0; // MMSYSERR_NOERROR
+				return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 			}
 
 			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
@@ -1722,7 +1722,7 @@ namespace Win32Emu.Win32.Modules
 			if (_midiStreams.TryGetValue(hms, out var stream))
 			{
 				stream.IsPaused = true;
-				return 0; // MMSYSERR_NOERROR
+				return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 			}
 
 			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
@@ -1748,7 +1748,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// For stub, just return success
-			return 0; // MMSYSERR_NOERROR
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
@@ -1765,7 +1765,7 @@ namespace Win32Emu.Win32.Modules
 			if (_midiStreams.TryGetValue(hms, out var stream))
 			{
 				stream.IsPaused = false;
-				return 0; // MMSYSERR_NOERROR
+				return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 			}
 
 			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
@@ -1787,7 +1787,7 @@ namespace Win32Emu.Win32.Modules
 				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
 			}
 
-			return 0; // MMSYSERR_NOERROR
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
 		}
 
 		/// <summary>
