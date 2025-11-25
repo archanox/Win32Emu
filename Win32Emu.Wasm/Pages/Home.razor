@@ -1,0 +1,309 @@
+@page "/"
+@inject IJSRuntime JS
+@inject ILogger<Home> Logger
+
+<PageTitle>Win32Emu - Web Emulator</PageTitle>
+
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-12 mb-3">
+			<h1>🖥️ Win32Emu - Web Emulator</h1>
+			<p class="lead">Run classic Windows applications in your browser</p>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="col-md-8">
+			<!-- Display Area -->
+			<div class="card mb-3">
+				<div class="card-header">
+					<strong>Display</strong>
+					@if (_isRunning)
+					{
+						<span class="badge bg-success float-end">Running</span>
+					}
+					else
+					{
+						<span class="badge bg-secondary float-end">Stopped</span>
+					}
+				</div>
+				<div class="card-body p-0">
+					<div class="canvas-container" style="background-color: #000; min-height: 480px; display: flex; align-items: center; justify-content: center;">
+						<canvas id="emulatorCanvas" 
+								width="640" 
+								height="480"
+								style="max-width: 100%; height: auto; image-rendering: pixelated;">
+						</canvas>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-md-4">
+			<!-- Controls -->
+			<div class="card mb-3">
+				<div class="card-header">
+					<strong>Controls</strong>
+				</div>
+				<div class="card-body">
+					<div class="mb-3">
+						<label for="fileInput" class="form-label">Load Executable</label>
+						<InputFile id="fileInput" 
+								   OnChange="@HandleFileSelected" 
+								   class="form-control" 
+								   accept=".exe"
+								   disabled="@_isRunning" />
+					</div>
+					
+					@if (_executableLoaded && !_isRunning)
+					{
+						<button class="btn btn-success w-100 mb-2" @onclick="StartEmulation">
+							<i class="bi bi-play-fill"></i> Start
+						</button>
+					}
+					
+					@if (_isRunning)
+					{
+						<button class="btn btn-warning w-100 mb-2" @onclick="PauseEmulation">
+							<i class="bi bi-pause-fill"></i> Pause
+						</button>
+						<button class="btn btn-danger w-100" @onclick="StopEmulation">
+							<i class="bi bi-stop-fill"></i> Stop
+						</button>
+					}
+
+					@if (!string.IsNullOrEmpty(_loadedFileName))
+					{
+						<div class="mt-3">
+							<small class="text-muted">
+								<strong>Loaded:</strong> @_loadedFileName
+								<br />
+								<strong>Size:</strong> @FormatFileSize(_loadedFileSize)
+							</small>
+						</div>
+					}
+				</div>
+			</div>
+
+			<!-- Status Info -->
+			<div class="card mb-3">
+				<div class="card-header">
+					<strong>Status</strong>
+				</div>
+				<div class="card-body">
+					<div class="status-info">
+						<div class="d-flex justify-content-between mb-2">
+							<span>Instructions:</span>
+							<strong>@_instructionsExecuted.ToString("N0")</strong>
+						</div>
+						<div class="d-flex justify-content-between mb-2">
+							<span>FPS:</span>
+							<strong>@_fps</strong>
+						</div>
+						<div class="d-flex justify-content-between">
+							<span>Audio:</span>
+							<strong>@(_audioEnabled ? "Enabled" : "Disabled")</strong>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="row">
+		<!-- Standard Output -->
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">
+					<strong>Standard Output</strong>
+					<button class="btn btn-sm btn-outline-secondary float-end" @onclick="ClearStdOut">
+						Clear
+					</button>
+				</div>
+				<div class="card-body p-0">
+					<pre class="log-panel mb-0" style="height: 200px; overflow-y: auto; margin: 0; padding: 10px; background-color: #f8f9fa;">@_stdOutput</pre>
+				</div>
+			</div>
+		</div>
+
+		<!-- Debug Output -->
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">
+					<strong>Debug Output</strong>
+					<button class="btn btn-sm btn-outline-secondary float-end" @onclick="ClearDebugOut">
+						Clear
+					</button>
+				</div>
+				<div class="card-body p-0">
+					<pre class="log-panel mb-0" style="height: 200px; overflow-y: auto; margin: 0; padding: 10px; background-color: #f8f9fa;">@_debugOutput</pre>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Note about current implementation -->
+	<div class="row mt-3">
+		<div class="col-12">
+			<div class="alert alert-info">
+				<h5 class="alert-heading">
+					<i class="bi bi-info-circle-fill"></i> Development Status
+				</h5>
+				<p>
+					This is a <strong>proof-of-concept</strong> Blazor WebAssembly frontend for Win32Emu.
+					The emulator core is currently designed for native platforms with dependencies on SDL3, 
+					Silk.NET, and other native libraries that don't support WASM.
+				</p>
+				<p class="mb-0">
+					To fully enable web-based emulation, the following work is needed:
+				</p>
+				<ul class="mb-0">
+					<li>Create a WASM-compatible rendering backend using HTML5 Canvas and JavaScript interop</li>
+					<li>Implement Web Audio API integration for audio output</li>
+					<li>Adapt the CPU emulator to work without native intrinsics or provide fallbacks</li>
+					<li>Handle file I/O through browser APIs</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+</div>
+
+@code {
+	private bool _isRunning = false;
+	private bool _executableLoaded = false;
+	private bool _audioEnabled = false;
+	private string _loadedFileName = string.Empty;
+	private long _loadedFileSize = 0;
+	private byte[]? _executableData = null;
+	
+	private long _instructionsExecuted = 0;
+	private int _fps = 0;
+	
+	private string _stdOutput = "No output yet.\n";
+	private string _debugOutput = "No debug messages.\n";
+
+	private async Task HandleFileSelected(InputFileChangeEventArgs e)
+	{
+		var file = e.File;
+		if (file != null)
+		{
+			try
+			{
+				_loadedFileName = file.Name;
+				_loadedFileSize = file.Size;
+				
+				// Read file into memory
+				using var stream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024); // 100MB max
+				using var ms = new MemoryStream();
+				await stream.CopyToAsync(ms);
+				_executableData = ms.ToArray();
+				
+				_executableLoaded = true;
+				AddDebugOutput($"Loaded executable: {_loadedFileName} ({FormatFileSize(_loadedFileSize)})");
+				
+				Logger.LogInformation("Loaded executable: {FileName} ({Size} bytes)", _loadedFileName, _loadedFileSize);
+			}
+			catch (Exception ex)
+			{
+				AddDebugOutput($"Error loading file: {ex.Message}");
+				Logger.LogError(ex, "Error loading executable");
+			}
+		}
+	}
+
+	private async Task StartEmulation()
+	{
+		if (_executableData == null)
+		{
+			AddDebugOutput("Error: No executable loaded");
+			return;
+		}
+
+		_isRunning = true;
+		AddDebugOutput("Starting emulation...");
+		AddStdOutput("Win32Emu Emulator Starting\n");
+		
+		try
+		{
+			// Initialize canvas
+			await JS.InvokeVoidAsync("initializeEmulator", "emulatorCanvas");
+			
+			// Simulate emulation start
+			AddDebugOutput("Emulator initialized");
+			AddDebugOutput($"Loaded PE executable: {_loadedFileName}");
+			AddDebugOutput("CPU: x86 (32-bit)");
+			AddDebugOutput("Memory: 64MB allocated");
+			AddStdOutput("Executable loaded and ready\n");
+			
+			// Start simulated execution
+			_ = Task.Run(async () =>
+			{
+				while (_isRunning)
+				{
+					_instructionsExecuted += 1000;
+					_fps = 60; // Simulated
+					
+					await InvokeAsync(StateHasChanged);
+					await Task.Delay(16); // ~60 FPS
+				}
+			});
+		}
+		catch (Exception ex)
+		{
+			AddDebugOutput($"Error starting emulation: {ex.Message}");
+			Logger.LogError(ex, "Error starting emulation");
+			_isRunning = false;
+		}
+	}
+
+	private Task PauseEmulation()
+	{
+		AddDebugOutput("Emulation paused");
+		return Task.CompletedTask;
+	}
+
+	private Task StopEmulation()
+	{
+		_isRunning = false;
+		_instructionsExecuted = 0;
+		_fps = 0;
+		AddDebugOutput("Emulation stopped");
+		AddStdOutput("Emulator stopped\n");
+		return Task.CompletedTask;
+	}
+
+	private void ClearStdOut()
+	{
+		_stdOutput = string.Empty;
+	}
+
+	private void ClearDebugOut()
+	{
+		_debugOutput = string.Empty;
+	}
+
+	private void AddStdOutput(string message)
+	{
+		_stdOutput += message;
+		StateHasChanged();
+	}
+
+	private void AddDebugOutput(string message)
+	{
+		_debugOutput += $"[{DateTime.Now:HH:mm:ss}] {message}\n";
+		StateHasChanged();
+	}
+
+	private string FormatFileSize(long bytes)
+	{
+		string[] sizes = { "B", "KB", "MB", "GB" };
+		double len = bytes;
+		int order = 0;
+		while (len >= 1024 && order < sizes.Length - 1)
+		{
+			order++;
+			len = len / 1024;
+		}
+		return $"{len:0.##} {sizes[order]}";
+	}
+}
