@@ -598,6 +598,47 @@ public static class NativeTypes
 	}
 
 	/// <summary>
+	/// MMIO error codes
+	/// </summary>
+	public enum MMIOError : uint
+	{
+		MMIOERR_BASE = 256,                  // Base error code
+		MMIOERR_FILENOTFOUND = 257,          // File not found
+		MMIOERR_OUTOFMEMORY = 258,           // Out of memory
+		MMIOERR_CANNOTOPEN = 259,            // Cannot open file
+		MMIOERR_CANNOTCLOSE = 260,           // Cannot close file
+		MMIOERR_CANNOTREAD = 261,            // Cannot read from file
+		MMIOERR_CANNOTWRITE = 262,           // Cannot write to file
+		MMIOERR_CANNOTSEEK = 263,            // Cannot seek in file
+		MMIOERR_CANNOTEXPAND = 264,          // Cannot expand file
+		MMIOERR_CHUNKNOTFOUND = 265,         // Chunk not found
+		MMIOERR_UNBUFFERED = 266,            // Unbuffered I/O not supported
+		MMIOERR_PATHNOTFOUND = 267,          // Path not found
+		MMIOERR_ACCESSDENIED = 268,          // Access denied
+		MMIOERR_SHARINGVIOLATION = 269,      // Sharing violation
+		MMIOERR_NETWORKNOTFOUND = 270,       // Network not found
+		MMIOERR_TOOMANYOPENFILES = 271,      // Too many open files
+		MMIOERR_INVALIDFILE = 272            // Invalid file
+	}
+
+	/// <summary>
+	/// Text alignment flags for GetTextAlign/SetTextAlign
+	/// </summary>
+	[Flags]
+	public enum TextAlignFlags : uint
+	{
+		TA_NOUPDATECP = 0,          // Don't update current position
+		TA_UPDATECP = 1,            // Update current position
+		TA_LEFT = 0,                // Left align
+		TA_RIGHT = 2,               // Right align
+		TA_CENTER = 6,              // Center align
+		TA_TOP = 0,                 // Top align
+		TA_BOTTOM = 8,              // Bottom align
+		TA_BASELINE = 24,           // Baseline align
+		TA_RTLREADING = 256         // Right-to-left reading order
+	}
+
+	/// <summary>
 	/// Wave header flags
 	/// </summary>
 	[Flags]

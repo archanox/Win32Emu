@@ -625,7 +625,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] GetTextAlign(HDC=0x{Hdc:X8})", hdc);
 			// Return default alignment (TA_LEFT | TA_TOP | TA_NOUPDATECP = 0)
-			return 0;
+			return (uint)NativeTypes.TextAlignFlags.TA_NOUPDATECP;
 		}
 
 		[DllModuleExport(1)]
