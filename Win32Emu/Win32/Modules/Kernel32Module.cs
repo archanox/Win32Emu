@@ -9908,18 +9908,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			dwMaximumWindowSize = new NativeTypes.COORD(80, 25)   // Maximum 80x25
 		};
 
-		// Write the structure to memory
-		_env.MemWrite16(lpConsoleScreenBufferInfo + 0, (ushort)info.dwSize.X);
-		_env.MemWrite16(lpConsoleScreenBufferInfo + 2, (ushort)info.dwSize.Y);
-		_env.MemWrite16(lpConsoleScreenBufferInfo + 4, (ushort)info.dwCursorPosition.X);
-		_env.MemWrite16(lpConsoleScreenBufferInfo + 6, (ushort)info.dwCursorPosition.Y);
-		_env.MemWrite16(lpConsoleScreenBufferInfo + 8, info.wAttributes);
-		_env.MemWrite16(lpConsoleScreenBufferInfo + 10, (ushort)info.srWindow.Left);
-		_env.MemWrite16(lpConsoleScreenBufferInfo + 12, (ushort)info.srWindow.Top);
-		_env.MemWrite16(lpConsoleScreenBufferInfo + 14, (ushort)info.srWindow.Right);
-		_env.MemWrite16(lpConsoleScreenBufferInfo + 16, (ushort)info.srWindow.Bottom);
-		_env.MemWrite16(lpConsoleScreenBufferInfo + 18, (ushort)info.dwMaximumWindowSize.X);
-		_env.MemWrite16(lpConsoleScreenBufferInfo + 20, (ushort)info.dwMaximumWindowSize.Y);
+		// Write the structure to memory using MemWriteStruct
+		_env.MemWriteStruct(lpConsoleScreenBufferInfo, ref info);
 
 		return 1; // TRUE
 	}
@@ -10020,14 +10010,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0; // FALSE
 		}
 
-		// Read SMALL_RECT structure from memory
-		var rect = new NativeTypes.SMALL_RECT
-		{
-			Left = (short)_env.MemRead16(lpConsoleWindow),
-			Top = (short)_env.MemRead16(lpConsoleWindow + 2),
-			Right = (short)_env.MemRead16(lpConsoleWindow + 4),
-			Bottom = (short)_env.MemRead16(lpConsoleWindow + 6)
-		};
+		// Read SMALL_RECT structure from memory using MemReadStruct
+		var rect = _env.MemReadStruct<NativeTypes.SMALL_RECT>(lpConsoleWindow);
 
 		_logger.LogInformation("[Kernel32] SetConsoleWindowInfo: Window rect ({Left}, {Top}, {Right}, {Bottom})",
 			rect.Left, rect.Top, rect.Right, rect.Bottom);

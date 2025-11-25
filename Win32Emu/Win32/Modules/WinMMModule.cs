@@ -1630,7 +1630,7 @@ namespace Win32Emu.Win32.Modules
 				return 0; // MMSYSERR_NOERROR
 			}
 
-			return 5; // MMSYSERR_INVALHANDLE
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
 		}
 
 		/// <summary>
@@ -1689,7 +1689,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (!_midiStreams.ContainsKey(hms))
 			{
-				return 5; // MMSYSERR_INVALHANDLE
+				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
 			}
 
 			// Mark buffer as done immediately (stub behavior)
@@ -1719,7 +1719,7 @@ namespace Win32Emu.Win32.Modules
 				return 0; // MMSYSERR_NOERROR
 			}
 
-			return 5; // MMSYSERR_INVALHANDLE
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
 		}
 
 		/// <summary>
@@ -1738,7 +1738,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (!_midiStreams.ContainsKey(hms))
 			{
-				return 5; // MMSYSERR_INVALHANDLE
+				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
 			}
 
 			// For stub, just return success
@@ -1762,7 +1762,7 @@ namespace Win32Emu.Win32.Modules
 				return 0; // MMSYSERR_NOERROR
 			}
 
-			return 5; // MMSYSERR_INVALHANDLE
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
 		}
 
 		/// <summary>
@@ -1778,7 +1778,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (!_midiStreams.ContainsKey(hms))
 			{
-				return 5; // MMSYSERR_INVALHANDLE
+				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
 			}
 
 			return 0; // MMSYSERR_NOERROR

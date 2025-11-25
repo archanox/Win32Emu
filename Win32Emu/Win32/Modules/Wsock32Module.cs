@@ -85,40 +85,7 @@ namespace Win32Emu.Win32.Modules
 					returnValue = (uint)WSAStartup((ushort)(a.UInt32(0) & 0xFFFF), a.UInt32(1));
 					return true;
 
-				// Ordinal-based exports (used by some older programs)
-				case "ORDINAL_2":
-					returnValue = bind(a.UInt32(0), a.UInt32(1), a.Int32(2));
-					return true;
-				case "ORDINAL_8":
-					returnValue = getsockname(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-					return true;
-				case "ORDINAL_9":
-					returnValue = getsockopt(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
-					return true;
-				case "ORDINAL_10":
-					returnValue = htonl(a.UInt32(0));
-					return true;
-				case "ORDINAL_11":
-					returnValue = htons(a.UInt32(0));
-					return true;
-				case "ORDINAL_14":
-					returnValue = listen(a.UInt32(0), a.Int32(1));
-					return true;
-				case "ORDINAL_15":
-					returnValue = ntohl(a.UInt32(0));
-					return true;
-				case "ORDINAL_109":
-					WSASetLastError(a.Int32(0));
-					returnValue = 0;
-					return true;
-				case "ORDINAL_110":
-					returnValue = WSAGetLastError();
-					return true;
-				case "ORDINAL_113":
-					returnValue = __WSAFDIsSet(a.UInt32(0), a.UInt32(1));
-					return true;
-
-				// Named versions of the above ordinals
+				// Named exports (ordinals are handled via DllModuleExport attribute)
 				case "HTONL":
 					returnValue = htonl(a.UInt32(0));
 					return true;
@@ -286,7 +253,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Sets the error code that can be retrieved through WSAGetLastError.
 		/// </summary>
-		[DllModuleExport(4)]
+		[DllModuleExport(109)]
 		private void WSASetLastError(int iError)
 		{
 			_logger.LogInformation("[WSOCK32] WSASetLastError(iError={IError})", iError);
@@ -296,7 +263,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Gets a socket option.
 		/// </summary>
-		[DllModuleExport(20)]
+		[DllModuleExport(9)]
 		private uint getsockopt(uint s, int level, int optname, uint optval, uint optlen)
 		{
 			_logger.LogInformation("[WSOCK32] getsockopt(s=0x{S:X8}, level={Level}, optname={Optname}, optval=0x{Optval:X8}, optlen=0x{Optlen:X8})",
@@ -309,7 +276,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Converts a u_long from host to network byte order (big-endian).
 		/// </summary>
-		[DllModuleExport(4)]
+		[DllModuleExport(10)]
 		private uint htonl(uint hostlong)
 		{
 			_logger.LogInformation("[WSOCK32] htonl(hostlong=0x{Hostlong:X8})", hostlong);
@@ -323,7 +290,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Converts a u_short from host to network byte order (big-endian).
 		/// </summary>
-		[DllModuleExport(4)]
+		[DllModuleExport(11)]
 		private uint htons(uint hostshort)
 		{
 			_logger.LogInformation("[WSOCK32] htons(hostshort=0x{Hostshort:X4})", hostshort);
@@ -335,7 +302,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Converts a u_long from network to host byte order.
 		/// </summary>
-		[DllModuleExport(4)]
+		[DllModuleExport(15)]
 		private uint ntohl(uint netlong)
 		{
 			_logger.LogInformation("[WSOCK32] ntohl(netlong=0x{Netlong:X8})", netlong);
@@ -349,7 +316,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Converts a u_short from network to host byte order.
 		/// </summary>
-		[DllModuleExport(4)]
+		[DllModuleExport(16)]
 		private uint ntohs(uint netshort)
 		{
 			_logger.LogInformation("[WSOCK32] ntohs(netshort=0x{Netshort:X4})", netshort);
@@ -361,7 +328,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Determines whether a socket is a member of a fd_set structure.
 		/// </summary>
-		[DllModuleExport(8)]
+		[DllModuleExport(113)]
 		private uint __WSAFDIsSet(uint fd, uint set)
 		{
 			_logger.LogInformation("[WSOCK32] __WSAFDIsSet(fd=0x{Fd:X8}, set=0x{Set:X8})", fd, set);
