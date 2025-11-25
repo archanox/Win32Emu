@@ -57,7 +57,6 @@ public class Sdl3BackendTests
             else
             {
                 // This is OK in CI - audio device not available. Skip the remainder of the test.
-                Assert.Skip("Audio stream could not be created, likely due to no audio device in CI. Skipping active stream count check.");
                 return;
             }
         }
