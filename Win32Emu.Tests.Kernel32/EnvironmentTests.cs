@@ -1,3 +1,4 @@
+using Xunit;
 using System.Text;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 
@@ -6,6 +7,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for environment variable functions like GetEnvironmentStringsW
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class EnvironmentTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;

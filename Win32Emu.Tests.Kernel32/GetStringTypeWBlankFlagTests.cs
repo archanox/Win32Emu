@@ -10,6 +10,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// Bug: GetStringTypeW had an else-if chain that prevented space and tab from receiving
 /// both CT_CTYPE1_SPACE and CT_CTYPE1_BLANK flags. The second check for blank was unreachable.
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class GetStringTypeWBlankFlagTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;

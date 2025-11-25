@@ -1,3 +1,4 @@
+using Xunit;
 using System.Text;
 using Win32Emu.Memory;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
@@ -8,6 +9,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for command line functions like GetCommandLineA
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class CommandLineTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;

@@ -7,6 +7,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Integration tests for VFS with Kernel32 File I/O APIs using virtual disks
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class VfsIntegrationTests : IDisposable
 {
 	private readonly string _testVhdPath;

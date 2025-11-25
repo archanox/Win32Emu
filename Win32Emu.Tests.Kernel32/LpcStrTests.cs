@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
 
@@ -6,6 +7,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for LpcStr (Long Pointer to Const String) type
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public sealed class LpcStrTests : IDisposable
 {
 	private readonly VirtualMemory _memory;

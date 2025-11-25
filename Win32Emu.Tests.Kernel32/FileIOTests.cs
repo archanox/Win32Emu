@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 
 namespace Win32Emu.Tests.Kernel32;
@@ -5,6 +6,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for Kernel32 file I/O functions like CreateFileA, ReadFile, WriteFile, CloseHandle, GetFileType
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class FileIoTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;

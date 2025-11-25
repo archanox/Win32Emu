@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Win32Emu.Win32;
 
@@ -8,6 +9,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// Note: Some functions like GetModuleFileNameA involve unsafe pointer operations
 /// that are not suitable for unit testing in this environment.
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class ModuleProcessTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;

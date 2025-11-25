@@ -4,6 +4,7 @@ using Xunit;
 
 namespace Win32Emu.Tests.Kernel32;
 
+[Trait("Category", "DllModuleTests")]
 public class ChdDiscReaderTests : IDisposable
 {
 	private readonly string _testDir;

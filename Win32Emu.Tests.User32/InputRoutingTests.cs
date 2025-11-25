@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.User32.TestInfrastructure;
 
 namespace Win32Emu.Tests.User32;
@@ -5,6 +6,7 @@ namespace Win32Emu.Tests.User32;
 /// <summary>
 /// Tests for keyboard and mouse input routing to the Win32 message queue
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class InputRoutingTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;

@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Win32Emu.Win32;
 using Win32Emu.Win32.Modules;
@@ -8,6 +9,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// Tests for directory functions (SetCurrentDirectoryA, GetCurrentDirectoryA)
 /// and string functions (LstrcatA), and process execution (WinExec)
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public sealed class DirectoryAndStringFunctionsTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;

@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Memory;
 using Win32Emu.Tests.User32.TestInfrastructure;
 using Win32Emu.Win32;
@@ -9,6 +10,7 @@ namespace Win32Emu.Tests.User32.Messaging;
 /// <summary>
 /// Integration tests showing how MessageDispatcher works with ProcessEnvironment
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class MessageDispatcherIntegrationTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;

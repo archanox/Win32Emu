@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Win32Emu.Win32;
 
@@ -6,6 +7,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for basic Kernel32 functions like GetVersion, GetLastError, SetLastError
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public sealed class BasicFunctionsTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;

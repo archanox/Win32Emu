@@ -3,6 +3,7 @@ using Win32Emu.Win32;
 
 namespace Win32Emu.Tests.User32
 {
+[Trait("Category", "DllModuleTests")]
     public class MsvcrtStdCallTests
     {
         [Theory]

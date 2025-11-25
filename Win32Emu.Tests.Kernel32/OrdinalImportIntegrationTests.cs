@@ -12,6 +12,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// Integration tests for ordinal-based imports
 /// These tests simulate what happens when a PE file imports a function by ordinal
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class OrdinalImportIntegrationTests
 {
 	[Fact]

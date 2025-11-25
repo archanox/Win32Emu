@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Win32Emu.Win32;
 
@@ -7,6 +8,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// Tests for newly implemented Kernel32 functions: VirtualFree, HeapDestroy, TerminateProcess, 
 /// GetProcAddress, MultiByteToWideChar, LCMapStringA, LCMapStringW, GetStringTypeW, RaiseException
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class NewFunctionsTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;

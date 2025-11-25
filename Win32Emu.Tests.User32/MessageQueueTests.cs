@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.User32.TestInfrastructure;
 
 namespace Win32Emu.Tests.User32;
@@ -5,6 +6,7 @@ namespace Win32Emu.Tests.User32;
 /// <summary>
 /// Tests for User32 message queue functions
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class MessageQueueTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;

@@ -5,6 +5,7 @@ using Xunit;
 
 namespace Win32Emu.Tests.Kernel32;
 
+[Trait("Category", "DllModuleTests")]
 public class VirtualAllocTests
 {
     private const uint MEM_COMMIT   = 0x00001000;

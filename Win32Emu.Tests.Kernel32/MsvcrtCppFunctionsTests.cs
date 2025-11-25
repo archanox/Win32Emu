@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Win32Emu.Win32.Modules;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -7,6 +8,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for MSVCRT C++ functions (mangled names)
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public sealed class MsvcrtCppFunctionsTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;
