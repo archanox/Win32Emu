@@ -1,4 +1,5 @@
 using System.Globalization;
+using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Win32Emu.Gui.Converters;
 using Win32Emu.Gui.ViewModels;
@@ -59,7 +60,7 @@ public class ImplementationStatusConverterTests
         Assert.Equal("Unknown", result);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ImplementationStatusToColorConverter_WithImplemented_ReturnsGreen()
     {
         // Arrange
@@ -75,7 +76,7 @@ public class ImplementationStatusConverterTests
         Assert.Equal(Color.Parse("#28A745"), brush.Color);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ImplementationStatusToColorConverter_WithPartial_ReturnsYellow()
     {
         // Arrange
@@ -91,7 +92,7 @@ public class ImplementationStatusConverterTests
         Assert.Equal(Color.Parse("#FFC107"), brush.Color);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ImplementationStatusToColorConverter_WithNotImplemented_ReturnsRed()
     {
         // Arrange
@@ -107,7 +108,7 @@ public class ImplementationStatusConverterTests
         Assert.Equal(Color.Parse("#DC3545"), brush.Color);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ImplementationStatusToColorConverter_WithInvalidValue_ReturnsGray()
     {
         // Arrange
@@ -134,7 +135,7 @@ public class ImplementationStatusConverterTests
             converter.ConvertBack(null, typeof(ImplementationStatus), null, CultureInfo.InvariantCulture));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ImplementationStatusToColorConverter_ConvertBack_ThrowsNotImplementedException()
     {
         // Arrange

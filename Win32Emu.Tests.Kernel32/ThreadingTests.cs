@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 
 namespace Win32Emu.Tests.Kernel32;
@@ -5,6 +6,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for threading and TLS (Thread Local Storage) functions
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public sealed class ThreadingTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;

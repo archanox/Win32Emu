@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Win32Emu.Win32;
 
@@ -7,6 +8,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// Tests based on API Monitor logs from ign_teas.exe on Windows
 /// These tests verify expected input/output behavior matches what was captured
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public sealed class ApiMonLogTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;

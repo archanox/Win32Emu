@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Win32Emu.Win32.Modules;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -8,6 +9,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for SHLWAPI.DLL functions
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public sealed class ShlwapiTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;

@@ -8,6 +8,7 @@ namespace Win32Emu.Tests.User32;
 /// Tests for system window classes that are pre-registered by the OS.
 /// These classes should be available without explicit registration via RegisterClassA.
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class SystemWindowClassesTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;

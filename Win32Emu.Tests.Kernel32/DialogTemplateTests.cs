@@ -10,6 +10,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for dialog template parsing and resource loading functionality.
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public sealed class DialogTemplateTests : IDisposable
 {
 	private readonly VirtualMemory _memory;

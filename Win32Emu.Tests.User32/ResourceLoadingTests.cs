@@ -7,6 +7,7 @@ using System.IO;
 
 namespace Win32Emu.Tests.User32;
 
+[Trait("Category", "DllModuleTests")]
 public class ResourceLoadingTests
 {
     [Fact]

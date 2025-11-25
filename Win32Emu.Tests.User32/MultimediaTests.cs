@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.User32.TestInfrastructure;
 
 namespace Win32Emu.Tests.User32;
@@ -5,6 +6,7 @@ namespace Win32Emu.Tests.User32;
 /// <summary>
 /// Tests for multimedia APIs (DirectSound, DirectInput, WinMM)
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class MultimediaTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;

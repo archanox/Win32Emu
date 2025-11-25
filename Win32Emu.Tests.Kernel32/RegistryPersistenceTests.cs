@@ -9,6 +9,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for registry persistence to virtual disk
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class RegistryPersistenceTests : IDisposable
 {
 	private readonly string _tempVhdPath;

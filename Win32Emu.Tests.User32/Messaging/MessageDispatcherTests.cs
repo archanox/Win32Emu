@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Win32.Messaging;
 using Win32Emu.Win32.Messaging.Handlers;
 
@@ -6,6 +7,7 @@ namespace Win32Emu.Tests.User32.Messaging;
 /// <summary>
 /// Tests for the MessageDispatcher system
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class MessageDispatcherTests : IDisposable
 {
 	private readonly MessageDispatcher _dispatcher;

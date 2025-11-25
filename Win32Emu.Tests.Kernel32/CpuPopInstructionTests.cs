@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 
@@ -6,6 +7,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for POP instruction implementation including POP to memory
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class CpuPopInstructionTests
 {
     [Fact]

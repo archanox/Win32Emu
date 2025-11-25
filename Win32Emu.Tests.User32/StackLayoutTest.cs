@@ -8,6 +8,7 @@ namespace Win32Emu.Tests.User32;
 /// <summary>
 /// Tests to verify correct stack layout for CallWindowProcedureAsync and CallDialogProcedureAsync
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class StackLayoutTests
 {
 	[Fact]

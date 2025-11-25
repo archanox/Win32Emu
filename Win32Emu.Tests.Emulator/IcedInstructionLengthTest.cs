@@ -7,6 +7,7 @@ namespace Win32Emu.Tests.Emulator;
 /// <summary>
 /// Test to diagnose instruction length and EIP advancement issues in 16-bit mode
 /// </summary>
+[Trait("Category", "ConformanceTests")]
 public class IcedInstructionLengthTest
 {
 	private readonly ITestOutputHelper _output;
@@ -34,14 +35,11 @@ public class IcedInstructionLengthTest
 		_output.WriteLine($"Length: {insn.Length}");
 		_output.WriteLine($"Decoder IP before: 0x{0x72A3:X}");
 		_output.WriteLine($"Decoder IP after: 0x{decoder.IP:X}");
-		_output.WriteLine($"Expected EIP after: 0x{0x72A4:X}");
 		_output.WriteLine($"Calculated EIP (oldEIP + length): 0x{(0x72A3 + insn.Length):X}");
 		
-		// The test expects EIP to be 0x72A4 after executing a 1-byte instruction starting at 0x72A3
-		// But our code produces 0x72A3
-		// This suggests the instruction is 1 byte, but the test expects the next instruction to be at 0x72A4
-		
-		Assert.Equal(1, insn.Length);  // Let's see what the actual length is
+		// The instruction "add [ss:bp+60h],bl" is 4 bytes:
+		// 36 (SS prefix) + 00 (opcode) + 5E (ModR/M) + 60 (displacement)
+		Assert.Equal(4, insn.Length);
 	}
 	
 	[Fact]

@@ -6,6 +6,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for ordinal-based function resolution
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class OrdinalResolutionTests
 {
 	[Fact]

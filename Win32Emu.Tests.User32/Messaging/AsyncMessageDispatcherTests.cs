@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Memory;
 using Win32Emu.Tests.User32.TestInfrastructure;
 using Win32Emu.Win32;
@@ -8,6 +9,7 @@ namespace Win32Emu.Tests.User32.Messaging;
 /// <summary>
 /// Tests for async message handling
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class AsyncMessageDispatcherTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;

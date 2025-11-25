@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.User32.TestInfrastructure;
 using Win32Emu.Win32;
 
@@ -6,6 +7,7 @@ namespace Win32Emu.Tests.User32;
 /// <summary>
 /// Tests for button control functionality
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class ButtonTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;

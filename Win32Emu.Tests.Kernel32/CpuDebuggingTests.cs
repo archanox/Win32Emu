@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Debugging;
 using Win32Emu.Memory;
@@ -7,6 +8,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Enhanced CPU debugging with actual implementation of debugging features
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class CpuDebuggingTests
 {
     [Fact]

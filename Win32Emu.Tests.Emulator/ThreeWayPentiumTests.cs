@@ -6,6 +6,7 @@ namespace Win32Emu.Tests.Emulator;
 /// Three-way conformance tests comparing Unicorn, IcedCpu, and JitCpu
 /// Covers the Pentium instruction set including x87 FPU and MMX
 /// </summary>
+[Trait("Category", "ConformanceTests")]
 public class ThreeWayPentiumTests : IDisposable
 {
 	private readonly ThreeWayTestHelper _helper;
@@ -238,8 +239,6 @@ public class ThreeWayPentiumTests : IDisposable
 		
 		// Act
 		_helper.ExecuteInstruction(); // ADD - should not set OF
-		_helper.ExecuteInstruction(); // ADD - should not set OF
-
 		_helper.ExecuteInstruction(); // CMOVNO - should move since OF=0
 		
 		// Assert

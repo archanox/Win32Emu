@@ -12,6 +12,7 @@ using Xunit;
 
 namespace Win32Emu.Tests.Kernel32;
 
+[Trait("Category", "DllModuleTests")]
 public class GdbServerTests
 {
     [Fact]

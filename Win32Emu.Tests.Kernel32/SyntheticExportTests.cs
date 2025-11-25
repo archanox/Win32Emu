@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 
 namespace Win32Emu.Tests.Kernel32;
@@ -5,6 +6,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for synthetic exports (functions looked up via GetProcAddress and called through function pointers)
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class SyntheticExportTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;

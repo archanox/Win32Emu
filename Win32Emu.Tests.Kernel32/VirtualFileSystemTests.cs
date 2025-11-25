@@ -6,6 +6,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for Virtual File System functionality
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class VirtualFileSystemTests : IDisposable
 {
 	private readonly string _testBaseDir;

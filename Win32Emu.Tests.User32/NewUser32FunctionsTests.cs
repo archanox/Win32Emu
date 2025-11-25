@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.User32.TestInfrastructure;
 using Win32Emu.Win32;
 
@@ -6,6 +7,7 @@ namespace Win32Emu.Tests.User32;
 /// <summary>
 /// Tests for newly implemented User32 functions: GetWindowWord, SetWindowWord, OemToCharA, OemToCharBuffA
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class NewUser32FunctionsTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;

@@ -6,6 +6,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Test to verify synthetic exports use the syscall mechanism
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class SyntheticExportAddressFixTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;

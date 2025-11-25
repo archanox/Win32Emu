@@ -17,6 +17,7 @@ public class SingleStepDebugTest
 	}
 	
 	[Fact]
+	[Trait("Category", "ConformanceTests")]
 	public void ExecuteFirstTest_WithDetailedLogging()
 	{
 		var testFile = FindTestFile("00.MOO.gz");

@@ -7,6 +7,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Test that verifies EBP initialization prevents address wraparound
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class EbpInitializationTests
 {
     [Fact]

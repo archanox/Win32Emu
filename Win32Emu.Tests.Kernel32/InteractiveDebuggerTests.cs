@@ -8,6 +8,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for the interactive debugger functionality
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class InteractiveDebuggerTests
 {
     [Fact]

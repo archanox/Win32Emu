@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 
 namespace Win32Emu.Tests.Kernel32;
@@ -5,6 +6,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// <summary>
 /// Tests for newly implemented Kernel32 functions (16-bit thunking, string validation, charset)
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public sealed class NewFunctionsTests2 : IDisposable
 {
 	private readonly TestEnvironment _testEnv;

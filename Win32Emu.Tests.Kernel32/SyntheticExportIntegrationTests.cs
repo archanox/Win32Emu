@@ -1,3 +1,4 @@
+using Xunit;
 using Win32Emu.Tests.Kernel32.TestInfrastructure;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
@@ -11,6 +12,7 @@ namespace Win32Emu.Tests.Kernel32;
 /// 2. GetProcAddress(hModule, "IsProcessorFeaturePresent")
 /// 3. Call the returned function pointer
 /// </summary>
+[Trait("Category", "DllModuleTests")]
 public class SyntheticExportIntegrationTests : IDisposable
 {
     private readonly TestEnvironment _testEnv;
