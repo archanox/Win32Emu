@@ -255,6 +255,24 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "PEEKCONSOLEINPUTW":
 				returnValue = PeekConsoleInputW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
+			case "GETCONSOLESCREENBUFFERINFO":
+				returnValue = GetConsoleScreenBufferInfo(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "GETLARGESTCONSOLEWINDOWSIZE":
+				returnValue = GetLargestConsoleWindowSize(a.UInt32(0));
+				return true;
+			case "READCONSOLEOUTPUTCHARACTERA":
+				returnValue = ReadConsoleOutputCharacterA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+			case "SETCONSOLESCREENBUFFERSIZE":
+				returnValue = SetConsoleScreenBufferSize(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "SETCONSOLEWINDOWINFO":
+				returnValue = SetConsoleWindowInfo(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "WRITECONSOLEINPUTA":
+				returnValue = WriteConsoleInputA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
 
 			// Memory/heap
 			case "GLOBALALLOC":
@@ -9852,6 +9870,191 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// For stub, return 0 events read (buffer is empty)
 		_env.MemWrite32(lpNumberOfEventsRead, 0);
 
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves information about the specified console screen buffer.
+	/// BOOL GetConsoleScreenBufferInfo(
+	///   [in]  HANDLE                      hConsoleOutput,
+	///   [out] PCONSOLE_SCREEN_BUFFER_INFO lpConsoleScreenBufferInfo
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint GetConsoleScreenBufferInfo(uint hConsoleOutput, uint lpConsoleScreenBufferInfo)
+	{
+		_logger.LogInformation("[Kernel32] GetConsoleScreenBufferInfo(hConsoleOutput=0x{HConsoleOutput:X8}, lpConsoleScreenBufferInfo=0x{LpConsoleScreenBufferInfo:X8})",
+			hConsoleOutput, lpConsoleScreenBufferInfo);
+
+		if (lpConsoleScreenBufferInfo == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// CONSOLE_SCREEN_BUFFER_INFO structure:
+		// COORD      dwSize           (4 bytes - X: ushort, Y: ushort)
+		// COORD      dwCursorPosition (4 bytes - X: ushort, Y: ushort)
+		// WORD       wAttributes      (2 bytes)
+		// SMALL_RECT srWindow         (8 bytes - Left, Top, Right, Bottom: ushort each)
+		// COORD      dwMaximumWindowSize (4 bytes - X: ushort, Y: ushort)
+
+		// Set dwSize (80x25 standard console)
+		_env.MemWrite16(lpConsoleScreenBufferInfo + 0, 80);  // dwSize.X
+		_env.MemWrite16(lpConsoleScreenBufferInfo + 2, 25);  // dwSize.Y
+
+		// Set dwCursorPosition (at 0,0)
+		_env.MemWrite16(lpConsoleScreenBufferInfo + 4, 0);   // dwCursorPosition.X
+		_env.MemWrite16(lpConsoleScreenBufferInfo + 6, 0);   // dwCursorPosition.Y
+
+		// Set wAttributes (white on black = 0x07)
+		_env.MemWrite16(lpConsoleScreenBufferInfo + 8, 0x07);
+
+		// Set srWindow (0,0,79,24)
+		_env.MemWrite16(lpConsoleScreenBufferInfo + 10, 0);  // srWindow.Left
+		_env.MemWrite16(lpConsoleScreenBufferInfo + 12, 0);  // srWindow.Top
+		_env.MemWrite16(lpConsoleScreenBufferInfo + 14, 79); // srWindow.Right
+		_env.MemWrite16(lpConsoleScreenBufferInfo + 16, 24); // srWindow.Bottom
+
+		// Set dwMaximumWindowSize (80x25)
+		_env.MemWrite16(lpConsoleScreenBufferInfo + 18, 80); // dwMaximumWindowSize.X
+		_env.MemWrite16(lpConsoleScreenBufferInfo + 20, 25); // dwMaximumWindowSize.Y
+
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves the size of the largest possible console window based on the current font and display size.
+	/// COORD GetLargestConsoleWindowSize(
+	///   [in] HANDLE hConsoleOutput
+	/// );
+	/// </summary>
+	/// <remarks>
+	/// Returns a packed COORD value where the low word is the X coordinate and the high word is the Y coordinate.
+	/// </remarks>
+	[DllModuleExport(4, IsStub = true)]
+	private uint GetLargestConsoleWindowSize(uint hConsoleOutput)
+	{
+		_logger.LogInformation("[Kernel32] GetLargestConsoleWindowSize(hConsoleOutput=0x{HConsoleOutput:X8})",
+			hConsoleOutput);
+
+		// Return COORD packed as DWORD: low word = X (columns), high word = Y (rows)
+		// Return 80x50 as a reasonable maximum console window size
+		var x = (ushort)80;
+		var y = (ushort)50;
+		return (uint)((y << 16) | x);
+	}
+
+	/// <summary>
+	/// Copies a specified number of characters from consecutive cells of a console screen buffer.
+	/// BOOL ReadConsoleOutputCharacterA(
+	///   [in]  HANDLE  hConsoleOutput,
+	///   [out] LPSTR   lpCharacter,
+	///   [in]  DWORD   nLength,
+	///   [in]  COORD   dwReadCoord,
+	///   [out] LPDWORD lpNumberOfCharsRead
+	/// );
+	/// </summary>
+	[DllModuleExport(20, IsStub = true)]
+	private uint ReadConsoleOutputCharacterA(uint hConsoleOutput, uint lpCharacter, uint nLength, uint dwReadCoord, uint lpNumberOfCharsRead)
+	{
+		_logger.LogInformation("[Kernel32] ReadConsoleOutputCharacterA(hConsoleOutput=0x{HConsoleOutput:X8}, lpCharacter=0x{LpCharacter:X8}, nLength={NLength}, dwReadCoord=0x{DwReadCoord:X8}, lpNumberOfCharsRead=0x{LpNumberOfCharsRead:X8})",
+			hConsoleOutput, lpCharacter, nLength, dwReadCoord, lpNumberOfCharsRead);
+
+		if (lpCharacter == 0 || lpNumberOfCharsRead == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// For stub, fill with spaces and return the requested length (or 0)
+		// In a real implementation, we would read from the console buffer
+		for (uint i = 0; i < nLength; i++)
+		{
+			_env.MemWrite8(lpCharacter + i, (byte)' ');
+		}
+
+		_env.MemWrite32(lpNumberOfCharsRead, nLength);
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Changes the size of the specified console screen buffer.
+	/// BOOL SetConsoleScreenBufferSize(
+	///   [in] HANDLE hConsoleOutput,
+	///   [in] COORD  dwSize
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint SetConsoleScreenBufferSize(uint hConsoleOutput, uint dwSize)
+	{
+		// dwSize is a packed COORD: low word = X (columns), high word = Y (rows)
+		var x = (ushort)(dwSize & 0xFFFF);
+		var y = (ushort)((dwSize >> 16) & 0xFFFF);
+
+		_logger.LogInformation("[Kernel32] SetConsoleScreenBufferSize(hConsoleOutput=0x{HConsoleOutput:X8}, dwSize=({X}, {Y}))",
+			hConsoleOutput, x, y);
+
+		// For stub, always return success
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Sets the current size and position of a console screen buffer's window.
+	/// BOOL SetConsoleWindowInfo(
+	///   [in]       HANDLE     hConsoleOutput,
+	///   [in]       BOOL       bAbsolute,
+	///   [in] const SMALL_RECT *lpConsoleWindow
+	/// );
+	/// </summary>
+	[DllModuleExport(12, IsStub = true)]
+	private uint SetConsoleWindowInfo(uint hConsoleOutput, uint bAbsolute, uint lpConsoleWindow)
+	{
+		_logger.LogInformation("[Kernel32] SetConsoleWindowInfo(hConsoleOutput=0x{HConsoleOutput:X8}, bAbsolute={BAbsolute}, lpConsoleWindow=0x{LpConsoleWindow:X8})",
+			hConsoleOutput, bAbsolute, lpConsoleWindow);
+
+		if (lpConsoleWindow == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// Read SMALL_RECT for logging
+		var left = _env.MemRead16(lpConsoleWindow);
+		var top = _env.MemRead16(lpConsoleWindow + 2);
+		var right = _env.MemRead16(lpConsoleWindow + 4);
+		var bottom = _env.MemRead16(lpConsoleWindow + 6);
+
+		_logger.LogInformation("[Kernel32] SetConsoleWindowInfo: Window rect ({Left}, {Top}, {Right}, {Bottom})",
+			left, top, right, bottom);
+
+		// For stub, always return success
+		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Writes data directly to the console input buffer.
+	/// BOOL WriteConsoleInputA(
+	///   [in]  HANDLE       hConsoleInput,
+	///   [in]  INPUT_RECORD *lpBuffer,
+	///   [in]  DWORD        nLength,
+	///   [out] LPDWORD      lpNumberOfEventsWritten
+	/// );
+	/// </summary>
+	[DllModuleExport(16, IsStub = true)]
+	private uint WriteConsoleInputA(uint hConsoleInput, uint lpBuffer, uint nLength, uint lpNumberOfEventsWritten)
+	{
+		_logger.LogInformation("[Kernel32] WriteConsoleInputA(hConsoleInput=0x{HConsoleInput:X8}, lpBuffer=0x{LpBuffer:X8}, nLength={NLength}, lpNumberOfEventsWritten=0x{LpNumberOfEventsWritten:X8})",
+			hConsoleInput, lpBuffer, nLength, lpNumberOfEventsWritten);
+
+		if (lpBuffer == 0 || lpNumberOfEventsWritten == 0)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// For stub, pretend we wrote all events
+		_env.MemWrite32(lpNumberOfEventsWritten, nLength);
 		return 1; // TRUE
 	}
 

@@ -85,6 +85,63 @@ namespace Win32Emu.Win32.Modules
 					returnValue = (uint)WSAStartup((ushort)(a.UInt32(0) & 0xFFFF), a.UInt32(1));
 					return true;
 
+				// Ordinal-based exports (used by some older programs)
+				case "ORDINAL_2":
+					returnValue = bind(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "ORDINAL_8":
+					returnValue = getsockname(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "ORDINAL_9":
+					returnValue = getsockopt(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "ORDINAL_10":
+					returnValue = htonl(a.UInt32(0));
+					return true;
+				case "ORDINAL_11":
+					returnValue = htons(a.UInt32(0));
+					return true;
+				case "ORDINAL_14":
+					returnValue = listen(a.UInt32(0), a.Int32(1));
+					return true;
+				case "ORDINAL_15":
+					returnValue = ntohl(a.UInt32(0));
+					return true;
+				case "ORDINAL_109":
+					WSASetLastError(a.Int32(0));
+					returnValue = 0;
+					return true;
+				case "ORDINAL_110":
+					returnValue = WSAGetLastError();
+					return true;
+				case "ORDINAL_113":
+					returnValue = __WSAFDIsSet(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				// Named versions of the above ordinals
+				case "HTONL":
+					returnValue = htonl(a.UInt32(0));
+					return true;
+				case "HTONS":
+					returnValue = htons(a.UInt32(0));
+					return true;
+				case "NTOHL":
+					returnValue = ntohl(a.UInt32(0));
+					return true;
+				case "NTOHS":
+					returnValue = ntohs(a.UInt32(0));
+					return true;
+				case "GETSOCKOPT":
+					returnValue = getsockopt(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "WSASETLASTERROR":
+					WSASetLastError(a.Int32(0));
+					returnValue = 0;
+					return true;
+				case "__WSAFDISSET":
+					returnValue = __WSAFDIsSet(a.UInt32(0), a.UInt32(1));
+					return true;
+
 				default:
 					_logger.LogInformation("[WSOCK32] Unimplemented export: {Export}", export);
 					return false;
@@ -216,12 +273,118 @@ namespace Win32Emu.Win32.Modules
 			return 0xBEEF0000 + (uint)Random.Shared.Next(0x1000);
 		}
 
+		// Track WSA last error
+		private int _wsaLastError = 0;
+
 		[DllModuleExport(0)]
 		private uint WSAGetLastError()
 		{
-			_logger.LogInformation("[WSOCK32] WSAGetLastError()");
-			// Return no error
-			return 0;
+			_logger.LogInformation("[WSOCK32] WSAGetLastError() -> {WsaLastError}", _wsaLastError);
+			return (uint)_wsaLastError;
+		}
+
+		/// <summary>
+		/// Sets the error code that can be retrieved through WSAGetLastError.
+		/// </summary>
+		[DllModuleExport(4)]
+		private void WSASetLastError(int iError)
+		{
+			_logger.LogInformation("[WSOCK32] WSASetLastError(iError={IError})", iError);
+			_wsaLastError = iError;
+		}
+
+		/// <summary>
+		/// Gets a socket option.
+		/// </summary>
+		[DllModuleExport(20)]
+		private uint getsockopt(uint s, int level, int optname, uint optval, uint optlen)
+		{
+			_logger.LogInformation("[WSOCK32] getsockopt(s=0x{S:X8}, level={Level}, optname={Optname}, optval=0x{Optval:X8}, optlen=0x{Optlen:X8})",
+				s, level, optname, optval, optlen);
+			// Return SOCKET_ERROR
+			_wsaLastError = 10014; // WSAEFAULT
+			return 0xFFFFFFFF;
+		}
+
+		/// <summary>
+		/// Converts a u_long from host to network byte order (big-endian).
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint htonl(uint hostlong)
+		{
+			_logger.LogInformation("[WSOCK32] htonl(hostlong=0x{Hostlong:X8})", hostlong);
+			// Convert from host to network byte order (big-endian)
+			return ((hostlong & 0x000000FF) << 24) |
+			       ((hostlong & 0x0000FF00) << 8) |
+			       ((hostlong & 0x00FF0000) >> 8) |
+			       ((hostlong & 0xFF000000) >> 24);
+		}
+
+		/// <summary>
+		/// Converts a u_short from host to network byte order (big-endian).
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint htons(uint hostshort)
+		{
+			_logger.LogInformation("[WSOCK32] htons(hostshort=0x{Hostshort:X4})", hostshort);
+			// Convert from host to network byte order (big-endian)
+			var s = (ushort)hostshort;
+			return (uint)(((s & 0x00FF) << 8) | ((s & 0xFF00) >> 8));
+		}
+
+		/// <summary>
+		/// Converts a u_long from network to host byte order.
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint ntohl(uint netlong)
+		{
+			_logger.LogInformation("[WSOCK32] ntohl(netlong=0x{Netlong:X8})", netlong);
+			// Convert from network to host byte order (same as htonl on little-endian)
+			return ((netlong & 0x000000FF) << 24) |
+			       ((netlong & 0x0000FF00) << 8) |
+			       ((netlong & 0x00FF0000) >> 8) |
+			       ((netlong & 0xFF000000) >> 24);
+		}
+
+		/// <summary>
+		/// Converts a u_short from network to host byte order.
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint ntohs(uint netshort)
+		{
+			_logger.LogInformation("[WSOCK32] ntohs(netshort=0x{Netshort:X4})", netshort);
+			// Convert from network to host byte order (same as htons on little-endian)
+			var s = (ushort)netshort;
+			return (uint)(((s & 0x00FF) << 8) | ((s & 0xFF00) >> 8));
+		}
+
+		/// <summary>
+		/// Determines whether a socket is a member of a fd_set structure.
+		/// </summary>
+		[DllModuleExport(8)]
+		private uint __WSAFDIsSet(uint fd, uint set)
+		{
+			_logger.LogInformation("[WSOCK32] __WSAFDIsSet(fd=0x{Fd:X8}, set=0x{Set:X8})", fd, set);
+
+			if (set == 0)
+			{
+				return 0; // Not in set (set is null)
+			}
+
+			// fd_set structure:
+			// u_int fd_count (4 bytes)
+			// SOCKET fd_array[FD_SETSIZE] (variable)
+			var fd_count = _env.MemRead32(set);
+			for (uint i = 0; i < fd_count; i++)
+			{
+				var socket = _env.MemRead32(set + 4 + (i * 4));
+				if (socket == fd)
+				{
+					return 1; // Found in set
+				}
+			}
+
+			return 0; // Not found in set
 		}
 
 		[DllModuleExport(8)]
