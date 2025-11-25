@@ -495,17 +495,142 @@
 		analysisResult.Is64Bit = false;
 		analysisResult.Is16Bit = true;
 
-		// NE format support is experimental
-		analysisResult.Status.Verdict = "EXPERIMENTAL - Win16 NE format detected. Loading and parsing supported, but Win16 API emulation is not yet implemented.";
-		
-		// TODO: Parse NE imports when we have NE parsing library
-		// For now, provide basic information
-		analysisResult.Status.TotalDlls = 0;
-		analysisResult.Status.TotalFunctions = 0;
-		analysisResult.Status.ImplementedFunctions = 0;
-		analysisResult.Status.StubFunctions = 0;
-		analysisResult.Status.MissingFunctions = 0;
-		analysisResult.Status.ImplementationPercentage = 0;
+		try
+		{
+			// Parse NE header and imports
+			var neImports = ParseNeImports(fileBytes);
+			
+			if (neImports.Count == 0)
+			{
+				analysisResult.Status.Verdict = "EXPERIMENTAL - Win16 NE format detected with no external module dependencies.";
+				analysisResult.Status.TotalDlls = 0;
+				analysisResult.Status.TotalFunctions = 0;
+				analysisResult.Status.ImplementedFunctions = 0;
+				analysisResult.Status.StubFunctions = 0;
+				analysisResult.Status.MissingFunctions = 0;
+				analysisResult.Status.ImplementationPercentage = 0;
+				return;
+			}
+
+			// Process imported modules
+			foreach (var moduleName in neImports)
+			{
+				var dllName = moduleName.ToUpperInvariant();
+				if (!dllName.EndsWith(".DLL") && !dllName.EndsWith(".EXE"))
+				{
+					dllName += ".DLL";
+				}
+
+				var dependency = new DllDependency
+				{
+					DllName = dllName,
+					IsSupported = false
+				};
+
+				// NE format imports by ordinal, so we can't know specific function names
+				// We add a placeholder to show the module is imported
+				var status = new FunctionStatus
+				{
+					Name = "(Imported by ordinal - specific functions unknown)",
+					Status = "missing",
+					Ordinal = null
+				};
+				dependency.Functions.Add(status);
+				dependency.MissingCount = 1;
+				dependency.ImplementationPercentage = 0;
+
+				analysisResult.Dependencies.Add(dependency);
+			}
+
+			// Calculate overall statistics
+			analysisResult.Status.TotalDlls = analysisResult.Dependencies.Count;
+			analysisResult.Status.TotalFunctions = analysisResult.Dependencies.Sum(d => d.Functions.Count);
+			analysisResult.Status.ImplementedFunctions = 0;
+			analysisResult.Status.StubFunctions = 0;
+			analysisResult.Status.MissingFunctions = analysisResult.Status.TotalFunctions;
+			analysisResult.Status.ImplementationPercentage = 0;
+
+			// Set verdict for NE files
+			analysisResult.Status.Verdict = $"EXPERIMENTAL - Win16 NE format detected. Found {neImports.Count} module dependencies. Win16 API emulation is not yet implemented.";
+		}
+		catch (Exception ex)
+		{
+			analysisResult.Status.Verdict = $"EXPERIMENTAL - Win16 NE format detected but import parsing failed: {ex.Message}";
+			analysisResult.Status.TotalDlls = 0;
+			analysisResult.Status.TotalFunctions = 0;
+			analysisResult.Status.ImplementedFunctions = 0;
+			analysisResult.Status.StubFunctions = 0;
+			analysisResult.Status.MissingFunctions = 0;
+			analysisResult.Status.ImplementationPercentage = 0;
+		}
+	}
+
+	/// <summary>
+	/// Parses the NE (New Executable) format to extract imported module names.
+	/// </summary>
+	/// <param name="fileBytes">The raw bytes of the NE executable</param>
+	/// <returns>List of imported module names</returns>
+	private List<string> ParseNeImports(byte[] fileBytes)
+	{
+		// NE format constants
+		const int MinimumNeHeaderSize = 64;    // Minimum size of NE header required for parsing
+		const int ModuleRefEntrySize = 2;      // Size of each entry in Module Reference Table (2 bytes)
+
+		var imports = new List<string>();
+
+		// Get offset to NE header from DOS header
+		// Need at least 0x3C + 4 bytes to read the NE header offset
+		if (fileBytes.Length < 0x40)
+			return imports;
+
+		var neHeaderOffset = BitConverter.ToUInt32(fileBytes, 0x3C);
+		if (neHeaderOffset + MinimumNeHeaderSize > fileBytes.Length)
+			return imports;
+
+		// Verify NE signature
+		if (fileBytes[neHeaderOffset] != 'N' || fileBytes[neHeaderOffset + 1] != 'E')
+			return imports;
+
+		// NE Header structure (key offsets from NE header start):
+		// Offset 0x1E (2 bytes): Number of entries in Module Reference Table
+		// Offset 0x28 (2 bytes): Offset to Module Reference Table (from start of NE header)
+		// Offset 0x2A (2 bytes): Offset to Imported Names Table (from start of NE header)
+
+		var moduleRefCount = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x1E);
+		var moduleRefTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x28);
+		var importedNamesTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x2A);
+
+		// Calculate absolute offsets
+		var absModuleRefTableOffset = neHeaderOffset + moduleRefTableOffset;
+		var absImportedNamesTableOffset = neHeaderOffset + importedNamesTableOffset;
+
+		// Validate offsets
+		if (absModuleRefTableOffset + (moduleRefCount * ModuleRefEntrySize) > fileBytes.Length)
+			return imports;
+
+		// Read Module Reference Table
+		// Each entry is a 2-byte offset into the Imported Names Table
+		for (int i = 0; i < moduleRefCount; i++)
+		{
+			var nameOffset = BitConverter.ToUInt16(fileBytes, (int)absModuleRefTableOffset + (i * ModuleRefEntrySize));
+			var absNameOffset = absImportedNamesTableOffset + nameOffset;
+
+			if (absNameOffset >= fileBytes.Length)
+				continue;
+
+			// Read Pascal-style string (length byte followed by characters)
+			var nameLength = fileBytes[absNameOffset];
+			if (nameLength == 0 || absNameOffset + 1 + nameLength > fileBytes.Length)
+				continue;
+
+			var moduleName = System.Text.Encoding.ASCII.GetString(fileBytes, (int)absNameOffset + 1, nameLength);
+			if (!string.IsNullOrWhiteSpace(moduleName))
+			{
+				imports.Add(moduleName);
+			}
+		}
+
+		return imports;
 	}
 
 	// Data models
