@@ -1249,6 +1249,137 @@ public static class NativeTypes
 
 	#endregion
 
+	#region Console
+
+	/// <summary>
+	/// COORD structure (4 bytes)
+	/// Defines the coordinates of a character cell in a console screen buffer
+	/// </summary>
+	public struct COORD
+	{
+		public short X;  // Offset 0 - Horizontal coordinate
+		public short Y;  // Offset 2 - Vertical coordinate
+
+		public COORD(short x, short y)
+		{
+			X = x;
+			Y = y;
+		}
+
+		/// <summary>
+		/// Packs the COORD as a DWORD (for return values)
+		/// </summary>
+		public uint ToDword() => (uint)(((ushort)Y << 16) | (ushort)X);
+	}
+
+	/// <summary>
+	/// SMALL_RECT structure (8 bytes)
+	/// Defines the coordinates of the upper-left and lower-right corners of a rectangle
+	/// </summary>
+	public struct SMALL_RECT
+	{
+		public short Left;    // Offset 0
+		public short Top;     // Offset 2
+		public short Right;   // Offset 4
+		public short Bottom;  // Offset 6
+	}
+
+	/// <summary>
+	/// CONSOLE_SCREEN_BUFFER_INFO structure (22 bytes)
+	/// Contains information about a console screen buffer
+	/// </summary>
+	public struct CONSOLE_SCREEN_BUFFER_INFO
+	{
+		public COORD dwSize;              // Offset 0 - Size of the screen buffer (columns and rows)
+		public COORD dwCursorPosition;    // Offset 4 - Cursor position in the buffer
+		public ushort wAttributes;        // Offset 8 - Character attributes
+		public SMALL_RECT srWindow;       // Offset 10 - Display window coordinates
+		public COORD dwMaximumWindowSize; // Offset 18 - Maximum window size
+	}
+
+	#endregion
+
+	#region MIDI
+
+	/// <summary>
+	/// MIDI header flags
+	/// </summary>
+	[Flags]
+	public enum MidiHdrFlags : uint
+	{
+		MHDR_DONE = 0x00000001,       // Done bit
+		MHDR_PREPARED = 0x00000002,   // Set if this header has been prepared
+		MHDR_INQUEUE = 0x00000004,    // Reserved for driver
+		MHDR_ISSTRM = 0x00000008      // Buffer is a stream buffer
+	}
+
+	#endregion
+
+	#region WinSock
+
+	/// <summary>
+	/// WinSock error codes
+	/// </summary>
+	public enum WsaError : int
+	{
+		WSABASEERR = 10000,
+		WSAEINTR = 10004,
+		WSAEBADF = 10009,
+		WSAEACCES = 10013,
+		WSAEFAULT = 10014,
+		WSAEINVAL = 10022,
+		WSAEMFILE = 10024,
+		WSAEWOULDBLOCK = 10035,
+		WSAEINPROGRESS = 10036,
+		WSAEALREADY = 10037,
+		WSAENOTSOCK = 10038,
+		WSAEDESTADDRREQ = 10039,
+		WSAEMSGSIZE = 10040,
+		WSAEPROTOTYPE = 10041,
+		WSAENOPROTOOPT = 10042,
+		WSAEPROTONOSUPPORT = 10043,
+		WSAESOCKTNOSUPPORT = 10044,
+		WSAEOPNOTSUPP = 10045,
+		WSAEPFNOSUPPORT = 10046,
+		WSAEAFNOSUPPORT = 10047,
+		WSAEADDRINUSE = 10048,
+		WSAEADDRNOTAVAIL = 10049,
+		WSAENETDOWN = 10050,
+		WSAENETUNREACH = 10051,
+		WSAENETRESET = 10052,
+		WSAECONNABORTED = 10053,
+		WSAECONNRESET = 10054,
+		WSAENOBUFS = 10055,
+		WSAEISCONN = 10056,
+		WSAENOTCONN = 10057,
+		WSAESHUTDOWN = 10058,
+		WSAETOOMANYREFS = 10059,
+		WSAETIMEDOUT = 10060,
+		WSAECONNREFUSED = 10061,
+		WSAELOOP = 10062,
+		WSAENAMETOOLONG = 10063,
+		WSAEHOSTDOWN = 10064,
+		WSAEHOSTUNREACH = 10065,
+		WSAENOTEMPTY = 10066,
+		WSAEPROCLIM = 10067,
+		WSAEUSERS = 10068,
+		WSAEDQUOT = 10069,
+		WSAESTALE = 10070,
+		WSAEREMOTE = 10071,
+		WSASYSNOTREADY = 10091,
+		WSAVERNOTSUPPORTED = 10092,
+		WSANOTINITIALISED = 10093,
+		WSAEDISCON = 10101,
+		WSAENOMORE = 10102,
+		WSAECANCELLED = 10103,
+		WSAHOST_NOT_FOUND = 11001,
+		WSATRY_AGAIN = 11002,
+		WSANO_RECOVERY = 11003,
+		WSANO_DATA = 11004
+	}
+
+	#endregion
+
 	#region Menu
 
 	/// <summary>

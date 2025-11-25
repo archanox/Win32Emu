@@ -302,7 +302,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[WSOCK32] getsockopt(s=0x{S:X8}, level={Level}, optname={Optname}, optval=0x{Optval:X8}, optlen=0x{Optlen:X8})",
 				s, level, optname, optval, optlen);
 			// Return SOCKET_ERROR
-			_wsaLastError = 10014; // WSAEFAULT
+			_wsaLastError = (int)NativeTypes.WsaError.WSAEFAULT;
 			return 0xFFFFFFFF;
 		}
 

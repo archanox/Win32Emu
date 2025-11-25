@@ -1523,11 +1523,11 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[WinMM] midiOutPrepareHeader(hmo=0x{Hmo:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
 				hmo, pmh, cbmh);
 
-			// Set MHDR_PREPARED flag (offset 16 in MIDIHDR)
+			// Set MHDR_PREPARED flag (offset 16 in MIDIHDR is dwFlags)
 			if (pmh != 0)
 			{
 				var flags = _env.MemRead32(pmh + 16);
-				_env.MemWrite32(pmh + 16, flags | 0x0002); // MHDR_PREPARED
+				_env.MemWrite32(pmh + 16, flags | (uint)NativeTypes.MidiHdrFlags.MHDR_PREPARED);
 			}
 
 			return 0; // MMSYSERR_NOERROR
@@ -1590,11 +1590,11 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[WinMM] midiOutUnprepareHeader(hmo=0x{Hmo:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
 				hmo, pmh, cbmh);
 
-			// Clear MHDR_PREPARED flag and set MHDR_DONE (offset 16 in MIDIHDR)
+			// Clear MHDR_PREPARED flag and set MHDR_DONE (offset 16 in MIDIHDR is dwFlags)
 			if (pmh != 0)
 			{
 				var flags = _env.MemRead32(pmh + 16);
-				_env.MemWrite32(pmh + 16, (flags & ~0x0002u) | 0x0001); // Clear MHDR_PREPARED, set MHDR_DONE
+				_env.MemWrite32(pmh + 16, (flags & ~(uint)NativeTypes.MidiHdrFlags.MHDR_PREPARED) | (uint)NativeTypes.MidiHdrFlags.MHDR_DONE);
 			}
 
 			return 0; // MMSYSERR_NOERROR
@@ -1696,7 +1696,7 @@ namespace Win32Emu.Win32.Modules
 			if (pmh != 0)
 			{
 				var flags = _env.MemRead32(pmh + 16);
-				_env.MemWrite32(pmh + 16, flags | 0x0001); // MHDR_DONE
+				_env.MemWrite32(pmh + 16, flags | (uint)NativeTypes.MidiHdrFlags.MHDR_DONE);
 			}
 
 			return 0; // MMSYSERR_NOERROR
