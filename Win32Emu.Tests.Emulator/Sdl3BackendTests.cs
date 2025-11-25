@@ -54,7 +54,12 @@ public class Sdl3BackendTests
             {
                 Assert.Equal(1, audioBackend.ActiveStreamCount);
             }
-            // else: This is OK in CI - audio device not available
+            else
+            {
+                // This is OK in CI - audio device not available. Skip the remainder of the test.
+                Assert.Skip("Audio stream could not be created, likely due to no audio device in CI. Skipping active stream count check.");
+                return;
+            }
         }
         catch (DllNotFoundException)
         {
