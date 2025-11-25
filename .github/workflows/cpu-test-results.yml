@@ -21,6 +21,7 @@ on:
       - 'Win32Emu.Tools.NativeDllAnalyzer/**'
       - 'Win32Emu.Generators/**'
       - 'Win32Emu.Tools.PeAnalyzer.Wasm/**'
+      - 'Win32Emu.Wasm/**'
       - 'docs/pages/pe-analyzer/**'
       - 'docs/pages/index.html'
       - 'docs/pages/missing-functions.html'
@@ -125,6 +126,17 @@ jobs:
           cp -r Win32Emu.Tools.PeAnalyzer.Wasm/bin/Release/net10.0/publish/wwwroot/* pages/pe-analyzer/
           # Copy the generated api-status.json for the PE Analyzer to use
           cp pages/api-status.json pages/pe-analyzer/
+
+      - name: Build Emulator WASM
+        run: >
+          dotnet publish
+          Win32Emu.Wasm/Win32Emu.Wasm.csproj
+          --configuration Release
+
+      - name: Copy Emulator WASM
+        run: |
+          mkdir -p pages/emulator
+          cp -r Win32Emu.Wasm/bin/Release/net10.0/publish/wwwroot/* pages/emulator/
 
       - name: Create main index page
         run: |
@@ -249,6 +261,12 @@ jobs:
                           <div class="icon">🔬</div>
                           <h2>PE Analyzer</h2>
                           <p>Upload Windows PE files (.exe or .dll) to check compatibility with Win32Emu. Client-side analysis powered by Blazor WebAssembly.</p>
+                      </a>
+                      
+                      <a href="emulator/" class="nav-card">
+                          <div class="icon">🎮</div>
+                          <h2>Web Emulator</h2>
+                          <p>Interactive Win32 emulator in your browser. Upload and run classic Windows executables with DirectDraw, audio output, and debugging panels. (Proof of Concept)</p>
                       </a>
                   </div>
                   
