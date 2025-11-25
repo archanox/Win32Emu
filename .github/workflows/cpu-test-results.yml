@@ -110,6 +110,9 @@ jobs:
         run: |
           cp docs/pages/missing-functions.html pages/missing-functions.html
 
+      - name: Install .NET WASM workload
+        run: dotnet workload install wasm-tools
+
       - name: Build PE Analyzer WASM
         run: >
           dotnet publish
