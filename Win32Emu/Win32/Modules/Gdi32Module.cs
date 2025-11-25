@@ -93,6 +93,9 @@ namespace Win32Emu.Win32.Modules
 				case "SETTEXTALIGN":
 					returnValue = SetTextAlign(a.UInt32(0), a.UInt32(1));
 					return true;
+				case "GETTEXTALIGN":
+					returnValue = GetTextAlign(a.UInt32(0));
+					return true;
 				case "GETDEVICECAPS":
 					returnValue = (uint)GetDeviceCaps(a.UInt32(0), a.Int32(1));
 					return true;
@@ -603,6 +606,26 @@ namespace Win32Emu.Win32.Modules
 			// TA_NOUPDATECP = 0, TA_UPDATECP = 1
 			// Return previous alignment (default: TA_LEFT | TA_TOP | TA_NOUPDATECP = 0)
 			return 0; // Previous alignment
+		}
+
+		/// <summary>
+		/// Retrieves the current text-alignment setting for the specified device context.
+		/// </summary>
+		/// <param name="hdc">Handle to the device context.</param>
+		/// <returns>
+		/// If the function succeeds, the return value is the status of the text-alignment flags.
+		/// The return value is a combination of one or more of the following flags:
+		/// TA_BASELINE (24), TA_BOTTOM (8), TA_TOP (0) for vertical alignment
+		/// TA_CENTER (6), TA_LEFT (0), TA_RIGHT (2) for horizontal alignment
+		/// TA_NOUPDATECP (0), TA_RTLREADING (256), TA_UPDATECP (1) for update flags
+		/// If the function fails, the return value is GDI_ERROR.
+		/// </returns>
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetTextAlign(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] GetTextAlign(HDC=0x{Hdc:X8})", hdc);
+			// Return default alignment (TA_LEFT | TA_TOP | TA_NOUPDATECP = 0)
+			return 0;
 		}
 
 		[DllModuleExport(1)]

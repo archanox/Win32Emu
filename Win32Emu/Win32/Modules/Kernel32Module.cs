@@ -172,6 +172,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GETMODULEFILENAMEA":
 				returnValue = GetModuleFileNameA(a.Ptr(0), a.Lpstr(1), a.UInt32(2));
 				return true;
+			case "GETMODULEFILENAMEW":
+				returnValue = GetModuleFileNameW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
 			case "LOADLIBRARYA":
 				returnValue = LoadLibraryA(a.LpcStr(0));
 				return true;
@@ -201,6 +204,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "SETENVIRONMENTVARIABLEA":
 				returnValue = SetEnvironmentVariableA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "SETENVIRONMENTVARIABLEW":
+				returnValue = SetEnvironmentVariableW(a.UInt32(0), a.UInt32(1));
 				return true;
 			case "EXPANDENVIRONMENTSTRINGSA":
 				returnValue = ExpandEnvironmentStringsA(a.LpcStr(0), a.LpStr(1), a.UInt32(2));
@@ -248,6 +254,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "READCONSOLEINPUTA":
 				returnValue = ReadConsoleInputA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+			case "READCONSOLEA":
+				returnValue = ReadConsoleA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
 			case "READCONSOLEINPUTW":
 				returnValue = ReadConsoleInputW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
@@ -1126,6 +1135,17 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "THUNKCONNECT32":
 				returnValue = ThunkConnect32(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+
+			// COM port functions
+			case "GETCOMMSTATE":
+				returnValue = GetCommState(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "SETCOMMSTATE":
+				returnValue = SetCommState(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "SETCOMMTIMEOUTS":
+				returnValue = SetCommTimeouts(a.UInt32(0), a.UInt32(1));
 				return true;
 
 			default:
@@ -10960,6 +10980,202 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		var str2 = wstr2.Read(_env.Memory);
 		_logger.LogInformation("[Kernel32] LstrcmpW(lpString1=\"{Str1}\", lpString2=\"{Str2}\")", str1, str2);
 		return string.Compare(str1, str2, StringComparison.Ordinal);
+	}
+
+	/// <summary>
+	/// Retrieves the full path and file name of the specified module (Unicode version).
+	/// DWORD GetModuleFileNameW(
+	///   [in, optional] HMODULE hModule,
+	///   [out]          LPWSTR  lpFilename,
+	///   [in]           DWORD   nSize
+	/// );
+	/// </summary>
+	[DllModuleExport(12, IsStub = true)]
+	private uint GetModuleFileNameW(uint hModule, uint lpFilename, uint nSize)
+	{
+		_logger.LogInformation("[Kernel32] GetModuleFileNameW called: hModule=0x{HModule:X8} lpFilename=0x{LpFilename:X8} nSize={NSize}", hModule, lpFilename, nSize);
+
+		if (nSize == 0 || lpFilename == 0)
+		{
+			_logger.LogWarning("[Kernel32] GetModuleFileNameW returning 0 (invalid params)");
+			return 0;
+		}
+
+		string? path = null;
+
+		if (hModule == 0)
+		{
+			path = ReadCurrentModulePath();
+		}
+		else
+		{
+			var moduleName = _env.GetModuleFileNameForHandle(hModule);
+			if (moduleName != null)
+			{
+				path = moduleName;
+			}
+			else
+			{
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+		}
+
+		if (path == null)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0;
+		}
+
+		path = FixPathEscaping(path);
+		var windowsPath = ConvertToWindowsPath(path);
+		_logger.LogDebug("[Kernel32] GetModuleFileNameW converted to Windows path: {WindowsPath}", windowsPath);
+
+		// Write Unicode string with size limit
+		var charsRequired = (uint)windowsPath.Length;
+
+		// If buffer too small, truncate
+		if (nSize <= charsRequired)
+		{
+			var truncated = windowsPath.Substring(0, (int)(nSize > 0 ? nSize - 1 : 0));
+			var wstr = new LpWStr(lpFilename);
+			wstr.Write(_env.Memory, truncated, true);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			_logger.LogDebug("[Kernel32] GetModuleFileNameW truncated; returning {CharsWritten}", nSize > 0 ? nSize - 1 : 0);
+			return nSize > 0 ? nSize - 1 : 0;
+		}
+
+		// Fits in buffer: write full path
+		var wstrFull = new LpWStr(lpFilename);
+		wstrFull.Write(_env.Memory, windowsPath, true);
+
+		_logger.LogInformation("[Kernel32] GetModuleFileNameW returning {ReturnLength}", charsRequired);
+		return charsRequired;
+	}
+
+	/// <summary>
+	/// Sets the value of an environment variable for the current process (Unicode version).
+	/// BOOL SetEnvironmentVariableW(
+	///   [in]           LPCWSTR lpName,
+	///   [in, optional] LPCWSTR lpValue
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint SetEnvironmentVariableW(uint lpName, uint lpValue)
+	{
+		try
+		{
+			var wstrName = new LpWStr(lpName);
+			var name = wstrName.Read(_env.Memory);
+
+			if (string.IsNullOrEmpty(name))
+			{
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
+
+			// If lpValue is NULL, delete the variable
+			if (lpValue == 0)
+			{
+				_env.SetEnvironmentVariable(name, null);
+				_logger.LogInformation("[Kernel32] SetEnvironmentVariableW: Deleted '{Name}'", name);
+			}
+			else
+			{
+				var wstrValue = new LpWStr(lpValue);
+				var value = wstrValue.Read(_env.Memory);
+				_env.SetEnvironmentVariable(name, value);
+				_logger.LogInformation("[Kernel32] SetEnvironmentVariableW: Set '{Name}'='{Value}'", name, value);
+			}
+
+			return (uint)NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] SetEnvironmentVariableW failed: {ExMessage}", ex.Message);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	/// <summary>
+	/// Reads character input from the console input buffer and removes it from the buffer.
+	/// BOOL ReadConsoleA(
+	///   [in]            HANDLE  hConsoleInput,
+	///   [out]           LPVOID  lpBuffer,
+	///   [in]            DWORD   nNumberOfCharsToRead,
+	///   [out]           LPDWORD lpNumberOfCharsRead,
+	///   [in, optional]  LPVOID  pInputControl
+	/// );
+	/// </summary>
+	[DllModuleExport(20, IsStub = true)]
+	private uint ReadConsoleA(uint hConsoleInput, uint lpBuffer, uint nNumberOfCharsToRead, uint lpNumberOfCharsRead, uint pInputControl)
+	{
+		_logger.LogInformation("[Kernel32] ReadConsoleA(hConsoleInput=0x{HConsoleInput:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfCharsToRead={NNumberOfCharsToRead}, lpNumberOfCharsRead=0x{LpNumberOfCharsRead:X8}, pInputControl=0x{PInputControl:X8})",
+			hConsoleInput, lpBuffer, nNumberOfCharsToRead, lpNumberOfCharsRead, pInputControl);
+
+		// Stub implementation: Return 0 characters read (no input available)
+		// A full implementation would read from a console input buffer
+		if (lpNumberOfCharsRead != 0)
+		{
+			_env.MemWrite32(lpNumberOfCharsRead, 0);
+		}
+
+		return (uint)NativeTypes.Win32Bool.TRUE;
+	}
+
+	/// <summary>
+	/// Retrieves the current control settings for a specified communications device.
+	/// BOOL GetCommState(
+	///   [in]      HANDLE hFile,
+	///   [in, out] LPDCB  lpDCB
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint GetCommState(uint hFile, uint lpDCB)
+	{
+		_logger.LogInformation("[Kernel32] GetCommState(hFile=0x{HFile:X8}, lpDCB=0x{LpDCB:X8})", hFile, lpDCB);
+
+		// Stub implementation: return FALSE (device not ready)
+		// A full implementation would query the communications device settings
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
+	}
+
+	/// <summary>
+	/// Configures a communications device according to the specifications in a device-control block.
+	/// BOOL SetCommState(
+	///   [in] HANDLE hFile,
+	///   [in] LPDCB  lpDCB
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint SetCommState(uint hFile, uint lpDCB)
+	{
+		_logger.LogInformation("[Kernel32] SetCommState(hFile=0x{HFile:X8}, lpDCB=0x{LpDCB:X8})", hFile, lpDCB);
+
+		// Stub implementation: return FALSE (device not ready)
+		// A full implementation would configure the communications device
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
+	}
+
+	/// <summary>
+	/// Sets the time-out parameters for all read and write operations on a specified communications device.
+	/// BOOL SetCommTimeouts(
+	///   [in] HANDLE         hFile,
+	///   [in] LPCOMMTIMEOUTS lpCommTimeouts
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint SetCommTimeouts(uint hFile, uint lpCommTimeouts)
+	{
+		_logger.LogInformation("[Kernel32] SetCommTimeouts(hFile=0x{HFile:X8}, lpCommTimeouts=0x{LpCommTimeouts:X8})", hFile, lpCommTimeouts);
+
+		// Stub implementation: return FALSE (device not ready)
+		// A full implementation would set the communication timeouts
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		return (uint)NativeTypes.Win32Bool.FALSE;
 	}
 
 }
