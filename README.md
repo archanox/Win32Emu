@@ -150,6 +150,37 @@ See [Win32Emu.Gui/README.md](Win32Emu.Gui/README.md) for more details about the 
 - [docs/features/CHD_DISC_IMAGE_SUPPORT.md](docs/features/CHD_DISC_IMAGE_SUPPORT.md) - CHD disc image format support
 - [docs/implementation/NE_LOADER_IMPLEMENTATION.md](docs/implementation/NE_LOADER_IMPLEMENTATION.md) - Win16 NE format support (experimental)
 
+### Win32Emu.Wasm
+Interactive web-based frontend for Win32Emu, built with Blazor WebAssembly.
+
+**Live Demo:** [https://archanox.github.io/Win32Emu/emulator/](https://archanox.github.io/Win32Emu/emulator/)
+
+![Win32Emu WASM Frontend](https://github.com/user-attachments/assets/9d06b66e-c8ca-4f69-904c-b10cec47e291)
+
+**Features:**
+- **Browser-Based**: Run the emulator interface directly in your web browser
+- **HTML5 Canvas Display**: Dedicated canvas area for DirectDraw output rendering
+- **Dual Output Panels**: Separate panels for standard output and debug messages
+- **Status Monitoring**: Real-time display of instructions executed, FPS, and audio status
+- **File Upload**: Upload Windows PE executables directly from your device
+- **Mobile-Friendly**: Test and interact with emulated applications on mobile devices
+
+**Current Status:**
+This is a **proof-of-concept** implementation. The Win32Emu core library currently has native dependencies (SDL3, Silk.NET, UnicornEngine) that don't support WebAssembly. To enable full web-based emulation, the following work is needed:
+
+- Create a WASM-compatible rendering backend using HTML5 Canvas and JavaScript interop
+- Implement Web Audio API integration for DirectSound emulation
+- Adapt CPU emulation to work without native intrinsics or provide fallbacks
+- Handle file I/O through browser APIs (IndexedDB, FileSystem API)
+
+**Use Cases:**
+- Test emulator compatibility on mobile devices
+- Share emulated applications via URL
+- Automated testing with Playwright browser automation
+- Quick PE file compatibility checks without installing the native application
+
+See [Win32Emu.Wasm/README.md](Win32Emu.Wasm/README.md) for more details.
+
 ### Win32Emu (Library)
 The core emulation library that powers Win32Emu.Gui. This library provides the `Emulator` class and `EmulatorLauncher` API for embedding Win32 emulation into .NET applications.
 
