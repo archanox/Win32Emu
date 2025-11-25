@@ -458,36 +458,38 @@ public class JitCpuInstructionTests
 	}
 
 	[Fact]
-	public void MemoryAccess_WithNegativeDisplacementAndZeroBase_ShouldThrow()
+	public void MemoryAccess_WithNegativeDisplacementAndZeroBase_ReadsFromHighAddress()
 	{
 		// Arrange
+		// With the new sparse memory model supporting full 4GB address space,
+		// accessing 0xFFFFFFBC is valid (it's in the upper portion of 32-bit space)
+		// and will just read zeros from an uninitialized page
 		var mem = new VirtualMemory(1024 * 1024);
 		var cpu = new JitCpu(mem);
 		
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("EBP", 0); // Base pointer is 0!
+		cpu.SetRegister("EAX", 0x12345678); // Non-zero value to verify it changes
 		
 		// MOV EAX, [EBP-68] using 32-bit displacement
-		// With EBP=0, this becomes [0xFFFFFFBC] which is out of range
+		// With EBP=0, this becomes [0xFFFFFFBC] - which is valid in sparse 4GB model
 		mem.Write8(0x1000, 0x8B); // MOV opcode
 		mem.Write8(0x1001, 0x85); // ModRM byte: [EBP+disp32]
 		mem.Write32(0x1002, 0xFFFFFFBC); // Displacement -68 as 32-bit value
 		
-		// Act & Assert
-		var ex = Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(mem));
-		Assert.Contains("0xFFFFFFBC", ex.Message);
+		// Act - In the new sparse model, this should succeed and read 0 from uninitialized memory
+		cpu.SingleStep(mem);
+		
+		// Assert - EAX should be 0 (uninitialized memory)
+		Assert.Equal(0u, cpu.GetRegister("EAX"));
 	}
 
 	[Fact]
-	public void MemoryAccess_WithVerySmallEBP_ShouldNotCrash()
+	public void MemoryAccess_WithVerySmallEBP_ReadsFromHighAddress()
 	{
-		// This test simulates the IGN_TEAS crash where EBP is 0
-		// The test verifies that even with EBP=0, the emulator doesn't crash
-		// because the Emulator.ValidateAndFixEbp() method will fix it
-		
-		// NOTE: This test requires the Emulator class, not just JitCpu
-		// So we'll test the fix indirectly by ensuring the JitCpu test doesn't crash
-		// when EBP is properly initialized
+		// This test simulates a scenario where EBP is very small
+		// With the new sparse memory model supporting full 4GB address space,
+		// accessing addresses like 0xFFFFFFBC (0x10 - 0x44) is valid
 		
 		var mem = new VirtualMemory(1024 * 1024);
 		var cpu = new JitCpu(mem);
@@ -495,21 +497,19 @@ public class JitCpuInstructionTests
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("ESP", 0x10000);
 		cpu.SetRegister("EBP", 0x10); // Very small EBP (below 0x1000 threshold)
-		
-		// Write test value at [ESP-68] where EBP should be pointing
-		uint expectedAddr = 0x10000 - 0x44;
-		mem.Write32(expectedAddr, 0x12345678);
+		cpu.SetRegister("EAX", 0x12345678); // Non-zero value to verify it changes
 		
 		// MOV EAX, [EBP-68]
-		// In the emulator, ValidateAndFixEbp() would reset EBP to ESP first
-		// Here we test that if EBP is valid (even if small), it works
+		// With EBP=0x10, address = 0x10 + 0xFFFFFFBC = 0xFFFFFFCC (wraps around in 32-bit)
 		mem.Write8(0x1000, 0x8B);
 		mem.Write8(0x1001, 0x85);
 		mem.Write32(0x1002, 0xFFFFFFBC);
 		
-		// Act - This will throw because we're at JitCpu level without Emulator protection
-		// The emulator-level fix would prevent this by resetting EBP before execution
-		Assert.Throws<IndexOutOfRangeException>(() => cpu.SingleStep(mem));
+		// Act - In the new sparse model, this should succeed and read from the wrapped address
+		cpu.SingleStep(mem);
+		
+		// Assert - EAX should be 0 (uninitialized memory)
+		Assert.Equal(0u, cpu.GetRegister("EAX"));
 	}
 
 	[Fact]
