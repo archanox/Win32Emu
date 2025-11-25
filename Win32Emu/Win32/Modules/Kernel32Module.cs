@@ -1148,6 +1148,26 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = SetCommTimeouts(a.UInt32(0), a.UInt32(1));
 				return true;
 
+			// Debug functions
+			case "CONTINUEDEBUGEVENT":
+				returnValue = ContinueDebugEvent(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "FLUSHINSTRUCTIONCACHE":
+				returnValue = FlushInstructionCache(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "GETTHREADCONTEXT":
+				returnValue = GetThreadContext(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "SETTHREADCONTEXT":
+				returnValue = SetThreadContext(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "WAITFORDEBUGEVENT":
+				returnValue = WaitForDebugEvent(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "WRITEPROCESSMEMORY":
+				returnValue = WriteProcessMemory(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+
 			default:
 				_logger.LogInformation("[Kernel32] Unimplemented export: {Export}", export);
 				return false;
@@ -11176,6 +11196,156 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// A full implementation would set the communication timeouts
 		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 		return (uint)NativeTypes.Win32Bool.FALSE;
+	}
+
+	/// <summary>
+	/// Enables a debugger to continue a thread that previously reported a debugging event.
+	/// BOOL ContinueDebugEvent(
+	///   [in] DWORD dwProcessId,
+	///   [in] DWORD dwThreadId,
+	///   [in] DWORD dwContinueStatus
+	/// );
+	/// </summary>
+	[DllModuleExport(12, IsStub = true)]
+	private uint ContinueDebugEvent(uint dwProcessId, uint dwThreadId, uint dwContinueStatus)
+	{
+		_logger.LogInformation("[Kernel32] ContinueDebugEvent(dwProcessId={DwProcessId}, dwThreadId={DwThreadId}, dwContinueStatus=0x{DwContinueStatus:X8})",
+			dwProcessId, dwThreadId, dwContinueStatus);
+
+		// Stub implementation: debugging not supported
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+		return (uint)NativeTypes.Win32Bool.FALSE;
+	}
+
+	/// <summary>
+	/// Flushes the instruction cache for the specified process.
+	/// BOOL FlushInstructionCache(
+	///   [in] HANDLE  hProcess,
+	///   [in] LPCVOID lpBaseAddress,
+	///   [in] SIZE_T  dwSize
+	/// );
+	/// </summary>
+	[DllModuleExport(12, IsStub = true)]
+	private uint FlushInstructionCache(uint hProcess, uint lpBaseAddress, uint dwSize)
+	{
+		_logger.LogInformation("[Kernel32] FlushInstructionCache(hProcess=0x{HProcess:X8}, lpBaseAddress=0x{LpBaseAddress:X8}, dwSize={DwSize})",
+			hProcess, lpBaseAddress, dwSize);
+
+		// In an emulator, we don't have a physical instruction cache to flush
+		// Return success to indicate the operation completed
+		return (uint)NativeTypes.Win32Bool.TRUE;
+	}
+
+	/// <summary>
+	/// Retrieves the context of the specified thread.
+	/// BOOL GetThreadContext(
+	///   [in]      HANDLE    hThread,
+	///   [in, out] LPCONTEXT lpContext
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint GetThreadContext(uint hThread, uint lpContext)
+	{
+		_logger.LogInformation("[Kernel32] GetThreadContext(hThread=0x{HThread:X8}, lpContext=0x{LpContext:X8})",
+			hThread, lpContext);
+
+		// Stub implementation: thread context retrieval not supported
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+		return (uint)NativeTypes.Win32Bool.FALSE;
+	}
+
+	/// <summary>
+	/// Sets the context of the specified thread.
+	/// BOOL SetThreadContext(
+	///   [in] HANDLE        hThread,
+	///   [in] const CONTEXT *lpContext
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint SetThreadContext(uint hThread, uint lpContext)
+	{
+		_logger.LogInformation("[Kernel32] SetThreadContext(hThread=0x{HThread:X8}, lpContext=0x{LpContext:X8})",
+			hThread, lpContext);
+
+		// Stub implementation: thread context modification not supported
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+		return (uint)NativeTypes.Win32Bool.FALSE;
+	}
+
+	/// <summary>
+	/// Waits for a debugging event to occur in a process being debugged.
+	/// BOOL WaitForDebugEvent(
+	///   [out] LPDEBUG_EVENT lpDebugEvent,
+	///   [in]  DWORD         dwMilliseconds
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint WaitForDebugEvent(uint lpDebugEvent, uint dwMilliseconds)
+	{
+		_logger.LogInformation("[Kernel32] WaitForDebugEvent(lpDebugEvent=0x{LpDebugEvent:X8}, dwMilliseconds={DwMilliseconds})",
+			lpDebugEvent, dwMilliseconds);
+
+		// Stub implementation: debugging not supported
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+		return (uint)NativeTypes.Win32Bool.FALSE;
+	}
+
+	/// <summary>
+	/// Writes data to an area of memory in a specified process.
+	/// BOOL WriteProcessMemory(
+	///   [in]  HANDLE  hProcess,
+	///   [in]  LPVOID  lpBaseAddress,
+	///   [in]  LPCVOID lpBuffer,
+	///   [in]  SIZE_T  nSize,
+	///   [out] SIZE_T  *lpNumberOfBytesWritten
+	/// );
+	/// </summary>
+	[DllModuleExport(20, IsStub = true)]
+	private uint WriteProcessMemory(uint hProcess, uint lpBaseAddress, uint lpBuffer, uint nSize, uint lpNumberOfBytesWritten)
+	{
+		_logger.LogInformation("[Kernel32] WriteProcessMemory(hProcess=0x{HProcess:X8}, lpBaseAddress=0x{LpBaseAddress:X8}, lpBuffer=0x{LpBuffer:X8}, nSize={NSize}, lpNumberOfBytesWritten=0x{LpNumberOfBytesWritten:X8})",
+			hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesWritten);
+
+		// For self-process (pseudo-handle or current process), just copy memory
+		if (hProcess == 0xFFFFFFFF || hProcess == GetCurrentProcess())
+		{
+			try
+			{
+				// Copy memory from source buffer to destination
+				for (uint i = 0; i < nSize; i++)
+				{
+					var value = _env.MemRead8(lpBuffer + i);
+					_env.MemWrite8(lpBaseAddress + i, value);
+				}
+
+				// Write the number of bytes written
+				if (lpNumberOfBytesWritten != 0)
+				{
+					_env.MemWrite32(lpNumberOfBytesWritten, nSize);
+				}
+
+				return 1; // TRUE
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[Kernel32] WriteProcessMemory: Exception occurred");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				if (lpNumberOfBytesWritten != 0)
+				{
+					_env.MemWrite32(lpNumberOfBytesWritten, 0);
+				}
+				return 0; // FALSE
+			}
+		}
+
+		// For other processes, we don't support cross-process memory access in the emulator
+		_logger.LogWarning("[Kernel32] WriteProcessMemory: Cross-process memory access not supported");
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+		if (lpNumberOfBytesWritten != 0)
+		{
+			_env.MemWrite32(lpNumberOfBytesWritten, 0);
+		}
+		return 0; // FALSE
 	}
 
 }
