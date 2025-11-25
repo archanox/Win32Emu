@@ -484,6 +484,8 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new WinMmModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new Msacm32Module(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new Glide2XModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new RedlineModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new VeriteModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new DPlayXModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new Ole32Module(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new Oleaut32Module(_env, _image.BaseAddress, peLoader, _logger));
