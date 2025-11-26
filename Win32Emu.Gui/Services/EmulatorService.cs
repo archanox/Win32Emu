@@ -78,7 +78,6 @@ public class EmulatorService
                 
                 // Determine which CPU backend to use based on configuration
                 var useJitCpu = _configuration.CpuBackend == "JitCPU";
-                var useUnicornCpu = _configuration.CpuBackend == "Unicorn";
                 
                 // Create and configure the emulator with backend factory
                 _currentEmulator = new Emulator(_host, _logger, telemetryService, backendFactory);
@@ -125,7 +124,6 @@ public class EmulatorService
                     _configuration.EnableInstructionAnalyzer,
                     _configuration.EnableLegacyInstructionDecoding,
                     useJitCpu,
-                    useUnicornCpu,
                     virtualDiskPath); // Pass the virtual disk path
                 
                 // Run the emulator

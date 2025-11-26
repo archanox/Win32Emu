@@ -188,7 +188,7 @@ public sealed class Emulator : IDisposable
         LogDebug("[Emulator] Subscribed to UI events from backends");
     }
 
-    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, bool useUnicornCpu = false, string? virtualDiskPath = null)
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, string? virtualDiskPath = null)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -375,28 +375,7 @@ public sealed class Emulator : IDisposable
         var stackLimit = 0x00100000u; // Bottom of stack (lowest valid address)
 
         // Create CPU based on backend preference
-        if (useUnicornCpu)
-        {
-            try
-            {
-                _cpu = new Cpu.Unicorn.UnicornCpu(_vm, _logger);
-                LogDebug("[Loader] Unicorn CPU backend enabled (reference implementation)");
-            }
-            catch (ApplicationException ex) when (ex.Message.Contains("Control Flow Guard"))
-            {
-                // Unicorn cannot run with CFG enabled on Windows
-                _logger.LogWarning("[Loader] Unicorn CPU backend is not compatible with Control Flow Guard (CFG). Falling back to IcedCpu.");
-                _logger.LogWarning("[Loader] To use Unicorn, disable CFG in project properties or build without CFG.");
-                CreateFallbackIcedCpu(decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase);
-            }
-            catch (Exception ex)
-            {
-                // Handle any other Unicorn initialization failures
-                _logger.LogWarning(ex, "[Loader] Failed to initialize Unicorn CPU backend: {Message}. Falling back to IcedCpu.", ex.Message);
-                CreateFallbackIcedCpu(decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase);
-            }
-        }
-        else if (useJitCpu)
+        if (useJitCpu)
         {
             _cpu = new Cpu.Jit.JitCpu(_vm, _logger);
             LogDebug("[Loader] JIT CPU backend enabled (async-capable)");
@@ -413,7 +392,6 @@ public sealed class Emulator : IDisposable
         // Log the actual CPU backend being used (after initialization and potential fallback)
         var actualCpuBackend = _cpu switch
         {
-            Cpu.Unicorn.UnicornCpu => "Unicorn",
             Cpu.Jit.JitCpu => "JitCpu",
             IcedCpu => "IcedCpu",
             _ => "Unknown"
@@ -2083,25 +2061,6 @@ public sealed class Emulator : IDisposable
         {
             _host.OnDebugOutput(message, DebugLevel.Debug);
         }
-    }
-
-    private void CreateFallbackIcedCpu(Iced.Intel.DecoderOptions decoderOptions, bool enableInstructionAnalyzer, uint imageBase, uint stackLimit, uint stackBase)
-    {
-        // _vm is guaranteed to be non-null here as this method is only called from LoadExecutable
-        // after _vm has been initialized
-        if (_vm == null)
-        {
-            throw new InvalidOperationException("Virtual memory must be initialized before creating fallback CPU.");
-        }
-        
-        // _image is also guaranteed to be non-null at this point as fallback is only called after image loading
-        if (_image == null)
-        {
-            throw new InvalidOperationException("Image must be loaded before creating fallback CPU.");
-        }
-        
-        _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, imageBase, stackLimit, stackBase);
-        LogDebug("[Loader] IcedCpu backend enabled (fallback from Unicorn)");
     }
 
     /// <summary>
