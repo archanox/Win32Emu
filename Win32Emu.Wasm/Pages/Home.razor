@@ -171,7 +171,7 @@
 @code {
 	private bool _isRunning = false;
 	private bool _executableLoaded = false;
-	private bool _audioEnabled = false;
+	private readonly bool _audioEnabled = false;
 	private string _loadedFileName = string.Empty;
 	private long _loadedFileSize = 0;
 	private byte[]? _executableData = null;
