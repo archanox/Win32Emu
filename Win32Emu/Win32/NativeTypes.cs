@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 
 namespace Win32Emu.Win32;
 
@@ -67,23 +68,14 @@ public static class NativeTypes
 
 	// CPINFO structure for GetCPInfo function
 	// Total size: 20 bytes (4 + 2 + 12 + 2 padding)
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct Cpinfo
 	{
 		public uint MaxCharSize;           // Maximum length, in bytes, of a character in the code page
-		public byte DefaultChar0;          // Default character used when translating to the specific code page
-		public byte DefaultChar1;
-		public byte LeadByte0;             // Lead byte ranges for double-byte character sets (DBCS)
-		public byte LeadByte1;
-		public byte LeadByte2;
-		public byte LeadByte3;
-		public byte LeadByte4;
-		public byte LeadByte5;
-		public byte LeadByte6;
-		public byte LeadByte7;
-		public byte LeadByte8;
-		public byte LeadByte9;
-		public byte LeadByte10;
-		public byte LeadByte11;
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
+		public byte[]? DefaultChar;        // Default character used when translating to the specific code page
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 12)]
+		public byte[]? LeadByte;           // Lead byte ranges for double-byte character sets (DBCS)
 	}
 
 	// RTL_CRITICAL_SECTION structure (Windows XP/2000)
@@ -389,6 +381,7 @@ public static class NativeTypes
 	}
 
 	// PAINTSTRUCT structure (64 bytes)
+	[StructLayout(LayoutKind.Sequential)]
 	public struct PAINTSTRUCT
 	{
 		public uint hdc;            // Offset 0
@@ -399,7 +392,8 @@ public static class NativeTypes
 		public int rcPaintBottom;   // Offset 20
 		public uint fRestore;       // Offset 24
 		public uint fIncUpdate;     // Offset 28
-		// rgbReserved[32] at offset 32 - not used in emulation, accessed via memory operations
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
+		public byte[]? rgbReserved; // Offset 32 - Reserved
 	}
 
 	// DOCINFO structure (20 bytes)
@@ -548,24 +542,28 @@ public static class NativeTypes
 	}
 
 	// WAVEINCAPS structure for wave input device capabilities (52 bytes for ANSI)
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public struct WAVEINCAPSA
 	{
 		public ushort wMid;                  // Offset 0 - Manufacturer ID
 		public ushort wPid;                  // Offset 2 - Product ID
 		public uint vDriverVersion;          // Offset 4 - Driver version
-		// szPname[32] - accessed via memory operations // Offset 8 - Product name (32 chars)
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+		public string? szPname;              // Offset 8 - Product name (32 chars)
 		public uint dwFormats;               // Offset 40 - Supported formats
 		public ushort wChannels;             // Offset 44 - Number of channels supported
 		public ushort wReserved1;            // Offset 46 - Reserved
 	}
 
 	// WAVEOUTCAPS structure for wave output device capabilities (52 bytes for ANSI)
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public struct WAVEOUTCAPSA
 	{
 		public ushort wMid;                  // Offset 0 - Manufacturer ID
 		public ushort wPid;                  // Offset 2 - Product ID
 		public uint vDriverVersion;          // Offset 4 - Driver version
-		// szPname[32] - accessed via memory operations // Offset 8 - Product name (32 chars)
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+		public string? szPname;              // Offset 8 - Product name (32 chars)
 		public uint dwFormats;               // Offset 40 - Supported formats
 		public ushort wChannels;             // Offset 44 - Number of channels supported
 		public ushort wReserved1;            // Offset 46 - Padding
@@ -677,6 +675,7 @@ public static class NativeTypes
 	}
 
 	// MIXERLINE structure (168 bytes for ANSI version)
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public struct MIXERLINEA
 	{
 		public uint cbStruct;                // Offset 0 - Size of structure
@@ -689,17 +688,21 @@ public static class NativeTypes
 		public uint cChannels;               // Offset 28 - Number of channels
 		public uint cConnections;            // Offset 32 - Number of connections
 		public uint cControls;               // Offset 36 - Number of controls
-		// szShortName[16] - accessed via memory operations // Offset 40 - Short name
-		// szName[64] - accessed via memory operations      // Offset 56 - Full name
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 16)]
+		public string? szShortName;          // Offset 40 - Short name
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
+		public string? szName;               // Offset 56 - Full name
 		public uint dwType;                  // Offset 120 - Target type
 		public uint dwDeviceID;              // Offset 124 - Device ID
 		public ushort wMid;                  // Offset 128 - Manufacturer ID
 		public ushort wPid;                  // Offset 130 - Product ID
 		public uint vDriverVersion;          // Offset 132 - Driver version
-		// szPname[32] - accessed via memory operations // Offset 136 - Product name
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+		public string? szPname;              // Offset 136 - Product name
 	}
 
 	// MIXERCONTROL structure (148 bytes for ANSI version)
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public struct MIXERCONTROLA
 	{
 		public uint cbStruct;                // Offset 0 - Size of structure
@@ -707,11 +710,14 @@ public static class NativeTypes
 		public uint dwControlType;           // Offset 8 - Control type
 		public uint fdwControl;              // Offset 12 - Control flags
 		public uint cMultipleItems;          // Offset 16 - Multiple items count
-		// szShortName[16] - accessed via memory operations // Offset 20 - Short name
-		// szName[64] - accessed via memory operations      // Offset 36 - Full name
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 16)]
+		public string? szShortName;          // Offset 20 - Short name
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
+		public string? szName;               // Offset 36 - Full name
 		public uint lMinimum;                // Offset 100 - Minimum value (signed as uint)
 		public uint lMaximum;                // Offset 104 - Maximum value (signed as uint)
-		// reserved[10] - accessed via memory operations    // Offset 108 - Reserved (40 bytes)
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 10)]
+		public uint[]? reserved;             // Offset 108 - Reserved (40 bytes)
 	}
 
 	// MIXERLINECONTROLS structure (24 bytes for ANSI version)
@@ -869,6 +875,7 @@ public static class NativeTypes
 
 	// PROCESSENTRY32 structure (296 bytes)
 	// Describes an entry from a list of the processes residing in the system address space
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public struct PROCESSENTRY32
 	{
 		public uint dwSize;              // Offset 0 - Size of the structure (296 bytes)
@@ -880,7 +887,8 @@ public static class NativeTypes
 		public uint th32ParentProcessID; // Offset 24 - Parent process identifier
 		public int pcPriClassBase;       // Offset 28 - Base priority of threads
 		public uint dwFlags;             // Offset 32 - Reserved (not used)
-		// szExeFile[260] - accessed via memory operations // Offset 36 - Path and filename of executable (MAX_PATH)
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+		public string? szExeFile;        // Offset 36 - Path and filename of executable (MAX_PATH)
 		
 		public const int Size = 296;
 	}
@@ -902,6 +910,7 @@ public static class NativeTypes
 
 	// MODULEENTRY32 structure (548 bytes)
 	// Describes an entry from a list of the modules belonging to a process
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public struct MODULEENTRY32
 	{
 		public uint dwSize;              // Offset 0 - Size of the structure (548 bytes)
@@ -912,8 +921,10 @@ public static class NativeTypes
 		public uint modBaseAddr;         // Offset 20 - Base address of module
 		public uint modBaseSize;         // Offset 24 - Size of module in bytes
 		public uint hModule;             // Offset 28 - Module handle
-		// szModule[256] - accessed via memory operations // Offset 32 - Module name (MAX_MODULE_NAME32 + 1)
-		// szExePath[260] - accessed via memory operations // Offset 288 - Module path (MAX_PATH)
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+		public string? szModule;         // Offset 32 - Module name (MAX_MODULE_NAME32 + 1)
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+		public string? szExePath;        // Offset 288 - Module path (MAX_PATH)
 		
 		public const int Size = 548;
 	}
