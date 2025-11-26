@@ -82,7 +82,7 @@ namespace Win32Emu.Win32.Modules
 // Initialize audio backend if not already done
 			if (_env.AudioBackend == null)
 			{
-				_env.AudioBackend = Rendering.BackendFactory.CreateAudioBackend(_logger);
+				_env.AudioBackend = _env.BackendFactory?.CreateAudioBackend(_logger);
 				_env.AudioBackend.Initialize();
 			}
 
@@ -633,7 +633,7 @@ namespace Win32Emu.Win32.Modules
 			if (_env.AudioBackend == null)
 			{
 				_logger.LogWarning("[DSound] SetCooperativeLevel: Audio backend not initialized, initializing now");
-				_env.AudioBackend = Rendering.BackendFactory.CreateAudioBackend(_logger);
+				_env.AudioBackend = _env.BackendFactory?.CreateAudioBackend(_logger);
 				if (!_env.AudioBackend.Initialize())
 				{
 					_logger.LogError("[DSound] SetCooperativeLevel: Failed to initialize audio backend");

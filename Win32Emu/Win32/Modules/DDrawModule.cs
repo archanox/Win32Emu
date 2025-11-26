@@ -3005,10 +3005,17 @@ namespace Win32Emu.Win32.Modules
 				// Initialize rendering backend if not already done
 				if (obj.RenderingBackend == null)
 				{
-					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
-					if (_env.Host != null)
+					if (_env.BackendFactory != null)
 					{
-						_logger.LogInformation("[DDraw] Using Avalonia rendering backend for GUI integration");
+						obj.RenderingBackend = _env.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
+						if (_env.Host != null)
+						{
+							_logger.LogInformation("[DDraw] Using Avalonia rendering backend for GUI integration");
+						}
+					}
+					else
+					{
+						_logger.LogWarning("[DDraw] BackendFactory not available, rendering backend not created");
 					}
 				}
 
@@ -3077,22 +3084,29 @@ namespace Win32Emu.Win32.Modules
 				// Initialize rendering backend with the specified dimensions
 				if (obj.RenderingBackend == null)
 				{
-					obj.RenderingBackend = Rendering.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
-					if (_env.Host != null)
+					if (_env.BackendFactory != null)
 					{
-						_logger.LogInformation("[DDraw] Using Avalonia rendering backend for GUI integration");
+						obj.RenderingBackend = _env.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
+						if (_env.Host != null)
+						{
+							_logger.LogInformation("[DDraw] Using Avalonia rendering backend for GUI integration");
+						}
+					}
+					else
+					{
+						_logger.LogWarning("[DDraw] BackendFactory not available, rendering backend not created");
 					}
 				}
 
 				// Initialize the window with the specified dimensions
 				var title = "Win32Emu DirectDraw";
-				if (obj.RenderingBackend.IsInitialized)
+				if (obj.RenderingBackend?.IsInitialized == true)
 				{
 					// If already initialized, we would need to recreate with new dimensions
 					// For now, we'll just log this situation
 					_logger.LogInformation("[DDraw] Display mode changed to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
 				}
-				else
+				else if (obj.RenderingBackend != null)
 				{
 					var success = obj.RenderingBackend.Initialize((int)dwWidth, (int)dwHeight, title);
 					if (!success)

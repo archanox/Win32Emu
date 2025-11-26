@@ -1497,11 +1497,11 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			// Create rendering backend (prioritize GLFW as requested)
-			if (_renderingBackend == null)
+			if (_renderingBackend == null && _env.BackendFactory != null)
 			{
 				_logger.LogInformation("[GLIDE2x] Creating rendering backend for Glide emulation");
 				
-				_renderingBackend = Rendering.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
+				_renderingBackend = _env.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
 				if (_env.Host != null)
 				{
 					_logger.LogInformation("[GLIDE2x] Using Avalonia rendering backend for GUI integration");

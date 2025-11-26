@@ -89,9 +89,9 @@ namespace Win32Emu.Win32.Modules
 			_dinputObjects[dinputHandle] = dinputObj;
 
 			// Initialize input backend if not already done
-			if (_env.InputBackend == null)
+			if (_env.InputBackend == null && _env.BackendFactory != null)
 			{
-				_env.InputBackend = Rendering.BackendFactory.CreateInputBackend(_logger);
+				_env.InputBackend = _env.BackendFactory.CreateInputBackend(_logger);
 				_env.InputBackend.Initialize();
 			}
 
@@ -161,9 +161,9 @@ namespace Win32Emu.Win32.Modules
 			_dinputObjects[dinputHandle] = dinputObj;
 
 			// Initialize input backend if not already done
-			if (_env.InputBackend == null)
+			if (_env.InputBackend == null && _env.BackendFactory != null)
 			{
-				_env.InputBackend = Rendering.BackendFactory.CreateInputBackend(_logger);
+				_env.InputBackend = _env.BackendFactory.CreateInputBackend(_logger);
 				_env.InputBackend.Initialize();
 			}
 
