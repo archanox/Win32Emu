@@ -1591,9 +1591,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(9)]
 	public unsafe uint GetCpInfo(CodePage codePage, NativeTypes.Lpcpinfo lpCpInfo)
 	{
-		_logger.LogInformation("[Kernel32] GetCPInfo called: codePage={CodePage} lpCpInfo=0x{LpCpInfo:X8}", codePage, (nint)lpCpInfo.Value);
+		_logger.LogInformation("[Kernel32] GetCPInfo called: codePage={CodePage} lpCpInfo=0x{LpCpInfo:X8}", codePage, lpCpInfo.Value);
 
-		if (lpCpInfo.Value == null)
+		if (lpCpInfo.Value == 0)
 		{
 			_logger.LogWarning("[Kernel32] GetCPInfo: null pointer");
 			return (uint)NativeTypes.Win32Bool.FALSE; // Return FALSE if null pointer
@@ -1645,16 +1645,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Write the CPINFO structure to emulated memory
-		// Validate pointer before casting and writing
-		var ptrValue = (ulong)lpCpInfo.Value;
-		// Assume emulated memory is 32-bit addressable (0..0xFFFFFFFF)
-		if (ptrValue is > uint.MaxValue or 0)
-		{
-			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return (uint)NativeTypes.Win32Bool.FALSE;
-		}
-
-		_env.MemWriteStruct((uint)ptrValue, ref cpInfo);
+		// lpCpInfo.Value is already validated to be non-zero above
+		_env.MemWriteStruct(lpCpInfo.Value, ref cpInfo);
 
 		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
