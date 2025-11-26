@@ -67,6 +67,46 @@
 				return false;
 			}
 		};
+		
+		// Folder selection helper
+		window.getFilesFromInput = async (inputId) => {
+			const input = document.getElementById(inputId);
+			if (!input || !input.files || input.files.length === 0) {
+				return [];
+			}
+			
+			const files = [];
+			const fileList = input.files;
+			
+			for (let i = 0; i < fileList.length; i++) {
+				const file = fileList[i];
+				
+				// Read file as base64
+				const base64 = await new Promise((resolve, reject) => {
+					const reader = new FileReader();
+					reader.onload = () => {
+						// Remove the data URL prefix (e.g., "data:application/octet-stream;base64,")
+						const base64String = reader.result.split(',')[1];
+						resolve(base64String);
+					};
+					reader.onerror = reject;
+					reader.readAsDataURL(file);
+				});
+				
+				// Get relative path (webkitRelativePath includes folder name)
+				const relativePath = file.webkitRelativePath || file.name;
+				
+				files.push({
+					name: file.name,
+					relativePath: relativePath,
+					size: file.size,
+					content: base64
+				});
+			}
+			
+			console.log(`Loaded ${files.length} files from folder`);
+			return files;
+		};
 	</script>
 	
 	<script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
