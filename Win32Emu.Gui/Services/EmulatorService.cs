@@ -60,10 +60,12 @@ public class EmulatorService
             try
             {
                 // Set the rendering backend from configuration
+                // TODO: Backend selection now handled through IBackendFactory injection
+                // BackendFactory is no longer static - need to pass instance through Emulator
                 if (Enum.TryParse<Rendering.BackendType>(_configuration.RenderingBackend, ignoreCase: true, out var backendType))
                 {
-                    Rendering.BackendFactory.CurrentBackendType = backendType;
-                    _logger.LogInformation("Set rendering backend to: {Backend}", backendType);
+                    // Win32Emu.Gui.Backends.BackendFactory.CurrentBackendType = backendType;
+                    _logger.LogInformation("Backend type from config: {Backend} (backend selection needs implementation)", backendType);
                 }
                 
                 // Get the global telemetry service if enabled
