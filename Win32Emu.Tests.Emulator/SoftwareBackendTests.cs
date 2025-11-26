@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Rendering;
+using Win32Emu.Gui.Backends;
 
 namespace Win32Emu.Tests.Emulator;
 

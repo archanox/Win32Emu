@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Win32Emu.Gui.Backends;
 using Win32Emu.Gui.Models;
+using Win32Emu.Rendering;
 using Win32Emu.VirtualFileSystem;
 
 namespace Win32Emu.Gui.Services;
@@ -59,13 +61,16 @@ public class EmulatorService
         {
             try
             {
-                // Set the rendering backend from configuration
-                // TODO: Backend selection now handled through IBackendFactory injection
-                // BackendFactory is no longer static - need to pass instance through Emulator
-                if (Enum.TryParse<Rendering.BackendType>(_configuration.RenderingBackend, ignoreCase: true, out var backendType))
+                // Create backend factory and set the rendering backend from configuration
+                var backendFactory = new BackendFactory();
+                if (Enum.TryParse<BackendType>(_configuration.RenderingBackend, ignoreCase: true, out var backendType))
                 {
-                    // Win32Emu.Gui.Backends.BackendFactory.CurrentBackendType = backendType;
-                    _logger.LogInformation("Backend type from config: {Backend} (backend selection needs implementation)", backendType);
+                    backendFactory.CurrentBackendType = backendType;
+                    _logger.LogInformation("Set rendering backend to: {Backend}", backendType);
+                }
+                else
+                {
+                    _logger.LogInformation("Using default rendering backend: {Backend}", backendFactory.CurrentBackendType);
                 }
                 
                 // Get the global telemetry service if enabled
@@ -75,8 +80,8 @@ public class EmulatorService
                 var useJitCpu = _configuration.CpuBackend == "JitCPU";
                 var useUnicornCpu = _configuration.CpuBackend == "Unicorn";
                 
-                // Create and configure the emulator
-                _currentEmulator = new Emulator(_host, _logger, telemetryService);
+                // Create and configure the emulator with backend factory
+                _currentEmulator = new Emulator(_host, _logger, telemetryService, backendFactory);
                 
                 // Determine the virtual disk path to use
                 string? virtualDiskPath = null;

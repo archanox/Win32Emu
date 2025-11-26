@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Rendering;
+using Win32Emu.Gui.Backends;
 using SharpMetal.Metal;
 using System.Numerics;
 
