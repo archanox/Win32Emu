@@ -47,12 +47,37 @@
 				</div>
 				<div class="card-body">
 					<div class="mb-3">
-						<label for="fileInput" class="form-label">Load Executable</label>
-						<InputFile id="fileInput" 
-								   OnChange="@HandleFileSelected" 
-								   class="form-control" 
-								   accept=".exe"
+						<label class="form-label">Load Options</label>
+						<div class="btn-group w-100 mb-2" role="group">
+							<input type="radio" class="btn-check" name="loadMode" id="loadFile" checked="@(!_folderMode)" @onchange="() => SetLoadMode(false)" disabled="@_isRunning" />
+							<label class="btn btn-outline-primary" for="loadFile">Single File</label>
+							
+							<input type="radio" class="btn-check" name="loadMode" id="loadFolder" checked="@_folderMode" @onchange="() => SetLoadMode(true)" disabled="@_isRunning" />
+							<label class="btn btn-outline-primary" for="loadFolder">Folder</label>
+						</div>
+						
+						@if (!_folderMode)
+						{
+							<label for="fileInput" class="form-label">Select Executable</label>
+							<InputFile id="fileInput" 
+									   OnChange="@HandleFileSelected" 
+									   class="form-control" 
+									   accept=".exe"
+									   disabled="@_isRunning" />
+						}
+						else
+						{
+							<label for="folderInput" class="form-label">Select Folder</label>
+							<input type="file" 
+								   id="folderInput" 
+								   class="form-control"
+								   webkitdirectory
+								   directory
+								   multiple
+								   @ref="_folderInputElement"
+								   @onchange="HandleFolderSelected"
 								   disabled="@_isRunning" />
+						}
 					</div>
 					
 					@if (_executableLoaded && !_isRunning)
@@ -79,6 +104,11 @@
 								<strong>Loaded:</strong> @_loadedFileName
 								<br />
 								<strong>Size:</strong> @FormatFileSize(_loadedFileSize)
+								@if (_folderMode && _loadedFiles.Count > 0)
+								{
+									<br />
+									<strong>Files in folder:</strong> @_loadedFiles.Count
+								}
 							</small>
 						</div>
 					}
@@ -172,15 +202,85 @@
 	private bool _isRunning = false;
 	private bool _executableLoaded = false;
 	private readonly bool _audioEnabled = false;
+	private bool _folderMode = false;
 	private string _loadedFileName = string.Empty;
 	private long _loadedFileSize = 0;
 	private byte[]? _executableData = null;
+	private Dictionary<string, byte[]> _loadedFiles = new();
+	private ElementReference _folderInputElement;
 	
 	private long _instructionsExecuted = 0;
 	private int _fps = 0;
 	
 	private string _stdOutput = "No output yet.\n";
 	private string _debugOutput = "No debug messages.\n";
+
+	private void SetLoadMode(bool folderMode)
+	{
+		_folderMode = folderMode;
+		_executableLoaded = false;
+		_loadedFileName = string.Empty;
+		_loadedFileSize = 0;
+		_executableData = null;
+		_loadedFiles.Clear();
+	}
+
+	private async Task HandleFolderSelected(ChangeEventArgs e)
+	{
+		try
+		{
+			_loadedFiles.Clear();
+			_executableLoaded = false;
+			_loadedFileName = string.Empty;
+			
+			// Get files from the folder using JavaScript interop
+			var fileDataList = await JS.InvokeAsync<List<FileData>>("getFilesFromInput", "folderInput");
+			
+			if (fileDataList == null || fileDataList.Count == 0)
+			{
+				AddDebugOutput("No files selected from folder");
+				return;
+			}
+
+			string? exePath = null;
+			long totalSize = 0;
+
+			foreach (var fileData in fileDataList)
+			{
+				_loadedFiles[fileData.RelativePath] = Convert.FromBase64String(fileData.Content);
+				totalSize += fileData.Size;
+				
+				if (fileData.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+				{
+					if (exePath == null)
+					{
+						exePath = fileData.RelativePath;
+						_executableData = _loadedFiles[fileData.RelativePath];
+						_loadedFileName = fileData.Name;
+						_loadedFileSize = fileData.Size;
+					}
+				}
+			}
+
+			if (exePath != null)
+			{
+				_executableLoaded = true;
+				AddDebugOutput($"Loaded folder with {_loadedFiles.Count} files (Total: {FormatFileSize(totalSize)})");
+				AddDebugOutput($"Main executable: {_loadedFileName}");
+				Logger.LogInformation("Loaded folder with {FileCount} files, executable: {FileName}", _loadedFiles.Count, _loadedFileName);
+			}
+			else
+			{
+				AddDebugOutput($"Error: No .exe file found in selected folder ({_loadedFiles.Count} files loaded)");
+				_loadedFiles.Clear();
+			}
+		}
+		catch (Exception ex)
+		{
+			AddDebugOutput($"Error loading folder: {ex.Message}");
+			Logger.LogError(ex, "Error loading folder");
+		}
+	}
 
 	private async Task HandleFileSelected(InputFileChangeEventArgs e)
 	{
@@ -305,5 +405,14 @@
 			len = len / 1024;
 		}
 		return $"{len:0.##} {sizes[order]}";
+	}
+
+	// Helper class for folder file data from JavaScript
+	private class FileData
+	{
+		public string Name { get; set; } = string.Empty;
+		public string RelativePath { get; set; } = string.Empty;
+		public long Size { get; set; }
+		public string Content { get; set; } = string.Empty; // Base64 encoded
 	}
 }
