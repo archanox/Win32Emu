@@ -117,7 +117,7 @@ namespace Win32Emu.Win32.Modules
 
 		public string Name => "USER32.DLL";
 
-		public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			_cpu = cpu;
 			_memory = memory;
@@ -1208,16 +1208,16 @@ namespace Win32Emu.Win32.Modules
 		/// such as BUTTON, EDIT, LISTBOX, and COMBOBOX may already be using values in this range.)
 		/// </remarks>
 		[DllModuleExport(18)]
-		private unsafe uint RegisterWindowMessageA(sbyte* lpString)
+		private uint RegisterWindowMessageA(uint lpString)
 		{
 			// Validate the input pointer
-			if (lpString == null)
+			if (lpString == 0)
 			{
 				_logger.LogWarning("[User32] RegisterWindowMessageA: NULL string pointer");
 				return 0;
 			}
 
-			var lpStringPtr = (uint)(nint)lpString;
+			var lpStringPtr = lpString;
 
 			// Read the message string from memory
 			var messageString = _env.ReadAnsiString(lpStringPtr);
@@ -1237,10 +1237,10 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(3)]
-		private unsafe uint CreateWindowExA(
+		private uint CreateWindowExA(
 			uint dwExStyle,
-			sbyte* lpClassName,
-			sbyte* lpWindowName,
+			uint lpClassName,
+			uint lpWindowName,
 			uint dwStyle,
 			int x,
 			int y,
@@ -1251,8 +1251,8 @@ namespace Win32Emu.Win32.Modules
 			uint hInstance,
 			uint lpParam)
 		{
-			var classNamePtr = (uint)(nint)lpClassName;
-			var windowNamePtr = (uint)(nint)lpWindowName;
+			var classNamePtr = lpClassName;
+			var windowNamePtr = lpWindowName;
 
 			string className;
 
@@ -3105,19 +3105,19 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(1)]
-		private unsafe uint SetDlgItemTextA(uint hDlg, int nIDDlgItem, sbyte* lpString)
+		private uint SetDlgItemTextA(uint hDlg, int nIDDlgItem, uint lpString)
 		{
 			// SetDlgItemTextA sets the text of a control in a dialog box
 			_logger.LogInformation("[User32] SetDlgItemTextA: hDlg=0x{HDlg:X8} nIDDlgItem={NIdDlgItem}", hDlg, nIDDlgItem);
 
 			string text;
-			if (lpString == null)
+			if (lpString == 0)
 			{
 				text = string.Empty;
 			}
 			else
 			{
-				var lpStringPtr = (uint)(nint)lpString;
+				var lpStringPtr = lpString;
 				text = _env.ReadAnsiString(lpStringPtr);
 			}
 

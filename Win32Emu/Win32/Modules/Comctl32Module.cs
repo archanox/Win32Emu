@@ -100,7 +100,6 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				return true;
 			
 			case "DPA_GetPtrIndex":
-				unsafe
 				{
 					returnValue = DPA_GetPtrIndex(a.Ptr(0), a.Ptr(1));
 					return true;
@@ -133,7 +132,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// </returns>
 	/// <exception cref="NotImplementedException"></exception>
 	[DllModuleExport(333, Version = "5.81.4916.400", IsStub = true)]
-	private unsafe uint DPA_GetPtrIndex(in void* hdpa, void* p)
+	private uint DPA_GetPtrIndex(uint hdpa, uint p)
 	{
 		throw new NotImplementedException();
 	}

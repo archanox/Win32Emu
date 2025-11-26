@@ -835,29 +835,39 @@ public class ProcessEnvironment
 	public void MemZero(uint addr, uint size) => Memory.WriteBytes(addr, new byte[size]);
 
 	// Write an unmanaged struct to emulated memory
-	public unsafe void MemWriteStruct<T>(uint addr, ref T value) where T : unmanaged
+	public void MemWriteStruct<T>(uint addr, ref T value) where T : unmanaged
 	{
-		var size = sizeof(T);
+		var size = Marshal.SizeOf<T>();
 		var bytes = new byte[size];
-		fixed (T* ptr = &value)
+		nint ptr = Marshal.AllocHGlobal(size);
+		try
 		{
-			Marshal.Copy((nint)ptr, bytes, 0, size);
+			Marshal.StructureToPtr(value, ptr, false);
+			Marshal.Copy(ptr, bytes, 0, size);
+		}
+		finally
+		{
+			Marshal.FreeHGlobal(ptr);
 		}
 		Memory.WriteBytes(addr, bytes);
 		try { Diagnostics.Diagnostics.LogMemWrite(addr, bytes.Length, bytes); } catch { }
 	}
 
 	// Read an unmanaged struct from emulated memory
-	public unsafe T MemReadStruct<T>(uint addr) where T : unmanaged
+	public T MemReadStruct<T>(uint addr) where T : unmanaged
 	{
-		var size = sizeof(T);
-		var bytes = Memory.GetSpan(addr, size);
-		T value;
-		fixed (byte* ptr = bytes)
+		var size = Marshal.SizeOf<T>();
+		var bytes = Memory.GetSpan(addr, size).ToArray();
+		nint ptr = Marshal.AllocHGlobal(size);
+		try
 		{
-			value = *(T*)ptr;
+			Marshal.Copy(bytes, 0, ptr, size);
+			return Marshal.PtrToStructure<T>(ptr);
 		}
-		return value;
+		finally
+		{
+			Marshal.FreeHGlobal(ptr);
+		}
 	}
 
 	// Handle table ops

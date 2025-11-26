@@ -11,12 +11,12 @@ public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem, uint baseOffse
 	public int Int32(int index) => (int)mem.Read32(_esp + (uint)((index + 1) * 4));
 	public NativeTypes.HModule HModule(int index) => new NativeTypes.HModule(UInt32(index));
 
-	// Unsafe-style helpers if needed
-	public unsafe void* Ptr(int index) => (void*)UInt32(index);
+	// Managed helper methods - return uint addresses instead of pointers
+	public uint Ptr(int index) => UInt32(index);
 	
-	public unsafe sbyte* Lpstr(int index) => (sbyte*)UInt32(index);
+	public uint Lpstr(int index) => UInt32(index);
 	
-	public unsafe char* Lpcstr(int index) => (char*)UInt32(index);
+	public uint Lpcstr(int index) => UInt32(index);
 	
 	public LpStr LpStr(int index) => new LpStr(UInt32(index));
 	
@@ -26,7 +26,7 @@ public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem, uint baseOffse
 	
 	public LpcWStr LpcWStr(int index) => new LpcWStr(UInt32(index), mem);
 	
-	public unsafe NativeTypes.Lpcpinfo Lpcpinfo(int index) => (NativeTypes.Cpinfo*)UInt32(index);
+	public uint Lpcpinfo(int index) => UInt32(index);
 	
 	// Ref struct wrappers for Win32 structures with automatic memory read/write
 	public WndClassARef WndClassA(int index) => new WndClassARef(mem, UInt32(index));
