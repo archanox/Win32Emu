@@ -14,4 +14,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Win32Emu\Win32Emu.csproj" />
+  </ItemGroup>
+
 </Project>
