@@ -25,12 +25,10 @@ public class BackendFactory : IBackendFactory
 
 			// Check environment variable
 			var envBackend = Environment.GetEnvironmentVariable("WIN32EMU_BACKEND");
-			if (!string.IsNullOrEmpty(envBackend))
+			if (!string.IsNullOrEmpty(envBackend) &&
+				Enum.TryParse<BackendType>(envBackend, ignoreCase: true, out var backendType))
 			{
-				if (Enum.TryParse<BackendType>(envBackend, ignoreCase: true, out var backendType))
-				{
-					return backendType;
-				}
+				return backendType;
 			}
 
 			// Default to SDL (Metal on macOS, Vulkan on Linux, DirectX 12 on Windows)
