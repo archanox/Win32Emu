@@ -77,7 +77,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_dispatcher = dispatcher;
 	}
 
-	public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		_cpu = cpu;
 		returnValue = 0;
@@ -2268,7 +2268,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(15)]
-	private unsafe uint GetModuleFileNameA(void* h, sbyte* lp, uint n)
+	private unsafe uint GetModuleFileNameA(uint h, sbyte* lp, uint n)
 	{
 		_logger.LogInformation("[Kernel32] GetModuleFileNameA called: h=0x{U:X8} lp=0x{Lp:X8} n={U1}", (uint)(nint)h, (uint)(nint)lp, n);
 
@@ -2713,10 +2713,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private uint GlobalAlloc(uint flags, uint bytes) => _env.SimpleAlloc(bytes == 0 ? 1u : bytes);
 
 	[DllModuleExport(25)]
-	private static unsafe uint GlobalFree(void* h) => 0;
+	private static uint GlobalFree(uint h) => 0;
 
 	[DllModuleExport(1)]
-	private static unsafe uint GlobalLock(void* hMem)
+	private static uint GlobalLock(uint hMem)
 	{
 		// GlobalLock locks a global memory object and returns a pointer to it
 		// In our simplified implementation, we just return the handle as a pointer
@@ -2725,7 +2725,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(1)]
-	private static unsafe uint GlobalUnlock(void* hMem)
+	private static uint GlobalUnlock(uint hMem)
 	{
 		// GlobalUnlock decrements the lock count
 		// Returns TRUE (1) if still locked, FALSE (0) if unlocked
@@ -2734,7 +2734,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(1)]
-	private static unsafe uint GlobalHandle(void* pMem)
+	private static uint GlobalHandle(uint pMem)
 	{
 		// GlobalHandle retrieves the handle associated with a locked memory pointer
 		// In our simplified implementation, the handle is the same as the pointer
@@ -2769,13 +2769,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_env.HeapCreate(flOptions, dwInitialSize, dwMaximumSize);
 
 	[DllModuleExport(26)]
-	private unsafe uint HeapAlloc(void* hHeap, uint dwFlags, uint dwBytes) => _env.HeapAlloc((uint)hHeap, dwBytes);
+	private uint HeapAlloc(uint hHeap, uint dwFlags, uint dwBytes) => _env.HeapAlloc((uint)hHeap, dwBytes);
 
 	[DllModuleExport(29)]
-	private static unsafe uint HeapFree(void* hHeap, uint dwFlags, void* lpMem) => 1;
+	private static unsafe uint HeapFree(uint hHeap, uint dwFlags, void* lpMem) => 1;
 
 	[DllModuleExport(1)]
-	private unsafe uint HeapReAlloc(void* hHeap, uint dwFlags, void* lpMem, uint dwBytes)
+	private unsafe uint HeapReAlloc(uint hHeap, uint dwFlags, void* lpMem, uint dwBytes)
 	{
 		// HeapReAlloc reallocates a memory block from a heap
 		// This implementation properly copies old data and frees the old block
@@ -2837,7 +2837,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(28)]
-	private unsafe uint HeapDestroy(void* hHeap)
+	private uint HeapDestroy(uint hHeap)
 	{
 		// HeapDestroy destroys a heap created with HeapCreate
 		// In our simple allocator, we don't actually manage individual heaps
@@ -3201,7 +3201,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(36)]
-	private unsafe uint ReadFile(void* hFile, uint lpBuffer, uint nNumberOfBytesToRead, uint lpNumberOfBytesRead,
+	private uint ReadFile(uint hFile, uint lpBuffer, uint nNumberOfBytesToRead, uint lpNumberOfBytesRead,
 		uint lpOverlapped)
 	{
 		var handle = (uint)hFile;
@@ -3455,7 +3455,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(1)]
-	private unsafe uint CloseHandle(void* hObject)
+	private uint CloseHandle(uint hObject)
 	{
 		var h = (uint)hObject;
 
@@ -3479,7 +3479,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(13)]
-	private unsafe uint GetFileType(void* hFile)
+	private uint GetFileType(uint hFile)
 	{
 		var handle = (uint)hFile;
 
@@ -3511,7 +3511,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(39)]
-	private unsafe uint SetFilePointer(void* hFile, uint lDistanceToMove, uint lpDistanceToMoveHigh, uint dwMoveMethod)
+	private uint SetFilePointer(uint hFile, uint lDistanceToMove, uint lpDistanceToMoveHigh, uint dwMoveMethod)
 	{
 		var handle = (uint)hFile;
 
@@ -3550,7 +3550,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(4)]
-	private unsafe uint FlushFileBuffers(void* hFile)
+	private uint FlushFileBuffers(uint hFile)
 	{
 		var handle = (uint)hFile;
 
@@ -3580,7 +3580,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(38)]
-	private unsafe uint SetEndOfFile(void* hFile)
+	private uint SetEndOfFile(uint hFile)
 	{
 		var handle = (uint)hFile;
 
@@ -3898,7 +3898,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(1)]
-	private unsafe uint FindClose(void* hFindFile)
+	private uint FindClose(uint hFindFile)
 	{
 		var handle = (uint)hFindFile;
 		if (_findFileHandles.Remove(handle))
@@ -10827,7 +10827,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// );
 	/// </summary>
 	[DllModuleExport(10002, IsStub = true)]
-	private unsafe uint ReadFileEx(uint hFile, uint lpBuffer, uint nNumberOfBytesToRead, uint lpOverlapped, uint lpCompletionRoutine)
+	private uint ReadFileEx(uint hFile, uint lpBuffer, uint nNumberOfBytesToRead, uint lpOverlapped, uint lpCompletionRoutine)
 	{
 		_logger.LogInformation("[Kernel32] ReadFileEx(hFile=0x{HFile:X8}, lpBuffer=0x{LpBuffer:X8}, nNumberOfBytesToRead={NNumberOfBytesToRead}, lpOverlapped=0x{LpOverlapped:X8}, lpCompletionRoutine=0x{LpCompletionRoutine:X8})",
 			hFile, lpBuffer, nNumberOfBytesToRead, lpOverlapped, lpCompletionRoutine);

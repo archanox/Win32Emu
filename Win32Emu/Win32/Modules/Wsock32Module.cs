@@ -27,7 +27,7 @@ namespace Win32Emu.Win32.Modules
 
 		public string Name => "WSOCK32.DLL";
 
-		public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
 			var a = new StackArgs(cpu, memory);

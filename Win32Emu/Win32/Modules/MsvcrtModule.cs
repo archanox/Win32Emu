@@ -28,7 +28,7 @@ namespace Win32Emu.Win32.Modules
 
 		public string Name => "MSVCRT.DLL";
 
-		public unsafe bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
 			_cpu = cpu;
@@ -543,12 +543,12 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(4)]
-		private unsafe void free(void* ptr)
+		private void free(uint ptr)
 		{
-			_logger.LogInformation("[msvcrt] free(ptr=0x{Ptr:X8})", (uint)ptr);
-			if ((uint)ptr != 0)
+			_logger.LogInformation("[msvcrt] free(ptr=0x{Ptr:X8})", ptr);
+			if (ptr != 0)
 			{
-				_env.HeapFree(0, (uint)ptr);
+				_env.HeapFree(0, ptr);
 			}
 		}
 
@@ -640,11 +640,11 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(8)]
-		private unsafe uint realloc(void* ptr, uint size)
+		private uint realloc(uint ptr, uint size)
 		{
-			_logger.LogInformation("[msvcrt] realloc(ptr=0x{Ptr:X8}, size={Size})", (uint)ptr, size);
+			_logger.LogInformation("[msvcrt] realloc(ptr=0x{Ptr:X8}, size={Size})", ptr, size);
 			// Reallocate memory
-			if ((uint)ptr == 0)
+			if (ptr == 0)
 			{
 				return malloc(size);
 			}
@@ -655,12 +655,12 @@ namespace Win32Emu.Win32.Modules
 			}
 			// Allocate new block and copy (simplified implementation)
 			var newPtr = malloc(size);
-			if (newPtr != 0 && (uint)ptr != 0)
+			if (newPtr != 0 && ptr != 0)
 			{
 				// Copy old data (we don't know the old size, so copy up to new size)
 				for (uint i = 0; i < size; i++)
 				{
-					_env.MemWrite8(newPtr + i, _env.MemRead8((uint)ptr + i));
+					_env.MemWrite8(newPtr + i, _env.MemRead8(ptr + i));
 				}
 				free(ptr);
 			}

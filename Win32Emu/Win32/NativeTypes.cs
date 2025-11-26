@@ -11,18 +11,18 @@ public static class NativeTypes
 		public static implicit operator uint(HModule h) => h.Value;
 	}
 
-	public readonly unsafe struct Pvoid(void* v)
+	public readonly struct Pvoid(uint v)
 	{
-		public readonly void* Value = v;
-		public static implicit operator void*(Pvoid p) => p.Value;
-		public static implicit operator Pvoid(void* v) => new(v);
+		public readonly uint Value = v;
+		public static implicit operator uint(Pvoid p) => p.Value;
+		public static implicit operator Pvoid(uint v) => new(v);
 	}
 
-	public readonly unsafe struct Handle(void* v) : IEquatable<Handle>
+	public readonly struct Handle(uint v) : IEquatable<Handle>
 	{
-		public readonly void* Value = v;
-		public static implicit operator void*(Handle h) => h.Value;
-		public static implicit operator Handle(void* v) => new(v);
+		public readonly uint Value = v;
+		public static implicit operator uint(Handle h) => h.Value;
+		public static implicit operator Handle(uint v) => new(v);
 
 		public override bool Equals([NotNullWhen(true)] object? obj)
 		{
@@ -36,7 +36,7 @@ public static class NativeTypes
 
 		public override int GetHashCode()
 		{
-			return unchecked((int)(long)Value);
+			return unchecked((int)Value);
 		}
 
 		public static bool operator ==(Handle left, Handle right)
@@ -50,11 +50,11 @@ public static class NativeTypes
 		}
 	}
 
-	public readonly unsafe struct Hinstance(void* v)
+	public readonly struct Hinstance(uint v)
 	{
-		public readonly void* Value = v;
-		public static implicit operator void*(Hinstance h) => h.Value;
-		public static implicit operator Hinstance(void* v) => new(v);
+		public readonly uint Value = v;
+		public static implicit operator uint(Hinstance h) => h.Value;
+		public static implicit operator Hinstance(uint v) => new(v);
 	}
 
 	// DWORD is a 32-bit unsigned integer
@@ -70,8 +70,20 @@ public static class NativeTypes
 	public struct Cpinfo
 	{
 		public uint MaxCharSize;           // Maximum length, in bytes, of a character in the code page
-		public unsafe fixed byte DefaultChar[2];  // Default character used when translating to the specific code page
-		public unsafe fixed byte LeadByte[12];    // Lead byte ranges for double-byte character sets (DBCS)
+		public byte DefaultChar0;          // Default character used when translating to the specific code page
+		public byte DefaultChar1;
+		public byte LeadByte0;             // Lead byte ranges for double-byte character sets (DBCS)
+		public byte LeadByte1;
+		public byte LeadByte2;
+		public byte LeadByte3;
+		public byte LeadByte4;
+		public byte LeadByte5;
+		public byte LeadByte6;
+		public byte LeadByte7;
+		public byte LeadByte8;
+		public byte LeadByte9;
+		public byte LeadByte10;
+		public byte LeadByte11;
 	}
 
 	// RTL_CRITICAL_SECTION structure (Windows XP/2000)
@@ -114,12 +126,12 @@ public static class NativeTypes
 		public uint hEvent;            // HANDLE - offset 16, 4 bytes - Event handle
 	}
 
-	// Pointer to CPINFO structure
-	public readonly unsafe struct Lpcpinfo(Cpinfo* v)
+	// Pointer to CPINFO structure - now just a uint address
+	public readonly struct Lpcpinfo(uint v)
 	{
-		public readonly Cpinfo* Value = v;
-		public static implicit operator Cpinfo*(Lpcpinfo p) => p.Value;
-		public static implicit operator Lpcpinfo(Cpinfo* v) => new(v);
+		public readonly uint Value = v;
+		public static implicit operator uint(Lpcpinfo p) => p.Value;
+		public static implicit operator Lpcpinfo(uint v) => new(v);
 	}
 
 	// Windows error codes
@@ -387,7 +399,7 @@ public static class NativeTypes
 		public int rcPaintBottom;   // Offset 20
 		public uint fRestore;       // Offset 24
 		public uint fIncUpdate;     // Offset 28
-		public unsafe fixed byte rgbReserved[32]; // Offset 32
+		// rgbReserved[32] at offset 32 - not used in emulation, accessed via memory operations
 	}
 
 	// DOCINFO structure (20 bytes)
@@ -541,7 +553,7 @@ public static class NativeTypes
 		public ushort wMid;                  // Offset 0 - Manufacturer ID
 		public ushort wPid;                  // Offset 2 - Product ID
 		public uint vDriverVersion;          // Offset 4 - Driver version
-		public unsafe fixed byte szPname[32]; // Offset 8 - Product name (32 chars)
+		// szPname[32] - accessed via memory operations // Offset 8 - Product name (32 chars)
 		public uint dwFormats;               // Offset 40 - Supported formats
 		public ushort wChannels;             // Offset 44 - Number of channels supported
 		public ushort wReserved1;            // Offset 46 - Reserved
@@ -553,7 +565,7 @@ public static class NativeTypes
 		public ushort wMid;                  // Offset 0 - Manufacturer ID
 		public ushort wPid;                  // Offset 2 - Product ID
 		public uint vDriverVersion;          // Offset 4 - Driver version
-		public unsafe fixed byte szPname[32]; // Offset 8 - Product name (32 chars)
+		// szPname[32] - accessed via memory operations // Offset 8 - Product name (32 chars)
 		public uint dwFormats;               // Offset 40 - Supported formats
 		public ushort wChannels;             // Offset 44 - Number of channels supported
 		public ushort wReserved1;            // Offset 46 - Padding
@@ -677,14 +689,14 @@ public static class NativeTypes
 		public uint cChannels;               // Offset 28 - Number of channels
 		public uint cConnections;            // Offset 32 - Number of connections
 		public uint cControls;               // Offset 36 - Number of controls
-		public unsafe fixed byte szShortName[16]; // Offset 40 - Short name
-		public unsafe fixed byte szName[64];      // Offset 56 - Full name
+		// szShortName[16] - accessed via memory operations // Offset 40 - Short name
+		// szName[64] - accessed via memory operations      // Offset 56 - Full name
 		public uint dwType;                  // Offset 120 - Target type
 		public uint dwDeviceID;              // Offset 124 - Device ID
 		public ushort wMid;                  // Offset 128 - Manufacturer ID
 		public ushort wPid;                  // Offset 130 - Product ID
 		public uint vDriverVersion;          // Offset 132 - Driver version
-		public unsafe fixed byte szPname[32]; // Offset 136 - Product name
+		// szPname[32] - accessed via memory operations // Offset 136 - Product name
 	}
 
 	// MIXERCONTROL structure (148 bytes for ANSI version)
@@ -695,11 +707,11 @@ public static class NativeTypes
 		public uint dwControlType;           // Offset 8 - Control type
 		public uint fdwControl;              // Offset 12 - Control flags
 		public uint cMultipleItems;          // Offset 16 - Multiple items count
-		public unsafe fixed byte szShortName[16]; // Offset 20 - Short name
-		public unsafe fixed byte szName[64];      // Offset 36 - Full name
+		// szShortName[16] - accessed via memory operations // Offset 20 - Short name
+		// szName[64] - accessed via memory operations      // Offset 36 - Full name
 		public uint lMinimum;                // Offset 100 - Minimum value (signed as uint)
 		public uint lMaximum;                // Offset 104 - Maximum value (signed as uint)
-		public unsafe fixed uint reserved[10];    // Offset 108 - Reserved (40 bytes)
+		// reserved[10] - accessed via memory operations    // Offset 108 - Reserved (40 bytes)
 	}
 
 	// MIXERLINECONTROLS structure (24 bytes for ANSI version)
@@ -857,7 +869,7 @@ public static class NativeTypes
 
 	// PROCESSENTRY32 structure (296 bytes)
 	// Describes an entry from a list of the processes residing in the system address space
-	public unsafe struct PROCESSENTRY32
+	public struct PROCESSENTRY32
 	{
 		public uint dwSize;              // Offset 0 - Size of the structure (296 bytes)
 		public uint cntUsage;            // Offset 4 - Reference count (no longer used, always 0)
@@ -868,7 +880,7 @@ public static class NativeTypes
 		public uint th32ParentProcessID; // Offset 24 - Parent process identifier
 		public int pcPriClassBase;       // Offset 28 - Base priority of threads
 		public uint dwFlags;             // Offset 32 - Reserved (not used)
-		public fixed byte szExeFile[260]; // Offset 36 - Path and filename of executable (MAX_PATH)
+		// szExeFile[260] - accessed via memory operations // Offset 36 - Path and filename of executable (MAX_PATH)
 		
 		public const int Size = 296;
 	}
@@ -890,7 +902,7 @@ public static class NativeTypes
 
 	// MODULEENTRY32 structure (548 bytes)
 	// Describes an entry from a list of the modules belonging to a process
-	public unsafe struct MODULEENTRY32
+	public struct MODULEENTRY32
 	{
 		public uint dwSize;              // Offset 0 - Size of the structure (548 bytes)
 		public uint th32ModuleID;        // Offset 4 - Module identifier (not used)
@@ -900,8 +912,8 @@ public static class NativeTypes
 		public uint modBaseAddr;         // Offset 20 - Base address of module
 		public uint modBaseSize;         // Offset 24 - Size of module in bytes
 		public uint hModule;             // Offset 28 - Module handle
-		public fixed byte szModule[256]; // Offset 32 - Module name (MAX_MODULE_NAME32 + 1)
-		public fixed byte szExePath[260]; // Offset 288 - Module path (MAX_PATH)
+		// szModule[256] - accessed via memory operations // Offset 32 - Module name (MAX_MODULE_NAME32 + 1)
+		// szExePath[260] - accessed via memory operations // Offset 288 - Module path (MAX_PATH)
 		
 		public const int Size = 548;
 	}
