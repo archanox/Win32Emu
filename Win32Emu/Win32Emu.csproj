@@ -50,17 +50,6 @@
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.14.0" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.14.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.14.0" />
-    <PackageReference Include="SDL3-CS" Version="3.3.2.1" />
-    <PackageReference Include="SDL3-CS.Native" Version="3.3.2" />
-    <PackageReference Include="SharpMetal" Version="1.1.0" />
-    <PackageReference Include="Silk.NET.GLFW" Version="2.22.0" />
-    <PackageReference Include="Silk.NET.OpenGL" Version="2.22.0" />
-    <PackageReference Include="Silk.NET.OpenAL" Version="2.22.0" />
-    <PackageReference Include="Silk.NET.Input" Version="2.22.0" />
-    <PackageReference Include="Silk.NET.Vulkan" Version="2.22.0" />
-    <PackageReference Include="Silk.NET.Vulkan.Extensions.KHR" Version="2.22.0" />
-    <PackageReference Include="Silk.NET.Windowing" Version="2.22.0" />
-    <PackageReference Include="Silk.NET.Maths" Version="2.22.0" />
     <PackageReference Include="System.Threading.Channels" Version="10.0.0" />
     <PackageReference Include="UnicornEngine.Unicorn" Version="2.1.4-a40db6c" />
   </ItemGroup>

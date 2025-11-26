@@ -96,11 +96,14 @@ public static class EmulatorLauncher
 		}
 
 		// Check for backend selection
+		// Note: Backend selection is now handled by the GUI layer through IBackendFactory
 		var backendIndex = Array.IndexOf(args, "--backend");
+		Rendering.BackendType? selectedBackend = null;
 		if (backendIndex >= 0 && backendIndex + 1 < args.Length &&
 		    Enum.TryParse<Rendering.BackendType>(args[backendIndex + 1], ignoreCase: true, out var backendType))
 		{
-			Rendering.BackendFactory.CurrentBackendType = backendType;
+			selectedBackend = backendType;
+			// BackendFactory is no longer static - handled by GUI layer
 		}
 		
 		// Build list of flag argument indices (those that start with -- and their values)

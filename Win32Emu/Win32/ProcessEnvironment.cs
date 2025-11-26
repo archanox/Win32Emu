@@ -106,13 +106,14 @@ public class ProcessEnvironment
 	/// </summary>
 	public int DisplayBitsPerPixel { get; set; } = 16;
 
-	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null)
+	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null, IBackendFactory? backendFactory = null)
 	{
 		Memory = vm;
 		_host = host;
 		_logger = logger ?? NullLogger.Instance;
 		_allocPtr = heapBase;
 		HeapBase = heapBase;
+		BackendFactory = backendFactory;
 		_comDispatcher = new ComVtableDispatcher(this, _logger);
 		_messageDispatcher = new MessageDispatcher(_logger);
 		ThreadScheduler = new ThreadScheduler(_logger);
@@ -133,6 +134,11 @@ public class ProcessEnvironment
 	/// Gets the emulator host interface for GUI callbacks
 	/// </summary>
 	public IEmulatorHost? Host => _host;
+
+	/// <summary>
+	/// Gets the backend factory for creating rendering, audio, and input backends
+	/// </summary>
+	public IBackendFactory? BackendFactory { get; }
 
 	// Virtual File System access
 	/// <summary>

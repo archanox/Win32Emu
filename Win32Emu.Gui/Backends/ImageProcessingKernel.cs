@@ -1,4 +1,4 @@
-namespace Win32Emu.Rendering
+namespace Win32Emu.Gui.Backends
 {
 	/// <summary>
 	/// Built-in image processing kernels
