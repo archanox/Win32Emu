@@ -7,6 +7,7 @@ using Win32Emu.Debugging;
 using Win32Emu.Diagnostics;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using Win32Emu.Rendering;
 using Win32Emu.Win32;
 using Win32Emu.Win32.Modules;
 
@@ -18,6 +19,7 @@ public sealed class Emulator : IDisposable
     private readonly ILogger _logger;
     private readonly Telemetry.TelemetryService? _telemetryService;
     private readonly Telemetry.EmulatorMetrics? _metrics;
+    private readonly IBackendFactory? _backendFactory;
     private VirtualMemory? _vm;
     private IAsyncCpu? _cpu;
     private ProcessEnvironment? _env;
@@ -75,11 +77,12 @@ public sealed class Emulator : IDisposable
         _logger.LogWarning("[TRACE] Instruction tracing enabled for next {Count} instructions", instructionCount);
     }
 
-    public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null)
+    public Emulator(IEmulatorHost? host = null, ILogger? logger = null, Telemetry.TelemetryService? telemetryService = null, IBackendFactory? backendFactory = null)
     {
         _host = host;
         _logger = logger ?? NullLogger.Instance;
         _telemetryService = telemetryService;
+        _backendFactory = backendFactory;
         _stopRequested = false;
         _pauseEvent = new ManualResetEvent(true); // Initially not paused (signaled)
         
@@ -323,7 +326,7 @@ public sealed class Emulator : IDisposable
             LogDebug($"[Loader]   Section '{section.Name}': RVA=0x{section.VirtualAddress:X8} Size=0x{section.VirtualSize:X8} Flags=[{string.Join(",", flags)}]");
         }
 
-        _env = new ProcessEnvironment(_vm, CalculateHeapBase(), _host, _logger);
+        _env = new ProcessEnvironment(_vm, CalculateHeapBase(), _host, _logger, _backendFactory);
         
         // Initialize virtual file system with disk (required)
         if (!string.IsNullOrEmpty(virtualDiskPath))

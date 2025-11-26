@@ -3,6 +3,7 @@ using Win32Emu.Win32.Modules;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
+using Win32Emu.Gui.Backends;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 

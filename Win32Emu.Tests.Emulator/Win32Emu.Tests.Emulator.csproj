@@ -13,6 +13,7 @@
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="PeNet" Version="5.1.0" />
+    <PackageReference Include="SharpMetal" Version="1.1.0" />
     <PackageReference Include="UnicornEngine.Unicorn" Version="2.1.4-a40db6c" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
@@ -24,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Win32Emu\Win32Emu.csproj" />
+    <ProjectReference Include="..\Win32Emu.Gui\Win32Emu.Gui.csproj" />
   </ItemGroup>
 
   <ItemGroup>
