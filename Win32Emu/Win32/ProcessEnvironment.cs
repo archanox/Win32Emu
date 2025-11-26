@@ -862,7 +862,8 @@ public class ProcessEnvironment
 		try
 		{
 			Marshal.Copy(bytes, 0, ptr, size);
-			return Marshal.PtrToStructure<T>(ptr);
+			// For unmanaged types, PtrToStructure<T> cannot return null
+			return Marshal.PtrToStructure<T>(ptr)!;
 		}
 		finally
 		{

@@ -80,9 +80,9 @@ namespace Win32Emu.Win32.Modules
 			_dsoundObjects[dsHandle] = dsObj;
 
 // Initialize audio backend if not already done
-			if (_env.AudioBackend == null)
+			if (_env.AudioBackend == null && _env.BackendFactory != null)
 			{
-				_env.AudioBackend = _env.BackendFactory?.CreateAudioBackend(_logger);
+				_env.AudioBackend = _env.BackendFactory.CreateAudioBackend(_logger);
 				_env.AudioBackend.Initialize();
 			}
 

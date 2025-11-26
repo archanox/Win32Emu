@@ -2769,39 +2769,39 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_env.HeapCreate(flOptions, dwInitialSize, dwMaximumSize);
 
 	[DllModuleExport(26)]
-	private uint HeapAlloc(uint hHeap, uint dwFlags, uint dwBytes) => _env.HeapAlloc((uint)hHeap, dwBytes);
+	private uint HeapAlloc(uint hHeap, uint dwFlags, uint dwBytes) => _env.HeapAlloc(hHeap, dwBytes);
 
 	[DllModuleExport(29)]
-	private static unsafe uint HeapFree(uint hHeap, uint dwFlags, void* lpMem) => 1;
+	private static uint HeapFree(uint hHeap, uint dwFlags, uint lpMem) => 1;
 
 	[DllModuleExport(1)]
-	private unsafe uint HeapReAlloc(uint hHeap, uint dwFlags, void* lpMem, uint dwBytes)
+	private uint HeapReAlloc(uint hHeap, uint dwFlags, uint lpMem, uint dwBytes)
 	{
 		// HeapReAlloc reallocates a memory block from a heap
 		// This implementation properly copies old data and frees the old block
 
 		try
 		{
-			if (lpMem == null)
+			if (lpMem == 0)
 			{
 				// If lpMem is null, HeapReAlloc acts like HeapAlloc
-				var alloc = _env.HeapAlloc((uint)hHeap, dwBytes);
+				var alloc = _env.HeapAlloc(hHeap, dwBytes);
 				_logger.LogInformation("[Kernel32] HeapReAlloc: lpMem is null, allocated new block at 0x{Alloc:X8}, size={DwBytes}", alloc, dwBytes);
 				return alloc;
 			}
 
 			// Get the size of the original allocation
-			var originalSize = _env.HeapSize((uint)hHeap, (uint)lpMem);
+			var originalSize = _env.HeapSize(hHeap, lpMem);
 			if (originalSize == 0)
 			{
 				// If we don't have size info, this might be an invalid pointer
-				_logger.LogWarning("[Kernel32] HeapReAlloc: Could not determine size of block at 0x{LpMem:X8}", (uint)lpMem);
+				_logger.LogWarning("[Kernel32] HeapReAlloc: Could not determine size of block at 0x{LpMem:X8}", lpMem);
 				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
 			// Allocate new block
-			var newMem = _env.HeapAlloc((uint)hHeap, dwBytes);
+			var newMem = _env.HeapAlloc(hHeap, dwBytes);
 			if (newMem == 0)
 			{
 				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
@@ -2816,16 +2816,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				var buffer = new byte[bytesToCopy];
 				for (uint i = 0; i < bytesToCopy; i++)
 				{
-					buffer[i] = _env.MemRead8((uint)lpMem + i);
+					buffer[i] = _env.MemRead8(lpMem + i);
 				}
 
 				_env.MemWriteBytes(newMem, buffer);
 			}
 
 			// Free the old block
-			_env.HeapFree((uint)hHeap, (uint)lpMem);
+			_env.HeapFree(hHeap, lpMem);
 
-			_logger.LogInformation("[Kernel32] HeapReAlloc: Reallocated from 0x{LpMem:X8} (size={OriginalSize}) to 0x{NewMem:X8} (size={DwBytes}), copied {BytesToCopy} bytes", (uint)lpMem, originalSize, newMem, dwBytes, bytesToCopy);
+			_logger.LogInformation("[Kernel32] HeapReAlloc: Reallocated from 0x{LpMem:X8} (size={OriginalSize}) to 0x{NewMem:X8} (size={DwBytes}), copied {BytesToCopy} bytes", lpMem, originalSize, newMem, dwBytes, bytesToCopy);
 			return newMem;
 		}
 		catch (Exception ex)
@@ -3204,10 +3204,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private uint ReadFile(uint hFile, uint lpBuffer, uint nNumberOfBytesToRead, uint lpNumberOfBytesRead,
 		uint lpOverlapped)
 	{
-		var handle = (uint)hFile;
-
 		// Try VFS handle first
-		if (_env.TryGetHandle<IVirtualFileHandle>(handle, out var vfsHandle) && vfsHandle is not null)
+		if (_env.TryGetHandle<IVirtualFileHandle>(hFile, out var vfsHandle) && vfsHandle is not null)
 		{
 			try
 			{
@@ -3234,7 +3232,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Fallback to FileStream for backwards compatibility
-		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
+		if (_env.TryGetHandle<FileStream>(hFile, out var fs) && fs is not null)
 		{
 			try
 			{
@@ -3457,52 +3455,48 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(1)]
 	private uint CloseHandle(uint hObject)
 	{
-		var h = (uint)hObject;
-
 		// Try VFS handle first
-		if (_env.TryGetHandle<IVirtualFileHandle>(h, out var vfsHandle) && vfsHandle is not null)
+		if (_env.TryGetHandle<IVirtualFileHandle>(hObject, out var vfsHandle) && vfsHandle is not null)
 		{
 			vfsHandle.Dispose();
-			_env.CloseHandle(h);
+			_env.CloseHandle(hObject);
 			return 1;
 		}
 
 		// Fallback to FileStream for backwards compatibility
-		if (_env.TryGetHandle<FileStream>(h, out var fs) && fs is not null)
+		if (_env.TryGetHandle<FileStream>(hObject, out var fs) && fs is not null)
 		{
 			fs.Dispose();
-			_env.CloseHandle(h);
+			_env.CloseHandle(hObject);
 			return 1;
 		}
 
-		return _env.CloseHandle(h) ? 1u : 0u;
+		return _env.CloseHandle(hObject) ? 1u : 0u;
 	}
 
 	[DllModuleExport(13)]
 	private uint GetFileType(uint hFile)
 	{
-		var handle = (uint)hFile;
-
 		// NULL handle returns FILE_TYPE_UNKNOWN
-		if (handle == 0)
+		if (hFile == 0)
 		{
 			return 0x0000; // FILE_TYPE_UNKNOWN
 		}
 
 		// Standard handles are character devices (console)
-		if (handle == _env.StdInputHandle || handle == _env.StdOutputHandle || handle == _env.StdErrorHandle)
+		if (hFile == _env.StdInputHandle || hFile == _env.StdOutputHandle || hFile == _env.StdErrorHandle)
 		{
 			return 0x0002; // FILE_TYPE_CHAR (character device like console)
 		}
 
 		// Check VFS handle
-		if (_env.TryGetHandle<IVirtualFileHandle>(handle, out var vfsHandle) && vfsHandle is not null)
+		if (_env.TryGetHandle<IVirtualFileHandle>(hFile, out var vfsHandle) && vfsHandle is not null)
 		{
 			return 0x0001; // FILE_TYPE_DISK
 		}
 
 		// Check FileStream (backwards compatibility)
-		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
+		if (_env.TryGetHandle<FileStream>(hFile, out var fs) && fs is not null)
 		{
 			return 0x0001; // FILE_TYPE_DISK
 		}
@@ -3513,10 +3507,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(39)]
 	private uint SetFilePointer(uint hFile, uint lDistanceToMove, uint lpDistanceToMoveHigh, uint dwMoveMethod)
 	{
-		var handle = (uint)hFile;
-
 		// Try VFS handle first
-		if (_env.TryGetHandle<IVirtualFileHandle>(handle, out var vfsHandle) && vfsHandle is not null)
+		if (_env.TryGetHandle<IVirtualFileHandle>(hFile, out var vfsHandle) && vfsHandle is not null)
 		{
 			var origin = dwMoveMethod switch
 			{
@@ -3531,7 +3523,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Fallback to FileStream
-		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
+		if (_env.TryGetHandle<FileStream>(hFile, out var fs) && fs is not null)
 		{
 			var origin = dwMoveMethod switch
 			{
@@ -3552,24 +3544,22 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(4)]
 	private uint FlushFileBuffers(uint hFile)
 	{
-		var handle = (uint)hFile;
-
 		// Standard output/error handles don't need flushing in our implementation
 		// since WriteToStdOutput already calls the host callback immediately
-		if (handle == _env.StdOutputHandle || handle == _env.StdErrorHandle)
+		if (hFile == _env.StdOutputHandle || hFile == _env.StdErrorHandle)
 		{
 			return 1; // Success
 		}
 
 		// Try VFS handle first
-		if (_env.TryGetHandle<IVirtualFileHandle>(handle, out var vfsHandle) && vfsHandle is not null)
+		if (_env.TryGetHandle<IVirtualFileHandle>(hFile, out var vfsHandle) && vfsHandle is not null)
 		{
 			vfsHandle.Flush();
 			return 1;
 		}
 
 		// Fallback to FileStream
-		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
+		if (_env.TryGetHandle<FileStream>(hFile, out var fs) && fs is not null)
 		{
 			fs.Flush(true);
 			return 1;
@@ -3582,19 +3572,17 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(38)]
 	private uint SetEndOfFile(uint hFile)
 	{
-		var handle = (uint)hFile;
-
 		// Try VFS handle first
-		if (_env.TryGetHandle<IVirtualFileHandle>(handle, out var vfsHandle) && vfsHandle is not null)
+		if (_env.TryGetHandle<IVirtualFileHandle>(hFile, out var vfsHandle1) && vfsHandle1 is not null)
 		{
-			vfsHandle.SetLength(vfsHandle.Position);
+			vfsHandle1.SetLength(vfsHandle1.Position);
 			return 1;
 		}
 
 		// Fallback to FileStream
-		if (_env.TryGetHandle<FileStream>(handle, out var fs) && fs is not null)
+		if (_env.TryGetHandle<FileStream>(hFile, out var fs1) && fs1 is not null)
 		{
-			fs.SetLength(fs.Position);
+			fs1.SetLength(fs1.Position);
 			return 1;
 		}
 
@@ -3900,10 +3888,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(1)]
 	private uint FindClose(uint hFindFile)
 	{
-		var handle = (uint)hFindFile;
-		if (_findFileHandles.Remove(handle))
+		if (_findFileHandles.Remove(hFindFile))
 		{
-			_logger.LogInformation("[Kernel32] FindClose: Closed handle 0x{Handle:X8}", handle);
+			_logger.LogInformation("[Kernel32] FindClose: Closed handle 0x{Handle:X8}", hFindFile);
 			return (uint)NativeTypes.Win32Bool.TRUE;
 		}
 

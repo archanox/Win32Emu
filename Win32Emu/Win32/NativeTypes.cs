@@ -73,9 +73,9 @@ public static class NativeTypes
 	{
 		public uint MaxCharSize;           // Maximum length, in bytes, of a character in the code page
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
-		public byte[]? DefaultChar;        // Default character used when translating to the specific code page
+		public byte[] DefaultChar;         // Default character used when translating to the specific code page
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 12)]
-		public byte[]? LeadByte;           // Lead byte ranges for double-byte character sets (DBCS)
+		public byte[] LeadByte;            // Lead byte ranges for double-byte character sets (DBCS)
 	}
 
 	// RTL_CRITICAL_SECTION structure (Windows XP/2000)
@@ -393,7 +393,7 @@ public static class NativeTypes
 		public uint fRestore;       // Offset 24
 		public uint fIncUpdate;     // Offset 28
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
-		public byte[]? rgbReserved; // Offset 32 - Reserved
+		public byte[] rgbReserved; // Offset 32 - Reserved
 	}
 
 	// DOCINFO structure (20 bytes)
@@ -549,7 +549,7 @@ public static class NativeTypes
 		public ushort wPid;                  // Offset 2 - Product ID
 		public uint vDriverVersion;          // Offset 4 - Driver version
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-		public string? szPname;              // Offset 8 - Product name (32 chars)
+		public string szPname;               // Offset 8 - Product name (32 chars)
 		public uint dwFormats;               // Offset 40 - Supported formats
 		public ushort wChannels;             // Offset 44 - Number of channels supported
 		public ushort wReserved1;            // Offset 46 - Reserved
@@ -563,7 +563,7 @@ public static class NativeTypes
 		public ushort wPid;                  // Offset 2 - Product ID
 		public uint vDriverVersion;          // Offset 4 - Driver version
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-		public string? szPname;              // Offset 8 - Product name (32 chars)
+		public string szPname;               // Offset 8 - Product name (32 chars)
 		public uint dwFormats;               // Offset 40 - Supported formats
 		public ushort wChannels;             // Offset 44 - Number of channels supported
 		public ushort wReserved1;            // Offset 46 - Padding
@@ -689,16 +689,16 @@ public static class NativeTypes
 		public uint cConnections;            // Offset 32 - Number of connections
 		public uint cControls;               // Offset 36 - Number of controls
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 16)]
-		public string? szShortName;          // Offset 40 - Short name
+		public string szShortName;           // Offset 40 - Short name
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
-		public string? szName;               // Offset 56 - Full name
+		public string szName;                // Offset 56 - Full name
 		public uint dwType;                  // Offset 120 - Target type
 		public uint dwDeviceID;              // Offset 124 - Device ID
 		public ushort wMid;                  // Offset 128 - Manufacturer ID
 		public ushort wPid;                  // Offset 130 - Product ID
 		public uint vDriverVersion;          // Offset 132 - Driver version
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-		public string? szPname;              // Offset 136 - Product name
+		public string szPname;               // Offset 136 - Product name
 	}
 
 	// MIXERCONTROL structure (148 bytes for ANSI version)
@@ -711,13 +711,13 @@ public static class NativeTypes
 		public uint fdwControl;              // Offset 12 - Control flags
 		public uint cMultipleItems;          // Offset 16 - Multiple items count
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 16)]
-		public string? szShortName;          // Offset 20 - Short name
+		public string szShortName;           // Offset 20 - Short name
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
-		public string? szName;               // Offset 36 - Full name
+		public string szName;                // Offset 36 - Full name
 		public uint lMinimum;                // Offset 100 - Minimum value (signed as uint)
 		public uint lMaximum;                // Offset 104 - Maximum value (signed as uint)
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 10)]
-		public uint[]? reserved;             // Offset 108 - Reserved (40 bytes)
+		public uint[] reserved;              // Offset 108 - Reserved (40 bytes)
 	}
 
 	// MIXERLINECONTROLS structure (24 bytes for ANSI version)
@@ -888,7 +888,7 @@ public static class NativeTypes
 		public int pcPriClassBase;       // Offset 28 - Base priority of threads
 		public uint dwFlags;             // Offset 32 - Reserved (not used)
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-		public string? szExeFile;        // Offset 36 - Path and filename of executable (MAX_PATH)
+		public string szExeFile;         // Offset 36 - Path and filename of executable (MAX_PATH)
 		
 		public const int Size = 296;
 	}
@@ -922,9 +922,9 @@ public static class NativeTypes
 		public uint modBaseSize;         // Offset 24 - Size of module in bytes
 		public uint hModule;             // Offset 28 - Module handle
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-		public string? szModule;         // Offset 32 - Module name (MAX_MODULE_NAME32 + 1)
+		public string szModule;          // Offset 32 - Module name (MAX_MODULE_NAME32 + 1)
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-		public string? szExePath;        // Offset 288 - Module path (MAX_PATH)
+		public string szExePath;         // Offset 288 - Module path (MAX_PATH)
 		
 		public const int Size = 548;
 	}
