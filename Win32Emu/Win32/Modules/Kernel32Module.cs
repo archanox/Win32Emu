@@ -170,7 +170,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = GetModuleHandleW(a.UInt32(0));
 				return true;
 			case "GETMODULEFILENAMEA":
-				returnValue = GetModuleFileNameA(a.Ptr(0), a.Lpstr(1), a.UInt32(2));
+				returnValue = GetModuleFileNameA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 			case "GETMODULEFILENAMEW":
 				returnValue = GetModuleFileNameW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
@@ -288,16 +288,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = GlobalAlloc(a.UInt32(0), a.UInt32(1));
 				return true;
 			case "GLOBALFREE":
-				returnValue = GlobalFree((void*)a.UInt32(0));
+				returnValue = GlobalFree(a.UInt32(0));
 				return true;
 			case "GLOBALLOCK":
-				returnValue = GlobalLock((void*)a.UInt32(0));
+				returnValue = GlobalLock(a.UInt32(0));
 				return true;
 			case "GLOBALUNLOCK":
-				returnValue = GlobalUnlock((void*)a.UInt32(0));
+				returnValue = GlobalUnlock(a.UInt32(0));
 				return true;
 			case "GLOBALHANDLE":
-				returnValue = GlobalHandle((void*)a.UInt32(0));
+				returnValue = GlobalHandle(a.UInt32(0));
 				return true;
 			case "GLOBALCOMPACT":
 				returnValue = GlobalCompact(a.UInt32(0));
@@ -306,16 +306,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = HeapCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 			case "HEAPALLOC":
-				returnValue = HeapAlloc((void*)a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				returnValue = HeapAlloc(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 			case "HEAPFREE":
-				returnValue = HeapFree((void*)a.UInt32(0), a.UInt32(1), (void*)a.UInt32(2));
+				returnValue = HeapFree(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 			case "HEAPREALLOC":
-				returnValue = HeapReAlloc((void*)a.UInt32(0), a.UInt32(1), (void*)a.UInt32(2), a.UInt32(3));
+				returnValue = HeapReAlloc(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
 			case "HEAPDESTROY":
-				returnValue = HeapDestroy((void*)a.UInt32(0));
+				returnValue = HeapDestroy(a.UInt32(0));
 				return true;
 			case "HEAPSIZE":
 				returnValue = HeapSize(a.UInt32(0), a.UInt32(1), a.UInt32(2));
@@ -367,7 +367,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 					a.UInt32(6));
 				return true;
 			case "READFILE":
-				returnValue = ReadFile((void*)a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				returnValue = ReadFile(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 				return true;
 			case "WRITEFILE":
 				returnValue = WriteFile(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
@@ -376,22 +376,22 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = GetOverlappedResult(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
 			case "CLOSEHANDLE":
-				returnValue = CloseHandle((void*)a.UInt32(0));
+				returnValue = CloseHandle(a.UInt32(0));
 				return true;
 			case "CONVERTTOGLOBALHANDLE":
 				returnValue = ConvertToGlobalHandle(a.UInt32(0));
 				return true;
 			case "GETFILETYPE":
-				returnValue = GetFileType((void*)a.UInt32(0));
+				returnValue = GetFileType(a.UInt32(0));
 				return true;
 			case "SETFILEPOINTER":
-				returnValue = SetFilePointer((void*)a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				returnValue = SetFilePointer(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
 			case "FLUSHFILEBUFFERS":
-				returnValue = FlushFileBuffers((void*)a.UInt32(0));
+				returnValue = FlushFileBuffers(a.UInt32(0));
 				return true;
 			case "SETENDOFFILE":
-				returnValue = SetEndOfFile((void*)a.UInt32(0));
+				returnValue = SetEndOfFile(a.UInt32(0));
 				return true;
 			case "DELETEFILEA":
 				returnValue = DeleteFileA(a.UInt32(0));
@@ -436,7 +436,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = FindNextFileA(a.UInt32(0), a.UInt32(1));
 				return true;
 			case "FINDCLOSE":
-				returnValue = FindClose((void*)a.UInt32(0));
+				returnValue = FindClose(a.UInt32(0));
 				return true;
 			case "FILETIMETOSYSTEMTIME":
 				returnValue = FileTimeToSystemTime(a.UInt32(0), a.UInt32(1));
@@ -1608,47 +1608,40 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		};
 
 		_logger.LogInformation("[Kernel32] GetCPInfo: actualCodePage={ActualCodePage}", actualCodePage);
-		NativeTypes.Cpinfo cpInfo;
+		NativeTypes.Cpinfo cpInfo = default; // Initialize all fields to zero
 
 		// We'll support common Western code pages
-		switch (actualCodePage)
+		unsafe
 		{
-			case CodePage.WestEurope: // Windows-1252 (Western European)
-			case CodePage.Oem437: // OEM United States
-			case CodePage.OemMultilingualLatinI: // OEM Multilingual Latin I
-			case CodePage.EastEurope: // Windows Central Europe
-			case CodePage.Russian: // Windows Cyrillic
-			case CodePage.Iso88591LatinI: // ISO 8859-1 Latin I
-										  // Single-byte code page setup
-				cpInfo.MaxCharSize = 1;
-				cpInfo.DefaultChar[0] = 0x3F; // '?' character
-				cpInfo.DefaultChar[1] = 0x00; // Null terminator
-											  // LeadByte array - all zeros for single-byte code page
-				for (var i = 0; i < 12; i++)
-				{
-					cpInfo.LeadByte[i] = 0;
-				}
+			switch (actualCodePage)
+			{
+				case CodePage.WestEurope: // Windows-1252 (Western European)
+				case CodePage.Oem437: // OEM United States
+				case CodePage.OemMultilingualLatinI: // OEM Multilingual Latin I
+				case CodePage.EastEurope: // Windows Central Europe
+				case CodePage.Russian: // Windows Cyrillic
+				case CodePage.Iso88591LatinI: // ISO 8859-1 Latin I
+											  // Single-byte code page setup
+					cpInfo.MaxCharSize = 1;
+					cpInfo.DefaultChar[0] = 0x3F; // '?' character
+					cpInfo.DefaultChar[1] = 0x00; // Null terminator
+												  // LeadByte array - all zeros for single-byte code page (already initialized via default)
+					break;
 
-				break;
+				case CodePage.Utf8: // UTF-8
+									// UTF-8 is a multi-byte encoding with variable length (1-4 bytes per character)
+					cpInfo.MaxCharSize = 4;
+					cpInfo.DefaultChar[0] = 0x3F; // '?' character
+					cpInfo.DefaultChar[1] = 0x00; // Null terminator
+												  // LeadByte array - all zeros for UTF-8 (already initialized via default)
+					break;
 
-			case CodePage.Utf8: // UTF-8
-								// UTF-8 is a multi-byte encoding with variable length (1-4 bytes per character)
-				cpInfo.MaxCharSize = 4;
-				cpInfo.DefaultChar[0] = 0x3F; // '?' character
-				cpInfo.DefaultChar[1] = 0x00; // Null terminator
-											  // LeadByte array - all zeros for UTF-8 (no traditional lead bytes like DBCS)
-				for (var i = 0; i < 12; i++)
-				{
-					cpInfo.LeadByte[i] = 0;
-				}
-
-				break;
-
-			default:
-				// Unsupported code page
-				_logger.LogWarning("[Kernel32] GetCPInfo: unsupported code page {ActualCodePage}", actualCodePage);
-				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-				return (uint)NativeTypes.Win32Bool.FALSE;
+				default:
+					// Unsupported code page
+					_logger.LogWarning("[Kernel32] GetCPInfo: unsupported code page {ActualCodePage}", actualCodePage);
+					_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+					return (uint)NativeTypes.Win32Bool.FALSE;
+			}
 		}
 
 		// Write the CPINFO structure to emulated memory
@@ -1670,13 +1663,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private CodePage GetOemCp() => CodePage.Oem437; // IBM PC US (OEM code page)
 
 	[DllModuleExport(21)]
-	private unsafe uint GetStringTypeA(uint locale, uint dwInfoType, sbyte* lpSrcStr, int cchSrc, uint lpCharType)
+	private uint GetStringTypeA(uint locale, uint dwInfoType, uint lpSrcStr, int cchSrc, uint lpCharType)
 	{
 		// Maximum string length limit to prevent excessive memory usage and infinite loops
 		const int maxStringLengthLimit = 1000;
 
-		var srcStrAddr = (uint)(nint)lpSrcStr;
-		if (srcStrAddr == 0 || lpCharType == 0)
+		if (lpSrcStr == 0 || lpCharType == 0)
 		{
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return (uint)NativeTypes.Win32Bool.FALSE;
@@ -1697,7 +1689,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Safely calculate string length with bounds check
 			while (length < maxStringLengthLimit)
 			{
-				var ch = _env.MemRead8(srcStrAddr + (uint)length);
+				var ch = _env.MemRead8(lpSrcStr + (uint)length);
 				if (ch == 0)
 				{
 					break;
@@ -1728,7 +1720,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Process each character
 		for (var i = 0; i < length; i++)
 		{
-			var ch = _env.MemRead8(srcStrAddr + (uint)i);
+			var ch = _env.MemRead8(lpSrcStr + (uint)i);
 			ushort charType = 0;
 
 			// ASCII punctuation ranges:
@@ -2268,19 +2260,19 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(15)]
-	private unsafe uint GetModuleFileNameA(uint h, sbyte* lp, uint n)
+	private uint GetModuleFileNameA(uint h, uint lp, uint n)
 	{
-		_logger.LogInformation("[Kernel32] GetModuleFileNameA called: h=0x{U:X8} lp=0x{Lp:X8} n={U1}", (uint)(nint)h, (uint)(nint)lp, n);
+		_logger.LogInformation("[Kernel32] GetModuleFileNameA called: h=0x{U:X8} lp=0x{Lp:X8} n={U1}", h, lp, n);
 
 		// Use guest memory helpers instead of dereferencing raw pointers to avoid AccessViolation
-		if (n == 0 || lp == null)
+		if (n == 0 || lp == 0)
 		{
 			_logger.LogWarning("[Kernel32] GetModuleFileNameA returning 0 (invalid params)");
 			return 0;
 		}
 
-		// Convert lp to guest address
-		var lpAddr = (uint)(nint)lp;
+		// lp is the guest address
+		var lpAddr = lp;
 		if (lpAddr == 0)
 		{
 			return 0;
@@ -2288,20 +2280,19 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		string? path = null;
 
-		if (h == null || (IntPtr)h == IntPtr.Zero)
+		if (h == 0)
 		{
 			path = ReadCurrentModulePath();
 		}
 		else
 		{
-			if ((ulong)(nint)h == 0xFFFFFFFFul)
+			if (h == 0xFFFFFFFFu)
 			{
 				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
-			var numericHandle = (uint)(nint)h;
-			var moduleName = _env.GetModuleFileNameForHandle(numericHandle);
+			var moduleName = _env.GetModuleFileNameForHandle(h);
 			if (moduleName != null)
 			{
 				path = moduleName;
@@ -8249,7 +8240,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// It maps to CloseHandle in Win32
 		// Return 0 for success, -1 (0xFFFFFFFF) for error
 
-		return CloseHandle((void*)hFile) != 0 ? 0u : 0xFFFFFFFF;
+		return CloseHandle(hFile) != 0 ? 0u : 0xFFFFFFFF;
 	}
 
 	/// <summary>
@@ -10836,7 +10827,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		var bytesReadPtr = _env.SimpleAlloc(4);
 		_env.MemWrite32(bytesReadPtr, 0);
 		
-		var result = ReadFile((void*)hFile, lpBuffer, nNumberOfBytesToRead, bytesReadPtr, lpOverlapped);
+		var result = ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, bytesReadPtr, lpOverlapped);
 		
 		// Store the bytes read in the overlapped structure's InternalHigh field (offset 4)
 		if (result != 0)

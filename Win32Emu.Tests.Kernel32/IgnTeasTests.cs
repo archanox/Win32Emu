@@ -52,15 +52,15 @@ namespace Win32Emu.Tests.Kernel32
 
 			// Allocate CPINFO structure in virtual memory
 			var cpInfoAddr = _testEnv.AllocateMemory(20);
+			var lpCpInfo = new NativeTypes.Lpcpinfo(cpInfoAddr);
+			var cpInfoResult = _testEnv.Kernel32.GetCpInfo(CodePage.Utf8, lpCpInfo);
+			Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, cpInfoResult);
+			
+			// Read back into struct and assert
+			var cpInfo = _testEnv.ProcessEnv.MemReadStruct<NativeTypes.Cpinfo>(cpInfoAddr);
+			Assert.Equal(4u, cpInfo.MaxCharSize);
 			unsafe
 			{
-				var lpCpInfo = new NativeTypes.Lpcpinfo((NativeTypes.Cpinfo*)cpInfoAddr);
-				var cpInfoResult = _testEnv.Kernel32.GetCpInfo(CodePage.Utf8, lpCpInfo);
-				Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, cpInfoResult);
-				
-				// Read back into struct and assert
-				var cpInfo = _testEnv.ProcessEnv.MemReadStruct<NativeTypes.Cpinfo>(cpInfoAddr);
-				Assert.Equal(4u, cpInfo.MaxCharSize);
 				Assert.Equal(63, cpInfo.DefaultChar[0]);
 				Assert.Equal(0, cpInfo.DefaultChar[1]);
 			}
