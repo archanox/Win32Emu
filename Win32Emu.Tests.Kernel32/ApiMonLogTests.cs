@@ -110,16 +110,13 @@ public sealed class ApiMonLogTests : IDisposable
 		// From CSV: GetCPInfo(CP_UTF8, 0x001afe5c) returns TRUE
 		var cpInfoAddr = _testEnv.AllocateMemory(20);
 		
-		unsafe
-		{
-			var lpCpInfo = new NativeTypes.Lpcpinfo((NativeTypes.Cpinfo*)cpInfoAddr);
-			var result = _testEnv.Kernel32.GetCpInfo(CodePage.Utf8, lpCpInfo);
-			Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
-			
-			// Read back the structure
-			var cpInfo = _testEnv.ProcessEnv.MemReadStruct<NativeTypes.Cpinfo>(cpInfoAddr);
-			Assert.Equal(4u, cpInfo.MaxCharSize); // UTF-8 max is 4 bytes per character
-		}
+		var lpCpInfo = new NativeTypes.Lpcpinfo(cpInfoAddr);
+		var result = _testEnv.Kernel32.GetCpInfo(CodePage.Utf8, lpCpInfo);
+		Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
+		
+		// Read back the structure
+		var cpInfo = _testEnv.ProcessEnv.MemReadStruct<NativeTypes.Cpinfo>(cpInfoAddr);
+		Assert.Equal(4u, cpInfo.MaxCharSize); // UTF-8 max is 4 bytes per character
 	}
 
 	[Fact]

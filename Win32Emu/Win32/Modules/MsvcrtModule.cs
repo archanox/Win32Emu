@@ -146,7 +146,7 @@ namespace Win32Emu.Win32.Modules
 					returnValue = (uint)fputs(a.LpcStr(0), a.UInt32(1));
 					return true;
 				case "FREE":
-					free((void*)a.UInt32(0));
+					free(a.UInt32(0));
 					returnValue = 0;
 					return true;
 				case "GETENV":
@@ -168,7 +168,7 @@ namespace Win32Emu.Win32.Modules
 					returnValue = memset(a.UInt32(0), a.Int32(1), a.UInt32(2));
 					return true;
 				case "REALLOC":
-					returnValue = realloc((void*)a.UInt32(0), a.UInt32(1));
+					returnValue = realloc(a.UInt32(0), a.UInt32(1));
 					return true;
 				case "SIGNAL":
 					returnValue = signal(a.Int32(0), a.UInt32(1));
