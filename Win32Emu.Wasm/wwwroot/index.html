@@ -121,10 +121,14 @@
 				// Calculate buffer size in samples
 				const samplesPerBuffer = bufferSize / 2; // 16-bit samples
 				
+				// ScriptProcessorNode requires power of 2 buffer size
+				// Find the nearest power of 2 between 256 and 4096
+				const nearestPow2 = Math.pow(2, Math.round(Math.log2(Math.max(256, Math.min(4096, samplesPerBuffer)))));
+				
 				// Create a ScriptProcessorNode for audio streaming (deprecated but widely supported)
 				// In production, AudioWorklet would be better but requires separate worklet files
 				const scriptNode = window.audioContext.createScriptProcessor(
-					Math.min(4096, Math.max(256, samplesPerBuffer)), // Must be power of 2
+					nearestPow2,
 					0,  // input channels
 					channels // output channels
 				);
