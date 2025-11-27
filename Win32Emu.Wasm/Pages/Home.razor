@@ -190,7 +190,7 @@
 				<ul class="mb-2">
 					<li>✅ WASM-compatible rendering backend using HTML5 Canvas and JavaScript interop</li>
 					<li>✅ Web Audio API integration for audio output with streaming support</li>
-					<li>✅ WASM SIMD support for DirectDraw blitting operations</li>
+					<li>✅ WASM-compatible DirectDraw blitting with scalar operations</li>
 					<li>✅ Safe code paths for all blitting operations (no unsafe pointers)</li>
 				</ul>
 				<p class="mb-0">
@@ -349,9 +349,10 @@
 					AddDebugOutput("Audio: Failed to initialize");
 				}
 			}
-			catch
+			catch (Exception ex)
 			{
-				AddDebugOutput("Audio: Not available");
+				AddDebugOutput($"Audio: Not available - {ex.Message}");
+				Logger.LogWarning(ex, "Audio initialization failed");
 				_audioEnabled = false;
 			}
 			

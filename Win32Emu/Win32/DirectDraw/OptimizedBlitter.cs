@@ -11,9 +11,8 @@ using System.Runtime.Intrinsics.Wasm;
 namespace Win32Emu.Win32.DirectDraw
 {
 	/// <summary>
-	/// High-performance blitter optimized with SIMD intrinsics (SSE2/AVX2 on x86/x64, Neon on ARM, PackedSimd on WASM).
-	/// Inspired by cnc-ddraw and DDrawCompat blitter implementations with color key support.
-	/// Includes adaptive algorithms that select optimal strategy based on buffer size and alignment.
+	/// Provides fast blit routines for common pixel formats using safe, portable Span operations.
+	/// WASM SIMD (PackedSimd) is detected but not currently used; scalar fallback is always used for cross-platform compatibility.
 	/// </summary>
 	public static class OptimizedBlitter
 	{
@@ -132,8 +131,6 @@ namespace Win32Emu.Win32.DirectDraw
 			byte colorKeyHigh)
 		{
 			// Safe scalar implementation for all platforms including WASM
-			// Note: WASM SIMD (PackedSimd) could be used for optimization, but the
-			// scalar implementation is correct and portable across all platforms.
 			for (var y = 0; y < height; y++)
 			{
 				var srcRowOffset = y * srcPitch;
