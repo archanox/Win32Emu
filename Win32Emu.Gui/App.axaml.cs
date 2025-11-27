@@ -3,11 +3,13 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.Logging;
+using Win32Emu.Gui.Backends.DirectDraw;
 using Win32Emu.Gui.Configuration;
 using Win32Emu.Gui.Services;
 using Win32Emu.Gui.ViewModels;
 using Win32Emu.Gui.Views;
 using Win32Emu.Telemetry;
+using Win32Emu.Win32.DirectDraw;
 
 namespace Win32Emu.Gui;
 
@@ -29,6 +31,9 @@ public class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+        
+        // Initialize the optimized SIMD blitter for desktop platforms
+        InitializeBlitter();
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -55,6 +60,12 @@ public class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static void InitializeBlitter()
+    {
+        // Use the optimized SIMD blitter for desktop platforms (SSE2/AVX2/NEON)
+        OptimizedBlitter.Current = SimdBlitter.Instance;
     }
 
     private void InitializeLogging()
