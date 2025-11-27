@@ -181,17 +181,25 @@
 				</h5>
 				<p>
 					This is a <strong>proof-of-concept</strong> Blazor WebAssembly frontend for Win32Emu.
-					The emulator core is currently designed for native platforms with dependencies on SDL3, 
-					Silk.NET, and other native libraries that don't support WASM.
+					The emulator core now includes WASM-specific optimizations including SIMD intrinsics
+					(via System.Runtime.Intrinsics.Wasm.PackedSimd) and Web Audio API integration.
 				</p>
 				<p class="mb-0">
-					To fully enable web-based emulation, the following work is needed:
+					<strong>Completed features:</strong>
+				</p>
+				<ul class="mb-2">
+					<li>✅ WASM-compatible rendering backend using HTML5 Canvas and JavaScript interop</li>
+					<li>✅ Web Audio API integration for audio output with streaming support</li>
+					<li>✅ WASM SIMD support for DirectDraw blitting operations</li>
+					<li>✅ Safe code paths for all blitting operations (no unsafe pointers)</li>
+				</ul>
+				<p class="mb-0">
+					<strong>Remaining work:</strong>
 				</p>
 				<ul class="mb-0">
-					<li>Create a WASM-compatible rendering backend using HTML5 Canvas and JavaScript interop</li>
-					<li>Implement Web Audio API integration for audio output</li>
-					<li>Adapt the CPU emulator to work without native intrinsics or provide fallbacks</li>
-					<li>Handle file I/O through browser APIs</li>
+					<li>Full emulator integration with WASM backend</li>
+					<li>Browser-based file I/O and VFS support</li>
+					<li>Keyboard/Mouse input handling</li>
 				</ul>
 			</div>
 		</div>
@@ -201,7 +209,7 @@
 @code {
 	private bool _isRunning = false;
 	private bool _executableLoaded = false;
-	private readonly bool _audioEnabled = false;
+	private bool _audioEnabled = false;
 	private bool _folderMode = false;
 	private string _loadedFileName = string.Empty;
 	private long _loadedFileSize = 0;
@@ -328,11 +336,31 @@
 			// Initialize canvas
 			await JS.InvokeVoidAsync("initializeEmulator", "emulatorCanvas");
 			
+			// Initialize audio (requires user interaction for browser autoplay policies)
+			try
+			{
+				_audioEnabled = await JS.InvokeAsync<bool>("initializeAudio");
+				if (_audioEnabled)
+				{
+					AddDebugOutput("Audio: Initialized (Web Audio API)");
+				}
+				else
+				{
+					AddDebugOutput("Audio: Failed to initialize");
+				}
+			}
+			catch
+			{
+				AddDebugOutput("Audio: Not available");
+				_audioEnabled = false;
+			}
+			
 			// Simulate emulation start
 			AddDebugOutput("Emulator initialized");
 			AddDebugOutput($"Loaded PE executable: {_loadedFileName}");
 			AddDebugOutput("CPU: x86 (32-bit)");
 			AddDebugOutput("Memory: 64MB allocated");
+			AddDebugOutput($"SIMD: {Win32Emu.Win32.DirectDraw.OptimizedBlitter.GetSimdCapabilities()}");
 			AddStdOutput("Executable loaded and ready\n");
 			
 			// Start simulated execution

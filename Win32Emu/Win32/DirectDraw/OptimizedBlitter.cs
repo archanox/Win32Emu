@@ -1,21 +1,36 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Runtime.Intrinsics.Arm;
+#if NET8_0_OR_GREATER
+using System.Runtime.Intrinsics.Wasm;
+#endif
 
 namespace Win32Emu.Win32.DirectDraw
 {
 	/// <summary>
-	/// High-performance blitter optimized with SIMD intrinsics (SSE2/AVX2 on x86/x64, Neon on ARM).
+	/// High-performance blitter optimized with SIMD intrinsics (SSE2/AVX2 on x86/x64, Neon on ARM, PackedSimd on WASM).
 	/// Inspired by cnc-ddraw and DDrawCompat blitter implementations with color key support.
 	/// Includes adaptive algorithms that select optimal strategy based on buffer size and alignment.
 	/// </summary>
 	public static class OptimizedBlitter
 	{
-		// Thresholds for selecting optimization strategies (from cnc-ddraw)
-		private const int LARGE_BUFFER_THRESHOLD = 4096 * 1024; // 4MB - use streaming stores
-		private const int SMALL_BUFFER_THRESHOLD = 100 * 1024;  // 100KB - use regular stores
+		/// <summary>
+		/// Indicates whether WASM SIMD is supported on the current platform.
+		/// </summary>
+		public static bool IsWasmSimdSupported
+		{
+			get
+			{
+#if NET8_0_OR_GREATER
+				return PackedSimd.IsSupported;
+#else
+				return false;
+#endif
+			}
+		}
 
 		/// <summary>
 		/// Performs a fast blit operation without color key.
@@ -80,7 +95,7 @@ namespace Win32Emu.Win32.DirectDraw
 
 		#region 8-bit Blitting
 
-		private static unsafe void BltFast8Bpp(
+		private static void BltFast8Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destPitch,
@@ -91,33 +106,22 @@ namespace Win32Emu.Win32.DirectDraw
 			// Check if we can use optimized full-surface copy
 			if (width == destPitch && destPitch == srcPitch)
 			{
-				// Contiguous memory - use CopyAdaptive for best performance
-				fixed (byte* destPtr = dest)
-				fixed (byte* srcPtr = src)
-				{
-					CopyAdaptive(destPtr, srcPtr, destPitch * height);
-				}
+				// Contiguous memory - use simple span copy for WASM compatibility
+				src.Slice(0, destPitch * height).CopyTo(dest);
 			}
 			else
 			{
-				// Row-by-row copy with CopyAdaptive for each row
-				fixed (byte* destPtr = dest)
-				fixed (byte* srcPtr = src)
+				// Row-by-row copy - safe implementation for all platforms
+				for (var y = 0; y < height; y++)
 				{
-					byte* dstRow = destPtr;
-					byte* srcRow = srcPtr;
-					
-					for (var y = 0; y < height; y++)
-					{
-						CopyAdaptive(dstRow, srcRow, width);
-						dstRow += destPitch;
-						srcRow += srcPitch;
-					}
+					var srcRow = src.Slice(y * srcPitch, width);
+					var destRow = dest.Slice(y * destPitch, width);
+					srcRow.CopyTo(destRow);
 				}
 			}
 		}
 
-		private static unsafe void BltWithSourceColorKey8Bpp(
+		private static void BltWithSourceColorKey8Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destPitch,
@@ -127,92 +131,110 @@ namespace Win32Emu.Win32.DirectDraw
 			byte colorKeyLow,
 			byte colorKeyHigh)
 		{
-			fixed (byte* destPtr = dest)
-			fixed (byte* srcPtr = src)
+#if NET8_0_OR_GREATER
+			// WASM SIMD path
+			if (PackedSimd.IsSupported && width >= 16)
 			{
-				byte* dstRow = destPtr;
-				byte* srcRow = srcPtr;
+				BltWithSourceColorKey8BppWasmSimd(dest, src, destPitch, srcPitch, width, height, colorKeyLow, colorKeyHigh);
+				return;
+			}
+#endif
+			// Desktop SIMD path or scalar fallback
+			BltWithSourceColorKey8BppSafe(dest, src, destPitch, srcPitch, width, height, colorKeyLow, colorKeyHigh);
+		}
 
-				if (Sse2.IsSupported && width >= 16)
+#if NET8_0_OR_GREATER
+		private static void BltWithSourceColorKey8BppWasmSimd(
+			Span<byte> dest,
+			ReadOnlySpan<byte> src,
+			int destPitch,
+			int srcPitch,
+			int width,
+			int height,
+			byte colorKeyLow,
+			byte colorKeyHigh)
+		{
+			var keyLow = Vector128.Create(colorKeyLow);
+			var keyHigh = Vector128.Create(colorKeyHigh);
+			var signFlip = Vector128.Create((byte)0x80);
+
+			for (var y = 0; y < height; y++)
+			{
+				var srcRowOffset = y * srcPitch;
+				var dstRowOffset = y * destPitch;
+				var x = 0;
+
+				// Process 16 bytes at a time with WASM SIMD
+				for (; x <= width - 16; x += 16)
 				{
-					var keyLow = Vector128.Create(colorKeyLow);
-					var keyHigh = Vector128.Create(colorKeyHigh);
+					var srcSlice = src.Slice(srcRowOffset + x, 16);
+					var srcData = Vector128.Create(srcSlice);
 
-					for (var y = 0; y < height; y++)
+					// For color key, check if pixel < colorKeyLow OR pixel > colorKeyHigh
+					// Pixels in range [colorKeyLow, colorKeyHigh] are transparent and should NOT be copied
+					var srcSigned = PackedSimd.Xor(srcData, signFlip).AsSByte();
+					var keyLowSigned = PackedSimd.Xor(keyLow, signFlip).AsSByte();
+					var keyHighSigned = PackedSimd.Xor(keyHigh, signFlip).AsSByte();
+
+					var cmpLow = PackedSimd.CompareLessThan(srcSigned, keyLowSigned);
+					var cmpHigh = PackedSimd.CompareGreaterThan(srcSigned, keyHighSigned);
+					var isNotTransparent = PackedSimd.Or(cmpLow, cmpHigh);
+
+					// Check if any pixels need to be copied
+					if (PackedSimd.AnyTrue(isNotTransparent))
 					{
-						var x = 0;
-
-						// Process 16 bytes at a time with SSE2
-						for (; x <= width - 16; x += 16)
+						// If all pixels should be copied
+						if (PackedSimd.AllTrue(isNotTransparent))
 						{
-							var srcData = Sse2.LoadVector128(srcRow + x);
-							
-							// For color key, we check if pixel < colorKeyLow OR pixel > colorKeyHigh
-							// Pixels in range [colorKeyLow, colorKeyHigh] are transparent and should NOT be copied
-							// This is equivalent to: isNotTransparent = (pixel < low) | (pixel > high)
-							// For unsigned bytes, use signed comparison after XOR with 0x80
-							var cmpLow = Sse2.CompareLessThan(
-								Sse2.Xor(srcData, Vector128.Create((byte)0x80)).AsSByte(),
-								Sse2.Xor(keyLow, Vector128.Create((byte)0x80)).AsSByte());
-							var cmpHigh = Sse2.CompareGreaterThan(
-								Sse2.Xor(srcData, Vector128.Create((byte)0x80)).AsSByte(),
-								Sse2.Xor(keyHigh, Vector128.Create((byte)0x80)).AsSByte());
-							var isNotTransparent = Sse2.Or(cmpLow, cmpHigh);
-
-							var mask = Sse2.MoveMask(isNotTransparent);
-							
-							// If all bytes are transparent (mask == 0, all pixels in color key range), skip
-							if (mask == 0)
-							{
-								continue;
-							}
-
-							// If all bytes are NOT transparent (mask == 0xFFFF, no pixels in range), copy entire vector
-							if (mask == 0xFFFF)
-							{
-								Sse2.Store(dstRow + x, srcData);
-								continue;
-							}
-
-							// Mixed case: use SIMD to blend source and destination
-							// isNotTransparent has bits set to 1 for pixels to copy from source
-							var destData = Sse2.LoadVector128(dstRow + x);
-							var maskedSrc = Sse2.And(srcData, isNotTransparent.AsByte()); // Select src where mask=1
-							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData); // AndNot(a,b) = (~a) & b, selects dest where mask=0
-							var result = Sse2.Or(maskedSrc, maskedDest); // Combine: src where non-transparent, dest where transparent
-							Sse2.Store(dstRow + x, result);
+							srcData.CopyTo(dest.Slice(dstRowOffset + x, 16));
 						}
-
-						// Handle remaining bytes
-						for (; x < width; x++)
+						else
 						{
-							var pixel = srcRow[x];
-							if (pixel < colorKeyLow || pixel > colorKeyHigh)
-							{
-								dstRow[x] = pixel;
-							}
+							// Mixed case: blend source and destination using the mask
+							var destSlice = dest.Slice(dstRowOffset + x, 16);
+							var destData = Vector128.Create(destSlice);
+							var maskedSrc = PackedSimd.And(srcData, isNotTransparent.AsByte());
+							var maskedDest = PackedSimd.AndNot(destData, isNotTransparent.AsByte());
+							var result = PackedSimd.Or(maskedSrc, maskedDest);
+							result.CopyTo(destSlice);
 						}
-
-						dstRow += destPitch;
-						srcRow += srcPitch;
 					}
 				}
-				else
-				{
-					// Scalar fallback
-					for (var y = 0; y < height; y++)
-					{
-						for (var x = 0; x < width; x++)
-						{
-							var pixel = srcRow[x];
-							if (pixel < colorKeyLow || pixel > colorKeyHigh)
-							{
-								dstRow[x] = pixel;
-							}
-						}
 
-						dstRow += destPitch;
-						srcRow += srcPitch;
+				// Handle remaining bytes with scalar code
+				for (; x < width; x++)
+				{
+					var pixel = src[srcRowOffset + x];
+					if (pixel < colorKeyLow || pixel > colorKeyHigh)
+					{
+						dest[dstRowOffset + x] = pixel;
+					}
+				}
+			}
+		}
+#endif
+
+		private static void BltWithSourceColorKey8BppSafe(
+			Span<byte> dest,
+			ReadOnlySpan<byte> src,
+			int destPitch,
+			int srcPitch,
+			int width,
+			int height,
+			byte colorKeyLow,
+			byte colorKeyHigh)
+		{
+			// Scalar fallback - safe for all platforms including WASM
+			for (var y = 0; y < height; y++)
+			{
+				var srcRowOffset = y * srcPitch;
+				var dstRowOffset = y * destPitch;
+				for (var x = 0; x < width; x++)
+				{
+					var pixel = src[srcRowOffset + x];
+					if (pixel < colorKeyLow || pixel > colorKeyHigh)
+					{
+						dest[dstRowOffset + x] = pixel;
 					}
 				}
 			}
@@ -222,7 +244,7 @@ namespace Win32Emu.Win32.DirectDraw
 
 		#region 16-bit Blitting
 
-		private static unsafe void BltFast16Bpp(
+		private static void BltFast16Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destPitch,
@@ -235,33 +257,22 @@ namespace Win32Emu.Win32.DirectDraw
 			// Check if we can use optimized full-surface copy
 			if (bytesPerRow == destPitch && destPitch == srcPitch)
 			{
-				// Contiguous memory - use CopyAdaptive for best performance
-				fixed (byte* destPtr = dest)
-				fixed (byte* srcPtr = src)
-				{
-					CopyAdaptive(destPtr, srcPtr, destPitch * height);
-				}
+				// Contiguous memory - use simple span copy for WASM compatibility
+				src.Slice(0, destPitch * height).CopyTo(dest);
 			}
 			else
 			{
-				// Row-by-row copy with CopyAdaptive for each row
-				fixed (byte* destPtr = dest)
-				fixed (byte* srcPtr = src)
+				// Row-by-row copy - safe implementation for all platforms
+				for (var y = 0; y < height; y++)
 				{
-					byte* dstRow = destPtr;
-					byte* srcRow = srcPtr;
-					
-					for (var y = 0; y < height; y++)
-					{
-						CopyAdaptive(dstRow, srcRow, bytesPerRow);
-						dstRow += destPitch;
-						srcRow += srcPitch;
-					}
+					var srcRow = src.Slice(y * srcPitch, bytesPerRow);
+					var destRow = dest.Slice(y * destPitch, bytesPerRow);
+					srcRow.CopyTo(destRow);
 				}
 			}
 		}
 
-		private static unsafe void BltWithSourceColorKey16Bpp(
+		private static void BltWithSourceColorKey16Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destPitch,
@@ -271,90 +282,22 @@ namespace Win32Emu.Win32.DirectDraw
 			ushort colorKeyLow,
 			ushort colorKeyHigh)
 		{
-			fixed (byte* destPtr = dest)
-			fixed (byte* srcPtr = src)
+			// Safe scalar implementation for all platforms including WASM
+			var srcSpan = MemoryMarshal.Cast<byte, ushort>(src);
+			var destSpan = MemoryMarshal.Cast<byte, ushort>(dest);
+			var srcPitch16 = srcPitch / 2;
+			var destPitch16 = destPitch / 2;
+
+			for (var y = 0; y < height; y++)
 			{
-				byte* dstRow = destPtr;
-				byte* srcRow = srcPtr;
-
-				if (Sse2.IsSupported && width >= 8)
+				var srcRowOffset = y * srcPitch16;
+				var dstRowOffset = y * destPitch16;
+				for (var x = 0; x < width; x++)
 				{
-					var keyLow = Vector128.Create(colorKeyLow);
-					var keyHigh = Vector128.Create(colorKeyHigh);
-
-					for (var y = 0; y < height; y++)
+					var pixel = srcSpan[srcRowOffset + x];
+					if (pixel < colorKeyLow || pixel > colorKeyHigh)
 					{
-						var x = 0;
-
-						// Process 8 pixels at a time
-						for (; x <= width - 8; x += 8)
-						{
-							var srcData = Sse2.LoadVector128((ushort*)(srcRow + x * 2));
-							
-							// Check if pixel < colorKeyLow OR pixel > colorKeyHigh (not transparent)
-							// Use XOR trick to convert to unsigned comparison
-							var cmpLow = Sse2.CompareLessThan(
-								Sse2.Xor(srcData, Vector128.Create((ushort)0x8000)).AsInt16(),
-								Sse2.Xor(keyLow, Vector128.Create((ushort)0x8000)).AsInt16());
-							var cmpHigh = Sse2.CompareGreaterThan(
-								Sse2.Xor(srcData, Vector128.Create((ushort)0x8000)).AsInt16(),
-								Sse2.Xor(keyHigh, Vector128.Create((ushort)0x8000)).AsInt16());
-							var isNotTransparent = Sse2.Or(cmpLow, cmpHigh);
-
-							var mask = Sse2.MoveMask(isNotTransparent.AsByte());
-							
-							// If all pixels are transparent (mask == 0), skip
-							if (mask == 0)
-							{
-								continue;
-							}
-
-							// If no pixels are transparent (mask == 0xFFFF), copy entire vector
-							if (mask == 0xFFFF)
-							{
-								Sse2.Store((ushort*)(dstRow + x * 2), srcData);
-								continue;
-							}
-
-							// Mixed case: use SIMD to blend source and destination
-							// isNotTransparent has bits set to 1 for pixels to copy from source
-							var destData = Sse2.LoadVector128((ushort*)(dstRow + x * 2));
-							var maskedSrc = Sse2.And(srcData.AsByte(), isNotTransparent.AsByte()); // Select src where mask=1
-							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData.AsByte()); // AndNot(a,b) = (~a) & b, selects dest where mask=0
-							var result = Sse2.Or(maskedSrc, maskedDest); // Combine: src where non-transparent, dest where transparent
-							Sse2.Store((ushort*)(dstRow + x * 2), result.AsUInt16());
-						}
-
-						// Handle remaining pixels
-						for (; x < width; x++)
-						{
-							var pixel = ((ushort*)(srcRow + x * 2))[0];
-							if (pixel < colorKeyLow || pixel > colorKeyHigh)
-							{
-								((ushort*)(dstRow + x * 2))[0] = pixel;
-							}
-						}
-
-						dstRow += destPitch;
-						srcRow += srcPitch;
-					}
-				}
-				else
-				{
-					// Scalar fallback
-					for (var y = 0; y < height; y++)
-					{
-						for (var x = 0; x < width; x++)
-						{
-							var pixel = ((ushort*)(srcRow + x * 2))[0];
-							if (pixel < colorKeyLow || pixel > colorKeyHigh)
-							{
-								((ushort*)(dstRow + x * 2))[0] = pixel;
-							}
-						}
-
-						dstRow += destPitch;
-						srcRow += srcPitch;
+						destSpan[dstRowOffset + x] = pixel;
 					}
 				}
 			}
@@ -364,7 +307,7 @@ namespace Win32Emu.Win32.DirectDraw
 
 		#region 24-bit Blitting
 
-		private static unsafe void BltFast24Bpp(
+		private static void BltFast24Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destPitch,
@@ -377,28 +320,17 @@ namespace Win32Emu.Win32.DirectDraw
 			// Check if we can use optimized full-surface copy
 			if (bytesPerRow == destPitch && destPitch == srcPitch)
 			{
-				// Contiguous memory - use CopyAdaptive for best performance
-				fixed (byte* destPtr = dest)
-				fixed (byte* srcPtr = src)
-				{
-					CopyAdaptive(destPtr, srcPtr, destPitch * height);
-				}
+				// Contiguous memory - use simple span copy for WASM compatibility
+				src.Slice(0, destPitch * height).CopyTo(dest);
 			}
 			else
 			{
-				// Row-by-row copy with CopyAdaptive for each row
-				fixed (byte* destPtr = dest)
-				fixed (byte* srcPtr = src)
+				// Row-by-row copy - safe implementation for all platforms
+				for (var y = 0; y < height; y++)
 				{
-					byte* dstRow = destPtr;
-					byte* srcRow = srcPtr;
-					
-					for (var y = 0; y < height; y++)
-					{
-						CopyAdaptive(dstRow, srcRow, bytesPerRow);
-						dstRow += destPitch;
-						srcRow += srcPitch;
-					}
+					var srcRow = src.Slice(y * srcPitch, bytesPerRow);
+					var destRow = dest.Slice(y * destPitch, bytesPerRow);
+					srcRow.CopyTo(destRow);
 				}
 			}
 		}
@@ -407,7 +339,7 @@ namespace Win32Emu.Win32.DirectDraw
 
 		#region 32-bit Blitting
 
-		private static unsafe void BltFast32Bpp(
+		private static void BltFast32Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destPitch,
@@ -420,33 +352,22 @@ namespace Win32Emu.Win32.DirectDraw
 			// Check if we can use optimized full-surface copy
 			if (bytesPerRow == destPitch && destPitch == srcPitch)
 			{
-				// Contiguous memory - use CopyAdaptive for best performance
-				fixed (byte* destPtr = dest)
-				fixed (byte* srcPtr = src)
-				{
-					CopyAdaptive(destPtr, srcPtr, destPitch * height);
-				}
+				// Contiguous memory - use simple span copy for WASM compatibility
+				src.Slice(0, destPitch * height).CopyTo(dest);
 			}
 			else
 			{
-				// Row-by-row copy with CopyAdaptive for each row
-				fixed (byte* destPtr = dest)
-				fixed (byte* srcPtr = src)
+				// Row-by-row copy - safe implementation for all platforms
+				for (var y = 0; y < height; y++)
 				{
-					byte* dstRow = destPtr;
-					byte* srcRow = srcPtr;
-					
-					for (var y = 0; y < height; y++)
-					{
-						CopyAdaptive(dstRow, srcRow, bytesPerRow);
-						dstRow += destPitch;
-						srcRow += srcPitch;
-					}
+					var srcRow = src.Slice(y * srcPitch, bytesPerRow);
+					var destRow = dest.Slice(y * destPitch, bytesPerRow);
+					srcRow.CopyTo(destRow);
 				}
 			}
 		}
 
-		private static unsafe void BltWithSourceColorKey32Bpp(
+		private static void BltWithSourceColorKey32Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destPitch,
@@ -456,142 +377,22 @@ namespace Win32Emu.Win32.DirectDraw
 			uint colorKeyLow,
 			uint colorKeyHigh)
 		{
-			fixed (byte* destPtr = dest)
-			fixed (byte* srcPtr = src)
+			// Safe scalar implementation for all platforms including WASM
+			var srcSpan = MemoryMarshal.Cast<byte, uint>(src);
+			var destSpan = MemoryMarshal.Cast<byte, uint>(dest);
+			var srcPitch32 = srcPitch / 4;
+			var destPitch32 = destPitch / 4;
+
+			for (var y = 0; y < height; y++)
 			{
-				byte* dstRow = destPtr;
-				byte* srcRow = srcPtr;
-
-				if (Sse2.IsSupported && width >= 4)
+				var srcRowOffset = y * srcPitch32;
+				var dstRowOffset = y * destPitch32;
+				for (var x = 0; x < width; x++)
 				{
-					var keyLow = Vector128.Create(colorKeyLow);
-					var keyHigh = Vector128.Create(colorKeyHigh);
-
-					for (var y = 0; y < height; y++)
+					var pixel = srcSpan[srcRowOffset + x];
+					if (pixel < colorKeyLow || pixel > colorKeyHigh)
 					{
-						var x = 0;
-
-						// Process 4 pixels at a time
-						for (; x <= width - 4; x += 4)
-						{
-							var srcData = Sse2.LoadVector128((uint*)(srcRow + x * 4));
-							
-							// Check if pixel < colorKeyLow OR pixel > colorKeyHigh (not transparent)
-							// Use XOR trick to convert to unsigned comparison
-							var cmpLow = Sse2.CompareLessThan(
-								Sse2.Xor(srcData, Vector128.Create(0x80000000u)).AsInt32(),
-								Sse2.Xor(keyLow, Vector128.Create(0x80000000u)).AsInt32());
-							var cmpHigh = Sse2.CompareGreaterThan(
-								Sse2.Xor(srcData, Vector128.Create(0x80000000u)).AsInt32(),
-								Sse2.Xor(keyHigh, Vector128.Create(0x80000000u)).AsInt32());
-							var isNotTransparent = Sse2.Or(cmpLow, cmpHigh);
-
-							var mask = Sse2.MoveMask(isNotTransparent.AsByte());
-							
-							// If all pixels are transparent (mask == 0), skip
-							if (mask == 0)
-							{
-								continue;
-							}
-
-							// If no pixels are transparent (mask == 0xFFFF), copy entire vector
-							if (mask == 0xFFFF)
-							{
-								Sse2.Store((uint*)(dstRow + x * 4), srcData);
-								continue;
-							}
-
-							// Mixed case: use SIMD to blend source and destination
-							// isNotTransparent has bits set to 1 for pixels to copy from source
-							var destData = Sse2.LoadVector128((uint*)(dstRow + x * 4));
-							var maskedSrc = Sse2.And(srcData.AsByte(), isNotTransparent.AsByte()); // Select src where mask=1
-							var maskedDest = Sse2.AndNot(isNotTransparent.AsByte(), destData.AsByte()); // AndNot(a,b) = (~a) & b, selects dest where mask=0
-							var result = Sse2.Or(maskedSrc, maskedDest); // Combine: src where non-transparent, dest where transparent
-							Sse2.Store((uint*)(dstRow + x * 4), result.AsUInt32());
-						}
-
-						// Handle remaining pixels
-						for (; x < width; x++)
-						{
-							var pixel = ((uint*)(srcRow + x * 4))[0];
-							if (pixel < colorKeyLow || pixel > colorKeyHigh)
-							{
-								((uint*)(dstRow + x * 4))[0] = pixel;
-							}
-						}
-
-						dstRow += destPitch;
-						srcRow += srcPitch;
-					}
-				}
-				else if (AdvSimd.IsSupported && width >= 4)
-				{
-					// ARM Neon implementation
-					var keyLow = Vector128.Create(colorKeyLow);
-					var keyHigh = Vector128.Create(colorKeyHigh);
-
-					for (var y = 0; y < height; y++)
-					{
-						var x = 0;
-
-						// Process 4 pixels at a time with Neon
-						for (; x <= width - 4; x += 4)
-						{
-							var srcData = AdvSimd.LoadVector128((uint*)(srcRow + x * 4));
-							
-							// Check if pixels are outside color key range
-							var isLtLow = AdvSimd.CompareLessThan(srcData, keyLow);
-							var isGtHigh = AdvSimd.CompareGreaterThan(srcData, keyHigh);
-							var isNotTransparent = AdvSimd.Or(isLtLow, isGtHigh);
-
-							// Check if any pixels are non-transparent
-							var anyOpaque = AdvSimd.Arm64.MaxAcross(isNotTransparent);
-							if (anyOpaque.ToScalar() == 0)
-							{
-								continue;
-							}
-
-							// Mixed case: copy non-transparent pixels individually
-							for (var i = 0; i < 4; i++)
-							{
-								var pixel = ((uint*)(srcRow + (x + i) * 4))[0];
-								if (pixel < colorKeyLow || pixel > colorKeyHigh)
-								{
-									((uint*)(dstRow + (x + i) * 4))[0] = pixel;
-								}
-							}
-						}
-
-						// Handle remaining pixels
-						for (; x < width; x++)
-						{
-							var pixel = ((uint*)(srcRow + x * 4))[0];
-							if (pixel < colorKeyLow || pixel > colorKeyHigh)
-							{
-								((uint*)(dstRow + x * 4))[0] = pixel;
-							}
-						}
-
-						dstRow += destPitch;
-						srcRow += srcPitch;
-					}
-				}
-				else
-				{
-					// Scalar fallback
-					for (var y = 0; y < height; y++)
-					{
-						for (var x = 0; x < width; x++)
-						{
-							var pixel = ((uint*)(srcRow + x * 4))[0];
-							if (pixel < colorKeyLow || pixel > colorKeyHigh)
-							{
-								((uint*)(dstRow + x * 4))[0] = pixel;
-							}
-						}
-
-						dstRow += destPitch;
-						srcRow += srcPitch;
+						destSpan[dstRowOffset + x] = pixel;
 					}
 				}
 			}
@@ -636,6 +437,14 @@ namespace Win32Emu.Win32.DirectDraw
 			{
 				caps.Append("NEON ");
 			}
+
+#if NET8_0_OR_GREATER
+			// WASM capabilities
+			if (PackedSimd.IsSupported)
+			{
+				caps.Append("WASM-SIMD ");
+			}
+#endif
 
 			// Cross-platform vector support
 			if (System.Numerics.Vector.IsHardwareAccelerated)
@@ -699,7 +508,7 @@ namespace Win32Emu.Win32.DirectDraw
 			}
 		}
 
-		private static unsafe void BltStretchWithColorKey8Bpp(
+		private static void BltStretchWithColorKey8Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destX, int destY, int destWidth, int destHeight, int destSurfaceWidth,
@@ -708,39 +517,35 @@ namespace Win32Emu.Win32.DirectDraw
 			float scaleWidth, float scaleHeight,
 			bool mirrorUpDown, bool mirrorLeftRight)
 		{
-			fixed (byte* destPtr = dest)
-			fixed (byte* srcPtr = src)
+			for (var y = 0; y < destHeight; y++)
 			{
-				for (var y = 0; y < destHeight; y++)
+				var scaledY = (int)(y * scaleHeight);
+				if (mirrorUpDown)
 				{
-					var scaledY = (int)(y * scaleHeight);
-					if (mirrorUpDown)
+					scaledY = srcHeight - 1 - scaledY;
+				}
+
+				var srcRow = srcX + srcSurfaceWidth * (scaledY + srcY);
+				var destRow = destX + destSurfaceWidth * (y + destY);
+
+				for (var x = 0; x < destWidth; x++)
+				{
+					var scaledX = (int)(x * scaleWidth);
+					if (mirrorLeftRight)
 					{
-						scaledY = srcHeight - 1 - scaledY;
+						scaledX = srcWidth - 1 - scaledX;
 					}
 
-					var srcRow = srcX + srcSurfaceWidth * (scaledY + srcY);
-					var destRow = destX + destSurfaceWidth * (y + destY);
-
-					for (var x = 0; x < destWidth; x++)
+					var pixel = src[scaledX + srcRow];
+					if (pixel < colorKeyLow || pixel > colorKeyHigh)
 					{
-						var scaledX = (int)(x * scaleWidth);
-						if (mirrorLeftRight)
-						{
-							scaledX = srcWidth - 1 - scaledX;
-						}
-
-						var pixel = srcPtr[scaledX + srcRow];
-						if (pixel < colorKeyLow || pixel > colorKeyHigh)
-						{
-							destPtr[x + destRow] = pixel;
-						}
+						dest[x + destRow] = pixel;
 					}
 				}
 			}
 		}
 
-		private static unsafe void BltStretchWithColorKey16Bpp(
+		private static void BltStretchWithColorKey16Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destX, int destY, int destWidth, int destHeight, int destSurfaceWidth,
@@ -749,42 +554,38 @@ namespace Win32Emu.Win32.DirectDraw
 			float scaleWidth, float scaleHeight,
 			bool mirrorUpDown, bool mirrorLeftRight)
 		{
-			fixed (byte* destPtr = dest)
-			fixed (byte* srcPtr = src)
-			{
-				var dest16 = (ushort*)destPtr;
-				var src16 = (ushort*)srcPtr;
+			var dest16 = MemoryMarshal.Cast<byte, ushort>(dest);
+			var src16 = MemoryMarshal.Cast<byte, ushort>(src);
 
-				for (var y = 0; y < destHeight; y++)
+			for (var y = 0; y < destHeight; y++)
+			{
+				var scaledY = (int)(y * scaleHeight);
+				if (mirrorUpDown)
 				{
-					var scaledY = (int)(y * scaleHeight);
-					if (mirrorUpDown)
+					scaledY = srcHeight - 1 - scaledY;
+				}
+
+				var srcRow = srcX + srcSurfaceWidth * (scaledY + srcY);
+				var destRow = destX + destSurfaceWidth * (y + destY);
+
+				for (var x = 0; x < destWidth; x++)
+				{
+					var scaledX = (int)(x * scaleWidth);
+					if (mirrorLeftRight)
 					{
-						scaledY = srcHeight - 1 - scaledY;
+						scaledX = srcWidth - 1 - scaledX;
 					}
 
-					var srcRow = srcX + srcSurfaceWidth * (scaledY + srcY);
-					var destRow = destX + destSurfaceWidth * (y + destY);
-
-					for (var x = 0; x < destWidth; x++)
+					var pixel = src16[scaledX + srcRow];
+					if (pixel < colorKeyLow || pixel > colorKeyHigh)
 					{
-						var scaledX = (int)(x * scaleWidth);
-						if (mirrorLeftRight)
-						{
-							scaledX = srcWidth - 1 - scaledX;
-						}
-
-						var pixel = src16[scaledX + srcRow];
-						if (pixel < colorKeyLow || pixel > colorKeyHigh)
-						{
-							dest16[x + destRow] = pixel;
-						}
+						dest16[x + destRow] = pixel;
 					}
 				}
 			}
 		}
 
-		private static unsafe void BltStretchWithColorKey32Bpp(
+		private static void BltStretchWithColorKey32Bpp(
 			Span<byte> dest,
 			ReadOnlySpan<byte> src,
 			int destX, int destY, int destWidth, int destHeight, int destSurfaceWidth,
@@ -793,39 +594,35 @@ namespace Win32Emu.Win32.DirectDraw
 			float scaleWidth, float scaleHeight,
 			bool mirrorUpDown, bool mirrorLeftRight)
 		{
-			fixed (byte* destPtr = dest)
-			fixed (byte* srcPtr = src)
-			{
-				var dest32 = (uint*)destPtr;
-				var src32 = (uint*)srcPtr;
-				var keyLow = colorKeyLow & 0xFFFFFF;
-				var keyHigh = colorKeyHigh & 0xFFFFFF;
+			var dest32 = MemoryMarshal.Cast<byte, uint>(dest);
+			var src32 = MemoryMarshal.Cast<byte, uint>(src);
+			var keyLow = colorKeyLow & 0xFFFFFF;
+			var keyHigh = colorKeyHigh & 0xFFFFFF;
 
-				for (var y = 0; y < destHeight; y++)
+			for (var y = 0; y < destHeight; y++)
+			{
+				var scaledY = (int)(y * scaleHeight);
+				if (mirrorUpDown)
 				{
-					var scaledY = (int)(y * scaleHeight);
-					if (mirrorUpDown)
+					scaledY = srcHeight - 1 - scaledY;
+				}
+
+				var srcRow = srcX + srcSurfaceWidth * (scaledY + srcY);
+				var destRow = destX + destSurfaceWidth * (y + destY);
+
+				for (var x = 0; x < destWidth; x++)
+				{
+					var scaledX = (int)(x * scaleWidth);
+					if (mirrorLeftRight)
 					{
-						scaledY = srcHeight - 1 - scaledY;
+						scaledX = srcWidth - 1 - scaledX;
 					}
 
-					var srcRow = srcX + srcSurfaceWidth * (scaledY + srcY);
-					var destRow = destX + destSurfaceWidth * (y + destY);
-
-					for (var x = 0; x < destWidth; x++)
+					var pixel = src32[scaledX + srcRow];
+					var pixelColor = pixel & 0xFFFFFF;
+					if (pixelColor < keyLow || pixelColor > keyHigh)
 					{
-						var scaledX = (int)(x * scaleWidth);
-						if (mirrorLeftRight)
-						{
-							scaledX = srcWidth - 1 - scaledX;
-						}
-
-						var pixel = src32[scaledX + srcRow];
-						var pixelColor = pixel & 0xFFFFFF;
-						if (pixelColor < keyLow || pixelColor > keyHigh)
-						{
-							dest32[x + destRow] = pixel;
-						}
+						dest32[x + destRow] = pixel;
 					}
 				}
 			}
@@ -836,155 +633,13 @@ namespace Win32Emu.Win32.DirectDraw
 		#region Clear Operations
 
 		/// <summary>
-		/// Optimized clear operation using AVX-512, AVX2, SSE2, ARM NEON, or scalar fallback.
-		/// Inspired by cnc-ddraw's blt_clear implementation with extended SIMD support.
+		/// Optimized clear operation that is safe for all platforms including WASM.
+		/// Uses Span.Fill which is optimized by the runtime.
 		/// </summary>
-		public static unsafe void Clear(Span<byte> buffer, byte value)
+		public static void Clear(Span<byte> buffer, byte value)
 		{
-			var size = buffer.Length;
-			
-			if (size == 0)
-			{
-				return;
-			}
-
-			fixed (byte* ptr = buffer)
-			{
-				// For large buffers, use native memset which may use REP STOSB
-				if (size >= SMALL_BUFFER_THRESHOLD)
-				{
-					buffer.Fill(value);
-					return;
-				}
-
-				// Check alignment
-				var isAligned64 = (((nuint)ptr) % 64) == 0;
-				var isAligned32 = (((nuint)ptr) % 32) == 0;
-				var isAligned16 = (((nuint)ptr) % 16) == 0;
-
-				// AVX-512: 512-bit vectors for maximum throughput
-				if (isAligned64 && size >= 256 && Avx512F.IsSupported)
-				{
-					var vec = Vector512.Create(value);
-					var p = ptr;
-					
-					while (size >= 256)
-					{
-						Avx512F.Store(p, vec);
-						Avx512F.Store(p + 64, vec);
-						Avx512F.Store(p + 128, vec);
-						Avx512F.Store(p + 192, vec);
-						
-						p += 256;
-						size -= 256;
-					}
-					
-					// Handle remaining full vectors
-					while (size >= 64)
-					{
-						Avx512F.Store(p, vec);
-						p += 64;
-						size -= 64;
-					}
-				}
-				// AVX2: 256-bit vectors for small/medium buffers with good alignment
-				else if (isAligned32 && Avx2.IsSupported)
-				{
-					var vec = Vector256.Create(value);
-					var p = ptr;
-					
-					while (size >= 128)
-					{
-						Avx2.Store(p, vec);
-						Avx2.Store(p + 32, vec);
-						Avx2.Store(p + 64, vec);
-						Avx2.Store(p + 96, vec);
-						
-						p += 128;
-						size -= 128;
-					}
-					
-					// Handle remaining full vectors
-					while (size >= 32)
-					{
-						Avx2.Store(p, vec);
-						p += 32;
-						size -= 32;
-					}
-				}
-				// SSE2: 128-bit vectors
-				else if (isAligned16 && Sse2.IsSupported)
-				{
-					var vec = Vector128.Create(value);
-					var p = ptr;
-					
-					while (size >= 64)
-					{
-						Sse2.Store(p, vec);
-						Sse2.Store(p + 16, vec);
-						Sse2.Store(p + 32, vec);
-						Sse2.Store(p + 48, vec);
-						
-						p += 64;
-						size -= 64;
-					}
-					
-					// Handle remaining full vectors
-					while (size >= 16)
-					{
-						Sse2.Store(p, vec);
-						p += 16;
-						size -= 16;
-					}
-				}
-				// ARM NEON: 128-bit vectors
-				else if (isAligned16 && AdvSimd.IsSupported)
-				{
-					var vec = Vector128.Create(value);
-					var p = ptr;
-					
-					while (size >= 64)
-					{
-						AdvSimd.Store(p, vec);
-						AdvSimd.Store(p + 16, vec);
-						AdvSimd.Store(p + 32, vec);
-						AdvSimd.Store(p + 48, vec);
-						
-						p += 64;
-						size -= 64;
-					}
-					
-					// Handle remaining full vectors
-					while (size >= 16)
-					{
-						AdvSimd.Store(p, vec);
-						p += 16;
-						size -= 16;
-					}
-				}
-				// System.Numerics.Vector: Cross-platform fallback
-				else if (System.Numerics.Vector.IsHardwareAccelerated)
-				{
-					var vectorSize = System.Numerics.Vector<byte>.Count;
-					var vec = new System.Numerics.Vector<byte>(value);
-					var bufferSpan = buffer;
-					var offset = 0;
-					
-					while (offset + vectorSize <= size)
-					{
-						vec.CopyTo(bufferSpan.Slice(offset));
-						offset += vectorSize;
-					}
-					
-					size -= offset;
-				}
-				
-				// Handle remainder with Fill
-				if (size > 0)
-				{
-					new Span<byte>(ptr + (buffer.Length - size), size).Fill(value);
-				}
-			}
+			// Use Span.Fill which is optimized for all platforms
+			buffer.Fill(value);
 		}
 
 		#endregion
@@ -1051,178 +706,6 @@ namespace Win32Emu.Win32.DirectDraw
 						srcRow.CopyTo(destRow);
 					}
 				}
-			}
-		}
-
-		#endregion
-
-		#region Enhanced Copy with Adaptive Algorithm Selection
-
-		/// <summary>
-		/// Enhanced copy operation with adaptive algorithm selection based on buffer size and alignment.
-		/// Supports AVX-512, AVX2, SSE2, ARM NEON, and System.Numerics.Vector fallbacks.
-		/// Inspired by cnc-ddraw's blt_copy with extended SIMD support.
-		/// </summary>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static unsafe void CopyAdaptive(byte* dest, byte* src, int size)
-		{
-			// Check for good alignment
-			var isAligned64 = (((nuint)dest) % 64) == 0 && (((nuint)src) % 64) == 0;
-			var isAligned32 = (((nuint)dest) % 32) == 0 && (((nuint)src) % 32) == 0;
-			var isAligned16 = (((nuint)dest) % 16) == 0 && (((nuint)src) % 16) == 0;
-			
-			// AVX-512: 512-bit vectors for maximum throughput on modern CPUs
-			if (isAligned64 && size >= LARGE_BUFFER_THRESHOLD && Avx512F.IsSupported)
-			{
-				// Large buffer with AVX-512 - process 512 bytes at a time
-				// Note: .NET doesn't expose non-temporal stores for AVX-512 yet, using regular stores
-				while (size >= 512)
-				{
-					// Prefetch ahead
-					Sse.Prefetch0(src + 1024);
-					
-					// Load 8x 512-bit vectors (512 bytes total)
-					var v0 = Avx512F.LoadVector512(src);
-					var v1 = Avx512F.LoadVector512(src + 64);
-					var v2 = Avx512F.LoadVector512(src + 128);
-					var v3 = Avx512F.LoadVector512(src + 192);
-					var v4 = Avx512F.LoadVector512(src + 256);
-					var v5 = Avx512F.LoadVector512(src + 320);
-					var v6 = Avx512F.LoadVector512(src + 384);
-					var v7 = Avx512F.LoadVector512(src + 448);
-					
-					// Regular stores (non-temporal stores not yet available in .NET for AVX-512)
-					Avx512F.Store(dest, v0);
-					Avx512F.Store(dest + 64, v1);
-					Avx512F.Store(dest + 128, v2);
-					Avx512F.Store(dest + 192, v3);
-					Avx512F.Store(dest + 256, v4);
-					Avx512F.Store(dest + 320, v5);
-					Avx512F.Store(dest + 384, v6);
-					Avx512F.Store(dest + 448, v7);
-					
-					src += 512;
-					dest += 512;
-					size -= 512;
-				}
-			}
-			// AVX2: 256-bit vectors for large buffers
-			else if (isAligned64 && size >= LARGE_BUFFER_THRESHOLD && Avx2.IsSupported)
-			{
-				// Large buffer with good alignment - use AVX2 non-temporal stores to bypass cache
-				// This is optimal for very large transfers that would pollute the cache
-				var destLong = (long*)dest;
-				var srcLong = (long*)src;
-				
-				while (size >= 256)
-				{
-					// Prefetch next cache line
-					Sse.Prefetch0(src + 512);
-					
-					// Load 8x 256-bit vectors (256 bytes total = 32 longs)
-					var c0 = Avx.LoadVector256(srcLong);
-					var c1 = Avx.LoadVector256(srcLong + 4);
-					var c2 = Avx.LoadVector256(srcLong + 8);
-					var c3 = Avx.LoadVector256(srcLong + 12);
-					var c4 = Avx.LoadVector256(srcLong + 16);
-					var c5 = Avx.LoadVector256(srcLong + 20);
-					var c6 = Avx.LoadVector256(srcLong + 24);
-					var c7 = Avx.LoadVector256(srcLong + 28);
-					
-					// Non-temporal stores (bypass cache)
-					Avx2.StoreAlignedNonTemporal(destLong, c0);
-					Avx2.StoreAlignedNonTemporal(destLong + 4, c1);
-					Avx2.StoreAlignedNonTemporal(destLong + 8, c2);
-					Avx2.StoreAlignedNonTemporal(destLong + 12, c3);
-					Avx2.StoreAlignedNonTemporal(destLong + 16, c4);
-					Avx2.StoreAlignedNonTemporal(destLong + 20, c5);
-					Avx2.StoreAlignedNonTemporal(destLong + 24, c6);
-					Avx2.StoreAlignedNonTemporal(destLong + 28, c7);
-					
-					src += 256;
-					dest += 256;
-					srcLong += 32;
-					destLong += 32;
-					size -= 256;
-				}
-			}
-			// AVX2: Regular stores for small/medium buffers
-			else if (isAligned32 && size < SMALL_BUFFER_THRESHOLD && Avx2.IsSupported)
-			{
-				// Small/medium buffer with good alignment - use regular AVX2 stores
-				while (size >= 128)
-				{
-					var c0 = Avx.LoadVector256(src);
-					var c1 = Avx.LoadVector256(src + 32);
-					var c2 = Avx.LoadVector256(src + 64);
-					var c3 = Avx.LoadVector256(src + 96);
-					
-					Avx.Store(dest, c0);
-					Avx.Store(dest + 32, c1);
-					Avx.Store(dest + 64, c2);
-					Avx.Store(dest + 96, c3);
-					
-					src += 128;
-					dest += 128;
-					size -= 128;
-				}
-			}
-			// ARM NEON: 128-bit vectors
-			else if (isAligned16 && AdvSimd.IsSupported && size >= 64)
-			{
-				// ARM NEON path - process 64 bytes at a time
-				while (size >= 64)
-				{
-					var v0 = AdvSimd.LoadVector128(src);
-					var v1 = AdvSimd.LoadVector128(src + 16);
-					var v2 = AdvSimd.LoadVector128(src + 32);
-					var v3 = AdvSimd.LoadVector128(src + 48);
-					
-					AdvSimd.Store(dest, v0);
-					AdvSimd.Store(dest + 16, v1);
-					AdvSimd.Store(dest + 32, v2);
-					AdvSimd.Store(dest + 48, v3);
-					
-					src += 64;
-					dest += 64;
-					size -= 64;
-				}
-			}
-			// System.Numerics.Vector: Cross-platform hardware-accelerated vectors
-			else if (System.Numerics.Vector.IsHardwareAccelerated && size >= System.Numerics.Vector<byte>.Count * 4)
-			{
-				var vectorSize = System.Numerics.Vector<byte>.Count;
-				var srcSpan = new Span<byte>(src, size);
-				var destSpan = new Span<byte>(dest, size);
-				
-				// Process 4 vectors at a time
-				var stride = vectorSize * 4;
-				var offset = 0;
-				
-				while (offset + stride <= size)
-				{
-					var v0 = new System.Numerics.Vector<byte>(srcSpan.Slice(offset));
-					var v1 = new System.Numerics.Vector<byte>(srcSpan.Slice(offset + vectorSize));
-					var v2 = new System.Numerics.Vector<byte>(srcSpan.Slice(offset + vectorSize * 2));
-					var v3 = new System.Numerics.Vector<byte>(srcSpan.Slice(offset + vectorSize * 3));
-					
-					v0.CopyTo(destSpan.Slice(offset));
-					v1.CopyTo(destSpan.Slice(offset + vectorSize));
-					v2.CopyTo(destSpan.Slice(offset + vectorSize * 2));
-					v3.CopyTo(destSpan.Slice(offset + vectorSize * 3));
-					
-					offset += stride;
-				}
-				
-				src += offset;
-				dest += offset;
-				size -= offset;
-			}
-			
-			// Handle remainder with standard copy
-			if (size > 0)
-			{
-				new Span<byte>(src, size).CopyTo(new Span<byte>(dest, size));
 			}
 		}
 

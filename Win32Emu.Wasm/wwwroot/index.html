@@ -86,15 +86,28 @@
 		// Web Audio API
 		window.audioContext = null;
 		window.audioStreams = {};
+		window.audioWorkletLoaded = false;
 		
-		window.initializeAudio = () => {
+		window.initializeAudio = async () => {
 			try {
 				window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-				console.log("Audio context initialized");
+				console.log("Audio context initialized, sample rate:", window.audioContext.sampleRate);
 				return true;
 			} catch (e) {
 				console.error("Error initializing audio:", e);
 				return false;
+			}
+		};
+		
+		// Resume audio context on user interaction (required by browsers)
+		window.resumeAudio = async () => {
+			if (window.audioContext && window.audioContext.state === 'suspended') {
+				try {
+					await window.audioContext.resume();
+					console.log("Audio context resumed");
+				} catch (e) {
+					console.error("Error resuming audio:", e);
+				}
 			}
 		};
 		
@@ -105,17 +118,75 @@
 			}
 			
 			try {
+				// Calculate buffer size in samples
+				const samplesPerBuffer = bufferSize / 2; // 16-bit samples
+				
+				// Create a ScriptProcessorNode for audio streaming (deprecated but widely supported)
+				// In production, AudioWorklet would be better but requires separate worklet files
+				const scriptNode = window.audioContext.createScriptProcessor(
+					Math.min(4096, Math.max(256, samplesPerBuffer)), // Must be power of 2
+					0,  // input channels
+					channels // output channels
+				);
+				
+				const gainNode = window.audioContext.createGain();
+				scriptNode.connect(gainNode);
+				gainNode.connect(window.audioContext.destination);
+				
 				window.audioStreams[streamId] = {
 					frequency: frequency,
 					channels: channels,
 					bufferSize: bufferSize,
-					gainNode: window.audioContext.createGain(),
+					scriptNode: scriptNode,
+					gainNode: gainNode,
 					paused: false,
-					queue: []
+					queue: [],           // Queue of Float32Array buffers to play
+					position: 0,         // Current position in current buffer
+					currentBuffer: null, // Current buffer being played
+					nextTime: 0          // When to schedule next buffer
 				};
 				
-				window.audioStreams[streamId].gainNode.connect(window.audioContext.destination);
-				console.log(`Created audio stream ${streamId}`);
+				// Audio processing callback
+				scriptNode.onaudioprocess = (e) => {
+					const stream = window.audioStreams[streamId];
+					if (!stream || stream.paused) {
+						// Output silence
+						for (let c = 0; c < e.outputBuffer.numberOfChannels; c++) {
+							e.outputBuffer.getChannelData(c).fill(0);
+						}
+						return;
+					}
+					
+					const outputLength = e.outputBuffer.getChannelData(0).length;
+					
+					for (let c = 0; c < e.outputBuffer.numberOfChannels; c++) {
+						const output = e.outputBuffer.getChannelData(c);
+						let outputIndex = 0;
+						
+						while (outputIndex < outputLength) {
+							// Get current buffer or next from queue
+							if (!stream.currentBuffer || stream.position >= stream.currentBuffer.length / stream.channels) {
+								stream.currentBuffer = stream.queue.shift();
+								stream.position = 0;
+								if (!stream.currentBuffer) {
+									// No more data, output silence
+									while (outputIndex < outputLength) {
+										output[outputIndex++] = 0;
+									}
+									break;
+								}
+							}
+							
+							// Copy samples from buffer to output
+							while (outputIndex < outputLength && stream.position < stream.currentBuffer.length / stream.channels) {
+								output[outputIndex++] = stream.currentBuffer[stream.position * stream.channels + c];
+								stream.position++;
+							}
+						}
+					}
+				};
+				
+				console.log(`Created audio stream ${streamId} (${frequency}Hz, ${channels} channels, buffer: ${bufferSize})`);
 			} catch (e) {
 				console.error(`Error creating audio stream ${streamId}:`, e);
 			}
@@ -123,11 +194,16 @@
 		
 		window.writeAudioData = (streamId, base64Data) => {
 			const stream = window.audioStreams[streamId];
-			if (!stream || stream.paused) {
+			if (!stream) {
 				return;
 			}
 			
 			try {
+				// Resume audio context if suspended (browser autoplay policy)
+				if (window.audioContext.state === 'suspended') {
+					window.audioContext.resume();
+				}
+				
 				// Decode base64 audio data
 				const binaryString = atob(base64Data);
 				const len = binaryString.length;
@@ -136,40 +212,42 @@
 					bytes[i] = binaryString.charCodeAt(i);
 				}
 				
-				// Convert to float32 audio samples
-				// This is a simplified conversion - actual implementation would need proper format handling
+				// Convert to float32 audio samples (assuming 16-bit signed PCM input)
 				const samples = new Float32Array(bytes.length / 2);
+				const dataView = new DataView(bytes.buffer);
 				for (let i = 0; i < samples.length; i++) {
-					const int16 = (bytes[i * 2 + 1] << 8) | bytes[i * 2];
+					// Read as signed 16-bit little-endian
+					const int16 = dataView.getInt16(i * 2, true);
 					samples[i] = int16 / 32768.0;
 				}
 				
-				// Create audio buffer and play
-				const audioBuffer = window.audioContext.createBuffer(
-					stream.channels,
-					samples.length / stream.channels,
-					stream.frequency
-				);
+				// Add to queue for streaming playback
+				stream.queue.push(samples);
 				
-				for (let channel = 0; channel < stream.channels; channel++) {
-					const channelData = audioBuffer.getChannelData(channel);
-					for (let i = 0; i < channelData.length; i++) {
-						channelData[i] = samples[i * stream.channels + channel];
-					}
+				// Limit queue size to prevent memory growth
+				while (stream.queue.length > 10) {
+					stream.queue.shift();
 				}
-				
-				const source = window.audioContext.createBufferSource();
-				source.buffer = audioBuffer;
-				source.connect(stream.gainNode);
-				source.start();
 			} catch (e) {
 				console.error(`Error writing audio data for stream ${streamId}:`, e);
 			}
 		};
 		
 		window.destroyAudioStream = (streamId) => {
-			if (window.audioStreams[streamId]) {
-				window.audioStreams[streamId].gainNode.disconnect();
+			const stream = window.audioStreams[streamId];
+			if (stream) {
+				// Disconnect and clean up audio nodes
+				if (stream.scriptNode) {
+					stream.scriptNode.disconnect();
+					stream.scriptNode.onaudioprocess = null;
+				}
+				if (stream.gainNode) {
+					stream.gainNode.disconnect();
+				}
+				// Clear the queue
+				stream.queue = [];
+				stream.currentBuffer = null;
+				
 				delete window.audioStreams[streamId];
 				console.log(`Destroyed audio stream ${streamId}`);
 			}
