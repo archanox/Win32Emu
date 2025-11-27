@@ -1589,7 +1589,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	public CodePage GetAcp() => CodePage.Utf8;
 
 	[DllModuleExport(9)]
-	public unsafe uint GetCpInfo(CodePage codePage, NativeTypes.Lpcpinfo lpCpInfo)
+	public uint GetCpInfo(CodePage codePage, NativeTypes.Lpcpinfo lpCpInfo)
 	{
 		_logger.LogInformation("[Kernel32] GetCPInfo called: codePage={CodePage} lpCpInfo=0x{LpCpInfo:X8}", codePage, lpCpInfo.Value);
 
@@ -1608,45 +1608,55 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		};
 
 		_logger.LogInformation("[Kernel32] GetCPInfo: actualCodePage={ActualCodePage}", actualCodePage);
-		NativeTypes.Cpinfo cpInfo = default; // Initialize all fields to zero
+
+		// CPINFO structure layout:
+		// Offset 0: uint MaxCharSize (4 bytes)
+		// Offset 4: byte[2] DefaultChar
+		// Offset 6: byte[12] LeadByte
+		// Total: 18 bytes (may have padding to 20)
+		uint maxCharSize;
+		byte defaultChar0, defaultChar1;
 
 		// We'll support common Western code pages
-		unsafe
+		switch (actualCodePage)
 		{
-			switch (actualCodePage)
-			{
-				case CodePage.WestEurope: // Windows-1252 (Western European)
-				case CodePage.Oem437: // OEM United States
-				case CodePage.OemMultilingualLatinI: // OEM Multilingual Latin I
-				case CodePage.EastEurope: // Windows Central Europe
-				case CodePage.Russian: // Windows Cyrillic
-				case CodePage.Iso88591LatinI: // ISO 8859-1 Latin I
-											  // Single-byte code page setup
-					cpInfo.MaxCharSize = 1;
-					cpInfo.DefaultChar[0] = 0x3F; // '?' character
-					cpInfo.DefaultChar[1] = 0x00; // Null terminator
-												  // LeadByte array - all zeros for single-byte code page (already initialized via default)
-					break;
+			case CodePage.WestEurope: // Windows-1252 (Western European)
+			case CodePage.Oem437: // OEM United States
+			case CodePage.OemMultilingualLatinI: // OEM Multilingual Latin I
+			case CodePage.EastEurope: // Windows Central Europe
+			case CodePage.Russian: // Windows Cyrillic
+			case CodePage.Iso88591LatinI: // ISO 8859-1 Latin I
+				// Single-byte code page setup
+				maxCharSize = 1;
+				defaultChar0 = 0x3F; // '?' character
+				defaultChar1 = 0x00; // Null terminator
+				break;
 
-				case CodePage.Utf8: // UTF-8
-									// UTF-8 is a multi-byte encoding with variable length (1-4 bytes per character)
-					cpInfo.MaxCharSize = 4;
-					cpInfo.DefaultChar[0] = 0x3F; // '?' character
-					cpInfo.DefaultChar[1] = 0x00; // Null terminator
-												  // LeadByte array - all zeros for UTF-8 (already initialized via default)
-					break;
+			case CodePage.Utf8: // UTF-8
+				// UTF-8 is a multi-byte encoding with variable length (1-4 bytes per character)
+				maxCharSize = 4;
+				defaultChar0 = 0x3F; // '?' character
+				defaultChar1 = 0x00; // Null terminator
+				break;
 
-				default:
-					// Unsupported code page
-					_logger.LogWarning("[Kernel32] GetCPInfo: unsupported code page {ActualCodePage}", actualCodePage);
-					_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-					return (uint)NativeTypes.Win32Bool.FALSE;
-			}
+			default:
+				// Unsupported code page
+				_logger.LogWarning("[Kernel32] GetCPInfo: unsupported code page {ActualCodePage}", actualCodePage);
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
-		// Write the CPINFO structure to emulated memory
-		// lpCpInfo.Value is already validated to be non-zero above
-		_env.MemWriteStruct(lpCpInfo.Value, ref cpInfo);
+		// Write the CPINFO structure to emulated memory manually
+		// This avoids requiring unsafe code or unmanaged constraints
+		var addr = lpCpInfo.Value;
+		_env.MemWrite32(addr, maxCharSize);          // Offset 0: MaxCharSize
+		_env.MemWrite8(addr + 4, defaultChar0);      // Offset 4: DefaultChar[0]
+		_env.MemWrite8(addr + 5, defaultChar1);      // Offset 5: DefaultChar[1]
+		// Offset 6-17: LeadByte[12] - all zeros for these code pages
+		for (uint i = 0; i < 12; i++)
+		{
+			_env.MemWrite8(addr + 6 + i, 0);
+		}
 
 		return (uint)NativeTypes.Win32Bool.TRUE;
 	}

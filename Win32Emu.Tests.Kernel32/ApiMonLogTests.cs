@@ -114,9 +114,10 @@ public sealed class ApiMonLogTests : IDisposable
 		var result = _testEnv.Kernel32.GetCpInfo(CodePage.Utf8, lpCpInfo);
 		Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);
 		
-		// Read back the structure
-		var cpInfo = _testEnv.ProcessEnv.MemReadStruct<NativeTypes.Cpinfo>(cpInfoAddr);
-		Assert.Equal(4u, cpInfo.MaxCharSize); // UTF-8 max is 4 bytes per character
+		// Read back the structure manually
+		// CPINFO layout: uint MaxCharSize (4), byte[2] DefaultChar, byte[12] LeadByte
+		var maxCharSize = _testEnv.ProcessEnv.MemRead32(cpInfoAddr);
+		Assert.Equal(4u, maxCharSize); // UTF-8 max is 4 bytes per character
 	}
 
 	[Fact]
