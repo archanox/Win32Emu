@@ -204,11 +204,11 @@ public sealed class MemoryRefStructGenerator : IIncrementalGenerator
 		{
 			"byte" => "byte",
 			"ushort" => "ushort",
-			"short" => "short",
+			"short" => "ushort",      // Cast signed to unsigned for write
 			"uint" => "uint",
-			"int" => "int",
+			"int" => "uint",          // Cast signed to unsigned for write
 			"ulong" => "ulong",
-			"long" => "long",
+			"long" => "ulong",        // Cast signed to unsigned for write
 			_ => "uint" // Default cast
 		};
 	}

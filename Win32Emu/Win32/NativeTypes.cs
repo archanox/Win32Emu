@@ -80,30 +80,51 @@ public static class NativeTypes
 
 	// RTL_CRITICAL_SECTION structure (Windows XP/2000)
 	// Total size: 24 bytes
+	[StructLayout(LayoutKind.Explicit, Size = 24)]
+	[GenerateMemoryRef]
 	public struct CriticalSection
 	{
+		[FieldOffset(0)]
 		public uint DebugInfo;      // PRTL_CRITICAL_SECTION_DEBUG - offset 0, 4 bytes
+		[FieldOffset(4)]
 		public int LockCount;       // LONG - offset 4, 4 bytes (starts at -1)
+		[FieldOffset(8)]
 		public int RecursionCount;  // LONG - offset 8, 4 bytes (starts at 0)
+		[FieldOffset(12)]
 		public uint OwningThread;   // HANDLE - offset 12, 4 bytes (starts at NULL)
+		[FieldOffset(16)]
 		public uint LockSemaphore;  // HANDLE - offset 16, 4 bytes (starts at NULL)
+		[FieldOffset(20)]
 		public uint SpinCount;      // ULONG_PTR - offset 20, 4 bytes (starts at 0)
 	}
 
 	// SYSTEM_INFO structure
 	// Total size: 36 bytes (0x24)
+	[StructLayout(LayoutKind.Explicit, Size = 36)]
+	[GenerateMemoryRef]
 	public struct SystemInfo
 	{
+		[FieldOffset(0)]
 		public ushort ProcessorArchitecture;  // WORD - offset 0, 2 bytes
+		[FieldOffset(2)]
 		public ushort Reserved;               // WORD - offset 2, 2 bytes
+		[FieldOffset(4)]
 		public uint PageSize;                 // DWORD - offset 4, 4 bytes
+		[FieldOffset(8)]
 		public uint MinimumApplicationAddress; // LPVOID - offset 8, 4 bytes
+		[FieldOffset(12)]
 		public uint MaximumApplicationAddress; // LPVOID - offset 12, 4 bytes
+		[FieldOffset(16)]
 		public uint ActiveProcessorMask;      // DWORD_PTR - offset 16, 4 bytes
+		[FieldOffset(20)]
 		public uint NumberOfProcessors;       // DWORD - offset 20, 4 bytes
+		[FieldOffset(24)]
 		public uint ProcessorType;            // DWORD - offset 24, 4 bytes
+		[FieldOffset(28)]
 		public uint AllocationGranularity;    // DWORD - offset 28, 4 bytes
+		[FieldOffset(32)]
 		public ushort ProcessorLevel;         // WORD - offset 32, 2 bytes
+		[FieldOffset(34)]
 		public ushort ProcessorRevision;      // WORD - offset 34, 2 bytes
 	}
 
@@ -338,45 +359,76 @@ public static class NativeTypes
 
 	// MSG structure (28 bytes)
 	// Used with GetMessage, PeekMessage, DispatchMessage
+	[StructLayout(LayoutKind.Explicit, Size = 28)]
+	[GenerateMemoryRef]
 	public struct MSG
 	{
+		[FieldOffset(0)]
 		public uint hwnd;      // Offset 0
+		[FieldOffset(4)]
 		public uint message;   // Offset 4
+		[FieldOffset(8)]
 		public uint wParam;    // Offset 8
+		[FieldOffset(12)]
 		public uint lParam;    // Offset 12
+		[FieldOffset(16)]
 		public uint time;      // Offset 16
+		[FieldOffset(20)]
 		public int ptX;        // Offset 20
+		[FieldOffset(24)]
 		public int ptY;        // Offset 24
 	}
 
 	// POINT structure (8 bytes)
+	[StructLayout(LayoutKind.Explicit, Size = 8)]
+	[GenerateMemoryRef]
 	public struct POINT
 	{
+		[FieldOffset(0)]
 		public int x;  // Offset 0
+		[FieldOffset(4)]
 		public int y;  // Offset 4
 	}
 
 	// RECT structure (16 bytes)
+	[StructLayout(LayoutKind.Explicit, Size = 16)]
+	[GenerateMemoryRef]
 	public struct RECT
 	{
+		[FieldOffset(0)]
 		public int left;    // Offset 0
+		[FieldOffset(4)]
 		public int top;     // Offset 4
+		[FieldOffset(8)]
 		public int right;   // Offset 8
+		[FieldOffset(12)]
 		public int bottom;  // Offset 12
 	}
 
-	// MSGBOXPARAMS structure
+	// MSGBOXPARAMS structure (40 bytes)
+	[StructLayout(LayoutKind.Explicit, Size = 40)]
+	[GenerateMemoryRef]
 	public struct MSGBOXPARAMS
 	{
+		[FieldOffset(0)]
 		public uint cbSize;           // Offset 0
+		[FieldOffset(4)]
 		public uint hwndOwner;        // Offset 4
+		[FieldOffset(8)]
 		public uint hInstance;        // Offset 8
+		[FieldOffset(12)]
 		public uint lpszText;         // Offset 12 (pointer to string)
+		[FieldOffset(16)]
 		public uint lpszCaption;      // Offset 16 (pointer to string)
+		[FieldOffset(20)]
 		public uint dwStyle;          // Offset 20
+		[FieldOffset(24)]
 		public uint lpszIcon;         // Offset 24 (pointer to string)
+		[FieldOffset(28)]
 		public uint dwContextHelpId;  // Offset 28
+		[FieldOffset(32)]
 		public uint lpfnMsgBoxCallback; // Offset 32 (pointer to function)
+		[FieldOffset(36)]
 		public uint dwLanguageId;     // Offset 36
 	}
 
@@ -487,9 +539,13 @@ public static class NativeTypes
 
 	// FILETIME structure (8 bytes)
 	// 64-bit value representing the number of 100-nanosecond intervals since January 1, 1601 (UTC)
+	[StructLayout(LayoutKind.Explicit, Size = 8)]
+	[GenerateMemoryRef]
 	public struct FILETIME
 	{
+		[FieldOffset(0)]
 		public uint dwLowDateTime;  // Offset 0
+		[FieldOffset(4)]
 		public uint dwHighDateTime; // Offset 4
 	}
 
@@ -1340,11 +1396,17 @@ public static class NativeTypes
 	/// SMALL_RECT structure (8 bytes)
 	/// Defines the coordinates of the upper-left and lower-right corners of a rectangle
 	/// </summary>
+	[StructLayout(LayoutKind.Explicit, Size = 8)]
+	[GenerateMemoryRef]
 	public struct SMALL_RECT
 	{
+		[FieldOffset(0)]
 		public short Left;    // Offset 0
+		[FieldOffset(2)]
 		public short Top;     // Offset 2
+		[FieldOffset(4)]
 		public short Right;   // Offset 4
+		[FieldOffset(6)]
 		public short Bottom;  // Offset 6
 	}
 

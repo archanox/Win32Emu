@@ -2677,8 +2677,15 @@ namespace Win32Emu.Win32.Modules
 			// Try to peek at a message from the queue
 			if (_env.TryPeekMessage(out var queuedMsg, hwnd, wMsgFilterMin, wMsgFilterMax, remove))
 			{
-				// Fill MSG structure
-				_env.MemWriteStruct(lpMsg, ref queuedMsg);
+				// Use generated ref struct for safe memory access
+				var msg = new MSGRef(_env.Memory, lpMsg);
+				msg.hwnd = queuedMsg.Hwnd;
+				msg.message = queuedMsg.Message;
+				msg.wParam = queuedMsg.WParam;
+				msg.lParam = queuedMsg.LParam;
+				msg.time = queuedMsg.Time;
+				msg.ptX = (int)queuedMsg.PtX;
+				msg.ptY = (int)queuedMsg.PtY;
 
 				_logger.LogInformation("[User32] PeekMessageA: found MSG=0x{QueuedMsgMessage:X4}", queuedMsg.Message);
 				return 1; // Message available
@@ -7286,21 +7293,16 @@ namespace Win32Emu.Win32.Modules
 			if (lprcDst == 0 || lprcSrc1 == 0 || lprcSrc2 == 0)
 				return 0;
 
-			// Read RECT structures
-			var rect1 = _env.MemReadStruct<NativeTypes.RECT>(lprcSrc1);
-			var rect2 = _env.MemReadStruct<NativeTypes.RECT>(lprcSrc2);
+			// Use generated ref structs for safe memory access
+			var rect1 = new RECTRef(_env.Memory, lprcSrc1);
+			var rect2 = new RECTRef(_env.Memory, lprcSrc2);
+			var result = new RECTRef(_env.Memory, lprcDst);
 
 			// Compute union
-			var result = new NativeTypes.RECT
-			{
-				left = Math.Min(rect1.left, rect2.left),
-				top = Math.Min(rect1.top, rect2.top),
-				right = Math.Max(rect1.right, rect2.right),
-				bottom = Math.Max(rect1.bottom, rect2.bottom)
-			};
-
-			// Write result
-			_env.MemWriteStruct(lprcDst, ref result);
+			result.left = Math.Min(rect1.left, rect2.left);
+			result.top = Math.Min(rect1.top, rect2.top);
+			result.right = Math.Max(rect1.right, rect2.right);
+			result.bottom = Math.Max(rect1.bottom, rect2.bottom);
 
 			return 1; // TRUE
 		}
@@ -7360,7 +7362,8 @@ namespace Win32Emu.Win32.Modules
 			if (lpMsgBoxParams == 0)
 				return 0;
 
-			var msgBoxParams = _env.MemReadStruct<NativeTypes.MSGBOXPARAMS>(lpMsgBoxParams);
+			// Use generated ref struct for safe memory access
+			var msgBoxParams = new MSGBOXPARAMSRef(_env.Memory, lpMsgBoxParams);
 
 			var text = msgBoxParams.lpszText != 0 ? _env.ReadAnsiString(msgBoxParams.lpszText) : "";
 			var caption = msgBoxParams.lpszCaption != 0 ? _env.ReadAnsiString(msgBoxParams.lpszCaption) : "";
@@ -7383,7 +7386,8 @@ namespace Win32Emu.Win32.Modules
 			if (lprc == 0)
 				return 1; // TRUE - null pointer considered empty
 
-			var rect = _env.MemReadStruct<NativeTypes.RECT>(lprc);
+			// Use generated ref struct for safe memory access
+			var rect = new RECTRef(_env.Memory, lprc);
 
 			// Rectangle is empty if width or height is <= 0
 			return (rect.right <= rect.left || rect.bottom <= rect.top) ? 1u : 0u;
@@ -7464,8 +7468,10 @@ namespace Win32Emu.Win32.Modules
 				return 0;
 			}
 			
-			var rect1 = _env.MemReadStruct<NativeTypes.RECT>(lprcSrc1);
-			var rect2 = _env.MemReadStruct<NativeTypes.RECT>(lprcSrc2);
+			// Use generated ref structs for safe memory access
+			var rect1 = new RECTRef(_env.Memory, lprcSrc1);
+			var rect2 = new RECTRef(_env.Memory, lprcSrc2);
+			var result = new RECTRef(_env.Memory, lprcDst);
 			
 			// Calculate intersection
 			var left = Math.Max(rect1.left, rect2.left);
@@ -7476,39 +7482,52 @@ namespace Win32Emu.Win32.Modules
 			// If rectangles don't intersect, return the first rectangle unchanged
 			if (left >= right || top >= bottom)
 			{
-				_env.MemWriteStruct(lprcDst, ref rect1);
+				result.left = rect1.left;
+				result.top = rect1.top;
+				result.right = rect1.right;
+				result.bottom = rect1.bottom;
 				return 1;
 			}
 			
 			// If rect2 completely contains rect1, result is empty
 			if (left == rect1.left && top == rect1.top && right == rect1.right && bottom == rect1.bottom)
 			{
-				var emptyRect = new NativeTypes.RECT { left = 0, top = 0, right = 0, bottom = 0 };
-				_env.MemWriteStruct(lprcDst, ref emptyRect);
+				result.left = 0;
+				result.top = 0;
+				result.right = 0;
+				result.bottom = 0;
 				return 0;
 			}
 			
 			// For simplicity, handle the most common case: subtract from bottom or right
 			// A full implementation would handle all intersection cases
-			var result = rect1;
+			// Start with rect1 values
+			var resultLeft = rect1.left;
+			var resultTop = rect1.top;
+			var resultRight = rect1.right;
+			var resultBottom = rect1.bottom;
+			
 			if (rect2.top <= rect1.top && rect2.bottom >= rect1.bottom)
 			{
 				// Vertical split - adjust left or right
 				if (rect2.left <= rect1.left && rect2.right < rect1.right)
-					result.left = rect2.right;
+					resultLeft = rect2.right;
 				else if (rect2.right >= rect1.right && rect2.left > rect1.left)
-					result.right = rect2.left;
+					resultRight = rect2.left;
 			}
 			else if (rect2.left <= rect1.left && rect2.right >= rect1.right)
 			{
 				// Horizontal split - adjust top or bottom
 				if (rect2.top <= rect1.top && rect2.bottom < rect1.bottom)
-					result.top = rect2.bottom;
+					resultTop = rect2.bottom;
 				else if (rect2.bottom >= rect1.bottom && rect2.top > rect1.top)
-					result.bottom = rect2.top;
+					resultBottom = rect2.top;
 			}
 			
-			_env.MemWriteStruct(lprcDst, ref result);
+			result.left = resultLeft;
+			result.top = resultTop;
+			result.right = resultRight;
+			result.bottom = resultBottom;
 			return 1;
 		}
 
