@@ -5,7 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- AllowUnsafeBlocks is disabled as DirectDraw has been made WASM-safe using safe Span operations -->
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <!-- Enable WASM SIMD for better performance -->
     <WasmEnableSIMD>true</WasmEnableSIMD>
     <!-- Enable exception handling for better debugging -->

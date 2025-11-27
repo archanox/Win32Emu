@@ -86,7 +86,6 @@
 		// Web Audio API
 		window.audioContext = null;
 		window.audioStreams = {};
-		window.audioWorkletLoaded = false;
 		
 		window.initializeAudio = async () => {
 			try {
@@ -96,18 +95,6 @@
 			} catch (e) {
 				console.error("Error initializing audio:", e);
 				return false;
-			}
-		};
-		
-		// Resume audio context on user interaction (required by browsers)
-		window.resumeAudio = async () => {
-			if (window.audioContext && window.audioContext.state === 'suspended') {
-				try {
-					await window.audioContext.resume();
-					console.log("Audio context resumed");
-				} catch (e) {
-					console.error("Error resuming audio:", e);
-				}
 			}
 		};
 		
@@ -123,7 +110,12 @@
 				
 				// ScriptProcessorNode requires power of 2 buffer size
 				// Find the nearest power of 2 between 256 and 4096
-				const nearestPow2 = Math.pow(2, Math.round(Math.log2(Math.max(256, Math.min(4096, samplesPerBuffer)))));
+				const clampedSamples = Math.max(256, Math.min(4096, samplesPerBuffer));
+				const lowerExp = Math.floor(Math.log2(clampedSamples));
+				const upperExp = Math.ceil(Math.log2(clampedSamples));
+				const lowerPow2 = Math.pow(2, lowerExp);
+				const upperPow2 = Math.pow(2, upperExp);
+				const nearestPow2 = (clampedSamples - lowerPow2 <= upperPow2 - clampedSamples) ? lowerPow2 : upperPow2;
 				
 				// Create a ScriptProcessorNode for audio streaming (deprecated but widely supported)
 				// In production, AudioWorklet would be better but requires separate worklet files
@@ -146,8 +138,7 @@
 					paused: false,
 					queue: [],           // Queue of Float32Array buffers to play
 					position: 0,         // Current position in current buffer
-					currentBuffer: null, // Current buffer being played
-					nextTime: 0          // When to schedule next buffer
+					currentBuffer: null  // Current buffer being played
 				};
 				
 				// Audio processing callback
@@ -230,6 +221,7 @@
 				
 				// Limit queue size to prevent memory growth
 				while (stream.queue.length > 10) {
+					console.warn(`Audio queue overflow for stream ${streamId} (length=${stream.queue.length}). Dropping oldest buffer.`);
 					stream.queue.shift();
 				}
 			} catch (e) {
