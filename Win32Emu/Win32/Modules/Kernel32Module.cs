@@ -5463,25 +5463,22 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 
+		// Use generated ref struct for safe memory access
+		var sysInfo = new SystemInfoRef(_env.Memory, lpSystemInfo);
+		
 		// Fill in SYSTEM_INFO structure with emulated system information
 		// We're emulating a single-processor Intel Pentium system running Windows XP
-		var sysInfo = new NativeTypes.SystemInfo
-		{
-			ProcessorArchitecture = 0,      // PROCESSOR_ARCHITECTURE_INTEL (x86)
-			Reserved = 0,
-			PageSize = 4096,                // 4KB pages (standard for x86)
-			MinimumApplicationAddress = 0x00010000, // 64KB - standard Windows minimum
-			MaximumApplicationAddress = 0x7FFEFFFF, // 2GB - 64KB (standard user-mode limit)
-			ActiveProcessorMask = 0x00000001,       // Processor 0 active (single CPU)
-			NumberOfProcessors = 1,                 // Single processor
-			ProcessorType = 586,                    // PROCESSOR_INTEL_PENTIUM (586)
-			AllocationGranularity = 65536,          // 64KB allocation granularity
-			ProcessorLevel = 5,                     // Pentium (family 5)
-			ProcessorRevision = 0x0101              // Model 1, Stepping 1
-		};
-
-		// Write the structure to memory
-		_env.MemWriteStruct(lpSystemInfo, ref sysInfo);
+		sysInfo.ProcessorArchitecture = 0;      // PROCESSOR_ARCHITECTURE_INTEL (x86)
+		sysInfo.Reserved = 0;
+		sysInfo.PageSize = 4096;                // 4KB pages (standard for x86)
+		sysInfo.MinimumApplicationAddress = 0x00010000; // 64KB - standard Windows minimum
+		sysInfo.MaximumApplicationAddress = 0x7FFEFFFF; // 2GB - 64KB (standard user-mode limit)
+		sysInfo.ActiveProcessorMask = 0x00000001;       // Processor 0 active (single CPU)
+		sysInfo.NumberOfProcessors = 1;                 // Single processor
+		sysInfo.ProcessorType = 586;                    // PROCESSOR_INTEL_PENTIUM (586)
+		sysInfo.AllocationGranularity = 65536;          // 64KB allocation granularity
+		sysInfo.ProcessorLevel = 5;                     // Pentium (family 5)
+		sysInfo.ProcessorRevision = 0x0101;             // Model 1, Stepping 1
 
 		_logger.LogDebug("[Kernel32] GetSystemInfo: Arch={Arch}, Processors={Procs}, PageSize={PageSize}",
 			sysInfo.ProcessorArchitecture, sysInfo.NumberOfProcessors, sysInfo.PageSize);
@@ -6408,18 +6405,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 
+		// Use generated ref struct for safe memory access
+		var criticalSection = new CriticalSectionRef(_env.Memory, lpCriticalSection);
+		
 		// Initialize the CRITICAL_SECTION structure with default values
-		var criticalSection = new NativeTypes.CriticalSection
-		{
-			DebugInfo = 0,       // NULL (simplified)
-			LockCount = -1,      // -1 means unlocked
-			RecursionCount = 0,  // Initially 0
-			OwningThread = 0,    // NULL initially
-			LockSemaphore = 0,   // NULL
-			SpinCount = 0        // 0 for single-threaded
-		};
-
-		_env.MemWriteStruct(lpCriticalSection, ref criticalSection);
+		criticalSection.DebugInfo = 0;       // NULL (simplified)
+		criticalSection.LockCount = -1;      // -1 means unlocked
+		criticalSection.RecursionCount = 0;  // Initially 0
+		criticalSection.OwningThread = 0;    // NULL initially
+		criticalSection.LockSemaphore = 0;   // NULL
+		criticalSection.SpinCount = 0;       // 0 for single-threaded
 
 		return 0; // This function returns void, but we return 0 for consistency
 	}
@@ -6435,18 +6430,17 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 
+		// Use generated ref struct for safe memory access
+		var criticalSection = new CriticalSectionRef(_env.Memory, lpCriticalSection);
+		
 		// In our single-threaded emulator, we just need to clear the structure
 		// A real implementation would release any associated semaphore and free debug info
-		var criticalSection = new NativeTypes.CriticalSection
-		{
-			DebugInfo = 0,
-			LockCount = 0,
-			RecursionCount = 0,
-			OwningThread = 0,
-			LockSemaphore = 0,
-			SpinCount = 0
-		};
-		_env.MemWriteStruct(lpCriticalSection, ref criticalSection);
+		criticalSection.DebugInfo = 0;
+		criticalSection.LockCount = 0;
+		criticalSection.RecursionCount = 0;
+		criticalSection.OwningThread = 0;
+		criticalSection.LockSemaphore = 0;
+		criticalSection.SpinCount = 0;
 
 		return 0; // This function returns void, but we return 0 for consistency
 	}
@@ -6465,8 +6459,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// In a single-threaded emulator, this is a no-op since there's no contention
 		// However, we update the structure to maintain correct state for any code that reads it
 
-		// Read current state
-		var criticalSection = _env.MemReadStruct<NativeTypes.CriticalSection>(lpCriticalSection);
+		// Use generated ref struct for safe memory access
+		var criticalSection = new CriticalSectionRef(_env.Memory, lpCriticalSection);
 		var currentThreadId = _env.GetCurrentThreadId();
 
 		if (criticalSection.OwningThread == 0)
@@ -6489,8 +6483,6 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_logger.LogWarning("[Kernel32] EnterCriticalSection: unexpected thread ownership (owner=0x{OwningThread:X8}, current=0x{CurrentThreadId:X8})", criticalSection.OwningThread, currentThreadId);
 		}
 
-		_env.MemWriteStruct(lpCriticalSection, ref criticalSection);
-
 		return 0; // This function returns void, but we return 0 for consistency
 	}
 
@@ -6505,8 +6497,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 
-		// Read current state
-		var criticalSection = _env.MemReadStruct<NativeTypes.CriticalSection>(lpCriticalSection);
+		// Use generated ref struct for safe memory access
+		var criticalSection = new CriticalSectionRef(_env.Memory, lpCriticalSection);
 		var currentThreadId = _env.GetCurrentThreadId();
 
 		if (criticalSection.OwningThread != currentThreadId)
@@ -6529,8 +6521,6 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Still owned by this thread (recursive lock)
 			criticalSection.LockCount--;
 		}
-
-		_env.MemWriteStruct(lpCriticalSection, ref criticalSection);
 
 		return 0; // This function returns void, but we return 0 for consistency
 	}
@@ -10030,8 +10020,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0; // FALSE
 		}
 
-		// Read SMALL_RECT structure from memory using MemReadStruct
-		var rect = _env.MemReadStruct<NativeTypes.SMALL_RECT>(lpConsoleWindow);
+		// Use generated ref struct for safe memory access
+		var rect = new SMALL_RECTRef(_env.Memory, lpConsoleWindow);
 
 		_logger.LogInformation("[Kernel32] SetConsoleWindowInfo: Window rect ({Left}, {Top}, {Right}, {Bottom})",
 			rect.Left, rect.Top, rect.Right, rect.Bottom);
@@ -10910,9 +10900,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return 0;
 		}
 		
-		// Read FILETIME structures
-		var ft1 = _env.MemReadStruct<NativeTypes.FILETIME>(lpFileTime1);
-		var ft2 = _env.MemReadStruct<NativeTypes.FILETIME>(lpFileTime2);
+		// Use generated ref structs for safe memory access
+		var ft1 = new FILETIMERef(_env.Memory, lpFileTime1);
+		var ft2 = new FILETIMERef(_env.Memory, lpFileTime2);
 		
 		// Combine into 64-bit values
 		var time1 = ((ulong)ft1.dwHighDateTime << 32) | ft1.dwLowDateTime;
