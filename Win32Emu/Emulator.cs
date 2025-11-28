@@ -1306,9 +1306,8 @@ public sealed class Emulator : IDisposable
                 // Non-blocking check for WASM - use WaitOne(0) which is always supported
                 if (!_pauseEvent.WaitOne(0))
                 {
-                    // If paused, yield to prevent busy-waiting
-                    // Use Task.Yield instead of Thread.Yield for async contexts
-                    System.Threading.Tasks.Task.Yield().GetAwaiter().GetResult();
+                    // If paused, add a small delay to prevent busy-waiting
+                    PlatformHelpers.Sleep(1);
                     continue;
                 }
             }
