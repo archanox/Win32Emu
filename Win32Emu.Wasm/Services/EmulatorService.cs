@@ -16,6 +16,7 @@ public class EmulatorService : IDisposable
 	private readonly ILogger<EmulatorService> _logger;
 	
 	private Emulator? _emulator;
+	private WasmEmulatorHost? _emulatorHost;
 	private WasmBackendFactory? _backendFactory;
 	private CancellationTokenSource? _emulationCts;
 	private Task? _emulationTask;
@@ -23,20 +24,24 @@ public class EmulatorService : IDisposable
 	// State
 	private bool _isRunning;
 	private bool _isPaused;
-	private ulong _instructionsExecuted;
 	private string? _loadedExecutableName;
 	
 	// Events for UI updates
 	public event EventHandler<string>? OnStdOutput;
 	public event EventHandler<string>? OnDebugOutput;
 	public event EventHandler<EmulatorStateChangedEventArgs>? OnStateChanged;
-	public event EventHandler<ulong>? OnInstructionCountUpdated;
 	
 	public bool IsRunning => _isRunning;
 	public bool IsPaused => _isPaused;
 	public bool IsExecutableLoaded => _emulator?.LoadedImage != null;
 	public string? LoadedExecutableName => _loadedExecutableName;
-	public ulong InstructionsExecuted => _instructionsExecuted;
+	
+	/// <summary>
+	/// Gets the number of instructions executed by the emulator.
+	/// Note: In WASM mode, telemetry is not enabled, so this will return 0.
+	/// This is a placeholder for future implementation.
+	/// </summary>
+	public ulong InstructionsExecuted => 0;
 	
 	public EmulatorService(IJSRuntime jsRuntime, ILoggerFactory loggerFactory)
 	{
@@ -70,9 +75,16 @@ public class EmulatorService : IDisposable
 			// Create backend factory if not already created
 			_backendFactory ??= new WasmBackendFactory(_jsRuntime, _loggerFactory);
 			
-			// Create emulator with WASM backend factory
+			// Create emulator host to receive debug and stdout output
+			_emulatorHost = new WasmEmulatorHost(_loggerFactory.CreateLogger<WasmEmulatorHost>());
+			
+			// Wire up host events to forward to service events
+			_emulatorHost.DebugOutputReceived += (sender, message) => EmitDebugOutput(message);
+			_emulatorHost.StdOutputReceived += (sender, message) => EmitStdOutput(message);
+			
+			// Create emulator with WASM backend factory AND emulator host for output
 			var emulatorLogger = _loggerFactory.CreateLogger<Emulator>();
-			_emulator = new Emulator(null, emulatorLogger, null, _backendFactory);
+			_emulator = new Emulator(_emulatorHost, emulatorLogger, null, _backendFactory);
 			
 			// Load the executable from bytes using the Emulator's built-in method
 			// which handles synthetic path generation internally
