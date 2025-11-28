@@ -9,26 +9,19 @@ namespace CHDReaderTest.Flac.FlacDeps
         private static readonly ushort[,] combineTable = new ushort[GF2_DIM, GF2_DIM];
         private static readonly ushort[,] substractTable = new ushort[GF2_DIM, GF2_DIM];
 
-        public static unsafe ushort ComputeChecksum(ushort crc, byte[] bytes, int pos, int count)
+        public static ushort ComputeChecksum(ushort crc, byte[] bytes, int pos, int count)
         {
-            fixed (byte* bs = bytes)
-                return ComputeChecksum(crc, bs + pos, count);
-        }
-
-        public static unsafe ushort ComputeChecksum(ushort crc, byte* bytes, int count)
-        {
-            fixed (ushort* t = table)
-                for (int i = count; i > 0; i--)
-                {
-                    crc = (ushort)(crc << 8 ^ t[crc >> 8 ^ *bytes++]);
-                }
+            for (int i = 0; i < count; i++)
+            {
+                crc = (ushort)(crc << 8 ^ table[crc >> 8 ^ bytes[pos + i]]);
+            }
             return crc;
         }
 
         const ushort polynomial = 0x8005;
         const ushort reversePolynomial = 0x4003;
 
-        static unsafe Crc16()
+        static Crc16()
         {
             for (ushort i = 0; i < table.Length; i++)
             {
@@ -51,46 +44,28 @@ namespace CHDReaderTest.Flac.FlacDeps
                 substractTable[0, n - 1] = (ushort)(1 << n);
             }
 
-            fixed (ushort* ct = &combineTable[0, 0], st = &substractTable[0, 0])
+            for (int i = 1; i < GF2_DIM; i++)
             {
-                //for (int i = 0; i < GF2_DIM; i++)
-                //	st[32 + i] = ct[i];
-                //invert_binary_matrix(st + 32, st, GF2_DIM);
-
-                for (int i = 1; i < GF2_DIM; i++)
-                {
-                    gf2_matrix_square(ct + i * GF2_DIM, ct + (i - 1) * GF2_DIM);
-                    gf2_matrix_square(st + i * GF2_DIM, st + (i - 1) * GF2_DIM);
-                }
+                gf2_matrix_square(combineTable, i, combineTable, i - 1);
+                gf2_matrix_square(substractTable, i, substractTable, i - 1);
             }
         }
 
-        private static unsafe ushort gf2_matrix_times(ushort* mat, ushort uvec)
+        private static ushort gf2_matrix_times(ushort[,] mat, int matRow, ushort uvec)
         {
             int vec = uvec << 16;
-            return (ushort)(
-                *mat++ & vec << 15 >> 31 ^
-                *mat++ & vec << 14 >> 31 ^
-                *mat++ & vec << 13 >> 31 ^
-                *mat++ & vec << 12 >> 31 ^
-                *mat++ & vec << 11 >> 31 ^
-                *mat++ & vec << 10 >> 31 ^
-                *mat++ & vec << 09 >> 31 ^
-                *mat++ & vec << 08 >> 31 ^
-                *mat++ & vec << 07 >> 31 ^
-                *mat++ & vec << 06 >> 31 ^
-                *mat++ & vec << 05 >> 31 ^
-                *mat++ & vec << 04 >> 31 ^
-                *mat++ & vec << 03 >> 31 ^
-                *mat++ & vec << 02 >> 31 ^
-                *mat++ & vec << 01 >> 31 ^
-                *mat++ & vec >> 31);
+            ushort result = 0;
+            for (int i = 0; i < GF2_DIM; i++)
+            {
+                result ^= (ushort)(mat[matRow, i] & (vec << (15 - i) >> 31));
+            }
+            return result;
         }
 
-        private static unsafe void gf2_matrix_square(ushort* square, ushort* mat)
+        private static void gf2_matrix_square(ushort[,] square, int squareRow, ushort[,] mat, int matRow)
         {
             for (int n = 0; n < GF2_DIM; n++)
-                square[n] = gf2_matrix_times(mat, mat[n]);
+                square[squareRow, n] = gf2_matrix_times(mat, matRow, mat[matRow, n]);
         }
 
         public static ushort Reflect(ushort crc)
@@ -98,7 +73,7 @@ namespace CHDReaderTest.Flac.FlacDeps
             return (ushort)Crc32.Reflect(crc, 16);
         }
 
-        public static unsafe ushort Combine(ushort crc1, ushort crc2, long len2)
+        public static ushort Combine(ushort crc1, ushort crc2, long len2)
         {
             crc1 = Reflect(crc1);
             crc2 = Reflect(crc2);
@@ -111,19 +86,16 @@ namespace CHDReaderTest.Flac.FlacDeps
             if (len2 < 0)
                 throw new ArgumentException("crc.Combine length cannot be negative", "len2");
 
-            fixed (ushort* ct = &combineTable[0, 0])
+            int n = 3;
+            do
             {
-                int n = 3;
-                do
-                {
-                    /* apply zeros operator for this bit of len2 */
-                    if ((len2 & 1) != 0)
-                        crc1 = gf2_matrix_times(ct + GF2_DIM * n, crc1);
-                    len2 >>= 1;
-                    n = n + 1 & GF2_DIM - 1;
-                    /* if no more bits set, then done */
-                } while (len2 != 0);
-            }
+                /* apply zeros operator for this bit of len2 */
+                if ((len2 & 1) != 0)
+                    crc1 = gf2_matrix_times(combineTable, n, crc1);
+                len2 >>= 1;
+                n = n + 1 & GF2_DIM - 1;
+                /* if no more bits set, then done */
+            } while (len2 != 0);
 
             /* return combined crc */
             crc1 ^= crc2;
@@ -131,7 +103,7 @@ namespace CHDReaderTest.Flac.FlacDeps
             return crc1;
         }
 
-        public static unsafe ushort Subtract(ushort crc1, ushort crc2, long len2)
+        public static ushort Subtract(ushort crc1, ushort crc2, long len2)
         {
             crc1 = Reflect(crc1);
             crc2 = Reflect(crc2);
@@ -143,19 +115,16 @@ namespace CHDReaderTest.Flac.FlacDeps
 
             crc1 ^= crc2;
 
-            fixed (ushort* st = &substractTable[0, 0])
+            int n = 3;
+            do
             {
-                int n = 3;
-                do
-                {
-                    /* apply zeros operator for this bit of len2 */
-                    if ((len2 & 1) != 0)
-                        crc1 = gf2_matrix_times(st + GF2_DIM * n, crc1);
-                    len2 >>= 1;
-                    n = n + 1 & GF2_DIM - 1;
-                    /* if no more bits set, then done */
-                } while (len2 != 0);
-            }
+                /* apply zeros operator for this bit of len2 */
+                if ((len2 & 1) != 0)
+                    crc1 = gf2_matrix_times(substractTable, n, crc1);
+                len2 >>= 1;
+                n = n + 1 & GF2_DIM - 1;
+                /* if no more bits set, then done */
+            } while (len2 != 0);
 
             /* return combined crc */
             crc1 = Reflect(crc1);

@@ -2,16 +2,18 @@
 
 namespace CUETools.Codecs.Flake
 {
-    unsafe public class FlacSubframe
+    public class FlacSubframe
     {
         public FlacSubframe()
         {
             rc = new RiceContext();
             coefs = new int[lpc.MAX_LPC_ORDER];
+            residual = new int[FlakeConstants.MAX_BLOCKSIZE];
         }
         public SubframeType type;
         public int order;
-        public int* residual;
+        public int[] residual;
+        public int residualOffset;
         public RiceContext rc;
         public uint size;
 

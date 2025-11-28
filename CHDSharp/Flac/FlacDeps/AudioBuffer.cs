@@ -6,25 +6,7 @@ namespace CHDReaderTest.Flac.FlacDeps
     {
         #region Static Methods
 
-        public static unsafe void FLACSamplesToBytes_16(int[,] inSamples, int inSampleOffset,
-            byte* outSamples, int sampleCount, int channelCount)
-        {
-            int loopCount = sampleCount * channelCount;
-
-            if (inSamples.GetLength(0) - inSampleOffset < sampleCount)
-                throw new IndexOutOfRangeException();
-
-            fixed (int* pInSamplesFixed = &inSamples[inSampleOffset, 0])
-            {
-                int* pInSamples = pInSamplesFixed;
-                short* pOutSamples = (short*)outSamples;
-                for (int i = 0; i < loopCount; i++)
-                    pOutSamples[i] = (short)pInSamples[i];
-                //*(pOutSamples++) = (short)*(pInSamples++);
-            }
-        }
-
-        public static unsafe void FLACSamplesToBytes_16(int[,] inSamples, int inSampleOffset,
+        public static void FLACSamplesToBytes_16(int[,] inSamples, int inSampleOffset,
             byte[] outSamples, int outByteOffset, int sampleCount, int channelCount)
         {
             int loopCount = sampleCount * channelCount;
@@ -35,11 +17,18 @@ namespace CHDReaderTest.Flac.FlacDeps
                 throw new IndexOutOfRangeException();
             }
 
-            fixed (byte* pOutSamplesFixed = &outSamples[outByteOffset])
-                FLACSamplesToBytes_16(inSamples, inSampleOffset, pOutSamplesFixed, sampleCount, channelCount);
+            int outIdx = outByteOffset;
+            for (int i = 0; i < loopCount; i++)
+            {
+                int row = inSampleOffset + i / channelCount;
+                int col = i % channelCount;
+                short sample = (short)inSamples[row, col];
+                outSamples[outIdx++] = (byte)sample;
+                outSamples[outIdx++] = (byte)(sample >> 8);
+            }
         }
 
-        public static unsafe void FLACSamplesToBytes_24(int[,] inSamples, int inSampleOffset,
+        public static void FLACSamplesToBytes_24(int[,] inSamples, int inSampleOffset,
             byte[] outSamples, int outByteOffset, int sampleCount, int channelCount, int wastedBits)
         {
             int loopCount = sampleCount * channelCount;
@@ -50,27 +39,21 @@ namespace CHDReaderTest.Flac.FlacDeps
                 throw new IndexOutOfRangeException();
             }
 
-            fixed (int* pInSamplesFixed = &inSamples[inSampleOffset, 0])
+            int outIdx = outByteOffset;
+            for (int i = 0; i < loopCount; i++)
             {
-                fixed (byte* pOutSamplesFixed = &outSamples[outByteOffset])
-                {
-                    int* pInSamples = pInSamplesFixed;
-                    byte* pOutSamples = pOutSamplesFixed;
-
-                    for (int i = 0; i < loopCount; i++)
-                    {
-                        uint sample_out = (uint)*pInSamples++ << wastedBits;
-                        *pOutSamples++ = (byte)(sample_out & 0xFF);
-                        sample_out >>= 8;
-                        *pOutSamples++ = (byte)(sample_out & 0xFF);
-                        sample_out >>= 8;
-                        *pOutSamples++ = (byte)(sample_out & 0xFF);
-                    }
-                }
+                int row = inSampleOffset + i / channelCount;
+                int col = i % channelCount;
+                uint sample_out = (uint)inSamples[row, col] << wastedBits;
+                outSamples[outIdx++] = (byte)(sample_out & 0xFF);
+                sample_out >>= 8;
+                outSamples[outIdx++] = (byte)(sample_out & 0xFF);
+                sample_out >>= 8;
+                outSamples[outIdx++] = (byte)(sample_out & 0xFF);
             }
         }
 
-        public static unsafe void FloatToBytes_16(float[,] inSamples, int inSampleOffset,
+        public static void FloatToBytes_16(float[,] inSamples, int inSampleOffset,
             byte[] outSamples, int outByteOffset, int sampleCount, int channelCount)
         {
             int loopCount = sampleCount * channelCount;
@@ -81,35 +64,29 @@ namespace CHDReaderTest.Flac.FlacDeps
                 throw new IndexOutOfRangeException();
             }
 
-            fixed (float* pInSamplesFixed = &inSamples[inSampleOffset, 0])
+            int outIdx = outByteOffset;
+            for (int i = 0; i < loopCount; i++)
             {
-                fixed (byte* pOutSamplesFixed = &outSamples[outByteOffset])
-                {
-                    float* pInSamples = pInSamplesFixed;
-                    short* pOutSamples = (short*)pOutSamplesFixed;
-
-                    for (int i = 0; i < loopCount; i++)
-                    {
-                        *pOutSamples++ = (short)(32758 * *pInSamples++);
-                    }
-                }
+                int row = inSampleOffset + i / channelCount;
+                int col = i % channelCount;
+                short sample = (short)(32758 * inSamples[row, col]);
+                outSamples[outIdx++] = (byte)sample;
+                outSamples[outIdx++] = (byte)(sample >> 8);
             }
         }
 
-        public static unsafe void FloatToBytes(float[,] inSamples, int inSampleOffset,
+        public static void FloatToBytes(float[,] inSamples, int inSampleOffset,
             byte[] outSamples, int outByteOffset, int sampleCount, int channelCount, int bitsPerSample)
         {
             if (bitsPerSample == 16)
                 FloatToBytes_16(inSamples, inSampleOffset, outSamples, outByteOffset, sampleCount, channelCount);
-            //else if (bitsPerSample > 16 && bitsPerSample <= 24)
-            //    FLACSamplesToBytes_24(inSamples, inSampleOffset, outSamples, outByteOffset, sampleCount, channelCount, 24 - bitsPerSample);
             else if (bitsPerSample == 32)
                 Buffer.BlockCopy(inSamples, inSampleOffset * 4 * channelCount, outSamples, outByteOffset, sampleCount * 4 * channelCount);
             else
                 throw new Exception("Unsupported bitsPerSample value");
         }
 
-        public static unsafe void FLACSamplesToBytes(int[,] inSamples, int inSampleOffset,
+        public static void FLACSamplesToBytes(int[,] inSamples, int inSampleOffset,
             byte[] outSamples, int outByteOffset, int sampleCount, int channelCount, int bitsPerSample)
         {
             if (bitsPerSample == 16)
@@ -120,16 +97,7 @@ namespace CHDReaderTest.Flac.FlacDeps
                 throw new Exception("Unsupported bitsPerSample value");
         }
 
-        public static unsafe void FLACSamplesToBytes(int[,] inSamples, int inSampleOffset,
-            byte* outSamples, int sampleCount, int channelCount, int bitsPerSample)
-        {
-            if (bitsPerSample == 16)
-                FLACSamplesToBytes_16(inSamples, inSampleOffset, outSamples, sampleCount, channelCount);
-            else
-                throw new Exception("Unsupported bitsPerSample value");
-        }
-
-        public static unsafe void Bytes16ToFloat(byte[] inSamples, int inByteOffset,
+        public static void Bytes16ToFloat(byte[] inSamples, int inByteOffset,
             float[,] outSamples, int outSampleOffset, int sampleCount, int channelCount)
         {
             int loopCount = sampleCount * channelCount;
@@ -138,19 +106,18 @@ namespace CHDReaderTest.Flac.FlacDeps
                 outSamples.GetLength(0) - outSampleOffset < sampleCount)
                 throw new IndexOutOfRangeException();
 
-            fixed (byte* pInSamplesFixed = &inSamples[inByteOffset])
+            int inIdx = inByteOffset;
+            for (int i = 0; i < loopCount; i++)
             {
-                fixed (float* pOutSamplesFixed = &outSamples[outSampleOffset, 0])
-                {
-                    short* pInSamples = (short*)pInSamplesFixed;
-                    float* pOutSamples = pOutSamplesFixed;
-                    for (int i = 0; i < loopCount; i++)
-                        *pOutSamples++ = *pInSamples++ / 32768.0f;
-                }
+                int row = outSampleOffset + i / channelCount;
+                int col = i % channelCount;
+                short sample = (short)(inSamples[inIdx] | inSamples[inIdx + 1] << 8);
+                outSamples[row, col] = sample / 32768.0f;
+                inIdx += 2;
             }
         }
 
-        public static unsafe void BytesToFLACSamples_16(byte[] inSamples, int inByteOffset,
+        public static void BytesToFLACSamples_16(byte[] inSamples, int inByteOffset,
             int[,] outSamples, int outSampleOffset, int sampleCount, int channelCount)
         {
             int loopCount = sampleCount * channelCount;
@@ -161,22 +128,18 @@ namespace CHDReaderTest.Flac.FlacDeps
                 throw new IndexOutOfRangeException();
             }
 
-            fixed (byte* pInSamplesFixed = &inSamples[inByteOffset])
+            int inIdx = inByteOffset;
+            for (int i = 0; i < loopCount; i++)
             {
-                fixed (int* pOutSamplesFixed = &outSamples[outSampleOffset, 0])
-                {
-                    short* pInSamples = (short*)pInSamplesFixed;
-                    int* pOutSamples = pOutSamplesFixed;
-
-                    for (int i = 0; i < loopCount; i++)
-                    {
-                        *pOutSamples++ = *pInSamples++;
-                    }
-                }
+                int row = outSampleOffset + i / channelCount;
+                int col = i % channelCount;
+                short sample = (short)(inSamples[inIdx] | inSamples[inIdx + 1] << 8);
+                outSamples[row, col] = sample;
+                inIdx += 2;
             }
         }
 
-        public static unsafe void BytesToFLACSamples_24(byte[] inSamples, int inByteOffset,
+        public static void BytesToFLACSamples_24(byte[] inSamples, int inByteOffset,
             int[,] outSamples, int outSampleOffset, int sampleCount, int channelCount, int wastedBits)
         {
             int loopCount = sampleCount * channelCount;
@@ -185,24 +148,19 @@ namespace CHDReaderTest.Flac.FlacDeps
                 outSamples.GetLength(0) - outSampleOffset < sampleCount)
                 throw new IndexOutOfRangeException();
 
-            fixed (byte* pInSamplesFixed = &inSamples[inByteOffset])
+            int inIdx = inByteOffset;
+            for (int i = 0; i < loopCount; i++)
             {
-                fixed (int* pOutSamplesFixed = &outSamples[outSampleOffset, 0])
-                {
-                    byte* pInSamples = pInSamplesFixed;
-                    int* pOutSamples = pOutSamplesFixed;
-                    for (int i = 0; i < loopCount; i++)
-                    {
-                        int sample = *pInSamples++;
-                        sample += *pInSamples++ << 8;
-                        sample += *pInSamples++ << 16;
-                        *pOutSamples++ = sample << 8 >> 8 + wastedBits;
-                    }
-                }
+                int row = outSampleOffset + i / channelCount;
+                int col = i % channelCount;
+                int sample = inSamples[inIdx++];
+                sample += inSamples[inIdx++] << 8;
+                sample += inSamples[inIdx++] << 16;
+                outSamples[row, col] = sample << 8 >> 8 + wastedBits;
             }
         }
 
-        public static unsafe void BytesToFLACSamples(byte[] inSamples, int inByteOffset,
+        public static void BytesToFLACSamples(byte[] inSamples, int inByteOffset,
             int[,] outSamples, int outSampleOffset, int sampleCount, int channelCount, int bitsPerSample)
         {
             if (bitsPerSample == 16)
@@ -215,9 +173,9 @@ namespace CHDReaderTest.Flac.FlacDeps
 
         #endregion
 
-        private int[,] samples;
-        private float[,] fsamples;
-        private byte[] bytes;
+        private int[,]? samples;
+        private float[,]? fsamples;
+        private byte[]? bytes;
         private int length;
         private int size;
         private AudioPCMConfig pcm;
@@ -253,7 +211,7 @@ namespace CHDReaderTest.Flac.FlacDeps
                 if (samples == null || samples.GetLength(0) < length)
                     samples = new int[size, pcm.ChannelCount];
                 if (!dataInSamples && dataInBytes && length != 0)
-                    BytesToFLACSamples(bytes, 0, samples, 0, length, pcm.ChannelCount, pcm.BitsPerSample);
+                    BytesToFLACSamples(bytes!, 0, samples, 0, length, pcm.ChannelCount, pcm.BitsPerSample);
                 dataInSamples = true;
                 return samples;
             }
@@ -268,11 +226,9 @@ namespace CHDReaderTest.Flac.FlacDeps
                 if (!dataInFloat && dataInBytes && length != 0)
                 {
                     if (pcm.BitsPerSample == 16)
-                        Bytes16ToFloat(bytes, 0, fsamples, 0, length, pcm.ChannelCount);
-                    //else if (pcm.BitsPerSample > 16 && PCM.BitsPerSample <= 24)
-                    //    BytesToFLACSamples_24(bytes, 0, fsamples, 0, length, pcm.ChannelCount, 24 - pcm.BitsPerSample);
+                        Bytes16ToFloat(bytes!, 0, fsamples, 0, length, pcm.ChannelCount);
                     else if (pcm.BitsPerSample == 32)
-                        Buffer.BlockCopy(bytes, 0, fsamples, 0, length * 4 * pcm.ChannelCount);
+                        Buffer.BlockCopy(bytes!, 0, fsamples, 0, length * 4 * pcm.ChannelCount);
                     else
                         throw new Exception("Unsupported bitsPerSample value");
                 }
@@ -290,9 +246,9 @@ namespace CHDReaderTest.Flac.FlacDeps
                 if (!dataInBytes && length != 0)
                 {
                     if (dataInSamples)
-                        FLACSamplesToBytes(samples, 0, bytes, 0, length, pcm.ChannelCount, pcm.BitsPerSample);
+                        FLACSamplesToBytes(samples!, 0, bytes, 0, length, pcm.ChannelCount, pcm.BitsPerSample);
                     else if (dataInFloat)
-                        FloatToBytes(fsamples, 0, bytes, 0, length, pcm.ChannelCount, pcm.BitsPerSample);
+                        FloatToBytes(fsamples!, 0, bytes, 0, length, pcm.ChannelCount, pcm.BitsPerSample);
                 }
                 dataInBytes = true;
                 return bytes;
@@ -379,7 +335,7 @@ namespace CHDReaderTest.Flac.FlacDeps
                 throw new Exception("Invalid length");
         }
 
-        internal unsafe void Load(int dstOffset, AudioBuffer src, int srcOffset, int copyLength)
+        internal void Load(int dstOffset, AudioBuffer src, int srcOffset, int copyLength)
         {
             if (dataInBytes)
                 Buffer.BlockCopy(src.Bytes, srcOffset * pcm.BlockAlign, Bytes, dstOffset * pcm.BlockAlign, copyLength * pcm.BlockAlign);
@@ -389,7 +345,7 @@ namespace CHDReaderTest.Flac.FlacDeps
                 Buffer.BlockCopy(src.Float, srcOffset * pcm.ChannelCount * 4, Float, dstOffset * pcm.ChannelCount * 4, copyLength * pcm.ChannelCount * 4);
         }
 
-        public unsafe void Prepare(AudioBuffer _src, int _offset, int _length)
+        public void Prepare(AudioBuffer _src, int _offset, int _length)
         {
             length = Math.Min(size, _src.Length - _offset);
             if (_length >= 0)
@@ -411,9 +367,9 @@ namespace CHDReaderTest.Flac.FlacDeps
             if (pcm.BitsPerSample != buffer.PCM.BitsPerSample || pcm.ChannelCount != buffer.PCM.ChannelCount)
                 throw new Exception("AudioBuffer format mismatch");
 
-            int[,] samplesTmp = samples;
-            float[,] floatsTmp = fsamples;
-            byte[] bytesTmp = bytes;
+            var samplesTmp = samples;
+            var floatsTmp = fsamples;
+            var bytesTmp = bytes;
 
             fsamples = buffer.fsamples;
             samples = buffer.samples;
@@ -433,41 +389,48 @@ namespace CHDReaderTest.Flac.FlacDeps
             buffer.dataInFloat = false;
         }
 
-        unsafe public void Interlace(int pos, int* src1, int* src2, int n)
+        public void Interlace(int pos, int[] src1, int src1Offset, int[] src2, int src2Offset, int n)
         {
             if (PCM.ChannelCount != 2)
             {
                 throw new Exception("Must be stereo");
             }
+            var bs = Bytes;
             if (PCM.BitsPerSample == 16)
             {
-                fixed (byte* bs = Bytes)
+                int resIdx = pos * 4;
+                int src1Idx = src1Offset;
+                int src2Idx = src2Offset;
+                for (int i = n; i > 0; i--)
                 {
-                    int* res = (int*)bs + pos;
-                    for (int i = n; i > 0; i--)
-                        *res++ = *src1++ & 0xffff ^ *src2++ << 16;
+                    int val1 = src1[src1Idx++];
+                    int val2 = src2[src2Idx++];
+                    int combined = (val1 & 0xffff) ^ (val2 << 16);
+                    bs[resIdx++] = (byte)combined;
+                    bs[resIdx++] = (byte)(combined >> 8);
+                    bs[resIdx++] = (byte)(combined >> 16);
+                    bs[resIdx++] = (byte)(combined >> 24);
                 }
             }
             else if (PCM.BitsPerSample == 24)
             {
-                fixed (byte* bs = Bytes)
+                int resIdx = pos * 6;
+                int src1Idx = src1Offset;
+                int src2Idx = src2Offset;
+                for (int i = n; i > 0; i--)
                 {
-                    byte* res = bs + pos * 6;
-                    for (int i = n; i > 0; i--)
-                    {
-                        uint sample_out = (uint)*src1++;
-                        *res++ = (byte)(sample_out & 0xFF);
-                        sample_out >>= 8;
-                        *res++ = (byte)(sample_out & 0xFF);
-                        sample_out >>= 8;
-                        *res++ = (byte)(sample_out & 0xFF);
-                        sample_out = (uint)*src2++;
-                        *res++ = (byte)(sample_out & 0xFF);
-                        sample_out >>= 8;
-                        *res++ = (byte)(sample_out & 0xFF);
-                        sample_out >>= 8;
-                        *res++ = (byte)(sample_out & 0xFF);
-                    }
+                    uint sample_out = (uint)src1[src1Idx++];
+                    bs[resIdx++] = (byte)(sample_out & 0xFF);
+                    sample_out >>= 8;
+                    bs[resIdx++] = (byte)(sample_out & 0xFF);
+                    sample_out >>= 8;
+                    bs[resIdx++] = (byte)(sample_out & 0xFF);
+                    sample_out = (uint)src2[src2Idx++];
+                    bs[resIdx++] = (byte)(sample_out & 0xFF);
+                    sample_out >>= 8;
+                    bs[resIdx++] = (byte)(sample_out & 0xFF);
+                    sample_out >>= 8;
+                    bs[resIdx++] = (byte)(sample_out & 0xFF);
                 }
             }
             else
@@ -475,10 +438,5 @@ namespace CHDReaderTest.Flac.FlacDeps
                 throw new Exception("Unsupported BPS");
             }
         }
-
-        //public void Clear()
-        //{
-        //    length = 0;
-        //}
     }
 }

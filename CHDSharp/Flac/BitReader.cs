@@ -3,7 +3,7 @@ using CHDReaderTest.Flac.FlacDeps;
 
 namespace CUETools.Codecs
 {
-    unsafe public class BitReader
+    public class BitReader
     {
         #region Static Methods
 
@@ -62,8 +62,9 @@ namespace CUETools.Codecs
 
         #endregion
 
-        private byte* buffer_m;
-        private byte* bptr_m;
+        private byte[]? buffer_m;
+        private int buffer_start_m;
+        private int bptr_m;
         private int buffer_len_m;
         private int have_bits_m;
         private ulong cache_m;
@@ -71,10 +72,10 @@ namespace CUETools.Codecs
 
 		public int Position
 		{
-			get { return (int)(bptr_m - buffer_m - (have_bits_m >> 3)); }
+			get { return bptr_m - buffer_start_m - (have_bits_m >> 3); }
 		}
 
-		public byte* Buffer
+		public byte[]? Buffer
 		{
 			get
 			{
@@ -85,22 +86,24 @@ namespace CUETools.Codecs
 		public BitReader()
 		{
 			buffer_m = null;
-            bptr_m = null;
+            buffer_start_m = 0;
+            bptr_m = 0;
 			buffer_len_m = 0;
 			have_bits_m = 0;
 			cache_m = 0;
             crc16_m = 0;
 		}
 
-		public BitReader(byte* _buffer, int _pos, int _len)
+		public BitReader(byte[] _buffer, int _pos, int _len)
 		{
 			Reset(_buffer, _pos, _len);
 		}
 
-		public void Reset(byte* _buffer, int _pos, int _len)
+		public void Reset(byte[] _buffer, int _pos, int _len)
 		{
 			buffer_m = _buffer;
-            bptr_m = _buffer + _pos;
+            buffer_start_m = _pos;
+            bptr_m = _pos;
 			buffer_len_m = _len;
 			have_bits_m = 0;
             cache_m = 0;
@@ -113,7 +116,7 @@ namespace CUETools.Codecs
             while (have_bits_m < 56)
             {
                 have_bits_m += 8;
-                byte b = *(bptr_m++);
+                byte b = buffer_m![bptr_m++];
                 cache_m |= (ulong)b << (64 - have_bits_m);
                 crc16_m = (ushort)((crc16_m << 8) ^ Crc16.table[(crc16_m >> 8) ^ b]);
             }
@@ -195,7 +198,7 @@ namespace CUETools.Codecs
 			{
 				val += 8;
                 cache_m <<= 8;
-                byte b = *(bptr_m++);
+                byte b = buffer_m![bptr_m++];
                 cache_m |= (ulong)b << (64 - have_bits_m);
                 crc16_m = (ushort)((crc16_m << 8) ^ Crc16.table[(crc16_m >> 8) ^ b]);
                 result = cache_m >> 56;
@@ -288,49 +291,46 @@ namespace CUETools.Codecs
 			return v;
 		}
 
-		public void read_rice_block(int n, int k, int* r)
+		public void read_rice_block(int n, int k, int[] r, int rOffset)
 		{
             fill();
-            fixed (byte* unary_table = byte_to_unary_table)
-            fixed (ushort* t = Crc16.table)
+            uint mask = (1U << k) - 1;
+            int bptr = bptr_m;
+            int have_bits = have_bits_m;
+            ulong cache = cache_m;
+            ushort crc = crc16_m;
+            int rIdx = rOffset;
+            for (int i = n; i > 0; i--)
             {
-                uint mask = (1U << k) - 1;
-                byte* bptr = bptr_m;
-                int have_bits = have_bits_m;
-                ulong cache = cache_m;
-                ushort crc = crc16_m;
-                for (int i = n; i > 0; i--)
+                uint bits;
+                int orig_bptr = bptr;
+                while ((bits = byte_to_unary_table[cache >> 56]) == 8)
                 {
-                    uint bits;
-                    byte* orig_bptr = bptr;
-                    while ((bits = unary_table[cache >> 56]) == 8)
-                    {
-                        cache <<= 8;
-                        byte b = *(bptr++);
-                        cache |= (ulong)b << (64 - have_bits);
-                        crc = (ushort)((crc << 8) ^ t[(crc >> 8) ^ b]);
-                    }
-                    uint msbs = bits + ((uint)(bptr - orig_bptr) << 3);
-                    // assumes k <= 41 (have_bits < 41 + 7 + 1 + 8 == 57, so we don't loose bits here)
-                    while (have_bits < 56)
-                    {
-                        have_bits += 8;
-                        byte b = *(bptr++);
-                        cache |= (ulong)b << (64 - have_bits);
-                        crc = (ushort)((crc << 8) ^ t[(crc >> 8) ^ b]);
-                    }
-
-                    int btsk = k + (int)bits + 1;
-                    uint uval = (msbs << k) | (uint)((cache >> (64 - btsk)) & mask);
-                    cache <<= btsk;
-                    have_bits -= btsk;
-                    *(r++) = (int)(uval >> 1 ^ -(int)(uval & 1));
+                    cache <<= 8;
+                    byte b = buffer_m![bptr++];
+                    cache |= (ulong)b << (64 - have_bits);
+                    crc = (ushort)((crc << 8) ^ Crc16.table[(crc >> 8) ^ b]);
                 }
-                have_bits_m = have_bits;
-                cache_m = cache;
-                bptr_m = bptr;
-                crc16_m = crc;
+                uint msbs = bits + ((uint)(bptr - orig_bptr) << 3);
+                // assumes k <= 41 (have_bits < 41 + 7 + 1 + 8 == 57, so we don't loose bits here)
+                while (have_bits < 56)
+                {
+                    have_bits += 8;
+                    byte b = buffer_m![bptr++];
+                    cache |= (ulong)b << (64 - have_bits);
+                    crc = (ushort)((crc << 8) ^ Crc16.table[(crc >> 8) ^ b]);
+                }
+
+                int btsk = k + (int)bits + 1;
+                uint uval = (msbs << k) | (uint)((cache >> (64 - btsk)) & mask);
+                cache <<= btsk;
+                have_bits -= btsk;
+                r[rIdx++] = (int)(uval >> 1 ^ -(int)(uval & 1));
             }
+            have_bits_m = have_bits;
+            cache_m = cache;
+            bptr_m = bptr;
+            crc16_m = crc;
 		}
 	}
 }

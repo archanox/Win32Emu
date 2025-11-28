@@ -1,6 +1,6 @@
 ﻿namespace CUETools.Codecs.Flake
 {
-    unsafe public class RiceContext
+    public class RiceContext
     {
         public RiceContext()
         {
