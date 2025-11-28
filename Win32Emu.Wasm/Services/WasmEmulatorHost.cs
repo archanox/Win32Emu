@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Win32Emu;
 
 namespace Win32Emu.Wasm.Services;
 
