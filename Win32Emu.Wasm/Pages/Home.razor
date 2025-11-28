@@ -1,6 +1,7 @@
 @page "/"
 @inject IJSRuntime JS
 @inject ILogger<Home> Logger
+@inject Win32Emu.Wasm.Services.EmulatorService EmulatorService
 
 <PageTitle>Win32Emu - Web Emulator</PageTitle>
 
@@ -192,14 +193,17 @@
 					<li>✅ Web Audio API integration for audio output with streaming support</li>
 					<li>✅ WASM-compatible DirectDraw blitting with scalar operations</li>
 					<li>✅ Safe code paths for all blitting operations (no unsafe pointers)</li>
+					<li>✅ Full emulator core integration (LoadExecutableFromBytes)</li>
+					<li>✅ WASM backend factory for rendering, audio, and input</li>
+					<li>✅ EmulatorService for lifecycle management</li>
 				</ul>
 				<p class="mb-0">
 					<strong>Remaining work:</strong>
 				</p>
 				<ul class="mb-0">
-					<li>Full emulator integration with WASM backend</li>
-					<li>Browser-based file I/O and VFS support</li>
-					<li>Keyboard/Mouse input handling</li>
+					<li>Browser-based VFS for game data files</li>
+					<li>Keyboard/Mouse input forwarding to emulated Windows</li>
+					<li>Performance optimization for real-time emulation</li>
 				</ul>
 			</div>
 		</div>
@@ -356,24 +360,49 @@
 				_audioEnabled = false;
 			}
 			
-			// Simulate emulation start
-			AddDebugOutput("Emulator initialized");
-			AddDebugOutput($"Loaded PE executable: {_loadedFileName}");
-			AddDebugOutput("CPU: x86 (32-bit)");
-			AddDebugOutput("Memory: 64MB allocated");
-			AddDebugOutput($"SIMD: {Win32Emu.Win32.DirectDraw.OptimizedBlitter.GetSimdCapabilities()}");
+			// Subscribe to emulator events
+			EmulatorService.OnDebugOutput += OnEmulatorDebugOutput;
+			EmulatorService.OnStdOutput += OnEmulatorStdOutput;
+			EmulatorService.OnStateChanged += OnEmulatorStateChanged;
+			
+			// Load the executable using the real emulator
+			AddDebugOutput($"Loading PE executable: {_loadedFileName}");
+			AddDebugOutput($"SIMD: {EmulatorService.GetSimdCapabilities()}");
+			
+			var loadSuccess = await EmulatorService.LoadExecutableAsync(
+				_executableData, 
+				_loadedFileName,
+				_folderMode ? _loadedFiles : null);
+			
+			if (!loadSuccess)
+			{
+				AddDebugOutput("Failed to load executable");
+				_isRunning = false;
+				return;
+			}
+			
+			AddDebugOutput("Executable loaded successfully");
 			AddStdOutput("Executable loaded and ready\n");
 			
-			// Start simulated execution
+			// Start the emulator
+			var startSuccess = await EmulatorService.StartAsync();
+			if (!startSuccess)
+			{
+				AddDebugOutput("Failed to start emulation");
+				_isRunning = false;
+				return;
+			}
+			
+			// Start UI update loop
 			_ = Task.Run(async () =>
 			{
 				while (_isRunning)
 				{
-					_instructionsExecuted += 1000;
-					_fps = 60; // Simulated
+					_instructionsExecuted = (long)EmulatorService.InstructionsExecuted;
+					_fps = 60; // TODO: Get actual FPS from emulator
 					
 					await InvokeAsync(StateHasChanged);
-					await Task.Delay(16); // ~60 FPS
+					await Task.Delay(100); // Update UI at 10 FPS
 				}
 			});
 		}
@@ -384,21 +413,54 @@
 			_isRunning = false;
 		}
 	}
-
-	private Task PauseEmulation()
+	
+	private void OnEmulatorDebugOutput(object? sender, string message)
 	{
-		AddDebugOutput("Emulation paused");
-		return Task.CompletedTask;
+		InvokeAsync(() =>
+		{
+			_debugOutput += message + "\n";
+			StateHasChanged();
+		});
+	}
+	
+	private void OnEmulatorStdOutput(object? sender, string message)
+	{
+		InvokeAsync(() =>
+		{
+			_stdOutput += message;
+			StateHasChanged();
+		});
+	}
+	
+	private void OnEmulatorStateChanged(object? sender, Win32Emu.Wasm.Services.EmulatorStateChangedEventArgs e)
+	{
+		InvokeAsync(() =>
+		{
+			_isRunning = e.IsRunning;
+			StateHasChanged();
+		});
 	}
 
-	private Task StopEmulation()
+	private void PauseEmulation()
 	{
+		EmulatorService.Pause();
+		AddDebugOutput("Emulation paused");
+	}
+
+	private async Task StopEmulation()
+	{
+		await EmulatorService.StopAsync();
+		
+		// Unsubscribe from events
+		EmulatorService.OnDebugOutput -= OnEmulatorDebugOutput;
+		EmulatorService.OnStdOutput -= OnEmulatorStdOutput;
+		EmulatorService.OnStateChanged -= OnEmulatorStateChanged;
+		
 		_isRunning = false;
 		_instructionsExecuted = 0;
 		_fps = 0;
 		AddDebugOutput("Emulation stopped");
 		AddStdOutput("Emulator stopped\n");
-		return Task.CompletedTask;
 	}
 
 	private void ClearStdOut()

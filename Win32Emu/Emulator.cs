@@ -188,7 +188,37 @@ public sealed class Emulator : IDisposable
         LogDebug("[Emulator] Subscribed to UI events from backends");
     }
 
-    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, string? virtualDiskPath = null)
+    /// <summary>
+    /// Load an executable directly from a byte array without requiring file system access.
+    /// This is the primary entry point for WASM and other sandboxed environments.
+    /// </summary>
+    /// <param name="executableBytes">The raw bytes of the PE executable</param>
+    /// <param name="executableName">Display name for the executable (e.g., "game.exe")</param>
+    /// <param name="programArgs">Optional command-line arguments</param>
+    /// <param name="debugMode">Enable enhanced debugging</param>
+    /// <param name="reservedMemoryMb">Memory to reserve for emulation (default: 256 MB)</param>
+    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs = null, bool debugMode = false, int reservedMemoryMb = 256)
+    {
+        // Use a synthetic path for internal tracking
+        var syntheticPath = $"C:\\WASM\\{executableName}";
+        
+        // Call the main LoadExecutable with pre-loaded bytes
+        LoadExecutable(
+            path: syntheticPath, 
+            programArgs: programArgs, 
+            debugMode: debugMode, 
+            interactiveDebugMode: false, 
+            reservedMemoryMb: reservedMemoryMb, 
+            gdbServerMode: false, 
+            gdbServerPort: 1234, 
+            enableInstructionAnalyzer: false, 
+            enableLegacyInstructionDecoding: false, 
+            useJitCpu: false, 
+            virtualDiskPath: null,
+            preloadedBytes: executableBytes);
+    }
+
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, string? virtualDiskPath = null, byte[]? preloadedBytes = null)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -196,9 +226,14 @@ public sealed class Emulator : IDisposable
         _gdbServerPort = gdbServerPort;
 
         // When using a virtual disk, extract the executable from VFS to memory
-        byte[]? executableBytes = null;
+        byte[]? executableBytes = preloadedBytes;
         
-        if (!string.IsNullOrEmpty(virtualDiskPath))
+        if (executableBytes != null)
+        {
+            // Bytes were pre-loaded (e.g., from WASM), skip file system access
+            _logger.LogInformation("[Loader] Using pre-loaded executable bytes ({Size} bytes)", executableBytes.Length);
+        }
+        else if (!string.IsNullOrEmpty(virtualDiskPath))
         {
             _logger.LogInformation("[Loader] Extracting executable from virtual disk: {VfsPath}", path);
             
