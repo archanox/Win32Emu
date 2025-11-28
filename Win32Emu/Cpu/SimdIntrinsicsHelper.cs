@@ -369,13 +369,8 @@ public static class SimdIntrinsicsHelper
 			return sum.ToScalar();
 		}
 
-		if (CpuIntrinsics.HasPackedSimd)
-		{
-		    // Use WebAssembly SIMD intrinsics for hardware acceleration
-		    return PackedSimd.PopCount(value);
-		}
-
 		// Software fallback using Brian Kernighan's algorithm
+		// Note: PackedSimd.PopCount operates on vectors, not scalars, so we use the software implementation
 		uint count = 0;
 		while (value != 0)
 		{
