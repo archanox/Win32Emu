@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Win32Emu.Cpu;
 using Win32Emu.Cpu.Iced;
@@ -778,13 +779,12 @@ public sealed class Emulator : IDisposable
                     if (inner.StackTrace != null)
                     {
                         LogDebug("[Exit] Inner exception stack trace:");
-                        foreach (var line in inner.StackTrace.Split(["\r\n", "\n"], StringSplitOptions.None))
+                        foreach (var trimmedLine in inner.StackTrace
+                            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                            .Select(line => line.Trim())
+                            .Where(trimmedLine => !string.IsNullOrEmpty(trimmedLine)))
                         {
-                            var trimmedLine = line.Trim();
-                            if (!string.IsNullOrEmpty(trimmedLine))
-                            {
-                                LogDebug($"[Exit]   {trimmedLine}");
-                            }
+                            LogDebug($"[Exit]   {trimmedLine}");
                         }
                     }
                     inner = inner.InnerException;
@@ -796,13 +796,12 @@ public sealed class Emulator : IDisposable
                 {
                     LogDebug("[Exit] Stack trace:");
                     // Split on both \r and \n to handle different line endings across platforms
-                    foreach (var line in _lastException.StackTrace.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                    foreach (var trimmedLine in _lastException.StackTrace
+                        .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                        .Select(line => line.Trim())
+                        .Where(trimmedLine => !string.IsNullOrEmpty(trimmedLine)))
                     {
-                        var trimmedLine = line.Trim();
-                        if (!string.IsNullOrEmpty(trimmedLine))
-                        {
-                            LogDebug($"[Exit]   {trimmedLine}");
-                        }
+                        LogDebug($"[Exit]   {trimmedLine}");
                     }
                 }
             }
