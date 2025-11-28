@@ -63,17 +63,17 @@ namespace CHDReaderTest.Flac.FlacDeps
             Array.Copy(smp, smpOffset, res, resOffset, n);
         }
 
-        public static void MemSet(byte[] res, byte smp, int offs, int n)
+        public static void MemSet(byte[] res, int offs, byte smp, int n)
         {
             Array.Fill(res, smp, offs, n);
         }
 
-        public static void MemSet(int[] res, int smp, int offs, int n)
+        public static void MemSet(int[] res, int offs, int smp, int n)
         {
             Array.Fill(res, smp, offs, n);
         }
 
-        public static void MemSet(long[] res, long smp, int offs, int n)
+        public static void MemSet(long[] res, int offs, long smp, int n)
         {
             Array.Fill(res, smp, offs, n);
         }
