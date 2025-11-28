@@ -770,9 +770,25 @@ public sealed class Emulator : IDisposable
                 // Log additional exception details for debugging
                 LogDebug($"[Exit] Exception message: {_lastException.Message}");
                 
-                if (_lastException.InnerException != null)
+                var inner = _lastException.InnerException;
+                var level = 1;
+                while (inner != null)
                 {
-                    LogDebug($"[Exit] Inner exception: {_lastException.InnerException.GetType().Name}: {_lastException.InnerException.Message}");
+                    LogDebug($"[Exit] Inner exception ({level}): {inner.GetType().Name}: {inner.Message}");
+                    if (inner.StackTrace != null)
+                    {
+                        LogDebug("[Exit] Inner exception stack trace:");
+                        foreach (var line in inner.StackTrace.Split(["\r\n", "\n"], StringSplitOptions.None))
+                        {
+                            var trimmedLine = line.Trim();
+                            if (!string.IsNullOrEmpty(trimmedLine))
+                            {
+                                LogDebug($"[Exit]   {trimmedLine}");
+                            }
+                        }
+                    }
+                    inner = inner.InnerException;
+                    level++;
                 }
                 
                 // Log stack trace to help identify the source of the exception
