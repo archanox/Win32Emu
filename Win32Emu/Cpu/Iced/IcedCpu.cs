@@ -1120,6 +1120,13 @@ public class IcedCpu : IAsyncCpu
 			return;
 		}
 		
+		// Skip validation in 16-bit mode - in real mode, all addresses from 0x0 to 0xFFFF are valid
+		// and there's no concept of an image base or PE headers
+		if (_bitness == 16)
+		{
+			return;
+		}
+		
 		// Allow special emulator ranges: COM vtables, syscalls, and import hooks
 		if (MemoryRegions.IsInSpecialRange(target))
 		{
