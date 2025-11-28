@@ -99,9 +99,9 @@ public static class SimdIntrinsicsHelper
 			BitConverter.GetBytes(result.GetElement(3)).CopyTo(output, 12);
 			return output;
 		}
-		else
+
+		// Software fallback
 		{
-			// Software fallback
 			var output = new byte[16];
 			for (var i = 0; i < 4; i++)
 			{
@@ -198,9 +198,9 @@ public static class SimdIntrinsicsHelper
 			BitConverter.GetBytes(result.GetElement(3)).CopyTo(output, 12);
 			return output;
 		}
-		else
+
+		// Software fallback
 		{
-			// Software fallback
 			var output = new byte[16];
 			for (var i = 0; i < 4; i++)
 			{
@@ -279,9 +279,9 @@ public static class SimdIntrinsicsHelper
 			BitConverter.GetBytes(result.GetElement(1)).CopyTo(output, 8);
 			return output;
 		}
-		else
+
+		// Software fallback
 		{
-			// Software fallback
 			var output = new byte[16];
 			for (var i = 0; i < 2; i++)
 			{
@@ -348,9 +348,9 @@ public static class SimdIntrinsicsHelper
 			}
 			return output;
 		}
-		else
+
+		// Software fallback
 		{
-			// Software fallback
 			var output = new byte[16];
 			for (var i = 0; i < 16; i++)
 			{
