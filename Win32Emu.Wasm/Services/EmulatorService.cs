@@ -75,12 +75,16 @@ public class EmulatorService : IDisposable
 			// Create backend factory if not already created
 			_backendFactory ??= new WasmBackendFactory(_jsRuntime, _loggerFactory);
 			
-			// Create emulator host to receive debug and stdout output
-			_emulatorHost = new WasmEmulatorHost(_loggerFactory.CreateLogger<WasmEmulatorHost>());
-			
-			// Wire up host events to forward to service events
-			_emulatorHost.DebugOutputReceived += (sender, message) => EmitDebugOutput(message);
-			_emulatorHost.StdOutputReceived += (sender, message) => EmitStdOutput(message);
+			// Create emulator host once and reuse it across multiple loads
+			// This avoids memory leaks from orphaned event handlers
+			if (_emulatorHost == null)
+			{
+				_emulatorHost = new WasmEmulatorHost(_loggerFactory.CreateLogger<WasmEmulatorHost>());
+				
+				// Wire up host events to forward to service events (only once)
+				_emulatorHost.DebugOutputReceived += (sender, message) => EmitDebugOutput(message);
+				_emulatorHost.StdOutputReceived += (sender, message) => EmitStdOutput(message);
+			}
 			
 			// Create emulator with WASM backend factory AND emulator host for output
 			var emulatorLogger = _loggerFactory.CreateLogger<Emulator>();
