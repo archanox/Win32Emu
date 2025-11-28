@@ -75,7 +75,7 @@ namespace CHDReaderTest.Flac.FlacDeps
             }
         }
 
-        public unsafe void writeints(int len, int pos, byte* buf)
+        public void writeints(int len, int pos, byte[] buf, int bufOffset)
         {
             int old_pos = BitLength;
             int start = old_pos / 8;
@@ -84,17 +84,16 @@ namespace CHDReaderTest.Flac.FlacDeps
             int end1 = (pos + len) / 8;
             flush();
             byte start_val = old_pos % 8 != 0 ? buffer[start] : (byte)0;
-            fixed (byte* buf1 = &buffer[0])
-            {
-                if (old_pos % 8 != 0)
-                    crc16_m = Crc16.Subtract(crc16_m, 0, 1);
-                crc16_m = Crc16.ComputeChecksum(crc16_m, buf + start1, end - start);
-                AudioSamples.MemCpy(buf1 + start, buf + start1, end - start);
-                buf1[start] |= start_val;
-            }
+            
+            if (old_pos % 8 != 0)
+                crc16_m = Crc16.Subtract(crc16_m, 0, 1);
+            crc16_m = Crc16.ComputeChecksum(crc16_m, buf, bufOffset + start1, end - start);
+            AudioSamples.MemCpy(buffer, start, buf, bufOffset + start1, end - start);
+            buffer[start] |= start_val;
+            
             buf_ptr_m = end;
             if ((old_pos + len) % 8 != 0)
-                writebits((old_pos + len) % 8, buf[end1] >> 8 - (old_pos + len) % 8);
+                writebits((old_pos + len) % 8, buf[bufOffset + end1] >> 8 - (old_pos + len) % 8);
         }
 
         public void write(params char[] chars)
@@ -143,8 +142,6 @@ namespace CHDReaderTest.Flac.FlacDeps
 
         public void writebits(int bits, ulong val)
         {
-            //assert(bits == 32 || val < (1U << bits));
-
             if (bits == 0 || eof) return;
             if (bits < bit_left_m)
             {
@@ -181,45 +178,10 @@ namespace CHDReaderTest.Flac.FlacDeps
                     buffer[buf_ptr_m + 0] = (byte)(bb & 0xFF);
                     buf_ptr_m += 8;
                 }
-                // cannot do this in one shift, because bit_left_m can be 64,
-                // 
                 bit_left_m += 64 - bits;
                 bit_buf_m = bit_left_m == 64 ? 0 : val << bit_left_m;
             }
         }
-
-        /// <summary>
-        /// Assumes there's enough space, buffer != null and bits is in range 1..31
-        /// </summary>
-        /// <param name="bits"></param>
-        /// <param name="val"></param>
-        //        unsafe void writebits_fast(int bits, uint val, ref byte* buf)
-        //        {
-        //#if DEBUG
-        //            if ((buf_ptr + 3) >= buf_end)
-        //            {
-        //                eof = true;
-        //                return;
-        //            }
-        //#endif
-        //            if (bits < bit_left)
-        //            {
-        //                bit_buf = (bit_buf << bits) | val;
-        //                bit_left -= bits;
-        //            }
-        //            else
-        //            {
-        //                uint bb = (bit_buf << bit_left) | (val >> (bits - bit_left));
-        //                bit_left += (32 - bits);
-
-        //                *(buf++) = (byte)(bb >> 24);
-        //                *(buf++) = (byte)(bb >> 16);
-        //                *(buf++) = (byte)(bb >> 8);
-        //                *(buf++) = (byte)(bb);
-
-        //                bit_buf = val;
-        //            }
-        //        }
 
         public void write_utf8(int val)
         {
@@ -278,69 +240,71 @@ namespace CHDReaderTest.Flac.FlacDeps
             writebits(k + q, v & (1 << k) - 1 | 1 << k);
         }
 
-        public unsafe void write_rice_block_signed(byte* fixedbuf, int k, int* residual, int count)
+        public void write_rice_block_signed(byte[] fixedbuf, int fixedbufOffset, int k, int[] residual, int residualOffset, int count)
         {
-            byte* buf = &fixedbuf[buf_ptr_m];
+            int bufIdx = fixedbufOffset + buf_ptr_m;
             ulong bit_buf = bit_buf_m;
             int bit_left = bit_left_m;
             ushort crc16 = crc16_m;
-            fixed (ushort* crc16_t = Crc16.table)
-                for (int i = count; i > 0; i--)
+            int rIdx = residualOffset;
+            
+            for (int i = count; i > 0; i--)
+            {
+                int vi = residual[rIdx++];
+                uint v = (uint)(vi << 1 ^ vi >> 31);
+
+                // write quotient in unary
+                int q = (int)(v >> k) + 1;
+                int bits = k + q;
+                while (bits > 64)
                 {
-                    int vi = *residual++;
-                    uint v = (uint)(vi << 1 ^ vi >> 31);
-
-                    // write quotient in unary
-                    int q = (int)(v >> k) + 1;
-                    int bits = k + q;
-                    while (bits > 64)
-                    {
 #if DEBUG
-                        if (buf + 1 > fixedbuf + buf_end)
-                        {
-                            eof = true;
-                            return;
-                        }
-#endif
-                        crc16 = (ushort)(crc16 << 8 ^ crc16_t[crc16 >> 8 ^ (*buf++ = (byte)(bit_buf >> 56))]);
-                        bit_buf <<= 8;
-                        bits -= 8;
-                    }
-
-                    // write remainder in binary using 'k' bits
-                    //writebits_fast(k + q, (uint)((v & ((1 << k) - 1)) | (1 << k)), ref buf);
-                    ulong val = v & (1U << k) - 1 | 1U << k;
-                    if (bits < bit_left)
+                    if (bufIdx + 1 > fixedbufOffset + buf_end)
                     {
-                        bit_left -= bits;
-                        bit_buf |= val << bit_left;
+                        eof = true;
+                        return;
                     }
-                    else
-                    {
-                        ulong bb = bit_buf | val >> bits - bit_left;
-#if DEBUG
-                        if (buf + 8 > fixedbuf + buf_end)
-                        {
-                            eof = true;
-                            return;
-                        }
 #endif
-
-                        crc16 = (ushort)(crc16 << 8 ^ crc16_t[crc16 >> 8 ^ (*buf++ = (byte)(bb >> 56))]);
-                        crc16 = (ushort)(crc16 << 8 ^ crc16_t[crc16 >> 8 ^ (*buf++ = (byte)(bb >> 48))]);
-                        crc16 = (ushort)(crc16 << 8 ^ crc16_t[crc16 >> 8 ^ (*buf++ = (byte)(bb >> 40))]);
-                        crc16 = (ushort)(crc16 << 8 ^ crc16_t[crc16 >> 8 ^ (*buf++ = (byte)(bb >> 32))]);
-                        crc16 = (ushort)(crc16 << 8 ^ crc16_t[crc16 >> 8 ^ (*buf++ = (byte)(bb >> 24))]);
-                        crc16 = (ushort)(crc16 << 8 ^ crc16_t[crc16 >> 8 ^ (*buf++ = (byte)(bb >> 16))]);
-                        crc16 = (ushort)(crc16 << 8 ^ crc16_t[crc16 >> 8 ^ (*buf++ = (byte)(bb >> 8))]);
-                        crc16 = (ushort)(crc16 << 8 ^ crc16_t[crc16 >> 8 ^ (*buf++ = (byte)bb)]);
-
-                        bit_left += 64 - bits;
-                        bit_buf = val << bit_left - 1 << 1;
-                    }
+                    byte b = (byte)(bit_buf >> 56);
+                    crc16 = (ushort)(crc16 << 8 ^ Crc16.table[crc16 >> 8 ^ b]);
+                    fixedbuf[bufIdx++] = b;
+                    bit_buf <<= 8;
+                    bits -= 8;
                 }
+
+                // write remainder in binary using 'k' bits
+                ulong val = v & (1U << k) - 1 | 1U << k;
+                if (bits < bit_left)
+                {
+                    bit_left -= bits;
+                    bit_buf |= val << bit_left;
+                }
+                else
+                {
+                    ulong bb = bit_buf | val >> bits - bit_left;
+#if DEBUG
+                    if (bufIdx + 8 > fixedbufOffset + buf_end)
+                    {
+                        eof = true;
+                        return;
+                    }
+#endif
+
+                    crc16 = (ushort)(crc16 << 8 ^ Crc16.table[crc16 >> 8 ^ (fixedbuf[bufIdx++] = (byte)(bb >> 56))]);
+                    crc16 = (ushort)(crc16 << 8 ^ Crc16.table[crc16 >> 8 ^ (fixedbuf[bufIdx++] = (byte)(bb >> 48))]);
+                    crc16 = (ushort)(crc16 << 8 ^ Crc16.table[crc16 >> 8 ^ (fixedbuf[bufIdx++] = (byte)(bb >> 40))]);
+                    crc16 = (ushort)(crc16 << 8 ^ Crc16.table[crc16 >> 8 ^ (fixedbuf[bufIdx++] = (byte)(bb >> 32))]);
+                    crc16 = (ushort)(crc16 << 8 ^ Crc16.table[crc16 >> 8 ^ (fixedbuf[bufIdx++] = (byte)(bb >> 24))]);
+                    crc16 = (ushort)(crc16 << 8 ^ Crc16.table[crc16 >> 8 ^ (fixedbuf[bufIdx++] = (byte)(bb >> 16))]);
+                    crc16 = (ushort)(crc16 << 8 ^ Crc16.table[crc16 >> 8 ^ (fixedbuf[bufIdx++] = (byte)(bb >> 8))]);
+                    crc16 = (ushort)(crc16 << 8 ^ Crc16.table[crc16 >> 8 ^ (fixedbuf[bufIdx++] = (byte)bb)]);
+
+                    bit_left += 64 - bits;
+                    bit_buf = val << bit_left - 1 << 1;
+                }
+            }
             crc16_m = crc16;
-            buf_ptr_m = (int)(buf - fixedbuf);
+            buf_ptr_m = bufIdx - fixedbufOffset;
             bit_buf_m = bit_buf;
             bit_left_m = bit_left;
         }
