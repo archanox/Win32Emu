@@ -779,7 +779,8 @@ public sealed class Emulator : IDisposable
                 if (_lastException.StackTrace != null)
                 {
                     LogDebug("[Exit] Stack trace:");
-                    foreach (var line in _lastException.StackTrace.Split('\n'))
+                    // Split on both \r\n and \n to handle different line endings across platforms
+                    foreach (var line in _lastException.StackTrace.Split(["\r\n", "\n"], StringSplitOptions.None))
                     {
                         var trimmedLine = line.Trim();
                         if (!string.IsNullOrEmpty(trimmedLine))
