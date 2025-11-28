@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using Win32Emu.Threading;
 
 namespace Win32Emu.Win32.Modules
 {
@@ -2708,7 +2709,7 @@ namespace Win32Emu.Win32.Modules
 			// to simulate waiting for a message without spinning
 			// For a stub implementation, just yield briefly and return success
 
-			System.Threading.Thread.Sleep(1); // Brief yield to prevent spinning
+			PlatformHelpers.Sleep(1); // Brief yield to prevent spinning
 
 			_logger.LogInformation("[User32] WaitMessage: Returning after wait");
 			return (uint)NativeTypes.Win32Bool.TRUE; // Always return success

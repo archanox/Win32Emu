@@ -8,6 +8,7 @@ using Win32Emu.Diagnostics;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
+using Win32Emu.Threading;
 using Win32Emu.Win32;
 using Win32Emu.Win32.Modules;
 
@@ -1299,7 +1300,20 @@ public sealed class Emulator : IDisposable
         {
             // Wait for pause event to be signaled (running state)
             // Using a timeout allows us to check _stopRequested periodically
-            _pauseEvent.WaitOne(100);
+            // In WASM, WaitOne with timeout may not be supported, so we use non-blocking check
+            if (PlatformHelpers.IsWasm)
+            {
+                // Non-blocking check for WASM - use WaitOne(0) which is always supported
+                if (!_pauseEvent.WaitOne(0))
+                {
+                    // If paused, yield and continue loop to check again
+                    continue;
+                }
+            }
+            else
+            {
+                _pauseEvent.WaitOne(100);
+            }
 
             if (_stopRequested)
             {

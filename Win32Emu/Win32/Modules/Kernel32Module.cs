@@ -4992,12 +4992,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 				// Mark as yielding but don't actually suspend
 				// The main execution loop will handle context switching
-				Thread.Yield();
+				PlatformHelpers.Yield();
 			}
 			else
 			{
 				// No thread scheduler, just yield the native thread
-				Thread.Yield();
+				PlatformHelpers.Yield();
 			}
 		}
 		else if (dwMilliseconds == 0xFFFFFFFF) // INFINITE
@@ -5015,7 +5015,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			else
 			{
 				// No thread scheduler - do a short sleep to avoid hanging
-				Thread.Sleep(1);
+				PlatformHelpers.Sleep(1);
 			}
 		}
 		else
@@ -5035,12 +5035,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				scheduler.SetThreadWaiting(currentThreadId, sleepToken, dwMilliseconds);
 
 				// Do a minimal actual sleep to prevent busy-waiting
-				Thread.Sleep(1);
+				PlatformHelpers.Sleep(1);
 			}
 			else
 			{
 				// Short sleeps or no scheduler - use minimal delay
-				Thread.Sleep(dwMilliseconds > 0 ? 1 : 0);
+				PlatformHelpers.Sleep(dwMilliseconds > 0 ? 1 : 0);
 			}
 		}
 
@@ -5958,7 +5958,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 			// Object not available yet - yield and retry
 			// Use a small sleep to prevent busy-waiting and allow other threads to run
-			Thread.Sleep(1);
+			PlatformHelpers.Sleep(1);
 
 			// Yield to thread scheduler if available
 			_env.ThreadScheduler?.ProcessWaitTimeouts();
@@ -6146,7 +6146,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			}
 
 			// Objects not available yet - yield and retry
-			Thread.Sleep(1);
+			PlatformHelpers.Sleep(1);
 
 			// Process scheduler timeout checks if available
 			_env.ThreadScheduler?.ProcessWaitTimeouts();
