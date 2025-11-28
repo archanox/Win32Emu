@@ -2323,7 +2323,15 @@ public sealed class Emulator : IDisposable
             }
             finally
             {
-                _eventProcessingTask?.Dispose();
+                // Only dispose if the task has completed to avoid "Task_Dispose_NotCompleted" error
+                // This is especially important in WASM environments where Task.Run doesn't create
+                // actual background threads and tasks may never complete in the traditional sense.
+                // According to Microsoft guidance, disposing Tasks is rarely necessary - the GC will
+                // clean up the resources eventually.
+                if (_eventProcessingTask?.IsCompleted == true)
+                {
+                    _eventProcessingTask.Dispose();
+                }
                 _eventProcessingTask = null;
             }
         }
