@@ -3,7 +3,6 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
 	<LangVersion>latest</LangVersion>
-	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 	<Nullable>enable</Nullable>
   </PropertyGroup>
 
