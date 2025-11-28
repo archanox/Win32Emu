@@ -121,6 +121,7 @@ public class WasmInputBackend : IInputBackend
 	[JSInvokable]
 	public void OnKeyDown(int keyCode)
 	{
+		// Dictionary indexer will add the key if it doesn't exist
 		_keyboardState.KeyStates[keyCode] = true;
 		UIEvent?.Invoke(this, new UIEventArgs
 		{
@@ -135,6 +136,7 @@ public class WasmInputBackend : IInputBackend
 	[JSInvokable]
 	public void OnKeyUp(int keyCode)
 	{
+		// Dictionary indexer will add the key if it doesn't exist
 		_keyboardState.KeyStates[keyCode] = false;
 		UIEvent?.Invoke(this, new UIEventArgs
 		{
@@ -165,6 +167,7 @@ public class WasmInputBackend : IInputBackend
 	[JSInvokable]
 	public void OnMouseDown(int button, int x, int y)
 	{
+		// Dictionary indexer will add the key if it doesn't exist
 		_mouseState.MouseButtons[button] = true;
 		_mouseState.MouseX = x;
 		_mouseState.MouseY = y;
@@ -183,6 +186,7 @@ public class WasmInputBackend : IInputBackend
 	[JSInvokable]
 	public void OnMouseUp(int button, int x, int y)
 	{
+		// Dictionary indexer will add the key if it doesn't exist
 		_mouseState.MouseButtons[button] = false;
 		_mouseState.MouseX = x;
 		_mouseState.MouseY = y;
