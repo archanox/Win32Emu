@@ -369,8 +369,28 @@ public static class SimdIntrinsicsHelper
 			return sum.ToScalar();
 		}
 
+		if (CpuIntrinsics.HasPackedSimd)
+		{
+			// Use WebAssembly SIMD intrinsics for hardware acceleration
+			// Create a vector with the value in the first 4 bytes and zeros elsewhere
+			var bytes = BitConverter.GetBytes(value);
+			var vec = Vector128.Create(
+				bytes[0], bytes[1], bytes[2], bytes[3],
+				(byte)0, (byte)0, (byte)0, (byte)0,
+				(byte)0, (byte)0, (byte)0, (byte)0,
+				(byte)0, (byte)0, (byte)0, (byte)0
+			);
+			var popcount = PackedSimd.PopCount(vec);
+			// Sum first 4 bytes to get total count
+			uint wasmCount = 0;
+			for (var i = 0; i < 4; i++)
+			{
+				wasmCount += popcount.GetElement(i);
+			}
+			return wasmCount;
+		}
+
 		// Software fallback using Brian Kernighan's algorithm
-		// Note: PackedSimd.PopCount operates on vectors, not scalars, so we use the software implementation
 		uint count = 0;
 		while (value != 0)
 		{
