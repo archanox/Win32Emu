@@ -4,10 +4,10 @@ This document describes the CPU intrinsics support in Win32Emu for hardware-acce
 
 ## Overview
 
-Win32Emu now leverages .NET's `System.Runtime.Intrinsics` API to provide hardware-accelerated emulation of x86 SIMD and extended instructions on both x86 and ARM host systems. This enables:
+Win32Emu now leverages .NET's `System.Runtime.Intrinsics` API to provide hardware-accelerated emulation of x86 SIMD and extended instructions on x86, ARM, and WebAssembly host systems. This enables:
 
 - **Better Performance**: Native CPU instructions are used when available instead of software emulation
-- **Cross-Platform**: The same emulated x86 code can run efficiently on both x86 and ARM hosts
+- **Cross-Platform**: The same emulated x86 code can run efficiently on x86, ARM, and WebAssembly hosts
 - **Modern CPU Features**: Support for SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, AVX, AVX2, and more
 
 ## Architecture Detection
@@ -24,6 +24,10 @@ else if (CpuIntrinsics.IsArm)
 {
     // Running on ARM/ARM64 host
 }
+else if (CpuIntrinsics.IsWasm)
+{
+    // Running on WebAssembly host
+}
 
 // Feature detection
 if (CpuIntrinsics.HasSse)
@@ -33,6 +37,10 @@ if (CpuIntrinsics.HasSse)
 if (CpuIntrinsics.HasAdvSimd)
 {
     // NEON instructions are available on ARM host
+}
+if (CpuIntrinsics.HasPackedSimd)
+{
+    // WebAssembly SIMD instructions are available on Wasm host
 }
 ```
 
@@ -61,6 +69,9 @@ if (CpuIntrinsics.HasAdvSimd)
 - **AES**: AES encryption instructions
 - **CRC32**: CRC32 calculation instructions
 - **SHA1/SHA256**: Cryptographic hash instructions
+
+#### WebAssembly Features
+- **PackedSimd**: WebAssembly SIMD 128-bit vector operations (available in .NET 8+)
 
 ## CPUID Emulation
 
@@ -145,7 +156,8 @@ The helper automatically selects the best implementation:
 
 1. **x86 hosts**: Uses x86 intrinsics (SSE, SSE2, etc.)
 2. **ARM hosts**: Uses ARM NEON intrinsics (AdvSimd)
-3. **Fallback**: Software implementation when intrinsics aren't available
+3. **WebAssembly hosts**: Uses Wasm SIMD intrinsics (PackedSimd)
+4. **Fallback**: Software implementation when intrinsics aren't available
 
 All implementations produce identical results, ensuring emulation accuracy regardless of host platform.
 
@@ -159,7 +171,7 @@ All implementations produce identical results, ensuring emulation accuracy regar
 
 ### Compatibility
 
-- **Cross-Platform**: Same emulated x86 code runs on both x86 and ARM hosts
+- **Cross-Platform**: Same emulated x86 code runs on x86, ARM, and WebAssembly hosts
 - **Future-Proof**: New CPU features can be easily added as they become available in .NET
 - **Graceful Degradation**: Software fallbacks ensure compatibility on older CPUs
 
@@ -205,9 +217,9 @@ private void ExecAddps(Instruction insn)
 
 All intrinsics support is thoroughly tested:
 
-- **CpuIntrinsicsTests**: Validates architecture detection and CPUID reporting
+- **CpuIntrinsicsTests**: Validates architecture detection (x86, ARM, Wasm) and CPUID reporting
 - **SimdIntrinsicsHelperTests**: Tests all SIMD helper functions
-- **Cross-Platform**: Tests run on both x86 and ARM in CI/CD
+- **Cross-Platform**: Tests run on x86, ARM, and WebAssembly in CI/CD
 
 Run tests with:
 ```bash
@@ -218,8 +230,10 @@ dotnet test Win32Emu.sln
 
 - [.NET x86 Intrinsics API](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.intrinsics.x86)
 - [.NET ARM Intrinsics API](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.intrinsics.arm)
+- [.NET WebAssembly Intrinsics API](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.intrinsics.wasm)
 - [Intel SSE/AVX Instructions Reference](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html)
 - [ARM NEON Intrinsics Reference](https://developer.arm.com/architectures/instruction-sets/intrinsics/)
+- [WebAssembly SIMD Operations](https://webassembly.github.io/simd/core/exec/numerics.html)
 
 ## Future Enhancements
 
