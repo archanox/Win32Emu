@@ -76,28 +76,15 @@ public static class SimdIntrinsicsHelper
 
 		if (CpuIntrinsics.HasPackedSimd)
 		{
-			// Use WebAssembly SIMD intrinsics for hardware acceleration
-			var vec1 = Vector128.Create(
-				BitConverter.ToSingle(a, 0),
-				BitConverter.ToSingle(a, 4),
-				BitConverter.ToSingle(a, 8),
-				BitConverter.ToSingle(a, 12)
-			);
-			var vec2 = Vector128.Create(
-				BitConverter.ToSingle(b, 0),
-				BitConverter.ToSingle(b, 4),
-				BitConverter.ToSingle(b, 8),
-				BitConverter.ToSingle(b, 12)
-			);
-			
-			var result = PackedSimd.Add(vec1, vec2);
-			
-			var output = new byte[16];
-			BitConverter.GetBytes(result.GetElement(0)).CopyTo(output, 0);
-			BitConverter.GetBytes(result.GetElement(1)).CopyTo(output, 4);
-			BitConverter.GetBytes(result.GetElement(2)).CopyTo(output, 8);
-			BitConverter.GetBytes(result.GetElement(3)).CopyTo(output, 12);
-			return output;
+		    // Use WebAssembly SIMD intrinsics for hardware acceleration
+		    var vec1 = Vector128.Create(a).AsSingle();
+		    var vec2 = Vector128.Create(b).AsSingle();
+    
+		    var result = PackedSimd.Add(vec1, vec2);
+    
+		    var output = new byte[16];
+		    result.AsByte().CopyTo(output);
+		    return output;
 		}
 
 		// Software fallback
