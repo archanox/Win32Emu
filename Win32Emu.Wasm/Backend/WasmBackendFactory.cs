@@ -18,6 +18,11 @@ public class WasmBackendFactory : IBackendFactory
 		_loggerFactory = loggerFactory;
 	}
 
+	/// <summary>
+	/// Creates a WASM rendering backend.
+	/// Note: The logger parameter is intentionally ignored because WASM backends require
+	/// strongly-typed ILogger&lt;T&gt; instances for proper category names in browser console.
+	/// </summary>
 	public IRenderingBackend CreateRenderingBackend(ILogger logger)
 	{
 		return new WasmRenderingBackend(_jsRuntime, _loggerFactory.CreateLogger<WasmRenderingBackend>());
@@ -29,11 +34,21 @@ public class WasmBackendFactory : IBackendFactory
 		return CreateRenderingBackend(logger);
 	}
 
+	/// <summary>
+	/// Creates a WASM audio backend.
+	/// Note: The logger parameter is intentionally ignored because WASM backends require
+	/// strongly-typed ILogger&lt;T&gt; instances for proper category names in browser console.
+	/// </summary>
 	public IAudioBackend CreateAudioBackend(ILogger logger)
 	{
 		return new WasmAudioBackend(_jsRuntime, _loggerFactory.CreateLogger<WasmAudioBackend>());
 	}
 
+	/// <summary>
+	/// Creates a WASM input backend.
+	/// Note: The logger parameter is intentionally ignored because WASM backends require
+	/// strongly-typed ILogger&lt;T&gt; instances for proper category names in browser console.
+	/// </summary>
 	public IInputBackend CreateInputBackend(ILogger logger)
 	{
 		return new WasmInputBackend(_jsRuntime, _loggerFactory.CreateLogger<WasmInputBackend>());
