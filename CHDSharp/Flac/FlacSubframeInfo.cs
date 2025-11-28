@@ -20,7 +20,8 @@ namespace CUETools.Codecs.Flake
         {
             if (w > bps)
                 throw new Exception("internal error");
-            Array.Copy(s, sOffset, samples, 0, samples.Length > s.Length - sOffset ? s.Length - sOffset : samples.Length);
+            int copyLength = Math.Min(samples.Length, s.Length - sOffset);
+            Array.Copy(s, sOffset, samples, 0, copyLength);
             samplesOffset = 0;
             obits = bps - w;
             wbits = w;

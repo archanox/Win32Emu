@@ -240,6 +240,9 @@ namespace CHDReaderTest.Flac.FlacDeps
                 done_lpcs[iPrecision] = 0;
         }
 
+        // Reusable temp buffer for autocorrelation calculations
+        private readonly double[] _autocorrTemp = new double[lpc.MAX_LPC_ORDER + 1];
+
         /// <summary>
         /// Calculate autocorrelation data and reflection coefficients.
         /// </summary>
@@ -263,15 +266,14 @@ namespace CHDReaderTest.Flac.FlacDeps
                         for (int i = min_order; i <= order; i++) 
                             subframe.autocorr_section_values[sections[sectionsOffset + section].m_id, i] = 0;
                         
-                        // Create a temp array to pass as autoc
-                        double[] autocTemp = new double[lpc.MAX_LPC_ORDER + 1];
-                        for (int i = 0; i < autocTemp.Length && i < subframe.autocorr_section_values.GetLength(1); i++)
-                            autocTemp[i] = subframe.autocorr_section_values[sections[sectionsOffset + section].m_id, i];
+                        // Use reusable temp buffer
+                        for (int i = 0; i < _autocorrTemp.Length && i < subframe.autocorr_section_values.GetLength(1); i++)
+                            _autocorrTemp[i] = subframe.autocorr_section_values[sections[sectionsOffset + section].m_id, i];
                         
-                        sections[sectionsOffset + section].compute_autocorr(samples, samplesOffset, window, windowOffset, min_order, order, blocksize, autocTemp, 0);
+                        sections[sectionsOffset + section].compute_autocorr(samples, samplesOffset, window, windowOffset, min_order, order, blocksize, _autocorrTemp, 0);
                         
-                        for (int i = 0; i < autocTemp.Length && i < subframe.autocorr_section_values.GetLength(1); i++)
-                            subframe.autocorr_section_values[sections[sectionsOffset + section].m_id, i] = autocTemp[i];
+                        for (int i = 0; i < _autocorrTemp.Length && i < subframe.autocorr_section_values.GetLength(1); i++)
+                            subframe.autocorr_section_values[sections[sectionsOffset + section].m_id, i] = _autocorrTemp[i];
                         
                         subframe.autocorr_section_orders[sections[sectionsOffset + section].m_id] = order + 1;
                     }
