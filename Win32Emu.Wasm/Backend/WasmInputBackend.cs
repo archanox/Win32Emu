@@ -66,6 +66,12 @@ public class WasmInputBackend : IInputBackend
 		};
 	}
 
+	/// <summary>
+	/// Opens an input device for reading.
+	/// Note: Multiple devices of the same type share the same underlying InputState.
+	/// This is intentional because in WASM, there's only one physical keyboard and mouse,
+	/// and all "devices" should reflect the same browser input state.
+	/// </summary>
 	public uint OpenDevice(uint deviceId, DeviceType type)
 	{
 		if (!_initialized)
@@ -75,6 +81,8 @@ public class WasmInputBackend : IInputBackend
 		}
 
 		var newId = _nextDeviceId++;
+		// All devices of the same type share state - this is intentional for WASM
+		// since there's only one physical keyboard/mouse in the browser
 		var state = type switch
 		{
 			DeviceType.Keyboard => _keyboardState,

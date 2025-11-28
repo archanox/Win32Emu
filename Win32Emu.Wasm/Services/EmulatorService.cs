@@ -57,6 +57,12 @@ public class EmulatorService : IDisposable
 		string fileName,
 		Dictionary<string, byte[]>? additionalFiles = null)
 	{
+		// TODO: Implement VFS population with additional files for WASM
+		if (additionalFiles != null && additionalFiles.Count > 0)
+		{
+			_logger.LogWarning("Additional files support not yet implemented for WASM ({Count} files ignored)", additionalFiles.Count);
+		}
+		
 		try
 		{
 			EmitDebugOutput($"Loading executable: {fileName} ({executableBytes.Length} bytes)");
@@ -129,6 +135,9 @@ public class EmulatorService : IDisposable
 			});
 			
 			// Run emulation on a background task
+			// Note: Emulator.RunAsync() doesn't accept a CancellationToken - it uses Stop() method
+			// for cancellation. The token here is used to cancel Task.Run() startup, while
+			// _emulator.Stop() (called in StopAsync) stops the actual emulation loop.
 			_emulationTask = Task.Run(async () =>
 			{
 				try
