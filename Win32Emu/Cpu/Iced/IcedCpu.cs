@@ -1157,7 +1157,7 @@ public class IcedCpu : IAsyncCpu
 				// Other low address (< stack region or >= stack region but < image base)
 				addressType = "low memory";
 				diagnosticInfo = $"This indicates an invalid or uninitialized function pointer. " +
-				                $"The address is below the image base (0x{_imageBase:X8} from PE header).";
+				                $"The address is below the image base (0x{_imageBase:X8}).";
 			}
 			
 			string errorMessage;
