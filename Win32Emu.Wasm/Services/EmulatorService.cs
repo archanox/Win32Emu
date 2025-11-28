@@ -68,14 +68,9 @@ public class EmulatorService : IDisposable
 			var emulatorLogger = _loggerFactory.CreateLogger<Emulator>();
 			_emulator = new Emulator(null, emulatorLogger, null, _backendFactory);
 			
-			// Load the executable from bytes
-			// We use a synthetic path since we don't have a real file system
-			var syntheticPath = $"C:\\WASM\\{fileName}";
-			
-			// The emulator's LoadExecutable normally reads from disk or VHD
-			// For WASM, we need to provide the bytes directly
-			// We'll use a workaround by writing to a temporary in-memory approach
-			await LoadExecutableFromBytesAsync(executableBytes, syntheticPath);
+			// Load the executable from bytes using the Emulator's built-in method
+			// which handles synthetic path generation internally
+			_emulator.LoadExecutableFromBytes(executableBytes, fileName);
 			
 			_loadedExecutableName = fileName;
 			EmitDebugOutput($"Successfully loaded: {fileName}");
@@ -99,21 +94,6 @@ public class EmulatorService : IDisposable
 		}
 	}
 	
-	/// <summary>
-	/// Internal method to load executable from bytes using reflection or a custom loader path
-	/// </summary>
-	private Task LoadExecutableFromBytesAsync(byte[] executableBytes, string syntheticPath)
-	{
-		if (_emulator == null)
-		{
-			throw new InvalidOperationException("Emulator not initialized");
-		}
-		
-		// Use the new LoadExecutableFromBytes method that bypasses file system access
-		_emulator.LoadExecutableFromBytes(executableBytes, Path.GetFileName(syntheticPath));
-		
-		return Task.CompletedTask;
-	}
 	
 	/// <summary>
 	/// Start emulation
