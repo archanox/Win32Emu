@@ -1101,7 +1101,7 @@ public class IcedCpu : IAsyncCpu
 
 	/// <summary>
 	/// Validates an indirect jump/call target and throws an exception if it points to an invalid region.
-	/// Addresses below the image base (from PE header, typically 0x00400000) are considered invalid,
+	/// Addresses below the image base (typically 0x00400000 for executables) are considered invalid,
 	/// except for NULL and special emulator ranges. This indicates possible invalid function pointers,
 	/// corrupted registers, or uninitialized memory being executed as code.
 	/// Stack and low heap addresses are especially problematic as they indicate function pointers
@@ -1134,8 +1134,8 @@ public class IcedCpu : IAsyncCpu
 			return;
 		}
 		
-		// Check if target is suspiciously low (< image base from PE header)
-		// The image base can vary based on the PE header (typically 0x00400000 for executables,
+		// Check if target is suspiciously low (< image base)
+		// The image base can vary (typically 0x00400000 for executables,
 		// but can be different for DLLs or executables with custom image bases)
 		if (target < _imageBase)
 		{
@@ -1143,7 +1143,7 @@ public class IcedCpu : IAsyncCpu
 			string addressType;
 			string diagnosticInfo;
 			
-			// Check if target is within the stack region (from PE header)
+			// Check if target is within the stack region
 			// Stack grows downward from _stackBase to _stackLimit
 			var isStackAddress = target >= _stackLimit && target < _stackBase;
 			if (isStackAddress)
