@@ -328,12 +328,9 @@ public static class SimdIntrinsicsHelper
 			
 			var result = PackedSimd.Add(vec1, vec2);
 			
-			var output = new byte[16];
-			for (var i = 0; i < 16; i++)
-			{
-				output[i] = result.GetElement(i);
-			}
-			return output;
+		    var output = new byte[16];
+		    result.CopyTo(output);
+		    return output;
 		}
 
 		// Software fallback
