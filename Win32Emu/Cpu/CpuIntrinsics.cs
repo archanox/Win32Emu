@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.Arm;
+using System.Runtime.Intrinsics.Wasm;
 using System.Runtime.Intrinsics.X86;
 using Aes = System.Runtime.Intrinsics.X86.Aes;
 
@@ -25,6 +26,12 @@ public static class CpuIntrinsics
 	public static readonly bool IsArm = RuntimeInformation.ProcessArchitecture 
 		is Architecture.Arm 
 		or Architecture.Arm64;
+
+	/// <summary>
+	/// Indicates if the runtime is WebAssembly
+	/// </summary>
+	public static readonly bool IsWasm = RuntimeInformation.ProcessArchitecture 
+		is Architecture.Wasm;
 
 	// x86 feature flags
 	public static readonly bool HasSse = IsX86 && Sse.IsSupported;
@@ -53,6 +60,13 @@ public static class CpuIntrinsics
 	public static readonly bool HasRdm = IsArm && Rdm.IsSupported;
 	public static readonly bool HasSha1 = IsArm && Sha1.IsSupported;
 	public static readonly bool HasSha256 = IsArm && Sha256.IsSupported;
+
+	// Wasm feature flags
+	/// <summary>
+	/// Indicates if WebAssembly SIMD (PackedSimd) is supported.
+	/// This enables 128-bit SIMD operations in WebAssembly environments.
+	/// </summary>
+	public static readonly bool HasPackedSimd = IsWasm && PackedSimd.IsSupported;
 
 	/// <summary>
 	/// Gets CPUID feature flags for ECX register (function 1)

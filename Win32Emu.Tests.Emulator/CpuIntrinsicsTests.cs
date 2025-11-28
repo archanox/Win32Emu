@@ -18,9 +18,33 @@ public class CpuIntrinsicsTests : IDisposable
     [Fact]
     public void CpuIntrinsics_ShouldDetectArchitecture()
     {
-        // Assert - At least one architecture should be detected
-        Assert.True(CpuIntrinsics.IsX86 || CpuIntrinsics.IsArm, 
-            "Should detect either x86 or ARM architecture");
+        // Assert - At least one architecture should be detected (x86, ARM, or Wasm)
+        Assert.True(CpuIntrinsics.IsX86 || CpuIntrinsics.IsArm || CpuIntrinsics.IsWasm, 
+            "Should detect either x86, ARM, or Wasm architecture");
+    }
+
+    [Fact]
+    public void CpuIntrinsics_ArchitecturesAreMutuallyExclusive()
+    {
+        // Only one architecture should be detected at a time
+        var architectureCount = 0;
+        if (CpuIntrinsics.IsX86) architectureCount++;
+        if (CpuIntrinsics.IsArm) architectureCount++;
+        if (CpuIntrinsics.IsWasm) architectureCount++;
+        
+        Assert.Equal(1, architectureCount);
+    }
+
+    [Fact]
+    public void CpuIntrinsics_WasmFeaturesAreConsistent()
+    {
+        // If not running on Wasm, PackedSimd should always be false
+        if (!CpuIntrinsics.IsWasm)
+        {
+            Assert.False(CpuIntrinsics.HasPackedSimd, 
+                "PackedSimd should be false when not running on Wasm");
+        }
+        // Note: On actual Wasm, PackedSimd may or may not be supported depending on the host
     }
 
     [Fact]

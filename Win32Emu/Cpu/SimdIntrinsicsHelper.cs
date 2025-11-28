@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
+using System.Runtime.Intrinsics.Wasm;
 using System.Runtime.Intrinsics.X86;
 
 namespace Win32Emu.Cpu;
@@ -64,6 +65,32 @@ public static class SimdIntrinsicsHelper
 			);
 			
 			var result = AdvSimd.Add(vec1, vec2);
+			
+			var output = new byte[16];
+			BitConverter.GetBytes(result.GetElement(0)).CopyTo(output, 0);
+			BitConverter.GetBytes(result.GetElement(1)).CopyTo(output, 4);
+			BitConverter.GetBytes(result.GetElement(2)).CopyTo(output, 8);
+			BitConverter.GetBytes(result.GetElement(3)).CopyTo(output, 12);
+			return output;
+		}
+
+		if (CpuIntrinsics.HasPackedSimd)
+		{
+			// Use WebAssembly SIMD intrinsics for hardware acceleration
+			var vec1 = Vector128.Create(
+				BitConverter.ToSingle(a, 0),
+				BitConverter.ToSingle(a, 4),
+				BitConverter.ToSingle(a, 8),
+				BitConverter.ToSingle(a, 12)
+			);
+			var vec2 = Vector128.Create(
+				BitConverter.ToSingle(b, 0),
+				BitConverter.ToSingle(b, 4),
+				BitConverter.ToSingle(b, 8),
+				BitConverter.ToSingle(b, 12)
+			);
+			
+			var result = PackedSimd.Add(vec1, vec2);
 			
 			var output = new byte[16];
 			BitConverter.GetBytes(result.GetElement(0)).CopyTo(output, 0);
@@ -145,6 +172,32 @@ public static class SimdIntrinsicsHelper
 			BitConverter.GetBytes(result.GetElement(3)).CopyTo(output, 12);
 			return output;
 		}
+
+		if (CpuIntrinsics.HasPackedSimd)
+		{
+			// Use WebAssembly SIMD intrinsics for hardware acceleration
+			var vec1 = Vector128.Create(
+				BitConverter.ToSingle(a, 0),
+				BitConverter.ToSingle(a, 4),
+				BitConverter.ToSingle(a, 8),
+				BitConverter.ToSingle(a, 12)
+			);
+			var vec2 = Vector128.Create(
+				BitConverter.ToSingle(b, 0),
+				BitConverter.ToSingle(b, 4),
+				BitConverter.ToSingle(b, 8),
+				BitConverter.ToSingle(b, 12)
+			);
+			
+			var result = PackedSimd.Multiply(vec1, vec2);
+			
+			var output = new byte[16];
+			BitConverter.GetBytes(result.GetElement(0)).CopyTo(output, 0);
+			BitConverter.GetBytes(result.GetElement(1)).CopyTo(output, 4);
+			BitConverter.GetBytes(result.GetElement(2)).CopyTo(output, 8);
+			BitConverter.GetBytes(result.GetElement(3)).CopyTo(output, 12);
+			return output;
+		}
 		else
 		{
 			// Software fallback
@@ -206,6 +259,26 @@ public static class SimdIntrinsicsHelper
 			BitConverter.GetBytes(result.GetElement(1)).CopyTo(output, 8);
 			return output;
 		}
+
+		if (CpuIntrinsics.HasPackedSimd)
+		{
+			// Use WebAssembly SIMD intrinsics for hardware acceleration
+			var vec1 = Vector128.Create(
+				BitConverter.ToDouble(a, 0),
+				BitConverter.ToDouble(a, 8)
+			);
+			var vec2 = Vector128.Create(
+				BitConverter.ToDouble(b, 0),
+				BitConverter.ToDouble(b, 8)
+			);
+			
+			var result = PackedSimd.Add(vec1, vec2);
+			
+			var output = new byte[16];
+			BitConverter.GetBytes(result.GetElement(0)).CopyTo(output, 0);
+			BitConverter.GetBytes(result.GetElement(1)).CopyTo(output, 8);
+			return output;
+		}
 		else
 		{
 			// Software fallback
@@ -259,6 +332,22 @@ public static class SimdIntrinsicsHelper
 			}
 			return output;
 		}
+
+		if (CpuIntrinsics.HasPackedSimd)
+		{
+			// Use WebAssembly SIMD intrinsics for hardware acceleration
+			var vec1 = Vector128.Create(a);
+			var vec2 = Vector128.Create(b);
+			
+			var result = PackedSimd.Add(vec1, vec2);
+			
+			var output = new byte[16];
+			for (var i = 0; i < 16; i++)
+			{
+				output[i] = result.GetElement(i);
+			}
+			return output;
+		}
 		else
 		{
 			// Software fallback
@@ -294,6 +383,27 @@ public static class SimdIntrinsicsHelper
 			// Sum all bytes to get total count
 			var sum = AdvSimd.Arm64.AddAcross(popcount);
 			return sum.ToScalar();
+		}
+
+		if (CpuIntrinsics.HasPackedSimd)
+		{
+			// Use WebAssembly SIMD intrinsics for hardware acceleration
+			// Create a vector with the value in the first 4 bytes and zeros elsewhere
+			var bytes = BitConverter.GetBytes(value);
+			var vec = Vector128.Create(
+				bytes[0], bytes[1], bytes[2], bytes[3],
+				(byte)0, (byte)0, (byte)0, (byte)0,
+				(byte)0, (byte)0, (byte)0, (byte)0,
+				(byte)0, (byte)0, (byte)0, (byte)0
+			);
+			var popcount = PackedSimd.PopCount(vec);
+			// Sum first 4 bytes to get total count
+			uint wasmCount = 0;
+			for (var i = 0; i < 4; i++)
+			{
+				wasmCount += popcount.GetElement(i);
+			}
+			return wasmCount;
 		}
 
 		// Software fallback using Brian Kernighan's algorithm
