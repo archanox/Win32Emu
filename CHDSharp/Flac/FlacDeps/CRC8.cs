@@ -4,7 +4,7 @@ namespace CHDReaderTest.Flac.FlacDeps
     {
         private const ushort poly8 = 0x07;
 
-        private static ushort[] table = null;
+        private static ushort[]? table = null;
 
         public Crc8()
         {
@@ -31,15 +31,7 @@ namespace CHDReaderTest.Flac.FlacDeps
         {
             ushort crc = 0;
             for (int i = pos; i < pos + count; i++)
-                crc = table[crc ^ bytes[i]];
-            return (byte)crc;
-        }
-
-        public unsafe byte ComputeChecksum(byte* bytes, int pos, int count)
-        {
-            ushort crc = 0;
-            for (int i = pos; i < pos + count; i++)
-                crc = table[crc ^ bytes[i]];
+                crc = table![crc ^ bytes[i]];
             return (byte)crc;
         }
     }
