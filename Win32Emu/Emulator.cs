@@ -765,21 +765,45 @@ public sealed class Emulator : IDisposable
             if (_lastException != null)
             {
                 exitMessage = $"[Exit] Emulation terminated due to unhandled exception: {_lastException.GetType().Name}";
+                LogDebug(exitMessage);
+                
+                // Log additional exception details for debugging
+                LogDebug($"[Exit] Exception message: {_lastException.Message}");
+                
+                if (_lastException.InnerException != null)
+                {
+                    LogDebug($"[Exit] Inner exception: {_lastException.InnerException.GetType().Name}: {_lastException.InnerException.Message}");
+                }
+                
+                // Log stack trace to help identify the source of the exception
+                if (_lastException.StackTrace != null)
+                {
+                    LogDebug("[Exit] Stack trace:");
+                    foreach (var line in _lastException.StackTrace.Split('\n'))
+                    {
+                        var trimmedLine = line.Trim();
+                        if (!string.IsNullOrEmpty(trimmedLine))
+                        {
+                            LogDebug($"[Exit]   {trimmedLine}");
+                        }
+                    }
+                }
             }
             else if (_stopRequested)
             {
                 exitMessage = "[Exit] Stop requested by user.";
+                LogDebug(exitMessage);
             }
             else if (_env.ExitRequested)
             {
                 exitMessage = "[Exit] Process requested exit.";
+                LogDebug(exitMessage);
             }
             else
             {
                 exitMessage = "[Exit] Execution completed.";
+                LogDebug(exitMessage);
             }
-            
-            LogDebug(exitMessage);
             
             LogDebug("=== Unknown Function Summary ===");
             _dispatcher.PrintUnknownFunctionsSummary();
