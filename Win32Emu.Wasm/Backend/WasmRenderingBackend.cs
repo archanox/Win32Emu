@@ -6,8 +6,22 @@ using Win32Emu.Rendering;
 namespace Win32Emu.Wasm.Backend;
 
 /// <summary>
-/// WASM-compatible rendering backend using HTML5 Canvas and JavaScript interop
+/// WASM-compatible rendering backend using HTML5 Canvas and JavaScript interop.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>WASM-Specific Behavior:</b> Due to WebAssembly's single-threaded nature, blocking calls
+/// like <c>.Wait()</c> or <c>.Result</c> on async operations are not supported and will throw
+/// <see cref="PlatformNotSupportedException"/>. This backend uses fire-and-forget patterns
+/// for JavaScript interop calls.
+/// </para>
+/// <para>
+/// The <see cref="Initialize"/> method sets <see cref="IsInitialized"/> to <c>true</c> and
+/// returns <c>true</c> before the JavaScript canvas initialization completes. This is safe
+/// because the HTML canvas element is already created in index.html, and the Blazor component
+/// (Home.razor) properly awaits the initializeEmulator JS call before starting emulation.
+/// </para>
+/// </remarks>
 public class WasmRenderingBackend : IRenderingBackend
 {
 	private readonly IJSRuntime _jsRuntime;
@@ -45,11 +59,9 @@ public class WasmRenderingBackend : IRenderingBackend
 			
 			_logger.LogInformation("[WASM] Initializing rendering backend ({Width}x{Height})", width, height);
 			
-			// Initialize canvas through JavaScript using fire-and-forget pattern.
-			// In WASM, we cannot use blocking calls like .Wait() or .Result because
-			// WebAssembly runs on a single thread and doesn't support Monitor.Wait.
-			// The canvas is already created in the HTML and the Blazor component
-			// calls initializeEmulator before emulation starts, so this is safe.
+			// Fire-and-forget JS initialization. See class remarks for WASM-specific behavior.
+			// IsInitialized will be true before JS completes - this is intentional and safe
+			// because the Blazor component awaits initializeEmulator before starting emulation.
 			_ = _jsRuntime.InvokeVoidAsync("initializeEmulator", _canvasId);
 			
 			_initialized = true;

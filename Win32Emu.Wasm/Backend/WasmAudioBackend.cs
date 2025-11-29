@@ -5,8 +5,22 @@ using Win32Emu.Rendering;
 namespace Win32Emu.Wasm.Backend;
 
 /// <summary>
-/// WASM-compatible audio backend using Web Audio API and JavaScript interop
+/// WASM-compatible audio backend using Web Audio API and JavaScript interop.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>WASM-Specific Behavior:</b> Due to WebAssembly's single-threaded nature, blocking calls
+/// like <c>.Wait()</c> or <c>.Result</c> on async operations are not supported and will throw
+/// <see cref="PlatformNotSupportedException"/>. This backend uses fire-and-forget patterns
+/// for JavaScript interop calls.
+/// </para>
+/// <para>
+/// The <see cref="Initialize"/> method returns <c>true</c> unconditionally to satisfy the
+/// synchronous interface contract. The actual JavaScript initialization happens asynchronously
+/// and the result is logged but does not affect the synchronous return value. The Blazor
+/// component (Home.razor) properly awaits audio initialization before starting emulation.
+/// </para>
+/// </remarks>
 public class WasmAudioBackend : IAudioBackend
 {
 	private readonly IJSRuntime _jsRuntime;
@@ -44,14 +58,12 @@ public class WasmAudioBackend : IAudioBackend
 		{
 			_logger.LogInformation("[WASM] Initializing audio backend");
 			
-			// Initialize Web Audio API through JavaScript.
-			// In WASM, we cannot use blocking calls like .Wait() or .Result because
-			// WebAssembly runs on a single thread and doesn't support Monitor.Wait.
-			// Instead, we fire the async call and handle the result via continuation.
+			// Fire async initialization - result is logged but doesn't affect synchronous return.
+			// See class remarks for WASM-specific behavior details.
 			_ = InitializeAudioAsync();
 			
-			// Return true optimistically - actual result is handled asynchronously
-			// The Blazor component (Home.razor) also calls initializeAudio with proper await
+			// Return true unconditionally to satisfy interface contract.
+			// Actual JS initialization result is handled asynchronously and logged.
 			return true;
 		}
 		catch (Exception ex)
