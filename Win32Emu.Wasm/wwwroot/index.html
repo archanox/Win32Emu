@@ -36,7 +36,178 @@
 		</button>
 	</div>
 	
+	<!-- In-page console log viewer for mobile debugging -->
+	<div id="page-console">
+		<div id="page-console-header">
+			<span>📋 Console Log</span>
+			<div id="page-console-controls">
+				<button id="page-console-clear" title="Clear logs">🗑️</button>
+				<button id="page-console-minimize" title="Minimize">➖</button>
+			</div>
+		</div>
+		<div id="page-console-content"></div>
+	</div>
+	<button id="page-console-toggle" title="Show Console">📋</button>
+	
 	<script>
+		// ===========================================
+		// In-page Console Log Viewer for Mobile Debugging
+		// ===========================================
+		(function() {
+			const MAX_LOG_ENTRIES = 200;
+			let logEntries = [];
+			let isConsoleVisible = false;
+			
+			// Store original console methods
+			const originalConsole = {
+				log: console.log.bind(console),
+				warn: console.warn.bind(console),
+				error: console.error.bind(console),
+				info: console.info.bind(console),
+				debug: console.debug.bind(console)
+			};
+			
+			function formatValue(value) {
+				if (value === null) return 'null';
+				if (value === undefined) return 'undefined';
+				if (typeof value === 'object') {
+					try {
+						if (value instanceof Error) {
+							return `${value.name}: ${value.message}${value.stack ? '\n' + value.stack : ''}`;
+						}
+						return JSON.stringify(value, null, 2);
+					} catch (e) {
+						return String(value);
+					}
+				}
+				return String(value);
+			}
+			
+			function addLogEntry(level, args) {
+				const timestamp = new Date().toLocaleTimeString();
+				const message = Array.from(args).map(formatValue).join(' ');
+				
+				logEntries.push({ level, timestamp, message });
+				
+				// Limit log entries
+				while (logEntries.length > MAX_LOG_ENTRIES) {
+					logEntries.shift();
+				}
+				
+				updateConsoleDisplay();
+			}
+			
+			function updateConsoleDisplay() {
+				const content = document.getElementById('page-console-content');
+				if (!content) return;
+				
+				const wasAtBottom = content.scrollHeight - content.scrollTop <= content.clientHeight + 50;
+				
+				content.innerHTML = logEntries.map(entry => {
+					const levelClass = `log-${entry.level}`;
+					const escapedMessage = entry.message
+						.replace(/&/g, '&amp;')
+						.replace(/</g, '&lt;')
+						.replace(/>/g, '&gt;')
+						.replace(/\n/g, '<br>');
+					return `<div class="log-entry ${levelClass}"><span class="log-time">[${entry.timestamp}]</span> <span class="log-level">[${entry.level.toUpperCase()}]</span> ${escapedMessage}</div>`;
+				}).join('');
+				
+				// Auto-scroll to bottom if user was already at bottom
+				if (wasAtBottom) {
+					content.scrollTop = content.scrollHeight;
+				}
+			}
+			
+			// Override console methods to capture logs
+			console.log = function(...args) {
+				originalConsole.log(...args);
+				addLogEntry('log', args);
+			};
+			
+			console.warn = function(...args) {
+				originalConsole.warn(...args);
+				addLogEntry('warn', args);
+			};
+			
+			console.error = function(...args) {
+				originalConsole.error(...args);
+				addLogEntry('error', args);
+			};
+			
+			console.info = function(...args) {
+				originalConsole.info(...args);
+				addLogEntry('info', args);
+			};
+			
+			console.debug = function(...args) {
+				originalConsole.debug(...args);
+				addLogEntry('debug', args);
+			};
+			
+			// Initialize console UI when DOM is ready
+			document.addEventListener('DOMContentLoaded', function() {
+				const consoleEl = document.getElementById('page-console');
+				const toggleBtn = document.getElementById('page-console-toggle');
+				const minimizeBtn = document.getElementById('page-console-minimize');
+				const clearBtn = document.getElementById('page-console-clear');
+				
+				if (toggleBtn) {
+					toggleBtn.addEventListener('click', function() {
+						isConsoleVisible = true;
+						consoleEl.style.display = 'flex';
+						toggleBtn.style.display = 'none';
+					});
+				}
+				
+				if (minimizeBtn) {
+					minimizeBtn.addEventListener('click', function() {
+						isConsoleVisible = false;
+						consoleEl.style.display = 'none';
+						toggleBtn.style.display = 'block';
+					});
+				}
+				
+				if (clearBtn) {
+					clearBtn.addEventListener('click', function() {
+						logEntries = [];
+						updateConsoleDisplay();
+					});
+				}
+				
+				// Log initial message
+				console.log('Win32Emu WASM console initialized. Logs will appear here.');
+			});
+			
+			// Export for external access
+			window.pageConsole = {
+				show: function() {
+					const consoleEl = document.getElementById('page-console');
+					const toggleBtn = document.getElementById('page-console-toggle');
+					if (consoleEl) consoleEl.style.display = 'flex';
+					if (toggleBtn) toggleBtn.style.display = 'none';
+					isConsoleVisible = true;
+				},
+				hide: function() {
+					const consoleEl = document.getElementById('page-console');
+					const toggleBtn = document.getElementById('page-console-toggle');
+					if (consoleEl) consoleEl.style.display = 'none';
+					if (toggleBtn) toggleBtn.style.display = 'block';
+					isConsoleVisible = false;
+				},
+				clear: function() {
+					logEntries = [];
+					updateConsoleDisplay();
+				},
+				getLogs: function() {
+					return logEntries.slice();
+				}
+			};
+		})();
+		
+		// ===========================================
+		// Global Error Handling
+		// ===========================================
 		// Global error storage for detailed error messages
 		window.lastError = null;
 		window.errorLog = [];
