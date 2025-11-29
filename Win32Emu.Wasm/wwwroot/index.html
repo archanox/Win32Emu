@@ -41,13 +41,13 @@
 		<div id="page-console-header">
 			<span>📋 Console Log</span>
 			<div id="page-console-controls">
-				<button id="page-console-clear" title="Clear logs">🗑️</button>
-				<button id="page-console-minimize" title="Minimize">➖</button>
+				<button id="page-console-clear" title="Clear logs" aria-label="Clear console logs">🗑️</button>
+				<button id="page-console-minimize" title="Minimize" aria-label="Minimize console">➖</button>
 			</div>
 		</div>
 		<div id="page-console-content"></div>
 	</div>
-	<button id="page-console-toggle" title="Show Console">📋</button>
+	<button id="page-console-toggle" title="Show Console" aria-label="Show Console">📋</button>
 	
 	<script>
 		// ===========================================
@@ -57,6 +57,7 @@
 			const MAX_LOG_ENTRIES = 200;
 			let logEntries = [];
 			let isConsoleVisible = false;
+			let updateScheduled = false;
 			
 			// Store original console methods
 			const originalConsole = {
@@ -66,6 +67,16 @@
 				info: console.info.bind(console),
 				debug: console.debug.bind(console)
 			};
+			
+			// HTML escape function for XSS prevention
+			function escapeHtml(text) {
+				return String(text)
+					.replace(/&/g, '&amp;')
+					.replace(/</g, '&lt;')
+					.replace(/>/g, '&gt;')
+					.replace(/"/g, '&quot;')
+					.replace(/'/g, '&#039;');
+			}
 			
 			function formatValue(value) {
 				if (value === null) return 'null';
@@ -94,7 +105,18 @@
 					logEntries.shift();
 				}
 				
-				updateConsoleDisplay();
+				scheduleUpdate();
+			}
+			
+			// Batch DOM updates using requestAnimationFrame for performance
+			function scheduleUpdate() {
+				if (!updateScheduled) {
+					updateScheduled = true;
+					requestAnimationFrame(() => {
+						updateConsoleDisplay();
+						updateScheduled = false;
+					});
+				}
 			}
 			
 			function updateConsoleDisplay() {
@@ -105,12 +127,10 @@
 				
 				content.innerHTML = logEntries.map(entry => {
 					const levelClass = `log-${entry.level}`;
-					const escapedMessage = entry.message
-						.replace(/&/g, '&amp;')
-						.replace(/</g, '&lt;')
-						.replace(/>/g, '&gt;')
-						.replace(/\n/g, '<br>');
-					return `<div class="log-entry ${levelClass}"><span class="log-time">[${entry.timestamp}]</span> <span class="log-level">[${entry.level.toUpperCase()}]</span> ${escapedMessage}</div>`;
+					// Escape both timestamp and message to prevent XSS
+					const escapedTimestamp = escapeHtml(entry.timestamp);
+					const escapedMessage = escapeHtml(entry.message).replace(/\n/g, '<br>');
+					return `<div class="log-entry ${levelClass}"><span class="log-time">[${escapedTimestamp}]</span> <span class="log-level">[${entry.level.toUpperCase()}]</span> ${escapedMessage}</div>`;
 				}).join('');
 				
 				// Auto-scroll to bottom if user was already at bottom
@@ -260,7 +280,8 @@
 			
 			if (toggleBtn && detailsEl) {
 				toggleBtn.addEventListener('click', function() {
-					if (detailsEl.style.display === 'none') {
+					// Check for empty string or 'none' since CSS sets initial display to none
+					if (detailsEl.style.display === '' || detailsEl.style.display === 'none') {
 						detailsEl.style.display = 'block';
 						toggleBtn.textContent = 'Hide Details';
 					} else {
