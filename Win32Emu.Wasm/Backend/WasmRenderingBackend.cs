@@ -45,8 +45,12 @@ public class WasmRenderingBackend : IRenderingBackend
 			
 			_logger.LogInformation("[WASM] Initializing rendering backend ({Width}x{Height})", width, height);
 			
-			// Initialize canvas through JavaScript
-			_jsRuntime.InvokeVoidAsync("initializeEmulator", _canvasId).AsTask().Wait();
+			// Initialize canvas through JavaScript using fire-and-forget pattern.
+			// In WASM, we cannot use blocking calls like .Wait() or .Result because
+			// WebAssembly runs on a single thread and doesn't support Monitor.Wait.
+			// The canvas is already created in the HTML and the Blazor component
+			// calls initializeEmulator before emulation starts, so this is safe.
+			_ = _jsRuntime.InvokeVoidAsync("initializeEmulator", _canvasId);
 			
 			_initialized = true;
 			_logger.LogInformation("[WASM] Rendering backend initialized successfully");

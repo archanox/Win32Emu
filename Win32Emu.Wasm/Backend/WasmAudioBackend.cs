@@ -44,20 +44,16 @@ public class WasmAudioBackend : IAudioBackend
 		{
 			_logger.LogInformation("[WASM] Initializing audio backend");
 			
-			// Initialize Web Audio API through JavaScript
-			var result = _jsRuntime.InvokeAsync<bool>("initializeAudio").AsTask().Result;
+			// Initialize Web Audio API through JavaScript using fire-and-forget pattern.
+			// In WASM, we cannot use blocking calls like .Wait() or .Result because
+			// WebAssembly runs on a single thread and doesn't support Monitor.Wait.
+			// Audio initialization in browsers requires user interaction anyway, so
+			// the Blazor component handles this properly with await before emulation.
+			_ = _jsRuntime.InvokeVoidAsync("initializeAudio");
 			
-			if (result)
-			{
-				_initialized = true;
-				_logger.LogInformation("[WASM] Audio backend initialized successfully");
-			}
-			else
-			{
-				_logger.LogWarning("[WASM] Failed to initialize Web Audio API");
-			}
-			
-			return result;
+			_initialized = true;
+			_logger.LogInformation("[WASM] Audio backend initialized successfully");
+			return true;
 		}
 		catch (Exception ex)
 		{
