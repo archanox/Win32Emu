@@ -12,7 +12,7 @@ namespace Win32Emu.Tests.Emulator;
 public class DInputModuleTests
 {
     [Fact]
-    public void DirectInputCreateA_ShouldReturnSuccess()
+    public async Task DirectInputCreateA_ShouldReturnSuccess()
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
@@ -45,7 +45,7 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void DirectInputCreate_ShouldInitializeInputBackend()
+    public async Task DirectInputCreate_ShouldInitializeInputBackend()
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
@@ -73,7 +73,7 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void DirectInput8Create_ShouldReturnSuccess()
+    public async Task DirectInput8Create_ShouldReturnSuccess()
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
@@ -101,7 +101,7 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void DirectInputCreateEx_ShouldReturnSuccess()
+    public async Task DirectInputCreateEx_ShouldReturnSuccess()
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
@@ -130,7 +130,7 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void UnknownExport_ShouldReturnFalse()
+    public async Task UnknownExport_ShouldReturnFalse()
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
@@ -148,13 +148,13 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void InputBackend_ShouldEnumerateDevices()
+    public async Task InputBackend_ShouldEnumerateDevices()
     {
         // Arrange
         var backend = new SilkInputBackend(NullLogger.Instance);
         
         // Act
-        backend.InitializeAsync();
+        await backend.InitializeAsync();
         var devices = backend.GetDevices();
 
         // Assert
@@ -164,11 +164,11 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void InputBackend_ShouldOpenAndCloseDevice()
+    public async Task InputBackend_ShouldOpenAndCloseDevice()
     {
         // Arrange
         var backend = new SilkInputBackend(NullLogger.Instance);
-        backend.InitializeAsync();
+        await backend.InitializeAsync();
         var devices = backend.GetDevices();
         var keyboardDevice = devices.First(d => d.Type == IInputBackend.DeviceType.Keyboard);
 
@@ -185,7 +185,7 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void InputState_ShouldHaveKeyboardState()
+    public async Task InputState_ShouldHaveKeyboardState()
     {
         // Arrange
         var state = new IInputBackend.InputState();
@@ -201,7 +201,7 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void InputState_ShouldHaveMouseState()
+    public async Task InputState_ShouldHaveMouseState()
     {
         // Arrange
         var state = new IInputBackend.InputState();
@@ -224,7 +224,7 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void InputState_ShouldHaveJoystickState()
+    public async Task InputState_ShouldHaveJoystickState()
     {
         // Arrange
         var state = new IInputBackend.InputState();
@@ -247,7 +247,7 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void SetDataFormat_ShouldParseAndStoreDataFormat()
+    public async Task SetDataFormat_ShouldParseAndStoreDataFormat()
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
@@ -281,7 +281,7 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void SetCooperativeLevel_ShouldStoreWindowHandleAndFlags()
+    public async Task SetCooperativeLevel_ShouldStoreWindowHandleAndFlags()
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
@@ -310,7 +310,7 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void SetProperty_ShouldParsePropertyHeader()
+    public async Task SetProperty_ShouldParsePropertyHeader()
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
@@ -344,7 +344,7 @@ public class DInputModuleTests
     }
 
     [Fact]
-    public void Acquire_ShouldMarkDeviceAsAcquired()
+    public async Task Acquire_ShouldMarkDeviceAsAcquired()
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);

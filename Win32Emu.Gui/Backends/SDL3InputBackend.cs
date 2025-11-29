@@ -64,13 +64,13 @@ public class Sdl3InputBackend(ILogger logger) : IInputBackend
     }
 
 
-    public bool Initialize()
+    public Task<bool> InitializeAsync()
     {
         lock (_lock)
         {
             if (_initialized)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             try
@@ -84,7 +84,7 @@ public class Sdl3InputBackend(ILogger logger) : IInputBackend
                 if (!SDL.Init(SDL.InitFlags.Joystick | SDL.InitFlags.Gamepad))
                 {
                     _logger.LogError("[SDL3Input] Failed to initialize SDL input: {Error}", SDL.GetError());
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Add keyboard device
@@ -131,12 +131,12 @@ public class Sdl3InputBackend(ILogger logger) : IInputBackend
 
                 _initialized = true;
                 _logger.LogInformation("[SDL3Input] Input backend initialized with {DeviceCount} devices", _devices.Count);
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[SDL3Input] Failed to initialize input backend");
-                return false;
+                return Task.FromResult(false);
             }
         }
     }

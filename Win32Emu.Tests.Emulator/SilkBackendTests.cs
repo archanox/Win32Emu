@@ -7,14 +7,14 @@ namespace Win32Emu.Tests.Emulator;
 public class SilkBackendTests
 {
     [Fact]
-    public void SilkOpenALAudioBackend_Initialize_ShouldNotThrow()
+    public async Task SilkOpenALAudioBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw even if OpenAL is not available
         try
         {
             using var audioBackend = new SilkOpenAlAudioBackend(NullLogger.Instance);
             
-            var result = audioBackend.Initialize();
+            var result = await audioBackend.InitializeAsync();
             // If initialization succeeds, verify state
             if (result)
             {
@@ -33,14 +33,14 @@ public class SilkBackendTests
     }
 
     [Fact]
-    public void SilkOpenALAudioBackend_CreateStream_WhenInitialized_ShouldReturnValidId()
+    public async Task SilkOpenALAudioBackend_CreateStream_WhenInitialized_ShouldReturnValidId()
     {
         // Arrange
         try
         {
             using var audioBackend = new SilkOpenAlAudioBackend(NullLogger.Instance);
             
-            audioBackend.Initialize();
+            await audioBackend.InitializeAsync();
             if (!audioBackend.IsInitialized)
             {
 	            return; // Skip test if OpenAL not available
@@ -64,14 +64,14 @@ public class SilkBackendTests
     }
 
     [Fact]
-    public void SilkOpenALAudioBackend_WriteAudioData_ShouldNotThrow()
+    public async Task SilkOpenALAudioBackend_WriteAudioData_ShouldNotThrow()
     {
         // Arrange
         try
         {
             using var audioBackend = new SilkOpenAlAudioBackend(NullLogger.Instance);
             
-            audioBackend.Initialize();
+            await audioBackend.InitializeAsync();
             if (!audioBackend.IsInitialized)
             {
 	            return; // Skip test if OpenAL not available
@@ -97,14 +97,14 @@ public class SilkBackendTests
     }
 
     [Fact]
-    public void SilkInputBackend_Initialize_ShouldNotThrow()
+    public async Task SilkInputBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw
         using var inputBackend = new SilkInputBackend(NullLogger.Instance);
         
         try
         {
-            var result = inputBackend.Initialize();
+            var result = await inputBackend.InitializeAsync();
             // If initialization succeeds, verify state
             if (result)
             {
@@ -119,14 +119,14 @@ public class SilkBackendTests
     }
 
     [Fact]
-    public void SilkInputBackend_GetDevices_WhenInitialized_ShouldReturnDevices()
+    public async Task SilkInputBackend_GetDevices_WhenInitialized_ShouldReturnDevices()
     {
         // Arrange
         using var inputBackend = new SilkInputBackend(NullLogger.Instance);
         
         try
         {
-            inputBackend.Initialize();
+            await inputBackend.InitializeAsync();
             if (!inputBackend.IsInitialized)
             {
 	            return; // Should not happen
@@ -149,7 +149,7 @@ public class SilkBackendTests
     }
 
     [Fact]
-    public void SilkOpenALAudioBackend_Dispose_ShouldNotThrow()
+    public async Task SilkOpenALAudioBackend_Dispose_ShouldNotThrow()
     {
         // Arrange
         try
@@ -158,7 +158,7 @@ public class SilkBackendTests
             
             try
             {
-                audioBackend.Initialize();
+                await audioBackend.InitializeAsync();
                 if (audioBackend.IsInitialized)
                 {
                     audioBackend.CreateAudioStream(44100, 2, 4096);
@@ -183,14 +183,14 @@ public class SilkBackendTests
     }
 
     [Fact]
-    public void SilkInputBackend_Dispose_ShouldNotThrow()
+    public async Task SilkInputBackend_Dispose_ShouldNotThrow()
     {
         // Arrange
         var inputBackend = new SilkInputBackend(NullLogger.Instance);
         
         try
         {
-            inputBackend.Initialize();
+            await inputBackend.InitializeAsync();
         }
         catch (DllNotFoundException)
         {
@@ -206,14 +206,14 @@ public class SilkBackendTests
     }
 
     [Fact(Skip = "Seems to stall?")]
-    public void SilkVulkanRenderingBackend_Initialize_ShouldNotThrow()
+    public async Task SilkVulkanRenderingBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw even if Vulkan is not available
         try
         {
             using var renderingBackend = new SilkVulkanRenderingBackend(NullLogger.Instance);
             
-            var result = renderingBackend.Initialize(640, 480, "Test Window");
+            var result = await renderingBackend.InitializeAsync(640, 480, "Test Window");
             // If initialization succeeds, verify state
             if (result)
             {
@@ -237,7 +237,7 @@ public class SilkBackendTests
     }
 
     [Fact]
-    public void SilkVulkanRenderingBackend_Dispose_ShouldNotThrow()
+    public async Task SilkVulkanRenderingBackend_Dispose_ShouldNotThrow()
     {
         // Arrange
         try
@@ -246,7 +246,7 @@ public class SilkBackendTests
             
             try
             {
-                renderingBackend.Initialize(640, 480, "Test Window");
+                renderingBackend.InitializeAsync(640, 480, "Test Window");
             }
             catch (Exception)
             {
@@ -270,14 +270,14 @@ public class SilkBackendTests
     }
 
     [Fact]
-    public void SilkGlfwRenderingBackend_Initialize_ShouldNotThrow()
+    public async Task SilkGlfwRenderingBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw even if GLFW is not available
         try
         {
             using var renderingBackend = new SilkGlfwRenderingBackend(NullLogger.Instance);
             
-            var result = renderingBackend.Initialize(640, 480, "Test Window");
+            var result = await renderingBackend.InitializeAsync(640, 480, "Test Window");
             // If initialization succeeds, verify state
             if (result)
             {
@@ -301,7 +301,7 @@ public class SilkBackendTests
     }
 
     [Fact(Skip = "Borked on macOS?")]
-    public void SilkGlfwRenderingBackend_Dispose_ShouldNotThrow()
+    public async Task SilkGlfwRenderingBackend_Dispose_ShouldNotThrow()
     {
         // Arrange
         try
@@ -310,7 +310,7 @@ public class SilkBackendTests
             
             try
             {
-                renderingBackend.Initialize(640, 480, "Test Window");
+                renderingBackend.InitializeAsync(640, 480, "Test Window");
             }
             catch (Exception)
             {

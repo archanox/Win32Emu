@@ -31,11 +31,11 @@ public class WasmInputBackend : IInputBackend
 		_logger = logger;
 	}
 
-	public bool Initialize()
+	public Task<bool> InitializeAsync()
 	{
 		if (_initialized)
 		{
-			return true;
+			return Task.FromResult(true);
 		}
 
 		try
@@ -47,12 +47,12 @@ public class WasmInputBackend : IInputBackend
 			
 			_initialized = true;
 			_logger.LogInformation("[WASM] Input backend initialized successfully");
-			return true;
+			return Task.FromResult(true);
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[WASM] Failed to initialize input backend");
-			return false;
+			return Task.FromResult(false);
 		}
 	}
 
