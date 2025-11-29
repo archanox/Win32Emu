@@ -1622,63 +1622,20 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(6)]
 		private uint DispatchMessageA(uint lpMsg)
 		{
-			if (lpMsg == 0)
-			{
-				_logger.LogInformation("[User32] DispatchMessageA: NULL MSG pointer");
-				return 0;
-			}
-
-			// Read MSG structure
-			var msg = new MsgRef(_env.Memory, lpMsg);
-
-			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}",
-				msg.hwnd, msg.message, msg.wParam, msg.lParam);
-
-			// First, try dispatching through MessageDispatcher asynchronously
-			if (_env.MessageDispatcher.HasHandlers(msg.message))
-			{
-				_logger.LogDebug("[User32] DispatchMessageA: Dispatching through MessageDispatcher");
-				var typedMessage = Messaging.MessageFactory.CreateMessage(msg.hwnd, msg.message, msg.wParam, msg.lParam);
-				// Use async dispatch with synchronous wait (DispatchMessageA is called from emulated code)
-				var dispatchResult = _env.MessageDispatcher.DispatchAsync(typedMessage).GetAwaiter().GetResult();
-				_logger.LogDebug("[User32] DispatchMessageA: MessageDispatcher returned 0x{Result:X8}", dispatchResult);
-				// Continue to window procedure for compatibility
-			}
-
-			// Check if this is a standard control first
-			var windowInfo = _env.GetWindow(msg.hwnd);
-			if (windowInfo.HasValue && StandardControlHandler.IsStandardControl(windowInfo.Value.ClassName))
-			{
-				_logger.LogInformation("[User32] DispatchMessageA: Routing to standard control handler for class '{ClassName}'", windowInfo.Value.ClassName);
-				return _standardControlHandler.HandleMessage(msg.hwnd, msg.message, msg.wParam, msg.lParam, windowInfo.Value.ClassName);
-			}
-
-			// Try to get the window procedure for this window
-			var wndProc = _env.GetWindowProc(msg.hwnd);
-			if (wndProc.HasValue && wndProc.Value != 0)
-			{
-				_logger.LogInformation("[User32] DispatchMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, msg.hwnd);
-
-				var result = CallWindowProcedureAsync(wndProc.Value, msg.hwnd, msg.message, msg.wParam, msg.lParam).GetAwaiter().GetResult();
-				_logger.LogInformation("[User32] DispatchMessageA: WndProc returned 0x{Result:X8}", result);
-				return result;
-			}
-
-			_logger.LogInformation("[User32] DispatchMessageA: No WndProc found for HWND=0x{Hwnd:X8}", msg.hwnd);
-
-			// For now, just return 0 (message processed)
-			return 0;
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to DispatchMessageAsync, bypassing this method
+			return DispatchMessageAsync(lpMsg).GetAwaiter().GetResult();
 		}
 
 		/// <summary>
-		/// Async version of DispatchMessageA that avoids blocking calls.
-		/// This is used on platforms like WASM where .GetAwaiter().GetResult() throws PlatformNotSupportedException.
+		/// Async implementation of DispatchMessageA.
+		/// Dispatches a message to a window procedure.
 		/// </summary>
 		private async Task<uint> DispatchMessageAsync(uint lpMsg, CancellationToken cancellationToken = default)
 		{
 			if (lpMsg == 0)
 			{
-				_logger.LogInformation("[User32] DispatchMessageAsync: NULL MSG pointer");
+				_logger.LogInformation("[User32] DispatchMessageA: NULL MSG pointer");
 				return 0;
 			}
 
@@ -1690,16 +1647,16 @@ namespace Win32Emu.Win32.Modules
 			var msgWParam = msgRef.wParam;
 			var msgLParam = msgRef.lParam;
 
-			_logger.LogInformation("[User32] DispatchMessageAsync: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}",
+			_logger.LogInformation("[User32] DispatchMessageA: HWND=0x{Hwnd:X8} MSG=0x{Message:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}",
 				msgHwnd, msgMessage, msgWParam, msgLParam);
 
 			// First, try dispatching through MessageDispatcher asynchronously
 			if (_env.MessageDispatcher.HasHandlers(msgMessage))
 			{
-				_logger.LogDebug("[User32] DispatchMessageAsync: Dispatching through MessageDispatcher");
+				_logger.LogDebug("[User32] DispatchMessageA: Dispatching through MessageDispatcher");
 				var typedMessage = Messaging.MessageFactory.CreateMessage(msgHwnd, msgMessage, msgWParam, msgLParam);
 				var dispatchResult = await _env.MessageDispatcher.DispatchAsync(typedMessage).ConfigureAwait(false);
-				_logger.LogDebug("[User32] DispatchMessageAsync: MessageDispatcher returned 0x{Result:X8}", dispatchResult);
+				_logger.LogDebug("[User32] DispatchMessageA: MessageDispatcher returned 0x{Result:X8}", dispatchResult);
 				// Continue to window procedure for compatibility
 			}
 
@@ -1707,7 +1664,7 @@ namespace Win32Emu.Win32.Modules
 			var windowInfo = _env.GetWindow(msgHwnd);
 			if (windowInfo.HasValue && StandardControlHandler.IsStandardControl(windowInfo.Value.ClassName))
 			{
-				_logger.LogInformation("[User32] DispatchMessageAsync: Routing to standard control handler for class '{ClassName}'", windowInfo.Value.ClassName);
+				_logger.LogInformation("[User32] DispatchMessageA: Routing to standard control handler for class '{ClassName}'", windowInfo.Value.ClassName);
 				return _standardControlHandler.HandleMessage(msgHwnd, msgMessage, msgWParam, msgLParam, windowInfo.Value.ClassName);
 			}
 
@@ -1715,14 +1672,14 @@ namespace Win32Emu.Win32.Modules
 			var wndProc = _env.GetWindowProc(msgHwnd);
 			if (wndProc.HasValue && wndProc.Value != 0)
 			{
-				_logger.LogInformation("[User32] DispatchMessageAsync: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, msgHwnd);
+				_logger.LogInformation("[User32] DispatchMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, msgHwnd);
 
 				var result = await CallWindowProcedureAsync(wndProc.Value, msgHwnd, msgMessage, msgWParam, msgLParam, cancellationToken).ConfigureAwait(false);
-				_logger.LogInformation("[User32] DispatchMessageAsync: WndProc returned 0x{Result:X8}", result);
+				_logger.LogInformation("[User32] DispatchMessageA: WndProc returned 0x{Result:X8}", result);
 				return result;
 			}
 
-			_logger.LogInformation("[User32] DispatchMessageAsync: No WndProc found for HWND=0x{Hwnd:X8}", msgHwnd);
+			_logger.LogInformation("[User32] DispatchMessageA: No WndProc found for HWND=0x{Hwnd:X8}", msgHwnd);
 
 			// For now, just return 0 (message processed)
 			return 0;
@@ -2224,6 +2181,17 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1)]
 		private uint SendMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to SendMessageAsync, bypassing this method
+			return SendMessageAsync(hwnd, msg, wParam, lParam).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async implementation of SendMessageA.
+		/// Sends the specified message to a window or windows.
+		/// </summary>
+		private async Task<uint> SendMessageAsync(uint hwnd, uint msg, uint wParam, uint lParam, CancellationToken cancellationToken = default)
+		{
 			_logger.LogInformation("[User32] SendMessageA: HWND=0x{Hwnd:X8} MSG=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, msg, wParam, lParam);
 
 			// Check if this is a standard control first
@@ -2234,51 +2202,18 @@ namespace Win32Emu.Win32.Modules
 				return _standardControlHandler.HandleMessage(hwnd, msg, wParam, lParam, windowInfo.Value.ClassName);
 			}
 
-			// SendMessage sends a message directly to the window procedure (synchronous)
-			// Try to get the window procedure for this window
-			var wndProc = _env.GetWindowProc(hwnd);
-			if (wndProc.HasValue && wndProc.Value != 0)
-			{
-				_logger.LogInformation("[User32] SendMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
-				var result = CallWindowProcedureAsync(wndProc.Value, hwnd, msg, wParam, lParam).GetAwaiter().GetResult();
-				_logger.LogInformation("[User32] SendMessageA: WndProc returned 0x{Result:X8}", result);
-				return result;
-			}
-
-			_logger.LogInformation("[User32] SendMessageA: No WndProc found for HWND=0x{Hwnd:X8}", hwnd);
-
-			// For now, return 0 (message processed)
-			return 0;
-		}
-
-		/// <summary>
-		/// Async version of SendMessageA that avoids blocking calls.
-		/// This is used on platforms like WASM where .GetAwaiter().GetResult() throws PlatformNotSupportedException.
-		/// </summary>
-		private async Task<uint> SendMessageAsync(uint hwnd, uint msg, uint wParam, uint lParam, CancellationToken cancellationToken = default)
-		{
-			_logger.LogInformation("[User32] SendMessageAsync: HWND=0x{Hwnd:X8} MSG=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, msg, wParam, lParam);
-
-			// Check if this is a standard control first
-			var windowInfo = _env.GetWindow(hwnd);
-			if (windowInfo.HasValue && StandardControlHandler.IsStandardControl(windowInfo.Value.ClassName))
-			{
-				_logger.LogInformation("[User32] SendMessageAsync: Routing to standard control handler for class '{ClassName}'", windowInfo.Value.ClassName);
-				return _standardControlHandler.HandleMessage(hwnd, msg, wParam, lParam, windowInfo.Value.ClassName);
-			}
-
 			// SendMessage sends a message directly to the window procedure
 			// Try to get the window procedure for this window
 			var wndProc = _env.GetWindowProc(hwnd);
 			if (wndProc.HasValue && wndProc.Value != 0)
 			{
-				_logger.LogInformation("[User32] SendMessageAsync: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
+				_logger.LogInformation("[User32] SendMessageA: Found WndProc=0x{WndProc:X8} for HWND=0x{Hwnd:X8}", wndProc.Value, hwnd);
 				var result = await CallWindowProcedureAsync(wndProc.Value, hwnd, msg, wParam, lParam, cancellationToken).ConfigureAwait(false);
-				_logger.LogInformation("[User32] SendMessageAsync: WndProc returned 0x{Result:X8}", result);
+				_logger.LogInformation("[User32] SendMessageA: WndProc returned 0x{Result:X8}", result);
 				return result;
 			}
 
-			_logger.LogInformation("[User32] SendMessageAsync: No WndProc found for HWND=0x{Hwnd:X8}", hwnd);
+			_logger.LogInformation("[User32] SendMessageA: No WndProc found for HWND=0x{Hwnd:X8}", hwnd);
 
 			// For now, return 0 (message processed)
 			return 0;
@@ -2425,10 +2360,20 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1)]
 		private uint UpdateWindow(uint hwnd)
 		{
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to UpdateWindowAsync, bypassing this method
+			return UpdateWindowAsync(hwnd).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async implementation of UpdateWindow.
+		/// Updates the client area of the specified window by sending a WM_PAINT message.
+		/// </summary>
+		private async Task<uint> UpdateWindowAsync(uint hwnd, CancellationToken cancellationToken = default)
+		{
 			_logger.LogInformation("[User32] UpdateWindow: HWND=0x{Hwnd:X8}", hwnd);
 
 			// UpdateWindow sends WM_PAINT directly if the window has an update region
-			// This is synchronous - it calls the window procedure directly
 			const uint WM_PAINT = 0x000F;
 
 			// Check if window exists
@@ -2439,35 +2384,8 @@ namespace Win32Emu.Win32.Modules
 				return 0; // FALSE
 			}
 
-			// Send WM_PAINT message to the window
-			// In a real implementation, this would only send if the window has an update region
-			_logger.LogInformation("[User32] UpdateWindow: Sending WM_PAINT to HWND=0x{Hwnd:X8}", hwnd);
-			SendMessageA(hwnd, WM_PAINT, 0, 0);
-
-			return 1; // TRUE
-		}
-
-		/// <summary>
-		/// Async version of UpdateWindow that avoids blocking calls.
-		/// This is used on platforms like WASM where .GetAwaiter().GetResult() throws PlatformNotSupportedException.
-		/// </summary>
-		private async Task<uint> UpdateWindowAsync(uint hwnd, CancellationToken cancellationToken = default)
-		{
-			_logger.LogInformation("[User32] UpdateWindowAsync: HWND=0x{Hwnd:X8}", hwnd);
-
-			// UpdateWindow sends WM_PAINT directly if the window has an update region
-			const uint WM_PAINT = 0x000F;
-
-			// Check if window exists
-			var windowInfo = _env.GetWindow(hwnd);
-			if (!windowInfo.HasValue)
-			{
-				_logger.LogWarning("[User32] UpdateWindowAsync: Window 0x{Hwnd:X8} not found", hwnd);
-				return 0; // FALSE
-			}
-
 			// Send WM_PAINT message to the window using async version
-			_logger.LogInformation("[User32] UpdateWindowAsync: Sending WM_PAINT to HWND=0x{Hwnd:X8}", hwnd);
+			_logger.LogInformation("[User32] UpdateWindow: Sending WM_PAINT to HWND=0x{Hwnd:X8}", hwnd);
 			await SendMessageAsync(hwnd, WM_PAINT, 0, 0, cancellationToken).ConfigureAwait(false);
 
 			return 1; // TRUE
