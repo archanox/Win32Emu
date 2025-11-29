@@ -2130,12 +2130,19 @@ public sealed class Emulator : IDisposable
     /// <summary>
     /// Synchronous wrapper for HandleSyscallAsync for use in non-WASM execution modes
     /// (enhanced debugging, interactive debugger) where blocking is acceptable.
-    /// On WASM, use HandleSyscallAsync directly.
     /// </summary>
+    /// <remarks>
+    /// WARNING: This method uses GetAwaiter().GetResult() which can cause deadlocks
+    /// in UI or ASP.NET contexts. It should ONLY be called from:
+    /// - RunWithEnhancedDebugging (inherently synchronous, not used on WASM)
+    /// - RunWithInteractiveDebugger (inherently synchronous, not used on WASM)
+    /// On WASM, the async RunNormalAsync calls HandleSyscallAsync directly.
+    /// </remarks>
     private bool HandleSyscall()
     {
         // Use GetAwaiter().GetResult() for sync contexts (non-WASM)
-        // This is safe on desktop/server runtimes where blocking is allowed
+        // This is safe on desktop/server runtimes in these specific contexts where
+        // there's no synchronization context that could cause deadlock
         return HandleSyscallAsync().GetAwaiter().GetResult();
     }
 
