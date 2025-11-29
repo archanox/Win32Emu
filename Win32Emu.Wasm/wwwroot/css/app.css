@@ -48,13 +48,24 @@ a, .btn-link {
     position: fixed;
     width: 100%;
     z-index: 1000;
+    max-height: 50vh;
+    overflow-y: auto;
 }
+
+    #blazor-error-ui #blazor-error-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
 
     #blazor-error-ui .dismiss {
         cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
+        margin-left: auto;
+        font-size: 1.2em;
+    }
+    
+    #blazor-error-ui .reload {
+        margin-left: 10px;
     }
 
 .blazor-error-boundary {
