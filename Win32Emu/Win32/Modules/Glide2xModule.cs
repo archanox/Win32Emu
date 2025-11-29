@@ -1518,7 +1518,7 @@ namespace Win32Emu.Win32.Modules
 			if (!_renderingBackend.IsInitialized)
 			{
 				var title = "Win32Emu - 3Dfx Glide";
-				var success = _renderingBackend.Initialize(_width, _height, title);
+				var success = _renderingBackend.InitializeAsync(_width, _height, title).GetAwaiter().GetResult();
 				
 				if (!success)
 				{

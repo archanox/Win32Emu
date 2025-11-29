@@ -115,7 +115,7 @@ namespace Win32Emu.Win32.Modules
 			if (_env.AudioBackend == null && _env.BackendFactory != null)
 			{
 				_env.AudioBackend = _env.BackendFactory.CreateAudioBackend(_logger);
-				_env.AudioBackend.Initialize();
+				_env.AudioBackend.InitializeAsync().GetAwaiter().GetResult();
 			}
 
 // Create COM vtable for IDirectSound interface
@@ -667,7 +667,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogWarning("[DSound] SetCooperativeLevel: Audio backend not initialized, initializing now");
 				_env.AudioBackend = _env.BackendFactory?.CreateAudioBackend(_logger);
-				if (!_env.AudioBackend.Initialize())
+				if (!_env.AudioBackend.InitializeAsync().GetAwaiter().GetResult())
 				{
 					_logger.LogError("[DSound] SetCooperativeLevel: Failed to initialize audio backend");
 					return 0x80004005; // E_FAIL

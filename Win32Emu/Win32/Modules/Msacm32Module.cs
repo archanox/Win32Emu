@@ -141,7 +141,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 		if (_env.AudioBackend == null && _env.BackendFactory != null)
 		{
 			_env.AudioBackend = _env.BackendFactory.CreateAudioBackend(_logger);
-			_env.AudioBackend.Initialize();
+			_env.AudioBackend.InitializeAsync().GetAwaiter().GetResult();
 		}
 
 		// Parse source wave format (WAVEFORMATEX structure)

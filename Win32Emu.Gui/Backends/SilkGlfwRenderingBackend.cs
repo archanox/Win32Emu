@@ -50,13 +50,13 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
         _glfw = Glfw.GetApi();
     }
 
-    public bool Initialize(int width, int height, string title = "Win32Emu Display")
+    public Task<bool> InitializeAsync(int width, int height, string title = "Win32Emu Display")
     {
         lock (_lock)
         {
             if (_initialized)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             _width = width;
@@ -74,7 +74,7 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             if (!_glfw.Init())
             {
                 _logger.LogError("[SilkGLFW] Failed to initialize GLFW");
-                return false;
+                return Task.FromResult(false);
             }
             _logger.LogInformation("[SilkGLFW] GLFW initialized successfully");
 
@@ -95,7 +95,7 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
             {
                 _logger.LogError("[SilkGLFW] Failed to create window");
                 _glfw.Terminate();
-                return false;
+                return Task.FromResult(false);
             }
             _logger.LogInformation("[SilkGLFW] Window created successfully");
 
@@ -109,7 +109,7 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
                 _logger.LogError("[SilkGLFW] Failed to load OpenGL");
                 _glfw.DestroyWindow(_window);
                 _glfw.Terminate();
-                return false;
+                return Task.FromResult(false);
             }
             _logger.LogInformation("[SilkGLFW] OpenGL loaded successfully");
 
@@ -144,7 +144,7 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
                 _gl.DeleteTexture(_textureId);
                 _glfw.DestroyWindow(_window);
                 _glfw.Terminate();
-                return false;
+                return Task.FromResult(false);
             }
 
             // Set up hardware acceleration pipeline for Glide2x
@@ -154,7 +154,7 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
                 _gl.DeleteTexture(_textureId);
                 _glfw.DestroyWindow(_window);
                 _glfw.Terminate();
-                return false;
+                return Task.FromResult(false);
             }
 
             // Set up window callbacks for lifecycle events
@@ -208,7 +208,7 @@ public unsafe class SilkGlfwRenderingBackend : IRenderingBackend
 
             _initialized = true;
             _logger.LogInformation("[SilkGLFW] Initialized {Width}x{Height} display", width, height);
-            return true;
+            return Task.FromResult(true);
         }
     }
 

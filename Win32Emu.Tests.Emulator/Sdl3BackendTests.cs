@@ -14,7 +14,7 @@ public class Sdl3BackendTests
         {
             using var audioBackend = new Sdl3AudioBackend(NullLogger.Instance);
             
-            var result = audioBackend.Initialize();
+            var result = audioBackend.InitializeAsync();
             // If initialization succeeds, verify state
             if (result)
             {
@@ -40,7 +40,7 @@ public class Sdl3BackendTests
         {
             using var audioBackend = new Sdl3AudioBackend(NullLogger.Instance);
             
-            audioBackend.Initialize();
+            audioBackend.InitializeAsync();
             if (!audioBackend.IsInitialized)
             {
                 return; // Skip test if SDL3 not available
@@ -79,7 +79,7 @@ public class Sdl3BackendTests
         {
             using var audioBackend = new Sdl3AudioBackend(NullLogger.Instance);
             
-            audioBackend.Initialize();
+            audioBackend.InitializeAsync();
             if (!audioBackend.IsInitialized)
             {
                 return; // Skip test if SDL3 not available
@@ -121,7 +121,7 @@ public class Sdl3BackendTests
             
             try
             {
-                audioBackend.Initialize();
+                audioBackend.InitializeAsync();
                 if (audioBackend.IsInitialized)
                 {
                     audioBackend.CreateAudioStream(44100, 2, 4096);
@@ -153,7 +153,7 @@ public class Sdl3BackendTests
         
         try
         {
-            var result = inputBackend.Initialize();
+            var result = inputBackend.InitializeAsync();
             // If initialization succeeds, verify state
             if (result)
             {
@@ -180,7 +180,7 @@ public class Sdl3BackendTests
         
         try
         {
-            inputBackend.Initialize();
+            inputBackend.InitializeAsync();
             if (!inputBackend.IsInitialized)
             {
                 return; // Should not happen but skip if it does
@@ -214,7 +214,7 @@ public class Sdl3BackendTests
         
         try
         {
-            inputBackend.Initialize();
+            inputBackend.InitializeAsync();
         }
         catch (DllNotFoundException)
         {
@@ -240,7 +240,7 @@ public class Sdl3BackendTests
         {
             using var renderingBackend = new Sdl3RenderingBackend(NullLogger.Instance);
             
-            var result = renderingBackend.Initialize(640, 480, "Test Window");
+            var result = renderingBackend.InitializeAsync(640, 480, "Test Window");
             // If initialization succeeds, verify state
             if (result)
             {
@@ -273,7 +273,7 @@ public class Sdl3BackendTests
             
             try
             {
-                renderingBackend.Initialize(640, 480, "Test Window");
+                renderingBackend.InitializeAsync(640, 480, "Test Window");
             }
             catch (Exception)
             {
@@ -304,7 +304,7 @@ public class Sdl3BackendTests
         {
             using var renderingBackend = new Sdl3RenderingBackend(NullLogger.Instance);
             
-            if (!renderingBackend.Initialize(640, 480, "Test Window"))
+            if (!renderingBackend.InitializeAsync(640, 480, "Test Window"))
             {
                 return; // Skip test if initialization fails
             }

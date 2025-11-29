@@ -30,13 +30,13 @@ public class AvaloniaRenderingBackend : IRenderingBackend
         _host = host ?? throw new ArgumentNullException(nameof(host));
     }
 
-    public bool Initialize(int width, int height, string title = "Win32Emu Display")
+    public Task<bool> InitializeAsync(int width, int height, string title = "Win32Emu Display")
     {
         lock (_lock)
         {
             if (_initialized)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             _width = width;
@@ -46,7 +46,7 @@ public class AvaloniaRenderingBackend : IRenderingBackend
 
             _initialized = true;
             _logger.LogInformation("[Avalonia] Avalonia rendering backend initialized successfully");
-            return true;
+            return Task.FromResult(true);
         }
     }
 

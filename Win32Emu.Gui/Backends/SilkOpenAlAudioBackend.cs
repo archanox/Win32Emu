@@ -36,13 +36,13 @@ public unsafe class SilkOpenAlAudioBackend : IAudioBackend
         _alc = ALContext.GetApi();
     }
 
-    public bool Initialize()
+    public Task<bool> InitializeAsync()
     {
         lock (_lock)
         {
             if (_initialized)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             // Open default audio device
@@ -50,7 +50,7 @@ public unsafe class SilkOpenAlAudioBackend : IAudioBackend
             if (_device == null)
             {
                 _logger.LogError("[SilkOpenAL] Failed to open audio device");
-                return false;
+                return Task.FromResult(false);
             }
 
             // Create context
@@ -59,7 +59,7 @@ public unsafe class SilkOpenAlAudioBackend : IAudioBackend
             {
                 _logger.LogError("[SilkOpenAL] Failed to create audio context");
                 _alc.CloseDevice(_device);
-                return false;
+                return Task.FromResult(false);
             }
 
             if (!_alc.MakeContextCurrent(_context))
@@ -67,12 +67,12 @@ public unsafe class SilkOpenAlAudioBackend : IAudioBackend
                 _logger.LogError("[SilkOpenAL] Failed to make context current");
                 _alc.DestroyContext(_context);
                 _alc.CloseDevice(_device);
-                return false;
+                return Task.FromResult(false);
             }
 
             _initialized = true;
             _logger.LogInformation("[SilkOpenAL] AudioBackend initialized");
-            return true;
+            return Task.FromResult(true);
         }
     }
 
