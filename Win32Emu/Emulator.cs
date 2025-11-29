@@ -1190,7 +1190,9 @@ public sealed class Emulator : IDisposable
             // The syscall dispatcher triggers INT 0x80, we handle it, then CPU executes RET naturally
             if (step.IsSyscall)
             {
-                HandleSyscall();
+                // Use async syscall handler to support async Win32 API implementations
+                // This is required for WASM where blocking operations are not supported
+                await HandleSyscallAsync().ConfigureAwait(false);
                 iterationsSinceLastSyscall = 0; // Reset counter on syscall
                 continue; // Continue to next iteration, let CPU execute RET
             }
@@ -1938,7 +1940,13 @@ public sealed class Emulator : IDisposable
     /// Handles syscall (INT 0x80) from import stubs.
     /// Returns true if the syscall was handled and execution should continue to next instruction.
     /// </summary>
-    private bool HandleSyscall()
+    /// <summary>
+    /// Async version of HandleSyscall that supports async Win32 API implementations.
+    /// This is required for WASM where blocking operations (like Task.Wait()) are not supported.
+    /// On WASM, this enables proper async execution of APIs like UpdateWindow that need to call
+    /// back into emulated code (e.g., window procedures).
+    /// </summary>
+    private async Task<bool> HandleSyscallAsync(CancellationToken cancellationToken = default)
     {
         // The stack looks like:
         // [ESP+0] = return address to import stub (points to RET instruction after CALL)
@@ -2000,7 +2008,9 @@ public sealed class Emulator : IDisposable
             
             _cpu.SetRegister("ESP", esp + 4);
             
-            if (_dispatcher!.TryInvoke(dll, name, _cpu, _vm!, out var ret, out var argBytes))
+            // Use async dispatcher to support async Win32 API implementations (required for WASM)
+            var (success, ret, argBytes, _) = await _dispatcher!.TryInvokeAsync(dll, name, _cpu, _vm!, cancellationToken).ConfigureAwait(false);
+            if (success)
             {
                 // DEBUG: Log stack contents after API call
                 var returnToCallerAfter = _vm!.Read32(returnToCallerAddr);
@@ -2115,6 +2125,18 @@ public sealed class Emulator : IDisposable
         }
         
         return true;
+    }
+
+    /// <summary>
+    /// Synchronous wrapper for HandleSyscallAsync for use in non-WASM execution modes
+    /// (enhanced debugging, interactive debugger) where blocking is acceptable.
+    /// On WASM, use HandleSyscallAsync directly.
+    /// </summary>
+    private bool HandleSyscall()
+    {
+        // Use GetAwaiter().GetResult() for sync contexts (non-WASM)
+        // This is safe on desktop/server runtimes where blocking is allowed
+        return HandleSyscallAsync().GetAwaiter().GetResult();
     }
 
     private static uint GetCallTarget(ICpu cpu, VirtualMemory vm)
