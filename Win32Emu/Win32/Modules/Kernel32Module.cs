@@ -5324,6 +5324,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// The pseudo handle need not be closed when it is no longer needed. Calling the CloseHandle function with a pseudo handle has no effect.
 	/// If the pseudo handle is duplicated by DuplicateHandle, the duplicate handle must be closed.
 	/// </remarks>
+	[DllModuleExport(189, Version = "4.90.0.3000")]
+	[DllModuleExport(36)]
 	private uint GetCurrentThread()
 	{
 		// Return pseudo-handle for current thread
