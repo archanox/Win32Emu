@@ -33,13 +33,6 @@ public class WasmAudioBackend : IAudioBackend
 		_logger = logger;
 	}
 
-	/// <summary>
-	/// Initializes the audio backend. In WASM, this always returns true because:
-	/// 1. We cannot use blocking calls (WASM is single-threaded)
-	/// 2. Browser audio requires user interaction to start (autoplay policies)
-	/// 3. The Blazor component (Home.razor) handles proper async initialization with user interaction
-	/// </summary>
-	/// <returns>Always true in WASM. Actual audio availability depends on browser state.</returns>
 	public bool Initialize()
 	{
 		if (_initialized)
@@ -51,23 +44,42 @@ public class WasmAudioBackend : IAudioBackend
 		{
 			_logger.LogInformation("[WASM] Initializing audio backend");
 			
-			// Initialize Web Audio API through JavaScript using fire-and-forget pattern.
+			// Initialize Web Audio API through JavaScript.
 			// In WASM, we cannot use blocking calls like .Wait() or .Result because
 			// WebAssembly runs on a single thread and doesn't support Monitor.Wait.
-			// Audio initialization in browsers requires user interaction anyway, so
-			// the Blazor component handles this properly with await before emulation.
-			// Note: This always returns true - actual audio availability depends on
-			// browser state and user interaction.
-			_ = _jsRuntime.InvokeVoidAsync("initializeAudio");
+			// Instead, we fire the async call and handle the result via continuation.
+			_ = InitializeAudioAsync();
 			
-			_initialized = true;
-			_logger.LogInformation("[WASM] Audio backend initialized (actual availability depends on browser)");
+			// Return true optimistically - actual result is handled asynchronously
+			// The Blazor component (Home.razor) also calls initializeAudio with proper await
 			return true;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[WASM] Failed to initialize audio backend");
 			return false;
+		}
+	}
+
+	private async Task InitializeAudioAsync()
+	{
+		try
+		{
+			var result = await _jsRuntime.InvokeAsync<bool>("initializeAudio");
+			
+			if (result)
+			{
+				_initialized = true;
+				_logger.LogInformation("[WASM] Audio backend initialized successfully");
+			}
+			else
+			{
+				_logger.LogWarning("[WASM] Failed to initialize Web Audio API");
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[WASM] Failed to initialize audio backend asynchronously");
 		}
 	}
 
