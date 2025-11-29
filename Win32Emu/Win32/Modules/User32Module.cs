@@ -1130,6 +1130,12 @@ namespace Win32Emu.Win32.Modules
 
 				case "UPDATEWINDOW":
 					return (true, await UpdateWindowAsync(a.UInt32(0), cancellationToken).ConfigureAwait(false));
+
+				case "DIALOGBOXPARAMA":
+					return (true, await DialogBoxParamAsync(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), cancellationToken).ConfigureAwait(false));
+
+				case "ENUMWINDOWS":
+					return (true, await EnumWindowsAsync(a.UInt32(0), a.UInt32(1), cancellationToken).ConfigureAwait(false));
 			}
 
 			// For all other APIs, use synchronous implementation
@@ -2778,7 +2784,8 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1)]
 		private uint DialogBoxParamA(uint hInstance, uint lpTemplateName, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
 		{
-			// Synchronous wrapper around async implementation
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to DialogBoxParamAsync, bypassing this method
 			return DialogBoxParamAsync(hInstance, lpTemplateName, hWndParent, lpDialogFunc, dwInitParam, CancellationToken.None).GetAwaiter().GetResult();
 		}
 
@@ -4825,6 +4832,8 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint EnumWindows(uint lpEnumFunc, uint lParam)
 		{
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to EnumWindowsAsync, bypassing this method
 			return EnumWindowsAsync(lpEnumFunc, lParam).GetAwaiter().GetResult();
 		}
 

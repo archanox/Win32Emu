@@ -9,7 +9,7 @@ using static Win32Emu.Win32.NativeTypes;
 
 namespace Win32Emu.Win32.Modules
 {
-	public class DSoundModule : IWin32ModuleUnsafe
+	public class DSoundModule : IWin32ModuleAsync
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
@@ -60,6 +60,38 @@ namespace Win32Emu.Win32.Modules
 					_logger.LogInformation("[DSound] Unimplemented export: {Export}", export);
 					return false;
 			}
+		}
+
+		/// <summary>
+		/// Async implementation for Win32 APIs that may call back into emulated code.
+		/// Routes APIs through async paths to avoid blocking calls that fail on WASM.
+		/// </summary>
+		public async Task<(bool success, uint returnValue)> TryInvokeAsync(
+			string export,
+			ICpu cpu,
+			VirtualMemory memory,
+			CancellationToken cancellationToken = default)
+		{
+			_cpu = cpu;
+			_memory = memory;
+			var a = new StackArgs(cpu, memory);
+
+			// Route APIs through async paths to avoid .GetAwaiter().GetResult()
+			// which throws PlatformNotSupportedException on WASM
+			switch (export.ToUpperInvariant())
+			{
+				case "DIRECTSOUNDENUMERATEA":
+					return (true, await DirectSoundEnumerateAAsync(a.UInt32(0), a.UInt32(1), cancellationToken).ConfigureAwait(false));
+			}
+
+			// For all other APIs, use synchronous implementation
+			if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
+			{
+				return (true, syncReturnValue);
+			}
+
+			// No async work performed; return failure immediately
+			return (false, 0);
 		}
 
 		[DllModuleExport(1, entryPoint: 0x0002C7DF, Version = "4.90.0.3000")]
@@ -119,6 +151,8 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(2, entryPoint: 0x0002708D, Version = "5.1.2600.6532")]
 		private uint DirectSoundEnumerateA(uint lpDsEnumCallback, uint lpContext)
 		{
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to DirectSoundEnumerateAAsync, bypassing this method
 			_logger.LogInformation("[DSound] DirectSoundEnumerateA(lpDSEnumCallback=0x{LpDsEnumCallback:X8}, lpContext=0x{LpContext:X8})", lpDsEnumCallback, lpContext);
 
 			// If no callback is provided, just return success
@@ -128,7 +162,6 @@ namespace Win32Emu.Win32.Modules
 				return 0; // DS_OK
 			}
 
-			// Use async implementation internally for better stack separation
 			return DirectSoundEnumerateAAsync(lpDsEnumCallback, lpContext).GetAwaiter().GetResult();
 		}
 
