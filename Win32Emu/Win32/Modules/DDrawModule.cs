@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using Win32Emu.Threading;
 using Win32Emu.Win32.COM;
 using Win32Emu.Win32.DirectDraw;
 using static Win32Emu.Win32.NativeTypes;
@@ -3108,28 +3109,39 @@ namespace Win32Emu.Win32.Modules
 				}
 				else if (obj.RenderingBackend != null)
 				{
-					var success = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title).GetAwaiter().GetResult();
-					if (!success)
+					// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
+					// Fire-and-forget the initialization - the backend will self-mark as initialized.
+					// Subsequent render calls will check IsInitialized before attempting to render.
+					if (PlatformHelpers.IsWasm)
 					{
-						// In headless/nogui mode (Host == null), rendering backend initialization may fail
-						// due to lack of video device. This is expected and should not cause the application to crash.
-						// We log the failure but still return success to allow headless testing.
-						if (_env.Host == null)
-						{
-							_logger.LogWarning("[DDraw] Failed to initialize rendering backend in headless mode (expected - no video device)");
-							_logger.LogInformation("[DDraw] SetDisplayMode succeeded in headless mode (rendering disabled)");
-						}
-						else
-						{
-							// In GUI mode, initialization failure is an actual error
-							_logger.LogError("[DDraw] Failed to initialize rendering backend");
-							_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
-							return (uint)DDResult.DDERR_GENERIC;
-						}
+						_ = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title);
+						_logger.LogInformation("[DDraw] Rendering backend initialization started asynchronously (WASM mode)");
 					}
 					else
 					{
-						_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}", dwWidth, dwHeight);
+						var success = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title).GetAwaiter().GetResult();
+						if (!success)
+						{
+							// In headless/nogui mode (Host == null), rendering backend initialization may fail
+							// due to lack of video device. This is expected and should not cause the application to crash.
+							// We log the failure but still return success to allow headless testing.
+							if (_env.Host == null)
+							{
+								_logger.LogWarning("[DDraw] Failed to initialize rendering backend in headless mode (expected - no video device)");
+								_logger.LogInformation("[DDraw] SetDisplayMode succeeded in headless mode (rendering disabled)");
+							}
+							else
+							{
+								// In GUI mode, initialization failure is an actual error
+								_logger.LogError("[DDraw] Failed to initialize rendering backend");
+								_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
+								return (uint)DDResult.DDERR_GENERIC;
+							}
+						}
+						else
+						{
+							_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}", dwWidth, dwHeight);
+						}
 					}
 				}
 
