@@ -273,7 +273,7 @@ public class Sdl3BackendTests
             
             try
             {
-                renderingBackend.InitializeAsync(640, 480, "Test Window");
+                await renderingBackend.InitializeAsync(640, 480, "Test Window");
             }
             catch (Exception)
             {
