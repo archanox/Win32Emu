@@ -4,7 +4,6 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
     <!-- AllowUnsafeBlocks is disabled as DirectDraw has been made WASM-safe using safe Span operations -->
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <!-- Enable WASM SIMD for better performance -->
