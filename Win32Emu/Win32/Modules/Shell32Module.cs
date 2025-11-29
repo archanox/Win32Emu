@@ -10,7 +10,7 @@ namespace Win32Emu.Win32.Modules;
 /// <summary>
 /// SHELL32.DLL module - provides Windows Shell functions including file operations and special folders.
 /// </summary>
-public partial class Shell32Module : IWin32ModuleUnsafe
+public partial class Shell32Module : IWin32ModuleAsync
 {
 	private readonly ProcessEnvironment _env;
 	private readonly uint _imageBase;
@@ -119,11 +119,52 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 	}
 
 	/// <summary>
+	/// Async implementation for Win32 APIs that may call back into emulated code or need async host interactions.
+	/// Routes APIs through async paths to avoid blocking calls that fail on WASM.
+	/// </summary>
+	public async Task<(bool success, uint returnValue)> TryInvokeAsync(
+		string export,
+		ICpu cpu,
+		VirtualMemory memory,
+		CancellationToken cancellationToken = default)
+	{
+		var a = new StackArgs(cpu, memory);
+
+		// Route APIs through async paths to avoid .GetAwaiter().GetResult()
+		// which throws PlatformNotSupportedException on WASM
+		switch (export.ToUpperInvariant())
+		{
+			case "SHBROWSEFORFOLDERA":
+				return (true, await SHBrowseForFolderAAsync(a.UInt32(0), cancellationToken).ConfigureAwait(false));
+		}
+
+		// For all other APIs, use synchronous implementation
+		if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
+		{
+			return (true, syncReturnValue);
+		}
+
+		// No async work performed; return failure immediately
+		return (false, 0);
+	}
+
+	/// <summary>
 	/// Displays a dialog box that enables the user to select a Shell folder.
 	/// PIDLIST_ABSOLUTE SHBrowseForFolderA([in] LPBROWSEINFOA lpbi);
 	/// </summary>
 	[DllModuleExport(8)]
 	private uint SHBrowseForFolderA(uint lpbi)
+	{
+		// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+		// On WASM, TryInvokeAsync routes directly to SHBrowseForFolderAAsync, bypassing this method
+		return SHBrowseForFolderAAsync(lpbi).GetAwaiter().GetResult();
+	}
+
+	/// <summary>
+	/// Async implementation of SHBrowseForFolderA.
+	/// Displays a dialog box that enables the user to select a Shell folder.
+	/// </summary>
+	private async Task<uint> SHBrowseForFolderAAsync(uint lpbi, CancellationToken cancellationToken = default)
 	{
 		LogSHBrowseForFolderA(lpbi);
 
@@ -135,15 +176,20 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 
 		// Read BROWSEINFO structure using ref struct
 		var bi = new BrowseInfoARef(_env.Memory, lpbi);
+		// Extract values before any await - ref struct can't be used across await boundaries
+		var hwndOwner = bi.hwndOwner;
+		var ulFlags = bi.ulFlags;
+		var lpszTitle = bi.lpszTitle;
+		var pszDisplayName = bi.pszDisplayName;
 
 		_logger.LogInformation("[Shell32] SHBrowseForFolderA: hwndOwner=0x{HwndOwner:X8}, flags=0x{Flags:X}, title=0x{Title:X8}",
-			bi.hwndOwner, bi.ulFlags, bi.lpszTitle);
+			hwndOwner, ulFlags, lpszTitle);
 
 		// Read title string if provided
 		string? title = null;
-		if (bi.lpszTitle != 0)
+		if (lpszTitle != 0)
 		{
-			title = ReadNullTerminatedString(bi.lpszTitle);
+			title = ReadNullTerminatedString(lpszTitle);
 			if (string.IsNullOrEmpty(title))
 			{
 				title = "Browse For Folder";
@@ -161,8 +207,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			try
 			{
 				// Call host's folder browser (this will show the Avalonia dialog)
-				// Using GetAwaiter().GetResult() to avoid potential deadlocks from task.Wait()
-				selectedPath = _env.Host.OnBrowseForFolder(title, null).GetAwaiter().GetResult();
+				selectedPath = await _env.Host.OnBrowseForFolder(title, null).ConfigureAwait(false);
 			}
 			catch (AggregateException ex)
 			{
@@ -200,7 +245,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 		_pidlToPathMap[pidlAddr] = selectedPath;
 
 		// Provide folder name in pszDisplayName buffer if it exists
-		if (bi.pszDisplayName != 0)
+		if (pszDisplayName != 0)
 		{
 			// Extract just the folder name from the full path
 			var folderName = System.IO.Path.GetFileName(selectedPath.TrimEnd('\\'));
@@ -213,7 +258,7 @@ public partial class Shell32Module : IWin32ModuleUnsafe
 			var nameBytes = System.Text.Encoding.ASCII.GetBytes(folderName + '\0');
 			for (int i = 0; i < nameBytes.Length && i < 260; i++)
 			{
-				_env.MemWrite8(bi.pszDisplayName + (uint)i, nameBytes[i]);
+				_env.MemWrite8(pszDisplayName + (uint)i, nameBytes[i]);
 			}
 		}
 
