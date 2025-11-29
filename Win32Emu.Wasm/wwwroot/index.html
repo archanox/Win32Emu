@@ -23,12 +23,126 @@
 	</div>
 
 	<div id="blazor-error-ui">
-		An unhandled error has occurred.
-		<a href="." class="reload">Reload</a>
-		<span class="dismiss">🗙</span>
+		<div id="blazor-error-header">
+			<strong>An unhandled error has occurred.</strong>
+			<a href="." class="reload">Reload</a>
+			<span class="dismiss">🗙</span>
+		</div>
+		<div id="blazor-error-details" style="display: none; margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-wrap: break-word;">
+			No error details available.
+		</div>
+		<button id="blazor-error-toggle" style="margin-top: 8px; padding: 4px 8px; cursor: pointer; background: #ffc107; border: 1px solid #e0a800; border-radius: 4px; font-size: 12px;">
+			Show Details
+		</button>
 	</div>
 	
 	<script>
+		// Global error storage for detailed error messages
+		window.lastError = null;
+		window.errorLog = [];
+		
+		// Enhanced error display function
+		function displayErrorDetails(error) {
+			const detailsEl = document.getElementById('blazor-error-details');
+			if (detailsEl && error) {
+				let errorText = '';
+				
+				if (error instanceof Error) {
+					errorText = `Error: ${error.message}\n`;
+					if (error.stack) {
+						errorText += `\nStack Trace:\n${error.stack}`;
+					}
+				} else if (typeof error === 'string') {
+					errorText = error;
+				} else if (error.reason) {
+					// For unhandled promise rejections
+					const reason = error.reason;
+					if (reason instanceof Error) {
+						errorText = `Unhandled Promise Rejection: ${reason.message}\n`;
+						if (reason.stack) {
+							errorText += `\nStack Trace:\n${reason.stack}`;
+						}
+					} else {
+						errorText = `Unhandled Promise Rejection: ${JSON.stringify(reason, null, 2)}`;
+					}
+				} else {
+					try {
+						errorText = JSON.stringify(error, null, 2);
+					} catch (e) {
+						errorText = String(error);
+					}
+				}
+				
+				// Add timestamp
+				const timestamp = new Date().toISOString();
+				errorText = `[${timestamp}]\n${errorText}`;
+				
+				detailsEl.textContent = errorText;
+				console.error('Blazor Error Details:', errorText);
+			}
+		}
+		
+		// Toggle button for error details
+		document.addEventListener('DOMContentLoaded', function() {
+			const toggleBtn = document.getElementById('blazor-error-toggle');
+			const detailsEl = document.getElementById('blazor-error-details');
+			
+			if (toggleBtn && detailsEl) {
+				toggleBtn.addEventListener('click', function() {
+					if (detailsEl.style.display === 'none') {
+						detailsEl.style.display = 'block';
+						toggleBtn.textContent = 'Hide Details';
+					} else {
+						detailsEl.style.display = 'none';
+						toggleBtn.textContent = 'Show Details';
+					}
+				});
+			}
+			
+			// Dismiss button
+			const dismissBtn = document.querySelector('#blazor-error-ui .dismiss');
+			if (dismissBtn) {
+				dismissBtn.addEventListener('click', function() {
+					document.getElementById('blazor-error-ui').style.display = 'none';
+				});
+			}
+		});
+		
+		// Global error handler
+		window.onerror = function(message, source, lineno, colno, error) {
+			console.error('Global error:', { message, source, lineno, colno, error });
+			window.lastError = error || { message, source, lineno, colno };
+			window.errorLog.push({
+				type: 'error',
+				message,
+				source,
+				lineno,
+				colno,
+				error,
+				timestamp: new Date().toISOString()
+			});
+			
+			if (error) {
+				displayErrorDetails(error);
+			} else {
+				displayErrorDetails(`Error: ${message}\nSource: ${source}\nLine: ${lineno}, Column: ${colno}`);
+			}
+			
+			return false;
+		};
+		
+		// Unhandled promise rejection handler
+		window.addEventListener('unhandledrejection', function(event) {
+			console.error('Unhandled promise rejection:', event);
+			window.lastError = event.reason;
+			window.errorLog.push({
+				type: 'unhandledrejection',
+				reason: event.reason,
+				timestamp: new Date().toISOString()
+			});
+			
+			displayErrorDetails(event);
+		});
 		window.initializeEmulator = (canvasId) => {
 			const canvas = document.getElementById(canvasId);
 			if (!canvas) {

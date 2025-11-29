@@ -1,6 +1,50 @@
-﻿<Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-</Router>
+﻿@inject IJSRuntime JS
+
+<ErrorBoundary @ref="_errorBoundary">
+    <ChildContent>
+        <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+            <Found Context="routeData">
+                <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
+                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+            </Found>
+        </Router>
+    </ChildContent>
+    <ErrorContent Context="ex">
+        <div class="alert alert-danger m-3" role="alert">
+            <h4 class="alert-heading">
+                <i class="bi bi-exclamation-triangle-fill"></i> Application Error
+            </h4>
+            <p><strong>An error has occurred in the application.</strong></p>
+            <hr />
+            <details>
+                <summary style="cursor: pointer; font-weight: bold;">Click to show error details</summary>
+                <div style="margin-top: 10px; padding: 10px; background: #f8d7da; border-radius: 4px; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; max-height: 400px; overflow-y: auto;">
+                    <p><strong>Error Type:</strong> @ex.GetType().FullName</p>
+                    <p><strong>Message:</strong> @ex.Message</p>
+                    @if (ex.InnerException != null)
+                    {
+                        <p><strong>Inner Exception:</strong> @ex.InnerException.Message</p>
+                    }
+                    <p><strong>Stack Trace:</strong></p>
+                    <pre style="margin: 0; white-space: pre-wrap;">@ex.StackTrace</pre>
+                </div>
+            </details>
+            <hr />
+            <button class="btn btn-primary" @onclick="Recover">
+                <i class="bi bi-arrow-counterclockwise"></i> Try to Recover
+            </button>
+            <a href="." class="btn btn-secondary ms-2">
+                <i class="bi bi-arrow-clockwise"></i> Reload Page
+            </a>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private ErrorBoundary? _errorBoundary;
+    
+    private void Recover()
+    {
+        _errorBoundary?.Recover();
+    }
+}
