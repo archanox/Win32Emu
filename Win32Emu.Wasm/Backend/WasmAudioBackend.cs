@@ -33,6 +33,13 @@ public class WasmAudioBackend : IAudioBackend
 		_logger = logger;
 	}
 
+	/// <summary>
+	/// Initializes the audio backend. In WASM, this always returns true because:
+	/// 1. We cannot use blocking calls (WASM is single-threaded)
+	/// 2. Browser audio requires user interaction to start (autoplay policies)
+	/// 3. The Blazor component (Home.razor) handles proper async initialization with user interaction
+	/// </summary>
+	/// <returns>Always true in WASM. Actual audio availability depends on browser state.</returns>
 	public bool Initialize()
 	{
 		if (_initialized)
@@ -49,10 +56,12 @@ public class WasmAudioBackend : IAudioBackend
 			// WebAssembly runs on a single thread and doesn't support Monitor.Wait.
 			// Audio initialization in browsers requires user interaction anyway, so
 			// the Blazor component handles this properly with await before emulation.
+			// Note: This always returns true - actual audio availability depends on
+			// browser state and user interaction.
 			_ = _jsRuntime.InvokeVoidAsync("initializeAudio");
 			
 			_initialized = true;
-			_logger.LogInformation("[WASM] Audio backend initialized successfully");
+			_logger.LogInformation("[WASM] Audio backend initialized (actual availability depends on browser)");
 			return true;
 		}
 		catch (Exception ex)
