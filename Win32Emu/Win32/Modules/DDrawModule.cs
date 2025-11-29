@@ -3114,8 +3114,24 @@ namespace Win32Emu.Win32.Modules
 					// Subsequent render calls will check IsInitialized before attempting to render.
 					if (PlatformHelpers.IsWasm)
 					{
-						_ = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title);
-						_logger.LogInformation("[DDraw] Rendering backend initialization started asynchronously (WASM mode)");
+						// Use ContinueWith to properly handle any exceptions from the async initialization
+						_ = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title)
+							.ContinueWith(t =>
+							{
+								if (t.IsFaulted)
+								{
+									_logger.LogError(t.Exception?.GetBaseException(), "[DDraw] Rendering backend initialization failed (WASM mode)");
+								}
+								else if (t.Result)
+								{
+									_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
+								}
+								else
+								{
+									_logger.LogWarning("[DDraw] Rendering backend initialization returned false (WASM mode)");
+								}
+							}, TaskScheduler.Default);
+						_logger.LogInformation("[DDraw] Rendering backend initialization started asynchronously with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
 					}
 					else
 					{
