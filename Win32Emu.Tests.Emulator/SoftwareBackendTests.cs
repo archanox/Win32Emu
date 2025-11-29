@@ -320,7 +320,7 @@ public class SoftwareBackendTests
         try
         {
             var backend = new SoftwareRenderingBackend(NullLogger.Instance);
-            backend.InitializeAsync(640, 480, "Test Window");
+            await backend.InitializeAsync(640, 480, "Test Window");
 
             // Act
             backend.Dispose();
@@ -345,7 +345,7 @@ public class SoftwareBackendTests
         try
         {
             var backend = new SoftwareRenderingBackend(NullLogger.Instance);
-            backend.InitializeAsync(640, 480, "Test Window");
+            await backend.InitializeAsync(640, 480, "Test Window");
 
             // Act & Assert - should not throw
             backend.Dispose();

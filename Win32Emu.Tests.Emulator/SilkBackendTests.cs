@@ -246,7 +246,7 @@ public class SilkBackendTests
             
             try
             {
-                renderingBackend.InitializeAsync(640, 480, "Test Window");
+                await renderingBackend.InitializeAsync(640, 480, "Test Window");
             }
             catch (Exception)
             {
@@ -310,7 +310,7 @@ public class SilkBackendTests
             
             try
             {
-                renderingBackend.InitializeAsync(640, 480, "Test Window");
+                await renderingBackend.InitializeAsync(640, 480, "Test Window");
             }
             catch (Exception)
             {
