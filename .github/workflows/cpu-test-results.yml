@@ -136,7 +136,7 @@ jobs:
       - name: Copy Emulator WASM
         run: |
           mkdir -p pages/emulator
-          cp -r Win32Emu.Wasm/bin/Release/net10.0/publish/wwwroot/* pages/emulator/
+          cp -r Win32Emu.Wasm/bin/Release/net9.0/publish/wwwroot/* pages/emulator/
 
       - name: Create main index page
         run: |
