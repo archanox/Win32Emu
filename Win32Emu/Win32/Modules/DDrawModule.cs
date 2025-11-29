@@ -3108,7 +3108,7 @@ namespace Win32Emu.Win32.Modules
 				}
 				else if (obj.RenderingBackend != null)
 				{
-					var success = obj.RenderingBackend.Initialize((int)dwWidth, (int)dwHeight, title);
+					var success = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title).GetAwaiter().GetResult();
 					if (!success)
 					{
 						// In headless/nogui mode (Host == null), rendering backend initialization may fail

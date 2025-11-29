@@ -6,15 +6,9 @@ namespace Win32Emu.Rendering;
 public interface IAudioBackend : IDisposable
 {
     /// <summary>
-    /// Initialize the audio backend synchronously
+    /// Initialize the audio backend asynchronously
     /// </summary>
-    bool Initialize();
-
-    /// <summary>
-    /// Initialize the audio backend asynchronously.
-    /// Default implementation calls the synchronous Initialize method.
-    /// </summary>
-    Task<bool> InitializeAsync() => Task.FromResult(Initialize());
+    Task<bool> InitializeAsync();
 
     /// <summary>
     /// Create an audio stream with specified parameters

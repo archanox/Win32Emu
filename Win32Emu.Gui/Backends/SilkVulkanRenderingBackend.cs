@@ -51,13 +51,13 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
         _logger = logger;
     }
 
-    public bool Initialize(int width, int height, string title = "Win32Emu Display")
+    public Task<bool> InitializeAsync(int width, int height, string title = "Win32Emu Display")
     {
         lock (_lock)
         {
             if (_initialized)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             _width = width;
@@ -112,7 +112,7 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                 if (!CreateInstance())
                 {
                     _logger.LogError("[Vulkan] Failed to create instance");
-                    return false;
+                    return Task.FromResult(false);
                 }
                 _logger.LogInformation("[Vulkan] Vulkan instance created successfully");
 
@@ -126,7 +126,7 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                 if (!SelectPhysicalDevice())
                 {
                     _logger.LogError("[Vulkan] Failed to select physical device");
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Create logical device
@@ -134,7 +134,7 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                 if (!CreateLogicalDevice())
                 {
                     _logger.LogError("[Vulkan] Failed to create logical device");
-                    return false;
+                    return Task.FromResult(false);
                 }
                 _logger.LogInformation("[Vulkan] Logical device created successfully");
 
@@ -143,7 +143,7 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                 if (!CreateSwapchain())
                 {
                     _logger.LogError("[Vulkan] Failed to create swapchain");
-                    return false;
+                    return Task.FromResult(false);
                 }
                 _logger.LogInformation("[Vulkan] Swapchain created successfully");
 
@@ -152,7 +152,7 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                 if (!CreateStagingImage())
                 {
                     _logger.LogError("[Vulkan] Failed to create staging image");
-                    return false;
+                    return Task.FromResult(false);
                 }
                 _logger.LogInformation("[Vulkan] Staging image created successfully");
 
@@ -161,7 +161,7 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                 if (!CreateCommandResources())
                 {
                     _logger.LogError("[Vulkan] Failed to create command resources");
-                    return false;
+                    return Task.FromResult(false);
                 }
                 _logger.LogInformation("[Vulkan] Command resources created successfully");
 
@@ -170,18 +170,18 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                 if (!CreateSyncObjects())
                 {
                     _logger.LogError("[Vulkan] Failed to create sync objects");
-                    return false;
+                    return Task.FromResult(false);
                 }
                 _logger.LogInformation("[Vulkan] Synchronization objects created successfully");
 
                 _initialized = true;
                 _logger.LogInformation("[Vulkan] Initialized {Width}x{Height} display", width, height);
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[Vulkan] Initialization failed: {Message}", ex.Message);
-                return false;
+                return Task.FromResult(false);
             }
         }
     }

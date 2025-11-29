@@ -15,8 +15,6 @@ namespace Win32Emu.Wasm.Backend;
 /// </para>
 /// <para>
 /// Use <see cref="InitializeAsync"/> for proper async initialization with result checking.
-/// The synchronous <see cref="Initialize"/> method fires the async initialization and returns
-/// <c>true</c> optimistically - callers should prefer <see cref="InitializeAsync"/> when possible.
 /// </para>
 /// </remarks>
 public class WasmAudioBackend : IAudioBackend
@@ -43,22 +41,6 @@ public class WasmAudioBackend : IAudioBackend
 	{
 		_jsRuntime = jsRuntime;
 		_logger = logger;
-	}
-
-	/// <summary>
-	/// Synchronous initialization - fires async initialization and returns true optimistically.
-	/// Prefer <see cref="InitializeAsync"/> for proper result checking in WASM.
-	/// </summary>
-	public bool Initialize()
-	{
-		if (_initialized)
-		{
-			return true;
-		}
-
-		// Fire async initialization - cannot await in sync method without blocking
-		_ = InitializeAsync();
-		return true;
 	}
 
 	/// <summary>

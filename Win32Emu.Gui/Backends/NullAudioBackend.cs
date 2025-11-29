@@ -21,11 +21,11 @@ public class NullAudioBackend : IAudioBackend
 		_logger = logger;
 	}
 
-	public bool Initialize()
+	public Task<bool> InitializeAsync()
 	{
 		_logger.LogInformation("[NullAudio] Audio backend initialized (no audio output)");
 		_isInitialized = true;
-		return true;
+		return Task.FromResult(true);
 	}
 
 	public uint CreateAudioStream(int frequency, int channels, int bufferSize)

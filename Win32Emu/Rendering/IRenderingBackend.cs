@@ -128,16 +128,9 @@ public enum TextureFormat
 public interface IRenderingBackend : IDisposable
 {
 	/// <summary>
-	/// Initialize the rendering backend with specified dimensions synchronously
+	/// Initialize the rendering backend with specified dimensions asynchronously
 	/// </summary>
-	bool Initialize(int width, int height, string title = "Win32Emu Display");
-
-	/// <summary>
-	/// Initialize the rendering backend with specified dimensions asynchronously.
-	/// Default implementation calls the synchronous Initialize method.
-	/// </summary>
-	Task<bool> InitializeAsync(int width, int height, string title = "Win32Emu Display")
-		=> Task.FromResult(Initialize(width, height, title));
+	Task<bool> InitializeAsync(int width, int height, string title = "Win32Emu Display");
 
 	/// <summary>
 	/// Convert palettized (8-bit indexed) surface to RGBA format

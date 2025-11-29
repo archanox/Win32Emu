@@ -154,7 +154,7 @@ public class DInputModuleTests
         var backend = new SilkInputBackend(NullLogger.Instance);
         
         // Act
-        backend.Initialize();
+        backend.InitializeAsync();
         var devices = backend.GetDevices();
 
         // Assert
@@ -168,7 +168,7 @@ public class DInputModuleTests
     {
         // Arrange
         var backend = new SilkInputBackend(NullLogger.Instance);
-        backend.Initialize();
+        backend.InitializeAsync();
         var devices = backend.GetDevices();
         var keyboardDevice = devices.First(d => d.Type == IInputBackend.DeviceType.Keyboard);
 

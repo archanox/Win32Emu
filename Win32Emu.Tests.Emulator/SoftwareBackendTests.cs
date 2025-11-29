@@ -15,7 +15,7 @@ public class SoftwareBackendTests
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
 
             // Act
-            var result = backend.Initialize(640, 480, "Test Window");
+            var result = backend.InitializeAsync(640, 480, "Test Window");
 
             // If initialization succeeds, verify state
             if (result)
@@ -43,8 +43,8 @@ public class SoftwareBackendTests
         {
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
 
-            var result1 = backend.Initialize(640, 480, "Test Window");
-            var result2 = backend.Initialize(800, 600, "Test Window 2");
+            var result1 = backend.InitializeAsync(640, 480, "Test Window");
+            var result2 = backend.InitializeAsync(800, 600, "Test Window 2");
 
             if (result1 && result2)
             {
@@ -69,7 +69,7 @@ public class SoftwareBackendTests
         {
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
             
-            if (!backend.Initialize(640, 480, "Test Window"))
+            if (!backend.InitializeAsync(640, 480, "Test Window"))
             {
                 return; // Skip test if initialization fails
             }
@@ -134,7 +134,7 @@ public class SoftwareBackendTests
         {
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
             
-            if (!backend.Initialize(640, 480, "Test Window"))
+            if (!backend.InitializeAsync(640, 480, "Test Window"))
             {
                 return; // Skip test if initialization fails
             }
@@ -163,7 +163,7 @@ public class SoftwareBackendTests
         {
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
             
-            if (!backend.Initialize(640, 480, "Test Window"))
+            if (!backend.InitializeAsync(640, 480, "Test Window"))
             {
                 return; // Skip test if initialization fails
             }
@@ -189,7 +189,7 @@ public class SoftwareBackendTests
         {
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
             
-            if (!backend.Initialize(640, 480, "Test Window"))
+            if (!backend.InitializeAsync(640, 480, "Test Window"))
             {
                 return; // Skip test if initialization fails
             }
@@ -320,7 +320,7 @@ public class SoftwareBackendTests
         try
         {
             var backend = new SoftwareRenderingBackend(NullLogger.Instance);
-            backend.Initialize(640, 480, "Test Window");
+            backend.InitializeAsync(640, 480, "Test Window");
 
             // Act
             backend.Dispose();
@@ -345,7 +345,7 @@ public class SoftwareBackendTests
         try
         {
             var backend = new SoftwareRenderingBackend(NullLogger.Instance);
-            backend.Initialize(640, 480, "Test Window");
+            backend.InitializeAsync(640, 480, "Test Window");
 
             // Act & Assert - should not throw
             backend.Dispose();

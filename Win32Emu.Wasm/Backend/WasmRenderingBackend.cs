@@ -15,9 +15,7 @@ namespace Win32Emu.Wasm.Backend;
 /// <see cref="PlatformNotSupportedException"/>.
 /// </para>
 /// <para>
-/// Use <see cref="InitializeAsync"/> for proper async initialization. The synchronous
-/// <see cref="Initialize"/> method fires the async initialization and returns <c>true</c>
-/// optimistically - callers should prefer <see cref="InitializeAsync"/> when possible.
+/// Use <see cref="InitializeAsync"/> for proper async initialization.
 /// </para>
 /// </remarks>
 public class WasmRenderingBackend : IRenderingBackend
@@ -40,26 +38,6 @@ public class WasmRenderingBackend : IRenderingBackend
 	{
 		_jsRuntime = jsRuntime;
 		_logger = logger;
-	}
-
-	/// <summary>
-	/// Synchronous initialization - fires async initialization and returns true optimistically.
-	/// Prefer <see cref="InitializeAsync"/> for proper result checking in WASM.
-	/// </summary>
-	public bool Initialize(int width, int height, string title = "Win32Emu Display")
-	{
-		if (_initialized)
-		{
-			return true;
-		}
-
-		_width = width;
-		_height = height;
-		_frameBuffer = new byte[width * height * 4]; // RGBA format
-		
-		// Fire async initialization - cannot await in sync method without blocking
-		_ = InitializeAsync(width, height, title);
-		return true;
 	}
 
 	/// <summary>

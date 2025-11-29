@@ -23,13 +23,13 @@ public class Sdl3AudioBackend(ILogger logger) : IAudioBackend
         public int BufferSize { get; set; }
     }
 
-    public bool Initialize()
+    public Task<bool> InitializeAsync()
     {
         lock (_lock)
         {
             if (_initialized)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             try
@@ -43,17 +43,17 @@ public class Sdl3AudioBackend(ILogger logger) : IAudioBackend
                 if (!SDL.Init(SDL.InitFlags.Audio))
                 {
                     _logger.LogError("[SDL3Audio] Failed to initialize SDL audio: {Error}", SDL.GetError());
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 _initialized = true;
                 _logger.LogInformation("[SDL3Audio] Audio backend initialized successfully");
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[SDL3Audio] Failed to initialize audio backend");
-                return false;
+                return Task.FromResult(false);
             }
         }
     }

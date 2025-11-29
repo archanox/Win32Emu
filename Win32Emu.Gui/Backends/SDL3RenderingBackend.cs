@@ -31,13 +31,13 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
         _logger = logger;
     }
 
-    public bool Initialize(int width, int height, string title = "Win32Emu Display")
+    public Task<bool> InitializeAsync(int width, int height, string title = "Win32Emu Display")
     {
         lock (_lock)
         {
             if (_initialized)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             _width = width;
@@ -54,7 +54,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                 if (!SDL.Init(SDL.InitFlags.Video))
                 {
                     _logger.LogError("[SDL3] Failed to initialize SDL video: {Error}", SDL.GetError());
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Create GPU device with shader format support for all platforms
@@ -65,7 +65,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                 {
                     _logger.LogError("[SDL3] Failed to create GPU device: {Error}", SDL.GetError());
                     SDL.Quit();
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Get the driver name
@@ -79,7 +79,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                     _logger.LogError("[SDL3] Failed to create window: {Error}", SDL.GetError());
                     SDL.DestroyGPUDevice(_gpuDevice);
                     SDL.Quit();
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Claim window for GPU device
@@ -89,7 +89,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                     SDL.DestroyWindow(_window);
                     SDL.DestroyGPUDevice(_gpuDevice);
                     SDL.Quit();
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Create frame texture
@@ -114,7 +114,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                     SDL.DestroyWindow(_window);
                     SDL.DestroyGPUDevice(_gpuDevice);
                     SDL.Quit();
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Create transfer buffer for uploading frame data
@@ -134,7 +134,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                     SDL.DestroyWindow(_window);
                     SDL.DestroyGPUDevice(_gpuDevice);
                     SDL.Quit();
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Show window
@@ -144,13 +144,13 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                 _logger.LogInformation("[SDL3] Initialized {Width}x{Height} display with GPU backend ({Driver})", 
                     width, height, driverName);
                 
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[SDL3] Failed to initialize rendering backend");
                 Cleanup();
-                return false;
+                return Task.FromResult(false);
             }
         }
     }

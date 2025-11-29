@@ -32,13 +32,13 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
         _logger = logger;
     }
 
-    public bool Initialize(int width, int height, string title = "Win32Emu Display")
+    public Task<bool> InitializeAsync(int width, int height, string title = "Win32Emu Display")
     {
         lock (_lock)
         {
             if (_initialized)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             _width = width;
@@ -56,7 +56,7 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
                 if (!SDL.Init(SDL.InitFlags.Video))
                 {
                     _logger.LogError("[Software] Failed to initialize SDL video: {Error}", SDL.GetError());
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Force SDL to use the software rendering driver
@@ -69,7 +69,7 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
                 {
                     _logger.LogError("[Software] Failed to create window: {Error}", SDL.GetError());
                     SDL.Quit();
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Create software renderer (CPU-only, no GPU acceleration)
@@ -79,7 +79,7 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
                     _logger.LogError("[Software] Failed to create software renderer: {Error}", SDL.GetError());
                     SDL.DestroyWindow(_window);
                     SDL.Quit();
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 _logger.LogInformation("[Software] Created software renderer");
@@ -93,7 +93,7 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
                     SDL.DestroyRenderer(_renderer);
                     SDL.DestroyWindow(_window);
                     SDL.Quit();
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Allocate frame buffer (RGBA format)
@@ -105,13 +105,13 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
 
                 _initialized = true;
                 _logger.LogInformation("[Software] Software rendering backend initialized successfully");
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[Software] Failed to initialize software rendering backend");
                 Cleanup();
-                return false;
+                return Task.FromResult(false);
             }
         }
     }

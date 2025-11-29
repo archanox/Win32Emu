@@ -50,13 +50,13 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
         _glfw = Glfw.GetApi();
     }
 
-    public bool Initialize(int width, int height, string title = "Win32Emu Display")
+    public Task<bool> InitializeAsync(int width, int height, string title = "Win32Emu Display")
     {
         lock (_lock)
         {
             if (_initialized)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             _width = width;
@@ -80,7 +80,7 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
                 if (!_glfw.Init())
                 {
                     _logger.LogError("[SharpMetal] Failed to initialize GLFW");
-                    return false;
+                    return Task.FromResult(false);
                 }
                 _logger.LogInformation("[SharpMetal] GLFW initialized successfully");
 
@@ -96,7 +96,7 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
                 {
                     _logger.LogError("[SharpMetal] Failed to create window");
                     _glfw.Terminate();
-                    return false;
+                    return Task.FromResult(false);
                 }
                 _logger.LogInformation("[SharpMetal] Window created successfully");
 
@@ -108,7 +108,7 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
                     _logger.LogError("[SharpMetal] Failed to create Metal device");
                     _glfw.DestroyWindow(_window);
                     _glfw.Terminate();
-                    return false;
+                    return Task.FromResult(false);
                 }
                 _logger.LogInformation("[SharpMetal] Metal device created: {DeviceName}", 
                     (IntPtr)_device.Name != IntPtr.Zero ? _device.Name.ToString() : "Unknown");
@@ -118,7 +118,7 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
                 if (_commandQueue == IntPtr.Zero)
                 {
                     _logger.LogError("[SharpMetal] Failed to create command queue");
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Get the NSView from GLFW window and attach Metal layer
@@ -129,7 +129,7 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
                     _device.Dispose();
                     _glfw.DestroyWindow(_window);
                     _glfw.Terminate();
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Create frame texture
@@ -145,7 +145,7 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
                     _device.Dispose();
                     _glfw.DestroyWindow(_window);
                     _glfw.Terminate();
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Set up rendering pipeline
@@ -166,7 +166,7 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
                     _device.Dispose();
                     _glfw.DestroyWindow(_window);
                     _glfw.Terminate();
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Set up window callbacks for lifecycle events
@@ -194,12 +194,12 @@ public unsafe class SharpMetalRenderingBackend : IRenderingBackend
 
                 _initialized = true;
                 _logger.LogInformation("[SharpMetal] Initialized {Width}x{Height} Metal display", width, height);
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[SharpMetal] Failed to initialize Metal backend");
-                return false;
+                return Task.FromResult(false);
             }
         }
     }
