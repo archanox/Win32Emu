@@ -37,9 +37,9 @@ public interface IInputBackend : IDisposable
     }
 
     /// <summary>
-    /// Initialize the input backend
+    /// Initialize the input backend asynchronously
     /// </summary>
-    bool Initialize();
+    Task<bool> InitializeAsync();
 
     /// <summary>
     /// Get list of available input devices

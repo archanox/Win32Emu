@@ -36,18 +36,18 @@ public class SilkInputBackend(ILogger logger) : IInputBackend
     }
 
 
-    public bool Initialize()
+    public Task<bool> InitializeAsync()
     {
         lock (_lock)
         {
             if (_initialized)
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             _initialized = true;
             _logger.LogInformation("[SilkInput] Input subsystem initialized");
-            return true;
+            return Task.FromResult(true);
         }
     }
 

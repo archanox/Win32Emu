@@ -7,14 +7,14 @@ namespace Win32Emu.Tests.Emulator;
 public class Sdl3BackendTests
 {
     [Fact]
-    public void Sdl3AudioBackend_Initialize_ShouldNotThrow()
+    public async Task Sdl3AudioBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw even if SDL3 is not available
         try
         {
             using var audioBackend = new Sdl3AudioBackend(NullLogger.Instance);
             
-            var result = audioBackend.InitializeAsync();
+            var result = await audioBackend.InitializeAsync();
             // If initialization succeeds, verify state
             if (result)
             {
@@ -33,14 +33,14 @@ public class Sdl3BackendTests
     }
 
     [Fact]
-    public void Sdl3AudioBackend_CreateStream_WhenInitialized_ShouldReturnValidId()
+    public async Task Sdl3AudioBackend_CreateStream_WhenInitialized_ShouldReturnValidId()
     {
         // Arrange
         try
         {
             using var audioBackend = new Sdl3AudioBackend(NullLogger.Instance);
             
-            audioBackend.InitializeAsync();
+            await audioBackend.InitializeAsync();
             if (!audioBackend.IsInitialized)
             {
                 return; // Skip test if SDL3 not available
@@ -72,14 +72,14 @@ public class Sdl3BackendTests
     }
 
     [Fact]
-    public void Sdl3AudioBackend_WriteAudioData_ShouldNotThrow()
+    public async Task Sdl3AudioBackend_WriteAudioData_ShouldNotThrow()
     {
         // Arrange
         try
         {
             using var audioBackend = new Sdl3AudioBackend(NullLogger.Instance);
             
-            audioBackend.InitializeAsync();
+            await audioBackend.InitializeAsync();
             if (!audioBackend.IsInitialized)
             {
                 return; // Skip test if SDL3 not available
@@ -112,7 +112,7 @@ public class Sdl3BackendTests
     }
 
     [Fact]
-    public void Sdl3AudioBackend_Dispose_ShouldNotThrow()
+    public async Task Sdl3AudioBackend_Dispose_ShouldNotThrow()
     {
         // Arrange
         try
@@ -121,7 +121,7 @@ public class Sdl3BackendTests
             
             try
             {
-                audioBackend.InitializeAsync();
+                await audioBackend.InitializeAsync();
                 if (audioBackend.IsInitialized)
                 {
                     audioBackend.CreateAudioStream(44100, 2, 4096);
@@ -146,14 +146,14 @@ public class Sdl3BackendTests
     }
 
     [Fact]
-    public void Sdl3InputBackend_Initialize_ShouldNotThrow()
+    public async Task Sdl3InputBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw
         using var inputBackend = new Sdl3InputBackend(NullLogger.Instance);
         
         try
         {
-            var result = inputBackend.InitializeAsync();
+            var result = await inputBackend.InitializeAsync();
             // If initialization succeeds, verify state
             if (result)
             {
@@ -173,14 +173,14 @@ public class Sdl3BackendTests
     }
 
     [Fact]
-    public void Sdl3InputBackend_GetDevices_WhenInitialized_ShouldReturnDevices()
+    public async Task Sdl3InputBackend_GetDevices_WhenInitialized_ShouldReturnDevices()
     {
         // Arrange
         using var inputBackend = new Sdl3InputBackend(NullLogger.Instance);
         
         try
         {
-            inputBackend.InitializeAsync();
+            await inputBackend.InitializeAsync();
             if (!inputBackend.IsInitialized)
             {
                 return; // Should not happen but skip if it does
@@ -207,14 +207,14 @@ public class Sdl3BackendTests
     }
 
     [Fact]
-    public void Sdl3InputBackend_Dispose_ShouldNotThrow()
+    public async Task Sdl3InputBackend_Dispose_ShouldNotThrow()
     {
         // Arrange
         var inputBackend = new Sdl3InputBackend(NullLogger.Instance);
         
         try
         {
-            inputBackend.InitializeAsync();
+            await inputBackend.InitializeAsync();
         }
         catch (DllNotFoundException)
         {
@@ -233,14 +233,14 @@ public class Sdl3BackendTests
     }
 
     [Fact]
-    public void Sdl3RenderingBackend_Initialize_ShouldNotThrow()
+    public async Task Sdl3RenderingBackend_Initialize_ShouldNotThrow()
     {
         // Arrange & Act & Assert - should not throw even if SDL3 is not available
         try
         {
             using var renderingBackend = new Sdl3RenderingBackend(NullLogger.Instance);
             
-            var result = renderingBackend.InitializeAsync(640, 480, "Test Window");
+            var result = await renderingBackend.InitializeAsync(640, 480, "Test Window");
             // If initialization succeeds, verify state
             if (result)
             {
@@ -264,7 +264,7 @@ public class Sdl3BackendTests
     }
 
     [Fact]
-    public void Sdl3RenderingBackend_Dispose_ShouldNotThrow()
+    public async Task Sdl3RenderingBackend_Dispose_ShouldNotThrow()
     {
         // Arrange
         try
@@ -297,14 +297,14 @@ public class Sdl3BackendTests
     }
 
     [Fact]
-    public void Sdl3RenderingBackend_UpdateFrameBuffer_WhenInitialized_ShouldReturnTrue()
+    public async Task Sdl3RenderingBackend_UpdateFrameBuffer_WhenInitialized_ShouldReturnTrue()
     {
         // Arrange
         try
         {
             using var renderingBackend = new Sdl3RenderingBackend(NullLogger.Instance);
             
-            if (!renderingBackend.InitializeAsync(640, 480, "Test Window"))
+            if (!await renderingBackend.InitializeAsync(640, 480, "Test Window"))
             {
                 return; // Skip test if initialization fails
             }

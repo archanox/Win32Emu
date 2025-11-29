@@ -92,7 +92,7 @@ namespace Win32Emu.Win32.Modules
 			if (_env.InputBackend == null && _env.BackendFactory != null)
 			{
 				_env.InputBackend = _env.BackendFactory.CreateInputBackend(_logger);
-				_env.InputBackend.Initialize();
+				_env.InputBackend.InitializeAsync().GetAwaiter().GetResult();
 			}
 
 // Create COM vtable for IDirectInput interface
@@ -164,7 +164,7 @@ namespace Win32Emu.Win32.Modules
 			if (_env.InputBackend == null && _env.BackendFactory != null)
 			{
 				_env.InputBackend = _env.BackendFactory.CreateInputBackend(_logger);
-				_env.InputBackend.Initialize();
+				_env.InputBackend.InitializeAsync().GetAwaiter().GetResult();
 			}
 
 			// Create COM vtable for IDirectInput interface

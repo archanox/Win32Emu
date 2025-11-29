@@ -7,7 +7,7 @@ namespace Win32Emu.Tests.Emulator;
 public class SoftwareBackendTests
 {
     [Fact]
-    public void SoftwareRenderingBackend_Initialize_ShouldSucceed()
+    public async Task SoftwareRenderingBackend_Initialize_ShouldSucceed()
     {
         // Arrange & Act & Assert - should not throw even if SDL3 is not available
         try
@@ -15,7 +15,7 @@ public class SoftwareBackendTests
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
 
             // Act
-            var result = backend.InitializeAsync(640, 480, "Test Window");
+            var result = await backend.InitializeAsync(640, 480, "Test Window");
 
             // If initialization succeeds, verify state
             if (result)
@@ -36,15 +36,15 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_Initialize_MultipleTimes_ShouldSucceed()
+    public async Task SoftwareRenderingBackend_Initialize_MultipleTimes_ShouldSucceed()
     {
         // Arrange & Act & Assert
         try
         {
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
 
-            var result1 = backend.InitializeAsync(640, 480, "Test Window");
-            var result2 = backend.InitializeAsync(800, 600, "Test Window 2");
+            var result1 = await backend.InitializeAsync(640, 480, "Test Window");
+            var result2 = await backend.InitializeAsync(800, 600, "Test Window 2");
 
             if (result1 && result2)
             {
@@ -62,14 +62,14 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_UpdateFrameBuffer_WhenInitialized_ShouldSucceed()
+    public async Task SoftwareRenderingBackend_UpdateFrameBuffer_WhenInitialized_ShouldSucceed()
     {
         // Arrange
         try
         {
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
             
-            if (!backend.InitializeAsync(640, 480, "Test Window"))
+            if (!await backend.InitializeAsync(640, 480, "Test Window"))
             {
                 return; // Skip test if initialization fails
             }
@@ -102,7 +102,7 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_UpdateFrameBuffer_WhenNotInitialized_ShouldFail()
+    public async Task SoftwareRenderingBackend_UpdateFrameBuffer_WhenNotInitialized_ShouldFail()
     {
         // Arrange & Act & Assert
         try
@@ -127,14 +127,14 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_UpdateFrameBuffer_WithNullData_ShouldFail()
+    public async Task SoftwareRenderingBackend_UpdateFrameBuffer_WithNullData_ShouldFail()
     {
         // Arrange
         try
         {
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
             
-            if (!backend.InitializeAsync(640, 480, "Test Window"))
+            if (!await backend.InitializeAsync(640, 480, "Test Window"))
             {
                 return; // Skip test if initialization fails
             }
@@ -156,14 +156,14 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_Clear_ShouldNotThrow()
+    public async Task SoftwareRenderingBackend_Clear_ShouldNotThrow()
     {
         // Arrange
         try
         {
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
             
-            if (!backend.InitializeAsync(640, 480, "Test Window"))
+            if (!await backend.InitializeAsync(640, 480, "Test Window"))
             {
                 return; // Skip test if initialization fails
             }
@@ -182,14 +182,14 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_ProcessEvents_ShouldNotThrow()
+    public async Task SoftwareRenderingBackend_ProcessEvents_ShouldNotThrow()
     {
         // Arrange
         try
         {
             using var backend = new SoftwareRenderingBackend(NullLogger.Instance);
             
-            if (!backend.InitializeAsync(640, 480, "Test Window"))
+            if (!await backend.InitializeAsync(640, 480, "Test Window"))
             {
                 return; // Skip test if initialization fails
             }
@@ -208,7 +208,7 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_ConvertPalettizedToRGBA_ShouldSucceed()
+    public async Task SoftwareRenderingBackend_ConvertPalettizedToRGBA_ShouldSucceed()
     {
         // Arrange
         try
@@ -247,7 +247,7 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_Convert16BitToRGBA_ShouldSucceed()
+    public async Task SoftwareRenderingBackend_Convert16BitToRGBA_ShouldSucceed()
     {
         // Arrange
         try
@@ -280,7 +280,7 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_Convert24BitToRGBA_ShouldSucceed()
+    public async Task SoftwareRenderingBackend_Convert24BitToRGBA_ShouldSucceed()
     {
         // Arrange
         try
@@ -314,7 +314,7 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_Dispose_ShouldCleanup()
+    public async Task SoftwareRenderingBackend_Dispose_ShouldCleanup()
     {
         // Arrange
         try
@@ -339,7 +339,7 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_Dispose_MultipleTimes_ShouldNotThrow()
+    public async Task SoftwareRenderingBackend_Dispose_MultipleTimes_ShouldNotThrow()
     {
         // Arrange
         try
@@ -362,7 +362,7 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_ConvertPalettizedToRGBA_WithNullData_ShouldThrow()
+    public async Task SoftwareRenderingBackend_ConvertPalettizedToRGBA_WithNullData_ShouldThrow()
     {
         // Arrange
         try
@@ -385,7 +385,7 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_ConvertPalettizedToRGBA_WithNullPalette_ShouldThrow()
+    public async Task SoftwareRenderingBackend_ConvertPalettizedToRGBA_WithNullPalette_ShouldThrow()
     {
         // Arrange
         try
@@ -408,7 +408,7 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_Convert16BitToRGBA_WithNullData_ShouldThrow()
+    public async Task SoftwareRenderingBackend_Convert16BitToRGBA_WithNullData_ShouldThrow()
     {
         // Arrange
         try
@@ -430,7 +430,7 @@ public class SoftwareBackendTests
     }
 
     [Fact]
-    public void SoftwareRenderingBackend_Convert24BitToRGBA_WithNullData_ShouldThrow()
+    public async Task SoftwareRenderingBackend_Convert24BitToRGBA_WithNullData_ShouldThrow()
     {
         // Arrange
         try
