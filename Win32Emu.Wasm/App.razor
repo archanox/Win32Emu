@@ -16,7 +16,7 @@
             <hr />
             <details>
                 <summary style="cursor: pointer; font-weight: bold;">Click to show error details</summary>
-                <div style="margin-top: 10px; padding: 10px; background: #f8d7da; border-radius: 4px; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; max-height: 400px; overflow-y: auto;">
+                <div class="error-details-panel">
                     <p><strong>Error Type:</strong> @ex.GetType().FullName</p>
                     <p><strong>Message:</strong> @ex.Message</p>
                     @if (ex.InnerException != null)
