@@ -1,6 +1,4 @@
-﻿@inject IJSRuntime JS
-
-<ErrorBoundary @ref="_errorBoundary">
+﻿<ErrorBoundary @ref="_errorBoundary">
     <ChildContent>
         <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
             <Found Context="routeData">

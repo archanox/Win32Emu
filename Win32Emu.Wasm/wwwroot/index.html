@@ -28,10 +28,10 @@
 			<a href="." class="reload">Reload</a>
 			<span class="dismiss">🗙</span>
 		</div>
-		<div id="blazor-error-details" style="display: none; margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-wrap: break-word;">
+		<div id="blazor-error-details">
 			No error details available.
 		</div>
-		<button id="blazor-error-toggle" style="margin-top: 8px; padding: 4px 8px; cursor: pointer; background: #ffc107; border: 1px solid #e0a800; border-radius: 4px; font-size: 12px;">
+		<button id="blazor-error-toggle">
 			Show Details
 		</button>
 	</div>
@@ -108,6 +108,9 @@
 			}
 		});
 		
+		// Maximum number of errors to keep in the log
+		const MAX_ERROR_LOG_SIZE = 50;
+		
 		// Global error handler
 		window.onerror = function(message, source, lineno, colno, error) {
 			console.error('Global error:', { message, source, lineno, colno, error });
@@ -121,6 +124,11 @@
 				error,
 				timestamp: new Date().toISOString()
 			});
+			
+			// Limit error log size to prevent memory growth
+			while (window.errorLog.length > MAX_ERROR_LOG_SIZE) {
+				window.errorLog.shift();
+			}
 			
 			if (error) {
 				displayErrorDetails(error);
@@ -140,6 +148,11 @@
 				reason: event.reason,
 				timestamp: new Date().toISOString()
 			});
+			
+			// Limit error log size to prevent memory growth
+			while (window.errorLog.length > MAX_ERROR_LOG_SIZE) {
+				window.errorLog.shift();
+			}
 			
 			displayErrorDetails(event);
 		});
