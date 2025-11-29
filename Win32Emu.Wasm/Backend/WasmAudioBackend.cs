@@ -11,14 +11,12 @@ namespace Win32Emu.Wasm.Backend;
 /// <para>
 /// <b>WASM-Specific Behavior:</b> Due to WebAssembly's single-threaded nature, blocking calls
 /// like <c>.Wait()</c> or <c>.Result</c> on async operations are not supported and will throw
-/// <see cref="PlatformNotSupportedException"/>. This backend uses fire-and-forget patterns
-/// for JavaScript interop calls.
+/// <see cref="PlatformNotSupportedException"/>. 
 /// </para>
 /// <para>
-/// The <see cref="Initialize"/> method returns <c>true</c> unconditionally to satisfy the
-/// synchronous interface contract. The actual JavaScript initialization happens asynchronously
-/// and the result is logged but does not affect the synchronous return value. The Blazor
-/// component (Home.razor) properly awaits audio initialization before starting emulation.
+/// Use <see cref="InitializeAsync"/> for proper async initialization with result checking.
+/// The synchronous <see cref="Initialize"/> method fires the async initialization and returns
+/// <c>true</c> optimistically - callers should prefer <see cref="InitializeAsync"/> when possible.
 /// </para>
 /// </remarks>
 public class WasmAudioBackend : IAudioBackend
@@ -47,7 +45,26 @@ public class WasmAudioBackend : IAudioBackend
 		_logger = logger;
 	}
 
+	/// <summary>
+	/// Synchronous initialization - fires async initialization and returns true optimistically.
+	/// Prefer <see cref="InitializeAsync"/> for proper result checking in WASM.
+	/// </summary>
 	public bool Initialize()
+	{
+		if (_initialized)
+		{
+			return true;
+		}
+
+		// Fire async initialization - cannot await in sync method without blocking
+		_ = InitializeAsync();
+		return true;
+	}
+
+	/// <summary>
+	/// Async initialization that properly awaits the JavaScript call and returns the actual result.
+	/// </summary>
+	public async Task<bool> InitializeAsync()
 	{
 		if (_initialized)
 		{
@@ -58,25 +75,6 @@ public class WasmAudioBackend : IAudioBackend
 		{
 			_logger.LogInformation("[WASM] Initializing audio backend");
 			
-			// Fire async initialization - result is logged but doesn't affect synchronous return.
-			// See class remarks for WASM-specific behavior details.
-			_ = InitializeAudioAsync();
-			
-			// Return true unconditionally to satisfy interface contract.
-			// Actual JS initialization result is handled asynchronously and logged.
-			return true;
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "[WASM] Failed to initialize audio backend");
-			return false;
-		}
-	}
-
-	private async Task InitializeAudioAsync()
-	{
-		try
-		{
 			var result = await _jsRuntime.InvokeAsync<bool>("initializeAudio");
 			
 			if (result)
@@ -88,10 +86,13 @@ public class WasmAudioBackend : IAudioBackend
 			{
 				_logger.LogWarning("[WASM] Failed to initialize Web Audio API");
 			}
+			
+			return result;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "[WASM] Failed to initialize audio backend asynchronously");
+			_logger.LogError(ex, "[WASM] Failed to initialize audio backend");
+			return false;
 		}
 	}
 
