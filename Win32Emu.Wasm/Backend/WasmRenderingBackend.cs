@@ -12,14 +12,12 @@ namespace Win32Emu.Wasm.Backend;
 /// <para>
 /// <b>WASM-Specific Behavior:</b> Due to WebAssembly's single-threaded nature, blocking calls
 /// like <c>.Wait()</c> or <c>.Result</c> on async operations are not supported and will throw
-/// <see cref="PlatformNotSupportedException"/>. This backend uses fire-and-forget patterns
-/// for JavaScript interop calls.
+/// <see cref="PlatformNotSupportedException"/>.
 /// </para>
 /// <para>
-/// The <see cref="Initialize"/> method sets <see cref="IsInitialized"/> to <c>true</c> and
-/// returns <c>true</c> before the JavaScript canvas initialization completes. This is safe
-/// because the HTML canvas element is already created in index.html, and the Blazor component
-/// (Home.razor) properly awaits the initializeEmulator JS call before starting emulation.
+/// Use <see cref="InitializeAsync"/> for proper async initialization. The synchronous
+/// <see cref="Initialize"/> method fires the async initialization and returns <c>true</c>
+/// optimistically - callers should prefer <see cref="InitializeAsync"/> when possible.
 /// </para>
 /// </remarks>
 public class WasmRenderingBackend : IRenderingBackend
@@ -44,7 +42,30 @@ public class WasmRenderingBackend : IRenderingBackend
 		_logger = logger;
 	}
 
+	/// <summary>
+	/// Synchronous initialization - fires async initialization and returns true optimistically.
+	/// Prefer <see cref="InitializeAsync"/> for proper result checking in WASM.
+	/// </summary>
 	public bool Initialize(int width, int height, string title = "Win32Emu Display")
+	{
+		if (_initialized)
+		{
+			return true;
+		}
+
+		_width = width;
+		_height = height;
+		_frameBuffer = new byte[width * height * 4]; // RGBA format
+		
+		// Fire async initialization - cannot await in sync method without blocking
+		_ = InitializeAsync(width, height, title);
+		return true;
+	}
+
+	/// <summary>
+	/// Async initialization that properly awaits the JavaScript call.
+	/// </summary>
+	public async Task<bool> InitializeAsync(int width, int height, string title = "Win32Emu Display")
 	{
 		if (_initialized)
 		{
@@ -59,10 +80,7 @@ public class WasmRenderingBackend : IRenderingBackend
 			
 			_logger.LogInformation("[WASM] Initializing rendering backend ({Width}x{Height})", width, height);
 			
-			// Fire-and-forget JS initialization. See class remarks for WASM-specific behavior.
-			// IsInitialized will be true before JS completes - this is intentional and safe
-			// because the Blazor component awaits initializeEmulator before starting emulation.
-			_ = _jsRuntime.InvokeVoidAsync("initializeEmulator", _canvasId);
+			await _jsRuntime.InvokeVoidAsync("initializeEmulator", _canvasId);
 			
 			_initialized = true;
 			_logger.LogInformation("[WASM] Rendering backend initialized successfully");
