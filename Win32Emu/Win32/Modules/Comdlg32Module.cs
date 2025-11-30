@@ -202,8 +202,9 @@ public class Comdlg32Module : IWin32ModuleAsync
 					// Write the selected path to lpstrFile buffer
 					if (lpstrFile != 0 && nMaxFile > 0)
 					{
-						// Truncate path if needed to fit in the buffer
-						var pathToWrite = selectedPath.Length < nMaxFile ? selectedPath : selectedPath.Substring(0, (int)nMaxFile - 1);
+						// Truncate path if needed to fit in the buffer (leave room for null terminator)
+						var maxChars = (int)nMaxFile - 1;
+						var pathToWrite = selectedPath.Length <= maxChars ? selectedPath : selectedPath.Substring(0, maxChars);
 						_env.WriteAnsiStringAt(lpstrFile, pathToWrite);
 					}
 					
@@ -258,8 +259,9 @@ public class Comdlg32Module : IWin32ModuleAsync
 					// Write the selected path to lpstrFile buffer
 					if (lpstrFile != 0 && nMaxFile > 0)
 					{
-						// Truncate path if needed to fit in the buffer
-						var pathToWrite = selectedPath.Length < nMaxFile ? selectedPath : selectedPath.Substring(0, (int)nMaxFile - 1);
+						// Truncate path if needed to fit in the buffer (leave room for null terminator)
+						var maxChars = (int)nMaxFile - 1;
+						var pathToWrite = selectedPath.Length <= maxChars ? selectedPath : selectedPath.Substring(0, maxChars);
 						_env.WriteAnsiStringAt(lpstrFile, pathToWrite);
 					}
 					
