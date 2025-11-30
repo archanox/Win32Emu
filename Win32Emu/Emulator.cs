@@ -201,6 +201,21 @@ public sealed class Emulator : IDisposable
     /// <param name="reservedMemoryMb">Memory to reserve for emulation (default: 256 MB)</param>
     public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs = null, bool debugMode = false, int reservedMemoryMb = 256)
     {
+        LoadExecutableFromBytes(executableBytes, executableName, programArgs, debugMode, reservedMemoryMb, virtualFileSystem: null);
+    }
+
+    /// <summary>
+    /// Loads an executable from bytes with an optional custom virtual file system.
+    /// This overload is useful for WASM scenarios where the VFS is browser-based.
+    /// </summary>
+    /// <param name="executableBytes">The executable bytes to load</param>
+    /// <param name="executableName">The name of the executable file</param>
+    /// <param name="programArgs">Optional program arguments</param>
+    /// <param name="debugMode">Enable debug mode</param>
+    /// <param name="reservedMemoryMb">Reserved memory in megabytes</param>
+    /// <param name="virtualFileSystem">Optional custom virtual file system for file operations</param>
+    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem)
+    {
         // Use a synthetic path for internal tracking
         var syntheticPath = $"C:\\WASM\\{executableName}";
         
@@ -217,10 +232,11 @@ public sealed class Emulator : IDisposable
             enableLegacyInstructionDecoding: false, 
             useJitCpu: false, 
             virtualDiskPath: null,
-            preloadedBytes: executableBytes);
+            preloadedBytes: executableBytes,
+            customVirtualFileSystem: virtualFileSystem);
     }
 
-    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, string? virtualDiskPath = null, byte[]? preloadedBytes = null)
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, string? virtualDiskPath = null, byte[]? preloadedBytes = null, VirtualFileSystem.IVirtualFileSystem? customVirtualFileSystem = null)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -365,12 +381,18 @@ public sealed class Emulator : IDisposable
 
         _env = new ProcessEnvironment(_vm, CalculateHeapBase(), _host, _logger, _backendFactory);
         
-        // Initialize virtual file system with disk (required)
-        if (!string.IsNullOrEmpty(virtualDiskPath))
+        // Initialize virtual file system - prioritize custom VFS, then disk path
+        if (customVirtualFileSystem != null)
+        {
+            _logger.LogInformation("[Loader] Initializing virtual file system with custom instance");
+            _env.InitializeVirtualFileSystem(customVirtualFileSystem);
+            _logger.LogInformation("[Loader] Virtual file system initialized successfully (custom)");
+        }
+        else if (!string.IsNullOrEmpty(virtualDiskPath))
         {
             _logger.LogInformation("[Loader] Initializing virtual file system with disk: {DiskPath}", virtualDiskPath);
             _env.InitializeVirtualFileSystemWithDisk(virtualDiskPath);
-            _logger.LogInformation("[Loader] Virtual file system initialized successfully");
+            _logger.LogInformation("[Loader] Virtual file system initialized successfully (disk)");
         }
         else
         {

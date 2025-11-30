@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Win32Emu.Wasm.Backend;
+using Win32Emu.Wasm.VirtualFileSystem;
 
 namespace Win32Emu.Wasm.Services;
 
@@ -18,6 +19,7 @@ public class EmulatorService : IDisposable
 	private Emulator? _emulator;
 	private WasmEmulatorHost? _emulatorHost;
 	private WasmBackendFactory? _backendFactory;
+	private BrowserVirtualFileSystem? _browserVfs;
 	private CancellationTokenSource? _emulationCts;
 	private Task? _emulationTask;
 	
@@ -43,6 +45,11 @@ public class EmulatorService : IDisposable
 	/// </summary>
 	public ulong InstructionsExecuted => 0;
 	
+	/// <summary>
+	/// Gets the number of files in the virtual file system.
+	/// </summary>
+	public int VfsFileCount => _browserVfs?.FileCount ?? 0;
+	
 	public EmulatorService(IJSRuntime jsRuntime, ILoggerFactory loggerFactory)
 	{
 		_jsRuntime = jsRuntime;
@@ -62,12 +69,6 @@ public class EmulatorService : IDisposable
 		string fileName,
 		Dictionary<string, byte[]>? additionalFiles = null)
 	{
-		// TODO: Implement VFS population with additional files for WASM
-		if (additionalFiles != null && additionalFiles.Count > 0)
-		{
-			_logger.LogWarning("Additional files support not yet implemented for WASM ({Count} files ignored)", additionalFiles.Count);
-		}
-		
 		try
 		{
 			EmitDebugOutput($"Loading executable: {fileName} ({executableBytes.Length} bytes)");
@@ -86,13 +87,41 @@ public class EmulatorService : IDisposable
 				_emulatorHost.StdOutputReceived += (sender, message) => EmitStdOutput(message);
 			}
 			
+			// Create browser-based virtual file system
+			_browserVfs?.Dispose();
+			_browserVfs = new BrowserVirtualFileSystem(_loggerFactory.CreateLogger<BrowserVirtualFileSystem>());
+			
+			// Add the main executable to VFS
+			var exePath = $"WASM\\{fileName}";
+			_browserVfs.AddFile(exePath, executableBytes);
+			EmitDebugOutput($"Added executable to VFS: \\{exePath}");
+			
+			// Add additional files to VFS if provided (for folder uploads)
+			if (additionalFiles != null && additionalFiles.Count > 0)
+			{
+				EmitDebugOutput($"Adding {additionalFiles.Count} additional files to VFS...");
+				foreach (var kvp in additionalFiles)
+				{
+					// Convert relative path to VFS path
+					// If path contains folder name as prefix (from webkitRelativePath), use it
+					// Otherwise, add to WASM folder
+					var vfsPath = kvp.Key;
+					if (!vfsPath.Contains('\\') && !vfsPath.Contains('/'))
+					{
+						vfsPath = $"WASM\\{vfsPath}";
+					}
+					_browserVfs.AddFile(vfsPath, kvp.Value);
+				}
+				EmitDebugOutput($"VFS initialized with {_browserVfs.FileCount} files");
+			}
+			
 			// Create emulator with WASM backend factory AND emulator host for output
 			var emulatorLogger = _loggerFactory.CreateLogger<Emulator>();
 			_emulator = new Emulator(_emulatorHost, emulatorLogger, null, _backendFactory);
 			
 			// Load the executable from bytes using the Emulator's built-in method
-			// which handles synthetic path generation internally
-			_emulator.LoadExecutableFromBytes(executableBytes, fileName);
+			// with the browser VFS for file operations
+			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs);
 			
 			_loadedExecutableName = fileName;
 			EmitDebugOutput($"Successfully loaded: {fileName}");
@@ -297,6 +326,7 @@ public class EmulatorService : IDisposable
 		_emulationCts?.Cancel();
 		_emulationCts?.Dispose();
 		_emulator?.Dispose();
+		_browserVfs?.Dispose();
 	}
 }
 
