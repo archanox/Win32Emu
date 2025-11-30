@@ -1605,9 +1605,18 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
-		/// Helper method to write a message to memory. Used by GetMessageAsync to avoid issues with ref struct
-		/// crossing await boundaries.
+		/// Writes MSG structure fields to emulated memory at the specified address.
+		/// Used to avoid ref struct crossing await boundaries in async methods such as GetMessageAsync.
+		/// This helper ensures correct marshaling of message data into the emulated process memory.
 		/// </summary>
+		/// <param name="lpMsg">Pointer to the MSG structure in emulated memory</param>
+		/// <param name="hwnd">Handle to the window that receives the message</param>
+		/// <param name="message">The message identifier</param>
+		/// <param name="wParam">Additional message-specific information</param>
+		/// <param name="lParam">Additional message-specific information</param>
+		/// <param name="time">The time at which the message was posted</param>
+		/// <param name="ptX">X coordinate of the cursor position when the message was posted</param>
+		/// <param name="ptY">Y coordinate of the cursor position when the message was posted</param>
 		private void WriteMessageToMemory(uint lpMsg, uint hwnd, uint message, uint wParam, uint lParam, uint time, int ptX, int ptY)
 		{
 			var msg = new MsgRef(_env.Memory, lpMsg);
@@ -2797,12 +2806,22 @@ namespace Win32Emu.Win32.Modules
 			// Returns TRUE (non-zero) if a message is available
 			// Returns FALSE (0) if an error occurs
 
-			// Yield control to allow other async operations to proceed
-			// This is important on WASM where blocking operations would hang the browser
-			await Task.Yield();
+			// Poll the message queue at short intervals until a message is available or cancellation is requested.
+			// This avoids blocking the thread and works in both desktop and WASM environments.
+			// If messages are pumped externally (e.g., browser event loop), this will yield until a message arrives.
+			// We use TryPeekMessage with remove=false to check without consuming the message.
+			while (!_env.TryPeekMessage(out _, 0, 0, 0, remove: false) && !_env.HasQuitMessage())
+			{
+				if (cancellationToken.IsCancellationRequested)
+				{
+					_logger.LogDebug("[User32] WaitMessage: Cancellation requested during wait");
+					return (uint)NativeTypes.Win32Bool.FALSE;
+				}
+				await Task.Delay(10, cancellationToken).ConfigureAwait(false); // Poll every 10ms
+			}
 
 			_logger.LogInformation("[User32] WaitMessage: Returning after wait");
-			return (uint)NativeTypes.Win32Bool.TRUE; // Always return success
+			return (uint)NativeTypes.Win32Bool.TRUE; // Return success when a message is available
 		}
 
 		[DllModuleExport(1)]
