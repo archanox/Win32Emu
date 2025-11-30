@@ -100,16 +100,51 @@ public class EmulatorService : IDisposable
 			if (additionalFiles != null && additionalFiles.Count > 0)
 			{
 				EmitDebugOutput($"Adding {additionalFiles.Count} additional files to VFS...");
-				foreach (var kvp in additionalFiles)
+				
+				// Pre-process paths: normalize to Windows backslash format and detect common prefix
+				// webkitRelativePath gives paths like "folderName/subdir/file.txt"
+				var normalizedPaths = additionalFiles.ToDictionary(
+					kvp => kvp.Key.Replace('/', '\\'),
+					kvp => kvp.Value,
+					StringComparer.OrdinalIgnoreCase);
+				
+				// Detect the common folder prefix from the uploaded files
+				string? commonPrefix = null;
+				foreach (var path in normalizedPaths.Keys)
 				{
-					// Convert relative path to VFS path
-					// If path contains folder name as prefix (from webkitRelativePath), use it
-					// Otherwise, add to WASM folder
-					var vfsPath = kvp.Key;
-					if (!vfsPath.Contains('\\') && !vfsPath.Contains('/'))
+					var firstSlash = path.IndexOf('\\');
+					if (firstSlash > 0)
 					{
+						var prefix = path.Substring(0, firstSlash);
+						if (commonPrefix == null)
+						{
+							commonPrefix = prefix;
+						}
+						else if (!string.Equals(commonPrefix, prefix, StringComparison.OrdinalIgnoreCase))
+						{
+							// Mixed prefixes - don't try to normalize
+							commonPrefix = null;
+							break;
+						}
+					}
+				}
+				
+				foreach (var kvp in normalizedPaths)
+				{
+					// Replace the folder prefix with WASM to match emulator's expected structure
+					var vfsPath = kvp.Key;
+					
+					if (commonPrefix != null && vfsPath.StartsWith(commonPrefix + "\\", StringComparison.OrdinalIgnoreCase))
+					{
+						// Replace the original folder prefix with WASM
+						vfsPath = $"WASM{vfsPath.Substring(commonPrefix.Length)}";
+					}
+					else if (!vfsPath.Contains('\\'))
+					{
+						// Single file without folder structure - add to WASM folder
 						vfsPath = $"WASM\\{vfsPath}";
 					}
+					
 					_browserVfs.AddFile(vfsPath, kvp.Value);
 				}
 				EmitDebugOutput($"VFS initialized with {_browserVfs.FileCount} files");
