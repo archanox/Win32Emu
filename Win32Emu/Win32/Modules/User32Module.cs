@@ -1478,7 +1478,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
 			// On WASM, TryInvokeAsync routes directly to GetMessageAsync, bypassing this method
-			return GetMessageAsync(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax).GetAwaiter().GetResult();
+			return GetMessageAsync(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, CancellationToken.None).GetAwaiter().GetResult();
 		}
 
 		/// <summary>
@@ -2772,7 +2772,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			// Sync wrapper for non-WASM runtimes
 			// On WASM, TryInvokeAsync routes directly to WaitMessageAsync, bypassing this method
-			return WaitMessageAsync().GetAwaiter().GetResult();
+			return WaitMessageAsync(CancellationToken.None).GetAwaiter().GetResult();
 		}
 
 		/// <summary>
