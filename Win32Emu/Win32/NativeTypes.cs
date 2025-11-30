@@ -1546,4 +1546,76 @@ public static class NativeTypes
 	}
 
 	#endregion
+
+	#region Common Dialog Structures
+
+	// OPENFILENAMEA structure (76 bytes for Windows 95/NT4, 88 bytes for Windows 2000+)
+	// Used with GetOpenFileName and GetSaveFileName
+	// Reference: https://learn.microsoft.com/en-us/windows/win32/api/commdlg/ns-commdlg-openfilenamea
+	[StructLayout(LayoutKind.Explicit, Size = 76)]
+	[GenerateMemoryRef]
+	public struct OPENFILENAMEA
+	{
+		[FieldOffset(0)]
+		public uint lStructSize;        // Offset 0 - Size of the structure
+
+		[FieldOffset(4)]
+		public uint hwndOwner;          // Offset 4 - Handle to owner window
+
+		[FieldOffset(8)]
+		public uint hInstance;          // Offset 8 - Module instance handle
+
+		[FieldOffset(12)]
+		public uint lpstrFilter;        // Offset 12 - Pointer to filter string
+
+		[FieldOffset(16)]
+		public uint lpstrCustomFilter;  // Offset 16 - Pointer to custom filter buffer
+
+		[FieldOffset(20)]
+		public uint nMaxCustFilter;     // Offset 20 - Size of custom filter buffer
+
+		[FieldOffset(24)]
+		public uint nFilterIndex;       // Offset 24 - Index of currently selected filter
+
+		[FieldOffset(28)]
+		public uint lpstrFile;          // Offset 28 - Pointer to file name buffer
+
+		[FieldOffset(32)]
+		public uint nMaxFile;           // Offset 32 - Size of file name buffer
+
+		[FieldOffset(36)]
+		public uint lpstrFileTitle;     // Offset 36 - Pointer to file title buffer
+
+		[FieldOffset(40)]
+		public uint nMaxFileTitle;      // Offset 40 - Size of file title buffer
+
+		[FieldOffset(44)]
+		public uint lpstrInitialDir;    // Offset 44 - Pointer to initial directory
+
+		[FieldOffset(48)]
+		public uint lpstrTitle;         // Offset 48 - Pointer to dialog title
+
+		[FieldOffset(52)]
+		public uint Flags;              // Offset 52 - Dialog flags
+
+		[FieldOffset(56)]
+		public ushort nFileOffset;      // Offset 56 - Offset to file name in lpstrFile
+
+		[FieldOffset(58)]
+		public ushort nFileExtension;   // Offset 58 - Offset to extension in lpstrFile
+
+		[FieldOffset(60)]
+		public uint lpstrDefExt;        // Offset 60 - Pointer to default extension
+
+		[FieldOffset(64)]
+		public uint lCustData;          // Offset 64 - Application-defined data
+
+		[FieldOffset(68)]
+		public uint lpfnHook;           // Offset 68 - Pointer to hook function
+
+		[FieldOffset(72)]
+		public uint lpTemplateName;     // Offset 72 - Pointer to template name
+	}
+
+	#endregion
 }

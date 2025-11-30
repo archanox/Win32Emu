@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using static Win32Emu.Win32.NativeTypes;
 
 namespace Win32Emu.Win32.Modules;
 
@@ -159,31 +160,17 @@ public class Comdlg32Module : IWin32ModuleAsync
 			return 0; // FALSE - dialog cancelled
 		}
 
-		// Read OPENFILENAME structure fields we need
-		// Offset 0: lStructSize (DWORD)
-		// Offset 4: hwndOwner (HWND)
-		// Offset 8: hInstance (HINSTANCE)
-		// Offset 12: lpstrFilter (LPCSTR)
-		// Offset 16: lpstrCustomFilter (LPSTR)
-		// Offset 20: nMaxCustFilter (DWORD)
-		// Offset 24: nFilterIndex (DWORD)
-		// Offset 28: lpstrFile (LPSTR)
-		// Offset 32: nMaxFile (DWORD)
-		// Offset 36: lpstrFileTitle (LPSTR)
-		// Offset 40: nMaxFileTitle (WORD)
-		// Offset 44: lpstrInitialDir (LPCSTR)
-		// Offset 48: lpstrTitle (LPCSTR)
-		// Offset 52: Flags (DWORD)
-
-		var lpstrFile = _env.MemRead32(lpofn + 28);
-		var nMaxFile = _env.MemRead32(lpofn + 32);
-		var lpstrTitle = _env.MemRead32(lpofn + 48);
+		// Read OPENFILENAME structure using generated Ref wrapper
+		var ofn = new OPENFILENAMEARef(_env.Memory, lpofn);
+		var lpstrFile = ofn.lpstrFile;
+		var nMaxFile = ofn.nMaxFile;
+		var lpstrTitlePtr = ofn.lpstrTitle;
 
 		// Try to read the title for the dialog
 		string? dialogTitle = null;
-		if (lpstrTitle != 0)
+		if (lpstrTitlePtr != 0)
 		{
-			dialogTitle = _env.ReadAnsiString(lpstrTitle);
+			dialogTitle = _env.ReadAnsiString(lpstrTitlePtr);
 		}
 		dialogTitle ??= "Open";
 
@@ -234,16 +221,17 @@ public class Comdlg32Module : IWin32ModuleAsync
 			return 0; // FALSE - dialog cancelled
 		}
 
-		// Read OPENFILENAME structure fields we need
-		var lpstrFile = _env.MemRead32(lpofn + 28);
-		var nMaxFile = _env.MemRead32(lpofn + 32);
-		var lpstrTitle = _env.MemRead32(lpofn + 48);
+		// Read OPENFILENAME structure using generated Ref wrapper
+		var ofn = new OPENFILENAMEARef(_env.Memory, lpofn);
+		var lpstrFile = ofn.lpstrFile;
+		var nMaxFile = ofn.nMaxFile;
+		var lpstrTitlePtr = ofn.lpstrTitle;
 
 		// Try to read the title for the dialog
 		string? dialogTitle = null;
-		if (lpstrTitle != 0)
+		if (lpstrTitlePtr != 0)
 		{
-			dialogTitle = _env.ReadAnsiString(lpstrTitle);
+			dialogTitle = _env.ReadAnsiString(lpstrTitlePtr);
 		}
 		dialogTitle ??= "Save As";
 
