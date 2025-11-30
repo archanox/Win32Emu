@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using Win32Emu.Threading;
 
 namespace Win32Emu.Win32.Modules;
 
@@ -141,7 +142,32 @@ public class Msacm32Module : IWin32ModuleUnsafe
 		if (_env.AudioBackend == null && _env.BackendFactory != null)
 		{
 			_env.AudioBackend = _env.BackendFactory.CreateAudioBackend(_logger);
-			_env.AudioBackend.InitializeAsync().GetAwaiter().GetResult();
+			// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
+			// Fire-and-forget the initialization - the backend will self-mark as initialized.
+			if (PlatformHelpers.IsWasm)
+			{
+				_ = _env.AudioBackend.InitializeAsync()
+					.ContinueWith(t =>
+					{
+						if (t.IsFaulted)
+						{
+							_logger.LogError(t.Exception?.GetBaseException(), "[MSACM32] Audio backend initialization failed (WASM mode)");
+						}
+						else if (t.Result)
+						{
+							_logger.LogInformation("[MSACM32] Audio backend initialized successfully (WASM mode)");
+						}
+						else
+						{
+							_logger.LogWarning("[MSACM32] Audio backend initialization returned false (WASM mode)");
+						}
+					}, TaskScheduler.Default);
+				_logger.LogInformation("[MSACM32] Audio backend initialization started asynchronously (WASM mode)");
+			}
+			else
+			{
+				_env.AudioBackend.InitializeAsync().GetAwaiter().GetResult();
+			}
 		}
 
 		// Parse source wave format (WAVEFORMATEX structure)

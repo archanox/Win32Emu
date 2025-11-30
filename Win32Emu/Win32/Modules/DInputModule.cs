@@ -4,6 +4,7 @@ using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
+using Win32Emu.Threading;
 
 namespace Win32Emu.Win32.Modules
 {
@@ -92,7 +93,32 @@ namespace Win32Emu.Win32.Modules
 			if (_env.InputBackend == null && _env.BackendFactory != null)
 			{
 				_env.InputBackend = _env.BackendFactory.CreateInputBackend(_logger);
-				_env.InputBackend.InitializeAsync().GetAwaiter().GetResult();
+				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
+				// Fire-and-forget the initialization - the backend will self-mark as initialized.
+				if (PlatformHelpers.IsWasm)
+				{
+					_ = _env.InputBackend.InitializeAsync()
+						.ContinueWith(t =>
+						{
+							if (t.IsFaulted)
+							{
+								_logger.LogError(t.Exception?.GetBaseException(), "[DInput] Input backend initialization failed (WASM mode)");
+							}
+							else if (t.Result)
+							{
+								_logger.LogInformation("[DInput] Input backend initialized successfully (WASM mode)");
+							}
+							else
+							{
+								_logger.LogWarning("[DInput] Input backend initialization returned false (WASM mode)");
+							}
+						}, TaskScheduler.Default);
+					_logger.LogInformation("[DInput] Input backend initialization started asynchronously (WASM mode)");
+				}
+				else
+				{
+					_env.InputBackend.InitializeAsync().GetAwaiter().GetResult();
+				}
 			}
 
 // Create COM vtable for IDirectInput interface
@@ -164,7 +190,32 @@ namespace Win32Emu.Win32.Modules
 			if (_env.InputBackend == null && _env.BackendFactory != null)
 			{
 				_env.InputBackend = _env.BackendFactory.CreateInputBackend(_logger);
-				_env.InputBackend.InitializeAsync().GetAwaiter().GetResult();
+				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
+				// Fire-and-forget the initialization - the backend will self-mark as initialized.
+				if (PlatformHelpers.IsWasm)
+				{
+					_ = _env.InputBackend.InitializeAsync()
+						.ContinueWith(t =>
+						{
+							if (t.IsFaulted)
+							{
+								_logger.LogError(t.Exception?.GetBaseException(), "[DInput] Input backend initialization failed (WASM mode)");
+							}
+							else if (t.Result)
+							{
+								_logger.LogInformation("[DInput] Input backend initialized successfully (WASM mode)");
+							}
+							else
+							{
+								_logger.LogWarning("[DInput] Input backend initialization returned false (WASM mode)");
+							}
+						}, TaskScheduler.Default);
+					_logger.LogInformation("[DInput] Input backend initialization started asynchronously (WASM mode)");
+				}
+				else
+				{
+					_env.InputBackend.InitializeAsync().GetAwaiter().GetResult();
+				}
 			}
 
 			// Create COM vtable for IDirectInput interface
