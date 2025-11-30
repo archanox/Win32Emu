@@ -132,9 +132,13 @@
 							<span>FPS:</span>
 							<strong>@_fps</strong>
 						</div>
-						<div class="d-flex justify-content-between">
+						<div class="d-flex justify-content-between mb-2">
 							<span>Audio:</span>
 							<strong>@(_audioEnabled ? "Enabled" : "Disabled")</strong>
+						</div>
+						<div class="d-flex justify-content-between">
+							<span>VFS Files:</span>
+							<strong>@EmulatorService.VfsFileCount</strong>
 						</div>
 					</div>
 				</div>
@@ -197,12 +201,13 @@
 					<li>✅ Full emulator core integration (LoadExecutableFromBytes)</li>
 					<li>✅ WASM backend factory for rendering, audio, and input</li>
 					<li>✅ EmulatorService for lifecycle management</li>
+					<li>✅ Browser-based VFS for game data files (in-memory, case-insensitive)</li>
 				</ul>
 				<p class="mb-0">
 					<strong>Remaining work:</strong>
 				</p>
 				<ul class="mb-0">
-					<li>Browser-based VFS for game data files</li>
+					<li>IndexedDB persistence for VFS (save games)</li>
 					<li>Keyboard/Mouse input forwarding to emulated Windows</li>
 					<li>Performance optimization for real-time emulation</li>
 				</ul>

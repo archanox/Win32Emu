@@ -43,10 +43,11 @@ To enable full web-based emulation, the following work is needed:
    - Handle threading limitations in WASM
    - Optimize JIT compilation for browser environment
 
-4. **File System Abstraction**
-   - Virtual file system for game data access
-   - IndexedDB for persistent storage
-   - Handle CD-ROM images through browser file APIs
+4. **File System Abstraction** ✅ COMPLETED
+   - Browser-based VFS (`BrowserVirtualFileSystem`) for in-memory file storage
+   - Case-insensitive file access (Windows compatibility)
+   - File/folder upload support via HTML5 File API
+   - Future: IndexedDB for persistent storage
 
 ## Building
 
