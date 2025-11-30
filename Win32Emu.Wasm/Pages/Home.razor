@@ -320,8 +320,12 @@
 				AddDebugOutput($"Loaded folder with {_loadedFiles.Count} files (Total: {FormatFileSize(totalSize)})");
 				AddDebugOutput($"Found {_discoveredExecutables.Count} executable(s): {string.Join(", ", _discoveredExecutables.Select(x => x.Name))}");
 				
-				// Auto-select the first executable
-				SelectExecutable(_discoveredExecutables[0].RelativePath);
+				// Auto-select the first executable (use FirstOrDefault for safer access)
+				var firstExe = _discoveredExecutables.FirstOrDefault();
+				if (firstExe != null)
+				{
+					SelectExecutable(firstExe.RelativePath);
+				}
 				
 				Logger.LogInformation("Loaded folder with {FileCount} files, found {ExeCount} executables", _loadedFiles.Count, _discoveredExecutables.Count);
 			}
@@ -344,9 +348,15 @@
 	private void SelectExecutable(string relativePath)
 	{
 		var exeInfo = _discoveredExecutables.FirstOrDefault(x => x.RelativePath == relativePath);
-		if (exeInfo == null || !_loadedFiles.TryGetValue(relativePath, out var exeData))
+		if (exeInfo == null)
 		{
-			AddDebugOutput($"Error: Could not find executable: {relativePath}");
+			AddDebugOutput($"Error: Executable not found in discovered list: {relativePath}");
+			return;
+		}
+		
+		if (!_loadedFiles.TryGetValue(relativePath, out var exeData))
+		{
+			AddDebugOutput($"Error: Executable data not found in loaded files: {relativePath}");
 			return;
 		}
 		
