@@ -9,6 +9,32 @@ namespace Win32Emu.Cpu;
 /// </summary>
 public static class CpuHelpers
 {
+	#region Async Callback Execution Constants
+	
+	/// <summary>
+	/// Check for infinite loops every N steps during async callback execution.
+	/// </summary>
+	public const int INFINITE_LOOP_CHECK_INTERVAL = 100000;
+	
+	/// <summary>
+	/// Number of consecutive checks at same EIP to consider the execution stuck.
+	/// </summary>
+	public const int STUCK_COUNTER_THRESHOLD = 3;
+	
+	/// <summary>
+	/// Check cancellation token every N steps during async callback execution.
+	/// </summary>
+	public const int CANCELLATION_CHECK_INTERVAL = 1000;
+	
+	/// <summary>
+	/// Minimum valid instruction pointer (4KB) - the first 4KB (0x0-0xFFF) is the Windows 
+	/// NULL pointer guard page. Any EIP in this range indicates a null pointer dereference 
+	/// or memory corruption.
+	/// </summary>
+	public const uint MINIMUM_VALID_EIP = 0x00001000;
+	
+	#endregion
+	
 	/// <summary>
 	/// Execute CPU instruction(s) asynchronously, using ExecuteBlockAsync for JIT-enabled CPUs
 	/// or SingleStepAsync for interpreter CPUs. This provides optimal performance while maintaining
