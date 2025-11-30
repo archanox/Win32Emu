@@ -235,6 +235,179 @@ public class StringInstructionTests : IDisposable
         Assert.False(_helper.IsFlagSet(CpuFlag.Zf));
     }
 
+    #region REP Instruction Batching Tests
+    
+    /// <summary>
+    /// Tests that large REP operations complete correctly across multiple batches.
+    /// REP_BATCH_SIZE is 1000 for WASM and 100000 for native, but we test with values
+    /// larger than WASM batch size to ensure batching works correctly.
+    /// </summary>
+    [Fact]
+    public void REP_STOSD_LargeCount_ShouldCompleteCorrectly()
+    {
+        // Arrange: REP STOSD (F3 AB) with 10000 iterations
+        // This exceeds WASM_BATCH_SIZE (1000) so it would require 10 batches on WASM
+        const uint iterationCount = 10000;
+        const uint fillValue = 0xDEADBEEF;
+        
+        _helper.SetReg("EDI", 0x00001000);
+        _helper.SetReg("ECX", iterationCount);
+        _helper.SetReg("EAX", fillValue);
+        _helper.WriteCode(0xF3, 0xAB); // REP STOSD
+        
+        // Act: Execute multiple SingleStep calls until REP completes
+        // The batching implementation keeps EIP at the REP instruction until ECX reaches 0
+        uint maxIterations = 100; // Prevent infinite loop in case of bugs
+        uint iterations = 0;
+        while (_helper.GetReg("ECX") > 0 && iterations < maxIterations)
+        {
+            _helper.ExecuteInstruction();
+            iterations++;
+            // No need to reset EIP - the batching implementation doesn't advance it
+        }
+        
+        // Assert
+        Assert.Equal(0x00000000u, _helper.GetReg("ECX")); // ECX should be 0
+        Assert.Equal(0x00001000u + (iterationCount * 4), _helper.GetReg("EDI")); // EDI should advance
+        
+        // Verify memory was filled correctly (check first, middle, and last DWORDs)
+        Assert.Equal(fillValue, _helper.ReadMemory32(0x00001000)); // First
+        Assert.Equal(fillValue, _helper.ReadMemory32(0x00001000 + 5000 * 4)); // Middle
+        Assert.Equal(fillValue, _helper.ReadMemory32(0x00001000 + (iterationCount - 1) * 4)); // Last
+    }
+
+    [Fact]
+    public void REP_MOVSD_LargeCount_ShouldCopyMemoryCorrectly()
+    {
+        // Arrange: REP MOVSD (F3 A5) with 5000 iterations
+        const uint iterationCount = 5000;
+        
+        // Initialize source memory with pattern
+        for (uint i = 0; i < iterationCount; i++)
+        {
+            _helper.WriteMemory32(0x00010000 + i * 4, 0x12340000 + i);
+        }
+        
+        _helper.SetReg("ESI", 0x00010000); // Source
+        _helper.SetReg("EDI", 0x00020000); // Destination
+        _helper.SetReg("ECX", iterationCount);
+        _helper.WriteCode(0xF3, 0xA5); // REP MOVSD
+        
+        // Act: Execute until complete
+        uint maxIterations = 100;
+        uint iterations = 0;
+        while (_helper.GetReg("ECX") > 0 && iterations < maxIterations)
+        {
+            _helper.ExecuteInstruction();
+            iterations++;
+        }
+        
+        // Assert
+        Assert.Equal(0x00000000u, _helper.GetReg("ECX"));
+        Assert.Equal(0x00010000u + iterationCount * 4, _helper.GetReg("ESI"));
+        Assert.Equal(0x00020000u + iterationCount * 4, _helper.GetReg("EDI"));
+        
+        // Verify copy was correct
+        Assert.Equal(0x12340000u, _helper.ReadMemory32(0x00020000)); // First
+        Assert.Equal(0x12340000u + 2500, _helper.ReadMemory32(0x00020000 + 2500 * 4)); // Middle (2500)
+        Assert.Equal(0x12340000u + iterationCount - 1, _helper.ReadMemory32(0x00020000 + (iterationCount - 1) * 4)); // Last
+    }
+
+    [Fact]
+    public void REP_STOSB_RegisterState_ShouldBePreservedBetweenBatches()
+    {
+        // Arrange: REP STOSB (F3 AA) - tests that ECX, EDI are correctly preserved
+        const uint iterationCount = 5000;
+        const byte fillValue = 0xAA;
+        
+        _helper.SetReg("EDI", 0x00001000);
+        _helper.SetReg("ECX", iterationCount);
+        _helper.SetReg("EAX", fillValue);
+        _helper.WriteCode(0xF3, 0xAA); // REP STOSB
+        
+        // Act: Execute and track register state between batches
+        uint maxIterations = 100;
+        uint iterations = 0;
+        uint lastEcx = iterationCount;
+        uint lastEdi = 0x00001000;
+        
+        while (_helper.GetReg("ECX") > 0 && iterations < maxIterations)
+        {
+            _helper.ExecuteInstruction();
+            iterations++;
+            
+            uint currentEcx = _helper.GetReg("ECX");
+            uint currentEdi = _helper.GetReg("EDI");
+            
+            // Verify ECX is decreasing (or at 0)
+            Assert.True(currentEcx <= lastEcx, $"ECX should decrease: was {lastEcx}, now {currentEcx}");
+            
+            // Verify EDI is increasing
+            Assert.True(currentEdi >= lastEdi, $"EDI should increase: was {lastEdi}, now {currentEdi}");
+            
+            // Verify EDI and ECX are consistent
+            uint bytesProcessed = iterationCount - currentEcx;
+            Assert.Equal(0x00001000u + bytesProcessed, currentEdi);
+            
+            lastEcx = currentEcx;
+            lastEdi = currentEdi;
+        }
+        
+        // Final assertions
+        Assert.Equal(0x00000000u, _helper.GetReg("ECX"));
+        Assert.Equal(0x00001000u + iterationCount, _helper.GetReg("EDI"));
+        
+        // Verify memory filled correctly
+        Assert.Equal(fillValue, _helper.ReadMemory8(0x00001000));
+        Assert.Equal(fillValue, _helper.ReadMemory8(0x00001000 + iterationCount - 1));
+    }
+
+    [Fact]
+    public void REPE_CMPSB_LargeCount_ShouldFindMismatch()
+    {
+        // Arrange: REPE CMPSB (F3 A6) - compare with mismatch at position 3000
+        const uint stringLength = 5000;
+        const uint mismatchPos = 3000;
+        
+        // Initialize identical strings with one mismatch
+        for (uint i = 0; i < stringLength; i++)
+        {
+            byte value = (byte)(i & 0xFF);
+            _helper.Memory.Write8(0x00010000 + i, value);
+            _helper.Memory.Write8(0x00020000 + i, value);
+        }
+        // Insert mismatch
+        _helper.Memory.Write8(0x00010000 + mismatchPos, 0xFF);
+        _helper.Memory.Write8(0x00020000 + mismatchPos, 0x00);
+        
+        _helper.SetReg("ESI", 0x00010000);
+        _helper.SetReg("EDI", 0x00020000);
+        _helper.SetReg("ECX", stringLength);
+        _helper.WriteCode(0xF3, 0xA6); // REPE CMPSB
+        
+        // Act: Execute until mismatch found or ECX exhausted
+        uint maxIterations = 100;
+        uint iterations = 0;
+        while (_helper.GetReg("ECX") > 0 && iterations < maxIterations)
+        {
+            _helper.ExecuteInstruction();
+            iterations++;
+            // REPE stops when ZF becomes 0 (mismatch) - check after execution
+            if (!_helper.IsFlagSet(CpuFlag.Zf))
+            {
+                break; // Mismatch found
+            }
+        }
+        
+        // Assert: Should stop at mismatch
+        // After finding mismatch at position 3000, ECX = 5000 - 3001 = 1999
+        // (we compared 3001 bytes: 0-2999 equal, 3000 not equal)
+        Assert.Equal(stringLength - mismatchPos - 1, _helper.GetReg("ECX"));
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf)); // ZF clear indicates mismatch found
+    }
+    
+    #endregion
+
     public void Dispose()
     {
         _helper?.Dispose();

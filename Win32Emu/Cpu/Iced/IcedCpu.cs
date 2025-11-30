@@ -42,9 +42,6 @@ public class IcedCpu : IAsyncCpu
 	// Track whether current instruction needs to be re-executed (for batched REP)
 	private bool _repInstructionContinue;
 	
-	// Current instruction address (set at start of SingleStep, used by REP handlers)
-	private uint _currentInstructionAddress;
-	
 	// Image base from PE header (used for validation of indirect calls/jumps)
 	private readonly uint _imageBase;
 	
@@ -225,14 +222,14 @@ public class IcedCpu : IAsyncCpu
 		Diagnostics.Diagnostics.SetCpuContext(new Diagnostics.Diagnostics.CpuContext(_eip, _esp, _ebp, _eax, _ecx, _edx, null));
 
 		var oldEip = _eip; // Capture instruction address BEFORE any decoder operations
-		_currentInstructionAddress = oldEip; // Store for REP handlers to access
 		
 		// Check if we're continuing a batched REP instruction
-		// If so, we're already at the right EIP and just need to continue execution
+		// If so, we need to re-execute the same REP instruction with the remaining ECX count
+		// (the instruction will be decoded again below)
 		if (_repInstructionContinue)
 		{
 			_repInstructionContinue = false;
-			// Fall through to execute the same instruction again
+			// Fall through to re-decode and execute the same instruction
 		}
 		
 		_reader.Reset(_eip);
