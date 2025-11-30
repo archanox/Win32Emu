@@ -53,8 +53,9 @@ public sealed class Emulator : IDisposable
     
     // WASM yield interval - yield to browser event loop every N iterations
     // This prevents the browser from freezing when emulating tight loops.
-    // Set to 1000 to balance responsiveness vs performance (yields ~every few ms on modern hardware)
-    private const ulong WASM_YIELD_INTERVAL = 1000;
+    // Set to 100 for better responsiveness on WASM - yields every ~0.1-1ms on modern hardware.
+    // Lower values improve UI responsiveness but reduce emulation throughput.
+    private const ulong WASM_YIELD_INTERVAL = 100;
     
     // Instruction tracing for debugging BasicDD crash
     private int _instructionTraceCount = 0;
@@ -870,17 +871,22 @@ public sealed class Emulator : IDisposable
         // Infinite loop detection - track EIP to detect stuck loops
         var lastProgressEip = 0u;
         var sameEipCount = 0ul;
-        // Stop emulation after 50M iterations at same EIP
-        // This threshold allows legitimate tight loops (memory initialization, large data processing) to run
-        // while still catching applications stuck in true infinite loops (e.g., message pump with no messages)
+        // Stop emulation after N iterations at same EIP
+        // WASM uses a much lower threshold (500K) to prevent browser freeze
+        // Native uses 50M to allow legitimate tight loops (memory initialization, large data processing)
         // Note: 307K iterations are needed for typical screen buffer initialization (640x480)
-        const ulong MAX_SAME_EIP_ITERATIONS = 50000000;
+        var maxSameEipIterations = PlatformHelpers.IsWasm 
+            ? 500000ul   // WASM: 500K iterations (~0.5-5 seconds) - prevents browser freeze
+            : 50000000ul; // Native: 50M iterations - allows complex initialization
         
         // Secondary infinite loop detection - track iterations since last syscall
         // This catches loops that cycle through multiple instructions but never call Win32 APIs
-        // Increased to 100M to allow complex initialization routines (lookup tables, data structures)
+        // WASM uses a lower threshold (1M) to keep the browser responsive
+        // Native uses 100M to allow complex initialization routines (lookup tables, data structures)
         var iterationsSinceLastSyscall = 0ul;
-        const ulong MAX_ITERATIONS_WITHOUT_SYSCALL = 100000000; // 100M instructions without a syscall
+        var maxIterationsWithoutSyscall = PlatformHelpers.IsWasm
+            ? 1000000ul    // WASM: 1M instructions (~1-10 seconds) - prevents browser freeze
+            : 100000000ul; // Native: 100M instructions - allows complex initialization
         
         // Throttle noisy warning logs to reduce spam
         var lastSuspiciousEipWarning = 0u;
@@ -914,7 +920,7 @@ public sealed class Emulator : IDisposable
                     }
                     
                     // Stop execution if we've been stuck too long
-                    if (sameEipCount >= MAX_SAME_EIP_ITERATIONS)
+                    if (sameEipCount >= maxSameEipIterations)
                     {
                         _logger.LogError("[Emulator] INFINITE LOOP DETECTED: Stuck at EIP=0x{Eip:X8} for {Iterations} iterations. Stopping emulation.", 
                             progressEip, sameEipCount);
@@ -934,7 +940,7 @@ public sealed class Emulator : IDisposable
                 
                 // Check if we've been running too long without making a Win32 API call
                 // This catches infinite loops that cycle through multiple instructions
-                if (iterationsSinceLastSyscall >= MAX_ITERATIONS_WITHOUT_SYSCALL)
+                if (iterationsSinceLastSyscall >= maxIterationsWithoutSyscall)
                 {
                     _logger.LogError("[Emulator] INFINITE LOOP DETECTED: {Iterations} iterations without a syscall. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}. Stopping emulation.", 
                         iterationsSinceLastSyscall, progressEip, progressEsp);
