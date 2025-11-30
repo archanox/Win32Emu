@@ -5,6 +5,7 @@ using Iced.Intel;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Memory;
+using Win32Emu.Threading;
 
 namespace Win32Emu.Cpu.Iced;
 
@@ -31,6 +32,18 @@ public class IcedCpu : IAsyncCpu
 	// Default stack region bounds if not specified (typical range for Windows applications)
 	private const uint DEFAULT_STACK_LIMIT = 0x00100000;  // 1 MB (bottom of stack)
 	private const uint DEFAULT_STACK_BASE = 0x01000000;   // 16 MB (top of stack)
+	
+	// REP instruction batch limits - WASM uses smaller batches to allow yielding
+	// Native platforms can process more iterations per call since they run on dedicated threads
+	// WASM: 1000 iterations allows yielding every ~0.1ms for large memory copies
+	// Native: 100K iterations for better throughput without frequent returns
+	private static readonly uint REP_BATCH_SIZE = PlatformHelpers.IsWasm ? 1000u : 100000u;
+	
+	// Track whether current instruction needs to be re-executed (for batched REP)
+	private bool _repInstructionContinue;
+	
+	// Current instruction address (set at start of SingleStep, used by REP handlers)
+	private uint _currentInstructionAddress;
 	
 	// Image base from PE header (used for validation of indirect calls/jumps)
 	private readonly uint _imageBase;
@@ -212,6 +225,16 @@ public class IcedCpu : IAsyncCpu
 		Diagnostics.Diagnostics.SetCpuContext(new Diagnostics.Diagnostics.CpuContext(_eip, _esp, _ebp, _eax, _ecx, _edx, null));
 
 		var oldEip = _eip; // Capture instruction address BEFORE any decoder operations
+		_currentInstructionAddress = oldEip; // Store for REP handlers to access
+		
+		// Check if we're continuing a batched REP instruction
+		// If so, we're already at the right EIP and just need to continue execution
+		if (_repInstructionContinue)
+		{
+			_repInstructionContinue = false;
+			// Fall through to execute the same instruction again
+		}
+		
 		_reader.Reset(_eip);
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
@@ -941,7 +964,8 @@ public class IcedCpu : IAsyncCpu
 		};
 
 		// For non-control-flow instructions, advance EIP by instruction length
-		if (!isControlFlowInstruction)
+		// But NOT if we're in the middle of a batched REP instruction
+		if (!isControlFlowInstruction && !_repInstructionContinue)
 		{
 			// Use decoder IP directly as it's authoritative for instruction length
 			// Store the full 32-bit value of EIP even in 16-bit mode
@@ -3066,14 +3090,25 @@ public class IcedCpu : IAsyncCpu
 	/// <summary>
 	/// Executes a string instruction with REP prefix (unconditional repeat).
 	/// Repeats the operation while ECX != 0, decrementing ECX after each iteration.
+	/// On WASM, limits iterations per call to REP_BATCH_SIZE for yielding.
 	/// </summary>
 	/// <param name="operation">The string operation to execute each iteration</param>
 	private void Rep(Action operation)
 	{
+		uint iterations = 0;
 		while (_ecx != 0)
 		{
 			operation();
 			_ecx--;
+			iterations++;
+			
+			// Yield after batch size to allow responsiveness (especially on WASM)
+			// REP_BATCH_SIZE is platform-specific: smaller on WASM for better browser responsiveness
+			if (iterations >= REP_BATCH_SIZE && _ecx != 0)
+			{
+				_repInstructionContinue = true;
+				return;
+			}
 		}
 	}
 
@@ -3081,10 +3116,12 @@ public class IcedCpu : IAsyncCpu
 	/// Executes a string instruction with REPE/REPZ prefix (repeat while equal/zero).
 	/// Repeats while ECX != 0 AND ZF = 1, decrementing ECX after each iteration.
 	/// Stops early if ZF becomes 0 (values not equal).
+	/// Batches iterations to allow yielding; batch size is platform-specific.
 	/// </summary>
 	/// <param name="operation">The string operation to execute each iteration</param>
 	private void Repe(Action operation)
 	{
+		uint iterations = 0;
 		while (_ecx != 0)
 		{
 			operation();
@@ -3093,6 +3130,15 @@ public class IcedCpu : IAsyncCpu
 			{
 				break; // Stop when not equal
 			}
+			iterations++;
+			
+			// Yield after batch size to allow responsiveness (especially on WASM)
+			// REP_BATCH_SIZE is platform-specific: smaller on WASM for better browser responsiveness
+			if (iterations >= REP_BATCH_SIZE && _ecx != 0)
+			{
+				_repInstructionContinue = true;
+				return;
+			}
 		}
 	}
 
@@ -3100,10 +3146,12 @@ public class IcedCpu : IAsyncCpu
 	/// Executes a string instruction with REPNE/REPNZ prefix (repeat while not equal/not zero).
 	/// Repeats while ECX != 0 AND ZF = 0, decrementing ECX after each iteration.
 	/// Stops early if ZF becomes 1 (values equal).
+	/// Batches iterations to allow yielding; batch size is platform-specific.
 	/// </summary>
 	/// <param name="operation">The string operation to execute each iteration</param>
 	private void Repne(Action operation)
 	{
+		uint iterations = 0;
 		while (_ecx != 0)
 		{
 			operation();
@@ -3111,6 +3159,15 @@ public class IcedCpu : IAsyncCpu
 			if (GetFlag(Zf))
 			{
 				break; // Stop when equal
+			}
+			iterations++;
+			
+			// Yield after batch size to allow responsiveness (especially on WASM)
+			// REP_BATCH_SIZE is platform-specific: smaller on WASM for better browser responsiveness
+			if (iterations >= REP_BATCH_SIZE && _ecx != 0)
+			{
+				_repInstructionContinue = true;
+				return;
 			}
 		}
 	}
