@@ -1652,21 +1652,22 @@ namespace Win32Emu.Win32.Modules
 		/// freezing when games use tight message loops. This is critical for WASM where
 		/// blocking the main thread freezes the browser.
 		/// </remarks>
+		/// <param name="lpMsg">Pointer to a MSG structure containing the message to translate</param>
 		/// <param name="cancellationToken">Cancellation token for async operation</param>
 		/// <returns>TRUE if a character message was posted, FALSE otherwise</returns>
 		private async Task<uint> TranslateMessageAsync(uint lpMsg, CancellationToken cancellationToken = default)
 		{
 			// TranslateMessage translates virtual-key messages into character messages
 			
-			// Yield to browser event loop - this is the key for WASM responsiveness
-			await Task.Yield();
-			
-			// Check for cancellation
+			// Check for cancellation first (fast path)
 			if (cancellationToken.IsCancellationRequested)
 			{
 				_logger.LogDebug("[User32] TranslateMessage: Cancellation requested");
 				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
+
+			// Yield to browser event loop - this is the key for WASM responsiveness
+			await Task.Yield();
 
 			if (lpMsg != 0)
 			{
@@ -2794,6 +2795,11 @@ namespace Win32Emu.Win32.Modules
 		/// freezing when games use tight PeekMessage loops (common game message pump pattern).
 		/// This is critical for WASM where blocking the main thread freezes the browser.
 		/// </remarks>
+		/// <param name="lpMsg">Pointer to a MSG structure that receives message information</param>
+		/// <param name="hwnd">Handle to the window whose messages are to be retrieved. 0 means any window</param>
+		/// <param name="wMsgFilterMin">Integer value of the lowest message value to retrieve</param>
+		/// <param name="wMsgFilterMax">Integer value of the highest message value to retrieve</param>
+		/// <param name="wRemoveMsg">Specifies how messages are to be handled (PM_REMOVE = 0x0001, PM_NOREMOVE = 0x0000)</param>
 		/// <param name="cancellationToken">Cancellation token for async operation</param>
 		/// <returns>TRUE if a message is available, FALSE otherwise</returns>
 		private async Task<uint> PeekMessageAsync(uint lpMsg, uint hwnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg, CancellationToken cancellationToken = default)
@@ -2801,21 +2807,22 @@ namespace Win32Emu.Win32.Modules
 			// PeekMessage returns immediately with message availability
 			_logger.LogInformation("[User32] PeekMessageA: lpMsg=0x{LpMsg:X8} HWND=0x{Hwnd:X8}", lpMsg, hwnd);
 
-			// Yield to browser event loop - this is the key for WASM responsiveness
-			// In tight PeekMessage loops, this allows the browser to process events
-			await Task.Yield();
+			// Validate parameter first (fast path for invalid input)
+			if (lpMsg == 0)
+			{
+				return (uint)NativeTypes.Win32Bool.FALSE; // No message available
+			}
 
-			// Check for cancellation
+			// Check for cancellation (fast path)
 			if (cancellationToken.IsCancellationRequested)
 			{
 				_logger.LogDebug("[User32] PeekMessageA: Cancellation requested");
-				return 0;
+				return (uint)NativeTypes.Win32Bool.FALSE;
 			}
 
-			if (lpMsg == 0)
-			{
-				return 0; // No message available
-			}
+			// Yield to browser event loop - this is the key for WASM responsiveness
+			// In tight PeekMessage loops, this allows the browser to process events
+			await Task.Yield();
 
 			// PM_REMOVE = 0x0001, PM_NOREMOVE = 0x0000
 			var remove = (wRemoveMsg & 0x0001) != 0;
@@ -2834,10 +2841,10 @@ namespace Win32Emu.Win32.Modules
 				msg.ptY = (int)queuedMsg.PtY;
 
 				_logger.LogInformation("[User32] PeekMessageA: found MSG=0x{QueuedMsgMessage:X4}", queuedMsg.Message);
-				return 1; // Message available
+				return (uint)NativeTypes.Win32Bool.TRUE; // Message available
 			}
 
-			return 0; // No message available
+			return (uint)NativeTypes.Win32Bool.FALSE; // No message available
 		}
 
 		[DllModuleExport(738, entryPoint: 0x00013A10, Version = "5.1.2600.6532")]
