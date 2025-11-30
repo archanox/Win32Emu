@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.VirtualFileSystem;
@@ -14,7 +16,6 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 	private readonly ILogger _logger;
 	private readonly Dictionary<string, byte[]> _files = new(StringComparer.OrdinalIgnoreCase);
 	private readonly HashSet<string> _directories = new(StringComparer.OrdinalIgnoreCase);
-	private readonly HashSet<string> _openFiles = new(StringComparer.OrdinalIgnoreCase);
 	private readonly object _lock = new();
 	private bool _disposed;
 
@@ -84,14 +85,18 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 		
 		var directory = normalizedPath.Substring(0, lastSep);
 		
-		// Create all parent directories
+		// Create all parent directories using StringBuilder for efficiency
 		var parts = directory.Split('\\', StringSplitOptions.RemoveEmptyEntries);
-		var currentPath = "\\";
+		var currentPath = new StringBuilder("\\");
 		
 		foreach (var part in parts)
 		{
-			currentPath = currentPath.TrimEnd('\\') + "\\" + part;
-			_directories.Add(currentPath);
+			if (currentPath.Length > 1)
+			{
+				currentPath.Append('\\');
+			}
+			currentPath.Append(part);
+			_directories.Add(currentPath.ToString());
 		}
 	}
 
@@ -112,10 +117,6 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 	/// </summary>
 	internal void CloseFile(string normalizedPath)
 	{
-		lock (_lock)
-		{
-			_openFiles.Remove(normalizedPath);
-		}
 		_logger.LogDebug("[BrowserVFS] Closed file: {Path}", normalizedPath);
 	}
 
@@ -173,11 +174,8 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 			normalized = normalized.TrimEnd('\\');
 		}
 		
-		// Remove double backslashes
-		while (normalized.Contains("\\\\"))
-		{
-			normalized = normalized.Replace("\\\\", "\\");
-		}
+		// Remove double backslashes (more efficient than while loop)
+		normalized = Regex.Replace(normalized, @"\\+", "\\");
 		
 		return normalized;
 	}
@@ -189,20 +187,9 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 	{
 		lock (_lock)
 		{
-			// Direct lookup works due to case-insensitive comparer
-			if (_files.ContainsKey(normalizedPath))
-			{
-				// Return the actual key from the dictionary (preserving original case)
-				foreach (var key in _files.Keys)
-				{
-					if (string.Equals(key, normalizedPath, StringComparison.OrdinalIgnoreCase))
-					{
-						return key;
-					}
-				}
-			}
+			// Direct lookup with case-insensitive comparer
+			return _files.ContainsKey(normalizedPath) ? normalizedPath : null;
 		}
-		return null;
 	}
 
 	public IVirtualFileHandle? OpenFile(string path, VfsFileMode mode, VfsFileAccess access)
@@ -275,7 +262,6 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 			}
 			// For write mode, position stays at end for append behavior (if needed)
 			
-			_openFiles.Add(actualPath);
 			_logger.LogDebug("[BrowserVFS] Opened file: {Path} (writable: {Writable})", actualPath, canWrite);
 			
 			return new BrowserFileHandle(stream, actualPath, this, canWrite);
@@ -362,27 +348,17 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 		
 		lock (_lock)
 		{
-			// Check explicit directories
-			foreach (var dir in _directories)
+			// Direct lookup with case-insensitive comparer
+			if (_directories.Contains(normalizedPath))
 			{
-				if (string.Equals(dir, normalizedPath, StringComparison.OrdinalIgnoreCase))
-				{
-					return true;
-				}
+				return true;
 			}
 			
 			// Check if any file exists in this directory (implicit directory)
 			var pathWithSep = normalizedPath.TrimEnd('\\') + "\\";
-			foreach (var filePath in _files.Keys)
-			{
-				if (filePath.StartsWith(pathWithSep, StringComparison.OrdinalIgnoreCase))
-				{
-					return true;
-				}
-			}
+			return _files.Keys.Any(filePath => 
+				filePath.StartsWith(pathWithSep, StringComparison.OrdinalIgnoreCase));
 		}
-		
-		return false;
 	}
 
 	public string[] GetFiles(string directory, string pattern)
@@ -392,57 +368,24 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 		var normalizedDir = NormalizePath(directory);
 		var dirWithSep = normalizedDir.TrimEnd('\\') + "\\";
 		
-		// Convert pattern to simple wildcard matching
-		var hasWildcard = pattern.Contains('*') || pattern.Contains('?');
-		var searchPattern = pattern.Replace("*", "").Replace("?", "");
-		var extension = pattern.StartsWith("*") ? pattern.Substring(1) : null;
+		// Convert Win32 wildcard pattern to regex
+		var regexPattern = "^" + Regex.Escape(pattern)
+			.Replace("\\*", ".*")
+			.Replace("\\?", ".") + "$";
+		var regex = new Regex(regexPattern, RegexOptions.IgnoreCase);
 		
 		var results = new List<string>();
 		
 		lock (_lock)
 		{
-			foreach (var filePath in _files.Keys)
-			{
-				// Check if file is in the specified directory (not subdirectory)
-				if (!filePath.StartsWith(dirWithSep, StringComparison.OrdinalIgnoreCase))
-				{
-					continue;
-				}
-				
-				var relativePath = filePath.Substring(dirWithSep.Length);
-				
-				// Skip files in subdirectories
-				if (relativePath.Contains('\\'))
-				{
-					continue;
-				}
-				
-				// Apply pattern matching
-				if (hasWildcard)
-				{
-					if (extension != null)
-					{
-						// Pattern like "*.exe"
-						if (relativePath.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
-						{
-							results.Add(relativePath);
-						}
-					}
-					else if (pattern == "*" || pattern == "*.*")
-					{
-						// Match all files
-						results.Add(relativePath);
-					}
-				}
-				else
-				{
-					// Exact match
-					if (string.Equals(relativePath, pattern, StringComparison.OrdinalIgnoreCase))
-					{
-						results.Add(relativePath);
-					}
-				}
-			}
+			// Filter files in the specified directory and match pattern
+			var matchingFiles = _files.Keys
+				.Where(filePath => filePath.StartsWith(dirWithSep, StringComparison.OrdinalIgnoreCase))
+				.Select(filePath => filePath.Substring(dirWithSep.Length))
+				.Where(relativePath => !relativePath.Contains('\\'))
+				.Where(relativePath => regex.IsMatch(relativePath));
+			
+			results.AddRange(matchingFiles);
 		}
 		
 		_logger.LogDebug("[BrowserVFS] GetFiles({Directory}, {Pattern}) returned {Count} files", 
@@ -460,7 +403,6 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 		{
 			_files.Clear();
 			_directories.Clear();
-			_openFiles.Clear();
 			
 			// Re-initialize root directory
 			_directories.Add("\\");
@@ -482,7 +424,6 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 		{
 			_files.Clear();
 			_directories.Clear();
-			_openFiles.Clear();
 		}
 		
 		_logger.LogInformation("[BrowserVFS] Disposed");
