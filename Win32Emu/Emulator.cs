@@ -57,6 +57,20 @@ public sealed class Emulator : IDisposable
     // Lower values improve UI responsiveness but reduce emulation throughput.
     private const ulong WASM_YIELD_INTERVAL = 100;
     
+    // Infinite loop detection thresholds - WASM uses lower values to prevent browser freeze
+    // These thresholds are selected based on runtime cost and expected legitimate workloads:
+    // - WASM needs to remain responsive to the browser event loop
+    // - Native can tolerate longer delays since emulation runs on a dedicated thread
+    
+    // Max iterations at same EIP before treating as stuck
+    // 307K iterations are needed for typical screen buffer initialization (640x480)
+    private const ulong MAX_SAME_EIP_ITERATIONS_WASM = 500000;     // WASM: 500K (~0.5-5 seconds)
+    private const ulong MAX_SAME_EIP_ITERATIONS_NATIVE = 50000000; // Native: 50M iterations
+    
+    // Max iterations without a syscall (Win32 API call) before treating as stuck
+    private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_WASM = 1000000;      // WASM: 1M (~1-10 seconds)
+    private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE = 100000000;  // Native: 100M instructions
+    
     // Instruction tracing for debugging BasicDD crash
     private int _instructionTraceCount = 0;
     private const int MAX_TRACE_INSTRUCTIONS = 1000; // Trace 1000 instructions to find stack corruption
@@ -871,22 +885,17 @@ public sealed class Emulator : IDisposable
         // Infinite loop detection - track EIP to detect stuck loops
         var lastProgressEip = 0u;
         var sameEipCount = 0ul;
-        // Stop emulation after N iterations at same EIP
-        // WASM uses a much lower threshold (500K) to prevent browser freeze
-        // Native uses 50M to allow legitimate tight loops (memory initialization, large data processing)
-        // Note: 307K iterations are needed for typical screen buffer initialization (640x480)
-        var maxSameEipIterations = PlatformHelpers.IsWasm 
-            ? 500000ul   // WASM: 500K iterations (~0.5-5 seconds) - prevents browser freeze
-            : 50000000ul; // Native: 50M iterations - allows complex initialization
+        // Select platform-appropriate threshold for same EIP detection
+        var maxSameEipIterations = PlatformHelpers.IsWasm
+            ? MAX_SAME_EIP_ITERATIONS_WASM
+            : MAX_SAME_EIP_ITERATIONS_NATIVE;
         
         // Secondary infinite loop detection - track iterations since last syscall
         // This catches loops that cycle through multiple instructions but never call Win32 APIs
-        // WASM uses a lower threshold (1M) to keep the browser responsive
-        // Native uses 100M to allow complex initialization routines (lookup tables, data structures)
         var iterationsSinceLastSyscall = 0ul;
         var maxIterationsWithoutSyscall = PlatformHelpers.IsWasm
-            ? 1000000ul    // WASM: 1M instructions (~1-10 seconds) - prevents browser freeze
-            : 100000000ul; // Native: 100M instructions - allows complex initialization
+            ? MAX_ITERATIONS_WITHOUT_SYSCALL_WASM
+            : MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE;
         
         // Throttle noisy warning logs to reduce spam
         var lastSuspiciousEipWarning = 0u;
