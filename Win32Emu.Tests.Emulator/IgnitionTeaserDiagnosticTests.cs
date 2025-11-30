@@ -135,14 +135,14 @@ public class IgnitionTeaserDiagnosticTests
         }
 
         public void OnDialogControlTextChanged(uint dialogHandle, int controlId, string text) { }
-        public void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData) { }
-        public void OnDialogControlEnabledChanged(uint dialogHandle, int controlId, bool enabled) { }
-        public void OnDisplayUpdate(DisplayUpdateInfo info) { }
-        public Task<string?> OnBrowseForFolder(string? title, string? rootPath) => Task.FromResult<string?>(null);
-        public Task<string?> OnOpenFileDialog(string? title, string? filter, string? initialDirectory) => Task.FromResult<string?>(null);
-        public Task<string?> OnSaveFileDialog(string? title, string? filter, string? initialDirectory) => Task.FromResult<string?>(null);
-public void OnWindowTitleChanged(uint windowHandle, string title) { }
-public void OnControlVisibilityChanged(uint dialogHandle, int controlId, bool visible) { }
+                public void OnDialogControlBitmapChanged(uint dialogHandle, int controlId, byte[] bitmapData) { }
+                public void OnDialogControlEnabledChanged(uint dialogHandle, int controlId, bool enabled) { }
+                public void OnDisplayUpdate(DisplayUpdateInfo info) { }
+                public Task<string?> OnBrowseForFolder(string? title, string? rootPath) => Task.FromResult<string?>(null);
+                public Task<string?> OnOpenFileDialog(string? title, string? filter, string? initialDirectory) => Task.FromResult<string?>(null);
+                public Task<string?> OnSaveFileDialog(string? title, string? filter, string? initialDirectory) => Task.FromResult<string?>(null);
+                public void OnWindowTitleChanged(uint windowHandle, string title) { }
+                public void OnControlVisibilityChanged(uint dialogHandle, int controlId, bool visible) { }
         
         public void TrackInstruction(uint eip)
         {
