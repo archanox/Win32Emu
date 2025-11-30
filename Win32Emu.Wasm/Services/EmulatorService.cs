@@ -101,12 +101,21 @@ public class EmulatorService : IDisposable
 			{
 				EmitDebugOutput($"Adding {additionalFiles.Count} additional files to VFS...");
 				
-				// Pre-process paths: normalize to Windows backslash format and detect common prefix
 				// webkitRelativePath gives paths like "folderName/subdir/file.txt"
-				var normalizedPaths = additionalFiles.ToDictionary(
-					kvp => kvp.Key.Replace('/', '\\'),
-					kvp => kvp.Value,
-					StringComparer.OrdinalIgnoreCase);
+				// The browser's folder upload API (webkitRelativePath) includes the top-level folder name
+				// in all paths. The emulator expects all files to be under the "WASM" directory (C:\WASM).
+				// We detect the common folder prefix so we can replace it with "WASM", ensuring the VFS
+				// structure matches the emulator's working directory and avoids mismatches between
+				// uploaded folder names and the expected VFS root.
+				var normalizedPaths = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+				foreach (var kvp in additionalFiles)
+				{
+					var normalizedKey = kvp.Key.Replace('/', '\\');
+					if (!normalizedPaths.TryAdd(normalizedKey, kvp.Value))
+					{
+						EmitDebugOutput($"Warning: Duplicate file path detected (case-insensitive): {normalizedKey}");
+					}
+				}
 				
 				// Detect the common folder prefix from the uploaded files
 				string? commonPrefix = null;
@@ -131,7 +140,7 @@ public class EmulatorService : IDisposable
 				
 				foreach (var kvp in normalizedPaths)
 				{
-					// Replace the folder prefix with WASM to match emulator's expected structure
+					// Replace the folder prefix with WASM to match emulator's working directory (C:\WASM)
 					var vfsPath = kvp.Key;
 					
 					if (commonPrefix != null && vfsPath.StartsWith(commonPrefix + "\\", StringComparison.OrdinalIgnoreCase))
