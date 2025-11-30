@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using Win32Emu.Threading;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
@@ -1518,18 +1519,45 @@ namespace Win32Emu.Win32.Modules
 			if (!_renderingBackend.IsInitialized)
 			{
 				var title = "Win32Emu - 3Dfx Glide";
-				var success = _renderingBackend.InitializeAsync(_width, _height, title).GetAwaiter().GetResult();
-				
-				if (!success)
+				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
+				// Fire-and-forget the initialization - the backend will self-mark as initialized.
+				if (PlatformHelpers.IsWasm)
 				{
-					_logger.LogError("[GLIDE2x] Failed to initialize rendering backend");
-					return 0; // FALSE - failed
+					_ = _renderingBackend.InitializeAsync(_width, _height, title)
+						.ContinueWith(t =>
+						{
+							if (t.IsFaulted)
+							{
+								_logger.LogError(t.Exception?.GetBaseException(), "[GLIDE2x] Rendering backend initialization failed (WASM mode)");
+							}
+							else if (t.Result)
+							{
+								_logger.LogInformation("[GLIDE2x] Rendering backend initialized: {Width}x{Height} (WASM mode)", _width, _height);
+								// Subscribe to UI events
+								_env.SubscribeToUIEvents(_renderingBackend, null);
+							}
+							else
+							{
+								_logger.LogWarning("[GLIDE2x] Rendering backend initialization returned false (WASM mode)");
+							}
+						}, TaskScheduler.Default);
+					_logger.LogInformation("[GLIDE2x] Rendering backend initialization started asynchronously (WASM mode)");
 				}
-				
-				_logger.LogInformation("[GLIDE2x] Rendering backend initialized: {Width}x{Height}", _width, _height);
-				
-				// Subscribe to UI events
-				_env.SubscribeToUIEvents(_renderingBackend, null);
+				else
+				{
+					var success = _renderingBackend.InitializeAsync(_width, _height, title).GetAwaiter().GetResult();
+					
+					if (!success)
+					{
+						_logger.LogError("[GLIDE2x] Failed to initialize rendering backend");
+						return 0; // FALSE - failed
+					}
+					
+					_logger.LogInformation("[GLIDE2x] Rendering backend initialized: {Width}x{Height}", _width, _height);
+					
+					// Subscribe to UI events
+					_env.SubscribeToUIEvents(_renderingBackend, null);
+				}
 			}
 			
 			// Allocate frame buffer (still needed for software rasterization fallback and LFB access)
