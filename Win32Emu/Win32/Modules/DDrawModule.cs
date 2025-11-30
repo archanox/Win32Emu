@@ -11,7 +11,7 @@ using static Win32Emu.Win32.NativeTypes;
 
 namespace Win32Emu.Win32.Modules
 {
-	public class DDrawModule : IWin32ModuleUnsafe
+	public class DDrawModule : IWin32ModuleAsync
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
@@ -22,6 +22,12 @@ namespace Win32Emu.Win32.Modules
 		// These are set at the start of TryInvokeUnsafe and used by export functions
 		private ICpu? _currentCpu;
 		private VirtualMemory? _currentMemory;
+
+		// Constants for async callback execution
+		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
+		private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
+		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
+		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB)
 
 		public DDrawModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -76,7 +82,44 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
-		/// 
+		/// Async implementation for Win32 APIs that may call back into emulated code.
+		/// Routes APIs through async paths to avoid blocking calls that fail on WASM.
+		/// </summary>
+		public async Task<(bool success, uint returnValue)> TryInvokeAsync(
+			string export,
+			ICpu cpu,
+			VirtualMemory memory,
+			CancellationToken cancellationToken = default)
+		{
+			_currentCpu = cpu;
+			_currentMemory = memory;
+			var a = new StackArgs(cpu, memory);
+
+			// Route APIs with callbacks through async paths to avoid .GetAwaiter().GetResult()
+			// which throws PlatformNotSupportedException on WASM
+			switch (export.ToUpperInvariant())
+			{
+				case "DIRECTDRAWENUMERATEA":
+					return (true, await DirectDrawEnumerateAAsync(a.UInt32(0), a.UInt32(1), cancellationToken).ConfigureAwait(false));
+				case "DIRECTDRAWENUMERATEEXA":
+					return (true, await DirectDrawEnumerateExAAsync(a.UInt32(0), a.UInt32(1), a.UInt32(2), cancellationToken).ConfigureAwait(false));
+				case "DIRECTDRAWENUMERATEW":
+					return (true, await DirectDrawEnumerateWAsync(a.UInt32(0), a.UInt32(1), cancellationToken).ConfigureAwait(false));
+				case "DIRECTDRAWENUMERATEEXW":
+					return (true, await DirectDrawEnumerateExWAsync(a.UInt32(0), a.UInt32(1), a.UInt32(2), cancellationToken).ConfigureAwait(false));
+			}
+
+			// For all other APIs, use synchronous implementation
+			if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
+			{
+				return (true, syncReturnValue);
+			}
+
+			// No async work performed; return failure immediately
+			return (false, 0);
+		}
+
+		/// <summary>
 		/// </summary>
 		/// <param name="lpGuid">A pointer to the globally unique identifier (GUID) that represents the driver to be created. This can be NULL to indicate the active display driver, or you can pass one of the following flags to restrict the active display driver's behavior for debugging purposes:
 		/// DDCREATE_EMULATIONONLY
@@ -3991,6 +4034,387 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DDResult.DDERR_GENERIC;
 			}
 		}
+
+		#region Async Enumerate Functions
+
+		/// <summary>
+		/// Async implementation of DirectDrawEnumerateA.
+		/// </summary>
+		private async Task<uint> DirectDrawEnumerateAAsync(uint lpCallback, uint lpContext, CancellationToken cancellationToken = default)
+		{
+			_logger.LogInformation("[DDraw] DirectDrawEnumerateAAsync(lpCallback=0x{LpCallback:X8}, lpContext=0x{LpContext:X8})", lpCallback, lpContext);
+
+			if (lpCallback == 0)
+			{
+				_logger.LogError("[DDraw] DirectDrawEnumerateAAsync: callback is null");
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
+			}
+
+			try
+			{
+				// Allocate memory for GUID (NULL for primary display driver)
+				uint guidPtr = 0; // NULL indicates primary display driver
+
+				// Allocate and write driver description string
+				var driverDescription = "Primary Display Driver";
+				var descPtr = AllocateString(driverDescription);
+
+				// Allocate and write driver name string
+				var driverName = "display";
+				var namePtr = AllocateString(driverName);
+
+				_logger.LogDebug("[DDraw] Allocated strings: desc=0x{Desc:X8}, name=0x{Name:X8}", descPtr, namePtr);
+
+				// Invoke callback asynchronously: DDEnumCallback(lpGUID, lpDriverDescription, lpDriverName, lpContext)
+				var parameters = new uint[] { guidPtr, descPtr, namePtr, lpContext };
+				var result = await InvokeCallbackAsync(lpCallback, parameters, 4, cancellationToken).ConfigureAwait(false);
+
+				// Free allocated strings
+				FreeString(descPtr);
+				FreeString(namePtr);
+
+				if (!result.success)
+				{
+					_logger.LogError("[DDraw] DirectDrawEnumerateAAsync: callback invocation failed");
+					return (uint)DDResult.DDERR_GENERIC;
+				}
+
+				_logger.LogInformation("[DDraw] DirectDrawEnumerateAAsync: callback returned {Result}", result.returnValue);
+				return (uint)DDResult.DD_OK;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DDraw] DirectDrawEnumerateAAsync: exception during enumeration");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
+		}
+
+		/// <summary>
+		/// Async implementation of DirectDrawEnumerateExA.
+		/// </summary>
+		private async Task<uint> DirectDrawEnumerateExAAsync(uint lpCallback, uint lpContext, uint dwFlags, CancellationToken cancellationToken = default)
+		{
+			_logger.LogInformation("[DDraw] DirectDrawEnumerateExAAsync(lpCallback=0x{LpCallback:X8}, lpContext=0x{LpContext:X8}, dwFlags=0x{DwFlags:X8})", lpCallback, lpContext, dwFlags);
+
+			if (lpCallback == 0)
+			{
+				_logger.LogError("[DDraw] DirectDrawEnumerateExAAsync: callback is null");
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
+			}
+
+			try
+			{
+				// Allocate memory for GUID (NULL for primary display driver)
+				uint guidPtr = 0; // NULL indicates primary display driver
+
+				// Allocate and write driver description string
+				var driverDescription = "Primary Display Driver";
+				var descPtr = AllocateString(driverDescription);
+
+				// Allocate and write driver name string
+				var driverName = "display";
+				var namePtr = AllocateString(driverName);
+
+				// Monitor handle (just use a dummy value for primary monitor)
+				uint hMonitor = 0x00010001;
+
+				_logger.LogDebug("[DDraw] Allocated strings: desc=0x{Desc:X8}, name=0x{Name:X8}, hMonitor=0x{HMonitor:X8}", descPtr, namePtr, hMonitor);
+
+				// Invoke callback asynchronously: DDEnumCallbackEx(lpGUID, lpDriverDescription, lpDriverName, lpContext, hMonitor)
+				var parameters = new uint[] { guidPtr, descPtr, namePtr, lpContext, hMonitor };
+				var result = await InvokeCallbackAsync(lpCallback, parameters, 5, cancellationToken).ConfigureAwait(false);
+
+				// Free allocated strings
+				FreeString(descPtr);
+				FreeString(namePtr);
+
+				if (!result.success)
+				{
+					_logger.LogError("[DDraw] DirectDrawEnumerateExAAsync: callback invocation failed");
+					return (uint)DDResult.DDERR_GENERIC;
+				}
+
+				_logger.LogInformation("[DDraw] DirectDrawEnumerateExAAsync: callback returned {Result}", result.returnValue);
+				return (uint)DDResult.DD_OK;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DDraw] DirectDrawEnumerateExAAsync: exception during enumeration");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
+		}
+
+		/// <summary>
+		/// Async implementation of DirectDrawEnumerateW.
+		/// </summary>
+		private async Task<uint> DirectDrawEnumerateWAsync(uint lpCallback, uint lpContext, CancellationToken cancellationToken = default)
+		{
+			_logger.LogInformation("[DDraw] DirectDrawEnumerateWAsync(lpCallback=0x{LpCallback:X8}, lpContext=0x{LpContext:X8})", lpCallback, lpContext);
+
+			if (lpCallback == 0)
+			{
+				_logger.LogError("[DDraw] DirectDrawEnumerateWAsync: callback is null");
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
+			}
+
+			try
+			{
+				// Allocate memory for GUID (NULL for primary display driver)
+				uint guidPtr = 0; // NULL indicates primary display driver
+
+				// Allocate and write driver description string (Unicode)
+				var driverDescription = "Primary Display Driver";
+				var descPtr = AllocateUnicodeString(driverDescription);
+
+				// Allocate and write driver name string (Unicode)
+				var driverName = "display";
+				var namePtr = AllocateUnicodeString(driverName);
+
+				_logger.LogDebug("[DDraw] Allocated Unicode strings: desc=0x{Desc:X8}, name=0x{Name:X8}", descPtr, namePtr);
+
+				// Invoke callback asynchronously: DDEnumCallbackW(lpGUID, lpDriverDescription, lpDriverName, lpContext)
+				var parameters = new uint[] { guidPtr, descPtr, namePtr, lpContext };
+				var result = await InvokeCallbackAsync(lpCallback, parameters, 4, cancellationToken).ConfigureAwait(false);
+
+				// Free allocated strings
+				FreeString(descPtr);
+				FreeString(namePtr);
+
+				if (!result.success)
+				{
+					_logger.LogError("[DDraw] DirectDrawEnumerateWAsync: callback invocation failed");
+					return (uint)DDResult.DDERR_GENERIC;
+				}
+
+				_logger.LogInformation("[DDraw] DirectDrawEnumerateWAsync: callback returned {Result}", result.returnValue);
+				return (uint)DDResult.DD_OK;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DDraw] DirectDrawEnumerateWAsync: exception during enumeration");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
+		}
+
+		/// <summary>
+		/// Async implementation of DirectDrawEnumerateExW.
+		/// </summary>
+		private async Task<uint> DirectDrawEnumerateExWAsync(uint lpCallback, uint lpContext, uint dwFlags, CancellationToken cancellationToken = default)
+		{
+			_logger.LogInformation("[DDraw] DirectDrawEnumerateExWAsync(lpCallback=0x{LpCallback:X8}, lpContext=0x{LpContext:X8}, dwFlags=0x{DwFlags:X8})", lpCallback, lpContext, dwFlags);
+
+			if (lpCallback == 0)
+			{
+				_logger.LogError("[DDraw] DirectDrawEnumerateExWAsync: callback is null");
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
+			}
+
+			try
+			{
+				// Allocate memory for GUID (NULL for primary display driver)
+				uint guidPtr = 0; // NULL indicates primary display driver
+
+				// Allocate and write driver description string (Unicode)
+				var driverDescription = "Primary Display Driver";
+				var descPtr = AllocateUnicodeString(driverDescription);
+
+				// Allocate and write driver name string (Unicode)
+				var driverName = "display";
+				var namePtr = AllocateUnicodeString(driverName);
+
+				// Monitor handle (just use a dummy value for primary monitor)
+				uint hMonitor = 0x00010001;
+
+				_logger.LogDebug("[DDraw] Allocated Unicode strings: desc=0x{Desc:X8}, name=0x{Name:X8}, hMonitor=0x{HMonitor:X8}", descPtr, namePtr, hMonitor);
+
+				// Invoke callback asynchronously: DDEnumCallbackExW(lpGUID, lpDriverDescription, lpDriverName, lpContext, hMonitor)
+				var parameters = new uint[] { guidPtr, descPtr, namePtr, lpContext, hMonitor };
+				var result = await InvokeCallbackAsync(lpCallback, parameters, 5, cancellationToken).ConfigureAwait(false);
+
+				// Free allocated strings
+				FreeString(descPtr);
+				FreeString(namePtr);
+
+				if (!result.success)
+				{
+					_logger.LogError("[DDraw] DirectDrawEnumerateExWAsync: callback invocation failed");
+					return (uint)DDResult.DDERR_GENERIC;
+				}
+
+				_logger.LogInformation("[DDraw] DirectDrawEnumerateExWAsync: callback returned {Result}", result.returnValue);
+				return (uint)DDResult.DD_OK;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DDraw] DirectDrawEnumerateExWAsync: exception during enumeration");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
+		}
+
+		/// <summary>
+		/// Async version of callback invocation that uses CpuHelpers.ExecuteAsync for WASM compatibility.
+		/// This eliminates the need for GetAwaiter().GetResult() which throws PlatformNotSupportedException on WASM.
+		/// </summary>
+		/// <param name="callbackAddress">Address of the callback function in emulated memory</param>
+		/// <param name="parameters">Parameters to pass to the callback (pushed right-to-left)</param>
+		/// <param name="paramCount">Number of parameters for stack cleanup calculation</param>
+		/// <param name="cancellationToken">Cancellation token for cooperative cancellation</param>
+		/// <returns>Tuple containing success flag and return value from EAX</returns>
+		private async Task<(bool success, uint returnValue)> InvokeCallbackAsync(
+			uint callbackAddress, 
+			uint[] parameters, 
+			int paramCount,
+			CancellationToken cancellationToken = default)
+		{
+			if (_currentCpu == null || _currentMemory == null)
+			{
+				_logger.LogWarning("[DDraw] InvokeCallbackAsync: CPU or Memory not available");
+				return (false, 0);
+			}
+
+			_logger.LogInformation("[DDraw] InvokeCallbackAsync: Calling 0x{CallbackAddress:X8}", callbackAddress);
+
+			// Validate callback address
+			if (callbackAddress == 0)
+			{
+				_logger.LogWarning("[DDraw] InvokeCallbackAsync: Callback address is NULL (0x00000000), aborting");
+				return (false, 0);
+			}
+
+			// Save current CPU state
+			var savedEip = _currentCpu.GetEip();
+			var savedEsp = _currentCpu.GetRegister("ESP");
+			var savedEbp = _currentCpu.GetRegister("EBP");
+
+			// Define return address marker
+			const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+			// Set up stack for stdcall convention (parameters pushed right-to-left)
+			var esp = savedEsp;
+
+			// Push return address first
+			esp -= 4;
+			_currentMemory.Write32(esp, RETURN_ADDRESS);
+
+			// Push parameters (right-to-left for stdcall)
+			for (int i = parameters.Length - 1; i >= 0; i--)
+			{
+				esp -= 4;
+				_currentMemory.Write32(esp, parameters[i]);
+			}
+
+			// Update CPU registers
+			_currentCpu.SetRegister("ESP", esp);
+			_currentCpu.SetEip(callbackAddress);
+
+			// Execute until we hit the return address with cancellation support
+			const int YIELD_INTERVAL = 10000;
+			var steps = 0;
+			var executionSuccessful = true;
+			var lastCheckEip = _currentCpu.GetEip();
+			var stuckCounter = 0;
+
+			try
+			{
+				while (true)
+				{
+					// Check for cancellation at regular intervals
+					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+					{
+						if (cancellationToken.IsCancellationRequested)
+						{
+							_logger.LogInformation("[DDraw] InvokeCallbackAsync: Cancellation requested at step {Steps}", steps);
+							executionSuccessful = false;
+							break;
+						}
+
+						// Suspend execution to preserve CPU state across async boundary
+						var cpuState = CpuHelpers.SuspendExecution(_currentCpu);
+						
+						// Yield to allow other async operations to proceed
+						await Task.Yield();
+						
+						// Resume execution with preserved state
+						CpuHelpers.ResumeExecution(_currentCpu, cpuState);
+					}
+
+					var eip = _currentCpu.GetEip();
+
+					// Check if we've returned to our marker address
+					if (eip == RETURN_ADDRESS)
+					{
+						break;
+					}
+
+					// Check for invalid EIP (NULL pointer execution)
+					if (eip == 0x00000000)
+					{
+						_logger.LogWarning("[DDraw] InvokeCallbackAsync: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting");
+						executionSuccessful = false;
+						break;
+					}
+
+					// Check for other invalid low addresses
+					if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
+					{
+						_logger.LogError("[DDraw] InvokeCallbackAsync: Execution jumped to invalid low address 0x{Eip:X8}", eip);
+						executionSuccessful = false;
+						break;
+					}
+
+					// Detect potential infinite loops
+					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+					{
+						var currentEip = _currentCpu.GetEip();
+						if (currentEip == lastCheckEip)
+						{
+							stuckCounter++;
+							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+							{
+								_logger.LogWarning("[DDraw] InvokeCallbackAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", 
+									currentEip, stuckCounter);
+								executionSuccessful = false;
+								break;
+							}
+						}
+						else
+						{
+							stuckCounter = 0;
+							lastCheckEip = currentEip;
+						}
+					}
+
+					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
+					await CpuHelpers.ExecuteAsync(_currentCpu, _currentMemory);
+					steps++;
+
+					// Periodically yield for cooperative multitasking
+					if (steps % YIELD_INTERVAL == 0)
+					{
+						await Task.Yield();
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DDraw] InvokeCallbackAsync: Exception during execution: {ExMessage}", ex.Message);
+				executionSuccessful = false;
+			}
+
+			// Get return value from EAX, but only if execution was successful
+			var returnValue = executionSuccessful ? _currentCpu.GetRegister("EAX") : 0u;
+
+			// Restore CPU state
+			_currentCpu.SetEip(savedEip);
+			_currentCpu.SetRegister("ESP", savedEsp);
+			_currentCpu.SetRegister("EBP", savedEbp);
+
+			_logger.LogInformation("[DDraw] InvokeCallbackAsync: Completed with return value 0x{ReturnValue:X8}", returnValue);
+
+			return (executionSuccessful, returnValue);
+		}
+
+		#endregion
 
 		[DllModuleExport(15, entryPoint: 0x00022768, Version = "4.90.0.3000", IsStub = true)]
 		public uint DdEntry18()

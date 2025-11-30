@@ -9,7 +9,7 @@ namespace Win32Emu.Win32.Modules;
 /// <summary>
 /// COMDLG32.DLL module - provides common dialog box functionality.
 /// </summary>
-public class Comdlg32Module : IWin32ModuleUnsafe
+public class Comdlg32Module : IWin32ModuleAsync
 {
 	private readonly ProcessEnvironment _env;
 	private readonly uint _imageBase;
@@ -56,6 +56,37 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 				_logger.LogInformation("[Comdlg32] Unimplemented export: {Export}", export);
 				return false;
 		}
+	}
+
+	/// <summary>
+	/// Async implementation for Win32 APIs that may require host interaction.
+	/// Routes file dialog APIs through async paths to avoid blocking calls that fail on WASM.
+	/// </summary>
+	public async Task<(bool success, uint returnValue)> TryInvokeAsync(
+		string export,
+		ICpu cpu,
+		VirtualMemory memory,
+		CancellationToken cancellationToken = default)
+	{
+		var a = new StackArgs(cpu, memory);
+
+		// Route file dialog APIs through async paths for WASM compatibility
+		switch (export.ToUpperInvariant())
+		{
+			case "GETOPENFILENAMEA":
+				return (true, await GetOpenFileNameAAsync(a.UInt32(0), cancellationToken).ConfigureAwait(false));
+			case "GETSAVEFILENAMEA":
+				return (true, await GetSaveFileNameAAsync(a.UInt32(0), cancellationToken).ConfigureAwait(false));
+		}
+
+		// For all other APIs, use synchronous implementation
+		if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
+		{
+			return (true, syncReturnValue);
+		}
+
+		// No async work performed; return failure immediately
+		return (false, 0);
 	}
 
 	/// <summary>
@@ -113,6 +144,140 @@ public class Comdlg32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Comdlg32] GetSaveFileNameA: Dialog cancelled (stub)");
 		return 0; // FALSE
 	}
+
+	#region Async File Dialog Implementations
+
+	/// <summary>
+	/// Async implementation of GetOpenFileNameA that uses host dialog if available.
+	/// </summary>
+	private async Task<uint> GetOpenFileNameAAsync(uint lpofn, CancellationToken cancellationToken = default)
+	{
+		_logger.LogInformation("[Comdlg32] GetOpenFileNameAAsync(lpofn=0x{Lpofn:X8})", lpofn);
+
+		if (lpofn == 0)
+		{
+			return 0; // FALSE - dialog cancelled
+		}
+
+		// Read OPENFILENAME structure fields we need
+		// Offset 0: lStructSize (DWORD)
+		// Offset 4: hwndOwner (HWND)
+		// Offset 8: hInstance (HINSTANCE)
+		// Offset 12: lpstrFilter (LPCSTR)
+		// Offset 16: lpstrCustomFilter (LPSTR)
+		// Offset 20: nMaxCustFilter (DWORD)
+		// Offset 24: nFilterIndex (DWORD)
+		// Offset 28: lpstrFile (LPSTR)
+		// Offset 32: nMaxFile (DWORD)
+		// Offset 36: lpstrFileTitle (LPSTR)
+		// Offset 40: nMaxFileTitle (WORD)
+		// Offset 44: lpstrInitialDir (LPCSTR)
+		// Offset 48: lpstrTitle (LPCSTR)
+		// Offset 52: Flags (DWORD)
+
+		var lpstrFile = _env.MemRead32(lpofn + 28);
+		var nMaxFile = _env.MemRead32(lpofn + 32);
+		var lpstrTitle = _env.MemRead32(lpofn + 48);
+
+		// Try to read the title for the dialog
+		string? dialogTitle = null;
+		if (lpstrTitle != 0)
+		{
+			dialogTitle = _env.ReadAnsiString(lpstrTitle);
+		}
+		dialogTitle ??= "Open";
+
+		// Try to read the filter if available
+		// For now, we'll just use a basic filter
+
+		// Use host's file dialog if available
+		if (_env.Host != null)
+		{
+			try
+			{
+				var selectedPath = await _env.Host.OnOpenFileDialog(dialogTitle, null, null).ConfigureAwait(false);
+				
+				if (!string.IsNullOrEmpty(selectedPath))
+				{
+					// Write the selected path to lpstrFile buffer
+					if (lpstrFile != 0 && nMaxFile > 0)
+					{
+						// Truncate path if needed to fit in the buffer
+						var pathToWrite = selectedPath.Length < nMaxFile ? selectedPath : selectedPath.Substring(0, (int)nMaxFile - 1);
+						_env.WriteAnsiStringAt(lpstrFile, pathToWrite);
+					}
+					
+					_logger.LogInformation("[Comdlg32] GetOpenFileNameAAsync: Selected '{Path}'", selectedPath);
+					return 1; // TRUE - success
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[Comdlg32] GetOpenFileNameAAsync: Error showing dialog");
+			}
+		}
+
+		_logger.LogInformation("[Comdlg32] GetOpenFileNameAAsync: Dialog cancelled");
+		return 0; // FALSE - cancelled or error
+	}
+
+	/// <summary>
+	/// Async implementation of GetSaveFileNameA that uses host dialog if available.
+	/// </summary>
+	private async Task<uint> GetSaveFileNameAAsync(uint lpofn, CancellationToken cancellationToken = default)
+	{
+		_logger.LogInformation("[Comdlg32] GetSaveFileNameAAsync(lpofn=0x{Lpofn:X8})", lpofn);
+
+		if (lpofn == 0)
+		{
+			return 0; // FALSE - dialog cancelled
+		}
+
+		// Read OPENFILENAME structure fields we need
+		var lpstrFile = _env.MemRead32(lpofn + 28);
+		var nMaxFile = _env.MemRead32(lpofn + 32);
+		var lpstrTitle = _env.MemRead32(lpofn + 48);
+
+		// Try to read the title for the dialog
+		string? dialogTitle = null;
+		if (lpstrTitle != 0)
+		{
+			dialogTitle = _env.ReadAnsiString(lpstrTitle);
+		}
+		dialogTitle ??= "Save As";
+
+		// Use host's file dialog if available
+		if (_env.Host != null)
+		{
+			try
+			{
+				var selectedPath = await _env.Host.OnSaveFileDialog(dialogTitle, null, null).ConfigureAwait(false);
+				
+				if (!string.IsNullOrEmpty(selectedPath))
+				{
+					// Write the selected path to lpstrFile buffer
+					if (lpstrFile != 0 && nMaxFile > 0)
+					{
+						// Truncate path if needed to fit in the buffer
+						var pathToWrite = selectedPath.Length < nMaxFile ? selectedPath : selectedPath.Substring(0, (int)nMaxFile - 1);
+						_env.WriteAnsiStringAt(lpstrFile, pathToWrite);
+					}
+					
+					_logger.LogInformation("[Comdlg32] GetSaveFileNameAAsync: Selected '{Path}'", selectedPath);
+					return 1; // TRUE - success
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[Comdlg32] GetSaveFileNameAAsync: Error showing dialog");
+			}
+		}
+
+		_logger.LogInformation("[Comdlg32] GetSaveFileNameAAsync: Dialog cancelled");
+		return 0; // FALSE - cancelled or error
+	}
+
+	#endregion
 
 	/// <summary>
 	/// Retrieves the name of the specified file.
