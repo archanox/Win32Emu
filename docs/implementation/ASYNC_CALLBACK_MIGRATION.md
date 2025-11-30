@@ -356,7 +356,7 @@ All planned enhancements have been successfully implemented:
 ## Summary
 
 The async callback pattern has been successfully implemented and **fully migrated** in:
-- ✅ User32Module (CallWindowProcedureAsync, CallDialogProcedureAsync, **SetTimer**, **EnumWindows**, **SetWindowsHookExA**)
+- ✅ User32Module (CallWindowProcedureAsync, CallDialogProcedureAsync, **SetTimer**, **EnumWindows**, **SetWindowsHookExA**, **PeekMessageA**, **TranslateMessage**)
 - ✅ DSoundModule (CallEnumerationCallbackAsync)
 - ✅ WinMMModule (**timeSetEvent**, migrated to IWin32ModuleAsync)
 
@@ -364,6 +364,7 @@ All implementations now include:
 - ✅ ExecuteBlockAsync support via CpuHelpers.ExecuteAsync() (Phase 1)
 - ✅ CPU state suspend/resume at async boundaries (Phase 2)
 - ✅ Async COM vtable dispatch capability (Phase 3)
+- ✅ WASM message loop support via Task.Yield() (Phase 4)
 - Elimination of STACK_SAFETY_MARGIN
 - Clean host/guest stack separation
 - Cancellation support and cooperative multitasking
@@ -378,6 +379,8 @@ The following APIs have been **fully implemented** with complete async callback 
 - ✅ `SetTimer` → `CallTimerProcAsync` - IMPLEMENTED with timer tracking and FireTimerAsync()
 - ✅ `EnumWindows` → `CallEnumWindowsProcAsync` - IMPLEMENTED with window enumeration
 - ✅ `SetWindowsHookExA` → `CallHookProcAsync` - IMPLEMENTED with hook tracking and CallHookAsync()
+- ✅ `PeekMessageA` → `PeekMessageAsync` - IMPLEMENTED with Task.Yield() for WASM browser event loop
+- ✅ `TranslateMessage` → `TranslateMessageAsync` - IMPLEMENTED with Task.Yield() for WASM browser event loop
 
 **WinMMModule:**
 - ✅ `timeSetEvent` → `CallTimeProcAsync` - IMPLEMENTED with multimedia timer tracking and FireMultimediaTimerAsync()
@@ -388,5 +391,24 @@ Each implementation includes:
 - Proper cleanup in corresponding Kill/Unhook functions
 - Comprehensive test coverage (21 total tests: 14 callback tests + 7 state tests)
 - Full logging and error handling
+
+### WASM-Specific Async Implementations
+
+For WASM (WebAssembly) browser environments, the following APIs have been made async to prevent browser freezing:
+
+- `PeekMessageA` → `PeekMessageAsync` - Uses `Task.Yield()` to yield to browser event loop
+- `TranslateMessage` → `TranslateMessageAsync` - Uses `Task.Yield()` to yield to browser event loop
+- `GetMessageA` → `GetMessageAsync` - Already async with proper waiting
+- `DispatchMessageA` → `DispatchMessageAsync` - Already async for window procedure callbacks
+- `WaitMessage` → `WaitMessageAsync` - Already async with async delay
+
+These APIs are critical for game message loops. Without async versions, tight game loops like:
+```c
+while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
+    TranslateMessage(&msg);
+    DispatchMessageA(&msg);
+}
+```
+would block the browser main thread indefinitely, causing the UI to freeze.
 
 The pattern is ready to be applied to additional modules as their callback functionality needs to be implemented.
