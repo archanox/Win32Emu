@@ -51,6 +51,11 @@ public sealed class Emulator : IDisposable
     // Log a warning every 1M iterations to avoid excessive log spam during legitimate tight loops
     private const ulong STUCK_EIP_LOG_INTERVAL = 1000000;
     
+    // WASM yield interval - yield to browser event loop every N iterations
+    // This prevents the browser from freezing when emulating tight loops.
+    // Set to 1000 to balance responsiveness vs performance (yields ~every few ms on modern hardware)
+    private const ulong WASM_YIELD_INTERVAL = 1000;
+    
     // Instruction tracing for debugging BasicDD crash
     private int _instructionTraceCount = 0;
     private const int MAX_TRACE_INSTRUCTIONS = 1000; // Trace 1000 instructions to find stack corruption
@@ -960,6 +965,14 @@ public sealed class Emulator : IDisposable
                 // Paused - yield and check again
                 await Task.Delay(100);
                 continue;
+            }
+            
+            // WASM: Yield to browser event loop periodically to prevent freezing
+            // In WebAssembly, Task.Run doesn't create real threads, so we must yield
+            // control back to the JavaScript event loop to keep the UI responsive.
+            if (PlatformHelpers.IsWasm && iterationCount % WASM_YIELD_INTERVAL == 0)
+            {
+                await Task.Yield();
             }
 
             if (_stopRequested)
