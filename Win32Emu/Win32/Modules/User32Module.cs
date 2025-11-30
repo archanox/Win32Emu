@@ -1122,6 +1122,12 @@ namespace Win32Emu.Win32.Modules
 			// which throws PlatformNotSupportedException on WASM
 			switch (export.ToUpperInvariant())
 			{
+				case "GETMESSAGEA":
+					return (true, await GetMessageAsync(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), cancellationToken).ConfigureAwait(false));
+
+				case "WAITMESSAGE":
+					return (true, await WaitMessageAsync(cancellationToken).ConfigureAwait(false));
+
 				case "SENDMESSAGEA":
 					return (true, await SendMessageAsync(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), cancellationToken).ConfigureAwait(false));
 
@@ -1470,14 +1476,32 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(10)]
 		private uint GetMessageA(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax)
 		{
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to GetMessageAsync, bypassing this method
+			return GetMessageAsync(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async implementation of GetMessageA.
+		/// Retrieves a message from the calling thread's message queue. The function dispatches incoming sent messages
+		/// until a posted message is available for retrieval.
+		/// </summary>
+		/// <param name="lpMsg">A pointer to an MSG structure that receives message information from the thread's message queue.</param>
+		/// <param name="hWnd">A handle to the window whose messages are to be retrieved. The window must belong to the current thread.
+		/// If hWnd is NULL, GetMessage retrieves messages for any window that belongs to the current thread.</param>
+		/// <param name="wMsgFilterMin">The integer value of the lowest message value to be retrieved. Use WM_KEYFIRST to specify the first keyboard message or WM_MOUSEFIRST to specify the first mouse message.</param>
+		/// <param name="wMsgFilterMax">The integer value of the highest message value to be retrieved. Use WM_KEYLAST to specify the last keyboard message or WM_MOUSELAST to specify the last mouse message.</param>
+		/// <param name="cancellationToken">Cancellation token for async operation</param>
+		/// <returns>If the function retrieves a message other than WM_QUIT, the return value is nonzero.
+		/// If the function retrieves the WM_QUIT message, the return value is zero.
+		/// If there is an error, the return value is -1 (0xFFFFFFFF).</returns>
+		private async Task<uint> GetMessageAsync(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax, CancellationToken cancellationToken = default)
+		{
 			if (lpMsg == 0)
 			{
 				_logger.LogInformation("[User32] GetMessageA: NULL MSG pointer");
 				return 0xFFFFFFFF; // -1 for error
 			}
-
-			// Use ref struct wrapper - writes happen automatically on property assignment
-			var msg = new MsgRef(_env.Memory, lpMsg);
 
 			// Check if there's a quit message
 			if (_env.HasQuitMessage())
@@ -1485,15 +1509,8 @@ namespace Win32Emu.Win32.Modules
 				var exitCode = _env.GetQuitExitCode();
 				_logger.LogInformation("[User32] GetMessageA: WM_QUIT (exitCode={ExitCode})", exitCode);
 
-				// Direct property assignments automatically write to memory
-				msg.hwnd = 0;
-				msg.message = 0x0012; // WM_QUIT
-				msg.wParam = (uint)exitCode;
-				msg.lParam = 0;
-				msg.time = 0;
-				msg.ptX = 0;
-				msg.ptY = 0;
-
+				// Use local variables to capture values before await boundaries
+				WriteMessageToMemory(lpMsg, 0, 0x0012, (uint)exitCode, 0, 0, 0, 0);
 				return 0; // GetMessage returns 0 for WM_QUIT
 			}
 
@@ -1506,27 +1523,16 @@ namespace Win32Emu.Win32.Modules
 				if (queuedMsg.Value.Message == 0x0012)
 				{
 					// WM_QUIT - already being processed from the queue
-					msg.hwnd = 0;
-					msg.message = 0x0012; // WM_QUIT
-					msg.wParam = queuedMsg.Value.WParam;
-					msg.lParam = 0;
-					msg.time = queuedMsg.Value.Time;
-					msg.ptX = (int)queuedMsg.Value.PtX;
-					msg.ptY = (int)queuedMsg.Value.PtY;
-
+					WriteMessageToMemory(lpMsg, 0, 0x0012, queuedMsg.Value.WParam, 0, 
+						queuedMsg.Value.Time, (int)queuedMsg.Value.PtX, (int)queuedMsg.Value.PtY);
 					return 0; // GetMessage returns 0 for WM_QUIT
 				}
 
 				_logger.LogInformation("[User32] GetMessageA: retrieved MSG=0x{ValueMessage:X4} HWND=0x{ValueHwnd:X8}", queuedMsg.Value.Message, queuedMsg.Value.Hwnd);
 
-				// Direct property assignments automatically write to memory
-				msg.hwnd = queuedMsg.Value.Hwnd;
-				msg.message = queuedMsg.Value.Message;
-				msg.wParam = queuedMsg.Value.WParam;
-				msg.lParam = queuedMsg.Value.LParam;
-				msg.time = queuedMsg.Value.Time;
-				msg.ptX = (int)queuedMsg.Value.PtX;
-				msg.ptY = (int)queuedMsg.Value.PtY;
+				WriteMessageToMemory(lpMsg, queuedMsg.Value.Hwnd, queuedMsg.Value.Message,
+					queuedMsg.Value.WParam, queuedMsg.Value.LParam, queuedMsg.Value.Time,
+					(int)queuedMsg.Value.PtX, (int)queuedMsg.Value.PtY);
 
 				return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 			}
@@ -1558,51 +1564,53 @@ namespace Win32Emu.Win32.Modules
 			}
 			else
 			{
-				// No thread scheduler available - fall back to old timeout behavior
-				// This maintains compatibility with tests and scenarios without threading
-				_logger.LogTrace("[User32] GetMessageA: No thread scheduler, using timeout fallback");
-				queuedMsg = _env.GetMessageBlocking(hWnd, wMsgFilterMin, wMsgFilterMax, timeoutMs: 100);
+				// No thread scheduler available - use async message waiting
+				// This path is used on WASM where blocking operations are not supported
+				_logger.LogTrace("[User32] GetMessageA: No thread scheduler, using async message wait");
+				
+				// Use the async version with timeout which properly yields to browser event loop
+				queuedMsg = await _env.GetMessageAsync(hWnd, wMsgFilterMin, wMsgFilterMax, timeoutMs: 100).ConfigureAwait(false);
 
 				if (queuedMsg.HasValue)
 				{
 					if (queuedMsg.Value.Message == 0x0012)
 					{
-						msg.hwnd = 0;
-						msg.message = 0x0012; // WM_QUIT
-						msg.wParam = queuedMsg.Value.WParam;
-						msg.lParam = 0;
-						msg.time = queuedMsg.Value.Time;
-						msg.ptX = (int)queuedMsg.Value.PtX;
-						msg.ptY = (int)queuedMsg.Value.PtY;
-
+						WriteMessageToMemory(lpMsg, 0, 0x0012, queuedMsg.Value.WParam, 0,
+							queuedMsg.Value.Time, (int)queuedMsg.Value.PtX, (int)queuedMsg.Value.PtY);
 						return 0; // GetMessage returns 0 for WM_QUIT
 					}
 
 					_logger.LogInformation("[User32] GetMessageA: retrieved MSG=0x{ValueMessage:X4} HWND=0x{ValueHwnd:X8}", queuedMsg.Value.Message, queuedMsg.Value.Hwnd);
 
-					msg.hwnd = queuedMsg.Value.Hwnd;
-					msg.message = queuedMsg.Value.Message;
-					msg.wParam = queuedMsg.Value.WParam;
-					msg.lParam = queuedMsg.Value.LParam;
-					msg.time = queuedMsg.Value.Time;
-					msg.ptX = (int)queuedMsg.Value.PtX;
-					msg.ptY = (int)queuedMsg.Value.PtY;
+					WriteMessageToMemory(lpMsg, queuedMsg.Value.Hwnd, queuedMsg.Value.Message,
+						queuedMsg.Value.WParam, queuedMsg.Value.LParam, queuedMsg.Value.Time,
+						(int)queuedMsg.Value.PtX, (int)queuedMsg.Value.PtY);
 
 					return 1; // GetMessage returns non-zero for all messages except WM_QUIT
 				}
 
 				// Timeout - return WM_NULL for compatibility
 				_logger.LogTrace("[User32] GetMessageA: Timeout, returning WM_NULL");
-				msg.hwnd = 0;
-				msg.message = 0; // WM_NULL
-				msg.wParam = 0;
-				msg.lParam = 0;
-				msg.time = (uint)Environment.TickCount;
-				msg.ptX = 0;
-				msg.ptY = 0;
+				WriteMessageToMemory(lpMsg, 0, 0, 0, 0, (uint)Environment.TickCount, 0, 0);
 
 				return 1; // GetMessage returns non-zero for WM_NULL (only 0 for WM_QUIT)
 			}
+		}
+
+		/// <summary>
+		/// Helper method to write a message to memory. Used by GetMessageAsync to avoid issues with ref struct
+		/// crossing await boundaries.
+		/// </summary>
+		private void WriteMessageToMemory(uint lpMsg, uint hwnd, uint message, uint wParam, uint lParam, uint time, int ptX, int ptY)
+		{
+			var msg = new MsgRef(_env.Memory, lpMsg);
+			msg.hwnd = hwnd;
+			msg.message = message;
+			msg.wParam = wParam;
+			msg.lParam = lParam;
+			msg.time = time;
+			msg.ptX = ptX;
+			msg.ptY = ptY;
 		}
 
 		[DllModuleExport(30)]
@@ -2755,17 +2763,29 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1, IsStub = false)]
 		private uint WaitMessage()
 		{
+			// Sync wrapper for non-WASM runtimes
+			// On WASM, TryInvokeAsync routes directly to WaitMessageAsync, bypassing this method
+			return WaitMessageAsync().GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async implementation of WaitMessage.
+		/// Yields control until the calling thread's message queue contains a message,
+		/// then returns TRUE (non-zero).
+		/// </summary>
+		/// <param name="cancellationToken">Cancellation token for async operation</param>
+		/// <returns>TRUE (non-zero) if a message is available, FALSE (0) on error.</returns>
+		private async Task<uint> WaitMessageAsync(CancellationToken cancellationToken = default)
+		{
 			_logger.LogInformation("[User32] WaitMessage");
 
 			// WaitMessage waits until a message is posted to the calling thread's message queue
 			// Returns TRUE (non-zero) if a message is available
 			// Returns FALSE (0) if an error occurs
 
-			// In our emulator, we'll do a simple wait with a small sleep
-			// to simulate waiting for a message without spinning
-			// For a stub implementation, just yield briefly and return success
-
-			PlatformHelpers.Sleep(1); // Brief yield to prevent spinning
+			// Yield control to allow other async operations to proceed
+			// This is important on WASM where blocking operations would hang the browser
+			await Task.Yield();
 
 			_logger.LogInformation("[User32] WaitMessage: Returning after wait");
 			return (uint)NativeTypes.Win32Bool.TRUE; // Always return success
