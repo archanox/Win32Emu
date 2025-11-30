@@ -1503,6 +1503,13 @@ namespace Win32Emu.Win32.Modules
 				return 0xFFFFFFFF; // -1 for error
 			}
 
+			// Check for cancellation early
+			if (cancellationToken.IsCancellationRequested)
+			{
+				_logger.LogDebug("[User32] GetMessageA: Cancellation requested");
+				return 0xFFFFFFFF; // -1 for error
+			}
+
 			// Check if there's a quit message
 			if (_env.HasQuitMessage())
 			{
@@ -2778,6 +2785,13 @@ namespace Win32Emu.Win32.Modules
 		private async Task<uint> WaitMessageAsync(CancellationToken cancellationToken = default)
 		{
 			_logger.LogInformation("[User32] WaitMessage");
+
+			// Check for cancellation early
+			if (cancellationToken.IsCancellationRequested)
+			{
+				_logger.LogDebug("[User32] WaitMessage: Cancellation requested");
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
 
 			// WaitMessage waits until a message is posted to the calling thread's message queue
 			// Returns TRUE (non-zero) if a message is available
