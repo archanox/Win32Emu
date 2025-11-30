@@ -23,12 +23,6 @@ namespace Win32Emu.Win32.Modules
 		private ICpu? _currentCpu;
 		private VirtualMemory? _currentMemory;
 
-		// Constants for async callback execution
-		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
-		private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
-		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
-		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB)
-
 		public DDrawModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
 			_env = env;
@@ -4319,7 +4313,7 @@ namespace Win32Emu.Win32.Modules
 				while (true)
 				{
 					// Check for cancellation at regular intervals
-					if (steps % CANCELLATION_CHECK_INTERVAL == 0)
+					if (steps % CpuHelpers.CANCELLATION_CHECK_INTERVAL == 0)
 					{
 						if (cancellationToken.IsCancellationRequested)
 						{
@@ -4355,7 +4349,7 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Check for other invalid low addresses
-					if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
+					if (eip < CpuHelpers.MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
 					{
 						_logger.LogError("[DDraw] InvokeCallbackAsync: Execution jumped to invalid low address 0x{Eip:X8}", eip);
 						executionSuccessful = false;
@@ -4363,13 +4357,13 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Detect potential infinite loops
-					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
+					if (steps > 0 && steps % CpuHelpers.INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
 						var currentEip = _currentCpu.GetEip();
 						if (currentEip == lastCheckEip)
 						{
 							stuckCounter++;
-							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
+							if (stuckCounter >= CpuHelpers.STUCK_COUNTER_THRESHOLD)
 							{
 								_logger.LogWarning("[DDraw] InvokeCallbackAsync: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting", 
 									currentEip, stuckCounter);

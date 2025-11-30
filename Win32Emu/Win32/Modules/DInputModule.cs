@@ -19,12 +19,6 @@ namespace Win32Emu.Win32.Modules
 		private ICpu? _currentCpu;
 		private VirtualMemory? _currentMemory;
 
-		// Constants for async callback execution
-		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000;
-		private const int STUCK_COUNTER_THRESHOLD = 3;
-		private const int CANCELLATION_CHECK_INTERVAL = 1000;
-		private const uint MINIMUM_VALID_EIP = 0x00001000;
-
 		public DInputModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
 			_env = env;
