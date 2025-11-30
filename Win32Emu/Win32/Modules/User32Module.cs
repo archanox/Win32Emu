@@ -1142,6 +1142,12 @@ namespace Win32Emu.Win32.Modules
 
 				case "ENUMWINDOWS":
 					return (true, await EnumWindowsAsync(a.UInt32(0), a.UInt32(1), cancellationToken).ConfigureAwait(false));
+
+				case "PEEKMESSAGEA":
+					return (true, await PeekMessageAsync(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), cancellationToken).ConfigureAwait(false));
+
+				case "TRANSLATEMESSAGE":
+					return (true, await TranslateMessageAsync(a.UInt32(0), cancellationToken).ConfigureAwait(false));
 			}
 
 			// For all other APIs, use synchronous implementation
@@ -1632,7 +1638,35 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(30)]
 		private uint TranslateMessage(uint lpMsg)
 		{
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to TranslateMessageAsync, bypassing this method
+			return TranslateMessageAsync(lpMsg, CancellationToken.None).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async implementation of TranslateMessage.
+		/// Translates virtual-key messages into character messages.
+		/// </summary>
+		/// <remarks>
+		/// The async version yields to the browser event loop via Task.Yield() to prevent
+		/// freezing when games use tight message loops. This is critical for WASM where
+		/// blocking the main thread freezes the browser.
+		/// </remarks>
+		/// <param name="cancellationToken">Cancellation token for async operation</param>
+		/// <returns>TRUE if a character message was posted, FALSE otherwise</returns>
+		private async Task<uint> TranslateMessageAsync(uint lpMsg, CancellationToken cancellationToken = default)
+		{
 			// TranslateMessage translates virtual-key messages into character messages
+			
+			// Yield to browser event loop - this is the key for WASM responsiveness
+			await Task.Yield();
+			
+			// Check for cancellation
+			if (cancellationToken.IsCancellationRequested)
+			{
+				_logger.LogDebug("[User32] TranslateMessage: Cancellation requested");
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
 
 			if (lpMsg != 0)
 			{
@@ -2744,8 +2778,39 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1)]
 		private uint PeekMessageA(uint lpMsg, uint hwnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg)
 		{
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to PeekMessageAsync, bypassing this method
+			return PeekMessageAsync(lpMsg, hwnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg, CancellationToken.None).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async implementation of PeekMessageA.
+		/// Checks the message queue for a message without blocking. If a message is available,
+		/// it is copied to the lpMsg structure. The wRemoveMsg parameter specifies whether to
+		/// remove the message from the queue.
+		/// </summary>
+		/// <remarks>
+		/// The async version yields to the browser event loop via Task.Yield() to prevent
+		/// freezing when games use tight PeekMessage loops (common game message pump pattern).
+		/// This is critical for WASM where blocking the main thread freezes the browser.
+		/// </remarks>
+		/// <param name="cancellationToken">Cancellation token for async operation</param>
+		/// <returns>TRUE if a message is available, FALSE otherwise</returns>
+		private async Task<uint> PeekMessageAsync(uint lpMsg, uint hwnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg, CancellationToken cancellationToken = default)
+		{
 			// PeekMessage returns immediately with message availability
 			_logger.LogInformation("[User32] PeekMessageA: lpMsg=0x{LpMsg:X8} HWND=0x{Hwnd:X8}", lpMsg, hwnd);
+
+			// Yield to browser event loop - this is the key for WASM responsiveness
+			// In tight PeekMessage loops, this allows the browser to process events
+			await Task.Yield();
+
+			// Check for cancellation
+			if (cancellationToken.IsCancellationRequested)
+			{
+				_logger.LogDebug("[User32] PeekMessageA: Cancellation requested");
+				return 0;
+			}
 
 			if (lpMsg == 0)
 			{
