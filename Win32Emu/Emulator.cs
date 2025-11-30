@@ -970,6 +970,8 @@ public sealed class Emulator : IDisposable
             // WASM: Yield to browser event loop periodically to prevent freezing
             // In WebAssembly, Task.Run doesn't create real threads, so we must yield
             // control back to the JavaScript event loop to keep the UI responsive.
+            // Note: PlatformHelpers.IsWasm is a static readonly field that JIT can constant-fold.
+            // On non-WASM platforms, the && short-circuits and the modulo is never evaluated.
             if (PlatformHelpers.IsWasm && iterationCount % WASM_YIELD_INTERVAL == 0)
             {
                 await Task.Yield();
