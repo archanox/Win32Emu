@@ -43,7 +43,14 @@ internal class BrowserFileHandle : Win32Emu.VirtualFileSystem.IVirtualFileHandle
 		return _stream.Seek(offset, origin);
 	}
 
-	public long Position => _stream.Position;
+	public long Position
+	{
+		get
+		{
+			ObjectDisposedException.ThrowIf(_disposed, this);
+			return _stream.Position;
+		}
+	}
 
 	public void SetLength(long length)
 	{
