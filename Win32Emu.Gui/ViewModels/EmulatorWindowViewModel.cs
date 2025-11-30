@@ -941,6 +941,93 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         });
     }
 
+    public async Task<string?> OnOpenFileDialog(string? title, string? filter, string? initialDirectory)
+    {
+        OnDebugOutput($"Open file dialog requested: title='{title}', filter='{filter}'", DebugLevel.Info);
+        
+        // Show the file dialog on UI thread
+        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            try
+            {
+                var dialog = new Avalonia.Platform.Storage.FilePickerOpenOptions
+                {
+                    Title = title ?? "Open File",
+                    AllowMultiple = false
+                };
+                
+                var topLevel = TopLevel.GetTopLevel(_ownerWindow);
+                if (topLevel == null)
+                {
+                    OnDebugOutput("Could not get TopLevel for file dialog", DebugLevel.Warning);
+                    return null;
+                }
+                
+                var result = await topLevel.StorageProvider.OpenFilePickerAsync(dialog);
+                
+                if (result.Count > 0)
+                {
+                    var path = result[0].Path.LocalPath;
+                    OnDebugOutput($"User selected file: {path}", DebugLevel.Info);
+                    return path;
+                }
+                else
+                {
+                    OnDebugOutput("User cancelled open file dialog", DebugLevel.Info);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                OnDebugOutput($"Error showing open file dialog: {ex.Message}", DebugLevel.Error);
+                return null;
+            }
+        });
+    }
+
+    public async Task<string?> OnSaveFileDialog(string? title, string? filter, string? initialDirectory)
+    {
+        OnDebugOutput($"Save file dialog requested: title='{title}', filter='{filter}'", DebugLevel.Info);
+        
+        // Show the file dialog on UI thread
+        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            try
+            {
+                var dialog = new Avalonia.Platform.Storage.FilePickerSaveOptions
+                {
+                    Title = title ?? "Save File"
+                };
+                
+                var topLevel = TopLevel.GetTopLevel(_ownerWindow);
+                if (topLevel == null)
+                {
+                    OnDebugOutput("Could not get TopLevel for file dialog", DebugLevel.Warning);
+                    return null;
+                }
+                
+                var result = await topLevel.StorageProvider.SaveFilePickerAsync(dialog);
+                
+                if (result != null)
+                {
+                    var path = result.Path.LocalPath;
+                    OnDebugOutput($"User selected save location: {path}", DebugLevel.Info);
+                    return path;
+                }
+                else
+                {
+                    OnDebugOutput("User cancelled save file dialog", DebugLevel.Info);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                OnDebugOutput($"Error showing save file dialog: {ex.Message}", DebugLevel.Error);
+                return null;
+            }
+        });
+    }
+
     public void OnStateChanged(EmulatorState state)
     {
         CurrentState = state;

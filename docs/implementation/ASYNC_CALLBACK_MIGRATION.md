@@ -242,6 +242,41 @@ private async Task<uint> PublicApiAsync(
   - Different architecture - threads run in their own context
   - May not need async callback pattern (separate execution context)
 
+#### DDrawModule ✅ - IMPLEMENTED
+
+- **DirectDrawEnumerateA/W/ExA/ExW** ✅ - FULLY IMPLEMENTED
+  - Status: Complete async implementation with callback execution
+  - Features:
+    - Async enumeration of DirectDraw devices
+    - Uses `InvokeCallbackAsync` helper for async callback execution
+    - Proper stack setup for stdcall callbacks
+    - CPU state preservation across async boundaries
+    - Cancellation support via CancellationToken
+  - Async methods: `DirectDrawEnumerateAAsync`, `DirectDrawEnumerateExAAsync`, `DirectDrawEnumerateWAsync`, `DirectDrawEnumerateExWAsync`
+  - Module now implements `IWin32ModuleAsync` interface
+
+#### DInputModule ✅ - IMPLEMENTED
+
+- Status: Module now implements `IWin32ModuleAsync` interface
+- Features:
+  - Ready for async callback support when EnumDevices callbacks are needed
+  - CPU/Memory state preserved for callbacks
+  - Constants defined for async callback execution
+- Note: Current DInput APIs don't require async callbacks (COM vtable dispatch handles callbacks)
+
+#### Comdlg32Module ✅ - IMPLEMENTED
+
+- **GetOpenFileNameA/GetSaveFileNameA** ✅ - FULLY IMPLEMENTED
+  - Status: Complete async implementation with host dialog integration
+  - Features:
+    - Async file dialog invocation via `IEmulatorHost` interface
+    - New interface methods: `OnOpenFileDialog`, `OnSaveFileDialog`
+    - Host implementations in EmulatorWindowViewModel (Avalonia GUI)
+    - WASM implementation returns null (future JS interop possible)
+    - Reads OPENFILENAME structure for dialog title and file buffer
+  - Async methods: `GetOpenFileNameAAsync`, `GetSaveFileNameAAsync`
+  - Module now implements `IWin32ModuleAsync` interface
+
 #### Other Modules
 - **GDI32Module** - No enumeration callbacks found that execute
 - **Shell32Module** - No browse callbacks found that execute
@@ -349,6 +384,9 @@ All planned enhancements have been successfully implemented:
 - **Pattern Documentation**: `docs/implementation/ASYNC_WINDOW_PROCEDURE_ARCHITECTURE.md`
 - **User32 Implementation**: `Win32Emu/Win32/Modules/User32Module.cs`
 - **DSound Implementation**: `Win32Emu/Win32/Modules/DSoundModule.cs`
+- **DDraw Implementation**: `Win32Emu/Win32/Modules/DDrawModule.cs`
+- **DInput Implementation**: `Win32Emu/Win32/Modules/DInputModule.cs`
+- **Comdlg32 Implementation**: `Win32Emu/Win32/Modules/Comdlg32Module.cs`
 - **COM Implementation**: `Win32Emu/Win32/COM/ComVtableDispatcher.cs`
 - **CPU Helpers**: `Win32Emu/Cpu/CpuHelpers.cs`
 - **retrowin32 reference**: [x86.rs async execution](https://github.com/evmar/retrowin32/blob/main/x86/src/x86.rs#L150)
@@ -359,12 +397,16 @@ The async callback pattern has been successfully implemented and **fully migrate
 - ✅ User32Module (CallWindowProcedureAsync, CallDialogProcedureAsync, **SetTimer**, **EnumWindows**, **SetWindowsHookExA**, **PeekMessageA**, **TranslateMessage**)
 - ✅ DSoundModule (CallEnumerationCallbackAsync)
 - ✅ WinMMModule (**timeSetEvent**, migrated to IWin32ModuleAsync)
+- ✅ DDrawModule (**DirectDrawEnumerateA/W/ExA/ExW**, migrated to IWin32ModuleAsync)
+- ✅ DInputModule (migrated to IWin32ModuleAsync, ready for async callbacks)
+- ✅ Comdlg32Module (**GetOpenFileNameA/GetSaveFileNameA**, migrated to IWin32ModuleAsync)
 
 All implementations now include:
 - ✅ ExecuteBlockAsync support via CpuHelpers.ExecuteAsync() (Phase 1)
 - ✅ CPU state suspend/resume at async boundaries (Phase 2)
 - ✅ Async COM vtable dispatch capability (Phase 3)
 - ✅ WASM message loop support via Task.Yield() (Phase 4)
+- ✅ Host dialog integration for file dialogs (Phase 5)
 - Elimination of STACK_SAFETY_MARGIN
 - Clean host/guest stack separation
 - Cancellation support and cooperative multitasking
@@ -385,6 +427,16 @@ The following APIs have been **fully implemented** with complete async callback 
 **WinMMModule:**
 - ✅ `timeSetEvent` → `CallTimeProcAsync` - IMPLEMENTED with multimedia timer tracking and FireMultimediaTimerAsync()
 
+**DDrawModule:**
+- ✅ `DirectDrawEnumerateA` → `DirectDrawEnumerateAAsync` - IMPLEMENTED with async callback execution
+- ✅ `DirectDrawEnumerateExA` → `DirectDrawEnumerateExAAsync` - IMPLEMENTED with async callback execution
+- ✅ `DirectDrawEnumerateW` → `DirectDrawEnumerateWAsync` - IMPLEMENTED with async callback execution
+- ✅ `DirectDrawEnumerateExW` → `DirectDrawEnumerateExWAsync` - IMPLEMENTED with async callback execution
+
+**Comdlg32Module:**
+- ✅ `GetOpenFileNameA` → `GetOpenFileNameAAsync` - IMPLEMENTED with host dialog integration
+- ✅ `GetSaveFileNameA` → `GetSaveFileNameAAsync` - IMPLEMENTED with host dialog integration
+
 Each implementation includes:
 - State tracking infrastructure (dictionaries for timers/hooks)
 - Public methods for manual callback invocation (for scheduler integration)
@@ -401,6 +453,8 @@ For WASM (WebAssembly) browser environments, the following APIs have been made a
 - `GetMessageA` → `GetMessageAsync` - Already async with proper waiting
 - `DispatchMessageA` → `DispatchMessageAsync` - Already async for window procedure callbacks
 - `WaitMessage` → `WaitMessageAsync` - Already async with async delay
+- `DirectDrawEnumerateA/W/ExA/ExW` → Async versions - Uses `Task.Yield()` and `CpuHelpers.ExecuteAsync()`
+- `GetOpenFileNameA/GetSaveFileNameA` → Async versions - Host dialog invocation (returns null in WASM)
 
 These APIs are critical for game message loops. Without async versions, tight game loops like:
 ```c

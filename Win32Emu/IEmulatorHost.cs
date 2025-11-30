@@ -20,6 +20,24 @@ namespace Win32Emu
 		Task<string?> OnBrowseForFolder(string? title, string? rootPath);
 		
 		/// <summary>
+		/// Shows an open file dialog.
+		/// Returns the selected file path, or null if cancelled.
+		/// </summary>
+		/// <param name="title">Dialog title</param>
+		/// <param name="filter">File filter (e.g., "Text Files|*.txt|All Files|*.*")</param>
+		/// <param name="initialDirectory">Initial directory to show</param>
+		Task<string?> OnOpenFileDialog(string? title, string? filter, string? initialDirectory);
+		
+		/// <summary>
+		/// Shows a save file dialog.
+		/// Returns the selected file path, or null if cancelled.
+		/// </summary>
+		/// <param name="title">Dialog title</param>
+		/// <param name="filter">File filter (e.g., "Text Files|*.txt|All Files|*.*")</param>
+		/// <param name="initialDirectory">Initial directory to show</param>
+		Task<string?> OnSaveFileDialog(string? title, string? filter, string? initialDirectory);
+		
+		/// <summary>
 		/// Notifies the host that a window's title/text has changed.
 		/// </summary>
 		/// <param name="windowHandle">The window handle</param>

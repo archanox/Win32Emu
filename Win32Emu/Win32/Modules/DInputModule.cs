@@ -8,12 +8,22 @@ using Win32Emu.Threading;
 
 namespace Win32Emu.Win32.Modules
 {
-	public class DInputModule : IWin32ModuleUnsafe
+	public class DInputModule : IWin32ModuleAsync
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
+
+		// Temporary storage for CPU and memory during callbacks
+		private ICpu? _currentCpu;
+		private VirtualMemory? _currentMemory;
+
+		// Constants for async callback execution
+		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000;
+		private const int STUCK_COUNTER_THRESHOLD = 3;
+		private const int CANCELLATION_CHECK_INTERVAL = 1000;
+		private const uint MINIMUM_VALID_EIP = 0x00001000;
 
 		public DInputModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -37,6 +47,8 @@ namespace Win32Emu.Win32.Modules
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
+			_currentCpu = cpu;
+			_currentMemory = memory;
 			var a = new StackArgs(cpu, memory);
 
 			switch (export.ToUpperInvariant())
@@ -55,6 +67,33 @@ namespace Win32Emu.Win32.Modules
 					_logger.LogInformation("[DInput] Unimplemented export: {Export}", export);
 					return false;
 			}
+		}
+
+		/// <summary>
+		/// Async implementation for Win32 APIs that may call back into emulated code.
+		/// Routes APIs through async paths to avoid blocking calls that fail on WASM.
+		/// </summary>
+		public async Task<(bool success, uint returnValue)> TryInvokeAsync(
+			string export,
+			ICpu cpu,
+			VirtualMemory memory,
+			CancellationToken cancellationToken = default)
+		{
+			_currentCpu = cpu;
+			_currentMemory = memory;
+
+			// For DInput, the current APIs don't require callbacks that need async execution.
+			// The EnumDevices callbacks are handled via COM vtable dispatch.
+			// If future APIs require async callbacks, they would be added here.
+			
+			// For all APIs, use synchronous implementation
+			if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
+			{
+				return (true, syncReturnValue);
+			}
+
+			// No async work performed; return failure immediately
+			return (false, 0);
 		}
 
 		[DllModuleExport(1, entryPoint: 0x0000B006, Version = "4.90.0.3000")]

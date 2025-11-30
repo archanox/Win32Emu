@@ -102,6 +102,22 @@ public class WasmEmulatorHost : IEmulatorHost
 		return Task.FromResult<string?>(null);
 	}
 	
+	public Task<string?> OnOpenFileDialog(string? title, string? filter, string? initialDirectory)
+	{
+		_logger.LogInformation("[EmulatorHost] Open file dialog requested: {Title}", title);
+		// Not supported in WASM - return null to indicate cancelled
+		// Future: could implement using browser's file picker API via JS interop
+		return Task.FromResult<string?>(null);
+	}
+	
+	public Task<string?> OnSaveFileDialog(string? title, string? filter, string? initialDirectory)
+	{
+		_logger.LogInformation("[EmulatorHost] Save file dialog requested: {Title}", title);
+		// Not supported in WASM - return null to indicate cancelled
+		// Future: could implement using browser's file saver API via JS interop
+		return Task.FromResult<string?>(null);
+	}
+	
 	public void OnWindowTitleChanged(uint windowHandle, string title)
 	{
 		_logger.LogDebug("[EmulatorHost] Window title changed: Handle=0x{Handle:X8}, Title={Title}", windowHandle, title);
