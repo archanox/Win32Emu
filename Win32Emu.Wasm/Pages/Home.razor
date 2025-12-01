@@ -1,5 +1,6 @@
 @page "/"
 @implements IDisposable
+@using System.Text
 @inject IJSRuntime JS
 @inject ILogger<Home> Logger
 @inject Win32Emu.Wasm.Services.EmulatorService EmulatorService
@@ -255,9 +256,13 @@
 	
 	private string _stdOutput = "No output yet.\n";
 	private string _debugOutput = "No debug messages.\n";
+	private readonly StringBuilder _debugOutputBuilder = new StringBuilder("No debug messages.\n");
 	
 	// Maximum number of characters to keep in debug output to prevent memory issues
 	private const int MaxDebugOutputLength = 100000;
+	// Buffer margin during log truncation to avoid frequent truncation operations
+	private const int LogRotationBufferMargin = 1000;
+	private const string LogTruncationPrefix = "... (older logs truncated) ...\n";
 	
 	/// <summary>
 	/// Called when the component is initialized. Subscribe to the debug log service.
@@ -278,15 +283,20 @@
 			await InvokeAsync(() =>
 			{
 				var formattedMessage = e.ToFormattedString() + "\n";
-				_debugOutput += formattedMessage;
+				_debugOutputBuilder.Append(formattedMessage);
 				
 				// Implement log rotation to prevent memory issues
-				if (_debugOutput.Length > MaxDebugOutputLength)
+				if (_debugOutputBuilder.Length > MaxDebugOutputLength)
 				{
-					// Keep the last portion of the log
-					_debugOutput = "... (older logs truncated) ...\n" + _debugOutput.Substring(_debugOutput.Length - MaxDebugOutputLength + 1000);
+					// Keep the last portion of the log, ensuring we don't exceed string bounds
+					var keepLength = MaxDebugOutputLength - LogTruncationPrefix.Length - LogRotationBufferMargin;
+					var startIndex = _debugOutputBuilder.Length - keepLength;
+					if (startIndex < 0) startIndex = 0;
+					_debugOutputBuilder.Remove(0, startIndex);
+					_debugOutputBuilder.Insert(0, LogTruncationPrefix);
 				}
 				
+				_debugOutput = _debugOutputBuilder.ToString();
 				StateHasChanged();
 			});
 		}
@@ -601,6 +611,7 @@
 
 	private void ClearDebugOut()
 	{
+		_debugOutputBuilder.Clear();
 		_debugOutput = string.Empty;
 	}
 
