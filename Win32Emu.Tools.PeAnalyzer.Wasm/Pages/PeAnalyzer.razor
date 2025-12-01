@@ -237,7 +237,18 @@
 		}
 
 		// PE file analysis
-		var peFile = new PeFile(fileBytes);
+		PeFile peFile;
+		try
+		{
+			peFile = new PeFile(fileBytes);
+		}
+		catch (Exception ex)
+		{
+			// This shouldn't happen if format detection is working correctly,
+			// but handle it gracefully in case of edge cases
+			errorMessage = $"Error parsing PE file: {ex.Message}. The file may be corrupted or in an unsupported format.";
+			return;
+		}
 		
 		analysisResult.Is32Bit = !peFile.Is64Bit;
 		analysisResult.Is64Bit = peFile.Is64Bit;
