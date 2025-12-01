@@ -1154,7 +1154,9 @@ public sealed class Emulator : IDisposable
             CpuStepResult step;
             try
             {
-                step = _cpu!.SingleStep(_vm!);
+                // Use async SingleStep to enable cooperative multitasking on WASM
+                // This allows the browser event loop to remain responsive during emulation
+                step = await _cpu!.SingleStepAsync(_vm!).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
