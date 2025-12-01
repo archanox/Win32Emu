@@ -31,9 +31,11 @@ public class NeResourceReader : IResourceReader
 	private readonly VirtualMemory _memory;
 	private readonly ILogger _logger;
 	private readonly Dictionary<uint, byte[]> _resourceCache = new();
+	private readonly Dictionary<uint, uint> _resourceHandleToAddress = new(); // Maps hResInfo -> memory address
 	private readonly List<NeResource> _resources = new();
 	private ushort _alignmentShift;
 	private int _neHeaderOffset;
+	private uint _nextResourceAddress = 0x0D000000u; // Starting address for resource allocation
 	
 	// DOS header constant
 	private const int DOS_HEADER_NE_OFFSET = 0x3C;
@@ -262,6 +264,12 @@ public class NeResourceReader : IResourceReader
 			return 0;
 		}
 		
+		// Check if already loaded (return cached address)
+		if (_resourceHandleToAddress.TryGetValue(hResInfo, out var cachedAddress))
+		{
+			return cachedAddress;
+		}
+		
 		var typeId = (ushort)((hResInfo >> 16) & 0x7FFF);
 		var nameId = (ushort)(hResInfo & 0xFFFF);
 		
@@ -270,12 +278,6 @@ public class NeResourceReader : IResourceReader
 		{
 			if (resource.TypeId == typeId && resource.ResourceId == nameId)
 			{
-				// Check if already cached
-				if (_resourceCache.TryGetValue(hResInfo, out _))
-				{
-					return hResInfo;
-				}
-				
 				// Read resource data from file
 				if (resource.FileOffset + resource.Length > _fileBytes.Length)
 				{
@@ -286,9 +288,13 @@ public class NeResourceReader : IResourceReader
 				var data = new byte[resource.Length];
 				Array.Copy(_fileBytes, resource.FileOffset, data, 0, resource.Length);
 				
-				// Allocate memory for the resource
-				var address = 0x0D000000u + (uint)(_resourceCache.Count * 0x10000);
+				// Allocate memory for the resource at a unique address
+				var address = _nextResourceAddress;
+				_nextResourceAddress += 0x10000; // 64KB per resource allocation slot
+				
+				// Store in both caches
 				_resourceCache[address] = data;
+				_resourceHandleToAddress[hResInfo] = address;
 				
 				_logger.LogDebug("[NE Resources] Loaded resource Type={TypeId}, ID={NameId} at 0x{Address:X8} ({Length} bytes)",
 					typeId, nameId, address, data.Length);
