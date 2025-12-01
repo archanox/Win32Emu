@@ -517,11 +517,20 @@ public sealed class Emulator : IDisposable
         kernel32Module.SetDispatcher(_dispatcher);
         
         // Create resource reader for PE resources (dialogs, icons, etc.)
+        // Only create for PE32 format - NE format has different resource handling
         // Use stored bytes instead of path, as path is a Windows path inside the VHD (e.g., C:\ign_teas\IGN_TEAS.EXE)
         // which doesn't exist on the host file system
-        var peImage = AsmResolver.PE.PEImage.FromBytes(_executableBytes!);
-        var resourceReader = new PeResourceReader(peImage, _image.BaseAddress, _vm, _logger);
-        kernel32Module.SetResourceReader(resourceReader);
+        PeResourceReader? resourceReader = null;
+        if (format == ExecutableFormat.PE32)
+        {
+            var peImage = AsmResolver.PE.PEImage.FromBytes(_executableBytes!);
+            resourceReader = new PeResourceReader(peImage, _image.BaseAddress, _vm, _logger);
+            kernel32Module.SetResourceReader(resourceReader);
+        }
+        else
+        {
+            _logger.LogWarning("[Loader] Resource reader not available for {Format} format. Dialog and resource loading may not work.", format);
+        }
         
         _dispatcher.RegisterModule(kernel32Module);
         // Register KERNELBASE for forwarded exports from KERNEL32
@@ -532,7 +541,10 @@ public sealed class Emulator : IDisposable
         var user32Module = new User32Module(_env, _image.BaseAddress, peLoader, _logger);
         user32Module.SetDispatcher(_dispatcher);
         user32Module.SetLoadedImage(_image);
-        user32Module.SetResourceReader(resourceReader); // Set resource reader for dialog loading
+        if (resourceReader != null)
+        {
+            user32Module.SetResourceReader(resourceReader); // Set resource reader for dialog loading
+        }
         user32Module.SetHost(_host); // Set host for dialog UI callbacks
         _dispatcher.RegisterModule(user32Module);
         
