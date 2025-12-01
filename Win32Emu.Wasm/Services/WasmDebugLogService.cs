@@ -61,6 +61,7 @@ public sealed class WasmDebugLogEventArgs : EventArgs
 		};
 
 		// Extract just the class name from the full category (e.g., "Win32Emu.Wasm.Backend.WasmRenderingBackend" -> "WasmRenderingBackend")
+		// Use char overloads for better performance since this is called for every log message
 		var shortCategory = CategoryName.Contains('.') 
 			? CategoryName.Substring(CategoryName.LastIndexOf('.') + 1)
 			: CategoryName;
