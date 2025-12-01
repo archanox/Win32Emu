@@ -22,7 +22,7 @@ namespace Win32Emu.Win32.Modules
 		private VirtualMemory? _memory;
 		private Win32Dispatcher? _dispatcher;
 		private LoadedImage? _image;
-		private PeResourceReader? _resourceReader;
+		private IResourceReader? _resourceReader;
 		private IEmulatorHost? _host;
 
 		// ATOM generation counter for window classes
@@ -106,7 +106,7 @@ namespace Win32Emu.Win32.Modules
 			_image = image;
 		}
 
-		public void SetResourceReader(PeResourceReader resourceReader)
+		public void SetResourceReader(IResourceReader resourceReader)
 		{
 			_resourceReader = resourceReader;
 		}

@@ -17,7 +17,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private readonly uint _imageBase;
 	private readonly PeImageLoader? _peLoader;
 	private readonly ILogger _logger;
-	private PeResourceReader? _resourceReader;
+	private IResourceReader? _resourceReader;
 
 	public Kernel32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 	{
@@ -67,7 +67,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private ICpu? _cpu;
 	private readonly object _interlockedLock = new();
 
-	public void SetResourceReader(PeResourceReader resourceReader)
+	public void SetResourceReader(IResourceReader resourceReader)
 	{
 		_resourceReader = resourceReader;
 	}
