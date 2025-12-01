@@ -76,6 +76,14 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	private const ushort IMAGE_FILE_MACHINE_I386 = 0x014C;
 	private const ushort IMAGE_FILE_EXECUTABLE_IMAGE = 0x0002;
 	
+	// NE Target OS values
+	private const byte NE_TARGET_OS_UNKNOWN = 0;
+	private const byte NE_TARGET_OS_OS2 = 1;
+	private const byte NE_TARGET_OS_WINDOWS = 2;
+	private const byte NE_TARGET_OS_DOS4 = 3;
+	private const byte NE_TARGET_OS_WIN386 = 4;
+	private const byte NE_TARGET_OS_BOSS = 5; // Borland Operating System Services
+	
 	/// <summary>
 	/// Validates if a file is a valid NE (Win16) executable by checking the NE signature.
 	/// </summary>
@@ -167,6 +175,10 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		logger?.LogInformation("[NE Loader] Target OS: {TargetOS} (2=Windows)", neHeader.TargetOS);
 		logger?.LogInformation("[NE Loader] Program flags: 0x{Flags:X4}", neHeader.ProgramFlags);
 		logger?.LogInformation("[NE Loader] Application type: 0x{Type:X4}", neHeader.ApplicationType);
+		logger?.LogInformation("[NE Loader] Auto data segment: {AutoData}, Init heap: {Heap}, Init stack: {Stack}",
+			neHeader.AutoDataSegment, neHeader.InitHeapSize, neHeader.InitStackSize);
+		logger?.LogInformation("[NE Loader] Sector alignment shift: {Shift} (sector size: {Size})",
+			neHeader.SectorAlignmentShift, 1 << neHeader.SectorAlignmentShift);
 		
 		// Parse segment table
 		var segments = ParseSegmentTable(bytes, neHeader);
@@ -195,26 +207,47 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		uint currentAddress = baseAddress;
 		var segmentMap = new Dictionary<int, (uint address, uint size)>();
 		
-		foreach (var segment in segments.Where(s => s.Length > 0))
+		// Calculate actual sector size from alignment shift (typically 9 for 512 bytes, or 4 for 16 bytes)
+		var sectorSize = neHeader.SectorAlignmentShift > 0 ? (1 << neHeader.SectorAlignmentShift) : (1 << NE_SECTOR_SHIFT);
+		
+		foreach (var segment in segments)
 		{
+			// Calculate memory allocation size
+			var memorySize = segment.MinAllocation > 0 ? Math.Max(segment.Length, segment.MinAllocation) : segment.Length;
+			if (memorySize == 0)
+			{
+				memorySize = FULL_SEGMENT_SIZE; // 64KB for zero-length segments with allocation
+			}
+			
 			// Align to paragraph boundary (16 bytes)
 			currentAddress = (currentAddress + PARAGRAPH_MASK) & PARAGRAPH_ALIGN;
 			
-			segmentMap[segment.SegmentNumber] = (currentAddress, segment.Length);
+			// Store segment mapping with allocated size
+			segmentMap[segment.SegmentNumber] = (currentAddress, memorySize);
 			
-			// Load segment data
-			if (segment.FileOffset > 0 && segment.FileOffset + segment.Length <= bytes.Length)
+			// Load segment data from file if present
+			if (segment.FileOffset > 0 && segment.Length > 0 && segment.FileOffset + segment.Length <= bytes.Length)
 			{
 				var segmentData = new byte[segment.Length];
 				Array.Copy(bytes, segment.FileOffset, segmentData, 0, segment.Length);
 				vm.WriteBytes(currentAddress, segmentData);
 				
-				logger?.LogDebug("[NE Loader] Loaded segment {Num}: Address=0x{Addr:X8}, Size=0x{Size:X4}, Flags=0x{Flags:X4}",
-					segment.SegmentNumber, currentAddress, segment.Length, segment.Flags);
+				var segFlags = (NeSegmentFlags)segment.Flags;
+				logger?.LogDebug("[NE Loader] Loaded segment {Num}: Address=0x{Addr:X8}, FileSize=0x{FileSize:X4}, MemSize=0x{MemSize:X4}, Flags={Flags}",
+					segment.SegmentNumber, currentAddress, segment.Length, memorySize, segFlags);
+			}
+			else if (memorySize > 0)
+			{
+				// Zero-initialize BSS segments
+				logger?.LogDebug("[NE Loader] Initialized segment {Num}: Address=0x{Addr:X8}, MemSize=0x{MemSize:X4} (no file data)",
+					segment.SegmentNumber, currentAddress, memorySize);
 			}
 			
-			currentAddress += segment.Length;
+			currentAddress += memorySize;
 		}
+		
+		// Process segment relocations
+		ProcessRelocations(bytes, neHeader, segments, segmentMap, importModules);
 		
 		// Calculate entry point address
 		// Entry point is specified as segment:offset in NE format
@@ -293,7 +326,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		// Get offset to NE header from DOS stub
 		var neOffset = (int)BitConverter.ToUInt32(bytes, DOS_HEADER_NE_PE_OFFSET);
 		
-		// Validate NE header can be fully read
+		// Validate NE header can be fully read (NE header is 64 bytes minimum)
 		if (neOffset < 0 || neOffset + NE_HEADER_MIN_SIZE > bytes.Length)
 		{
 			throw new InvalidDataException($"Invalid NE header offset: {neOffset}");
@@ -301,26 +334,72 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		
 		return new NeHeader
 		{
-			Signature = BitConverter.ToUInt16(bytes, neOffset),
-			MajorLinkerVersion = bytes[neOffset + 2],
-			MinorLinkerVersion = bytes[neOffset + 3],
-			EntryTableOffset = BitConverter.ToUInt16(bytes, neOffset + 4),
-			EntryTableLength = BitConverter.ToUInt16(bytes, neOffset + 6),
-			CrcChecksum = BitConverter.ToUInt32(bytes, neOffset + 8),
-			ProgramFlags = BitConverter.ToUInt16(bytes, neOffset + 12),
-			ApplicationType = BitConverter.ToUInt16(bytes, neOffset + 14),
-			SegmentTableOffset = BitConverter.ToUInt16(bytes, neOffset + 34),
-			SegmentCount = BitConverter.ToUInt16(bytes, neOffset + 28),
-			ResourceTableOffset = BitConverter.ToUInt16(bytes, neOffset + 36),
-			ResidentNameTableOffset = BitConverter.ToUInt16(bytes, neOffset + 38),
-			ModuleReferenceTableOffset = BitConverter.ToUInt16(bytes, neOffset + 40),
-			ImportedNamesTableOffset = BitConverter.ToUInt16(bytes, neOffset + 42),
-			NonResidentNameTableOffset = BitConverter.ToUInt32(bytes, neOffset + 44),
-			MovableEntryCount = BitConverter.ToUInt16(bytes, neOffset + 48),
-			TargetOS = bytes[neOffset + 54],
-			ExpectedWindowsVersion = BitConverter.ToUInt16(bytes, neOffset + 62),
-			EntryPointSegment = BitConverter.ToUInt16(bytes, neOffset + 20),
-			EntryPointOffset = BitConverter.ToUInt16(bytes, neOffset + 22),
+			// 0x00-0x01: Signature
+			Signature = BitConverter.ToUInt16(bytes, neOffset + 0x00),
+			// 0x02: Major linker version
+			MajorLinkerVersion = bytes[neOffset + 0x02],
+			// 0x03: Minor linker version
+			MinorLinkerVersion = bytes[neOffset + 0x03],
+			// 0x04-0x05: Entry table offset
+			EntryTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x04),
+			// 0x06-0x07: Entry table length
+			EntryTableLength = BitConverter.ToUInt16(bytes, neOffset + 0x06),
+			// 0x08-0x0B: CRC checksum
+			CrcChecksum = BitConverter.ToUInt32(bytes, neOffset + 0x08),
+			// 0x0C-0x0D: Program flags
+			ProgramFlags = BitConverter.ToUInt16(bytes, neOffset + 0x0C),
+			// 0x0E-0x0F: Application type flags
+			ApplicationType = BitConverter.ToUInt16(bytes, neOffset + 0x0E),
+			// 0x10-0x11: Auto data segment (DGROUP)
+			AutoDataSegment = BitConverter.ToUInt16(bytes, neOffset + 0x10),
+			// 0x12-0x13: Initial heap size
+			InitHeapSize = BitConverter.ToUInt16(bytes, neOffset + 0x12),
+			// 0x14-0x15: Initial stack size
+			InitStackSize = BitConverter.ToUInt16(bytes, neOffset + 0x14),
+			// 0x16-0x17: Entry point segment (CS)
+			EntryPointSegment = BitConverter.ToUInt16(bytes, neOffset + 0x16),
+			// 0x18-0x19: Entry point offset (IP)
+			EntryPointOffset = BitConverter.ToUInt16(bytes, neOffset + 0x18),
+			// 0x1A-0x1B: Initial stack segment (SS)
+			InitStackSegment = BitConverter.ToUInt16(bytes, neOffset + 0x1A),
+			// 0x1C-0x1D: Initial stack pointer (SP)
+			InitStackPointer = BitConverter.ToUInt16(bytes, neOffset + 0x1C),
+			// 0x1E-0x1F: Segment count
+			SegmentCount = BitConverter.ToUInt16(bytes, neOffset + 0x1E),
+			// 0x20-0x21: Module reference count
+			ModuleReferenceCount = BitConverter.ToUInt16(bytes, neOffset + 0x20),
+			// 0x22-0x23: Non-resident name table size
+			NonResidentNameTableSize = BitConverter.ToUInt16(bytes, neOffset + 0x22),
+			// 0x24-0x25: Segment table offset
+			SegmentTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x24),
+			// 0x26-0x27: Resource table offset
+			ResourceTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x26),
+			// 0x28-0x29: Resident name table offset
+			ResidentNameTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x28),
+			// 0x2A-0x2B: Module reference table offset
+			ModuleReferenceTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x2A),
+			// 0x2C-0x2D: Imported names table offset
+			ImportedNamesTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x2C),
+			// 0x2E-0x31: Non-resident name table offset (absolute file offset)
+			NonResidentNameTableOffset = BitConverter.ToUInt32(bytes, neOffset + 0x2E),
+			// 0x32-0x33: Movable entry point count
+			MovableEntryCount = BitConverter.ToUInt16(bytes, neOffset + 0x32),
+			// 0x34-0x35: Sector alignment shift
+			SectorAlignmentShift = BitConverter.ToUInt16(bytes, neOffset + 0x34),
+			// 0x36-0x37: Resource segment count
+			ResourceSegmentCount = BitConverter.ToUInt16(bytes, neOffset + 0x36),
+			// 0x38: Target OS
+			TargetOS = bytes[neOffset + 0x38],
+			// 0x39: Other flags (OS/2)
+			OtherFlags = bytes[neOffset + 0x39],
+			// 0x3A-0x3B: Return thunks offset (gang load)
+			ReturnThunksOffset = BitConverter.ToUInt16(bytes, neOffset + 0x3A),
+			// 0x3C-0x3D: Segment reference thunks offset
+			SegmentReferenceThunksOffset = BitConverter.ToUInt16(bytes, neOffset + 0x3C),
+			// 0x3E-0x3F: Minimum code swap size
+			SwapCodeSize = BitConverter.ToUInt16(bytes, neOffset + 0x3E),
+			// 0x40-0x41: Expected Windows version
+			ExpectedWindowsVersion = BitConverter.ToUInt16(bytes, neOffset + 0x40),
 			BaseOffset = neOffset
 		};
 	}
@@ -604,6 +683,222 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		return modules;
 	}
 	
+	/// <summary>
+	/// Process segment relocations for all segments that have relocation data.
+	/// </summary>
+	private void ProcessRelocations(byte[] bytes, NeHeader header, NeSegment[] segments, 
+		Dictionary<int, (uint address, uint size)> segmentMap, List<string> importModules)
+	{
+		var sectorSize = header.SectorAlignmentShift > 0 ? (1 << header.SectorAlignmentShift) : (1 << NE_SECTOR_SHIFT);
+		
+		foreach (var segment in segments)
+		{
+			// Check if segment has relocations
+			if ((segment.Flags & (ushort)NeSegmentFlags.HasRelocations) == 0)
+			{
+				continue;
+			}
+			
+			if (!segmentMap.TryGetValue(segment.SegmentNumber, out var segInfo))
+			{
+				continue;
+			}
+			
+			// Relocation data follows segment data
+			var relocationOffset = segment.FileOffset + segment.Length;
+			if (relocationOffset + 2 > bytes.Length)
+			{
+				logger?.LogWarning("[NE Loader] Segment {Num} relocation data extends beyond file", segment.SegmentNumber);
+				continue;
+			}
+			
+			// Read relocation count
+			var relocationCount = BitConverter.ToUInt16(bytes, (int)relocationOffset);
+			relocationOffset += 2;
+			
+			logger?.LogDebug("[NE Loader] Processing {Count} relocations for segment {Num}", relocationCount, segment.SegmentNumber);
+			
+			// Process each relocation entry (8 bytes each)
+			for (var i = 0; i < relocationCount; i++)
+			{
+				if (relocationOffset + 8 > bytes.Length)
+				{
+					logger?.LogWarning("[NE Loader] Relocation entry {Index} extends beyond file", i);
+					break;
+				}
+				
+				var reloc = new NeRelocation
+				{
+					SourceType = bytes[relocationOffset],
+					TargetFlags = bytes[relocationOffset + 1],
+					SourceOffset = BitConverter.ToUInt16(bytes, (int)relocationOffset + 2),
+					TargetSegment = BitConverter.ToUInt16(bytes, (int)relocationOffset + 4),
+					TargetOffset = BitConverter.ToUInt16(bytes, (int)relocationOffset + 6)
+				};
+				
+				ApplyRelocation(reloc, segInfo.address, segmentMap, importModules, bytes, header);
+				relocationOffset += 8;
+			}
+		}
+	}
+	
+	/// <summary>
+	/// Apply a single relocation fixup.
+	/// </summary>
+	private void ApplyRelocation(NeRelocation reloc, uint segmentAddress, 
+		Dictionary<int, (uint address, uint size)> segmentMap, List<string> importModules,
+		byte[] bytes, NeHeader header)
+	{
+		var targetType = (NeRelocationTargetType)(reloc.TargetFlags & 0x03);
+		var isAdditive = (reloc.TargetFlags & 0x04) != 0;
+		var sourceType = (NeRelocationSourceType)(reloc.SourceType & 0x0F);
+		
+		uint fixupAddress = segmentAddress + reloc.SourceOffset;
+		uint targetValue = 0;
+		
+		switch (targetType)
+		{
+			case NeRelocationTargetType.InternalRef:
+				// Internal reference - target is segment:offset within this module
+				if (segmentMap.TryGetValue(reloc.TargetSegment, out var targetSeg))
+				{
+					targetValue = targetSeg.address + reloc.TargetOffset;
+				}
+				else
+				{
+					logger?.LogWarning("[NE Loader] Internal relocation references invalid segment {Seg}", reloc.TargetSegment);
+					return;
+				}
+				break;
+				
+			case NeRelocationTargetType.ImportOrdinal:
+				// Import by ordinal - TargetSegment is module index (1-based), TargetOffset is ordinal
+				if (reloc.TargetSegment > 0 && reloc.TargetSegment <= importModules.Count)
+				{
+					var moduleName = importModules[reloc.TargetSegment - 1];
+					var ordinal = reloc.TargetOffset;
+					
+					// Create a synthetic import address for this function
+					// Using a range in the import area (0x0F000000+)
+					targetValue = MemoryRegions.ImportHookBase + 
+						(uint)((reloc.TargetSegment - 1) * 0x10000 + ordinal * 4);
+					
+					logger?.LogDebug("[NE Loader] Import by ordinal: {Module}!{Ordinal} -> 0x{Addr:X8}",
+						moduleName, ordinal, targetValue);
+				}
+				break;
+				
+			case NeRelocationTargetType.ImportName:
+				// Import by name - TargetSegment is module index, TargetOffset is name offset
+				if (reloc.TargetSegment > 0 && reloc.TargetSegment <= importModules.Count)
+				{
+					var moduleName = importModules[reloc.TargetSegment - 1];
+					var nameOffset = header.BaseOffset + header.ImportedNamesTableOffset + reloc.TargetOffset;
+					var funcName = ReadPascalString(bytes, nameOffset);
+					
+					// Create a synthetic import address
+					targetValue = MemoryRegions.ImportHookBase + 
+						(uint)((reloc.TargetSegment - 1) * 0x10000 + reloc.TargetOffset);
+					
+					logger?.LogDebug("[NE Loader] Import by name: {Module}!{Name} -> 0x{Addr:X8}",
+						moduleName, funcName ?? "??", targetValue);
+				}
+				break;
+				
+			case NeRelocationTargetType.OsFixup:
+				// Operating system fixup - various OS-specific addresses
+				switch (reloc.TargetOffset)
+				{
+					case 1: // Floating point fixup
+						logger?.LogDebug("[NE Loader] OS fixup: floating point");
+						return;
+					default:
+						logger?.LogDebug("[NE Loader] OS fixup type {Type}", reloc.TargetOffset);
+						return;
+				}
+		}
+		
+		// Apply fixup based on source type
+		switch (sourceType)
+		{
+			case NeRelocationSourceType.LoByte:
+				// Low byte fixup
+				var lobyte = (byte)(targetValue & 0xFF);
+				if (isAdditive)
+				{
+					lobyte += vm.Read8(fixupAddress);
+				}
+				vm.Write8(fixupAddress, lobyte);
+				break;
+				
+			case NeRelocationSourceType.Selector:
+				// 16-bit segment selector - in flat memory model, use segment base >> 4
+				var selector = (ushort)(targetValue >> 4);
+				if (isAdditive)
+				{
+					selector = (ushort)(selector + vm.Read16(fixupAddress));
+				}
+				vm.Write16(fixupAddress, selector);
+				break;
+				
+			case NeRelocationSourceType.Pointer32:
+				// 32-bit far pointer (selector:offset)
+				var offset16 = (ushort)(targetValue & 0xFFFF);
+				var seg16 = (ushort)(targetValue >> 4);
+				if (isAdditive)
+				{
+					offset16 = (ushort)(offset16 + vm.Read16(fixupAddress));
+					seg16 = (ushort)(seg16 + vm.Read16(fixupAddress + 2));
+				}
+				vm.Write16(fixupAddress, offset16);
+				vm.Write16(fixupAddress + 2, seg16);
+				break;
+				
+			case NeRelocationSourceType.Offset16:
+				// 16-bit offset fixup
+				var offset = (ushort)(targetValue & 0xFFFF);
+				if (isAdditive)
+				{
+					offset = (ushort)(offset + vm.Read16(fixupAddress));
+				}
+				vm.Write16(fixupAddress, offset);
+				break;
+				
+			case NeRelocationSourceType.Offset32:
+				// 32-bit offset fixup
+				var offset32 = targetValue;
+				if (isAdditive)
+				{
+					offset32 += vm.Read32(fixupAddress);
+				}
+				vm.Write32(fixupAddress, offset32);
+				break;
+				
+			default:
+				logger?.LogWarning("[NE Loader] Unsupported relocation source type: {Type}", sourceType);
+				break;
+		}
+	}
+	
+	/// <summary>
+	/// Read a Pascal string (length-prefixed) from the file.
+	/// </summary>
+	private static string? ReadPascalString(byte[] bytes, int offset)
+	{
+		if (offset < 0 || offset >= bytes.Length)
+		{
+			return null;
+		}
+		
+		var length = bytes[offset];
+		if (length == 0 || offset + 1 + length > bytes.Length)
+		{
+			return null;
+		}
+		
+		return Encoding.ASCII.GetString(bytes, offset + 1, length);
+	}
+	
 	private Dictionary<uint, (string dll, string name)> BuildImportMap(
 		List<string> importModules,
 		Dictionary<string, ushort> residentNames,
@@ -726,29 +1021,43 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 
 /// <summary>
 /// NE (New Executable) header structure.
+/// Based on https://wiki.osdev.org/NE and https://www.fileformat.info/format/exe/corion-ne.htm
 /// </summary>
 internal class NeHeader
 {
-	public ushort Signature { get; init; }                    // "NE" signature (0x454E)
-	public byte MajorLinkerVersion { get; init; }             // Linker major version
-	public byte MinorLinkerVersion { get; init; }             // Linker minor version
-	public ushort EntryTableOffset { get; init; }             // Offset to entry table
-	public ushort EntryTableLength { get; init; }             // Length of entry table
-	public uint CrcChecksum { get; init; }                    // CRC checksum
-	public ushort ProgramFlags { get; init; }                 // Program flags
-	public ushort ApplicationType { get; init; }              // Application type flags
-	public ushort SegmentTableOffset { get; init; }           // Offset to segment table
-	public ushort SegmentCount { get; init; }                 // Number of segments
-	public ushort ResourceTableOffset { get; init; }          // Offset to resource table
-	public ushort ResidentNameTableOffset { get; init; }      // Offset to resident name table
-	public ushort ModuleReferenceTableOffset { get; init; }   // Offset to module reference table
-	public ushort ImportedNamesTableOffset { get; init; }     // Offset to imported names table
-	public uint NonResidentNameTableOffset { get; init; }     // File offset to non-resident name table
-	public ushort MovableEntryCount { get; init; }            // Number of movable entries
-	public byte TargetOS { get; init; }                       // Target operating system
-	public ushort ExpectedWindowsVersion { get; init; }       // Expected Windows version
-	public ushort EntryPointSegment { get; init; }            // Entry point segment number
-	public ushort EntryPointOffset { get; init; }             // Entry point offset within segment
+	public ushort Signature { get; init; }                    // 0x00: "NE" signature (0x454E)
+	public byte MajorLinkerVersion { get; init; }             // 0x02: Linker major version
+	public byte MinorLinkerVersion { get; init; }             // 0x03: Linker minor version
+	public ushort EntryTableOffset { get; init; }             // 0x04: Offset to entry table
+	public ushort EntryTableLength { get; init; }             // 0x06: Length of entry table
+	public uint CrcChecksum { get; init; }                    // 0x08: CRC checksum (32-bit)
+	public ushort ProgramFlags { get; init; }                 // 0x0C: Program flags (DGROUP type, etc.)
+	public ushort ApplicationType { get; init; }              // 0x0E: Application type flags (DLL, GUI, etc.)
+	public ushort AutoDataSegment { get; init; }              // 0x10: Auto data segment index (DGROUP)
+	public ushort InitHeapSize { get; init; }                 // 0x12: Initial heap size
+	public ushort InitStackSize { get; init; }                // 0x14: Initial stack size
+	public ushort EntryPointSegment { get; init; }            // 0x16: Entry point segment number (CS:IP)
+	public ushort EntryPointOffset { get; init; }             // 0x18: Entry point offset (CS:IP)
+	public ushort InitStackSegment { get; init; }             // 0x1A: Initial stack segment number (SS:SP)
+	public ushort InitStackPointer { get; init; }             // 0x1C: Initial stack pointer (SS:SP)
+	public ushort SegmentCount { get; init; }                 // 0x1E: Number of segments
+	public ushort ModuleReferenceCount { get; init; }         // 0x20: Number of module reference entries
+	public ushort NonResidentNameTableSize { get; init; }     // 0x22: Size of non-resident name table
+	public ushort SegmentTableOffset { get; init; }           // 0x24: Offset to segment table
+	public ushort ResourceTableOffset { get; init; }          // 0x26: Offset to resource table
+	public ushort ResidentNameTableOffset { get; init; }      // 0x28: Offset to resident name table
+	public ushort ModuleReferenceTableOffset { get; init; }   // 0x2A: Offset to module reference table
+	public ushort ImportedNamesTableOffset { get; init; }     // 0x2C: Offset to imported names table
+	public uint NonResidentNameTableOffset { get; init; }     // 0x2E: File offset to non-resident name table (absolute)
+	public ushort MovableEntryCount { get; init; }            // 0x32: Number of movable entry points
+	public ushort SectorAlignmentShift { get; init; }         // 0x34: Sector alignment shift (log2 of sector size)
+	public ushort ResourceSegmentCount { get; init; }         // 0x36: Number of resource segments
+	public byte TargetOS { get; init; }                       // 0x38: Target operating system
+	public byte OtherFlags { get; init; }                     // 0x39: Other executable flags (OS/2)
+	public ushort ReturnThunksOffset { get; init; }           // 0x3A: Offset to return thunks (gang load area)
+	public ushort SegmentReferenceThunksOffset { get; init; } // 0x3C: Offset to segment reference thunks
+	public ushort SwapCodeSize { get; init; }                 // 0x3E: Minimum code swap area size
+	public ushort ExpectedWindowsVersion { get; init; }       // 0x40: Expected Windows version (minor.major)
 	public int BaseOffset { get; init; }                      // Base offset of NE header in file
 }
 
@@ -758,10 +1067,35 @@ internal class NeHeader
 internal class NeSegment
 {
 	public int SegmentNumber { get; init; }    // Segment number (1-based)
-	public uint FileOffset { get; init; }      // File offset to segment data
-	public uint Length { get; init; }          // Length of segment in bytes
+	public uint FileOffset { get; init; }      // File offset to segment data (shifted)
+	public uint Length { get; init; }          // Length of segment in file
 	public ushort Flags { get; init; }         // Segment flags
-	public ushort MinAllocation { get; init; } // Minimum allocation size
+	public ushort MinAllocation { get; init; } // Minimum allocation size in memory
+	public uint MemoryAddress { get; set; }    // Loaded memory address (set during loading)
+	public uint MemorySize { get; set; }       // Allocated memory size (set during loading)
+}
+
+/// <summary>
+/// NE segment flags.
+/// </summary>
+[Flags]
+internal enum NeSegmentFlags : ushort
+{
+	Data = 0x0001,          // Segment contains data (vs code)
+	Allocated = 0x0002,     // Memory allocated for segment
+	Loaded = 0x0004,        // Segment is loaded
+	Iterated = 0x0008,      // Segment data is iterated (compressed)
+	Movable = 0x0010,       // Segment is movable
+	Shareable = 0x0020,     // Segment is shareable (pure)
+	Preload = 0x0040,       // Segment should be preloaded
+	ExecuteOnly = 0x0080,   // Code segment is execute-only
+	ReadOnly = 0x0080,      // Data segment is read-only
+	HasRelocations = 0x0100,// Segment has relocation data
+	Conforming = 0x0200,    // Code segment is conforming
+	PrivilegeLevel = 0x0C00,// Privilege level (DPL)
+	Discardable = 0x1000,   // Segment is discardable
+	Is32Bit = 0x2000,       // 32-bit segment
+	Huge = 0x4000,          // Huge segment (>64KB)
 }
 
 /// <summary>
@@ -770,7 +1104,117 @@ internal class NeSegment
 internal class NeEntryPoint
 {
 	public ushort Ordinal { get; init; }  // Ordinal number
-	public byte Segment { get; init; }    // Segment number
+	public byte Segment { get; init; }    // Segment number (0 = movable)
 	public ushort Offset { get; init; }   // Offset within segment
-	public byte Flags { get; init; }      // Entry flags
+	public byte Flags { get; init; }      // Entry flags (exported, shared data, etc.)
+}
+
+/// <summary>
+/// NE relocation record.
+/// </summary>
+internal class NeRelocation
+{
+	public byte SourceType { get; init; }      // Source type (fixup type)
+	public byte TargetFlags { get; init; }     // Target flags and type
+	public ushort SourceOffset { get; init; }  // Offset within segment to fixup
+	public ushort TargetSegment { get; init; } // Target segment (or module index)
+	public ushort TargetOffset { get; init; }  // Target offset (or ordinal/name offset)
+}
+
+/// <summary>
+/// NE relocation source types.
+/// </summary>
+internal enum NeRelocationSourceType : byte
+{
+	LoByte = 0,         // Low byte fixup
+	Selector = 2,       // 16-bit selector fixup
+	Pointer32 = 3,      // 32-bit far pointer fixup (seg:off)
+	Offset16 = 5,       // 16-bit offset fixup
+	Pointer48 = 11,     // 48-bit far pointer fixup (seg:off32)
+	Offset32 = 13,      // 32-bit offset fixup
+}
+
+/// <summary>
+/// NE relocation target types.
+/// </summary>
+internal enum NeRelocationTargetType : byte
+{
+	InternalRef = 0,    // Internal reference (within this module)
+	ImportOrdinal = 1,  // Import by ordinal
+	ImportName = 2,     // Import by name
+	OsFixup = 3,        // Operating system fixup
+	Additive = 4,       // Additive fixup (add, don't replace)
+}
+
+/// <summary>
+/// NE program flags (offset 0x0C in NE header).
+/// </summary>
+[Flags]
+internal enum NeProgramFlags : ushort
+{
+	/// <summary>DGROUP type mask (bits 0-1)</summary>
+	DGroupTypeMask = 0x0003,
+	/// <summary>No DGROUP (DGROUP = NONE)</summary>
+	DGroupNone = 0x0000,
+	/// <summary>Single DGROUP (DGROUP = GROUP)</summary>
+	DGroupSingle = 0x0001,
+	/// <summary>Multiple DGROUP (DGROUP = MULTIPLE)</summary>
+	DGroupMultiple = 0x0002,
+	/// <summary>DGROUP is null (for library)</summary>
+	DGroupNull = 0x0003,
+	/// <summary>Global initialization required</summary>
+	GlobalInit = 0x0004,
+	/// <summary>Protected mode only</summary>
+	ProtectedModeOnly = 0x0008,
+	/// <summary>8086 instructions used</summary>
+	Has8086 = 0x0010,
+	/// <summary>80286 instructions used</summary>
+	Has80286 = 0x0020,
+	/// <summary>80386 instructions used</summary>
+	Has80386 = 0x0040,
+	/// <summary>80x87 (FPU) instructions used</summary>
+	HasFpu = 0x0080,
+}
+
+/// <summary>
+/// NE application type flags (offset 0x0E in NE header).
+/// </summary>
+[Flags]
+internal enum NeApplicationType : ushort
+{
+	/// <summary>Full screen application (not aware of Windows)</summary>
+	FullScreen = 0x0001,
+	/// <summary>Aware of Windows/Presentation Manager</summary>
+	WindowsAware = 0x0002,
+	/// <summary>Uses Windows/Presentation Manager API (GUI application)</summary>
+	WindowsApi = 0x0003,
+	/// <summary>Application type mask (bits 0-1)</summary>
+	TypeMask = 0x0003,
+	/// <summary>OS/2 family application (runs on OS/2 and DOS)</summary>
+	FamilyApp = 0x0008,
+	/// <summary>Self-loading application (has self-loading prolog)</summary>
+	SelfLoading = 0x0800,
+	/// <summary>Linker errors occurred (file may be invalid)</summary>
+	LinkerErrors = 0x2000,
+	/// <summary>Module is a library (DLL)</summary>
+	Library = 0x8000,
+}
+
+/// <summary>
+/// NE target operating system values (offset 0x38 in NE header).
+/// </summary>
+internal enum NeTargetOS : byte
+{
+	/// <summary>Unknown operating system</summary>
+	Unknown = 0,
+	/// <summary>OS/2</summary>
+	OS2 = 1,
+	/// <summary>Windows</summary>
+	Windows = 2,
+	/// <summary>DOS 4.x</summary>
+	DOS4 = 3,
+	/// <summary>Windows 386 (enhanced mode)</summary>
+	Windows386 = 4,
+	/// <summary>Borland Operating System Services</summary>
+	BOSS = 5,
 }
