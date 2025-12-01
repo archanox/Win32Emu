@@ -93,7 +93,7 @@
 									@onchange="OnExecutableSelectionChanged">
 								@foreach (var exe in _discoveredExecutables)
 								{
-									<option value="@exe.RelativePath">@exe.Name (@FormatFileSize(exe.Size))</option>
+									<option value="@exe.RelativePath">@exe.RelativePath (@FormatFileSize(exe.Size))</option>
 								}
 							</select>
 							<small class="text-muted">@_discoveredExecutables.Count executables found in folder</small>
@@ -320,7 +320,7 @@
 				AddDebugOutput($"Loaded folder with {_loadedFiles.Count} files (Total: {FormatFileSize(totalSize)})");
 				AddDebugOutput($"Found {_discoveredExecutables.Count} executable(s): {string.Join(", ", _discoveredExecutables.Select(x => x.Name))}");
 				
-				// Auto-select the first executable (use FirstOrDefault for safer access)
+				// Auto-select the first executable; null check below handles empty list edge case
 				var firstExe = _discoveredExecutables.FirstOrDefault();
 				if (firstExe != null)
 				{
@@ -350,12 +350,14 @@
 		var exeInfo = _discoveredExecutables.FirstOrDefault(x => x.RelativePath == relativePath);
 		if (exeInfo == null)
 		{
+			Logger.LogWarning("Executable not found in discovered list: {RelativePath}", relativePath);
 			AddDebugOutput($"Error: Executable not found in discovered list: {relativePath}");
 			return;
 		}
 		
 		if (!_loadedFiles.TryGetValue(relativePath, out var exeData))
 		{
+			Logger.LogWarning("Executable data not found in loaded files: {RelativePath}", relativePath);
 			AddDebugOutput($"Error: Executable data not found in loaded files: {relativePath}");
 			return;
 		}
