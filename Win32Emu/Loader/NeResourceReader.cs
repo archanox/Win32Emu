@@ -43,21 +43,6 @@ public class NeResourceReader : IResourceReader
 	// NE header resource table offset location
 	private const int NE_RESOURCE_TABLE_OFFSET_LOCATION = 36;
 	
-	// Resource type constants matching Windows RT_* values
-	private const ushort RT_CURSOR = 1;
-	private const ushort RT_BITMAP = 2;
-	private const ushort RT_ICON = 3;
-	private const ushort RT_MENU = 4;
-	private const ushort RT_DIALOG = 5;
-	private const ushort RT_STRING = 6;
-	private const ushort RT_FONTDIR = 7;
-	private const ushort RT_FONT = 8;
-	private const ushort RT_ACCELERATOR = 9;
-	private const ushort RT_RCDATA = 10;
-	private const ushort RT_GROUP_CURSOR = 12;
-	private const ushort RT_GROUP_ICON = 14;
-	private const ushort RT_VERSION = 16;
-	
 	// Resource flags
 	private const ushort RESOURCE_MOVEABLE = 0x0010;
 	private const ushort RESOURCE_PURE = 0x0020;
@@ -218,19 +203,19 @@ public class NeResourceReader : IResourceReader
 	{
 		return typeId switch
 		{
-			RT_CURSOR => "RT_CURSOR",
-			RT_BITMAP => "RT_BITMAP",
-			RT_ICON => "RT_ICON",
-			RT_MENU => "RT_MENU",
-			RT_DIALOG => "RT_DIALOG",
-			RT_STRING => "RT_STRING",
-			RT_FONTDIR => "RT_FONTDIR",
-			RT_FONT => "RT_FONT",
-			RT_ACCELERATOR => "RT_ACCELERATOR",
-			RT_RCDATA => "RT_RCDATA",
-			RT_GROUP_CURSOR => "RT_GROUP_CURSOR",
-			RT_GROUP_ICON => "RT_GROUP_ICON",
-			RT_VERSION => "RT_VERSION",
+			(ushort)IResourceReader.ResourceType.RT_CURSOR => "RT_CURSOR",
+			(ushort)IResourceReader.ResourceType.RT_BITMAP => "RT_BITMAP",
+			(ushort)IResourceReader.ResourceType.RT_ICON => "RT_ICON",
+			(ushort)IResourceReader.ResourceType.RT_MENU => "RT_MENU",
+			(ushort)IResourceReader.ResourceType.RT_DIALOG => "RT_DIALOG",
+			(ushort)IResourceReader.ResourceType.RT_STRING => "RT_STRING",
+			(ushort)IResourceReader.ResourceType.RT_FONTDIR => "RT_FONTDIR",
+			(ushort)IResourceReader.ResourceType.RT_FONT => "RT_FONT",
+			(ushort)IResourceReader.ResourceType.RT_ACCELERATOR => "RT_ACCELERATOR",
+			(ushort)IResourceReader.ResourceType.RT_RCDATA => "RT_RCDATA",
+			(ushort)IResourceReader.ResourceType.RT_GROUP_CURSOR => "RT_GROUP_CURSOR",
+			(ushort)IResourceReader.ResourceType.RT_GROUP_ICON => "RT_GROUP_ICON",
+			(ushort)IResourceReader.ResourceType.RT_VERSION => "RT_VERSION",
 			_ => $"Unknown({typeId})"
 		};
 	}
@@ -348,7 +333,7 @@ public class NeResourceReader : IResourceReader
 		// Find the string table resource
 		foreach (var resource in _resources)
 		{
-			if (resource.TypeId == RT_STRING && resource.ResourceId == blockId)
+			if (resource.TypeId == (ushort)IResourceReader.ResourceType.RT_STRING && resource.ResourceId == blockId)
 			{
 				if (resource.FileOffset + resource.Length > _fileBytes.Length)
 				{
@@ -401,7 +386,7 @@ public class NeResourceReader : IResourceReader
 	{
 		foreach (var resource in _resources)
 		{
-			if (resource.TypeId == RT_BITMAP && resource.ResourceId == (ushort)bitmapId)
+			if (resource.TypeId == (ushort)IResourceReader.ResourceType.RT_BITMAP && resource.ResourceId == (ushort)bitmapId)
 			{
 				if (resource.FileOffset + resource.Length > _fileBytes.Length)
 				{
@@ -422,7 +407,7 @@ public class NeResourceReader : IResourceReader
 	{
 		foreach (var resource in _resources)
 		{
-			if (resource.TypeId == RT_BITMAP && 
+			if (resource.TypeId == (ushort)IResourceReader.ResourceType.RT_BITMAP && 
 			    string.Equals(resource.ResourceName, bitmapName, StringComparison.OrdinalIgnoreCase))
 			{
 				if (resource.FileOffset + resource.Length > _fileBytes.Length)
