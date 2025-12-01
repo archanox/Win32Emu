@@ -8,6 +8,10 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
+// Create the debug log service as a singleton so it can collect logs from all components
+var debugLogService = new WasmDebugLogService();
+builder.Services.AddSingleton(debugLogService);
+
 // Configure logging to enable debug verbosity for Win32 module logs
 // In production, you might want to set this to Warning or Error
 // For debugging purposes, we keep it at Debug to capture all messages
@@ -16,6 +20,11 @@ builder.Logging.SetMinimumLevel(LogLevel.Debug);
 // Add browser console logging with detailed formatting
 builder.Logging.AddFilter("Microsoft.AspNetCore.Components", LogLevel.Warning);
 builder.Logging.AddFilter("Win32Emu", LogLevel.Debug);
+
+// Add the custom WASM logger provider that routes logs to the debug console UI
+// This intercepts logs from backends (WasmRenderingBackend, WasmAudioBackend, WasmInputBackend)
+// and forwards them to the debug panel in the web frontend
+builder.Logging.AddProvider(new WasmLoggerProvider(debugLogService));
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
