@@ -3,6 +3,7 @@
 @inject IJSRuntime JS
 @inject ILogger<Home> Logger
 @inject Win32Emu.Wasm.Services.EmulatorService EmulatorService
+@inject Win32Emu.Wasm.Services.WasmDebugLogService DebugLogService
 
 <PageTitle>Win32Emu - Web Emulator</PageTitle>
 
@@ -254,6 +255,27 @@
 	
 	private string _stdOutput = "No output yet.\n";
 	private string _debugOutput = "No debug messages.\n";
+	
+	/// <summary>
+	/// Called when the component is initialized. Subscribe to the debug log service.
+	/// </summary>
+	protected override void OnInitialized()
+	{
+		// Subscribe to the centralized debug log service to receive logs from all backend components
+		DebugLogService.LogReceived += OnBackendLogReceived;
+	}
+	
+	/// <summary>
+	/// Handle log messages from backend components (rendering, audio, input backends, etc.)
+	/// </summary>
+	private async void OnBackendLogReceived(object? sender, Win32Emu.Wasm.Services.WasmDebugLogEventArgs e)
+	{
+		await InvokeAsync(() =>
+		{
+			_debugOutput += e.ToFormattedString() + "\n";
+			StateHasChanged();
+		});
+	}
 	
 	/// <summary>
 	/// Information about a discovered executable file
@@ -601,6 +623,10 @@
 	/// </summary>
 	public void Dispose()
 	{
+		// Unsubscribe from debug log service
+		DebugLogService.LogReceived -= OnBackendLogReceived;
+		
+		// Unsubscribe from emulator service events
 		EmulatorService.OnDebugOutput -= OnEmulatorDebugOutput;
 		EmulatorService.OnStdOutput -= OnEmulatorStdOutput;
 		EmulatorService.OnStateChanged -= OnEmulatorStateChanged;
