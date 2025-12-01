@@ -516,16 +516,22 @@ public sealed class Emulator : IDisposable
         var kernel32Module = new Kernel32Module(_env, _image.BaseAddress, peLoader, _logger);
         kernel32Module.SetDispatcher(_dispatcher);
         
-        // Create resource reader for PE resources (dialogs, icons, etc.)
-        // Only create for PE32 format - NE format has different resource handling
+        // Create resource reader for resources (dialogs, icons, etc.)
         // Use stored bytes instead of path, as path is a Windows path inside the VHD (e.g., C:\ign_teas\IGN_TEAS.EXE)
         // which doesn't exist on the host file system
-        PeResourceReader? resourceReader = null;
+        IResourceReader? resourceReader = null;
         if (format == ExecutableFormat.PE32)
         {
             var peImage = AsmResolver.PE.PEImage.FromBytes(_executableBytes!);
             resourceReader = new PeResourceReader(peImage, _image.BaseAddress, _vm, _logger);
             kernel32Module.SetResourceReader(resourceReader);
+        }
+        else if (format == ExecutableFormat.NE)
+        {
+            // Use NE resource reader for Win16 executables
+            resourceReader = new NeResourceReader(_executableBytes!, _vm, _logger);
+            kernel32Module.SetResourceReader(resourceReader);
+            _logger.LogInformation("[Loader] NE resource reader initialized for Win16 executable");
         }
         else
         {

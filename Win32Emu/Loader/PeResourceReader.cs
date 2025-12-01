@@ -16,38 +16,12 @@ namespace Win32Emu.Loader;
 /// Reads PE resources from a loaded PE image.
 /// Supports reading resource directory structures and extracting resource data.
 /// </summary>
-public class PeResourceReader
+public class PeResourceReader : IResourceReader
 {
 	private readonly PEImage _image;
 	private readonly uint _imageBase;
 	private readonly VirtualMemory _memory;
 	private readonly ILogger _logger;
-
-	// Resource type constants
-	public enum ResourceType : uint
-	{
-		RT_CURSOR = 1,
-		RT_BITMAP = 2,
-		RT_ICON = 3,
-		RT_MENU = 4,
-		RT_DIALOG = 5,
-		RT_STRING = 6,
-		RT_FONTDIR = 7,
-		RT_FONT = 8,
-		RT_ACCELERATOR = 9,
-		RT_RCDATA = 10,
-		RT_MESSAGETABLE = 11,
-		RT_GROUP_CURSOR = 12,
-		RT_GROUP_ICON = 14,
-		RT_VERSION = 16,
-		RT_DLGINCLUDE = 17,
-		RT_PLUGPLAY = 19,
-		RT_VXD = 20,
-		RT_ANICURSOR = 21,
-		RT_ANIICON = 22,
-		RT_HTML = 23,
-		RT_MANIFEST = 24
-	}
 
 	public PeResourceReader(PEImage image, uint imageBase, VirtualMemory memory, ILogger? logger = null)
 	{
@@ -322,7 +296,7 @@ public class PeResourceReader
 			return null;
 		}
 		
-		var resourceData = FindResourceData(resources, (uint)ResourceType.RT_STRING, blockId);
+		var resourceData = FindResourceData(resources, (uint)IResourceReader.ResourceType.RT_STRING, blockId);
 		if (resourceData == null || resourceData.Length == 0)
 		{
 			return null;
@@ -383,7 +357,7 @@ public class PeResourceReader
 			return null;
 		}
 		
-		var resourceData = FindResourceData(resources, (uint)ResourceType.RT_BITMAP, bitmapId);
+		var resourceData = FindResourceData(resources, (uint)IResourceReader.ResourceType.RT_BITMAP, bitmapId);
 		return resourceData;
 	}
 
@@ -402,7 +376,7 @@ public class PeResourceReader
 		}
 
 		// Navigate: Type (RT_BITMAP) -> Name -> Language
-		var typeEntry = resources.Entries.Where(e => e.Id == (uint)ResourceType.RT_BITMAP).FirstOrDefault();
+		var typeEntry = resources.Entries.Where(e => e.Id == (uint)IResourceReader.ResourceType.RT_BITMAP).FirstOrDefault();
 		if (typeEntry is ResourceDirectory typeDir)
 		{
 			// Try case-sensitive match first, then case-insensitive
