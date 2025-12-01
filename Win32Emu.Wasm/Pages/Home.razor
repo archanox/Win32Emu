@@ -256,6 +256,9 @@
 	private string _stdOutput = "No output yet.\n";
 	private string _debugOutput = "No debug messages.\n";
 	
+	// Maximum number of characters to keep in debug output to prevent memory issues
+	private const int MaxDebugOutputLength = 100000;
+	
 	/// <summary>
 	/// Called when the component is initialized. Subscribe to the debug log service.
 	/// </summary>
@@ -270,11 +273,28 @@
 	/// </summary>
 	private async void OnBackendLogReceived(object? sender, Win32Emu.Wasm.Services.WasmDebugLogEventArgs e)
 	{
-		await InvokeAsync(() =>
+		try
 		{
-			_debugOutput += e.ToFormattedString() + "\n";
-			StateHasChanged();
-		});
+			await InvokeAsync(() =>
+			{
+				var formattedMessage = e.ToFormattedString() + "\n";
+				_debugOutput += formattedMessage;
+				
+				// Implement log rotation to prevent memory issues
+				if (_debugOutput.Length > MaxDebugOutputLength)
+				{
+					// Keep the last portion of the log
+					_debugOutput = "... (older logs truncated) ...\n" + _debugOutput.Substring(_debugOutput.Length - MaxDebugOutputLength + 1000);
+				}
+				
+				StateHasChanged();
+			});
+		}
+		catch (Exception ex)
+		{
+			// Log to browser console but don't crash the UI
+			Logger.LogError(ex, "Error handling backend log message");
+		}
 	}
 	
 	/// <summary>

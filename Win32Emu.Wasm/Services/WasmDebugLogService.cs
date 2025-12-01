@@ -41,7 +41,7 @@ public sealed class WasmDebugLogEventArgs : EventArgs
 		CategoryName = categoryName;
 		LogLevel = logLevel;
 		Message = message;
-		Timestamp = DateTime.Now;
+		Timestamp = DateTime.UtcNow;
 	}
 
 	/// <summary>
