@@ -207,9 +207,6 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		uint currentAddress = baseAddress;
 		var segmentMap = new Dictionary<int, (uint address, uint size)>();
 		
-		// Calculate actual sector size from alignment shift (typically 9 for 512 bytes, or 4 for 16 bytes)
-		var sectorSize = neHeader.SectorAlignmentShift > 0 ? (1 << neHeader.SectorAlignmentShift) : (1 << NE_SECTOR_SHIFT);
-		
 		foreach (var segment in segments)
 		{
 			// Calculate memory allocation size
@@ -689,8 +686,6 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	private void ProcessRelocations(byte[] bytes, NeHeader header, NeSegment[] segments, 
 		Dictionary<int, (uint address, uint size)> segmentMap, List<string> importModules)
 	{
-		var sectorSize = header.SectorAlignmentShift > 0 ? (1 << header.SectorAlignmentShift) : (1 << NE_SECTOR_SHIFT);
-		
 		foreach (var segment in segments)
 		{
 			// Check if segment has relocations
@@ -826,7 +821,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				var lobyte = (byte)(targetValue & 0xFF);
 				if (isAdditive)
 				{
-					lobyte += vm.Read8(fixupAddress);
+					lobyte = (byte)(lobyte + vm.Read8(fixupAddress));
 				}
 				vm.Write8(fixupAddress, lobyte);
 				break;

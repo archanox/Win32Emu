@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -35,7 +36,7 @@ public class NeResourceReader : IResourceReader
 	private readonly List<NeResource> _resources = new();
 	private ushort _alignmentShift;
 	private int _neHeaderOffset;
-	private uint _nextResourceAddress = 0x0D000000u; // Starting address for resource allocation
+	private uint _nextResourceAddress = 0x10000000u; // Starting address for resource allocation (outside COM vtable region)
 	
 	// DOS header constant
 	private const int DOS_HEADER_NE_OFFSET = 0x3C;
@@ -227,14 +228,12 @@ public class NeResourceReader : IResourceReader
 		var nameId = (ushort)(lpName & 0xFFFF);
 		
 		// Find matching resource
-		foreach (var resource in _resources)
+		var matchingResource = _resources.FirstOrDefault(r => r.TypeId == typeId && r.ResourceId == nameId);
+		if (matchingResource != null)
 		{
-			if (resource.TypeId == typeId && resource.ResourceId == nameId)
-			{
-				// Create a resource handle encoding type and name
-				var handle = 0x80000000u | ((uint)typeId << 16) | nameId;
-				return handle;
-			}
+			// Create a resource handle encoding type and name
+			var handle = 0x80000000u | ((uint)typeId << 16) | nameId;
+			return handle;
 		}
 		
 		_logger.LogDebug("[NE Resources] Resource not found: Type={TypeId}, Name={NameId}", typeId, nameId);
@@ -259,33 +258,35 @@ public class NeResourceReader : IResourceReader
 		var nameId = (ushort)(hResInfo & 0xFFFF);
 		
 		// Find the resource
-		foreach (var resource in _resources)
+		var resource = _resources.FirstOrDefault(r => r.TypeId == typeId && r.ResourceId == nameId);
+		if (resource != null)
 		{
-			if (resource.TypeId == typeId && resource.ResourceId == nameId)
+			// Read resource data from file
+			if (resource.FileOffset + resource.Length > _fileBytes.Length)
 			{
-				// Read resource data from file
-				if (resource.FileOffset + resource.Length > _fileBytes.Length)
-				{
-					_logger.LogWarning("[NE Resources] Resource data extends beyond file");
-					return 0;
-				}
-				
-				var data = new byte[resource.Length];
-				Array.Copy(_fileBytes, resource.FileOffset, data, 0, resource.Length);
-				
-				// Allocate memory for the resource at a unique address
-				var address = _nextResourceAddress;
-				_nextResourceAddress += 0x10000; // 64KB per resource allocation slot
-				
-				// Store in both caches
-				_resourceCache[address] = data;
-				_resourceHandleToAddress[hResInfo] = address;
-				
-				_logger.LogDebug("[NE Resources] Loaded resource Type={TypeId}, ID={NameId} at 0x{Address:X8} ({Length} bytes)",
-					typeId, nameId, address, data.Length);
-				
-				return address;
+				_logger.LogWarning("[NE Resources] Resource data extends beyond file");
+				return 0;
 			}
+			
+			var data = new byte[resource.Length];
+			Array.Copy(_fileBytes, resource.FileOffset, data, 0, resource.Length);
+			
+			// Allocate memory for the resource at a unique address
+			var address = _nextResourceAddress;
+			if (_nextResourceAddress > 0xFFC00000u)
+			{
+				throw new OutOfMemoryException("Resource allocation limit exceeded");
+			}
+			_nextResourceAddress += 0x10000; // 64KB per resource allocation slot
+			
+			// Store in both caches
+			_resourceCache[address] = data;
+			_resourceHandleToAddress[hResInfo] = address;
+			
+			_logger.LogDebug("[NE Resources] Loaded resource Type={TypeId}, ID={NameId} at 0x{Address:X8} ({Length} bytes)",
+				typeId, nameId, address, data.Length);
+			
+			return address;
 		}
 		
 		return 0;
@@ -302,15 +303,8 @@ public class NeResourceReader : IResourceReader
 		var typeId = (ushort)((hResInfo >> 16) & 0x7FFF);
 		var nameId = (ushort)(hResInfo & 0xFFFF);
 		
-		foreach (var resource in _resources)
-		{
-			if (resource.TypeId == typeId && resource.ResourceId == nameId)
-			{
-				return resource.Length;
-			}
-		}
-		
-		return 0;
+		var resource = _resources.FirstOrDefault(r => r.TypeId == typeId && r.ResourceId == nameId);
+		return resource?.Length ?? 0;
 	}
 	
 	/// <inheritdoc />
@@ -331,51 +325,51 @@ public class NeResourceReader : IResourceReader
 		var indexInBlock = (int)(stringId % 16);
 		
 		// Find the string table resource
-		foreach (var resource in _resources)
+		var resource = _resources.FirstOrDefault(r => 
+			r.TypeId == (ushort)IResourceReader.ResourceType.RT_STRING && r.ResourceId == blockId);
+		
+		if (resource == null)
 		{
-			if (resource.TypeId == (ushort)IResourceReader.ResourceType.RT_STRING && resource.ResourceId == blockId)
+			return null;
+		}
+		
+		if (resource.FileOffset + resource.Length > _fileBytes.Length)
+		{
+			return null;
+		}
+		
+		// Parse string table
+		var offset = (int)resource.FileOffset;
+		var endOffset = offset + (int)resource.Length;
+		
+		for (var i = 0; i <= indexInBlock && offset < endOffset; i++)
+		{
+			if (offset + 1 > endOffset)
 			{
-				if (resource.FileOffset + resource.Length > _fileBytes.Length)
+				return null;
+			}
+			
+			// String length in bytes (NE uses Pascal strings, not WCHAR)
+			var length = _fileBytes[offset];
+			offset++;
+			
+			if (i == indexInBlock)
+			{
+				if (length == 0)
+				{
+					return string.Empty;
+				}
+				
+				if (offset + length > endOffset)
 				{
 					return null;
 				}
 				
-				// Parse string table
-				var offset = (int)resource.FileOffset;
-				var endOffset = offset + (int)resource.Length;
-				
-				for (var i = 0; i <= indexInBlock && offset < endOffset; i++)
-				{
-					if (offset + 1 > endOffset)
-					{
-						return null;
-					}
-					
-					// String length in bytes (NE uses Pascal strings, not WCHAR)
-					var length = _fileBytes[offset];
-					offset++;
-					
-					if (i == indexInBlock)
-					{
-						if (length == 0)
-						{
-							return string.Empty;
-						}
-						
-						if (offset + length > endOffset)
-						{
-							return null;
-						}
-						
-						// NE string resources are typically ANSI, not Unicode
-						return Encoding.ASCII.GetString(_fileBytes, offset, length);
-					}
-					
-					offset += length;
-				}
-				
-				break;
+				// NE string resources are typically ANSI, not Unicode
+				return Encoding.ASCII.GetString(_fileBytes, offset, length);
 			}
+			
+			offset += length;
 		}
 		
 		return null;
@@ -384,59 +378,54 @@ public class NeResourceReader : IResourceReader
 	/// <inheritdoc />
 	public byte[]? LoadBitmap(uint bitmapId)
 	{
-		foreach (var resource in _resources)
+		var resource = _resources.FirstOrDefault(r => 
+			r.TypeId == (ushort)IResourceReader.ResourceType.RT_BITMAP && r.ResourceId == (ushort)bitmapId);
+		
+		if (resource == null)
 		{
-			if (resource.TypeId == (ushort)IResourceReader.ResourceType.RT_BITMAP && resource.ResourceId == (ushort)bitmapId)
-			{
-				if (resource.FileOffset + resource.Length > _fileBytes.Length)
-				{
-					return null;
-				}
-				
-				var data = new byte[resource.Length];
-				Array.Copy(_fileBytes, resource.FileOffset, data, 0, resource.Length);
-				return data;
-			}
+			return null;
 		}
 		
-		return null;
+		if (resource.FileOffset + resource.Length > _fileBytes.Length)
+		{
+			return null;
+		}
+		
+		var data = new byte[resource.Length];
+		Array.Copy(_fileBytes, resource.FileOffset, data, 0, resource.Length);
+		return data;
 	}
 	
 	/// <inheritdoc />
 	public byte[]? LoadBitmapByName(string bitmapName)
 	{
-		foreach (var resource in _resources)
+		var resource = _resources.FirstOrDefault(r => 
+			r.TypeId == (ushort)IResourceReader.ResourceType.RT_BITMAP && 
+			string.Equals(r.ResourceName, bitmapName, StringComparison.OrdinalIgnoreCase));
+		
+		if (resource == null)
 		{
-			if (resource.TypeId == (ushort)IResourceReader.ResourceType.RT_BITMAP && 
-			    string.Equals(resource.ResourceName, bitmapName, StringComparison.OrdinalIgnoreCase))
-			{
-				if (resource.FileOffset + resource.Length > _fileBytes.Length)
-				{
-					return null;
-				}
-				
-				var data = new byte[resource.Length];
-				Array.Copy(_fileBytes, resource.FileOffset, data, 0, resource.Length);
-				return data;
-			}
+			return null;
 		}
 		
-		return null;
+		if (resource.FileOffset + resource.Length > _fileBytes.Length)
+		{
+			return null;
+		}
+		
+		var data = new byte[resource.Length];
+		Array.Copy(_fileBytes, resource.FileOffset, data, 0, resource.Length);
+		return data;
 	}
 	
 	/// <inheritdoc />
 	public IEnumerable<uint>? EnumerateResourceNames(uint lpType)
 	{
 		var typeId = (ushort)(lpType & 0xFFFF);
-		var names = new List<uint>();
-		
-		foreach (var resource in _resources)
-		{
-			if (resource.TypeId == typeId && resource.ResourceName == null)
-			{
-				names.Add(resource.ResourceId);
-			}
-		}
+		var names = _resources
+			.Where(r => r.TypeId == typeId && r.ResourceName == null)
+			.Select(r => (uint)r.ResourceId)
+			.ToList();
 		
 		return names.Count > 0 ? names : null;
 	}
