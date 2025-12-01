@@ -44,11 +44,6 @@ public class NeResourceReader : IResourceReader
 	// NE header resource table offset location
 	private const int NE_RESOURCE_TABLE_OFFSET_LOCATION = 36;
 	
-	// Resource flags
-	private const ushort RESOURCE_MOVEABLE = 0x0010;
-	private const ushort RESOURCE_PURE = 0x0020;
-	private const ushort RESOURCE_PRELOAD = 0x0040;
-	
 	public NeResourceReader(byte[] fileBytes, VirtualMemory memory, ILogger? logger = null)
 	{
 		_fileBytes = fileBytes ?? throw new ArgumentNullException(nameof(fileBytes));
@@ -443,4 +438,20 @@ public class NeResourceReader : IResourceReader
 		public uint Length { get; init; }
 		public ushort Flags { get; init; }
 	}
+}
+
+/// <summary>
+/// NE resource flags.
+/// </summary>
+[Flags]
+internal enum NeResourceFlags : ushort
+{
+	/// <summary>No flags set</summary>
+	None = 0x0000,
+	/// <summary>Resource is moveable in memory</summary>
+	Moveable = 0x0010,
+	/// <summary>Resource is pure (shareable)</summary>
+	Pure = 0x0020,
+	/// <summary>Resource should be preloaded</summary>
+	Preload = 0x0040,
 }

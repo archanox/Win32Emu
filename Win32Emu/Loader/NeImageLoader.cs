@@ -76,14 +76,6 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	private const ushort IMAGE_FILE_MACHINE_I386 = 0x014C;
 	private const ushort IMAGE_FILE_EXECUTABLE_IMAGE = 0x0002;
 	
-	// NE Target OS values
-	private const byte NE_TARGET_OS_UNKNOWN = 0;
-	private const byte NE_TARGET_OS_OS2 = 1;
-	private const byte NE_TARGET_OS_WINDOWS = 2;
-	private const byte NE_TARGET_OS_DOS4 = 3;
-	private const byte NE_TARGET_OS_WIN386 = 4;
-	private const byte NE_TARGET_OS_BOSS = 5; // Borland Operating System Services
-	
 	/// <summary>
 	/// Validates if a file is a valid NE (Win16) executable by checking the NE signature.
 	/// </summary>
