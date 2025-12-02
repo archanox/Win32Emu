@@ -4324,7 +4324,8 @@ namespace Win32Emu.Win32.Modules
 				while (true)
 				{
 					// Emergency timeout check for WASM to prevent browser freeze
-					if (PlatformHelpers.IsWasm)
+					// Check every 100 iterations to reduce DateTime.UtcNow overhead
+					if (PlatformHelpers.IsWasm && steps % 100 == 0)
 					{
 						var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
 						if (elapsed > CALLBACK_TIMEOUT_MS)
@@ -4344,16 +4345,23 @@ namespace Win32Emu.Win32.Modules
 							break;
 						}
 
-						// Suspend execution to preserve CPU state across async boundary
-						var cpuState = CpuHelpers.SuspendExecution(_currentCpu);
-						
-						// Yield to allow other async operations to proceed
-						// Use Task.Delay(1) in WASM to actually return control to browser event loop
-						// Task.Yield() only yields to .NET scheduler, not to JavaScript
-						await Task.Delay(PlatformHelpers.IsWasm ? 1 : 0);
-						
-						// Resume execution with preserved state
-						CpuHelpers.ResumeExecution(_currentCpu, cpuState);
+											// Suspend execution to preserve CPU state across async boundary
+					var cpuState = CpuHelpers.SuspendExecution(_currentCpu);
+					
+					// Yield to allow other async operations to proceed
+					// Use Task.Delay(1) in WASM to actually return control to browser event loop
+					// Task.Yield() only yields to .NET scheduler, not to JavaScript
+					if (PlatformHelpers.IsWasm)
+					{
+						await Task.Delay(1);
+					}
+					else
+					{
+						await Task.Yield();
+					}
+					
+					// Resume execution with preserved state
+					CpuHelpers.ResumeExecution(_currentCpu, cpuState);
 					}
 
 					var eip = _currentCpu.GetEip();
@@ -4411,7 +4419,14 @@ namespace Win32Emu.Win32.Modules
 					// Task.Yield() doesn't work in WASM - only yields to .NET scheduler
 					if (steps % CALLBACK_YIELD_INTERVAL == 0)
 					{
-						await Task.Delay(PlatformHelpers.IsWasm ? 1 : 0);
+						if (PlatformHelpers.IsWasm)
+						{
+							await Task.Delay(1);
+						}
+						else
+						{
+							await Task.Yield();
+						}
 					}
 				}
 			}
