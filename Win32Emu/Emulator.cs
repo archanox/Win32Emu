@@ -674,7 +674,7 @@ public sealed class Emulator : IDisposable
                     await _cpu.SingleStepAsync(_vm).ConfigureAwait(false);
                     
                     // Yield periodically on WASM to keep browser responsive
-                    if (PlatformHelpers.IsWasm && ++stepCount % 100 == 0)
+                    if (PlatformHelpers.IsWasm && ++stepCount % (int)WASM_YIELD_INTERVAL == 0)
                     {
                         await Task.Yield();
                     }
