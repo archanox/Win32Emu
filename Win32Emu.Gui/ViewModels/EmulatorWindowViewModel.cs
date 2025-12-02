@@ -1089,7 +1089,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             OnDebugOutput("Cannot open registry viewer: Emulator not running", DebugLevel.Warning);
         }
     }
-
+    
     /// <summary>
     /// Resize the EmulatorWindow to match the game's display resolution
     /// </summary>
