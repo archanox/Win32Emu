@@ -4302,16 +4302,32 @@ namespace Win32Emu.Win32.Modules
 			_currentCpu.SetEip(callbackAddress);
 
 			// Execute until we hit the return address with cancellation support
-			const int YIELD_INTERVAL = 10000;
+			// WASM: Use lower yield interval to keep browser responsive during callbacks
+			const int YIELD_INTERVAL = 10;
 			var steps = 0;
 			var executionSuccessful = true;
 			var lastCheckEip = _currentCpu.GetEip();
 			var stuckCounter = 0;
+			
+			// Emergency timeout for callbacks - prevent browser freeze
+			var startTime = DateTime.UtcNow;
+			const int CALLBACK_TIMEOUT_MS = 5000; // 5 seconds max for callback execution
 
 			try
 			{
 				while (true)
 				{
+					// Emergency timeout check for WASM to prevent browser freeze
+					if (PlatformHelpers.IsWasm)
+					{
+						var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
+						if (elapsed > CALLBACK_TIMEOUT_MS)
+						{
+							_logger.LogError("[DDraw] InvokeCallbackAsync: Callback execution timeout after {Ms}ms, aborting", elapsed);
+							executionSuccessful = false;
+							break;
+						}
+					}
 					// Check for cancellation at regular intervals
 					if (steps % CpuHelpers.CANCELLATION_CHECK_INTERVAL == 0)
 					{
