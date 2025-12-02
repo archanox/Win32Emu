@@ -435,140 +435,196 @@ public static class CpuHelpers
 		
 		if (success)
 		{
-			// Set return value in EAX (stdcall convention)
-			cpu.SetRegister("EAX", returnValue);
-			
-			// Get current stack pointer and return address
-			var esp = cpu.GetRegister("ESP");
-			var retEip = memory.Read32(esp);
-			
-			// Log the return address for diagnostics
-			logger?.LogInformation("[{Context}] Return address from stack: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}", context, esp, retEip);
-			
-			// Validate return address before using it
-			// Check if return address is in a valid code region using PE section information if available
-			if (loadedImage != null)
-			{
-				// Use PE section information to validate return address
-				var imageBase = loadedImage.BaseAddress;
-				
-				if (retEip < imageBase)
-				{
-					logger?.LogError("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is below image base (0x{ImageBase:X8}). Possible stack corruption!", context, retEip, imageBase);
-				}
-				else if (loadedImage.IsAddressInDataSection(retEip))
-				{
-					// Return address is in a data section (.data, .rdata, etc.)
-					logger?.LogWarning("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} appears to be in data section (not executable code). Possible stack corruption or unusual calling convention!", context, retEip);
-					
-					// Dump additional stack context for debugging
-					var stackDump = new System.Text.StringBuilder();
-					stackDump.AppendLine($"[{context}] Extended stack dump for suspicious return address:");
-					try
-					{
-						for (int i = -4; i <= 16; i++)
-						{
-							var addr = esp + (uint)(i * 4);
-							// Check if address is valid before reading
-							if (addr < 0x10000)
-							{
-								stackDump.AppendLine($"  [ESP{i:+0;-0}] = 0x{addr:X8}: (address too low)");
-								continue;
-							}
-							var val = memory.Read32(addr);
-							var label = i == 0
-								? " (return addr - SUSPICIOUS!)"
-								: i < 0
-									? $" (ESP{(i * 4):+0;-0})"
-									: i > 0 && i <= (argBytes / 4)
-										? $" (arg{i})"
-										: "";
-							stackDump.AppendLine($"  [ESP{i:+0;-0}] = 0x{addr:X8}: 0x{val:X8}{label}");
-						}
-					}
-					catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
-					{
-						stackDump.AppendLine("  (error reading extended stack)");
-						logger?.LogError(ex, "[{Context}] Error reading extended stack for dump", context);
-					}
-					logger?.LogWarning(stackDump.ToString());
-				}
-				else if (!loadedImage.IsAddressInCodeSection(retEip))
-				{
-					// Return address is not in code section and not in data section - likely outside loaded image
-					logger?.LogWarning("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is not in any known executable section. May be in unloaded DLL or corrupted.", context, retEip);
-				}
-			}
-			else
-			{
-				// Fallback to basic validation when PE image information is not available
-				// Use typical PE image base as a sanity check
-				if (retEip < 0x00400000)
-				{
-					logger?.LogError("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is below typical image base (0x00400000). Possible stack corruption!", context, retEip);
-				}
-			}
-			
-			// Dump stack contents for debugging (at Information level for diagnostics)
-			if (logger != null)
-			{
-				var stackDump = new System.Text.StringBuilder();
-				stackDump.AppendLine($"[{context}] Stack state before cleanup:");
-				try
-				{
-					// Show 6 stack slots for better context
-					for (int i = 0; i < 6; i++)
-					{
-						var addr = esp + (uint)(i * 4);
-						var val = memory.Read32(addr);
-						var label = i == 0 ? " (return addr)" : i <= (argBytes / 4) ? $" (arg{i})" : "";
-						stackDump.AppendLine($"  [ESP+{i * 4:D2}] = 0x{addr:X8}: 0x{val:X8}{label}");
-					}
-				}
-				catch (Exception ex)
-				{
-					stackDump.AppendLine("  (error reading stack)");
-					logger?.LogError(ex, "[{Context}] Error reading stack for dump", context);
-				}
-				logger.LogInformation(stackDump.ToString());
-			}
-			
-			// Log detailed stack cleanup information at Information level
-			logger?.LogInformation("[{Context}] Stack cleanup: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}, argBytes={ArgBytes}, new ESP=0x{NewEsp:X8}",
-				context, esp, retEip, argBytes, esp + 4 + (uint)argBytes);
-			
-			// Clean up stack: pop return address + arguments (stdcall convention)
-			esp += 4 + (uint)argBytes;
-			cpu.SetRegister("ESP", esp);
-			
-			// Set EIP to return address
-			cpu.SetEip(retEip);
-			
-			// Restore callee-saved registers with EBP validation
-			RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memorySize);
-			
-			// Optionally validate register state for diagnostics
-			if (logger != null && logger.IsEnabled(LogLevel.Debug))
-			{
-				ValidateRegisterState(cpu, saved, memorySize, logger, context, LogLevel.Debug);
-			}
-			
+			HandleSuccessfulInvocation(cpu, memory, saved, returnValue, argBytes, memorySize, logger, context, loadedImage);
 			return true;
 		}
 		else
 		{
-			// Restore registers even on failure
-			RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memorySize);
-			
-			// Simulate error return
-			var esp = cpu.GetRegister("ESP");
-			var retEip = memory.Read32(esp);
-			esp += 4 + (uint)argBytes; // Pop return address and arguments to maintain stack alignment
-			cpu.SetRegister("ESP", esp);
-			cpu.SetRegister("EAX", 0); // Return 0 as error
-			cpu.SetEip(retEip);
-			
+			HandleFailedInvocation(cpu, memory, saved, argBytes, memorySize);
 			return false;
+		}
+	}
+	
+	/// <summary>
+	/// Helper to handle successful invocation: validates return address, logs diagnostics, cleans up stack
+	/// </summary>
+	private static void HandleSuccessfulInvocation(
+		ICpu cpu,
+		VirtualMemory memory,
+		SavedCalleeSavedRegisters saved,
+		uint returnValue,
+		int argBytes,
+		ulong memorySize,
+		ILogger? logger,
+		string context,
+		LoadedImage? loadedImage)
+	{
+		// Set return value in EAX (stdcall convention)
+		cpu.SetRegister("EAX", returnValue);
+		
+		// Get current stack pointer and return address
+		var esp = cpu.GetRegister("ESP");
+		var retEip = memory.Read32(esp);
+		
+		// Log the return address for diagnostics
+		logger?.LogInformation("[{Context}] Return address from stack: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}", context, esp, retEip);
+		
+		// Validate return address before using it
+		ValidateReturnAddress(retEip, esp, argBytes, memory, logger, context, loadedImage);
+		
+		// Dump stack contents for debugging (at Information level for diagnostics)
+		DumpStackState(esp, argBytes, memory, logger, context);
+		
+		// Log detailed stack cleanup information at Information level
+		logger?.LogInformation("[{Context}] Stack cleanup: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}, argBytes={ArgBytes}, new ESP=0x{NewEsp:X8}",
+			context, esp, retEip, argBytes, esp + 4 + (uint)argBytes);
+		
+		// Clean up stack: pop return address + arguments (stdcall convention)
+		esp += 4 + (uint)argBytes;
+		cpu.SetRegister("ESP", esp);
+		
+		// Set EIP to return address
+		cpu.SetEip(retEip);
+		
+		// Restore callee-saved registers with EBP validation
+		RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memorySize);
+		
+		// Optionally validate register state for diagnostics
+		if (logger != null && logger.IsEnabled(LogLevel.Debug))
+		{
+			ValidateRegisterState(cpu, saved, memorySize, logger, context, LogLevel.Debug);
+		}
+	}
+	
+	/// <summary>
+	/// Helper to handle failed invocation: restores registers and simulates error return
+	/// </summary>
+	private static void HandleFailedInvocation(
+		ICpu cpu,
+		VirtualMemory memory,
+		SavedCalleeSavedRegisters saved,
+		int argBytes,
+		ulong memorySize)
+	{
+		// Restore registers even on failure
+		RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memorySize);
+		
+		// Simulate error return
+		var esp = cpu.GetRegister("ESP");
+		var retEip = memory.Read32(esp);
+		esp += 4 + (uint)argBytes; // Pop return address and arguments to maintain stack alignment
+		cpu.SetRegister("ESP", esp);
+		cpu.SetRegister("EAX", 0); // Return 0 as error
+		cpu.SetEip(retEip);
+	}
+	
+	/// <summary>
+	/// Helper to validate return address and log warnings for suspicious addresses
+	/// </summary>
+	private static void ValidateReturnAddress(
+		uint retEip,
+		uint esp,
+		int argBytes,
+		VirtualMemory memory,
+		ILogger? logger,
+		string context,
+		LoadedImage? loadedImage)
+	{
+		// Check if return address is in a valid code region using PE section information if available
+		if (loadedImage != null)
+		{
+			// Use PE section information to validate return address
+			var imageBase = loadedImage.BaseAddress;
+			
+			if (retEip < imageBase)
+			{
+				logger?.LogError("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is below image base (0x{ImageBase:X8}). Possible stack corruption!", context, retEip, imageBase);
+			}
+			else if (loadedImage.IsAddressInDataSection(retEip))
+			{
+				// Return address is in a data section (.data, .rdata, etc.)
+				logger?.LogWarning("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} appears to be in data section (not executable code). Possible stack corruption or unusual calling convention!", context, retEip);
+				
+				// Dump additional stack context for debugging
+				var stackDump = new System.Text.StringBuilder();
+				stackDump.AppendLine($"[{context}] Extended stack dump for suspicious return address:");
+				try
+				{
+					for (int i = -4; i <= 16; i++)
+					{
+						var addr = esp + (uint)(i * 4);
+						// Check if address is valid before reading
+						if (addr < 0x10000)
+						{
+							stackDump.AppendLine($"  [ESP{i:+0;-0}] = 0x{addr:X8}: (address too low)");
+							continue;
+						}
+						var val = memory.Read32(addr);
+						var label = i == 0
+							? " (return addr - SUSPICIOUS!)"
+							: i < 0
+								? $" (ESP{(i * 4):+0;-0})"
+								: i > 0 && i <= (argBytes / 4)
+									? $" (arg{i})"
+									: "";
+						stackDump.AppendLine($"  [ESP{i:+0;-0}] = 0x{addr:X8}: 0x{val:X8}{label}");
+					}
+				}
+				catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
+				{
+					stackDump.AppendLine("  (error reading extended stack)");
+					logger?.LogError(ex, "[{Context}] Error reading extended stack for dump", context);
+				}
+				logger?.LogWarning(stackDump.ToString());
+			}
+			else if (!loadedImage.IsAddressInCodeSection(retEip))
+			{
+				// Return address is not in code section and not in data section - likely outside loaded image
+				logger?.LogWarning("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is not in any known executable section. May be in unloaded DLL or corrupted.", context, retEip);
+			}
+		}
+		else
+		{
+			// Fallback to basic validation when PE image information is not available
+			// Use typical PE image base as a sanity check
+			if (retEip < 0x00400000)
+			{
+				logger?.LogError("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is below typical image base (0x00400000). Possible stack corruption!", context, retEip);
+			}
+		}
+	}
+	
+	/// <summary>
+	/// Helper to dump stack state for diagnostics
+	/// </summary>
+	private static void DumpStackState(
+		uint esp,
+		int argBytes,
+		VirtualMemory memory,
+		ILogger? logger,
+		string context)
+	{
+		if (logger != null)
+		{
+			var stackDump = new System.Text.StringBuilder();
+			stackDump.AppendLine($"[{context}] Stack state before cleanup:");
+			try
+			{
+				// Show 6 stack slots for better context
+				for (int i = 0; i < 6; i++)
+				{
+					var addr = esp + (uint)(i * 4);
+					var val = memory.Read32(addr);
+					var label = i == 0 ? " (return addr)" : i <= (argBytes / 4) ? $" (arg{i})" : "";
+					stackDump.AppendLine($"  [ESP+{i * 4:D2}] = 0x{addr:X8}: 0x{val:X8}{label}");
+				}
+			}
+			catch (Exception ex)
+			{
+				stackDump.AppendLine("  (error reading stack)");
+				logger?.LogError(ex, "[{Context}] Error reading stack for dump", context);
+			}
+			logger.LogInformation(stackDump.ToString());
 		}
 	}
 	
@@ -602,139 +658,12 @@ public static class CpuHelpers
 		
 		if (success)
 		{
-			// Set return value in EAX (stdcall convention)
-			cpu.SetRegister("EAX", returnValue);
-			
-			// Get current stack pointer and return address
-			var esp = cpu.GetRegister("ESP");
-			var retEip = memory.Read32(esp);
-			
-			// Log the return address for diagnostics
-			logger?.LogInformation("[{Context}] Return address from stack: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}", context, esp, retEip);
-			
-			// Validate return address before using it
-			// Check if return address is in a valid code region using PE section information if available
-			if (loadedImage != null)
-			{
-				// Use PE section information to validate return address
-				var imageBase = loadedImage.BaseAddress;
-				
-				if (retEip < imageBase)
-				{
-					logger?.LogError("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is below image base (0x{ImageBase:X8}). Possible stack corruption!", context, retEip, imageBase);
-				}
-				else if (loadedImage.IsAddressInDataSection(retEip))
-				{
-					// Return address is in a data section (.data, .rdata, etc.)
-					logger?.LogWarning("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} appears to be in data section (not executable code). Possible stack corruption or unusual calling convention!", context, retEip);
-					
-					// Dump additional stack context for debugging
-					var stackDump = new System.Text.StringBuilder();
-					stackDump.AppendLine($"[{context}] Extended stack dump for suspicious return address:");
-					try
-					{
-						for (int i = -4; i <= 16; i++)
-						{
-							var addr = esp + (uint)(i * 4);
-							// Check if address is valid before reading
-							if (addr < 0x10000)
-							{
-								stackDump.AppendLine($"  [ESP{i:+0;-0}] = 0x{addr:X8}: (address too low)");
-								continue;
-							}
-							var val = memory.Read32(addr);
-							var label = i == 0
-								? " (return addr - SUSPICIOUS!)"
-								: i < 0
-									? $" (ESP{(i * 4):+0;-0})"
-									: i > 0 && i <= (argBytes / 4)
-										? $" (arg{i})"
-										: "";
-							stackDump.AppendLine($"  [ESP{i:+0;-0}] = 0x{addr:X8}: 0x{val:X8}{label}");
-						}
-					}
-					catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
-					{
-						stackDump.AppendLine("  (error reading extended stack)");
-						logger?.LogError(ex, "[{Context}] Error reading extended stack for dump", context);
-					}
-					logger?.LogWarning(stackDump.ToString());
-				}
-				else if (!loadedImage.IsAddressInCodeSection(retEip))
-				{
-					// Return address is not in code section and not in data section - likely outside loaded image
-					logger?.LogWarning("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is not in any known executable section. May be in unloaded DLL or corrupted.", context, retEip);
-				}
-			}
-			else
-			{
-				// Fallback to basic validation when PE image information is not available
-				// Use typical PE image base as a sanity check
-				if (retEip < 0x00400000)
-				{
-					logger?.LogError("[{Context}] SUSPICIOUS return address 0x{RetEip:X8} is below typical image base (0x00400000). Possible stack corruption!", context, retEip);
-				}
-			}
-			
-			// Dump stack contents for debugging (at Information level for diagnostics)
-			if (logger != null)
-			{
-				var stackDump = new System.Text.StringBuilder();
-				stackDump.AppendLine($"[{context}] Stack state before cleanup:");
-				try
-				{
-					// Show 6 stack slots for better context
-					for (int i = 0; i < 6; i++)
-					{
-						var addr = esp + (uint)(i * 4);
-						var val = memory.Read32(addr);
-						var label = i == 0 ? " (return addr)" : i <= (argBytes / 4) ? $" (arg{i})" : "";
-						stackDump.AppendLine($"  [ESP+{i * 4:D2}] = 0x{addr:X8}: 0x{val:X8}{label}");
-					}
-				}
-				catch (Exception ex)
-				{
-					stackDump.AppendLine("  (error reading stack)");
-					logger?.LogError(ex, "[{Context}] Error reading stack for dump", context);
-				}
-				logger.LogInformation(stackDump.ToString());
-			}
-			
-			// Log detailed stack cleanup information at Information level
-			logger?.LogInformation("[{Context}] Stack cleanup: ESP=0x{Esp:X8}, retEIP=0x{RetEip:X8}, argBytes={ArgBytes}, new ESP=0x{NewEsp:X8}",
-				context, esp, retEip, argBytes, esp + 4 + (uint)argBytes);
-			
-			// Clean up stack: pop return address + arguments (stdcall convention)
-			esp += 4 + (uint)argBytes;
-			cpu.SetRegister("ESP", esp);
-			
-			// Set EIP to return address
-			cpu.SetEip(retEip);
-			
-			// Restore callee-saved registers with EBP validation
-			RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memorySize);
-			
-			// Optionally validate register state for diagnostics
-			if (logger != null && logger.IsEnabled(LogLevel.Debug))
-			{
-				ValidateRegisterState(cpu, saved, memorySize, logger, context, LogLevel.Debug);
-			}
-			
+			HandleSuccessfulInvocation(cpu, memory, saved, returnValue, argBytes, memorySize, logger, context, loadedImage);
 			return true;
 		}
 		else
 		{
-			// Restore registers even on failure
-			RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memorySize);
-			
-			// Simulate error return
-			var esp = cpu.GetRegister("ESP");
-			var retEip = memory.Read32(esp);
-			esp += 4 + (uint)argBytes; // Pop return address and arguments to maintain stack alignment
-			cpu.SetRegister("ESP", esp);
-			cpu.SetRegister("EAX", 0); // Return 0 as error
-			cpu.SetEip(retEip);
-			
+			HandleFailedInvocation(cpu, memory, saved, argBytes, memorySize);
 			return false;
 		}
 	}
