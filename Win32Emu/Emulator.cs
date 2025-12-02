@@ -53,9 +53,10 @@ public sealed class Emulator : IDisposable
     
     // WASM yield interval - yield to browser event loop every N iterations
     // This prevents the browser from freezing when emulating tight loops.
-    // Set to 100 for better responsiveness on WASM - yields every ~0.1-1ms on modern hardware.
-    // Lower values improve UI responsiveness but reduce emulation throughput.
-    private const ulong WASM_YIELD_INTERVAL = 100;
+    // Set to 10 for maximum responsiveness on WASM - yields every ~0.01-0.1ms on modern hardware.
+    // Lower values improve UI responsiveness but reduce emulation throughput slightly.
+    // Reduced from 100 to 10 to prevent browser tab freezing during DirectDraw initialization.
+    private const ulong WASM_YIELD_INTERVAL = 10;
     
     // Infinite loop detection thresholds - WASM uses lower values to prevent browser freeze
     // These thresholds are selected based on runtime cost and expected legitimate workloads:
@@ -64,11 +65,13 @@ public sealed class Emulator : IDisposable
     
     // Max iterations at same EIP before treating as stuck
     // 307K iterations are needed for typical screen buffer initialization (640x480)
-    private const ulong MAX_SAME_EIP_ITERATIONS_WASM = 500000;     // WASM: 500K (~0.5-5 seconds)
+    // Reduced from 500K to 100K for faster loop detection in WASM to prevent browser hangs
+    private const ulong MAX_SAME_EIP_ITERATIONS_WASM = 100000;     // WASM: 100K (~0.1-1 seconds)
     private const ulong MAX_SAME_EIP_ITERATIONS_NATIVE = 50000000; // Native: 50M iterations
     
     // Max iterations without a syscall (Win32 API call) before treating as stuck
-    private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_WASM = 1000000;      // WASM: 1M (~1-10 seconds)
+    // Reduced from 1M to 200K for faster detection of infinite loops in WASM
+    private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_WASM = 200000;       // WASM: 200K (~0.2-2 seconds)
     private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE = 100000000;  // Native: 100M instructions
     
     // Instruction tracing for debugging BasicDD crash
@@ -926,6 +929,10 @@ public sealed class Emulator : IDisposable
         // Throttle noisy warning logs to reduce spam
         var lastSuspiciousEipWarning = 0u;
         var lastHeapEipWarning = 0u;
+        
+        // WASM emergency yield: Track last yield time to prevent prolonged browser freezes
+        // If more than 100ms passes without yielding, force an emergency yield
+        var lastYieldTime = DateTime.UtcNow;
 
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
@@ -1013,9 +1020,24 @@ public sealed class Emulator : IDisposable
             // control back to the JavaScript event loop to keep the UI responsive.
             // Note: PlatformHelpers.IsWasm is a static readonly field that JIT can constant-fold.
             // On non-WASM platforms, the && short-circuits and the modulo is never evaluated.
-            if (PlatformHelpers.IsWasm && iterationCount % WASM_YIELD_INTERVAL == 0)
+            if (PlatformHelpers.IsWasm)
             {
-                await Task.Yield();
+                var needsYield = iterationCount % WASM_YIELD_INTERVAL == 0;
+                
+                // Emergency yield: If more than 100ms has passed since last yield, force a yield
+                // This prevents the browser from freezing even if we're stuck in a tight loop
+                var timeSinceLastYield = (DateTime.UtcNow - lastYieldTime).TotalMilliseconds;
+                if (!needsYield && timeSinceLastYield > 100)
+                {
+                    needsYield = true;
+                    _logger.LogWarning("[Emulator] Emergency yield after {Ms}ms without yielding (iteration {Count})", timeSinceLastYield, iterationCount);
+                }
+                
+                if (needsYield)
+                {
+                    await Task.Yield();
+                    lastYieldTime = DateTime.UtcNow;
+                }
             }
 
             if (_stopRequested)
