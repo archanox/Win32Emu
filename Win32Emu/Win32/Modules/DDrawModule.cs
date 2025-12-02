@@ -2088,9 +2088,6 @@ namespace Win32Emu.Win32.Modules
 				srcHeight = srcRect.bottom - srcY;
 			}
 
-			_logger.LogDebug("[DDraw] BltFast: dest={DestW}x{DestH}, src=({SrcX},{SrcY},{SrcW}x{SrcH}), destPos=({DestX},{DestY})", 
-				destSurface.Width, destSurface.Height, srcX, srcY, srcWidth, srcHeight, dwX, dwY);
-
 			// Get bits per pixel from DirectDraw object
 			if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
 			{
@@ -2103,6 +2100,9 @@ namespace Win32Emu.Win32.Modules
 			// Calculate destination position and clipping
 			var destX = (int)dwX;
 			var destY = (int)dwY;
+
+			_logger.LogDebug("[DDraw] BltFast: dest={DestW}x{DestH}, src=({SrcX},{SrcY},{SrcW}x{SrcH}), destPos=({DestX},{DestY})", 
+				destSurface.Width, destSurface.Height, srcX, srcY, srcWidth, srcHeight, destX, destY);
 
 			// Check if destination is completely out of bounds
 			if (destX >= destSurface.Width || destY >= destSurface.Height)
