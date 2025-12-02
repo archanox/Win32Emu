@@ -58,6 +58,10 @@ public sealed class Emulator : IDisposable
     // Reduced from 100 to 10 to prevent browser tab freezing during DirectDraw initialization.
     private const ulong WASM_YIELD_INTERVAL = 10;
     
+    // Emergency yield threshold - force yield if more than this many milliseconds pass without yielding
+    // This is a safety net to prevent browser freezes in pathological cases
+    private const int EMERGENCY_YIELD_THRESHOLD_MS = 100;
+    
     // Infinite loop detection thresholds - WASM uses lower values to prevent browser freeze
     // These thresholds are selected based on runtime cost and expected legitimate workloads:
     // - WASM needs to remain responsive to the browser event loop
@@ -1024,10 +1028,10 @@ public sealed class Emulator : IDisposable
             {
                 var needsYield = iterationCount % WASM_YIELD_INTERVAL == 0;
                 
-                // Emergency yield: If more than 100ms has passed since last yield, force a yield
+                // Emergency yield: If more than EMERGENCY_YIELD_THRESHOLD_MS has passed since last yield, force a yield
                 // This prevents the browser from freezing even if we're stuck in a tight loop
                 var timeSinceLastYield = (DateTime.UtcNow - lastYieldTime).TotalMilliseconds;
-                if (!needsYield && timeSinceLastYield > 100)
+                if (!needsYield && timeSinceLastYield > EMERGENCY_YIELD_THRESHOLD_MS)
                 {
                     needsYield = true;
                     _logger.LogWarning("[Emulator] Emergency yield after {Ms}ms without yielding (iteration {Count})", timeSinceLastYield, iterationCount);

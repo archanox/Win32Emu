@@ -18,6 +18,14 @@ namespace Win32Emu.Win32.Modules
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
 
+		// Callback execution constants for WASM responsiveness
+		// Lower yield interval ensures browser remains responsive during callback execution
+		private const int CALLBACK_YIELD_INTERVAL = 10;
+		
+		// Callback timeout prevents indefinite browser freezing
+		// Most callbacks should complete in <100ms; this is a safety net for pathological cases
+		private const int CALLBACK_TIMEOUT_MS = 5000;
+
 		// Temporary storage for CPU and memory during callbacks
 		// These are set at the start of TryInvokeUnsafe and used by export functions
 		private ICpu? _currentCpu;
@@ -4303,7 +4311,6 @@ namespace Win32Emu.Win32.Modules
 
 			// Execute until we hit the return address with cancellation support
 			// WASM: Use lower yield interval to keep browser responsive during callbacks
-			const int YIELD_INTERVAL = 10;
 			var steps = 0;
 			var executionSuccessful = true;
 			var lastCheckEip = _currentCpu.GetEip();
@@ -4311,7 +4318,6 @@ namespace Win32Emu.Win32.Modules
 			
 			// Emergency timeout for callbacks - prevent browser freeze
 			var startTime = DateTime.UtcNow;
-			const int CALLBACK_TIMEOUT_MS = 5000; // 5 seconds max for callback execution
 
 			try
 			{
@@ -4399,7 +4405,7 @@ namespace Win32Emu.Win32.Modules
 					steps++;
 
 					// Periodically yield for cooperative multitasking
-					if (steps % YIELD_INTERVAL == 0)
+					if (steps % CALLBACK_YIELD_INTERVAL == 0)
 					{
 						await Task.Yield();
 					}
