@@ -2104,10 +2104,11 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogDebug("[DDraw] BltFast: dest={DestW}x{DestH}, src=({SrcX},{SrcY},{SrcW}x{SrcH}), destPos=({DestX},{DestY})", 
 				destSurface.Width, destSurface.Height, srcX, srcY, srcWidth, srcHeight, destX, destY);
 
-			// Check if destination is completely out of bounds
-			if (destX >= destSurface.Width || destY >= destSurface.Height)
+			// Check if destination is completely out of bounds (right, bottom, left, or top)
+			if (destX >= destSurface.Width || destY >= destSurface.Height ||
+				destX + srcWidth <= 0 || destY + srcHeight <= 0)
 			{
-				_logger.LogDebug("[DDraw] BltFast: destination position ({X}, {Y}) is completely outside destination surface ({Width}x{Height})", destX, destY, destSurface.Width, destSurface.Height);
+				_logger.LogDebug("[DDraw] BltFast: destination region ({X},{Y},{W}x{H}) is completely outside destination surface ({Width}x{Height})", destX, destY, srcWidth, srcHeight, destSurface.Width, destSurface.Height);
 				return (uint)DDResult.DD_OK;
 			}
 
