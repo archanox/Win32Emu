@@ -65,19 +65,11 @@
                     <Border Grid.Row="0"
                             Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                             Padding="10">
-                        <Grid ColumnDefinitions="*,Auto,Auto">
+                        <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0"
                                      Text="Debug Output"
                                      FontWeight="Bold"/>
-                            <Button Grid.Column="1"
-                                    Command="{Binding CopyDebugOutputCommand}"
-                                    ToolTip.Tip="Copy debug output to clipboard (max 65535 chars)"
-                                    AutomationProperties.Name="Copy debug output"
-                                    Padding="5"
-                                    Margin="0,0,5,0">
-                                <TextBlock Text="📋 Copy"/>
-                            </Button>
-                            <ComboBox Grid.Column="2"
+                            <ComboBox Grid.Column="1"
                                     SelectedItem="{Binding MinimumDebugLevel}"
                                     Width="100">
                                 <ComboBoxItem>Trace</ComboBoxItem>
