@@ -1089,6 +1089,61 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             OnDebugOutput("Cannot open registry viewer: Emulator not running", DebugLevel.Warning);
         }
     }
+
+    [RelayCommand]
+    private async Task CopyDebugOutput()
+    {
+        try
+        {
+            var debugOutput = GetDebugOutputText();
+            
+            if (_ownerWindow != null)
+            {
+                var clipboard = TopLevel.GetTopLevel(_ownerWindow)?.Clipboard;
+                if (clipboard != null)
+                {
+                    await clipboard.SetTextAsync(debugOutput);
+                    OnDebugOutput($"Copied {debugOutput.Length} characters of debug output to clipboard", DebugLevel.Info);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            OnDebugOutput($"Failed to copy debug output to clipboard: {ex.Message}", DebugLevel.Error);
+        }
+    }
+
+    /// <summary>
+    /// Get all debug messages as a single string, limited to 65535 characters
+    /// </summary>
+    private string GetDebugOutputText()
+    {
+        const int maxLength = 65535;
+        var sb = new System.Text.StringBuilder();
+        
+        sb.AppendLine("=== Win32Emu Debug Output ===");
+        sb.AppendLine($"Timestamp: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"Total Messages: {DebugMessages.Count}");
+        sb.AppendLine();
+        
+        // Build the output string from all debug messages
+        foreach (var msg in DebugMessages)
+        {
+            var line = $"[{msg.Timestamp:HH:mm:ss}] [{msg.Level}] {msg.Message}\n";
+            
+            // Check if adding this line would exceed the limit
+            if (sb.Length + line.Length > maxLength)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"... (output truncated at {maxLength} characters)");
+                break;
+            }
+            
+            sb.Append(line);
+        }
+        
+        return sb.ToString();
+    }
     
     /// <summary>
     /// Resize the EmulatorWindow to match the game's display resolution
