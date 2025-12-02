@@ -2088,6 +2088,9 @@ namespace Win32Emu.Win32.Modules
 				srcHeight = srcRect.bottom - srcY;
 			}
 
+			_logger.LogDebug("[DDraw] BltFast: dest={DestW}x{DestH}, src=({SrcX},{SrcY},{SrcW}x{SrcH}), destPos=({DestX},{DestY})", 
+				destSurface.Width, destSurface.Height, srcX, srcY, srcWidth, srcHeight, dwX, dwY);
+
 			// Get bits per pixel from DirectDraw object
 			if (!_ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObj))
 			{
@@ -2143,7 +2146,7 @@ namespace Win32Emu.Win32.Modules
 			// Check if width/height are valid after clipping
 			if (srcWidth <= 0 || srcHeight <= 0)
 			{
-				_logger.LogDebug("[DDraw] BltFast: nothing to blit after clipping");
+				_logger.LogDebug("[DDraw] BltFast: nothing to blit after clipping (srcWidth={W}, srcHeight={H})", srcWidth, srcHeight);
 				return (uint)DDResult.DD_OK;
 			}
 
