@@ -69,8 +69,8 @@ public sealed class Emulator : IDisposable
     
     // Max iterations at same EIP before treating as stuck
     // 307K iterations are needed for typical screen buffer initialization (640x480)
-    // Reduced from 500K to 100K for faster loop detection in WASM to prevent browser hangs
-    private const ulong MAX_SAME_EIP_ITERATIONS_WASM = 100000;     // WASM: 100K (~0.1-1 seconds)
+    // Set to 500K to avoid false positives for legitimate screen buffer operations in WASM
+    private const ulong MAX_SAME_EIP_ITERATIONS_WASM = 500000;     // WASM: 500K (~0.5-5 seconds)
     private const ulong MAX_SAME_EIP_ITERATIONS_NATIVE = 50000000; // Native: 50M iterations
     
     // Max iterations without a syscall (Win32 API call) before treating as stuck
@@ -1034,11 +1034,15 @@ public sealed class Emulator : IDisposable
                 
                 // Emergency yield: If more than EMERGENCY_YIELD_THRESHOLD_MS has passed since last yield, force a yield
                 // This prevents the browser from freezing even if we're stuck in a tight loop
-                var timeSinceLastYield = (DateTime.UtcNow - lastYieldTime).TotalMilliseconds;
-                if (!needsYield && timeSinceLastYield > EMERGENCY_YIELD_THRESHOLD_MS)
+                // Check every 100 iterations to reduce DateTime.UtcNow overhead
+                if (!needsYield && iterationCount % 100 == 0)
                 {
-                    needsYield = true;
-                    _logger.LogWarning("[Emulator] Emergency yield after {Ms}ms without yielding (iteration {Count})", timeSinceLastYield, iterationCount);
+                    var timeSinceLastYield = (DateTime.UtcNow - lastYieldTime).TotalMilliseconds;
+                    if (timeSinceLastYield > EMERGENCY_YIELD_THRESHOLD_MS)
+                    {
+                        needsYield = true;
+                        _logger.LogWarning("[Emulator] Emergency yield after {Ms}ms without yielding (iteration {Count})", timeSinceLastYield, iterationCount);
+                    }
                 }
                 
                 if (needsYield)
