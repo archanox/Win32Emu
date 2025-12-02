@@ -593,7 +593,8 @@ public sealed class Emulator : IDisposable
 
         // Execute TLS callbacks if present
         // TLS callbacks must be executed AFTER all modules are registered but BEFORE the main entry point
-        ExecuteTlsCallbacks();
+        // Use synchronous wrapper for compatibility with synchronous LoadExecutable
+        ExecuteTlsCallbacksAsync().GetAwaiter().GetResult();
         
         // Apply executable-specific workarounds after TLS but before main entry point
         ApplyExecutableWorkarounds();
@@ -603,7 +604,7 @@ public sealed class Emulator : IDisposable
     /// Executes TLS (Thread Local Storage) callbacks for process attach.
     /// TLS callbacks are invoked before the main entry point with DLL_PROCESS_ATTACH reason.
     /// </summary>
-    private void ExecuteTlsCallbacks()
+    private async Task ExecuteTlsCallbacksAsync()
     {
         if (_image == null || _cpu == null || _vm == null || _env == null)
         {
@@ -663,13 +664,20 @@ public sealed class Emulator : IDisposable
                 _cpu.SetRegister("ESP", esp);
                 _cpu.SetEip(callbackAddress);
                 
-                // Execute the callback until it returns
+                // Execute the callback until it returns using async SingleStep
                 // We'll detect return when EIP reaches our RETURN_MARKER
                 // Note: Unlike the main emulation loop, TLS callbacks run to completion without instruction limits
                 // to match Windows behavior. If a callback never returns, the emulator will hang.
+                var stepCount = 0;
                 while (_cpu.GetEip() != RETURN_MARKER)
                 {
-                    _cpu.SingleStep(_vm);
+                    await _cpu.SingleStepAsync(_vm).ConfigureAwait(false);
+                    
+                    // Yield periodically on WASM to keep browser responsive
+                    if (PlatformHelpers.IsWasm && ++stepCount % 100 == 0)
+                    {
+                        await Task.Yield();
+                    }
                 }
                 
                 _logger.LogDebug("[Emulator] TLS callback #{Index} returned successfully", i);
@@ -1833,8 +1841,8 @@ public sealed class Emulator : IDisposable
 	                break; // Client disconnected or quit
                 }
 
-                // Execute one instruction
-                var step = _cpu.SingleStep(_vm!);
+                // Execute one instruction using async SingleStep
+                var step = await _cpu.SingleStepAsync(_vm!).ConfigureAwait(false);
                 
                 // Check for COM vtable method calls
                 if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
