@@ -4348,7 +4348,9 @@ namespace Win32Emu.Win32.Modules
 						var cpuState = CpuHelpers.SuspendExecution(_currentCpu);
 						
 						// Yield to allow other async operations to proceed
-						await Task.Yield();
+						// Use Task.Delay(1) in WASM to actually return control to browser event loop
+						// Task.Yield() only yields to .NET scheduler, not to JavaScript
+						await Task.Delay(PlatformHelpers.IsWasm ? 1 : 0);
 						
 						// Resume execution with preserved state
 						CpuHelpers.ResumeExecution(_currentCpu, cpuState);
@@ -4405,9 +4407,11 @@ namespace Win32Emu.Win32.Modules
 					steps++;
 
 					// Periodically yield for cooperative multitasking
+					// In WASM, use Task.Delay(1) to return control to browser event loop
+					// Task.Yield() doesn't work in WASM - only yields to .NET scheduler
 					if (steps % CALLBACK_YIELD_INTERVAL == 0)
 					{
-						await Task.Yield();
+						await Task.Delay(PlatformHelpers.IsWasm ? 1 : 0);
 					}
 				}
 			}

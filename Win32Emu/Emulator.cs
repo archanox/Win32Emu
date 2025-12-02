@@ -681,9 +681,10 @@ public sealed class Emulator : IDisposable
                     await _cpu.SingleStepAsync(_vm).ConfigureAwait(false);
                     
                     // Yield periodically on WASM to keep browser responsive
+                    // Use Task.Delay(1) to actually return control to browser, not Task.Yield()
                     if (PlatformHelpers.IsWasm && ++stepCount % (int)WASM_YIELD_INTERVAL == 0)
                     {
-                        await Task.Yield();
+                        await Task.Delay(1);
                     }
                 }
                 
@@ -1022,6 +1023,9 @@ public sealed class Emulator : IDisposable
             // WASM: Yield to browser event loop periodically to prevent freezing
             // In WebAssembly, Task.Run doesn't create real threads, so we must yield
             // control back to the JavaScript event loop to keep the UI responsive.
+            // IMPORTANT: Task.Yield() doesn't work in WASM - it only yields to .NET scheduler
+            // but doesn't return control to browser. Use Task.Delay(1) instead to allow
+            // the browser's event loop to process events.
             // Note: PlatformHelpers.IsWasm is a static readonly field that JIT can constant-fold.
             // On non-WASM platforms, the && short-circuits and the modulo is never evaluated.
             if (PlatformHelpers.IsWasm)
@@ -1039,7 +1043,9 @@ public sealed class Emulator : IDisposable
                 
                 if (needsYield)
                 {
-                    await Task.Yield();
+                    // Use Task.Delay(1) instead of Task.Yield() to actually return control to browser
+                    // Task.Delay schedules a JavaScript timer which allows the browser event loop to run
+                    await Task.Delay(1);
                     lastYieldTime = DateTime.UtcNow;
                 }
             }
