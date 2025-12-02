@@ -1114,35 +1114,78 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     }
 
     /// <summary>
-    /// Get all debug messages as a single string, limited to 65535 characters
+    /// Get all debug messages as a single string, limited to 65535 characters.
+    /// Returns the LAST 65535 characters (most recent messages) if truncation is needed.
     /// </summary>
     private string GetDebugOutputText()
     {
         const int maxLength = 65535;
-        var sb = new System.Text.StringBuilder();
+        var header = new System.Text.StringBuilder();
         
-        sb.AppendLine("=== Win32Emu Debug Output ===");
-        sb.AppendLine($"Timestamp: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine($"Total Messages: {DebugMessages.Count}");
-        sb.AppendLine();
+        header.AppendLine("=== Win32Emu Debug Output ===");
+        header.AppendLine($"Timestamp: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        header.AppendLine($"Total Messages: {DebugMessages.Count}");
+        header.AppendLine();
         
-        // Build the output string from all debug messages
+        var headerText = header.ToString();
+        var availableLength = maxLength - headerText.Length;
+        
+        // Build all messages first
+        var messageLines = new List<string>();
         foreach (var msg in DebugMessages)
         {
-            var line = $"[{msg.Timestamp:HH:mm:ss}] [{msg.Level}] {msg.Message}\n";
-            
-            // Check if adding this line would exceed the limit
-            if (sb.Length + line.Length > maxLength)
-            {
-                sb.AppendLine();
-                sb.AppendLine($"... (output truncated at {maxLength} characters)");
-                break;
-            }
-            
-            sb.Append(line);
+            messageLines.Add($"[{msg.Timestamp:HH:mm:ss}] [{msg.Level}] {msg.Message}");
         }
         
-        return sb.ToString();
+        // Calculate total length needed
+        var totalMessageLength = messageLines.Sum(line => line.Length + 1); // +1 for newline
+        
+        var result = new System.Text.StringBuilder();
+        result.Append(headerText);
+        
+        if (totalMessageLength <= availableLength)
+        {
+            // All messages fit, just append them all
+            foreach (var line in messageLines)
+            {
+                result.AppendLine(line);
+            }
+        }
+        else
+        {
+            // Need to truncate - take the LAST messages that fit
+            var truncationNotice = "... (showing last " + maxLength + " characters of output)\n";
+            availableLength -= truncationNotice.Length;
+            
+            result.Append(truncationNotice);
+            
+            var currentLength = 0;
+            var startIndex = messageLines.Count;
+            
+            // Work backwards to find where to start
+            for (int i = messageLines.Count - 1; i >= 0; i--)
+            {
+                var lineLength = messageLines[i].Length + 1; // +1 for newline
+                if (currentLength + lineLength > availableLength)
+                {
+                    startIndex = i + 1;
+                    break;
+                }
+                currentLength += lineLength;
+                if (i == 0)
+                {
+                    startIndex = 0;
+                }
+            }
+            
+            // Append messages from startIndex onwards
+            for (int i = startIndex; i < messageLines.Count; i++)
+            {
+                result.AppendLine(messageLines[i]);
+            }
+        }
+        
+        return result.ToString();
     }
     
     /// <summary>

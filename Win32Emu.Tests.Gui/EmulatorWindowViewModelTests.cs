@@ -36,7 +36,7 @@ public class EmulatorWindowViewModelTests
 	}
 	
 	[Fact]
-	public void GetDebugOutputText_TruncatesAt65535Characters()
+	public void GetDebugOutputText_TruncatesAt65535Characters_ShowsLastMessages()
 	{
 		// Arrange
 		var viewModel = new EmulatorWindowViewModel();
@@ -63,7 +63,12 @@ public class EmulatorWindowViewModelTests
 		// Assert
 		Assert.NotNull(result);
 		Assert.True(result.Length <= 65535, $"Output length {result.Length} exceeds 65535 characters");
-		Assert.Contains("output truncated at 65535 characters", result);
+		Assert.Contains("showing last 65535 characters", result);
+		
+		// Verify it shows the LAST messages (higher message numbers should be present)
+		Assert.Contains("Message 99:", result); // Last message should be there
+		// First messages should NOT be there when truncated
+		Assert.DoesNotContain("Message 0:", result);
 	}
 	
 	[Fact]
