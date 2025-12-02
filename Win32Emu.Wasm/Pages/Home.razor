@@ -172,9 +172,14 @@
 			<div class="card">
 				<div class="card-header">
 					<strong>Standard Output</strong>
-					<button class="btn btn-sm btn-outline-secondary float-end" @onclick="ClearStdOut">
-						Clear
-					</button>
+					<div class="btn-group float-end" role="group">
+						<button class="btn btn-sm btn-outline-secondary" @onclick="CopyStdOut" title="Copy to Clipboard">
+							<i class="bi bi-clipboard"></i>
+						</button>
+						<button class="btn btn-sm btn-outline-secondary" @onclick="ClearStdOut">
+							Clear
+						</button>
+					</div>
 				</div>
 				<div class="card-body p-0">
 					<pre class="log-panel mb-0" style="height: 200px; overflow-y: auto; margin: 0; padding: 10px; background-color: #f8f9fa;">@_stdOutput</pre>
@@ -187,9 +192,14 @@
 			<div class="card">
 				<div class="card-header">
 					<strong>Debug Output</strong>
-					<button class="btn btn-sm btn-outline-secondary float-end" @onclick="ClearDebugOut">
-						Clear
-					</button>
+					<div class="btn-group float-end" role="group">
+						<button class="btn btn-sm btn-outline-secondary" @onclick="CopyDebugOut" title="Copy to Clipboard">
+							<i class="bi bi-clipboard"></i>
+						</button>
+						<button class="btn btn-sm btn-outline-secondary" @onclick="ClearDebugOut">
+							Clear
+						</button>
+					</div>
 				</div>
 				<div class="card-body p-0">
 					<pre class="log-panel mb-0" style="height: 200px; overflow-y: auto; margin: 0; padding: 10px; background-color: #f8f9fa;">@_debugOutput</pre>
@@ -259,7 +269,7 @@
 	private readonly StringBuilder _debugOutputBuilder = new StringBuilder("No debug messages.\n");
 	
 	// Maximum number of characters to keep in debug output to prevent memory issues
-	private const int MaxDebugOutputLength = 100000;
+	private const int MaxDebugOutputLength = 65535;
 	// Buffer margin during log truncation to avoid frequent truncation operations
 	private const int LogRotationBufferMargin = 1000;
 	private const string LogTruncationPrefix = "... (older logs truncated) ...\n";
@@ -609,10 +619,50 @@
 		_stdOutput = string.Empty;
 	}
 
+	private async Task CopyStdOut()
+	{
+		try
+		{
+			var success = await JS.InvokeAsync<bool>("copyToClipboard", _stdOutput);
+			if (success)
+			{
+				Logger.LogInformation("Standard output copied to clipboard");
+			}
+			else
+			{
+				Logger.LogWarning("Failed to copy standard output to clipboard");
+			}
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Error copying standard output to clipboard");
+		}
+	}
+
 	private void ClearDebugOut()
 	{
 		_debugOutputBuilder.Clear();
 		_debugOutput = string.Empty;
+	}
+
+	private async Task CopyDebugOut()
+	{
+		try
+		{
+			var success = await JS.InvokeAsync<bool>("copyToClipboard", _debugOutput);
+			if (success)
+			{
+				Logger.LogInformation("Debug output copied to clipboard");
+			}
+			else
+			{
+				Logger.LogWarning("Failed to copy debug output to clipboard");
+			}
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Error copying debug output to clipboard");
+		}
 	}
 
 	private void AddStdOutput(string message)
