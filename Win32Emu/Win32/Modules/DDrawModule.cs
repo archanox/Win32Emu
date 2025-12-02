@@ -2101,6 +2101,13 @@ namespace Win32Emu.Win32.Modules
 			var destX = (int)dwX;
 			var destY = (int)dwY;
 
+			// Check if destination is completely out of bounds
+			if (destX >= destSurface.Width || destY >= destSurface.Height)
+			{
+				_logger.LogDebug("[DDraw] BltFast: destination position ({X}, {Y}) is completely outside destination surface ({Width}x{Height})", destX, destY, destSurface.Width, destSurface.Height);
+				return (uint)DDResult.DD_OK;
+			}
+
 			// Clip the source rectangle if destination goes out of bounds
 			if (destX < 0)
 			{
