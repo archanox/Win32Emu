@@ -3366,7 +3366,7 @@ namespace Win32Emu.Win32.Modules
 			surface.IsLocked = false;
 
 			// If this is a primary surface, update the rendering backend texture
-			if (surface.IsPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null)
+			if (surface.IsPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null && ddrawObj.RenderingBackend.IsInitialized)
 			{
 				try
 				{
