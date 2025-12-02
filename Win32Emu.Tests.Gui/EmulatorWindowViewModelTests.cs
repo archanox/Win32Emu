@@ -99,6 +99,8 @@ public class EmulatorWindowViewModelTests
 		var viewModel = new EmulatorWindowViewModel();
 		
 		// Assert
+		// Note: Only testing command existence as actual clipboard functionality
+		// requires Avalonia UI infrastructure which is tested through integration tests
 		Assert.NotNull(viewModel.CopyDebugOutputCommand);
 	}
 	

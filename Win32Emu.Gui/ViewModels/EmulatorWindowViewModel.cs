@@ -1097,15 +1097,21 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         {
             var debugOutput = GetDebugOutputText();
             
-            if (_ownerWindow != null)
+            if (_ownerWindow == null)
             {
-                var clipboard = TopLevel.GetTopLevel(_ownerWindow)?.Clipboard;
-                if (clipboard != null)
-                {
-                    await clipboard.SetTextAsync(debugOutput);
-                    OnDebugOutput($"Copied {debugOutput.Length} characters of debug output to clipboard", DebugLevel.Info);
-                }
+                OnDebugOutput("Cannot copy debug output: window not initialized", DebugLevel.Warning);
+                return;
             }
+
+            var clipboard = TopLevel.GetTopLevel(_ownerWindow)?.Clipboard;
+            if (clipboard == null)
+            {
+                OnDebugOutput("Cannot copy debug output: clipboard not available", DebugLevel.Warning);
+                return;
+            }
+
+            await clipboard.SetTextAsync(debugOutput);
+            OnDebugOutput($"Copied {debugOutput.Length} characters of debug output to clipboard", DebugLevel.Info);
         }
         catch (Exception ex)
         {
@@ -1130,15 +1136,12 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         var headerText = header.ToString();
         var availableLength = maxLength - headerText.Length;
         
-        // Build all messages first
-        var messageLines = new List<string>();
+        // Calculate total length needed
+        int totalMessageLength = 0;
         foreach (var msg in DebugMessages)
         {
-            messageLines.Add($"[{msg.Timestamp:HH:mm:ss}] [{msg.Level}] {msg.Message}");
+            totalMessageLength += $"[{msg.Timestamp:HH:mm:ss}] [{msg.Level}] {msg.Message}".Length + 1;
         }
-        
-        // Calculate total length needed
-        var totalMessageLength = messageLines.Sum(line => line.Length + 1); // +1 for newline
         
         var result = new System.Text.StringBuilder();
         result.Append(headerText);
@@ -1146,42 +1149,38 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         if (totalMessageLength <= availableLength)
         {
             // All messages fit, just append them all
-            foreach (var line in messageLines)
+            foreach (var msg in DebugMessages)
             {
-                result.AppendLine(line);
+                result.AppendLine($"[{msg.Timestamp:HH:mm:ss}] [{msg.Level}] {msg.Message}");
             }
         }
         else
         {
             // Need to truncate - take the LAST messages that fit
-            var truncationNotice = "... (showing last " + maxLength + " characters of output)\n";
-            availableLength -= truncationNotice.Length;
-            
+            var truncationNotice = $"... (showing last {maxLength} characters of output)\n";
+            var availableTruncatedLength = availableLength - truncationNotice.Length;
             result.Append(truncationNotice);
             
+            var messagesToInclude = new List<string>();
             var currentLength = 0;
-            var startIndex = messageLines.Count;
-            
-            // Work backwards to find where to start
-            for (int i = messageLines.Count - 1; i >= 0; i--)
+            for (int i = DebugMessages.Count - 1; i >= 0; i--)
             {
-                var lineLength = messageLines[i].Length + 1; // +1 for newline
-                if (currentLength + lineLength > availableLength)
+                var line = $"[{DebugMessages[i].Timestamp:HH:mm:ss}] [{DebugMessages[i].Level}] {DebugMessages[i].Message}";
+                var lineLength = line.Length + 1;
+                if (currentLength + lineLength <= availableTruncatedLength)
                 {
-                    startIndex = i + 1;
-                    break;
+                    messagesToInclude.Insert(0, line);
+                    currentLength += lineLength;
                 }
-                currentLength += lineLength;
-                if (i == 0)
+                else
                 {
-                    startIndex = 0;
+                    break;
                 }
             }
             
-            // Append messages from startIndex onwards
-            for (int i = startIndex; i < messageLines.Count; i++)
+            foreach (var line in messagesToInclude)
             {
-                result.AppendLine(messageLines[i]);
+                result.AppendLine(line);
             }
         }
         
