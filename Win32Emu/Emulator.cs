@@ -1297,27 +1297,26 @@ public sealed class Emulator : IDisposable
             // Check for COM vtable method calls
             if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
             {
-                // Logging now handled by ComVtableDispatcher.TryInvoke
+                // Logging now handled by ComVtableDispatcher.TryInvokeAsync
                 
                 var espBefore = _cpu.GetRegister("ESP");
                 var eipBefore = _cpu.GetEip();
                 
-                // Use consolidated helper for register preservation and stdcall convention
-                CpuHelpers.InvokeWithRegisterPreservation(
+                // Use async version of consolidated helper for register preservation and stdcall convention
+                await CpuHelpers.InvokeWithRegisterPreservationAsync(
                     _cpu,
                     _vm!,
-                    () => {
-                        var success = _env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var returnValue, out var argBytes);
-                        return (success, returnValue, argBytes);
+                    async () => {
+                        return await _env.ComDispatcher.TryInvokeAsync(step.CallTarget, _cpu, _vm!).ConfigureAwait(false);
                     },
                     _vm!.Size,
                     _logger,
                     "COM vtable",
-                    _image);
+                    _image).ConfigureAwait(false);
                 
                 var espAfter = _cpu.GetRegister("ESP");
                 var eipAfter = _cpu.GetEip();
-                _logger.LogInformation("[COM] After vtable call: ESP changed from 0x{EspBefore:X8} to 0x{EspAfter:X8} (delta={Delta}), Call site EIP=0x{EipBefore:X8}, Return EIP=0x{EipAfter:X8}", 
+                _logger.LogInformation("[COM] After async vtable call: ESP changed from 0x{EspBefore:X8} to 0x{EspAfter:X8} (delta={Delta}), Call site EIP=0x{EipBefore:X8}, Return EIP=0x{EipAfter:X8}", 
                     espBefore, espAfter, (int)espAfter - (int)espBefore, eipBefore, eipAfter);
                 
                 // Enable instruction tracing based on configured trigger points
@@ -1847,21 +1846,19 @@ public sealed class Emulator : IDisposable
                 // Check for COM vtable method calls
                 if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
                 {
-                    // Logging now handled by ComVtableDispatcher.TryInvoke
+                    // Logging now handled by ComVtableDispatcher.TryInvokeAsync
                     
-                    // Use consolidated helper for register preservation and stdcall convention
-                    CpuHelpers.InvokeWithRegisterPreservation(
+                    // Use async version of consolidated helper for register preservation and stdcall convention
+                    await CpuHelpers.InvokeWithRegisterPreservationAsync(
                         _cpu,
                         _vm!,
-                        () => {
-                            var success = _env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var returnValue, out var argBytes);
-                            // Return logging now handled by ComVtableDispatcher.TryInvoke
-                            return (success, returnValue, argBytes);
+                        async () => {
+                            return await _env.ComDispatcher.TryInvokeAsync(step.CallTarget, _cpu, _vm!).ConfigureAwait(false);
                         },
                         _vm!.Size,
                         _logger,
                         "COM vtable (GDB)",
-                        _image);
+                        _image).ConfigureAwait(false);
                 }
                 else if (step.IsCall && !IsImportStubAddress(step.CallTarget))
                 {
