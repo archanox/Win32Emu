@@ -594,6 +594,28 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new UcrtbaseModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new Vcruntime140Module(_env, _image.BaseAddress, peLoader, _logger));
 
+        // Register Win16 thunking modules for NE format executables
+        if (format == ExecutableFormat.NE)
+        {
+            _logger.LogInformation("[Loader] Registering Win16 thunking modules for NE format executable");
+            
+            // Get the Win32 modules we need to wrap
+            var kernel32 = _dispatcher.TryGetModule("KERNEL32.DLL", out var k32Module) ? k32Module! : throw new InvalidOperationException("KERNEL32.DLL not found");
+            var user32 = _dispatcher.TryGetModule("USER32.DLL", out var u32Module) ? u32Module! : throw new InvalidOperationException("USER32.DLL not found");
+            var gdi32 = _dispatcher.TryGetModule("GDI32.DLL", out var g32Module) ? g32Module! : throw new InvalidOperationException("GDI32.DLL not found");
+            var winmm = _dispatcher.TryGetModule("WINMM.DLL", out var wmmModule) ? wmmModule! : throw new InvalidOperationException("WINMM.DLL not found");
+            
+            // Register Win16 thunking modules that wrap Win32 modules
+            _dispatcher.RegisterModule(new Win32.Win16.Win16KernelModule(kernel32, _logger));
+            _dispatcher.RegisterModule(new Win32.Win16.Win16UserModule(user32, _logger));
+            _dispatcher.RegisterModule(new Win32.Win16.Win16GdiModule(gdi32, _logger));
+            _dispatcher.RegisterModule(new Win32.Win16.Win16KeyboardModule(user32, _logger));
+            _dispatcher.RegisterModule(new Win32.Win16.Win16SystemModule(kernel32, _logger));
+            _dispatcher.RegisterModule(new Win32.Win16.Win16SoundModule(winmm, _logger));
+            
+            _logger.LogInformation("[Loader] Win16 thunking modules registered successfully");
+        }
+
         // Initialize the main thread in the thread scheduler
         _env.InitializeMainThread(_cpu);
         LogDebug("[Loader] Main thread initialized");
