@@ -838,8 +838,19 @@ namespace Win32Emu.Win32.Modules
 			var surfaceWidth = dwWidth;
 			var surfaceHeight = dwHeight;
 			
-			if (isPrimary && (!dwFlags.HasFlag(DDSD.WIDTH) || !dwFlags.HasFlag(DDSD.HEIGHT) || dwWidth == 0 || dwHeight == 0))
+			// Check if dimensions are explicitly specified and valid
+			var hasDimensionFlags = dwFlags.HasFlag(DDSD.WIDTH) && dwFlags.HasFlag(DDSD.HEIGHT);
+			var hasValidDimensions = dwWidth > 0 && dwHeight > 0;
+			
+			if (isPrimary && (!hasDimensionFlags || !hasValidDimensions))
 			{
+				// Validate display mode dimensions before using them
+				if (ddrawObj.Width <= 0 || ddrawObj.Height <= 0)
+				{
+					_logger.LogError("[DDraw] Cannot create primary surface: display mode dimensions are invalid ({Width}x{Height})", ddrawObj.Width, ddrawObj.Height);
+					return (uint)DDResult.DDERR_GENERIC;
+				}
+				
 				_logger.LogInformation("[DDraw] Primary surface created without explicit dimensions, using display mode: {Width}x{Height}", ddrawObj.Width, ddrawObj.Height);
 				surfaceWidth = (uint)ddrawObj.Width;
 				surfaceHeight = (uint)ddrawObj.Height;
