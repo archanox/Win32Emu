@@ -830,16 +830,31 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DDResult.DDERR_GENERIC;
 			}
 
+			// Determine if this is a primary surface
+			var isPrimary = (dwSurfaceCaps & (uint)DDSCaps.DDSCAPS_PRIMARYSURFACE) != 0;
+
+			// For primary surfaces, if WIDTH/HEIGHT are not specified in the descriptor,
+			// use the dimensions from the current display mode (set by SetDisplayMode)
+			var surfaceWidth = dwWidth;
+			var surfaceHeight = dwHeight;
+			
+			if (isPrimary && (!dwFlags.HasFlag(DDSD.WIDTH) || !dwFlags.HasFlag(DDSD.HEIGHT) || dwWidth == 0 || dwHeight == 0))
+			{
+				_logger.LogInformation("[DDraw] Primary surface created without explicit dimensions, using display mode: {Width}x{Height}", ddrawObj.Width, ddrawObj.Height);
+				surfaceWidth = (uint)ddrawObj.Width;
+				surfaceHeight = (uint)ddrawObj.Height;
+			}
+
 			// Create a new surface
 			var surfaceHandle = _nextSurfaceHandle++;
 			var surface = new DirectDrawSurface
 			{
 				Handle = surfaceHandle,
-				Width = (int)dwWidth,
-				Height = (int)dwHeight,
+				Width = (int)surfaceWidth,
+				Height = (int)surfaceHeight,
 				DirectDrawHandle = ddrawHandle,
-				IsPrimary = (dwSurfaceCaps & (uint)DDSCaps.DDSCAPS_PRIMARYSURFACE) != 0, // DDSCAPS_PRIMARYSURFACE
-				Pitch = (int)dwWidth * (ddrawObj.BitsPerPixel / 8)
+				IsPrimary = isPrimary,
+				Pitch = (int)surfaceWidth * (ddrawObj.BitsPerPixel / 8)
 			};
 
 			// Allocate memory for the surface
@@ -920,11 +935,11 @@ namespace Win32Emu.Win32.Modules
 					var backBuffer = new DirectDrawSurface
 					{
 						Handle = backBufferHandle,
-						Width = (int)dwWidth,
-						Height = (int)dwHeight,
+						Width = (int)surfaceWidth,
+						Height = (int)surfaceHeight,
 						DirectDrawHandle = ddrawHandle,
 						IsPrimary = false,
-						Pitch = (int)dwWidth * (ddrawObj.BitsPerPixel / 8)
+						Pitch = (int)surfaceWidth * (ddrawObj.BitsPerPixel / 8)
 					};
 
 					// Allocate memory for the backbuffer
