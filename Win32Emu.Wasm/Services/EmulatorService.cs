@@ -75,6 +75,12 @@ public class EmulatorService : IDisposable
 	{
 		try
 		{
+			// Stop any running emulation before loading a new executable
+			if (_isRunning)
+			{
+				await StopAsync();
+			}
+			
 			EmitDebugOutput($"Loading executable: {fileName} ({executableBytes.Length} bytes)");
 			
 			// Create backend factory if not already created
@@ -166,6 +172,9 @@ public class EmulatorService : IDisposable
 				}
 				EmitDebugOutput($"VFS initialized with {_browserVfs.FileCount} files");
 			}
+			
+			// Dispose old emulator if it exists to prevent memory leaks when loading multiple executables
+			_emulator?.Dispose();
 			
 			// Create emulator with WASM backend factory AND emulator host for output
 			var emulatorLogger = _loggerFactory.CreateLogger<Emulator>();
