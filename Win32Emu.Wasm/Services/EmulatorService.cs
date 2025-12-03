@@ -385,12 +385,18 @@ public class EmulatorService : IDisposable
 	public void Dispose()
 	{
 		// Unsubscribe from emulator host events to prevent memory leaks
-		if (_emulatorHost != null && _debugOutputHandler != null && _stdOutputHandler != null)
+		if (_emulatorHost != null)
 		{
-			_emulatorHost.DebugOutputReceived -= _debugOutputHandler;
-			_emulatorHost.StdOutputReceived -= _stdOutputHandler;
-			_debugOutputHandler = null;
-			_stdOutputHandler = null;
+			if (_debugOutputHandler != null)
+			{
+				_emulatorHost.DebugOutputReceived -= _debugOutputHandler;
+				_debugOutputHandler = null;
+			}
+			if (_stdOutputHandler != null)
+			{
+				_emulatorHost.StdOutputReceived -= _stdOutputHandler;
+				_stdOutputHandler = null;
+			}
 		}
 		
 		_emulationCts?.Cancel();
