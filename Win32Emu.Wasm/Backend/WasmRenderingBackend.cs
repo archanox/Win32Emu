@@ -188,6 +188,7 @@ public class WasmRenderingBackend : IRenderingBackend
 			
 			// Update canvas through JavaScript
 			// Note: We don't await this to avoid blocking, but we use ContinueWith to log any errors
+			// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
 			var base64Data = Convert.ToBase64String(_frameBuffer);
 			_jsRuntime.InvokeVoidAsync("updateCanvas", _canvasId, base64Data, _width, _height)
 				.AsTask()
@@ -197,7 +198,7 @@ public class WasmRenderingBackend : IRenderingBackend
 					{
 						_logger.LogError(t.Exception?.GetBaseException(), "[WASM] Failed to invoke updateCanvas JavaScript function");
 					}
-				}, TaskScheduler.Default);
+				});
 			
 			return true;
 		}

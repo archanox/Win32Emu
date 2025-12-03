@@ -379,6 +379,8 @@
 		
 		// Update canvas with RGBA frame buffer data
 		window.updateCanvas = (canvasId, base64Data, width, height) => {
+			const BYTES_PER_PIXEL = 4; // RGBA format
+			
 			const canvas = document.getElementById(canvasId);
 			if (!canvas) {
 				console.error("Canvas not found: " + canvasId);
@@ -407,9 +409,9 @@
 			}
 			
 			// Validate data length matches expected size
-			const expectedLength = width * height * 4; // RGBA = 4 bytes per pixel
+			const expectedLength = width * height * BYTES_PER_PIXEL;
 			if (len !== expectedLength) {
-				console.error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x4), got ${len} bytes`);
+				console.error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x${BYTES_PER_PIXEL}), got ${len} bytes`);
 				return;
 			}
 			
