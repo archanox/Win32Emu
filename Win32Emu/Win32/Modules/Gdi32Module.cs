@@ -57,6 +57,26 @@ namespace Win32Emu.Win32.Modules
 			OBJ_EXTPEN = 11
 		}
 
+		// Raster operation codes for BitBlt, PatBlt, and StretchBlt
+		private enum RasterOperation : uint
+		{
+			BLACKNESS = 0x00000042,
+			NOTSRCERASE = 0x001100A6,
+			NOTSRCCOPY = 0x00330008,
+			SRCERASE = 0x00440328,
+			DSTINVERT = 0x00550009,
+			PATINVERT = 0x005A0049,
+			SRCINVERT = 0x00660046,
+			SRCAND = 0x008800C6,
+			MERGEPAINT = 0x00BB0226,
+			MERGECOPY = 0x00C000CA,
+			SRCCOPY = 0x00CC0020,
+			SRCPAINT = 0x00EE0086,
+			PATCOPY = 0x00F00021,
+			PATPAINT = 0x00FB0A09,
+			WHITENESS = 0x00FF0062
+		}
+
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
@@ -510,7 +530,8 @@ namespace Win32Emu.Win32.Modules
 			{
 				Handle = hdc,
 				WindowHandle = hwnd,
-				SelectedBitmap = bitmapHandle
+				SelectedBitmap = bitmapHandle,
+				OwnsSelectedBitmap = true // Mark that this DC owns the bitmap for cleanup
 			};
 			_deviceContexts[hdc] = dc;
 
@@ -571,6 +592,12 @@ namespace Win32Emu.Win32.Modules
 								Height = bitmap.Height,
 								Stride = stride
 							});
+						}
+
+						// Clean up the bitmap if it was created by BeginPaint
+						if (dc.OwnsSelectedBitmap)
+						{
+							_gdiObjects.Remove(dc.SelectedBitmap);
 						}
 					}
 
@@ -907,23 +934,23 @@ namespace Win32Emu.Win32.Modules
 					// Apply raster operation
 					switch (rop)
 					{
-						case 0x00CC0020: // SRCCOPY - Copy source to destination
+						case (uint)RasterOperation.SRCCOPY:
 							CopyPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
 							break;
 
-						case 0x00EE0086: // SRCPAINT - OR source and destination
+						case (uint)RasterOperation.SRCPAINT:
 							OrPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
 							break;
 
-						case 0x008800C6: // SRCAND - AND source and destination
+						case (uint)RasterOperation.SRCAND:
 							AndPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
 							break;
 
-						case 0x00660046: // SRCINVERT - XOR source and destination
+						case (uint)RasterOperation.SRCINVERT:
 							XorPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
 							break;
 
-						case 0x00330008: // NOTSRCCOPY - Copy inverted source to destination
+						case (uint)RasterOperation.NOTSRCCOPY:
 							NotCopyPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
 							break;
 
@@ -997,7 +1024,7 @@ namespace Win32Emu.Win32.Modules
 
 			var stride = ((bitmap.Width * bytesPerPixel + 3) / 4) * 4;
 
-			// Extract RGB components from COLORREF (0x00BBGGRR format)
+			// Extract RGB components from COLORREF (0x00BBGGRR in memory, where bits 0-7: R, 8-15: G, 16-23: B)
 			var r = (byte)(color & 0xFF);
 			var g = (byte)((color >> 8) & 0xFF);
 			var b = (byte)((color >> 16) & 0xFF);
@@ -1107,7 +1134,7 @@ namespace Win32Emu.Win32.Modules
 
 			var stride = ((bitmap.Width * bytesPerPixel + 3) / 4) * 4;
 
-			// Extract RGB components from COLORREF (0x00BBGGRR format)
+			// Extract RGB components from COLORREF (0x00BBGGRR in memory, where bits 0-7: R, 8-15: G, 16-23: B)
 			var r = (byte)(color & 0xFF);
 			var g = (byte)((color >> 8) & 0xFF);
 			var b = (byte)((color >> 16) & 0xFF);
@@ -1844,14 +1871,6 @@ namespace Win32Emu.Win32.Modules
 				return 0; // FALSE
 			}
 
-			// PatBlt uses a brush pattern with raster operations
-			// Common raster operation codes (rop):
-			// PATCOPY (0x00F00021) - Copy pattern to destination
-			// PATINVERT (0x005A0049) - XOR pattern with destination
-			// DSTINVERT (0x00550009) - Invert destination (no pattern needed)
-			// BLACKNESS (0x00000042) - Fill destination with black
-			// WHITENESS (0x00FF0062) - Fill destination with white
-
 			// Get destination bitmap if selected
 			BitmapData? destBitmap = null;
 			if (dc.SelectedBitmap != 0 && _gdiObjects.TryGetValue(dc.SelectedBitmap, out var destObj))
@@ -1865,54 +1884,40 @@ namespace Win32Emu.Win32.Modules
 				return 1; // TRUE - operation succeeded but had no visible effect
 			}
 
+			// Get the selected brush color (used by pattern operations)
+			var brushColor = dc.BkColor; // Default to background color
+			if (dc.SelectedBrush != 0 && _gdiObjects.TryGetValue(dc.SelectedBrush, out var brushObj))
+			{
+				brushColor = brushObj.BrushColor;
+			}
+
 			// Handle different raster operations
 			switch (rop)
 			{
-				case 0x00000042: // BLACKNESS - Fill with black
+				case (uint)RasterOperation.BLACKNESS:
 					FillBitmapRect(destBitmap, x, y, w, h, 0x00);
 					break;
 
-				case 0x00FF0062: // WHITENESS - Fill with white
+				case (uint)RasterOperation.WHITENESS:
 					FillBitmapRect(destBitmap, x, y, w, h, 0xFF);
 					break;
 
-				case 0x00F00021: // PATCOPY - Copy pattern (brush) to destination
-				{
-					// Get the selected brush
-					var brushColor = dc.BkColor; // Default to background color
-					if (dc.SelectedBrush != 0 && _gdiObjects.TryGetValue(dc.SelectedBrush, out var brushObj))
-					{
-						brushColor = brushObj.BrushColor;
-					}
+				case (uint)RasterOperation.PATCOPY:
 					FillBitmapRectWithColor(destBitmap, x, y, w, h, brushColor);
 					break;
-				}
 
-				case 0x00550009: // DSTINVERT - Invert destination
+				case (uint)RasterOperation.DSTINVERT:
 					InvertBitmapRect(destBitmap, x, y, w, h);
 					break;
 
-				case 0x005A0049: // PATINVERT - XOR pattern with destination
-				{
-					// Get the selected brush
-					var brushColor = dc.BkColor; // Default to background color
-					if (dc.SelectedBrush != 0 && _gdiObjects.TryGetValue(dc.SelectedBrush, out var brushObj))
-					{
-						brushColor = brushObj.BrushColor;
-					}
+				case (uint)RasterOperation.PATINVERT:
 					XorBitmapRectWithColor(destBitmap, x, y, w, h, brushColor);
 					break;
-				}
 
 				default:
 					_logger.LogWarning("[Gdi32] PatBlt: Unsupported ROP 0x{Rop:X8}, using PATCOPY as fallback", rop);
 					// Default to PATCOPY
-					var defaultBrushColor = dc.BkColor;
-					if (dc.SelectedBrush != 0 && _gdiObjects.TryGetValue(dc.SelectedBrush, out var defaultBrushObj))
-					{
-						defaultBrushColor = defaultBrushObj.BrushColor;
-					}
-					FillBitmapRectWithColor(destBitmap, x, y, w, h, defaultBrushColor);
+					FillBitmapRectWithColor(destBitmap, x, y, w, h, brushColor);
 					break;
 			}
 
@@ -2459,6 +2464,7 @@ namespace Win32Emu.Win32.Modules
 			public uint SelectedBitmap { get; set; } = 0; // Currently selected bitmap
 			public uint SelectedBrush { get; set; } = 0; // Currently selected brush
 			public uint SelectedPen { get; set; } = 0; // Currently selected pen
+			public bool OwnsSelectedBitmap { get; set; } = false; // True if bitmap was created by BeginPaint
 		}
 
 		/// <summary>
