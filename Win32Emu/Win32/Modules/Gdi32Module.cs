@@ -37,6 +37,10 @@ namespace Win32Emu.Win32.Modules
 		private const int DefaultCharWidth = 8;
 		private const int DefaultFontHeight = 16;
 
+		// Default window dimensions for BeginPaint when window info is unavailable
+		private const int DefaultWindowWidth = 640;
+		private const int DefaultWindowHeight = 480;
+
 		// GDI object type constants (from GetObjectType)
 		private enum GdiObjectTypeId : uint
 		{
@@ -488,8 +492,8 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[Gdi32] BeginPaint(HWND=0x{Hwnd:X8}, lpPaint=0x{LpPaint:X8})", hwnd, lpPaint);
 
 			// Get window dimensions (default to 640x480 if window not found)
-			var width = 640;
-			var height = 480;
+			var width = DefaultWindowWidth;
+			var height = DefaultWindowHeight;
 			var windowInfo = _env.GetWindow(hwnd);
 			if (windowInfo.HasValue)
 			{
