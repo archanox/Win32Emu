@@ -8,7 +8,7 @@ namespace Win32Emu.Win32.Win16;
 /// Win16 KEYBOARD module thunking layer - maps to USER32.DLL.
 /// Provides 16-bit to 32-bit thunking for keyboard-related functions.
 /// </summary>
-internal class Win16KeyboardModule : Win16ThunkingLayer, IWin32ModuleUnsafe
+internal class Win16KeyboardModule : Win16ThunkingLayer, IWin32ModuleAsync
 {
 	public Win16KeyboardModule(IWin32ModuleUnsafe user32Module, ILogger logger)
 		: base(user32Module, logger)
@@ -20,6 +20,12 @@ internal class Win16KeyboardModule : Win16ThunkingLayer, IWin32ModuleUnsafe
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		return TryInvokeWin16(export, cpu, memory, out returnValue);
+	}
+
+	public async Task<(bool success, uint returnValue)> TryInvokeAsync(string export, ICpu cpu, VirtualMemory memory, CancellationToken cancellationToken = default)
+	{
+		var success = TryInvokeUnsafe(export, cpu, memory, out var returnValue);
+		return await Task.FromResult((success, returnValue));
 	}
 
 	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
@@ -53,7 +59,7 @@ internal class Win16KeyboardModule : Win16ThunkingLayer, IWin32ModuleUnsafe
 /// Win16 SYSTEM module thunking layer - maps to KERNEL32.DLL.
 /// Provides 16-bit to 32-bit thunking for system-related functions.
 /// </summary>
-internal class Win16SystemModule : Win16ThunkingLayer, IWin32ModuleUnsafe
+internal class Win16SystemModule : Win16ThunkingLayer, IWin32ModuleAsync
 {
 	public Win16SystemModule(IWin32ModuleUnsafe kernel32Module, ILogger logger)
 		: base(kernel32Module, logger)
@@ -65,6 +71,12 @@ internal class Win16SystemModule : Win16ThunkingLayer, IWin32ModuleUnsafe
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		return TryInvokeWin16(export, cpu, memory, out returnValue);
+	}
+
+	public async Task<(bool success, uint returnValue)> TryInvokeAsync(string export, ICpu cpu, VirtualMemory memory, CancellationToken cancellationToken = default)
+	{
+		var success = TryInvokeUnsafe(export, cpu, memory, out var returnValue);
+		return await Task.FromResult((success, returnValue));
 	}
 
 	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
@@ -97,7 +109,7 @@ internal class Win16SystemModule : Win16ThunkingLayer, IWin32ModuleUnsafe
 /// Win16 SOUND module thunking layer - maps to WINMM.DLL.
 /// Provides 16-bit to 32-bit thunking for sound/multimedia functions.
 /// </summary>
-internal class Win16SoundModule : Win16ThunkingLayer, IWin32ModuleUnsafe
+internal class Win16SoundModule : Win16ThunkingLayer, IWin32ModuleAsync
 {
 	public Win16SoundModule(IWin32ModuleUnsafe winmmModule, ILogger logger)
 		: base(winmmModule, logger)
@@ -109,6 +121,12 @@ internal class Win16SoundModule : Win16ThunkingLayer, IWin32ModuleUnsafe
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		return TryInvokeWin16(export, cpu, memory, out returnValue);
+	}
+
+	public async Task<(bool success, uint returnValue)> TryInvokeAsync(string export, ICpu cpu, VirtualMemory memory, CancellationToken cancellationToken = default)
+	{
+		var success = TryInvokeUnsafe(export, cpu, memory, out var returnValue);
+		return await Task.FromResult((success, returnValue));
 	}
 
 	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)

@@ -14,7 +14,7 @@ namespace Win32Emu.Win32.Win16;
 /// Window handles (HWND) and device context handles (HDC) are often 16-bit in Win16
 /// but are extended to 32-bit in Win32.
 /// </remarks>
-internal class Win16UserModule : Win16ThunkingLayer, IWin32ModuleUnsafe
+internal class Win16UserModule : Win16ThunkingLayer, IWin32ModuleAsync
 {
 	public Win16UserModule(IWin32ModuleUnsafe user32Module, ILogger logger)
 		: base(user32Module, logger)
@@ -26,6 +26,12 @@ internal class Win16UserModule : Win16ThunkingLayer, IWin32ModuleUnsafe
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		return TryInvokeWin16(export, cpu, memory, out returnValue);
+	}
+
+	public async Task<(bool success, uint returnValue)> TryInvokeAsync(string export, ICpu cpu, VirtualMemory memory, CancellationToken cancellationToken = default)
+	{
+		var success = TryInvokeUnsafe(export, cpu, memory, out var returnValue);
+		return await Task.FromResult((success, returnValue));
 	}
 
 	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
