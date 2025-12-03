@@ -349,17 +349,20 @@
 			displayErrorDetails(event);
 		});
 		window.initializeEmulator = (canvasId) => {
+			console.log(`Initializing emulator canvas with id: ${canvasId}`);
 			const canvas = document.getElementById(canvasId);
 			if (!canvas) {
-				console.error("Canvas not found");
+				console.error(`Canvas element not found with id: ${canvasId}`);
 				return;
 			}
 			
 			const ctx = canvas.getContext('2d');
 			if (!ctx) {
-				console.error("Could not get 2D context");
+				console.error("Could not get 2D context from canvas");
 				return;
 			}
+			
+			console.log(`Canvas found: ${canvas.width}x${canvas.height}`);
 			
 			// Clear canvas with black background
 			ctx.fillStyle = '#000000';
@@ -371,14 +374,14 @@
 			ctx.fillText('Win32Emu - Ready', 20, 40);
 			ctx.fillText('Waiting for executable...', 20, 70);
 			
-			console.log("Emulator canvas initialized");
+			console.log("Emulator canvas initialized successfully");
 		};
 		
 		// Update canvas with RGBA frame buffer data
 		window.updateCanvas = (canvasId, base64Data, width, height) => {
 			const canvas = document.getElementById(canvasId);
 			if (!canvas) {
-				console.error("Canvas not found");
+				console.error("Canvas not found: " + canvasId);
 				return;
 			}
 			
@@ -386,6 +389,13 @@
 			if (!ctx) {
 				console.error("Could not get 2D context");
 				return;
+			}
+			
+			// Resize canvas if dimensions changed
+			if (canvas.width !== width || canvas.height !== height) {
+				console.log(`Resizing canvas from ${canvas.width}x${canvas.height} to ${width}x${height}`);
+				canvas.width = width;
+				canvas.height = height;
 			}
 			
 			// Decode base64 data
@@ -396,9 +406,17 @@
 				bytes[i] = binaryString.charCodeAt(i);
 			}
 			
+			// Validate data length matches expected size
+			const expectedLength = width * height * 4; // RGBA = 4 bytes per pixel
+			if (len !== expectedLength) {
+				console.error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x4), got ${len} bytes`);
+				return;
+			}
+			
 			// Create ImageData and draw to canvas
 			const imageData = new ImageData(bytes, width, height);
 			ctx.putImageData(imageData, 0, 0);
+			console.log(`Canvas updated successfully: ${width}x${height}`);
 		};
 		
 		// Web Audio API
