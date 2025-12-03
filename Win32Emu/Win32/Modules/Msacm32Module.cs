@@ -146,6 +146,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 			// Fire-and-forget the initialization - the backend will self-mark as initialized.
 			if (PlatformHelpers.IsWasm)
 			{
+				// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
 				_ = _env.AudioBackend.InitializeAsync()
 					.ContinueWith(t =>
 					{
@@ -161,7 +162,7 @@ public class Msacm32Module : IWin32ModuleUnsafe
 						{
 							_logger.LogWarning("[MSACM32] Audio backend initialization returned false (WASM mode)");
 						}
-					}, TaskScheduler.Default);
+					});
 				_logger.LogInformation("[MSACM32] Audio backend initialization started asynchronously (WASM mode)");
 			}
 			else
