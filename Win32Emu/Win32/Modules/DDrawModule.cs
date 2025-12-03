@@ -839,10 +839,10 @@ namespace Win32Emu.Win32.Modules
 			var surfaceHeight = dwHeight;
 			
 			// Check if dimensions are explicitly specified and valid
-			var hasDimensionFlags = dwFlags.HasFlag(DDSD.WIDTH) && dwFlags.HasFlag(DDSD.HEIGHT);
+			var hasWidthAndHeightFlags = dwFlags.HasFlag(DDSD.WIDTH) && dwFlags.HasFlag(DDSD.HEIGHT);
 			var hasValidDimensions = dwWidth > 0 && dwHeight > 0;
 			
-			if (isPrimary && (!hasDimensionFlags || !hasValidDimensions))
+			if (isPrimary && (!hasWidthAndHeightFlags || !hasValidDimensions))
 			{
 				// Validate display mode dimensions before using them
 				if (ddrawObj.Width <= 0 || ddrawObj.Height <= 0)
@@ -852,6 +852,7 @@ namespace Win32Emu.Win32.Modules
 				}
 				
 				_logger.LogInformation("[DDraw] Primary surface created without explicit dimensions, using display mode: {Width}x{Height}", ddrawObj.Width, ddrawObj.Height);
+				// Safe to cast: validation above ensures dimensions are positive
 				surfaceWidth = (uint)ddrawObj.Width;
 				surfaceHeight = (uint)ddrawObj.Height;
 			}
