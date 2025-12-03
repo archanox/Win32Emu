@@ -3029,6 +3029,21 @@ public class ProcessEnvironment
 		_cleanupCalled = true;
 		_logger.LogInformation("[ProcessEnv] Performing cleanup");
 		
+		// Unsubscribe from all UI events to prevent memory leaks
+		foreach (var renderingBackend in _subscribedRenderingBackends.ToList())
+		{
+			renderingBackend.UIEvent -= OnUIEvent;
+			_logger.LogDebug("[ProcessEnv] Unsubscribed from rendering backend UI events");
+		}
+		_subscribedRenderingBackends.Clear();
+		
+		foreach (var inputBackend in _subscribedInputBackends.ToList())
+		{
+			inputBackend.UIEvent -= OnUIEvent;
+			_logger.LogDebug("[ProcessEnv] Unsubscribed from input backend UI events");
+		}
+		_subscribedInputBackends.Clear();
+		
 		// Save and dispose registry hives
 		_registryHive?.Dispose();
 		_registryHive = null;
