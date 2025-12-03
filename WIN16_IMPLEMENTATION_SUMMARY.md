@@ -141,16 +141,6 @@ Functions that work well with current thunking:
 - Message passing
 - Basic GDI drawing operations
 
-## Future Enhancements
-
-Potential improvements for more complete Win16 support:
-1. Advanced parameter translation for complex functions
-2. Explicit PASCAL calling convention support
-3. Full segment:offset to flat address conversion
-4. Handle mapping tables for GDI objects
-5. Win16-specific structure marshalling
-6. Enhanced resource loading
-
 ## Impact
 
 This implementation enables:

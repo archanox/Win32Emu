@@ -13,7 +13,7 @@ namespace Win32Emu.Win32.Win16;
 /// where parameter sizes and semantics are compatible with Win32 equivalents.
 /// More complex functions may require additional parameter translation logic.
 /// </remarks>
-internal class Win16KernelModule : Win16ThunkingLayer, IWin32ModuleUnsafe
+internal class Win16KernelModule : Win16ThunkingLayer, IWin32ModuleAsync
 {
 	public Win16KernelModule(IWin32ModuleUnsafe kernel32Module, ILogger logger)
 		: base(kernel32Module, logger)
@@ -25,6 +25,12 @@ internal class Win16KernelModule : Win16ThunkingLayer, IWin32ModuleUnsafe
 	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		return TryInvokeWin16(export, cpu, memory, out returnValue);
+	}
+
+	public async Task<(bool success, uint returnValue)> TryInvokeAsync(string export, ICpu cpu, VirtualMemory memory, CancellationToken cancellationToken = default)
+	{
+		var success = TryInvokeUnsafe(export, cpu, memory, out var returnValue);
+		return await Task.FromResult((success, returnValue));
 	}
 
 	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
