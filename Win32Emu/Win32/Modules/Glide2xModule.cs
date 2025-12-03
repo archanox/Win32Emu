@@ -1523,6 +1523,7 @@ namespace Win32Emu.Win32.Modules
 				// Fire-and-forget the initialization - the backend will self-mark as initialized.
 				if (PlatformHelpers.IsWasm)
 				{
+					// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
 					_ = _renderingBackend.InitializeAsync(_width, _height, title)
 						.ContinueWith(t =>
 						{
@@ -1540,7 +1541,7 @@ namespace Win32Emu.Win32.Modules
 							{
 								_logger.LogWarning("[GLIDE2x] Rendering backend initialization returned false (WASM mode)");
 							}
-						}, TaskScheduler.Default);
+						});
 					_logger.LogInformation("[GLIDE2x] Rendering backend initialization started asynchronously (WASM mode)");
 				}
 				else

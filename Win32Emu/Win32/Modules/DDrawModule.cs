@@ -3198,6 +3198,7 @@ namespace Win32Emu.Win32.Modules
 					if (PlatformHelpers.IsWasm)
 					{
 						// Use ContinueWith to properly handle any exceptions from the async initialization
+						// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
 						_ = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title)
 							.ContinueWith(t =>
 							{
@@ -3213,7 +3214,7 @@ namespace Win32Emu.Win32.Modules
 								{
 									_logger.LogWarning("[DDraw] Rendering backend initialization returned false (WASM mode)");
 								}
-							}, TaskScheduler.Default);
+							});
 						_logger.LogInformation("[DDraw] Rendering backend initialization started asynchronously with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
 					}
 					else
