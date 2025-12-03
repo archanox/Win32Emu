@@ -186,23 +186,35 @@ The core emulation library that powers Win32Emu.Gui. This library provides the `
 
 ## Win16 NE Format Support (Experimental)
 
-Win32Emu now includes experimental support for Win16 NE (New Executable) format applications. This enables running 16-bit Windows installers and games common for Windows 9x.
+Win32Emu now includes experimental support for Win16 NE (New Executable) format applications. This enables running 16-bit Windows installers and games common for Windows 9x through a thunking layer that translates Win16 API calls to Win32 equivalents.
 
-**Status**: 🚧 Experimental - Format detection and loading implemented, API emulation in progress
+**Status**: 🚧 Experimental - Format loading and Win16→Win32 thunking implemented, full API compatibility in progress
 
 **Supported**:
 - ✓ NE format detection and validation
 - ✓ Segment table parsing and loading
 - ✓ Entry point resolution
 - ✓ Resident/non-resident name table parsing
-- ✓ Import module identification
+- ✓ Import module identification and relocation
+- ✓ Win16 to Win32 module name mapping (KERNEL→KERNEL32, USER→USER32, GDI→GDI32, etc.)
+- ✓ Win16 thunking layer with 6 modules (KERNEL, USER, GDI, KEYBOARD, SYSTEM, SOUND)
+- ✓ Handle size conversion (16-bit to 32-bit)
+- ✓ Parameter forwarding for compatible functions
 
-**Not Yet Implemented**:
-- ⚠️ Win16 API emulation (KERNEL, USER, GDI)
-- ⚠️ 16-bit to 32-bit thunking layer
-- ⚠️ Segment:offset address translation
-- ⚠️ 16-bit calling convention support
-- ⚠️ NE resource loading
+**Implemented Win16 Modules**:
+- **KERNEL** → KERNEL32.DLL (memory, file I/O, strings, module loading)
+- **USER** → USER32.DLL (windows, messages, dialogs, menus, input)
+- **GDI** → GDI32.DLL (device contexts, drawing, text, bitmaps, fonts)
+- **KEYBOARD** → USER32.DLL (keyboard state and configuration)
+- **SYSTEM** → KERNEL32.DLL (timers and system time)
+- **SOUND** → WINMM.DLL (multimedia and sound playback)
+
+**Known Limitations**:
+- ⚠️ Simplified thunking (complex parameter translation may be needed for some functions)
+- ⚠️ PASCAL calling convention handled by underlying Win32 implementations
+- ⚠️ Far pointer (segment:offset) translation not fully implemented
+- ⚠️ Complex Win16-specific structures may need additional marshalling
+- ⚠️ NE resource loading is basic
 
 **Example Usage**:
 ```bash
@@ -212,11 +224,13 @@ Win32Emu.Gui --nogui installer16.exe
 # The emulator will log:
 # [Loader] Detected format: NE
 # [Loader] Win16 NE format support is experimental
+# [Loader] Registering Win16 thunking modules for NE format executable
+# [Win16 Thunk] GLOBALALLOC - forwarding to KERNEL32
 ```
 
 **For More Information**:
+- [Win16 Thunking Implementation Guide](docs/implementation/WIN16_THUNKING_IMPLEMENTATION.md)
 - [NE Loader Implementation Guide](docs/implementation/NE_LOADER_IMPLEMENTATION.md)
-- [Issue #XX: Win16 (NE) application support](https://github.com/archanox/Win32Emu/issues/XX)
 
 ## Backend System
 
