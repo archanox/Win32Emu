@@ -23,6 +23,10 @@ public class EmulatorService : IDisposable
 	private CancellationTokenSource? _emulationCts;
 	private Task? _emulationTask;
 	
+	// Store event handlers for proper unsubscription
+	private EventHandler<string>? _debugOutputHandler;
+	private EventHandler<string>? _stdOutputHandler;
+	
 	// State
 	private bool _isRunning;
 	private bool _isPaused;
@@ -83,8 +87,12 @@ public class EmulatorService : IDisposable
 				_emulatorHost = new WasmEmulatorHost(_loggerFactory.CreateLogger<WasmEmulatorHost>());
 				
 				// Wire up host events to forward to service events (only once)
-				_emulatorHost.DebugOutputReceived += (sender, message) => EmitDebugOutput(message);
-				_emulatorHost.StdOutputReceived += (sender, message) => EmitStdOutput(message);
+				// Store handlers so we can unsubscribe later
+				_debugOutputHandler = (sender, message) => EmitDebugOutput(message);
+				_stdOutputHandler = (sender, message) => EmitStdOutput(message);
+				
+				_emulatorHost.DebugOutputReceived += _debugOutputHandler;
+				_emulatorHost.StdOutputReceived += _stdOutputHandler;
 			}
 			
 			// Create browser-based virtual file system
@@ -367,10 +375,23 @@ public class EmulatorService : IDisposable
 	
 	public void Dispose()
 	{
+		// Unsubscribe from emulator host events to prevent memory leaks
+		if (_emulatorHost != null && _debugOutputHandler != null && _stdOutputHandler != null)
+		{
+			_emulatorHost.DebugOutputReceived -= _debugOutputHandler;
+			_emulatorHost.StdOutputReceived -= _stdOutputHandler;
+			_debugOutputHandler = null;
+			_stdOutputHandler = null;
+		}
+		
 		_emulationCts?.Cancel();
 		_emulationCts?.Dispose();
 		_emulator?.Dispose();
 		_browserVfs?.Dispose();
+		
+		// Clear references to allow garbage collection
+		_emulatorHost = null;
+		_backendFactory = null;
 	}
 }
 
