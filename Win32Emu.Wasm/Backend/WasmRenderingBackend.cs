@@ -20,6 +20,8 @@ namespace Win32Emu.Wasm.Backend;
 /// </remarks>
 public class WasmRenderingBackend : IRenderingBackend
 {
+	private const int BytesPerPixelRgba = 4; // RGBA format
+	
 	private readonly IJSRuntime _jsRuntime;
 	private readonly ILogger<WasmRenderingBackend> _logger;
 	private bool _initialized;
@@ -54,7 +56,7 @@ public class WasmRenderingBackend : IRenderingBackend
 		{
 			_width = width;
 			_height = height;
-			_frameBuffer = new byte[width * height * 4]; // RGBA format
+			_frameBuffer = new byte[width * height * BytesPerPixelRgba]; // RGBA format
 			
 			_logger.LogInformation("[WASM] Initializing rendering backend ({Width}x{Height})", width, height);
 			
@@ -165,7 +167,7 @@ public class WasmRenderingBackend : IRenderingBackend
 				_width, _height, pitch, data.Length);
 			
 			// Copy data to internal frame buffer
-			if (pitch == _width * 4)
+			if (pitch == _width * BytesPerPixelRgba)
 			{
 				// Direct copy if pitch matches
 				Array.Copy(data, _frameBuffer, Math.Min(data.Length, _frameBuffer.Length));
@@ -176,8 +178,8 @@ public class WasmRenderingBackend : IRenderingBackend
 				for (int y = 0; y < _height; y++)
 				{
 					var srcOffset = y * pitch;
-					var dstOffset = y * _width * 4;
-					var lineLength = Math.Min(_width * 4, pitch);
+					var dstOffset = y * _width * BytesPerPixelRgba;
+					var lineLength = Math.Min(_width * BytesPerPixelRgba, pitch);
 					
 					if (srcOffset + lineLength <= data.Length && dstOffset + lineLength <= _frameBuffer.Length)
 					{
