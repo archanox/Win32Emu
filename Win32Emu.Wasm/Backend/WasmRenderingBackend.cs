@@ -154,11 +154,16 @@ public class WasmRenderingBackend : IRenderingBackend
 	{
 		if (!_initialized || _frameBuffer == null)
 		{
+			_logger.LogWarning("[WASM] UpdateFrameBuffer called but backend not initialized (_initialized={Initialized}, _frameBuffer={FrameBufferNull})", 
+				_initialized, _frameBuffer == null ? "null" : "not null");
 			return false;
 		}
 
 		try
 		{
+			_logger.LogTrace("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
+				_width, _height, pitch, data.Length);
+			
 			// Copy data to internal frame buffer
 			if (pitch == _width * 4)
 			{
@@ -182,8 +187,17 @@ public class WasmRenderingBackend : IRenderingBackend
 			}
 			
 			// Update canvas through JavaScript
+			// Note: We don't await this to avoid blocking, but we use ContinueWith to log any errors
 			var base64Data = Convert.ToBase64String(_frameBuffer);
-			_jsRuntime.InvokeVoidAsync("updateCanvas", _canvasId, base64Data, _width, _height);
+			_jsRuntime.InvokeVoidAsync("updateCanvas", _canvasId, base64Data, _width, _height)
+				.AsTask()
+				.ContinueWith(t =>
+				{
+					if (t.IsFaulted)
+					{
+						_logger.LogError(t.Exception?.GetBaseException(), "[WASM] Failed to invoke updateCanvas JavaScript function");
+					}
+				}, TaskScheduler.Default);
 			
 			return true;
 		}
