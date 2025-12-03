@@ -121,7 +121,6 @@ internal class Win16SoundModule : Win16ThunkingLayer, IWin32ModuleUnsafe
 			// Sound functions - forward to WINMM
 			case "SNDPLAYSOUND":
 			case "SNDPLAYSONDA":
-			case "MESSAGEBEEP":
 			case "OPENDRIVER":
 			case "CLOSEDRIVER":
 			case "SENDDRIVER":
