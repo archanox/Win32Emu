@@ -690,7 +690,10 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] BitBlt(hdcDest=0x{HdcDest:X8}, dest=({X},{Y}), size=({Cx},{Cy}), hdcSrc=0x{HdcSrc:X8}, src=({X1},{Y1}), rop=0x{Rop:X})",
 				hdcDest, x, y, cx, cy, hdcSrc, x1, y1, rop);
-			return 1; // TRUE
+
+			// BitBlt is essentially StretchBlt with 1:1 scaling
+			// Just call StretchBlt with the same source and destination sizes
+			return StretchBlt(hdcDest, x, y, cx, cy, hdcSrc, x1, y1, cx, cy, rop);
 		}
 
 		/// <summary>
@@ -927,6 +930,180 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
+		/// Fills a rectangle in a bitmap with a COLORREF color value
+		/// </summary>
+		private void FillBitmapRectWithColor(BitmapData bitmap, int x, int y, int w, int h, uint color)
+		{
+			if (bitmap.Bits == null)
+			{
+				return;
+			}
+
+			var bytesPerPixel = (int)(bitmap.BitCount / 8);
+			if (bytesPerPixel == 0)
+			{
+				bytesPerPixel = 1;
+			}
+
+			var stride = ((bitmap.Width * bytesPerPixel + 3) / 4) * 4;
+
+			// Extract RGB components from COLORREF (0x00BBGGRR format)
+			var r = (byte)(color & 0xFF);
+			var g = (byte)((color >> 8) & 0xFF);
+			var b = (byte)((color >> 16) & 0xFF);
+
+			for (var dy = 0; dy < h; dy++)
+			{
+				var py = y + dy;
+				if (py < 0 || py >= bitmap.Height)
+				{
+					continue;
+				}
+
+				for (var dx = 0; dx < w; dx++)
+				{
+					var px = x + dx;
+					if (px < 0 || px >= bitmap.Width)
+					{
+						continue;
+					}
+
+					var offset = py * stride + px * bytesPerPixel;
+					if (offset < bitmap.Bits.Length)
+					{
+						// Write color in appropriate format
+						if (bytesPerPixel >= 3)
+						{
+							// RGB or RGBA format
+							if (offset + 2 < bitmap.Bits.Length)
+							{
+								bitmap.Bits[offset] = b;     // Blue
+								bitmap.Bits[offset + 1] = g; // Green
+								bitmap.Bits[offset + 2] = r; // Red
+								if (bytesPerPixel == 4 && offset + 3 < bitmap.Bits.Length)
+								{
+									bitmap.Bits[offset + 3] = 0xFF; // Alpha
+								}
+							}
+						}
+						else
+						{
+							// Grayscale - use simple average
+							bitmap.Bits[offset] = (byte)((r + g + b) / 3);
+						}
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Inverts colors in a rectangle in a bitmap
+		/// </summary>
+		private void InvertBitmapRect(BitmapData bitmap, int x, int y, int w, int h)
+		{
+			if (bitmap.Bits == null)
+			{
+				return;
+			}
+
+			var bytesPerPixel = (int)(bitmap.BitCount / 8);
+			if (bytesPerPixel == 0)
+			{
+				bytesPerPixel = 1;
+			}
+
+			var stride = ((bitmap.Width * bytesPerPixel + 3) / 4) * 4;
+
+			for (var dy = 0; dy < h; dy++)
+			{
+				var py = y + dy;
+				if (py < 0 || py >= bitmap.Height)
+				{
+					continue;
+				}
+
+				for (var dx = 0; dx < w; dx++)
+				{
+					var px = x + dx;
+					if (px < 0 || px >= bitmap.Width)
+					{
+						continue;
+					}
+
+					var offset = py * stride + px * bytesPerPixel;
+					for (var b = 0; b < bytesPerPixel && offset + b < bitmap.Bits.Length; b++)
+					{
+						bitmap.Bits[offset + b] = (byte)~bitmap.Bits[offset + b];
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// XORs a rectangle in a bitmap with a color
+		/// </summary>
+		private void XorBitmapRectWithColor(BitmapData bitmap, int x, int y, int w, int h, uint color)
+		{
+			if (bitmap.Bits == null)
+			{
+				return;
+			}
+
+			var bytesPerPixel = (int)(bitmap.BitCount / 8);
+			if (bytesPerPixel == 0)
+			{
+				bytesPerPixel = 1;
+			}
+
+			var stride = ((bitmap.Width * bytesPerPixel + 3) / 4) * 4;
+
+			// Extract RGB components from COLORREF (0x00BBGGRR format)
+			var r = (byte)(color & 0xFF);
+			var g = (byte)((color >> 8) & 0xFF);
+			var b = (byte)((color >> 16) & 0xFF);
+
+			for (var dy = 0; dy < h; dy++)
+			{
+				var py = y + dy;
+				if (py < 0 || py >= bitmap.Height)
+				{
+					continue;
+				}
+
+				for (var dx = 0; dx < w; dx++)
+				{
+					var px = x + dx;
+					if (px < 0 || px >= bitmap.Width)
+					{
+						continue;
+					}
+
+					var offset = py * stride + px * bytesPerPixel;
+					if (offset < bitmap.Bits.Length)
+					{
+						// XOR color in appropriate format
+						if (bytesPerPixel >= 3)
+						{
+							// RGB or RGBA format
+							if (offset + 2 < bitmap.Bits.Length)
+							{
+								bitmap.Bits[offset] ^= b;     // Blue
+								bitmap.Bits[offset + 1] ^= g; // Green
+								bitmap.Bits[offset + 2] ^= r; // Red
+							}
+						}
+						else
+						{
+							// Grayscale - XOR with average
+							var avg = (byte)((r + g + b) / 3);
+							bitmap.Bits[offset] ^= avg;
+						}
+					}
+				}
+			}
+		}
+
+		/// <summary>
 		/// Copy pixel from source to destination
 		/// </summary>
 		private void CopyPixel(byte[] src, int srcOffset, int srcBpp, byte[] dest, int destOffset, int destBpp)
@@ -1129,19 +1306,36 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] SelectObject(hdc=0x{Hdc:X8}, hObject=0x{HObject:X8})", hdc, hObject);
 
-			// Track bitmap selection in DC
+			// Track object selection in DC
 			if (_deviceContexts.TryGetValue(hdc, out var dc) && _gdiObjects.TryGetValue(hObject, out var obj))
 			{
-				if (obj.Type == GdiObjectType.Bitmap)
+				switch (obj.Type)
 				{
-					var previousBitmap = dc.SelectedBitmap;
-					dc.SelectedBitmap = hObject;
-					_logger.LogInformation("[Gdi32] SelectObject: Selected bitmap 0x{HObject:X8} into DC 0x{Hdc:X8}", hObject, hdc);
-					return previousBitmap; // Return previous bitmap
+					case GdiObjectType.Bitmap:
+					{
+						var previousBitmap = dc.SelectedBitmap;
+						dc.SelectedBitmap = hObject;
+						_logger.LogInformation("[Gdi32] SelectObject: Selected bitmap 0x{HObject:X8} into DC 0x{Hdc:X8}", hObject, hdc);
+						return previousBitmap; // Return previous bitmap
+					}
+					case GdiObjectType.Brush:
+					{
+						var previousBrush = dc.SelectedBrush;
+						dc.SelectedBrush = hObject;
+						_logger.LogInformation("[Gdi32] SelectObject: Selected brush 0x{HObject:X8} into DC 0x{Hdc:X8}", hObject, hdc);
+						return previousBrush; // Return previous brush
+					}
+					case GdiObjectType.Pen:
+					{
+						var previousPen = dc.SelectedPen;
+						dc.SelectedPen = hObject;
+						_logger.LogInformation("[Gdi32] SelectObject: Selected pen 0x{HObject:X8} into DC 0x{Hdc:X8}", hObject, hdc);
+						return previousPen; // Return previous pen
+					}
 				}
 			}
 
-			return hObject; // Return previous object (stub for non-bitmap objects)
+			return hObject; // Return previous object (stub for non-tracked objects)
 		}
 
 		[DllModuleExport(8)]
@@ -1243,7 +1437,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] CreateSolidBrush(color=0x{Color:X8})", color);
 			var handle = _nextGdiObjectHandle++;
-			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Brush };
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Brush, BrushColor = color };
 			return handle;
 		}
 
@@ -1592,8 +1786,88 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] PatBlt(hdc=0x{Hdc:X8}, x={X}, y={Y}, w={W}, h={H}, rop=0x{Rop:X8})",
 				hdc, x, y, w, h, rop);
-			// Stub - return TRUE (success)
-			return 1;
+
+			// Validate device context
+			if (!_deviceContexts.TryGetValue(hdc, out var dc))
+			{
+				_logger.LogWarning("[Gdi32] PatBlt: Invalid DC 0x{Hdc:X8}", hdc);
+				return 0; // FALSE
+			}
+
+			// PatBlt uses a brush pattern with raster operations
+			// Common raster operation codes (rop):
+			// PATCOPY (0x00F00021) - Copy pattern to destination
+			// PATINVERT (0x005A0049) - XOR pattern with destination
+			// DSTINVERT (0x00550009) - Invert destination (no pattern needed)
+			// BLACKNESS (0x00000042) - Fill destination with black
+			// WHITENESS (0x00FF0062) - Fill destination with white
+
+			// Get destination bitmap if selected
+			BitmapData? destBitmap = null;
+			if (dc.SelectedBitmap != 0 && _gdiObjects.TryGetValue(dc.SelectedBitmap, out var destObj))
+			{
+				destBitmap = destObj.Bitmap;
+			}
+
+			if (destBitmap == null)
+			{
+				_logger.LogInformation("[Gdi32] PatBlt: No destination bitmap selected, operation is a no-op");
+				return 1; // TRUE - operation succeeded but had no visible effect
+			}
+
+			// Handle different raster operations
+			switch (rop)
+			{
+				case 0x00000042: // BLACKNESS - Fill with black
+					FillBitmapRect(destBitmap, x, y, w, h, 0x00);
+					break;
+
+				case 0x00FF0062: // WHITENESS - Fill with white
+					FillBitmapRect(destBitmap, x, y, w, h, 0xFF);
+					break;
+
+				case 0x00F00021: // PATCOPY - Copy pattern (brush) to destination
+				{
+					// Get the selected brush
+					var brushColor = dc.BkColor; // Default to background color
+					if (dc.SelectedBrush != 0 && _gdiObjects.TryGetValue(dc.SelectedBrush, out var brushObj))
+					{
+						brushColor = brushObj.BrushColor;
+					}
+					FillBitmapRectWithColor(destBitmap, x, y, w, h, brushColor);
+					break;
+				}
+
+				case 0x00550009: // DSTINVERT - Invert destination
+					InvertBitmapRect(destBitmap, x, y, w, h);
+					break;
+
+				case 0x005A0049: // PATINVERT - XOR pattern with destination
+				{
+					// Get the selected brush
+					var brushColor = dc.BkColor; // Default to background color
+					if (dc.SelectedBrush != 0 && _gdiObjects.TryGetValue(dc.SelectedBrush, out var brushObj))
+					{
+						brushColor = brushObj.BrushColor;
+					}
+					XorBitmapRectWithColor(destBitmap, x, y, w, h, brushColor);
+					break;
+				}
+
+				default:
+					_logger.LogWarning("[Gdi32] PatBlt: Unsupported ROP 0x{Rop:X8}, using PATCOPY as fallback", rop);
+					// Default to PATCOPY
+					var defaultBrushColor = dc.BkColor;
+					if (dc.SelectedBrush != 0 && _gdiObjects.TryGetValue(dc.SelectedBrush, out var defaultBrushObj))
+					{
+						defaultBrushColor = defaultBrushObj.BrushColor;
+					}
+					FillBitmapRectWithColor(destBitmap, x, y, w, h, defaultBrushColor);
+					break;
+			}
+
+			_logger.LogInformation("[Gdi32] PatBlt: Operation completed successfully");
+			return 1; // TRUE
 		}
 
 		[DllModuleExport(36)]
@@ -2113,6 +2387,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			public GdiObjectType Type { get; set; }
 			public BitmapData? Bitmap { get; set; }
+			public uint BrushColor { get; set; } = 0x00000000; // For solid brushes
 		}
 
 		private class BitmapData
@@ -2130,7 +2405,10 @@ namespace Win32Emu.Win32.Modules
 			public uint WindowHandle { get; set; }
 			public int BkMode { get; set; } = 2; // OPAQUE
 			public uint TextColor { get; set; } = 0x00000000; // Black
+			public uint BkColor { get; set; } = 0x00FFFFFF; // White background
 			public uint SelectedBitmap { get; set; } = 0; // Currently selected bitmap
+			public uint SelectedBrush { get; set; } = 0; // Currently selected brush
+			public uint SelectedPen { get; set; } = 0; // Currently selected pen
 		}
 
 		/// <summary>
