@@ -487,12 +487,26 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] BeginPaint(HWND=0x{Hwnd:X8}, lpPaint=0x{LpPaint:X8})", hwnd, lpPaint);
 
+			// Get window dimensions (default to 640x480 if window not found)
+			var width = 640;
+			var height = 480;
+			var windowInfo = _env.GetWindow(hwnd);
+			if (windowInfo.HasValue)
+			{
+				width = windowInfo.Value.Width;
+				height = windowInfo.Value.Height;
+			}
+
+			// Create or get a bitmap for this window
+			var bitmapHandle = CreateCompatibleBitmap(0, width, height);
+
 			// Create a device context for this paint session
 			var hdc = _nextDcHandle++;
 			var dc = new DeviceContext
 			{
 				Handle = hdc,
-				WindowHandle = hwnd
+				WindowHandle = hwnd,
+				SelectedBitmap = bitmapHandle
 			};
 			_deviceContexts[hdc] = dc;
 
@@ -510,8 +524,8 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lpPaint + 4, 1); // fErase = TRUE
 				_env.MemWrite32(lpPaint + 8, 0); // rcPaint.left
 				_env.MemWrite32(lpPaint + 12, 0); // rcPaint.top
-				_env.MemWrite32(lpPaint + 16, 640); // rcPaint.right
-				_env.MemWrite32(lpPaint + 20, 480); // rcPaint.bottom
+				_env.MemWrite32(lpPaint + 16, (uint)width); // rcPaint.right
+				_env.MemWrite32(lpPaint + 20, (uint)height); // rcPaint.bottom
 			}
 
 			return hdc;
@@ -525,8 +539,40 @@ namespace Win32Emu.Win32.Modules
 				var hdc = _env.MemRead32(lpPaint);
 				_logger.LogInformation("[Gdi32] EndPaint(HWND=0x{Hwnd:X8}, HDC=0x{Hdc:X8})", hwnd, hdc);
 
-				// Remove the device context
-				_deviceContexts.Remove(hdc);
+				// Get the device context
+				if (_deviceContexts.TryGetValue(hdc, out var dc))
+				{
+					// Get the bitmap that was drawn to
+					if (dc.SelectedBitmap != 0 && _gdiObjects.TryGetValue(dc.SelectedBitmap, out var bitmapObj) && bitmapObj.Bitmap != null)
+					{
+						var bitmap = bitmapObj.Bitmap;
+						if (bitmap.Bits != null && _env.Host != null)
+						{
+							// Calculate stride
+							var bytesPerPixel = (int)(bitmap.BitCount / 8);
+							if (bytesPerPixel == 0)
+							{
+								bytesPerPixel = 1;
+							}
+							var stride = ((bitmap.Width * bytesPerPixel + 3) / 4) * 4;
+
+							// Send the bitmap to the host for display
+							_logger.LogInformation("[Gdi32] EndPaint: Sending display update for HWND=0x{Hwnd:X8}, {Width}x{Height}", 
+								hwnd, bitmap.Width, bitmap.Height);
+
+							_env.Host.OnDisplayUpdate(new DisplayUpdateInfo
+							{
+								FrameBuffer = bitmap.Bits,
+								Width = bitmap.Width,
+								Height = bitmap.Height,
+								Stride = stride
+							});
+						}
+					}
+
+					// Remove the device context
+					_deviceContexts.Remove(hdc);
+				}
 			}
 
 			return 1; // TRUE
