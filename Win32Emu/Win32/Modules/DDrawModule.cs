@@ -18,6 +18,9 @@ namespace Win32Emu.Win32.Modules
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
 
+		// RGBA pixel format constant
+		private const int BytesPerPixelRgba = 4;
+
 		// Callback execution constants for WASM responsiveness
 		// Lower yield interval ensures browser remains responsive during callback execution
 		private const int CALLBACK_YIELD_INTERVAL = 10;
@@ -3494,7 +3497,7 @@ namespace Win32Emu.Win32.Modules
 					// Update the rendering backend texture with the converted surface data
 					if (displayData != null)
 					{
-						var displayPitch = surface.Width * 4; // RGBA format
+						var displayPitch = surface.Width * BytesPerPixelRgba; // RGBA format
 						_logger.LogDebug("[DDraw] Calling UpdateFrameBuffer: surface={SurfaceHandle:X8}, width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
 							surfaceHandle, surface.Width, surface.Height, displayPitch, displayData.Length);
 						var updateResult = ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch);
