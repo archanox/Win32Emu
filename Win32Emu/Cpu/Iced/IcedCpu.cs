@@ -5768,6 +5768,7 @@ public class IcedCpu : IAsyncCpu
 	/// Gets the mask for a specific operand size (8, 16, or 32 bits).
 	/// Used to mask values to their actual size before flag calculations.
 	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private uint GetOperandMask(int opSize) => opSize switch
 	{
 		8 => 0xFFu,
