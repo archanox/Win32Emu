@@ -646,6 +646,9 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		
 		// Use module reference count from header instead of iterating until importNamesOffset
 		// Each entry is 2 bytes (offset into imported names table)
+		// Note: We use 'continue' instead of 'break' for invalid entries to be resilient
+		// to partially corrupted files - this allows loading valid modules even if some
+		// entries are corrupted. Real-world NE files may have corruption or padding issues.
 		var moduleCount = header.ModuleReferenceCount;
 		
 		for (var i = 0; i < moduleCount; i++)

@@ -593,9 +593,11 @@ public class NeImageLoaderTests
 		WriteUInt16(data, neOffset + 0x60, 0); // Offset to "KERNEL"
 		WriteUInt16(data, neOffset + 0x62, 7); // Offset to "USER"
 		
-		// Fill the gap with garbage data (0x64 to 0x9F)
+		// Fill the gap with garbage data (after last module entry until imported names table)
 		// Old code would try to parse this as module references!
-		for (var i = 0x64; i < 0xA0; i++)
+		var gapStart = 0x64; // After 2 module reference entries (0x60 + 2*2)
+		var gapEnd = 0xA0;   // Start of imported names table
+		for (var i = gapStart; i < gapEnd; i++)
 		{
 			data[neOffset + i] = 0xFF; // Garbage data
 		}
