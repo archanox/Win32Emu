@@ -807,6 +807,13 @@
 		// NE format constants
 		const int MinimumNeHeaderSize = 64;
 		const int ModuleRefEntrySize = 2;
+		const int ImportedEntrySize = 6;
+		const byte ImportedSegmentIndicator = 0xFF;
+		const byte FixedSegmentIndicator = 0xFE;
+		const ushort OrdinalHighBitMask = 0x8000;
+		const ushort OrdinalValueMask = 0x7FFF;
+		const uint FixedEntrySize = 6u;
+		const uint MoveableEntrySize = 3u;
 
 		var importsByModule = new Dictionary<string, List<NeImportedFunction>>(StringComparer.OrdinalIgnoreCase);
 
@@ -888,13 +895,13 @@
 				var segmentIndicator = fileBytes[currentOffset];
 				currentOffset++;
 
-				// segmentIndicator == 0xFF means imported entries
-				if (segmentIndicator == 0xFF)
+				// ImportedSegmentIndicator (0xFF) means imported entries
+				if (segmentIndicator == ImportedSegmentIndicator)
 				{
 					// These are imported ordinals
 					for (int i = 0; i < count; i++)
 					{
-						if (currentOffset + 6 > fileBytes.Length)
+						if (currentOffset + ImportedEntrySize > fileBytes.Length)
 							break;
 
 						// Read import entry (6 bytes):
@@ -907,7 +914,7 @@
 						var moduleIndex = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 1);
 						var importOrdinal = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 3);
 
-						currentOffset += 6;
+						currentOffset += ImportedEntrySize;
 
 						// Module index is 1-based
 						if (moduleIndex > 0 && moduleIndex <= moduleNames.Count)
@@ -919,7 +926,7 @@
 
 							// Check if it's imported by name or ordinal
 							// If high bit of importOrdinal is NOT set, it's a name reference
-							if (importOrdinal < 0x8000)
+							if (importOrdinal < OrdinalHighBitMask)
 							{
 								// Import by name - importOrdinal is offset into Imported Names Table
 								var functionNameOffset = absImportedNamesTableOffset + importOrdinal;
@@ -940,7 +947,7 @@
 							else
 							{
 								// Import by ordinal
-								var ordinal = (ushort)(importOrdinal & 0x7FFF);
+								var ordinal = (ushort)(importOrdinal & OrdinalValueMask);
 								importsByModule[moduleName].Add(new NeImportedFunction
 								{
 									Name = $"Ordinal_{ordinal}",
@@ -955,7 +962,7 @@
 				{
 					// Fixed or moveable segment entries - skip them
 					// Each entry is 3 bytes for moveable, 6 bytes for fixed
-					uint entrySize = (segmentIndicator == 0xFE) ? 6u : 3u;
+					uint entrySize = (segmentIndicator == FixedSegmentIndicator) ? FixedEntrySize : MoveableEntrySize;
 					currentOffset += count * entrySize;
 				}
 			}
