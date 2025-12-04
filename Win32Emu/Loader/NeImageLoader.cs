@@ -903,7 +903,8 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				
 			case NeRelocationSourceType.Pointer48:
 				// 48-bit far pointer (seg:off32) - 16-bit selector + 32-bit offset
-				// This is rare in NE files and not fully implemented yet
+				// This is rare in NE files and not fully implemented yet.
+				// Pointer48 relocations are intentionally not applied until full implementation is added.
 				logger?.LogWarning("[NE Loader] Pointer48 relocation not yet implemented, skipping");
 				break;
 				
