@@ -776,8 +776,9 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			NeRelocationSourceType.Selector => true,
 			NeRelocationSourceType.Pointer32 => true,
 			NeRelocationSourceType.Offset16 => true,
-			NeRelocationSourceType.Pointer48 => true,
 			NeRelocationSourceType.Offset32 => true,
+			// Pointer48 (48-bit far pointer) is valid but not yet implemented
+			NeRelocationSourceType.Pointer48 => true,
 			_ => false
 		};
 		
@@ -896,6 +897,12 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 					offset = (ushort)(offset + vm.Read16(fixupAddress));
 				}
 				vm.Write16(fixupAddress, offset);
+				break;
+				
+			case NeRelocationSourceType.Pointer48:
+				// 48-bit far pointer (seg:off32) - 16-bit selector + 32-bit offset
+				// This is rare in NE files and not fully implemented yet
+				logger?.LogWarning("[NE Loader] Pointer48 relocation not yet implemented, skipping");
 				break;
 				
 			case NeRelocationSourceType.Offset32:
