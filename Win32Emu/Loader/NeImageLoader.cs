@@ -703,6 +703,25 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			var relocationCount = BitConverter.ToUInt16(bytes, (int)relocationOffset);
 			relocationOffset += 2;
 			
+			// Validate relocation count - if it's unreasonably large, the segment likely doesn't have relocations
+			// or the data is corrupted. A reasonable upper bound is the segment size / 2 (minimum 2 bytes per fixup)
+			var maxReasonableRelocations = segment.Length > 0 ? segment.Length / 2 : 1000;
+			if (relocationCount > maxReasonableRelocations)
+			{
+				logger?.LogWarning("[NE Loader] Segment {Num} has suspicious relocation count {Count} (max reasonable: {Max}), skipping relocations",
+					segment.SegmentNumber, relocationCount, maxReasonableRelocations);
+				continue;
+			}
+			
+			// Also check if we have enough space for all relocations
+			var requiredSpace = relocationOffset + (relocationCount * 8);
+			if (requiredSpace > bytes.Length)
+			{
+				logger?.LogWarning("[NE Loader] Segment {Num} relocation table extends beyond file (needs {Required} bytes, have {Available})",
+					segment.SegmentNumber, requiredSpace, bytes.Length);
+				continue;
+			}
+			
 			logger?.LogDebug("[NE Loader] Processing {Count} relocations for segment {Num}", relocationCount, segment.SegmentNumber);
 			
 			// Process each relocation entry (8 bytes each)
@@ -739,6 +758,13 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		var targetType = (NeRelocationTargetType)(reloc.TargetFlags & 0x03);
 		var isAdditive = (reloc.TargetFlags & 0x04) != 0;
 		var sourceType = (NeRelocationSourceType)(reloc.SourceType & 0x0F);
+		
+		// Validate source type - if it's not a known type, skip this relocation
+		if (!Enum.IsDefined(typeof(NeRelocationSourceType), sourceType))
+		{
+			logger?.LogWarning("[NE Loader] Unsupported relocation source type: {Type}", reloc.SourceType);
+			return;
+		}
 		
 		uint fixupAddress = segmentAddress + reloc.SourceOffset;
 		uint targetValue = 0;
