@@ -59,9 +59,6 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	// Maximum reasonable relocations fallback (used when segment length is 0)
 	private const int MAX_REASONABLE_RELOCATIONS_FALLBACK = 1000;
 	
-	// NE sector shift (sectors are 16 bytes each)
-	private const int NE_SECTOR_SHIFT = 4;
-	
 	// NE name table entry suffix size (name length byte + 2-byte ordinal)
 	private const int NE_NAME_ENTRY_SUFFIX_SIZE = 3;
 	
@@ -414,10 +411,15 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			throw new InvalidDataException($"Segment table extends beyond file bounds");
 		}
 		
+		// Use the sector alignment shift from the header, not a hardcoded value
+		// This varies between files (commonly 4, 8, or 9)
+		var sectorShift = header.SectorAlignmentShift;
+		
 		for (var i = 0; i < header.SegmentCount; i++)
 		{
-			// Safe: max sector (0xFFFF) << 4 = 0xFFFF0, well within uint range for NE format
-			var fileOffset = (uint)(BitConverter.ToUInt16(bytes, offset) << NE_SECTOR_SHIFT);
+			// The file offset is stored as a shifted value (divided by sector size)
+			// Shift it back by the alignment shift to get the actual file offset
+			var fileOffset = (uint)(BitConverter.ToUInt16(bytes, offset) << sectorShift);
 			var lengthRaw = BitConverter.ToUInt16(bytes, offset + 2);
 			var flags = BitConverter.ToUInt16(bytes, offset + 4);
 			var minAllocation = BitConverter.ToUInt16(bytes, offset + 6);
