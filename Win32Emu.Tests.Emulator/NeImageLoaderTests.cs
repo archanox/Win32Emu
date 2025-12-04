@@ -309,38 +309,41 @@ public class NeImageLoaderTests
 		WriteUInt16(data, neOffset + 14, 2); // Windows application
 		
 		// Entry point (segment:offset)
-		WriteUInt16(data, neOffset + 20, 1); // Segment 1
-		WriteUInt16(data, neOffset + 22, 0); // Offset 0
+		WriteUInt16(data, neOffset + 0x16, 1); // Segment 1 (CS)
+		WriteUInt16(data, neOffset + 0x18, 0); // Offset 0 (IP)
 		
 		// Segment count
-		WriteUInt16(data, neOffset + 28, 1); // One segment
+		WriteUInt16(data, neOffset + 0x1E, 1); // One segment
 		
 		// Segment table offset (relative to NE header)
-		WriteUInt16(data, neOffset + 34, 0x40); // Offset 0x40 from NE header
+		WriteUInt16(data, neOffset + 0x24, 0x40); // Offset 0x40 from NE header
 		
 		// Resource table offset
-		WriteUInt16(data, neOffset + 36, 0x48); // After segment table
+		WriteUInt16(data, neOffset + 0x26, 0x48); // After segment table
 		
 		// Resident name table offset
-		WriteUInt16(data, neOffset + 38, 0x50); // After resource table
+		WriteUInt16(data, neOffset + 0x28, 0x50); // After resource table
 		
 		// Module reference table offset
-		WriteUInt16(data, neOffset + 40, 0x60); // After resident name table
+		WriteUInt16(data, neOffset + 0x2A, 0x60); // After resident name table
 		
 		// Imported names table offset
-		WriteUInt16(data, neOffset + 42, 0x70); // After module reference table
+		WriteUInt16(data, neOffset + 0x2C, 0x70); // After module reference table
 		
 		// Non-resident name table offset (file offset, not relative)
 		WriteUInt32(data, neOffset + 44, 0); // No non-resident names
 		
 		// Movable entry count
-		WriteUInt16(data, neOffset + 48, 0);
+		WriteUInt16(data, neOffset + 0x32, 0);
+		
+		// Sector alignment shift
+		WriteUInt16(data, neOffset + 0x34, 4); // 16-byte sectors
 		
 		// Target OS
-		data[neOffset + 54] = 2; // Windows
+		data[neOffset + 0x38] = 2; // Windows
 		
 		// Expected Windows version
-		WriteUInt16(data, neOffset + 62, 0x0300); // Windows 3.0
+		WriteUInt16(data, neOffset + 0x40, 0x0300); // Windows 3.0
 		
 		// Segment table at offset neOffset + 0x40
 		var segmentOffset = neOffset + 0x40;
