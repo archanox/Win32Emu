@@ -17,6 +17,17 @@ A Blazor WebAssembly application for analyzing Windows executable files (`.exe` 
 dotnet build
 ```
 
+## Regenerating Win16 API Status
+
+The Win16 API compatibility data is auto-generated from the Win16 module source files. If you add or modify Win16 functions in the `Win32Emu/Win32/Win16/` directory, regenerate the JSON file:
+
+```bash
+# From repository root
+python3 generate-win16-api-status.py
+```
+
+This script parses the Win16 module C# files and extracts supported function names from the switch statements, generating `Win32Emu.Tools.PeAnalyzer.Wasm/wwwroot/win16-api-status.json`.
+
 ## Publishing for GitHub Pages
 
 **Important**: The `wwwroot/index.html` file must have `<base href="/Win32Emu/pe-analyzer/" />` for GitHub Pages deployment. This ensures all resources load from the correct subpath.

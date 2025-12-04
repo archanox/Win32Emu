@@ -151,6 +151,7 @@
 @code {
 	private CompatibilityReport? analysisResult;
 	private ApiStatusData? apiStatus;
+	private Win16ApiStatusData? win16ApiStatus;
 	private bool isProcessing;
 	private bool showDetails;
 	private string? errorMessage;
@@ -159,9 +160,16 @@
 	{
 		try
 		{
-			// Load api-status.json
+			// Load api-status.json (Win32 modules)
 			var json = await Http.GetStringAsync("api-status.json");
 			apiStatus = JsonSerializer.Deserialize<ApiStatusData>(json, new JsonSerializerOptions
+			{
+				PropertyNameCaseInsensitive = true
+			});
+
+			// Load win16-api-status.json (Win16 modules)
+			var win16Json = await Http.GetStringAsync("win16-api-status.json");
+			win16ApiStatus = JsonSerializer.Deserialize<Win16ApiStatusData>(win16Json, new JsonSerializerOptions
 			{
 				PropertyNameCaseInsensitive = true
 			});
@@ -463,169 +471,24 @@
 
 	/// <summary>
 	/// Returns a dictionary of supported Win16 modules and their functions.
-	/// Based on Win16ThunkingLayer implementations in Win32Emu.
+	/// Data is loaded from win16-api-status.json which is auto-generated from Win16 module source files.
 	/// </summary>
 	private Dictionary<string, HashSet<string>> GetWin16SupportedModules()
 	{
 		var modules = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
-		// KERNEL.DLL -> KERNEL32.DLL thunking
-		modules["KERNEL.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-		{
-			// Memory management functions
-			"GLOBALALLOC", "GLOBALFREE", "GLOBALLOCK", "GLOBALUNLOCK", "GLOBALREALLOC", "GLOBALSIZE", "GLOBALHANDLE",
-			"LOCALALLOC", "LOCALFREE", "LOCALLOCK", "LOCALUNLOCK", "LOCALREALLOC", "LOCALSIZE", "LOCALHANDLE",
-			
-			// File I/O functions
-			"OPENFILE", "LCREAT", "LOPEN", "LCLOSE", "LREAD", "LWRITE", "LSEEK",
-			"_HREAD", "_HWRITE", "_LCREAT", "_LOPEN", "_LCLOSE", "_LREAD", "_LWRITE", "_LLSEEK",
-			
-			// String functions
-			"LSTRCPY", "LSTRCPYA", "LSTRCPYN", "LSTRCPYNA", "LSTRCAT", "LSTRCATA",
-			"LSTRCMP", "LSTRCMPA", "LSTRCMPI", "LSTRCMPIA", "LSTRLEN", "LSTRLENA",
-			
-			// Module/task functions
-			"GETMODULEHANDLE", "GETMODULEFILENAME", "GETMODULEFILENAME16", "GETPROCADDRESS",
-			"LOADLIBRARY", "FREELIBRARY", "GETCURRENTTASK", "GETCURRENTPDB",
-			
-			// Version functions
-			"GETVERSION", "GETVERSIONEX",
-			
-			// Miscellaneous functions
-			"GETWINFLAGS", "GETTICKCOUNT", "GETFREESPACE", "EXITWINDOWS", "EXITWINDOWSEXEC",
-			"OUTPUTDEBUGSTRING", "FATALAPPEXIT", "FATALEXIT"
-		};
+		if (win16ApiStatus?.Modules == null)
+			return modules;
 
-		// USER.DLL -> USER32.DLL thunking
-		modules["USER.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		foreach (var module in win16ApiStatus.Modules)
 		{
-			// Window management functions
-			"CREATEWINDOW", "CREATEWINDOWA", "CREATEWINDOWEX", "CREATEWINDOWEXA",
-			"DESTROYWINDOW", "SHOWWINDOW", "UPDATEWINDOW", "SETWINDOWPOS", "MOVEWINDOW",
-			"GETWINDOWRECT", "GETCLIENTRECT", "ADJUSTWINDOWRECT", "ADJUSTWINDOWRECTEX",
-			"SETWINDOWTEXT", "SETWINDOWTEXTA", "GETWINDOWTEXT", "GETWINDOWTEXTA",
-			"GETWINDOWTEXTLENGTH", "GETWINDOWTEXTLENGTHA", "GETWINDOWLONG", "SETWINDOWLONG",
-			"GETCLASSNAME", "GETCLASSNAMEA", "GETCLASSINFO", "GETCLASSINFOA",
-			
-			// Message functions
-			"GETMESSAGE", "GETMESSAGEA", "PEEKMESSAGE", "PEEKMESSAGEA",
-			"TRANSLATEMESSAGE", "DISPATCHMESSAGE", "DISPATCHMESSAGEA",
-			"POSTMESSAGE", "POSTMESSAGEA", "SENDMESSAGE", "SENDMESSAGEA",
-			"POSTQUITMESSAGE", "WAITMESSAGE",
-			
-			// Dialog functions
-			"DIALOGBOX", "DIALOGBOXA", "DIALOGBOXPARAM", "DIALOGBOXPARAMA",
-			"DIALOGBOXINDIRECT", "DIALOGBOXINDIRECTA", "DIALOGBOXINDIRECTPARAM", "DIALOGBOXINDIRECTPARAMA",
-			"ENDDIALOG", "GETDLGITEM", "GETDLGITEMTEXT", "GETDLGITEMTEXTA",
-			"SETDLGITEMTEXT", "SETDLGITEMTEXTA", "GETDLGITEMINT", "SETDLGITEMINT",
-			"CHECKDLGBUTTON", "ISDLGBUTTONCHECKED",
-			
-			// Menu functions
-			"CREATEMENU", "CREATEPOPUPMENU", "DESTROYMENU",
-			"APPENDMENU", "APPENDMENUA", "INSERTMENU", "INSERTMENUA",
-			"DELETEMENU", "MODIFYMENU", "MODIFYMENUA",
-			"CHECKMENUITEM", "ENABLEMENUITEM", "SETMENU", "GETMENU", "DRAWMENUBAR",
-			
-			// GDI/DC functions (in USER for Win16)
-			"GETDC", "RELEASEDC", "GETWINDOWDC", "BEGINPAINT", "ENDPAINT",
-			"INVALIDATERECT", "VALIDATERECT", "INVALIDATERGN", "VALIDATERGN",
-			
-			// Resource functions
-			"LOADSTRING", "LOADSTRINGA", "LOADICON", "LOADICONA",
-			"LOADCURSOR", "LOADCURSORA", "LOADBITMAP", "LOADBITMAPA",
-			"LOADMENU", "LOADMENUA", "LOADDIALOG", "LOADACCELERATORS", "LOADACCELERATORSA",
-			
-			// Keyboard/mouse input functions
-			"GETASYNCKEYSTATE", "GETKEYSTATE", "GETKEYBOARDSTATE", "SETKEYBOARDSTATE",
-			"GETCURSORPOS", "SETCURSORPOS", "SHOWCURSOR", "SETCURSOR", "GETCURSOR",
-			"CLIPCURSOR", "GETCAPTURE", "SETCAPTURE", "RELEASECAPTURE",
-			
-			// Timer functions
-			"SETTIMER", "KILLTIMER",
-			
-			// Miscellaneous functions
-			"MESSAGEBOX", "MESSAGEBOXA", "MESSAGEBEEP",
-			"GETDESKTOPWINDOW", "GETACTIVEWINDOW", "SETACTIVEWINDOW",
-			"GETFOCUS", "SETFOCUS", "GETSYSTEMMETRICS",
-			"ISWINDOW", "ISWINDOWVISIBLE", "ISWINDOWENABLED", "ENABLEWINDOW",
-			"GETPARENT", "SETPARENT"
-		};
-
-		// GDI.DLL -> GDI32.DLL thunking
-		modules["GDI.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-		{
-			// Device context functions
-			"CREATEDC", "CREATEDCA", "CREATECOMPATIBLEDC", "DELETEDC",
-			"SAVEDC", "RESTOREDC", "GETDEVICECAPS",
-			"SETMAPMODE", "GETMAPMODE", "SETVIEWPORTORG", "GETVIEWPORTORG",
-			"SETWINDOWORG", "GETWINDOWORG",
-			
-			// Drawing functions
-			"MOVETO", "LINETO", "RECTANGLE", "ELLIPSE", "POLYGON", "POLYLINE",
-			"ARC", "PIE", "CHORD", "ROUNDRECT", "SETPIXEL", "GETPIXEL",
-			"FLOODFILL", "EXTFLOODFILL",
-			
-			// Text output functions
-			"TEXTOUT", "TEXTOUTA", "EXTTEXTOUT", "EXTTEXTOUTA",
-			"DRAWTEXT", "DRAWTEXTA", "TABBEDTEXTOUT", "TABBEDTEXTOUTA",
-			"GETTEXTEXTENT", "GETTEXTEXTENTA", "GETTEXTMETRICS", "GETTEXTMETRICSA",
-			"SETTEXTCOLOR", "GETTEXTCOLOR", "SETBKCOLOR", "GETBKCOLOR",
-			"SETBKMODE", "GETBKMODE", "SETTEXTALIGN", "GETTEXTALIGN",
-			
-			// Pen and brush functions
-			"CREATEPEN", "CREATEPENINDIRECT", "CREATEBRUSHINDIRECT",
-			"CREATESOLIDBRUSH", "CREATEHATCHBRUSH", "CREATEPATTERNBRUSH",
-			"SELECTOBJECT", "DELETEOBJECT", "GETOBJECT", "GETSTOCKOBJECT",
-			
-			// Bitmap functions
-			"CREATEBITMAP", "CREATEBITMAPINDIRECT", "CREATECOMPATIBLEBITMAP", "CREATEDIBSECTION",
-			"BITBLT", "STRETCHBLT", "PATBLT", "SETDIBITS", "GETDIBITS",
-			"SETDIBITSTODEVICE", "STRETCHDIBITS",
-			
-			// Font functions
-			"CREATEFONT", "CREATEFONTA", "CREATEFONTINDIRECT", "CREATEFONTINDIRECTA",
-			"ENUMFONTS", "ENUMFONTSA", "ENUMFONTFAMILIES", "ENUMFONTFAMILIESA",
-			"GETTEXTFACE", "GETTEXTFACEA",
-			
-			// Region functions
-			"CREATERECTRGNINDIRECT", "CREATERECTRGNINDIRECTA", "CREATEELLIPTICRGN",
-			"CREATEELLIPTICRGNINDIRECT", "CREATEPOLYGONRGN", "CREATEROUNDRECTRGN",
-			"COMBINERGN", "EQUALRGN", "OFFSETRGN", "GETREGIONDATA",
-			"PTINREGION", "RECTINREGION", "FILLRGN", "FRAMERGN", "INVERTRGN", "PAINTRGN",
-			
-			// Palette functions
-			"CREATEPALETTE", "SELECTPALETTE", "REALIZEPALETTE",
-			"GETPALETTEENTRIES", "SETPALETTEENTRIES", "GETNEARESTCOLOR",
-			"GETNEARESTPALETTEINDEX", "ANIMATEPALETTE", "UPDATECOLORS",
-			
-			// Clipping functions
-			"SELECTCLIPRGN", "GETCLIPBOX", "EXCLUDECLIPRECT", "INTERSECTCLIPRECT", "OFFSETCLIPRGN",
-			
-			// Miscellaneous functions
-			"GETRVALUE", "GETGVALUE", "GETBVALUE", "RGB",
-			"GETROP2", "SETROP2", "SETSTRETCHBLTMODE", "GETSTRETCHBLTMODE", "UNREALIZEOBJECT"
-		};
-
-		// KEYBOARD.DLL -> USER32.DLL thunking
-		modules["KEYBOARD.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-		{
-			"GETKEYSTATE", "GETASYNCKEYSTATE", "GETKEYBOARDSTATE", "SETKEYBOARDSTATE",
-			"GETKEYBOARDTYPE", "MAPVIRTUALKEY", "OEMKEYSCAN", "VKKEYSCAN", "ENABLEKEYBOARD"
-		};
-
-		// SYSTEM.DLL -> KERNEL32.DLL thunking
-		modules["SYSTEM.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-		{
-			"GETTICKCOUNT", "GETFREESPACE", "GETSYSTEMTIME", "SETSYSTEMTIME",
-			"GETLOCALTIME", "SETLOCALTIME", "GETCURRENTTIME", "GETTIMERDESCRIPTION"
-		};
-
-		// SOUND.DLL -> WINMM.DLL thunking
-		modules["SOUND.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-		{
-			"SNDPLAYSOUND", "SNDPLAYSONDA", "OPENDRIVER", "CLOSEDRIVER",
-			"SENDDRIVER", "GETDRIVERNAME", "GETDRIVERNAMEA", "GETDRIVERINFO", "GETDRIVERMODULEHANDLE"
-		};
+			var functions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			foreach (var function in module.Functions)
+			{
+				functions.Add(function);
+			}
+			modules[module.Name] = functions;
+		}
 
 		return modules;
 	}
@@ -1062,5 +925,16 @@
 		public string Name { get; set; } = "";
 		public bool IsStub { get; set; }
 		public string? ExportName { get; set; }
+	}
+
+	public class Win16ApiStatusData
+	{
+		public List<Win16ModuleInfo> Modules { get; set; } = new();
+	}
+
+	public class Win16ModuleInfo
+	{
+		public string Name { get; set; } = "";
+		public List<string> Functions { get; set; } = new();
 	}
 }
