@@ -3558,6 +3558,7 @@ namespace Win32Emu.Win32.Modules
 			return lpszCurrent - 1;
 		}
 
+		[DllModuleExport(39)]
 		private uint CharNextA(uint lpsz)
 		{
 			if (lpsz == 0)

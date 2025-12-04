@@ -4087,6 +4087,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Async implementation of DirectDrawEnumerateA.
 		/// </summary>
+		[DllModuleExport(34)]
 		private async Task<uint> DirectDrawEnumerateAAsync(uint lpCallback, uint lpContext, CancellationToken cancellationToken = default)
 		{
 			_logger.LogInformation("[DDraw] DirectDrawEnumerateAAsync(lpCallback=0x{LpCallback:X8}, lpContext=0x{LpContext:X8})", lpCallback, lpContext);
@@ -4139,6 +4140,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Async implementation of DirectDrawEnumerateExA.
 		/// </summary>
+		[DllModuleExport(35)]
 		private async Task<uint> DirectDrawEnumerateExAAsync(uint lpCallback, uint lpContext, uint dwFlags, CancellationToken cancellationToken = default)
 		{
 			_logger.LogInformation("[DDraw] DirectDrawEnumerateExAAsync(lpCallback=0x{LpCallback:X8}, lpContext=0x{LpContext:X8}, dwFlags=0x{DwFlags:X8})", lpCallback, lpContext, dwFlags);
@@ -4194,6 +4196,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Async implementation of DirectDrawEnumerateW.
 		/// </summary>
+		[DllModuleExport(37)]
 		private async Task<uint> DirectDrawEnumerateWAsync(uint lpCallback, uint lpContext, CancellationToken cancellationToken = default)
 		{
 			_logger.LogInformation("[DDraw] DirectDrawEnumerateWAsync(lpCallback=0x{LpCallback:X8}, lpContext=0x{LpContext:X8})", lpCallback, lpContext);
@@ -4246,6 +4249,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Async implementation of DirectDrawEnumerateExW.
 		/// </summary>
+		[DllModuleExport(36)]
 		private async Task<uint> DirectDrawEnumerateExWAsync(uint lpCallback, uint lpContext, uint dwFlags, CancellationToken cancellationToken = default)
 		{
 			_logger.LogInformation("[DDraw] DirectDrawEnumerateExWAsync(lpCallback=0x{LpCallback:X8}, lpContext=0x{LpContext:X8}, dwFlags=0x{DwFlags:X8})", lpCallback, lpContext, dwFlags);
