@@ -644,40 +644,51 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		var moduleTableOffset = header.BaseOffset + header.ModuleReferenceTableOffset;
 		var importNamesOffset = header.BaseOffset + header.ImportedNamesTableOffset;
 		
-		// Read module count from first entry
+		// Use module reference count from header instead of iterating until importNamesOffset
 		// Each entry is 2 bytes (offset into imported names table)
-		var offset = moduleTableOffset;
+		var moduleCount = header.ModuleReferenceCount;
 		
-		while (offset < importNamesOffset)
+		for (var i = 0; i < moduleCount; i++)
 		{
+			var offset = moduleTableOffset + (i * NE_MODULE_REF_ENTRY_SIZE);
+			
 			// Validate bounds for reading module reference entry
-			if (offset + NE_MODULE_REF_ENTRY_SIZE > bytes.Length || offset + NE_MODULE_REF_ENTRY_SIZE > importNamesOffset)
+			if (offset + NE_MODULE_REF_ENTRY_SIZE > bytes.Length)
 			{
+				logger?.LogWarning("[NE Loader] Module reference entry {Index} is out of bounds", i);
 				break;
 			}
 			
 			var nameOffset = BitConverter.ToUInt16(bytes, offset);
 			if (nameOffset == 0)
 			{
-				break;
+				logger?.LogWarning("[NE Loader] Module reference entry {Index} has null offset", i);
+				continue; // Skip null entries but continue with remaining modules
 			}
 			
 			var actualOffset = importNamesOffset + nameOffset;
 			if (actualOffset >= bytes.Length || actualOffset + 1 > bytes.Length)
 			{
-				break;
+				logger?.LogWarning("[NE Loader] Module name offset {Offset} (entry {Index}) is out of bounds", actualOffset, i);
+				continue; // Skip invalid entries but continue with remaining modules
 			}
 			
 			var nameLength = bytes[actualOffset];
+			if (nameLength == 0)
+			{
+				logger?.LogWarning("[NE Loader] Module name at offset {Offset} (entry {Index}) has zero length", actualOffset, i);
+				continue; // Skip empty names but continue with remaining modules
+			}
+			
 			if (actualOffset + nameLength + 1 > bytes.Length)
 			{
-				break;
+				logger?.LogWarning("[NE Loader] Module name at offset {Offset} (entry {Index}) extends beyond file bounds (length {Length})", 
+					actualOffset, i, nameLength);
+				continue; // Skip truncated names but continue with remaining modules
 			}
 			
 			var moduleName = Encoding.ASCII.GetString(bytes, actualOffset + 1, nameLength);
 			modules.Add(moduleName);
-			
-			offset += NE_MODULE_REF_ENTRY_SIZE;
 		}
 		
 		return modules;
