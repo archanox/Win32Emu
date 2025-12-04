@@ -50,6 +50,12 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	// NE segment table entry size
 	private const int NE_SEGMENT_ENTRY_SIZE = 8;
 	
+	// NE relocation entry size
+	private const int NE_RELOCATION_ENTRY_SIZE = 8;
+	
+	// Maximum reasonable relocations fallback (used when segment length is 0)
+	private const int MAX_REASONABLE_RELOCATIONS_FALLBACK = 1000;
+	
 	// NE sector shift (sectors are 16 bytes each)
 	private const int NE_SECTOR_SHIFT = 4;
 	
@@ -705,7 +711,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			
 			// Validate relocation count - if it's unreasonably large, the segment likely doesn't have relocations
 			// or the data is corrupted. A reasonable upper bound is the segment size / 2 (minimum 2 bytes per fixup)
-			var maxReasonableRelocations = segment.Length > 0 ? segment.Length / 2 : 1000;
+			var maxReasonableRelocations = segment.Length > 0 ? segment.Length / 2 : MAX_REASONABLE_RELOCATIONS_FALLBACK;
 			if (relocationCount > maxReasonableRelocations)
 			{
 				logger?.LogWarning("[NE Loader] Segment {Num} has suspicious relocation count {Count} (max reasonable: {Max}), skipping relocations",
@@ -714,7 +720,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			}
 			
 			// Also check if we have enough space for all relocations
-			var requiredSpace = relocationOffset + (relocationCount * 8);
+			var requiredSpace = relocationOffset + (relocationCount * NE_RELOCATION_ENTRY_SIZE);
 			if (requiredSpace > bytes.Length)
 			{
 				logger?.LogWarning("[NE Loader] Segment {Num} relocation table extends beyond file (needs {Required} bytes, have {Available})",
@@ -724,10 +730,10 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			
 			logger?.LogDebug("[NE Loader] Processing {Count} relocations for segment {Num}", relocationCount, segment.SegmentNumber);
 			
-			// Process each relocation entry (8 bytes each)
+			// Process each relocation entry
 			for (var i = 0; i < relocationCount; i++)
 			{
-				if (relocationOffset + 8 > bytes.Length)
+				if (relocationOffset + NE_RELOCATION_ENTRY_SIZE > bytes.Length)
 				{
 					logger?.LogWarning("[NE Loader] Relocation entry {Index} extends beyond file", i);
 					break;
@@ -743,7 +749,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				};
 				
 				ApplyRelocation(reloc, segInfo.address, segmentMap, importModules, bytes, header);
-				relocationOffset += 8;
+				relocationOffset += NE_RELOCATION_ENTRY_SIZE;
 			}
 		}
 	}
