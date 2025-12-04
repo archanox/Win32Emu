@@ -2522,7 +2522,6 @@ public class IcedCpu : IAsyncCpu
 		// Mask result to operand size before updating flags
 		// This is crucial for correct ZF calculation when high bits are set
 		r &= GetOperandMask(opSize);
-		
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r, signBit);
 	}
