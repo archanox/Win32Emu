@@ -662,7 +662,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				break;
 			}
 			
-			var actualOffset = header.BaseOffset + header.ImportedNamesTableOffset + nameOffset;
+			var actualOffset = importNamesOffset + nameOffset;
 			if (actualOffset >= bytes.Length || actualOffset + 1 > bytes.Length)
 			{
 				break;

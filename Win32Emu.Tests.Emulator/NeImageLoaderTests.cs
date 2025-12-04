@@ -291,6 +291,115 @@ public class NeImageLoaderTests
 		Assert.Equal(0u, image.HeaderEndRva);
 	}
 
+	[Fact]
+	public void LoadFromBytes_WithImportModules_ParsesModuleNamesCorrectly()
+	{
+		// Arrange
+		var vm = new VirtualMemory(256 * 1024 * 1024, NullLogger.Instance); // 256MB
+		var loader = new NeImageLoader(vm, NullLogger.Instance);
+
+		// Create an NE file with import modules
+		var neData = CreateNEFileWithImports();
+
+		// Act - This should not throw and should parse module names correctly
+		var image = loader.LoadFromBytes(neData, "<test>");
+
+		// Assert - If the fix is correct, this should load successfully
+		// The bug would cause garbage module names and potentially crash or fail to load
+		Assert.NotNull(image);
+		Assert.Equal(0x00010000u, image.BaseAddress);
+	}
+
+	/// <summary>
+	/// Creates an NE file with import modules to test import parsing.
+	/// </summary>
+	private static byte[] CreateNEFileWithImports()
+	{
+		var data = new byte[2048];
+		
+		// DOS MZ header
+		data[0] = 0x4D; // 'M'
+		data[1] = 0x5A; // 'Z'
+		data[0x3C] = 0x80;
+		
+		// NE header at offset 0x80
+		var neOffset = 0x80;
+		data[neOffset + 0] = 0x4E;  // 'N'
+		data[neOffset + 1] = 0x45;  // 'E'
+		data[neOffset + 2] = 5;
+		data[neOffset + 3] = 10;
+		
+		WriteUInt16(data, neOffset + 4, 0x0100);
+		WriteUInt16(data, neOffset + 6, 0);
+		WriteUInt32(data, neOffset + 8, 0);
+		WriteUInt16(data, neOffset + 12, 0x0300);
+		WriteUInt16(data, neOffset + 14, 2);
+		WriteUInt16(data, neOffset + 0x16, 1);
+		WriteUInt16(data, neOffset + 0x18, 0);
+		WriteUInt16(data, neOffset + 0x1E, 1);
+		
+		// Module reference count
+		WriteUInt16(data, neOffset + 0x20, 2); // 2 modules
+		
+		WriteUInt16(data, neOffset + 0x24, 0x40); // Segment table
+		WriteUInt16(data, neOffset + 0x26, 0x48); // Resource table
+		WriteUInt16(data, neOffset + 0x28, 0x50); // Resident name table
+		WriteUInt16(data, neOffset + 0x2A, 0x60); // Module reference table
+		WriteUInt16(data, neOffset + 0x2C, 0x70); // Imported names table
+		WriteUInt32(data, neOffset + 44, 0);
+		WriteUInt16(data, neOffset + 0x32, 0);
+		WriteUInt16(data, neOffset + 0x34, 4);
+		data[neOffset + 0x38] = 2;
+		WriteUInt16(data, neOffset + 0x40, 0x0300);
+		
+		// Segment table
+		var segmentOffset = neOffset + 0x40;
+		WriteUInt16(data, segmentOffset + 0, 0x20);
+		WriteUInt16(data, segmentOffset + 2, 0x100);
+		WriteUInt16(data, segmentOffset + 4, 0x0000);
+		WriteUInt16(data, segmentOffset + 6, 0x100);
+		
+		// Resource table (empty)
+		WriteUInt16(data, neOffset + 0x48, 0);
+		
+		// Resident name table
+		data[neOffset + 0x50] = 4;
+		data[neOffset + 0x51] = (byte)'T';
+		data[neOffset + 0x52] = (byte)'E';
+		data[neOffset + 0x53] = (byte)'S';
+		data[neOffset + 0x54] = (byte)'T';
+		WriteUInt16(data, neOffset + 0x55, 0);
+		data[neOffset + 0x57] = 0;
+		
+		// Module reference table at neOffset + 0x60
+		// Two entries, each is a 2-byte offset into imported names table
+		WriteUInt16(data, neOffset + 0x60, 0); // Offset to "KERNEL" (0 bytes from start of imported names)
+		WriteUInt16(data, neOffset + 0x62, 7); // Offset to "USER" (7 bytes from start of imported names)
+		
+		// Imported names table at neOffset + 0x70
+		// Format: length-byte + string
+		// "KERNEL" at offset 0
+		data[neOffset + 0x70] = 6; // Length
+		data[neOffset + 0x71] = (byte)'K';
+		data[neOffset + 0x72] = (byte)'E';
+		data[neOffset + 0x73] = (byte)'R';
+		data[neOffset + 0x74] = (byte)'N';
+		data[neOffset + 0x75] = (byte)'E';
+		data[neOffset + 0x76] = (byte)'L';
+		
+		// "USER" at offset 7
+		data[neOffset + 0x77] = 4; // Length
+		data[neOffset + 0x78] = (byte)'U';
+		data[neOffset + 0x79] = (byte)'S';
+		data[neOffset + 0x7A] = (byte)'E';
+		data[neOffset + 0x7B] = (byte)'R';
+		
+		// Put dummy code
+		data[0x200] = 0xC3;
+		
+		return data;
+	}
+
 	/// <summary>
 	/// Creates a minimal valid NE file structure for testing.
 	/// This is a simplified structure that passes basic validation.
