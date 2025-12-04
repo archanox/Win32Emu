@@ -53,6 +53,9 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	// NE relocation entry size
 	private const int NE_RELOCATION_ENTRY_SIZE = 8;
 	
+	// Minimum bytes per relocation fixup (used to calculate maximum reasonable relocations)
+	private const int MIN_BYTES_PER_RELOCATION = 2;
+	
 	// Maximum reasonable relocations fallback (used when segment length is 0)
 	private const int MAX_REASONABLE_RELOCATIONS_FALLBACK = 1000;
 	
@@ -710,8 +713,8 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			relocationOffset += 2;
 			
 			// Validate relocation count - if it's unreasonably large, the segment likely doesn't have relocations
-			// or the data is corrupted. A reasonable upper bound is the segment size / 2 (minimum 2 bytes per fixup)
-			var maxReasonableRelocations = segment.Length > 0 ? segment.Length / 2 : MAX_REASONABLE_RELOCATIONS_FALLBACK;
+			// or the data is corrupted. A reasonable upper bound is the segment size divided by minimum bytes per fixup
+			var maxReasonableRelocations = segment.Length > 0 ? segment.Length / MIN_BYTES_PER_RELOCATION : MAX_REASONABLE_RELOCATIONS_FALLBACK;
 			if (relocationCount > maxReasonableRelocations)
 			{
 				logger?.LogWarning("[NE Loader] Segment {Num} has suspicious relocation count {Count} (max reasonable: {Max}), skipping relocations",
@@ -766,7 +769,19 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		var sourceType = (NeRelocationSourceType)(reloc.SourceType & 0x0F);
 		
 		// Validate source type - if it's not a known type, skip this relocation
-		if (!Enum.IsDefined(typeof(NeRelocationSourceType), sourceType))
+		// Using switch expression for better performance than Enum.IsDefined
+		var isValidSourceType = sourceType switch
+		{
+			NeRelocationSourceType.LoByte => true,
+			NeRelocationSourceType.Selector => true,
+			NeRelocationSourceType.Pointer32 => true,
+			NeRelocationSourceType.Offset16 => true,
+			NeRelocationSourceType.Pointer48 => true,
+			NeRelocationSourceType.Offset32 => true,
+			_ => false
+		};
+		
+		if (!isValidSourceType)
 		{
 			logger?.LogWarning("[NE Loader] Unsupported relocation source type: {Type}", reloc.SourceType);
 			return;
